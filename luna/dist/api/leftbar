@@ -1,0 +1,40 @@
+[
+  {
+    "title": "xxxx",
+    "key": "1",
+    "folder": false,
+    "machine": "localhost"
+  },
+  {
+    "title": "Folder 2",
+    "key": "2",
+    "folder": true,
+    "children": [
+      {
+        "title": "Node 2.1",
+        "key": "3",
+        "machine":"aa"
+      },
+      {
+        "title": "Node 2.2",
+        "key": "4",
+        "machine":"bb"
+      }
+    ]
+  },
+  {
+    "title": "Folder 3",
+    "key": "2",
+    "folder": true,
+    "children": [
+      {
+        "title": "Node 2.1",
+        "key": "3"
+      },
+      {
+        "title": "Node 2.2",
+        "key": "4"
+      }
+    ]
+  }
+]

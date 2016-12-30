@@ -1,0 +1,47 @@
+[
+  {
+    "title": "Cut",
+    "cmd": "cut",
+    "uiIcon": "fa fa-cut fa-size-1p3em"
+  },
+  {
+    "title": "Copy",
+    "cmd": "copy",
+    "uiIcon": "fa fa-copy fa-size-1p3em"
+  },
+  {
+    "title": "Paste",
+    "cmd": "paste",
+    "uiIcon": "fa fa-paste fa-size-1p3em",
+    "disabled": false
+  },
+  {
+    "title": "----"
+  },
+  {
+    "title": "Edit",
+    "cmd": "edit",
+    "uiIcon": "fa fa-edit fa-size-1p3em",
+    "disabled": true
+  },
+  {
+    "title": "Delete",
+    "cmd": "delete",
+    "uiIcon": "fa fa-trash fa-size-1p3em",
+    "disabled": true
+  },
+  {
+    "title": "More",
+    "uiIcon": "fa  fa-caret-right fa-size-1p3em",
+    "children": [
+      {
+        "title": "Sub 1",
+        "cmd": "sub1"
+      },
+      {
+        "title": "Sub 2",
+        "cmd": "sub1"
+      }
+    ]
+  }
+]
