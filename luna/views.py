@@ -5,7 +5,7 @@
 from flask import render_template, send_from_directory, jsonify, g
 from flask_socketio import emit
 
-from . import app, socket_io, api
+from . import app, socket_io
 
 
 @app.route('/api/token')
