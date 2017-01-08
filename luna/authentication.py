@@ -6,7 +6,6 @@ from flask import g, request
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth, MultiAuth
 
 from . import app
-from .errors import unauthorized
 
 
 token_auth = HTTPTokenAuth()

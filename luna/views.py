@@ -78,6 +78,6 @@ def handle_term_disconnect():
 
 @socket_io.on('resize')
 def handle_term_resize(json):
-    # print('term resize: ' + str(json))
+    print('term resize: ' + str(json))
     pass
 

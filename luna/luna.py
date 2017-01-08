@@ -20,8 +20,9 @@ class Luna(Flask, AppMixin):
         'NAME': 'luna',
         'BIND_HOST': '0.0.0.0',
         'LISTEN_PORT': 5000,
-        'JUMPSERVER_ENDPOINT': 'http://localhost:8080',
+        'JUMPSERVER_ENDPOINT': os.environ.get('JUMPSERVER_ENDPOINT') or 'http://localhost:8080',
         'ACCESS_KEY': None,
+        'SECRET_KEY': 'Keep_secret!!',
         'ACCESS_KEY_ENV': 'LUNA_ACCESS_KEY',
         'ACCESS_KEY_STORE': os.path.join(BASE_DIR, 'keys', '.access_key'),
         'LOG_LEVEL': 'DEBUG',
@@ -30,13 +31,10 @@ class Luna(Flask, AppMixin):
         'HEATBEAT_INTERVAL': 5,
     })
     app_service = None
-    user_service = None
 
     def bootstrap(self):
         self.app_service = AppService(app_name=self.config['NAME'],
                                       endpoint=self.config['JUMPSERVER_ENDPOINT'])
-        self.user_service = UserService(app_name=self.config['NAME'],
-                                        endpoint=self.config['JUMPSERVER_ENDPOINT'])
         self.app_auth()
         while True:
             if self.check_auth():
@@ -49,6 +47,7 @@ class Luna(Flask, AppMixin):
 
     def run(self, host=None, port=None, debug=None, **options):
         self.bootstrap()
+        # logging.info('hello')
         print(time.ctime())
         print('Luna version %s, more see https://www.jumpserver.org' % __version__)
         print('Starting ssh server at %(host)s:%(port)s' % {'host': self.config['BIND_HOST'],

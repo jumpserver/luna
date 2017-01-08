@@ -1,7 +1,7 @@
 flask==0.12
 paramiko==2.1.1
-python-gssapi==0.6.4
 requests==2.11.1
 flask-socketio==2.8.2
 flask-httpauth==3.2.1
 jumpserver-python-sdk
+gunicorn

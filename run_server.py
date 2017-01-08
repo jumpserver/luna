@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # ~*~ coding: utf-8 ~*~
 
-from luna import app
+
 from config import Config
+from luna import app
+import subprocess
 
 app.config.from_object(Config)
+host = app.config['BIND_HOST']
+port = app.config['LISTEN_PORT']
 
 if __name__ == '__main__':
-    app.run(host=app.config['BIND_HOST'], port=app.config['LISTEN_PORT'],
-            debug=app.config['DEBUG'])
+    subprocess.call('gunicorn -k eventlet -b %s:%s -w 4 -n luna run_server:app' % (host, port), shell=True)
