@@ -14,3 +14,10 @@ $ export JUMPSERVER_ENDPOINT='http://a-jumpserver-url:port'
   
 $ python run_server.py
 ```
+
+如果不想和Jumpserver联调,修改 run_server.py
+```
+# 注释掉
+# app.bootstrap()
+```
+
