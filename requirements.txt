@@ -4,4 +4,3 @@ requests==2.11.1
 flask-socketio==2.8.2
 flask-httpauth==3.2.1
 jumpserver-python-sdk
-gunicorn
