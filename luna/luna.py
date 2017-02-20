@@ -31,6 +31,7 @@ class Luna(Flask, AppMixin):
         'HEATBEAT_INTERVAL': 5,
     })
     app_service = None
+    clients = {}
 
     def bootstrap(self):
         self.app_service = AppService(app_name=self.config['NAME'],

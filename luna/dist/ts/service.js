@@ -64,8 +64,8 @@ exports.DataStore = {
     Path: {},
     error: {},
     msg: {},
-    leftbar: "/bifrost/api/leftbar",
-    leftbarrightclick: "/bifrost/api/leftbarrightclick",
+    leftbar: "/luna/api/leftbar",
+    leftbarrightclick: "/luna/api/leftbarrightclick",
     loglevel: 0,
     term: [],
     termActive: 0,
@@ -104,7 +104,7 @@ var AppService = (function () {
             exports.DataStore.socket.on('popup', function (data) {
                 layer.msg(data);
             });
-            exports.DataStore.socket.emit('api', 'all');
+            exports.DataStore.socket.emit('nav');
         });
     }
     AppService.prototype.checklogin = function (path) {
@@ -324,7 +324,7 @@ var AppService = (function () {
             document.title = title;
         });
         exports.DataStore.term[id]["term"].open(document.getElementById('term-' + id));
-        exports.DataStore.term[id]["term"].write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
+        exports.DataStore.term[id]["term"].write('\x1b[32mWelcome to Jumpserver!\x1b[m\r\n');
         socket.on('connect', function () {
             socket.emit('machine', uuid);
             exports.DataStore.term[id]["term"].on('data', function (data) {
