@@ -2,3 +2,4 @@
 *.pyc
 *.pyo
 luna/keys/.access_key
+logs/*.log

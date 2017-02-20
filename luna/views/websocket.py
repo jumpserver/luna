@@ -7,6 +7,7 @@ import select
 import threading
 import collections
 import json
+import logging
 
 import paramiko
 
@@ -14,6 +15,7 @@ from .. import app, socket_io
 from ..nav import nav
 
 clients = app.clients
+logger = logging.getLogger(__file__)
 
 
 __all__ = [
@@ -39,16 +41,12 @@ def handle_machine(sid, message):
     t = threading.Thread(target=forward, args=(sid,))
     t.setDaemon(True)
     t.start()
-    # global thread
-    # if thread is None:
-    #     thread = socket_io.start_background_task(forward, sid)
     socket_io.emit('data', 'Connect to %s:%s \r\n' % (host, port), room=sid)
-    print(t.is_alive())
 
 
 @socket_io.on('data')
 def handle_data(sid, message):
-    print('Receive data: %s' % message)
+    logger.debug('Receive data: %s' % message)
     if clients[sid]['chan']:
         clients[sid]['chan'].send(message)
 
@@ -61,7 +59,7 @@ def handle_term_disconnect(sid):
 
 @socket_io.on('resize')
 def handle_term_resize(sid, json):
-    print(json)
+    logger.debug('Resize term: %s' % json)
 
 
 def forward(sid):
