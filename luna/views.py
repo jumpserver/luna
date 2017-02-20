@@ -59,13 +59,14 @@ def handle_term_connect(sid, environ):
 def handle_machine(sid, message):
     clients[sid]['host'] = host = '192.168.152.129'
     clients[sid]['port'] = port = 22
-    # t = threading.Thread(target=forward, args=(sid,))
-    # t.setDaemon(True)
-    # t.start()
-    global thread
-    if thread is None:
-        thread = socket_io.start_background_task(forward, sid)
-    socket_io.emit('data', 'Connect to %s:%s' % (host, port), room=sid)
+    t = threading.Thread(target=forward, args=(sid,))
+    t.setDaemon(True)
+    t.start()
+    # global thread
+    # if thread is None:
+    #     thread = socket_io.start_background_task(forward, sid)
+    socket_io.emit('data', 'Connect to %s:%s \r\n' % (host, port), room=sid)
+    print(t.is_alive())
 
 
 @socket_io.on('data')
@@ -83,8 +84,8 @@ def handle_term_disconnect(sid):
 
 @socket_io.on('resize')
 def handle_term_resize(sid, json):
-    print('term resize: ' + str(json))
-    pass
+
+    print(json)
 
 
 def forward(sid):
@@ -94,12 +95,6 @@ def forward(sid):
     except KeyError as e:
         socket_io.emit('data', e, room=sid)
         return
-
-    for i in range(1, 10):
-        socket_io.emit('data', 'Forwarding\r\n')
-        socket_io.emit('data', 'Forwarding\r\n')
-        socket_io.sleep(1)
-
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(host, port=port, username='root', password='redhat')
@@ -111,5 +106,4 @@ def forward(sid):
             data = chan.recv(1024)
             if not len(data):
                 break
-            print('Sending data: %s' % data)
-            socket_io.emit('data', 'What is')
+            socket_io.emit('data', data, room=sid)

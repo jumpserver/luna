@@ -57,5 +57,5 @@ class Luna(Flask, AppMixin):
 
 async_mode = None
 app = Luna(__name__, template_folder='dist')
-socket_io = socketio.Server(logger=True, async_mode=async_mode)
+socket_io = socketio.Server(logger=True, async_mode='threading')
 app.wsgi_app = socketio.Middleware(socket_io, app.wsgi_app)
