@@ -5,7 +5,7 @@ import logging
 import time
 
 from flask import Flask
-from flask_socketio import SocketIO
+import socketio
 from jms import AppService, UserService
 from jms.mixin import AppMixin
 
@@ -55,5 +55,7 @@ class Luna(Flask, AppMixin):
 
         return Flask.run(self, host=host, port=port, debug=debug, **options)
 
+async_mode = None
 app = Luna(__name__, template_folder='dist')
-socket_io = SocketIO(app)
+socket_io = socketio.Server(logger=True, async_mode=async_mode)
+app.wsgi_app = socketio.Middleware(socket_io, app.wsgi_app)

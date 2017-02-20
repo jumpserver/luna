@@ -6,8 +6,8 @@ Luna 是Jumpserver项目的web terminal子项目, 用户登陆 Luna可以获取�
 ### Quick start
 
 ```
-$ brew install $(cat mac_requirements.txt)
-$ pip install -r requirements.py
+                                                                                                                      $ brew install $(cat mac_requirements.txt)
+$ pip install --user -r requirements.py -i https://pypi.douban.com/simple
 
 $ export JUMPSERVER_ENDPOINT='http://a-jumpserver-url:port'
   # 或修改配置文件设置 JUMPSERVER_ENDPOINT 

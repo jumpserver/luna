@@ -360,6 +360,7 @@ var AppService = (function () {
                 }
                 else {
                     socket.emit('resize', [col, row]);
+                    console.log('resize');
                     exports.DataStore.term[id]["term"].resize(col, row);
                     ng2_cookies_1.Cookie.set('cols', String(col), 99, '/', document.domain);
                     ng2_cookies_1.Cookie.set('rows', String(row), 99, '/', document.domain);

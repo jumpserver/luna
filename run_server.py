@@ -11,6 +11,11 @@ host = app.config['BIND_HOST']
 port = app.config['LISTEN_PORT']
 
 if __name__ == '__main__':
-    # subprocess.call('gunicorn -k eventlet -b %s:%s -w 4 -n luna run_server:app' % (host, port), shell=True)
-    app.bootstrap()
-    socket_io.run(app, host='0.0.0.0')
+    if socket_io.async_mode == 'threading':
+        app.run(threaded=True)
+    elif socket_io.async_mode == 'eventlet':
+        import eventlet
+        import eventlet.wsgi
+        eventlet.wsgi.server(eventlet.listen(('', 5000)), app)
+    else:
+        print('Unkonw async_mode: ' + socket_io.async_mode)
