@@ -34,8 +34,8 @@ def handle_term_connect(sid, environ):
 
 @socket_io.on('machine')
 def handle_machine(sid, message):
-    clients[sid]['host'] = host = '192.168.152.129'
-    clients[sid]['port'] = port = 22
+    clients[sid]['host'] = host = '120.25.240.109'
+    clients[sid]['port'] = port = 8022
     t = threading.Thread(target=forward, args=(sid,))
     t.setDaemon(True)
     t.start()
@@ -73,7 +73,7 @@ def forward(sid):
         return
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(host, port=port, username='root', password='redhat')
+    ssh.connect(host, port=port, username='jms', password='redhat')
     clients[sid]['ssh'] = ssh
     clients[sid]['chan'] = chan = ssh.invoke_shell()
     while True:
