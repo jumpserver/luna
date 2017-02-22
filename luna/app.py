@@ -36,8 +36,9 @@ class Luna(Flask, AppMixin):
     def run(self, host=None, port=None, debug=None, **options):
         print(time.ctime())
         print('Luna version %s, more see https://www.jumpserver.org' % __version__)
-        print('Starting ssh server at %(host)s:%(port)s' % {'host': self.config['BIND_HOST'],
-                                                            'port': self.config['LISTEN_PORT']})
+        print('Starting ssh server at %(host)s:%(port)s' %
+              {'host': self.config['BIND_HOST'],
+               'port': self.config['LISTEN_PORT']})
         print('Quit the server with CONTROL-C.')
 
         return Flask.run(self, host=host, port=port, debug=debug, **options)
