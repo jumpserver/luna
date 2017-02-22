@@ -17,13 +17,13 @@ __version__ = '0.4.0'
 
 
 class Luna(Flask, AppMixin):
-    default_config = config
     app_service = None
     clients = {}
 
     def bootstrap(self):
-        self.app_service = AppService(app_name=self.config['NAME'],
-                                      endpoint=self.config['JUMPSERVER_ENDPOINT'])
+        self.app_service = AppService(
+            app_name=self.config['NAME'],
+            endpoint=self.config['JUMPSERVER_ENDPOINT'])
         self.app_auth()
         while True:
             if self.check_auth():
@@ -32,10 +32,8 @@ class Luna(Flask, AppMixin):
             else:
                 logging.warn('App auth failed, Access key error or need admin active it')
             time.sleep(5)
-        self.heatbeat()
 
     def run(self, host=None, port=None, debug=None, **options):
-        # self.bootstrap()
         print(time.ctime())
         print('Luna version %s, more see https://www.jumpserver.org' % __version__)
         print('Starting ssh server at %(host)s:%(port)s' % {'host': self.config['BIND_HOST'],
@@ -52,5 +50,6 @@ class Luna(Flask, AppMixin):
 
 async_mode = 'threading'
 app = Luna(__name__, template_folder='dist')
+app.config.update(**config)
 socket_io = socketio.Server(logger=True, async_mode=async_mode)
 app.wsgi_app = socketio.Middleware(socket_io, app.wsgi_app)

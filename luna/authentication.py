@@ -2,42 +2,39 @@
 # ~*~ coding: utf-8 ~*~
 # 
 
-from flask import g, request
-from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth, MultiAuth
+from flask import g, request, redirect
+from functools import wraps, partial
 
+from jms import UserService
 from . import app
 
 
-token_auth = HTTPTokenAuth()
-basic_auth = HTTPBasicAuth()
-auth = MultiAuth(token_auth, basic_auth)
+def is_authenticate():
+    pass
 
 
-@basic_auth.verify_password
-def verify_password(username, password):
-    return True
-    user = app.user_service.login(username=username, password=password, remote_addr=request.remote_addr)
-    if not user:
-        g.current_user = None
-        return False
-    else:
-        g.current_user = user
-        return True
+def login_required(login_url=None):
+    if login_url is None:
+        endpoint = app.config['JUMPSERVER_ENDPOINT']
+        login_url = endpoint.rstrip('/') + '/users/login?next=' + request.url
+        return partial(login_required, login_url=login_url)
+
+    def decorate(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            session_id = request.cookies.get('sessionid', '')
+            csrf_token = request.cookies.get('csrf_token', '')
+            if '' in [session_id, csrf_token]:
+                return redirect(login_url)
+
+            g.user_service = UserService.auth_from_session(session_id, csrf_token)
+            if g.user_service.is_authenticate():
+                return func(*args, **kwargs)
+            else:
+                return redirect(login_url)
+        return wrapper
+    return decorate
 
 
-@token_auth.verify_token
-def verify_token(token):
-    return True
-    if getattr(g, 'token') and g.token == token:
-        return True
-    else:
-        return False
 
 
-#@app.before_request
-#@auth.login_required
-#def before_request():
-#    print('Request start')
-#    if g.current_user is None:
-#        print('User is None')
-#        return unauthorized('Invalid credentials')
