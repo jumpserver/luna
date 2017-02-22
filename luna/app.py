@@ -5,9 +5,8 @@ import time
 
 from flask import Flask
 import socketio
-from jms import AppService, UserService
-from jms.mixin import AppMixin
 from .conf import config
+from .service import service
 
 
 logger = logging.getLogger(__file__)
@@ -16,22 +15,10 @@ logger = logging.getLogger(__file__)
 __version__ = '0.4.0'
 
 
-class Luna(Flask, AppMixin):
-    app_service = None
+class Luna(Flask):
+    app_service = service
     clients = {}
-
-    def bootstrap(self):
-        self.app_service = AppService(
-            app_name=self.config['NAME'],
-            endpoint=self.config['JUMPSERVER_ENDPOINT'])
-        self.app_auth()
-        while True:
-            if self.check_auth():
-                logging.info('App auth passed')
-                break
-            else:
-                logging.warn('App auth failed, Access key error or need admin active it')
-            time.sleep(5)
+    active = True
 
     def run(self, host=None, port=None, debug=None, **options):
         print(time.ctime())
@@ -43,14 +30,14 @@ class Luna(Flask, AppMixin):
 
         return Flask.run(self, host=host, port=port, debug=debug, **options)
 
-    @classmethod
-    def stop(cls):
-        for i in cls.clients:
+    def stop(self):
+        self.active = False
+        for i in Luna.clients:
             i.disconnect()
         socket_io.stop()
 
 async_mode = 'threading'
 app = Luna(__name__, template_folder='dist')
 app.config.update(**config)
-socket_io = socketio.Server(logger=True, async_mode=async_mode)
+socket_io = socketio.Server(logger=False, async_mode=async_mode)
 app.wsgi_app = socketio.Middleware(socket_io, app.wsgi_app)

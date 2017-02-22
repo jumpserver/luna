@@ -1,18 +1,20 @@
 # ~*~ coding: utf-8 ~*~
-
-#!/usr/bin/env python
-# coding: utf-8
-
+import re
 import select
 import threading
+import socket
 import collections
 import json
 import logging
 
 import paramiko
+import time
+from flask import request, g
 
+from jms.utils import TtyIOParser
 from .. import app, socket_io
 from ..nav import nav
+from ..tasks import command_queue, record_queue
 
 clients = app.clients
 logger = logging.getLogger(__file__)
@@ -39,7 +41,7 @@ def handle_machine(sid, message):
     clients[sid]['host'] = host = '120.25.240.109'
     clients[sid]['port'] = port = 8022
     t = threading.Thread(target=forward, args=(sid,))
-    t.setDaemon(True)
+    t.daemon = True
     t.start()
     socket_io.emit('data', 'Connect to %s:%s \r\n' % (host, port), room=sid)
 
@@ -62,6 +64,8 @@ def handle_term_resize(sid, json):
     logger.debug('Resize term: %s' % json)
 
 
+
+
 def forward(sid):
     try:
         host = clients[sid]['host']
@@ -74,10 +78,11 @@ def forward(sid):
     ssh.connect(host, port=port, username='jms', password='redhat')
     clients[sid]['ssh'] = ssh
     clients[sid]['chan'] = chan = ssh.invoke_shell()
-    while True:
+    while app.active:
         r, w, x = select.select([chan], [], [])
         if chan in r:
             data = chan.recv(1024)
             if not len(data):
                 break
             socket_io.emit('data', data, room=sid)
+    del clients[sid]

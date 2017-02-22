@@ -9,31 +9,33 @@ from jms import UserService
 from . import app
 
 
-def is_authenticate():
+def is_authenticate(user_service):
     pass
 
 
-def login_required(login_url=None):
-    if login_url is None:
-        endpoint = app.config['JUMPSERVER_ENDPOINT']
-        login_url = endpoint.rstrip('/') + '/users/login?next=' + request.url
+def login_required(func=None, login_url=None):
+    if func is None:
         return partial(login_required, login_url=login_url)
 
-    def decorate(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            session_id = request.cookies.get('sessionid', '')
-            csrf_token = request.cookies.get('csrf_token', '')
-            if '' in [session_id, csrf_token]:
-                return redirect(login_url)
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        url = login_url
+        if url is None:
+            endpoint = app.config['JUMPSERVER_ENDPOINT']
+            url = endpoint.rstrip('/') + '/users/login?next=' + request.url
+        session_id = request.cookies.get('sessionid', '')
+        csrf_token = request.cookies.get('csrftoken', '')
 
-            g.user_service = UserService.auth_from_session(session_id, csrf_token)
-            if g.user_service.is_authenticate():
-                return func(*args, **kwargs)
-            else:
-                return redirect(login_url)
-        return wrapper
-    return decorate
+        if '' in [session_id, csrf_token]:
+            return redirect(url)
+
+        g.user_service = UserService(endpoint=app.config['JUMPSERVER_ENDPOINT'])
+        g.user_service.auth_from_session(session_id, csrf_token)
+        if g.user_service.is_authenticated():
+            return func(*args, **kwargs)
+        else:
+            return redirect(login_url)
+    return wrapper
 
 
 
