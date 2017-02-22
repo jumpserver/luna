@@ -6,11 +6,10 @@ from ..authentication import login_required
 from flask import render_template, send_from_directory
 
 
-__all__ = ['index', 'luna', 'send_dist']
+# __all__ = ['index', 'luna', 'send_dist']
 
 
 @app.route('/')
-@login_required
 def index():
     return render_template('index.html')
 
