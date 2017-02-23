@@ -5,6 +5,7 @@ import time
 
 from flask import Flask
 import socketio
+from flask_socketio import SocketIO
 from .conf import config
 from .service import service
 
@@ -16,8 +17,9 @@ __version__ = '0.4.0'
 
 
 class Luna(Flask):
-    app_service = service
+    service = service
     clients = {}
+    proxy_list = {}
     active = True
 
     def run(self, host=None, port=None, debug=None, **options):
@@ -38,6 +40,7 @@ class Luna(Flask):
 
 async_mode = 'threading'
 app = Luna(__name__, template_folder='dist')
+socket_io = SocketIO(app)
 app.config.update(**config)
-socket_io = socketio.Server(logger=False, async_mode=async_mode)
-app.wsgi_app = socketio.Middleware(socket_io, app.wsgi_app)
+#socket_io = socketio.Server(logger=False, async_mode=async_mode)
+#app.wsgi_app = socketio.Middleware(socket_io, app.wsgi_app)

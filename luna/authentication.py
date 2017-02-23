@@ -9,10 +9,6 @@ from jms import UserService
 from . import app
 
 
-def is_authenticate(user_service):
-    pass
-
-
 def login_required(func=None, login_url=None):
     if func is None:
         return partial(login_required, login_url=login_url)
@@ -31,7 +27,9 @@ def login_required(func=None, login_url=None):
 
         g.user_service = UserService(endpoint=app.config['JUMPSERVER_ENDPOINT'])
         g.user_service.auth_from_session(session_id, csrf_token)
-        if g.user_service.is_authenticated():
+        user = g.user_service.is_authenticated()
+        if user:
+            g.user = user
             return func(*args, **kwargs)
         else:
             return redirect(login_url)

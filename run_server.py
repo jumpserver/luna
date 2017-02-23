@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # ~*~ coding: utf-8 ~*~
 
-from luna import app
+import sys
 import os
 
+from luna import app, socket_io
 
 host = app.config['BIND_HOST']
 port = app.config['LISTEN_PORT']
@@ -17,7 +18,9 @@ if __name__ == '__main__':
         pass
 
     try:
-        app.run(threaded=True, host=host, port=port)
+        socket_io.run(app)
+        # app.run(threaded=True, host=host, port=port)
     except KeyboardInterrupt:
         app.stop()
+        sys.exit()
 

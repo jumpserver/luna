@@ -1,20 +1,18 @@
 # ~*~ coding: utf-8 ~*~
-import re
 import select
 import threading
-import socket
 import collections
 import json
 import logging
 
 import paramiko
-import time
 from flask import request, g
 
-from jms.utils import TtyIOParser
+from jms.utils import to_dotmap
 from .. import app, socket_io
 from ..nav import nav
-from ..tasks import command_queue, record_queue
+from ..proxy import ProxyServer
+from ..channel import ProxyChannel
 
 clients = app.clients
 logger = logging.getLogger(__file__)
@@ -25,6 +23,58 @@ __all__ = [
     'handle_data', 'handle_term_disconnect', 'handle_term_resize'
 ]
 
+
+@socket_io.on('nav')
+def handle_api():
+    socket_io.emit('nav', json.dumps(nav))
+
+
+@socket_io.on('connect', namespace='/')
+def handle_term_connect():
+    clients[request.sid] = collections.defaultdict(dict)
+
+
+@socket_io.on('machine')
+def handle_machine(message):
+    sid = request.sid
+    clients[sid]['host'] = host = '120.25.240.109'
+    clients[sid]['port'] = port = 8022
+    user = to_dotmap({'username': 'root', 'name': 'redhat'})
+    asset = to_dotmap({'hostname': host, 'ip': host, 'port': 8022})
+    # win_width = request.cookies.get('col')
+    # win_height = request.cookies.get('row')
+    system_user = to_dotmap({'name': 'jms', 'username': 'jms', 'id': 102})
+    clients[sid]['proxy_chan'] = proxy_chan = ProxyChannel(sid)
+    # proxy_chan.set_win_size((win_width, win_height))
+    proxy_server = ProxyServer(app, user, asset, system_user, proxy_chan)
+    socket_io.start_background_task(proxy_server.proxy)
+    # t = threading.Thread(target=proxy_server.proxy, args=())
+    # t.daemon = True
+    # t.start()
+
+
+@socket_io.on('data')
+def handle_data( message):
+    sid = request.sid
+    logger.debug('Receive data: %s' % message)
+    if clients[sid]['proxy_chan']:
+        print('Sending to client channel')
+        clients[sid]['proxy_chan'].write(message)
+
+
+@socket_io.on('disconnect')
+def handle_term_disconnect():
+    sid = request.sid
+    del clients[sid]
+    print('term disconnect')
+
+
+@socket_io.on('resize')
+def handle_term_resize(json):
+    sid = request.sid
+    logger.debug('Resize term: %s' % json)
+
+"""
 
 @socket_io.on('nav')
 def handle_api(sid):
@@ -40,17 +90,25 @@ def handle_term_connect(sid, environ):
 def handle_machine(sid, message):
     clients[sid]['host'] = host = '120.25.240.109'
     clients[sid]['port'] = port = 8022
-    t = threading.Thread(target=forward, args=(sid,))
+    user = to_dotmap({'username': 'root', 'name': 'redhat'})
+    asset = to_dotmap({'hostname': host, 'ip': host, 'port': 8022})
+    # win_width = request.cookies.get('col')
+    # win_height = request.cookies.get('row')
+    system_user = to_dotmap({'name': 'jms', 'username': 'jms', 'id': 102})
+    clients[sid]['proxy_chan'] = proxy_chan = ProxyChannel(sid)
+    # proxy_chan.set_win_size((win_width, win_height))
+    proxy_server = ProxyServer(app, user, asset, system_user, proxy_chan)
+    t = threading.Thread(target=proxy_server.proxy, args=())
     t.daemon = True
     t.start()
-    socket_io.emit('data', 'Connect to %s:%s \r\n' % (host, port), room=sid)
 
 
 @socket_io.on('data')
 def handle_data(sid, message):
     logger.debug('Receive data: %s' % message)
-    if clients[sid]['chan']:
-        clients[sid]['chan'].send(message)
+    if clients[sid]['proxy_chan']:
+        print('Sending to client channel')
+        clients[sid]['proxy_chan'].write(message)
 
 
 @socket_io.on('disconnect')
@@ -62,11 +120,12 @@ def handle_term_disconnect(sid):
 @socket_io.on('resize')
 def handle_term_resize(sid, json):
     logger.debug('Resize term: %s' % json)
+"""
 
-
-
+### Only for test ###
 
 def forward(sid):
+    print(request)
     try:
         host = clients[sid]['host']
         port = clients[sid]['port']
@@ -86,3 +145,14 @@ def forward(sid):
                 break
             socket_io.emit('data', data, room=sid)
     del clients[sid]
+
+
+def handle(p):
+    while True:
+        r, w, x = select.select([p], [], [])
+        if p in r:
+            data = p.recv(1024)
+            if len(data) == 0:
+                break
+            print("Recieve client: %s" % data)
+
