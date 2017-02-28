@@ -328,6 +328,8 @@ var AppService = (function () {
         socket.on('connect', function () {
             socket.emit('machine', uuid);
             exports.DataStore.term[id]["term"].on('data', function (data) {
+                // console.log(data);
+                // socket.emit('data', 'echo 你好');
                 socket.emit('data', data);
             });
             socket.on('data', function (data) {

@@ -41,20 +41,20 @@ def handle_machine(message):
     clients[sid]['port'] = port = 8022
     user = to_dotmap({'username': 'root', 'name': 'redhat'})
     asset = to_dotmap({'hostname': host, 'ip': host, 'port': 8022})
-    # win_width = request.cookies.get('col')
-    # win_height = request.cookies.get('row')
+    win_width = request.cookies.get('cols')
+    win_height = request.cookies.get('rows')
     system_user = to_dotmap({'name': 'jms', 'username': 'jms', 'id': 102})
     clients[sid]['proxy_chan'] = proxy_chan = ProxyChannel(sid)
-    # proxy_chan.set_win_size((win_width, win_height))
-    proxy_server = ProxyServer(app, user, asset, system_user, proxy_chan)
+    proxy_chan.set_win_size((win_width, win_height))
+    stop_event = threading.Event()
+    clients[sid]['stop_event'] = stop_event
+    proxy_server = ProxyServer(app, user, asset, system_user,
+                               proxy_chan, stop_event)
     socket_io.start_background_task(proxy_server.proxy)
-    # t = threading.Thread(target=proxy_server.proxy, args=())
-    # t.daemon = True
-    # t.start()
 
 
 @socket_io.on('data')
-def handle_data( message):
+def handle_data(message):
     sid = request.sid
     logger.debug('Receive data: %s' % message)
     if clients[sid]['proxy_chan']:

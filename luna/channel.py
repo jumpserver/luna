@@ -16,7 +16,7 @@ class ProxyChannel(object):
 
     def send(self, s):
         """Proxy server中使用select, 通过socketio发送给用户"""
-        return socket_io.emit('data', s, root=self.sid)
+        return socket_io.emit('data', s, room=self.sid)
 
     def recv(self, size):
         """Proxy server使用select, 接受socketio客户端数据发送来的数据"""
@@ -24,10 +24,17 @@ class ProxyChannel(object):
 
     def write(self, s):
         """socket io写数据,proxy可以通过recv收到"""
-        print('Client write message: %s' % s)
         self.cli.send(s)
 
     def set_win_size(self, size):
-        self.win_width, self.win_height = size
+        win_width, win_height = size
+        try:
+            self.win_width = int(win_width)
+            self.win_height = int(win_height)
+        except TypeError:
+            pass
 
+    def close(self):
+        self.srv.close()
+        self.cli.close()
 
