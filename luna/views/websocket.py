@@ -1,11 +1,7 @@
 # ~*~ coding: utf-8 ~*~
-import select
 import threading
 import collections
 import json
-import logging
-
-import paramiko
 from flask import request, g
 
 from jms.utils import to_dotmap
