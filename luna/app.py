@@ -75,5 +75,3 @@ async_mode = 'gevent'
 app = Luna(__name__, template_folder='dist')
 socket_io = SocketIO(app, async_mode=async_mode)
 app.config.update(**config)
-#socket_io = socketio.Server(logger=False, async_mode=async_mode)
-#app.wsgi_app = socketio.Middleware(socket_io, app.wsgi_app)

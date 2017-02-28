@@ -22,12 +22,12 @@ LOG_LEVELS = {
 }
 
 
-def create_logger():
+def create_logger(app):
     level = config.get('LOG_LEVEL', None)
     level = LOG_LEVELS.get(level, logging.INFO)
     log_dir = config.get('LOG_DIR', os.path.join(PROJECT_DIR, 'logs'))
     log_path = os.path.join(log_dir, 'luna.log')
-    logger_root = logging.getLogger()
+    logger_root = app.logger
     logger = logging.getLogger(config.get('NAME', 'luna'))
 
     main_formatter = logging.Formatter(
@@ -45,7 +45,7 @@ def create_logger():
     logger.setLevel(level)
 
 
-# def get_logger(name):
-#     return logging.getLogger('luna.%s' % name)
-#
-# # create_logger()
+def get_logger(name):
+    return logging.getLogger('luna.%s' % name)
+
+create_logger(app)
