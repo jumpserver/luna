@@ -70,7 +70,7 @@ exports.DataStore = {
     term: [],
     termActive: 0,
     leftbarhide: false,
-    termlist: [],
+    termlist: []
 };
 var AppService = (function () {
     function AppService(http, _router, _logger) {
