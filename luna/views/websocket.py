@@ -15,8 +15,9 @@ logger = app.logger
 
 
 __all__ = [
-    'handle_api', 'handle_term_connect', 'handle_machine',
-    'handle_data', 'handle_term_disconnect', 'handle_term_resize'
+    'handle_nav', 'handle_term_connect', 'handle_machine',
+    'handle_data', 'handle_term_disconnect', 'handle_term_resize',
+    'handle_assets',
 ]
 
 
