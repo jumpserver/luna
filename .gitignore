@@ -1,5 +1,5 @@
 .idea
 *.pyc
 *.pyo
-luna/keys/.access_key
+.access_key
 logs/*.log
