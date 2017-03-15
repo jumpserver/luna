@@ -21,8 +21,49 @@ __all__ = [
 
 
 @socket_io.on('nav')
-def handle_api():
+def handle_nav():
     socket_io.emit('nav', json.dumps(nav))
+
+
+@socket_io.on('assets')
+def handle_assets():
+    groups_assets = {
+        'DB': [
+            {
+                'id': 1,
+                'hostname': 'test-db-1',
+                'ip': '192.168.1.1',
+                'system_users': [
+                    {
+                        'id': 3,
+                        'name': '测试环境web',
+                        'username': 'web'
+                    },
+                    {
+                        'id': 6,
+                        'name': '测试环境sa',
+                        'username': 'sa'
+                    },
+                ]
+            }
+        ],
+        'JAVA': [
+            {
+                'id': 3,
+                'hostname': 'test1-java',
+                'ip': '120.25.240.109',
+                'port': 8022,
+                'system_users': [
+                    {
+                        'id': 3,
+                        'name': 'web',
+                        'username': 'web'
+                    }
+                ]
+            }
+        ]
+    }
+    socket_io.emit('assets', json.dumps(groups_assets))
 
 
 @socket_io.on('connect', namespace='/')
