@@ -1,0 +1,596 @@
+/*  @import url("https://fonts.googleapis.com/css?family=Roboto:100,400,700,300"); */
+
+@font-face {
+    font-family: Roboto;
+    src: url('./fonts/roboto-light-webfont.ttf'), url('./fonts/roboto-light-webfont.eot');
+    /* IE9+ */
+    font-weight: bold;
+}
+
+@font-face {
+    font-family: iosevka;
+    src: url('./fonts/iosevka-light.ttf');
+    font-weight: normal;
+}
+
+html,
+body,
+div,
+span,
+applet,
+object,
+iframe,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+blockquote,
+pre,
+a,
+abbr,
+acronym,
+address,
+big,
+cite,
+code,
+del,
+dfn,
+em,
+font,
+img,
+ins,
+kbd,
+q,
+s,
+samp,
+small,
+strike,
+strong,
+sub,
+sup,
+tt,
+var,
+b,
+u,
+i,
+center,
+dl,
+dt,
+dd,
+ol,
+ul,
+li,
+fieldset,
+form,
+label,
+legend,
+table,
+caption,
+tbody,
+tfoot,
+thead,
+tr,
+th,
+td {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    outline: 0;
+    vertical-align: top;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    overflow: hidden;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background-color: black;
+}
+
+body > div {
+    position: absolute;
+    width: 100%;
+    top: 30px;
+    bottom: 0px;
+}
+
+nav {
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    position: absolute;
+    display: inline-block;
+    top: 0;
+    left: 0;
+    height: 30px;
+    width: 100%;
+    color: #323a4e;
+    background-color: #463e3e;
+    background-repeat: no-repeat;
+    background-position: 100% 50%;
+    z-index: 5;
+    transition: background 0.2s ease-out;
+}
+
+nav .nav {
+    display: block;
+    margin-top: 2px;
+    height: 30px
+}
+
+nav .nav ul {
+    list-style-type: none;
+    line-height: 24px;
+}
+
+nav .nav li {
+    display: inline-block;
+}
+
+nav .nav a {
+    color: #f0f0f1;
+    text-decoration: none;
+    padding: 6px 15px 6px 15px;
+}
+
+nav .nav a:hover {
+    color: #fff;
+    cursor: pointer
+}
+
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown:hover {
+    background-color: #2d2828;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: black;
+    color: #c6bcbc;
+    padding: 4px 0;
+    z-index: 999;
+    float: none;
+    list-style: none;
+    line-height: normal;
+    direction: ltr;
+    width: auto;
+    top: auto;
+    left: 0px;
+    margin-left: 0px;
+    margin-top: 0px;
+    min-width: 150px;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+nav .nav .dropdown-content li {
+    float: left;
+    display: flex;
+}
+
+nav .nav .dropdown-content li a {
+    padding: 6px 14px 6px 25px;
+    white-space: nowrap;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    position: relative;
+    text-decoration: none;
+    min-width: 150px;
+    line-height: normal;
+}
+
+nav .nav .dropdown-content li a span {
+    float: right;
+}
+
+.dropdown-content li:hover {
+    background-color: #3a3333;
+    color: black;
+}
+
+.dropdown-content li.disabled:hover {
+    background-color: black;
+}
+
+.dropdown-content li.disabled a {
+    color: #c5babc;
+}
+
+.dropdown-content li.disabled a:hover {
+    cursor: default;
+    color: #c5babc;
+}
+
+#liuzheng {
+    font-family: 'Monaco', iosevka;
+    font-size: 11px
+}
+
+#editor {
+    position: absolute;
+    width: 97%;
+    height: 90%;
+}
+
+#editor > * {
+    font: 12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+}
+
+#page-wrapper {
+    min-height: 0px;
+}
+
+#left-bar {
+    width: 200px;
+    position: absolute;
+    bottom: 0;
+    top: 0;
+}
+
+#left-bar * {
+    width: 200px;
+    position: absolute;
+    bottom: 0;
+    top: 0;
+}
+
+#left-bar ul {
+    height: 100%
+}
+
+#left-bar.hideleftbar {
+    left: -198px;
+}
+
+#ngdiv.hideleftbar {
+    left: 2px !important;
+}
+
+.hidden {
+    display: none
+}
+
+.ui-menu {
+    width: 100px;
+    z-index: 3;
+    /* over ext-wide titles */
+    font: 12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace !important;
+}
+
+.ui-icon {
+    width: 16px;
+    height: 16px;
+    text-indent: 0 !important;
+    padding: 0;
+    display: block;
+    overflow: hidden;
+}
+
+.fa-size-1p3em {
+    font-size: 1.3em;
+}
+
+.ui-state-active {
+    border: none !important;
+    background-color: black !important;
+}
+
+.fa.fa-caret-right.fa-size-1p3em {
+    float: right !important;
+    position: initial !important;
+    background-color: inherit !important;
+}
+
+.ui-menu.ui-widget.ui-widget-content {
+    padding-right: 0 !important;
+    color: white;
+    background-color: #463e3e;
+    border: none;
+}
+
+.ui-menu-item:hover {
+    background-color: #2d2828;
+}
+
+.ui-state-disabled.ui-menu-item:hover {
+    background-color: inherit;
+}
+
+ul.fancytree-container {
+    border: none !important;
+    background: rgb(47, 42, 42);
+    color: rgb(214, 203, 203)
+}
+
+ul.fancytree-container span.fancytree-title {
+    color: rgb(214, 203, 203)
+}
+
+span.fancytree-active span,
+span.fancytree-selected span {
+    color: #fff;
+}
+
+span.fancytree-active span.fancytree-title,
+span.fancytree-selected span.fancytree-title {
+    color: #fff;
+    background: transparent;
+}
+
+span.fancytree-expanded {
+    color: #fff;
+}
+
+span.fancytree-expanded span.fancytree-title {
+    color: #fff;
+    background: transparent;
+}
+
+.fancytree-node span {
+    vertical-align: middle;
+}
+
+span.fancytree-icon {
+    background-image: none !important;
+}
+
+.ui-menu .ui-menu-item {
+    position: relative;
+    padding: 3px 1em 3px .4em;
+}
+
+.ui-menu-icons .ui-menu-item {
+    padding-left: 2em;
+    padding-right: 0;
+}
+
+.ui-menu .ui-icon {
+    position: absolute;
+    padding: 0;
+    top: 0;
+    bottom: 0;
+    left: .2em;
+    margin: auto 0;
+}
+
+#ngdiv {
+    position: fixed;
+    right: 0;
+    left: 200px;
+    top: 30px;
+    bottom: 0;
+}
+
+.terminal {
+    border: #000 solid 5px;
+    font-family: 'Monaco', iosevka;
+    font-size: 11px;
+    color: #f0f0f0;
+    background: #000;
+    box-shadow: rgba(0, 0, 0, 0.8) 2px 2px 20px;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+#term .terminal div span {
+    min-width: 12px;
+}
+
+.reverse-video {
+    color: #000;
+    background: #f0f0f0;
+}
+
+.termChangBar {
+    line-height: 1;
+    margin: 0 auto;
+    border: 1px solid #ffffff;
+    color: #fff;
+    background-color: #ffffff;
+    position: fixed;
+    right: 0;
+    top: 0;
+}
+
+#testBar {
+    font-family: iosevka;
+    height: 200px;
+    width: 200px;
+    top: 450px;
+    left: 300px;
+    background-color: white;
+    position: absolute
+}
+
+#ngdiv ul {
+    list-style-type: none;
+    height: 30px;
+    background-color: #3a3333;
+    overflow-y: hidden;
+    overflow-x: auto;
+    width: 100%;
+    display: inline-flex;
+}
+
+#ngdiv ul li {
+    display: inline-table;
+    width: 150px;
+    height: 30px;
+    position: relative;
+}
+
+#ngdiv ul li span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: gray;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    text-decoration: none;
+    padding: 6px 20px 6px 15px;
+    cursor: default;
+    width: 115px;
+    height: 21px;
+    position: absolute;
+}
+
+#ngdiv ul li a.close {
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    position: absolute;
+    color: gray;
+    top: 0;
+    right: 5px;
+    cursor: pointer;
+    line-height: 26px;
+    display: inline-block;
+}
+
+#ngdiv ul li.active a {
+    color: white;
+}
+
+#ngdiv ul li.active span {
+    padding: 5px 20px 4px 15px;
+    color: white;
+    height: 18px;
+    border-bottom: 3px solid #7f3f98 !important;
+}
+
+#ngdiv ul li input {
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    width: 115px;
+    border: none;
+    background-color: inherit;
+    color: white;
+    padding: 5px 20px 4px 15px;
+    height: 18px;
+    border-bottom: 3px solid #7f3f98 !important;
+}
+
+#tabs ul li.disconnected {
+    background-color: darkgray;
+}
+
+.layui-layer.layui-layer-dialog.layui-layer-prompt.layer-anim textarea {
+    height: 160px;
+    width: 300px;
+    resize: none;
+}
+
+.left-search {
+    padding: 0;
+    width: 100%;
+    border: none;
+    height: 90%;
+}
+
+
+/* login form */
+
+form {
+    position: relative;
+    width: 250px;
+    margin: 0 auto;
+    background: rgba(130, 130, 130, .3);
+    padding: 20px 22px;
+    border: 1px solid;
+    border-top-color: rgba(255, 255, 255, .4);
+    border-left-color: rgba(255, 255, 255, .4);
+    border-bottom-color: rgba(60, 60, 60, .4);
+    border-right-color: rgba(60, 60, 60, .4);
+}
+
+form input,
+form button {
+    width: 212px;
+    border: 1px solid;
+    border-bottom-color: rgba(255, 255, 255, .5);
+    border-right-color: rgba(60, 60, 60, .35);
+    border-top-color: rgba(60, 60, 60, .35);
+    border-left-color: rgba(80, 80, 80, .45);
+    background-color: rgba(0, 0, 0, .2);
+    background-repeat: no-repeat;
+    padding: 8px 24px 8px 10px;
+    font: bold .875em/1.25em "Monaco", Roboto, sans-serif;
+    letter-spacing: .075em;
+    color: #fff;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .1);
+    margin-bottom: 19px;
+}
+
+form input:focus {
+    background-color: rgba(0, 0, 0, .4);
+}
+
+.from-group {
+    position: relative;
+}
+
+.form-control-feedback {
+    position: absolute;
+    color: #ffffff;
+    top: 2px;
+    right: 2px;
+    z-index: 2;
+    display: block;
+    width: 34px;
+    height: 34px;
+    line-height: 34px;
+    text-align: center;
+    pointer-events: none;
+    font-weight: 400;
+    font-size: 18px;
+}
+
+::-webkit-input-placeholder {
+    color: #ccc;
+    text-transform: uppercase;
+}
+
+::-moz-placeholder {
+    color: #ccc;
+    text-transform: uppercase;
+}
+
+:-ms-input-placeholder {
+    color: #ccc;
+    text-transform: uppercase;
+}
+
+form button[type=submit] {
+    width: 248px;
+    margin-bottom: 0;
+    color: greenyellow;
+    letter-spacing: .05em;
+    text-shadow: 0 1px 0 #133d3e;
+    text-transform: uppercase;
+    background: #225556;
+    border-top-color: #9fb5b5;
+    border-left-color: #608586;
+    border-bottom-color: #1b4849;
+    border-right-color: #1e4d4e;
+    cursor: pointer;
+}
+
+
+/* login form end */
