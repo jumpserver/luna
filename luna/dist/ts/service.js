@@ -36,6 +36,7 @@ var User = (function () {
         this.name = '';
         this.username = '';
         this.password = '';
+        this.phone = '';
         this.avatar = 'root.png';
         this.role = '';
         this.email = '';
@@ -70,7 +71,8 @@ exports.DataStore = {
     term: [],
     termActive: 0,
     leftbarhide: false,
-    termlist: []
+    termlist: [],
+    windowsize: [],
 };
 var AppService = (function () {
     function AppService(http, _router, _logger) {
@@ -104,43 +106,46 @@ var AppService = (function () {
             exports.DataStore.socket.on('popup', function (data) {
                 layer.msg(data);
             });
-            exports.DataStore.socket.emit('nav');
+            exports.DataStore.socket.emit('api', 'all');
         });
+        this.checklogin();
     }
-    AppService.prototype.checklogin = function (path) {
+    AppService.prototype.checklogin = function () {
         var _this = this;
+        var that = this;
         this._logger.log('service.ts:AppService,checklogin');
         if (exports.DataStore.Path)
-            if (exports.DataStore.Path['name'] == 'FOF' || exports.DataStore.Path['name'] == 'Forgot')
-                jQuery('angular2').show();
+            if (exports.DataStore.Path['name'] == 'FOF' || exports.DataStore.Path['name'] == 'Forgot') {
+            }
             else {
                 if (exports.DataStore.logined) {
                     this._router.navigate([exports.DataStore.Path['name']]);
-                    jQuery('angular2').show();
                 }
                 else {
                     this.http.get('/api/checklogin')
                         .map(function (res) { return res.json(); })
                         .subscribe(function (data) {
                         exports.DataStore.logined = data.logined;
+                        exports.DataStore.user = data.user;
                     }, function (err) {
                         _this._logger.error(err);
                         exports.DataStore.logined = false;
                         _this._router.navigate(['Login']);
                     }, function () {
                         if (exports.DataStore.logined) {
-                            _this._logger.info(exports.DataStore.Path);
-                            _this._router.navigate([exports.DataStore.Path['name'], exports.DataStore.Path['res']]);
+                            if (jQuery.isEmptyObject(exports.DataStore.Path))
+                                _this._router.navigate(["Index", "/"]);
+                            else
+                                _this._router.navigate([exports.DataStore.Path['name'], exports.DataStore.Path['res']]);
                         }
                         else
                             _this._router.navigate(['Login']);
-                        jQuery('angular2').show();
+                        // jQuery('angular2').show();
                     });
                 }
             }
         else {
             this._router.navigate(['FOF']);
-            jQuery('angular2').show();
         }
     };
     AppService.prototype.login = function (user) {
@@ -151,19 +156,24 @@ var AppService = (function () {
             this.http.post('/api/checklogin', JSON.stringify(user)).map(function (res) { return res.json(); })
                 .subscribe(function (data) {
                 exports.DataStore.logined = data.logined;
+                exports.DataStore.user = data.user;
             }, function (err) {
                 _this._logger.error(err);
                 exports.DataStore.logined = false;
                 _this._router.navigate(['Login']);
                 exports.DataStore.error['login'] = '后端错误,请重试';
             }, function () {
-                if (exports.DataStore.logined)
-                    _this._router.navigate([exports.DataStore.Path['name'], exports.DataStore.Path['res']]);
+                if (exports.DataStore.logined) {
+                    if (jQuery.isEmptyObject(exports.DataStore.Path))
+                        _this._router.navigate(["Index", "/"]);
+                    else
+                        _this._router.navigate([exports.DataStore.Path['name'], exports.DataStore.Path['res']]);
+                }
                 else {
                     exports.DataStore.error['login'] = '请检查用户名和密码';
                     _this._router.navigate(['Login']);
                 }
-                jQuery('angular2').show();
+                // jQuery('angular2').show();
             });
         else
             exports.DataStore.error['login'] = '请检查用户名和密码';
@@ -208,6 +218,16 @@ var AppService = (function () {
     // //         this._dataObserver.next(user);
     //         // this.myinfo$ = new Observable(observer => this._dataObserver = observer).share()
     //     }
+    AppService.prototype.getnav = function () {
+        this._logger.log('service.ts:AppService,getnav');
+        return this.http.get('/api/nav')
+            .map(function (res) { return res.json(); })
+            .subscribe(function (response) {
+            exports.DataStore.Nav = response;
+            // this._logger.warn(this._dataStore.user);
+            // this._logger.warn(DataStore.user)
+        });
+    };
     AppService.prototype.getMyinfo = function () {
         this._logger.log('service.ts:AppService,getMyinfo');
         return this.http.get('/api/userprofile')
@@ -291,8 +311,9 @@ var AppService = (function () {
     //         });
     //
     // }
-    AppService.prototype.TerminalConnect = function (uuid) {
+    AppService.prototype.TerminalConnect = function (assetData) {
         var socket = io.connect();
+        var vm = this;
         if (ng2_cookies_1.Cookie.get("cols")) {
             var cols = ng2_cookies_1.Cookie.get("cols");
         }
@@ -324,20 +345,19 @@ var AppService = (function () {
             document.title = title;
         });
         exports.DataStore.term[id]["term"].open(document.getElementById('term-' + id));
-        exports.DataStore.term[id]["term"].write('\x1b[32mWelcome to Jumpserver!\x1b[m\r\n');
+        exports.DataStore.term[id]["term"].write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
         socket.on('connect', function () {
-            socket.emit('machine', uuid);
+            socket.emit('machine', assetData);
             exports.DataStore.term[id]["term"].on('data', function (data) {
-                // console.log(data);
-                // socket.emit('data', 'echo 你好');
                 socket.emit('data', data);
             });
             socket.on('data', function (data) {
                 exports.DataStore.term[id]["term"].write(data);
             });
             socket.on('disconnect', function () {
-                exports.DataStore.term[id]["term"].destroy();
-                exports.DataStore.term[id]["connected"] = false;
+                vm.TerminalDisconnect(id);
+                // DataStore.term[id]["term"].destroy();
+                // DataStore.term[id]["connected"] = false;
             });
             window.onresize = function () {
                 var col = Math.floor(jQuery("#term").width() / jQuery("#liuzheng").width() * 8) - 3;
@@ -361,9 +381,10 @@ var AppService = (function () {
                 if (cols == col && row == rows) {
                 }
                 else {
-                    socket.emit('resize', [col, row]);
-                    console.log('resize');
-                    exports.DataStore.term[id]["term"].resize(col, row);
+                    for (var termid in exports.DataStore.term) {
+                        exports.DataStore.term[termid]["socket"].emit('resize', [col, row]);
+                        exports.DataStore.term[termid]["term"].resize(col, row);
+                    }
                     ng2_cookies_1.Cookie.set('cols', String(col), 99, '/', document.domain);
                     ng2_cookies_1.Cookie.set('rows', String(row), 99, '/', document.domain);
                 }
@@ -377,9 +398,7 @@ var AppService = (function () {
     };
     AppService.prototype.TerminalDisconnectAll = function () {
         for (var i in exports.DataStore.term) {
-            exports.DataStore.term[i]["connected"] = false;
-            exports.DataStore.term[i]["socket"].destroy();
-            exports.DataStore.term[i]["term"].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+            this.TerminalDisconnect(i);
         }
     };
     AppService.prototype.Search = function (q) {

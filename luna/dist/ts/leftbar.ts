@@ -1,57 +1,64 @@
 /**
  * Created by liuzheng on 7/12/16.
  */
-"use strict";
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-var core_1 = require('@angular/core');
-var core_2 = require("angular2-logger/core");
-require('rxjs/Rx');
-var service_1 = require('./service');
-var SearchBar = (function () {
-    function SearchBar(_appService, _logger) {
-        this._appService = _appService;
-        this._logger = _logger;
+
+import {Component, OnChanges, Input} from '@angular/core';
+import {NgClass}    from '@angular/common';
+import {ROUTER_DIRECTIVES} from '@angular/router-deprecated';
+import {Logger} from "angular2-logger/core";
+
+import  'rxjs/Rx';
+declare var jQuery:any;
+
+import {AppService, DataStore} from './service'
+
+@Component({
+    selector: 'search-bar',
+    template: `<input class="left-search" placeholder=" Search ..." maxlength="2048" name="q" autocomplete="off" title="Search"
+       type="text" tabindex="1" spellcheck="false" autofocus [(ngModel)]="q" (keyup.enter)="search()"
+       (ngModelChange)="modelChange($event)">`
+})
+class SearchBar implements OnChanges {
+    @Input() input;
+    q:string;
+
+    constructor(private _appService:AppService,
+                private _logger:Logger) {
         this._logger.log('LeftbarComponent.ts:SearchBar');
     }
-    SearchBar.prototype.ngOnChanges = function (changes) {
+
+    ngOnChanges(changes) {
         this.q = changes.input.currentValue;
-    };
-    SearchBar.prototype.modelChange = function ($event) {
-        this._appService.Search(this.q);
-    };
-    __decorate([
-        core_1.Input(), 
-        __metadata('design:type', Object)
-    ], SearchBar.prototype, "input", void 0);
-    SearchBar = __decorate([
-        core_1.Component({
-            selector: 'search-bar',
-            template: "<input class=\"left-search\" placeholder=\" Search ...\" maxlength=\"2048\" name=\"q\" autocomplete=\"off\" title=\"Search\"\n       type=\"text\" tabindex=\"1\" spellcheck=\"false\" autofocus [(ngModel)]=\"q\" (keyup.enter)=\"search()\"\n       (ngModelChange)=\"modelChange($event)\">"
-        }), 
-        __metadata('design:paramtypes', [service_1.AppService, core_2.Logger])
-    ], SearchBar);
-    return SearchBar;
-}());
-var LeftbarComponent = (function () {
-    function LeftbarComponent(_appService, _logger) {
-        this._appService = _appService;
-        this._logger = _logger;
-        this.DataStore = service_1.DataStore;
-        this._logger.log('LeftbarComponent.ts:LeftbarComponent');
-        this._logger.debug("check DataStroe.leftbar", service_1.DataStore.leftbar);
     }
-    LeftbarComponent.prototype.ngOnInit = function () {
+
+    modelChange($event) {
+        this._appService.Search(this.q)
+    }
+}
+
+@Component({
+    selector: 'div',
+    template: `<div style="height:30px;width:100%;background-color: #00b3ee">
+    <search-bar></search-bar></div>`,
+    directives: [SearchBar],
+})
+
+
+export class LeftbarComponent {
+    DataStore = DataStore;
+
+    constructor(private _appService:AppService,
+                private _logger:Logger) {
+        this._logger.log('LeftbarComponent.ts:LeftbarComponent');
+        this._logger.debug("check DataStroe.leftbar", DataStore.leftbar);
+    }
+
+    ngOnInit() {
         this._logger.log('LeftbarComponent.ts:LeftbarComponent,ngOnInit');
-    };
-    LeftbarComponent.prototype.ngAfterViewInit = function () {
+
+    }
+
+    ngAfterViewInit() {
         this._logger.log('LeftbarComponent.ts:LeftbarComponent,ngAfterViewInit');
         jQuery("#left-bar").fancytree({
             extensions: ["glyph"],
@@ -76,47 +83,54 @@ var LeftbarComponent = (function () {
                     folderOpen: "fa fa-cubes"
                 }
             },
-            source: { url: service_1.DataStore.leftbar },
-            activeVisible: true,
-            aria: true,
-            autoActivate: true,
-            autoCollapse: true,
-            autoScroll: true,
-            clickFolderMode: 3,
-            checkbox: true,
-            debugLevel: 0,
-            disabled: false,
-            focusOnSelect: true,
-            escapeTitles: false,
-            generateIds: true,
-            idPrefix: "ft_",
-            icon: true,
+            source: {url: DataStore.leftbar},
+            activeVisible: true, // Make sure, active nodes are visible (expanded).
+            aria: true, // Enable WAI-ARIA support.
+            autoActivate: true, // Automatically activate a node when it is focused (using keys).
+            autoCollapse: true, // Automatically collapse all siblings, when a node is expanded.
+            autoScroll: true, // Automatically scroll nodes into visible area.
+            clickFolderMode: 3, // 1:activate, 2:expand, 3:activate and expand, 4:activate (dblclick expands)
+            checkbox: true, // Show checkboxes.
+            debugLevel: 0, // 0:quiet, 1:normal, 2:debug
+            disabled: false, // Disable control
+            focusOnSelect: true, // Set focus when node is checked by a mouse click
+            escapeTitles: false, // Escape `node.title` content for display
+            generateIds: true, // Generate id attributes like <span id='fancytree-id-KEY'>
+            idPrefix: "ft_", // Used to generate node id´s like <span id='fancytree-id-<key>'>.
+            icon: true, // Display node icons.
+
             // icon: function (event, data) {
             //     if (data.node.isFolder()) {
             //         return "glyphicon glyphicon-book";
             //     }
             // },
-            keyboard: false,
-            keyPathSeparator: "/",
-            minExpandLevel: 1,
-            quicksearch: true,
-            selectMode: 3,
-            tabindex: "0",
-            titlesTabbable: false,
+            keyboard: false, // Support keyboard navigation.
+            keyPathSeparator: "/", // Used by node.getKeyPath() and tree.loadKeyPath().
+            minExpandLevel: 1, // 1: root node is not collapsible
+            quicksearch: true, // Navigate to next node by typing the first letters.
+            selectMode: 3, // 1:single, 2:multi, 3:multi-hier
+            tabindex: "0", // Whole tree behaves as one single control
+            titlesTabbable: false, // Node titles can receive keyboard focus
             dblclick: function (event, data) {
                 console.log('leftbar dbclick', event, data);
                 if (!data.node.folder) {
-                    var param = {
+                    let param = {
                         'assetId': data.node.data.id,
                         'sysUserId': data.node.data.system_users[0].id,
                     };
-                    service_1.DataStore.termlist.push(param);
+                    DataStore.termlist.push(param);
+                    // DataStore.termActive = DataStore.term.push({
+                    //         "machine": data.node.data.machine,
+                    //         "nick": data.node.title
+                    //     }) - 1;
                 }
+
             },
         });
+
         jQuery("#left-bar").contextmenu({
             delegate: "span.fancytree-title",
-            hide: { effect: "explode", duration: "slow" },
+            hide: {effect: "explode", duration: "slow"},
             menu: [
                 {
                     "title": "Cut",
@@ -169,6 +183,7 @@ var LeftbarComponent = (function () {
                 // Modify menu entries depending on node status
                 jQuery("#left-bar").contextmenu("enableEntry", "paste", node.isFolder());
                 // Show/hide single entries
+
                 // Activate node on right-click
                 node.setActive();
             },
@@ -177,22 +192,15 @@ var LeftbarComponent = (function () {
                 alert("select " + ui.cmd + " on " + node);
             }
         });
-    };
-    LeftbarComponent.prototype.getSelect = function () {
+    }
+
+    getSelect() {
         jQuery('#left-bar').fancytree('getTree').getSelectedNodes();
-    };
-    LeftbarComponent.prototype.Hide = function () {
-        this._appService.HideLeft();
-    };
-    LeftbarComponent = __decorate([
-        core_1.Component({
-            selector: 'div',
-            template: "<div style=\"height:30px;width:100%;background-color: #00b3ee\">\n    <search-bar></search-bar></div>",
-            directives: [SearchBar],
-        }), 
-        __metadata('design:paramtypes', [service_1.AppService, core_2.Logger])
-    ], LeftbarComponent);
-    return LeftbarComponent;
-}());
-exports.LeftbarComponent = LeftbarComponent;
-//# sourceMappingURL=leftbar.js.map
+    }
+
+    Hide() {
+        this._appService.HideLeft()
+    }
+
+
+}

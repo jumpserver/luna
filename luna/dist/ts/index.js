@@ -22,6 +22,24 @@ var nav_1 = require('./nav');
 var leftbar_1 = require('./leftbar');
 // import {SomeComponent} from './copy-model';
 var terminal_1 = require('./terminal');
+var login_1 = require('./login');
+var hostedit_1 = require('./hostedit');
+//noinspection TypeScriptValidateTypes
+var WorkboardComponent = (function () {
+    function WorkboardComponent() {
+        this.DataStore = service_1.DataStore;
+    }
+    WorkboardComponent = __decorate([
+        core_1.Component({
+            selector: "div",
+            template: "<div id=\"left-bar\" [ngClass]=\"{'hideleftbar':DataStore.leftbarhide}\"></div>\n<term id=\"ngdiv\" [ngClass]=\"{'hideleftbar':DataStore.leftbarhide}\"></term>",
+            directives: [leftbar_1.LeftbarComponent, terminal_1.TermComponent]
+        }), 
+        __metadata('design:paramtypes', [])
+    ], WorkboardComponent);
+    return WorkboardComponent;
+}());
+exports.WorkboardComponent = WorkboardComponent;
 //noinspection TypeScriptValidateTypes
 var IndexComponent = (function () {
     function IndexComponent() {
@@ -30,7 +48,8 @@ var IndexComponent = (function () {
     IndexComponent = __decorate([
         core_1.Component({
             selector: "div",
-            template: "<div id=\"left-bar\" [ngClass]=\"{'hideleftbar':DataStore.leftbarhide}\"></div>\n<term id=\"ngdiv\" [ngClass]=\"{'hideleftbar':DataStore.leftbarhide}\"></term>",
+            // template: `<div style="background-color: white">Thank you for using <a [routerLink]="['WorkboardComponent']">Bifrost</a></div>`,
+            template: "<div id=\"left-bar\" *ngIf=\"!DataStore.leftbarhide\"></div>\n<term id=\"ngdiv\" [ngClass]=\"{'hideleftbar':DataStore.leftbarhide}\"></term>",
             directives: [leftbar_1.LeftbarComponent, terminal_1.TermComponent]
         }), 
         __metadata('design:paramtypes', [])
@@ -48,6 +67,7 @@ exports.IndexComponent = IndexComponent;
 //noinspection TypeScriptValidateTypes
 var AppComponent = (function () {
     function AppComponent() {
+        this.DataStore = service_1.DataStore;
     }
     AppComponent = __decorate([
         core_1.Component({
@@ -57,8 +77,11 @@ var AppComponent = (function () {
             providers: [service_1.AppService, router_deprecated_1.ROUTER_PROVIDERS]
         }),
         router_deprecated_1.RouteConfig([
-            { path: '/', name: 'Index', component: IndexComponent, useAsDefault: true },
+            { path: '/login', name: 'Login', component: login_1.LoginComponent },
+            { path: '/', name: 'Index', component: IndexComponent },
             { path: '/aaa', name: 'Aaaa', component: IndexComponent },
+            { path: '/bifrost', name: 'WorkboardComponent', component: WorkboardComponent },
+            { path: '/hostedit', name: 'HostEdit', component: hostedit_1.HostEditComponent },
         ]), 
         __metadata('design:paramtypes', [])
     ], AppComponent);

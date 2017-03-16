@@ -24,7 +24,7 @@ var NavComponent = (function () {
         this._logger = _logger;
         this.DataStore = service_1.DataStore;
         this._logger.log('nav.ts:NavComponent');
-        // this._appService.getnav()
+        this._appService.getnav();
     }
     NavComponent.prototype.ngOnInit = function () {
     };
@@ -76,7 +76,7 @@ var NavComponent = (function () {
     NavComponent = __decorate([
         core_1.Component({
             selector: 'nav',
-            template: "<div class=\"nav\">\n    <ul>\n        <li><a [routerLink]=\"['Index']\"><img src=\"./imgs/logo.png\" height=\"26px\"/></a>\n        </li>\n        <li *ngFor=\"let v of DataStore.Nav; let k = index \" [ngClass]=\"{'dropdown': v.children}\">\n            <a>{{v.name}}</a>\n            <ul [ngClass]=\"{'dropdown-content': v.children}\">\n                <li *ngFor=\"let vv of v.children; let kk = index\" [ngClass]=\"{'disabled': vv.disable}\">\n                    <a *ngIf=\"vv.href\" [routerLink]=\"[vv.href]\">{{vv.name}}</a>\n                    <a id=\"{{vv.id}}\" *ngIf=\"vv.click\" (click)=\"click(vv.click)\">{{vv.name}}</a>\n                </li>\n            </ul>\n        </li>\n    </ul>\n</div>",
+            template: "<div class=\"nav\" *ngIf=\"DataStore.logined\">\n    <ul>\n        <li><a [routerLink]=\"['Index']\"><img src=\"./imgs/logo.png\" height=\"26px\"/></a>\n        </li>\n        <li *ngFor=\"let v of DataStore.Nav; let k = index \" [ngClass]=\"{'dropdown': v.children}\">\n            <a>{{v.name}}</a>\n            <ul [ngClass]=\"{'dropdown-content': v.children}\">\n                <li *ngFor=\"let vv of v.children; let kk = index\" [ngClass]=\"{'disabled': vv.disable}\">\n                    <a *ngIf=\"vv.href\" [routerLink]=\"[vv.href]\">{{vv.name}}</a>\n                    <a id=\"{{vv.id}}\" *ngIf=\"vv.click\" (click)=\"click(vv.click)\">{{vv.name}}</a>\n                </li>\n            </ul>\n        </li>\n    </ul>\n</div>",
             directives: [router_deprecated_1.ROUTER_DIRECTIVES, common_1.NgClass]
         }), 
         __metadata('design:paramtypes', [service_1.AppService, core_2.Logger])
