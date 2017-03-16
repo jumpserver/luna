@@ -76,6 +76,7 @@ def checklogin():
     })
 
 
+@login_required
 @app.route('/api/userprofile')
 def profile():
     return jsonify({
