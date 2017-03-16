@@ -36,11 +36,6 @@ def handle_term_connect():
 def handle_machine(message):
     print('Get message: {}'.format(message))
     sid = request.sid
-    time.sleep(1)
-    emit(message)
-    time.sleep(10)
-    socket_io.disconnect()
-    return
     clients[sid]['host'] = host = '120.25.240.109'
     clients[sid]['port'] = port = 8022
     user = to_dotmap({'username': 'root', 'name': 'redhat'})
