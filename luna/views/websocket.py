@@ -1,8 +1,10 @@
 # ~*~ coding: utf-8 ~*~
 import threading
 import collections
+import time
 import json
 from flask import request, g
+from flask_socketio import send, emit
 
 from jms.utils import to_dotmap
 from .. import app, socket_io
@@ -34,10 +36,9 @@ def handle_term_connect():
 def handle_machine(message):
     print('Get message: {}'.format(message))
     sid = request.sid
-    message_json = json.loads(message)
-    asset_id = message_json.get('assetId', 0)
-    system_user_id = message_json.get('sysUserId', 0)
-    socket_io.emit('data', 'Connect assetId: {} sysUserId: {}'.format(asset_id, system_user_id))
+    time.sleep(1)
+    emit(message)
+    time.sleep(10)
     socket_io.disconnect()
     return
     clients[sid]['host'] = host = '120.25.240.109'
