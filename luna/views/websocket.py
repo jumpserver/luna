@@ -17,54 +17,12 @@ logger = app.logger
 __all__ = [
     'handle_nav', 'handle_term_connect', 'handle_machine',
     'handle_data', 'handle_term_disconnect', 'handle_term_resize',
-    'handle_assets',
 ]
 
 
 @socket_io.on('nav')
 def handle_nav():
     socket_io.emit('nav', json.dumps(nav))
-
-
-@socket_io.on('assets')
-def handle_assets():
-    groups_assets = {
-        'DB': [
-            {
-                'id': 1,
-                'hostname': 'test-db-1',
-                'ip': '192.168.1.1',
-                'system_users': [
-                    {
-                        'id': 3,
-                        'name': '测试环境web',
-                        'username': 'web'
-                    },
-                    {
-                        'id': 6,
-                        'name': '测试环境sa',
-                        'username': 'sa'
-                    },
-                ]
-            }
-        ],
-        'JAVA': [
-            {
-                'id': 3,
-                'hostname': 'test1-java',
-                'ip': '120.25.240.109',
-                'port': 8022,
-                'system_users': [
-                    {
-                        'id': 3,
-                        'name': 'web',
-                        'username': 'web'
-                    }
-                ]
-            }
-        ]
-    }
-    socket_io.emit('assets', json.dumps(groups_assets))
 
 
 @socket_io.on('connect', namespace='/')
@@ -74,7 +32,14 @@ def handle_term_connect():
 
 @socket_io.on('machine')
 def handle_machine(message):
+    print('Get message: {}'.format(message))
     sid = request.sid
+    message_json = json.loads(message)
+    asset_id = message_json.get('assetId', 0)
+    system_user_id = message_json.get('sysUserId', 0)
+    socket_io.emit('data', 'Connect assetId: {} sysUserId: {}'.format(asset_id, system_user_id))
+    socket_io.disconnect()
+    return
     clients[sid]['host'] = host = '120.25.240.109'
     clients[sid]['port'] = port = 8022
     user = to_dotmap({'username': 'root', 'name': 'redhat'})
