@@ -67,7 +67,7 @@ module.exports = function(grunt) {
             main: {
                 dest: 'luna/dist/main.min.js',
                 src: 'luna/src/js/main.js'
-                // files: [
+                    // files: [
                     // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/luna/src/ts/index.ts' },
                     // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/leftbar.ts' },
                     // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/nav.ts' },
@@ -76,28 +76,46 @@ module.exports = function(grunt) {
                     // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/login.ts' },
                     // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/hostedit.ts' },
 
-                    // { filter: 'isFile', dest: 'luna/dist/', src: 'luna/src/js/main.js' },
+                // { filter: 'isFile', dest: 'luna/dist/', src: 'luna/src/js/main.js' },
 
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/index.js' },
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/leftbar.js' },
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/nav.js' },
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/terminal.js' },
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/service.js' },
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/login.js' },
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/hostedit.js' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/index.js' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/leftbar.js' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/nav.js' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/terminal.js' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/service.js' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/login.js' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/hostedit.js' },
 
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/index.js.map' },
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/leftbar.js.map' },
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/nav.js.map' },
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/terminal.js.map' },
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/service.js.map' },
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/login.js.map' },
-                    // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/hostedit.js.map' }
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/index.js.map' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/leftbar.js.map' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/nav.js.map' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/terminal.js.map' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/service.js.map' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/login.js.map' },
+                // { filter: 'isFile', dest: 'luna/dist/ts/', src: 'luna/src/ts/hostedit.js.map' }
                 // ]
             },
+            // ts: {
+            //     dest: 'luna/dist/ts/**',
+            //     src: 'luna/src/ts/**'
+            // }
             ts: {
-                dest: 'luna/dist/',
-                src: 'luna/src/ts/**'
+                files: [{
+                    expand: true,
+                    filter: 'isFile',
+                    cwd: 'luna/src/ts',
+                    src: '**',
+                    dest: 'luna/dist/ts/'
+                }]
+            },
+            fonts: {
+                files: [{
+                    expand: true,
+                    filter: 'isFile',
+                    cwd: 'luna/src/fonts',
+                    src: '**',
+                    dest: 'luna/dist/fonts'
+                }]
             }
 
         },

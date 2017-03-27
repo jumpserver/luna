@@ -2,14 +2,14 @@
 
 @font-face {
     font-family: Roboto;
-    src: url('./fonts/roboto-light-webfont.ttf'), url('./fonts/roboto-light-webfont.eot');
+    src: url('fonts/roboto-light-webfont.ttf'), url('fonts/roboto-light-webfont.eot');
     /* IE9+ */
     font-weight: bold;
 }
 
 @font-face {
     font-family: iosevka;
-    src: url('./fonts/iosevka-light.ttf');
+    src: url('fonts/iosevka-light.ttf');
     font-weight: normal;
 }
 
