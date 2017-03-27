@@ -52,6 +52,13 @@ def leftbar():
     return jsonify(response)
 
 
+@app.route('/api/search')
+def search():
+    with open(os.path.join(API_MOCK_DIR, 'search')) as f:
+        response = json.load(f)
+    return jsonify(response)
+
+
 @app.route('/api/leftbarrightclick')
 def leftbarrightclick():
     with open(os.path.join(API_MOCK_DIR, 'leftbarrightclick')) as f:

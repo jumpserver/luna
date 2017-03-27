@@ -1,7 +1,7 @@
 {
-  "name": "bifrost",
+  "name": "Luna",
   "version": "0.0.1",
-  "description": "Gabriel's web",
+  "description": "Jumpserver web terminal",
   "main": "index.js",
   "scripts": {
     "start": "grunt && tsc && concurrently \"npm run tsc:w\" \"npm run lite\" ",
@@ -14,9 +14,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@code.simcu.com:jumpserver/Bifrost.git"
+    "url": "https://github.com/jumpserver/luna.git"
   },
-  "author": "liuzheng712",
+  "author": "liuzheng712,sofia",
   "license": "ISC",
   "dependencies": {
     "@angular/common": "2.0.0-rc.4",

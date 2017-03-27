@@ -1,0 +1,50 @@
+[
+  {
+    "title": "JAVA",
+    "id": "2",
+    "folder": true,
+    "children": [
+      {
+        "title": "java-test-1",
+        "id": "3",
+        "ip":"192.168.1.1",
+        "system_users": [
+          {
+              "id": 3,
+              "name": "测试环境web",
+              "username": "web"
+          }
+        ]
+      },
+      {
+        "title": "java-test-2",
+        "id": "4",
+        "ip":"192.168.1.2",
+        "system_users": [
+          {
+              "id": 3,
+              "name": "测试环境web",
+              "username": "web"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "MySQL",
+    "id": "2",
+    "folder": true,
+    "children": [
+      {
+        "title": "mysql-1",
+        "id": "3",
+        "ip": "192.168.3.1"
+      },
+      {
+        "title": "msyql-master",
+        "id": "4",
+        "ip": "192.168.2.3"
+      }
+    ]
+  }
+]
