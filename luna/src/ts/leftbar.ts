@@ -77,10 +77,10 @@ export class LeftbarComponent {
                     loading: "fa fa-spinner fa-pulse",
                     // Default node icons.
                     // (Use tree.options.icon callback to define custom icons based on node data)
-                    doc: "fa fa-cube",
-                    docOpen: "fa fa-cube",
-                    folder: "fa fa-cubes",
-                    folderOpen: "fa fa-cubes"
+                    doc: "fa fa-file",
+                    docOpen: "fa fa-file-o",
+                    folder: "fa fa-folder",
+                    folderOpen: "fa fa-folder-open-o"
                 }
             },
             source: {url: DataStore.leftbar},
@@ -90,7 +90,7 @@ export class LeftbarComponent {
             autoCollapse: true, // Automatically collapse all siblings, when a node is expanded.
             autoScroll: true, // Automatically scroll nodes into visible area.
             clickFolderMode: 3, // 1:activate, 2:expand, 3:activate and expand, 4:activate (dblclick expands)
-            checkbox: true, // Show checkboxes.
+            checkbox: false, // Show checkboxes.
             debugLevel: 0, // 0:quiet, 1:normal, 2:debug
             disabled: false, // Disable control
             focusOnSelect: true, // Set focus when node is checked by a mouse click
@@ -130,7 +130,7 @@ export class LeftbarComponent {
 
         jQuery("#left-bar").contextmenu({
             delegate: "span.fancytree-title",
-            hide: {effect: "explode", duration: "slow"},
+            hide: {effect: "basic", duration: "slow"},
             menu: [
                 {
                     "title": "Cut",

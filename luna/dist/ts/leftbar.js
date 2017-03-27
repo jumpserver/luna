@@ -70,10 +70,10 @@ var LeftbarComponent = (function () {
                     loading: "fa fa-spinner fa-pulse",
                     // Default node icons.
                     // (Use tree.options.icon callback to define custom icons based on node data)
-                    doc: "fa fa-cube",
-                    docOpen: "fa fa-cube",
-                    folder: "fa fa-cubes",
-                    folderOpen: "fa fa-cubes"
+                    doc: "fa fa-file",
+                    docOpen: "fa fa-file-o",
+                    folder: "fa fa-folder",
+                    folderOpen: "fa fa-folder-open-o"
                 }
             },
             source: { url: service_1.DataStore.leftbar },
@@ -83,7 +83,7 @@ var LeftbarComponent = (function () {
             autoCollapse: true,
             autoScroll: true,
             clickFolderMode: 3,
-            checkbox: true,
+            checkbox: false,
             debugLevel: 0,
             disabled: false,
             focusOnSelect: true,
@@ -116,7 +116,7 @@ var LeftbarComponent = (function () {
         });
         jQuery("#left-bar").contextmenu({
             delegate: "span.fancytree-title",
-            hide: { effect: "explode", duration: "slow" },
+            hide: { effect: "basic", duration: "slow" },
             menu: [
                 {
                     "title": "Cut",
