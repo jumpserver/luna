@@ -114,7 +114,7 @@ module.exports = function(grunt) {
                     filter: 'isFile',
                     cwd: 'luna/src/fonts',
                     src: '**',
-                    dest: 'luna/dist/fonts'
+                    dest: 'luna/dist/fonts/'
                 }]
             }
 

@@ -244,18 +244,16 @@ nav .nav .dropdown-content li a span {
     bottom: 0;
     top: 0;
 }
-
-#left-bar * {
-    width: 200px;
-    position: absolute;
-    bottom: 0;
-    top: 0;
-}
-
 #left-bar ul {
     height: 100%
 }
-
+#left-bar input {
+    box-sizing: border-box;
+    padding: 0 10px;
+    background: rgb(47, 42, 42);
+    color: #fff;
+    outline: none;
+}
 #left-bar.hideleftbar {
     left: -198px;
 }
@@ -328,20 +326,28 @@ span.fancytree-active span,
 span.fancytree-selected span {
     color: #fff;
 }
-
+.fancytree-treefocus span.fancytree-active span.fancytree-title,
+.fancytree-treefocus span.fancytree-selected span.fancytree-title { 
+    color: #fff;
+    background: rgb(47, 42, 42);
+}
+span.fancytree-treefocus span.fancytree-title,
 span.fancytree-active span.fancytree-title,
 span.fancytree-selected span.fancytree-title {
     color: #fff;
-    background: transparent;
+    background: rgb(47, 42, 42);
 }
-
+.fancytree-treefocus span.fancytree-active span.fancytree-title,
+.fancytree-treefocus span.fancytree-selected span.fancytree-title {
+    background: rgb(47, 42, 42);
+}
 span.fancytree-expanded {
     color: #fff;
 }
 
 span.fancytree-expanded span.fancytree-title {
     color: #fff;
-    background: transparent;
+    background: rgb(47, 42, 42);
 }
 
 .fancytree-node span {
