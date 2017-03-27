@@ -176,11 +176,12 @@ class ProxyServer(object):
     def proxy(self):
         self.backend_channel = backend_channel = self.connect()
         client_channel = self.client_channel
-        self.app.proxy_list[self.proxy_log_id] = \
-            [self.client_channel, backend_channel]
 
         if backend_channel is None:
             return
+
+        self.app.proxy_list[self.proxy_log_id] = \
+            [self.client_channel, backend_channel]
 
         while not self.stop_event.set():
             r, w, x = select.select([client_channel, backend_channel], [], [])
