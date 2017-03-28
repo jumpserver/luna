@@ -2,9 +2,11 @@
 
 import os
 
+from . import __version__
 from .. import app
 from ..authentication import login_required
-from flask import render_template, send_from_directory, make_response, jsonify
+from flask import render_template, send_from_directory, make_response, \
+    jsonify, request, g
 import json
 
 
@@ -33,9 +35,7 @@ def send_dist(path):
 
 @app.route('/api/version')
 def version():
-    with open(os.path.join(API_MOCK_DIR, 'version')) as f:
-        response = json.load(f)
-    return jsonify(response)
+    return jsonify(__version__)
 
 
 @app.route('/api/nav')
