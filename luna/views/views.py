@@ -39,6 +39,7 @@ def version():
 
 
 @app.route('/api/nav')
+@login_required
 def nav():
     with open(os.path.join(API_MOCK_DIR, 'nav')) as f:
         response = json.load(f)
@@ -46,9 +47,18 @@ def nav():
 
 
 @app.route('/api/leftbar')
+@login_required
 def leftbar():
-    with open(os.path.join(API_MOCK_DIR, 'leftbar')) as f:
-        response = json.load(f)
+    response = []
+    user_service = g.user_service
+    asset_groups_assets = user_service.get_my_asset_groups_assets()
+    for asset_group in asset_groups_assets:
+        asset_group['title'] = asset_group['name']
+        asset_group['children'] = asset_group['assets']
+        asset_group['folder'] = True
+        for asset in asset_group['children']:
+            asset['title'] = asset['hostname']
+        response.append(asset_group)
     return jsonify(response)
 
 
