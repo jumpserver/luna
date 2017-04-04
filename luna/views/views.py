@@ -5,8 +5,8 @@ import os
 from . import __version__
 from .. import app
 from ..authentication import login_required
-from flask import render_template, send_from_directory, make_response, \
-    jsonify, request, g
+from flask import render_template, send_from_directory, \
+    jsonify, g
 import json
 
 
@@ -52,6 +52,7 @@ def leftbar():
     response = []
     user_service = g.user_service
     asset_groups_assets = user_service.get_my_asset_groups_assets()
+
     for asset_group in asset_groups_assets:
         asset_group['title'] = asset_group['name']
         asset_group['children'] = asset_group['assets']

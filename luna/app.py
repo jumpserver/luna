@@ -46,6 +46,12 @@ class Luna(Flask):
                     backend_channel.close()
                     client_channel.close()
 
+            data = {
+                "proxy_log_id": proxy_log_id,
+                "date_finished": time.time(),
+            }
+            self.service.finish_proxy_log(data)
+
     def heatbeat(self):
         def _keep():
             while True:

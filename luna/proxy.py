@@ -91,8 +91,6 @@ class ProxyServer(object):
         self.input = parser.parse_input(b''.join(self.input_data))
 
     def validate_user_asset_permission(self):
-        # Todo: Only test
-        return True
         return self.service.validate_user_asset_permission(
             self.user.id, self.asset.id, self.system_user.id)
 

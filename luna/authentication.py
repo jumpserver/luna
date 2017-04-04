@@ -30,6 +30,11 @@ def login_required(func=None, login_url=None):
         user = g.user_service.is_authenticated()
         if user:
             g.user = user
+            assets = g.user_service.get_my_assets()
+            assets_dict = dict()
+            for asset in assets:
+                assets_dict[asset['id']] = asset
+            g.assets = assets_dict
             return func(*args, **kwargs)
         else:
             return redirect(login_url)
