@@ -28,7 +28,7 @@ class ProxyServer(object):
     We also record the command and result to database for audit
 
     """
-    ENTER_CHAR = ['\r', '\n', '\r\n']
+    ENTER_CHAR = ('\r', '\n', '\r\n')
     OUTPUT_END_PATTERN = re.compile(r'\x1b]0;.+@.+:.+\x07.*')
     VIM_PATTERN = re.compile(r'\x1b\[\?1049', re.X)
     IGNORE_OUTPUT_COMMAND = [re.compile(r'^cat\s+'),
@@ -61,7 +61,7 @@ class ProxyServer(object):
 
     def is_finish_input(self, s):
         for char in s:
-            if char in self.ENTER_CHAR:
+            if chr(char) in self.ENTER_CHAR:
                 return True
         return False
 
@@ -97,7 +97,7 @@ class ProxyServer(object):
     def get_asset_auth(self, system_user):
         return self.service.get_system_user_auth_info(system_user)
 
-    def connect(self, term=b'xterm', width=80, height=24, timeout=10):
+    def connect(self, term='xterm', width=80, height=24, timeout=10):
         user = self.user
         asset = self.asset
         system_user = self.system_user
@@ -105,7 +105,6 @@ class ProxyServer(object):
         try:
             width = int(client_channel.win_width)
             height = int(client_channel.win_height)
-            print('term %s*%s' % (width, height))
         except TypeError:
             pass
         if not self.validate_user_asset_permission():

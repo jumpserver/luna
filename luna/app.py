@@ -3,12 +3,14 @@
 import logging
 import time
 import threading
+from gevent import monkey
 
 from flask import Flask
 from flask_socketio import SocketIO
 from .conf import config
 from .service import service
 
+monkey.patch_all()
 
 logger = logging.getLogger(__file__)
 
@@ -63,7 +65,6 @@ class Luna(Flask):
                     tasks = result.get('tasks')
                     if tasks:
                         logger.info('Receive task: %s' % tasks)
-                        print(tasks)
                         self.handle_task(tasks)
                 time.sleep(config.HEATBEAT_INTERVAL)
 

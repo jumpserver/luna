@@ -54,11 +54,15 @@ def leftbar():
     asset_groups_assets = user_service.get_my_asset_groups_assets()
 
     for asset_group in asset_groups_assets:
+        asset_group = asset_group.toDict()
         asset_group['title'] = asset_group['name']
-        asset_group['children'] = asset_group['assets']
+        asset_group['children'] = asset_group["assets"]
         asset_group['folder'] = True
+        del asset_group['assets']
+        del asset_group['name']
         for asset in asset_group['children']:
             asset['title'] = asset['hostname']
+            del asset['hostname']
         response.append(asset_group)
     return jsonify(response)
 

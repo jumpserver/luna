@@ -3,3 +3,5 @@
 *.pyo
 .access_key
 logs/*.log
+luna.iml
+node_modules

@@ -48,7 +48,6 @@ def get_asset_system_user(asset_id, system_user_id):
 @login_required
 def handle_machine(message):
     sid = request.sid
-    print('Get message: {}'.format(message))
     asset_id = message.get('assetId')
     system_user_id = message.get('sysUserId')
     if not asset_id or not system_user_id:
@@ -86,7 +85,8 @@ def handle_data(message):
 @socket_io.on('disconnect')
 def handle_term_disconnect():
     sid = request.sid
-    del clients[sid]
+    if sid in clients:
+        del clients[sid]
     disconnect()
     print('term disconnect')
 

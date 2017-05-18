@@ -23,13 +23,11 @@ def login_required(func=None, login_url=None):
         csrf_token = request.cookies.get('csrftoken', '')
 
         if '' in [session_id, csrf_token]:
-            print(session_id, csrf_token)
             return redirect(url)
 
         g.user_service = UserService(endpoint=app.config['JUMPSERVER_ENDPOINT'])
         g.user_service.auth_from_session(session_id, csrf_token)
         user = g.user_service.is_authenticated()
-        print(user)
         if user:
             g.user = user
             assets = g.user_service.get_my_assets()
@@ -38,8 +36,6 @@ def login_required(func=None, login_url=None):
                 assets_dict[asset['id']] = asset
             g.assets = assets_dict
             return func(*args, **kwargs)
-        else:
-            print('hello')
     return wrapper
 
 

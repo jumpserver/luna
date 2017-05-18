@@ -1,13 +1,20 @@
-FROM jumpserver/base-env-alpine:latest
-MAINTAINER Jumpserver Team <ibuler@qq.com>
+FROM jumpserver/python:v3.6.1
+LABEL MAINTAINER Jumpserver Team <ibuler@qq.com>
 
-COPY . /opt/jumpserver-web-terminal
-WORKDIR /opt/jumpserver-web-terminal
+COPY . /opt/luna
+WORKDIR /opt/luna
 
-RUN pip install -r requirements.txt -i https://pypi.doubanio.com/simple
+RUN cd requirements && yum -y install $(cat rpm_requirements.txt)
+RUN cd requirements && pip install -r requirements.txt
+RUN yum clean all
+
+VOLUME /opt/luna/logs
+VOLUME /opt/luna/keys
+
+RUN rm -r .git
+RUN rm -f keys/.access_key
+
+RUN cp config_docker.py config.py
+
 EXPOSE 5000
-ENV JUMPSERVER_ENDPOINT ''
-ENV LUNA_ACCESS_KEY ''
-ENV ACCESS_KEY_ENV ''
-ENV ACCESS_KEY_STORE ''
 CMD python run_server.py

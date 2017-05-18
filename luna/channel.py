@@ -16,6 +16,8 @@ class ProxyChannel(object):
 
     def send(self, s):
         """Proxy server中使用select, 通过socketio发送给用户"""
+        if isinstance(s, bytes):
+            s = s.decode("utf-8")
         return socket_io.emit('data', s, room=self.sid)
 
     def recv(self, size):
