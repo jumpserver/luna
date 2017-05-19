@@ -40,6 +40,34 @@ var SearchBar = (function () {
     ], SearchBar);
     return SearchBar;
 }());
+var UserList = (function () {
+    function UserList(_appService, _logger) {
+        this._appService = _appService;
+        this._logger = _logger;
+        this.DataStore = service_1.DataStore;
+        this._logger.log('LeftbarComponent.ts:UserList');
+    }
+    UserList.prototype.ngOnInit = function () {
+    };
+    UserList.prototype.selectUser = function (serverInfo, index) {
+        this.selectedUser = serverInfo.system_users[index];
+        var param = {
+            'assetId': serverInfo.id,
+            'sysUserId': this.selectedUser['id'],
+        };
+        service_1.DataStore.termlist.push(param);
+        service_1.DataStore.loguserlist = [];
+        service_1.DataStore.loguserInfo = {};
+    };
+    UserList = __decorate([
+        core_1.Component({
+            selector: 'select-user-panel',
+            template: "<div class=\"select-user-panel\" *ngIf=\"DataStore.loguserlist.length\"><h2>\u9009\u62E9\u8981\u767B\u5F55\u7684\u8D26\u6237</h2>\n        <div class=\"log-user\" *ngFor=\"let user of DataStore.loguserlist; let i = index\" (click)=\"selectUser(DataStore.loguserInfo, i)\">\n            {{i+1}}: {{user.name}}\n        </div></div>"
+        }), 
+        __metadata('design:paramtypes', [service_1.AppService, core_2.Logger])
+    ], UserList);
+    return UserList;
+}());
 var LeftbarComponent = (function () {
     function LeftbarComponent(_appService, _logger) {
         this._appService = _appService;
@@ -106,11 +134,19 @@ var LeftbarComponent = (function () {
             dblclick: function (event, data) {
                 console.log('leftbar dbclick', event, data);
                 if (!data.node.folder) {
-                    var param = {
-                        'assetId': data.node.data.id,
-                        'sysUserId': data.node.data.system_users[0].id,
-                    };
-                    service_1.DataStore.termlist.push(param);
+                    if (data.node.data.system_users && data.node.data.system_users.length > 1) {
+                        service_1.DataStore.loguserlist = data.node.data.system_users;
+                        service_1.DataStore.loguserInfo = data.node.data;
+                    }
+                    else {
+                        if (data.node.data.system_users && data.node.data.system_users.length > 0) {
+                            var param = {
+                                'assetId': data.node.data.id,
+                                'sysUserId': data.node.data.system_users[0].id,
+                            };
+                            service_1.DataStore.termlist.push(param);
+                        }
+                    }
                 }
             },
         });
@@ -187,8 +223,8 @@ var LeftbarComponent = (function () {
     LeftbarComponent = __decorate([
         core_1.Component({
             selector: 'div',
-            template: "<div style=\"height:30px;width:100%;background-color: #00b3ee\">\n    <search-bar></search-bar></div>",
-            directives: [SearchBar],
+            template: "<div style=\"height:30px;width:100%;background-color: #00b3ee\">\n    <search-bar></search-bar><select-user-panel></select-user-panel></div>",
+            directives: [SearchBar, UserList],
         }), 
         __metadata('design:paramtypes', [service_1.AppService, core_2.Logger])
     ], LeftbarComponent);

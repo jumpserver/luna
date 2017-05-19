@@ -28,7 +28,7 @@ var TermComponent = (function () {
         this.timer();
     };
     TermComponent.prototype.ngAfterViewInit = function () {
-        this._appService.TerminalConnect({});
+        // this._appService.TerminalConnect({});
         //this._logger.debug("term width ", jQuery("#term").width());
         //this._logger.debug("term height", jQuery("#term").height());
     };
@@ -36,7 +36,8 @@ var TermComponent = (function () {
         var _this = this;
         if (service_1.DataStore.termlist.length > 0) {
             for (var i in service_1.DataStore.termlist)
-                this._appService.TerminalConnect(service_1.DataStore.termlist[i]);
+                console.log('-----------------------', service_1.DataStore.termlist[i]);
+            this._appService.TerminalConnect(service_1.DataStore.termlist[i]);
             service_1.DataStore.termlist = [];
         }
         jQuery(window).trigger('resize');

@@ -1,0 +1,168 @@
+{
+  "_args": [
+    [
+      {
+        "raw": "angular2-logger@^0.3.0",
+        "scope": null,
+        "escapedName": "angular2-logger",
+        "name": "angular2-logger",
+        "rawSpec": "^0.3.0",
+        "spec": ">=0.3.0 <0.4.0",
+        "type": "range"
+      },
+      "/Users/liuzheng/gitproject/Jumpserver/Bifrost"
+    ]
+  ],
+  "_cnpm_publish_time": 1462417387136,
+  "_from": "angular2-logger@>=0.3.0 <0.4.0",
+  "_id": "angular2-logger@0.3.0",
+  "_inCache": true,
+  "_installable": true,
+  "_location": "/angular2-logger",
+  "_nodeVersion": "5.8.0",
+  "_npmOperationalInternal": {
+    "host": "packages-12-west.internal.npmjs.com",
+    "tmp": "tmp/angular2-logger-0.3.0.tgz_1462417384745_0.6831560465507209"
+  },
+  "_npmUser": {
+    "name": "langley",
+    "email": "langley.agm@gmail.com"
+  },
+  "_npmVersion": "3.8.2",
+  "_phantomChildren": {},
+  "_requested": {
+    "raw": "angular2-logger@^0.3.0",
+    "scope": null,
+    "escapedName": "angular2-logger",
+    "name": "angular2-logger",
+    "rawSpec": "^0.3.0",
+    "spec": ">=0.3.0 <0.4.0",
+    "type": "range"
+  },
+  "_requiredBy": [
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/angular2-logger/-/angular2-logger-0.3.0.tgz",
+  "_shasum": "9985569d40c814e7ba0ac9f9fd7e6b1e8fd082ea",
+  "_shrinkwrap": null,
+  "_spec": "angular2-logger@^0.3.0",
+  "_where": "/Users/liuzheng/gitproject/Jumpserver/Bifrost",
+  "author": {
+    "name": "Armando Garcia Moran"
+  },
+  "bugs": {
+    "url": "https://github.com/code-chunks/angular2-logger/issues"
+  },
+  "contributors": [
+    {
+      "name": "Armando Garcia",
+      "email": "langley.agm@gmail.com"
+    },
+    {
+      "name": "Juan Hernandez",
+      "email": "juanhersan@gmail.com"
+    }
+  ],
+  "dependencies": {},
+  "description": "A Log4j inspired Logger for Angular 2.",
+  "devDependencies": {
+    "@angular/common": "^2.0.0-rc.1",
+    "@angular/compiler": "^2.0.0-rc.1",
+    "@angular/core": "^2.0.0-rc.1",
+    "@angular/platform-browser": "^2.0.0-rc.1",
+    "@angular/platform-browser-dynamic": "^2.0.0-rc.1",
+    "es6-promise": "^3.0.2",
+    "es6-shim": "^0.35.0",
+    "reflect-metadata": "0.1.2",
+    "rimraf": "^2.5.2",
+    "rxjs": "5.0.0-beta.6",
+    "systemjs": "0.19.27",
+    "tslint": "^3.8.1",
+    "typescript": "^1.8.9",
+    "typings": "^0.8.1",
+    "uglify-js": "^2.6.2",
+    "zone.js": "^0.6.12"
+  },
+  "directories": {},
+  "dist": {
+    "shasum": "9985569d40c814e7ba0ac9f9fd7e6b1e8fd082ea",
+    "size": 13032,
+    "noattachment": false,
+    "tarball": "http://registry.npm.taobao.org/angular2-logger/download/angular2-logger-0.3.0.tgz"
+  },
+  "gitHead": "22cf159fa43f1007ad90399594b84660b59bf1fc",
+  "homepage": "https://github.com/code-chunks/angular2-logger#readme",
+  "keywords": [
+    "log",
+    "angular2",
+    "logger",
+    "angular 2",
+    "angular2-logger",
+    "console",
+    "ng2",
+    "logging",
+    "logmanager",
+    "log manager",
+    "debug",
+    "trace",
+    "error",
+    "info",
+    "warn",
+    "warning",
+    "fatal",
+    "log4j",
+    "log4ng",
+    "log4js",
+    "typescript",
+    "ng",
+    "angular"
+  ],
+  "license": "MIT",
+  "main": "logger.js",
+  "maintainers": [
+    {
+      "name": "langley",
+      "email": "langley.agm@gmail.com"
+    },
+    {
+      "name": "mech543",
+      "email": "juanhersan@gmail.com"
+    }
+  ],
+  "name": "angular2-logger",
+  "optionalDependencies": {},
+  "peerDependencies": {
+    "@angular/common": "^2.0.0-rc.1",
+    "@angular/compiler": "^2.0.0-rc.1",
+    "@angular/core": "^2.0.0-rc.1",
+    "@angular/platform-browser": "^2.0.0-rc.1",
+    "@angular/platform-browser-dynamic": "^2.0.0-rc.1"
+  },
+  "publish_time": 1462417387136,
+  "readme": "ERROR: No README data found!",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/code-chunks/angular2-logger.git"
+  },
+  "scripts": {
+    "build": "npm run minify",
+    "clean": "rimraf *.js *.js.map *.d.ts app/**/*.js app/**/*.js.map app/**/*.d.ts dist bundles",
+    "compile": "npm run compile:bundle && npm run compile:cjs && npm run compile:es6",
+    "compile:bundle": "tsc",
+    "compile:cjs": "tsc -t ES5 --sourceMap --experimentalDecorators --emitDecoratorMetadata --moduleResolution node --declaration core.ts typings/browser",
+    "compile:es6": "tsc -t ES6 --sourceMap --experimentalDecorators --emitDecoratorMetadata --moduleResolution node core.ts --outDir dist/es6",
+    "lint": "npm run tslint",
+    "minify": "uglifyjs -o bundles/angular2-logger.min.js bundles/angular2-logger.js",
+    "postbuild": "echo Build Successful.",
+    "prebuild": "npm run clean && npm run compile && npm run test",
+    "precompile": "typings install",
+    "prepublish": "npm run build",
+    "pretest": "npm run lint",
+    "test": "echo tests pending...",
+    "tsc": "tsc",
+    "tslint": "tslint *.ts src/**/*.ts",
+    "typings": "typings",
+    "uglifyjs": "uglifyjs"
+  },
+  "version": "0.3.0"
+}

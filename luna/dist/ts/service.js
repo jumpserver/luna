@@ -73,6 +73,8 @@ exports.DataStore = {
     leftbarhide: false,
     termlist: [],
     windowsize: [],
+    loguserInfo: {},
+    loguserlist: [],
 };
 var AppService = (function () {
     function AppService(http, _router, _logger) {
@@ -312,6 +314,7 @@ var AppService = (function () {
     //
     // }
     AppService.prototype.TerminalConnect = function (assetData) {
+        console.log('--------------------', assetData);
         var socket = io.connect();
         var vm = this;
         if (ng2_cookies_1.Cookie.get("cols")) {

@@ -1,0 +1,92 @@
+{
+  "_args": [
+    [
+      {
+        "raw": "@angular/router-deprecated@2.0.0-rc.2",
+        "scope": "@angular",
+        "escapedName": "@angular%2frouter-deprecated",
+        "name": "@angular/router-deprecated",
+        "rawSpec": "2.0.0-rc.2",
+        "spec": "2.0.0-rc.2",
+        "type": "version"
+      },
+      "/Users/liuzheng/gitproject/Jumpserver/Bifrost"
+    ]
+  ],
+  "_cnpm_publish_time": 1466015706945,
+  "_from": "@angular/router-deprecated@2.0.0-rc.2",
+  "_id": "@angular/router-deprecated@2.0.0-rc.2",
+  "_inCache": true,
+  "_installable": true,
+  "_location": "/@angular/router-deprecated",
+  "_nodeVersion": "5.4.1",
+  "_npmOperationalInternal": {
+    "host": "packages-12-west.internal.npmjs.com",
+    "tmp": "tmp/router-deprecated-2.0.0-rc.2.tgz_1466015704080_0.16310800914652646"
+  },
+  "_npmUser": {
+    "name": "angular",
+    "email": "angular-core+npm@google.com"
+  },
+  "_npmVersion": "3.9.2",
+  "_phantomChildren": {},
+  "_requested": {
+    "raw": "@angular/router-deprecated@2.0.0-rc.2",
+    "scope": "@angular",
+    "escapedName": "@angular%2frouter-deprecated",
+    "name": "@angular/router-deprecated",
+    "rawSpec": "2.0.0-rc.2",
+    "spec": "2.0.0-rc.2",
+    "type": "version"
+  },
+  "_requiredBy": [
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/@angular/router-deprecated/-/router-deprecated-2.0.0-rc.2.tgz",
+  "_shasum": "6ffdf75f6090a48e9f084a15aa75e7ce1389be53",
+  "_shrinkwrap": null,
+  "_spec": "@angular/router-deprecated@2.0.0-rc.2",
+  "_where": "/Users/liuzheng/gitproject/Jumpserver/Bifrost",
+  "author": {
+    "name": "angular"
+  },
+  "bugs": {
+    "url": "https://github.com/angular/angular/issues"
+  },
+  "dependencies": {},
+  "description": "",
+  "devDependencies": {},
+  "directories": {},
+  "dist": {
+    "shasum": "6ffdf75f6090a48e9f084a15aa75e7ce1389be53",
+    "size": 262470,
+    "noattachment": false,
+    "tarball": "http://registry.npm.taobao.org/@angular/router-deprecated/download/@angular/router-deprecated-2.0.0-rc.2.tgz"
+  },
+  "homepage": "https://github.com/angular/angular#readme",
+  "jsnext:main": "esm/index.js",
+  "license": "MIT",
+  "main": "index.js",
+  "maintainers": [
+    {
+      "name": "angular",
+      "email": "angular-core+npm@google.com"
+    }
+  ],
+  "name": "@angular/router-deprecated",
+  "optionalDependencies": {},
+  "peerDependencies": {
+    "@angular/core": "^2.0.0-rc",
+    "@angular/common": "^2.0.0-rc",
+    "@angular/platform-browser": "^2.0.0-rc"
+  },
+  "publish_time": 1466015706945,
+  "readme": "ERROR: No README data found!",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/angular/angular.git"
+  },
+  "scripts": {},
+  "typins": "index.d.ts",
+  "version": "2.0.0-rc.2"
+}

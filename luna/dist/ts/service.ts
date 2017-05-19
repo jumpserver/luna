@@ -69,6 +69,9 @@ export var DataStore:{
     leftbarhide:boolean,
     termlist:Array<{}>,
     windowsize:Array<number>,
+
+    loguserInfo: {}, // 当前已选服务器信息
+    loguserlist:Array<{}>, // 可用用户列表
 } = {
     socket: io.connect(),
     user: new User,
@@ -88,6 +91,9 @@ export var DataStore:{
     leftbarhide: false,
     termlist: [],
     windowsize: [],
+
+    loguserInfo: {}, // 当前已选服务器信息
+    loguserlist:[], // 可用用户列表
 };
 
 @Injectable()
@@ -372,6 +378,7 @@ export class AppService {
     //
     // }
     TerminalConnect(assetData) {
+        console.log('--------------------', assetData);
         var socket = io.connect();
         var vm = this;
 

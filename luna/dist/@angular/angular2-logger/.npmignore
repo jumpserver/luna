@@ -1,0 +1,24 @@
+
+npm-debug.log*
+
+# Dependency directory
+node_modules
+typings
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+#idea project config files.
+.idea
+*.iml
+
+demos
+
+tsconfig.json
+
+typings.json
+
+.travis.yml

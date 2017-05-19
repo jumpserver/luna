@@ -52,7 +52,7 @@ export class TermComponent {
     }
 
     ngAfterViewInit() {
-        this._appService.TerminalConnect({});
+        // this._appService.TerminalConnect({});
         //this._logger.debug("term width ", jQuery("#term").width());
         //this._logger.debug("term height", jQuery("#term").height());
     }
@@ -60,6 +60,7 @@ export class TermComponent {
     timer() {
         if (DataStore.termlist.length > 0) {
             for (var i in DataStore.termlist)
+                console.log('-----------------------', DataStore.termlist[i]);
                 this._appService.TerminalConnect(DataStore.termlist[i]);
             DataStore.termlist = []
         }

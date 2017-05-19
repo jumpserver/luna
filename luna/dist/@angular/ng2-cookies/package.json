@@ -1,0 +1,106 @@
+{
+  "_args": [
+    [
+      {
+        "raw": "ng2-cookies@^0.1.9",
+        "scope": null,
+        "escapedName": "ng2-cookies",
+        "name": "ng2-cookies",
+        "rawSpec": "^0.1.9",
+        "spec": ">=0.1.9 <0.2.0",
+        "type": "range"
+      },
+      "/Users/liuzheng/gitproject/Jumpserver/Bifrost"
+    ]
+  ],
+  "_cnpm_publish_time": 1468681131763,
+  "_from": "ng2-cookies@>=0.1.9 <0.2.0",
+  "_id": "ng2-cookies@0.1.11",
+  "_inCache": true,
+  "_installable": true,
+  "_location": "/ng2-cookies",
+  "_nodeVersion": "5.7.0",
+  "_npmOperationalInternal": {
+    "host": "packages-16-east.internal.npmjs.com",
+    "tmp": "tmp/ng2-cookies-0.1.11.tgz_1468681130733_0.1951643591746688"
+  },
+  "_npmUser": {
+    "name": "carcamano",
+    "email": "carcamano@gmail.com"
+  },
+  "_npmVersion": "3.6.0",
+  "_phantomChildren": {},
+  "_requested": {
+    "raw": "ng2-cookies@^0.1.9",
+    "scope": null,
+    "escapedName": "ng2-cookies",
+    "name": "ng2-cookies",
+    "rawSpec": "^0.1.9",
+    "spec": ">=0.1.9 <0.2.0",
+    "type": "range"
+  },
+  "_requiredBy": [
+    "/"
+  ],
+  "_resolved": "https://registry.npm.taobao.org/ng2-cookies/download/ng2-cookies-0.1.11.tgz",
+  "_shasum": "d23c9f1e7420f41f1af6e680e6bdb9c1c99b8085",
+  "_shrinkwrap": null,
+  "_spec": "ng2-cookies@^0.1.9",
+  "_where": "/Users/liuzheng/gitproject/Jumpserver/Bifrost",
+  "author": {
+    "name": "Felipe Rebelo Lopes",
+    "email": "carcamano@users.noreply.github.com"
+  },
+  "bugs": {
+    "url": "https://github.com/BCJTI/ng2-cookies/issues"
+  },
+  "dependencies": {},
+  "description": "Simple library to deal with cookies in Angular2.",
+  "devDependencies": {
+    "typescript": "^1.7.3"
+  },
+  "directories": {},
+  "dist": {
+    "shasum": "d23c9f1e7420f41f1af6e680e6bdb9c1c99b8085",
+    "size": 4597,
+    "noattachment": false,
+    "tarball": "http://registry.npm.taobao.org/ng2-cookies/download/ng2-cookies-0.1.11.tgz"
+  },
+  "engines": {
+    "node": ">=4.1.0"
+  },
+  "gitHead": "f696a9658c7af573dcb7b0860fbb66b9897788e3",
+  "homepage": "https://github.com/BCJTI/ng2-cookies#readme",
+  "keywords": [
+    "angular",
+    "angular2",
+    "cookie",
+    "cookies"
+  ],
+  "main": "index.js",
+  "maintainers": [
+    {
+      "name": "bigous",
+      "email": "bigous@gmail.com"
+    },
+    {
+      "name": "carcamano",
+      "email": "carcamano@gmail.com"
+    }
+  ],
+  "name": "ng2-cookies",
+  "optionalDependencies": {},
+  "publish_time": 1468681131763,
+  "readme": "ERROR: No README data found!",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BCJTI/ng2-cookies.git"
+  },
+  "scripts": {
+    "prepublish": "tsc --outDir .",
+    "test": "tsc && karma start",
+    "tsc": "tsc"
+  },
+  "typings": "./index.d.ts",
+  "version": "0.1.11"
+}

@@ -2,7 +2,7 @@
  * Created by liuzheng on 7/12/16.
  */
 
-import {Component, OnChanges, Input} from '@angular/core';
+import {Component, OnChanges, OnInit, Input} from '@angular/core';
 import {NgClass}    from '@angular/common';
 import {ROUTER_DIRECTIVES} from '@angular/router-deprecated';
 import {Logger} from "angular2-logger/core";
@@ -35,12 +35,46 @@ class SearchBar implements OnChanges {
         this._appService.Search(this.q)
     }
 }
+@Component({
+    selector: 'select-user-panel',
+    template: `<div class="select-user-panel" *ngIf="DataStore.loguserlist.length"><h2>选择要登录的账户</h2>
+        <div class="log-user" *ngFor="let user of DataStore.loguserlist; let i = index" (click)="selectUser(DataStore.loguserInfo, i)">
+            {{i+1}}: {{user.name}}
+        </div></div>`
+})
+
+class UserList implements OnInit {
+  DataStore = DataStore;
+  users: Object[];
+  selectedUser: Object;
+  constructor(private _appService:AppService,
+                private _logger:Logger) {
+        this._logger.log('LeftbarComponent.ts:UserList');
+  }
+
+  ngOnInit() {
+  }
+  selectUser(serverInfo, index) {
+
+    this.selectedUser = serverInfo.system_users[index];
+    let param = {
+        'assetId': serverInfo.id,
+        'sysUserId': this.selectedUser['id'],
+    };
+    DataStore.termlist.push(param);
+    DataStore.loguserlist = [];
+    DataStore.loguserInfo = {};
+  }
+}
+
+
+
 
 @Component({
     selector: 'div',
     template: `<div style="height:30px;width:100%;background-color: #00b3ee">
-    <search-bar></search-bar></div>`,
-    directives: [SearchBar],
+    <search-bar></search-bar><select-user-panel></select-user-panel></div>`,
+    directives: [SearchBar, UserList],
 })
 
 
@@ -114,11 +148,20 @@ export class LeftbarComponent {
             dblclick: function (event, data) {
                 console.log('leftbar dbclick', event, data);
                 if (!data.node.folder) {
-                    let param = {
-                        'assetId': data.node.data.id,
-                        'sysUserId': data.node.data.system_users[0].id,
-                    };
-                    DataStore.termlist.push(param);
+                    if (data.node.data.system_users && data.node.data.system_users.length > 1) {
+                        DataStore.loguserlist = data.node.data.system_users;
+                        DataStore.loguserInfo = data.node.data;
+                    } else {
+                        if (data.node.data.system_users && data.node.data.system_users.length > 0) {
+                            let param = {
+                                'assetId': data.node.data.id,
+                                'sysUserId': data.node.data.system_users[0].id,
+                            };
+                            DataStore.termlist.push(param);
+                        }
+                        
+                    }
+                    
                     // DataStore.termActive = DataStore.term.push({
                     //         "machine": data.node.data.machine,
                     //         "nick": data.node.title
