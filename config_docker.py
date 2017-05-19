@@ -4,7 +4,7 @@ import os
 
 DEBUG = True
 # NAME = 'luna'
-# BIND_HOST = '0.0.0.0'
+BIND_HOST = '0.0.0.0'
 # LISTEN_PORT = 5000
 JUMPSERVER_ENDPOINT = os.environ.get("JUMPSERVER_ENDPOINT") or 'http://jumpserver:8080/'
 # ACCESS_KEY = None

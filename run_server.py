@@ -22,8 +22,7 @@ if __name__ == '__main__':
         command_task.run()
         record_task.run()
         app.bootstrap()
-        socket_io.run(app)
-        # app.run(threaded=True, host=host, port=port)
+        socket_io.run(app, host=host, port=port)
     except KeyboardInterrupt:
         app.stop()
         sys.exit()
