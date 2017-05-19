@@ -5,3 +5,5 @@
 logs/*.log
 luna.iml
 node_modules
+dist
+.DS_Store
