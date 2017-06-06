@@ -35,9 +35,9 @@ var TermComponent = (function () {
     TermComponent.prototype.timer = function () {
         var _this = this;
         if (service_1.DataStore.termlist.length > 0) {
-            for (var i in service_1.DataStore.termlist)
-                console.log('-----------------------', service_1.DataStore.termlist[i]);
-            this._appService.TerminalConnect(service_1.DataStore.termlist[i]);
+            for (var i in service_1.DataStore.termlist) {
+                this._appService.TerminalConnect(service_1.DataStore.termlist[i]);
+            }
             service_1.DataStore.termlist = [];
         }
         jQuery(window).trigger('resize');
@@ -48,8 +48,28 @@ var TermComponent = (function () {
     TermComponent.prototype.close = function (i) {
         this._logger.debug(i);
         this._appService.TerminalDisconnect(i);
-        service_1.DataStore.term[i]["term"].destroy();
-        // delete DataStore.term.splice(i, 1)
+        // DataStore.term[i]["term"].destroy();
+        service_1.DataStore.term.splice(i, 1);
+        this.checkActive(i);
+    };
+    TermComponent.prototype.checkActive = function (index) {
+        var len = service_1.DataStore.term.length;
+        if (len == 1) {
+            // 唯一一个
+            service_1.DataStore.termActive = 0;
+        }
+        else {
+            if (len == index) {
+                // 删了最后一个
+                service_1.DataStore.termActive = index - 1;
+            }
+            else if (len > index) {
+                service_1.DataStore.termActive = index;
+            }
+        }
+    };
+    TermComponent.prototype.setActive = function (index) {
+        service_1.DataStore.termActive = index;
     };
     TermComponent.prototype.dblclick = function () {
         console.log(service_1.DataStore.term);
@@ -57,7 +77,7 @@ var TermComponent = (function () {
     TermComponent = __decorate([
         core_1.Component({
             selector: 'term',
-            template: "<div id=\"tabs\" style=\"height: 30px;width: 100%\">\n    <ul>\n        <li *ngFor=\"let m of DataStore.term;let i = index\"\n            [ngClass]=\"{'active':i==DataStore.termActive,'disconnected':!m.connected}\"\n            id=\"termnav-{{i}}\">\n            <span *ngIf=\"!m.$edit\" (click)=\"DataStore.termActive=i\" (dblclick)=\"m.$edit=true;DataStore.termActive=i\">{{m.nick}}</span>\n            <input *ngIf=\"m.$edit\" [(ngModel)]=\"m.nick\" autofocus (blur)=\"m.$edit=false\" (keyup.enter)=\"m.$edit=false\"/>\n            <a class=\"close\" (click)=\"close(i)\" onclick=\"this.parentElement.style.display='none';\">x</a></li>\n    </ul>\n</div>\n<div id=\"term\" style=\"width: 100%;height: 100%;\">\n    <div id=\"term-0\" [ngClass]=\"{'hidden':DataStore.termActive!=0}\"></div>\n    <div *ngFor=\"let m of DataStore.term; let i = index\" [ngClass]=\"{'hidden':i+1!=DataStore.termActive}\"\n         id=\"term-{{i+1}}\"></div>\n</div>",
+            template: "<div id=\"tabs\" style=\"height: 30px;width: 100%\">\n    <ul>\n        <li *ngFor=\"let m of DataStore.term;let i = index\"\n            [ngClass]=\"{'active':i==DataStore.termActive,'disconnected':!m.connected, 'hidden': m.closed}\"\n            id=\"termnav-{{i}}\" (click)=\"setActive(i)\">\n            <span *ngIf=\"!m.$edit\" (dblclick)=\"m.$edit=true;setActive(i)\">{{m.nick}}</span>\n            <input *ngIf=\"m.$edit\" [(ngModel)]=\"m.nick\" autofocus (blur)=\"m.$edit=false\" (keyup.enter)=\"m.$edit=false\"/>\n            <a class=\"close\" (click)=\"close(i)\">&times;</a></li>\n    </ul>\n</div>\n<div id=\"term\" style=\"width: 100%;height: 100%;\">\n    <div *ngFor=\"let m of DataStore.term;let i = index\" [ngClass]=\"{'disconnected':!m.connected, 'hidden': i!=DataStore.termActive || m.closed}\" id=\"term-{{i}}\"></div>\n</div>",
             directives: [common_1.NgClass, common_1.FORM_DIRECTIVES]
         }), 
         __metadata('design:paramtypes', [service_1.AppService, core_2.Logger])

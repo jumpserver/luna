@@ -69,6 +69,9 @@ export var DataStore:{
     leftbarhide:boolean,
     termlist:Array<{}>,
     windowsize:Array<number>,
+
+    loguserInfo: {}, // 当前已选服务器信息
+    loguserlist:Array<{}>, // 可用用户列表
 } = {
     socket: io.connect(),
     user: new User,
@@ -88,6 +91,9 @@ export var DataStore:{
     leftbarhide: false,
     termlist: [],
     windowsize: [],
+
+    loguserInfo: {}, // 当前已选服务器信息
+    loguserlist:[], // 可用用户列表
 };
 
 @Injectable()
@@ -124,6 +130,7 @@ export class AppService {
                 DataStore.Nav = JSON.parse(data)
             });
             DataStore.socket.on('leftbar', function (data) {
+                console.log('leftbar', data)
                 if (data == 'changed')
                     vm.ReloadLeftbar()
             });
@@ -372,6 +379,12 @@ export class AppService {
     //
     // }
     TerminalConnect(assetData) {
+        // assetId 资产
+        // sysUserId 用户
+        // nickName 资产昵称
+        // ip 资产IP
+        // port 资产端口
+        console.log('assetData', assetData);
         var socket = io.connect();
         var vm = this;
 
@@ -387,12 +400,21 @@ export class AppService {
             var rows = "24";
             Cookie.set('rows', rows, 99, '/', document.domain);
         }
+        // var id = DataStore.term.push({
+        //         "machine": "localhost",
+        //         "nick": "localhost",
+        //         "connected": true,
+        //         "socket": socket
+        //     }) - 1;
+
         var id = DataStore.term.push({
-                "machine": "localhost",
-                "nick": "localhost",
+                "machine": '' + assetData.assetId,
+                "nick": assetData.nickName,
                 "connected": true,
+                "closed": false,
                 "socket": socket
             }) - 1;
+
         DataStore.termActive = id;
         DataStore.term[id]["term"] = new Terminal({
             cols: cols,
@@ -404,10 +426,11 @@ export class AppService {
         DataStore.term[id]["term"].on('title', function (title) {
             document.title = title;
         });
-
-        DataStore.term[id]["term"].open(document.getElementById('term-' + id));
-
-        DataStore.term[id]["term"].write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
+        setTimeout(function() {
+            DataStore.term[id]["term"].open(document.getElementById('term-' + id));
+            DataStore.term[id]["term"].write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
+        }, 0);
+        
 
         socket.on('connect', function () {
             socket.emit('machine', assetData);
@@ -458,6 +481,7 @@ export class AppService {
 
     TerminalDisconnect(i) {
         DataStore.term[i]["connected"] = false;
+        DataStore.term[i]["closed"] = true;
         DataStore.term[i]["socket"].destroy();
         DataStore.term[i]["term"].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
     }

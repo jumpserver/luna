@@ -47,13 +47,15 @@ var UserList = (function () {
         this.DataStore = service_1.DataStore;
         this._logger.log('LeftbarComponent.ts:UserList');
     }
-    UserList.prototype.ngOnInit = function () {
-    };
+    UserList.prototype.ngOnInit = function () { };
     UserList.prototype.selectUser = function (serverInfo, index) {
         this.selectedUser = serverInfo.system_users[index];
         var param = {
             'assetId': serverInfo.id,
             'sysUserId': this.selectedUser['id'],
+            'nickName': serverInfo.title,
+            'ip': serverInfo.ip,
+            'port': serverInfo.port,
         };
         service_1.DataStore.termlist.push(param);
         service_1.DataStore.loguserlist = [];
@@ -104,7 +106,9 @@ var LeftbarComponent = (function () {
                     folderOpen: "fa fa-folder-open-o"
                 }
             },
-            source: { url: service_1.DataStore.leftbar },
+            source: {
+                url: service_1.DataStore.leftbar
+            },
             activeVisible: true,
             aria: true,
             autoActivate: true,
@@ -136,70 +140,67 @@ var LeftbarComponent = (function () {
                 if (!data.node.folder) {
                     if (data.node.data.system_users && data.node.data.system_users.length > 1) {
                         service_1.DataStore.loguserlist = data.node.data.system_users;
-                        service_1.DataStore.loguserInfo = data.node.data;
+                        service_1.DataStore.loguserInfo = jQuery.extent({}, data.node.data, {
+                            'nickName': data.node.title
+                        });
                     }
                     else {
                         if (data.node.data.system_users && data.node.data.system_users.length > 0) {
                             var param = {
                                 'assetId': data.node.data.id,
                                 'sysUserId': data.node.data.system_users[0].id,
+                                'nickName': data.node.title,
+                                'ip': data.node.data.ip,
+                                'port': data.node.data.port,
                             };
                             service_1.DataStore.termlist.push(param);
                         }
                     }
                 }
-            },
+            }
         });
         jQuery("#left-bar").contextmenu({
             delegate: "span.fancytree-title",
-            hide: { effect: "basic", duration: "slow" },
-            menu: [
-                {
+            hide: {
+                effect: "basic",
+                duration: "slow"
+            },
+            menu: [{
                     "title": "Cut",
                     "cmd": "cut",
                     "uiIcon": "fa fa-cut fa-size-1p3em"
-                },
-                {
+                }, {
                     "title": "Copy",
                     "cmd": "copy",
                     "uiIcon": "fa fa-copy fa-size-1p3em"
-                },
-                {
+                }, {
                     "title": "Paste",
                     "cmd": "paste",
                     "uiIcon": "fa fa-paste fa-size-1p3em",
                     "disabled": false
-                },
-                {
+                }, {
                     "title": "----"
-                },
-                {
+                }, {
                     "title": "Edit",
                     "cmd": "edit",
                     "uiIcon": "fa fa-edit fa-size-1p3em",
                     "disabled": true
-                },
-                {
+                }, {
                     "title": "Delete",
                     "cmd": "delete",
                     "uiIcon": "fa fa-trash fa-size-1p3em",
                     "disabled": true
-                },
-                {
+                }, {
                     "title": "More",
                     "uiIcon": "fa fa-caret-right fa-size-1p3em",
-                    "children": [
-                        {
+                    "children": [{
                             "title": "Sub 1",
                             "cmd": "sub1"
-                        },
-                        {
+                        }, {
                             "title": "Sub 2",
                             "cmd": "sub1"
-                        }
-                    ]
-                }
-            ],
+                        }]
+                }],
             beforeOpen: function (event, ui) {
                 var node = jQuery.ui.fancytree.getNode(ui.target[0]);
                 // Modify menu entries depending on node status
@@ -223,8 +224,8 @@ var LeftbarComponent = (function () {
     LeftbarComponent = __decorate([
         core_1.Component({
             selector: 'div',
-            template: "<div style=\"height:30px;width:100%;background-color: #00b3ee\">\n    <search-bar></search-bar><select-user-panel></select-user-panel></div>",
-            directives: [SearchBar, UserList],
+            template: "<div style=\"height:30px;width:100%;background-color: #00b3ee\">\n    <search-bar></search-bar></div>",
+            directives: [SearchBar],
         }), 
         __metadata('design:paramtypes', [service_1.AppService, core_2.Logger])
     ], LeftbarComponent);

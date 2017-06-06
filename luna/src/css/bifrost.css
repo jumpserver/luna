@@ -257,7 +257,30 @@ nav .nav .dropdown-content li a span {
 #left-bar.hideleftbar {
     left: -198px;
 }
-
+#left-bar .select-user-panel {
+    position: fixed;
+    top: 200px;
+    left: 50%;
+    width: 300px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-left: -150px;
+    line-height: 32px;
+    font-size: 14px;
+    background:#2f2a2a;
+    color: #efefef;;
+    z-index: 8000;
+}
+#left-bar .select-user-panel h2 {
+    border-bottom: 1px solid #999;
+    line-height: 1;
+    padding-bottom: 20px;
+    font-size: 18px;
+}
+#left-bar .select-user-panel .log-user {
+    cursor: pointer;
+}
 #ngdiv.hideleftbar {
     left: 2px !important;
 }
@@ -329,7 +352,7 @@ span.fancytree-selected span {
 .fancytree-treefocus span.fancytree-active span.fancytree-title,
 .fancytree-treefocus span.fancytree-selected span.fancytree-title { 
     color: #fff;
-    background: rgb(47, 42, 42);
+    background: #a9a9a9;
 }
 span.fancytree-treefocus span.fancytree-title,
 span.fancytree-active span.fancytree-title,
@@ -495,6 +518,9 @@ span.fancytree-icon {
 
 #tabs ul li.disconnected {
     background-color: darkgray;
+}
+#tabs ul li.hidden {
+    display: none;
 }
 
 .layui-layer.layui-layer-dialog.layui-layer-prompt.layer-anim textarea {

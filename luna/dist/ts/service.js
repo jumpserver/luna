@@ -102,6 +102,7 @@ var AppService = (function () {
                 exports.DataStore.Nav = JSON.parse(data);
             });
             exports.DataStore.socket.on('leftbar', function (data) {
+                console.log('leftbar', data);
                 if (data == 'changed')
                     vm.ReloadLeftbar();
             });
@@ -314,7 +315,12 @@ var AppService = (function () {
     //
     // }
     AppService.prototype.TerminalConnect = function (assetData) {
-        console.log('--------------------', assetData);
+        // assetId 资产
+        // sysUserId 用户
+        // nickName 资产昵称
+        // ip 资产IP
+        // port 资产端口
+        console.log('assetData', assetData);
         var socket = io.connect();
         var vm = this;
         if (ng2_cookies_1.Cookie.get("cols")) {
@@ -331,10 +337,17 @@ var AppService = (function () {
             var rows = "24";
             ng2_cookies_1.Cookie.set('rows', rows, 99, '/', document.domain);
         }
+        // var id = DataStore.term.push({
+        //         "machine": "localhost",
+        //         "nick": "localhost",
+        //         "connected": true,
+        //         "socket": socket
+        //     }) - 1;
         var id = exports.DataStore.term.push({
-            "machine": "localhost",
-            "nick": "localhost",
+            "machine": '' + assetData.assetId,
+            "nick": assetData.nickName,
             "connected": true,
+            "closed": false,
             "socket": socket
         }) - 1;
         exports.DataStore.termActive = id;
@@ -347,8 +360,10 @@ var AppService = (function () {
         exports.DataStore.term[id]["term"].on('title', function (title) {
             document.title = title;
         });
-        exports.DataStore.term[id]["term"].open(document.getElementById('term-' + id));
-        exports.DataStore.term[id]["term"].write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
+        setTimeout(function () {
+            exports.DataStore.term[id]["term"].open(document.getElementById('term-' + id));
+            exports.DataStore.term[id]["term"].write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
+        }, 0);
         socket.on('connect', function () {
             socket.emit('machine', assetData);
             exports.DataStore.term[id]["term"].on('data', function (data) {
@@ -396,6 +411,7 @@ var AppService = (function () {
     };
     AppService.prototype.TerminalDisconnect = function (i) {
         exports.DataStore.term[i]["connected"] = false;
+        exports.DataStore.term[i]["closed"] = true;
         exports.DataStore.term[i]["socket"].destroy();
         exports.DataStore.term[i]["term"].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
     };

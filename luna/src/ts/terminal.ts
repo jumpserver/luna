@@ -20,17 +20,15 @@ import {AppService, DataStore} from './service'
     template: `<div id="tabs" style="height: 30px;width: 100%">
     <ul>
         <li *ngFor="let m of DataStore.term;let i = index"
-            [ngClass]="{'active':i==DataStore.termActive,'disconnected':!m.connected}"
-            id="termnav-{{i}}">
-            <span *ngIf="!m.$edit" (click)="DataStore.termActive=i" (dblclick)="m.$edit=true;DataStore.termActive=i">{{m.nick}}</span>
+            [ngClass]="{'active':i==DataStore.termActive,'disconnected':!m.connected, 'hidden': m.closed}"
+            id="termnav-{{i}}" (click)="setActive(i)">
+            <span *ngIf="!m.$edit" (dblclick)="m.$edit=true;setActive(i)">{{m.nick}}</span>
             <input *ngIf="m.$edit" [(ngModel)]="m.nick" autofocus (blur)="m.$edit=false" (keyup.enter)="m.$edit=false"/>
-            <a class="close" (click)="close(i)" onclick="this.parentElement.style.display='none';">x</a></li>
+            <a class="close" (click)="close(i)">&times;</a></li>
     </ul>
 </div>
 <div id="term" style="width: 100%;height: 100%;">
-    <div id="term-0" [ngClass]="{'hidden':DataStore.termActive!=0}"></div>
-    <div *ngFor="let m of DataStore.term; let i = index" [ngClass]="{'hidden':i+1!=DataStore.termActive}"
-         id="term-{{i+1}}"></div>
+    <div *ngFor="let m of DataStore.term;let i = index" [ngClass]="{'disconnected':!m.connected, 'hidden': i!=DataStore.termActive || m.closed}" id="term-{{i}}"></div>
 </div>`,
     directives: [NgClass, FORM_DIRECTIVES]
 })
@@ -52,15 +50,16 @@ export class TermComponent {
     }
 
     ngAfterViewInit() {
-        this._appService.TerminalConnect({});
+        // this._appService.TerminalConnect({});
         //this._logger.debug("term width ", jQuery("#term").width());
         //this._logger.debug("term height", jQuery("#term").height());
     }
 
     timer() {
         if (DataStore.termlist.length > 0) {
-            for (var i in DataStore.termlist)
+            for (var i in DataStore.termlist){
                 this._appService.TerminalConnect(DataStore.termlist[i]);
+            }
             DataStore.termlist = []
         }
         jQuery(window).trigger('resize');
@@ -72,11 +71,27 @@ export class TermComponent {
     close(i) {
         this._logger.debug(i);
         this._appService.TerminalDisconnect(i);
-        DataStore.term[i]["term"].destroy();
-
-        // delete DataStore.term.splice(i, 1)
+        // DataStore.term[i]["term"].destroy();
+        DataStore.term.splice(i, 1);
+        this.checkActive(i);
     }
-
+    checkActive(index) {
+        var len = DataStore.term.length;
+        if(len == 1) {
+            // 唯一一个
+            DataStore.termActive = 0;
+        } else {
+            if (len == index) {
+                // 删了最后一个
+                DataStore.termActive = index - 1;
+            } else if (len > index) {
+                DataStore.termActive = index;
+            }
+        }
+    }
+    setActive(index) {
+        DataStore.termActive = index;
+    }
     dblclick() {
         console.log(DataStore.term)
     }

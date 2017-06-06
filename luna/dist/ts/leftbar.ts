@@ -2,15 +2,29 @@
  * Created by liuzheng on 7/12/16.
  */
 
-import {Component, OnChanges, OnInit, Input} from '@angular/core';
-import {NgClass}    from '@angular/common';
-import {ROUTER_DIRECTIVES} from '@angular/router-deprecated';
-import {Logger} from "angular2-logger/core";
+import {
+    Component,
+    OnChanges,
+    OnInit,
+    Input
+} from '@angular/core';
+import {
+    NgClass
+} from '@angular/common';
+import {
+    ROUTER_DIRECTIVES
+} from '@angular/router-deprecated';
+import {
+    Logger
+} from "angular2-logger/core";
 
-import  'rxjs/Rx';
-declare var jQuery:any;
+import 'rxjs/Rx';
+declare var jQuery: any;
 
-import {AppService, DataStore} from './service'
+import {
+    AppService,
+    DataStore
+} from './service'
 
 @Component({
     selector: 'search-bar',
@@ -20,10 +34,10 @@ import {AppService, DataStore} from './service'
 })
 class SearchBar implements OnChanges {
     @Input() input;
-    q:string;
+    q: string;
 
-    constructor(private _appService:AppService,
-                private _logger:Logger) {
+    constructor(private _appService: AppService,
+        private _logger: Logger) {
         this._logger.log('LeftbarComponent.ts:SearchBar');
     }
 
@@ -35,6 +49,7 @@ class SearchBar implements OnChanges {
         this._appService.Search(this.q)
     }
 }
+
 @Component({
     selector: 'select-user-panel',
     template: `<div class="select-user-panel" *ngIf="DataStore.loguserlist.length"><h2>选择要登录的账户</h2>
@@ -44,45 +59,42 @@ class SearchBar implements OnChanges {
 })
 
 class UserList implements OnInit {
-  DataStore = DataStore;
-  users: Object[];
-  selectedUser: Object;
-  constructor(private _appService:AppService,
-                private _logger:Logger) {
+    DataStore = DataStore;
+    users: Object[];
+    selectedUser: Object;
+    constructor(private _appService: AppService,
+        private _logger: Logger) {
         this._logger.log('LeftbarComponent.ts:UserList');
-  }
+    }
 
-  ngOnInit() {
-  }
-  selectUser(serverInfo, index) {
-
-    this.selectedUser = serverInfo.system_users[index];
-    let param = {
-        'assetId': serverInfo.id,
-        'sysUserId': this.selectedUser['id'],
-    };
-    DataStore.termlist.push(param);
-    DataStore.loguserlist = [];
-    DataStore.loguserInfo = {};
-  }
+    ngOnInit() {}
+    selectUser(serverInfo, index) {
+        this.selectedUser = serverInfo.system_users[index];
+        let param = {
+            'assetId': serverInfo.id,
+            'sysUserId': this.selectedUser['id'],
+            'nickName': serverInfo.title,
+            'ip': serverInfo.ip,
+            'port': serverInfo.port,
+        };
+        DataStore.termlist.push(param);
+        DataStore.loguserlist = [];
+        DataStore.loguserInfo = {};
+    }
 }
-
-
-
 
 @Component({
     selector: 'div',
     template: `<div style="height:30px;width:100%;background-color: #00b3ee">
-    <search-bar></search-bar><select-user-panel></select-user-panel></div>`,
-    directives: [SearchBar, UserList],
+    <search-bar></search-bar></div>`,
+    directives: [SearchBar],
 })
 
 
 export class LeftbarComponent {
     DataStore = DataStore;
-
-    constructor(private _appService:AppService,
-                private _logger:Logger) {
+    constructor(private _appService: AppService,
+        private _logger: Logger) {
         this._logger.log('LeftbarComponent.ts:LeftbarComponent');
         this._logger.debug("check DataStroe.leftbar", DataStore.leftbar);
     }
@@ -117,7 +129,9 @@ export class LeftbarComponent {
                     folderOpen: "fa fa-folder-open-o"
                 }
             },
-            source: {url: DataStore.leftbar},
+            source: {
+                url: DataStore.leftbar
+            },
             activeVisible: true, // Make sure, active nodes are visible (expanded).
             aria: true, // Enable WAI-ARIA support.
             autoActivate: true, // Automatically activate a node when it is focused (using keys).
@@ -145,83 +159,75 @@ export class LeftbarComponent {
             selectMode: 3, // 1:single, 2:multi, 3:multi-hier
             tabindex: "0", // Whole tree behaves as one single control
             titlesTabbable: false, // Node titles can receive keyboard focus
-            dblclick: function (event, data) {
+            dblclick: function(event, data) {
                 console.log('leftbar dbclick', event, data);
                 if (!data.node.folder) {
                     if (data.node.data.system_users && data.node.data.system_users.length > 1) {
                         DataStore.loguserlist = data.node.data.system_users;
-                        DataStore.loguserInfo = data.node.data;
+                        DataStore.loguserInfo = jQuery.extent({}, data.node.data, {
+                            'nickName': data.node.title
+                        });
                     } else {
                         if (data.node.data.system_users && data.node.data.system_users.length > 0) {
                             let param = {
                                 'assetId': data.node.data.id,
                                 'sysUserId': data.node.data.system_users[0].id,
+                                'nickName': data.node.title,
+                                'ip': data.node.data.ip,
+                                'port': data.node.data.port,
                             };
                             DataStore.termlist.push(param);
                         }
-                        
-                    }
-                    
-                    // DataStore.termActive = DataStore.term.push({
-                    //         "machine": data.node.data.machine,
-                    //         "nick": data.node.title
-                    //     }) - 1;
-                }
 
-            },
+                    }
+
+                }
+            }
         });
 
         jQuery("#left-bar").contextmenu({
             delegate: "span.fancytree-title",
-            hide: {effect: "basic", duration: "slow"},
-            menu: [
-                {
-                    "title": "Cut",
-                    "cmd": "cut",
-                    "uiIcon": "fa fa-cut fa-size-1p3em"
-                },
-                {
-                    "title": "Copy",
-                    "cmd": "copy",
-                    "uiIcon": "fa fa-copy fa-size-1p3em"
-                },
-                {
-                    "title": "Paste",
-                    "cmd": "paste",
-                    "uiIcon": "fa fa-paste fa-size-1p3em",
-                    "disabled": false
-                },
-                {
-                    "title": "----"
-                },
-                {
-                    "title": "Edit",
-                    "cmd": "edit",
-                    "uiIcon": "fa fa-edit fa-size-1p3em",
-                    "disabled": true
-                },
-                {
-                    "title": "Delete",
-                    "cmd": "delete",
-                    "uiIcon": "fa fa-trash fa-size-1p3em",
-                    "disabled": true
-                },
-                {
-                    "title": "More",
-                    "uiIcon": "fa fa-caret-right fa-size-1p3em",
-                    "children": [
-                        {
-                            "title": "Sub 1",
-                            "cmd": "sub1"
-                        },
-                        {
-                            "title": "Sub 2",
-                            "cmd": "sub1"
-                        }
-                    ]
-                }
-            ],
-            beforeOpen: function (event, ui) {
+            hide: {
+                effect: "basic",
+                duration: "slow"
+            },
+            menu: [{
+                "title": "Cut",
+                "cmd": "cut",
+                "uiIcon": "fa fa-cut fa-size-1p3em"
+            }, {
+                "title": "Copy",
+                "cmd": "copy",
+                "uiIcon": "fa fa-copy fa-size-1p3em"
+            }, {
+                "title": "Paste",
+                "cmd": "paste",
+                "uiIcon": "fa fa-paste fa-size-1p3em",
+                "disabled": false
+            }, {
+                "title": "----"
+            }, {
+                "title": "Edit",
+                "cmd": "edit",
+                "uiIcon": "fa fa-edit fa-size-1p3em",
+                "disabled": true
+            }, {
+                "title": "Delete",
+                "cmd": "delete",
+                "uiIcon": "fa fa-trash fa-size-1p3em",
+                "disabled": true
+            }, {
+                "title": "More",
+                "uiIcon": "fa fa-caret-right fa-size-1p3em",
+                "children": [{
+                    "title": "Sub 1",
+                    "cmd": "sub1"
+                }, {
+                    "title": "Sub 2",
+                    "cmd": "sub1"
+                }]
+            }],
+            beforeOpen: function(event, ui) {
                 var node = jQuery.ui.fancytree.getNode(ui.target[0]);
                 // Modify menu entries depending on node status
                 jQuery("#left-bar").contextmenu("enableEntry", "paste", node.isFolder());
@@ -230,7 +236,7 @@ export class LeftbarComponent {
                 // Activate node on right-click
                 node.setActive();
             },
-            select: function (event, ui) {
+            select: function(event, ui) {
                 var node = jQuery.ui.fancytree.getNode(ui.target[0]);
                 alert("select " + ui.cmd + " on " + node);
             }
