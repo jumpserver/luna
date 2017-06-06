@@ -140,7 +140,7 @@ var LeftbarComponent = (function () {
                 if (!data.node.folder) {
                     if (data.node.data.system_users && data.node.data.system_users.length > 1) {
                         service_1.DataStore.loguserlist = data.node.data.system_users;
-                        service_1.DataStore.loguserInfo = jQuery.extent({}, data.node.data, {
+                        service_1.DataStore.loguserInfo = jQuery.extend({}, data.node.data, {
                             'nickName': data.node.title
                         });
                     }

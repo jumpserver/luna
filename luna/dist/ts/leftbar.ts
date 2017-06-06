@@ -164,7 +164,7 @@ export class LeftbarComponent {
                 if (!data.node.folder) {
                     if (data.node.data.system_users && data.node.data.system_users.length > 1) {
                         DataStore.loguserlist = data.node.data.system_users;
-                        DataStore.loguserInfo = jQuery.extent({}, data.node.data, {
+                        DataStore.loguserInfo = jQuery.extend({}, data.node.data, {
                             'nickName': data.node.title
                         });
                     } else {
