@@ -67,13 +67,16 @@ class UserList implements OnInit {
         this._logger.log('LeftbarComponent.ts:UserList');
     }
 
-    ngOnInit() {}
+    ngOnInit() {
+        debugger;
+    }
     selectUser(serverInfo, index) {
+        debugger;
         this.selectedUser = serverInfo.system_users[index];
         let param = {
             'assetId': serverInfo.id,
             'sysUserId': this.selectedUser['id'],
-            'nickName': serverInfo.title,
+            'nickName': serverInfo.nickName,
             'ip': serverInfo.ip,
             'port': serverInfo.port,
         };
@@ -86,8 +89,8 @@ class UserList implements OnInit {
 @Component({
     selector: 'div',
     template: `<div style="height:30px;width:100%;background-color: #00b3ee">
-    <search-bar></search-bar></div>`,
-    directives: [SearchBar],
+    <search-bar></search-bar><select-user-panel></select-user-panel></div>`,
+    directives: [SearchBar, UserList],
 })
 
 
@@ -160,6 +163,7 @@ export class LeftbarComponent {
             tabindex: "0", // Whole tree behaves as one single control
             titlesTabbable: false, // Node titles can receive keyboard focus
             dblclick: function(event, data) {
+                debugger;
                 console.log('leftbar dbclick', event, data);
                 if (!data.node.folder) {
                     if (data.node.data.system_users && data.node.data.system_users.length > 1) {
@@ -167,6 +171,7 @@ export class LeftbarComponent {
                         DataStore.loguserInfo = jQuery.extend({}, data.node.data, {
                             'nickName': data.node.title
                         });
+                        debugger;
                     } else {
                         if (data.node.data.system_users && data.node.data.system_users.length > 0) {
                             let param = {
@@ -177,6 +182,7 @@ export class LeftbarComponent {
                                 'port': data.node.data.port,
                             };
                             DataStore.termlist.push(param);
+                            debugger;
                         }
 
                     }

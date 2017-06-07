@@ -321,6 +321,7 @@ var AppService = (function () {
         // ip 资产IP
         // port 资产端口
         console.log('assetData', assetData);
+        debugger;
         var socket = io.connect();
         var vm = this;
         if (ng2_cookies_1.Cookie.get("cols")) {

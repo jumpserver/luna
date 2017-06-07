@@ -385,6 +385,7 @@ export class AppService {
         // ip 资产IP
         // port 资产端口
         console.log('assetData', assetData);
+        debugger;
         var socket = io.connect();
         var vm = this;
 

@@ -47,13 +47,16 @@ var UserList = (function () {
         this.DataStore = service_1.DataStore;
         this._logger.log('LeftbarComponent.ts:UserList');
     }
-    UserList.prototype.ngOnInit = function () { };
+    UserList.prototype.ngOnInit = function () {
+        debugger;
+    };
     UserList.prototype.selectUser = function (serverInfo, index) {
+        debugger;
         this.selectedUser = serverInfo.system_users[index];
         var param = {
             'assetId': serverInfo.id,
             'sysUserId': this.selectedUser['id'],
-            'nickName': serverInfo.title,
+            'nickName': serverInfo.nickName,
             'ip': serverInfo.ip,
             'port': serverInfo.port,
         };
@@ -136,13 +139,15 @@ var LeftbarComponent = (function () {
             tabindex: "0",
             titlesTabbable: false,
             dblclick: function (event, data) {
+                debugger;
                 console.log('leftbar dbclick', event, data);
                 if (!data.node.folder) {
                     if (data.node.data.system_users && data.node.data.system_users.length > 1) {
                         service_1.DataStore.loguserlist = data.node.data.system_users;
-                        service_1.DataStore.loguserInfo = jQuery.extent({}, data.node.data, {
+                        service_1.DataStore.loguserInfo = jQuery.extend({}, data.node.data, {
                             'nickName': data.node.title
                         });
+                        debugger;
                     }
                     else {
                         if (data.node.data.system_users && data.node.data.system_users.length > 0) {
@@ -154,6 +159,7 @@ var LeftbarComponent = (function () {
                                 'port': data.node.data.port,
                             };
                             service_1.DataStore.termlist.push(param);
+                            debugger;
                         }
                     }
                 }
@@ -224,8 +230,8 @@ var LeftbarComponent = (function () {
     LeftbarComponent = __decorate([
         core_1.Component({
             selector: 'div',
-            template: "<div style=\"height:30px;width:100%;background-color: #00b3ee\">\n    <search-bar></search-bar></div>",
-            directives: [SearchBar],
+            template: "<div style=\"height:30px;width:100%;background-color: #00b3ee\">\n    <search-bar></search-bar><select-user-panel></select-user-panel></div>",
+            directives: [SearchBar, UserList],
         }), 
         __metadata('design:paramtypes', [service_1.AppService, core_2.Logger])
     ], LeftbarComponent);
