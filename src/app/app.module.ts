@@ -14,6 +14,8 @@ import {AppRoutingModule} from './app-routing.module';
 import {IndexComponent} from './index.component';
 import {WelcomeComponent} from './welcome.component';
 import {NavComponent} from './nav.component';
+import {FooterComponent} from './footer.component';
+import {LeftbarComponent} from './leftbar.component';
 import {PageNotFoundComponent} from './not-found.component';
 
 @NgModule({
@@ -27,6 +29,8 @@ import {PageNotFoundComponent} from './not-found.component';
     IndexComponent,
     WelcomeComponent,
     NavComponent,
+    LeftbarComponent,
+    FooterComponent,
     PageNotFoundComponent
     // HeroListComponent,
     // CrisisListComponent,
