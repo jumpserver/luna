@@ -11,7 +11,7 @@ import { HttpModule } from '@angular/http';
 import {AppRoutingModule} from './app-routing.module';
 
 
-import {IndexComponent} from './index.component';
+import {AppComponent} from './app.component';
 import {WelcomeComponent} from './welcome.component';
 import {NavComponent} from './nav.component';
 import {FooterComponent} from './footer.component';
@@ -26,7 +26,7 @@ import {PageNotFoundComponent} from './not-found.component';
     HttpModule,
   ],
   declarations: [
-    IndexComponent,
+    AppComponent,
     WelcomeComponent,
     NavComponent,
     LeftbarComponent,
@@ -35,7 +35,7 @@ import {PageNotFoundComponent} from './not-found.component';
     // HeroListComponent,
     // CrisisListComponent,
   ],
-  bootstrap: [IndexComponent],
+  bootstrap: [AppComponent],
   providers: [
     {provide: Options, useValue: {store: false, level: LoggerLevel.WARN}},
     Logger
