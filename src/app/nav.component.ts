@@ -25,7 +25,7 @@ import {AppService, DataStore} from './app.service';
 
 
 export class NavComponent {
-  // DataStore = DataStore;
+  DataStore = DataStore;
 
   constructor(private _appService: AppService,
               private _logger: Logger) {

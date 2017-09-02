@@ -10,10 +10,11 @@ import 'rxjs/add/operator/map';
 // import {DynamicRouteConfigurator} from './dynamicRouteConfigurator'
 // import 'rxjs/add/operator/share';
 // import  'rxjs/Rx';
-// declare var jQuery: any;
+declare let jQuery: any;
 // declare var Terminal: any;
 // declare var Clipboard: any;
-// declare var io: any;
+import * as io from 'socket.io-client';
+// declare let io: any;
 // declare var layer: any;
 // @Injectable()
 // export class Logger {
@@ -25,7 +26,7 @@ import 'rxjs/add/operator/map';
 // }
 
 
-export interface User {
+export class User {
   id: number;
   name: string;
   username: string;
@@ -33,20 +34,20 @@ export interface User {
   phone: string;
   avatar: string;
   role: string;
-  email: string ;
+  email: string;
   is_active: boolean;
   date_joined: string;
   last_login: string;
   groups: Array<string>;
 }
-export interface Group {
+export class Group {
   id: number;
   name: string;
   membercount: number;
   comment: string;
 }
 
-export interface DataStore {
+export let DataStore: {
   socket: any;
   user: User;
   Nav: Array<{}>;
@@ -65,28 +66,26 @@ export interface DataStore {
   leftbarhide: boolean;
   termlist: Array<string>;
   windowsize: Array<number>;
-}
-// = {
-//   socket: io.connect(),
-//   user: new User,
-//   Nav: [{}],
-//   logined: false,
-//   lastNavigationAttempt: '',
-//   route: [{}],
-//   activenav: {},
-//   Path: {},
-//   error: {},
-//   msg: {},
-//   leftbar: '/api/leftbar',
-//   leftbarrightclick: '/api/leftbarrightclick',
-//   loglevel: 0,
-//   term: [],
-//   termActive: 0,
-//   leftbarhide: false,
-//   termlist: [],
-//   windowsize: [],
-// };
-
+} = {
+  socket: io.connect(),
+  user: new User,
+  Nav: [{}],
+  logined: false,
+  lastNavigationAttempt: '',
+  route: [{}],
+  activenav: {},
+  Path: {},
+  error: {},
+  msg: {},
+  leftbar: '/api/leftbar',
+  leftbarrightclick: '/api/leftbarrightclick',
+  loglevel: 0,
+  term: [],
+  termActive: 0,
+  leftbarhide: false,
+  termlist: [],
+  windowsize: [],
+};
 
 
 @Injectable()
@@ -104,7 +103,7 @@ export class AppService {
       // 3.- Level.INFO
       // 4.- Level.DEBUG
       // 5.- Level.LOG
-      this._logger.level = parseInt(Cookie.get('loglevel'));
+      this._logger.level = parseInt(Cookie.get('loglevel'), 10);
       // this._logger.debug('Your debug stuff');
       // this._logger.info('An info');
       // this._logger.warn('Take care ');
@@ -115,24 +114,26 @@ export class AppService {
       // this._logger.level = parseInt(Cookie.getCookie('loglevel'));
       this._logger.level = 0;
     }
-    // let vm = this;
-    //   DataStore.socket.on('connect', function () {
-    //     console.log('DatsStore socket connected');
-    //     DataStore.socket.on('nav', function (data) {
-    //       DataStore.Nav = JSON.parse(data);
-    //     });
-    //     DataStore.socket.on('leftbar', function (data) {
-    //       if (data == 'changed')
-    //         vm.ReloadLeftbar();
-    //     });
-    //     // DataStore.socket.on('popup', function (data) {
-    //     //   layer.msg(data);
-    //     // });
-    //
-    //     // DataStore.socket.emit('api', 'all');
-    //   });
-    //   // this.checklogin();
-    // }
+    const vm = this;
+    DataStore.socket.on('connect', function () {
+      console.log('DatsStore socket connected');
+      DataStore.socket.on('nav', function (data) {
+        DataStore.Nav = JSON.parse(data);
+      });
+      DataStore.socket.on('leftbar', function (data) {
+        if (data === 'changed') {
+          vm.ReloadLeftbar();
+        }
+      });
+      // DataStore.socket.on('popup', function (data) {
+      //   layer.msg(data);
+      // });
+
+      // DataStore.socket.emit('api', 'all');
+    });
+    // this.checklogin();
+  }
+
 //
 //   checklogin() {
 //     this._logger.log('service.ts:AppService,checklogin');
@@ -248,19 +249,19 @@ export class AppService {
 //
 //   }
 //
-//   ReloadLeftbar() {
-//     jQuery('#left-bar').fancytree('getTree').reload();
-//   }
-//
-// //     setMyinfo(user:User) {
-// //         // Update data store
-// //         this._dataStore.user = user;
-// //         this._logger.log("service.ts:AppService,setMyinfo");
-// //         this._logger.debug(user);
-// // // Push the new list of todos into the Observable stream
-// // //         this._dataObserver.next(user);
-// //         // this.myinfo$ = new Observable(observer => this._dataObserver = observer).share()
-// //     }
+  ReloadLeftbar() {
+    jQuery('#left-bar').fancytree('getTree').reload();
+  }
+
+//     setMyinfo(user:User) {
+//         // Update data store
+//         this._dataStore.user = user;
+//         this._logger.log("service.ts:AppService,setMyinfo");
+//         this._logger.debug(user);
+// // Push the new list of todos into the Observable stream
+// //         this._dataObserver.next(user);
+//         // this.myinfo$ = new Observable(observer => this._dataObserver = observer).share()
+//     }
 //
 //   getMyinfo() {
 //     this._logger.log('service.ts:AppService,getMyinfo');
@@ -476,8 +477,8 @@ export class AppService {
 //       );
 //     this._logger.log(q);
 //   }
-  }
 }
+// }
 //
 // @Pipe({
 //     name: 'join'

@@ -27,6 +27,7 @@
     "ng2-cookies": "^1.0.12",
     "pty.js": "^0.3.1",
     "rxjs": "^5.4.2",
+    "socket.io": "^2.0.3",
     "zone.js": "^0.8.14"
   },
   "devDependencies": {
