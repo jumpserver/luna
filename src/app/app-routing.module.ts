@@ -6,10 +6,11 @@ import {RouterModule, Routes} from '@angular/router';
 import {WelcomeComponent} from './welcome.component';
 import {PageNotFoundComponent} from './not-found.component';
 import {environment} from '../environments/environment';
-
+import {LoginComponent} from './login.component';
 const appRoutes: Routes = [
   // { path: 'crisis-center', component: CrisisListComponent },
   {path: 'welcome', component: WelcomeComponent}, // <-- delete this line
+  {path: 'login', component: LoginComponent},
   {path: '', redirectTo: '/welcome', pathMatch: 'full'},
   {path: '**', component: PageNotFoundComponent}
 ];

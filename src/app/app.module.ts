@@ -6,7 +6,7 @@ import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms'; // <-- NgModel lives here
 import {Logger, Options, Level as LoggerLevel} from 'angular2-logger/core';
-import { HttpModule } from '@angular/http';
+import {HttpModule} from '@angular/http';
 
 import {AppRoutingModule} from './app-routing.module';
 
@@ -17,6 +17,8 @@ import {NavComponent} from './nav.component';
 import {FooterComponent} from './footer.component';
 import {LeftbarComponent} from './leftbar.component';
 import {PageNotFoundComponent} from './not-found.component';
+import {LoginComponent} from './login.component';
+
 
 @NgModule({
   imports: [
@@ -31,7 +33,8 @@ import {PageNotFoundComponent} from './not-found.component';
     NavComponent,
     LeftbarComponent,
     FooterComponent,
-    PageNotFoundComponent
+    PageNotFoundComponent,
+    LoginComponent
     // HeroListComponent,
     // CrisisListComponent,
   ],
@@ -41,4 +44,5 @@ import {PageNotFoundComponent} from './not-found.component';
     Logger
   ]
 })
-export class AppModule {}
+export class AppModule {
+}

@@ -24,6 +24,7 @@ import * as io from 'socket.io-client';
 //     console.log(message);
 //   }
 // }
+import {Router} from '@angular/router';
 
 
 export class User {
@@ -94,6 +95,7 @@ export class AppService {
   // searchrequest: any;
 
   constructor(private http: Http,
+              private _router: Router,
               private _logger: Logger) {
     if (Cookie.get('loglevel')) {
 
@@ -131,87 +133,87 @@ export class AppService {
 
       // DataStore.socket.emit('api', 'all');
     });
-    // this.checklogin();
+    this.checklogin();
   }
 
-//
-//   checklogin() {
-//     this._logger.log('service.ts:AppService,checklogin');
-//
-//     if (DataStore.Path)
-//       if (DataStore.Path['name'] == 'FOF' || DataStore.Path['name'] == 'Forgot') {
-//       }
-//       // jQuery('angular2').show();
-//       else {
-//         if (DataStore.logined) {
-//           this._router.navigate([DataStore.Path['name']]);
-//           // jQuery('angular2').show();
-//         } else {
-//           this.http.get('/api/checklogin')
-//             .map(res => res.json())
-//             .subscribe(
-//               data => {
-//                 DataStore.logined = data.logined;
-//                 DataStore.user = data.user;
-//               },
-//               err => {
-//                 this._logger.error(err);
-//                 DataStore.logined = false;
-//                 this._router.navigate(['Login']);
-//               },
-//               () => {
-//                 if (DataStore.logined) {
-//                   if (jQuery.isEmptyObject(DataStore.Path))
-//                     this._router.navigate(['Index', '/']);
-//                   else
-//                     this._router.navigate([DataStore.Path['name'], DataStore.Path['res']]);
-//                 }
-//                 else
-//                   this._router.navigate(['Login']);
-//                 // jQuery('angular2').show();
-//               }
-//             );
-//         }
-//       }
-//     else {
-//       this._router.navigate(['FOF']);
-//       // jQuery('angular2').show();
-//     }
-//   }
-//
-//   login(user: User) {
-//     this._logger.log('service.ts:AppService,login');
-//     DataStore.error['login'] = '';
-//     if (user.username.length > 0 && user.password.length > 6 && user.password.length < 100)
-//       this.http.post('/api/checklogin', JSON.stringify(user)).map(res => res.json())
-//         .subscribe(
-//           data => {
-//             DataStore.logined = data.logined;
-//             DataStore.user = data.user;
-//           },
-//           err => {
-//             this._logger.error(err);
-//             DataStore.logined = false;
-//             this._router.navigate(['Login']);
-//             DataStore.error['login'] = '后端错误,请重试';
-//           },
-//           () => {
-//             if (DataStore.logined) {
-//               if (jQuery.isEmptyObject(DataStore.Path))
-//                 this._router.navigate(['Index', '/']);
-//               else
-//                 this._router.navigate([DataStore.Path['name'], DataStore.Path['res']]);
-//             } else {
-//               DataStore.error['login'] = '请检查用户名和密码';
-//               this._router.navigate(['Login']);
-//             }
-//             // jQuery('angular2').show();
-//
-//           });
-//     else
-//       DataStore.error['login'] = '请检查用户名和密码';
-//
-//   }
+
+  checklogin() {
+    this._logger.log('service.ts:AppService,checklogin');
+
+    if (DataStore.Path) {
+      if (DataStore.Path['name'] === 'FOF' || DataStore.Path['name'] === 'Forgot') {
+      } else {
+        if (DataStore.logined) {
+          this._router.navigate([DataStore.Path['name']]);
+          // jQuery('angular2').show();
+        } else {
+          this.http.get('/api/checklogin')
+            .map(res => res.json())
+            .subscribe(
+              data => {
+                DataStore.logined = data.logined;
+                DataStore.user = data.user;
+              },
+              err => {
+                this._logger.error(err);
+                DataStore.logined = false;
+                this._router.navigate(['login']);
+              },
+              () => {
+                if (DataStore.logined) {
+                  if (jQuery.isEmptyObject(DataStore.Path)) {
+                    this._router.navigate(['']);
+                  } else {
+                    this._router.navigate([DataStore.Path['name'], DataStore.Path['res']]);
+                  }
+                } else {
+                  this._router.navigate(['login']);
+                }
+                // jQuery('angular2').show();
+              }
+            );
+        }
+      }
+    } else {
+      this._router.navigate(['FOF']);
+      // jQuery('angular2').show();
+    }
+  }
+
+  login(user: User) {
+    this._logger.log('service.ts:AppService,login');
+    DataStore.error['login'] = '';
+    if (user.username.length > 0 && user.password.length > 6 && user.password.length < 100)
+      this.http.post('/api/checklogin', JSON.stringify(user)).map(res => res.json())
+        .subscribe(
+          data => {
+            DataStore.logined = data.logined;
+            DataStore.user = data.user;
+          },
+          err => {
+            this._logger.error(err);
+            DataStore.logined = false;
+            this._router.navigate(['Login']);
+            DataStore.error['login'] = '后端错误,请重试';
+          },
+          () => {
+            if (DataStore.logined) {
+              if (jQuery.isEmptyObject(DataStore.Path))
+                this._router.navigate(['Index', '/']);
+              else
+                this._router.navigate([DataStore.Path['name'], DataStore.Path['res']]);
+            } else {
+              DataStore.error['login'] = '请检查用户名和密码';
+              this._router.navigate(['Login']);
+            }
+            // jQuery('angular2').show();
+
+          });
+    else
+      DataStore.error['login'] = '请检查用户名和密码';
+
+  }
+
 //
 //
 //   HideLeft() {

@@ -1,0 +1,16 @@
+<div style="position: fixed;top: 0;left:0;width:100%;height:100%;z-index: 5;background-color: #000000;"></div>
+<canvas id="q" style="position:fixed;top: 0;z-index: 5;"></canvas>
+<div id="form" style="z-index: 9;display: none;">
+  <form (ngSubmit)="onSubmit()" style="z-index:9;">
+    <div class="from-group">
+      <input type="text" name="username" id="username" placeholder="Username" [(ngModel)]="user.username" required>
+      <span class="fa fa-user-secret form-control-feedback"></span>
+    </div>
+    <div class="from-group">
+      <input type="password" name="password" id="password" placeholder="password" [(ngModel)]="user.password" required
+             (ngEnter)="onSubmit()">
+      <span class="fa fa-key form-control-feedback"></span>
+    </div>
+    <button type="submit">login to your account</button>
+  </form>
+</div>
