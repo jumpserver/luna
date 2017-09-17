@@ -25,7 +25,7 @@ export class LoginComponent implements OnInit {
   constructor(private _appService: AppService,
               private _logger: Logger,
               private _router: Router,
-              private user: User) {
+              public user: User) {
     this._logger.log('login.ts:LoginComponent');
   }
 
