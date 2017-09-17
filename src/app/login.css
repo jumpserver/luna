@@ -10,6 +10,7 @@ form {
   border-left-color: rgba(255, 255, 255, .4);
   border-bottom-color: rgba(60, 60, 60, .4);
   border-right-color: rgba(60, 60, 60, .4);
+  z-index: 9;
 }
 
 form input, form button {
@@ -81,6 +82,26 @@ form button[type=submit] {
   border-bottom-color: #1b4849;
   border-right-color: #1e4d4e;
   cursor: pointer;
+}
+
+canvas {
+  position: fixed;
+  top: 0;
+  z-index: 5;
+}
+
+.form {
+  z-index: 9;
+}
+
+.black {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  background-color: #000000;
 }
 
 /* login form end */

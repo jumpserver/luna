@@ -40,6 +40,7 @@ export class User {
   date_joined: string;
   last_login: string;
   groups: Array<string>;
+  logined:boolean;
 }
 export class Group {
   id: number;
@@ -183,7 +184,7 @@ export class AppService {
   login(user: User) {
     this._logger.log('service.ts:AppService,login');
     DataStore.error['login'] = '';
-    if (user.username.length > 0 && user.password.length > 6 && user.password.length < 100)
+    if (user.username.length > 0 && user.password.length > 6 && user.password.length < 100) {
       this.http.post('/api/checklogin', JSON.stringify(user)).map(res => res.json())
         .subscribe(
           data => {
@@ -193,25 +194,26 @@ export class AppService {
           err => {
             this._logger.error(err);
             DataStore.logined = false;
-            this._router.navigate(['Login']);
+            this._router.navigate(['login']);
             DataStore.error['login'] = '后端错误,请重试';
           },
           () => {
             if (DataStore.logined) {
-              if (jQuery.isEmptyObject(DataStore.Path))
-                this._router.navigate(['Index', '/']);
-              else
+              if (jQuery.isEmptyObject(DataStore.Path)) {
+                this._router.navigate(['welcome']);
+              } else {
                 this._router.navigate([DataStore.Path['name'], DataStore.Path['res']]);
+              }
             } else {
               DataStore.error['login'] = '请检查用户名和密码';
-              this._router.navigate(['Login']);
+              this._router.navigate(['login']);
             }
             // jQuery('angular2').show();
 
           });
-    else
+    } else {
       DataStore.error['login'] = '请检查用户名和密码';
-
+    }
   }
 
 //

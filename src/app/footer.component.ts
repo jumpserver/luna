@@ -5,13 +5,13 @@
 import {Component} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
 
-import {AppService, DataStore} from './app.service';
+import {AppService, DataStore, User} from './app.service';
 
 
 @Component({
   selector: 'app-footer',
   templateUrl: './footer.html',
-  // directives: [NgClass]
+  providers: [AppService]
 })
 
 

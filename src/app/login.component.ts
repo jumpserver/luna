@@ -4,7 +4,6 @@
 
 import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
-
 import {AppService, DataStore, User} from './app.service';
 import {Router} from '@angular/router';
 
@@ -21,7 +20,6 @@ declare let jQuery: any;
 export class LoginComponent implements OnInit {
   DataStore = DataStore;
 
-
   constructor(private _appService: AppService,
               private _logger: Logger,
               private _router: Router,
@@ -37,7 +35,7 @@ export class LoginComponent implements OnInit {
 
   ngOnInit() {
     jQuery('#form').fadeIn('slow');
-    this._router.navigate(['/login']);
+    // this._router.navigate(['login']);
     // jQuery('nav').hide();
     const vm = this;
     window.onresize = function () {
