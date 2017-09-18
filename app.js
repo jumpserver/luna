@@ -47,10 +47,10 @@ server.run = function (options) {
 
   apis.route('/checklogin')
     .post(function (req, res) {
-      res.json({logined: true, user: {id: 1, username: "liuzheng", name: "liuzheng"}})
+      res.json({logined: true, id: 1, username: "liuzheng", name: "liuzheng"})
     })
     .get(function (req, res) {
-      res.json({logined: true, user: {id: 1, username: "liuzheng", name: "liuzheng"}})
+      res.json({logined: false})
     });
 
 

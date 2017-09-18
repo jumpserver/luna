@@ -27,7 +27,27 @@ import * as io from 'socket.io-client';
 import {Router} from '@angular/router';
 
 
-export class User {
+// export class User {
+//   id: number;
+//   name: string;
+//   username: string;
+//   password: string;
+//   phone: string;
+//   avatar: string;
+//   role: string;
+//   email: string;
+//   is_active: boolean;
+//   date_joined: string;
+//   last_login: string;
+//   groups: Array<string>;
+// }
+export class Group {
+  id: number;
+  name: string;
+  membercount: number;
+  comment: string;
+}
+export let User: {
   id: number;
   name: string;
   username: string;
@@ -41,19 +61,24 @@ export class User {
   last_login: string;
   groups: Array<string>;
   logined: boolean;
-}
-export class Group {
-  id: number;
-  name: string;
-  membercount: number;
-  comment: string;
-}
-
+} = {
+  id: 0,
+  name: 'nobody',
+  username: '',
+  password: '',
+  phone: '',
+  avatar: '',
+  role: '',
+  email: '',
+  is_active: false,
+  date_joined: '',
+  last_login: '',
+  groups: [],
+  logined: false,
+};
 export let DataStore: {
   socket: any;
-  user: User;
   Nav: Array<{}>;
-  logined: boolean;
   lastNavigationAttempt: string;
   route: Array<{}>;
   activenav: {};
@@ -70,9 +95,7 @@ export let DataStore: {
   windowsize: Array<number>;
 } = {
   socket: io.connect(),
-  user: new User,
   Nav: [{}],
-  logined: false,
   lastNavigationAttempt: '',
   route: [{}],
   activenav: {},
@@ -144,7 +167,7 @@ export class AppService {
     if (DataStore.Path) {
       if (DataStore.Path['name'] === 'FOF' || DataStore.Path['name'] === 'Forgot') {
       } else {
-        if (DataStore.logined) {
+        if (User.logined) {
           this._router.navigate([DataStore.Path['name']]);
           // jQuery('angular2').show();
         } else {
@@ -152,16 +175,18 @@ export class AppService {
             .map(res => res.json())
             .subscribe(
               data => {
-                DataStore.logined = data.logined;
-                DataStore.user = data.user;
+                User.name = data.name;
+                User.username = data.username;
+                User.logined = data.logined;
+                this._logger.debug(User);
               },
               err => {
                 this._logger.error(err);
-                DataStore.logined = false;
+                User.logined = false;
                 this._router.navigate(['login']);
               },
               () => {
-                if (DataStore.logined) {
+                if (User.logined) {
                   if (jQuery.isEmptyObject(DataStore.Path)) {
                     this._router.navigate(['']);
                   } else {
@@ -181,25 +206,27 @@ export class AppService {
     }
   }
 
-  login(user: User) {
+  login() {
     this._logger.log('service.ts:AppService,login');
     DataStore.error['login'] = '';
-    if (user.username.length > 0 && user.password.length > 6 && user.password.length < 100) {
-      this.http.post('/api/checklogin', JSON.stringify(user)).map(res => res.json())
+    if (User.username.length > 0 && User.password.length > 6 && User.password.length < 100) {
+      this.http.post('/api/checklogin', JSON.stringify(User)).map(res => res.json())
         .subscribe(
           data => {
-            DataStore.logined = data.logined;
-            DataStore.user = data.user;
+            User.logined = data.logined;
+            User.name = data.name;
+            User.username = data.username;
+            User.logined = data.logined;
           },
           err => {
             this._logger.error(err);
-            DataStore.logined = false;
+            User.logined = false;
             this._router.navigate(['login']);
             DataStore.error['login'] = '后端错误,请重试';
             return '后端错误,请重试';
           },
           () => {
-            if (DataStore.logined) {
+            if (User.logined) {
               if (jQuery.isEmptyObject(DataStore.Path)) {
                 this._router.navigate(['welcome']);
               } else {
@@ -215,7 +242,7 @@ export class AppService {
           });
     } else {
       DataStore.error['login'] = '请检查用户名和密码';
-       return '请检查用户名和密码';
+      return '请检查用户名和密码';
     }
   }
 

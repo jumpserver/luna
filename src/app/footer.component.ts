@@ -16,7 +16,8 @@ import {AppService, DataStore, User} from './app.service';
 
 
 export class FooterComponent {
-  // DataStore = DataStore;
+  DataStore = DataStore;
+  User = User;
 
   constructor(private _appService: AppService,
               private _logger: Logger) {

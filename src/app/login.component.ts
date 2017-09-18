@@ -12,23 +12,23 @@ declare let jQuery: any;
   selector: 'app-root',
   templateUrl: './login.html',
   styleUrls: ['./login.css'],
-  providers: [AppService, User]
+  providers: [AppService]
 })
 // ToDo: ngEnter and redirect to default page
 
 export class LoginComponent implements OnInit {
   DataStore = DataStore;
+  User = User;
   loginBotton = 'login to your account';
 
   constructor(private _appService: AppService,
-              private _logger: Logger,
-              public user: User) {
+              private _logger: Logger) {
     this._logger.log('login.ts:LoginComponent');
   }
 
 
   onSubmit() {
-    this._logger.error(this._appService.login(this.user));
+    this._logger.error(this._appService.login());
   }
 
   ngOnInit() {
@@ -37,7 +37,7 @@ export class LoginComponent implements OnInit {
     // jQuery('nav').hide();
     const vm = this;
     window.onresize = function () {
-      if (!DataStore.logined) {
+      if (!User.logined) {
         vm.background();
       }
     };
@@ -49,7 +49,7 @@ export class LoginComponent implements OnInit {
   timer() {
     if (DataStore.windowsize[0] !== document.documentElement.clientWidth ||
       DataStore.windowsize[1] !== document.documentElement.clientHeight &&
-      !DataStore.logined) {
+      !User.logined) {
       jQuery(window).trigger('resize');
       DataStore.windowsize = [document.documentElement.clientWidth, document.documentElement.clientHeight];
     }

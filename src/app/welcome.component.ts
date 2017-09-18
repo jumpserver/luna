@@ -11,8 +11,8 @@ import {AppService, DataStore, User} from './app.service';
 })
 
 export class WelcomeComponent {
-  DataStore = DataStore;
-
+  // DataStore = DataStore;
+  User = User;
 
   // DataStore = DataStore;
 }
