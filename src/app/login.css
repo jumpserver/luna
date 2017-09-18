@@ -6,22 +6,15 @@ form {
   background: rgba(130, 130, 130, .3);
   padding: 20px 22px;
   border: 1px solid;
-  border-top-color: rgba(255, 255, 255, .4);
-  border-left-color: rgba(255, 255, 255, .4);
-  border-bottom-color: rgba(60, 60, 60, .4);
-  border-right-color: rgba(60, 60, 60, .4);
+  border-color: rgba(255, 255, 255, .4) rgba(60, 60, 60, .4) rgba(60, 60, 60, .4) rgba(255, 255, 255, .4);
   z-index: 9;
 }
 
 form input, form button {
   width: 250px;
   border: 1px solid;
-  border-bottom-color: rgba(255, 255, 255, .5);
-  border-right-color: rgba(60, 60, 60, .35);
-  border-top-color: rgba(60, 60, 60, .35);
-  border-left-color: rgba(80, 80, 80, .45);
-  background-color: rgba(0, 0, 0, .2);
-  background-repeat: no-repeat;
+  border-color: rgba(60, 60, 60, .35) rgba(60, 60, 60, .35) rgba(255, 255, 255, .5) rgba(80, 80, 80, .45);
+  background: rgba(0, 0, 0, .2) no-repeat;
   padding: 8px 24px 8px 10px;
   font: bold .875em/1.25em "Monaco", Roboto, sans-serif;
   letter-spacing: .075em;

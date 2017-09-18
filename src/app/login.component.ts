@@ -5,7 +5,6 @@
 import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
 import {AppService, DataStore, User} from './app.service';
-import {Router} from '@angular/router';
 
 declare let jQuery: any;
 
@@ -22,7 +21,6 @@ export class LoginComponent implements OnInit {
 
   constructor(private _appService: AppService,
               private _logger: Logger,
-              private _router: Router,
               public user: User) {
     this._logger.log('login.ts:LoginComponent');
   }
