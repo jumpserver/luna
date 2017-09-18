@@ -18,6 +18,7 @@ declare let jQuery: any;
 
 export class LoginComponent implements OnInit {
   DataStore = DataStore;
+  loginBotton = 'login to your account';
 
   constructor(private _appService: AppService,
               private _logger: Logger,
@@ -27,8 +28,7 @@ export class LoginComponent implements OnInit {
 
 
   onSubmit() {
-    this._logger.log(DataStore);
-    this._appService.login(this.user);
+    this._logger.error(this._appService.login(this.user));
   }
 
   ngOnInit() {

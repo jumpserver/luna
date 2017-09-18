@@ -40,7 +40,7 @@ export class User {
   date_joined: string;
   last_login: string;
   groups: Array<string>;
-  logined:boolean;
+  logined: boolean;
 }
 export class Group {
   id: number;
@@ -196,6 +196,7 @@ export class AppService {
             DataStore.logined = false;
             this._router.navigate(['login']);
             DataStore.error['login'] = '后端错误,请重试';
+            return '后端错误,请重试';
           },
           () => {
             if (DataStore.logined) {
@@ -205,14 +206,16 @@ export class AppService {
                 this._router.navigate([DataStore.Path['name'], DataStore.Path['res']]);
               }
             } else {
-              DataStore.error['login'] = '请检查用户名和密码';
               this._router.navigate(['login']);
+              DataStore.error['login'] = '请检查用户名和密码';
+              return '请检查用户名和密码';
             }
             // jQuery('angular2').show();
 
           });
     } else {
       DataStore.error['login'] = '请检查用户名和密码';
+       return '请检查用户名和密码';
     }
   }
 
