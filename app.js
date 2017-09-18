@@ -50,7 +50,7 @@ server.run = function (options) {
       res.json({logined: true, user: {id: 1, username: "liuzheng", name: "liuzheng"}})
     })
     .get(function (req, res) {
-      res.json({logined: false, user: {id: 1, username: "liuzheng", name: "liuzheng"}})
+      res.json({logined: true, user: {id: 1, username: "liuzheng", name: "liuzheng"}})
     });
 
 
