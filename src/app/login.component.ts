@@ -13,25 +13,24 @@ declare let jQuery: any;
   selector: 'app-root',
   templateUrl: './login.html',
   styleUrls: ['./login.css'],
-  providers: [AppService, User]
+  providers: [AppService]
 })
 // ToDo: ngEnter and redirect to default page
 
 export class LoginComponent implements OnInit {
   DataStore = DataStore;
+  User = User;
+  loginBotton = 'login to your account';
 
   constructor(private _appService: AppService,
-              private _logger: Logger,
-              public user: User) {
+              private _logger: Logger) {
     this._logger.log('login.ts:LoginComponent');
   }
 
 
   onSubmit(f: NgForm) {
     if (f.valid) {
-      this.user.username = f.value.email;
-      this.user.password = f.value.password;
-      this._appService.login(this.user);
+      this._appService.login();
     } else {
       this._logger.error("the form not valid")
     }
