@@ -184,6 +184,7 @@ export class AppService {
   login(user: User) {
     this._logger.log('service.ts:AppService,login');
     DataStore.error['login'] = '';
+    this._logger.log(user);
     if (user.username.length > 0 && user.password.length > 6 && user.password.length < 100) {
       this.http.post('/api/checklogin', JSON.stringify(user)).map(res => res.json())
         .subscribe(

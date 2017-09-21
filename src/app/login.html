@@ -1,16 +1,15 @@
-<div class="black"></div>
-<canvas id="q"></canvas>
-<div class="form">
-  <form (ngSubmit)="onSubmit()">
-    <div class="from-group">
-      <input type="text" name="username" id="username" placeholder="Username" [(ngModel)]="user.username" required>
-      <span class="fa fa-user-secret form-control-feedback"></span>
-    </div>
-    <div class="from-group">
-      <input type="password" name="password" id="password" placeholder="password" [(ngModel)]="user.password" required
-             (ngEnter)="onSubmit()">
-      <span class="fa fa-key form-control-feedback"></span>
-    </div>
-    <button type="submit">login to your account</button>
-  </form>
-</div>
+<form class="form-signin" #f="ngForm" (ngSubmit)="onSubmit(f)">
+  <h2 class="form-signin-heading">Please sign in</h2>
+  <label for="inputEmail" class="sr-only">Email address</label>
+  <input type="email" id="inputEmail" class="form-control" placeholder="Email address"
+         name="email" ngModel #email="ngModel" required autofocus pattern="^\w+([.-]?\w+)*@\w+([.-]?\w+)*(.\w{2,3})+$">
+  <label for="inputPassword" class="sr-only">Password</label>
+  <input type="password" id="inputPassword" class="form-control" placeholder="Password" required
+         name="password" ngModel #password="ngModel" (ngEnter)="onSubmit(f)">
+  <div class="checkbox">
+    <label>
+      <input type="checkbox" value="remember-me"> Remember me
+    </label>
+  </div>
+  <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+</form>
