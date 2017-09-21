@@ -13,7 +13,7 @@ import {Logger} from 'angular2-logger/core';
 // declare var layer: any;
 
 
-import {AppService, DataStore} from './app.service';
+import {AppService, DataStore, User} from './app.service';
 
 
 //noinspection TypeScriptValidateTypes
@@ -26,6 +26,7 @@ import {AppService, DataStore} from './app.service';
 
 export class NavComponent {
   DataStore = DataStore;
+  User = User;
 
   constructor(private _appService: AppService,
               private _logger: Logger) {
