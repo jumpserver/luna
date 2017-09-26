@@ -10,14 +10,19 @@ import {HttpModule} from '@angular/http';
 
 import {AppRoutingModule} from './app-routing.module';
 
-
 import {AppComponent} from './app.component';
-import {WelcomeComponent} from './welcome.component';
-import {NavComponent} from './nav.component';
-import {FooterComponent} from './footer.component';
-import {LeftbarComponent} from './leftbar.component';
-import {PageNotFoundComponent} from './not-found.component';
-import {LoginComponent} from './login.component';
+
+import {WelcomeComponent} from './IndexPage/welcome.component';
+import {LeftbarComponent} from './IndexPage/leftbar.component';
+
+import {NavComponent} from './BasicPage/nav.component';
+import {FooterComponent} from './BasicPage/footer.component';
+import {PageNotFoundComponent} from './BasicPage/not-found.component';
+import {LoginComponent} from './BasicPage/login.component';
+
+import {TermPage} from './TerminalPage/main';
+import {TermLeftBar} from './TerminalPage/leftbar';
+import {Terminal} from './TerminalPage/terminal';
 
 
 @NgModule({
@@ -34,7 +39,11 @@ import {LoginComponent} from './login.component';
     LeftbarComponent,
     FooterComponent,
     PageNotFoundComponent,
-    LoginComponent
+    LoginComponent,
+
+    TermPage,
+    TermLeftBar,
+    Terminal
     // HeroListComponent,
     // CrisisListComponent,
   ],

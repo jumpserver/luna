@@ -4,14 +4,11 @@
 import {Injectable, NgModule} from '@angular/core';
 import {Http} from '@angular/http';
 import {Cookie} from 'ng2-cookies/ng2-cookies';
-// import {CookieService} from 'angular2-cookie/core'
 import {Logger} from 'angular2-logger/core';
 import 'rxjs/add/operator/map';
-// import {DynamicRouteConfigurator} from './dynamicRouteConfigurator'
-// import 'rxjs/add/operator/share';
-// import  'rxjs/Rx';
+
 declare let jQuery: any;
-// declare var Terminal: any;
+declare let Terminal: any;
 // declare var Clipboard: any;
 import * as io from 'socket.io-client';
 // declare let io: any;
@@ -25,6 +22,8 @@ import * as io from 'socket.io-client';
 //   }
 // }
 import {Router} from '@angular/router';
+import {logger} from "codelyzer/util/logger";
+import {log} from "util";
 
 
 // export class User {
@@ -47,6 +46,7 @@ export class Group {
   membercount: number;
   comment: string;
 }
+
 export let User: {
   id: number;
   name: string;
@@ -59,7 +59,7 @@ export let User: {
   is_active: boolean;
   date_joined: string;
   last_login: string;
-  groups: Array<string>;
+  groups: Array<Group>;
   logined: boolean;
 } = {
   id: 0,
@@ -76,6 +76,18 @@ export let User: {
   groups: [],
   logined: false,
 };
+
+export class Term {
+  nick: string;
+  edit: boolean;
+  machine: string;
+  connected: boolean;
+  closed: boolean;
+  socket: any;
+  term: any;
+  hide: boolean;
+}
+
 export let DataStore: {
   socket: any;
   Nav: Array<{}>;
@@ -88,7 +100,7 @@ export let DataStore: {
   leftbar: string;
   leftbarrightclick: string;
   loglevel: number;
-  term: Array<{}>;
+  term: Array<Term>;
   termActive: number;
   leftbarhide: boolean;
   termlist: Array<string>;
@@ -105,7 +117,7 @@ export let DataStore: {
   leftbar: '/api/leftbar',
   leftbarrightclick: '/api/leftbarrightclick',
   loglevel: 0,
-  term: [],
+  term: [new Term()],
   termActive: 0,
   leftbarhide: false,
   termlist: [],
@@ -140,7 +152,6 @@ export class AppService {
       // this._logger.level = parseInt(Cookie.getCookie('loglevel'));
       this._logger.level = 0;
     }
-    const vm = this;
     DataStore.socket.on('connect', function () {
       console.log('DatsStore socket connected');
       DataStore.socket.on('nav', function (data) {
@@ -148,7 +159,7 @@ export class AppService {
       });
       DataStore.socket.on('leftbar', function (data) {
         if (data === 'changed') {
-          vm.ReloadLeftbar();
+          AppService.ReloadLeftbar();
         }
       });
       // DataStore.socket.on('popup', function (data) {
@@ -163,12 +174,15 @@ export class AppService {
 
   checklogin() {
     this._logger.log('service.ts:AppService,checklogin');
-
     if (DataStore.Path) {
       if (DataStore.Path['name'] === 'FOF' || DataStore.Path['name'] === 'Forgot') {
       } else {
         if (User.logined) {
-          this._router.navigate([DataStore.Path['name']]);
+          if (document.location.pathname === '/login') {
+            this._router.navigate(['']);
+          } else {
+            this._router.navigate([document.location.pathname]);
+          }
           // jQuery('angular2').show();
         } else {
           this.http.get('/api/checklogin')
@@ -187,10 +201,10 @@ export class AppService {
               },
               () => {
                 if (User.logined) {
-                  if (jQuery.isEmptyObject(DataStore.Path)) {
+                  if (document.location.pathname === '/login') {
                     this._router.navigate(['']);
                   } else {
-                    this._router.navigate([DataStore.Path['name'], DataStore.Path['res']]);
+                    this._router.navigate([document.location.pathname]);
                   }
                 } else {
                   this._router.navigate(['login']);
@@ -284,7 +298,7 @@ export class AppService {
 //
 //   }
 //
-  ReloadLeftbar() {
+  static ReloadLeftbar() {
     jQuery('#left-bar').fancytree('getTree').reload();
   }
 
@@ -394,105 +408,115 @@ export class AppService {
 //   //         });
 //   //
 //   // }
-//   TerminalConnect(uuid) {
-//     var socket = io.connect();
-//     var vm = this;
-//
-//     if (Cookie.get('cols')) {
-//       var cols = Cookie.get('cols');
-//     } else {
-//       var cols = '80';
-//       Cookie.set('cols', cols, 99, '/', document.domain);
-//     }
-//     if (Cookie.get('rows')) {
-//       var rows = Cookie.get('rows');
-//     } else {
-//       var rows = '24';
-//       Cookie.set('rows', rows, 99, '/', document.domain);
-//     }
-//     var id = DataStore.term.push({
-//         'machine': 'localhost',
-//         'nick': 'localhost',
-//         'connected': true,
-//         'socket': socket
-//       }) - 1;
-//     DataStore.termActive = id;
-//     DataStore.term[id]['term'] = new Terminal({
-//       cols: cols,
-//       rows: rows,
-//       useStyle: true,
-//       screenKeys: true
-//     });
-//
-//     DataStore.term[id]['term'].on('title', function (title) {
-//       document.title = title;
-//     });
-//
-//     DataStore.term[id]['term'].open(document.getElementById('term-' + id));
-//
-//     DataStore.term[id]['term'].write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
-//
-//     socket.on('connect', function () {
-//       socket.emit('machine', uuid);
-//
-//       DataStore.term[id]['term'].on('data', function (data) {
-//         socket.emit('data', data);
-//       });
-//
-//
-//       socket.on('data', function (data) {
-//         DataStore.term[id]['term'].write(data);
-//       });
-//
-//       socket.on('disconnect', function () {
-//         vm.TerminalDisconnect(id);
-//         // DataStore.term[id]["term"].destroy();
-//         // DataStore.term[id]["connected"] = false;
-//       });
-//
-//       window.onresize = function () {
-//         var col = Math.floor(jQuery('#term').width() / jQuery('#liuzheng').width() * 8) - 3;
-//         var row = Math.floor(jQuery('#term').height() / jQuery('#liuzheng').height()) - 3;
-//         if (Cookie.get('rows')) {
-//           var rows = parseInt(Cookie.get('rows'));
-//         } else {
-//           var rows = 24;
-//         }
-//         if (Cookie.get('cols')) {
-//           var cols = parseInt(Cookie.get('cols'));
-//         } else {
-//           var cols = 80;
-//         }
-//         if (col < 80) col = 80;
-//         if (row < 24) row = 24;
-//         if (cols == col && row == rows) {
-//         } else {
-//           for (var termid in DataStore.term) {
-//             DataStore.term[termid]['socket'].emit('resize', [col, row]);
-//             DataStore.term[termid]['term'].resize(col, row);
-//           }
-//           Cookie.set('cols', String(col), 99, '/', document.domain);
-//           Cookie.set('rows', String(row), 99, '/', document.domain);
-//         }
-//       };
-//     });
-//
-//   }
-//
-//   TerminalDisconnect(i) {
-//     DataStore.term[i]['connected'] = false;
-//     DataStore.term[i]['socket'].destroy();
-//     DataStore.term[i]['term'].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
-//   }
-//
-//   TerminalDisconnectAll() {
-//     for (var i in DataStore.term) {
-//       this.TerminalDisconnect(i);
-//       // DataStore.term[i]["connected"] = false;
-//       // DataStore.term[i]["socket"].destroy();
-//       // DataStore.term[i]["term"].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
-//     }
-//   }
+  TerminalConnect(uuid) {
+    let socket = io.connect();
+    let cols = '80';
+    let rows = '24';
+    if (Cookie.get('cols')) {
+      cols = Cookie.get('cols');
+    }
+    if (Cookie.get('rows')) {
+      rows = Cookie.get('rows');
+    }
+    Cookie.set('cols', cols, 99, '/', document.domain);
+    Cookie.set('rows', rows, 99, '/', document.domain);
+
+
+    let id = DataStore.term.length - 1;
+    DataStore.term[id].machine = 'localhost';
+    DataStore.term[id].nick = 'localhost';
+    DataStore.term[id].connected = true;
+    DataStore.term[id].socket = socket;
+    DataStore.term[id].edit = false;
+    DataStore.term[id].closed = false;
+    DataStore.term[id].term = new Terminal({
+      cols: cols,
+      rows: rows,
+      useStyle: true,
+      screenKeys: true
+    });
+    DataStore.term.push(new Term());
+    for (let m in DataStore.term) {
+      DataStore.term[m].hide = true;
+    }
+    DataStore.term[id].hide = false;
+
+    this._logger.log(DataStore.term[id + 1].closed);
+    DataStore.termActive = id;
+
+
+    // DataStore.term[id]['term'].on('title', function (title) {
+    //   document.title = title;
+    // });
+
+    DataStore.term[id].term.open(document.getElementById('term-' + id));
+
+    DataStore.term[id].term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
+
+    socket.on('connect', function () {
+      socket.emit('machine', uuid);
+
+      DataStore.term[id].term.on('data', function (data) {
+        socket.emit('data', data);
+      });
+
+
+      socket.on('data', function (data) {
+        DataStore.term[id].term.write(data);
+      });
+
+      socket.on('disconnect', function () {
+        AppService.TerminalDisconnect(id);
+        // DataStore.term[id]["term"].destroy();
+        // DataStore.term[id]["connected"] = false;
+      });
+
+      window.onresize = function () {
+        let col = Math.floor(jQuery('#term').width() / jQuery('#liuzheng').width() * 8) - 3;
+        let row = Math.floor(jQuery('#term').height() / jQuery('#liuzheng').height()) - 5;
+        let rows = 24;
+        let cols = 80;
+
+        if (Cookie.get('rows')) {
+          rows = parseInt(Cookie.get('rows'));
+        }
+        if (Cookie.get('cols')) {
+          cols = parseInt(Cookie.get('cols'));
+        }
+        if (col < 80) col = 80;
+        if (row < 24) row = 24;
+        if (cols == col && row == rows) {
+        } else {
+          for (let tid in DataStore.term) {
+            if (DataStore.term[tid].connected) {
+              DataStore.term[tid].socket.emit('resize', [col, row]);
+              DataStore.term[tid].term.resize(col, row);
+            }
+          }
+          Cookie.set('cols', String(col), 99, '/', document.domain);
+          Cookie.set('rows', String(row), 99, '/', document.domain);
+        }
+      };
+    });
+
+  }
+
+  static TerminalDisconnect(i) {
+    DataStore.term[i].connected = false;
+    DataStore.term[i].socket.destroy();
+    DataStore.term[i].term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+  }
+
+  static TerminalDisconnectAll() {
+    alert("TerminalDisconnectAll");
+    for (let i in DataStore.term) {
+      AppService.TerminalDisconnect(i);
+      // DataStore.term[i]["connected"] = false;
+      // DataStore.term[i]["socket"].destroy();
+      // DataStore.term[i]["term"].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+    }
+  }
+
 //
 //   Search(q) {
 //     if (this.searchrequest) {
@@ -513,6 +537,7 @@ export class AppService {
 //     this._logger.log(q);
 //   }
 }
+
 // }
 //
 // @Pipe({

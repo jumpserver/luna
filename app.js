@@ -6,7 +6,7 @@ var server = {};
 var http = require('http');
 var express = require('express');
 var io = require('socket.io');
-// var pty = require('pty.js');
+var pty = require('pty.js');
 // var terminal = require('term.js');
 
 var socket;
@@ -16,23 +16,23 @@ var buff = [];
 server.run = function (options) {
 
   // create shell process
-  // term = pty.fork(
-  //     process.env.SHELL || 'sh',
-  //     [],
-  //     {
-  //         name: require('fs').existsSync('/usr/share/terminfo/x/xterm-256color')
-  //             ? 'xterm-256color'
-  //             : 'xterm',
-  //         cols: 80,
-  //         rows: 24,
-  //         cwd: process.env.HOME
-  //     }
-  // );
+  term = pty.fork(
+      process.env.SHELL || 'sh',
+      [],
+      {
+          name: require('fs').existsSync('/usr/share/terminfo/x/xterm-256color')
+              ? 'xterm-256color'
+              : 'xterm',
+          cols: 80,
+          rows: 24,
+          cwd: process.env.HOME
+      }
+  );
   //
   // // store term's output into buffer or emit through socket
-  // term.on('data', function (data) {
-  //     return !socket ? buff.push(data) : socket.emit('data', data);
-  // });
+  term.on('data', function (data) {
+      return !socket ? buff.push(data) : socket.emit('data', data);
+  });
 
   // console.log('Created shell with pty master/slave pair (master: %d, pid: %d)', term.fd, term.pid);
 
@@ -50,7 +50,7 @@ server.run = function (options) {
       res.json({logined: true, id: 1, username: "liuzheng", name: "liuzheng"})
     })
     .get(function (req, res) {
-      res.json({logined: false})
+      res.json({logined: true})
     });
 
 

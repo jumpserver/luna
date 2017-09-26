@@ -1,0 +1,128 @@
+
+#tabs {
+  height: 30px;
+  width: 100%
+}
+
+#tabs ul li.disconnected {
+  background-color: darkgray;
+}
+
+#tabs ul li.hidden {
+  display: none;
+}
+
+#tabs ul {
+  list-style-type: none;
+  height: 30px;
+  background-color: #3a3333;
+  overflow-y: hidden;
+  overflow-x: auto;
+  width: 100%;
+  display: inline-flex;
+  position: absolute;
+}
+
+#tabs ul li {
+  display: inline-table;
+  width: 150px;
+  height: 30px;
+  position: relative;
+  box-sizing: content-box;
+}
+
+#tabs ul li.active div {
+  height: 100%;
+  width: 100%;
+  border-bottom: 3px solid #7f3f98 !important;
+}
+
+#tabs ul li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: gray;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  text-decoration: none;
+  padding: 8px 20px 6px 15px;
+  cursor: default;
+  width: 115px;
+  height: 21px;
+  position: absolute;
+}
+
+#tabs ul li a.close {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  position: absolute;
+  color: gray;
+  top: 0;
+  right: 5px;
+  cursor: pointer;
+  line-height: 26px;
+  display: inline-block;
+}
+
+#tabs ul li.active a {
+  color: white;
+}
+
+#tabs ul li.active span {
+  padding: 5px 20px 4px 15px;
+  color: white;
+  height: 18px;
+}
+
+#tabs ul li input {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  width: 115px;
+  border: none;
+  background-color: inherit;
+  color: white;
+  padding: 5px 20px 4px 15px;
+  height: 18px;
+  border-bottom: 3px solid #7f3f98 !important;
+}
+
+#term {
+  width: 100%;
+  height: 100%;
+}
+
+.terminal {
+  border: #000 solid 5px;
+  color: #f0f0f0;
+  background: #fffa90;
+  box-shadow: rgba(0, 0, 0, 0.8) 2px 2px 20px;
+  white-space: nowrap;
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+  background-color: black;
+}
+
+#term .terminal div span {
+  min-width: 12px;
+}
+
+.reverse-video {
+  color: #000;
+  background: #f0f0f0;
+}
+
+.termChangBar {
+  line-height: 1;
+  margin: 0 auto;
+  border: 1px solid #ffffff;
+  color: #fff;
+  background-color: #ffffff;
+  position: fixed;
+  right: 0;
+  top: 0;
+}
+
+.hidden {
+  display: none;
+}

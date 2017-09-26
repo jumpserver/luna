@@ -5,19 +5,19 @@
 import {Component} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
 
-import {AppService, DataStore, User} from './app.service';
+import {AppService, DataStore} from '../app.service';
 
 
+//noinspection TypeScriptValidateTypes
 @Component({
-  selector: 'app-footer',
-  templateUrl: './footer.html',
-  providers: [AppService]
+  selector: 'app-leftbar',
+  templateUrl: './leftbar.html',
+  // directives: [NgClass]
 })
 
 
-export class FooterComponent {
-  DataStore = DataStore;
-  User = User;
+export class LeftbarComponent {
+  // DataStore = DataStore;
 
   constructor(private _appService: AppService,
               private _logger: Logger) {
