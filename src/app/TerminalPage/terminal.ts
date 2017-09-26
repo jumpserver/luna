@@ -51,34 +51,31 @@ export class TerminalComponent implements OnInit {
 
   close(i) {
     this._logger.debug(i);
-    Terminal.TerminalDisconnect(i);
+    TerminalComponent.TerminalDisconnect(i);
     DataStore.term[i].hide = true;
     DataStore.term[i].closed = true;
     DataStore.term[i].term.destroy();
     DataStore.term.splice(i, 1);
-    Terminal.checkActive(i);
+    TerminalComponent.checkActive(i);
   }
 
   static checkActive(index) {
     let len = DataStore.term.length;
-    if (len == 2) {
+    if (len == 1) {
       // 唯一一个
       DataStore.termActive = 0;
+    } else if (len - 1 == index) {
+      // 删了最后一个
+      DataStore.termActive = len - 2;
     } else {
-      if (len - 1 == index) {
-        // 删了最后一个
-        DataStore.termActive = index - 1;
-      } else {
-        DataStore.termActive = index;
-      }
-      for (let m in DataStore.term) {
-        DataStore.term[m].hide = true;
-      }
-      DataStore.term[DataStore.termActive].hide = false;
+      DataStore.termActive = index;
     }
+    TerminalComponent.setActive(DataStore.termActive)
   }
 
-  setActive(index) {
+  setActive = TerminalComponent.setActive;
+
+  static setActive(index) {
     for (let m in DataStore.term) {
       DataStore.term[m].hide = true;
     }
@@ -115,7 +112,7 @@ export class TerminalComponent implements OnInit {
       cols: cols,
       rows: rows,
       useStyle: true,
-      screenKeys: true
+      screenKeys: true,
     });
     DataStore.term.push(new Term());
     for (let m in DataStore.term) {
@@ -123,7 +120,6 @@ export class TerminalComponent implements OnInit {
     }
     DataStore.term[id].hide = false;
 
-    this._logger.log(DataStore.term[id + 1].closed);
     DataStore.termActive = id;
 
 
@@ -192,7 +188,7 @@ export class TerminalComponent implements OnInit {
   static TerminalDisconnectAll() {
     alert("TerminalDisconnectAll");
     for (let i in DataStore.term) {
-      Terminal.TerminalDisconnect(i);
+      TerminalComponent.TerminalDisconnect(i);
       // DataStore.term[i]["connected"] = false;
       // DataStore.term[i]["socket"].destroy();
       // DataStore.term[i]["term"].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');

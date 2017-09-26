@@ -89,6 +89,13 @@
   height: 100%;
 }
 
+#term > div {
+  border-left: 10px solid black;
+  border-top: 10px solid black;
+  background-color: black;
+  height:100%;
+}
+
 .terminal {
   border: #000 solid 5px;
   color: #f0f0f0;
@@ -122,4 +129,14 @@
 
 .hidden {
   display: none;
+}
+
+#liuzheng {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  font-size: 11px !important;
+  padding-bottom: 16px !important;
+  font-family: 'Monaco', iosevka !important;
 }

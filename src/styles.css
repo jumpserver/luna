@@ -33,7 +33,3 @@ app-root {
   padding-bottom: 16px !important;
   font-family: 'Monaco', iosevka !important;
 }
-
-.xterm-rows {
-  margin: 10px 0 0 10px;
-}
