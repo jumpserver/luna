@@ -3,11 +3,9 @@
     <li *ngFor="let m of DataStore.term;let i = index"
         [ngClass]="{'active':i==DataStore.termActive,'disconnected':!m.connected, 'hidden': m.closed != false}"
         id="termnav-{{i}}" (click)="setActive(i)">
-      <div>
-        <span *ngIf="!m.edit" (dblclick)="m.edit=true;setActive(i)">{{m.nick}}</span>
-        <input *ngIf="m.edit" [(ngModel)]="m.nick" autofocus (blur)="m.edit=false" (keyup.enter)="m.edit=false"/>
-        <a class="close" (click)="close(i)">&times;</a>
-      </div>
+      <span *ngIf="!m.edit" (dblclick)="m.edit=true;setActive(i)">{{m.nick}}</span>
+      <input *ngIf="m.edit" [(ngModel)]="m.nick" autofocus (blur)="m.edit=false" (keyup.enter)="m.edit=false"/>
+      <a class="close" (click)="close(i)">&times;</a>
     </li>
   </ul>
 </div>
@@ -18,6 +16,7 @@
   <div *ngFor="let m of DataStore.term;let i=index"
        [ngClass]="{'disconnected':!m.connected,'hidden': m.hide}" id="term-{{i}}">
   </div>
-  <div class="terminal"></div>
 </div>
-<span id="liuzheng" class="terminal" style="display: none;">liuzheng</span>
+<div class="terminal" style="position: absolute;top: -9999999px;left: -999999px;">
+  <span id="liuzheng" style="display: none;">liuzheng</span>
+</div>

@@ -31,9 +31,8 @@
   box-sizing: content-box;
 }
 
-#tabs ul li.active div {
-  height: 100%;
-  width: 100%;
+#tabs ul li.active {
+  box-sizing: border-box;
   border-bottom: 3px solid #7f3f98 !important;
 }
 
@@ -49,7 +48,6 @@
   cursor: default;
   width: 115px;
   height: 21px;
-  position: absolute;
 }
 
 #tabs ul li a.close {
@@ -94,7 +92,6 @@
 .terminal {
   border: #000 solid 5px;
   color: #f0f0f0;
-  background: #fffa90;
   box-shadow: rgba(0, 0, 0, 0.8) 2px 2px 20px;
   white-space: nowrap;
   display: inline-block;

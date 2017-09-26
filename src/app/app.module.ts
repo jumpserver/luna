@@ -22,7 +22,7 @@ import {LoginComponent} from './BasicPage/login.component';
 
 import {TermPage} from './TerminalPage/main';
 import {TermLeftBar} from './TerminalPage/leftbar';
-import {Terminal} from './TerminalPage/terminal';
+import {TerminalComponent} from './TerminalPage/terminal';
 
 
 @NgModule({
@@ -43,7 +43,7 @@ import {Terminal} from './TerminalPage/terminal';
 
     TermPage,
     TermLeftBar,
-    Terminal
+    TerminalComponent
     // HeroListComponent,
     // CrisisListComponent,
   ],
