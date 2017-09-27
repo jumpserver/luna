@@ -25,8 +25,14 @@ import * as io from 'socket.io-client';
 //   }
 // }
 
+export class Group {
+  id: number;
+  name: string;
+  membercount: number;
+  comment: string;
+}
 
-export class User {
+export let User: {
   id: number;
   name: string;
   username: string;
@@ -38,20 +44,38 @@ export class User {
   is_active: boolean;
   date_joined: string;
   last_login: string;
-  groups: Array<string>;
-}
-export class Group {
-  id: number;
-  name: string;
-  membercount: number;
-  comment: string;
+  groups: Array<Group>;
+  logined: boolean;
+} = {
+  id: 0,
+  name: 'nobody',
+  username: '',
+  password: '',
+  phone: '',
+  avatar: '',
+  role: '',
+  email: '',
+  is_active: false,
+  date_joined: '',
+  last_login: '',
+  groups: [],
+  logined: false,
+};
+
+export class Term {
+  nick: string;
+  edit: boolean;
+  machine: string;
+  connected: boolean;
+  closed: boolean;
+  socket: any;
+  term: any;
+  hide: boolean;
 }
 
 export let DataStore: {
   socket: any;
-  user: User;
   Nav: Array<{}>;
-  logined: boolean;
   lastNavigationAttempt: string;
   route: Array<{}>;
   activenav: {};
@@ -61,16 +85,14 @@ export let DataStore: {
   leftbar: string;
   leftbarrightclick: string;
   loglevel: number;
-  term: Array<{}>;
+  term: Array<Term>;
   termActive: number;
   leftbarhide: boolean;
   termlist: Array<string>;
   windowsize: Array<number>;
 } = {
   socket: io.connect(),
-  user: new User,
   Nav: [{}],
-  logined: false,
   lastNavigationAttempt: '',
   route: [{}],
   activenav: {},
@@ -80,7 +102,7 @@ export let DataStore: {
   leftbar: '/api/leftbar',
   leftbarrightclick: '/api/leftbarrightclick',
   loglevel: 0,
-  term: [],
+  term: [new Term()],
   termActive: 0,
   leftbarhide: false,
   termlist: [],
@@ -333,161 +355,4 @@ export class AppService {
 //     });
 //
 //   }
-//
-//   // getMachineList() {
-//   //     this._logger.log('service.ts:AppService,getMachineList');
-//   //     return this.http.get('/api/leftbar')
-//   //         .map(res => res.json())
-//   //         .subscribe(response => {
-//   //             DataStore.leftbar = response;
-//   //             this._logger.debug("DataStore.leftbar:", DataStore.leftbar)
-//   //
-//   //             // this._logger.warn(this._dataStore.user);
-//   //             // this._logger.warn(DataStore.user)
-//   //         });
-//   // }
-//   //
-//   // getLeftbarRightclick() {
-//   //     this._logger.log('service.ts:AppService,getLeftbarRightclick');
-//   //     return this.http.get('/api/leftbarrightclick')
-//   //         .map(res => res.json())
-//   //         .subscribe(response => {
-//   //             DataStore.leftbarrightclick = response;
-//   //             this._logger.debug("DataStore.leftbarrightclick:", DataStore.leftbarrightclick)
-//   //             // this._logger.warn(this._dataStore.user);
-//   //             // this._logger.warn(DataStore.user)
-//   //         });
-//   //
-//   // }
-//   TerminalConnect(uuid) {
-//     var socket = io.connect();
-//     var vm = this;
-//
-//     if (Cookie.get('cols')) {
-//       var cols = Cookie.get('cols');
-//     } else {
-//       var cols = '80';
-//       Cookie.set('cols', cols, 99, '/', document.domain);
-//     }
-//     if (Cookie.get('rows')) {
-//       var rows = Cookie.get('rows');
-//     } else {
-//       var rows = '24';
-//       Cookie.set('rows', rows, 99, '/', document.domain);
-//     }
-//     var id = DataStore.term.push({
-//         'machine': 'localhost',
-//         'nick': 'localhost',
-//         'connected': true,
-//         'socket': socket
-//       }) - 1;
-//     DataStore.termActive = id;
-//     DataStore.term[id]['term'] = new Terminal({
-//       cols: cols,
-//       rows: rows,
-//       useStyle: true,
-//       screenKeys: true
-//     });
-//
-//     DataStore.term[id]['term'].on('title', function (title) {
-//       document.title = title;
-//     });
-//
-//     DataStore.term[id]['term'].open(document.getElementById('term-' + id));
-//
-//     DataStore.term[id]['term'].write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
-//
-//     socket.on('connect', function () {
-//       socket.emit('machine', uuid);
-//
-//       DataStore.term[id]['term'].on('data', function (data) {
-//         socket.emit('data', data);
-//       });
-//
-//
-//       socket.on('data', function (data) {
-//         DataStore.term[id]['term'].write(data);
-//       });
-//
-//       socket.on('disconnect', function () {
-//         vm.TerminalDisconnect(id);
-//         // DataStore.term[id]["term"].destroy();
-//         // DataStore.term[id]["connected"] = false;
-//       });
-//
-//       window.onresize = function () {
-//         var col = Math.floor(jQuery('#term').width() / jQuery('#liuzheng').width() * 8) - 3;
-//         var row = Math.floor(jQuery('#term').height() / jQuery('#liuzheng').height()) - 3;
-//         if (Cookie.get('rows')) {
-//           var rows = parseInt(Cookie.get('rows'));
-//         } else {
-//           var rows = 24;
-//         }
-//         if (Cookie.get('cols')) {
-//           var cols = parseInt(Cookie.get('cols'));
-//         } else {
-//           var cols = 80;
-//         }
-//         if (col < 80) col = 80;
-//         if (row < 24) row = 24;
-//         if (cols == col && row == rows) {
-//         } else {
-//           for (var termid in DataStore.term) {
-//             DataStore.term[termid]['socket'].emit('resize', [col, row]);
-//             DataStore.term[termid]['term'].resize(col, row);
-//           }
-//           Cookie.set('cols', String(col), 99, '/', document.domain);
-//           Cookie.set('rows', String(row), 99, '/', document.domain);
-//         }
-//       };
-//     });
-//
-//   }
-//
-//   TerminalDisconnect(i) {
-//     DataStore.term[i]['connected'] = false;
-//     DataStore.term[i]['socket'].destroy();
-//     DataStore.term[i]['term'].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
-//   }
-//
-//   TerminalDisconnectAll() {
-//     for (var i in DataStore.term) {
-//       this.TerminalDisconnect(i);
-//       // DataStore.term[i]["connected"] = false;
-//       // DataStore.term[i]["socket"].destroy();
-//       // DataStore.term[i]["term"].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
-//     }
-//   }
-//
-//   Search(q) {
-//     if (this.searchrequest) {
-//       this.searchrequest.unsubscribe();
-//     }
-//     this.searchrequest = this.http.get('/api/search?q=' + q)
-//       .map(res => res.json())
-//       .subscribe(
-//         data => {
-//           this._logger.log(data);
-//         },
-//         err => {
-//           this._logger.error(err);
-//         },
-//         () => {
-//         }
-//       );
-//     this._logger.log(q);
-//   }
 }
-// }
-//
-// @Pipe({
-//     name: 'join'
-// })
-//
-// export class Join {
-//     transform(value, args?) {
-//         if (typeof value === 'undefined')
-//             return 'undefined';
-//         return value.join(args)
-//     }
-// }
