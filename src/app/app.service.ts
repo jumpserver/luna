@@ -27,20 +27,6 @@ import * as io from 'socket.io-client';
 import {Router} from '@angular/router';
 
 
-// export class User {
-//   id: number;
-//   name: string;
-//   username: string;
-//   password: string;
-//   phone: string;
-//   avatar: string;
-//   role: string;
-//   email: string;
-//   is_active: boolean;
-//   date_joined: string;
-//   last_login: string;
-//   groups: Array<string>;
-// }
 export class Group {
   id: number;
   name: string;
@@ -60,7 +46,7 @@ export let User: {
   is_active: boolean;
   date_joined: string;
   last_login: string;
-  groups: Array<string>;
+  groups: Array<Group>;
   logined: boolean;
 } = {
   id: 0,
@@ -77,6 +63,18 @@ export let User: {
   groups: [],
   logined: false,
 };
+
+export class Term {
+  nick: string;
+  edit: boolean;
+  machine: string;
+  connected: boolean;
+  closed: boolean;
+  socket: any;
+  term: any;
+  hide: boolean;
+}
+
 export let DataStore: {
   socket: any;
   Nav: Array<{}>;
@@ -89,7 +87,7 @@ export let DataStore: {
   leftbar: string;
   leftbarrightclick: string;
   loglevel: number;
-  term: Array<{}>;
+  term: Array<Term>;
   termActive: number;
   leftbarhide: boolean;
   termlist: Array<string>;
@@ -106,7 +104,7 @@ export let DataStore: {
   leftbar: '/api/leftbar',
   leftbarrightclick: '/api/leftbarrightclick',
   loglevel: 0,
-  term: [],
+  term: [new Term()],
   termActive: 0,
   leftbarhide: false,
   termlist: [],
@@ -372,19 +370,4 @@ export class AppService {
 //     });
 //
 //   }
-//
-//
-//   // getLeftbarRightclick() {
-//   //     this._logger.log('service.ts:AppService,getLeftbarRightclick');
-//   //     return this.http.get('/api/leftbarrightclick')
-//   //         .map(res => res.json())
-//   //         .subscribe(response => {
-//   //             DataStore.leftbarrightclick = response;
-//   //             this._logger.debug("DataStore.leftbarrightclick:", DataStore.leftbarrightclick)
-//   //             // this._logger.warn(this._dataStore.user);
-//   //             // this._logger.warn(DataStore.user)
-//   //         });
-//   //
-//   // }
-
 }

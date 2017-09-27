@@ -3,10 +3,15 @@
  */
 import {NgModule} from '@angular/core';
 import {RouterModule, Routes} from '@angular/router';
-import {WelcomeComponent} from './welcome.component';
-import {PageNotFoundComponent} from './not-found.component';
 import {environment} from '../environments/environment';
+<<<<<<< HEAD
 import {LoginComponent} from './login.component';
+=======
+
+import {WelcomeComponent} from './IndexPage/welcome.component';
+import {PageNotFoundComponent} from './BasicPage/not-found.component';
+
+>>>>>>> master
 const appRoutes: Routes = [
   // { path: 'crisis-center', component: CrisisListComponent },
   {path: 'welcome', component: WelcomeComponent}, // <-- delete this line

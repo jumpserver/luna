@@ -12,6 +12,7 @@ import {AppRoutingModule} from './app-routing.module';
 
 
 import {AppComponent} from './app.component';
+<<<<<<< HEAD
 import {WelcomeComponent} from './welcome.component';
 import {NavComponent} from './nav.component';
 import {FooterComponent} from './footer.component';
@@ -19,6 +20,15 @@ import {LeftbarComponent} from './leftbar.component';
 import {PageNotFoundComponent} from './not-found.component';
 import {LoginComponent} from './login.component';
 
+=======
+
+import {NavComponent} from './BasicPage/nav.component';
+import {PageNotFoundComponent} from './BasicPage/not-found.component';
+import {FooterComponent} from './BasicPage/footer.component';
+
+import {WelcomeComponent} from './IndexPage/welcome.component';
+import {LeftbarComponent} from './IndexPage/leftbar.component';
+>>>>>>> master
 
 @NgModule({
   imports: [
