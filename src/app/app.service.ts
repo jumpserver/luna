@@ -62,53 +62,25 @@ export let User: {
   logined: false,
 };
 
-export class Term {
-  nick: string;
-  edit: boolean;
-  machine: string;
-  connected: boolean;
-  closed: boolean;
-  socket: any;
-  term: any;
-  hide: boolean;
-}
-
 export let DataStore: {
   socket: any;
   Nav: Array<{}>;
-  lastNavigationAttempt: string;
-  route: Array<{}>;
-  activenav: {};
   Path: {};
   error: {};
   msg: {};
-  leftbar: string;
-  leftbarrightclick: string;
   loglevel: number;
-  term: Array<Term>;
-  termActive: number;
   leftbarhide: boolean;
-  termlist: Array<string>;
   windowsize: Array<number>;
 } = {
   socket: io.connect(),
   Nav: [{}],
-  lastNavigationAttempt: '',
-  route: [{}],
-  activenav: {},
   Path: {},
   error: {},
   msg: {},
-  leftbar: '/api/leftbar',
-  leftbarrightclick: '/api/leftbarrightclick',
   loglevel: 0,
-  term: [new Term()],
-  termActive: 0,
   leftbarhide: false,
-  termlist: [],
   windowsize: [],
 };
-
 
 @Injectable()
 export class AppService {
