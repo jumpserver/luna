@@ -1,7 +1,7 @@
 <div id="tabs">
   <ul>
-    <li *ngFor="let m of DataStore.term;let i = index"
-        [ngClass]="{'active':i==DataStore.termActive,'disconnected':!m.connected, 'hidden': m.closed != false}"
+    <li *ngFor="let m of TermStore.term;let i = index"
+        [ngClass]="{'active':i==TermStore.termActive,'disconnected':!m.connected, 'hidden': m.closed != false}"
         id="termnav-{{i}}" (click)="setActive(i)">
       <span *ngIf="!m.edit" (dblclick)="m.edit=true;setActive(i)">{{m.nick}}</span>
       <input *ngIf="m.edit" [(ngModel)]="m.nick" autofocus (blur)="m.edit=false" (keyup.enter)="m.edit=false"/>
@@ -13,7 +13,7 @@
   <!--<div-->
   <!--[ngClass]="{'disconnected':!DataStore.term[0].connected, 'hidden': i!=DataStore.termActive || DataStore.term[0].closed}"-->
   <!--id="term-0"></div>-->
-  <div *ngFor="let m of DataStore.term;let i=index"
+  <div *ngFor="let m of TermStore.term;let i=index"
        [ngClass]="{'disconnected':!m.connected,'hidden': m.hide}" id="term-{{i}}">
   </div>
 </div>

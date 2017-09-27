@@ -6,8 +6,30 @@ import {Cookie} from 'ng2-cookies/ng2-cookies';
 declare let jQuery: any;
 declare let Terminal: any;
 
-import {AppService, DataStore, Term} from '../app.service';
+import {AppService, DataStore} from '../app.service';
 
+export class Term {
+  nick: string;
+  edit: boolean;
+  machine: string;
+  connected: boolean;
+  closed: boolean;
+  socket: any;
+  term: any;
+  hide: boolean;
+}
+
+export let TermStore: {
+  term: Array<Term>;
+  termlist: Array<string>;
+  termActive: number;
+
+
+} = {
+  term: [new Term()],
+  termlist: [],
+  termActive: 0,
+};
 
 @Component({
   selector: 'term-body',
@@ -19,6 +41,7 @@ import {AppService, DataStore, Term} from '../app.service';
 
 export class TerminalComponent implements OnInit {
   DataStore = DataStore;
+  TermStore = TermStore;
 
   constructor(private _appService: AppService,
               private _logger: Logger) {
@@ -26,7 +49,7 @@ export class TerminalComponent implements OnInit {
   }
 
   ngOnInit() {
-    //DataStore.term[0]["term"].open(document.getElementById("term-0"))
+    //TermStore.term[0]["term"].open(document.getElementById("term-0"))
     this.timer();
   }
 
@@ -37,11 +60,11 @@ export class TerminalComponent implements OnInit {
   }
 
   timer() {
-    if (DataStore.termlist.length > 0) {
-      for (let i in DataStore.termlist) {
-        this.TerminalConnect(DataStore.termlist[i]);
+    if (TermStore.termlist.length > 0) {
+      for (let i in TermStore.termlist) {
+        this.TerminalConnect(TermStore.termlist[i]);
       }
-      DataStore.termlist = []
+      TermStore.termlist = []
     }
     jQuery(window).trigger('resize');
     setTimeout(() => {
@@ -52,39 +75,39 @@ export class TerminalComponent implements OnInit {
   close(i) {
     this._logger.debug(i);
     TerminalComponent.TerminalDisconnect(i);
-    DataStore.term[i].hide = true;
-    DataStore.term[i].closed = true;
-    DataStore.term[i].term.destroy();
-    DataStore.term.splice(i, 1);
+    TermStore.term[i].hide = true;
+    TermStore.term[i].closed = true;
+    TermStore.term[i].term.destroy();
+    TermStore.term.splice(i, 1);
     TerminalComponent.checkActive(i);
   }
 
   static checkActive(index) {
-    let len = DataStore.term.length;
+    let len = TermStore.term.length;
     if (len == 1) {
       // 唯一一个
-      DataStore.termActive = 0;
+      TermStore.termActive = 0;
     } else if (len - 1 == index) {
       // 删了最后一个
-      DataStore.termActive = len - 2;
+      TermStore.termActive = len - 2;
     } else {
-      DataStore.termActive = index;
+      TermStore.termActive = index;
     }
-    TerminalComponent.setActive(DataStore.termActive)
+    TerminalComponent.setActive(TermStore.termActive)
   }
 
   setActive = TerminalComponent.setActive;
 
   static setActive(index) {
-    for (let m in DataStore.term) {
-      DataStore.term[m].hide = true;
+    for (let m in TermStore.term) {
+      TermStore.term[m].hide = true;
     }
-    DataStore.term[index].hide = false;
-    DataStore.termActive = index;
+    TermStore.term[index].hide = false;
+    TermStore.termActive = index;
   }
 
   dblclick() {
-    console.log(DataStore.term)
+    console.log(TermStore.term)
   }
 
   TerminalConnect(uuid) {
@@ -101,52 +124,52 @@ export class TerminalComponent implements OnInit {
     Cookie.set('rows', rows, 99, '/', document.domain);
 
 
-    let id = DataStore.term.length - 1;
-    DataStore.term[id].machine = 'localhost';
-    DataStore.term[id].nick = 'localhost';
-    DataStore.term[id].connected = true;
-    DataStore.term[id].socket = socket;
-    DataStore.term[id].edit = false;
-    DataStore.term[id].closed = false;
-    DataStore.term[id].term = new Terminal({
+    let id = TermStore.term.length - 1;
+    TermStore.term[id].machine = 'localhost';
+    TermStore.term[id].nick = 'localhost';
+    TermStore.term[id].connected = true;
+    TermStore.term[id].socket = socket;
+    TermStore.term[id].edit = false;
+    TermStore.term[id].closed = false;
+    TermStore.term[id].term = new Terminal({
       cols: cols,
       rows: rows,
       useStyle: true,
       screenKeys: true,
     });
-    DataStore.term.push(new Term());
-    for (let m in DataStore.term) {
-      DataStore.term[m].hide = true;
+    TermStore.term.push(new Term());
+    for (let m in TermStore.term) {
+      TermStore.term[m].hide = true;
     }
-    DataStore.term[id].hide = false;
+    TermStore.term[id].hide = false;
 
-    DataStore.termActive = id;
+    TermStore.termActive = id;
 
 
-    // DataStore.term[id]['term'].on('title', function (title) {
+    // TermStore.term[id]['term'].on('title', function (title) {
     //   document.title = title;
     // });
 
-    DataStore.term[id].term.open(document.getElementById('term-' + id));
+    TermStore.term[id].term.open(document.getElementById('term-' + id), true);
 
-    DataStore.term[id].term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
+    TermStore.term[id].term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
 
     socket.on('connect', function () {
       socket.emit('machine', uuid);
 
-      DataStore.term[id].term.on('data', function (data) {
+      TermStore.term[id].term.on('data', function (data) {
         socket.emit('data', data);
       });
 
 
       socket.on('data', function (data) {
-        DataStore.term[id].term.write(data);
+        TermStore.term[id].term.write(data);
       });
 
       socket.on('disconnect', function () {
         this.TerminalDisconnect(id);
-        // DataStore.term[id]["term"].destroy();
-        // DataStore.term[id]["connected"] = false;
+        // TermStore.term[id]["term"].destroy();
+        // TermStore.term[id]["connected"] = false;
       });
 
       window.onresize = function () {
@@ -165,10 +188,10 @@ export class TerminalComponent implements OnInit {
         if (row < 24) row = 24;
         if (cols == col && row == rows) {
         } else {
-          for (let tid in DataStore.term) {
-            if (DataStore.term[tid].connected) {
-              DataStore.term[tid].socket.emit('resize', [col, row]);
-              DataStore.term[tid].term.resize(col, row);
+          for (let tid in TermStore.term) {
+            if (TermStore.term[tid].connected) {
+              TermStore.term[tid].socket.emit('resize', [col, row]);
+              TermStore.term[tid].term.resize(col, row);
             }
           }
           Cookie.set('cols', String(col), 99, '/', document.domain);
@@ -180,18 +203,18 @@ export class TerminalComponent implements OnInit {
   }
 
   static TerminalDisconnect(i) {
-    DataStore.term[i].connected = false;
-    DataStore.term[i].socket.destroy();
-    DataStore.term[i].term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+    TermStore.term[i].connected = false;
+    TermStore.term[i].socket.destroy();
+    TermStore.term[i].term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
   }
 
   static TerminalDisconnectAll() {
     alert("TerminalDisconnectAll");
-    for (let i in DataStore.term) {
+    for (let i in TermStore.term) {
       TerminalComponent.TerminalDisconnect(i);
-      // DataStore.term[i]["connected"] = false;
-      // DataStore.term[i]["socket"].destroy();
-      // DataStore.term[i]["term"].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+      // TermStore.term[i]["connected"] = false;
+      // TermStore.term[i]["socket"].destroy();
+      // TermStore.term[i]["term"].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
     }
   }
 }
