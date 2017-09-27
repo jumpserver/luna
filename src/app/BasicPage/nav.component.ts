@@ -3,21 +3,13 @@
  */
 
 import {Component} from '@angular/core';
-import {NgClass} from '@angular/common';
-// import {ROUTER_DIRECTIVES} from '@angular/router-deprecated';
 import {Logger} from 'angular2-logger/core';
 
-// import  'rxjs/Rx';
-// declare var jQuery: any;
 // declare var Clipboard: any;
 // declare var layer: any;
 
 
-<<<<<<< HEAD:src/app/nav.component.ts
-import {AppService, DataStore, User} from './app.service';
-=======
-import {AppService, DataStore} from '../app.service';
->>>>>>> master:src/app/BasicPage/nav.component.ts
+import {AppService, DataStore, User} from '../app.service';
 
 
 //noinspection TypeScriptValidateTypes

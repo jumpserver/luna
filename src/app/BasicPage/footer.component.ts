@@ -5,11 +5,7 @@
 import {Component} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
 
-<<<<<<< HEAD:src/app/footer.component.ts
-import {AppService, DataStore, User} from './app.service';
-=======
-import {AppService, DataStore} from '../app.service';
->>>>>>> master:src/app/BasicPage/footer.component.ts
+import {AppService, DataStore, User} from '../app.service';
 
 
 @Component({

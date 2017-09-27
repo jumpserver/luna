@@ -4,7 +4,7 @@
 
 import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
-import {AppService, DataStore, User} from './app.service';
+import {AppService, DataStore, User} from '../app.service';
 import {NgForm} from '@angular/forms';
 
 declare let jQuery: any;
