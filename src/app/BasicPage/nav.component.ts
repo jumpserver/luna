@@ -13,7 +13,7 @@ import {Logger} from 'angular2-logger/core';
 // declare var layer: any;
 
 
-import {AppService, DataStore} from './app.service';
+import {AppService, DataStore} from '../app.service';
 
 
 //noinspection TypeScriptValidateTypes
