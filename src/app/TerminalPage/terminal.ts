@@ -23,8 +23,6 @@ export let TermStore: {
   term: Array<Term>;
   termlist: Array<string>;
   termActive: number;
-
-
 } = {
   term: [new Term()],
   termlist: [],

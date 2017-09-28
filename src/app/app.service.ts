@@ -2,7 +2,7 @@
  * Created by liuzheng on 2017/8/30.
  */
 import {Injectable, NgModule} from '@angular/core';
-import {Http, Request, RequestOptionsArgs, Headers} from '@angular/http';
+import {Http, RequestOptionsArgs, Headers} from '@angular/http';
 import {Cookie} from 'ng2-cookies/ng2-cookies';
 import {Logger} from 'angular2-logger/core';
 import 'rxjs/add/operator/map';
@@ -93,48 +93,73 @@ export let Browser: {
   vendor: navigator.vendor,
 };
 
+@Injectable()
 export class HttpService {
   headers = new Headers();
 
   constructor(private _http: Http) {
   }
 
-  request(url: string | Request, options?: RequestOptionsArgs) {
-    options.headers = this.headers;
-    return this._http.request(url, options)
-  }
+  // request(url: string | Request, options?: RequestOptionsArgs) {
+  //   if (options == null) {
+  //     options = {};
+  //   }
+  //   options.headers = this.headers;
+  //   return this._http.request(url, options)
+  // }
 
   get(url: string, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.get(url, options)
   }
 
   post(url: string, body: any, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.post(url, body, options)
   }
 
   put(url: string, body: any, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.put(url, body, options)
   }
 
   delete(url: string, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.delete(url, options)
   }
 
   patch(url: string, body: any, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.patch(url, body, options)
   }
 
   head(url: string, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.head(url, options)
   }
 
   options(url: string, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.options(url, options)
   }
@@ -275,6 +300,7 @@ export class AppService {
   }
 
   browser() {
+    this._http.headers.append("aa", "vvv");
     this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json())
   }
 
