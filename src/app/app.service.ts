@@ -10,33 +10,8 @@ import 'rxjs/add/operator/map';
 declare let jQuery: any;
 // declare var Clipboard: any;
 import * as io from 'socket.io-client';
-// declare let io: any;
-// declare var layer: any;
-// @Injectable()
-// export class Logger {
-//   logs: string[] = []; // capture logs for testing
-//   log(message: string) {
-//     this.logs.push(message);
-//     console.log(message);
-//   }
-// }
 import {Router} from '@angular/router';
 
-
-// export class User {
-//   id: number;
-//   name: string;
-//   username: string;
-//   password: string;
-//   phone: string;
-//   avatar: string;
-//   role: string;
-//   email: string;
-//   is_active: boolean;
-//   date_joined: string;
-//   last_login: string;
-//   groups: Array<string>;
-// }
 export class Group {
   id: number;
   name: string;
@@ -104,7 +79,6 @@ export class AppService {
               private _router: Router,
               private _logger: Logger) {
     if (Cookie.get('loglevel')) {
-
       // 0.- Level.OFF
       // 1.- Level.ERROR
       // 2.- Level.WARN
