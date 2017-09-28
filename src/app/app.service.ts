@@ -105,48 +105,73 @@ export let Browser: {
   vendor: navigator.vendor,
 };
 
+@Injectable()
 export class HttpService {
   headers = new Headers();
 
   constructor(private _http: Http) {
   }
 
-  request(url: string | Request, options?: RequestOptionsArgs) {
-    options.headers = this.headers;
-    return this._http.request(url, options)
-  }
+  // request(url: string | Request, options?: RequestOptionsArgs) {
+  //   if (options == null) {
+  //     options = {};
+  //   }
+  //   options.headers = this.headers;
+  //   return this._http.request(url, options)
+  // }
 
   get(url: string, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.get(url, options)
   }
 
   post(url: string, body: any, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.post(url, body, options)
   }
 
   put(url: string, body: any, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.put(url, body, options)
   }
 
   delete(url: string, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.delete(url, options)
   }
 
   patch(url: string, body: any, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.patch(url, body, options)
   }
 
   head(url: string, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.head(url, options)
   }
 
   options(url: string, options?: RequestOptionsArgs) {
+    if (options == null) {
+      options = {};
+    }
     options.headers = this.headers;
     return this._http.options(url, options)
   }
