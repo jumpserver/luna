@@ -2,14 +2,12 @@
  * Created by liuzheng on 2017/8/30.
  */
 import {Injectable, NgModule} from '@angular/core';
-import {Http} from '@angular/http';
+import {Http, Request, RequestOptionsArgs, Headers} from '@angular/http';
 import {Cookie} from 'ng2-cookies/ng2-cookies';
-// import {CookieService} from 'angular2-cookie/core'
 import {Logger} from 'angular2-logger/core';
 import 'rxjs/add/operator/map';
-// import {DynamicRouteConfigurator} from './dynamicRouteConfigurator'
-// import 'rxjs/add/operator/share';
-// import  'rxjs/Rx';
+import 'rxjs/add/operator/catch';
+
 declare let jQuery: any;
 // declare var Terminal: any;
 // declare var Clipboard: any;
@@ -83,13 +81,84 @@ export let DataStore: {
   leftbarhide: false,
   windowsize: [],
 };
+export let CSRF: string = '';
+
+export let Browser: {
+  userAgent: string;
+  appCodeName: string;
+  appName: string;
+  appVersion: string;
+  language: string;
+  platform: string;
+  product: string;
+  productSub: string;
+  vendor: string;
+} = {
+  userAgent: navigator.userAgent,
+  appCodeName: navigator.appCodeName,
+  appName: navigator.appName,
+  appVersion: navigator.appVersion,
+  language: navigator.language,
+  platform: navigator.platform,
+  product: navigator.product,
+  productSub: navigator.productSub,
+  vendor: navigator.vendor,
+};
+
+export class HttpService {
+  headers = new Headers();
+
+  constructor(private _http: Http) {
+  }
+
+  request(url: string | Request, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.request(url, options)
+  }
+
+  get(url: string, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.get(url, options)
+  }
+
+  post(url: string, body: any, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.post(url, body, options)
+  }
+
+  put(url: string, body: any, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.put(url, body, options)
+  }
+
+  delete(url: string, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.delete(url, options)
+  }
+
+  patch(url: string, body: any, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.patch(url, body, options)
+  }
+
+  head(url: string, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.head(url, options)
+  }
+
+  options(url: string, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.options(url, options)
+  }
+
+}
 
 @Injectable()
 export class AppService {
   // user:User = user  ;
   // searchrequest: any;
 
-  constructor(private http: Http,
+  constructor(private _http: HttpService,
               private _router: Router,
               private _logger: Logger) {
     if (Cookie.get('loglevel')) {
@@ -111,16 +180,10 @@ export class AppService {
       // this._logger.level = parseInt(Cookie.getCookie('loglevel'));
       this._logger.level = 0;
     }
-    const vm = this;
     DataStore.socket.on('connect', function () {
       console.log('DatsStore socket connected');
       DataStore.socket.on('nav', function (data) {
         DataStore.Nav = JSON.parse(data);
-      });
-      DataStore.socket.on('leftbar', function (data) {
-        if (data === 'changed') {
-          vm.ReloadLeftbar();
-        }
       });
       // DataStore.socket.on('popup', function (data) {
       //   layer.msg(data);
@@ -129,6 +192,7 @@ export class AppService {
       // DataStore.socket.emit('api', 'all');
     });
     this.checklogin();
+    this.browser()
   }
 
 
@@ -145,7 +209,7 @@ export class AppService {
           }
           // jQuery('angular2').show();
         } else {
-          this.http.get('/api/checklogin')
+          this._http.get('/api/checklogin')
             .map(res => res.json())
             .subscribe(
               data => {
@@ -185,7 +249,7 @@ export class AppService {
     DataStore.error['login'] = '';
     this._logger.log(User);
     if (User.username.length > 0 && User.password.length > 6 && User.password.length < 100) {
-      this.http.post('/api/checklogin', JSON.stringify(User)).map(res => res.json())
+      this._http.post('/api/checklogin', JSON.stringify(User)).map(res => res.json())
         .subscribe(
           data => {
             User.logined = data.logined;
@@ -219,6 +283,10 @@ export class AppService {
       DataStore.error['login'] = '请检查用户名和密码';
       return '请检查用户名和密码';
     }
+  }
+
+  browser() {
+    this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json())
   }
 
 //
@@ -258,10 +326,6 @@ export class AppService {
 //
 //   }
 //
-  ReloadLeftbar() {
-    jQuery('#left-bar').fancytree('getTree').reload();
-  }
-
 //     setMyinfo(user:User) {
 //         // Update data store
 //         this._dataStore.user = user;
