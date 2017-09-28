@@ -45,6 +45,12 @@ server.run = function (options) {
   // let term.js handle req/res
   // app.use(terminal.middleware());
 
+  apis.route('/browser')
+    .post(function (req, res) {
+      console.log(req);
+      res.string('');
+      // res.json({verified: true, csrf: "liuzheng"})
+    });
   apis.route('/checklogin')
     .post(function (req, res) {
       res.json({logined: true, id: 1, username: "liuzheng", name: "liuzheng"})
@@ -52,7 +58,6 @@ server.run = function (options) {
     .get(function (req, res) {
       res.json({logined: true})
     });
-
 
   app.use("/api", apis);
   // let server listen on the port

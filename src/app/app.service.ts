@@ -2,10 +2,11 @@
  * Created by liuzheng on 2017/8/30.
  */
 import {Injectable, NgModule} from '@angular/core';
-import {Http} from '@angular/http';
+import {Http, Request, RequestOptionsArgs, Headers} from '@angular/http';
 import {Cookie} from 'ng2-cookies/ng2-cookies';
 import {Logger} from 'angular2-logger/core';
 import 'rxjs/add/operator/map';
+import 'rxjs/add/operator/catch';
 
 declare let jQuery: any;
 // declare var Clipboard: any;
@@ -68,14 +69,84 @@ export let DataStore: {
   leftbarhide: false,
   windowsize: [],
 };
+export let CSRF: string = '';
 
+export let Browser: {
+  userAgent: string;
+  appCodeName: string;
+  appName: string;
+  appVersion: string;
+  language: string;
+  platform: string;
+  product: string;
+  productSub: string;
+  vendor: string;
+} = {
+  userAgent: navigator.userAgent,
+  appCodeName: navigator.appCodeName,
+  appName: navigator.appName,
+  appVersion: navigator.appVersion,
+  language: navigator.language,
+  platform: navigator.platform,
+  product: navigator.product,
+  productSub: navigator.productSub,
+  vendor: navigator.vendor,
+};
+
+export class HttpService {
+  headers = new Headers();
+
+  constructor(private _http: Http) {
+  }
+
+  request(url: string | Request, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.request(url, options)
+  }
+
+  get(url: string, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.get(url, options)
+  }
+
+  post(url: string, body: any, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.post(url, body, options)
+  }
+
+  put(url: string, body: any, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.put(url, body, options)
+  }
+
+  delete(url: string, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.delete(url, options)
+  }
+
+  patch(url: string, body: any, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.patch(url, body, options)
+  }
+
+  head(url: string, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.head(url, options)
+  }
+
+  options(url: string, options?: RequestOptionsArgs) {
+    options.headers = this.headers;
+    return this._http.options(url, options)
+  }
+
+}
 
 @Injectable()
 export class AppService {
   // user:User = user  ;
   // searchrequest: any;
 
-  constructor(private http: Http,
+  constructor(private _http: HttpService,
               private _router: Router,
               private _logger: Logger) {
     if (Cookie.get('loglevel')) {
@@ -110,6 +181,7 @@ export class AppService {
       // DataStore.socket.emit('api', 'all');
     });
     this.checklogin();
+    this.browser()
   }
 
 
@@ -126,7 +198,7 @@ export class AppService {
           }
           // jQuery('angular2').show();
         } else {
-          this.http.get('/api/checklogin')
+          this._http.get('/api/checklogin')
             .map(res => res.json())
             .subscribe(
               data => {
@@ -166,7 +238,7 @@ export class AppService {
     DataStore.error['login'] = '';
     this._logger.log(User);
     if (User.username.length > 0 && User.password.length > 6 && User.password.length < 100) {
-      this.http.post('/api/checklogin', JSON.stringify(User)).map(res => res.json())
+      this._http.post('/api/checklogin', JSON.stringify(User)).map(res => res.json())
         .subscribe(
           data => {
             User.logined = data.logined;
@@ -200,6 +272,10 @@ export class AppService {
       DataStore.error['login'] = '请检查用户名和密码';
       return '请检查用户名和密码';
     }
+  }
+
+  browser() {
+    this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json())
   }
 
 //
@@ -239,7 +315,6 @@ export class AppService {
 //
 //   }
 //
-
 //     setMyinfo(user:User) {
 //         // Update data store
 //         this._dataStore.user = user;
@@ -320,65 +395,4 @@ export class AppService {
 //     });
 //
 //   }
-//
-//   // getMachineList() {
-//   //     this._logger.log('service.ts:AppService,getMachineList');
-//   //     return this.http.get('/api/leftbar')
-//   //         .map(res => res.json())
-//   //         .subscribe(response => {
-//   //             DataStore.leftbar = response;
-//   //             this._logger.debug("DataStore.leftbar:", DataStore.leftbar)
-//   //
-//   //             // this._logger.warn(this._dataStore.user);
-//   //             // this._logger.warn(DataStore.user)
-//   //         });
-//   // }
-//   //
-//   // getLeftbarRightclick() {
-//   //     this._logger.log('service.ts:AppService,getLeftbarRightclick');
-//   //     return this.http.get('/api/leftbarrightclick')
-//   //         .map(res => res.json())
-//   //         .subscribe(response => {
-//   //             DataStore.leftbarrightclick = response;
-//   //             this._logger.debug("DataStore.leftbarrightclick:", DataStore.leftbarrightclick)
-//   //             // this._logger.warn(this._dataStore.user);
-//   //             // this._logger.warn(DataStore.user)
-//   //         });
-//   //
-//   // }
-
-
-//
-//   Search(q) {
-//     if (this.searchrequest) {
-//       this.searchrequest.unsubscribe();
-//     }
-//     this.searchrequest = this.http.get('/api/search?q=' + q)
-//       .map(res => res.json())
-//       .subscribe(
-//         data => {
-//           this._logger.log(data);
-//         },
-//         err => {
-//           this._logger.error(err);
-//         },
-//         () => {
-//         }
-//       );
-//     this._logger.log(q);
-//   }
 }
-
-// }
-//
-// @Pipe({
-//     name: 'join'
-// })
-//
-// export class Join {
-//     transform(value, args?) {
-//         if (typeof value === 'undefined')
-//             return 'undefined';
-//         return value.join(args)
-//     }
-// }

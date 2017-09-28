@@ -33,6 +33,7 @@
     "socket.io": "^2.0.3",
     "tether": "^1.4.0",
     "xterm": "^2.9.2",
+    "ssh-keygen": "^0.4.1",
     "zone.js": "^0.8.14"
   },
   "devDependencies": {
