@@ -1,7 +1,7 @@
 /**
  * Created by liuzheng on 2017/8/30.
  */
-import {Injectable, NgModule} from '@angular/core';
+import {Injectable} from '@angular/core';
 import {Http, RequestOptionsArgs, Headers} from '@angular/http';
 import {Cookie} from 'ng2-cookies/ng2-cookies';
 import {Logger} from 'angular2-logger/core';
@@ -113,6 +113,7 @@ export class HttpService {
       options = {};
     }
     options.headers = this.headers;
+    this._http.get("/api/hello");
     return this._http.get(url, options)
   }
 
@@ -206,7 +207,6 @@ export class AppService {
       // DataStore.socket.emit('api', 'all');
     });
     this.checklogin();
-    this.browser()
   }
 
 
@@ -223,6 +223,7 @@ export class AppService {
           }
           // jQuery('angular2').show();
         } else {
+          this.browser();
           this._http.get('/api/checklogin')
             .map(res => res.json())
             .subscribe(
@@ -300,8 +301,7 @@ export class AppService {
   }
 
   browser() {
-    this._http.headers.append("aa", "vvv");
-    this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json())
+    this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json()).subscribe()
   }
 
 //

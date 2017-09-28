@@ -7,6 +7,7 @@ declare let jQuery: any;
 declare let Terminal: any;
 
 import {AppService, DataStore} from '../app.service';
+import {logger} from "codelyzer/util/logger";
 
 export class Term {
   nick: string;

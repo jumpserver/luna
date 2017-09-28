@@ -3,3 +3,7 @@ div, term-leftbar, term-body {
   width: 100%;
   padding: 0;
 }
+
+div {
+  top: 55px;
+}
