@@ -1,5 +1,6 @@
 /* login form */
 form {
+  top: 80px;
   position: relative;
   width: 300px;
   margin: auto;
@@ -75,12 +76,6 @@ form button[type=submit] {
   border-bottom-color: #1b4849;
   border-right-color: #1e4d4e;
   cursor: pointer;
-}
-
-canvas {
-  position: fixed;
-  top: 0;
-  z-index: 5;
 }
 
 .form {

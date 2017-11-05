@@ -1,0 +1,11 @@
+<div id="tabs">
+  <ul>
+    <li *ngFor="let m of NavList.term;let i = index"
+        [ngClass]="{'active':i==NavList.termActive,'disconnected':!m.connected, 'hidden': m.closed != false}"
+        id="termnav-{{i}}" (click)="setActive(i)">
+      <span *ngIf="!m.edit" (dblclick)="m.edit=true;setActive(i)">{{m.nick}}</span>
+      <input *ngIf="m.edit" [(ngModel)]="m.nick" autofocus (blur)="m.edit=false" (keyup.enter)="m.edit=false"/>
+      <a class="close" (click)="close(i)">&times;</a>
+    </li>
+  </ul>
+</div>

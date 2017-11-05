@@ -5,16 +5,16 @@ import {NgModule} from '@angular/core';
 import {RouterModule, Routes} from '@angular/router';
 import {environment} from '../environments/environment';
 
-import {WelcomeComponent} from './IndexPage/welcome.component';
+import {IndexPageComponent} from './IndexPage/index-page.component';
 import {PageNotFoundComponent} from './BasicPage/not-found.component';
-import {LoginComponent} from './BasicPage/login.component';
-import {TermPage} from './TerminalPage/main';
+import {LoginComponent} from './BasicPage/login/login.component';
+import {ConsolePageComponent} from './ConsolePage/consolepage.component';
 
 const appRoutes: Routes = [
   // { path: 'crisis-center', component: CrisisListComponent },
-  {path: 'welcome', component: WelcomeComponent}, // <-- delete this line
+  {path: 'welcome', component: IndexPageComponent}, // <-- delete this line
   {path: 'login', component: LoginComponent},
-  {path: 'term', component: TermPage},
+  {path: 'term', component: ConsolePageComponent},
   {path: '', redirectTo: '/welcome', pathMatch: 'full'},
   {path: '**', component: PageNotFoundComponent}
 ];

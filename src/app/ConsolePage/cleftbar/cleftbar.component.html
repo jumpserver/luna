@@ -1,10 +1,11 @@
 <div id="sidebar">
+  <app-search></app-search>
   <ul class="filetree">
     <li *ngFor="let hostGroup of HostGroups">
       <input type="checkbox" id="level1-1">
       <label for="level1-1">{{hostGroup.name}}</label>
       <ul>
-        <li *ngFor="let host of hostGroup.children" (click)="TerminalConnect()">{{host.name}}</li>
+        <li *ngFor="let host of hostGroup.children" (click)="Connect(host)">{{host.name}}</li>
       </ul>
     </li>
   </ul>
