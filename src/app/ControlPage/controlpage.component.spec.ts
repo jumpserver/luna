@@ -1,20 +1,20 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ConsolenavComponent } from './consolenav.component';
+import { ControlPageComponent } from './controlpage.component';
 
-describe('ConsolenavComponent', () => {
-  let component: ConsolenavComponent;
-  let fixture: ComponentFixture<ConsolenavComponent>;
+describe('ControlPageComponent', () => {
+  let component: ControlPageComponent;
+  let fixture: ComponentFixture<ControlPageComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ ConsolenavComponent ]
+      declarations: [ ControlPageComponent ]
     })
     .compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(ConsolenavComponent);
+    fixture = TestBed.createComponent(ControlPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

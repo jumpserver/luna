@@ -6,7 +6,7 @@ import {Cookie} from 'ng2-cookies/ng2-cookies';
 declare let jQuery: any;
 declare let Terminal: any;
 import {AppService, DataStore} from '../../../app.service';
-import {NavList, Term} from '../console.component';
+import {NavList, Term} from '../control.component';
 
 
 @Component({
@@ -19,7 +19,7 @@ export class SshComponent implements OnInit {
 
   constructor(private _appService: AppService,
               private _logger: Logger) {
-    this._logger.log('ConsoleComponent.ts:ConsoleComponent');
+    this._logger.log('SshComponent.ts:SshComponent');
   }
 
   ngOnInit() {

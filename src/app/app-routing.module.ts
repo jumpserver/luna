@@ -8,13 +8,13 @@ import {environment} from '../environments/environment';
 import {IndexPageComponent} from './IndexPage/index-page.component';
 import {PageNotFoundComponent} from './BasicPage/not-found.component';
 import {LoginComponent} from './BasicPage/login/login.component';
-import {ConsolePageComponent} from './ConsolePage/consolepage.component';
+import {ControlPageComponent} from './ControlPage/controlpage.component';
 
 const appRoutes: Routes = [
   // { path: 'crisis-center', component: CrisisListComponent },
   {path: 'welcome', component: IndexPageComponent}, // <-- delete this line
   {path: 'login', component: LoginComponent},
-  {path: 'term', component: ConsolePageComponent},
+  {path: 'term', component: ControlPageComponent},
   {path: '', redirectTo: '/welcome', pathMatch: 'full'},
   {path: '**', component: PageNotFoundComponent}
 ];

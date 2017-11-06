@@ -22,11 +22,11 @@ export let NavList: {
 };
 
 @Component({
-  selector: 'app-console',
-  templateUrl: './console.component.html',
-  styleUrls: ['./console.component.css']
+  selector: 'app-control',
+  templateUrl: './control.component.html',
+  styleUrls: ['./control.component.css']
 })
-export class ConsoleComponent implements OnInit {
+export class ControlComponent implements OnInit {
 
   constructor() {
   }

@@ -17,14 +17,14 @@ import {LoginComponent} from './BasicPage/login/login.component';
 import {FooterComponent} from './BasicPage/footer/footer.component';
 import {PageNotFoundComponent} from './BasicPage/not-found.component';
 
-import {SearchComponent} from './ConsolePage/search/search.component';
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
-import {CleftbarComponent} from './ConsolePage/cleftbar/cleftbar.component';
-import {ConsoleComponent} from './ConsolePage/console/console.component';
-import {ConsolenavComponent} from './ConsolePage/console/consolenav/consolenav.component';
-import {RdpComponent} from './ConsolePage/console/rdp/rdp.component';
-import {SshComponent} from './ConsolePage/console/ssh/ssh.component';
-import {ConsolePageComponent} from './ConsolePage/consolepage.component';
+import {SearchComponent} from './ControlPage/search/search.component';
+import {CleftbarComponent} from './ControlPage/cleftbar/cleftbar.component';
+import {ControlComponent} from './ControlPage/control/control.component';
+import {ControlnavComponent} from './ControlPage/control/controlnav/controlnav.component';
+import {RdpComponent} from './ControlPage/control/rdp/rdp.component';
+import {SshComponent} from './ControlPage/control/ssh/ssh.component';
+import {ControlPageComponent} from './ControlPage/controlpage.component';
 import {IndexPageComponent} from './IndexPage/index-page.component';
 
 
@@ -47,9 +47,9 @@ import {IndexPageComponent} from './IndexPage/index-page.component';
     SearchComponent,
     IleftbarComponent,
     CleftbarComponent,
-    ConsoleComponent,
-    ConsolenavComponent,
-    ConsolePageComponent,
+    ControlComponent,
+    ControlnavComponent,
+    ControlPageComponent,
     IndexPageComponent
     // HeroListComponent,
     // CrisisListComponent,

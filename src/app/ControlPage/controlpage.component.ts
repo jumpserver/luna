@@ -2,13 +2,13 @@ import {Component, OnInit} from '@angular/core';
 import {AppService, DataStore, User} from '../app.service';
 
 @Component({
-  selector: 'app-consolepage',
-  templateUrl: './consolepage.component.html',
-  styleUrls: ['./consolepage.component.css'],
+  selector: 'app-controllpage',
+  templateUrl: './control.component.html',
+  styleUrls: ['./control.component.css'],
   providers: [AppService]
 
 })
-export class ConsolePageComponent implements OnInit {
+export class ControlPageComponent implements OnInit {
   DataStore = DataStore;
   User = User;
 

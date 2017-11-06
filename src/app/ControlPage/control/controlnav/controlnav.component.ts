@@ -1,14 +1,14 @@
 import {Component, OnInit} from '@angular/core';
-import {NavList} from '../console.component'
+import {NavList} from '../control.component'
 
 
 @Component({
-  selector: 'app-consolenav',
-  templateUrl: './consolenav.component.html',
-  styleUrls: ['./consolenav.component.css']
+  selector: 'app-controlnav',
+  templateUrl: './controlnav.component.html',
+  styleUrls: ['./controlnav.component.css']
 })
-export class ConsolenavComponent implements OnInit {
-  setActive = ConsolenavComponent.setActive;
+export class ControlnavComponent implements OnInit {
+  setActive = ControlnavComponent.setActive;
   NavList = NavList;
 
   constructor() {
@@ -28,7 +28,7 @@ export class ConsolenavComponent implements OnInit {
     } else {
       NavList.termActive = index;
     }
-    ConsolenavComponent.setActive(NavList.termActive)
+    ControlnavComponent.setActive(NavList.termActive)
   }
 
   static setActive(index) {
