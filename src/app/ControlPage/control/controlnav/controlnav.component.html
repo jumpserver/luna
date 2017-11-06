@@ -5,7 +5,7 @@
         id="termnav-{{i}}" (click)="setActive(i)">
       <span *ngIf="!m.edit" (dblclick)="m.edit=true;setActive(i)">{{m.nick}}</span>
       <input *ngIf="m.edit" [(ngModel)]="m.nick" autofocus (blur)="m.edit=false" (keyup.enter)="m.edit=false"/>
-      <a class="close" (click)="close(i)">&times;</a>
+      <a class="close" (click)="close(m,i)">&times;</a>
     </li>
   </ul>
 </div>

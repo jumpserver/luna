@@ -1,5 +1,9 @@
 import {Component, OnInit} from '@angular/core';
 import {NavList} from '../control.component'
+import {SshComponent} from '../ssh/ssh.component'
+import {RdpComponent} from '../rdp/rdp.component'
+import {NavComponent} from "../../../BasicPage/nav/nav.component";
+
 declare let jQuery: any;
 
 
@@ -39,12 +43,23 @@ export class ControlnavComponent implements OnInit {
     NavList.List[index].hide = false;
     NavList.Active = index;
     if (NavList.List[index].type === "ssh") {
-      jQuery("#ssh").show();
-      jQuery("#rdp").hide()
-    } else {
-      jQuery("#ssh").hide();
-      jQuery("#rdp").show()
+      jQuery("app-ssh").show();
+      jQuery("app-rdp").hide()
+    } else if (NavList.List[index].type === 'rdp') {
+      jQuery("app-ssh").hide();
+      jQuery("app-rdp").show();
+      jQuery("#rdp-" + index + " iframe")[0].contentWindow.focus();
     }
+  }
+
+  close(host, index) {
+    if (host.type === 'rdp') {
+      RdpComponent.Disconnect(host)
+    } else if (host.type === 'ssh') {
+      SshComponent.TerminalDisconnect(host)
+    }
+    NavList.List.splice(index, 1);
+    ControlnavComponent.checkActive(index)
   }
 
 }

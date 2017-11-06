@@ -5,6 +5,8 @@ import {AppService, DataStore} from '../../app.service';
 import {SshComponent} from '../control/ssh/ssh.component';
 import {RdpComponent} from "../control/rdp/rdp.component";
 
+declare let jQuery: any;
+
 @Component({
   selector: 'app-cleftbar',
   templateUrl: './cleftbar.component.html',
@@ -17,11 +19,11 @@ export class CleftbarComponent implements OnInit {
   DataStore = DataStore;
   HostGroups = [
     {
-      name: "msa-us",
+      name: "ops",
       id: "ccc",
       children: [
         {
-          name: "ops-redis",
+          name: "ops-linux",
           uuid: "xxxx",
           type: "ssh"
         }, {
@@ -46,9 +48,13 @@ export class CleftbarComponent implements OnInit {
 
   Connect(host) {
     if (host.type === 'ssh') {
-      this._term.TerminalConnect(host.uuid);
+      jQuery("app-ssh").show();
+      jQuery("app-rdp").hide();
+      this._term.TerminalConnect(host);
     } else {
-      this._rdp.Connect()
+      jQuery("app-ssh").hide();
+      jQuery("app-rdp").show();
+      this._rdp.Connect(host);
     }
   }
 

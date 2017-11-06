@@ -25,7 +25,7 @@ export class SshComponent implements OnInit {
   ngOnInit() {
   }
 
-  TerminalConnect(uuid) {
+  TerminalConnect(host) {
     let socket = io.connect();
     let cols = '80';
     let rows = '24';
@@ -40,7 +40,7 @@ export class SshComponent implements OnInit {
 
 
     let id = NavList.List.length - 1;
-    NavList.List[id].nick = 'localhost';
+    NavList.List[id].nick = host.name;
     NavList.List[id].connected = true;
     NavList.List[id].edit = false;
     NavList.List[id].closed = false;
@@ -72,7 +72,7 @@ export class SshComponent implements OnInit {
     NavList.List[id].Term.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
 
     socket.on('connect', function () {
-      socket.emit('machine', uuid);
+      socket.emit('machine', host.id);
 
       NavList.List[id].Term.term.on('data', function (data) {
         socket.emit('data', data);
@@ -115,14 +115,15 @@ export class SshComponent implements OnInit {
           Cookie.set('rows', String(row), 99, '/', document.domain);
         }
       };
+      jQuery(window).resize();
     });
 
   }
 
-  static TerminalDisconnect(i) {
-    NavList.List[i].connected = false;
-    NavList.List[i].Term.socket.destroy();
-    NavList.List[i].Term.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+  static TerminalDisconnect(host) {
+    host.connected = false;
+    host.Term.socket.destroy();
+    host.Term.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
   }
 
   static TerminalDisconnectAll() {
