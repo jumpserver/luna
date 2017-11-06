@@ -3,8 +3,8 @@ import {AppService, DataStore, User} from '../app.service';
 
 @Component({
   selector: 'app-controllpage',
-  templateUrl: './control.component.html',
-  styleUrls: ['./control.component.css'],
+  templateUrl: './controlpage.component.html',
+  styleUrls: ['./controlpage.component.css'],
   providers: [AppService]
 
 })

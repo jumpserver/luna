@@ -14,7 +14,7 @@ const appRoutes: Routes = [
   // { path: 'crisis-center', component: CrisisListComponent },
   {path: 'welcome', component: IndexPageComponent}, // <-- delete this line
   {path: 'login', component: LoginComponent},
-  {path: 'term', component: ControlPageComponent},
+  {path: 'control', component: ControlPageComponent},
   {path: '', redirectTo: '/welcome', pathMatch: 'full'},
   {path: '**', component: PageNotFoundComponent}
 ];

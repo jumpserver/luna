@@ -1,3 +1,6 @@
-<p>
-  rdp works!
-</p>
+<div id="rdp">
+  <div *ngFor="let m of NavList.List;let i=index"
+       [ngClass]="{'disconnected':!m.connected,'hidden': m.hide,'hidden':m.type!='rdp'}" id="rdp-{{i}}">
+    <iframe src="http://127.0.0.1:9250/?token=000"></iframe>
+  </div>
+</div>

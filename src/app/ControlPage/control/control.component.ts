@@ -1,24 +1,31 @@
 import {Component, OnInit} from '@angular/core';
 
 export class Term {
-  nick: string;
-  edit: boolean;
   machine: string;
-  connected: boolean;
-  closed: boolean;
   socket: any;
   term: any;
-  hide: boolean;
 }
+export class Rdp {
+  machine: string;
+  token: string;
+}
+export class View {
+  nick: string;
+  type: string;
+  edit: boolean;
+  connected: boolean;
+  hide: boolean;
+  closed: boolean;
+  Rdp: Rdp;
+  Term: Term;
 
+}
 export let NavList: {
-  term: Array<Term>;
-  termlist: Array<string>;
-  termActive: number;
+  List: Array<View>;
+  Active: number;
 } = {
-  term: [new Term()],
-  termlist: [],
-  termActive: 0,
+  List: [new View()],
+  Active: 0,
 };
 
 @Component({

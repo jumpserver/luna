@@ -3,13 +3,14 @@ import {Logger} from 'angular2-logger/core';
 
 import {AppService, DataStore} from '../../app.service';
 import {SshComponent} from '../control/ssh/ssh.component';
+import {RdpComponent} from "../control/rdp/rdp.component";
 
 @Component({
   selector: 'app-cleftbar',
   templateUrl: './cleftbar.component.html',
   styleUrls: ['./cleftbar.component.css'],
 
-  providers: [SshComponent]
+  providers: [SshComponent, RdpComponent]
 
 })
 export class CleftbarComponent implements OnInit {
@@ -33,6 +34,7 @@ export class CleftbarComponent implements OnInit {
 
   constructor(private _appService: AppService,
               private _term: SshComponent,
+              private _rdp: RdpComponent,
               private _logger: Logger) {
     this._logger.log('nav.ts:NavComponent');
     // this._appService.getnav()
@@ -46,7 +48,7 @@ export class CleftbarComponent implements OnInit {
     if (host.type === 'ssh') {
       this._term.TerminalConnect(host.uuid);
     } else {
-
+      this._rdp.Connect()
     }
   }
 

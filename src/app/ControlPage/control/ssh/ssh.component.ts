@@ -6,7 +6,7 @@ import {Cookie} from 'ng2-cookies/ng2-cookies';
 declare let jQuery: any;
 declare let Terminal: any;
 import {AppService, DataStore} from '../../../app.service';
-import {NavList, Term} from '../control.component';
+import {NavList, View, Term} from '../control.component';
 
 
 @Component({
@@ -39,46 +39,48 @@ export class SshComponent implements OnInit {
     Cookie.set('rows', rows, 99, '/', document.domain);
 
 
-    let id = NavList.term.length - 1;
-    NavList.term[id].machine = 'localhost';
-    NavList.term[id].nick = 'localhost';
-    NavList.term[id].connected = true;
-    NavList.term[id].socket = socket;
-    NavList.term[id].edit = false;
-    NavList.term[id].closed = false;
-    NavList.term[id].term = new Terminal({
+    let id = NavList.List.length - 1;
+    NavList.List[id].nick = 'localhost';
+    NavList.List[id].connected = true;
+    NavList.List[id].edit = false;
+    NavList.List[id].closed = false;
+    NavList.List[id].type = "ssh";
+    NavList.List[id].Term = new Term;
+    NavList.List[id].Term.machine = 'localhost';
+    NavList.List[id].Term.socket = socket;
+    NavList.List[id].Term.term = new Terminal({
       cols: cols,
       rows: rows,
       useStyle: true,
       screenKeys: true,
     });
-    NavList.term.push(new Term());
-    for (let m in NavList.term) {
-      NavList.term[m].hide = true;
+    NavList.List.push(new View());
+    for (let m in NavList.List) {
+      NavList.List[m].hide = true;
     }
-    NavList.term[id].hide = false;
+    NavList.List[id].hide = false;
 
-    NavList.termActive = id;
+    NavList.Active = id;
 
 
     // TermStore.term[id]['term'].on('title', function (title) {
     //   document.title = title;
     // });
 
-    NavList.term[id].term.open(document.getElementById('term-' + id), true);
+    NavList.List[id].Term.term.open(document.getElementById('term-' + id), true);
 
-    NavList.term[id].term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
+    NavList.List[id].Term.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
 
     socket.on('connect', function () {
       socket.emit('machine', uuid);
 
-      NavList.term[id].term.on('data', function (data) {
+      NavList.List[id].Term.term.on('data', function (data) {
         socket.emit('data', data);
       });
 
 
       socket.on('data', function (data) {
-        NavList.term[id].term.write(data);
+        NavList.List[id].Term.term.write(data);
       });
 
       socket.on('disconnect', function () {
@@ -103,10 +105,10 @@ export class SshComponent implements OnInit {
         if (row < 24) row = 24;
         if (cols == col && row == rows) {
         } else {
-          for (let tid in NavList.term) {
-            if (NavList.term[tid].connected) {
-              NavList.term[tid].socket.emit('resize', [col, row]);
-              NavList.term[tid].term.resize(col, row);
+          for (let tid in NavList.List) {
+            if (NavList.List[tid].connected) {
+              NavList.List[tid].Term.socket.emit('resize', [col, row]);
+              NavList.List[tid].Term.term.resize(col, row);
             }
           }
           Cookie.set('cols', String(col), 99, '/', document.domain);
@@ -118,14 +120,14 @@ export class SshComponent implements OnInit {
   }
 
   static TerminalDisconnect(i) {
-    NavList.term[i].connected = false;
-    NavList.term[i].socket.destroy();
-    NavList.term[i].term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+    NavList.List[i].connected = false;
+    NavList.List[i].Term.socket.destroy();
+    NavList.List[i].Term.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
   }
 
   static TerminalDisconnectAll() {
     alert("TerminalDisconnectAll");
-    for (let i in NavList.term) {
+    for (let i in NavList.List) {
       SshComponent.TerminalDisconnect(i);
       // TermStore.term[i]["connected"] = false;
       // TermStore.term[i]["socket"].destroy();
