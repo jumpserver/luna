@@ -1,3 +1,12 @@
+/**
+ * 控制页面
+ *
+ * 主管已连接的主机标签卡，各连接方式的web展现（WebTerminal、RDP、VNC等）
+ *
+ * @date     2017-11-07
+ * @author   liuzheng <liuzheng712@gmail.com>
+ */
+
 import {Component, OnInit} from '@angular/core';
 
 export class Term {

@@ -1,3 +1,12 @@
+/**
+ * 控制页面的左边栏主机树状页
+ *
+ * 以树状方式列出所有主机
+ *
+ * @date     2017-11-07
+ * @author   liuzheng <liuzheng712@gmail.com>
+ */
+
 import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
 
@@ -11,9 +20,7 @@ declare let jQuery: any;
   selector: 'app-cleftbar',
   templateUrl: './cleftbar.component.html',
   styleUrls: ['./cleftbar.component.css'],
-
   providers: [SshComponent, RdpComponent]
-
 })
 export class CleftbarComponent implements OnInit {
   DataStore = DataStore;

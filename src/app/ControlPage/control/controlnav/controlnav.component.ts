@@ -1,3 +1,12 @@
+/**
+ * 控制页面的已连接主机选项卡
+ *
+ * 展示所有已连接的主机
+ *
+ * @date     2017-11-07
+ * @author   liuzheng <liuzheng712@gmail.com>
+ */
+
 import {Component, OnInit} from '@angular/core';
 import {NavList} from '../control.component'
 import {SshComponent} from '../ssh/ssh.component'

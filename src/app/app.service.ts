@@ -1,5 +1,9 @@
 /**
- * Created by liuzheng on 2017/8/30.
+ * 后台控制
+ *
+ *
+ * @date     2017-11-07
+ * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Injectable} from '@angular/core';
 import {Http, RequestOptionsArgs, Headers} from '@angular/http';
