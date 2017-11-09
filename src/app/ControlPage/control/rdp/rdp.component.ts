@@ -1,7 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {NavList, View, Rdp} from '../control.component';
 
-declare let jQuery: any;
+declare let Mstsc: any;
 
 @Component({
   selector: 'app-rdp',
@@ -35,12 +35,17 @@ export class RdpComponent implements OnInit {
     NavList.List[id].hide = false;
 
     NavList.Active = id;
-    jQuery("#rdp-" + id + " iframe")[0].contentWindow.focus();
-
+    let client = Mstsc.client.create(Mstsc.$("canvas-" + id));
+    let canvas = Mstsc.$("canvas-" + id);
+    canvas.style.display = 'inline';
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    client.connect("xxxx", "rdp/socket.io");
   }
 
   static Disconnect(host) {
     host.connected = false;
+
     // document.getElementById("templatesrc").remove();
 
   }

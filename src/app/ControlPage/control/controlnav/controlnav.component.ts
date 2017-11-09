@@ -48,7 +48,6 @@ export class ControlnavComponent implements OnInit {
     } else if (NavList.List[index].type === 'rdp') {
       jQuery("app-ssh").hide();
       jQuery("app-rdp").show();
-      jQuery("#rdp-" + index + " iframe")[0].contentWindow.focus();
     }
   }
 

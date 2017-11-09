@@ -6,5 +6,12 @@
   "/socket.io/": {
     "target": "http://localhost:3000",
     "secure": false
+  },
+  "/rdp/socket.io/": {
+    "target": "http://localhost:9250",
+    "pathRewrite": {
+      "^/rdp": ""
+    },
+    "secure": false
   }
 }

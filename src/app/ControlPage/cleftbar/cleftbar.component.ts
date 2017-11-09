@@ -25,11 +25,13 @@ export class CleftbarComponent implements OnInit {
         {
           name: "ops-linux",
           uuid: "xxxx",
-          type: "ssh"
+          type: "ssh",
+          token: "sshxxx"
         }, {
           name: "ops-win",
           uuid: "win-aasdf",
-          type: "rdp"
+          type: "rdp",
+          token: "rdpxxx"
         }
       ],
     }];
