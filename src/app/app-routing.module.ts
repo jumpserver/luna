@@ -1,5 +1,9 @@
 /**
- * Created by liuzheng on 2017/8/31.
+ * app路由
+ *
+ *
+ * @date     2017-11-07
+ * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {NgModule} from '@angular/core';
 import {RouterModule, Routes} from '@angular/router';

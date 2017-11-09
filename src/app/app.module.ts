@@ -2,6 +2,13 @@
  * Created by liuzheng on 2017/8/30.
  */
 
+/**
+ * app 模块
+ *
+ *
+ * @date     2017-11-07
+ * @author   liuzheng <liuzheng712@gmail.com>
+ */
 import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms'; // <-- NgModel lives here

@@ -1,5 +1,8 @@
 /**
- * Created by liuzheng on 2017/8/31.
+ * 404页面
+ *
+ * @date     2017-11-07
+ * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component} from '@angular/core';
 
