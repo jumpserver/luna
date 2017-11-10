@@ -38,7 +38,8 @@ export class CleftbarComponent implements OnInit {
           name: "ops-win",
           uuid: "win-aasdf",
           type: "rdp",
-          token: "rdpxxx"
+          token: "rdpxxx",
+          machine: "sss"
         }
       ],
     }];

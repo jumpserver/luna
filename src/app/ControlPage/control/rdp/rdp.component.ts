@@ -26,14 +26,23 @@ export class RdpComponent implements OnInit {
 
   Connect(host) {
     let id = NavList.List.length - 1;
+
+    let canvas = Mstsc.$("canvas-" + id);
+    canvas.style.display = 'inline';
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
     NavList.List[id].nick = host.name;
     NavList.List[id].connected = true;
     NavList.List[id].edit = false;
     NavList.List[id].closed = false;
     NavList.List[id].type = "rdp";
     NavList.List[id].Rdp = new Rdp;
-    NavList.List[id].Rdp.token = "xxx";
-    NavList.List[id].Rdp.machine = "xxx";
+    NavList.List[id].Rdp.token = host.token;
+    NavList.List[id].Rdp.machine = host.machine;
+    NavList.List[id].Rdp.client = Mstsc.client.create(Mstsc.$("canvas-" + id));
+    NavList.List[id].Rdp.client.connect(host.token, "rdp/socket.io");
+
 
     NavList.List.push(new View());
     for (let m in NavList.List) {
@@ -42,12 +51,7 @@ export class RdpComponent implements OnInit {
     NavList.List[id].hide = false;
 
     NavList.Active = id;
-    let client = Mstsc.client.create(Mstsc.$("canvas-" + id));
-    let canvas = Mstsc.$("canvas-" + id);
-    canvas.style.display = 'inline';
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    client.connect("xxxx", "rdp/socket.io");
+
   }
 
   static Disconnect(host) {

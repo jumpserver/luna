@@ -14,10 +14,13 @@ export class Term {
   socket: any;
   term: any;
 }
+
 export class Rdp {
   machine: string;
   token: string;
+  client: any;
 }
+
 export class View {
   nick: string;
   type: string;
@@ -29,6 +32,7 @@ export class View {
   Term: Term;
 
 }
+
 export let NavList: {
   List: Array<View>;
   Active: number;
