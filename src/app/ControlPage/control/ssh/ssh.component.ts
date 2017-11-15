@@ -79,7 +79,8 @@ export class SshComponent implements OnInit {
     NavList.List[id].Term.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
 
     socket.on('connect', function () {
-      socket.emit('machine', host.id);
+      socket.emit('login', "root");
+      socket.emit('machine', host.uuid);
 
       NavList.List[id].Term.term.on('data', function (data) {
         socket.emit('data', data);

@@ -60,5 +60,8 @@ export class RdpComponent implements OnInit {
     // document.getElementById("templatesrc").remove();
 
   }
+  static DisconnectAll(){
+
+  }
 
 }

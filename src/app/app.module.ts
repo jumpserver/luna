@@ -22,7 +22,6 @@ import {AppComponent} from './app.component';
 import {NavComponent} from './BasicPage/nav/nav.component';
 import {LoginComponent} from './BasicPage/login/login.component';
 import {FooterComponent} from './BasicPage/footer/footer.component';
-import {PageNotFoundComponent} from './BasicPage/not-found.component';
 
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
 import {SearchComponent} from './ControlPage/search/search.component';
@@ -33,6 +32,7 @@ import {RdpComponent} from './ControlPage/control/rdp/rdp.component';
 import {SshComponent} from './ControlPage/control/ssh/ssh.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
 import {IndexPageComponent} from './IndexPage/index-page.component';
+import { NotFoundComponent } from './BasicPage/not-found/not-found.component';
 
 
 @NgModule({
@@ -44,7 +44,6 @@ import {IndexPageComponent} from './IndexPage/index-page.component';
   ],
   declarations: [
     AppComponent,
-    PageNotFoundComponent,
     NavComponent,
     LoginComponent,
     FooterComponent,
@@ -57,7 +56,8 @@ import {IndexPageComponent} from './IndexPage/index-page.component';
     ControlComponent,
     ControlnavComponent,
     ControlPageComponent,
-    IndexPageComponent
+    IndexPageComponent,
+    NotFoundComponent
     // HeroListComponent,
     // CrisisListComponent,
   ],

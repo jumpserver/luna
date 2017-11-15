@@ -58,6 +58,118 @@ server.run = function (options) {
     .get(function (req, res) {
       res.json({logined: true})
     });
+  apis.route('/nav')
+    .get(function (req, res) {
+      res.json([{
+        "id": "File",
+        "name": "Server",
+        "children": [
+          {
+            "id": "NewConnection",
+            "href": "Aaaa",
+            "name": "New connection",
+            "disable": true
+          },
+          {
+            "id": "Connect",
+            "href": "Aaaa",
+            "name": "Connect",
+            "disable": true
+          },
+          {
+            "id": "Disconnect",
+            "click": "Disconnect",
+            "name": "Disconnect"
+          },
+          {
+            "id": "DisconnectAll",
+            "click": "DisconnectAll",
+            "name": "Disconnect all"
+          },
+          {
+            "id": "Duplicate",
+            "href": "Aaaa",
+            "name": "Duplicate",
+            "disable": true
+          },
+          {
+            "id": "Upload",
+            "href": "Aaaa",
+            "name": "Upload",
+            "disable": true
+          },
+          {
+            "id": "Download",
+            "href": "Aaaa",
+            "name": "Download",
+            "disable": true
+          },
+          {
+            "id": " Search",
+            "href": "Aaaa",
+            "name": "Search",
+            "disable": true
+          },
+          {
+            "id": "Reload",
+            "click": "ReloadLeftbar",
+            "name": "Reload"
+          }
+        ]
+      }, {
+        "id": "View",
+        "name": "View",
+        "children": [
+          {
+            "id": "HindLeftManager",
+            "click": "HideLeft",
+            "name": "Hind left manager"
+          },
+          {
+            "id": "SplitVertical",
+            "href": "Aaaa",
+            "name": "Split vertical",
+            "disable": true
+          },
+          {
+            "id": "CommandBar",
+            "href": "Aaaa",
+            "name": "Command bar",
+            "disable": true
+          },
+          {
+            "id": "ShareSession",
+            "href": "Aaaa",
+            "name": "Share session (read/write)",
+            "disable": true
+          },
+          {
+            "id": "Language",
+            "href": "Aaaa",
+            "name": "Language",
+            "disable": true
+          }]
+      }, {
+        "id": "Help",
+        "name": "Help",
+        "children": [
+          {
+            "id": "EnterLicense",
+            "click": "EnterLicense",
+            "name": "Enter License"
+          },
+          {
+            "id": "Website",
+            "click": "Website",
+            "name": "Website"
+          },
+          {
+            "id": "BBS",
+            "click": "BBS",
+            "name": "BBS"
+          }]
+      }])
+    });
 
   app.use("/api", apis);
   // let server listen on the port

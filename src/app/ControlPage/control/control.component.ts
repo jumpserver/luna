@@ -30,7 +30,6 @@ export class View {
   closed: boolean;
   Rdp: Rdp;
   Term: Term;
-
 }
 
 export let NavList: {

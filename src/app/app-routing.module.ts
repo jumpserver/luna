@@ -10,7 +10,7 @@ import {RouterModule, Routes} from '@angular/router';
 import {environment} from '../environments/environment';
 
 import {IndexPageComponent} from './IndexPage/index-page.component';
-import {PageNotFoundComponent} from './BasicPage/not-found.component';
+import {NotFoundComponent} from './BasicPage/not-found/not-found.component';
 import {LoginComponent} from './BasicPage/login/login.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
 
@@ -20,7 +20,7 @@ const appRoutes: Routes = [
   {path: 'login', component: LoginComponent},
   {path: 'control', component: ControlPageComponent},
   {path: '', redirectTo: '/welcome', pathMatch: 'full'},
-  {path: '**', component: PageNotFoundComponent}
+  {path: '**', component: NotFoundComponent}
 ];
 
 @NgModule({

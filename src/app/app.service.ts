@@ -117,7 +117,6 @@ export class HttpService {
       options = {};
     }
     options.headers = this.headers;
-    this._http.get("/api/hello");
     return this._http.get(url, options)
   }
 
@@ -263,46 +262,7 @@ export class AppService {
     }
   }
 
-  login() {
-    this._logger.log('service.ts:AppService,login');
-    DataStore.error['login'] = '';
-    this._logger.log(User);
-    if (User.username.length > 0 && User.password.length > 6 && User.password.length < 100) {
-      this._http.post('/api/checklogin', JSON.stringify(User)).map(res => res.json())
-        .subscribe(
-          data => {
-            User.logined = data.logined;
-            User.name = data.name;
-            User.username = data.username;
-            User.logined = data.logined;
-          },
-          err => {
-            this._logger.error(err);
-            User.logined = false;
-            this._router.navigate(['login']);
-            DataStore.error['login'] = '后端错误,请重试';
-            return '后端错误,请重试';
-          },
-          () => {
-            if (User.logined) {
-              if (jQuery.isEmptyObject(DataStore.Path)) {
-                this._router.navigate(['welcome']);
-              } else {
-                this._router.navigate([DataStore.Path['name'], DataStore.Path['res']]);
-              }
-            } else {
-              this._router.navigate(['login']);
-              DataStore.error['login'] = '请检查用户名和密码';
-              return '请检查用户名和密码';
-            }
-            // jQuery('angular2').show();
 
-          });
-    } else {
-      DataStore.error['login'] = '请检查用户名和密码';
-      return '请检查用户名和密码';
-    }
-  }
 
   browser() {
     this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json()).subscribe()

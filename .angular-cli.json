@@ -21,6 +21,7 @@
       "styles": [
         "../node_modules/bootstrap/dist/css/bootstrap.min.css",
         "../node_modules/xterm/dist/xterm.css",
+        "../node_modules/layui-layer/dist/theme/default/layer.css",
         "styles.css"
       ],
       "scripts": [
@@ -28,6 +29,7 @@
         "../node_modules/tether/dist/js/tether.min.js",
         "../node_modules/bootstrap/dist/js/bootstrap.min.js",
         "../node_modules/xterm/dist/xterm.js",
+        "../node_modules/layui-layer/dist/layer.js",
         "../node_modules/socket.io-client/dist/socket.io.js",
         "./assets/js/mstsc.js",
         "./assets/js/keyboard.js",
