@@ -24,7 +24,7 @@ export class RdpComponent implements OnInit {
   ngOnInit() {
   }
 
-  Connect(host) {
+  Connect(host, username) {
     let id = NavList.List.length - 1;
 
     let canvas = Mstsc.$("canvas-" + id);
@@ -39,7 +39,7 @@ export class RdpComponent implements OnInit {
     NavList.List[id].type = "rdp";
     NavList.List[id].Rdp = new Rdp;
     NavList.List[id].Rdp.token = host.token;
-    NavList.List[id].Rdp.machine = host.machine;
+    NavList.List[id].Rdp.machine = host.uuid;
     NavList.List[id].Rdp.client = Mstsc.client.create(Mstsc.$("canvas-" + id));
     NavList.List[id].Rdp.client.connect(host.token, "rdp/socket.io");
 
@@ -60,7 +60,8 @@ export class RdpComponent implements OnInit {
     // document.getElementById("templatesrc").remove();
 
   }
-  static DisconnectAll(){
+
+  static DisconnectAll() {
 
   }
 

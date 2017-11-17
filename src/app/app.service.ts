@@ -5,8 +5,9 @@
  * @date     2017-11-07
  * @author   liuzheng <liuzheng712@gmail.com>
  */
-import {Injectable} from '@angular/core';
+import {Injectable, OnInit} from '@angular/core';
 import {Http, RequestOptionsArgs, Headers} from '@angular/http';
+import {Router} from '@angular/router';
 import {Cookie} from 'ng2-cookies/ng2-cookies';
 import {Logger} from 'angular2-logger/core';
 import 'rxjs/add/operator/map';
@@ -15,7 +16,7 @@ import 'rxjs/add/operator/catch';
 declare let jQuery: any;
 // declare var Clipboard: any;
 import * as io from 'socket.io-client';
-import {Router} from '@angular/router';
+import {environment} from '../environments/environment';
 
 export class Group {
   id: number;
@@ -97,6 +98,12 @@ export let Browser: {
   vendor: navigator.vendor,
 };
 
+export class wsEvent {
+  event: string;
+  data: any;
+}
+
+
 @Injectable()
 export class HttpService {
   headers = new Headers();
@@ -171,7 +178,7 @@ export class HttpService {
 }
 
 @Injectable()
-export class AppService {
+export class AppService implements OnInit {
   // user:User = user  ;
   searchrequest: any;
 
@@ -196,20 +203,11 @@ export class AppService {
       // this._logger.level = parseInt(Cookie.getCookie('loglevel'));
       this._logger.level = 0;
     }
-    DataStore.socket.on('connect', function () {
-      console.log('DatsStore socket connected');
-      DataStore.socket.on('nav', function (data) {
-        DataStore.Nav = JSON.parse(data);
-      });
-      DataStore.socket.on('leftbar', function (data) {
-      });
-      // DataStore.socket.on('popup', function (data) {
-      //   layer.msg(data);
-      // });
 
-      // DataStore.socket.emit('api', 'all');
-    });
     this.checklogin();
+  }
+
+  ngOnInit() {
   }
 
 
@@ -261,7 +259,6 @@ export class AppService {
       // jQuery('angular2').show();
     }
   }
-
 
 
   browser() {

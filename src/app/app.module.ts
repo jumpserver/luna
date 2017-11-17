@@ -33,6 +33,7 @@ import {SshComponent} from './ControlPage/control/ssh/ssh.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
 import {IndexPageComponent} from './IndexPage/index-page.component';
 import { NotFoundComponent } from './BasicPage/not-found/not-found.component';
+import { PopupComponent } from './BasicPage/popup/popup.component';
 
 
 @NgModule({
@@ -57,7 +58,8 @@ import { NotFoundComponent } from './BasicPage/not-found/not-found.component';
     ControlnavComponent,
     ControlPageComponent,
     IndexPageComponent,
-    NotFoundComponent
+    NotFoundComponent,
+    PopupComponent
     // HeroListComponent,
     // CrisisListComponent,
   ],

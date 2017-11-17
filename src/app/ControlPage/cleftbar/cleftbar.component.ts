@@ -14,11 +14,12 @@ import {AppService, DataStore, HttpService} from '../../app.service';
 import {SshComponent} from '../control/ssh/ssh.component';
 import {RdpComponent} from "../control/rdp/rdp.component";
 
+declare let layer: any;
 declare let jQuery: any;
 
 export class HostGroup {
   name: string;
-  id: string;
+  id: number;
   children: Array<Host>;
 }
 
@@ -26,8 +27,6 @@ export class Host {
   name: string;
   uuid: string;
   type: string;
-  token: string;
-  machine: string;
 }
 
 @Component({
@@ -68,14 +67,45 @@ export class CleftbarComponent implements OnInit {
 
 
   Connect(host) {
+    console.log(host);
+    let username: string;
+    if (host.users.length > 1) {
+      let options = "";
+      for (let u of host.users) {
+        options += "<option value='" + u + "'>" + u + "</option>"
+      }
+      layer.open({
+        title: 'Please Choose a User',
+        scrollbar: false,
+        moveOut: true,
+        moveType: 1,
+        btn: ["确定", "取消"],
+        content: "<select id='selectuser'>" + options + "</select>",
+        yes: function (index, layero) {
+          username = jQuery("#selectuser").val();
+          layer.close(index);
+        },
+        btn2: function (index, layero) {
+        },
+        cancel: function () {
+          //右上角关闭回调
+          //return false 开启该代码可禁止点击该按钮关闭
+        }
+      });
+    } else if (host.users.length === 1) {
+      username = host.users[0]
+    }
+    if (username === "") {
+      return
+    }
     if (host.type === 'ssh') {
       jQuery("app-ssh").show();
       jQuery("app-rdp").hide();
-      this._term.TerminalConnect(host);
+      this._term.TerminalConnect(host, username);
     } else {
       jQuery("app-ssh").hide();
       jQuery("app-rdp").show();
-      this._rdp.Connect(host);
+      this._rdp.Connect(host, username);
     }
   }
 

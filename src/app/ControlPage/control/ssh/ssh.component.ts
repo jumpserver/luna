@@ -32,7 +32,7 @@ export class SshComponent implements OnInit {
   ngOnInit() {
   }
 
-  TerminalConnect(host) {
+  TerminalConnect(host,username) {
     let socket = io.connect();
     let cols = '80';
     let rows = '24';
@@ -53,7 +53,7 @@ export class SshComponent implements OnInit {
     NavList.List[id].closed = false;
     NavList.List[id].type = "ssh";
     NavList.List[id].Term = new Term;
-    NavList.List[id].Term.machine = 'localhost';
+    NavList.List[id].Term.machine = host.uuid;
     NavList.List[id].Term.socket = socket;
     NavList.List[id].Term.term = new Terminal({
       cols: cols,
