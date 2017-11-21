@@ -204,7 +204,7 @@ export class AppService implements OnInit {
       this._logger.level = 0;
     }
 
-    this.checklogin();
+    // this.checklogin();
   }
 
   ngOnInit() {
