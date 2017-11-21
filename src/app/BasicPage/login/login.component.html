@@ -1,0 +1,17 @@
+<div class="black"></div>
+<canvas id="q"></canvas>
+<div class="form">
+  <form #f="ngForm" (ngSubmit)="onSubmit(f)">
+    <div class="from-group">
+      <input type="email" id="username" placeholder="Email address" [(ngModel)]="User.username"
+             name="email" required autofocus pattern="^\w+([.-]?\w+)*@\w+([.-]?\w+)*(.\w{2,3})+$">
+      <span class="fa fa-user-secret form-control-feedback"></span>
+    </div>
+    <div class="from-group">
+      <input type="password" name="password" id="password" placeholder="password" [(ngModel)]="User.password" required
+             (ngEnter)="onSubmit(f)">
+      <span class="fa fa-key form-control-feedback"></span>
+    </div>
+    <button type="submit">{{loginBotton}}</button>
+  </form>
+</div>

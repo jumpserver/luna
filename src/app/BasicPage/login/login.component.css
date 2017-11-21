@@ -1,0 +1,95 @@
+/* login form */
+form {
+  top: 80px;
+  position: relative;
+  width: 300px;
+  margin: auto;
+  background: rgba(130, 130, 130, .3);
+  padding: 20px 22px;
+  border: 1px solid;
+  border-color: rgba(255, 255, 255, .4) rgba(60, 60, 60, .4) rgba(60, 60, 60, .4) rgba(255, 255, 255, .4);
+  z-index: 9;
+}
+
+form input, form button {
+  width: 250px;
+  border: 1px solid;
+  border-color: rgba(60, 60, 60, .35) rgba(60, 60, 60, .35) rgba(255, 255, 255, .5) rgba(80, 80, 80, .45);
+  background: rgba(0, 0, 0, .2) no-repeat;
+  padding: 8px 24px 8px 10px;
+  font: bold .875em/1.25em "Monaco", Roboto, sans-serif;
+  letter-spacing: .075em;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .1);
+  margin-bottom: 19px;
+}
+
+form input:focus {
+  background-color: rgba(0, 0, 0, .4);
+}
+
+.from-group {
+  position: relative;
+}
+
+.form-control-feedback {
+  position: absolute;
+  color: #ffffff;
+  top: 2px;
+  right: 2px;
+  z-index: 2;
+  display: block;
+  width: 34px;
+  height: 34px;
+  line-height: 34px;
+  text-align: center;
+  pointer-events: none;
+  font-weight: 400;
+  font-size: 18px;
+}
+
+::-webkit-input-placeholder {
+  color: #ccc;
+  text-transform: uppercase;
+}
+
+::-moz-placeholder {
+  color: #ccc;
+  text-transform: uppercase;
+}
+
+:-ms-input-placeholder {
+  color: #ccc;
+  text-transform: uppercase;
+}
+
+form button[type=submit] {
+  width: 250px;
+  margin-bottom: 0;
+  color: greenyellow;
+  letter-spacing: .05em;
+  text-shadow: 0 1px 0 #133d3e;
+  text-transform: uppercase;
+  background: #225556;
+  border-top-color: #9fb5b5;
+  border-left-color: #608586;
+  border-bottom-color: #1b4849;
+  border-right-color: #1e4d4e;
+  cursor: pointer;
+}
+
+.form {
+  z-index: 9;
+}
+
+.black {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  background-color: #000000;
+}
+
+/* login form end */

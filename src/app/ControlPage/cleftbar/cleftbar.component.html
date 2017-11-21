@@ -1,0 +1,13 @@
+<div id="sidebar">
+  <app-search></app-search>
+  <ul class="filetree">
+    <li *ngFor="let hostGroup of HostGroups; let i = index ">
+      <input type="checkbox" id="hostgroup-{{i}}">
+      <label for="hostgroup-{{i}}">{{hostGroup.name}}</label>
+      <ul>
+        <li *ngFor="let host of hostGroup.children" (click)="Connect(host)">{{host.name}}</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
