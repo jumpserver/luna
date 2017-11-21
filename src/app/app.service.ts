@@ -16,7 +16,6 @@ import 'rxjs/add/operator/catch';
 declare let jQuery: any;
 // declare var Clipboard: any;
 import * as io from 'socket.io-client';
-import {environment} from '../environments/environment';
 
 export class Group {
   id: number;
@@ -204,7 +203,7 @@ export class AppService implements OnInit {
       this._logger.level = 0;
     }
 
-    this.checklogin();
+    // this.checklogin();
   }
 
   ngOnInit() {
