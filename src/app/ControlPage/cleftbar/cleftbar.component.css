@@ -58,3 +58,8 @@
     background-size: 33px 63px;
   }
 }
+
+app-search {
+  border-left-width: 0;
+  border-bottom: gold 7px inset;
+}

@@ -170,6 +170,37 @@ server.run = function (options) {
           }]
       }])
     });
+  apis.route('/hostlist')
+    .get(function (req, res) {
+      res.json([{
+        "name": "测试服务器组1",
+        "id": 1,
+        "children": [{"name": "测试服务器1", "uuid": "", "type": "ssh", "users": ["root", "test"]}, {
+          "name": "测试服务器2",
+          "uuid": "",
+          "type": "ssh",
+          "users": ["root", "test"]
+        }]
+      }, {
+        "name": "樱花庄服务器组",
+        "id": 2,
+        "children": [{"name": "测试服务器1", "uuid": "", "type": "ssh", "users": ["root", "test"]}, {
+          "name": "测试服务器2",
+          "uuid": "",
+          "type": "ssh",
+          "users": ["root", "test"]
+        }]
+      }, {
+        "name": "阿里云服务器组",
+        "id": 3,
+        "children": [{"name": "测试服务器1", "uuid": "", "type": "ssh", "users": ["root", "test"]}, {
+          "name": "测试服务器2",
+          "uuid": "",
+          "type": "ssh",
+          "users": ["root", "test"]
+        }]
+      }])
+    });
 
   app.use("/api", apis);
   // let server listen on the port
