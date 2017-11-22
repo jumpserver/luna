@@ -61,7 +61,7 @@ export let DataStore: {
   error: {};
   msg: {};
   loglevel: number;
-  leftbarhide: boolean;
+  leftbarshow: boolean;
   windowsize: Array<number>;
 } = {
   socket: io.connect(),
@@ -70,7 +70,7 @@ export let DataStore: {
   error: {},
   msg: {},
   loglevel: 0,
-  leftbarhide: false,
+  leftbarshow: true,
   windowsize: [],
 };
 export let CSRF: string = '';
@@ -262,7 +262,6 @@ export class AppService implements OnInit {
   browser() {
     this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json()).subscribe()
   }
-
 
 
 //

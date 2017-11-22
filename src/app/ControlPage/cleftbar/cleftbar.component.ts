@@ -45,9 +45,33 @@ export class CleftbarComponent implements OnInit {
   }
 
   static Hide() {
+    DataStore.leftbarshow = false;
+    DataStore.Nav.map(function (value, i) {
+      for (var ii in value["children"]) {
+        if (DataStore.Nav[i]["children"][ii]["id"] === "HindLeftManager") {
+          DataStore.Nav[i]["children"][ii] = {
+            "id": "ShowLeftManager",
+            "click": "ShowLeft",
+            "name": "Show left manager"
+          }
+        }
+      }
+    })
   }
 
   static Show() {
+    DataStore.leftbarshow = true;
+    DataStore.Nav.map(function (value, i) {
+      for (var ii in value["children"]) {
+        if (DataStore.Nav[i]["children"][ii]["id"] === "ShowLeftManager") {
+          DataStore.Nav[i]["children"][ii] = {
+            "id": "HindLeftManager",
+            "click": "HideLeft",
+            "name": "Hind left manager"
+          }
+        }
+      }
+    })
   }
 
   constructor(private _appService: AppService,
