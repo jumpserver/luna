@@ -12,7 +12,8 @@ import {Logger} from 'angular2-logger/core';
 
 import {AppService, DataStore, HttpService} from '../../app.service';
 import {SshComponent} from '../control/ssh/ssh.component';
-import {RdpComponent} from "../control/rdp/rdp.component";
+import {RdpComponent} from '../control/rdp/rdp.component';
+import {SearchComponent} from "../search/search.component";
 
 declare let layer: any;
 declare let jQuery: any;
@@ -33,11 +34,12 @@ export class Host {
   selector: 'app-cleftbar',
   templateUrl: './cleftbar.component.html',
   styleUrls: ['./cleftbar.component.css'],
-  providers: [SshComponent, RdpComponent]
+  providers: [SshComponent, RdpComponent, SearchComponent]
 })
 export class CleftbarComponent implements OnInit {
   DataStore = DataStore;
   HostGroups: Array<HostGroup>;
+  q: string;
 
   static Reload() {
   }
@@ -52,6 +54,7 @@ export class CleftbarComponent implements OnInit {
               private _term: SshComponent,
               private _rdp: RdpComponent,
               private _http: HttpService,
+              private _search: SearchComponent,
               private _logger: Logger) {
     this._logger.log('nav.ts:NavComponent');
     // this._appService.getnav()
@@ -64,7 +67,6 @@ export class CleftbarComponent implements OnInit {
         this.HostGroups = response;
       });
   }
-
 
   Connect(host) {
     console.log(host);
@@ -107,6 +109,10 @@ export class CleftbarComponent implements OnInit {
       jQuery("app-rdp").show();
       this._rdp.Connect(host, username);
     }
+  }
+
+  Search(q) {
+    this._search.Search(q)
   }
 
 }

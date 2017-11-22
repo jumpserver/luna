@@ -24,7 +24,7 @@ import {LoginComponent} from './BasicPage/login/login.component';
 import {FooterComponent} from './BasicPage/footer/footer.component';
 
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
-import {SearchComponent} from './ControlPage/search/search.component';
+import {SearchComponent, SearchFilter} from './ControlPage/search/search.component';
 import {CleftbarComponent} from './ControlPage/cleftbar/cleftbar.component';
 import {ControlComponent} from './ControlPage/control/control.component';
 import {ControlnavComponent} from './ControlPage/control/controlnav/controlnav.component';
@@ -32,8 +32,8 @@ import {RdpComponent} from './ControlPage/control/rdp/rdp.component';
 import {SshComponent} from './ControlPage/control/ssh/ssh.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
 import {IndexPageComponent} from './IndexPage/index-page.component';
-import { NotFoundComponent } from './BasicPage/not-found/not-found.component';
-import { PopupComponent } from './BasicPage/popup/popup.component';
+import {NotFoundComponent} from './BasicPage/not-found/not-found.component';
+import {PopupComponent} from './BasicPage/popup/popup.component';
 
 
 @NgModule({
@@ -52,6 +52,7 @@ import { PopupComponent } from './BasicPage/popup/popup.component';
     RdpComponent,
     SshComponent,
     SearchComponent,
+    SearchFilter,
     IleftbarComponent,
     CleftbarComponent,
     ControlComponent,
