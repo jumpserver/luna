@@ -1,4 +1,4 @@
 <input class="left-search" placeholder=" Search ..." maxlength="2048" name="q" autocomplete="off"
        title="Search"
-       type="text" tabindex="1" spellcheck="false" autofocus [(ngModel)]="q" (keyup.enter)="search()"
+       type="text" tabindex="1" spellcheck="false" autofocus [(ngModel)]="q" (keyup.enter)="Search(q)"
        (ngModelChange)="modelChange($event)">

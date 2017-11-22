@@ -179,7 +179,6 @@ export class HttpService {
 @Injectable()
 export class AppService implements OnInit {
   // user:User = user  ;
-  searchrequest: any;
 
   constructor(private _http: HttpService,
               private _router: Router,
@@ -264,24 +263,7 @@ export class AppService implements OnInit {
     this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json()).subscribe()
   }
 
-  Search(q) {
-    if (this.searchrequest) {
-      this.searchrequest.unsubscribe();
-    }
-    this.searchrequest = this._http.get('/api/search?q=' + q)
-      .map(res => res.json())
-      .subscribe(
-        data => {
-          this._logger.log(data);
-        },
-        err => {
-          this._logger.error(err);
-        },
-        () => {
-        }
-      );
-    this._logger.log(q)
-  }
+
 
 //
 //

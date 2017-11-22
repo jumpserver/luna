@@ -59,7 +59,13 @@
   }
 }
 
-app-search {
+.search {
   border-left-width: 0;
-  border-bottom: gold 7px inset;
+  border-bottom: gold 2px inset;
+}
+
+.left-search {
+  padding-left: 14px;
+  width: 100%;
+  border: none;
 }
