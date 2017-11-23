@@ -16,10 +16,10 @@ import {ControlPageComponent} from './ControlPage/controlpage.component';
 
 const appRoutes: Routes = [
   // { path: 'crisis-center', component: CrisisListComponent },
-  {path: 'welcome', component: IndexPageComponent}, // <-- delete this line
+  // {path: 'welcome', component: IndexPageComponent}, // <-- delete this line
   {path: 'login', component: LoginComponent},
   {path: 'control', component: ControlPageComponent},
-  {path: '', redirectTo: '/welcome', pathMatch: 'full'},
+  {path: '', redirectTo: '/control', pathMatch: 'full'},
   {path: '**', component: NotFoundComponent}
 ];
 

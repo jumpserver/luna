@@ -170,8 +170,125 @@ server.run = function (options) {
           }]
       }])
     });
-  apis.route('/hostlist')
+  apis.route('/perms/v1/user/my/asset-groups-assets/')
     .get(function (req, res) {
+      res.json([
+    {
+        "id": 0,
+        "name": "ungrouped",
+        "assets": []
+    },
+    {
+        "id": 1,
+        "name": "Default",
+        "comment": "Default asset group",
+        "assets": [
+            {
+                "id": 2,
+                "hostname": "192.168.1.6",
+                "ip": "192.168.2.6",
+                "port": 22,
+                "system_users": [
+                    {
+                        "id": 1,
+                        "name": "web",
+                        "username": "web",
+                        "protocol": "ssh",
+                        "auth_method": "P",
+                        "auto_push": true
+                    }
+                ]
+            },
+            {
+                "id": 4,
+                "hostname": "testserver123",
+                "ip": "123.57.183.135",
+                "port": 8022,
+                "system_users": [
+                    {
+                        "id": 1,
+                        "name": "web",
+                        "username": "web",
+                        "protocol": "ssh",
+                        "auth_method": "P",
+                        "auto_push": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": 4,
+        "name": "java",
+        "comment": "",
+        "assets": [
+            {
+                "id": 2,
+                "hostname": "192.168.1.6",
+                "ip": "192.168.2.6",
+                "port": 22,
+                "system_users": [
+                    {
+                        "id": 1,
+                        "name": "web",
+                        "username": "web",
+                        "protocol": "ssh",
+                        "auth_method": "P",
+                        "auto_push": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": 3,
+        "name": "数据库",
+        "comment": "",
+        "assets": [
+            {
+                "id": 2,
+                "hostname": "192.168.1.6",
+                "ip": "192.168.2.6",
+                "port": 22,
+                "system_users": [
+                    {
+                        "id": 1,
+                        "name": "web",
+                        "username": "web",
+                        "protocol": "ssh",
+                        "auth_method": "P",
+                        "auto_push": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": 2,
+        "name": "运维组",
+        "comment": "",
+        "assets": [
+            {
+                "id": 2,
+                "hostname": "192.168.1.6",
+                "ip": "192.168.2.6",
+                "port": 22,
+                "system_users": [
+                    {
+                        "id": 1,
+                        "name": "web",
+                        "username": "web",
+                        "protocol": "ssh",
+                        "auth_method": "P",
+                        "auto_push": true
+                    }
+                ]
+            }
+        ]
+    }
+]);
+
+
       res.json([{
         "name": "测试服务器组1",
         "id": 1,

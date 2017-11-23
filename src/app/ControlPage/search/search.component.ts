@@ -64,7 +64,7 @@ export class SearchFilter implements PipeTransform {
     if (input) {
       input = input.toLowerCase();
       return value.filter(function (el: any) {
-        return el.name.toLowerCase().indexOf(input) > -1;
+        return el.name.toLowerCase().indexOf(input) > -1 || el.comment.toLocaleLowerCase().indexOf(input) > -1;
       })
     }
     return value;
