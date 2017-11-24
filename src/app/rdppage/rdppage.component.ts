@@ -33,7 +33,7 @@ export class RdppageComponent implements OnInit {
     canvas.height = window.innerHeight;
 
     let client = Mstsc.client.create(Mstsc.$("canvas"));
-    client.connect(token, "rdp/socket.io");
+    client.connect(token, "socket.io");
   }
 
 }
