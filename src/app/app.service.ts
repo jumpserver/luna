@@ -57,6 +57,7 @@ export let User: {
 export let DataStore: {
   socket: any;
   Nav: Array<{}>;
+  NavShow: boolean;
   Path: {};
   error: {};
   msg: {};
@@ -66,6 +67,7 @@ export let DataStore: {
 } = {
   socket: io.connect(),
   Nav: [{}],
+  NavShow: true,
   Path: {},
   error: {},
   msg: {},
