@@ -47,7 +47,7 @@ export class SshComponent implements OnInit {
 
 
     let id = NavList.List.length - 1;
-    NavList.List[id].nick = host.name;
+    NavList.List[id].nick = host.hostname;
     NavList.List[id].connected = true;
     NavList.List[id].edit = false;
     NavList.List[id].closed = false;

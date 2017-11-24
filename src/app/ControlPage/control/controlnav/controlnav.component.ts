@@ -11,7 +11,6 @@ import {Component, OnInit} from '@angular/core';
 import {NavList} from '../control.component'
 import {SshComponent} from '../ssh/ssh.component'
 import {RdpComponent} from '../rdp/rdp.component'
-import {NavComponent} from "../../../BasicPage/nav/nav.component";
 
 declare let jQuery: any;
 
@@ -19,7 +18,7 @@ declare let jQuery: any;
 @Component({
   selector: 'app-controlnav',
   templateUrl: './controlnav.component.html',
-  styleUrls: ['./controlnav.component.css']
+  styleUrls: ['./controlnav.component.css'],
 })
 export class ControlnavComponent implements OnInit {
   setActive = ControlnavComponent.setActive;

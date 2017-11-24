@@ -45,9 +45,33 @@ export class CleftbarComponent implements OnInit {
   }
 
   static Hide() {
+    DataStore.leftbarshow = false;
+    DataStore.Nav.map(function (value, i) {
+      for (var ii in value["children"]) {
+        if (DataStore.Nav[i]["children"][ii]["id"] === "HindLeftManager") {
+          DataStore.Nav[i]["children"][ii] = {
+            "id": "ShowLeftManager",
+            "click": "ShowLeft",
+            "name": "Show left manager"
+          }
+        }
+      }
+    })
   }
 
   static Show() {
+    DataStore.leftbarshow = true;
+    DataStore.Nav.map(function (value, i) {
+      for (var ii in value["children"]) {
+        if (DataStore.Nav[i]["children"][ii]["id"] === "ShowLeftManager") {
+          DataStore.Nav[i]["children"][ii] = {
+            "id": "HindLeftManager",
+            "click": "HideLeft",
+            "name": "Hind left manager"
+          }
+        }
+      }
+    })
   }
 
   constructor(private _appService: AppService,
@@ -61,7 +85,7 @@ export class CleftbarComponent implements OnInit {
   }
 
   ngOnInit() {
-    this._http.get('/api/hostlist')
+    this._http.get('/api/perms/v1/user/my/asset-groups-assets/')
       .map(res => res.json())
       .subscribe(response => {
         this.HostGroups = response;
@@ -71,10 +95,10 @@ export class CleftbarComponent implements OnInit {
   Connect(host) {
     console.log(host);
     let username: string;
-    if (host.users.length > 1) {
+    if (host.system_users.length > 1) {
       let options = "";
-      for (let u of host.users) {
-        options += "<option value='" + u + "'>" + u + "</option>"
+      for (let u of host.system_users) {
+        options += "<option value='" + u.username + "'>" + u.username + "</option>"
       }
       layer.open({
         title: 'Please Choose a User',
@@ -94,8 +118,8 @@ export class CleftbarComponent implements OnInit {
           //return false 开启该代码可禁止点击该按钮关闭
         }
       });
-    } else if (host.users.length === 1) {
-      username = host.users[0]
+    } else if (host.system_users.length === 1) {
+      username = host.system_users[0].username
     }
     if (username === "") {
       return

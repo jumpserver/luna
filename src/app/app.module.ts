@@ -34,6 +34,8 @@ import {ControlPageComponent} from './ControlPage/controlpage.component';
 import {IndexPageComponent} from './IndexPage/index-page.component';
 import {NotFoundComponent} from './BasicPage/not-found/not-found.component';
 import {PopupComponent} from './BasicPage/popup/popup.component';
+import { RdppageComponent } from './rdppage/rdppage.component';
+import { TermpageComponent } from './termpage/termpage.component';
 
 
 @NgModule({
@@ -60,7 +62,9 @@ import {PopupComponent} from './BasicPage/popup/popup.component';
     ControlPageComponent,
     IndexPageComponent,
     NotFoundComponent,
-    PopupComponent
+    PopupComponent,
+    RdppageComponent,
+    TermpageComponent,
     // HeroListComponent,
     // CrisisListComponent,
   ],

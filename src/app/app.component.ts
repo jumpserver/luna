@@ -6,7 +6,7 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component} from '@angular/core';
-import {AppService, HttpService} from './app.service';
+import {AppService, HttpService, DataStore} from './app.service';
 
 @Component({
   selector: 'app-root',
@@ -17,5 +17,5 @@ import {AppService, HttpService} from './app.service';
 })
 
 export class AppComponent {
-  // DataStore = DataStore;
+  DataStore = DataStore;
 }

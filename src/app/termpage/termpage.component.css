@@ -1,8 +1,6 @@
-
 #term {
   width: 100%;
   height: 100%;
-  padding: 15px;
 }
 
 #term > div {
@@ -22,26 +20,6 @@
 
 #term .terminal div span {
   min-width: 12px;
-}
-
-.reverse-video {
-  color: #000;
-  background: #f0f0f0;
-}
-
-.termChangBar {
-  line-height: 1;
-  margin: 0 auto;
-  border: 1px solid #ffffff;
-  color: #fff;
-  background-color: #ffffff;
-  position: fixed;
-  right: 0;
-  top: 0;
-}
-
-.hidden {
-  display: none;
 }
 
 #liuzheng {
