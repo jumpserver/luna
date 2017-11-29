@@ -8,7 +8,7 @@
 import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
 
-import {AppService, DataStore, User, HttpService} from '../../app.service';
+import {AppService, DataStore, HttpService} from '../../app.service';
 import {CleftbarComponent} from '../../ControlPage/cleftbar/cleftbar.component';
 import {SshComponent} from '../../ControlPage/control/ssh/ssh.component';
 import {RdpComponent} from '../../ControlPage/control/rdp/rdp.component';
