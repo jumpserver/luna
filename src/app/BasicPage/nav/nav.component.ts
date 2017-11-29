@@ -24,7 +24,6 @@ declare let jQuery: any;
 })
 export class NavComponent implements OnInit {
   DataStore = DataStore;
-  User = User;
 
   constructor(private _appService: AppService,
               private _http: HttpService,
