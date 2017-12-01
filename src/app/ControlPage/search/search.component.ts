@@ -19,7 +19,7 @@ export let Q: string = '';
   styleUrls: ['./search.component.css']
 })
 export class SearchComponent implements OnChanges {
-
+  q: string;
   @Input() input;
   searchrequest: any;
 
