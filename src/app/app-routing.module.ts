@@ -19,7 +19,7 @@ import {TermpageComponent} from "./termpage/termpage.component";
 const appRoutes: Routes = [
   // { path: 'crisis-center', component: CrisisListComponent },
   // {path: 'welcome', component: IndexPageComponent}, // <-- delete this line
-  {path: 'login', component: LoginComponent},
+  {path: 'users/login', component: LoginComponent},
   {path: 'control', component: ControlPageComponent},
   {path: 'rdp/:token', component: RdppageComponent},
   {path: 'term/:token', component: TermpageComponent},

@@ -115,14 +115,140 @@ export class NavComponent implements OnInit {
 
   getnav() {
     this._logger.log('getnav');
-    return this._http.get('/api/nav')
-      .map(res => res.json())
-      .subscribe(response => {
-        DataStore.Nav = response;
-      });
+    // this._http.get('/api/nav')
+    //   .map(res => res.json())
+    //   .subscribe(response => {
+    //     DataStore.Nav = response;
+    //   });
+    DataStore.Nav = [{
+      "id": "File",
+      "name": "Server",
+      "children": [
+        {
+          "id": "NewConnection",
+          "href": "",
+          "name": "New connection",
+          "disable": true
+        },
+        {
+          "id": "Connect",
+          "click": "Connect",
+          "name": "Connect",
+          "disable": true
+        },
+        {
+          "id": "Disconnect",
+          "click": "Disconnect",
+          "name": "Disconnect"
+        },
+        {
+          "id": "DisconnectAll",
+          "click": "DisconnectAll",
+          "name": "Disconnect all"
+        },
+        {
+          "id": "Duplicate",
+          "href": "",
+          "name": "Duplicate",
+          "disable": true
+        },
+        {
+          "id": "Upload",
+          "href": "",
+          "name": "Upload",
+          "disable": true
+        },
+        {
+          "id": "Download",
+          "href": "",
+          "name": "Download",
+          "disable": true
+        },
+        {
+          "id": " Search",
+          "href": "",
+          "name": "Search",
+          "disable": true
+        },
+        {
+          "id": "Reload",
+          "click": "ReloadLeftbar",
+          "name": "Reload"
+        }
+      ]
+    }, {
+      "id": "View",
+      "name": "View",
+      "children": [
+        {
+          "id": "HindLeftManager",
+          "click": "HideLeft",
+          "name": "Hind left manager"
+        },
+        {
+          "id": "SplitVertical",
+          "href": "",
+          "name": "Split vertical",
+          "disable": true
+        },
+        {
+          "id": "CommandBar",
+          "href": "",
+          "name": "Command bar",
+          "disable": true
+        },
+        {
+          "id": "ShareSession",
+          "href": "",
+          "name": "Share session (read/write)",
+          "disable": true
+        },
+        {
+          "id": "Language",
+          "href": "",
+          "name": "Language",
+          "disable": true
+        }]
+    }, {
+      "id": "Help",
+      "name": "Help",
+      "children": [
+        {
+          "id": "EnterLicense",
+          "click": "EnterLicense",
+          "name": "Enter License"
+        },
+        {
+          "id": "Website",
+          "click": "Website",
+          "name": "Website"
+        },
+        {
+          "id": "BBS",
+          "click": "BBS",
+          "name": "BBS"
+        }]
+    }]
   }
 
   static Hide() {
     jQuery("app-nav").hide()
+  }
+
+  Connect() {
+    layer.prompt({
+      formType: 2,
+      maxlength: 500,
+      title: 'Please Input Code',
+      scrollbar: false,
+      area: ['400px', '300px'],
+      moveOut: true,
+      moveType: 1
+    }, function (value, index) {
+      DataStore.socket.emit('key', value);
+      // layer.msg(value); //得到value
+      layer.close(index);
+
+    });
   }
 }

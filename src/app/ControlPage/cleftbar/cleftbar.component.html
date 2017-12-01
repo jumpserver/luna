@@ -5,7 +5,7 @@
            type="text" tabindex="1" spellcheck="false" autofocus [(ngModel)]="q" (keyup.enter)="Search(q)">
   </div>
   <ul class="filetree">
-    <li *ngFor="let hostGroup of HostGroups ; let i = index ">
+    <li *ngFor="let hostGroup of HostGroups | SearchFilter: q; let i = index ">
       <input type="checkbox" id="hostgroup-{{i}}">
       <label for="hostgroup-{{i}}">{{hostGroup.name}}</label>
       <ul>
