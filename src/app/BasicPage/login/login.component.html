@@ -1,17 +1,72 @@
-<div class="black"></div>
-<canvas id="q"></canvas>
-<div class="form">
-  <form #f="ngForm" (ngSubmit)="onSubmit(f)">
-    <div class="from-group">
-      <input type="email" id="username" placeholder="Email address" [(ngModel)]="User.username"
-             name="email" required autofocus pattern="^\w+([.-]?\w+)*@\w+([.-]?\w+)*(.\w{2,3})+$">
-      <span class="fa fa-user-secret form-control-feedback"></span>
+<div class="container loginColumns animated fadeInDown">
+  <div class="row justify-content-md-center">
+    <div class="col col-md-6">
+      <h2 class="font-bold">欢迎使用Jumpserver开源跳板机</h2>
+      <p>
+        Jumpserver是一款使用Python, Django开发的开源跳板机系统, 助力互联网企业高效 用户、资产、权限、审计 管理
+      </p>
+      <p>
+        我们自五湖四海，我们对开源精神无比敬仰和崇拜，我们对完美、整洁、优雅 无止境的追求
+      </p>
+      <p>
+        专注自动化运维，努力打造 易用、稳定、安全、自动化 的跳板机, 这是我们的不懈的追求和动力
+      </p>
+      <p>
+        <small>永远年轻，永远热泪盈眶 stay foolish stay hungry</small>
+      </p>
+
     </div>
-    <div class="from-group">
-      <input type="password" name="password" id="password" placeholder="password" [(ngModel)]="User.password" required
-             (ngEnter)="onSubmit(f)">
-      <span class="fa fa-key form-control-feedback"></span>
+    <div class="col col-md-6">
+      <div class="ibox-content">
+        <div><img src="/assets/imgs/logo.png" width="82" height="82"> <span class="font-bold text-center"
+                                                                            style="font-size: 32px; font-family: inherit">登录</span>
+        </div>
+        <form class="m-t" #f="ngForm" (ngSubmit)="onSubmit(f)">
+          <p class="red-fonts">* Please enter a correct Username and password. Note that both fields may be
+            case-sensitive.</p>
+          <div class="form-group">
+            <input type="text" class="form-control" id="username" name="username" placeholder="Username" required
+                   autofocus pattern="^\w+$" [(ngModel)]="User.username">
+          </div>
+          <div class="form-group">
+            <input type="password" class="form-control" id="password" name="password" placeholder="Password"
+                   [(ngModel)]="User.password" required (ngEnter)="onSubmit(f)">
+          </div>
+          <!--<div>-->
+
+          <!--<img src="/captcha/image/c6fc850ce5a0c4d12e56e0ed2f02b55d1659a83a/" alt="captcha" class="captcha"><input-->
+          <!--id="id_captcha_0" name="captcha_0" type="hidden" value="c6fc850ce5a0c4d12e56e0ed2f02b55d1659a83a">-->
+
+          <!--<div class="row">-->
+          <!--<div class="col-sm-6">-->
+          <!--<input autocomplete="off" id="id_captcha_1" class="form-control" name="captcha_1" placeholder="Captcha"-->
+          <!--type="text">-->
+          <!--</div>-->
+          <!--</div>-->
+          <!--<br>-->
+          <!--</div>-->
+          <button type="submit" class="btn btn-primary block full-width m-b">Login</button>
+
+          <a href="/users/password/forgot">
+            <small>Forgot password?</small>
+          </a>
+
+          <p class="text-muted text-center">
+          </p>
+        </form>
+        <p class="m-t">
+        </p>
+      </div>
     </div>
-    <button type="submit">{{loginBotton}}</button>
-  </form>
+  </div>
+  <hr>
+  <div class="row">
+    <div class="col-md-6">
+      Copyright Jumpserver.org
+    </div>
+    <div class="col-md-6 text-right">
+      <small>© 2014-2017</small>
+    </div>
+  </div>
 </div>
+

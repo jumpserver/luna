@@ -22,6 +22,7 @@
     "@angular/platform-browser-dynamic": "^4.2.4",
     "@angular/router": "^4.2.4",
     "angular2-logger": "^0.6.0",
+    "animate.css": "^3.5.2",
     "body-parser": "^1.18.2",
     "bootstrap": "^4.0.0-alpha.6",
     "clipboard": "^1.7.1",

@@ -14,7 +14,6 @@ declare let Terminal: any;
 export class TermpageComponent implements OnInit {
   constructor(private activatedRoute: ActivatedRoute) {
     DataStore.NavShow = false;
-
   }
 
   ngOnInit() {

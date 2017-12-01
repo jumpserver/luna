@@ -29,6 +29,7 @@ export class LoginComponent implements OnInit {
               private _router: Router,
               private _logger: Logger) {
     this._logger.log('login.ts:LoginComponent');
+    DataStore.NavShow = false;
   }
 
 

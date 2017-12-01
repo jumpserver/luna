@@ -64,7 +64,8 @@ export class SearchFilter implements PipeTransform {
     if (input) {
       input = input.toLowerCase();
       return value.filter(function (el: any) {
-        return el.name.toLowerCase().indexOf(input) > -1 || el.comment.toLocaleLowerCase().indexOf(input) > -1;
+        // ToDo: search with a simple SQL like language, and a bug search a group's hosts
+        return JSON.stringify(el).toLowerCase().indexOf(input) > -1;
       })
     }
     return value;
