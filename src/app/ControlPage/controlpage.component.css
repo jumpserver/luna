@@ -10,8 +10,9 @@ div {
 }
 
 app-cleftbar {
-  background-color: white;
   padding: 0;
+  background: #2f2a2a;
+  color: #d6cbcb;
 }
 
 app-control {

@@ -1,6 +1,6 @@
 <div id="term">
   <div *ngFor="let m of NavList.List;let i=index"
-       [ngClass]="{'disconnected':!m.connected,'hidden': m.hide,'hidden':m.type!='ssh'}" id="term-{{i}}">
+       [ngClass]="{'disconnected':!m.connected,'hidden': m.hide || m.type!='ssh'}" id="term-{{i}}">
   </div>
 </div>
 <span id="liuzheng">liuzheng</span>

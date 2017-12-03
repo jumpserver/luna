@@ -20,10 +20,9 @@ const appRoutes: Routes = [
   // { path: 'crisis-center', component: CrisisListComponent },
   // {path: 'welcome', component: IndexPageComponent}, // <-- delete this line
   {path: 'users/login', component: LoginComponent},
-  {path: 'control', component: ControlPageComponent},
   {path: 'rdp/:token', component: RdppageComponent},
   {path: 'term/:token', component: TermpageComponent},
-  {path: '', redirectTo: '/control', pathMatch: 'full'},
+  {path: '', component: ControlPageComponent},
   {path: '**', component: NotFoundComponent}
 ];
 

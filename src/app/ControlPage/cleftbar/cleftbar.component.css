@@ -22,6 +22,7 @@
 .filetree li {
   list-style: none;
   cursor: pointer;
+  color: #ffffff;
 }
 
 .filetree label {
@@ -69,4 +70,5 @@
   width: 100%;
   border: none;
   height: 28px;
+  background: #2f2a2a;
 }
