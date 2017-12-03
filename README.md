@@ -26,3 +26,28 @@ Before running the tests make sure you are serving the app via `ng serve`.
 ## Further help
 
 To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
+
+
+## Running On Your Server
+Untar the luna release tar file, and put it under the folder you like.
+
+Nginx config:
+
+```
+  location /luna/ {
+    index  index.html;
+    alias /path/of/your/luna/;
+  }
+  
+  location ^~ /ws/ {
+        proxy_pass http://localhost:3000/ws/;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        # WebSocket support (nginx 1.4)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+  }
+```
