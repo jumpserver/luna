@@ -17,8 +17,6 @@ import {RdppageComponent} from "./rdppage/rdppage.component";
 import {TermpageComponent} from "./termpage/termpage.component";
 
 const appRoutes: Routes = [
-  // { path: 'crisis-center', component: CrisisListComponent },
-  // {path: 'welcome', component: IndexPageComponent}, // <-- delete this line
   {path: 'users/login', component: LoginComponent},
   {path: 'rdp/:token', component: RdppageComponent},
   {path: 'term/:token', component: TermpageComponent},
