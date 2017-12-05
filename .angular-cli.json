@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "project": {
-    "name": "my-app"
+    "name": "WebTerminal"
   },
   "apps": [
     {
@@ -19,9 +19,26 @@
       "testTsconfig": "tsconfig.spec.json",
       "prefix": "app",
       "styles": [
+        "../node_modules/bootstrap/dist/css/bootstrap.min.css",
+        "../node_modules/xterm/dist/xterm.css",
+        "../node_modules/layui-layer/dist/theme/default/layer.css",
+        "../node_modules/animate.css/animate.min.css",
+        "./assets/css/style.css",
         "styles.css"
       ],
-      "scripts": [],
+      "scripts": [
+        "../node_modules/jquery/dist/jquery.min.js",
+        "../node_modules/tether/dist/js/tether.min.js",
+        "../node_modules/bootstrap/dist/js/bootstrap.min.js",
+        "../node_modules/xterm/dist/xterm.js",
+        "../node_modules/layui-layer/dist/layer.js",
+        "../node_modules/socket.io-client/dist/socket.io.js",
+        "./assets/js/mstsc.js",
+        "./assets/js/keyboard.js",
+        "./assets/js/rle.js",
+        "./assets/js/client.js",
+        "./assets/js/canvas.js"
+      ],
       "environmentSource": "environments/environment.ts",
       "environments": {
         "dev": "environments/environment.ts",

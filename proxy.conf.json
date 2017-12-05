@@ -1,0 +1,17 @@
+{
+  "/api": {
+    "target": "http://localhost:3000",
+    "secure": false
+  },
+  "/socket.io/": {
+    "target": "http://127.0.0.1:3000",
+    "secure": false
+  },
+  "/rdp/socket.io/": {
+    "target": "http://localhost:9250",
+    "pathRewrite": {
+      "^/rdp": ""
+    },
+    "secure": false
+  }
+}

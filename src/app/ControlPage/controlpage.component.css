@@ -1,0 +1,20 @@
+div, term-leftbar, term-body {
+  height: 100%;
+  width: 100%;
+  padding: 0;
+}
+
+div {
+  background-color: black;
+  margin: 0;
+}
+
+app-cleftbar {
+  padding: 0;
+  background: #2f2a2a;
+  color: #d6cbcb;
+}
+
+app-control {
+  padding: 0;
+}

@@ -1,0 +1,55 @@
+
+#term {
+  width: 100%;
+  height: 100%;
+  padding: 15px;
+}
+
+#term > div {
+  height: 100%;
+}
+
+.terminal {
+  border: #000 solid 5px;
+  color: #f0f0f0;
+  box-shadow: rgba(0, 0, 0, 0.8) 2px 2px 20px;
+  white-space: nowrap;
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+  background-color: black;
+}
+
+#term .terminal div span {
+  min-width: 12px;
+}
+
+.reverse-video {
+  color: #000;
+  background: #f0f0f0;
+}
+
+.termChangBar {
+  line-height: 1;
+  margin: 0 auto;
+  border: 1px solid #ffffff;
+  color: #fff;
+  background-color: #ffffff;
+  position: fixed;
+  right: 0;
+  top: 0;
+}
+
+.hidden {
+  display: none;
+}
+
+#liuzheng {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  font-size: 11px !important;
+  padding-bottom: 16px !important;
+  font-family: 'Monaco', iosevka !important;
+}
