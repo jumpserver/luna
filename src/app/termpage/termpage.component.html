@@ -1,7 +1,27 @@
 <span id="liuzheng">liuzheng</span>
-<i class="fa fa-backward" aria-hidden="true"></i>
-<i class="fa fa-play" aria-hidden="true"></i>
-<i class="fa fa-stop" aria-hidden="true"></i>
-<i class="fa fa-pause" aria-hidden="true"></i>
-<i class="fa fa-forward" aria-hidden="true"></i>
+<button type="button" class="btn">
+  <i class="fa fa-stop" aria-hidden="true"></i>
+</button>
+<button type="button" class="btn">
+  <i class="fa fa-step-backward" aria-hidden="true"></i>
+</button>
+<button type="button" class="btn">
+  <i class="fa fa-backward" aria-hidden="true"></i>
+</button>
+<button type="button" class="btn" (click)="play()">
+  <i class="fa" aria-hidden="true" [ngClass]="{'fa-play':playing,'fa-pause': !playing}"></i>
+</button>
+<button type="button" class="btn">
+  <i class="fa fa-forward" aria-hidden="true"></i>
+</button>
+<button type="button" class="btn">
+  <i class="fa fa-step-forward" aria-hidden="true"></i>
+</button>
+<button type="button" class="btn">
+  <i class="fa fa-expand" aria-hidden="true"></i>
+</button>
+<button type="button" class="btn">
+  <i class="fa fa-compress" aria-hidden="true"></i>
+</button>
+
 <div id="term"></div>

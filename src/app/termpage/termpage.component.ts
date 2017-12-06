@@ -12,6 +12,8 @@ declare let Terminal: any;
   styleUrls: ['./termpage.component.css']
 })
 export class TermpageComponent implements OnInit {
+  playing: boolean;
+
   constructor(private activatedRoute: ActivatedRoute) {
     DataStore.NavShow = false;
   }
@@ -52,6 +54,10 @@ export class TermpageComponent implements OnInit {
       // jQuery(window).resize();
     });
 
+  }
+
+  play() {
+    this.playing = !this.playing;
   }
 
 }
