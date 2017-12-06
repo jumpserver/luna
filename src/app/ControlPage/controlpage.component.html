@@ -1,0 +1,4 @@
+<div class="container-fluid row">
+  <app-cleftbar class="col-md-2" *ngIf="DataStore.leftbarshow"></app-cleftbar>
+  <app-control [ngClass]="{'col-md-10':DataStore.leftbarshow,'col-md-12':!DataStore.leftbarshow}"></app-control>
+</div>

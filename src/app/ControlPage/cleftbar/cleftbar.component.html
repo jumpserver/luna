@@ -1,0 +1,17 @@
+<div id="sidebar">
+  <div class="search">
+    <input class="left-search" placeholder=" Search ..." maxlength="2048" name="q" autocomplete="off"
+           title="Search"
+           type="text" tabindex="1" spellcheck="false" autofocus [(ngModel)]="q" (keyup.enter)="Search(q)">
+  </div>
+  <ul class="filetree">
+    <li *ngFor="let hostGroup of HostGroups | SearchFilter: q; let i = index ">
+      <input type="checkbox" id="hostgroup-{{i}}">
+      <label for="hostgroup-{{i}}">{{hostGroup.name}}</label>
+      <ul>
+        <li *ngFor="let host of hostGroup.assets | SearchFilter: q" (click)="Connect(host)">{{host.hostname}}</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+

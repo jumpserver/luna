@@ -1,1 +1,22 @@
 /* You can add global styles to this file, and also import other style files */
+/*
+ * Style tweaks
+ * --------------------------------------------------
+ */
+@font-face {
+  font-family: iosevka;
+  src: url('assets/fonts/iosevka-term-ss07-1.13.3/woff2/iosevka-term-ss07-light.woff2') format("woff2");
+  font-weight: normal;
+}
+
+html,
+body {
+  overflow-x: hidden; /* Prevent scroll on narrow devices */
+  height: 100%;
+  width: 100%;
+  background-color: rgb(243, 243, 244);
+}
+
+app-root {
+  height: 100%;
+}
