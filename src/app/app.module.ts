@@ -36,6 +36,7 @@ import {NotFoundComponent} from './BasicPage/not-found/not-found.component';
 import {PopupComponent} from './BasicPage/popup/popup.component';
 import { RdppageComponent } from './rdppage/rdppage.component';
 import { TermpageComponent } from './termpage/termpage.component';
+import { ReplayPageComponent } from './replay-page/replay-page.component';
 
 
 @NgModule({
@@ -65,6 +66,7 @@ import { TermpageComponent } from './termpage/termpage.component';
     PopupComponent,
     RdppageComponent,
     TermpageComponent,
+    ReplayPageComponent,
     // HeroListComponent,
     // CrisisListComponent,
   ],

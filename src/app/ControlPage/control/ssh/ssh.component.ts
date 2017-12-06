@@ -24,6 +24,22 @@ import {NavList, View, Term} from '../control.component';
 export class SshComponent implements OnInit {
   NavList = NavList;
 
+  static TerminalDisconnect(host) {
+    host.connected = false;
+    host.Term.socket.destroy();
+    host.Term.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+  }
+
+  static TerminalDisconnectAll() {
+    alert('TerminalDisconnectAll');
+    for (let _i = 0; _i < NavList.List.length; _i++) {
+      SshComponent.TerminalDisconnect(_i);
+      // TermStore.term[i]["connected"] = false;
+      // TermStore.term[i]["socket"].destroy();
+      // TermStore.term[i]["term"].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+    }
+  }
+
   constructor(private _appService: AppService,
               private _logger: Logger) {
     this._logger.log('SshComponent.ts:SshComponent');
@@ -32,8 +48,8 @@ export class SshComponent implements OnInit {
   ngOnInit() {
   }
 
-  TerminalConnect(host,username) {
-    let socket = io.connect();
+  TerminalConnect(host, username) {
+    const socket = io.connect();
     let cols = '80';
     let rows = '24';
     if (Cookie.get('cols')) {
@@ -46,12 +62,12 @@ export class SshComponent implements OnInit {
     Cookie.set('rows', rows, 99, '/', document.domain);
 
 
-    let id = NavList.List.length - 1;
+    const id = NavList.List.length - 1;
     NavList.List[id].nick = host.hostname;
     NavList.List[id].connected = true;
     NavList.List[id].edit = false;
     NavList.List[id].closed = false;
-    NavList.List[id].type = "ssh";
+    NavList.List[id].type = 'ssh';
     NavList.List[id].Term = new Term;
     NavList.List[id].Term.machine = host.uuid;
     NavList.List[id].Term.socket = socket;
@@ -62,10 +78,13 @@ export class SshComponent implements OnInit {
       screenKeys: true,
     });
     NavList.List.push(new View());
-    for (let m in NavList.List) {
-      NavList.List[m].hide = true;
+    for (let _i = 0; _i < NavList.List.length; _i++) {
+      if (id === _i) {
+        NavList.List[id].hide = false;
+      } else {
+        NavList.List[_i].hide = true;
+      }
     }
-    NavList.List[id].hide = false;
 
     NavList.Active = id;
 
@@ -79,7 +98,7 @@ export class SshComponent implements OnInit {
     NavList.List[id].Term.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
 
     socket.on('connect', function () {
-      socket.emit('login', "root");
+      socket.emit('login', 'root');
       socket.emit('machine', host.uuid);
 
       NavList.List[id].Term.term.on('data', function (data) {
@@ -109,14 +128,18 @@ export class SshComponent implements OnInit {
         if (Cookie.get('cols')) {
           cols = parseInt(Cookie.get('cols'));
         }
-        if (col < 80) col = 80;
-        if (row < 24) row = 24;
-        if (cols == col && row == rows) {
+        if (col < 80) {
+          col = 80;
+        }
+        if (row < 24) {
+          row = 24;
+        }
+        if (cols === col && row === rows) {
         } else {
-          for (let tid in NavList.List) {
-            if (NavList.List[tid].connected) {
-              NavList.List[tid].Term.socket.emit('resize', [col, row]);
-              NavList.List[tid].Term.term.resize(col, row);
+          for (let _i = 0; _i < NavList.List.length; _i++) {
+            if (NavList.List[_i].connected) {
+              NavList.List[_i].Term.socket.emit('resize', [col, row]);
+              NavList.List[_i].Term.term.resize(col, row);
             }
           }
           Cookie.set('cols', String(col), 99, '/', document.domain);
@@ -128,19 +151,5 @@ export class SshComponent implements OnInit {
 
   }
 
-  static TerminalDisconnect(host) {
-    host.connected = false;
-    host.Term.socket.destroy();
-    host.Term.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
-  }
 
-  static TerminalDisconnectAll() {
-    alert("TerminalDisconnectAll");
-    for (let i in NavList.List) {
-      SshComponent.TerminalDisconnect(i);
-      // TermStore.term[i]["connected"] = false;
-      // TermStore.term[i]["socket"].destroy();
-      // TermStore.term[i]["term"].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
-    }
-  }
 }
