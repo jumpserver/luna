@@ -21,13 +21,15 @@ export class TermpageComponent implements OnInit {
     this.activatedRoute.params.subscribe((params: Params) => {
       token = params['token'];
     });
-    let socket = io.connect();
+    let socket = io.connect('/ssh');
+
     let term = new Terminal({
       cols: '80',
       rows: '24',
       useStyle: true,
       screenKeys: true,
     });
+    term.open(document.getElementById('term' ), true);
 
     socket.on('connect', function () {
       socket.emit('token', token);
@@ -60,7 +62,7 @@ export class TermpageComponent implements OnInit {
           term.resize(col, row);
         }
       };
-      jQuery(window).resize();
+      // jQuery(window).resize();
     });
 
   }
