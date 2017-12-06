@@ -1,6 +1,6 @@
 <div class="nav">
   <ul>
-    <li><a [routerLink]="['Index']"><img src="assets/imgs/logo.png" height="26px"/></a>
+    <li><a [routerLink]="['Index']"><img src="static/imgs/logo.png" height="26px"/></a>
     </li>
     <li *ngFor="let v of DataStore.Nav" [ngClass]="{'dropdown': v.children}">
       <a>{{v.name}}</a>

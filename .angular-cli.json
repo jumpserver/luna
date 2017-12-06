@@ -8,7 +8,7 @@
       "root": "src",
       "outDir": "dist",
       "assets": [
-        "assets",
+        "static",
         "favicon.ico"
       ],
       "index": "index.html",
@@ -20,14 +20,17 @@
       "prefix": "app",
       "styles": [
         "../node_modules/bootstrap/dist/css/bootstrap.min.css",
+        "../node_modules/font-awesome/css/font-awesome.css",
         "../node_modules/xterm/dist/xterm.css",
         "../node_modules/layui-layer/dist/theme/default/layer.css",
         "../node_modules/animate.css/animate.min.css",
-        "./assets/css/style.css",
+        "assets/inspinia/style.scss",
         "styles.css"
       ],
       "scripts": [
         "../node_modules/jquery/dist/jquery.min.js",
+        "../node_modules/metismenu/dist/metisMenu.js",
+        "../node_modules/jquery-sparkline/jquery.sparkline.js",
         "../node_modules/tether/dist/js/tether.min.js",
         "../node_modules/bootstrap/dist/js/bootstrap.min.js",
         "../node_modules/xterm/dist/xterm.js",
