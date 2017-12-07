@@ -21,17 +21,3 @@
 #term .terminal div span {
   min-width: 12px;
 }
-
-#liuzheng {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: -1;
-  font-size: 11px !important;
-  padding-bottom: 16px !important;
-  font-family: 'Monaco', iosevka !important;
-}
-
-button{
-  width: 40px;
-}

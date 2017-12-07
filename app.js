@@ -170,6 +170,12 @@ server.run = function (options) {
           }]
       }])
     });
+  apis.route('/replay')
+    .get(function (req, res) {
+      res.json({
+        "type": "json"
+      })
+    });
   apis.route('/perms/v1/user/my/asset-groups-assets/')
     .get(function (req, res) {
       res.json([

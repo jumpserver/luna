@@ -8,7 +8,7 @@
   <i class="fa fa-backward" aria-hidden="true"></i>
 </button>
 <button type="button" class="btn" (click)="play()">
-  <i class="fa" aria-hidden="true" [ngClass]="{'fa-play':playing,'fa-pause': !playing}"></i>
+  <i class="fa" aria-hidden="true" [ngClass]="{'fa-play':!playing,'fa-pause': playing}"></i>
 </button>
 <button type="button" class="btn">
   <i class="fa fa-forward" aria-hidden="true"></i>
@@ -22,3 +22,5 @@
 <button type="button" class="btn">
   <i class="fa fa-compress" aria-hidden="true"></i>
 </button>
+<app-mp4 *ngIf="video.type=='mp4'"></app-mp4>
+<app-json *ngIf="video.type=='json'"></app-json>
