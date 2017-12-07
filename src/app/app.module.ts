@@ -34,8 +34,11 @@ import {ControlPageComponent} from './ControlPage/controlpage.component';
 import {IndexPageComponent} from './IndexPage/index-page.component';
 import {NotFoundComponent} from './BasicPage/not-found/not-found.component';
 import {PopupComponent} from './BasicPage/popup/popup.component';
-import { RdppageComponent } from './rdppage/rdppage.component';
-import { TermpageComponent } from './termpage/termpage.component';
+import {RdppageComponent} from './rdppage/rdppage.component';
+import {TermpageComponent} from './termpage/termpage.component';
+import {ReplayPageComponent} from './replay-page/replay-page.component';
+import {Mp4Component} from './replay-page/mp4/mp4.component';
+import {JsonComponent} from './replay-page/json/json.component';
 
 
 @NgModule({
@@ -50,7 +53,6 @@ import { TermpageComponent } from './termpage/termpage.component';
     NavComponent,
     LoginComponent,
     FooterComponent,
-
     RdpComponent,
     SshComponent,
     SearchComponent,
@@ -65,6 +67,10 @@ import { TermpageComponent } from './termpage/termpage.component';
     PopupComponent,
     RdppageComponent,
     TermpageComponent,
+    ReplayPageComponent,
+    Mp4Component,
+    JsonComponent,
+
     // HeroListComponent,
     // CrisisListComponent,
   ],
