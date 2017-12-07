@@ -21,7 +21,6 @@ app-root {
   height: 100%;
 }
 
-
 #liuzheng {
   position: fixed;
   top: 0;
@@ -30,4 +29,12 @@ app-root {
   font-size: 11px !important;
   padding-bottom: 16px !important;
   font-family: 'Monaco', iosevka !important;
+}
+
+.terminal, .terminal .xterm-viewport {
+  background-color: inherit;
+}
+
+.terminal .xterm-rows {
+  background-color: black;
 }

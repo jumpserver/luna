@@ -1,4 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import {Component, OnInit} from '@angular/core';
+
+declare let jQuery: any;
+declare let Terminal: any;
 
 @Component({
   selector: 'app-json',
@@ -7,9 +10,17 @@ import { Component, OnInit } from '@angular/core';
 })
 export class JsonComponent implements OnInit {
 
-  constructor() { }
+  constructor() {
+  }
 
   ngOnInit() {
+    const term = new Terminal({
+      cols: '80',
+      rows: '24',
+      useStyle: true,
+      screenKeys: true,
+    });
+    term.open(document.getElementById('term'), true);
   }
 
 }

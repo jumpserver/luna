@@ -15,6 +15,7 @@ export class ReplayPageComponent implements OnInit {
   constructor(private activatedRoute: ActivatedRoute,
               private _http: HttpService,
               private _logger: Logger) {
+    this.video = {'type': 'none'};
   }
 
   ngOnInit() {
