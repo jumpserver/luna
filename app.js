@@ -188,6 +188,7 @@ server.run = function (options) {
               "hostname": "192.168.1.6",
               "ip": "192.168.2.6",
               "port": 22,
+              "system": "windows",
               "system_users": [
                 {
                   "id": 1,
@@ -204,6 +205,7 @@ server.run = function (options) {
               "hostname": "testserver123",
               "ip": "123.57.183.135",
               "port": 8022,
+              "system": "linux",
               "system_users": [
                 {
                   "id": 1,

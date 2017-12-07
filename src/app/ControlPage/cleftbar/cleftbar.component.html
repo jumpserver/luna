@@ -9,7 +9,10 @@
       <input type="checkbox" id="hostgroup-{{i}}">
       <label for="hostgroup-{{i}}">{{hostGroup.name}}</label>
       <ul>
-        <li *ngFor="let host of hostGroup.assets | SearchFilter: q" (click)="Connect(host)">{{host.hostname}}</li>
+        <li *ngFor="let host of hostGroup.assets | SearchFilter: q" (click)="Connect(host)">
+          <i class="fa" [ngClass]="'fa-'+host.system" id="rdp-{{i}}"></i>
+          {{host.hostname}}
+        </li>
       </ul>
     </li>
   </ul>
