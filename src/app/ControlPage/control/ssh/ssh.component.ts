@@ -49,7 +49,7 @@ export class SshComponent implements OnInit {
   }
 
   TerminalConnect(host, username) {
-    const socket = io.connect();
+    const socket = io.connect('/ssh');
     let cols = '80';
     let rows = '24';
     if (Cookie.get('cols')) {
@@ -98,8 +98,7 @@ export class SshComponent implements OnInit {
     NavList.List[id].Term.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
 
     socket.on('connect', function () {
-      socket.emit('login', 'root');
-      socket.emit('machine', host.uuid);
+      socket.emit('host', {'uuid': host.uuid, 'user': username});
 
       NavList.List[id].Term.term.on('data', function (data) {
         socket.emit('data', data);
