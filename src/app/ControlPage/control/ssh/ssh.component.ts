@@ -110,7 +110,7 @@ export class SshComponent implements OnInit {
       });
 
       socket.on('disconnect', function () {
-        this.TerminalDisconnect(id);
+        this.TerminalDisconnect(NavList.List[id]);
         // TermStore.term[id]["term"].destroy();
         // TermStore.term[id]["connected"] = false;
       });
@@ -122,10 +122,10 @@ export class SshComponent implements OnInit {
         let cols = 80;
 
         if (Cookie.get('rows')) {
-          rows = parseInt(Cookie.get('rows'));
+          rows = parseInt(Cookie.get('rows'), 10);
         }
         if (Cookie.get('cols')) {
-          cols = parseInt(Cookie.get('cols'));
+          cols = parseInt(Cookie.get('cols'), 10);
         }
         if (col < 80) {
           col = 80;
