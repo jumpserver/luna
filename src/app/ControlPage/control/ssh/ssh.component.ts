@@ -137,7 +137,7 @@ export class SshComponent implements OnInit {
         } else {
           for (let _i = 0; _i < NavList.List.length; _i++) {
             if (NavList.List[_i].connected) {
-              NavList.List[_i].Term.socket.emit('resize', [col, row]);
+              NavList.List[_i].Term.socket.emit('resize', {'cols': col, 'rows': row});
               NavList.List[_i].Term.term.resize(col, row);
             }
           }
