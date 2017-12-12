@@ -49,6 +49,7 @@ export class SshComponent implements OnInit {
   }
 
   TerminalConnect(host, username) {
+  console.log(host,username);
     const socket = io.connect('/ssh');
     let cols = '80';
     let rows = '24';
@@ -69,7 +70,7 @@ export class SshComponent implements OnInit {
     NavList.List[id].closed = false;
     NavList.List[id].type = 'ssh';
     NavList.List[id].Term = new Term;
-    NavList.List[id].Term.machine = host.uuid;
+    NavList.List[id].Term.machine = host.id;
     NavList.List[id].Term.socket = socket;
     NavList.List[id].Term.term = new Terminal({
       cols: cols,
@@ -98,7 +99,7 @@ export class SshComponent implements OnInit {
     NavList.List[id].Term.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
 
     socket.on('connect', function () {
-      socket.emit('host', {'uuid': host.uuid, 'user': username});
+      socket.emit('host', {'uuid': host.id, 'user': username});
 
       NavList.List[id].Term.term.on('data', function (data) {
         socket.emit('data', data);

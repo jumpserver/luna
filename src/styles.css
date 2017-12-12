@@ -30,7 +30,9 @@ app-root {
   padding-bottom: 16px !important;
   font-family: 'Monaco', iosevka !important;
 }
-
+.terminal{
+   white-space: nowrap;
+}
 .terminal, .terminal .xterm-viewport {
   background-color: inherit;
 }

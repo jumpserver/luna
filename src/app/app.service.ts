@@ -18,14 +18,14 @@ declare let jQuery: any;
 import * as io from 'socket.io-client';
 
 export class Group {
-  id: number;
+  id: string;
   name: string;
   membercount: number;
   comment: string;
 }
 
 export let User: {
-  id: number;
+  id: string;
   name: string;
   username: string;
   password: string;
@@ -39,7 +39,7 @@ export let User: {
   groups: Array<Group>;
   logined: boolean;
 } = {
-  id: 0,
+  id: '',
   name: 'nobody',
   username: '',
   password: '',
