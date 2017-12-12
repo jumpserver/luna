@@ -45,6 +45,7 @@
     "roboto-fontface": "^0.8.0",
     "rxjs": "^5.4.2",
     "socket.io": "^2.0.3",
+    "socket.io-client": "^2.0.4",
     "ssh-keygen": "^0.4.1",
     "tether": "^1.4.0",
     "xterm": "^2.9.2",
@@ -68,7 +69,6 @@
     "karma-jasmine-html-reporter": "^0.2.2",
     "node-sass": "^4.7.2",
     "protractor": "~5.1.2",
-    "pty.js": "^0.3.1",
     "ts-node": "~3.2.0",
     "tslint": "~5.3.2",
     "typescript": "~2.3.3"

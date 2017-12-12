@@ -49,7 +49,7 @@ export class SshComponent implements OnInit {
   }
 
   TerminalConnect(host, username) {
-    const socket = io.connect();
+    const socket = io.connect('/ssh');
     let cols = '80';
     let rows = '24';
     if (Cookie.get('cols')) {
@@ -98,8 +98,7 @@ export class SshComponent implements OnInit {
     NavList.List[id].Term.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
 
     socket.on('connect', function () {
-      socket.emit('login', 'root');
-      socket.emit('machine', host.uuid);
+      socket.emit('host', {'uuid': host.uuid, 'user': username});
 
       NavList.List[id].Term.term.on('data', function (data) {
         socket.emit('data', data);
@@ -111,7 +110,7 @@ export class SshComponent implements OnInit {
       });
 
       socket.on('disconnect', function () {
-        this.TerminalDisconnect(id);
+        this.TerminalDisconnect(NavList.List[id]);
         // TermStore.term[id]["term"].destroy();
         // TermStore.term[id]["connected"] = false;
       });
@@ -123,10 +122,10 @@ export class SshComponent implements OnInit {
         let cols = 80;
 
         if (Cookie.get('rows')) {
-          rows = parseInt(Cookie.get('rows'));
+          rows = parseInt(Cookie.get('rows'), 10);
         }
         if (Cookie.get('cols')) {
-          cols = parseInt(Cookie.get('cols'));
+          cols = parseInt(Cookie.get('cols'), 10);
         }
         if (col < 80) {
           col = 80;
@@ -138,7 +137,7 @@ export class SshComponent implements OnInit {
         } else {
           for (let _i = 0; _i < NavList.List.length; _i++) {
             if (NavList.List[_i].connected) {
-              NavList.List[_i].Term.socket.emit('resize', [col, row]);
+              NavList.List[_i].Term.socket.emit('resize', {'cols': col, 'rows': row});
               NavList.List[_i].Term.term.resize(col, row);
             }
           }
