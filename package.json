@@ -48,6 +48,7 @@
     "socket.io-client": "^2.0.4",
     "ssh-keygen": "^0.4.1",
     "tether": "^1.4.0",
+    "tty.js": "^0.2.15",
     "xterm": "^2.9.2",
     "zone.js": "^0.8.14"
   },
