@@ -20,13 +20,13 @@ declare let jQuery: any;
 
 export class HostGroup {
   name: string;
-  id: number;
+  id: string;
   children: Array<Host>;
 }
 
 export class Host {
   name: string;
-  uuid: string;
+  id: string;
   type: string;
 }
 
@@ -95,9 +95,9 @@ export class CleftbarComponent implements OnInit {
   Connect(host) {
     console.log(host);
     let username: string;
-    if (host.system_users.length > 1) {
+    if (host.system_users_granted.length > 1) {
       let options = '';
-      for (let u of host.system_users) {
+      for (let u of host.system_users_granted) {
         options += '<option value="' + u.username + '">' + u.username + '</option>';
       }
       layer.open({
@@ -118,12 +118,15 @@ export class CleftbarComponent implements OnInit {
           // return false 开启该代码可禁止点击该按钮关闭
         }
       });
-    } else if (host.system_users.length === 1) {
-      username = host.system_users[0].username;
+    } else if (host.system_users_granted.length === 1) {
+      username = host.system_users_granted[0].username;
     }
     if (username === '') {
       return;
     }
+      jQuery('app-ssh').show();
+      jQuery('app-rdp').hide();
+      this._term.TerminalConnect(host, username);
     if (host.system === 'linux') {
       jQuery('app-ssh').show();
       jQuery('app-rdp').hide();
