@@ -132,6 +132,11 @@ export class CleftbarComponent implements OnInit {
       jQuery('app-ssh').hide();
       jQuery('app-rdp').show();
       this._rdp.Connect(host, username);
+    } else {
+
+      jQuery('app-ssh').show();
+      jQuery('app-rdp').hide();
+      this._term.TerminalConnect(host, username);
     }
   }
 
