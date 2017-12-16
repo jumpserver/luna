@@ -48,8 +48,8 @@ export class SshComponent implements OnInit {
   ngOnInit() {
   }
 
-  TerminalConnect(host, username) {
-    console.log(host, username);
+  TerminalConnect(host, userid) {
+    console.log(host, userid);
     const socket = io.connect('/ssh');
     let cols = '80';
     let rows = '24';
@@ -99,7 +99,7 @@ export class SshComponent implements OnInit {
     NavList.List[id].Term.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
 
     socket.on('connect', function () {
-      socket.emit('host', {'asset': host, 'username': username});
+      socket.emit('host', {'uuid': host.id, 'userid': userid});
 
       NavList.List[id].Term.term.on('data', function (data) {
         socket.emit('data', data);
