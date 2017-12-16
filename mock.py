@@ -12,7 +12,7 @@ class SSHws(Namespace):
     self.ssh = paramiko.SSHClient()
     self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     self.ssh.connect("127.0.0.1", 22, "liuzheng", "liuzheng")
-    self.chan = self.ssh.invoke_shell(term='xterm', width=self.cols, height=self.raws)
+    self.chan = self.ssh.invoke_shell(term='xterm', width=self.cols, height=self.rows)
     self.socketio.start_background_task(self.send_data)
     # self.chan.settimeout(0.1)
 
@@ -23,7 +23,7 @@ class SSHws(Namespace):
 
   def on_connect(self):
     self.cols = int(request.cookies.get('cols', 80))
-    self.raws = int(request.cookies.get('raws', 24))
+    self.rows = int(request.cookies.get('rows', 24))
     self.ssh_with_password()
 
   def on_data(self, message):
