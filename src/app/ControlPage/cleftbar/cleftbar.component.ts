@@ -94,11 +94,11 @@ export class CleftbarComponent implements OnInit {
 
   Connect(host) {
     console.log(host);
-    let username: string;
+    let userid: string;
     if (host.system_users_granted.length > 1) {
       let options = '';
       for (let u of host.system_users_granted) {
-        options += '<option value="' + u.username + '">' + u.username + '</option>';
+        options += '<option value="' + u.id + '">' + u.username + '</option>';
       }
       layer.open({
         title: 'Please Choose a User',
@@ -108,7 +108,7 @@ export class CleftbarComponent implements OnInit {
         btn: ['确定', '取消'],
         content: '<select id="selectuser">' + options + '</select>',
         yes: function (index, layero) {
-          username = jQuery('#selectuser').val();
+          userid = jQuery('#selectuser').val();
           layer.close(index);
         },
         btn2: function (index, layero) {
@@ -119,24 +119,23 @@ export class CleftbarComponent implements OnInit {
         }
       });
     } else if (host.system_users_granted.length === 1) {
-      username = host.system_users_granted[0].username;
+      userid = host.system_users_granted[0].id;
     }
-    if (username === '') {
+    if (userid === '') {
       return;
     }
     if (host.system === 'linux') {
       jQuery('app-ssh').show();
       jQuery('app-rdp').hide();
-      this._term.TerminalConnect(host, username);
+      this._term.TerminalConnect(host, userid);
     } else if (host.system === 'windows') {
       jQuery('app-ssh').hide();
       jQuery('app-rdp').show();
-      this._rdp.Connect(host, username);
+      this._rdp.Connect(host, userid);
     } else {
-
       jQuery('app-ssh').show();
       jQuery('app-rdp').hide();
-      this._term.TerminalConnect(host, username);
+      this._term.TerminalConnect(host, userid);
     }
   }
 
