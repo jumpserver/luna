@@ -49,7 +49,7 @@ export class SshComponent implements OnInit {
   }
 
   TerminalConnect(host, username) {
-  console.log(host,username);
+    console.log(host, username);
     const socket = io.connect('/ssh');
     let cols = '80';
     let rows = '24';

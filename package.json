@@ -36,6 +36,7 @@
     "jquery-sparkline": "^2.4.0",
     "jvectormap": "1.2.2",
     "layui-layer": "git+https://github.com/jumpserver/layer.git",
+    "materialize-css": "^0.100.2",
     "metismenu": "^2.5.0",
     "ng2-charts": "^1.5.0",
     "ng2-cookies": "^1.0.12",

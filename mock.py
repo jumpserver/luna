@@ -1,17 +1,42 @@
 #!/usr/bin/env python3
 
-from flask import Flask, send_from_directory, render_template, jsonify
+from flask import Flask, send_from_directory, render_template, request, jsonify
 from flask_socketio import SocketIO, Namespace, emit
+import paramiko
 
 app = Flask(__name__, template_folder='dist')
 
 
 class SSHws(Namespace):
+  def ssh_with_password(self):
+    self.ssh = paramiko.SSHClient()
+    self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    self.ssh.connect("127.0.0.1", 22, "liuzheng", "liuzheng")
+    self.chan = self.ssh.invoke_shell(term='xterm', width=self.cols, height=self.raws)
+    self.socketio.start_background_task(self.send_data)
+    # self.chan.settimeout(0.1)
+
+  def send_data(self):
+    while True:
+      data = self.chan.recv(2048).decode('utf-8', 'replace')
+      self.emit('data', data)
+
   def on_connect(self):
-    pass
+    self.cols = int(request.cookies.get('cols', 80))
+    self.raws = int(request.cookies.get('raws', 24))
+    self.ssh_with_password()
 
   def on_data(self, message):
+    self.chan.send(message)
+
+  def on_host(self, message):
     print(message)
+
+  def on_resize(self, message):
+    print(message)
+    self.cols = message.get('cols', 80)
+    self.rows = message.get('rows', 24)
+    self.chan.resize_pty(width=self.cols, height=self.rows, width_pixels=1, height_pixels=1)
 
   def on_disconnect(self):
     pass
@@ -40,14 +65,14 @@ def asset_groups_assets():
       "id": 1,
       "name": "Default",
       "comment": "Default asset group",
-      "assets": [
+      "assets_granted": [
         {
           "id": 2,
           "hostname": "192.168.1.6",
           "ip": "192.168.2.6",
           "port": 22,
-          "system": "windows",
-          "system_users": [
+          "system": "linux",
+          "system_users_granted": [
             {
               "id": 1,
               "name": "web",
@@ -64,7 +89,7 @@ def asset_groups_assets():
           "ip": "123.57.183.135",
           "port": 8022,
           "system": "linux",
-          "system_users": [
+          "assets_granted": [
             {
               "id": 1,
               "name": "web",
@@ -81,13 +106,13 @@ def asset_groups_assets():
       "id": 4,
       "name": "java",
       "comment": "",
-      "assets": [
+      "assets_granted": [
         {
           "id": 2,
           "hostname": "192.168.1.6",
           "ip": "192.168.2.6",
           "port": 22,
-          "system_users": [
+          "system_users_granted": [
             {
               "id": 1,
               "name": "web",
@@ -104,13 +129,13 @@ def asset_groups_assets():
       "id": 3,
       "name": "数据库",
       "comment": "",
-      "assets": [
+      "assets_granted": [
         {
           "id": 2,
           "hostname": "192.168.1.6",
           "ip": "192.168.2.6",
           "port": 22,
-          "system_users": [
+          "system_users_granted": [
             {
               "id": 1,
               "name": "web",
@@ -127,13 +152,13 @@ def asset_groups_assets():
       "id": 2,
       "name": "运维组",
       "comment": "",
-      "assets": [
+      "assets_granted": [
         {
           "id": 2,
           "hostname": "192.168.1.6",
           "ip": "192.168.2.6",
           "port": 22,
-          "system_users": [
+          "system_users_granted": [
             {
               "id": 1,
               "name": "web",
