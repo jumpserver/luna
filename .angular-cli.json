@@ -25,6 +25,7 @@
         "../node_modules/xterm/dist/xterm.css",
         "../node_modules/layui-layer/dist/theme/default/layer.css",
         "../node_modules/animate.css/animate.min.css",
+        "../node_modules/xterm/src/xterm.css",
         "assets/inspinia/style.scss",
         "styles.css"
       ],
@@ -35,7 +36,6 @@
         "../node_modules/tether/dist/js/tether.min.js",
         "../node_modules/bootstrap/dist/js/bootstrap.min.js",
         "../node_modules/term.js/src/term.js",
-        "../node_modules/tty.js/static/tty.js",
         "../node_modules/layui-layer/dist/layer.js",
         "../node_modules/socket.io-client/dist/socket.io.js",
         "./assets/js/mstsc.js",

@@ -2,6 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
 import {Logger} from 'angular2-logger/core';
 import {HttpService} from '../app.service';
+import {Video} from '../globals';
 
 @Component({
   selector: 'app-replay-page',
@@ -9,13 +10,12 @@ import {HttpService} from '../app.service';
   styleUrls: ['./replay-page.component.css']
 })
 export class ReplayPageComponent implements OnInit {
-  playing: boolean;
-  video: any;
+  Video = Video;
 
   constructor(private activatedRoute: ActivatedRoute,
               private _http: HttpService,
               private _logger: Logger) {
-    this.video = {'type': 'none'};
+    // this.video = {'type': 'none'};
   }
 
   ngOnInit() {
@@ -27,7 +27,7 @@ export class ReplayPageComponent implements OnInit {
       .map(res => res.json())
       .subscribe(
         data => {
-          this.video = data;
+          this.Video = data;
         },
         err => {
           this._logger.error(err);
@@ -35,9 +35,4 @@ export class ReplayPageComponent implements OnInit {
       );
 
   }
-
-  play() {
-    this.playing = !this.playing;
-  }
-
 }
