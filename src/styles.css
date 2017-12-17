@@ -30,9 +30,18 @@ app-root {
   padding-bottom: 16px !important;
   font-family: 'Monaco', iosevka !important;
 }
-.terminal{
-   white-space: nowrap;
+
+.terminal {
+  font-family: 'Monaco', iosevka;
+  font-size: 11px;
+  white-space: nowrap;
+  display: inline-block;
 }
+
+.terminal div {
+  user-select: text;
+}
+
 .terminal, .terminal .xterm-viewport {
   background-color: inherit;
 }

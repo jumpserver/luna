@@ -1,4 +1,5 @@
 import {Component, OnInit} from '@angular/core';
+import {Video} from '../../globals';
 
 declare let jQuery: any;
 declare let Terminal: any;
@@ -9,6 +10,7 @@ declare let Terminal: any;
   styleUrls: ['./json.component.css']
 })
 export class JsonComponent implements OnInit {
+  Video = Video;
 
   constructor() {
   }
