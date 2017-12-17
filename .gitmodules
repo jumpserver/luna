@@ -1,0 +1,4 @@
+[submodule "node_modules/asciinema-player"]
+	path = node_modules/asciinema-player
+	url = https://github.com/asciinema/asciinema-player
+    branch = v2.6.0
