@@ -104,9 +104,6 @@ export class SshComponent implements OnInit {
       NavList.List[id].Term.term.on('data', function (data) {
         socket.emit('data', data);
       });
-      socket.on('join', function (room) {
-        socket.email('room', room);
-      });
 
 
       socket.on('data', function (data) {
