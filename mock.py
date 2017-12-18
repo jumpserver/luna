@@ -9,45 +9,63 @@ app = Flask(__name__, template_folder='dist')
 
 
 class SSHws(Namespace):
+  def __init__(self, *args, **kwargs):
+    self.clients = dict()
+    super().__init__(*args, **kwargs)
+
   def ssh_with_password(self):
-    self.ssh = paramiko.SSHClient()
-    self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    self.ssh.connect("127.0.0.1", 22, "liuzheng", "liuzheng")
-    self.chan = self.ssh.invoke_shell(term='xterm', width=self.cols, height=self.rows)
-    self.socketio.start_background_task(self.send_data)
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect("127.0.0.1", 22, "liuzheng", "liuzheng")
+    self.clients[request.sid]["chan"] = ssh.invoke_shell(term='xterm', width=self.clients[request.sid]["cols"],
+                                                         height=self.clients[request.sid]["rows"])
+    # self.socketio.start_background_task(self.send_data, self.clients[request.sid]["chan"])
     # self.chan.settimeout(0.1)
 
-  def send_data(self):
+  def send_data(self, s):
     while True:
-      data = self.chan.recv(2048).decode('utf-8', 'replace')
-      self.emit(event='data', data=data, room=self.room)
+      for sid in self.clients:
+        try:
+          if self.clients[sid]["chan"]:
+            data = self.clients[sid]["chan"].recv(2048).decode('utf-8', 'replace')
+            s.emit(event='data', data=data, room=self.clients[sid]["room"])
+        except RuntimeError:
+          print(data)
+          print(self.clients)
 
   def on_connect(self):
-    self.cols = int(request.cookies.get('cols', 80))
-    self.rows = int(request.cookies.get('rows', 24))
+    print(request.sid)
+    self.clients[request.sid] = {
+      "cols": int(request.cookies.get('cols', 80)),
+      "rows": int(request.cookies.get('rows', 24)),
+      "room": str(uuid.uuid4()),
+      "chan": None
+    }
+    print(self.clients[request.sid]["room"])
+    join_room(self.clients[request.sid]["room"])
+    self.socketio.start_background_task(self.send_data, self)
 
   def on_data(self, message):
-    self.chan.send(message)
+    self.clients[request.sid]["chan"].send(message)
 
   def on_host(self, message):
-    self.room = str(uuid.uuid4())
-    self.emit('room', self.room)
-    join_room(self.room)
+    # self.clients[request.sid]["room"] = str(uuid.uuid4())
+    # self.emit('room', self.clients[request.sid]["chan"]["room"])
+    # join_room(self.clients[request.sid]["room"])
     self.ssh_with_password()
-    print(message, self.room)
+    print(message, self.clients[request.sid]["room"])
 
   def on_resize(self, message):
     print(message)
-    self.cols = message.get('cols', 80)
-    self.rows = message.get('rows', 24)
-    self.chan.resize_pty(width=self.cols, height=self.rows, width_pixels=1, height_pixels=1)
+    self.clients[request.sid]["cols"] = message.get('cols', 80)
+    self.clients[request.sid]["rows"] = message.get('rows', 24)
+    self.clients[request.sid]["chan"].resize_pty(width=self.clients[request.sid]["rows"],
+                                                 height=self.clients[request.sid]["rows"], width_pixels=1,
+                                                 height_pixels=1)
 
   def on_disconnect(self):
+    print("disconnect")
     pass
-
-  def on_join(self, room):
-    join_room(room)
-    self.room = room
 
   def on_leave(self):
     leave_room(self.room)
