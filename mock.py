@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 from flask import Flask, send_from_directory, render_template, request, jsonify
-from flask_socketio import SocketIO, Namespace, emit
+from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room
 import paramiko
+import uuid
 
 app = Flask(__name__, template_folder='dist')
 
@@ -19,18 +20,21 @@ class SSHws(Namespace):
   def send_data(self):
     while True:
       data = self.chan.recv(2048).decode('utf-8', 'replace')
-      self.emit('data', data)
+      self.emit(event='data', data=data, room=self.room)
 
   def on_connect(self):
     self.cols = int(request.cookies.get('cols', 80))
     self.rows = int(request.cookies.get('rows', 24))
-    self.ssh_with_password()
 
   def on_data(self, message):
     self.chan.send(message)
 
   def on_host(self, message):
-    print(message)
+    self.room = str(uuid.uuid4())
+    self.emit('room', self.room)
+    join_room(self.room)
+    self.ssh_with_password()
+    print(message, self.room)
 
   def on_resize(self, message):
     print(message)
@@ -40,6 +44,13 @@ class SSHws(Namespace):
 
   def on_disconnect(self):
     pass
+
+  def on_join(self, room):
+    join_room(room)
+    self.room = room
+
+  def on_leave(self):
+    leave_room(self.room)
 
 
 @app.route('/luna/<path:path>')
