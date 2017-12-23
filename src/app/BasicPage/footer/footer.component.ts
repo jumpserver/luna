@@ -7,7 +7,8 @@
  */
 import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
-import {AppService, DataStore, User} from '../../app.service';
+import {AppService} from '../../app.service';
+import {DataStore, User} from '../../globals';
 
 @Component({
   selector: 'app-footer',

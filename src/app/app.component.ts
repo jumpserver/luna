@@ -6,7 +6,8 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component} from '@angular/core';
-import {AppService, HttpService, DataStore} from './app.service';
+import {AppService, HttpService} from './app.service';
+import {DataStore} from './globals';
 
 @Component({
   selector: 'app-root',

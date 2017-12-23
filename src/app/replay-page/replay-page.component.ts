@@ -2,7 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
 import {Logger} from 'angular2-logger/core';
 import {HttpService} from '../app.service';
-import {Video} from '../globals';
+import {Video, DataStore} from '../globals';
 
 @Component({
   selector: 'app-replay-page',
@@ -16,6 +16,8 @@ export class ReplayPageComponent implements OnInit {
               private _http: HttpService,
               private _logger: Logger) {
     // this.video = {'type': 'none'};
+    DataStore.NavShow = false;
+
   }
 
   ngOnInit() {

@@ -12,9 +12,8 @@ import {Cookie} from 'ng2-cookies/ng2-cookies';
 
 declare let jQuery: any;
 declare let Terminal: any;
-import {AppService, DataStore} from '../../../app.service';
+import {AppService} from '../../../app.service';
 import {NavList, View, Term} from '../control.component';
-
 
 @Component({
   selector: 'app-ssh',

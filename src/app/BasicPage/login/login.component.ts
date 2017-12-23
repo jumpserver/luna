@@ -7,9 +7,10 @@
  */
 import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
-import {AppService, DataStore, HttpService, User} from '../../app.service';
+import {AppService, HttpService} from '../../app.service';
 import {NgForm} from '@angular/forms';
 import {Router} from '@angular/router';
+import {DataStore, User} from '../../globals';
 
 declare let jQuery: any;
 
@@ -37,7 +38,7 @@ export class LoginComponent implements OnInit {
     if (f.valid) {
       this.login();
     } else {
-      this._logger.error("the form not valid")
+      this._logger.error('the form not valid');
     }
   }
 

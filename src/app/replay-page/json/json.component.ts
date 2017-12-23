@@ -1,6 +1,5 @@
 import {Component, OnInit} from '@angular/core';
 import {Video} from '../../globals';
-import {Term} from '../../ControlPage/control/control.component';
 
 declare let jQuery: any;
 declare let Terminal: any;
