@@ -39,6 +39,7 @@ import {TermpageComponent} from './termpage/termpage.component';
 import {ReplayPageComponent} from './replay-page/replay-page.component';
 import {Mp4Component} from './replay-page/mp4/mp4.component';
 import {JsonComponent} from './replay-page/json/json.component';
+import {UtcDatePipe} from './app.pipe';
 
 
 @NgModule({
@@ -70,7 +71,7 @@ import {JsonComponent} from './replay-page/json/json.component';
     ReplayPageComponent,
     Mp4Component,
     JsonComponent,
-
+    UtcDatePipe,
     // HeroListComponent,
     // CrisisListComponent,
   ],
