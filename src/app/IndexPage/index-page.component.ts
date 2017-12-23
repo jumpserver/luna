@@ -6,7 +6,8 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {AppService, User} from '../app.service';
+import {AppService} from '../app.service';
+import {User} from '../globals';
 
 @Component({
   selector: 'app-index-page',
