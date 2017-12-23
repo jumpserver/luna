@@ -12,97 +12,9 @@ import {Cookie} from 'ng2-cookies/ng2-cookies';
 import {Logger} from 'angular2-logger/core';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
+import {DataStore, User, Browser} from './globals';
 
 declare let jQuery: any;
-// declare var Clipboard: any;
-import * as io from 'socket.io-client';
-
-export class Group {
-  id: string;
-  name: string;
-  membercount: number;
-  comment: string;
-}
-
-export let User: {
-  id: string;
-  name: string;
-  username: string;
-  password: string;
-  phone: string;
-  avatar: string;
-  role: string;
-  email: string;
-  is_active: boolean;
-  date_joined: string;
-  last_login: string;
-  groups: Array<Group>;
-  logined: boolean;
-} = {
-  id: '',
-  name: 'nobody',
-  username: '',
-  password: '',
-  phone: '',
-  avatar: '',
-  role: '',
-  email: '',
-  is_active: false,
-  date_joined: '',
-  last_login: '',
-  groups: [],
-  logined: false,
-};
-
-export let DataStore: {
-  socket: any;
-  Nav: Array<{}>;
-  NavShow: boolean;
-  Path: {};
-  error: {};
-  msg: {};
-  loglevel: number;
-  leftbarshow: boolean;
-  windowsize: Array<number>;
-} = {
-  socket: io.connect(),
-  Nav: [{}],
-  NavShow: true,
-  Path: {},
-  error: {},
-  msg: {},
-  loglevel: 0,
-  leftbarshow: true,
-  windowsize: [],
-};
-export let CSRF: string = '';
-
-export let Browser: {
-  userAgent: string;
-  appCodeName: string;
-  appName: string;
-  appVersion: string;
-  language: string;
-  platform: string;
-  product: string;
-  productSub: string;
-  vendor: string;
-} = {
-  userAgent: navigator.userAgent,
-  appCodeName: navigator.appCodeName,
-  appName: navigator.appName,
-  appVersion: navigator.appVersion,
-  language: navigator.language,
-  platform: navigator.platform,
-  product: navigator.product,
-  productSub: navigator.productSub,
-  vendor: navigator.vendor,
-};
-
-export class wsEvent {
-  event: string;
-  data: any;
-}
 
 
 @Injectable()
@@ -125,7 +37,7 @@ export class HttpService {
       options = {};
     }
     options.headers = this.headers;
-    return this._http.get(url, options)
+    return this._http.get(url, options);
   }
 
   post(url: string, body: any, options?: RequestOptionsArgs) {
@@ -133,7 +45,7 @@ export class HttpService {
       options = {};
     }
     options.headers = this.headers;
-    return this._http.post(url, body, options)
+    return this._http.post(url, body, options);
   }
 
   put(url: string, body: any, options?: RequestOptionsArgs) {
@@ -141,7 +53,7 @@ export class HttpService {
       options = {};
     }
     options.headers = this.headers;
-    return this._http.put(url, body, options)
+    return this._http.put(url, body, options);
   }
 
   delete(url: string, options?: RequestOptionsArgs) {
@@ -149,7 +61,7 @@ export class HttpService {
       options = {};
     }
     options.headers = this.headers;
-    return this._http.delete(url, options)
+    return this._http.delete(url, options);
   }
 
   patch(url: string, body: any, options?: RequestOptionsArgs) {
@@ -157,7 +69,7 @@ export class HttpService {
       options = {};
     }
     options.headers = this.headers;
-    return this._http.patch(url, body, options)
+    return this._http.patch(url, body, options);
   }
 
   head(url: string, options?: RequestOptionsArgs) {
@@ -165,7 +77,7 @@ export class HttpService {
       options = {};
     }
     options.headers = this.headers;
-    return this._http.head(url, options)
+    return this._http.head(url, options);
   }
 
   options(url: string, options?: RequestOptionsArgs) {
@@ -173,7 +85,7 @@ export class HttpService {
       options = {};
     }
     options.headers = this.headers;
-    return this._http.options(url, options)
+    return this._http.options(url, options);
   }
 
 }
@@ -262,7 +174,7 @@ export class AppService implements OnInit {
 
 
   browser() {
-    this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json()).subscribe()
+    this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json()).subscribe();
   }
 
 

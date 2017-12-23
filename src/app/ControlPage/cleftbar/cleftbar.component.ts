@@ -10,10 +10,11 @@
 import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
 
-import {AppService, DataStore, HttpService} from '../../app.service';
+import {AppService, HttpService} from '../../app.service';
 import {SshComponent} from '../control/ssh/ssh.component';
 import {RdpComponent} from '../control/rdp/rdp.component';
 import {SearchComponent} from '../search/search.component';
+import {DataStore} from '../../globals';
 
 declare let layer: any;
 declare let jQuery: any;

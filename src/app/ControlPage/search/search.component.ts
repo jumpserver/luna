@@ -9,9 +9,9 @@ import {Component, OnChanges, Input, Pipe, PipeTransform} from '@angular/core';
 
 import {Logger} from 'angular2-logger/core';
 
-import {AppService, DataStore, HttpService} from '../../app.service';
+import {AppService, HttpService} from '../../app.service';
 
-export let Q: string = '';
+export let Q = '';
 
 @Component({
   selector: 'app-search',
@@ -34,7 +34,7 @@ export class SearchComponent implements OnChanges {
   }
 
   modelChange($event) {
-    this.Search(Q)
+    this.Search(Q);
   }
 
   public Search(q) {
@@ -53,7 +53,7 @@ export class SearchComponent implements OnChanges {
         () => {
         }
       );
-    this._logger.log(q)
+    this._logger.log(q);
   }
 }
 
@@ -66,7 +66,7 @@ export class SearchFilter implements PipeTransform {
       return value.filter(function (el: any) {
         // ToDo: search with a simple SQL like language, and a bug search a group's hosts
         return JSON.stringify(el).toLowerCase().indexOf(input) > -1;
-      })
+      });
     }
     return value;
   }

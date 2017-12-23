@@ -8,7 +8,7 @@
 import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
 
-import {AppService, DataStore} from '../../app.service';
+import {AppService} from '../../app.service';
 
 @Component({
   selector: 'app-ileftbar',

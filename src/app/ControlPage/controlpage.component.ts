@@ -6,7 +6,8 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {AppService, DataStore, User} from '../app.service';
+import {AppService} from '../app.service';
+import {DataStore, User} from '../globals';
 
 @Component({
   selector: 'app-controllpage',

@@ -8,11 +8,12 @@
 import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
 
-import {AppService, DataStore, HttpService} from '../../app.service';
+import {AppService, HttpService} from '../../app.service';
 import {CleftbarComponent} from '../../ControlPage/cleftbar/cleftbar.component';
 import {SshComponent} from '../../ControlPage/control/ssh/ssh.component';
 import {RdpComponent} from '../../ControlPage/control/rdp/rdp.component';
 import {NavList} from '../../ControlPage/control/control.component';
+import {DataStore} from '../../globals';
 
 declare let layer: any;
 declare let jQuery: any;
@@ -25,11 +26,15 @@ declare let jQuery: any;
 export class NavComponent implements OnInit {
   DataStore = DataStore;
 
+  static Hide() {
+    jQuery('app-nav').hide();
+  }
+
   constructor(private _appService: AppService,
               private _http: HttpService,
               private _logger: Logger) {
     this._logger.log('nav.ts:NavComponent');
-    this.getnav()
+    this.getnav();
   }
 
   ngOnInit() {
@@ -38,59 +43,59 @@ export class NavComponent implements OnInit {
   click(event) {
     this._logger.debug('nav.ts:NavComponent,click', event);
     switch (event) {
-      case "ReloadLeftbar": {
+      case 'ReloadLeftbar': {
         CleftbarComponent.Reload();
-        break
+        break;
       }
 
-      case "HideLeft": {
+      case 'HideLeft': {
         CleftbarComponent.Hide();
-        break
+        break;
       }
-      case "ShowLeft": {
+      case 'ShowLeft': {
         CleftbarComponent.Show();
-        break
+        break;
       }
-      case "Copy": {
+      case 'Copy': {
         // this._appService.copy();
-        break
+        break;
       }
-      case"Disconnect": {
+      case'Disconnect': {
         switch (NavList.List[NavList.Active].type) {
-          case "ssh": {
+          case 'ssh': {
             SshComponent.TerminalDisconnect(NavList.List[NavList.Active]);
-            break
+            break;
           }
-          case "rdp": {
+          case 'rdp': {
             RdpComponent.Disconnect(NavList.List[NavList.Active]);
-            break
+            break;
           }
           default: {
-            //statements;
+            // statements;
             break;
           }
         }
-        break
+        break;
       }
-      case"DisconnectAll": {
+      case'DisconnectAll': {
         SshComponent.TerminalDisconnectAll();
         RdpComponent.DisconnectAll();
-        break
+        break;
       }
-      case "Website": {
+      case 'Website': {
         window.open('http://www.jumpserver.org');
-        break
+        break;
       }
-      case "BBS": {
+      case 'BBS': {
         window.open('http://bbs.jumpserver.org');
-        break
+        break;
       }
-      case "EnterLicense": {
+      case 'EnterLicense': {
         this.EnterLicense();
-        break
+        break;
       }
       default: {
-        break
+        break;
       }
     }
 
@@ -121,119 +126,116 @@ export class NavComponent implements OnInit {
     //     DataStore.Nav = response;
     //   });
     DataStore.Nav = [{
-      "id": "File",
-      "name": "Server",
-      "children": [
+      'id': 'File',
+      'name': 'Server',
+      'children': [
         {
-          "id": "NewConnection",
-          "href": "",
-          "name": "New connection",
-          "disable": true
+          'id': 'NewConnection',
+          'href': '',
+          'name': 'New connection',
+          'disable': true
         },
         {
-          "id": "Connect",
-          "click": "Connect",
-          "name": "Connect",
-          "disable": true
+          'id': 'Connect',
+          'click': 'Connect',
+          'name': 'Connect',
+          'disable': true
         },
         {
-          "id": "Disconnect",
-          "click": "Disconnect",
-          "name": "Disconnect"
+          'id': 'Disconnect',
+          'click': 'Disconnect',
+          'name': 'Disconnect'
         },
         {
-          "id": "DisconnectAll",
-          "click": "DisconnectAll",
-          "name": "Disconnect all"
+          'id': 'DisconnectAll',
+          'click': 'DisconnectAll',
+          'name': 'Disconnect all'
         },
         {
-          "id": "Duplicate",
-          "href": "",
-          "name": "Duplicate",
-          "disable": true
+          'id': 'Duplicate',
+          'href': '',
+          'name': 'Duplicate',
+          'disable': true
         },
         {
-          "id": "Upload",
-          "href": "",
-          "name": "Upload",
-          "disable": true
+          'id': 'Upload',
+          'href': '',
+          'name': 'Upload',
+          'disable': true
         },
         {
-          "id": "Download",
-          "href": "",
-          "name": "Download",
-          "disable": true
+          'id': 'Download',
+          'href': '',
+          'name': 'Download',
+          'disable': true
         },
         {
-          "id": " Search",
-          "href": "",
-          "name": "Search",
-          "disable": true
+          'id': ' Search',
+          'href': '',
+          'name': 'Search',
+          'disable': true
         },
         {
-          "id": "Reload",
-          "click": "ReloadLeftbar",
-          "name": "Reload"
+          'id': 'Reload',
+          'click': 'ReloadLeftbar',
+          'name': 'Reload'
         }
       ]
     }, {
-      "id": "View",
-      "name": "View",
-      "children": [
+      'id': 'View',
+      'name': 'View',
+      'children': [
         {
-          "id": "HindLeftManager",
-          "click": "HideLeft",
-          "name": "Hind left manager"
+          'id': 'HindLeftManager',
+          'click': 'HideLeft',
+          'name': 'Hind left manager'
         },
         {
-          "id": "SplitVertical",
-          "href": "",
-          "name": "Split vertical",
-          "disable": true
+          'id': 'SplitVertical',
+          'href': '',
+          'name': 'Split vertical',
+          'disable': true
         },
         {
-          "id": "CommandBar",
-          "href": "",
-          "name": "Command bar",
-          "disable": true
+          'id': 'CommandBar',
+          'href': '',
+          'name': 'Command bar',
+          'disable': true
         },
         {
-          "id": "ShareSession",
-          "href": "",
-          "name": "Share session (read/write)",
-          "disable": true
+          'id': 'ShareSession',
+          'href': '',
+          'name': 'Share session (read/write)',
+          'disable': true
         },
         {
-          "id": "Language",
-          "href": "",
-          "name": "Language",
-          "disable": true
+          'id': 'Language',
+          'href': '',
+          'name': 'Language',
+          'disable': true
         }]
     }, {
-      "id": "Help",
-      "name": "Help",
-      "children": [
+      'id': 'Help',
+      'name': 'Help',
+      'children': [
         {
-          "id": "EnterLicense",
-          "click": "EnterLicense",
-          "name": "Enter License"
+          'id': 'EnterLicense',
+          'click': 'EnterLicense',
+          'name': 'Enter License'
         },
         {
-          "id": "Website",
-          "click": "Website",
-          "name": "Website"
+          'id': 'Website',
+          'click': 'Website',
+          'name': 'Website'
         },
         {
-          "id": "BBS",
-          "click": "BBS",
-          "name": "BBS"
+          'id': 'BBS',
+          'click': 'BBS',
+          'name': 'BBS'
         }]
-    }]
+    }];
   }
 
-  static Hide() {
-    jQuery("app-nav").hide()
-  }
 
   Connect() {
     layer.prompt({

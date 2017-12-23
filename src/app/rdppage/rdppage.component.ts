@@ -6,7 +6,7 @@
  */
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
-import {DataStore} from "../app.service";
+import {DataStore} from '../globals';
 
 declare let Mstsc: any;
 
