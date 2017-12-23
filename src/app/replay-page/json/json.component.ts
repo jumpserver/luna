@@ -67,7 +67,7 @@ export class JsonComponent implements OnInit {
   restart() {
     clearInterval(this.timer);
     this.term.reset();
-    this.time = (this.setPercent / 100) * Video.totalTime;
+    this.time = 1;
     this.pos = 0;
     this.toggle = true;
     this.timer = setInterval(() => {
