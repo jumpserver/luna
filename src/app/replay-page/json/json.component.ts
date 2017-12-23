@@ -22,18 +22,32 @@ export class JsonComponent implements OnInit {
   pos = 0;
   scrubber: number;
 
-// Todo: initial the term size
   constructor() {
   }
 
   ngOnInit() {
+    let col = Math.floor(jQuery('#term').width() / jQuery('#liuzheng').width() * 8) - 3;
+    let row = Math.floor(jQuery('#term').height() / jQuery('#liuzheng').height()) - 5;
     this.term = new Terminal({
-      cols: '180',
-      rows: '35',
+      cols: col,
+      rows: row,
       useStyle: true,
       screenKeys: true,
     });
     this.term.open(document.getElementById('term'), true);
+    const that = this;
+    window.onresize = function () {
+      let col = Math.floor(jQuery('#term').width() / jQuery('#liuzheng').width() * 8) - 3;
+      let row = Math.floor(jQuery('#term').height() / jQuery('#liuzheng').height()) - 5;
+
+      if (col < 80) {
+        col = 80;
+      }
+      if (row < 24) {
+        row = 24;
+      }
+      that.term.resize(col, row);
+    };
   }
 
 
