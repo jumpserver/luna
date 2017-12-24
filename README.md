@@ -35,12 +35,12 @@ Nginx config:
 
 ```
   location /luna/ {
-    index  index.html;
+    try_files $uri / /index.html;
     alias /path/of/your/luna/;
   }
   
-  location ^~ /ws/ {
-        proxy_pass http://localhost:3000/ws/;
+  location /socket.io/ {
+        proxy_pass http://localhost:5000/socket.io/;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
