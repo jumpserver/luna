@@ -25,8 +25,10 @@ export class JsonComponent implements OnInit {
   }
 
   ngOnInit() {
-    let col = Math.floor(jQuery('#term').width() / jQuery('#liuzheng').width() * 8) - 3;
-    let row = Math.floor(jQuery('#term').height() / jQuery('#liuzheng').height()) - 5;
+    let col: number;
+    let row: number;
+    col = Math.floor(jQuery('#term').width() / jQuery('#liuzheng').width() * 8) - 3;
+    row = Math.floor(jQuery('#term').height() / jQuery('#liuzheng').height()) - 5;
     this.term = new Terminal({
       cols: col,
       rows: row,
@@ -36,8 +38,8 @@ export class JsonComponent implements OnInit {
     this.term.open(document.getElementById('term'), true);
     const that = this;
     window.onresize = function () {
-      let col = Math.floor(jQuery('#term').width() / jQuery('#liuzheng').width() * 8) - 3;
-      let row = Math.floor(jQuery('#term').height() / jQuery('#liuzheng').height()) - 5;
+      col = Math.floor(jQuery('#term').width() / jQuery('#liuzheng').width() * 8) - 3;
+      row = Math.floor(jQuery('#term').height() / jQuery('#liuzheng').height()) - 5;
 
       if (col < 80) {
         col = 80;

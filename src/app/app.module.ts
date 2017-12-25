@@ -40,6 +40,9 @@ import {ReplayPageComponent} from './replay-page/replay-page.component';
 import {Mp4Component} from './replay-page/mp4/mp4.component';
 import {JsonComponent} from './replay-page/json/json.component';
 import {UtcDatePipe} from './app.pipe';
+import {MonitorPageComponent} from './monitor-page/monitor-page.component';
+import {LinuxComponent} from './monitor-page/linux/linux.component';
+import {WindowsComponent} from './monitor-page/windows/windows.component';
 
 
 @NgModule({
@@ -72,8 +75,9 @@ import {UtcDatePipe} from './app.pipe';
     Mp4Component,
     JsonComponent,
     UtcDatePipe,
-    // HeroListComponent,
-    // CrisisListComponent,
+    MonitorPageComponent,
+    LinuxComponent,
+    WindowsComponent,
   ],
   bootstrap: [AppComponent],
   providers: [

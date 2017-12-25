@@ -9,19 +9,20 @@ import {NgModule} from '@angular/core';
 import {RouterModule, Routes} from '@angular/router';
 import {environment} from '../environments/environment';
 
-import {IndexPageComponent} from './IndexPage/index-page.component';
 import {NotFoundComponent} from './BasicPage/not-found/not-found.component';
 import {LoginComponent} from './BasicPage/login/login.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
 import {RdppageComponent} from './rdppage/rdppage.component';
 import {TermpageComponent} from './termpage/termpage.component';
 import {ReplayPageComponent} from './replay-page/replay-page.component';
+import {MonitorPageComponent} from './monitor-page/monitor-page.component';
 
 const appRoutes: Routes = [
   {path: 'users/login', component: LoginComponent},
   {path: 'rdp/:token', component: RdppageComponent},
   {path: 'term/:token', component: TermpageComponent},
   {path: 'replay/:token', component: ReplayPageComponent},
+  {path: 'monitor/:token', component: MonitorPageComponent},
   {path: '', component: ControlPageComponent},
   {path: '**', component: NotFoundComponent}
 ];
