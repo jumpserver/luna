@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from flask import Flask, send_from_directory, render_template, request, jsonify, send_file
+from flask import Flask, send_from_directory, render_template, request, jsonify, redirect, url_for
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room
 import paramiko
 import uuid
@@ -206,7 +206,7 @@ def asset_groups_assets():
 
 @app.route('/api/terminal/v1/sessions/test/replay/')
 def replay():
-  return send_file('test.json')
+  return redirect("http://jps.ilz.me/media/2017-12-24/ec87a486-0344-4f12-b27a-620321944f7f.gz")
 
 
 if __name__ == '__main__':

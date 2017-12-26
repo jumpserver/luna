@@ -37,10 +37,6 @@ export class JsonComponent implements OnInit {
     }
   }
 
-  start() {
-    console.log(Video.timelist);
-  }
-
   restart() {
     clearInterval(this.timer);
     term.term.reset();
@@ -53,6 +49,7 @@ export class JsonComponent implements OnInit {
   }
 
   pause() {
+    console.log(Video.timelist);
     if (this.toggle) {
       clearInterval(this.timer);
       this.toggle = !this.toggle;
@@ -79,6 +76,9 @@ export class JsonComponent implements OnInit {
       this.toggle = !this.toggle;
       clearInterval(that.timer);
     }
+    if (Video.timelist[that.pos] - Video.timelist[that.pos - 1] > 5) {
+      that.time += 5000;
+    }
 
     that.time += that.TIMESTEP;
     that.setPercent = that.time / Video.totalTime * 100;
@@ -100,7 +100,7 @@ export class JsonComponent implements OnInit {
         break;
       }
     }
-    this.time = Video.timelist[this.pos];
+    this.time = Video.totalTime * this.setPercent / 100;
   }
 
 }
