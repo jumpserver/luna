@@ -51,3 +51,16 @@ Nginx config:
         proxy_set_header Connection "upgrade";
   }
 ```
+
+# Luna in Docker
+## build
+Run this script, it will build automatically.
+```bash
+./tools/docker_build.sh
+```
+
+## run
+
+```bash
+docker run -d -p 80:80 luna
+```
