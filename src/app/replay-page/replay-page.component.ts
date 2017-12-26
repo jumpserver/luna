@@ -10,6 +10,8 @@ import {Video, DataStore} from '../globals';
   styleUrls: ['./replay-page.component.css']
 })
 export class ReplayPageComponent implements OnInit {
+  Video = Video;
+
   constructor(private activatedRoute: ActivatedRoute,
               private _http: HttpService,
               private _logger: Logger) {
