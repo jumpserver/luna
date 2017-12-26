@@ -2,6 +2,10 @@
   font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
 }
 
+label {
+  margin-bottom: 0;
+}
+
 .filetree {
   padding-left: 20px;
 }
@@ -16,13 +20,13 @@
 }
 
 .filetree input[type=checkbox] + label:before {
-  content: "\f1b3";
+  content: "\f114";
   letter-spacing: 10px;
   width: 30px;
 }
 
 .filetree input[type=checkbox]:checked + label:before {
-  content: "\f085";
+  content: "\f115";
 }
 
 .filetree ul {
