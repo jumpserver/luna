@@ -19,15 +19,15 @@ declare let layer: any;
 declare let jQuery: any;
 
 @Component({
-  selector: 'app-nav',
+  selector: 'app-element-nav',
   templateUrl: './nav.component.html',
   styleUrls: ['./nav.component.css'],
 })
-export class NavComponent implements OnInit {
+export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
 
   static Hide() {
-    jQuery('app-nav').hide();
+    jQuery('app-element-nav').hide();
   }
 
   constructor(private _appService: AppService,

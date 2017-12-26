@@ -1,5 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {NavComponent} from '../nav/nav.component'
+import {DataStore} from '../../globals';
 
 @Component({
   selector: 'app-not-found',
@@ -13,7 +13,7 @@ export class NotFoundComponent implements OnInit {
   }
 
   ngOnInit() {
-    NavComponent.Hide()
+    DataStore.NavShow = false;
   }
 
 }

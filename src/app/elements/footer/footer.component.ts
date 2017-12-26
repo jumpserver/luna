@@ -6,19 +6,16 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {Logger} from 'angular2-logger/core';
 import {AppService} from '../../app.service';
+import {Logger} from 'angular2-logger/core';
 import {DataStore, User} from '../../globals';
 
 @Component({
-  selector: 'app-footer',
+  selector: 'app-element-footer',
   templateUrl: './footer.component.html',
-  styleUrls: ['./footer.component.css'],
-  providers: [AppService]
-
+  styleUrls: ['./footer.component.css']
 })
-export class FooterComponent implements OnInit {
-
+export class ElementFooterComponent implements OnInit {
   DataStore = DataStore;
   User = User;
 

@@ -114,10 +114,10 @@ def asset_groups_assets():
         },
         {
           "id": 4,
-          "hostname": "testserver123",
+          "hostname": "windows server",
           "ip": "123.57.183.135",
-          "port": 8022,
-          "system": "linux",
+          "port": 3389,
+          "system": "windows",
           "assets_granted": [
             {
               "id": 1,

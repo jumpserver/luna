@@ -18,11 +18,11 @@ import {HttpModule} from '@angular/http';
 import {AppRoutingModule} from './app-routing.module';
 
 import {AppComponent} from './app.component';
+import {ElementFooterComponent} from './elements/footer/footer.component';
 
-import {NavComponent} from './BasicPage/nav/nav.component';
+import {ElementNavComponent} from './elements/nav/nav.component';
 import {LoginComponent} from './BasicPage/login/login.component';
-import {FooterComponent} from './BasicPage/footer/footer.component';
-
+import {ElementPopupComponent} from './elements/popup/popup.component';
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
 import {SearchComponent, SearchFilter} from './ControlPage/search/search.component';
 import {CleftbarComponent} from './ControlPage/cleftbar/cleftbar.component';
@@ -33,7 +33,6 @@ import {SshComponent} from './ControlPage/control/ssh/ssh.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
 import {IndexPageComponent} from './IndexPage/index-page.component';
 import {NotFoundComponent} from './BasicPage/not-found/not-found.component';
-import {PopupComponent} from './BasicPage/popup/popup.component';
 import {RdppageComponent} from './rdppage/rdppage.component';
 import {TermpageComponent} from './termpage/termpage.component';
 import {ReplayPageComponent} from './replay-page/replay-page.component';
@@ -54,9 +53,10 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
   ],
   declarations: [
     AppComponent,
-    NavComponent,
+    ElementNavComponent,
+    ElementFooterComponent,
+    ElementPopupComponent,
     LoginComponent,
-    FooterComponent,
     RdpComponent,
     SshComponent,
     SearchComponent,
@@ -68,7 +68,6 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
     ControlPageComponent,
     IndexPageComponent,
     NotFoundComponent,
-    PopupComponent,
     RdppageComponent,
     TermpageComponent,
     ReplayPageComponent,
