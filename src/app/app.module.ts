@@ -19,6 +19,8 @@ import {AppRoutingModule} from './app-routing.module';
 
 import {AppComponent} from './app.component';
 import {ElementFooterComponent} from './elements/footer/footer.component';
+import {ElementTermComponent} from './elements/term/term.component';
+
 
 import {ElementNavComponent} from './elements/nav/nav.component';
 import {LoginComponent} from './BasicPage/login/login.component';
@@ -56,6 +58,7 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
     ElementNavComponent,
     ElementFooterComponent,
     ElementPopupComponent,
+    ElementTermComponent,
     LoginComponent,
     RdpComponent,
     SshComponent,

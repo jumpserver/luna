@@ -1,8 +1,8 @@
 import {Component, OnInit} from '@angular/core';
 import {Video} from '../../globals';
+import {term} from '../../globals';
 
 declare let jQuery: any;
-declare let Terminal: any;
 
 @Component({
   selector: 'app-json',
@@ -10,7 +10,6 @@ declare let Terminal: any;
   styleUrls: ['./json.component.css']
 })
 export class JsonComponent implements OnInit {
-  term: any;
   speed = 1;
   setPercent = 0;
   toggle = false;
@@ -25,30 +24,6 @@ export class JsonComponent implements OnInit {
   }
 
   ngOnInit() {
-    let col: number;
-    let row: number;
-    col = Math.floor(jQuery('#term').width() / jQuery('#liuzheng').width() * 8) - 3;
-    row = Math.floor(jQuery('#term').height() / jQuery('#liuzheng').height()) - 5;
-    this.term = new Terminal({
-      cols: col,
-      rows: row,
-      useStyle: true,
-      screenKeys: true,
-    });
-    this.term.open(document.getElementById('term'), true);
-    const that = this;
-    window.onresize = function () {
-      col = Math.floor(jQuery('#term').width() / jQuery('#liuzheng').width() * 8) - 3;
-      row = Math.floor(jQuery('#term').height() / jQuery('#liuzheng').height()) - 5;
-
-      if (col < 80) {
-        col = 80;
-      }
-      if (row < 24) {
-        row = 24;
-      }
-      that.term.resize(col, row);
-    };
   }
 
 
@@ -68,7 +43,7 @@ export class JsonComponent implements OnInit {
 
   restart() {
     clearInterval(this.timer);
-    this.term.reset();
+    term.term.reset();
     this.time = 1;
     this.pos = 0;
     this.toggle = true;
@@ -94,7 +69,7 @@ export class JsonComponent implements OnInit {
     // document.getElementById('beforeScrubberText').innerHTML = this.buildTimeString(this.time);
     for (; that.pos < Video.timelist.length; that.pos++) {
       if (Video.timelist[that.pos] * 1000 <= that.time) {
-        this.term.write(Video.json[Video.timelist[that.pos].toString()]);
+        term.term.write(Video.json[Video.timelist[that.pos].toString()]);
       } else {
         break;
       }
@@ -116,11 +91,11 @@ export class JsonComponent implements OnInit {
 
   rununil() {
     this.pos = 0;
-    this.term.reset();
+    term.term.reset();
     this.toggle = false;
     for (; this.pos < Video.timelist.length; this.pos++) {
       if (Video.timelist[this.pos] * 1000 <= this.setPercent / 100 * Video.totalTime) {
-        this.term.write(Video.json[Video.timelist[this.pos].toString()]);
+        term.term.write(Video.json[Video.timelist[this.pos].toString()]);
       } else {
         break;
       }

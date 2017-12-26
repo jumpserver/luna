@@ -1,6 +1,17 @@
 'use strict';
 import * as io from 'socket.io-client';
 
+declare let Terminal: any;
+
+export let term: {
+  term: any;
+  col: number;
+  row: number;
+} = {
+  term: Terminal(),
+  col: 80,
+  row: 24,
+};
 export const sep = '/';
 export const version = '22.22.2';
 export let Video: {
@@ -77,7 +88,7 @@ export let DataStore: {
   leftbarshow: true,
   windowsize: [],
 };
-export let CSRF: string = '';
+export let CSRF = '';
 
 export let Browser: {
   userAgent: string;
@@ -101,7 +112,7 @@ export let Browser: {
   vendor: navigator.vendor,
 };
 
-export class wsEvent {
+export let wsEvent: {
   event: string;
   data: any;
-}
+};
