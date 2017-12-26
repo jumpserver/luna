@@ -1,6 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
-import {DataStore} from '../globals';
+import {DataStore, Monitor} from '../globals';
 
 @Component({
   selector: 'app-monitor-page',
@@ -14,9 +14,10 @@ export class MonitorPageComponent implements OnInit {
   }
 
   ngOnInit() {
-    let token: string;
     this.activatedRoute.params.subscribe((params: Params) => {
-      token = params['token'];
+      Monitor.sessionid = params['token'];
+      Monitor.type = 'term';
+      console.log(Monitor);
     });
 
   }

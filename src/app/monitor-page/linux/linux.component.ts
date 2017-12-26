@@ -1,7 +1,8 @@
 import {Component, OnInit} from '@angular/core';
+import {Monitor, term} from '../../globals';
+import * as io from 'socket.io-client';
 
 declare let jQuery: any;
-declare let Terminal: any;
 
 @Component({
   selector: 'app-monitor-linux',
@@ -14,7 +15,18 @@ export class LinuxComponent implements OnInit {
   }
 
   ngOnInit() {
-
+    Monitor.socket = io.connect('/ssh');
+    Monitor.socket.on('connect', function () {
+      Monitor.socket.emit('room', Monitor.sessionid);
+      Monitor.socket.on('room', function (room) {
+        Monitor.room = room;
+        Monitor.socket.emit('join', room);
+        console.log(Monitor);
+      });
+      Monitor.socket.on('data', function (data) {
+        term.term.write(data);
+      });
+    });
   }
 
 

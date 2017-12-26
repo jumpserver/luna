@@ -49,7 +49,6 @@ export class JsonComponent implements OnInit {
   }
 
   pause() {
-    console.log(Video.timelist);
     if (this.toggle) {
       clearInterval(this.timer);
       this.toggle = !this.toggle;

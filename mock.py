@@ -41,7 +41,6 @@ class SSHws(Namespace):
       "room": str(uuid.uuid4()),
       "chan": None
     }
-    print(self.clients[request.sid]["room"])
     join_room(self.clients[request.sid]["room"])
     self.socketio.start_background_task(self.send_data, self)
 
@@ -56,12 +55,21 @@ class SSHws(Namespace):
     print(message, self.clients[request.sid]["room"])
 
   def on_resize(self, message):
-    print(message)
     self.clients[request.sid]["cols"] = message.get('cols', 80)
     self.clients[request.sid]["rows"] = message.get('rows', 24)
     self.clients[request.sid]["chan"].resize_pty(width=self.clients[request.sid]["rows"],
                                                  height=self.clients[request.sid]["rows"], width_pixels=1,
                                                  height_pixels=1)
+
+  def on_room(self, sessionid):
+    if sessionid not in self.clients.keys():
+      self.emit('error', "no such session", room=self.clients[request.sid]["room"])
+    else:
+      self.emit('room', self.clients[sessionid]["room"], room=self.clients[request.sid]["room"])
+
+  def on_join(self, room):
+    self.leave_room(room=self.clients[request.sid]["room"])
+    join_room(room)
 
   def on_disconnect(self):
     print("disconnect")

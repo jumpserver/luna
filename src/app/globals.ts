@@ -30,6 +30,18 @@ export let Video: {
   totalTime: 0,
 };
 
+export let Monitor: {
+  sessionid: string,
+  room: string,
+  type: string,
+  socket: any,
+} = {
+  sessionid: '',
+  room: '',
+  type: 'term',
+  socket: io.connect(),
+};
+
 export class Group {
   id: string;
   name: string;
