@@ -7,8 +7,4 @@ install:
 script:
   - docker build -t registry.fit2cloud.com/jumpserver/luna:test-$BUILD_NUMBER .
   - docker push registry.fit2cloud.com/jumpserver/luna:test-$BUILD_NUMBER
-after_success:
-  - echo "SUCCESS!"
-after_failure:
-  - echo "FAILURE"
 
