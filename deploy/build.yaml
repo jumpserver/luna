@@ -1,0 +1,17 @@
+name: luna
+tasks:
+  - name: prebuild
+    command:
+      - docker pull node:latest
+  - name: test
+  - name: build
+    command:
+      - docker run -i -v `pwd`:/data -w /data node  sh -c "npm i && npm rebuild node-sass&& npm run-script build"
+  - name: artifacts
+    kind: Docker
+    images:
+      - name: luna
+        path: .
+        publish: true
+        tag: latest
+
