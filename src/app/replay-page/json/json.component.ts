@@ -2,7 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {Video} from '../../globals';
 import {term} from '../../globals';
 
-declare let jQuery: any;
+import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
   selector: 'app-json',

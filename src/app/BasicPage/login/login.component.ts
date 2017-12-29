@@ -11,8 +11,8 @@ import {AppService, HttpService} from '../../app.service';
 import {NgForm} from '@angular/forms';
 import {Router} from '@angular/router';
 import {DataStore, User} from '../../globals';
+import * as jQuery from 'jquery/dist/jquery.min.js';
 
-declare let jQuery: any;
 
 @Component({
   selector: 'app-login',

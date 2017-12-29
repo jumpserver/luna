@@ -14,9 +14,6 @@ import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser} from './globals';
 
-declare let jQuery: any;
-
-
 @Injectable()
 export class HttpService {
   headers = new Headers();
