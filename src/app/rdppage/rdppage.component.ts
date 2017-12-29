@@ -27,13 +27,13 @@ export class RdppageComponent implements OnInit {
       token = params['token'];
     });
 
-    let canvas = Mstsc.$("canvas");
+    const canvas = Mstsc.$('canvas');
     canvas.style.display = 'inline';
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    let client = Mstsc.client.create(Mstsc.$("canvas"));
-    client.connect(token, "socket.io");
+    const client = Mstsc.client.create(Mstsc.$('canvas'));
+    client.connect(token, 'socket.io');
   }
 
 }

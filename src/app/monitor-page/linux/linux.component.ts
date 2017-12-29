@@ -2,7 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {Monitor, term} from '../../globals';
 import * as io from 'socket.io-client';
 
-declare let jQuery: any;
+import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
   selector: 'app-monitor-linux',
