@@ -7,13 +7,12 @@
 
 import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
-import * as io from 'socket.io-client';
 import {Cookie} from 'ng2-cookies/ng2-cookies';
-
-declare let jQuery: any;
-declare let Terminal: any;
 import {AppService} from '../../../app.service';
 import {NavList, View, Term} from '../control.component';
+import {Terminal} from '../../../globals';
+import * as io from 'socket.io-client';
+import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
   selector: 'app-ssh',
@@ -71,7 +70,7 @@ export class SshComponent implements OnInit {
     NavList.List[id].Term = new Term;
     NavList.List[id].Term.machine = host.id;
     NavList.List[id].Term.socket = socket;
-    NavList.List[id].Term.term = new Terminal({
+    NavList.List[id].Term.term = Terminal({
       cols: cols,
       rows: rows,
       useStyle: true,

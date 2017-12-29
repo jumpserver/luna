@@ -16,8 +16,10 @@ import {RdpComponent} from '../control/rdp/rdp.component';
 import {SearchComponent} from '../search/search.component';
 import {DataStore} from '../../globals';
 
+import * as jQuery from 'jquery/dist/jquery.min.js';
+// import * as layer from 'layui-layer/src/layer.js';
 declare let layer: any;
-declare let jQuery: any;
+
 
 export class HostGroup {
   name: string;
