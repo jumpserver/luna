@@ -24,6 +24,7 @@ export class JsonComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.restart();
   }
 
 
