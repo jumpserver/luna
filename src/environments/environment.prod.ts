@@ -1,4 +1,4 @@
 export const environment = {
   production: true
 };
-export const version = 'Luna-EE-0.5-{{BUILD_NUMBER}}';
+export const version = 'v0.5-{{BUILD_NUMBER}}';
