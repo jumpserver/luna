@@ -14,9 +14,9 @@ import {SshComponent} from '../../ControlPage/control/ssh/ssh.component';
 import {RdpComponent} from '../../ControlPage/control/rdp/rdp.component';
 import {NavList} from '../../ControlPage/control/control.component';
 import {DataStore} from '../../globals';
-
+import * as jQuery from 'jquery/dist/jquery.min.js';
+// import * as layer from 'layui-layer/src/layer.js';
 declare let layer: any;
-declare let jQuery: any;
 
 @Component({
   selector: 'app-element-nav',

@@ -1,9 +1,8 @@
 import {AfterViewInit, Component, OnInit, ViewChild} from '@angular/core';
 import {ElementRef, Renderer2} from '@angular/core';
 import {term} from '../../globals';
-
-declare let jQuery: any;
-declare let Terminal: any;
+import {Terminal} from '../../globals';
+import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
   selector: 'app-element-term',
@@ -24,7 +23,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   ngAfterViewInit() {
     term.col = Math.floor(jQuery(this.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
     term.row = Math.floor(jQuery(this.el.nativeElement).height() / jQuery('#liuzheng').height()) - 5;
-    term.term = new Terminal({
+    term.term = Terminal({
       cols: term.col,
       rows: term.row,
       useStyle: true,

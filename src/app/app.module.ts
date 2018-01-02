@@ -18,13 +18,14 @@ import {HttpModule} from '@angular/http';
 import {AppRoutingModule} from './app-routing.module';
 
 import {AppComponent} from './app.component';
+// Elements
 import {ElementFooterComponent} from './elements/footer/footer.component';
 import {ElementTermComponent} from './elements/term/term.component';
-
-
+import {ElementInteractiveComponent} from './elements/interactive/interactive.component';
 import {ElementNavComponent} from './elements/nav/nav.component';
 import {LoginComponent} from './BasicPage/login/login.component';
 import {ElementPopupComponent} from './elements/popup/popup.component';
+// pages
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
 import {SearchComponent, SearchFilter} from './ControlPage/search/search.component';
 import {CleftbarComponent} from './ControlPage/cleftbar/cleftbar.component';
@@ -59,6 +60,7 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
     ElementFooterComponent,
     ElementPopupComponent,
     ElementTermComponent,
+    ElementInteractiveComponent,
     LoginComponent,
     RdpComponent,
     SshComponent,

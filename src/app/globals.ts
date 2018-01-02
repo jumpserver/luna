@@ -1,19 +1,21 @@
 'use strict';
+import * as terminal from 'term.js/src/term.js';
 import * as io from 'socket.io-client';
 
-declare let Terminal: any;
+export function Terminal(xargs: any) {
+  return terminal(xargs);
+}
 
 export let term: {
   term: any;
   col: number;
   row: number;
 } = {
-  term: Terminal(),
+  term: Terminal({}),
   col: 80,
   row: 24,
 };
 export const sep = '/';
-export const version = '22.22.2';
 export let Video: {
   id: string,
   src: string,

@@ -2,9 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
 import {DataStore} from '../globals';
 import * as io from 'socket.io-client';
-
-declare let jQuery: any;
-declare let Terminal: any;
+import * as Terminal from 'term.js/src/term.js';
 
 @Component({
   selector: 'app-termpage',

@@ -15,9 +15,10 @@ import {SshComponent} from '../control/ssh/ssh.component';
 import {RdpComponent} from '../control/rdp/rdp.component';
 import {SearchComponent} from '../search/search.component';
 import {DataStore} from '../../globals';
+import {version} from '../../../environments/environment';
+import * as jQuery from 'jquery/dist/jquery.min.js';
+import * as layer from 'layui-layer/src/layer.js';
 
-declare let layer: any;
-declare let jQuery: any;
 
 export class HostGroup {
   name: string;
@@ -40,7 +41,7 @@ export class Host {
 export class CleftbarComponent implements OnInit {
   DataStore = DataStore;
   HostGroups: Array<HostGroup>;
-  q: string;
+  version = version;
 
   static Reload() {
   }
