@@ -65,4 +65,8 @@ label {
 
 .footer {
   background: #2f2a2a;
+  font-size: 12pt;
+  border-top-width: 1px;
+  padding-top: 1px;
+  padding-bottom: 5px;
 }
