@@ -3,9 +3,9 @@ before_install:
   - echo "`date -u '+%Y-%m-%d %H:%M:%S'` Start to build Luna"
   - docker pull node:latest
 install:
+  - sed -i 's/{{BUILD_NUMBER}}/${BUILD_NUMBER}/g' src/environment/environment.prod.ts
   - docker run -i -v `pwd`:/data -w /data node  sh -c "npm i && npm rebuild node-sass&& npm run-script build"
 script:
-  - sed -i 's/{{BUILD_NUMBER}}/${BUILD_NUMBER}/g' src/environment/environment.prod.ts
   - docker build -t registry.fit2cloud.com/jumpserver/luna:test .
   - docker push registry.fit2cloud.com/jumpserver/luna:test
 
