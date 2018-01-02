@@ -6,3 +6,4 @@
 export const environment = {
   production: false
 };
+export const version = 'Luna-dev';

@@ -20,3 +20,10 @@ nav {
   height: 30px;
   width: 100%;
 }
+
+app-element-interactive {
+  position: absolute;
+  display: inline-block;
+  bottom: 120px;
+  left: 100px;
+}
