@@ -16,7 +16,6 @@ export let term: {
   row: 24,
 };
 export const sep = '/';
-export const version = '22.22.2';
 export let Video: {
   id: string,
   src: string,

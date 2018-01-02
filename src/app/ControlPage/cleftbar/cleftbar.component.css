@@ -62,3 +62,12 @@ label {
   background: #2f2a2a;
   color: #ffffff;
 }
+
+.footer {
+  background: #2f2a2a;
+  font-size: 9pt;
+  border-top-width: 1px;
+  left: 0;
+  padding: 1px 20px 30px 20px;
+  position: absolute;
+}
