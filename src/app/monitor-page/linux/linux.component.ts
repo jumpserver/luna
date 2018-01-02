@@ -20,11 +20,15 @@ export class LinuxComponent implements OnInit {
       Monitor.socket.emit('room', Monitor.sessionid);
       Monitor.socket.on('room', function (room) {
         Monitor.room = room;
+        console.log(room);
         Monitor.socket.emit('join', room);
         console.log(Monitor);
       });
       Monitor.socket.on('data', function (data) {
         term.term.write(data);
+      });
+      Monitor.socket.on('error', function (data) {
+        alert(data);
       });
     });
   }
