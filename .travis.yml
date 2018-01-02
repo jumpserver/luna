@@ -5,6 +5,7 @@ before_install:
 install:
   - docker run -i -v `pwd`:/data -w /data node  sh -c "npm i && npm rebuild node-sass&& npm run-script build"
 script:
-  - docker build -t registry.fit2cloud.com/jumpserver/luna:test-$BUILD_NUMBER .
-  - docker push registry.fit2cloud.com/jumpserver/luna:test-$BUILD_NUMBER
+  - sed -i 's/{{BUILD_NUMBER}}/${BUILD_NUMBER}/g' src/environment/environment.prod.ts
+  - docker build -t registry.fit2cloud.com/jumpserver/luna:test .
+  - docker push registry.fit2cloud.com/jumpserver/luna:test
 
