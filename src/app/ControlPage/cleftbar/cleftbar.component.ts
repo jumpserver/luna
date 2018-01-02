@@ -42,6 +42,7 @@ export class CleftbarComponent implements OnInit {
   DataStore = DataStore;
   HostGroups: Array<HostGroup>;
   version = version;
+  q: string;
 
   static Reload() {
   }
