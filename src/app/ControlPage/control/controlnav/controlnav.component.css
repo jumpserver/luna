@@ -21,6 +21,7 @@
   width: 100%;
   display: inline-flex;
   position: absolute;
+  padding-left: 0;
 }
 
 #tabs ul li {
