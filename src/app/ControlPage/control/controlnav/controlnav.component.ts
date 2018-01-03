@@ -34,7 +34,7 @@ export class ControlnavComponent implements OnInit {
     } else {
       NavList.Active = index;
     }
-    ControlnavComponent.setActive(NavList.Active)
+    ControlnavComponent.setActive(NavList.Active);
   }
 
   static setActive(index) {

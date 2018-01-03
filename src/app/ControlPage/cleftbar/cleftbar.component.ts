@@ -96,7 +96,7 @@ export class CleftbarComponent implements OnInit {
   }
 
   Connect(host) {
-    console.log(host);
+    // console.log(host);
     let userid: string;
     if (host.system_users_granted.length > 1) {
       let options = '';
