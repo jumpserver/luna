@@ -129,18 +129,18 @@ export class ElementNavComponent implements OnInit {
       'id': 'File',
       'name': 'Server',
       'children': [
-        {
-          'id': 'NewConnection',
-          'href': '',
-          'name': 'New connection',
-          'disable': true
-        },
-        {
-          'id': 'Connect',
-          'click': 'Connect',
-          'name': 'Connect',
-          'disable': true
-        },
+        // {
+        //   'id': 'NewConnection',
+        //   'href': '',
+        //   'name': 'New connection',
+        //   'disable': true
+        // },
+        // {
+        //   'id': 'Connect',
+        //   'click': 'Connect',
+        //   'name': 'Connect',
+        //   'disable': true
+        // },
         {
           'id': 'Disconnect',
           'click': 'Disconnect',
@@ -151,35 +151,35 @@ export class ElementNavComponent implements OnInit {
           'click': 'DisconnectAll',
           'name': 'Disconnect all'
         },
-        {
-          'id': 'Duplicate',
-          'href': '',
-          'name': 'Duplicate',
-          'disable': true
-        },
-        {
-          'id': 'Upload',
-          'href': '',
-          'name': 'Upload',
-          'disable': true
-        },
-        {
-          'id': 'Download',
-          'href': '',
-          'name': 'Download',
-          'disable': true
-        },
-        {
-          'id': ' Search',
-          'href': '',
-          'name': 'Search',
-          'disable': true
-        },
-        {
-          'id': 'Reload',
-          'click': 'ReloadLeftbar',
-          'name': 'Reload'
-        }
+        // {
+        //   'id': 'Duplicate',
+        //   'href': '',
+        //   'name': 'Duplicate',
+        //   'disable': true
+        // },
+        // {
+        //   'id': 'Upload',
+        //   'href': '',
+        //   'name': 'Upload',
+        //   'disable': true
+        // },
+        // {
+        //   'id': 'Download',
+        //   'href': '',
+        //   'name': 'Download',
+        //   'disable': true
+        // },
+        // {
+        //   'id': ' Search',
+        //   'href': '',
+        //   'name': 'Search',
+        //   'disable': true
+        // },
+        // {
+        //   'id': 'Reload',
+        //   'click': 'ReloadLeftbar',
+        //   'name': 'Reload'
+        // }
       ]
     }, {
       'id': 'View',
@@ -218,11 +218,11 @@ export class ElementNavComponent implements OnInit {
       'id': 'Help',
       'name': 'Help',
       'children': [
-        {
-          'id': 'EnterLicense',
-          'click': 'EnterLicense',
-          'name': 'Enter License'
-        },
+        // {
+        //   'id': 'EnterLicense',
+        //   'click': 'EnterLicense',
+        //   'name': 'Enter License'
+        // },
         {
           'id': 'Website',
           'click': 'Website',
