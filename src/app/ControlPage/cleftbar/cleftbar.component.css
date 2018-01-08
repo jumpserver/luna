@@ -71,3 +71,7 @@ label {
   padding: 1px 20px 0 20px;
   position: absolute;
 }
+
+.fa.fa-undefined:before {
+  content: "\f26c";
+}
