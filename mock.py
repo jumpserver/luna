@@ -104,7 +104,7 @@ def asset_groups_assets():
       "comment": "Default asset group",
       "assets_granted": [
         {
-          "id": 2,
+          "id": 1,
           "hostname": "192.168.1.6",
           "ip": "192.168.2.6",
           "port": 22,

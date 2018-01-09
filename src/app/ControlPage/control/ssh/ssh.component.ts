@@ -77,11 +77,11 @@ export class SshComponent implements OnInit {
       screenKeys: true,
     });
     NavList.List.push(new View());
-    for (let _i = 0; _i < NavList.List.length; _i++) {
-      if (id === _i) {
+    for (let i = 0; i < NavList.List.length; i++) {
+      if (id === i) {
         NavList.List[id].hide = false;
       } else {
-        NavList.List[_i].hide = true;
+        NavList.List[i].hide = true;
       }
     }
 
