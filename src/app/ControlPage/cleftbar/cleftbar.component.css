@@ -75,3 +75,11 @@ label {
 .fa.fa-undefined:before {
   content: "\f26c";
 }
+
+.fa.fa-Linux:before {
+  content: "\f17c";
+}
+
+.fa.fa-Windows:before {
+  content: "\f17a";
+}
