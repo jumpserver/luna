@@ -127,11 +127,11 @@ export class CleftbarComponent implements OnInit {
     if (userid === '') {
       return;
     }
-    if (host.system === 'linux') {
+    if (host.plantform === 'Linux') {
       jQuery('app-ssh').show();
       jQuery('app-rdp').hide();
       this._term.TerminalConnect(host, userid);
-    } else if (host.system === 'windows') {
+    } else if (host.plantform === 'Windows') {
       jQuery('app-ssh').hide();
       jQuery('app-rdp').show();
       this._rdp.Connect(host, userid);

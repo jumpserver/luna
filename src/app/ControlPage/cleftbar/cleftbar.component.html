@@ -10,7 +10,7 @@
       <label for="hostgroup-{{i}}">{{hostGroup.name}}</label>
       <ul [ngClass]="{'insearch': q }">
         <li *ngFor="let host of hostGroup.assets_granted | SearchFilter: q" (click)="Connect(host)">
-          <i class="fa" [ngClass]="'fa-'+host.system" id="fa-{{i}}"></i>
+          <i class="fa" [ngClass]="'fa-'+host.plantform" id="fa-{{i}}"></i>
           {{host.hostname}}
         </li>
       </ul>
