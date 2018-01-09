@@ -47,7 +47,7 @@ export class SshComponent implements OnInit {
   }
 
   TerminalConnect(host, userid) {
-    console.log(host, userid);
+    // console.log(host, userid);
     const socket = io.connect('/ssh');
     let cols = '80';
     let rows = '24';
@@ -77,11 +77,11 @@ export class SshComponent implements OnInit {
       screenKeys: true,
     });
     NavList.List.push(new View());
-    for (let _i = 0; _i < NavList.List.length; _i++) {
-      if (id === _i) {
+    for (let i = 0; i < NavList.List.length; i++) {
+      if (id === i) {
         NavList.List[id].hide = false;
       } else {
-        NavList.List[_i].hide = true;
+        NavList.List[i].hide = true;
       }
     }
 
@@ -109,7 +109,7 @@ export class SshComponent implements OnInit {
       });
 
       socket.on('disconnect', function () {
-        this.TerminalDisconnect(NavList.List[id]);
+        SshComponent.TerminalDisconnect(NavList.List[id]);
         // TermStore.term[id]["term"].destroy();
         // TermStore.term[id]["connected"] = false;
       });
