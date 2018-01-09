@@ -117,6 +117,14 @@ def asset_groups_assets():
               "protocol": "ssh",
               "auth_method": "P",
               "auto_push": True
+            },
+            {
+              "id": 2,
+              "name": "liuzheng",
+              "username": "liuzheng",
+              "protocol": "ssh",
+              "auth_method": "P",
+              "auto_push": True
             }
           ]
         },
