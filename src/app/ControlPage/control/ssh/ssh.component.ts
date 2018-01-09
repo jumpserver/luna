@@ -109,7 +109,7 @@ export class SshComponent implements OnInit {
       });
 
       socket.on('disconnect', function () {
-        this.TerminalDisconnect(NavList.List[id]);
+        SshComponent.TerminalDisconnect(NavList.List[id]);
         // TermStore.term[id]["term"].destroy();
         // TermStore.term[id]["connected"] = false;
       });
