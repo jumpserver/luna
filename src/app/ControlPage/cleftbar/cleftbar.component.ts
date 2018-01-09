@@ -113,19 +113,7 @@ export class CleftbarComponent implements OnInit {
         content: '<select id="selectuser">' + options + '</select>',
         yes: function (index, layero) {
           userid = jQuery('#selectuser').val();
-          if (host.plantform === 'Linux') {
-            jQuery('app-ssh').show();
-            jQuery('app-rdp').hide();
-            that._term.TerminalConnect(host, userid);
-          } else if (host.plantform === 'Windows') {
-            jQuery('app-ssh').hide();
-            jQuery('app-rdp').show();
-            that._rdp.Connect(host, userid);
-          } else {
-            jQuery('app-ssh').show();
-            jQuery('app-rdp').hide();
-            that._term.TerminalConnect(host, userid);
-          }
+          that.login(host, userid);
           layer.close(index);
         },
         btn2: function (index, layero) {
@@ -137,22 +125,26 @@ export class CleftbarComponent implements OnInit {
       });
     } else if (host.system_users_granted.length === 1) {
       userid = host.system_users_granted[0].id;
-      if (userid === '') {
-        return;
-      }
-      if (host.plantform === 'Linux') {
-        jQuery('app-ssh').show();
-        jQuery('app-rdp').hide();
-        this._term.TerminalConnect(host, userid);
-      } else if (host.plantform === 'Windows') {
-        jQuery('app-ssh').hide();
-        jQuery('app-rdp').show();
-        this._rdp.Connect(host, userid);
-      } else {
-        jQuery('app-ssh').show();
-        jQuery('app-rdp').hide();
-        this._term.TerminalConnect(host, userid);
-      }
+      this.login(host, userid);
+    }
+  }
+
+  login(host, userid) {
+    if (userid === '') {
+      return;
+    }
+    if (host.plantform === 'Linux') {
+      jQuery('app-ssh').show();
+      jQuery('app-rdp').hide();
+      this._term.TerminalConnect(host, userid);
+    } else if (host.plantform === 'Windows') {
+      jQuery('app-ssh').hide();
+      jQuery('app-rdp').show();
+      this._rdp.Connect(host, userid);
+    } else {
+      jQuery('app-ssh').show();
+      jQuery('app-rdp').hide();
+      this._term.TerminalConnect(host, userid);
     }
   }
 
