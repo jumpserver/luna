@@ -34,7 +34,7 @@ label {
   overflow: hidden;
 }
 
-.filetree > li input:checked ~ ul {
+.filetree > li input:checked ~ ul , .filetree > li ul.insearch{
   height: auto;
 }
 
@@ -74,4 +74,12 @@ label {
 
 .fa.fa-undefined:before {
   content: "\f26c";
+}
+
+.fa.fa-Linux:before {
+  content: "\f17c";
+}
+
+.fa.fa-Windows:before {
+  content: "\f17a";
 }
