@@ -92,7 +92,26 @@ export class CleftbarComponent implements OnInit {
       .map(res => res.json())
       .subscribe(response => {
         this.HostGroups = response;
+        this.autologin();
       });
+  }
+
+
+  autologin() {
+    const id = this._appService.getQueryString('id');
+    if (id) {
+      for (let g of this.HostGroups) {
+        if (g['assets_granted']) {
+          for (let u of g['assets_granted']) {
+            if (u.id.toString() === id.toString()) {
+              this.Connect(u);
+              return;
+            }
+          }
+        }
+      }
+
+    }
   }
 
   Connect(host) {

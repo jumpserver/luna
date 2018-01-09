@@ -13,6 +13,7 @@ import {Logger} from 'angular2-logger/core';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser} from './globals';
+declare function unescape(s: string): string;
 
 @Injectable()
 export class HttpService {
@@ -174,6 +175,14 @@ export class AppService implements OnInit {
     this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json()).subscribe();
   }
 
+  getQueryString(name) {
+    const reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
+    const r = window.location.search.substr(1).match(reg);
+    if (r != null) {
+      return unescape(r[2]);
+    }
+    return null;
+  }
 
 //
 //
