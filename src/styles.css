@@ -4,9 +4,10 @@
  * --------------------------------------------------
  */
 @font-face {
-  font-family: iosevka;
-  src: url('assets/fonts/iosevka-term-ss07-1.13.3/woff2/iosevka-term-ss07-light.woff2') format("woff2");
+  font-family: Inconsolata;
+  src: url('assets/fonts/inconsolata.woff') format("woff");
   font-weight: normal;
+  font-size: large;
 }
 
 html,
@@ -29,11 +30,11 @@ app-root {
   z-index: -1;
   font-size: 11px !important;
   padding-bottom: 16px !important;
-  font-family: 'Monaco', iosevka !important;
+  font-family: 'Monaco', Inconsolata !important;
 }
 
 .terminal {
-  font-family: 'Monaco', iosevka;
+  font-family: 'Monaco', Inconsolata;
   font-size: 11px;
   white-space: nowrap;
   display: inline-block;
