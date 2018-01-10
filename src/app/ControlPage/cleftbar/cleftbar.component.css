@@ -34,7 +34,7 @@ label {
   overflow: hidden;
 }
 
-.filetree > li input:checked ~ ul , .filetree > li ul.insearch{
+.filetree > li input:checked ~ ul, .filetree > li ul.insearch {
   height: auto;
 }
 
@@ -67,7 +67,7 @@ label {
   background: #2f2a2a;
   font-size: 9pt;
   border-top-width: 1px;
-  left: 0;
+  left: 0px;
   padding: 1px 20px 0 20px;
   position: absolute;
 }
