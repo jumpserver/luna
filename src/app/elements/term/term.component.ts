@@ -30,19 +30,19 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     // });
     term.term.resize(term.col, term.row);
     term.term.open(this.el.nativeElement, true);
-    const that = this;
-    window.onresize = function () {
-      term.col = Math.floor(jQuery(that.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
-      term.row = Math.floor(jQuery(that.el.nativeElement).height() / jQuery('#liuzheng').height()) - 5;
-
-      if (term.col < 80) {
-        term.col = 80;
-      }
-      if (term.row < 24) {
-        term.row = 24;
-      }
-      term.term.resize(term.col, term.row);
-    };
+    // const that = this;
+    // window.onresize = function () {
+    //   term.col = Math.floor(jQuery(that.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
+    //   term.row = Math.floor(jQuery(that.el.nativeElement).height() / jQuery('#liuzheng').height()) - 5;
+    //
+    //   if (term.col < 80) {
+    //     term.col = 80;
+    //   }
+    //   if (term.row < 24) {
+    //     term.row = 24;
+    //   }
+    //   term.term.resize(term.col, term.row);
+    // };
   }
 
 }

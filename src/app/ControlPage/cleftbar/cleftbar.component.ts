@@ -116,7 +116,7 @@ export class CleftbarComponent implements OnInit {
 
   Connect(host) {
     // console.log(host);
-    let userid: string;
+    let user: any;
     const that = this;
     if (host.system_users_granted.length > 1) {
       let options = '';
@@ -131,8 +131,14 @@ export class CleftbarComponent implements OnInit {
         btn: ['确定', '取消'],
         content: '<select id="selectuser">' + options + '</select>',
         yes: function (index, layero) {
-          userid = jQuery('#selectuser').val();
-          that.login(host, userid);
+          let userid = jQuery('#selectuser').val();
+          for (let i of host.system_users_granted) {
+            if (i.id.toString() === userid.toString()) {
+              user = i;
+              break;
+            }
+          }
+          that.login(host, user);
           layer.close(index);
         },
         btn2: function (index, layero) {
@@ -143,28 +149,38 @@ export class CleftbarComponent implements OnInit {
         }
       });
     } else if (host.system_users_granted.length === 1) {
-      userid = host.system_users_granted[0].id;
-      this.login(host, userid);
+      user = host.system_users_granted[0];
+      this.login(host, user);
     }
   }
 
-  login(host, userid) {
-    if (userid === '') {
-      return;
+  login(host, user) {
+    if (user) {
+      if (user.protocol === 'ssh') {
+        jQuery('app-ssh').show();
+        jQuery('app-rdp').hide();
+        this._term.TerminalConnect(host, user.id);
+      } else if (user.protocol === 'rdp') {
+        jQuery('app-ssh').hide();
+        jQuery('app-rdp').show();
+        this._rdp.Connect(host, user.id);
+      }
     }
-    if (host.plantform.toLowerCase() === 'linux') {
-      jQuery('app-ssh').show();
-      jQuery('app-rdp').hide();
-      this._term.TerminalConnect(host, userid);
-    } else if (host.plantform.toLowerCase() === 'windows') {
-      jQuery('app-ssh').hide();
-      jQuery('app-rdp').show();
-      this._rdp.Connect(host, userid);
-    } else {
-      jQuery('app-ssh').show();
-      jQuery('app-rdp').hide();
-      this._term.TerminalConnect(host, userid);
-    }
+    // if (host.plantform) {
+    //   if (host.plantform.toLowerCase() === 'linux') {
+    //     jQuery('app-ssh').show();
+    //     jQuery('app-rdp').hide();
+    //     this._term.TerminalConnect(host, user.id);
+    //   } else if (host.plantform.toLowerCase() === 'windows') {
+    //     jQuery('app-ssh').hide();
+    //     jQuery('app-rdp').show();
+    //     this._rdp.Connect(host, user.id);
+    //   } else {
+    //     jQuery('app-ssh').show();
+    //     jQuery('app-rdp').hide();
+    //     this._term.TerminalConnect(host, user.id);
+    //   }
+    // }
   }
 
   Search(q) {

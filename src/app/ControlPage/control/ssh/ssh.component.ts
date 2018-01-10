@@ -30,11 +30,8 @@ export class SshComponent implements OnInit {
 
   static TerminalDisconnectAll() {
     alert('TerminalDisconnectAll');
-    for (let _i = 0; _i < NavList.List.length; _i++) {
-      SshComponent.TerminalDisconnect(_i);
-      // TermStore.term[i]["connected"] = false;
-      // TermStore.term[i]["socket"].destroy();
-      // TermStore.term[i]["term"].write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+    for (let i = 0; i < NavList.List.length; i++) {
+      SshComponent.TerminalDisconnect(NavList.List[i]);
     }
   }
 
