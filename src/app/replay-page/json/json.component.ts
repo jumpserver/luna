@@ -1,15 +1,13 @@
-import {AfterViewInit, Component, OnInit} from '@angular/core';
+import {Component, OnInit} from '@angular/core';
 import {Video} from '../../globals';
 import {term} from '../../globals';
-
-import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
   selector: 'app-json',
   templateUrl: './json.component.html',
   styleUrls: ['./json.component.css']
 })
-export class JsonComponent implements OnInit, AfterViewInit {
+export class JsonComponent implements OnInit {
   speed = 1;
   setPercent = 0;
   toggle = false;
@@ -24,12 +22,8 @@ export class JsonComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
-  }
-
-  ngAfterViewInit() {
     this.restart();
   }
-
 
   setSpeed() {
     if (this.speed === 0) {
