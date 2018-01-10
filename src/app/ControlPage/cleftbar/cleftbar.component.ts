@@ -133,7 +133,7 @@ export class CleftbarComponent implements OnInit {
         yes: function (index, layero) {
           let userid = jQuery('#selectuser').val();
           for (let i of host.system_users_granted) {
-            if (i.id === userid) {
+            if (i.id.toString() === userid.toString()) {
               user = i;
               break;
             }
@@ -156,11 +156,11 @@ export class CleftbarComponent implements OnInit {
 
   login(host, user) {
     if (user) {
-      if (user.procotol === 'ssh') {
+      if (user.protocol === 'ssh') {
         jQuery('app-ssh').show();
         jQuery('app-rdp').hide();
         this._term.TerminalConnect(host, user.id);
-      } else if (user.procotol === 'rdp') {
+      } else if (user.protocol === 'rdp') {
         jQuery('app-ssh').hide();
         jQuery('app-rdp').show();
         this._rdp.Connect(host, user.id);
