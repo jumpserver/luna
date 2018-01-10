@@ -4,7 +4,6 @@ before_install:
   - docker pull node:latest
 install:
   - git checkout $Branch
-  - git pull 
   - sed -i 's/{{BUILD_NUMBER}}/'$BUILD_NUMBER'/g' src/environments/environment.prod.ts
   - rm -rf dist/
   - docker run -i -v `pwd`:/data -w /data node  sh -c "npm i && npm rebuild node-sass&& npm run-script build"
