@@ -1,7 +1,6 @@
 import {AfterViewInit, Component, OnInit, ViewChild} from '@angular/core';
 import {ElementRef} from '@angular/core';
 import {term} from '../../globals';
-import {Terminal} from '../../globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
