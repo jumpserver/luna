@@ -22,13 +22,13 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   ngAfterViewInit() {
     term.col = Math.floor(jQuery(this.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
     term.row = Math.floor(jQuery(this.el.nativeElement).height() / jQuery('#liuzheng').height()) - 5;
-    console.log(term);
     // term.term = Terminal({
     //   cols: term.col,
     //   rows: term.row,
     //   useStyle: true,
     //   screenKeys: true,
     // });
+    term.term.resize(term.col, term.row);
     term.term.open(this.el.nativeElement, true);
     const that = this;
     window.onresize = function () {
