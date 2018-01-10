@@ -7,6 +7,8 @@ div, term-leftbar, term-body {
 div {
   background-color: black;
   margin: 0;
+  padding-top: 30px;
+  position: initial;
 }
 
 app-cleftbar {

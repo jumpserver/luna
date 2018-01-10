@@ -1,5 +1,5 @@
-<div id="tabs">
-  <ul>
+<div class="tabs">
+  <ul [ngStyle]="{'width':150*NavList.List.length+'px'}">
     <li *ngFor="let m of NavList.List;let i = index"
         [ngClass]="{'active':i==NavList.Active,'disconnected':!m.connected, 'hidden': m.closed != false}"
         id="termnav-{{i}}" (click)="setActive(i)">

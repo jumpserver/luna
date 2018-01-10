@@ -11,7 +11,12 @@ export let term: {
   col: number;
   row: number;
 } = {
-  term: Terminal({}),
+  term: Terminal({
+    cols: 80,
+    rows: 24,
+    useStyle: true,
+    screenKeys: true,
+  }),
   col: 80,
   row: 24,
 };

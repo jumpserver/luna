@@ -34,7 +34,7 @@ label {
   overflow: hidden;
 }
 
-.filetree > li input:checked ~ ul {
+.filetree > li input:checked ~ ul, .filetree > li ul.insearch {
   height: auto;
 }
 
@@ -51,7 +51,7 @@ label {
 
 .search {
   border-left-width: 0;
-  border-bottom: gold 2px inset;
+  border-bottom: #19aa8d 2px inset;
 }
 
 .left-search {
@@ -67,7 +67,11 @@ label {
   background: #2f2a2a;
   font-size: 9pt;
   border-top-width: 1px;
-  left: 0;
-  padding: 1px 20px 30px 20px;
+  left: 0px;
+  padding: 1px 20px 0 20px;
   position: absolute;
+}
+
+.fa.fa-undefined:before {
+  content: "\f26c";
 }

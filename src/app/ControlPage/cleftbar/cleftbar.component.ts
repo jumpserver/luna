@@ -92,12 +92,32 @@ export class CleftbarComponent implements OnInit {
       .map(res => res.json())
       .subscribe(response => {
         this.HostGroups = response;
+        this.autologin();
       });
   }
 
+
+  autologin() {
+    const id = this._appService.getQueryString('id');
+    if (id) {
+      for (let g of this.HostGroups) {
+        if (g['assets_granted']) {
+          for (let u of g['assets_granted']) {
+            if (u.id.toString() === id.toString()) {
+              this.Connect(u);
+              return;
+            }
+          }
+        }
+      }
+
+    }
+  }
+
   Connect(host) {
-    console.log(host);
+    // console.log(host);
     let userid: string;
+    const that = this;
     if (host.system_users_granted.length > 1) {
       let options = '';
       for (let u of host.system_users_granted) {
@@ -112,6 +132,7 @@ export class CleftbarComponent implements OnInit {
         content: '<select id="selectuser">' + options + '</select>',
         yes: function (index, layero) {
           userid = jQuery('#selectuser').val();
+          that.login(host, userid);
           layer.close(index);
         },
         btn2: function (index, layero) {
@@ -123,15 +144,19 @@ export class CleftbarComponent implements OnInit {
       });
     } else if (host.system_users_granted.length === 1) {
       userid = host.system_users_granted[0].id;
+      this.login(host, userid);
     }
+  }
+
+  login(host, userid) {
     if (userid === '') {
       return;
     }
-    if (host.system === 'linux') {
+    if (host.plantform.toLowerCase() === 'linux') {
       jQuery('app-ssh').show();
       jQuery('app-rdp').hide();
       this._term.TerminalConnect(host, userid);
-    } else if (host.system === 'windows') {
+    } else if (host.plantform.toLowerCase() === 'windows') {
       jQuery('app-ssh').hide();
       jQuery('app-rdp').show();
       this._rdp.Connect(host, userid);

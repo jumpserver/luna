@@ -21,3 +21,7 @@
 #term .terminal div span {
   min-width: 12px;
 }
+
+app-element-term {
+  position: absolute;
+}

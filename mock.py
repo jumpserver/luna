@@ -104,16 +104,24 @@ def asset_groups_assets():
       "comment": "Default asset group",
       "assets_granted": [
         {
-          "id": 2,
+          "id": 1,
           "hostname": "192.168.1.6",
           "ip": "192.168.2.6",
           "port": 22,
-          "system": "linux",
+          "plantform": "Linux",
           "system_users_granted": [
             {
               "id": 1,
               "name": "web",
               "username": "web",
+              "protocol": "ssh",
+              "auth_method": "P",
+              "auto_push": True
+            },
+            {
+              "id": 2,
+              "name": "liuzheng",
+              "username": "liuzheng",
               "protocol": "ssh",
               "auth_method": "P",
               "auto_push": True
@@ -125,7 +133,7 @@ def asset_groups_assets():
           "hostname": "windows server",
           "ip": "123.57.183.135",
           "port": 3389,
-          "system": "windows",
+          "plantform": "Windows",
           "assets_granted": [
             {
               "id": 1,

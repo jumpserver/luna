@@ -1,42 +1,41 @@
-
-#tabs {
+.tabs {
   height: 30px;
-  width: 100%
+  overflow-y: hidden;
+  overflow-x: auto;
 }
 
-#tabs ul li.disconnected {
+.tabs ul li.disconnected {
   background-color: darkgray;
 }
 
-#tabs ul li.hidden {
+.tabs ul li.hidden {
   display: none;
 }
 
-#tabs ul {
+.tabs ul {
   list-style-type: none;
   height: 30px;
   background-color: #3a3333;
-  overflow-y: hidden;
-  overflow-x: auto;
-  width: 100%;
-  display: inline-flex;
-  position: absolute;
+  display: block;
+  min-width: 100%;
+  padding-left: 0;
 }
 
-#tabs ul li {
+.tabs ul li {
   display: inline-table;
   width: 150px;
   height: 30px;
   position: relative;
   box-sizing: content-box;
+  float: left;;
 }
 
-#tabs ul li.active {
+.tabs ul li.active {
   box-sizing: border-box;
-  border-bottom: 3px solid #7f3f98 !important;
+  border-bottom: 3px solid #19aa8d !important;
 }
 
-#tabs ul li span {
+.tabs ul li span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -50,7 +49,7 @@
   height: 21px;
 }
 
-#tabs ul li a.close {
+.tabs ul li a.close {
   font-family: 'Roboto', sans-serif;
   font-size: 13px;
   position: absolute;
@@ -62,17 +61,17 @@
   display: inline-block;
 }
 
-#tabs ul li.active a {
+.tabs ul li.active a {
   color: white;
 }
 
-#tabs ul li.active span {
+.tabs ul li.active span {
   padding: 5px 20px 4px 15px;
   color: white;
   height: 18px;
 }
 
-#tabs ul li input {
+.tabs ul li input {
   font-family: 'Roboto', sans-serif;
   font-size: 13px;
   width: 115px;
