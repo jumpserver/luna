@@ -166,12 +166,12 @@ export class CleftbarComponent implements OnInit {
         this._rdp.Connect(host, user.id);
       }
     }
-    // if (host.plantform) {
-    //   if (host.plantform.toLowerCase() === 'linux') {
+    // if (host.platform) {
+    //   if (host.platform.toLowerCase() === 'linux') {
     //     jQuery('app-ssh').show();
     //     jQuery('app-rdp').hide();
     //     this._term.TerminalConnect(host, user.id);
-    //   } else if (host.plantform.toLowerCase() === 'windows') {
+    //   } else if (host.platform.toLowerCase() === 'windows') {
     //     jQuery('app-ssh').hide();
     //     jQuery('app-rdp').show();
     //     this._rdp.Connect(host, user.id);

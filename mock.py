@@ -108,7 +108,7 @@ def asset_groups_assets():
           "hostname": "192.168.1.6",
           "ip": "192.168.2.6",
           "port": 22,
-          "plantform": "Linux",
+          "platform": "Linux",
           "system_users_granted": [
             {
               "id": 1,
@@ -133,13 +133,13 @@ def asset_groups_assets():
           "hostname": "windows server",
           "ip": "123.57.183.135",
           "port": 3389,
-          "plantform": "Windows",
-          "assets_granted": [
+          "platform": "Windows",
+          "system_users_granted": [
             {
-              "id": 1,
+              "id": 3,
               "name": "web",
               "username": "web",
-              "protocol": "ssh",
+              "protocol": "rdp",
               "auth_method": "P",
               "auto_push": True
             }

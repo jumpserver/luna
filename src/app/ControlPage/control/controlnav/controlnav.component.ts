@@ -69,4 +69,5 @@ export class ControlnavComponent implements OnInit {
     ControlnavComponent.checkActive(index);
   }
 
+
 }

@@ -6,9 +6,10 @@
  */
 
 import {Component, OnInit} from '@angular/core';
-import {NavList, View, Rdp} from '../control.component';
+import {NavList, View, Rdp, ControlComponent} from '../control.component';
 
-declare let Mstsc: any;
+import * as Mstsc from 'mstsc.js/client/js/mstsc.js';
+// declare let Mstsc: any;
 
 @Component({
   selector: 'app-rdp',
@@ -53,17 +54,10 @@ export class RdpComponent implements OnInit {
     NavList.List[id].Rdp.token = host.token;
     NavList.List[id].Rdp.machine = host.uuid;
     NavList.List[id].Rdp.client = Mstsc.client.create(Mstsc.$('canvas-' + id));
-    NavList.List[id].Rdp.client.connect(host.token, 'rdp/socket.io');
-
+    NavList.List[id].Rdp.client.connect(host.token, '/rdp/socket.io');
 
     NavList.List.push(new View());
-    for (let m in NavList.List) {
-      NavList.List[m].hide = true;
-    }
-    NavList.List[id].hide = false;
-
-    NavList.Active = id;
-
+    ControlComponent.active(id);
   }
 
 }
