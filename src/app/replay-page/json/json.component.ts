@@ -22,12 +22,9 @@ export class JsonComponent implements OnInit {
   }
 
   ngOnInit() {
-    while (true) {
-      if (term.term) {
-        this.pause();
-        break;
-      }
-    }
+    setTimeout(() => {
+      this.pause();
+    }, 2000);
   }
 
   setSpeed() {
