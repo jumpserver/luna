@@ -1,6 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {Video} from '../../globals';
-import {term} from '../../globals';
+import {Video, term} from '../../globals';
 
 @Component({
   selector: 'app-json',
@@ -22,12 +21,9 @@ export class JsonComponent implements OnInit {
   }
 
   ngOnInit() {
-    while (true) {
-      if (term.term) {
-        this.pause();
-        break;
-      }
-    }
+    setTimeout(() => {
+      this.pause();
+    }, 2000);
   }
 
   setSpeed() {
