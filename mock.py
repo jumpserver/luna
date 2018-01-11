@@ -108,7 +108,7 @@ def asset_groups_assets():
           "hostname": "192.168.1.6",
           "ip": "192.168.2.6",
           "port": 22,
-          "plantform": "Linux",
+          "platform": "Linux",
           "system_users_granted": [
             {
               "id": 1,
@@ -116,7 +116,8 @@ def asset_groups_assets():
               "username": "web",
               "protocol": "ssh",
               "auth_method": "P",
-              "auto_push": True
+              "auto_push": True,
+              "priority": 1
             },
             {
               "id": 2,
@@ -124,7 +125,9 @@ def asset_groups_assets():
               "username": "liuzheng",
               "protocol": "ssh",
               "auth_method": "P",
-              "auto_push": True
+              "auto_push": True,
+              "priority": 10
+
             }
           ]
         },
@@ -133,84 +136,16 @@ def asset_groups_assets():
           "hostname": "windows server",
           "ip": "123.57.183.135",
           "port": 3389,
-          "plantform": "Windows",
-          "assets_granted": [
-            {
-              "id": 1,
-              "name": "web",
-              "username": "web",
-              "protocol": "ssh",
-              "auth_method": "P",
-              "auto_push": True
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "name": "java",
-      "comment": "",
-      "assets_granted": [
-        {
-          "id": 2,
-          "hostname": "192.168.1.6",
-          "ip": "192.168.2.6",
-          "port": 22,
+          "platform": "Windows",
           "system_users_granted": [
             {
-              "id": 1,
+              "id": "3",
               "name": "web",
               "username": "web",
-              "protocol": "ssh",
+              "protocol": "rdp",
               "auth_method": "P",
-              "auto_push": True
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "name": "数据库",
-      "comment": "",
-      "assets_granted": [
-        {
-          "id": 2,
-          "hostname": "192.168.1.6",
-          "ip": "192.168.2.6",
-          "port": 22,
-          "system_users_granted": [
-            {
-              "id": 1,
-              "name": "web",
-              "username": "web",
-              "protocol": "ssh",
-              "auth_method": "P",
-              "auto_push": True
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "name": "运维组",
-      "comment": "",
-      "assets_granted": [
-        {
-          "id": 2,
-          "hostname": "192.168.1.6",
-          "ip": "192.168.2.6",
-          "port": 22,
-          "system_users_granted": [
-            {
-              "id": 1,
-              "name": "web",
-              "username": "web",
-              "protocol": "ssh",
-              "auth_method": "P",
-              "auto_push": True
+              "auto_push": True,
+              "priority": 10
             }
           ]
         }

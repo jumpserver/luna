@@ -6,9 +6,13 @@
  */
 
 import {Component, OnInit} from '@angular/core';
-import {NavList, View, Rdp} from '../control.component';
+import {NavList, View, Rdp, ControlComponent} from '../control.component';
 
-declare let Mstsc: any;
+import {Mstsc} from 'mstsc.js/client/js/mstsc.js';
+import {Client} from 'mstsc.js/client/js/client.js';
+import {Canvas} from 'mstsc.js/client/js/canvas.js';
+
+// declare let Mstsc: any;
 
 @Component({
   selector: 'app-rdp',
@@ -18,12 +22,8 @@ declare let Mstsc: any;
 export class RdpComponent implements OnInit {
   NavList = NavList;
 
-
   static Disconnect(host) {
     host.connected = false;
-
-    // document.getElementById("templatesrc").remove();
-
   }
 
   static DisconnectAll() {
@@ -40,9 +40,9 @@ export class RdpComponent implements OnInit {
     const id = NavList.List.length - 1;
 
     const canvas = Mstsc.$('canvas-' + id);
-    canvas.style.display = 'inline';
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    // canvas.style.display = 'inline';
+    // canvas.width = window.innerWidth;
+    // canvas.height = window.innerHeight;
 
     NavList.List[id].nick = host.name;
     NavList.List[id].connected = true;
@@ -52,18 +52,11 @@ export class RdpComponent implements OnInit {
     NavList.List[id].Rdp = new Rdp;
     NavList.List[id].Rdp.token = host.token;
     NavList.List[id].Rdp.machine = host.uuid;
-    NavList.List[id].Rdp.client = Mstsc.client.create(Mstsc.$('canvas-' + id));
-    NavList.List[id].Rdp.client.connect(host.token, 'rdp/socket.io');
-
+    NavList.List[id].Rdp.client = new Client.Client(Mstsc.$('canvas-' + id));
+    NavList.List[id].Rdp.client.connect(host.token, '/rdp/socket.io');
 
     NavList.List.push(new View());
-    for (let m in NavList.List) {
-      NavList.List[m].hide = true;
-    }
-    NavList.List[id].hide = false;
-
-    NavList.Active = id;
-
+    ControlComponent.active(id);
   }
 
 }

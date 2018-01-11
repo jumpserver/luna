@@ -46,6 +46,17 @@ export let NavList: {
   styleUrls: ['./control.component.css']
 })
 export class ControlComponent implements OnInit {
+  static active(id) {
+    for (let i in NavList.List) {
+      if (id.toString() === i) {
+        NavList.List[id].hide = false;
+      } else {
+        NavList.List[i].hide = true;
+      }
+    }
+
+    NavList.Active = id;
+  }
 
   constructor() {
   }

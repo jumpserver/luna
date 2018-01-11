@@ -36,8 +36,8 @@ import {SshComponent} from './ControlPage/control/ssh/ssh.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
 import {IndexPageComponent} from './IndexPage/index-page.component';
 import {NotFoundComponent} from './BasicPage/not-found/not-found.component';
-import {RdppageComponent} from './rdppage/rdppage.component';
-import {TermpageComponent} from './termpage/termpage.component';
+import {RdpPageComponent} from './rdp-page/rdp-page.component';
+import {TermPageComponent} from './term-page/term-page.component';
 import {ReplayPageComponent} from './replay-page/replay-page.component';
 import {Mp4Component} from './replay-page/mp4/mp4.component';
 import {JsonComponent} from './replay-page/json/json.component';
@@ -45,7 +45,7 @@ import {UtcDatePipe} from './app.pipe';
 import {MonitorPageComponent} from './monitor-page/monitor-page.component';
 import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
-
+import {ElementRdpComponent} from './elements/rdp/rdp.component';
 
 @NgModule({
   imports: [
@@ -61,6 +61,7 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
     ElementPopupComponent,
     ElementTermComponent,
     ElementInteractiveComponent,
+    ElementRdpComponent,
     LoginComponent,
     RdpComponent,
     SshComponent,
@@ -73,8 +74,8 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
     ControlPageComponent,
     IndexPageComponent,
     NotFoundComponent,
-    RdppageComponent,
-    TermpageComponent,
+    RdpPageComponent,
+    TermPageComponent,
     ReplayPageComponent,
     Mp4Component,
     JsonComponent,
