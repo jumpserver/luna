@@ -1,6 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {Video} from '../../globals';
-import {term} from '../../globals';
+import {Video, term} from '../../globals';
 
 @Component({
   selector: 'app-json',
