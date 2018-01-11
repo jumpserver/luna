@@ -1,20 +1,20 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { RdppageComponent } from './rdppage.component';
+import { ElementRdpComponent } from './rdp.component';
 
-describe('RdppageComponent', () => {
-  let component: RdppageComponent;
-  let fixture: ComponentFixture<RdppageComponent>;
+describe('ElementRdpComponent', () => {
+  let component: ElementRdpComponent;
+  let fixture: ComponentFixture<ElementRdpComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ RdppageComponent ]
+      declarations: [ ElementRdpComponent ]
     })
     .compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(RdppageComponent);
+    fixture = TestBed.createComponent(ElementRdpComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

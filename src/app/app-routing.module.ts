@@ -12,15 +12,15 @@ import {environment} from '../environments/environment';
 import {NotFoundComponent} from './BasicPage/not-found/not-found.component';
 import {LoginComponent} from './BasicPage/login/login.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
-import {RdppageComponent} from './rdppage/rdppage.component';
-import {TermpageComponent} from './termpage/termpage.component';
 import {ReplayPageComponent} from './replay-page/replay-page.component';
 import {MonitorPageComponent} from './monitor-page/monitor-page.component';
+import {RdpPageComponent} from './rdp-page/rdp-page.component';
+import {TermPageComponent} from './term-page/term-page.component';
 
 const appRoutes: Routes = [
   {path: 'users/login', component: LoginComponent},
-  {path: 'rdp/:token', component: RdppageComponent},
-  {path: 'term/:token', component: TermpageComponent},
+  {path: 'rdp/:token', component: RdpPageComponent},
+  {path: 'term/:token', component: TermPageComponent},
   {path: 'replay/:token', component: ReplayPageComponent},
   {path: 'monitor/:token', component: MonitorPageComponent},
   {path: '', component: ControlPageComponent},

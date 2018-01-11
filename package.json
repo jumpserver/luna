@@ -40,6 +40,7 @@
     "layui-layer": "git+https://github.com/jumpserver/layer.git",
     "materialize-css": "^0.100.2",
     "metismenu": "^2.5.0",
+    "mstsc.js": "^0.2.4",
     "ng2-charts": "^1.5.0",
     "ng2-cookies": "^1.0.12",
     "ngx-bootstrap": "^1.6.6",
@@ -54,8 +55,8 @@
     "socket.io": "^2.0.3",
     "socket.io-client": "^2.0.4",
     "ssh-keygen": "^0.4.1",
+    "term.js": "0.0.7",
     "tether": "^1.4.0",
-    "tty.js": "^0.2.15",
     "xterm": "^2.9.2",
     "zone.js": "^0.8.14"
   },

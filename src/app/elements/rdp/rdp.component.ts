@@ -4,35 +4,40 @@
  * @date     2017-11-24
  * @author   liuzheng <liuzheng712@gmail.com>
  */
-import {Component, OnInit} from '@angular/core';
+import {AfterViewInit, Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
-import {DataStore} from '../globals';
+import {DataStore} from '../../globals';
 
 declare let Mstsc: any;
 
 @Component({
-  selector: 'app-rdppage',
-  templateUrl: './rdppage.component.html',
-  styleUrls: ['./rdppage.component.css']
+  selector: 'app-element-rdp',
+  templateUrl: './rdp.component.html',
+  styleUrls: ['./rdp.component.scss']
 })
-export class RdppageComponent implements OnInit {
+export class ElementRdpComponent implements OnInit, AfterViewInit {
+  @ViewChild('rdp') el: ElementRef;
 
   constructor(private activatedRoute: ActivatedRoute) {
     DataStore.NavShow = false;
   }
 
   ngOnInit() {
+  }
+
+  ngAfterViewInit() {
+
     let token: string;
     this.activatedRoute.params.subscribe((params: Params) => {
       token = params['token'];
     });
 
-    const canvas = Mstsc.$('canvas');
+    const canvas = Mstsc.$(this.el.nativeElement);
     canvas.style.display = 'inline';
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const client = Mstsc.client.create(Mstsc.$('canvas'));
+    const client = Mstsc.client.create(Mstsc.$(this.el.nativeElement));
     client.connect(token, 'socket.io');
   }
 

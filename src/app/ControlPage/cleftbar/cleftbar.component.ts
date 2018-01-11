@@ -116,55 +116,90 @@ export class CleftbarComponent implements OnInit {
 
   Connect(host) {
     // console.log(host);
-    let userid: string;
+    let user: any;
     const that = this;
     if (host.system_users_granted.length > 1) {
       let options = '';
-      for (let u of host.system_users_granted) {
-        options += '<option value="' + u.id + '">' + u.username + '</option>';
-      }
-      layer.open({
-        title: 'Please Choose a User',
-        scrollbar: false,
-        moveOut: true,
-        moveType: 1,
-        btn: ['确定', '取消'],
-        content: '<select id="selectuser">' + options + '</select>',
-        yes: function (index, layero) {
-          userid = jQuery('#selectuser').val();
-          that.login(host, userid);
-          layer.close(index);
-        },
-        btn2: function (index, layero) {
-        },
-        cancel: function () {
-          // 右上角关闭回调
-          // return false 开启该代码可禁止点击该按钮关闭
+      user = this.checkPriority(host.system_users_granted);
+      if (user) {
+        this.login(host, user);
+      } else {
+        for (let u of host.system_users_granted) {
+          options += '<option value="' + u.id + '">' + u.username + '</option>';
         }
-      });
+        layer.open({
+          title: 'Please Choose a User',
+          scrollbar: false,
+          moveOut: true,
+          moveType: 1,
+          btn: ['确定', '取消'],
+          content: '<select id="selectuser">' + options + '</select>',
+          yes: function (index, layero) {
+            const userid = jQuery('#selectuser').val();
+            for (let i of host.system_users_granted) {
+              if (i.id.toString() === userid.toString()) {
+                user = i;
+                break;
+              }
+            }
+            that.login(host, user);
+            layer.close(index);
+          },
+          btn2: function (index, layero) {
+          },
+          cancel: function () {
+            // 右上角关闭回调
+            // return false 开启该代码可禁止点击该按钮关闭
+          }
+        });
+      }
     } else if (host.system_users_granted.length === 1) {
-      userid = host.system_users_granted[0].id;
-      this.login(host, userid);
+      user = host.system_users_granted[0];
+      this.login(host, user);
     }
   }
 
-  login(host, userid) {
-    if (userid === '') {
-      return;
+  login(host, user) {
+    if (user) {
+      if (user.protocol === 'ssh') {
+        jQuery('app-ssh').show();
+        jQuery('app-rdp').hide();
+        this._term.TerminalConnect(host, user.id);
+      } else if (user.protocol === 'rdp') {
+        jQuery('app-ssh').hide();
+        jQuery('app-rdp').show();
+        this._rdp.Connect(host, user.id);
+      }
     }
-    if (host.plantform.toLowerCase() === 'linux') {
-      jQuery('app-ssh').show();
-      jQuery('app-rdp').hide();
-      this._term.TerminalConnect(host, userid);
-    } else if (host.plantform.toLowerCase() === 'windows') {
-      jQuery('app-ssh').hide();
-      jQuery('app-rdp').show();
-      this._rdp.Connect(host, userid);
-    } else {
-      jQuery('app-ssh').show();
-      jQuery('app-rdp').hide();
-      this._term.TerminalConnect(host, userid);
+    // if (host.platform) {
+    //   if (host.platform.toLowerCase() === 'linux') {
+    //     jQuery('app-ssh').show();
+    //     jQuery('app-rdp').hide();
+    //     this._term.TerminalConnect(host, user.id);
+    //   } else if (host.platform.toLowerCase() === 'windows') {
+    //     jQuery('app-ssh').hide();
+    //     jQuery('app-rdp').show();
+    //     this._rdp.Connect(host, user.id);
+    //   } else {
+    //     jQuery('app-ssh').show();
+    //     jQuery('app-rdp').hide();
+    //     this._term.TerminalConnect(host, user.id);
+    //   }
+    // }
+  }
+
+  checkPriority(sysUsers) {
+    let priority: number = -1;
+    let user: any;
+    for (let u of sysUsers) {
+      if (u.priority > priority) {
+        user = u;
+        priority = u.priority;
+      } else if (u.priority === priority) {
+        return null;
+      }
     }
+    return user;
   }
 
   Search(q) {

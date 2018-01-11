@@ -1,6 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {Video} from '../../globals';
-import {term} from '../../globals';
+import {Video, term} from '../../globals';
 
 @Component({
   selector: 'app-json',
@@ -22,7 +21,14 @@ export class JsonComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.restart();
+    const that = this;
+    let r = true;
+    window.onresize = function () {
+      if (r) {
+        that.pause();
+        r = false;
+      }
+    };
   }
 
   setSpeed() {
