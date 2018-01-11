@@ -22,13 +22,14 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   ngAfterViewInit() {
     term.col = Math.floor(jQuery(this.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
     term.row = Math.floor(jQuery(this.el.nativeElement).height() / jQuery('#liuzheng').height()) - 5;
-    term.term.resize(term.col, term.row);
     term.term.open(this.el.nativeElement, true);
     const that = this;
     window.onresize = function () {
       term.col = Math.floor(jQuery(that.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
-      term.row = Math.floor(jQuery(that.el.nativeElement).height() / jQuery('#liuzheng').height()) - 5;
-
+      term.row = Math.floor(jQuery(that.el.nativeElement).height() / jQuery('#liuzheng').height()) - 3;
+      console.log(jQuery(that.el.nativeElement).height());
+      console.log(jQuery('#liuzheng').height());
+      console.log(term);
       if (term.col < 80) {
         term.col = 80;
       }
@@ -37,6 +38,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       }
       term.term.resize(term.col, term.row);
     };
+    jQuery(window).resize();
   }
 
 }
