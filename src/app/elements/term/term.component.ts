@@ -27,9 +27,6 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     window.onresize = function () {
       term.col = Math.floor(jQuery(that.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
       term.row = Math.floor(jQuery(that.el.nativeElement).height() / jQuery('#liuzheng').height()) - 3;
-      console.log(jQuery(that.el.nativeElement).height());
-      console.log(jQuery('#liuzheng').height());
-      console.log(term);
       if (term.col < 80) {
         term.col = 80;
       }
