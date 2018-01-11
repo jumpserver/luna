@@ -33,14 +33,7 @@
         "../node_modules/jquery-sparkline/jquery.sparkline.js",
         "../node_modules/tether/dist/js/tether.min.js",
         "../node_modules/bootstrap/dist/js/bootstrap.min.js",
-        "../node_modules/xterm/dist/xterm.js",
-        "../node_modules/layui-layer/dist/layer.js",
-        "../node_modules/socket.io-client/dist/socket.io.js",
-        "./assets/js/mstsc.js",
-        "./assets/js/keyboard.js",
-        "./assets/js/rle.js",
-        "./assets/js/client.js",
-        "./assets/js/canvas.js"
+        "../node_modules/xterm/dist/xterm.js"
       ],
       "environmentSource": "environments/environment.ts",
       "environments": {

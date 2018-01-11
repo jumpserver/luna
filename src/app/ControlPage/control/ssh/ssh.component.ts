@@ -9,7 +9,7 @@ import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
 import {Cookie} from 'ng2-cookies/ng2-cookies';
 import {AppService} from '../../../app.service';
-import {NavList, View, Term} from '../control.component';
+import {NavList, View, Term, ControlComponent} from '../control.component';
 import {Terminal} from '../../../globals';
 import * as io from 'socket.io-client';
 import * as jQuery from 'jquery/dist/jquery.min.js';
@@ -74,15 +74,7 @@ export class SshComponent implements OnInit {
       screenKeys: true,
     });
     NavList.List.push(new View());
-    for (let i = 0; i < NavList.List.length; i++) {
-      if (id === i) {
-        NavList.List[id].hide = false;
-      } else {
-        NavList.List[i].hide = true;
-      }
-    }
-
-    NavList.Active = id;
+    ControlComponent.active(id);
 
 
     // TermStore.term[id]['term'].on('title', function (title) {

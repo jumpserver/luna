@@ -46,6 +46,7 @@ export class ControlnavComponent implements OnInit {
     if (NavList.List[index].type === 'ssh') {
       jQuery('app-ssh').show();
       jQuery('app-rdp').hide();
+      NavList.List[index].Term.term.focus();
     } else if (NavList.List[index].type === 'rdp') {
       jQuery('app-ssh').hide();
       jQuery('app-rdp').show();
@@ -68,5 +69,6 @@ export class ControlnavComponent implements OnInit {
     NavList.List.splice(index, 1);
     ControlnavComponent.checkActive(index);
   }
+
 
 }
