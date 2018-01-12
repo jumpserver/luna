@@ -18,6 +18,7 @@ import {DataStore} from '../../globals';
 import {version} from '../../../environments/environment';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import * as layer from 'layui-layer/src/layer.js';
+import {ElementServerMenuComponent} from '../../elements/server-menu/server-menu.component';
 
 
 export class HostGroup {
@@ -36,13 +37,16 @@ export class Host {
   selector: 'app-cleftbar',
   templateUrl: './cleftbar.component.html',
   styleUrls: ['./cleftbar.component.css'],
-  providers: [SshComponent, RdpComponent, SearchComponent]
+  providers: [SshComponent, RdpComponent, SearchComponent, ElementServerMenuComponent]
 })
 export class CleftbarComponent implements OnInit {
   DataStore = DataStore;
   HostGroups: Array<HostGroup>;
   version = version;
   q: string;
+  event: MouseEvent;
+  clientX = 0;
+  clientY = 0;
 
   static Reload() {
   }
@@ -82,7 +86,8 @@ export class CleftbarComponent implements OnInit {
               private _rdp: RdpComponent,
               private _http: HttpService,
               private _search: SearchComponent,
-              private _logger: Logger) {
+              private _logger: Logger,
+              private _menu: ElementServerMenuComponent) {
     this._logger.log('nav.ts:NavComponent');
     // this._appService.getnav()
   }
@@ -124,7 +129,7 @@ export class CleftbarComponent implements OnInit {
       if (user) {
         this.login(host, user);
       } else {
-        for (let u of host.system_users_granted) {
+        for (const u of host.system_users_granted) {
           options += '<option value="' + u.id + '">' + u.username + '</option>';
         }
         layer.open({
@@ -191,7 +196,7 @@ export class CleftbarComponent implements OnInit {
   checkPriority(sysUsers) {
     let priority: number = -1;
     let user: any;
-    for (let u of sysUsers) {
+    for (const u of sysUsers) {
       if (u.priority > priority) {
         user = u;
         priority = u.priority;
@@ -206,4 +211,10 @@ export class CleftbarComponent implements OnInit {
     this._search.Search(q);
   }
 
+  onRightClick(event: MouseEvent): void {
+    this.clientX = event.clientX;
+    this.clientY = event.clientY;
+    // console.log(this.clientX, this.clientY);
+    // this._menu.contextmenu(this.clientY, this.clientX);
+  }
 }

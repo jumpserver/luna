@@ -46,6 +46,7 @@ import {MonitorPageComponent} from './monitor-page/monitor-page.component';
 import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {ElementRdpComponent} from './elements/rdp/rdp.component';
+import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
 
 @NgModule({
   imports: [
@@ -62,6 +63,7 @@ import {ElementRdpComponent} from './elements/rdp/rdp.component';
     ElementTermComponent,
     ElementInteractiveComponent,
     ElementRdpComponent,
+    ElementServerMenuComponent,
     LoginComponent,
     RdpComponent,
     SshComponent,

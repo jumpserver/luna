@@ -16,6 +16,7 @@ import {ReplayPageComponent} from './replay-page/replay-page.component';
 import {MonitorPageComponent} from './monitor-page/monitor-page.component';
 import {RdpPageComponent} from './rdp-page/rdp-page.component';
 import {TermPageComponent} from './term-page/term-page.component';
+import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
 
 const appRoutes: Routes = [
   {path: 'users/login', component: LoginComponent},
@@ -23,6 +24,7 @@ const appRoutes: Routes = [
   {path: 'term/:token', component: TermPageComponent},
   {path: 'replay/:token', component: ReplayPageComponent},
   {path: 'monitor/:token', component: MonitorPageComponent},
+  {path: 'test', component: ElementServerMenuComponent},
   {path: '', component: ControlPageComponent},
   {path: '**', component: NotFoundComponent}
 ];
