@@ -1,0 +1,8 @@
+app-element-term, div {
+  height: 100%;
+  display: none;
+}
+
+.active {
+  display: block;
+}

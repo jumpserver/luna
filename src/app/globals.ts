@@ -6,6 +6,7 @@ export function Terminal(xargs: any) {
   return terminal(xargs);
 }
 
+export const TermWS = io.connect('/ssh');
 export let term: {
   term: any;
   col: number;
