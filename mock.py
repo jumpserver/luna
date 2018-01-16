@@ -87,7 +87,8 @@ class SSHws(Namespace):
   def on_disconnect(self):
     print("disconnect")
     for connection in self.clients[request.sid]["chan"]:
-      self.on_logout(connection)
+      self.clients[request.sid]["chan"][connection].close()
+    del self.clients[request.sid]["chan"]
     pass
 
   def on_leave(self):
