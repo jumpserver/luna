@@ -1,3 +1,8 @@
-div, app-element-term {
+app-element-term {
   height: 100%;
+  display: none;
+}
+
+app-element-term.active {
+  display: block;
 }

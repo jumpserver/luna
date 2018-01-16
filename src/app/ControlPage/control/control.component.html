@@ -5,6 +5,7 @@
   <app-element-term [host]="m.host"
                     [userid]="m.user.id"
                     [index]="i"
+                    [ngClass]="{'active':i==NavList.Active}"
                     *ngIf="m.type=='ssh'">
   </app-element-term>
 </div>

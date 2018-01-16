@@ -1,6 +1,6 @@
 import {AfterViewInit, Component, Input, OnInit, ViewChild} from '@angular/core';
 import {ElementRef} from '@angular/core';
-import {term, TermWS} from '../../globals';
+import {term, Terminal, TermWS} from '../../globals';
 import {Cookie} from 'ng2-cookies/ng2-cookies';
 import {NavList} from '../../ControlPage/control/control.component';
 import * as jQuery from 'jquery/dist/jquery.min.js';
@@ -18,12 +18,19 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   @Input() room: string;
   @ViewChild('term') el: ElementRef;
   secret: string;
+  term: any;
 
   constructor() {
   }
 
   ngOnInit() {
     this.secret = UUID.create()['hex'];
+    this.term = Terminal({
+      cols: 80,
+      rows: 24,
+      useStyle: true,
+      screenKeys: true,
+    });
   }
 
   ngAfterViewInit() {
@@ -37,8 +44,9 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     } else {
       term.col = Math.floor(jQuery(this.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
       term.row = Math.floor(jQuery(this.el.nativeElement).height() / jQuery('#liuzheng').height()) - 5;
+      term.term = this.term;
     }
-    term.term.open(this.el.nativeElement, true);
+    this.term.open(this.el.nativeElement, true);
     const that = this;
     window.onresize = function () {
       term.col = Math.floor(jQuery(that.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
@@ -49,7 +57,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       if (term.row < 24) {
         term.row = 24;
       }
-      term.term.resize(term.col, term.row);
+      that.term.resize(term.col, term.row);
       if (that.host) {
         Cookie.set('cols', term.col.toString(), 99, '/', document.domain);
         Cookie.set('rows', term.row.toString(), 99, '/', document.domain);
@@ -59,19 +67,19 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     jQuery(window).resize();
 
     if (this.host) {
-      NavList.List[this.index].Term = term.term;
+      NavList.List[this.index].Term = this.term;
 
-      term.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
+      this.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
 
       TermWS.emit('host', {'uuid': this.host.id, 'userid': this.userid, 'secret': this.secret});
 
-      term.term.on('data', function (data) {
+      this.term.on('data', function (data) {
         TermWS.emit('data', {'data': data, 'room': that.room});
       });
 
       TermWS.on('data', function (data) {
         if (data['room'] === that.room) {
-          term.term.write(data['data']);
+          that.term.write(data['data']);
         }
       });
 
@@ -88,6 +96,6 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
   TerminalDisconnect() {
     NavList.List[this.index].connected = false;
-    term.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+    this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
   }
 }

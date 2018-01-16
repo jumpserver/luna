@@ -176,7 +176,7 @@ export class CleftbarComponent implements OnInit {
         NavList.List[id].type = 'rdp';
       }
       NavList.List.push(new View());
-
+      NavList.Active = id;
     }
     // if (host.platform) {
     //   if (host.platform.toLowerCase() === 'linux') {
