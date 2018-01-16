@@ -8,6 +8,7 @@
  */
 
 import {Component, OnInit} from '@angular/core';
+import {TermWS} from '../../globals';
 
 // export class Term {
 //   machine: string;
@@ -30,6 +31,7 @@ export class View {
   closed: boolean;
   host: any;
   user: any;
+  room: string;
   Rdp: Rdp;
   Term: any;
 }
@@ -63,8 +65,12 @@ export class ControlComponent implements OnInit {
   }
 
   static TerminalDisconnect(id) {
-    NavList.List[id].connected = false;
-    NavList.List[id].Term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+    console.log(id);
+    if (NavList.List[id].connected) {
+      NavList.List[id].connected = false;
+      NavList.List[id].Term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+      TermWS.emit('logout', NavList.List[id].room);
+    }
   }
 
   static RdpDisconnect(id) {

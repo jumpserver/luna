@@ -24,10 +24,12 @@ class SSHws(Namespace):
     # self.chan.settimeout(0.1)
     self.socketio.start_background_task(self.sent_data, self, self.clients[request.sid]["chan"][connection],
                                         self.clients[request.sid]["room"],
-                                        connection)
+                                        connection, request.sid)
 
-  def sent_data(self, s, chan, room, connection):
+  def sent_data(self, s, chan, room, connection, sid):
     while True:
+      if connection not in s.clients[sid]["chan"].keys():
+        return
       try:
         data = chan.recv(2048).decode('utf-8', 'replace')
         s.emit(event='data', data={"data": data, "room": connection}, room=room)
@@ -61,8 +63,8 @@ class SSHws(Namespace):
 
   def on_host(self, message):
     connection = str(uuid.uuid4())
-    self.ssh_with_password(connection)
     self.emit('room', {'room': connection, 'secret': message['secret']})
+    self.ssh_with_password(connection)
 
   def on_resize(self, message):
     self.clients[request.sid]["cols"] = message.get('cols', 80)
@@ -84,10 +86,18 @@ class SSHws(Namespace):
 
   def on_disconnect(self):
     print("disconnect")
+    for connection in self.clients[request.sid]["chan"]:
+      self.on_logout(connection)
     pass
 
   def on_leave(self):
     leave_room(self.room)
+
+  def on_logout(self, connection):
+    print("logout", connection)
+    if connection:
+      self.clients[request.sid]["chan"][connection].close()
+      del self.clients[request.sid]["chan"][connection]
 
 
 @app.route('/luna/<path:path>')

@@ -15,7 +15,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   @Input() host: any;
   @Input() userid: any;
   @Input() index: number;
-  @Input() room: string;
+  // @Input() room: string;
   @ViewChild('term') el: ElementRef;
   secret: string;
   term: any;
@@ -31,6 +31,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       useStyle: true,
       screenKeys: true,
     });
+    // NavList.List[this.index].room = this.room;
   }
 
   ngAfterViewInit() {
@@ -74,11 +75,11 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       TermWS.emit('host', {'uuid': this.host.id, 'userid': this.userid, 'secret': this.secret});
 
       this.term.on('data', function (data) {
-        TermWS.emit('data', {'data': data, 'room': that.room});
+        TermWS.emit('data', {'data': data, 'room': NavList.List[that.index].room});
       });
 
       TermWS.on('data', function (data) {
-        if (data['room'] === that.room) {
+        if (data['room'] === NavList.List[that.index].room) {
           that.term.write(data['data']);
         }
       });
@@ -88,7 +89,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       });
       TermWS.on('room', function (data) {
         if (data['secret'] === that.secret) {
-          that.room = data['room'];
+          NavList.List[that.index].room = data['room'];
         }
       });
     }
@@ -97,5 +98,6 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   TerminalDisconnect() {
     NavList.List[this.index].connected = false;
     this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+    TermWS.emit('logout', NavList.List[this.index].room);
   }
 }
