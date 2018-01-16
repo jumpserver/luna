@@ -11,14 +11,13 @@ import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
 
 import {AppService, HttpService} from '../../app.service';
-import {SshComponent} from '../control/ssh/ssh.component';
-import {RdpComponent} from '../control/rdp/rdp.component';
 import {SearchComponent} from '../search/search.component';
 import {DataStore} from '../../globals';
 import {version} from '../../../environments/environment';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import * as layer from 'layui-layer/src/layer.js';
 import {ElementServerMenuComponent} from '../../elements/server-menu/server-menu.component';
+import {NavList, View} from '../control/control.component';
 
 
 export class HostGroup {
@@ -37,7 +36,7 @@ export class Host {
   selector: 'app-cleftbar',
   templateUrl: './cleftbar.component.html',
   styleUrls: ['./cleftbar.component.css'],
-  providers: [SshComponent, RdpComponent, SearchComponent, ElementServerMenuComponent]
+  providers: [SearchComponent, ElementServerMenuComponent]
 })
 export class CleftbarComponent implements OnInit {
   DataStore = DataStore;
@@ -82,8 +81,6 @@ export class CleftbarComponent implements OnInit {
   }
 
   constructor(private _appService: AppService,
-              private _term: SshComponent,
-              private _rdp: RdpComponent,
               private _http: HttpService,
               private _search: SearchComponent,
               private _logger: Logger,
@@ -166,15 +163,20 @@ export class CleftbarComponent implements OnInit {
 
   login(host, user) {
     if (user) {
+      const id = NavList.List.length - 1;
+      NavList.List[id].nick = host.hostname;
+      NavList.List[id].connected = true;
+      NavList.List[id].edit = false;
+      NavList.List[id].closed = false;
+      NavList.List[id].host = host;
+      NavList.List[id].user = user;
       if (user.protocol === 'ssh') {
-        jQuery('app-ssh').show();
-        jQuery('app-rdp').hide();
-        this._term.TerminalConnect(host, user.id);
+        NavList.List[id].type = 'ssh';
       } else if (user.protocol === 'rdp') {
-        jQuery('app-ssh').hide();
-        jQuery('app-rdp').show();
-        this._rdp.Connect(host, user.id);
+        NavList.List[id].type = 'rdp';
       }
+      NavList.List.push(new View());
+
     }
     // if (host.platform) {
     //   if (host.platform.toLowerCase() === 'linux') {

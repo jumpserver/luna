@@ -1,3 +1,10 @@
 <app-controlnav></app-controlnav>
-<app-ssh></app-ssh>
+<!--<app-ssh></app-ssh>-->
 <!--<app-rdp></app-rdp>-->
+<div *ngFor="let m of NavList.List;let i=index">
+  <app-element-term [host]="m.host"
+                    [userid]="m.user.id"
+                    [index]="i"
+                    *ngIf="m.type=='ssh'">
+  </app-element-term>
+</div>
