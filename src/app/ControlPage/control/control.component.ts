@@ -8,12 +8,13 @@
  */
 
 import {Component, OnInit} from '@angular/core';
+import {TermWS} from '../../globals';
 
-export class Term {
-  machine: string;
-  socket: any;
-  term: any;
-}
+// export class Term {
+//   machine: string;
+//   socket: any;
+//   term: any;
+// }
 
 export class Rdp {
   machine: string;
@@ -28,8 +29,11 @@ export class View {
   connected: boolean;
   hide: boolean;
   closed: boolean;
+  host: any;
+  user: any;
+  room: string;
   Rdp: Rdp;
-  Term: Term;
+  Term: any;
 }
 
 export let NavList: {
@@ -46,6 +50,8 @@ export let NavList: {
   styleUrls: ['./control.component.css']
 })
 export class ControlComponent implements OnInit {
+  NavList = NavList;
+
   static active(id) {
     for (let i in NavList.List) {
       if (id.toString() === i) {
@@ -56,6 +62,26 @@ export class ControlComponent implements OnInit {
     }
 
     NavList.Active = id;
+  }
+
+  static TerminalDisconnect(id) {
+    console.log(id);
+    if (NavList.List[id].connected) {
+      NavList.List[id].connected = false;
+      NavList.List[id].Term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+      TermWS.emit('logout', NavList.List[id].room);
+    }
+  }
+
+  static RdpDisconnect(id) {
+    NavList.List[id].connected = false;
+  }
+
+  static DisconnectAll() {
+    alert('DisconnectAll');
+    for (let i = 0; i < NavList.List.length; i++) {
+      ControlComponent.TerminalDisconnect(i);
+    }
   }
 
   constructor() {
