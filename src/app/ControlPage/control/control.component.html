@@ -10,4 +10,11 @@
                     [ngClass]="{'active':i==NavList.Active}"
                     *ngIf="m.type=='ssh'">
   </app-element-term>
+  <app-element-guacamole [host]="m.host"
+                         [userid]="m.user.id"
+                         [index]="i"
+                         [ngClass]="{'active':i==NavList.Active}"
+                         *ngIf="m.type=='rdp'">
+
+  </app-element-guacamole>
 </div>
