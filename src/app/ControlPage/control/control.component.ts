@@ -65,7 +65,6 @@ export class ControlComponent implements OnInit {
   }
 
   static TerminalDisconnect(id) {
-    console.log(id);
     if (NavList.List[id].connected) {
       NavList.List[id].connected = false;
       NavList.List[id].Term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
@@ -90,4 +89,7 @@ export class ControlComponent implements OnInit {
   ngOnInit() {
   }
 
+  // trackByFn(index: number, item: View) {
+  //   return item.id;
+  // }
 }
