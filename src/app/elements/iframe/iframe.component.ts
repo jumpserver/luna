@@ -3,11 +3,11 @@ import {DomSanitizer} from '@angular/platform-browser';
 import {NavList} from '../../ControlPage/control/control.component';
 
 @Component({
-  selector: 'app-element-guacamole',
-  templateUrl: './guacamole.component.html',
-  styleUrls: ['./guacamole.component.scss']
+  selector: 'app-element-iframe',
+  templateUrl: './iframe.component.html',
+  styleUrls: ['./iframe.component.scss']
 })
-export class ElementGuacamoleComponent implements OnInit {
+export class ElementIframeComponent implements OnInit {
   @Input() host: any;
   @Input() userid: any;
   @Input() index: number;
@@ -17,8 +17,7 @@ export class ElementGuacamoleComponent implements OnInit {
   }
 
   ngOnInit() {
-    // this.target = '/guacamole/?asset_id=' + '&system_user_id=' + '';
-    this.target = 'https://www.baidu.com';
+    this.target = 'https://wx.qq.com/';
   }
 
   trust(url) {
