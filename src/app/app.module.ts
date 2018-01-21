@@ -25,14 +25,15 @@ import {ElementInteractiveComponent} from './elements/interactive/interactive.co
 import {ElementNavComponent} from './elements/nav/nav.component';
 import {LoginComponent} from './BasicPage/login/login.component';
 import {ElementPopupComponent} from './elements/popup/popup.component';
+import {ElementRdpComponent} from './elements/rdp/rdp.component';
+import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
+import {ElementIframeComponent} from './elements/iframe/iframe.component';
 // pages
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
 import {SearchComponent, SearchFilter} from './ControlPage/search/search.component';
 import {CleftbarComponent} from './ControlPage/cleftbar/cleftbar.component';
 import {ControlComponent} from './ControlPage/control/control.component';
 import {ControlnavComponent} from './ControlPage/control/controlnav/controlnav.component';
-import {RdpComponent} from './ControlPage/control/rdp/rdp.component';
-import {SshComponent} from './ControlPage/control/ssh/ssh.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
 import {IndexPageComponent} from './IndexPage/index-page.component';
 import {NotFoundComponent} from './BasicPage/not-found/not-found.component';
@@ -45,7 +46,6 @@ import {UtcDatePipe} from './app.pipe';
 import {MonitorPageComponent} from './monitor-page/monitor-page.component';
 import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
-import {ElementRdpComponent} from './elements/rdp/rdp.component';
 
 @NgModule({
   imports: [
@@ -62,9 +62,9 @@ import {ElementRdpComponent} from './elements/rdp/rdp.component';
     ElementTermComponent,
     ElementInteractiveComponent,
     ElementRdpComponent,
+    ElementServerMenuComponent,
+    ElementIframeComponent,
     LoginComponent,
-    RdpComponent,
-    SshComponent,
     SearchComponent,
     SearchFilter,
     IleftbarComponent,

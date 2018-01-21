@@ -21,9 +21,14 @@ export class JsonComponent implements OnInit {
   }
 
   ngOnInit() {
-    setTimeout(() => {
-      this.pause();
-    }, 2000);
+    const that = this;
+    let r = true;
+    window.onresize = function () {
+      if (r) {
+        that.pause();
+        r = false;
+      }
+    };
   }
 
   setSpeed() {
