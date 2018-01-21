@@ -27,7 +27,7 @@ import {LoginComponent} from './BasicPage/login/login.component';
 import {ElementPopupComponent} from './elements/popup/popup.component';
 import {ElementRdpComponent} from './elements/rdp/rdp.component';
 import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
-import {ElementGuacamoleComponent} from './elements/guacamole/guacamole.component';
+import {ElementIframeComponent} from './elements/iframe/iframe.component';
 // pages
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
 import {SearchComponent, SearchFilter} from './ControlPage/search/search.component';
@@ -63,7 +63,7 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
     ElementInteractiveComponent,
     ElementRdpComponent,
     ElementServerMenuComponent,
-    ElementGuacamoleComponent,
+    ElementIframeComponent,
     LoginComponent,
     SearchComponent,
     SearchFilter,

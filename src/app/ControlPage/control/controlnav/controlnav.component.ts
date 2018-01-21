@@ -42,12 +42,8 @@ export class ControlnavComponent implements OnInit {
     NavList.List[index].hide = false;
     NavList.Active = index;
     if (NavList.List[index].type === 'ssh') {
-      jQuery('app-ssh').show();
-      jQuery('app-rdp').hide();
       NavList.List[index].Term.focus();
     } else if (NavList.List[index].type === 'rdp') {
-      jQuery('app-ssh').hide();
-      jQuery('app-rdp').show();
     }
   }
 
