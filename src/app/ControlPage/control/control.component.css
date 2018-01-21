@@ -1,5 +1,8 @@
-app-element-term, div {
+div, app-element-term, app-element-guacamole {
   height: 100%;
+}
+
+div {
   display: none;
 }
 

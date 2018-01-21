@@ -9,13 +9,13 @@
 
 import {Component, OnInit} from '@angular/core';
 import {Logger} from 'angular2-logger/core';
-
 import {AppService, HttpService} from '../../app.service';
 import {SearchComponent} from '../search/search.component';
 import {DataStore} from '../../globals';
 import {version} from '../../../environments/environment';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import * as layer from 'layui-layer/src/layer.js';
+import * as UUID from 'uuid-js/lib/uuid.js';
 import {ElementServerMenuComponent} from '../../elements/server-menu/server-menu.component';
 import {NavList, View} from '../control/control.component';
 
@@ -119,9 +119,9 @@ export class CleftbarComponent implements OnInit {
   Connect(host) {
     // console.log(host);
     let user: any;
+    let options = '';
     const that = this;
     if (host.system_users_granted.length > 1) {
-      let options = '';
       user = this.checkPriority(host.system_users_granted);
       if (user) {
         this.login(host, user);
@@ -162,8 +162,8 @@ export class CleftbarComponent implements OnInit {
   }
 
   login(host, user) {
+    const id = NavList.List.length - 1;
     if (user) {
-      const id = NavList.List.length - 1;
       NavList.List[id].nick = host.hostname;
       NavList.List[id].connected = true;
       NavList.List[id].edit = false;
