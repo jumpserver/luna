@@ -70,7 +70,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     if (this.host) {
       NavList.List[this.index].Term = this.term;
 
-      this.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
+      // this.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
 
       TermWS.emit('host', {'uuid': this.host.id, 'userid': this.userid, 'secret': this.secret});
 
