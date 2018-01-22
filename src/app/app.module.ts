@@ -48,6 +48,7 @@ import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {BrowserXhr} from '@angular/http';
 import {NgProgressModule, NgProgressBrowserXhr} from 'ngx-progressbar';
+import {AppService, HttpService} from './app.service';
 
 @NgModule({
   imports: [
@@ -91,6 +92,8 @@ import {NgProgressModule, NgProgressBrowserXhr} from 'ngx-progressbar';
   providers: [
     {provide: Options, useValue: {store: false, level: LoggerLevel.WARN}},
     {provide: BrowserXhr, useClass: NgProgressBrowserXhr},
+    AppService,
+    HttpService,
     Logger
   ]
 })
