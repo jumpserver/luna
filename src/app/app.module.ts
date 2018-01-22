@@ -46,6 +46,8 @@ import {UtcDatePipe} from './app.pipe';
 import {MonitorPageComponent} from './monitor-page/monitor-page.component';
 import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
+import {BrowserXhr} from '@angular/http';
+import {NgProgressModule, NgProgressBrowserXhr} from 'ngx-progressbar';
 
 @NgModule({
   imports: [
@@ -53,6 +55,7 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
     FormsModule,
     AppRoutingModule,
     HttpModule,
+    NgProgressModule
   ],
   declarations: [
     AppComponent,
@@ -87,6 +90,7 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
   bootstrap: [AppComponent],
   providers: [
     {provide: Options, useValue: {store: false, level: LoggerLevel.WARN}},
+    {provide: BrowserXhr, useClass: NgProgressBrowserXhr},
     Logger
   ]
 })

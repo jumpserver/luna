@@ -38,6 +38,7 @@ export class ReplayPageComponent implements OnInit {
           Video.totalTime = Video.timelist[Video.timelist.length - 1] * 1000;
         },
         err => {
+          alert('无法下载');
           this._logger.error(err);
         },
       );
