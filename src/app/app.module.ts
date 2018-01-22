@@ -49,6 +49,7 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {BrowserXhr} from '@angular/http';
 import {NgProgressModule, NgProgressBrowserXhr} from 'ngx-progressbar';
 import {AppService, HttpService} from './app.service';
+import {LayerService} from './elements/layer/layer.service';
 
 @NgModule({
   imports: [

@@ -18,7 +18,6 @@ import * as jQuery from 'jquery/dist/jquery.min.js';
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css'],
-  providers: [AppService]
 })
 export class LoginComponent implements OnInit {
   DataStore = DataStore;

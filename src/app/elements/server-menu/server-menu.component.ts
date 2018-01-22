@@ -1,4 +1,5 @@
 import {Component, OnInit} from '@angular/core';
+import {LayerService} from '../layer/layer.service';
 
 export class Menu {
   name: string;
@@ -9,7 +10,7 @@ export class Menu {
 @Component({
   selector: 'app-element-server-menu',
   templateUrl: './server-menu.component.html',
-  styleUrls: ['./server-menu.component.scss']
+  styleUrls: ['./server-menu.component.scss'],
 })
 export class ElementServerMenuComponent implements OnInit {
   MenuList: Array<any>;
