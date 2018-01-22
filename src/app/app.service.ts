@@ -13,6 +13,7 @@ import {Logger} from 'angular2-logger/core';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser} from './globals';
+import {NgLayer} from 'angular2-layer';
 declare function unescape(s: string): string;
 
 @Injectable()

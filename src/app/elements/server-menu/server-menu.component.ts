@@ -1,6 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {LayerService} from '../layer/layer.service';
 
+
 export class Menu {
   name: string;
   type: string;
@@ -17,7 +18,7 @@ export class ElementServerMenuComponent implements OnInit {
   top: number;
   left: number;
 
-  constructor() {
+  constructor(private ly: LayerService) {
   }
 
   ngOnInit() {
@@ -28,6 +29,7 @@ export class ElementServerMenuComponent implements OnInit {
     m.type = 'lll';
     line.type = 'line';
     this.MenuList = [m, m, line, m, m];
+    this.ly.alert();
   }
 
   public contextmenu(top: number, left: number) {
