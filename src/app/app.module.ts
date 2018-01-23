@@ -12,7 +12,7 @@
 import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms'; // <-- NgModel lives here
-import {Logger, Options, Level as LoggerLevel} from 'angular2-logger/core';
+import {NGXLogger, LoggerConfig, NgxLoggerLevel as LoggerLevel} from 'ngx-logger';
 import {HttpModule} from '@angular/http';
 
 import {AppRoutingModule} from './app-routing.module';
@@ -55,6 +55,7 @@ import {NgProgressModule, NgProgressBrowserXhr} from 'ngx-progressbar';
 
 
 import {NgxLayerModule} from 'ngx-layer';
+import {TestPageComponent} from './test-page/test-page.component';
 
 @NgModule({
   imports: [
@@ -94,15 +95,16 @@ import {NgxLayerModule} from 'ngx-layer';
     MonitorPageComponent,
     LinuxComponent,
     WindowsComponent,
+    TestPageComponent,
   ],
   bootstrap: [AppComponent],
   providers: [
-    {provide: Options, useValue: {store: false, level: LoggerLevel.WARN}},
+    {provide: LoggerConfig, useValue: {level: LoggerLevel.WARN}},
     {provide: BrowserXhr, useClass: NgProgressBrowserXhr},
     AppService,
     HttpService,
     LayerService,
-    Logger,
+    NGXLogger,
   ]
 })
 export class AppModule {
