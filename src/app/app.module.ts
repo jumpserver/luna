@@ -54,7 +54,7 @@ import {BrowserXhr} from '@angular/http';
 import {NgProgressModule, NgProgressBrowserXhr} from 'ngx-progressbar';
 
 
-import {NgxLayerModule} from 'ngx-layer';
+// import {NgxLayerModule} from 'ngx-layer';
 import {TestPageComponent} from './test-page/test-page.component';
 
 @NgModule({
@@ -64,7 +64,7 @@ import {TestPageComponent} from './test-page/test-page.component';
     AppRoutingModule,
     HttpModule,
     NgProgressModule,
-    NgxLayerModule
+    // NgxLayerModule
   ],
   declarations: [
     AppComponent,
