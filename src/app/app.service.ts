@@ -13,6 +13,7 @@ import {NGXLogger} from 'ngx-logger';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser} from './globals';
+
 declare function unescape(s: string): string;
 
 @Injectable()
@@ -114,7 +115,7 @@ export class AppService implements OnInit {
     //   this._logger.level = 0;
     // }
 
-    // this.checklogin();
+    this.checklogin();
   }
 
   ngOnInit() {
@@ -135,32 +136,43 @@ export class AppService implements OnInit {
           // jQuery('angular2').show();
         } else {
           this.browser();
-          this._http.get('/api/checklogin')
+          this._http.get('/api/users/v1/profile/')
             .map(res => res.json())
             .subscribe(
               data => {
+                User.id = data.id;
                 User.name = data.name;
                 User.username = data.username;
+                User.email = data.email;
+                User.is_active = data.is_active;
+                User.is_superuser = data.is_superuser;
+                User.role = data.role;
+                // User.groups = data.groups;
+                User.wechat = data.wechat;
+                User.comment = data.comment;
+                User.date_expired = data.date_expired;
+                User.phone = data.phone.toString();
                 User.logined = data.logined;
                 this._logger.debug(User);
               },
               err => {
-                this._logger.error(err);
+                // this._logger.error(err);
                 User.logined = false;
-                this._router.navigate(['login']);
+                window.location.href = document.location.origin + '/users/login?next=' + document.location.pathname;
+                // this._router.navigate(['login']);
               },
-              () => {
-                if (User.logined) {
-                  if (document.location.pathname === '/login') {
-                    this._router.navigate(['']);
-                  } else {
-                    this._router.navigate([document.location.pathname]);
-                  }
-                } else {
-                  this._router.navigate(['login']);
-                }
-                // jQuery('angular2').show();
-              }
+              // () => {
+              //   if (User.logined) {
+              //     if (document.location.pathname === '/login') {
+              //       this._router.navigate(['']);
+              //     } else {
+              //       this._router.navigate([document.location.pathname]);
+              //     }
+              //   } else {
+              //     this._router.navigate(['login']);
+              //   }
+              // jQuery('angular2').show();
+              // }
             );
         }
       }
