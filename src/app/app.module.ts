@@ -53,7 +53,7 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {BrowserXhr} from '@angular/http';
 import {NgProgressModule, NgProgressBrowserXhr} from 'ngx-progressbar';
 import {TestPageComponent} from './test-page/test-page.component';
-// import {NgxLayerModule} from 'ngx-layer';
+import {NgxLayerModule} from 'ngx-layer';
 
 @NgModule({
   imports: [
@@ -62,7 +62,7 @@ import {TestPageComponent} from './test-page/test-page.component';
     AppRoutingModule,
     HttpModule,
     NgProgressModule,
-    // NgxLayerModule
+    NgxLayerModule
   ],
   declarations: [
     AppComponent,

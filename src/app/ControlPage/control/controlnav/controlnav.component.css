@@ -91,7 +91,7 @@
 }
 
 .tabs::-webkit-scrollbar {
-  height: 1px;
+  height: 2px;
 }
 
 .tabs::-webkit-scrollbar-thumb {
