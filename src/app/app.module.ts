@@ -52,10 +52,8 @@ import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {BrowserXhr} from '@angular/http';
 import {NgProgressModule, NgProgressBrowserXhr} from 'ngx-progressbar';
-
-
-// import {NgxLayerModule} from 'ngx-layer';
 import {TestPageComponent} from './test-page/test-page.component';
+// import {NgxLayerModule} from 'ngx-layer';
 
 @NgModule({
   imports: [
