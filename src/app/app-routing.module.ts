@@ -24,7 +24,7 @@ const appRoutes: Routes = [
   {path: 'term/:token', component: TermPageComponent},
   {path: 'replay/:token', component: ReplayPageComponent},
   {path: 'monitor/:token', component: MonitorPageComponent},
-  {path: 'test', component: ElementServerMenuComponent},
+  {path: 'test', component: TermPageComponent},
   {path: '', component: ControlPageComponent},
   {path: '**', component: NotFoundComponent}
 ];

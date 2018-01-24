@@ -1,6 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
-import {Logger} from 'angular2-logger/core';
+import {NGXLogger} from 'ngx-logger';
 import {HttpService} from '../app.service';
 import {Video, DataStore} from '../globals';
 
@@ -14,7 +14,7 @@ export class ReplayPageComponent implements OnInit {
 
   constructor(private activatedRoute: ActivatedRoute,
               private _http: HttpService,
-              private _logger: Logger) {
+              private _logger: NGXLogger) {
     // this.video = {'type': 'none'};
     DataStore.NavShow = false;
 
@@ -38,6 +38,7 @@ export class ReplayPageComponent implements OnInit {
           Video.totalTime = Video.timelist[Video.timelist.length - 1] * 1000;
         },
         err => {
+          alert('无法下载');
           this._logger.error(err);
         },
       );

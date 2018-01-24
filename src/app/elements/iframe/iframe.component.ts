@@ -17,7 +17,7 @@ export class ElementIframeComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.target = 'https://wx.qq.com/';
+    this.target = 'http://localhost:8080/#/client/MwBjAHBvc3RncmVzcWw=';
   }
 
   trust(url) {

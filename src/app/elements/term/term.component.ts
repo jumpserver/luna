@@ -44,7 +44,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       }
     } else {
       term.col = Math.floor(jQuery(this.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
-      term.row = Math.floor(jQuery(this.el.nativeElement).height() / jQuery('#liuzheng').height()) - 5;
+      term.row = Math.floor(jQuery(this.el.nativeElement).height() / jQuery('#liuzheng').height()) - 3;
       term.term = this.term;
     }
     this.term.open(this.el.nativeElement, true);

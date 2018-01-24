@@ -1,3 +1,9 @@
+<div class="scroll-botton">
+  &nbsp; <a class="left" (click)="scrollleft()"><i class="fa fa-caret-left"></i></a>
+  &nbsp;
+  <a class="right" (click)="scrollright()"><i class="fa fa-caret-right"></i></a>
+  &nbsp;
+</div>
 <div class="tabs">
   <ul [ngStyle]="{'width':150*NavList.List.length+'px'}">
     <li *ngFor="let m of NavList.List;let i = index"
