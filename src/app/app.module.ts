@@ -10,16 +10,16 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {BrowserModule} from '@angular/platform-browser';
-import {NgModule} from '@angular/core';
+import {ClassProvider, NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms'; // <-- NgModel lives here
-import {NGXLogger, LoggerConfig, NgxLoggerLevel as LoggerLevel} from 'ngx-logger';
+// import {NGXLogger, LoggerConfig, NgxLoggerLevel as LoggerLevel} from 'ngx-logger';
 import {HttpModule} from '@angular/http';
 
 import {AppRoutingModule} from './app-routing.module';
 
 import {AppComponent} from './app.component';
 // service
-import {AppService, HttpService} from './app.service';
+import {AppService, HttpService, LogService} from './app.service';
 import {LayerService} from './elements/layer/layer.service';
 
 // Elements
@@ -50,10 +50,9 @@ import {UtcDatePipe} from './app.pipe';
 import {MonitorPageComponent} from './monitor-page/monitor-page.component';
 import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
-import {BrowserXhr} from '@angular/http';
-import {NgProgressModule, NgProgressBrowserXhr} from 'ngx-progressbar';
+import {NgProgressModule} from 'ngx-progressbar';
 import {TestPageComponent} from './test-page/test-page.component';
-import {HttpClient, HttpHandler} from '@angular/common/http';
+
 // import {NgxLayerModule} from 'ngx-layer';
 
 @NgModule({
@@ -98,14 +97,12 @@ import {HttpClient, HttpHandler} from '@angular/common/http';
   ],
   bootstrap: [AppComponent],
   providers: [
-    {provide: LoggerConfig, useValue: {level: LoggerLevel.WARN}},
-    {provide: BrowserXhr, useClass: NgProgressBrowserXhr},
+    // {provide: LoggerConfig, useValue: {level: LoggerLevel.WARN}},
+    // {provide: BrowserXhr, useClass: NgProgressBrowserXhr},
     AppService,
     HttpService,
-    LayerService,
-    HttpClient,
-    HttpHandler,
-    NGXLogger
+    LogService,
+    LayerService
   ]
 })
 export class AppModule {

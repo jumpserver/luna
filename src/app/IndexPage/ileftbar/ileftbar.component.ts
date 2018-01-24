@@ -6,8 +6,7 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {AppService} from '../../app.service';
-import {NGXLogger} from 'ngx-logger';
+import {AppService, LogService} from '../../app.service';
 
 @Component({
   selector: 'app-ileftbar',
@@ -17,7 +16,7 @@ import {NGXLogger} from 'ngx-logger';
 export class IleftbarComponent implements OnInit {
 
   constructor(private _appService: AppService,
-              private _logger:NGXLogger) {
+              private _logger: LogService) {
     this._logger.log('nav.ts:NavComponent');
     // this._appService.getnav()
   }
