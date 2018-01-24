@@ -103,9 +103,9 @@ import {HttpClient, HttpHandler} from '@angular/common/http';
     AppService,
     HttpService,
     LayerService,
-    NGXLogger,
     HttpClient,
-    HttpHandler
+    HttpHandler,
+    NGXLogger
   ]
 })
 export class AppModule {

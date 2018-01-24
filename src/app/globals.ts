@@ -66,9 +66,13 @@ export let User: {
   avatar: string;
   role: string;
   email: string;
+  wechat: string;
+  comment: string;
   is_active: boolean;
+  is_superuser: boolean;
   date_joined: string;
   last_login: string;
+  date_expired: string;
   groups: Array<Group>;
   logined: boolean;
 } = {
@@ -80,9 +84,13 @@ export let User: {
   avatar: '',
   role: '',
   email: '',
+  wechat: '',
+  comment: '',
   is_active: false,
+  is_superuser: false,
   date_joined: '',
   last_login: '',
+  date_expired: '',
   groups: [],
   logined: false,
 };

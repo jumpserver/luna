@@ -19,7 +19,7 @@ import {TermPageComponent} from './term-page/term-page.component';
 import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
 
 const appRoutes: Routes = [
-  {path: 'users/login', component: LoginComponent},
+  // {path: 'users/login', component: LoginComponent},
   {path: 'rdp/:token', component: RdpPageComponent},
   {path: 'term/:token', component: TermPageComponent},
   {path: 'replay/:token', component: ReplayPageComponent},
