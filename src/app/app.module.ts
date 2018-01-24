@@ -53,6 +53,7 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {BrowserXhr} from '@angular/http';
 import {NgProgressModule, NgProgressBrowserXhr} from 'ngx-progressbar';
 import {TestPageComponent} from './test-page/test-page.component';
+import {HttpClient, HttpHandler} from '@angular/common/http';
 // import {NgxLayerModule} from 'ngx-layer';
 
 @NgModule({
@@ -103,6 +104,8 @@ import {TestPageComponent} from './test-page/test-page.component';
     HttpService,
     LayerService,
     NGXLogger,
+    HttpClient,
+    HttpHandler
   ]
 })
 export class AppModule {

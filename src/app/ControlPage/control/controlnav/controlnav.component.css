@@ -97,3 +97,12 @@
 .tabs::-webkit-scrollbar-thumb {
   background-color: #19aa8d;
 }
+
+.scroll-botton {
+  font-size: 20px;
+  float: left;
+  height: 30px;
+  overflow: hidden;
+  background-color: #3a3333;
+  color: white
+}
