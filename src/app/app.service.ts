@@ -9,10 +9,10 @@ import {Injectable, OnInit} from '@angular/core';
 import {Http, RequestOptionsArgs, Headers} from '@angular/http';
 import {Router} from '@angular/router';
 // import {Cookie} from 'ng2-cookies/ng2-cookies';
-import {NGXLogger} from 'ngx-logger';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser} from './globals';
+import {environment} from '../environments/environment';
 
 declare function unescape(s: string): string;
 
@@ -90,12 +90,43 @@ export class HttpService {
 }
 
 @Injectable()
+export class LogService {
+  constructor() {
+  }
+
+  trace(message: any, ...additional: any[]) {
+    console.log(message, additional.join(' '));
+  }
+
+  debug(message: any, ...additional: any[]) {
+    console.log(message, additional.join(' '));
+  }
+
+  info(message: any, ...additional: any[]) {
+    console.log(message, additional.join(' '));
+  }
+
+  log(message: any, ...additional: any[]) {
+    console.log(message, additional.join(' '));
+  }
+
+  warn(message: any, ...additional: any[]) {
+    console.log(message, additional.join(' '));
+  }
+
+  error(message: any, ...additional: any[]) {
+    console.log(message, additional.join(' '));
+  }
+
+}
+
+@Injectable()
 export class AppService implements OnInit {
   // user:User = user  ;
 
   constructor(private _http: HttpService,
               private _router: Router,
-              private _logger: NGXLogger) {
+              private _logger: LogService) {
     // if (Cookie.get('loglevel')) {
     //   // 0.- Level.OFF
     //   // 1.- Level.ERROR
@@ -115,12 +146,13 @@ export class AppService implements OnInit {
     //   this._logger.level = 0;
     // }
 
-    this.checklogin();
+    if (environment.production) {
+      this.checklogin();
+    }
   }
 
   ngOnInit() {
   }
-
 
   checklogin() {
     this._logger.log('service.ts:AppService,checklogin');
@@ -181,7 +213,6 @@ export class AppService implements OnInit {
       // jQuery('angular2').show();
     }
   }
-
 
   browser() {
     this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json()).subscribe();
@@ -314,3 +345,4 @@ export class AppService implements OnInit {
 //
 //   }
 }
+

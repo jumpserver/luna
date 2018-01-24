@@ -1,7 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
-import {NGXLogger} from 'ngx-logger';
-import {HttpService} from '../app.service';
+import {HttpService, LogService} from '../app.service';
 import {Video, DataStore} from '../globals';
 
 @Component({
@@ -14,7 +13,7 @@ export class ReplayPageComponent implements OnInit {
 
   constructor(private activatedRoute: ActivatedRoute,
               private _http: HttpService,
-              private _logger: NGXLogger) {
+              private _logger: LogService) {
     // this.video = {'type': 'none'};
     DataStore.NavShow = false;
 

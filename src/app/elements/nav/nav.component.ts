@@ -6,9 +6,7 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {NGXLogger} from 'ngx-logger';
-
-import {AppService, HttpService} from '../../app.service';
+import {AppService, HttpService, LogService} from '../../app.service';
 import {CleftbarComponent} from '../../ControlPage/cleftbar/cleftbar.component';
 import {ControlComponent, NavList} from '../../ControlPage/control/control.component';
 import {DataStore} from '../../globals';
@@ -30,7 +28,7 @@ export class ElementNavComponent implements OnInit {
 
   constructor(private _appService: AppService,
               private _http: HttpService,
-              private _logger: NGXLogger) {
+              private _logger: LogService) {
     this._logger.log('nav.ts:NavComponent');
     this.getnav();
   }

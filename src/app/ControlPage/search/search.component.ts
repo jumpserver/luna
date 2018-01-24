@@ -7,8 +7,7 @@
  */
 import {Component, OnChanges, Input, Pipe, PipeTransform} from '@angular/core';
 
-import {AppService, HttpService} from '../../app.service';
-import {NGXLogger} from 'ngx-logger';
+import {AppService, HttpService, LogService} from '../../app.service';
 
 export let Q = '';
 
@@ -24,7 +23,7 @@ export class SearchComponent implements OnChanges {
 
   constructor(private _appService: AppService,
               private _http: HttpService,
-              private _logger: NGXLogger) {
+              private _logger: LogService) {
     this._logger.log('LeftbarComponent.ts:SearchBar');
   }
 

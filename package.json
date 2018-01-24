@@ -4,7 +4,7 @@
   "license": "GPLv3",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --proxy-config proxy.conf.json  --preserve-symlinks --port 4202",
+    "start": "ng serve --proxy-config proxy.conf.json",
     "build": "ng build -prod --base-href=/luna/  --deploy '/luna/'",
     "test": "ng test",
     "lint": "ng lint",
