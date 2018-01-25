@@ -22,6 +22,7 @@ export class ElementIframeComponent implements OnInit {
   }
 
   ngOnInit() {
+    // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
     this._http.get('/guacamole/api/tokens?username=' + User.name + '&password=zheng&asset_id=' +
       this.host.id + '&system_user_id=' + this.userid
     ).map(res => res.json())
@@ -29,6 +30,7 @@ export class ElementIframeComponent implements OnInit {
         data => {
           const title = this.host.hostname + '[' + this.host.ip + ']';
           const base = Base64.encode(title + '\0' + 'c' + '\0' + 'jumpserver');
+          // /guacamole/client will redirect to http://guacamole/#/client
           this.target = document.location.origin +
             '/guacamole/client/' + base + '?token=' + data['authToken'];
         },
