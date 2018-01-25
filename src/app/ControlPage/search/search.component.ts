@@ -39,8 +39,7 @@ export class SearchComponent implements OnChanges {
     if (this.searchrequest) {
       this.searchrequest.unsubscribe();
     }
-    this.searchrequest = this._http.get('/api/search?q=' + q)
-      .map(res => res.json())
+    this.searchrequest = this._http.search(q)
       .subscribe(
         data => {
           this._logger.log(data);

@@ -12,8 +12,7 @@
 import {BrowserModule} from '@angular/platform-browser';
 import {ClassProvider, NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms'; // <-- NgModel lives here
-// import {NGXLogger, LoggerConfig, NgxLoggerLevel as LoggerLevel} from 'ngx-logger';
-import {HttpModule} from '@angular/http';
+import {LoggerModule, NGXLogger, NgxLoggerLevel} from 'ngx-logger';
 
 import {AppRoutingModule} from './app-routing.module';
 
@@ -61,9 +60,9 @@ import {HttpClientModule} from '@angular/common/http';
     BrowserModule,
     FormsModule,
     AppRoutingModule,
-    HttpModule,
     NgProgressModule,
-    HttpClientModule
+    HttpClientModule,
+    LoggerModule.forRoot({serverLoggingUrl: '/api/logs', level: NgxLoggerLevel.DEBUG, serverLogLevel: NgxLoggerLevel.ERROR}),
     // NgxLayerModule
   ],
   declarations: [
@@ -104,7 +103,8 @@ import {HttpClientModule} from '@angular/common/http';
     AppService,
     HttpService,
     LogService,
-    LayerService
+    LayerService,
+    NGXLogger
   ]
 })
 export class AppModule {

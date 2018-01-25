@@ -6,116 +6,126 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Injectable, OnInit} from '@angular/core';
-import {Http, RequestOptionsArgs, Headers} from '@angular/http';
 import {Router} from '@angular/router';
 // import {Cookie} from 'ng2-cookies/ng2-cookies';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser} from './globals';
 import {environment} from '../environments/environment';
+import {HttpClient, HttpHeaders} from '@angular/common/http';
+import {NGXLogger} from 'ngx-logger';
+import {HostGroup} from './ControlPage/cleftbar/cleftbar.component';
 
 declare function unescape(s: string): string;
 
 @Injectable()
 export class HttpService {
-  headers = new Headers();
+  headers = new HttpHeaders();
 
-  constructor(private _http: Http) {
+  constructor(private http: HttpClient) {
   }
 
-  // request(url: string | Request, options?: RequestOptionsArgs) {
-  //   if (options == null) {
-  //     options = {};
-  //   }
-  //   options.headers = this.headers;
-  //   return this._http.request(url, options)
-  // }
-
-  get(url: string, options?: RequestOptionsArgs) {
-    if (options == null) {
-      options = {};
-    }
-    options.headers = this.headers;
-    return this._http.get(url, options);
+  get(url: string, options?: any) {
+    return this.http.get(url, options);
   }
 
-  post(url: string, body: any, options?: RequestOptionsArgs) {
-    if (options == null) {
-      options = {};
-    }
-    options.headers = this.headers;
-    return this._http.post(url, body, options);
+  post(url: string, options?: any) {
+    return this.http.post(url, options);
   }
 
-  put(url: string, body: any, options?: RequestOptionsArgs) {
-    if (options == null) {
-      options = {};
-    }
-    options.headers = this.headers;
-    return this._http.put(url, body, options);
+  put(url: string, options?: any) {
+    return this.http.put(url, options);
   }
 
-  delete(url: string, options?: RequestOptionsArgs) {
-    if (options == null) {
-      options = {};
-    }
-    options.headers = this.headers;
-    return this._http.delete(url, options);
+  delete(url: string, options?: any) {
+    return this.http.delete(url, options);
   }
 
-  patch(url: string, body: any, options?: RequestOptionsArgs) {
-    if (options == null) {
-      options = {};
-    }
-    options.headers = this.headers;
-    return this._http.patch(url, body, options);
+  patch(url: string, options?: any) {
+    return this.http.patch(url, options);
   }
 
-  head(url: string, options?: RequestOptionsArgs) {
-    if (options == null) {
-      options = {};
-    }
-    options.headers = this.headers;
-    return this._http.head(url, options);
+  head(url: string, options?: any) {
+    return this.http.head(url, options);
   }
 
-  options(url: string, options?: RequestOptionsArgs) {
-    if (options == null) {
-      options = {};
-    }
-    options.headers = this.headers;
-    return this._http.options(url, options);
+  options(url: string, options?: any) {
+    return this.http.options(url, options);
+  }
+
+  report_browser() {
+    return this.http.post('/api/browser', JSON.stringify(Browser));
+  }
+
+  check_login(user: any) {
+    return this.http.post('/api/checklogin', user);
+  }
+
+  get_user_profile() {
+    return this.http.get('/api/users/v1/profile/');
+  }
+
+  get_my_asset_groups_assets() {
+    return this.http.get<Array<HostGroup>>('/api/perms/v1/user/my/asset-groups-assets/');
+  }
+
+  get_guacamole_token(username: string, assetID: string, systemUserID: string) {
+    return this.get('/guacamole/api/tokens?username=' + username + '&password=zheng&asset_id=' +
+      assetID + '&system_user_id=' + systemUserID, {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
+  }
+
+  search(q: string) {
+    return this.http.get('/api/search?q=' + q);
+  }
+
+  get_replay(token: string) {
+    return this.http.get('/api/terminal/v1/sessions/' + token + '/replay');
   }
 
 }
 
 @Injectable()
 export class LogService {
-  constructor() {
-  }
+  level: number;
 
-  trace(message: any, ...additional: any[]) {
-    console.log(message, additional.join(' '));
-  }
-
-  debug(message: any, ...additional: any[]) {
-    console.log(message, additional.join(' '));
-  }
-
-  info(message: any, ...additional: any[]) {
-    console.log(message, additional.join(' '));
+  constructor(private _logger: NGXLogger) {
+    // 0.- Level.OFF
+    // 1.- Level.ERROR
+    // 2.- Level.WARN
+    // 3.- Level.INFO
+    // 4.- Level.DEBUG
+    // 5.- Level.LOG
+    this.level = 4;
   }
 
   log(message: any, ...additional: any[]) {
-    console.log(message, additional.join(' '));
+    if (this.level > 4) {
+      this._logger.log(message, ...additional);
+    }
+  }
+
+  debug(message: any, ...additional: any[]) {
+    if (this.level > 3) {
+      this._logger.debug(message, ...additional);
+    }
+  }
+
+  info(message: any, ...additional: any[]) {
+    if (this.level > 2) {
+      this._logger.info(message, ...additional);
+    }
   }
 
   warn(message: any, ...additional: any[]) {
-    console.log(message, additional.join(' '));
+    if (this.level > 1) {
+      this._logger.warn(message, ...additional);
+    }
   }
 
   error(message: any, ...additional: any[]) {
-    console.log(message, additional.join(' '));
+    if (this.level > 0) {
+      this._logger.error(message, ...additional);
+    }
   }
 
 }
@@ -149,6 +159,8 @@ export class AppService implements OnInit {
     if (environment.production) {
       this.checklogin();
     }
+    // this._logger
+    //   .debug(this._http.get_user_profile());
   }
 
   ngOnInit() {
@@ -168,23 +180,22 @@ export class AppService implements OnInit {
           // jQuery('angular2').show();
         } else {
           // this.browser();
-          this._http.get('/api/users/v1/profile/')
-            .map(res => res.json())
+          this._http.get_user_profile()
             .subscribe(
               data => {
-                User.id = data.id;
-                User.name = data.name;
-                User.username = data.username;
-                User.email = data.email;
-                User.is_active = data.is_active;
-                User.is_superuser = data.is_superuser;
-                User.role = data.role;
-                // User.groups = data.groups;
-                User.wechat = data.wechat;
-                User.comment = data.comment;
-                User.date_expired = data.date_expired;
-                User.phone = data.phone.toString();
-                User.logined = data.logined;
+                User.id = data['id'];
+                User.name = data['name'];
+                User.username = data['username'];
+                User.email = data['email'];
+                User.is_active = data['is_active'];
+                User.is_superuser = data['is_superuser'];
+                User.role = data['role'];
+                // User.groups = data['groups'];
+                User.wechat = data['wechat'];
+                User.comment = data['comment'];
+                User.date_expired = data['date_expired'];
+                User.phone = data['phone'].toString();
+                User.logined = data['logined'];
                 this._logger.debug(User);
               },
               err => {
@@ -215,7 +226,7 @@ export class AppService implements OnInit {
   }
 
   browser() {
-    this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json()).subscribe();
+    this._http.report_browser();
   }
 
   getQueryString(name) {
