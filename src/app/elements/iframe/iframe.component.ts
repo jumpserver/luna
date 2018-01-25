@@ -1,6 +1,9 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {DomSanitizer} from '@angular/platform-browser';
 import {NavList} from '../../ControlPage/control/control.component';
+import {User} from '../../globals';
+import {HttpService, LogService} from '../../app.service';
+import * as Base64 from 'base64-js/base64js.min';
 
 @Component({
   selector: 'app-element-iframe',
@@ -13,13 +16,28 @@ export class ElementIframeComponent implements OnInit {
   @Input() index: number;
   target: string;
 
-  constructor(private sanitizer: DomSanitizer) {
+  constructor(private sanitizer: DomSanitizer,
+              private _http: HttpService,
+              private _logger: LogService) {
   }
 
   ngOnInit() {
-    this.target = document.location.origin +
-      '/guacamole/api/tokens?username=liu&password=zheng&asset_id=' +
-      this.host.id + '&system_user_id=' + this.userid;
+    // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
+    this._http.get('/guacamole/api/tokens?username=' + User.name + '&password=zheng&asset_id=' +
+      this.host.id + '&system_user_id=' + this.userid
+    ).map(res => res.json())
+      .subscribe(
+        data => {
+          const title = this.host.hostname + '[' + this.host.ip + ']';
+          const base = Base64.encode(title + '\0' + 'c' + '\0' + 'jumpserver');
+          // /guacamole/client will redirect to http://guacamole/#/client
+          this.target = document.location.origin +
+            '/guacamole/client/' + base + '?token=' + data['authToken'];
+        },
+        error2 => {
+          this._logger.error(error2);
+        }
+      );
   }
 
   trust(url) {
