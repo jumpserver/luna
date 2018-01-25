@@ -1,6 +1,7 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {DomSanitizer} from '@angular/platform-browser';
 import {NavList} from '../../ControlPage/control/control.component';
+import {User} from '../../globals';
 
 @Component({
   selector: 'app-element-iframe',
@@ -18,7 +19,7 @@ export class ElementIframeComponent implements OnInit {
 
   ngOnInit() {
     this.target = document.location.origin +
-      '/guacamole/api/tokens?username=liu&password=zheng&asset_id=' +
+      '/guacamole/api/tokens?username=' + User.name + '&password=zheng&asset_id=' +
       this.host.id + '&system_user_id=' + this.userid;
   }
 
