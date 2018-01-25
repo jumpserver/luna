@@ -44,7 +44,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       }
     } else {
       term.col = Math.floor(jQuery(this.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
-      term.row = Math.floor(jQuery(this.el.nativeElement).height() / jQuery('#liuzheng').height()) - 5;
+      term.row = Math.floor(jQuery(this.el.nativeElement).height() / jQuery('#liuzheng').height()) - 3;
       term.term = this.term;
     }
     this.term.open(this.el.nativeElement, true);
@@ -70,7 +70,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     if (this.host) {
       NavList.List[this.index].Term = this.term;
 
-      this.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
+      // this.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
 
       TermWS.emit('host', {'uuid': this.host.id, 'userid': this.userid, 'secret': this.secret});
 
@@ -86,6 +86,12 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
       TermWS.on('disconnect', function () {
         that.TerminalDisconnect();
+      });
+      TermWS.on('logout', function (data) {
+        if (data['room'] === NavList.List[that.index].room) {
+          NavList.List[this.index].connected = false;
+          this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+        }
       });
       TermWS.on('room', function (data) {
         if (data['secret'] === that.secret) {

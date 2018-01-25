@@ -8,11 +8,12 @@
 import {Injectable, OnInit} from '@angular/core';
 import {Http, RequestOptionsArgs, Headers} from '@angular/http';
 import {Router} from '@angular/router';
-import {Cookie} from 'ng2-cookies/ng2-cookies';
-import {Logger} from 'angular2-logger/core';
+// import {Cookie} from 'ng2-cookies/ng2-cookies';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser} from './globals';
+import {environment} from '../environments/environment';
+
 declare function unescape(s: string): string;
 
 @Injectable()
@@ -89,37 +90,69 @@ export class HttpService {
 }
 
 @Injectable()
+export class LogService {
+  constructor() {
+  }
+
+  trace(message: any, ...additional: any[]) {
+    console.log(message, additional.join(' '));
+  }
+
+  debug(message: any, ...additional: any[]) {
+    console.log(message, additional.join(' '));
+  }
+
+  info(message: any, ...additional: any[]) {
+    console.log(message, additional.join(' '));
+  }
+
+  log(message: any, ...additional: any[]) {
+    console.log(message, additional.join(' '));
+  }
+
+  warn(message: any, ...additional: any[]) {
+    console.log(message, additional.join(' '));
+  }
+
+  error(message: any, ...additional: any[]) {
+    console.log(message, additional.join(' '));
+  }
+
+}
+
+@Injectable()
 export class AppService implements OnInit {
   // user:User = user  ;
 
   constructor(private _http: HttpService,
               private _router: Router,
-              private _logger: Logger) {
-    if (Cookie.get('loglevel')) {
-      // 0.- Level.OFF
-      // 1.- Level.ERROR
-      // 2.- Level.WARN
-      // 3.- Level.INFO
-      // 4.- Level.DEBUG
-      // 5.- Level.LOG
-      this._logger.level = parseInt(Cookie.get('loglevel'), 10);
-      // this._logger.debug('Your debug stuff');
-      // this._logger.info('An info');
-      // this._logger.warn('Take care ');
-      // this._logger.error('Too late !');
-      // this._logger.log('log !');
-    } else {
-      Cookie.set('loglevel', '0', 99, '/', document.domain);
-      // this._logger.level = parseInt(Cookie.getCookie('loglevel'));
-      this._logger.level = 0;
-    }
+              private _logger: LogService) {
+    // if (Cookie.get('loglevel')) {
+    //   // 0.- Level.OFF
+    //   // 1.- Level.ERROR
+    //   // 2.- Level.WARN
+    //   // 3.- Level.INFO
+    //   // 4.- Level.DEBUG
+    //   // 5.- Level.LOG
+    //   this._logger.level = parseInt(Cookie.get('loglevel'), 10);
+    //   // this._logger.debug('Your debug stuff');
+    //   // this._logger.info('An info');
+    //   // this._logger.warn('Take care ');
+    //   // this._logger.error('Too late !');
+    //   // this._logger.log('log !');
+    // } else {
+    //   Cookie.set('loglevel', '0', 99, '/', document.domain);
+    //   // this._logger.level = parseInt(Cookie.getCookie('loglevel'));
+    //   this._logger.level = 0;
+    // }
 
-    // this.checklogin();
+    if (environment.production) {
+      this.checklogin();
+    }
   }
 
   ngOnInit() {
   }
-
 
   checklogin() {
     this._logger.log('service.ts:AppService,checklogin');
@@ -135,32 +168,43 @@ export class AppService implements OnInit {
           // jQuery('angular2').show();
         } else {
           this.browser();
-          this._http.get('/api/checklogin')
+          this._http.get('/api/users/v1/profile/')
             .map(res => res.json())
             .subscribe(
               data => {
+                User.id = data.id;
                 User.name = data.name;
                 User.username = data.username;
+                User.email = data.email;
+                User.is_active = data.is_active;
+                User.is_superuser = data.is_superuser;
+                User.role = data.role;
+                // User.groups = data.groups;
+                User.wechat = data.wechat;
+                User.comment = data.comment;
+                User.date_expired = data.date_expired;
+                User.phone = data.phone.toString();
                 User.logined = data.logined;
                 this._logger.debug(User);
               },
               err => {
-                this._logger.error(err);
+                // this._logger.error(err);
                 User.logined = false;
-                this._router.navigate(['login']);
+                window.location.href = document.location.origin + '/users/login?next=' + document.location.pathname;
+                // this._router.navigate(['login']);
               },
-              () => {
-                if (User.logined) {
-                  if (document.location.pathname === '/login') {
-                    this._router.navigate(['']);
-                  } else {
-                    this._router.navigate([document.location.pathname]);
-                  }
-                } else {
-                  this._router.navigate(['login']);
-                }
-                // jQuery('angular2').show();
-              }
+              // () => {
+              //   if (User.logined) {
+              //     if (document.location.pathname === '/login') {
+              //       this._router.navigate(['']);
+              //     } else {
+              //       this._router.navigate([document.location.pathname]);
+              //     }
+              //   } else {
+              //     this._router.navigate(['login']);
+              //   }
+              // jQuery('angular2').show();
+              // }
             );
         }
       }
@@ -169,7 +213,6 @@ export class AppService implements OnInit {
       // jQuery('angular2').show();
     }
   }
-
 
   browser() {
     this._http.post('/api/browser', JSON.stringify(Browser)).map(res => res.json()).subscribe();
@@ -302,3 +345,4 @@ export class AppService implements OnInit {
 //
 //   }
 }
+

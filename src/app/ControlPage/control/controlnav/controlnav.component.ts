@@ -11,7 +11,6 @@ import {Component, OnInit} from '@angular/core';
 import {ControlComponent, NavList} from '../control.component';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
-
 @Component({
   selector: 'app-controlnav',
   templateUrl: './controlnav.component.html',
@@ -64,5 +63,12 @@ export class ControlnavComponent implements OnInit {
     ControlnavComponent.checkActive(index);
   }
 
+  scrollleft() {
+    jQuery('.tabs').scrollLeft(jQuery('.tabs').scrollLeft() - 100);
+  }
+
+  scrollright() {
+    jQuery('.tabs').scrollLeft(jQuery('.tabs').scrollLeft() + 100);
+  }
 
 }

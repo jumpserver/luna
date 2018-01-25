@@ -8,8 +8,7 @@
  */
 
 import {Component, OnInit} from '@angular/core';
-import {Logger} from 'angular2-logger/core';
-import {AppService, HttpService} from '../../app.service';
+import {AppService, HttpService, LogService} from '../../app.service';
 import {SearchComponent} from '../search/search.component';
 import {DataStore} from '../../globals';
 import {version} from '../../../environments/environment';
@@ -83,7 +82,7 @@ export class CleftbarComponent implements OnInit {
   constructor(private _appService: AppService,
               private _http: HttpService,
               private _search: SearchComponent,
-              private _logger: Logger,
+              private _logger: LogService,
               private _menu: ElementServerMenuComponent) {
     this._logger.log('nav.ts:NavComponent');
     // this._appService.getnav()

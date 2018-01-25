@@ -6,19 +6,16 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {Logger} from 'angular2-logger/core';
-import {AppService, HttpService} from '../../app.service';
+import {AppService, HttpService, LogService} from '../../app.service';
 import {NgForm} from '@angular/forms';
 import {Router} from '@angular/router';
 import {DataStore, User} from '../../globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
-
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css'],
-  providers: [AppService]
 })
 export class LoginComponent implements OnInit {
   DataStore = DataStore;
@@ -28,7 +25,7 @@ export class LoginComponent implements OnInit {
   constructor(private _appService: AppService,
               private _http: HttpService,
               private _router: Router,
-              private _logger: Logger) {
+              private _logger: LogService) {
     this._logger.log('login.ts:LoginComponent');
     DataStore.NavShow = false;
   }
