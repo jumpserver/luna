@@ -167,7 +167,7 @@ export class AppService implements OnInit {
           }
           // jQuery('angular2').show();
         } else {
-          this.browser();
+          // this.browser();
           this._http.get('/api/users/v1/profile/')
             .map(res => res.json())
             .subscribe(
