@@ -87,6 +87,12 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       TermWS.on('disconnect', function () {
         that.TerminalDisconnect();
       });
+      TermWS.on('logout', function (data) {
+        if (data['room'] === NavList.List[that.index].room) {
+          NavList.List[this.index].connected = false;
+          this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+        }
+      });
       TermWS.on('room', function (data) {
         if (data['secret'] === that.secret) {
           NavList.List[that.index].room = data['room'];
