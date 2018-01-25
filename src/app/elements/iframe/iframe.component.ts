@@ -2,9 +2,9 @@ import {Component, Input, OnInit} from '@angular/core';
 import {DomSanitizer} from '@angular/platform-browser';
 import {NavList} from '../../ControlPage/control/control.component';
 import {User} from '../../globals';
-import {HttpService, LogService} from '../../app.service';
+import {LogService} from '../../app.service';
 import * as Base64 from 'base64-js/base64js.min';
-import {Http, RequestOptions} from '@angular/http';
+import {HttpClient, HttpHeaders} from '@angular/common/http';
 
 @Component({
   selector: 'app-element-iframe',
@@ -18,16 +18,16 @@ export class ElementIframeComponent implements OnInit {
   target: string;
 
   constructor(private sanitizer: DomSanitizer,
-              private _http: Http,
+              private _http: HttpClient,
               private _logger: LogService) {
   }
 
   ngOnInit() {
     // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
-    let options = new RequestOptions();
-    options.headers.set('Content-Type', 'application/x-www-form-urlencoded');
+    const header = new HttpHeaders();
+    header.append('Content-Type', 'application/x-www-form-urlencoded');
     this._http.get('/guacamole/api/tokens?username=' + User.name + '&password=zheng&asset_id=' +
-      this.host.id + '&system_user_id=' + this.userid, options
+      this.host.id + '&system_user_id=' + this.userid, header
     ).map(res => res.json())
       .subscribe(
         data => {
