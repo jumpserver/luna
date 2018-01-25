@@ -18,7 +18,7 @@ export class ElementIframeComponent implements OnInit {
 
   ngOnInit() {
     this.target = document.location.origin +
-      '/api/tokens?username=liu&password=zheng&asset_id=' +
+      '/guacamole/api/tokens?username=liu&password=zheng&asset_id=' +
       this.host.id + '&system_user_id=' + this.userid;
   }
 
