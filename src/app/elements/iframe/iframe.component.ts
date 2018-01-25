@@ -23,6 +23,7 @@ export class ElementIframeComponent implements OnInit {
 
   ngOnInit() {
     // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
+    this._http.headers.append('Content-Type', 'application/x-www-form-urlencoded');
     this._http.get('/guacamole/api/tokens?username=' + User.name + '&password=zheng&asset_id=' +
       this.host.id + '&system_user_id=' + this.userid
     ).map(res => res.json())
