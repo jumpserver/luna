@@ -27,8 +27,8 @@ export class ElementIframeComponent implements OnInit {
     const header = new HttpHeaders();
     header.append('Content-Type', 'application/x-www-form-urlencoded');
     this._http.get('/guacamole/api/tokens?username=' + User.name + '&password=zheng&asset_id=' +
-      this.host.id + '&system_user_id=' + this.userid, header
-    ).map(res => res.json())
+      this.host.id + '&system_user_id=' + this.userid, {headers: header}
+    )
       .subscribe(
         data => {
           const title = this.host.hostname + '[' + this.host.ip + ']';
