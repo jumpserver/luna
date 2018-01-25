@@ -52,6 +52,7 @@ import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {NgProgressModule} from 'ngx-progressbar';
 import {TestPageComponent} from './test-page/test-page.component';
+import {HttpClientModule} from '@angular/common/http';
 
 // import {NgxLayerModule} from 'ngx-layer';
 
@@ -62,6 +63,7 @@ import {TestPageComponent} from './test-page/test-page.component';
     AppRoutingModule,
     HttpModule,
     NgProgressModule,
+    HttpClientModule
     // NgxLayerModule
   ],
   declarations: [
