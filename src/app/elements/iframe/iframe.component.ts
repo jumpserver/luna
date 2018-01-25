@@ -17,7 +17,9 @@ export class ElementIframeComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.target = 'http://localhost:8080/#/client/MwBjAHBvc3RncmVzcWw=';
+    this.target = document.location.origin +
+      '/api/tokens?username=liu&password=zheng&asset_id=' +
+      this.host.id + '&system_user_id=' + this.userid;
   }
 
   trust(url) {
