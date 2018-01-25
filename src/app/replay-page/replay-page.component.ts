@@ -24,8 +24,7 @@ export class ReplayPageComponent implements OnInit {
     this.activatedRoute.params.subscribe((params: Params) => {
       token = params['token'];
     });
-    this._http.get('/api/terminal/v1/sessions/' + token + '/replay')
-      .map(res => res.json())
+    this._http.get_replay(token)
       .subscribe(
         data => {
           Video.type = 'json';

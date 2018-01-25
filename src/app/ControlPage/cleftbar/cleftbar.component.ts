@@ -17,9 +17,10 @@ import * as layer from 'layui-layer/src/layer.js';
 import * as UUID from 'uuid-js/lib/uuid.js';
 import {ElementServerMenuComponent} from '../../elements/server-menu/server-menu.component';
 import {NavList, View} from '../control/control.component';
+import {logger} from 'codelyzer/util/logger';
 
 
-export class HostGroup {
+export interface HostGroup {
   name: string;
   id: string;
   children: Array<Host>;
@@ -89,14 +90,12 @@ export class CleftbarComponent implements OnInit {
   }
 
   ngOnInit() {
-    this._http.get('/api/perms/v1/user/my/asset-groups-assets/')
-      .map(res => res.json())
+    this._http.get_my_asset_groups_assets()
       .subscribe(response => {
         this.HostGroups = response;
         this.autologin();
       });
   }
-
 
   autologin() {
     const id = this._appService.getQueryString('id');
@@ -177,21 +176,6 @@ export class CleftbarComponent implements OnInit {
       NavList.List.push(new View());
       NavList.Active = id;
     }
-    // if (host.platform) {
-    //   if (host.platform.toLowerCase() === 'linux') {
-    //     jQuery('app-ssh').show();
-    //     jQuery('app-rdp').hide();
-    //     this._term.TerminalConnect(host, user.id);
-    //   } else if (host.platform.toLowerCase() === 'windows') {
-    //     jQuery('app-ssh').hide();
-    //     jQuery('app-rdp').show();
-    //     this._rdp.Connect(host, user.id);
-    //   } else {
-    //     jQuery('app-ssh').show();
-    //     jQuery('app-rdp').hide();
-    //     this._term.TerminalConnect(host, user.id);
-    //   }
-    // }
   }
 
   checkPriority(sysUsers) {

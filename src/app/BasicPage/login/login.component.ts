@@ -44,13 +44,13 @@ export class LoginComponent implements OnInit {
     DataStore.error['login'] = '';
     this._logger.log(User);
     if (User.username.length > 0 && User.password.length > 6 && User.password.length < 100) {
-      this._http.post('/api/checklogin', JSON.stringify(User)).map(res => res.json())
+      this._http.check_login(JSON.stringify(User))
         .subscribe(
           data => {
-            User.logined = data.logined;
-            User.name = data.name;
-            User.username = data.username;
-            User.logined = data.logined;
+            User.logined = data['logined'];
+            User.name = data['name'];
+            User.username = data['username'];
+            User.logined = data['logined'];
           },
           err => {
             this._logger.error(err);
