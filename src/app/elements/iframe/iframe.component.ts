@@ -1,6 +1,7 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {DomSanitizer} from '@angular/platform-browser';
 import {NavList} from '../../ControlPage/control/control.component';
+
 import {User} from '../../globals';
 import {HttpService, LogService} from '../../app.service';
 
