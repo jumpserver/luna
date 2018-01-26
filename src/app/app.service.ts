@@ -12,7 +12,7 @@ import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser} from './globals';
 import {environment} from '../environments/environment';
-import {HttpClient, HttpHeaders} from '@angular/common/http';
+import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
 import {HostGroup} from './ControlPage/cleftbar/cleftbar.component';
 import * as UUID from 'uuid-js/lib/uuid.js';
@@ -71,9 +71,12 @@ export class HttpService {
   }
 
   get_guacamole_token(username: string, assetID: string, systemUserID: string) {
-    return this.http.post('/guacamole/api/tokens', {
-      username: username, password: 'zheng', asset_id: assetID, system_user_id: systemUserID
-    }, {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
+    const body = new HttpParams()
+      .set('username', username)
+      .set('password', 'jumpserver')
+      .set('asset_id', assetID)
+      .set('system_user_id', systemUserID);
+    return this.http.post('/guacamole/api/tokens', body.toString(), {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
   }
 
   search(q: string) {
