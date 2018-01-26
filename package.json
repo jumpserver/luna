@@ -61,7 +61,6 @@
     "socket.io": "^2.0.3",
     "socket.io-client": "^2.0.4",
     "ssh-keygen": "^0.4.1",
-    "term.js": "0.0.7",
     "tether": "^1.4.0",
     "uuid-js": "^0.7.5",
     "xterm": "^2.9.2",

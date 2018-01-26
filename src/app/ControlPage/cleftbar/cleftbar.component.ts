@@ -13,11 +13,9 @@ import {SearchComponent} from '../search/search.component';
 import {DataStore} from '../../globals';
 import {version} from '../../../environments/environment';
 import * as jQuery from 'jquery/dist/jquery.min.js';
-import * as layer from 'layui-layer/src/layer.js';
-import * as UUID from 'uuid-js/lib/uuid.js';
 import {ElementServerMenuComponent} from '../../elements/server-menu/server-menu.component';
 import {NavList, View} from '../control/control.component';
-import {logger} from 'codelyzer/util/logger';
+import {LayerService} from '../../elements/layer/layer.service';
 
 
 export interface HostGroup {
@@ -84,7 +82,8 @@ export class CleftbarComponent implements OnInit {
               private _http: HttpService,
               private _search: SearchComponent,
               private _logger: LogService,
-              private _menu: ElementServerMenuComponent) {
+              private _menu: ElementServerMenuComponent,
+              private _layer: LayerService) {
     this._logger.log('nav.ts:NavComponent');
     // this._appService.getnav()
   }
@@ -127,7 +126,7 @@ export class CleftbarComponent implements OnInit {
         for (const u of host.system_users_granted) {
           options += '<option value="' + u.id + '">' + u.username + '</option>';
         }
-        layer.open({
+        this._layer.open({
           title: 'Please Choose a User',
           scrollbar: false,
           moveOut: true,
@@ -143,7 +142,7 @@ export class CleftbarComponent implements OnInit {
               }
             }
             that.login(host, user);
-            layer.close(index);
+            that._layer.close(index);
           },
           btn2: function (index, layero) {
           },

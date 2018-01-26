@@ -1,5 +1,5 @@
 'use strict';
-import * as terminal from 'term.js/src/term.js';
+import * as terminal from 'xterm/dist/xterm';
 import * as io from 'socket.io-client';
 
 export function Terminal(xargs: any) {

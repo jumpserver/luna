@@ -15,6 +15,7 @@ import {environment} from '../environments/environment';
 import {HttpClient, HttpHeaders} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
 import {HostGroup} from './ControlPage/cleftbar/cleftbar.component';
+import * as UUID from 'uuid-js/lib/uuid.js';
 
 declare function unescape(s: string): string;
 
@@ -70,8 +71,10 @@ export class HttpService {
   }
 
   get_guacamole_token(username: string, assetID: string, systemUserID: string) {
-    return this.get('/guacamole/api/tokens?username=' + username + '&password=zheng&asset_id=' +
-      assetID + '&system_user_id=' + systemUserID, {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
+    return this.http.post('/guacamole/api/tokens', {
+      username: username, password: 'zheng', asset_id:
+      assetID, system_user_id: systemUserID
+    }, {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
   }
 
   search(q: string) {
@@ -357,3 +360,13 @@ export class AppService implements OnInit {
 //   }
 }
 
+@Injectable()
+export class UUIDService {
+  constructor() {
+
+  }
+
+  gen() {
+    return UUID.create()['hex'];
+  }
+}
