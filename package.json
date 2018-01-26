@@ -23,7 +23,6 @@
     "@angular/platform-browser-dynamic": "5.2.0",
     "@angular/router": "5.2.0",
     "animate.css": "^3.5.2",
-    "base64-js": "^1.2.1",
     "body-parser": "^1.18.2",
     "bootstrap": "^4.0.0-beta.3",
     "clipboard": "^1.7.1",
