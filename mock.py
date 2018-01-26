@@ -177,6 +177,27 @@ def asset_groups_assets():
   return jsonify(assets)
 
 
+@app.route('/api/users/v1/profile/')
+def user_profile():
+  assets = {
+    "id": "4fc67feb-9efa-4e7b-94b0-b73356a87b2e",
+    "username": "admin",
+    "name": "Administrator",
+    "email": "admin@mycomany.com",
+    "is_active": True,
+    "is_superuser": True,
+    "role": "Administrator",
+    "groups": [
+      "Default"
+    ],
+    "wechat": "",
+    "phone": 13888888888,
+    "comment": "",
+    "date_expired": "2087-12-16 07:41:35"
+  }
+  return jsonify(assets)
+
+
 @app.route('/api/terminal/v1/sessions/test/replay/')
 def replay():
   return redirect("http://jps.ilz.me/media/2017-12-24/ec87a486-0344-4f12-b27a-620321944f7f.gz")

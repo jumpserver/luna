@@ -1,20 +1,20 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ElementGuacamoleComponent } from './guacamole.component';
+import { BlankPageComponent } from './blank-page.component';
 
-describe('ElementGuacamoleComponent', () => {
-  let component: ElementGuacamoleComponent;
-  let fixture: ComponentFixture<ElementGuacamoleComponent>;
+describe('BlankPageComponent', () => {
+  let component: BlankPageComponent;
+  let fixture: ComponentFixture<BlankPageComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ ElementGuacamoleComponent ]
+      declarations: [ BlankPageComponent ]
     })
     .compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(ElementGuacamoleComponent);
+    fixture = TestBed.createComponent(BlankPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

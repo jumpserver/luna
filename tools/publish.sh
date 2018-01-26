@@ -7,12 +7,12 @@
 set -ex
 
 
-git checkout publish && \
+git checkout github_dev && \
   git pull github dev --rebase && \
-  git merge master -m "publish" && \
+  git merge dev -m "publish" && \
   git reset --soft HEAD^ && \
   git commit -m "publish" && \
-  git push github publish:dev && \
+  git push github github_dev:dev && \
   echo "success"
-git checkout master
-git pull github dev --commit && git push origin master
+git checkout dev
+git pull github dev --commit && git push origin dev

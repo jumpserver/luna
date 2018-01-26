@@ -6,8 +6,7 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {AppService} from '../../app.service';
-import {Logger} from 'angular2-logger/core';
+import {AppService, LogService} from '../../app.service';
 import {DataStore, User} from '../../globals';
 import {version} from '../../../environments/environment';
 
@@ -22,7 +21,7 @@ export class ElementFooterComponent implements OnInit {
   version = version;
 
   constructor(private _appService: AppService,
-              private _logger: Logger) {
+              private _logger: LogService) {
     this._logger.log('nav.ts:NavComponent');
     // this._appService.getnav()
   }

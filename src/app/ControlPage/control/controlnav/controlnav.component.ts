@@ -11,7 +11,6 @@ import {Component, OnInit} from '@angular/core';
 import {ControlComponent, NavList} from '../control.component';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
-
 @Component({
   selector: 'app-controlnav',
   templateUrl: './controlnav.component.html',
@@ -42,12 +41,8 @@ export class ControlnavComponent implements OnInit {
     NavList.List[index].hide = false;
     NavList.Active = index;
     if (NavList.List[index].type === 'ssh') {
-      jQuery('app-ssh').show();
-      jQuery('app-rdp').hide();
       NavList.List[index].Term.focus();
     } else if (NavList.List[index].type === 'rdp') {
-      jQuery('app-ssh').hide();
-      jQuery('app-rdp').show();
     }
   }
 
@@ -68,5 +63,12 @@ export class ControlnavComponent implements OnInit {
     ControlnavComponent.checkActive(index);
   }
 
+  scrollleft() {
+    jQuery('.tabs').scrollLeft(jQuery('.tabs').scrollLeft() - 100);
+  }
+
+  scrollright() {
+    jQuery('.tabs').scrollLeft(jQuery('.tabs').scrollLeft() + 100);
+  }
 
 }
