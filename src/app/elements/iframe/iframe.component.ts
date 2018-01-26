@@ -25,8 +25,7 @@ export class ElementIframeComponent implements OnInit {
     // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
     this._http.get_guacamole_token(User.name, this.host.id, this.userid).subscribe(
       data => {
-        const title = this.host.hostname + '[' + this.host.ip + ']';
-        const base = Base64.encode(title + '\0' + 'c' + '\0' + 'jumpserver');
+        const base = Base64.encode(this.host.hostname + '\0' + 'c' + '\0' + 'jumpserver');
         // /guacamole/client will redirect to http://guacamole/#/client
         this.target = document.location.origin +
           '/guacamole/client/' + base + '?token=' + data['authToken'];
