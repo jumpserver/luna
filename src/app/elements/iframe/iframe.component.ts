@@ -26,8 +26,10 @@ export class ElementIframeComponent implements OnInit {
       data => {
         const base = window.btoa(this.host.hostname + '\0' + 'c' + '\0' + 'jumpserver');
         // /guacamole/client will redirect to http://guacamole/#/client
+        this._logger.debug(base);
         this.target = document.location.origin +
           '/guacamole/client/' + base + '?token=' + data['authToken'];
+        this._logger.debug(this.target);
       },
       error2 => {
         this._logger.error(error2);
