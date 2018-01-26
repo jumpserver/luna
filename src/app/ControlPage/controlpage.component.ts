@@ -13,8 +13,6 @@ import {DataStore, User} from '../globals';
   selector: 'app-controllpage',
   templateUrl: './controlpage.component.html',
   styleUrls: ['./controlpage.component.css'],
-  providers: [AppService]
-
 })
 export class ControlPageComponent implements OnInit {
   DataStore = DataStore;

@@ -1,25 +1,25 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { RdpComponent } from './rdp.component';
+import { TestPageComponent } from './test-page.component';
 
-describe('RdpComponent', () => {
-  let component: RdpComponent;
-  let fixture: ComponentFixture<RdpComponent>;
+describe('TestPageComponent', () => {
+  let component: TestPageComponent;
+  let fixture: ComponentFixture<TestPageComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ RdpComponent ]
+      declarations: [ TestPageComponent ]
     })
     .compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(RdpComponent);
+    fixture = TestBed.createComponent(TestPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
 
-  it('should be created', () => {
+  it('should create', () => {
     expect(component).toBeTruthy();
   });
 });

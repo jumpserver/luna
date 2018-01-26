@@ -6,13 +6,9 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {Logger} from 'angular2-logger/core';
-
-import {AppService, HttpService} from '../../app.service';
+import {AppService, HttpService, LogService} from '../../app.service';
 import {CleftbarComponent} from '../../ControlPage/cleftbar/cleftbar.component';
-import {SshComponent} from '../../ControlPage/control/ssh/ssh.component';
-import {RdpComponent} from '../../ControlPage/control/rdp/rdp.component';
-import {NavList} from '../../ControlPage/control/control.component';
+import {ControlComponent, NavList} from '../../ControlPage/control/control.component';
 import {DataStore} from '../../globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 // import * as layer from 'layui-layer/src/layer.js';
@@ -32,7 +28,7 @@ export class ElementNavComponent implements OnInit {
 
   constructor(private _appService: AppService,
               private _http: HttpService,
-              private _logger: Logger) {
+              private _logger: LogService) {
     this._logger.log('nav.ts:NavComponent');
     this.getnav();
   }
@@ -63,11 +59,11 @@ export class ElementNavComponent implements OnInit {
       case'Disconnect': {
         switch (NavList.List[NavList.Active].type) {
           case 'ssh': {
-            SshComponent.TerminalDisconnect(NavList.List[NavList.Active]);
+            ControlComponent.TerminalDisconnect(NavList.Active);
             break;
           }
           case 'rdp': {
-            RdpComponent.Disconnect(NavList.List[NavList.Active]);
+            ControlComponent.RdpDisconnect(NavList.Active);
             break;
           }
           default: {
@@ -78,8 +74,7 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case'DisconnectAll': {
-        SshComponent.TerminalDisconnectAll();
-        RdpComponent.DisconnectAll();
+        ControlComponent.DisconnectAll();
         break;
       }
       case 'Website': {

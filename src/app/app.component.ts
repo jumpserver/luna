@@ -13,7 +13,6 @@ import {DataStore} from './globals';
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
-  providers: [AppService, HttpService],
   // directives: [LeftbarComponent, TermComponent]
 })
 
