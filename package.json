@@ -5,26 +5,13 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.json",
-    "build": "ng build --environment prod --build-optimizer=false --base-href=/luna/  --deploy '/luna/'",
+    "build": "ng build --environment prod --base-href=/luna/  --deploy '/luna/'",
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e"
   },
   "private": true,
   "dependencies": {
-<<<<<<< HEAD
-    "@angular/animations": "^4.2.4",
-    "@angular/cdk": "^2.0.0-beta.12",
-    "@angular/common": "^4.2.4",
-    "@angular/compiler": "^4.2.4",
-    "@angular/core": "^4.2.4",
-    "@angular/forms": "^4.2.4",
-    "@angular/http": "^4.2.4",
-    "@angular/platform-browser": "^4.2.4",
-    "@angular/platform-browser-dynamic": "^4.2.4",
-    "@angular/router": "^4.2.4",
-    "angular2-logger": "^0.6.0",
-=======
     "@angular/animations": "5.2.0",
     "@angular/cdk": "^5.1.0",
     "@angular/common": "5.2.0",
@@ -35,7 +22,6 @@
     "@angular/platform-browser": "5.2.0",
     "@angular/platform-browser-dynamic": "5.2.0",
     "@angular/router": "5.2.0",
->>>>>>> github_dev
     "animate.css": "^3.5.2",
     "body-parser": "^1.18.2",
     "bootstrap": "^4.0.0-beta.3",
@@ -59,14 +45,10 @@
     "ng2-charts": "^1.5.0",
     "ng2-cookies": "^1.0.12",
     "ngx-bootstrap": "^1.6.6",
-<<<<<<< HEAD
-    "ngx-contextmenu": "^4.1.1",
-=======
     "ngx-layer": "0.0.4",
     "ngx-logger": "^1.1.2",
     "ngx-perfect-scrollbar": "5.2.0",
     "ngx-progressbar": "^2.1.1",
->>>>>>> github_dev
     "node": "^9.3.0",
     "npm": "^5.6.0",
     "npm-font-open-sans": "^1.1.0",
