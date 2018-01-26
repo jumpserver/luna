@@ -4,7 +4,7 @@ import {term, Terminal, TermWS} from '../../globals';
 import {Cookie} from 'ng2-cookies/ng2-cookies';
 import {NavList} from '../../ControlPage/control/control.component';
 import * as jQuery from 'jquery/dist/jquery.min.js';
-import * as UUID from 'uuid-js/lib/uuid.js';
+import {UUIDService} from '../../app.service';
 
 @Component({
   selector: 'app-element-term',
@@ -20,11 +20,11 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   secret: string;
   term: any;
 
-  constructor() {
+  constructor(private _uuid: UUIDService) {
   }
 
   ngOnInit() {
-    this.secret = UUID.create()['hex'];
+    this.secret = this._uuid.gen();
     this.term = Terminal({
       cols: 80,
       rows: 24,

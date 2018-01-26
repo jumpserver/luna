@@ -15,6 +15,7 @@ import {environment} from '../environments/environment';
 import {HttpClient, HttpHeaders} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
 import {HostGroup} from './ControlPage/cleftbar/cleftbar.component';
+import * as UUID from 'uuid-js/lib/uuid.js';
 
 declare function unescape(s: string): string;
 
@@ -357,3 +358,13 @@ export class AppService implements OnInit {
 //   }
 }
 
+@Injectable()
+export class UUIDService {
+  constructor() {
+
+  }
+
+  gen() {
+    return UUID.create()['hex'];
+  }
+}

@@ -18,7 +18,7 @@ import {AppRoutingModule} from './app-routing.module';
 
 import {AppComponent} from './app.component';
 // service
-import {AppService, HttpService, LogService} from './app.service';
+import {AppService, HttpService, LogService, UUIDService} from './app.service';
 import {LayerService} from './elements/layer/layer.service';
 
 // Elements
@@ -103,6 +103,7 @@ import {HttpClientModule} from '@angular/common/http';
     AppService,
     HttpService,
     LogService,
+    UUIDService,
     LayerService,
     NGXLogger
   ]
