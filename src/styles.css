@@ -31,6 +31,7 @@ app-root {
   font-size: 11px !important;
   padding-bottom: 16px !important;
   font-family: 'Monaco', Inconsolata !important;
+  color: white;
 }
 
 .terminal {

@@ -12,23 +12,27 @@
 import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms'; // <-- NgModel lives here
-import {Logger, Options, Level as LoggerLevel} from 'angular2-logger/core';
-import {HttpModule} from '@angular/http';
+import {LoggerModule, NGXLogger, NgxLoggerLevel} from 'ngx-logger';
+import {HttpClientModule} from '@angular/common/http';
 
 import {AppRoutingModule} from './app-routing.module';
 
 import {AppComponent} from './app.component';
+// service
+import {AppService, HttpService, LogService, UUIDService} from './app.service';
+import {LayerService} from './elements/layer/layer.service';
+
 // Elements
 import {ElementFooterComponent} from './elements/footer/footer.component';
 import {ElementTermComponent} from './elements/term/term.component';
 import {ElementInteractiveComponent} from './elements/interactive/interactive.component';
 import {ElementNavComponent} from './elements/nav/nav.component';
-import {LoginComponent} from './BasicPage/login/login.component';
 import {ElementPopupComponent} from './elements/popup/popup.component';
 import {ElementRdpComponent} from './elements/rdp/rdp.component';
 import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
 import {ElementIframeComponent} from './elements/iframe/iframe.component';
 // pages
+import {LoginComponent} from './BasicPage/login/login.component';
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
 import {SearchComponent, SearchFilter} from './ControlPage/search/search.component';
 import {CleftbarComponent} from './ControlPage/cleftbar/cleftbar.component';
@@ -46,13 +50,21 @@ import {UtcDatePipe} from './app.pipe';
 import {MonitorPageComponent} from './monitor-page/monitor-page.component';
 import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
+import {NgProgressModule} from 'ngx-progressbar';
+import {TestPageComponent} from './test-page/test-page.component';
+import { BlankPageComponent } from './blank-page/blank-page.component';
+
+// import {NgxLayerModule} from 'ngx-layer';
 
 @NgModule({
   imports: [
     BrowserModule,
     FormsModule,
     AppRoutingModule,
-    HttpModule,
+    NgProgressModule,
+    HttpClientModule,
+    LoggerModule.forRoot({serverLoggingUrl: '/api/logs', level: NgxLoggerLevel.DEBUG, serverLogLevel: NgxLoggerLevel.ERROR}),
+    // NgxLayerModule
   ],
   declarations: [
     AppComponent,
@@ -83,11 +95,19 @@ import {WindowsComponent} from './monitor-page/windows/windows.component';
     MonitorPageComponent,
     LinuxComponent,
     WindowsComponent,
+    TestPageComponent,
+    BlankPageComponent,
   ],
   bootstrap: [AppComponent],
   providers: [
-    {provide: Options, useValue: {store: false, level: LoggerLevel.WARN}},
-    Logger
+    // {provide: LoggerConfig, useValue: {level: LoggerLevel.WARN}},
+    // {provide: BrowserXhr, useClass: NgProgressBrowserXhr},
+    AppService,
+    HttpService,
+    LogService,
+    UUIDService,
+    LayerService,
+    NGXLogger
   ]
 })
 export class AppModule {

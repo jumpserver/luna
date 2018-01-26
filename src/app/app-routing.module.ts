@@ -17,14 +17,16 @@ import {MonitorPageComponent} from './monitor-page/monitor-page.component';
 import {RdpPageComponent} from './rdp-page/rdp-page.component';
 import {TermPageComponent} from './term-page/term-page.component';
 import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
+import {BlankPageComponent} from './blank-page/blank-page.component';
 
 const appRoutes: Routes = [
-  {path: 'users/login', component: LoginComponent},
+  // {path: 'users/login', component: LoginComponent},
   {path: 'rdp/:token', component: RdpPageComponent},
   {path: 'term/:token', component: TermPageComponent},
   {path: 'replay/:token', component: ReplayPageComponent},
   {path: 'monitor/:token', component: MonitorPageComponent},
-  {path: 'test', component: ElementServerMenuComponent},
+  {path: 'test', component: TermPageComponent},
+  {path: 'undefined', component: BlankPageComponent},
   {path: '', component: ControlPageComponent},
   {path: '**', component: NotFoundComponent}
 ];

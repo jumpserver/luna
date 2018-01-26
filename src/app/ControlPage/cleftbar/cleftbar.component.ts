@@ -8,19 +8,17 @@
  */
 
 import {Component, OnInit} from '@angular/core';
-import {Logger} from 'angular2-logger/core';
-import {AppService, HttpService} from '../../app.service';
+import {AppService, HttpService, LogService} from '../../app.service';
 import {SearchComponent} from '../search/search.component';
 import {DataStore} from '../../globals';
 import {version} from '../../../environments/environment';
 import * as jQuery from 'jquery/dist/jquery.min.js';
-import * as layer from 'layui-layer/src/layer.js';
-import * as UUID from 'uuid-js/lib/uuid.js';
 import {ElementServerMenuComponent} from '../../elements/server-menu/server-menu.component';
 import {NavList, View} from '../control/control.component';
+import {LayerService} from '../../elements/layer/layer.service';
 
 
-export class HostGroup {
+export interface HostGroup {
   name: string;
   id: string;
   children: Array<Host>;
@@ -83,21 +81,20 @@ export class CleftbarComponent implements OnInit {
   constructor(private _appService: AppService,
               private _http: HttpService,
               private _search: SearchComponent,
-              private _logger: Logger,
-              private _menu: ElementServerMenuComponent) {
+              private _logger: LogService,
+              private _menu: ElementServerMenuComponent,
+              private _layer: LayerService) {
     this._logger.log('nav.ts:NavComponent');
     // this._appService.getnav()
   }
 
   ngOnInit() {
-    this._http.get('/api/perms/v1/user/my/asset-groups-assets/')
-      .map(res => res.json())
+    this._http.get_my_asset_groups_assets()
       .subscribe(response => {
         this.HostGroups = response;
         this.autologin();
       });
   }
-
 
   autologin() {
     const id = this._appService.getQueryString('id');
@@ -129,7 +126,7 @@ export class CleftbarComponent implements OnInit {
         for (const u of host.system_users_granted) {
           options += '<option value="' + u.id + '">' + u.username + '</option>';
         }
-        layer.open({
+        this._layer.open({
           title: 'Please Choose a User',
           scrollbar: false,
           moveOut: true,
@@ -145,7 +142,7 @@ export class CleftbarComponent implements OnInit {
               }
             }
             that.login(host, user);
-            layer.close(index);
+            that._layer.close(index);
           },
           btn2: function (index, layero) {
           },
@@ -178,21 +175,6 @@ export class CleftbarComponent implements OnInit {
       NavList.List.push(new View());
       NavList.Active = id;
     }
-    // if (host.platform) {
-    //   if (host.platform.toLowerCase() === 'linux') {
-    //     jQuery('app-ssh').show();
-    //     jQuery('app-rdp').hide();
-    //     this._term.TerminalConnect(host, user.id);
-    //   } else if (host.platform.toLowerCase() === 'windows') {
-    //     jQuery('app-ssh').hide();
-    //     jQuery('app-rdp').show();
-    //     this._rdp.Connect(host, user.id);
-    //   } else {
-    //     jQuery('app-ssh').show();
-    //     jQuery('app-rdp').hide();
-    //     this._term.TerminalConnect(host, user.id);
-    //   }
-    // }
   }
 
   checkPriority(sysUsers) {

@@ -7,9 +7,7 @@
  */
 import {Component, OnChanges, Input, Pipe, PipeTransform} from '@angular/core';
 
-import {Logger} from 'angular2-logger/core';
-
-import {AppService, HttpService} from '../../app.service';
+import {AppService, HttpService, LogService} from '../../app.service';
 
 export let Q = '';
 
@@ -25,7 +23,7 @@ export class SearchComponent implements OnChanges {
 
   constructor(private _appService: AppService,
               private _http: HttpService,
-              private _logger: Logger) {
+              private _logger: LogService) {
     this._logger.log('LeftbarComponent.ts:SearchBar');
   }
 
@@ -41,8 +39,7 @@ export class SearchComponent implements OnChanges {
     if (this.searchrequest) {
       this.searchrequest.unsubscribe();
     }
-    this.searchrequest = this._http.get('/api/search?q=' + q)
-      .map(res => res.json())
+    this.searchrequest = this._http.search(q)
       .subscribe(
         data => {
           this._logger.log(data);
