@@ -10,9 +10,10 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {BrowserModule} from '@angular/platform-browser';
-import {ClassProvider, NgModule} from '@angular/core';
+import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms'; // <-- NgModel lives here
 import {LoggerModule, NGXLogger, NgxLoggerLevel} from 'ngx-logger';
+import {HttpClientModule} from '@angular/common/http';
 
 import {AppRoutingModule} from './app-routing.module';
 
@@ -51,7 +52,6 @@ import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {NgProgressModule} from 'ngx-progressbar';
 import {TestPageComponent} from './test-page/test-page.component';
-import {HttpClientModule} from '@angular/common/http';
 
 // import {NgxLayerModule} from 'ngx-layer';
 

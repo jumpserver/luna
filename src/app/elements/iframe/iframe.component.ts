@@ -4,7 +4,6 @@ import {NavList} from '../../ControlPage/control/control.component';
 import {User} from '../../globals';
 import {HttpService, LogService} from '../../app.service';
 import * as Base64 from 'base64-js/base64js.min';
-import {Headers} from '@angular/http';
 
 @Component({
   selector: 'app-element-iframe',
