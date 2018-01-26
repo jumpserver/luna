@@ -52,6 +52,7 @@ import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {NgProgressModule} from 'ngx-progressbar';
 import {TestPageComponent} from './test-page/test-page.component';
+import { BlankPageComponent } from './blank-page/blank-page.component';
 
 // import {NgxLayerModule} from 'ngx-layer';
 
@@ -95,6 +96,7 @@ import {TestPageComponent} from './test-page/test-page.component';
     LinuxComponent,
     WindowsComponent,
     TestPageComponent,
+    BlankPageComponent,
   ],
   bootstrap: [AppComponent],
   providers: [
