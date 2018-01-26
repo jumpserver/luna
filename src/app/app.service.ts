@@ -196,7 +196,9 @@ export class AppService implements OnInit {
                 User.wechat = data['wechat'];
                 User.comment = data['comment'];
                 User.date_expired = data['date_expired'];
-                User.phone = data['phone'].toString();
+                if (data['phone']) {
+                  User.phone = data['phone'].toString();
+                }
                 User.logined = data['logined'];
                 this._logger.debug(User);
               },
