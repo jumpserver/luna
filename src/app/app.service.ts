@@ -71,8 +71,10 @@ export class HttpService {
   }
 
   get_guacamole_token(username: string, assetID: string, systemUserID: string) {
-    return this.get('/guacamole/api/tokens?username=' + username + '&password=zheng&asset_id=' +
-      assetID + '&system_user_id=' + systemUserID, {headers: new HttpHeaders().set('Content-type', 'application/x-www-form-urlencoded')});
+    return this.http.post('/guacamole/api/tokens', {
+      username: username, password: 'zheng', asset_id:
+      assetID, system_user_id: systemUserID
+    }, {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
   }
 
   search(q: string) {
