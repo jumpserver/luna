@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import {Component, OnInit} from '@angular/core';
+import {DataStore} from '../globals';
 
 @Component({
   selector: 'app-term-page',
@@ -7,7 +8,9 @@ import { Component, OnInit } from '@angular/core';
 })
 export class TermPageComponent implements OnInit {
 
-  constructor() { }
+  constructor() {
+    DataStore.NavShow = false;
+  }
 
   ngOnInit() {
   }
