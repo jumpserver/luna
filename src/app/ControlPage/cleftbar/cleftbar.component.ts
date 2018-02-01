@@ -51,30 +51,30 @@ export class CleftbarComponent implements OnInit {
   static Hide() {
     DataStore.leftbarshow = false;
     DataStore.Nav.map(function (value, i) {
-      for (var ii in value['children']) {
-        if (DataStore.Nav[i]['children'][ii]['id'] === 'HindLeftManager') {
-          DataStore.Nav[i]['children'][ii] = {
+      value['children'].forEach((v, key) => {
+        if (DataStore.Nav[i]['children'][key]['id'] === 'HindLeftManager') {
+          DataStore.Nav[i]['children'][key] = {
             'id': 'ShowLeftManager',
             'click': 'ShowLeft',
             'name': 'Show left manager'
           };
         }
-      }
+      });
     });
   }
 
   static Show() {
     DataStore.leftbarshow = true;
     DataStore.Nav.map(function (value, i) {
-      for (var ii in value['children']) {
-        if (DataStore.Nav[i]['children'][ii]['id'] === 'ShowLeftManager') {
-          DataStore.Nav[i]['children'][ii] = {
+      value['children'].forEach((v, key) => {
+        if (DataStore.Nav[i]['children'][key]['id'] === 'ShowLeftManager') {
+          DataStore.Nav[i]['children'][key] = {
             'id': 'HindLeftManager',
             'click': 'HideLeft',
             'name': 'Hind left manager'
           };
         }
-      }
+      });
     });
   }
 
@@ -101,12 +101,12 @@ export class CleftbarComponent implements OnInit {
     if (id) {
       for (let g of this.HostGroups) {
         if (g['assets_granted']) {
-          for (let u of g['assets_granted']) {
-            if (u.id.toString() === id.toString()) {
-              this.Connect(u);
+          g['assets_granted'].forEach((v, k) => {
+            if (v.id.toSource() === id.toString()) {
+              this.Connect(v);
               return;
             }
-          }
+          });
         }
       }
 

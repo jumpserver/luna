@@ -39,15 +39,13 @@ export let Video: {
 };
 
 export let Monitor: {
-  sessionid: string,
+  token: string,
   room: string,
   type: string,
-  socket: any,
 } = {
-  sessionid: '',
+  token: '',
   room: '',
   type: 'term',
-  socket: io.connect(),
 };
 
 export class Group {

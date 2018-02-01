@@ -15,7 +15,7 @@ export class MonitorPageComponent implements OnInit {
 
   ngOnInit() {
     this.activatedRoute.params.subscribe((params: Params) => {
-      Monitor.sessionid = params['token'];
+      Monitor.token = params['token'];
       Monitor.type = 'term';
       console.log(Monitor);
     });
