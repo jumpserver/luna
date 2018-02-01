@@ -15,7 +15,7 @@ import {version} from '../../../environments/environment';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {ElementServerMenuComponent} from '../../elements/server-menu/server-menu.component';
 import {NavList, View} from '../control/control.component';
-import {LayerService} from '../../elements/layer/layer.service';
+import {DialogService} from '../../elements/dialog/dialog.service';
 
 
 export interface HostGroup {
@@ -83,7 +83,7 @@ export class CleftbarComponent implements OnInit {
               private _search: SearchComponent,
               private _logger: LogService,
               private _menu: ElementServerMenuComponent,
-              private _layer: LayerService) {
+              private _dialog: DialogService) {
     this._logger.log('nav.ts:NavComponent');
     // this._appService.getnav()
   }
@@ -126,7 +126,7 @@ export class CleftbarComponent implements OnInit {
         for (const u of host.system_users_granted) {
           options += '<option value="' + u.id + '">' + u.username + '</option>';
         }
-        this._layer.open({
+        this._dialog.open({
           title: 'Please Choose a User',
           scrollbar: false,
           moveOut: true,
@@ -142,7 +142,7 @@ export class CleftbarComponent implements OnInit {
               }
             }
             that.login(host, user);
-            that._layer.close(index);
+            that._dialog.close(index);
           },
           btn2: function (index, layero) {
           },

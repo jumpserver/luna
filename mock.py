@@ -84,6 +84,9 @@ class SSHws(Namespace):
     self.leave_room(room=self.clients[request.sid]["room"])
     join_room(room)
 
+  def on_token(self, token):
+    print(token)
+
   def on_disconnect(self):
     print("disconnect")
     for connection in self.clients[request.sid]["chan"]:
