@@ -20,7 +20,7 @@ import {AppRoutingModule} from './app-routing.module';
 import {AppComponent} from './app.component';
 // service
 import {AppService, HttpService, LogService, UUIDService} from './app.service';
-import {LayerService} from './elements/layer/layer.service';
+import {DialogService} from './elements/dialog/dialog.service';
 
 // Elements
 import {ElementFooterComponent} from './elements/footer/footer.component';
@@ -106,7 +106,7 @@ import { BlankPageComponent } from './blank-page/blank-page.component';
     HttpService,
     LogService,
     UUIDService,
-    LayerService,
+    DialogService,
     NGXLogger
   ]
 })

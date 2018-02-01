@@ -19,6 +19,7 @@
     "@angular/core": "5.2.0",
     "@angular/forms": "5.2.0",
     "@angular/http": "5.2.0",
+    "@angular/material": "^5.1.1",
     "@angular/platform-browser": "5.2.0",
     "@angular/platform-browser-dynamic": "5.2.0",
     "@angular/router": "5.2.0",
@@ -61,9 +62,9 @@
     "socket.io-client": "^2.0.4",
     "ssh-keygen": "^0.4.1",
     "tether": "^1.4.0",
+    "tslib": "1.8.1",
     "uuid-js": "^0.7.5",
     "xterm": "^2.9.2",
-    "tslib": "1.8.1",
     "zone.js": "0.8.20"
   },
   "devDependencies": {
