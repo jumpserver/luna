@@ -10,16 +10,17 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {BrowserModule} from '@angular/platform-browser';
-import {ClassProvider, NgModule} from '@angular/core';
+import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms'; // <-- NgModel lives here
 import {LoggerModule, NGXLogger, NgxLoggerLevel} from 'ngx-logger';
+import {HttpClientModule} from '@angular/common/http';
 
 import {AppRoutingModule} from './app-routing.module';
 
 import {AppComponent} from './app.component';
 // service
 import {AppService, HttpService, LogService, UUIDService} from './app.service';
-import {LayerService} from './elements/layer/layer.service';
+import {DialogService} from './elements/dialog/dialog.service';
 
 // Elements
 import {ElementFooterComponent} from './elements/footer/footer.component';
@@ -51,7 +52,7 @@ import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {NgProgressModule} from 'ngx-progressbar';
 import {TestPageComponent} from './test-page/test-page.component';
-import {HttpClientModule} from '@angular/common/http';
+import { BlankPageComponent } from './blank-page/blank-page.component';
 
 // import {NgxLayerModule} from 'ngx-layer';
 
@@ -95,6 +96,7 @@ import {HttpClientModule} from '@angular/common/http';
     LinuxComponent,
     WindowsComponent,
     TestPageComponent,
+    BlankPageComponent,
   ],
   bootstrap: [AppComponent],
   providers: [
@@ -104,7 +106,7 @@ import {HttpClientModule} from '@angular/common/http';
     HttpService,
     LogService,
     UUIDService,
-    LayerService,
+    DialogService,
     NGXLogger
   ]
 })

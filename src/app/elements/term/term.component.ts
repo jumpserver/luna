@@ -15,7 +15,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   @Input() host: any;
   @Input() userid: any;
   @Input() index: number;
-  // @Input() room: string;
+  @Input() token: string;
   @ViewChild('term') el: ElementRef;
   secret: string;
   term: any;
@@ -35,7 +35,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    if (this.host) {
+    if (this.host || this.token) {
       if (Cookie.get('cols')) {
         term.col = parseInt(Cookie.get('cols'), 10);
       }
@@ -67,38 +67,37 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     };
     jQuery(window).resize();
 
+    NavList.List[this.index].Term = this.term;
     if (this.host) {
-      NavList.List[this.index].Term = this.term;
-
-      // this.term.write('\x1b[31mWelcome to Jumpserver!\x1b[m\r\n');
-
       TermWS.emit('host', {'uuid': this.host.id, 'userid': this.userid, 'secret': this.secret});
-
-      this.term.on('data', function (data) {
-        TermWS.emit('data', {'data': data, 'room': NavList.List[that.index].room});
-      });
-
-      TermWS.on('data', function (data) {
-        if (data['room'] === NavList.List[that.index].room) {
-          that.term.write(data['data']);
-        }
-      });
-
-      TermWS.on('disconnect', function () {
-        that.TerminalDisconnect();
-      });
-      TermWS.on('logout', function (data) {
-        if (data['room'] === NavList.List[that.index].room) {
-          NavList.List[this.index].connected = false;
-          this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
-        }
-      });
-      TermWS.on('room', function (data) {
-        if (data['secret'] === that.secret) {
-          NavList.List[that.index].room = data['room'];
-        }
-      });
     }
+    if (this.token) {
+      TermWS.emit('token', {'token': this.token, 'secrte': this.secret});
+    }
+    this.term.on('data', function (data) {
+      TermWS.emit('data', {'data': data, 'room': NavList.List[that.index].room});
+    });
+
+    TermWS.on('data', function (data) {
+      if (data['room'] === NavList.List[that.index].room) {
+        that.term.write(data['data']);
+      }
+    });
+
+    TermWS.on('disconnect', function () {
+      that.TerminalDisconnect();
+    });
+    TermWS.on('logout', function (data) {
+      if (data['room'] === NavList.List[that.index].room) {
+        NavList.List[this.index].connected = false;
+        this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+      }
+    });
+    TermWS.on('room', function (data) {
+      if (data['secret'] === that.secret) {
+        NavList.List[that.index].room = data['room'];
+      }
+    });
   }
 
   TerminalDisconnect() {
