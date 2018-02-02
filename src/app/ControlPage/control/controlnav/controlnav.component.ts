@@ -35,14 +35,18 @@ export class ControlnavComponent implements OnInit {
   }
 
   static setActive(index) {
-    for (let m in NavList.List) {
-      NavList.List[m].hide = true;
-    }
+    NavList.List.forEach((value, key) => {
+      NavList.List[key].hide = true;
+    });
     NavList.List[index].hide = false;
     NavList.Active = index;
-    if (NavList.List[index].type === 'ssh') {
-      NavList.List[index].Term.focus();
-    } else if (NavList.List[index].type === 'rdp') {
+    if (!NavList.List[index].edit) {
+      if (NavList.List[index].type === 'ssh') {
+        NavList.List[index].Term.focus();
+      } else if (NavList.List[index].type === 'rdp') {
+      }
+    } else {
+
     }
   }
 
