@@ -7,7 +7,7 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 
-import {Component, OnInit} from '@angular/core';
+import {Component, Inject, OnInit} from '@angular/core';
 import {AppService, HttpService, LogService} from '../../app.service';
 import {SearchComponent} from '../search/search.component';
 import {DataStore} from '../../globals';
@@ -15,7 +15,10 @@ import {version} from '../../../environments/environment';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {ElementServerMenuComponent} from '../../elements/server-menu/server-menu.component';
 import {NavList, View} from '../control/control.component';
-import {DialogService} from '../../elements/dialog/dialog.service';
+import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
+import {logger} from 'codelyzer/util/logger';
+import {selector} from 'rxjs/operator/publish';
+import {FormControl, Validators} from '@angular/forms';
 
 
 export interface HostGroup {
@@ -51,30 +54,30 @@ export class CleftbarComponent implements OnInit {
   static Hide() {
     DataStore.leftbarshow = false;
     DataStore.Nav.map(function (value, i) {
-      for (var ii in value['children']) {
-        if (DataStore.Nav[i]['children'][ii]['id'] === 'HindLeftManager') {
-          DataStore.Nav[i]['children'][ii] = {
+      value['children'].forEach((v, key) => {
+        if (DataStore.Nav[i]['children'][key]['id'] === 'HindLeftManager') {
+          DataStore.Nav[i]['children'][key] = {
             'id': 'ShowLeftManager',
             'click': 'ShowLeft',
             'name': 'Show left manager'
           };
         }
-      }
+      });
     });
   }
 
   static Show() {
     DataStore.leftbarshow = true;
     DataStore.Nav.map(function (value, i) {
-      for (var ii in value['children']) {
-        if (DataStore.Nav[i]['children'][ii]['id'] === 'ShowLeftManager') {
-          DataStore.Nav[i]['children'][ii] = {
+      value['children'].forEach((v, key) => {
+        if (DataStore.Nav[i]['children'][key]['id'] === 'ShowLeftManager') {
+          DataStore.Nav[i]['children'][key] = {
             'id': 'HindLeftManager',
             'click': 'HideLeft',
             'name': 'Hind left manager'
           };
         }
-      }
+      });
     });
   }
 
@@ -83,7 +86,7 @@ export class CleftbarComponent implements OnInit {
               private _search: SearchComponent,
               private _logger: LogService,
               private _menu: ElementServerMenuComponent,
-              private _dialog: DialogService) {
+              public _dialog: MatDialog) {
     this._logger.log('nav.ts:NavComponent');
     // this._appService.getnav()
   }
@@ -101,12 +104,12 @@ export class CleftbarComponent implements OnInit {
     if (id) {
       for (let g of this.HostGroups) {
         if (g['assets_granted']) {
-          for (let u of g['assets_granted']) {
-            if (u.id.toString() === id.toString()) {
-              this.Connect(u);
+          g['assets_granted'].forEach((v, k) => {
+            if (v.id.toSource() === id.toString()) {
+              this.Connect(v);
               return;
             }
-          }
+          });
         }
       }
 
@@ -116,39 +119,26 @@ export class CleftbarComponent implements OnInit {
   Connect(host) {
     // console.log(host);
     let user: any;
-    let options = '';
-    const that = this;
     if (host.system_users_granted.length > 1) {
       user = this.checkPriority(host.system_users_granted);
       if (user) {
         this.login(host, user);
       } else {
-        for (const u of host.system_users_granted) {
-          options += '<option value="' + u.id + '">' + u.username + '</option>';
-        }
-        this._dialog.open({
-          title: 'Please Choose a User',
-          scrollbar: false,
-          moveOut: true,
-          moveType: 1,
-          btn: ['确定', '取消'],
-          content: '<select id="selectuser">' + options + '</select>',
-          yes: function (index, layero) {
-            const userid = jQuery('#selectuser').val();
+        const dialogRef = this._dialog.open(CleftbarComponentDialog, {
+          height: '200px',
+          width: '300px',
+          data: {users: host.system_users_granted}
+        });
+
+        dialogRef.afterClosed().subscribe(result => {
+          if (result) {
             for (let i of host.system_users_granted) {
-              if (i.id.toString() === userid.toString()) {
+              if (i.id.toString() === result.toString()) {
                 user = i;
                 break;
               }
             }
-            that.login(host, user);
-            that._dialog.close(index);
-          },
-          btn2: function (index, layero) {
-          },
-          cancel: function () {
-            // 右上角关闭回调
-            // return false 开启该代码可禁止点击该按钮关闭
+            this.login(host, user);
           }
         });
       }
@@ -200,5 +190,36 @@ export class CleftbarComponent implements OnInit {
     this.clientY = event.clientY;
     // console.log(this.clientX, this.clientY);
     // this._menu.contextmenu(this.clientY, this.clientX);
+  }
+}
+
+
+@Component({
+  selector: 'app-cleftbar-dialog',
+  templateUrl: 'dialog.html',
+})
+export class CleftbarComponentDialog implements OnInit {
+  UserSelectControl = new FormControl('', [Validators.required]);
+  selected: any;
+
+  constructor(public dialogRef: MatDialogRef<CleftbarComponentDialog>,
+              @Inject(MAT_DIALOG_DATA) public data: any,
+              private _logger: LogService) {
+  }
+
+  ngOnInit() {
+    this.selected = this.data.users[0].id;
+    this.UserSelectControl.setValue(this.selected);
+    // this._logger.debug(this.UserSelectControl);
+  }
+
+  onNoClick(): void {
+    this.dialogRef.close();
+  }
+
+  compareFn: ((f1: any, f2: any) => boolean) | null = this.compareByValue;
+
+  compareByValue(f1: any, f2: any) {
+    return f1 && f2 && f1.value === f2.value;
   }
 }

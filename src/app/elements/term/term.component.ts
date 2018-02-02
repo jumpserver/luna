@@ -16,6 +16,8 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   @Input() userid: any;
   @Input() index: number;
   @Input() token: string;
+  @Input() monitor: string;
+
   @ViewChild('term') el: ElementRef;
   secret: string;
   term: any;
@@ -72,11 +74,16 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       TermWS.emit('host', {'uuid': this.host.id, 'userid': this.userid, 'secret': this.secret});
     }
     if (this.token) {
-      TermWS.emit('token', {'token': this.token, 'secrte': this.secret});
+      TermWS.emit('token', {'token': this.token, 'secret': this.secret});
     }
-    this.term.on('data', function (data) {
-      TermWS.emit('data', {'data': data, 'room': NavList.List[that.index].room});
-    });
+    if (this.monitor) {
+      TermWS.emit('monitor', {'token': this.monitor, 'secret': this.secret});
+    } else {
+      this.term.on('data', function (data) {
+        TermWS.emit('data', {'data': data, 'room': NavList.List[that.index].room});
+      });
+    }
+
 
     TermWS.on('data', function (data) {
       if (data['room'] === NavList.List[that.index].room) {

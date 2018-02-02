@@ -1,8 +1,4 @@
 /**
- * Created by liuzheng on 2017/8/30.
- */
-
-/**
  * app 模块
  *
  *
@@ -11,13 +7,15 @@
  */
 import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
-import {FormsModule} from '@angular/forms'; // <-- NgModel lives here
+import {FormsModule, ReactiveFormsModule} from '@angular/forms'; // <-- NgModel lives here
 import {LoggerModule, NGXLogger, NgxLoggerLevel} from 'ngx-logger';
 import {HttpClientModule} from '@angular/common/http';
 
 import {AppRoutingModule} from './app-routing.module';
 
 import {AppComponent} from './app.component';
+import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
+
 // service
 import {AppService, HttpService, LogService, UUIDService} from './app.service';
 import {DialogService} from './elements/dialog/dialog.service';
@@ -35,7 +33,7 @@ import {ElementIframeComponent} from './elements/iframe/iframe.component';
 import {LoginComponent} from './BasicPage/login/login.component';
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
 import {SearchComponent, SearchFilter} from './ControlPage/search/search.component';
-import {CleftbarComponent} from './ControlPage/cleftbar/cleftbar.component';
+import {CleftbarComponent, CleftbarComponentDialog} from './ControlPage/cleftbar/cleftbar.component';
 import {ControlComponent} from './ControlPage/control/control.component';
 import {ControlnavComponent} from './ControlPage/control/controlnav/controlnav.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
@@ -51,18 +49,20 @@ import {MonitorPageComponent} from './monitor-page/monitor-page.component';
 import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {NgProgressModule} from 'ngx-progressbar';
-import {TestPageComponent} from './test-page/test-page.component';
-import { BlankPageComponent } from './blank-page/blank-page.component';
-
-// import {NgxLayerModule} from 'ngx-layer';
+import {TestPageComponent, TestPageComponentDialog} from './test-page/test-page.component';
+import {BlankPageComponent} from './blank-page/blank-page.component';
+import {MaterialModule} from './MaterialModule.component';
 
 @NgModule({
   imports: [
     BrowserModule,
+    BrowserAnimationsModule,
     FormsModule,
     AppRoutingModule,
     NgProgressModule,
     HttpClientModule,
+    ReactiveFormsModule,
+    MaterialModule,
     LoggerModule.forRoot({serverLoggingUrl: '/api/logs', level: NgxLoggerLevel.DEBUG, serverLogLevel: NgxLoggerLevel.ERROR}),
     // NgxLayerModule
   ],
@@ -80,7 +80,7 @@ import { BlankPageComponent } from './blank-page/blank-page.component';
     SearchComponent,
     SearchFilter,
     IleftbarComponent,
-    CleftbarComponent,
+    CleftbarComponent, CleftbarComponentDialog,
     ControlComponent,
     ControlnavComponent,
     ControlPageComponent,
@@ -95,8 +95,12 @@ import { BlankPageComponent } from './blank-page/blank-page.component';
     MonitorPageComponent,
     LinuxComponent,
     WindowsComponent,
-    TestPageComponent,
+    TestPageComponent, TestPageComponentDialog,
     BlankPageComponent,
+  ],
+  entryComponents: [
+    CleftbarComponentDialog,
+    TestPageComponentDialog
   ],
   bootstrap: [AppComponent],
   providers: [

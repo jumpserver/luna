@@ -8,9 +8,9 @@
   <ul [ngStyle]="{'width':150*NavList.List.length+'px'}">
     <li *ngFor="let m of NavList.List;let i = index"
         [ngClass]="{'active':i==NavList.Active,'disconnected':!m.connected, 'hidden': m.closed != false}"
-        id="termnav-{{i}}" (click)="setActive(i)">
-      <span *ngIf="!m.edit" (dblclick)="m.edit=true;setActive(i)">{{m.nick}}</span>
-      <input *ngIf="m.edit" [(ngModel)]="m.nick" autofocus (blur)="m.edit=false" (keyup.enter)="m.edit=false"/>
+        id="termnav-{{i}}" (click)="setActive(i)" (dblclick)="m.edit=true;setActive(i)">
+      <span *ngIf="!m.edit">{{m.nick}}</span>
+      <input *ngIf="m.edit" [(ngModel)]="m.nick" (blur)="m.edit=false" (keyup.enter)="m.edit=false" autofocus="true"/>
       <a class="close" (click)="close(m,i)">&times;</a>
     </li>
   </ul>
