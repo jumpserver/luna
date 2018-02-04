@@ -84,6 +84,9 @@ class SSHws(Namespace):
     self.leave_room(room=self.clients[request.sid]["room"])
     join_room(room)
 
+  def on_token(self, token):
+    print(token)
+
   def on_disconnect(self):
     print("disconnect")
     for connection in self.clients[request.sid]["chan"]:
@@ -127,6 +130,33 @@ def asset_groups_assets():
       "assets_granted": [
         {
           "id": 1,
+          "hostname": "192.168.1.6",
+          "ip": "192.168.2.6",
+          "port": 22,
+          "platform": "Linux",
+          "system_users_granted": [
+            {
+              "id": 1,
+              "name": "web",
+              "username": "web",
+              "protocol": "ssh",
+              "auth_method": "P",
+              "auto_push": True,
+              "priority": 10
+            },
+            {
+              "id": 2,
+              "name": "liuzheng",
+              "username": "liuzheng",
+              "protocol": "ssh",
+              "auth_method": "P",
+              "auto_push": True,
+              "priority": 10
+
+            }],
+        },
+        {
+          "id": 44,
           "hostname": "192.168.1.6",
           "ip": "192.168.2.6",
           "port": 22,

@@ -1,14 +1,14 @@
 import {Injectable} from '@angular/core';
-import * as layer from 'layui-layer/src/layer.js';
+// import * as layer from 'layui-layer/src/layer.js';
 
 @Injectable()
-export class LayerService {
+export class DialogService {
 
   constructor() {
   }
 
   open(options: any) {
-    layer.open(options);
+    // layer.open(options);
   }
 
   dialog() {
@@ -29,6 +29,6 @@ export class LayerService {
   }
 
   close(index: any) {
-    layer.close(index);
+    // layer.close(index);
   }
 }

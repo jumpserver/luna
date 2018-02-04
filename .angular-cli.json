@@ -20,7 +20,6 @@
       "testTsconfig": "tsconfig.spec.json",
       "prefix": "app",
       "styles": [
-        "../node_modules/layui-layer/dist/theme/default/layer.css",
         "../node_modules/animate.css/animate.min.css",
         "../node_modules/xterm/dist/xterm.css",
         "sass/style.scss",

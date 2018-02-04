@@ -1,5 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {LayerService} from '../layer/layer.service';
+import {DialogService} from '../dialog/dialog.service';
 
 
 export class Menu {
@@ -18,7 +18,7 @@ export class ElementServerMenuComponent implements OnInit {
   top: number;
   left: number;
 
-  constructor(private ly: LayerService) {
+  constructor(private _dialog: DialogService) {
   }
 
   ngOnInit() {
@@ -29,7 +29,7 @@ export class ElementServerMenuComponent implements OnInit {
     m.type = 'lll';
     line.type = 'line';
     this.MenuList = [m, m, line, m, m];
-    this.ly.alert();
+    this._dialog.alert();
   }
 
   public contextmenu(top: number, left: number) {
