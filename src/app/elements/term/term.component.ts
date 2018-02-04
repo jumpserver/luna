@@ -97,7 +97,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     TermWS.on('logout', function (data) {
       if (data['room'] === NavList.List[that.index].room) {
         NavList.List[this.index].connected = false;
-        this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+        // this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
       }
     });
     TermWS.on('room', function (data) {
@@ -109,7 +109,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
   TerminalDisconnect() {
     NavList.List[this.index].connected = false;
-    this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+    // this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
     TermWS.emit('logout', NavList.List[this.index].room);
   }
 }
