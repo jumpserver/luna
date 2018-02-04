@@ -125,7 +125,7 @@ def asset_groups_assets():
     },
     {
       "id": 1,
-      "name": "Default",
+      "name": "Default long name long name long name",
       "comment": "Default asset group",
       "assets_granted": [
         {
@@ -157,7 +157,7 @@ def asset_groups_assets():
         },
         {
           "id": 44,
-          "hostname": "192.168.1.6",
+          "hostname": "192.168.1.6 long name long name long name long name long name",
           "ip": "192.168.2.6",
           "port": 22,
           "platform": "Linux",
