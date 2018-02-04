@@ -169,7 +169,7 @@ export class CleftbarComponent implements OnInit {
   }
 
   checkPriority(sysUsers) {
-    let priority: number = -1;
+    let priority = -1;
     let user: any;
     for (const u of sysUsers) {
       if (u.priority > priority) {
@@ -199,11 +199,11 @@ export class CleftbarComponent implements OnInit {
   selector: 'app-cleftbar-dialog',
   templateUrl: 'dialog.html',
 })
-export class CleftbarComponentDialog implements OnInit {
+export class CleftbarDialogComponent implements OnInit {
   UserSelectControl = new FormControl('', [Validators.required]);
   selected: any;
 
-  constructor(public dialogRef: MatDialogRef<CleftbarComponentDialog>,
+  constructor(public dialogRef: MatDialogRef<CleftbarDialogComponent>,
               @Inject(MAT_DIALOG_DATA) public data: any,
               private _logger: LogService) {
   }

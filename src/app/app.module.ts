@@ -33,7 +33,7 @@ import {ElementIframeComponent} from './elements/iframe/iframe.component';
 import {LoginComponent} from './BasicPage/login/login.component';
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
 import {SearchComponent, SearchFilter} from './ControlPage/search/search.component';
-import {CleftbarComponent, CleftbarComponentDialog} from './ControlPage/cleftbar/cleftbar.component';
+import {CleftbarComponent, CleftbarDialogComponent} from './ControlPage/cleftbar/cleftbar.component';
 import {ControlComponent} from './ControlPage/control/control.component';
 import {ControlnavComponent} from './ControlPage/control/controlnav/controlnav.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
@@ -80,7 +80,7 @@ import {MaterialModule} from './MaterialModule.component';
     SearchComponent,
     SearchFilter,
     IleftbarComponent,
-    CleftbarComponent, CleftbarComponentDialog,
+    CleftbarComponent, CleftbarDialogComponent,
     ControlComponent,
     ControlnavComponent,
     ControlPageComponent,
@@ -99,7 +99,7 @@ import {MaterialModule} from './MaterialModule.component';
     BlankPageComponent,
   ],
   entryComponents: [
-    CleftbarComponentDialog,
+    CleftbarDialogComponent,
     TestPageComponentDialog
   ],
   bootstrap: [AppComponent],
