@@ -42,6 +42,9 @@ label {
   list-style: none;
   cursor: pointer;
   color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filetree label {

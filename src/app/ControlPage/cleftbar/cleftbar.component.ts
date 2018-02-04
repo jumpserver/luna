@@ -47,6 +47,7 @@ export class CleftbarComponent implements OnInit {
   event: MouseEvent;
   clientX = 0;
   clientY = 0;
+  TooltipPosition = 'above';
 
   static Reload() {
   }
