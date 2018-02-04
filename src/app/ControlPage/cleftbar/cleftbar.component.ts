@@ -12,12 +12,9 @@ import {AppService, HttpService, LogService} from '../../app.service';
 import {SearchComponent} from '../search/search.component';
 import {DataStore} from '../../globals';
 import {version} from '../../../environments/environment';
-import * as jQuery from 'jquery/dist/jquery.min.js';
 import {ElementServerMenuComponent} from '../../elements/server-menu/server-menu.component';
 import {NavList, View} from '../control/control.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-import {logger} from 'codelyzer/util/logger';
-import {selector} from 'rxjs/operator/publish';
 import {FormControl, Validators} from '@angular/forms';
 
 
@@ -125,7 +122,7 @@ export class CleftbarComponent implements OnInit {
       if (user) {
         this.login(host, user);
       } else {
-        const dialogRef = this._dialog.open(CleftbarComponentDialog, {
+        const dialogRef = this._dialog.open(CleftbarDialogComponent, {
           height: '200px',
           width: '300px',
           data: {users: host.system_users_granted}

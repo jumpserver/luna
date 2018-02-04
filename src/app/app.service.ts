@@ -7,7 +7,7 @@
  */
 import {Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
-// import {Cookie} from 'ng2-cookies/ng2-cookies';
+import {CookieService} from 'ngx-cookie-service';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser} from './globals';
@@ -141,27 +141,29 @@ export class AppService implements OnInit {
 
   constructor(private _http: HttpService,
               private _router: Router,
-              private _logger: LogService) {
-    // if (Cookie.get('loglevel')) {
-    //   // 0.- Level.OFF
-    //   // 1.- Level.ERROR
-    //   // 2.- Level.WARN
-    //   // 3.- Level.INFO
-    //   // 4.- Level.DEBUG
-    //   // 5.- Level.LOG
-    //   this._logger.level = parseInt(Cookie.get('loglevel'), 10);
-    //   // this._logger.debug('Your debug stuff');
-    //   // this._logger.info('An info');
-    //   // this._logger.warn('Take care ');
-    //   // this._logger.error('Too late !');
-    //   // this._logger.log('log !');
-    // } else {
-    //   Cookie.set('loglevel', '0', 99, '/', document.domain);
-    //   // this._logger.level = parseInt(Cookie.getCookie('loglevel'));
-    //   this._logger.level = 0;
-    // }
+              private _logger: LogService,
+              private _cookie: CookieService) {
+    if (this._cookie.get('loglevel')) {
+      // 0.- Level.OFF
+      // 1.- Level.ERROR
+      // 2.- Level.WARN
+      // 3.- Level.INFO
+      // 4.- Level.DEBUG
+      // 5.- Level.LOG
+      this._logger.level = parseInt(this._cookie.get('loglevel'), 10);
+      // this._logger.debug('Your debug stuff');
+      // this._logger.info('An info');
+      // this._logger.warn('Take care ');
+      // this._logger.error('Too late !');
+      // this._logger.log('log !');
+    } else {
+      this._cookie.set('loglevel', '0', 99, '/', document.domain);
+      // this._logger.level = parseInt(Cookie.getCookie('loglevel'));
+      this._logger.level = 0;
+    }
 
     if (environment.production) {
+      this._logger.level = 2;
       this.checklogin();
     }
     // this._logger
