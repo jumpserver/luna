@@ -63,8 +63,8 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       }
       that.term.resize(term.col, term.row);
       if (that.host) {
-        this._cookie.set('cols', term.col.toString(), 99, '/', document.domain);
-        this._cookie.set('rows', term.row.toString(), 99, '/', document.domain);
+        that._cookie.set('cols', term.col.toString(), 99, '/', document.domain);
+        that._cookie.set('rows', term.row.toString(), 99, '/', document.domain);
         TermWS.emit('resize', {'cols': term.col, 'rows': term.row});
       }
     };

@@ -52,6 +52,7 @@ import {NgProgressModule} from 'ngx-progressbar';
 import {TestPageComponent, TestPageComponentDialog} from './test-page/test-page.component';
 import {BlankPageComponent} from './blank-page/blank-page.component';
 import {MaterialModule} from './MaterialModule.component';
+import {CookieService} from 'ngx-cookie-service';
 
 @NgModule({
   imports: [
@@ -111,6 +112,7 @@ import {MaterialModule} from './MaterialModule.component';
     LogService,
     UUIDService,
     DialogService,
+    CookieService,
     NGXLogger
   ]
 })
