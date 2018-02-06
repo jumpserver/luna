@@ -1,0 +1,20 @@
+<div>
+  <input
+    type='text'
+    placeholder='Type to filter the name column...'
+    (keyup)='updateFilter($event)'
+    *ngIf="config.search"/>
+  <ngx-datatable
+    #table
+    class="material"
+    [rows]="rows"
+    [columns]="columns"
+    [limit]="config.limit"
+    [columnMode]="config.columnMode"
+    [headerHeight]="config.headerHeight"
+    [footerHeight]="config.footerHeight"
+    [rowHeight]="config.rowHeight"
+    [scrollbarV]="config.scrollbarV"
+    [scrollbarH]="config.scrollbarH"
+  ></ngx-datatable>
+</div>

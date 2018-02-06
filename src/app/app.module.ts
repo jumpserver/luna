@@ -49,10 +49,12 @@ import {MonitorPageComponent} from './monitor-page/monitor-page.component';
 import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {NgProgressModule} from 'ngx-progressbar';
-import {TestPageComponent, TestPageComponentDialog} from './test-page/test-page.component';
+import {TestPageComponent} from './test-page/test-page.component';
 import {BlankPageComponent} from './blank-page/blank-page.component';
 import {MaterialModule} from './MaterialModule.component';
 import {CookieService} from 'ngx-cookie-service';
+import {NgxDatatableModule} from '@swimlane/ngx-datatable';
+import {ElementTableComponent} from './elements/table/table.component';
 
 @NgModule({
   imports: [
@@ -65,7 +67,7 @@ import {CookieService} from 'ngx-cookie-service';
     ReactiveFormsModule,
     MaterialModule,
     LoggerModule.forRoot({serverLoggingUrl: '/api/logs', level: NgxLoggerLevel.DEBUG, serverLogLevel: NgxLoggerLevel.ERROR}),
-    // NgxLayerModule
+    NgxDatatableModule
   ],
   declarations: [
     AppComponent,
@@ -96,12 +98,12 @@ import {CookieService} from 'ngx-cookie-service';
     MonitorPageComponent,
     LinuxComponent,
     WindowsComponent,
-    TestPageComponent, TestPageComponentDialog,
+    TestPageComponent,
     BlankPageComponent,
+    ElementTableComponent,
   ],
   entryComponents: [
     CleftbarDialogComponent,
-    TestPageComponentDialog
   ],
   bootstrap: [AppComponent],
   providers: [

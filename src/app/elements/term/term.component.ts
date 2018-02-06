@@ -76,7 +76,6 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     }
     if (this.token) {
       TermWS.emit('token', {'token': this.token, 'secret': this.secret});
-      console.log(this.token);
     }
     if (this.monitor) {
       TermWS.emit('monitor', {'token': this.monitor, 'secret': this.secret});
