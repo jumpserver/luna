@@ -1,6 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {DataStore} from '../globals';
 import {Config} from '../elements/table/table.component';
+import {DialogService} from '../elements/dialog/dialog.service';
 
 // import {Mats, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
 
@@ -22,7 +23,7 @@ export class TestPageComponent implements OnInit {
   ];
   config = Config;
 
-  constructor() {
+  constructor(private _layer: DialogService) {
     DataStore.NavShow = false;
     this.config.search = true;
     this.config.scrollbarH = true;
@@ -31,4 +32,7 @@ export class TestPageComponent implements OnInit {
   ngOnInit() {
   }
 
+  test() {
+    this._layer.alert('sss');
+  }
 }

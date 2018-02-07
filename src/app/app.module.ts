@@ -18,7 +18,7 @@ import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 
 // service
 import {AppService, HttpService, LogService, UUIDService} from './app.service';
-import {DialogService} from './elements/dialog/dialog.service';
+import {DialogService, ElementDialogAlertComponent} from './elements/dialog/dialog.service';
 
 // Elements
 import {ElementFooterComponent} from './elements/footer/footer.component';
@@ -79,6 +79,7 @@ import {ElementTableComponent} from './elements/table/table.component';
     ElementRdpComponent,
     ElementServerMenuComponent,
     ElementIframeComponent,
+    ElementDialogAlertComponent,
     LoginComponent,
     SearchComponent,
     SearchFilter,
@@ -104,6 +105,7 @@ import {ElementTableComponent} from './elements/table/table.component';
   ],
   entryComponents: [
     CleftbarDialogComponent,
+    ElementDialogAlertComponent,
   ],
   bootstrap: [AppComponent],
   providers: [

@@ -16,6 +16,7 @@ import {ElementServerMenuComponent} from '../../elements/server-menu/server-menu
 import {NavList, View} from '../control/control.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
+import {DialogService} from '../../elements/dialog/dialog.service';
 
 
 export interface HostGroup {
@@ -84,7 +85,8 @@ export class CleftbarComponent implements OnInit {
               private _search: SearchComponent,
               private _logger: LogService,
               private _menu: ElementServerMenuComponent,
-              public _dialog: MatDialog) {
+              public _dialog: MatDialog,
+              private _layer: DialogService) {
     this._logger.log('nav.ts:NavComponent');
     // this._appService.getnav()
   }
@@ -98,19 +100,34 @@ export class CleftbarComponent implements OnInit {
   }
 
   autologin() {
-    const id = this._appService.getQueryString('id');
-    if (id) {
+    const asset_id = this._appService.getQueryString('asset_id');
+    const user_id = this._appService.getQueryString('user_id');
+    let tag = false;
+    if (asset_id) {
       for (let g of this.HostGroups) {
         if (g['assets_granted']) {
-          g['assets_granted'].forEach((v, k) => {
-            if (v.id.toSource() === id.toString()) {
-              this.Connect(v);
-              return;
+          for (let host of g['assets_granted']) {
+            if (host.id.toString() === asset_id) {
+              if (user_id) {
+                host['system_users_granted'].forEach((user, kk) => {
+                  if (user.id.toString() === user_id.toString()) {
+                    this.login(host, user);
+                    tag = true;
+                    return;
+                  }
+                });
+              } else {
+                this.Connect(host);
+                tag = true;
+                return;
+              }
             }
-          });
+          }
         }
       }
-
+    }
+    if (!tag) {
+      this._layer.alert('Maybe you do not have permission on that host');
     }
   }
 
