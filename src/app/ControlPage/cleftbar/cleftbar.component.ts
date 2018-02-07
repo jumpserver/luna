@@ -46,7 +46,6 @@ export class CleftbarComponent implements OnInit {
   clientX = 0;
   clientY = 0;
   TooltipPosition = 'above';
-  auto: boolean;
 
   static Reload() {
   }
@@ -96,7 +95,7 @@ export class CleftbarComponent implements OnInit {
     this._http.get_my_asset_groups_assets()
       .subscribe(response => {
         this.HostGroups = response;
-        if (!this.auto) {
+        if (!DataStore.autologin) {
           this.autologin();
         }
       });
@@ -132,7 +131,7 @@ export class CleftbarComponent implements OnInit {
     if (!tag) {
       this._layer.alert('Maybe you do not have permission on that host');
     }
-    this.auto = true;
+    DataStore.autologin = true;
   }
 
   Connect(host) {
