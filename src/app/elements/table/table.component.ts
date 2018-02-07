@@ -10,6 +10,8 @@ export let Config: {
   headerHeight: number,
   limit: number,
   columnMode: string,
+  pageSize: number,
+  pageSizeOptions: Array<number>,
 } = {
   search: false,
   scrollbarV: false,
@@ -19,6 +21,8 @@ export let Config: {
   headerHeight: 50,
   limit: 10,
   columnMode: 'force',
+  pageSize: 10,
+  pageSizeOptions: [5, 10, 20],
 };
 
 @Component({

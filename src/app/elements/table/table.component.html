@@ -17,4 +17,8 @@
     [scrollbarV]="config.scrollbarV"
     [scrollbarH]="config.scrollbarH"
   ></ngx-datatable>
+  <mat-paginator #paginator
+                 [pageSize]="config.pageSize"
+                 [pageSizeOptions]="config.pageSizeOptions">
+  </mat-paginator>
 </div>

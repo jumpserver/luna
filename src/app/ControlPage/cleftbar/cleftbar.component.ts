@@ -127,9 +127,9 @@ export class CleftbarComponent implements OnInit {
           }
         }
       }
-    }
-    if (!tag) {
-      this._layer.alert('Maybe you do not have permission on that host');
+      if (!tag) {
+        this._layer.alert('Maybe you do not have permission on that host');
+      }
     }
     DataStore.autologin = true;
   }
