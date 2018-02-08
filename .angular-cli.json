@@ -31,6 +31,8 @@
         "../node_modules/jquery-sparkline/jquery.sparkline.js",
         "../node_modules/tether/dist/js/tether.min.js",
         "../node_modules/bootstrap/dist/js/bootstrap.min.js",
+        "assets/inspinia/inspinia.js",
+        "assets/slimscroll/jquery.slimscroll.min.js",
         "../node_modules/xterm/dist/xterm.js"
       ],
       "environmentSource": "environments/environment.ts",

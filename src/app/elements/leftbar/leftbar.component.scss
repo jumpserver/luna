@@ -1,0 +1,43 @@
+nav {
+  height: 100%;
+  font-family: "open sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background-color: #2f4050;
+  font-size: 13px;
+}
+
+.nav-header {
+  padding: 0;
+  width: 100%;
+}
+
+.navbar-default {
+  background-color: #2f4050;
+  border-color: #2f4050;
+}
+
+.nav-header, body.mini-navbar .nav-header {
+  padding: 0;
+  background: #202c37;
+}
+
+.profile-element div:last-child a {
+  line-height: 60px;
+  width: 150px;
+  float: left;
+  font-size: 22px;
+  color: #1ab394;
+}
+
+.logo-element {
+  padding: 10px 0;
+}
+.nav.nav-tabs li.active {
+    background-color: #FFF;
+}
+.nav.nav-tabs li > a {
+    max-height: 38px;
+}
+
+.nav.nav-tabs li.active a {
+    border: none;
+}

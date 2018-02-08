@@ -17,55 +17,7 @@ $roboto-font-path: "~roboto-fontface/fonts";
  *
 */
 $asset-path: '../static/imgs/inspinia';
-// Variables, Mixins
-@import "../assets/inspinia/imports/variables";
-@import "../assets/inspinia/imports/mixins";
-
-// INSPINIA Theme Elements
-@import "../assets/inspinia/imports/typography";
-@import "../assets/inspinia/imports/navigation";
-@import "../assets/inspinia/imports/top_navigation";
-@import "../assets/inspinia/imports/buttons";
-@import "../assets/inspinia/imports/badges_labels";
-@import "../assets/inspinia/imports/elements";
-@import "../assets/inspinia/imports/sidebar";
-@import "../assets/inspinia/imports/base";
-@import "../assets/inspinia/imports/pages";
-@import "../assets/inspinia/imports/chat";
-@import "../assets/inspinia/imports/metismenu";
-@import "../assets/inspinia/imports/spinners";
-
-// Landing page styles
-//@import "../assets/inspinia/imports/landing";
-
-// RTL Support
-@import "../assets/inspinia/imports/rtl";
-
-// For demo only - config box style
-@import "../assets/inspinia/imports/theme-config";
-
-// INSPINIA Skins
-@import "../assets/inspinia/imports/skins";
-@import "../assets/inspinia/imports/md-skin";
-
-// Media query style
-@import "../assets/inspinia/imports/media";
-
-// Custom style
-// Your custom style to override base style
-@import "../assets/inspinia/imports/custom";
-
-// Clear layout on print mode
-@media print {
-  nav.navbar-static-side {
-    display: none;
-  }
-  body { overflow: visible !important; }
-
-  #page-wrapper {
-    margin: 0;
-  }
-}
+@import "../assets/inspinia/style";
 
 @import '~@angular/material/prebuilt-themes/deeppurple-amber.css';
 
