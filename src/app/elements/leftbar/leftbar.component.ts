@@ -1,4 +1,5 @@
 import {Component, OnInit} from '@angular/core';
+import {FormBuilder, FormGroup} from '@angular/forms';
 
 @Component({
   selector: 'app-element-leftbar',
@@ -10,7 +11,8 @@ export class ElementLeftbarComponent implements OnInit {
     {
       'name': 'Dashboard',
       'class': 'fa fa-dashboard',
-      'label': 'label label-info pull-right'
+      'label': '',
+      'link': '/'
     },
     {
       'name': 'Users',
@@ -77,21 +79,41 @@ export class ElementLeftbarComponent implements OnInit {
       'label': 'fa arrow',
       'child': [
         {
-          'name': 'Task'
+          'name': 'Task',
+          'link': '/task'
         },
       ]
     },
     {
       'name': 'Settings',
       'class': 'fa fa-gears',
-      'label': 'label label-info pull-right'
+      'label': '',
+      'link': '/luna/setting'
     },
   ];
+  options: FormGroup;
+  active: number;
+  active2: number;
 
-  constructor() {
+  constructor(fb: FormBuilder) {
+    this.options = fb.group({
+      'fixed': true,
+      'top': 0,
+      'bottom': 0,
+    });
   }
+
 
   ngOnInit() {
+    this.active = 6;
+    this.active2 = 0;
   }
 
+  gotoLink(link: string, index: number, index2: number) {
+    if (link) {
+      window.location.href = link;
+    }
+    this.active = index;
+    this.active2 = index2;
+  }
 }
