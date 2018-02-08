@@ -1,6 +1,10 @@
 {
   "/api": {
-    "target": "http://127.0.0.1:8088",
+    "target": "http://127.0.0.1:5000",
+    "secure": false
+  },
+  "/i18n": {
+    "target": "http://127.0.0.1:5000",
     "secure": false
   },
   "/socket.io/": {

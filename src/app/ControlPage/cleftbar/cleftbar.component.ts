@@ -54,7 +54,7 @@ export class CleftbarComponent implements OnInit {
     DataStore.leftbarshow = false;
     DataStore.Nav.map(function (value, i) {
       value['children'].forEach((v, key) => {
-        if (DataStore.Nav[i]['children'][key]['id'] === 'HindLeftManager') {
+        if (DataStore.Nav[i]['children'][key]['id'] === 'HideLeftManager') {
           DataStore.Nav[i]['children'][key] = {
             'id': 'ShowLeftManager',
             'click': 'ShowLeft',
@@ -71,9 +71,9 @@ export class CleftbarComponent implements OnInit {
       value['children'].forEach((v, key) => {
         if (DataStore.Nav[i]['children'][key]['id'] === 'ShowLeftManager') {
           DataStore.Nav[i]['children'][key] = {
-            'id': 'HindLeftManager',
+            'id': 'HideLeftManager',
             'click': 'HideLeft',
-            'name': 'Hind left manager'
+            'name': 'Hide left manager'
           };
         }
       });

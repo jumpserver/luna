@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from flask import Flask, send_from_directory, render_template, request, jsonify, redirect, url_for
+from flask import Flask, send_from_directory, render_template, request, jsonify, redirect, send_file
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room
 import paramiko
 import uuid
@@ -85,7 +85,7 @@ class SSHws(Namespace):
     join_room(room)
 
   def on_token(self, token):
-    print(token)
+    self.on_host(token)
 
   def on_disconnect(self):
     print("disconnect")
@@ -231,6 +231,16 @@ def user_profile():
 @app.route('/api/terminal/v1/sessions/test/replay/')
 def replay():
   return redirect("http://jps.ilz.me/media/2017-12-24/ec87a486-0344-4f12-b27a-620321944f7f.gz")
+
+
+@app.route('/i18n/<i18n>')
+def i18n(i18n):
+  return send_file('./i18n/' + i18n + '.json')
+
+
+def read_file(filename, charset='utf-8'):
+  with open(filename, 'r') as f:
+    return f.read().decode(charset)
 
 
 if __name__ == '__main__':

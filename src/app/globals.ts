@@ -144,3 +144,6 @@ export let wsEvent: {
   event: string;
   data: any;
 };
+
+export const i18n = new Map();
+

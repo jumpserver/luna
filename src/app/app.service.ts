@@ -10,7 +10,7 @@ import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
-import {DataStore, User, Browser} from './globals';
+import {DataStore, User, Browser, i18n} from './globals';
 import {environment} from '../environments/environment';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
@@ -76,7 +76,9 @@ export class HttpService {
       .set('password', 'jumpserver')
       .set('asset_id', assetID)
       .set('system_user_id', systemUserID);
-    return this.http.post('/guacamole/api/tokens', body.toString(), {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
+    return this.http.post('/guacamole/api/tokens',
+      body.toString(),
+      {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
   }
 
   search(q: string) {
@@ -136,13 +138,30 @@ export class LogService {
 }
 
 @Injectable()
+export class LocalStorageService {
+  constructor() {
+
+  }
+
+  get(key: string): string {
+    return localStorage.getItem(key);
+  }
+
+  set(key: string, value: any) {
+    return localStorage.setItem(key, value);
+  }
+}
+
+@Injectable()
 export class AppService implements OnInit {
   // user:User = user  ;
+  lang: string;
 
   constructor(private _http: HttpService,
               private _router: Router,
               private _logger: LogService,
-              private _cookie: CookieService) {
+              private _cookie: CookieService,
+              private _localStorage: LocalStorageService) {
     if (this._cookie.get('loglevel')) {
       // 0.- Level.OFF
       // 1.- Level.ERROR
@@ -166,8 +185,28 @@ export class AppService implements OnInit {
       this._logger.level = 2;
       this.checklogin();
     }
-    // this._logger
-    //   .debug(this._http.get_user_profile());
+
+    if (this._cookie.get('lang')) {
+      this.lang = this._cookie.get('lang');
+    } else {
+      this.lang = window.navigator.languages ? window.navigator.languages[0] : 'cn';
+      this._cookie.set('lang', this.lang);
+    }
+
+    if (this.lang !== 'en') {
+      this._http.get('/i18n/' + this.lang).subscribe(
+        data => {
+          this._localStorage.set('lang', JSON.stringify(data));
+        }
+      );
+    }
+    const l = this._localStorage.get('lang');
+    if (l) {
+      const data = JSON.parse(l);
+      Object.keys(data).forEach((k, _) => {
+        i18n.set(k, data[k]);
+      });
+    }
   }
 
   ngOnInit() {
@@ -254,7 +293,7 @@ export class AppService implements OnInit {
 //
 //     DataStore.Nav.map(function (value, i) {
 //       for (var ii in value['children']) {
-//         if (DataStore.Nav[i]['children'][ii]['id'] === 'HindLeftManager') {
+//         if (DataStore.Nav[i]['children'][ii]['id'] === 'HideLeftManager') {
 //           DataStore.Nav[i]['children'][ii] = {
 //             'id': 'ShowLeftManager',
 //             'click': 'ShowLeft',
@@ -273,9 +312,9 @@ export class AppService implements OnInit {
 //       for (var ii in value['children']) {
 //         if (DataStore.Nav[i]['children'][ii]['id'] === 'ShowLeftManager') {
 //           DataStore.Nav[i]['children'][ii] = {
-//             'id': 'HindLeftManager',
+//             'id': 'HideLeftManager',
 //             'click': 'HideLeft',
-//             'name': 'Hind left manager'
+//             'name': 'Hide left manager'
 //           };
 //         }
 //       }
@@ -376,3 +415,4 @@ export class UUIDService {
     return UUID.create()['hex'];
   }
 }
+

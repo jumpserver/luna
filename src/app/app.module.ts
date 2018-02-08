@@ -17,7 +17,7 @@ import {AppComponent} from './app.component';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 
 // service
-import {AppService, HttpService, LogService, UUIDService} from './app.service';
+import {AppService, HttpService, LocalStorageService, LogService, UUIDService} from './app.service';
 import {DialogService, ElementDialogAlertComponent} from './elements/dialog/dialog.service';
 
 // Elements
@@ -55,6 +55,16 @@ import {MaterialModule} from './MaterialModule.component';
 import {CookieService} from 'ngx-cookie-service';
 import {NgxDatatableModule} from '@swimlane/ngx-datatable';
 import {ElementTableComponent} from './elements/table/table.component';
+import {SettingPageComponent} from './setting-page/setting-page.component';
+import {ElementLeftbarComponent} from './elements/leftbar/leftbar.component';
+import {ElementOfooterComponent} from './elements/ofooter/ofooter.component';
+import {SettingPageNavComponent} from './setting-page/nav/nav.component';
+import {SettingPageBasicComponent} from './setting-page/basic/basic.component';
+import {SettingPageEmailComponent} from './setting-page/email/email.component';
+import {SettingPageLdapComponent} from './setting-page/ldap/ldap.component';
+import {SettingPageTerminalComponent} from './setting-page/terminal/terminal.component';
+import {SettingPageS3Component} from './setting-page/s3/s3.component';
+import {TransPipe} from './trans.pipe';
 
 @NgModule({
   imports: [
@@ -80,6 +90,9 @@ import {ElementTableComponent} from './elements/table/table.component';
     ElementServerMenuComponent,
     ElementIframeComponent,
     ElementDialogAlertComponent,
+    ElementTableComponent,
+    ElementLeftbarComponent,
+    ElementOfooterComponent,
     LoginComponent,
     SearchComponent,
     SearchFilter,
@@ -101,7 +114,14 @@ import {ElementTableComponent} from './elements/table/table.component';
     WindowsComponent,
     TestPageComponent,
     BlankPageComponent,
-    ElementTableComponent,
+    SettingPageComponent,
+    SettingPageNavComponent,
+    SettingPageBasicComponent,
+    SettingPageEmailComponent,
+    SettingPageLdapComponent,
+    SettingPageTerminalComponent,
+    SettingPageS3Component,
+    TransPipe,
   ],
   entryComponents: [
     CleftbarDialogComponent,
@@ -115,6 +135,7 @@ import {ElementTableComponent} from './elements/table/table.component';
     HttpService,
     LogService,
     UUIDService,
+    LocalStorageService,
     DialogService,
     CookieService,
     NGXLogger
