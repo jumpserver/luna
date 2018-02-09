@@ -58,7 +58,6 @@ import {ElementTableComponent} from './elements/table/table.component';
 import {SettingPageComponent} from './setting-page/setting-page.component';
 import {ElementLeftbarComponent} from './elements/leftbar/leftbar.component';
 import {ElementOfooterComponent} from './elements/ofooter/ofooter.component';
-import {SettingPageNavComponent} from './setting-page/nav/nav.component';
 import {SettingPageBasicComponent} from './setting-page/basic/basic.component';
 import {SettingPageEmailComponent} from './setting-page/email/email.component';
 import {SettingPageLdapComponent} from './setting-page/ldap/ldap.component';
@@ -115,7 +114,6 @@ import {TransPipe} from './trans.pipe';
     TestPageComponent,
     BlankPageComponent,
     SettingPageComponent,
-    SettingPageNavComponent,
     SettingPageBasicComponent,
     SettingPageEmailComponent,
     SettingPageLdapComponent,

@@ -1,6 +1,20 @@
 <div class="pace-done">
   <app-element-leftbar></app-element-leftbar>
-
-  <!--<app-sp-basic></app-sp-basic>-->
+  <mat-card class="content">
+    <mat-tab-group>
+      <mat-tab label="{{'Basic setting'|trans}}">
+        <app-sp-basic></app-sp-basic>
+      </mat-tab>
+      <mat-tab label="{{'Email setting'|trans}}">
+        <app-sp-email></app-sp-email>
+      </mat-tab>
+      <mat-tab label="{{'LDAP setting'|trans}}">
+        <app-sp-ldap></app-sp-ldap>
+      </mat-tab>
+      <mat-tab label="{{'Terminal setting'|trans}}">
+        <app-sp-terminal></app-sp-terminal>
+      </mat-tab>
+    </mat-tab-group>
+  </mat-card>
   <app-element-ofooter></app-element-ofooter>
 </div>
