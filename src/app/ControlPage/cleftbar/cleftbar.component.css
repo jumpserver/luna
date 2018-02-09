@@ -78,3 +78,10 @@ label {
 .fa.fa-undefined:before {
   content: "\f26c";
 }
+
+.overflow {
+  height: 100%;
+  overflow-y: scroll;
+  position: absolute;
+  width: 100%;
+}
