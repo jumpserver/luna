@@ -1,5 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {FormBuilder, FormGroup} from '@angular/forms';
+import {Router} from '@angular/router';
 
 @Component({
   selector: 'app-element-leftbar',
@@ -95,7 +96,8 @@ export class ElementLeftbarComponent implements OnInit {
   active: number;
   active2: number;
 
-  constructor(fb: FormBuilder) {
+  constructor(fb: FormBuilder,
+              private _router: Router) {
     this.options = fb.group({
       'fixed': true,
       'top': 0,
@@ -111,7 +113,11 @@ export class ElementLeftbarComponent implements OnInit {
 
   gotoLink(link: string, index: number, index2: number) {
     if (link) {
-      window.location.href = link;
+      if (link === '/luna/setting') {
+        this._router.navigate(['setting']);
+      } else {
+        window.location.href = link;
+      }
     }
     this.active = index;
     this.active2 = index2;

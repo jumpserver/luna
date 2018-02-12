@@ -64,6 +64,7 @@ import {SettingPageLdapComponent} from './setting-page/ldap/ldap.component';
 import {SettingPageTerminalComponent} from './setting-page/terminal/terminal.component';
 import {SettingPageS3Component} from './setting-page/s3/s3.component';
 import {TransPipe} from './trans.pipe';
+import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 
 @NgModule({
   imports: [
@@ -136,7 +137,9 @@ import {TransPipe} from './trans.pipe';
     LocalStorageService,
     DialogService,
     CookieService,
-    NGXLogger
+    NGXLogger,
+    {provide: MAT_LABEL_GLOBAL_OPTIONS, useValue: {float: 'always'}}
+
   ]
 })
 export class AppModule {
