@@ -103,6 +103,7 @@ export let DataStore: {
   loglevel: number;
   leftbarshow: boolean;
   windowsize: Array<number>;
+  autologin: boolean;
 } = {
   socket: io.connect(),
   Nav: [{}],
@@ -113,6 +114,7 @@ export let DataStore: {
   loglevel: 0,
   leftbarshow: true,
   windowsize: [],
+  autologin: false,
 };
 export let CSRF = '';
 
@@ -142,3 +144,6 @@ export let wsEvent: {
   event: string;
   data: any;
 };
+
+export const i18n = new Map();
+

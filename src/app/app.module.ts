@@ -17,8 +17,8 @@ import {AppComponent} from './app.component';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 
 // service
-import {AppService, HttpService, LogService, UUIDService} from './app.service';
-import {DialogService} from './elements/dialog/dialog.service';
+import {AppService, HttpService, LocalStorageService, LogService, UUIDService} from './app.service';
+import {DialogService, ElementDialogAlertComponent} from './elements/dialog/dialog.service';
 
 // Elements
 import {ElementFooterComponent} from './elements/footer/footer.component';
@@ -33,7 +33,7 @@ import {ElementIframeComponent} from './elements/iframe/iframe.component';
 import {LoginComponent} from './BasicPage/login/login.component';
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
 import {SearchComponent, SearchFilter} from './ControlPage/search/search.component';
-import {CleftbarComponent, CleftbarComponentDialog} from './ControlPage/cleftbar/cleftbar.component';
+import {CleftbarComponent, CleftbarDialogComponent} from './ControlPage/cleftbar/cleftbar.component';
 import {ControlComponent} from './ControlPage/control/control.component';
 import {ControlnavComponent} from './ControlPage/control/controlnav/controlnav.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
@@ -49,9 +49,22 @@ import {MonitorPageComponent} from './monitor-page/monitor-page.component';
 import {LinuxComponent} from './monitor-page/linux/linux.component';
 import {WindowsComponent} from './monitor-page/windows/windows.component';
 import {NgProgressModule} from 'ngx-progressbar';
-import {TestPageComponent, TestPageComponentDialog} from './test-page/test-page.component';
+import {TestPageComponent} from './test-page/test-page.component';
 import {BlankPageComponent} from './blank-page/blank-page.component';
 import {MaterialModule} from './MaterialModule.component';
+import {CookieService} from 'ngx-cookie-service';
+import {NgxDatatableModule} from '@swimlane/ngx-datatable';
+import {ElementTableComponent} from './elements/table/table.component';
+import {SettingPageComponent} from './setting-page/setting-page.component';
+import {ElementLeftbarComponent} from './elements/leftbar/leftbar.component';
+import {ElementOfooterComponent} from './elements/ofooter/ofooter.component';
+import {SettingPageBasicComponent} from './setting-page/basic/basic.component';
+import {SettingPageEmailComponent} from './setting-page/email/email.component';
+import {SettingPageLdapComponent} from './setting-page/ldap/ldap.component';
+import {SettingPageTerminalComponent} from './setting-page/terminal/terminal.component';
+import {SettingPageS3Component} from './setting-page/s3/s3.component';
+import {TransPipe} from './trans.pipe';
+import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 
 @NgModule({
   imports: [
@@ -64,7 +77,7 @@ import {MaterialModule} from './MaterialModule.component';
     ReactiveFormsModule,
     MaterialModule,
     LoggerModule.forRoot({serverLoggingUrl: '/api/logs', level: NgxLoggerLevel.DEBUG, serverLogLevel: NgxLoggerLevel.ERROR}),
-    // NgxLayerModule
+    NgxDatatableModule
   ],
   declarations: [
     AppComponent,
@@ -76,11 +89,15 @@ import {MaterialModule} from './MaterialModule.component';
     ElementRdpComponent,
     ElementServerMenuComponent,
     ElementIframeComponent,
+    ElementDialogAlertComponent,
+    ElementTableComponent,
+    ElementLeftbarComponent,
+    ElementOfooterComponent,
     LoginComponent,
     SearchComponent,
     SearchFilter,
     IleftbarComponent,
-    CleftbarComponent, CleftbarComponentDialog,
+    CleftbarComponent, CleftbarDialogComponent,
     ControlComponent,
     ControlnavComponent,
     ControlPageComponent,
@@ -95,12 +112,19 @@ import {MaterialModule} from './MaterialModule.component';
     MonitorPageComponent,
     LinuxComponent,
     WindowsComponent,
-    TestPageComponent, TestPageComponentDialog,
+    TestPageComponent,
     BlankPageComponent,
+    SettingPageComponent,
+    SettingPageBasicComponent,
+    SettingPageEmailComponent,
+    SettingPageLdapComponent,
+    SettingPageTerminalComponent,
+    SettingPageS3Component,
+    TransPipe,
   ],
   entryComponents: [
-    CleftbarComponentDialog,
-    TestPageComponentDialog
+    CleftbarDialogComponent,
+    ElementDialogAlertComponent,
   ],
   bootstrap: [AppComponent],
   providers: [
@@ -110,8 +134,12 @@ import {MaterialModule} from './MaterialModule.component';
     HttpService,
     LogService,
     UUIDService,
+    LocalStorageService,
     DialogService,
-    NGXLogger
+    CookieService,
+    NGXLogger,
+    {provide: MAT_LABEL_GLOBAL_OPTIONS, useValue: {float: 'always'}}
+
   ]
 })
 export class AppModule {

@@ -2,6 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {DataStore} from '../globals';
 import {ActivatedRoute, Params} from '@angular/router';
 import * as jQuery from 'jquery/dist/jquery.min.js';
+import {LogService} from '../app.service';
 
 @Component({
   selector: 'app-term-page',
@@ -11,8 +12,10 @@ import * as jQuery from 'jquery/dist/jquery.min.js';
 export class TermPageComponent implements OnInit {
   token: string;
 
-  constructor(private activatedRoute: ActivatedRoute) {
+  constructor(private activatedRoute: ActivatedRoute,
+              private _logger: LogService) {
     DataStore.NavShow = false;
+    this._logger.debug('TermPageComponent');
   }
 
   ngOnInit() {

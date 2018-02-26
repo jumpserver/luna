@@ -19,6 +19,7 @@ import {TermPageComponent} from './term-page/term-page.component';
 import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
 import {BlankPageComponent} from './blank-page/blank-page.component';
 import {TestPageComponent} from './test-page/test-page.component';
+import {SettingPageComponent} from './setting-page/setting-page.component';
 
 const appRoutes: Routes = [
   // {path: 'users/login', component: LoginComponent},
@@ -27,6 +28,7 @@ const appRoutes: Routes = [
   {path: 'replay/:token', component: ReplayPageComponent},
   {path: 'monitor/:token', component: MonitorPageComponent},
   {path: 'test', component: TestPageComponent},
+  {path: 'setting', component: SettingPageComponent},
   {path: 'undefined', component: BlankPageComponent},
   {path: '', component: ControlPageComponent},
   {path: '**', component: NotFoundComponent}
