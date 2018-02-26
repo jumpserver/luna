@@ -1,10 +1,10 @@
 import {AfterViewInit, Component, Input, OnInit, ViewChild} from '@angular/core';
 import {ElementRef} from '@angular/core';
 import {term, Terminal, TermWS} from '../../globals';
-import {Cookie} from 'ng2-cookies/ng2-cookies';
 import {NavList} from '../../ControlPage/control/control.component';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {UUIDService} from '../../app.service';
+import {CookieService} from 'ngx-cookie-service';
 
 @Component({
   selector: 'app-element-term',
@@ -22,7 +22,8 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   secret: string;
   term: any;
 
-  constructor(private _uuid: UUIDService) {
+  constructor(private _uuid: UUIDService,
+              private _cookie: CookieService) {
   }
 
   ngOnInit() {
@@ -38,11 +39,11 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     if (this.host || this.token) {
-      if (Cookie.get('cols')) {
-        term.col = parseInt(Cookie.get('cols'), 10);
+      if (this._cookie.get('cols')) {
+        term.col = parseInt(this._cookie.get('cols'), 10);
       }
-      if (Cookie.get('rows')) {
-        term.row = parseInt(Cookie.get('rows'), 10);
+      if (this._cookie.get('rows')) {
+        term.row = parseInt(this._cookie.get('rows'), 10);
       }
     } else {
       term.col = Math.floor(jQuery(this.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
@@ -62,8 +63,8 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       }
       that.term.resize(term.col, term.row);
       if (that.host) {
-        Cookie.set('cols', term.col.toString(), 99, '/', document.domain);
-        Cookie.set('rows', term.row.toString(), 99, '/', document.domain);
+        that._cookie.set('cols', term.col.toString(), 99, '/', document.domain);
+        that._cookie.set('rows', term.row.toString(), 99, '/', document.domain);
         TermWS.emit('resize', {'cols': term.col, 'rows': term.row});
       }
     };
@@ -97,7 +98,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     TermWS.on('logout', function (data) {
       if (data['room'] === NavList.List[that.index].room) {
         NavList.List[this.index].connected = false;
-        this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+        // this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
       }
     });
     TermWS.on('room', function (data) {
@@ -109,7 +110,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
   TerminalDisconnect() {
     NavList.List[this.index].connected = false;
-    this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+    // this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
     TermWS.emit('logout', NavList.List[this.index].room);
   }
 }

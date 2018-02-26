@@ -12,13 +12,11 @@ import {AppService, HttpService, LogService} from '../../app.service';
 import {SearchComponent} from '../search/search.component';
 import {DataStore} from '../../globals';
 import {version} from '../../../environments/environment';
-import * as jQuery from 'jquery/dist/jquery.min.js';
 import {ElementServerMenuComponent} from '../../elements/server-menu/server-menu.component';
 import {NavList, View} from '../control/control.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-import {logger} from 'codelyzer/util/logger';
-import {selector} from 'rxjs/operator/publish';
 import {FormControl, Validators} from '@angular/forms';
+import {DialogService} from '../../elements/dialog/dialog.service';
 
 
 export interface HostGroup {
@@ -47,6 +45,7 @@ export class CleftbarComponent implements OnInit {
   event: MouseEvent;
   clientX = 0;
   clientY = 0;
+  TooltipPosition = 'above';
 
   static Reload() {
   }
@@ -55,7 +54,7 @@ export class CleftbarComponent implements OnInit {
     DataStore.leftbarshow = false;
     DataStore.Nav.map(function (value, i) {
       value['children'].forEach((v, key) => {
-        if (DataStore.Nav[i]['children'][key]['id'] === 'HindLeftManager') {
+        if (DataStore.Nav[i]['children'][key]['id'] === 'HideLeftManager') {
           DataStore.Nav[i]['children'][key] = {
             'id': 'ShowLeftManager',
             'click': 'ShowLeft',
@@ -72,9 +71,9 @@ export class CleftbarComponent implements OnInit {
       value['children'].forEach((v, key) => {
         if (DataStore.Nav[i]['children'][key]['id'] === 'ShowLeftManager') {
           DataStore.Nav[i]['children'][key] = {
-            'id': 'HindLeftManager',
+            'id': 'HideLeftManager',
             'click': 'HideLeft',
-            'name': 'Hind left manager'
+            'name': 'Hide left manager'
           };
         }
       });
@@ -86,7 +85,8 @@ export class CleftbarComponent implements OnInit {
               private _search: SearchComponent,
               private _logger: LogService,
               private _menu: ElementServerMenuComponent,
-              public _dialog: MatDialog) {
+              public _dialog: MatDialog,
+              private _layer: DialogService) {
     this._logger.log('nav.ts:NavComponent');
     // this._appService.getnav()
   }
@@ -95,25 +95,43 @@ export class CleftbarComponent implements OnInit {
     this._http.get_my_asset_groups_assets()
       .subscribe(response => {
         this.HostGroups = response;
-        this.autologin();
+        if (!DataStore.autologin) {
+          this.autologin();
+        }
       });
   }
 
   autologin() {
-    const id = this._appService.getQueryString('id');
-    if (id) {
+    const asset_id = this._appService.getQueryString('asset_id');
+    const user_id = this._appService.getQueryString('user_id');
+    let tag = false;
+    if (asset_id) {
       for (let g of this.HostGroups) {
         if (g['assets_granted']) {
-          g['assets_granted'].forEach((v, k) => {
-            if (v.id.toSource() === id.toString()) {
-              this.Connect(v);
-              return;
+          for (let host of g['assets_granted']) {
+            if (host.id.toString() === asset_id) {
+              if (user_id) {
+                host['system_users_granted'].forEach((user, kk) => {
+                  if (user.id.toString() === user_id.toString()) {
+                    this.login(host, user);
+                    tag = true;
+                    return;
+                  }
+                });
+              } else {
+                this.Connect(host);
+                tag = true;
+                return;
+              }
             }
-          });
+          }
         }
       }
-
+      if (!tag) {
+        this._layer.alert('Maybe you do not have permission on that host');
+      }
     }
+    DataStore.autologin = true;
   }
 
   Connect(host) {
@@ -124,7 +142,7 @@ export class CleftbarComponent implements OnInit {
       if (user) {
         this.login(host, user);
       } else {
-        const dialogRef = this._dialog.open(CleftbarComponentDialog, {
+        const dialogRef = this._dialog.open(CleftbarDialogComponent, {
           height: '200px',
           width: '300px',
           data: {users: host.system_users_granted}
@@ -168,7 +186,7 @@ export class CleftbarComponent implements OnInit {
   }
 
   checkPriority(sysUsers) {
-    let priority: number = -1;
+    let priority = -1;
     let user: any;
     for (const u of sysUsers) {
       if (u.priority > priority) {
@@ -198,11 +216,11 @@ export class CleftbarComponent implements OnInit {
   selector: 'app-cleftbar-dialog',
   templateUrl: 'dialog.html',
 })
-export class CleftbarComponentDialog implements OnInit {
+export class CleftbarDialogComponent implements OnInit {
   UserSelectControl = new FormControl('', [Validators.required]);
   selected: any;
 
-  constructor(public dialogRef: MatDialogRef<CleftbarComponentDialog>,
+  constructor(public dialogRef: MatDialogRef<CleftbarDialogComponent>,
               @Inject(MAT_DIALOG_DATA) public data: any,
               private _logger: LogService) {
   }

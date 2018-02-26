@@ -1,0 +1,12 @@
+.basic-form {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  max-width: 400px;
+  margin: auto;
+  font-size: 14pt;
+}
+
+.basic-form > * {
+  width: 100%;
+}

@@ -1,13 +1,14 @@
+<script src="../../trans.pipe.spec.ts"></script>
 <div class="nav">
   <ul>
     <li><a [routerLink]="['']"><img src="static/imgs/logo.png" height="26px"/></a>
     </li>
     <li *ngFor="let v of DataStore.Nav" [ngClass]="{'dropdown': v.children}">
-      <a>{{v.name}}</a>
+      <a>{{v.name | trans}}</a>
       <ul [ngClass]="{'dropdown-content': v.children}">
         <li *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
-          <a *ngIf="vv.href" [routerLink]="[vv.href]">{{vv.name}}</a>
-          <a id="{{vv.id}}" *ngIf="vv.click" (click)="click(vv.click)">{{vv.name}}</a>
+          <a *ngIf="vv.href" [routerLink]="[vv.href]">{{vv.name|trans}}</a>
+          <a id="{{vv.id}}" *ngIf="vv.click" (click)="click(vv.click)">{{vv.name|trans}}</a>
         </li>
       </ul>
     </li>

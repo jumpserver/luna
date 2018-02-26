@@ -1,7 +1,7 @@
-import {Component, Inject, OnInit} from '@angular/core';
+import {Component, OnInit} from '@angular/core';
 import {DataStore} from '../globals';
+import {Config} from '../elements/table/table.component';
 import {DialogService} from '../elements/dialog/dialog.service';
-import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 
 // import {Mats, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
 
@@ -11,41 +11,42 @@ import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
   styleUrls: ['./test-page.component.scss']
 })
 export class TestPageComponent implements OnInit {
-  name: string;
+  rows = [
+    {name: 'Austin', gender: 'Male', company: 'Swimlane'},
+    {name: 'Dany', gender: 'Male', company: 'KFC'},
+    {name: 'Molly', gender: 'Female', company: 'Burger King'},
+    {name: 'Dany', gender: 'Male', company: 'KFC'},
+    {name: 'Molly', gender: 'Female', company: 'Burger King'},
+    {name: 'Dany', gender: 'Male', company: 'KFC'},
+    {name: 'Molly', gender: 'Female', company: 'Burger King'},
+    {name: 'Dany', gender: 'Male', company: 'KFC'},
+    {name: 'Molly', gender: 'Female', company: 'Burger King'},
+    {name: 'Dany', gender: 'Male', company: 'KFC'},
+    {name: 'Molly', gender: 'Female', company: 'Burger King'},
+    {name: 'Dany', gender: 'Male', company: 'KFC'},
+    {name: 'Molly', gender: 'Female', company: 'Burger King'},
+    {name: 'Dany', gender: 'Male', company: 'KFC'},
+    {name: 'Molly', gender: 'Female', company: 'Burger King'},
+    {name: 'Dany', gender: 'Male', company: 'KFC'},
+    {name: 'Molly', gender: 'Female', company: 'Burger King'},
+  ];
+  columns = [
+    {prop: 'name'},
+    {name: 'Gender'},
+    {name: 'Company'}
+  ];
+  config = Config;
 
-  constructor(private _dialog: MatDialog) {
+  constructor(private _layer: DialogService) {
     DataStore.NavShow = false;
+    this.config.search = true;
+    this.config.scrollbarH = true;
   }
 
   ngOnInit() {
-    this.name = 'ssss';
   }
 
-  openDialog(): void {
-    const dialogRef = this._dialog.open(TestPageComponentDialog, {
-      width: '251px',
-      data: {name: this.name}
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      console.log('The dialog was closed', result);
-      // this.animal = result;
-    });
+  test() {
+    this._layer.alert('sss');
   }
-}
-
-
-@Component({
-  selector: 'app-test-page-dialog',
-  templateUrl: 'dialog.html',
-})
-export class TestPageComponentDialog {
-  constructor(public dialogRef: MatDialogRef<TestPageComponentDialog>,
-              @Inject(MAT_DIALOG_DATA) public data: any) {
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-
 }
