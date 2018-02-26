@@ -150,6 +150,10 @@ export class LocalStorageService {
   set(key: string, value: any) {
     return localStorage.setItem(key, value);
   }
+
+  delete(key: string) {
+    return localStorage.removeItem(key);
+  }
 }
 
 @Injectable()
