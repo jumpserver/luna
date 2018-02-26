@@ -276,6 +276,7 @@ export class ElementNavComponent implements OnInit {
   English() {
     this._localStorage.delete('lang');
     i18n.clear();
+    location.reload();
   }
 
   Language(lan: string) {
@@ -291,5 +292,6 @@ export class ElementNavComponent implements OnInit {
         i18n.set(k, data[k]);
       });
     }
+    location.reload();
   }
 }
