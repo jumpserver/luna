@@ -115,7 +115,7 @@ def index():
   return render_template('index.html')
 
 
-@app.route('/api/perms/v1/user/my/asset-groups-assets/')
+@app.route('/api/perms/v1/user/nodes-assets/')
 def asset_groups_assets():
   assets = [
     {

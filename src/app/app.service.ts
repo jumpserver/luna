@@ -67,7 +67,7 @@ export class HttpService {
   }
 
   get_my_asset_groups_assets() {
-    return this.http.get<Array<HostGroup>>('/api/perms/v1/user/my/asset-groups-assets/');
+    return this.http.get<Array<HostGroup>>('/api/perms/v1/user/nodes-assets/');
   }
 
   get_guacamole_token(username: string, assetID: string, systemUserID: string) {
