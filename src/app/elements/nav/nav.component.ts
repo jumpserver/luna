@@ -280,7 +280,7 @@ export class ElementNavComponent implements OnInit {
   }
 
   Language(lan: string) {
-    this._http.get('/i18n/' + lan).subscribe(
+    this._http.get('/luna/i18n/' + lan + '.json').subscribe(
       data => {
         this._localStorage.set('lang', JSON.stringify(data));
       }
