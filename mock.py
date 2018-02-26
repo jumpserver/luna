@@ -233,9 +233,9 @@ def replay():
   return redirect("http://jps.ilz.me/media/2017-12-24/ec87a486-0344-4f12-b27a-620321944f7f.gz")
 
 
-@app.route('/i18n/<i18n>')
+@app.route('/luna/i18n/<i18n>')
 def i18n(i18n):
-  return send_file('./i18n/' + i18n + '.json')
+  return send_file('./i18n/' + i18n)
 
 
 def read_file(filename, charset='utf-8'):

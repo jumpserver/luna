@@ -6,10 +6,10 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {AppService, HttpService, LogService} from '../../app.service';
+import {AppService, HttpService, LocalStorageService, LogService} from '../../app.service';
 import {CleftbarComponent} from '../../ControlPage/cleftbar/cleftbar.component';
 import {ControlComponent, NavList} from '../../ControlPage/control/control.component';
-import {DataStore} from '../../globals';
+import {DataStore, i18n} from '../../globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 // import * as layer from 'layui-layer/src/layer.js';
 declare let layer: any;
@@ -28,7 +28,8 @@ export class ElementNavComponent implements OnInit {
 
   constructor(private _appService: AppService,
               private _http: HttpService,
-              private _logger: LogService) {
+              private _logger: LogService,
+              private _localStorage: LocalStorageService) {
     this._logger.log('nav.ts:NavComponent');
     this.getnav();
   }
@@ -87,6 +88,14 @@ export class ElementNavComponent implements OnInit {
       }
       case 'EnterLicense': {
         this.EnterLicense();
+        break;
+      }
+      case 'English': {
+        this.English();
+        break;
+      }
+      case 'Chinese': {
+        this.Language('cn');
         break;
       }
       default: {
@@ -228,9 +237,24 @@ export class ElementNavComponent implements OnInit {
           'click': 'BBS',
           'name': 'BBS'
         }]
-    }];
+    }, {
+      'id': 'Language',
+      'name': 'Language',
+      'children': [
+        {
+          'id': 'English',
+          'click': 'English',
+          'name': 'English'
+        },
+        {
+          'id': 'Chinese',
+          'click': 'Chinese',
+          'name': '中文'
+        }
+      ]
+    }
+    ];
   }
-
 
   Connect() {
     layer.prompt({
@@ -247,5 +271,27 @@ export class ElementNavComponent implements OnInit {
       layer.close(index);
 
     });
+  }
+
+  English() {
+    this._localStorage.delete('lang');
+    i18n.clear();
+    location.reload();
+  }
+
+  Language(lan: string) {
+    this._http.get('/luna/i18n/' + lan + '.json').subscribe(
+      data => {
+        this._localStorage.set('lang', JSON.stringify(data));
+      }
+    );
+    const l = this._localStorage.get('lang');
+    if (l) {
+      const data = JSON.parse(l);
+      Object.keys(data).forEach((k, _) => {
+        i18n.set(k, data[k]);
+      });
+    }
+    location.reload();
   }
 }

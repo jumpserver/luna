@@ -150,6 +150,10 @@ export class LocalStorageService {
   set(key: string, value: any) {
     return localStorage.setItem(key, value);
   }
+
+  delete(key: string) {
+    return localStorage.removeItem(key);
+  }
 }
 
 @Injectable()
@@ -194,7 +198,7 @@ export class AppService implements OnInit {
     }
 
     if (this.lang !== 'en') {
-      this._http.get('/i18n/' + this.lang).subscribe(
+      this._http.get('/luna/i18n/' + this.lang + '.json').subscribe(
         data => {
           this._localStorage.set('lang', JSON.stringify(data));
         }
