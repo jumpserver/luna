@@ -29,7 +29,7 @@ export class ElementServerMenuComponent implements OnInit {
     m.type = 'lll';
     line.type = 'line';
     this.MenuList = [m, m, line, m, m];
-    this._dialog.alert();
+    this._dialog.alert('sss');
   }
 
   public contextmenu(top: number, left: number) {

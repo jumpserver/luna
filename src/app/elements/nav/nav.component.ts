@@ -181,9 +181,9 @@ export class ElementNavComponent implements OnInit {
       'name': 'View',
       'children': [
         {
-          'id': 'HindLeftManager',
+          'id': 'HideLeftManager',
           'click': 'HideLeft',
-          'name': 'Hind left manager'
+          'name': 'Hide left manager'
         },
         {
           'id': 'SplitVertical',

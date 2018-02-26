@@ -1,0 +1,33 @@
+<mat-sidenav-container>
+  <mat-sidenav #sidenav mode="side" opened="true" class="example-sidenav"
+               [fixedInViewport]="options.value.fixed" [fixedTopGap]="options.value.top"
+               [fixedBottomGap]="options.value.bottom">
+    <nav>
+      <div class="header">
+        <a href="http://www.jumpserver.org" target="_blank">
+          <img alt="image" height="55" src="/static/imgs/logo-text.png" style="margin-left: 10px">
+        </a>
+      </div>
+      <div class="body">
+        <ul class="nav metismenu nav-frist-level">
+          <li *ngFor="let bar of leftbar;let i = index" [ngClass]="{'active':i==active}">
+            <a (click)="gotoLink(bar.link,i,-1)">
+              <i class="{{bar.class}}"></i>
+              <span class="nav-label">{{bar.name|trans}}</span>
+              <span class="{{bar.label}}"></span>
+            </a>
+            <ul class="nav nav-second-level collapse">
+              <li *ngFor="let child of bar.child;let ii = index" [ngClass]="{'active':ii==active2}">
+                <a (click)="gotoLink(child.link,i,ii)">{{child.name|trans}}</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </nav>
+  </mat-sidenav>
+  <div class="navbar-header">
+    <button class="navbar-minimalize minimalize-styl-2 btn btn-primary " (click)="sidenav.toggle()"><i
+      class="fa fa-bars"></i></button>
+  </div>
+</mat-sidenav-container>
