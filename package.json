@@ -5,7 +5,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.json",
-    "build": "ng build --environment prod --base-href=/luna/  --deploy '/luna/' && cp -R i18n/ dist/",
+    "build": "ng build --environment prod --base-href=/luna/  --deploy '/luna/'",
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e"
