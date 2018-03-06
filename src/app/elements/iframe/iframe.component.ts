@@ -24,7 +24,7 @@ export class ElementIframeComponent implements OnInit {
   ngOnInit() {
     // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
     const base = window.btoa(this.host.hostname + '\0' + 'c' + '\0' + 'jumpserver');
-    if (guacamole_token.length > 0) {
+    if (guacamole_token) {
       this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + guacamole_token;
     } else {
       this._http.get_guacamole_token(User.name, this.host.id, this.userid).subscribe(
