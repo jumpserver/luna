@@ -147,3 +147,4 @@ export let wsEvent: {
 
 export const i18n = new Map();
 
+export let guacamole_token: string;

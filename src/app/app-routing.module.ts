@@ -28,7 +28,7 @@ const appRoutes: Routes = [
   {path: 'replay/:token', component: ReplayPageComponent},
   {path: 'monitor/:token', component: MonitorPageComponent},
   {path: 'test', component: TestPageComponent},
-  {path: 'setting', component: SettingPageComponent},
+  // {path: 'setting', component: SettingPageComponent},
   {path: 'undefined', component: BlankPageComponent},
   {path: '', component: ControlPageComponent},
   {path: '**', component: NotFoundComponent}
