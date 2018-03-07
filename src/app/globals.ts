@@ -104,6 +104,7 @@ export let DataStore: {
   leftbarshow: boolean;
   windowsize: Array<number>;
   autologin: boolean;
+  guacamole_token: string;
 } = {
   socket: io.connect(),
   Nav: [{}],
@@ -115,6 +116,7 @@ export let DataStore: {
   leftbarshow: true,
   windowsize: [],
   autologin: false,
+  guacamole_token: ''
 };
 export let CSRF = '';
 
@@ -147,4 +149,3 @@ export let wsEvent: {
 
 export const i18n = new Map();
 
-export let guacamole: { token: string } = {token: ''};
