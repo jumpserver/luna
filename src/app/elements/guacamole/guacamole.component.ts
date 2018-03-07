@@ -57,4 +57,9 @@ export class ElementGuacamoleComponent implements OnInit {
     NavList.List[this.index].connected = false;
   }
 
+  active() {
+    this._logger.debug('focus');
+    this.el.nativeElement.focus();
+  }
+
 }
