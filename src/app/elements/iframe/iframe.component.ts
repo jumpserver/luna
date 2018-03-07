@@ -15,6 +15,7 @@ export class ElementIframeComponent implements OnInit {
   @Input() userid: any;
   @Input() index: number;
   target: string;
+  guacamole = guacamole;
 
   constructor(private sanitizer: DomSanitizer,
               private _http: HttpService,
@@ -24,15 +25,15 @@ export class ElementIframeComponent implements OnInit {
   ngOnInit() {
     // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
     const base = window.btoa(this.host.hostname + '\0' + 'c' + '\0' + 'jumpserver');
-    if (guacamole.token) {
-      this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + guacamole.token;
+    if (this.guacamole.token) {
+      this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + this.guacamole.token;
     } else {
       this._http.get_guacamole_token(User.name, this.host.id, this.userid).subscribe(
         data => {
           // /guacamole/client will redirect to http://guacamole/#/client
           this.target = document.location.origin +
             '/guacamole/#/client/' + base + '?token=' + data['authToken'];
-          guacamole.token = data['authToken'];
+          this.guacamole.token = data['authToken'];
         },
         error2 => {
           this._logger.error(error2);
