@@ -7,9 +7,9 @@
                     [index]="i"
                     *ngIf="m.type=='ssh'">
   </app-element-term>
-  <app-element-iframe [host]="m.host"
+  <app-element-guacamole [host]="m.host"
                       [userid]="m.user.id"
                       [index]="i"
                       *ngIf="m.type=='rdp'">
-  </app-element-iframe>
+  </app-element-guacamole>
 </div>
