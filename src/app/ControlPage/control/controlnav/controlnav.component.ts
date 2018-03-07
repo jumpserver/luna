@@ -7,7 +7,7 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 
-import {Component, OnInit} from '@angular/core';
+import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {ControlComponent, NavList} from '../control.component';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
@@ -44,6 +44,7 @@ export class ControlnavComponent implements OnInit {
       if (NavList.List[index].type === 'ssh') {
         NavList.List[index].Term.focus();
       } else if (NavList.List[index].type === 'rdp') {
+        NavList.List[index].Rdp.iframe.focus();
       }
     } else {
 

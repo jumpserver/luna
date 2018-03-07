@@ -1,4 +1,4 @@
-import {Component, Input, OnInit} from '@angular/core';
+import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {CookieService} from 'ngx-cookie-service';
 import {HttpService, LogService} from '../../app.service';
 import {DataStore, User} from '../../globals';
@@ -16,6 +16,7 @@ export class ElementGuacamoleComponent implements OnInit {
   @Input() userid: any;
   @Input() index: number;
   target: string;
+  @ViewChild('rdp') el: ElementRef;
 
   constructor(private sanitizer: DomSanitizer,
               private _http: HttpService,
@@ -45,6 +46,7 @@ export class ElementGuacamoleComponent implements OnInit {
     } else {
       this.target = this._cookie.get('guacamole');
     }
+    NavList.List[this.index].Rdp.iframe = this.el.nativeElement;
   }
 
   trust(url) {
