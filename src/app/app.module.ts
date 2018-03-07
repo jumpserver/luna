@@ -65,6 +65,7 @@ import {SettingPageTerminalComponent} from './setting-page/terminal/terminal.com
 import {SettingPageS3Component} from './setting-page/s3/s3.component';
 import {TransPipe} from './trans.pipe';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
+import {ElementGuacamoleComponent} from './elements/guacamole/guacamole.component';
 
 @NgModule({
   imports: [
@@ -93,6 +94,7 @@ import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
     ElementTableComponent,
     ElementLeftbarComponent,
     ElementOfooterComponent,
+    ElementGuacamoleComponent,
     LoginComponent,
     SearchComponent,
     SearchFilter,
