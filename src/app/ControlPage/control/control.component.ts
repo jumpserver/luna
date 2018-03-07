@@ -16,12 +16,7 @@ import {TermWS} from '../../globals';
 //   term: any;
 // }
 
-export class Rdp {
-  machine: string;
-  token: string;
-  client: any;
-  iframe: any;
-}
+
 
 export class View {
   nick: string;
@@ -33,7 +28,7 @@ export class View {
   host: any;
   user: any;
   room: string;
-  Rdp: Rdp;
+  Rdp: any;
   Term: any;
 }
 
