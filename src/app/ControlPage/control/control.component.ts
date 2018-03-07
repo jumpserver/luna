@@ -20,6 +20,7 @@ export class Rdp {
   machine: string;
   token: string;
   client: any;
+  iframe: any;
 }
 
 export class View {
