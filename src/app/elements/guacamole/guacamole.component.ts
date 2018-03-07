@@ -46,7 +46,7 @@ export class ElementGuacamoleComponent implements OnInit {
     } else {
       this.target = this._cookie.get('guacamole');
     }
-    NavList.List[this.index].Rdp.iframe = this.el.nativeElement;
+    NavList.List[this.index].Rdp = this.el.nativeElement;
   }
 
   trust(url) {
