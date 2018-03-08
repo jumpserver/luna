@@ -70,13 +70,22 @@ export class HttpService {
     return this.http.get<Array<HostGroup>>('/api/perms/v1/user/nodes-assets/');
   }
 
-  get_guacamole_token(username: string, assetID: string, systemUserID: string) {
+  get_guacamole_token(username: string) {
     const body = new HttpParams()
       .set('username', username)
-      .set('password', 'jumpserver')
-      .set('asset_id', assetID)
-      .set('system_user_id', systemUserID);
+      .set('password', 'jumpserver');
     return this.http.post('/guacamole/api/tokens',
+      body.toString(),
+      {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
+  }
+
+  guacamole_add_asset(user_id: string, asset_id: string, system_user_id: string) {
+    const body = new HttpParams()
+      .set('user_id', user_id)
+      .set('asset_id', asset_id)
+      .set('system_user_id', system_user_id)
+      .set('token', DataStore.guacamole_token);
+    return this.http.post('/guacamole/api/session/ext/jumpserver/asset/add',
       body.toString(),
       {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
   }
