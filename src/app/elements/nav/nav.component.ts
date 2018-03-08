@@ -237,9 +237,14 @@ export class ElementNavComponent implements OnInit {
           'name': 'Website'
         },
         {
-          'id': 'BBS',
-          'click': 'BBS',
-          'name': 'BBS'
+          'id': 'Document',
+          'click': 'Document',
+          'name': 'Document'
+        },
+        {
+          'id': 'Support',
+          'click': 'Support',
+          'name': 'Support'
         }]
     }, {
       'id': 'Language',
