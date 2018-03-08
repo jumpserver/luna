@@ -1,22 +1,22 @@
-import {Component, Input, OnInit} from '@angular/core';
+import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
+import {CookieService} from 'ngx-cookie-service';
+import {HttpService, LogService} from '../../app.service';
+import {DataStore, User} from '../../globals';
 import {DomSanitizer} from '@angular/platform-browser';
+import {environment} from '../../../environments/environment';
 import {NavList} from '../../ControlPage/control/control.component';
 
-import {User, DataStore} from '../../globals';
-import {HttpService, LogService} from '../../app.service';
-import {environment} from '../../../environments/environment';
-import {CookieService} from 'ngx-cookie-service';
-
 @Component({
-  selector: 'app-element-iframe',
-  templateUrl: './iframe.component.html',
-  styleUrls: ['./iframe.component.scss']
+  selector: 'app-element-guacamole',
+  templateUrl: './guacamole.component.html',
+  styleUrls: ['./guacamole.component.scss']
 })
-export class ElementIframeComponent implements OnInit {
+export class ElementGuacamoleComponent implements OnInit {
   @Input() host: any;
   @Input() userid: any;
   @Input() index: number;
   target: string;
+  @ViewChild('rdp') el: ElementRef;
 
   constructor(private sanitizer: DomSanitizer,
               private _http: HttpService,
@@ -46,6 +46,7 @@ export class ElementIframeComponent implements OnInit {
     } else {
       this.target = this._cookie.get('guacamole');
     }
+    NavList.List[this.index].Rdp = this.el.nativeElement;
   }
 
   trust(url) {
@@ -55,4 +56,10 @@ export class ElementIframeComponent implements OnInit {
   Disconnect() {
     NavList.List[this.index].connected = false;
   }
+
+  active() {
+    this._logger.debug('focus');
+    this.el.nativeElement.focus();
+  }
+
 }
