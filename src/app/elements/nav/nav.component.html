@@ -1,7 +1,7 @@
 <script src="../../trans.pipe.spec.ts"></script>
 <div class="nav">
   <ul>
-    <li><a [routerLink]="['']"><img src="static/imgs/logo.png" height="26px"/></a>
+    <li><a href="/"><img src="static/imgs/logo.png" height="26px"/></a>
     </li>
     <li *ngFor="let v of DataStore.Nav" [ngClass]="{'dropdown': v.children}">
       <a>{{v.name | trans}}</a>
