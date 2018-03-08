@@ -80,18 +80,24 @@ export class HttpService {
   }
 
   guacamole_add_asset(user_id: string, asset_id: string, system_user_id: string) {
-    const body = new HttpParams()
+    const params = new HttpParams()
       .set('user_id', user_id)
       .set('asset_id', asset_id)
       .set('system_user_id', system_user_id)
       .set('token', DataStore.guacamole_token);
-    return this.http.post('/guacamole/api/session/ext/jumpserver/asset/add',
-      body.toString(),
-      {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
+    return this.http.get(
+      '/guacamole/api/session/ext/jumpserver/asset/add',
+      {
+        headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
+        params: params
+      }
+    );
   }
 
   search(q: string) {
-    return this.http.get('/api/search?q=' + q);
+    const params = new HttpParams()
+      .set('q', q);
+    return this.http.get('/api/search', {params: params});
   }
 
   get_replay(token: string) {
