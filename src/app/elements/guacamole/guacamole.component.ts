@@ -29,14 +29,29 @@ export class ElementGuacamoleComponent implements OnInit {
     const base = window.btoa(this.host.id + '\0' + 'c' + '\0' + 'jumpserver');
     if (environment.production) {
       if (DataStore.guacamole_token) {
-        this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamole_token;
+        this._http.guacamole_add_asset(User.id, this.host.id, this.userid).subscribe(
+          data => {
+            this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamole_token;
+          },
+          error2 => {
+            this._logger.error(error2);
+          }
+        );
       } else {
-        this._http.get_guacamole_token(User.name, this.host.id, this.userid).subscribe(
+        this._http.get_guacamole_token(User.id).subscribe(
           data => {
             // /guacamole/client will redirect to http://guacamole/#/client
-            this.target = document.location.origin +
-              '/guacamole/#/client/' + base + '?token=' + data['authToken'];
             DataStore.guacamole_token = data['authToken'];
+
+            this._http.guacamole_add_asset(User.id, this.host.id, this.userid).subscribe(
+              data2 => {
+                this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamole_token;
+              },
+              error2 => {
+                this._logger.error(error2);
+              }
+            );
+            // '/guacamole/#/client/' + base + '?token=' + data['authToken'];
           },
           error2 => {
             this._logger.error(error2);
