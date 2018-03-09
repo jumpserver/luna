@@ -1,20 +1,20 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { RdpPageComponent } from './rdp-page.component';
+import { ConnectPageComponent } from './connect-page.component';
 
-describe('RdpPageComponent', () => {
-  let component: RdpPageComponent;
-  let fixture: ComponentFixture<RdpPageComponent>;
+describe('ConnectPageComponent', () => {
+  let component: ConnectPageComponent;
+  let fixture: ComponentFixture<ConnectPageComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ RdpPageComponent ]
+      declarations: [ ConnectPageComponent ]
     })
     .compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(RdpPageComponent);
+    fixture = TestBed.createComponent(ConnectPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
