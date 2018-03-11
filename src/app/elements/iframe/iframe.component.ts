@@ -25,27 +25,6 @@ export class ElementIframeComponent implements OnInit {
   }
 
   ngOnInit() {
-    // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
-    const base = window.btoa(this.host.id + '\0' + 'c' + '\0' + 'jumpserver');
-    if (environment.production) {
-      if (DataStore.guacamole_token) {
-        this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamole_token;
-      } else {
-        this._http.get_guacamole_token(User.name, this.host.id, this.userid).subscribe(
-          data => {
-            // /guacamole/client will redirect to http://guacamole/#/client
-            this.target = document.location.origin +
-              '/guacamole/#/client/' + base + '?token=' + data['authToken'];
-            DataStore.guacamole_token = data['authToken'];
-          },
-          error2 => {
-            this._logger.error(error2);
-          }
-        );
-      }
-    } else {
-      this.target = this._cookie.get('guacamole');
-    }
   }
 
   trust(url) {

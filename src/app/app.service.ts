@@ -70,19 +70,47 @@ export class HttpService {
     return this.http.get<Array<HostGroup>>('/api/perms/v1/user/nodes-assets/');
   }
 
-  get_guacamole_token(username: string, assetID: string, systemUserID: string) {
+  get_guacamole_token(user_id: string) {
     const body = new HttpParams()
-      .set('username', username)
-      .set('password', 'jumpserver')
-      .set('asset_id', assetID)
-      .set('system_user_id', systemUserID);
+      .set('username', user_id)
+      .set('password', 'jumpserver');
     return this.http.post('/guacamole/api/tokens',
       body.toString(),
       {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
   }
 
+  guacamole_add_asset(user_id: string, asset_id: string, system_user_id: string) {
+    const params = new HttpParams()
+      .set('user_id', user_id)
+      .set('asset_id', asset_id)
+      .set('system_user_id', system_user_id)
+      .set('token', DataStore.guacamole_token);
+    return this.http.get(
+      '/guacamole/api/session/ext/jumpserver/asset/add',
+      {
+        headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
+        params: params
+      }
+    );
+  }
+
+  guacamole_token_add_asset(token: string) {
+    const params = new HttpParams()
+      .set('asset_token', token)
+      .set('token', DataStore.guacamole_token);
+    return this.http.get(
+      '/guacamole/api/session/ext/jumpserver/asset/token/add',
+      {
+        headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
+        params: params
+      }
+    );
+  }
+
   search(q: string) {
-    return this.http.get('/api/search?q=' + q);
+    const params = new HttpParams()
+      .set('q', q);
+    return this.http.get('/api/search', {params: params});
   }
 
   get_replay(token: string) {

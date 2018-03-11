@@ -5,7 +5,7 @@
               [compareWith]="compareFn"
               [formControl]="UserSelectControl"
               placeholder="{{'Choose a User'|trans}}" required>
-    <mat-option *ngFor="let u of data.users" value="{{u.id}}">{{u.username}}</mat-option>
+    <mat-option *ngFor="let u of data.users" value="{{u.id}}">{{u.name}}</mat-option>
   </mat-select>
   <mat-error *ngIf="UserSelectControl.hasError('required')">{{"Please choose a User"|trans}}</mat-error>
 
