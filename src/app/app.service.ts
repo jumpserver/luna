@@ -290,7 +290,7 @@ export class AppService implements OnInit {
               err => {
                 // this._logger.error(err);
                 User.logined = false;
-                window.location.href = document.location.origin + '/users/login?next=' + document.location.pathname;
+                window.location.href = document.location.origin + '/users/login?next=' + document.location.pathname + document.location.search;
                 // this._router.navigate(['login']);
               },
               // () => {
