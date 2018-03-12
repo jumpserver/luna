@@ -70,10 +70,11 @@ export class HttpService {
     return this.http.get<Array<HostGroup>>('/api/perms/v1/user/nodes-assets/');
   }
 
-  get_guacamole_token(user_id: string) {
+  get_guacamole_token(user_id: string, authToken: string) {
     const body = new HttpParams()
       .set('username', user_id)
-      .set('password', 'jumpserver');
+      .set('password', 'jumpserver')
+      .set('asset_token', authToken);
 //  {
 // "authToken": "xxxxxxx",
 // "username": "xxxxxx",
@@ -125,6 +126,14 @@ export class HttpService {
 
   get_replay(token: string) {
     return this.http.get('/api/terminal/v1/sessions/' + token + '/replay');
+  }
+
+  get_user_id_from_token(token: string) {
+    const params = new HttpParams()
+      .set('user-only', '1')
+      .set('token', token);
+    return this.http.get('/api/users/v1/connection-token/', {params: params});
+
   }
 
 }
