@@ -50,6 +50,7 @@ export class ElementGuacamoleComponent implements OnInit {
           .subscribe(
             data => {
               this._localStorage.set('user', data['user']);
+              window.location.reload();
             }
           );
 

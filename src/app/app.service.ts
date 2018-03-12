@@ -275,70 +275,81 @@ export class AppService implements OnInit {
             this._router.navigate([document.location.pathname]);
           }
           // jQuery('angular2').show();
+        } else if (document.location.pathname === '/luna/connect') {
+          User.logined = true;
         } else {
           // this.browser();
-          if (document.location.pathname !== '/luna/connect') {
-            this._http.get_user_profile()
-              .subscribe(
-                data => {
-                  User.id = data['id'];
-                  User.name = data['name'];
-                  User.username = data['username'];
-                  User.email = data['email'];
-                  User.is_active = data['is_active'];
-                  User.is_superuser = data['is_superuser'];
-                  User.role = data['role'];
-                  // User.groups = data['groups'];
-                  User.wechat = data['wechat'];
-                  User.comment = data['comment'];
-                  User.date_expired = data['date_expired'];
-                  if (data['phone']) {
-                    User.phone = data['phone'].toString();
-                  }
-                  User.logined = data['logined'];
-                  this._logger.debug(User);
-                  this._localStorage.set('user', data['id']);
-                },
-                err => {
-                  // this._logger.error(err);
-                  User.logined = false;
-                  window.location.href = document.location.origin + '/users/login?next=' + document.location.pathname + document.location.search;
-                  // this._router.navigate(['login']);
-                },
-                // () => {
-                //   if (User.logined) {
-                //     if (document.location.pathname === '/login') {
-                //       this._router.navigate(['']);
-                //     } else {
-                //       this._router.navigate([document.location.pathname]);
-                //     }
-                //   } else {
-                //     this._router.navigate(['login']);
-                //   }
-                // jQuery('angular2').show();
-                // }
-              );
-          }
+          this._http.get_user_profile()
+            .subscribe(
+              data => {
+                User.id = data['id'];
+                User.name = data['name'];
+                User.username = data['username'];
+                User.email = data['email'];
+                User.is_active = data['is_active'];
+                User.is_superuser = data['is_superuser'];
+                User.role = data['role'];
+                // User.groups = data['groups'];
+                User.wechat = data['wechat'];
+                User.comment = data['comment'];
+                User.date_expired = data['date_expired'];
+                if (data['phone']) {
+                  User.phone = data['phone'].toString();
+                }
+                User.logined = data['logined'];
+                this._logger.debug(User);
+                this._localStorage.set('user', data['id']);
+              },
+              err => {
+                // this._logger.error(err);
+                User.logined = false;
+                window.location.href = document.location.origin + '/users/login?next=' + document.location.pathname + document.location.search;
+                // this._router.navigate(['login']);
+              },
+              // () => {
+              //   if (User.logined) {
+              //     if (document.location.pathname === '/login') {
+              //       this._router.navigate(['']);
+              //     } else {
+              //       this._router.navigate([document.location.pathname]);
+              //     }
+              //   } else {
+              //     this._router.navigate(['login']);
+              //   }
+              // jQuery('angular2').show();
+              // }
+            );
         }
       }
-    } else {
-      this._router.navigate(['FOF']);
-      // jQuery('angular2').show();
     }
   }
 
-  browser() {
-    this._http.report_browser();
-  }
+  else {
+  this;
+.
+  _router;
+.
 
-  getQueryString(name) {
-    const reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
-    const r = window.location.search.substr(1).match(reg);
-    if (r != null) {
-      return unescape(r[2]);
-    }
-    return null;
+  navigate(['FOF']);
+
+  // jQuery('angular2').show();
+}
+}
+
+browser();
+{
+  this._http.report_browser();
+}
+
+getQueryString(name);
+{
+  const reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
+  const r = window.location.search.substr(1).match(reg);
+  if (r != null) {
+    return unescape(r[2]);
   }
+  return null;
+}
 
 //
 //
