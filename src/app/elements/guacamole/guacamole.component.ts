@@ -28,18 +28,57 @@ export class ElementGuacamoleComponent implements OnInit {
   ngOnInit() {
     // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
     if (this.token) {
-      this._http.get_guacamole_token(User.id).subscribe(
-        data => {
-          DataStore.guacamole_token = data['authToken'];
-          this._http.guacamole_token_add_asset(this.token).subscribe(
-            _ => {
-              this.target = document.location.origin + '/guacamole/#/client/' + data['result'] + '?token=' + DataStore.guacamole_token;
+      if (User.id) {
+        this._http.get_user_profile()
+          .subscribe(
+            data => {
+              User.id = data['id'];
+              User.name = data['name'];
+              User.username = data['username'];
+              User.email = data['email'];
+              User.is_active = data['is_active'];
+              User.is_superuser = data['is_superuser'];
+              User.role = data['role'];
+              // User.groups = data['groups'];
+              User.wechat = data['wechat'];
+              User.comment = data['comment'];
+              User.date_expired = data['date_expired'];
+              if (data['phone']) {
+                User.phone = data['phone'].toString();
+              }
+              User.logined = data['logined'];
+              this._http.get_guacamole_token(User.id).subscribe(
+                data2 => {
+                  DataStore.guacamole_token = data2['authToken'];
+                  this._http.guacamole_token_add_asset(this.token).subscribe(
+                    _ => {
+                      this.target = document.location.origin + '/guacamole/#/client/' + data['result'] + '?token=' + DataStore.guacamole_token;
+                    },
+                    error2 => {
+                      this._logger.error(error2);
+                    }
+                  );
+                });
             },
-            error2 => {
-              this._logger.error(error2);
-            }
+            err => {
+              User.logined = false;
+              window.location.href = document.location.origin + '/users/login?next=' + document.location.pathname;
+            },
           );
-        });
+      } else {
+        this._http.get_guacamole_token(User.id).subscribe(
+          data => {
+            DataStore.guacamole_token = data['authToken'];
+            this._http.guacamole_token_add_asset(this.token).subscribe(
+              _ => {
+                this.target = document.location.origin + '/guacamole/#/client/' + data['result'] + '?token=' + DataStore.guacamole_token;
+              },
+              error2 => {
+                this._logger.error(error2);
+              }
+            );
+          });
+      }
     } else {
       const base = window.btoa(this.host.id + '\0' + 'c' + '\0' + 'jumpserver');
       if (environment.production) {
