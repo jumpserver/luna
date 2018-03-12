@@ -5,6 +5,7 @@ import {DataStore, User} from '../../globals';
 import {DomSanitizer} from '@angular/platform-browser';
 import {environment} from '../../../environments/environment';
 import {NavList} from '../../ControlPage/control/control.component';
+import {logger} from 'codelyzer/util/logger';
 
 @Component({
   selector: 'app-element-guacamole',
@@ -35,7 +36,8 @@ export class ElementGuacamoleComponent implements OnInit {
           DataStore.guacamole_token = data['authToken'];
           this._http.guacamole_token_add_asset(this.token).subscribe(
             _ => {
-              this.target = document.location.origin + '/guacamole/#/client/' + data['result'] + '?token=' + DataStore.guacamole_token;
+              this._logger.debug(data);
+              this.target = document.location.origin + '/guacamole/#/client/' + data['result'] + '?token=' + data['authToken'];
             },
             error2 => {
               this._logger.error(error2);
