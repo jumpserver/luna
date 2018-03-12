@@ -106,8 +106,10 @@ export class HttpService {
     const params = new HttpParams()
       .set('asset_token', assetToken)
       .set('token', token);
+// 原有：/api/session/ext/jumpserver/asset/token/add?asset_token=<asset_token>&token=<token>
+// 改为：/api/ext/jumpserver/asset/token/add?asset_token=<asset_token>&token=<token>
     return this.http.get(
-      '/guacamole/api/session/ext/jumpserver/asset/token/add',
+      '/guacamole/api/ext/jumpserver/asset/token/add',
       {
         headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
         params: params
@@ -266,46 +268,48 @@ export class AppService implements OnInit {
           // jQuery('angular2').show();
         } else {
           // this.browser();
-          this._http.get_user_profile()
-            .subscribe(
-              data => {
-                User.id = data['id'];
-                User.name = data['name'];
-                User.username = data['username'];
-                User.email = data['email'];
-                User.is_active = data['is_active'];
-                User.is_superuser = data['is_superuser'];
-                User.role = data['role'];
-                // User.groups = data['groups'];
-                User.wechat = data['wechat'];
-                User.comment = data['comment'];
-                User.date_expired = data['date_expired'];
-                if (data['phone']) {
-                  User.phone = data['phone'].toString();
-                }
-                User.logined = data['logined'];
-                this._logger.debug(User);
-                this._localStorage.set('user', data['id']);
-              },
-              err => {
-                // this._logger.error(err);
-                User.logined = false;
-                window.location.href = document.location.origin + '/users/login?next=' + document.location.pathname + document.location.search;
-                // this._router.navigate(['login']);
-              },
-              // () => {
-              //   if (User.logined) {
-              //     if (document.location.pathname === '/login') {
-              //       this._router.navigate(['']);
-              //     } else {
-              //       this._router.navigate([document.location.pathname]);
-              //     }
-              //   } else {
-              //     this._router.navigate(['login']);
-              //   }
-              // jQuery('angular2').show();
-              // }
-            );
+          if (document.location.pathname !== '/luna/connect') {
+            this._http.get_user_profile()
+              .subscribe(
+                data => {
+                  User.id = data['id'];
+                  User.name = data['name'];
+                  User.username = data['username'];
+                  User.email = data['email'];
+                  User.is_active = data['is_active'];
+                  User.is_superuser = data['is_superuser'];
+                  User.role = data['role'];
+                  // User.groups = data['groups'];
+                  User.wechat = data['wechat'];
+                  User.comment = data['comment'];
+                  User.date_expired = data['date_expired'];
+                  if (data['phone']) {
+                    User.phone = data['phone'].toString();
+                  }
+                  User.logined = data['logined'];
+                  this._logger.debug(User);
+                  this._localStorage.set('user', data['id']);
+                },
+                err => {
+                  // this._logger.error(err);
+                  User.logined = false;
+                  window.location.href = document.location.origin + '/users/login?next=' + document.location.pathname + document.location.search;
+                  // this._router.navigate(['login']);
+                },
+                // () => {
+                //   if (User.logined) {
+                //     if (document.location.pathname === '/login') {
+                //       this._router.navigate(['']);
+                //     } else {
+                //       this._router.navigate([document.location.pathname]);
+                //     }
+                //   } else {
+                //     this._router.navigate(['login']);
+                //   }
+                // jQuery('angular2').show();
+                // }
+              );
+          }
         }
       }
     } else {
