@@ -74,6 +74,14 @@ export class HttpService {
     const body = new HttpParams()
       .set('username', user_id)
       .set('password', 'jumpserver');
+//  {
+// "authToken": "xxxxxxx",
+// "username": "xxxxxx",
+// "dataSource": "jumpserver",
+// "availableDataSources":[
+// "jumpserver"
+// ]
+// }
     return this.http.post('/guacamole/api/tokens',
       body.toString(),
       {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
@@ -94,10 +102,10 @@ export class HttpService {
     );
   }
 
-  guacamole_token_add_asset(token: string) {
+  guacamole_token_add_asset(assetToken: string, token: string) {
     const params = new HttpParams()
-      .set('asset_token', token)
-      .set('token', DataStore.guacamole_token);
+      .set('asset_token', assetToken)
+      .set('token', token);
     return this.http.get(
       '/guacamole/api/session/ext/jumpserver/asset/token/add',
       {
