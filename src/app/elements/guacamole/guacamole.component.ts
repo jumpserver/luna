@@ -57,7 +57,7 @@ export class ElementGuacamoleComponent implements OnInit {
             }
           );
         } else {
-          this._http.get_guacamole_token(User.id).subscribe(
+          this._http.get_guacamole_token(User.id, '').subscribe(
             data => {
               // /guacamole/client will redirect to http://guacamole/#/client
               DataStore.guacamole_token = data['authToken'];
