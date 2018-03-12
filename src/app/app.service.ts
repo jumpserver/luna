@@ -277,6 +277,7 @@ export class AppService implements OnInit {
                 }
                 User.logined = data['logined'];
                 this._logger.debug(User);
+                this._localStorage.set('user', data['id']);
               },
               err => {
                 // this._logger.error(err);
