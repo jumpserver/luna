@@ -38,7 +38,8 @@ export class ElementGuacamoleComponent implements OnInit {
             this._http.guacamole_token_add_asset(this.token, data['authToken']).subscribe(
               data2 => {
                 this._logger.debug(data);
-                this.target = document.location.origin + '/guacamole/#/client/' + data2['result'] + '?asset_token=jumpserver&token=' + data['authToken'];
+                this.target = document.location.origin + '/guacamole/#/client/' + data2['result'] +
+                  '?asset_token=jumpserver&token=' + data['authToken'];
               },
               error2 => {
                 this._logger.error(error2);
