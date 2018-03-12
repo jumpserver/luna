@@ -29,7 +29,6 @@ export class ElementGuacamoleComponent implements OnInit {
 
   ngOnInit() {
     // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
-    const base = window.btoa(this.host.id + '\0' + 'c' + '\0' + 'jumpserver');
     if (this.token) {
       this.userid = this._localStorage.get('user');
       this._http.get_guacamole_token(this.userid).subscribe(
@@ -46,6 +45,7 @@ export class ElementGuacamoleComponent implements OnInit {
           );
         });
     } else {
+      const base = window.btoa(this.host.id + '\0' + 'c' + '\0' + 'jumpserver');
       if (environment.production) {
         if (DataStore.guacamole_token) {
           this._http.guacamole_add_asset(User.id, this.host.id, this.userid).subscribe(
