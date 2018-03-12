@@ -16,7 +16,7 @@
   "show left manager": "显示左边栏",
   "disconnect all": "断开所有链接",
   "disconnect": "断开链接",
-  "website": "我们的网站",
+  "website": "官网",
   "search": "搜索",
   "settings": "系统设置",
   "job center": "作业中心",
@@ -46,5 +46,7 @@
   "choose a user": "选择一个用户",
   "please choose a user": "请选择一个用户",
   "cancel": "取消",
-  "confirm": "确认"
+  "confirm": "确认",
+  "document": "文档",
+  "support": "商业支持"
 }
