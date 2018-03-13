@@ -14,10 +14,10 @@ import {NavList} from '../../ControlPage/control/control.component';
 export class ElementGuacamoleComponent implements OnInit {
   @Input() host: any;
   @Input() userid: any;
-  @Input() token: string;
+  @Input() target: string;
   @Input() index: number;
-  target: string;
   @ViewChild('rdp') el: ElementRef;
+
 
   constructor(private sanitizer: DomSanitizer,
               private _http: HttpService,
@@ -27,20 +27,7 @@ export class ElementGuacamoleComponent implements OnInit {
 
   ngOnInit() {
     // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
-    if (this.token) {
-      this._http.get_guacamole_token(User.id).subscribe(
-        data => {
-          DataStore.guacamole_token = data['authToken'];
-          this._http.guacamole_token_add_asset(this.token).subscribe(
-            _ => {
-              this.target = document.location.origin + '/guacamole/#/client/' + data['result'] + '?token=' + DataStore.guacamole_token;
-            },
-            error2 => {
-              this._logger.error(error2);
-            }
-          );
-        });
-    } else {
+    if (!this.target) {
       const base = window.btoa(this.host.id + '\0' + 'c' + '\0' + 'jumpserver');
       if (environment.production) {
         if (DataStore.guacamole_token) {
@@ -53,7 +40,7 @@ export class ElementGuacamoleComponent implements OnInit {
             }
           );
         } else {
-          this._http.get_guacamole_token(User.id).subscribe(
+          this._http.get_guacamole_token(User.id, '').subscribe(
             data => {
               // /guacamole/client will redirect to http://guacamole/#/client
               DataStore.guacamole_token = data['authToken'];
@@ -66,7 +53,6 @@ export class ElementGuacamoleComponent implements OnInit {
                   this._logger.error(error2);
                 }
               );
-              // '/guacamole/#/client/' + base + '?token=' + data['authToken'];
             },
             error2 => {
               this._logger.error(error2);
