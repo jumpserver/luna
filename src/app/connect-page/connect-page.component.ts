@@ -39,6 +39,7 @@ export class ConnectPageComponent implements OnInit {
           .subscribe(
             data => {
               this._localStorage.set('user-' + this.token, data['user']);
+              this.userid = data['user'];
               this.getAuthToken();
             }
           );
