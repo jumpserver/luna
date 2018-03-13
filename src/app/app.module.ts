@@ -65,6 +65,7 @@ import {TransPipe} from './trans.pipe';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 import {ElementGuacamoleComponent} from './elements/guacamole/guacamole.component';
 import {ConnectPageComponent} from './connect-page/connect-page.component';
+import {ElementelFinderComponent} from './elements/el-finder/el-finder.component';
 
 @NgModule({
   imports: [
@@ -94,6 +95,7 @@ import {ConnectPageComponent} from './connect-page/connect-page.component';
     ElementLeftbarComponent,
     ElementOfooterComponent,
     ElementGuacamoleComponent,
+    ElementelFinderComponent,
     LoginComponent,
     SearchComponent,
     SearchFilter,
