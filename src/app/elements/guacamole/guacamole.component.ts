@@ -1,6 +1,6 @@
 import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {CookieService} from 'ngx-cookie-service';
-import {HttpService, LocalStorageService, LogService} from '../../app.service';
+import {HttpService, LogService} from '../../app.service';
 import {DataStore, User} from '../../globals';
 import {DomSanitizer} from '@angular/platform-browser';
 import {environment} from '../../../environments/environment';
@@ -22,8 +22,7 @@ export class ElementGuacamoleComponent implements OnInit {
   constructor(private sanitizer: DomSanitizer,
               private _http: HttpService,
               private _cookie: CookieService,
-              private _logger: LogService,
-              private _localStorage: LocalStorageService) {
+              private _logger: LogService) {
   }
 
   ngOnInit() {
@@ -54,7 +53,6 @@ export class ElementGuacamoleComponent implements OnInit {
                   this._logger.error(error2);
                 }
               );
-              // '/guacamole/#/client/' + base + '?token=' + data['authToken'];
             },
             error2 => {
               this._logger.error(error2);

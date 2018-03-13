@@ -107,8 +107,6 @@ export class HttpService {
     const params = new HttpParams()
       .set('asset_token', assetToken)
       .set('token', token);
-// 原有：/api/session/ext/jumpserver/asset/token/add?asset_token=<asset_token>&token=<token>
-// 改为：/api/ext/jumpserver/asset/token/add?asset_token=<asset_token>&token=<token>
     return this.http.get(
       '/guacamole/api/ext/jumpserver/asset/token/add',
       {
