@@ -15,7 +15,6 @@ export class ConnectPageComponent implements OnInit {
   userid: string;
   target: string;
   base: string;
-  time: number;
 
   constructor(private _appService: AppService,
               private _http: HttpService,
@@ -32,7 +31,6 @@ export class ConnectPageComponent implements OnInit {
     this.userid = this._localStorage.get('user-' + this.token);
     this.authToken = this._localStorage.get('authToken-' + this.token);
     this.base = this._localStorage.get('base-' + this.token);
-    this.time = 0;
 
     if (this.system === 'windows') {
 
@@ -41,48 +39,52 @@ export class ConnectPageComponent implements OnInit {
           .subscribe(
             data => {
               this._localStorage.set('user-' + this.token, data['user']);
-              this.time = this.time + 1;
+              this.getAuthToken();
             }
           );
       } else {
-        this.time = this.time + 1;
+        this.getAuthToken();
       }
+    }
+  }
 
-      if (!this.authToken) {
-        this._http.get_guacamole_token(this.userid, this.token).subscribe(
-          data => {
-            if (data['authToken']) {
-              this._localStorage.set('authToken-' + this.token, data['authToken']);
-              this.authToken = data['authToken'];
-              this.time = this.time + 1;
-            }
+  getAuthToken() {
+    if (!this.authToken) {
+      this._http.get_guacamole_token(this.userid, this.token).subscribe(
+        data => {
+          if (data['authToken']) {
+            this._localStorage.set('authToken-' + this.token, data['authToken']);
+            this.authToken = data['authToken'];
+            this.getBase();
           }
-        );
-      } else {
-        this.time = this.time + 1;
-      }
-      if (!this.base) {
-        this._http.guacamole_token_add_asset(this.token, this.authToken).subscribe(
-          data => {
-            if (data['result']) {
-              this._localStorage.set('base-' + this.token, data['result']);
-              this.base = data['result'];
-              this.time = this.time + 1;
-            }
-          });
-      } else {
-        this.time = this.time + 1;
-      }
-      setTimeout(() => {
-          if (this.time === 3) {
-            if (this.authToken && this.base) {
-              this.target = document.location.origin + '/guacamole/#/client/' + this.base +
-                '?asset_token=jumpserver&token=' + this.authToken;
-            }
-          }
-        },
-        50
+        }
       );
+    } else {
+      this.getBase();
+    }
+  }
+
+  getBase() {
+    if (!this.base) {
+      this._http.guacamole_token_add_asset(this.token, this.authToken).subscribe(
+        data => {
+          if (data['result']) {
+            this._localStorage.set('base-' + this.token, data['result']);
+            this.base = data['result'];
+            this.setWinTarget();
+          }
+        });
+    } else {
+      this.setWinTarget();
+    }
+  }
+
+  setWinTarget() {
+    if (this.base && this.authToken) {
+      this.target = document.location.origin + '/guacamole/#/client/' + this.base +
+        '?asset_token=jumpserver&token=' + this.authToken;
+    } else {
+      window.location.reload();
     }
   }
 
