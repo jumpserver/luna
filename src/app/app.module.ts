@@ -29,6 +29,8 @@ import {ElementPopupComponent} from './elements/popup/popup.component';
 import {ElementRdpComponent} from './elements/rdp/rdp.component';
 import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
 import {ElementIframeComponent} from './elements/iframe/iframe.component';
+import {ElementElfinderComponent} from './elements/elfinder/elfinder.component';
+
 // pages
 import {LoginComponent} from './BasicPage/login/login.component';
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
@@ -94,6 +96,7 @@ import {ConnectPageComponent} from './connect-page/connect-page.component';
     ElementLeftbarComponent,
     ElementOfooterComponent,
     ElementGuacamoleComponent,
+    ElementElfinderComponent,
     LoginComponent,
     SearchComponent,
     SearchFilter,
