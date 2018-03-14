@@ -1,16 +1,16 @@
-<h1 mat-dialog-title>Found {{data.users.length}} Users</h1>
+<h1 mat-dialog-title>{{"Found"|trans}} {{data.users.length}} {{"Users "|trans}}</h1>
 
 <mat-form-field>
   <mat-select [(value)]="selected"
               [compareWith]="compareFn"
               [formControl]="UserSelectControl"
-              placeholder="Choose a User" required>
-    <mat-option *ngFor="let u of data.users" value="{{u.id}}">{{u.username}}</mat-option>
+              placeholder="{{'Choose a User'|trans}}" required>
+    <mat-option *ngFor="let u of data.users" value="{{u.id}}">{{u.name}}</mat-option>
   </mat-select>
-  <mat-error *ngIf="UserSelectControl.hasError('required')">Please choose a User</mat-error>
+  <mat-error *ngIf="UserSelectControl.hasError('required')">{{"Please choose a User"|trans}}</mat-error>
 
 </mat-form-field>
 <div style="float: right">
-  <button mat-raised-button (click)="onNoClick()">Cancel</button>
-  <button mat-raised-button color="primary" [mat-dialog-close]="selected" cdkFocusInitial>Confirm</button>
+  <button mat-raised-button (click)="onNoClick()">{{"Cancel"|trans}}</button>
+  <button mat-raised-button color="primary" [mat-dialog-close]="selected" cdkFocusInitial>{{"Confirm"|trans}}</button>
 </div>

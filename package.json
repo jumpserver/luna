@@ -24,6 +24,7 @@
     "@angular/platform-browser-dynamic": "5.2.0",
     "@angular/router": "5.2.0",
     "@swimlane/ngx-datatable": "^11.1.7",
+    "ajv": "^6.2.1",
     "animate.css": "^3.5.2",
     "body-parser": "^1.18.2",
     "bootstrap": "^4.0.0-beta.3",
@@ -68,9 +69,9 @@
     "zone.js": "0.8.20"
   },
   "devDependencies": {
-    "@angular-devkit/core": "0.0.28",
-    "@angular-devkit/schematics": "0.0.42",
-    "@angular/cli": "^1.6.5",
+    "@angular-devkit/core": "^0.4.2",
+    "@angular-devkit/schematics": "^0.4.2",
+    "@angular/cli": "^1.7.3",
     "@angular/compiler-cli": "5.2.0",
     "@angular/language-service": "5.2.0",
     "@types/jasmine": "2.8.4",

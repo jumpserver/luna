@@ -82,8 +82,12 @@ export class ElementNavComponent implements OnInit {
         window.open('http://www.jumpserver.org');
         break;
       }
-      case 'BBS': {
-        window.open('http://bbs.jumpserver.org');
+      case 'Document': {
+        window.open('http://docs.jumpserver.org/');
+        break;
+      }
+      case 'Support': {
+        window.open('https://market.aliyun.com/products/53690006/cmgj026011.html?spm=5176.730005.0.0.cY2io1');
         break;
       }
       case 'EnterLicense': {
@@ -233,9 +237,14 @@ export class ElementNavComponent implements OnInit {
           'name': 'Website'
         },
         {
-          'id': 'BBS',
-          'click': 'BBS',
-          'name': 'BBS'
+          'id': 'Document',
+          'click': 'Document',
+          'name': 'Document'
+        },
+        {
+          'id': 'Support',
+          'click': 'Support',
+          'name': 'Support'
         }]
     }, {
       'id': 'Language',

@@ -14,21 +14,19 @@ import {LoginComponent} from './BasicPage/login/login.component';
 import {ControlPageComponent} from './ControlPage/controlpage.component';
 import {ReplayPageComponent} from './replay-page/replay-page.component';
 import {MonitorPageComponent} from './monitor-page/monitor-page.component';
-import {RdpPageComponent} from './rdp-page/rdp-page.component';
-import {TermPageComponent} from './term-page/term-page.component';
 import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
 import {BlankPageComponent} from './blank-page/blank-page.component';
 import {TestPageComponent} from './test-page/test-page.component';
 import {SettingPageComponent} from './setting-page/setting-page.component';
+import {ConnectPageComponent} from './connect-page/connect-page.component';
 
 const appRoutes: Routes = [
   // {path: 'users/login', component: LoginComponent},
-  {path: 'rdp/:token', component: RdpPageComponent},
-  {path: 'term/:token', component: TermPageComponent},
   {path: 'replay/:token', component: ReplayPageComponent},
   {path: 'monitor/:token', component: MonitorPageComponent},
-  {path: 'test', component: TestPageComponent},
-  {path: 'setting', component: SettingPageComponent},
+  // {path: 'test', component: TestPageComponent},
+  {path: 'connect', component: ConnectPageComponent},
+  // {path: 'setting', component: SettingPageComponent},
   {path: 'undefined', component: BlankPageComponent},
   {path: '', component: ControlPageComponent},
   {path: '**', component: NotFoundComponent}

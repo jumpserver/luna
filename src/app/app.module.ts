@@ -29,6 +29,8 @@ import {ElementPopupComponent} from './elements/popup/popup.component';
 import {ElementRdpComponent} from './elements/rdp/rdp.component';
 import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
 import {ElementIframeComponent} from './elements/iframe/iframe.component';
+import {ElementElfinderComponent} from './elements/elfinder/elfinder.component';
+
 // pages
 import {LoginComponent} from './BasicPage/login/login.component';
 import {IleftbarComponent} from './IndexPage/ileftbar/ileftbar.component';
@@ -39,8 +41,6 @@ import {ControlnavComponent} from './ControlPage/control/controlnav/controlnav.c
 import {ControlPageComponent} from './ControlPage/controlpage.component';
 import {IndexPageComponent} from './IndexPage/index-page.component';
 import {NotFoundComponent} from './BasicPage/not-found/not-found.component';
-import {RdpPageComponent} from './rdp-page/rdp-page.component';
-import {TermPageComponent} from './term-page/term-page.component';
 import {ReplayPageComponent} from './replay-page/replay-page.component';
 import {Mp4Component} from './replay-page/mp4/mp4.component';
 import {JsonComponent} from './replay-page/json/json.component';
@@ -65,6 +65,8 @@ import {SettingPageTerminalComponent} from './setting-page/terminal/terminal.com
 import {SettingPageS3Component} from './setting-page/s3/s3.component';
 import {TransPipe} from './trans.pipe';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
+import {ElementGuacamoleComponent} from './elements/guacamole/guacamole.component';
+import {ConnectPageComponent} from './connect-page/connect-page.component';
 
 @NgModule({
   imports: [
@@ -93,6 +95,8 @@ import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
     ElementTableComponent,
     ElementLeftbarComponent,
     ElementOfooterComponent,
+    ElementGuacamoleComponent,
+    ElementElfinderComponent,
     LoginComponent,
     SearchComponent,
     SearchFilter,
@@ -103,8 +107,6 @@ import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
     ControlPageComponent,
     IndexPageComponent,
     NotFoundComponent,
-    RdpPageComponent,
-    TermPageComponent,
     ReplayPageComponent,
     Mp4Component,
     JsonComponent,
@@ -121,6 +123,7 @@ import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
     SettingPageTerminalComponent,
     SettingPageS3Component,
     TransPipe,
+    ConnectPageComponent,
   ],
   entryComponents: [
     CleftbarDialogComponent,
