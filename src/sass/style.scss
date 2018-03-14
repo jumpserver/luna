@@ -1,14 +1,14 @@
 // font-awesome
-$fa-font-path: "~font-awesome/fonts";
+$fa-font-path: '~font-awesome/fonts';
 @import '~font-awesome/scss/font-awesome';
 
 // bootstrap
-@import "~bootstrap/scss/bootstrap";
+@import '~bootstrap/scss/bootstrap';
 
-$FontPathOpenSans: "~npm-font-open-sans/fonts";
+$FontPathOpenSans: '~npm-font-open-sans/fonts';
 @import '~npm-font-open-sans/open-sans';
-$roboto-font-path: "~roboto-fontface/fonts";
-@import "~roboto-fontface/css/mixins.scss";
+$roboto-font-path: '~roboto-fontface/fonts';
+@import '~roboto-fontface/css/mixins.scss';
 
 /*
  *
@@ -17,7 +17,7 @@ $roboto-font-path: "~roboto-fontface/fonts";
  *
 */
 $asset-path: '../static/imgs/inspinia';
-@import "../assets/inspinia/style";
+@import '../assets/inspinia/style';
 
 @import '~@swimlane/ngx-datatable/release/index.css';
 @import '~@swimlane/ngx-datatable/release/themes/material.css';
@@ -25,7 +25,7 @@ $asset-path: '../static/imgs/inspinia';
 
 @import './material.css';
 $material-design-icons-font-path: '~/material-design-icons/iconfont/';
-//@import "~material-design-icons/iconfont/material-icons";
+//@import '~material-design-icons/iconfont/material-icons';
 @font-face {
   font-family: 'Material Icons';
   font-style: normal;
