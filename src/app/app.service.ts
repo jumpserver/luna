@@ -70,10 +70,11 @@ export class HttpService {
     return this.http.get<Array<HostGroup>>('/api/perms/v1/user/nodes-assets/');
   }
 
-  get_guacamole_token(user_id: string) {
+  get_guacamole_token(user_id: string, authToken: string) {
     const body = new HttpParams()
       .set('username', user_id)
-      .set('password', 'jumpserver');
+      .set('password', 'jumpserver')
+      .set('asset_token', authToken);
 //  {
 // "authToken": "xxxxxxx",
 // "username": "xxxxxx",
@@ -107,7 +108,7 @@ export class HttpService {
       .set('asset_token', assetToken)
       .set('token', token);
     return this.http.get(
-      '/guacamole/api/session/ext/jumpserver/asset/token/add',
+      '/guacamole/api/ext/jumpserver/asset/token/add',
       {
         headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
         params: params
@@ -123,6 +124,14 @@ export class HttpService {
 
   get_replay(token: string) {
     return this.http.get('/api/terminal/v1/sessions/' + token + '/replay');
+  }
+
+  get_user_id_from_token(token: string) {
+    const params = new HttpParams()
+      .set('user-only', '1')
+      .set('token', token);
+    return this.http.get('/api/users/v1/connection-token/', {params: params});
+
   }
 
 }
@@ -264,51 +273,53 @@ export class AppService implements OnInit {
             this._router.navigate([document.location.pathname]);
           }
           // jQuery('angular2').show();
+        } else if (document.location.pathname === '/luna/connect') {
+          User.logined = true;
         } else {
-          // this.browser();
           this._http.get_user_profile()
-            .subscribe(
-              data => {
-                User.id = data['id'];
-                User.name = data['name'];
-                User.username = data['username'];
-                User.email = data['email'];
-                User.is_active = data['is_active'];
-                User.is_superuser = data['is_superuser'];
-                User.role = data['role'];
-                // User.groups = data['groups'];
-                User.wechat = data['wechat'];
-                User.comment = data['comment'];
-                User.date_expired = data['date_expired'];
-                if (data['phone']) {
-                  User.phone = data['phone'].toString();
-                }
-                User.logined = data['logined'];
-                this._logger.debug(User);
-                this._localStorage.set('user', data['id']);
-              },
-              err => {
-                // this._logger.error(err);
-                User.logined = false;
-                window.location.href = document.location.origin + '/users/login?next=' + document.location.pathname + document.location.search;
-                // this._router.navigate(['login']);
-              },
-              // () => {
-              //   if (User.logined) {
-              //     if (document.location.pathname === '/login') {
-              //       this._router.navigate(['']);
-              //     } else {
-              //       this._router.navigate([document.location.pathname]);
-              //     }
-              //   } else {
-              //     this._router.navigate(['login']);
-              //   }
-              // jQuery('angular2').show();
-              // }
+              .subscribe(
+                data => {
+                  User.id = data['id'];
+                  User.name = data['name'];
+                  User.username = data['username'];
+                  User.email = data['email'];
+                  User.is_active = data['is_active'];
+                  User.is_superuser = data['is_superuser'];
+                  User.role = data['role'];
+                  // User.groups = data['groups'];
+                  User.wechat = data['wechat'];
+                  User.comment = data['comment'];
+                  User.date_expired = data['date_expired'];
+                  if (data['phone']) {
+                    User.phone = data['phone'].toString();
+                  }
+                  User.logined = data['logined'];
+                  this._logger.debug(User);
+                  this._localStorage.set('user', data['id']);
+                },
+                err => {
+                  // this._logger.error(err);
+                  User.logined = false;
+                  window.location.href = document.location.origin + '/users/login?next=' +
+                    document.location.pathname + document.location.search;
+                  // this._router.navigate(['login']);
+                },
+                // () => {
+                //   if (User.logined) {
+                //     if (document.location.pathname === '/login') {
+                //       this._router.navigate(['']);
+                //     } else {
+                //       this._router.navigate([document.location.pathname]);
+                //     }
+                //   } else {
+                //     this._router.navigate(['login']);
+                //   }
+                // jQuery('angular2').show();
+                // }
             );
-        }
       }
-    } else {
+    }
+  } else {
       this._router.navigate(['FOF']);
       // jQuery('angular2').show();
     }
