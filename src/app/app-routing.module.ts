@@ -24,7 +24,7 @@ const appRoutes: Routes = [
   // {path: 'users/login', component: LoginComponent},
   {path: 'replay/:token', component: ReplayPageComponent},
   {path: 'monitor/:token', component: MonitorPageComponent},
-  {path: 'test', component: TestPageComponent},
+  // {path: 'test', component: TestPageComponent},
   {path: 'connect', component: ConnectPageComponent},
   // {path: 'setting', component: SettingPageComponent},
   {path: 'undefined', component: BlankPageComponent},
