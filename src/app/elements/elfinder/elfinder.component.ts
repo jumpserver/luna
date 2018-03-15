@@ -1,4 +1,5 @@
 import {Component, OnInit} from '@angular/core';
+import * as elfinder from 'elfinder/js/elfinder.min.js';
 
 @Component({
   selector: 'app-element-elfinder',
@@ -11,6 +12,7 @@ export class ElementElfinderComponent implements OnInit {
   }
 
   ngOnInit() {
+    elfinder(document.getElementById('elfinder'), {});
   }
 
 }
