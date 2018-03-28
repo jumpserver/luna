@@ -5,12 +5,14 @@
  * @date     2017-11-07
  * @author   liuzheng <liuzheng712@gmail.com>
  */
-import {Component, OnInit} from '@angular/core';
+import {Component, Inject, OnInit} from '@angular/core';
 import {AppService, HttpService, LocalStorageService, LogService} from '../../app.service';
 import {CleftbarComponent} from '../../ControlPage/cleftbar/cleftbar.component';
 import {ControlComponent, NavList} from '../../ControlPage/control/control.component';
 import {DataStore, i18n} from '../../globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
+import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
+import {FormControl, Validators} from '@angular/forms';
 // import * as layer from 'layui-layer/src/layer.js';
 declare let layer: any;
 
@@ -21,6 +23,7 @@ declare let layer: any;
 })
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
+  ChangeLanWarningDialog: any;
 
   static Hide() {
     jQuery('app-element-nav').hide();
@@ -29,6 +32,7 @@ export class ElementNavComponent implements OnInit {
   constructor(private _appService: AppService,
               private _http: HttpService,
               private _logger: LogService,
+              public _dialog: MatDialog,
               private _localStorage: LocalStorageService) {
     this._logger.log('nav.ts:NavComponent');
     this.getnav();
@@ -95,11 +99,33 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'English': {
-        this.English();
+        this.ChangeLanWarningDialog = this._dialog.open(
+          ChangLanWarningDialogComponent,
+          {
+            height: '200px',
+            width: '300px',
+          });
+        this.ChangeLanWarningDialog.afterClosed().subscribe(
+          result => {
+            if (result) {
+              this.English();
+            }
+          });
         break;
       }
       case 'Chinese': {
-        this.Language('cn');
+        this.ChangeLanWarningDialog = this._dialog.open(
+          ChangLanWarningDialogComponent,
+          {
+            height: '200px',
+            width: '300px',
+          });
+        this.ChangeLanWarningDialog.afterClosed().subscribe(
+          result => {
+            if (result) {
+              this.Language('cn');
+            }
+          });
         break;
       }
       default: {
@@ -302,5 +328,23 @@ export class ElementNavComponent implements OnInit {
       });
     }
     location.reload();
+  }
+}
+
+
+@Component({
+  selector: 'app-element-nav-dialog',
+  templateUrl: 'changeLanWarning.html',
+})
+export class ChangLanWarningDialogComponent implements OnInit {
+
+  constructor(public dialogRef: MatDialogRef<ChangLanWarningDialogComponent>) {
+  }
+
+  ngOnInit() {
+  }
+
+  onNoClick(): void {
+    this.dialogRef.close();
   }
 }

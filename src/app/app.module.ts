@@ -24,7 +24,7 @@ import {DialogService, ElementDialogAlertComponent} from './elements/dialog/dial
 import {ElementFooterComponent} from './elements/footer/footer.component';
 import {ElementTermComponent} from './elements/term/term.component';
 import {ElementInteractiveComponent} from './elements/interactive/interactive.component';
-import {ElementNavComponent} from './elements/nav/nav.component';
+import {ChangLanWarningDialogComponent, ElementNavComponent} from './elements/nav/nav.component';
 import {ElementPopupComponent} from './elements/popup/popup.component';
 import {ElementRdpComponent} from './elements/rdp/rdp.component';
 import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
@@ -83,7 +83,7 @@ import {ConnectPageComponent} from './connect-page/connect-page.component';
   ],
   declarations: [
     AppComponent,
-    ElementNavComponent,
+    ElementNavComponent, ChangLanWarningDialogComponent,
     ElementFooterComponent,
     ElementPopupComponent,
     ElementTermComponent,
@@ -128,6 +128,7 @@ import {ConnectPageComponent} from './connect-page/connect-page.component';
   entryComponents: [
     CleftbarDialogComponent,
     ElementDialogAlertComponent,
+    ChangLanWarningDialogComponent,
   ],
   bootstrap: [AppComponent],
   providers: [
