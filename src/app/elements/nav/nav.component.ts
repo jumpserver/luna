@@ -99,33 +99,43 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'English': {
-        this.ChangeLanWarningDialog = this._dialog.open(
+        const dialog = this._dialog.open(
           ChangLanWarningDialogComponent,
           {
             height: '200px',
             width: '300px',
+            data: {
+              title: 'Warning',
+              note: 'The page will be reload, can you acceptable?',
+              cancel: 'Cancel',
+              confirm: 'Confirm',
+            },
           });
-        this.ChangeLanWarningDialog.afterClosed().subscribe(
-          result => {
-            if (result) {
-              this.English();
-            }
-          });
+        dialog.afterClosed().subscribe(result => {
+          if (result) {
+            this.English();
+          }
+        });
         break;
       }
       case 'Chinese': {
-        this.ChangeLanWarningDialog = this._dialog.open(
+        const dialog = this._dialog.open(
           ChangLanWarningDialogComponent,
           {
             height: '200px',
             width: '300px',
+            data: {
+              title: '警告',
+              note: '此页将被重载，是否确认?',
+              cancel: '取消',
+              confirm: '确认',
+            },
           });
-        this.ChangeLanWarningDialog.afterClosed().subscribe(
-          result => {
-            if (result) {
-              this.Language('cn');
-            }
-          });
+        dialog.afterClosed().subscribe(result => {
+          if (result) {
+            this.Language('cn');
+          }
+        });
         break;
       }
       default: {
@@ -338,7 +348,8 @@ export class ElementNavComponent implements OnInit {
 })
 export class ChangLanWarningDialogComponent implements OnInit {
 
-  constructor(public dialogRef: MatDialogRef<ChangLanWarningDialogComponent>) {
+  constructor(public dialogRef: MatDialogRef<ChangLanWarningDialogComponent>,
+              @Inject(MAT_DIALOG_DATA) public data: any) {
   }
 
   ngOnInit() {
