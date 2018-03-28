@@ -39,12 +39,6 @@ export class ElementNavComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.ChangeLanWarningDialog = this._dialog.open(
-      ChangLanWarningDialogComponent,
-      {
-        height: '200px',
-        width: '300px',
-      });
   }
 
   click(event) {
@@ -105,6 +99,12 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'English': {
+        this.ChangeLanWarningDialog = this._dialog.open(
+          ChangLanWarningDialogComponent,
+          {
+            height: '200px',
+            width: '300px',
+          });
         this.ChangeLanWarningDialog.afterClosed().subscribe(
           result => {
             if (result) {
@@ -114,6 +114,12 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'Chinese': {
+        this.ChangeLanWarningDialog = this._dialog.open(
+          ChangLanWarningDialogComponent,
+          {
+            height: '200px',
+            width: '300px',
+          });
         this.ChangeLanWarningDialog.afterClosed().subscribe(
           result => {
             if (result) {
