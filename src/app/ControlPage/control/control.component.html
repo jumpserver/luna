@@ -2,14 +2,17 @@
 <div *ngFor="let m of NavList.List;let i=index"
      [ngClass]="{'active':i==NavList.Active}"
 >
-  <app-element-term [host]="m.host"
+  <app-element-term [index]="i"
+                    [host]="m.host"
                     [userid]="m.user.id"
-                    [index]="i"
                     *ngIf="m.type=='ssh'">
   </app-element-term>
-  <app-element-guacamole [host]="m.host"
-                      [userid]="m.user.id"
-                      [index]="i"
-                      *ngIf="m.type=='rdp'">
+  <app-element-guacamole [index]="i"
+                         [host]="m.host"
+                         [userid]="m.user.id"
+                         *ngIf="m.type=='rdp'">
   </app-element-guacamole>
+  <app-element-settings [index]="i"
+                        *ngIf="m.type=='settings'">
+  </app-element-settings>
 </div>

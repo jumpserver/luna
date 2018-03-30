@@ -30,6 +30,7 @@ import {ElementRdpComponent} from './elements/rdp/rdp.component';
 import {ElementServerMenuComponent} from './elements/server-menu/server-menu.component';
 import {ElementIframeComponent} from './elements/iframe/iframe.component';
 import {ElementElfinderComponent} from './elements/elfinder/elfinder.component';
+import {ElementSettingsComponent} from './elements/settings/settings.component';
 
 // pages
 import {LoginComponent} from './BasicPage/login/login.component';
@@ -97,6 +98,7 @@ import {ConnectPageComponent} from './connect-page/connect-page.component';
     ElementOfooterComponent,
     ElementGuacamoleComponent,
     ElementElfinderComponent,
+    ElementSettingsComponent,
     LoginComponent,
     SearchComponent,
     SearchFilter,

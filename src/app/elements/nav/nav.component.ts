@@ -8,7 +8,7 @@
 import {Component, Inject, OnInit} from '@angular/core';
 import {AppService, HttpService, LocalStorageService, LogService} from '../../app.service';
 import {CleftbarComponent} from '../../ControlPage/cleftbar/cleftbar.component';
-import {ControlComponent, NavList} from '../../ControlPage/control/control.component';
+import {ControlComponent, NavList, View} from '../../ControlPage/control/control.component';
 import {DataStore, i18n} from '../../globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
@@ -51,6 +51,10 @@ export class ElementNavComponent implements OnInit {
 
       case 'HideLeft': {
         CleftbarComponent.Hide();
+        break;
+      }
+      case 'Settings': {
+        this.Settings();
         break;
       }
       case 'ShowLeft': {
@@ -253,10 +257,9 @@ export class ElementNavComponent implements OnInit {
           'disable': true
         },
         {
-          'id': 'Language',
-          'href': '',
-          'name': 'Language',
-          'disable': true
+          'id': 'Settings',
+          'click': 'Settings',
+          'name': 'Settings'
         }]
     }, {
       'id': 'Help',
@@ -338,6 +341,17 @@ export class ElementNavComponent implements OnInit {
       });
     }
     location.reload();
+  }
+
+  Settings() {
+    const id = NavList.List.length - 1;
+    NavList.List[id].nick = 'Setting';
+    NavList.List[id].connected = true;
+    NavList.List[id].edit = false;
+    NavList.List[id].closed = false;
+    NavList.List[id].type = 'settings';
+    NavList.List.push(new View());
+    NavList.Active = id;
   }
 }
 
