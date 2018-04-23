@@ -126,7 +126,11 @@ export class HttpService {
     return this.http.get('/api/terminal/v1/sessions/' + token + '/replay');
   }
 
-  get_replay_json(src: string) {
+  get_replay_json(token: string) {
+    return this.http.get('/api/terminal/v2/sessions/' + token + '/replay');
+  }
+
+  get_replay_data(src: string) {
     return this.http.get(src);
   }
 

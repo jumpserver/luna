@@ -23,21 +23,24 @@ export class JsonComponent implements OnInit {
   }
 
   ngOnInit() {
-    this._http.get_replay_json(Video.src)
-      .subscribe(
-        data => {
-          Video.json = data;
-          Video.timelist = Object.keys(Video.json).map(Number);
-          Video.timelist = Video.timelist.sort(function (a, b) {
-            return a - b;
-          });
-          Video.totalTime = Video.timelist[Video.timelist.length - 1] * 1000;
-        },
-        err => {
-          alert('无法下载');
-          this._logger.error(err);
-        }
-      );
+    if (Video.src !== 'READY') {
+      this._http.get_replay_data(Video.src)
+        .subscribe(
+          data => {
+            Video.json = data;
+            Video.timelist = Object.keys(Video.json).map(Number);
+            Video.timelist = Video.timelist.sort(function (a, b) {
+              return a - b;
+            });
+            Video.totalTime = Video.timelist[Video.timelist.length - 1] * 1000;
+          },
+          err => {
+            alert('无法下载');
+            this._logger.error(err);
+          }
+        );
+    }
+
     const that = this;
     let r = true;
     window.onresize = function () {

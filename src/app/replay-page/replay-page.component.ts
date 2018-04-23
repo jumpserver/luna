@@ -23,7 +23,7 @@ export class ReplayPageComponent implements OnInit {
     this.activatedRoute.params.subscribe((params: Params) => {
       token = params['token'];
     });
-    this._http.get_replay(token)
+    this._http.get_replay_json(token)
       .subscribe(
         data => {
           Video.type = data['type'];
@@ -33,8 +33,24 @@ export class ReplayPageComponent implements OnInit {
           Video.height = data['height'];
         },
         err => {
-          alert('API请求出错');
-          this._logger.error(err);
+          this._http.get_replay(token)
+            .subscribe(
+              data => {
+                Video.type = 'json';
+                Video.json = data;
+                Video.src = 'READY';
+                Video.timelist = Object.keys(Video.json).map(Number);
+                Video.timelist = Video.timelist.sort(function (a, b) {
+                  return a - b;
+                });
+                Video.totalTime = Video.timelist[Video.timelist.length - 1] * 1000;
+
+              }, err2 => {
+                alert('无法下载');
+                this._logger.error(err2);
+              },
+            );
+
         }
       );
 
