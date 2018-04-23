@@ -15,6 +15,7 @@ import {AppRoutingModule} from './app-routing.module';
 
 import {AppComponent} from './app.component';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
+import { TreeModule } from 'angular-tree-component';
 
 // service
 import {AppService, HttpService, LocalStorageService, LogService, UUIDService} from './app.service';
@@ -80,7 +81,8 @@ import {ConnectPageComponent} from './connect-page/connect-page.component';
     ReactiveFormsModule,
     MaterialModule,
     LoggerModule.forRoot({serverLoggingUrl: '/api/logs', level: NgxLoggerLevel.DEBUG, serverLogLevel: NgxLoggerLevel.ERROR}),
-    NgxDatatableModule
+    NgxDatatableModule,
+    TreeModule
   ],
   declarations: [
     AppComponent,
