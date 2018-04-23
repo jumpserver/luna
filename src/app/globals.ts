@@ -26,13 +26,17 @@ export let Video: {
   id: string,
   src: string,
   type: string,
+  height: number,
+  width: number,
   json: object;
   timelist: Array<number>;
   totalTime: number;
 } = {
-  id: 'sss',
-  src: 'sss',
-  type: 'json',
+  id: '',
+  src: '',
+  type: '',
+  width: 0,
+  height: 0,
   json: {},
   timelist: [],
   totalTime: 0,

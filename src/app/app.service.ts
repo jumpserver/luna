@@ -126,6 +126,10 @@ export class HttpService {
     return this.http.get('/api/terminal/v1/sessions/' + token + '/replay');
   }
 
+  get_replay_json(src: string) {
+    return this.http.get(src);
+  }
+
   get_user_id_from_token(token: string) {
     const params = new HttpParams()
       .set('user-only', '1')

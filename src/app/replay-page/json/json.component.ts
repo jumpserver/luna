@@ -1,8 +1,9 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, Input, OnInit} from '@angular/core';
 import {Video, term} from '../../globals';
+import {HttpService, LogService} from '../../app.service';
 
 @Component({
-  selector: 'app-json',
+  selector: 'app-replay-json',
   templateUrl: './json.component.html',
   styleUrls: ['./json.component.css']
 })
@@ -17,10 +18,26 @@ export class JsonComponent implements OnInit {
   pos = 0;
   scrubber: number;
 
-  constructor() {
+  constructor(private _http: HttpService,
+              private _logger: LogService) {
   }
 
   ngOnInit() {
+    this._http.get_replay_json(Video.src)
+      .subscribe(
+        data => {
+          Video.json = data;
+          Video.timelist = Object.keys(Video.json).map(Number);
+          Video.timelist = Video.timelist.sort(function (a, b) {
+            return a - b;
+          });
+          Video.totalTime = Video.timelist[Video.timelist.length - 1] * 1000;
+        },
+        err => {
+          alert('无法下载');
+          this._logger.error(err);
+        }
+      );
     const that = this;
     let r = true;
     window.onresize = function () {

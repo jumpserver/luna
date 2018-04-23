@@ -26,18 +26,16 @@ export class ReplayPageComponent implements OnInit {
     this._http.get_replay(token)
       .subscribe(
         data => {
-          Video.type = 'json';
-          Video.json = data;
-          Video.timelist = Object.keys(Video.json).map(Number);
-          Video.timelist = Video.timelist.sort(function (a, b) {
-            return a - b;
-          });
-          Video.totalTime = Video.timelist[Video.timelist.length - 1] * 1000;
+          Video.type = data['type'];
+          Video.src = data['src'];
+          Video.id = data['id'];
+          Video.width = data['width'];
+          Video.height = data['height'];
         },
         err => {
-          alert('无法下载');
+          alert('API请求出错');
           this._logger.error(err);
-        },
+        }
       );
 
   }

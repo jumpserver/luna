@@ -1,13 +1,16 @@
-import { Component, OnInit } from '@angular/core';
+import {Component, Input, OnInit} from '@angular/core';
+import {Video} from '../../globals';
 
 @Component({
-  selector: 'app-mp4',
+  selector: 'app-replay-mp4',
   templateUrl: './mp4.component.html',
   styleUrls: ['./mp4.component.css']
 })
 export class Mp4Component implements OnInit {
+  Video = Video;
 
-  constructor() { }
+  constructor() {
+  }
 
   ngOnInit() {
   }

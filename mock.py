@@ -4,6 +4,7 @@ from flask import Flask, send_from_directory, render_template, request, jsonify,
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room
 import paramiko
 import uuid
+from flask import Flask, request, current_app, redirect
 
 app = Flask(__name__, template_folder='dist')
 
@@ -55,6 +56,7 @@ class SSHws(Namespace):
       "room": str(uuid.uuid4()),
       "chan": dict()
     }
+    print(request.sid)
     join_room(self.clients[request.sid]["room"])
     # self.socketio.start_background_task(self.send_data, self)
 
