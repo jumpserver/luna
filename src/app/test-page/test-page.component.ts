@@ -1,5 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {DataStore} from '../globals';
+import {DataStore, Video} from '../globals';
 import {TREE_ACTIONS, KEYS, IActionMapping, ITreeOptions} from 'angular-tree-component';
 
 @Component({
@@ -68,7 +68,8 @@ export class TestPageComponent implements OnInit {
   }
 
   ngOnInit() {
-
+    Video.id = 'asfafdasd';
+    Video.src = 'https://www.w3schools.com/tags/movie.mp4';
   }
 
 }

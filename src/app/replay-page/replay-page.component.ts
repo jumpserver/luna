@@ -29,8 +29,8 @@ export class ReplayPageComponent implements OnInit {
           Video.type = data['type'];
           Video.src = data['src'];
           Video.id = data['id'];
-          Video.width = data['width'];
-          Video.height = data['height'];
+          // Video.width = data['width'];
+          // Video.height = data['height'];
         },
         err => {
           this._http.get_replay(token)

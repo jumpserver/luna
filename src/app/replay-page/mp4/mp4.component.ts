@@ -13,6 +13,13 @@ export class Mp4Component implements OnInit {
   }
 
   ngOnInit() {
+    if (this.Video.height === 0) {
+      this.Video.height = 600;
+    }
+    if (this.Video.width === 0) {
+      this.Video.width = 800;
+    }
+
   }
 
 }
