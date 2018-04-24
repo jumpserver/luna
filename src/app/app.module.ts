@@ -13,7 +13,7 @@ import {HttpClientModule} from '@angular/common/http';
 
 import {AppRouterModule} from './router/router.module';
 
-import {AppComponent} from './app.component';
+import {AppComponent} from './pages/app.component';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {TreeModule} from 'angular-tree-component';
 
