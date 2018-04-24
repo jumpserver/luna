@@ -1,6 +1,6 @@
 import {MaterialModule} from './MaterialModule.component';
 
-export const pluginModules = [
+export const PluginModules = [
   MaterialModule
 ];
 

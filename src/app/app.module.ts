@@ -22,8 +22,6 @@ import {AppService, HttpService, LocalStorageService, LogService, UUIDService} f
 
 
 import {NgProgressModule} from 'ngx-progressbar';
-import {TestPageComponent} from './test-page/test-page.component';
-import {MaterialModule} from './plugins/MaterialModule.component';
 import {CookieService} from 'ngx-cookie-service';
 import {NgxDatatableModule} from '@swimlane/ngx-datatable';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
@@ -35,7 +33,8 @@ import {ElementComponents} from './elements/elements.component';
 import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {CleftbarDialogComponent} from './pages/control/cleftbar/cleftbar.component';
 import {DialogService, ElementDialogAlertComponent} from './elements/dialog/dialog.service';
-import {pluginModules} from './plugins/plugins';
+import {PluginModules} from './plugins/plugins';
+import {TestPageComponent} from './test-page/test-page.component';
 
 
 @NgModule({
@@ -50,7 +49,7 @@ import {pluginModules} from './plugins/plugins';
     NgxDatatableModule,
     TreeModule,
     AppRouterModule,
-    ...pluginModules
+    ...PluginModules
   ],
   declarations: [
     AppComponent,
