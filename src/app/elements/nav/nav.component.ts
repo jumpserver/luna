@@ -7,8 +7,8 @@
  */
 import {Component, Inject, OnInit} from '@angular/core';
 import {AppService, HttpService, LocalStorageService, LogService} from '../../app.service';
-import {CleftbarComponent} from '../../ControlPage/cleftbar/cleftbar.component';
-import {ControlComponent, NavList, View} from '../../ControlPage/control/control.component';
+import {CleftbarComponent} from '../../pages/control/cleftbar/cleftbar.component';
+import {ControlComponent, NavList, View} from '../../pages/control/control/control.component';
 import {DataStore, i18n} from '../../globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
@@ -17,7 +17,7 @@ import {FormControl, Validators} from '@angular/forms';
 declare let layer: any;
 
 @Component({
-  selector: 'app-element-nav',
+  selector: 'elements-nav',
   templateUrl: './nav.component.html',
   styleUrls: ['./nav.component.css'],
 })
@@ -26,7 +26,7 @@ export class ElementNavComponent implements OnInit {
   ChangeLanWarningDialog: any;
 
   static Hide() {
-    jQuery('app-element-nav').hide();
+    jQuery('elements-nav').hide();
   }
 
   constructor(private _appService: AppService,
@@ -357,7 +357,7 @@ export class ElementNavComponent implements OnInit {
 
 
 @Component({
-  selector: 'app-element-nav-dialog',
+  selector: 'elements-nav-dialog',
   templateUrl: 'changeLanWarning.html',
 })
 export class ChangLanWarningDialogComponent implements OnInit {

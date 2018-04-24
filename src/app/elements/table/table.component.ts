@@ -28,7 +28,7 @@ export let Config: {
 };
 
 @Component({
-  selector: 'app-element-table',
+  selector: 'elements-table',
   templateUrl: './table.component.html',
   styleUrls: ['./table.component.scss']
 })

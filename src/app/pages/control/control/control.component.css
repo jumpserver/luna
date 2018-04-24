@@ -1,0 +1,12 @@
+div, elements-term, elements-iframe {
+  height: 100%;
+  padding-bottom: 30px;
+}
+
+div {
+  display: none;
+}
+
+.active {
+  display: block;
+}

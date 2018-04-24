@@ -1,0 +1,16 @@
+<div class="overflow">
+  <ul class="filetree">
+    <li *ngFor="let hostGroup of HostGroups ; let i = index ">
+      <input type="checkbox" id="hostgroup-{{i}}">
+      <label for="hostgroup-{{i}}" matTooltip="{{hostGroup.name}}" [matTooltipPosition]="TooltipPosition">{{hostGroup.name}}</label>
+      <ul [ngClass]="{'insearch': q }">
+        <li *ngFor="let host of hostGroup.assets_granted  " (click)="Connect(host)"
+            (contextmenu)="onRightClick($event)" matTooltip="{{host.hostname}}"
+            [matTooltipPosition]="TooltipPosition">
+          <i class="fa" [ngClass]="'fa-'+(host.platform||'undefined').toLowerCase()" id="fa-{{i}}"></i>
+          {{host.hostname}}
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>

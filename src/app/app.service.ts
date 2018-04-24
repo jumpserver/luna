@@ -14,7 +14,7 @@ import {DataStore, User, Browser, i18n} from './globals';
 import {environment} from '../environments/environment';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
-import {HostGroup} from './ControlPage/cleftbar/cleftbar.component';
+import {HostGroup} from './pages/control/cleftbar/cleftbar.component';
 import * as UUID from 'uuid-js/lib/uuid.js';
 
 declare function unescape(s: string): string;
@@ -139,7 +139,6 @@ export class HttpService {
       .set('user-only', '1')
       .set('token', token);
     return this.http.get('/api/users/v1/connection-token/', {params: params});
-
   }
 
 }

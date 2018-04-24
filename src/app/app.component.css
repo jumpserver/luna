@@ -1,5 +1,5 @@
 
-app-element-nav {
+elements-nav {
   font-family: 'Roboto', sans-serif;
   font-size: 13px;
   font-weight: 300;
@@ -22,7 +22,7 @@ nav {
   width: 100%;
 }
 
-app-element-interactive {
+elements-interactive {
   position: absolute;
   display: inline-block;
   bottom: 120px;

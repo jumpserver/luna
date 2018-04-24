@@ -3,7 +3,7 @@ import {version} from '../../../environments/environment';
 import {DataStore} from '../../globals';
 
 @Component({
-  selector: 'app-element-ofooter',
+  selector: 'elements-ofooter',
   templateUrl: './ofooter.component.html',
   styleUrls: ['./ofooter.component.scss']
 })
