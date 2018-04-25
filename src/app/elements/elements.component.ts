@@ -14,6 +14,7 @@ import {ElementElfinderComponent} from './elfinder/elfinder.component';
 import {ElementSettingsComponent} from './settings/settings.component';
 import {ElementDialogAlertComponent} from './dialog/dialog.service';
 import {ElementGuacamoleComponent} from './guacamole/guacamole.component';
+import {ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
 
 export const ElementComponents = [
   ElementLeftbarComponent,
@@ -30,5 +31,6 @@ export const ElementComponents = [
   ElementElfinderComponent,
   ElementSettingsComponent,
   ElementDialogAlertComponent,
-  ElementGuacamoleComponent
+  ElementGuacamoleComponent,
+  ElementAssetTreeComponent
 ];

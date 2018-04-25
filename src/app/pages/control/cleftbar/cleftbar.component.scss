@@ -1,3 +1,8 @@
+.sidebar {
+  height: 100%;
+  width: 100%;
+}
+
 :root {
   font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
 }
@@ -8,6 +13,7 @@ label {
 
 .filetree {
   padding-left: 20px;
+  height: inherit;
 }
 
 .filetree input[type="checkbox"] {
@@ -52,51 +58,56 @@ label {
   display: inline-block;
 }
 
-.search {
-  border-left-width: 0;
-  border-bottom: #19aa8d 2px inset;
+.fa.fa-undefined:before {
+  content: "\f26c";
 }
 
 .left-search {
   padding-left: 14px;
   width: 100%;
   border: none;
-  height: 28px;
   background: #2f2a2a;
   color: #ffffff;
 }
 
-.footer {
-  background: #2f2a2a;
-  font-size: 9pt;
-  border-top-width: 1px;
-  left: 0;
-  padding: 1px 20px 0 20px;
-  position: absolute;
+.search {
+  border-left-width: 0;
+  border-bottom: #19aa8d 2px inset;
+  padding-top: 30px;
+  width: 100%;
+  //position: fixed;
+  //height: 28px;
 }
 
-.fa.fa-undefined:before {
-  content: "\f26c";
+.search > input {
+  height: 30px;
 }
 
 .overflow {
-  height: 100%;
-  overflow-y: scroll;
-  position: absolute;
+  //height: 100%;
+  float: left;
   width: 100%;
+  position: inherit;
+  background: #2f2a2a;
+  color: #d6cbcb;
 }
 
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+.footer-version {
+  background: #2f2a2a;
+  font-size: 9pt;
+  left: 0;
+  width: 100%;
+  padding: 1px 20px 0 20px;
+  border-top: 1px solid #e7eaec;
+  bottom: 0;
+  //height: 30px;
+  //position: fixed;
 }
 
-::-webkit-scrollbar-track {
-  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-  border-radius: 10px;
+.footer-version > p {
+  height: 8px;
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 
-::-webkit-scrollbar-thumb {
-  border-radius: 10px;
-  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
-}
+@import "~@swimlane/ngx-ui/release/styles/components/scrollbars";

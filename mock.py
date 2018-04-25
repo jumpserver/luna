@@ -126,6 +126,301 @@ def asset_groups_assets():
       "assets": []
     },
     {
+      "id": 2,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 3,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 4,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 5,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
+      "id": 6,
+      "name": "ungrouped",
+      "assets": []
+    },
+    {
       "id": 1,
       "name": "Default long name long name long name",
       "comment": "Default asset group",

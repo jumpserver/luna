@@ -1,13 +1,9 @@
-div, term-leftbar, term-body {
+div {
   height: 100%;
   width: 100%;
   padding: 0;
-}
-
-div {
   background-color: black;
   margin: 0;
-  padding-top: 30px;
   position: initial;
 }
 
@@ -15,8 +11,13 @@ pages-control-cleftbar {
   padding: 0;
   background: #2f2a2a;
   color: #d6cbcb;
+  width: 100%;
+  height: 100%;
 }
 
 pages-control-control {
   padding: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 11;
 }

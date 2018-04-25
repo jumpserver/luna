@@ -1,6 +1,5 @@
 import {Component, OnInit} from '@angular/core';
 import {HttpService} from '../../app.service';
-import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
   selector: 'elements-asset-tree',
@@ -8,6 +7,25 @@ import * as jQuery from 'jquery/dist/jquery.min.js';
   styleUrls: ['./asset-tree.component.scss']
 })
 export class ElementAssetTreeComponent implements OnInit {
+
+  nodes1: any[] = [
+    {
+      label: 'Node1', model: {type: 'Array', count: 1}
+    },
+    {
+      label: 'Node2',
+      expandable: true,
+      model: {type: 'Object'},
+      children: [
+        {
+          label: 'Node1', model: {type: 'Array', count: 1}
+        }
+      ]
+    },
+    {
+      label: 'Node3', model: {type: 'Array', count: 1}
+    }
+  ];
 
   constructor(private _http: HttpService) {
 

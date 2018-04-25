@@ -34,7 +34,7 @@ export class Host {
 @Component({
   selector: 'pages-control-cleftbar',
   templateUrl: './cleftbar.component.html',
-  styleUrls: ['./cleftbar.component.css'],
+  styleUrls: ['./cleftbar.component.scss'],
   providers: [SearchComponent, ElementServerMenuComponent]
 })
 export class CleftbarComponent implements OnInit {

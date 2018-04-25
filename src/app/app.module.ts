@@ -15,7 +15,6 @@ import {AppRouterModule} from './router/router.module';
 
 import {AppComponent} from './pages/app.component';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
-import {TreeModule} from 'angular-tree-component';
 
 // service
 import {AppService, HttpService, LocalStorageService, LogService, UUIDService} from './app.service';
@@ -35,6 +34,7 @@ import {CleftbarDialogComponent} from './pages/control/cleftbar/cleftbar.compone
 import {DialogService, ElementDialogAlertComponent} from './elements/dialog/dialog.service';
 import {PluginModules} from './plugins/plugins';
 import {TestPageComponent} from './test-page/test-page.component';
+import {Ng2FileTreeModule} from 'ng2-file-tree/ng2-file-tree';
 
 
 @NgModule({
@@ -47,9 +47,9 @@ import {TestPageComponent} from './test-page/test-page.component';
     ReactiveFormsModule,
     LoggerModule.forRoot({serverLoggingUrl: '/api/logs', level: NgxLoggerLevel.DEBUG, serverLogLevel: NgxLoggerLevel.ERROR}),
     NgxDatatableModule,
-    TreeModule,
     AppRouterModule,
-    ...PluginModules
+    ...PluginModules,
+    Ng2FileTreeModule
   ],
   declarations: [
     AppComponent,

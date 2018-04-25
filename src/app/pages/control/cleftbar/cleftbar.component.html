@@ -1,11 +1,11 @@
-<div id="sidebar">
-  <div class="search">
+<div class="sidebar" fxLayout="column" ngxSplit="column">
+  <div fxflex="0 0 50px" class="search">
     <input class="left-search" placeholder=" {{'Search'| trans }} ..." maxlength="2048" name="q" autocomplete="off"
            title="Search"
            type="text" tabindex="1" spellcheck="false" autofocus [(ngModel)]="q" (keyup.enter)="Search(q)">
   </div>
-  <div class="overflow">
-    <ul class="filetree">
+  <div class="overflow ngx-scroll-overlay" fxflex="1 1 100%">
+    <ul class="filetree ">
       <li *ngFor="let hostGroup of HostGroups | SearchFilter: q; let i = index ">
         <input type="checkbox" id="hostgroup-{{i}}">
         <label for="hostgroup-{{i}}" matTooltip="{{hostGroup.name}}" [matTooltipPosition]="TooltipPosition">{{hostGroup.name}}</label>
@@ -21,8 +21,8 @@
     </ul>
   </div>
 
-</div>
-<div class="footer">
-  Version <strong>{{version}}</strong>
+  <div class="footer-version" fxflex="0 0 40px">
+    <p> Version <strong>{{version}}</strong></p>
+  </div>
 </div>
 <!--<elements-server-menu></elements-server-menu>-->
