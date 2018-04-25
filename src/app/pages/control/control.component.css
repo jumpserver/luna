@@ -7,17 +7,11 @@ div {
   position: initial;
 }
 
-pages-control-cleftbar {
-  padding: 0;
+pages-control-cleftbar, pages-control-control {
   background: #2f2a2a;
   color: #d6cbcb;
-  width: 100%;
-  height: 100%;
 }
 
-pages-control-control {
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 11;
+.container-fluid {
+  padding-top: 30px;
 }
