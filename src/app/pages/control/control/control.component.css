@@ -3,7 +3,7 @@ div, elements-term, elements-iframe {
   padding-bottom: 30px;
 }
 
-div {
+.window {
   display: none;
 }
 
