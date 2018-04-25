@@ -1,5 +1,8 @@
-div, elements-term, elements-iframe {
+div, elements-term, elements-guacamole, elements-settings {
   height: 100%;
+}
+
+elements-term, elements-guacamole, elements-settings {
   padding-bottom: 30px;
 }
 
@@ -10,6 +13,7 @@ div, elements-term, elements-iframe {
 .active {
   display: block;
 }
+
 .right-side {
   height: 100%;
   width: 100%;
