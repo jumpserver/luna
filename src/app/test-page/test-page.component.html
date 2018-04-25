@@ -1,20 +1,5 @@
 <!--<tree-root [nodes]="nodes" [options]="options"></tree-root>-->
 <!--<app-replay-mp4></app-replay-mp4>-->
-<!--<elements-asset-tree></elements-asset-tree>-->
-<div fxLayout="row" style="height:500px" ngxSplit="row">
-  <div fxFlex="30%" ngxSplitArea>
-    <ul>
-      <li>DDOS</li>
-      <li>DDOS</li>
-      <li>DDOS</li>
-    </ul>
-  </div>
-  <div fxFlex="15px" ngxSplitHandle></div>
-  <div fxFlex="70%" ngxSplitArea>
-    <ul>
-      <li>Alerts</li>
-      <li>Search</li>
-      <li>Admin</li>
-    </ul>
-  </div>
-</div>
+<!--<elements-tree [TreeData]="nodes1"></elements-tree>-->
+<elements-asset-tree [Data]="zNodes"></elements-asset-tree>
+

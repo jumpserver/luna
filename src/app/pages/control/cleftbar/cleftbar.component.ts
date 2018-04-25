@@ -18,7 +18,6 @@ import {FormControl, Validators} from '@angular/forms';
 import {ElementServerMenuComponent} from '../../../elements/server-menu/server-menu.component';
 import {DialogService} from '../../../elements/dialog/dialog.service';
 
-
 export interface HostGroup {
   name: string;
   id: string;
@@ -40,6 +39,7 @@ export class Host {
 export class CleftbarComponent implements OnInit {
   DataStore = DataStore;
   HostGroups: Array<HostGroup>;
+  zNodes: any;
   version = version;
   q: string;
   event: MouseEvent;
@@ -94,6 +94,7 @@ export class CleftbarComponent implements OnInit {
   ngOnInit() {
     this._http.get_my_asset_groups_assets()
       .subscribe(response => {
+        this.zNodes = response;
         this.HostGroups = response;
         if (!DataStore.autologin) {
           this.autologin();

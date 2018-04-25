@@ -71,3 +71,23 @@ $material-design-icons-font-path: '~/material-design-icons/iconfont/';
 //ngx-tree div.ngx-tree div.ngx-tree-vr {
 //  display: none;
 //}
+
+.ztree * {
+  background-color: inherit !important;
+  color: #ffffff;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+//.ztree li {
+//font-size: 15pt !important;
+//  padding-top: 5px !important;
+//}
+//
+//.ztree li span.node_name {
+//  padding-left: 8px !important;
+//}
+
+.ztree li span.button::before {
+  color: #ffffff !important;
+}

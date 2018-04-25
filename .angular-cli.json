@@ -24,7 +24,8 @@
         "../node_modules/xterm/dist/xterm.css",
         "../node_modules/elfinder/css/elfinder.min.css",
         "sass/style.scss",
-        "styles.css"
+        "styles.css",
+        "assets/ztree/awesomeStyle/awesome.css"
       ],
       "scripts": [
         "../node_modules/jquery/dist/jquery.min.js",
@@ -35,7 +36,8 @@
         "assets/inspinia/inspinia.js",
         "assets/slimscroll/jquery.slimscroll.min.js",
         "../node_modules/elfinder/js/elfinder.min.js",
-        "../node_modules/xterm/dist/xterm.js"
+        "../node_modules/xterm/dist/xterm.js",
+        "assets/ztree/jquery.ztree.all.min.js"
       ],
       "environmentSource": "environments/environment.ts",
       "environments": {
