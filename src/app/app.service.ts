@@ -253,6 +253,8 @@ export class AppService implements OnInit {
       this._http.get('/luna/i18n/' + this.lang + '.json').subscribe(
         data => {
           this._localStorage.set('lang', JSON.stringify(data));
+        },
+        err => {
         }
       );
     }
