@@ -4,10 +4,10 @@ import {HttpService, LogService} from '../../app.service';
 import {DataStore, User} from '../../globals';
 import {DomSanitizer} from '@angular/platform-browser';
 import {environment} from '../../../environments/environment';
-import {NavList} from '../../ControlPage/control/control.component';
+import {NavList} from '../../pages/control/control/control.component';
 
 @Component({
-  selector: 'app-element-guacamole',
+  selector: 'elements-guacamole',
   templateUrl: './guacamole.component.html',
   styleUrls: ['./guacamole.component.scss']
 })

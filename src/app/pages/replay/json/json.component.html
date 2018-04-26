@@ -1,0 +1,37 @@
+<div>
+
+  <!--<button type="button" class="btn">-->
+  <!--<i class="fa fa-stop" aria-hidden="true"></i>-->
+  <!--</button>-->
+  <!--<button type="button" class="btn">-->
+  <!--<i class="fa fa-step-backward" aria-hidden="true"></i>-->
+  <!--</button>-->
+  <!--<button type="button" class="btn">-->
+  <!--<i class="fa fa-backward" aria-hidden="true"></i>-->
+  <!--</button>-->
+  <button type="button" class="btn" (click)="pause()">
+    <i class="fa" aria-hidden="true" [ngClass]="{'fa-play':!toggle,'fa-pause': toggle}"></i>
+  </button>
+  <!--<button type="button" class="btn">-->
+  <!--<i class="fa fa-forward" aria-hidden="true"></i>-->
+  <!--</button>-->
+  <!--<button type="button" class="btn">-->
+  <!--<i class="fa fa-step-forward" aria-hidden="true"></i>-->
+  <!--</button>-->
+  <!--<button type="button" class="btn">-->
+  <!--<i class="fa fa-expand" aria-hidden="true"></i>-->
+  <!--</button>-->
+  <!--<button type="button" class="btn">-->
+  <!--<i class="fa fa-compress" aria-hidden="true"></i>-->
+  <!--</button>-->
+  <button type="button" class="btn" (click)="restart()">
+    <i class="fa fa-repeat" aria-hidden="true"></i>
+  </button>
+
+  <input id="scrubber" type="range" [(ngModel)]="setPercent" min=0 max=100 (mousedown)="stop()" (mouseup)="rununil()"/>
+
+  {{time | utcDate | date:"HH:mm:ss"}}
+</div>
+
+<elements-term></elements-term>
+<!--<asciinema-player></asciinema-player>-->

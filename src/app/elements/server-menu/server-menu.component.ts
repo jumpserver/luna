@@ -9,7 +9,7 @@ export class Menu {
 }
 
 @Component({
-  selector: 'app-element-server-menu',
+  selector: 'elements-server-menu',
   templateUrl: './server-menu.component.html',
   styleUrls: ['./server-menu.component.scss'],
 })

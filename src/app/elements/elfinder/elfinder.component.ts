@@ -2,7 +2,7 @@ import {Component, OnInit} from '@angular/core';
 // import * as elfinder from 'elfinder/js/elfinder.min.js';
 
 @Component({
-  selector: 'app-element-elfinder',
+  selector: 'elements-elfinder',
   templateUrl: './elfinder.component.html',
   styleUrls: ['./elfinder.component.scss']
 })

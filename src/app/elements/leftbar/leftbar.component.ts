@@ -3,7 +3,7 @@ import {FormBuilder, FormGroup} from '@angular/forms';
 import {Router} from '@angular/router';
 
 @Component({
-  selector: 'app-element-leftbar',
+  selector: 'elements-leftbar',
   templateUrl: './leftbar.component.html',
   styleUrls: ['./leftbar.component.scss']
 })

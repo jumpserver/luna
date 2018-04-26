@@ -1,0 +1,17 @@
+div {
+  height: 100%;
+  width: 100%;
+  padding: 0;
+  background-color: black;
+  margin: 0;
+  position: initial;
+}
+
+pages-control-cleftbar, pages-control-control {
+  background: #2f2a2a;
+  color: #d6cbcb;
+}
+
+.container-fluid {
+  padding-top: 30px;
+}

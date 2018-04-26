@@ -10,7 +10,7 @@ import {DataStore, User} from '../../globals';
 import {version} from '../../../environments/environment';
 
 @Component({
-  selector: 'app-element-footer',
+  selector: 'elements-footer',
   templateUrl: './footer.component.html',
   styleUrls: ['./footer.component.css']
 })

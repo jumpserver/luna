@@ -1,0 +1,17 @@
+<div *ngFor="let node of TreeData">
+  <div *ngIf="node.leafs?.length>0">
+    {{node.id}}
+    <elements-tree [TreeData]="node.leafs"></elements-tree>
+  </div>
+  <div *ngIf="node.leafs?.length==0">
+    {{node.id}}
+  </div>
+</div>
+
+
+<!--<ul class="filetree ">-->
+<!--<li *ngFor="let hostGroup of HostGroups | SearchFilter: q; let i = index ">-->
+<!--<input type="checkbox" id="hostgroup-{{i}}">-->
+<!--<label for="hostgroup-{{i}}" matTooltip="{{hostGroup.name}}" [matTooltipPosition]="TooltipPosition">{{hostGroup.name}}</label>-->
+<!--</li>-->
+<!--</ul>-->
