@@ -1,4 +1,4 @@
-import {Component, Input, OnInit, AfterViewInit, Inject} from '@angular/core';
+import {Component, Input, OnInit, Inject, SimpleChanges, OnChanges} from '@angular/core';
 import {NavList, View} from '../../pages/control/control/control.component';
 import {AppService, LogService} from '../../app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
@@ -14,7 +14,7 @@ declare var $: any;
   templateUrl: './asset-tree.component.html',
   styleUrls: ['./asset-tree.component.scss']
 })
-export class ElementAssetTreeComponent implements OnInit {
+export class ElementAssetTreeComponent implements OnInit, OnChanges {
   @Input() Data: any;
   nodes = [];
   setting = {
@@ -31,36 +31,42 @@ export class ElementAssetTreeComponent implements OnInit {
       onClick: this.onCzTreeOnClick.bind(this)
     },
   };
-  timer: any;
+  zTreeObj: any;
+
+  // hiddenNodes: [];
 
   onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
     this.Connect(treeNode);
-    // this.Connect(treeNode);
   }
 
   constructor(private _appService: AppService,
-              private _menu: ElementServerMenuComponent,
               public _dialog: MatDialog,
-              private _layer: DialogService) {
+              public _logger: LogService) {
   }
 
   ngOnInit() {
     if (this.Data) {
       this.draw();
     }
-    clearInterval(this.timer);
+    // clearInterval(this.timer);
+    //
+    // this.timer = setInterval(() => {
+    //   if (this.Data) {
+    //     this.draw();
+    //     clearInterval(this.timer);
+    //   }
+    // }, 100);
+  }
 
-    this.timer = setInterval(() => {
-      if (this.Data) {
-        this.draw();
-        clearInterval(this.timer);
-      }
-    }, 100);
+  ngOnChanges(changes: SimpleChanges) {
+    if (this.Data) {
+      this.draw();
+    }
   }
 
   draw() {
-    let nodes = {};
-    let assets = {};
+    const nodes = {};
+    const assets = {};
     this.Data.forEach((v, i) => {
       if (!nodes[v['id']]) {
         nodes[v['id']] = true;
@@ -109,8 +115,7 @@ export class ElementAssetTreeComponent implements OnInit {
         });
       });
     });
-    $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
-
+    this.zTreeObj = $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
   }
 
   Connect(host) {
@@ -129,7 +134,7 @@ export class ElementAssetTreeComponent implements OnInit {
 
         dialogRef.afterClosed().subscribe(result => {
           if (result) {
-            for (let i of host.system_users_granted) {
+            for (const i of host.system_users_granted) {
               if (i.id.toString() === result.toString()) {
                 user = i;
                 break;
@@ -180,8 +185,8 @@ export class ElementAssetTreeComponent implements OnInit {
 
   login(host, user) {
     const id = NavList.List.length - 1;
-    console.log(NavList);
-    console.log(host);
+    this._logger.debug(NavList);
+    this._logger.debug(host);
     if (user) {
       NavList.List[id].nick = host.name;
       NavList.List[id].connected = true;
@@ -197,7 +202,7 @@ export class ElementAssetTreeComponent implements OnInit {
       NavList.List.push(new View());
       NavList.Active = id;
     }
-    console.log(NavList);
+    this._logger.debug(NavList);
   }
 
   checkPriority(sysUsers) {
@@ -213,11 +218,24 @@ export class ElementAssetTreeComponent implements OnInit {
     }
     return user;
   }
+
+  // filter() {
+  //   this.zTreeObj.showNodes(this.hiddenNodes);
+  //
+  //   function filterFunc(node) {
+  //     const _keywords = $('#keyword').val();
+  //     return !(node.isParent || node.name.indexOf(_keywords) !== -1);
+  //   }
+  //
+  //   this.hiddenNodes = this.zTreeObj.getNodesByFilter(filterFunc);
+  //
+  //   this.zTreeObj.hideNodes(this.hiddenNodes);
+  // }
 }
 
 
 @Component({
-  selector: 'asset-tree-dialog',
+  selector: 'elements-asset-tree-dialog',
   templateUrl: 'dialog.html',
 })
 export class AssetTreeDialogComponent implements OnInit {
