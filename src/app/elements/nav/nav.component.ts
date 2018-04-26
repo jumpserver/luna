@@ -39,12 +39,6 @@ export class ElementNavComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.ChangeLanWarningDialog = this._dialog.open(
-      ChangLanWarningDialogComponent,
-      {
-        height: '200px',
-        width: '300px',
-      });
   }
 
   click(event) {
@@ -370,24 +364,6 @@ export class ChangLanWarningDialogComponent implements OnInit {
 
   constructor(public dialogRef: MatDialogRef<ChangLanWarningDialogComponent>,
               @Inject(MAT_DIALOG_DATA) public data: any) {
-  }
-
-  ngOnInit() {
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-}
-
-
-@Component({
-  selector: 'app-element-nav-dialog',
-  templateUrl: 'changeLanWarning.html',
-})
-export class ChangLanWarningDialogComponent implements OnInit {
-
-  constructor(public dialogRef: MatDialogRef<ChangLanWarningDialogComponent>) {
   }
 
   ngOnInit() {
