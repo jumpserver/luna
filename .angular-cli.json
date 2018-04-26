@@ -37,7 +37,8 @@
         "assets/slimscroll/jquery.slimscroll.min.js",
         "../node_modules/elfinder/js/elfinder.min.js",
         "../node_modules/xterm/dist/xterm.js",
-        "assets/ztree/jquery.ztree.all.min.js"
+        "assets/ztree/jquery.ztree.all.min.js",
+        "assets/ztree/jquery.ztree.exhide.min.js"
       ],
       "environmentSource": "environments/environment.ts",
       "environments": {

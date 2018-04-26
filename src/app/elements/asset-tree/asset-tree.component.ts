@@ -16,6 +16,7 @@ declare var $: any;
 })
 export class ElementAssetTreeComponent implements OnInit, OnChanges {
   @Input() Data: any;
+  @Input() query: string;
   nodes = [];
   setting = {
     view: {
@@ -31,9 +32,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       onClick: this.onCzTreeOnClick.bind(this)
     },
   };
-  zTreeObj: any;
-
-  // hiddenNodes: [];
+  hiddenNodes: any;
 
   onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
     this.Connect(treeNode);
@@ -59,8 +58,11 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (this.Data) {
+    if (changes['Data'] && this.Data) {
       this.draw();
+    }
+    if (changes['query'] && !changes['query'].firstChange) {
+      this.filter();
     }
   }
 
@@ -115,7 +117,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
         });
       });
     });
-    this.zTreeObj = $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
+    $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
   }
 
   Connect(host) {
@@ -219,18 +221,23 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     return user;
   }
 
-  // filter() {
-  //   this.zTreeObj.showNodes(this.hiddenNodes);
-  //
-  //   function filterFunc(node) {
-  //     const _keywords = $('#keyword').val();
-  //     return !(node.isParent || node.name.indexOf(_keywords) !== -1);
-  //   }
-  //
-  //   this.hiddenNodes = this.zTreeObj.getNodesByFilter(filterFunc);
-  //
-  //   this.zTreeObj.hideNodes(this.hiddenNodes);
-  // }
+  filter() {
+    const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
+    zTreeObj.showNodes(this.hiddenNodes);
+
+    function filterFunc(node) {
+      const _keywords = $('#keyword').val();
+      if (node.isParent || node.name.indexOf(_keywords) !== -1) {
+        return false;
+      }
+      return true;
+    }
+
+    this.hiddenNodes = zTreeObj.getNodesByFilter(filterFunc);
+
+    zTreeObj.hideNodes(this.hiddenNodes);
+    zTreeObj.expandAll(true);
+  }
 }
 
 
