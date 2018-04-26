@@ -76,7 +76,6 @@ export class ElementGuacamoleComponent implements OnInit {
   }
 
   active() {
-    this._logger.debug('focus');
     this.el.nativeElement.focus();
   }
 
