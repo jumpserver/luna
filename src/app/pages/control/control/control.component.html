@@ -1,0 +1,23 @@
+<div fxLayout="column" ngxSplit="column" style="width: 100%;height: 100%;">
+  <div fxflex="0 0 50px" class="search">
+    <pages-control-nav></pages-control-nav>
+  </div>
+  <div fxFlex>
+    <div class="window" *ngFor="let m of NavList.List;let i=index"
+         [ngClass]="{'active':i==NavList.Active}">
+      <elements-term [index]="i"
+                     [host]="m.host"
+                     [userid]="m.user.id"
+                     *ngIf="m.type=='ssh'">
+      </elements-term>
+      <elements-guacamole [index]="i"
+                          [host]="m.host"
+                          [userid]="m.user.id"
+                          *ngIf="m.type=='rdp'">
+      </elements-guacamole>
+      <elements-settings [index]="i"
+                         *ngIf="m.type=='settings'">
+      </elements-settings>
+    </div>
+  </div>
+</div>

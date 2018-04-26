@@ -1,0 +1,30 @@
+
+elements-nav {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  font-weight: 300;
+  position: absolute;
+  display: inline-block;
+  top: 0;
+  left: 0;
+  height: 30px;
+  width: 100%;
+  color: #323a4e;
+  background-color: #463e3e;
+  background-repeat: no-repeat;
+  background-position: 100% 50%;
+  z-index: 5;
+  transition: background 0.2s ease-out;
+}
+
+nav {
+  height: 30px;
+  width: 100%;
+}
+
+elements-interactive {
+  position: absolute;
+  display: inline-block;
+  bottom: 120px;
+  left: 100px;
+}

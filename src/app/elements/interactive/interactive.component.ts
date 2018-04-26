@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 
 @Component({
-  selector: 'app-element-interactive',
+  selector: 'elements-interactive',
   templateUrl: './interactive.component.html',
   styleUrls: ['./interactive.component.scss']
 })

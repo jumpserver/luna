@@ -1,0 +1,113 @@
+.sidebar {
+  height: 100%;
+  width: 100%;
+}
+
+:root {
+  font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+}
+
+label {
+  margin-bottom: 0;
+}
+
+.filetree {
+  padding-left: 20px;
+  height: inherit;
+}
+
+.filetree input[type="checkbox"] {
+  display: none;
+}
+
+.filetree input[type=checkbox] + label:before {
+  font-family: FontAwesome;
+  display: inline-block;
+}
+
+.filetree input[type=checkbox] + label:before {
+  content: "\f114";
+  letter-spacing: 10px;
+  width: 30px;
+}
+
+.filetree input[type=checkbox]:checked + label:before {
+  content: "\f115";
+}
+
+.filetree ul {
+  height: 0;
+  overflow: hidden;
+}
+
+.filetree > li input:checked ~ ul, .filetree > li ul.insearch {
+  height: auto;
+}
+
+.filetree li {
+  list-style: none;
+  cursor: pointer;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filetree label {
+  line-height: 33px;
+  display: inline-block;
+}
+
+.fa.fa-undefined:before {
+  content: "\f26c";
+}
+
+.left-search {
+  padding-left: 14px;
+  width: 100%;
+  border: none;
+  background: #2f2a2a;
+  color: #ffffff;
+}
+
+.search {
+  border-left-width: 0;
+  border-bottom: #19aa8d 2px inset;
+  //padding-top: 30px;
+  width: 100%;
+  //position: fixed;
+  //height: 28px;
+}
+
+.search > input {
+  height: 30px;
+}
+
+.overflow {
+  height: 100%;
+  width: 100%;
+  float: left;
+  position: inherit;
+  background: #2f2a2a;
+  color: #d6cbcb;
+}
+
+.footer-version {
+  background: #2f2a2a;
+  font-size: 9pt;
+  left: 0;
+  width: 100%;
+  padding: 1px 20px 0 20px;
+  border-top: 1px solid #e7eaec;
+  bottom: 0;
+  //height: 30px;
+  //position: fixed;
+}
+
+.footer-version > p {
+  height: 8px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+@import "~@swimlane/ngx-ui/release/styles/components/scrollbars";

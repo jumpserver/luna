@@ -1,13 +1,13 @@
 import {AfterViewInit, Component, Input, OnInit, ViewChild} from '@angular/core';
 import {ElementRef} from '@angular/core';
 import {term, Terminal, TermWS} from '../../globals';
-import {NavList} from '../../ControlPage/control/control.component';
+import {NavList} from '../../pages/control/control/control.component';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {UUIDService} from '../../app.service';
 import {CookieService} from 'ngx-cookie-service';
 
 @Component({
-  selector: 'app-element-term',
+  selector: 'elements-term',
   templateUrl: './term.component.html',
   styleUrls: ['./term.component.css']
 })

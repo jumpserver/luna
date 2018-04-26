@@ -3,14 +3,6 @@
  * Style tweaks
  * --------------------------------------------------
  */
-@font-face {
-  font-family: Inconsolata;
-  src: url('assets/fonts/inconsolata.woff') format("woff");
-  font-weight: normal;
-  font-size: large;
-}
-
-
 html,
 body {
   overflow-x: hidden; /* Prevent scroll on narrow devices */
@@ -31,12 +23,12 @@ app-root {
   z-index: -1;
   font-size: 11px !important;
   padding-bottom: 16px !important;
-  font-family: 'Monaco', Inconsolata !important;
+  font-family: 'Monaco', 'Consolas' !important;
   color: white;
 }
 
 .terminal {
-  font-family: 'Monaco', Inconsolata;
+  font-family: 'Monaco', 'Consolas' !important;
   font-size: 11px;
   white-space: nowrap;
   display: inline-block;
