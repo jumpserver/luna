@@ -30,11 +30,11 @@ import {Pipes} from './pipes/pipes';
 import {PagesComponents} from './pages/pages.component';
 import {ElementComponents} from './elements/elements.component';
 import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
-import {CleftbarDialogComponent} from './pages/control/cleftbar/cleftbar.component';
 import {DialogService, ElementDialogAlertComponent} from './elements/dialog/dialog.service';
 import {PluginModules} from './plugins/plugins';
 import {TestPageComponent} from './test-page/test-page.component';
 import {Ng2FileTreeModule} from 'ng2-file-tree/ng2-file-tree';
+import {AssetTreeDialogComponent} from './elements/asset-tree/asset-tree.component';
 
 
 @NgModule({
@@ -59,7 +59,7 @@ import {Ng2FileTreeModule} from 'ng2-file-tree/ng2-file-tree';
     ...PagesComponents
   ],
   entryComponents: [
-    CleftbarDialogComponent,
+    AssetTreeDialogComponent,
     ElementDialogAlertComponent,
     ChangLanWarningDialogComponent,
   ],

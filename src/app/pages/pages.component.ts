@@ -7,7 +7,7 @@ import {PagesReplayComponent} from './replay/replay.component';
 // import {PagesSettingComponent} from './setting/setting.component';
 import {PagesNotFoundComponent} from './not-found/not-found.component';
 import {PagesLoginComponent} from './login/login.component';
-import {CleftbarComponent, CleftbarDialogComponent} from './control/cleftbar/cleftbar.component';
+import {CleftbarComponent} from './control/cleftbar/cleftbar.component';
 import {Mp4Component} from './replay/mp4/mp4.component';
 import {JsonComponent} from './replay/json/json.component';
 import {ControlComponent} from './control/control/control.component';
@@ -20,7 +20,7 @@ export const PagesComponents = [
   PagesBlankComponent,
   PagesConnectComponent,
   PagesControlComponent, ControlComponent, PagesControlNavComponent,
-  CleftbarComponent, CleftbarDialogComponent,
+  CleftbarComponent,
   PagesIndexComponent,
   PagesMonitorComponent,
   PagesReplayComponent, Mp4Component, JsonComponent,

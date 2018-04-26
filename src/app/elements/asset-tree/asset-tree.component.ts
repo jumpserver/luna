@@ -1,4 +1,11 @@
-import {Component, Input, OnInit, AfterViewInit} from '@angular/core';
+import {Component, Input, OnInit, AfterViewInit, Inject} from '@angular/core';
+import {NavList, View} from '../../pages/control/control/control.component';
+import {AppService, LogService} from '../../app.service';
+import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
+import {FormControl, Validators} from '@angular/forms';
+import {DataStore} from '../../globals';
+import {ElementServerMenuComponent} from '../server-menu/server-menu.component';
+import {DialogService} from '../dialog/dialog.service';
 
 declare var $: any;
 
@@ -21,16 +28,20 @@ export class ElementAssetTreeComponent implements OnInit {
       }
     },
     callback: {
-      // onClick: this.onCzTreeOnClick
+      onClick: this.onCzTreeOnClick.bind(this)
     },
   };
   timer: any;
 
   onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
-    alert(treeNode.name);
+    this.Connect(treeNode);
+    // this.Connect(treeNode);
   }
 
-  constructor() {
+  constructor(private _appService: AppService,
+              private _menu: ElementServerMenuComponent,
+              public _dialog: MatDialog,
+              private _layer: DialogService) {
   }
 
   ngOnInit() {
@@ -100,5 +111,137 @@ export class ElementAssetTreeComponent implements OnInit {
     });
     $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
 
+  }
+
+  Connect(host) {
+    // console.log(host);
+    let user: any;
+    if (host.system_users_granted.length > 1) {
+      user = this.checkPriority(host.system_users_granted);
+      if (user) {
+        this.login(host, user);
+      } else {
+        const dialogRef = this._dialog.open(AssetTreeDialogComponent, {
+          height: '200px',
+          width: '300px',
+          data: {users: host.system_users_granted}
+        });
+
+        dialogRef.afterClosed().subscribe(result => {
+          if (result) {
+            for (let i of host.system_users_granted) {
+              if (i.id.toString() === result.toString()) {
+                user = i;
+                break;
+              }
+            }
+            this.login(host, user);
+          }
+        });
+      }
+    } else if (host.system_users_granted.length === 1) {
+      user = host.system_users_granted[0];
+      this.login(host, user);
+    }
+  }
+
+  // autologin() {
+  //   const asset_id = this._appService.getQueryString('asset_id');
+  //   const user_id = this._appService.getQueryString('user_id');
+  //   let tag = false;
+  //   if (asset_id) {
+  //     for (let g of this.Data) {
+  //       if (g['assets_granted']) {
+  //         for (let host of g['assets_granted']) {
+  //           if (host.id.toString() === asset_id) {
+  //             if (user_id) {
+  //               host['system_users_granted'].forEach((user, kk) => {
+  //                 if (user.id.toString() === user_id.toString()) {
+  //                   this.login(host, user);
+  //                   tag = true;
+  //                   return;
+  //                 }
+  //               });
+  //             } else {
+  //               this.Connect(host);
+  //               tag = true;
+  //               return;
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //     if (!tag) {
+  //       this._layer.alert('Maybe you do not have permission on that host');
+  //     }
+  //   }
+  //   DataStore.autologin = true;
+  // }
+
+  login(host, user) {
+    const id = NavList.List.length - 1;
+    console.log(NavList);
+    console.log(host);
+    if (user) {
+      NavList.List[id].nick = host.name;
+      NavList.List[id].connected = true;
+      NavList.List[id].edit = false;
+      NavList.List[id].closed = false;
+      NavList.List[id].host = host;
+      NavList.List[id].user = user;
+      if (user.protocol === 'ssh') {
+        NavList.List[id].type = 'ssh';
+      } else if (user.protocol === 'rdp') {
+        NavList.List[id].type = 'rdp';
+      }
+      NavList.List.push(new View());
+      NavList.Active = id;
+    }
+    console.log(NavList);
+  }
+
+  checkPriority(sysUsers) {
+    let priority = -1;
+    let user: any;
+    for (const u of sysUsers) {
+      if (u.priority > priority) {
+        user = u;
+        priority = u.priority;
+      } else if (u.priority === priority) {
+        return null;
+      }
+    }
+    return user;
+  }
+}
+
+
+@Component({
+  selector: 'asset-tree-dialog',
+  templateUrl: 'dialog.html',
+})
+export class AssetTreeDialogComponent implements OnInit {
+  UserSelectControl = new FormControl('', [Validators.required]);
+  selected: any;
+
+  constructor(public dialogRef: MatDialogRef<AssetTreeDialogComponent>,
+              @Inject(MAT_DIALOG_DATA) public data: any,
+              private _logger: LogService) {
+  }
+
+  ngOnInit() {
+    this.selected = this.data.users[0].id;
+    this.UserSelectControl.setValue(this.selected);
+    // this._logger.debug(this.UserSelectControl);
+  }
+
+  onNoClick(): void {
+    this.dialogRef.close();
+  }
+
+  compareFn: ((f1: any, f2: any) => boolean) | null = this.compareByValue;
+
+  compareByValue(f1: any, f2: any) {
+    return f1 && f2 && f1.value === f2.value;
   }
 }
