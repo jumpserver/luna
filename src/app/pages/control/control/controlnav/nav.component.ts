@@ -40,15 +40,15 @@ export class PagesControlNavComponent implements OnInit {
     });
     NavList.List[index].hide = false;
     NavList.Active = index;
-    // if (!NavList.List[index].edit) {
-    //   if (NavList.List[index].type === 'ssh') {
-    //     NavList.List[index].Term.focus();
-    //   } else if (NavList.List[index].type === 'rdp') {
-    //     NavList.List[index].Rdp.focus();
-    //   }
-    // } else {
-    //
-    // }
+    if (!NavList.List[index].edit) {
+      if (NavList.List[index].type === 'ssh') {
+        NavList.List[index].Term.focus();
+      } else if (NavList.List[index].type === 'rdp') {
+        // NavList.List[index].Rdp.focus();
+      }
+    } else {
+
+    }
   }
 
   constructor() {
