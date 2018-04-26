@@ -91,3 +91,7 @@ $material-design-icons-font-path: '~/material-design-icons/iconfont/';
 .ztree li span.button::before {
   color: #ffffff !important;
 }
+
+button.icon-split-handle.ngx-split-button {
+  height: 100%;
+}
