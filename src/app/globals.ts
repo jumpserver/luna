@@ -1,10 +1,10 @@
 'use strict';
-import * as terminal from 'xterm/dist/xterm';
+import * as Terminal from 'xterm/dist/xterm';
 import * as io from 'socket.io-client';
 
-export function Terminal(xargs: any) {
-  return terminal(xargs);
-}
+// export function Terminal(xargs: any) {
+//   return terminal(xargs);
+// }
 
 export const TermWS = io.connect('/ssh');
 export let term: {
@@ -17,6 +17,7 @@ export let term: {
     rows: 24,
     useStyle: true,
     screenKeys: true,
+    scrollback: 10
   }),
   col: 80,
   row: 24,

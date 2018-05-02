@@ -1,6 +1,8 @@
 import {AfterViewInit, Component, Input, OnInit, ViewChild} from '@angular/core';
 import {ElementRef} from '@angular/core';
-import {term, Terminal, TermWS} from '../../globals';
+import {term, TermWS} from '../../globals';
+import * as Terminal from 'xterm/dist/xterm';
+// import { Terminal } from 'xterm';
 import {NavList} from '../../pages/control/control/control.component';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {UUIDService} from '../../app.service';
@@ -21,6 +23,8 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   @ViewChild('term') el: ElementRef;
   secret: string;
   term: any;
+  col = 80;
+  row = 24;
 
   constructor(private _uuid: UUIDService,
               private _cookie: CookieService) {
@@ -28,7 +32,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
   ngOnInit() {
     this.secret = this._uuid.gen();
-    this.term = Terminal({
+    this.term = new Terminal({
       cols: 80,
       rows: 24,
       useStyle: true,
@@ -38,34 +42,36 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    if (this.host || this.token) {
-      if (this._cookie.get('cols')) {
-        term.col = parseInt(this._cookie.get('cols'), 10);
-      }
-      if (this._cookie.get('rows')) {
-        term.row = parseInt(this._cookie.get('rows'), 10);
-      }
-    } else {
-      term.col = Math.floor(jQuery(this.el.nativeElement).width() / jQuery('#marker').width() * 6) - 3;
-      term.row = Math.floor(jQuery(this.el.nativeElement).height() / jQuery('#marker').height()) - 3;
-      term.term = this.term;
-    }
+    // if (this.host || this.token) {
+    //   if (this._cookie.get('cols')) {
+    //     this.col = parseInt(this._cookie.get('cols'), 10);
+    //   }
+    //   if (this._cookie.get('rows')) {
+    //     this.row = parseInt(this._cookie.get('rows'), 10);
+    //   }
+    // } else {
+      this.col = Math.floor(jQuery('.content').width() / jQuery('#marker').width() * 6) - 8;
+      this.row = Math.floor(jQuery('.content').height() / jQuery('#marker').height()) - 3;
+      // term.term = this.term;
+    // }
     this.term.open(this.el.nativeElement, true);
     const that = this;
     window.onresize = function () {
-      term.col = Math.floor(jQuery(that.el.nativeElement).width() / jQuery('#marker').width() * 6) - 3;
-      term.row = Math.floor(jQuery(that.el.nativeElement).height() / jQuery('#marker').height());
-      if (term.col < 80) {
-        term.col = 80;
+      console.log('Height: ', jQuery('.content').height(), jQuery('#marker').height());
+      that.col = Math.floor(jQuery('.content').width() / jQuery('#marker').width() * 6) - 8;
+      that.row = Math.floor(jQuery('.content').height() / jQuery('#marker').height()) - 3;
+
+      if (that.col < 80) {
+        that.col = 80;
       }
-      if (term.row < 24) {
-        term.row = 24;
+      if (that.row < 24) {
+        that.row = 24;
       }
-      that.term.resize(term.col, term.row);
+      that.term.resize(that.col, that.row);
       if (that.host) {
         that._cookie.set('cols', term.col.toString(), 99, '/', document.domain);
         that._cookie.set('rows', term.row.toString(), 99, '/', document.domain);
-        TermWS.emit('resize', {'cols': term.col, 'rows': term.row});
+        TermWS.emit('resize', {'cols': that.col, 'rows': that.row});
       }
     };
     jQuery(window).resize();
