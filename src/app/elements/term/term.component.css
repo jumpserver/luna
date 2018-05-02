@@ -13,6 +13,7 @@ div {
   white-space: nowrap;
   display: inline-block;
   height: 100%;
+  background: #0d8ddb;
 }
 
 div.terminal div span {

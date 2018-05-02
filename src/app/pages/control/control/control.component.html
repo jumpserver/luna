@@ -1,5 +1,5 @@
 <div fxLayout="column" ngxSplit="column" style="width: 100%;height: 100%;">
-  <div fxflex="0 0 50px" class="search">
+  <div fxFlex="1 1 30px" class="search">
     <pages-control-nav></pages-control-nav>
   </div>
   <div fxFlex>
@@ -15,9 +15,9 @@
                           [userid]="m.user.id"
                           *ngIf="m.type=='rdp'">
       </elements-guacamole>
-      <elements-settings [index]="i"
-                         *ngIf="m.type=='settings'">
-      </elements-settings>
+      <!--<elements-settings [index]="i"-->
+                         <!--*ngIf="m.type=='settings'">-->
+      <!--</elements-settings>-->
     </div>
   </div>
 </div>

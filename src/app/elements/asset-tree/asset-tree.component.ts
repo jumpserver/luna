@@ -47,14 +47,6 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     if (this.Data) {
       this.draw();
     }
-    // clearInterval(this.timer);
-    //
-    // this.timer = setInterval(() => {
-    //   if (this.Data) {
-    //     this.draw();
-    //     clearInterval(this.timer);
-    //   }
-    // }, 100);
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -113,9 +105,14 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
             });
             assets[vv['id'] + '@' + vvv['id']] = true;
           }
-
         });
       });
+    });
+    this.nodes.sort(function(node1, node2) {
+      if (node1.isParent && !node2.isParent) {
+        return -1;
+      }
+      return node1.name < node2.name ? -1 : 1;
     });
     $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
   }

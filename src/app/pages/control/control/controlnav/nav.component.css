@@ -2,6 +2,7 @@
   height: 30px;
   overflow-y: hidden;
   overflow-x: auto;
+  position: relative;
 }
 
 .tabs ul li.disconnected {
@@ -32,7 +33,7 @@
 
 .tabs ul li.active {
   box-sizing: border-box;
-  border-bottom: 5px solid #19aa8d !important;
+  border-bottom: 3px solid #19aa8d !important;
 }
 
 .tabs ul li span {
@@ -43,7 +44,8 @@
   font-family: 'Roboto', sans-serif;
   font-size: 13px;
   text-decoration: none;
-  padding: 8px 20px 6px 15px;
+  padding-left: 24px;
+  line-height: 26px;
   cursor: default;
   width: 115px;
   height: 21px;
@@ -66,7 +68,8 @@
 }
 
 .tabs ul li.active span {
-  padding: 5px 20px 4px 15px;
+  padding-left: 24px;
+  line-height: 26px;
   color: white;
   height: 18px;
 }

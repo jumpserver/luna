@@ -1,9 +1,10 @@
 <div class="container-fluid row" fxLayout="row" ngxSplit="row">
-  <div fxFlex="20%" ngxSplitArea *ngIf="DataStore.leftbarshow">
+  <div fxFlex="1 1 20%" minBasis="100px" maxBasis="800px" fxFlexFill ngxSplitArea *ngIf="DataStore.leftbarshow">
     <pages-control-cleftbar></pages-control-cleftbar>
   </div>
-  <div fxFlex="15px" ngxSplitHandle ></div>
-  <div fxFlex>
+  <div fxFlex="0" ngxSplitHandle></div>
+  <div fxFlex="1 1 80%" ngxSplitArea class="content">
     <pages-control-control></pages-control-control>
   </div>
 </div>
+

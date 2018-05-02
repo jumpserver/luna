@@ -46,15 +46,15 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
         term.row = parseInt(this._cookie.get('rows'), 10);
       }
     } else {
-      term.col = Math.floor(jQuery(this.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
-      term.row = Math.floor(jQuery(this.el.nativeElement).height() / jQuery('#liuzheng').height()) - 3;
+      term.col = Math.floor(jQuery(this.el.nativeElement).width() / jQuery('#marker').width() * 6) - 3;
+      term.row = Math.floor(jQuery(this.el.nativeElement).height() / jQuery('#marker').height()) - 3;
       term.term = this.term;
     }
     this.term.open(this.el.nativeElement, true);
     const that = this;
     window.onresize = function () {
-      term.col = Math.floor(jQuery(that.el.nativeElement).width() / jQuery('#liuzheng').width() * 8) - 3;
-      term.row = Math.floor(jQuery(that.el.nativeElement).height() / jQuery('#liuzheng').height()) - 3;
+      term.col = Math.floor(jQuery(that.el.nativeElement).width() / jQuery('#marker').width() * 6) - 3;
+      term.row = Math.floor(jQuery(that.el.nativeElement).height() / jQuery('#marker').height());
       if (term.col < 80) {
         term.col = 80;
       }
