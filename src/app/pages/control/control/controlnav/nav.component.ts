@@ -44,7 +44,7 @@ export class PagesControlNavComponent implements OnInit {
       if (NavList.List[index].type === 'ssh') {
         NavList.List[index].Term.focus();
       } else if (NavList.List[index].type === 'rdp') {
-        NavList.List[index].Rdp.focus();
+        // NavList.List[index].Rdp.focus();
       }
     } else {
 

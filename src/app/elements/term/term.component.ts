@@ -113,4 +113,8 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     // this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
     TermWS.emit('logout', NavList.List[this.index].room);
   }
+
+  active() {
+    this.term.focus();
+  }
 }
