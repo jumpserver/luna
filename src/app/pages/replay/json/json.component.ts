@@ -1,5 +1,5 @@
 import {Component, Input, OnInit} from '@angular/core';
-import {term} from '../../../globals';
+import * as Terminal from 'xterm/dist/xterm';
 import {HttpService, LogService} from '../../../app.service';
 import {Replay} from '../replay.model';
 
@@ -18,14 +18,14 @@ export class JsonComponent implements OnInit {
   timer: any;
   pos = 0;
   scrubber: number;
+  term: Terminal;
 
   @Input() replay: Replay;
 
-  constructor(private _http: HttpService,
-              private _logger: LogService) {
-  }
+  constructor(private _http: HttpService) {}
 
   ngOnInit() {
+    this.term = new Terminal();
     if (this.replay.src !== 'READY') {
       console.log('SRC', this.replay.src);
       this._http.get_replay_data(this.replay.src)
@@ -40,7 +40,7 @@ export class JsonComponent implements OnInit {
           },
           err => {
             alert('无法下载');
-            this._logger.error(err);
+            console.log(err);
           }
         );
     }
@@ -67,7 +67,7 @@ export class JsonComponent implements OnInit {
 
   restart() {
     clearInterval(this.timer);
-    term.term.reset();
+    this.term.reset();
     this.time = 1;
     this.pos = 0;
     this.toggle = true;
@@ -93,7 +93,7 @@ export class JsonComponent implements OnInit {
     // document.getElementById('beforeScrubberText').innerHTML = this.buildTimeString(this.time);
     for (; that.pos < this.replay.timelist.length; that.pos++) {
       if (this.replay.timelist[that.pos] * 1000 <= that.time) {
-        term.term.write(this.replay.json[this.replay.timelist[that.pos].toString()]);
+        this.term.write(this.replay.json[this.replay.timelist[that.pos].toString()]);
       } else {
         break;
       }
@@ -118,11 +118,11 @@ export class JsonComponent implements OnInit {
 
   rununil() {
     this.pos = 0;
-    term.term.reset();
+    this.term.reset();
     this.toggle = false;
     for (; this.pos < this.replay.timelist.length; this.pos++) {
       if (this.replay.timelist[this.pos] * 1000 <= this.setPercent / 100 * this.replay.totalTime) {
-        term.term.write(this.replay.json[this.replay.timelist[this.pos].toString()]);
+        this.term.term.write(this.replay.json[this.replay.timelist[this.pos].toString()]);
       } else {
         break;
       }

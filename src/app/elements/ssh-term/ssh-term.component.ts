@@ -38,6 +38,10 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
     this.joinRoom();
   }
 
+  changeWinSize(size: Array<number>) {
+    ws.emit('resize', {'cols': size[0], 'rows': size[1]});
+  }
+
   joinRoom() {
     NavList.List[this.index].Term = this.term;
     if (this.host) {

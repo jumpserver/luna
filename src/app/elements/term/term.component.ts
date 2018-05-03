@@ -1,4 +1,4 @@
-import {AfterViewInit, Component, Input, OnInit, ViewChild} from '@angular/core';
+import {AfterViewInit, Component, Input, Output, OnInit, ViewChild, EventEmitter} from '@angular/core';
 import {ElementRef} from '@angular/core';
 import * as Terminal from 'xterm/dist/xterm';
 // import { Terminal } from 'xterm';
@@ -16,6 +16,7 @@ import 'rxjs/add/operator/distinctUntilChanged';
 export class ElementTermComponent implements OnInit, AfterViewInit {
   @ViewChild('term') el: ElementRef;
   @Input() term: Terminal;
+  @Output() winSizeChangeTrigger = new EventEmitter<Array<number>>();
   col = 80;
   row = 24;
   winSizeChange$: Observable<any>;
@@ -34,7 +35,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     this.term.open(this.el.nativeElement, true);
-    $(window).resize();
+    this.resizeTerm();
   }
 
   resizeTerm() {
@@ -51,6 +52,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     console.log('Mark size: ', markerElement.width(), '*', markerElement.height());
     console.log('Resize term size: ', this.col, this.row);
     this.term.resize(this.col, this.row);
+    this.winSizeChangeTrigger.emit([this.col, this.row]);
   }
 
   active() {
