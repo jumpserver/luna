@@ -3,9 +3,6 @@ import {NavList, View} from '../../pages/control/control/control.component';
 import {AppService, LogService} from '../../app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
-import {DataStore} from '../../globals';
-import {ElementServerMenuComponent} from '../server-menu/server-menu.component';
-import {DialogService} from '../dialog/dialog.service';
 
 declare var $: any;
 
@@ -148,39 +145,6 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       this.login(host, user);
     }
   }
-
-  // autologin() {
-  //   const asset_id = this._appService.getQueryString('asset_id');
-  //   const user_id = this._appService.getQueryString('user_id');
-  //   let tag = false;
-  //   if (asset_id) {
-  //     for (let g of this.Data) {
-  //       if (g['assets_granted']) {
-  //         for (let host of g['assets_granted']) {
-  //           if (host.id.toString() === asset_id) {
-  //             if (user_id) {
-  //               host['system_users_granted'].forEach((user, kk) => {
-  //                 if (user.id.toString() === user_id.toString()) {
-  //                   this.login(host, user);
-  //                   tag = true;
-  //                   return;
-  //                 }
-  //               });
-  //             } else {
-  //               this.Connect(host);
-  //               tag = true;
-  //               return;
-  //             }
-  //           }
-  //         }
-  //       }
-  //     }
-  //     if (!tag) {
-  //       this._layer.alert('Maybe you do not have permission on that host');
-  //     }
-  //   }
-  //   DataStore.autologin = true;
-  // }
 
   login(host, user) {
     const id = NavList.List.length - 1;

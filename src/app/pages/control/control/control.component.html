@@ -4,12 +4,12 @@
   </div>
   <div fxFlex>
     <div class="window" *ngFor="let m of NavList.List;let i=index"
-         [ngClass]="{'active':i==NavList.Active}">
-      <elements-term [index]="i"
+         [ngClass]="{'active':i==NavList.Active}" style="height: 100%">
+      <elements-ssh-term [index]="i"
                      [host]="m.host"
                      [userid]="m.user.id"
                      *ngIf="m.type=='ssh'">
-      </elements-term>
+      </elements-ssh-term>
       <elements-guacamole [index]="i"
                           [host]="m.host"
                           [userid]="m.user.id"

@@ -7,11 +7,9 @@
  */
 import {NgModule} from '@angular/core';
 import {RouterModule, Routes} from '@angular/router';
-import {environment} from '../../environments/environment';
 
 import {PagesBlankComponent} from '../pages/blank/blank.component';
 import {TestPageComponent} from '../test-page/test-page.component';
-// import {PagesSettingComponent} from '../pages/setting/setting.component';
 import {PagesConnectComponent} from '../pages/connect/connect.component';
 import {PagesReplayComponent} from '../pages/replay/replay.component';
 import {PagesControlComponent} from '../pages/control/control.component';
@@ -20,12 +18,10 @@ import {PagesMonitorComponent} from '../pages/monitor/monitor.component';
 
 
 const appRoutes: Routes = [
-  // {path: 'users/login', component: LoginComponent},
   {path: 'replay/:token', component: PagesReplayComponent},
   {path: 'monitor/:token', component: PagesMonitorComponent},
   {path: 'test', component: TestPageComponent},
   {path: 'connect', component: PagesConnectComponent},
-  // {path: 'setting', component: PagesSettingComponent},
   {path: 'undefined', component: PagesBlankComponent},
   {path: '', component: PagesControlComponent},
   {path: '**', component: PagesNotFoundComponent}

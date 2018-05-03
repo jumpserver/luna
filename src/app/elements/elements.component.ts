@@ -12,6 +12,7 @@ import {ElementServerMenuComponent} from './server-menu/server-menu.component';
 import {ElementIframeComponent} from './iframe/iframe.component';
 import {ElementDialogAlertComponent} from './dialog/dialog.service';
 import {ElementGuacamoleComponent} from './guacamole/guacamole.component';
+import {ElementSshTermComponent} from './ssh-term/ssh-term.component';
 import {AssetTreeDialogComponent, ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
 
 export const ElementComponents = [
@@ -29,5 +30,6 @@ export const ElementComponents = [
   ElementDialogAlertComponent,
   ElementGuacamoleComponent,
   ElementAssetTreeComponent,
+  ElementSshTermComponent,
   AssetTreeDialogComponent
 ];

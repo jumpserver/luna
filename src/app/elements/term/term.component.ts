@@ -1,11 +1,12 @@
 import {AfterViewInit, Component, Input, OnInit, ViewChild} from '@angular/core';
 import {ElementRef} from '@angular/core';
-import {term, Terminal, TermWS} from '../../globals';
+import * as Terminal from 'xterm/dist/xterm';
 // import { Terminal } from 'xterm';
-import {NavList} from '../../pages/control/control/control.component';
-import * as jQuery from 'jquery/dist/jquery.min.js';
-import {UUIDService} from '../../app.service';
-import {CookieService} from 'ngx-cookie-service';
+import * as $ from 'jquery/dist/jquery.min.js';
+import {Observable} from 'rxjs/Rx';
+import 'rxjs/Observable';
+import 'rxjs/add/operator/debounceTime';
+import 'rxjs/add/operator/distinctUntilChanged';
 
 @Component({
   selector: 'elements-term',
@@ -13,110 +14,43 @@ import {CookieService} from 'ngx-cookie-service';
   styleUrls: ['./term.component.css']
 })
 export class ElementTermComponent implements OnInit, AfterViewInit {
-  @Input() host: any;
-  @Input() userid: any;
-  @Input() index: number;
-  @Input() token: string;
-  @Input() monitor: string;
-
   @ViewChild('term') el: ElementRef;
-  secret: string;
-  term: any;
+  @Input() term: Terminal;
   col = 80;
   row = 24;
+  winSizeChange$: Observable<any>;
 
-  constructor(private _uuid: UUIDService,
-              private _cookie: CookieService) {
+  constructor() {
   }
 
   ngOnInit() {
-    this.secret = this._uuid.gen();
-    this.term = Terminal({
-      cols: 80,
-      rows: 24,
-      useStyle: true,
-      screenKeys: true,
-    });
-    // NavList.List[this.index].room = this.room;
+    this.winSizeChange$ = Observable.fromEvent(window, 'resize')
+      .debounceTime(500)
+      .distinctUntilChanged();
+
+    this.winSizeChange$
+      .subscribe(() => this.resizeTerm());
   }
 
   ngAfterViewInit() {
-    // if (this.host || this.token) {
-    //   if (this._cookie.get('cols')) {
-    //     this.col = parseInt(this._cookie.get('cols'), 10);
-    //   }
-    //   if (this._cookie.get('rows')) {
-    //     this.row = parseInt(this._cookie.get('rows'), 10);
-    //   }
-    // } else {
-      this.col = Math.floor(jQuery('.content').width() / jQuery('#marker').width() * 6) - 8;
-      this.row = Math.floor(jQuery('.content').height() / jQuery('#marker').height()) - 3;
-      // term.term = this.term;
-    // }
     this.term.open(this.el.nativeElement, true);
-    const that = this;
-    window.onresize = function () {
-      console.log('Height: ', jQuery('.content').height(), jQuery('#marker').height());
-      that.col = Math.floor(jQuery('.content').width() / jQuery('#marker').width() * 6) - 8;
-      that.row = Math.floor(jQuery('.content').height() / jQuery('#marker').height()) - 3;
-
-      if (that.col < 80) {
-        that.col = 80;
-      }
-      if (that.row < 24) {
-        that.row = 24;
-      }
-      that.term.resize(that.col, that.row);
-      if (that.host) {
-        that._cookie.set('cols', term.col.toString(), 99, '/', document.domain);
-        that._cookie.set('rows', term.row.toString(), 99, '/', document.domain);
-        TermWS.emit('resize', {'cols': that.col, 'rows': that.row});
-      }
-    };
-    jQuery(window).resize();
-
-    NavList.List[this.index].Term = this.term;
-    if (this.host) {
-      TermWS.emit('host', {'uuid': this.host.id, 'userid': this.userid, 'secret': this.secret});
-    }
-    if (this.token) {
-      TermWS.emit('token', {'token': this.token, 'secret': this.secret});
-    }
-    if (this.monitor) {
-      TermWS.emit('monitor', {'token': this.monitor, 'secret': this.secret});
-    } else {
-      this.term.on('data', function (data) {
-        TermWS.emit('data', {'data': data, 'room': NavList.List[that.index].room});
-      });
-    }
-
-
-    TermWS.on('data', function (data) {
-      if (data['room'] === NavList.List[that.index].room) {
-        that.term.write(data['data']);
-      }
-    });
-
-    TermWS.on('disconnect', function () {
-      that.TerminalDisconnect();
-    });
-    TermWS.on('logout', function (data) {
-      if (data['room'] === NavList.List[that.index].room) {
-        NavList.List[this.index].connected = false;
-        // this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
-      }
-    });
-    TermWS.on('room', function (data) {
-      if (data['secret'] === that.secret) {
-        NavList.List[that.index].room = data['room'];
-      }
-    });
+    $(window).resize();
   }
 
-  TerminalDisconnect() {
-    NavList.List[this.index].connected = false;
-    // this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
-    TermWS.emit('logout', NavList.List[this.index].room);
+  resizeTerm() {
+    let contentElement = $('.window.active');
+    if (contentElement.length === 0) {
+      contentElement = $('body');
+    }
+    const markerElement = $('#marker');
+    const col = Math.floor(contentElement.width() / markerElement.width() * 6) - 8;
+    const row = Math.floor(contentElement.height() / markerElement.height()) - 2;
+    this.col = col > 80 ? col : 80;
+    this.row = row > 24 ? row : 24;
+    console.log('Box size: ', contentElement.width(), '*', contentElement.height());
+    console.log('Mark size: ', markerElement.width(), '*', markerElement.height());
+    console.log('Resize term size: ', this.col, this.row);
+    this.term.resize(this.col, this.row);
   }
 
   active() {

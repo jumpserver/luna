@@ -47,7 +47,7 @@ import {AssetTreeDialogComponent} from './elements/asset-tree/asset-tree.compone
     TestPageComponent,
     ...Pipes,
     ...ElementComponents,
-    ...PagesComponents
+    ...PagesComponents,
   ],
   entryComponents: [
     AssetTreeDialogComponent,

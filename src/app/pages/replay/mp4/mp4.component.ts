@@ -1,5 +1,5 @@
 import {Component, Input, OnInit} from '@angular/core';
-import {Video} from '../replay.model';
+import {Replay} from '../replay.model';
 
 @Component({
   selector: 'app-replay-mp4',
@@ -7,16 +7,16 @@ import {Video} from '../replay.model';
   styleUrls: ['./mp4.component.css']
 })
 export class Mp4Component implements OnInit {
-  @Input() video: Video;
+  @Input() replay: Replay;
   constructor() {
   }
 
   ngOnInit() {
-    if (this.video.height === 0) {
-      this.video.height = 600;
+    if (this.replay.height === 0) {
+      this.replay.height = 600;
     }
-    if (this.video.width === 0) {
-      this.video.width = 800;
+    if (this.replay.width === 0) {
+      this.replay.width = 800;
     }
 
   }

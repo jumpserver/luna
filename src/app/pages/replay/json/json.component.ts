@@ -1,7 +1,7 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {term} from '../../../globals';
 import {HttpService, LogService} from '../../../app.service';
-import {Video} from '../replay.model';
+import {Replay} from '../replay.model';
 
 @Component({
   selector: 'app-replay-json',
@@ -13,29 +13,30 @@ export class JsonComponent implements OnInit {
   setPercent = 0;
   toggle = false;
   TICK = 33;
-  TIMESTEP = 33;
+  TIMESTEMP = 33;
   time = 1;
   timer: any;
   pos = 0;
   scrubber: number;
 
-  @Input() video: Video;
+  @Input() replay: Replay;
 
   constructor(private _http: HttpService,
               private _logger: LogService) {
   }
 
   ngOnInit() {
-    if (this.video.src !== 'READY') {
-      this._http.get_replay_data(this.video.src)
+    if (this.replay.src !== 'READY') {
+      console.log('SRC', this.replay.src);
+      this._http.get_replay_data(this.replay.src)
         .subscribe(
           data => {
-            this.video.json = data;
-            this.video.timelist = Object.keys(this.video.json).map(Number);
-            this.video.timelist = this.video.timelist.sort(function (a, b) {
+            this.replay.json = data;
+            this.replay.timelist = Object.keys(this.replay.json).map(Number);
+            this.replay.timelist = this.replay.timelist.sort((a, b) => {
               return a - b;
             });
-            this.video.totalTime = this.video.timelist[this.video.timelist.length - 1] * 1000;
+            this.replay.totalTime = this.replay.timelist[this.replay.timelist.length - 1] * 1000;
           },
           err => {
             alert('无法下载');
@@ -46,21 +47,21 @@ export class JsonComponent implements OnInit {
 
     const that = this;
     let r = true;
-    window.onresize = function () {
+    window.addEventListener('resize', () => {
       if (r) {
         that.pause();
         r = false;
       }
-    };
+    });
   }
 
   setSpeed() {
     if (this.speed === 0) {
-      this.TIMESTEP = this.TICK;
+      this.TIMESTEMP = this.TICK;
     } else if (this.speed < 0) {
-      this.TIMESTEP = this.TICK / -this.speed;
+      this.TIMESTEMP = this.TICK / -this.speed;
     } else {
-      this.TIMESTEP = this.TICK * this.speed;
+      this.TIMESTEMP = this.TICK * this.speed;
     }
   }
 
@@ -88,26 +89,26 @@ export class JsonComponent implements OnInit {
   }
 
   advance(that) {
-    that.scrubber = Math.ceil((that.time / this.video.totalTime) * 100);
+    that.scrubber = Math.ceil((that.time / this.replay.totalTime) * 100);
     // document.getElementById('beforeScrubberText').innerHTML = this.buildTimeString(this.time);
-    for (; that.pos < this.video.timelist.length; that.pos++) {
-      if (this.video.timelist[that.pos] * 1000 <= that.time) {
-        term.term.write(this.video.json[this.video.timelist[that.pos].toString()]);
+    for (; that.pos < this.replay.timelist.length; that.pos++) {
+      if (this.replay.timelist[that.pos] * 1000 <= that.time) {
+        term.term.write(this.replay.json[this.replay.timelist[that.pos].toString()]);
       } else {
         break;
       }
     }
 
-    if (that.pos >= this.video.timelist.length) {
+    if (that.pos >= this.replay.timelist.length) {
       this.toggle = !this.toggle;
       clearInterval(that.timer);
     }
-    if (this.video.timelist[that.pos] - this.video.timelist[that.pos - 1] > 5) {
+    if (this.replay.timelist[that.pos] - this.replay.timelist[that.pos - 1] > 5) {
       that.time += 5000;
     }
 
-    that.time += that.TIMESTEP;
-    that.setPercent = that.time / this.video.totalTime * 100;
+    that.time += that.TIMESTEMP;
+    that.setPercent = that.time / this.replay.totalTime * 100;
   }
 
   stop() {
@@ -119,14 +120,14 @@ export class JsonComponent implements OnInit {
     this.pos = 0;
     term.term.reset();
     this.toggle = false;
-    for (; this.pos < this.video.timelist.length; this.pos++) {
-      if (this.video.timelist[this.pos] * 1000 <= this.setPercent / 100 * this.video.totalTime) {
-        term.term.write(this.video.json[this.video.timelist[this.pos].toString()]);
+    for (; this.pos < this.replay.timelist.length; this.pos++) {
+      if (this.replay.timelist[this.pos] * 1000 <= this.setPercent / 100 * this.replay.totalTime) {
+        term.term.write(this.replay.json[this.replay.timelist[this.pos].toString()]);
       } else {
         break;
       }
     }
-    this.time = this.video.totalTime * this.setPercent / 100;
+    this.time = this.replay.totalTime * this.setPercent / 100;
   }
 
 }
