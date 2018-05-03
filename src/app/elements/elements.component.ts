@@ -10,8 +10,6 @@ import {ElementPopupComponent} from './popup/popup.component';
 import {ElementRdpComponent} from './rdp/rdp.component';
 import {ElementServerMenuComponent} from './server-menu/server-menu.component';
 import {ElementIframeComponent} from './iframe/iframe.component';
-import {ElementElfinderComponent} from './elfinder/elfinder.component';
-import {ElementSettingsComponent} from './settings/settings.component';
 import {ElementDialogAlertComponent} from './dialog/dialog.service';
 import {ElementGuacamoleComponent} from './guacamole/guacamole.component';
 import {AssetTreeDialogComponent, ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
@@ -28,8 +26,6 @@ export const ElementComponents = [
   ElementRdpComponent,
   ElementServerMenuComponent,
   ElementIframeComponent,
-  ElementElfinderComponent,
-  ElementSettingsComponent,
   ElementDialogAlertComponent,
   ElementGuacamoleComponent,
   ElementAssetTreeComponent,

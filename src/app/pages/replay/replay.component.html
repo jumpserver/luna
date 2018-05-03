@@ -1,2 +1,2 @@
-<app-replay-json *ngIf="Video.type=='json'"></app-replay-json>
-<app-replay-mp4 *ngIf="Video.type=='mp4'"></app-replay-mp4>
+<app-replay-json [video]="video" *ngIf="video.type=='json'"></app-replay-json>
+<app-replay-mp4 [video]="video" *ngIf="video.type=='mp4'"></app-replay-mp4>

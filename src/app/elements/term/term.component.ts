@@ -1,7 +1,6 @@
 import {AfterViewInit, Component, Input, OnInit, ViewChild} from '@angular/core';
 import {ElementRef} from '@angular/core';
-import {term, TermWS} from '../../globals';
-import * as Terminal from 'xterm/dist/xterm';
+import {term, Terminal, TermWS} from '../../globals';
 // import { Terminal } from 'xterm';
 import {NavList} from '../../pages/control/control/control.component';
 import * as jQuery from 'jquery/dist/jquery.min.js';
@@ -32,7 +31,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
   ngOnInit() {
     this.secret = this._uuid.gen();
-    this.term = new Terminal({
+    this.term = Terminal({
       cols: 80,
       rows: 24,
       useStyle: true,

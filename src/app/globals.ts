@@ -1,10 +1,10 @@
 'use strict';
-import * as Terminal from 'xterm/dist/xterm';
+import * as terminal from 'xterm/dist/xterm';
 import * as io from 'socket.io-client';
 
-// export function Terminal(xargs: any) {
-//   return terminal(xargs);
-// }
+export function Terminal(xargs: any) {
+  return terminal(xargs);
+}
 
 export const TermWS = io.connect('/ssh');
 export let term: {
