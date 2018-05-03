@@ -21,7 +21,7 @@ app-root {
   top: 0;
   left: 0;
   z-index: -1;
-  font-size: 11px !important;
+  font-size: 13px !important;
   padding-bottom: 16px !important;
   font-family: 'Monaco', 'Consolas', 'monospace' !important;
   color: white;
@@ -29,7 +29,7 @@ app-root {
 
 .terminal {
   font-family: 'Monaco', 'Consolas', 'monospace' !important;
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
   /*display: inline-block;*/
   /*background-color: #1f1b1b;*/
@@ -64,6 +64,7 @@ body ::-webkit-scrollbar-thumb {
 
 .ztree * {
   font-family: 'Monaco', 'Consolas', 'monospace' !important;
+  font-size: 13px !important;
 }
 
 /*.scroll-botton {*/
