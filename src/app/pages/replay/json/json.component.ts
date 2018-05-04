@@ -9,14 +9,14 @@ import {Replay} from '../replay.model';
   styleUrls: ['./json.component.css']
 })
 export class JsonComponent implements OnInit {
-  speed = 1;
-  setPercent = 0;
-  toggle = false;
-  TICK = 33;
-  TIMESTEMP = 33;
+  speed = 2;
+  percent = 0;
+  play = false;
+  tick = 33;
+  timeStep = 33;
   time = 1;
-  timer: any;
-  pos = 0;
+  timer: any; // 多长时间播放下一个
+  pos = 0; // 播放点
   scrubber: number;
   term: Terminal;
 
@@ -27,7 +27,6 @@ export class JsonComponent implements OnInit {
   ngOnInit() {
     this.term = new Terminal();
     if (this.replay.src !== 'READY') {
-      console.log('SRC', this.replay.src);
       this._http.get_replay_data(this.replay.src)
         .subscribe(
           data => {
@@ -37,31 +36,13 @@ export class JsonComponent implements OnInit {
               return a - b;
             });
             this.replay.totalTime = this.replay.timelist[this.replay.timelist.length - 1] * 1000;
+            this.toggle();
           },
           err => {
             alert('无法下载');
             console.log(err);
           }
         );
-    }
-
-    const that = this;
-    let r = true;
-    window.addEventListener('resize', () => {
-      if (r) {
-        that.pause();
-        r = false;
-      }
-    });
-  }
-
-  setSpeed() {
-    if (this.speed === 0) {
-      this.TIMESTEMP = this.TICK;
-    } else if (this.speed < 0) {
-      this.TIMESTEMP = this.TICK / -this.speed;
-    } else {
-      this.TIMESTEMP = this.TICK * this.speed;
     }
   }
 
@@ -70,64 +51,89 @@ export class JsonComponent implements OnInit {
     this.term.reset();
     this.time = 1;
     this.pos = 0;
-    this.toggle = true;
+    this.play = true;
     this.timer = setInterval(() => {
-      this.advance(this);
-    }, this.TICK);
+      this.advance();
+    }, this.tick);
   }
 
-  pause() {
-    if (this.toggle) {
+  toggle() {
+    if (this.play) {
       clearInterval(this.timer);
-      this.toggle = !this.toggle;
+      this.play = !this.play;
     } else {
       this.timer = setInterval(() => {
-        this.advance(this);
-      }, this.TICK);
-      this.toggle = !this.toggle;
+        this.advance();
+      }, this.tick);
+      this.play = !this.play;
     }
   }
 
-  advance(that) {
-    that.scrubber = Math.ceil((that.time / this.replay.totalTime) * 100);
-    // document.getElementById('beforeScrubberText').innerHTML = this.buildTimeString(this.time);
-    for (; that.pos < this.replay.timelist.length; that.pos++) {
-      if (this.replay.timelist[that.pos] * 1000 <= that.time) {
-        this.term.write(this.replay.json[this.replay.timelist[that.pos].toString()]);
+  advance() {
+    // 每个time间隔执行一次
+    // this.scrubber = Math.ceil((this.time / this.replay.totalTime) * 100);
+    for (; this.pos < this.replay.timelist.length; this.pos++) {
+      if (this.replay.timelist[this.pos] * 1000 <= this.time) {
+        this.term.write(this.replay.json[this.replay.timelist[this.pos].toString()]);
       } else {
         break;
       }
     }
 
-    if (that.pos >= this.replay.timelist.length) {
-      this.toggle = !this.toggle;
-      clearInterval(that.timer);
-    }
-    if (this.replay.timelist[that.pos] - this.replay.timelist[that.pos - 1] > 5) {
-      that.time += 5000;
+    // 超过了总的时间点, 停止播放
+    if (this.pos >= this.replay.timelist.length) {
+      this.play = !this.play;
+      clearInterval(this.timer);
     }
 
-    that.time += that.TIMESTEMP;
-    that.setPercent = that.time / this.replay.totalTime * 100;
+    // 如果两次时间间隔超过了5s
+    if (this.replay.timelist[this.pos] - this.replay.timelist[this.pos - 1] > 5) {
+      this.time += 5000;
+    }
+
+    this.time += this.timeStep * this.speed;
+    this.percent = this.time / this.replay.totalTime * 100;
   }
 
   stop() {
     clearInterval(this.timer);
-    this.toggle = false;
+    this.play = false;
   }
 
-  rununil() {
-    this.pos = 0;
-    this.term.reset();
-    this.toggle = false;
-    for (; this.pos < this.replay.timelist.length; this.pos++) {
-      if (this.replay.timelist[this.pos] * 1000 <= this.setPercent / 100 * this.replay.totalTime) {
-        this.term.term.write(this.replay.json[this.replay.timelist[this.pos].toString()]);
-      } else {
-        break;
+  speedUp() {
+    this.speed += 1;
+  }
+
+  speedDown() {
+    this.speed -= 1;
+  }
+
+  runFrom() {
+    clearInterval(this.timer);
+    const time = this.replay.totalTime * this.percent / 100;
+    this.replay.timelist.forEach((v, i) => {
+      const preTime = this.replay.timelist[i - 1];
+      if (time <= v * 1000 && time >= preTime * 1000) {
+        this.time = v * 1000;
+        this.pos = i;
+        return;
       }
-    }
-    this.time = this.replay.totalTime * this.setPercent / 100;
+    });
+    this.timer = setInterval(() => {
+      this.advance();
+    }, this.tick);
+    this.play = !this.play;
   }
-
+    // this.pos = 0;
+    // this.term.reset();
+    // this.play = false;
+    // for (; this.pos < this.replay.timelist.length; this.pos++) {
+    //   if (this.replay.timelist[this.pos] * 1000 <= this.percent / 100 * this.replay.totalTime) {
+    //     this.term.term.write(this.replay.json[this.replay.timelist[this.pos].toString()]);
+    //   } else {
+    //     break;
+    //   }
+    // }
+    // this.time = this.replay.totalTime * this.percent / 100;
+  // }
 }
