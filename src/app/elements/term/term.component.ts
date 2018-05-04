@@ -44,8 +44,8 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       contentElement = $('body');
     }
     const markerElement = $('#marker');
-    const col = Math.floor(contentElement.width() / markerElement.width() * 6) - 8;
-    const row = Math.floor(contentElement.height() / markerElement.height()) - 2;
+    const col = Math.floor((contentElement.width() - 30) / markerElement.width() * 6) - 1;
+    const row = Math.floor((contentElement.height() - 30) / markerElement.height());
     this.col = col > 80 ? col : 80;
     this.row = row > 24 ? row : 24;
     console.log('Box size: ', contentElement.width(), '*', contentElement.height());

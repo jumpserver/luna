@@ -1,8 +1,8 @@
 <div fxLayout="column" ngxSplit="column" style="width: 100%;height: 100%;">
-  <div fxFlex="1 1 30px" class="search">
+  <div fxFlex="0 0 30px" class="search">
     <pages-control-nav></pages-control-nav>
   </div>
-  <div fxFlex>
+  <div fxFlex="0 0 calc(100%-35px)">
     <div class="window" *ngFor="let m of NavList.List;let i=index"
          [ngClass]="{'active':i==NavList.Active}" style="height: 100%">
       <elements-ssh-term [index]="i"
