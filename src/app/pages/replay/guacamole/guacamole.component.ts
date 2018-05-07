@@ -1,6 +1,6 @@
 import { Component, OnInit, Input } from '@angular/core';
 import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
-// import { Replay } from '../replay.model';
+import { Replay } from '../replay.model';
 
 function zeroPad(num, minLength) {
     let str = num.toString();
@@ -59,6 +59,7 @@ export class ReplayGuacamoleComponent implements OnInit {
       // Scale displayRef to fit width of container
       recordingDisplay.scale(that.displayRef.offsetWidth / width);
     };
+    // this.toggle();
   }
 
   initRecording() {
@@ -76,12 +77,18 @@ export class ReplayGuacamoleComponent implements OnInit {
     this.recording.onprogress = function (millis) {
       that.duration = formatTime(millis);
       that.max = millis;
+      that.toggle();
     };
 
     // If paused, the play/pause button should read "Play"
     this.recording.onpause = function() {
       that.isPlaying = false;
     };
+  }
+
+  restart() {
+    this.percent = 0;
+    this.runFrom();
   }
 
   runFrom() {

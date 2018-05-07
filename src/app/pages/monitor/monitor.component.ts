@@ -17,8 +17,6 @@ export class PagesMonitorComponent implements OnInit {
     this.activatedRoute.params.subscribe((params: Params) => {
       Monitor.token = params['token'];
       Monitor.type = 'term';
-      console.log(Monitor);
     });
-
   }
 }

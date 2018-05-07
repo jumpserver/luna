@@ -30,7 +30,6 @@ export class ElementGuacamoleComponent implements OnInit {
     if (!this.target) {
       const base = window.btoa(this.host.id + '\0' + 'c' + '\0' + 'jumpserver');
       if (environment.production) {
-        console.log('env', environment, 'pro');
         if (DataStore.guacamole_token) {
           this._http.guacamole_add_asset(User.id, this.host.id, this.userid).subscribe(
             data => {
@@ -41,7 +40,6 @@ export class ElementGuacamoleComponent implements OnInit {
             }
           );
         } else {
-          console.log('env', environment, 'dev');
           this._http.get_guacamole_token(User.id, '').subscribe(
             data => {
               // /guacamole/client will redirect to http://guacamole/#/client
@@ -65,8 +63,6 @@ export class ElementGuacamoleComponent implements OnInit {
         this.target = this._cookie.get('guacamole');
       }
     }
-    console.log('Target: ', this.target);
-
     NavList.List[this.index].Rdp = this.el.nativeElement;
   }
 
