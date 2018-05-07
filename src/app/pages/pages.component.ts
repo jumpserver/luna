@@ -15,6 +15,7 @@ import {PagesControlNavComponent} from './control/control/controlnav/nav.compone
 import {SearchComponent, SearchFilter} from './control/search/search.component';
 import {PagesMonitorLinuxComponent} from './monitor/linux/linux.component';
 import {PagesMonitorWindowsComponent} from './monitor/windows/windows.component';
+import {ReplayGuacamoleComponent} from './replay/guacamole/guacamole.component';
 
 export const PagesComponents = [
   PagesBlankComponent,
@@ -30,5 +31,6 @@ export const PagesComponents = [
   SearchComponent,
   SearchFilter,
   PagesMonitorLinuxComponent,
-  PagesMonitorWindowsComponent
+  PagesMonitorWindowsComponent,
+  ReplayGuacamoleComponent
 ];
