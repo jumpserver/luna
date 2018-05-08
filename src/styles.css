@@ -44,9 +44,9 @@ app-root {
   /*margin: 15px;*/
 }
 
-.xterm-rows {
-  padding: 15px;
-}
+/*.xterm-rows {*/
+  /*padding: 15px;*/
+/*}*/
 
 .terminal .xterm-viewport {
   background-color: #1f1b1b;

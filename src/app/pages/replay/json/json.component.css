@@ -20,6 +20,7 @@
 
 #term .terminal div span {
   min-width: 12px;
+  padding: 15px;
 }
 
 elements-term {

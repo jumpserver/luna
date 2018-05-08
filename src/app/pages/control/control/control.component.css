@@ -8,6 +8,7 @@ elements-term, elements-guacamole, elements-settings {
 
 .window {
   display: none;
+  padding: 15px;
 }
 
 .active {
