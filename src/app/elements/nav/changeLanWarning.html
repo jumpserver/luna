@@ -1,0 +1,9 @@
+<h1 mat-dialog-title>{{data.title}}</h1>
+
+<h3>
+  {{data.note}}
+</h3>
+<div style="float: right">
+  <button mat-raised-button (click)="onNoClick()">{{data.cancel}}</button>
+  <button mat-raised-button color="primary"  [mat-dialog-close]="true"  cdkFocusInitial>{{data.confirm}}</button>
+</div>

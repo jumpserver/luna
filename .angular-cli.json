@@ -22,9 +22,10 @@
       "styles": [
         "../node_modules/animate.css/animate.min.css",
         "../node_modules/xterm/dist/xterm.css",
-        "assets/elFinder/css/elfinder.min.css",
+        "../node_modules/elfinder/css/elfinder.min.css",
         "sass/style.scss",
-        "styles.css"
+        "styles.css",
+        "assets/ztree/awesomeStyle/awesome.css"
       ],
       "scripts": [
         "../node_modules/jquery/dist/jquery.min.js",
@@ -34,8 +35,10 @@
         "../node_modules/bootstrap/dist/js/bootstrap.min.js",
         "assets/inspinia/inspinia.js",
         "assets/slimscroll/jquery.slimscroll.min.js",
-        "assets/elFinder/js/elfinder.min.js",
-        "../node_modules/xterm/dist/xterm.js"
+        "../node_modules/elfinder/js/elfinder.min.js",
+        "../node_modules/xterm/dist/xterm.js",
+        "assets/ztree/jquery.ztree.all.min.js",
+        "assets/ztree/jquery.ztree.exhide.min.js"
       ],
       "environmentSource": "environments/environment.ts",
       "environments": {

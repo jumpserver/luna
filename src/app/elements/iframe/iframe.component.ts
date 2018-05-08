@@ -1,6 +1,6 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {DomSanitizer} from '@angular/platform-browser';
-import {NavList} from '../../ControlPage/control/control.component';
+import {NavList} from '../../pages/control/control/control.component';
 
 import {User, DataStore} from '../../globals';
 import {HttpService, LogService} from '../../app.service';
@@ -8,7 +8,7 @@ import {environment} from '../../../environments/environment';
 import {CookieService} from 'ngx-cookie-service';
 
 @Component({
-  selector: 'app-element-iframe',
+  selector: 'elements-iframe',
   templateUrl: './iframe.component.html',
   styleUrls: ['./iframe.component.scss']
 })

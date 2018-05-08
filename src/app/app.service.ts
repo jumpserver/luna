@@ -14,7 +14,7 @@ import {DataStore, User, Browser, i18n} from './globals';
 import {environment} from '../environments/environment';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
-import {HostGroup} from './ControlPage/cleftbar/cleftbar.component';
+import {HostGroup} from './pages/control/cleftbar/cleftbar.component';
 import * as UUID from 'uuid-js/lib/uuid.js';
 
 declare function unescape(s: string): string;
@@ -126,12 +126,19 @@ export class HttpService {
     return this.http.get('/api/terminal/v1/sessions/' + token + '/replay');
   }
 
+  get_replay_json(token: string) {
+    return this.http.get('/api/terminal/v2/sessions/' + token + '/replay');
+  }
+
+  get_replay_data(src: string) {
+    return this.http.get(src);
+  }
+
   get_user_id_from_token(token: string) {
     const params = new HttpParams()
       .set('user-only', '1')
       .set('token', token);
     return this.http.get('/api/users/v1/connection-token/', {params: params});
-
   }
 
 }
@@ -246,6 +253,8 @@ export class AppService implements OnInit {
       this._http.get('/luna/i18n/' + this.lang + '.json').subscribe(
         data => {
           this._localStorage.set('lang', JSON.stringify(data));
+        },
+        err => {
         }
       );
     }
@@ -264,7 +273,7 @@ export class AppService implements OnInit {
   checklogin() {
     this._logger.log('service.ts:AppService,checklogin');
     if (DataStore.Path) {
-      if (DataStore.Path['name'] === 'FOF' || DataStore.Path['name'] === 'Forgot') {
+      if (document.location.pathname === '/luna/connect') {
       } else {
         if (User.logined) {
           if (document.location.pathname === '/login') {
@@ -273,53 +282,51 @@ export class AppService implements OnInit {
             this._router.navigate([document.location.pathname]);
           }
           // jQuery('angular2').show();
-        } else if (document.location.pathname === '/luna/connect') {
-          User.logined = true;
         } else {
           this._http.get_user_profile()
-              .subscribe(
-                data => {
-                  User.id = data['id'];
-                  User.name = data['name'];
-                  User.username = data['username'];
-                  User.email = data['email'];
-                  User.is_active = data['is_active'];
-                  User.is_superuser = data['is_superuser'];
-                  User.role = data['role'];
-                  // User.groups = data['groups'];
-                  User.wechat = data['wechat'];
-                  User.comment = data['comment'];
-                  User.date_expired = data['date_expired'];
-                  if (data['phone']) {
-                    User.phone = data['phone'].toString();
-                  }
-                  User.logined = data['logined'];
-                  this._logger.debug(User);
-                  this._localStorage.set('user', data['id']);
-                },
-                err => {
-                  // this._logger.error(err);
-                  User.logined = false;
-                  window.location.href = document.location.origin + '/users/login?next=' +
-                    document.location.pathname + document.location.search;
-                  // this._router.navigate(['login']);
-                },
-                // () => {
-                //   if (User.logined) {
-                //     if (document.location.pathname === '/login') {
-                //       this._router.navigate(['']);
-                //     } else {
-                //       this._router.navigate([document.location.pathname]);
-                //     }
-                //   } else {
-                //     this._router.navigate(['login']);
-                //   }
-                // jQuery('angular2').show();
-                // }
+            .subscribe(
+              data => {
+                User.id = data['id'];
+                User.name = data['name'];
+                User.username = data['username'];
+                User.email = data['email'];
+                User.is_active = data['is_active'];
+                User.is_superuser = data['is_superuser'];
+                User.role = data['role'];
+                // User.groups = data['groups'];
+                User.wechat = data['wechat'];
+                User.comment = data['comment'];
+                User.date_expired = data['date_expired'];
+                if (data['phone']) {
+                  User.phone = data['phone'].toString();
+                }
+                User.logined = data['logined'];
+                this._logger.debug(User);
+                this._localStorage.set('user', data['id']);
+              },
+              err => {
+                // this._logger.error(err);
+                User.logined = false;
+                window.location.href = document.location.origin + '/users/login?next=' +
+                  document.location.pathname + document.location.search;
+                // this._router.navigate(['login']);
+              },
+              // () => {
+              //   if (User.logined) {
+              //     if (document.location.pathname === '/login') {
+              //       this._router.navigate(['']);
+              //     } else {
+              //       this._router.navigate([document.location.pathname]);
+              //     }
+              //   } else {
+              //     this._router.navigate(['login']);
+              //   }
+              // jQuery('angular2').show();
+              // }
             );
+        }
       }
-    }
-  } else {
+    } else {
       this._router.navigate(['FOF']);
       // jQuery('angular2').show();
     }

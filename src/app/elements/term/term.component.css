@@ -2,19 +2,33 @@
 div {
   width: 100%;
   height: 100%;
-  padding: 15px;
+  /*padding: 15px 0 15px 15px;*/
 }
 
 
-.terminal {
-  border: #000 solid 5px;
+.terminal .xterm-rows {
+  border: #000 solid 1px;
   color: #f0f0f0;
   box-shadow: rgba(0, 0, 0, 0.8) 2px 2px 20px;
   white-space: nowrap;
   display: inline-block;
   height: 100%;
+  font-size: 11px;
+  *padding: 15px 0 15px 15px;;
 }
 
 div.terminal div span {
   min-width: 12px;
+}
+
+.terminal div {
+  user-select: text;
+}
+
+/*.terminal, .terminal .xterm-viewport {*/
+  /*background-color: inherit;*/
+/*}*/
+
+.terminal .xterm-rows {
+  background-color: #1f1b1b;
 }

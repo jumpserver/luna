@@ -1,0 +1,10 @@
+<elements-ssh-term
+  [token]="token"
+  [index]="0"
+  *ngIf="system =='linux'">
+</elements-ssh-term>
+<elements-guacamole
+  [target]="target"
+  [index]="0"
+  *ngIf="system=='windows' && target">
+</elements-guacamole>

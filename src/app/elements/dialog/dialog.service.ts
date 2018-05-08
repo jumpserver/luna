@@ -43,7 +43,7 @@ export class DialogService {
 
 
 @Component({
-  selector: 'app-alert',
+  selector: 'elements-alert',
   templateUrl: 'alert.html',
   styleUrls: ['./alert.scss']
 })

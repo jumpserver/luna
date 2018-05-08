@@ -1,0 +1,29 @@
+
+#term {
+  width: 100%;
+  height: 100%;
+}
+
+#term > div {
+  height: 100%;
+}
+
+.terminal {
+  border: #000 solid 5px;
+  color: #f0f0f0;
+  box-shadow: rgba(0, 0, 0, 0.8) 2px 2px 20px;
+  white-space: nowrap;
+  display: inline-block;
+  height: 100%;
+}
+
+#term .terminal div span {
+  min-width: 12px;
+}
+
+elements-term {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: #1f1b1b;
+}

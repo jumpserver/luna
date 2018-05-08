@@ -11,7 +11,7 @@ import {DataStore} from '../../globals';
 declare let Mstsc: any;
 
 @Component({
-  selector: 'app-element-rdp',
+  selector: 'elements-rdp',
   templateUrl: './rdp.component.html',
   styleUrls: ['./rdp.component.scss']
 })

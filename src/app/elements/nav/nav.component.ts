@@ -5,30 +5,34 @@
  * @date     2017-11-07
  * @author   liuzheng <liuzheng712@gmail.com>
  */
-import {Component, OnInit} from '@angular/core';
+import {Component, Inject, OnInit} from '@angular/core';
 import {AppService, HttpService, LocalStorageService, LogService} from '../../app.service';
-import {CleftbarComponent} from '../../ControlPage/cleftbar/cleftbar.component';
-import {ControlComponent, NavList} from '../../ControlPage/control/control.component';
+import {CleftbarComponent} from '../../pages/control/cleftbar/cleftbar.component';
+import {ControlComponent, NavList, View} from '../../pages/control/control/control.component';
 import {DataStore, i18n} from '../../globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
+import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
+import {FormControl, Validators} from '@angular/forms';
 // import * as layer from 'layui-layer/src/layer.js';
 declare let layer: any;
 
 @Component({
-  selector: 'app-element-nav',
+  selector: 'elements-nav',
   templateUrl: './nav.component.html',
   styleUrls: ['./nav.component.css'],
 })
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
+  ChangeLanWarningDialog: any;
 
   static Hide() {
-    jQuery('app-element-nav').hide();
+    jQuery('elements-nav').hide();
   }
 
   constructor(private _appService: AppService,
               private _http: HttpService,
               private _logger: LogService,
+              public _dialog: MatDialog,
               private _localStorage: LocalStorageService) {
     this._logger.log('nav.ts:NavComponent');
     this.getnav();
@@ -47,6 +51,10 @@ export class ElementNavComponent implements OnInit {
 
       case 'HideLeft': {
         CleftbarComponent.Hide();
+        break;
+      }
+      case 'Settings': {
+        this.Settings();
         break;
       }
       case 'ShowLeft': {
@@ -95,11 +103,43 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'English': {
-        this.English();
+        const dialog = this._dialog.open(
+          ChangLanWarningDialogComponent,
+          {
+            height: '200px',
+            width: '300px',
+            data: {
+              title: 'Warning',
+              note: 'The page will be reload, can you acceptable?',
+              cancel: 'Cancel',
+              confirm: 'Confirm',
+            },
+          });
+        dialog.afterClosed().subscribe(result => {
+          if (result) {
+            this.English();
+          }
+        });
         break;
       }
       case 'Chinese': {
-        this.Language('cn');
+        const dialog = this._dialog.open(
+          ChangLanWarningDialogComponent,
+          {
+            height: '200px',
+            width: '300px',
+            data: {
+              title: '警告',
+              note: '此页将被重载，是否确认?',
+              cancel: '取消',
+              confirm: '确认',
+            },
+          });
+        dialog.afterClosed().subscribe(result => {
+          if (result) {
+            this.Language('cn');
+          }
+        });
         break;
       }
       default: {
@@ -217,10 +257,9 @@ export class ElementNavComponent implements OnInit {
           'disable': true
         },
         {
-          'id': 'Language',
-          'href': '',
-          'name': 'Language',
-          'disable': true
+          'id': 'Settings',
+          'click': 'Settings',
+          'name': 'Settings'
         }]
     }, {
       'id': 'Help',
@@ -302,5 +341,35 @@ export class ElementNavComponent implements OnInit {
       });
     }
     location.reload();
+  }
+
+  Settings() {
+    const id = NavList.List.length - 1;
+    NavList.List[id].nick = 'Setting';
+    NavList.List[id].connected = true;
+    NavList.List[id].edit = false;
+    NavList.List[id].closed = false;
+    NavList.List[id].type = 'settings';
+    NavList.List.push(new View());
+    NavList.Active = id;
+  }
+}
+
+
+@Component({
+  selector: 'elements-nav-dialog',
+  templateUrl: 'changeLanWarning.html',
+})
+export class ChangLanWarningDialogComponent implements OnInit {
+
+  constructor(public dialogRef: MatDialogRef<ChangLanWarningDialogComponent>,
+              @Inject(MAT_DIALOG_DATA) public data: any) {
+  }
+
+  ngOnInit() {
+  }
+
+  onNoClick(): void {
+    this.dialogRef.close();
   }
 }

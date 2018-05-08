@@ -3,14 +3,6 @@
  * Style tweaks
  * --------------------------------------------------
  */
-@font-face {
-  font-family: Inconsolata;
-  src: url('assets/fonts/inconsolata.woff') format("woff");
-  font-weight: normal;
-  font-size: large;
-}
-
-
 html,
 body {
   overflow-x: hidden; /* Prevent scroll on narrow devices */
@@ -24,32 +16,67 @@ app-root {
   height: 100%;
 }
 
-#liuzheng {
+#marker {
   position: fixed;
   top: 0;
   left: 0;
   z-index: -1;
-  font-size: 11px !important;
+  font-size: 13px !important;
   padding-bottom: 16px !important;
-  font-family: 'Monaco', Inconsolata !important;
+  font-family: 'Monaco', 'Consolas', 'monospace' !important;
   color: white;
 }
 
 .terminal {
-  font-family: 'Monaco', Inconsolata;
-  font-size: 11px;
+  font-family: 'Monaco', 'Consolas', 'monospace' !important;
+  font-size: 13px;
   white-space: nowrap;
-  display: inline-block;
+  /*display: inline-block;*/
+  /*background-color: #1f1b1b;*/
 }
 
 .terminal div {
   user-select: text;
 }
 
-.terminal, .terminal .xterm-viewport {
-  background-color: inherit;
+.terminal .xterm-rows {
+  background-color: #1f1b1b;
+  /*margin: 15px;*/
 }
 
-.terminal .xterm-rows {
-  background-color: black;
+/*.xterm-rows {*/
+  /*padding: 15px;*/
+/*}*/
+
+.terminal .xterm-viewport {
+  background-color: #1f1b1b;
+  overflow: auto;
 }
+
+body ::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
+  background-color: #676a6c;
+}
+
+body ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body ::-webkit-scrollbar-thumb {
+  background-color: #F5F5F5;
+}
+
+.ztree * {
+  font-family: 'Monaco', 'Consolas', 'monospace' !important;
+  font-size: 13px !important;
+}
+
+/*.scroll-botton {*/
+  /*font-size: 20px;*/
+  /*float: left;*/
+  /*height: 30px;*/
+  /*overflow: hidden;*/
+  /*background-color: #3a3333;*/
+  /*color: white*/
+/*}*/

@@ -1,0 +1,16 @@
+<div class="sidebar" fxLayout="column" ngxSplit="column">
+  <div fxflex="0 0 30px" class="search">
+    <input id="keyword" class="left-search" placeholder=" {{'Search'| trans }} ..." maxlength="2048" name="q"
+           autocomplete="off"
+           title="Search"
+           type="text" tabindex="1" spellcheck="false" autofocus [(ngModel)]="q" (keyup.enter)="Search(q)">
+  </div>
+  <div class="overflow ngx-scroll-overlay" fxflex="1 1 90%">
+    <elements-asset-tree [Data]="zNodes" [query]="q"></elements-asset-tree>
+  </div>
+
+  <div class="footer-version" fxflex="0 0 26px">
+    <p> Version <strong>{{version}}</strong></p>
+  </div>
+</div>
+<!--<elements-server-menu></elements-server-menu>-->
