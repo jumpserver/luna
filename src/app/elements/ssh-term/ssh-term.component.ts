@@ -1,11 +1,10 @@
 import {AfterViewInit, Component, Input, OnInit } from '@angular/core';
-import * as io from 'socket.io-client';
-// import {ws} from '../../globals';
 import * as Terminal from 'xterm/dist/xterm';
 import {NavList} from '../../pages/control/control/control.component';
 import {UUIDService} from '../../app.service';
+import {TermWS} from '../../globals';
 
-const ws = io.connect('/ssh');
+const ws = TermWS;
 
 @Component({
   selector: 'elements-ssh-term',
@@ -27,8 +26,6 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
   ngOnInit() {
     this.secret = this._uuid.gen();
     this.term = new Terminal({
-      // cols: 80,
-      // rows: 24,
       useStyle: true,
       screenKeys: true,
     });
@@ -68,22 +65,17 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
     ws.on('logout', (data) => {
       if (data['room'] === NavList.List[that.index].room) {
         NavList.List[that.index].connected = false;
-        // this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
       }
     });
     ws.on('room', data => {
-      console.log('Compile secret: ', data['secret'], this.secret);
       if (data['secret'] === this.secret) {
-        console.log('Set room: ', data['room']);
         NavList.List[that.index].room = data['room'];
-        console.log('get', that.index, 'room: ', NavList.List[that.index].room);
       }
     });
   }
 
   disconnect() {
     NavList.List[this.index].connected = false;
-    // this.term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
     ws.emit('logout', NavList.List[this.index].room);
   }
 
