@@ -2,7 +2,6 @@
 #term {
   width: 100%;
   height: 100%;
-  padding: 15px;
 }
 
 #term > div {
@@ -20,11 +19,11 @@
 
 #term .terminal div span {
   min-width: 12px;
-  padding: 15px;
 }
 
 elements-term {
   position: absolute;
   width: 100%;
   height: 100%;
+  background: #1f1b1b;
 }
