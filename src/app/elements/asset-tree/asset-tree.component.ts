@@ -184,10 +184,10 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
 
   filter() {
     const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
+    const _keywords = $('#keyword').val();
     zTreeObj.showNodes(this.hiddenNodes);
 
     function filterFunc(node) {
-      const _keywords = $('#keyword').val();
       if (node.isParent || node.name.indexOf(_keywords) !== -1) {
         return false;
       }
@@ -195,9 +195,12 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
 
     this.hiddenNodes = zTreeObj.getNodesByFilter(filterFunc);
-
     zTreeObj.hideNodes(this.hiddenNodes);
-    zTreeObj.expandAll(true);
+    if (_keywords) {
+      zTreeObj.expandAll(true);
+    } else {
+      zTreeObj.expandAll(false);
+    }
   }
 }
 
