@@ -3,19 +3,23 @@ import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
 import { Replay } from '../replay.model';
 
 function zeroPad(num, minLength) {
-    let str = num.toString();
-    // Add leading zeroes until string is long enough
-    while (str.length < minLength) {
-      str = '0' + str;
-    }
-    return str;
+  let str = num.toString();
+  // Add leading zeroes until string is long enough
+  while (str.length < minLength) {
+    str = '0' + str;
+  }
+  return str;
 }
 
-function formatTime(millis) {
-    const totalSeconds = Math.floor(millis / 1000);
-    const seconds = totalSeconds % 60;
-    const minutes = Math.floor(totalSeconds / 60);
-    return zeroPad(minutes, 2) + ':' + zeroPad(seconds, 2);
+function formatTime(millis: number) {
+  const totalSeconds = Math.floor(millis / 1000);
+  const seconds = totalSeconds % 60;
+  const minutes = Math.floor(totalSeconds / 60);
+  console.log('1');
+  console.log('1');
+  console.log('1');
+  console.log('1');
+  return zeroPad(minutes, 2) + ':' + zeroPad(seconds, 2);
 }
 
 @Component({
@@ -25,7 +29,7 @@ function formatTime(millis) {
 })
 export class ReplayGuacamoleComponent implements OnInit {
   isPlaying = false;
-  recording: Guacamole.SessionRecording;
+  recording: any;
   playerRef: any;
   displayRef: any;
   max = 100;
@@ -64,7 +68,7 @@ export class ReplayGuacamoleComponent implements OnInit {
 
   initRecording() {
     const that = this;
-    this.recording.connect();
+    this.recording.connect('');
     this.recording.onplay = function() {
       that.isPlaying = true;
     };

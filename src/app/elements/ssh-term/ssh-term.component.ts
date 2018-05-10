@@ -1,5 +1,5 @@
 import {AfterViewInit, Component, Input, OnInit } from '@angular/core';
-import * as Terminal from 'xterm/dist/xterm';
+import {Terminal} from 'xterm';
 import {NavList} from '../../pages/control/control/control.component';
 import {UUIDService} from '../../app.service';
 import {TermWS} from '../../globals';
@@ -26,8 +26,12 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
   ngOnInit() {
     this.secret = this._uuid.gen();
     this.term = new Terminal({
-      useStyle: true,
-      screenKeys: true,
+      fontFamily: '"Monaco", "Consolas", "monospace"',
+      fontSize: 14,
+      rightClickSelectsWord: true,
+      theme: {
+        background: '#1f1b1b'
+      }
     });
   }
 

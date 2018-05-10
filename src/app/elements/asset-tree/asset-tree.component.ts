@@ -32,7 +32,12 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   hiddenNodes: any;
 
   onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
-    this.Connect(treeNode);
+    if (treeNode.isParent) {
+      const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
+      zTreeObj.expandNode(treeNode);
+    } else {
+      this.Connect(treeNode);
+    }
   }
 
   constructor(private _appService: AppService,
