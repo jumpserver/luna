@@ -48,9 +48,6 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     const row = Math.floor((contentElement.height() - 30) / markerElement.height());
     this.col = col > 80 ? col : 80;
     this.row = row > 24 ? row : 24;
-    console.log('Box size: ', contentElement.width(), '*', contentElement.height());
-    console.log('Mark size: ', markerElement.width(), '*', markerElement.height());
-    console.log('Resize term size: ', this.col, this.row);
     this.term.resize(this.col, this.row);
     this.winSizeChangeTrigger.emit([this.col, this.row]);
   }

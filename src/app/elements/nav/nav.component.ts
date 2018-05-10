@@ -13,7 +13,6 @@ import {DataStore, i18n} from '../../globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
-// import * as layer from 'layui-layer/src/layer.js';
 declare let layer: any;
 
 @Component({
@@ -66,6 +65,9 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case'Disconnect': {
+        if (!confirm('断开当前连接? (RDP暂不支持)')) {
+          break;
+        }
         switch (NavList.List[NavList.Active].type) {
           case 'ssh': {
             ControlComponent.TerminalDisconnect(NavList.Active);
@@ -83,6 +85,9 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case'DisconnectAll': {
+        if (!confirm('断开所有连接? (RDP暂不支持)')) {
+          break;
+        }
         ControlComponent.DisconnectAll();
         break;
       }
@@ -255,12 +260,8 @@ export class ElementNavComponent implements OnInit {
           'href': '',
           'name': 'Share session (read/write)',
           'disable': true
-        },
-        {
-          'id': 'Settings',
-          'click': 'Settings',
-          'name': 'Settings'
-        }]
+        }
+        ]
     }, {
       'id': 'Help',
       'name': 'Help',

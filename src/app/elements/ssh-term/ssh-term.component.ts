@@ -54,7 +54,8 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
     });
 
     ws.on('data', data => {
-      if (data['room'] === NavList.List[that.index].room) {
+      const view = NavList.List[that.index];
+      if (view && data['room'] === view.room) {
         that.term.write(data['data']);
       }
     });
@@ -62,11 +63,13 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
     ws.on('disconnect', () => {
       that.disconnect();
     });
+
     ws.on('logout', (data) => {
       if (data['room'] === NavList.List[that.index].room) {
         NavList.List[that.index].connected = false;
       }
     });
+
     ws.on('room', data => {
       if (data['secret'] === this.secret) {
         NavList.List[that.index].room = data['room'];
@@ -75,8 +78,11 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
   }
 
   disconnect() {
-    NavList.List[this.index].connected = false;
-    ws.emit('logout', NavList.List[this.index].room);
+    const view = NavList.List[this.index];
+    if (view) {
+      NavList.List[this.index].connected = false;
+      ws.emit('logout', NavList.List[this.index].room);
+    }
   }
 
   active() {
