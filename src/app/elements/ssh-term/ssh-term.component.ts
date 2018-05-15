@@ -65,7 +65,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
     });
 
     ws.on('disconnect', () => {
-      that.disconnect();
+      that.close();
     });
 
     ws.on('logout', (data) => {
@@ -81,7 +81,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
     });
   }
 
-  disconnect() {
+  close() {
     const view = NavList.List[this.index];
     if (view) {
       NavList.List[this.index].connected = false;

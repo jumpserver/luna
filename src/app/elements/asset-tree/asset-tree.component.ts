@@ -148,6 +148,8 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     } else if (host.system_users_granted.length === 1) {
       user = host.system_users_granted[0];
       this.login(host, user);
+    } else {
+      alert('该主机没有授权登录用户');
     }
   }
 

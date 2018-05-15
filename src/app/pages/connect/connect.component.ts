@@ -26,14 +26,12 @@ export class PagesConnectComponent implements OnInit {
     this.system = this._appService.getQueryString('system');
     this.token = this._appService.getQueryString('token');
 
-    jQuery('body').css('background-color', 'black');
-
     this.userid = this._localStorage.get('user-' + this.token);
     this.authToken = this._localStorage.get('authToken-' + this.token);
     this.base = this._localStorage.get('base-' + this.token);
 
+    jQuery('body').css('background-color', '#1f1b1b');
     if (this.system === 'windows') {
-
       if (!this.userid) {
         this._http.get_user_id_from_token(this.token)
           .subscribe(
