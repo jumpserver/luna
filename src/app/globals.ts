@@ -1,8 +1,8 @@
 'use strict';
 import * as io from 'socket.io-client';
-import {Terminal} from 'xterm';
 
-export const TermWS = io.connect('/ssh');
+import {Terminal} from 'xterm';
+export const TermWS = io.connect('/ssh', {'reconnection': false});
 export const sep = '/';
 export let Video: {
   id: string,
