@@ -7,6 +7,8 @@ import 'rxjs/Observable';
 import 'rxjs/add/operator/debounceTime';
 import 'rxjs/add/operator/distinctUntilChanged';
 
+import {NavList} from '../../pages/control/control/control.component';
+
 
 @Component({
   selector: 'elements-term',
@@ -28,7 +30,11 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       .distinctUntilChanged();
 
     this.winSizeChange$
-      .subscribe(() => this.resizeTerm());
+      .subscribe(() => {
+        if (NavList.List[NavList.Active].type === 'ssh') {
+          this.resizeTerm();
+        }
+      });
   }
 
   ngAfterViewInit() {
