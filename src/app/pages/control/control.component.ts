@@ -25,6 +25,10 @@ export class PagesControlComponent implements OnInit {
     return NavList.List[NavList.Active].type === 'rdp';
   }
 
+  dragSplitBtn(evt) {
+    window.dispatchEvent(new Event('resize'));
+  }
+
   ngOnInit() {
   }
 
