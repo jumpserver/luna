@@ -3,7 +3,8 @@ import {ElementRef} from '@angular/core';
 import {Terminal} from 'xterm';
 import {fit} from 'xterm/lib/addons/fit/fit';
 import {Observable} from 'rxjs/Rx';
-import { CookieService } from 'ngx-cookie-service';
+import {CookieService} from 'ngx-cookie-service';
+import * as $ from 'jquery/dist/jquery.min.js';
 import 'rxjs/Observable';
 import 'rxjs/add/operator/debounceTime';
 import 'rxjs/add/operator/distinctUntilChanged';
@@ -43,9 +44,23 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     this.resizeTerm();
   }
 
+  getWinSize() {
+    const activeEle = $('#winContainer');
+    const markerEle = $('#marker');
+    const cols = parseInt(activeEle.width() / markerEle.width() * 6, 10) - 6;
+    const rows = parseInt(activeEle.height() / markerEle.height(), 10) - 1;
+    return [cols, rows];
+  }
+
   resizeTerm() {
-    fit(this.term);
-    this.winSizeChangeTrigger.emit([this.term.cols, this.term.rows]);
+    // fit(this.term);
+    const size = this.getWinSize();
+    if (isNaN(size[0])) {
+      fit(this.term);
+    } else {
+      this.term.resize(size[0], size[1]);
+      this.winSizeChangeTrigger.emit([this.term.cols, this.term.rows]);
+    }
     this._cookie.set('cols', this.term.cols.toString(), 0, '/', document.domain);
     this._cookie.set('rows', this.term.rows.toString(), 0, '/', document.domain);
   }

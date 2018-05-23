@@ -2,7 +2,7 @@
   <div fxFlex="0 0 30px" class="search">
     <pages-control-nav></pages-control-nav>
   </div>
-  <div fxFlex="0 0 calc(100%-35px)">
+  <div fxFlex="0 0 calc(100%-35px)" id="winContainer">
     <div class="window" *ngFor="let m of NavList.List;let i=index"
          [ngClass]="{'active':i==NavList.Active}" style="height: 100%">
       <elements-ssh-term [index]="i"
