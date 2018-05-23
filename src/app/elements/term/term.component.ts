@@ -47,8 +47,8 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   getWinSize() {
     const activeEle = $('#winContainer');
     const markerEle = $('#marker');
-    const cols = parseInt(activeEle.width() / markerEle.width() * 6, 10) - 6;
-    const rows = parseInt(activeEle.height() / markerEle.height(), 10) - 1;
+    const cols = Math.floor(activeEle.width() / markerEle.width() * 6) - 6;
+    const rows = Math.floor(activeEle.height() / markerEle.height()) - 1;
     return [cols, rows];
   }
 
