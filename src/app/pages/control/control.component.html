@@ -2,7 +2,7 @@
   <div fxFlex="1 1 20%" minBasis="100px" maxBasis="800px" fxFlexFill ngxSplitArea *ngIf="DataStore.leftbarshow">
     <pages-control-cleftbar></pages-control-cleftbar>
   </div>
-  <div fxFlex="0" ngxSplitHandle></div>
+  <div fxFlex="0" ngxSplitHandle [style.display]="activeViewIsRdp() ? 'none' : 'block'"></div>
   <div fxFlex="1 1 80%" ngxSplitArea class="content">
     <pages-control-control></pages-control-control>
   </div>

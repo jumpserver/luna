@@ -6,8 +6,8 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {AppService} from '../../app.service';
 import {DataStore, User} from '../../globals';
+import {NavList} from './control/control.component';
 
 @Component({
   selector: 'pages-control',
@@ -19,6 +19,10 @@ export class PagesControlComponent implements OnInit {
   User = User;
 
   constructor() {
+  }
+
+  activeViewIsRdp() {
+    return NavList.List[NavList.Active].type === 'rdp';
   }
 
   ngOnInit() {
