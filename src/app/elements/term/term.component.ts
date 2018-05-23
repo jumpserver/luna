@@ -3,6 +3,7 @@ import {ElementRef} from '@angular/core';
 import {Terminal} from 'xterm';
 import {fit} from 'xterm/lib/addons/fit/fit';
 import {Observable} from 'rxjs/Rx';
+import { CookieService } from 'ngx-cookie-service';
 import 'rxjs/Observable';
 import 'rxjs/add/operator/debounceTime';
 import 'rxjs/add/operator/distinctUntilChanged';
@@ -21,7 +22,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   @Output() winSizeChangeTrigger = new EventEmitter<Array<number>>();
   winSizeChange$: Observable<any>;
 
-  constructor() {
+  constructor(private _cookie: CookieService) {
   }
 
   ngOnInit() {
@@ -44,17 +45,9 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
   resizeTerm() {
     fit(this.term);
-    // let contentElement = $('.window.active');
-    // if (contentElement.length === 0) {
-    //   contentElement = $('body');
-    // }
-    // const markerElement = $('#marker');
-    // const col = Math.floor((contentElement.width() - 30) / markerElement.width() * 6) - 1;
-    // const row = Math.floor((contentElement.height() - 30) / markerElement.height());
-    // this.col = col > 80 ? col : 80;
-    // this.row = row > 24 ? row : 24;
-    // this.term.resize(this.col, this.row);
     this.winSizeChangeTrigger.emit([this.term.cols, this.term.rows]);
+    this._cookie.set('cols', this.term.cols.toString(), 0, '/', document.domain);
+    this._cookie.set('rows', this.term.rows.toString(), 0, '/', document.domain);
   }
 
   active() {
