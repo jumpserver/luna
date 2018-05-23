@@ -63,51 +63,36 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   draw() {
     const nodes = {};
     const assets = {};
-    this.Data.forEach((v, i) => {
-      if (!nodes[v['id']]) {
-        nodes[v['id']] = true;
+    this.Data.forEach(node => {
+      if (!nodes[node['id']]) {
+        nodes[node['id']] = true;
         this.nodes.push({
-          'id': v['id'],
-          'key': v['key'],
-          'name': v['name'],
-          'value': v['value'],
-          'pId': v['parent'],
-          'assets_amount': v['assets_amount'],
+          'id': node['id'],
+          'key': node['key'],
+          'name': node['name'],
+          'value': node['value'],
+          'pId': node['parent'],
+          'assets_amount': node['assets_amount'],
           'isParent': true,
-          'open': v['key'] === '0'
+          'open': node['key'] === '0'
         });
       }
 
-      v['assets_granted'].forEach((vv, ii) => {
-        vv['nodes'].forEach((vvv, iii) => {
-          if (!nodes[vvv['id']]) {
-            this.nodes.push({
-              'id': vvv['id'],
-              'key': vvv['key'],
-              'name': vvv['value'],
-              'value': vvv['value'],
-              'pId': vvv['parent'],
-              'assets_amount': vvv['assets_amount'],
-              'isParent': true,
-              'open': vvv['key'] === '0'
-            });
-            nodes[vvv['id']] = true;
-          }
-          if (!assets[vv['id'] + '@' + vvv['id']]) {
-            this.nodes.push({
-              'id': vv['id'],
-              'name': vv['hostname'],
-              'value': vv['hostname'],
-              'system_users_granted': vv['system_users_granted'],
-              'platform': vv['platform'],
-              'comment': vv['comment'],
-              'isParent': false,
-              'pId': vvv['id'],
-              'iconSkin': vv['platform'].toLowerCase()
-            });
-            assets[vv['id'] + '@' + vvv['id']] = true;
-          }
-        });
+      node['assets_granted'].forEach(asset => {
+        if (!assets[asset['id']]) {
+          this.nodes.push({
+            'id': asset['id'],
+            'name': asset['hostname'],
+            'value': asset['hostname'],
+            'system_users_granted': asset['system_users_granted'],
+            'platform': asset['platform'],
+            'comment': asset['comment'],
+            'isParent': false,
+            'pId': node['id'],
+            'iconSkin': asset['platform'].toLowerCase()
+          });
+          assets[asset['id'] + '@' + node['id']] = true;
+        }
       });
     });
     this.nodes.sort(function(node1, node2) {
