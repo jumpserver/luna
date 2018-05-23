@@ -4,7 +4,6 @@ import {NavList} from '../../pages/control/control/control.component';
 import {UUIDService} from '../../app.service';
 import {CookieService} from 'ngx-cookie-service';
 import {TermWS} from '../../globals';
-import {isNumber} from 'ngx-bootstrap/timepicker/timepicker.utils';
 
 const ws = TermWS;
 
@@ -35,11 +34,9 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
         background: '#1f1b1b'
       }
     });
-    const rowInit = this._cookie.get('rows') || '24';
-    const colsInit = this._cookie.get('cols') || '80';
-    if (isNumber(rowInit) && isNumber(colsInit)) {
-      this.term.resize(parseInt(colsInit, 10), parseInt(rowInit, 10));
-    }
+    const rowInit = parseInt(this._cookie.get('rows') || '24', 10);
+    const colsInit = parseInt(this._cookie.get('cols') || '80', 10);
+    this.term.resize(colsInit, rowInit);
   }
 
   ngAfterViewInit() {
