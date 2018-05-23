@@ -2,8 +2,7 @@
 import * as io from 'socket.io-client';
 import {Terminal} from 'xterm';
 
-// 由于没有真正Upgrade到websocket协议，所以禁用重连截止，否则会用户闪断
-export const TermWS = io.connect('/ssh', {'reconnection': false});
+export const TermWS = io.connect('/ssh');
 export const sep = '/';
 export let Video: {
   id: string,
