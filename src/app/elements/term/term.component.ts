@@ -46,16 +46,32 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
   getWinSize() {
     const activeEle = $('#winContainer');
-    const markerEle = $('#marker');
-    const cols = Math.floor(activeEle.width() / markerEle.width() * 6) - 6;
-    const rows = Math.floor(activeEle.height() / markerEle.height()) - 1;
-    return [cols, rows];
+    const elementStyle = window.getComputedStyle(this.term.element);
+    const elementPadding = {
+        top: parseInt(elementStyle.getPropertyValue('padding-top'), 10),
+        bottom: parseInt(elementStyle.getPropertyValue('padding-bottom'), 10),
+        right: parseInt(elementStyle.getPropertyValue('padding-right'), 10),
+        left: parseInt(elementStyle.getPropertyValue('padding-left'), 10)
+    };
+    const elementPaddingVer = elementPadding.top + elementPadding.bottom;
+    const elementPaddingHor = elementPadding.right + elementPadding.left;
+    const availableHeight = activeEle.height() - elementPaddingVer;
+    const availableWidth = activeEle.width() - elementPaddingHor - (<any>this.term).viewport.scrollBarWidth;
+    const geometry = (
+      Math.floor(availableWidth / (<any>this.term).renderer.dimensions.actualCellWidth),
+      Math.floor(availableHeight / (<any>this.term).renderer.dimensions.actualCellHeight)
+    );
+    return geometry;
+
+    // const cols = Math.floor((activeEle.width() - 15) / markerEle.width() * 6) - 1;
+    // const rows = Math.floor(activeEle.height() / markerEle.height()) - 1;
+    // return [cols, rows];
   }
 
   resizeTerm() {
     // fit(this.term);
     const size = this.getWinSize();
-    if (isNaN(size[0])) {
+    if (isNaN(size[0]) || isNaN(size[1])) {
       fit(this.term);
     } else {
       this.term.resize(size[0], size[1]);
