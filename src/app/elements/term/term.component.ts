@@ -1,12 +1,16 @@
 import {AfterViewInit, Component, Input, Output, OnInit, ViewChild, EventEmitter} from '@angular/core';
 import {ElementRef} from '@angular/core';
-import * as Terminal from 'xterm/dist/xterm';
-// import { Terminal } from 'xterm';
-import * as $ from 'jquery/dist/jquery.min.js';
+import {Terminal} from 'xterm';
+import {fit} from 'xterm/lib/addons/fit/fit';
 import {Observable} from 'rxjs/Rx';
+import {CookieService} from 'ngx-cookie-service';
+import * as $ from 'jquery/dist/jquery.min.js';
 import 'rxjs/Observable';
 import 'rxjs/add/operator/debounceTime';
 import 'rxjs/add/operator/distinctUntilChanged';
+
+import {NavList} from '../../pages/control/control/control.component';
+
 
 @Component({
   selector: 'elements-term',
@@ -17,11 +21,9 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   @ViewChild('term') el: ElementRef;
   @Input() term: Terminal;
   @Output() winSizeChangeTrigger = new EventEmitter<Array<number>>();
-  col = 80;
-  row = 24;
   winSizeChange$: Observable<any>;
 
-  constructor() {
+  constructor(private _cookie: CookieService) {
   }
 
   ngOnInit() {
@@ -30,29 +32,37 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       .distinctUntilChanged();
 
     this.winSizeChange$
-      .subscribe(() => this.resizeTerm());
+      .subscribe(() => {
+        if (NavList.List[NavList.Active].type === 'ssh') {
+          this.resizeTerm();
+        }
+      });
   }
 
   ngAfterViewInit() {
-    this.term.open(this.el.nativeElement, true);
+    this.term.open(this.el.nativeElement);
     this.resizeTerm();
   }
 
+  getWinSize() {
+    const activeEle = $('#winContainer');
+    const markerEle = $('#marker');
+    const cols = Math.floor(activeEle.width() / markerEle.width() * 6) - 6;
+    const rows = Math.floor(activeEle.height() / markerEle.height()) - 1;
+    return [cols, rows];
+  }
+
   resizeTerm() {
-    let contentElement = $('.window.active');
-    if (contentElement.length === 0) {
-      contentElement = $('body');
+    // fit(this.term);
+    const size = this.getWinSize();
+    if (isNaN(size[0])) {
+      fit(this.term);
+    } else {
+      this.term.resize(size[0], size[1]);
+      this.winSizeChangeTrigger.emit([this.term.cols, this.term.rows]);
     }
-    const markerElement = $('#marker');
-    const col = Math.floor((contentElement.width() - 30) / markerElement.width() * 6) - 1;
-    const row = Math.floor((contentElement.height() - 30) / markerElement.height());
-    this.col = col > 80 ? col : 80;
-    this.row = row > 24 ? row : 24;
-    console.log('Box size: ', contentElement.width(), '*', contentElement.height());
-    console.log('Mark size: ', markerElement.width(), '*', markerElement.height());
-    console.log('Resize term size: ', this.col, this.row);
-    this.term.resize(this.col, this.row);
-    this.winSizeChangeTrigger.emit([this.col, this.row]);
+    this._cookie.set('cols', this.term.cols.toString(), 0, '/', document.domain);
+    this._cookie.set('rows', this.term.rows.toString(), 0, '/', document.domain);
   }
 
   active() {

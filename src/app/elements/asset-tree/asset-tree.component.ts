@@ -32,7 +32,12 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   hiddenNodes: any;
 
   onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
-    this.Connect(treeNode);
+    if (treeNode.isParent) {
+      const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
+      zTreeObj.expandNode(treeNode);
+    } else {
+      this.Connect(treeNode);
+    }
   }
 
   constructor(private _appService: AppService,
@@ -58,51 +63,36 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   draw() {
     const nodes = {};
     const assets = {};
-    this.Data.forEach((v, i) => {
-      if (!nodes[v['id']]) {
-        nodes[v['id']] = true;
+    this.Data.forEach(node => {
+      if (!nodes[node['id']]) {
+        nodes[node['id']] = true;
         this.nodes.push({
-          'id': v['id'],
-          'key': v['key'],
-          'name': v['name'],
-          'value': v['value'],
-          'pId': v['parent'],
-          'assets_amount': v['assets_amount'],
+          'id': node['id'],
+          'key': node['key'],
+          'name': node['name'],
+          'value': node['value'],
+          'pId': node['parent'],
+          'assets_amount': node['assets_amount'],
           'isParent': true,
-          'open': v['key'] === '0'
+          'open': node['key'] === '0'
         });
       }
 
-      v['assets_granted'].forEach((vv, ii) => {
-        vv['nodes'].forEach((vvv, iii) => {
-          if (!nodes[vvv['id']]) {
-            this.nodes.push({
-              'id': vvv['id'],
-              'key': vvv['key'],
-              'name': vvv['value'],
-              'value': vvv['value'],
-              'pId': vvv['parent'],
-              'assets_amount': vvv['assets_amount'],
-              'isParent': true,
-              'open': vvv['key'] === '0'
-            });
-            nodes[vvv['id']] = true;
-          }
-          if (!assets[vv['id'] + '@' + vvv['id']]) {
-            this.nodes.push({
-              'id': vv['id'],
-              'name': vv['hostname'],
-              'value': vv['hostname'],
-              'system_users_granted': vv['system_users_granted'],
-              'platform': vv['platform'],
-              'comment': vv['comment'],
-              'isParent': false,
-              'pId': vvv['id'],
-              'iconSkin': vv['platform'].toLowerCase()
-            });
-            assets[vv['id'] + '@' + vvv['id']] = true;
-          }
-        });
+      node['assets_granted'].forEach(asset => {
+        if (!assets[asset['id']]) {
+          this.nodes.push({
+            'id': asset['id'],
+            'name': asset['hostname'],
+            'value': asset['hostname'],
+            'system_users_granted': asset['system_users_granted'],
+            'platform': asset['platform'],
+            'comment': asset['comment'],
+            'isParent': false,
+            'pId': node['id'],
+            'iconSkin': asset['platform'].toLowerCase()
+          });
+          assets[asset['id'] + '@' + node['id']] = true;
+        }
       });
     });
     this.nodes.sort(function(node1, node2) {
@@ -143,6 +133,8 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     } else if (host.system_users_granted.length === 1) {
       user = host.system_users_granted[0];
       this.login(host, user);
+    } else {
+      alert('该主机没有授权登录用户');
     }
   }
 
@@ -184,10 +176,10 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
 
   filter() {
     const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
+    const _keywords = $('#keyword').val();
     zTreeObj.showNodes(this.hiddenNodes);
 
     function filterFunc(node) {
-      const _keywords = $('#keyword').val();
       if (node.isParent || node.name.indexOf(_keywords) !== -1) {
         return false;
       }
@@ -195,9 +187,12 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
 
     this.hiddenNodes = zTreeObj.getNodesByFilter(filterFunc);
-
     zTreeObj.hideNodes(this.hiddenNodes);
-    zTreeObj.expandAll(true);
+    if (_keywords) {
+      zTreeObj.expandAll(true);
+    } else {
+      zTreeObj.expandAll(false);
+    }
   }
 }
 

@@ -27,25 +27,47 @@ app-root {
   color: white;
 }
 
-.terminal {
-  font-family: 'Monaco', 'Consolas', 'monospace' !important;
-  font-size: 13px;
-  white-space: nowrap;
-  /*display: inline-block;*/
+/*.terminal {*/
+  /*font-family: 'Monaco', 'Consolas', 'monospace' !important;*/
+  /*font-size: 13px;*/
+  /*white-space: nowrap;*/
+  /*!*display: inline-block;*!*/
+  /*!*background-color: #1f1b1b;*!*/
+/*}*/
+
+/*.terminal div {*/
+  /*user-select: text;*/
+/*}*/
+
+/*.terminal .xterm-rows {*/
   /*background-color: #1f1b1b;*/
-}
-
-.terminal div {
-  user-select: text;
-}
-
-.terminal .xterm-rows {
-  background-color: #1f1b1b;
-  /*margin: 15px;*/
-}
+  /*!*margin: 15px;*!*/
+/*}*/
 
 /*.xterm-rows {*/
   /*padding: 15px;*/
+/*}*/
+
+/*.xterm .composition-view {*/
+    /*!* TODO: Composition position got messed up somewhere *!*/
+    /*background: #1f1b1b !important;*/
+    /*color: #FFF;*/
+    /*display: none;*/
+    /*position: absolute;*/
+    /*white-space: nowrap;*/
+    /*z-index: 1;*/
+/*}*/
+
+/*.xterm .xterm-viewport {*/
+    /*!* On OS X this is required in order for the scroll bar to appear fully opaque *!*/
+    /*background: #1f1b1b !important;*/
+    /*overflow-y: scroll;*/
+    /*cursor: default;*/
+    /*position: absolute;*/
+    /*right: 0;*/
+    /*left: 0;*/
+    /*top: 0;*/
+    /*bottom: 0;*/
 /*}*/
 
 .terminal .xterm-viewport {

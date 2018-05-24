@@ -1,5 +1,5 @@
 import {Component, Input, OnInit} from '@angular/core';
-import * as Terminal from 'xterm/dist/xterm';
+import {Terminal} from 'xterm';
 import {HttpService, LogService} from '../../../app.service';
 import {Replay} from '../replay.model';
 
@@ -25,7 +25,14 @@ export class JsonComponent implements OnInit {
   constructor(private _http: HttpService) {}
 
   ngOnInit() {
-    this.term = new Terminal();
+    this.term = new Terminal({
+      fontFamily: '"Monaco", "Consolas", "monospace"',
+      fontSize: 14,
+      rightClickSelectsWord: true,
+      theme: {
+        background: '#1f1b1b'
+      }
+    });
     if (this.replay.src !== 'READY') {
       this._http.get_replay_data(this.replay.src)
         .subscribe(

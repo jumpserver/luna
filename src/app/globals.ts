@@ -1,27 +1,8 @@
 'use strict';
-import * as terminal from 'xterm/dist/xterm';
 import * as io from 'socket.io-client';
-
-export function Terminal(xargs: any) {
-  return terminal(xargs);
-}
+import {Terminal} from 'xterm';
 
 export const TermWS = io.connect('/ssh');
-export let term: {
-  term: any;
-  col: number;
-  row: number;
-} = {
-  term: Terminal({
-    cols: 80,
-    rows: 24,
-    useStyle: true,
-    screenKeys: true,
-    scrollback: 10
-  }),
-  col: 80,
-  row: 24,
-};
 export const sep = '/';
 export let Video: {
   id: string,
@@ -153,4 +134,3 @@ export let wsEvent: {
 };
 
 export const i18n = new Map();
-

@@ -69,7 +69,6 @@ export class ControlComponent implements OnInit {
   }
 
   static DisconnectAll() {
-    alert('DisconnectAll');
     for (let i = 0; i < NavList.List.length; i++) {
       ControlComponent.TerminalDisconnect(i);
     }
