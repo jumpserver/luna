@@ -46,21 +46,38 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
   getWinSize() {
     const activeEle = $('#winContainer');
-    const markerEle = $('#marker');
-    const cols = Math.floor(activeEle.width() / markerEle.width() * 6) - 6;
-    const rows = Math.floor(activeEle.height() / markerEle.height()) - 1;
-    return [cols, rows];
+    const elementStyle = window.getComputedStyle(this.term.element);
+    const elementPadding = {
+        top: parseInt(elementStyle.getPropertyValue('padding-top'), 10),
+        bottom: parseInt(elementStyle.getPropertyValue('padding-bottom'), 10),
+        right: parseInt(elementStyle.getPropertyValue('padding-right'), 10),
+        left: parseInt(elementStyle.getPropertyValue('padding-left'), 10)
+    };
+    const elementPaddingVer = elementPadding.top + elementPadding.bottom;
+    const elementPaddingHor = elementPadding.right + elementPadding.left;
+    const availableHeight = activeEle.height() - elementPaddingVer;
+    const availableWidth = activeEle.width() - elementPaddingHor - (<any>this.term).viewport.scrollBarWidth;
+    const geometry = [
+      Math.floor(availableWidth / (<any>this.term).renderer.dimensions.actualCellWidth) - 1,
+      Math.floor(availableHeight / (<any>this.term).renderer.dimensions.actualCellHeight) - 1
+    ];
+    return geometry;
+
+    // const cols = Math.floor((activeEle.width() - 15) / markerEle.width() * 6) - 1;
+    // const rows = Math.floor(activeEle.height() / markerEle.height()) - 1;
+    // return [cols, rows];
   }
 
   resizeTerm() {
-    // fit(this.term);
     const size = this.getWinSize();
-    if (isNaN(size[0])) {
+    console.log('get SIze', size);
+    if (isNaN(size[0]) || isNaN(size[1])) {
       fit(this.term);
     } else {
+      (<any>this.term).renderer.clear();
       this.term.resize(size[0], size[1]);
-      this.winSizeChangeTrigger.emit([this.term.cols, this.term.rows]);
     }
+    this.winSizeChangeTrigger.emit([this.term.cols, this.term.rows]);
     this._cookie.set('cols', this.term.cols.toString(), 0, '/', document.domain);
     this._cookie.set('rows', this.term.rows.toString(), 0, '/', document.domain);
   }
