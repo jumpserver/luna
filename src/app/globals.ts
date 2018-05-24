@@ -2,7 +2,7 @@
 import * as io from 'socket.io-client';
 import {Terminal} from 'xterm';
 
-export const TermWS = io.connect('/ssh', {'reconnection': false});
+export const TermWS = io.connect('/ssh');
 export const sep = '/';
 export let Video: {
   id: string,
