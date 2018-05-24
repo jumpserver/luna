@@ -57,10 +57,10 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     const elementPaddingHor = elementPadding.right + elementPadding.left;
     const availableHeight = activeEle.height() - elementPaddingVer;
     const availableWidth = activeEle.width() - elementPaddingHor - (<any>this.term).viewport.scrollBarWidth;
-    const geometry = (
-      Math.floor(availableWidth / (<any>this.term).renderer.dimensions.actualCellWidth),
-      Math.floor(availableHeight / (<any>this.term).renderer.dimensions.actualCellHeight)
-    );
+    const geometry = [
+      Math.floor(availableWidth / (<any>this.term).renderer.dimensions.actualCellWidth) - 1,
+      Math.floor(availableHeight / (<any>this.term).renderer.dimensions.actualCellHeight) - 1
+    ];
     return geometry;
 
     // const cols = Math.floor((activeEle.width() - 15) / markerEle.width() * 6) - 1;
@@ -69,14 +69,15 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   }
 
   resizeTerm() {
-    // fit(this.term);
     const size = this.getWinSize();
+    console.log('get SIze', size);
     if (isNaN(size[0]) || isNaN(size[1])) {
       fit(this.term);
     } else {
+      (<any>this.term).renderer.clear();
       this.term.resize(size[0], size[1]);
-      this.winSizeChangeTrigger.emit([this.term.cols, this.term.rows]);
     }
+    this.winSizeChangeTrigger.emit([this.term.cols, this.term.rows]);
     this._cookie.set('cols', this.term.cols.toString(), 0, '/', document.domain);
     this._cookie.set('rows', this.term.rows.toString(), 0, '/', document.domain);
   }
