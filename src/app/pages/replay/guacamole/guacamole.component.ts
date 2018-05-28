@@ -15,10 +15,6 @@ function formatTime(millis: number) {
   const totalSeconds = Math.floor(millis / 1000);
   const seconds = totalSeconds % 60;
   const minutes = Math.floor(totalSeconds / 60);
-  console.log('1');
-  console.log('1');
-  console.log('1');
-  console.log('1');
   return zeroPad(minutes, 2) + ':' + zeroPad(seconds, 2);
 }
 
