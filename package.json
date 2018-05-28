@@ -4,7 +4,7 @@
   "license": "GPLv3",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --proxy-config proxy.conf.json",
+    "start": "ng serve --proxy-config proxy.conf.json --host 0.0.0.0",
     "build": "ng build --environment prod --aot --prod --base-href=/luna/  --deploy '/luna/'",
     "test": "ng test",
     "lint": "ng lint",
@@ -25,6 +25,7 @@
     "@angular/router": "5.2.0",
     "@swimlane/ngx-datatable": "^11.3.2",
     "@swimlane/ngx-ui": "^20.2.1",
+    "@types/socket.io-client": "^1.4.32",
     "ajv": "^6.5.0",
     "animate.css": "^3.6.1",
     "body-parser": "^1.18.2",

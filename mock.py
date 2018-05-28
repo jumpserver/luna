@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 
-from flask import Flask, send_from_directory, render_template, request, jsonify, redirect, send_file
+from flask import Flask, send_from_directory, render_template, request, jsonify, redirect, send_file, abort
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room
 import paramiko
 import uuid
-import eventlet
 from threading import Lock
 from flask import Flask, request, current_app, redirect
+import eventlet
+import time
+
+eventlet.monkey_patch()
+# async_mode = 'threading'
+async_mode = 'eventlet'
 
 app = Flask(__name__, template_folder='dist')
 
@@ -53,13 +58,12 @@ class SSHws(Namespace):
         return chan
 
     def proxy(self, ws, chan, room_id):
-        # eventlet.monkey_patch(thread=True, select=True, socket=True)
         while True:
             data = chan.recv(1024)
-            socketio.sleep(1)
             if len(data) == 0:
+                ws.emit(event='logout', data={'room': room_id}, room=room_id)
                 break
-            ws.emit(event="data", data={"data": data.decode(), "room": room_id}, room=room_id, namespace='/ssh')
+            ws.emit(event="data", data={"data": data.decode(), "room": room_id}, room=room_id)
 
     def new_connection(self):
         self.connections[request.sid] = dict()
@@ -82,6 +86,9 @@ class SSHws(Namespace):
     def get_win_size():
         cols_request = request.cookies.get('cols')
         rows_request = request.cookies.get('rows')
+        print("GET WIN SIZE")
+        print(cols_request)
+        print(rows_request)
         if cols_request and cols_request.isdigit():
             cols = int(cols_request)
         else:
@@ -96,13 +103,6 @@ class SSHws(Namespace):
     def on_connect(self):
         print("On connect event trigger")
         self.new_connection()
-        # self.connections[request.sid] = connection
-        # self.rooms[connection['room']] = {
-        #     "admin": request.sid,
-        #     "member": [],
-        #     "rw": []
-        # }
-        # join_room(connection['room'])
 
     def on_host(self, message):
         # 此处获取主机的信息
@@ -116,13 +116,10 @@ class SSHws(Namespace):
         print("Join room: {}".format(room["id"]))
         join_room(room["id"])
         if not asset_id or not user_id:
-            # self.on_connect()
             return
-        global thread
-        if thread is None:
-            thread = self.socketio.start_background_task(
-                self.proxy, self, room["request"], room["id"]
-            )
+        self.socketio.start_background_task(
+            self.proxy, self, room["request"], room["id"]
+        )
 
     def on_data(self, message):
         """
@@ -172,57 +169,31 @@ class SSHws(Namespace):
     def on_resize(self, message):
         cols, rows = message.get('cols', None), message.get('rows', None)
         print("On resize event trigger: {}*{}".format(cols, rows))
-        rooms = self.connections.get(request.sid)
 
+        time.sleep(0.2)
+        rooms = self.connections.get(request.sid)
         if not rooms:
             return
-
         room_tmp = list(rooms.values())[0]
+        print(room_tmp["cols"], room_tmp["rows"])
         if (room_tmp["cols"], room_tmp["rows"]) != (cols, rows):
             for room in rooms.values():
                 room["request"].resize_pty(width=cols, height=rows)
                 # room["request"].change_size_event.set()
                 # room.update({"cols": cols, "rows": rows})
 
-    # def on_room(self, session_id):
-    #     print("On room event trigger")
-    #     if session_id not in self.connections.keys():
-    #         self.emit(
-    #             'error', "no such session",
-    #             room=self.connections[request.sid]["room"]
-    #         )
-    #     else:
-    #         self.emit(
-    #             'room', self.connections[session_id]["room"],
-    #             room=self.connections[request.sid]["room"]
-    #         )
-    #
-    # def on_join(self, room):
-    #     print("On join room event trigger")
-    #     self.on_leave(self.connections[request.id]["room"])
-    #     self.connections[request.sid]["room"] = room
-    #     self.rooms[room]["member"].append(request.sid)
-    #     join_room(room=room)
-    #
-    # def on_leave(self, room):
-    #     print("On leave room event trigger")
-    #     if self.rooms[room]["admin"] == request.sid:
-    #         self.emit("data", "\nAdmin leave", room=room)
-    #         del self.rooms[room]
-    #     leave_room(room=room)
-
     def on_disconnect(self):
         print("On disconnect event trigger")
         # self.on_leave(self.clients[request.sid]["room"])
-        for room in self.connections.get(request.sid, {}):
-            self.on_logout(room["id"])
+        rooms = {k: v for k, v in self.connections.get(request.sid, {}).items()}
+        for room_id in rooms:
+            self.on_logout(room_id)
         del self.connections[request.sid]
 
     def on_logout(self, room_id):
         print("On logout event trigger")
         room = self.connections.get(request.sid, {}).get(room_id)
         if room:
-            room["proxy"].close()
             del self.connections[request.sid][room_id]
             del room
 
@@ -236,620 +207,425 @@ def send_js(path):
 def asset_groups_assets():
     assets = [
         {
-            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-            "key": "0:11:77",
-            "name": "新节点 12",
-            "value": "新节点 12",
-            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-            "assets_granted": [
-                {
-                    "id": "1600ed6d-e3b6-434c-a960-c5bb818806b6",
-                    "hostname": "windows1",
-                    "ip": "10.1.10.178",
-                    "port": 3389,
-                    "system_users_granted": [
-                        {
-                            "id": "8763b81a-bb5e-484a-abca-10514c7bb185",
-                            "name": "组织1-部门1-Administrator",
-                            "username": "Administrator",
-                            "priority": 10,
-                            "protocol": "rdp",
-                            "comment": ""
-                        }
-                    ],
-                    "is_active": True,
-                    "system_users_join": "Administrator",
-                    "os": "",
-                    "domain": "",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "key": "0:11",
-                            "value": "网域测试",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Windows",
-                    "comment": ""
-                },
-                {
-                    "id": "b952a481-a624-467e-b97f-9435155f0d53",
-                    "hostname": "testserver",
-                    "ip": "10.1.10.192",
-                    "port": 22,
-                    "system_users_granted": [
-                        {
-                            "id": "7e326f71-aee5-4688-8cc1-717919470a09",
-                            "name": "root",
-                            "username": "root",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        }
-                    ],
-                    "is_active": True,
-                    "system_users_join": "root, zbh",
-                    "os": "CentOS",
-                    "domain": "",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "key": "0:11",
-                            "value": "网域测试",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "key": "0",
-                            "value": "Fit2cloud",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Linux",
-                    "comment": ""
-                },
-                {
-                    "id": "9fcd7a09-a171-4cb7-b2f9-a025754f8635",
-                    "hostname": "ali-windows",
-                    "ip": "47.104.206.228",
-                    "port": 3389,
-                    "system_users_granted": [
-                        {
-                            "id": "8763b81a-bb5e-484a-abca-10514c7bb185",
-                            "name": "组织1-部门1-Administrator",
-                            "username": "Administrator",
-                            "priority": 10,
-                            "protocol": "rdp",
-                            "comment": ""
-                        }
-                    ],
-                    "is_active": True,
-                    "system_users_join": "Administrator",
-                    "os": "",
-                    "domain": "",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "key": "0",
-                            "value": "Fit2cloud",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Windows",
-                    "comment": ""
-                },
-                {
-                    "id": "b6f16269-d02a-4055-9cd8-460fa10b1540",
-                    "hostname": "test-vm3",
-                    "ip": "172.19.185.8",
-                    "port": 22,
-                    "system_users_granted": [
-                        {
-                            "id": "7e326f71-aee5-4688-8cc1-717919470a09",
-                            "name": "root",
-                            "username": "root",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        }
-                    ],
-                    "is_active": True,
-                    "system_users_join": "root, zbh",
-                    "os": "",
-                    "domain": "8789580f-b5ca-4478-b6d3-d0dafc4c48e8",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "key": "0:11",
-                            "value": "网域测试",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Linux",
-                    "comment": ""
-                },
-                {
-                    "id": "27e50edc-52d9-41ef-8c9e-1bff9d1628b2",
-                    "hostname": "test-vm2",
-                    "ip": "172.19.185.7",
-                    "port": 22,
-                    "system_users_granted": [
-                        {
-                            "id": "7e326f71-aee5-4688-8cc1-717919470a09",
-                            "name": "root",
-                            "username": "root",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        },
-                    ],
-                    "is_active": True,
-                    "system_users_join": "root, zbh",
-                    "os": "",
-                    "domain": "8789580f-b5ca-4478-b6d3-d0dafc4c48e8",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "key": "0:11",
-                            "value": "网域测试",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Linux",
-                    "comment": ""
-                },
-                {
-                    "id": "9ef36bb3-1bed-455f-be09-3770d3f4bf97",
-                    "hostname": "test-vm1",
-                    "ip": "172.19.185.6",
-                    "port": 22,
-                    "system_users_granted": [
-                        {
-                            "id": "7e326f71-aee5-4688-8cc1-717919470a09",
-                            "name": "root",
-                            "username": "root",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        },
-                        {
-                            "id": "17f384f4-683d-4944-a38d-db73608b92a9",
-                            "name": "zbh-test",
-                            "username": "zbh",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        }
-                    ],
-                    "is_active": True,
-                    "system_users_join": "root, zbh",
-                    "os": "",
-                    "domain": "8789580f-b5ca-4478-b6d3-d0dafc4c48e8",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "key": "0:11",
-                            "value": "网域测试",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Linux",
-                    "comment": ""
-                }
-            ],
-            "assets_amount": 6
+            'assets_amount': 0,
+            'assets_granted': [],
+            'id': '3ea680e3-7a7b-49c3-908b-ffec3b349f28',
+            'key': '0:15:1',
+            'name': '新节点 25',
+            'parent': '181a066e-7f02-4b12-bc4a-80eb990d7830',
+            'value': '新节点 25'
         },
         {
-            "id": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-            "key": "0:11",
-            "name": "网域测试",
-            "value": "网域测试",
-            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-            "assets_granted": [
+            'assets_amount': 1,
+            'assets_granted': [
                 {
-                    "id": "1600ed6d-e3b6-434c-a960-c5bb818806b6",
-                    "hostname": "windows1",
-                    "ip": "10.1.10.178",
-                    "port": 3389,
-                    "system_users_granted": [
-                        {
-                            "id": "8763b81a-bb5e-484a-abca-10514c7bb185",
-                            "name": "组织1-部门1-Administrator",
-                            "username": "Administrator",
-                            "priority": 10,
-                            "protocol": "rdp",
-                            "comment": ""
-                        }
-                    ],
-                    "is_active": True,
-                    "system_users_join": "Administrator",
-                    "os": "",
-                    "domain": "",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "key": "0:11",
-                            "value": "网域测试",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Windows",
-                    "comment": ""
-                },
-                {
-                    "id": "b952a481-a624-467e-b97f-9435155f0d53",
-                    "hostname": "testserver",
-                    "ip": "10.1.10.192",
-                    "port": 22,
-                    "system_users_granted": [
-                        {
-                            "id": "7e326f71-aee5-4688-8cc1-717919470a09",
-                            "name": "root",
-                            "username": "root",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        }
-                    ],
-                    "is_active": True,
-                    "system_users_join": "root, zbh",
-                    "os": "CentOS",
-                    "domain": "",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "key": "0:11",
-                            "value": "网域测试",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "key": "0",
-                            "value": "Fit2cloud",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Linux",
-                    "comment": ""
-                },
-                {
-                    "id": "b6f16269-d02a-4055-9cd8-460fa10b1540",
-                    "hostname": "test-vm3",
-                    "ip": "172.19.185.8",
-                    "port": 22,
-                    "system_users_granted": [
-                        {
-                            "id": "7e326f71-aee5-4688-8cc1-717919470a09",
-                            "name": "root",
-                            "username": "root",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        },
-                        {
-                            "id": "17f384f4-683d-4944-a38d-db73608b92a9",
-                            "name": "zbh-test",
-                            "username": "zbh",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        }
-                    ],
-                    "is_active": True,
-                    "system_users_join": "root, zbh",
-                    "os": "",
-                    "domain": "8789580f-b5ca-4478-b6d3-d0dafc4c48e8",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "key": "0:11",
-                            "value": "网域测试",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Linux",
-                    "comment": ""
-                },
-                {
-                    "id": "27e50edc-52d9-41ef-8c9e-1bff9d1628b2",
-                    "hostname": "test-vm2",
-                    "ip": "172.19.185.7",
-                    "port": 22,
-                    "system_users_granted": [
-                        {
-                            "id": "7e326f71-aee5-4688-8cc1-717919470a09",
-                            "name": "root",
-                            "username": "root",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        },
-                        {
-                            "id": "17f384f4-683d-4944-a38d-db73608b92a9",
-                            "name": "zbh-test",
-                            "username": "zbh",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        }
-                    ],
-                    "is_active": True,
-                    "system_users_join": "root, zbh",
-                    "os": "",
-                    "domain": "8789580f-b5ca-4478-b6d3-d0dafc4c48e8",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "key": "0:11",
-                            "value": "网域测试",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Linux",
-                    "comment": ""
-                },
-                {
-                    "id": "9ef36bb3-1bed-455f-be09-3770d3f4bf97",
-                    "hostname": "test-vm1",
-                    "ip": "172.19.185.6",
-                    "port": 22,
-                    "system_users_granted": [
-                        {
-                            "id": "7e326f71-aee5-4688-8cc1-717919470a09",
-                            "name": "root",
-                            "username": "root",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        },
-                        {
-                            "id": "17f384f4-683d-4944-a38d-db73608b92a9",
-                            "name": "zbh-test",
-                            "username": "zbh",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        }
-                    ],
-                    "is_active": True,
-                    "system_users_join": "root, zbh",
-                    "os": "",
-                    "domain": "8789580f-b5ca-4478-b6d3-d0dafc4c48e8",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "key": "0:11",
-                            "value": "网域测试",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Linux",
-                    "comment": ""
+                    'comment': '',
+                    'domain': None,
+                    'hostname': 'widnows',
+                    'id': '9fcd7a09-a171-4cb7-b2f9-a025754f8635',
+                    'ip': '192.168.1.179',
+                    'is_active': True,
+                    'nodes': [{
+                        'assets_amount': 1,
+                        'id': '181a066e-7f02-4b12-bc4a-80eb990d7830',
+                        'is_node': True,
+                        'key': '0:15',
+                        'parent': 'cf461e12-787e-451c-857a-db5503ee1bd2',
+                        'value': 'windows'}],
+                    'os': None,
+                    'platform': 'Windows',
+                    'port': 3389,
+                    'system_users_granted': [{
+                        'comment': '',
+                        'id': 'd95e223e-0539-48a1-864d-6709a0cc6ec0',
+                        'name': 'windows',
+                        'priority': 10,
+                        'protocol': 'rdp',
+                        'username': 'guanghongwei'}],
+                    'system_users_join': 'guanghongwei'
                 }
             ],
-            "assets_amount": 5
-        },
-        {
-            "id": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-            "key": "0",
-            "name": "Fit2cloud",
-            "value": "Fit2cloud",
-            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-            "assets_granted": [
-                {
-                    "id": "b952a481-a624-467e-b97f-9435155f0d53",
-                    "hostname": "testserver",
-                    "ip": "10.1.10.192",
-                    "port": 22,
-                    "system_users_granted": [
-                        {
-                            "id": "7e326f71-aee5-4688-8cc1-717919470a09",
-                            "name": "root",
-                            "username": "root",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        },
-                        {
-                            "id": "17f384f4-683d-4944-a38d-db73608b92a9",
-                            "name": "zbh-test",
-                            "username": "zbh",
-                            "priority": 10,
-                            "protocol": "ssh",
-                            "comment": ""
-                        }
-                    ],
-                    "is_active": True,
-                    "system_users_join": "root, zbh",
-                    "os": "CentOS",
-                    "domain": "",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "key": "0:11",
-                            "value": "网域测试",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "key": "0",
-                            "value": "Fit2cloud",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Linux",
-                    "comment": ""
-                },
-                {
-                    "id": "ad594b10-9f64-4913-b7b1-135fe63561d1",
-                    "hostname": "ali-windows",
-                    "ip": "47.104.206.228",
-                    "port": 3389,
-                    "system_users_granted": [
-                        {
-                            "id": "8763b81a-bb5e-484a-abca-10514c7bb185",
-                            "name": "组织1-部门1-Administrator",
-                            "username": "Administrator",
-                            "priority": 10,
-                            "protocol": "rdp",
-                            "comment": ""
-                        }
-                    ],
-                    "is_active": True,
-                    "system_users_join": "Administrator",
-                    "os": "",
-                    "domain": "",
-                    "nodes": [
-                        {
-                            "id": "67f92d6c-0f91-4d20-a0e4-ac83b7dd02b6",
-                            "key": "0:11:77",
-                            "value": "新节点 12",
-                            "parent": "9c83d432-a353-4a4e-9fd9-be27a5851c2d",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        },
-                        {
-                            "id": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "key": "0",
-                            "value": "Fit2cloud",
-                            "parent": "be9d9c3a-68d0-40ec-887c-5815d68e2f2c",
-                            "assets_amount": 6,
-                            "is_asset": False
-                        }
-                    ],
-                    "platform": "Windows",
-                    "comment": ""
-                }
-            ],
-            "assets_amount": 2
-        }
-    ]
+            'id': '181a066e-7f02-4b12-bc4a-80eb990d7830',
+            'key': '0:15',
+            'name': 'windows',
+            'parent': 'cf461e12-787e-451c-857a-db5503ee1bd2',
+            'value': 'windows'},
+       {'assets_amount': 0,
+        'assets_granted': [],
+        'id': '35e82765-8595-479a-a304-1c44433be955',
+        'key': '0:11:0:1:0',
+        'name': '新节点 22',
+        'parent': 'c7705b0d-56b1-479e-a2a6-6a2f381f0232',
+        'value': '新节点 22'},
+       {'assets_amount': 0,
+        'assets_granted': [],
+        'id': '4d976d17-a2ad-4532-b729-0ce18bb1011e',
+        'key': '0:11:0:0',
+        'name': '新节点 13',
+        'parent': '26410e6f-b833-433b-a804-b8b235bffc49',
+        'value': '新节点 13'},
+       {'assets_amount': 0,
+        'assets_granted': [],
+        'id': 'c7705b0d-56b1-479e-a2a6-6a2f381f0232',
+        'key': '0:11:0:1',
+        'name': '新节点 21',
+        'parent': '26410e6f-b833-433b-a804-b8b235bffc49',
+        'value': '新节点 21'},
+       {'assets_amount': 15,
+        'assets_granted': [{'comment': '',
+          'domain': None,
+          'hostname': 'guagua5服务器',
+          'id': '06547347-ad7a-4577-943e-6d9b29655b17',
+          'ip': '192.168.244.182',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua3',
+          'id': '50b0d171-41a2-4767-96c8-f2532036dcd9',
+          'ip': '192.168.244.180',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua10嘎嘎',
+          'id': '58b3ef97-fb52-41c0-81de-4505ab1ebff8',
+          'ip': '192.168.244.187',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': '79f6f79a-6fa2-4fb2-ae7b-ab4a730131e3',
+          'hostname': 'centos.fit2cloud.com.xxx.whoami.ggg',
+          'id': '5c5aaeaa-6324-4246-b836-5935836e2a30',
+          'ip': '127.0.0.1',
+          'is_active': True,
+          'nodes': [{'assets_amount': 1,
+            'id': '0bd0ce70-ed45-4201-b8e4-7062cf456d76',
+            'is_node': True,
+            'key': '0:6:0',
+            'parent': 'bff42eef-37e2-476e-a0b0-27637f4ccf02',
+            'value': '新节点 7'},
+           {'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'},
+           {'assets_amount': 16,
+            'id': 'cf461e12-787e-451c-857a-db5503ee1bd2',
+            'is_node': True,
+            'key': '0',
+            'parent': 'cf461e12-787e-451c-857a-db5503ee1bd2',
+            'value': 'ROOT'}],
+          'os': 'CentOS',
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua1',
+          'id': '63f6fb16-0331-42d9-b5c9-6805bf45534f',
+          'ip': '192.168.244.178',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua14',
+          'id': '6cf174f3-97ef-47de-be56-d15972a3e1b7',
+          'ip': '192.168.244.191',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua12',
+          'id': '771f9e8b-19a7-429c-8d19-920fefce0518',
+          'ip': '192.168.244.189',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua6',
+          'id': 'a1330e54-b5dc-4634-ae68-29fb8fbd0307',
+          'ip': '192.168.244.183',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua4',
+          'id': 'b1291272-0f2a-4a24-bde5-b317a74c50b1',
+          'ip': '192.168.244.181',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua8',
+          'id': 'cea1f081-098a-4d1f-b7c3-cf5977f5e6e4',
+          'ip': '192.168.244.185',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua11',
+          'id': 'd490c8d0-5ac9-4eb4-8aed-e5eda79a4f7c',
+          'ip': '192.168.244.188',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua7',
+          'id': 'f586a600-cc85-4e22-adf1-22c7f1631f4a',
+          'ip': '192.168.244.184',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua9',
+          'id': 'f5a9d5b8-524e-4a85-b8ed-da9db81fa2cc',
+          'ip': '192.168.244.186',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua2',
+          'id': 'fcddcb81-bc1f-4f76-af2b-67b1daa105b0',
+          'ip': '192.168.244.179',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'},
+         {'comment': '',
+          'domain': None,
+          'hostname': 'guagua13',
+          'id': 'fda85d33-6ae9-47ec-b910-fe542441c824',
+          'ip': '192.168.244.190',
+          'is_active': True,
+          'nodes': [{'assets_amount': 15,
+            'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+            'is_node': True,
+            'key': '0:11:0',
+            'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+            'value': '新节点 12'}],
+          'os': None,
+          'platform': 'Linux',
+          'port': 22,
+          'system_users_granted': [{'comment': '',
+            'id': '070a4791-36c9-4952-998b-7e5131ec2cd0',
+            'name': 'web',
+            'priority': 10,
+            'protocol': 'ssh',
+            'username': 'web'}],
+          'system_users_join': 'web'}],
+        'id': '26410e6f-b833-433b-a804-b8b235bffc49',
+        'key': '0:11:0',
+        'name': '新节点 12',
+        'parent': '9e1a60f6-6c55-4fed-ac39-cc786942cfc0',
+        'value': '新节点 12'},
+       {'assets_amount': 0,
+        'assets_granted': [],
+        'id': '2abfa1bc-bfd1-4aa3-a864-c3ad59a324da',
+        'key': '',
+        'name': 'Unnode',
+        'parent': 'cf461e12-787e-451c-857a-db5503ee1bd2',
+        'value': 'Unnode'}]
     return jsonify(assets)
 
 
@@ -904,7 +680,6 @@ def read_file(filename, charset='utf-8'):
 
 
 if __name__ == '__main__':
-    async_mode = 'threading'
     socketio = SocketIO(app, async_mode=async_mode)
     socketio.on_namespace(SSHws('/ssh'))
-    socketio.run(app, debug=True)
+    socketio.run(app, port=5001)
