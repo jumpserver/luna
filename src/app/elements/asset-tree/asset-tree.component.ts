@@ -1,8 +1,9 @@
-import {Component, Input, OnInit, Inject, SimpleChanges, OnChanges} from '@angular/core';
+import {Component, Input, OnInit, Inject, SimpleChanges, OnChanges, EventEmitter} from '@angular/core';
 import {NavList, View} from '../../pages/control/control/control.component';
 import {AppService, LogService} from '../../app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
+import {BehaviorSubject} from 'rxjs/BehaviorSubject';
 
 declare var $: any;
 
@@ -14,6 +15,7 @@ declare var $: any;
 export class ElementAssetTreeComponent implements OnInit, OnChanges {
   @Input() Data: any;
   @Input() query: string;
+  @Input() searchEvt$: BehaviorSubject<string>;
   nodes = [];
   setting = {
     view: {
@@ -43,12 +45,19 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   constructor(private _appService: AppService,
               public _dialog: MatDialog,
               public _logger: LogService) {
+    this.searchEvt$ = new BehaviorSubject<string>(this.query);
   }
 
   ngOnInit() {
     if (this.Data) {
       this.draw();
     }
+    this.searchEvt$.asObservable()
+      .debounceTime(300)
+      .distinctUntilChanged()
+      .subscribe((n) => {
+        this.filter();
+      });
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -56,7 +65,8 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       this.draw();
     }
     if (changes['query'] && !changes['query'].firstChange) {
-      this.filter();
+      this.searchEvt$.next(this.query);
+      // this.filter();
     }
   }
 
@@ -174,25 +184,53 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     return user;
   }
 
+  recurseParent(node) {
+    const parentNode = node.getParentNode();
+    if (parentNode && parentNode.pId) {
+      return [parentNode, ...this.recurseParent(parentNode)];
+    } else if (parentNode) {
+      return [parentNode];
+    } else {
+      return [];
+    }
+  }
+
+  recurseChildren(node) {
+    if (!node.isParent) {
+      return [];
+    }
+    const children = node.children;
+    if (!children) {
+      return [];
+    }
+    children.forEach((n) => {
+      return [...children, ...this.recurseChildren(n)];
+    });
+    return [];
+  }
+
   filter() {
     const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
-    const _keywords = $('#keyword').val();
-    zTreeObj.showNodes(this.hiddenNodes);
-
-    function filterFunc(node) {
-      if (node.isParent || node.name.indexOf(_keywords) !== -1) {
-        return false;
+    if (!zTreeObj) {
+      return null;
+    }
+    const _keywords = this.query;
+    const nodes = zTreeObj.transformToArray(zTreeObj.getNodes());
+    if (!_keywords) {
+      zTreeObj.showNodes(nodes);
+      return null;
+    }
+    let shouldShow = [];
+    nodes.forEach((node) => {
+      if (shouldShow.indexOf(node) === -1 && node.name.indexOf(_keywords) !== -1) {
+        const parents = this.recurseParent(node);
+        const children = this.recurseChildren(node);
+        shouldShow = [...shouldShow, ...parents, ...children, node];
       }
-      return true;
-    }
-
-    this.hiddenNodes = zTreeObj.getNodesByFilter(filterFunc);
-    zTreeObj.hideNodes(this.hiddenNodes);
-    if (_keywords) {
-      zTreeObj.expandAll(true);
-    } else {
-      zTreeObj.expandAll(false);
-    }
+    });
+    zTreeObj.hideNodes(nodes);
+    zTreeObj.showNodes(shouldShow);
+    zTreeObj.expandAll(true);
   }
 }
 
