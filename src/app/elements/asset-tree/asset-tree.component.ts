@@ -4,7 +4,6 @@ import {AppService, LogService} from '../../app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {BehaviorSubject} from 'rxjs/BehaviorSubject';
-import {forEach} from '@angular-devkit/schematics';
 
 declare var $: any;
 
