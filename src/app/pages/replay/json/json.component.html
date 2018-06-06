@@ -1,35 +1,22 @@
 <div>
-  <!--<button type="button" class="btn">-->
-    <!--<i class="fa fa-stop" aria-hidden="true"></i>-->
-  <!--</button>-->
-  <!--<button type="button" class="btn">-->
-    <!--<i class="fa fa-step-backward" aria-hidden="true"></i>-->
-  <!--</button>-->
   <button type="button" class="btn">
     <i class="fa fa-backward" aria-hidden="true" (click)="speedDown()"></i>
   </button>
   <button type="button" class="btn" (click)="toggle()">
-    <i class="fa" aria-hidden="true" [ngClass]="{'fa-play':!play,'fa-pause': play}"></i>
+    <i class="fa" aria-hidden="true" [ngClass]="{'fa-play':!isPlaying, 'fa-pause': isPlaying}"></i>
   </button>
   <button type="button" class="btn" (click)="speedUp()">
     <i class="fa fa-forward" aria-hidden="true"></i>
   </button>
-  <!--<button type="button" class="btn">-->
-    <!--<i class="fa fa-step-forward" aria-hidden="true"></i>-->
-  <!--</button>-->
-  <!--<button type="button" class="btn">-->
-    <!--<i class="fa fa-expand" aria-hidden="true"></i>-->
-  <!--</button>-->
-  <!--<button type="button" class="btn">-->
-    <!--<i class="fa fa-compress" aria-hidden="true"></i>-->
-  <!--</button>-->
   <button type="button" class="btn" (click)="restart()">
     <i class="fa fa-repeat" aria-hidden="true"></i>
   </button>
 
-  <input id="scrubber" type="range" [(ngModel)]="percent" min=0 max=100 (mousedown)="stop()" (mouseup)="runFrom()"/>
+  <input id="scrubber" type="range" [(ngModel)]="time" min=0 [attr.max]="max" (mouseup)="runFrom()"/>
 
-  {{time | utcDate | date:"HH:mm:ss"}}
+  <span id="position">{{ position }}</span>
+  <span>/</span>
+  <span id="duration">{{ duration }}</span>
   {{"Speed"|trans}}: {{speed}}
 </div>
 
