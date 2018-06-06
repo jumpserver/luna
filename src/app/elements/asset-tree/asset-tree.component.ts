@@ -206,10 +206,11 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     if (!children) {
       return [];
     }
+    let all_children = [];
     children.forEach((n) => {
-      return [...children, ...this.recurseChildren(n)];
+      all_children = [...children, ...this.recurseChildren(n)];
     });
-    return [];
+    return all_children;
   }
 
   filter() {
@@ -221,6 +222,9 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     const nodes = zTreeObj.transformToArray(zTreeObj.getNodes());
     if (!_keywords) {
       zTreeObj.showNodes(nodes);
+      zTreeObj.expandAll(false);
+      const root = zTreeObj.getNodes()[0];
+      zTreeObj.expandNode(root);
       return null;
     }
     let shouldShow = [];
