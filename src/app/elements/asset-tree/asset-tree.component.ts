@@ -4,6 +4,7 @@ import {AppService, LogService} from '../../app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {BehaviorSubject} from 'rxjs/BehaviorSubject';
+import {forEach} from '@angular-devkit/schematics';
 
 declare var $: any;
 
@@ -32,6 +33,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     },
   };
   hiddenNodes: any;
+  expandNodes: any;
 
   onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
@@ -221,10 +223,18 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     const _keywords = this.query;
     const nodes = zTreeObj.transformToArray(zTreeObj.getNodes());
     if (!_keywords) {
-      zTreeObj.showNodes(nodes);
-      zTreeObj.expandAll(false);
-      const root = zTreeObj.getNodes()[0];
-      zTreeObj.expandNode(root);
+      if (this.hiddenNodes) {
+        zTreeObj.showNodes(this.hiddenNodes);
+        this.hiddenNodes = null;
+      }
+      if (this.expandNodes) {
+        this.expandNodes.forEach((node) => {
+          if (node.id !== nodes[0].id) {
+            zTreeObj.expandNode(node, false);
+          }
+        });
+        this.expandNodes = null;
+      }
       return null;
     }
     let shouldShow = [];
@@ -235,9 +245,16 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
         shouldShow = [...shouldShow, ...parents, ...children, node];
       }
     });
+    this.hiddenNodes = nodes;
+    this.expandNodes = shouldShow;
     zTreeObj.hideNodes(nodes);
     zTreeObj.showNodes(shouldShow);
-    zTreeObj.expandAll(true);
+    shouldShow.forEach((node) => {
+        if (node.isParent) {
+          zTreeObj.expandNode(node, true);
+        }
+    });
+    // zTreeObj.expandAll(true);
   }
 }
 
