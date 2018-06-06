@@ -20,6 +20,7 @@ import {NavList} from '../../pages/control/control/control.component';
 export class ElementTermComponent implements OnInit, AfterViewInit {
   @ViewChild('term') el: ElementRef;
   @Input() term: Terminal;
+  @Input() offset: Array<number>;
   @Output() winSizeChangeTrigger = new EventEmitter<Array<number>>();
   winSizeChange$: Observable<any>;
 
@@ -33,7 +34,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
     this.winSizeChange$
       .subscribe(() => {
-        if (NavList.List[NavList.Active].type === 'ssh') {
+        if (NavList.List[NavList.Active].type !== 'rdp') {
           this.resizeTerm();
         }
       });
@@ -70,7 +71,6 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
   resizeTerm() {
     const size = this.getWinSize();
-    console.log('get SIze', size);
     if (isNaN(size[0]) || isNaN(size[1])) {
       fit(this.term);
     } else {

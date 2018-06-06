@@ -108,8 +108,11 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     this.nodes.sort(function(node1, node2) {
       if (node1.isParent && !node2.isParent) {
         return -1;
+      } else if (!node1.isParent && node2.isParent) {
+        return 1;
+      } else {
+        return node1.name < node2.name ? -1 : 1;
       }
-      return node1.name < node2.name ? -1 : 1;
     });
     $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
   }
