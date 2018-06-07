@@ -24,6 +24,10 @@ logger.setLevel(logging.DEBUG)
 sh = logging.StreamHandler(stream=None)
 logger.addHandler(sh)
 
+logger2 = logging.getLogger('coco')
+logger2.setLevel(logging.DEBUG)
+logger2.addHandler(sh)
+
 eventlet.monkey_patch()
 # async_mode = 'threading'
 async_mode = 'eventlet'
@@ -38,7 +42,9 @@ nodes = '[{"id":"03059e2e-06b8-4ef1-b949-72e230b706fa","key":"0:9:5","name":"部
 class Forwarder:
     def __init__(self, client):
         self.client = client
-        self.server = self.ssh_with_password()
+        width = client.request.meta['width']
+        height = client.request.meta['height']
+        self.server = self.ssh_with_password(width, height)
         self.watch_win_size_change_async()
 
     def proxy(self, asset, system_user):
@@ -60,11 +66,10 @@ class Forwarder:
         thread.daemon = True
         thread.start()
 
-    def ssh_with_password(self):
+    def ssh_with_password(self, width=80, height=24):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect("192.168.244.176", 22, "root", "redhat123")
-        width, height = (80, 24)
         chan = ssh.invoke_shell(term='xterm', width=width, height=height)
         return chan
 
@@ -75,7 +80,8 @@ class Forwarder:
             height = self.client.request.meta.get('height', 24)
             logger.debug("Change win size: %s - %s" % (width, height))
             try:
-                self.server.chan.resize_pty(width=width, height=height)
+                self.server.resize_pty(width=width, height=height)
+                # self.server.chan.resize_pty(width=width, height=height)
             except Exception:
                 break
 
