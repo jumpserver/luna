@@ -71,13 +71,6 @@ export class JsonComponent implements OnInit {
     return formatTime(this.time);
   }
   set position(data) {
-    return '00:00';
-  }
-  get duration() {
-    return formatTime(this.max);
-  }
-  set duration(data) {
-    return '00:00';
   }
   @Input() replay: Replay;
 
