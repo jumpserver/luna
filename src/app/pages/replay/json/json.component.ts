@@ -95,6 +95,7 @@ export class JsonComponent implements OnInit {
               return a - b;
             });
             this.max = this.timeList[this.timeList.length - 1] * 1000;
+            this.duration = formatTime(this.max);
             this.toggle();
           },
           err => {
