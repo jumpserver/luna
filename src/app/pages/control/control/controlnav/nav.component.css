@@ -44,7 +44,8 @@
   font-family: 'Roboto', sans-serif;
   font-size: 13px;
   text-decoration: none;
-  padding-left: 24px;
+  padding-left: 12px;
+  padding-right: 14px;
   line-height: 26px;
   cursor: default;
   width: 115px;
@@ -68,7 +69,7 @@
 }
 
 .tabs ul li.active span {
-  padding-left: 24px;
+  padding-left: 12px;
   line-height: 26px;
   color: white;
   height: 18px;

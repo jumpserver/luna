@@ -1,15 +1,16 @@
 {
   "/api": {
-    "target": "http://127.0.0.1:5000",
+    "target": "http://127.0.0.1:5001",
     "secure": false
   },
   "/luna/i18n": {
-    "target": "http://127.0.0.1:8088",
+    "target": "http://127.0.0.1:5001",
     "secure": false
   },
   "/socket.io/": {
-    "target": "http://127.0.0.1:5000",
-    "secure": false
+    "target": "http://127.0.0.1:5001",
+    "secure": false,
+    "ws": true
   },
   "/rdp/socket.io/": {
     "target": "http://localhost:9250",

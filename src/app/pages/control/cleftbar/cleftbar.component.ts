@@ -7,7 +7,7 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 
-import {Component, Inject, OnInit} from '@angular/core';
+import {Component, Inject, OnInit, ViewChild, ElementRef} from '@angular/core';
 import {AppService, HttpService, LogService} from '../../../app.service';
 import {SearchComponent} from '../search/search.component';
 import {DataStore} from '../../../globals';
@@ -17,6 +17,7 @@ import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {ElementServerMenuComponent} from '../../../elements/server-menu/server-menu.component';
 import {DialogService} from '../../../elements/dialog/dialog.service';
+import {Observable} from '../../../../../node_modules/rxjs';
 
 export interface HostGroup {
   name: string;
@@ -101,7 +102,6 @@ export class CleftbarComponent implements OnInit {
         // }
       });
   }
-
 
   Search(q) {
     this._search.Search(q);

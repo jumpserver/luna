@@ -1,8 +1,9 @@
-import {Component, Input, OnInit, Inject, SimpleChanges, OnChanges} from '@angular/core';
+import {Component, Input, OnInit, Inject, SimpleChanges, OnChanges, EventEmitter} from '@angular/core';
 import {NavList, View} from '../../pages/control/control/control.component';
 import {AppService, LogService} from '../../app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
+import {BehaviorSubject} from 'rxjs/BehaviorSubject';
 
 declare var $: any;
 
@@ -14,6 +15,7 @@ declare var $: any;
 export class ElementAssetTreeComponent implements OnInit, OnChanges {
   @Input() Data: any;
   @Input() query: string;
+  @Input() searchEvt$: BehaviorSubject<string>;
   nodes = [];
   setting = {
     view: {
@@ -30,6 +32,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     },
   };
   hiddenNodes: any;
+  expandNodes: any;
 
   onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
@@ -43,12 +46,19 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   constructor(private _appService: AppService,
               public _dialog: MatDialog,
               public _logger: LogService) {
+    this.searchEvt$ = new BehaviorSubject<string>(this.query);
   }
 
   ngOnInit() {
     if (this.Data) {
       this.draw();
     }
+    this.searchEvt$.asObservable()
+      .debounceTime(300)
+      .distinctUntilChanged()
+      .subscribe((n) => {
+        this.filter();
+      });
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -56,7 +66,8 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       this.draw();
     }
     if (changes['query'] && !changes['query'].firstChange) {
-      this.filter();
+      this.searchEvt$.next(this.query);
+      // this.filter();
     }
   }
 
@@ -98,8 +109,11 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     this.nodes.sort(function(node1, node2) {
       if (node1.isParent && !node2.isParent) {
         return -1;
+      } else if (!node1.isParent && node2.isParent) {
+        return 1;
+      } else {
+        return node1.name < node2.name ? -1 : 1;
       }
-      return node1.name < node2.name ? -1 : 1;
     });
     $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
   }
@@ -174,25 +188,72 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     return user;
   }
 
+  recurseParent(node) {
+    const parentNode = node.getParentNode();
+    if (parentNode && parentNode.pId) {
+      return [parentNode, ...this.recurseParent(parentNode)];
+    } else if (parentNode) {
+      return [parentNode];
+    } else {
+      return [];
+    }
+  }
+
+  recurseChildren(node) {
+    if (!node.isParent) {
+      return [];
+    }
+    const children = node.children;
+    if (!children) {
+      return [];
+    }
+    let all_children = [];
+    children.forEach((n) => {
+      all_children = [...children, ...this.recurseChildren(n)];
+    });
+    return all_children;
+  }
+
   filter() {
     const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
-    const _keywords = $('#keyword').val();
-    zTreeObj.showNodes(this.hiddenNodes);
-
-    function filterFunc(node) {
-      if (node.isParent || node.name.indexOf(_keywords) !== -1) {
-        return false;
+    if (!zTreeObj) {
+      return null;
+    }
+    const _keywords = this.query;
+    const nodes = zTreeObj.transformToArray(zTreeObj.getNodes());
+    if (!_keywords) {
+      if (this.hiddenNodes) {
+        zTreeObj.showNodes(this.hiddenNodes);
+        this.hiddenNodes = null;
       }
-      return true;
+      if (this.expandNodes) {
+        this.expandNodes.forEach((node) => {
+          if (node.id !== nodes[0].id) {
+            zTreeObj.expandNode(node, false);
+          }
+        });
+        this.expandNodes = null;
+      }
+      return null;
     }
-
-    this.hiddenNodes = zTreeObj.getNodesByFilter(filterFunc);
-    zTreeObj.hideNodes(this.hiddenNodes);
-    if (_keywords) {
-      zTreeObj.expandAll(true);
-    } else {
-      zTreeObj.expandAll(false);
-    }
+    let shouldShow = [];
+    nodes.forEach((node) => {
+      if (shouldShow.indexOf(node) === -1 && node.name.indexOf(_keywords) !== -1) {
+        const parents = this.recurseParent(node);
+        const children = this.recurseChildren(node);
+        shouldShow = [...shouldShow, ...parents, ...children, node];
+      }
+    });
+    this.hiddenNodes = nodes;
+    this.expandNodes = shouldShow;
+    zTreeObj.hideNodes(nodes);
+    zTreeObj.showNodes(shouldShow);
+    shouldShow.forEach((node) => {
+        if (node.isParent) {
+          zTreeObj.expandNode(node, true);
+        }
+    });
+    // zTreeObj.expandAll(true);
   }
 }
 

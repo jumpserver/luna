@@ -20,6 +20,7 @@ import {NavList} from '../../pages/control/control/control.component';
 export class ElementTermComponent implements OnInit, AfterViewInit {
   @ViewChild('term') el: ElementRef;
   @Input() term: Terminal;
+  @Input() offset: Array<number>;
   @Output() winSizeChangeTrigger = new EventEmitter<Array<number>>();
   winSizeChange$: Observable<any>;
 
@@ -33,7 +34,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
     this.winSizeChange$
       .subscribe(() => {
-        if (NavList.List[NavList.Active].type === 'ssh') {
+        if (NavList.List[NavList.Active].type !== 'rdp') {
           this.resizeTerm();
         }
       });
@@ -62,15 +63,10 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       Math.floor(availableHeight / (<any>this.term).renderer.dimensions.actualCellHeight) - 1
     ];
     return geometry;
-
-    // const cols = Math.floor((activeEle.width() - 15) / markerEle.width() * 6) - 1;
-    // const rows = Math.floor(activeEle.height() / markerEle.height()) - 1;
-    // return [cols, rows];
   }
 
   resizeTerm() {
     const size = this.getWinSize();
-    console.log('get SIze', size);
     if (isNaN(size[0]) || isNaN(size[1])) {
       fit(this.term);
     } else {
@@ -78,8 +74,6 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       this.term.resize(size[0], size[1]);
     }
     this.winSizeChangeTrigger.emit([this.term.cols, this.term.rows]);
-    this._cookie.set('cols', this.term.cols.toString(), 0, '/', document.domain);
-    this._cookie.set('rows', this.term.rows.toString(), 0, '/', document.domain);
   }
 
   active() {

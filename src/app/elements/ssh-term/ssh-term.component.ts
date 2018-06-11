@@ -34,9 +34,6 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
         background: '#1f1b1b'
       }
     });
-    const rowInit = parseInt(this._cookie.get('rows') || '24', 10);
-    const colsInit = parseInt(this._cookie.get('cols') || '80', 10);
-    this.term.resize(colsInit, rowInit);
   }
 
   ngAfterViewInit() {
@@ -49,11 +46,21 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
 
   joinRoom() {
     NavList.List[this.index].Term = this.term;
+    console.log(this.term);
+    console.log('Col: ', this.term.cols, 'rows', this.term.rows);
     if (this.host) {
-      ws.emit('host', {'uuid': this.host.id, 'userid': this.userid, 'secret': this.secret});
+      ws.emit('host', {
+        'uuid': this.host.id,
+        'userid': this.userid,
+        'secret': this.secret,
+        'size': [this.term.cols, this.term.rows]
+      });
     }
     if (this.token) {
-      ws.emit('token', {'token': this.token, 'secret': this.secret});
+      ws.emit('token', {
+        'token': this.token, 'secret': this.secret,
+        'size': [this.term.cols, this.term.rows]
+      });
     }
     const that = this;
 

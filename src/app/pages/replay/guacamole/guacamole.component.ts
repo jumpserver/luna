@@ -11,12 +11,39 @@ function zeroPad(num, minLength) {
   return str;
 }
 
-function formatTime(millis: number) {
-  const totalSeconds = Math.floor(millis / 1000);
-  const seconds = totalSeconds % 60;
-  const minutes = Math.floor(totalSeconds / 60);
-  return zeroPad(minutes, 2) + ':' + zeroPad(seconds, 2);
+function formatTimeWithSeconds(seconds) {
+  let hour = 0, minute = 0, second = 0;
+  const ref = [3600, 60, 1];
+  for (let i = 0; i < ref.length; i++) {
+    const val = ref[i];
+    while (val <= seconds) {
+      seconds -= val;
+      switch (i) {
+        case 0:
+          hour++;
+          break;
+        case 1:
+          minute++;
+          break;
+        case 2:
+          second++;
+          break;
+      }
+    }
+  }
+  return [hour, minute, second];
 }
+
+function formatTime(millis: number) {
+  const totalSeconds = millis / 1000;
+  const [hour, minute, second] = formatTimeWithSeconds(totalSeconds);
+  let time = zeroPad(minute, 2) + ':' + zeroPad(second, 2);
+  if (hour > 0) {
+    time = zeroPad(hour, 2) + ':' + time;
+  }
+  return time;
+}
+
 
 @Component({
   selector: 'app-replay-guacamole',
@@ -115,6 +142,4 @@ export class ReplayGuacamoleComponent implements OnInit {
       this.isPlaying = false;
     }
   }
-
-
 }
