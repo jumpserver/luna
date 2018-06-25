@@ -37,7 +37,6 @@
     "elfinder": "git+https://github.com/Studio-42/elFinder.git#2.1.33",
     "filetree-css": "^1.0.0",
     "font-awesome": "4.7.0",
-    "fsevents": "^1.2.4",
     "guacamole-common-js": "^1.0.0",
     "handlebars": "^4.0.11",
     "intl": "1.2.5",
