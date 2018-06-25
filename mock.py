@@ -175,7 +175,7 @@ def get_session_replay(pk):
     # })
     return jsonify({
         'type': 'json',
-        'src': 'http://localhost/media/2018-05-02/dbd5302d-7861-4810-b555-5fe71e26ccc3.gz',
+        'src': 'http://localhost/media/replay/2018-06-08/581a12ca-fa8f-4399-8800-f97935219ddf.replay.gz',
         'status': 'DONE',
     })
 
