@@ -69,7 +69,7 @@ class Forwarder:
     def ssh_with_password(self, width=80, height=24):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect("192.168.244.176", 22, "root", "redhat123")
+        ssh.connect("192.168.244.128", 22, "web", "redhat")
         chan = ssh.invoke_shell(term='xterm', width=width, height=height)
         return chan
 
