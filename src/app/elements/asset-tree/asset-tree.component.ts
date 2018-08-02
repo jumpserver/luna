@@ -125,7 +125,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
     const zTree = $.fn.zTree.getZTreeObj('ztree');
     const root = zTree.getNodes()[0];
-    zTree.expandNode(root);
+    zTree.expandNode(root, true);
   }
 
   Connect(host) {
