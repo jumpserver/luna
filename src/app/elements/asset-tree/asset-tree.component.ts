@@ -70,7 +70,6 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
     if (changes['query'] && !changes['query'].firstChange) {
       this.searchEvt$.next(this.query);
-      // this.filter();
     }
   }
 
@@ -129,7 +128,6 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   Connect(host) {
-    // console.log(host);
     let user: any;
     if (host.system_users_granted.length > 1) {
       user = this.checkPriority(host.system_users_granted);
