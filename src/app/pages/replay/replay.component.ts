@@ -24,7 +24,7 @@ export class PagesReplayComponent implements OnInit {
       .subscribe(params => {
         token = params['token'];
       });
-    this._http.get_replay_json(token)
+    this._http.get_replay(token)
       .subscribe(
         data => {
           this.replay.type = data['type'];
@@ -32,7 +32,6 @@ export class PagesReplayComponent implements OnInit {
           this.replay.id = data['id'];
         },
         err => {
-          this._http.get_replay(token);
           alert('没找到录像文件');
         }
       );

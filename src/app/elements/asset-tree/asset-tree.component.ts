@@ -25,6 +25,9 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     data: {
       simpleData: {
         enable: true
+      },
+      key: {
+        title: 'title'
       }
     },
     callback: {
@@ -67,7 +70,6 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
     if (changes['query'] && !changes['query'].firstChange) {
       this.searchEvt$.next(this.query);
-      // this.filter();
     }
   }
 
@@ -81,8 +83,10 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
           'id': node['id'],
           'key': node['key'],
           'name': node['name'],
+          'title': node['name'],
           'value': node['value'],
           'pId': node['parent'],
+          'ip': '',
           'assets_amount': node['assets_amount'],
           'isParent': true,
           'open': node['key'] === '0'
@@ -91,16 +95,18 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
 
       node['assets_granted'].forEach(asset => {
         if (!assets[asset['id']]) {
+          const platform = asset['platform'].toLowerCase().indexOf('win') === 0 ? 'windows' : 'linux';
           this.nodes.push({
             'id': asset['id'],
             'name': asset['hostname'],
             'value': asset['hostname'],
             'system_users_granted': asset['system_users_granted'],
             'platform': asset['platform'],
-            'comment': asset['comment'],
+            'ip': asset['ip'],
+            'title': asset['ip'],
             'isParent': false,
             'pId': node['id'],
-            'iconSkin': asset['platform'].toLowerCase()
+            'iconSkin': platform
           });
           assets[asset['id'] + '@' + node['id']] = true;
         }
@@ -116,10 +122,12 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       }
     });
     $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
+    const zTree = $.fn.zTree.getZTreeObj('ztree');
+    const root = zTree.getNodes()[0];
+    zTree.expandNode(root, true);
   }
 
   Connect(host) {
-    // console.log(host);
     let user: any;
     if (host.system_users_granted.length > 1) {
       user = this.checkPriority(host.system_users_granted);
@@ -163,7 +171,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       NavList.List[id].closed = false;
       NavList.List[id].host = host;
       NavList.List[id].user = user;
-      if (user.protocol === 'ssh') {
+      if (user.protocol === 'ssh' || user.protocol === 'telnet') {
         NavList.List[id].type = 'ssh';
       } else if (user.protocol === 'rdp') {
         NavList.List[id].type = 'rdp';
@@ -237,12 +245,13 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       return null;
     }
     let shouldShow = [];
-    nodes.forEach((node) => {
-      if (shouldShow.indexOf(node) === -1 && node.name.indexOf(_keywords) !== -1) {
+    const matchedNodes = zTreeObj.getNodesByFilter(function(node){
+       return node.name.indexOf(_keywords) !== -1 || node.ip.indexOf(_keywords) !== -1;
+    });
+    matchedNodes.forEach((node) => {
         const parents = this.recurseParent(node);
         const children = this.recurseChildren(node);
         shouldShow = [...shouldShow, ...parents, ...children, node];
-      }
     });
     this.hiddenNodes = nodes;
     this.expandNodes = shouldShow;
