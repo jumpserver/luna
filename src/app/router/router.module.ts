@@ -15,6 +15,7 @@ import {PagesReplayComponent} from '../pages/replay/replay.component';
 import {PagesControlComponent} from '../pages/control/control.component';
 import {PagesNotFoundComponent} from '../pages/not-found/not-found.component';
 import {PagesMonitorComponent} from '../pages/monitor/monitor.component';
+import {SftpComponent} from '../elements/sftp/sftp.component';
 
 
 const appRoutes: Routes = [
@@ -22,6 +23,7 @@ const appRoutes: Routes = [
   {path: 'monitor/:token', component: PagesMonitorComponent},
   {path: 'test', component: TestPageComponent},
   {path: 'connect', component: PagesConnectComponent},
+  {path: 'sftp', component: SftpComponent},
   {path: 'undefined', component: PagesBlankComponent},
   {path: '', component: PagesControlComponent},
   {path: '**', component: PagesNotFoundComponent}

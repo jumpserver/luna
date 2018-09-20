@@ -8,9 +8,18 @@
     "secure": false
   },
   "/socket.io/": {
-    "target": "http://127.0.0.1:5001",
+    "target": "http://127.0.0.1:5000",
     "secure": false,
     "ws": true
+  },
+  "/coco/": {
+    "target": "http://127.0.0.1:5000",
+    "secure:": false,
+    "ws": true
+  },
+  "/static": {
+    "target": "http://127.0.0.1:5000",
+    "secure:": false
   },
   "/rdp/socket.io/": {
     "target": "http://localhost:9250",

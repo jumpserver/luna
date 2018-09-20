@@ -1,4 +1,4 @@
-import {Component, Input, OnInit, Inject, SimpleChanges, OnChanges, EventEmitter} from '@angular/core';
+import {Component, Input, OnInit, Inject, SimpleChanges, OnChanges, ElementRef, ViewChild} from '@angular/core';
 import {NavList, View} from '../../pages/control/control/control.component';
 import {AppService, LogService} from '../../app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
@@ -16,6 +16,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   @Input() Data: any;
   @Input() query: string;
   @Input() searchEvt$: BehaviorSubject<string>;
+  @ViewChild('rMenu') rMenu: ElementRef;
   nodes = [];
   setting = {
     view: {
@@ -31,11 +32,16 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       }
     },
     callback: {
-      onClick: this.onCzTreeOnClick.bind(this)
+      onClick: this.onCzTreeOnClick.bind(this),
+      onRightClick: this.onRightClick.bind(this)
     },
   };
+  pos = {left: '100px', top: '200px'};
   hiddenNodes: any;
   expandNodes: any;
+  zTree: any;
+  isShowRMenu = false;
+  rightClickSelectNode: any;
 
   onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
@@ -56,6 +62,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     if (this.Data) {
       this.draw();
     }
+    document.addEventListener('click', this.hideRMenu.bind(this), false);
     this.searchEvt$.asObservable()
       .debounceTime(300)
       .distinctUntilChanged()
@@ -122,9 +129,30 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       }
     });
     $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
-    const zTree = $.fn.zTree.getZTreeObj('ztree');
-    const root = zTree.getNodes()[0];
-    zTree.expandNode(root, true);
+    this.zTree = $.fn.zTree.getZTreeObj('ztree');
+    const root = this.zTree.getNodes()[0];
+    this.zTree.expandNode(root, true);
+  }
+
+  showRMenu(left, top) {
+    this.pos.left = left + 'px';
+    this.pos.top = top + 'px';
+    this.isShowRMenu = true;
+  }
+
+  hideRMenu() {
+    this.isShowRMenu = false;
+  }
+
+  onRightClick(event, treeId, treeNode) {
+    if (!treeNode && event.target.tagName.toLowerCase() !== 'button' && $(event.target).parents('a').length === 0) {
+      this.zTree.cancelSelectedNode();
+      this.showRMenu(event.clientX, event.clientY);
+    } else if (treeNode && !treeNode.noR) {
+      this.zTree.selectNode(treeNode);
+      this.showRMenu(event.clientX, event.clientY);
+      this.rightClickSelectNode = treeNode;
+    }
   }
 
   Connect(host) {
@@ -158,6 +186,29 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     } else {
       alert('该主机没有授权登录用户');
     }
+  }
+
+  connectFileManager() {
+    const host = this.rightClickSelectNode;
+    console.log(host);
+    const id = NavList.List.length - 1;
+    if (host) {
+      NavList.List[id].nick = '[FILE]' + host.name;
+      NavList.List[id].connected = true;
+      NavList.List[id].edit = false;
+      NavList.List[id].closed = false;
+      NavList.List[id].host = host;
+      NavList.List[id].type = 'sftp';
+      NavList.List.push(new View());
+      NavList.Active = id;
+    }
+    this._logger.debug(NavList);
+  }
+
+  connectTerminal() {
+    console.log('Connect terminal');
+    const host = this.rightClickSelectNode;
+    this.Connect(host);
   }
 
   login(host, user) {

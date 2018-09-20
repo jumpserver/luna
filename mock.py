@@ -18,7 +18,7 @@ import socket
 import logging
 import select
 from coco.models import WSProxy, Client, Request, Connection
-from coco.httpd import ProxyNamespace
+from coco.httpd.ws import ProxyNamespace
 
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.DEBUG)

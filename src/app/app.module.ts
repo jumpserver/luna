@@ -31,6 +31,7 @@ import {DialogService, ElementDialogAlertComponent} from './elements/dialog/dial
 import {PluginModules} from './plugins/plugins';
 import {TestPageComponent} from './test-page/test-page.component';
 import {AssetTreeDialogComponent} from './elements/asset-tree/asset-tree.component';
+import {SftpComponent} from './elements/sftp/sftp.component';
 
 
 @NgModule({
@@ -48,6 +49,7 @@ import {AssetTreeDialogComponent} from './elements/asset-tree/asset-tree.compone
     ...Pipes,
     ...ElementComponents,
     ...PagesComponents,
+    SftpComponent,
  ],
   entryComponents: [
     AssetTreeDialogComponent,
