@@ -48,10 +48,9 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'ConnectSFTP': {
-        window.open('/sftp/');
+        window.open('/luna/sftp/');
         break;
       }
-
       case 'HideLeft': {
         CleftbarComponent.Hide();
         break;

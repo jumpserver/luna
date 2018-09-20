@@ -145,6 +145,9 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   onRightClick(event, treeId, treeNode) {
+    if (!treeNode || treeNode.isParent || treeNode.platform.toLowerCase() === 'windows') {
+      return null;
+    }
     if (!treeNode && event.target.tagName.toLowerCase() !== 'button' && $(event.target).parents('a').length === 0) {
       this.zTree.cancelSelectedNode();
       this.showRMenu(event.clientX, event.clientY);
@@ -190,7 +193,6 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
 
   connectFileManager() {
     const host = this.rightClickSelectNode;
-    console.log(host);
     const id = NavList.List.length - 1;
     if (host) {
       NavList.List[id].nick = '[FILE]' + host.name;
@@ -206,7 +208,6 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   connectTerminal() {
-    console.log('Connect terminal');
     const host = this.rightClickSelectNode;
     this.Connect(host);
   }
