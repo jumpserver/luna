@@ -48,7 +48,7 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'ConnectSFTP': {
-        window.open('/luna/sftp/');
+        window.open('/coco/elfinder/sftp/');
         break;
       }
       case 'HideLeft': {

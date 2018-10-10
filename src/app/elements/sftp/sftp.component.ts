@@ -13,6 +13,9 @@ export class SftpComponent implements OnInit {
   @ViewChild('sftp') el: ElementRef;
 
   constructor(private sanitizer: DomSanitizer) {
+    if (!this.host) {
+      DataStore.NavShow = false;
+    }
   }
 
   ngOnInit() {
@@ -20,11 +23,8 @@ export class SftpComponent implements OnInit {
     if (this.host) {
       // _target += 'f5857eee-c114-4564-af8f-96329c400a8a' + '/';
       _target += this.host.id + '/';
-    } else {
-      DataStore.NavShow = false;
     }
     this.trust(_target);
-    console.log(this.host.id);
   }
 
   trust(url) {
