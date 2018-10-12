@@ -52,7 +52,6 @@ export class ControlComponent implements OnInit {
     NavList.List.forEach((v, k) => {
       v.hide = id.toString() !== k;
     });
-
     NavList.Active = id;
   }
 

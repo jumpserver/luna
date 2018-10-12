@@ -47,7 +47,10 @@ export class ElementNavComponent implements OnInit {
         CleftbarComponent.Reload();
         break;
       }
-
+      case 'ConnectSFTP': {
+        window.open('/coco/elfinder/sftp/');
+        break;
+      }
       case 'HideLeft': {
         CleftbarComponent.Hide();
         break;
@@ -182,18 +185,6 @@ export class ElementNavComponent implements OnInit {
       'id': 'File',
       'name': 'Server',
       'children': [
-        // {
-        //   'id': 'NewConnection',
-        //   'href': '',
-        //   'name': 'New connection',
-        //   'disable': true
-        // },
-        // {
-        //   'id': 'Connect',
-        //   'click': 'Connect',
-        //   'name': 'Connect',
-        //   'disable': true
-        // },
         {
           'id': 'Disconnect',
           'click': 'Disconnect',
@@ -235,6 +226,17 @@ export class ElementNavComponent implements OnInit {
         // }
       ]
     }, {
+      'id': 'FileManager',
+      'name': 'File Manager',
+      'children': [
+        {
+          'id': 'Connect',
+          'click': 'ConnectSFTP',
+          'name': 'Connect'
+        },
+      ]
+    },
+      {
       'id': 'View',
       'name': 'View',
       'children': [
@@ -266,11 +268,6 @@ export class ElementNavComponent implements OnInit {
       'id': 'Help',
       'name': 'Help',
       'children': [
-        // {
-        //   'id': 'EnterLicense',
-        //   'click': 'EnterLicense',
-        //   'name': 'Enter License'
-        // },
         {
           'id': 'Website',
           'click': 'Website',
@@ -316,9 +313,7 @@ export class ElementNavComponent implements OnInit {
       moveType: 1
     }, function (value, index) {
       DataStore.socket.emit('key', value);
-      // layer.msg(value); //得到value
       layer.close(index);
-
     });
   }
 

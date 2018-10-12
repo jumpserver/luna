@@ -1,1 +1,15 @@
 <ul id="ztree" class="ztree"></ul>
+
+<div #rMenu *ngIf="isShowRMenu" class="basicContext" [style.top]="pos.top" [style.left]="pos.left">
+  <table>
+      <tbody>
+        <tr class="basicContext__item ">
+            <td class="basicContext__data" data-num="0"  (click)="connectTerminal()"> <span class="basicContext__icon fa fa-terminal new-connection"></span>{{ "New Connection"|trans }}</td>
+        </tr>
+        <tr class="basicContext__item basicContext__item--separator"></tr>
+        <tr class="basicContext__item ">
+            <td class="basicContext__data" data-num="2" (click)="connectFileManager()"><span class="basicContext__icon fa fa-file refresh"></span>{{ "File Manager"|trans }}</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
