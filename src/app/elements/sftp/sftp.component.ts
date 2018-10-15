@@ -13,9 +13,6 @@ export class SftpComponent implements OnInit {
   @ViewChild('sftp') el: ElementRef;
 
   constructor(private sanitizer: DomSanitizer) {
-    if (!this.host) {
-      DataStore.NavShow = false;
-    }
   }
 
   ngOnInit() {
