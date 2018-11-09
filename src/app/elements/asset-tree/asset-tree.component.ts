@@ -190,7 +190,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     const host = this.rightClickSelectNode.asset;
     const id = NavList.List.length - 1;
     if (host) {
-      NavList.List[id].nick = '[FILE]' + host.name;
+      NavList.List[id].nick = '[FILE]' + host.hostname;
       NavList.List[id].connected = true;
       NavList.List[id].edit = false;
       NavList.List[id].closed = false;
@@ -210,7 +210,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   login(host, user) {
     const id = NavList.List.length - 1;
     if (user) {
-      NavList.List[id].nick = host.name;
+      NavList.List[id].nick = host.hostname;
       NavList.List[id].connected = true;
       NavList.List[id].edit = false;
       NavList.List[id].closed = false;
