@@ -10,14 +10,6 @@
 import {Component, OnInit} from '@angular/core';
 import {TermWS} from '../../../globals';
 
-// export class Term {
-//   machine: string;
-//   socket: any;
-//   term: any;
-// }
-
-
-
 export class View {
   nick: string;
   type: string;
