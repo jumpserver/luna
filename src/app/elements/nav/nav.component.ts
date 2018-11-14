@@ -106,6 +106,26 @@ export class ElementNavComponent implements OnInit {
         window.open('https://market.aliyun.com/products/53690006/cmgj026011.html?spm=5176.730005.0.0.cY2io1');
         break;
       }
+      case 'SetResolution': {
+        const dialog = this._dialog.open(
+          RDPSolutionDialogComponent,
+          {
+            height: '200px',
+            width: '300px',
+            data: {
+              title: 'Warning',
+              note: 'The page will be reload, can you acceptable?',
+              cancel: 'Cancel',
+              confirm: 'Confirm',
+            },
+          });
+        dialog.afterClosed().subscribe(result => {
+          if (result) {
+            console.log(result);
+          }
+        });
+        break;
+      }
       case 'EnterLicense': {
         this.EnterLicense();
         break;
@@ -175,12 +195,6 @@ export class ElementNavComponent implements OnInit {
   }
 
   getnav() {
-    this._logger.log('getnav');
-    // this._http.get('/api/nav')
-    //   .map(res => res.json())
-    //   .subscribe(response => {
-    //     DataStore.Nav = response;
-    //   });
     DataStore.Nav = [{
       'id': 'File',
       'name': 'Server',
@@ -195,35 +209,6 @@ export class ElementNavComponent implements OnInit {
           'click': 'DisconnectAll',
           'name': 'Disconnect all'
         },
-        // {
-        //   'id': 'Duplicate',
-        //   'href': '',
-        //   'name': 'Duplicate',
-        //   'disable': true
-        // },
-        // {
-        //   'id': 'Upload',
-        //   'href': '',
-        //   'name': 'Upload',
-        //   'disable': true
-        // },
-        // {
-        //   'id': 'Download',
-        //   'href': '',
-        //   'name': 'Download',
-        //   'disable': true
-        // },
-        // {
-        //   'id': ' Search',
-        //   'href': '',
-        //   'name': 'Search',
-        //   'disable': true
-        // },
-        // {
-        //   'id': 'Reload',
-        //   'click': 'ReloadLeftbar',
-        //   'name': 'Reload'
-        // }
       ]
     }, {
       'id': 'FileManager',
@@ -244,6 +229,11 @@ export class ElementNavComponent implements OnInit {
           'id': 'HideLeftManager',
           'click': 'HideLeft',
           'name': 'Hide left manager'
+        },
+        {
+          'id': 'RDPResolution',
+          'click': 'SetResolution',
+          'name': 'RDP Resolution'
         },
         {
           'id': 'SplitVertical',
@@ -363,6 +353,36 @@ export class ChangLanWarningDialogComponent implements OnInit {
   }
 
   ngOnInit() {
+  }
+
+  onNoClick(): void {
+    this.dialogRef.close();
+  }
+}
+
+@Component({
+  selector: 'elements-rdp-solution-dialog',
+  templateUrl: 'rdpSolutionDialog.html',
+})
+export class RDPSolutionDialogComponent implements OnInit {
+  solutions = ['Auto', '1024x768', '1366x768', '1400*900'];
+  solution: string;
+  cacheKey = 'rdpSolution';
+
+  constructor(public dialogRef: MatDialogRef<RDPSolutionDialogComponent>,
+              @Inject(MAT_DIALOG_DATA) public data: any) {
+  }
+
+  ngOnInit() {
+    this.solution = localStorage.getItem(this.cacheKey) || 'Auto';
+  }
+
+  setSolution(value: string) {
+    localStorage.setItem(this.cacheKey, value);
+  }
+
+  onSubmit() {
+    this.setSolution(this.solution);
   }
 
   onNoClick(): void {

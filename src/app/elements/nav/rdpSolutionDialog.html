@@ -1,0 +1,13 @@
+<h1 mat-dialog-title>{{"Set RDP solution"|trans}}</h1>
+
+<mat-form-field>
+  <mat-select [(value)]="solution"
+    placeholder="{{'Select a solution'|trans}}" >
+    <mat-option *ngFor="let s of solutions"  value="{{s}}">{{s}}</mat-option>
+  </mat-select>
+<!---->
+</mat-form-field>
+<div style="float: right">
+  <button mat-raised-button (click)="onNoClick()">{{"Cancel"|trans}}</button>
+  <button mat-raised-button color="primary" [mat-dialog-close]="selected" (click)="onSubmit()">{{"Confirm"|trans}}</button>
+</div>

@@ -94,6 +94,13 @@ export class HttpService {
       .set('asset_id', asset_id)
       .set('system_user_id', system_user_id)
       .set('token', DataStore.guacamole_token);
+    const solution = localStorage.getItem('rdpSolution') || 'Auto';
+    if (solution !== 'Auto') {
+      const width = solution.split('x')[0];
+      const height = solution.split('x')[1];
+      params.set('width', width).set('height', height);
+    }
+
     return this.http.get(
       '/guacamole/api/session/ext/jumpserver/asset/add',
       {
@@ -107,6 +114,12 @@ export class HttpService {
     const params = new HttpParams()
       .set('asset_token', assetToken)
       .set('token', token);
+    const solution = localStorage.getItem('rdpSolution') || 'Auto';
+    if (solution !== 'Auto') {
+      const width = solution.split('x')[0];
+      const height = solution.split('x')[1];
+      params.set('width', width).set('height', height);
+    }
     return this.http.get(
       '/guacamole/api/ext/jumpserver/asset/token/add',
       {
