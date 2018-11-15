@@ -365,7 +365,7 @@ export class ChangLanWarningDialogComponent implements OnInit {
   templateUrl: 'rdpSolutionDialog.html',
 })
 export class RDPSolutionDialogComponent implements OnInit {
-  solutions = ['Auto', '1024x768', '1366x768', '1400*900'];
+  solutions = ['Auto', '1024x768', '1366x768', '1400x900'];
   solution: string;
   cacheKey = 'rdpSolution';
 
@@ -383,6 +383,7 @@ export class RDPSolutionDialogComponent implements OnInit {
 
   onSubmit() {
     this.setSolution(this.solution);
+    this.dialogRef.close();
   }
 
   onNoClick(): void {

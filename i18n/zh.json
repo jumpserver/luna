@@ -50,8 +50,11 @@
   "document": "文档",
   "support": "商业支持",
   "speed": "速度",
-  "File Manager": "文件管理",
-  "File": "文件管理",
-  "New Connection": "连接",
-  "Connect": "连接"
+  "file manager": "文件管理",
+  "file": "文件管理",
+  "new connection": "连接",
+  "connect": "连接",
+  "rdp resolution": "RDP分辨率",
+  "set rdp solution": "设置分辨率",
+  "select a solution": "选择分辨率"
 }
