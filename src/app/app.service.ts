@@ -89,7 +89,7 @@ export class HttpService {
   }
 
   guacamole_add_asset(user_id: string, asset_id: string, system_user_id: string) {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('user_id', user_id)
       .set('asset_id', asset_id)
       .set('system_user_id', system_user_id)
@@ -98,7 +98,7 @@ export class HttpService {
     if (solution !== 'Auto') {
       const width = solution.split('x')[0];
       const height = solution.split('x')[1];
-      params.set('width', width).set('height', height);
+      params = params.set('width', width).set('height', height);
     }
 
     return this.http.get(
@@ -111,14 +111,14 @@ export class HttpService {
   }
 
   guacamole_token_add_asset(assetToken: string, token: string) {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('asset_token', assetToken)
       .set('token', token);
     const solution = localStorage.getItem('rdpSolution') || 'Auto';
     if (solution !== 'Auto') {
       const width = solution.split('x')[0];
       const height = solution.split('x')[1];
-      params.set('width', width).set('height', height);
+      params = params.set('width', width).set('height', height);
     }
     return this.http.get(
       '/guacamole/api/ext/jumpserver/asset/token/add',
