@@ -81,57 +81,8 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   draw() {
-    const nodes = {};
-    const assets = {};
-    this.Data.forEach(node => {
-      if (!nodes[node['id']]) {
-        nodes[node['id']] = true;
-        this.nodes.push({
-          'id': node['id'],
-          'key': node['key'],
-          'name': node['name'],
-          'title': node['name'],
-          'value': node['value'],
-          'pId': node['parent'],
-          'ip': '',
-          'assets_amount': node['assets_amount'],
-          'isParent': true,
-          'open': node['key'] === '0'
-        });
-      }
-
-      node['assets_granted'].forEach(asset => {
-        if (!assets[asset['id']]) {
-          const platform = asset['platform'].toLowerCase().indexOf('win') === 0 ? 'windows' : 'linux';
-          this.nodes.push({
-            'id': asset['id'],
-            'name': asset['hostname'],
-            'value': asset['hostname'],
-            'system_users_granted': asset['system_users_granted'],
-            'platform': asset['platform'],
-            'ip': asset['ip'],
-            'title': asset['ip'],
-            'isParent': false,
-            'pId': node['id'],
-            'iconSkin': platform
-          });
-          assets[asset['id'] + '@' + node['id']] = true;
-        }
-      });
-    });
-    this.nodes.sort(function(node1, node2) {
-      if (node1.isParent && !node2.isParent) {
-        return -1;
-      } else if (!node1.isParent && node2.isParent) {
-        return 1;
-      } else {
-        return node1.name < node2.name ? -1 : 1;
-      }
-    });
-    $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
+    $.fn.zTree.init($('#ztree'), this.setting, this.Data);
     this.zTree = $.fn.zTree.getZTreeObj('ztree');
-    const root = this.zTree.getNodes()[0];
-    this.zTree.expandNode(root, true);
   }
 
   showRMenu(left, top) {
@@ -145,8 +96,12 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   onRightClick(event, treeId, treeNode) {
-    if (!treeNode || treeNode.isParent || treeNode.platform.toLowerCase() === 'windows') {
+    if (!treeNode || treeNode.isParent ) {
       return null;
+    }
+    const host = treeNode.meta.asset;
+    if (host.protocol.toLowerCase() === 'rdp') {
+      alert('Windows 请使用Ctrl+Shift+Alt呼出侧边栏上传下载');
     }
     if (!treeNode && event.target.tagName.toLowerCase() !== 'button' && $(event.target).parents('a').length === 0) {
       this.zTree.cancelSelectedNode();
@@ -158,22 +113,24 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
   }
 
-  Connect(host) {
+  Connect(node) {
+    const system_users = node.meta.system_users;
+    const host = node.meta.asset;
     let user: any;
-    if (host.system_users_granted.length > 1) {
-      user = this.checkPriority(host.system_users_granted);
+    if (system_users.length > 1) {
+      user = this.checkPriority(system_users);
       if (user) {
         this.login(host, user);
       } else {
         const dialogRef = this._dialog.open(AssetTreeDialogComponent, {
           height: '200px',
           width: '300px',
-          data: {users: host.system_users_granted}
+          data: {users: system_users}
         });
 
         dialogRef.afterClosed().subscribe(result => {
           if (result) {
-            for (const i of host.system_users_granted) {
+            for (const i of system_users) {
               if (i.id.toString() === result.toString()) {
                 user = i;
                 break;
@@ -183,8 +140,8 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
           }
         });
       }
-    } else if (host.system_users_granted.length === 1) {
-      user = host.system_users_granted[0];
+    } else if (system_users.length === 1) {
+      user = system_users[0];
       this.login(host, user);
     } else {
       alert('该主机没有授权登录用户');
@@ -192,10 +149,10 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   connectFileManager() {
-    const host = this.rightClickSelectNode;
+    const host = this.rightClickSelectNode.meta.asset;
     const id = NavList.List.length - 1;
     if (host) {
-      NavList.List[id].nick = '[FILE]' + host.name;
+      NavList.List[id].nick = '[FILE]' + host.hostname;
       NavList.List[id].connected = true;
       NavList.List[id].edit = false;
       NavList.List[id].closed = false;
@@ -217,7 +174,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     this._logger.debug(NavList);
     this._logger.debug(host);
     if (user) {
-      NavList.List[id].nick = host.name;
+      NavList.List[id].nick = host.hostname;
       NavList.List[id].connected = true;
       NavList.List[id].edit = false;
       NavList.List[id].closed = false;
@@ -297,8 +254,13 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       return null;
     }
     let shouldShow = [];
-    const matchedNodes = zTreeObj.getNodesByFilter(function(node){
-       return node.name.indexOf(_keywords) !== -1 || node.ip.indexOf(_keywords) !== -1;
+    const matchedNodes = zTreeObj.getNodesByFilter(function(node) {
+      if (node.meta.type === 'asset') {
+        const host = node.meta.asset;
+        return host.hostname.indexOf(_keywords) !== -1 || host.ip.indexOf(_keywords) !== -1;
+      } else {
+        return node.name.indexOf(_keywords) !== -1;
+      }
     });
     matchedNodes.forEach((node) => {
         const parents = this.recurseParent(node);

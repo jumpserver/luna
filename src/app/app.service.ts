@@ -14,7 +14,7 @@ import {DataStore, User, Browser, i18n} from './globals';
 import {environment} from '../environments/environment';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
-import {HostGroup} from './pages/control/cleftbar/cleftbar.component';
+import {HostGroup, Node} from './pages/control/cleftbar/cleftbar.component';
 import * as UUID from 'uuid-js/lib/uuid.js';
 
 declare function unescape(s: string): string;
@@ -66,8 +66,8 @@ export class HttpService {
     return this.http.get('/api/users/v1/profile/');
   }
 
-  get_my_asset_groups_assets() {
-    return this.http.get<Array<HostGroup>>('/api/perms/v1/user/nodes-assets/');
+  get_my_granted_nodes() {
+    return this.http.get<Array<Node>>('/api/perms/v1/user/nodes-assets/tree/');
   }
 
   get_guacamole_token(user_id: string, authToken: string) {
