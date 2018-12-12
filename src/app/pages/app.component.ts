@@ -22,7 +22,8 @@ export class AppComponent {
 
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any) {
-    if (environment.production) {
+    const notInIframe = window.self === window.top;
+    if (environment.production && notInIframe) {
       $event.returnValue = true;
     }
   }
