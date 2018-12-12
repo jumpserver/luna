@@ -33,24 +33,24 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     },
     callback: {
       onClick: this.onCzTreeOnClick.bind(this),
-      onRightClick: this.onRightClick.bind(this),
-      onAsyncSuccess: this.onzTreeAsyncSuccess.bind(this)
+      onRightClick: this.onRightClick.bind(this)
     },
-    async: {
-      enable: true,
-      url: '/api/perms/v1/user/nodes/children/',
-      autoParam: ['node_id=id', 'name=n', 'level=lv'],
-      type: 'get',
-      dataFilter: this.nodeFilter
-    }
   };
   pos = {left: '100px', top: '200px'};
   hiddenNodes: any;
   expandNodes: any;
   zTree: any;
-  searching = false;
   isShowRMenu = false;
   rightClickSelectNode: any;
+
+  onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
+    if (treeNode.isParent) {
+      const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
+      zTreeObj.expandNode(treeNode);
+    } else {
+      this.Connect(treeNode);
+    }
+  }
 
   constructor(private _appService: AppService,
               public _dialog: MatDialog,
@@ -67,7 +67,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       .debounceTime(300)
       .distinctUntilChanged()
       .subscribe((n) => {
-        this.searchNode();
+        this.filter();
       });
   }
 
@@ -80,53 +80,9 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
   }
 
-  nodeFilter(treeId, parentNode, childNodes) {
-    $.each(childNodes, function (index, value) {
-      value['node_id'] = value['id'];
-      value['id'] = value['tree_id'];
-      if (value['tree_id'] !== value['tree_parent']) {
-        value['pId'] = value['tree_parent'];
-      } else {
-        value['isParent'] = true;
-      }
-      value['name'] = value['value'];
-      if (!value['is_node']) {
-        const platform = value['asset']['platform'].toLowerCase().indexOf('win') === 0 ? 'windows' : 'linux';
-        value['title'] = value['asset']['ip'] || value['name'];
-        value['iconSkin'] = platform;
-      }
-      value['isParent'] = value['is_node'];
-    });
-    return childNodes;
-  }
-
-  onzTreeAsyncSuccess(event, treeId, treeNode, msg) {
-    // 代表第一次加载
-    if (!treeNode) {
-      this.zTree = $.fn.zTree.getZTreeObj(treeId);
-      if (this.searching) {
-        this.zTree.expandAll(true);
-      } else {
-        const root = this.zTree.getNodes()[0];
-        this.zTree.expandNode(root, true);
-      }
-    }
-  }
-
-  onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
-    if (treeNode.isParent) {
-      const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
-      zTreeObj.expandNode(treeNode);
-    } else {
-      this.Connect(treeNode.asset);
-    }
-  }
-
   draw() {
-    $.fn.zTree.init($('#ztree'), this.setting, this.nodes);
-    // this.zTree = $.fn.zTree.getZTreeObj('ztree');
-    // const root = this.zTree.getNodes()[0];
-    // this.zTree.expandNode(root, true);
+    $.fn.zTree.init($('#ztree'), this.setting, this.Data);
+    this.zTree = $.fn.zTree.getZTreeObj('ztree');
   }
 
   showRMenu(left, top) {
@@ -140,8 +96,12 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   onRightClick(event, treeId, treeNode) {
-    if (!treeNode || treeNode.isParent || treeNode.asset.platform.toLowerCase() === 'windows') {
+    if (!treeNode || treeNode.isParent ) {
       return null;
+    }
+    const host = treeNode.meta.asset;
+    if (host.protocol.toLowerCase() === 'rdp') {
+      alert('Windows 请使用Ctrl+Shift+Alt呼出侧边栏上传下载');
     }
     if (!treeNode && event.target.tagName.toLowerCase() !== 'button' && $(event.target).parents('a').length === 0) {
       this.zTree.cancelSelectedNode();
@@ -153,22 +113,24 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
   }
 
-  Connect(host) {
+  Connect(node) {
+    const system_users = node.meta.system_users;
+    const host = node.meta.asset;
     let user: any;
-    if (host.system_users_granted.length > 1) {
-      user = this.checkPriority(host.system_users_granted);
+    if (system_users.length > 1) {
+      user = this.checkPriority(system_users);
       if (user) {
         this.login(host, user);
       } else {
         const dialogRef = this._dialog.open(AssetTreeDialogComponent, {
           height: '200px',
           width: '300px',
-          data: {users: host.system_users_granted}
+          data: {users: system_users}
         });
 
         dialogRef.afterClosed().subscribe(result => {
           if (result) {
-            for (const i of host.system_users_granted) {
+            for (const i of system_users) {
               if (i.id.toString() === result.toString()) {
                 user = i;
                 break;
@@ -178,8 +140,8 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
           }
         });
       }
-    } else if (host.system_users_granted.length === 1) {
-      user = host.system_users_granted[0];
+    } else if (system_users.length === 1) {
+      user = system_users[0];
       this.login(host, user);
     } else {
       alert('该主机没有授权登录用户');
@@ -187,7 +149,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   connectFileManager() {
-    const host = this.rightClickSelectNode.asset;
+    const host = this.rightClickSelectNode.meta.asset;
     const id = NavList.List.length - 1;
     if (host) {
       NavList.List[id].nick = '[FILE]' + host.hostname;
@@ -209,6 +171,8 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
 
   login(host, user) {
     const id = NavList.List.length - 1;
+    this._logger.debug(NavList);
+    this._logger.debug(host);
     if (user) {
       NavList.List[id].nick = host.hostname;
       NavList.List[id].connected = true;
@@ -241,25 +205,78 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     return user;
   }
 
-  searchNode() {
+  recurseParent(node) {
+    const parentNode = node.getParentNode();
+    if (parentNode && parentNode.pId) {
+      return [parentNode, ...this.recurseParent(parentNode)];
+    } else if (parentNode) {
+      return [parentNode];
+    } else {
+      return [];
+    }
+  }
+
+  recurseChildren(node) {
+    if (!node.isParent) {
+      return [];
+    }
+    const children = node.children;
+    if (!children) {
+      return [];
+    }
+    let all_children = [];
+    children.forEach((n) => {
+      all_children = [...children, ...this.recurseChildren(n)];
+    });
+    return all_children;
+  }
+
+  filter() {
     const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
     if (!zTreeObj) {
       return null;
     }
     const _keywords = this.query;
+    const nodes = zTreeObj.transformToArray(zTreeObj.getNodes());
     if (!_keywords) {
-      // 第一次刷新
-      if (!this.searching) {
-        return null;
+      if (this.hiddenNodes) {
+        zTreeObj.showNodes(this.hiddenNodes);
+        this.hiddenNodes = null;
       }
-      // 以后搜索后回来
-      this.searching = false;
-      zTreeObj.setting.async.url = '/api/perms/v1/user/nodes/children/';
-    } else {
-      this.searching = true;
-      zTreeObj.setting.async.url = `/api/perms/v1/user/nodes/children/?search=${_keywords}`;
+      if (this.expandNodes) {
+        this.expandNodes.forEach((node) => {
+          if (node.id !== nodes[0].id) {
+            zTreeObj.expandNode(node, false);
+          }
+        });
+        this.expandNodes = null;
+      }
+      return null;
     }
-    zTreeObj.reAsyncChildNodes(null, 'refresh');
+    let shouldShow = [];
+    const matchedNodes = zTreeObj.getNodesByFilter(function(node) {
+      if (node.meta.type === 'asset') {
+        const host = node.meta.asset;
+        return host.hostname.indexOf(_keywords) !== -1 || host.ip.indexOf(_keywords) !== -1;
+      } else {
+        return node.name.indexOf(_keywords) !== -1;
+      }
+    });
+    matchedNodes.forEach((node) => {
+        const parents = this.recurseParent(node);
+        const children = this.recurseChildren(node);
+        shouldShow = [...shouldShow, ...parents, ...children, node];
+    });
+    this.hiddenNodes = nodes;
+    this.expandNodes = shouldShow;
+    zTreeObj.hideNodes(nodes);
+    zTreeObj.showNodes(shouldShow);
+    shouldShow.forEach((node) => {
+        if (node.isParent) {
+          zTreeObj.expandNode(node, true);
+        }
+    });
+    // zTreeObj.expandAll(true);
   }
 }
 

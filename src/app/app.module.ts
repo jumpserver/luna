@@ -26,7 +26,7 @@ import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 import {Pipes} from './pipes/pipes';
 import {PagesComponents} from './pages/pages.component';
 import {ElementComponents} from './elements/elements.component';
-import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
+import {ChangLanWarningDialogComponent, RDPSolutionDialogComponent} from './elements/nav/nav.component';
 import {DialogService, ElementDialogAlertComponent} from './elements/dialog/dialog.service';
 import {PluginModules} from './plugins/plugins';
 import {TestPageComponent} from './test-page/test-page.component';
@@ -55,6 +55,7 @@ import {SftpComponent} from './elements/sftp/sftp.component';
     AssetTreeDialogComponent,
     ElementDialogAlertComponent,
     ChangLanWarningDialogComponent,
+    RDPSolutionDialogComponent,
   ],
   bootstrap: [AppComponent],
   providers: [

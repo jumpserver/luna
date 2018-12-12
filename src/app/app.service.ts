@@ -14,7 +14,7 @@ import {DataStore, User, Browser, i18n} from './globals';
 import {environment} from '../environments/environment';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
-import {HostGroup} from './pages/control/cleftbar/cleftbar.component';
+import {HostGroup, Node} from './pages/control/cleftbar/cleftbar.component';
 import * as UUID from 'uuid-js/lib/uuid.js';
 
 declare function unescape(s: string): string;
@@ -66,8 +66,8 @@ export class HttpService {
     return this.http.get('/api/users/v1/profile/');
   }
 
-  get_my_asset_groups_assets() {
-    return this.http.get<Array<HostGroup>>('/api/perms/v1/user/nodes-assets/');
+  get_my_granted_nodes() {
+    return this.http.get<Array<Node>>('/api/perms/v1/user/nodes-assets/tree/');
   }
 
   get_guacamole_token(user_id: string, authToken: string) {
@@ -89,11 +89,18 @@ export class HttpService {
   }
 
   guacamole_add_asset(user_id: string, asset_id: string, system_user_id: string) {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('user_id', user_id)
       .set('asset_id', asset_id)
       .set('system_user_id', system_user_id)
       .set('token', DataStore.guacamole_token);
+    const solution = localStorage.getItem('rdpSolution') || 'Auto';
+    if (solution !== 'Auto') {
+      const width = solution.split('x')[0];
+      const height = solution.split('x')[1];
+      params = params.set('width', width).set('height', height);
+    }
+
     return this.http.get(
       '/guacamole/api/session/ext/jumpserver/asset/add',
       {
@@ -104,9 +111,15 @@ export class HttpService {
   }
 
   guacamole_token_add_asset(assetToken: string, token: string) {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('asset_token', assetToken)
       .set('token', token);
+    const solution = localStorage.getItem('rdpSolution') || 'Auto';
+    if (solution !== 'Auto') {
+      const width = solution.split('x')[0];
+      const height = solution.split('x')[1];
+      params = params.set('width', width).set('height', height);
+    }
     return this.http.get(
       '/guacamole/api/ext/jumpserver/asset/token/add',
       {

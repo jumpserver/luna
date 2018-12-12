@@ -25,6 +25,18 @@ export interface HostGroup {
   children: Array<Host>;
 }
 
+export interface Node {
+  id: string;
+  name: string;
+  comment: string;
+  title: string;
+  isParent: boolean;
+  pId: string;
+  open: boolean;
+  iconSkin: string;
+  meta: object;
+}
+
 export class Host {
   name: string;
   id: string;
@@ -93,7 +105,7 @@ export class CleftbarComponent implements OnInit {
   }
 
   ngOnInit() {
-    this._http.get_my_asset_groups_assets()
+    this._http.get_my_granted_nodes()
       .subscribe(response => {
         this.zNodes = response;
         // this.HostGroups = response;
