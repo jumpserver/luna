@@ -1,6 +1,6 @@
 {
   "name": "luna",
-  "version": "1.4.3",
+  "version": "1.4.6",
   "license": "GPLv3",
   "scripts": {
     "ng": "ng",
