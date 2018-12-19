@@ -182,7 +182,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       NavList.List[id].user = user;
       if (user.protocol === 'ssh' || user.protocol === 'telnet') {
         NavList.List[id].type = 'ssh';
-      } else if (user.protocol === 'rdp') {
+      } else if (user.protocol === 'rdp' || user.protocol === 'vnc') {
         NavList.List[id].type = 'rdp';
       }
       NavList.List.push(new View());
