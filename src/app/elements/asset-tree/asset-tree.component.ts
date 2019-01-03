@@ -4,6 +4,7 @@ import {AppService, LogService} from '../../app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {BehaviorSubject} from 'rxjs/BehaviorSubject';
+import {Router, ActivatedRoute, Params} from '@angular/router';
 
 declare var $: any;
 
@@ -54,7 +55,9 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
 
   constructor(private _appService: AppService,
               public _dialog: MatDialog,
-              public _logger: LogService) {
+              public _logger: LogService,
+              private activatedRoute: ActivatedRoute,
+              ) {
     this.searchEvt$ = new BehaviorSubject<string>(this.query);
   }
 
@@ -69,6 +72,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       .subscribe((n) => {
         this.filter();
       });
+
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -83,6 +87,18 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   draw() {
     $.fn.zTree.init($('#ztree'), this.setting, this.Data);
     this.zTree = $.fn.zTree.getZTreeObj('ztree');
+
+    this.activatedRoute.queryParams.subscribe(params => {
+        const login_to = params['login_to'];
+        if (login_to) {
+          this.Data.forEach(t => {
+            if (login_to === t.id && t.isParent === false) {
+              this.Connect(t);
+              return;
+            }
+          });
+        }
+    });
   }
 
   showRMenu(left, top) {
