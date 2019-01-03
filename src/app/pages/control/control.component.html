@@ -3,7 +3,7 @@
     <pages-control-cleftbar></pages-control-cleftbar>
   </div>
   <div fxFlex="0" ngxSplitHandle [style.display]="activeViewIsRdp() ? 'none' : 'block'" (mouseup)="dragSplitBtn($event)"></div>
-  <div fxFlex="1 1 80%" ngxSplitArea class="content">
+  <div [fxFlex]="DataStore.leftbarshow ? '1 1 80%' : '1 1 100%'" ngxSplitArea class="content">
     <pages-control-control></pages-control-control>
   </div>
 </div>
