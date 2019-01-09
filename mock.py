@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# coding: utf-8
 
 
 import eventlet
@@ -41,138 +40,61 @@ app = Flask(__name__, template_folder='dist')
 
 socketio = None
 
-nodes = [{'id': '6353b2d3-54f1-4354-bede-fe8d8eebfe0c',
-  'key': '4',
-  'name': '开发部',
-  'value': '开发部',
-  'parent': '6353b2d3-54f1-4354-bede-fe8d8eebfe0c',
-  'assets_granted': [{'id': '9e911ac3-7231-441b-9123-e1945e93c0b0',
-    'hostname': 'Test-48',
-    'ip': '172.15.1.48',
-    'port': 22,
-    'system_users_granted': [{'id': '859274bb-dc6e-4890-87dc-eefddf0ea8c1',
-      'name': '111',
-      'username': '1',
-      'priority': 20,
-      'protocol': 'ssh',
-      'comment': '',
-      'login_mode': 'auto'}],
-    'is_active': True,
-    'system_users_join': '1',
-    'os': None,
+nodes = [{'iconSkin': '',
+  'id': '0',
+  'isParent': True,
+  'meta': {'node': {'id': '08a2ba4c-238a-4e01-9f07-eb82b8e3377b',
+    'key': '0',
+    'name': 'ROOT',
+    'value': 'ROOT'},
+   'type': 'node'},
+  'name': 'ROOT (2)',
+  'open': True,
+  'pId': '',
+  'title': 'ROOT (2)'},
+ {'iconSkin': 'linux',
+  'id': 'f4d3b256-c19b-4472-9a53-b9f48e51f311',
+  'isParent': False,
+  'meta': {'asset': {'comment': '',
     'domain': None,
-    'platform': 'Linux',
-    'comment': '',
-    'protocol': 'ssh',
-    'org_id': 'e338bd97-bdb1-47b1-95f7-4994776488b5',
-    'org_name': '开发部'}],
-  'assets_amount': 1,
-  'org_id': 'e338bd97-bdb1-47b1-95f7-4994776488b5'},
- {'id': 'cd3c1d48-4bf0-43e1-bca1-0817a1295e22',
-  'key': '5:23:0:1',
-  'name': '新节点 2',
-  'value': '新节点 2',
-  'parent': 'a3852030-eeb5-4c0f-ba57-32cce42c8333',
-  'assets_granted': [{'id': '9590ebfa-5720-461d-835f-fecfe6245c67',
-    'hostname': 'Test-48',
-    'ip': '172.15.1.48',
-    'port': 22,
-    'system_users_granted': [{'id': 'e2b1900f-b0e6-4813-b90a-7216d670a1cd',
-      'name': 'test_SSH',
-      'username': 'test',
-      'priority': 10,
-      'protocol': 'ssh',
-      'comment': '',
-      'login_mode': 'auto'}],
+    'hostname': 'centos',
+    'id': 'f4d3b256-c19b-4472-9a53-b9f48e51f311',
+    'ip': '192.168.244.142',
     'is_active': True,
-    'system_users_join': 'test',
-    'os': None,
-    'domain': None,
     'platform': 'Linux',
-    'comment': '',
-    'protocol': 'ssh',
-    'org_id': '8eb2637c-e14f-41f1-b1b1-00a2dfa20248',
-    'org_name': '测试部'}],
-  'assets_amount': 1,
-  'org_id': '8eb2637c-e14f-41f1-b1b1-00a2dfa20248'},
- {'id': 'a3852030-eeb5-4c0f-ba57-32cce42c8333',
-  'key': '5:23:0',
-  'name': '新节点 1',
-  'value': '新节点 1',
-  'parent': '39c0f461-e9c2-4ef5-926d-3308ae9c43d8',
-  'assets_granted': [],
-  'assets_amount': 0,
-  'org_id': '8eb2637c-e14f-41f1-b1b1-00a2dfa20248'},
- {'id': '39c0f461-e9c2-4ef5-926d-3308ae9c43d8',
-  'key': '5:23',
-  'name': 'hbase',
-  'value': 'hbase',
-  'parent': 'd49f0fb2-ad3e-4f13-835f-12c13329f3be',
-  'assets_granted': [],
-  'assets_amount': 0,
-  'org_id': '8eb2637c-e14f-41f1-b1b1-00a2dfa20248'},
- {'id': 'd49f0fb2-ad3e-4f13-835f-12c13329f3be',
-  'key': '5',
-  'name': '测试部',
-  'value': '测试部',
-  'parent': 'd49f0fb2-ad3e-4f13-835f-12c13329f3be',
-  'assets_granted': [],
-  'assets_amount': 0,
-  'org_id': '8eb2637c-e14f-41f1-b1b1-00a2dfa20248'},
- {'id': 'c10cb68a-816d-4030-9a7b-e9a22a83818a',
-  'key': '5:12',
-  'name': '测试资产666',
-  'value': '测试资产666',
-  'parent': 'd49f0fb2-ad3e-4f13-835f-12c13329f3be',
-  'assets_granted': [{'id': '9590ebfa-5720-461d-835f-fecfe6245c67',
-    'hostname': 'Test-48',
-    'ip': '172.15.1.48',
     'port': 22,
-    'system_users_granted': [{'id': 'e2b1900f-b0e6-4813-b90a-7216d670a1cd',
-      'name': 'test_SSH',
-      'username': 'test',
-      'priority': 10,
-      'protocol': 'ssh',
-      'comment': '',
-      'login_mode': 'auto'}],
-    'is_active': True,
-    'system_users_join': 'test',
-    'os': None,
+    'protocol': 'ssh'},
+   'system_users': [{'comment': '',
+     'id': '2fb10ed2-db03-4c69-9fc1-aacbb2a9cc75',
+     'login_mode': 'auto',
+     'name': 'web',
+     'priority': 20,
+     'protocol': 'ssh',
+     'username': 'web'}],
+   'type': 'asset'},
+  'name': 'centos',
+  'open': False,
+  'pId': '0',
+  'title': '192.168.244.142'},
+ {'iconSkin': 'windows',
+  'id': '741127ed-1e51-46c0-8d3d-f8a7d215b70d',
+  'isParent': False,
+  'meta': {'asset': {'comment': '',
     'domain': None,
-    'platform': 'Linux',
-    'comment': '',
-    'protocol': 'ssh',
-    'org_id': '8eb2637c-e14f-41f1-b1b1-00a2dfa20248',
-    'org_name': '测试部'}],
-  'assets_amount': 1,
-  'org_id': '8eb2637c-e14f-41f1-b1b1-00a2dfa20248'},
- {'id': 'c57099a1-f1fc-48d2-9d0c-611ed65560b2',
-  'key': '5:3',
-  'name': '测试资产265465',
-  'value': '测试资产265465',
-  'parent': 'd49f0fb2-ad3e-4f13-835f-12c13329f3be',
-  'assets_granted': [{'id': '965e86b1-b09a-4c1e-8b6c-784803fdeeaf',
-    'hostname': 'Test01-22',
-    'ip': '172.15.2.22',
-    'port': 22,
-    'system_users_granted': [{'id': 'e2b1900f-b0e6-4813-b90a-7216d670a1cd',
-      'name': 'test_SSH',
-      'username': 'test',
-      'priority': 10,
-      'protocol': 'ssh',
-      'comment': '',
-      'login_mode': 'auto'}],
+    'hostname': 'windows',
+    'id': '741127ed-1e51-46c0-8d3d-f8a7d215b70d',
+    'ip': '192.168.244.142',
     'is_active': True,
-    'system_users_join': 'test',
-    'os': None,
-    'domain': None,
-    'platform': 'Linux',
-    'comment': '',
-    'protocol': 'ssh',
-    'org_id': '8eb2637c-e14f-41f1-b1b1-00a2dfa20248',
-    'org_name': '测试部'}],
-  'assets_amount': 1,
-  'org_id': '8eb2637c-e14f-41f1-b1b1-00a2dfa20248'}]
+    'platform': 'Windows',
+    'port': 3389,
+    'protocol': 'rdp'},
+   'system_users': [],
+   'type': 'asset'},
+  'name': 'windows',
+  'open': False,
+  'pId': '0',
+  'title': '192.168.244.142'}]
+
 
 class ProxyServer:
     def __init__(self, client, asset, system_user):
@@ -195,6 +117,7 @@ class ProxyServer:
                     break
                 self.server.send(data)
             elif self.client.change_size_evt in r:
+                self.client.change_size_evt.recv(1)
                 self.resize_win_size()
 
     def resize_win_size(self):
@@ -206,7 +129,7 @@ class ProxyServer:
     def ssh_with_password(self, width=80, height=24):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect("192.168.244.177", 22, "root", "redhat123")
+        ssh.connect("192.168.244.142", 22, "root", "redhat")
         chan = ssh.invoke_shell(term='xterm', width=width, height=height)
         return chan
 
@@ -271,10 +194,9 @@ def send_js(path):
     return send_from_directory('dist', path)
 
 
-@app.route('/api/perms/v1/user/nodes-assets/')
+@app.route('/api/perms/v1/user/nodes-assets/tree/')
 def asset_groups_assets():
-    # node = json.loads(nodes)
-    return jsonify([])
+    return jsonify(nodes)
 
 
 @app.route('/api/terminal/v1/sessions/test/replay/')
@@ -295,15 +217,6 @@ def get_session_replay(pk):
         'src': 'http://localhost/media/replay/2018-06-08/581a12ca-fa8f-4399-8800-f97935219ddf.replay.gz',
         'status': 'DONE',
     })
-
-
-@app.route('/api/perms/v1/user/nodes/children/')
-def get_nodes_children():
-    data1 = nodes
-    if request.args.get('id'):
-        return jsonify(data2)
-    else:
-        return jsonify(data1)
 
 
 @app.route('/luna/i18n/<i18n>')
