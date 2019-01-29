@@ -76,6 +76,7 @@ export class CleftbarComponent implements OnInit {
         }
       });
     });
+    window.dispatchEvent(new Event('resize'));
   }
 
   static Show() {
@@ -91,6 +92,7 @@ export class CleftbarComponent implements OnInit {
         }
       });
     });
+    window.dispatchEvent(new Event('resize'));
   }
 
   constructor(private _appService: AppService,
