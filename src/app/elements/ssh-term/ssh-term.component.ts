@@ -27,7 +27,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
   ngOnInit() {
     this.secret = this._uuid.gen();
     this.term = new Terminal({
-      fontFamily: '"Consolas", "monospace"',
+      fontFamily: '"Monaco", "Consolas", "monospace"',
       fontSize: 16,
       rightClickSelectsWord: true,
       theme: {
