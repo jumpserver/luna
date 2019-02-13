@@ -49,7 +49,6 @@
     "material-design-icons": "^3.0.1",
     "materialize-css": "^0.100.2",
     "metismenu": "^2.7.9",
-    "mstsc.js": "^0.2.4",
     "ng2-charts": "^1.5.0",
     "ngx-bootstrap": "^1.6.6",
     "ngx-cookie-service": "^1.0.10",
@@ -71,7 +70,7 @@
     "tslib": "^1.9.0",
     "utf-8-validate": "^5.0.2",
     "uuid-js": "^0.7.5",
-    "xterm": "^3.11.0",
+    "xterm": "^3.3.0",
     "zone.js": "0.8.20"
   },
   "devDependencies": {
