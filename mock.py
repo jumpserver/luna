@@ -163,6 +163,7 @@ class SSHws(ProxyNamespace):
 
         def proxy():
             forwarder.proxy()
+            self.emit('data', {'data': 'Disconnected', 'room': client_id}, room=client_id)
             self.logout(client_id, connection)
         self.socketio.start_background_task(proxy)
 

@@ -25,8 +25,9 @@ export class AppComponent {
     const notInIframe = window.self === window.top;
     const notInReplay = location.pathname.indexOf('/luna/replay') === -1;
     if (environment.production && notInIframe && notInReplay) {
-      $event.returnValue = true;
+      return false;
     }
+    return true;
   }
 }
 
