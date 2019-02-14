@@ -1,0 +1,9 @@
+<h1 mat-dialog-title>{{"Set font size"|trans}}</h1>
+
+<mat-form-field>
+  <input matInput placeholder='{{"Font size"|trans}}' name="fontSize" type="number" min="5" max="60" [(ngModel)]="fontSize">
+</mat-form-field>
+<div style="float: right">
+  <button mat-raised-button (click)="onNoClick()">{{"Cancel"|trans}}</button>
+  <button mat-raised-button color="primary" [disabled]="!isValid()" (click)="onSubmit()">{{"Confirm"|trans}}</button>
+</div>

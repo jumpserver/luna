@@ -14,7 +14,7 @@ import {ElementDialogAlertComponent} from './dialog/dialog.service';
 import {ElementGuacamoleComponent} from './guacamole/guacamole.component';
 import {ElementSshTermComponent} from './ssh-term/ssh-term.component';
 import {AssetTreeDialogComponent, ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
-import {RDPSolutionDialogComponent} from './nav/nav.component';
+import {RDPSolutionDialogComponent, FontSizeDialogComponent} from './nav/nav.component';
 
 export const ElementComponents = [
   ElementLeftbarComponent,
@@ -33,5 +33,6 @@ export const ElementComponents = [
   ElementAssetTreeComponent,
   ElementSshTermComponent,
   AssetTreeDialogComponent,
-  RDPSolutionDialogComponent
+  RDPSolutionDialogComponent,
+  FontSizeDialogComponent
 ];

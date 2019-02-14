@@ -12,7 +12,6 @@ import {ControlComponent, NavList, View} from '../../pages/control/control/contr
 import {DataStore, i18n} from '../../globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-import {FormControl, Validators} from '@angular/forms';
 declare let layer: any;
 
 @Component({
@@ -34,7 +33,7 @@ export class ElementNavComponent implements OnInit {
               public _dialog: MatDialog,
               private _localStorage: LocalStorageService) {
     this._logger.log('nav.ts:NavComponent');
-    this.getnav();
+    this.getNav();
   }
 
   ngOnInit() {
@@ -126,6 +125,26 @@ export class ElementNavComponent implements OnInit {
         });
         break;
       }
+      case 'SetFontSize': {
+        const dialog = this._dialog.open(
+          FontSizeDialogComponent,
+          {
+            height: '200px',
+            width: '300px',
+            data: {
+              title: 'Warning',
+              note: 'The page will be reload, can you acceptable?',
+              cancel: 'Cancel',
+              confirm: 'Confirm',
+            },
+          });
+        dialog.afterClosed().subscribe(result => {
+          if (result) {
+            console.log(result);
+          }
+        });
+        break;
+      }
       case 'EnterLicense': {
         this.EnterLicense();
         break;
@@ -194,7 +213,7 @@ export class ElementNavComponent implements OnInit {
     });
   }
 
-  getnav() {
+  getNav() {
     DataStore.Nav = [{
       'id': 'File',
       'name': 'Server',
@@ -234,6 +253,11 @@ export class ElementNavComponent implements OnInit {
           'id': 'RDPResolution',
           'click': 'SetResolution',
           'name': 'RDP Resolution'
+        },
+        {
+          'id': 'FontSize',
+          'click': 'SetFontSize',
+          'name': 'Font Size'
         },
         {
           'id': 'SplitVertical',
@@ -383,6 +407,42 @@ export class RDPSolutionDialogComponent implements OnInit {
 
   onSubmit() {
     this.setSolution(this.solution);
+    this.dialogRef.close();
+  }
+
+  onNoClick(): void {
+    this.dialogRef.close();
+  }
+}
+
+@Component({
+  selector: 'elements-font-size-dialog',
+  templateUrl: 'fontSizeDialog.html',
+})
+export class FontSizeDialogComponent implements OnInit {
+  fontSize: string;
+  solution: string;
+  cacheKey = 'fontSize';
+
+  constructor(public dialogRef: MatDialogRef<FontSizeDialogComponent>,
+              @Inject(MAT_DIALOG_DATA) public data: any) {
+  }
+
+  ngOnInit() {
+    this.fontSize = localStorage.getItem(this.cacheKey) || '14';
+  }
+
+  setFontSize(value: string) {
+    localStorage.setItem(this.cacheKey, value);
+  }
+
+  isValid() {
+    const size = parseInt(this.fontSize, 10);
+    return size > 5 && size < 60;
+  }
+
+  onSubmit() {
+    this.setFontSize(this.fontSize);
     this.dialogRef.close();
   }
 
