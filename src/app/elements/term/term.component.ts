@@ -57,10 +57,10 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     const elementPaddingVer = elementPadding.top + elementPadding.bottom;
     const elementPaddingHor = elementPadding.right + elementPadding.left;
     const availableHeight = activeEle.height() - elementPaddingVer;
-    const availableWidth = activeEle.width() - elementPaddingHor - (<any>this.term)._core.viewport.scrollBarWidth;
+    const availableWidth = activeEle.width() - elementPaddingHor - (<any>this.term).viewport.scrollBarWidth;
     const geometry = [
-      Math.floor(availableWidth / (<any>this.term)._core.renderer.dimensions.actualCellWidth) - 1,
-      Math.floor(availableHeight / (<any>this.term)._core.renderer.dimensions.actualCellHeight) - 1
+      Math.floor(availableWidth / (<any>this.term).renderer.dimensions.actualCellWidth) - 1,
+      Math.floor(availableHeight / (<any>this.term).renderer.dimensions.actualCellHeight) - 1
     ];
     return geometry;
   }
@@ -70,7 +70,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     if (isNaN(size[0]) || isNaN(size[1])) {
       fit(this.term);
     } else {
-      (<any>this.term)._core.renderer.clear();
+      (<any>this.term).renderer.clear();
       this.term.resize(size[0], size[1]);
     }
     this.winSizeChangeTrigger.emit([this.term.cols, this.term.rows]);

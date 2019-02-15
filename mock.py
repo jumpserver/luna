@@ -129,7 +129,7 @@ class ProxyServer:
     def ssh_with_password(self, width=80, height=24):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect("192.168.244.142", 22, "root", "redhat")
+        ssh.connect("192.168.244.185", 22, "root", "redhat")
         chan = ssh.invoke_shell(term='xterm', width=width, height=height)
         return chan
 
@@ -137,6 +137,7 @@ class ProxyServer:
 class SSHws(ProxyNamespace):
 
     def connect_host(self, message):
+        print("Connect host: {}".format(message))
         asset_id = message.get('uuid', None)
         system_user_id = message.get('userid', None)
         secret = message.get('secret', None)
@@ -162,6 +163,7 @@ class SSHws(ProxyNamespace):
 
         def proxy():
             forwarder.proxy()
+            self.emit('data', {'data': 'Disconnected', 'room': client_id}, room=client_id)
             self.logout(client_id, connection)
         self.socketio.start_background_task(proxy)
 

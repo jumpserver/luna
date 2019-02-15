@@ -12,7 +12,6 @@ import {ControlComponent, NavList, View} from '../../pages/control/control/contr
 import {DataStore, i18n} from '../../globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-import {FormControl, Validators} from '@angular/forms';
 declare let layer: any;
 
 @Component({
@@ -34,7 +33,7 @@ export class ElementNavComponent implements OnInit {
               public _dialog: MatDialog,
               private _localStorage: LocalStorageService) {
     this._logger.log('nav.ts:NavComponent');
-    this.getnav();
+    this.getNav();
   }
 
   ngOnInit() {
@@ -111,13 +110,21 @@ export class ElementNavComponent implements OnInit {
           RDPSolutionDialogComponent,
           {
             height: '200px',
-            width: '300px',
-            data: {
-              title: 'Warning',
-              note: 'The page will be reload, can you acceptable?',
-              cancel: 'Cancel',
-              confirm: 'Confirm',
-            },
+            width: '300px'
+          });
+        dialog.afterClosed().subscribe(result => {
+          if (result) {
+            console.log(result);
+          }
+        });
+        break;
+      }
+      case 'SetFont': {
+        const dialog = this._dialog.open(
+          FontDialogComponent,
+          {
+            height: '200px',
+            width: '300px'
           });
         dialog.afterClosed().subscribe(result => {
           if (result) {
@@ -194,7 +201,7 @@ export class ElementNavComponent implements OnInit {
     });
   }
 
-  getnav() {
+  getNav() {
     DataStore.Nav = [{
       'id': 'File',
       'name': 'Server',
@@ -234,6 +241,11 @@ export class ElementNavComponent implements OnInit {
           'id': 'RDPResolution',
           'click': 'SetResolution',
           'name': 'RDP Resolution'
+        },
+        {
+          'id': 'Font',
+          'click': 'SetFont',
+          'name': 'Font'
         },
         {
           'id': 'SplitVertical',
@@ -345,6 +357,7 @@ export class ElementNavComponent implements OnInit {
 @Component({
   selector: 'elements-nav-dialog',
   templateUrl: 'changeLanWarning.html',
+  styles: ['.mat-form-field { width: 100%; }']
 })
 export class ChangLanWarningDialogComponent implements OnInit {
 
@@ -363,6 +376,7 @@ export class ChangLanWarningDialogComponent implements OnInit {
 @Component({
   selector: 'elements-rdp-solution-dialog',
   templateUrl: 'rdpSolutionDialog.html',
+  styles: ['.mat-form-field { width: 100%; }']
 })
 export class RDPSolutionDialogComponent implements OnInit {
   solutions = ['Auto', '1024x768', '1366x768', '1400x900'];
@@ -383,6 +397,43 @@ export class RDPSolutionDialogComponent implements OnInit {
 
   onSubmit() {
     this.setSolution(this.solution);
+    this.dialogRef.close();
+  }
+
+  onNoClick(): void {
+    this.dialogRef.close();
+  }
+}
+
+@Component({
+  selector: 'elements-font-size-dialog',
+  templateUrl: 'fontDialog.html',
+  styles: ['.mat-form-field { width: 100%; }']
+})
+export class FontDialogComponent implements OnInit {
+  fontSize: string;
+  solution: string;
+  cacheKey = 'fontSize';
+
+  constructor(public dialogRef: MatDialogRef<FontDialogComponent>,
+              @Inject(MAT_DIALOG_DATA) public data: any) {
+  }
+
+  ngOnInit() {
+    this.fontSize = localStorage.getItem(this.cacheKey) || '14';
+  }
+
+  setFontSize(value: string) {
+    localStorage.setItem(this.cacheKey, value);
+  }
+
+  isValid() {
+    const size = parseInt(this.fontSize, 10);
+    return size > 5 && size < 60;
+  }
+
+  onSubmit() {
+    this.setFontSize(this.fontSize);
     this.dialogRef.close();
   }
 
