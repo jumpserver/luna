@@ -57,6 +57,7 @@
   "rdp resolution": "RDP分辨率",
   "set rdp solution": "设置分辨率",
   "select a solution": "选择分辨率",
-  "set font size": "设置字体大小",
+  "set font": "设置字体",
+  "font": "字体",
   "font size": "字体大小"
 }

@@ -110,13 +110,7 @@ export class ElementNavComponent implements OnInit {
           RDPSolutionDialogComponent,
           {
             height: '200px',
-            width: '300px',
-            data: {
-              title: 'Warning',
-              note: 'The page will be reload, can you acceptable?',
-              cancel: 'Cancel',
-              confirm: 'Confirm',
-            },
+            width: '300px'
           });
         dialog.afterClosed().subscribe(result => {
           if (result) {
@@ -125,18 +119,12 @@ export class ElementNavComponent implements OnInit {
         });
         break;
       }
-      case 'SetFontSize': {
+      case 'SetFont': {
         const dialog = this._dialog.open(
-          FontSizeDialogComponent,
+          FontDialogComponent,
           {
             height: '200px',
-            width: '300px',
-            data: {
-              title: 'Warning',
-              note: 'The page will be reload, can you acceptable?',
-              cancel: 'Cancel',
-              confirm: 'Confirm',
-            },
+            width: '300px'
           });
         dialog.afterClosed().subscribe(result => {
           if (result) {
@@ -255,9 +243,9 @@ export class ElementNavComponent implements OnInit {
           'name': 'RDP Resolution'
         },
         {
-          'id': 'FontSize',
-          'click': 'SetFontSize',
-          'name': 'Font Size'
+          'id': 'Font',
+          'click': 'SetFont',
+          'name': 'Font'
         },
         {
           'id': 'SplitVertical',
@@ -369,6 +357,7 @@ export class ElementNavComponent implements OnInit {
 @Component({
   selector: 'elements-nav-dialog',
   templateUrl: 'changeLanWarning.html',
+  styles: ['.mat-form-field { width: 100%; }']
 })
 export class ChangLanWarningDialogComponent implements OnInit {
 
@@ -387,6 +376,7 @@ export class ChangLanWarningDialogComponent implements OnInit {
 @Component({
   selector: 'elements-rdp-solution-dialog',
   templateUrl: 'rdpSolutionDialog.html',
+  styles: ['.mat-form-field { width: 100%; }']
 })
 export class RDPSolutionDialogComponent implements OnInit {
   solutions = ['Auto', '1024x768', '1366x768', '1400x900'];
@@ -417,14 +407,15 @@ export class RDPSolutionDialogComponent implements OnInit {
 
 @Component({
   selector: 'elements-font-size-dialog',
-  templateUrl: 'fontSizeDialog.html',
+  templateUrl: 'fontDialog.html',
+  styles: ['.mat-form-field { width: 100%; }']
 })
-export class FontSizeDialogComponent implements OnInit {
+export class FontDialogComponent implements OnInit {
   fontSize: string;
   solution: string;
   cacheKey = 'fontSize';
 
-  constructor(public dialogRef: MatDialogRef<FontSizeDialogComponent>,
+  constructor(public dialogRef: MatDialogRef<FontDialogComponent>,
               @Inject(MAT_DIALOG_DATA) public data: any) {
   }
 
