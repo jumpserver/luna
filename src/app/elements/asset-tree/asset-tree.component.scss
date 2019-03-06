@@ -1,9 +1,21 @@
+#ztree .fa {
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  background-size: 18px;
+  background-position: 3px 3px;
+  margin-left: -30px;
+  position: absolute;
+  margin-right: 10px;
+  text-align: center;
+  display: inline-block;
+  font: normal normal normal 14px/1 FontAwesome !important;
+}
 
 .ztree {
   height: 100%;
   background-color: inherit;
 }
-
 
 .basicContext {
     background: #000;
@@ -38,19 +50,6 @@
     margin: 0;
 }
 
-.fa {
-    width: 24px;
-    height: 24px;
-    line-height: 24px;
-    background-size: 18px;
-    background-position: 3px 3px;
-    margin-left: -30px;
-    position: absolute;
-    margin-right: 10px;
-    text-align: center;
-    display: inline-block;
-}
-
 .basicContext__item {
   cursor: pointer;
   padding: 0 6px;
@@ -61,7 +60,7 @@
     padding: 0 35px;
     text-decoration: none;
     width: auto;
-  opacity: 1;
+    opacity: 1;
     white-space: nowrap;
     line-height: 24px;
     text-shadow: none;
@@ -103,3 +102,4 @@ tr:hover {
 .basicContext__data {
   padding: 0 6px;
 }
+

@@ -1,10 +1,10 @@
-import {Component, Input, OnInit, Inject, SimpleChanges, OnChanges, ElementRef, ViewChild} from '@angular/core';
+import {Component, Input, Output, OnInit, Inject, SimpleChanges, OnChanges, ElementRef, ViewChild, EventEmitter} from '@angular/core';
 import {NavList, View} from '../../pages/control/control/control.component';
 import {AppService, LogService} from '../../app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {BehaviorSubject} from 'rxjs/BehaviorSubject';
-import {Router, ActivatedRoute, Params} from '@angular/router';
+import {ActivatedRoute} from '@angular/router';
 
 declare var $: any;
 
@@ -17,6 +17,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   @Input() Data: any;
   @Input() query: string;
   @Input() searchEvt$: BehaviorSubject<string>;
+  @Output() treeRefresh = new EventEmitter<boolean>();
   @ViewChild('rMenu') rMenu: ElementRef;
   nodes = [];
   setting = {
@@ -87,6 +88,10 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   draw() {
     $.fn.zTree.init($('#ztree'), this.setting, this.Data);
     this.zTree = $.fn.zTree.getZTreeObj('ztree');
+    this.rootNodeAddDom(this.zTree, () => {
+      this.zTree.destroy();
+      this.treeRefresh.emit(true);
+    });
 
     this.activatedRoute.queryParams.subscribe(params => {
         const login_to = params['login_to'];
@@ -98,6 +103,17 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
             }
           });
         }
+    });
+  }
+
+  rootNodeAddDom(ztree, callback) {
+    const refreshIcon = '<a id="tree-refresh"><i class="fa fa-refresh"></i></a>';
+    const rootNode = ztree.getNodes()[0];
+    const $rootNodeRef = $('#' + rootNode.tId + '_a');
+    $rootNodeRef.after(refreshIcon);
+    const refreshIconRef = $('#tree-refresh');
+    refreshIconRef.bind('click', function () {
+        callback();
     });
   }
 
