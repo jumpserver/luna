@@ -14,16 +14,9 @@ import {DataStore} from '../../../globals';
 import {version} from '../../../../environments/environment';
 import {NavList, View} from '../control/control.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-import {FormControl, Validators} from '@angular/forms';
 import {ElementServerMenuComponent} from '../../../elements/server-menu/server-menu.component';
 import {DialogService} from '../../../elements/dialog/dialog.service';
-import {Observable} from '../../../../../node_modules/rxjs';
 
-export interface HostGroup {
-  name: string;
-  id: string;
-  children: Array<Host>;
-}
 
 export interface Node {
   id: string;
@@ -51,7 +44,6 @@ export class Host {
 })
 export class CleftbarComponent implements OnInit {
   DataStore = DataStore;
-  HostGroups: Array<HostGroup>;
   zNodes: any;
   version = version;
   q: string;
@@ -103,17 +95,12 @@ export class CleftbarComponent implements OnInit {
               public _dialog: MatDialog,
               private _layer: DialogService) {
     this._logger.log('nav.ts:NavComponent');
-    // this._appService.getnav()
   }
 
   ngOnInit() {
     this._http.get_my_granted_nodes()
       .subscribe(response => {
         this.zNodes = response;
-        // this.HostGroups = response;
-        // if (!DataStore.autologin) {
-        //   this.autologin();
-        // }
       });
   }
 
@@ -121,10 +108,15 @@ export class CleftbarComponent implements OnInit {
     this._search.Search(q);
   }
 
+  refreshGrantNodes() {
+    this._http.refresh_my_granted_nodes()
+      .subscribe(response => {
+        this.zNodes = response;
+      });
+  }
+
   onRightClick(event: MouseEvent): void {
     this.clientX = event.clientX;
     this.clientY = event.clientY;
-    // console.log(this.clientX, this.clientY);
-    // this._menu.contextmenu(this.clientY, this.clientX);
   }
 }
