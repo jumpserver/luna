@@ -1,4 +1,2 @@
-*
-!dist
-!nginx.conf
-!i18n
+dist
+node_modules
