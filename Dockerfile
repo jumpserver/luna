@@ -1,6 +1,7 @@
-FROM node as stage-build
+FROM node:10 as stage-build
 WORKDIR /data
 ADD ./package.json /data/package.json
+ADD ./package-lock.json /data/package-lock.json
 RUN npm i
 ADD . /data
 RUN npm run-script build

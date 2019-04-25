@@ -70,7 +70,7 @@
     "tslib": "^1.9.0",
     "utf-8-validate": "^5.0.2",
     "uuid-js": "^0.7.5",
-    "xterm": "^3.3.0",
+    "xterm": "3.3.0",
     "zone.js": "0.8.20"
   },
   "devDependencies": {
@@ -94,6 +94,6 @@
     "protractor": "^5.4.2",
     "ts-node": "3.3.0",
     "tslint": "5.9.1",
-    "typescript": "2.4.2"
+    "typescript": "2.6.2"
   }
 }
