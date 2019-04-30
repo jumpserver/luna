@@ -268,7 +268,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     if (!zTreeObj) {
       return null;
     }
-    const _keywords = this.query;
+    const _keywords = this.query.toLowerCase();
     const nodes = zTreeObj.transformToArray(zTreeObj.getNodes());
     if (!_keywords) {
       if (this.hiddenNodes) {
@@ -289,9 +289,9 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     const matchedNodes = zTreeObj.getNodesByFilter(function(node) {
       if (node.meta.type === 'asset') {
         const host = node.meta.asset;
-        return host.hostname.indexOf(_keywords) !== -1 || host.ip.indexOf(_keywords) !== -1;
+        return host.hostname.toLowerCase().indexOf(_keywords) !== -1 || host.ip.indexOf(_keywords) !== -1;
       } else {
-        return node.name.indexOf(_keywords) !== -1;
+        return node.name.toLowerCase().indexOf(_keywords) !== -1;
       }
     });
     matchedNodes.forEach((node) => {
