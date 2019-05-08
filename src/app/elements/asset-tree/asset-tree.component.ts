@@ -268,7 +268,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     if (!zTreeObj) {
       return null;
     }
-    const _keywords = this.query.toLowerCase();
+    let _keywords = this.query;
     const nodes = zTreeObj.transformToArray(zTreeObj.getNodes());
     if (!_keywords) {
       if (this.hiddenNodes) {
@@ -285,6 +285,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       }
       return null;
     }
+    _keywords = _keywords.toLowerCase();
     let shouldShow = [];
     const matchedNodes = zTreeObj.getNodesByFilter(function(node) {
       if (node.meta.type === 'asset') {
