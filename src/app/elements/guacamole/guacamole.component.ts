@@ -19,7 +19,6 @@ export class ElementGuacamoleComponent implements OnInit {
   @Input() index: number;
   @ViewChild('rdp') el: ElementRef;
 
-
   constructor(private sanitizer: DomSanitizer,
               private _http: HttpService,
               private _cookie: CookieService,
@@ -32,6 +31,7 @@ export class ElementGuacamoleComponent implements OnInit {
         data => {
           const base = data.result;
           this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamole_token;
+          NavList.List[this.index].Rdp = this.el.nativeElement;
         },
         error => {
           this._logger.error(error);
@@ -42,6 +42,7 @@ export class ElementGuacamoleComponent implements OnInit {
         data => {
           const base = data.result;
           this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamole_token;
+          NavList.List[this.index].Rdp = this.el.nativeElement;
         },
         error2 => {
           this._logger.error(error2);
@@ -78,8 +79,6 @@ export class ElementGuacamoleComponent implements OnInit {
     } else {
       this.registerHost();
     }
-
-    NavList.List[this.index].Rdp = this.el.nativeElement;
   }
 
   trust(url) {
