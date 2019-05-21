@@ -26,32 +26,8 @@ export class ElementGuacamoleComponent implements OnInit {
               private _logger: LogService) {
   }
 
-  ngOnInit() {
-    // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
-    if (this.target) {
-      NavList.List[this.index].Rdp = this.el.nativeElement;
-      return null;
-    }
-
-    if (!environment.production) {
-      this.target = this._cookie.get('guacamole');
-      NavList.List[this.index].Rdp = this.el.nativeElement;
-      return null;
-    }
-    if (!DataStore.guacamole_token) {
-      this._http.get_guacamole_token(User.id, '').subscribe(
-        data => {
-          // /guacamole/client will redirect to http://guacamole/#/client
-          DataStore.guacamole_token = data['authToken'];
-        },
-        error => {
-          this._logger.error(error);
-          alert(error.message);
-          return null;
-        }
-      );
-    }
-    if (this.remoteAppId !== '') {
+  registerHost() {
+    if (this.remoteAppId) {
       this._http.guacamole_add_remote_app(User.id, this.remoteAppId).subscribe(
         data => {
           const base = data.result;
@@ -71,6 +47,36 @@ export class ElementGuacamoleComponent implements OnInit {
           this._logger.error(error2);
         }
       );
+    }
+  }
+
+  ngOnInit() {
+    // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
+    if (this.target) {
+      NavList.List[this.index].Rdp = this.el.nativeElement;
+      return null;
+    }
+
+    if (!environment.production) {
+      this.target = this._cookie.get('guacamole');
+      NavList.List[this.index].Rdp = this.el.nativeElement;
+      return null;
+    }
+    if (!DataStore.guacamole_token) {
+      this._http.get_guacamole_token(User.id, '').subscribe(
+        data => {
+          // /guacamole/client will redirect to http://guacamole/#/client
+          DataStore.guacamole_token = data['authToken'];
+          this.registerHost();
+        },
+        error => {
+          this._logger.error(error);
+          alert(error.message);
+          return null;
+        }
+      );
+    } else {
+      this.registerHost();
     }
 
     NavList.List[this.index].Rdp = this.el.nativeElement;
