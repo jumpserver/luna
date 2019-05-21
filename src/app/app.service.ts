@@ -18,6 +18,11 @@ import * as UUID from 'uuid-js/lib/uuid.js';
 
 declare function unescape(s: string): string;
 
+class GuacObjAddResp {
+  code: number;
+  result: string;
+}
+
 @Injectable()
 export class HttpService {
   headers = new HttpHeaders();
@@ -69,6 +74,10 @@ export class HttpService {
     return this.http.get<Array<Node>>('/api/perms/v1/user/nodes-assets/tree/?cache_policy=1');
   }
 
+  get_my_granted_remote_apps() {
+    return this.http.get<Array<Node>>('/api/perms/v1/user/remote-apps/tree/');
+  }
+
   refresh_my_granted_nodes() {
     return this.http.get<Array<Node>>('/api/perms/v1/user/nodes-assets/tree/?cache_policy=2');
   }
@@ -104,8 +113,29 @@ export class HttpService {
       params = params.set('width', width).set('height', height);
     }
 
-    return this.http.get(
+    return this.http.get<GuacObjAddResp>(
       '/guacamole/api/session/ext/jumpserver/asset/add',
+      {
+        headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
+        params: params
+      }
+    );
+  }
+
+  guacamole_add_remote_app(user_id: string, remote_app_id: string) {
+    let params = new HttpParams()
+      .set('user_id', user_id)
+      .set('remote_app_id', remote_app_id)
+      .set('token', DataStore.guacamole_token);
+    const solution = localStorage.getItem('rdpSolution') || 'Auto';
+    if (solution !== 'Auto') {
+      const width = solution.split('x')[0];
+      const height = solution.split('x')[1];
+      params = params.set('width', width).set('height', height);
+    }
+
+    return this.http.get<GuacObjAddResp>(
+      '/guacamole/api/session/ext/jumpserver/remote-app/add',
       {
         headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
         params: params

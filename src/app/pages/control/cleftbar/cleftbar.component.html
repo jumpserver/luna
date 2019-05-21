@@ -9,7 +9,7 @@
            type="text" tabindex="1" spellcheck="false" [(ngModel)]="q">
   </div>
   <div class="overflow ngx-scroll-overlay" fxflex="1 1 90%">
-    <elements-asset-tree [Data]="zNodes" [query]="q" (treeRefresh)="refreshGrantNodes()"></elements-asset-tree>
+    <elements-asset-tree [query]="q" ></elements-asset-tree>
   </div>
 
   <div class="footer-version" fxflex="0 0 26px">

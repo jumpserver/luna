@@ -42,9 +42,8 @@ export class Host {
   styleUrls: ['./cleftbar.component.scss'],
   providers: [SearchComponent, ElementServerMenuComponent]
 })
-export class CleftbarComponent implements OnInit {
+export class CleftbarComponent {
   DataStore = DataStore;
-  zNodes: any;
   version = version;
   q: string;
   event: MouseEvent;
@@ -97,22 +96,8 @@ export class CleftbarComponent implements OnInit {
     this._logger.log('nav.ts:NavComponent');
   }
 
-  ngOnInit() {
-    this._http.get_my_granted_nodes()
-      .subscribe(response => {
-        this.zNodes = response;
-      });
-  }
-
   Search(q) {
     this._search.Search(q);
-  }
-
-  refreshGrantNodes() {
-    this._http.refresh_my_granted_nodes()
-      .subscribe(response => {
-        this.zNodes = response;
-      });
   }
 
   onRightClick(event: MouseEvent): void {

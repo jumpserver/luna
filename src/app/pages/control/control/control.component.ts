@@ -19,6 +19,7 @@ export class View {
   closed: boolean;
   host: any;
   user: any;
+  remoteApp: any;
   room: string;
   Rdp: any;
   Term: any;
