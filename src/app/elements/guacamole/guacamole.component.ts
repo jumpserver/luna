@@ -63,11 +63,14 @@ export class ElementGuacamoleComponent implements OnInit {
       NavList.List[this.index].Rdp = this.el.nativeElement;
       return null;
     }
-    if (!DataStore.guacamole_token) {
+    const now = new Date();
+    const nowTime = now.getTime() / 1000;
+    if (!DataStore.guacamole_token || nowTime - DataStore.guacamole_token_time > 3600) {
       this._http.get_guacamole_token(User.id, '').subscribe(
         data => {
           // /guacamole/client will redirect to http://guacamole/#/client
           DataStore.guacamole_token = data['authToken'];
+          DataStore.guacamole_token_time = nowTime;
           this.registerHost();
         },
         error => {

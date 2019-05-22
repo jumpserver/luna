@@ -91,6 +91,7 @@ export let DataStore: {
   windowsize: Array<number>;
   autologin: boolean;
   guacamole_token: string;
+  guacamole_token_time: number;
 } = {
   socket: io.connect(),
   Nav: [{}],
@@ -102,7 +103,8 @@ export let DataStore: {
   leftbarshow: true,
   windowsize: [],
   autologin: false,
-  guacamole_token: ''
+  guacamole_token: '',
+  guacamole_token_time: 0
 };
 export let CSRF = '';
 
