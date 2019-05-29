@@ -1,6 +1,6 @@
 import {Component, Input, Output, OnInit, Inject, SimpleChanges, OnChanges, ElementRef, ViewChild, EventEmitter} from '@angular/core';
 import {NavList, View} from '../../pages/control/control/control.component';
-import {AppService, LogService} from '../../app.service';
+import {AppService, HttpService, LogService} from '../../app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {BehaviorSubject} from 'rxjs/BehaviorSubject';
@@ -14,11 +14,10 @@ declare var $: any;
   styleUrls: ['./asset-tree.component.scss']
 })
 export class ElementAssetTreeComponent implements OnInit, OnChanges {
-  @Input() Data: any;
   @Input() query: string;
   @Input() searchEvt$: BehaviorSubject<string>;
-  @Output() treeRefresh = new EventEmitter<boolean>();
   @ViewChild('rMenu') rMenu: ElementRef;
+  Data = [];
   nodes = [];
   setting = {
     view: {
@@ -58,14 +57,30 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
               public _dialog: MatDialog,
               public _logger: LogService,
               private activatedRoute: ActivatedRoute,
+              private _http: HttpService
               ) {
     this.searchEvt$ = new BehaviorSubject<string>(this.query);
   }
 
+  getGrantedAssetsNodes() {
+    this._http.get_my_granted_nodes()
+      .subscribe(response => {
+        this.Data = [...response, ...this.Data];
+        this.draw();
+      });
+  }
+
+  getGrantedRemoteApps() {
+    this._http.get_my_granted_remote_apps()
+      .subscribe(response => {
+        this.Data = [...this.Data, ...response];
+        this.draw();
+    });
+  }
+
   ngOnInit() {
-    if (this.Data) {
-      this.draw();
-    }
+    this.getGrantedAssetsNodes();
+    this.getGrantedRemoteApps();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
     this.searchEvt$.asObservable()
       .debounceTime(300)
@@ -73,7 +88,6 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       .subscribe((n) => {
         this.filter();
       });
-
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -85,12 +99,18 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
   }
 
+  refreshNodes() {
+    this.zTree.destroy();
+    this.Data = [];
+    this.getGrantedAssetsNodes();
+    this.getGrantedRemoteApps();
+  }
+
   draw() {
     $.fn.zTree.init($('#ztree'), this.setting, this.Data);
     this.zTree = $.fn.zTree.getZTreeObj('ztree');
     this.rootNodeAddDom(this.zTree, () => {
-      this.zTree.destroy();
-      this.treeRefresh.emit(true);
+      this.refreshNodes();
     });
 
     this.activatedRoute.queryParams.subscribe(params => {
@@ -128,6 +148,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   onRightClick(event, treeId, treeNode) {
+
     if (!treeNode || treeNode.isParent ) {
       return null;
     }
@@ -144,8 +165,8 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       this.rightClickSelectNode = treeNode;
     }
   }
-
-  Connect(node) {
+  
+  connectAsset(node) {
     const system_users = node.meta.system_users;
     const host = node.meta.asset;
     let user: any;
@@ -177,6 +198,34 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       this.login(host, user);
     } else {
       alert('该主机没有授权登录用户');
+    }
+  }
+
+  connectRemoteApp(node) {
+    const id = NavList.List.length - 1;
+    if (node) {
+      NavList.List[id].nick = node.name;
+      NavList.List[id].connected = true;
+      NavList.List[id].edit = false;
+      NavList.List[id].closed = false;
+      NavList.List[id].remoteApp = node.id;
+      NavList.List[id].type = 'rdp';
+      NavList.List.push(new View());
+      NavList.Active = id;
+    }
+    this._logger.debug(NavList);
+  }
+
+  Connect(node) {
+    switch (node.meta.type) {
+      case 'asset':
+        this.connectAsset(node);
+        break;
+      case 'remote_app':
+        this.connectRemoteApp(node);
+        break;
+      default:
+        alert('Unknown type: ' + node.meta.type);
     }
   }
 

@@ -12,7 +12,8 @@
       </elements-ssh-term>
       <elements-guacamole [index]="i"
                           [host]="m.host"
-                          [userid]="m.user.id"
+                          [userid]="m.user?.id"
+                          [remoteAppId]="m.remoteApp"
                           *ngIf="m.type=='rdp'">
       </elements-guacamole>
       <app-sftp *ngIf="m.type=='sftp'" [host]="m.host">
