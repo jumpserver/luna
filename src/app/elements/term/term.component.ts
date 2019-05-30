@@ -46,18 +46,26 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   }
 
   getWinSize() {
-    const activeEle = $('#winContainer');
-    const elementStyle = window.getComputedStyle(this.term.element);
-    const elementPadding = {
-        top: parseInt(elementStyle.getPropertyValue('padding-top'), 10),
-        bottom: parseInt(elementStyle.getPropertyValue('padding-bottom'), 10),
-        right: parseInt(elementStyle.getPropertyValue('padding-right'), 10),
-        left: parseInt(elementStyle.getPropertyValue('padding-left'), 10)
-    };
-    const elementPaddingVer = elementPadding.top + elementPadding.bottom;
-    const elementPaddingHor = elementPadding.right + elementPadding.left;
-    const availableHeight = activeEle.height() - elementPaddingVer;
-    const availableWidth = activeEle.width() - elementPaddingHor - (<any>this.term).viewport.scrollBarWidth;
+    let availableHeight = 0;
+    let availableWidth = 0;
+    if (document.fullscreenElement) {
+      availableWidth = document.body.clientWidth - 10;
+      availableHeight = document.body.clientHeight;
+    } else {
+      const activeEle = $('#winContainer');
+      const elementStyle = window.getComputedStyle(this.term.element);
+      const elementPadding = {
+          top: parseInt(elementStyle.getPropertyValue('padding-top'), 10),
+          bottom: parseInt(elementStyle.getPropertyValue('padding-bottom'), 10),
+          right: parseInt(elementStyle.getPropertyValue('padding-right'), 10),
+          left: parseInt(elementStyle.getPropertyValue('padding-left'), 10)
+      };
+      const elementPaddingVer = elementPadding.top + elementPadding.bottom;
+      const elementPaddingHor = elementPadding.right + elementPadding.left;
+      availableHeight = activeEle.height() - elementPaddingVer;
+      availableWidth = activeEle.width() - elementPaddingHor - (<any>this.term).viewport.scrollBarWidth;
+    }
+
     const geometry = [
       Math.floor(availableWidth / (<any>this.term).renderer.dimensions.actualCellWidth) - 1,
       Math.floor(availableHeight / (<any>this.term).renderer.dimensions.actualCellHeight) - 1

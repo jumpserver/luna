@@ -66,8 +66,9 @@ export class ElementNavComponent implements OnInit {
         // this._appService.copy();
         break;
       }
-      case 'FullScreen':{
-        document.getElementsByClassName("window active ")[0].requestFullscreen();
+      case 'FullScreen': {
+        document.getElementsByClassName('window active ')[0].requestFullscreen();
+        window.dispatchEvent(new Event('resize'));
         break;
       }
       case'Disconnect': {
