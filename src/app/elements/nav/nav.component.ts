@@ -66,6 +66,11 @@ export class ElementNavComponent implements OnInit {
         // this._appService.copy();
         break;
       }
+      case 'FullScreen': {
+        document.getElementsByClassName('window active ')[0].requestFullscreen();
+        window.dispatchEvent(new Event('resize'));
+        break;
+      }
       case'Disconnect': {
         if (!confirm('断开当前连接? (RDP暂不支持)')) {
           break;
@@ -264,6 +269,11 @@ export class ElementNavComponent implements OnInit {
           'href': '',
           'name': 'Share session (read/write)',
           'disable': true
+        },
+        {
+          'id': 'FullScreen',
+          'click': 'FullScreen',
+          'name': 'Full Screen'
         }
         ]
     }, {
