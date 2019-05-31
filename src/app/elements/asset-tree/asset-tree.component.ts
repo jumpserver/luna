@@ -73,8 +73,10 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   getGrantedRemoteApps() {
     this._http.get_my_granted_remote_apps()
       .subscribe(response => {
-        this.Data = [...this.Data, ...response];
-        this.draw();
+        if (response.length > 1) {
+          this.Data = [...this.Data, ...response];
+          this.draw();
+        }
     });
   }
 
