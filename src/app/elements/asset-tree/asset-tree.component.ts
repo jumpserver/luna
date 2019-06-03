@@ -64,6 +64,14 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
 
   getGrantedAssetsNodes() {
     this._http.get_my_granted_nodes()
+    .subscribe(response => {
+      this.Data = [...response, ...this.Data];
+      this.draw();
+    });
+  }
+
+  refreshGrantedAssetsNodes() {
+    this._http.refresh_my_granted_nodes()
       .subscribe(response => {
         this.Data = [...response, ...this.Data];
         this.draw();
@@ -104,7 +112,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   refreshNodes() {
     this.zTree.destroy();
     this.Data = [];
-    this.getGrantedAssetsNodes();
+    this.refreshGrantedAssetsNodes();
     this.getGrantedRemoteApps();
   }
 
