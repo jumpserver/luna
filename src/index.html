@@ -13,4 +13,20 @@
 <span id="marker" style="display: none;font-size: 14px">marker</span>
 
 </body>
+<script>
+  window.onload = function (ev) {
+    var clipboardData = "";
+
+    if (navigator.clipboard && navigator.clipboard.readText) {
+        navigator.clipboard.readText().then(function textRead(text) {
+          clipboardData = text;
+        });
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(clipboardData)
+    }
+}
+
+</script>
 </html>
