@@ -16,6 +16,9 @@
 <script>
   window.onload = function (ev) {
     var clipboardData = "";
+    if (!document.hasFocus()) {
+      return
+    }
 
     if (navigator.clipboard && navigator.clipboard.readText) {
         navigator.clipboard.readText().then(function textRead(text) {
