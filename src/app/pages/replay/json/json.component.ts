@@ -90,7 +90,7 @@ export class JsonComponent implements OnInit {
         .subscribe(
           data => {
             this.replayData = data;
-            this.timeList = Object.keys(this.replayData).map(Number);
+            this.timeList = Object.keys(this.replayData);
             this.timeList = this.timeList.sort((a, b) => {
               return a - b;
             });
@@ -134,7 +134,7 @@ export class JsonComponent implements OnInit {
     // }
     for (; this.pos < this.timeList.length; this.pos++) {
       if (this.timeList[this.pos] * 1000 <= this.time) {
-        this.term.write(this.replayData[this.timeList[this.pos].toString()]);
+        this.term.write(this.replayData[this.timeList[this.pos]]);
       } else {
         break;
       }
