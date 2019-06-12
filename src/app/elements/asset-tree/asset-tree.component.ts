@@ -43,6 +43,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   zTree: any;
   isShowRMenu = false;
   rightClickSelectNode: any;
+  hasLoginTo = false;
 
   onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
@@ -125,9 +126,10 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
 
     this.activatedRoute.queryParams.subscribe(params => {
         const login_to = params['login_to'];
-        if (login_to) {
+        if (login_to && !this.hasLoginTo) {
           this.Data.forEach(t => {
             if (login_to === t.id && t.isParent === false) {
+              this.hasLoginTo = true;
               this.Connect(t);
               return;
             }
