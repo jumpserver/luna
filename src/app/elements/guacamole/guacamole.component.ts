@@ -18,6 +18,7 @@ export class ElementGuacamoleComponent implements OnInit {
   @Input() target: string;
   @Input() index: number;
   @ViewChild('rdp') el: ElementRef;
+  registered = false;
 
   constructor(private sanitizer: DomSanitizer,
               private _http: HttpService,
@@ -26,29 +27,42 @@ export class ElementGuacamoleComponent implements OnInit {
   }
 
   registerHost() {
+    let action: any;
     if (this.remoteAppId) {
-      this._http.guacamole_add_remote_app(User.id, this.remoteAppId).subscribe(
-        data => {
-          const base = data.result;
-          this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamole_token;
-          NavList.List[this.index].Rdp = this.el.nativeElement;
-        },
-        error => {
-          this._logger.error(error);
-        }
-      );
+      action = this._http.guacamole_add_remote_app(User.id, this.remoteAppId);
     } else {
-      this._http.guacamole_add_asset(User.id, this.host.id, this.userid).subscribe(
-        data => {
-          const base = data.result;
-          this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamole_token;
-          NavList.List[this.index].Rdp = this.el.nativeElement;
-        },
-        error2 => {
-          this._logger.error(error2);
-        }
-      );
+      action = this._http.guacamole_add_asset(User.id, this.host.id, this.userid);
     }
+    action.subscribe(
+      data => {
+        const base = data.result;
+        this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamole_token;
+        NavList.List[this.index].Rdp = this.el.nativeElement;
+      },
+      error => {
+        if (!this.registered) {
+          this.registerToken();
+        }
+      }
+    );
+  }
+
+  registerToken() {
+    const now = new Date();
+    const nowTime = now.getTime() / 1000;
+    this.registered = true;
+    this._http.get_guacamole_token(User.id, '').subscribe(
+      data => {
+        // /guacamole/client will redirect to http://guacamole/#/client
+        DataStore.guacamole_token = data['authToken'];
+        DataStore.guacamole_token_time = nowTime;
+        this.registerHost();
+      },
+      error => {
+        this._logger.error(error);
+        return null;
+      }
+    );
   }
 
   ngOnInit() {
@@ -63,25 +77,7 @@ export class ElementGuacamoleComponent implements OnInit {
       NavList.List[this.index].Rdp = this.el.nativeElement;
       return null;
     }
-    const now = new Date();
-    const nowTime = now.getTime() / 1000;
-    if (!DataStore.guacamole_token || nowTime - DataStore.guacamole_token_time > 3600) {
-      this._http.get_guacamole_token(User.id, '').subscribe(
-        data => {
-          // /guacamole/client will redirect to http://guacamole/#/client
-          DataStore.guacamole_token = data['authToken'];
-          DataStore.guacamole_token_time = nowTime;
-          this.registerHost();
-        },
-        error => {
-          this._logger.error(error);
-          alert(error.message);
-          return null;
-        }
-      );
-    } else {
-      this.registerHost();
-    }
+    this.registerHost();
   }
 
   trust(url) {
