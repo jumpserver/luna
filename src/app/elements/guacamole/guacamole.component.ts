@@ -41,6 +41,7 @@ export class ElementGuacamoleComponent implements OnInit {
       },
       error => {
         if (!this.registered) {
+          console.log('Register host error, register token then connect');
           this.registerToken();
         }
       }

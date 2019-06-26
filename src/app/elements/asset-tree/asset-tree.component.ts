@@ -160,14 +160,25 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   onRightClick(event, treeId, treeNode) {
-
     if (!treeNode || treeNode.isParent ) {
       return null;
     }
     const host = treeNode.meta.asset;
-    if (host.protocol.toLowerCase() === 'rdp') {
+    let findSSHProtocol = false;
+    const protocols = host.protocols || [];
+    if (host.protocol) {
+      protocols.push(host.protocol);
+    }
+    for (let i = 0; i <= protocols.length; i++) {
+       const protocol = protocols[i];
+       if (protocol.startsWith('ssh')) {
+         findSSHProtocol = true;
+       }
+    }
+    if (!findSSHProtocol) {
       alert('Windows 请使用Ctrl+Shift+Alt呼出侧边栏上传下载');
     }
+
     if (!treeNode && event.target.tagName.toLowerCase() !== 'button' && $(event.target).parents('a').length === 0) {
       this.zTree.cancelSelectedNode();
       this.showRMenu(event.clientX, event.clientY);
