@@ -169,9 +169,9 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     if (host.protocol) {
       protocols.push(host.protocol);
     }
-    for (let i = 0; i <= protocols.length; i++) {
+    for (let i = 0; i < protocols.length; i++) {
        const protocol = protocols[i];
-       if (protocol.startsWith('ssh')) {
+       if (protocol && protocol.startsWith('ssh')) {
          findSSHProtocol = true;
        }
     }
