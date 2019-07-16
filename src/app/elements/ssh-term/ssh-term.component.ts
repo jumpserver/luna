@@ -1,18 +1,19 @@
-import {AfterViewInit, Component, Input, OnInit } from '@angular/core';
+import {AfterViewInit, Component, Input, OnInit, OnDestroy } from '@angular/core';
 import {Terminal} from 'xterm';
+import * as neffos from 'neffos.js';
 import {NavList} from '../../pages/control/control/control.component';
 import {UUIDService} from '../../app.service';
 import {CookieService} from 'ngx-cookie-service';
-import {TermWS} from '../../globals';
+import {Socket, Room} from '../../utils/socket';
+import {getWsSocket} from '../../globals';
 
-const ws = TermWS;
 
 @Component({
   selector: 'elements-ssh-term',
   templateUrl: './ssh-term.component.html',
   styleUrls: ['./ssh-term.component.scss']
 })
-export class ElementSshTermComponent implements OnInit, AfterViewInit {
+export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() host: any;
   @Input() userid: any;
   @Input() index: number;
@@ -20,12 +21,20 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
 
   term: Terminal;
   secret: string;
+  ws: Socket;
+  room: Room;
 
   constructor(private _uuid: UUIDService, private _cookie: CookieService) {
   }
 
   ngOnInit() {
     this.secret = this._uuid.gen();
+    getWsSocket().then(sock => {
+      this.ws = sock;
+      console.log('Connect ok');
+      console.log(this.ws);
+      this.joinRoom();
+    });
     const fontSize = localStorage.getItem('fontSize') || '14';
     this.term = new Terminal({
       fontFamily: 'monaco, Consolas, "Lucida Console", monospace',
@@ -38,57 +47,66 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    this.joinRoom();
   }
 
   changeWinSize(size: Array<number>) {
-    ws.emit('resize', {'cols': size[0], 'rows': size[1]});
+    if (this.ws) {
+      this.ws.emit('resize', {'cols': size[0], 'rows': size[1]});
+    }
   }
 
   joinRoom() {
     NavList.List[this.index].Term = this.term;
-    console.log(this.term);
-    console.log('Col: ', this.term.cols, 'rows', this.term.rows);
     if (this.host) {
-      ws.emit('host', {
-        'uuid': this.host.id,
-        'userid': this.userid,
-        'secret': this.secret,
-        'size': [this.term.cols, this.term.rows]
-      });
+      const data = {
+        uuid: this.host.id,
+        userid: this.userid,
+        secret: this.secret,
+        size: [this.term.cols, this.term.rows]
+      };
+      this.ws.emit('host', data);
     }
     if (this.token) {
-      ws.emit('token', {
+      const data = {
         'token': this.token, 'secret': this.secret,
         'size': [this.term.cols, this.term.rows]
-      });
+      };
+      this.ws.emit('token', data);
     }
     const that = this;
 
-    this.term.on('data', function (data) {
-      ws.emit('data', {'data': data, 'room': NavList.List[that.index].room});
+    this.term.on('data', data => {
+      const d = {'data': data};
+      this.room.emit('data', d);
     });
 
-    ws.on('data', data => {
+    this.ws.on('data', (roomName, msg) => {
+      const data = msg.unmarshal();
       const view = NavList.List[that.index];
-      if (view && data['room'] === view.room) {
+      if (view && roomName === view.room) {
         that.term.write(data['data']);
       }
     });
 
-    ws.on('disconnect', () => {
+    this.ws.on('disconnect', () => {
       that.close();
     });
 
-    ws.on('logout', (data) => {
-      if (data['room'] === NavList.List[that.index].room) {
+    this.ws.on('logout', (roomName, msg) => {
+      const data = msg.unmarshal();
+      if (data.room === NavList.List[that.index].room) {
         NavList.List[that.index].connected = false;
       }
     });
 
-    ws.on('room', data => {
-      if (data['secret'] === this.secret) {
-        NavList.List[that.index].room = data['room'];
+    this.ws.on('room', (roomName, msg) => {
+      const data = msg.unmarshal();
+      console.log('On room', roomName, data);
+      if (data.secret === this.secret && data.room) {
+        this.ws.JoinRoom(data.room).then(room => {
+          this.room = room;
+        });
+        NavList.List[that.index].room = data.room;
       }
     });
   }
@@ -97,11 +115,16 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
     const view = NavList.List[this.index];
     if (view) {
       NavList.List[this.index].connected = false;
-      ws.emit('logout', NavList.List[this.index].room);
+      console.log(NavList.List[this.index].room);
+      this.room.emit('logout', {'room': NavList.List[this.index].room});
     }
   }
 
   active() {
     this.term.focus();
+  }
+
+  ngOnDestroy(): void {
+    this.close();
   }
 }
