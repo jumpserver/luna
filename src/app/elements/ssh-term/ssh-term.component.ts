@@ -1,6 +1,5 @@
 import {AfterViewInit, Component, Input, OnInit, OnDestroy } from '@angular/core';
 import {Terminal} from 'xterm';
-import * as neffos from 'neffos.js';
 import {NavList} from '../../pages/control/control/control.component';
 import {UUIDService} from '../../app.service';
 import {CookieService} from 'ngx-cookie-service';
