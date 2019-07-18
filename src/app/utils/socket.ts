@@ -27,7 +27,7 @@ export async function getWsSock(url: string, namespace: string): Promise<Socket>
   const events = {};
   events[namespace] = {
     _OnNamespaceConnected: function (ns, msg) {
-       emitter.emit('connect', ns);
+      emitter.emit('connect', ns);
     },
 
     _OnNamespaceDisconnect: function (ns, msg) {
@@ -46,7 +46,7 @@ export async function getWsSock(url: string, namespace: string): Promise<Socket>
       emitter.emit(msg.Event, msg);
     }
   };
-  const options = {reconnnect: 5};
+  const options = {reconnect: 5000};
   const conn = <neffos.Conn>await neffos.dial(url, events, options);
   const nsConn = <neffos.NSConn>await conn.connect(namespace);
   const sock = new Socket(nsConn, emitter);

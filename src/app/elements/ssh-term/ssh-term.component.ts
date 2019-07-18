@@ -74,6 +74,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
         'token': this.token, 'secret': this.secret,
         'size': [this.term.cols, this.term.rows]
       };
+      console.log('On token event trigger');
       this.ws.emit('token', data);
     }
 
@@ -91,13 +92,14 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
 
     // 服务器主动断开
     this.ws.on('disconnect', () => {
+      console.log('On disconnect event trigger');
       this.close();
     });
 
     this.ws.on('logout', (msg) => {
       const data = msg.unmarshal();
       if (data.room === this.roomID) {
-        console.log('On logout: ', data.room, this.roomID);
+        console.log('On logout event trigger: ', data.room, this.roomID);
         this.view.connected = false;
       }
     });
