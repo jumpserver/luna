@@ -52,6 +52,7 @@ export class ControlComponent implements OnInit {
     if (NavList.List[id].connected) {
       NavList.List[id].connected = false;
       NavList.List[id].Term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
+      console.log('Terminal disconn')
       TermWS.emit('logout', {room: NavList.List[id].room});
     }
   }
