@@ -22,16 +22,24 @@ export class Socket {
   }
 }
 
+
 export async function getWsSock(url: string, namespace: string): Promise<Socket> {
   const emitter = new EventEmitter();
-  const events = {};
+  const events = {
+  };
+  let interval;
+
   events[namespace] = {
     _OnNamespaceConnected: function (ns, msg) {
       emitter.emit('connect', ns);
+      interval = setInterval(() => ns.emit('ping', ''), 10000);
     },
 
     _OnNamespaceDisconnect: function (ns, msg) {
       emitter.emit('disconnect', ns);
+      if (interval) {
+        clearInterval(interval);
+      }
     },
 
     _OnRoomJoined: function (ns, msg) {
@@ -44,9 +52,11 @@ export async function getWsSock(url: string, namespace: string): Promise<Socket>
 
     _OnAnyEvent: function (ns, msg) {
       emitter.emit(msg.Event, msg);
-    }
+    },
   };
-  const options = {reconnect: 5000};
+  const options = {
+    reconnect: 5000,
+  };
   const conn = <neffos.Conn>await neffos.dial(url, events, options);
   const nsConn = <neffos.NSConn>await conn.connect(namespace);
   const sock = new Socket(nsConn, emitter);
