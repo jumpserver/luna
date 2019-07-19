@@ -42,22 +42,24 @@ export async function getWsSock(url: string, namespace: string): Promise<Socket>
       }
     },
 
-    _OnRoomJoined: function (ns, msg) {
-      emitter.emit('roomJoined', msg.Room);
-    },
-
-    _OnRoomLeft: function (ns, msg) {
-      emitter.emit('roomLeft', msg.Room);
-    },
-
     _OnAnyEvent: function (ns, msg) {
-      emitter.emit(msg.Event, msg);
+      let data = '';
+      if (msg.Body) {
+        data = msg.unmarshal();
+      }
+      emitter.emit(msg.Event, data);
     },
   };
   const options = {
     reconnect: 5000,
   };
-  const conn = <neffos.Conn>await neffos.dial(url, events, options);
+  const conn = <neffos.Conn>await neffos.dial(url, events, options)
+    .catch(err => {
+       return null;
+    });
+  if (!conn) {
+    return null;
+  }
   const nsConn = <neffos.NSConn>await conn.connect(namespace);
   const sock = new Socket(nsConn, emitter);
   return sock;

@@ -1,6 +1,6 @@
 'use strict';
 import {EventEmitter} from 'events/events';
-// import * as io from 'socket.io-client';
+import * as io from 'socket.io-client';
 import * as neffos from 'neffos.js';
 import {Terminal} from 'xterm';
 // const abc = io.connect('/ssh');
@@ -151,6 +151,10 @@ export async function getWsSocket() {
     return TermWS;
   }
   TermWS = await getWsSock(wsURL, 'ssh');
+  if (!TermWS) {
+    console.log('Try to using socket.io protocol');
+    TermWS = io.connect('/ssh');
+  }
   DataStore.socket = TermWS;
   return TermWS;
 }

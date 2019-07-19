@@ -83,8 +83,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
       this.ws.emit('data', d);
     });
 
-    this.ws.on('data', (msg) => {
-      const data = msg.unmarshal();
+    this.ws.on('data', data => {
       if (data.room === this.roomID) {
         this.term.write(data['data']);
       }
@@ -96,16 +95,14 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
       this.close();
     });
 
-    this.ws.on('logout', (msg) => {
-      const data = msg.unmarshal();
+    this.ws.on('logout', data => {
       if (data.room === this.roomID) {
         console.log('On logout event trigger: ', data.room, this.roomID);
         this.view.connected = false;
       }
     });
 
-    this.ws.on('room', (msg) => {
-      const data = msg.unmarshal();
+    this.ws.on('room', data => {
       if (data.secret === this.secret && data.room) {
         console.log('On room', data);
         this.roomID = data.room;
