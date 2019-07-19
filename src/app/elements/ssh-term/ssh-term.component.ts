@@ -115,7 +115,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
   close() {
     if (this.view && (this.view.room === this.roomID)) {
       this.view.connected = false;
-      this.ws.emit('logout', {'room': this.roomID});
+      this.ws.emit('logout', this.roomID);
     }
   }
 
