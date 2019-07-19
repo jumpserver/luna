@@ -50,6 +50,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
       zTreeObj.expandNode(treeNode);
     } else {
+      this._http.get_user_profile().subscribe();
       this.Connect(treeNode);
     }
   }
