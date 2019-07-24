@@ -1,20 +1,78 @@
 import {EventEmitter} from 'events/events';
-import {NSConn, marshal} from 'neffos.js';
+import {Conn, NSConn, marshal} from 'neffos.js';
 import * as neffos from 'neffos.js';
 
 
 export class Socket {
-  conn: NSConn;
+  conn: Conn;
+  nsConn: NSConn;
   emitter: EventEmitter;
+  url: string;
+  namespace: string;
 
-  constructor(conn: NSConn, emitter: EventEmitter) {
-    this.conn = conn;
+  constructor(url: string, namespace: string) {
+    this.url = url;
+    this.namespace = namespace;
+  }
+
+  async connect() {
+    const emitter = new EventEmitter();
     this.emitter = emitter;
+    const events = {
+    };
+    let interval = null;
+
+    events[this.namespace] = {
+      _OnNamespaceConnected: (ns, msg) => {
+        emitter.emit('connect', ns);
+        if (ns.conn.wasReconnected()) {
+          this.conn = ns.conn;
+          this.nsConn = ns;
+          console.log('Ws was reconnected');
+        }
+        interval = setInterval(() => ns.emit('ping', ''), 10000);
+      },
+
+      _OnNamespaceDisconnect: function (ns, msg) {
+        emitter.emit('disconnect', ns);
+        if (interval) {
+          clearInterval(interval);
+        }
+      },
+
+      _OnAnyEvent: function (ns, msg) {
+        let data = '';
+        if (msg.Body) {
+          data = msg.unmarshal();
+        }
+        emitter.emit(msg.Event, data);
+      },
+    };
+    const options = {
+      reconnect: 5000,
+      headers: {
+        'X-Namespace': 'ssh'
+      },
+    };
+    this.conn = <Conn>await neffos.dial(this.url, events, options)
+      .catch(err => {
+        console.log('connect to neffos ws error: ', err);
+        return null;
+    });
+    if (!this.conn) {
+      return null;
+    }
+    this.nsConn = <NSConn> await this.conn.connect(this.namespace)
+      .catch(err => {
+        console.log('connect to namespace error: ', err);
+        return null;
+      });
+    return this.nsConn;
   }
 
   emit(type: string, obj: any) {
     const msg = marshal(obj);
-    this.conn.emit(type, msg);
+    this.nsConn.emit(type, msg);
   }
 
   on(type: string, fn: Function, opt_scope?: any, opt_oneshot?: boolean) {
@@ -22,45 +80,3 @@ export class Socket {
   }
 }
 
-
-export async function getWsSock(url: string, namespace: string): Promise<Socket> {
-  const emitter = new EventEmitter();
-  const events = {
-  };
-  let interval;
-
-  events[namespace] = {
-    _OnNamespaceConnected: function (ns, msg) {
-      emitter.emit('connect', ns);
-      interval = setInterval(() => ns.emit('ping', ''), 10000);
-    },
-
-    _OnNamespaceDisconnect: function (ns, msg) {
-      emitter.emit('disconnect', ns);
-      if (interval) {
-        clearInterval(interval);
-      }
-    },
-
-    _OnAnyEvent: function (ns, msg) {
-      let data = '';
-      if (msg.Body) {
-        data = msg.unmarshal();
-      }
-      emitter.emit(msg.Event, data);
-    },
-  };
-  const options = {
-    reconnect: 5000,
-  };
-  const conn = <neffos.Conn>await neffos.dial(url, events, options)
-    .catch(err => {
-       return null;
-    });
-  if (!conn) {
-    return null;
-  }
-  const nsConn = <neffos.NSConn>await conn.connect(namespace);
-  const sock = new Socket(nsConn, emitter);
-  return sock;
-}

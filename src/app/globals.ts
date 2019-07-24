@@ -4,7 +4,7 @@ import * as io from 'socket.io-client';
 import * as neffos from 'neffos.js';
 import {Terminal} from 'xterm';
 // const abc = io.connect('/ssh');
-import {getWsSock, Socket} from './utils/socket';
+import {Socket} from './utils/socket';
 
 const scheme = document.location.protocol === 'https:' ? 'wss' : 'ws';
 const port = document.location.port ? ':' + document.location.port : '';
@@ -139,21 +139,17 @@ export let Browser: {
   vendor: navigator.vendor,
 };
 
-export let wsEvent: {
-  event: string;
-  data: any;
-};
-
 export const i18n = new Map();
 
 export async function getWsSocket() {
   if (TermWS) {
     return TermWS;
   }
-  TermWS = await getWsSock(wsURL, 'ssh');
-  if (!TermWS) {
+  TermWS = new Socket(wsURL, 'ssh');
+  const nsConn = await TermWS.connect();
+  if (!nsConn) {
     console.log('Try to using socket.io protocol');
-    TermWS = io.connect('/ssh');
+    TermWS = io.connect('/ssh', {reconnectionAttempts: 10});
   }
   DataStore.socket = TermWS;
   return TermWS;
