@@ -67,7 +67,20 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'FullScreen': {
-        document.getElementsByClassName('window active ')[0].requestFullscreen();
+        let ele:any = document.getElementsByClassName("window active ")[0];
+        
+        if (ele.requestFullscreen) {
+          ele.requestFullscreen();
+        } else if (ele.mozRequestFullScreen) {
+          ele.mozRequestFullScreen();
+        } else if (ele.msRequestFullscreen) {
+          ele.msRequestFullscreen();
+        } else if (ele.webkitRequestFullscreen) {
+          ele.webkitRequestFullScreen();
+        } else {
+          throw new Error('不支持全屏api');
+        }
+        
         window.dispatchEvent(new Event('resize'));
         break;
       }
