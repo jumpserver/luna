@@ -151,6 +151,10 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   showRMenu(left, top) {
+    const clientHeight = document.body.clientHeight;
+    if (top + 60 > clientHeight) {
+      top -= 60;
+    }
     this.pos.left = left + 'px';
     this.pos.top = top + 'px';
     this.isShowRMenu = true;
