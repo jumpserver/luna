@@ -48,8 +48,9 @@
   padding-right: 14px;
   line-height: 26px;
   cursor: default;
-  width: 115px;
+  width: 145px;
   height: 21px;
+  display:inline-block;
 }
 
 .tabs ul li a.close {

@@ -7,7 +7,7 @@
     <li *ngFor="let m of NavList.List;let i = index"
         [ngClass]="{'active':i==NavList.Active,'disconnected':!m.connected, 'hidden': m.closed != false}"
         id="termnav-{{i}}" (click)="setActive(i)" (dblclick)="m.edit=true;setActive(i)">
-      <span *ngIf="!m.edit">{{m.nick | truncatechars:25 }}</span>
+      <span *ngIf="!m.edit" [attr.title]="m.nick">{{m.nick | truncatechars:17 }}</span>
       <input *ngIf="m.edit" [(ngModel)]="m.nick" (blur)="m.edit=false" (keyup.enter)="m.edit=false" autofocus="true"/>
       <a class="close" (click)="close(m,i)">&times;</a>
     </li>
