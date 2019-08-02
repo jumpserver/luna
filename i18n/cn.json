@@ -61,5 +61,7 @@
   "font": "字体",
   "font size": "字体大小",
   "full screen": "全屏显示",
-  "manual input password": "输入密码"
+  "please input password": "请输入密码",
+  "username": "用户名",
+  "password": "密码"
 }
