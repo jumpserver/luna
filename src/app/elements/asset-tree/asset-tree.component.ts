@@ -286,6 +286,9 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       data: {username: user.username}
     });
     dialogRef.afterClosed().subscribe(result => {
+      if (!result) {
+        return;
+      }
       user.username = btoa(result.username);
       user.password = btoa(result.password);
       return this.login(host, user);
