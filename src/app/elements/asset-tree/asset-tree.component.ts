@@ -286,6 +286,9 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       data: {username: user.username}
     });
     dialogRef.afterClosed().subscribe(result => {
+      if (!result) {
+        return;
+      }
       user.username = btoa(result.username);
       user.password = btoa(result.password);
       return this.login(host, user);
@@ -451,6 +454,10 @@ export class ManualPasswordDialogComponent implements OnInit {
 
   onNoClick() {
     this.dialogRef.close();
+  }
+
+  onEnter() {
+    this.dialogRef.close(this.data);
   }
 
   ngOnInit(): void {
