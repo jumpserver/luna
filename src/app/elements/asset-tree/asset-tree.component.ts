@@ -278,10 +278,26 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     this.Connect(host);
   }
 
+  manualSetUserAuthLogin(host, user) {
+    const dialogRef = this._dialog.open(ManualPasswordDialogComponent, {
+      height: '250px',
+      width: '400px',
+      data: {username: user.username}
+    });
+    dialogRef.afterClosed().subscribe(result => {
+      user.username = result.username;
+      user.password = result.password;
+      return this.login(host, user);
+    });
+  }
+
   login(host, user) {
     const id = NavList.List.length - 1;
     this._logger.debug(NavList);
     this._logger.debug(host);
+    if (user.login_mode === 'manual' && !user.password && user.protocol === 'rdp') {
+       return this.manualSetUserAuthLogin(host, user);
+    }
     if (user) {
       NavList.List[id].nick = host.hostname;
       NavList.List[id].connected = true;
@@ -418,5 +434,24 @@ export class AssetTreeDialogComponent implements OnInit {
 
   compareByValue(f1: any, f2: any) {
     return f1 && f2 && f1.value === f2.value;
+  }
+}
+
+@Component({
+  selector: 'elements-manual-password-dialog',
+  templateUrl: 'manual-password-dialog.html',
+})
+export class ManualPasswordDialogComponent implements OnInit {
+  PasswordControl = new FormControl('', [Validators.required]);
+  constructor(@Inject(MAT_DIALOG_DATA) public data: any,
+              public dialogRef: MatDialogRef<ManualPasswordDialogComponent>) {
+
+  }
+
+  onNoClick() {
+    this.dialogRef.close();
+  }
+
+  ngOnInit(): void {
   }
 }

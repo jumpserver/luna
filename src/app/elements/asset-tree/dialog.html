@@ -1,6 +1,6 @@
 <h1 mat-dialog-title>{{"Found"|trans}} {{data.users.length}} {{"Users "|trans}}</h1>
 
-<mat-form-field>
+<mat-form-field style="width: 100%">
   <mat-select [(value)]="selected"
               [compareWith]="compareFn"
               [formControl]="UserSelectControl"
