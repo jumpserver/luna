@@ -100,12 +100,18 @@ export class HttpService {
       {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
   }
 
-  guacamole_add_asset(user_id: string, asset_id: string, system_user_id: string) {
+  guacamole_add_asset(user_id: string, asset_id: string, system_user_id: string, system_user_username?: string, system_user_password?: string) {
     let params = new HttpParams()
       .set('user_id', user_id)
       .set('asset_id', asset_id)
       .set('system_user_id', system_user_id)
       .set('token', DataStore.guacamole_token);
+    if (system_user_username) {
+      params.set('username', system_user_username);
+    }
+    if (system_user_password) {
+      params.set('password', system_user_password);
+    }
     const solution = localStorage.getItem('rdpSolution') || 'Auto';
     if (solution !== 'Auto') {
       const width = solution.split('x')[0];

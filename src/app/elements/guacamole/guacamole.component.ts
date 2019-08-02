@@ -13,7 +13,7 @@ import {NavList} from '../../pages/control/control/control.component';
 })
 export class ElementGuacamoleComponent implements OnInit {
   @Input() host: any;
-  @Input() userid: any;
+  @Input() sysUser: any;
   @Input() remoteAppId: string;
   @Input() target: string;
   @Input() index: number;
@@ -31,7 +31,7 @@ export class ElementGuacamoleComponent implements OnInit {
     if (this.remoteAppId) {
       action = this._http.guacamole_add_remote_app(User.id, this.remoteAppId);
     } else {
-      action = this._http.guacamole_add_asset(User.id, this.host.id, this.userid);
+      action = this._http.guacamole_add_asset(User.id, this.host.id, this.sysUser.id, this.sysUser.username, this.sysUser.password);
     }
     action.subscribe(
       data => {

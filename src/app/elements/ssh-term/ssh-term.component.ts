@@ -14,7 +14,7 @@ import {getWsSocket} from '../../globals';
 })
 export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() host: any;
-  @Input() userid: any;
+  @Input() sysUser: any;
   @Input() index: number;
   @Input() token: string;
 
@@ -63,7 +63,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.host) {
       const data = {
         uuid: this.host.id,
-        userid: this.userid,
+        userid: this.sysUser.id,
         secret: this.secret,
         size: [this.term.cols, this.term.rows]
       };
