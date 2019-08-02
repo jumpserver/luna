@@ -453,6 +453,10 @@ export class ManualPasswordDialogComponent implements OnInit {
     this.dialogRef.close();
   }
 
+  onEnter() {
+    this.dialogRef.close(this.data);
+  }
+
   ngOnInit(): void {
   }
 }
