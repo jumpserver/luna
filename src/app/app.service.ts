@@ -107,10 +107,10 @@ export class HttpService {
       .set('system_user_id', system_user_id)
       .set('token', DataStore.guacamole_token);
     if (system_user_username) {
-      params.set('username', system_user_username);
+      params = params.set('username', system_user_username);
     }
     if (system_user_password) {
-      params.set('password', system_user_password);
+      params = params.set('password', system_user_password);
     }
     const solution = localStorage.getItem('rdpSolution') || 'Auto';
     if (solution !== 'Auto') {
