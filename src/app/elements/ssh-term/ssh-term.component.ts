@@ -1,31 +1,46 @@
-import {AfterViewInit, Component, Input, OnInit } from '@angular/core';
+import {AfterViewInit, Component, Input, OnInit, OnDestroy } from '@angular/core';
 import {Terminal} from 'xterm';
-import {NavList} from '../../pages/control/control/control.component';
+import {NavList, View} from '../../pages/control/control/control.component';
 import {UUIDService} from '../../app.service';
 import {CookieService} from 'ngx-cookie-service';
-import {TermWS} from '../../globals';
+import {Socket} from '../../utils/socket';
+import {getWsSocket} from '../../globals';
 
-const ws = TermWS;
 
 @Component({
   selector: 'elements-ssh-term',
   templateUrl: './ssh-term.component.html',
   styleUrls: ['./ssh-term.component.scss']
 })
-export class ElementSshTermComponent implements OnInit, AfterViewInit {
+export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() host: any;
-  @Input() userid: any;
+  @Input() sysUser: any;
   @Input() index: number;
   @Input() token: string;
 
   term: Terminal;
   secret: string;
+  ws: Socket;
+  roomID: string;
+  view: View;
 
   constructor(private _uuid: UUIDService, private _cookie: CookieService) {
   }
 
   ngOnInit() {
+    this.view = NavList.List[this.index];
     this.secret = this._uuid.gen();
+    this.newTerm();
+    getWsSocket().then(sock => {
+      this.ws = sock;
+      this.connectHost();
+    });
+  }
+
+  ngAfterViewInit() {
+  }
+
+  newTerm() {
     const fontSize = localStorage.getItem('fontSize') || '14';
     this.term = new Terminal({
       fontFamily: 'monaco, Consolas, "Lucida Console", monospace',
@@ -35,73 +50,80 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
         background: '#1f1b1b'
       }
     });
-  }
-
-  ngAfterViewInit() {
-    this.joinRoom();
+    this.view.Term = this.term;
   }
 
   changeWinSize(size: Array<number>) {
-    ws.emit('resize', {'cols': size[0], 'rows': size[1]});
+    if (this.ws) {
+      this.ws.emit('resize', {'cols': size[0], 'rows': size[1]});
+    }
   }
 
-  joinRoom() {
-    NavList.List[this.index].Term = this.term;
-    console.log(this.term);
-    console.log('Col: ', this.term.cols, 'rows', this.term.rows);
+  connectHost() {
     if (this.host) {
-      ws.emit('host', {
-        'uuid': this.host.id,
-        'userid': this.userid,
-        'secret': this.secret,
-        'size': [this.term.cols, this.term.rows]
-      });
+      const data = {
+        uuid: this.host.id,
+        userid: this.sysUser.id,
+        secret: this.secret,
+        size: [this.term.cols, this.term.rows]
+      };
+      this.ws.emit('host', data);
     }
     if (this.token) {
-      ws.emit('token', {
+      const data = {
         'token': this.token, 'secret': this.secret,
         'size': [this.term.cols, this.term.rows]
-      });
+      };
+      console.log('On token event trigger');
+      this.ws.emit('token', data);
     }
-    const that = this;
 
-    this.term.on('data', function (data) {
-      ws.emit('data', {'data': data, 'room': NavList.List[that.index].room});
+    this.term.on('data', data => {
+      const d = {'data': data, 'room': this.roomID};
+      this.ws.emit('data', d);
     });
 
-    ws.on('data', data => {
-      const view = NavList.List[that.index];
-      if (view && data['room'] === view.room) {
-        that.term.write(data['data']);
+    this.ws.on('data', data => {
+      if (data.room === this.roomID) {
+        this.term.write(data['data']);
       }
     });
 
-    ws.on('disconnect', () => {
-      that.close();
+    // 服务器主动断开
+    this.ws.on('disconnect', () => {
+      console.log('On disconnect event trigger');
+      this.close();
     });
 
-    ws.on('logout', (data) => {
-      if (data['room'] === NavList.List[that.index].room) {
-        NavList.List[that.index].connected = false;
+    this.ws.on('logout', data => {
+      if (data.room === this.roomID) {
+        console.log('On logout event trigger: ', data.room, this.roomID);
+        this.view.connected = false;
       }
     });
 
-    ws.on('room', data => {
-      if (data['secret'] === this.secret) {
-        NavList.List[that.index].room = data['room'];
+    this.ws.on('room', data => {
+      if (data.secret === this.secret && data.room) {
+        console.log('On room', data);
+        this.roomID = data.room;
+        this.view.room = data.room;
       }
     });
   }
 
+  // 客户端主动关闭
   close() {
-    const view = NavList.List[this.index];
-    if (view) {
-      NavList.List[this.index].connected = false;
-      ws.emit('logout', NavList.List[this.index].room);
+    if (this.view && (this.view.room === this.roomID)) {
+      this.view.connected = false;
+      this.ws.emit('logout', this.roomID);
     }
   }
 
   active() {
     this.term.focus();
+  }
+
+  ngOnDestroy(): void {
+    this.close();
   }
 }

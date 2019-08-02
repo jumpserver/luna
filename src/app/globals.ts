@@ -1,8 +1,17 @@
 'use strict';
+import {EventEmitter} from 'events/events';
 import * as io from 'socket.io-client';
+import * as neffos from 'neffos.js';
 import {Terminal} from 'xterm';
+// const abc = io.connect('/ssh');
+import {Socket} from './utils/socket';
 
-export const TermWS = io.connect('/ssh');
+const scheme = document.location.protocol === 'https:' ? 'wss' : 'ws';
+const port = document.location.port ? ':' + document.location.port : '';
+const wsURL = scheme + '://' + document.location.hostname + port + '/socket.io/';
+export let TermWS = null;
+
+export const emitter = new(EventEmitter);
 export const sep = '/';
 export let Video: {
   id: string,
@@ -93,7 +102,7 @@ export let DataStore: {
   guacamole_token: string;
   guacamole_token_time: number;
 } = {
-  socket: io.connect(),
+  socket: TermWS,
   Nav: [{}],
   NavShow: true,
   Path: {},
@@ -130,9 +139,20 @@ export let Browser: {
   vendor: navigator.vendor,
 };
 
-export let wsEvent: {
-  event: string;
-  data: any;
-};
-
 export const i18n = new Map();
+
+export async function getWsSocket() {
+  if (TermWS) {
+    return TermWS;
+  }
+  TermWS = new Socket(wsURL, 'ssh');
+  const nsConn = await TermWS.connect();
+  if (!nsConn) {
+    console.log('Try to using socket.io protocol');
+    TermWS = io.connect('/ssh', {reconnectionAttempts: 10});
+  }
+  DataStore.socket = TermWS;
+  return TermWS;
+}
+
+

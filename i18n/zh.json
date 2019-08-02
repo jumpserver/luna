@@ -60,5 +60,8 @@
   "set font": "设置字体",
   "font": "字体",
   "font size": "字体大小",
-  "full screen": "全屏显示"
+  "full screen": "全屏显示",
+  "please input password": "请输入密码",
+  "username": "用户名",
+  "password": "密码"
 }

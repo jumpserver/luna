@@ -30,7 +30,7 @@ import {ChangLanWarningDialogComponent, RDPSolutionDialogComponent, FontDialogCo
 import {DialogService, ElementDialogAlertComponent} from './elements/dialog/dialog.service';
 import {PluginModules} from './plugins/plugins';
 import {TestPageComponent} from './test-page/test-page.component';
-import {AssetTreeDialogComponent} from './elements/asset-tree/asset-tree.component';
+import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './elements/asset-tree/asset-tree.component';
 import {SftpComponent} from './elements/sftp/sftp.component';
 
 
@@ -53,6 +53,7 @@ import {SftpComponent} from './elements/sftp/sftp.component';
  ],
   entryComponents: [
     AssetTreeDialogComponent,
+    ManualPasswordDialogComponent,
     ElementDialogAlertComponent,
     ChangLanWarningDialogComponent,
     RDPSolutionDialogComponent,
