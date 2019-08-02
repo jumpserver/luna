@@ -279,6 +279,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   manualSetUserAuthLogin(host, user) {
+    user = Object.assign({}, user);
     const dialogRef = this._dialog.open(ManualPasswordDialogComponent, {
       height: '250px',
       width: '400px',

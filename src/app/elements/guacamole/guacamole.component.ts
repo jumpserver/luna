@@ -73,11 +73,11 @@ export class ElementGuacamoleComponent implements OnInit {
       return null;
     }
 
-    if (!environment.production) {
-      this.target = this._cookie.get('guacamole');
-      NavList.List[this.index].Rdp = this.el.nativeElement;
-      return null;
-    }
+    // if (!environment.production) {
+    //   this.target = this._cookie.get('guacamole');
+    //   NavList.List[this.index].Rdp = this.el.nativeElement;
+    //   return null;
+    // }
     this.registerHost();
   }
 
