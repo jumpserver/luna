@@ -95,3 +95,12 @@
   cursor: default;
   color: #c5babc;
 }
+
+.nav ul li.disconnected {
+  background-color: darkgray;
+}
+
+.nav ul li.active {
+  box-sizing: border-box;
+  border-bottom: 3px solid #19aa8d !important;
+}

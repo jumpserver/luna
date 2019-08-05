@@ -21,6 +21,7 @@ declare let layer: any;
 })
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
+  NavList = NavList;
   ChangeLanWarningDialog: any;
 
   static Hide() {
@@ -37,6 +38,10 @@ export class ElementNavComponent implements OnInit {
   }
 
   ngOnInit() {
+  }
+
+  toTab(idx) {
+    ControlComponent.active(idx);
   }
 
   click(event) {
@@ -68,7 +73,7 @@ export class ElementNavComponent implements OnInit {
       }
       case 'FullScreen': {
         let ele:any = document.getElementsByClassName("window active ")[0];
-        
+
         if (ele.requestFullscreen) {
           ele.requestFullscreen();
         } else if (ele.mozRequestFullScreen) {
@@ -80,11 +85,17 @@ export class ElementNavComponent implements OnInit {
         } else {
           throw new Error('不支持全屏api');
         }
-        
+
         window.dispatchEvent(new Event('resize'));
         break;
       }
-      case'Disconnect': {
+      case 'Reconnect': {
+        if (NavList.List[NavList.Active].termComp) {
+          NavList.List[NavList.Active].termComp.reconnect();
+        }
+        break;
+      }
+      case 'Disconnect': {
         if (!confirm('断开当前连接? (RDP暂不支持)')) {
           break;
         }
@@ -233,6 +244,11 @@ export class ElementNavComponent implements OnInit {
           'id': 'DisconnectAll',
           'click': 'DisconnectAll',
           'name': 'Disconnect all'
+        },
+        {
+          'id': 'Reconnect',
+          'click': 'Reconnect',
+          'name': 'Reconnect'
         },
       ]
     }, {
