@@ -63,5 +63,8 @@
   "full screen": "全屏显示",
   "please input password": "请输入密码",
   "username": "用户名",
-  "password": "密码"
+  "password": "密码",
+  "tab list": "窗口列表",
+  "reconnect": "重新连接",
+  "are you sure to reconnect it?(rdp not support)": "确定要重新连接吗? (RDP暂不支持)"
 }

@@ -9,6 +9,7 @@
 
 import {Component, OnInit} from '@angular/core';
 import {TermWS} from '../../../globals';
+import * as jQuery from 'jquery/dist/jquery.min';
 
 export class View {
   nick: string;
@@ -23,6 +24,7 @@ export class View {
   room: string;
   Rdp: any;
   Term: any;
+  termComp: any;
 }
 
 export let NavList: {
@@ -46,6 +48,7 @@ export class ControlComponent implements OnInit {
       v.hide = id.toString() !== k;
     });
     NavList.Active = id;
+    jQuery('.tabs').animate({'scrollLeft': 150 * id}, 400);
   }
 
   static TerminalDisconnect(id) {

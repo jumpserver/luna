@@ -5,6 +5,7 @@ import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {BehaviorSubject} from 'rxjs/BehaviorSubject';
 import {ActivatedRoute} from '@angular/router';
+import * as jQuery from 'jquery/dist/jquery.min';
 
 declare var $: any;
 
@@ -60,16 +61,16 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
               public _logger: LogService,
               private activatedRoute: ActivatedRoute,
               private _http: HttpService
-              ) {
+  ) {
     this.searchEvt$ = new BehaviorSubject<string>(this.query);
   }
 
   getGrantedAssetsNodes() {
     this._http.get_my_granted_nodes()
-    .subscribe(response => {
-      this.Data = [...response, ...this.Data];
-      this.draw();
-    });
+      .subscribe(response => {
+        this.Data = [...response, ...this.Data];
+        this.draw();
+      });
   }
 
   refreshGrantedAssetsNodes() {
@@ -87,7 +88,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
           this.Data = [...this.Data, ...response];
           this.draw();
         }
-    });
+      });
   }
 
   ngOnInit() {
@@ -126,16 +127,16 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     });
 
     this.activatedRoute.queryParams.subscribe(params => {
-        const login_to = params['login_to'];
-        if (login_to && !this.hasLoginTo) {
-          this.Data.forEach(t => {
-            if (login_to === t.id && t.isParent === false) {
-              this.hasLoginTo = true;
-              this.Connect(t);
-              return;
-            }
-          });
-        }
+      const login_to = params['login_to'];
+      if (login_to && !this.hasLoginTo) {
+        this.Data.forEach(t => {
+          if (login_to === t.id && t.isParent === false) {
+            this.hasLoginTo = true;
+            this.Connect(t);
+            return;
+          }
+        });
+      }
     });
   }
 
@@ -146,7 +147,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     $rootNodeRef.after(refreshIcon);
     const refreshIconRef = $('#tree-refresh');
     refreshIconRef.bind('click', function () {
-        callback();
+      callback();
     });
   }
 
@@ -165,7 +166,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   onRightClick(event, treeId, treeNode) {
-    if (!treeNode || treeNode.isParent ) {
+    if (!treeNode || treeNode.isParent) {
       return null;
     }
     const host = treeNode.meta.asset;
@@ -175,10 +176,10 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       protocols.push(host.protocol);
     }
     for (let i = 0; i < protocols.length; i++) {
-       const protocol = protocols[i];
-       if (protocol && protocol.startsWith('ssh')) {
-         findSSHProtocol = true;
-       }
+      const protocol = protocols[i];
+      if (protocol && protocol.startsWith('ssh')) {
+        findSSHProtocol = true;
+      }
     }
     if (!findSSHProtocol) {
       alert('Windows 请使用Ctrl+Shift+Alt呼出侧边栏上传下载');
@@ -193,7 +194,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       this.rightClickSelectNode = treeNode;
     }
   }
-  
+
   connectAsset(node) {
     const system_users = node.meta.system_users;
     const host = node.meta.asset;
@@ -316,6 +317,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       }
       NavList.List.push(new View());
       NavList.Active = id;
+      jQuery('.tabs').animate({'scrollLeft': 150 * id}, 400);
     }
     this._logger.debug(NavList);
   }
@@ -384,7 +386,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
     _keywords = _keywords.toLowerCase();
     let shouldShow = [];
-    const matchedNodes = zTreeObj.getNodesByFilter(function(node) {
+    const matchedNodes = zTreeObj.getNodesByFilter(function (node) {
       if (node.meta.type === 'asset') {
         const host = node.meta.asset;
         return host.hostname.toLowerCase().indexOf(_keywords) !== -1 || host.ip.indexOf(_keywords) !== -1;
@@ -393,18 +395,18 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       }
     });
     matchedNodes.forEach((node) => {
-        const parents = this.recurseParent(node);
-        const children = this.recurseChildren(node);
-        shouldShow = [...shouldShow, ...parents, ...children, node];
+      const parents = this.recurseParent(node);
+      const children = this.recurseChildren(node);
+      shouldShow = [...shouldShow, ...parents, ...children, node];
     });
     this.hiddenNodes = nodes;
     this.expandNodes = shouldShow;
     zTreeObj.hideNodes(nodes);
     zTreeObj.showNodes(shouldShow);
     shouldShow.forEach((node) => {
-        if (node.isParent) {
-          zTreeObj.expandNode(node, true);
-        }
+      if (node.isParent) {
+        zTreeObj.expandNode(node, true);
+      }
     });
     // zTreeObj.expandAll(true);
   }
