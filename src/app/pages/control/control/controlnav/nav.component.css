@@ -48,9 +48,9 @@
   padding-right: 14px;
   line-height: 26px;
   cursor: default;
-  width: 145px;
-  height: 21px;
-  display:inline-block;
+  /*width: 145px;*/
+  height: 26px;
+  display: block;
 }
 
 .tabs ul li a.close {
@@ -73,18 +73,18 @@
   padding-left: 12px;
   line-height: 26px;
   color: white;
-  height: 18px;
+  height: 26px;
 }
 
 .tabs ul li input {
   font-family: 'Roboto', sans-serif;
   font-size: 13px;
-  width: 115px;
+  width: 120px;
   border: none;
   background-color: inherit;
   color: white;
   padding: 5px 20px 4px 15px;
-  height: 18px;
+  height: 26px;
 }
 
 /*
