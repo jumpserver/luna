@@ -111,3 +111,92 @@
   background-color: #3a3333;
   color: white
 }
+
+
+
+.basicContext {
+  background: #000;
+  border: none;
+  -webkit-border-radius: 2px;
+  -moz-border-radius: 2px;
+  border-radius: 2px;
+  margin: 0;
+  box-shadow: 0 3px 6px 0px rgba(0,0,0,0.16);
+  position: absolute;
+  opacity: 1;
+  padding: 6px 0;
+  z-index: 1000;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+.basicContext, .basicContext * {
+  box-sizing: border-box;
+}
+
+.basicContextContainer {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.basicContext tr {
+  margin: 0;
+}
+
+.basicContext__item {
+  cursor: pointer;
+  padding: 0 6px;
+}
+
+.basicContext td {
+  display: block;
+  padding: 0 35px;
+  text-decoration: none;
+  width: auto;
+  opacity: 1;
+  white-space: nowrap;
+  line-height: 24px;
+  text-shadow: none;
+  -webkit-border-radius: 0;
+  -moz-border-radius: 0;
+  border-radius: 0;
+  cursor: pointer;
+}
+.basicContext__item.basicContext__item--separator {
+  background: #181414;
+  border: 0;
+  border-top: none;
+  height: 1px;
+  min-height: 1px;
+  max-height: 1px;
+  padding: 0;
+  border-left: none;
+  text-shadow: 0 0 0 transparent;
+  box-shadow: 0;
+  -webkit-border-radius: 0;
+  -moz-border-radius: 0;
+  border-radius: 0;
+  margin: 2px 0;
+}
+tr {
+  display: table-row;
+  vertical-align: inherit;
+  border-color: inherit;
+}
+
+tr:hover {
+  background-color: #463e3e;
+}
+
+.basicContext table {
+  border-spacing: 0 !important;
+}
+
+.basicContext__data {
+  padding: 0 6px;
+}
+

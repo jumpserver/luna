@@ -66,5 +66,11 @@
   "password": "密码",
   "tab list": "窗口列表",
   "reconnect": "重新连接",
-  "are you sure to reconnect it?(rdp not support)": "确定要重新连接吗? (RDP暂不支持)"
+  "are you sure to reconnect it?(rdp not support)": "确定要重新连接吗? (RDP暂不支持)",
+  "clone connect": "复制窗口",
+  "close current tab": "关闭",
+  "close all tabs": "关闭所有",
+  "close left tabs": "关闭左侧",
+  "close right tabs": "关闭右侧",
+  "close other tabs": "关闭其他"
 }

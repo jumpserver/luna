@@ -6,10 +6,55 @@
   <ul [ngStyle]="{'width':150*NavList.List.length+'px'}">
     <li *ngFor="let m of NavList.List;let i = index"
         [ngClass]="{'active':i==NavList.Active,'disconnected':!m.connected, 'hidden': m.closed != false}"
-        id="termnav-{{i}}" (click)="setActive(i)" (dblclick)="m.edit=true;setActive(i)">
+        id="termnav-{{i}}" (click)="setActive(i)" (dblclick)="m.edit=true;setActive(i)" (contextmenu)="onRightClick($event, i)">
       <span *ngIf="!m.edit" [attr.title]="m.nick">{{m.nick | truncatechars:17 }}</span>
       <input *ngIf="m.edit" [(ngModel)]="m.nick" (blur)="m.edit=false" (keyup.enter)="m.edit=false" autofocus="true"/>
       <a class="close" (click)="close(m,i)">&times;</a>
     </li>
   </ul>
+</div>
+<div #rMenu *ngIf="isShowRMenu" class="basicContext" [style.top]="pos.top" [style.left]="pos.left">
+  <table>
+    <tbody>
+
+    <tr class="basicContext__item ">
+      <td class="basicContext__data"  (click)="rCloneConnect()"><span class="basicContext__icon fa fa-copy"></span> {{ "Clone Connect"|trans }} </td>
+    </tr>
+    <tr class="basicContext__item basicContext__item--separator"></tr>
+    <tr class="basicContext__item ">
+      <td class="basicContext__data"  (click)="rReconnect()"><span class="basicContext__icon fa fa-refresh"></span> {{ "Reconnect"|trans }} </td>
+    </tr>
+    <tr class="basicContext__item basicContext__item--separator"></tr>
+    <tr class="basicContext__item ">
+      <td class="basicContext__data"   (click)="rClose()"> <span class="basicContext__icon fa fa-close "></span> {{ "Close Current Tab"|trans }} </td>
+    </tr>
+    <ng-template [ngIf]="NavList.List.length>2">
+    <tr class="basicContext__item basicContext__item--separator"></tr>
+    <tr class="basicContext__item ">
+      <td class="basicContext__data"  (click)="rCloseAll()"><span class="basicContext__icon fa fa-close"></span> {{ "Close All Tabs"|trans }} </td>
+    </tr>
+    <tr class="basicContext__item basicContext__item--separator"></tr>
+    <tr class="basicContext__item ">
+      <td class="basicContext__data"  (click)="rCloseOthers()"><span class="basicContext__icon fa fa-close"></span> {{ "Close Other Tabs"|trans }} </td>
+    </tr>
+    </ng-template>
+    <ng-template [ngIf]="rIdx>0">
+    <tr class="basicContext__item basicContext__item--separator"></tr>
+    <tr class="basicContext__item ">
+      <td class="basicContext__data"  (click)="rCloseLeft()"><span class="basicContext__icon fa fa-close"></span> {{ "Close Left Tabs"|trans }} </td>
+    </tr>
+    </ng-template>
+    <ng-template [ngIf]="rIdx!=NavList.List.length-2">
+    <tr class="basicContext__item basicContext__item--separator"></tr>
+    <tr class="basicContext__item ">
+      <td class="basicContext__data"  (click)="rCloseRight()"><span class="basicContext__icon fa fa-close"></span> {{ "Close Right Tabs"|trans }} </td>
+    </tr>
+    </ng-template>
+
+    <tr class="basicContext__item basicContext__item--separator"></tr>
+    <tr class="basicContext__item ">
+      <td class="basicContext__data"  (click)="rDisconnect()"><span class="basicContext__icon fa fa-pause-circle"></span> {{ "Disconnect"|trans }} </td>
+    </tr>
+    </tbody>
+  </table>
 </div>

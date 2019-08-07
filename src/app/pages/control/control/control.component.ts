@@ -10,6 +10,7 @@
 import {Component, OnInit} from '@angular/core';
 import {TermWS} from '../../../globals';
 import * as jQuery from 'jquery/dist/jquery.min';
+import {ElementSshTermComponent} from '../../../elements/ssh-term/ssh-term.component';
 
 export class View {
   nick: string;
@@ -24,7 +25,7 @@ export class View {
   room: string;
   Rdp: any;
   Term: any;
-  termComp: any;
+  termComp: ElementSshTermComponent;
 }
 
 export let NavList: {
