@@ -4,7 +4,7 @@ import {NavList, View} from '../../pages/control/control/control.component';
 import {UUIDService} from '../../app.service';
 import {CookieService} from 'ngx-cookie-service';
 import {Socket} from '../../utils/socket';
-import {getWsSocket} from '../../globals';
+import {DataStore, getWsSocket} from '../../globals';
 import {TransPipe} from '../../pipes/trans.pipe';
 
 
@@ -27,6 +27,15 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
   transPipe: TransPipe;
 
   constructor(private _uuid: UUIDService, private _cookie: CookieService) {
+  }
+
+  contextMenu($event) {
+    this.term.focus();
+    if (DataStore.termSelection !== '') {
+      this.ws.emit('data', {'data': DataStore.termSelection, 'room': NavList.List[this.index].room});
+      $event.preventDefault();
+    }
+
   }
 
   ngOnInit() {
@@ -129,6 +138,14 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
         this.view.room = data.room;
         this.view.connected = true;
       }
+    });
+
+    this.term.on('selection', function () {
+      document.execCommand('copy');
+      if (!this.hasSelection) {
+        DataStore.termSelection = '';
+      }
+      DataStore.termSelection = this.getSelection().trim();
     });
   }
 
