@@ -20,3 +20,20 @@ elements-term, elements-guacamole, elements-settings {
   width: 100%;
   background-color: gray;
 }
+
+
+.batch-command {
+  border-left-width: 0;
+  width: 100%;
+  padding: 0 2px 0 0;
+}
+
+.batch-command > input {
+  height: 26px;
+  padding-left: 14px;
+  width: 100%;
+  line-height: 26px;
+  border: none;
+  background: #2f2a2a;
+  color: #ffffff;
+}

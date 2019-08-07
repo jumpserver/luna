@@ -72,5 +72,6 @@
   "close all tabs": "关闭所有",
   "close left tabs": "关闭左侧",
   "close right tabs": "关闭右侧",
-  "close other tabs": "关闭其他"
+  "close other tabs": "关闭其他",
+  "send text to all ssh terminals": "发送文本到所有ssh终端"
 }

@@ -43,6 +43,7 @@ export let NavList: {
 })
 export class ControlComponent implements OnInit {
   NavList = NavList;
+  batchCommand: string;
 
   static active(id) {
     NavList.List.forEach((v, k) => {
@@ -57,6 +58,16 @@ export class ControlComponent implements OnInit {
       NavList.List[id].connected = false;
       NavList.List[id].Term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
       TermWS.emit('logout', NavList.List[id].room);
+    }
+  }
+
+  static SendCommandToAllSshTerm(cmd) {
+    for (let i = 0; i < NavList.List.length; i++) {
+      if (NavList.List[i].type !== 'ssh' || NavList.List[i].connected !== true) {
+        continue;
+      }
+      const d = {'data': cmd, 'room': NavList.List[i].room};
+      TermWS.emit('data', d);
     }
   }
 
@@ -76,7 +87,13 @@ export class ControlComponent implements OnInit {
   ngOnInit() {
   }
 
-  // trackByFn(index: number, item: View) {
-  //   return item.id;
-  // }
+  sendBatchCommand() {
+    this.batchCommand = this.batchCommand.trim();
+    if (this.batchCommand === '') {
+      return;
+    }
+    ControlComponent.SendCommandToAllSshTerm(this.batchCommand + '\r');
+    this.batchCommand = '';
+
+  }
 }

@@ -2,7 +2,7 @@
   <div fxFlex="0 0 30px" class="search">
     <pages-control-nav></pages-control-nav>
   </div>
-  <div fxFlex="0 0 calc(100%-35px)" id="winContainer">
+  <div fxFlex="0 0 calc(100%-56px)" id="winContainer">
     <div class="window" *ngFor="let m of NavList.List;let i=index"
          [ngClass]="{'active':i==NavList.Active}" style="height: 100%">
       <elements-ssh-term [index]="i"
@@ -22,5 +22,12 @@
                          <!--*ngIf="m.type=='settings'">-->
       <!--</elements-settings>-->
     </div>
+  </div>
+  <div fxflex="0 0 26px" class="batch-command">
+    <input placeholder=" {{'Send text to all ssh terminals'| trans }} ..."
+           maxlength="2048"
+           title="{{'Send text to all ssh terminals'| trans }} ..."
+           (keydown.enter)="sendBatchCommand()"
+           type="text" tabindex="2" spellcheck="false" [(ngModel)]="batchCommand">
   </div>
 </div>
