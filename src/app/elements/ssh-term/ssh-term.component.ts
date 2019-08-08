@@ -31,7 +31,18 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
 
   contextMenu($event) {
     this.term.focus();
-    if (DataStore.termSelection !== '') {
+    // ctrl按下则不处理
+    if ($event.ctrlKey) {
+      return;
+    }
+    // @ts-ignore
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      // @ts-ignore
+      navigator.clipboard.readText().then((text) => {
+        this.ws.emit('data', {'data': text, 'room': NavList.List[this.index].room});
+      });
+      $event.preventDefault();
+    } else if (DataStore.termSelection !== '') {
       this.ws.emit('data', {'data': DataStore.termSelection, 'room': NavList.List[this.index].room});
       $event.preventDefault();
     }
