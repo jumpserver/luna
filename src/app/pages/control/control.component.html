@@ -1,5 +1,6 @@
 <div class="container-fluid row" fxLayout="row" ngxSplit="row">
-  <div fxFlex="1 1 20%" minBasis="100px" maxBasis="800px" fxFlexFill ngxSplitArea *ngIf="DataStore.leftbarshow">
+  <div [fxFlex]="DataStore.leftbarshow ? '1 1 20%': '1 1 0'" minBasis="100px" maxBasis="800px" fxFlexFill ngxSplitArea
+       [style.display]="DataStore.leftbarshow ? 'block' : 'none'">
     <pages-control-cleftbar></pages-control-cleftbar>
   </div>
   <div fxFlex="0" ngxSplitHandle [style.display]="activeViewIsRdp() ? 'none' : 'block'" (mouseup)="dragSplitBtn($event)"></div>
