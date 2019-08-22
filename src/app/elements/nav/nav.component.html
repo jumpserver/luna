@@ -3,6 +3,16 @@
   <ul>
     <li><a href="/"><img src="static/imgs/logo.png" height="26px"/></a>
     </li>
+    <li [ngClass]="{'dropdown': true}">
+      <a>{{"Tab List"|trans}}</a>
+      <ul *ngIf="NavList.List.length>1" [ngClass]="{'dropdown-content': true}">
+        <ng-container *ngFor="let t of NavList.List, let idx= index" >
+          <li *ngIf="t.nick!=null" [ngClass]="{'active':idx==NavList.Active,'disconnected':!t.connected, 'hidden': t.closed != false}">
+            <a id="{{ 'tab' + idx }}"   (click)="toTab(idx)">{{t.nick}}</a>
+          </li>
+        </ng-container>
+      </ul>
+    </li>
     <li *ngFor="let v of DataStore.Nav" [ngClass]="{'dropdown': v.children}">
       <a>{{v.name|trans}}</a>
       <ul [ngClass]="{'dropdown-content': v.children}">
@@ -12,15 +22,6 @@
         </li>
       </ul>
     </li>
-    <li [ngClass]="{'dropdown': true}">
-      <a>{{"Tab List"|trans}}</a>
-      <ul *ngIf="NavList.List.length>1" [ngClass]="{'dropdown-content': true}">
-        <ng-container *ngFor="let t of NavList.List, let idx= index" >
-        <li *ngIf="t.nick!=null" [ngClass]="{'active':idx==NavList.Active,'disconnected':!t.connected, 'hidden': t.closed != false}">
-          <a id="{{ 'tab' + idx }}"   (click)="toTab(idx)">{{t.nick}}</a>
-        </li>
-        </ng-container>
-      </ul>
-    </li>
+
   </ul>
 </div>

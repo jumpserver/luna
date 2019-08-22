@@ -7,6 +7,7 @@
 .nav ul {
   list-style-type: none;
   line-height: 24px;
+  padding-inline-start: 0;
 }
 
 .nav li {
@@ -57,7 +58,7 @@
 }
 
 .nav .dropdown-content li {
-  float: left;
+  /*float: left;*/
   display: flex;
 }
 

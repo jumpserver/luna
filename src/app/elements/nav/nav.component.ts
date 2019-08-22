@@ -122,6 +122,17 @@ export class ElementNavComponent implements OnInit {
         ControlComponent.DisconnectAll();
         break;
       }
+      case'ReconnectAll': {
+        if (!confirm('确定重新连接所有已断开终端? (RDP暂不支持)')) {
+          break;
+        }
+        for (let i = 0; i < NavList.List.length - 1; i++) {
+          if (NavList.List[i].connected !== true && NavList.List[i].type === 'ssh' ) {
+            NavList.List[i].termComp.reconnect();
+          }
+        }
+        break;
+      }
       case 'Website': {
         window.open('http://www.jumpserver.org');
         break;
@@ -249,6 +260,11 @@ export class ElementNavComponent implements OnInit {
           'id': 'Reconnect',
           'click': 'Reconnect',
           'name': 'Reconnect'
+        },
+        {
+          'id': 'ReconnectAll',
+          'click': 'ReconnectAll',
+          'name': 'Reconnect all'
         },
       ]
     }, {
