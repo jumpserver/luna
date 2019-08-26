@@ -286,7 +286,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   manualSetUserAuthLoginIfNeed(host, user, callback) {
-    if (user.login_mode !== 'manual') {
+    if (user.login_mode !== 'manual' || user.protocol !== 'rdp') {
       return callback(host, user);
     }
     user = Object.assign({}, user);
