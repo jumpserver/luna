@@ -17,7 +17,7 @@ export class ElementGuacamoleComponent implements OnInit {
   @Input() remoteAppId: string;
   @Input() target: string;
   @Input() index: number;
-  @ViewChild('rdp') el: ElementRef;
+  @ViewChild('rdpRef') el: ElementRef;
   registered = false;
 
   constructor(private sanitizer: DomSanitizer,
@@ -29,15 +29,17 @@ export class ElementGuacamoleComponent implements OnInit {
   registerHost() {
     let action: any;
     if (this.remoteAppId) {
-      action = this._http.guacamole_add_remote_app(User.id, this.remoteAppId, this.sysUser.username, this.sysUser.password);
+      action = this._http.guacamoleAddRemoteApp(User.id, this.remoteAppId, this.sysUser.username, this.sysUser.password);
     } else {
-      action = this._http.guacamole_add_asset(User.id, this.host.id, this.sysUser.id, this.sysUser.username, this.sysUser.password);
+      action = this._http.guacamoleAddAsset(User.id, this.host.id, this.sysUser.id, this.sysUser.username, this.sysUser.password);
     }
     action.subscribe(
       data => {
         const base = data.result;
         this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamole_token;
-        NavList.List[this.index].Rdp = this.el.nativeElement;
+        setTimeout(() => {
+          NavList.List[this.index].Rdp = this.el.nativeElement;
+        }, 500);
       },
       error => {
         if (!this.registered) {
@@ -52,7 +54,7 @@ export class ElementGuacamoleComponent implements OnInit {
     const now = new Date();
     const nowTime = now.getTime() / 1000;
     this.registered = true;
-    this._http.get_guacamole_token(User.id, '').subscribe(
+    this._http.getGuacamoleToken(User.id, '').subscribe(
       data => {
         // /guacamole/client will redirect to http://guacamole/#/client
         DataStore.guacamole_token = data['authToken'];

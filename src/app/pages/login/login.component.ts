@@ -44,7 +44,7 @@ export class PagesLoginComponent implements OnInit {
     DataStore.error['login'] = '';
     this._logger.log(User);
     if (User.username.length > 0 && User.password.length > 6 && User.password.length < 100) {
-      this._http.check_login(JSON.stringify(User))
+      this._http.checkLogin(JSON.stringify(User))
         .subscribe(
           data => {
             User.logined = data['logined'];

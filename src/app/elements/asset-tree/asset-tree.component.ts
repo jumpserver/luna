@@ -51,7 +51,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
       zTreeObj.expandNode(treeNode);
     } else {
-      this._http.get_user_profile().subscribe();
+      this._http.getUserProfile().subscribe();
       this.Connect(treeNode);
     }
   }
@@ -66,7 +66,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   getGrantedAssetsNodes() {
-    this._http.get_my_granted_nodes()
+    this._http.getMyGrantedNodes()
       .subscribe(response => {
         this.Data = [...response, ...this.Data];
         this.draw();
@@ -74,7 +74,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   refreshGrantedAssetsNodes() {
-    this._http.refresh_my_granted_nodes()
+    this._http.refreshMyGrantedNodes()
       .subscribe(response => {
         this.Data = [...response, ...this.Data];
         this.draw();
@@ -82,7 +82,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   getGrantedRemoteApps() {
-    this._http.get_my_granted_remote_apps()
+    this._http.getMyGrantedRemoteApps()
       .subscribe(response => {
         if (response.length > 1) {
           this.Data = [...this.Data, ...response];
@@ -209,35 +209,35 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   connectAsset(node) {
-    const system_users = node.meta.system_users;
+    const systemUsers = node.meta.system_users;
     const host = node.meta.asset;
     let user: any;
-    if (system_users.length > 1) {
-      user = this.checkPriority(system_users);
+    if (systemUsers.length > 1) {
+      user = this.checkPriority(systemUsers);
       if (user) {
-        this.login(host, user);
+        return this.manualSetUserAuthLoginIfNeed(host, user, this.login);
       } else {
         const dialogRef = this._dialog.open(AssetTreeDialogComponent, {
           height: '200px',
           width: '300px',
-          data: {users: system_users}
+          data: {users: systemUsers}
         });
 
         dialogRef.afterClosed().subscribe(result => {
           if (result) {
-            for (const i of system_users) {
+            for (const i of systemUsers) {
               if (i.id.toString() === result.toString()) {
                 user = i;
                 break;
               }
             }
-            this.login(host, user);
+            return this.manualSetUserAuthLoginIfNeed(host, user, this.login);
           }
         });
       }
-    } else if (system_users.length === 1) {
-      user = system_users[0];
-      this.login(host, user);
+    } else if (systemUsers.length === 1) {
+      user = systemUsers[0];
+      this.manualSetUserAuthLoginIfNeed(host, user, this.login);
     } else {
       alert('该主机没有授权登录用户');
     }
@@ -245,14 +245,11 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
 
   connectRemoteApp(node) {
     const user = node.meta.user;
-    return this.loginRemoteApp(node, user);
+    return this.manualSetUserAuthLoginIfNeed(node, user, this.loginRemoteApp);
   }
 
   loginRemoteApp(node, user) {
     const id = NavList.List.length - 1;
-    if (user.login_mode === 'manual' && !user.password && user.protocol === 'rdp') {
-       return this.manualSetUserAuthLogin(node, user, this.loginRemoteApp);
-    }
     if (node) {
       NavList.List[id].nick = node.name;
       NavList.List[id].connected = true;
@@ -288,28 +285,32 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     this.Connect(host);
   }
 
-  manualSetUserAuthLogin(host, user, callback) {
+  manualSetUserAuthLoginIfNeed(host, user, callback) {
+    if (user.login_mode !== 'manual') {
+      return callback(host, user);
+    }
     user = Object.assign({}, user);
     const dialogRef = this._dialog.open(ManualPasswordDialogComponent, {
       height: '250px',
-      width: '400px',
+      width: '500px',
       data: {username: user.username}
     });
     dialogRef.afterClosed().subscribe(result => {
       if (!result) {
+        return;
+      }
+      if (result.skip) {
         return callback(host, user);
       }
-      user.username = btoa(result.username);
-      user.password = btoa(result.password);
+      user.username = result.username;
+      user.password = result.password;
       return callback(host, user);
     });
   }
 
   login(host, user) {
     const id = NavList.List.length - 1;
-    if (user.login_mode === 'manual' && !user.password && user.protocol === 'rdp') {
-       return this.manualSetUserAuthLogin(host, user, this.login);
-    }
+
     if (user) {
       NavList.List[id].nick = host.hostname;
       NavList.List[id].connected = true;
@@ -458,6 +459,16 @@ export class ManualPasswordDialogComponent implements OnInit {
   constructor(@Inject(MAT_DIALOG_DATA) public data: any,
               public dialogRef: MatDialogRef<ManualPasswordDialogComponent>) {
 
+  }
+
+  onSkip() {
+    this.data.skip = true;
+    this.dialogRef.close(this.data);
+  }
+
+  onSkipAll() {
+    this.data.skipAll = true;
+    this.dialogRef.close(this.data);
   }
 
   onNoClick() {

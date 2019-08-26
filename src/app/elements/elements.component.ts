@@ -13,7 +13,7 @@ import {ElementIframeComponent} from './iframe/iframe.component';
 import {ElementDialogAlertComponent} from './dialog/dialog.service';
 import {ElementGuacamoleComponent} from './guacamole/guacamole.component';
 import {ElementSshTermComponent} from './ssh-term/ssh-term.component';
-import {AssetTreeDialogComponent, ElementAssetTreeComponent, ManualPasswordDialogComponent} from './asset-tree/asset-tree.component';
+import {ElementAssetTreeComponent, AssetTreeDialogComponent, ManualPasswordDialogComponent} from './asset-tree/asset-tree.component';
 import {RDPSolutionDialogComponent, FontDialogComponent} from './nav/nav.component';
 
 export const ElementComponents = [

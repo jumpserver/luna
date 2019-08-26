@@ -24,7 +24,7 @@ export class PagesReplayComponent implements OnInit {
       .subscribe(params => {
         token = params['token'];
       });
-    this._http.get_replay(token)
+    this._http.getReplay(token)
       .subscribe(
         data => {
           this.replay.type = data['type'];

@@ -86,7 +86,7 @@ export class JsonComponent implements OnInit {
       }
     });
     if (this.replay.src !== 'READY') {
-      this._http.get_replay_data(this.replay.src)
+      this._http.getReplayData(this.replay.src)
         .subscribe(
           data => {
             this.replayData = data;
