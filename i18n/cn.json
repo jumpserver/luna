@@ -64,5 +64,6 @@
   "please input password": "请输入密码",
   "username": "用户名",
   "password": "密码",
-  "skip": "跳过"
+  "skip": "跳过",
+  "loading": "加载中"
 }
