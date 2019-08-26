@@ -29,7 +29,7 @@ export class ElementGuacamoleComponent implements OnInit {
   registerHost() {
     let action: any;
     if (this.remoteAppId) {
-      action = this._http.guacamole_add_remote_app(User.id, this.remoteAppId);
+      action = this._http.guacamole_add_remote_app(User.id, this.remoteAppId, this.sysUser.username, this.sysUser.password);
     } else {
       action = this._http.guacamole_add_asset(User.id, this.host.id, this.sysUser.id, this.sysUser.username, this.sysUser.password);
     }

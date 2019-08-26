@@ -106,11 +106,12 @@ export class HttpService {
       .set('asset_id', asset_id)
       .set('system_user_id', system_user_id)
       .set('token', DataStore.guacamole_token);
+    let body = new HttpParams();
     if (system_user_username) {
-      params = params.set('username', system_user_username);
+      body = body.set('username', system_user_username);
     }
     if (system_user_password) {
-      params = params.set('password', system_user_password);
+      body = body.set('password', system_user_password);
     }
     const solution = localStorage.getItem('rdpSolution') || 'Auto';
     if (solution !== 'Auto') {
@@ -119,8 +120,9 @@ export class HttpService {
       params = params.set('width', width).set('height', height);
     }
 
-    return this.http.get<GuacObjAddResp>(
+    return this.http.post<GuacObjAddResp>(
       '/guacamole/api/session/ext/jumpserver/asset/add',
+      body.toString(),
       {
         headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
         params: params
@@ -128,11 +130,18 @@ export class HttpService {
     );
   }
 
-  guacamole_add_remote_app(user_id: string, remote_app_id: string) {
+  guacamole_add_remote_app(user_id: string, remote_app_id: string, system_user_username?: string, system_user_password?: string) {
     let params = new HttpParams()
       .set('user_id', user_id)
       .set('remote_app_id', remote_app_id)
       .set('token', DataStore.guacamole_token);
+    let body = new HttpParams();
+    if (system_user_username) {
+      body = body.set('username', system_user_username);
+    }
+    if (system_user_password) {
+      body = body.set('password', system_user_password);
+    }
     const solution = localStorage.getItem('rdpSolution') || 'Auto';
     if (solution !== 'Auto') {
       const width = solution.split('x')[0];
@@ -140,8 +149,9 @@ export class HttpService {
       params = params.set('width', width).set('height', height);
     }
 
-    return this.http.get<GuacObjAddResp>(
+    return this.http.post<GuacObjAddResp>(
       '/guacamole/api/session/ext/jumpserver/remote-app/add',
+      body.toString(),
       {
         headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
         params: params
