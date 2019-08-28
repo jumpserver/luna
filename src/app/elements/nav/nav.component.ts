@@ -6,7 +6,7 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, Inject, OnInit} from '@angular/core';
-import {AppService, HttpService, LocalStorageService, LogService} from '../../app.service';
+import {AppService, HttpService, LocalStorageService, NavService, LogService} from '../../app.service';
 import {CleftbarComponent} from '../../pages/control/cleftbar/cleftbar.component';
 import {ControlComponent, NavList, View} from '../../pages/control/control/control.component';
 import {DataStore, i18n} from '../../globals';
@@ -21,7 +21,9 @@ declare let layer: any;
 })
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
+  navs: Array<object>;
   ChangeLanWarningDialog: any;
+  _asyncTree = false;
 
   static Hide() {
     jQuery('elements-nav').hide();
@@ -31,12 +33,22 @@ export class ElementNavComponent implements OnInit {
               private _http: HttpService,
               private _logger: LogService,
               public _dialog: MatDialog,
+              public _navSvc: NavService,
               private _localStorage: LocalStorageService) {
     this._logger.log('nav.ts:NavComponent');
     this.getNav();
   }
 
   ngOnInit() {
+    this.navs = this.getNav();
+  }
+
+  get treeLoadAsync() {
+    return this._asyncTree;
+  }
+
+  set treeLoadAsync(value) {
+    this._asyncTree = value;
   }
 
   click(event) {
@@ -67,7 +79,7 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'FullScreen': {
-        let ele:any = document.getElementsByClassName("window active ")[0];
+        const ele: any = document.getElementsByClassName('window active')[0];
         
         if (ele.requestFullscreen) {
           ele.requestFullscreen();
@@ -195,6 +207,16 @@ export class ElementNavComponent implements OnInit {
         });
         break;
       }
+      case 'LoadTreeAsync': {
+        this._navSvc.treeLoadAsync = !this._navSvc.treeLoadAsync;
+        this.refreshNav();
+        break;
+      }
+      case 'SkipManualPassword': {
+        this._navSvc.skipAllManualPassword = !this._navSvc.skipAllManualPassword;
+        this.refreshNav();
+        break;
+      }
       default: {
         break;
       }
@@ -219,8 +241,12 @@ export class ElementNavComponent implements OnInit {
     });
   }
 
+  refreshNav() {
+    this.navs = this.getNav();
+  }
+
   getNav() {
-    DataStore.Nav = [{
+    return [{
       'id': 'File',
       'name': 'Server',
       'children': [
@@ -287,6 +313,30 @@ export class ElementNavComponent implements OnInit {
           'id': 'FullScreen',
           'click': 'FullScreen',
           'name': 'Full Screen'
+        },
+        {
+          'id': 'LoadTreeAsync',
+          'click': 'LoadTreeAsync',
+          'name': 'Load Tree Async',
+          'hide': this._navSvc.treeLoadAsync
+        },
+        {
+          'id': 'LoadTreeSync',
+          'click': 'LoadTreeAsync',
+          'name': 'Load Tree Sync',
+          'hide': !this._navSvc.treeLoadAsync
+        },
+        {
+          'id': 'SkipManualPassword',
+          'click': 'SkipManualPassword',
+          'name': 'Skip manual password',
+          'hide': this._navSvc.skipAllManualPassword
+        },
+        {
+          'id': 'ShowManualPassword',
+          'click': 'SkipManualPassword',
+          'name': 'show manual password',
+          'hide': !this._navSvc.skipAllManualPassword
         }
         ]
     }, {

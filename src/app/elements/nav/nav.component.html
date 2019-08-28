@@ -3,12 +3,12 @@
   <ul>
     <li><a href="/"><img src="static/imgs/logo.png" height="26px"/></a>
     </li>
-    <li *ngFor="let v of DataStore.Nav" [ngClass]="{'dropdown': v.children}">
+    <li *ngFor="let v of navs" [ngClass]="{'dropdown': v.children}">
       <a>{{v.name|trans}}</a>
       <ul [ngClass]="{'dropdown-content': v.children}">
         <li *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
           <a *ngIf="vv.href" [routerLink]="[vv.href]">{{vv.name|trans}}</a>
-          <a id="{{vv.id}}" *ngIf="vv.click" (click)="click(vv.click)">{{vv.name|trans}}</a>
+          <a id="{{vv.id}}" *ngIf="vv.click && !vv.hide" (click)="click(vv.click)">{{vv.name|trans}}</a>
         </li>
       </ul>
     </li>

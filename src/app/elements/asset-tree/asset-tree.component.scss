@@ -1,4 +1,4 @@
-#ztree .fa {
+.tree-refresh .fa {
   width: 24px;
   height: 24px;
   line-height: 24px;
@@ -35,7 +35,7 @@
     user-select: none;
 }
 .basicContext, .basicContext * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 .basicContextContainer {
@@ -92,11 +92,11 @@ tr {
 }
 
 tr:hover {
-   background-color: #463e3e;
+  background-color: #463e3e;
 }
 
 .basicContext table {
-    border-spacing: 0 !important;
+  border-spacing: 0 !important;
 }
 
 .basicContext__data {

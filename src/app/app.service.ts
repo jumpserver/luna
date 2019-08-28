@@ -11,7 +11,6 @@ import {CookieService} from 'ngx-cookie-service';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser, i18n} from './globals';
-import {environment} from '../environments/environment';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
 import * as UUID from 'uuid-js/lib/uuid.js';
@@ -70,8 +69,12 @@ export class HttpService {
     return this.http.get('/api/users/v1/profile/');
   }
 
-  getMyGrantedNodes() {
-    return this.http.get<Array<Node>>('/api/perms/v1/user/nodes-assets/tree/?cache_policy=1');
+  getMyGrantedNodes(async: boolean, refresh?: boolean) {
+    const cachePolicy = refresh ? '2' : '1';
+    const syncUrl = '/api/perms/v1/users/nodes-with-assets/tree/?cache_policy=' + cachePolicy;
+    const asyncUrl = '/api/perms/v1/users/nodes/children-with-assets/tree/?cache_policy=' + cachePolicy;
+    const url = async ? asyncUrl : syncUrl;
+    return this.http.get<Array<Node>>(url);
   }
 
   getMyGrantedRemoteApps() {
@@ -405,3 +408,28 @@ export class UUIDService {
   }
 }
 
+
+@Injectable()
+export class NavService {
+  constructor(private store: LocalStorageService) {}
+
+  get treeLoadAsync() {
+    const value = this.store.get('LoadTreeAsync');
+    return value === '1';
+  }
+
+  set treeLoadAsync(v: boolean) {
+    const value = v ? '1' : '0';
+    this.store.set('LoadTreeAsync', value);
+  }
+
+  get skipAllManualPassword() {
+    const value = this.store.get('SkipAllManualPassword');
+    return value === '1';
+  }
+
+  set skipAllManualPassword(v) {
+    const value = v ? '1' : '0';
+    this.store.set('SkipAllManualPassword', value);
+  }
+}

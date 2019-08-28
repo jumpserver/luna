@@ -1,6 +1,6 @@
-import {Component, Input, Output, OnInit, Inject, SimpleChanges, OnChanges, ElementRef, ViewChild, EventEmitter} from '@angular/core';
+import {Component, Input, OnInit, Inject, SimpleChanges, OnChanges, ElementRef, ViewChild} from '@angular/core';
 import {NavList, View} from '../../pages/control/control/control.component';
-import {AppService, HttpService, LogService} from '../../app.service';
+import {AppService, HttpService, LogService, NavService} from '../../app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {BehaviorSubject} from 'rxjs/BehaviorSubject';
@@ -33,23 +33,21 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
         title: 'title'
       }
     },
-    callback: {
-      onClick: this.onCzTreeOnClick.bind(this),
-      onRightClick: this.onRightClick.bind(this)
-    },
+
   };
   pos = {left: '100px', top: '200px'};
   hiddenNodes: any;
   expandNodes: any;
-  zTree: any;
+  assetsTree: any;
+  remoteAppsTree: any;
   isShowRMenu = false;
   rightClickSelectNode: any;
   hasLoginTo = false;
+  loadTreeAsync = false;
 
-  onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
+  onNodeClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
-      const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
-      zTreeObj.expandNode(treeNode);
+      this.assetsTree.expandNode(treeNode);
     } else {
       this._http.getUserProfile().subscribe();
       this.Connect(treeNode);
@@ -60,41 +58,25 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
               public _dialog: MatDialog,
               public _logger: LogService,
               private activatedRoute: ActivatedRoute,
-              private _http: HttpService
+              private _http: HttpService,
+              private _navSvc: NavService
   ) {
     this.searchEvt$ = new BehaviorSubject<string>(this.query);
-  }
-
-  getGrantedAssetsNodes() {
-    this._http.getMyGrantedNodes()
-      .subscribe(response => {
-        this.Data = [...response, ...this.Data];
-        this.draw();
-      });
   }
 
   refreshGrantedAssetsNodes() {
     this._http.refreshMyGrantedNodes()
       .subscribe(response => {
         this.Data = [...response, ...this.Data];
-        this.draw();
-      });
-  }
-
-  getGrantedRemoteApps() {
-    this._http.getMyGrantedRemoteApps()
-      .subscribe(response => {
-        if (response.length > 1) {
-          this.Data = [...this.Data, ...response];
-          this.draw();
-        }
+        this.initTree();
       });
   }
 
   ngOnInit() {
-    this.getGrantedAssetsNodes();
-    this.getGrantedRemoteApps();
+    this.initAssetsTree();
+    this.initRemoteAppsTree();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
+    this.loadTreeAsync = this._navSvc.treeLoadAsync;
     this.searchEvt$.asObservable()
       .debounceTime(300)
       .distinctUntilChanged()
@@ -104,27 +86,63 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['Data'] && this.Data) {
-      this.draw();
-    }
+    // if (changes['Data'] && this.Data) {
+    //   this.draw();
+    // }
     if (changes['query'] && !changes['query'].firstChange) {
       this.searchEvt$.next(this.query);
     }
   }
 
-  refreshNodes() {
-    this.zTree.destroy();
-    this.Data = [];
-    this.refreshGrantedAssetsNodes();
-    this.getGrantedRemoteApps();
+  refreshAssetsTree() {
+    this.assetsTree.destroy();
+    this.initAssetsTree(true);
   }
 
-  draw() {
-    $.fn.zTree.init($('#ztree'), this.setting, this.Data);
-    this.zTree = $.fn.zTree.getZTreeObj('ztree');
-    this.rootNodeAddDom(this.zTree, () => {
-      this.refreshNodes();
-    });
+  initAssetsTree(refresh?: boolean) {
+    const setting = Object.assign({}, this.setting);
+    setting['callback'] = {
+      onClick: this.onNodeClick.bind(this),
+      onRightClick: this.onRightClick.bind(this)
+    };
+    if (this.loadTreeAsync) {
+      setting['async'] = {
+        enable: true,
+        url: '/api/perms/v1/users/nodes/children-with-assets/tree/',
+        autoParam: ['id=key', 'name=n', 'level=lv'],
+        type: 'get'
+      };
+    }
+
+    this._http.getMyGrantedNodes(this.loadTreeAsync, refresh).subscribe(resp => {
+        const assetsTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
+        this.assetsTree = assetsTree;
+        this.rootNodeAddDom(assetsTree, () => {
+          this.refreshAssetsTree();
+        });
+      });
+  }
+
+  refreshRemoteAppsTree() {
+    this.remoteAppsTree.destroy();
+    this.initRemoteAppsTree();
+  }
+
+  initRemoteAppsTree() {
+    this._http.getMyGrantedRemoteApps().subscribe(
+      resp => {
+        const tree = $.fn.zTree.init($('#remoteAppsTree'), this.setting, resp);
+        this.remoteAppsTree = tree;
+        this.rootNodeAddDom(tree, () => {
+          this.refreshRemoteAppsTree();
+        });
+      }
+    );
+  }
+
+  initTree() {
+    this.initAssetsTree();
+    this.initRemoteAppsTree();
 
     this.activatedRoute.queryParams.subscribe(params => {
       const login_to = params['login_to'];
@@ -141,11 +159,13 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   rootNodeAddDom(ztree, callback) {
-    const refreshIcon = '<a id="tree-refresh"><i class="fa fa-refresh"></i></a>';
+    const tId = ztree.setting.treeId + '_tree_refresh';
+    const refreshIcon = '<a id=' + tId + ' class="tree-refresh">' +
+      '<i class="fa fa-refresh" style="font-family: FontAwesome !important;" ></i></a>';
     const rootNode = ztree.getNodes()[0];
     const $rootNodeRef = $('#' + rootNode.tId + '_a');
     $rootNodeRef.after(refreshIcon);
-    const refreshIconRef = $('#tree-refresh');
+    const refreshIconRef = $('#' + tId);
     refreshIconRef.bind('click', function () {
       callback();
     });
@@ -186,10 +206,10 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
 
     if (!treeNode && event.target.tagName.toLowerCase() !== 'button' && $(event.target).parents('a').length === 0) {
-      this.zTree.cancelSelectedNode();
+      this.assetsTree.cancelSelectedNode();
       this.showRMenu(event.clientX, event.clientY);
     } else if (treeNode && !treeNode.noR) {
-      this.zTree.selectNode(treeNode);
+      this.assetsTree.selectNode(treeNode);
       this.showRMenu(event.clientX, event.clientY);
       this.rightClickSelectNode = treeNode;
     }
@@ -458,7 +478,6 @@ export class ManualPasswordDialogComponent implements OnInit {
   PasswordControl = new FormControl('', [Validators.required]);
   constructor(@Inject(MAT_DIALOG_DATA) public data: any,
               public dialogRef: MatDialogRef<ManualPasswordDialogComponent>) {
-
   }
 
   onSkip() {

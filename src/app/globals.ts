@@ -90,7 +90,7 @@ export let User: {
 
 export let DataStore: {
   socket: any;
-  Nav: Array<{}>;
+  Nav: Array<object>;
   NavShow: boolean;
   Path: {};
   error: {};

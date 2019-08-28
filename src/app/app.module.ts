@@ -16,7 +16,7 @@ import {AppRouterModule} from './router/router.module';
 import {AppComponent} from './pages/app.component';
 
 // service
-import {AppService, HttpService, LocalStorageService, LogService, UUIDService} from './app.service';
+import {AppService, HttpService, LocalStorageService, NavService, LogService, UUIDService} from './app.service';
 
 
 import {CookieService} from 'ngx-cookie-service';
@@ -66,6 +66,7 @@ import {SftpComponent} from './elements/sftp/sftp.component';
     AppService,
     HttpService,
     LogService,
+    NavService,
     UUIDService,
     LocalStorageService,
     DialogService,
