@@ -1,6 +1,6 @@
 import {AfterViewInit, Component, Input, OnInit, OnDestroy } from '@angular/core';
 import {Terminal} from 'xterm';
-import {NavList, View} from '../../pages/control/control/control.component';
+import {View} from '../content/model';
 import {UUIDService} from '../../app.service';
 import {CookieService} from 'ngx-cookie-service';
 import {Socket} from '../../utils/socket';
@@ -14,6 +14,7 @@ import {getWsSocket} from '../../globals';
 })
 export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() host: any;
+  @Input() view: View;
   @Input() sysUser: any;
   @Input() index: number;
   @Input() token: string;
@@ -22,13 +23,11 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
   secret: string;
   ws: Socket;
   roomID: string;
-  view: View;
 
   constructor(private _uuid: UUIDService, private _cookie: CookieService) {
   }
 
   ngOnInit() {
-    this.view = NavList.List[this.index];
     this.secret = this._uuid.gen();
     this.newTerm();
     getWsSocket().then(sock => {
@@ -92,7 +91,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
     // 服务器主动断开
     this.ws.on('disconnect', () => {
       console.log('On disconnect event trigger');
-      this.close();
+      this.view.connected = false;
     });
 
     this.ws.on('logout', data => {
@@ -111,19 +110,15 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
     });
   }
 
-  // 客户端主动关闭
-  close() {
-    if (this.view && (this.view.room === this.roomID)) {
-      this.view.connected = false;
-      this.ws.emit('logout', this.roomID);
-    }
-  }
-
   active() {
     this.term.focus();
   }
 
   ngOnDestroy(): void {
-    this.close();
+    console.log('Close view');
+    if (this.view && (this.view.room === this.roomID)) {
+      this.view.connected = false;
+      this.ws.emit('logout', this.roomID);
+    }
   }
 }

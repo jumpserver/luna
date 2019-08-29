@@ -1,0 +1,17 @@
+  <div class="window" [ngClass]="{'active':view.active}" style="height: 100%">
+    <elements-ssh-term
+      [view]="view"
+      [host]="view.host"
+      [sysUser]="view.user"
+      *ngIf="view.type=='ssh'"
+    >
+    </elements-ssh-term>
+    <elements-guacamole
+      [host]="view.host"
+      [sysUser]="view.user"
+      [remoteAppId]="view.remoteApp"
+      *ngIf="view.type=='rdp'"
+    >
+    </elements-guacamole>
+    <app-sftp *ngIf="view.type=='sftp'" [host]="view.host"></app-sftp>
+  </div>

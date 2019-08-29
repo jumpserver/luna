@@ -1,0 +1,62 @@
+/*.right-side {*/
+  /*height: 100%;*/
+  /*width: 100%;*/
+  /*background-color: gray;*/
+/*}*/
+
+/*div {*/
+  /*height: 100%;*/
+  /*width: 100%;*/
+  /*padding: 0;*/
+  /*background-color: #1f1b1b;*/
+  /*margin: 0;*/
+  /*position: initial;*/
+/*}*/
+
+/*#content {*/
+  /*padding-top: 0;*/
+/*}*/
+
+/*.container-fluid {*/
+  /*padding-top: 30px;*/
+/*}*/
+
+.tabs {
+  height: 30px;
+  overflow-y: hidden;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.tabs ul {
+  list-style-type: none;
+  height: 30px;
+  background-color: #3a3333;
+  display: block;
+  min-width: 100%;
+  padding-left: 0;
+}
+/*
+ *  scrollbar
+ */
+.tabs::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  background-color: #676a6c;
+}
+
+.tabs::-webkit-scrollbar {
+  height: 2px;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+  background-color: #F5F5F5;
+}
+
+.scroll-botton {
+  font-size: 20px;
+  float: left;
+  height: 30px;
+  overflow: hidden;
+  background-color: #3a3333;
+  color: white
+}

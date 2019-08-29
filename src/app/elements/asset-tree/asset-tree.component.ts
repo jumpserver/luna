@@ -1,11 +1,11 @@
 import {Component, Input, OnInit, Inject, SimpleChanges, OnChanges, ElementRef, ViewChild} from '@angular/core';
 import {NavList, View} from '../../pages/control/control/control.component';
 import {AppService, HttpService, LogService, NavService} from '../../app.service';
-import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-import {FormControl, Validators} from '@angular/forms';
+import {connectEvt} from '../../globals';
+import {MatDialog} from '@angular/material';
 import {BehaviorSubject} from 'rxjs/BehaviorSubject';
 import {ActivatedRoute} from '@angular/router';
-import {SystemUser, TreeNode, Asset, Node} from '../../model';
+import {TreeNode, ConnectEvt} from '../../model';
 import * as jQuery from 'jquery/dist/jquery.min';
 
 declare var $: any;
@@ -34,7 +34,6 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
         title: 'title'
       }
     },
-
   };
   pos = {left: '100px', top: '200px'};
   hiddenNodes: any;
@@ -153,6 +152,11 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     });
   }
 
+  Connect(node: TreeNode) {
+    const evt = new ConnectEvt(node, 'asset');
+    connectEvt.next(evt);
+  }
+
   rootNodeAddDom(ztree, callback) {
     const tId = ztree.setting.treeId + '_tree_refresh';
     const refreshIcon = '<a id=' + tId + ' class="tree-refresh">' +
@@ -210,76 +214,6 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
   }
 
-  Connect(node: TreeNode) {
-    switch (node.meta.type) {
-      case 'asset':
-        this.connectAsset(node);
-        break;
-      case 'remote_app':
-        this.connectRemoteApp(node);
-        break;
-      default:
-        alert('Unknown type: ' + node.meta.type);
-    }
-  }
-
-  connectAsset(node: TreeNode) {
-    const host = node.meta.asset as Asset;
-    this._http.getMyAssetSystemUsers(host.id).subscribe(systemUsers => {
-      let user: SystemUser;
-      if (systemUsers.length > 1) {
-        // 检查系统用户优先级，获取最高优先级的
-        user = this.checkPriority(systemUsers);
-        if (user) {
-          return this.manualSetUserAuthLoginIfNeed(host, user, this.loginAsset);
-        }
-        const dialogRef = this._dialog.open(AssetTreeDialogComponent, {
-          height: '200px',
-          width: '300px',
-          data: {users: systemUsers}
-        });
-
-        dialogRef.afterClosed().subscribe(result => {
-          if (result) {
-            for (const i of systemUsers) {
-              if (i.id.toString() === result.toString()) {
-                user = i;
-                break;
-              }
-            }
-            return this.manualSetUserAuthLoginIfNeed(host, user, this.loginAsset);
-          }
-        });
-      } else if (systemUsers.length === 1) {
-        user = systemUsers[0];
-        this.manualSetUserAuthLoginIfNeed(host, user, this.loginAsset);
-      } else {
-        alert('该主机没有授权登录用户');
-      }
-    });
-  }
-
-  connectRemoteApp(node: TreeNode) {
-    const user = node.meta.user as SystemUser;
-    return this.manualSetUserAuthLoginIfNeed(node, user, this.loginRemoteApp);
-  }
-
-  loginRemoteApp(node: TreeNode, user: SystemUser) {
-    const id = NavList.List.length - 1;
-    if (node) {
-      NavList.List[id].nick = node.name;
-      NavList.List[id].connected = true;
-      NavList.List[id].edit = false;
-      NavList.List[id].closed = false;
-      NavList.List[id].remoteApp = node.id;
-      NavList.List[id].user = user;
-      NavList.List[id].type = 'rdp';
-      NavList.List.push(new View());
-      NavList.Active = id;
-      jQuery('.tabs').animate({'scrollLeft': 150 * id}, 400);
-    }
-  }
-
   connectFileManager() {
     const host = this.rightClickSelectNode.meta.asset;
     const id = NavList.List.length - 1;
@@ -299,64 +233,6 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   connectTerminal() {
     const host = this.rightClickSelectNode;
     this.Connect(host);
-  }
-
-  manualSetUserAuthLoginIfNeed(host: Asset, user: SystemUser, callback) {
-    if (user.login_mode !== 'manual' || user.protocol !== 'rdp') {
-      return callback(host, user);
-    }
-    user = Object.assign({}, user);
-    const dialogRef = this._dialog.open(ManualPasswordDialogComponent, {
-      height: '250px',
-      width: '500px',
-      data: {username: user.username}
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (!result) {
-        return;
-      }
-      if (result.skip) {
-        return callback(host, user);
-      }
-      user.username = result.username;
-      user.password = result.password;
-      return callback(host, user);
-    });
-  }
-
-  loginAsset(host: Asset, user: SystemUser) {
-    const id = NavList.List.length - 1;
-
-    if (user) {
-      NavList.List[id].nick = host.hostname;
-      NavList.List[id].connected = true;
-      NavList.List[id].edit = false;
-      NavList.List[id].closed = false;
-      NavList.List[id].host = host;
-      NavList.List[id].user = user;
-      if (user.protocol === 'ssh' || user.protocol === 'telnet') {
-        NavList.List[id].type = 'ssh';
-      } else if (user.protocol === 'rdp' || user.protocol === 'vnc') {
-        NavList.List[id].type = 'rdp';
-      }
-      NavList.List.push(new View());
-      NavList.Active = id;
-      jQuery('.tabs').animate({'scrollLeft': 150 * id}, 400);
-    }
-  }
-
-  checkPriority(sysUsers: Array<SystemUser>) {
-    let priority = -1;
-    let user: any;
-    for (const u of sysUsers) {
-      if (u.priority > priority) {
-        user = u;
-        priority = u.priority;
-      } else if (u.priority === priority) {
-        return null;
-      }
-    }
-    return user;
   }
 
   recurseParent(node) {
@@ -435,65 +311,3 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 }
 
-
-@Component({
-  selector: 'elements-asset-tree-dialog',
-  templateUrl: 'dialog.html',
-})
-export class AssetTreeDialogComponent implements OnInit {
-  UserSelectControl = new FormControl('', [Validators.required]);
-  selected: any;
-
-  constructor(public dialogRef: MatDialogRef<AssetTreeDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any,
-              private _logger: LogService) {
-  }
-
-  ngOnInit() {
-    this.selected = this.data.users[0].id;
-    this.UserSelectControl.setValue(this.selected);
-    // this._logger.debug(this.UserSelectControl);
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-
-  compareFn: ((f1: any, f2: any) => boolean) | null = this.compareByValue;
-
-  compareByValue(f1: any, f2: any) {
-    return f1 && f2 && f1.value === f2.value;
-  }
-}
-
-@Component({
-  selector: 'elements-manual-password-dialog',
-  templateUrl: 'manual-password-dialog.html',
-})
-export class ManualPasswordDialogComponent implements OnInit {
-  PasswordControl = new FormControl('', [Validators.required]);
-  constructor(@Inject(MAT_DIALOG_DATA) public data: any,
-              public dialogRef: MatDialogRef<ManualPasswordDialogComponent>) {
-  }
-
-  onSkip() {
-    this.data.skip = true;
-    this.dialogRef.close(this.data);
-  }
-
-  onSkipAll() {
-    this.data.skipAll = true;
-    this.dialogRef.close(this.data);
-  }
-
-  onNoClick() {
-    this.dialogRef.close();
-  }
-
-  onEnter() {
-    this.dialogRef.close(this.data);
-  }
-
-  ngOnInit(): void {
-  }
-}

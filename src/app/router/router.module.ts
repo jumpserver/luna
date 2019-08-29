@@ -12,6 +12,7 @@ import {PagesBlankComponent} from '../pages/blank/blank.component';
 import {TestPageComponent} from '../test-page/test-page.component';
 import {PagesConnectComponent} from '../pages/connect/connect.component';
 import {PagesReplayComponent} from '../pages/replay/replay.component';
+import {PageMainComponent} from '../pages/main/main.component';
 import {PagesControlComponent} from '../pages/control/control.component';
 import {PagesNotFoundComponent} from '../pages/not-found/not-found.component';
 import {PagesMonitorComponent} from '../pages/monitor/monitor.component';
@@ -25,7 +26,7 @@ const appRoutes: Routes = [
   {path: 'connect', component: PagesConnectComponent},
   {path: 'sftp', component: SftpComponent},
   {path: 'undefined', component: PagesBlankComponent},
-  {path: '', component: PagesControlComponent},
+  {path: '', component: PageMainComponent},
   {path: '**', component: PagesNotFoundComponent}
 ];
 

@@ -15,8 +15,8 @@ import {NavList} from './control/control.component';
   styleUrls: ['./control.component.css'],
 })
 export class PagesControlComponent implements OnInit {
-  DataStore = DataStore;
-  User = User;
+  dataStore = DataStore;
+  user = User;
 
   constructor() {
   }

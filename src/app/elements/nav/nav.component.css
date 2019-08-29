@@ -1,7 +1,8 @@
 .nav {
   display: block;
   margin-top: 2px;
-  height: 30px
+  height: 31px;
+  background-color: #463e3e;
 }
 
 .nav ul {

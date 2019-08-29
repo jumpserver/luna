@@ -24,9 +24,6 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   @Output() winSizeChangeTrigger = new EventEmitter<Array<number>>();
   winSizeChange$: Observable<any>;
 
-  constructor(private _cookie: CookieService) {
-  }
-
   ngOnInit() {
     this.winSizeChange$ = Observable.fromEvent(window, 'resize')
       .debounceTime(500)
@@ -66,21 +63,35 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       availableWidth = activeEle.width() - elementPaddingHor - (<any>this.term).viewport.scrollBarWidth;
     }
 
+    const dimensions = (<any>this.term).renderer.dimensions;
     const geometry = [
-      Math.floor(availableWidth / (<any>this.term).renderer.dimensions.actualCellWidth) - 1,
-      Math.floor(availableHeight / (<any>this.term).renderer.dimensions.actualCellHeight) - 1
+      Math.floor(availableWidth / dimensions.actualCellWidth) - 1,
+      Math.floor(availableHeight / dimensions.actualCellHeight) - 2
     ];
+    console.log(availableWidth, dimensions.actualCellWidth);
+    console.log(availableHeight, dimensions.actualCellHeight);
+    console.log('with: ', geometry[0], 'height: ', geometry[1]);
+
+    if (!isFinite(geometry[0])) {
+      geometry[0] = 80;
+    }
+    if (!isFinite(geometry[1])) {
+      geometry[1] = 24;
+    }
     return geometry;
   }
 
   resizeTerm() {
     const size = this.getWinSize();
+    // Todo: 修改大小
+    console.log('get size is: ', size);
     if (isNaN(size[0]) || isNaN(size[1])) {
       fit(this.term);
     } else {
       (<any>this.term).renderer.clear();
       this.term.resize(size[0], size[1]);
     }
+    console.log(size);
     this.winSizeChangeTrigger.emit([this.term.cols, this.term.rows]);
   }
 
