@@ -13,14 +13,12 @@ import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser, i18n} from './globals';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
+import {SystemUser, GuacObjAddResp, TreeNode} from './model';
 import * as UUID from 'uuid-js/lib/uuid.js';
 
 declare function unescape(s: string): string;
 
-class GuacObjAddResp {
-  code: number;
-  result: string;
-}
+
 
 @Injectable()
 export class HttpService {
@@ -71,18 +69,23 @@ export class HttpService {
 
   getMyGrantedNodes(async: boolean, refresh?: boolean) {
     const cachePolicy = refresh ? '2' : '1';
-    const syncUrl = '/api/perms/v1/users/nodes-with-assets/tree/?cache_policy=' + cachePolicy;
-    const asyncUrl = '/api/perms/v1/users/nodes/children-with-assets/tree/?cache_policy=' + cachePolicy;
+    const syncUrl = `/api/perms/v1/users/nodes-with-assets/tree/?cache_policy=${cachePolicy}`;
+    const asyncUrl = `/api/perms/v1/users/nodes/children-with-assets/tree/?cache_policy=${cachePolicy}`;
     const url = async ? asyncUrl : syncUrl;
-    return this.http.get<Array<Node>>(url);
+    return this.http.get<Array<TreeNode>>(url);
   }
 
   getMyGrantedRemoteApps() {
-    return this.http.get<Array<Node>>('/api/perms/v1/user/remote-apps/tree/');
+    return this.http.get<Array<TreeNode>>('/api/perms/v1/user/remote-apps/tree/');
+  }
+
+  getMyAssetSystemUsers(assetId: string) {
+    const url = `/api/v1/perms/users/assets/${assetId}/system-users/`;
+    return this.http.get<Array<SystemUser>>(url);
   }
 
   refreshMyGrantedNodes() {
-    return this.http.get<Array<Node>>('/api/perms/v1/user/nodes-assets/tree/?cache_policy=2');
+    return this.http.get<Array<TreeNode>>('/api/perms/v1/user/nodes-assets/tree/?cache_policy=2');
   }
 
   getGuacamoleToken(user_id: string, authToken: string) {
@@ -180,8 +183,7 @@ export class HttpService {
   }
 
   search(q: string) {
-    const params = new HttpParams()
-      .set('q', q);
+    const params = new HttpParams().set('q', q);
     return this.http.get('/api/search', {params: params});
   }
 

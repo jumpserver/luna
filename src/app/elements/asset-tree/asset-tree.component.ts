@@ -5,6 +5,7 @@ import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {BehaviorSubject} from 'rxjs/BehaviorSubject';
 import {ActivatedRoute} from '@angular/router';
+import {SystemUser, TreeNode, Asset, Node} from '../../model';
 import * as jQuery from 'jquery/dist/jquery.min';
 
 declare var $: any;
@@ -54,7 +55,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
   }
 
-  constructor(private _appService: AppService,
+  constructor(private _appSvc: AppService,
               public _dialog: MatDialog,
               public _logger: LogService,
               private activatedRoute: ActivatedRoute,
@@ -64,19 +65,12 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     this.searchEvt$ = new BehaviorSubject<string>(this.query);
   }
 
-  refreshGrantedAssetsNodes() {
-    this._http.refreshMyGrantedNodes()
-      .subscribe(response => {
-        this.Data = [...response, ...this.Data];
-        this.initTree();
-      });
-  }
-
   ngOnInit() {
-    this.initAssetsTree();
-    this.initRemoteAppsTree();
+    this.initTree();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
     this.loadTreeAsync = this._navSvc.treeLoadAsync;
+
+    // Todo: 搜索
     this.searchEvt$.asObservable()
       .debounceTime(300)
       .distinctUntilChanged()
@@ -115,12 +109,12 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
 
     this._http.getMyGrantedNodes(this.loadTreeAsync, refresh).subscribe(resp => {
-        const assetsTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
-        this.assetsTree = assetsTree;
-        this.rootNodeAddDom(assetsTree, () => {
-          this.refreshAssetsTree();
-        });
+      const assetsTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
+      this.assetsTree = assetsTree;
+      this.rootNodeAddDom(assetsTree, () => {
+        this.refreshAssetsTree();
       });
+    });
   }
 
   refreshRemoteAppsTree() {
@@ -144,6 +138,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     this.initAssetsTree();
     this.initRemoteAppsTree();
 
+    // Todo: connect to some asset, direct
     this.activatedRoute.queryParams.subscribe(params => {
       const login_to = params['login_to'];
       if (login_to && !this.hasLoginTo) {
@@ -215,7 +210,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
   }
 
-  Connect(node) {
+  Connect(node: TreeNode) {
     switch (node.meta.type) {
       case 'asset':
         this.connectAsset(node);
@@ -228,15 +223,16 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
   }
 
-  connectAsset(node) {
-    const systemUsers = node.meta.system_users;
-    const host = node.meta.asset;
-    let user: any;
-    if (systemUsers.length > 1) {
-      user = this.checkPriority(systemUsers);
-      if (user) {
-        return this.manualSetUserAuthLoginIfNeed(host, user, this.login);
-      } else {
+  connectAsset(node: TreeNode) {
+    const host = node.meta.asset as Asset;
+    this._http.getMyAssetSystemUsers(host.id).subscribe(systemUsers => {
+      let user: SystemUser;
+      if (systemUsers.length > 1) {
+        // 检查系统用户优先级，获取最高优先级的
+        user = this.checkPriority(systemUsers);
+        if (user) {
+          return this.manualSetUserAuthLoginIfNeed(host, user, this.loginAsset);
+        }
         const dialogRef = this._dialog.open(AssetTreeDialogComponent, {
           height: '200px',
           width: '300px',
@@ -251,24 +247,24 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
                 break;
               }
             }
-            return this.manualSetUserAuthLoginIfNeed(host, user, this.login);
+            return this.manualSetUserAuthLoginIfNeed(host, user, this.loginAsset);
           }
         });
+      } else if (systemUsers.length === 1) {
+        user = systemUsers[0];
+        this.manualSetUserAuthLoginIfNeed(host, user, this.loginAsset);
+      } else {
+        alert('该主机没有授权登录用户');
       }
-    } else if (systemUsers.length === 1) {
-      user = systemUsers[0];
-      this.manualSetUserAuthLoginIfNeed(host, user, this.login);
-    } else {
-      alert('该主机没有授权登录用户');
-    }
+    });
   }
 
-  connectRemoteApp(node) {
-    const user = node.meta.user;
+  connectRemoteApp(node: TreeNode) {
+    const user = node.meta.user as SystemUser;
     return this.manualSetUserAuthLoginIfNeed(node, user, this.loginRemoteApp);
   }
 
-  loginRemoteApp(node, user) {
+  loginRemoteApp(node: TreeNode, user: SystemUser) {
     const id = NavList.List.length - 1;
     if (node) {
       NavList.List[id].nick = node.name;
@@ -305,7 +301,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     this.Connect(host);
   }
 
-  manualSetUserAuthLoginIfNeed(host, user, callback) {
+  manualSetUserAuthLoginIfNeed(host: Asset, user: SystemUser, callback) {
     if (user.login_mode !== 'manual' || user.protocol !== 'rdp') {
       return callback(host, user);
     }
@@ -328,7 +324,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     });
   }
 
-  login(host, user) {
+  loginAsset(host: Asset, user: SystemUser) {
     const id = NavList.List.length - 1;
 
     if (user) {
@@ -349,7 +345,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     }
   }
 
-  checkPriority(sysUsers) {
+  checkPriority(sysUsers: Array<SystemUser>) {
     let priority = -1;
     let user: any;
     for (const u of sysUsers) {
