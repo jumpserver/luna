@@ -1,7 +1,7 @@
 .nav {
   display: block;
-  margin-top: 2px;
   height: 31px;
+  padding-top: 2px;
   background-color: #463e3e;
 }
 
@@ -16,6 +16,9 @@
 
 .nav a {
   color: #f0f0f1;
+  font-family: Roboto,sans-serif;
+  font-size: 13px;
+  font-weight: 300;
   text-decoration: none;
   padding: 6px 15px 6px 15px;
 }
@@ -47,9 +50,9 @@
   direction: ltr;
   width: auto;
   top: auto;
-  left: 0px;
-  margin-left: 0px;
-  margin-top: 0px;
+  left: 0;
+  margin-left: 0;
+  margin-top: 0;
   min-width: 150px;
 }
 

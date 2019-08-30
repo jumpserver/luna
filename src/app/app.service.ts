@@ -13,7 +13,7 @@ import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser, i18n} from './globals';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
-import {SystemUser, GuacObjAddResp, TreeNode, User as _User} from './model';
+import {SystemUser, GuacObjAddResp, TreeNode, User as _User, NavEvt} from './model';
 import {environment} from '../environments/environment';
 import * as UUID from 'uuid-js/lib/uuid.js';
 
@@ -66,6 +66,11 @@ export class HttpService {
 
   getUserProfile() {
     return this.http.get<_User>('/api/users/v1/profile/');
+  }
+
+  getMyGrantedAssets(keyword) {
+    const url = `/api/perms/v1/users/assets/tree/?search=${keyword}`;
+    return this.http.get<Array<TreeNode>>(url);
   }
 
   getMyGrantedNodes(async: boolean, refresh?: boolean) {
@@ -310,7 +315,11 @@ export class AppService implements OnInit {
     this.lang = lang;
 
     if (lang !== 'en') {
-      this._http.get('/luna/i18n/' + 'zh' + '.json').subscribe(
+      let url = `/luna/i18n/zh.json`;
+      if (!environment.production) {
+        url = `/assets/i18n/zh.json`;
+      }
+      this._http.get(url).subscribe(
         data => {
           this._localStorage.set('lang', JSON.stringify(data));
         },
@@ -321,46 +330,47 @@ export class AppService implements OnInit {
     }
     const l = this._localStorage.get('lang');
     if (l) {
-      const data = JSON.parse(l);
-      Object.keys(data).forEach((k, _) => {
-        i18n.set(k, data[k]);
-      });
+      try {
+        const data = JSON.parse(l);
+        Object.keys(data).forEach((k, _) => {
+          i18n.set(k, data[k]);
+        });
+      } catch (e) {
+        this._logger.error('Parse lang json failed');
+      }
     }
   }
 
   checklogin() {
     this._logger.log('service.ts:AppService,checklogin');
-    if (DataStore.Path) {
-      if (document.location.pathname === '/luna/connect') {
-        return;
-      }
-      if (User.logined) {
-        if (document.location.pathname === '/login') {
-          this._router.navigate(['']);
-        } else {
-          this._router.navigate([document.location.pathname]);
-        }
-        return;
-        // jQuery('angular2').show();
-      }
-      this._http.getUserProfile().subscribe(
-        user => {
-          Object.assign(User, user);
-          User.logined = true;
-          this._localStorage.set('user', user.id);
-        },
-        err => {
-          // this._logger.error(err);
-          User.logined = false;
-          window.location.href = document.location.origin + '/users/login?next=' +
-            document.location.pathname + document.location.search;
-          // this._router.navigate(['login']);
-        },
-      );
-    } else {
+    if (!DataStore.Path) {
       this._router.navigate(['FOF']);
-      // jQuery('angular2').show();
     }
+    if (document.location.pathname === '/luna/connect') {
+      return;
+    }
+    if (User.logined) {
+      if (document.location.pathname === '/login') {
+        this._router.navigate(['']);
+      } else {
+        this._router.navigate([document.location.pathname]);
+      }
+      return;
+    }
+    this._http.getUserProfile().subscribe(
+      user => {
+        Object.assign(User, user);
+        User.logined = true;
+        this._localStorage.set('user', user.id);
+      },
+      err => {
+        // this._logger.error(err);
+        User.logined = false;
+        window.location.href = document.location.origin + '/users/login?next=' +
+          document.location.pathname + document.location.search;
+        // this._router.navigate(['login']);
+      },
+    );
   }
 
   browser() {
@@ -391,7 +401,24 @@ export class UUIDService {
 
 @Injectable()
 export class NavService {
+  onNavClick: EventEmitter<NavEvt> = new EventEmitter<NavEvt>();
+
   constructor(private store: LocalStorageService) {}
+
+  disconnectAllConnection() {
+    const evt = new NavEvt('disconnectAll', '');
+    this.onNavClick.emit(evt);
+  }
+
+  disconnectConnection() {
+    const evt = new NavEvt('disconnect', '');
+    this.onNavClick.emit(evt);
+  }
+
+  changeLang(value) {
+    const evt = new NavEvt('changeLang', value);
+    this.onNavClick.emit(evt);
+  }
 
   get treeLoadAsync() {
     const value = this.store.get('LoadTreeAsync');

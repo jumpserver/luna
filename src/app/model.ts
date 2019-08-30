@@ -80,6 +80,17 @@ export class ConnectEvt {
   }
 }
 
+export class NavEvt {
+  name: string;
+  value: any;
+
+  constructor(name: string, value: any) {
+    this.name = name;
+    this.value = value;
+  }
+
+}
+
 export class DataStore {
   socket: any;
   Nav: Array<object>;
@@ -87,7 +98,7 @@ export class DataStore {
   Path: {};
   error: {};
   msg: {};
-  loglevel: number;
+  logLevel: number;
   showLeftBar = true;
   windowsize: Array<number>;
   autologin: boolean;

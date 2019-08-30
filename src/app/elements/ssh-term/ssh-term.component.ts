@@ -1,8 +1,7 @@
-import {AfterViewInit, Component, Input, OnInit, OnDestroy } from '@angular/core';
+import {Component, Input, OnInit, OnDestroy } from '@angular/core';
 import {Terminal} from 'xterm';
 import {View} from '../content/model';
-import {UUIDService} from '../../app.service';
-import {CookieService} from 'ngx-cookie-service';
+import {LogService, UUIDService} from '../../app.service';
 import {Socket} from '../../utils/socket';
 import {getWsSocket} from '../../globals';
 
@@ -24,7 +23,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   ws: Socket;
   roomID: string;
 
-  constructor(private _uuid: UUIDService, private _cookie: CookieService) {
+  constructor(private _uuid: UUIDService, private _logger: LogService) {
   }
 
   ngOnInit() {
@@ -71,7 +70,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
         'token': this.token, 'secret': this.secret,
         'size': [this.term.cols, this.term.rows]
       };
-      console.log('On token event trigger');
+      this._logger.debug('On token event trigger');
       this.ws.emit('token', data);
     }
 
@@ -88,20 +87,20 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
 
     // 服务器主动断开
     this.ws.on('disconnect', () => {
-      console.log('On disconnect event trigger');
+      this._logger.debug('On disconnect event trigger');
       this.view.connected = false;
     });
 
     this.ws.on('logout', data => {
       if (data.room === this.roomID) {
-        console.log('On logout event trigger: ', data.room, this.roomID);
+        this._logger.debug('On logout event trigger: ', data.room, this.roomID);
         this.view.connected = false;
       }
     });
 
     this.ws.on('room', data => {
       if (data.secret === this.secret && data.room) {
-        console.log('On room', data);
+        this._logger.debug('On room', data);
         this.roomID = data.room;
         this.view.room = data.room;
       }
@@ -113,7 +112,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    console.log('Close view');
+    this._logger.debug('Close view');
     if (this.view && (this.view.room === this.roomID)) {
       this.view.connected = false;
       this.ws.emit('logout', this.roomID);

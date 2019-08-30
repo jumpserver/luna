@@ -65,5 +65,9 @@
   "username": "用户名",
   "password": "密码",
   "skip": "跳过",
-  "loading": "加载中"
+  "loading": "加载中",
+  "load tree async": "异步加载树",
+  "load tree sync": "同步加载树",
+  "show manual password": "显示手动密码窗",
+  "skip manual password": "跳过手动密码窗"
 }

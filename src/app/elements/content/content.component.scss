@@ -9,7 +9,8 @@
   list-style-type: none;
   height: 30px;
   background-color: #3a3333;
-  display: block;
+  //display: block;
+  display: inline-block;
   min-width: 100%;
   padding-left: 0;
 }
@@ -37,6 +38,12 @@
   background-color: #3a3333;
   color: white
 }
+
+.scroll-button a.disabled {
+  color: #676A6D;
+  cursor: not-allowed;
+}
+
 
 .window {
   height: 100%;

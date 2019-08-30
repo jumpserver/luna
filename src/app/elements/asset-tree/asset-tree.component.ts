@@ -4,9 +4,8 @@ import {BehaviorSubject} from 'rxjs/BehaviorSubject';
 import {ActivatedRoute} from '@angular/router';
 
 import {AppService, HttpService, LogService, NavService, TreeFilterService} from '../../app.service';
-import {connectEvt} from '../../globals';
+import {connectEvt, i18n} from '../../globals';
 import {TreeNode, ConnectEvt} from '../../model';
-import {View} from '../content/model';
 
 declare var $: any;
 
@@ -274,6 +273,33 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   filterAssetsServer(keyword) {
+    if (!this.assetsTree) {
+      return;
+    }
+    if (!keyword) {
+      const searchNode = this.assetsTree.getNodesByFilter((node) => node.id === 'search');
+      if (searchNode) {
+        this.assetsTree.removeChildNodes(searchNode[0]);
+        this.assetsTree.removeNode(searchNode[0]);
+      }
+      const treeNodes = this.assetsTree.getNodes();
+      if (treeNodes.length !== 0) {
+        this.assetsTree.showNode(treeNodes[0]);
+      }
+      return;
+    }
+    this._http.getMyGrantedAssets(keyword).subscribe(nodes => {
+      const treeNodes = this.assetsTree.getNodes();
+      if (treeNodes.length !== 0) {
+        this.assetsTree.hideNode(treeNodes[0]);
+      }
+      const newNode = {id: 'search', name: i18n.get('Search'), isParent: true, open: true, zAsync: true};
+      const parentNode = this.assetsTree.addNodes(null, newNode)[0];
+      parentNode.zAsync = true;
+      console.log(parentNode);
+      this.assetsTree.addNodes(parentNode, nodes);
+      parentNode.open = true;
+    });
     return;
   }
 

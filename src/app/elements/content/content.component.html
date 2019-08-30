@@ -4,9 +4,8 @@
       <a class="left" (click)="scrollLeft()"><i class="fa fa-caret-left"></i></a>
       <a class="right" (click)="scrollRight()"><i class="fa fa-caret-right"></i></a>
     </div>
-    <div class="tabs">
-      <ul>
-        <!--<ul [ngStyle]="{'width':150*viewList.length+'px'}">-->
+    <div class="tabs" #tabs>
+      <ul [ngStyle]="{'width':tabsWidth+'px'}">
         <elements-content-tab
           *ngFor="let view of viewList"
           [view]="view" (onAction)="onViewAction($event)">

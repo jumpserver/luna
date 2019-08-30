@@ -7,8 +7,6 @@
  */
 import {Component, Inject, OnInit} from '@angular/core';
 import {HttpService, LocalStorageService, NavService, LogService} from '../../app.service';
-import {CleftbarComponent} from '../../pages/control/cleftbar/cleftbar.component';
-import {ControlComponent, NavList, View} from '../../pages/control/control/control.component';
 import {DataStore, i18n} from '../../globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
@@ -22,7 +20,6 @@ declare let layer: any;
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
   navs: Array<object>;
-  ChangeLanWarningDialog: any;
   _asyncTree = false;
 
   static Hide() {
@@ -51,26 +48,23 @@ export class ElementNavComponent implements OnInit {
   }
 
   click(event) {
-    this._logger.debug('nav.ts:NavComponent,click', event);
     switch (event) {
-      case 'ReloadLeftbar': {
-        CleftbarComponent.Reload();
-        break;
-      }
       case 'ConnectSFTP': {
         window.open('/coco/elfinder/sftp/');
         break;
       }
       case 'HideLeft': {
-        CleftbarComponent.Hide();
+        DataStore.showLeftBar = false;
+        this.refreshNav();
+        break;
+      }
+      case 'ShowLeft': {
+        DataStore.showLeftBar = true;
+        this.refreshNav();
         break;
       }
       case 'Settings': {
         this.Settings();
-        break;
-      }
-      case 'ShowLeft': {
-        CleftbarComponent.Show();
         break;
       }
       case 'Copy': {
@@ -79,7 +73,9 @@ export class ElementNavComponent implements OnInit {
       }
       case 'FullScreen': {
         const ele: any = document.getElementsByClassName('window active')[0];
-        
+        if (!ele) {
+          return;
+        }
         if (ele.requestFullscreen) {
           ele.requestFullscreen();
         } else if (ele.mozRequestFullScreen) {
@@ -91,35 +87,21 @@ export class ElementNavComponent implements OnInit {
         } else {
           throw new Error('不支持全屏api');
         }
-        
         window.dispatchEvent(new Event('resize'));
         break;
       }
       case'Disconnect': {
-        if (!confirm('断开当前连接? (RDP暂不支持)')) {
+        if (!confirm('断开当前连接?')) {
           break;
         }
-        switch (NavList.List[NavList.Active].type) {
-          case 'ssh': {
-            ControlComponent.TerminalDisconnect(NavList.Active);
-            break;
-          }
-          case 'rdp': {
-            ControlComponent.RdpDisconnect(NavList.Active);
-            break;
-          }
-          default: {
-            // statements;
-            break;
-          }
-        }
+        this._navSvc.disconnectConnection();
         break;
       }
       case'DisconnectAll': {
-        if (!confirm('断开所有连接? (RDP暂不支持)')) {
+        if (!confirm('断开所有连接?')) {
           break;
         }
-        ControlComponent.DisconnectAll();
+        this._navSvc.disconnectAllConnection();
         break;
       }
       case 'Website': {
@@ -160,10 +142,6 @@ export class ElementNavComponent implements OnInit {
             console.log(result);
           }
         });
-        break;
-      }
-      case 'EnterLicense': {
-        this.EnterLicense();
         break;
       }
       case 'English': {
@@ -223,23 +201,6 @@ export class ElementNavComponent implements OnInit {
 
   }
 
-  EnterLicense() {
-    layer.prompt({
-      formType: 2,
-      maxlength: 500,
-      title: 'Please Input Code',
-      scrollbar: false,
-      area: ['400px', '300px'],
-      moveOut: true,
-      moveType: 1
-    }, function (value, index) {
-      DataStore.socket.emit('key', value);
-      // layer.msg(value); //得到value
-      layer.close(index);
-
-    });
-  }
-
   refreshNav() {
     this.navs = this.getNav();
   }
@@ -278,7 +239,14 @@ export class ElementNavComponent implements OnInit {
         {
           'id': 'HideLeftManager',
           'click': 'HideLeft',
-          'name': 'Hide left manager'
+          'name': 'Hide left manager',
+          'hide': !DataStore.showLeftBar
+        },
+        {
+          'id': 'ShowLeftManager',
+          'click': 'ShowLeft',
+          'name': 'Show left manager',
+          'hide': DataStore.showLeftBar
         },
         {
           'id': 'RDPResolution',
@@ -334,7 +302,7 @@ export class ElementNavComponent implements OnInit {
         {
           'id': 'ShowManualPassword',
           'click': 'SkipManualPassword',
-          'name': 'show manual password',
+          'name': 'Show manual password',
           'hide': !this._navSvc.skipAllManualPassword
         }
         ]
@@ -376,21 +344,6 @@ export class ElementNavComponent implements OnInit {
     ];
   }
 
-  Connect() {
-    layer.prompt({
-      formType: 2,
-      maxlength: 500,
-      title: 'Please Input Code',
-      scrollbar: false,
-      area: ['400px', '300px'],
-      moveOut: true,
-      moveType: 1
-    }, function (value, index) {
-      DataStore.socket.emit('key', value);
-      layer.close(index);
-    });
-  }
-
   English() {
     this._localStorage.delete('lang');
     i18n.clear();
@@ -414,14 +367,6 @@ export class ElementNavComponent implements OnInit {
   }
 
   Settings() {
-    const id = NavList.List.length - 1;
-    NavList.List[id].nick = 'Setting';
-    NavList.List[id].connected = true;
-    NavList.List[id].edit = false;
-    NavList.List[id].closed = false;
-    NavList.List[id].type = 'settings';
-    NavList.List.push(new View());
-    NavList.Active = id;
   }
 }
 

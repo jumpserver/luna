@@ -1,16 +1,5 @@
-/**
- * 控制页面
- *
- * 主管已连接的主机标签卡，各连接方式的web展现（WebTerminal、RDP、VNC等）
- *
- * @date     2017-11-07
- * @author   liuzheng <liuzheng712@gmail.com>
- */
-
-import {Component, OnInit} from '@angular/core';
-import {TermWS} from '../../globals';
+import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {View, ViewAction} from './model';
-import jQuery from 'jquery/dist/jquery.min';
 
 @Component({
   selector: 'elements-content',
@@ -19,16 +8,17 @@ import jQuery from 'jquery/dist/jquery.min';
 })
 export class ElementContentComponent implements OnInit {
   viewList: Array<View> = [];
-
-  static RdpDisconnect(id) {
-    // viewList.List[id].connected = false;
-  }
+  @ViewChild('tabs') tabsRef: ElementRef;
 
   static DisconnectAll() {
     // for (let i = 0; i < viewList.List.length; i++) {
     //   // Todo:
     //   // ContentComponent.TerminalDisconnect(i);
     // }
+  }
+
+  get tabsWidth() {
+    return (this.viewList.length + 1) * 151 + 10;
   }
 
   constructor() {
@@ -38,8 +28,11 @@ export class ElementContentComponent implements OnInit {
   }
 
   onNewView(view) {
-    this.viewList.push(view);
-    this.setViewActive(view);
+    this.scrollToEnd();
+    setTimeout(() => {
+      this.viewList.push(view);
+      this.setViewActive(view);
+    }, 100);
   }
 
   onViewAction(action: ViewAction) {
@@ -79,13 +72,15 @@ export class ElementContentComponent implements OnInit {
   }
 
   scrollLeft() {
-    const tabRef = jQuery('.tabs');
-    tabRef.scrollLeft(tabRef.scrollLeft() - 100);
+    this.tabsRef.nativeElement.scrollLeft -= 150 * 2;
   }
 
   scrollRight() {
-    const tabRef = jQuery('.tabs');
-    tabRef.scrollLeft(tabRef.scrollLeft() + 100);
+    this.tabsRef.nativeElement.scrollLeft += 150 * 2;
+  }
+
+  scrollToEnd() {
+    this.tabsRef.nativeElement.scrollLeft = this.tabsRef.nativeElement.scrollWidth;
   }
 
 }

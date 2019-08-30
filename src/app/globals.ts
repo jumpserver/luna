@@ -24,7 +24,7 @@ export const DataStore: _DataStore = {
   Path: {},
   error: {},
   msg: {},
-  loglevel: 0,
+  logLevel: 4,
   showLeftBar: true,
   windowsize: [],
   autologin: false,
