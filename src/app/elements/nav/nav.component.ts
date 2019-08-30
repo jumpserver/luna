@@ -92,6 +92,14 @@ export class ElementNavComponent implements OnInit {
       }
       case'Disconnect': {
         if (!confirm('断开当前连接?')) {
+          return
+        }
+      }
+      case 'Reconnect': {
+        break;
+      }
+      case 'Disconnect': {
+        if (!confirm('断开当前连接? (RDP暂不支持)')) {
           break;
         }
         this._navSvc.disconnectConnection();
@@ -219,6 +227,11 @@ export class ElementNavComponent implements OnInit {
           'id': 'DisconnectAll',
           'click': 'DisconnectAll',
           'name': 'Disconnect all'
+        },
+        {
+          'id': 'Reconnect',
+          'click': 'Reconnect',
+          'name': 'Reconnect'
         },
       ]
     }, {

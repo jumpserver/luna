@@ -3,7 +3,7 @@ import {Terminal} from 'xterm';
 import {View} from '../content/model';
 import {LogService, UUIDService} from '../../app.service';
 import {Socket} from '../../utils/socket';
-import {getWsSocket} from '../../globals';
+import {getWsSocket, translate} from '../../globals';
 
 
 @Component({
@@ -55,7 +55,17 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
     }
   }
 
-  connectHost() {
+  reconnect() {
+    if (this.view.connected === true) {
+      if (!confirm(translate('Are you sure to reconnect it?(RDP not support)'))) {
+        return;
+      }
+    }
+    this.secret = this._uuid.gen();
+    this.emitHostAndTokenData();
+  }
+
+  emitHostAndTokenData() {
     if (this.host) {
       const data = {
         uuid: this.host.id,
@@ -73,6 +83,10 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
       this._logger.debug('On token event trigger');
       this.ws.emit('token', data);
     }
+  }
+
+  connectHost() {
+    this.emitHostAndTokenData();
 
     this.term.on('data', data => {
       const d = {'data': data, 'room': this.roomID};
@@ -103,6 +117,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
         this._logger.debug('On room', data);
         this.roomID = data.room;
         this.view.room = data.room;
+        this.view.connected = true;
       }
     });
   }
