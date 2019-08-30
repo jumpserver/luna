@@ -1,10 +1,11 @@
-import {AfterViewInit, Component, Input, OnInit, OnDestroy } from '@angular/core';
+import {AfterViewInit, Component, Input, OnInit, OnDestroy} from '@angular/core';
 import {Terminal} from 'xterm';
 import {NavList, View} from '../../pages/control/control/control.component';
 import {UUIDService} from '../../app.service';
 import {CookieService} from 'ngx-cookie-service';
 import {Socket} from '../../utils/socket';
 import {getWsSocket} from '../../globals';
+import {TransPipe} from '../../pipes/trans.pipe';
 
 
 @Component({
@@ -23,6 +24,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
   ws: Socket;
   roomID: string;
   view: View;
+  transPipe: TransPipe;
 
   constructor(private _uuid: UUIDService, private _cookie: CookieService) {
   }
@@ -31,6 +33,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
     this.view = NavList.List[this.index];
     this.secret = this._uuid.gen();
     this.newTerm();
+    this.transPipe = new TransPipe();
     getWsSocket().then(sock => {
       this.ws = sock;
       this.connectHost();
@@ -51,6 +54,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
       }
     });
     this.view.Term = this.term;
+    this.view.termComp = this;
   }
 
   changeWinSize(size: Array<number>) {
@@ -59,7 +63,19 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
 
-  connectHost() {
+  reconnect() {
+
+    if (NavList.List[this.index].connected === true) {
+      if (!confirm(this.transPipe.transform('Are you sure to reconnect it?(RDP not support)'))) {
+        return;
+      }
+      this.close();
+    }
+    this.secret = this._uuid.gen();
+    this.emitHostAndTokenData();
+  }
+
+  emitHostAndTokenData() {
     if (this.host) {
       const data = {
         uuid: this.host.id,
@@ -77,6 +93,10 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
       console.log('On token event trigger');
       this.ws.emit('token', data);
     }
+  }
+
+  connectHost() {
+    this.emitHostAndTokenData();
 
     this.term.on('data', data => {
       const d = {'data': data, 'room': this.roomID};
@@ -107,6 +127,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
         console.log('On room', data);
         this.roomID = data.room;
         this.view.room = data.room;
+        this.view.connected = true;
       }
     });
   }
