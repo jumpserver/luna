@@ -4,7 +4,7 @@ import {BehaviorSubject} from 'rxjs/BehaviorSubject';
 import {ActivatedRoute} from '@angular/router';
 
 import {AppService, HttpService, LogService, NavService, TreeFilterService} from '../../app.service';
-import {connectEvt, i18n} from '../../globals';
+import {connectEvt, translate} from '../../globals';
 import {TreeNode, ConnectEvt} from '../../model';
 
 declare var $: any;
@@ -70,12 +70,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.treeFilterSubscription.unsubscribe();
   }
 
-  onNodeClick(event, treeId, treeNode, clickFlag) {
+  onAssetsNodeClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
       this.assetsTree.expandNode(treeNode);
     } else {
       this._http.getUserProfile().subscribe();
-      this.ConnectAsset(treeNode);
+      this.connectAsset(treeNode);
     }
   }
 
@@ -87,7 +87,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   initAssetsTree(refresh?: boolean) {
     const setting = Object.assign({}, this.setting);
     setting['callback'] = {
-      onClick: this.onNodeClick.bind(this),
+      onClick: this.onAssetsNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
     if (this._navSvc.treeLoadAsync) {
@@ -112,11 +112,24 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.remoteAppsTree.destroy();
     this.initRemoteAppsTree();
   }
+  
+  onRemoteAppsNodeClick(event, treeId, treeNode, clickFlag) {
+    if (treeNode.isParent) {
+      this.remoteAppsTree.expandNode(treeNode);
+    } else {
+      this._http.getUserProfile().subscribe();
+      this.connectAsset(treeNode);
+    }
+  }
 
   initRemoteAppsTree() {
+    const setting = Object.assign({}, this.setting);
+    setting['callback'] = {
+      onClick: this.onRemoteAppsNodeClick.bind(this),
+    };
     this._http.getMyGrantedRemoteApps().subscribe(
       resp => {
-        const tree = $.fn.zTree.init($('#remoteAppsTree'), this.setting, resp);
+        const tree = $.fn.zTree.init($('#remoteAppsTree'), setting, resp);
         this.remoteAppsTree = tree;
         this.rootNodeAddDom(tree, () => {
           this.refreshRemoteAppsTree();
@@ -136,7 +149,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         this.Data.forEach(t => {
           if (login_to === t.id && t.isParent === false) {
             this.hasLoginTo = true;
-            this.ConnectAsset(t);
+            this.connectAsset(t);
             return;
           }
         });
@@ -144,11 +157,11 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     });
   }
 
-  ConnectAsset(node: TreeNode) {
+  connectAsset(node: TreeNode) {
     const evt = new ConnectEvt(node, 'asset');
     connectEvt.next(evt);
   }
-
+  
   rootNodeAddDom(ztree, callback) {
     const tId = ztree.setting.treeId + '_tree_refresh';
     const refreshIcon = '<a id=' + tId + ' class="tree-refresh">' +
@@ -214,7 +227,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   connectTerminal() {
     const host = this.rightClickSelectNode;
-    this.ConnectAsset(host);
+    this.connectAsset(host);
   }
 
   filterAssets(keyword) {
@@ -293,10 +306,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       if (treeNodes.length !== 0) {
         this.assetsTree.hideNode(treeNodes[0]);
       }
-      const newNode = {id: 'search', name: i18n.get('Search'), isParent: true, open: true, zAsync: true};
+      const newNode = {id: 'search', name: translate('Search'), isParent: true, open: true, zAsync: true};
       const parentNode = this.assetsTree.addNodes(null, newNode)[0];
       parentNode.zAsync = true;
-      console.log(parentNode);
       this.assetsTree.addNodes(parentNode, nodes);
       parentNode.open = true;
     });
@@ -337,11 +349,11 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (!children) {
       return [];
     }
-    let all_children = [];
+    let allChildren = [];
     children.forEach((n) => {
-      all_children = [...children, ...this.recurseChildren(n)];
+      allChildren = [...children, ...this.recurseChildren(n)];
     });
-    return all_children;
+    return allChildren;
   }
 }
 

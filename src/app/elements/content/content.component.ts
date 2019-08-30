@@ -11,10 +11,6 @@ export class ElementContentComponent implements OnInit {
   @ViewChild('tabs') tabsRef: ElementRef;
 
   static DisconnectAll() {
-    // for (let i = 0; i < viewList.List.length; i++) {
-    //   // Todo:
-    //   // ContentComponent.TerminalDisconnect(i);
-    // }
   }
 
   get tabsWidth() {

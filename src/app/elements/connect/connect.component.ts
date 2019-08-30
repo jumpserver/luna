@@ -32,7 +32,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     connectEvt.asObservable().subscribe(evt => {
       switch (evt.action) {
         case 'asset': {
-          this.connectAsset(evt.node);
+          this.Connect(evt.node);
+          break;
+        }
+        case 'sftp': {
+          this.connectFileManager(evt.node);
           break;
         }
       }
@@ -114,7 +118,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const host = node.meta.asset as Asset;
     if (host) {
       const view = new View();
-      view.nick = '[FILE]' + host.hostname;
+      view.nick = '[FILE] ' + host.hostname;
       view.connected = true;
       view.editable = false;
       view.closed = false;

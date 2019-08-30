@@ -50,3 +50,12 @@ export async function getWsSocket() {
 }
 
 export const connectEvt = new BehaviorSubject<ConnectEvt>(new ConnectEvt(null, null));
+
+export function translate(value) {
+   if (i18n.has(value.toLowerCase())) {
+      return i18n.get(value.toLowerCase());
+   } else {
+      return value;
+   }
+}
+
