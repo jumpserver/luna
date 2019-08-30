@@ -3,13 +3,10 @@ import {ElementRef} from '@angular/core';
 import {Terminal} from 'xterm';
 import {fit} from 'xterm/lib/addons/fit/fit';
 import {Observable} from 'rxjs/Rx';
-import {CookieService} from 'ngx-cookie-service';
 import * as $ from 'jquery/dist/jquery.min.js';
 import 'rxjs/Observable';
 import 'rxjs/add/operator/debounceTime';
 import 'rxjs/add/operator/distinctUntilChanged';
-
-import {NavList} from '../../pages/control/control/control.component';
 
 
 @Component({
@@ -31,9 +28,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
     this.winSizeChange$
       .subscribe(() => {
-        if (NavList.List[NavList.Active].type !== 'rdp') {
           this.resizeTerm();
-        }
       });
   }
 
@@ -80,7 +75,6 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
   resizeTerm() {
     const size = this.getWinSize();
-    // Todo: 修改大小
     if (isNaN(size[0]) || isNaN(size[1])) {
       fit(this.term);
     } else {
