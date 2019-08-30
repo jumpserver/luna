@@ -88,11 +88,11 @@ export class DataStore {
   error: {};
   msg: {};
   loglevel: number;
-  leftbarshow = true;
+  showLeftBar = true;
   windowsize: Array<number>;
   autologin: boolean;
-  guacamole_token: string;
-  guacamole_token_time: number;
+  guacamoleToken: string;
+  guacamoleTokenTime: number;
 
 }
 

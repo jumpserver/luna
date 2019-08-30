@@ -1,46 +1,30 @@
-import {Component, OnChanges, Input, Pipe, PipeTransform} from '@angular/core';
-import {AppService, HttpService, LogService} from '../../app.service';
+import {Component, OnInit, Output, Pipe, PipeTransform, EventEmitter} from '@angular/core';
+import {FormControl} from '@angular/forms';
+import {debounceTime, distinctUntilChanged} from 'rxjs/operators';
+
+import {LogService, TreeFilterService} from '../../app.service';
 
 @Component({
   selector: 'elements-tree-filter',
   templateUrl: './tree-filter.component.html',
-  styleUrls: ['./tree-filter.component.css']
+  styleUrls: ['./tree-filter.component.css'],
 })
-export class ElementTreeFilterComponent implements OnChanges {
-  q: string;
-  @Input() input;
-  searchRequest: any;
+export class ElementTreeFilterComponent implements OnInit {
+  private searchControl: FormControl;
+  private debounce = 400;
 
-  constructor(private _appService: AppService,
-              private _http: HttpService,
+  constructor(private _treeFilterService: TreeFilterService,
               private _logger: LogService) {
-    this._logger.log('LeftbarComponent.ts:SearchBar');
   }
 
-  ngOnChanges(changes) {
-    this.q = changes.input.currentValue;
-  }
-
-  modelChange($event) {
-    this.Search(this.q);
-  }
-
-  public Search(q) {
-    if (this.searchRequest) {
-      this.searchRequest.unsubscribe();
-    }
-    this.searchRequest = this._http.search(q)
-      .subscribe(
-        data => {
-          this._logger.log(data);
-        },
-        err => {
-          this._logger.error(err);
-        },
-        () => {
-        }
-      );
-    this._logger.log(q);
+  ngOnInit(): void {
+    this.searchControl = new FormControl('');
+    this.searchControl.valueChanges
+      .pipe(debounceTime(this.debounce), distinctUntilChanged())
+      .subscribe(query => {
+        this._logger.debug('Tree filter: ', query);
+        this._treeFilterService.filter(query);
+      });
   }
 }
 

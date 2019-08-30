@@ -8,15 +8,10 @@ elements-term, elements-guacamole, elements-settings {
 
 .window {
   display: none;
+  height: 100%;
   /*padding: 15px;*/
 }
 
 .active {
   display: block;
-}
-
-.right-side {
-  height: 100%;
-  width: 100%;
-  background-color: gray;
 }

@@ -25,11 +25,11 @@ export const DataStore: _DataStore = {
   error: {},
   msg: {},
   loglevel: 0,
-  leftbarshow: true,
+  showLeftBar: true,
   windowsize: [],
   autologin: false,
-  guacamole_token: '',
-  guacamole_token_time: 0
+  guacamoleToken: '',
+  guacamoleTokenTime: 0
 };
 
 export let Browser = new _Browser();

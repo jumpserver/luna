@@ -1,10 +1,10 @@
 <elements-nav></elements-nav>
 <div id="container" class="container-fluid row" fxLayout="row" ngxSplit="row">
-  <div fxFlex="1 1 20%" minBasis="100px" maxBasis="800px" fxFlexFill ngxSplitArea *ngIf="DataStore.leftbarshow">
+  <div fxFlex="1 1 20%" minBasis="100px" maxBasis="800px" fxFlexFill ngxSplitArea *ngIf="DataStore.showLeftBar">
     <elements-left-bar></elements-left-bar>
   </div>
-  <div fxFlex="0" ngxSplitHandle [style.display]="activeViewIsRdp() ? 'none' : 'block'" (mouseup)="dragSplitBtn($event)"></div>
-  <div [fxFlex]="DataStore.leftbarshow ? '1 1 80%' : '1 1 100%'" ngxSplitArea class="content">
+  <div fxFlex="0" ngxSplitHandle (mouseup)="dragSplitBtn($event)"></div>
+  <div [fxFlex]="DataStore.showLeftBar ? '1 1 80%' : '1 1 100%'" ngxSplitArea class="content">
     <elements-content></elements-content>
   </div>
 </div>

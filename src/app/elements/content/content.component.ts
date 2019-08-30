@@ -15,7 +15,7 @@ import jQuery from 'jquery/dist/jquery.min';
 @Component({
   selector: 'elements-content',
   templateUrl: './content.component.html',
-  styleUrls: ['./content.component.css']
+  styleUrls: ['./content.component.scss']
 })
 export class ElementContentComponent implements OnInit {
   viewList: Array<View> = [];

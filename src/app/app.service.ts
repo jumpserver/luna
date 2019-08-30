@@ -5,7 +5,7 @@
  * @date     2017-11-07
  * @author   liuzheng <liuzheng712@gmail.com>
  */
-import {Injectable, OnInit} from '@angular/core';
+import {EventEmitter, Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import 'rxjs/add/operator/map';
@@ -13,7 +13,8 @@ import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser, i18n} from './globals';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
-import {SystemUser, GuacObjAddResp, TreeNode} from './model';
+import {SystemUser, GuacObjAddResp, TreeNode, User as _User} from './model';
+import {environment} from '../environments/environment';
 import * as UUID from 'uuid-js/lib/uuid.js';
 
 declare function unescape(s: string): string;
@@ -64,7 +65,7 @@ export class HttpService {
   }
 
   getUserProfile() {
-    return this.http.get('/api/users/v1/profile/');
+    return this.http.get<_User>('/api/users/v1/profile/');
   }
 
   getMyGrantedNodes(async: boolean, refresh?: boolean) {
@@ -111,7 +112,7 @@ export class HttpService {
       .set('user_id', userId)
       .set('asset_id', assetId)
       .set('system_user_id', systemUserId)
-      .set('token', DataStore.guacamole_token);
+      .set('token', DataStore.guacamoleToken);
     let body = new HttpParams();
     if (systemUserUsername && systemUserPassword) {
       systemUserUsername = btoa(systemUserUsername);
@@ -139,7 +140,7 @@ export class HttpService {
     let params = new HttpParams()
       .set('user_id', userId)
       .set('remote_app_id', remoteAppId)
-      .set('token', DataStore.guacamole_token);
+      .set('token', DataStore.guacamoleToken);
     let body = new HttpParams();
     if (systemUserUsername && systemUserPassword) {
       systemUserUsername = btoa(systemUserUsername);
@@ -280,46 +281,41 @@ export class AppService implements OnInit {
 
   constructor(private _http: HttpService,
               private _router: Router,
-              private _logger: LogService,
               private _cookie: CookieService,
+              private _logger: LogService,
               private _localStorage: LocalStorageService) {
-    if (this._cookie.get('loglevel')) {
-      // 0.- Level.OFF
-      // 1.- Level.ERROR
-      // 2.- Level.WARN
-      // 3.- Level.INFO
-      // 4.- Level.DEBUG
-      // 5.- Level.LOG
-      this._logger.level = parseInt(this._cookie.get('loglevel'), 10);
-      // this._logger.debug('Your debug stuff');
-      // this._logger.info('An info');
-      // this._logger.warn('Take care ');
-      // this._logger.error('Too late !');
-      // this._logger.log('log !');
-    } else {
-      this._cookie.set('loglevel', '0', 99, '/', document.domain);
-      // this._logger.level = parseInt(Cookie.getCookie('loglevel'));
-      this._logger.level = 0;
+    this.setLogLevel();
+    this.setLang();
+    this.checklogin();
+  }
+
+  ngOnInit() {
+  }
+
+  setLogLevel() {
+    // 设置logger level
+    let logLevel = this._cookie.get('logLevel');
+    if (!logLevel) {
+        logLevel = environment.production ? '1' : '5';
     }
+    this._logger.level = parseInt(logLevel, 10);
+  }
 
-    // if (environment.production) {
-      this._logger.level = 2;
-      this.checklogin();
-    // }
-
-    if (this._cookie.get('lang')) {
-      this.lang = this._cookie.get('lang');
-    } else {
-      this.lang = window.navigator.languages ? window.navigator.languages[0] : 'cn';
-      this._cookie.set('lang', this.lang);
+  setLang() {
+    let lang = this._cookie.get('lang');
+    if (!lang) {
+      lang = navigator.language;
     }
+    lang = lang.substr(0, 2);
+    this.lang = lang;
 
-    if (this.lang !== 'en') {
-      this._http.get('/luna/i18n/' + this.lang + '.json').subscribe(
+    if (lang !== 'en') {
+      this._http.get('/luna/i18n/' + 'zh' + '.json').subscribe(
         data => {
           this._localStorage.set('lang', JSON.stringify(data));
         },
         err => {
+          this._logger.error('Load i18n file error: ', err.error);
         }
       );
     }
@@ -332,53 +328,35 @@ export class AppService implements OnInit {
     }
   }
 
-  ngOnInit() {
-  }
-
   checklogin() {
     this._logger.log('service.ts:AppService,checklogin');
     if (DataStore.Path) {
       if (document.location.pathname === '/luna/connect') {
-      } else {
-        if (User.logined) {
-          if (document.location.pathname === '/login') {
-            this._router.navigate(['']);
-          } else {
-            this._router.navigate([document.location.pathname]);
-          }
-          // jQuery('angular2').show();
-        } else {
-          this._http.getUserProfile()
-            .subscribe(
-              data => {
-                User.id = data['id'];
-                User.name = data['name'];
-                User.username = data['username'];
-                User.email = data['email'];
-                User.is_active = data['is_active'];
-                User.is_superuser = data['is_superuser'];
-                User.role = data['role'];
-                // User.groups = data['groups'];
-                User.wechat = data['wechat'];
-                User.comment = data['comment'];
-                User.date_expired = data['date_expired'];
-                if (data['phone']) {
-                  User.phone = data['phone'].toString();
-                }
-                User.logined = data['logined'];
-                this._logger.debug(User);
-                this._localStorage.set('user', data['id']);
-              },
-              err => {
-                // this._logger.error(err);
-                User.logined = false;
-                window.location.href = document.location.origin + '/users/login?next=' +
-                  document.location.pathname + document.location.search;
-                // this._router.navigate(['login']);
-              },
-            );
-        }
+        return;
       }
+      if (User.logined) {
+        if (document.location.pathname === '/login') {
+          this._router.navigate(['']);
+        } else {
+          this._router.navigate([document.location.pathname]);
+        }
+        return;
+        // jQuery('angular2').show();
+      }
+      this._http.getUserProfile().subscribe(
+        user => {
+          Object.assign(User, user);
+          User.logined = true;
+          this._localStorage.set('user', user.id);
+        },
+        err => {
+          // this._logger.error(err);
+          User.logined = false;
+          window.location.href = document.location.origin + '/users/login?next=' +
+            document.location.pathname + document.location.search;
+          // this._router.navigate(['login']);
+        },
+      );
     } else {
       this._router.navigate(['FOF']);
       // jQuery('angular2').show();
@@ -433,5 +411,14 @@ export class NavService {
   set skipAllManualPassword(v) {
     const value = v ? '1' : '0';
     this.store.set('SkipAllManualPassword', value);
+  }
+}
+
+@Injectable()
+export class TreeFilterService {
+  onFilter: EventEmitter<string> = new EventEmitter<string>();
+
+  filter(q: string) {
+    this.onFilter.emit(q);
   }
 }

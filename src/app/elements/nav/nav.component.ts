@@ -6,7 +6,7 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, Inject, OnInit} from '@angular/core';
-import {AppService, HttpService, LocalStorageService, NavService, LogService} from '../../app.service';
+import {HttpService, LocalStorageService, NavService, LogService} from '../../app.service';
 import {CleftbarComponent} from '../../pages/control/cleftbar/cleftbar.component';
 import {ControlComponent, NavList, View} from '../../pages/control/control/control.component';
 import {DataStore, i18n} from '../../globals';
@@ -29,8 +29,7 @@ export class ElementNavComponent implements OnInit {
     jQuery('elements-nav').hide();
   }
 
-  constructor(private _appService: AppService,
-              private _http: HttpService,
+  constructor(private _http: HttpService,
               private _logger: LogService,
               public _dialog: MatDialog,
               public _navSvc: NavService,

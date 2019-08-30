@@ -3,8 +3,7 @@ import {CookieService} from 'ngx-cookie-service';
 import {HttpService, LogService} from '../../app.service';
 import {DataStore, User} from '../../globals';
 import {DomSanitizer} from '@angular/platform-browser';
-import {environment} from '../../../environments/environment';
-import {NavList} from '../../pages/control/control/control.component';
+import {View} from '../content/model';
 
 @Component({
   selector: 'elements-guacamole',
@@ -12,6 +11,7 @@ import {NavList} from '../../pages/control/control/control.component';
   styleUrls: ['./guacamole.component.scss']
 })
 export class ElementGuacamoleComponent implements OnInit {
+  @Input() view: View;
   @Input() host: any;
   @Input() sysUser: any;
   @Input() remoteAppId: string;
@@ -36,10 +36,7 @@ export class ElementGuacamoleComponent implements OnInit {
     action.subscribe(
       data => {
         const base = data.result;
-        this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamole_token;
-        setTimeout(() => {
-          NavList.List[this.index].Rdp = this.el.nativeElement;
-        }, 500);
+        this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamoleToken;
       },
       error => {
         if (!this.registered) {
@@ -57,8 +54,8 @@ export class ElementGuacamoleComponent implements OnInit {
     this._http.getGuacamoleToken(User.id, '').subscribe(
       data => {
         // /guacamole/client will redirect to http://guacamole/#/client
-        DataStore.guacamole_token = data['authToken'];
-        DataStore.guacamole_token_time = nowTime;
+        DataStore.guacamoleToken = data['authToken'];
+        DataStore.guacamoleTokenTime = nowTime;
         this.registerHost();
       },
       error => {
@@ -70,8 +67,8 @@ export class ElementGuacamoleComponent implements OnInit {
 
   ngOnInit() {
     // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
+    this.view.type = 'rdp';
     if (this.target) {
-      NavList.List[this.index].Rdp = this.el.nativeElement;
       return null;
     }
 
@@ -88,7 +85,8 @@ export class ElementGuacamoleComponent implements OnInit {
   }
 
   Disconnect() {
-    NavList.List[this.index].connected = false;
+    // TOdo:
+    return;
   }
 
   active() {

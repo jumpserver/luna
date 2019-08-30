@@ -1,6 +1,6 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, HostListener, OnInit} from '@angular/core';
 import {DataStore, User} from '../../globals';
-import {NavList} from '../control/control/control.component';
+import {environment} from '../../../environments/environment';
 
 @Component({
   selector: 'pages-main',
@@ -14,11 +14,14 @@ export class PageMainComponent implements OnInit {
   ngOnInit(): void {
   }
 
-  activeViewIsRdp() {
-    return NavList.List[NavList.Active].type === 'rdp';
-  }
-
   dragSplitBtn(evt) {
     window.dispatchEvent(new Event('resize'));
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  unloadNotification($event: any) {
+    const notInIframe = window.self === window.top;
+    const notInReplay = location.pathname.indexOf('/luna/replay') === -1;
+    return !(environment.production && notInIframe && notInReplay);
   }
 }

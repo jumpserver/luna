@@ -43,7 +43,7 @@ export class ElementLeftBarComponent {
   }
 
   static Hide() {
-    DataStore.leftbarshow = false;
+    DataStore.showLeftBar = false;
     DataStore.Nav.map(function (value, i) {
       value['children'].forEach((v, key) => {
         if (DataStore.Nav[i]['children'][key]['id'] === 'HideLeftManager') {
@@ -59,7 +59,7 @@ export class ElementLeftBarComponent {
   }
 
   static Show() {
-    DataStore.leftbarshow = true;
+    DataStore.showLeftBar = true;
     DataStore.Nav.map(function (value, i) {
       value['children'].forEach((v, key) => {
         if (DataStore.Nav[i]['children'][key]['id'] === 'ShowLeftManager') {

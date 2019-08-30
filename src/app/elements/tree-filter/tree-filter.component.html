@@ -1,8 +1,9 @@
-<input #keyword id="search" class="search"
+<input id="search" class="search"
+  [formControl]="searchControl"
   placeholder=" {{'Search'| trans }} ..."
   maxlength="2048"
-  name="q"
+  name="keyword"
   autocomplete="off"
   title="Search"
-  type="text" tabindex="1" spellcheck="false" [(ngModel)]="q"
+  type="text" tabindex="1" spellcheck="false"
 >

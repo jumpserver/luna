@@ -1,21 +1,21 @@
-import {Component, Input, OnInit, Inject, SimpleChanges, OnChanges, ElementRef, ViewChild} from '@angular/core';
-import {NavList, View} from '../../pages/control/control/control.component';
-import {AppService, HttpService, LogService, NavService} from '../../app.service';
-import {connectEvt} from '../../globals';
+import {Component, Input, OnInit, OnDestroy, ElementRef, ViewChild} from '@angular/core';
 import {MatDialog} from '@angular/material';
 import {BehaviorSubject} from 'rxjs/BehaviorSubject';
 import {ActivatedRoute} from '@angular/router';
+
+import {AppService, HttpService, LogService, NavService, TreeFilterService} from '../../app.service';
+import {connectEvt} from '../../globals';
 import {TreeNode, ConnectEvt} from '../../model';
-import * as jQuery from 'jquery/dist/jquery.min';
+import {View} from '../content/model';
 
 declare var $: any;
 
 @Component({
   selector: 'elements-asset-tree',
   templateUrl: './asset-tree.component.html',
-  styleUrls: ['./asset-tree.component.scss']
+  styleUrls: ['./asset-tree.component.scss'],
 })
-export class ElementAssetTreeComponent implements OnInit, OnChanges {
+export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   @Input() query: string;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu') rMenu: ElementRef;
@@ -43,47 +43,40 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   isShowRMenu = false;
   rightClickSelectNode: any;
   hasLoginTo = false;
-  loadTreeAsync = false;
+  treeFilterSubscription: any;
+
+  constructor(private _appSvc: AppService,
+              private _treeFilterSvc: TreeFilterService,
+              public _dialog: MatDialog,
+              public _logger: LogService,
+              private activatedRoute: ActivatedRoute,
+              private _http: HttpService,
+              private _navSvc: NavService
+  ) {}
+
+  ngOnInit() {
+    this.initTree();
+    document.addEventListener('click', this.hideRMenu.bind(this), false);
+
+    this.treeFilterSubscription = this._treeFilterSvc.onFilter.subscribe(
+      keyword => {
+        this._logger.debug('Filter tree: ', keyword);
+        this.filterAssets(keyword);
+        this.filterRemoteApps(keyword);
+      }
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.treeFilterSubscription.unsubscribe();
+  }
 
   onNodeClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
       this.assetsTree.expandNode(treeNode);
     } else {
       this._http.getUserProfile().subscribe();
-      this.Connect(treeNode);
-    }
-  }
-
-  constructor(private _appSvc: AppService,
-              public _dialog: MatDialog,
-              public _logger: LogService,
-              private activatedRoute: ActivatedRoute,
-              private _http: HttpService,
-              private _navSvc: NavService
-  ) {
-    this.searchEvt$ = new BehaviorSubject<string>(this.query);
-  }
-
-  ngOnInit() {
-    this.initTree();
-    document.addEventListener('click', this.hideRMenu.bind(this), false);
-    this.loadTreeAsync = this._navSvc.treeLoadAsync;
-
-    // Todo: 搜索
-    this.searchEvt$.asObservable()
-      .debounceTime(300)
-      .distinctUntilChanged()
-      .subscribe((n) => {
-        this.filter();
-      });
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    // if (changes['Data'] && this.Data) {
-    //   this.draw();
-    // }
-    if (changes['query'] && !changes['query'].firstChange) {
-      this.searchEvt$.next(this.query);
+      this.ConnectAsset(treeNode);
     }
   }
 
@@ -98,7 +91,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       onClick: this.onNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
-    if (this.loadTreeAsync) {
+    if (this._navSvc.treeLoadAsync) {
       setting['async'] = {
         enable: true,
         url: '/api/perms/v1/users/nodes/children-with-assets/tree/',
@@ -107,7 +100,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       };
     }
 
-    this._http.getMyGrantedNodes(this.loadTreeAsync, refresh).subscribe(resp => {
+    this._http.getMyGrantedNodes(this._navSvc.treeLoadAsync, refresh).subscribe(resp => {
       const assetsTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
       this.assetsTree = assetsTree;
       this.rootNodeAddDom(assetsTree, () => {
@@ -144,7 +137,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
         this.Data.forEach(t => {
           if (login_to === t.id && t.isParent === false) {
             this.hasLoginTo = true;
-            this.Connect(t);
+            this.ConnectAsset(t);
             return;
           }
         });
@@ -152,7 +145,7 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     });
   }
 
-  Connect(node: TreeNode) {
+  ConnectAsset(node: TreeNode) {
     const evt = new ConnectEvt(node, 'asset');
     connectEvt.next(evt);
   }
@@ -215,24 +208,88 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
   }
 
   connectFileManager() {
-    const host = this.rightClickSelectNode.meta.asset;
-    const id = NavList.List.length - 1;
-    if (host) {
-      NavList.List[id].nick = '[FILE]' + host.hostname;
-      NavList.List[id].connected = true;
-      NavList.List[id].edit = false;
-      NavList.List[id].closed = false;
-      NavList.List[id].host = host;
-      NavList.List[id].type = 'sftp';
-      NavList.List.push(new View());
-      NavList.Active = id;
-      jQuery('.tabs').animate({'scrollLeft': 150 * id}, 400);
-    }
+    const node = this.rightClickSelectNode;
+    const evt = new ConnectEvt(node, 'sftp');
+    connectEvt.next(evt);
   }
 
   connectTerminal() {
     const host = this.rightClickSelectNode;
-    this.Connect(host);
+    this.ConnectAsset(host);
+  }
+
+  filterAssets(keyword) {
+    if (this._navSvc.treeLoadAsync) {
+      this._logger.debug('Filter assets server');
+      this.filterAssetsServer(keyword);
+    } else {
+      this._logger.debug('Filter assets local');
+      this.filterAssetsLocal(keyword);
+    }
+  }
+
+  filterTree(keyword, tree, filterCallback) {
+    const nodes = tree.transformToArray(tree.getNodes());
+    if (!keyword) {
+      if (tree.hiddenNodes) {
+        tree.showNodes(tree.hiddenNodes);
+        tree.hiddenNodes = null;
+      }
+      if (tree.expandNodes) {
+        tree.expandNodes.forEach((node) => {
+          if (node.id !== nodes[0].id) {
+            tree.expandNode(node, false);
+          }
+        });
+        tree.expandNodes = null;
+      }
+      return null;
+    }
+    let shouldShow = [];
+    const matchedNodes = tree.getNodesByFilter(filterCallback);
+    matchedNodes.forEach((node) => {
+      const parents = this.recurseParent(node);
+      const children = this.recurseChildren(node);
+      shouldShow = [...shouldShow, ...parents, ...children, node];
+    });
+    tree.hiddenNodes = nodes;
+    tree.expandNodes = shouldShow;
+    tree.hideNodes(nodes);
+    tree.showNodes(shouldShow);
+    shouldShow.forEach((node) => {
+      if (node.isParent) {
+        tree.expandNode(node, true);
+      }
+    });
+  }
+
+  filterRemoteApps(keyword) {
+    if (!this.remoteAppsTree) {
+      return null;
+    }
+    function filterCallback(node: TreeNode) {
+      return node.name.toLowerCase().indexOf(keyword) !== -1;
+    }
+    return this.filterTree(keyword, this.remoteAppsTree, filterCallback);
+  }
+
+  filterAssetsServer(keyword) {
+    return;
+  }
+
+  filterAssetsLocal(keyword) {
+    if (!this.assetsTree) {
+      return null;
+    }
+    function filterAssetsCallback(node) {
+      if (node.isParent) {
+        return false;
+      }
+      const host = node.meta.asset;
+      return host.hostname.toLowerCase().indexOf(keyword) !== -1 || host.ip.indexOf(keyword) !== -1;
+    }
+    return this.filterTree(keyword, this.assetsTree, filterAssetsCallback);
+    // zTreeObj.expandAll(true);
   }
 
   recurseParent(node) {
@@ -259,55 +316,6 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
       all_children = [...children, ...this.recurseChildren(n)];
     });
     return all_children;
-  }
-
-  filter() {
-    const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
-    if (!zTreeObj) {
-      return null;
-    }
-    let _keywords = this.query;
-    const nodes = zTreeObj.transformToArray(zTreeObj.getNodes());
-    if (!_keywords) {
-      if (this.hiddenNodes) {
-        zTreeObj.showNodes(this.hiddenNodes);
-        this.hiddenNodes = null;
-      }
-      if (this.expandNodes) {
-        this.expandNodes.forEach((node) => {
-          if (node.id !== nodes[0].id) {
-            zTreeObj.expandNode(node, false);
-          }
-        });
-        this.expandNodes = null;
-      }
-      return null;
-    }
-    _keywords = _keywords.toLowerCase();
-    let shouldShow = [];
-    const matchedNodes = zTreeObj.getNodesByFilter(function (node) {
-      if (node.meta.type === 'asset') {
-        const host = node.meta.asset;
-        return host.hostname.toLowerCase().indexOf(_keywords) !== -1 || host.ip.indexOf(_keywords) !== -1;
-      } else {
-        return node.name.toLowerCase().indexOf(_keywords) !== -1;
-      }
-    });
-    matchedNodes.forEach((node) => {
-      const parents = this.recurseParent(node);
-      const children = this.recurseChildren(node);
-      shouldShow = [...shouldShow, ...parents, ...children, node];
-    });
-    this.hiddenNodes = nodes;
-    this.expandNodes = shouldShow;
-    zTreeObj.hideNodes(nodes);
-    zTreeObj.showNodes(shouldShow);
-    shouldShow.forEach((node) => {
-      if (node.isParent) {
-        zTreeObj.expandNode(node, true);
-      }
-    });
-    // zTreeObj.expandAll(true);
   }
 }
 

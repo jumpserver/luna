@@ -13,17 +13,14 @@ import {HttpClientModule} from '@angular/common/http';
 
 import {AppRouterModule} from './router/router.module';
 
-import {AppComponent} from './pages/app.component';
-
 // service
-import {AppService, HttpService, LocalStorageService, NavService, LogService, UUIDService} from './app.service';
-
-
+import {AppService, HttpService, LocalStorageService, NavService, LogService, UUIDService, TreeFilterService} from './app.service';
 import {CookieService} from 'ngx-cookie-service';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 
 
 import {Pipes} from './pipes/pipes';
+import {AppComponent} from './pages/app.component';
 import {PagesComponents} from './pages/pages.component';
 import {ElementComponents} from './elements/elements.component';
 import {ChangLanWarningDialogComponent, RDPSolutionDialogComponent, FontDialogComponent} from './elements/nav/nav.component';
@@ -71,9 +68,9 @@ import {SftpComponent} from './elements/sftp/sftp.component';
     LocalStorageService,
     DialogService,
     CookieService,
+    TreeFilterService,
     NGXLogger,
     {provide: MAT_LABEL_GLOBAL_OPTIONS, useValue: {float: 'always'}}
-
   ]
 })
 export class AppModule {

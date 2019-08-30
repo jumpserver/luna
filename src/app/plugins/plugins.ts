@@ -9,7 +9,7 @@ export const PluginModules = [
   BrowserAnimationsModule,
   NgProgressModule,
   MaterialModule,
-  LoggerModule.forRoot({serverLoggingUrl: '/api/logs', level: NgxLoggerLevel.DEBUG, serverLogLevel: NgxLoggerLevel.ERROR}),
+  LoggerModule.forRoot({level: NgxLoggerLevel.DEBUG, serverLogLevel: NgxLoggerLevel.ERROR}),
   NgxDatatableModule,
   NgxUIModule,
   SplitModule

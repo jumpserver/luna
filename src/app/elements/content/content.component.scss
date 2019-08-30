@@ -1,26 +1,3 @@
-/*.right-side {*/
-  /*height: 100%;*/
-  /*width: 100%;*/
-  /*background-color: gray;*/
-/*}*/
-
-/*div {*/
-  /*height: 100%;*/
-  /*width: 100%;*/
-  /*padding: 0;*/
-  /*background-color: #1f1b1b;*/
-  /*margin: 0;*/
-  /*position: initial;*/
-/*}*/
-
-/*#content {*/
-  /*padding-top: 0;*/
-/*}*/
-
-/*.container-fluid {*/
-  /*padding-top: 30px;*/
-/*}*/
-
 .tabs {
   height: 30px;
   overflow-y: hidden;
@@ -52,11 +29,15 @@
   background-color: #F5F5F5;
 }
 
-.scroll-botton {
+.scroll-button {
   font-size: 20px;
   float: left;
   height: 30px;
   overflow: hidden;
   background-color: #3a3333;
   color: white
+}
+
+.window {
+  height: 100%;
 }

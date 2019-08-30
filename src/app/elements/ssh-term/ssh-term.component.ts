@@ -12,7 +12,7 @@ import {getWsSocket} from '../../globals';
   templateUrl: './ssh-term.component.html',
   styleUrls: ['./ssh-term.component.scss']
 })
-export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy {
+export class ElementSshTermComponent implements OnInit, OnDestroy {
   @Input() host: any;
   @Input() view: View;
   @Input() sysUser: any;
@@ -34,9 +34,7 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit, OnDestroy
       this.ws = sock;
       this.connectHost();
     });
-  }
-
-  ngAfterViewInit() {
+    this.view.type = 'ssh';
   }
 
   newTerm() {
