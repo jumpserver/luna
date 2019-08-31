@@ -1,4 +1,4 @@
-<div id="content" fxLayout="column" ngxSplit="column" style="width: 100%;height: 100%;">
+<div id="content" fxLayout="column" ngxSplit="column">
   <div fxFlex="0 0 30px">
     <div class="scroll-button" style="padding: 0 5px">
       <a class="left" (click)="scrollLeft()"><i class="fa fa-caret-left"></i></a>
@@ -13,9 +13,9 @@
       </ul>
     </div>
   </div>
-  <div fxFlex="0 0 calc(100%-35px)" id="winContainer">
+  <div fxFlex="1 1 calc(100%-30px)" id="winContainer">
     <elements-content-window *ngFor="let view of viewList" [view]="view" ></elements-content-window>
   </div>
 </div>
 
-<elements-connect (onNewView)="onNewView($event)" ></elements-connect>
+<elements-connect [ngStyle]="{'display': none}" (onNewView)="onNewView($event)" ></elements-connect>

@@ -19,7 +19,8 @@ li {
   box-sizing: content-box;
   float: left;;
   background-color: #463a3a66;
-  border-right: 1px solid #3a3333c2;
+  border-right: 1px solid #6b6565c2;
+  border-radius: 2px;
 }
 
 li.active {

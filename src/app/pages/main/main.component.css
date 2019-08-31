@@ -7,11 +7,16 @@ div {
   position: initial;
 }
 
+elements-nav {
+  height: 30px;
+}
 
 #container {
   padding-top: 0;
+  height: calc(100% - 30px);
 }
 
-.container-fluid {
-  padding-top: 30px;
-}
+
+/*.container-fluid {*/
+  /*padding-top: 30px;*/
+/*}*/

@@ -1,10 +1,3 @@
-/**
- * 后台控制
- *
- *
- * @date     2017-11-07
- * @author   liuzheng <liuzheng712@gmail.com>
- */
 import {EventEmitter, Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
