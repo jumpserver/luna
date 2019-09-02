@@ -71,7 +71,7 @@ export class HttpService {
   }
 
   get_my_granted_nodes() {
-    return this.http.get<Array<Node>>('/api/perms/v1/user/nodes-assets/tree/?cache_policy=1');
+    return this.http.get<Array<Node>>('/api/perms/v1/users/nodes-with-assets/tree/?cache_policy=1');
   }
 
   get_my_granted_remote_apps() {
@@ -79,7 +79,7 @@ export class HttpService {
   }
 
   refresh_my_granted_nodes() {
-    return this.http.get<Array<Node>>('/api/perms/v1/user/nodes-assets/tree/?cache_policy=2');
+    return this.http.get<Array<Node>>('/api/perms/v1/users/nodes-with-assets/tree/?cache_policy=2');
   }
 
   get_guacamole_token(user_id: string, authToken: string) {
