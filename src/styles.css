@@ -10,6 +10,7 @@ body {
   width: 100%;
   background-color: rgb(243, 243, 244);
   overflow-y: hidden;
+  margin: 0;
 }
 
 app-root {
@@ -90,7 +91,7 @@ body ::-webkit-scrollbar-thumb {
   border-radius: 6px;
 }
 
-.ztree * {
+.ztree *:not(.fa) {
   font-family: 'Monaco', 'Consolas', 'monospace' !important;
   font-size: 13px !important;
 }

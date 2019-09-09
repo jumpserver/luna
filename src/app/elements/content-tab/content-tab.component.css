@@ -1,0 +1,81 @@
+.window {
+  display: none;
+  /*padding: 15px;*/
+}
+
+li.disconnected {
+  background-color: darkgray;
+}
+
+li.hidden {
+  display: none;
+}
+
+li {
+  display: inline-table;
+  width: 150px;
+  height: 30px;
+  position: relative;
+  box-sizing: content-box;
+  float: left;;
+  background-color: #463a3a66;
+  border-right: 1px solid #6b6565c2;
+  border-radius: 2px;
+}
+
+li.active {
+  box-sizing: border-box;
+  border-bottom: 3px solid #19aa8d;
+}
+
+li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #f1f0f0;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  text-decoration: none;
+  padding-left: 12px;
+  padding-right: 14px;
+  line-height: 26px;
+  cursor: default;
+  /*width: 145px;*/
+  height: 26px;
+  display: block;
+}
+
+li a.close {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  position: absolute;
+  color: gray;
+  top: 0;
+  right: 5px;
+  cursor: pointer;
+  line-height: 26px;
+  display: inline-block;
+}
+
+li.active a {
+  color: white;
+}
+
+li.active span {
+  padding-left: 12px;
+  line-height: 26px;
+  color: white;
+  height: 26px;
+}
+
+li input {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  width: 120px;
+  border: none;
+  background-color: inherit;
+  color: white;
+  padding: 5px 20px 4px 15px;
+  height: 26px;
+}
+

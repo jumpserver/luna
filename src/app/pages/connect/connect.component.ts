@@ -1,6 +1,6 @@
 import {Component, OnInit} from '@angular/core';
-import {AppService, HttpService, LocalStorageService} from '../../app.service';
-import {DataStore} from '../../globals';
+import {AppService, HttpService, LocalStorageService} from '@app/app.service';
+import {DataStore} from '@app/globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
@@ -33,7 +33,7 @@ export class PagesConnectComponent implements OnInit {
     jQuery('body').css('background-color', '#1f1b1b');
     if (this.system === 'windows') {
       if (!this.userid) {
-        this._http.get_user_id_from_token(this.token)
+        this._http.getUserIdFromToken(this.token)
           .subscribe(
             data => {
               this._localStorage.set('user-' + this.token, data['user']);
@@ -49,7 +49,7 @@ export class PagesConnectComponent implements OnInit {
 
   getAuthToken() {
     if (!this.authToken) {
-      this._http.get_guacamole_token(this.userid, this.token).subscribe(
+      this._http.getGuacamoleToken(this.userid, this.token).subscribe(
         data => {
           if (data['authToken']) {
             this._localStorage.set('authToken-' + this.token, data['authToken']);
@@ -65,7 +65,7 @@ export class PagesConnectComponent implements OnInit {
 
   getBase() {
     if (!this.base) {
-      this._http.guacamole_token_add_asset(this.token, this.authToken).subscribe(
+      this._http.guacamoleTokenAddAsset(this.token, this.authToken).subscribe(
         data => {
           if (data['result']) {
             this._localStorage.set('base-' + this.token, data['result']);

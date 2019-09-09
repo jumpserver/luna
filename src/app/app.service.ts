@@ -1,27 +1,18 @@
-/**
- * 后台控制
- *
- *
- * @date     2017-11-07
- * @author   liuzheng <liuzheng712@gmail.com>
- */
-import {Injectable, OnInit} from '@angular/core';
+import {EventEmitter, Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
 import {DataStore, User, Browser, i18n} from './globals';
-import {environment} from '../environments/environment';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
+import {SystemUser, GuacObjAddResp, TreeNode, User as _User, NavEvt} from './model';
+import {environment} from '../environments/environment';
 import * as UUID from 'uuid-js/lib/uuid.js';
 
 declare function unescape(s: string): string;
 
-class GuacObjAddResp {
-  code: number;
-  result: string;
-}
+
 
 @Injectable()
 export class HttpService {
@@ -58,31 +49,45 @@ export class HttpService {
     return this.http.options(url, options);
   }
 
-  report_browser() {
+  reportBrowser() {
     return this.http.post('/api/browser', JSON.stringify(Browser));
   }
 
-  check_login(user: any) {
+  checkLogin(user: any) {
     return this.http.post('/api/checklogin', user);
   }
 
-  get_user_profile() {
-    return this.http.get('/api/users/v1/profile/');
+  getUserProfile() {
+    return this.http.get<_User>('/api/users/v1/profile/');
   }
 
-  get_my_granted_nodes() {
-    return this.http.get<Array<Node>>('/api/perms/v1/users/nodes-with-assets/tree/?cache_policy=1');
+  getMyGrantedAssets(keyword) {
+    const url = `/api/perms/v1/users/assets/tree/?search=${keyword}`;
+    return this.http.get<Array<TreeNode>>(url);
   }
 
-  get_my_granted_remote_apps() {
-    return this.http.get<Array<Node>>('/api/perms/v1/user/remote-apps/tree/');
+  getMyGrantedNodes(async: boolean, refresh?: boolean) {
+    const cachePolicy = refresh ? '2' : '1';
+    const syncUrl = `/api/perms/v1/users/nodes-with-assets/tree/?cache_policy=${cachePolicy}`;
+    const asyncUrl = `/api/perms/v1/users/nodes/children-with-assets/tree/?cache_policy=${cachePolicy}`;
+    const url = async ? asyncUrl : syncUrl;
+    return this.http.get<Array<TreeNode>>(url);
   }
 
-  refresh_my_granted_nodes() {
-    return this.http.get<Array<Node>>('/api/perms/v1/users/nodes-with-assets/tree/?cache_policy=2');
+  getMyGrantedRemoteApps() {
+    return this.http.get<Array<TreeNode>>('/api/perms/v1/user/remote-apps/tree/');
   }
 
-  get_guacamole_token(user_id: string, authToken: string) {
+  getMyAssetSystemUsers(assetId: string) {
+    const url = `/api/v1/perms/users/assets/${assetId}/system-users/`;
+    return this.http.get<Array<SystemUser>>(url);
+  }
+
+  refreshMyGrantedNodes() {
+    return this.http.get<Array<TreeNode>>('/api/perms/v1/user/nodes-assets/tree/?cache_policy=2');
+  }
+
+  getGuacamoleToken(user_id: string, authToken: string) {
     const body = new HttpParams()
       .set('username', user_id)
       .set('password', 'jumpserver')
@@ -100,17 +105,17 @@ export class HttpService {
       {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
   }
 
-  guacamole_add_asset(user_id: string, asset_id: string, system_user_id: string, system_user_username?: string, system_user_password?: string) {
+  guacamoleAddAsset(userId: string, assetId: string, systemUserId: string, systemUserUsername?: string, systemUserPassword?: string) {
     let params = new HttpParams()
-      .set('user_id', user_id)
-      .set('asset_id', asset_id)
-      .set('system_user_id', system_user_id)
-      .set('token', DataStore.guacamole_token);
-    if (system_user_username) {
-      params = params.set('username', system_user_username);
-    }
-    if (system_user_password) {
-      params = params.set('password', system_user_password);
+      .set('user_id', userId)
+      .set('asset_id', assetId)
+      .set('system_user_id', systemUserId)
+      .set('token', DataStore.guacamoleToken);
+    let body = new HttpParams();
+    if (systemUserUsername && systemUserPassword) {
+      systemUserUsername = btoa(systemUserUsername);
+      systemUserPassword = btoa(systemUserPassword);
+      body = body.set('username', systemUserUsername).set('password', systemUserPassword);
     }
     const solution = localStorage.getItem('rdpSolution') || 'Auto';
     if (solution !== 'Auto') {
@@ -119,8 +124,9 @@ export class HttpService {
       params = params.set('width', width).set('height', height);
     }
 
-    return this.http.get<GuacObjAddResp>(
+    return this.http.post<GuacObjAddResp>(
       '/guacamole/api/session/ext/jumpserver/asset/add',
+      body.toString(),
       {
         headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
         params: params
@@ -128,11 +134,17 @@ export class HttpService {
     );
   }
 
-  guacamole_add_remote_app(user_id: string, remote_app_id: string) {
+  guacamoleAddRemoteApp(userId: string, remoteAppId: string, systemUserUsername?: string, systemUserPassword?: string) {
     let params = new HttpParams()
-      .set('user_id', user_id)
-      .set('remote_app_id', remote_app_id)
-      .set('token', DataStore.guacamole_token);
+      .set('user_id', userId)
+      .set('remote_app_id', remoteAppId)
+      .set('token', DataStore.guacamoleToken);
+    let body = new HttpParams();
+    if (systemUserUsername && systemUserPassword) {
+      systemUserUsername = btoa(systemUserUsername);
+      systemUserPassword = btoa(systemUserPassword);
+      body = body.set('username', systemUserUsername).set('password', systemUserPassword);
+    }
     const solution = localStorage.getItem('rdpSolution') || 'Auto';
     if (solution !== 'Auto') {
       const width = solution.split('x')[0];
@@ -140,8 +152,9 @@ export class HttpService {
       params = params.set('width', width).set('height', height);
     }
 
-    return this.http.get<GuacObjAddResp>(
+    return this.http.post<GuacObjAddResp>(
       '/guacamole/api/session/ext/jumpserver/remote-app/add',
+      body.toString(),
       {
         headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
         params: params
@@ -149,7 +162,7 @@ export class HttpService {
     );
   }
 
-  guacamole_token_add_asset(assetToken: string, token: string) {
+  guacamoleTokenAddAsset(assetToken: string, token: string) {
     let params = new HttpParams()
       .set('asset_token', assetToken)
       .set('token', token);
@@ -169,12 +182,11 @@ export class HttpService {
   }
 
   search(q: string) {
-    const params = new HttpParams()
-      .set('q', q);
+    const params = new HttpParams().set('q', q);
     return this.http.get('/api/search', {params: params});
   }
 
-  get_replay(token: string) {
+  getReplay(token: string) {
     return this.http.get('/api/terminal/v1/sessions/' + token + '/replay');
   }
 
@@ -182,11 +194,11 @@ export class HttpService {
   //   return this.http.get('/api/terminal/v2/sessions/' + token + '/replay');
   // }
 
-  get_replay_data(src: string) {
+  getReplayData(src: string) {
     return this.http.get(src);
   }
 
-  get_user_id_from_token(token: string) {
+  getUserIdFromToken(token: string) {
     const params = new HttpParams()
       .set('user-only', '1')
       .set('token', token);
@@ -267,125 +279,95 @@ export class AppService implements OnInit {
 
   constructor(private _http: HttpService,
               private _router: Router,
-              private _logger: LogService,
               private _cookie: CookieService,
+              private _logger: LogService,
               private _localStorage: LocalStorageService) {
-    if (this._cookie.get('loglevel')) {
-      // 0.- Level.OFF
-      // 1.- Level.ERROR
-      // 2.- Level.WARN
-      // 3.- Level.INFO
-      // 4.- Level.DEBUG
-      // 5.- Level.LOG
-      this._logger.level = parseInt(this._cookie.get('loglevel'), 10);
-      // this._logger.debug('Your debug stuff');
-      // this._logger.info('An info');
-      // this._logger.warn('Take care ');
-      // this._logger.error('Too late !');
-      // this._logger.log('log !');
-    } else {
-      this._cookie.set('loglevel', '0', 99, '/', document.domain);
-      // this._logger.level = parseInt(Cookie.getCookie('loglevel'));
-      this._logger.level = 0;
-    }
-
-    if (environment.production) {
-      this._logger.level = 2;
-      this.checklogin();
-    }
-
-    if (this._cookie.get('lang')) {
-      this.lang = this._cookie.get('lang');
-    } else {
-      this.lang = window.navigator.languages ? window.navigator.languages[0] : 'cn';
-      this._cookie.set('lang', this.lang);
-    }
-
-    if (this.lang !== 'en') {
-      this._http.get('/luna/i18n/' + this.lang + '.json').subscribe(
-        data => {
-          this._localStorage.set('lang', JSON.stringify(data));
-        },
-        err => {
-        }
-      );
-    }
-    const l = this._localStorage.get('lang');
-    if (l) {
-      const data = JSON.parse(l);
-      Object.keys(data).forEach((k, _) => {
-        i18n.set(k, data[k]);
-      });
-    }
+    this.setLogLevel();
+    this.setLang();
+    this.checklogin();
   }
 
   ngOnInit() {
   }
 
-  checklogin() {
-    this._logger.log('service.ts:AppService,checklogin');
-    if (DataStore.Path) {
-      if (document.location.pathname === '/luna/connect') {
-      } else {
-        if (User.logined) {
-          if (document.location.pathname === '/login') {
-            this._router.navigate(['']);
-          } else {
-            this._router.navigate([document.location.pathname]);
-          }
-          // jQuery('angular2').show();
-        } else {
-          this._http.get_user_profile()
-            .subscribe(
-              data => {
-                User.id = data['id'];
-                User.name = data['name'];
-                User.username = data['username'];
-                User.email = data['email'];
-                User.is_active = data['is_active'];
-                User.is_superuser = data['is_superuser'];
-                User.role = data['role'];
-                // User.groups = data['groups'];
-                User.wechat = data['wechat'];
-                User.comment = data['comment'];
-                User.date_expired = data['date_expired'];
-                if (data['phone']) {
-                  User.phone = data['phone'].toString();
-                }
-                User.logined = data['logined'];
-                this._logger.debug(User);
-                this._localStorage.set('user', data['id']);
-              },
-              err => {
-                // this._logger.error(err);
-                User.logined = false;
-                window.location.href = document.location.origin + '/users/login?next=' +
-                  document.location.pathname + document.location.search;
-                // this._router.navigate(['login']);
-              },
-              // () => {
-              //   if (User.logined) {
-              //     if (document.location.pathname === '/login') {
-              //       this._router.navigate(['']);
-              //     } else {
-              //       this._router.navigate([document.location.pathname]);
-              //     }
-              //   } else {
-              //     this._router.navigate(['login']);
-              //   }
-              // jQuery('angular2').show();
-              // }
-            );
-        }
+  setLogLevel() {
+    // 设置logger level
+    let logLevel = this._cookie.get('logLevel');
+    if (!logLevel) {
+        logLevel = environment.production ? '1' : '5';
+    }
+    this._logger.level = parseInt(logLevel, 10);
+  }
+
+  setLang() {
+    let lang = this._cookie.get('lang');
+    if (!lang) {
+      lang = navigator.language;
+    }
+    lang = lang.substr(0, 2);
+    this.lang = lang;
+
+    if (lang !== 'en') {
+      let url = `/luna/i18n/zh.json`;
+      if (!environment.production) {
+        url = `/assets/i18n/zh.json`;
       }
-    } else {
-      this._router.navigate(['FOF']);
-      // jQuery('angular2').show();
+      this._http.get(url).subscribe(
+        data => {
+          this._localStorage.set('lang', JSON.stringify(data));
+        },
+        err => {
+          this._logger.error('Load i18n file error: ', err.error);
+        }
+      );
+    }
+    const l = this._localStorage.get('lang');
+    if (l) {
+      try {
+        const data = JSON.parse(l);
+        Object.keys(data).forEach((k, _) => {
+          i18n.set(k, data[k]);
+        });
+      } catch (e) {
+        this._logger.error('Parse lang json failed');
+      }
     }
   }
 
+  checklogin() {
+    this._logger.log('service.ts:AppService,checklogin');
+    if (!DataStore.Path) {
+      this._router.navigate(['FOF']);
+    }
+    if (document.location.pathname === '/luna/connect') {
+      return;
+    }
+    if (User.logined) {
+      if (document.location.pathname === '/login') {
+        this._router.navigate(['']);
+      } else {
+        this._router.navigate([document.location.pathname]);
+      }
+      return;
+    }
+    this._http.getUserProfile().subscribe(
+      user => {
+        Object.assign(User, user);
+        User.logined = true;
+        this._localStorage.set('user', user.id);
+      },
+      err => {
+        // this._logger.error(err);
+        User.logined = false;
+        window.location.href = document.location.origin + '/users/login?next=' +
+          document.location.pathname + document.location.search;
+        // this._router.navigate(['login']);
+      },
+    );
+  }
+
   browser() {
-    this._http.report_browser();
+    this._http.reportBrowser();
   }
 
   getQueryString(name) {
@@ -396,124 +378,6 @@ export class AppService implements OnInit {
     }
     return null;
   }
-
-//
-//
-//   HideLeft() {
-//     DataStore.leftbarhide = true;
-//
-//     DataStore.Nav.map(function (value, i) {
-//       for (var ii in value['children']) {
-//         if (DataStore.Nav[i]['children'][ii]['id'] === 'HideLeftManager') {
-//           DataStore.Nav[i]['children'][ii] = {
-//             'id': 'ShowLeftManager',
-//             'click': 'ShowLeft',
-//             'name': 'Show left manager'
-//           };
-//         }
-//       }
-//     });
-//
-//   }
-//
-//   ShowLeft() {
-//     DataStore.leftbarhide = false;
-//
-//     DataStore.Nav.map(function (value, i) {
-//       for (var ii in value['children']) {
-//         if (DataStore.Nav[i]['children'][ii]['id'] === 'ShowLeftManager') {
-//           DataStore.Nav[i]['children'][ii] = {
-//             'id': 'HideLeftManager',
-//             'click': 'HideLeft',
-//             'name': 'Hide left manager'
-//           };
-//         }
-//       }
-//     });
-//
-//
-//   }
-//
-//     setMyinfo(user:User) {
-//         // Update data store
-//         this._dataStore.user = user;
-//         this._logger.log("service.ts:AppService,setMyinfo");
-//         this._logger.debug(user);
-// // Push the new list of todos into the Observable stream
-// //         this._dataObserver.next(user);
-//         // this.myinfo$ = new Observable(observer => this._dataObserver = observer).share()
-//     }
-//
-//   getMyinfo() {
-//     this._logger.log('service.ts:AppService,getMyinfo');
-//     return this.http.get('/api/userprofile')
-//       .map(res => res.json())
-//       .subscribe(response => {
-//         DataStore.user = response;
-//         // this._logger.warn(this._dataStore.user);
-//         // this._logger.warn(DataStore.user)
-//       });
-//   }
-//
-//   getUser(id: string) {
-//     this._logger.log('service.ts:AppService,getUser');
-//     return this.http.get('/api/userprofile')
-//       .map(res => res.json());
-//   }
-//
-//   gettest() {
-//     this._logger.log('service.ts:AppService,gettest');
-//     this.http.get('/api/userprofile')
-//       .map(res => res.json())
-//       .subscribe(res => {
-//         return res;
-//       });
-//   }
-//
-//   getGrouplist() {
-//     this._logger.log('service.ts:AppService,getGrouplist');
-//     return this.http.get('/api/grouplist')
-//       .map(res => res.json());
-//   }
-//
-//   getUserlist(id: string) {
-//     this._logger.log('service.ts:AppService,getUserlist');
-//     if (id)
-//       return this.http.get('/api/userlist/' + id)
-//         .map(res => res.json());
-//     else
-//       return this.http.get('/api/userlist')
-//         .map(res => res.json());
-//   }
-//
-//   delGroup(id) {
-//
-//   }
-//
-//
-//   copy() {
-//     var clipboard = new Clipboard('#Copy');
-//
-//     clipboard.on('success', function (e) {
-//       console.info('Action:', e.action);
-//       console.info('Text:', e.text);
-//       console.info('Trigger:', e.trigger);
-//
-//       e.clearSelection();
-//     });
-//     console.log('ffff');
-//     console.log(window.getSelection().toString());
-//
-//     var copy = new Clipboard('#Copy', {
-//       text: function () {
-//         return window.getSelection().toString();
-//       }
-//     });
-//     copy.on('success', function (e) {
-//       layer.alert('Lucky Copyed!');
-//     });
-//
-//   }
 }
 
 @Injectable()
@@ -527,3 +391,54 @@ export class UUIDService {
   }
 }
 
+
+@Injectable()
+export class NavService {
+  onNavClick: EventEmitter<NavEvt> = new EventEmitter<NavEvt>();
+
+  constructor(private store: LocalStorageService) {}
+
+  disconnectAllConnection() {
+    const evt = new NavEvt('disconnectAll', '');
+    this.onNavClick.emit(evt);
+  }
+
+  disconnectConnection() {
+    const evt = new NavEvt('disconnect', '');
+    this.onNavClick.emit(evt);
+  }
+
+  changeLang(value) {
+    const evt = new NavEvt('changeLang', value);
+    this.onNavClick.emit(evt);
+  }
+
+  get treeLoadAsync() {
+    const value = this.store.get('LoadTreeAsync');
+    return value === '1';
+  }
+
+  set treeLoadAsync(v: boolean) {
+    const value = v ? '1' : '0';
+    this.store.set('LoadTreeAsync', value);
+  }
+
+  get skipAllManualPassword() {
+    const value = this.store.get('SkipAllManualPassword');
+    return value === '1';
+  }
+
+  set skipAllManualPassword(v) {
+    const value = v ? '1' : '0';
+    this.store.set('SkipAllManualPassword', value);
+  }
+}
+
+@Injectable()
+export class TreeFilterService {
+  onFilter: EventEmitter<string> = new EventEmitter<string>();
+
+  filter(q: string) {
+    this.onFilter.emit(q);
+  }
+}

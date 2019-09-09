@@ -1,0 +1,59 @@
+.tabs {
+  height: 30px;
+  overflow-y: hidden;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.tabs ul {
+  list-style-type: none;
+  height: 30px;
+  background-color: #3a3333;
+  //display: block;
+  display: inline-block;
+  min-width: 100%;
+  padding-left: 0;
+  margin: 0;
+}
+/*
+ *  scrollbar
+ */
+.tabs::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  background-color: #676a6c;
+}
+
+.tabs::-webkit-scrollbar {
+  height: 2px;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+  background-color: #F5F5F5;
+}
+
+.scroll-button {
+  font-size: 20px;
+  float: left;
+  height: 30px;
+  overflow: hidden;
+  background-color: #3a3333;
+  color: white;
+  padding: 0 5px;
+}
+
+.scroll-button a.disabled {
+  color: #676A6D;
+  cursor: not-allowed;
+}
+
+#content {
+  height: 100%;
+}
+
+#winContainer {
+  height: calc(100% - 30px);
+}
+//
+//.window {
+//  height: 100%;
+//}

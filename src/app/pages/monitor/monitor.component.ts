@@ -1,6 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
-import {DataStore, Monitor} from '../../globals';
+import {DataStore, Monitor} from '@app/globals';
 
 @Component({
   selector: 'pages-monitor',

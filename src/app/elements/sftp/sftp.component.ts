@@ -1,5 +1,5 @@
 import {Component, OnInit, Input, ElementRef, ViewChild} from '@angular/core';
-import {DataStore} from '../../globals';
+import {DataStore} from '@app/globals';
 import {DomSanitizer} from '@angular/platform-browser';
 
 @Component({

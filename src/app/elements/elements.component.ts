@@ -1,7 +1,11 @@
 // Elements
 import {ElementTableComponent} from './table/table.component';
-import {ElementLeftbarComponent} from './leftbar/leftbar.component';
-import {ElementOfooterComponent} from './ofooter/ofooter.component';
+import {ElementLeftBarComponent} from './left-bar/left-bar.component';
+import {ElementContentComponent} from './content/content.component';
+import {ElementContentViewComponent} from './content-window/content-window.component';
+import {ElementContentTabComponent} from './content-tab/content-tab.component';
+import {ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
+import {ElementTreeFilterComponent} from './tree-filter/tree-filter.component';
 import {ElementFooterComponent} from './footer/footer.component';
 import {ElementTermComponent} from './term/term.component';
 import {ElementInteractiveComponent} from './interactive/interactive.component';
@@ -13,17 +17,22 @@ import {ElementIframeComponent} from './iframe/iframe.component';
 import {ElementDialogAlertComponent} from './dialog/dialog.service';
 import {ElementGuacamoleComponent} from './guacamole/guacamole.component';
 import {ElementSshTermComponent} from './ssh-term/ssh-term.component';
-import {AssetTreeDialogComponent, ElementAssetTreeComponent, ManualPasswordDialogComponent} from './asset-tree/asset-tree.component';
+import {ElementConnectComponent, AssetTreeDialogComponent, ManualPasswordDialogComponent} from './connect/connect.component';
 import {RDPSolutionDialogComponent, FontDialogComponent} from './nav/nav.component';
 
 export const ElementComponents = [
-  ElementLeftbarComponent,
-  ElementOfooterComponent,
+  ElementLeftBarComponent,
+  ElementContentComponent,
+  ElementContentTabComponent,
+  ElementContentViewComponent,
+  ElementConnectComponent,
+  ElementTreeFilterComponent,
   ElementTableComponent,
   ElementFooterComponent,
   ElementTermComponent,
   ElementInteractiveComponent,
-  ElementNavComponent, ChangLanWarningDialogComponent,
+  ElementNavComponent,
+  ChangLanWarningDialogComponent,
   ElementPopupComponent,
   ElementRdpComponent,
   ElementServerMenuComponent,
@@ -32,6 +41,7 @@ export const ElementComponents = [
   ElementGuacamoleComponent,
   ElementAssetTreeComponent,
   ElementSshTermComponent,
+  ElementConnectComponent,
   AssetTreeDialogComponent,
   ManualPasswordDialogComponent,
   RDPSolutionDialogComponent,

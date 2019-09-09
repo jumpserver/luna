@@ -8,6 +8,7 @@
       "root": "src",
       "outDir": "dist",
       "assets": [
+        "assets",
         "static",
         "theme/default/",
         "favicon.ico"
@@ -31,8 +32,6 @@
         "../node_modules/metismenu/dist/metisMenu.js",
         "../node_modules/jquery-sparkline/jquery.sparkline.js",
         "../node_modules/tether/dist/js/tether.min.js",
-        "../node_modules/bootstrap/dist/js/bootstrap.min.js",
-        "assets/inspinia/inspinia.js",
         "assets/slimscroll/jquery.slimscroll.min.js",
         "../node_modules/xterm/dist/xterm.js",
         "assets/ztree/jquery.ztree.all.min.js",

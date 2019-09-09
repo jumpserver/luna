@@ -3,6 +3,7 @@ $fa-font-path: '~font-awesome/fonts';
 @import '~font-awesome/scss/font-awesome';
 
 // bootstrap
+// Todo: 去掉依赖
 @import '~bootstrap/scss/bootstrap';
 
 $FontPathOpenSans: '~npm-font-open-sans/fonts';
@@ -17,6 +18,7 @@ $roboto-font-path: '~roboto-fontface/fonts';
  *
 */
 $asset-path: '../static/imgs/inspinia';
+// Todo: 去掉依赖
 @import '../assets/inspinia/style';
 
 @import '~@swimlane/ngx-datatable/release/index.css';

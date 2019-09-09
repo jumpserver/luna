@@ -1,11 +1,6 @@
-import {Component, Input, OnInit} from '@angular/core';
+import {Component, OnInit} from '@angular/core';
 import {DomSanitizer} from '@angular/platform-browser';
-import {NavList} from '../../pages/control/control/control.component';
 
-import {User, DataStore} from '../../globals';
-import {HttpService, LogService} from '../../app.service';
-import {environment} from '../../../environments/environment';
-import {CookieService} from 'ngx-cookie-service';
 
 @Component({
   selector: 'elements-iframe',
@@ -13,15 +8,9 @@ import {CookieService} from 'ngx-cookie-service';
   styleUrls: ['./iframe.component.scss']
 })
 export class ElementIframeComponent implements OnInit {
-  @Input() host: any;
-  @Input() userid: any;
-  @Input() index: number;
   target: string;
 
-  constructor(private sanitizer: DomSanitizer,
-              private _http: HttpService,
-              private _cookie: CookieService,
-              private _logger: LogService) {
+  constructor(private sanitizer: DomSanitizer) {
   }
 
   ngOnInit() {
@@ -29,9 +18,5 @@ export class ElementIframeComponent implements OnInit {
 
   trust(url) {
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
-  }
-
-  Disconnect() {
-    NavList.List[this.index].connected = false;
   }
 }

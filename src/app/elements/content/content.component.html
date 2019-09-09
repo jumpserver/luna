@@ -1,0 +1,21 @@
+<div id="content">
+  <div>
+    <div class="scroll-button">
+      <a class="left" (click)="scrollLeft()"><i class="fa fa-caret-left"></i></a>
+      <a class="right" (click)="scrollRight()"><i class="fa fa-caret-right"></i></a>
+    </div>
+    <div class="tabs" #tabs>
+      <ul [ngStyle]="{'width':tabsWidth+'px'}">
+        <elements-content-tab
+          *ngFor="let view of viewList"
+          [view]="view" (onAction)="onViewAction($event)">
+        </elements-content-tab>
+      </ul>
+    </div>
+  </div>
+  <div id="winContainer">
+    <elements-content-window *ngFor="let view of viewList" [view]="view" ></elements-content-window>
+  </div>
+</div>
+
+<elements-connect [ngStyle]="{'display': 'none'}" (onNewView)="onNewView($event)" ></elements-connect>

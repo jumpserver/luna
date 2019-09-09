@@ -1,5 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {Monitor} from '../../../globals';
+import {Monitor} from '@app/globals';
 
 @Component({
   selector: 'pages-monitor-linux',

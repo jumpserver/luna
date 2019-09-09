@@ -1,0 +1,17 @@
+div, elements-term, elements-guacamole {
+  height: 100%;
+}
+
+elements-term, elements-guacamole {
+  /*padding-bottom: 30px;*/
+}
+
+.window {
+  display: none;
+  height: 100%;
+  /*padding: 15px;*/
+}
+
+.active {
+  display: block;
+}

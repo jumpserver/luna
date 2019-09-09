@@ -1,0 +1,46 @@
+.sidebar {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+}
+
+label {
+  margin-bottom: 0;
+}
+
+.fa.fa-undefined:before {
+  content: "\f26c";
+}
+
+.overflow {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  float: left;
+  position: inherit;
+  background: #2f2a2a;
+  color: #d6cbcb;
+}
+
+.footer-version {
+  background: #2f2a2a;
+  font-size: 9pt;
+  left: 0;
+  width: 100%;
+  padding: 1px 20px 0 20px;
+  border-top: 1px solid #e7eaec;
+  bottom: 0;
+  height: 30px;
+}
+
+.footer-version > p {
+  height: 8px;
+  font-size: 13px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  color: #d6cbcb;
+}
+
+.ngx-scroll-overlay {
+  overflow: auto; // for FF
+}

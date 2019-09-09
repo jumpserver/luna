@@ -6,10 +6,8 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, Inject, OnInit} from '@angular/core';
-import {AppService, HttpService, LocalStorageService, LogService} from '../../app.service';
-import {CleftbarComponent} from '../../pages/control/cleftbar/cleftbar.component';
-import {ControlComponent, NavList, View} from '../../pages/control/control/control.component';
-import {DataStore, i18n} from '../../globals';
+import {HttpService, LocalStorageService, NavService, LogService} from '@app/app.service';
+import {DataStore, i18n} from '@app/globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 declare let layer: any;
@@ -21,50 +19,52 @@ declare let layer: any;
 })
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
-  NavList = NavList;
-  ChangeLanWarningDialog: any;
+  navs: Array<any>;
+  _asyncTree = false;
 
   static Hide() {
     jQuery('elements-nav').hide();
   }
 
-  constructor(private _appService: AppService,
-              private _http: HttpService,
+  constructor(private _http: HttpService,
               private _logger: LogService,
               public _dialog: MatDialog,
+              public _navSvc: NavService,
               private _localStorage: LocalStorageService) {
     this._logger.log('nav.ts:NavComponent');
     this.getNav();
   }
 
   ngOnInit() {
+    this.navs = this.getNav();
   }
 
-  toTab(idx) {
-    ControlComponent.active(idx);
+  get treeLoadAsync() {
+    return this._asyncTree;
+  }
+
+  set treeLoadAsync(value) {
+    this._asyncTree = value;
   }
 
   click(event) {
-    this._logger.debug('nav.ts:NavComponent,click', event);
     switch (event) {
-      case 'ReloadLeftbar': {
-        CleftbarComponent.Reload();
-        break;
-      }
       case 'ConnectSFTP': {
         window.open('/coco/elfinder/sftp/');
         break;
       }
       case 'HideLeft': {
-        CleftbarComponent.Hide();
+        DataStore.showLeftBar = false;
+        this.refreshNav();
+        break;
+      }
+      case 'ShowLeft': {
+        DataStore.showLeftBar = true;
+        this.refreshNav();
         break;
       }
       case 'Settings': {
         this.Settings();
-        break;
-      }
-      case 'ShowLeft': {
-        CleftbarComponent.Show();
         break;
       }
       case 'Copy': {
@@ -72,8 +72,10 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'FullScreen': {
-        let ele:any = document.getElementsByClassName("window active ")[0];
-
+        const ele: any = document.getElementsByClassName('window active')[0];
+        if (!ele) {
+          return;
+        }
         if (ele.requestFullscreen) {
           ele.requestFullscreen();
         } else if (ele.mozRequestFullScreen) {
@@ -85,41 +87,29 @@ export class ElementNavComponent implements OnInit {
         } else {
           throw new Error('不支持全屏api');
         }
-
         window.dispatchEvent(new Event('resize'));
         break;
       }
-      case 'Reconnect': {
-        if (NavList.List[NavList.Active].termComp) {
-          NavList.List[NavList.Active].termComp.reconnect();
+      case'Disconnect': {
+        if (!confirm('断开当前连接?')) {
+          return
         }
+      }
+      case 'Reconnect': {
         break;
       }
       case 'Disconnect': {
         if (!confirm('断开当前连接? (RDP暂不支持)')) {
           break;
         }
-        switch (NavList.List[NavList.Active].type) {
-          case 'ssh': {
-            ControlComponent.TerminalDisconnect(NavList.Active);
-            break;
-          }
-          case 'rdp': {
-            ControlComponent.RdpDisconnect(NavList.Active);
-            break;
-          }
-          default: {
-            // statements;
-            break;
-          }
-        }
+        this._navSvc.disconnectConnection();
         break;
       }
       case'DisconnectAll': {
-        if (!confirm('断开所有连接? (RDP暂不支持)')) {
+        if (!confirm('断开所有连接?')) {
           break;
         }
-        ControlComponent.DisconnectAll();
+        this._navSvc.disconnectAllConnection();
         break;
       }
       case 'Website': {
@@ -162,10 +152,6 @@ export class ElementNavComponent implements OnInit {
         });
         break;
       }
-      case 'EnterLicense': {
-        this.EnterLicense();
-        break;
-      }
       case 'English': {
         const dialog = this._dialog.open(
           ChangLanWarningDialogComponent,
@@ -206,6 +192,16 @@ export class ElementNavComponent implements OnInit {
         });
         break;
       }
+      case 'LoadTreeAsync': {
+        this._navSvc.treeLoadAsync = !this._navSvc.treeLoadAsync;
+        this.refreshNav();
+        break;
+      }
+      case 'SkipManualPassword': {
+        this._navSvc.skipAllManualPassword = !this._navSvc.skipAllManualPassword;
+        this.refreshNav();
+        break;
+      }
       default: {
         break;
       }
@@ -213,45 +209,12 @@ export class ElementNavComponent implements OnInit {
 
   }
 
-  EnterLicense() {
-    layer.prompt({
-      formType: 2,
-      maxlength: 500,
-      title: 'Please Input Code',
-      scrollbar: false,
-      area: ['400px', '300px'],
-      moveOut: true,
-      moveType: 1
-    }, function (value, index) {
-      DataStore.socket.emit('key', value);
-      // layer.msg(value); //得到value
-      layer.close(index);
-
-    });
+  refreshNav() {
+    this.navs = this.getNav();
   }
 
   getNav() {
-    DataStore.Nav = [{
-      'id': 'File',
-      'name': 'Server',
-      'children': [
-        {
-          'id': 'Disconnect',
-          'click': 'Disconnect',
-          'name': 'Disconnect'
-        },
-        {
-          'id': 'DisconnectAll',
-          'click': 'DisconnectAll',
-          'name': 'Disconnect all'
-        },
-        {
-          'id': 'Reconnect',
-          'click': 'Reconnect',
-          'name': 'Reconnect'
-        },
-      ]
-    }, {
+    return [{
       'id': 'FileManager',
       'name': 'File Manager',
       'children': [
@@ -269,7 +232,14 @@ export class ElementNavComponent implements OnInit {
         {
           'id': 'HideLeftManager',
           'click': 'HideLeft',
-          'name': 'Hide left manager'
+          'name': 'Hide left manager',
+          'hide': !DataStore.showLeftBar
+        },
+        {
+          'id': 'ShowLeftManager',
+          'click': 'ShowLeft',
+          'name': 'Show left manager',
+          'hide': DataStore.showLeftBar
         },
         {
           'id': 'RDPResolution',
@@ -303,6 +273,30 @@ export class ElementNavComponent implements OnInit {
           'id': 'FullScreen',
           'click': 'FullScreen',
           'name': 'Full Screen'
+        },
+        {
+          'id': 'LoadTreeAsync',
+          'click': 'LoadTreeAsync',
+          'name': 'Load Tree Async',
+          'hide': this._navSvc.treeLoadAsync
+        },
+        {
+          'id': 'LoadTreeSync',
+          'click': 'LoadTreeAsync',
+          'name': 'Load Tree Sync',
+          'hide': !this._navSvc.treeLoadAsync
+        },
+        {
+          'id': 'SkipManualPassword',
+          'click': 'SkipManualPassword',
+          'name': 'Skip manual password',
+          'hide': this._navSvc.skipAllManualPassword
+        },
+        {
+          'id': 'ShowManualPassword',
+          'click': 'SkipManualPassword',
+          'name': 'Show manual password',
+          'hide': !this._navSvc.skipAllManualPassword
         }
         ]
     }, {
@@ -343,21 +337,6 @@ export class ElementNavComponent implements OnInit {
     ];
   }
 
-  Connect() {
-    layer.prompt({
-      formType: 2,
-      maxlength: 500,
-      title: 'Please Input Code',
-      scrollbar: false,
-      area: ['400px', '300px'],
-      moveOut: true,
-      moveType: 1
-    }, function (value, index) {
-      DataStore.socket.emit('key', value);
-      layer.close(index);
-    });
-  }
-
   English() {
     this._localStorage.delete('lang');
     i18n.clear();
@@ -381,14 +360,6 @@ export class ElementNavComponent implements OnInit {
   }
 
   Settings() {
-    const id = NavList.List.length - 1;
-    NavList.List[id].nick = 'Setting';
-    NavList.List[id].connected = true;
-    NavList.List[id].edit = false;
-    NavList.List[id].closed = false;
-    NavList.List[id].type = 'settings';
-    NavList.List.push(new View());
-    NavList.Active = id;
   }
 }
 

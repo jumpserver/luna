@@ -1,5 +1,5 @@
 import {Component, Input, OnInit} from '@angular/core';
-import {HttpService} from '../../app.service';
+import {HttpService} from '@app/app.service';
 
 export interface Assets {
   name: string;

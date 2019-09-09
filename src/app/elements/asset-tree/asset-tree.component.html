@@ -1,4 +1,13 @@
-<ul id="ztree" class="ztree"></ul>
+<div>
+  <ul id="assetsTree" class="ztree">
+    {{ "Loading"|trans }} ...
+  </ul>
+
+  <ul id="remoteAppsTree" class="ztree">
+    {{ "Loading"|trans }} ...
+  </ul>
+</div>
+
 
 <div #rMenu *ngIf="isShowRMenu" class="basicContext" [style.top]="pos.top" [style.left]="pos.left">
   <table>
