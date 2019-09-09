@@ -71,7 +71,7 @@ export class HttpService {
   }
 
   getMyGrantedNodes() {
-    return this.http.get<Array<Node>>('/api/perms/v1/user/nodes-assets/tree/?cache_policy=1');
+    return this.http.get<Array<Node>>('/api/perms/v1/users/nodes-with-assets/tree/?cache_policy=1');
   }
 
   getMyGrantedRemoteApps() {
@@ -79,7 +79,7 @@ export class HttpService {
   }
 
   refreshMyGrantedNodes() {
-    return this.http.get<Array<Node>>('/api/perms/v1/user/nodes-assets/tree/?cache_policy=2');
+    return this.http.get<Array<Node>>('/api/perms/v1/users/nodes-with-assets/tree/?cache_policy=2');
   }
 
   getGuacamoleToken(user_id: string, authToken: string) {
