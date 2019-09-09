@@ -27,12 +27,15 @@
         "styles.css",
         "assets/ztree/awesomeStyle/awesome.css"
       ],
+      "comment": [
+        "../node_modules/jquery-sparkline/jquery.sparkline.js",
+        "../node_modules/metismenu/dist/metisMenu.js",
+        "assets/slimscroll/jquery.slimscroll.min.js",
+        "../node_modules/tether/dist/js/tether.min.js"
+
+      ],
       "scripts": [
         "../node_modules/jquery/dist/jquery.min.js",
-        "../node_modules/metismenu/dist/metisMenu.js",
-        "../node_modules/jquery-sparkline/jquery.sparkline.js",
-        "../node_modules/tether/dist/js/tether.min.js",
-        "assets/slimscroll/jquery.slimscroll.min.js",
         "../node_modules/xterm/dist/xterm.js",
         "assets/ztree/jquery.ztree.all.min.js",
         "assets/ztree/jquery.ztree.exhide.min.js"
