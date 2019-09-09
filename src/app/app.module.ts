@@ -1,15 +1,7 @@
-/**
- * app 模块
- *
- *
- * @date     2017-11-07
- * @author   liuzheng <liuzheng712@gmail.com>
- */
 import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms'; // <-- NgModel lives here
 import {NGXLogger} from 'ngx-logger';
-import {FlexLayoutModule} from '@angular/flex-layout';
 import {HttpClientModule} from '@angular/common/http';
 import {CookieService} from 'ngx-cookie-service';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
@@ -34,7 +26,6 @@ import {SftpComponent} from './elements/sftp/sftp.component';
 @NgModule({
   imports: [
     BrowserModule,
-    FlexLayoutModule,
     FormsModule,
     HttpClientModule,
     ReactiveFormsModule,
