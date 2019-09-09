@@ -6,10 +6,10 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {AppService, HttpService, LogService} from '../../app.service';
+import {AppService, HttpService, LogService} from '@app/app.service';
 import {NgForm} from '@angular/forms';
 import {Router} from '@angular/router';
-import {DataStore, User} from '../../globals';
+import {DataStore, User} from '@app/globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({

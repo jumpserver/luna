@@ -13,6 +13,7 @@
   display: inline-block;
   min-width: 100%;
   padding-left: 0;
+  margin: 0;
 }
 /*
  *  scrollbar
@@ -36,7 +37,8 @@
   height: 30px;
   overflow: hidden;
   background-color: #3a3333;
-  color: white
+  color: white;
+  padding: 0 5px;
 }
 
 .scroll-button a.disabled {
@@ -44,7 +46,14 @@
   cursor: not-allowed;
 }
 
-
-.window {
+#content {
   height: 100%;
 }
+
+#winContainer {
+  height: calc(100% - 30px);
+}
+//
+//.window {
+//  height: 100%;
+//}

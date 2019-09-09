@@ -1,7 +1,5 @@
 import {Component, OnInit, Input, Output, EventEmitter} from '@angular/core';
-import {View, ViewAction} from '../content/model';
-
-
+import {View, ViewAction} from '@app/model';
 
 @Component({
   selector: 'elements-content-tab',

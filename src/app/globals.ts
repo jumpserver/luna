@@ -26,8 +26,8 @@ export const DataStore: _DataStore = {
   msg: {},
   logLevel: 4,
   showLeftBar: true,
-  windowsize: [],
-  autologin: false,
+  windowSize: [],
+  autoLogin: false,
   guacamoleToken: '',
   guacamoleTokenTime: 0
 };

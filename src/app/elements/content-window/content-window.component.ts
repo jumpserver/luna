@@ -1,5 +1,5 @@
 import {Component, OnInit, Input} from '@angular/core';
-import {View} from '../content/model';
+import {View} from '@app/model';
 
 @Component({
   selector: 'elements-content-window',

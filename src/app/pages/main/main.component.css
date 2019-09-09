@@ -1,21 +1,26 @@
-div {
+.content {
   height: 100%;
   width: 100%;
   padding: 0;
   background-color: #1f1b1b;
+  /*background-color: red;*/
   margin: 0;
   position: initial;
 }
+
+/*.content {*/
+  /*overflow: hidden !important;*/
+/*}*/
 
 elements-nav {
   height: 30px;
 }
 
 #container {
-  padding-top: 0;
+  padding: 0;
+  margin: 0;
   height: calc(100% - 30px);
 }
-
 
 /*.container-fluid {*/
   /*padding-top: 30px;*/

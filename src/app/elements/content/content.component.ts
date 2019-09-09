@@ -1,5 +1,5 @@
 import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
-import {View, ViewAction} from './model';
+import {View, ViewAction} from '@app/model';
 
 @Component({
   selector: 'elements-content',
@@ -7,8 +7,8 @@ import {View, ViewAction} from './model';
   styleUrls: ['./content.component.scss']
 })
 export class ElementContentComponent implements OnInit {
-  viewList: Array<View> = [];
   @ViewChild('tabs') tabsRef: ElementRef;
+  viewList: Array<View> = [];
 
   static DisconnectAll() {
   }

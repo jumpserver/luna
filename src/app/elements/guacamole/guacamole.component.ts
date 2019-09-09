@@ -1,9 +1,9 @@
 import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {CookieService} from 'ngx-cookie-service';
-import {HttpService, LogService} from '../../app.service';
-import {DataStore, User} from '../../globals';
+import {HttpService, LogService} from '@app/app.service';
+import {DataStore, User} from '@app/globals';
 import {DomSanitizer} from '@angular/platform-browser';
-import {View} from '../content/model';
+import {View} from '@app/model';
 
 @Component({
   selector: 'elements-guacamole',

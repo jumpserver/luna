@@ -1,7 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
-import {HttpService, LogService} from '../../app.service';
-import {DataStore} from '../../globals';
+import {HttpService, LogService} from '@app/app.service';
+import {DataStore} from '@app/globals';
 import {Replay} from './replay.model';
 
 @Component({

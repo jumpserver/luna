@@ -1,7 +1,7 @@
 import {Component, Input, OnInit, ViewChild} from '@angular/core';
 import {DatatableComponent} from '@swimlane/ngx-datatable';
 import {MatPaginator} from '@angular/material';
-import {LogService} from '../../app.service';
+import {LogService} from '@app/app.service';
 
 export let Config: {
   search: boolean,

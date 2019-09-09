@@ -6,8 +6,8 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, Inject, OnInit} from '@angular/core';
-import {HttpService, LocalStorageService, NavService, LogService} from '../../app.service';
-import {DataStore, i18n} from '../../globals';
+import {HttpService, LocalStorageService, NavService, LogService} from '@app/app.service';
+import {DataStore, i18n} from '@app/globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 declare let layer: any;
@@ -19,7 +19,7 @@ declare let layer: any;
 })
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
-  navs: Array<object>;
+  navs: Array<any>;
   _asyncTree = false;
 
   static Hide() {
@@ -215,26 +215,6 @@ export class ElementNavComponent implements OnInit {
 
   getNav() {
     return [{
-      'id': 'File',
-      'name': 'Server',
-      'children': [
-        {
-          'id': 'Disconnect',
-          'click': 'Disconnect',
-          'name': 'Disconnect'
-        },
-        {
-          'id': 'DisconnectAll',
-          'click': 'DisconnectAll',
-          'name': 'Disconnect all'
-        },
-        {
-          'id': 'Reconnect',
-          'click': 'Reconnect',
-          'name': 'Reconnect'
-        },
-      ]
-    }, {
       'id': 'FileManager',
       'name': 'File Manager',
       'children': [

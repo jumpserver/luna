@@ -91,6 +91,33 @@ export class NavEvt {
 
 }
 
+export class View {
+  id: string;
+  nick: string;
+  type: string;
+  editable: boolean;
+  active: boolean;
+  connected: boolean;
+  hide: boolean;
+  closed: boolean;
+  host: any;
+  user: any;
+  remoteApp: string;
+  room: string;
+  Rdp: any;
+  Term: any;
+}
+
+export class ViewAction {
+  view: View;
+  name: string;
+
+  constructor(view: View, name: string) {
+    this.view = view;
+    this.name = name;
+  }
+}
+
 export class DataStore {
   socket: any;
   Nav: Array<object>;
@@ -100,8 +127,8 @@ export class DataStore {
   msg: {};
   logLevel: number;
   showLeftBar = true;
-  windowsize: Array<number>;
-  autologin: boolean;
+  windowSize: Array<number>;
+  autoLogin: boolean;
   guacamoleToken: string;
   guacamoleTokenTime: number;
 
@@ -139,7 +166,7 @@ export class Video {
   height: number;
   width: number;
   json: object;
-  timelist: Array<number>;
+  timeList: Array<number>;
   totalTime: number;
 }
 
@@ -148,4 +175,5 @@ export class Monitor {
   room: string;
   type: string;
 }
+
 

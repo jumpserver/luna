@@ -3,9 +3,9 @@ import {MatDialog} from '@angular/material';
 import {BehaviorSubject} from 'rxjs/BehaviorSubject';
 import {ActivatedRoute} from '@angular/router';
 
-import {AppService, HttpService, LogService, NavService, TreeFilterService} from '../../app.service';
-import {connectEvt, translate} from '../../globals';
-import {TreeNode, ConnectEvt} from '../../model';
+import {AppService, HttpService, LogService, NavService, TreeFilterService} from '@app/app.service';
+import {connectEvt, translate} from '@app/globals';
+import {TreeNode, ConnectEvt} from '@app/model';
 
 declare var $: any;
 

@@ -6,7 +6,6 @@ import {ElementContentViewComponent} from './content-window/content-window.compo
 import {ElementContentTabComponent} from './content-tab/content-tab.component';
 import {ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
 import {ElementTreeFilterComponent} from './tree-filter/tree-filter.component';
-import {ElementOfooterComponent} from './ofooter/ofooter.component';
 import {ElementFooterComponent} from './footer/footer.component';
 import {ElementTermComponent} from './term/term.component';
 import {ElementInteractiveComponent} from './interactive/interactive.component';
@@ -28,7 +27,6 @@ export const ElementComponents = [
   ElementContentViewComponent,
   ElementConnectComponent,
   ElementTreeFilterComponent,
-  ElementOfooterComponent,
   ElementTableComponent,
   ElementFooterComponent,
   ElementTermComponent,

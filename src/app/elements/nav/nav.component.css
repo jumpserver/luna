@@ -1,26 +1,32 @@
 .nav {
   display: block;
-  height: 31px;
-  padding-top: 2px;
+  height: 30px;
+  padding-top: 0;
   background-color: #463e3e;
+  list-style: none;
 }
 
 .nav ul {
   list-style-type: none;
   line-height: 24px;
+  margin: 0;
+  box-sizing: border-box;
+  font-weight: 400;
+  text-align: left;
 }
 
 .nav li {
   display: inline-block;
 }
 
-.nav a {
+.nav .dropdown a {
   color: #f0f0f1;
   font-family: Roboto,sans-serif;
   font-size: 13px;
   font-weight: 300;
   text-decoration: none;
-  padding: 6px 15px 6px 15px;
+  padding: 6px 15px;
+  height: 30px;
 }
 
 .nav a:hover {

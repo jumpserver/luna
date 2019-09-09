@@ -5,9 +5,9 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {AppService, LogService} from '../../app.service';
-import {DataStore, User} from '../../globals';
-import {version} from '../../../environments/environment';
+import {AppService, LogService} from '@app/app.service';
+import {DataStore, User} from '@app/globals';
+import {version} from '@src/environments/environment';
 
 @Component({
   selector: 'elements-footer',

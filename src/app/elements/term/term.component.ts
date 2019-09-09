@@ -2,6 +2,7 @@ import {AfterViewInit, Component, Input, Output, OnInit, ViewChild, EventEmitter
 import {ElementRef} from '@angular/core';
 import {Terminal} from 'xterm';
 import {fit} from 'xterm/lib/addons/fit/fit';
+import {LogService} from '@app/app.service';
 import {Observable} from 'rxjs/Rx';
 import * as $ from 'jquery/dist/jquery.min.js';
 import 'rxjs/Observable';
@@ -20,6 +21,10 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   @Input() offset: Array<number>;
   @Output() winSizeChangeTrigger = new EventEmitter<Array<number>>();
   winSizeChange$: Observable<any>;
+
+  constructor(private _logger: LogService){
+
+  }
 
   ngOnInit() {
     this.winSizeChange$ = Observable.fromEvent(window, 'resize')
@@ -61,7 +66,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     const dimensions = (<any>this.term).renderer.dimensions;
     const geometry = [
       Math.floor(availableWidth / dimensions.actualCellWidth) - 1,
-      Math.floor(availableHeight / dimensions.actualCellHeight) - 2
+      Math.floor(availableHeight / dimensions.actualCellHeight) - 1
     ];
 
     if (!isFinite(geometry[0])) {

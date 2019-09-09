@@ -1,2 +1,3 @@
-<!--<iframe #rdp [src]="trust('https://inews.gtimg.com/newsapp_bt/0/3460971429/1000')"  width="100%" height="100%" (mouseenter)="active()"></iframe>-->
+<div class="rdpIframe">
   <iframe #rdpRef *ngIf="target" [src]="trust(target)" width="100%" height="100%" (mouseenter)="active()"></iframe>
+</div>

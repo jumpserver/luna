@@ -1,6 +1,6 @@
 import {Component, OnInit} from '@angular/core';
-import {AppService, HttpService, LocalStorageService} from '../../app.service';
-import {DataStore} from '../../globals';
+import {AppService, HttpService, LocalStorageService} from '@app/app.service';
+import {DataStore} from '@app/globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({

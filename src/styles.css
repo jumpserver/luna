@@ -10,6 +10,7 @@ body {
   width: 100%;
   background-color: rgb(243, 243, 244);
   overflow-y: hidden;
+  margin: 0;
 }
 
 app-root {

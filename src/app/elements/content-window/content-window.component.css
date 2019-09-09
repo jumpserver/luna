@@ -1,8 +1,8 @@
-div, elements-term, elements-guacamole, elements-settings {
+div, elements-term, elements-guacamole {
   height: 100%;
 }
 
-elements-term, elements-guacamole, elements-settings {
+elements-term, elements-guacamole {
   /*padding-bottom: 30px;*/
 }
 

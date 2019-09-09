@@ -1,8 +1,8 @@
 import {Component, Inject, OnInit, ViewChild, ElementRef} from '@angular/core';
-import {AppService, HttpService, LogService} from '../../app.service';
+import {AppService, HttpService, LogService} from '@app/app.service';
 // import {ElementTreeFilterComponent} from '../tree-filter/tree-filter.component';
-import {DataStore} from '../../globals';
-import {version} from '../../../environments/environment';
+import {DataStore} from '@app/globals';
+import {version} from '@src/environments/environment';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 
 

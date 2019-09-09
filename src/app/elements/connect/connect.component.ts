@@ -1,11 +1,11 @@
 import {Component, Input, OnInit, Output, Inject, OnDestroy, EventEmitter} from '@angular/core';
-import {connectEvt} from '../../globals';
-import {AppService, HttpService, LogService, NavService} from '../../app.service';
+import {connectEvt} from '@app/globals';
+import {AppService, HttpService, LogService, NavService} from '@app/app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';
-import {SystemUser, TreeNode, Asset} from '../../model';
-import {View} from '../content/model';
+import {SystemUser, TreeNode, Asset} from '@app/model';
+import {View} from '@app/model';
 import * as jQuery from 'jquery/dist/jquery.min';
 
 declare var $: any;

@@ -9,16 +9,16 @@ import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms'; // <-- NgModel lives here
 import {NGXLogger} from 'ngx-logger';
+import {FlexLayoutModule} from '@angular/flex-layout';
 import {HttpClientModule} from '@angular/common/http';
-
-import {AppRouterModule} from './router/router.module';
-
-// service
-import {AppService, HttpService, LocalStorageService, NavService, LogService, UUIDService, TreeFilterService} from './app.service';
 import {CookieService} from 'ngx-cookie-service';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 
 
+// service
+import {AppService, HttpService, LocalStorageService, NavService, LogService, UUIDService, TreeFilterService} from './app.service';
+
+import {AppRouterModule} from './router/router.module';
 import {Pipes} from './pipes/pipes';
 import {AppComponent} from './pages/app.component';
 import {PagesComponents} from './pages/pages.component';
@@ -34,6 +34,7 @@ import {SftpComponent} from './elements/sftp/sftp.component';
 @NgModule({
   imports: [
     BrowserModule,
+    FlexLayoutModule,
     FormsModule,
     HttpClientModule,
     ReactiveFormsModule,
