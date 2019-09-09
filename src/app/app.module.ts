@@ -6,7 +6,6 @@ import {HttpClientModule} from '@angular/common/http';
 import {CookieService} from 'ngx-cookie-service';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 
-
 // service
 import {AppService, HttpService, LocalStorageService, NavService, LogService, UUIDService, TreeFilterService} from './app.service';
 
@@ -15,12 +14,10 @@ import {Pipes} from './pipes/pipes';
 import {AppComponent} from './pages/app.component';
 import {PagesComponents} from './pages/pages.component';
 import {ElementComponents} from './elements/elements.component';
-import {ChangLanWarningDialogComponent, RDPSolutionDialogComponent, FontDialogComponent} from './elements/nav/nav.component';
-import {DialogService, ElementDialogAlertComponent} from './elements/dialog/dialog.service';
+import {PageMainComponent} from '@app/pages/main/main.component';
 import {PluginModules} from './plugins/plugins';
-import {TestPageComponent} from './test-page/test-page.component';
+import {ChangLanWarningDialogComponent, RDPSolutionDialogComponent, FontDialogComponent} from './elements/nav/nav.component';
 import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './elements/connect/connect.component';
-import {SftpComponent} from './elements/sftp/sftp.component';
 
 
 @NgModule({
@@ -34,19 +31,17 @@ import {SftpComponent} from './elements/sftp/sftp.component';
   ],
   declarations: [
     AppComponent,
-    TestPageComponent,
     ...Pipes,
     ...ElementComponents,
     ...PagesComponents,
-    SftpComponent,
- ],
+  ],
   entryComponents: [
     AssetTreeDialogComponent,
     ManualPasswordDialogComponent,
-    ElementDialogAlertComponent,
     ChangLanWarningDialogComponent,
     RDPSolutionDialogComponent,
-    FontDialogComponent
+    FontDialogComponent,
+    PageMainComponent,
   ],
   bootstrap: [AppComponent],
   providers: [
@@ -58,7 +53,6 @@ import {SftpComponent} from './elements/sftp/sftp.component';
     NavService,
     UUIDService,
     LocalStorageService,
-    DialogService,
     CookieService,
     TreeFilterService,
     NGXLogger,

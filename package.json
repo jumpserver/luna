@@ -34,6 +34,7 @@
     "roboto-fontface": "^0.8.0",
     "sass-math": "^1.0.0",
     "tether": "^1.4.4",
+    "npm-font-open-sans": "^1.1.0",
     "utf-8-validate": "^5.0.2"
   },
   "dependencies": {
@@ -72,7 +73,6 @@
     "tslib": "^1.9.0",
     "requirejs": "^2.3.5",
     "ngx-progressbar": "^2.1.1",
-    "npm-font-open-sans": "^1.1.0",
     "font-awesome": "4.7.0"
   },
   "devDependencies": {

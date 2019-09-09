@@ -7,7 +7,7 @@ import {DomSanitizer} from '@angular/platform-browser';
   templateUrl: './sftp.component.html',
   styleUrls: ['./sftp.component.scss']
 })
-export class SftpComponent implements OnInit {
+export class ElementSftpComponent implements OnInit {
   @Input() host: any;
   target: any;
   @ViewChild('sftp') el: ElementRef;

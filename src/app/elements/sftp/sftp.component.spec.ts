@@ -1,20 +1,20 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { SftpComponent } from './sftp.component';
+import { ElementSftpComponent } from './sftp.component';
 
-describe('SftpComponent', () => {
-  let component: SftpComponent;
-  let fixture: ComponentFixture<SftpComponent>;
+describe('ElementSftpComponent', () => {
+  let component: ElementSftpComponent;
+  let fixture: ComponentFixture<ElementSftpComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ SftpComponent ]
+      declarations: [ ElementSftpComponent ]
     })
     .compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(SftpComponent);
+    fixture = TestBed.createComponent(ElementSftpComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

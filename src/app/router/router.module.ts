@@ -2,20 +2,18 @@ import {NgModule} from '@angular/core';
 import {RouterModule, Routes} from '@angular/router';
 
 import {PagesBlankComponent} from '../pages/blank/blank.component';
-import {TestPageComponent} from '../test-page/test-page.component';
 import {PagesConnectComponent} from '../pages/connect/connect.component';
 import {PagesReplayComponent} from '../pages/replay/replay.component';
 import {PageMainComponent} from '../pages/main/main.component';
 import {PagesMonitorComponent} from '../pages/monitor/monitor.component';
-import {SftpComponent} from '../elements/sftp/sftp.component';
+import {ElementSftpComponent} from '../elements/sftp/sftp.component';
 
 
 const appRoutes: Routes = [
   {path: 'replay/:token', component: PagesReplayComponent},
   {path: 'monitor/:token', component: PagesMonitorComponent},
-  {path: 'test', component: TestPageComponent},
   {path: 'connect', component: PagesConnectComponent},
-  {path: 'sftp', component: SftpComponent},
+  {path: 'sftp', component: ElementSftpComponent},
   {path: 'undefined', component: PagesBlankComponent},
   {path: '', component: PageMainComponent},
   // {path: '**', component: PagesNotFoundComponent}
