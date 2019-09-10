@@ -1,14 +1,11 @@
-import {Component, Input, OnInit, Output, Inject, OnDestroy, EventEmitter} from '@angular/core';
+import {Component, OnInit, Output, Inject, OnDestroy, EventEmitter} from '@angular/core';
 import {connectEvt} from '@app/globals';
-import {AppService, HttpService, LogService, NavService} from '@app/app.service';
+import {AppService, HttpService, LogService} from '@app/app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';
 import {SystemUser, TreeNode, Asset} from '@app/model';
 import {View} from '@app/model';
-import * as jQuery from 'jquery/dist/jquery.min';
-
-declare var $: any;
 
 @Component({
   selector: 'elements-connect',
@@ -39,6 +36,20 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           this.connectFileManager(evt.node);
           break;
         }
+      }
+    });
+    this.activatedRoute.queryParams.subscribe(params => {
+      const login_to = params['login_to'];
+      if (login_to && !this.hasLoginTo) {
+        this._http.filterMyGrantedAssetsById(login_to).subscribe(
+          nodes => {
+            if (nodes.length === 1) {
+              this.hasLoginTo = true;
+              const node = nodes[0];
+              this.Connect(node);
+            }
+          }
+        );
       }
     });
   }

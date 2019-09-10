@@ -1,5 +1,6 @@
 import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
+import {ViewService} from '@app/app.service';
 
 @Component({
   selector: 'elements-content',
@@ -8,7 +9,8 @@ import {View, ViewAction} from '@app/model';
 })
 export class ElementContentComponent implements OnInit {
   @ViewChild('tabs') tabsRef: ElementRef;
-  viewList: Array<View> = [];
+  viewList: Array<View>;
+  hasLoginTo = false;
 
   static DisconnectAll() {
   }
@@ -17,16 +19,17 @@ export class ElementContentComponent implements OnInit {
     return (this.viewList.length + 1) * 151 + 10;
   }
 
-  constructor() {
+  constructor(private viewSrv: ViewService) {
   }
 
   ngOnInit() {
+    this.viewList = this.viewSrv.viewList;
   }
 
   onNewView(view) {
     this.scrollToEnd();
     setTimeout(() => {
-      this.viewList.push(view);
+      this.viewSrv.addView(view);
       this.setViewActive(view);
     }, 100);
   }
@@ -45,9 +48,7 @@ export class ElementContentComponent implements OnInit {
   }
 
   setViewActive(view) {
-    this.viewList.forEach((v, k) => {
-        v.active = v === view;
-    });
+    this.viewSrv.activeView(view);
   }
 
   closeView(view) {
@@ -61,7 +62,7 @@ export class ElementContentComponent implements OnInit {
         nextActiveView = this.viewList[index + 1];
       }
     }
-    this.viewList.splice(index, 1);
+    this.viewSrv.removeView(view);
     if (nextActiveView) {
       this.setViewActive(nextActiveView);
     }

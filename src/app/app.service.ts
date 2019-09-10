@@ -2,11 +2,10 @@ import {EventEmitter, Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 
-
 import {DataStore, User, Browser, i18n} from './globals';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';
-import {SystemUser, GuacObjAddResp, TreeNode, User as _User, NavEvt} from './model';
+import {SystemUser, GuacObjAddResp, TreeNode, User as _User, NavEvt, View} from './model';
 import {environment} from '../environments/environment';
 import * as UUID from 'uuid-js/lib/uuid.js';
 
@@ -63,6 +62,11 @@ export class HttpService {
 
   getMyGrantedAssets(keyword) {
     const url = `/api/perms/v1/users/assets/tree/?search=${keyword}`;
+    return this.http.get<Array<TreeNode>>(url);
+  }
+
+  filterMyGrantedAssetsById(id: string) {
+    const url = `/api/perms/v1/users/assets/tree/?id=${id}`;
     return this.http.get<Array<TreeNode>>(url);
   }
 
@@ -440,5 +444,36 @@ export class TreeFilterService {
 
   filter(q: string) {
     this.onFilter.emit(q);
+  }
+}
+
+@Injectable()
+export class ViewService {
+  viewList: Array<View> = [];
+  currentView: View;
+  num = 0;
+
+  addView(view: View) {
+    this.num += 1;
+    view.id = 'View_' + this.num;
+    this.viewList.push(view);
+  }
+
+  activeView(view: View) {
+    this.viewList.forEach((v, k) => {
+      v.active = v === view;
+    });
+    setTimeout(() => {
+      const viewEl = document.getElementById(view.id);
+      if (viewEl) {
+        viewEl.scrollIntoView();
+      }
+    }, 100);
+    this.currentView = view;
+  }
+
+  removeView(view: View) {
+    const index = this.viewList.indexOf(view);
+    this.viewList.splice(index, 1);
   }
 }

@@ -6,11 +6,12 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, Inject, OnInit} from '@angular/core';
-import {HttpService, LocalStorageService, NavService, LogService} from '@app/app.service';
+import {HttpService, LocalStorageService, NavService, LogService, ViewService} from '@app/app.service';
 import {DataStore, i18n} from '@app/globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
+import {ElementLeftBarComponent} from '@app/elements/left-bar/left-bar.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-declare let layer: any;
+import {View} from '@app/model';
 
 @Component({
   selector: 'elements-nav',
@@ -21,6 +22,7 @@ export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
   navs: Array<any>;
   _asyncTree = false;
+  viewList: Array<View>;
 
   static Hide() {
     jQuery('elements-nav').hide();
@@ -30,13 +32,13 @@ export class ElementNavComponent implements OnInit {
               private _logger: LogService,
               public _dialog: MatDialog,
               public _navSvc: NavService,
+              public _viewSrv: ViewService,
               private _localStorage: LocalStorageService) {
-    this._logger.log('nav.ts:NavComponent');
-    this.getNav();
   }
 
   ngOnInit() {
     this.navs = this.getNav();
+    this.viewList = this._viewSrv.viewList;
   }
 
   get treeLoadAsync() {
@@ -54,12 +56,12 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'HideLeft': {
-        DataStore.showLeftBar = false;
+        ElementLeftBarComponent.Hide();
         this.refreshNav();
         break;
       }
       case 'ShowLeft': {
-        DataStore.showLeftBar = true;
+        ElementLeftBarComponent.Show();
         this.refreshNav();
         break;
       }
@@ -89,11 +91,6 @@ export class ElementNavComponent implements OnInit {
         }
         window.dispatchEvent(new Event('resize'));
         break;
-      }
-      case'Disconnect': {
-        if (!confirm('断开当前连接?')) {
-          return
-        }
       }
       case 'Reconnect': {
         break;
