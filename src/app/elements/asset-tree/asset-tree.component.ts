@@ -289,12 +289,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (!this.assetsTree) {
       return;
     }
+    const searchNode = this.assetsTree.getNodesByFilter((node) => node.id === 'search');
+    if (searchNode) {
+      this.assetsTree.removeChildNodes(searchNode[0]);
+      this.assetsTree.removeNode(searchNode[0]);
+    }
     if (!keyword) {
-      const searchNode = this.assetsTree.getNodesByFilter((node) => node.id === 'search');
-      if (searchNode) {
-        this.assetsTree.removeChildNodes(searchNode[0]);
-        this.assetsTree.removeNode(searchNode[0]);
-      }
       const treeNodes = this.assetsTree.getNodes();
       if (treeNodes.length !== 0) {
         this.assetsTree.showNode(treeNodes[0]);
