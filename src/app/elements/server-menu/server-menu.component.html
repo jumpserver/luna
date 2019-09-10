@@ -1,7 +1,0 @@
-<div class="ES-menu" [ngStyle]="{'top':top,'left':left}">
-  <ul class="dropdown-content">
-    <li [ngClass]="m.type" *ngFor="let m of MenuList">
-      <a (click)="m.action" *ngIf="m.type!='line'">{{m.name}}</a>
-    </li>
-  </ul>
-</div>

@@ -1,8 +1,8 @@
 import {EventEmitter, Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
-import 'rxjs/add/operator/map';
-import 'rxjs/add/operator/catch';
+
+
 import {DataStore, User, Browser, i18n} from './globals';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {NGXLogger} from 'ngx-logger';

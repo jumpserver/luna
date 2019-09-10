@@ -3,8 +3,12 @@
   "compilerOptions": {
     "baseUrl": "src",
     "paths": {
-      "@src/*": ["*"],
-      "@app/*": ["app/*"]
+      "@src/*": [
+        "*"
+      ],
+      "@app/*": [
+        "app/*"
+      ]
     },
     "allowJs": true,
     "outDir": "./dist/out-tsc",
@@ -21,6 +25,8 @@
     "lib": [
       "es2017",
       "dom"
-    ]
+    ],
+    "module": "es2015",
+    "allowSyntheticDefaultImports": true
   }
 }

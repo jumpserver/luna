@@ -1,10 +1,12 @@
 <elements-nav></elements-nav>
-<div fxLayout="row" id="container" class="container-fluid row" ngxSplit="row">
-  <div fxFlex="1 1 20%" minBasis="100px" maxBasis="800px" fxFlexFill ngxSplitArea *ngIf="DataStore.showLeftBar">
+<div fxLayout="row" id="container" ngxSplit="row">
+  <div fxFlex="20%" fxFlexFill maxBasis="400px" minBasis="100px" ngxSplitArea *ngIf="DataStore.showLeftBar" class="left-side">
     <elements-left-bar></elements-left-bar>
   </div>
-  <div fxFlex="0" ngxSplitHandle (mouseup)="dragSplitBtn($event)"></div>
-  <div [fxFlex]="DataStore.showLeftBar ? '1 1 80%' : '1 1 100%'" ngxSplitArea class="content">
+  <div ngxSplitHandle (mouseup)="dragSplitBtn($event)" class="handle handle-row" *ngIf="DataStore.showLeftBar" >
+    <i class="fa fa-window-minimize" style="color: white"></i>
+  </div>
+  <div [fxFlex]="DataStore.showLeftBar ? '80%' : '100%'" fxFlexFill ngxSplitArea class="content">
     <elements-content></elements-content>
   </div>
 </div>
