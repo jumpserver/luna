@@ -8,6 +8,6 @@ RUN npm run-script build
 
 
 FROM nginx:alpine
-COPY --from=stage-build /data/luan /opt/luna/
+COPY --from=stage-build /data/luna /opt/luna/
 COPY ./src/assets/i18n /opt/luna/i18n
 COPY nginx.conf /etc/nginx/conf.d/default.conf
