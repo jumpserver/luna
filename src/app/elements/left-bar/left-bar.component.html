@@ -1,12 +1,12 @@
 <div class="sidebar" fxLayout="column" >
-  <div fxflex="1 1 30px" class="tree-filter">
+  <div fxflex="30px" class="tree-filter">
     <elements-tree-filter ></elements-tree-filter>
   </div>
-  <div class="overflow ngx-scroll-overlay" fxflex="1 1 calc(100% - 60px)">
+  <div fxflex="calc(100% - 60px)" class="overflow ngx-scroll-overlay">
     <elements-asset-tree ></elements-asset-tree>
   </div>
 
-  <div class="footer-version" fxflex="1 1 30px">
+  <div fxflex="30px" class="footer-version">
     <p> Version <strong>{{version}}</strong></p>
   </div>
 </div>

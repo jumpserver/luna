@@ -1,8 +1,7 @@
 'use strict';
 import {EventEmitter} from 'events/events';
-import * as io from 'socket.io-client';
 import {Socket} from './utils/socket';
-import {BehaviorSubject} from 'rxjs/BehaviorSubject';
+import {BehaviorSubject} from 'rxjs';
 import {ConnectEvt, User as _User } from './model';
 import {DataStore as _DataStore, Browser as _Browser, Video as _Video, Monitor as _Monitor} from './model';
 
@@ -43,7 +42,6 @@ export async function getWsSocket() {
   const nsConn = await TermWS.connect();
   if (!nsConn) {
     console.log('Try to using socket.io protocol');
-    TermWS = io.connect('/ssh', {reconnectionAttempts: 10});
   }
   DataStore.socket = TermWS;
   return TermWS;

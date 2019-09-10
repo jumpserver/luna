@@ -3,11 +3,10 @@ import {ElementRef} from '@angular/core';
 import {Terminal} from 'xterm';
 import {fit} from 'xterm/lib/addons/fit/fit';
 import {LogService} from '@app/app.service';
-import {Observable} from 'rxjs/Rx';
+import {Observable, fromEvent} from 'rxjs';
+import {debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import * as $ from 'jquery/dist/jquery.min.js';
 import 'rxjs/Observable';
-import 'rxjs/add/operator/debounceTime';
-import 'rxjs/add/operator/distinctUntilChanged';
 
 
 @Component({
@@ -27,9 +26,10 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
-    this.winSizeChange$ = Observable.fromEvent(window, 'resize')
-      .debounceTime(500)
-      .distinctUntilChanged();
+    this.winSizeChange$ = fromEvent(window, 'resize').pipe(
+      debounceTime(500),
+      distinctUntilChanged(),
+    );
 
     this.winSizeChange$
       .subscribe(() => {
@@ -45,7 +45,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   getWinSize() {
     let availableHeight = 0;
     let availableWidth = 0;
-    if (document.fullscreenElement) {
+    if (document['fullscreenElement']) {
       availableWidth = document.body.clientWidth - 10;
       availableHeight = document.body.clientHeight;
     } else {

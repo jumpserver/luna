@@ -1,6 +1,6 @@
 import {Component, Input, OnInit, OnDestroy, ElementRef, ViewChild} from '@angular/core';
 import {MatDialog} from '@angular/material';
-import {BehaviorSubject} from 'rxjs/BehaviorSubject';
+import {BehaviorSubject} from 'rxjs';
 import {ActivatedRoute} from '@angular/router';
 
 import {AppService, HttpService, LogService, NavService, TreeFilterService} from '@app/app.service';
