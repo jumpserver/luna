@@ -70,5 +70,6 @@
   "load tree sync": "同步加载树",
   "show manual password": "显示手动密码窗",
   "skip manual password": "跳过手动密码窗",
-  "tab list": "窗口列表"
+  "tab list": "窗口列表",
+  "open in new window": "新窗口打开"
 }

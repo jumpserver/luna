@@ -40,7 +40,7 @@ export class ElementGuacamoleComponent implements OnInit {
       },
       error => {
         if (!this.registered) {
-          console.log('Register host error, register token then connect');
+          this._logger.debug('Register host error, register token then connect');
           this.registerToken();
         }
       }
@@ -51,6 +51,7 @@ export class ElementGuacamoleComponent implements OnInit {
     const now = new Date();
     const nowTime = now.getTime() / 1000;
     this.registered = true;
+    this._logger.debug('Userid is', User.id);
     this._http.getGuacamoleToken(User.id, '').subscribe(
       data => {
         // /guacamole/client will redirect to http://guacamole/#/client

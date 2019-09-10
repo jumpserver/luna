@@ -14,7 +14,6 @@ import {View} from '@app/model';
 export class ElementConnectComponent implements OnInit, OnDestroy {
   @Output() onNewView: EventEmitter<View> = new EventEmitter<View>();
 
-  pos = {left: '100px', top: '200px'};
   hasLoginTo = false;
 
   constructor(private _appSvc: AppService,

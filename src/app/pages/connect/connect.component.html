@@ -1,10 +1,4 @@
-<elements-ssh-term
-  [token]="token"
-  [index]="0"
-  *ngIf="system =='linux'">
-</elements-ssh-term>
-<elements-guacamole
-  [target]="target"
-  [index]="0"
-  *ngIf="system=='windows' && target">
-</elements-guacamole>
+<div class="windows" id="winContainer">
+  <elements-content-window [view]="view" *ngIf="view"></elements-content-window>
+  <elements-connect [ngStyle]="{'display': 'none'}" (onNewView)="onNewView($event)"></elements-connect>
+</div>

@@ -10,7 +10,6 @@ import {ViewService} from '@app/app.service';
 export class ElementContentComponent implements OnInit {
   @ViewChild('tabs') tabsRef: ElementRef;
   viewList: Array<View>;
-  hasLoginTo = false;
 
   static DisconnectAll() {
   }

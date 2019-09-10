@@ -12,12 +12,10 @@
 <div #rMenu *ngIf="isShowRMenu" class="basicContext" [style.top]="pos.top" [style.left]="pos.left">
   <table>
       <tbody>
-        <tr class="basicContext__item ">
-            <td class="basicContext__data" data-num="0"  (click)="connectTerminal()"> <span class="basicContext__icon fa fa-terminal new-connection"></span> {{ "New Connection"|trans }} </td>
-        </tr>
-        <tr class="basicContext__item basicContext__item--separator"></tr>
-        <tr class="basicContext__item ">
-            <td class="basicContext__data" data-num="2" (click)="connectFileManager()"><span class="basicContext__icon fa fa-file refresh"></span> {{ "File Manager"|trans }} </td>
+        <tr *ngFor="let menu of RMenuList; let i = index" class="basicContext__item ">
+            <td class="basicContext__data" [attr.data-num]="i" (click)="menu.click()" [ngStyle]="{'display': menu.hide ? 'none': ''}">
+              <span class="basicContext__icon fa" [ngClass]="menu.fa"></span> {{ menu.name|trans }}
+            </td>
         </tr>
         </tbody>
     </table>
