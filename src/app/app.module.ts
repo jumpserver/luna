@@ -7,7 +7,9 @@ import {CookieService} from 'ngx-cookie-service';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 
 // service
-import {AppService, HttpService, LocalStorageService, NavService, LogService, UUIDService, TreeFilterService} from './app.service';
+import {AppService, HttpService, LocalStorageService, NavService, LogService,
+  UUIDService, TreeFilterService, ViewService,
+} from './app.service';
 
 import {AppRouterModule} from './router/router.module';
 import {Pipes} from './pipes/pipes';
@@ -55,6 +57,7 @@ import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './element
     LocalStorageService,
     CookieService,
     TreeFilterService,
+    ViewService,
     NGXLogger,
     {provide: MAT_LABEL_GLOBAL_OPTIONS, useValue: {float: 'always'}}
   ]

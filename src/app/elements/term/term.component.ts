@@ -21,7 +21,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   @Output() winSizeChangeTrigger = new EventEmitter<Array<number>>();
   winSizeChange$: Observable<any>;
 
-  constructor(private _logger: LogService){
+  constructor(private _logger: LogService) {
 
   }
 
@@ -33,7 +33,8 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
 
     this.winSizeChange$
       .subscribe(() => {
-          this.resizeTerm();
+        this._logger.debug('Get win size change event');
+        this.resizeTerm();
       });
   }
 

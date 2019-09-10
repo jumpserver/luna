@@ -29,10 +29,6 @@ export class ElementContentViewComponent implements OnInit {
   }
 
   static DisconnectAll() {
-    // for (let i = 0; i < viewList.List.length; i++) {
-    //   Todo:
-      // ContentComponent.TerminalDisconnect(i);
-    // }
   }
 
   constructor() {

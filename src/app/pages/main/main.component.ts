@@ -9,7 +9,7 @@ import {environment} from '@src/environments/environment';
 })
 export class PageMainComponent implements OnInit {
   User = User;
-  DataStore = DataStore;
+  store = DataStore;
 
   ngOnInit(): void {
   }

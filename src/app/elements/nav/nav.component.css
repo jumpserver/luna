@@ -71,7 +71,7 @@
   display: flex;
 }
 
-.nav .dropdown-content li a {
+.nav .dropdown-content a {
   padding: 6px 14px 6px 25px;
   white-space: nowrap;
   font-family: 'Roboto', sans-serif;
@@ -110,7 +110,14 @@
   background-color: darkgray;
 }
 
-.nav ul li.active {
-  box-sizing: border-box;
-  border-bottom: 3px solid #19aa8d !important;
+
+.flag {
+  display: none;
+  color: #19aa8d;
+  padding-right: 10px;
+
+}
+
+.active .flag {
+  display: inline;
 }

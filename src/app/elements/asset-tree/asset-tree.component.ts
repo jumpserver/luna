@@ -141,20 +141,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   initTree() {
     this.initAssetsTree();
     this.initRemoteAppsTree();
-
-    // Todo: connect to some asset, direct
-    this.activatedRoute.queryParams.subscribe(params => {
-      const login_to = params['login_to'];
-      if (login_to && !this.hasLoginTo) {
-        this.Data.forEach(t => {
-          if (login_to === t.id && t.isParent === false) {
-            this.hasLoginTo = true;
-            this.connectAsset(t);
-            return;
-          }
-        });
-      }
-    });
   }
 
   connectAsset(node: TreeNode) {
