@@ -6,7 +6,8 @@
   >
     <elements-left-bar></elements-left-bar>
   </div>
-  <div ngxSplitHandle (mouseup)="dragSplitBtn($event)" class="handle handle-row" [ngStyle]="{'display': store.showLeftBar ? '' : 'none'}" >
+  <div ngxSplitHandle (mouseup)="dragSplitBtn($event)" class="handle handle-row"
+       [ngStyle]="{'display': showSplitter ? '' : 'none'}" >
     <i class="fa fa-window-minimize" style="color: white"></i>
   </div>
   <div [fxFlex]="store.showLeftBar ? '80%' : '100%'" fxFlexFill ngxSplitArea class="content">

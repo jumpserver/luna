@@ -56,7 +56,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   }
 
   reconnect() {
-    if (this.view.connected === true) {
+    if (this.view.connected !== true) {
       if (!confirm(translate('Are you sure to reconnect it?(RDP not support)'))) {
         return;
       }

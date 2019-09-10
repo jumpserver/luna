@@ -46,11 +46,11 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   getWinSize() {
     let availableHeight = 0;
     let availableWidth = 0;
+    const activeEle = $('#winContainer');
     if (document['fullscreenElement']) {
       availableWidth = document.body.clientWidth - 10;
       availableHeight = document.body.clientHeight;
-    } else {
-      const activeEle = $('#winContainer');
+    } else if (activeEle) {
       const elementStyle = window.getComputedStyle(this.term.element);
       const elementPadding = {
           top: parseInt(elementStyle.getPropertyValue('padding-top'), 10),
@@ -63,6 +63,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       availableHeight = activeEle.height() - elementPaddingVer;
       availableWidth = activeEle.width() - elementPaddingHor - (<any>this.term).viewport.scrollBarWidth;
     }
+    this._logger.debug('Winsize: ', availableWidth, availableHeight);
 
     const dimensions = (<any>this.term).renderer.dimensions;
     const geometry = [
@@ -76,6 +77,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     if (!isFinite(geometry[1])) {
       geometry[1] = 24;
     }
+    this._logger.debug('size: ', geometry);
     return geometry;
   }
 

@@ -1,7 +1,10 @@
 import {Component, OnInit} from '@angular/core';
 import {AppService, HttpService, LocalStorageService} from '@app/app.service';
-import {DataStore} from '@app/globals';
-import * as jQuery from 'jquery/dist/jquery.min.js';
+import {connectEvt} from '@app/globals';
+import {ConnectEvt} from '@app/model';
+// import {DataStore} from '@app/globals';
+// import * as jQuery from 'jquery/dist/jquery.min.js';
+import {View, ViewAction} from '@app/model';
 
 @Component({
   selector: 'pages-connect',
@@ -11,80 +14,44 @@ import * as jQuery from 'jquery/dist/jquery.min.js';
 export class PagesConnectComponent implements OnInit {
   token: string;
   system: string;
-  authToken: string;
-  userid: string;
-  target: string;
-  base: string;
+  view: View;
 
   constructor(private _appService: AppService,
               private _http: HttpService,
               private _localStorage: LocalStorageService) {
-    DataStore.NavShow = false;
+  }
+
+  onNewView(view) {
+    view.active = true;
+    this.view = view;
   }
 
   ngOnInit() {
     this.system = this._appService.getQueryString('system');
     this.token = this._appService.getQueryString('token');
-
-    this.userid = this._localStorage.get('user-' + this.token);
-    this.authToken = this._localStorage.get('authToken-' + this.token);
-    this.base = this._localStorage.get('base-' + this.token);
-
-    jQuery('body').css('background-color', '#1f1b1b');
-    if (this.system === 'windows') {
-      if (!this.userid) {
-        this._http.getUserIdFromToken(this.token)
-          .subscribe(
-            data => {
-              this._localStorage.set('user-' + this.token, data['user']);
-              this.userid = data['user'];
-              this.getAuthToken();
-            }
-          );
-      } else {
-        this.getAuthToken();
-      }
-    }
-  }
-
-  getAuthToken() {
-    if (!this.authToken) {
-      this._http.getGuacamoleToken(this.userid, this.token).subscribe(
-        data => {
-          if (data['authToken']) {
-            this._localStorage.set('authToken-' + this.token, data['authToken']);
-            this.authToken = data['authToken'];
-            this.getBase();
+    const assetId = this._appService.getQueryString('asset');
+    const remoteAppId = this._appService.getQueryString('remote_app');
+    if (assetId) {
+      this._http.filterMyGrantedAssetsById(assetId).subscribe(
+        nodes => {
+          if (!nodes) {
+            return;
           }
+          const evt = new ConnectEvt(nodes[0], 'asset');
+          connectEvt.next(evt);
         }
       );
-    } else {
-      this.getBase();
     }
-  }
-
-  getBase() {
-    if (!this.base) {
-      this._http.guacamoleTokenAddAsset(this.token, this.authToken).subscribe(
-        data => {
-          if (data['result']) {
-            this._localStorage.set('base-' + this.token, data['result']);
-            this.base = data['result'];
-            this.setWinTarget();
+    if (remoteAppId) {
+      this._http.getMyGrantedRemoteApps(remoteAppId).subscribe(
+        nodes => {
+          if (!nodes) {
+            return;
           }
-        });
-    } else {
-      this.setWinTarget();
+          const evt = new ConnectEvt(nodes[0], 'asset');
+          connectEvt.next(evt);
+        }
+      );
     }
   }
-
-  setWinTarget() {
-    if (this.base && this.authToken) {
-      this.target = document.location.origin + '/guacamole/#/client/' + this.base +
-        '?asset_token=jumpserver&token=' + this.authToken;
-    } else {
-      window.location.reload();
-    }
-  }
-
 }

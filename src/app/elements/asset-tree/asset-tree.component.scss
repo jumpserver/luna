@@ -57,8 +57,9 @@
 
 .basicContext td {
     display: block;
-    padding: 0 35px;
+    padding: 0 15px;
     text-decoration: none;
+    min-width: 150px;
     width: auto;
     opacity: 1;
     white-space: nowrap;
@@ -69,6 +70,11 @@
     border-radius: 0;
     cursor: pointer;
 }
+
+.basicContext__icon {
+  padding-right: 5px;
+}
+
 .basicContext__item.basicContext__item--separator {
     background: #181414;
     border: 0;

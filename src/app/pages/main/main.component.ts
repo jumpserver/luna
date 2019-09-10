@@ -1,6 +1,7 @@
 import {Component, HostListener, OnInit} from '@angular/core';
 import {DataStore, User} from '@app/globals';
 import {environment} from '@src/environments/environment';
+import {ViewService} from '@app/app.service';
 
 @Component({
   selector: 'pages-main',
@@ -10,6 +11,19 @@ import {environment} from '@src/environments/environment';
 export class PageMainComponent implements OnInit {
   User = User;
   store = DataStore;
+
+  constructor(public viewSrv: ViewService) {}
+
+  get currentView() {
+    return this.viewSrv.currentView;
+  }
+
+  get showSplitter() {
+    if (this.currentView && this.currentView.type !== 'ssh') {
+      return false;
+    }
+    return this.store.showLeftBar;
+  }
 
   ngOnInit(): void {
   }

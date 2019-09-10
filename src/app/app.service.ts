@@ -78,8 +78,12 @@ export class HttpService {
     return this.http.get<Array<TreeNode>>(url);
   }
 
-  getMyGrantedRemoteApps() {
-    return this.http.get<Array<TreeNode>>('/api/perms/v1/user/remote-apps/tree/');
+  getMyGrantedRemoteApps(id?: string) {
+    let url = '/api/perms/v1/user/remote-apps/tree/';
+    if (id) {
+      url += `?id=${id}&only=1`;
+    }
+    return this.http.get<Array<TreeNode>>(url);
   }
 
   getMyAssetSystemUsers(assetId: string) {
@@ -339,13 +343,11 @@ export class AppService implements OnInit {
   }
 
   checklogin() {
-    this._logger.log('service.ts:AppService,checklogin');
+    this._logger.debug('Check user auth');
     if (!DataStore.Path) {
       this._router.navigate(['FOF']);
     }
-    if (document.location.pathname === '/luna/connect') {
-      return;
-    }
+
     if (User.logined) {
       if (document.location.pathname === '/login') {
         this._router.navigate(['']);
@@ -363,8 +365,10 @@ export class AppService implements OnInit {
       err => {
         // this._logger.error(err);
         User.logined = false;
-        window.location.href = document.location.origin + '/users/login?next=' +
-          document.location.pathname + document.location.search;
+        if (document.location.pathname !== '/luna/connect') {
+          window.location.href = document.location.origin + '/users/login?next=' +
+            document.location.pathname + document.location.search;
+        }
         // this._router.navigate(['login']);
       },
     );

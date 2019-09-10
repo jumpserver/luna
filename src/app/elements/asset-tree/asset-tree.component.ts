@@ -126,9 +126,13 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     const setting = Object.assign({}, this.setting);
     setting['callback'] = {
       onClick: this.onRemoteAppsNodeClick.bind(this),
+      onRightClick: this.onRightClick.bind(this)
     };
     this._http.getMyGrantedRemoteApps().subscribe(
       resp => {
+        if (!resp) {
+          return;
+        }
         const tree = $.fn.zTree.init($('#remoteAppsTree'), setting, resp);
         this.remoteAppsTree = tree;
         this.rootNodeAddDom(tree, () => {
@@ -175,11 +179,11 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.isShowRMenu = false;
   }
 
-  onRightClick(event, treeId, treeNode) {
-    if (!treeNode || treeNode.isParent) {
-      return null;
+  nodeSupportSSH() {
+    const host = this.rightClickSelectNode.meta.asset;
+    if (!host) {
+      return false;
     }
-    const host = treeNode.meta.asset;
     let findSSHProtocol = false;
     const protocols = host.protocols || [];
     if (host.protocol) {
@@ -191,9 +195,34 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         findSSHProtocol = true;
       }
     }
-    if (!findSSHProtocol) {
-      alert('Windows 请使用Ctrl+Shift+Alt呼出侧边栏上传下载');
+    return findSSHProtocol;
+  }
+
+  get RMenuList() {
+    const menuList = [{
+      'id': 'new-connection',
+      'name': 'Open in new window',
+      'fa': 'fa-terminal',
+      'hide': false,
+      'click': this.connectInNewWindow.bind(this)
+    }, {
+      'id': 'file-manager',
+      'name': 'File Manager',
+      'fa': 'fa-file',
+      'hide': !this.nodeSupportSSH(),
+      'click': this.connectFileManager.bind(this)
+    }];
+    if (!this.rightClickSelectNode) {
+      return [];
     }
+    return menuList;
+  }
+
+  onRightClick(event, treeId, treeNode) {
+    if (!treeNode || treeNode.isParent) {
+      return null;
+    }
+    this.rightClickSelectNode = treeNode;
 
     if (!treeNode && event.target.tagName.toLowerCase() !== 'button' && $(event.target).parents('a').length === 0) {
       this.assetsTree.cancelSelectedNode();
@@ -211,9 +240,21 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     connectEvt.next(evt);
   }
 
-  connectTerminal() {
-    const host = this.rightClickSelectNode;
-    this.connectAsset(host);
+  connectInNewWindow() {
+    const node = this.rightClickSelectNode;
+    let url = '/luna/connect?';
+    switch (node.meta.type) {
+      case 'asset':
+        url += 'asset=' + node.meta.asset.id;
+        break;
+      case 'remote_app':
+        url += 'remote_app=' + node.id;
+        break;
+      default:
+        alert('Unknown type: ' + node.meta.type);
+        return;
+    }
+    window.open(url, '_blank');
   }
 
   filterAssets(keyword) {
