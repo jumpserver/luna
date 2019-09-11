@@ -64,7 +64,6 @@
     "neffos.js": "^0.1.19",
     "ngx-cookie-service": "^1.0.10",
     "ngx-logger": "4.0.4",
-    "ngx-progressbar": "^2.1.1",
     "popper.js": "^1.14.7",
     "requirejs": "^2.3.5",
     "rxjs": "~6.3.3",
