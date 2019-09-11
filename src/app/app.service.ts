@@ -91,10 +91,6 @@ export class HttpService {
     return this.http.get<Array<SystemUser>>(url);
   }
 
-  refreshMyGrantedNodes() {
-    return this.http.get<Array<TreeNode>>('/api/perms/v1/user/nodes-assets/tree/?cache_policy=2');
-  }
-
   getGuacamoleToken(user_id: string, authToken: string) {
     const body = new HttpParams()
       .set('username', user_id)

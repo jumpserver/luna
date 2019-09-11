@@ -1,6 +1,6 @@
 import {Component, OnInit, Output, Inject, OnDestroy, EventEmitter} from '@angular/core';
 import {connectEvt} from '@app/globals';
-import {AppService, HttpService, LogService} from '@app/app.service';
+import {AppService, HttpService, LogService, NavService} from '@app/app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';
@@ -19,6 +19,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   constructor(private _appSvc: AppService,
               public _dialog: MatDialog,
               public _logger: LogService,
+              private _navSrv: NavService,
               private activatedRoute: ActivatedRoute,
               private _http: HttpService,
   ) {
@@ -144,7 +145,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   manualSetUserAuthLoginIfNeed(node: any, user: SystemUser, callback) {
-    if (user.login_mode !== 'manual' || user.protocol !== 'rdp') {
+    if (user.login_mode !== 'manual' || user.protocol !== 'rdp' || this._navSrv.skipAllManualPassword) {
       return callback(node, user);
     }
     user = Object.assign({}, user);
@@ -235,7 +236,6 @@ export class AssetTreeDialogComponent implements OnInit {
   templateUrl: 'manual-password-dialog.html',
 })
 export class ManualPasswordDialogComponent implements OnInit {
-  PasswordControl = new FormControl('', [Validators.required]);
   constructor(@Inject(MAT_DIALOG_DATA) public data: any,
               public dialogRef: MatDialogRef<ManualPasswordDialogComponent>) {
   }

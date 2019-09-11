@@ -415,7 +415,7 @@ export class RDPSolutionDialogComponent implements OnInit {
 @Component({
   selector: 'elements-font-size-dialog',
   templateUrl: 'fontDialog.html',
-  styles: ['.mat-form-field { width: 100%; }']
+  styles: ['.mat-form-field { width: 100%; }'],
 })
 export class FontDialogComponent implements OnInit {
   fontSize: string;
