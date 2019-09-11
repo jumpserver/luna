@@ -55,6 +55,7 @@ export class ReplayGuacamoleComponent implements OnInit {
   recording: any;
   playerRef: any;
   displayRef: any;
+  screenRef: any;
   max = 100;
   percent = 0;
   duration = '00:00';
@@ -70,21 +71,28 @@ export class ReplayGuacamoleComponent implements OnInit {
     }
     this.playerRef = document.getElementById('player');
     this.displayRef = document.getElementById('display');
+    this.screenRef = document.getElementById('screen');
     const tunnel = new Guacamole.StaticHTTPTunnel(this.replay.src);
     this.recording = new Guacamole.SessionRecording(tunnel);
     const recordingDisplay = this.recording.getDisplay();
-
-    this.displayRef.appendChild(recordingDisplay.getElement());
+    const recordingElement = recordingDisplay.getElement();
+    recordingElement.style.margin = '0 auto';
+    this.screenRef.appendChild(recordingElement);
     this.initRecording();
     const that = this;
 
-    recordingDisplay.onresize = function displayResized(width, height) {
+    recordingDisplay.onresize = function onDisplayResize(width, height) {
       // Do not scale if displayRef has no width
-      if (!width) {
+      if (!height) {
         return;
       }
       // Scale displayRef to fit width of container
-      recordingDisplay.scale(that.displayRef.offsetWidth / width);
+      const widthScale = that.displayRef.offsetWidth / width;
+      const heightScale = that.displayRef.offsetHeight / height;
+      console.log('old => new: ', widthScale, heightScale);
+      const minScale = widthScale < heightScale ? widthScale : heightScale;
+      recordingDisplay.scale(minScale);
+      // recordingDisplay.scale(that.displayRef.offsetHeigth / height);
     };
     // this.toggle();
   }

@@ -93,7 +93,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (this._navSvc.treeLoadAsync) {
       setting['async'] = {
         enable: true,
-        url: '/api/perms/v1/users/nodes/children-with-assets/tree/',
+        url: '/api/perms/v1/users/nodes/children-with-assets/tree/?cache_policy=1',
         autoParam: ['id=key', 'name=n', 'level=lv'],
         type: 'get'
       };
