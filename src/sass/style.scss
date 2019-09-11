@@ -6,6 +6,7 @@ $fa-font-path: '~font-awesome/fonts';
 // Todo: 去掉依赖
 @import '~bootstrap/scss/bootstrap';
 
+//@import "~@angular/material/prebuilt-themes/indigo-pink.css";
 //$FontPathOpenSans: '~npm-font-open-sans/fonts';
 //@import '~npm-font-open-sans/open-sans';
 //$roboto-font-path: '~roboto-fontface/fonts';
@@ -98,4 +99,8 @@ button.icon-split-handle.ngx-split-button {
   height: 100%;
   //border: 1px solid #3a3333;
   opacity: 0.0;
+}
+
+button.mat-raised-button {
+  margin-left: 5px;
 }

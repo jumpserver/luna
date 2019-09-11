@@ -29,7 +29,7 @@
   outline: none;
   -webkit-user-select: none;
   user-select: none;
-  z-index: 9999;
+  z-index: 99;
   height: 5px;
   width: 0;
   display: block;
