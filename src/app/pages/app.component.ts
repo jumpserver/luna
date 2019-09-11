@@ -1,5 +1,4 @@
 import {Component} from '@angular/core';
-import {DataStore} from '../globals';
 import {AppService} from '../app.service';
 
 @Component({
@@ -9,9 +8,8 @@ import {AppService} from '../app.service';
 })
 
 export class AppComponent {
-  DataStore = DataStore;
 
-  constructor(appSrv: AppService) {
+  constructor(private appSrv: AppService) {
   }
 }
 
