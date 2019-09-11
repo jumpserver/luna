@@ -56,6 +56,7 @@ export class ReplayGuacamoleComponent implements OnInit {
   playerRef: any;
   displayRef: any;
   screenRef: any;
+  recordingDisplay: any;
   max = 100;
   percent = 0;
   duration = '00:00';
@@ -74,50 +75,48 @@ export class ReplayGuacamoleComponent implements OnInit {
     this.screenRef = document.getElementById('screen');
     const tunnel = new Guacamole.StaticHTTPTunnel(this.replay.src);
     this.recording = new Guacamole.SessionRecording(tunnel);
-    const recordingDisplay = this.recording.getDisplay();
-    const recordingElement = recordingDisplay.getElement();
+    this.recordingDisplay = this.recording.getDisplay();
+    const recordingElement = this.recordingDisplay.getElement();
     recordingElement.style.margin = '0 auto';
     this.screenRef.appendChild(recordingElement);
     this.initRecording();
-    const that = this;
 
-    recordingDisplay.onresize = function onDisplayResize(width, height) {
+
+    // this.toggle();
+  }
+
+  initRecording() {
+    this.recording.connect('');
+    this.recording.onplay = () => {
+      this.isPlaying = true;
+    };
+
+    this.recording.onseek = (millis) => {
+      this.position = formatTime(millis);
+      this.percent = millis;
+    };
+
+    this.recording.onprogress = (millis) => {
+      this.duration = formatTime(millis);
+      this.max = millis;
+      this.toggle();
+    };
+
+    // If paused, the play/pause button should read "Play"
+    this.recording.onpause = () => {
+      this.isPlaying = false;
+    };
+
+    this.recordingDisplay.onresize = (width, height) => {
       // Do not scale if displayRef has no width
       if (!height) {
         return;
       }
       // Scale displayRef to fit width of container
-      const widthScale = that.displayRef.offsetWidth / width;
-      const heightScale = that.displayRef.offsetHeight / height;
-      console.log('old => new: ', widthScale, heightScale);
+      const widthScale = this.displayRef.offsetWidth / width;
+      const heightScale = this.displayRef.offsetHeight / height;
       const minScale = widthScale < heightScale ? widthScale : heightScale;
-      recordingDisplay.scale(minScale);
-      // recordingDisplay.scale(that.displayRef.offsetHeigth / height);
-    };
-    // this.toggle();
-  }
-
-  initRecording() {
-    const that = this;
-    this.recording.connect('');
-    this.recording.onplay = function() {
-      that.isPlaying = true;
-    };
-
-    this.recording.onseek = function (millis) {
-      that.position = formatTime(millis);
-      that.percent = millis;
-    };
-
-    this.recording.onprogress = function (millis) {
-      that.duration = formatTime(millis);
-      that.max = millis;
-      that.toggle();
-    };
-
-    // If paused, the play/pause button should read "Play"
-    this.recording.onpause = function() {
-      that.isPlaying = false;
+      this.recordingDisplay.scale(minScale);
     };
   }
 

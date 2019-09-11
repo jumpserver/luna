@@ -58,7 +58,7 @@
     "codemirror": "^5.42.0",
     "core-js": "^2.5.4",
     "font-awesome": "4.7.0",
-    "guacamole-common-js": "0.9.14-b",
+    "guacamole-common-js": "1.1.0",
     "jquery": "^3.4.1",
     "metismenu": "^2.7.9",
     "neffos.js": "^0.1.19",
