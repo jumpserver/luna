@@ -1,5 +1,4 @@
 import {Component, OnInit, Output, Inject, OnDestroy, EventEmitter} from '@angular/core';
-import {Observable, Subject} from 'rxjs';
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {AppService, HttpService, LogService, NavService} from '@app/app.service';
