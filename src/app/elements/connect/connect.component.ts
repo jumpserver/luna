@@ -1,4 +1,5 @@
 import {Component, OnInit, Output, Inject, OnDestroy, EventEmitter} from '@angular/core';
+import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {AppService, HttpService, LogService, NavService} from '@app/app.service';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
@@ -6,6 +7,7 @@ import {FormControl, Validators} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';
 import {SystemUser, TreeNode, Asset} from '@app/model';
 import {View} from '@app/model';
+
 
 @Component({
   selector: 'elements-connect',
@@ -70,45 +72,87 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
   }
 
-  connectAsset(node: TreeNode) {
+  async connectAsset(node: TreeNode) {
     const host = node.meta.asset as Asset;
-    this._http.getMyAssetSystemUsers(host.id).subscribe(systemUsers => {
-      let user: SystemUser;
-      if (systemUsers.length > 1) {
-        // 检查系统用户优先级，获取最高优先级的
-        user = this.checkPriority(systemUsers);
-        if (user) {
-          return this.manualSetUserAuthLoginIfNeed(host, user, this.loginAsset.bind(this));
-        }
+    const systemUsers = await this._http.getMyAssetSystemUsers(host.id).toPromise();
+    let sysUser = await this.selectLoginSystemUsers(systemUsers);
+    sysUser = await this.manualSetUserAuthLoginIfNeed(sysUser);
+    if (sysUser && sysUser.id) {
+      this.loginAsset(host, sysUser);
+    } else {
+      alert('该主机没有授权系统用户');
+    }
+  }
+
+  selectLoginSystemUsers(systemUsers: Array<SystemUser>): Promise<SystemUser> {
+    const systemUserMaxPriority = this.filterMaxPrioritySystemUsers(systemUsers);
+    let user: SystemUser;
+
+    if (systemUsers.length > 1) {
+      return new Promise<SystemUser>(resolve => {
         const dialogRef = this._dialog.open(AssetTreeDialogComponent, {
           height: '200px',
           width: '300px',
-          data: {users: systemUsers}
+          data: {users: systemUserMaxPriority}
         });
 
         dialogRef.afterClosed().subscribe(result => {
           if (result) {
-            for (const i of systemUsers) {
+            for (const i of systemUserMaxPriority) {
               if (i.id.toString() === result.toString()) {
                 user = i;
-                break;
+                resolve(user);
               }
             }
-            return this.manualSetUserAuthLoginIfNeed(host, user, this.loginAsset.bind(this));
           }
+          return null;
         });
-      } else if (systemUsers.length === 1) {
-        user = systemUsers[0];
-        this.manualSetUserAuthLoginIfNeed(host, user, this.loginAsset.bind(this));
-      } else {
-        alert('该主机没有授权登录用户');
-      }
-    });
+      });
+    } else if (systemUserMaxPriority.length === 1) {
+      user = systemUserMaxPriority[0];
+      return Promise.resolve(user);
+    } else {
+      return Promise.resolve(null);
+    }
   }
 
-  connectRemoteApp(node: TreeNode) {
-    const user = node.meta.user as SystemUser;
-    return this.manualSetUserAuthLoginIfNeed(node, user, this.loginRemoteApp.bind(this));
+  manualSetUserAuthLoginIfNeed(user: SystemUser): Promise<SystemUser> {
+    if (!user || user.login_mode !== 'manual' || user.protocol !== 'rdp' || this._navSrv.skipAllManualPassword) {
+      return Promise.resolve(user);
+    }
+    user = Object.assign({}, user);
+    return new Promise(resolve => {
+      const dialogRef = this._dialog.open(ManualPasswordDialogComponent, {
+        height: '250px',
+        width: '500px',
+        data: {username: user.username}
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (!result) {
+          return resolve(null);
+        }
+        if (result.skip) {
+          return resolve(user);
+        }
+        user.username = result.username;
+        user.password = result.password;
+        return resolve(user);
+      });
+    });
+
+  }
+
+
+  async connectRemoteApp(node: TreeNode) {
+    this._logger.debug('Connect remote app: ', node.id);
+    const systemUsers = await this._http.getMyRemoteAppSystemUsers(node.id).toPromise();
+    let sysUser = await this.selectLoginSystemUsers(systemUsers);
+    sysUser = await this.manualSetUserAuthLoginIfNeed(sysUser);
+    if (sysUser && sysUser.id) {
+      return this.loginRemoteApp(node, sysUser);
+    } else {
+      alert('该应用没有授权系统用户');
+    }
   }
 
   loginRemoteApp(node: TreeNode, user: SystemUser) {
@@ -144,28 +188,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     this.Connect(node);
   }
 
-  manualSetUserAuthLoginIfNeed(node: any, user: SystemUser, callback) {
-    if (user.login_mode !== 'manual' || user.protocol !== 'rdp' || this._navSrv.skipAllManualPassword) {
-      return callback(node, user);
-    }
-    user = Object.assign({}, user);
-    const dialogRef = this._dialog.open(ManualPasswordDialogComponent, {
-      height: '250px',
-      width: '500px',
-      data: {username: user.username}
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (!result) {
-        return;
-      }
-      if (result.skip) {
-        return callback(node, user);
-      }
-      user.username = result.username;
-      user.password = result.password;
-      return callback(node, user);
-    });
-  }
 
   loginAsset(host: Asset, user: SystemUser) {
     if (user) {
@@ -185,18 +207,10 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
   }
 
-  checkPriority(sysUsers: Array<SystemUser>) {
-    let priority = -1;
-    let user: any;
-    for (const u of sysUsers) {
-      if (u.priority > priority) {
-        user = u;
-        priority = u.priority;
-      } else if (u.priority === priority) {
-        return null;
-      }
-    }
-    return user;
+  filterMaxPrioritySystemUsers(sysUsers: Array<SystemUser>): Array<SystemUser> {
+    const priorityAll: Array<number> = sysUsers.map(s => s.priority);
+    const maxPriority = Math.max(...priorityAll);
+    return sysUsers.filter(s => s.priority === maxPriority);
   }
 }
 

@@ -86,6 +86,11 @@ export class HttpService {
     return this.http.get<Array<TreeNode>>(url);
   }
 
+  getMyRemoteAppSystemUsers(remoteAppId: string) {
+    const url = `/api/v1/perms/users/remote-apps/${remoteAppId}/system-users/`;
+    return this.http.get<Array<SystemUser>>(url);
+  }
+
   getMyAssetSystemUsers(assetId: string) {
     const url = `/api/v1/perms/users/assets/${assetId}/system-users/`;
     return this.http.get<Array<SystemUser>>(url);
@@ -138,10 +143,11 @@ export class HttpService {
     );
   }
 
-  guacamoleAddRemoteApp(userId: string, remoteAppId: string, systemUserUsername?: string, systemUserPassword?: string) {
+  guacamoleAddRemoteApp(userId: string, remoteAppId: string, sysUserId: string, systemUserUsername?: string, systemUserPassword?: string) {
     let params = new HttpParams()
       .set('user_id', userId)
       .set('remote_app_id', remoteAppId)
+      .set('system_user_id', sysUserId)
       .set('token', DataStore.guacamoleToken);
     let body = new HttpParams();
     if (systemUserUsername && systemUserPassword) {

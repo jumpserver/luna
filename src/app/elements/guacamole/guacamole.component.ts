@@ -28,8 +28,9 @@ export class ElementGuacamoleComponent implements OnInit {
 
   registerHost() {
     let action: any;
+    console.log(this.sysUser);
     if (this.remoteAppId) {
-      action = this._http.guacamoleAddRemoteApp(User.id, this.remoteAppId, this.sysUser.username, this.sysUser.password);
+      action = this._http.guacamoleAddRemoteApp(User.id, this.remoteAppId, this.sysUser.id, this.sysUser.username, this.sysUser.password);
     } else {
       action = this._http.guacamoleAddAsset(User.id, this.host.id, this.sysUser.id, this.sysUser.username, this.sysUser.password);
     }
@@ -51,7 +52,7 @@ export class ElementGuacamoleComponent implements OnInit {
     const now = new Date();
     const nowTime = now.getTime() / 1000;
     this.registered = true;
-    this._logger.debug('Userid is', User.id);
+    this._logger.debug('User id is', User.id);
     this._http.getGuacamoleToken(User.id, '').subscribe(
       data => {
         // /guacamole/client will redirect to http://guacamole/#/client
