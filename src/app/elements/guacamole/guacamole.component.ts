@@ -1,6 +1,6 @@
 import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {CookieService} from 'ngx-cookie-service';
-import {HttpService, LogService} from '@app/app.service';
+import {HttpService, LogService} from '@app/services';
 import {DataStore, User} from '@app/globals';
 import {DomSanitizer} from '@angular/platform-browser';
 import {View} from '@app/model';

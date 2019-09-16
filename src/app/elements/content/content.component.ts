@@ -1,6 +1,6 @@
 import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
-import {ViewService} from '@app/app.service';
+import {ViewService} from '@app/services';
 
 @Component({
   selector: 'elements-content',

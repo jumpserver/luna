@@ -6,7 +6,7 @@
  * @author   liuzheng <liuzheng712@gmail.com>
  */
 import {Component, OnInit} from '@angular/core';
-import {AppService, HttpService, LogService} from '@app/app.service';
+import {AppService, HttpService, LogService} from '@app/services';
 import {NgForm} from '@angular/forms';
 import {Router} from '@angular/router';
 import {DataStore, User} from '@app/globals';

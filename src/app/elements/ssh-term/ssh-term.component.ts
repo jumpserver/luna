@@ -1,7 +1,7 @@
 import {Component, Input, OnInit, OnDestroy } from '@angular/core';
 import {Terminal} from 'xterm';
 import {View} from '@app/model';
-import {LogService, UUIDService} from '@app/app.service';
+import {LogService, UUIDService} from '@app/services';
 import {Socket} from '@app/utils/socket';
 import {getWsSocket, translate} from '@app/globals';
 

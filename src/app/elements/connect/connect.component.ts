@@ -1,7 +1,7 @@
 import {Component, OnInit, Output, Inject, OnDestroy, EventEmitter} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
-import {AppService, HttpService, LogService, NavService} from '@app/app.service';
+import {AppService, HttpService, LogService, NavService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';

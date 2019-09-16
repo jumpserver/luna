@@ -1,6 +1,6 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {Terminal} from 'xterm';
-import {HttpService, LogService} from '@app/app.service';
+import {HttpService, LogService} from '@app/services';
 import {Replay} from '../replay.model';
 
 function zeroPad(num, minLength) {

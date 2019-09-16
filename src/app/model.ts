@@ -80,6 +80,17 @@ export class ConnectEvt {
   }
 }
 
+
+export class Nav {
+  id: string;
+  name: string;
+  children?: Array<Nav>;
+  hide?: boolean = false;
+  click?: string;
+  href?: string;
+  disable?: boolean = false;
+}
+
 export class NavEvt {
   name: string;
   value: any;
@@ -88,7 +99,6 @@ export class NavEvt {
     this.name = name;
     this.value = value;
   }
-
 }
 
 export class View {
@@ -177,3 +187,9 @@ export class Monitor {
 }
 
 
+export class Setting {
+  rdpSolution: string = '1024x768';
+  fontSize: number = 14;
+  isLoadTreeAsync: boolean = true;
+  isSkipAllManualPassword: boolean = false;
+}

@@ -7,9 +7,7 @@ import {CookieService} from 'ngx-cookie-service';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 
 // service
-import {AppService, HttpService, LocalStorageService, NavService, LogService,
-  UUIDService, TreeFilterService, ViewService,
-} from './app.service';
+import {AllServices} from '@app/services';
 
 import {AppRouterModule} from './router/router.module';
 import {Pipes} from './pipes/pipes';
@@ -19,6 +17,7 @@ import {ElementComponents} from './elements/elements.component';
 import {PageMainComponent} from '@app/pages/main/main.component';
 import {PluginModules} from './plugins/plugins';
 import {ChangLanWarningDialogComponent, RDPSolutionDialogComponent, FontDialogComponent} from './elements/nav/nav.component';
+import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './elements/connect/connect.component';
 
 
@@ -44,20 +43,14 @@ import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './element
     RDPSolutionDialogComponent,
     FontDialogComponent,
     PageMainComponent,
+    ElementSettingComponent,
   ],
   bootstrap: [AppComponent],
   providers: [
     // {provide: LoggerConfig, useValue: {level: LoggerLevel.WARN}},
     // {provide: BrowserXhr, useClass: NgProgressBrowserXhr},
-    AppService,
-    HttpService,
-    LogService,
-    NavService,
-    UUIDService,
-    LocalStorageService,
+    ...AllServices,
     CookieService,
-    TreeFilterService,
-    ViewService,
     NGXLogger,
     {provide: MAT_LABEL_GLOBAL_OPTIONS, useValue: {float: 'always'}}
   ]

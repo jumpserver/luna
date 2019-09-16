@@ -3,7 +3,7 @@ import {MatDialog} from '@angular/material';
 import {BehaviorSubject} from 'rxjs';
 import {ActivatedRoute} from '@angular/router';
 
-import {AppService, HttpService, LogService, NavService, TreeFilterService} from '@app/app.service';
+import {AppService, HttpService, LogService, NavService, TreeFilterService} from '@app/services';
 import {connectEvt, translate} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
 

@@ -1,17 +1,10 @@
-/**
- * 主页导航条
- *
- *
- * @date     2017-11-07
- * @author   liuzheng <liuzheng712@gmail.com>
- */
 import {Component, Inject, OnInit} from '@angular/core';
-import {HttpService, LocalStorageService, NavService, LogService, ViewService} from '@app/app.service';
+import {HttpService, LocalStorageService, NavService, LogService, ViewService} from '@app/services';
 import {DataStore, i18n} from '@app/globals';
-import * as jQuery from 'jquery/dist/jquery.min.js';
 import {ElementLeftBarComponent} from '@app/elements/left-bar/left-bar.component';
+import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-import {View} from '@app/model';
+import {Nav, View} from '@app/model';
 
 @Component({
   selector: 'elements-nav',
@@ -20,13 +13,9 @@ import {View} from '@app/model';
 })
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
-  navs: Array<any>;
+  navs: Array<Nav>;
   _asyncTree = false;
   viewList: Array<View>;
-
-  static Hide() {
-    jQuery('elements-nav').hide();
-  }
 
   constructor(private _http: HttpService,
               private _logger: LogService,
@@ -65,8 +54,8 @@ export class ElementNavComponent implements OnInit {
         this.refreshNav();
         break;
       }
-      case 'Settings': {
-        this.Settings();
+      case 'Setting': {
+        this.Setting();
         break;
       }
       case 'Copy': {
@@ -212,122 +201,132 @@ export class ElementNavComponent implements OnInit {
 
   getNav() {
     return [{
-      'id': 'FileManager',
-      'name': 'File Manager',
-      'children': [
+      id: 'FileManager',
+      name: 'File Manager',
+      children: [
         {
-          'id': 'Connect',
-          'click': 'ConnectSFTP',
-          'name': 'Connect'
+          id: 'Connect',
+          click: 'ConnectSFTP',
+          name: 'Connect'
         },
       ]
-    },
-      {
-      'id': 'View',
-      'name': 'View',
-      'children': [
-        {
-          'id': 'HideLeftManager',
-          'click': 'HideLeft',
-          'name': 'Hide left manager',
-          'hide': !DataStore.showLeftBar
-        },
-        {
-          'id': 'ShowLeftManager',
-          'click': 'ShowLeft',
-          'name': 'Show left manager',
-          'hide': DataStore.showLeftBar
-        },
-        {
-          'id': 'RDPResolution',
-          'click': 'SetResolution',
-          'name': 'RDP Resolution'
-        },
-        {
-          'id': 'Font',
-          'click': 'SetFont',
-          'name': 'Font'
-        },
-        {
-          'id': 'SplitVertical',
-          'href': '',
-          'name': 'Split vertical',
-          'disable': true
-        },
-        {
-          'id': 'CommandBar',
-          'href': '',
-          'name': 'Command bar',
-          'disable': true
-        },
-        {
-          'id': 'ShareSession',
-          'href': '',
-          'name': 'Share session (read/write)',
-          'disable': true
-        },
-        {
-          'id': 'FullScreen',
-          'click': 'FullScreen',
-          'name': 'Full Screen'
-        },
-        {
-          'id': 'LoadTreeAsync',
-          'click': 'LoadTreeAsync',
-          'name': 'Load Tree Async',
-          'hide': this._navSvc.treeLoadAsync
-        },
-        {
-          'id': 'LoadTreeSync',
-          'click': 'LoadTreeAsync',
-          'name': 'Load Tree Sync',
-          'hide': !this._navSvc.treeLoadAsync
-        },
-        {
-          'id': 'SkipManualPassword',
-          'click': 'SkipManualPassword',
-          'name': 'Skip manual password',
-          'hide': this._navSvc.skipAllManualPassword
-        },
-        {
-          'id': 'ShowManualPassword',
-          'click': 'SkipManualPassword',
-          'name': 'Show manual password',
-          'hide': !this._navSvc.skipAllManualPassword
-        }
-        ]
     }, {
-      'id': 'Help',
-      'name': 'Help',
-      'children': [
+      id: 'View',
+      name: 'View',
+      children: [
         {
-          'id': 'Website',
-          'click': 'Website',
-          'name': 'Website'
+          id: 'HideLeftManager',
+          click: 'HideLeft',
+          name: 'Hide left manager',
+          hide: !DataStore.showLeftBar
         },
         {
-          'id': 'Document',
-          'click': 'Document',
-          'name': 'Document'
+          id: 'ShowLeftManager',
+          click: 'ShowLeft',
+          name: 'Show left manager',
+          hide: DataStore.showLeftBar
         },
         {
-          'id': 'Support',
-          'click': 'Support',
-          'name': 'Support'
+          id: 'RDPResolution',
+          click: 'SetResolution',
+          name: 'RDP Resolution'
+        },
+        {
+          id: 'Font',
+          click: 'SetFont',
+          name: 'Font'
+        },
+        {
+          id: 'SplitVertical',
+          href: '',
+          name: 'Split vertical',
+          disable: true
+        },
+        {
+          id: 'CommandBar',
+          href: '',
+          name: 'Command bar',
+          disable: true
+        },
+        {
+          id: 'ShareSession',
+          href: '',
+          name: 'Share session (read/write)',
+          disable: true
+        },
+        {
+          id: 'FullScreen',
+          click: 'FullScreen',
+          name: 'Full Screen'
+        },
+        {
+          id: 'LoadTreeAsync',
+          click: 'LoadTreeAsync',
+          name: 'Load Tree Async',
+          hide: this._navSvc.treeLoadAsync
+        },
+        {
+          id: 'LoadTreeSync',
+          click: 'LoadTreeAsync',
+          name: 'Load Tree Sync',
+          hide: !this._navSvc.treeLoadAsync
+        },
+        {
+          id: 'SkipManualPassword',
+          click: 'SkipManualPassword',
+          name: 'Skip manual password',
+          hide: this._navSvc.skipAllManualPassword
+        },
+        {
+          id: 'ShowManualPassword',
+          click: 'SkipManualPassword',
+          name: 'Show manual password',
+          hide: !this._navSvc.skipAllManualPassword
+        }
+      ]
+    }, {
+      id: 'Help',
+      name: 'Help',
+      children: [
+        {
+          id: 'Website',
+          click: 'Website',
+          name: 'Website'
+        },
+        {
+          id: 'Document',
+          click: 'Document',
+          name: 'Document'
+        },
+        {
+          id: 'Support',
+          click: 'Support',
+          name: 'Support'
         }]
     }, {
-      'id': 'Language',
-      'name': 'Language',
-      'children': [
+      id: 'Language',
+      name: 'Language',
+      children: [
         {
-          'id': 'English',
-          'click': 'English',
-          'name': 'English'
+          id: 'English',
+          click: 'English',
+          name: 'English'
         },
         {
-          'id': 'Chinese',
-          'click': 'Chinese',
-          'name': '中文'
+          id: 'Chinese',
+          click: 'Chinese',
+          name: '中文'
+        }
+      ]
+    }, {
+      id: 'Setting',
+      name: 'Setting',
+      click: 'Setting',
+      children: [
+        {
+          id: 'Setting',
+          click: 'Setting',
+          name: 'Setting'
         }
       ]
     }
@@ -356,7 +355,17 @@ export class ElementNavComponent implements OnInit {
     location.reload();
   }
 
-  Settings() {
+  Setting() {
+    const dialog = this._dialog.open(
+      ElementSettingComponent,
+      {
+        height: '300px',
+        width: '400px',
+      });
+    dialog.afterClosed().subscribe(result => {
+      if (result) {
+      }
+    });
   }
 }
 

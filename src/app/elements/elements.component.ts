@@ -15,6 +15,7 @@ import {ElementSshTermComponent} from './ssh-term/ssh-term.component';
 import {ElementConnectComponent, AssetTreeDialogComponent, ManualPasswordDialogComponent} from './connect/connect.component';
 import {RDPSolutionDialogComponent, FontDialogComponent} from './nav/nav.component';
 import {ElementSftpComponent} from '@app/elements/sftp/sftp.component';
+import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 
 export const ElementComponents = [
   ElementLeftBarComponent,
@@ -37,5 +38,6 @@ export const ElementComponents = [
   ChangLanWarningDialogComponent,
   ManualPasswordDialogComponent,
   RDPSolutionDialogComponent,
-  FontDialogComponent
+  FontDialogComponent,
+  ElementSettingComponent
 ];

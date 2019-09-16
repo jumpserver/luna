@@ -1,5 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {AppService, HttpService, LocalStorageService} from '@app/app.service';
+import {AppService, HttpService, LocalStorageService} from '@app/services';
 import {connectEvt} from '@app/globals';
 import {ConnectEvt} from '@app/model';
 // import {DataStore} from '@app/globals';

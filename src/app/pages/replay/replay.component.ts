@@ -1,6 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-import {HttpService, LogService} from '@app/app.service';
+import {HttpService, LogService} from '@app/services';
 import {Replay} from './replay.model';
 
 @Component({
