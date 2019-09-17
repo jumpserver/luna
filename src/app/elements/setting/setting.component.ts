@@ -1,5 +1,5 @@
-import {Component, Inject, OnInit} from '@angular/core';
-import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
+import {Component, OnInit} from '@angular/core';
+import { MatDialogRef} from '@angular/material';
 import {SettingService} from '@app/services';
 import {Setting} from '@app/model';
 
@@ -10,12 +10,11 @@ import {Setting} from '@app/model';
   styles: ['.mat-form-field { width: 100%;}']
 })
 export class ElementSettingComponent implements OnInit {
-  solutionsChoices = ['Auto', '1024x768', '1366x768', '1400x900'];
+  solutionsChoices = ['Auto', '1024x768', '1366x768', '1600x900', '1920×1080'];
   boolChoices = [{name: 'Yes', value: '1'}, {name: 'No', value: '0'}];
   setting: Setting;
 
   constructor(public dialogRef: MatDialogRef<ElementSettingComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any,
               private settingSrv: SettingService) {
   }
 
