@@ -40,29 +40,27 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         }
       }
     });
-    this.activatedRoute.queryParams.subscribe(params => {
-      const login_to = params['login_to'];
-      if (login_to && !this.hasLoginTo) {
-        this._http.filterMyGrantedAssetsById(login_to).subscribe(
-          nodes => {
-            if (nodes.length === 1) {
-              this.hasLoginTo = true;
-              const node = nodes[0];
-              this.Connect(node);
-            }
+    const loginTo = this._appSvc.getQueryString('login_to');
+    if (loginTo && !this.hasLoginTo) {
+      this._http.filterMyGrantedAssetsById(loginTo).subscribe(
+        nodes => {
+          if (nodes.length === 1) {
+            this.hasLoginTo = true;
+            const node = nodes[0];
+            this.Connect(node);
           }
-        );
-        this._http.getMyGrantedRemoteApps(login_to).subscribe(
-          nodes => {
-            if (nodes.length === 1) {
-              this.hasLoginTo = true;
-              const node = nodes[0];
-              this.Connect(node);
-            }
+        }
+      );
+      this._http.getMyGrantedRemoteApps(loginTo).subscribe(
+        nodes => {
+          if (nodes.length === 1) {
+            this.hasLoginTo = true;
+            const node = nodes[0];
+            this.Connect(node);
           }
-        );
-      }
-    });
+        }
+      );
+    }
   }
   ngOnDestroy(): void {
     connectEvt.unsubscribe();
