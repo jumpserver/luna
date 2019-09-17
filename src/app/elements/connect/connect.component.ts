@@ -52,6 +52,15 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
             }
           }
         );
+        this._http.getMyGrantedRemoteApps(login_to).subscribe(
+          nodes => {
+            if (nodes.length === 1) {
+              this.hasLoginTo = true;
+              const node = nodes[0];
+              this.Connect(node);
+            }
+          }
+        );
       }
     });
   }
