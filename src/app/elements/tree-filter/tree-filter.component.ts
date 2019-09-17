@@ -2,7 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {FormControl} from '@angular/forms';
 import {debounceTime, distinctUntilChanged} from 'rxjs/operators';
 
-import {LogService, TreeFilterService} from '@app/app.service';
+import {LogService, TreeFilterService} from '@app/services';
 
 
 @Component({

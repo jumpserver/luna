@@ -67,7 +67,7 @@
 }
 
 .nav .dropdown-content li {
-  float: left;
+  /*float: left;*/
   display: flex;
 }
 
@@ -84,7 +84,7 @@
 }
 
 .nav .dropdown-content li a span {
-  float: right;
+  /*float: right;*/
 }
 
 .dropdown-content li:hover {

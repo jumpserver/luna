@@ -1,17 +1,10 @@
-/**
- * 主页导航条
- *
- *
- * @date     2017-11-07
- * @author   liuzheng <liuzheng712@gmail.com>
- */
 import {Component, Inject, OnInit} from '@angular/core';
-import {HttpService, LocalStorageService, NavService, LogService, ViewService} from '@app/app.service';
+import {HttpService, LocalStorageService, NavService, LogService, ViewService} from '@app/services';
 import {DataStore, i18n} from '@app/globals';
-import * as jQuery from 'jquery/dist/jquery.min.js';
 import {ElementLeftBarComponent} from '@app/elements/left-bar/left-bar.component';
+import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-import {View} from '@app/model';
+import {Nav, View} from '@app/model';
 
 @Component({
   selector: 'elements-nav',
@@ -20,13 +13,9 @@ import {View} from '@app/model';
 })
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
-  navs: Array<any>;
+  navs: Array<Nav>;
   _asyncTree = false;
   viewList: Array<View>;
-
-  static Hide() {
-    jQuery('elements-nav').hide();
-  }
 
   constructor(private _http: HttpService,
               private _logger: LogService,
@@ -65,8 +54,8 @@ export class ElementNavComponent implements OnInit {
         this.refreshNav();
         break;
       }
-      case 'Settings': {
-        this.Settings();
+      case 'Setting': {
+        this.Setting();
         break;
       }
       case 'Copy': {
@@ -121,34 +110,6 @@ export class ElementNavComponent implements OnInit {
         window.open('https://market.aliyun.com/products/53690006/cmgj026011.html?spm=5176.730005.0.0.cY2io1');
         break;
       }
-      case 'SetResolution': {
-        const dialog = this._dialog.open(
-          RDPSolutionDialogComponent,
-          {
-            height: '200px',
-            width: '300px'
-          });
-        dialog.afterClosed().subscribe(result => {
-          if (result) {
-            console.log(result);
-          }
-        });
-        break;
-      }
-      case 'SetFont': {
-        const dialog = this._dialog.open(
-          FontDialogComponent,
-          {
-            height: '200px',
-            width: '300px'
-          });
-        dialog.afterClosed().subscribe(result => {
-          if (result) {
-            console.log(result);
-          }
-        });
-        break;
-      }
       case 'English': {
         const dialog = this._dialog.open(
           ChangLanWarningDialogComponent,
@@ -189,16 +150,6 @@ export class ElementNavComponent implements OnInit {
         });
         break;
       }
-      case 'LoadTreeAsync': {
-        this._navSvc.treeLoadAsync = !this._navSvc.treeLoadAsync;
-        this.refreshNav();
-        break;
-      }
-      case 'SkipManualPassword': {
-        this._navSvc.skipAllManualPassword = !this._navSvc.skipAllManualPassword;
-        this.refreshNav();
-        break;
-      }
       default: {
         break;
       }
@@ -212,122 +163,98 @@ export class ElementNavComponent implements OnInit {
 
   getNav() {
     return [{
-      'id': 'FileManager',
-      'name': 'File Manager',
-      'children': [
+      id: 'FileManager',
+      name: 'File Manager',
+      children: [
         {
-          'id': 'Connect',
-          'click': 'ConnectSFTP',
-          'name': 'Connect'
+          id: 'Connect',
+          click: 'ConnectSFTP',
+          name: 'Connect'
         },
       ]
-    },
-      {
-      'id': 'View',
-      'name': 'View',
-      'children': [
-        {
-          'id': 'HideLeftManager',
-          'click': 'HideLeft',
-          'name': 'Hide left manager',
-          'hide': !DataStore.showLeftBar
-        },
-        {
-          'id': 'ShowLeftManager',
-          'click': 'ShowLeft',
-          'name': 'Show left manager',
-          'hide': DataStore.showLeftBar
-        },
-        {
-          'id': 'RDPResolution',
-          'click': 'SetResolution',
-          'name': 'RDP Resolution'
-        },
-        {
-          'id': 'Font',
-          'click': 'SetFont',
-          'name': 'Font'
-        },
-        {
-          'id': 'SplitVertical',
-          'href': '',
-          'name': 'Split vertical',
-          'disable': true
-        },
-        {
-          'id': 'CommandBar',
-          'href': '',
-          'name': 'Command bar',
-          'disable': true
-        },
-        {
-          'id': 'ShareSession',
-          'href': '',
-          'name': 'Share session (read/write)',
-          'disable': true
-        },
-        {
-          'id': 'FullScreen',
-          'click': 'FullScreen',
-          'name': 'Full Screen'
-        },
-        {
-          'id': 'LoadTreeAsync',
-          'click': 'LoadTreeAsync',
-          'name': 'Load Tree Async',
-          'hide': this._navSvc.treeLoadAsync
-        },
-        {
-          'id': 'LoadTreeSync',
-          'click': 'LoadTreeAsync',
-          'name': 'Load Tree Sync',
-          'hide': !this._navSvc.treeLoadAsync
-        },
-        {
-          'id': 'SkipManualPassword',
-          'click': 'SkipManualPassword',
-          'name': 'Skip manual password',
-          'hide': this._navSvc.skipAllManualPassword
-        },
-        {
-          'id': 'ShowManualPassword',
-          'click': 'SkipManualPassword',
-          'name': 'Show manual password',
-          'hide': !this._navSvc.skipAllManualPassword
-        }
-        ]
     }, {
-      'id': 'Help',
-      'name': 'Help',
-      'children': [
+      id: 'View',
+      name: 'View',
+      children: [
         {
-          'id': 'Website',
-          'click': 'Website',
-          'name': 'Website'
+          id: 'HideLeftManager',
+          click: 'HideLeft',
+          name: 'Hide left manager',
+          hide: !DataStore.showLeftBar
         },
         {
-          'id': 'Document',
-          'click': 'Document',
-          'name': 'Document'
+          id: 'ShowLeftManager',
+          click: 'ShowLeft',
+          name: 'Show left manager',
+          hide: DataStore.showLeftBar
         },
         {
-          'id': 'Support',
-          'click': 'Support',
-          'name': 'Support'
+          id: 'SplitVertical',
+          href: '',
+          name: 'Split vertical',
+          disable: true
+        },
+        {
+          id: 'CommandBar',
+          href: '',
+          name: 'Command bar',
+          disable: true
+        },
+        {
+          id: 'ShareSession',
+          href: '',
+          name: 'Share session (read/write)',
+          disable: true
+        },
+        {
+          id: 'FullScreen',
+          click: 'FullScreen',
+          name: 'Full Screen'
+        },
+      ]
+    }, {
+      id: 'Help',
+      name: 'Help',
+      children: [
+        {
+          id: 'Website',
+          click: 'Website',
+          name: 'Website'
+        },
+        {
+          id: 'Document',
+          click: 'Document',
+          name: 'Document'
+        },
+        {
+          id: 'Support',
+          click: 'Support',
+          name: 'Support'
         }]
     }, {
-      'id': 'Language',
-      'name': 'Language',
-      'children': [
+      id: 'Language',
+      name: 'Language',
+      children: [
         {
-          'id': 'English',
-          'click': 'English',
-          'name': 'English'
+          id: 'English',
+          click: 'English',
+          name: 'English'
         },
         {
-          'id': 'Chinese',
-          'click': 'Chinese',
-          'name': '中文'
+          id: 'Chinese',
+          click: 'Chinese',
+          name: '中文'
+        }
+      ]
+    }, {
+      id: 'Setting',
+      name: 'Setting',
+      click: 'Setting',
+      children: [
+        {
+          id: 'Setting',
+          click: 'Setting',
+          name: 'Setting'
         }
       ]
     }
@@ -356,7 +283,17 @@ export class ElementNavComponent implements OnInit {
     location.reload();
   }
 
-  Settings() {
+  Setting() {
+    const dialog = this._dialog.open(
+      ElementSettingComponent,
+      {
+        height: '370px',
+        width: '400px',
+      });
+    dialog.afterClosed().subscribe(result => {
+      if (result) {
+      }
+    });
   }
 }
 
@@ -380,71 +317,3 @@ export class ChangLanWarningDialogComponent implements OnInit {
   }
 }
 
-@Component({
-  selector: 'elements-rdp-solution-dialog',
-  templateUrl: 'rdpSolutionDialog.html',
-  styles: ['.mat-form-field { width: 100%; }']
-})
-export class RDPSolutionDialogComponent implements OnInit {
-  solutions = ['Auto', '1024x768', '1366x768', '1400x900'];
-  solution: string;
-  cacheKey = 'rdpSolution';
-
-  constructor(public dialogRef: MatDialogRef<RDPSolutionDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any) {
-  }
-
-  ngOnInit() {
-    this.solution = localStorage.getItem(this.cacheKey) || 'Auto';
-  }
-
-  setSolution(value: string) {
-    localStorage.setItem(this.cacheKey, value);
-  }
-
-  onSubmit() {
-    this.setSolution(this.solution);
-    this.dialogRef.close();
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-}
-
-@Component({
-  selector: 'elements-font-size-dialog',
-  templateUrl: 'fontDialog.html',
-  styles: ['.mat-form-field { width: 100%; }'],
-})
-export class FontDialogComponent implements OnInit {
-  fontSize: string;
-  solution: string;
-  cacheKey = 'fontSize';
-
-  constructor(public dialogRef: MatDialogRef<FontDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any) {
-  }
-
-  ngOnInit() {
-    this.fontSize = localStorage.getItem(this.cacheKey) || '14';
-  }
-
-  setFontSize(value: string) {
-    localStorage.setItem(this.cacheKey, value);
-  }
-
-  isValid() {
-    const size = parseInt(this.fontSize, 10);
-    return size > 5 && size < 60;
-  }
-
-  onSubmit() {
-    this.setFontSize(this.fontSize);
-    this.dialogRef.close();
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-}

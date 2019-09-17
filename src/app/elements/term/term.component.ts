@@ -2,7 +2,7 @@ import {AfterViewInit, Component, Input, Output, OnInit, ViewChild, EventEmitter
 import {ElementRef} from '@angular/core';
 import {Terminal} from 'xterm';
 import {fit} from 'xterm/lib/addons/fit/fit';
-import {LogService} from '@app/app.service';
+import {LogService} from '@app/services';
 import {Observable, fromEvent} from 'rxjs';
 import {debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import * as $ from 'jquery/dist/jquery.min.js';

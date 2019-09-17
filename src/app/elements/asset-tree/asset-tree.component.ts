@@ -3,7 +3,7 @@ import {MatDialog} from '@angular/material';
 import {BehaviorSubject} from 'rxjs';
 import {ActivatedRoute} from '@angular/router';
 
-import {AppService, HttpService, LogService, NavService, TreeFilterService} from '@app/app.service';
+import {AppService, HttpService, LogService, NavService, SettingService, TreeFilterService} from '@app/services';
 import {connectEvt, translate} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
 
@@ -43,6 +43,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   rightClickSelectNode: any;
   hasLoginTo = false;
   treeFilterSubscription: any;
+  isLoadTreeAsync: boolean;
 
   constructor(private _appSvc: AppService,
               private _treeFilterSvc: TreeFilterService,
@@ -50,10 +51,11 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
               public _logger: LogService,
               private activatedRoute: ActivatedRoute,
               private _http: HttpService,
-              private _navSvc: NavService
+              private settingSvc: SettingService
   ) {}
 
   ngOnInit() {
+    this.isLoadTreeAsync = this.settingSvc.isLoadTreeAsync();
     this.initTree();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
 
@@ -90,7 +92,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       onClick: this.onAssetsNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
-    if (this._navSvc.treeLoadAsync) {
+    if (this.isLoadTreeAsync) {
       setting['async'] = {
         enable: true,
         url: '/api/perms/v1/users/nodes/children-with-assets/tree/?cache_policy=1',
@@ -99,7 +101,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       };
     }
 
-    this._http.getMyGrantedNodes(this._navSvc.treeLoadAsync, refresh).subscribe(resp => {
+    this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
       const assetsTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
       this.assetsTree = assetsTree;
       this.rootNodeAddDom(assetsTree, () => {
@@ -258,7 +260,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   filterAssets(keyword) {
-    if (this._navSvc.treeLoadAsync) {
+    if (this.isLoadTreeAsync) {
       this._logger.debug('Filter assets server');
       this.filterAssetsServer(keyword);
     } else {

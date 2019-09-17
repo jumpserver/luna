@@ -1,7 +1,7 @@
 import {Component, HostListener, OnInit} from '@angular/core';
 import {DataStore, User} from '@app/globals';
 import {environment} from '@src/environments/environment';
-import {ViewService} from '@app/app.service';
+import {ViewService} from '@app/services';
 
 @Component({
   selector: 'pages-main',
