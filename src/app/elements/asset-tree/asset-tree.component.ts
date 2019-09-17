@@ -1,6 +1,7 @@
 import {Component, Input, OnInit, OnDestroy, ElementRef, ViewChild} from '@angular/core';
 import {MatDialog} from '@angular/material';
-import {BehaviorSubject} from 'rxjs';
+import {BehaviorSubject, Subject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
 
 import {AppService, HttpService, LogService, NavService, SettingService, TreeFilterService} from '@app/services';
@@ -44,6 +45,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   hasLoginTo = false;
   treeFilterSubscription: any;
   isLoadTreeAsync: boolean;
+  filterAssetCancel$: Subject<boolean> = new Subject();
 
   constructor(private _appSvc: AppService,
               private _treeFilterSvc: TreeFilterService,
@@ -330,17 +332,23 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       }
       return;
     }
-    this._http.getMyGrantedAssets(keyword).subscribe(nodes => {
-      const treeNodes = this.assetsTree.getNodes();
-      if (treeNodes.length !== 0) {
-        this.assetsTree.hideNode(treeNodes[0]);
-      }
-      const newNode = {id: 'search', name: translate('Search'), isParent: true, open: true, zAsync: true};
-      const parentNode = this.assetsTree.addNodes(null, newNode)[0];
-      parentNode.zAsync = true;
-      this.assetsTree.addNodes(parentNode, nodes);
-      parentNode.open = true;
-    });
+    this.filterAssetCancel$.next(true);
+    this._http.getMyGrantedAssets(keyword)
+      .pipe(takeUntil(this.filterAssetCancel$))
+      .subscribe(nodes => {
+        const treeNodes = this.assetsTree.getNodes();
+        if (treeNodes.length !== 0) {
+          this.assetsTree.hideNode(treeNodes[0]);
+        }
+        let name = translate('Search');
+        const assetsAmount = nodes.length;
+        name = `${name} (${assetsAmount})`;
+        const newNode = {id: 'search', name: name, isParent: true, open: true, zAsync: true};
+        const parentNode = this.assetsTree.addNodes(null, newNode)[0];
+        parentNode.zAsync = true;
+        this.assetsTree.addNodes(parentNode, nodes);
+        parentNode.open = true;
+      });
     return;
   }
 
