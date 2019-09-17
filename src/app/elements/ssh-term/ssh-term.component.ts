@@ -47,6 +47,15 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
       }
     });
     this.view.Term = this.term;
+    this.term.attachCustomKeyEventHandler(e => {
+      if (e.ctrlKey && e.key == 'c' && term.hasSelection()) {
+          return false;
+      }
+      if (e.ctrlKey && e.key == 'v') {
+          return false;
+      }
+      return true;
+    })
   }
 
   changeWinSize(size: Array<number>) {
