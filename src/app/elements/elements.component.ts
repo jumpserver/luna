@@ -13,7 +13,6 @@ import {ElementDialogAlertComponent} from './dialog/dialog.service';
 import {ElementGuacamoleComponent} from './guacamole/guacamole.component';
 import {ElementSshTermComponent} from './ssh-term/ssh-term.component';
 import {ElementConnectComponent, AssetTreeDialogComponent, ManualPasswordDialogComponent} from './connect/connect.component';
-import {RDPSolutionDialogComponent, FontDialogComponent} from './nav/nav.component';
 import {ElementSftpComponent} from '@app/elements/sftp/sftp.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 
@@ -37,7 +36,5 @@ export const ElementComponents = [
   AssetTreeDialogComponent,
   ChangLanWarningDialogComponent,
   ManualPasswordDialogComponent,
-  RDPSolutionDialogComponent,
-  FontDialogComponent,
   ElementSettingComponent
 ];

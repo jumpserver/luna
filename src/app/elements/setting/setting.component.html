@@ -11,6 +11,21 @@
   <input [(value)]="setting.fontSize" matInput placeholder='{{"Font size"|trans}}' name="fontSize" type="number" min="5" max="60" >
 </mat-form-field>
 
+<mat-form-field>
+  <mat-select [(value)]="setting.isLoadTreeAsync"
+    placeholder="{{'Load tree async'|trans }}" >
+    <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name|trans}}</mat-option>
+  </mat-select>
+</mat-form-field>
+
+<mat-form-field>
+  <mat-select [(value)]="setting.isSkipAllManualPassword"
+    placeholder="{{'Skip manual password'|trans }}" >
+    <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name|trans}}</mat-option>
+  </mat-select>
+</mat-form-field>
+
+
 <div style="float: right">
   <button mat-raised-button (click)="onNoClick()">{{"Cancel"|trans}}</button>
   <button mat-raised-button color="primary" (click)="onSubmit()">{{"Confirm"|trans}}</button>

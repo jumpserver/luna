@@ -190,6 +190,6 @@ export class Monitor {
 export class Setting {
   rdpSolution: string = '1024x768';
   fontSize: number = 14;
-  isLoadTreeAsync: boolean = true;
-  isSkipAllManualPassword: boolean = false;
+  isLoadTreeAsync: string = '1';
+  isSkipAllManualPassword: string = '0';
 }

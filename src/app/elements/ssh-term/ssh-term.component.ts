@@ -1,7 +1,7 @@
 import {Component, Input, OnInit, OnDestroy } from '@angular/core';
 import {Terminal} from 'xterm';
 import {View} from '@app/model';
-import {LogService, UUIDService} from '@app/services';
+import {LogService, SettingService, UUIDService} from '@app/services';
 import {Socket} from '@app/utils/socket';
 import {getWsSocket, translate} from '@app/globals';
 
@@ -23,7 +23,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   ws: Socket;
   roomID: string;
 
-  constructor(private _uuid: UUIDService, private _logger: LogService) {
+  constructor(private _uuid: UUIDService, private _logger: LogService, private settingSvc: SettingService) {
   }
 
   ngOnInit() {
@@ -37,10 +37,10 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   }
 
   newTerm() {
-    const fontSize = localStorage.getItem('fontSize') || '14';
+    const fontSize = this.settingSvc.setting.fontSize;
     this.term = new Terminal({
       fontFamily: 'monaco, Consolas, "Lucida Console", monospace',
-      fontSize: parseInt(fontSize, 10),
+      fontSize: fontSize,
       rightClickSelectsWord: true,
       theme: {
         background: '#1f1b1b'

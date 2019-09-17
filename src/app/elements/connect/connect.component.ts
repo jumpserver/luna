@@ -1,7 +1,7 @@
 import {Component, OnInit, Output, Inject, OnDestroy, EventEmitter} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
-import {AppService, HttpService, LogService, NavService} from '@app/services';
+import {AppService, HttpService, LogService, NavService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';
@@ -21,7 +21,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   constructor(private _appSvc: AppService,
               public _dialog: MatDialog,
               public _logger: LogService,
-              private _navSrv: NavService,
+              private settingSvc: SettingService,
               private activatedRoute: ActivatedRoute,
               private _http: HttpService,
   ) {
@@ -117,7 +117,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   manualSetUserAuthLoginIfNeed(user: SystemUser): Promise<SystemUser> {
-    if (!user || user.login_mode !== 'manual' || user.protocol !== 'rdp' || this._navSrv.skipAllManualPassword) {
+    if (!user || user.login_mode !== 'manual' || user.protocol !== 'rdp' || this.settingSvc.isSkipAllManualPassword()) {
       return Promise.resolve(user);
     }
     user = Object.assign({}, user);

@@ -110,34 +110,6 @@ export class ElementNavComponent implements OnInit {
         window.open('https://market.aliyun.com/products/53690006/cmgj026011.html?spm=5176.730005.0.0.cY2io1');
         break;
       }
-      case 'SetResolution': {
-        const dialog = this._dialog.open(
-          RDPSolutionDialogComponent,
-          {
-            height: '200px',
-            width: '300px'
-          });
-        dialog.afterClosed().subscribe(result => {
-          if (result) {
-            console.log(result);
-          }
-        });
-        break;
-      }
-      case 'SetFont': {
-        const dialog = this._dialog.open(
-          FontDialogComponent,
-          {
-            height: '200px',
-            width: '300px'
-          });
-        dialog.afterClosed().subscribe(result => {
-          if (result) {
-            console.log(result);
-          }
-        });
-        break;
-      }
       case 'English': {
         const dialog = this._dialog.open(
           ChangLanWarningDialogComponent,
@@ -176,16 +148,6 @@ export class ElementNavComponent implements OnInit {
             this.Language('cn');
           }
         });
-        break;
-      }
-      case 'LoadTreeAsync': {
-        this._navSvc.treeLoadAsync = !this._navSvc.treeLoadAsync;
-        this.refreshNav();
-        break;
-      }
-      case 'SkipManualPassword': {
-        this._navSvc.skipAllManualPassword = !this._navSvc.skipAllManualPassword;
-        this.refreshNav();
         break;
       }
       default: {
@@ -227,16 +189,6 @@ export class ElementNavComponent implements OnInit {
           hide: DataStore.showLeftBar
         },
         {
-          id: 'RDPResolution',
-          click: 'SetResolution',
-          name: 'RDP Resolution'
-        },
-        {
-          id: 'Font',
-          click: 'SetFont',
-          name: 'Font'
-        },
-        {
           id: 'SplitVertical',
           href: '',
           name: 'Split vertical',
@@ -259,30 +211,6 @@ export class ElementNavComponent implements OnInit {
           click: 'FullScreen',
           name: 'Full Screen'
         },
-        {
-          id: 'LoadTreeAsync',
-          click: 'LoadTreeAsync',
-          name: 'Load Tree Async',
-          hide: this._navSvc.treeLoadAsync
-        },
-        {
-          id: 'LoadTreeSync',
-          click: 'LoadTreeAsync',
-          name: 'Load Tree Sync',
-          hide: !this._navSvc.treeLoadAsync
-        },
-        {
-          id: 'SkipManualPassword',
-          click: 'SkipManualPassword',
-          name: 'Skip manual password',
-          hide: this._navSvc.skipAllManualPassword
-        },
-        {
-          id: 'ShowManualPassword',
-          click: 'SkipManualPassword',
-          name: 'Show manual password',
-          hide: !this._navSvc.skipAllManualPassword
-        }
       ]
     }, {
       id: 'Help',
@@ -359,7 +287,7 @@ export class ElementNavComponent implements OnInit {
     const dialog = this._dialog.open(
       ElementSettingComponent,
       {
-        height: '300px',
+        height: '370px',
         width: '400px',
       });
     dialog.afterClosed().subscribe(result => {
@@ -389,71 +317,3 @@ export class ChangLanWarningDialogComponent implements OnInit {
   }
 }
 
-@Component({
-  selector: 'elements-rdp-solution-dialog',
-  templateUrl: 'rdpSolutionDialog.html',
-  styles: ['.mat-form-field { width: 100%; }']
-})
-export class RDPSolutionDialogComponent implements OnInit {
-  solutions = ['Auto', '1024x768', '1366x768', '1400x900'];
-  solution: string;
-  cacheKey = 'rdpSolution';
-
-  constructor(public dialogRef: MatDialogRef<RDPSolutionDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any) {
-  }
-
-  ngOnInit() {
-    this.solution = localStorage.getItem(this.cacheKey) || 'Auto';
-  }
-
-  setSolution(value: string) {
-    localStorage.setItem(this.cacheKey, value);
-  }
-
-  onSubmit() {
-    this.setSolution(this.solution);
-    this.dialogRef.close();
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-}
-
-@Component({
-  selector: 'elements-font-size-dialog',
-  templateUrl: 'fontDialog.html',
-  styles: ['.mat-form-field { width: 100%; }'],
-})
-export class FontDialogComponent implements OnInit {
-  fontSize: string;
-  solution: string;
-  cacheKey = 'fontSize';
-
-  constructor(public dialogRef: MatDialogRef<FontDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any) {
-  }
-
-  ngOnInit() {
-    this.fontSize = localStorage.getItem(this.cacheKey) || '14';
-  }
-
-  setFontSize(value: string) {
-    localStorage.setItem(this.cacheKey, value);
-  }
-
-  isValid() {
-    const size = parseInt(this.fontSize, 10);
-    return size > 5 && size < 60;
-  }
-
-  onSubmit() {
-    this.setFontSize(this.fontSize);
-    this.dialogRef.close();
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-}

@@ -16,7 +16,7 @@ import {PagesComponents} from './pages/pages.component';
 import {ElementComponents} from './elements/elements.component';
 import {PageMainComponent} from '@app/pages/main/main.component';
 import {PluginModules} from './plugins/plugins';
-import {ChangLanWarningDialogComponent, RDPSolutionDialogComponent, FontDialogComponent} from './elements/nav/nav.component';
+import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './elements/connect/connect.component';
 
@@ -40,8 +40,6 @@ import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './element
     AssetTreeDialogComponent,
     ManualPasswordDialogComponent,
     ChangLanWarningDialogComponent,
-    RDPSolutionDialogComponent,
-    FontDialogComponent,
     PageMainComponent,
     ElementSettingComponent,
   ],

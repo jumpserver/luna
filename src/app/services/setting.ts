@@ -10,7 +10,11 @@ export class SettingService {
   constructor(private store: LocalStorageService) {
     const settingData = this.store.get(this.settingKey);
     if (settingData) {
-      this.setting = JSON.parse(settingData) as Setting;
+      try {
+        this.setting = JSON.parse(settingData) as Setting;
+      } catch (e) {
+        this.setting = new Setting();
+      }
     } else {
       this.setting = new Setting();
     }
@@ -21,11 +25,11 @@ export class SettingService {
     this.store.set(this.settingKey, settingData);
   }
 
-  isLoadTreeAsync() {
-    return this.setting.isLoadTreeAsync;
+  isLoadTreeAsync(): boolean {
+    return this.setting.isLoadTreeAsync === '1';
   }
 
-  isSkipAllManualPassword() {
-    return this.setting.isSkipAllManualPassword;
+  isSkipAllManualPassword(): boolean {
+    return this.setting.isSkipAllManualPassword === '1';
   }
 }

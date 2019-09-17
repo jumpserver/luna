@@ -2,13 +2,14 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Browser, DataStore} from '@app/globals';
 import {GuacObjAddResp, SystemUser, TreeNode, User as _User} from '@app/model';
+import {SettingService} from './setting';
 
 
 @Injectable()
 export class HttpService {
   headers = new HttpHeaders();
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private settingSrv: SettingService) {
   }
 
   get(url: string, options?: any) {
@@ -117,7 +118,7 @@ export class HttpService {
       systemUserPassword = btoa(systemUserPassword);
       body = body.set('username', systemUserUsername).set('password', systemUserPassword);
     }
-    const solution = localStorage.getItem('rdpSolution') || 'Auto';
+    const solution = this.settingSrv.setting.rdpSolution || 'Auto';
     if (solution !== 'Auto') {
       const width = solution.split('x')[0];
       const height = solution.split('x')[1];
@@ -146,7 +147,7 @@ export class HttpService {
       systemUserPassword = btoa(systemUserPassword);
       body = body.set('username', systemUserUsername).set('password', systemUserPassword);
     }
-    const solution = localStorage.getItem('rdpSolution') || 'Auto';
+    const solution = this.settingSrv.setting.rdpSolution || 'Auto';
     if (solution !== 'Auto') {
       const width = solution.split('x')[0];
       const height = solution.split('x')[1];
@@ -167,7 +168,7 @@ export class HttpService {
     let params = new HttpParams()
       .set('asset_token', assetToken)
       .set('token', token);
-    const solution = localStorage.getItem('rdpSolution') || 'Auto';
+    const solution = this.settingSrv.setting.rdpSolution || 'Auto';
     if (solution !== 'Auto') {
       const width = solution.split('x')[0];
       const height = solution.split('x')[1];

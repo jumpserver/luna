@@ -71,5 +71,8 @@
   "show manual password": "显示手动密码窗",
   "skip manual password": "跳过手动密码窗",
   "tab list": "窗口列表",
-  "open in new window": "新窗口打开"
+  "open in new window": "新窗口打开",
+  "setting": "设置",
+  "yes": "是",
+  "no": "否"
 }

@@ -11,6 +11,7 @@ import {Setting} from '@app/model';
 })
 export class ElementSettingComponent implements OnInit {
   solutionsChoices = ['Auto', '1024x768', '1366x768', '1400x900'];
+  boolChoices = [{name: 'Yes', value: '1'}, {name: 'No', value: '0'}];
   setting: Setting;
 
   constructor(public dialogRef: MatDialogRef<ElementSettingComponent>,
@@ -20,10 +21,10 @@ export class ElementSettingComponent implements OnInit {
 
   ngOnInit() {
     this.setting = this.settingSrv.setting;
-    console.log(this.setting);
   }
 
   onSubmit() {
+    this.settingSrv.save();
     this.dialogRef.close();
   }
 
