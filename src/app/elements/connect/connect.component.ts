@@ -59,16 +59,18 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         break;
       case 'remote_app':
         this._http.getMyGrantedRemoteApps(loginTo).subscribe(
-        nodes => {
-          if (nodes.length === 1) {
-            this.hasLoginTo = true;
-            const node = nodes[0];
-            this.Connect(node);
+          nodes => {
+            if (nodes.length === 1) {
+              this.hasLoginTo = true;
+              const node = nodes[0];
+              this.Connect(node);
+            }
           }
-        }
-      );
+        );
+        break;
     }
   }
+
   ngOnDestroy(): void {
     connectEvt.unsubscribe();
   }
