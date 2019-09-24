@@ -1,7 +1,6 @@
 import {Component, OnInit} from '@angular/core';
-import {ActivatedRoute, Params} from '@angular/router';
-import {HttpService, LogService} from '../../app.service';
-import {DataStore} from '../../globals';
+import {ActivatedRoute} from '@angular/router';
+import {HttpService, LogService} from '@app/services';
 import {Replay} from './replay.model';
 
 @Component({
@@ -15,25 +14,22 @@ export class PagesReplayComponent implements OnInit {
   constructor(private route: ActivatedRoute,
               private _http: HttpService,
               private _logger: LogService) {
-    DataStore.NavShow = false;
   }
 
   ngOnInit() {
-    let token = '';
-    this.route.params
-      .subscribe(params => {
-        token = params['token'];
-      });
-    this._http.get_replay(token)
-      .subscribe(
-        data => {
-          this.replay.type = data['type'];
-          this.replay.src = data['src'];
-          this.replay.id = data['id'];
-        },
-        err => {
-          alert('没找到录像文件');
-        }
-      );
+    let sid = '';
+    this.route.params.subscribe(params => {
+      sid = params['sid'];
+    });
+    this._http.getReplay(sid).subscribe(
+      data => {
+        this.replay.type = data['type'];
+        this.replay.src = data['src'];
+        this.replay.id = data['id'];
+      },
+      err => {
+        alert('没找到录像文件');
+      }
+    );
   }
 }

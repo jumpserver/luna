@@ -2,14 +2,11 @@ import {AfterViewInit, Component, Input, Output, OnInit, ViewChild, EventEmitter
 import {ElementRef} from '@angular/core';
 import {Terminal} from 'xterm';
 import {fit} from 'xterm/lib/addons/fit/fit';
-import {Observable} from 'rxjs/Rx';
-import {CookieService} from 'ngx-cookie-service';
+import {LogService} from '@app/services';
+import {Observable, fromEvent} from 'rxjs';
+import {debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import * as $ from 'jquery/dist/jquery.min.js';
 import 'rxjs/Observable';
-import 'rxjs/add/operator/debounceTime';
-import 'rxjs/add/operator/distinctUntilChanged';
-
-import {NavList} from '../../pages/control/control/control.component';
 
 
 @Component({
@@ -24,19 +21,20 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   @Output() winSizeChangeTrigger = new EventEmitter<Array<number>>();
   winSizeChange$: Observable<any>;
 
-  constructor(private _cookie: CookieService) {
+  constructor(private _logger: LogService) {
+
   }
 
   ngOnInit() {
-    this.winSizeChange$ = Observable.fromEvent(window, 'resize')
-      .debounceTime(500)
-      .distinctUntilChanged();
+    this.winSizeChange$ = fromEvent(window, 'resize').pipe(
+      debounceTime(500),
+      distinctUntilChanged(),
+    );
 
     this.winSizeChange$
       .subscribe(() => {
-        if (NavList.List[NavList.Active].type !== 'rdp') {
-          this.resizeTerm();
-        }
+        this._logger.debug('Get win size change event');
+        this.resizeTerm();
       });
   }
 
@@ -48,11 +46,11 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   getWinSize() {
     let availableHeight = 0;
     let availableWidth = 0;
-    if (document.fullscreenElement) {
+    const activeEle = $('#winContainer');
+    if (document['fullscreenElement']) {
       availableWidth = document.body.clientWidth - 10;
       availableHeight = document.body.clientHeight;
-    } else {
-      const activeEle = $('#winContainer');
+    } else if (activeEle) {
       const elementStyle = window.getComputedStyle(this.term.element);
       const elementPadding = {
           top: parseInt(elementStyle.getPropertyValue('padding-top'), 10),
@@ -65,11 +63,21 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       availableHeight = activeEle.height() - elementPaddingVer;
       availableWidth = activeEle.width() - elementPaddingHor - (<any>this.term).viewport.scrollBarWidth;
     }
+    this._logger.debug('Winsize: ', availableWidth, availableHeight);
 
+    const dimensions = (<any>this.term).renderer.dimensions;
     const geometry = [
-      Math.floor(availableWidth / (<any>this.term).renderer.dimensions.actualCellWidth) - 1,
-      Math.floor(availableHeight / (<any>this.term).renderer.dimensions.actualCellHeight) - 1
+      Math.floor(availableWidth / dimensions.actualCellWidth) - 1,
+      Math.floor(availableHeight / dimensions.actualCellHeight) - 1
     ];
+
+    if (!isFinite(geometry[0])) {
+      geometry[0] = 80;
+    }
+    if (!isFinite(geometry[1])) {
+      geometry[1] = 24;
+    }
+    this._logger.debug('size: ', geometry);
     return geometry;
   }
 

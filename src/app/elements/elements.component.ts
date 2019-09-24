@@ -1,39 +1,40 @@
 // Elements
-import {ElementTableComponent} from './table/table.component';
-import {ElementLeftbarComponent} from './leftbar/leftbar.component';
-import {ElementOfooterComponent} from './ofooter/ofooter.component';
-import {ElementFooterComponent} from './footer/footer.component';
+import {ElementLeftBarComponent} from './left-bar/left-bar.component';
+import {ElementContentComponent} from './content/content.component';
+import {ElementContentViewComponent} from './content-window/content-window.component';
+import {ElementContentTabComponent} from './content-tab/content-tab.component';
+import {ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
+import {ElementTreeFilterComponent} from './tree-filter/tree-filter.component';
 import {ElementTermComponent} from './term/term.component';
-import {ElementInteractiveComponent} from './interactive/interactive.component';
 import {ChangLanWarningDialogComponent, ElementNavComponent} from './nav/nav.component';
-import {ElementPopupComponent} from './popup/popup.component';
 import {ElementRdpComponent} from './rdp/rdp.component';
-import {ElementServerMenuComponent} from './server-menu/server-menu.component';
 import {ElementIframeComponent} from './iframe/iframe.component';
 import {ElementDialogAlertComponent} from './dialog/dialog.service';
 import {ElementGuacamoleComponent} from './guacamole/guacamole.component';
 import {ElementSshTermComponent} from './ssh-term/ssh-term.component';
-import {AssetTreeDialogComponent, ElementAssetTreeComponent, ManualPasswordDialogComponent} from './asset-tree/asset-tree.component';
-import {RDPSolutionDialogComponent, FontDialogComponent} from './nav/nav.component';
+import {ElementConnectComponent, AssetTreeDialogComponent, ManualPasswordDialogComponent} from './connect/connect.component';
+import {ElementSftpComponent} from '@app/elements/sftp/sftp.component';
+import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 
 export const ElementComponents = [
-  ElementLeftbarComponent,
-  ElementOfooterComponent,
-  ElementTableComponent,
-  ElementFooterComponent,
+  ElementLeftBarComponent,
+  ElementContentComponent,
+  ElementContentTabComponent,
+  ElementContentViewComponent,
+  ElementConnectComponent,
+  ElementTreeFilterComponent,
   ElementTermComponent,
-  ElementInteractiveComponent,
-  ElementNavComponent, ChangLanWarningDialogComponent,
-  ElementPopupComponent,
+  ElementNavComponent,
   ElementRdpComponent,
-  ElementServerMenuComponent,
   ElementIframeComponent,
   ElementDialogAlertComponent,
   ElementGuacamoleComponent,
   ElementAssetTreeComponent,
   ElementSshTermComponent,
+  ElementConnectComponent,
+  ElementSftpComponent,
   AssetTreeDialogComponent,
+  ChangLanWarningDialogComponent,
   ManualPasswordDialogComponent,
-  RDPSolutionDialogComponent,
-  FontDialogComponent
+  ElementSettingComponent
 ];

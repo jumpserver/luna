@@ -1,5 +1,5 @@
 import {Component, OnInit, Input, ElementRef, ViewChild} from '@angular/core';
-import {DataStore} from '../../globals';
+import {DataStore} from '@app/globals';
 import {DomSanitizer} from '@angular/platform-browser';
 
 @Component({
@@ -7,7 +7,7 @@ import {DomSanitizer} from '@angular/platform-browser';
   templateUrl: './sftp.component.html',
   styleUrls: ['./sftp.component.scss']
 })
-export class SftpComponent implements OnInit {
+export class ElementSftpComponent implements OnInit {
   @Input() host: any;
   target: any;
   @ViewChild('sftp') el: ElementRef;

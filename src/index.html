@@ -9,9 +9,8 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
-<app-root></app-root>
+<app-root>加载中...</app-root>
 <span id="marker" style="display: none;font-size: 14px">marker</span>
-
 </body>
 <script>
   window.onload = function (ev) {
@@ -21,15 +20,15 @@
     }
 
     if (navigator.clipboard && navigator.clipboard.readText) {
-        navigator.clipboard.readText().then(function textRead(text) {
-          clipboardData = text;
-        });
+      navigator.clipboard.readText().then(function textRead(text) {
+        clipboardData = text;
+      });
     }
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(clipboardData)
     }
-}
+  }
 
 </script>
 </html>

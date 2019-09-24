@@ -1,0 +1,8 @@
+<li
+  [ngClass]="{'active': view.active,'disconnected': !view.connected, 'hidden': view.closed != false}"
+  [id]="view.id" (click)="setActive()" (dblclick)="view.editable=true;setActive()"
+>
+  <span *ngIf="view.nick && !view.editable">{{view.nick | truncatechars:25 }}</span>
+  <input *ngIf="view.editable" [(ngModel)]="view.nick" (blur)="view.editable=false" (keyup.enter)="view.editable=false" autofocus="autofocus"/>
+  <a class="close" (click)="close()">&times;</a>
+</li>

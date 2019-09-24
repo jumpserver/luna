@@ -1,6 +1,6 @@
 import {Component, Inject, Injectable, OnInit} from '@angular/core';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-import {LogService} from '../../app.service';
+import {LogService} from '@app/services';
 import {FormControl, Validators} from '@angular/forms';
 
 // import * as layer from 'layui-layer/src/layer.js';

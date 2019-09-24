@@ -1,6 +1,6 @@
 {
   "/api": {
-    "target": "http://127.0.0.1:5001",
+    "target": "http://127.0.0.1:8080",
     "secure": false
   },
   "/luna/i18n": {
@@ -8,7 +8,7 @@
     "secure": false
   },
   "/socket.io/": {
-    "target": "http://127.0.0.1:5001",
+    "target": "http://127.0.0.1:5000",
     "secure": false,
     "ws": true
   },
@@ -27,5 +27,17 @@
       "^/rdp": ""
     },
     "secure": false
+  },
+  "/media/": {
+    "target": "http://127.0.0.1:8080",
+    "secure": false
+  },
+  "/guacamole/": {
+    "target": "http://127.0.0.1:8083",
+    "secure": false,
+    "ws": true,
+    "pathRewrite": {
+      "^/guacamole": ""
+    }
   }
 }

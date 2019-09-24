@@ -1,0 +1,20 @@
+/*.left-search {*/
+  /*padding-left: 14px;*/
+  /*width: 100%;*/
+  /*border: none;*/
+/*}*/
+.search {
+  border: none;
+  border-left-width: 0;
+  border-bottom: #19aa8d 1px inset;
+  width: 100%;
+  background: #2f2a2a;
+  color: #d6cbcb;
+  height: 30px;
+  padding-left: 10px;
+/* padding-top: 30px;
+//position: fixed;
+//height: 28px;
+*/
+}
+

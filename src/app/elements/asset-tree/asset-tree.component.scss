@@ -1,4 +1,4 @@
-#ztree .fa {
+.tree-refresh .fa {
   width: 24px;
   height: 24px;
   line-height: 24px;
@@ -35,7 +35,7 @@
     user-select: none;
 }
 .basicContext, .basicContext * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 .basicContextContainer {
@@ -57,8 +57,9 @@
 
 .basicContext td {
     display: block;
-    padding: 0 35px;
+    padding: 0 15px;
     text-decoration: none;
+    min-width: 150px;
     width: auto;
     opacity: 1;
     white-space: nowrap;
@@ -69,6 +70,11 @@
     border-radius: 0;
     cursor: pointer;
 }
+
+.basicContext__icon {
+  padding-right: 5px;
+}
+
 .basicContext__item.basicContext__item--separator {
     background: #181414;
     border: 0;
@@ -92,11 +98,11 @@ tr {
 }
 
 tr:hover {
-   background-color: #463e3e;
+  background-color: #463e3e;
 }
 
 .basicContext table {
-    border-spacing: 0 !important;
+  border-spacing: 0 !important;
 }
 
 .basicContext__data {

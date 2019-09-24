@@ -1,19 +1,21 @@
-import {Component, Input, Output, OnInit, Inject, SimpleChanges, OnChanges, ElementRef, ViewChild, EventEmitter} from '@angular/core';
-import {NavList, View} from '../../pages/control/control/control.component';
-import {AppService, HttpService, LogService} from '../../app.service';
-import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-import {FormControl, Validators} from '@angular/forms';
-import {BehaviorSubject} from 'rxjs/BehaviorSubject';
+import {Component, Input, OnInit, OnDestroy, ElementRef, ViewChild} from '@angular/core';
+import {MatDialog} from '@angular/material';
+import {BehaviorSubject, Subject} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
+
+import {AppService, HttpService, LogService, NavService, SettingService, TreeFilterService} from '@app/services';
+import {connectEvt, translate} from '@app/globals';
+import {TreeNode, ConnectEvt} from '@app/model';
 
 declare var $: any;
 
 @Component({
   selector: 'elements-asset-tree',
   templateUrl: './asset-tree.component.html',
-  styleUrls: ['./asset-tree.component.scss']
+  styleUrls: ['./asset-tree.component.scss'],
 })
-export class ElementAssetTreeComponent implements OnInit, OnChanges {
+export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   @Input() query: string;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu') rMenu: ElementRef;
@@ -32,121 +34,138 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
         title: 'title'
       }
     },
-    callback: {
-      onClick: this.onCzTreeOnClick.bind(this),
-      onRightClick: this.onRightClick.bind(this)
-    },
   };
   pos = {left: '100px', top: '200px'};
   hiddenNodes: any;
   expandNodes: any;
-  zTree: any;
+  assetsTree: any;
+  remoteAppsTree: any;
   isShowRMenu = false;
   rightClickSelectNode: any;
   hasLoginTo = false;
+  treeFilterSubscription: any;
+  isLoadTreeAsync: boolean;
+  filterAssetCancel$: Subject<boolean> = new Subject();
 
-  onCzTreeOnClick(event, treeId, treeNode, clickFlag) {
-    if (treeNode.isParent) {
-      const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
-      zTreeObj.expandNode(treeNode);
-    } else {
-      this._http.get_user_profile().subscribe();
-      this.Connect(treeNode);
-    }
-  }
-
-  constructor(private _appService: AppService,
+  constructor(private _appSvc: AppService,
+              private _treeFilterSvc: TreeFilterService,
               public _dialog: MatDialog,
               public _logger: LogService,
               private activatedRoute: ActivatedRoute,
-              private _http: HttpService
-              ) {
-    this.searchEvt$ = new BehaviorSubject<string>(this.query);
-  }
-
-  getGrantedAssetsNodes() {
-    this._http.get_my_granted_nodes()
-    .subscribe(response => {
-      this.Data = [...response, ...this.Data];
-      this.draw();
-    });
-  }
-
-  refreshGrantedAssetsNodes() {
-    this._http.refresh_my_granted_nodes()
-      .subscribe(response => {
-        this.Data = [...response, ...this.Data];
-        this.draw();
-      });
-  }
-
-  getGrantedRemoteApps() {
-    this._http.get_my_granted_remote_apps()
-      .subscribe(response => {
-        if (response.length > 1) {
-          this.Data = [...this.Data, ...response];
-          this.draw();
-        }
-    });
-  }
+              private _http: HttpService,
+              private settingSvc: SettingService
+  ) {}
 
   ngOnInit() {
-    this.getGrantedAssetsNodes();
-    this.getGrantedRemoteApps();
+    this.isLoadTreeAsync = this.settingSvc.isLoadTreeAsync();
+    this.initTree();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
-    this.searchEvt$.asObservable()
-      .debounceTime(300)
-      .distinctUntilChanged()
-      .subscribe((n) => {
-        this.filter();
+
+    this.treeFilterSubscription = this._treeFilterSvc.onFilter.subscribe(
+      keyword => {
+        this._logger.debug('Filter tree: ', keyword);
+        this.filterAssets(keyword);
+        this.filterRemoteApps(keyword);
+      }
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.treeFilterSubscription.unsubscribe();
+  }
+
+  onAssetsNodeClick(event, treeId, treeNode, clickFlag) {
+    if (treeNode.isParent) {
+      this.assetsTree.expandNode(treeNode);
+    } else {
+      this._http.getUserProfile().subscribe();
+      this.connectAsset(treeNode);
+    }
+  }
+
+  refreshAssetsTree() {
+    this.assetsTree.destroy();
+    this.initAssetsTree(true);
+  }
+
+  initAssetsTree(refresh?: boolean) {
+    const setting = Object.assign({}, this.setting);
+    setting['callback'] = {
+      onClick: this.onAssetsNodeClick.bind(this),
+      onRightClick: this.onRightClick.bind(this)
+    };
+    if (this.isLoadTreeAsync) {
+      setting['async'] = {
+        enable: true,
+        url: '/api/v1/perms/users/nodes/children-with-assets/tree/?cache_policy=1',
+        autoParam: ['id=key', 'name=n', 'level=lv'],
+        type: 'get'
+      };
+    }
+
+    this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
+      const assetsTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
+      this.assetsTree = assetsTree;
+      this.rootNodeAddDom(assetsTree, () => {
+        this.refreshAssetsTree();
       });
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['Data'] && this.Data) {
-      this.draw();
-    }
-    if (changes['query'] && !changes['query'].firstChange) {
-      this.searchEvt$.next(this.query);
-    }
-  }
-
-  refreshNodes() {
-    this.zTree.destroy();
-    this.Data = [];
-    this.refreshGrantedAssetsNodes();
-    this.getGrantedRemoteApps();
-  }
-
-  draw() {
-    $.fn.zTree.init($('#ztree'), this.setting, this.Data);
-    this.zTree = $.fn.zTree.getZTreeObj('ztree');
-    this.rootNodeAddDom(this.zTree, () => {
-      this.refreshNodes();
     });
+  }
 
-    this.activatedRoute.queryParams.subscribe(params => {
-        const login_to = params['login_to'];
-        if (login_to && !this.hasLoginTo) {
-          this.Data.forEach(t => {
-            if (login_to === t.id && t.isParent === false) {
-              this.hasLoginTo = true;
-              this.Connect(t);
-              return;
-            }
-          });
+  refreshRemoteAppsTree() {
+    this.remoteAppsTree.destroy();
+    this.initRemoteAppsTree();
+  }
+  
+  onRemoteAppsNodeClick(event, treeId, treeNode, clickFlag) {
+    if (treeNode.isParent) {
+      this.remoteAppsTree.expandNode(treeNode);
+    } else {
+      this._http.getUserProfile().subscribe();
+      this.connectAsset(treeNode);
+    }
+  }
+
+  initRemoteAppsTree() {
+    const setting = Object.assign({}, this.setting);
+    setting['callback'] = {
+      onClick: this.onRemoteAppsNodeClick.bind(this),
+      onRightClick: this.onRightClick.bind(this)
+    };
+    this._http.getMyGrantedRemoteApps().subscribe(
+      resp => {
+        if (!resp) {
+          return;
         }
-    });
+        const tree = $.fn.zTree.init($('#remoteAppsTree'), setting, resp);
+        this.remoteAppsTree = tree;
+        this.rootNodeAddDom(tree, () => {
+          this.refreshRemoteAppsTree();
+        });
+      }
+    );
   }
 
+  initTree() {
+    this.initAssetsTree();
+    this.initRemoteAppsTree();
+  }
+
+  connectAsset(node: TreeNode) {
+    const evt = new ConnectEvt(node, 'asset');
+    connectEvt.next(evt);
+  }
+  
   rootNodeAddDom(ztree, callback) {
-    const refreshIcon = '<a id="tree-refresh"><i class="fa fa-refresh"></i></a>';
+    const tId = ztree.setting.treeId + '_tree_refresh';
+    const refreshIcon = '<a id=' + tId + ' class="tree-refresh">' +
+      '<i class="fa fa-refresh" style="font-family: FontAwesome !important;" ></i></a>';
     const rootNode = ztree.getNodes()[0];
     const $rootNodeRef = $('#' + rootNode.tId + '_a');
     $rootNodeRef.after(refreshIcon);
-    const refreshIconRef = $('#tree-refresh');
+    const refreshIconRef = $('#' + tId);
     refreshIconRef.bind('click', function () {
-        callback();
+      callback();
     });
   }
 
@@ -164,174 +183,188 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     this.isShowRMenu = false;
   }
 
-  onRightClick(event, treeId, treeNode) {
-    if (!treeNode || treeNode.isParent ) {
-      return null;
+  nodeSupportSSH() {
+    const host = this.rightClickSelectNode.meta.asset;
+    if (!host) {
+      return false;
     }
-    const host = treeNode.meta.asset;
     let findSSHProtocol = false;
     const protocols = host.protocols || [];
     if (host.protocol) {
       protocols.push(host.protocol);
     }
     for (let i = 0; i < protocols.length; i++) {
-       const protocol = protocols[i];
-       if (protocol && protocol.startsWith('ssh')) {
-         findSSHProtocol = true;
-       }
+      const protocol = protocols[i];
+      if (protocol && protocol.startsWith('ssh')) {
+        findSSHProtocol = true;
+      }
     }
-    if (!findSSHProtocol) {
-      alert('Windows 请使用Ctrl+Shift+Alt呼出侧边栏上传下载');
+    return findSSHProtocol;
+  }
+
+  get RMenuList() {
+    const menuList = [{
+      'id': 'new-connection',
+      'name': 'Open in new window',
+      'fa': 'fa-terminal',
+      'hide': false,
+      'click': this.connectInNewWindow.bind(this)
+    }, {
+      'id': 'file-manager',
+      'name': 'File Manager',
+      'fa': 'fa-file',
+      'hide': !this.nodeSupportSSH(),
+      'click': this.connectFileManager.bind(this)
+    }];
+    if (!this.rightClickSelectNode) {
+      return [];
     }
+    return menuList;
+  }
+
+  onRightClick(event, treeId, treeNode) {
+    if (!treeNode || treeNode.isParent) {
+      return null;
+    }
+    this.rightClickSelectNode = treeNode;
 
     if (!treeNode && event.target.tagName.toLowerCase() !== 'button' && $(event.target).parents('a').length === 0) {
-      this.zTree.cancelSelectedNode();
+      this.assetsTree.cancelSelectedNode();
       this.showRMenu(event.clientX, event.clientY);
     } else if (treeNode && !treeNode.noR) {
-      this.zTree.selectNode(treeNode);
+      this.assetsTree.selectNode(treeNode);
       this.showRMenu(event.clientX, event.clientY);
       this.rightClickSelectNode = treeNode;
     }
   }
-  
-  connectAsset(node) {
-    const system_users = node.meta.system_users;
-    const host = node.meta.asset;
-    let user: any;
-    if (system_users.length > 1) {
-      user = this.checkPriority(system_users);
-      if (user) {
-        this.login(host, user);
-      } else {
-        const dialogRef = this._dialog.open(AssetTreeDialogComponent, {
-          height: '200px',
-          width: '300px',
-          data: {users: system_users}
-        });
 
-        dialogRef.afterClosed().subscribe(result => {
-          if (result) {
-            for (const i of system_users) {
-              if (i.id.toString() === result.toString()) {
-                user = i;
-                break;
-              }
-            }
-            this.login(host, user);
-          }
-        });
-      }
-    } else if (system_users.length === 1) {
-      user = system_users[0];
-      this.login(host, user);
-    } else {
-      alert('该主机没有授权登录用户');
-    }
+  connectFileManager() {
+    const node = this.rightClickSelectNode;
+    const evt = new ConnectEvt(node, 'sftp');
+    connectEvt.next(evt);
   }
 
-  connectRemoteApp(node) {
-    const id = NavList.List.length - 1;
-    if (node) {
-      NavList.List[id].nick = node.name;
-      NavList.List[id].connected = true;
-      NavList.List[id].edit = false;
-      NavList.List[id].closed = false;
-      NavList.List[id].remoteApp = node.id;
-      NavList.List[id].type = 'rdp';
-      NavList.List.push(new View());
-      NavList.Active = id;
-    }
-    this._logger.debug(NavList);
-  }
-
-  Connect(node) {
+  connectInNewWindow() {
+    const node = this.rightClickSelectNode;
+    let url = '/luna/connect?';
     switch (node.meta.type) {
       case 'asset':
-        this.connectAsset(node);
+        url += 'asset=' + node.meta.asset.id;
         break;
       case 'remote_app':
-        this.connectRemoteApp(node);
+        url += 'remote_app=' + node.id;
         break;
       default:
         alert('Unknown type: ' + node.meta.type);
-    }
-  }
-
-  connectFileManager() {
-    const host = this.rightClickSelectNode.meta.asset;
-    const id = NavList.List.length - 1;
-    if (host) {
-      NavList.List[id].nick = '[FILE]' + host.hostname;
-      NavList.List[id].connected = true;
-      NavList.List[id].edit = false;
-      NavList.List[id].closed = false;
-      NavList.List[id].host = host;
-      NavList.List[id].type = 'sftp';
-      NavList.List.push(new View());
-      NavList.Active = id;
-    }
-    this._logger.debug(NavList);
-  }
-
-  connectTerminal() {
-    const host = this.rightClickSelectNode;
-    this.Connect(host);
-  }
-
-  manualSetUserAuthLogin(host, user) {
-    user = Object.assign({}, user);
-    const dialogRef = this._dialog.open(ManualPasswordDialogComponent, {
-      height: '250px',
-      width: '400px',
-      data: {username: user.username}
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (!result) {
         return;
+    }
+    window.open(url, '_blank');
+  }
+
+  filterAssets(keyword) {
+    if (this.isLoadTreeAsync) {
+      this._logger.debug('Filter assets server');
+      this.filterAssetsServer(keyword);
+    } else {
+      this._logger.debug('Filter assets local');
+      this.filterAssetsLocal(keyword);
+    }
+  }
+
+  filterTree(keyword, tree, filterCallback) {
+    const nodes = tree.transformToArray(tree.getNodes());
+    if (!keyword) {
+      if (tree.hiddenNodes) {
+        tree.showNodes(tree.hiddenNodes);
+        tree.hiddenNodes = null;
       }
-      user.username = btoa(result.username);
-      user.password = btoa(result.password);
-      return this.login(host, user);
+      if (tree.expandNodes) {
+        tree.expandNodes.forEach((node) => {
+          if (node.id !== nodes[0].id) {
+            tree.expandNode(node, false);
+          }
+        });
+        tree.expandNodes = null;
+      }
+      return null;
+    }
+    let shouldShow = [];
+    const matchedNodes = tree.getNodesByFilter(filterCallback);
+    matchedNodes.forEach((node) => {
+      const parents = this.recurseParent(node);
+      const children = this.recurseChildren(node);
+      shouldShow = [...shouldShow, ...parents, ...children, node];
+    });
+    tree.hiddenNodes = nodes;
+    tree.expandNodes = shouldShow;
+    tree.hideNodes(nodes);
+    tree.showNodes(shouldShow);
+    shouldShow.forEach((node) => {
+      if (node.isParent) {
+        tree.expandNode(node, true);
+      }
     });
   }
 
-  login(host, user) {
-    const id = NavList.List.length - 1;
-    this._logger.debug(NavList);
-    this._logger.debug(host);
-    if (user.login_mode === 'manual' && !user.password && user.protocol === 'rdp') {
-       return this.manualSetUserAuthLogin(host, user);
+  filterRemoteApps(keyword) {
+    if (!this.remoteAppsTree) {
+      return null;
     }
-    if (user) {
-      NavList.List[id].nick = host.hostname;
-      NavList.List[id].connected = true;
-      NavList.List[id].edit = false;
-      NavList.List[id].closed = false;
-      NavList.List[id].host = host;
-      NavList.List[id].user = user;
-      if (user.protocol === 'ssh' || user.protocol === 'telnet') {
-        NavList.List[id].type = 'ssh';
-      } else if (user.protocol === 'rdp' || user.protocol === 'vnc') {
-        NavList.List[id].type = 'rdp';
-      }
-      NavList.List.push(new View());
-      NavList.Active = id;
+    function filterCallback(node: TreeNode) {
+      return node.name.toLowerCase().indexOf(keyword) !== -1;
     }
-    this._logger.debug(NavList);
+    return this.filterTree(keyword, this.remoteAppsTree, filterCallback);
   }
 
-  checkPriority(sysUsers) {
-    let priority = -1;
-    let user: any;
-    for (const u of sysUsers) {
-      if (u.priority > priority) {
-        user = u;
-        priority = u.priority;
-      } else if (u.priority === priority) {
-        return null;
-      }
+  filterAssetsServer(keyword) {
+    if (!this.assetsTree) {
+      return;
     }
-    return user;
+    const searchNode = this.assetsTree.getNodesByFilter((node) => node.id === 'search');
+    if (searchNode) {
+      this.assetsTree.removeChildNodes(searchNode[0]);
+      this.assetsTree.removeNode(searchNode[0]);
+    }
+    if (!keyword) {
+      const treeNodes = this.assetsTree.getNodes();
+      if (treeNodes.length !== 0) {
+        this.assetsTree.showNode(treeNodes[0]);
+      }
+      return;
+    }
+    this.filterAssetCancel$.next(true);
+    this._http.getMyGrantedAssets(keyword)
+      .pipe(takeUntil(this.filterAssetCancel$))
+      .subscribe(nodes => {
+        const treeNodes = this.assetsTree.getNodes();
+        if (treeNodes.length !== 0) {
+          this.assetsTree.hideNode(treeNodes[0]);
+        }
+        let name = translate('Search');
+        const assetsAmount = nodes.length;
+        name = `${name} (${assetsAmount})`;
+        const newNode = {id: 'search', name: name, isParent: true, open: true, zAsync: true};
+        const parentNode = this.assetsTree.addNodes(null, newNode)[0];
+        parentNode.zAsync = true;
+        this.assetsTree.addNodes(parentNode, nodes);
+        parentNode.open = true;
+      });
+    return;
+  }
+
+  filterAssetsLocal(keyword) {
+    if (!this.assetsTree) {
+      return null;
+    }
+    function filterAssetsCallback(node) {
+      if (node.isParent) {
+        return false;
+      }
+      const host = node.meta.asset;
+      return host.hostname.toLowerCase().indexOf(keyword) !== -1 || host.ip.indexOf(keyword) !== -1;
+    }
+    return this.filterTree(keyword, this.assetsTree, filterAssetsCallback);
+    // zTreeObj.expandAll(true);
   }
 
   recurseParent(node) {
@@ -353,113 +386,11 @@ export class ElementAssetTreeComponent implements OnInit, OnChanges {
     if (!children) {
       return [];
     }
-    let all_children = [];
+    let allChildren = [];
     children.forEach((n) => {
-      all_children = [...children, ...this.recurseChildren(n)];
+      allChildren = [...children, ...this.recurseChildren(n)];
     });
-    return all_children;
-  }
-
-  filter() {
-    const zTreeObj = $.fn.zTree.getZTreeObj('ztree');
-    if (!zTreeObj) {
-      return null;
-    }
-    let _keywords = this.query;
-    const nodes = zTreeObj.transformToArray(zTreeObj.getNodes());
-    if (!_keywords) {
-      if (this.hiddenNodes) {
-        zTreeObj.showNodes(this.hiddenNodes);
-        this.hiddenNodes = null;
-      }
-      if (this.expandNodes) {
-        this.expandNodes.forEach((node) => {
-          if (node.id !== nodes[0].id) {
-            zTreeObj.expandNode(node, false);
-          }
-        });
-        this.expandNodes = null;
-      }
-      return null;
-    }
-    _keywords = _keywords.toLowerCase();
-    let shouldShow = [];
-    const matchedNodes = zTreeObj.getNodesByFilter(function(node) {
-      if (node.meta.type === 'asset') {
-        const host = node.meta.asset;
-        return host.hostname.toLowerCase().indexOf(_keywords) !== -1 || host.ip.indexOf(_keywords) !== -1;
-      } else {
-        return node.name.toLowerCase().indexOf(_keywords) !== -1;
-      }
-    });
-    matchedNodes.forEach((node) => {
-        const parents = this.recurseParent(node);
-        const children = this.recurseChildren(node);
-        shouldShow = [...shouldShow, ...parents, ...children, node];
-    });
-    this.hiddenNodes = nodes;
-    this.expandNodes = shouldShow;
-    zTreeObj.hideNodes(nodes);
-    zTreeObj.showNodes(shouldShow);
-    shouldShow.forEach((node) => {
-        if (node.isParent) {
-          zTreeObj.expandNode(node, true);
-        }
-    });
-    // zTreeObj.expandAll(true);
+    return allChildren;
   }
 }
 
-
-@Component({
-  selector: 'elements-asset-tree-dialog',
-  templateUrl: 'dialog.html',
-})
-export class AssetTreeDialogComponent implements OnInit {
-  UserSelectControl = new FormControl('', [Validators.required]);
-  selected: any;
-
-  constructor(public dialogRef: MatDialogRef<AssetTreeDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any,
-              private _logger: LogService) {
-  }
-
-  ngOnInit() {
-    this.selected = this.data.users[0].id;
-    this.UserSelectControl.setValue(this.selected);
-    // this._logger.debug(this.UserSelectControl);
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-
-  compareFn: ((f1: any, f2: any) => boolean) | null = this.compareByValue;
-
-  compareByValue(f1: any, f2: any) {
-    return f1 && f2 && f1.value === f2.value;
-  }
-}
-
-@Component({
-  selector: 'elements-manual-password-dialog',
-  templateUrl: 'manual-password-dialog.html',
-})
-export class ManualPasswordDialogComponent implements OnInit {
-  PasswordControl = new FormControl('', [Validators.required]);
-  constructor(@Inject(MAT_DIALOG_DATA) public data: any,
-              public dialogRef: MatDialogRef<ManualPasswordDialogComponent>) {
-
-  }
-
-  onNoClick() {
-    this.dialogRef.close();
-  }
-
-  onEnter() {
-    this.dialogRef.close(this.data);
-  }
-
-  ngOnInit(): void {
-  }
-}

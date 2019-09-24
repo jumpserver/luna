@@ -17,6 +17,7 @@ export class Socket {
 
   async connect() {
     const emitter = new EventEmitter();
+    emitter.setMaxListeners(20);
     this.emitter = emitter;
     const events = {
     };

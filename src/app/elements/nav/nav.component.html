@@ -1,15 +1,27 @@
-<script src="../../trans.pipe.spec.ts"></script>
 <div class="nav">
-  <ul>
-    <li><a href="/"><img src="static/imgs/logo.png" height="26px"/></a>
+  <ul class="nav-main">
+    <li style="padding-right: 10px">
+      <a href="/"><img src="static/imgs/logo.png" height="26px"/></a>
     </li>
-    <li *ngFor="let v of DataStore.Nav" [ngClass]="{'dropdown': v.children}">
+    <li *ngFor="let v of navs" [ngClass]="{'dropdown': v.children}" >
       <a>{{v.name|trans}}</a>
-      <ul [ngClass]="{'dropdown-content': v.children}">
+      <ul [ngClass]="{'dropdown-content': v.children}" *ngIf="v.children">
         <li *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
           <a *ngIf="vv.href" [routerLink]="[vv.href]">{{vv.name|trans}}</a>
-          <a id="{{vv.id}}" *ngIf="vv.click" (click)="click(vv.click)">{{vv.name|trans}}</a>
+          <a id="{{vv.id}}" *ngIf="vv.click && !vv.hide" (click)="click(vv.click)">{{vv.name|trans}}</a>
         </li>
+      </ul>
+    </li>
+    <li [ngClass]="{'dropdown': true}">
+      <a>{{"Tab List"|trans}}</a>
+      <ul *ngIf="viewList.length > 0" [ngClass]="{'dropdown-content': true}">
+        <ng-container *ngFor="let v of viewList, let idx = index" >
+        <li *ngIf="v.nick!=null" [ngClass]="{'disconnected':!v.connected, 'hidden': v.closed != false}">
+          <span [class.active]="v.active">
+            <a id="{{ 'tab' + idx }}"  (click)="_viewSrv.activeView(v)"><i class="fa fa-circle flag"></i> {{v.nick}} </a>
+          </span>
+        </li>
+        </ng-container>
       </ul>
     </li>
   </ul>

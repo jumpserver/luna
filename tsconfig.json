@@ -1,6 +1,15 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "baseUrl": "src",
+    "paths": {
+      "@src/*": [
+        "*"
+      ],
+      "@app/*": [
+        "app/*"
+      ]
+    },
     "allowJs": true,
     "outDir": "./dist/out-tsc",
     "sourceMap": true,
@@ -16,6 +25,8 @@
     "lib": [
       "es2017",
       "dom"
-    ]
+    ],
+    "module": "es2015",
+    "allowSyntheticDefaultImports": true
   }
 }

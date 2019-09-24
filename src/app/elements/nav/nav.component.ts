@@ -1,18 +1,10 @@
-/**
- * 主页导航条
- *
- *
- * @date     2017-11-07
- * @author   liuzheng <liuzheng712@gmail.com>
- */
 import {Component, Inject, OnInit} from '@angular/core';
-import {AppService, HttpService, LocalStorageService, LogService} from '../../app.service';
-import {CleftbarComponent} from '../../pages/control/cleftbar/cleftbar.component';
-import {ControlComponent, NavList, View} from '../../pages/control/control/control.component';
-import {DataStore, i18n} from '../../globals';
-import * as jQuery from 'jquery/dist/jquery.min.js';
+import {HttpService, LocalStorageService, NavService, LogService, ViewService} from '@app/services';
+import {DataStore, i18n} from '@app/globals';
+import {ElementLeftBarComponent} from '@app/elements/left-bar/left-bar.component';
+import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-declare let layer: any;
+import {Nav, View} from '@app/model';
 
 @Component({
   selector: 'elements-nav',
@@ -21,45 +13,49 @@ declare let layer: any;
 })
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
-  ChangeLanWarningDialog: any;
+  navs: Array<Nav>;
+  _asyncTree = false;
+  viewList: Array<View>;
 
-  static Hide() {
-    jQuery('elements-nav').hide();
-  }
-
-  constructor(private _appService: AppService,
-              private _http: HttpService,
+  constructor(private _http: HttpService,
               private _logger: LogService,
               public _dialog: MatDialog,
+              public _navSvc: NavService,
+              public _viewSrv: ViewService,
               private _localStorage: LocalStorageService) {
-    this._logger.log('nav.ts:NavComponent');
-    this.getNav();
   }
 
   ngOnInit() {
+    this.navs = this.getNav();
+    this.viewList = this._viewSrv.viewList;
+  }
+
+  get treeLoadAsync() {
+    return this._asyncTree;
+  }
+
+  set treeLoadAsync(value) {
+    this._asyncTree = value;
   }
 
   click(event) {
-    this._logger.debug('nav.ts:NavComponent,click', event);
     switch (event) {
-      case 'ReloadLeftbar': {
-        CleftbarComponent.Reload();
-        break;
-      }
       case 'ConnectSFTP': {
         window.open('/coco/elfinder/sftp/');
         break;
       }
       case 'HideLeft': {
-        CleftbarComponent.Hide();
-        break;
-      }
-      case 'Settings': {
-        this.Settings();
+        ElementLeftBarComponent.Hide();
+        this.refreshNav();
         break;
       }
       case 'ShowLeft': {
-        CleftbarComponent.Show();
+        ElementLeftBarComponent.Show();
+        this.refreshNav();
+        break;
+      }
+      case 'Setting': {
+        this.Setting();
         break;
       }
       case 'Copy': {
@@ -67,8 +63,10 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'FullScreen': {
-        let ele:any = document.getElementsByClassName("window active ")[0];
-        
+        const ele: any = document.getElementsByClassName('window active')[0];
+        if (!ele) {
+          return;
+        }
         if (ele.requestFullscreen) {
           ele.requestFullscreen();
         } else if (ele.mozRequestFullScreen) {
@@ -80,35 +78,24 @@ export class ElementNavComponent implements OnInit {
         } else {
           throw new Error('不支持全屏api');
         }
-        
         window.dispatchEvent(new Event('resize'));
         break;
       }
-      case'Disconnect': {
+      case 'Reconnect': {
+        break;
+      }
+      case 'Disconnect': {
         if (!confirm('断开当前连接? (RDP暂不支持)')) {
           break;
         }
-        switch (NavList.List[NavList.Active].type) {
-          case 'ssh': {
-            ControlComponent.TerminalDisconnect(NavList.Active);
-            break;
-          }
-          case 'rdp': {
-            ControlComponent.RdpDisconnect(NavList.Active);
-            break;
-          }
-          default: {
-            // statements;
-            break;
-          }
-        }
+        this._navSvc.disconnectConnection();
         break;
       }
       case'DisconnectAll': {
-        if (!confirm('断开所有连接? (RDP暂不支持)')) {
+        if (!confirm('断开所有连接?')) {
           break;
         }
-        ControlComponent.DisconnectAll();
+        this._navSvc.disconnectAllConnection();
         break;
       }
       case 'Website': {
@@ -121,38 +108,6 @@ export class ElementNavComponent implements OnInit {
       }
       case 'Support': {
         window.open('https://market.aliyun.com/products/53690006/cmgj026011.html?spm=5176.730005.0.0.cY2io1');
-        break;
-      }
-      case 'SetResolution': {
-        const dialog = this._dialog.open(
-          RDPSolutionDialogComponent,
-          {
-            height: '200px',
-            width: '300px'
-          });
-        dialog.afterClosed().subscribe(result => {
-          if (result) {
-            console.log(result);
-          }
-        });
-        break;
-      }
-      case 'SetFont': {
-        const dialog = this._dialog.open(
-          FontDialogComponent,
-          {
-            height: '200px',
-            width: '300px'
-          });
-        dialog.afterClosed().subscribe(result => {
-          if (result) {
-            console.log(result);
-          }
-        });
-        break;
-      }
-      case 'EnterLicense': {
-        this.EnterLicense();
         break;
       }
       case 'English': {
@@ -202,144 +157,108 @@ export class ElementNavComponent implements OnInit {
 
   }
 
-  EnterLicense() {
-    layer.prompt({
-      formType: 2,
-      maxlength: 500,
-      title: 'Please Input Code',
-      scrollbar: false,
-      area: ['400px', '300px'],
-      moveOut: true,
-      moveType: 1
-    }, function (value, index) {
-      DataStore.socket.emit('key', value);
-      // layer.msg(value); //得到value
-      layer.close(index);
-
-    });
+  refreshNav() {
+    this.navs = this.getNav();
   }
 
   getNav() {
-    DataStore.Nav = [{
-      'id': 'File',
-      'name': 'Server',
-      'children': [
+    return [{
+      id: 'FileManager',
+      name: 'File Manager',
+      children: [
         {
-          'id': 'Disconnect',
-          'click': 'Disconnect',
-          'name': 'Disconnect'
-        },
-        {
-          'id': 'DisconnectAll',
-          'click': 'DisconnectAll',
-          'name': 'Disconnect all'
+          id: 'Connect',
+          click: 'ConnectSFTP',
+          name: 'Connect'
         },
       ]
     }, {
-      'id': 'FileManager',
-      'name': 'File Manager',
-      'children': [
+      id: 'View',
+      name: 'View',
+      children: [
         {
-          'id': 'Connect',
-          'click': 'ConnectSFTP',
-          'name': 'Connect'
+          id: 'HideLeftManager',
+          click: 'HideLeft',
+          name: 'Hide left manager',
+          hide: !DataStore.showLeftBar
+        },
+        {
+          id: 'ShowLeftManager',
+          click: 'ShowLeft',
+          name: 'Show left manager',
+          hide: DataStore.showLeftBar
+        },
+        {
+          id: 'SplitVertical',
+          href: '',
+          name: 'Split vertical',
+          disable: true
+        },
+        {
+          id: 'CommandBar',
+          href: '',
+          name: 'Command bar',
+          disable: true
+        },
+        {
+          id: 'ShareSession',
+          href: '',
+          name: 'Share session (read/write)',
+          disable: true
+        },
+        {
+          id: 'FullScreen',
+          click: 'FullScreen',
+          name: 'Full Screen'
         },
       ]
-    },
-      {
-      'id': 'View',
-      'name': 'View',
-      'children': [
-        {
-          'id': 'HideLeftManager',
-          'click': 'HideLeft',
-          'name': 'Hide left manager'
-        },
-        {
-          'id': 'RDPResolution',
-          'click': 'SetResolution',
-          'name': 'RDP Resolution'
-        },
-        {
-          'id': 'Font',
-          'click': 'SetFont',
-          'name': 'Font'
-        },
-        {
-          'id': 'SplitVertical',
-          'href': '',
-          'name': 'Split vertical',
-          'disable': true
-        },
-        {
-          'id': 'CommandBar',
-          'href': '',
-          'name': 'Command bar',
-          'disable': true
-        },
-        {
-          'id': 'ShareSession',
-          'href': '',
-          'name': 'Share session (read/write)',
-          'disable': true
-        },
-        {
-          'id': 'FullScreen',
-          'click': 'FullScreen',
-          'name': 'Full Screen'
-        }
-        ]
     }, {
-      'id': 'Help',
-      'name': 'Help',
-      'children': [
+      id: 'Help',
+      name: 'Help',
+      children: [
         {
-          'id': 'Website',
-          'click': 'Website',
-          'name': 'Website'
+          id: 'Website',
+          click: 'Website',
+          name: 'Website'
         },
         {
-          'id': 'Document',
-          'click': 'Document',
-          'name': 'Document'
+          id: 'Document',
+          click: 'Document',
+          name: 'Document'
         },
         {
-          'id': 'Support',
-          'click': 'Support',
-          'name': 'Support'
+          id: 'Support',
+          click: 'Support',
+          name: 'Support'
         }]
     }, {
-      'id': 'Language',
-      'name': 'Language',
-      'children': [
+      id: 'Language',
+      name: 'Language',
+      children: [
         {
-          'id': 'English',
-          'click': 'English',
-          'name': 'English'
+          id: 'English',
+          click: 'English',
+          name: 'English'
         },
         {
-          'id': 'Chinese',
-          'click': 'Chinese',
-          'name': '中文'
+          id: 'Chinese',
+          click: 'Chinese',
+          name: '中文'
+        }
+      ]
+    }, {
+      id: 'Setting',
+      name: 'Setting',
+      click: 'Setting',
+      children: [
+        {
+          id: 'Setting',
+          click: 'Setting',
+          name: 'Setting'
         }
       ]
     }
     ];
-  }
-
-  Connect() {
-    layer.prompt({
-      formType: 2,
-      maxlength: 500,
-      title: 'Please Input Code',
-      scrollbar: false,
-      area: ['400px', '300px'],
-      moveOut: true,
-      moveType: 1
-    }, function (value, index) {
-      DataStore.socket.emit('key', value);
-      layer.close(index);
-    });
   }
 
   English() {
@@ -364,15 +283,17 @@ export class ElementNavComponent implements OnInit {
     location.reload();
   }
 
-  Settings() {
-    const id = NavList.List.length - 1;
-    NavList.List[id].nick = 'Setting';
-    NavList.List[id].connected = true;
-    NavList.List[id].edit = false;
-    NavList.List[id].closed = false;
-    NavList.List[id].type = 'settings';
-    NavList.List.push(new View());
-    NavList.Active = id;
+  Setting() {
+    const dialog = this._dialog.open(
+      ElementSettingComponent,
+      {
+        height: '370px',
+        width: '400px',
+      });
+    dialog.afterClosed().subscribe(result => {
+      if (result) {
+      }
+    });
   }
 }
 
@@ -396,71 +317,3 @@ export class ChangLanWarningDialogComponent implements OnInit {
   }
 }
 
-@Component({
-  selector: 'elements-rdp-solution-dialog',
-  templateUrl: 'rdpSolutionDialog.html',
-  styles: ['.mat-form-field { width: 100%; }']
-})
-export class RDPSolutionDialogComponent implements OnInit {
-  solutions = ['Auto', '1024x768', '1366x768', '1400x900'];
-  solution: string;
-  cacheKey = 'rdpSolution';
-
-  constructor(public dialogRef: MatDialogRef<RDPSolutionDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any) {
-  }
-
-  ngOnInit() {
-    this.solution = localStorage.getItem(this.cacheKey) || 'Auto';
-  }
-
-  setSolution(value: string) {
-    localStorage.setItem(this.cacheKey, value);
-  }
-
-  onSubmit() {
-    this.setSolution(this.solution);
-    this.dialogRef.close();
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-}
-
-@Component({
-  selector: 'elements-font-size-dialog',
-  templateUrl: 'fontDialog.html',
-  styles: ['.mat-form-field { width: 100%; }']
-})
-export class FontDialogComponent implements OnInit {
-  fontSize: string;
-  solution: string;
-  cacheKey = 'fontSize';
-
-  constructor(public dialogRef: MatDialogRef<FontDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any) {
-  }
-
-  ngOnInit() {
-    this.fontSize = localStorage.getItem(this.cacheKey) || '14';
-  }
-
-  setFontSize(value: string) {
-    localStorage.setItem(this.cacheKey, value);
-  }
-
-  isValid() {
-    const size = parseInt(this.fontSize, 10);
-    return size > 5 && size < 60;
-  }
-
-  onSubmit() {
-    this.setFontSize(this.fontSize);
-    this.dialogRef.close();
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-}

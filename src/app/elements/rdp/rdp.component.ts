@@ -6,7 +6,7 @@
  */
 import {AfterViewInit, Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
-import {DataStore} from '../../globals';
+import {DataStore} from '@app/globals';
 
 declare let Mstsc: any;
 
