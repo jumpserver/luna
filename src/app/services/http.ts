@@ -49,29 +49,29 @@ export class HttpService {
   }
 
   getUserProfile() {
-    return this.http.get<_User>('/api/users/v1/profile/');
+    return this.http.get<_User>('/api/v1/users/profile/');
   }
 
   getMyGrantedAssets(keyword) {
-    const url = `/api/perms/v1/users/assets/tree/?search=${keyword}`;
+    const url = `/api/v1/perms/users/assets/tree/?search=${keyword}`;
     return this.http.get<Array<TreeNode>>(url);
   }
 
   filterMyGrantedAssetsById(id: string) {
-    const url = `/api/perms/v1/users/assets/tree/?id=${id}`;
+    const url = `/api/v1/perms/users/assets/tree/?id=${id}`;
     return this.http.get<Array<TreeNode>>(url);
   }
 
   getMyGrantedNodes(async: boolean, refresh?: boolean) {
     const cachePolicy = refresh ? '2' : '1';
-    const syncUrl = `/api/perms/v1/users/nodes-with-assets/tree/?cache_policy=${cachePolicy}`;
-    const asyncUrl = `/api/perms/v1/users/nodes/children-with-assets/tree/?cache_policy=${cachePolicy}`;
+    const syncUrl = `/api/v1/perms/users/nodes-with-assets/tree/?cache_policy=${cachePolicy}`;
+    const asyncUrl = `/api/v1/perms/users/nodes/children-with-assets/tree/?cache_policy=${cachePolicy}`;
     const url = async ? asyncUrl : syncUrl;
     return this.http.get<Array<TreeNode>>(url);
   }
 
   getMyGrantedRemoteApps(id?: string) {
-    let url = '/api/perms/v1/user/remote-apps/tree/';
+    let url = '/api/v1/perms/user/remote-apps/tree/';
     if (id) {
       url += `?id=${id}&only=1`;
     }
@@ -189,7 +189,7 @@ export class HttpService {
   }
 
   getReplay(token: string) {
-    return this.http.get('/api/terminal/v1/sessions/' + token + '/replay');
+    return this.http.get('/api/v1/terminal/sessions/' + token + '/replay');
   }
 
   // get_replay_json(token: string) {
@@ -204,7 +204,7 @@ export class HttpService {
     const params = new HttpParams()
       .set('user-only', '1')
       .set('token', token);
-    return this.http.get('/api/users/v1/connection-token/', {params: params});
+    return this.http.get('/api/v1/users/connection-token/', {params: params});
   }
 
 }
