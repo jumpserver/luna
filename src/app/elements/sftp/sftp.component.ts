@@ -1,5 +1,4 @@
 import {Component, OnInit, Input, ElementRef, ViewChild} from '@angular/core';
-import {DataStore} from '@app/globals';
 import {DomSanitizer} from '@angular/platform-browser';
 
 @Component({
@@ -16,7 +15,7 @@ export class ElementSftpComponent implements OnInit {
   }
 
   ngOnInit() {
-    let _target = '/coco/elfinder/sftp/';
+    let _target = '/koko/elfinder/sftp/';
     if (this.host) {
       // _target += 'f5857eee-c114-4564-af8f-96329c400a8a' + '/';
       _target += this.host.id + '/';
