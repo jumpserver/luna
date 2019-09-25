@@ -41,7 +41,7 @@ export class ElementNavComponent implements OnInit {
   click(event) {
     switch (event) {
       case 'ConnectSFTP': {
-        window.open('/coco/elfinder/sftp/');
+        window.open('/koko/elfinder/sftp/');
         break;
       }
       case 'HideLeft': {

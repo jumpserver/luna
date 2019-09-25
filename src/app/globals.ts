@@ -8,7 +8,7 @@ import {DataStore as _DataStore, Browser as _Browser, Video as _Video, Monitor a
 const scheme = document.location.protocol === 'https:' ? 'wss' : 'ws';
 const port = document.location.port ? ':' + document.location.port : '';
 const hostname = document.location.hostname;
-const wsURL = `${scheme}://${hostname}${port}/socket.io/`;
+const wsURL = `${scheme}://${hostname}${port}/koko/ws/`;
 export let TermWS = null;
 
 export const emitter = new(EventEmitter);
