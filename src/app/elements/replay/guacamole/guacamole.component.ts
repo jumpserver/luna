@@ -1,6 +1,6 @@
 import { Component, OnInit, Input } from '@angular/core';
 import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
-import { Replay } from '../replay.model';
+import { Replay } from '@app/model';
 
 function zeroPad(num, minLength) {
   let str = num.toString();
@@ -46,11 +46,11 @@ function formatTime(millis: number) {
 
 
 @Component({
-  selector: 'app-replay-guacamole',
+  selector: 'elements-replay-guacamole',
   templateUrl: './guacamole.component.html',
   styleUrls: ['./guacamole.component.scss']
 })
-export class ReplayGuacamoleComponent implements OnInit {
+export class ElementReplayGuacamoleComponent implements OnInit {
   isPlaying = false;
   recording: any;
   playerRef: any;

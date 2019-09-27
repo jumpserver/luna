@@ -13,8 +13,10 @@ import {ElementDialogAlertComponent} from './dialog/dialog.service';
 import {ElementGuacamoleComponent} from './guacamole/guacamole.component';
 import {ElementSshTermComponent} from './ssh-term/ssh-term.component';
 import {ElementConnectComponent, AssetTreeDialogComponent, ManualPasswordDialogComponent} from './connect/connect.component';
-import {ElementSftpComponent} from '@app/elements/sftp/sftp.component';
-import {ElementSettingComponent} from '@app/elements/setting/setting.component';
+import {ElementSftpComponent} from './sftp/sftp.component';
+import {ElementSettingComponent} from './setting/setting.component';
+import {ElementReplayGuacamoleComponent} from './replay/guacamole/guacamole.component';
+import {ElementReplayJsonComponent} from './replay/json/json.component';
 
 export const ElementComponents = [
   ElementLeftBarComponent,
@@ -33,6 +35,8 @@ export const ElementComponents = [
   ElementSshTermComponent,
   ElementConnectComponent,
   ElementSftpComponent,
+  ElementReplayGuacamoleComponent,
+  ElementReplayJsonComponent,
   AssetTreeDialogComponent,
   ChangLanWarningDialogComponent,
   ManualPasswordDialogComponent,
