@@ -143,7 +143,7 @@ export class DataStore {
   autoLogin: boolean;
   guacamoleToken: string;
   guacamoleTokenTime: number;
-
+  termSelection: string;
 }
 
 export class Browser {

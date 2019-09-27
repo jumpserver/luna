@@ -3,7 +3,7 @@ import {Terminal} from 'xterm';
 import {View} from '@app/model';
 import {LogService, SettingService, UUIDService} from '@app/services';
 import {Socket} from '@app/utils/socket';
-import {getWsSocket, translate} from '@app/globals';
+import {DataStore, getWsSocket, translate} from '@app/globals';
 import {newTerminal} from '@app/utils/common';
 
 
@@ -26,6 +26,26 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   roomID: string;
 
   constructor(private _uuid: UUIDService, private _logger: LogService, private settingSvc: SettingService) {
+  }
+
+  contextMenu($event) {
+    this.term.focus();
+    // ctrl按下则不处理
+    if ($event.ctrlKey) {
+      return;
+    }
+    // @ts-ignore
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      // @ts-ignore
+      navigator.clipboard.readText().then((text) => {
+        this.ws.emit('data', {'data': text, 'room': this.roomID});
+      });
+      $event.preventDefault();
+    } else if (DataStore.termSelection !== '') {
+      this.ws.emit('data', {'data': DataStore.termSelection, 'room': this.roomID});
+      $event.preventDefault();
+    }
+
   }
 
   ngOnInit() {
@@ -139,6 +159,14 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
         this.view.room = data.room;
         this.view.connected = true;
       }
+    });
+
+    this.term.on('selection', function () {
+      document.execCommand('copy');
+      if (!this.hasSelection) {
+        DataStore.termSelection = '';
+      }
+      DataStore.termSelection = this.getSelection().trim();
     });
   }
 
