@@ -74,5 +74,6 @@
   "open in new window": "新窗口打开",
   "setting": "设置",
   "yes": "是",
-  "no": "否"
+  "no": "否",
+  "send text to all ssh terminals": "发送文本到所有ssh终端"
 }
