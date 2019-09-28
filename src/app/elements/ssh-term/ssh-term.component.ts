@@ -56,6 +56,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
       this.connectHost();
     });
     // this.view.type = 'ssh';
+    this.view.termComp = this;
   }
 
   newTerm() {

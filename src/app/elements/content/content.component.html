@@ -16,6 +16,13 @@
   <div id="winContainer">
     <elements-content-window *ngFor="let view of viewList" [view]="view" ></elements-content-window>
   </div>
+  <div id="batchCommandDiv">
+    <input placeholder=" {{'Send text to all ssh terminals'| trans }} ..."
+           maxlength="2048"
+           title="{{'Send text to all ssh terminals'| trans }} ..."
+           (keydown.enter)="sendBatchCommand()"
+           type="text" tabindex="2" spellcheck="false" [(ngModel)]="batchCommand">
+  </div>
 </div>
 
 <elements-connect [ngStyle]="{'display': 'none'}" (onNewView)="onNewView($event)" ></elements-connect>
