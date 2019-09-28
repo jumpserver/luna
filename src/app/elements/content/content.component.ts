@@ -11,6 +11,9 @@ export class ElementContentComponent implements OnInit {
   @ViewChild('tabs') tabsRef: ElementRef;
   viewList: Array<View>;
   batchCommand: string;
+  pos = {left: '100px', top: '100px'};
+  isShowRMenu = false;
+  rIdx = -1;
 
   static DisconnectAll() {
   }
@@ -24,6 +27,7 @@ export class ElementContentComponent implements OnInit {
 
   ngOnInit() {
     this.viewList = this.viewSrv.viewList;
+    document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
   onNewView(view) {
@@ -98,6 +102,97 @@ export class ElementContentComponent implements OnInit {
 
     this.batchCommand = '';
 
+  }
+
+  showRMenu(left, top) {
+    this.pos.left = left + 'px';
+    this.pos.top = top + 'px';
+    this.isShowRMenu = true;
+  }
+
+  hideRMenu() {
+    this.isShowRMenu = false;
+  }
+
+  onRightClick(event, tabIdx) {
+    this.showRMenu(event.clientX, event.clientY);
+    this.rIdx = tabIdx;
+    event.preventDefault();
+  }
+
+  rClose() {
+    // 关闭当前tab
+    this.closeView(this.viewList[this.rIdx]);
+  }
+
+  rCloseAll() {
+    // 关闭所有tab
+    while (this.viewList.length > 0) {
+      this.closeView(this.viewList[0]);
+    }
+  }
+
+  rCloseOthers() {
+    // 关闭其他tab
+    for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
+      this.closeView(this.viewList[i]);
+    }
+    while (this.viewList.length > 1) {
+      this.closeView(this.viewList[0]);
+    }
+  }
+
+  rCloseRight() {
+    // 关闭右侧tab
+    for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
+      this.closeView(this.viewList[i].host);
+    }
+  }
+
+  rCloseLeft() {
+    // 关闭左侧tab
+    const keepNum = this.viewList.length - this.rIdx;
+    while (this.viewList.length > keepNum) {
+      this.closeView(this.viewList[0]);
+    }
+  }
+
+  rCloneConnect() {
+    const v = new View();
+    const id = this.rIdx + 1;
+    const host = this.viewList[this.rIdx].host;
+    const user = this.viewList[this.rIdx].user;
+    v.nick = host.hostname;
+    v.connected = true;
+    v.editable = false;
+    v.closed = false;
+    v.host = host;
+    v.user = user;
+    v.type = this.viewList[this.rIdx].type;
+    this.viewList.splice(id, 0, v);
+    this.setViewActive(v);
+  }
+  rReconnect() {
+    this.viewList[this.rIdx].termComp.reconnect();
+  }
+  rDisconnect() {
+    if (!confirm('断开当前连接? (RDP暂不支持)')) {
+      return;
+    }
+    switch (this.viewList[this.rIdx].type) {
+      case 'ssh': {
+        this.viewList[this.rIdx].termComp.logout();
+        break;
+      }
+      case 'rdp': {
+        // statements
+        break;
+      }
+      default: {
+        // statements;
+        break;
+      }
+    }
   }
 
 }
