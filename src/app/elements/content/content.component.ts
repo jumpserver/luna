@@ -10,6 +10,7 @@ import {ViewService} from '@app/services';
 export class ElementContentComponent implements OnInit {
   @ViewChild('tabs') tabsRef: ElementRef;
   viewList: Array<View>;
+  batchCommand: string;
 
   static DisconnectAll() {
   }
@@ -77,6 +78,26 @@ export class ElementContentComponent implements OnInit {
 
   scrollToEnd() {
     this.tabsRef.nativeElement.scrollLeft = this.tabsRef.nativeElement.scrollWidth;
+  }
+
+  sendBatchCommand() {
+    this.batchCommand = this.batchCommand.trim();
+    if (this.batchCommand === '') {
+      return;
+    }
+
+    const cmd = this.batchCommand + '\r';
+    for (let i = 0; i < this.viewList.length; i++) {
+      if (this.viewList[i].type !== 'ssh' || this.viewList[i].connected !== true) {
+        continue;
+      }
+      const d = {'data': cmd, 'room': this.viewList[i].room};
+
+      this.viewList[i].termComp.ws.emit('data', d);
+    }
+
+    this.batchCommand = '';
+
   }
 
 }

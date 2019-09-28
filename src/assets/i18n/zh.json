@@ -84,5 +84,6 @@
   "Asset": "资产",
   "start time":"开始时间",
   "download":"下载录像",
-  "idle timeout, connection has been disconnected": "空闲超时，链接已断开"
+  "idle timeout, connection has been disconnected": "空闲超时，链接已断开",
+  "send text to all ssh terminals": "发送文本到所有ssh终端"
 }

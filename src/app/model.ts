@@ -1,3 +1,4 @@
+import {ElementSshTermComponent} from '@app/elements/ssh-term/ssh-term.component';
 
 export class UserGroup {
   id: string;
@@ -118,6 +119,7 @@ export class View {
   Term: any;
   DatabaseApp: string;
   shareroomId: string;
+  termComp: ElementSshTermComponent;
 }
 
 export class ViewAction {

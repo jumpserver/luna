@@ -13,6 +13,7 @@
   box-sizing: border-box;
   font-weight: 400;
   text-align: left;
+  padding-inline-start: 15px;
 }
 
 .nav li {
