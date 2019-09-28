@@ -81,7 +81,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   }
 
   reconnect() {
-    if (this.view.connected !== true) {
+    if (this.view.connected === true) {
       if (!confirm(translate('Are you sure to reconnect it?(RDP not support)'))) {
         return;
       }
@@ -177,6 +177,9 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this._logger.debug('Close view');
+    this.logout();
+  }
+  logout(): void {
     if (this.view && (this.view.room === this.roomID)) {
       this.view.connected = false;
       this.ws.emit('logout', this.roomID);
