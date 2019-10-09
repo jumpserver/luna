@@ -188,8 +188,21 @@ export class Monitor {
 
 
 export class Setting {
-  rdpSolution: string = '1024x768';
+  rdpSolution: string = 'Auto';
   fontSize: number = 14;
   isLoadTreeAsync: string = '1';
   isSkipAllManualPassword: string = '0';
+}
+
+
+export class Replay {
+  id: string;
+  src: string;
+  type: string;
+  status: string;
+  timelist: Array<number>;
+  totalTime: number;
+  json: any;
+  height: number;
+  width: number;
 }

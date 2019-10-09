@@ -1,20 +1,20 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ReplayGuacamoleComponent } from './guacamole.component';
+import { ElementReplayGuacamoleComponent } from './guacamole.component';
 
 describe('ReplayGuacamoleComponent', () => {
-  let component: ReplayGuacamoleComponent;
-  let fixture: ComponentFixture<ReplayGuacamoleComponent>;
+  let component: ElementReplayGuacamoleComponent;
+  let fixture: ComponentFixture<ElementReplayGuacamoleComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ ReplayGuacamoleComponent ]
+      declarations: [ ElementReplayGuacamoleComponent ]
     })
     .compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(ReplayGuacamoleComponent);
+    fixture = TestBed.createComponent(ElementReplayGuacamoleComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

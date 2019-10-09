@@ -1,7 +1,7 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {Terminal} from 'xterm';
 import {HttpService, LogService} from '@app/services';
-import {Replay} from '../replay.model';
+import {Replay} from '@app/model';
 
 function zeroPad(num, minLength) {
   let str = num.toString();
@@ -47,11 +47,11 @@ function formatTime(millis: number) {
 
 
 @Component({
-  selector: 'app-replay-json',
+  selector: 'elements-replay-json',
   templateUrl: './json.component.html',
   styleUrls: ['./json.component.css']
 })
-export class JsonComponent implements OnInit {
+export class ElementReplayJsonComponent implements OnInit {
   isPlaying = false;
   recording: any;
   playerRef: any;
