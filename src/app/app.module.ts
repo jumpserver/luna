@@ -9,7 +9,7 @@ import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 // service
 import {AllServices} from '@app/services';
 
-import {AppRouterModule} from './router/router.module';
+import {AppRouterModule} from './router.module';
 import {Pipes} from './pipes/pipes';
 import {AppComponent} from './pages/app.component';
 import {PagesComponents} from './pages/pages.component';
