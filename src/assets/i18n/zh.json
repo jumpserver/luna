@@ -74,5 +74,7 @@
   "open in new window": "新窗口打开",
   "setting": "设置",
   "yes": "是",
-  "no": "否"
+  "no": "否",
+  "cols": "列数",
+  "rows": "行数"
 }

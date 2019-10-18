@@ -1,4 +1,4 @@
-import {Component, Input, OnInit} from '@angular/core';
+import {Component, Input, OnInit, OnChanges} from '@angular/core';
 import {Terminal} from 'xterm';
 import {HttpService, LogService} from '@app/services';
 import {Replay} from '@app/model';
@@ -67,6 +67,9 @@ export class ElementReplayJsonComponent implements OnInit {
   timer: any; // 多长时间播放下一个
   pos = 0; // 播放点
   term: Terminal;
+  termCols = 80;
+  termRows = 24;
+
   get position() {
     return formatTime(this.time);
   }
@@ -110,6 +113,7 @@ export class ElementReplayJsonComponent implements OnInit {
     clearInterval(this.timer);
     this.term.reset();
     this.pos = 0;
+    this.time = 0;
     this.isPlaying = true;
     this.timer = setInterval(() => {
       this.advance();
@@ -172,5 +176,17 @@ export class ElementReplayJsonComponent implements OnInit {
       }
     }
     this.advance();
+  }
+
+  resizeTerm() {
+    this.term.resize(this.termCols, this.termRows);
+    this.restart();
+  }
+
+  onTermSizeChange(evt) {
+    setTimeout(() => {
+      this.termCols = evt[0];
+      this.termRows = evt[1];
+    }, 500);
   }
 }

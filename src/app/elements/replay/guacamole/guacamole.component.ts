@@ -80,9 +80,6 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     recordingElement.style.margin = '0 auto';
     this.screenRef.appendChild(recordingElement);
     this.initRecording();
-
-
-    // this.toggle();
   }
 
   initRecording() {
@@ -99,7 +96,7 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     this.recording.onprogress = (millis) => {
       this.duration = formatTime(millis);
       this.max = millis;
-      this.toggle();
+      this.play();
     };
 
     // If paused, the play/pause button should read "Play"
@@ -140,13 +137,25 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     e.stopPropagation();
   }
 
-  toggle() {
+  play() {
     if (!this.recording.isPlaying()) {
       this.recording.play();
       this.isPlaying = true;
-    } else {
+    }
+  }
+
+  pause() {
+    if (this.recording.isPlaying()) {
       this.recording.pause();
       this.isPlaying = false;
+    }
+  }
+
+  toggle() {
+    if (!this.recording.isPlaying()) {
+      this.play();
+    } else {
+      this.pause();
     }
   }
 }

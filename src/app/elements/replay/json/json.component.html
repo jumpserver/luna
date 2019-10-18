@@ -14,13 +14,19 @@
 
   <input id="scrubber" type="range" [(ngModel)]="time" min=0 [attr.max]="max" (mouseup)="runFrom()"/>
 
-  <span id="position">{{ position }}</span>
+  <span id="position" style="padding-left: 10px">{{ position }}</span>
   <span>/</span>
   <span id="duration">{{ duration }}</span>
   {{"Speed"|trans}}: {{speed}}
+
+  <span style="float: right;padding-top: 5px;padding-right: 20px">
+    <span style="padding-left: 10px">{{"cols"|trans}}: <input type="number" style="width: 60px" [(ngModel)]="termCols"></span>
+    <span style="padding-left: 10px">{{"rows"|trans}}: <input type="number" style="width: 60px" [(ngModel)]="termRows"></span>
+    <span style="padding-left: 10px"><input type="button" value="{{'confirm'|trans}}" (click)="resizeTerm()"></span>
+  </span>
 </div>
 
 <div id="winContainer" style="height: 90%;width: 100%">
-  <elements-term [term]="term"></elements-term>
+  <elements-term #termRef [term]="term" [stopWatchWinChange]="true" (winSizeChangeTrigger)="onTermSizeChange($event)"></elements-term>
 </div>
 <!--<asciinema-player></asciinema-player>-->

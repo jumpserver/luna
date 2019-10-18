@@ -3,7 +3,7 @@ import {ElementRef} from '@angular/core';
 import {Terminal} from 'xterm';
 import {fit} from 'xterm/lib/addons/fit/fit';
 import {LogService} from '@app/services';
-import {Observable, fromEvent} from 'rxjs';
+import {Observable, fromEvent, Subscription} from 'rxjs';
 import {debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import * as $ from 'jquery/dist/jquery.min.js';
 import 'rxjs/Observable';
@@ -18,12 +18,12 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   @ViewChild('term') el: ElementRef;
   @Input() term: Terminal;
   @Input() offset: Array<number>;
+  @Input() stopWatchWinChange = false;
   @Output() winSizeChangeTrigger = new EventEmitter<Array<number>>();
   winSizeChange$: Observable<any>;
+  winSizeSub: Subscription;
 
-  constructor(private _logger: LogService) {
-
-  }
+  constructor(private _logger: LogService) {}
 
   ngOnInit() {
     this.winSizeChange$ = fromEvent(window, 'resize').pipe(
@@ -31,7 +31,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       distinctUntilChanged(),
     );
 
-    this.winSizeChange$
+    this.winSizeSub = this.winSizeChange$
       .subscribe(() => {
         this._logger.debug('Get win size change event');
         this.resizeTerm();
@@ -41,6 +41,9 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   ngAfterViewInit() {
     this.term.open(this.el.nativeElement);
     this.resizeTerm();
+    if (this.stopWatchWinChange) {
+      this.winSizeSub.unsubscribe();
+    }
   }
 
   getWinSize() {
