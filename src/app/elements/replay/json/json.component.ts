@@ -1,7 +1,7 @@
-import {Component, Input, OnInit} from '@angular/core';
+import {Component, Input, OnInit, OnChanges} from '@angular/core';
 import {Terminal} from 'xterm';
 import {HttpService, LogService} from '@app/services';
-import {Replay} from '../replay.model';
+import {Replay} from '@app/model';
 
 function zeroPad(num, minLength) {
   let str = num.toString();
@@ -47,11 +47,11 @@ function formatTime(millis: number) {
 
 
 @Component({
-  selector: 'app-replay-json',
+  selector: 'elements-replay-json',
   templateUrl: './json.component.html',
   styleUrls: ['./json.component.css']
 })
-export class JsonComponent implements OnInit {
+export class ElementReplayJsonComponent implements OnInit {
   isPlaying = false;
   recording: any;
   playerRef: any;
@@ -67,6 +67,9 @@ export class JsonComponent implements OnInit {
   timer: any; // 多长时间播放下一个
   pos = 0; // 播放点
   term: Terminal;
+  termCols = 80;
+  termRows = 24;
+
   get position() {
     return formatTime(this.time);
   }
@@ -110,6 +113,7 @@ export class JsonComponent implements OnInit {
     clearInterval(this.timer);
     this.term.reset();
     this.pos = 0;
+    this.time = 0;
     this.isPlaying = true;
     this.timer = setInterval(() => {
       this.advance();
@@ -172,5 +176,17 @@ export class JsonComponent implements OnInit {
       }
     }
     this.advance();
+  }
+
+  resizeTerm() {
+    this.term.resize(this.termCols, this.termRows);
+    this.restart();
+  }
+
+  onTermSizeChange(evt) {
+    setTimeout(() => {
+      this.termCols = evt[0];
+      this.termRows = evt[1];
+    }, 500);
   }
 }

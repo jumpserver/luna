@@ -1,6 +1,6 @@
 import { Component, OnInit, Input } from '@angular/core';
 import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
-import { Replay } from '../replay.model';
+import { Replay } from '@app/model';
 
 function zeroPad(num, minLength) {
   let str = num.toString();
@@ -46,11 +46,11 @@ function formatTime(millis: number) {
 
 
 @Component({
-  selector: 'app-replay-guacamole',
+  selector: 'elements-replay-guacamole',
   templateUrl: './guacamole.component.html',
   styleUrls: ['./guacamole.component.scss']
 })
-export class ReplayGuacamoleComponent implements OnInit {
+export class ElementReplayGuacamoleComponent implements OnInit {
   isPlaying = false;
   recording: any;
   playerRef: any;
@@ -80,9 +80,6 @@ export class ReplayGuacamoleComponent implements OnInit {
     recordingElement.style.margin = '0 auto';
     this.screenRef.appendChild(recordingElement);
     this.initRecording();
-
-
-    // this.toggle();
   }
 
   initRecording() {
@@ -99,7 +96,7 @@ export class ReplayGuacamoleComponent implements OnInit {
     this.recording.onprogress = (millis) => {
       this.duration = formatTime(millis);
       this.max = millis;
-      this.toggle();
+      this.play();
     };
 
     // If paused, the play/pause button should read "Play"
@@ -140,13 +137,25 @@ export class ReplayGuacamoleComponent implements OnInit {
     e.stopPropagation();
   }
 
-  toggle() {
+  play() {
     if (!this.recording.isPlaying()) {
       this.recording.play();
       this.isPlaying = true;
-    } else {
+    }
+  }
+
+  pause() {
+    if (this.recording.isPlaying()) {
       this.recording.pause();
       this.isPlaying = false;
+    }
+  }
+
+  toggle() {
+    if (!this.recording.isPlaying()) {
+      this.play();
+    } else {
+      this.pause();
     }
   }
 }

@@ -46,6 +46,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   treeFilterSubscription: any;
   isLoadTreeAsync: boolean;
   filterAssetCancel$: Subject<boolean> = new Subject();
+  loading = true;
 
   constructor(private _appSvc: AppService,
               private _treeFilterSvc: TreeFilterService,
@@ -103,7 +104,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       };
     }
 
+    this.loading = true;
     this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
+      this.loading = false;
       const assetsTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
       this.assetsTree = assetsTree;
       this.rootNodeAddDom(assetsTree, () => {
@@ -134,7 +137,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     };
     this._http.getMyGrantedRemoteApps().subscribe(
       resp => {
-        if (!resp) {
+        if (resp.length === 1) {
           return;
         }
         const tree = $.fn.zTree.init($('#remoteAppsTree'), setting, resp);
@@ -325,21 +328,22 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       this.assetsTree.removeChildNodes(searchNode[0]);
       this.assetsTree.removeNode(searchNode[0]);
     }
+    const treeNodes = this.assetsTree.getNodes();
     if (!keyword) {
-      const treeNodes = this.assetsTree.getNodes();
       if (treeNodes.length !== 0) {
         this.assetsTree.showNode(treeNodes[0]);
       }
       return;
     }
     this.filterAssetCancel$.next(true);
+    if (treeNodes.length !== 0) {
+      this.assetsTree.hideNode(treeNodes[0]);
+    }
+    this.loading = true;
     this._http.getMyGrantedAssets(keyword)
       .pipe(takeUntil(this.filterAssetCancel$))
       .subscribe(nodes => {
-        const treeNodes = this.assetsTree.getNodes();
-        if (treeNodes.length !== 0) {
-          this.assetsTree.hideNode(treeNodes[0]);
-        }
+        this.loading = false;
         let name = translate('Search');
         const assetsAmount = nodes.length;
         name = `${name} (${assetsAmount})`;
