@@ -331,13 +331,13 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     const treeNodes = this.assetsTree.getNodes();
     if (!keyword) {
       if (treeNodes.length !== 0) {
-        this.assetsTree.showNode(treeNodes[0]);
+        this.assetsTree.showNodes(treeNodes);
       }
       return;
     }
     this.filterAssetCancel$.next(true);
     if (treeNodes.length !== 0) {
-      this.assetsTree.hideNode(treeNodes[0]);
+      this.assetsTree.hideNodes(treeNodes);
     }
     this.loading = true;
     this._http.getMyGrantedAssets(keyword)
