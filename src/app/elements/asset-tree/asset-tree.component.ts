@@ -4,6 +4,7 @@ import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
 
+import {groupBy} from '@app/utils/common';
 import {AppService, HttpService, LogService, NavService, SettingService, TreeFilterService} from '@app/services';
 import {connectEvt, translate} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
@@ -323,7 +324,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (!this.assetsTree) {
       return;
     }
-    const searchNode = this.assetsTree.getNodesByFilter((node) => node.id === 'search');
+    let searchNode = this.assetsTree.getNodesByFilter((node) => node.id === 'search');
     if (searchNode) {
       this.assetsTree.removeChildNodes(searchNode[0]);
       this.assetsTree.removeNode(searchNode[0]);
@@ -348,10 +349,19 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         const assetsAmount = nodes.length;
         name = `${name} (${assetsAmount})`;
         const newNode = {id: 'search', name: name, isParent: true, open: true, zAsync: true};
-        const parentNode = this.assetsTree.addNodes(null, newNode)[0];
-        parentNode.zAsync = true;
-        this.assetsTree.addNodes(parentNode, nodes);
-        parentNode.open = true;
+        searchNode = this.assetsTree.addNodes(null, newNode)[0];
+        searchNode.zAsync = true;
+        const nodesGroupByOrg = groupBy(nodes, (node) => {
+          return node.meta.asset.org_name;
+        });
+        nodesGroupByOrg.forEach((item) => {
+          const orgName = item[0].meta.asset.org_name;
+          const orgNodeData = {id: orgName, name: orgName, isParent: true, open: true, zAsync: true};
+          const orgNode = this.assetsTree.addNodes(searchNode, orgNodeData)[0];
+          orgNode.zAsync = true;
+          this.assetsTree.addNodes(orgNode, item);
+        });
+        searchNode.open = true;
       });
     return;
   }
