@@ -40,6 +40,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
     const fontSize = this.settingSvc.setting.fontSize;
     this.term = new Terminal({
       fontFamily: 'monaco, Consolas, "Lucida Console", monospace',
+      lineHeight: 1.2,
       fontSize: fontSize,
       rightClickSelectsWord: true,
       theme: {
