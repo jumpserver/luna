@@ -4,6 +4,7 @@ import {View} from '@app/model';
 import {LogService, SettingService, UUIDService} from '@app/services';
 import {Socket} from '@app/utils/socket';
 import {getWsSocket, translate} from '@app/globals';
+import {newTerminal} from '@app/utils/common';
 
 
 @Component({
@@ -38,15 +39,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
 
   newTerm() {
     const fontSize = this.settingSvc.setting.fontSize;
-    this.term = new Terminal({
-      fontFamily: 'monaco, Consolas, "Lucida Console", monospace',
-      lineHeight: 1.2,
-      fontSize: fontSize,
-      rightClickSelectsWord: true,
-      theme: {
-        background: '#1f1b1b'
-      }
-    });
+    this.term = newTerminal(fontSize);
     this.view.Term = this.term;
     this.term.attachCustomKeyEventHandler(e => {
       if (e.ctrlKey && e.key === 'c' && this.term.hasSelection()) {

@@ -2,6 +2,7 @@ import {Component, Input, OnInit, OnChanges} from '@angular/core';
 import {Terminal} from 'xterm';
 import {HttpService, LogService} from '@app/services';
 import {Replay} from '@app/model';
+import {newTerminal} from '@app/utils/common';
 
 function zeroPad(num, minLength) {
   let str = num.toString();
@@ -80,14 +81,7 @@ export class ElementReplayJsonComponent implements OnInit {
   constructor(private _http: HttpService) {}
 
   ngOnInit() {
-    this.term = new Terminal({
-      fontFamily: '"Monaco", "Consolas", "monospace"',
-      fontSize: 14,
-      rightClickSelectsWord: true,
-      theme: {
-        background: '#1f1b1b'
-      }
-    });
+    this.term = newTerminal(14);
     if (this.replay.src !== 'READY') {
       this._http.getReplayData(this.replay.src)
         .subscribe(
