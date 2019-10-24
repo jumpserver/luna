@@ -38,7 +38,7 @@
     "utf-8-validate": "^5.0.2"
   },
   "dependencies": {
-    "@angular/animations": "~7.2.0",
+    "@angular/animations": "^7.2.0",
     "@angular/cdk": "^7.3.7",
     "@angular/common": "~7.2.0",
     "@angular/compiler": "~7.2.0",
@@ -64,6 +64,7 @@
     "neffos.js": "^0.1.19",
     "ngx-cookie-service": "^1.0.10",
     "ngx-logger": "4.0.4",
+    "ngx-toastr": "^10.2.0",
     "popper.js": "^1.14.7",
     "requirejs": "^2.3.5",
     "rxjs": "~6.3.3",

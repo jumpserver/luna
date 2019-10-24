@@ -78,5 +78,6 @@
   "cols": "列数",
   "rows": "行数",
   "favorite": "收藏",
-  "disfavor": "取消收藏"
+  "disfavor": "取消收藏",
+  "success": "成功"
 }

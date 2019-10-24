@@ -3,6 +3,7 @@ import {MatDialog} from '@angular/material';
 import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
+import {ToastrService} from 'ngx-toastr';
 
 import {groupBy} from '@app/utils/common';
 import {AppService, HttpService, LogService, NavService, SettingService, TreeFilterService} from '@app/services';
@@ -56,7 +57,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
               public _logger: LogService,
               private activatedRoute: ActivatedRoute,
               private _http: HttpService,
-              private settingSvc: SettingService
+              private settingSvc: SettingService,
+              private toastr: ToastrService
   ) {}
 
   ngOnInit() {
@@ -301,10 +303,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       this._http.favoriteAsset(assetId, false).subscribe(() => {
         const i = this.favoriteAssets.indexOf(assetId);
         this.favoriteAssets.splice(i, 1);
+        this.toastr.success(translate('Favorite') + ' ' + translate('success'));
       });
     } else {
       this._http.favoriteAsset(assetId, true).subscribe(() => {
         this.favoriteAssets.push(assetId);
+        this.toastr.success(translate('Disfavor') + ' ' + translate('success'));
       });
     }
   }
