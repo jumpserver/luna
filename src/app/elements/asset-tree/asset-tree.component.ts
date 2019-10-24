@@ -48,6 +48,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   isLoadTreeAsync: boolean;
   filterAssetCancel$: Subject<boolean> = new Subject();
   loading = true;
+  favoriteAssets = [];
 
   constructor(private _appSvc: AppService,
               private _treeFilterSvc: TreeFilterService,
@@ -104,6 +105,10 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         type: 'get'
       };
     }
+
+    this._http.getFavoriteAssets().subscribe(resp => {
+      this.favoriteAssets = resp.map(i => i.asset);
+    });
 
     this.loading = true;
     this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
@@ -206,6 +211,15 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     return findSSHProtocol;
   }
 
+  isAssetFavorite() {
+    const host = this.rightClickSelectNode.meta.asset;
+    if (!host) {
+      return false;
+    }
+    const assetId = host.id;
+    return this.favoriteAssets.indexOf(assetId) !== -1;
+  }
+
   get RMenuList() {
     const menuList = [{
       'id': 'new-connection',
@@ -219,6 +233,18 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       'fa': 'fa-file',
       'hide': !this.nodeSupportSSH(),
       'click': this.connectFileManager.bind(this)
+    }, {
+      'id': 'favorite',
+      'name': 'Favorite',
+      'fa': 'fa-star-o',
+      'hide': this.isAssetFavorite(),
+      'click': this.favoriteAsset.bind(this)
+    }, {
+      'id': 'disfavor',
+      'name': 'Disfavor',
+      'fa': 'fa-star',
+      'hide': !this.isAssetFavorite(),
+      'click': this.favoriteAsset.bind(this)
     }];
     if (!this.rightClickSelectNode) {
       return [];
@@ -263,6 +289,24 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         return;
     }
     window.open(url, '_blank');
+  }
+
+  favoriteAsset() {
+    const host = this.rightClickSelectNode.meta.asset;
+    if (!host) {
+      return false;
+    }
+    const assetId = host.id;
+    if (this.isAssetFavorite()) {
+      this._http.favoriteAsset(assetId, false).subscribe(() => {
+        const i = this.favoriteAssets.indexOf(assetId);
+        this.favoriteAssets.splice(i, 1);
+      });
+    } else {
+      this._http.favoriteAsset(assetId, true).subscribe(() => {
+        this.favoriteAssets.push(assetId);
+      });
+    }
   }
 
   filterAssets(keyword) {

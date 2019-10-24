@@ -3,6 +3,7 @@ import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Browser, DataStore} from '@app/globals';
 import {GuacObjAddResp, SystemUser, TreeNode, User as _User} from '@app/model';
 import {SettingService} from './setting';
+import {getCookie} from '@app/utils/common';
 
 
 @Injectable()
@@ -12,23 +13,43 @@ export class HttpService {
   constructor(private http: HttpClient, private settingSrv: SettingService) {
   }
 
+  setOptionsCSRFToken(options) {
+    const csrfToken = getCookie('csrftoken');
+    let headers;
+    if (!options) {
+      options = {};
+    }
+    if (!options.headers) {
+      headers = new HttpHeaders();
+    } else {
+      headers = options.headers;
+    }
+    headers = headers.set('X-CSRFToken', csrfToken);
+    options.headers = headers;
+    return options;
+  }
+
   get(url: string, options?: any) {
     return this.http.get(url, options);
   }
 
-  post(url: string, options?: any) {
-    return this.http.post(url, options);
+  post(url: string, body: any, options?: any) {
+    options = this.setOptionsCSRFToken(options);
+    return this.http.post(url, body, options);
   }
 
   put(url: string, options?: any) {
+    options = this.setOptionsCSRFToken(options);
     return this.http.put(url, options);
   }
 
   delete(url: string, options?: any) {
+    options = this.setOptionsCSRFToken(options);
     return this.http.delete(url, options);
   }
 
   patch(url: string, options?: any) {
+    options = this.setOptionsCSRFToken(options);
     return this.http.patch(url, options);
   }
 
@@ -86,6 +107,25 @@ export class HttpService {
   getMyAssetSystemUsers(assetId: string) {
     const url = `/api/v1/perms/users/assets/${assetId}/system-users/`;
     return this.http.get<Array<SystemUser>>(url);
+  }
+
+  favoriteAsset(assetId: string, favorite: boolean) {
+    let url: string;
+    if (favorite) {
+      url = `/api/v1/assets/favorite-assets/`;
+      const data = {
+        asset: assetId
+      };
+      return this.post(url, data);
+    } else {
+      url = `/api/v1/assets/favorite-assets/?asset=${assetId}`;
+      return this.delete(url);
+    }
+  }
+
+  getFavoriteAssets() {
+    const url = '/api/v1/assets/favorite-assets/';
+    return this.http.get<Array<any>>(url);
   }
 
   getGuacamoleToken(user_id: string, authToken: string) {
