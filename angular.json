@@ -19,7 +19,6 @@
             "assets": [
               "src/assets",
               "src/static",
-              "src/theme/default",
               "src/favicon.ico"
             ],
             "styles": [
@@ -28,6 +27,7 @@
               "node_modules/ngx-toastr/toastr.css",
               "src/sass/style.scss",
               "src/styles.css",
+              "src/theme.scss",
               "src/assets/ztree/awesomeStyle/awesome.css"
             ],
             "scripts": [

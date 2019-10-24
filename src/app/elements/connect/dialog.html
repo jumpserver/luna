@@ -1,15 +1,30 @@
 <h1 mat-dialog-title>{{"Found"|trans}} {{data.users.length}} {{"Users "|trans}}</h1>
 
-<mat-form-field style="width: 100%">
-  <mat-select [(value)]="selected"
-              [compareWith]="compareFn"
-              [formControl]="UserSelectControl"
-              placeholder="{{'Choose a User'|trans}}" required>
-    <mat-option *ngFor="let u of data.users" value="{{u.id}}">{{u.name}}</mat-option>
-  </mat-select>
+<div style="height: 110px">
+  <div *ngIf="data.users.length < 5">
+    <div>
+      <label>{{'Choose a User'|trans}}: </label>
+    </div>
+    <mat-radio-group required [formControl]="UserSelectControl" [(ngModel)]="selected">
+      <mat-radio-button *ngFor="let u of data.users" value="{{u.id}}"
+                        style="padding-right: 10px">{{u.name}}</mat-radio-button>
+    </mat-radio-group>
+  </div>
+
+  <div *ngIf="data.users.length >= 5">
+    <mat-form-field style="width: 100%" >
+      <mat-select [(value)]="selected"
+                  [compareWith]="compareFn"
+                  [formControl]="UserSelectControl"
+                  placeholder="{{'Choose a User'|trans}}" required>
+        <mat-option *ngFor="let u of data.users" value="{{u.id}}">{{u.name}}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
   <mat-error *ngIf="UserSelectControl.hasError('required')">{{"Please choose a User"|trans}}</mat-error>
 
-</mat-form-field>
+</div>
+
 <div style="float: right">
   <button mat-raised-button (click)="onNoClick()">{{"Cancel"|trans}}</button>
   <button mat-raised-button color="primary" [mat-dialog-close]="selected" cdkFocusInitial>{{"Confirm"|trans}}</button>

@@ -107,8 +107,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (systemUsers.length > 1) {
       return new Promise<SystemUser>(resolve => {
         const dialogRef = this._dialog.open(AssetTreeDialogComponent, {
-          height: '200px',
-          width: '300px',
+          height: '250px',
+          width: '500px',
           data: {users: systemUserMaxPriority}
         });
 
