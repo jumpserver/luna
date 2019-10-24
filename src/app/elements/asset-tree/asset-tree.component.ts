@@ -303,12 +303,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       this._http.favoriteAsset(assetId, false).subscribe(() => {
         const i = this.favoriteAssets.indexOf(assetId);
         this.favoriteAssets.splice(i, 1);
-        this.toastr.success(translate('Favorite') + ' ' + translate('success'));
+        this.toastr.success(translate('Disfavor') + ' ' + translate('success'), '', {timeOut: 2000});
       });
     } else {
       this._http.favoriteAsset(assetId, true).subscribe(() => {
         this.favoriteAssets.push(assetId);
-        this.toastr.success(translate('Disfavor') + ' ' + translate('success'));
+        this.toastr.success(translate('Favorite') + ' ' + translate('success'), '', {timeOut: 2000});
       });
     }
   }
