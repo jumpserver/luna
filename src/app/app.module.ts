@@ -4,6 +4,8 @@ import {FormsModule, ReactiveFormsModule} from '@angular/forms'; // <-- NgModel 
 import {NGXLogger} from 'ngx-logger';
 import {HttpClientModule} from '@angular/common/http';
 import {CookieService} from 'ngx-cookie-service';
+import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
+import {ToastrModule} from 'ngx-toastr';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 
 // service
@@ -26,8 +28,10 @@ import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './element
     BrowserModule,
     FormsModule,
     HttpClientModule,
+    BrowserAnimationsModule,
     ReactiveFormsModule,
     AppRouterModule,
+    ToastrModule.forRoot(),
     ...PluginModules
   ],
   declarations: [

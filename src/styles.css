@@ -124,3 +124,17 @@ body ::-webkit-scrollbar-thumb {
   display: inline-block;
   font: normal normal normal 14px/1 FontAwesome !important;
 }
+
+
+#toast-container > .toast-warning:before {
+}
+
+#toast-container > .toast-error:before {
+}
+
+#toast-container > .toast-info:before {
+}
+
+#toast-container > .toast-success:before {
+  content: "";
+}

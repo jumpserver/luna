@@ -19,14 +19,15 @@
             "assets": [
               "src/assets",
               "src/static",
-              "src/theme/default",
               "src/favicon.ico"
             ],
             "styles": [
               "node_modules/animate.css/animate.min.css",
               "node_modules/xterm/dist/xterm.css",
+              "node_modules/ngx-toastr/toastr.css",
               "src/sass/style.scss",
               "src/styles.css",
+              "src/theme.scss",
               "src/assets/ztree/awesomeStyle/awesome.css"
             ],
             "scripts": [
