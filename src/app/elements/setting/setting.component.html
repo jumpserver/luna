@@ -18,7 +18,7 @@
   </mat-select>
 </mat-form-field>
 
-<mat-form-field>
+<mat-form-field *ngIf="!globalSetting.WINDOWS_SKIP_ALL_MANUAL_PASSWORD">
   <mat-select [(value)]="setting.isSkipAllManualPassword"
     placeholder="{{'Skip manual password'|trans }}" >
     <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name|trans}}</mat-option>
