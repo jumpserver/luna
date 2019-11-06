@@ -25,8 +25,7 @@
   </mat-select>
 </mat-form-field>
 
-
-<div style="float: right">
+<div style="float: right" [style.padding-top]="globalSetting.WINDOWS_SKIP_ALL_MANUAL_PASSWORD ? '20px' : '0'">
   <button mat-raised-button (click)="onNoClick()">{{"Cancel"|trans}}</button>
   <button mat-raised-button color="primary" (click)="onSubmit()">{{"Confirm"|trans}}</button>
 </div>
