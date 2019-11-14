@@ -1,6 +1,6 @@
 import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {CookieService} from 'ngx-cookie-service';
-import {HttpService, LogService} from '@app/services';
+import {HttpService, LogService, SettingService} from '@app/services';
 import {DataStore, User} from '@app/globals';
 import {DomSanitizer} from '@angular/platform-browser';
 import {View} from '@app/model';
@@ -19,16 +19,22 @@ export class ElementGuacamoleComponent implements OnInit {
   @Input() index: number;
   @ViewChild('rdpRef') el: ElementRef;
   registered = false;
+  iframeWindow: any;
+  idleTimeout: number;
+  idleTTL = 1000 * 3600;
+  isIdleTimeout = false;
+  idleTimeoutMsg = 'Idle timeout, connection has been disconnected';
 
   constructor(private sanitizer: DomSanitizer,
               private _http: HttpService,
               private _cookie: CookieService,
+              private settingSvc: SettingService,
               private _logger: LogService) {
+    this.idleTTL = this.settingSvc.globalSetting.SECURITY_MAX_IDLE_TIME * 60 * 1000;
   }
 
   registerHost() {
     let action: any;
-    console.log(this.sysUser);
     if (this.remoteAppId) {
       action = this._http.guacamoleAddRemoteApp(User.id, this.remoteAppId, this.sysUser.id, this.sysUser.username, this.sysUser.password);
     } else {
@@ -38,6 +44,7 @@ export class ElementGuacamoleComponent implements OnInit {
       data => {
         const base = data.result;
         this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamoleToken;
+        setTimeout(() => this.setIdleTimeout(), 500);
       },
       error => {
         if (!this.registered) {
@@ -73,13 +80,29 @@ export class ElementGuacamoleComponent implements OnInit {
     if (this.target) {
       return null;
     }
-
-    // if (!environment.production) {
-    //   this.target = this._cookie.get('guacamole');
-    //   NavList.List[this.index].Rdp = this.el.nativeElement;
-    //   return null;
-    // }
     this.registerHost();
+  }
+
+  setIdleTimeout() {
+    this.iframeWindow = this.el.nativeElement.contentWindow;
+    this.resetIdleTimeout();
+    this.iframeWindow.onclick = () => this.resetIdleTimeout();
+    this.iframeWindow.onkeyup = () => this.resetIdleTimeout();
+    console.log(this.iframeWindow);
+  }
+
+  resetIdleTimeout() {
+    if (this.idleTimeout) {
+      clearTimeout(this.idleTimeout);
+      this.idleTimeout = null;
+    }
+    this.idleTimeout = setTimeout(() => this.disconnect(), this.idleTTL);
+  }
+
+  disconnect() {
+    this._logger.debug('Disconnect guacamole');
+    this.target = '';
+    this.isIdleTimeout = true;
   }
 
   trust(url) {
