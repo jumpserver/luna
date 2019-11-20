@@ -186,6 +186,9 @@ export class Monitor {
   type: string;
 }
 
+export class GlobalSetting {
+  WINDOWS_SKIP_ALL_MANUAL_PASSWORD: boolean;
+}
 
 export class Setting {
   rdpSolution: string = 'Auto';
