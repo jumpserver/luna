@@ -42,6 +42,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   expandNodes: any;
   assetsTree: any;
   remoteAppsTree: any;
+  DBAppsTree: any;
   isShowRMenu = false;
   rightClickSelectNode: any;
   hasLoginTo = false;
@@ -127,7 +128,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.remoteAppsTree.destroy();
     this.initRemoteAppsTree();
   }
-  
+
+  refreshDBAppsTree() {
+    this.DBAppsTree.destroy();
+    this.initDBAppsTree();
+  }
+
   onRemoteAppsNodeClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
       this.remoteAppsTree.expandNode(treeNode);
@@ -140,7 +146,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   initRemoteAppsTree() {
     const setting = Object.assign({}, this.setting);
     setting['callback'] = {
-      onClick: this.onRemoteAppsNodeClick.bind(this),
+      //onClick: this.onRemoteAppsNodeClick.bind(this),
+      onClick: this.onAssetsNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
     this._http.getMyGrantedRemoteApps().subscribe(
@@ -156,17 +163,37 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       }
     );
   }
+  initDBAppsTree() {
+    const setting = Object.assign({}, this.setting);
+    setting['callback'] = {
+      onClick: this.onRemoteAppsNodeClick.bind(this),
+      onRightClick: this.onRightClick.bind(this)
+    };
+    this._http.getMyGrantedDBApps().subscribe(
+      resp => {
+        if (resp.length === 1) {
+          return;
+        }
+        const tree = $.fn.zTree.init($('#DBAppsTree'), setting, resp);
+        this.DBAppsTree = tree;
+        this.rootNodeAddDom(tree, () => {
+          this.refreshDBAppsTree();
+        });
+      }
+    );
+  }
 
   initTree() {
     this.initAssetsTree();
     this.initRemoteAppsTree();
+    this.initDBAppsTree();
   }
 
   connectAsset(node: TreeNode) {
     const evt = new ConnectEvt(node, 'asset');
     connectEvt.next(evt);
   }
-  
+
   rootNodeAddDom(ztree, callback) {
     const tId = ztree.setting.treeId + '_tree_refresh';
     const refreshIcon = '<a id=' + tId + ' class="tree-refresh">' +

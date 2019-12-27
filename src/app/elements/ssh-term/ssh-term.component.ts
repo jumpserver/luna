@@ -34,7 +34,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
       this.ws = sock;
       this.connectHost();
     });
-    this.view.type = 'ssh';
+    // this.view.type = 'ssh';
   }
 
   newTerm() {
@@ -74,8 +74,10 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
         uuid: this.host.id,
         userid: this.sysUser.id,
         secret: this.secret,
-        size: [this.term.cols, this.term.rows]
+        size: [this.term.cols, this.term.rows],
+        type: this.view.type
       };
+      console.log('type', data);
       this.ws.emit('host', data);
     }
     if (this.token) {
