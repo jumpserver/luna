@@ -134,6 +134,14 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.initDBAppsTree();
   }
 
+  onDBAppsTreeNodeClick(event, treeId, treeNode, clickFlag) {
+    if (treeNode.isParent) {
+      this.DBAppsTree.expandNode(treeNode);
+    } else {
+      this._http.getUserProfile().subscribe();
+      this.connectAsset(treeNode);
+    }
+  }
   onRemoteAppsNodeClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
       this.remoteAppsTree.expandNode(treeNode);
@@ -146,8 +154,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   initRemoteAppsTree() {
     const setting = Object.assign({}, this.setting);
     setting['callback'] = {
-      //onClick: this.onRemoteAppsNodeClick.bind(this),
-      onClick: this.onAssetsNodeClick.bind(this),
+      onClick: this.onRemoteAppsNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
     this._http.getMyGrantedRemoteApps().subscribe(
@@ -166,7 +173,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   initDBAppsTree() {
     const setting = Object.assign({}, this.setting);
     setting['callback'] = {
-      onClick: this.onRemoteAppsNodeClick.bind(this),
+      onClick: this.onDBAppsTreeNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
     this._http.getMyGrantedDBApps().subscribe(
