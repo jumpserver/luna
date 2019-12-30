@@ -104,7 +104,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   async connectDatabaseAsset(node: TreeNode) {
-    console.log('debug', node);
     this._logger.debug('Connect remote app: ', node.id);
     const systemUsers = await this._http.getMyDatabaseAppSystemUsers(node.id).toPromise();
     let sysUser = await this.selectLoginSystemUsers(systemUsers);

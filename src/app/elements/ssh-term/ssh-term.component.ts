@@ -77,7 +77,6 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
         size: [this.term.cols, this.term.rows],
         type: this.view.type
       };
-      console.log('type', data);
       this.ws.emit('host', data);
     }
     if (this.token) {
