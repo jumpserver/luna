@@ -247,8 +247,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         view.type = 'ssh';
       } else if (user.protocol === 'rdp' || user.protocol === 'vnc') {
         view.type = 'rdp';
-      }  else if (user.protocol === 'database_app' ) {
-        view.type = 'database_app';
       }
       this.onNewView.emit(view);
     }
