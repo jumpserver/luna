@@ -116,6 +116,7 @@ export class View {
   room: string;
   Rdp: any;
   Term: any;
+  DatabaseApp: string;
 }
 
 export class ViewAction {

@@ -99,8 +99,21 @@ export class HttpService {
     return this.http.get<Array<TreeNode>>(url);
   }
 
+  getMyGrantedDBApps(id?: string) {
+    let url = '/api/v1/perms/user/database-apps/tree/';
+    if (id) {
+      url += `?id=${id}&only=1`;
+    }
+    return this.http.get<Array<TreeNode>>(url);
+  }
+
   getMyRemoteAppSystemUsers(remoteAppId: string) {
     const url = `/api/v1/perms/users/remote-apps/${remoteAppId}/system-users/`;
+    return this.http.get<Array<SystemUser>>(url);
+  }
+
+  getMyDatabaseAppSystemUsers(DatabaseAppId: string) {
+    const url = `/api/v1/perms/users/database-apps/${DatabaseAppId}/system-users/`;
     return this.http.get<Array<SystemUser>>(url);
   }
 
@@ -122,12 +135,10 @@ export class HttpService {
       return this.delete(url);
     }
   }
-
   getFavoriteAssets() {
     const url = '/api/v1/assets/favorite-assets/';
     return this.http.get<Array<any>>(url);
   }
-
   getGuacamoleToken(user_id: string, authToken: string) {
     const body = new HttpParams()
       .set('username', user_id)

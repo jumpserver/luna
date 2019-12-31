@@ -83,6 +83,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       case 'remote_app':
         this.connectRemoteApp(node);
         break;
+      case 'database_app':
+        this.connectDatabaseApp(node);
+        break;
       default:
         alert('Unknown type: ' + node.meta.type);
     }
@@ -95,6 +98,18 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     sysUser = await this.manualSetUserAuthLoginIfNeed(sysUser);
     if (sysUser && sysUser.id) {
       this.loginAsset(host, sysUser);
+    } else {
+      alert('该主机没有授权系统用户');
+    }
+  }
+
+  async connectDatabaseApp(node: TreeNode) {
+    this._logger.debug('Connect remote app: ', node.id);
+    const systemUsers = await this._http.getMyDatabaseAppSystemUsers(node.id).toPromise();
+    let sysUser = await this.selectLoginSystemUsers(systemUsers);
+    sysUser = await this.manualSetUserAuthLoginIfNeed(sysUser);
+    if (sysUser && sysUser.id) {
+      this.loginDatabaseApp(node, sysUser);
     } else {
       alert('该主机没有授权系统用户');
     }
@@ -181,6 +196,20 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       view.remoteApp = node.id;
       view.user = user;
       view.type = 'rdp';
+      this.onNewView.emit(view);
+    }
+  }
+  loginDatabaseApp(node: TreeNode, user: SystemUser) {
+    if (node) {
+      const view = new View();
+      view.host = node;
+      view.nick = node.name;
+      view.connected = true;
+      view.editable = false;
+      view.closed = false;
+      view.DatabaseApp = node.id;
+      view.user = user;
+      view.type = 'database';
       this.onNewView.emit(view);
     }
   }

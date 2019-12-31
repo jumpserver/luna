@@ -3,7 +3,7 @@
     [view]="view"
     [host]="view.host"
     [sysUser]="view.user"
-    *ngIf="view.type=='ssh'"
+    *ngIf="view.type=='ssh' || view.type=='database'"
   >
   </elements-ssh-term>
   <elements-guacamole
