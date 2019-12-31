@@ -84,7 +84,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         this.connectRemoteApp(node);
         break;
       case 'database_app':
-        this.connectDatabaseAsset(node);
+        this.connectDatabaseApp(node);
         break;
       default:
         alert('Unknown type: ' + node.meta.type);
@@ -103,7 +103,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
   }
 
-  async connectDatabaseAsset(node: TreeNode) {
+  async connectDatabaseApp(node: TreeNode) {
     this._logger.debug('Connect remote app: ', node.id);
     const systemUsers = await this._http.getMyDatabaseAppSystemUsers(node.id).toPromise();
     let sysUser = await this.selectLoginSystemUsers(systemUsers);
