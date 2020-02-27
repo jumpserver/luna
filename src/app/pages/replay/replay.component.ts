@@ -26,6 +26,10 @@ export class PagesReplayComponent implements OnInit {
         this.replay.type = data['type'];
         this.replay.src = data['src'];
         this.replay.id = data['id'];
+        this.replay.user = data['user'];
+        this.replay.asset = data['asset'];
+        this.replay.system_user = data['system_user'];
+        this.replay.date_start = data['date_start'];
       },
       err => {
         alert('没找到录像文件');

@@ -208,6 +208,10 @@ export class Replay {
   timelist: Array<number>;
   totalTime: number;
   json: any;
+  user: string;
+  asset: string;
+  system_user: string;
+  date_start: string;
   height: number;
   width: number;
 }
