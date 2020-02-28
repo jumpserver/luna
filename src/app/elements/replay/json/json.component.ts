@@ -70,6 +70,7 @@ export class ElementReplayJsonComponent implements OnInit {
   term: Terminal;
   termCols = 80;
   termRows = 24;
+  starttime = null;
 
   get position() {
     return formatTime(this.time);
@@ -82,6 +83,8 @@ export class ElementReplayJsonComponent implements OnInit {
 
   ngOnInit() {
     this.term = newTerminal(14);
+    const date = new Date(Date.parse(this.replay.date_start));
+    this.starttime = date.toLocaleString('zh-CN', { hour12: false }).split('/').join('-');
     if (this.replay.src !== 'READY') {
       this._http.getReplayData(this.replay.src)
         .subscribe(

@@ -62,6 +62,7 @@ export class ElementReplayGuacamoleComponent implements OnInit {
   duration = '00:00';
   position = '00:00';
   @Input() replay: Replay;
+  starttime = null;
 
   constructor() { }
 
@@ -70,6 +71,8 @@ export class ElementReplayGuacamoleComponent implements OnInit {
       alert('Not found replay');
       return;
     }
+    const date = new Date(Date.parse(this.replay.date_start));
+    this.starttime = date.toLocaleString('zh-CN', { hour12: false }).split('/').join('-');
     this.playerRef = document.getElementById('player');
     this.displayRef = document.getElementById('display');
     this.screenRef = document.getElementById('screen');
