@@ -10,10 +10,10 @@
     <span id="position">{{ position }}</span>
     <span>/</span>
     <span id="duration">{{ duration }}</span>
-    <span id="user" style="padding-left: 20px">{{"用户"|trans}} : {{this.replay.user}}</span>
-    <span id="asset" style="padding-left: 20px">{{"资产"|trans}} : {{this.replay.asset}}</span>
-    <span id="system_user" style="padding-left: 20px">{{"系统用户"|trans}} : {{this.replay.system_user}}</span>
-    <span id="date_start" style="padding-left: 20px">{{"开始时间"|trans}} : {{this.starttime}} </span>
+    <span id="user" style="padding-left: 20px" *ngIf="this.replay.user">{{"用户"|trans}} : {{this.replay.user}}</span>
+    <span id="asset" style="padding-left: 20px" *ngIf="this.replay.asset">{{"资产"|trans}} : {{this.replay.asset}}</span>
+    <span id="system_user" style="padding-left: 20px" *ngIf="this.replay.asset">{{"系统用户"|trans}} : {{this.replay.system_user}}</span>
+    <span id="date_start" style="padding-left: 20px" *ngIf="this.replay.date_start">{{"开始时间"|trans}} : {{this.starttime}} </span>
   </div>
   <div id="display" (click)="toggle()">
     <div class="notification-container">
