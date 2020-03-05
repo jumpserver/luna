@@ -214,4 +214,5 @@ export class Replay {
   date_start: string;
   height: number;
   width: number;
+  download_url: string;
 }
