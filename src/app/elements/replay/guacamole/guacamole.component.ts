@@ -62,6 +62,7 @@ export class ElementReplayGuacamoleComponent implements OnInit {
   duration = '00:00';
   position = '00:00';
   @Input() replay: Replay;
+  starttime = null;
 
   constructor() { }
 
@@ -70,6 +71,8 @@ export class ElementReplayGuacamoleComponent implements OnInit {
       alert('Not found replay');
       return;
     }
+    const date = new Date(Date.parse(this.replay.date_start));
+    this.starttime = this.toSafeLocalDateStr(date);
     this.playerRef = document.getElementById('player');
     this.displayRef = document.getElementById('display');
     this.screenRef = document.getElementById('screen');
@@ -122,6 +125,18 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     this.runFrom();
   }
 
+  getUserLang() {
+    let userLangEN = document.cookie.indexOf('django_language=en');
+    if (userLangEN === -1) {
+    return 'zh-CN';
+    } else {
+    return 'en-US';
+    }
+  }
+  toSafeLocalDateStr(d) {
+    let date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
+    return date_s.split('/').join('-');
+  }
   runFrom() {
     this.recording.seek(this.percent, () =>
       this.playerRef.className = ''
