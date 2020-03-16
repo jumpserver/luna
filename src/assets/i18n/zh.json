@@ -82,8 +82,7 @@
   "success": "成功",
   "User":"用户",
   "Asset": "资产",
-  "System User": "系统用户",
-  "Start Time":"开始时间",
-  "Download":"下载录像",
+  "start time":"开始时间",
+  "download":"下载录像",
   "idle timeout, connection has been disconnected": "空闲超时，链接已断开"
 }
