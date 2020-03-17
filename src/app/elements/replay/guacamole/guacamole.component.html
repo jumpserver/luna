@@ -10,11 +10,11 @@
     <span id="position">{{ position }}</span>
     <span>/</span>
     <span id="duration">{{ duration }}</span>
-    <span id="user" style="padding-left: 20px" *ngIf="replay.user">{{"User"|trans}} : {{replay.user}}</span>
-    <span id="asset" style="padding-left: 20px" *ngIf="replay.asset">{{"Asset"|trans}} : {{replay.asset}}</span>
-    <span id="system_user" style="padding-left: 20px" *ngIf="replay.system_user">{{"System User"|trans}} : {{replay.system_user}}</span>
-    <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{"Start Time"|trans}} : {{starttime}} </span>
-    <span id="date_start" style="padding-left: 30px" *ngIf="replay.download_url"><a type="button" [href]="replay.download_url">{{"Download"|trans}}</a></span>
+    <span id="user" style="padding-left: 20px" *ngIf="replay.user">{{"user"|trans}} : {{replay.user}}</span>
+    <span id="asset" style="padding-left: 20px" *ngIf="replay.asset">{{"asset"|trans}} : {{replay.asset}}</span>
+    <span id="system_user" style="padding-left: 20px" *ngIf="replay.system_user">{{"system user"|trans}} : {{replay.system_user}}</span>
+    <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{"start time"|trans}} : {{starttime}} </span>
+    <span id="date_start" style="padding-left: 30px" *ngIf="replay.download_url"><a type="button" [href]="replay.download_url">{{"download"|trans}}</a></span>
 
   </div>
   <div id="display" (click)="toggle()">
