@@ -21,15 +21,23 @@ export class PagesReplayComponent implements OnInit {
     this.route.params.subscribe(params => {
       sid = params['sid'];
     });
-    this._http.getReplay(sid).subscribe(
-      data => {
-        this.replay.type = data['type'];
-        this.replay.src = data['src'];
-        this.replay.id = data['id'];
-      },
-      err => {
-        alert('没找到录像文件');
-      }
-    );
+    const interval = setInterval(() => {
+      this._http.getReplay(sid).subscribe(
+        data => {
+          if (data['error']) {
+            alert('没找到录像文件');
+            clearInterval(interval);
+            return;
+          }
+          if (data['type']) {
+            Object.assign(this.replay, data);
+            clearInterval(interval);
+          }
+        },
+        err => {
+          alert('没找到录像文件');
+        }
+      );
+    }, 2000);
   }
 }

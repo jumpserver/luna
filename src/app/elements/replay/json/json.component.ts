@@ -70,6 +70,7 @@ export class ElementReplayJsonComponent implements OnInit {
   term: Terminal;
   termCols = 80;
   termRows = 24;
+  starttime = null;
 
   get position() {
     return formatTime(this.time);
@@ -82,6 +83,8 @@ export class ElementReplayJsonComponent implements OnInit {
 
   ngOnInit() {
     this.term = newTerminal(14);
+    const date = new Date(Date.parse(this.replay.date_start));
+    this.starttime = this.toSafeLocalDateStr(date);
     if (this.replay.src !== 'READY') {
       this._http.getReplayData(this.replay.src)
         .subscribe(
@@ -150,7 +153,18 @@ export class ElementReplayJsonComponent implements OnInit {
     clearInterval(this.timer);
     this.isPlaying = false;
   }
-
+  getUserLang() {
+    let userLangEN = document.cookie.indexOf('django_language=en');
+    if (userLangEN === -1) {
+    return 'zh-CN';
+    } else {
+    return 'en-US';
+    }
+  }
+  toSafeLocalDateStr(d) {
+    let date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
+    return date_s.split('/').join('-');
+  }
   speedUp() {
     this.speed += 1;
   }
