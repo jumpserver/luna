@@ -5,7 +5,7 @@ import {AppService, HttpService, LogService, NavService, SettingService} from '@
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';
-import {SystemUser, TreeNode, Asset, Node} from '@app/model';
+import {SystemUser, TreeNode, Asset} from '@app/model';
 import {View} from '@app/model';
 
 
