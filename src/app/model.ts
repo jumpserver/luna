@@ -117,6 +117,7 @@ export class View {
   Rdp: any;
   Term: any;
   DatabaseApp: string;
+  shareroomId: string;
 }
 
 export class ViewAction {

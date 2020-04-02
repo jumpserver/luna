@@ -1,7 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {AppService, HttpService, LocalStorageService} from '@app/services';
 import {connectEvt} from '@app/globals';
-import {ConnectEvt} from '@app/model';
+import {ConnectEvt, TreeNode} from '@app/model';
 // import {DataStore} from '@app/globals';
 // import * as jQuery from 'jquery/dist/jquery.min.js';
 import {View, ViewAction} from '@app/model';
@@ -30,6 +30,7 @@ export class PagesConnectComponent implements OnInit {
     this.system = this._appService.getQueryString('system');
     this.token = this._appService.getQueryString('token');
     const assetId = this._appService.getQueryString('asset');
+    const shareroomId = this._appService.getQueryString('shareroom');
     const remoteAppId = this._appService.getQueryString('remote_app');
     if (assetId) {
       this._http.filterMyGrantedAssetsById(assetId).subscribe(
@@ -41,6 +42,15 @@ export class PagesConnectComponent implements OnInit {
           connectEvt.next(evt);
         }
       );
+    }
+    if (shareroomId) {
+      const node = new TreeNode;
+      node.id = shareroomId;
+      node.meta = {
+        type: 'shareroom'
+      };
+      const evt = new ConnectEvt(node, 'shareroom');
+      connectEvt.next(evt);
     }
     if (remoteAppId) {
       this._http.getMyGrantedRemoteApps(remoteAppId).subscribe(
