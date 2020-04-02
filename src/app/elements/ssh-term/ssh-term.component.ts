@@ -123,7 +123,10 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
     });
 
     this.ws.on('logout', data => {
-      if (data.room === this.roomID) {
+      if (this.shareroomId) {
+        this.term.write('\n \n Session Has Been Closed By Owner');
+        this.view.connected = false;
+      } else if (data.room === this.roomID) {
         this._logger.debug('On logout event trigger: ', data.room, this.roomID);
         this.view.connected = false;
       }
