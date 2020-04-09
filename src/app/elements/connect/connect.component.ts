@@ -34,6 +34,10 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           this.Connect(evt.node);
           break;
         }
+        case 'shareroom': {
+          this.Connect(evt.node);
+          break;
+        }
         case 'sftp': {
           this.connectFileManager(evt.node);
           break;
@@ -83,9 +87,12 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       case 'remote_app':
         this.connectRemoteApp(node);
         break;
-      case 'database_app':
-        this.connectDatabaseApp(node);
+      case 'shareroom':
+        this.connetShareroom(node);
         break;
+      case 'database_app':
+          this.connectDatabaseApp(node);
+          break;
       default:
         alert('Unknown type: ' + node.meta.type);
     }
@@ -250,6 +257,15 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       }
       this.onNewView.emit(view);
     }
+  }
+  connetShareroom(node: TreeNode) {
+      const view = new View();
+      view.connected = true;
+      view.editable = false;
+      view.closed = false;
+      view.shareroomId = node.id;
+      view.type = 'ssh';
+      this.onNewView.emit(view);
   }
 
   filterMaxPrioritySystemUsers(sysUsers: Array<SystemUser>): Array<SystemUser> {

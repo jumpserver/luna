@@ -18,6 +18,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   @Input() sysUser: any;
   @Input() index: number;
   @Input() token: string;
+  @Input() shareroomId: string;
 
   term: Terminal;
   secret: string;
@@ -79,6 +80,14 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
       };
       this.ws.emit('host', data);
     }
+    if (this.shareroomId) {
+      const data = {
+        shareRoomID: this.shareroomId,
+        secret: this.secret,
+        size: [this.term.cols, this.term.rows],
+      };
+      this.ws.emit('shareRoom', data);
+    }
     if (this.token) {
       const data = {
         'token': this.token, 'secret': this.secret,
@@ -97,12 +106,16 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
       this.ws.emit('data', d);
     });
 
+    this.ws.on('shareRoomData', data => {
+      if (data.room === this.roomID) {
+        this.term.write(data['data']);
+      }
+    });
     this.ws.on('data', data => {
       if (data.room === this.roomID) {
         this.term.write(data['data']);
       }
     });
-
     // 服务器主动断开
     this.ws.on('disconnect', () => {
       this._logger.debug('On disconnect event trigger');
@@ -110,7 +123,10 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
     });
 
     this.ws.on('logout', data => {
-      if (data.room === this.roomID) {
+      if (this.shareroomId) {
+        this.term.write('\n \n Session Has Been Closed By Owner');
+        this.view.connected = false;
+      } else if (data.room === this.roomID) {
         this._logger.debug('On logout event trigger: ', data.room, this.roomID);
         this.view.connected = false;
       }

@@ -3,6 +3,7 @@
     [view]="view"
     [host]="view.host"
     [sysUser]="view.user"
+    [shareroomId] = "view.shareroomId"
     *ngIf="view.type=='ssh' || view.type=='database'"
   >
   </elements-ssh-term>
