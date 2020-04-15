@@ -125,7 +125,6 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
     this.ws.on('logout', data => {
       if (this.shareroomId) {
         this.term.write(data['data']);
-        // this.term.write('\n\033[32;49;1m == Session has been closed by owner ==  \033[39;49;0m')
         this.view.connected = false;
       } else if (data.room === this.roomID) {
         this._logger.debug('On logout event trigger: ', data.room, this.roomID);
