@@ -11,10 +11,11 @@ import {ElementSftpComponent} from './elements/sftp/sftp.component';
 
 const appRoutes: Routes = [
   {path: 'replay/:sid', component: PagesReplayComponent},
-  {path: 'monitor/:token', component: PagesMonitorComponent},
+  {path: 'join', component: PagesConnectComponent},
   {path: 'connect', component: PagesConnectComponent},
   {path: 'sftp', component: ElementSftpComponent},
   {path: 'undefined', component: PagesBlankComponent},
+  {path: 'monitor/:token', component: PagesMonitorComponent},
   {path: '', component: PageMainComponent},
   // {path: '**', component: PagesNotFoundComponent}
 ];
