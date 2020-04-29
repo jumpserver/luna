@@ -59,7 +59,7 @@
     "core-js": "^2.5.4",
     "font-awesome": "4.7.0",
     "guacamole-common-js": "1.1.0",
-    "jquery": "^3.4.1",
+    "jquery": "^3.5.0",
     "metismenu": "^2.7.9",
     "neffos.js": "^0.1.19",
     "ngx-cookie-service": "^1.0.10",
