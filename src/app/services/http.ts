@@ -92,7 +92,7 @@ export class HttpService {
   }
 
   getMyGrantedRemoteApps(id?: string) {
-    let url = '/api/v1/perms/user/remote-apps/tree/';
+    let url = '/api/v1/perms/users/remote-apps/tree/';
     if (id) {
       url += `?id=${id}&only=1`;
     }
@@ -100,7 +100,7 @@ export class HttpService {
   }
 
   getMyGrantedDBApps(id?: string) {
-    let url = '/api/v1/perms/user/database-apps/tree/';
+    let url = '/api/v1/perms/users/database-apps/tree/';
     if (id) {
       url += `?id=${id}&only=1`;
     }
