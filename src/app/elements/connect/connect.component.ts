@@ -72,6 +72,17 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           }
         );
         break;
+      case 'database_app':
+        this._http.getMyGrantedDBApps(loginTo).subscribe(
+          nodes => {
+            if (nodes.length === 1) {
+              this.hasLoginTo = true;
+              const node = nodes[0];
+              this.Connect(node);
+            }
+          }
+        );
+        break;
     }
   }
 
