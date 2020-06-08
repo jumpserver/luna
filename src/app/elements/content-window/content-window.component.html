@@ -3,7 +3,9 @@
     [view]="view"
     [host]="view.host"
     [sysUser]="view.user"
+    [token]="view.token"
     [shareroomId] = "view.shareroomId"
+
     *ngIf="view.type=='ssh' || view.type=='database'"
   >
   </elements-ssh-term>
@@ -12,6 +14,7 @@
     [host]="view.host"
     [sysUser]="view.user"
     [remoteAppId]="view.remoteApp"
+    [token]="view.token"
     *ngIf="view.type=='rdp'"
   >
   </elements-guacamole>
