@@ -17,6 +17,7 @@ export class ElementGuacamoleComponent implements OnInit {
   @Input() remoteAppId: string;
   @Input() target: string;
   @Input() index: number;
+  @Input() token: any;
   @ViewChild('rdpRef') el: ElementRef;
   registered = false;
   iframeWindow: any;
@@ -37,6 +38,8 @@ export class ElementGuacamoleComponent implements OnInit {
     let action: any;
     if (this.remoteAppId) {
       action = this._http.guacamoleAddRemoteApp(User.id, this.remoteAppId, this.sysUser.id, this.sysUser.username, this.sysUser.password);
+    } else if (this.token) {
+      action = this._http.guacamoleTokenAddAsset(this.token);
     } else {
       action = this._http.guacamoleAddAsset(User.id, this.host.id, this.sysUser.id, this.sysUser.username, this.sysUser.password);
     }
