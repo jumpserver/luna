@@ -9,7 +9,7 @@ import {LocalStorageService, LogService} from './share';
 declare function unescape(s: string): string;
 
 
-@Injectable()
+@Injectable()``
 export class AppService implements OnInit {
   // user:User = user  ;
   lang: string;
