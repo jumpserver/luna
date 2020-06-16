@@ -240,7 +240,7 @@ export class HttpService {
   }
 
   getReplay(token: string) {
-    return this.http.get('/api/v1/terminal/sessions/' + token + '/replay');
+    return this.http.get('/api/v1/terminal/sessions/' + token + '/replay/');
   }
 
   // get_replay_json(token: string) {
