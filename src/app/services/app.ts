@@ -45,7 +45,7 @@ export class AppService implements OnInit {
     this.lang = lang;
 
     if (lang !== 'en') {
-      let url = `/luna/i18n/zh.json`;
+      let url = `/luna/assets/i18n/zh.json`;
       if (!environment.production) {
         url = `/assets/i18n/zh.json`;
       }
