@@ -1,6 +1,7 @@
 import {Component, Inject, OnInit} from '@angular/core';
 import {HttpService, LocalStorageService, NavService, LogService, ViewService} from '@app/services';
 import {DataStore, i18n} from '@app/globals';
+import {CookieService} from 'ngx-cookie-service';
 import {ElementLeftBarComponent} from '@app/elements/left-bar/left-bar.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
@@ -21,6 +22,7 @@ export class ElementNavComponent implements OnInit {
               private _logger: LogService,
               public _dialog: MatDialog,
               public _navSvc: NavService,
+              private _cookie: CookieService,
               public _viewSrv: ViewService,
               private _localStorage: LocalStorageService) {
   }
@@ -145,7 +147,7 @@ export class ElementNavComponent implements OnInit {
           });
         dialog.afterClosed().subscribe(result => {
           if (result) {
-            this.Language('cn');
+            this.Language('zh');
           }
         });
         break;
@@ -264,10 +266,12 @@ export class ElementNavComponent implements OnInit {
   English() {
     this._localStorage.delete('lang');
     i18n.clear();
+    this._cookie.set('lang', 'en');
     location.reload();
   }
 
   Language(lan: string) {
+    this._cookie.set('lang', lan);
     this._http.get('/luna/i18n/' + lan + '.json').subscribe(
       data => {
         this._localStorage.set('lang', JSON.stringify(data));
