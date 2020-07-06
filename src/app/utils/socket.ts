@@ -79,5 +79,8 @@ export class Socket {
   on(type: string, fn: Function, opt_scope?: any, opt_oneshot?: boolean) {
     this.emitter.on(type, fn, opt_scope, opt_oneshot);
   }
+  off(type: string, fn: Function) {
+    this.emitter.off(type, fn);
+  }
 }
 
