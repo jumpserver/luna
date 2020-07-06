@@ -24,6 +24,11 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   secret: string;
   ws: Socket;
   roomID: string;
+  wsDataFn: Function;
+  wsShareRoomDataFn: Function;
+  wsRoomFn: Function;
+  wsLogoutFn: Function;
+  wsDisconnectFn: Function;
 
   constructor(private _uuid: UUIDService, private _logger: LogService, private settingSvc: SettingService) {
   }
@@ -121,29 +126,29 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
 
   connectHost() {
     this.emitHostAndTokenData();
-
-    this.term.on('data', data => {
-      const d = {'data': data, 'room': this.roomID};
-      this.ws.emit('data', d);
-    });
-
-    this.ws.on('shareRoomData', data => {
+    this.wsDataFn = data => {
       if (data.room === this.roomID) {
         this.term.write(data['data']);
       }
-    });
-    this.ws.on('data', data => {
+    };
+    this.wsShareRoomDataFn = data => {
       if (data.room === this.roomID) {
         this.term.write(data['data']);
       }
-    });
-    // 服务器主动断开
-    this.ws.on('disconnect', () => {
+    };
+    this.wsRoomFn = data => {
+      if (data.secret === this.secret && data.room) {
+        this._logger.debug('On room', data);
+        this.roomID = data.room;
+        this.view.room = data.room;
+        this.view.connected = true;
+      }
+    };
+    this.wsDisconnectFn = () => {
       this._logger.debug('On disconnect event trigger');
       this.view.connected = false;
-    });
-
-    this.ws.on('logout', data => {
+    };
+    this.wsLogoutFn = data => {
       if (this.shareroomId) {
         this.term.write(data['data']);
         this.view.connected = false;
@@ -151,16 +156,20 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
         this._logger.debug('On logout event trigger: ', data.room, this.roomID);
         this.view.connected = false;
       }
+    };
+    this.term.on('data', data => {
+      const d = {'data': data, 'room': this.roomID};
+      this.ws.emit('data', d);
     });
 
-    this.ws.on('room', data => {
-      if (data.secret === this.secret && data.room) {
-        this._logger.debug('On room', data);
-        this.roomID = data.room;
-        this.view.room = data.room;
-        this.view.connected = true;
-      }
-    });
+    this.ws.on('shareRoomData', this.wsShareRoomDataFn);
+    this.ws.on('data', this.wsDataFn);
+    // 服务器主动断开
+    this.ws.on('disconnect', this.wsDisconnectFn);
+
+    this.ws.on('logout', this.wsLogoutFn);
+
+    this.ws.on('room', this.wsRoomFn);
 
     this.term.on('selection', function () {
       document.execCommand('copy');
@@ -178,6 +187,12 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this._logger.debug('Close view');
     this.logout();
+    this.term.destroy();
+    this.ws.off('shareRoomData', this.wsShareRoomDataFn);
+    this.ws.off('data', this.wsDataFn);
+    this.ws.off('disconnect', this.wsDisconnectFn);
+    this.ws.off('logout', this.wsLogoutFn);
+    this.ws.off('room', this.wsRoomFn);
   }
   logout(): void {
     if (this.view && (this.view.room === this.roomID)) {
