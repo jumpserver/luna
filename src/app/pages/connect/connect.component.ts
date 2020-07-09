@@ -32,6 +32,10 @@ export class PagesConnectComponent implements OnInit {
     const assetId = this._appService.getQueryString('asset');
     const shareroomId = this._appService.getQueryString('shareroom');
     const remoteAppId = this._appService.getQueryString('remote_app');
+    if (this.system && this.token) {
+      const evt = new ConnectEvt(new TreeNode(), 'token');
+      connectEvt.next(evt);
+    }
     if (assetId) {
       this._http.filterMyGrantedAssetsById(assetId).subscribe(
         nodes => {

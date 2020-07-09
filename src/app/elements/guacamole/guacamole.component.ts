@@ -17,6 +17,7 @@ export class ElementGuacamoleComponent implements OnInit {
   @Input() remoteAppId: string;
   @Input() target: string;
   @Input() index: number;
+  @Input() token: any;
   @ViewChild('rdpRef') el: ElementRef;
   registered = false;
   iframeWindow: any;
@@ -37,6 +38,34 @@ export class ElementGuacamoleComponent implements OnInit {
     let action: any;
     if (this.remoteAppId) {
       action = this._http.guacamoleAddRemoteApp(User.id, this.remoteAppId, this.sysUser.id, this.sysUser.username, this.sysUser.password);
+    } else if (this.token) {
+      const now = new Date();
+      const nowTime = now.getTime() / 1000;
+      this._http.getGuacamoleToken(this.token, this.token).subscribe(
+        data => {
+          console.log(data);
+          // /guacamole/client will redirect to http://guacamole/#/client
+          DataStore.guacamoleToken = data['authToken'];
+          DataStore.guacamoleTokenTime = nowTime;
+          action = this._http.guacamoleTokenAddAsset(this.token).subscribe(
+            data2 => {
+              console.log(data2);
+              const base = data2['result'];
+              this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamoleToken;
+              setTimeout(() => this.setIdleTimeout(), 500);
+            },
+            error => {
+              if (!this.registered) {
+                this._logger.debug('Register host error, register token then connect');
+                this.registerToken();
+              }
+            }
+          );
+        },
+        error => {
+          this._logger.error(error);
+          return null;
+        });
     } else {
       action = this._http.guacamoleAddAsset(User.id, this.host.id, this.sysUser.id, this.sysUser.username, this.sysUser.password);
     }
@@ -59,6 +88,7 @@ export class ElementGuacamoleComponent implements OnInit {
     const now = new Date();
     const nowTime = now.getTime() / 1000;
     this.registered = true;
+    console.log( 'I am here' , User.id);
     this._logger.debug('User id is', User.id);
     this._http.getGuacamoleToken(User.id, '').subscribe(
       data => {
