@@ -1,13 +1,8 @@
 FROM node:10 as stage-build
 WORKDIR /data
-ADD ./package.json /data/package.json
-ADD ./package-lock.json /data/package-lock.json
-RUN npm i
 ADD . /data
-RUN npm run-script build
-
+RUN cd utils && bash -ix build.sh
 
 FROM nginx:alpine
-COPY --from=stage-build /data/luna /opt/luna/
-COPY ./src/assets/i18n /opt/luna/i18n
+COPY --from=stage-build /data/release/luna /opt/luna/
 COPY nginx.conf /etc/nginx/conf.d/default.conf
