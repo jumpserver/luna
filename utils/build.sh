@@ -16,7 +16,7 @@ function change_version() {
 }
 
 # 修改版本号文件
-if [[ -n ${VERSION} ]]; then
+if [[ -n ${VERSION-''} ]]; then
   change_version || exit 2
 fi
 
