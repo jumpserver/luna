@@ -3,7 +3,7 @@ ARG VERSION
 ENV VERSION=$VERSION
 WORKDIR /data
 ADD . /data
-RUN cd utils && bash -ix build.sh
+RUN cd utils && bash -ixeu build.sh
 
 FROM nginx:alpine
 COPY --from=stage-build /data/release/luna /opt/luna/
