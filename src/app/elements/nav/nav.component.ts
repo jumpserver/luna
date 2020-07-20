@@ -266,12 +266,12 @@ export class ElementNavComponent implements OnInit {
   English() {
     this._localStorage.delete('lang');
     i18n.clear();
-    this._cookie.set('lang', 'en');
+    this._cookie.set('lang', 'en', 30);
     location.reload();
   }
 
   Language(lan: string) {
-    this._cookie.set('lang', lan);
+    this._cookie.set('lang', lan, 30);
     this._http.get('/luna/i18n/' + lan + '.json').subscribe(
       data => {
         this._localStorage.set('lang', JSON.stringify(data));

@@ -43,7 +43,7 @@ export class AppService implements OnInit {
     }
     lang = lang.substr(0, 2);
     this.lang = lang;
-    this._cookie.set('lang', lang);
+    this._cookie.set('lang', lang, 30);
     if (lang !== 'en') {
       let url = `/luna/assets/i18n/zh.json`;
       if (!environment.production) {
