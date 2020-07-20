@@ -22,6 +22,11 @@ export class SettingService {
     }
     this._http.get<any>('/api/v1/settings/public/').subscribe(resp => {
       this.globalSetting  = resp.data;
+      const link: any = document.querySelector('link[rel*=\'icon\']') || document.createElement('link');
+      link.type = 'image/x-icon';
+      link.rel = 'shortcut icon';
+      link.href = resp.data.LOGO_URLS.favicon;
+      document.getElementsByTagName('head')[0].appendChild(link);
     });
   }
 
