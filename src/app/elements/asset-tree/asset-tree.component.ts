@@ -72,6 +72,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         this._logger.debug('Filter tree: ', keyword);
         this.filterAssets(keyword);
         this.filterRemoteApps(keyword);
+        this.filterDBApps(keyword);
       }
     );
   }
@@ -401,6 +402,16 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     }
     return this.filterTree(keyword, this.remoteAppsTree, filterCallback);
   }
+  filterDBApps(keyword) {
+    if (!this.DBAppsTree) {
+      return null;
+    }
+    function filterCallback(node: TreeNode) {
+      return node.name.toLowerCase().indexOf(keyword) !== -1;
+    }
+    return this.filterTree(keyword, this.DBAppsTree, filterCallback);
+  }
+
 
   filterAssetsServer(keyword) {
     if (!this.assetsTree) {
