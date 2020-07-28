@@ -19,7 +19,7 @@ export class PageMainComponent implements OnInit {
   }
 
   get showSplitter() {
-    if (this.currentView && this.currentView.type !== 'ssh') {
+    if (this.currentView && this.currentView.type === 'rdp') {
       return false;
     }
     return this.store.showLeftBar;
