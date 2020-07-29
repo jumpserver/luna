@@ -1,4 +1,4 @@
-import {AfterViewInit, Component, Input, Output, OnInit, ViewChild, EventEmitter} from '@angular/core';
+import {AfterViewInit, Component, Input, Output, OnInit, ViewChild, EventEmitter, OnChanges , SimpleChanges} from '@angular/core';
 import {ElementRef} from '@angular/core';
 import {Terminal} from 'xterm';
 import {fit} from 'xterm/lib/addons/fit/fit';
@@ -14,7 +14,7 @@ import 'rxjs/Observable';
   templateUrl: './term.component.html',
   styleUrls: ['./term.component.css']
 })
-export class ElementTermComponent implements OnInit, AfterViewInit {
+export class ElementTermComponent implements OnInit, AfterViewInit, OnChanges {
   @ViewChild('term') el: ElementRef;
   @Input() term: Terminal;
   @Input() offset: Array<number>;
@@ -38,6 +38,15 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       });
   }
 
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['term']) {
+      this.term.open(this.el.nativeElement);
+      this.resizeTerm();
+      if (this.stopWatchWinChange) {
+        this.winSizeSub.unsubscribe();
+      }
+    }
+  }
   ngAfterViewInit() {
     this.term.open(this.el.nativeElement);
     this.resizeTerm();

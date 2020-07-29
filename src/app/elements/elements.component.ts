@@ -11,7 +11,7 @@ import {ElementRdpComponent} from './rdp/rdp.component';
 import {ElementIframeComponent} from './iframe/iframe.component';
 import {ElementDialogAlertComponent} from './dialog/dialog.service';
 import {ElementGuacamoleComponent} from './guacamole/guacamole.component';
-import {ElementSshTermComponent} from './ssh-term/ssh-term.component';
+import {ElementSshTermComponent,ReconnectDialogComponent} from './ssh-term/ssh-term.component';
 import {ElementConnectComponent, AssetTreeDialogComponent, ManualPasswordDialogComponent} from './connect/connect.component';
 import {ElementSftpComponent} from './sftp/sftp.component';
 import {ElementSettingComponent} from './setting/setting.component';
@@ -33,6 +33,7 @@ export const ElementComponents = [
   ElementGuacamoleComponent,
   ElementAssetTreeComponent,
   ElementSshTermComponent,
+  ReconnectDialogComponent,
   ElementConnectComponent,
   ElementSftpComponent,
   ElementReplayGuacamoleComponent,

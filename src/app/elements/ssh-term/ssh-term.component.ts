@@ -1,9 +1,10 @@
-import {Component, Input, OnInit, OnDestroy } from '@angular/core';
+import {Component, Input, OnInit, OnDestroy, Inject, Output, EventEmitter} from '@angular/core';
 import {Terminal} from 'xterm';
 import {View} from '@app/model';
+import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {LogService, SettingService, UUIDService} from '@app/services';
 import {Socket} from '@app/utils/socket';
-import {getWsSocket, translate} from '@app/globals';
+import {getWsSocket, translate, reconnectWsSocket} from '@app/globals';
 import {newTerminal} from '@app/utils/common';
 
 
@@ -25,7 +26,11 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   ws: Socket;
   roomID: string;
 
-  constructor(private _uuid: UUIDService, private _logger: LogService, private settingSvc: SettingService) {
+  constructor(
+    private _uuid: UUIDService,
+    private _logger: LogService,
+    public _dialog: MatDialog,
+    private settingSvc: SettingService) {
   }
 
   ngOnInit() {
@@ -36,6 +41,28 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
       this.connectHost();
     });
     // this.view.type = 'ssh';
+  }
+
+  reconnectWS() {
+    this.secret = this._uuid.gen();
+    this.newTerm();
+    reconnectWsSocket().then(sock => {
+      this.ws = sock;
+      this.connectHost();
+    });
+  }
+
+  reConnectDialog() {
+    const dialogRef = this._dialog.open(ReconnectDialogComponent, {
+      height: '250px',
+      width: '500px'
+    });
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === 'Reconnect') {
+        this.reconnectWS();
+      }
+    });
+    return;
   }
 
   newTerm() {
@@ -78,7 +105,11 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
         size: [this.term.cols, this.term.rows],
         type: this.view.type
       };
-      this.ws.emit('host', data);
+      try {
+        this.ws.emit('host', data);
+      } catch (err) {
+        this.reConnectDialog();
+      }
     }
     if (this.shareroomId) {
       const data = {
@@ -86,7 +117,11 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
         secret: this.secret,
         size: [this.term.cols, this.term.rows],
       };
-      this.ws.emit('shareRoom', data);
+      try {
+        this.ws.emit('shareRoom', data);
+      } catch (err) {
+        this.reConnectDialog();
+      }
     }
     if (this.token) {
       const data = {
@@ -94,7 +129,11 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
         'size': [this.term.cols, this.term.rows]
       };
       this._logger.debug('On token event trigger');
-      this.ws.emit('token', data);
+      try {
+        this.ws.emit('token', data);
+      } catch (err) {
+        this.reConnectDialog();
+      }
     }
   }
 
@@ -119,6 +158,13 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
     // 服务器主动断开
     this.ws.on('disconnect', () => {
       this._logger.debug('On disconnect event trigger');
+      this.term.write('\n\r   __                            __                               ');
+      this.term.write('\n\r   \\ \\  _   _  _ __ ___   _ __  / _\\  ___  _ __ __   __ ___  _ __ ');
+      this.term.write('\n\r    \\ \\| | | || \'_ ` _ \\ | \'_ \\ \\ \\  / _ \\| \'__|\\ \\ / // _ \\| \'__|');
+      this.term.write('\n\r /\\_/ /| |_| || | | | | || |_) |_\\ \\|  __/| |    \\ V /|  __/| |   ');
+      this.term.write('\n\r \\___/  \\__,_||_| |_| |_|| .__/ \\__/ \\___||_|     \\_/  \\___||_|   ');
+      this.term.write('\n\r                         |_|                                       ');
+      this.term.write('\n\r\u001b[31mWS链接异常中断，请检查 JumpServer 服务后重试\n\r\u001b[0m');
       this.view.connected = false;
     });
 
@@ -152,5 +198,27 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
       this.view.connected = false;
       this.ws.emit('logout', this.roomID);
     }
+  }
+}
+
+@Component({
+  selector: 'elements-reconnect-dialog',
+  templateUrl: 'reconnect-dialog.html',
+})
+export class ReconnectDialogComponent implements OnInit {
+  constructor(@Inject(MAT_DIALOG_DATA) public data: any,
+              public dialogRef: MatDialogRef<ReconnectDialogComponent>) {
+  }
+  onNoClick() {
+    this.dialogRef.close();
+  }
+
+  onReconnect() {
+    this.dialogRef.close('Reconnect');
+    // 重新初始化兄弟组件
+    // TODO
+  }
+
+  ngOnInit(): void {
   }
 }

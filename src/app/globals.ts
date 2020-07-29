@@ -47,6 +47,16 @@ export async function getWsSocket() {
   return TermWS;
 }
 
+export async function reconnectWsSocket() {
+  TermWS = new Socket(wsURL, 'ssh');
+  const nsConn = await TermWS.connect();
+  if (!nsConn) {
+    console.log('Try to using socket.io protocol');
+  }
+  DataStore.socket = TermWS;
+  return TermWS;
+}
+
 export const connectEvt = new BehaviorSubject<ConnectEvt>(new ConnectEvt(null, null));
 
 export function translate(value) {

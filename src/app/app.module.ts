@@ -20,6 +20,7 @@ import {PageMainComponent} from '@app/pages/main/main.component';
 import {PluginModules} from './plugins/plugins';
 import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
+import {ReconnectDialogComponent} from '@app/elements/ssh-term/ssh-term.component';
 import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './elements/connect/connect.component';
 
 
@@ -43,6 +44,7 @@ import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './element
   entryComponents: [
     AssetTreeDialogComponent,
     ManualPasswordDialogComponent,
+    ReconnectDialogComponent,
     ChangLanWarningDialogComponent,
     PageMainComponent,
     ElementSettingComponent,
