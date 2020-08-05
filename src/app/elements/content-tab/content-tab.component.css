@@ -40,7 +40,7 @@ li span {
   padding-right: 14px;
   line-height: 26px;
   cursor: default;
-  /*width: 145px;*/
+  width: 145px;
   height: 26px;
   display: block;
 }
