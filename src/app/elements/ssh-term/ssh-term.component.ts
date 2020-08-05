@@ -45,7 +45,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
 
   reconnectWS() {
     this.secret = this._uuid.gen();
-    this.newTerm();
+    // this.newTerm();
     reconnectWsSocket().then(sock => {
       this.ws = sock;
       this.connectHost();
@@ -158,14 +158,8 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
     // 服务器主动断开
     this.ws.on('disconnect', () => {
       this._logger.debug('On disconnect event trigger');
-      this.term.write('\n\r   __                            __                               ');
-      this.term.write('\n\r   \\ \\  _   _  _ __ ___   _ __  / _\\  ___  _ __ __   __ ___  _ __ ');
-      this.term.write('\n\r    \\ \\| | | || \'_ ` _ \\ | \'_ \\ \\ \\  / _ \\| \'__|\\ \\ / // _ \\| \'__|');
-      this.term.write('\n\r /\\_/ /| |_| || | | | | || |_) |_\\ \\|  __/| |    \\ V /|  __/| |   ');
-      this.term.write('\n\r \\___/  \\__,_||_| |_| |_|| .__/ \\__/ \\___||_|     \\_/  \\___||_|   ');
-      this.term.write('\n\r                         |_|                                       ');
-      this.term.write('\n\r\u001b[31mWS链接异常中断，请检查 JumpServer 服务后重试\n\r\u001b[0m');
       this.view.connected = false;
+      this.reConnectDialog();
     });
 
     this.ws.on('logout', data => {
@@ -210,7 +204,7 @@ export class ReconnectDialogComponent implements OnInit {
               public dialogRef: MatDialogRef<ReconnectDialogComponent>) {
   }
   onNoClick() {
-    this.dialogRef.close();
+    this.dialogRef.close('Close');
   }
 
   onReconnect() {

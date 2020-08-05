@@ -14,7 +14,7 @@ import 'rxjs/Observable';
   templateUrl: './term.component.html',
   styleUrls: ['./term.component.css']
 })
-export class ElementTermComponent implements OnInit, AfterViewInit, OnChanges {
+export class ElementTermComponent implements OnInit, AfterViewInit {
   @ViewChild('term') el: ElementRef;
   @Input() term: Terminal;
   @Input() offset: Array<number>;
@@ -38,15 +38,15 @@ export class ElementTermComponent implements OnInit, AfterViewInit, OnChanges {
       });
   }
 
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['term']) {
-      this.term.open(this.el.nativeElement);
-      this.resizeTerm();
-      if (this.stopWatchWinChange) {
-        this.winSizeSub.unsubscribe();
-      }
-    }
-  }
+  // ngOnChanges(changes: SimpleChanges) {
+  //   if (changes['term']) {
+  //     this.term.open(this.el.nativeElement);
+  //     this.resizeTerm();
+  //     if (this.stopWatchWinChange) {
+  //       this.winSizeSub.unsubscribe();
+  //     }
+  //   }
+  // }
   ngAfterViewInit() {
     this.term.open(this.el.nativeElement);
     this.resizeTerm();
