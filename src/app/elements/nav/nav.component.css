@@ -13,6 +13,8 @@
   box-sizing: border-box;
   font-weight: 400;
   text-align: left;
+}
+.nav ul.nav-main {
   padding-inline-start: 15px;
 }
 
