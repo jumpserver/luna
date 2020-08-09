@@ -1,3 +1,4 @@
+import {ElementSshTermComponent} from '@app/elements/ssh-term/ssh-term.component';
 
 export class UserGroup {
   id: string;
@@ -119,6 +120,7 @@ export class View {
   token: any;
   DatabaseApp: string;
   shareroomId: string;
+  termComp: ElementSshTermComponent;
 }
 
 export class ViewAction {
@@ -144,7 +146,7 @@ export class DataStore {
   autoLogin: boolean;
   guacamoleToken: string;
   guacamoleTokenTime: number;
-
+  termSelection: string;
 }
 
 export class Browser {

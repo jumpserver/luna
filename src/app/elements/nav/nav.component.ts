@@ -273,18 +273,19 @@ export class ElementNavComponent implements OnInit {
   Language(lan: string) {
     this._cookie.set('lang', lan, 30);
     this._http.get('/luna/i18n/' + lan + '.json').subscribe(
-      data => {
-        this._localStorage.set('lang', JSON.stringify(data));
+      respData => {
+        this._localStorage.set('lang', JSON.stringify(respData));
+        const l = this._localStorage.get('lang');
+        if (l) {
+          const data = JSON.parse(l);
+          Object.keys(data).forEach((k, _) => {
+            i18n.set(k, data[k]);
+          });
+        }
+        location.reload();
       }
     );
-    const l = this._localStorage.get('lang');
-    if (l) {
-      const data = JSON.parse(l);
-      Object.keys(data).forEach((k, _) => {
-        i18n.set(k, data[k]);
-      });
-    }
-    location.reload();
+
   }
 
   Setting() {

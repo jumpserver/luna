@@ -28,7 +28,8 @@ export const DataStore: _DataStore = {
   windowSize: [],
   autoLogin: false,
   guacamoleToken: '',
-  guacamoleTokenTime: 0
+  guacamoleTokenTime: 0,
+  termSelection: ''
 };
 
 export let Browser = new _Browser();
