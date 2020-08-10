@@ -87,6 +87,17 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           }
         );
         break;
+      case 'k8s_app':
+        this._http.getMyGrantedK8SApps(loginTo).subscribe(
+          nodes => {
+            if (nodes.length === 1) {
+              this.hasLoginTo = true;
+              const node = nodes[0];
+              this.Connect(node);
+            }
+          }
+        );
+        break;
     }
   }
 
@@ -108,6 +119,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       case 'database_app':
           this.connectDatabaseApp(node);
           break;
+      case 'k8s_app':
+        this.connectK8SApp(node);
+        break;
       default:
         alert('Unknown type: ' + node.meta.type);
     }
@@ -134,12 +148,24 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   async connectDatabaseApp(node: TreeNode) {
-    this._logger.debug('Connect remote app: ', node.id);
+    this._logger.debug('Connect database app: ', node.id);
     const systemUsers = await this._http.getMyDatabaseAppSystemUsers(node.id).toPromise();
     let sysUser = await this.selectLoginSystemUsers(systemUsers);
     sysUser = await this.manualSetUserAuthLoginIfNeed(sysUser);
     if (sysUser && sysUser.id) {
       this.loginDatabaseApp(node, sysUser);
+    } else {
+      alert('该主机没有授权系统用户');
+    }
+  }
+
+  async connectK8SApp(node: TreeNode) {
+    this._logger.debug('Connect K8S app: ', node.id);
+    const systemUsers = await this._http.getMyDatabaseAppSystemUsers(node.id).toPromise();
+    let sysUser = await this.selectLoginSystemUsers(systemUsers);
+    sysUser = await this.manualSetUserAuthLoginIfNeed(sysUser);
+    if (sysUser && sysUser.id) {
+      this.loginK8SApp(node, sysUser);
     } else {
       alert('该主机没有授权系统用户');
     }
@@ -243,6 +269,20 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       this.onNewView.emit(view);
     }
   }
+  loginK8SApp(node: TreeNode, user: SystemUser) {
+    if (node) {
+      const view = new View();
+      view.host = node;
+      view.nick = node.name;
+      view.connected = true;
+      view.editable = false;
+      view.closed = false;
+      view.K8SApp = node.id;
+      view.user = user;
+      view.type = 'k8s';
+      this.onNewView.emit(view);
+    }
+  }
 
   connectFileManager(node: TreeNode) {
     const host = node.meta.asset as Asset;
@@ -304,13 +344,15 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   templateUrl: 'dialog.html',
 })
 export class AssetTreeDialogComponent implements OnInit {
-  UserSelectControl = new FormControl('', [Validators.required]);
-  selected: any;
 
   constructor(public dialogRef: MatDialogRef<AssetTreeDialogComponent>,
               @Inject(MAT_DIALOG_DATA) public data: any,
               private _logger: LogService) {
   }
+  UserSelectControl = new FormControl('', [Validators.required]);
+  selected: any;
+
+  compareFn: ((f1: any, f2: any) => boolean) | null = this.compareByValue;
 
   ngOnInit() {
     this.selected = this.data.users[0].id;
@@ -321,8 +363,6 @@ export class AssetTreeDialogComponent implements OnInit {
   onNoClick(): void {
     this.dialogRef.close();
   }
-
-  compareFn: ((f1: any, f2: any) => boolean) | null = this.compareByValue;
 
   compareByValue(f1: any, f2: any) {
     return f1 && f2 && f1.value === f2.value;

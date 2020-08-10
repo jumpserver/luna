@@ -106,6 +106,13 @@ export class HttpService {
     }
     return this.http.get<Array<TreeNode>>(url);
   }
+  getMyGrantedK8SApps(id?: string) {
+    let url = '/api/v1/perms/users/k8s-apps/tree/';
+    if (id) {
+      url += `?id=${id}&only=1`;
+    }
+    return this.http.get<Array<TreeNode>>(url);
+  }
 
   getMyRemoteAppSystemUsers(remoteAppId: string) {
     const url = `/api/v1/perms/users/remote-apps/${remoteAppId}/system-users/`;
@@ -114,6 +121,11 @@ export class HttpService {
 
   getMyDatabaseAppSystemUsers(DatabaseAppId: string) {
     const url = `/api/v1/perms/users/database-apps/${DatabaseAppId}/system-users/`;
+    return this.http.get<Array<SystemUser>>(url);
+  }
+
+  getMyK8SAppSystemUsers(K8SAppId: string) {
+    const url = `/api/v1/perms/users/k8s-apps/${K8SAppId}/system-users/`;
     return this.http.get<Array<SystemUser>>(url);
   }
 

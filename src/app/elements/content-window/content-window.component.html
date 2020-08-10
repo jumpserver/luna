@@ -6,7 +6,7 @@
     [token]="view.token"
     [shareroomId] = "view.shareroomId"
 
-    *ngIf="view.type=='ssh' || view.type=='database'"
+    *ngIf="view.type=='ssh' || view.type=='database'|| view.type=='k8s'"
   >
   </elements-ssh-term>
   <elements-guacamole
