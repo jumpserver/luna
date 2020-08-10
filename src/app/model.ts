@@ -86,10 +86,10 @@ export class Nav {
   id: string;
   name: string;
   children?: Array<Nav>;
-  hide?: boolean = false;
+  hide = false;
   click?: string;
   href?: string;
-  disable?: boolean = false;
+  disable = false;
 }
 
 export class NavEvt {
@@ -119,6 +119,7 @@ export class View {
   Term: any;
   token: any;
   DatabaseApp: string;
+  K8SApp: string;
   shareroomId: string;
   termComp: ElementSshTermComponent;
 }
@@ -197,10 +198,10 @@ export class GlobalSetting {
 }
 
 export class Setting {
-  rdpSolution: string = 'Auto';
-  fontSize: number = 14;
-  isLoadTreeAsync: string = '1';
-  isSkipAllManualPassword: string = '0';
+  rdpSolution = 'Auto';
+  fontSize = 14;
+  isLoadTreeAsync = '1';
+  isSkipAllManualPassword = '0';
 }
 
 

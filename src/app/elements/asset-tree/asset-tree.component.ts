@@ -43,6 +43,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   assetsTree: any;
   remoteAppsTree: any;
   DBAppsTree: any;
+  K8SAppsTree: any;
   isShowRMenu = false;
   rightClickSelectNode: any;
   hasLoginTo = false;
@@ -135,6 +136,19 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.initDBAppsTree();
   }
 
+  refreshK8SAppsTree() {
+    this.K8SAppsTree.destroy();
+    this.initK8SAppsTree();
+  }
+
+  onK8SAppsTreeNodeClick(event, treeId, treeNode, clickFlag) {
+    if (treeNode.isParent) {
+      this.K8SAppsTree.expandNode(treeNode);
+    } else {
+      this._http.getUserProfile().subscribe();
+      this.connectAsset(treeNode);
+    }
+  }
   onDBAppsTreeNodeClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
       this.DBAppsTree.expandNode(treeNode);
@@ -190,11 +204,31 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       }
     );
   }
+  initK8SAppsTree() {
+    const setting = Object.assign({}, this.setting);
+    setting['callback'] = {
+      onClick: this.onK8SAppsTreeNodeClick.bind(this),
+      onRightClick: this.onRightClick.bind(this)
+    };
+    this._http.getMyGrantedK8SApps().subscribe(
+      resp => {
+        if (resp.length === 1) {
+          return;
+        }
+        const tree = $.fn.zTree.init($('#K8SAppsTree'), setting, resp);
+        this.DBAppsTree = tree;
+        this.rootNodeAddDom(tree, () => {
+          this.refreshK8SAppsTree();
+        });
+      }
+    );
+  }
 
   initTree() {
     this.initAssetsTree();
     this.initRemoteAppsTree();
     this.initDBAppsTree();
+    this.initK8SAppsTree();
   }
 
   connectAsset(node: TreeNode) {
