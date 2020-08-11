@@ -74,6 +74,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         this.filterAssets(keyword);
         this.filterRemoteApps(keyword);
         this.filterDBApps(keyword);
+        this.filterK8SApps(keyword);
       }
     );
   }
@@ -216,7 +217,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
           return;
         }
         const tree = $.fn.zTree.init($('#K8SAppsTree'), setting, resp);
-        this.DBAppsTree = tree;
+        this.K8SAppsTree = tree;
         this.rootNodeAddDom(tree, () => {
           this.refreshK8SAppsTree();
         });
@@ -445,7 +446,15 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     }
     return this.filterTree(keyword, this.DBAppsTree, filterCallback);
   }
-
+  filterK8SApps(keyword) {
+    if (!this.K8SAppsTree) {
+      return null;
+    }
+    function filterCallback(node: TreeNode) {
+      return node.name.toLowerCase().indexOf(keyword) !== -1;
+    }
+    return this.filterTree(keyword, this.K8SAppsTree, filterCallback);
+  }
 
   filterAssetsServer(keyword) {
     if (!this.assetsTree) {
