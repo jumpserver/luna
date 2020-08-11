@@ -86,10 +86,11 @@ export class Nav {
   id: string;
   name: string;
   children?: Array<Nav>;
-  hide = false;
+  hide?: boolean = false;
   click?: string;
   href?: string;
-  disable = false;
+  disable?: boolean = false;
+
 }
 
 export class NavEvt {
@@ -198,10 +199,10 @@ export class GlobalSetting {
 }
 
 export class Setting {
-  rdpSolution = 'Auto';
-  fontSize = 14;
-  isLoadTreeAsync = '1';
-  isSkipAllManualPassword = '0';
+  rdpSolution: string = 'Auto';
+  fontSize: number = 14;
+  isLoadTreeAsync: string = '1';
+  isSkipAllManualPassword: string = '0';
 }
 
 
