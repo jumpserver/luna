@@ -161,7 +161,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   async connectK8SApp(node: TreeNode) {
     this._logger.debug('Connect K8S app: ', node.id);
-    const systemUsers = await this._http.getMyDatabaseAppSystemUsers(node.id).toPromise();
+    const systemUsers = await this._http.getMyK8SAppSystemUsers(node.id).toPromise();
     let sysUser = await this.selectLoginSystemUsers(systemUsers);
     sysUser = await this.manualSetUserAuthLoginIfNeed(sysUser);
     if (sysUser && sysUser.id) {
