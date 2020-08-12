@@ -1,5 +1,5 @@
 <div>
-  <p *ngIf="loading" style="padding: 3px">{{ "Loading"|trans }} ...</p>
+  <p *ngIf="loading" style="padding: 3px">{{ "Loading"| translate }} ...</p>
   <ul id="assetsTree" class="ztree">
   </ul>
 
@@ -17,7 +17,7 @@
       <tbody>
         <tr *ngFor="let menu of RMenuList; let i = index" class="basicContext__item ">
             <td class="basicContext__data" [attr.data-num]="i" (click)="menu.click()" [ngStyle]="{'display': menu.hide ? 'none': ''}">
-              <span class="basicContext__icon fa" [ngClass]="menu.fa"></span> {{ menu.name|trans }}
+              <span class="basicContext__icon fa" [ngClass]="menu.fa"></span> {{ menu.name| translate }}
             </td>
         </tr>
         </tbody>

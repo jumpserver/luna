@@ -4,10 +4,10 @@ import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
 import {ToastrService} from 'ngx-toastr';
-
+import {TranslateService} from '@ngx-translate/core';
 import {groupBy} from '@app/utils/common';
 import {AppService, HttpService, LogService, NavService, SettingService, TreeFilterService} from '@app/services';
-import {connectEvt, translate} from '@app/globals';
+import {connectEvt} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
 
 declare var $: any;
@@ -57,6 +57,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
               private _treeFilterSvc: TreeFilterService,
               public _dialog: MatDialog,
               public _logger: LogService,
+              public translate: TranslateService,
               private activatedRoute: ActivatedRoute,
               private _http: HttpService,
               private settingSvc: SettingService,
@@ -373,12 +374,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       this._http.favoriteAsset(assetId, false).subscribe(() => {
         const i = this.favoriteAssets.indexOf(assetId);
         this.favoriteAssets.splice(i, 1);
-        this.toastr.success(translate('Disfavor') + ' ' + translate('success'), '', {timeOut: 2000});
+        this.toastr.success(this.translate.instant('Disfavor') + ' ' + this.translate.instant('success'), '', {timeOut: 2000});
       });
     } else {
       this._http.favoriteAsset(assetId, true).subscribe(() => {
         this.favoriteAssets.push(assetId);
-        this.toastr.success(translate('Favorite') + ' ' + translate('success'), '', {timeOut: 2000});
+        this.toastr.success(this.translate.instant('Favorite') + ' ' + this.translate.instant('success'), '', {timeOut: 2000});
       });
     }
   }
@@ -482,7 +483,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.filterAssetCancel$))
       .subscribe(nodes => {
         this.loading = false;
-        let name = translate('Search');
+        let name = this.translate.instant('Search');
         const assetsAmount = nodes.length;
         name = `${name} (${assetsAmount})`;
         const newNode = {id: 'search', name: name, isParent: true, open: true, zAsync: true};

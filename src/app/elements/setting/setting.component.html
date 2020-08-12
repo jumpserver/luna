@@ -1,31 +1,31 @@
-<h1 mat-dialog-title>{{"Setting"|trans}}</h1>
+<h1 mat-dialog-title>{{"Setting"| translate}}</h1>
 
 <mat-form-field>
   <mat-select [(value)]="setting.rdpSolution"
-    placeholder="{{'Select a solution'|trans}}" >
+    placeholder="{{'Select a solution'| translate}}" >
     <mat-option *ngFor="let s of solutionsChoices"  value="{{s}}">{{s}}</mat-option>
   </mat-select>
 </mat-form-field>
 
 <mat-form-field>
-  <input [(ngModel)]="setting.fontSize" matInput placeholder='{{"Font size"|trans}}' name="fontSize" type="number" min="5" max="60" >
+  <input [(ngModel)]="setting.fontSize" matInput placeholder='{{"Font size"| translate}}' name="fontSize" type="number" min="5" max="60" >
 </mat-form-field>
 
 <mat-form-field>
   <mat-select [(value)]="setting.isLoadTreeAsync"
-    placeholder="{{'Load tree async'|trans }}" >
-    <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name|trans}}</mat-option>
+    placeholder="{{'Load tree async'| translate }}" >
+    <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name| translate}}</mat-option>
   </mat-select>
 </mat-form-field>
 
 <mat-form-field *ngIf="!globalSetting.WINDOWS_SKIP_ALL_MANUAL_PASSWORD">
   <mat-select [(value)]="setting.isSkipAllManualPassword"
-    placeholder="{{'Skip manual password'|trans }}" >
-    <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name|trans}}</mat-option>
+    placeholder="{{'Skip manual password'| translate }}" >
+    <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name| translate}}</mat-option>
   </mat-select>
 </mat-form-field>
 
 <div style="float: right" [style.padding-top]="globalSetting.WINDOWS_SKIP_ALL_MANUAL_PASSWORD ? '20px' : '0'">
-  <button mat-raised-button (click)="onNoClick()">{{"Cancel"|trans}}</button>
-  <button mat-raised-button color="primary" (click)="onSubmit()">{{"Confirm"|trans}}</button>
+  <button mat-raised-button (click)="onNoClick()">{{"Cancel"| translate}}</button>
+  <button mat-raised-button color="primary" (click)="onSubmit()">{{"Confirm"| translate}}</button>
 </div>
