@@ -23,9 +23,10 @@ import {PluginModules} from './plugins/plugins';
 import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './elements/connect/connect.component';
+import {environment} from '@src/environments/environment';
 
 export function HttpLoaderFactory(http: HttpClient) {
-  return new TranslateHttpLoader(http, '/luna/assets/i18n/');
+  return new TranslateHttpLoader(http, environment.production ? '/luna/assets/i18n/' : '/assets/i18n/');
 }
 
 @NgModule({
