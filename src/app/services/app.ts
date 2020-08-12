@@ -5,6 +5,8 @@ import {environment} from '@src/environments/environment';
 import {DataStore, i18n, User} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
+import { TranslateService } from '@ngx-translate/core';
+
 
 declare function unescape(s: string): string;
 
@@ -18,13 +20,14 @@ export class AppService implements OnInit {
               private _router: Router,
               private _cookie: CookieService,
               private _logger: LogService,
+              public translate: TranslateService,
               private _localStorage: LocalStorageService) {
     this.setLogLevel();
-    this.setLang();
     this.checklogin();
   }
 
-  ngOnInit() {
+  public ngOnInit() {
+
   }
 
   setLogLevel() {
@@ -35,42 +38,6 @@ export class AppService implements OnInit {
     }
     this._logger.level = parseInt(logLevel, 10);
   }
-
-  setLang() {
-    let lang = this._cookie.get('lang');
-    if (!lang) {
-      lang = navigator.language;
-    }
-    lang = lang.substr(0, 2);
-    this.lang = lang;
-    this._cookie.set('lang', lang, 30);
-    if (lang !== 'en') {
-      let url = `/luna/assets/i18n/zh.json`;
-      if (!environment.production) {
-        url = `/assets/i18n/zh.json`;
-      }
-      this._http.get(url).subscribe(
-        data => {
-          this._localStorage.set('lang', JSON.stringify(data));
-        },
-        err => {
-          this._logger.error('Load i18n file error: ', err.error);
-        }
-      );
-    }
-    const l = this._localStorage.get('lang');
-    if (l) {
-      try {
-        const data = JSON.parse(l);
-        Object.keys(data).forEach((k, _) => {
-          i18n.set(k, data[k]);
-        });
-      } catch (e) {
-        this._logger.error('Parse lang json failed');
-      }
-    }
-  }
-
   checklogin() {
     this._logger.debug('Check user auth');
     if (!DataStore.Path) {

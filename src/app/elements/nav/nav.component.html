@@ -4,7 +4,7 @@
       <a href="/"><img src="static/imgs/logo.png" height="26px"/></a>
     </li>
     <li [ngClass]="{'dropdown': true}">
-      <a>{{"Tab List"|trans}}</a>
+      <a>{{"Tab List"| translate}}</a>
       <ul *ngIf="viewList.length > 0" [ngClass]="{'dropdown-content': true}">
         <ng-container *ngFor="let v of viewList, let idx = index" >
           <li *ngIf="v.nick!=null" [ngClass]="{'disconnected':!v.connected, 'hidden': v.closed != false}">
@@ -16,11 +16,11 @@
       </ul>
     </li>
     <li *ngFor="let v of navs" [ngClass]="{'dropdown': v.children}" >
-      <a>{{v.name|trans}}</a>
+      <a>{{v.name|translate}}</a>
       <ul [ngClass]="{'dropdown-content': v.children}" *ngIf="v.children">
         <li *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
-          <a *ngIf="vv.href" [routerLink]="[vv.href]">{{vv.name|trans}}</a>
-          <a id="{{vv.id}}" *ngIf="vv.click && !vv.hide" (click)="click(vv.click)">{{vv.name|trans}}</a>
+          <a *ngIf="vv.href" [routerLink]="[vv.href]">{{vv.name| translate}}</a>
+          <a id="{{vv.id}}" *ngIf="vv.click && !vv.hide" (click)="click(vv.click)">{{vv.name| translate}}</a>
         </li>
       </ul>
     </li>

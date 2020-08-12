@@ -3,7 +3,8 @@ import {Terminal} from 'xterm';
 import {View} from '@app/model';
 import {LogService, SettingService, UUIDService} from '@app/services';
 import {Socket} from '@app/utils/socket';
-import {DataStore, getWsSocket, translate} from '@app/globals';
+import {DataStore, getWsSocket} from '@app/globals';
+import {TranslateService} from '@ngx-translate/core';
 import {newTerminal} from '@app/utils/common';
 
 
@@ -30,7 +31,10 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   wsLogoutFn: Function;
   wsDisconnectFn: Function;
 
-  constructor(private _uuid: UUIDService, private _logger: LogService, private settingSvc: SettingService) {
+  constructor(private _uuid: UUIDService,
+              private _logger: LogService,
+              private settingSvc: SettingService,
+              public translate: TranslateService ) {
   }
 
   contextMenu($event) {
@@ -87,7 +91,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
 
   reconnect() {
     if (this.view.connected === true) {
-      if (!confirm(translate('Are you sure to reconnect it?(RDP not support)'))) {
+      if (!confirm(this.translate.instant('Are you sure to reconnect it?(RDP not support)'))) {
         return;
       }
     }
