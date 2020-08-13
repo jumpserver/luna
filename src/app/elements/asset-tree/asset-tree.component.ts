@@ -359,6 +359,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       case 'remote_app':
         url += 'remote_app=' + node.id;
         break;
+      case 'k8s_app':
+        url += 'k8s_app=' + node.id;
+        break;
+      case 'database_app':
+        url += 'database_app=' + node.id;
+        break;
       default:
         alert('Unknown type: ' + node.meta.type);
         return;
