@@ -11,9 +11,9 @@
 	"Confirm": "确认",
 	"Connect": "连接",
 	"Disconnect": "断开链接",
-	"Disfavor": "",
+	"Disfavor": "取消收藏",
 	"Document": "文档",
-	"Favorite": "",
+	"Favorite": "收藏",
 	"File Manager": "文件管理",
 	"Font size": "字体大小",
 	"Found": "发现",
@@ -47,7 +47,8 @@
 	"download": "下载",
 	"rows": "行数",
 	"start time": "开始时间",
-	"success": "",
+	"success": "成功",
 	"system user": "系统用户",
-	"user": "用户"
+	"user": "用户",
+  "Open in new window": "新窗口打开"
 }
