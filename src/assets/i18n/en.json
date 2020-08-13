@@ -11,9 +11,9 @@
 	"Confirm": "Confirm",
 	"Connect": "Connect",
 	"Disconnect": "Disconnect",
-	"Disfavor": "",
+	"Disfavor": "Disfavor",
 	"Document": "Document",
-	"Favorite": "",
+	"Favorite": "Favorite",
 	"File Manager": "File Manager",
 	"Font size": "Font size",
 	"Found": "Found",
@@ -47,7 +47,8 @@
 	"download": "download",
 	"rows": "rows",
 	"start time": "start time",
-	"success": "",
+	"success": "success",
 	"system user": "system user",
-	"user": "user"
+	"user": "user",
+  "Open in new window": "Open in new window"
 }
