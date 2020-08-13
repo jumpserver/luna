@@ -177,6 +177,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this._http.getMyGrantedRemoteApps().subscribe(
       resp => {
         if (resp.length === 1) {
+          $('#remoteAppsTree').hide();
           return;
         }
         const tree = $.fn.zTree.init($('#remoteAppsTree'), setting, resp);
@@ -196,6 +197,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this._http.getMyGrantedDBApps().subscribe(
       resp => {
         if (resp.length === 1) {
+          $('#DBAppsTree').hide();
           return;
         }
         const tree = $.fn.zTree.init($('#DBAppsTree'), setting, resp);

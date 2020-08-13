@@ -136,7 +136,8 @@ export class ElementNavComponent implements OnInit {
   }
 
   getNav() {
-    return [{
+    return [
+      {
       id: 'FileManager',
       name: 'File Manager',
       children: [
@@ -146,7 +147,8 @@ export class ElementNavComponent implements OnInit {
           name: 'Connect'
         },
       ]
-    }, {
+    },
+      {
       id: 'View',
       name: 'View',
       children: [
@@ -186,26 +188,8 @@ export class ElementNavComponent implements OnInit {
           name: 'Full Screen'
         },
       ]
-    }, {
-      id: 'Help',
-      name: 'Help',
-      children: [
-        {
-          id: 'Website',
-          click: 'Website',
-          name: 'Website'
-        },
-        {
-          id: 'Document',
-          click: 'Document',
-          name: 'Document'
-        },
-        {
-          id: 'Support',
-          click: 'Support',
-          name: 'Support'
-        }]
-    }, {
+    },
+      {
       id: 'Language',
       name: 'Language',
       children: [
@@ -220,7 +204,8 @@ export class ElementNavComponent implements OnInit {
           name: '中文'
         }
       ]
-    }, {
+    },
+      {
       id: 'Setting',
       name: 'Setting',
       click: 'Setting',
@@ -231,7 +216,27 @@ export class ElementNavComponent implements OnInit {
           name: 'Setting'
         }
       ]
-    }
+    },
+      {
+        id: 'Help',
+        name: 'Help',
+        children: [
+          {
+            id: 'Website',
+            click: 'Website',
+            name: 'Website'
+          },
+          {
+            id: 'Document',
+            click: 'Document',
+            name: 'Document'
+          },
+          {
+            id: 'Support',
+            click: 'Support',
+            name: 'Support'
+          }]
+      },
     ];
   }
   Setting() {
