@@ -1,6 +1,7 @@
 import {Component, Inject, OnInit} from '@angular/core';
 import {HttpService, LocalStorageService, NavService, LogService, ViewService} from '@app/services';
-import {DataStore, i18n} from '@app/globals';
+import {DataStore} from '@app/globals';
+import { TranslateService } from '@ngx-translate/core';
 import {CookieService} from 'ngx-cookie-service';
 import {ElementLeftBarComponent} from '@app/elements/left-bar/left-bar.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
@@ -24,6 +25,7 @@ export class ElementNavComponent implements OnInit {
               public _navSvc: NavService,
               private _cookie: CookieService,
               public _viewSrv: ViewService,
+              public translate: TranslateService,
               private _localStorage: LocalStorageService) {
   }
 
@@ -113,43 +115,13 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'English': {
-        const dialog = this._dialog.open(
-          ChangLanWarningDialogComponent,
-          {
-            height: '200px',
-            width: '300px',
-            data: {
-              title: 'Warning',
-              note: 'The page will be reload, can you acceptable?',
-              cancel: 'Cancel',
-              confirm: 'Confirm',
-            },
-          });
-        dialog.afterClosed().subscribe(result => {
-          if (result) {
-            this.English();
-          }
-        });
+        this.translate.use('en');
+        localStorage.setItem('currentLanguage', 'en');
         break;
       }
       case 'Chinese': {
-        const dialog = this._dialog.open(
-          ChangLanWarningDialogComponent,
-          {
-            height: '200px',
-            width: '300px',
-            data: {
-              title: '警告',
-              note: '此页将被重载，是否确认?',
-              cancel: '取消',
-              confirm: '确认',
-            },
-          });
-        dialog.afterClosed().subscribe(result => {
-          if (result) {
-            this.Language('zh');
-          }
-        });
+        this.translate.use('zh');
+        localStorage.setItem('currentLanguage', 'zh');
         break;
       }
       default: {
@@ -164,7 +136,8 @@ export class ElementNavComponent implements OnInit {
   }
 
   getNav() {
-    return [{
+    return [
+      {
       id: 'FileManager',
       name: 'File Manager',
       children: [
@@ -174,7 +147,8 @@ export class ElementNavComponent implements OnInit {
           name: 'Connect'
         },
       ]
-    }, {
+    },
+      {
       id: 'View',
       name: 'View',
       children: [
@@ -214,26 +188,8 @@ export class ElementNavComponent implements OnInit {
           name: 'Full Screen'
         },
       ]
-    }, {
-      id: 'Help',
-      name: 'Help',
-      children: [
-        {
-          id: 'Website',
-          click: 'Website',
-          name: 'Website'
-        },
-        {
-          id: 'Document',
-          click: 'Document',
-          name: 'Document'
-        },
-        {
-          id: 'Support',
-          click: 'Support',
-          name: 'Support'
-        }]
-    }, {
+    },
+      {
       id: 'Language',
       name: 'Language',
       children: [
@@ -248,7 +204,8 @@ export class ElementNavComponent implements OnInit {
           name: '中文'
         }
       ]
-    }, {
+    },
+      {
       id: 'Setting',
       name: 'Setting',
       click: 'Setting',
@@ -259,34 +216,29 @@ export class ElementNavComponent implements OnInit {
           name: 'Setting'
         }
       ]
-    }
+    },
+      {
+        id: 'Help',
+        name: 'Help',
+        children: [
+          {
+            id: 'Website',
+            click: 'Website',
+            name: 'Website'
+          },
+          {
+            id: 'Document',
+            click: 'Document',
+            name: 'Document'
+          },
+          {
+            id: 'Support',
+            click: 'Support',
+            name: 'Support'
+          }]
+      },
     ];
   }
-
-  English() {
-    this._localStorage.delete('lang');
-    i18n.clear();
-    this._cookie.set('lang', 'en');
-    location.reload();
-  }
-
-  Language(lan: string) {
-    this._cookie.set('lang', lan);
-    this._http.get('/luna/i18n/' + lan + '.json').subscribe(
-      data => {
-        this._localStorage.set('lang', JSON.stringify(data));
-      }
-    );
-    const l = this._localStorage.get('lang');
-    if (l) {
-      const data = JSON.parse(l);
-      Object.keys(data).forEach((k, _) => {
-        i18n.set(k, data[k]);
-      });
-    }
-    location.reload();
-  }
-
   Setting() {
     const dialog = this._dialog.open(
       ElementSettingComponent,

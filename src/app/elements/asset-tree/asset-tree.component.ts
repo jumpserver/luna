@@ -4,10 +4,10 @@ import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
 import {ToastrService} from 'ngx-toastr';
-
+import {TranslateService} from '@ngx-translate/core';
 import {groupBy} from '@app/utils/common';
 import {AppService, HttpService, LogService, NavService, SettingService, TreeFilterService} from '@app/services';
-import {connectEvt, translate} from '@app/globals';
+import {connectEvt} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
 
 declare var $: any;
@@ -43,6 +43,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   assetsTree: any;
   remoteAppsTree: any;
   DBAppsTree: any;
+  K8SAppsTree: any;
   isShowRMenu = false;
   rightClickSelectNode: any;
   hasLoginTo = false;
@@ -56,6 +57,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
               private _treeFilterSvc: TreeFilterService,
               public _dialog: MatDialog,
               public _logger: LogService,
+              public translate: TranslateService,
               private activatedRoute: ActivatedRoute,
               private _http: HttpService,
               private settingSvc: SettingService,
@@ -72,6 +74,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         this._logger.debug('Filter tree: ', keyword);
         this.filterAssets(keyword);
         this.filterRemoteApps(keyword);
+        this.filterDBApps(keyword);
+        this.filterK8SApps(keyword);
       }
     );
   }
@@ -134,6 +138,19 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.initDBAppsTree();
   }
 
+  refreshK8SAppsTree() {
+    this.K8SAppsTree.destroy();
+    this.initK8SAppsTree();
+  }
+
+  onK8SAppsTreeNodeClick(event, treeId, treeNode, clickFlag) {
+    if (treeNode.isParent) {
+      this.K8SAppsTree.expandNode(treeNode);
+    } else {
+      this._http.getUserProfile().subscribe();
+      this.connectAsset(treeNode);
+    }
+  }
   onDBAppsTreeNodeClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
       this.DBAppsTree.expandNode(treeNode);
@@ -160,6 +177,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this._http.getMyGrantedRemoteApps().subscribe(
       resp => {
         if (resp.length === 1) {
+          $('#remoteAppsTree').hide();
           return;
         }
         const tree = $.fn.zTree.init($('#remoteAppsTree'), setting, resp);
@@ -179,6 +197,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this._http.getMyGrantedDBApps().subscribe(
       resp => {
         if (resp.length === 1) {
+          $('#DBAppsTree').hide();
           return;
         }
         const tree = $.fn.zTree.init($('#DBAppsTree'), setting, resp);
@@ -189,11 +208,31 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       }
     );
   }
+  initK8SAppsTree() {
+    const setting = Object.assign({}, this.setting);
+    setting['callback'] = {
+      onClick: this.onK8SAppsTreeNodeClick.bind(this),
+      onRightClick: this.onRightClick.bind(this)
+    };
+    this._http.getMyGrantedK8SApps().subscribe(
+      resp => {
+        if (resp.length === 1) {
+          return;
+        }
+        const tree = $.fn.zTree.init($('#K8SAppsTree'), setting, resp);
+        this.K8SAppsTree = tree;
+        this.rootNodeAddDom(tree, () => {
+          this.refreshK8SAppsTree();
+        });
+      }
+    );
+  }
 
   initTree() {
     this.initAssetsTree();
     this.initRemoteAppsTree();
     this.initDBAppsTree();
+    this.initK8SAppsTree();
   }
 
   connectAsset(node: TreeNode) {
@@ -320,6 +359,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       case 'remote_app':
         url += 'remote_app=' + node.id;
         break;
+      case 'k8s_app':
+        url += 'k8s_app=' + node.id;
+        break;
+      case 'database_app':
+        url += 'database_app=' + node.id;
+        break;
       default:
         alert('Unknown type: ' + node.meta.type);
         return;
@@ -337,12 +382,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       this._http.favoriteAsset(assetId, false).subscribe(() => {
         const i = this.favoriteAssets.indexOf(assetId);
         this.favoriteAssets.splice(i, 1);
-        this.toastr.success(translate('Disfavor') + ' ' + translate('success'), '', {timeOut: 2000});
+        this.toastr.success(this.translate.instant('Disfavor') + ' ' + this.translate.instant('success'), '', {timeOut: 2000});
       });
     } else {
       this._http.favoriteAsset(assetId, true).subscribe(() => {
         this.favoriteAssets.push(assetId);
-        this.toastr.success(translate('Favorite') + ' ' + translate('success'), '', {timeOut: 2000});
+        this.toastr.success(this.translate.instant('Favorite') + ' ' + this.translate.instant('success'), '', {timeOut: 2000});
       });
     }
   }
@@ -401,6 +446,25 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     }
     return this.filterTree(keyword, this.remoteAppsTree, filterCallback);
   }
+  filterDBApps(keyword) {
+    if (!this.DBAppsTree) {
+      return null;
+    }
+    function filterCallback(node: TreeNode) {
+      return node.name.toLowerCase().indexOf(keyword) !== -1;
+    }
+    return this.filterTree(keyword, this.DBAppsTree, filterCallback);
+  }
+
+  filterK8SApps(keyword) {
+    if (!this.K8SAppsTree) {
+      return null;
+    }
+    function filterCallback(node: TreeNode) {
+      return node.name.toLowerCase().indexOf(keyword) !== -1;
+    }
+    return this.filterTree(keyword, this.K8SAppsTree, filterCallback);
+  }
 
   filterAssetsServer(keyword) {
     if (!this.assetsTree) {
@@ -427,7 +491,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.filterAssetCancel$))
       .subscribe(nodes => {
         this.loading = false;
-        let name = translate('Search');
+        let name = this.translate.instant('Search');
         const assetsAmount = nodes.length;
         name = `${name} (${assetsAmount})`;
         const newNode = {id: 'search', name: name, isParent: true, open: true, zAsync: true};

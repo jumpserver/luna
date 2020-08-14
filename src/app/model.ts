@@ -1,3 +1,4 @@
+import {ElementSshTermComponent} from '@app/elements/ssh-term/ssh-term.component';
 
 export class UserGroup {
   id: string;
@@ -89,6 +90,7 @@ export class Nav {
   click?: string;
   href?: string;
   disable?: boolean = false;
+
 }
 
 export class NavEvt {
@@ -116,8 +118,11 @@ export class View {
   room: string;
   Rdp: any;
   Term: any;
+  token: any;
   DatabaseApp: string;
+  K8SApp: string;
   shareroomId: string;
+  termComp: ElementSshTermComponent;
 }
 
 export class ViewAction {
@@ -143,7 +148,7 @@ export class DataStore {
   autoLogin: boolean;
   guacamoleToken: string;
   guacamoleTokenTime: number;
-
+  termSelection: string;
 }
 
 export class Browser {
