@@ -91,5 +91,6 @@ export class PagesConnectComponent implements OnInit {
         }
       );
     }
+
   }
 }
