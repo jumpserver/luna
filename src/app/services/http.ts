@@ -227,10 +227,10 @@ export class HttpService {
     );
   }
 
-  guacamoleTokenAddAsset(assetToken: string) {
+  guacamoleTokenAddAsset(assetToken: string, token: string) {
     let params = new HttpParams()
       .set('asset_token', assetToken)
-      .set('token',  DataStore.guacamoleToken);
+      .set('token', token);
     const solution = this.settingSrv.setting.rdpSolution || 'Auto';
     if (solution !== 'Auto') {
       const width = solution.split('x')[0];

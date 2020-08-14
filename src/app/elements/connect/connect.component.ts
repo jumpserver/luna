@@ -42,10 +42,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           this.connectFileManager(evt.node);
           break;
         }
-        case 'token': {
-          this.connectAssetWithToken();
-          break;
-        }
       }
     });
     const loginTo = this._appSvc.getQueryString('login_to');
@@ -127,14 +123,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
   }
 
-  connectAssetWithToken() {
-    const view = new View();
-    const system = this._appSvc.getQueryString('system');
-    const token = this._appSvc.getQueryString('token');
-    view.token = token;
-    view.type =  system;
-    this.onNewView.emit(view);
-  }
   async connectAsset(node: TreeNode) {
     const host = node.meta.asset as Asset;
     const systemUsers = await this._http.getMyAssetSystemUsers(host.id).toPromise();

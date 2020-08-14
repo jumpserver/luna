@@ -69,28 +69,5 @@ export class PagesConnectComponent implements OnInit {
         }
       );
     }
-    if (databaseAppId) {
-      this._http.getMyGrantedDBApps(databaseAppId).subscribe(
-        nodes => {
-          if (!nodes) {
-            return;
-          }
-          const evt = new ConnectEvt(nodes[0], 'asset');
-          connectEvt.next(evt);
-        }
-      );
-    }
-    if (k8sId) {
-      this._http.getMyGrantedK8SApps(k8sId).subscribe(
-        nodes => {
-          if (!nodes) {
-            return;
-          }
-          const evt = new ConnectEvt(nodes[0], 'asset');
-          connectEvt.next(evt);
-        }
-      );
-    }
-
   }
 }

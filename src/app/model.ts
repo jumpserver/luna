@@ -118,7 +118,6 @@ export class View {
   room: string;
   Rdp: any;
   Term: any;
-  token: any;
   DatabaseApp: string;
   K8SApp: string;
   shareroomId: string;
