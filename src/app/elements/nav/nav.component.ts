@@ -243,7 +243,7 @@ export class ElementNavComponent implements OnInit {
     const dialog = this._dialog.open(
       ElementSettingComponent,
       {
-        height: '370px',
+        height: '410px',
         width: '400px',
       });
     dialog.afterClosed().subscribe(result => {

@@ -40,7 +40,7 @@ export class ElementSshTermComponent implements OnInit, OnDestroy {
   contextMenu($event) {
     this.term.focus();
     // ctrl按下则不处理
-    if ($event.ctrlKey) {
+    if ($event.ctrlKey || this.settingSvc.setting.quickPaste !== '1') {
       return;
     }
     // @ts-ignore
