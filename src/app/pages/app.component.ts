@@ -15,8 +15,11 @@ export class AppComponent {
   // tslint:disable-next-line:use-life-cycle-interface
   public async ngOnInit() {
     // 语言初始化(若未设置语言, 则取浏览器语言)
-    const currentLanguage = await localStorage.getItem('currentLanguage') || 'zh';
+    let currentLanguage = await localStorage.getItem('currentLanguage') || 'zh';
     // 当在assets/i18n中找不到对应的语言翻译时，使用'zh-CN'作为默认语言
+    if (currentLanguage !== 'zh' && currentLanguage !== 'en' ) {
+      currentLanguage = 'zh';
+    }
     this.translate.setDefaultLang('zh');
     this.translate.use(currentLanguage);
     // 记录当前设置的语言
