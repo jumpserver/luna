@@ -97,7 +97,7 @@ export class ElementContentComponent implements OnInit {
       }
       const d = {'data': cmd};
 
-      this.viewList[i].termComp.send(d);
+      this.viewList[i].termComp.sendCommand(d);
     }
 
     this.batchCommand = '';
@@ -174,25 +174,6 @@ export class ElementContentComponent implements OnInit {
   }
   rReconnect() {
     this.viewList[this.rIdx].termComp.reconnect();
-  }
-  rDisconnect() {
-    if (!confirm('断开当前连接? (RDP暂不支持)')) {
-      return;
-    }
-    switch (this.viewList[this.rIdx].type) {
-      case 'ssh': {
-        this.viewList[this.rIdx].termComp.logout();
-        break;
-      }
-      case 'rdp': {
-        // statements
-        break;
-      }
-      default: {
-        // statements;
-        break;
-      }
-    }
   }
 
 }

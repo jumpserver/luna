@@ -43,13 +43,11 @@ export class ElementGuacamoleComponent implements OnInit {
       const nowTime = now.getTime() / 1000;
       this._http.getGuacamoleToken(this.token, this.token).subscribe(
         data => {
-          console.log(data);
           // /guacamole/client will redirect to http://guacamole/#/client
           DataStore.guacamoleToken = data['authToken'];
           DataStore.guacamoleTokenTime = nowTime;
           action = this._http.guacamoleTokenAddAsset(this.token).subscribe(
             data2 => {
-              console.log(data2);
               const base = data2['result'];
               this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamoleToken;
               setTimeout(() => this.setIdleTimeout(), 500);
@@ -118,7 +116,6 @@ export class ElementGuacamoleComponent implements OnInit {
     this.resetIdleTimeout();
     this.iframeWindow.onclick = () => this.resetIdleTimeout();
     this.iframeWindow.onkeyup = () => this.resetIdleTimeout();
-    console.log(this.iframeWindow);
   }
 
   resetIdleTimeout() {
