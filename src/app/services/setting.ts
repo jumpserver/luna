@@ -7,7 +7,7 @@ import {HttpClient} from '@angular/common/http';
 export class SettingService {
   setting: Setting;
   globalSetting: GlobalSetting;
-  settingKey: 'LunaSetting';
+  settingKey = 'LunaSetting';
 
   constructor(private store: LocalStorageService, private _http: HttpClient) {
     const settingData = this.store.get(this.settingKey);
