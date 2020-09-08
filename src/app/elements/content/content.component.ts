@@ -95,9 +95,9 @@ export class ElementContentComponent implements OnInit {
       if (this.viewList[i].type !== 'ssh' || this.viewList[i].connected !== true) {
         continue;
       }
-      const d = {'data': cmd, 'room': this.viewList[i].room};
+      const d = {'data': cmd};
 
-      this.viewList[i].termComp.ws.emit('data', d);
+      this.viewList[i].termComp.send(d);
     }
 
     this.batchCommand = '';

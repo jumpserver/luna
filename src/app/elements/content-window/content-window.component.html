@@ -1,11 +1,10 @@
 <div class="window" [ngClass]="{'active':view.active}" style="height: 100%">
   <elements-ssh-term
     [view]="view"
-    [host]="view.host"
-    [sysUser]="view.user"
     [token]="view.token"
+    [sysUser]="view.user"
+    [host]="view.host"
     [shareroomId] = "view.shareroomId"
-
     *ngIf="view.type=='ssh' || view.type=='database'|| view.type=='k8s'"
   >
   </elements-ssh-term>
