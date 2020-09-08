@@ -1,11 +1,8 @@
-import {Component, Input, OnInit, OnDestroy } from '@angular/core';
-import {Terminal} from 'xterm';
+import {Component, Input, OnInit, ViewChild, ElementRef, AfterViewInit} from '@angular/core';
 import {View} from '@app/model';
 import {LogService, SettingService, UUIDService} from '@app/services';
-import {Socket} from '@app/utils/socket';
-import {DataStore, getWsSocket} from '@app/globals';
 import {TranslateService} from '@ngx-translate/core';
-import {newTerminal} from '@app/utils/common';
+import {DomSanitizer} from '@angular/platform-browser';
 
 
 @Component({
@@ -13,195 +10,104 @@ import {newTerminal} from '@app/utils/common';
   templateUrl: './ssh-term.component.html',
   styleUrls: ['./ssh-term.component.scss']
 })
-export class ElementSshTermComponent implements OnInit, OnDestroy {
-  @Input() host: any;
+export class ElementSshTermComponent implements OnInit, AfterViewInit {
   @Input() view: View;
+  @Input() host: any;
   @Input() sysUser: any;
-  @Input() index: number;
   @Input() token: string;
   @Input() shareroomId: string;
+  @ViewChild('terminal') iframe: ElementRef;
 
-  term: Terminal;
-  secret: string;
-  ws: Socket;
-  roomID: string;
-  wsDataFn: Function;
-  wsShareRoomDataFn: Function;
-  wsRoomFn: Function;
-  wsLogoutFn: Function;
-  wsDisconnectFn: Function;
+  target: any;
+  terminalID: any;
 
   constructor(private _uuid: UUIDService,
+              private sanitizer: DomSanitizer,
               private _logger: LogService,
               private settingSvc: SettingService,
               public translate: TranslateService ) {
   }
 
-  contextMenu($event) {
-    this.term.focus();
-    // ctrl按下则不处理
-    if ($event.ctrlKey) {
-      return;
-    }
-    // @ts-ignore
-    if (navigator.clipboard && navigator.clipboard.readText) {
-      // @ts-ignore
-      navigator.clipboard.readText().then((text) => {
-        this.ws.emit('data', {'data': text, 'room': this.roomID});
-      });
-      $event.preventDefault();
-    } else if (DataStore.termSelection !== '') {
-      this.ws.emit('data', {'data': DataStore.termSelection, 'room': this.roomID});
-      $event.preventDefault();
-    }
-
-  }
-
   ngOnInit() {
-    this.secret = this._uuid.gen();
-    this.newTerm();
-    getWsSocket().then(sock => {
-      this.ws = sock;
-      this.connectHost();
-    });
-    // this.view.type = 'ssh';
-    this.view.termComp = this;
+    // tslint:disable-next-line:max-line-length
+      if (this.host) {
+        switch (this.view.type) {
+          case 'ssh':
+            this.target =  this.trust(
+              `${document.location.origin}/koko/terminal/?target_id=${this.host.id}&type=asset&system_user_id=${this.sysUser.id}`
+            );
+            break;
+          case 'database':
+            this.target =  this.trust(
+              // tslint:disable-next-line:max-line-length
+              `${document.location.origin}/koko/terminal/?target_id=${this.host.id}&type=database_app&system_user_id=${this.sysUser.id}`
+            );
+            break;
+          case 'k8s':
+            this.target =  this.trust(
+              `${document.location.origin}/koko/terminal/?target_id=${this.host.id}&type=k8s_app&system_user_id=${this.sysUser.id}`
+            );
+            break;
+          default:
+            this.target =  this.trust(
+              `${document.location.origin}/koko/terminal/?target_id=${this.host.id}&type=asset&system_user_id=${this.sysUser.id}`
+            );
+            break;
+        }
+      }
+      if (this.shareroomId) {
+        this.target =  this.trust(
+          `${document.location.origin}/koko/terminal/?target_id=${this.shareroomId}&type=shareroom`
+        );
+      }
+      if (this.token) {
+        this.target =  this.trust(
+          `${document.location.origin}/koko/terminal/?target_id=${this.token}&type=token`
+        );
+      }
+      this.view.termComp = this;
+      this.terminalID = Math.random().toString(36).substr(2);
+
   }
 
-  newTerm() {
-    const fontSize = this.settingSvc.setting.fontSize;
-    this.term = newTerminal(fontSize);
-    this.view.Term = this.term;
-    this.term.attachCustomKeyEventHandler(e => {
-      if (e.ctrlKey && e.key === 'c' && this.term.hasSelection()) {
-        return false;
-      }
-      if (e.ctrlKey && e.key === 'v') {
-        return false;
-      }
-      return true;
-    });
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.listenEvent();
+    }, 2000);
   }
 
-  changeWinSize(size: Array<number>) {
-    if (this.ws) {
-      this.ws.emit('resize', {'cols': size[0], 'rows': size[1]});
+  listenEvent() {
+    const isIFrame = (input: HTMLElement | null): input is HTMLIFrameElement =>
+      input !== null && input.tagName === 'IFRAME';
+    const frame = document.getElementById(this.terminalID);
+    if (isIFrame(frame) && frame.contentWindow) {
+      frame.contentWindow.addEventListener('CLOSE', (e) => {
+        this.view.connected = false;
+      });
     }
   }
 
   reconnect() {
-    if (this.view.connected === true) {
-      if (!confirm(this.translate.instant('Are you sure to reconnect it?(RDP not support)'))) {
-        return;
-      }
-    }
-    this.secret = this._uuid.gen();
-    this.emitHostAndTokenData();
+    const url = this.target;
+    this.target = this.trust('about:blank');
+    setTimeout(() => {
+      this.target = url;
+    }, 10);
+    this.view.connected = true;
   }
 
-  emitHostAndTokenData() {
-    if (this.host) {
-      const data = {
-        uuid: this.host.id,
-        userid: this.sysUser.id,
-        secret: this.secret,
-        size: [this.term.cols, this.term.rows],
-        type: this.view.type
-      };
-      this.ws.emit('host', data);
-    }
-    if (this.shareroomId) {
-      const data = {
-        shareRoomID: this.shareroomId,
-        secret: this.secret,
-        size: [this.term.cols, this.term.rows],
-      };
-      this.ws.emit('shareRoom', data);
-    }
-    if (this.token) {
-      const data = {
-        'token': this.token, 'secret': this.secret,
-        'size': [this.term.cols, this.term.rows]
-      };
-      this._logger.debug('On token event trigger');
-      this.ws.emit('token', data);
+  sendCommand(data) {
+    const isIFrame = (input: HTMLElement | null): input is HTMLIFrameElement =>
+      input !== null && input.tagName === 'IFRAME';
+    const frame = document.getElementById(this.terminalID);
+    if (isIFrame(frame) && frame.contentWindow) {
+      const iframeWindow: any = frame.contentWindow;
+      iframeWindow.SendTerminalData(data.data);
     }
   }
 
-  connectHost() {
-    this.emitHostAndTokenData();
-    this.wsDataFn = data => {
-      if (data.room === this.roomID) {
-        this.term.write(data['data']);
-      }
-    };
-    this.wsShareRoomDataFn = data => {
-      if (data.room === this.roomID) {
-        this.term.write(data['data']);
-      }
-    };
-    this.wsRoomFn = data => {
-      if (data.secret === this.secret && data.room) {
-        this._logger.debug('On room', data);
-        this.roomID = data.room;
-        this.view.room = data.room;
-        this.view.connected = true;
-      }
-    };
-    this.wsDisconnectFn = () => {
-      this._logger.debug('On disconnect event trigger');
-      this.view.connected = false;
-    };
-    this.wsLogoutFn = data => {
-      if (this.shareroomId) {
-        this.term.write(data['data']);
-        this.view.connected = false;
-      } else if (data.room === this.roomID) {
-        this._logger.debug('On logout event trigger: ', data.room, this.roomID);
-        this.view.connected = false;
-      }
-    };
-    this.term.on('data', data => {
-      const d = {'data': data, 'room': this.roomID};
-      this.ws.emit('data', d);
-    });
-
-    this.ws.on('shareRoomData', this.wsShareRoomDataFn);
-    this.ws.on('data', this.wsDataFn);
-    // 服务器主动断开
-    this.ws.on('disconnect', this.wsDisconnectFn);
-
-    this.ws.on('logout', this.wsLogoutFn);
-
-    this.ws.on('room', this.wsRoomFn);
-
-    this.term.on('selection', function () {
-      document.execCommand('copy');
-      if (!this.hasSelection) {
-        DataStore.termSelection = '';
-      }
-      DataStore.termSelection = this.getSelection().trim();
-    });
+  trust(url) {
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 
-  active() {
-    this.term.focus();
-  }
-
-  ngOnDestroy(): void {
-    this._logger.debug('Close view');
-    this.logout();
-    this.term.destroy();
-    this.ws.off('shareRoomData', this.wsShareRoomDataFn);
-    this.ws.off('data', this.wsDataFn);
-    this.ws.off('disconnect', this.wsDisconnectFn);
-    this.ws.off('logout', this.wsLogoutFn);
-    this.ws.off('room', this.wsRoomFn);
-  }
-  logout(): void {
-    if (this.view && (this.view.room === this.roomID)) {
-      this.view.connected = false;
-      this.ws.emit('logout', this.roomID);
-    }
-  }
 }

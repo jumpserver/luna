@@ -95,9 +95,9 @@ export class ElementContentComponent implements OnInit {
       if (this.viewList[i].type !== 'ssh' || this.viewList[i].connected !== true) {
         continue;
       }
-      const d = {'data': cmd, 'room': this.viewList[i].room};
+      const d = {'data': cmd};
 
-      this.viewList[i].termComp.ws.emit('data', d);
+      this.viewList[i].termComp.sendCommand(d);
     }
 
     this.batchCommand = '';
@@ -162,7 +162,7 @@ export class ElementContentComponent implements OnInit {
     const id = this.rIdx + 1;
     const host = this.viewList[this.rIdx].host;
     const user = this.viewList[this.rIdx].user;
-    v.nick = host.hostname;
+    v.nick = host.hostname || host.title;
     v.connected = true;
     v.editable = false;
     v.closed = false;
@@ -174,25 +174,6 @@ export class ElementContentComponent implements OnInit {
   }
   rReconnect() {
     this.viewList[this.rIdx].termComp.reconnect();
-  }
-  rDisconnect() {
-    if (!confirm('断开当前连接? (RDP暂不支持)')) {
-      return;
-    }
-    switch (this.viewList[this.rIdx].type) {
-      case 'ssh': {
-        this.viewList[this.rIdx].termComp.logout();
-        break;
-      }
-      case 'rdp': {
-        // statements
-        break;
-      }
-      default: {
-        // statements;
-        break;
-      }
-    }
   }
 
 }
