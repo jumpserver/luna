@@ -1,13 +1,8 @@
-import {Component, Input, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit} from '@angular/core';
-import {Terminal} from 'xterm';
+import {Component, Input, OnInit, ViewChild, ElementRef, AfterViewInit} from '@angular/core';
 import {View} from '@app/model';
 import {LogService, SettingService, UUIDService} from '@app/services';
-import {Socket} from '@app/utils/socket';
-import {DataStore, getWsSocket} from '@app/globals';
 import {TranslateService} from '@ngx-translate/core';
-import {newTerminal} from '@app/utils/common';
 import {DomSanitizer} from '@angular/platform-browser';
-import {listener} from '@angular/core/src/render3';
 
 
 @Component({
@@ -93,7 +88,6 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
   }
 
   reconnect() {
-    console.log(this.view);
     const url = this.target;
     this.target = this.trust('about:blank');
     setTimeout(() => {
@@ -102,12 +96,13 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
     this.view.connected = true;
   }
 
-  send(data) {
+  sendCommand(data) {
     const isIFrame = (input: HTMLElement | null): input is HTMLIFrameElement =>
       input !== null && input.tagName === 'IFRAME';
     const frame = document.getElementById(this.terminalID);
     if (isIFrame(frame) && frame.contentWindow) {
-      frame.contentWindow.SendTerminalData(data.data);
+      const iframeWindow: any = frame.contentWindow;
+      iframeWindow.SendTerminalData(data.data);
     }
   }
 
