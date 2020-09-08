@@ -162,7 +162,7 @@ export class ElementContentComponent implements OnInit {
     const id = this.rIdx + 1;
     const host = this.viewList[this.rIdx].host;
     const user = this.viewList[this.rIdx].user;
-    v.nick = host.hostname;
+    v.nick = host.hostname || host.title;
     v.connected = true;
     v.editable = false;
     v.closed = false;
