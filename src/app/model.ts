@@ -121,7 +121,7 @@ export class View {
   token: any;
   DatabaseApp: string;
   K8SApp: string;
-  shareroomId: string;
+  shareRoomId: string;
   termComp: ElementSshTermComponent;
 }
 
