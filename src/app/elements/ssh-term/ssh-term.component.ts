@@ -10,12 +10,12 @@ import {DomSanitizer} from '@angular/platform-browser';
   templateUrl: './ssh-term.component.html',
   styleUrls: ['./ssh-term.component.scss']
 })
-export class ElementSshTermComponent implements OnInit, AfterViewInit {
+export class ElementSshTermComponent implements OnInit {
   @Input() view: View;
   @Input() host: any;
   @Input() sysUser: any;
   @Input() token: string;
-  @Input() shareroomId: string;
+  @Input() shareRoomId: string;
   @ViewChild('terminal') iframe: ElementRef;
 
   target: any;
@@ -55,9 +55,9 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
             break;
         }
       }
-      if (this.shareroomId) {
+      if (this.shareRoomId) {
         this.target =  this.trust(
-          `${document.location.origin}/koko/terminal/?target_id=${this.shareroomId}&type=shareroom`
+          `${document.location.origin}/koko/terminal/?target_id=${this.shareRoomId}&type=shareroom`
         );
       }
       if (this.token) {
@@ -68,12 +68,6 @@ export class ElementSshTermComponent implements OnInit, AfterViewInit {
       this.view.termComp = this;
       this.terminalID = Math.random().toString(36).substr(2);
 
-  }
-
-  ngAfterViewInit() {
-    setTimeout(() => {
-      this.listenEvent();
-    }, 2000);
   }
 
   listenEvent() {
