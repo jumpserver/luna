@@ -30,7 +30,7 @@ export class PagesConnectComponent implements OnInit {
     this.system = this._appService.getQueryString('system');
     this.token = this._appService.getQueryString('token');
     const assetId = this._appService.getQueryString('asset');
-    const shareroomId = this._appService.getQueryString('shareroom');
+    const shareRoomId = this._appService.getQueryString('shareroom');
     const remoteAppId = this._appService.getQueryString('remote_app');
     const databaseAppId = this._appService.getQueryString('database_app');
     const k8sId = this._appService.getQueryString('k8s_app');
@@ -49,9 +49,9 @@ export class PagesConnectComponent implements OnInit {
         }
       );
     }
-    if (shareroomId) {
+    if (shareRoomId) {
       const node = new TreeNode;
-      node.id = shareroomId;
+      node.id = shareRoomId;
       node.meta = {
         type: 'shareroom'
       };

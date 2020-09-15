@@ -326,7 +326,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       view.connected = true;
       view.editable = false;
       view.closed = false;
-      view.shareroomId = node.id;
+      view.shareRoomId = node.id;
       view.type = 'ssh';
       this.onNewView.emit(view);
   }
