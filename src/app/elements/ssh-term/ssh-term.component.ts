@@ -40,7 +40,11 @@ export class ElementSshTermComponent implements OnInit {
           case 'database':
             this.target =  this.trust(
               // tslint:disable-next-line:max-line-length
-              `${document.location.origin}/koko/terminal/?target_id=${this.host.id}&type=database_app&system_user_id=${this.sysUser.id}`
+              // `${document.location.origin}/koko/terminal/?target_id=${this.host.id}&type=database_app&system_user_id=${this.sysUser.id}`
+              // tslint:disable-next-line:max-line-length
+              // http://172.16.10.200:8080/omnidb/jumpserver/connect/workspace/?database_id=36cb2e01-97dd-44bd-beb4-0646935cba49&system_user_id=78956411-922f-42db-809b-d7fa274a3017
+              // tslint:disable-next-line:max-line-length
+              `${document.location.origin}/omnidb/jumpserver/connect/workspace/?database_id=${this.host.id}&system_user_id=${this.sysUser.id}`
             );
             break;
           case 'k8s':
