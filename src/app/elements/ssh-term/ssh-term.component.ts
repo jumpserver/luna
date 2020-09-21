@@ -1,4 +1,4 @@
-import {Component, Input, OnInit, ViewChild, ElementRef, AfterViewInit} from '@angular/core';
+import {Component, Input, OnInit, ViewChild, ElementRef} from '@angular/core';
 import {View} from '@app/model';
 import {LogService, SettingService, UUIDService} from '@app/services';
 import {TranslateService} from '@ngx-translate/core';
@@ -30,47 +30,37 @@ export class ElementSshTermComponent implements OnInit {
 
   ngOnInit() {
     // tslint:disable-next-line:max-line-length
-      if (this.host) {
-        switch (this.view.type) {
-          case 'ssh':
-            this.target =  this.trust(
-              `${document.location.origin}/koko/terminal/?target_id=${this.host.id}&type=asset&system_user_id=${this.sysUser.id}`
-            );
-            break;
-          case 'database':
-            this.target =  this.trust(
-              // tslint:disable-next-line:max-line-length
-              `${document.location.origin}/koko/terminal/?target_id=${this.host.id}&type=database_app&system_user_id=${this.sysUser.id}`
-            );
-            break;
-          case 'k8s':
-            this.target =  this.trust(
-              `${document.location.origin}/koko/terminal/?target_id=${this.host.id}&type=k8s_app&system_user_id=${this.sysUser.id}`
-            );
-            break;
-          default:
-            this.target =  this.trust(
-              `${document.location.origin}/koko/terminal/?target_id=${this.host.id}&type=asset&system_user_id=${this.sysUser.id}`
-            );
-            break;
-        }
+    const baseUrl = `${document.location.origin}/koko/terminal`;
+    if (this.host) {
+      switch (this.view.type) {
+        case 'ssh':
+          this.target = `${baseUrl}/?target_id=${this.host.id}&type=asset&system_user_id=${this.sysUser.id}`;
+          break;
+        case 'database':
+          this.target = `${baseUrl}/?target_id=${this.host.id}&type=database_app&system_user_id=${this.sysUser.id}`;
+          break;
+        case 'k8s':
+          this.target = `${baseUrl}/?target_id=${this.host.id}&type=k8s_app&system_user_id=${this.sysUser.id}`;
+          break;
+        default:
+          this.target = `${baseUrl}/?target_id=${this.host.id}&type=asset&system_user_id=${this.sysUser.id}`;
+          break;
       }
-      if (this.shareRoomId) {
-        this.target =  this.trust(
-          `${document.location.origin}/koko/terminal/?target_id=${this.shareRoomId}&type=shareroom`
-        );
-      }
-      if (this.token) {
-        this.target =  this.trust(
-          `${document.location.origin}/koko/terminal/?target_id=${this.token}&type=token`
-        );
-      }
-      this.view.termComp = this;
-      this.terminalID = Math.random().toString(36).substr(2);
-
+    }
+    if (this.shareRoomId) {
+      this.target = `${baseUrl}/?target_id=${this.shareRoomId}&type=shareroom`;
+    }
+    if (this.token) {
+      this.target = `${baseUrl}/?target_id=${this.token}&type=token`;
+    }
+    this.view.termComp = this;
+    this.terminalID = Math.random().toString(36).substr(2);
   }
 
   listenEvent() {
+    if (!this.target || this.target === 'about:blank') {
+      return null;
+    }
     const isIFrame = (input: HTMLElement | null): input is HTMLIFrameElement =>
       input !== null && input.tagName === 'IFRAME';
     const frame = document.getElementById(this.terminalID);
@@ -83,7 +73,7 @@ export class ElementSshTermComponent implements OnInit {
 
   reconnect() {
     const url = this.target;
-    this.target = this.trust('about:blank');
+    this.target = 'about:blank';
     setTimeout(() => {
       this.target = url;
     }, 10);
