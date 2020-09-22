@@ -32,6 +32,13 @@
   </mat-select>
 </mat-form-field>
 
+<mat-form-field *ngIf="globalSetting.XPACK_LICENSE_IS_VALID">
+  <mat-select [(value)]="setting.sqlClient"
+              placeholder="{{'SQL Client'| translate }}" >
+    <mat-option *ngFor="let s of clientChoices"  value="{{s.value}}">{{s.name| translate}}</mat-option>
+  </mat-select>
+</mat-form-field>
+
 <div style="float: right" [style.padding-top]="globalSetting.WINDOWS_SKIP_ALL_MANUAL_PASSWORD ? '20px' : '0'">
   <button mat-raised-button (click)="onNoClick()">{{"Cancel"| translate}}</button>
   <button mat-raised-button color="primary" (click)="onSubmit()">{{"Confirm"| translate}}</button>
