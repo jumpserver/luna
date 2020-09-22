@@ -51,5 +51,6 @@
 	"system user": "system user",
 	"user": "user",
 	"Open in new window": "Open in new window",
-	"Right mouse quick paste": "Right mouse quick paste"
+	"Right mouse quick paste": "Right mouse quick paste",
+  "SQL Client": "SQL Client"
 }

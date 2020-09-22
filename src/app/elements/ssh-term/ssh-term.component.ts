@@ -37,7 +37,14 @@ export class ElementSshTermComponent implements OnInit {
           this.target = `${baseUrl}/?target_id=${this.host.id}&type=asset&system_user_id=${this.sysUser.id}`;
           break;
         case 'database':
-          this.target = `${baseUrl}/?target_id=${this.host.id}&type=database_app&system_user_id=${this.sysUser.id}`;
+          if (this.settingSvc.setting.sqlClient === '1' && this.settingSvc.globalSetting.XPACK_LICENSE_IS_VALID) {
+            // OmniDB
+            // tslint:disable-next-line:max-line-length
+            this.target = `${document.location.origin}/omnidb/jumpserver/connect/workspace/?database_id=${this.host.id}&system_user_id=${this.sysUser.id}`;
+          } else {
+            // KOKO
+            this.target = `${baseUrl}/?target_id=${this.host.id}&type=database_app&system_user_id=${this.sysUser.id}`;
+          }
           break;
         case 'k8s':
           this.target = `${baseUrl}/?target_id=${this.host.id}&type=k8s_app&system_user_id=${this.sysUser.id}`;
