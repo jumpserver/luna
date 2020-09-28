@@ -41,9 +41,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   hiddenNodes: any;
   expandNodes: any;
   assetsTree: any;
-  remoteAppsTree: any;
-  DBAppsTree: any;
-  K8SAppsTree: any;
+  applicationsTree: any;
   isShowRMenu = false;
   rightClickSelectNode: any;
   hasLoginTo = false;
@@ -73,9 +71,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       keyword => {
         this._logger.debug('Filter tree: ', keyword);
         this.filterAssets(keyword);
-        this.filterRemoteApps(keyword);
-        this.filterDBApps(keyword);
-        this.filterK8SApps(keyword);
+        this.filterApplicationsTree(keyword);
       }
     );
   }
@@ -100,6 +96,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   initAssetsTree(refresh?: boolean) {
     const setting = Object.assign({}, this.setting);
+    const myAssetsNodes = [
+      {
+        name: '我的资产', id: 'myAssets', isParent: true,
+        children: [], open: true
+      }
+    ];
     setting['callback'] = {
       onClick: this.onAssetsNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
@@ -120,119 +122,67 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.loading = true;
     this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
       this.loading = false;
-      const assetsTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
-      this.assetsTree = assetsTree;
-      this.rootNodeAddDom(assetsTree, () => {
+      const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
+      myAssetsNodes[0].children = _assetTree.getNodes();
+      const myAssetsTree = $.fn.zTree.init($('#myAssets'), setting, myAssetsNodes);
+      this.assetsTree = myAssetsTree;
+      this.rootNodeAddDom(myAssetsTree, () => {
         this.refreshAssetsTree();
       });
+      _assetTree.destroy();
     });
   }
 
-  refreshRemoteAppsTree() {
-    this.remoteAppsTree.destroy();
-    this.initRemoteAppsTree();
-  }
-
-  refreshDBAppsTree() {
-    this.DBAppsTree.destroy();
-    this.initDBAppsTree();
-  }
-
-  refreshK8SAppsTree() {
-    this.K8SAppsTree.destroy();
-    this.initK8SAppsTree();
-  }
-
-  onK8SAppsTreeNodeClick(event, treeId, treeNode, clickFlag) {
-    if (treeNode.isParent) {
-      this.K8SAppsTree.expandNode(treeNode);
-    } else {
-      this._http.getUserProfile().subscribe();
-      this.connectAsset(treeNode);
-    }
-  }
-  onDBAppsTreeNodeClick(event, treeId, treeNode, clickFlag) {
-    if (treeNode.isParent) {
-      this.DBAppsTree.expandNode(treeNode);
-    } else {
-      this._http.getUserProfile().subscribe();
-      this.connectAsset(treeNode);
-    }
-  }
-  onRemoteAppsNodeClick(event, treeId, treeNode, clickFlag) {
-    if (treeNode.isParent) {
-      this.remoteAppsTree.expandNode(treeNode);
-    } else {
-      this._http.getUserProfile().subscribe();
-      this.connectAsset(treeNode);
+  addApplicationNodesIfNeed(nodes, applicationNodes) {
+    if (nodes.length > 1) {
+      const rootNode: TreeNode = nodes[0];
+      rootNode['children'] = nodes.slice(1, nodes.length);
+      applicationNodes[0].children.push(rootNode);
     }
   }
 
-  initRemoteAppsTree() {
+  async initApplicationTree() {
     const setting = Object.assign({}, this.setting);
     setting['callback'] = {
-      onClick: this.onRemoteAppsNodeClick.bind(this),
+      onClick: this.onApplicationTreeNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
-    this._http.getMyGrantedRemoteApps().subscribe(
-      resp => {
-        if (resp.length === 1) {
-          $('#remoteAppsTree').hide();
-          return;
-        }
-        const tree = $.fn.zTree.init($('#remoteAppsTree'), setting, resp);
-        this.remoteAppsTree = tree;
-        this.rootNodeAddDom(tree, () => {
-          this.refreshRemoteAppsTree();
-        });
+    const applicationNodes = [
+      {
+        name: '我的应用', id: 'myApplication', isParent: true,
+        children: [], open: true
       }
-    );
+    ];
+    const dbNodes = await this._http.getMyGrantedDBApps().toPromise();
+    this.addApplicationNodesIfNeed(dbNodes, applicationNodes);
+    const k8sNodes = await this._http.getMyGrantedK8SApps().toPromise();
+    this.addApplicationNodesIfNeed(k8sNodes, applicationNodes);
+    const remoteNodes = await this._http.getMyGrantedRemoteApps().toPromise();
+    this.addApplicationNodesIfNeed(remoteNodes, applicationNodes);
+    const tree = $.fn.zTree.init($('#applicationsTree'), setting, applicationNodes);
+    this.rootNodeAddDom(tree, () => {
+      this.refreshApplicationTree();
+    });
+    this.applicationsTree = tree;
   }
-  initDBAppsTree() {
-    const setting = Object.assign({}, this.setting);
-    setting['callback'] = {
-      onClick: this.onDBAppsTreeNodeClick.bind(this),
-      onRightClick: this.onRightClick.bind(this)
-    };
-    this._http.getMyGrantedDBApps().subscribe(
-      resp => {
-        if (resp.length === 1) {
-          $('#DBAppsTree').hide();
-          return;
-        }
-        const tree = $.fn.zTree.init($('#DBAppsTree'), setting, resp);
-        this.DBAppsTree = tree;
-        this.rootNodeAddDom(tree, () => {
-          this.refreshDBAppsTree();
-        });
-      }
-    );
+
+  refreshApplicationTree() {
+    if (this.applicationsTree) {
+      this.applicationsTree.destroy();
+      this.initApplicationTree().then();
+    }
   }
-  initK8SAppsTree() {
-    const setting = Object.assign({}, this.setting);
-    setting['callback'] = {
-      onClick: this.onK8SAppsTreeNodeClick.bind(this),
-      onRightClick: this.onRightClick.bind(this)
-    };
-    this._http.getMyGrantedK8SApps().subscribe(
-      resp => {
-        if (resp.length === 1) {
-          return;
-        }
-        const tree = $.fn.zTree.init($('#K8SAppsTree'), setting, resp);
-        this.K8SAppsTree = tree;
-        this.rootNodeAddDom(tree, () => {
-          this.refreshK8SAppsTree();
-        });
-      }
-    );
+
+  onApplicationTreeNodeClick(event, treeId, treeNode, clickFlag) {
+    if (!treeNode.isParent) {
+      this._http.getUserProfile().subscribe();
+      this.connectAsset(treeNode);
+    }
   }
 
   initTree() {
     this.initAssetsTree();
-    this.initRemoteAppsTree();
-    this.initDBAppsTree();
-    this.initK8SAppsTree();
+    this.initApplicationTree().then();
   }
 
   connectAsset(node: TreeNode) {
@@ -295,6 +245,10 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     return this.favoriteAssets.indexOf(assetId) !== -1;
   }
 
+  isAssetNode() {
+    return this.rightClickSelectNode.meta.asset;
+  }
+
   get RMenuList() {
     const menuList = [{
       'id': 'new-connection',
@@ -312,13 +266,13 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       'id': 'favorite',
       'name': 'Favorite',
       'fa': 'fa-star-o',
-      'hide': this.isAssetFavorite(),
+      'hide': this.isAssetFavorite() || !this.isAssetNode(),
       'click': this.favoriteAsset.bind(this)
     }, {
       'id': 'disfavor',
       'name': 'Disfavor',
       'fa': 'fa-star',
-      'hide': !this.isAssetFavorite(),
+      'hide': !this.isAssetFavorite() || !this.isAssetNode(),
       'click': this.favoriteAsset.bind(this)
     }];
     if (!this.rightClickSelectNode) {
@@ -333,7 +287,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     }
     this.rightClickSelectNode = treeNode;
 
-    if (!treeNode && event.target.tagName.toLowerCase() !== 'button' && $(event.target).parents('a').length === 0) {
+    if (!treeNode && event.target.tagName.toLowerCase() !== 'button'
+          && $(event.target).parents('a').length === 0) {
       this.assetsTree.cancelSelectedNode();
       this.showRMenu(event.clientX, event.clientY);
     } else if (treeNode && !treeNode.noR) {
@@ -437,33 +392,14 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     });
   }
 
-  filterRemoteApps(keyword) {
-    if (!this.remoteAppsTree) {
+  filterApplicationsTree(keyword) {
+    if (!this.filterApplicationsTree) {
       return null;
     }
     function filterCallback(node: TreeNode) {
       return node.name.toLowerCase().indexOf(keyword) !== -1;
     }
-    return this.filterTree(keyword, this.remoteAppsTree, filterCallback);
-  }
-  filterDBApps(keyword) {
-    if (!this.DBAppsTree) {
-      return null;
-    }
-    function filterCallback(node: TreeNode) {
-      return node.name.toLowerCase().indexOf(keyword) !== -1;
-    }
-    return this.filterTree(keyword, this.DBAppsTree, filterCallback);
-  }
-
-  filterK8SApps(keyword) {
-    if (!this.K8SAppsTree) {
-      return null;
-    }
-    function filterCallback(node: TreeNode) {
-      return node.name.toLowerCase().indexOf(keyword) !== -1;
-    }
-    return this.filterTree(keyword, this.K8SAppsTree, filterCallback);
+    return this.filterTree(keyword, this.applicationsTree, filterCallback);
   }
 
   filterAssetsServer(keyword) {

@@ -1,6 +1,10 @@
 <div>
   <p *ngIf="loading" style="padding: 3px">{{ "Loading"| translate }} ...</p>
-  <ul id="assetsTree" class="ztree">
+  <ul id="myAssets" class="ztree">
+    <ul id="assetsTree" class="ztree" style="display: none">
+    </ul>
+  </ul>
+  <ul id="applicationsTree" class="ztree">
   </ul>
 
   <ul id="remoteAppsTree" class="ztree">
