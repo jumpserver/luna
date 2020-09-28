@@ -174,7 +174,16 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   selectLoginSystemUsers(systemUsers: Array<SystemUser>): Promise<SystemUser> {
     const systemUserMaxPriority = this.filterMaxPrioritySystemUsers(systemUsers);
     let user: SystemUser;
-
+    const systemUserId = this._appSvc.getQueryString('system_user');
+    if (systemUserId) {
+      systemUserMaxPriority.forEach((v, i) => {
+        if (v.id === systemUserId ) {
+          user = v;
+          return;
+        }
+      });
+      return Promise.resolve(user);
+    }
     if (systemUserMaxPriority.length > 1) {
       return new Promise<SystemUser>(resolve => {
         const dialogRef = this._dialog.open(AssetTreeDialogComponent, {
