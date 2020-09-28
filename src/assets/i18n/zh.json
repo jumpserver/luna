@@ -50,6 +50,8 @@
 	"success": "成功",
 	"system user": "系统用户",
 	"user": "用户",
+  "MyApps": "我的应用",
+  "MyAssets": "我的资产",
 	"Open in new window": "新窗口打开",
   "Right mouse quick paste": "右键快速粘贴"
 }

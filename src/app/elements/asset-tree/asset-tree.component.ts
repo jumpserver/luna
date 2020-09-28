@@ -4,7 +4,7 @@ import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
 import {ToastrService} from 'ngx-toastr';
-import {TranslateService} from '@ngx-translate/core';
+import {TranslateService, TranslationChangeEvent} from '@ngx-translate/core';
 import {groupBy} from '@app/utils/common';
 import {AppService, HttpService, LogService, NavService, SettingService, TreeFilterService} from '@app/services';
 import {connectEvt} from '@app/globals';
@@ -50,6 +50,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   filterAssetCancel$: Subject<boolean> = new Subject();
   loading = true;
   favoriteAssets = [];
+  myAssetsNodes = [];
+  applicationNodes = [];
+  langInit = false;
 
   constructor(private _appSvc: AppService,
               private _treeFilterSvc: TreeFilterService,
@@ -60,7 +63,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
               private _http: HttpService,
               private settingSvc: SettingService,
               private toastr: ToastrService
-  ) {}
+  ) {
+
+  }
 
   ngOnInit() {
     this.isLoadTreeAsync = this.settingSvc.isLoadTreeAsync();
@@ -74,7 +79,30 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         this.filterApplicationsTree(keyword);
       }
     );
+    this.translate.onLangChange.subscribe((event: TranslationChangeEvent) => {
+      this.myAssetsNodes = [
+        {
+          name: this.translate.instant('MyAssets'), id: 'myAssets', isParent: true,
+          children: [], open: true
+        }
+      ];
+      this.applicationNodes = [
+        {
+          name: this.translate.instant('MyApps'), id: 'myApplication', isParent: true,
+          children: [], open: true
+        }
+      ];
+      if (this.langInit) {
+        this.refreshApplicationTree();
+        this.refreshAssetsTree();
+      } else {
+        this.langInit = true;
+      }
+
+
+    });
   }
+
 
   ngOnDestroy(): void {
     this.treeFilterSubscription.unsubscribe();
@@ -96,12 +124,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   initAssetsTree(refresh?: boolean) {
     const setting = Object.assign({}, this.setting);
-    const myAssetsNodes = [
-      {
-        name: '我的资产', id: 'myAssets', isParent: true,
-        children: [], open: true
-      }
-    ];
     setting['callback'] = {
       onClick: this.onAssetsNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
@@ -123,8 +145,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
       this.loading = false;
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
-      myAssetsNodes[0].children = _assetTree.getNodes();
-      const myAssetsTree = $.fn.zTree.init($('#myAssets'), setting, myAssetsNodes);
+      this.myAssetsNodes[0].children = _assetTree.getNodes();
+      const myAssetsTree = $.fn.zTree.init($('#myAssets'), setting, this.myAssetsNodes);
       this.assetsTree = myAssetsTree;
       this.rootNodeAddDom(myAssetsTree, () => {
         this.refreshAssetsTree();
@@ -147,19 +169,13 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       onClick: this.onApplicationTreeNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
-    const applicationNodes = [
-      {
-        name: '我的应用', id: 'myApplication', isParent: true,
-        children: [], open: true
-      }
-    ];
     const dbNodes = await this._http.getMyGrantedDBApps().toPromise();
-    this.addApplicationNodesIfNeed(dbNodes, applicationNodes);
+    this.addApplicationNodesIfNeed(dbNodes, this.applicationNodes);
     const k8sNodes = await this._http.getMyGrantedK8SApps().toPromise();
-    this.addApplicationNodesIfNeed(k8sNodes, applicationNodes);
+    this.addApplicationNodesIfNeed(k8sNodes, this.applicationNodes);
     const remoteNodes = await this._http.getMyGrantedRemoteApps().toPromise();
-    this.addApplicationNodesIfNeed(remoteNodes, applicationNodes);
-    const tree = $.fn.zTree.init($('#applicationsTree'), setting, applicationNodes);
+    this.addApplicationNodesIfNeed(remoteNodes, this.applicationNodes);
+    const tree = $.fn.zTree.init($('#applicationsTree'), setting, this.applicationNodes);
     this.rootNodeAddDom(tree, () => {
       this.refreshApplicationTree();
     });
