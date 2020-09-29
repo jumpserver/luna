@@ -176,7 +176,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     let user: SystemUser;
     const systemUserId = this._appSvc.getQueryString('system_user');
     if (systemUserId) {
-      systemUserMaxPriority.forEach((v, i) => {
+      systemUsers.forEach((v, i) => {
         if (v.id === systemUserId ) {
           user = v;
           return;
