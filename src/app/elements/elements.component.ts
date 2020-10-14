@@ -3,7 +3,7 @@ import {ElementLeftBarComponent} from './left-bar/left-bar.component';
 import {ElementContentComponent} from './content/content.component';
 import {ElementContentViewComponent} from './content-window/content-window.component';
 import {ElementContentTabComponent} from './content-tab/content-tab.component';
-import {ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
+import {ElementAssetTreeComponent, DisabledAssetsDialogComponent} from './asset-tree/asset-tree.component';
 import {ElementTreeFilterComponent} from './tree-filter/tree-filter.component';
 import {ElementTermComponent} from './term/term.component';
 import {ChangLanWarningDialogComponent, ElementNavComponent} from './nav/nav.component';
@@ -39,6 +39,7 @@ export const ElementComponents = [
   ElementReplayJsonComponent,
   AssetTreeDialogComponent,
   ChangLanWarningDialogComponent,
+  DisabledAssetsDialogComponent,
   ManualPasswordDialogComponent,
   ElementSettingComponent
 ];

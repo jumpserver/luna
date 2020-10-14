@@ -1,5 +1,5 @@
-import {Component, Input, OnInit, OnDestroy, ElementRef, ViewChild} from '@angular/core';
-import {MatDialog} from '@angular/material';
+import {Component, Input, OnInit, OnDestroy, ElementRef, ViewChild, Inject} from '@angular/core';
+import {MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material';
 import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
@@ -9,6 +9,7 @@ import {groupBy} from '@app/utils/common';
 import {AppService, HttpService, LogService, NavService, SettingService, TreeFilterService} from '@app/services';
 import {connectEvt} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
+import {AssetTreeDialogComponent} from '@app/elements/connect/connect.component';
 
 declare var $: any;
 
@@ -84,6 +85,13 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (treeNode.isParent) {
       this.assetsTree.expandNode(treeNode);
     } else {
+      if (treeNode.chkDisabled) {
+        this._dialog.open(DisabledAssetsDialogComponent, {
+          height: '200px',
+          width: '450px'
+        });
+        return;
+      }
       this._http.getUserProfile().subscribe();
       this.connectAsset(treeNode);
     }
@@ -479,6 +487,24 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       allChildren = [...children, ...this.recurseChildren(n)];
     });
     return allChildren;
+  }
+}
+@Component({
+  selector: 'elements-asset-tree-dialog',
+  templateUrl: 'disabledWarning.html',
+  styles: ['.mat-form-field { width: 100%; }']
+})
+export class DisabledAssetsDialogComponent implements OnInit {
+
+  constructor(public dialogRef: MatDialogRef<DisabledAssetsDialogComponent>,
+              @Inject(MAT_DIALOG_DATA) public data: any) {
+  }
+
+  ngOnInit() {
+  }
+
+  onNoClick(): void {
+    this.dialogRef.close();
   }
 }
 

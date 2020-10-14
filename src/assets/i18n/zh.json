@@ -51,5 +51,7 @@
 	"system user": "系统用户",
 	"user": "用户",
 	"Open in new window": "新窗口打开",
-  "Right mouse quick paste": "右键快速粘贴"
+  "Right mouse quick paste": "右键快速粘贴",
+  "Info": "提示",
+  "Asset disabled": "该资产已被禁用，请联系管理员"
 }
