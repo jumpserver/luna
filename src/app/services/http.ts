@@ -84,7 +84,7 @@ export class HttpService {
   }
 
   getMyGrantedNodes(async: boolean, refresh?: boolean) {
-    const cachePolicy = refresh ? '2' : '1';
+    const cachePolicy = refresh ? `2&rebuild_tree=1` : '1';
     const syncUrl = `/api/v1/perms/users/nodes-with-assets/tree/?cache_policy=${cachePolicy}`;
     const asyncUrl = `/api/v1/perms/users/nodes/children-with-assets/tree/?cache_policy=${cachePolicy}`;
     const url = async ? asyncUrl : syncUrl;
