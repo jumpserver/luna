@@ -107,6 +107,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     const myAssetsNodes = [
       {
         name: '我的资产', id: 'myAssets', isParent: true,
+        title: 'My assets',
         children: [], open: true
       }
     ];
@@ -155,6 +156,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     const applicationNodes = [
       {
         name: '我的应用', id: 'myApplication', isParent: true,
+        title: 'My applications',
         children: [], open: true
       }
     ];
