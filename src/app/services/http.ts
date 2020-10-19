@@ -181,10 +181,10 @@ export class HttpService {
       systemUserPassword = btoa(systemUserPassword);
       body = body.set('username', systemUserUsername).set('password', systemUserPassword);
     }
-    const solution = this.settingSrv.setting.rdpSolution || 'Auto';
-    if (solution !== 'Auto') {
-      const width = solution.split('x')[0];
-      const height = solution.split('x')[1];
+    const resolution = this.settingSrv.setting.rdpResolution || 'Auto';
+    if (resolution !== 'Auto') {
+      const width = resolution.split('x')[0];
+      const height = resolution.split('x')[1];
       params = params.set('width', width).set('height', height);
     }
 
@@ -210,10 +210,10 @@ export class HttpService {
       systemUserPassword = btoa(systemUserPassword);
       body = body.set('username', systemUserUsername).set('password', systemUserPassword);
     }
-    const solution = this.settingSrv.setting.rdpSolution || 'Auto';
-    if (solution !== 'Auto') {
-      const width = solution.split('x')[0];
-      const height = solution.split('x')[1];
+    const resolution = this.settingSrv.setting.rdpResolution || 'Auto';
+    if (resolution !== 'Auto') {
+      const width = resolution.split('x')[0];
+      const height = resolution.split('x')[1];
       params = params.set('width', width).set('height', height);
     }
 
@@ -231,10 +231,10 @@ export class HttpService {
     let params = new HttpParams()
       .set('asset_token', assetToken)
       .set('token',  DataStore.guacamoleToken);
-    const solution = this.settingSrv.setting.rdpSolution || 'Auto';
-    if (solution !== 'Auto') {
-      const width = solution.split('x')[0];
-      const height = solution.split('x')[1];
+    const resolution = this.settingSrv.setting.rdpResolution || 'Auto';
+    if (resolution !== 'Auto') {
+      const width = resolution.split('x')[0];
+      const height = resolution.split('x')[1];
       params = params.set('width', width).set('height', height);
     }
     return this.http.get(
