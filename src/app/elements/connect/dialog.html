@@ -1,7 +1,7 @@
 <h1 mat-dialog-title>{{"Found"| translate}} {{data.users.length}} {{"Users"| translate}}</h1>
 
-<div style="height: 110px">
-  <div *ngIf="data.users.length < 5">
+<div style="height: 110px;display:block;overflow:hidden;">
+  <div *ngIf="data.users.length < 4">
     <div>
       <label>{{'Choose a User'| translate}}: </label>
     </div>
@@ -11,7 +11,7 @@
     </mat-radio-group>
   </div>
 
-  <div *ngIf="data.users.length >= 5">
+  <div *ngIf="data.users.length >= 4">
     <mat-form-field style="width: 100%" >
       <mat-select [(value)]="selected"
                   [compareWith]="compareFn"
