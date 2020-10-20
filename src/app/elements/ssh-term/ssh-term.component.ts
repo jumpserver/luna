@@ -1,8 +1,9 @@
-import {Component, Input, OnInit, ViewChild, ElementRef} from '@angular/core';
+import {Component, Input, OnInit, ViewChild, ElementRef, Inject} from '@angular/core';
 import {View} from '@app/model';
 import {LogService, SettingService, UUIDService} from '@app/services';
 import {TranslateService} from '@ngx-translate/core';
 import {DomSanitizer} from '@angular/platform-browser';
+import { MatDialogRef, MAT_DIALOG_DATA, MatDialog } from '@angular/material';
 
 
 @Component({
@@ -24,6 +25,7 @@ export class ElementSshTermComponent implements OnInit {
   constructor(private _uuid: UUIDService,
               private sanitizer: DomSanitizer,
               private _logger: LogService,
+              public _dialog: MatDialog,
               private settingSvc: SettingService,
               public translate: TranslateService ) {
   }
@@ -37,14 +39,19 @@ export class ElementSshTermComponent implements OnInit {
           this.target = `${baseUrl}/?target_id=${this.host.id}&type=asset&system_user_id=${this.sysUser.id}`;
           break;
         case 'database':
-          if (this.settingSvc.setting.sqlClient === '1' && this.settingSvc.globalSetting.XPACK_LICENSE_IS_VALID) {
-            // OmniDB
-            // tslint:disable-next-line:max-line-length
-            this.target = `${document.location.origin}/omnidb/jumpserver/connect/workspace/?database_id=${this.host.id}&system_user_id=${this.sysUser.id}`;
-          } else {
-            // KOKO
-            this.target = `${baseUrl}/?target_id=${this.host.id}&type=database_app&system_user_id=${this.sysUser.id}`;
-          }
+          if (this.settingSvc.globalSetting.XPACK_LICENSE_IS_VALID && this.settingSvc.setting.sqlClient === '1') {
+              // tslint:disable-next-line:max-line-length
+              this.target = `${document.location.origin}/omnidb/jumpserver/connect/workspace/?database_id=${this.host.id}&system_user_id=${this.sysUser.id}`;
+            } else {
+              if (this.view.protocol === 'mysql') {
+                this.target = `${baseUrl}/?target_id=${this.host.id}&type=database_app&system_user_id=${this.sysUser.id}`;
+              } else {
+                this._dialog.open(DisabledDatabaseDialogComponent, {
+                  height: '200px',
+                  width: '450px'
+                });
+              }
+            }
           break;
         case 'k8s':
           this.target = `${baseUrl}/?target_id=${this.host.id}&type=k8s_app&system_user_id=${this.sysUser.id}`;
@@ -101,4 +108,23 @@ export class ElementSshTermComponent implements OnInit {
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 
+}
+
+@Component({
+  selector: 'elements-ssh-term-dialog',
+  templateUrl: 'disabledDatabaseWarning.html',
+  styles: ['.mat-form-field { width: 100%; }']
+})
+export class DisabledDatabaseDialogComponent implements OnInit {
+
+  constructor(public dialogRef: MatDialogRef<DisabledDatabaseDialogComponent>,
+              @Inject(MAT_DIALOG_DATA) public data: any) {
+  }
+
+  ngOnInit() {
+  }
+
+  onNoClick(): void {
+    this.dialogRef.close();
+  }
 }

@@ -266,6 +266,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       view.DatabaseApp = node.id;
       view.user = user;
       view.type = 'database';
+      view.protocol = user.protocol;
       this.onNewView.emit(view);
     }
   }
