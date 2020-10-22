@@ -13,6 +13,9 @@ import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 // service
 import {AllServices} from '@app/services';
 
+// Angular split
+import { AngularSplitModule } from 'angular-split';
+
 import {AppRouterModule} from './router.module';
 import {Pipes} from './pipes/pipes';
 import {AppComponent} from './pages/app.component';
@@ -39,6 +42,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     ReactiveFormsModule,
     AppRouterModule,
     ToastrModule.forRoot(),
+    AngularSplitModule.forRoot(),
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,

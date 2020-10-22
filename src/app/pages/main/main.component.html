@@ -1,16 +1,19 @@
 <elements-nav></elements-nav>
-<div fxLayout="row" id="container" ngxSplit="row">
-  <div fxFlex="20%" fxFlexFill ngxSplitArea
-    [ngStyle]="{'display': store.showLeftBar ? '' : 'none', 'min-width': store.showLeftBar ? '100px': ''}"
-    class="left-side"
-  >
-    <elements-left-bar></elements-left-bar>
-  </div>
-  <div ngxSplitHandle (mouseup)="dragSplitBtn($event)" class="handle handle-row"
-       [ngStyle]="{'display': showSplitter ? '' : 'none'}" >
-    <i class="fa fa-window-minimize" style="color: white"></i>
-  </div>
-  <div [fxFlex]="store.showLeftBar ? '80%' : '100%'" fxFlexFill ngxSplitArea class="content">
-    <elements-content></elements-content>
-  </div>
-</div>
+<as-split direction="horizontal"
+          id="container"
+          (dragStart)="dragStartHandler($event)"
+          (dragEnd)="dragEndHandler($event)"
+          (gutterClick)="splitGutterClick($event)">
+  <as-split-area [size]="20" class="left-side">
+    <div>
+      <elements-left-bar></elements-left-bar>
+    </div>
+  </as-split-area>
+  <as-split-area [size]="80" class="content">
+    <div>
+      <elements-content></elements-content>
+      <div [hidden]="showIframeHider === false" class="hack-iframe-hider"></div>
+    </div>
+  </as-split-area>
+</as-split>
+

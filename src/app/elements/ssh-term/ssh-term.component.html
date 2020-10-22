@@ -1,2 +1,3 @@
 <!--<elements-term (winSizeChangeTrigger)="changeWinSize($event)"  (contextmenu)="contextMenu($event)" [term]="term"></elements-term>-->
 <iframe #terminal [src]="target | safeUrl" *ngIf="target" (load)="listenEvent()" width="100%" height="100%" [id]="terminalID"></iframe>
+
