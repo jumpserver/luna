@@ -12,8 +12,9 @@
   background-color: #1f1b1b;
   /*background-color: red;*/
   margin: 0;
+  width: 100%;
   position: initial;
-  min-width: 100px;
+  min-width: 50%;
 }
 
 
