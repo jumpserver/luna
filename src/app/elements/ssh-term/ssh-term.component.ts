@@ -31,6 +31,7 @@ export class ElementSshTermComponent implements OnInit {
   ngOnInit() {
     // tslint:disable-next-line:max-line-length
     const baseUrl = `${document.location.origin}/koko/terminal`;
+    const tokenUrl = `${document.location.origin}/koko/token`;
     if (this.host) {
       switch (this.view.type) {
         case 'ssh':
@@ -51,7 +52,7 @@ export class ElementSshTermComponent implements OnInit {
       this.target = `${baseUrl}/?target_id=${this.shareRoomId}&type=shareroom`;
     }
     if (this.token) {
-      this.target = `${baseUrl}/?target_id=${this.token}&type=token`;
+      this.target = `${tokenUrl}/?target_id=${this.token}&type=token`;
     }
     this.view.termComp = this;
     this.terminalID = Math.random().toString(36).substr(2);
