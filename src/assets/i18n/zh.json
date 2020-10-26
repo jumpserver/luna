@@ -53,5 +53,10 @@
 	"Open in new window": "新窗口打开",
   "Right mouse quick paste": "右键快速粘贴",
   "Info": "提示",
-  "Asset disabled": "该资产已被禁用，请联系管理员"
+  "Asset disabled": "该资产已被禁用，请联系管理员",
+  "User: ": "用户: {{value}}",
+  "Asset: ": "资产: {{value}}",
+  "System User: ": "系统用户: {{value}}",
+  "Start Time: ": "开始时间: {{value}}",
+  "Protocol: ": "协议: {{value}}"
 }

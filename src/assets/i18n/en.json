@@ -53,5 +53,10 @@
 	"Open in new window": "Open in new window",
 	"Right mouse quick paste": "Right mouse quick paste",
   "Info": "Info",
-  "Asset disabled": "This asset has been disabled, please contact an administrator"
+  "Asset disabled": "This asset has been disabled, please contact an administrator",
+  "User: ": "User: {{value}}",
+  "Asset: ": "Asset: {{value}}",
+  "System User: ": "System user: {{value}}",
+  "Start Time: ": "Start time: {{value}}",
+  "Protocol: ": "Protocol: {{value}}"
 }
