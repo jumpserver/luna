@@ -255,6 +255,10 @@ export class HttpService {
     return this.http.get('/api/v1/terminal/sessions/' + token + '/replay/');
   }
 
+  getSessionDetail(shareroomId: string) {
+    return this.http.get(`/api/v1/terminal/sessions/${shareroomId}/`);
+  }
+
   // get_replay_json(token: string) {
   //   return this.http.get('/api/terminal/v2/sessions/' + token + '/replay');
   // }
