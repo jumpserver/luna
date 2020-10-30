@@ -12,7 +12,7 @@ import {GlobalSetting, Setting} from '@app/model';
 export class ElementSettingComponent implements OnInit {
   resolutionsChoices = ['Auto', '1024x768', '1366x768', '1600x900', '1920x1080'];
   boolChoices = [{name: 'Yes', value: '1'}, {name: 'No', value: '0'}];
-  clientChoices = [{name: 'Client', value: '0'}, {name: 'UI', value: '1'}];
+  clientChoices = [{name: 'Koko Cli', value: '0'}, {name: 'OmniDB', value: '1'}];
   setting: Setting;
   globalSetting: GlobalSetting;
 
