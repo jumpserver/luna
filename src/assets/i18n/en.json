@@ -52,6 +52,8 @@
 	"user": "user",
 	"Open in new window": "Open in new window",
 	"Right mouse quick paste": "Right mouse quick paste",
+  "SQL Client": "SQL Client",
   "Info": "Info",
+  "Database disabled": "This type of connection is not supported, please contact an administrator."
   "Asset disabled": "This asset has been disabled, please contact an administrator"
 }
