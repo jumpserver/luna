@@ -28,7 +28,7 @@
 	"Please input password": "Please input password",
 	"Reconnect": "Reconnect",
 	"Search": "Search",
-	"Select a solution": "Select a solution",
+	"Select a resolution": "Select a resolution",
 	"Send text to all ssh terminals": "Send text to all ssh terminals",
 	"Setting": "Setting",
 	"Show left manager": "Show left manager",
@@ -55,4 +55,5 @@
   "SQL Client": "SQL Client",
   "Info": "Info",
   "Database disabled": "This type of connection is not supported, please contact an administrator."
+  "Asset disabled": "This asset has been disabled, please contact an administrator"
 }

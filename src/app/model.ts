@@ -201,7 +201,7 @@ export class GlobalSetting {
 }
 
 export class Setting {
-  rdpSolution: string = 'Auto';
+  rdpResolution: string = 'Auto';
   fontSize: number = 14;
   isLoadTreeAsync: string = '1';
   isSkipAllManualPassword: string = '0';

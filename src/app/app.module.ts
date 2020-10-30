@@ -24,6 +24,7 @@ import {ElementComponents} from './elements/elements.component';
 import {PageMainComponent} from '@app/pages/main/main.component';
 import {PluginModules} from './plugins/plugins';
 import {DisabledDatabaseDialogComponent} from '@app/elements/ssh-term/ssh-term.component';
+import {DisabledAssetsDialogComponent} from './elements/asset-tree/asset-tree.component';
 import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './elements/connect/connect.component';
@@ -63,6 +64,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     DisabledDatabaseDialogComponent,
     ManualPasswordDialogComponent,
     ChangLanWarningDialogComponent,
+    DisabledAssetsDialogComponent,
     PageMainComponent,
     ElementSettingComponent,
   ],

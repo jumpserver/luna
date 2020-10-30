@@ -28,7 +28,7 @@
 	"Please input password": "请输入密码",
 	"Reconnect": "重新连接",
 	"Search": "搜索",
-	"Select a solution": "选择分辨率",
+	"Select a resolution": "选择分辨率",
 	"Send text to all ssh terminals": "发送文本到所有ssh终端",
 	"Setting": "设置",
 	"Show left manager": "显示左边栏",
@@ -53,6 +53,7 @@
 	"Open in new window": "新窗口打开",
   "Right mouse quick paste": "右键快速粘贴",
   "SQL Client": "SQL 客户端",
-  "Info": "提示",
   "Database disabled": "不支持此种链接方式，请联系管理员"
+  "Info": "提示",
+  "Asset disabled": "该资产已被禁用，请联系管理员"
 }

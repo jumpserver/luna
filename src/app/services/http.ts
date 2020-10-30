@@ -84,7 +84,7 @@ export class HttpService {
   }
 
   getMyGrantedNodes(async: boolean, refresh?: boolean) {
-    const cachePolicy = refresh ? '2' : '1';
+    const cachePolicy = refresh ? `2&rebuild_tree=1` : '1';
     const syncUrl = `/api/v1/perms/users/nodes-with-assets/tree/?cache_policy=${cachePolicy}`;
     const asyncUrl = `/api/v1/perms/users/nodes/children-with-assets/tree/?cache_policy=${cachePolicy}`;
     const url = async ? asyncUrl : syncUrl;
@@ -92,40 +92,40 @@ export class HttpService {
   }
 
   getMyGrantedRemoteApps(id?: string) {
-    let url = '/api/v1/perms/users/remote-apps/tree/';
+    let url = '/api/v1/perms/users/applications/tree/?category=remote_app';
     if (id) {
-      url += `?id=${id}&only=1`;
+      url += `&id=${id}&only=1`;
     }
     return this.http.get<Array<TreeNode>>(url);
   }
 
   getMyGrantedDBApps(id?: string) {
-    let url = '/api/v1/perms/users/database-apps/tree/';
+    let url = '/api/v1/perms/users/applications/tree/?category=db';
     if (id) {
-      url += `?id=${id}&only=1`;
+      url += `&id=${id}&only=1`;
     }
     return this.http.get<Array<TreeNode>>(url);
   }
   getMyGrantedK8SApps(id?: string) {
-    let url = '/api/v1/perms/users/k8s-apps/tree/';
+    let url = '/api/v1/perms/users/applications/tree/?category=cloud';
     if (id) {
-      url += `?id=${id}&only=1`;
+      url += `&id=${id}&only=1`;
     }
     return this.http.get<Array<TreeNode>>(url);
   }
 
   getMyRemoteAppSystemUsers(remoteAppId: string) {
-    const url = `/api/v1/perms/users/remote-apps/${remoteAppId}/system-users/`;
+    const url = `/api/v1/perms/users/applications/${remoteAppId}/system-users/`;
     return this.http.get<Array<SystemUser>>(url);
   }
 
   getMyDatabaseAppSystemUsers(DatabaseAppId: string) {
-    const url = `/api/v1/perms/users/database-apps/${DatabaseAppId}/system-users/`;
+    const url = `/api/v1/perms/users/applications/${DatabaseAppId}/system-users/`;
     return this.http.get<Array<SystemUser>>(url);
   }
 
   getMyK8SAppSystemUsers(K8SAppId: string) {
-    const url = `/api/v1/perms/users/k8s-apps/${K8SAppId}/system-users/`;
+    const url = `/api/v1/perms/users/applications/${K8SAppId}/system-users/`;
     return this.http.get<Array<SystemUser>>(url);
   }
 
@@ -181,10 +181,10 @@ export class HttpService {
       systemUserPassword = btoa(systemUserPassword);
       body = body.set('username', systemUserUsername).set('password', systemUserPassword);
     }
-    const solution = this.settingSrv.setting.rdpSolution || 'Auto';
-    if (solution !== 'Auto') {
-      const width = solution.split('x')[0];
-      const height = solution.split('x')[1];
+    const resolution = this.settingSrv.setting.rdpResolution || 'Auto';
+    if (resolution !== 'Auto') {
+      const width = resolution.split('x')[0];
+      const height = resolution.split('x')[1];
       params = params.set('width', width).set('height', height);
     }
 
@@ -210,10 +210,10 @@ export class HttpService {
       systemUserPassword = btoa(systemUserPassword);
       body = body.set('username', systemUserUsername).set('password', systemUserPassword);
     }
-    const solution = this.settingSrv.setting.rdpSolution || 'Auto';
-    if (solution !== 'Auto') {
-      const width = solution.split('x')[0];
-      const height = solution.split('x')[1];
+    const resolution = this.settingSrv.setting.rdpResolution || 'Auto';
+    if (resolution !== 'Auto') {
+      const width = resolution.split('x')[0];
+      const height = resolution.split('x')[1];
       params = params.set('width', width).set('height', height);
     }
 
@@ -231,10 +231,10 @@ export class HttpService {
     let params = new HttpParams()
       .set('asset_token', assetToken)
       .set('token',  DataStore.guacamoleToken);
-    const solution = this.settingSrv.setting.rdpSolution || 'Auto';
-    if (solution !== 'Auto') {
-      const width = solution.split('x')[0];
-      const height = solution.split('x')[1];
+    const resolution = this.settingSrv.setting.rdpResolution || 'Auto';
+    if (resolution !== 'Auto') {
+      const width = resolution.split('x')[0];
+      const height = resolution.split('x')[1];
       params = params.set('width', width).set('height', height);
     }
     return this.http.get(
