@@ -98,7 +98,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   refreshAssetsTree() {
-    this.assetsTree.destroy();
     this.initAssetsTree(true);
   }
 
@@ -130,6 +129,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.loading = true;
     this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
       this.loading = false;
+      if(refresh){
+        this.assetsTree.destroy();
+      }
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
       myAssetsNodes[0].children = _assetTree.getNodes();
       const myAssetsTree = $.fn.zTree.init($('#myAssets'), setting, myAssetsNodes);
@@ -138,6 +140,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         this.refreshAssetsTree();
       });
       _assetTree.destroy();
+    }, error => {
+      this.loading = false;
     });
   }
 
