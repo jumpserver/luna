@@ -13,6 +13,9 @@ import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 // service
 import {AllServices} from '@app/services';
 
+// Angular split
+import { AngularSplitModule } from 'angular-split';
+
 import {AppRouterModule} from './router.module';
 import {Pipes} from './pipes/pipes';
 import {AppComponent} from './pages/app.component';
@@ -20,6 +23,7 @@ import {PagesComponents} from './pages/pages.component';
 import {ElementComponents} from './elements/elements.component';
 import {PageMainComponent} from '@app/pages/main/main.component';
 import {PluginModules} from './plugins/plugins';
+import {DisabledDatabaseDialogComponent} from '@app/elements/ssh-term/ssh-term.component';
 import {DisabledAssetsDialogComponent} from './elements/asset-tree/asset-tree.component';
 import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
@@ -39,6 +43,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     ReactiveFormsModule,
     AppRouterModule,
     ToastrModule.forRoot(),
+    AngularSplitModule.forRoot(),
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,
@@ -56,6 +61,7 @@ export function HttpLoaderFactory(http: HttpClient) {
   ],
   entryComponents: [
     AssetTreeDialogComponent,
+    DisabledDatabaseDialogComponent,
     ManualPasswordDialogComponent,
     ChangLanWarningDialogComponent,
     DisabledAssetsDialogComponent,

@@ -141,12 +141,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     });
   }
 
-  addApplicationNodesIfNeed(nodes, applicationNodes) {
-    if (nodes.length > 1) {
-      const rootNode: TreeNode = nodes[0];
-      rootNode['children'] = nodes.slice(1, nodes.length);
+  addApplicationNodesIfNeed(nodes, rootNode, applicationNodes) {
+      rootNode['children'] = nodes;
       applicationNodes[0].children.push(rootNode);
-    }
   }
 
   async initApplicationTree() {
@@ -161,12 +158,45 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         children: [], open: true
       }
     ];
+    const remoteAppRootNode = {
+      iconSkin: '',
+      id: 'ID_REMOTE_APP_ROOT',
+      isParent: true,
+      meta: {type: 'remote_app'},
+      name: '远程应用',
+      nocheck: false,
+      open: false,
+      pId: '',
+      title: 'RemoteApp'
+    };
+    const dbRootNode = {
+      iconSkin: '',
+      id: 'ID_DATABASE_APP_ROOT',
+      isParent: true,
+      meta: {type: 'database_app'},
+      name: '数据库应用',
+      nocheck: false,
+      open: false,
+      pId: '',
+      title: 'DatabaseApp'
+    };
+    const cloudAppRootNode = {
+      iconSkin: '',
+      id: 'ID_K8S_APP_ROOT',
+      isParent: true,
+      meta: {type: 'k8s_app'},
+      name: 'Kubernetes应用',
+      nocheck: false,
+      open: false,
+      pId: '',
+      title: 'K8sApp'
+    };
     const dbNodes = await this._http.getMyGrantedDBApps().toPromise();
-    this.addApplicationNodesIfNeed(dbNodes, applicationNodes);
+    this.addApplicationNodesIfNeed(dbNodes, dbRootNode, applicationNodes);
     const k8sNodes = await this._http.getMyGrantedK8SApps().toPromise();
-    this.addApplicationNodesIfNeed(k8sNodes, applicationNodes);
+    this.addApplicationNodesIfNeed(k8sNodes, cloudAppRootNode, applicationNodes);
     const remoteNodes = await this._http.getMyGrantedRemoteApps().toPromise();
-    this.addApplicationNodesIfNeed(remoteNodes, applicationNodes);
+    this.addApplicationNodesIfNeed(remoteNodes, remoteAppRootNode, applicationNodes);
     const tree = $.fn.zTree.init($('#applicationsTree'), setting, applicationNodes);
     this.rootNodeAddDom(tree, () => {
       this.refreshApplicationTree();

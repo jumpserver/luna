@@ -331,6 +331,30 @@ website:    http://code.google.com/p/jquerytree/
   display: inline-block;
   color: #676a6c;
 }
+.ztree li span.button.database_ico_docu::before {
+  content: "\f1c0";
+  font-family: FontAwesome;
+  padding-top: 10px;
+  padding-left: 2px;
+  display: inline-block;
+  color: #676a6c;
+}
+.ztree li span.button.k8s_ico_docu::before {
+  content: "\f1b3";
+  font-family: FontAwesome;
+  padding-top: 10px;
+  padding-left: 2px;
+  display: inline-block;
+  color: #676a6c;
+}
+.ztree li span.button.chrome_ico_docu::before {
+  content: "\f268";
+  font-family: FontAwesome;
+  padding-top: 10px;
+  padding-left: 2px;
+  display: inline-block;
+  color: #676a6c;
+}
 .ztree li span.button.edit {
   margin-left: 4px;
   margin-right: -1px;
