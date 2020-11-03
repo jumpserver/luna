@@ -55,5 +55,10 @@
   "SQL Client": "SQL 客户端",
   "Database disabled": "不支持此种链接方式，请联系管理员"
   "Info": "提示",
-  "Asset disabled": "该资产已被禁用，请联系管理员"
+  "Asset disabled": "该资产已被禁用，请联系管理员",
+  "User: ": "用户: {{value}}",
+  "Asset: ": "资产: {{value}}",
+  "System User: ": "系统用户: {{value}}",
+  "Start Time: ": "开始时间: {{value}}",
+  "Protocol: ": "协议: {{value}}"
 }

@@ -1,6 +1,6 @@
 import {Component, Input, OnInit, ViewChild, ElementRef, Inject} from '@angular/core';
-import {View} from '@app/model';
-import {LogService, SettingService, UUIDService} from '@app/services';
+import {View, Session} from '@app/model';
+import {HttpService, LogService, SettingService, UUIDService} from '@app/services';
 import {TranslateService} from '@ngx-translate/core';
 import {DomSanitizer} from '@angular/platform-browser';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialog } from '@angular/material';
@@ -21,12 +21,14 @@ export class ElementSshTermComponent implements OnInit {
 
   target: any;
   terminalID: any;
+  sessionDetail: Session;
 
   constructor(private _uuid: UUIDService,
               private sanitizer: DomSanitizer,
               private _logger: LogService,
               public _dialog: MatDialog,
               private settingSvc: SettingService,
+              private _http: HttpService,
               public translate: TranslateService ) {
   }
 
@@ -62,6 +64,11 @@ export class ElementSshTermComponent implements OnInit {
       }
     }
     if (this.shareRoomId) {
+      this._http.getSessionDetail(this.shareRoomId)
+        .subscribe((data: Session) => {
+          this.sessionDetail = data;
+          console.log(this.sessionDetail, 'Helloooooooooooooooooooooo');
+        });
       this.target = `${baseUrl}/?target_id=${this.shareRoomId}&type=shareroom`;
     }
     if (this.token) {
@@ -107,7 +114,6 @@ export class ElementSshTermComponent implements OnInit {
   trust(url) {
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
-
 }
 
 @Component({

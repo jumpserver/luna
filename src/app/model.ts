@@ -226,3 +226,17 @@ export class Replay {
   width: number;
   download_url: string;
 }
+
+export class Session {
+  asset: string;
+  asset_id: string;
+  date_start: string;
+  login_from_display: String;
+  protocol: string;
+  remote_addr: string;
+  system_user: string;
+  system_user_id: string;
+  terminal: string;
+  user: string;
+  user_id: string;
+}
