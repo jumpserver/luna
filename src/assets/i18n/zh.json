@@ -53,7 +53,7 @@
 	"Open in new window": "新窗口打开",
   "Right mouse quick paste": "右键快速粘贴",
   "SQL Client": "SQL 客户端",
-  "Database disabled": "不支持此种链接方式，请联系管理员"
+  "Database disabled": "不支持此种链接方式，请联系管理员",
   "Info": "提示",
   "Asset disabled": "该资产已被禁用，请联系管理员",
   "User: ": "用户: {{value}}",
