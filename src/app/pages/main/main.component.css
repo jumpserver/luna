@@ -80,9 +80,9 @@ as-split ::ng-deep .as-split-gutter-icon:before{
   opacity: 0.2;
 }
  as-split.as-horizontal ::ng-deep .as-split-gutter-icon {
-  width: 17px !important;
-  left: -8px;
-  right: 8px;
+  width: 8px !important;
+  left: -1px;
+  right: 2px;
 }
  as-split.as-vertical ::ng-deep .as-split-gutter-icon {
   height: 17px !important;
