@@ -86,7 +86,6 @@ export class ElementGuacamoleComponent implements OnInit {
     const now = new Date();
     const nowTime = now.getTime() / 1000;
     this.registered = true;
-    console.log( 'I am here' , User.id);
     this._logger.debug('User id is', User.id);
     this._http.getGuacamoleToken(User.id, '').subscribe(
       data => {

@@ -42,12 +42,10 @@ export class PageMainComponent implements OnInit {
     return !(environment.production && notInIframe && notInReplay);
   }
   dragStartHandler($event: IOutputData) {
-    console.log('dragStartHandler', { event: $event });
     this.showIframeHider = true;
   }
 
   dragEndHandler($event: IOutputData) {
-    console.log('dragEndHandler', { event: $event });
     this.showIframeHider = false;
   }
 
