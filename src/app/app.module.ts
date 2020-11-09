@@ -29,6 +29,7 @@ import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './elements/connect/connect.component';
 import {environment} from '@src/environments/environment';
+import {httpInterceptorProviders} from '@app/services/http';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, environment.production ? '/luna/assets/i18n/' : '/assets/i18n/');
@@ -75,6 +76,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     ...AllServices,
     CookieService,
     NGXLogger,
+    httpInterceptorProviders,
     {provide: MAT_LABEL_GLOBAL_OPTIONS, useValue: {float: 'always'}}
   ]
 })

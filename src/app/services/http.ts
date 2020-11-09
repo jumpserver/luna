@@ -1,9 +1,72 @@
 import {Injectable} from '@angular/core';
-import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
+import {HttpClient,
+  HttpHeaders,
+  HttpParams,
+  HTTP_INTERCEPTORS,
+  HttpInterceptor,
+  HttpRequest,
+  HttpHandler,
+  HttpEvent,
+  HttpErrorResponse} from '@angular/common/http';
 import {Browser, DataStore} from '@app/globals';
 import {GuacObjAddResp, SystemUser, TreeNode, User as _User} from '@app/model';
 import {SettingService} from './setting';
 import {getCookie} from '@app/utils/common';
+import {
+  Observable,
+  throwError
+} from 'rxjs';
+import {
+  timeout,
+  delay,
+  retryWhen,
+  scan,
+  tap,
+  catchError
+} from 'rxjs/operators';
+
+/** 超时时间 */
+const DEFAULTTIMEOUT = 5000;
+/** 最大重试次数 */
+const MAXRETRYCOUNT = 5;
+
+
+@Injectable()
+export class TimeoutInterceptor implements HttpInterceptor {
+  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    return next.handle(req).pipe(
+      timeout(DEFAULTTIMEOUT),
+      retryWhen(err$ => {
+        // 重试 控制器
+        return err$.pipe(
+          scan((errCount, err) => {
+            if (errCount >= MAXRETRYCOUNT) {
+              throw err;
+            }
+            return errCount + 1;
+          }, 0),
+          delay(5000),
+          tap(errCount => {
+            // 副作用
+            if (errCount === 1) {
+              // 第一次重试时显示友好信息
+              // this.nzNotificationService.info('网络超时', '正在重新请求中...');
+            }
+          })
+        );
+      }),
+      catchError((err: HttpErrorResponse) => {
+        // this.nzNotificationService.error('网络超时', '请重试');
+        return throwError(err);
+      })
+    );
+  }
+}
+
+
+export const httpInterceptorProviders = [
+  { provide: HTTP_INTERCEPTORS, useClass: TimeoutInterceptor, multi: true },
+];
 
 
 @Injectable()
