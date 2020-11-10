@@ -1,6 +1,7 @@
 import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Browser, DataStore} from '@app/globals';
+import { retryWhen, delay, tap, scan, concatMap } from 'rxjs/operators';
 import {GuacObjAddResp, SystemUser, TreeNode, User as _User} from '@app/model';
 import {SettingService} from './setting';
 import {getCookie} from '@app/utils/common';
@@ -88,7 +89,19 @@ export class HttpService {
     const syncUrl = `/api/v1/perms/users/nodes-with-assets/tree/?cache_policy=${cachePolicy}`;
     const asyncUrl = `/api/v1/perms/users/nodes/children-with-assets/tree/?cache_policy=${cachePolicy}`;
     const url = async ? asyncUrl : syncUrl;
-    return this.http.get<Array<TreeNode>>(url);
+    return this.http.get<Array<TreeNode>>(url).pipe(
+      retryWhen(err => err.pipe(
+        scan(
+          (retryCount, _err) => {
+            if (retryCount > 10) {
+              throw _err;
+            } else {
+              return retryCount + 1;
+            }
+          }, 0
+        ),
+        delay(10000)
+      )));
   }
 
   getMyGrantedRemoteApps(id?: string) {
