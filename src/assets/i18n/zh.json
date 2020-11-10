@@ -60,5 +60,6 @@
   "Asset: ": "资产: {{value}}",
   "System User: ": "系统用户: {{value}}",
   "Start Time: ": "开始时间: {{value}}",
-  "Protocol: ": "协议: {{value}}"
+  "Protocol: ": "协议: {{value}}",
+  "Command Line": "命令行"
 }

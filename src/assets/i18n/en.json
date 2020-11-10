@@ -60,5 +60,6 @@
   "Asset: ": "Asset: {{value}}",
   "System User: ": "System user: {{value}}",
   "Start Time: ": "Start time: {{value}}",
-  "Protocol: ": "Protocol: {{value}}"
+  "Protocol: ": "Protocol: {{value}}",
+  "Command Line": "Command Line"
 }
