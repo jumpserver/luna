@@ -26,7 +26,7 @@ import {
 } from 'rxjs/operators';
 
 /** 超时时间 */
-const DEFAULTTIMEOUT = 5000;
+// const DEFAULTTIMEOUT = 30000;
 /** 最大重试次数 */
 const MAXRETRYCOUNT = 5;
 
@@ -35,7 +35,10 @@ const MAXRETRYCOUNT = 5;
 export class TimeoutInterceptor implements HttpInterceptor {
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     return next.handle(req).pipe(
-      timeout(DEFAULTTIMEOUT),
+
+      // 关闭Timeout过滤条件, 只拦截Error请求
+      // timeout(DEFAULTTIMEOUT)
+
       retryWhen(err$ => {
         // 重试 控制器
         return err$.pipe(
@@ -47,7 +50,7 @@ export class TimeoutInterceptor implements HttpInterceptor {
           }, 0),
           delay(5000),
           tap(errCount => {
-            // 副作用
+
             if (errCount === 1) {
               // 第一次重试时显示友好信息
               // this.nzNotificationService.info('网络超时', '正在重新请求中...');
