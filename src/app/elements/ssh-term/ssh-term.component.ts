@@ -68,7 +68,6 @@ export class ElementSshTermComponent implements OnInit {
       this._http.getSessionDetail(this.shareRoomId)
         .subscribe((data: Session) => {
           this.sessionDetail = data;
-          console.log(this.sessionDetail, 'Helloooooooooooooooooooooo');
         });
       this.target = `${baseUrl}/?target_id=${this.shareRoomId}&type=shareroom`;
     }

@@ -61,5 +61,10 @@
   "System User: ": "System user: {{value}}",
   "Start Time: ": "Start time: {{value}}",
   "Protocol: ": "Protocol: {{value}}",
+  "My assets": "My assets",
+  "My applications": "My applications",
+  "Databases": "Databases",
+  "Remote apps": "Remote apps",
+  "Kubernetes": "Kubernetes",
   "Command Line": "Command Line"
 }

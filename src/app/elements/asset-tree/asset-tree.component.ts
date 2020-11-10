@@ -10,6 +10,7 @@ import {AppService, HttpService, LogService, NavService, SettingService, TreeFil
 import {connectEvt} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
 import {AssetTreeDialogComponent} from '@app/elements/connect/connect.component';
+import {ancestorWhere} from 'tslint';
 
 declare var $: any;
 
@@ -102,11 +103,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.initAssetsTree(true);
   }
 
-  initAssetsTree(refresh?: boolean) {
+  async initAssetsTree(refresh?: boolean) {
     const setting = Object.assign({}, this.setting);
     const myAssetsNodes = [
       {
-        name: '我的资产', id: 'myAssets', isParent: true,
+        name: await this.translate.get('My assets').toPromise(),
+        id: 'myAssets', isParent: true,
         title: 'My assets',
         children: [], open: true
       }
@@ -155,7 +157,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     };
     const applicationNodes = [
       {
-        name: '我的应用', id: 'myApplication', isParent: true,
+        name: await this.translate.get('My applications').toPromise(),
+        id: 'myApplication', isParent: true,
         title: 'My applications',
         children: [], open: true
       }
@@ -165,7 +168,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       id: 'ID_REMOTE_APP_ROOT',
       isParent: true,
       meta: {type: 'remote_app'},
-      name: '远程应用',
+      name: this.translate.instant('Remote apps'),
       nocheck: false,
       open: false,
       pId: '',
@@ -176,7 +179,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       id: 'ID_DATABASE_APP_ROOT',
       isParent: true,
       meta: {type: 'database_app'},
-      name: '数据库应用',
+      name: await this.translate.get('Databases').toPromise(),
       nocheck: false,
       open: false,
       pId: '',
@@ -187,7 +190,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       id: 'ID_K8S_APP_ROOT',
       isParent: true,
       meta: {type: 'k8s_app'},
-      name: 'Kubernetes应用',
+      name: await this.translate.get('Kubernetes').toPromise(),
       nocheck: false,
       open: false,
       pId: '',
@@ -195,10 +198,10 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     };
     const dbNodes = await this._http.getMyGrantedDBApps().toPromise();
     this.addApplicationNodesIfNeed(dbNodes, dbRootNode, applicationNodes);
-    const k8sNodes = await this._http.getMyGrantedK8SApps().toPromise();
-    this.addApplicationNodesIfNeed(k8sNodes, cloudAppRootNode, applicationNodes);
     const remoteNodes = await this._http.getMyGrantedRemoteApps().toPromise();
     this.addApplicationNodesIfNeed(remoteNodes, remoteAppRootNode, applicationNodes);
+    const k8sNodes = await this._http.getMyGrantedK8SApps().toPromise();
+    this.addApplicationNodesIfNeed(k8sNodes, cloudAppRootNode, applicationNodes);
     const tree = $.fn.zTree.init($('#applicationsTree'), setting, applicationNodes);
     this.rootNodeAddDom(tree, () => {
       this.refreshApplicationTree();
