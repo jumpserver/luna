@@ -122,6 +122,7 @@ export class ElementGuacamoleComponent implements OnInit {
       clearTimeout(this.idleTimeout);
       this.idleTimeout = null;
     }
+    // @ts-ignore
     this.idleTimeout = setTimeout(() => this.disconnect(), this.idleTTL);
   }
 
