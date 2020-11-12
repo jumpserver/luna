@@ -116,19 +116,18 @@ export class ElementNavComponent implements OnInit {
       }
       case 'English': {
         this.translate.use('en');
-        localStorage.setItem('currentLanguage', 'en');
+        this._cookie.set('django_language', 'en');
         break;
       }
       case 'Chinese': {
         this.translate.use('zh');
-        localStorage.setItem('currentLanguage', 'zh');
+        this._cookie.set('django_language', 'zh-hans');
         break;
       }
       default: {
         break;
       }
     }
-
   }
 
   refreshNav() {
@@ -243,7 +242,7 @@ export class ElementNavComponent implements OnInit {
     const dialog = this._dialog.open(
       ElementSettingComponent,
       {
-        height: '410px',
+        height: '460px',
         width: '400px',
       });
     dialog.afterClosed().subscribe(result => {

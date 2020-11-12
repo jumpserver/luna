@@ -10,6 +10,7 @@ import {AppService, HttpService, LogService, NavService, SettingService, TreeFil
 import {connectEvt} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
 import {AssetTreeDialogComponent} from '@app/elements/connect/connect.component';
+import {ancestorWhere} from 'tslint';
 
 declare var $: any;
 
@@ -98,15 +99,16 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   refreshAssetsTree() {
-    this.assetsTree.destroy();
     this.initAssetsTree(true);
   }
 
-  initAssetsTree(refresh?: boolean) {
+  async initAssetsTree(refresh?: boolean) {
     const setting = Object.assign({}, this.setting);
     const myAssetsNodes = [
       {
-        name: '我的资产', id: 'myAssets', isParent: true,
+        name: await this.translate.get('My assets').toPromise(),
+        id: 'myAssets', isParent: true,
+        title: 'My assets',
         children: [], open: true
       }
     ];
@@ -130,6 +132,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.loading = true;
     this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
       this.loading = false;
+      if (refresh) {
+        this.assetsTree.destroy();
+      }
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
       myAssetsNodes[0].children = _assetTree.getNodes();
       const myAssetsTree = $.fn.zTree.init($('#myAssets'), setting, myAssetsNodes);
@@ -138,15 +143,16 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         this.refreshAssetsTree();
       });
       _assetTree.destroy();
+    }, error => {
+      this.loading = false;
     });
   }
 
-  addApplicationNodesIfNeed(nodes, applicationNodes) {
-    if (nodes.length > 1) {
-      const rootNode: TreeNode = nodes[0];
-      rootNode['children'] = nodes.slice(1, nodes.length);
-      applicationNodes[0].children.push(rootNode);
-    }
+  addApplicationNodesIfNeed(nodes, rootNode, applicationNodes) {
+      rootNode['children'] = nodes;
+      if (nodes.length > 0) {
+        applicationNodes[0].children.push(rootNode);
+      }
   }
 
   async initApplicationTree() {
@@ -157,21 +163,59 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     };
     const applicationNodes = [
       {
-        name: '我的应用', id: 'myApplication', isParent: true,
+        name: await this.translate.get('My applications').toPromise(),
+        id: 'myApplication', isParent: true,
+        title: 'My applications',
         children: [], open: true
       }
     ];
+    const remoteAppRootNode = {
+      iconSkin: '',
+      id: 'ID_REMOTE_APP_ROOT',
+      isParent: true,
+      meta: {type: 'remote_app'},
+      name: this.translate.instant('Remote apps'),
+      nocheck: false,
+      open: false,
+      pId: '',
+      title: 'RemoteApp'
+    };
+    const dbRootNode = {
+      iconSkin: '',
+      id: 'ID_DATABASE_APP_ROOT',
+      isParent: true,
+      meta: {type: 'database_app'},
+      name: await this.translate.get('Databases').toPromise(),
+      nocheck: false,
+      open: false,
+      pId: '',
+      title: 'DatabaseApp'
+    };
+    const cloudAppRootNode = {
+      iconSkin: '',
+      id: 'ID_K8S_APP_ROOT',
+      isParent: true,
+      meta: {type: 'k8s_app'},
+      name: await this.translate.get('Kubernetes').toPromise(),
+      nocheck: false,
+      open: false,
+      pId: '',
+      title: 'K8sApp'
+    };
     const dbNodes = await this._http.getMyGrantedDBApps().toPromise();
-    this.addApplicationNodesIfNeed(dbNodes, applicationNodes);
-    const k8sNodes = await this._http.getMyGrantedK8SApps().toPromise();
-    this.addApplicationNodesIfNeed(k8sNodes, applicationNodes);
+    this.addApplicationNodesIfNeed(dbNodes, dbRootNode, applicationNodes);
     const remoteNodes = await this._http.getMyGrantedRemoteApps().toPromise();
-    this.addApplicationNodesIfNeed(remoteNodes, applicationNodes);
-    const tree = $.fn.zTree.init($('#applicationsTree'), setting, applicationNodes);
-    this.rootNodeAddDom(tree, () => {
-      this.refreshApplicationTree();
-    });
-    this.applicationsTree = tree;
+    this.addApplicationNodesIfNeed(remoteNodes, remoteAppRootNode, applicationNodes);
+    const k8sNodes = await this._http.getMyGrantedK8SApps().toPromise();
+    this.addApplicationNodesIfNeed(k8sNodes, cloudAppRootNode, applicationNodes);
+    if (applicationNodes[0].children.length > 0) {
+      const tree = $.fn.zTree.init($('#applicationsTree'), setting, applicationNodes);
+      this.rootNodeAddDom(tree, () => {
+        this.refreshApplicationTree();
+      });
+      this.applicationsTree = tree;
+    }
+
   }
 
   refreshApplicationTree() {
@@ -185,6 +229,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (!treeNode.isParent) {
       this._http.getUserProfile().subscribe();
       this.connectAsset(treeNode);
+    } else {
+      this.applicationsTree.expandNode(treeNode);
     }
   }
 

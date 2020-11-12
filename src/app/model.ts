@@ -123,6 +123,7 @@ export class View {
   K8SApp: string;
   shareRoomId: string;
   termComp: ElementSshTermComponent;
+  protocol: string;
 }
 
 export class ViewAction {
@@ -196,14 +197,16 @@ export class Monitor {
 export class GlobalSetting {
   WINDOWS_SKIP_ALL_MANUAL_PASSWORD: boolean;
   SECURITY_MAX_IDLE_TIME: number;
+  XPACK_LICENSE_IS_VALID: boolean;
 }
 
 export class Setting {
-  rdpSolution: string = 'Auto';
+  rdpResolution: string = 'Auto';
   fontSize: number = 14;
   isLoadTreeAsync: string = '1';
   isSkipAllManualPassword: string = '0';
   quickPaste = '0';
+  sqlClient = '1';
 }
 
 
@@ -222,4 +225,18 @@ export class Replay {
   height: number;
   width: number;
   download_url: string;
+}
+
+export class Session {
+  asset: string;
+  asset_id: string;
+  date_start: string;
+  login_from_display: String;
+  protocol: string;
+  remote_addr: string;
+  system_user: string;
+  system_user_id: string;
+  terminal: string;
+  user: string;
+  user_id: string;
 }

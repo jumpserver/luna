@@ -100,7 +100,6 @@ export class ElementReplayJsonComponent implements OnInit {
           },
           err => {
             alert('无法下载');
-            console.log(err);
           }
         );
     }

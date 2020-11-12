@@ -1,9 +1,9 @@
 <h1 mat-dialog-title>{{"Setting"| translate}}</h1>
 
 <mat-form-field>
-  <mat-select [(value)]="setting.rdpSolution"
-    placeholder="{{'Select a solution'| translate}}" >
-    <mat-option *ngFor="let s of solutionsChoices"  value="{{s}}">{{s}}</mat-option>
+  <mat-select [(value)]="setting.rdpResolution"
+    placeholder="{{'Select a resolution'| translate}}" >
+    <mat-option *ngFor="let s of resolutionsChoices"  value="{{s}}">{{s}}</mat-option>
   </mat-select>
 </mat-form-field>
 
@@ -29,6 +29,13 @@
   <mat-select [(value)]="setting.quickPaste"
               placeholder="{{'Right mouse quick paste'| translate }}" >
     <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name| translate}}</mat-option>
+  </mat-select>
+</mat-form-field>
+
+<mat-form-field *ngIf="globalSetting.XPACK_LICENSE_IS_VALID">
+  <mat-select [(value)]="setting.sqlClient"
+              placeholder="{{'SQL Client'| translate }}" >
+    <mat-option *ngFor="let s of clientChoices"  value="{{s.value}}">{{s.name| translate}}</mat-option>
   </mat-select>
 </mat-form-field>
 

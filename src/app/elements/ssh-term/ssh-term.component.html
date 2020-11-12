@@ -1,2 +1,22 @@
 <!--<elements-term (winSizeChangeTrigger)="changeWinSize($event)"  (contextmenu)="contextMenu($event)" [term]="term"></elements-term>-->
+<div *ngIf="sessionDetail && shareRoomId" class="nav">
+  <ul class="nav-main">
+    <li style="padding-right: 10px">
+      <img src="static/imgs/logo.png" height="26px"/>
+    </li>
+    <li>
+      <p>{{ 'User: ' | translate:{value: sessionDetail.user} }}</p>
+    </li>
+    <li>
+      <p>{{ 'Asset: ' | translate:{value: sessionDetail.asset} }}</p>
+    </li>
+    <li>
+      <p>{{ 'System User: ' | translate:{value: sessionDetail.system_user} }}</p>
+    </li>
+    <li>
+    <p>{{ 'Protocol: ' | translate:{value: sessionDetail.protocol} }}</p>
+    </li>
+  </ul>
+</div>
 <iframe #terminal [src]="target | safeUrl" *ngIf="target" (load)="listenEvent()" width="100%" height="100%" [id]="terminalID"></iframe>
+
