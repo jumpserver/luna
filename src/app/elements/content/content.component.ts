@@ -1,6 +1,7 @@
 import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
 import {ViewService} from '@app/services';
+import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
   selector: 'elements-content',
@@ -115,7 +116,10 @@ export class ElementContentComponent implements OnInit {
   }
 
   onRightClick(event, tabIdx) {
-    this.showRMenu(event.clientX, event.clientY);
+    const sideX = jQuery('#left-side').width();
+    const x = event.pageX - sideX;
+    const y = event.pageY - 30;
+    this.showRMenu(x, y);
     this.rIdx = tabIdx;
     event.preventDefault();
   }
