@@ -132,7 +132,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.loading = true;
     this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
       this.loading = false;
-      if(refresh){
+      if (refresh) {
         this.assetsTree.destroy();
       }
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
@@ -150,7 +150,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   addApplicationNodesIfNeed(nodes, rootNode, applicationNodes) {
       rootNode['children'] = nodes;
-      applicationNodes[0].children.push(rootNode);
+      if (nodes.length > 0) {
+        applicationNodes[0].children.push(rootNode);
+      }
   }
 
   async initApplicationTree() {
@@ -206,11 +208,14 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.addApplicationNodesIfNeed(remoteNodes, remoteAppRootNode, applicationNodes);
     const k8sNodes = await this._http.getMyGrantedK8SApps().toPromise();
     this.addApplicationNodesIfNeed(k8sNodes, cloudAppRootNode, applicationNodes);
-    const tree = $.fn.zTree.init($('#applicationsTree'), setting, applicationNodes);
-    this.rootNodeAddDom(tree, () => {
-      this.refreshApplicationTree();
-    });
-    this.applicationsTree = tree;
+    if (applicationNodes[0].children.length > 0) {
+      const tree = $.fn.zTree.init($('#applicationsTree'), setting, applicationNodes);
+      this.rootNodeAddDom(tree, () => {
+        this.refreshApplicationTree();
+      });
+      this.applicationsTree = tree;
+    }
+
   }
 
   refreshApplicationTree() {
@@ -224,6 +229,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (!treeNode.isParent) {
       this._http.getUserProfile().subscribe();
       this.connectAsset(treeNode);
+    } else {
+      this.applicationsTree.expandNode(treeNode);
     }
   }
 
