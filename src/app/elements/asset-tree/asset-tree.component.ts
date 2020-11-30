@@ -487,9 +487,17 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         const newNode = {id: 'search', name: name, isParent: true, open: true, zAsync: true};
         searchNode = this.assetsTree.addNodes(null, newNode)[0];
         searchNode.zAsync = true;
-        nodes.forEach((item) => {
-          this.assetsTree.addNodes(searchNode, item);
+        const nodesGroupByOrg = groupBy(nodes, (node) => {
+          return node.meta.asset.org_name;
         });
+        nodesGroupByOrg.forEach((item) => {
+          const orgName = item[0].meta.asset.org_name;
+          const orgNodeData = {id: orgName, name: orgName, isParent: true, open: true, zAsync: true};
+          const orgNode = this.assetsTree.addNodes(searchNode, orgNodeData)[0];
+          orgNode.zAsync = true;
+          this.assetsTree.addNodes(orgNode, item);
+        });
+        searchNode.open = true;
       });
     return;
   }
