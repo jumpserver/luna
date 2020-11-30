@@ -66,5 +66,6 @@
   "Databases": "Databases",
   "Remote apps": "Remote apps",
   "Kubernetes": "Kubernetes",
-  "Command Line": "Command Line"
+  "Command Line": "Command Line",
+  "Force refresh": "Force refresh"
 }

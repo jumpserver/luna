@@ -23,6 +23,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   @Input() query: string;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu') rMenu: ElementRef;
+  @ViewChild('rootRMenu') rootRMenu: ElementRef;
   Data = [];
   nodes = [];
   setting = {
@@ -45,6 +46,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   assetsTree: any;
   applicationsTree: any;
   isShowRMenu = false;
+  isShowRootRMenu = false;
   rightClickSelectNode: any;
   hasLoginTo = false;
   treeFilterSubscription: any;
@@ -99,7 +101,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   refreshAssetsTree() {
-    this.initAssetsTree(true);
+    this.initAssetsTree(false).then();
   }
 
   async initAssetsTree(refresh?: boolean) {
@@ -235,7 +237,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   initTree() {
-    this.initAssetsTree();
+    this.initAssetsTree(false).then();
     this.initApplicationTree().then();
   }
 
@@ -263,12 +265,23 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       top -= 60;
     }
     this.pos.left = left + 'px';
-    this.pos.top = top + 'px';
+    this.pos.top = (top - 25)  + 'px';
     this.isShowRMenu = true;
+  }
+
+  showRootRMenu(left, top) {
+    const clientHeight = document.body.clientHeight;
+    if (top + 60 > clientHeight) {
+      top -= 60;
+    }
+    this.pos.left = left + 'px';
+    this.pos.top = (top - 25)  + 'px';
+    this.isShowRootRMenu = true;
   }
 
   hideRMenu() {
     this.isShowRMenu = false;
+    this.isShowRootRMenu = false;
   }
 
   nodeSupportSSH() {
@@ -332,10 +345,32 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (!this.rightClickSelectNode) {
       return [];
     }
+
     return menuList;
   }
 
+  forceRefreshTree() {
+    this.initAssetsTree(true).then();
+  }
+
+  get RootRMenuList() {
+    const menuList = [{
+      'id': 'refresh',
+      'name': 'Force refresh',
+      'fa': 'fa-refresh',
+      'hide': false,
+      'click': this.forceRefreshTree.bind(this)
+    }];
+    return menuList;
+  }
+
+
   onRightClick(event, treeId, treeNode) {
+
+    if (treeNode.id === 'myAssets') {
+      this.showRootRMenu(event.clientX, event.clientY);
+      return;
+    }
     if (!treeNode || treeNode.isParent) {
       return null;
     }

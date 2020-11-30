@@ -66,5 +66,6 @@
   "Databases": "数据库",
   "Remote apps": "远程应用",
   "Kubernetes": "Kubernetes",
-  "Command Line": "命令行"
+  "Command Line": "命令行",
+  "Force refresh": "强制刷新"
 }
