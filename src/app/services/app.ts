@@ -62,8 +62,8 @@ export class AppService implements OnInit {
         // this._logger.error(err);
         User.logined = false;
         if (document.location.pathname !== '/luna/connect') {
-          window.location.href = document.location.origin + '/users/login?next=' +
-            document.location.pathname + document.location.search;
+          window.location.href = document.location.origin + '/core/auth/login/?next=' +
+            encodeURI(document.location.pathname + document.location.search);
         }
         // this._router.navigate(['login']);
       },
