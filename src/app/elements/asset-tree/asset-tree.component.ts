@@ -139,6 +139,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       }
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
       myAssetsNodes[0].children = _assetTree.getNodes();
+      // 销毁临时树
+      $.fn.zTree.destroy(_assetTree);
       const myAssetsTree = $.fn.zTree.init($('#myAssets'), setting, myAssetsNodes);
       this.assetsTree = myAssetsTree;
       this.rootNodeAddDom(myAssetsTree, () => {
@@ -205,11 +207,26 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       title: 'K8sApp'
     };
     const dbNodes = await this._http.getMyGrantedDBApps().toPromise();
-    this.addApplicationNodesIfNeed(dbNodes, dbRootNode, applicationNodes);
+    if (dbNodes.length > 0) {
+      const _dbTree = $.fn.zTree.init($('#DBAppsTree'), setting, dbNodes);
+      dbRootNode['children'] = _dbTree.getNodes();
+      applicationNodes[0].children.push(dbRootNode);
+      $.fn.zTree.destroy(_dbTree);
+    }
     const remoteNodes = await this._http.getMyGrantedRemoteApps().toPromise();
-    this.addApplicationNodesIfNeed(remoteNodes, remoteAppRootNode, applicationNodes);
-    const k8sNodes = await this._http.getMyGrantedK8SApps().toPromise();
-    this.addApplicationNodesIfNeed(k8sNodes, cloudAppRootNode, applicationNodes);
+    if (remoteNodes.length > 0) {
+      const _remoteTree = $.fn.zTree.init($('#remoteAppsTree'), setting, remoteNodes);
+      remoteAppRootNode['children'] = _remoteTree.getNodes();
+      applicationNodes[0].children.push(remoteAppRootNode);
+      $.fn.zTree.destroy(_remoteTree);
+    }
+    const cloudNodes = await this._http.getMyGrantedK8SApps().toPromise();
+    if (cloudNodes.length > 0) {
+      const _cloudTree = $.fn.zTree.init($('#K8SAppsTree'), setting, remoteNodes);
+      cloudAppRootNode['children'] = _cloudTree.getNodes();
+      applicationNodes[0].children.push(cloudAppRootNode);
+      $.fn.zTree.destroy(_cloudTree);
+    }
     if (applicationNodes[0].children.length > 0) {
       const tree = $.fn.zTree.init($('#applicationsTree'), setting, applicationNodes);
       this.rootNodeAddDom(tree, () => {
