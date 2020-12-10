@@ -23,6 +23,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   @Input() query: string;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu') rMenu: ElementRef;
+  @ViewChild('rootRMenu') rootRMenu: ElementRef;
   Data = [];
   nodes = [];
   setting = {
@@ -45,6 +46,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   assetsTree: any;
   applicationsTree: any;
   isShowRMenu = false;
+  isShowRootRMenu = false;
   rightClickSelectNode: any;
   hasLoginTo = false;
   treeFilterSubscription: any;
@@ -99,7 +101,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   refreshAssetsTree() {
-    this.initAssetsTree(true);
+    this.initAssetsTree(false).then();
   }
 
   async initAssetsTree(refresh?: boolean) {
@@ -137,6 +139,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       }
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
       myAssetsNodes[0].children = _assetTree.getNodes();
+      // 销毁临时树
+      $.fn.zTree.destroy(_assetTree);
       const myAssetsTree = $.fn.zTree.init($('#myAssets'), setting, myAssetsNodes);
       this.assetsTree = myAssetsTree;
       this.rootNodeAddDom(myAssetsTree, () => {
@@ -203,11 +207,26 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       title: 'K8sApp'
     };
     const dbNodes = await this._http.getMyGrantedDBApps().toPromise();
-    this.addApplicationNodesIfNeed(dbNodes, dbRootNode, applicationNodes);
+    if (dbNodes.length > 0) {
+      const _dbTree = $.fn.zTree.init($('#DBAppsTree'), setting, dbNodes);
+      dbRootNode['children'] = _dbTree.getNodes();
+      applicationNodes[0].children.push(dbRootNode);
+      $.fn.zTree.destroy(_dbTree);
+    }
     const remoteNodes = await this._http.getMyGrantedRemoteApps().toPromise();
-    this.addApplicationNodesIfNeed(remoteNodes, remoteAppRootNode, applicationNodes);
-    const k8sNodes = await this._http.getMyGrantedK8SApps().toPromise();
-    this.addApplicationNodesIfNeed(k8sNodes, cloudAppRootNode, applicationNodes);
+    if (remoteNodes.length > 0) {
+      const _remoteTree = $.fn.zTree.init($('#remoteAppsTree'), setting, remoteNodes);
+      remoteAppRootNode['children'] = _remoteTree.getNodes();
+      applicationNodes[0].children.push(remoteAppRootNode);
+      $.fn.zTree.destroy(_remoteTree);
+    }
+    const cloudNodes = await this._http.getMyGrantedK8SApps().toPromise();
+    if (cloudNodes.length > 0) {
+      const _cloudTree = $.fn.zTree.init($('#K8SAppsTree'), setting, remoteNodes);
+      cloudAppRootNode['children'] = _cloudTree.getNodes();
+      applicationNodes[0].children.push(cloudAppRootNode);
+      $.fn.zTree.destroy(_cloudTree);
+    }
     if (applicationNodes[0].children.length > 0) {
       const tree = $.fn.zTree.init($('#applicationsTree'), setting, applicationNodes);
       this.rootNodeAddDom(tree, () => {
@@ -235,7 +254,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   initTree() {
-    this.initAssetsTree();
+    this.initAssetsTree(false).then();
     this.initApplicationTree().then();
   }
 
@@ -263,12 +282,23 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       top -= 60;
     }
     this.pos.left = left + 'px';
-    this.pos.top = top + 'px';
+    this.pos.top = (top - 25)  + 'px';
     this.isShowRMenu = true;
+  }
+
+  showRootRMenu(left, top) {
+    const clientHeight = document.body.clientHeight;
+    if (top + 60 > clientHeight) {
+      top -= 60;
+    }
+    this.pos.left = left + 'px';
+    this.pos.top = (top - 25)  + 'px';
+    this.isShowRootRMenu = true;
   }
 
   hideRMenu() {
     this.isShowRMenu = false;
+    this.isShowRootRMenu = false;
   }
 
   nodeSupportSSH() {
@@ -332,10 +362,32 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (!this.rightClickSelectNode) {
       return [];
     }
+
     return menuList;
   }
 
+  forceRefreshTree() {
+    this.initAssetsTree(true).then();
+  }
+
+  get RootRMenuList() {
+    const menuList = [{
+      'id': 'refresh',
+      'name': 'Force refresh',
+      'fa': 'fa-refresh',
+      'hide': false,
+      'click': this.forceRefreshTree.bind(this)
+    }];
+    return menuList;
+  }
+
+
   onRightClick(event, treeId, treeNode) {
+
+    if (treeNode.id === 'myAssets') {
+      this.showRootRMenu(event.clientX, event.clientY);
+      return;
+    }
     if (!treeNode || treeNode.isParent) {
       return null;
     }
@@ -447,7 +499,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   filterApplicationsTree(keyword) {
-    if (!this.filterApplicationsTree) {
+    if (!this.applicationsTree) {
       return null;
     }
     function filterCallback(node: TreeNode) {
@@ -487,9 +539,17 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         const newNode = {id: 'search', name: name, isParent: true, open: true, zAsync: true};
         searchNode = this.assetsTree.addNodes(null, newNode)[0];
         searchNode.zAsync = true;
-        nodes.forEach((item) => {
-          this.assetsTree.addNodes(searchNode, item);
+        const nodesGroupByOrg = groupBy(nodes, (node) => {
+          return node.meta.asset.org_name;
         });
+        nodesGroupByOrg.forEach((item) => {
+          const orgName = item[0].meta.asset.org_name;
+          const orgNodeData = {id: orgName, name: orgName, isParent: true, open: true, zAsync: true};
+          const orgNode = this.assetsTree.addNodes(searchNode, orgNodeData)[0];
+          orgNode.zAsync = true;
+          this.assetsTree.addNodes(orgNode, item);
+        });
+        searchNode.open = true;
       });
     return;
   }
