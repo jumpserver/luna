@@ -139,8 +139,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       }
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
       myAssetsNodes[0].children = _assetTree.getNodes();
-      // 销毁临时树
-      $.fn.zTree.destroy(_assetTree);
       const myAssetsTree = $.fn.zTree.init($('#myAssets'), setting, myAssetsNodes);
       this.assetsTree = myAssetsTree;
       this.rootNodeAddDom(myAssetsTree, () => {
@@ -211,21 +209,21 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       const _dbTree = $.fn.zTree.init($('#DBAppsTree'), setting, dbNodes);
       dbRootNode['children'] = _dbTree.getNodes();
       applicationNodes[0].children.push(dbRootNode);
-      $.fn.zTree.destroy(_dbTree);
+      _dbTree.destroy();
     }
     const remoteNodes = await this._http.getMyGrantedRemoteApps().toPromise();
     if (remoteNodes.length > 0) {
       const _remoteTree = $.fn.zTree.init($('#remoteAppsTree'), setting, remoteNodes);
       remoteAppRootNode['children'] = _remoteTree.getNodes();
       applicationNodes[0].children.push(remoteAppRootNode);
-      $.fn.zTree.destroy(_remoteTree);
+      _remoteTree.destroy();
     }
     const cloudNodes = await this._http.getMyGrantedK8SApps().toPromise();
     if (cloudNodes.length > 0) {
       const _cloudTree = $.fn.zTree.init($('#K8SAppsTree'), setting, remoteNodes);
       cloudAppRootNode['children'] = _cloudTree.getNodes();
       applicationNodes[0].children.push(cloudAppRootNode);
-      $.fn.zTree.destroy(_cloudTree);
+      _cloudTree.destroy();
     }
     if (applicationNodes[0].children.length > 0) {
       const tree = $.fn.zTree.init($('#applicationsTree'), setting, applicationNodes);
