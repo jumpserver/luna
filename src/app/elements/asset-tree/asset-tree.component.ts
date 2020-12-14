@@ -220,7 +220,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     }
     const cloudNodes = await this._http.getMyGrantedK8SApps().toPromise();
     if (cloudNodes.length > 0) {
-      const _cloudTree = $.fn.zTree.init($('#K8SAppsTree'), setting, remoteNodes);
+      const _cloudTree = $.fn.zTree.init($('#K8SAppsTree'), setting, cloudNodes);
       cloudAppRootNode['children'] = _cloudTree.getNodes();
       applicationNodes[0].children.push(cloudAppRootNode);
       _cloudTree.destroy();
