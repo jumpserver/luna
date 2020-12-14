@@ -57,9 +57,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       case 'asset':
         this._http.filterMyGrantedAssetsById(loginTo).subscribe(
           nodes => {
-            if (nodes.length === 1) {
+            if (nodes.length === 2) {
               this.hasLoginTo = true;
-              const node = nodes[0];
+              const node = nodes[1];
               this.Connect(node);
             }
           }
@@ -68,9 +68,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       case 'remote_app':
         this._http.getMyGrantedRemoteApps(loginTo).subscribe(
           nodes => {
-            if (nodes.length === 1) {
+            if (nodes.length === 2) {
               this.hasLoginTo = true;
-              const node = nodes[0];
+              const node = nodes[1];
               this.Connect(node);
             }
           }
@@ -79,9 +79,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       case 'database_app':
         this._http.getMyGrantedDBApps(loginTo).subscribe(
           nodes => {
-            if (nodes.length === 1) {
+            if (nodes.length === 2) {
               this.hasLoginTo = true;
-              const node = nodes[0];
+              const node = nodes[1];
               this.Connect(node);
             }
           }
