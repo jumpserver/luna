@@ -187,7 +187,7 @@ export class HttpService {
       .set('user_id', userId)
       .set('asset_id', assetId)
       .set('system_user_id', systemUserId)
-      .set('token', DataStore.guacamoleToken);
+      .set('token', localStorage.getItem('guacamoleToken'));
     let body = new HttpParams();
     if (systemUserUsername && systemUserPassword) {
       systemUserUsername = btoa(systemUserUsername);
@@ -216,7 +216,7 @@ export class HttpService {
       .set('user_id', userId)
       .set('remote_app_id', remoteAppId)
       .set('system_user_id', sysUserId)
-      .set('token', DataStore.guacamoleToken);
+      .set('token', localStorage.getItem('guacamoleToken'));
     let body = new HttpParams();
     if (systemUserUsername && systemUserPassword) {
       systemUserUsername = btoa(systemUserUsername);
@@ -243,7 +243,7 @@ export class HttpService {
   guacamoleTokenAddAsset(assetToken: string) {
     let params = new HttpParams()
       .set('asset_token', assetToken)
-      .set('token',  DataStore.guacamoleToken);
+      .set('token',  localStorage.getItem('guacamoleToken'));
     const resolution = this.settingSrv.setting.rdpResolution || 'Auto';
     if (resolution !== 'Auto') {
       const width = resolution.split('x')[0];
