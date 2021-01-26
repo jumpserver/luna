@@ -44,12 +44,12 @@ export class ElementGuacamoleComponent implements OnInit {
       this._http.getGuacamoleToken(this.token, this.token).subscribe(
         data => {
           // /guacamole/client will redirect to http://guacamole/#/client
-          DataStore.guacamoleToken = data['authToken'];
+          localStorage.setItem('guacamoleToken', data['authToken']);
           DataStore.guacamoleTokenTime = nowTime;
           action = this._http.guacamoleTokenAddAsset(this.token).subscribe(
             data2 => {
               const base = data2['result'];
-              this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamoleToken;
+              this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + localStorage.getItem('guacamoleToken');
               setTimeout(() => this.setIdleTimeout(), 500);
             },
             error => {
@@ -70,7 +70,7 @@ export class ElementGuacamoleComponent implements OnInit {
     action.subscribe(
       data => {
         const base = data.result;
-        this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + DataStore.guacamoleToken;
+        this.target = document.location.origin + '/guacamole/#/client/' + base + '?token=' + localStorage.getItem('guacamoleToken');
         setTimeout(() => this.setIdleTimeout(), 500);
       },
       error => {
@@ -90,7 +90,7 @@ export class ElementGuacamoleComponent implements OnInit {
     this._http.getGuacamoleToken(User.id, '').subscribe(
       data => {
         // /guacamole/client will redirect to http://guacamole/#/client
-        DataStore.guacamoleToken = data['authToken'];
+        localStorage.setItem('guacamoleToken', data['authToken']);
         DataStore.guacamoleTokenTime = nowTime;
         this.registerHost();
       },
