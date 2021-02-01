@@ -22,6 +22,7 @@ export class SettingService {
     }
     this._http.get<any>('/api/v1/settings/public/').subscribe(resp => {
       this.globalSetting  = resp.data;
+      this.setting.command_execution = this.globalSetting.SECURITY_COMMAND_EXECUTION;
       const link: any = document.querySelector('link[rel*=\'icon\']') || document.createElement('link');
       link.type = 'image/x-icon';
       link.rel = 'shortcut icon';
