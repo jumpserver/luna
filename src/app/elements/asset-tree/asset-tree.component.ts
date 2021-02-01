@@ -379,15 +379,56 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     return menuList;
   }
 
+  reAsyncChildNodes(treeId, treeNode, silent) {
+    if (treeNode && treeNode.isParent && treeNode.children) {
+      for (let i = 0; i < treeNode.children.length; i++) {
+        const childNode = treeNode.children[i];
+        const self = this;
+        const targetTree = $.fn.zTree.getZTreeObj(treeId);
+        targetTree.reAsyncChildNodesPromise(childNode, 'refresh', silent).then(function () {
+          self.reAsyncChildNodes(treeId, childNode, silent);
+        });
+      }
+    }
+  }
+
+  expandAllChildren(treeId, treeNode, expandFlag) {
+    if (expandFlag === treeNode.open) {
+      return;
+    }
+    // 异步加载时需要加载全部子节点
+    const self = this;
+    const targetTree = $.fn.zTree.getZTreeObj(treeId);
+    if (targetTree.setting.async.enable && (!treeNode.children || treeNode.children.length === 0)) {
+      targetTree.reAsyncChildNodesPromise(treeNode, 'refresh', false).then(function () {
+        self.reAsyncChildNodes(treeId, treeNode, false);
+      });
+    } else {
+      // 展开时递归展开，防止用户手动展开子级折叠后无法再次展开孙子级
+      if (expandFlag) {
+        targetTree.expandNode(treeNode, expandFlag, false, false, false);
+        if (treeNode.children && treeNode.children.length > 0) {
+          treeNode.children.forEach(function(childNode) {
+            self.expandAllChildren(treeId, childNode, expandFlag);
+          });
+        }
+      } else {
+        targetTree.expandNode(treeNode, expandFlag, true, false, false);
+      }
+    }
+  }
 
   onRightClick(event, treeId, treeNode) {
-
+    if (!treeNode) {
+      return null;
+    }
     if (treeNode.id === 'myAssets') {
       this.showRootRMenu(event.clientX, event.clientY);
       return;
     }
-    if (!treeNode || treeNode.isParent) {
-      return null;
+    if (treeNode.isParent) {
+      this.expandAllChildren(treeId, treeNode, !treeNode.open);
+      return;
     }
     this.rightClickSelectNode = treeNode;
 
