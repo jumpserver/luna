@@ -56,6 +56,10 @@ export class AppService implements OnInit {
       user => {
         Object.assign(User, user);
         User.logined = true;
+        const oldUserId = this._localStorage.get('user');
+        if (oldUserId !== user.id ) {
+          this._localStorage.set('guacamoleToken', null);
+        }
         this._localStorage.set('user', user.id);
       },
       err => {
