@@ -29,7 +29,14 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   setting = {
     view: {
       dblClickExpand: false,
-      showLine: true
+      showLine: true,
+      // 添加禁用颜色区分
+      fontCss: (treeId, treeNode) => {
+        if (treeNode.chkDisabled) {
+          return {opacity: '0.4'};
+        }
+        return {};
+      }
     },
     data: {
       simpleData: {
