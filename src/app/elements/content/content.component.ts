@@ -24,7 +24,7 @@ export class ElementContentComponent implements OnInit {
   }
 
   constructor(private viewSrv: ViewService,
-              private settingSvc: SettingService
+              public settingSvc: SettingService
   ) {
   }
 
