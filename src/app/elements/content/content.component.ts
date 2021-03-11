@@ -1,6 +1,6 @@
 import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
-import {ViewService} from '@app/services';
+import {SettingService, ViewService} from '@app/services';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
@@ -23,7 +23,9 @@ export class ElementContentComponent implements OnInit {
     return (this.viewList.length + 1) * 151 + 10;
   }
 
-  constructor(private viewSrv: ViewService) {
+  constructor(private viewSrv: ViewService,
+              public settingSvc: SettingService
+  ) {
   }
 
   ngOnInit() {

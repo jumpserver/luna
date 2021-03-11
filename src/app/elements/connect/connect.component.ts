@@ -172,7 +172,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   selectLoginSystemUsers(systemUsers: Array<SystemUser>): Promise<SystemUser> {
-    const systemUserMaxPriority = this.filterMaxPrioritySystemUsers(systemUsers);
+    const systemUserMaxPriority = this.filterHighestPrioritySystemUsers(systemUsers);
     let user: SystemUser;
     const systemUserId = this._appSvc.getQueryString('system_user');
     if (systemUserId) {
@@ -341,10 +341,10 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       this.onNewView.emit(view);
   }
 
-  filterMaxPrioritySystemUsers(sysUsers: Array<SystemUser>): Array<SystemUser> {
+  filterHighestPrioritySystemUsers(sysUsers: Array<SystemUser>): Array<SystemUser> {
     const priorityAll: Array<number> = sysUsers.map(s => s.priority);
-    const maxPriority = Math.max(...priorityAll);
-    return sysUsers.filter(s => s.priority === maxPriority);
+    const HighestPriority = Math.min(...priorityAll);
+    return sysUsers.filter(s => s.priority === HighestPriority);
   }
 }
 

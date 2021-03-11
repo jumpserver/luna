@@ -198,6 +198,7 @@ export class GlobalSetting {
   WINDOWS_SKIP_ALL_MANUAL_PASSWORD: boolean;
   SECURITY_MAX_IDLE_TIME: number;
   XPACK_LICENSE_IS_VALID: boolean;
+  SECURITY_COMMAND_EXECUTION: boolean;
 }
 
 export class Setting {
@@ -207,6 +208,7 @@ export class Setting {
   isSkipAllManualPassword: string = '0';
   quickPaste = '0';
   sqlClient = '1';
+  command_execution: boolean = true;
 }
 
 
