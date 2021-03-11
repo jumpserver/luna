@@ -343,8 +343,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   filterMaxPrioritySystemUsers(sysUsers: Array<SystemUser>): Array<SystemUser> {
     const priorityAll: Array<number> = sysUsers.map(s => s.priority);
-    const maxPriority = Math.max(...priorityAll);
-    return sysUsers.filter(s => s.priority === maxPriority);
+    const HighestPriority = Math.min(...priorityAll);
+    return sysUsers.filter(s => s.priority === HighestPriority);
   }
 }
 
