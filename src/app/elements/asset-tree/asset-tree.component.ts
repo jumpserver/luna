@@ -6,6 +6,7 @@ import {ActivatedRoute} from '@angular/router';
 import {ToastrService} from 'ngx-toastr';
 import {TranslateService} from '@ngx-translate/core';
 import {groupBy} from '@app/utils/common';
+import * as _ from 'lodash';
 import {AppService, HttpService, LogService, NavService, SettingService, TreeFilterService} from '@app/services';
 import {connectEvt} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
@@ -20,6 +21,61 @@ declare var $: any;
   styleUrls: ['./asset-tree.component.scss'],
 })
 export class ElementAssetTreeComponent implements OnInit, OnDestroy {
+
+  constructor(private _appSvc: AppService,
+              private _treeFilterSvc: TreeFilterService,
+              public _dialog: MatDialog,
+              public _logger: LogService,
+              public translate: TranslateService,
+              private activatedRoute: ActivatedRoute,
+              private _http: HttpService,
+              private settingSvc: SettingService,
+              private toastr: ToastrService
+  ) {}
+
+  get RMenuList() {
+    const menuList = [{
+      'id': 'new-connection',
+      'name': 'Open in new window',
+      'fa': 'fa-terminal',
+      'hide': false,
+      'click': this.connectInNewWindow.bind(this)
+    }, {
+      'id': 'file-manager',
+      'name': 'File Manager',
+      'fa': 'fa-file',
+      'hide': !this.nodeSupportSSH(),
+      'click': this.connectFileManager.bind(this)
+    }, {
+      'id': 'favorite',
+      'name': 'Favorite',
+      'fa': 'fa-star-o',
+      'hide': this.isAssetFavorite() || !this.isAssetNode(),
+      'click': this.favoriteAsset.bind(this)
+    }, {
+      'id': 'disfavor',
+      'name': 'Disfavor',
+      'fa': 'fa-star',
+      'hide': !this.isAssetFavorite() || !this.isAssetNode(),
+      'click': this.favoriteAsset.bind(this)
+    }];
+    if (!this.rightClickSelectNode) {
+      return [];
+    }
+
+    return menuList;
+  }
+
+  get RootRMenuList() {
+    const menuList = [{
+      'id': 'refresh',
+      'name': 'Force refresh',
+      'fa': 'fa-refresh',
+      'hide': false,
+      'click': this.forceRefreshTree.bind(this)
+    }];
+    return menuList;
+  }
   @Input() query: string;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu') rMenu: ElementRef;
@@ -62,16 +118,16 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   loading = true;
   favoriteAssets = [];
 
-  constructor(private _appSvc: AppService,
-              private _treeFilterSvc: TreeFilterService,
-              public _dialog: MatDialog,
-              public _logger: LogService,
-              public translate: TranslateService,
-              private activatedRoute: ActivatedRoute,
-              private _http: HttpService,
-              private settingSvc: SettingService,
-              private toastr: ToastrService
-  ) {}
+
+  debouncedOnAssetsNodeClick = _.debounce(this.onAssetsNodeClick, 300, {
+    'leading': true,
+    'trailing': false
+  });
+
+  debouncedOnApplicationTreeNodeClick = _.debounce(this.onApplicationTreeNodeClick, 300, {
+    'leading': true,
+    'trailing': false
+  });
 
   ngOnInit() {
     this.isLoadTreeAsync = this.settingSvc.isLoadTreeAsync();
@@ -122,7 +178,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       }
     ];
     setting['callback'] = {
-      onClick: this.onAssetsNodeClick.bind(this),
+      onClick: this.debouncedOnAssetsNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
     if (this.isLoadTreeAsync) {
@@ -167,7 +223,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   async initApplicationTree() {
     const setting = Object.assign({}, this.setting);
     setting['callback'] = {
-      onClick: this.onApplicationTreeNodeClick.bind(this),
+      onClick: this.debouncedOnApplicationTreeNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
     const applicationNodes = [
@@ -338,52 +394,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     return this.rightClickSelectNode.meta.asset;
   }
 
-  get RMenuList() {
-    const menuList = [{
-      'id': 'new-connection',
-      'name': 'Open in new window',
-      'fa': 'fa-terminal',
-      'hide': false,
-      'click': this.connectInNewWindow.bind(this)
-    }, {
-      'id': 'file-manager',
-      'name': 'File Manager',
-      'fa': 'fa-file',
-      'hide': !this.nodeSupportSSH(),
-      'click': this.connectFileManager.bind(this)
-    }, {
-      'id': 'favorite',
-      'name': 'Favorite',
-      'fa': 'fa-star-o',
-      'hide': this.isAssetFavorite() || !this.isAssetNode(),
-      'click': this.favoriteAsset.bind(this)
-    }, {
-      'id': 'disfavor',
-      'name': 'Disfavor',
-      'fa': 'fa-star',
-      'hide': !this.isAssetFavorite() || !this.isAssetNode(),
-      'click': this.favoriteAsset.bind(this)
-    }];
-    if (!this.rightClickSelectNode) {
-      return [];
-    }
-
-    return menuList;
-  }
-
   forceRefreshTree() {
     this.initAssetsTree(true).then();
-  }
-
-  get RootRMenuList() {
-    const menuList = [{
-      'id': 'refresh',
-      'name': 'Force refresh',
-      'fa': 'fa-refresh',
-      'hide': false,
-      'click': this.forceRefreshTree.bind(this)
-    }];
-    return menuList;
   }
 
   reAsyncChildNodes(treeId, treeNode, silent) {
