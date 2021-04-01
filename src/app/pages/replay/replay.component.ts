@@ -1,5 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
+import { NgxWatermarkOptions } from 'ngx-watermark';
 import {HttpService, LogService} from '@app/services';
 import {Replay} from '@app/model';
 
@@ -15,6 +16,17 @@ export class PagesReplayComponent implements OnInit {
               private _http: HttpService,
               private _logger: LogService) {
   }
+
+  options: NgxWatermarkOptions = {
+    text: 'This is NGX-WATERMARK\nSimple watermark text\nmultiple line and custom font',
+    width: 350,
+    height: 300,
+    fontFamily: 'Kanit',
+    color: '#999',
+    alpha: 0.7,
+    degree: -45,
+    fontSize: '20px',
+  };
 
   ngOnInit() {
     let sid = '';
@@ -40,4 +52,8 @@ export class PagesReplayComponent implements OnInit {
       );
     }, 2000);
   }
+
+
+
+
 }

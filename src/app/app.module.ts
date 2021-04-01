@@ -2,6 +2,7 @@ import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms'; // <-- NgModel lives here
 import {NGXLogger} from 'ngx-logger';
+import { NgxWatermarkModule } from 'ngx-watermark';
 import {CookieService} from 'ngx-cookie-service';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {ToastrModule} from 'ngx-toastr';
@@ -42,6 +43,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     BrowserAnimationsModule,
     ReactiveFormsModule,
     AppRouterModule,
+    NgxWatermarkModule,
     ToastrModule.forRoot(),
     AngularSplitModule.forRoot(),
     TranslateModule.forRoot({
