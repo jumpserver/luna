@@ -78,8 +78,8 @@ export class ElementGuacamoleComponent implements OnInit {
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 
-  active() {
-    this.el.nativeElement.focus();
-  }
+  // active() {
+  //   this.el.nativeElement.focus();
+  // }
 
 }
