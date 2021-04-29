@@ -15,12 +15,13 @@ export class ElementGuacamoleComponent implements OnInit {
   @Input() host: any;
   @Input() sysUser: any;
   @Input() remoteAppId: string;
-  @Input() target: string;
   @Input() index: number;
   @Input() token: any;
   @ViewChild('rdpRef') el: ElementRef;
   registered = false;
   iframeWindow: any;
+  terminalID: any;
+  target: any;
   idleTimeout: number;
   idleTTL = 1000 * 3600;
   isIdleTimeout = false;
@@ -34,6 +35,19 @@ export class ElementGuacamoleComponent implements OnInit {
     this.idleTTL = this.settingSvc.globalSetting.SECURITY_MAX_IDLE_TIME * 60 * 1000;
   }
 
+  listenEvent() {
+    if (!this.target || this.target === 'about:blank') {
+      return null;
+    }
+    const isIFrame = (input: HTMLElement | null): input is HTMLIFrameElement =>
+      input !== null && input.tagName === 'IFRAME';
+    const frame = document.getElementById(this.terminalID);
+    if (isIFrame(frame) && frame.contentWindow) {
+      frame.contentWindow.addEventListener('CLOSE', (e) => {
+        this.view.connected = false;
+      });
+    }
+  }
 
   ngOnInit() {
     // /guacamole/api/tokens will redirect to http://guacamole/api/tokens
@@ -43,36 +57,14 @@ export class ElementGuacamoleComponent implements OnInit {
     if (this.target) {
       return null;
     }
-    // const baseUrl = `${document.location.origin}/lion/`;
-    // if (this.host) {
-    //   this.target = `${baseUrl}/?target_id=${this.host.id}&type=${this.view.type}&system_user_id=${this.sysUser.id}`;
-    // }
-    // if (this.token) {
-    //   this.target = `${baseUrl}/?token=${this.token}`;
-    // }
-    this.target = `https://www.baidu.com`;
-  }
-
-  setIdleTimeout() {
-    this.iframeWindow = this.el.nativeElement.contentWindow;
-    this.resetIdleTimeout();
-    this.iframeWindow.onclick = () => this.resetIdleTimeout();
-    this.iframeWindow.onkeyup = () => this.resetIdleTimeout();
-  }
-
-  resetIdleTimeout() {
-    if (this.idleTimeout) {
-      clearTimeout(this.idleTimeout);
-      this.idleTimeout = null;
+    const baseUrl = `${document.location.origin}/lion/`;
+    if (this.host) {
+      this.target = `${baseUrl}/?target_id=${this.host.id}&type=${this.view.type}&system_user_id=${this.sysUser.id}`;
     }
-    // @ts-ignore
-    this.idleTimeout = setTimeout(() => this.disconnect(), this.idleTTL);
-  }
+    if (this.token) {
+      this.target = `${baseUrl}/?token=${this.token}`;
+    }
 
-  disconnect() {
-    this._logger.debug('Disconnect guacamole');
-    this.target = '';
-    this.isIdleTimeout = true;
   }
 
   trust(url) {
