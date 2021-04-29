@@ -40,9 +40,6 @@ export class ElementGuacamoleComponent implements OnInit {
     // this.view.type = 'rdp';
     // /lion/?type=vnc&target_id=40c0d114-fbbe-412e-9429-23b9917764e3&system_user_id=b40fc7be-84ae-4a58-9551-c7372b4a25bc
 
-    if (this.target) {
-      return null;
-    }
     const baseUrl = `${document.location.origin}/lion/`;
     if (this.host) {
       this.target = `${baseUrl}/?target_id=${this.host.id}&type=${this.view.type}&system_user_id=${this.sysUser.id}`;
