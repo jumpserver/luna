@@ -43,13 +43,14 @@ export class ElementGuacamoleComponent implements OnInit {
     if (this.target) {
       return null;
     }
-    const baseUrl = `${document.location.origin}/lion/`;
-    if (this.host) {
-      this.target = `${baseUrl}/?target_id=${this.host.id}&type=${this.view.type}&system_user_id=${this.sysUser.id}`;
-    }
-    if (this.token) {
-      this.target = `${baseUrl}/?token=${this.token}`;
-    }
+    // const baseUrl = `${document.location.origin}/lion/`;
+    // if (this.host) {
+    //   this.target = `${baseUrl}/?target_id=${this.host.id}&type=${this.view.type}&system_user_id=${this.sysUser.id}`;
+    // }
+    // if (this.token) {
+    //   this.target = `${baseUrl}/?token=${this.token}`;
+    // }
+    this.target = `https://www.baidu.com`;
   }
 
   setIdleTimeout() {
