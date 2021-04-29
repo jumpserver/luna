@@ -260,7 +260,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       view.closed = false;
       view.remoteApp = node.id;
       view.user = user;
-      view.type = 'rdp';
+      view.type = 'remoteapp';
       this.onNewView.emit(view);
     }
   }
@@ -325,8 +325,10 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       view.user = user;
       if (user.protocol === 'ssh' || user.protocol === 'telnet') {
         view.type = 'ssh';
-      } else if (user.protocol === 'rdp' || user.protocol === 'vnc') {
+      } else if (user.protocol === 'rdp') {
         view.type = 'rdp';
+      } else if (user.protocol === 'vnc') {
+        view.type = 'vnc';
       }
       this.onNewView.emit(view);
     }
