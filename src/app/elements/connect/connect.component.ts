@@ -217,24 +217,25 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return Promise.resolve(user);
     }
     user = Object.assign({}, user);
-    return new Promise(resolve => {
-      const dialogRef = this._dialog.open(ManualPasswordDialogComponent, {
-        height: '250px',
-        width: '500px',
-        data: {username: user.username}
-      });
-      dialogRef.afterClosed().subscribe(result => {
-        if (!result) {
-          return resolve(null);
-        }
-        if (result.skip) {
-          return resolve(user);
-        }
-        user.username = result.username;
-        user.password = result.password;
-        return resolve(user);
-      });
-    });
+    return Promise.resolve(user);
+    // return new Promise(resolve => {
+    //   const dialogRef = this._dialog.open(ManualPasswordDialogComponent, {
+    //     height: '250px',
+    //     width: '500px',
+    //     data: {username: user.username}
+    //   });
+    //   dialogRef.afterClosed().subscribe(result => {
+    //     if (!result) {
+    //       return resolve(null);
+    //     }
+    //     if (result.skip) {
+    //       return resolve(user);
+    //     }
+    //     user.username = result.username;
+    //     user.password = result.password;
+    //     return resolve(user);
+    //   });
+    // });
 
   }
 
@@ -260,7 +261,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       view.closed = false;
       view.remoteApp = node.id;
       view.user = user;
-      view.type = 'rdp';
+      view.type = 'remoteapp';
       this.onNewView.emit(view);
     }
   }
@@ -325,8 +326,10 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       view.user = user;
       if (user.protocol === 'ssh' || user.protocol === 'telnet') {
         view.type = 'ssh';
-      } else if (user.protocol === 'rdp' || user.protocol === 'vnc') {
+      } else if (user.protocol === 'rdp') {
         view.type = 'rdp';
+      } else if (user.protocol === 'vnc') {
+        view.type = 'vnc';
       }
       this.onNewView.emit(view);
     }

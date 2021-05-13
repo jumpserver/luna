@@ -1,6 +1,3 @@
 <div class="rdpIframe">
-  <iframe #rdpRef *ngIf="target" [src]="trust(target)" width="100%" height="100%" (mouseenter)="active()"></iframe>
-  <div *ngIf="isIdleTimeout" class="idleTimeout">
-    {{ idleTimeoutMsg | translate }}
-  </div>
+  <iframe #terminal [src]="target | safeUrl" *ngIf="target" (load)="listenEvent()" width="100%" height="100%" [id]="terminalID"></iframe>
 </div>
