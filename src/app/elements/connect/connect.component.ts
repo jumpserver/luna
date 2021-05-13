@@ -217,24 +217,25 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return Promise.resolve(user);
     }
     user = Object.assign({}, user);
-    return new Promise(resolve => {
-      const dialogRef = this._dialog.open(ManualPasswordDialogComponent, {
-        height: '250px',
-        width: '500px',
-        data: {username: user.username}
-      });
-      dialogRef.afterClosed().subscribe(result => {
-        if (!result) {
-          return resolve(null);
-        }
-        if (result.skip) {
-          return resolve(user);
-        }
-        user.username = result.username;
-        user.password = result.password;
-        return resolve(user);
-      });
-    });
+    return Promise.resolve(user);
+    // return new Promise(resolve => {
+    //   const dialogRef = this._dialog.open(ManualPasswordDialogComponent, {
+    //     height: '250px',
+    //     width: '500px',
+    //     data: {username: user.username}
+    //   });
+    //   dialogRef.afterClosed().subscribe(result => {
+    //     if (!result) {
+    //       return resolve(null);
+    //     }
+    //     if (result.skip) {
+    //       return resolve(user);
+    //     }
+    //     user.username = result.username;
+    //     user.password = result.password;
+    //     return resolve(user);
+    //   });
+    // });
 
   }
 
