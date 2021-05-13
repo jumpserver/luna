@@ -61,6 +61,9 @@ export class ElementGuacamoleComponent implements OnInit {
     if (this.host) {
       this.target = `${baseUrl}/?target_id=${this.host.id}&type=${this.view.type}&system_user_id=${this.sysUser.id}`;
     }
+    if (this.remoteAppId) {
+      this.target = `${baseUrl}/?target_id=${this.remoteAppId}&type=${this.view.type}&system_user_id=${this.sysUser.id}`;
+    }
     if (this.token) {
       this.target = `${baseUrl}/?token=${this.token}`;
     }
