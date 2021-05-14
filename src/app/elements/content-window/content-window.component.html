@@ -14,7 +14,7 @@
     [sysUser]="view.user"
     [remoteAppId]="view.remoteApp"
     [token]="view.token"
-    *ngIf="view.type=='rdp' || 'vnc' || 'remoteapp'"
+    *ngIf="view.type=='rdp' || view.type=='vnc' || view.type=='remoteapp'"
   >
   </elements-guacamole>
   <app-sftp *ngIf="view.type=='sftp'" [host]="view.host"></app-sftp>
