@@ -138,3 +138,7 @@ body ::-webkit-scrollbar-thumb {
 #toast-container > .toast-success:before {
   content: "";
 }
+
+.fa {
+  font-family: FontAwesome !important;
+}

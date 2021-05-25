@@ -2,6 +2,7 @@ import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
 import {SettingService, ViewService} from '@app/services';
 import * as jQuery from 'jquery/dist/jquery.min.js';
+import * as _ from 'lodash';
 
 @Component({
   selector: 'elements-content',
@@ -104,7 +105,6 @@ export class ElementContentComponent implements OnInit {
     }
 
     this.batchCommand = '';
-
   }
 
   showRMenu(left, top) {
@@ -151,7 +151,7 @@ export class ElementContentComponent implements OnInit {
   rCloseRight() {
     // 关闭右侧tab
     for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
-      this.closeView(this.viewList[i].host);
+      this.closeView(this.viewList[i].node);
     }
   }
 
@@ -164,17 +164,8 @@ export class ElementContentComponent implements OnInit {
   }
 
   rCloneConnect() {
-    const v = new View();
     const id = this.rIdx + 1;
-    const host = this.viewList[this.rIdx].host;
-    const user = this.viewList[this.rIdx].user;
-    v.nick = host.hostname || host.title;
-    v.connected = true;
-    v.editable = false;
-    v.closed = false;
-    v.host = host;
-    v.user = user;
-    v.type = this.viewList[this.rIdx].type;
+    const v = _.cloneDeep(this.viewList[this.rIdx]);
     this.viewList.splice(id, 0, v);
     this.setViewActive(v);
   }

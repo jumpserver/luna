@@ -1,6 +1,6 @@
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import {async, ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { ElementTermComponent } from './term.component';
+import {ElementTermComponent} from './term.component';
 
 describe('ElementTermComponent', () => {
   let component: ElementTermComponent;

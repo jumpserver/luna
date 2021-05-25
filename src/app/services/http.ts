@@ -1,8 +1,8 @@
 import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
-import {Browser, DataStore} from '@app/globals';
-import { retryWhen, delay, tap, scan, concatMap } from 'rxjs/operators';
-import {GuacObjAddResp, SystemUser, TreeNode, User as _User} from '@app/model';
+import {Browser} from '@app/globals';
+import {retryWhen, delay, scan} from 'rxjs/operators';
+import {SystemUser, TreeNode, User as _User, Session} from '@app/model';
 import {SettingService} from './setting';
 import {getCookie} from '@app/utils/common';
 
@@ -63,11 +63,11 @@ export class HttpService {
   }
 
   reportBrowser() {
-    return this.http.post('/api/browser', JSON.stringify(Browser));
+    return this.post('/api/browser', JSON.stringify(Browser));
   }
 
   checkLogin(user: any) {
-    return this.http.post('/api/checklogin', user);
+    return this.post('/api/checklogin', user);
   }
 
   getUserProfile() {
@@ -86,8 +86,8 @@ export class HttpService {
 
   getMyGrantedNodes(async: boolean, refresh?: boolean) {
     const cachePolicy = refresh ? `2&rebuild_tree=1` : '1';
-    const syncUrl = `/api/v1/perms/users/nodes-with-assets/tree/?cache_policy=${cachePolicy}`;
-    const asyncUrl = `/api/v1/perms/users/nodes/children-with-assets/tree/?cache_policy=${cachePolicy}`;
+    const syncUrl = `/api/v1/perms/users/nodes-with-assets/tree/`;
+    const asyncUrl = `/api/v1/perms/users/nodes/children-with-assets/tree/`;
     const url = async ? asyncUrl : syncUrl;
     return this.http.get<Array<TreeNode>>(url).pipe(
       retryWhen(err => err.pipe(
@@ -119,6 +119,7 @@ export class HttpService {
     }
     return this.http.get<Array<TreeNode>>(url);
   }
+
   getMyGrantedK8SApps(id?: string) {
     let url = '/api/v1/perms/users/applications/tree/?category=cloud';
     if (id) {
@@ -160,103 +161,10 @@ export class HttpService {
       return this.delete(url);
     }
   }
+
   getFavoriteAssets() {
     const url = '/api/v1/assets/favorite-assets/';
     return this.http.get<Array<any>>(url);
-  }
-  getGuacamoleToken(user_id: string, authToken: string) {
-    const body = new HttpParams()
-      .set('username', user_id)
-      .set('password', 'jumpserver')
-      .set('asset_token', authToken);
-//  {
-// "authToken": "xxxxxxx",
-// "username": "xxxxxx",
-// "dataSource": "jumpserver",
-// "availableDataSources":[
-// "jumpserver"
-// ]
-// }
-    return this.http.post('/guacamole/api/tokens',
-      body.toString(),
-      {headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')});
-  }
-
-  guacamoleAddAsset(userId: string, assetId: string, systemUserId: string, systemUserUsername?: string, systemUserPassword?: string) {
-    let params = new HttpParams()
-      .set('user_id', userId)
-      .set('asset_id', assetId)
-      .set('system_user_id', systemUserId)
-      .set('token', localStorage.getItem('guacamoleToken'));
-    let body = new HttpParams();
-    if (systemUserUsername && systemUserPassword) {
-      systemUserUsername = btoa(systemUserUsername);
-      systemUserPassword = btoa(systemUserPassword);
-      body = body.set('username', systemUserUsername).set('password', systemUserPassword);
-    }
-    const resolution = this.settingSrv.setting.rdpResolution || 'Auto';
-    if (resolution !== 'Auto') {
-      const width = resolution.split('x')[0];
-      const height = resolution.split('x')[1];
-      params = params.set('width', width).set('height', height);
-    }
-
-    return this.http.post<GuacObjAddResp>(
-      '/guacamole/api/session/ext/jumpserver/asset/add',
-      body.toString(),
-      {
-        headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
-        params: params
-      }
-    );
-  }
-
-  guacamoleAddRemoteApp(userId: string, remoteAppId: string, sysUserId: string, systemUserUsername?: string, systemUserPassword?: string) {
-    let params = new HttpParams()
-      .set('user_id', userId)
-      .set('remote_app_id', remoteAppId)
-      .set('system_user_id', sysUserId)
-      .set('token', localStorage.getItem('guacamoleToken'));
-    let body = new HttpParams();
-    if (systemUserUsername && systemUserPassword) {
-      systemUserUsername = btoa(systemUserUsername);
-      systemUserPassword = btoa(systemUserPassword);
-      body = body.set('username', systemUserUsername).set('password', systemUserPassword);
-    }
-    const resolution = this.settingSrv.setting.rdpResolution || 'Auto';
-    if (resolution !== 'Auto') {
-      const width = resolution.split('x')[0];
-      const height = resolution.split('x')[1];
-      params = params.set('width', width).set('height', height);
-    }
-
-    return this.http.post<GuacObjAddResp>(
-      '/guacamole/api/session/ext/jumpserver/remote-app/add',
-      body.toString(),
-      {
-        headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
-        params: params
-      }
-    );
-  }
-
-  guacamoleTokenAddAsset(assetToken: string) {
-    let params = new HttpParams()
-      .set('asset_token', assetToken)
-      .set('token',  localStorage.getItem('guacamoleToken'));
-    const resolution = this.settingSrv.setting.rdpResolution || 'Auto';
-    if (resolution !== 'Auto') {
-      const width = resolution.split('x')[0];
-      const height = resolution.split('x')[1];
-      params = params.set('width', width).set('height', height);
-    }
-    return this.http.get(
-      '/guacamole/api/ext/jumpserver/asset/token/add',
-      {
-        headers: new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded'),
-        params: params
-      }
-    );
   }
 
   search(q: string) {
@@ -268,8 +176,8 @@ export class HttpService {
     return this.http.get('/api/v1/terminal/sessions/' + token + '/replay/');
   }
 
-  getSessionDetail(shareroomId: string) {
-    return this.http.get(`/api/v1/terminal/sessions/${shareroomId}/`);
+  getSessionDetail(sid: string): Promise<Session> {
+    return this.http.get<Session>(`/api/v1/terminal/sessions/${sid}/`).toPromise();
   }
 
   // get_replay_json(token: string) {
@@ -287,6 +195,24 @@ export class HttpService {
     return this.http.get('/api/v1/users/connection-token/', {params: params});
   }
 
+  downloadRDPFile(assetId: string, systemUserId: string, solution) {
+    const url = new URL('/api/v1/authentication/connection-token/rdp/file/', window.location.origin);
+    url.searchParams.append('asset', assetId);
+    url.searchParams.append('system_user', systemUserId);
+    if (solution.indexOf('x') > -1) {
+      const [width, height] = solution.split('x');
+      url.searchParams.append('width', width);
+      url.searchParams.append('height', height);
+    }
+    return window.open(url.href);
+  }
 
-
+  createSystemUserTempAuth(systemUser: SystemUser, node: TreeNode, auth: object) {
+    const url = `/api/v1/assets/system-users/${systemUser.id}/temp-auth/`;
+    const data = {
+      instance_id: node.id,
+      ...auth
+    };
+    return this.post(url, data).toPromise();
+  }
 }

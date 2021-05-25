@@ -1,6 +1,6 @@
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import {async, ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { ElementNavComponent } from './nav.component';
+import {ElementNavComponent} from './nav.component';
 
 describe('ElementNavComponent', () => {
   let component: ElementNavComponent;

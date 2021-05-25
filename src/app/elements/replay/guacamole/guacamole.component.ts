@@ -1,6 +1,6 @@
-import { Component, OnInit, Input } from '@angular/core';
+import {Component, OnInit, Input} from '@angular/core';
 import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
-import { Replay } from '@app/model';
+import {Replay} from '@app/model';
 
 function zeroPad(num, minLength) {
   let str = num.toString();

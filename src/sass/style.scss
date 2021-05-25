@@ -27,54 +27,8 @@ $asset-path: '../static/imgs/inspinia';
 //@import '~@swimlane/ngx-datatable/release/assets/icons.css';
 
 @import './material.css';
-//$material-design-icons-font-path: '~/material-design-icons/iconfont/';
-//@import '~material-design-icons/iconfont/material-icons';
-//@font-face {
-//  font-family: 'Material Icons';
-//  font-style: normal;
-//  font-weight: 400;
-//  src: url('#{$material-design-icons-font-path}/MaterialIcons-Regular.eot'); /* For IE6-8 */
-//  src: local('Material Icons'),
-//  local('MaterialIcons-Regular'),
-//  url('#{$material-design-icons-font-path}/MaterialIcons-Regular.woff2') format('woff2'),
-//  url('#{$material-design-icons-font-path}/MaterialIcons-Regular.woff') format('woff'),
-//  url('#{$material-design-icons-font-path}/MaterialIcons-Regular.ttf') format('truetype');
-//}
-//
-//.material-icons {
-//  font-family: 'Material Icons';
-//  font-weight: normal;
-//  font-style: normal;
-//  font-size: 24px; /* Preferred icon size */
-//  display: inline-block;
-//  line-height: 1;
-//  text-transform: none;
-//  letter-spacing: normal;
-//  word-wrap: normal;
-//  white-space: nowrap;
-//  direction: ltr;
-//
-//  /* Support for all WebKit browsers. */
-//  -webkit-font-smoothing: antialiased;
-//  /* Support for Safari and Chrome. */
-//  text-rendering: optimizeLegibility;
-//
-//  /* Support for Firefox. */
-//  -moz-osx-font-smoothing: grayscale;
-//
-//  /* Support for IE. */
-//  font-feature-settings: 'liga';
-//}
-
-//ul {
-//  padding-left: 0;
-//  list-style-type: none;
-//}
-//
-//ngx-tree div.ngx-tree div.ngx-tree-vr {
-//  display: none;
-//}
-
+@import '~material-design-icons/iconfont/material-icons.css';
+$label-margin-bottom: 0;
 .ztree * {
   background-color: inherit !important;
   color: #ffffff;
@@ -103,4 +57,10 @@ button.icon-split-handle.ngx-split-button {
 
 button.mat-raised-button {
   margin-left: 5px;
+}
+
+label {
+  // Allow labels to use `margin` for spacing.
+  display: inline-block;
+  margin-bottom: 0;
 }

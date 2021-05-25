@@ -2,13 +2,13 @@
 
 <mat-form-field>
   <mat-select [(value)]="setting.rdpResolution"
-    placeholder="{{'Select a resolution'| translate}}" >
+    placeholder="{{'RDP resolution'| translate}}" >
     <mat-option *ngFor="let s of resolutionsChoices"  value="{{s}}">{{s}}</mat-option>
   </mat-select>
 </mat-form-field>
 
 <mat-form-field>
-  <input [(ngModel)]="setting.fontSize" matInput placeholder='{{"Font size"| translate}}' name="fontSize" type="number" min="5" max="60" >
+  <input [(ngModel)]="setting.fontSize" matInput placeholder='{{"CLI font size"| translate}}' name="fontSize" type="number" min="5" max="60" >
 </mat-form-field>
 
 <mat-form-field>
@@ -18,24 +18,10 @@
   </mat-select>
 </mat-form-field>
 
-<mat-form-field *ngIf="!globalSetting.WINDOWS_SKIP_ALL_MANUAL_PASSWORD">
-  <mat-select [(value)]="setting.isSkipAllManualPassword"
-    placeholder="{{'Skip manual password'| translate }}" >
-    <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name| translate}}</mat-option>
-  </mat-select>
-</mat-form-field>
-
 <mat-form-field>
   <mat-select [(value)]="setting.quickPaste"
               placeholder="{{'Right mouse quick paste'| translate }}" >
     <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name| translate}}</mat-option>
-  </mat-select>
-</mat-form-field>
-
-<mat-form-field *ngIf="globalSetting.XPACK_LICENSE_IS_VALID">
-  <mat-select [(value)]="setting.sqlClient"
-              placeholder="{{'SQL Client'| translate }}" >
-    <mat-option *ngFor="let s of clientChoices"  value="{{s.value}}">{{s.name| translate}}</mat-option>
   </mat-select>
 </mat-form-field>
 
