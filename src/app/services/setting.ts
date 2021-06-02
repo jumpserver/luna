@@ -2,6 +2,7 @@ import {Injectable} from '@angular/core';
 import {Setting, GlobalSetting} from '@app/model';
 import {LocalStorageService} from './share';
 import {HttpClient} from '@angular/common/http';
+import {TranslateService} from '@ngx-translate/core';
 
 @Injectable()
 export class SettingService {
@@ -20,18 +21,26 @@ export class SettingService {
     } else {
       this.setting = new Setting();
     }
+    this.getPublicSettings();
+  }
+
+  getPublicSettings() {
     this._http.get<any>('/api/v1/settings/public/').subscribe(resp => {
       this.globalSetting  = resp.data;
       this.setting.command_execution = this.globalSetting.SECURITY_COMMAND_EXECUTION;
+
+      // 更改favicon
       const link: any = document.querySelector('link[rel*=\'icon\']') || document.createElement('link');
       link.type = 'image/x-icon';
       link.rel = 'shortcut icon';
       link.href = resp.data.LOGO_URLS.favicon;
 
-      // 动态修改Title
-      if (resp.data.LOGIN_TITLE) { document.title = `Luna - ${resp.data.LOGIN_TITLE}`; }
+      // 改logo
+      const logoRef: any = document.getElementById('left-logo');
 
       document.getElementsByTagName('head')[0].appendChild(link);
+      logoRef.src = resp.data.LOGO_URLS.logo_logout;
+      document.title = `${resp.data.LOGIN_TITLE}`;
     });
   }
 
