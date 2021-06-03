@@ -1,7 +1,7 @@
 'use strict';
 import {EventEmitter} from 'events/events';
 import {BehaviorSubject} from 'rxjs';
-import {ConnectEvt, User as _User } from './model';
+import {ConnectEvt, ConnectType, User as _User} from './model';
 import {DataStore as _DataStore, Browser as _Browser, Video as _Video, Monitor as _Monitor} from './model';
 
 export let TermWS = null;
@@ -31,4 +31,37 @@ export const i18n = new Map();
 
 export const connectEvt = new BehaviorSubject<ConnectEvt>(new ConnectEvt(null, null));
 
+export const TYPE_WEB_CLI: ConnectType = {
+  name: 'Web CLI',
+  id: 'webCLI',
+  requireXPack: false
+};
 
+export const TYPE_WEB_GUI: ConnectType = {
+  name: 'Web GUI',
+  id: 'webGUI',
+  requireXPack: false
+};
+
+export const TYPE_DB_GUI: ConnectType = {
+  name: 'Web GUI',
+  id: 'dbGUI',
+  requireXPack: true
+};
+
+export const TYPE_RDP_CLIENT: ConnectType = {
+  name: 'Microsoft RDP Client',
+  id: 'rdpClient',
+  requireXPack: true
+};
+
+export const ProtocolConnectTypes = {
+  ssh: [TYPE_WEB_CLI],
+  rdp: [TYPE_WEB_GUI, TYPE_RDP_CLIENT],
+  telnet: [TYPE_WEB_CLI],
+  mysql: [TYPE_WEB_CLI, TYPE_DB_GUI],
+  postgre: [TYPE_DB_GUI],
+  oracle: [TYPE_DB_GUI],
+  mariadb: [TYPE_WEB_CLI, TYPE_DB_GUI],
+  k8s: [TYPE_WEB_CLI],
+};

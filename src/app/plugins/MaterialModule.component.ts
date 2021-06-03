@@ -33,6 +33,7 @@ import {
   MatStepperModule,
 } from '@angular/material';
 import {CdkTableModule} from '@angular/cdk/table';
+import {NgxMatSelectSearchModule} from 'ngx-mat-select-search';
 
 @NgModule({
   exports: [
@@ -68,6 +69,7 @@ import {CdkTableModule} from '@angular/cdk/table';
     MatTabsModule,
     MatToolbarModule,
     MatTooltipModule,
+    NgxMatSelectSearchModule
   ]
 })
 export class MaterialModule {

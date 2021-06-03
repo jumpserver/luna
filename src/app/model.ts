@@ -1,5 +1,3 @@
-import {ElementSshTermComponent} from '@app/elements/ssh-term/ssh-term.component';
-
 export class UserGroup {
   id: string;
   name: string;
@@ -66,10 +64,6 @@ export class Asset {
   protocols: Array<string>;
 }
 
-export class GuacObjAddResp {
-  code: number;
-  result: string;
-}
 
 export class ConnectEvt {
   node: TreeNode;
@@ -106,24 +100,35 @@ export class NavEvt {
 export class View {
   id: string;
   nick: string;
-  type: string;
+  connectFrom: string; // token, node, fileManager
+  type: string; // database_app, remote_app, asset, k8s_app
+  protocol: string;
   editable: boolean;
   active: boolean;
   connected: boolean;
   hide: boolean;
   closed: boolean;
-  host: any;
-  user: any;
-  remoteApp: string;
-  room: string;
-  Rdp: any;
-  Term: any;
-  token: any;
-  DatabaseApp: string;
-  K8SApp: string;
-  shareRoomId: string;
-  termComp: ElementSshTermComponent;
-  protocol: string;
+  node: TreeNode;
+  sysUser: SystemUser;
+  // remoteApp: string;
+  // room: string;
+  // Rdp: any;
+  // Term: any;
+  token: string;
+  connectType: ConnectType;
+  termComp: any;
+
+  constructor(node, user, connectFrom, type, protocol) {
+    this.connected = true;
+    this.editable = false;
+    this.closed = false;
+    this.nick = node.name;
+    this.node = node;
+    this.sysUser = user;
+    this.connectFrom = connectFrom;
+    this.type = type;
+    this.protocol = protocol;
+  }
 }
 
 export class ViewAction {
@@ -134,6 +139,12 @@ export class ViewAction {
     this.view = view;
     this.name = name;
   }
+}
+
+export class ConnectType {
+  name: string;
+  id: string;
+  requireXPack: boolean;
 }
 
 export class DataStore {
@@ -174,7 +185,6 @@ export class Browser {
     this.productSub = navigator.productSub;
     this.vendor = navigator.vendor;
   }
-
 }
 
 export class Video {
@@ -241,4 +251,22 @@ export class Session {
   terminal: string;
   user: string;
   user_id: string;
+}
+
+export class SystemUserGroup {
+  name: string;
+  disabled: boolean;
+  systemUsers: SystemUser[];
+}
+
+export class AuthInfo {
+  username: string;
+  password: string;
+}
+
+export class ConnectData {
+  node: TreeNode;
+  systemUser: SystemUser;
+  manualAuthInfo: AuthInfo;
+  connectType: ConnectType;
 }

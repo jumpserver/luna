@@ -1,7 +1,7 @@
 import {Component, Inject, OnInit} from '@angular/core';
 import {HttpService, LocalStorageService, NavService, LogService, ViewService} from '@app/services';
 import {DataStore} from '@app/globals';
-import { TranslateService } from '@ngx-translate/core';
+import {TranslateService} from '@ngx-translate/core';
 import {CookieService} from 'ngx-cookie-service';
 import {ElementLeftBarComponent} from '@app/elements/left-bar/left-bar.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
@@ -16,7 +16,6 @@ import {Nav, View} from '@app/model';
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
   navs: Array<Nav>;
-  _asyncTree = false;
   viewList: Array<View>;
 
   constructor(private _http: HttpService,
@@ -26,20 +25,11 @@ export class ElementNavComponent implements OnInit {
               private _cookie: CookieService,
               public _viewSrv: ViewService,
               public translate: TranslateService,
-              private _localStorage: LocalStorageService) {
-  }
+              ) {}
 
   ngOnInit() {
     this.navs = this.getNav();
     this.viewList = this._viewSrv.viewList;
-  }
-
-  get treeLoadAsync() {
-    return this._asyncTree;
-  }
-
-  set treeLoadAsync(value) {
-    this._asyncTree = value;
   }
 
   click(event) {
@@ -239,16 +229,12 @@ export class ElementNavComponent implements OnInit {
     ];
   }
   Setting() {
-    const dialog = this._dialog.open(
+    this._dialog.open(
       ElementSettingComponent,
       {
-        height: '460px',
+        height: '360px',
         width: '400px',
       });
-    dialog.afterClosed().subscribe(result => {
-      if (result) {
-      }
-    });
   }
 }
 

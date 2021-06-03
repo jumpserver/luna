@@ -27,16 +27,3 @@
         </tbody>
     </table>
 </div>
-
-
-<div #rootRMenu *ngIf="isShowRootRMenu" class="basicContext" [style.top]="pos.top" [style.left]="pos.left">
-  <table>
-    <tbody>
-    <tr *ngFor="let menu of RootRMenuList; let i = index" class="basicContext__item ">
-      <td class="basicContext__data" [attr.data-num]="i" (click)="menu.click()" [ngStyle]="{'display': menu.hide ? 'none': ''}">
-        <span class="basicContext__icon fa" [ngClass]="menu.fa"></span> {{ menu.name| translate }}
-      </td>
-    </tr>
-    </tbody>
-  </table>
-</div>

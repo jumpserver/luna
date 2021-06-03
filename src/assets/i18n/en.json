@@ -15,7 +15,7 @@
 	"Document": "Document",
 	"Favorite": "Favorite",
 	"File Manager": "File Manager",
-	"Font size": "Font size",
+	"CLI font size": "CLI font size",
 	"Found": "Found",
 	"Full Screen": "Full Screen",
 	"Help": "Help",
@@ -28,7 +28,7 @@
 	"Please input password": "Please input password",
 	"Reconnect": "Reconnect",
 	"Search": "Search",
-	"Select a resolution": "Select a resolution",
+	"RDP resolution": "RDP resolution",
 	"Send text to all ssh terminals": "Send text to all ssh terminals",
 	"Setting": "Setting",
 	"Show left manager": "Show left manager",
@@ -67,5 +67,10 @@
   "Remote apps": "Remote apps",
   "Kubernetes": "Kubernetes",
   "Command Line": "Command Line",
-  "Force refresh": "Force refresh"
+  "Force refresh": "Force refresh",
+  "Select system users": "Select system users",
+  "No matching found": "No matching found",
+  "Connect Type": "Connect Type",
+  "Yes": "Yes",
+  "No": "No"
 }

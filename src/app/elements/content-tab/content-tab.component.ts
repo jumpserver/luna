@@ -9,8 +9,14 @@ import {View, ViewAction} from '@app/model';
 export class ElementContentTabComponent implements OnInit {
   @Input() view: View;
   @Output() onAction: EventEmitter<ViewAction> = new EventEmitter<ViewAction>();
+  public iconCls: string;
 
   ngOnInit(): void {
+    if (!this.view.node) {
+      this.iconCls = 'fa-linux';
+    } else {
+      this.iconCls = 'fa-' + this.view.node.iconSkin;
+    }
   }
 
   close() {

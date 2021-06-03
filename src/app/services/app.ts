@@ -2,10 +2,11 @@ import {Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
-import {DataStore, i18n, User} from '@app/globals';
+import {DataStore, i18n, User, ProtocolConnectTypes} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
-import { TranslateService } from '@ngx-translate/core';
+import {TranslateService} from '@ngx-translate/core';
+import {SettingService} from '@app/services/setting';
 
 
 declare function unescape(s: string): string;
@@ -20,6 +21,7 @@ export class AppService implements OnInit {
               private _router: Router,
               private _cookie: CookieService,
               private _logger: LogService,
+              private _settingSvc: SettingService,
               public translate: TranslateService,
               private _localStorage: LocalStorageService) {
     this.setLogLevel();
@@ -27,7 +29,6 @@ export class AppService implements OnInit {
   }
 
   public ngOnInit() {
-
   }
 
   setLogLevel() {
@@ -85,5 +86,20 @@ export class AppService implements OnInit {
       return unescape(r[2]);
     }
     return null;
+  }
+
+  getProtocolConnectTypes() {
+    const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
+    const validTypes = {};
+    for (const [protocol, types] of Object.entries(ProtocolConnectTypes)) {
+      validTypes[protocol] = types.filter((tp) => {
+        if (!xpackEnabled && tp.requireXPack) {
+          return false;
+        } else {
+          return true;
+        }
+      });
+    }
+    return validTypes;
   }
 }

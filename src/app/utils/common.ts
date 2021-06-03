@@ -47,3 +47,10 @@ export function getCookie(name: string): string {
     }
     return cookieValue;
 }
+
+export function groupByProp(xs, key) {
+  return xs.reduce(function(rv, x) {
+    (rv[x[key]] = rv[x[key]] || []).push(x);
+    return rv;
+  }, {});
+}

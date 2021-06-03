@@ -1,5 +1,5 @@
 import {Component, Input, OnInit, OnDestroy, ElementRef, ViewChild, Inject} from '@angular/core';
-import {MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material';
+import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
 import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
@@ -10,8 +10,6 @@ import * as _ from 'lodash';
 import {AppService, HttpService, LogService, NavService, SettingService, TreeFilterService} from '@app/services';
 import {connectEvt} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
-import {AssetTreeDialogComponent} from '@app/elements/connect/connect.component';
-import {ancestorWhere} from 'tslint';
 
 declare var $: any;
 
@@ -24,13 +22,13 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   constructor(private _appSvc: AppService,
               private _treeFilterSvc: TreeFilterService,
+              private activatedRoute: ActivatedRoute,
+              private _http: HttpService,
+              private _settingSvc: SettingService,
+              private toastr: ToastrService,
               public _dialog: MatDialog,
               public _logger: LogService,
               public translate: TranslateService,
-              private activatedRoute: ActivatedRoute,
-              private _http: HttpService,
-              private settingSvc: SettingService,
-              private toastr: ToastrService
   ) {}
 
   get RMenuList() {
@@ -66,20 +64,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     return menuList;
   }
 
-  get RootRMenuList() {
-    const menuList = [{
-      'id': 'refresh',
-      'name': 'Force refresh',
-      'fa': 'fa-refresh',
-      'hide': false,
-      'click': this.forceRefreshTree.bind(this)
-    }];
-    return menuList;
-  }
   @Input() query: string;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu') rMenu: ElementRef;
-  @ViewChild('rootRMenu') rootRMenu: ElementRef;
   Data = [];
   nodes = [];
   setting = {
@@ -109,7 +96,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   assetsTree: any;
   applicationsTree: any;
   isShowRMenu = false;
-  isShowRootRMenu = false;
   rightClickSelectNode: any;
   hasLoginTo = false;
   treeFilterSubscription: any;
@@ -117,7 +103,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   filterAssetCancel$: Subject<boolean> = new Subject();
   loading = true;
   favoriteAssets = [];
-
 
   debouncedOnAssetsNodeClick = _.debounce(this.onAssetsNodeClick, 300, {
     'leading': true,
@@ -130,7 +115,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
-    this.isLoadTreeAsync = this.settingSvc.isLoadTreeAsync();
+    this.isLoadTreeAsync = this._settingSvc.isLoadTreeAsync();
     this.initTree();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
 
@@ -158,20 +143,19 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         });
         return;
       }
-      this._http.getUserProfile().subscribe();
       this.connectAsset(treeNode);
     }
   }
 
   refreshAssetsTree() {
-    this.initAssetsTree(false).then();
+    this.initAssetsTree(true).then();
   }
 
   async initAssetsTree(refresh?: boolean) {
     const setting = Object.assign({}, this.setting);
     const myAssetsNodes = [
       {
-        name: await this.translate.get('My assets').toPromise(),
+        name: this.translate.instant('My assets'),
         id: 'myAssets', isParent: true,
         title: 'My assets',
         children: [], open: true
@@ -184,7 +168,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (this.isLoadTreeAsync) {
       setting['async'] = {
         enable: true,
-        url: '/api/v1/perms/users/nodes/children-with-assets/tree/?cache_policy=1',
+        url: '/api/v1/perms/users/nodes/children-with-assets/tree/',
         autoParam: ['id=key', 'name=n', 'level=lv'],
         type: 'get'
       };
@@ -228,7 +212,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     };
     const applicationNodes = [
       {
-        name: await this.translate.get('My applications').toPromise(),
+        name: this.translate.instant('My applications'),
         id: 'myApplication', isParent: true,
         title: 'My applications',
         children: [], open: true
@@ -250,7 +234,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       id: 'ID_DATABASE_APP_ROOT',
       isParent: true,
       meta: {type: 'database_app'},
-      name: await this.translate.get('Databases').toPromise(),
+      name: await this.translate.instant('Databases'),
       nocheck: false,
       open: false,
       pId: '',
@@ -261,7 +245,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       id: 'ID_K8S_APP_ROOT',
       isParent: true,
       meta: {type: 'k8s_app'},
-      name: await this.translate.get('Kubernetes').toPromise(),
+      name: await this.translate.instant('Kubernetes'),
       nocheck: false,
       open: false,
       pId: '',
@@ -295,7 +279,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       });
       this.applicationsTree = tree;
     }
-
   }
 
   refreshApplicationTree() {
@@ -347,19 +330,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.isShowRMenu = true;
   }
 
-  showRootRMenu(left, top) {
-    const clientHeight = document.body.clientHeight;
-    if (top + 60 > clientHeight) {
-      top -= 60;
-    }
-    this.pos.left = left + 'px';
-    this.pos.top = (top - 25)  + 'px';
-    this.isShowRootRMenu = true;
-  }
-
   hideRMenu() {
     this.isShowRMenu = false;
-    this.isShowRootRMenu = false;
   }
 
   nodeSupportSSH() {
@@ -441,10 +413,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (!treeNode) {
       return null;
     }
-    if (treeNode.id === 'myAssets') {
-      this.showRootRMenu(event.clientX, event.clientY);
-      return;
-    }
     if (treeNode.isParent) {
       this.expandAllChildren(treeId, treeNode, !treeNode.open);
       return;
@@ -470,24 +438,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   connectInNewWindow() {
     const node = this.rightClickSelectNode;
-    let url = '/luna/connect?';
-    switch (node.meta.type) {
-      case 'asset':
-        url += 'asset=' + node.meta.asset.id;
-        break;
-      case 'remote_app':
-        url += 'remote_app=' + node.id;
-        break;
-      case 'k8s_app':
-        url += 'k8s_app=' + node.id;
-        break;
-      case 'database_app':
-        url += 'database_app=' + node.id;
-        break;
-      default:
-        alert('Unknown type: ' + node.meta.type);
-        return;
-    }
+    const url = `/luna/connect?login_to=${node.id}&type=${node.meta.type}`;
     window.open(url, '_blank');
   }
 
@@ -653,6 +604,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     return allChildren;
   }
 }
+
 @Component({
   selector: 'elements-asset-tree-dialog',
   templateUrl: 'disabledWarning.html',

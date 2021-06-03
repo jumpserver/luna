@@ -1,7 +1,3 @@
-iframe {
-  border-width: 0;
-}
-
 .nav {
   display: block;
   height: 30px;
@@ -34,4 +30,8 @@ li  p {
   text-decoration: none;
   padding: 2px 15px;
   height: 30px;
+}
+
+iframe {
+  border-width: 0;
 }

@@ -1,0 +1,3 @@
+<div class="rdpIframe">
+  <iframe #terminal [src]="iframeURL | safeUrl" *ngIf="iframeURL" (load)="listenEvent()" width="100%" height="100%" [id]="terminalID"></iframe>
+</div>

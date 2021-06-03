@@ -8,7 +8,7 @@ import {LocalStorageService} from './share';
 export class NavService {
   onNavClick: EventEmitter<NavEvt> = new EventEmitter<NavEvt>();
 
-  constructor(private store: LocalStorageService) {}
+  constructor(private _localStorage: LocalStorageService) {}
 
   disconnectAllConnection() {
     const evt = new NavEvt('disconnectAll', '');
@@ -23,25 +23,5 @@ export class NavService {
   changeLang(value) {
     const evt = new NavEvt('changeLang', value);
     this.onNavClick.emit(evt);
-  }
-
-  get treeLoadAsync() {
-    const value = this.store.get('LoadTreeAsync');
-    return value === '1';
-  }
-
-  set treeLoadAsync(v: boolean) {
-    const value = v ? '1' : '0';
-    this.store.set('LoadTreeAsync', value);
-  }
-
-  get skipAllManualPassword() {
-    const value = this.store.get('SkipAllManualPassword');
-    return value === '1';
-  }
-
-  set skipAllManualPassword(v) {
-    const value = v ? '1' : '0';
-    this.store.set('SkipAllManualPassword', value);
   }
 }

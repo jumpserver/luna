@@ -2,7 +2,6 @@ import {Injectable} from '@angular/core';
 import {Setting, GlobalSetting} from '@app/model';
 import {LocalStorageService} from './share';
 import {HttpClient} from '@angular/common/http';
-import {TranslateService} from '@ngx-translate/core';
 
 @Injectable()
 export class SettingService {
@@ -10,14 +9,13 @@ export class SettingService {
   globalSetting: GlobalSetting;
   settingKey = 'LunaSetting';
 
-  constructor(private store: LocalStorageService, private _http: HttpClient) {
-    const settingData = this.store.get(this.settingKey);
-    if (settingData) {
-      try {
-        this.setting = JSON.parse(settingData) as Setting;
-      } catch (e) {
-        this.setting = new Setting();
-      }
+  constructor(
+    private _localStorage: LocalStorageService,
+    private _http: HttpClient
+  ) {
+    const settingData = this._localStorage.get(this.settingKey);
+    if (settingData && typeof settingData === 'object') {
+      this.setting = settingData;
     } else {
       this.setting = new Setting();
     }
@@ -38,6 +36,7 @@ export class SettingService {
       // 改logo
       const logoRef: any = document.getElementById('left-logo');
 
+      // 统一修改，避免生效速度不一致
       document.getElementsByTagName('head')[0].appendChild(link);
       logoRef.src = resp.data.LOGO_URLS.logo_logout;
       document.title = `${resp.data.LOGIN_TITLE}`;
@@ -45,8 +44,7 @@ export class SettingService {
   }
 
   save() {
-    const settingData = JSON.stringify(this.setting);
-    this.store.set(this.settingKey, settingData);
+    this._localStorage.set(this.settingKey, this.setting);
   }
 
   isLoadTreeAsync(): boolean {
