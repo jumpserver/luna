@@ -2,15 +2,13 @@
 
 <div (keyup.enter)="onConfirm()" >
   <div class="select-user">
-    <span class="zone-label">
-      <label>{{'Choose a User'| translate}}</label>
-    </span>
     <div>
       <mat-form-field style="width: 100%" >
         <mat-select
           [(value)]="systemUserSelected"
           [compareWith]="compareFn"
           [formControl]="sysUserCtrl"
+          placeholder="{{'Choose a User'| translate}}"
         >
           <mat-option>
             <ngx-mat-select-search
