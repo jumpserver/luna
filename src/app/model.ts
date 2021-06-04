@@ -218,7 +218,7 @@ export class Setting {
   isSkipAllManualPassword: string = '0';
   quickPaste = '0';
   sqlClient = '1';
-  command_execution: boolean = true;
+  commandExecution: boolean = true;
 }
 
 

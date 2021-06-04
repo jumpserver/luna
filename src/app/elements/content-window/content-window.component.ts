@@ -10,6 +10,7 @@ import {TYPE_DB_GUI} from '@app/globals';
 export class ElementContentWindowComponent implements OnInit {
   @Input() view: View;
   connector: any; // koko, omnidb, lion
+  public id: string;
 
   constructor() {
   }

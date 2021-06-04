@@ -1,2 +1,2 @@
-<iframe #terminal [src]="iframeURL | safeUrl" *ngIf="iframeURL" (load)="listenEvent()" width="100%" height="100%" [id]="terminalID"></iframe>
-
+<elements-iframe *ngIf="iframeURL" [src]="iframeURL" [view]="view">
+</elements-iframe>

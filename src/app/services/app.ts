@@ -2,10 +2,9 @@ import {Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
-import {DataStore, i18n, User, ProtocolConnectTypes} from '@app/globals';
+import {DataStore, User, ProtocolConnectTypes} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
-import {TranslateService} from '@ngx-translate/core';
 import {SettingService} from '@app/services/setting';
 
 
@@ -22,7 +21,6 @@ export class AppService implements OnInit {
               private _cookie: CookieService,
               private _logger: LogService,
               private _settingSvc: SettingService,
-              public translate: TranslateService,
               private _localStorage: LocalStorageService) {
     this.setLogLevel();
     this.checklogin();
