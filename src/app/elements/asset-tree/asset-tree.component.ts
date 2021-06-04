@@ -22,13 +22,13 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   constructor(private _appSvc: AppService,
               private _treeFilterSvc: TreeFilterService,
-              private activatedRoute: ActivatedRoute,
+              private _route: ActivatedRoute,
               private _http: HttpService,
               private _settingSvc: SettingService,
-              private toastr: ToastrService,
-              public _dialog: MatDialog,
-              public _logger: LogService,
-              public translate: TranslateService,
+              private _dialog: MatDialog,
+              private _logger: LogService,
+              private _i18n: TranslateService,
+              private _toastr: ToastrService,
   ) {}
 
   get RMenuList() {
@@ -155,7 +155,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     const setting = Object.assign({}, this.setting);
     const myAssetsNodes = [
       {
-        name: this.translate.instant('My assets'),
+        name: await this._i18n.get('My assets').toPromise(),
         id: 'myAssets', isParent: true,
         title: 'My assets',
         children: [], open: true
@@ -212,7 +212,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     };
     const applicationNodes = [
       {
-        name: this.translate.instant('My applications'),
+        name: await this._i18n.get('My applications').toPromise(),
         id: 'myApplication', isParent: true,
         title: 'My applications',
         children: [], open: true
@@ -223,7 +223,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       id: 'ID_REMOTE_APP_ROOT',
       isParent: true,
       meta: {type: 'remote_app'},
-      name: this.translate.instant('Remote apps'),
+      name: await this._i18n.get('Remote apps').toPromise(),
       nocheck: false,
       open: false,
       pId: '',
@@ -234,7 +234,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       id: 'ID_DATABASE_APP_ROOT',
       isParent: true,
       meta: {type: 'database_app'},
-      name: await this.translate.instant('Databases'),
+      name: await this._i18n.get('Databases').toPromise(),
       nocheck: false,
       open: false,
       pId: '',
@@ -245,7 +245,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       id: 'ID_K8S_APP_ROOT',
       isParent: true,
       meta: {type: 'k8s_app'},
-      name: await this.translate.instant('Kubernetes'),
+      name: await this._i18n.get('Kubernetes').toPromise(),
       nocheck: false,
       open: false,
       pId: '',
@@ -452,12 +452,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       this._http.favoriteAsset(assetId, false).subscribe(() => {
         const i = this.favoriteAssets.indexOf(assetId);
         this.favoriteAssets.splice(i, 1);
-        this.toastr.success(this.translate.instant('Disfavor') + ' ' + this.translate.instant('success'), '', {timeOut: 2000});
+        this._toastr.success(this._i18n.instant('Disfavor') + ' ' + this._i18n.instant('success'), '', {timeOut: 2000});
       });
     } else {
       this._http.favoriteAsset(assetId, true).subscribe(() => {
         this.favoriteAssets.push(assetId);
-        this.toastr.success(this.translate.instant('Favorite') + ' ' + this.translate.instant('success'), '', {timeOut: 2000});
+        this._toastr.success(this._i18n.instant('Favorite') + ' ' + this._i18n.instant('success'), '', {timeOut: 2000});
       });
     }
   }
@@ -542,7 +542,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.filterAssetCancel$))
       .subscribe(nodes => {
         this.loading = false;
-        let name = this.translate.instant('Search');
+        let name = this._i18n.instant('Search');
         const assetsAmount = nodes.length;
         name = `${name} (${assetsAmount})`;
         const newNode = {id: 'search', name: name, isParent: true, open: true, zAsync: true};

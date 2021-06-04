@@ -25,7 +25,7 @@ export class SettingService {
   getPublicSettings() {
     this._http.get<any>('/api/v1/settings/public/').subscribe(resp => {
       this.globalSetting  = resp.data;
-      this.setting.command_execution = this.globalSetting.SECURITY_COMMAND_EXECUTION;
+      this.setting.commandExecution = this.globalSetting.SECURITY_COMMAND_EXECUTION;
 
       // 更改favicon
       const link: any = document.querySelector('link[rel*=\'icon\']') || document.createElement('link');

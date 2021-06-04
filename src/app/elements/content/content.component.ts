@@ -96,7 +96,7 @@ export class ElementContentComponent implements OnInit {
 
     const cmd = this.batchCommand + '\r';
     for (let i = 0; i < this.viewList.length; i++) {
-      if (this.viewList[i].type !== 'ssh' || this.viewList[i].connected !== true) {
+      if (this.viewList[i].protocol !== 'ssh' || this.viewList[i].connected !== true) {
         continue;
       }
       const d = {'data': cmd};

@@ -13,7 +13,6 @@ import {TranslateService} from '@ngx-translate/core';
 export class ElementSettingComponent implements OnInit {
   resolutionsChoices = ['Auto', '1024x768', '1366x768', '1600x900', '1920x1080'];
   public boolChoices: any[];
-  clientChoices = [{name: this.translate.instant('Command Line'), value: '0'}, {name: 'Web UI', value: '1'}];
   setting: Setting;
   globalSetting: GlobalSetting;
 
