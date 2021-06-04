@@ -1,12 +1,12 @@
 import {Component, Inject, OnInit} from '@angular/core';
-import {HttpService, LocalStorageService, NavService, LogService, ViewService} from '@app/services';
+import {HttpService, NavService, LogService, ViewService} from '@app/services';
 import {DataStore} from '@app/globals';
-import {TranslateService} from '@ngx-translate/core';
 import {CookieService} from 'ngx-cookie-service';
 import {ElementLeftBarComponent} from '@app/elements/left-bar/left-bar.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {Nav, View} from '@app/model';
+import {I18nService} from '@app/services/i18n';
 
 @Component({
   selector: 'elements-nav',
@@ -20,11 +20,11 @@ export class ElementNavComponent implements OnInit {
 
   constructor(private _http: HttpService,
               private _logger: LogService,
-              public _dialog: MatDialog,
-              public _navSvc: NavService,
+              private _dialog: MatDialog,
+              private _navSvc: NavService,
               private _cookie: CookieService,
+              private _i18n: I18nService,
               public _viewSrv: ViewService,
-              public translate: TranslateService,
               ) {}
 
   ngOnInit() {
@@ -105,13 +105,11 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'English': {
-        this.translate.use('en');
-        this._cookie.set('django_language', 'en');
+        this._i18n.use('en');
         break;
       }
       case 'Chinese': {
-        this.translate.use('zh');
-        this._cookie.set('django_language', 'zh-hans');
+        this._i18n.use('zh');
         break;
       }
       default: {

@@ -1,8 +1,6 @@
-import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
-import {CookieService} from 'ngx-cookie-service';
-import {HttpService, LogService, SettingService} from '@app/services';
+import {Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
+import {LogService} from '@app/services';
 import {TreeNode, SystemUser} from '@app/model';
-import {DomSanitizer} from '@angular/platform-browser';
 import {View} from '@app/model';
 
 @Component({
@@ -12,10 +10,7 @@ import {View} from '@app/model';
 })
 export class ElementConnectorLionComponent implements OnInit {
   @Input() view: View;
-  @ViewChild('rdpRef') el: ElementRef;
-  registered = false;
-  iframeWindow: any;
-  terminalID: any;
+  @ViewChild('terminal') el: ElementRef;
   iframeURL: any;
   node: TreeNode;
   sysUser: SystemUser;
@@ -23,25 +18,7 @@ export class ElementConnectorLionComponent implements OnInit {
 
   public baseUrl = `${document.location.origin}/lion`;
 
-  constructor(private sanitizer: DomSanitizer,
-              private _http: HttpService,
-              private _cookie: CookieService,
-              private settingSvc: SettingService,
-              private _logger: LogService) {
-  }
-
-  listenEvent() {
-    if (!this.iframeURL || this.iframeURL === 'about:blank') {
-      return null;
-    }
-    const isIFrame = (input: HTMLElement | null): input is HTMLIFrameElement =>
-      input !== null && input.tagName === 'IFRAME';
-    const frame = document.getElementById(this.terminalID);
-    if (isIFrame(frame) && frame.contentWindow) {
-      frame.contentWindow.addEventListener('CLOSE', (e) => {
-        this.view.connected = false;
-      });
-    }
+  constructor(private _logger: LogService) {
   }
 
   ngOnInit() {
@@ -87,5 +64,4 @@ export class ElementConnectorLionComponent implements OnInit {
   active() {
     this.el.nativeElement.focus();
   }
-
 }

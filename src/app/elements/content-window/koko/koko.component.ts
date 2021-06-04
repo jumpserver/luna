@@ -1,8 +1,6 @@
 import {Component, Input, OnInit, ViewChild, ElementRef, Inject} from '@angular/core';
 import {View, SystemUser, TreeNode} from '@app/model';
-import {HttpService, LogService, SettingService, UUIDService} from '@app/services';
-import {TranslateService} from '@ngx-translate/core';
-import {DomSanitizer} from '@angular/platform-browser';
+import {LogService} from '@app/services';
 
 
 @Component({
@@ -18,14 +16,8 @@ export class ElementConnectorKokoComponent implements OnInit {
   node: TreeNode;
   sysUser: SystemUser;
   protocol: string;
-  terminalID: any;
 
-  constructor(private _uuid: UUIDService,
-              private sanitizer: DomSanitizer,
-              private _logger: LogService,
-              private settingSvc: SettingService,
-              private _http: HttpService,
-              public translate: TranslateService ) {
+  constructor(private _logger: LogService ) {
   }
 
   ngOnInit() {
@@ -48,10 +40,6 @@ export class ElementConnectorKokoComponent implements OnInit {
         this.generateFileManagerURL();
         break;
     }
-
-    this.view.termComp = this;
-    this.terminalID = Math.random().toString(36).substr(2);
-    this._logger.debug('What is the iframe url: ', this.iframeURL);
   }
 
   generateNodeConnectUrl() {
@@ -76,38 +64,5 @@ export class ElementConnectorKokoComponent implements OnInit {
 
   generateFileManagerURL() {
     this.iframeURL = `/koko/elfinder/sftp/${this.node.id}/`;
-  }
-
-  listenEvent() {
-    if (!this.iframeURL || this.iframeURL === 'about:blank') {
-      return null;
-    }
-    const isIFrame = (input: HTMLElement | null): input is HTMLIFrameElement =>
-      input !== null && input.tagName === 'IFRAME';
-    const frame = document.getElementById(this.terminalID);
-    if (isIFrame(frame) && frame.contentWindow) {
-      frame.contentWindow.addEventListener('CLOSE', (e) => {
-        this.view.connected = false;
-      });
-    }
-  }
-
-  reconnect() {
-    const url = this.iframeURL;
-    this.iframeURL = 'about:blank';
-    setTimeout(() => {
-      this.iframeURL = url;
-    }, 10);
-    this.view.connected = true;
-  }
-
-  sendCommand(data) {
-    const isIFrame = (input: HTMLElement | null): input is HTMLIFrameElement =>
-      input !== null && input.tagName === 'IFRAME';
-    const frame = document.getElementById(this.terminalID);
-    if (isIFrame(frame) && frame.contentWindow) {
-      const iframeWindow: any = frame.contentWindow;
-      iframeWindow.SendTerminalData(data.data);
-    }
   }
 }
