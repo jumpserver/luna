@@ -6,7 +6,7 @@ import {FormControl, Validators} from '@angular/forms';
 import {ReplaySubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {groupByProp} from '@app/utils/common';
-import {SystemUserGroup, SystemUser, AuthInfo, ConnectType, ConnectData} from '@app/model';
+import {SystemUserGroup, SystemUser, AuthInfo, ConnectType, ConnectData, TreeNode} from '@app/model';
 
 @Component({
   selector: 'elements-asset-tree-dialog',
@@ -14,6 +14,7 @@ import {SystemUserGroup, SystemUser, AuthInfo, ConnectType, ConnectData} from '@
   styleUrls: ['./connect-dialog.component.scss'],
 })
 export class ConnectDialogComponent implements OnInit, OnDestroy {
+  public node: TreeNode;
   public systemUserSelected: SystemUser;
   public systemUsers: SystemUser[];
   public systemUsersGroups: SystemUserGroup[];
@@ -42,8 +43,9 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.systemUsers = this.data.systemUsers;
+    this.node = this.data.node;
     this.systemUsersGroups = this.groupSystemUsers();
-    this.systemUserSelected = this.systemUsers[0];
+    this.systemUserSelected = this.getPreferSystemUser();
     this.filteredUsersGroups.next(this.systemUsersGroups.slice());
     this.filteredCtrl.valueChanges
       .pipe(takeUntil(this._onDestroy))
@@ -138,10 +140,18 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
     );
   }
 
+  getPreferSystemUser() {
+    const preferId = this._appSvc.getNodePreferSystemUser(this.node.id);
+    const matchedSystemUsers = this.systemUsers.filter((item) => item.id === preferId);
+    if (matchedSystemUsers.length === 1) {
+      return matchedSystemUsers[0];
+    } else {
+      return this.systemUsers[0];
+    }
+  }
+
   getPreferConnectType() {
-    const key = `ProtocolPreferLoginType`;
-    const preferTypesSetting = this._localStorage.get(key) || {};
-    const preferConnectTypeId = preferTypesSetting[this.systemUserSelected.protocol];
+    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType(this.systemUserSelected.protocol);
     const matchedTypes = this.connectTypes.filter((item) => item.id === preferConnectTypeId);
     if (matchedTypes.length === 1) {
       return matchedTypes[0];
@@ -150,19 +160,13 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
     }
   }
 
-  recordPreferConnectType() {
-    const key = `ProtocolPreferLoginType`;
-    const preferTypesSetting = this._localStorage.get(key) || {};
-    preferTypesSetting[this.systemUserSelected.protocol] = this.connectType.id;
-    this._localStorage.set(key, preferTypesSetting);
-  }
-
   onConfirm() {
     this.outputData.systemUser = this.systemUserSelected;
     this.outputData.manualAuthInfo = this.manualAuthInfo;
     this.outputData.connectType = this.connectType;
 
-    this.recordPreferConnectType();
+    this._appSvc.setNodePreferSystemUser(this.node.id, this.systemUserSelected.id);
+    this._appSvc.setProtocolPreferLoginType(this.systemUserSelected.protocol, this.connectType.id);
     this.dialogRef.close(this.outputData);
   }
 }
