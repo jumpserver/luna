@@ -19,6 +19,9 @@ export {SettingService} from './setting';
 import {ViewService} from './view';
 export {ViewService} from './view';
 
+import {I18nService} from './i18n';
+export {I18nService};
+
 export const AllServices = [
   LogService,
   LocalStorageService,
@@ -29,5 +32,6 @@ export const AllServices = [
   TreeFilterService,
   SettingService,
   ViewService,
+  I18nService
 ];
 

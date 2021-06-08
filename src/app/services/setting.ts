@@ -2,6 +2,7 @@ import {Injectable} from '@angular/core';
 import {Setting, GlobalSetting} from '@app/model';
 import {LocalStorageService} from './share';
 import {HttpClient} from '@angular/common/http';
+import {I18nService} from '@app/services/i18n';
 
 @Injectable()
 export class SettingService {
@@ -11,7 +12,8 @@ export class SettingService {
 
   constructor(
     private _localStorage: LocalStorageService,
-    private _http: HttpClient
+    private _http: HttpClient,
+    private _i18n: I18nService
   ) {
     const settingData = this._localStorage.get(this.settingKey);
     if (settingData && typeof settingData === 'object') {
@@ -39,7 +41,7 @@ export class SettingService {
       // 统一修改，避免生效速度不一致
       document.getElementsByTagName('head')[0].appendChild(link);
       logoRef.src = resp.data.LOGO_URLS.logo_logout;
-      document.title = `${resp.data.LOGIN_TITLE}`;
+      document.title = this._i18n.instant('Web Terminal') + ` - ${resp.data.LOGIN_TITLE}`;
     });
   }
 

@@ -67,7 +67,7 @@
     "material-design-icons": "^3.0.1",
     "metismenu": "^2.7.9",
     "neffos.js": "^0.1.19",
-    "ngx-cookie-service": "^1.0.10",
+    "ngx-cookie-service": "^2.3.0",
     "ngx-logger": "4.0.4",
     "ngx-mat-select-search": "^1.8.0",
     "ngx-toastr": "^10.2.0",
