@@ -154,7 +154,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     const setting = Object.assign({}, this.setting);
     const myAssetsNodes = [
       {
-        name: await this._i18n.get('My assets'),
+        name: await this._i18n.t('My assets'),
         id: 'myAssets', isParent: true,
         title: 'My assets',
         children: [], open: true
