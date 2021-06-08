@@ -154,7 +154,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     const setting = Object.assign({}, this.setting);
     const myAssetsNodes = [
       {
-        name: await this._i18n.get('My assets').toPromise(),
+        name: await this._i18n.t('My assets'),
         id: 'myAssets', isParent: true,
         title: 'My assets',
         children: [], open: true
@@ -211,7 +211,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     };
     const applicationNodes = [
       {
-        name: await this._i18n.get('My applications').toPromise(),
+        name: await this._i18n.t('My applications'),
         id: 'myApplication', isParent: true,
         title: 'My applications',
         children: [], open: true
@@ -222,7 +222,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       id: 'ID_REMOTE_APP_ROOT',
       isParent: true,
       meta: {type: 'remote_app'},
-      name: await this._i18n.get('Remote apps').toPromise(),
+      name: await this._i18n.t('Remote apps'),
       nocheck: false,
       open: false,
       pId: '',
@@ -233,7 +233,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       id: 'ID_DATABASE_APP_ROOT',
       isParent: true,
       meta: {type: 'database_app'},
-      name: await this._i18n.get('Databases').toPromise(),
+      name: await this._i18n.t('Databases'),
       nocheck: false,
       open: false,
       pId: '',
@@ -244,7 +244,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       id: 'ID_K8S_APP_ROOT',
       isParent: true,
       meta: {type: 'k8s_app'},
-      name: await this._i18n.get('Kubernetes').toPromise(),
+      name: await this._i18n.t('Kubernetes'),
       nocheck: false,
       open: false,
       pId: '',

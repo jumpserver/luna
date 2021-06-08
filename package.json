@@ -61,6 +61,7 @@
     "bootstrap": "^4.3.1",
     "codemirror": "^5.42.0",
     "core-js": "^2.5.4",
+    "crypto-js": "^4.0.0",
     "font-awesome": "4.7.0",
     "guacamole-common-js": "1.1.0",
     "jquery": "^3.4.1",

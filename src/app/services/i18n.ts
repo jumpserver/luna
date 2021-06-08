@@ -43,6 +43,10 @@ export class I18nService {
     return this._translate.get(key).toPromise();
   }
 
+  get(key): Promise<string> {
+    return this._translate.get(key).toPromise();
+  }
+
   instant(key): string {
     return this._translate.instant(key);
   }

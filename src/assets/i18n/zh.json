@@ -73,5 +73,7 @@
   "Connect Type": "连接方式",
   "Yes": "是",
   "No": "否",
-  "Web Terminal": "Web终端"
+  "Web Terminal": "Web终端",
+  "Remember in browser": "记住密码到浏览器",
+  "Account info": "账号信息"
 }

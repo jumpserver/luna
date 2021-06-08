@@ -1,38 +1,39 @@
-<h1 mat-dialog-title>{{"Connect" | translate}}</h1>
+<h1 mat-dialog-title>{{"Connect" | translate}} {{ node.name | truncatechars:30 }}</h1>
 
 <div (keyup.enter)="onConfirm()" >
   <div class="select-user">
-    <div>
-      <mat-form-field style="width: 100%" >
-        <mat-select
-          [(value)]="systemUserSelected"
-          [compareWith]="compareFn"
-          [formControl]="sysUserCtrl"
-          placeholder="{{'Choose a User'| translate}}"
-        >
-          <mat-option>
-            <ngx-mat-select-search
-              placeholderLabel="{{ 'Search' | translate }}"
-              [formControl]="filteredCtrl"
-              noEntriesFoundLabel="{{ 'No matching found' | translate }}"
-            >
-              <mat-icon ngxMatSelectSearchClear>close</mat-icon>
-            </ngx-mat-select-search>
+    <label class="zone-label" style="margin-bottom: 0" for="selectUsers">{{ "Select system users" | translate }}</label>
+    <mat-form-field style="width: 100%;margin-top:-10px" >
+      <mat-select
+        id="selectUsers"
+        [(value)]="systemUserSelected"
+        [compareWith]="compareFn"
+        [formControl]="sysUserCtrl"
+      >
+        <mat-option>
+          <ngx-mat-select-search
+            placeholderLabel="{{ 'Search' | translate }}"
+            [formControl]="filteredCtrl"
+            noEntriesFoundLabel="{{ 'No matching found' | translate }}"
+          >
+            <mat-icon ngxMatSelectSearchClear>close</mat-icon>
+          </ngx-mat-select-search>
+        </mat-option>
+        <mat-optgroup *ngFor="let group of filteredUsersGroups | async"
+                      [label]="group.name"
+                      [disabled]="group.disabled">
+          <mat-option *ngFor="let sysUser of group.systemUsers" [value]="sysUser">
+            {{sysUser.name}}({{sysUser.username}})
           </mat-option>
-          <mat-optgroup *ngFor="let group of filteredUsersGroups | async" [label]="group.name"
-                        [disabled]="group.disabled">
-            <mat-option *ngFor="let sysUser of group.systemUsers" [value]="sysUser">
-              {{sysUser.name}}({{sysUser.username}})
-            </mat-option>
-          </mat-optgroup>
-        </mat-select>
-      </mat-form-field>
-      <mat-error *ngIf="sysUserCtrl.hasError('required')">{{"Please choose a User"| translate}}</mat-error>
-    </div>
+        </mat-optgroup>
+      </mat-select>
+    </mat-form-field>
+    <mat-error *ngIf="sysUserCtrl.hasError('required')">{{"Please choose a User"| translate}}</mat-error>
   </div>
 
-  <div *ngIf="systemUserSelected.login_mode === 'manual'" class="account-info">
-    <div style="border: none #cfcfe0 1px; padding: 0">
+  <div *ngIf="systemUserSelected.login_mode === 'manual'" class="manual-auth">
+   <label class="zone-label">{{ "Account info" | translate }}</label>
+    <div class="account-info">
       <mat-form-field style="width: 45%">
         <input
           #username
@@ -62,14 +63,16 @@
           <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
         </button>
       </mat-form-field>
+
+      <mat-checkbox *ngIf="!rememberAuthDisabled" [(ngModel)]="rememberAuth" class="remember-auth">
+        {{ "Remember in browser" | translate }}
+      </mat-checkbox>
     </div>
   </div>
 
-  <div style="margin-top: 20px">
-    <span class="zone-label">
-      <label for="connect-type">{{ "Connect Type" | translate }}</label>
-    </span>
-    <div style="border: solid #cbc9c9 1px; padding: 5px">
+  <div class="connect-type">
+    <label class="zone-label" for="connect-type">{{ "Connect Type" | translate }}</label>
+    <div class="connect-type-group">
       <mat-radio-group aria-label="Select an option" name="connect-type" [(ngModel)]="connectType" id="connect-type">
         <mat-radio-button *ngFor="let type of connectTypes" [value]="type">{{ type.name }}</mat-radio-button>
       </mat-radio-group>

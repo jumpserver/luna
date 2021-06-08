@@ -3,7 +3,6 @@ import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Browser} from '@app/globals';
 import {retryWhen, delay, scan} from 'rxjs/operators';
 import {SystemUser, TreeNode, User as _User, Session} from '@app/model';
-import {SettingService} from './setting';
 import {getCookie} from '@app/utils/common';
 
 
@@ -11,8 +10,7 @@ import {getCookie} from '@app/utils/common';
 export class HttpService {
   headers = new HttpHeaders();
 
-  constructor(private http: HttpClient, private settingSrv: SettingService) {
-  }
+  constructor(private http: HttpClient) {}
 
   setOptionsCSRFToken(options) {
     const csrfToken = getCookie('csrftoken');

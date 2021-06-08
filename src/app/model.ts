@@ -209,6 +209,7 @@ export class GlobalSetting {
   SECURITY_MAX_IDLE_TIME: number;
   XPACK_LICENSE_IS_VALID: boolean;
   SECURITY_COMMAND_EXECUTION: boolean;
+  SECURITY_LUNA_REMEMBER_AUTH: boolean;
 }
 
 export class Setting {

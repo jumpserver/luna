@@ -6,7 +6,7 @@ import {FormControl, Validators} from '@angular/forms';
 import {ReplaySubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {groupByProp} from '@app/utils/common';
-import {SystemUserGroup, SystemUser, AuthInfo, ConnectType, ConnectData} from '@app/model';
+import {SystemUserGroup, SystemUser, AuthInfo, ConnectType, ConnectData, TreeNode} from '@app/model';
 
 @Component({
   selector: 'elements-asset-tree-dialog',
@@ -14,6 +14,7 @@ import {SystemUserGroup, SystemUser, AuthInfo, ConnectType, ConnectData} from '@
   styleUrls: ['./connect-dialog.component.scss'],
 })
 export class ConnectDialogComponent implements OnInit, OnDestroy {
+  public node: TreeNode;
   public systemUserSelected: SystemUser;
   public systemUsers: SystemUser[];
   public systemUsersGroups: SystemUserGroup[];
@@ -22,6 +23,8 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
   public filteredCtrl: FormControl = new FormControl();
   public hidePassword = true;
   public manualAuthInfo: AuthInfo = new AuthInfo();
+  public rememberAuth = false;
+  public rememberAuthDisabled = false;
   public outputData: ConnectData = new ConnectData();
   protected _onDestroy = new Subject<void>();
   @ViewChild('username') usernameRef: ElementRef;
@@ -42,8 +45,9 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.systemUsers = this.data.systemUsers;
+    this.node = this.data.node;
     this.systemUsersGroups = this.groupSystemUsers();
-    this.systemUserSelected = this.systemUsers[0];
+    this.systemUserSelected = this.getPreferSystemUser();
     this.filteredUsersGroups.next(this.systemUsersGroups.slice());
     this.filteredCtrl.valueChanges
       .pipe(takeUntil(this._onDestroy))
@@ -60,6 +64,10 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.sysUserCtrl.setValue(this.systemUserSelected);
     }, 100);
+
+    if (!this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH) {
+      this.rememberAuthDisabled = true;
+    }
   }
 
   ngOnDestroy() {
@@ -76,6 +84,12 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
     if (this.systemUserSelected['login_mode'] !== 'manual') {
       return;
     }
+    const savedInfo = this._appSvc.getAssetSystemUserAuth(this.node.id, this.systemUserSelected.id);
+    console.log('get save info: ', savedInfo)
+    if (savedInfo) {
+      this.manualAuthInfo = Object.assign(this.manualAuthInfo, savedInfo);
+      return;
+    }
     this.manualAuthInfo.username = this.systemUserSelected.username;
     this._cdRef.detectChanges();
     setTimeout(() => {
@@ -86,6 +100,7 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
       }
     }, 10);
   }
+
   groupSystemUsers() {
     const groups = [];
     const protocolSysUsersMapper = groupByProp(this.systemUsers, 'protocol');
@@ -138,10 +153,22 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
     );
   }
 
+  getSavedAuthInfo() {
+    return this._appSvc.getAssetSystemUserAuth(this.node.id, this.systemUserSelected.id);
+  }
+
+  getPreferSystemUser() {
+    const preferId = this._appSvc.getNodePreferSystemUser(this.node.id);
+    const matchedSystemUsers = this.systemUsers.filter((item) => item.id === preferId);
+    if (matchedSystemUsers.length === 1) {
+      return matchedSystemUsers[0];
+    } else {
+      return this.systemUsers[0];
+    }
+  }
+
   getPreferConnectType() {
-    const key = `ProtocolPreferLoginType`;
-    const preferTypesSetting = this._localStorage.get(key) || {};
-    const preferConnectTypeId = preferTypesSetting[this.systemUserSelected.protocol];
+    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType(this.systemUserSelected.protocol);
     const matchedTypes = this.connectTypes.filter((item) => item.id === preferConnectTypeId);
     if (matchedTypes.length === 1) {
       return matchedTypes[0];
@@ -150,19 +177,17 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
     }
   }
 
-  recordPreferConnectType() {
-    const key = `ProtocolPreferLoginType`;
-    const preferTypesSetting = this._localStorage.get(key) || {};
-    preferTypesSetting[this.systemUserSelected.protocol] = this.connectType.id;
-    this._localStorage.set(key, preferTypesSetting);
-  }
-
   onConfirm() {
     this.outputData.systemUser = this.systemUserSelected;
     this.outputData.manualAuthInfo = this.manualAuthInfo;
     this.outputData.connectType = this.connectType;
 
-    this.recordPreferConnectType();
+    this._appSvc.setNodePreferSystemUser(this.node.id, this.systemUserSelected.id);
+    this._appSvc.setProtocolPreferLoginType(this.systemUserSelected.protocol, this.connectType.id);
+    if (this.rememberAuth) {
+      this._logger.debug('Save auth to localstorge: ', this.node.id, this.systemUserSelected.id, this.manualAuthInfo);
+      this._appSvc.saveNodeSystemUserAuth(this.node.id, this.systemUserSelected.id, this.manualAuthInfo);
+    }
     this.dialogRef.close(this.outputData);
   }
 }

@@ -142,3 +142,7 @@ body ::-webkit-scrollbar-thumb {
 .fa {
   font-family: FontAwesome !important;
 }
+
+.mat-form-field-infix {
+  font-size: 14px;
+}

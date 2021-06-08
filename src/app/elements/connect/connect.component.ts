@@ -128,7 +128,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return;
     }
     const systemUsers = await this._http[handleName](target.id).toPromise();
-    const connectInfo = await this.selectLoginSystemUsers(systemUsers);
+    const connectInfo = await this.selectLoginSystemUsers(systemUsers, node);
     if (!connectInfo) {
       this._logger.info('Just close the dialog');
       return;
@@ -156,13 +156,13 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     this.onNewView.emit(view);
   }
 
-  showSelectSystemUserDialog(systemUserMaxPriority: SystemUser[]): Promise<ConnectData> {
+  showSelectSystemUserDialog(systemUserMaxPriority: SystemUser[], node: TreeNode): Promise<ConnectData> {
     const dialogRef = this._dialog.open(ConnectDialogComponent, {
       minHeight: '300px',
       height: 'auto',
       width: '500px',
       disableClose: true,
-      data: {systemUsers: systemUserMaxPriority}
+      data: {systemUsers: systemUserMaxPriority, node: node}
     });
 
     return new Promise<ConnectData>(resolve => {
@@ -172,7 +172,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
   }
 
-  selectLoginSystemUsers(systemUsers: Array<SystemUser>): Promise<ConnectData> {
+  selectLoginSystemUsers(systemUsers: Array<SystemUser>, node: TreeNode): Promise<ConnectData> {
     let systemUserMaxPriority = this.filterHighestPrioritySystemUsers(systemUsers);
     const systemUserId = this._appSvc.getQueryString('system_user');
     if (systemUserId) {
@@ -186,7 +186,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         reject('没有系统用户');
       });
     } else if (systemUserMaxPriority.length > 1) {
-      return this.showSelectSystemUserDialog(systemUserMaxPriority);
+      return this.showSelectSystemUserDialog(systemUserMaxPriority, node);
     } else {
       const systemUser = systemUserMaxPriority[0];
       const connectTypes = this._appSvc.getProtocolConnectTypes()[systemUser.protocol];
@@ -202,7 +202,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           resolve(outputData);
         });
       } else {
-        return this.showSelectSystemUserDialog(systemUserMaxPriority);
+        return this.showSelectSystemUserDialog(systemUserMaxPriority, node);
       }
     }
   }
