@@ -2,7 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {MatDialogRef} from '@angular/material';
 import {SettingService} from '@app/services';
 import {GlobalSetting, Setting} from '@app/model';
-import {TranslateService} from '@ngx-translate/core';
+import {I18nService} from '@app/services/i18n';
 
 
 @Component({
@@ -17,11 +17,11 @@ export class ElementSettingComponent implements OnInit {
   globalSetting: GlobalSetting;
 
   constructor(public dialogRef: MatDialogRef<ElementSettingComponent>,
-              public translate: TranslateService,
+              private _i18n: I18nService,
               private settingSrv: SettingService) {
     this.boolChoices = [
-      {name: translate.instant('Yes'), value: '1'},
-      {name: translate.instant('No'), value: '0'}
+      {name: _i18n.instant('Yes'), value: '1'},
+      {name: _i18n.instant('No'), value: '0'}
     ];
   }
 

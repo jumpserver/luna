@@ -82,7 +82,6 @@ export class LocalStorageService {
 @Injectable()
 export class UUIDService {
   constructor() {
-
   }
 
   gen() {
