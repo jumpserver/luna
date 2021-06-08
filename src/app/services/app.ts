@@ -7,9 +7,7 @@ import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
 
-
 declare function unescape(s: string): string;
-
 
 @Injectable()
 export class AppService implements OnInit {
