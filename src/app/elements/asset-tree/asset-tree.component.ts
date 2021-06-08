@@ -9,7 +9,6 @@ import * as _ from 'lodash';
 import {AppService, HttpService, LogService, NavService, SettingService, TreeFilterService} from '@app/services';
 import {connectEvt} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
-import {I18nService} from '@app/services/i18n';
 
 declare var $: any;
 
@@ -27,7 +26,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
               private _settingSvc: SettingService,
               private _dialog: MatDialog,
               private _logger: LogService,
-              private _i18n: TranslateService,
+              private _i18n: I18nService,
               private _toastr: ToastrService,
   ) {}
 
