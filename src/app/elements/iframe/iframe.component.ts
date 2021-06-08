@@ -17,6 +17,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
+    this.id = 'window-' + Math.random().toString(36).substr(2)
   }
 
   ngAfterViewInit() {

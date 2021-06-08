@@ -193,11 +193,11 @@ export class HttpService {
     return this.http.get('/api/v1/users/connection-token/', {params: params});
   }
 
-  downloadRDPFile(assetId: string, systemUserId: string, solution) {
+  downloadRDPFile(assetId: string, systemUserId: string, solution: string) {
     const url = new URL('/api/v1/authentication/connection-token/rdp/file/', window.location.origin);
     url.searchParams.append('asset', assetId);
     url.searchParams.append('system_user', systemUserId);
-    if (solution.indexOf('x') > -1) {
+    if (solution && solution.indexOf('x') > -1) {
       const [width, height] = solution.split('x');
       url.searchParams.append('width', width);
       url.searchParams.append('height', height);
