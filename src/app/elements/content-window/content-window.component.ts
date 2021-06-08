@@ -17,6 +17,7 @@ export class ElementContentWindowComponent implements OnInit {
 
   ngOnInit() {
     this.computeConnector();
+    this.id = 'window-' + Math.random().toString(36).substr(2);
   }
 
   computeConnector() {
