@@ -2,23 +2,25 @@ import {Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
-import {DataStore, i18n, User, ProtocolConnectTypes} from '@app/globals';
+import {DataStore, User, ProtocolConnectTypes} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
-
+import {AuthInfo} from '@app/model';
+import * as CryptoJS from 'crypto-js';
 
 declare function unescape(s: string): string;
 
-
 @Injectable()
-export class AppService implements OnInit {
+export class AppService {
   // user:User = user  ;
-  lang: string;
+  public lang: string;
   private protocolPreferConnectTypes: object = {};
   private assetPreferSystemUser: object = {};
   private protocolPreferKey = 'ProtocolPreferLoginType';
   private systemUserPreferKey = 'PreferSystemUser';
+  private manualAuthInfoKey = 'ManualAuthInfo';
+  private manualAuthInfos: object = {};
 
   constructor(private _http: HttpService,
               private _router: Router,
@@ -28,10 +30,8 @@ export class AppService implements OnInit {
               private _localStorage: LocalStorageService) {
     this.setLogLevel();
     this.checklogin();
-  }
-
-  public ngOnInit() {
     this.loadPreferData();
+    this.loadManualAuthInfo();
   }
 
   setLogLevel() {
@@ -134,5 +134,41 @@ export class AppService implements OnInit {
   setNodePreferSystemUser(nodeId: string, systemUserId: string) {
     this.assetPreferSystemUser[nodeId] = systemUserId;
     this._localStorage.set(this.systemUserPreferKey, this.assetPreferSystemUser);
+  }
+
+  loadManualAuthInfo() {
+    const authInfos = this._localStorage.get(this.manualAuthInfoKey);
+    if (authInfos && typeof authInfos === 'object') {
+      this.manualAuthInfos = authInfos;
+    }
+  }
+
+  getAssetSystemUserAuth(nodeId: string, systemUserId: string): AuthInfo {
+    const localKey = `${systemUserId}_${nodeId}`;
+    const auth = this.manualAuthInfos[localKey];
+    if (!auth) {
+      return null;
+    }
+    const newAuth = Object.assign({}, auth);
+    try {
+      const bytes = CryptoJS.AES.decrypt(newAuth.password, User.id);
+      newAuth.password = bytes.toString(CryptoJS.enc.Utf8);
+    } catch (err) {
+      newAuth.password = '';
+    }
+    return newAuth;
+  }
+
+  saveNodeSystemUserAuth(nodeId: string, systemUserId: string, auth: AuthInfo) {
+    const newAuth = Object.assign({}, auth);
+    if (!auth.password) {
+      auth.password = '';
+    } else {
+      const secretKey = User.id;
+      newAuth.password = CryptoJS.AES.encrypt(auth.password, secretKey).toString();
+    }
+    const localKey = `${systemUserId}_${nodeId}`;
+    this.manualAuthInfos[localKey] = newAuth;
+    this._localStorage.set(this.manualAuthInfoKey, this.manualAuthInfos);
   }
 }

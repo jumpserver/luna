@@ -23,6 +23,8 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
   public filteredCtrl: FormControl = new FormControl();
   public hidePassword = true;
   public manualAuthInfo: AuthInfo = new AuthInfo();
+  public rememberAuth: false;
+  public rememberAuthDisabled: false;
   public outputData: ConnectData = new ConnectData();
   protected _onDestroy = new Subject<void>();
   @ViewChild('username') usernameRef: ElementRef;
@@ -62,6 +64,10 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.sysUserCtrl.setValue(this.systemUserSelected);
     }, 100);
+
+    if (!this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH) {
+      this.rememberAuthDisabled = true;
+    }
   }
 
   ngOnDestroy() {
@@ -78,6 +84,12 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
     if (this.systemUserSelected['login_mode'] !== 'manual') {
       return;
     }
+    const savedInfo = this._appSvc.getAssetSystemUserAuth(this.node.id, this.systemUserSelected.id);
+    console.log('get save info: ', savedInfo)
+    if (savedInfo) {
+      this.manualAuthInfo = Object.assign(this.manualAuthInfo, savedInfo);
+      return;
+    }
     this.manualAuthInfo.username = this.systemUserSelected.username;
     this._cdRef.detectChanges();
     setTimeout(() => {
@@ -88,6 +100,7 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
       }
     }, 10);
   }
+
   groupSystemUsers() {
     const groups = [];
     const protocolSysUsersMapper = groupByProp(this.systemUsers, 'protocol');
@@ -140,6 +153,10 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
     );
   }
 
+  getSavedAuthInfo() {
+    return this._appSvc.getAssetSystemUserAuth(this.node.id, this.systemUserSelected.id);
+  }
+
   getPreferSystemUser() {
     const preferId = this._appSvc.getNodePreferSystemUser(this.node.id);
     const matchedSystemUsers = this.systemUsers.filter((item) => item.id === preferId);
@@ -167,6 +184,10 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
 
     this._appSvc.setNodePreferSystemUser(this.node.id, this.systemUserSelected.id);
     this._appSvc.setProtocolPreferLoginType(this.systemUserSelected.protocol, this.connectType.id);
+    if (this.rememberAuth) {
+      this._logger.debug('Save auth to localstorge: ', this.node.id, this.systemUserSelected.id, this.manualAuthInfo);
+      this._appSvc.saveNodeSystemUserAuth(this.node.id, this.systemUserSelected.id, this.manualAuthInfo);
+    }
     this.dialogRef.close(this.outputData);
   }
 }
