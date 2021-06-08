@@ -23,8 +23,8 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
   public filteredCtrl: FormControl = new FormControl();
   public hidePassword = true;
   public manualAuthInfo: AuthInfo = new AuthInfo();
-  public rememberAuth: false;
-  public rememberAuthDisabled: false;
+  public rememberAuth = false;
+  public rememberAuthDisabled = false;
   public outputData: ConnectData = new ConnectData();
   protected _onDestroy = new Subject<void>();
   @ViewChild('username') usernameRef: ElementRef;
