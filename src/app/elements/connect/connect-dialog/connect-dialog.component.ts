@@ -85,7 +85,6 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
       return;
     }
     const savedInfo = this._appSvc.getAssetSystemUserAuth(this.node.id, this.systemUserSelected.id);
-    console.log('get save info: ', savedInfo)
     if (savedInfo) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, savedInfo);
       return;
