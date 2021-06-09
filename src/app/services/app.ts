@@ -124,7 +124,11 @@ export class AppService {
 
   setProtocolPreferLoginType(protocol: string, type: string) {
     this.protocolPreferConnectTypes[protocol] = type;
-    this._localStorage.set(this.protocolPreferKey, this.protocolPreferConnectTypes);
+    try {
+      this._localStorage.set(this.protocolPreferKey, this.protocolPreferConnectTypes);
+    } catch (e) {
+      // pass
+    }
   }
 
   getNodePreferSystemUser(nodeId: string): string {
@@ -133,7 +137,11 @@ export class AppService {
 
   setNodePreferSystemUser(nodeId: string, systemUserId: string) {
     this.assetPreferSystemUser[nodeId] = systemUserId;
-    this._localStorage.set(this.systemUserPreferKey, this.assetPreferSystemUser);
+    try {
+      this._localStorage.set(this.systemUserPreferKey, this.assetPreferSystemUser);
+    } catch (e) {
+      // pass
+    }
   }
 
   loadManualAuthInfo() {
@@ -150,8 +158,9 @@ export class AppService {
       return null;
     }
     const newAuth = Object.assign({}, auth);
+    const secretKey = `${User.id}_${User.username}`;
     try {
-      const bytes = CryptoJS.AES.decrypt(newAuth.password, User.id);
+      const bytes = CryptoJS.AES.decrypt(newAuth.password, secretKey);
       newAuth.password = bytes.toString(CryptoJS.enc.Utf8);
     } catch (err) {
       newAuth.password = '';
@@ -164,11 +173,16 @@ export class AppService {
     if (!auth.password) {
       auth.password = '';
     } else {
-      const secretKey = User.id;
+      const secretKey = `${User.id}_${User.username}`;
       newAuth.password = CryptoJS.AES.encrypt(auth.password, secretKey).toString();
     }
     const localKey = `${systemUserId}_${nodeId}`;
     this.manualAuthInfos[localKey] = newAuth;
-    this._localStorage.set(this.manualAuthInfoKey, this.manualAuthInfos);
+    try {
+      this._localStorage.set(this.manualAuthInfoKey, this.manualAuthInfos);
+    } catch (e) {
+      this._logger.error('Error: ', e);
+      // pass
+    }
   }
 }
