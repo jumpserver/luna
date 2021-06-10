@@ -1,12 +1,11 @@
-import {Component, OnInit, Output, Inject, OnDestroy, EventEmitter} from '@angular/core';
+import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {connectEvt} from '@app/globals';
-import {AppService, HttpService, LogService, NavService, SettingService} from '@app/services';
-import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-import {FormControl, Validators} from '@angular/forms';
-import {ActivatedRoute} from '@angular/router';
-import {SystemUser, TreeNode, Asset} from '@app/model';
+import {connectEvt, ProtocolConnectTypes, TYPE_RDP_CLIENT} from '@app/globals';
+import {AppService, HttpService, LogService, SettingService} from '@app/services';
+import {MatDialog} from '@angular/material';
+import {SystemUser, TreeNode, Asset, ConnectData} from '@app/model';
 import {View} from '@app/model';
+import {ConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 
 
 @Component({
@@ -19,396 +18,215 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   hasLoginTo = false;
 
   constructor(private _appSvc: AppService,
-              public _dialog: MatDialog,
-              public _logger: LogService,
-              private settingSvc: SettingService,
-              private activatedRoute: ActivatedRoute,
+              private _dialog: MatDialog,
+              private _logger: LogService,
+              private _settingSvc: SettingService,
               private _http: HttpService,
   ) {
   }
 
   ngOnInit(): void {
+    this.keepSubscribeConnectEvent();
+    this.connectDirectIfNeed();
+    this.connectTokenIfNeed();
+  }
+
+  connectTokenIfNeed() {
+    const system = this._appSvc.getQueryString('system');
+    const token = this._appSvc.getQueryString('token');
+    if (system && token) {
+      const view = new View(token, null, 'token', system, '');
+      this.onNewView.emit(view);
+    }
+  }
+
+  connectDirectIfNeed() {
+    let loginTo = this._appSvc.getQueryString('login_to');
+    let tp = this._appSvc.getQueryString('type') || 'asset';
+    const assetId = this._appSvc.getQueryString('asset');
+    const remoteAppId = this._appSvc.getQueryString('remote_app');
+    const databaseAppId = this._appSvc.getQueryString('database_app');
+    const k8sId = this._appSvc.getQueryString('k8s_app');
+    if (assetId) {
+      loginTo = assetId;
+      tp = 'asset';
+    } else if (remoteAppId) {
+      loginTo = remoteAppId;
+      tp = 'remote_app';
+    } else if (databaseAppId) {
+      loginTo = databaseAppId;
+      tp = 'database_app';
+    } else if (k8sId) {
+      loginTo = k8sId;
+      tp = 'k8s_app';
+    }
+    if (this.hasLoginTo || !loginTo) {
+      return;
+    }
+    const getTreeNodeHandlerMapper = {
+      asset: 'filterMyGrantedAssetsById',
+      remote_app: 'getMyGrantedRemoteApps',
+      database_app: 'getMyGrantedDBApps',
+      k8s_app: 'getMyGrantedK8SApps',
+    };
+
+    const handlerName = getTreeNodeHandlerMapper[tp];
+    if (!handlerName) {
+      alert('未知的类型: ' + tp);
+      return;
+    }
+    this.hasLoginTo = true;
+    this._http[handlerName](loginTo).subscribe(nodes => {
+      let node;
+      if (nodes.length === 1) {
+        node = nodes[0];
+      } else {
+        node = nodes[1];
+      }
+      this.connectNode(node).then();
+    });
+  }
+
+  keepSubscribeConnectEvent() {
     connectEvt.asObservable().subscribe(evt => {
       switch (evt.action) {
-        case 'asset': {
-          this.Connect(evt.node);
-          break;
-        }
-        case 'shareroom': {
-          this.Connect(evt.node);
-          break;
-        }
         case 'sftp': {
           this.connectFileManager(evt.node);
           break;
         }
-        case 'token': {
-          this.connectAssetWithToken();
-          break;
+        default: {
+          this.connectNode(evt.node).then();
         }
       }
     });
-    const loginTo = this._appSvc.getQueryString('login_to');
-    const tp = this._appSvc.getQueryString('type') || 'asset';
-    if (this.hasLoginTo || !loginTo) {
-      return;
-    }
-    switch (tp) {
-      case 'asset':
-        this._http.filterMyGrantedAssetsById(loginTo).subscribe(
-          nodes => {
-            if (nodes.length === 1) {
-              this.hasLoginTo = true;
-              const node = nodes[0];
-              this.Connect(node);
-            }
-          }
-        );
-        break;
-      case 'remote_app':
-        this._http.getMyGrantedRemoteApps(loginTo).subscribe(
-          nodes => {
-            if (nodes.length === 2) {
-              this.hasLoginTo = true;
-              const node = nodes[1];
-              this.Connect(node);
-            }
-          }
-        );
-        break;
-      case 'database_app':
-        this._http.getMyGrantedDBApps(loginTo).subscribe(
-          nodes => {
-            if (nodes.length === 2) {
-              this.hasLoginTo = true;
-              const node = nodes[1];
-              this.Connect(node);
-            }
-          }
-        );
-        break;
-      case 'k8s_app':
-        this._http.getMyGrantedK8SApps(loginTo).subscribe(
-          nodes => {
-            if (nodes.length === 2) {
-              this.hasLoginTo = true;
-              const node = nodes[1];
-              this.Connect(node);
-            }
-          }
-        );
-        break;
-    }
   }
 
   ngOnDestroy(): void {
     connectEvt.unsubscribe();
   }
 
-  Connect(node: TreeNode) {
-    switch (node.meta.type) {
-      case 'asset':
-        this.connectAsset(node);
-        break;
-      case 'remote_app':
-        this.connectRemoteApp(node);
-        break;
-      case 'shareroom':
-        this.connetShareroom(node);
-        break;
-      case 'database_app':
-          this.connectDatabaseApp(node);
-          break;
-      case 'k8s_app':
-        this.connectK8SApp(node);
-        break;
-      default:
-        alert('Unknown type: ' + node.meta.type);
+  async connectNode(node) {
+    if (!node) {
+      return;
+    }
+    const tp = node.meta.type;
+    let target;
+    if (tp === 'asset') {
+      target = node.meta.asset;
+    } else {
+      target = node;
+    }
+    const grantedSystemUsersHandlerMapper = {
+      asset: 'getMyAssetSystemUsers',
+      remote_app: 'getMyRemoteAppSystemUsers',
+      database_app: 'getMyDatabaseAppSystemUsers',
+      k8s_app: 'getMyK8SAppSystemUsers'
+    };
+    const handleName = grantedSystemUsersHandlerMapper[tp];
+    if (!handleName) {
+      alert('未知的类型: ' + tp);
+      return;
+    }
+    const systemUsers = await this._http[handleName](target.id).toPromise();
+    const connectInfo = await this.selectLoginSystemUsers(systemUsers, node);
+    if (!connectInfo) {
+      this._logger.info('Just close the dialog');
+      return;
+    }
+    await this.createTempAuthIfNeed(node, connectInfo);
+    this._logger.debug('Connect info: ', connectInfo);
+    if (connectInfo.connectType.id === TYPE_RDP_CLIENT.id) {
+      this.createRdpFile(connectInfo, node);
+    } else {
+      this.createNodeView(connectInfo, node);
     }
   }
 
-  connectAssetWithToken() {
-    const view = new View();
-    const system = this._appSvc.getQueryString('system');
-    const token = this._appSvc.getQueryString('token');
-    view.token = token;
-    view.type =  system;
+  createRdpFile(connectInfo: ConnectData, node: TreeNode) {
+    this._logger.debug('Download the rdp file');
+    const { systemUser} = connectInfo;
+    const solution = this._settingSvc.setting.rdpResolution;
+    this._http.downloadRDPFile(node.id, systemUser.id, solution);
+  }
+
+  createNodeView(connectInfo: ConnectData, node: TreeNode) {
+    const {systemUser} = connectInfo;
+    const view = new View(node, systemUser, 'node', node.meta.type, systemUser.protocol);
+    view.connectType = connectInfo.connectType;
     this.onNewView.emit(view);
   }
-  async connectAsset(node: TreeNode) {
-    const host = node.meta.asset as Asset;
-    const systemUsers = await this._http.getMyAssetSystemUsers(host.id).toPromise();
-    let sysUser = await this.selectLoginSystemUsers(systemUsers);
-    sysUser = await this.manualSetUserAuthLoginIfNeed(sysUser);
-    if (sysUser && sysUser.id) {
-      this.loginAsset(host, sysUser);
-    } else {
-      alert('该主机没有授权系统用户');
-    }
+
+  showSelectSystemUserDialog(systemUserMaxPriority: SystemUser[], node: TreeNode): Promise<ConnectData> {
+    const dialogRef = this._dialog.open(ConnectDialogComponent, {
+      minHeight: '300px',
+      height: 'auto',
+      width: '500px',
+      disableClose: true,
+      data: {systemUsers: systemUserMaxPriority, node: node}
+    });
+
+    return new Promise<ConnectData>(resolve => {
+      dialogRef.afterClosed().subscribe(outputData  => {
+        resolve(outputData);
+      });
+    });
   }
 
-  async connectDatabaseApp(node: TreeNode) {
-    this._logger.debug('Connect database app: ', node.id);
-    const systemUsers = await this._http.getMyDatabaseAppSystemUsers(node.id).toPromise();
-    let sysUser = await this.selectLoginSystemUsers(systemUsers);
-    sysUser = await this.manualSetUserAuthLoginIfNeed(sysUser);
-    if (sysUser && sysUser.id) {
-      this.loginDatabaseApp(node, sysUser);
-    } else {
-      alert('该主机没有授权系统用户');
-    }
-  }
-
-  async connectK8SApp(node: TreeNode) {
-    this._logger.debug('Connect K8S app: ', node.id);
-    const systemUsers = await this._http.getMyK8SAppSystemUsers(node.id).toPromise();
-    let sysUser = await this.selectLoginSystemUsers(systemUsers);
-    sysUser = await this.manualSetUserAuthLoginIfNeed(sysUser);
-    if (sysUser && sysUser.id) {
-      this.loginK8SApp(node, sysUser);
-    } else {
-      alert('该主机没有授权系统用户');
-    }
-  }
-
-  selectLoginSystemUsers(systemUsers: Array<SystemUser>): Promise<SystemUser> {
-    const systemUserMaxPriority = this.filterHighestPrioritySystemUsers(systemUsers);
-    let user: SystemUser;
+  selectLoginSystemUsers(systemUsers: Array<SystemUser>, node: TreeNode): Promise<ConnectData> {
+    let systemUserMaxPriority = this.filterHighestPrioritySystemUsers(systemUsers);
     const systemUserId = this._appSvc.getQueryString('system_user');
     if (systemUserId) {
-      systemUsers.forEach((v, i) => {
-        if (v.id === systemUserId ) {
-          user = v;
-          return;
-        }
+      systemUserMaxPriority = systemUserMaxPriority.filter(s => {
+        s.id = systemUserId;
       });
-      return Promise.resolve(user);
     }
-    if (systemUserMaxPriority.length > 1) {
-      return new Promise<SystemUser>(resolve => {
-        const dialogRef = this._dialog.open(AssetTreeDialogComponent, {
-          height: '250px',
-          width: '500px',
-          data: {users: systemUserMaxPriority}
-        });
-
-        dialogRef.afterClosed().subscribe(result => {
-          if (result) {
-            for (const i of systemUserMaxPriority) {
-              if (i.id.toString() === result.toString()) {
-                user = i;
-                resolve(user);
-              }
-            }
-          }
-          return null;
-        });
+    if (systemUserMaxPriority.length === 0) {
+      alert('没有系统用户');
+      return new Promise<ConnectData>((resolve, reject) => {
+        reject('没有系统用户');
       });
-    } else if (systemUserMaxPriority.length === 1) {
-      user = systemUserMaxPriority[0];
-      return Promise.resolve(user);
+    } else if (systemUserMaxPriority.length > 1) {
+      return this.showSelectSystemUserDialog(systemUserMaxPriority, node);
     } else {
-      return Promise.resolve(null);
+      const systemUser = systemUserMaxPriority[0];
+      const connectTypes = this._appSvc.getProtocolConnectTypes()[systemUser.protocol];
+      let connectType = null;
+      if (connectTypes && connectTypes.length === 1) {
+        connectType = connectTypes[0];
+      }
+      if (systemUser && connectType && systemUser.login_mode === 'auto') {
+        return new Promise<ConnectData>(resolve => {
+          const outputData = new ConnectData();
+          outputData.systemUser = systemUser;
+          outputData.connectType = connectType;
+          resolve(outputData);
+        });
+      } else {
+        return this.showSelectSystemUserDialog(systemUserMaxPriority, node);
+      }
     }
   }
 
-  manualSetUserAuthLoginIfNeed(user: SystemUser): Promise<SystemUser> {
-    if (!user || user.login_mode !== 'manual' || user.protocol !== 'rdp' || this.settingSvc.isSkipAllManualPassword()) {
-      return Promise.resolve(user);
+  createTempAuthIfNeed(node: TreeNode, outputData: ConnectData) {
+    const auth = outputData.manualAuthInfo;
+    if (!auth) {
+      return;
     }
-    user = Object.assign({}, user);
-    return Promise.resolve(user);
-    // return new Promise(resolve => {
-    //   const dialogRef = this._dialog.open(ManualPasswordDialogComponent, {
-    //     height: '250px',
-    //     width: '500px',
-    //     data: {username: user.username}
-    //   });
-    //   dialogRef.afterClosed().subscribe(result => {
-    //     if (!result) {
-    //       return resolve(null);
-    //     }
-    //     if (result.skip) {
-    //       return resolve(user);
-    //     }
-    //     user.username = result.username;
-    //     user.password = result.password;
-    //     return resolve(user);
-    //   });
-    // });
-
-  }
-
-
-  async connectRemoteApp(node: TreeNode) {
-    this._logger.debug('Connect remote app: ', node.id);
-    const systemUsers = await this._http.getMyRemoteAppSystemUsers(node.id).toPromise();
-    let sysUser = await this.selectLoginSystemUsers(systemUsers);
-    sysUser = await this.manualSetUserAuthLoginIfNeed(sysUser);
-    if (sysUser && sysUser.id) {
-      return this.loginRemoteApp(node, sysUser);
-    } else {
-      alert('该应用没有授权系统用户');
-    }
-  }
-
-  loginRemoteApp(node: TreeNode, user: SystemUser) {
-    if (node) {
-      const view = new View();
-      view.nick = node.name;
-      view.connected = true;
-      view.editable = false;
-      view.closed = false;
-      view.remoteApp = node.id;
-      view.user = user;
-      view.type = 'remoteapp';
-      this.onNewView.emit(view);
-    }
-  }
-  loginDatabaseApp(node: TreeNode, user: SystemUser) {
-    if (node) {
-      const view = new View();
-      view.host = node;
-      view.nick = node.name;
-      view.connected = true;
-      view.editable = false;
-      view.closed = false;
-      view.DatabaseApp = node.id;
-      view.user = user;
-      view.type = 'database';
-      view.protocol = user.protocol;
-      this.onNewView.emit(view);
-    }
-  }
-  loginK8SApp(node: TreeNode, user: SystemUser) {
-    if (node) {
-      const view = new View();
-      view.host = node;
-      view.nick = node.name;
-      view.connected = true;
-      view.editable = false;
-      view.closed = false;
-      view.K8SApp = node.id;
-      view.user = user;
-      view.type = 'k8s';
-      this.onNewView.emit(view);
+    if (auth.password) {
+      return this._http.createSystemUserTempAuth(outputData.systemUser, node, auth);
     }
   }
 
   connectFileManager(node: TreeNode) {
     const host = node.meta.asset as Asset;
-    if (host) {
-      const view = new View();
-      view.nick = '[FILE] ' + host.hostname;
-      view.connected = true;
-      view.editable = false;
-      view.closed = false;
-      view.host = host;
-      view.type = 'sftp';
-      this.onNewView.emit(view);
-      // jQuery('.tabs').animate({'scrollLeft': 150 * id}, 400);
-    }
-  }
-
-  connectTerminal(node: TreeNode) {
-    this.Connect(node);
-  }
-
-
-  loginAsset(host: Asset, user: SystemUser) {
-    if (user) {
-      const view = new View();
-      view.nick = host.hostname;
-      view.connected = true;
-      view.editable = false;
-      view.closed = false;
-      view.host = host;
-      view.user = user;
-      if (user.protocol === 'ssh' || user.protocol === 'telnet') {
-        view.type = 'ssh';
-      } else if (user.protocol === 'rdp') {
-        view.type = 'rdp';
-      } else if (user.protocol === 'vnc') {
-        view.type = 'vnc';
-      }
-      this.onNewView.emit(view);
-    }
-  }
-  connetShareroom(node: TreeNode) {
-      const view = new View();
-      view.connected = true;
-      view.editable = false;
-      view.closed = false;
-      view.shareRoomId = node.id;
-      view.type = 'ssh';
-      this.onNewView.emit(view);
+    const view = new View(host, null, 'fileManager', 'asset', 'sftp');
+    view.nick = '[FILE] ' + host.hostname;
+    this.onNewView.emit(view);
   }
 
   filterHighestPrioritySystemUsers(sysUsers: Array<SystemUser>): Array<SystemUser> {
     const priorityAll: Array<number> = sysUsers.map(s => s.priority);
     const HighestPriority = Math.min(...priorityAll);
     return sysUsers.filter(s => s.priority === HighestPriority);
-  }
-}
-
-
-@Component({
-  selector: 'elements-asset-tree-dialog',
-  templateUrl: 'dialog.html',
-})
-export class AssetTreeDialogComponent implements OnInit {
-
-  constructor(public dialogRef: MatDialogRef<AssetTreeDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any,
-              private _logger: LogService) {
-  }
-  UserSelectControl = new FormControl('', [Validators.required]);
-  selected: any;
-
-  compareFn: ((f1: any, f2: any) => boolean) | null = this.compareByValue;
-
-  ngOnInit() {
-    this.selected = this.data.users[0].id;
-    this.UserSelectControl.setValue(this.selected);
-    // this._logger.debug(this.UserSelectControl);
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-
-  compareByValue(f1: any, f2: any) {
-    return f1 && f2 && f1.value === f2.value;
-  }
-}
-
-@Component({
-  selector: 'elements-manual-password-dialog',
-  templateUrl: 'manual-password-dialog.html',
-})
-export class ManualPasswordDialogComponent implements OnInit {
-  constructor(@Inject(MAT_DIALOG_DATA) public data: any,
-              public dialogRef: MatDialogRef<ManualPasswordDialogComponent>) {
-  }
-
-  onSkip() {
-    this.data.skip = true;
-    this.dialogRef.close(this.data);
-  }
-
-  onSkipAll() {
-    this.data.skipAll = true;
-    this.dialogRef.close(this.data);
-  }
-
-  onNoClick() {
-    this.dialogRef.close();
-  }
-
-  onEnter() {
-    this.dialogRef.close(this.data);
-  }
-
-  ngOnInit(): void {
   }
 }

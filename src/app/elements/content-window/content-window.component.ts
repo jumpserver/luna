@@ -1,43 +1,48 @@
 import {Component, OnInit, Input} from '@angular/core';
 import {View} from '@app/model';
+import {TYPE_DB_GUI} from '@app/globals';
 
 @Component({
   selector: 'elements-content-window',
   templateUrl: './content-window.component.html',
   styleUrls: ['./content-window.component.css']
 })
-export class ElementContentViewComponent implements OnInit {
+export class ElementContentWindowComponent implements OnInit {
   @Input() view: View;
-
-  static active() {
-    // viewList.List.forEach((v, k) => {
-    //   v.hide = id.toString() !== k;
-    // });
-    // viewList.Active = id;
-  }
-
-  static TerminalDisconnect(id) {
-    // if (viewList.List[id].connected) {
-    //   viewList.List[id].connected = false;
-    //   viewList.List[id].Term.write('\r\n\x1b[31mBye Bye!\x1b[m\r\n');
-    //   TermWS.emit('logout', viewList.List[id].room);
-    // }
-  }
-
-  static RdpDisconnect(id) {
-    // viewList.List[id].connected = false;
-  }
-
-  static DisconnectAll() {
-  }
+  connector: any; // koko, omnidb, lion
+  public id: string;
 
   constructor() {
   }
 
   ngOnInit() {
+    this.computeConnector();
+    this.id = 'window-' + Math.random().toString(36).substr(2);
   }
 
-  // trackByFn(index: number, item: View) {
-  //   return item.id;
-  // }
+  computeConnector() {
+    switch (this.view.connectFrom) {
+      case 'node':
+        if (this.view.type === 'database_app' && this.view.connectType.id === TYPE_DB_GUI.id) {
+          this.connector = 'omnidb';
+        } else if (['rdp', 'vnc'].indexOf(this.view.protocol) > -1) {
+          this.connector = 'lion';
+        } else {
+          this.connector = 'koko';
+        }
+        break;
+      case 'fileManager':
+        if (this.view.protocol === 'sftp') {
+          this.connector = 'koko';
+        }
+        break;
+      case 'token':
+        if (this.view.type.toLowerCase().indexOf('window') > -1) {
+          this.connector = 'lion';
+        } else {
+          this.connector = 'koko';
+        }
+        break;
+    }
+  }
 }

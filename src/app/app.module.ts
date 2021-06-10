@@ -6,15 +6,15 @@ import {CookieService} from 'ngx-cookie-service';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {ToastrModule} from 'ngx-toastr';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
-import { TranslateHttpLoader } from '@ngx-translate/http-loader';
+import {HttpClient, HttpClientModule} from '@angular/common/http';
+import {TranslateModule, TranslateLoader} from '@ngx-translate/core';
+import {TranslateHttpLoader} from '@ngx-translate/http-loader';
 
 // service
 import {AllServices} from '@app/services';
 
 // Angular split
-import { AngularSplitModule } from 'angular-split';
+import {AngularSplitModule} from 'angular-split';
 
 import {AppRouterModule} from './router.module';
 import {Pipes} from './pipes/pipes';
@@ -23,11 +23,10 @@ import {PagesComponents} from './pages/pages.component';
 import {ElementComponents} from './elements/elements.component';
 import {PageMainComponent} from '@app/pages/main/main.component';
 import {PluginModules} from './plugins/plugins';
-import {DisabledDatabaseDialogComponent} from '@app/elements/ssh-term/ssh-term.component';
 import {DisabledAssetsDialogComponent} from './elements/asset-tree/asset-tree.component';
 import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
-import {AssetTreeDialogComponent, ManualPasswordDialogComponent} from './elements/connect/connect.component';
+import {ConnectDialogComponent} from './elements/connect/connect-dialog/connect-dialog.component';
 import {environment} from '@src/environments/environment';
 
 export function HttpLoaderFactory(http: HttpClient) {
@@ -51,7 +50,7 @@ export function HttpLoaderFactory(http: HttpClient) {
         deps: [HttpClient]
       }
     }),
-    ...PluginModules
+    ...PluginModules,
   ],
   declarations: [
     AppComponent,
@@ -60,13 +59,11 @@ export function HttpLoaderFactory(http: HttpClient) {
     ...PagesComponents,
   ],
   entryComponents: [
-    AssetTreeDialogComponent,
-    DisabledDatabaseDialogComponent,
-    ManualPasswordDialogComponent,
     ChangLanWarningDialogComponent,
     DisabledAssetsDialogComponent,
     PageMainComponent,
     ElementSettingComponent,
+    ConnectDialogComponent,
   ],
   bootstrap: [AppComponent],
   providers: [

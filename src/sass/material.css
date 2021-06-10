@@ -1773,3 +1773,18 @@ input.mat-input-element {
 .mat-simple-snackbar-action {
   color: #ffd740
 }
+
+.mat-radio-container {
+  height: 15px !important;
+  width: 15px !important;
+}
+
+.mat-radio-inner-circle {
+  height: 15px !important;
+  width: 15px !important;
+}
+
+.mat-radio-outer-circle {
+  height: 15px !important;
+  width: 15px !important;
+}

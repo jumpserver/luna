@@ -1,6 +1,6 @@
 import {Component, HostListener, OnInit, ViewChild} from '@angular/core';
 import {DataStore, User} from '@app/globals';
-import { IOutputData, SplitComponent } from 'angular-split';
+import {IOutputData, SplitComponent} from 'angular-split';
 import {environment} from '@src/environments/environment';
 import {ViewService} from '@app/services';
 

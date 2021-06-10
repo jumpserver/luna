@@ -1,12 +1,12 @@
 import {Component, Inject, OnInit} from '@angular/core';
-import {HttpService, LocalStorageService, NavService, LogService, ViewService} from '@app/services';
+import {HttpService, NavService, LogService, ViewService} from '@app/services';
 import {DataStore} from '@app/globals';
-import { TranslateService } from '@ngx-translate/core';
 import {CookieService} from 'ngx-cookie-service';
 import {ElementLeftBarComponent} from '@app/elements/left-bar/left-bar.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {Nav, View} from '@app/model';
+import {I18nService} from '@app/services/i18n';
 
 @Component({
   selector: 'elements-nav',
@@ -16,30 +16,20 @@ import {Nav, View} from '@app/model';
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
   navs: Array<Nav>;
-  _asyncTree = false;
   viewList: Array<View>;
 
   constructor(private _http: HttpService,
               private _logger: LogService,
-              public _dialog: MatDialog,
-              public _navSvc: NavService,
+              private _dialog: MatDialog,
+              private _navSvc: NavService,
               private _cookie: CookieService,
+              private _i18n: I18nService,
               public _viewSrv: ViewService,
-              public translate: TranslateService,
-              private _localStorage: LocalStorageService) {
-  }
+              ) {}
 
   ngOnInit() {
     this.navs = this.getNav();
     this.viewList = this._viewSrv.viewList;
-  }
-
-  get treeLoadAsync() {
-    return this._asyncTree;
-  }
-
-  set treeLoadAsync(value) {
-    this._asyncTree = value;
   }
 
   click(event) {
@@ -115,13 +105,11 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'English': {
-        this.translate.use('en');
-        this._cookie.set('django_language', 'en');
+        this._i18n.use('en');
         break;
       }
       case 'Chinese': {
-        this.translate.use('zh');
-        this._cookie.set('django_language', 'zh-hans');
+        this._i18n.use('zh');
         break;
       }
       default: {
@@ -239,16 +227,12 @@ export class ElementNavComponent implements OnInit {
     ];
   }
   Setting() {
-    const dialog = this._dialog.open(
+    this._dialog.open(
       ElementSettingComponent,
       {
-        height: '460px',
+        height: '360px',
         width: '400px',
       });
-    dialog.afterClosed().subscribe(result => {
-      if (result) {
-      }
-    });
   }
 }
 

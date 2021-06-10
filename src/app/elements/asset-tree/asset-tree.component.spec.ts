@@ -1,6 +1,6 @@
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import {async, ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { ElementAssetTreeComponent } from './asset-tree.component';
+import {ElementAssetTreeComponent} from './asset-tree.component';
 
 describe('R ', () => {
   let component: ElementAssetTreeComponent;

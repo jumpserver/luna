@@ -1,0 +1,32 @@
+.mat-radio-button ~ .mat-radio-button {
+  margin-left: 16px;
+}
+
+.zone-label {
+  color: rgba(0, 0, 0, 0.54);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.mat-form-field-infix {
+  border-top-width: 0!important;
+}
+
+.account-info {
+  border: solid #cbc9c9 1px;
+  padding: 10px;
+  padding-bottom: 0;
+}
+
+.connect-type-group {
+  border: solid #cbc9c9 1px;
+  padding: 5px
+}
+
+.manual-auth {
+  margin-bottom: 20px;
+}
+
+.remember-auth ::ng-deep .mat-checkbox-layout {
+  padding-bottom: 10px;
+}

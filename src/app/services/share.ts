@@ -51,15 +51,23 @@ export class LogService {
 @Injectable()
 export class LocalStorageService {
   constructor() {
-
   }
 
-  get(key: string): string {
-    return localStorage.getItem(key);
+  get(key: string): any {
+    let data = localStorage.getItem(key);
+    if (!data) {
+      return data;
+    }
+    try {
+      data = JSON.parse(data);
+      return data;
+    } catch (e) {}
+    return data;
   }
 
   set(key: string, value: any) {
-    return localStorage.setItem(key, value);
+    const data = JSON.stringify(value);
+    return localStorage.setItem(key, data);
   }
 
   delete(key: string) {
@@ -72,7 +80,6 @@ export class LocalStorageService {
 @Injectable()
 export class UUIDService {
   constructor() {
-
   }
 
   gen() {

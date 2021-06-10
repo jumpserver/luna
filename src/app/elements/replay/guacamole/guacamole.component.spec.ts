@@ -1,6 +1,6 @@
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import {async, ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { ElementReplayGuacamoleComponent } from './guacamole.component';
+import {ElementReplayGuacamoleComponent} from './guacamole.component';
 
 describe('ReplayGuacamoleComponent', () => {
   let component: ElementReplayGuacamoleComponent;

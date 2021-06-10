@@ -33,6 +33,7 @@ $my-teal: (
     A700: $dark-primary-text,
   )
 );
+$infix-margin-top: 0;
 
 $candy-app-primary: mat-palette($my-teal, 500);
 $candy-app-accent:  mat-palette($my-teal, 500);

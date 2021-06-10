@@ -4,7 +4,7 @@ import {Terminal} from 'xterm';
 import {fit} from 'xterm/lib/addons/fit/fit';
 import {LogService} from '@app/services';
 import {Observable, fromEvent, Subscription} from 'rxjs';
-import {debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import {debounceTime, distinctUntilChanged} from 'rxjs/operators';
 import * as $ from 'jquery/dist/jquery.min.js';
 import 'rxjs/Observable';
 

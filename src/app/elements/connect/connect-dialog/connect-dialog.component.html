@@ -1,0 +1,88 @@
+<h1 mat-dialog-title>{{"Connect" | translate}} {{ node.name | truncatechars:30 }}</h1>
+
+<div (keyup.enter)="onConfirm()" >
+  <div class="select-user">
+    <label class="zone-label" style="margin-bottom: 0" for="selectUsers">{{ "Select system users" | translate }}</label>
+    <mat-form-field style="width: 100%;margin-top:-10px" >
+      <mat-select
+        id="selectUsers"
+        [(value)]="systemUserSelected"
+        [compareWith]="compareFn"
+        [formControl]="sysUserCtrl"
+      >
+        <mat-option>
+          <ngx-mat-select-search
+            placeholderLabel="{{ 'Search' | translate }}"
+            [formControl]="filteredCtrl"
+            noEntriesFoundLabel="{{ 'No matching found' | translate }}"
+          >
+            <mat-icon ngxMatSelectSearchClear>close</mat-icon>
+          </ngx-mat-select-search>
+        </mat-option>
+        <mat-optgroup *ngFor="let group of filteredUsersGroups | async"
+                      [label]="group.name"
+                      [disabled]="group.disabled">
+          <mat-option *ngFor="let sysUser of group.systemUsers" [value]="sysUser">
+            {{sysUser.name}}({{sysUser.username}})
+          </mat-option>
+        </mat-optgroup>
+      </mat-select>
+    </mat-form-field>
+    <mat-error *ngIf="sysUserCtrl.hasError('required')">{{"Please choose a User"| translate}}</mat-error>
+  </div>
+
+  <div *ngIf="systemUserSelected.login_mode === 'manual'" class="manual-auth">
+   <label class="zone-label">{{ "Account info" | translate }}</label>
+    <div class="account-info">
+      <mat-form-field style="width: 45%">
+        <input
+          #username
+          matInput
+          name="username"
+          placeholder="{{'Username'| translate}}"
+          [(ngModel)]="manualAuthInfo.username"
+          autofocus
+        >
+      </mat-form-field>
+
+      <mat-form-field style="width: 45%; margin-left: 10%">
+        <input matInput [type]="hidePassword ? 'password' : 'text'"
+               #password
+               name="password"
+               [(ngModel)]="manualAuthInfo.password"
+               placeholder="{{'Password'| translate}}"
+               [attr.cdkFocusInitial]="manualAuthInfo.username? true : null"
+               autofocus
+        >
+        <button mat-icon-button matSuffix
+                (click)="hidePassword = !hidePassword"
+                [attr.aria-label]="'Hide password'"
+                [attr.aria-pressed]="hidePassword"
+                [disabled]="systemUserSelected.login_mode !== 'manual'"
+        >
+          <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <mat-checkbox *ngIf="!rememberAuthDisabled" [(ngModel)]="rememberAuth" class="remember-auth">
+        {{ "Remember in browser" | translate }}
+      </mat-checkbox>
+    </div>
+  </div>
+
+  <div class="connect-type">
+    <label class="zone-label" for="connect-type">{{ "Connect Type" | translate }}</label>
+    <div class="connect-type-group">
+      <mat-radio-group aria-label="Select an option" name="connect-type" [(ngModel)]="connectType" id="connect-type">
+        <mat-radio-button *ngFor="let type of connectTypes" [value]="type">{{ type.name }}</mat-radio-button>
+      </mat-radio-group>
+    </div>
+  </div>
+
+  <mat-dialog-actions  style="float: right; margin: 20px 0 10px 0;">
+    <button mat-raised-button (click)="onCancel()">{{"Cancel"| translate}}</button>
+    <button mat-raised-button color="primary" type="submit" [mat-dialog-close]="outputData" (click)="onConfirm()">{{"Confirm"| translate}}</button>
+  </mat-dialog-actions>
+</div>
+<!--<div style="float: right; margin-top: 20px">-->
+<!--</div>-->

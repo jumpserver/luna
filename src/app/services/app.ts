@@ -2,32 +2,36 @@ import {Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
-import {DataStore, i18n, User} from '@app/globals';
+import {DataStore, User, ProtocolConnectTypes} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
-import { TranslateService } from '@ngx-translate/core';
-
+import {SettingService} from '@app/services/setting';
+import {AuthInfo} from '@app/model';
+import * as CryptoJS from 'crypto-js';
 
 declare function unescape(s: string): string;
 
-
 @Injectable()
-export class AppService implements OnInit {
+export class AppService {
   // user:User = user  ;
-  lang: string;
+  public lang: string;
+  private protocolPreferConnectTypes: object = {};
+  private assetPreferSystemUser: object = {};
+  private protocolPreferKey = 'ProtocolPreferLoginType';
+  private systemUserPreferKey = 'PreferSystemUser';
+  private manualAuthInfoKey = 'ManualAuthInfo';
+  private manualAuthInfos: object = {};
 
   constructor(private _http: HttpService,
               private _router: Router,
               private _cookie: CookieService,
               private _logger: LogService,
-              public translate: TranslateService,
+              private _settingSvc: SettingService,
               private _localStorage: LocalStorageService) {
     this.setLogLevel();
     this.checklogin();
-  }
-
-  public ngOnInit() {
-
+    this.loadPreferData();
+    this.loadManualAuthInfo();
   }
 
   setLogLevel() {
@@ -85,5 +89,100 @@ export class AppService implements OnInit {
       return unescape(r[2]);
     }
     return null;
+  }
+
+  getProtocolConnectTypes() {
+    const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
+    const validTypes = {};
+    for (const [protocol, types] of Object.entries(ProtocolConnectTypes)) {
+      validTypes[protocol] = types.filter((tp) => {
+        if (!xpackEnabled && tp.requireXPack) {
+          return false;
+        } else {
+          return true;
+        }
+      });
+    }
+    return validTypes;
+  }
+
+  loadPreferData() {
+    const protocolPreferData = this._localStorage.get(this.protocolPreferKey);
+    if (protocolPreferData && typeof protocolPreferData === 'object') {
+      this.protocolPreferConnectTypes = protocolPreferData;
+    }
+
+    const systemUserPreferData = this._localStorage.get(this.systemUserPreferKey);
+    if (systemUserPreferData && typeof systemUserPreferData === 'object') {
+      this.assetPreferSystemUser = systemUserPreferData;
+    }
+  }
+
+  getProtocolPreferLoginType(protocol: string): string {
+    return this.protocolPreferConnectTypes[protocol];
+  }
+
+  setProtocolPreferLoginType(protocol: string, type: string) {
+    this.protocolPreferConnectTypes[protocol] = type;
+    try {
+      this._localStorage.set(this.protocolPreferKey, this.protocolPreferConnectTypes);
+    } catch (e) {
+      // pass
+    }
+  }
+
+  getNodePreferSystemUser(nodeId: string): string {
+    return this.assetPreferSystemUser[nodeId];
+  }
+
+  setNodePreferSystemUser(nodeId: string, systemUserId: string) {
+    this.assetPreferSystemUser[nodeId] = systemUserId;
+    try {
+      this._localStorage.set(this.systemUserPreferKey, this.assetPreferSystemUser);
+    } catch (e) {
+      // pass
+    }
+  }
+
+  loadManualAuthInfo() {
+    const authInfos = this._localStorage.get(this.manualAuthInfoKey);
+    if (authInfos && typeof authInfos === 'object') {
+      this.manualAuthInfos = authInfos;
+    }
+  }
+
+  getAssetSystemUserAuth(nodeId: string, systemUserId: string): AuthInfo {
+    const localKey = `${systemUserId}_${nodeId}`;
+    const auth = this.manualAuthInfos[localKey];
+    if (!auth) {
+      return null;
+    }
+    const newAuth = Object.assign({}, auth);
+    const secretKey = `${User.id}_${User.username}`;
+    try {
+      const bytes = CryptoJS.AES.decrypt(newAuth.password, secretKey);
+      newAuth.password = bytes.toString(CryptoJS.enc.Utf8);
+    } catch (err) {
+      newAuth.password = '';
+    }
+    return newAuth;
+  }
+
+  saveNodeSystemUserAuth(nodeId: string, systemUserId: string, auth: AuthInfo) {
+    const newAuth = Object.assign({}, auth);
+    if (!auth.password) {
+      auth.password = '';
+    } else {
+      const secretKey = `${User.id}_${User.username}`;
+      newAuth.password = CryptoJS.AES.encrypt(auth.password, secretKey).toString();
+    }
+    const localKey = `${systemUserId}_${nodeId}`;
+    this.manualAuthInfos[localKey] = newAuth;
+    try {
+      this._localStorage.set(this.manualAuthInfoKey, this.manualAuthInfos);
+    } catch (e) {
+      this._logger.error('Error: ', e);
+      // pass
+    }
   }
 }
