@@ -58,6 +58,7 @@ export const TYPE_RDP_CLIENT: ConnectType = {
 export const ProtocolConnectTypes = {
   ssh: [TYPE_WEB_CLI],
   rdp: [TYPE_WEB_GUI, TYPE_RDP_CLIENT],
+  vnc: [TYPE_WEB_GUI],
   telnet: [TYPE_WEB_CLI],
   mysql: [TYPE_WEB_CLI, TYPE_DB_GUI],
   postgre: [TYPE_DB_GUI],
