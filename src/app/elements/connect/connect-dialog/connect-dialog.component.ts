@@ -6,6 +6,7 @@ import {FormControl, Validators} from '@angular/forms';
 import {ReplaySubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {groupByProp} from '@app/utils/common';
+import {User} from '@app/globals';
 import {SystemUserGroup, SystemUser, AuthInfo, ConnectType, ConnectData, TreeNode} from '@app/model';
 
 @Component({
@@ -84,12 +85,18 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
     if (this.systemUserSelected['login_mode'] !== 'manual') {
       return;
     }
+    this.manualAuthInfo.username = '';
+    this.manualAuthInfo.password = '';
     const savedInfo = this._appSvc.getAssetSystemUserAuth(this.node.id, this.systemUserSelected.id);
     if (savedInfo) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, savedInfo);
       return;
     }
-    this.manualAuthInfo.username = this.systemUserSelected.username;
+    if (this.systemUserSelected.username_same_with_user) {
+      this.manualAuthInfo.username = User.username;
+    } else if (this.systemUserSelected.username) {
+      this.manualAuthInfo.username = this.systemUserSelected.username;
+    }
     this._cdRef.detectChanges();
     setTimeout(() => {
       if (this.systemUserSelected.username) {
