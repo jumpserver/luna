@@ -33,6 +33,7 @@ export class SystemUser {
   protocol: string;
   password: string;
   actions: Array<string>;
+  username_same_with_user: boolean;
 }
 
 export class TreeNode {
