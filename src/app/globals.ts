@@ -61,7 +61,7 @@ export const ProtocolConnectTypes = {
   vnc: [TYPE_WEB_GUI],
   telnet: [TYPE_WEB_CLI],
   mysql: [TYPE_WEB_CLI, TYPE_DB_GUI],
-  postgre: [TYPE_DB_GUI],
+  postgresql: [TYPE_DB_GUI],
   oracle: [TYPE_DB_GUI],
   mariadb: [TYPE_WEB_CLI, TYPE_DB_GUI],
   k8s: [TYPE_WEB_CLI],
