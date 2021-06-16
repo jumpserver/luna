@@ -40,7 +40,10 @@ export class SettingService {
 
       // 统一修改，避免生效速度不一致
       document.getElementsByTagName('head')[0].appendChild(link);
-      logoRef.src = resp.data.LOGO_URLS.logo_logout;
+      const logoLogout = resp.data.LOGO_URLS.logo_logout;
+      if (logoLogout) {
+        logoRef.src = logoLogout;
+      }
       document.title = this._i18n.instant('Web Terminal') + ` - ${resp.data.LOGIN_TITLE}`;
     });
   }

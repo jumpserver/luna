@@ -10,7 +10,7 @@ import {Session} from '@app/model';
 })
 export class PagesMonitorComponent implements OnInit {
   iframeURL: string;
-  sessionDetail: Session;
+  sessionDetail: Session = null;
   sessionID: string;
 
   constructor(private _appService: AppService,
