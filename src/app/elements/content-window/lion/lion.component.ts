@@ -48,7 +48,7 @@ export class ElementConnectorLionComponent implements OnInit {
 
   generateNodeURL() {
     if (this.view.type === 'remote_app') {
-      this.iframeURL = `${this.baseUrl}/?target_id=${this.node.id}&type=remote_app&system_user_id=${this.sysUser.id}`;
+      this.iframeURL = `${this.baseUrl}/?target_id=${this.node.id}&type=remoteapp&system_user_id=${this.sysUser.id}`;
     } else {
       this.iframeURL = `${this.baseUrl}/?target_id=${this.node.id}&type=${this.protocol}&system_user_id=${this.sysUser.id}`;
     }
