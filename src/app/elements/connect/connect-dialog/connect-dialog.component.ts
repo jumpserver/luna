@@ -77,7 +77,8 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
   }
 
   setConnectTypes() {
-    this.connectTypes = this._appSvc.getProtocolConnectTypes()[this.systemUserSelected.protocol];
+    const isRemoteApp = this.node.meta.type === 'remote_app';
+    this.connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[this.systemUserSelected.protocol];
     this.connectType = this.getPreferConnectType() || this.connectTypes[0];
   }
 
