@@ -1,5 +1,15 @@
-<elements-replay-json [replay]="replay" *ngIf="replay.type=='json'"></elements-replay-json>
-<elements-replay-guacamole [replay]="replay" *ngIf="replay.type=='guacamole'"></elements-replay-guacamole>
+<elements-replay-json
+  [replay]="replay"
+  *ngIf="replay.type=='json'"
+  [ngxWatermark]="options"
+>
+</elements-replay-json>
+<elements-replay-guacamole
+  [replay]="replay"
+  *ngIf="replay.type=='guacamole'"
+  [ngxWatermark]="options"
+>
+</elements-replay-guacamole>
 <div id="loading" >
     <div class="lds-spinner" *ngIf="replay.type!=='json'&&replay.type!=='guacamole'">
         <div></div>
