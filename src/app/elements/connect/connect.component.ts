@@ -144,9 +144,13 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   createRdpFile(connectInfo: ConnectData, node: TreeNode) {
     this._logger.debug('Download the rdp file');
-    const { systemUser} = connectInfo;
+    const { systemUser } = connectInfo;
     const solution = this._settingSvc.setting.rdpResolution;
-    this._http.downloadRDPFile(node.id, systemUser.id, solution);
+    if (node.meta.type === 'remote_app') {
+      this._http.downloadRDPFile('', node.id, systemUser.id, solution);
+    } else {
+      this._http.downloadRDPFile(node.id, '', systemUser.id, solution);
+    }
   }
 
   createNodeView(connectInfo: ConnectData, node: TreeNode) {
@@ -189,7 +193,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return this.showSelectSystemUserDialog(systemUserMaxPriority, node);
     } else {
       const systemUser = systemUserMaxPriority[0];
-      const connectTypes = this._appSvc.getProtocolConnectTypes()[systemUser.protocol];
+      const isRemoteApp = node.meta.type === 'remote_app';
+      const connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[systemUser.protocol];
       let connectType = null;
       if (connectTypes && connectTypes.length === 1) {
         connectType = connectTypes[0];

@@ -2,7 +2,7 @@ import {Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
-import {DataStore, User, ProtocolConnectTypes} from '@app/globals';
+import {DataStore, User, ProtocolConnectTypes, TYPE_RDP_CLIENT} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
@@ -91,11 +91,14 @@ export class AppService {
     return null;
   }
 
-  getProtocolConnectTypes() {
+  getProtocolConnectTypes(remoteApp: Boolean) {
     const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
     const validTypes = {};
     for (const [protocol, types] of Object.entries(ProtocolConnectTypes)) {
       validTypes[protocol] = types.filter((tp) => {
+        if (protocol === 'rdp' && remoteApp && tp.id === TYPE_RDP_CLIENT.id ) {
+          return false;
+        }
         if (!xpackEnabled && tp.requireXPack) {
           return false;
         } else {
