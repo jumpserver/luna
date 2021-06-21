@@ -1,5 +1,4 @@
 import {Component, OnInit} from '@angular/core';
-import {AppService} from '@app/services';
 import {View} from '@app/model';
 
 @Component({
@@ -8,20 +7,19 @@ import {View} from '@app/model';
   styleUrls: ['./connect.component.scss']
 })
 export class PagesConnectComponent implements OnInit {
-  token: string;
-  system: string;
   view: View;
 
-  constructor(private _appService: AppService) {
+  constructor() {
   }
 
   onNewView(view) {
-    view.active = true;
-    this.view = view;
+    setTimeout(() => {
+      view.active = true;
+      this.view = view;
+    }, 200);
   }
 
   ngOnInit() {
-    this.system = this._appService.getQueryString('system');
-    this.token = this._appService.getQueryString('token');
+    this.view = null;
   }
 }
