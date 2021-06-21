@@ -1,6 +1,6 @@
 import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {connectEvt, ProtocolConnectTypes, TYPE_RDP_CLIENT} from '@app/globals';
+import {connectEvt, TYPE_RDP_CLIENT} from '@app/globals';
 import {AppService, HttpService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {SystemUser, TreeNode, Asset, ConnectData} from '@app/model';
@@ -32,12 +32,30 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   connectTokenIfNeed() {
-    const system = this._appSvc.getQueryString('system');
     const token = this._appSvc.getQueryString('token');
-    if (system && token) {
-      const view = new View(token, null, 'token', system, '');
-      this.onNewView.emit(view);
+    if (!token) {
+      return;
     }
+    const system = this._appSvc.getQueryString('system');
+    const type = this._appSvc.getQueryString('type') || 'asset';
+    let protocol = this._appSvc.getQueryString('protocol') || 'ssh';
+
+    if (system) {
+      switch (system) {
+        case 'linux':
+          protocol = 'ssh';
+          break;
+        case 'window':
+        case 'windows':
+          protocol = 'rdp';
+          break;
+      }
+    }
+    const node = new TreeNode();
+    node.name = 'Token';
+    const view = new View(node, null, 'token', type, protocol);
+    view.token = token;
+    this.onNewView.emit(view);
   }
 
   connectDirectIfNeed() {
@@ -223,9 +241,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   connectFileManager(node: TreeNode) {
-    const host = node.meta.asset as Asset;
-    const view = new View(host, null, 'fileManager', 'asset', 'sftp');
-    view.nick = '[FILE] ' + host.hostname;
+    const view = new View(node, null, 'fileManager', 'asset', 'sftp');
+    view.nick = '[FILE] ' + node.name;
     this.onNewView.emit(view);
   }
 

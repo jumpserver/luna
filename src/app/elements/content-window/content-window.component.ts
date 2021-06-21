@@ -37,7 +37,7 @@ export class ElementContentWindowComponent implements OnInit {
         }
         break;
       case 'token':
-        if (this.view.type.toLowerCase().indexOf('window') > -1) {
+        if (this.view.protocol === 'rdp') {
           this.connector = 'lion';
         } else {
           this.connector = 'koko';
