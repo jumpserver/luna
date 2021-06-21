@@ -1,3 +1,5 @@
+import {Tree} from '@angular/router/src/utils/tree';
+
 export class UserGroup {
   id: string;
   name: string;
@@ -119,7 +121,7 @@ export class View {
   connectType: ConnectType;
   termComp: any;
 
-  constructor(node, user, connectFrom, type, protocol) {
+  constructor(node: TreeNode, user: SystemUser, connectFrom: string, type: string, protocol: string) {
     this.connected = true;
     this.editable = false;
     this.closed = false;

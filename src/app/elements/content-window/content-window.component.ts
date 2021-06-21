@@ -22,8 +22,9 @@ export class ElementContentWindowComponent implements OnInit {
 
   computeConnector() {
     switch (this.view.connectFrom) {
+      case 'token':
       case 'node':
-        if (this.view.type === 'database_app' && this.view.connectType.id === TYPE_DB_GUI.id) {
+        if (this.view.type === 'database_app') {
           this.connector = 'omnidb';
         } else if (['rdp', 'vnc'].indexOf(this.view.protocol) > -1) {
           this.connector = 'lion';
@@ -33,13 +34,6 @@ export class ElementContentWindowComponent implements OnInit {
         break;
       case 'fileManager':
         if (this.view.protocol === 'sftp') {
-          this.connector = 'koko';
-        }
-        break;
-      case 'token':
-        if (this.view.type.toLowerCase().indexOf('window') > -1) {
-          this.connector = 'lion';
-        } else {
           this.connector = 'koko';
         }
         break;
