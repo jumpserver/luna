@@ -1,4 +1,4 @@
 <div class="windows" id="winContainer">
-  <elements-content-window [view]="view" *ngIf="view"></elements-content-window>
+  <elements-content-window *ngIf="view" [view]="view"></elements-content-window>
   <elements-connect [ngStyle]="{'display': 'none'}" (onNewView)="onNewView($event)"></elements-connect>
 </div>
