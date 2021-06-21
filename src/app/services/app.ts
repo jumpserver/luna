@@ -29,7 +29,7 @@ export class AppService {
               private _settingSvc: SettingService,
               private _localStorage: LocalStorageService) {
     this.setLogLevel();
-    this.checklogin();
+    this.checkLogin();
     this.loadPreferData();
     this.loadManualAuthInfo();
   }
@@ -42,14 +42,14 @@ export class AppService {
     }
     this._logger.level = parseInt(logLevel, 10);
   }
-  checklogin() {
+  checkLogin() {
     this._logger.debug('Check user auth');
     if (!DataStore.Path) {
       this._router.navigate(['FOF']);
     }
 
     if (User.logined) {
-      if (document.location.pathname === '/login') {
+      if (document.location.pathname === '/login/') {
         this._router.navigate(['']);
       } else {
         this._router.navigate([document.location.pathname]);
@@ -60,18 +60,15 @@ export class AppService {
       user => {
         Object.assign(User, user);
         User.logined = true;
-        const oldUserId = this._localStorage.get('user');
-        if (oldUserId !== user.id ) {
-          this._localStorage.set('guacamoleToken', null);
-        }
         this._localStorage.set('user', user.id);
       },
       err => {
         // this._logger.error(err);
         User.logined = false;
-        if (document.location.pathname !== '/luna/connect') {
-          window.location.href = document.location.origin + '/core/auth/login/?next=' +
-            encodeURI(document.location.pathname + document.location.search);
+        const currentPath = encodeURI(document.location.pathname + document.location.search);
+        const token = this.getQueryString('token');
+        if (!token) {
+          window.location.href = document.location.origin + '/core/auth/login/?next=' + currentPath;
         }
         // this._router.navigate(['login']);
       },
