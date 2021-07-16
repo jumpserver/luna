@@ -213,6 +213,7 @@ export class GlobalSetting {
   XPACK_LICENSE_IS_VALID: boolean;
   SECURITY_COMMAND_EXECUTION: boolean;
   SECURITY_LUNA_REMEMBER_AUTH: boolean;
+  SECURITY_WATERMARK_ENABLED: boolean;
 }
 
 export class Setting {
