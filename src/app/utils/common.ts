@@ -54,3 +54,50 @@ export function groupByProp(xs, key) {
     return rv;
   }, {});
 }
+
+export function canvasWaterMark({
+    // 使用 ES6 的函数默认值方式设置参数的默认取值
+    // 具体参见 https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Functions/Default_parameters
+    container = document.body,
+    width = '300px',
+    height = '300px',
+    textAlign = 'left',
+    textBaseline = 'middle',
+    font = '20px monaco, microsoft yahei',
+    fillStyle = 'rgba(184, 184, 184, 0.8)',
+    content = 'JumpServer',
+    rotate = 30,
+    zIndex = 1000
+} = {}) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  canvas.setAttribute('width', width);
+  canvas.setAttribute('height', height);
+
+  ctx.font = font;
+  ctx.fillStyle = fillStyle;
+  ctx.textAlign = <CanvasTextAlign>textAlign;
+  ctx.textBaseline = <CanvasTextBaseline>textBaseline;
+
+  ctx.translate(70, -80);
+  ctx.rotate(Math.PI / 180 * rotate);
+  ctx.fillText(content, parseFloat(width) / 2, parseFloat(height) / 2);
+
+  const base64Url = canvas.toDataURL();
+  const watermarkDiv = document.createElement('div');
+  watermarkDiv.setAttribute('style', `
+          position:absolute;
+          top:0;
+          left:0;
+          width:100%;
+          height:100%;
+          z-index:${zIndex};
+          pointer-events:none;
+          background-repeat:repeat;
+          background-image:url('${base64Url}')`
+  );
+
+  container.style.position = 'relative';
+  container.insertBefore(watermarkDiv, container.firstChild);
+}
