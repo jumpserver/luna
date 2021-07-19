@@ -17,7 +17,7 @@ export class ElementConnectorKokoComponent implements OnInit {
   sysUser: SystemUser;
   protocol: string;
 
-  constructor(private _logger: LogService ) {
+  constructor(private _logger: LogService) {
   }
 
   ngOnInit() {
@@ -44,21 +44,10 @@ export class ElementConnectorKokoComponent implements OnInit {
 
   generateNodeConnectUrl() {
     const baseUrl = `${document.location.origin}/koko/terminal`;
-    switch (this.view.protocol) {
-      case 'k8s':
-        this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=k8s_app&system_user_id=${this.sysUser.id}`;
-        break;
-      case 'mysql':
-      case 'mariadb':
-        this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=database_app&system_user_id=${this.sysUser.id}`;
-        break;
-      default:
-        this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=asset&system_user_id=${this.sysUser.id}`;
-        break;
-    }
+    this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=${this.view.protocol}&system_user_id=${this.sysUser.id}`;
   }
 
-  generateTokenURL()  {
+  generateTokenURL() {
     const tokenUrl = `${document.location.origin}/koko/token`;
     this.iframeURL = `${tokenUrl}/?target_id=${this.view.token}&type=token`;
   }
