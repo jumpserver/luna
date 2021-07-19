@@ -49,6 +49,7 @@ export class ElementConnectorKokoComponent implements OnInit {
         this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=k8s_app&system_user_id=${this.sysUser.id}`;
         break;
       case 'mysql':
+      case 'mariadb':
         this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=database_app&system_user_id=${this.sysUser.id}`;
         break;
       default:
