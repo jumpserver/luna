@@ -5,7 +5,7 @@ import {ConnectEvt, ConnectType, User as _User} from './model';
 import {DataStore as _DataStore, Browser as _Browser, Video as _Video, Monitor as _Monitor} from './model';
 
 export let TermWS = null;
-export const emitter = new(EventEmitter);
+export const emitter = new (EventEmitter);
 export const sep = '/';
 export let Video = new _Video();
 export let Monitor = new _Monitor();
@@ -63,6 +63,6 @@ export const ProtocolConnectTypes = {
   mysql: [TYPE_WEB_CLI, TYPE_DB_GUI],
   postgresql: [TYPE_DB_GUI],
   oracle: [TYPE_DB_GUI],
-  mariadb: [TYPE_DB_GUI],
+  mariadb: [TYPE_WEB_CLI, TYPE_DB_GUI],
   k8s: [TYPE_WEB_CLI],
 };
