@@ -24,6 +24,11 @@ export class ElementIframeComponent implements OnInit, AfterViewInit {
     this.onIframeLoadDone();
   }
 
+  setActive() {
+    const win = this.iframeRef.nativeElement.contentWindow;
+    win.dispatchEvent(new Event('jmsFocus'));
+  }
+
   onIframeLoadDone() {
     let t ;
     const that = this;
