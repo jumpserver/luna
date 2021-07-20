@@ -16,7 +16,16 @@ export class ViewService {
 
   activeView(view: View) {
     this.viewList.forEach((v, k) => {
-      v.active = v === view;
+      if (v === view) {
+        v.active = true;
+        if (view.termComp) {
+          setTimeout(() => {
+            view.termComp.setActive();
+          }, 100);
+        }
+      } else {
+        v.active = false;
+      }
     });
     setTimeout(() => {
       const viewEl = document.getElementById(view.id);

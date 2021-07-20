@@ -8,7 +8,10 @@
       <ul [ngStyle]="{'width':tabsWidth+'px'}">
         <elements-content-tab
           *ngFor="let view of viewList;let i = index"
-          [view]="view" (onAction)="onViewAction($event)" (contextmenu)="onRightClick($event, i)">
+          [view]="view"
+          (onAction)="onViewAction($event)"
+          (contextmenu)="onRightClick($event, i)"
+        >
         </elements-content-tab>
       </ul>
     </div>
