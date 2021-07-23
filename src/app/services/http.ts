@@ -102,6 +102,11 @@ export class HttpService {
       )));
   }
 
+  getMyGrantedAppsNodes() {
+    const url = '/api/v1/perms/users/applications/tree/';
+    return this.http.get<Array<TreeNode>>(url);
+  }
+
   getMyGrantedRemoteApps(id?: string) {
     let url = '/api/v1/perms/users/applications/tree/?category=remote_app';
     if (id) {
