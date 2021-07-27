@@ -23,7 +23,7 @@
                       [label]="group.name"
                       [disabled]="group.disabled">
           <mat-option *ngFor="let sysUser of group.systemUsers" [value]="sysUser">
-            {{sysUser.name}}({{sysUser.username}})
+            {{sysUser.name}}({{sysUser.username || '*'}})
           </mat-option>
         </mat-optgroup>
       </mat-select>
@@ -40,9 +40,16 @@
           matInput
           name="username"
           placeholder="{{'Username'| translate}}"
-          [(ngModel)]="manualAuthInfo.username"
           autofocus
+          [(ngModel)]="manualAuthInfo.username"
+          [formControl]="usernameControl"
+          [matAutocomplete]="auto"
         >
+        <mat-autocomplete #auto="matAutocomplete">
+          <mat-option *ngFor="let option of filteredUsernameOptions | async" [value]="option">
+            {{option}}
+          </mat-option>
+        </mat-autocomplete>
       </mat-form-field>
 
       <mat-form-field style="width: 45%; margin-left: 10%">

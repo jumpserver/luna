@@ -1,10 +1,11 @@
 import {Component, OnInit, OnDestroy, Inject, ViewChild, ElementRef, ChangeDetectorRef} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
+import {Observable} from 'rxjs';
 import {AppService, LocalStorageService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {FormControl, Validators} from '@angular/forms';
 import {ReplaySubject, Subject} from 'rxjs';
-import {takeUntil} from 'rxjs/operators';
+import {takeUntil, startWith, map} from 'rxjs/operators';
 import {groupByProp} from '@app/utils/common';
 import {User} from '@app/globals';
 import {SystemUserGroup, SystemUser, AuthInfo, ConnectType, ConnectData, TreeNode} from '@app/model';
@@ -30,6 +31,10 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
   protected _onDestroy = new Subject<void>();
   @ViewChild('username') usernameRef: ElementRef;
   @ViewChild('password') passwordRef: ElementRef;
+
+  usernameControl = new FormControl();
+  usernameOptions: string[] = ['One', 'Two', 'Three'];
+  filteredUsernameOptions: Observable<string[]>;
 
   public connectType: ConnectType;
   public connectTypes = [];
@@ -69,6 +74,17 @@ export class ConnectDialogComponent implements OnInit, OnDestroy {
     if (!this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH) {
       this.rememberAuthDisabled = true;
     }
+
+    this.filteredUsernameOptions = this.usernameControl.valueChanges
+      .pipe(
+        startWith(''),
+        map(value => this._filter(value))
+      );
+  }
+
+  private _filter(value: string): string[] {
+    const filterValue = value.toLowerCase();
+    return this.usernameOptions.filter(option => option.toLowerCase().includes(filterValue));
   }
 
   ngOnDestroy() {
