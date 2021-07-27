@@ -1,13 +1,106 @@
-import {Component, OnInit} from '@angular/core';
+import {ChangeDetectorRef, Component, ElementRef, Inject, Input, OnInit, ViewChild} from '@angular/core';
+import {AuthInfo, SystemUser, TreeNode} from '@app/model';
+import {User} from '@app/globals';
+import {AppService, LocalStorageService, LogService, SettingService} from '@app/services';
+import {FormControl} from '@angular/forms';
+import {BehaviorSubject, Observable, pipe} from 'rxjs';
+import {map} from 'rxjs/operators';
 
 @Component({
   selector: 'elements-manual-auth',
-  templateUrl: 'elements-manual-auth.component.html',
-  styleUrls: ['./elements-manual-auth.component.scss'],
+  templateUrl: './manual-auth.component.html',
+  styleUrls: ['./manual-auth.component.scss'],
 })
-export class ManualAuthComponent implements  OnInit {
-  constructor() {
-  }
+export class ElementManualAuthComponent implements  OnInit {
+  @Input() systemUserSelected: SystemUser;
+  @Input() node: TreeNode;
+  @Input() onSubmit: BehaviorSubject<boolean>;
+  @Input() manualAuthInfo: AuthInfo;
+  public hidePassword = true;
+  public rememberAuth = false;
+  public rememberAuthDisabled = false;
+  @ViewChild('username') usernameRef: ElementRef;
+  @ViewChild('password') passwordRef: ElementRef;
+  usernameControl = new FormControl();
+  usernameReadonly = false;
+  authsOptions: AuthInfo[];
+  filteredOptions: Observable<AuthInfo[]>;
+  systemUserManualAuthInit = false;
+
+  constructor(private _settingSvc: SettingService,
+              private _cdRef: ChangeDetectorRef,
+              private _logger: LogService,
+              private _appSvc: AppService,
+              private _localStorage: LocalStorageService,
+  ) {}
+
   ngOnInit() {
+    if (!this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH) {
+      this.rememberAuthDisabled = true;
+    }
+    this.subscribeUsernameChanges();
+    this.subscribeSubmitEvent();
+  }
+
+  onSystemUserChanged() {
+    if (this.systemUserSelected['login_mode'] !== 'manual') {
+      return;
+    }
+    this.usernameReadonly = false;
+    this.manualAuthInfo.username = '';
+    this.manualAuthInfo.password = '';
+    this.authsOptions = this._appSvc.getAssetSystemUserAuth(this.node.id, this.systemUserSelected.id);
+    if (this.authsOptions && this.authsOptions.length > 0) {
+      this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.authsOptions[0]);
+    }
+    if (this.systemUserSelected.username_same_with_user) {
+      this.manualAuthInfo.username = User.username;
+      this.usernameReadonly = true;
+    }
+    if (!this.manualAuthInfo.username && this.systemUserSelected.username) {
+      this.manualAuthInfo.username = this.systemUserSelected.username;
+    }
+    this._cdRef.detectChanges();
+    setTimeout(() => {
+      if (this.systemUserSelected.username) {
+        this.usernameRef.nativeElement.focus();
+      } else {
+        this.passwordRef.nativeElement.focus();
+      }
+    }, 10);
+  }
+
+  onFocus() {
+    if (!this.systemUserManualAuthInit && !this.usernameReadonly) {
+      this.usernameControl.setValue('');
+      this.systemUserManualAuthInit = true;
+    }
+  }
+
+  subscribeUsernameChanges() {
+    this.filteredOptions = this.usernameControl.valueChanges.pipe(
+      map(value => {
+        const filterValue = value.toLowerCase();
+        return this.authsOptions.filter(authInfo => {
+          if (authInfo.username.toLowerCase() === filterValue) {
+            this.manualAuthInfo = Object.assign(this.manualAuthInfo, authInfo);
+          }
+          return authInfo.username.toLowerCase().includes(filterValue);
+        });
+      })
+    );
+  }
+
+  subscribeSubmitEvent() {
+    this.onSubmit.subscribe(() => {
+      if (this.rememberAuth) {
+        this._logger.debug('Save auth to localstorge: ', this.node.id, this.systemUserSelected.id, this.manualAuthInfo);
+        this._appSvc.saveNodeSystemUserAuth(this.node.id, this.systemUserSelected.id, this.manualAuthInfo);
+      }
+    });
+  }
+
+  getSavedAuthInfos() {
+    this.authsOptions = this._appSvc.getAssetSystemUserAuth(this.node.id, this.systemUserSelected.id);
   }
 }

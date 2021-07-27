@@ -1,0 +1,29 @@
+<div class="select-user">
+  <label class="zone-label" style="margin-bottom: 0" for="selectUsers">{{ "Select system users" | translate }}</label>
+  <mat-form-field style="width: 100%;margin-top:-10px" >
+    <mat-select
+      id="selectUsers"
+      [(value)]="systemUserSelected"
+      [compareWith]="compareFn"
+      [formControl]="sysUserCtrl"
+    >
+      <mat-option>
+        <ngx-mat-select-search
+          placeholderLabel="{{ 'Search' | translate }}"
+          [formControl]="filteredCtrl"
+          noEntriesFoundLabel="{{ 'No matching found' | translate }}"
+        >
+          <mat-icon ngxMatSelectSearchClear>close</mat-icon>
+        </ngx-mat-select-search>
+      </mat-option>
+      <mat-optgroup *ngFor="let group of filteredUsersGroups | async"
+                    [label]="group.name"
+                    [disabled]="group.disabled">
+        <mat-option *ngFor="let sysUser of group.systemUsers" [value]="sysUser">
+          {{sysUser.name}}({{sysUser.username || '*'}})
+        </mat-option>
+      </mat-optgroup>
+    </mat-select>
+  </mat-form-field>
+  <mat-error *ngIf="sysUserCtrl.hasError('required')">{{"Please choose a User"| translate}}</mat-error>
+</div>

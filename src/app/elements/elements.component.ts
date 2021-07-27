@@ -10,13 +10,15 @@ import {ChangLanWarningDialogComponent, ElementNavComponent} from './nav/nav.com
 import {ElementIframeComponent} from './iframe/iframe.component';
 import {ElementDialogAlertComponent} from './dialog/dialog.service';
 import {ElementConnectComponent} from './connect/connect.component';
-import {ConnectDialogComponent} from './connect/connect-dialog/connect-dialog.component';
+import {ElementConnectDialogComponent} from './connect/connect-dialog/connect-dialog.component';
 import {ElementSettingComponent} from './setting/setting.component';
 import {ElementReplayGuacamoleComponent} from './replay/guacamole/guacamole.component';
 import {ElementReplayJsonComponent} from './replay/json/json.component';
 import {ElementConnectorKokoComponent} from './content-window/koko/koko.component';
 import {ElementConnectorLionComponent} from './content-window/lion/lion.component';
 import {ElementConnectorOmnidbComponent} from './content-window/omnidb/omnidb.component';
+import {ElementManualAuthComponent} from './connect/connect-dialog/manual-auth/manual-auth.component';
+import {ElementSelectSystemUserComponent} from './connect/connect-dialog/select-system-user/select-system-user.component';
 
 
 export const ElementComponents = [
@@ -39,6 +41,8 @@ export const ElementComponents = [
   ChangLanWarningDialogComponent,
   DisabledAssetsDialogComponent,
   ElementSettingComponent,
-  ConnectDialogComponent,
-  ElementConnectorOmnidbComponent
+  ElementConnectDialogComponent,
+  ElementManualAuthComponent,
+  ElementConnectorOmnidbComponent,
+  ElementSelectSystemUserComponent
 ];
