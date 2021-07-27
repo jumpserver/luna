@@ -209,75 +209,13 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       onClick: this.debouncedOnApplicationTreeNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
-    const applicationNodes = [
-      {
-        name: await this._i18n.t('My applications'),
-        id: 'myApplication', isParent: true,
-        title: 'My applications',
-        children: [], open: true
-      }
-    ];
-    const remoteAppRootNode = {
-      iconSkin: '',
-      id: 'ID_REMOTE_APP_ROOT',
-      isParent: true,
-      meta: {type: 'remote_app'},
-      name: await this._i18n.t('Remote apps'),
-      nocheck: false,
-      open: false,
-      pId: '',
-      title: 'RemoteApp'
-    };
-    const dbRootNode = {
-      iconSkin: '',
-      id: 'ID_DATABASE_APP_ROOT',
-      isParent: true,
-      meta: {type: 'database_app'},
-      name: await this._i18n.t('Databases'),
-      nocheck: false,
-      open: false,
-      pId: '',
-      title: 'DatabaseApp'
-    };
-    const cloudAppRootNode = {
-      iconSkin: '',
-      id: 'ID_K8S_APP_ROOT',
-      isParent: true,
-      meta: {type: 'k8s_app'},
-      name: await this._i18n.t('Kubernetes'),
-      nocheck: false,
-      open: false,
-      pId: '',
-      title: 'K8sApp'
-    };
-    const dbNodes = await this._http.getMyGrantedDBApps().toPromise();
-    if (dbNodes.length > 0) {
-      const _dbTree = $.fn.zTree.init($('#DBAppsTree'), setting, dbNodes);
-      dbRootNode['children'] = _dbTree.getNodes();
-      applicationNodes[0].children.push(dbRootNode);
-      _dbTree.destroy();
-    }
-    const remoteNodes = await this._http.getMyGrantedRemoteApps().toPromise();
-    if (remoteNodes.length > 0) {
-      const _remoteTree = $.fn.zTree.init($('#remoteAppsTree'), setting, remoteNodes);
-      remoteAppRootNode['children'] = _remoteTree.getNodes();
-      applicationNodes[0].children.push(remoteAppRootNode);
-      _remoteTree.destroy();
-    }
-    const cloudNodes = await this._http.getMyGrantedK8SApps().toPromise();
-    if (cloudNodes.length > 0) {
-      const _cloudTree = $.fn.zTree.init($('#K8SAppsTree'), setting, cloudNodes);
-      cloudAppRootNode['children'] = _cloudTree.getNodes();
-      applicationNodes[0].children.push(cloudAppRootNode);
-      _cloudTree.destroy();
-    }
-    if (applicationNodes[0].children.length > 0) {
-      const tree = $.fn.zTree.init($('#applicationsTree'), setting, applicationNodes);
+    this._http.getMyGrantedAppsNodes().subscribe(resp => {
+      const tree = $.fn.zTree.init($('#applicationsTree'), setting, resp);
       this.rootNodeAddDom(tree, () => {
         this.refreshApplicationTree();
       });
       this.applicationsTree = tree;
-    }
+    });
   }
 
   refreshApplicationTree() {
