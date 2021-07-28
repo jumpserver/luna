@@ -24,7 +24,7 @@ export class ElementManualAuthComponent implements  OnInit {
   usernameControl = new FormControl();
   usernameReadonly = false;
   authsOptions: AuthInfo[];
-  filteredOptions: Observable<AuthInfo[]>;
+  filteredOptions: AuthInfo[];
   systemUserManualAuthInit = false;
 
   constructor(private _settingSvc: SettingService,
@@ -38,7 +38,6 @@ export class ElementManualAuthComponent implements  OnInit {
     if (!this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH) {
       this.rememberAuthDisabled = true;
     }
-    this.subscribeUsernameChanges();
     this.subscribeSubmitEvent();
   }
 
@@ -62,10 +61,10 @@ export class ElementManualAuthComponent implements  OnInit {
     }
     this._cdRef.detectChanges();
     setTimeout(() => {
-      if (this.systemUserSelected.username) {
-        this.usernameRef.nativeElement.focus();
-      } else {
+      if (this.manualAuthInfo.username) {
         this.passwordRef.nativeElement.focus();
+      } else {
+        this.usernameRef.nativeElement.focus();
       }
     }, 10);
   }
@@ -77,18 +76,14 @@ export class ElementManualAuthComponent implements  OnInit {
     }
   }
 
-  subscribeUsernameChanges() {
-    this.filteredOptions = this.usernameControl.valueChanges.pipe(
-      map(value => {
-        const filterValue = value.toLowerCase();
-        return this.authsOptions.filter(authInfo => {
-          if (authInfo.username.toLowerCase() === filterValue) {
-            this.manualAuthInfo = Object.assign(this.manualAuthInfo, authInfo);
-          }
-          return authInfo.username.toLowerCase().includes(filterValue);
-        });
-      })
-    );
+  onUsernameChanges() {
+    const filterValue = this.manualAuthInfo.username.toLowerCase();
+    this.filteredOptions = this.authsOptions.filter(authInfo => {
+      if (authInfo.username.toLowerCase() === filterValue) {
+        this.manualAuthInfo = Object.assign(this.manualAuthInfo, authInfo);
+      }
+      return authInfo.username.toLowerCase().includes(filterValue);
+    });
   }
 
   subscribeSubmitEvent() {

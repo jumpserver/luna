@@ -9,13 +9,13 @@
         placeholder="{{'Username'| translate}}"
         autofocus
         [(ngModel)]="manualAuthInfo.username"
-        [formControl]="usernameControl"
+        (ngModelChange)="onUsernameChanges()"
         (focus)="onFocus()"
         [readonly]="usernameReadonly"
         [matAutocomplete]="auto"
       >
       <mat-autocomplete #auto="matAutocomplete">
-        <mat-option *ngFor="let i of filteredOptions | async" [value]="i.username">
+        <mat-option *ngFor="let i of filteredOptions" [value]="i.username">
           {{i.username}}
         </mat-option>
       </mat-autocomplete>
