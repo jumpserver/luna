@@ -151,21 +151,29 @@ export class AppService {
     }
   }
 
-  getAssetSystemUserAuth(nodeId: string, systemUserId: string): AuthInfo {
+  getAssetSystemUserAuth(nodeId: string, systemUserId: string): AuthInfo[] {
     const localKey = `${systemUserId}_${nodeId}`;
-    const auth = this.manualAuthInfos[localKey];
-    if (!auth) {
-      return null;
+    let auths = this.manualAuthInfos[localKey];
+    if (!auths) {
+      return [];
     }
-    const newAuth = Object.assign({}, auth);
-    const secretKey = `${User.id}_${User.username}`;
-    try {
-      const bytes = CryptoJS.AES.decrypt(newAuth.password, secretKey);
-      newAuth.password = bytes.toString(CryptoJS.enc.Utf8);
-    } catch (err) {
-      newAuth.password = '';
+    if (!Array.isArray(auths)) {
+      auths = [auths];
     }
-    return newAuth;
+
+    const newAuths: AuthInfo[] = [];
+    for (const auth of auths) {
+      const newAuth = Object.assign({}, auth);
+      const secretKey = `${User.id}_${User.username}`;
+      try {
+        const bytes = CryptoJS.AES.decrypt(newAuth.password, secretKey);
+        newAuth.password = bytes.toString(CryptoJS.enc.Utf8);
+      } catch (err) {
+        newAuth.password = '';
+      }
+      newAuths.push(newAuth);
+    }
+    return newAuths;
   }
 
   saveNodeSystemUserAuth(nodeId: string, systemUserId: string, auth: AuthInfo) {
@@ -176,8 +184,19 @@ export class AppService {
       const secretKey = `${User.id}_${User.username}`;
       newAuth.password = CryptoJS.AES.encrypt(auth.password, secretKey).toString();
     }
+
     const localKey = `${systemUserId}_${nodeId}`;
-    this.manualAuthInfos[localKey] = newAuth;
+    let auths = this.manualAuthInfos[localKey];
+    if (!auths) {
+      auths = [];
+    } else if (!Array.isArray(auths)) {
+      auths = [auths];
+    }
+
+    auths = auths.filter((item) => item.username !== newAuth.username);
+    auths.splice(0, 0, newAuth);
+
+    this.manualAuthInfos[localKey] = auths;
     try {
       this._localStorage.set(this.manualAuthInfoKey, this.manualAuthInfos);
     } catch (e) {

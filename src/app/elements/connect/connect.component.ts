@@ -5,7 +5,7 @@ import {AppService, HttpService, LogService, SettingService} from '@app/services
 import {MatDialog} from '@angular/material';
 import {SystemUser, TreeNode, Asset, ConnectData} from '@app/model';
 import {View} from '@app/model';
-import {ConnectDialogComponent} from './connect-dialog/connect-dialog.component';
+import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 
 
 @Component({
@@ -179,7 +179,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   showSelectSystemUserDialog(systemUserMaxPriority: SystemUser[], node: TreeNode): Promise<ConnectData> {
-    const dialogRef = this._dialog.open(ConnectDialogComponent, {
+    const dialogRef = this._dialog.open(ElementConnectDialogComponent, {
       minHeight: '300px',
       height: 'auto',
       width: '500px',

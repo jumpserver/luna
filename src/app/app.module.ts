@@ -26,7 +26,7 @@ import {PluginModules} from './plugins/plugins';
 import {DisabledAssetsDialogComponent} from './elements/asset-tree/asset-tree.component';
 import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
-import {ConnectDialogComponent} from './elements/connect/connect-dialog/connect-dialog.component';
+import {ElementConnectDialogComponent} from './elements/connect/connect-dialog/connect-dialog.component';
 import {environment} from '@src/environments/environment';
 
 export function HttpLoaderFactory(http: HttpClient) {
@@ -63,7 +63,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     DisabledAssetsDialogComponent,
     PageMainComponent,
     ElementSettingComponent,
-    ConnectDialogComponent,
+    ElementConnectDialogComponent,
   ],
   bootstrap: [AppComponent],
   providers: [
