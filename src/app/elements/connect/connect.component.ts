@@ -65,27 +65,25 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const remoteAppId = this._appSvc.getQueryString('remote_app');
     const databaseAppId = this._appSvc.getQueryString('database_app');
     const k8sId = this._appSvc.getQueryString('k8s_app');
+
+    if (tp !== 'asset') {
+      tp = 'application';
+    }
     if (assetId) {
       loginTo = assetId;
-      tp = 'asset';
     } else if (remoteAppId) {
       loginTo = remoteAppId;
-      tp = 'remote_app';
     } else if (databaseAppId) {
       loginTo = databaseAppId;
-      tp = 'database_app';
     } else if (k8sId) {
       loginTo = k8sId;
-      tp = 'k8s_app';
     }
     if (this.hasLoginTo || !loginTo) {
       return;
     }
     const getTreeNodeHandlerMapper = {
       asset: 'filterMyGrantedAssetsById',
-      remote_app: 'getMyGrantedRemoteApps',
-      database_app: 'getMyGrantedDBApps',
-      k8s_app: 'getMyGrantedK8SApps',
+      application: 'getMyGrantedAppsNodes',
     };
 
     const handlerName = getTreeNodeHandlerMapper[tp];
@@ -136,9 +134,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
     const grantedSystemUsersHandlerMapper = {
       asset: 'getMyAssetSystemUsers',
-      remote_app: 'getMyRemoteAppSystemUsers',
-      database_app: 'getMyDatabaseAppSystemUsers',
-      k8s_app: 'getMyK8SAppSystemUsers'
+      application: 'getMyAppSystemUsers',
     };
     const handleName = grantedSystemUsersHandlerMapper[tp];
     if (!handleName) {

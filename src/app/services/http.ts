@@ -102,47 +102,16 @@ export class HttpService {
       )));
   }
 
-  getMyGrantedAppsNodes() {
-    const url = '/api/v1/perms/users/applications/tree/';
-    return this.http.get<Array<TreeNode>>(url);
-  }
-
-  getMyGrantedRemoteApps(id?: string) {
-    let url = '/api/v1/perms/users/applications/tree/?category=remote_app';
+  getMyGrantedAppsNodes(id?: string) {
+    let url = '/api/v1/perms/users/applications/tree/';
     if (id) {
       url += `&id=${id}&only=1`;
     }
     return this.http.get<Array<TreeNode>>(url);
   }
 
-  getMyGrantedDBApps(id?: string) {
-    let url = '/api/v1/perms/users/applications/tree/?category=db';
-    if (id) {
-      url += `&id=${id}&only=1`;
-    }
-    return this.http.get<Array<TreeNode>>(url);
-  }
-
-  getMyGrantedK8SApps(id?: string) {
-    let url = '/api/v1/perms/users/applications/tree/?category=cloud';
-    if (id) {
-      url += `&id=${id}&only=1`;
-    }
-    return this.http.get<Array<TreeNode>>(url);
-  }
-
-  getMyRemoteAppSystemUsers(remoteAppId: string) {
+  getMyAppSystemUsers(remoteAppId: string) {
     const url = `/api/v1/perms/users/applications/${remoteAppId}/system-users/`;
-    return this.http.get<Array<SystemUser>>(url);
-  }
-
-  getMyDatabaseAppSystemUsers(DatabaseAppId: string) {
-    const url = `/api/v1/perms/users/applications/${DatabaseAppId}/system-users/`;
-    return this.http.get<Array<SystemUser>>(url);
-  }
-
-  getMyK8SAppSystemUsers(K8SAppId: string) {
-    const url = `/api/v1/perms/users/applications/${K8SAppId}/system-users/`;
     return this.http.get<Array<SystemUser>>(url);
   }
 
