@@ -448,9 +448,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (!this.applicationsTree) {
       return null;
     }
-    function filterCallback(node: TreeNode) {
-      return node.name.toLowerCase().indexOf(keyword) !== -1;
-    }
+    const filterCallback = (node: TreeNode) => {
+      return node.name.toLowerCase().indexOf(keyword.toLowerCase()) !== -1;
+    };
     return this.filterTree(keyword, this.applicationsTree, filterCallback);
   }
 
@@ -504,13 +504,14 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (!this.assetsTree) {
       return null;
     }
-    function filterAssetsCallback(node) {
+    const filterAssetsCallback = (node: TreeNode) => {
       if (node.isParent) {
         return false;
       }
       const host = node.meta.asset;
-      return host.hostname.toLowerCase().indexOf(keyword) !== -1 || host.ip.indexOf(keyword) !== -1;
-    }
+      return host.hostname.toLowerCase().indexOf(keyword.toLowerCase()) !== -1
+        || host.ip.indexOf(keyword.toLowerCase()) !== -1;
+    };
     return this.filterTree(keyword, this.assetsTree, filterAssetsCallback);
     // zTreeObj.expandAll(true);
   }
