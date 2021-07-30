@@ -272,7 +272,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   nodeSupportSSH() {
-    const host = this.rightClickSelectNode.meta.asset;
+    const host = this.rightClickSelectNode.meta.data;
     if (!host) {
       return false;
     }
@@ -291,16 +291,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   isAssetFavorite() {
-    const host = this.rightClickSelectNode.meta.asset;
-    if (!host) {
-      return false;
-    }
-    const assetId = host.id;
+    const assetId = this.rightClickSelectNode.id;
     return this.favoriteAssets.indexOf(assetId) !== -1;
   }
 
   isAssetNode() {
-    return this.rightClickSelectNode.meta.asset;
+    return this.rightClickSelectNode.meta.type === 'asset';
   }
 
   forceRefreshTree() {
@@ -380,11 +376,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   favoriteAsset() {
-    const host = this.rightClickSelectNode.meta.asset;
-    if (!host) {
-      return false;
-    }
-    const assetId = host.id;
+    const assetId = this.rightClickSelectNode.id;
     if (this.isAssetFavorite()) {
       this._http.favoriteAsset(assetId, false).subscribe(() => {
         const i = this.favoriteAssets.indexOf(assetId);
@@ -486,10 +478,10 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         searchNode = this.assetsTree.addNodes(null, newNode)[0];
         searchNode.zAsync = true;
         const nodesGroupByOrg = groupBy(nodes, (node) => {
-          return node.meta.asset.org_name;
+          return node.meta.data.org_name;
         });
         nodesGroupByOrg.forEach((item) => {
-          const orgName = item[0].meta.asset.org_name;
+          const orgName = item[0].meta.data.org_name;
           const orgNodeData = {id: orgName, name: orgName, isParent: true, open: true, zAsync: true};
           const orgNode = this.assetsTree.addNodes(searchNode, orgNodeData)[0];
           orgNode.zAsync = true;
@@ -508,7 +500,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       if (node.isParent) {
         return false;
       }
-      const host = node.meta.asset;
+      const host = node.meta.data;
       return host.hostname.toLowerCase().indexOf(keyword.toLowerCase()) !== -1
         || host.ip.indexOf(keyword.toLowerCase()) !== -1;
     };

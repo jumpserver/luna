@@ -126,12 +126,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return;
     }
     const tp = node.meta.type;
-    let target;
-    if (tp === 'asset') {
-      target = node.meta.asset;
-    } else {
-      target = node;
-    }
     const grantedSystemUsersHandlerMapper = {
       asset: 'getMyAssetSystemUsers',
       application: 'getMyAppSystemUsers',
@@ -141,7 +135,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       alert('未知的类型: ' + tp);
       return;
     }
-    const systemUsers = await this._http[handleName](target.id).toPromise();
+    const systemUsers = await this._http[handleName](node.id).toPromise();
     const connectInfo = await this.selectLoginSystemUsers(systemUsers, node);
     if (!connectInfo) {
       this._logger.info('Just close the dialog');
