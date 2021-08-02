@@ -1,4 +1,4 @@
-import {Component, OnInit, Inject, ViewChild, ElementRef, ChangeDetectorRef, Input} from '@angular/core';
+import {Component, OnInit, Inject, ViewChild, ChangeDetectorRef} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {AppService, LocalStorageService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
@@ -12,8 +12,7 @@ import {BehaviorSubject} from 'rxjs';
   styleUrls: ['./connect-dialog.component.scss'],
 })
 export class ElementConnectDialogComponent implements OnInit {
-  @ViewChild('manualAuth')
-  manualAuthRef: ElementManualAuthComponent;
+  @ViewChild('manualAuth') manualAuthRef: ElementManualAuthComponent;
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
   public node: TreeNode;
   public outputData: ConnectData = new ConnectData();
@@ -40,11 +39,16 @@ export class ElementConnectDialogComponent implements OnInit {
 
   onSelectSystemUser(systemUser) {
     this.systemUserSelected = systemUser;
+    if (!systemUser) {
+      return;
+    }
     this.setConnectTypes();
     this._cdRef.detectChanges();
     setTimeout(() => {
-      this.manualAuthRef.onSystemUserChanged();
-    }, 200);
+      if (this.manualAuthRef) {
+        this.manualAuthRef.onSystemUserChanged();
+      }
+    }, 300);
   }
 
   setConnectTypes() {

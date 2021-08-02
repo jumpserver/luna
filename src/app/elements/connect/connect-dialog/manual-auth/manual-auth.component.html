@@ -34,7 +34,7 @@
               (click)="hidePassword = !hidePassword"
               [attr.aria-label]="'Hide password'"
               [attr.aria-pressed]="hidePassword"
-              [disabled]="systemUserSelected.login_mode !== 'manual'"
+              [disabled]="systemUserSelected?.login_mode !== 'manual'"
       >
         <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
       </button>

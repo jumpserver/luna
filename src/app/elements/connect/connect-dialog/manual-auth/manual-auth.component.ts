@@ -3,8 +3,7 @@ import {AuthInfo, SystemUser, TreeNode} from '@app/model';
 import {User} from '@app/globals';
 import {AppService, LocalStorageService, LogService, SettingService} from '@app/services';
 import {FormControl} from '@angular/forms';
-import {BehaviorSubject, Observable, pipe} from 'rxjs';
-import {map} from 'rxjs/operators';
+import {BehaviorSubject} from 'rxjs';
 
 @Component({
   selector: 'elements-manual-auth',
@@ -12,10 +11,10 @@ import {map} from 'rxjs/operators';
   styleUrls: ['./manual-auth.component.scss'],
 })
 export class ElementManualAuthComponent implements  OnInit {
-  @Input() systemUserSelected: SystemUser;
   @Input() node: TreeNode;
-  @Input() onSubmit: BehaviorSubject<boolean>;
+  @Input() onSubmit$: BehaviorSubject<boolean>;
   @Input() manualAuthInfo: AuthInfo;
+  @Input() systemUserSelected: SystemUser;
   public hidePassword = true;
   public rememberAuth = false;
   public rememberAuthDisabled = false;
@@ -42,7 +41,7 @@ export class ElementManualAuthComponent implements  OnInit {
   }
 
   onSystemUserChanged() {
-    if (this.systemUserSelected['login_mode'] !== 'manual') {
+    if (!this.systemUserSelected || this.systemUserSelected['login_mode'] !== 'manual') {
       return;
     }
     this.usernameReadonly = false;
@@ -87,7 +86,7 @@ export class ElementManualAuthComponent implements  OnInit {
   }
 
   subscribeSubmitEvent() {
-    this.onSubmit.subscribe(() => {
+    this.onSubmit$.subscribe(() => {
       if (this.rememberAuth) {
         this._logger.debug('Save auth to localstorge: ', this.node.id, this.systemUserSelected.id, this.manualAuthInfo);
         this._appSvc.saveNodeSystemUserAuth(this.node.id, this.systemUserSelected.id, this.manualAuthInfo);
