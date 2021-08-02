@@ -39,18 +39,18 @@
     "utf-8-validate": "^5.0.2"
   },
   "dependencies": {
-    "@angular/animations": "^7.2.0",
+    "@angular/animations": "^8.2.14",
     "@angular/cdk": "^7.3.7",
-    "@angular/common": "~7.2.0",
-    "@angular/compiler": "~7.2.0",
-    "@angular/core": "~7.2.0",
+    "@angular/common": "~8.2.14",
+    "@angular/compiler": "~8.2.14",
+    "@angular/core": "~8.2.14",
     "@angular/flex-layout": "^7.0.0-beta.19",
-    "@angular/forms": "~7.2.0",
+    "@angular/forms": "~8.2.14",
     "@angular/http": "^7.2.15",
     "@angular/material": "^7.3.7",
-    "@angular/platform-browser": "~7.2.0",
-    "@angular/platform-browser-dynamic": "~7.2.0",
-    "@angular/router": "~7.2.0",
+    "@angular/platform-browser": "~8.2.14",
+    "@angular/platform-browser-dynamic": "~8.2.14",
+    "@angular/router": "~8.2.14",
     "@ngx-translate/core": "~11.0.0",
     "@ngx-translate/http-loader": "~4.0.0",
     "@types/jquery": "^3.3.6",
@@ -74,18 +74,18 @@
     "ngx-toastr": "^10.2.0",
     "popper.js": "^1.14.7",
     "requirejs": "^2.3.5",
-    "rxjs": "~6.3.3",
+    "rxjs": "~6.6.7",
     "rxjs-compat": "^6.0.0-rc.0",
     "tslib": "^1.9.0",
     "uuid-js": "^0.7.5",
     "xterm": "3.3.0",
-    "zone.js": "~0.8.26"
+    "zone.js": "~0.9.1"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "~0.13.0",
-    "@angular/cli": "~7.3.9",
-    "@angular/compiler-cli": "~7.2.0",
-    "@angular/language-service": "~7.2.0",
+    "@angular-devkit/build-angular": "~0.803.29",
+    "@angular/cli": "~8.3.29",
+    "@angular/compiler-cli": "~8.2.14",
+    "@angular/language-service": "~8.2.14",
     "@biesbjerg/ngx-translate-extract": "^7.0.2",
     "@types/jasmine": "~2.8.8",
     "@types/jasminewd2": "~2.0.3",
@@ -101,6 +101,6 @@
     "protractor": "~5.4.0",
     "ts-node": "~7.0.0",
     "tslint": "~5.11.0",
-    "typescript": "~3.2.2"
+    "typescript": "~3.5.3"
   }
 }

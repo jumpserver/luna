@@ -12,7 +12,7 @@ import {BehaviorSubject} from 'rxjs';
   styleUrls: ['./connect-dialog.component.scss'],
 })
 export class ElementConnectDialogComponent implements OnInit {
-  @ViewChild('manualAuth') manualAuthRef: ElementManualAuthComponent;
+  @ViewChild('manualAuth', {static: false}) manualAuthRef: ElementManualAuthComponent;
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
   public node: TreeNode;
   public outputData: ConnectData = new ConnectData();
@@ -43,12 +43,12 @@ export class ElementConnectDialogComponent implements OnInit {
       return;
     }
     this.setConnectTypes();
-    this._cdRef.detectChanges();
+    // this._cdRef.detectChanges();
     setTimeout(() => {
       if (this.manualAuthRef) {
         this.manualAuthRef.onSystemUserChanged();
       }
-    }, 300);
+    });
   }
 
   setConnectTypes() {

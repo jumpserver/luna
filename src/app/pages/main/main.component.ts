@@ -10,7 +10,7 @@ import {ViewService} from '@app/services';
   styleUrls: ['./main.component.css'],
 })
 export class PageMainComponent implements OnInit {
-  @ViewChild(SplitComponent, { read: false }) split: SplitComponent;
+  @ViewChild(SplitComponent, {read: false, static: false}) split: SplitComponent;
   User = User;
   store = DataStore;
   showIframeHider = false;
