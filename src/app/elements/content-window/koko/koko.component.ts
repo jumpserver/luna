@@ -10,7 +10,7 @@ import {LogService} from '@app/services';
 })
 export class ElementConnectorKokoComponent implements OnInit {
   @Input() view: View;
-  @ViewChild('terminal') iframe: ElementRef;
+  @ViewChild('terminal', {static: false}) iframe: ElementRef;
 
   iframeURL: any;
   node: TreeNode;

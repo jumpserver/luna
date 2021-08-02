@@ -18,8 +18,8 @@ export class ElementManualAuthComponent implements  OnInit {
   public hidePassword = true;
   public rememberAuth = false;
   public rememberAuthDisabled = false;
-  @ViewChild('username') usernameRef: ElementRef;
-  @ViewChild('password') passwordRef: ElementRef;
+  @ViewChild('username', {static: false}) usernameRef: ElementRef;
+  @ViewChild('password', {static: false}) passwordRef: ElementRef;
   usernameControl = new FormControl();
   usernameReadonly = false;
   authsOptions: AuthInfo[];

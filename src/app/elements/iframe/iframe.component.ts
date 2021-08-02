@@ -10,7 +10,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit {
   @Input() src: any;
   @Input() id: string;
   @Input() view: View;
-  @ViewChild('iFrame') iframeRef: ElementRef;
+  @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
 
   constructor() {

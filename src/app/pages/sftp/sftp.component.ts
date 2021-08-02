@@ -9,7 +9,7 @@ import {DomSanitizer} from '@angular/platform-browser';
 export class PageSftpComponent implements OnInit {
   @Input() host: any;
   iframeURL: any;
-  @ViewChild('sftp') el: ElementRef;
+  @ViewChild('sftp', {static: false}) el: ElementRef;
 
   constructor(private sanitizer: DomSanitizer) {
   }

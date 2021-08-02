@@ -10,7 +10,7 @@ import {View} from '@app/model';
 })
 export class ElementConnectorLionComponent implements OnInit {
   @Input() view: View;
-  @ViewChild('terminal') el: ElementRef;
+  @ViewChild('terminal', {static: false}) el: ElementRef;
   iframeURL: any;
   node: TreeNode;
   sysUser: SystemUser;

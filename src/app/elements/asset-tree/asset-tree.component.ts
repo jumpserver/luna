@@ -65,7 +65,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   @Input() query: string;
   @Input() searchEvt$: BehaviorSubject<string>;
-  @ViewChild('rMenu') rMenu: ElementRef;
+  @ViewChild('rMenu', {static: false}) rMenu: ElementRef;
   Data = [];
   nodes = [];
   setting = {

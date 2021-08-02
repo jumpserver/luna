@@ -1,5 +1,3 @@
-import {Tree} from '@angular/router/src/utils/tree';
-
 export class UserGroup {
   id: string;
   name: string;

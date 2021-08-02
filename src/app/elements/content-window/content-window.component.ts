@@ -12,7 +12,7 @@ import {SettingService} from '@app/services';
 })
 export class ElementContentWindowComponent implements OnInit {
   @Input() view: View;
-  @ViewChild('contentWindow') windowRef: ElementRef;
+  @ViewChild('contentWindow', {static: false}) windowRef: ElementRef;
   connector: any; // koko, omnidb, lion
   public id: string;
 
