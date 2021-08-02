@@ -1,7 +1,6 @@
 <h1 mat-dialog-title>{{"Connect" | translate}} {{ node.name | truncatechars:30 }}</h1>
 
 <div (keyup.enter)="onConfirm()" >
-
   <elements-select-system-user
     [node]="node"
     [systemUsers]="systemUsers"
@@ -16,7 +15,7 @@
     [node]="node"
     [systemUserSelected]="systemUserSelected"
     [manualAuthInfo]="manualAuthInfo"
-    [onSubmit]="onSubmit$"
+    [onSubmit$]="onSubmit$"
   >
   </elements-manual-auth>
 

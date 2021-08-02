@@ -183,6 +183,33 @@ export class HttpService {
     return window.open(url.href);
   }
 
+  getRDPClientUrl(assetId: string, appId: string, systemUserId: string, solution: string) {
+    const params = {};
+    if (solution && solution.indexOf('x') > -1) {
+      const [width, height] = solution.split('x');
+      params['width'] = width;
+      params['height'] = height;
+    }
+    return this.getLocalClientUrl(assetId, appId, systemUserId, params);
+  }
+
+  getLocalClientUrl(assetId: string, appId: string, systemUserId: string, otherParams: object) {
+    const url = new URL('/api/v1/authentication/connection-token/client-url/', window.location.origin);
+    const data = {};
+    if (assetId) {
+      data['asset'] = assetId;
+    } else {
+      data['application'] = appId;
+    }
+    data['system_user'] = systemUserId;
+    if (otherParams) {
+      for (const [k, v] of Object.entries(otherParams)) {
+        url.searchParams.append(k, v);
+      }
+    }
+    return this.post(url.href, data).toPromise();
+  }
+
   createSystemUserTempAuth(systemUser: SystemUser, node: TreeNode, auth: object) {
     const url = `/api/v1/assets/system-users/${systemUser.id}/temp-auth/`;
     const data = {

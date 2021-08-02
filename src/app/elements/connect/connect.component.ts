@@ -3,7 +3,7 @@ import 'rxjs/add/operator/toPromise';
 import {connectEvt, TYPE_RDP_CLIENT} from '@app/globals';
 import {AppService, HttpService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
-import {SystemUser, TreeNode, Asset, ConnectData} from '@app/model';
+import {SystemUser, TreeNode, ConnectData} from '@app/model';
 import {View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 
@@ -144,21 +144,23 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     await this.createTempAuthIfNeed(node, connectInfo);
     this._logger.debug('Connect info: ', connectInfo);
     if (connectInfo.connectType.id === TYPE_RDP_CLIENT.id) {
-      this.createRdpFile(connectInfo, node);
+      this.callLocalClient(connectInfo, node).then();
     } else {
       this.createNodeView(connectInfo, node);
     }
   }
 
-  createRdpFile(connectInfo: ConnectData, node: TreeNode) {
-    this._logger.debug('Download the rdp file');
+  async callLocalClient(connectInfo: ConnectData, node: TreeNode) {
+    this._logger.debug('Call local client');
     const { systemUser } = connectInfo;
     const solution = this._settingSvc.setting.rdpResolution;
-    if (node.meta.type === 'remote_app') {
-      this._http.downloadRDPFile('', node.id, systemUser.id, solution);
+    let data;
+    if (node.meta.type === 'application' && node.meta.data.category === 'remote_app') {
+      data = await this._http.getRDPClientUrl('', node.id, systemUser.id, solution);
     } else {
-      this._http.downloadRDPFile(node.id, '', systemUser.id, solution);
+      data = await this._http.getRDPClientUrl(node.id, '', systemUser.id, solution);
     }
+    window.open(data['url']);
   }
 
   createNodeView(connectInfo: ConnectData, node: TreeNode) {
