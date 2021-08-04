@@ -44,7 +44,11 @@ export class ElementConnectorKokoComponent implements OnInit {
 
   generateNodeConnectUrl() {
     const baseUrl = `${document.location.origin}/koko/terminal`;
-    this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=${this.view.protocol}&system_user_id=${this.sysUser.id}`;
+    let type = this.view.protocol;
+    if (this.view.type === 'remote_app') {
+      type = 'remoteapp';
+    }
+    this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=${type}&system_user_id=${this.sysUser.id}`;
   }
 
   generateTokenURL() {
