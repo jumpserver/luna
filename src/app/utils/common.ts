@@ -115,3 +115,11 @@ export function canvasWaterMark({
   container.style.position = 'relative';
   container.insertBefore(watermarkDiv, container.firstChild);
 }
+
+export function windowOpen(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
