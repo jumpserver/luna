@@ -6,6 +6,7 @@ import {MatDialog} from '@angular/material';
 import {SystemUser, TreeNode, ConnectData} from '@app/model';
 import {View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
+import {windowOpen} from '@app/utils/common';
 
 
 @Component({
@@ -160,7 +161,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     } else {
       data = await this._http.getRDPClientUrl(node.id, '', systemUser.id, solution);
     }
-    window.open(data['url']);
+    windowOpen(data['url']);
   }
 
   createNodeView(connectInfo: ConnectData, node: TreeNode) {
