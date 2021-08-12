@@ -1,0 +1,46 @@
+<div class="manual-auth">
+  <label class="zone-label">{{ "Account info" | translate }}</label>
+  <div class="account-info">
+    <mat-form-field style="width: 45%">
+      <input
+        #username
+        matInput
+        name="username"
+        placeholder="{{'Username'| translate}}"
+        autofocus
+        [(ngModel)]="manualAuthInfo.username"
+        (ngModelChange)="onUsernameChanges()"
+        (focus)="onFocus()"
+        [readonly]="usernameReadonly"
+        [matAutocomplete]="auto"
+      >
+      <mat-autocomplete #auto="matAutocomplete">
+        <mat-option *ngFor="let i of filteredOptions" [value]="i.username">
+          {{i.username}}
+        </mat-option>
+      </mat-autocomplete>
+    </mat-form-field>
+
+    <mat-form-field style="width: 45%; margin-left: 10%">
+      <input matInput [type]="hidePassword ? 'password' : 'text'"
+             #password
+             name="password"
+             [(ngModel)]="manualAuthInfo.password"
+             placeholder="{{'Password'| translate}}"
+             [attr.cdkFocusInitial]="manualAuthInfo.username? true : null"
+             autofocus
+      >
+      <button mat-icon-button matSuffix
+              (click)="hidePassword = !hidePassword"
+              [attr.aria-label]="'Hide password'"
+              [attr.aria-pressed]="hidePassword"
+              [disabled]="systemUserSelected?.login_mode !== 'manual'"
+      >
+        <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+      </button>
+    </mat-form-field>
+    <mat-checkbox *ngIf="!rememberAuthDisabled" [(ngModel)]="rememberAuth" class="remember-auth">
+      {{ "Remember in browser" | translate }}
+    </mat-checkbox>
+  </div>
+</div>

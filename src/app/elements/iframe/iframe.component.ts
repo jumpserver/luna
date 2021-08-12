@@ -10,7 +10,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit {
   @Input() src: any;
   @Input() id: string;
   @Input() view: View;
-  @ViewChild('iFrame') iframeRef: ElementRef;
+  @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
 
   constructor() {
@@ -22,6 +22,11 @@ export class ElementIframeComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     this.onIframeLoadDone();
+  }
+
+  setActive() {
+    const win = this.iframeRef.nativeElement.contentWindow;
+    win.dispatchEvent(new Event('jmsFocus'));
   }
 
   onIframeLoadDone() {

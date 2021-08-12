@@ -3,9 +3,10 @@ import 'rxjs/add/operator/toPromise';
 import {connectEvt, TYPE_RDP_CLIENT} from '@app/globals';
 import {AppService, HttpService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
-import {SystemUser, TreeNode, Asset, ConnectData} from '@app/model';
+import {SystemUser, TreeNode, ConnectData} from '@app/model';
 import {View} from '@app/model';
-import {ConnectDialogComponent} from './connect-dialog/connect-dialog.component';
+import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
+import {windowOpen} from '@app/utils/common';
 
 
 @Component({
@@ -65,27 +66,25 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const remoteAppId = this._appSvc.getQueryString('remote_app');
     const databaseAppId = this._appSvc.getQueryString('database_app');
     const k8sId = this._appSvc.getQueryString('k8s_app');
+
+    if (tp !== 'asset') {
+      tp = 'application';
+    }
     if (assetId) {
       loginTo = assetId;
-      tp = 'asset';
     } else if (remoteAppId) {
       loginTo = remoteAppId;
-      tp = 'remote_app';
     } else if (databaseAppId) {
       loginTo = databaseAppId;
-      tp = 'database_app';
     } else if (k8sId) {
       loginTo = k8sId;
-      tp = 'k8s_app';
     }
     if (this.hasLoginTo || !loginTo) {
       return;
     }
     const getTreeNodeHandlerMapper = {
       asset: 'filterMyGrantedAssetsById',
-      remote_app: 'getMyGrantedRemoteApps',
-      database_app: 'getMyGrantedDBApps',
-      k8s_app: 'getMyGrantedK8SApps',
+      application: 'getMyGrantedAppsNodes',
     };
 
     const handlerName = getTreeNodeHandlerMapper[tp];
@@ -128,24 +127,16 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return;
     }
     const tp = node.meta.type;
-    let target;
-    if (tp === 'asset') {
-      target = node.meta.asset;
-    } else {
-      target = node;
-    }
     const grantedSystemUsersHandlerMapper = {
       asset: 'getMyAssetSystemUsers',
-      remote_app: 'getMyRemoteAppSystemUsers',
-      database_app: 'getMyDatabaseAppSystemUsers',
-      k8s_app: 'getMyK8SAppSystemUsers'
+      application: 'getMyAppSystemUsers',
     };
     const handleName = grantedSystemUsersHandlerMapper[tp];
     if (!handleName) {
       alert('未知的类型: ' + tp);
       return;
     }
-    const systemUsers = await this._http[handleName](target.id).toPromise();
+    const systemUsers = await this._http[handleName](node.id).toPromise();
     const connectInfo = await this.selectLoginSystemUsers(systemUsers, node);
     if (!connectInfo) {
       this._logger.info('Just close the dialog');
@@ -154,21 +145,23 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     await this.createTempAuthIfNeed(node, connectInfo);
     this._logger.debug('Connect info: ', connectInfo);
     if (connectInfo.connectType.id === TYPE_RDP_CLIENT.id) {
-      this.createRdpFile(connectInfo, node);
+      this.callLocalClient(connectInfo, node).then();
     } else {
       this.createNodeView(connectInfo, node);
     }
   }
 
-  createRdpFile(connectInfo: ConnectData, node: TreeNode) {
-    this._logger.debug('Download the rdp file');
+  async callLocalClient(connectInfo: ConnectData, node: TreeNode) {
+    this._logger.debug('Call local client');
     const { systemUser } = connectInfo;
     const solution = this._settingSvc.setting.rdpResolution;
-    if (node.meta.type === 'remote_app') {
-      this._http.downloadRDPFile('', node.id, systemUser.id, solution);
+    let data;
+    if (node.meta.type === 'application' && node.meta.data.category === 'remote_app') {
+      data = await this._http.getRDPClientUrl('', node.id, systemUser.id, solution);
     } else {
-      this._http.downloadRDPFile(node.id, '', systemUser.id, solution);
+      data = await this._http.getRDPClientUrl(node.id, '', systemUser.id, solution);
     }
+    windowOpen(data['url']);
   }
 
   createNodeView(connectInfo: ConnectData, node: TreeNode) {
@@ -179,7 +172,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   showSelectSystemUserDialog(systemUserMaxPriority: SystemUser[], node: TreeNode): Promise<ConnectData> {
-    const dialogRef = this._dialog.open(ConnectDialogComponent, {
+    const dialogRef = this._dialog.open(ElementConnectDialogComponent, {
       minHeight: '300px',
       height: 'auto',
       width: '500px',

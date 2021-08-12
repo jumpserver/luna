@@ -54,3 +54,72 @@ export function groupByProp(xs, key) {
     return rv;
   }, {});
 }
+
+export function canvasWaterMark({
+    // 使用 ES6 的函数默认值方式设置参数的默认取值
+    // 具体参见 https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Functions/Default_parameters
+    container = document.body,
+    width = 300,
+    height = 300,
+    textAlign = 'center',
+    textBaseline = 'middle',
+    font = '20px monaco, microsoft yahei',
+    fillStyle = 'rgba(184, 184, 184, 0.8)',
+    content = 'JumpServer',
+    rotate = -45,
+    zIndex = 1000
+} = {}) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  canvas.width = width;
+  canvas.height = height;
+  ctx.globalAlpha = 0.5;
+
+  ctx.font = font;
+  ctx.fillStyle = fillStyle;
+  ctx.textAlign = <CanvasTextAlign>textAlign;
+  ctx.textBaseline = <CanvasTextBaseline>textBaseline;
+
+  ctx.translate(0.5 * width, 0.5 * height);
+  ctx.rotate((rotate * Math.PI) / 180);
+
+  function generateMultiLineText(_ctx: CanvasRenderingContext2D, _text: string, _width: number, _lineHeight: number) {
+    const words = _text.split('\n');
+    let line = '';
+    const x = 0;
+    let y = 0;
+
+    for (let n = 0; n < words.length; n++) {
+      line = words[n];
+      _ctx.fillText(line, x, y);
+      y += _lineHeight;
+    }
+  }
+  generateMultiLineText(ctx, content, width, 48);
+
+  const base64Url = canvas.toDataURL();
+  const watermarkDiv = document.createElement('div');
+  watermarkDiv.setAttribute('style', `
+          position:absolute;
+          top:0;
+          left:0;
+          width:100%;
+          height:100%;
+          z-index:${zIndex};
+          pointer-events:none;
+          background-repeat:repeat;
+          background-image:url('${base64Url}')`
+  );
+
+  container.style.position = 'relative';
+  container.insertBefore(watermarkDiv, container.firstChild);
+}
+
+export function windowOpen(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+

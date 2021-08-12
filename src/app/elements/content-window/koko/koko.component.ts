@@ -10,14 +10,14 @@ import {LogService} from '@app/services';
 })
 export class ElementConnectorKokoComponent implements OnInit {
   @Input() view: View;
-  @ViewChild('terminal') iframe: ElementRef;
+  @ViewChild('terminal', {static: false}) iframe: ElementRef;
 
   iframeURL: any;
   node: TreeNode;
   sysUser: SystemUser;
   protocol: string;
 
-  constructor(private _logger: LogService ) {
+  constructor(private _logger: LogService) {
   }
 
   ngOnInit() {
@@ -44,20 +44,14 @@ export class ElementConnectorKokoComponent implements OnInit {
 
   generateNodeConnectUrl() {
     const baseUrl = `${document.location.origin}/koko/terminal`;
-    switch (this.view.protocol) {
-      case 'k8s':
-        this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=k8s_app&system_user_id=${this.sysUser.id}`;
-        break;
-      case 'mysql':
-        this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=database_app&system_user_id=${this.sysUser.id}`;
-        break;
-      default:
-        this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=asset&system_user_id=${this.sysUser.id}`;
-        break;
+    let type = this.view.protocol;
+    if (this.view.type === 'remote_app') {
+      type = 'remoteapp';
     }
+    this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=${type}&system_user_id=${this.sysUser.id}`;
   }
 
-  generateTokenURL()  {
+  generateTokenURL() {
     const tokenUrl = `${document.location.origin}/koko/token`;
     this.iframeURL = `${tokenUrl}/?target_id=${this.view.token}&type=token`;
   }

@@ -1,16 +1,14 @@
-import {Directive, ElementRef, Inject, Output} from '@angular/core';
+import {Directive, ElementRef, HostBinding, Inject, Output} from '@angular/core';
 import {DOCUMENT} from '@angular/common';
 import {fromEvent, Observable} from 'rxjs';
 import {map, switchMap, takeUntil, throttleTime} from 'rxjs/operators';
 
 @Directive({
-  selector: '[ngxSplitHandle]',
-  host: {
-    class: 'ngx-split-handle',
-    title: 'Drag to resize'
-  }
+  selector: '[ngxSplitHandle]'
 })
 export class SplitHandleDirective {
+  @HostBinding('class') splitClass = 'ngx-split-handle';
+  @HostBinding('title') splitTitle = 'Drag to resize';
   @Output() drag: Observable<{ x: number, y: number }>;
 
   constructor(ref: ElementRef, @Inject(DOCUMENT) _document: any) {

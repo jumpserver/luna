@@ -10,7 +10,7 @@ import {View} from '@app/model';
 })
 export class ElementConnectorLionComponent implements OnInit {
   @Input() view: View;
-  @ViewChild('terminal') el: ElementRef;
+  @ViewChild('terminal', {static: false}) el: ElementRef;
   iframeURL: any;
   node: TreeNode;
   sysUser: SystemUser;
@@ -47,7 +47,7 @@ export class ElementConnectorLionComponent implements OnInit {
   }
 
   generateNodeURL() {
-    if (this.view.type === 'remote_app') {
+    if (this.view.type === 'remote_app' || this.view.type === 'application' ) {
       this.iframeURL = `${this.baseUrl}/?target_id=${this.node.id}&type=remoteapp&system_user_id=${this.sysUser.id}`;
     } else {
       this.iframeURL = `${this.baseUrl}/?target_id=${this.node.id}&type=${this.protocol}&system_user_id=${this.sysUser.id}`;

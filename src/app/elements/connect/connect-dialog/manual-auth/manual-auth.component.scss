@@ -1,0 +1,23 @@
+.manual-auth {
+  margin-bottom: 20px;
+}
+
+.remember-auth ::ng-deep .mat-checkbox-layout {
+  padding-bottom: 10px;
+}
+
+.mat-option {
+  line-height: 30;
+  height: 40px;
+}
+
+.zone-label {
+  color: rgba(0, 0, 0, 0.54);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.account-info {
+  border: solid #cbc9c9 1px;
+  padding: 10px 10px 0 10px;
+}

@@ -1,7 +1,8 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-import {HttpService, LogService} from '@app/services';
+import {HttpService, LogService, SettingService} from '@app/services';
 import {Replay} from '@app/model';
+import {canvasWaterMark} from '@app/utils/common';
 
 @Component({
   selector: 'pages-replay',
@@ -13,6 +14,7 @@ export class PagesReplayComponent implements OnInit {
 
   constructor(private route: ActivatedRoute,
               private _http: HttpService,
+              private _settingSvc: SettingService,
               private _logger: LogService) {
   }
 
@@ -32,12 +34,23 @@ export class PagesReplayComponent implements OnInit {
           if (data['type']) {
             Object.assign(this.replay, data);
             clearInterval(interval);
+            this.createWaterMarkIfNeed();
           }
         },
         err => {
           alert('没找到录像文件');
+          clearInterval(interval);
         }
       );
     }, 2000);
+  }
+
+  createWaterMarkIfNeed() {
+    if (this._settingSvc.globalSetting.SECURITY_WATERMARK_ENABLED) {
+      canvasWaterMark({
+        container: document.body,
+        content: `${this.replay.user}`,
+      });
+    }
   }
 }

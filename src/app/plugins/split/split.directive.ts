@@ -7,6 +7,7 @@ import {
   Input,
   OnDestroy,
   QueryList,
+  HostBinding
 } from '@angular/core';
 import {FlexDirective} from '@angular/flex-layout';
 import {Subscription} from 'rxjs';
@@ -16,14 +17,12 @@ import {SplitAreaDirective} from './split-area.directive';
 
 
 @Directive({
-  selector: '[ngxSplit]',
-  host: {
-    class: 'ngx-split'
-  }
+  selector: '[ngxSplit]'
 })
 export class SplitDirective implements AfterContentInit, OnDestroy {
   @Input('ngxSplit') direction = 'row';
-  @ContentChild(SplitHandleDirective) handle: SplitHandleDirective;
+  @HostBinding('class') splitClass = 'ngx-split';
+  @ContentChild(SplitHandleDirective, {static: false}) handle: SplitHandleDirective;
   @ContentChildren(SplitAreaDirective) areas: QueryList<SplitAreaDirective>;
 
   private watcher: Subscription;

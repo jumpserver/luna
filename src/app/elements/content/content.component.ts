@@ -10,7 +10,7 @@ import * as _ from 'lodash';
   styleUrls: ['./content.component.scss']
 })
 export class ElementContentComponent implements OnInit {
-  @ViewChild('tabs') tabsRef: ElementRef;
+  @ViewChild('tabs', {static: false}) tabsRef: ElementRef;
   viewList: Array<View>;
   batchCommand: string;
   pos = {left: '100px', top: '100px'};

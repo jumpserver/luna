@@ -102,42 +102,16 @@ export class HttpService {
       )));
   }
 
-  getMyGrantedRemoteApps(id?: string) {
-    let url = '/api/v1/perms/users/applications/tree/?category=remote_app';
+  getMyGrantedAppsNodes(id?: string) {
+    let url = '/api/v1/perms/users/applications/tree/';
     if (id) {
       url += `&id=${id}&only=1`;
     }
     return this.http.get<Array<TreeNode>>(url);
   }
 
-  getMyGrantedDBApps(id?: string) {
-    let url = '/api/v1/perms/users/applications/tree/?category=db';
-    if (id) {
-      url += `&id=${id}&only=1`;
-    }
-    return this.http.get<Array<TreeNode>>(url);
-  }
-
-  getMyGrantedK8SApps(id?: string) {
-    let url = '/api/v1/perms/users/applications/tree/?category=cloud';
-    if (id) {
-      url += `&id=${id}&only=1`;
-    }
-    return this.http.get<Array<TreeNode>>(url);
-  }
-
-  getMyRemoteAppSystemUsers(remoteAppId: string) {
+  getMyAppSystemUsers(remoteAppId: string) {
     const url = `/api/v1/perms/users/applications/${remoteAppId}/system-users/`;
-    return this.http.get<Array<SystemUser>>(url);
-  }
-
-  getMyDatabaseAppSystemUsers(DatabaseAppId: string) {
-    const url = `/api/v1/perms/users/applications/${DatabaseAppId}/system-users/`;
-    return this.http.get<Array<SystemUser>>(url);
-  }
-
-  getMyK8SAppSystemUsers(K8SAppId: string) {
-    const url = `/api/v1/perms/users/applications/${K8SAppId}/system-users/`;
     return this.http.get<Array<SystemUser>>(url);
   }
 
@@ -207,6 +181,33 @@ export class HttpService {
       url.searchParams.append('height', height);
     }
     return window.open(url.href);
+  }
+
+  getRDPClientUrl(assetId: string, appId: string, systemUserId: string, solution: string) {
+    const params = {};
+    if (solution && solution.indexOf('x') > -1) {
+      const [width, height] = solution.split('x');
+      params['width'] = width;
+      params['height'] = height;
+    }
+    return this.getLocalClientUrl(assetId, appId, systemUserId, params);
+  }
+
+  getLocalClientUrl(assetId: string, appId: string, systemUserId: string, otherParams: object) {
+    const url = new URL('/api/v1/authentication/connection-token/client-url/', window.location.origin);
+    const data = {};
+    if (assetId) {
+      data['asset'] = assetId;
+    } else {
+      data['application'] = appId;
+    }
+    data['system_user'] = systemUserId;
+    if (otherParams) {
+      for (const [k, v] of Object.entries(otherParams)) {
+        url.searchParams.append(k, v);
+      }
+    }
+    return this.post(url.href, data).toPromise();
   }
 
   createSystemUserTempAuth(systemUser: SystemUser, node: TreeNode, auth: object) {

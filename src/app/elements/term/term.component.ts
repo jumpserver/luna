@@ -15,7 +15,7 @@ import 'rxjs/Observable';
   styleUrls: ['./term.component.css']
 })
 export class ElementTermComponent implements OnInit, AfterViewInit {
-  @ViewChild('term') el: ElementRef;
+  @ViewChild('term', {static: false}) el: ElementRef;
   @Input() term: Terminal;
   @Input() offset: Array<number>;
   @Input() stopWatchWinChange = false;
