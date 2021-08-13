@@ -29,7 +29,7 @@ export class ElementContentWindowComponent implements OnInit {
     switch (this.view.connectFrom) {
       case 'token':
       case 'node':
-        if (this.view.type === 'database_app' && this.view.connectType.id === TYPE_DB_GUI.id) {
+        if (this.view.connectType.id === TYPE_DB_GUI.id) {
           this.connector = 'omnidb';
         } else if (['rdp', 'vnc'].indexOf(this.view.protocol) > -1) {
           this.connector = 'lion';
