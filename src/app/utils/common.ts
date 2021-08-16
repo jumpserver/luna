@@ -63,6 +63,7 @@ export function canvasWaterMark({
     height = 300,
     textAlign = 'center',
     textBaseline = 'middle',
+    alpha = 0.3,
     font = '20px monaco, microsoft yahei',
     fillStyle = 'rgba(184, 184, 184, 0.8)',
     content = 'JumpServer',
@@ -80,6 +81,7 @@ export function canvasWaterMark({
   ctx.fillStyle = fillStyle;
   ctx.textAlign = <CanvasTextAlign>textAlign;
   ctx.textBaseline = <CanvasTextBaseline>textBaseline;
+  ctx.globalAlpha = alpha;
 
   ctx.translate(0.5 * width, 0.5 * height);
   ctx.rotate((rotate * Math.PI) / 180);
