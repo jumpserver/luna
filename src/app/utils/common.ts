@@ -63,6 +63,7 @@ export function canvasWaterMark({
     height = 300,
     textAlign = 'center',
     textBaseline = 'middle',
+    alpha = 0.3,
     font = '20px monaco, microsoft yahei',
     fillStyle = 'rgba(184, 184, 184, 0.8)',
     content = 'JumpServer',
@@ -80,6 +81,7 @@ export function canvasWaterMark({
   ctx.fillStyle = fillStyle;
   ctx.textAlign = <CanvasTextAlign>textAlign;
   ctx.textBaseline = <CanvasTextBaseline>textBaseline;
+  ctx.globalAlpha = alpha;
 
   ctx.translate(0.5 * width, 0.5 * height);
   ctx.rotate((rotate * Math.PI) / 180);
@@ -121,5 +123,47 @@ export function windowOpen(url) {
   a.href = url;
   a.click();
   window.URL.revokeObjectURL(url);
+}
+
+export function zeroPad(num, minLength) {
+  let str = num.toString();
+  // Add leading zeroes until string is long enough
+  while (str.length < minLength) {
+    str = '0' + str;
+  }
+  return str;
+}
+
+export function formatTimeWithSeconds(seconds) {
+  let hour = 0, minute = 0, second = 0;
+  const ref = [3600, 60, 1];
+  for (let i = 0; i < ref.length; i++) {
+    const val = ref[i];
+    while (val <= seconds) {
+      seconds -= val;
+      switch (i) {
+        case 0:
+          hour++;
+          break;
+        case 1:
+          minute++;
+          break;
+        case 2:
+          second++;
+          break;
+      }
+    }
+  }
+  return [hour, minute, second];
+}
+
+export function formatTime(millis: number) {
+  const totalSeconds = millis / 1000;
+  const [hour, minute, second] = formatTimeWithSeconds(totalSeconds);
+  let time = zeroPad(minute, 2) + ':' + zeroPad(second, 2);
+  if (hour > 0) {
+    time = zeroPad(hour, 2) + ':' + time;
+  }
+  return time;
 }
 

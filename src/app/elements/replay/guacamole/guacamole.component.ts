@@ -1,48 +1,7 @@
 import {Component, OnInit, Input} from '@angular/core';
 import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
 import {Replay} from '@app/model';
-
-function zeroPad(num, minLength) {
-  let str = num.toString();
-  // Add leading zeroes until string is long enough
-  while (str.length < minLength) {
-    str = '0' + str;
-  }
-  return str;
-}
-
-function formatTimeWithSeconds(seconds) {
-  let hour = 0, minute = 0, second = 0;
-  const ref = [3600, 60, 1];
-  for (let i = 0; i < ref.length; i++) {
-    const val = ref[i];
-    while (val <= seconds) {
-      seconds -= val;
-      switch (i) {
-        case 0:
-          hour++;
-          break;
-        case 1:
-          minute++;
-          break;
-        case 2:
-          second++;
-          break;
-      }
-    }
-  }
-  return [hour, minute, second];
-}
-
-function formatTime(millis: number) {
-  const totalSeconds = millis / 1000;
-  const [hour, minute, second] = formatTimeWithSeconds(totalSeconds);
-  let time = zeroPad(minute, 2) + ':' + zeroPad(second, 2);
-  if (hour > 0) {
-    time = zeroPad(hour, 2) + ':' + time;
-  }
-  return time;
-}
+import {formatTime} from '@app/utils/common';
 
 
 @Component({
@@ -62,7 +21,7 @@ export class ElementReplayGuacamoleComponent implements OnInit {
   duration = '00:00';
   position = '00:00';
   @Input() replay: Replay;
-  starttime = null;
+  startTime = null;
 
   constructor() { }
 
@@ -72,7 +31,7 @@ export class ElementReplayGuacamoleComponent implements OnInit {
       return;
     }
     const date = new Date(Date.parse(this.replay.date_start));
-    this.starttime = this.toSafeLocalDateStr(date);
+    this.startTime = this.toSafeLocalDateStr(date);
     this.playerRef = document.getElementById('player');
     this.displayRef = document.getElementById('display');
     this.screenRef = document.getElementById('screen');
@@ -126,7 +85,7 @@ export class ElementReplayGuacamoleComponent implements OnInit {
   }
 
   getUserLang() {
-    let userLangEN = document.cookie.indexOf('django_language=en');
+    const userLangEN = document.cookie.indexOf('django_language=en');
     if (userLangEN === -1) {
     return 'zh-CN';
     } else {
@@ -134,7 +93,7 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     }
   }
   toSafeLocalDateStr(d) {
-    let date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
+    const date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
     return date_s.split('/').join('-');
   }
   runFrom() {

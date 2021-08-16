@@ -21,8 +21,8 @@
   <span id="user" style="padding-left: 20px" *ngIf="replay.user">{{"user"| translate}} : {{replay.user}}</span>
   <span id="asset" style="padding-left: 20px" *ngIf="replay.asset">{{"asset"| translate}} : {{replay.asset}}</span>
   <span id="system_user" style="padding-left: 20px" *ngIf="replay.system_user">{{"system user"| translate}} : {{replay.system_user}}</span>
-  <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{"start time"| translate}} : {{starttime}} </span>
-  <span id="date_start" style="padding-left: 30px" *ngIf="replay.download_url"><a type="button" [href]="replay.download_url">{{"download"| translate}}</a></span>
+  <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{"start time"| translate}} : {{startTime}} </span>
+  <span id="download" style="padding-left: 30px" *ngIf="replay.download_url"><a type="button" [href]="replay.download_url">{{"download"| translate}}</a></span>
   <span style="float: right;padding-top: 5px;padding-right: 20px">
     <span style="padding-left: 10px">{{"cols"| translate}}: <input type="number" style="width: 60px" [(ngModel)]="termCols"></span>
     <span style="padding-left: 10px">{{"rows"| translate}}: <input type="number" style="width: 60px" [(ngModel)]="termRows"></span>
@@ -30,7 +30,7 @@
   </span>
 </div>
 
-<div id="winContainer" style="height: 90%;width: 100%">
+<div id="winContainer" style="height: calc(100vh - 50px);width: 100vw">
   <elements-term #termRef [term]="term" [stopWatchWinChange]="true" (winSizeChangeTrigger)="onTermSizeChange($event)"></elements-term>
 </div>
 <!--<asciinema-player></asciinema-player>-->
