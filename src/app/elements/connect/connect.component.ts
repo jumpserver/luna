@@ -204,7 +204,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return this.showSelectSystemUserDialog(systemUserMaxPriority, node);
     } else {
       const systemUser = systemUserMaxPriority[0];
-      const isRemoteApp = node.meta.type === 'remote_app';
+      const isRemoteApp = node.meta.type === 'application';
       const connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[systemUser.protocol];
       let connectType = null;
       if (connectTypes && connectTypes.length === 1) {
