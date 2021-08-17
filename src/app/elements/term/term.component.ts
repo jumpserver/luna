@@ -30,7 +30,6 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
       debounceTime(500),
       distinctUntilChanged(),
     );
-
     this.winSizeSub = this.winSizeChange$
       .subscribe(() => {
         this._logger.debug('Get win size change event');
@@ -41,6 +40,7 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   ngAfterViewInit() {
     this.term.open(this.el.nativeElement);
     this.resizeTerm();
+
     if (this.stopWatchWinChange) {
       this.winSizeSub.unsubscribe();
     }

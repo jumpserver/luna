@@ -1,50 +1,9 @@
 import {Component, Input, OnInit, OnChanges} from '@angular/core';
 import {Terminal} from 'xterm';
-import {HttpService, LogService} from '@app/services';
+import {HttpService} from '@app/services';
 import {Replay} from '@app/model';
 import {newTerminal} from '@app/utils/common';
-
-function zeroPad(num, minLength) {
-  let str = num.toString();
-  // Add leading zeroes until string is long enough
-  while (str.length < minLength) {
-    str = '0' + str;
-  }
-  return str;
-}
-
-function formatTimeWithSeconds(seconds) {
-  let hour = 0, minute = 0, second = 0;
-  const ref = [3600, 60, 1];
-  for (let i = 0; i < ref.length; i++) {
-    const val = ref[i];
-    while (val <= seconds) {
-      seconds -= val;
-      switch (i) {
-        case 0:
-          hour++;
-          break;
-        case 1:
-          minute++;
-          break;
-        case 2:
-          second++;
-          break;
-      }
-    }
-  }
-  return [hour, minute, second];
-}
-
-function formatTime(millis: number) {
-  const totalSeconds = millis / 1000;
-  const [hour, minute, second] = formatTimeWithSeconds(totalSeconds);
-  let time = zeroPad(minute, 2) + ':' + zeroPad(second, 2);
-  if (hour > 0) {
-    time = zeroPad(hour, 2) + ':' + time;
-  }
-  return time;
-}
+import {formatTime} from '@app/utils/common';
 
 
 @Component({
@@ -70,7 +29,7 @@ export class ElementReplayJsonComponent implements OnInit {
   term: Terminal;
   termCols = 80;
   termRows = 24;
-  starttime = null;
+  startTime = null;
 
   get position() {
     return formatTime(this.time);
@@ -84,7 +43,7 @@ export class ElementReplayJsonComponent implements OnInit {
   ngOnInit() {
     this.term = newTerminal(14);
     const date = new Date(Date.parse(this.replay.date_start));
-    this.starttime = this.toSafeLocalDateStr(date);
+    this.startTime = this.toSafeLocalDateStr(date);
     if (this.replay.src !== 'READY') {
       this._http.getReplayData(this.replay.src)
         .subscribe(
@@ -153,7 +112,7 @@ export class ElementReplayJsonComponent implements OnInit {
     this.isPlaying = false;
   }
   getUserLang() {
-    let userLangEN = document.cookie.indexOf('django_language=en');
+    const userLangEN = document.cookie.indexOf('django_language=en');
     if (userLangEN === -1) {
     return 'zh-CN';
     } else {
@@ -161,7 +120,7 @@ export class ElementReplayJsonComponent implements OnInit {
     }
   }
   toSafeLocalDateStr(d) {
-    let date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
+    const date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
     return date_s.split('/').join('-');
   }
   speedUp() {
