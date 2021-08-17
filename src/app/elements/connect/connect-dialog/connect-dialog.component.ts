@@ -52,7 +52,7 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   setConnectTypes() {
-    const isRemoteApp = this.node.meta.type === 'remote_app';
+    const isRemoteApp = this.node.meta.type === 'application';
     this.connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[this.systemUserSelected.protocol];
     this.connectType = this.getPreferConnectType() || this.connectTypes[0];
   }
