@@ -2,7 +2,6 @@ import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {HttpService, LogService, SettingService} from '@app/services';
 import {Replay} from '@app/model';
-import {canvasWaterMark} from '@app/utils/common';
 
 @Component({
   selector: 'pages-replay',
@@ -34,7 +33,7 @@ export class PagesReplayComponent implements OnInit {
           if (data['type']) {
             Object.assign(this.replay, data);
             clearInterval(interval);
-            this.createWaterMarkIfNeed();
+            this._settingSvc.createWaterMarkIfNeed(document.body, `${this.replay.user}`);
           }
         },
         err => {
@@ -43,14 +42,5 @@ export class PagesReplayComponent implements OnInit {
         }
       );
     }, 2000);
-  }
-
-  createWaterMarkIfNeed() {
-    if (this._settingSvc.globalSetting.SECURITY_WATERMARK_ENABLED) {
-      canvasWaterMark({
-        container: document.body,
-        content: `${this.replay.user}`,
-      });
-    }
   }
 }

@@ -1,7 +1,6 @@
 import {Component, OnInit, Input, ViewChild, ElementRef} from '@angular/core';
 import {View} from '@app/model';
 import {TYPE_DB_GUI} from '@app/globals';
-import {canvasWaterMark} from '@app/utils/common';
 import {User} from '@app/globals';
 import {SettingService} from '@app/services';
 
@@ -22,7 +21,10 @@ export class ElementContentWindowComponent implements OnInit {
   ngOnInit() {
     this.computeConnector();
     this.id = 'window-' + Math.random().toString(36).substr(2);
-    this.createWaterMarkIfNeed();
+    this._settingSvc.createWaterMarkIfNeed(
+      this.windowRef.nativeElement,
+      `${User.name}(${User.username})`
+    );
   }
 
   computeConnector() {
@@ -42,15 +44,6 @@ export class ElementContentWindowComponent implements OnInit {
           this.connector = 'koko';
         }
         break;
-    }
-  }
-
-  createWaterMarkIfNeed() {
-    if (this._settingSvc.globalSetting.SECURITY_WATERMARK_ENABLED) {
-      canvasWaterMark({
-        container: this.windowRef.nativeElement,
-        content: `${User.name}(${User.username})`,
-      });
     }
   }
 }

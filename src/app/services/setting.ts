@@ -3,12 +3,14 @@ import {Setting, GlobalSetting} from '@app/model';
 import {LocalStorageService} from './share';
 import {HttpClient} from '@angular/common/http';
 import {I18nService} from '@app/services/i18n';
+import {canvasWaterMark} from '@app/utils/common';
 
 @Injectable()
 export class SettingService {
   setting: Setting;
-  globalSetting: GlobalSetting;
+  public globalSetting: GlobalSetting = new GlobalSetting();
   settingKey = 'LunaSetting';
+  private inited = false;
 
   constructor(
     private _localStorage: LocalStorageService,
@@ -21,31 +23,38 @@ export class SettingService {
     } else {
       this.setting = new Setting();
     }
-    this.getPublicSettings();
+    this.init().then();
+  }
+  async getPublicSettings() {
+    const resp = await this._http.get<any>('/api/v1/settings/public/').toPromise();
+    this.globalSetting  = resp['data'];
+    this.setting.commandExecution = this.globalSetting.SECURITY_COMMAND_EXECUTION;
+
+    // 更改favicon
+    const link: any = document.querySelector('link[rel*=\'icon\']') || document.createElement('link');
+    link.type = 'image/x-icon';
+    link.rel = 'shortcut icon';
+    link.href = resp['data'].LOGO_URLS.favicon;
+
+    // 改logo
+    const logoRef: any = document.getElementById('left-logo');
+
+    // 统一修改，避免生效速度不一致
+    document.getElementsByTagName('head')[0].appendChild(link);
+    const logoLogout = resp['data'].LOGO_URLS.logo_logout;
+    if (logoLogout && logoRef) {
+      logoRef.src = logoLogout;
+    }
+    document.title = this._i18n.instant('Web Terminal') + ` - ${resp.data.LOGIN_TITLE}`;
+    return new Promise((resolve) => { resolve(true); });
   }
 
-  getPublicSettings() {
-    this._http.get<any>('/api/v1/settings/public/').subscribe(resp => {
-      this.globalSetting  = resp.data;
-      this.setting.commandExecution = this.globalSetting.SECURITY_COMMAND_EXECUTION;
-
-      // 更改favicon
-      const link: any = document.querySelector('link[rel*=\'icon\']') || document.createElement('link');
-      link.type = 'image/x-icon';
-      link.rel = 'shortcut icon';
-      link.href = resp.data.LOGO_URLS.favicon;
-
-      // 改logo
-      const logoRef: any = document.getElementById('left-logo');
-
-      // 统一修改，避免生效速度不一致
-      document.getElementsByTagName('head')[0].appendChild(link);
-      const logoLogout = resp.data.LOGO_URLS.logo_logout;
-      if (logoLogout && logoRef) {
-        logoRef.src = logoLogout;
-      }
-      document.title = this._i18n.instant('Web Terminal') + ` - ${resp.data.LOGIN_TITLE}`;
-    });
+  async init() {
+    if (this.inited) {
+      return ;
+    }
+    await this.getPublicSettings();
+    this.inited = true;
   }
 
   save() {
@@ -66,5 +75,16 @@ export class SettingService {
       return true;
     }
     return this.setting.isSkipAllManualPassword === '1';
+  }
+
+  createWaterMarkIfNeed(element, content) {
+    this.init().then(() => {
+      if (this.globalSetting.SECURITY_WATERMARK_ENABLED) {
+        canvasWaterMark({
+          container: element,
+          content: content
+        });
+      }
+    });
   }
 }
