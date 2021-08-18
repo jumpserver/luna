@@ -36,6 +36,11 @@ export class SystemUser {
   username_same_with_user: boolean;
 }
 
+class TreeNodeMeta {
+  type: string;
+  data: any;
+}
+
 export class TreeNode {
   id: string;
   name: string;
@@ -45,7 +50,7 @@ export class TreeNode {
   pId: string;
   open: boolean;
   iconSkin: string;
-  meta: any;
+  meta: TreeNodeMeta;
 }
 
 export class Node {
