@@ -1,5 +1,5 @@
-import {Component, OnInit} from '@angular/core';
-import {AppService, HttpService} from '@app/services';
+import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
+import {AppService, HttpService, SettingService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
 import {Session} from '@app/model';
 
@@ -9,11 +9,13 @@ import {Session} from '@app/model';
   styleUrls: ['./monitor.component.scss']
 })
 export class PagesMonitorComponent implements OnInit {
+  @ViewChild('contentWindow', {static: false}) windowRef: ElementRef;
   iframeURL: string;
   sessionDetail: Session = null;
   sessionID: string;
 
   constructor(private _appService: AppService,
+              private _settingSvc: SettingService,
               private _http: HttpService,
               private _route: ActivatedRoute) {
   }
@@ -21,7 +23,9 @@ export class PagesMonitorComponent implements OnInit {
   ngOnInit() {
     this._route.params.subscribe(params => {
       this.sessionID = params['sid'];
-      this.generateMonitorURL().then();
+      this.generateMonitorURL().then(() => {
+        this._settingSvc.createWaterMarkIfNeed(this.windowRef.nativeElement, this.sessionDetail.user);
+      });
     });
   }
 
