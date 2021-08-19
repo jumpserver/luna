@@ -3,6 +3,7 @@ import 'rxjs/add/operator/toPromise';
 import {AppService, LocalStorageService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {ConnectType, ConnectData, TreeNode, SystemUser, AuthInfo} from '@app/model';
+import {TYPE_RDP_CLIENT} from '@app/globals';
 import {ElementManualAuthComponent} from './manual-auth/manual-auth.component';
 import {BehaviorSubject} from 'rxjs';
 
@@ -59,6 +60,10 @@ export class ElementConnectDialogComponent implements OnInit {
 
   onCancel(): void {
     this.dialogRef.close();
+  }
+
+  hasRDPClientTypes() {
+    return this.connectTypes.indexOf(TYPE_RDP_CLIENT) > -1;
   }
 
   getPreferConnectType() {

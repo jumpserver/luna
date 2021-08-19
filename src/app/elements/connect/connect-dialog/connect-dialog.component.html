@@ -26,6 +26,10 @@
         <mat-radio-button *ngFor="let type of connectTypes" [value]="type">{{ type.name }}</mat-radio-button>
       </mat-radio-group>
     </div>
+    <span *ngIf="hasRDPClientTypes()" style="margin-top: 10px">
+      <a href="https://docs.jumpserver.org/zh/master/about/download/" target="_blank">{{ 'Download' | translate }} </a>
+      RDP Client {{ 'Launch Program' | translate }}
+    </span>
   </div>
 
   <mat-dialog-actions  style="float: right; margin: 20px 0 10px 0;">
