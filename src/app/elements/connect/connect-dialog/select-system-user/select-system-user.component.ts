@@ -21,7 +21,7 @@ export class ElementSelectSystemUserComponent implements OnInit, OnDestroy {
   public systemUserSelected: SystemUser;
   public systemUsersGroups: SystemUserGroup[];
   public filteredUsersGroups: ReplaySubject<SystemUserGroup[]> = new ReplaySubject<SystemUserGroup[]>(1);
-  public sysUserCtrl: FormControl = new FormControl('', [Validators.required]);
+  public sysUserCtrl: FormControl = new FormControl();
   public filteredCtrl: FormControl = new FormControl();
   public compareFn = (f1, f2) => f1 && f2 && f1.id === f2.id;
 
@@ -51,6 +51,7 @@ export class ElementSelectSystemUserComponent implements OnInit, OnDestroy {
 
     setTimeout(() => {
       this.sysUserCtrl.setValue(this.systemUserSelected);
+      this.sysUserCtrl.setValidators([Validators.required]);
     }, 100);
   }
 
