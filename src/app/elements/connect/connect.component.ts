@@ -84,7 +84,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
     const getTreeNodeHandlerMapper = {
       asset: 'filterMyGrantedAssetsById',
-      application: 'getMyGrantedAppsNodes',
+      application: 'getMyGrantedAppNodesDetail',
     };
 
     const handlerName = getTreeNodeHandlerMapper[tp];

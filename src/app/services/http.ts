@@ -4,6 +4,7 @@ import {Browser} from '@app/globals';
 import {retryWhen, delay, scan} from 'rxjs/operators';
 import {SystemUser, TreeNode, User as _User, Session} from '@app/model';
 import {getCookie} from '@app/utils/common';
+import {map} from 'rxjs/operators';
 
 
 @Injectable()
@@ -102,12 +103,16 @@ export class HttpService {
       )));
   }
 
-  getMyGrantedAppsNodes(id?: string) {
-    let url = '/api/v1/perms/users/applications/tree/';
-    if (id) {
-      url += `&id=${id}&only=1`;
-    }
+  getMyGrantedAppsNodes() {
+    const url = '/api/v1/perms/users/applications/tree/';
     return this.http.get<Array<TreeNode>>(url);
+  }
+
+  getMyGrantedAppNodesDetail(id: string) {
+    const url = `/api/v1/perms/users/applications/tree/?id=${id}`;
+    return this.http.get<Array<TreeNode>>(url).pipe(
+      map(nodes => nodes.filter(node => node.id === id))
+    );
   }
 
   getMyAppSystemUsers(remoteAppId: string) {
