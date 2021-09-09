@@ -8,7 +8,7 @@ import {I18nService} from '@app/services/i18n';
 @Component({
   selector: 'elements-setting',
   templateUrl: './setting.component.html',
-  styles: ['.mat-form-field { width: 100%;}']
+  styleUrls: ['./setting.component.css']
 })
 export class ElementSettingComponent implements OnInit {
   resolutionsChoices = ['Auto', '1024x768', '1366x768', '1600x900', '1920x1080'];
@@ -23,6 +23,10 @@ export class ElementSettingComponent implements OnInit {
       {name: _i18n.instant('Yes'), value: '1'},
       {name: _i18n.instant('No'), value: '0'}
     ];
+  }
+
+  hasLicense() {
+    return this.settingSrv.globalSetting.XPACK_LICENSE_IS_VALID;
   }
 
   ngOnInit() {

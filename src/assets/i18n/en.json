@@ -77,5 +77,10 @@
   "Remember in browser": "Remember in browser",
   "Account info": "Account info",
   "Download":  "Download",
-  "Launch Program": "Launch Program"
+  "Launch Program": "Launch Program",
+  "RDP options": "RDP client options",
+  "Full screen": "Full screen",
+  "Driver redirect": "Driver redirect",
+  "RDP File": "RDP File",
+  "RDP Client": "RDP Client"
 }

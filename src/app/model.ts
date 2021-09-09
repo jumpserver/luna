@@ -217,10 +217,13 @@ export class GlobalSetting {
   SECURITY_COMMAND_EXECUTION: boolean;
   SECURITY_LUNA_REMEMBER_AUTH: boolean;
   SECURITY_WATERMARK_ENABLED: boolean;
+  XRDP_ENABLED: boolean;
 }
 
 export class Setting {
   rdpResolution: string = 'Auto';
+  rdpFullScreen: number = 0;
+  rdpDrivesRedirect: number = 0;
   fontSize: number = 14;
   isLoadTreeAsync: string = '1';
   isSkipAllManualPassword: string = '0';
