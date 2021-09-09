@@ -5,6 +5,7 @@ import {retryWhen, delay, scan} from 'rxjs/operators';
 import {SystemUser, TreeNode, User as _User, Session} from '@app/model';
 import {getCookie} from '@app/utils/common';
 import {map} from 'rxjs/operators';
+import {Observable} from 'rxjs';
 
 
 @Injectable()
@@ -29,31 +30,31 @@ export class HttpService {
     return options;
   }
 
-  get(url: string, options?: any) {
+  get<T>(url: string, options?: any): Observable<any> {
     return this.http.get(url, options);
   }
 
-  post(url: string, body: any, options?: any) {
+  post<T>(url: string, body: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
     return this.http.post(url, body, options);
   }
 
-  put(url: string, options?: any) {
+  put<T>(url: string, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
     return this.http.put(url, options);
   }
 
-  delete(url: string, options?: any) {
+  delete<T>(url: string, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
     return this.http.delete(url, options);
   }
 
-  patch(url: string, options?: any) {
+  patch<T>(url: string, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
     return this.http.patch(url, options);
   }
 
-  head(url: string, options?: any) {
+  head<T>(url: string, options?: any) {
     return this.http.head(url, options);
   }
 
@@ -157,10 +158,6 @@ export class HttpService {
     return this.http.get<Session>(`/api/v1/terminal/sessions/${sid}/`).toPromise();
   }
 
-  // get_replay_json(token: string) {
-  //   return this.http.get('/api/terminal/v2/sessions/' + token + '/replay');
-  // }
-
   getReplayData(src: string) {
     return this.http.get(src);
   }
@@ -172,7 +169,25 @@ export class HttpService {
     return this.http.get('/api/v1/users/connection-token/', {params: params});
   }
 
-  downloadRDPFile(assetId: string, appId: string, systemUserId: string, solution: string) {
+  cleanRDPParams(params) {
+    const cleanedParams = {};
+    const {rdpResolution, rdpFullScreen, rdpDrivesRedirect } = params;
+
+    if (rdpResolution && rdpResolution.indexOf('x') > -1) {
+      const [width, height] = rdpResolution.split('x');
+      cleanedParams['width'] = width;
+      cleanedParams['height'] = height;
+    }
+    if (rdpFullScreen) {
+      cleanedParams['full_screen'] = '1';
+    }
+    if (rdpDrivesRedirect) {
+      cleanedParams['drives_redirect'] = '1';
+    }
+    return cleanedParams;
+  }
+
+  downloadRDPFile({assetId, appId, systemUserId}, params: Object) {
     const url = new URL('/api/v1/authentication/connection-token/rdp/file/', window.location.origin);
     if (assetId) {
       url.searchParams.append('asset', assetId);
@@ -180,25 +195,16 @@ export class HttpService {
       url.searchParams.append('application', appId);
     }
     url.searchParams.append('system_user', systemUserId);
-    if (solution && solution.indexOf('x') > -1) {
-      const [width, height] = solution.split('x');
-      url.searchParams.append('width', width);
-      url.searchParams.append('height', height);
+    params = this.cleanRDPParams(params);
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        url.searchParams.append(k, v);
+      }
     }
     return window.open(url.href);
   }
 
-  getRDPClientUrl(assetId: string, appId: string, systemUserId: string, solution: string) {
-    const params = {};
-    if (solution && solution.indexOf('x') > -1) {
-      const [width, height] = solution.split('x');
-      params['width'] = width;
-      params['height'] = height;
-    }
-    return this.getLocalClientUrl(assetId, appId, systemUserId, params);
-  }
-
-  getLocalClientUrl(assetId: string, appId: string, systemUserId: string, otherParams: object) {
+  getRDPClientUrl({assetId, appId, systemUserId}, params: Object) {
     const url = new URL('/api/v1/authentication/connection-token/client-url/', window.location.origin);
     const data = {};
     if (assetId) {
@@ -207,8 +213,9 @@ export class HttpService {
       data['application'] = appId;
     }
     data['system_user'] = systemUserId;
-    if (otherParams) {
-      for (const [k, v] of Object.entries(otherParams)) {
+    params = this.cleanRDPParams(params);
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
         url.searchParams.append(k, v);
       }
     }

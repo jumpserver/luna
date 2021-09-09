@@ -77,5 +77,10 @@
   "Remember in browser": "记住密码到浏览器",
   "Account info": "账号信息",
   "Download": "下载",
-  "Launch Program": "启动程序"
+  "Launch Program": "启动程序",
+  "RDP client options": "RDP 客户端选项",
+  "Full screen": "全屏",
+  "Driver redirect": "磁盘挂载",
+  "RDP Client": "RDP 客户端",
+  "RDP File": "RDP 文件"
 }

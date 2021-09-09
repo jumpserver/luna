@@ -23,12 +23,12 @@
     <label class="zone-label" for="connect-type">{{ "Connect Type" | translate }}</label>
     <div class="connect-type-group">
       <mat-radio-group aria-label="Select an option" name="connect-type" [(ngModel)]="connectType" id="connect-type">
-        <mat-radio-button *ngFor="let type of connectTypes" [value]="type">{{ type.name }}</mat-radio-button>
+        <mat-radio-button *ngFor="let type of connectTypes" [value]="type">{{ type.name | translate }}</mat-radio-button>
       </mat-radio-group>
     </div>
-    <span *ngIf="hasRDPClientTypes()" style="margin-top: 10px">
-      <a href="https://docs.jumpserver.org/zh/master/about/download/" target="_blank">{{ 'Download' | translate }} </a>
-      RDP Client {{ 'Launch Program' | translate }}
+    <span [style.visibility]="hasRDPClientTypes() ? 'inherit' : 'hidden'">
+      <a href="/core/download/" target="_blank">{{ 'Download' | translate }} </a>
+      {{ 'RDP Client' | translate }} {{ 'Launch Program' | translate }}
     </span>
   </div>
 

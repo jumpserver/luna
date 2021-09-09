@@ -1,6 +1,6 @@
 import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {connectEvt, TYPE_RDP_CLIENT} from '@app/globals';
+import {connectEvt, TYPE_RDP_CLIENT, TYPE_RDP_FILE} from '@app/globals';
 import {AppService, HttpService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {SystemUser, TreeNode, ConnectData} from '@app/model';
@@ -146,22 +146,35 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     this._logger.debug('Connect info: ', connectInfo);
     if (connectInfo.connectType.id === TYPE_RDP_CLIENT.id) {
       this.callLocalClient(connectInfo, node).then();
+    } else if (connectInfo.connectType.id === TYPE_RDP_FILE.id) {
+      this.downloadRDPFile(connectInfo, node).then();
     } else {
       this.createNodeView(connectInfo, node);
     }
   }
 
+  async downloadRDPFile(connectInfo: ConnectData, node: TreeNode) {
+    const { systemUser } = connectInfo;
+    const data = { systemUserId: systemUser.id, appId: '', assetId: '' };
+    if (node.meta.type === 'application' && node.meta.data.category === 'remote_app') {
+      data['appId'] = node.id;
+    } else {
+      data['assetId'] = node.id;
+    }
+    await this._http.downloadRDPFile(data, this._settingSvc.setting);
+  }
+
   async callLocalClient(connectInfo: ConnectData, node: TreeNode) {
     this._logger.debug('Call local client');
     const { systemUser } = connectInfo;
-    const solution = this._settingSvc.setting.rdpResolution;
-    let data;
+    const data = { systemUserId: systemUser.id, appId: '', assetId: '' };
     if (node.meta.type === 'application' && node.meta.data.category === 'remote_app') {
-      data = await this._http.getRDPClientUrl('', node.id, systemUser.id, solution);
+      data['appId'] = node.id;
     } else {
-      data = await this._http.getRDPClientUrl(node.id, '', systemUser.id, solution);
+      data['assetId'] = node.id;
     }
-    windowOpen(data['url']);
+    const response = await this._http.getRDPClientUrl(data, this._settingSvc.setting);
+    windowOpen(response['url']);
   }
 
   createNodeView(connectInfo: ConnectData, node: TreeNode) {
