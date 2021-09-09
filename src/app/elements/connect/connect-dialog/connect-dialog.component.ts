@@ -63,7 +63,7 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   hasRDPClientTypes() {
-    return this.connectTypes.indexOf(TYPE_RDP_CLIENT) > -1;
+    return this.connectType && this.connectType.id === 'rdpClient';
   }
 
   getPreferConnectType() {

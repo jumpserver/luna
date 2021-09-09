@@ -1,0 +1,7 @@
+.field-label {
+  display: block;
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+.mat-form-field { width: 100%;}

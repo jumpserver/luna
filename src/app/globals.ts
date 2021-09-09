@@ -50,14 +50,20 @@ export const TYPE_DB_GUI: ConnectType = {
 };
 
 export const TYPE_RDP_CLIENT: ConnectType = {
-  name: 'Microsoft RDP Client',
+  name: 'RDP Client',
   id: 'rdpClient',
+  requireXPack: true
+};
+
+export const TYPE_RDP_FILE: ConnectType = {
+  name: 'RDP File',
+  id: 'rdpFile',
   requireXPack: true
 };
 
 export const ProtocolConnectTypes = {
   ssh: [TYPE_WEB_CLI],
-  rdp: [TYPE_WEB_GUI, TYPE_RDP_CLIENT],
+  rdp: [TYPE_WEB_GUI, TYPE_RDP_CLIENT, TYPE_RDP_FILE],
   vnc: [TYPE_WEB_GUI],
   telnet: [TYPE_WEB_CLI],
   mysql: [TYPE_WEB_CLI, TYPE_DB_GUI],
