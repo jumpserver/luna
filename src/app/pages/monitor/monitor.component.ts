@@ -34,7 +34,7 @@ export class PagesMonitorComponent implements OnInit {
     if (['rdp', 'vnc'].indexOf(this.sessionDetail.protocol) > -1) {
       this.iframeURL = `${document.location.origin}/lion/monitor/?session=${this.sessionID}`;
     } else {
-      this.iframeURL = `${document.location.origin}/koko/terminal/?target_id=${this.sessionID}&type=shareroom`;
+      this.iframeURL = `${document.location.origin}/koko/monitor/${this.sessionID}/`;
     }
   }
 }
