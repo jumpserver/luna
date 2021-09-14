@@ -185,6 +185,13 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   showSelectSystemUserDialog(systemUserMaxPriority: SystemUser[], node: TreeNode): Promise<ConnectData> {
+    const preConnectData = this._appSvc.getPreLoginSelect(node);
+    if (preConnectData) {
+      return new Promise<ConnectData>(resolve => {
+        resolve(preConnectData);
+      });
+    }
+
     const dialogRef = this._dialog.open(ElementConnectDialogComponent, {
       minHeight: '300px',
       height: 'auto',

@@ -6,7 +6,7 @@ import {DataStore, User, ProtocolConnectTypes, TYPE_RDP_CLIENT, TYPE_RDP_FILE} f
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
-import {AuthInfo} from '@app/model';
+import {AuthInfo, ConnectData, TreeNode} from '@app/model';
 import * as CryptoJS from 'crypto-js';
 
 declare function unescape(s: string): string;
@@ -132,6 +132,29 @@ export class AppService {
       this._localStorage.set(this.protocolPreferKey, this.protocolPreferConnectTypes);
     } catch (e) {
       // pass
+    }
+  }
+
+  setPreLoginSelect(node: TreeNode, outputData: ConnectData) {
+    try {
+      const data = JSON.stringify(outputData);
+      const key = 'PreLogin_' + node.id;
+      this._localStorage.set(key, data);
+    } catch (e) {
+      // console.log('hello
+    }
+  }
+
+  getPreLoginSelect(node: TreeNode): ConnectData {
+    const key = 'PreLogin_' + node.id;
+    const data = this._localStorage.get(key);
+    let outputData: ConnectData;
+    try {
+      outputData = JSON.parse(data);
+      return outputData;
+    } catch (e) {
+      console.error('Json parse error: ', e);
+      return null;
     }
   }
 

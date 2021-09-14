@@ -32,6 +32,10 @@
     </span>
   </div>
 
+  <div class="auto-connect" style="padding-top: 20px">
+    <mat-checkbox class="example-margin" [(ngModel)]="autoLogin">下次自动登录 </mat-checkbox>
+  </div>
+
   <mat-dialog-actions  style="float: right; margin: 20px 0 10px 0;">
     <button mat-raised-button (click)="onCancel()">{{"Cancel"| translate}}</button>
     <button mat-raised-button color="primary" type="submit" [mat-dialog-close]="outputData" (click)="onConfirm()">{{"Confirm"| translate}}</button>
