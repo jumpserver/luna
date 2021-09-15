@@ -47,7 +47,7 @@ export class ElementManualAuthComponent implements  OnInit {
     this.usernameReadonly = false;
     this.manualAuthInfo.username = '';
     this.manualAuthInfo.password = '';
-    this.authsOptions = this._appSvc.getAssetSystemUserAuth(this.node.id, this.systemUserSelected.id);
+    this.authsOptions = this._appSvc.getNodeSystemUserAuth(this.node.id, this.systemUserSelected.id);
     if (this.authsOptions && this.authsOptions.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.authsOptions[0]);
     }
@@ -88,13 +88,13 @@ export class ElementManualAuthComponent implements  OnInit {
   subscribeSubmitEvent() {
     this.onSubmit$.subscribe(() => {
       if (this.rememberAuth) {
-        this._logger.debug('Save auth to localstorge: ', this.node.id, this.systemUserSelected.id, this.manualAuthInfo);
+        this._logger.debug('Save auth to local storage: ', this.node.id, this.systemUserSelected.id, this.manualAuthInfo);
         this._appSvc.saveNodeSystemUserAuth(this.node.id, this.systemUserSelected.id, this.manualAuthInfo);
       }
     });
   }
 
   getSavedAuthInfos() {
-    this.authsOptions = this._appSvc.getAssetSystemUserAuth(this.node.id, this.systemUserSelected.id);
+    this.authsOptions = this._appSvc.getNodeSystemUserAuth(this.node.id, this.systemUserSelected.id);
   }
 }
