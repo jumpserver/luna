@@ -82,5 +82,7 @@
   "Full screen": "Full screen",
   "Driver redirect": "Driver redirect",
   "RDP File": "RDP File",
-  "RDP Client": "RDP Client"
+  "RDP Client": "RDP Client",
+  "Remember select": "Remember selected",
+  "Automatic login text": "Automatic Login next time (right click asset Connection to re-select)"
 }

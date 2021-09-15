@@ -111,6 +111,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           this.connectFileManager(evt.node);
           break;
         }
+        case 'connect': {
+          this._appSvc.delPreLoginSelect(evt.node);
+          this.connectNode(evt.node).then();
+          break;
+        }
         default: {
           this.connectNode(evt.node).then();
         }
@@ -184,7 +189,39 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     this.onNewView.emit(view);
   }
 
-  showSelectSystemUserDialog(systemUserMaxPriority: SystemUser[], node: TreeNode): Promise<ConnectData> {
+  validatePreConnectData(systemUsers: SystemUser[], preData: ConnectData): Boolean {
+    if (!preData || !preData.systemUser || preData.node) {
+      this._logger.debug('No system user or node');
+      return false;
+    }
+    // 验证系统用户是否有效
+    const preSystemUser = preData.systemUser;
+    const inSystemUsers = systemUsers.filter(item => {
+      return item.id === preSystemUser.id;
+    });
+    if (inSystemUsers.length !== 1) {
+      this._logger.debug('System user may be not valid');
+      return false;
+    }
+    // 验证登录
+    const systemUser = inSystemUsers[0];
+    const preAuth = preData.manualAuthInfo;
+    if (systemUser['login_mode'] === 'manual' && !preAuth.password) {
+      this._logger.debug('System user no manual auth');
+      return false;
+    }
+    return true;
+  }
+
+  getConnectData(systemUserMaxPriority: SystemUser[], node: TreeNode): Promise<ConnectData> {
+    const preConnectData = this._appSvc.getPreLoginSelect(node);
+    const isValid = this.validatePreConnectData(systemUserMaxPriority, preConnectData);
+    if (isValid) {
+      return new Promise<ConnectData>(resolve => {
+        resolve(preConnectData);
+      });
+    }
+
     const dialogRef = this._dialog.open(ElementConnectDialogComponent, {
       minHeight: '300px',
       height: 'auto',
@@ -214,25 +251,31 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         reject('没有系统用户');
       });
     } else if (systemUserMaxPriority.length > 1) {
-      return this.showSelectSystemUserDialog(systemUserMaxPriority, node);
+      return this.getConnectData(systemUserMaxPriority, node);
+    }
+    // 系统用户等于 1 个的情况
+    const systemUser = systemUserMaxPriority[0];
+    const isRemoteApp = node.meta.type === 'application';
+    const connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[systemUser.protocol];
+    if (!connectTypes) {
+      alert('没有匹配的连接方式');
+      return new Promise<ConnectData>((resolve, reject) => {
+        reject('没有匹配的连接方式');
+      });
+    }
+    let connectType = null;
+    if (connectTypes && connectTypes.length === 1) {
+      connectType = connectTypes[0];
+    }
+    if (systemUser && connectType && systemUser.login_mode === 'auto') {
+      return new Promise<ConnectData>(resolve => {
+        const outputData = new ConnectData();
+        outputData.systemUser = systemUser;
+        outputData.connectType = connectType;
+        resolve(outputData);
+      });
     } else {
-      const systemUser = systemUserMaxPriority[0];
-      const isRemoteApp = node.meta.type === 'application';
-      const connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[systemUser.protocol];
-      let connectType = null;
-      if (connectTypes && connectTypes.length === 1) {
-        connectType = connectTypes[0];
-      }
-      if (systemUser && connectType && systemUser.login_mode === 'auto') {
-        return new Promise<ConnectData>(resolve => {
-          const outputData = new ConnectData();
-          outputData.systemUser = systemUser;
-          outputData.connectType = connectType;
-          resolve(outputData);
-        });
-      } else {
-        return this.showSelectSystemUserDialog(systemUserMaxPriority, node);
-      }
+      return this.getConnectData(systemUserMaxPriority, node);
     }
   }
 

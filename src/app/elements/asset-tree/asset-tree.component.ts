@@ -32,29 +32,36 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   get RMenuList() {
     const menuList = [{
-      'id': 'new-connection',
-      'name': 'Open in new window',
+      'id': 'connect',
+      'name': 'Connect',
       'fa': 'fa-terminal',
       'hide': false,
-      'click': this.connectInNewWindow.bind(this)
+      'click': this.onMenuConnect.bind(this)
+    },
+      {
+      'id': 'new-connection',
+      'name': 'Open in new window',
+      'fa': 'fa-external-link',
+      'hide': false,
+      'click': this.onMenuConnectNewWindow.bind(this)
     }, {
       'id': 'file-manager',
       'name': 'File Manager',
       'fa': 'fa-file',
       'hide': !this.nodeSupportSSH(),
-      'click': this.connectFileManager.bind(this)
+      'click': this.onMenuConnectFileManager.bind(this)
     }, {
       'id': 'favorite',
       'name': 'Favorite',
       'fa': 'fa-star-o',
       'hide': this.isAssetFavorite() || !this.isAssetNode(),
-      'click': this.favoriteAsset.bind(this)
+      'click': this.onMenuFavorite.bind(this)
     }, {
       'id': 'disfavor',
       'name': 'Disfavor',
       'fa': 'fa-star',
       'hide': !this.isAssetFavorite() || !this.isAssetNode(),
-      'click': this.favoriteAsset.bind(this)
+      'click': this.onMenuFavorite.bind(this)
     }];
     if (!this.rightClickSelectNode) {
       return [];
@@ -363,30 +370,38 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     }
   }
 
-  connectFileManager() {
+  onMenuConnect() {
+    const node = this.rightClickSelectNode;
+    const evt = new ConnectEvt(node, 'connect');
+    connectEvt.next(evt);
+  }
+
+  onMenuConnectFileManager() {
     const node = this.rightClickSelectNode;
     const evt = new ConnectEvt(node, 'sftp');
     connectEvt.next(evt);
   }
 
-  connectInNewWindow() {
+  onMenuConnectNewWindow() {
     const node = this.rightClickSelectNode;
     const url = `/luna/connect?login_to=${node.id}&type=${node.meta.type}`;
     window.open(url, '_blank');
   }
 
-  favoriteAsset() {
+  onMenuFavorite() {
     const assetId = this.rightClickSelectNode.id;
     if (this.isAssetFavorite()) {
       this._http.favoriteAsset(assetId, false).subscribe(() => {
         const i = this.favoriteAssets.indexOf(assetId);
         this.favoriteAssets.splice(i, 1);
-        this._toastr.success(this._i18n.instant('Disfavor') + ' ' + this._i18n.instant('success'), '', {timeOut: 2000});
+        const msg = this._i18n.instant('Disfavor') + ' ' + this._i18n.instant('success');
+        this._toastr.success(msg, '', {timeOut: 2000});
       });
     } else {
       this._http.favoriteAsset(assetId, true).subscribe(() => {
         this.favoriteAssets.push(assetId);
-        this._toastr.success(this._i18n.instant('Favorite') + ' ' + this._i18n.instant('success'), '', {timeOut: 2000});
+        const msg = this._i18n.instant('Favorite') + ' ' + this._i18n.instant('success');
+        this._toastr.success(msg, '', {timeOut: 2000});
       });
     }
   }

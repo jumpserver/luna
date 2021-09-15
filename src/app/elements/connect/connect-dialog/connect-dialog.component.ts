@@ -3,7 +3,6 @@ import 'rxjs/add/operator/toPromise';
 import {AppService, LocalStorageService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {ConnectType, ConnectData, TreeNode, SystemUser, AuthInfo} from '@app/model';
-import {TYPE_RDP_CLIENT} from '@app/globals';
 import {ElementManualAuthComponent} from './manual-auth/manual-auth.component';
 import {BehaviorSubject} from 'rxjs';
 
@@ -23,6 +22,7 @@ export class ElementConnectDialogComponent implements OnInit {
   public systemUserSelected: SystemUser = null;
   public connectType: ConnectType;
   public connectTypes = [];
+  public autoLogin = false;
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
@@ -80,6 +80,10 @@ export class ElementConnectDialogComponent implements OnInit {
     this.outputData.systemUser = this.systemUserSelected;
     this.outputData.connectType = this.connectType;
     this.outputData.manualAuthInfo = this.manualAuthInfo;
+
+    if (this.autoLogin) {
+      this._appSvc.setPreLoginSelect(this.node, this.outputData);
+    }
 
     this.onSubmit$.next(true);
 

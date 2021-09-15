@@ -82,5 +82,7 @@
   "Full screen": "全屏",
   "Driver redirect": "磁盘挂载",
   "RDP Client": "RDP 客户端",
-  "RDP File": "RDP 文件"
+  "RDP File": "RDP 文件",
+  "Remember select": "记住选择",
+  "Automatic login text": "下次自动登录 (右击资产连接可以重新选择)"
 }

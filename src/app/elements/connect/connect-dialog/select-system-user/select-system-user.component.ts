@@ -34,7 +34,7 @@ export class ElementSelectSystemUserComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.systemUsersGroups = this.groupSystemUsers();
-    this.systemUserSelected = this.getPreferSystemUser();
+    this.systemUserSelected = this.systemUsers[0];
     this.filteredUsersGroups.next(this.systemUsersGroups.slice());
 
     this.filteredCtrl.valueChanges
@@ -90,7 +90,11 @@ export class ElementSelectSystemUserComponent implements OnInit, OnDestroy {
       systemUsersGroupsCopy.filter(group => {
         const showGroup = group.name.toLowerCase().indexOf(search) > -1;
         if (!showGroup) {
-          group.systemUsers = group.systemUsers.filter(sysUser => sysUser.name.toLowerCase().indexOf(search) > -1);
+          group.systemUsers = group.systemUsers.filter(
+            sysUser => {
+              return sysUser.name.toLowerCase().indexOf(search) > -1;
+            }
+          );
         }
         return group.systemUsers.length > 0;
       })
@@ -106,15 +110,5 @@ export class ElementSelectSystemUserComponent implements OnInit, OnDestroy {
       });
     });
     return systemUsersCopy;
-  }
-
-  getPreferSystemUser() {
-    const preferId = this._appSvc.getNodePreferSystemUser(this.node.id);
-    const matchedSystemUsers = this.systemUsers.filter((item) => item.id === preferId);
-    if (matchedSystemUsers.length === 1) {
-      return matchedSystemUsers[0];
-    } else {
-      return this.systemUsers[0];
-    }
   }
 }

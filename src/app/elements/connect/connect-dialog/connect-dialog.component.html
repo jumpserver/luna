@@ -32,6 +32,13 @@
     </span>
   </div>
 
+  <div class="auto-connect">
+    <label class="zone-label" style="display: block">{{ "Remember select" | translate }}</label>
+    <mat-checkbox name="auto-login" [(ngModel)]="autoLogin">
+      {{ "Automatic login text" | translate }}
+    </mat-checkbox>
+  </div>
+
   <mat-dialog-actions  style="float: right; margin: 20px 0 10px 0;">
     <button mat-raised-button (click)="onCancel()">{{"Cancel"| translate}}</button>
     <button mat-raised-button color="primary" type="submit" [mat-dialog-close]="outputData" (click)="onConfirm()">{{"Confirm"| translate}}</button>
