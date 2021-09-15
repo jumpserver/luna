@@ -16,11 +16,7 @@ export class AppService {
   // user:User = user  ;
   public lang: string;
   private protocolPreferConnectTypes: object = {};
-  private assetPreferSystemUser: object = {};
   private protocolPreferKey = 'ProtocolPreferLoginType';
-  private systemUserPreferKey = 'PreferSystemUser';
-  private manualAuthInfoKey = 'ManualAuthInfo';
-  private manualAuthInfos: object = {};
 
   constructor(private _http: HttpService,
               private _router: Router,
@@ -30,8 +26,7 @@ export class AppService {
               private _localStorage: LocalStorageService) {
     this.setLogLevel();
     this.checkLogin();
-    this.loadPreferData();
-    this.loadManualAuthInfo();
+    this.loadOriManualAuthInfo();
   }
 
   setLogLevel() {
@@ -42,6 +37,7 @@ export class AppService {
     }
     this._logger.level = parseInt(logLevel, 10);
   }
+
   checkLogin() {
     this._logger.debug('Check user auth');
     if (!DataStore.Path) {
@@ -110,16 +106,19 @@ export class AppService {
     return validTypes;
   }
 
-  loadPreferData() {
-    const protocolPreferData = this._localStorage.get(this.protocolPreferKey);
-    if (protocolPreferData && typeof protocolPreferData === 'object') {
-      this.protocolPreferConnectTypes = protocolPreferData;
+  loadOriManualAuthInfo() {
+    const manualAuthInfoKey = 'ManualAuthInfo';
+    const authInfos = this._localStorage.get(manualAuthInfoKey);
+    if (!authInfos) {
+      return;
     }
-
-    const systemUserPreferData = this._localStorage.get(this.systemUserPreferKey);
-    if (systemUserPreferData && typeof systemUserPreferData === 'object') {
-      this.assetPreferSystemUser = systemUserPreferData;
+    if (authInfos && typeof authInfos === 'object') {
+      for (const [key, auths] of Object.entries(authInfos)) {
+        const newKey = `JMS_MA_${key}`;
+        this._localStorage.set(newKey, auths);
+      }
     }
+    this._localStorage.delete(manualAuthInfoKey);
   }
 
   getProtocolPreferLoginType(protocol: string): string {
@@ -128,76 +127,86 @@ export class AppService {
 
   setProtocolPreferLoginType(protocol: string, type: string) {
     this.protocolPreferConnectTypes[protocol] = type;
+    this._localStorage.set(this.protocolPreferKey, this.protocolPreferConnectTypes);
+  }
+
+  encrypt(s) {
+    const secretKey = `${User.id}_${User.username}`;
     try {
-      this._localStorage.set(this.protocolPreferKey, this.protocolPreferConnectTypes);
-    } catch (e) {
-      // pass
+      return CryptoJS.AES.encrypt(s, secretKey).toString();
+    } catch (err) {
+      return '';
+    }
+  }
+
+  decrypt(secret) {
+    const secretKey = `${User.id}_${User.username}`;
+    try {
+      const bytes = CryptoJS.AES.decrypt(secret, secretKey);
+      return bytes.toString(CryptoJS.enc.Utf8);
+    } catch (err) {
+      return '';
     }
   }
 
   setPreLoginSelect(node: TreeNode, outputData: ConnectData) {
-    try {
-      const data = JSON.stringify(outputData);
-      const key = 'PreLogin_' + node.id;
-      this._localStorage.set(key, data);
-    } catch (e) {
-      // console.log('hello
+    const tmp = JSON.parse(JSON.stringify(outputData)) as ConnectData;
+    if (tmp.manualAuthInfo) {
+      tmp.manualAuthInfo.password = '';
     }
+    if (tmp.systemUser.actions) {
+      tmp.systemUser.actions = [];
+    }
+    const key = 'JMS_PL_' + node.id;
+    this._localStorage.set(key, tmp);
   }
 
   getPreLoginSelect(node: TreeNode): ConnectData {
-    const key = 'PreLogin_' + node.id;
-    const data = this._localStorage.get(key);
-    let outputData: ConnectData;
-    try {
-      outputData = JSON.parse(data);
-      return outputData;
-    } catch (e) {
-      console.error('Json parse error: ', e);
+    const key = 'JMS_PL_' + node.id;
+    const connectData = this._localStorage.get(key) as ConnectData;
+    if (!connectData || !connectData.manualAuthInfo) {
       return null;
     }
-  }
-
-  getNodePreferSystemUser(nodeId: string): string {
-    return this.assetPreferSystemUser[nodeId];
-  }
-
-  setNodePreferSystemUser(nodeId: string, systemUserId: string) {
-    this.assetPreferSystemUser[nodeId] = systemUserId;
-    try {
-      this._localStorage.set(this.systemUserPreferKey, this.assetPreferSystemUser);
-    } catch (e) {
-      // pass
+    if (connectData.systemUser.login_mode !== 'manual') {
+      return connectData;
     }
-  }
-
-  loadManualAuthInfo() {
-    const authInfos = this._localStorage.get(this.manualAuthInfoKey);
-    if (authInfos && typeof authInfos === 'object') {
-      this.manualAuthInfos = authInfos;
+    // 获取手动的密码
+    const manualAuth = connectData.manualAuthInfo;
+    if (manualAuth.username) {
+      const auths = this.getNodeSystemUserAuth(node.id, connectData.systemUser.id);
+      const matched = auths.filter(item => item.username === manualAuth.username);
+      if (matched.length === 1) {
+        manualAuth.password = matched[0].password;
+      }
     }
+    return connectData;
   }
 
-  getAssetSystemUserAuth(nodeId: string, systemUserId: string): AuthInfo[] {
-    const localKey = `${systemUserId}_${nodeId}`;
-    let auths = this.manualAuthInfos[localKey];
+  delPreLoginSelect(node: TreeNode) {
+    const key = 'JMS_PL_' + node.id;
+    this._localStorage.delete(key);
+  }
+
+  getNodeSystemUserAuth(nodeId: string, systemUserId: string, decrypt= true): AuthInfo[] {
+    const localKey = `JMS_MA_${systemUserId}_${nodeId}`;
+    let auths = this._localStorage.get(localKey);
+
     if (!auths) {
       return [];
     }
+
     if (!Array.isArray(auths)) {
       auths = [auths];
+    }
+
+    if (!decrypt) {
+      return auths;
     }
 
     const newAuths: AuthInfo[] = [];
     for (const auth of auths) {
       const newAuth = Object.assign({}, auth);
-      const secretKey = `${User.id}_${User.username}`;
-      try {
-        const bytes = CryptoJS.AES.decrypt(newAuth.password, secretKey);
-        newAuth.password = bytes.toString(CryptoJS.enc.Utf8);
-      } catch (err) {
-        newAuth.password = '';
-      }
+      newAuth.password = this.decrypt(newAuth.password);
       newAuths.push(newAuth);
     }
     return newAuths;
@@ -208,27 +217,14 @@ export class AppService {
     if (!auth.password) {
       auth.password = '';
     } else {
-      const secretKey = `${User.id}_${User.username}`;
-      newAuth.password = CryptoJS.AES.encrypt(auth.password, secretKey).toString();
+      newAuth.password = this.encrypt(auth.password);
     }
 
-    const localKey = `${systemUserId}_${nodeId}`;
-    let auths = this.manualAuthInfos[localKey];
-    if (!auths) {
-      auths = [];
-    } else if (!Array.isArray(auths)) {
-      auths = [auths];
-    }
+    let auths = this.getNodeSystemUserAuth(nodeId, systemUserId, false);
+    const localKey = `JMS_MA_${systemUserId}_${nodeId}`;
 
     auths = auths.filter((item) => item.username !== newAuth.username);
     auths.splice(0, 0, newAuth);
-
-    this.manualAuthInfos[localKey] = auths;
-    try {
-      this._localStorage.set(this.manualAuthInfoKey, this.manualAuthInfos);
-    } catch (e) {
-      this._logger.error('Error: ', e);
-      // pass
-    }
+    this._localStorage.set(localKey, auths);
   }
 }

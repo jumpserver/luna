@@ -32,8 +32,11 @@
     </span>
   </div>
 
-  <div class="auto-connect" style="padding-top: 20px">
-    <mat-checkbox class="example-margin" [(ngModel)]="autoLogin">下次自动登录 </mat-checkbox>
+  <div class="auto-connect">
+    <label class="zone-label" style="display: block">{{ "Remember select" | translate }}</label>
+    <mat-checkbox name="auto-login" [(ngModel)]="autoLogin">
+      {{ "Automatic login text" | translate }}
+    </mat-checkbox>
   </div>
 
   <mat-dialog-actions  style="float: right; margin: 20px 0 10px 0;">

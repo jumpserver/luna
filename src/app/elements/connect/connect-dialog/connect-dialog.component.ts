@@ -22,7 +22,7 @@ export class ElementConnectDialogComponent implements OnInit {
   public systemUserSelected: SystemUser = null;
   public connectType: ConnectType;
   public connectTypes = [];
-  public autoLogin = true;
+  public autoLogin = false;
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
