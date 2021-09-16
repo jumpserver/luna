@@ -16,7 +16,7 @@
 </div>
 
 
-<div #rMenu *ngIf="isShowRMenu" class="basicContext" [style.top]="pos.top" [style.left]="pos.left">
+<div #rMenu *ngIf="isShowRMenu" class="basicContext" style="position: fixed" [style.top]="pos.top" [style.left]="pos.left">
   <table>
       <tbody>
         <tr *ngFor="let menu of RMenuList; let i = index" class="basicContext__item ">
