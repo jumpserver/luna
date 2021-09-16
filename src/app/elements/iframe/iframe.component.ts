@@ -37,6 +37,15 @@ export class ElementIframeComponent implements OnInit, AfterViewInit {
       if (i.contentWindow.document.readyState === 'complete') {
         window.clearInterval(t);
         this.view.termComp = that;
+
+        // iframe 点击的时候，透传到外层，一些菜单会折叠
+        setTimeout(() => {
+          i.contentWindow.addEventListener('click', function() {
+            document.body.click();
+          });
+        }, 300);
+
+        // 内部加载完成后再显示
         setTimeout(() => {
           i.style.visibility = '';
           i.contentWindow.addEventListener('CLOSE', (e) => {
