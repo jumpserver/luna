@@ -21,7 +21,6 @@ export class ElementManualAuthComponent implements  OnInit {
   @ViewChild('username', {static: false}) usernameRef: ElementRef;
   @ViewChild('password', {static: false}) passwordRef: ElementRef;
   usernameControl = new FormControl();
-  usernameReadonly = false;
   authsOptions: AuthInfo[];
   filteredOptions: AuthInfo[];
   systemUserManualAuthInit = false;
@@ -44,7 +43,6 @@ export class ElementManualAuthComponent implements  OnInit {
     if (!this.systemUserSelected || this.systemUserSelected['login_mode'] !== 'manual') {
       return;
     }
-    this.usernameReadonly = false;
     this.manualAuthInfo.username = '';
     this.manualAuthInfo.password = '';
     this.authsOptions = this._appSvc.getNodeSystemUserAuth(this.node.id, this.systemUserSelected.id);
@@ -53,7 +51,6 @@ export class ElementManualAuthComponent implements  OnInit {
     }
     if (this.systemUserSelected.username_same_with_user) {
       this.manualAuthInfo.username = User.username;
-      this.usernameReadonly = true;
     }
     if (!this.manualAuthInfo.username && this.systemUserSelected.username) {
       this.manualAuthInfo.username = this.systemUserSelected.username;
@@ -69,7 +66,7 @@ export class ElementManualAuthComponent implements  OnInit {
   }
 
   onFocus() {
-    if (!this.systemUserManualAuthInit && !this.usernameReadonly) {
+    if (!this.systemUserManualAuthInit) {
       this.usernameControl.setValue('');
       this.systemUserManualAuthInit = true;
     }
