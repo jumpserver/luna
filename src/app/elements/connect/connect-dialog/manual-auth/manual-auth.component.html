@@ -11,7 +11,6 @@
         [(ngModel)]="manualAuthInfo.username"
         (ngModelChange)="onUsernameChanges()"
         (focus)="onFocus()"
-        [readonly]="usernameReadonly"
         [matAutocomplete]="auto"
       >
       <mat-autocomplete #auto="matAutocomplete">
