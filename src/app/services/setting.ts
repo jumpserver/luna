@@ -87,4 +87,8 @@ export class SettingService {
       }
     });
   }
+
+  hasXPack() {
+    return this.globalSetting.XPACK_LICENSE_IS_VALID;
+  }
 }

@@ -1,6 +1,6 @@
 import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {connectEvt, TYPE_RDP_CLIENT, TYPE_RDP_FILE} from '@app/globals';
+import {connectEvt, TYPE_RDP_CLIENT, TYPE_WEB_CLI, TYPE_RDP_FILE, TYPE_WEB_GUI} from '@app/globals';
 import {AppService, HttpService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {SystemUser, TreeNode, ConnectData} from '@app/model';
@@ -56,6 +56,27 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     node.name = 'Token';
     const view = new View(node, null, 'token', type, protocol);
     view.token = token;
+
+    switch (protocol) {
+      case 'mysql':
+      case 'oracle':
+      case 'postgresql':
+      case 'mariadb':
+        view.connectType = TYPE_WEB_GUI;
+        break;
+      case 'rdp':
+      case 'vnc':
+        view.connectType = TYPE_WEB_GUI;
+        break;
+      default:
+        view.connectType = TYPE_WEB_CLI;
+    }
+
+    const isDatabase = ['oracle', 'mysql', 'postgre', 'mariadb'].indexOf(protocol) > -1;
+    if (isDatabase && !this._settingSvc.hasXPack()) {
+      view.connectType = TYPE_WEB_CLI;
+    }
+
     this.onNewView.emit(view);
   }
 
@@ -189,7 +210,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     this.onNewView.emit(view);
   }
 
-  validatePreConnectData(systemUsers: SystemUser[], preData: ConnectData): Boolean {
+  validatePreConnectData(node: TreeNode, systemUsers: SystemUser[], preData: ConnectData): Boolean {
     if (!preData || !preData.systemUser || preData.node) {
       this._logger.debug('No system user or node');
       return false;
@@ -210,12 +231,26 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       this._logger.debug('System user no manual auth');
       return false;
     }
+    // 验证连接方式
+    const isRemoteApp = node.meta.type === 'application';
+    const connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[systemUser.protocol];
+    if (!connectTypes) {
+      this._logger.debug('No matched connect types');
+      return false;
+    }
+    const inConnectType = connectTypes.filter(item => {
+      return item.id === preData.connectType.id;
+    });
+    if (inConnectType.length !== 1) {
+      this._logger.error('No matched connect type, may be changed');
+      return false;
+    }
     return true;
   }
 
   getConnectData(systemUserMaxPriority: SystemUser[], node: TreeNode): Promise<ConnectData> {
     const preConnectData = this._appSvc.getPreLoginSelect(node);
-    const isValid = this.validatePreConnectData(systemUserMaxPriority, preConnectData);
+    const isValid = this.validatePreConnectData(node, systemUserMaxPriority, preConnectData);
     if (isValid) {
       return new Promise<ConnectData>(resolve => {
         resolve(preConnectData);
