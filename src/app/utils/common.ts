@@ -55,6 +55,14 @@ export function groupByProp(xs, key) {
   }, {});
 }
 
+export function truncateCenter(s: string, l: number) {
+  if (s.length <= l) {
+    return s;
+  }
+  const centerIndex = Math.ceil(l  / 2);
+  return s.slice(0, centerIndex - 2) + '...' + s.slice(centerIndex + 1, l);
+}
+
 export function canvasWaterMark({
     // 使用 ES6 的函数默认值方式设置参数的默认取值
     // 具体参见 https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Functions/Default_parameters
@@ -94,11 +102,12 @@ export function canvasWaterMark({
 
     for (let n = 0; n < words.length; n++) {
       line = words[n];
+      line = truncateCenter(line, 25);
       _ctx.fillText(line, x, y);
       y += _lineHeight;
     }
   }
-  generateMultiLineText(ctx, content, width, 48);
+  generateMultiLineText(ctx, content, width, 24);
 
   const base64Url = canvas.toDataURL();
   const watermarkDiv = document.createElement('div');
