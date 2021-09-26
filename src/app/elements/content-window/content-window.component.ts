@@ -23,7 +23,7 @@ export class ElementContentWindowComponent implements OnInit {
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this._settingSvc.createWaterMarkIfNeed(
       this.windowRef.nativeElement,
-      `${User.name}(${User.username})`
+      `${User.name}(${User.username})\n${this.view.node.name}`
     );
   }
 
