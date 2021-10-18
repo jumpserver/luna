@@ -43,7 +43,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       'name': 'Open in new window',
       'fa': 'fa-external-link',
       'hide': false,
-      'click': this.onMenuConnectNewWindow.bind(this)
+      'click': this.onMenuConnectNewTab.bind(this)
     }, {
       'id': 'file-manager',
       'name': 'File Manager',
@@ -141,16 +141,16 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   onAssetsNodeClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
       this.assetsTree.expandNode(treeNode);
-    } else {
-      if (treeNode.chkDisabled) {
-        this._dialog.open(DisabledAssetsDialogComponent, {
-          height: '200px',
-          width: '450px'
-        });
-        return;
-      }
-      this.connectAsset(treeNode);
+      return;
     }
+    if (treeNode.chkDisabled) {
+      this._dialog.open(DisabledAssetsDialogComponent, {
+        height: '200px',
+        width: '450px'
+      });
+      return;
+    }
+    this.connectAsset(treeNode);
   }
 
   refreshAssetsTree() {
@@ -232,8 +232,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     }
   }
 
-  onApplicationTreeNodeClick(event, treeId, treeNode, clickFlag) {
+  onApplicationTreeNodeClick(event, treeId, treeNode: TreeNode, clickFlag) {
     if (!treeNode.isParent) {
+      if (treeNode.meta.data.category === 'remote_app') {
+        this.connectOnNewPage(treeNode, true);
+        return;
+      }
       this._http.getUserProfile().subscribe();
       this.connectAsset(treeNode);
     } else {
@@ -382,10 +386,21 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     connectEvt.next(evt);
   }
 
-  onMenuConnectNewWindow() {
+  onMenuConnectNewTab() {
     const node = this.rightClickSelectNode;
+    this.connectOnNewPage(node, false);
+  }
+
+  connectOnNewPage(node: TreeNode, newWindow?: boolean) {
     const url = `/luna/connect?login_to=${node.id}&type=${node.meta.type}`;
-    window.open(url, '_blank');
+    if (newWindow) {
+      const height = window.innerHeight;
+      const width = window.innerWidth;
+      const params = `toolbar=yes,scrollbars=yes,resizable=yes,top=300,left=300,width=${width},height=${height}`;
+      window.open(url, '_blank', params);
+    } else {
+      window.open(url, '_blank');
+    }
   }
 
   onMenuFavorite() {
