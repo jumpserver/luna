@@ -2,16 +2,16 @@
   <label class="zone-label">{{ "Account info" | translate }}</label>
   <div class="account-info">
     <mat-form-field style="width: 45%">
+      <mat-label>{{'Username'| translate}}</mat-label>
       <input
         #username
         matInput
         name="username"
-        placeholder="{{'Username'| translate}}"
+        [placeholder]="usernamePlaceholder"
         autofocus
         [(ngModel)]="manualAuthInfo.username"
         (ngModelChange)="onUsernameChanges()"
         (focus)="onFocus()"
-        [readonly]="usernameReadonly"
         [matAutocomplete]="auto"
       >
       <mat-autocomplete #auto="matAutocomplete">

@@ -84,5 +84,6 @@
   "RDP Client": "RDP 客户端",
   "RDP File": "RDP 文件",
   "Remember select": "记住选择",
-  "Automatic login text": "下次自动登录 (右击资产连接可以重新选择)"
+  "Automatic login next": "下次自动登录 (右击资产连接可以重新选择)",
+  "Username@Domain": "用户名@AD域"
 }

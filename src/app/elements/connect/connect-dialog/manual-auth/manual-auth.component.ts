@@ -1,7 +1,7 @@
 import {ChangeDetectorRef, Component, ElementRef, Inject, Input, OnInit, ViewChild} from '@angular/core';
 import {AuthInfo, SystemUser, TreeNode} from '@app/model';
 import {User} from '@app/globals';
-import {AppService, LocalStorageService, LogService, SettingService} from '@app/services';
+import {AppService, I18nService, LocalStorageService, LogService, SettingService} from '@app/services';
 import {FormControl} from '@angular/forms';
 import {BehaviorSubject} from 'rxjs';
 
@@ -21,15 +21,16 @@ export class ElementManualAuthComponent implements  OnInit {
   @ViewChild('username', {static: false}) usernameRef: ElementRef;
   @ViewChild('password', {static: false}) passwordRef: ElementRef;
   usernameControl = new FormControl();
-  usernameReadonly = false;
   authsOptions: AuthInfo[];
   filteredOptions: AuthInfo[];
   systemUserManualAuthInit = false;
+  usernamePlaceholder: string = 'Username';
 
   constructor(private _settingSvc: SettingService,
               private _cdRef: ChangeDetectorRef,
               private _logger: LogService,
               private _appSvc: AppService,
+              private _i18n: I18nService,
               private _localStorage: LocalStorageService,
   ) {}
 
@@ -37,14 +38,22 @@ export class ElementManualAuthComponent implements  OnInit {
     if (!this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH) {
       this.rememberAuthDisabled = true;
     }
+    this.setUsernamePlaceholder();
     this.subscribeSubmitEvent();
+  }
+
+  setUsernamePlaceholder() {
+    if (this.systemUserSelected.protocol === 'rdp') {
+      this.usernamePlaceholder = this._i18n.instant('Username@Domain');
+    } else {
+      this.usernamePlaceholder = this._i18n.instant('Username');
+    }
   }
 
   onSystemUserChanged() {
     if (!this.systemUserSelected || this.systemUserSelected['login_mode'] !== 'manual') {
       return;
     }
-    this.usernameReadonly = false;
     this.manualAuthInfo.username = '';
     this.manualAuthInfo.password = '';
     this.authsOptions = this._appSvc.getNodeSystemUserAuth(this.node.id, this.systemUserSelected.id);
@@ -53,11 +62,11 @@ export class ElementManualAuthComponent implements  OnInit {
     }
     if (this.systemUserSelected.username_same_with_user) {
       this.manualAuthInfo.username = User.username;
-      this.usernameReadonly = true;
     }
     if (!this.manualAuthInfo.username && this.systemUserSelected.username) {
       this.manualAuthInfo.username = this.systemUserSelected.username;
     }
+    this.setUsernamePlaceholder();
     this._cdRef.detectChanges();
     setTimeout(() => {
       if (this.manualAuthInfo.username) {
@@ -69,7 +78,7 @@ export class ElementManualAuthComponent implements  OnInit {
   }
 
   onFocus() {
-    if (!this.systemUserManualAuthInit && !this.usernameReadonly) {
+    if (!this.systemUserManualAuthInit) {
       this.usernameControl.setValue('');
       this.systemUserManualAuthInit = true;
     }
