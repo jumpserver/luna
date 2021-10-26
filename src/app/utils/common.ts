@@ -111,6 +111,22 @@ export function canvasWaterMark({
 
   const base64Url = canvas.toDataURL();
   const watermarkDiv = document.createElement('div');
+  const config = { attributes: true, characterData: true };
+
+  // 监听dom节点的style属性变化
+  let observer = new MutationObserver(mutations => {
+    const record = mutations[0];
+    if (record.type === 'attributes' && record.attributeName === 'style') {
+      setTimeout(() => {
+        observer.disconnect();
+        // 重新添加水印
+        watermarkDiv.style.backgroundImage = `url('${base64Url}')`
+        observer.observe(watermarkDiv, config);
+      }, 0);
+      } 
+  })
+  observer.observe(watermarkDiv, config);
+
   watermarkDiv.setAttribute('style', `
           position:absolute;
           top:0;
