@@ -86,5 +86,6 @@
   "Remember select": "记住选择",
   "Automatic login next": "下次自动登录 (右击资产连接可以重新选择)",
   "Username@Domain": "用户名@AD域",
-  "InstallClientMsg": "JumpServer 客户端没有安装，现在去下载安装 ?"
+  "InstallClientMsg": "JumpServer 客户端没有安装，现在去下载安装 ?",
+  "LoginExpireMsg": "登录已过期，请重新登录"
 }
