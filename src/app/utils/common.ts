@@ -182,14 +182,18 @@ export function formatTime(millis: number) {
  * @param {Function} fail 失败的回调
  */
 export function launchLocalApp(url, fail) {
+  if (!url) {
+    return;
+  }
+
   let isDone = false;
   let decideTimeOut = null;
   const aLink = document.createElement('a');
   aLink.style.display = 'none';
-  aLink.id = 'aLink';
   aLink.href = url;
   document.body.appendChild(aLink);
   aLink.click();
+  document.body.removeChild(aLink);
   window.onblur = () => {
     if (decideTimeOut) {
       isDone = true;
