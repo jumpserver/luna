@@ -176,3 +176,37 @@ export function formatTime(millis: number) {
   return time;
 }
 
+/**
+ * 判断用户有没有下载jumpServer
+ * @param {string} url
+ * @param {Function} fail 失败的回调
+ */
+export function launchLocalApp(url, fail) {
+  let isDone = false;
+  let decideTimeOut = null;
+  const aLink = document.createElement('a');
+  aLink.style.display = 'none';
+  aLink.id = 'aLink';
+  aLink.href = url;
+  document.body.appendChild(aLink);
+  aLink.click();
+  window.onblur = () => {
+    if (decideTimeOut) {
+      isDone = true;
+    }
+  };
+  const curDone = function done() {
+    isDone = false;
+    clearTimeout(decideTimeOut);
+    decideTimeOut = null;
+  };
+
+  decideTimeOut = setTimeout(() => {
+    if (isDone) {
+      curDone();
+    } else {
+      fail();
+      curDone();
+    }
+  }, 600);
+}
