@@ -85,5 +85,6 @@
   "RDP Client": "RDP Client",
   "Remember select": "Remember selected",
   "Automatic login next": "Automatic Login next time (right click asset Connection to re-select)",
-  "Username@Domain": "Username@Domain"
+  "Username@Domain": "Username@Domain",
+  "LoginExpireMsg": "Login session expired, please re-login"
 }
