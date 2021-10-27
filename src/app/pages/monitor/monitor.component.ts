@@ -2,7 +2,6 @@ import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {AppService, HttpService, SettingService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
 import {Session} from '@app/model';
-import {User} from '@app/globals';
 
 @Component({
   selector: 'pages-monitor',
