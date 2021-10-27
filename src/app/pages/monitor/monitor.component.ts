@@ -2,6 +2,7 @@ import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {AppService, HttpService, SettingService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
 import {Session} from '@app/model';
+import {User} from '@app/globals';
 
 @Component({
   selector: 'pages-monitor',
@@ -24,7 +25,10 @@ export class PagesMonitorComponent implements OnInit {
     this._route.params.subscribe(params => {
       this.sessionID = params['sid'];
       this.generateMonitorURL().then(() => {
-        this._settingSvc.createWaterMarkIfNeed(this.windowRef.nativeElement, this.sessionDetail.user);
+        this._settingSvc.createWaterMarkIfNeed(
+          this.windowRef.nativeElement,
+          `${this.sessionDetail.user}\n${this.sessionDetail.asset}`
+        );
       });
     });
   }
