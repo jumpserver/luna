@@ -260,6 +260,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     const refreshIcon = '<a id=' + tId + ' class="tree-refresh">' +
       '<i class="fa fa-refresh" style="font-family: FontAwesome !important;" ></i></a>';
     const rootNode = ztree.getNodes()[0];
+    if (!rootNode) {
+      return;
+    }
     const $rootNodeRef = $('#' + rootNode.tId + '_a');
     $rootNodeRef.after(refreshIcon);
     const refreshIconRef = $('#' + tId);

@@ -111,6 +111,22 @@ export function canvasWaterMark({
 
   const base64Url = canvas.toDataURL();
   const watermarkDiv = document.createElement('div');
+  const config = { attributes: true, characterData: true };
+
+  // 监听dom节点的style属性变化
+  let observer = new MutationObserver(mutations => {
+    const record = mutations[0];
+    if (record.type === 'attributes' && record.attributeName === 'style') {
+      setTimeout(() => {
+        observer.disconnect();
+        // 重新添加水印
+        watermarkDiv.style.backgroundImage = `url('${base64Url}')`
+        observer.observe(watermarkDiv, config);
+      }, 0);
+      } 
+  })
+  observer.observe(watermarkDiv, config);
+
   watermarkDiv.setAttribute('style', `
           position:absolute;
           top:0;
@@ -176,3 +192,41 @@ export function formatTime(millis: number) {
   return time;
 }
 
+/**
+ * 判断用户有没有下载jumpServer
+ * @param {string} url
+ * @param {Function} fail 失败的回调
+ */
+export function launchLocalApp(url, fail) {
+  if (!url) {
+    return;
+  }
+
+  let isDone = false;
+  let decideTimeOut = null;
+  const aLink = document.createElement('a');
+  aLink.style.display = 'none';
+  aLink.href = url;
+  document.body.appendChild(aLink);
+  aLink.click();
+  document.body.removeChild(aLink);
+  window.onblur = () => {
+    if (decideTimeOut) {
+      isDone = true;
+    }
+  };
+  const curDone = function done() {
+    isDone = false;
+    clearTimeout(decideTimeOut);
+    decideTimeOut = null;
+  };
+
+  decideTimeOut = setTimeout(() => {
+    if (isDone) {
+      curDone();
+    } else {
+      fail();
+      curDone();
+    }
+  }, 600);
+}

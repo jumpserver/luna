@@ -1,12 +1,12 @@
 import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {connectEvt, TYPE_RDP_CLIENT, TYPE_WEB_CLI, TYPE_RDP_FILE, TYPE_WEB_GUI, TYPE_DB_GUI} from '@app/globals';
-import {AppService, HttpService, LogService, SettingService} from '@app/services';
+import {AppService, HttpService, I18nService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {SystemUser, TreeNode, ConnectData} from '@app/model';
 import {View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
-import {windowOpen} from '@app/utils/common';
+import {launchLocalApp} from '@app/utils/common';
 
 
 @Component({
@@ -23,6 +23,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
               private _logger: LogService,
               private _settingSvc: SettingService,
               private _http: HttpService,
+              private _i18n: I18nService,
   ) {
   }
 
@@ -198,7 +199,13 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       data['assetId'] = node.id;
     }
     const response = await this._http.getRDPClientUrl(data, this._settingSvc.setting);
-    windowOpen(response['url']);
+    const url = response['url'];
+    launchLocalApp(url, () => {
+      const msg = this._i18n.instant('InstallClientMsg');
+      if (window.confirm(msg)) {
+        window.open('/core/download/', '_blank');
+      }
+    });
   }
 
   createNodeView(connectInfo: ConnectData, node: TreeNode) {
