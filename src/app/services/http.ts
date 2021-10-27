@@ -32,16 +32,12 @@ export class HttpService {
 
   get<T>(url: string, options?: any): Observable<any> {
     return this.http.get(url, options).pipe(
-      retry(3),
       catchError(this.handleError.bind(this))
     );
   }
 
   async handleError(error: HttpErrorResponse) {
-    if (error.status === 0) {
-      // A client-side or network error occurred. Handle it accordingly.
-      console.error('An error occurred:', error.error);
-    } else if (error.status === 401 || error.status === 403) {
+    if (error.status === 401 || error.status === 403) {
       const msg = await this._i18n.t('LoginExpireMsg');
       if (confirm(msg)) {
         window.open('/core/auth/login/?next=/luna/');
@@ -50,9 +46,8 @@ export class HttpService {
       // The backend returned an unsuccessful response code.
       // The response body may contain clues as to what went wrong.
       console.error(`Backend returned code ${error.status}, body was: `, error.error);
+      throw error;
     }
-    // Return an observable with a user-facing error message.
-    return throwError('Something bad happened; please try again later.');
   }
 
   post<T>(url: string, body: any, options?: any): Observable<any> {
@@ -171,8 +166,8 @@ export class HttpService {
     return this.get('/api/search', {params: params});
   }
 
-  getReplay(token: string) {
-    return this.get('/api/v1/terminal/sessions/' + token + '/replay/');
+  getReplay(sessionId: string) {
+    return this.get(`/api/v1/terminal/sessions/${sessionId}/replay/`);
   }
 
   getSessionDetail(sid: string): Promise<Session> {
