@@ -37,11 +37,15 @@ export class HttpService {
   }
 
   async handleError(error: HttpErrorResponse) {
-    if (error.status === 401 || error.status === 403) {
+    if (error.status === 401) {
       const msg = await this._i18n.t('LoginExpireMsg');
       if (confirm(msg)) {
         window.open('/core/auth/login/?next=/luna/');
       }
+    } else if (error.status === 403) {
+      const msg = await this._i18n.t('No permission');
+      alert(msg);
+      throw error;
     } else {
       // The backend returned an unsuccessful response code.
       // The response body may contain clues as to what went wrong.
@@ -52,22 +56,30 @@ export class HttpService {
 
   post<T>(url: string, body: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.post(url, body, options);
+    return this.http.post(url, body, options).pipe(
+      catchError(this.handleError.bind(this))
+    );
   }
 
   put<T>(url: string, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.put(url, options);
+    return this.http.put(url, options).pipe(
+      catchError(this.handleError.bind(this))
+    );
   }
 
   delete<T>(url: string, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.delete(url, options);
+    return this.http.delete(url, options).pipe(
+      catchError(this.handleError.bind(this))
+    );
   }
 
   patch<T>(url: string, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.patch(url, options);
+    return this.http.patch(url, options).pipe(
+      catchError(this.handleError.bind(this))
+    );
   }
 
   head<T>(url: string, options?: any) {
