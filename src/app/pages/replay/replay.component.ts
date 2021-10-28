@@ -33,7 +33,9 @@ export class PagesReplayComponent implements OnInit {
           if (data['type']) {
             Object.assign(this.replay, data);
             clearInterval(interval);
-            this._settingSvc.createWaterMarkIfNeed(document.body, `${this.replay.user}`);
+            this._settingSvc.createWaterMarkIfNeed(
+              document.body, `${this.replay.user}\n${this.replay.asset}`
+            );
           }
         },
         err => {
