@@ -204,12 +204,10 @@ export function launchLocalApp(url, fail) {
 
   let isDone = false;
   let decideTimeOut = null;
-  const aLink = document.createElement('a');
+  const aLink = document.createElement('iframe');
   aLink.style.display = 'none';
-  aLink.href = url;
+  aLink.src = url;
   document.body.appendChild(aLink);
-  aLink.click();
-  document.body.removeChild(aLink);
   window.onblur = () => {
     if (decideTimeOut) {
       isDone = true;
@@ -219,6 +217,7 @@ export function launchLocalApp(url, fail) {
     isDone = false;
     clearTimeout(decideTimeOut);
     decideTimeOut = null;
+    document.body.removeChild(aLink);
   };
 
   decideTimeOut = setTimeout(() => {
