@@ -17,6 +17,9 @@ export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
   navs: Array<Nav>;
   viewList: Array<View>;
+  OFFICIAL_WEBSITE_URL: string;
+  HELP_DOCUMENT_URL: string;
+  HELP_SUPPORT_URL: string;
 
   constructor(private _http: HttpService,
               private _logger: LogService,
@@ -30,6 +33,7 @@ export class ElementNavComponent implements OnInit {
   ngOnInit() {
     this.navs = this.getNav();
     this.viewList = this._viewSrv.viewList;
+    this.getUrl();
   }
 
   click(event) {
@@ -93,15 +97,15 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'Website': {
-        window.open('http://www.jumpserver.org');
+        window.open(this.OFFICIAL_WEBSITE_URL);
         break;
       }
       case 'Document': {
-        window.open('http://docs.jumpserver.org/');
+        window.open(this.HELP_DOCUMENT_URL);
         break;
       }
       case 'Support': {
-        window.open('https://market.aliyun.com/products/53690006/cmgj026011.html?spm=5176.730005.0.0.cY2io1');
+        window.open(this.HELP_SUPPORT_URL);
         break;
       }
       case 'English': {
@@ -233,6 +237,13 @@ export class ElementNavComponent implements OnInit {
         height: '450px',
         width: '500px',
       });
+  }
+  getUrl() {
+    this._http.get('/api/v1/settings/setting/?category=other').subscribe(result => {
+      this.OFFICIAL_WEBSITE_URL = result['OFFICIAL_WEBSITE_URL'];
+      this.HELP_DOCUMENT_URL = result['HELP_DOCUMENT_URL'];
+      this.HELP_SUPPORT_URL = result['HELP_SUPPORT_URL'];
+    }, error => console.log(error));
   }
 }
 
