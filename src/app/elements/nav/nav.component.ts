@@ -17,7 +17,6 @@ export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
   navs: Array<Nav>;
   viewList: Array<View>;
-  OFFICIAL_WEBSITE_URL: string;
   HELP_DOCUMENT_URL: string;
   HELP_SUPPORT_URL: string;
 
@@ -94,10 +93,6 @@ export class ElementNavComponent implements OnInit {
           break;
         }
         this._navSvc.disconnectAllConnection();
-        break;
-      }
-      case 'Website': {
-        window.open(this.OFFICIAL_WEBSITE_URL);
         break;
       }
       case 'Document': {
@@ -213,11 +208,6 @@ export class ElementNavComponent implements OnInit {
         name: 'Help',
         children: [
           {
-            id: 'Website',
-            click: 'Website',
-            name: 'Website'
-          },
-          {
             id: 'Document',
             click: 'Document',
             name: 'Document'
@@ -240,7 +230,6 @@ export class ElementNavComponent implements OnInit {
   }
   getUrl() {
     this._http.get('/api/v1/settings/setting/?category=other').subscribe(result => {
-      this.OFFICIAL_WEBSITE_URL = result['OFFICIAL_WEBSITE_URL'];
       this.HELP_DOCUMENT_URL = result['HELP_DOCUMENT_URL'];
       this.HELP_SUPPORT_URL = result['HELP_SUPPORT_URL'];
     }, error => console.log(error));
