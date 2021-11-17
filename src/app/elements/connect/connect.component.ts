@@ -59,6 +59,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
     switch (protocol) {
       case 'mysql':
+      case 'sqlseerver':
       case 'oracle':
       case 'postgresql':
       case 'mariadb':
