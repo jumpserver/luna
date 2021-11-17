@@ -229,7 +229,7 @@ export class ElementNavComponent implements OnInit {
       });
   }
   getUrl() {
-    this._http.get('/api/v1/settings/setting/?category=other').subscribe(result => {
+    this._http.get('/api/v1/settings/public/').subscribe(result => {
       this.HELP_DOCUMENT_URL = result['HELP_DOCUMENT_URL'];
       this.HELP_SUPPORT_URL = result['HELP_SUPPORT_URL'];
     }, error => console.log(error));
