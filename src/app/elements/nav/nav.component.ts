@@ -1,5 +1,5 @@
 import {Component, Inject, OnInit} from '@angular/core';
-import {HttpService, NavService, LogService, ViewService} from '@app/services';
+import {HttpService, NavService, LogService, ViewService, SettingService} from '@app/services';
 import {DataStore} from '@app/globals';
 import {CookieService} from 'ngx-cookie-service';
 import {ElementLeftBarComponent} from '@app/elements/left-bar/left-bar.component';
@@ -26,13 +26,14 @@ export class ElementNavComponent implements OnInit {
               private _navSvc: NavService,
               private _cookie: CookieService,
               private _i18n: I18nService,
+              private _settingSvc: SettingService,
               public _viewSrv: ViewService,
               ) {}
 
   ngOnInit() {
     this.navs = this.getNav();
     this.viewList = this._viewSrv.viewList;
-    this.getUrl();
+    this.setHelpUrl();
   }
 
   click(event) {
@@ -228,11 +229,9 @@ export class ElementNavComponent implements OnInit {
         width: '500px',
       });
   }
-  getUrl() {
-    this._http.get('/api/v1/settings/setting/?category=other').subscribe(result => {
-      this.HELP_DOCUMENT_URL = result['HELP_DOCUMENT_URL'];
-      this.HELP_SUPPORT_URL = result['HELP_SUPPORT_URL'];
-    }, error => console.log(error));
+  setHelpUrl() {
+      this.HELP_DOCUMENT_URL = this._settingSvc.globalSetting.HELP_DOCUMENT_URL;
+      this.HELP_SUPPORT_URL = this._settingSvc.globalSetting.HELP_SUPPORT_URL;
   }
 }
 
