@@ -19,6 +19,7 @@ import {ElementConnectorLionComponent} from './content-window/lion/lion.componen
 import {ElementConnectorOmnidbComponent} from './content-window/omnidb/omnidb.component';
 import {ElementManualAuthComponent} from './connect/connect-dialog/manual-auth/manual-auth.component';
 import {ElementSelectSystemUserComponent} from './connect/connect-dialog/select-system-user/select-system-user.component';
+import {ElementReplayAsciicastComponent} from '@app/elements/replay/asciicast/asciicast.component';
 
 
 export const ElementComponents = [
@@ -44,5 +45,6 @@ export const ElementComponents = [
   ElementConnectDialogComponent,
   ElementManualAuthComponent,
   ElementConnectorOmnidbComponent,
-  ElementSelectSystemUserComponent
+  ElementSelectSystemUserComponent,
+  ElementReplayAsciicastComponent
 ];
