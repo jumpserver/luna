@@ -39,7 +39,7 @@ export class PageMainComponent implements OnInit {
   unloadNotification($event: any) {
     const notInIframe = window.self === window.top;
     const notInReplay = location.pathname.indexOf('/luna/replay') === -1;
-    return !(environment.production && notInIframe && notInReplay);
+    return !(notInIframe && notInReplay);
   }
   dragStartHandler($event: IOutputData) {
     this.showIframeHider = true;

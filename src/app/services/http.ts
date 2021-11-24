@@ -1,18 +1,18 @@
 import {Injectable} from '@angular/core';
-import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
+import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
 import {Browser} from '@app/globals';
-import {retryWhen, delay, scan} from 'rxjs/operators';
+import {retryWhen, delay, scan, map, retry, catchError} from 'rxjs/operators';
 import {SystemUser, TreeNode, User as _User, Session} from '@app/model';
 import {getCookie} from '@app/utils/common';
-import {map} from 'rxjs/operators';
-import {Observable} from 'rxjs';
+import {Observable, throwError} from 'rxjs';
+import {I18nService} from '@app/services/i18n';
 
 
 @Injectable()
 export class HttpService {
   headers = new HttpHeaders();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private _i18n: I18nService) {}
 
   setOptionsCSRFToken(options) {
     const csrfToken = getCookie('csrftoken');
@@ -31,27 +31,55 @@ export class HttpService {
   }
 
   get<T>(url: string, options?: any): Observable<any> {
-    return this.http.get(url, options);
+    return this.http.get(url, options).pipe(
+      catchError(this.handleError.bind(this))
+    );
+  }
+
+  async handleError(error: HttpErrorResponse) {
+    if (error.status === 401) {
+      const msg = await this._i18n.t('LoginExpireMsg');
+      if (confirm(msg)) {
+        window.open('/core/auth/login/?next=/luna/');
+      }
+    } else if (error.status === 403) {
+      const msg = await this._i18n.t('No permission');
+      alert(msg);
+      throw error;
+    } else {
+      // The backend returned an unsuccessful response code.
+      // The response body may contain clues as to what went wrong.
+      console.error(`Backend returned code ${error.status}, body was: `, error.error);
+      throw error;
+    }
   }
 
   post<T>(url: string, body: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.post(url, body, options);
+    return this.http.post(url, body, options).pipe(
+      catchError(this.handleError.bind(this))
+    );
   }
 
   put<T>(url: string, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.put(url, options);
+    return this.http.put(url, options).pipe(
+      catchError(this.handleError.bind(this))
+    );
   }
 
   delete<T>(url: string, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.delete(url, options);
+    return this.http.delete(url, options).pipe(
+      catchError(this.handleError.bind(this))
+    );
   }
 
   patch<T>(url: string, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.patch(url, options);
+    return this.http.patch(url, options).pipe(
+      catchError(this.handleError.bind(this))
+    );
   }
 
   head<T>(url: string, options?: any) {
@@ -71,17 +99,17 @@ export class HttpService {
   }
 
   getUserProfile() {
-    return this.http.get<_User>('/api/v1/users/profile/');
+    return this.get<_User>('/api/v1/users/profile/');
   }
 
   getMyGrantedAssets(keyword) {
     const url = `/api/v1/perms/users/assets/tree/?search=${keyword}`;
-    return this.http.get<Array<TreeNode>>(url);
+    return this.get<Array<TreeNode>>(url);
   }
 
   filterMyGrantedAssetsById(id: string) {
     const url = `/api/v1/perms/users/assets/tree/?id=${id}`;
-    return this.http.get<Array<TreeNode>>(url);
+    return this.get<Array<TreeNode>>(url);
   }
 
   getMyGrantedNodes(async: boolean, refresh?: boolean) {
@@ -89,7 +117,7 @@ export class HttpService {
     const syncUrl = `/api/v1/perms/users/nodes-with-assets/tree/`;
     const asyncUrl = `/api/v1/perms/users/nodes/children-with-assets/tree/`;
     const url = async ? asyncUrl : syncUrl;
-    return this.http.get<Array<TreeNode>>(url).pipe(
+    return this.get<Array<TreeNode>>(url).pipe(
       retryWhen(err => err.pipe(
         scan(
           (retryCount, _err) => {
@@ -106,24 +134,24 @@ export class HttpService {
 
   getMyGrantedAppsNodes() {
     const url = '/api/v1/perms/users/applications/tree/';
-    return this.http.get<Array<TreeNode>>(url);
+    return this.get<Array<TreeNode>>(url);
   }
 
   getMyGrantedAppNodesDetail(id: string) {
     const url = `/api/v1/perms/users/applications/tree/?id=${id}`;
-    return this.http.get<Array<TreeNode>>(url).pipe(
+    return this.get<Array<TreeNode>>(url).pipe(
       map(nodes => nodes.filter(node => node.id === id))
     );
   }
 
   getMyAppSystemUsers(remoteAppId: string) {
     const url = `/api/v1/perms/users/applications/${remoteAppId}/system-users/`;
-    return this.http.get<Array<SystemUser>>(url);
+    return this.get<Array<SystemUser>>(url);
   }
 
   getMyAssetSystemUsers(assetId: string) {
     const url = `/api/v1/perms/users/assets/${assetId}/system-users/`;
-    return this.http.get<Array<SystemUser>>(url);
+    return this.get<Array<SystemUser>>(url);
   }
 
   favoriteAsset(assetId: string, favorite: boolean) {
@@ -142,31 +170,31 @@ export class HttpService {
 
   getFavoriteAssets() {
     const url = '/api/v1/assets/favorite-assets/';
-    return this.http.get<Array<any>>(url);
+    return this.get<Array<any>>(url);
   }
 
   search(q: string) {
     const params = new HttpParams().set('q', q);
-    return this.http.get('/api/search', {params: params});
+    return this.get('/api/search', {params: params});
   }
 
-  getReplay(token: string) {
-    return this.http.get('/api/v1/terminal/sessions/' + token + '/replay/');
+  getReplay(sessionId: string) {
+    return this.get(`/api/v1/terminal/sessions/${sessionId}/replay/`);
   }
 
   getSessionDetail(sid: string): Promise<Session> {
-    return this.http.get<Session>(`/api/v1/terminal/sessions/${sid}/`).toPromise();
+    return this.get<Session>(`/api/v1/terminal/sessions/${sid}/`).toPromise();
   }
 
   getReplayData(src: string) {
-    return this.http.get(src);
+    return this.get(src);
   }
 
   getUserIdFromToken(token: string) {
     const params = new HttpParams()
       .set('user-only', '1')
       .set('token', token);
-    return this.http.get('/api/v1/users/connection-token/', {params: params});
+    return this.get('/api/v1/users/connection-token/', {params: params});
   }
 
   cleanRDPParams(params) {

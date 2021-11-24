@@ -24,7 +24,10 @@ export class PagesMonitorComponent implements OnInit {
     this._route.params.subscribe(params => {
       this.sessionID = params['sid'];
       this.generateMonitorURL().then(() => {
-        this._settingSvc.createWaterMarkIfNeed(this.windowRef.nativeElement, this.sessionDetail.user);
+        this._settingSvc.createWaterMarkIfNeed(
+          this.windowRef.nativeElement,
+          `${this.sessionDetail.user}\n${this.sessionDetail.asset}`
+        );
       });
     });
   }

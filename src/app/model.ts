@@ -218,6 +218,8 @@ export class GlobalSetting {
   SECURITY_LUNA_REMEMBER_AUTH: boolean;
   SECURITY_WATERMARK_ENABLED: boolean;
   XRDP_ENABLED: boolean;
+  HELP_DOCUMENT_URL: string;
+  HELP_SUPPORT_URL: string;
 }
 
 export class Setting {

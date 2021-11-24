@@ -1,5 +1,5 @@
 import {Component, Inject, OnInit} from '@angular/core';
-import {HttpService, NavService, LogService, ViewService} from '@app/services';
+import {HttpService, NavService, LogService, ViewService, SettingService} from '@app/services';
 import {DataStore} from '@app/globals';
 import {CookieService} from 'ngx-cookie-service';
 import {ElementLeftBarComponent} from '@app/elements/left-bar/left-bar.component';
@@ -17,6 +17,8 @@ export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
   navs: Array<Nav>;
   viewList: Array<View>;
+  HELP_DOCUMENT_URL: string;
+  HELP_SUPPORT_URL: string;
 
   constructor(private _http: HttpService,
               private _logger: LogService,
@@ -24,12 +26,14 @@ export class ElementNavComponent implements OnInit {
               private _navSvc: NavService,
               private _cookie: CookieService,
               private _i18n: I18nService,
+              private _settingSvc: SettingService,
               public _viewSrv: ViewService,
               ) {}
 
   ngOnInit() {
     this.navs = this.getNav();
     this.viewList = this._viewSrv.viewList;
+    this.setHelpUrl();
   }
 
   click(event) {
@@ -92,16 +96,12 @@ export class ElementNavComponent implements OnInit {
         this._navSvc.disconnectAllConnection();
         break;
       }
-      case 'Website': {
-        window.open('http://www.jumpserver.org');
-        break;
-      }
       case 'Document': {
-        window.open('http://docs.jumpserver.org/');
+        window.open(this.HELP_DOCUMENT_URL);
         break;
       }
       case 'Support': {
-        window.open('https://market.aliyun.com/products/53690006/cmgj026011.html?spm=5176.730005.0.0.cY2io1');
+        window.open(this.HELP_SUPPORT_URL);
         break;
       }
       case 'English': {
@@ -209,11 +209,6 @@ export class ElementNavComponent implements OnInit {
         name: 'Help',
         children: [
           {
-            id: 'Website',
-            click: 'Website',
-            name: 'Website'
-          },
-          {
             id: 'Document',
             click: 'Document',
             name: 'Document'
@@ -233,6 +228,10 @@ export class ElementNavComponent implements OnInit {
         height: '450px',
         width: '500px',
       });
+  }
+  setHelpUrl() {
+      this.HELP_DOCUMENT_URL = this._settingSvc.globalSetting.HELP_DOCUMENT_URL;
+      this.HELP_SUPPORT_URL = this._settingSvc.globalSetting.HELP_SUPPORT_URL;
   }
 }
 
