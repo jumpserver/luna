@@ -3,6 +3,7 @@ import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/c
 import {Browser} from '@app/globals';
 import {retryWhen, delay, scan, map, retry, catchError} from 'rxjs/operators';
 import {SystemUser, TreeNode, User as _User, Session} from '@app/model';
+import {User} from '@app/globals';
 import {getCookie} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
@@ -37,7 +38,7 @@ export class HttpService {
   }
 
   async handleError(error: HttpErrorResponse) {
-    if (error.status === 401) {
+    if (error.status === 401 && User.logined) {
       const msg = await this._i18n.t('LoginExpireMsg');
       if (confirm(msg)) {
         window.open('/core/auth/login/?next=/luna/');
