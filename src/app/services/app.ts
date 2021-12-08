@@ -90,10 +90,6 @@ export class AppService {
     const validTypes = {};
     for (const [protocol, types] of Object.entries(ProtocolConnectTypes)) {
       validTypes[protocol] = types.filter((tp) => {
-        // 暂时去掉 remote app 连接 xrdp
-        if (remoteApp && [TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1) {
-          return false;
-        }
         // 没有开启 xrdp 不支持 连接 xrdp
         if (xrdpEnabled === false && [TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1) {
           return false;
