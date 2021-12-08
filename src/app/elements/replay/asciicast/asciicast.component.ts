@@ -24,6 +24,7 @@ export class ElementReplayAsciicastComponent implements OnInit {
   duration: string;
   position: string;
   timer: any; // 多长时间播放下一个
+  startTime = null;
 
   constructor(private route: ActivatedRoute) {
     this.startAt = 0;
@@ -33,6 +34,8 @@ export class ElementReplayAsciicastComponent implements OnInit {
     const start = new Date(this.replay.date_start);
     const end = new Date(this.replay.date_end);
     const duration = end.getTime() - start.getTime();
+    const date = new Date(Date.parse(this.replay.date_start));
+    this.startTime = this.toSafeLocalDateStr(date);
     this.route.queryParams.filter(params => params.timestamp).subscribe(params => {
         // 计算开始时间时，减去 5 秒误差
         this.startAt = (end.getTime() / 1000) - parseInt(params.timestamp, 10) - 5;
@@ -134,7 +137,17 @@ export class ElementReplayAsciicastComponent implements OnInit {
     return asciinema.player.js.CreatePlayer(el, this.replay.src, opt);
   }
 
-  resizeWindow() {
+  getUserLang() {
+    const userLangEN = document.cookie.indexOf('django_language=en');
+    if (userLangEN === -1) {
+    return 'zh-CN';
+    } else {
+    return 'en-US';
+    }
+  }
 
+  toSafeLocalDateStr(d) {
+    const date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
+    return date_s.split('/').join('-');
   }
 }

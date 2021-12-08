@@ -2,9 +2,6 @@
   <button type="button" class="btn">
     <i class="fa fa-backward" aria-hidden="true" (click)="speedDown()"></i>
   </button>
-  <button type="button" class="btn" (click)="toggle()">
-    <i class="fa" aria-hidden="true" [ngClass]="{'fa-play':!isPlaying, 'fa-pause': isPlaying}"></i>
-  </button>
   <button type="button" class="btn" (click)="speedUp()">
     <i class="fa fa-forward" aria-hidden="true"></i>
   </button>
@@ -12,22 +9,12 @@
     <i class="fa fa-repeat" aria-hidden="true"></i>
   </button>
 
-<!--  <input id="scrubber" type="range" [(ngModel)]="time" min=0 [attr.max]="max" (mouseup)="runFrom()"/>-->
-
-  <span id="position" style="padding-left: 10px">{{position}}</span>
-  <span>/</span>
-  <span id="duration">{{ duration }}</span>
   {{"Speed"| translate}}: {{speed}}
   <span id="user" style="padding-left: 20px" *ngIf="replay.user">{{"user"| translate}} : {{replay.user}}</span>
   <span id="asset" style="padding-left: 20px" *ngIf="replay.asset">{{"asset"| translate}} : {{replay.asset}}</span>
   <span id="system_user" style="padding-left: 20px" *ngIf="replay.system_user">{{"system user"| translate}} : {{replay.system_user}}</span>
-  <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{"start time"| translate}} : {{startTime}} </span>
+  <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{"start time"| translate}} : {{replay.date_start}} </span>
   <span id="download" style="padding-left: 30px" *ngIf="replay.download_url"><a type="button" [href]="replay.download_url">{{"download"| translate}}</a></span>
-  <span style="float: right;padding-top: 5px;padding-right: 20px">
-    <span style="padding-left: 10px">{{"cols"| translate}}: <input type="number" style="width: 60px" [(ngModel)]="cols"></span>
-    <span style="padding-left: 10px">{{"rows"| translate}}: <input type="number" style="width: 60px" [(ngModel)]="rows"></span>
-    <span style="padding-left: 10px"><input type="button" value="{{'confirm'| translate}}" (click)="resizeWindow()"></span>
-  </span>
 </div>
 <div id="player" style="height: calc(100vh - 50px)"></div>
 
