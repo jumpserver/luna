@@ -227,5 +227,5 @@ export function launchLocalApp(url, fail) {
       fail();
       curDone();
     }
-  }, 600);
+  }, 3000);
 }

@@ -45,4 +45,13 @@ export class PagesReplayComponent implements OnInit {
       );
     }, 2000);
   }
+
+  isLoad() {
+    const tp = this.replay.type;
+    const supportedType = {
+      'json': true,
+      'guacamole': true,
+      'asciicast': true};
+    return !supportedType[tp];
+  }
 }

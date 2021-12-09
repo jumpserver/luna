@@ -247,6 +247,7 @@ export class Replay {
   asset: string;
   system_user: string;
   date_start: string;
+  date_end: string;
   height: number;
   width: number;
   download_url: string;

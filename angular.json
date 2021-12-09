@@ -28,13 +28,15 @@
               "src/sass/style.scss",
               "src/styles.css",
               "src/theme.scss",
-              "src/assets/ztree/awesomeStyle/awesome.css"
+              "src/assets/ztree/awesomeStyle/awesome.css",
+              "node_modules/asciinema-player/resources/public/css/asciinema-player.css"
             ],
             "scripts": [
               "node_modules/jquery/dist/jquery.min.js",
               "node_modules/xterm/dist/xterm.js",
               "src/assets/ztree/jquery.ztree.all.min.js",
-              "src/assets/ztree/jquery.ztree.exhide.min.js"
+              "src/assets/ztree/jquery.ztree.exhide.min.js",
+              "node_modules/asciinema-player/resources/public/js/asciinema-player.js"
             ]
           },
           "configurations": {
