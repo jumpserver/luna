@@ -267,6 +267,20 @@ export class Session {
   user_id: string;
 }
 
+export class Command {
+  id: string;
+  user: string;
+  asset: string;
+  system_user: string;
+  input: string;
+  output: string;
+  session: string;
+  risk_level: number;
+  risk_level_display: string;
+  org_id: string;
+  timestamp: number;
+}
+
 export class SystemUserGroup {
   name: string;
   disabled: boolean;

@@ -1,25 +1,68 @@
 #player {
   width: 100%;
   height: 100%;
-  padding: 5px;
 }
 
 #display {
   position: relative;
-  width: calc(100vw - 10px);
-  height: calc(100vh - 40px);
+  background: #1f1b1b;
+  padding: 0 5px;
+  height: calc(100vh - 35px);
 }
 
-#screen * {
+#display .command-results {
+  height: 100%;
+  overflow-y: auto;
 }
+
+#display .item{
+  height: 80px;
+  border-bottom: #000 solid 1px;
+  color: #f0f0f0;
+  padding: 10px 5px;
+}
+
+#display .command {
+  padding: 5px 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+#display .timestamp {
+  overflow: hidden;
+  float: right;
+  padding: 5px 10px;
+}
+
+.command-results::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 2px rgba(0, 0, 0, 0);
+  background-color: #00000000;
+}
+
+.command-results::-webkit-scrollbar-thumb {
+  background-color: #000000;
+}
+
+.command-results::-webkit-scrollbar {
+  height: 3px;
+  width: 3px;
+}
+
+#screen * {}
 
 #player .notification-container {
   position: absolute;
-  z-index: 1;
+  z-index: -1;
   top: 0;
   right: 0;
   left: 0;
   bottom: 0;
+}
+
+#player.seeking .notification-container {
+  z-index: 1;
 }
 
 #player .seek-notification {
@@ -44,9 +87,8 @@
 }
 
 #player .controls {
-
   width: 100%;
-  height: 30px;
+  height: 35px;
 
   /* IE10 */
   display: -ms-flexbox;
