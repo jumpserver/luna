@@ -16,7 +16,7 @@
     <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{"start time"| translate}} : {{startTime}} </span>
     <span id="download" style="padding-left: 30px" *ngIf="replay.download_url"><a type="button" [href]="replay.download_url">{{"download"| translate}}</a></span>
   </div>
-  <div id="display" (click)="toggle()">
+  <div id="display">
     <div class="notification-container">
       <div class="seek-notification">
         <p>
@@ -25,6 +25,23 @@
         </p>
       </div>
     </div>
-    <div id="screen"></div>
+    <as-split direction="horizontal" gutterSize="0">
+      <as-split-area *ngIf="commands.length" [size]="15" [maxSize]="15" [minSize]="0" order="0">
+        <div class="command-results" 
+              infiniteScroll
+              [infiniteScrollDistance]="2"
+              [infiniteScrollThrottle]="50"
+              (scrolled)="onScroll()"
+              [scrollWindow]="false">
+            <div class="item" [title]="leftInfo" *ngFor="let item of commands" (click)="commandClick(item)"> 
+              <div class="command" [title]="item.input">{{ item.input }}</div>
+              <div class="timestamp">{{ item.atime }}</div>
+            </div>
+        </div>
+      </as-split-area>
+      <as-split-area [size]="85" [maxSize]="100" [minSize]="85" order="1">
+          <div id="screen" (click)="toggle()"></div>
+      </as-split-area>
+    </as-split>
   </div>
 </div>
