@@ -1,7 +1,9 @@
 import {Component, OnInit, Input} from '@angular/core';
 import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
-import {Replay} from '@app/model';
+import {Replay, Command} from '@app/model';
+import {HttpService} from '@app/services';
 import {formatTime} from '@app/utils/common';
+import {TranslateService} from '@ngx-translate/core';
 
 
 @Component({
@@ -22,16 +24,22 @@ export class ElementReplayGuacamoleComponent implements OnInit {
   position = '00:00';
   @Input() replay: Replay;
   startTime = null;
+  startTimeStamp = null;
+  commands: Command[];
+  page = 0;
+  leftInfo = null;
 
-  constructor() { }
+  constructor(private _http: HttpService,private _translate: TranslateService) {}
 
   ngOnInit() {
     if (!this.replay.src) {
       alert('Not found replay');
       return;
     }
+    this.commands = new Array<Command>();
     const date = new Date(Date.parse(this.replay.date_start));
     this.startTime = this.toSafeLocalDateStr(date);
+    this.startTimeStamp = Date.parse(this.replay.date_start)
     this.playerRef = document.getElementById('player');
     this.displayRef = document.getElementById('display');
     this.screenRef = document.getElementById('screen');
@@ -42,6 +50,10 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     recordingElement.style.margin = '0 auto';
     this.screenRef.appendChild(recordingElement);
     this.initRecording();
+    this.getCommands(this.page);
+    this._translate.get('LeftInfo').subscribe((res: string) => {
+      this.leftInfo = res;
+  });
   }
 
   initRecording() {
@@ -131,5 +143,34 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     } else {
       this.pause();
     }
+  }
+
+  getCommands(page: number) {
+    if (!this.startTimeStamp){
+      return;
+    }
+    this._http.getCommandsData(this.replay.id, page)
+    .subscribe(
+      data => {
+        let results = data.results
+        results.forEach(element => {
+          element.atime = formatTime(element.timestamp * 1000 - this.startTimeStamp);
+        });
+        this.commands = this.commands.concat(results);
+      },
+      err => {
+        alert('没找到命令记录');
+      }
+    );
+  }
+
+  onScroll() {
+    this.getCommands(++this.page);
+  }
+
+  commandClick(item: Command){
+    let time = (item.timestamp  - 10) * 1000 - this.startTimeStamp
+    this.percent = time <=0 ? 0 : time;
+    this.runFrom()
   }
 }

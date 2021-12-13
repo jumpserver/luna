@@ -191,6 +191,15 @@ export class HttpService {
     return this.get(src);
   }
 
+  getCommandsData(sid:string, page: number) {
+    const params = new HttpParams()
+    .set('session_id', sid)
+    .set('limit', '30')
+    .set('offset', String(30 * page))
+    .set('order', 'timestamp')
+    return this.get('/api/v1/terminal/commands/', {params: params});
+  }
+
   getUserIdFromToken(token: string) {
     const params = new HttpParams()
       .set('user-only', '1')
