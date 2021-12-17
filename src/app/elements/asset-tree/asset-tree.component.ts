@@ -4,7 +4,7 @@ import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
 import {ToastrService} from 'ngx-toastr';
-import {groupBy} from '@app/utils/common';
+import {groupBy, connectOnNewPage} from '@app/utils/common';
 import * as _ from 'lodash';
 import {AppService, HttpService, LogService, SettingService, TreeFilterService, I18nService} from '@app/services';
 import {connectEvt} from '@app/globals';
@@ -234,10 +234,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   onApplicationTreeNodeClick(event, treeId, treeNode: TreeNode, clickFlag) {
     if (!treeNode.isParent) {
-      if (treeNode.meta.data.category === 'remote_app') {
-        this.connectOnNewPage(treeNode, true);
-        return;
-      }
       this._http.getUserProfile().subscribe();
       this.connectAsset(treeNode);
     } else {
@@ -391,19 +387,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   onMenuConnectNewTab() {
     const node = this.rightClickSelectNode;
-    this.connectOnNewPage(node, false);
-  }
-
-  connectOnNewPage(node: TreeNode, newWindow?: boolean) {
-    const url = `/luna/connect?login_to=${node.id}&type=${node.meta.type}`;
-    if (newWindow) {
-      const height = window.innerHeight;
-      const width = window.innerWidth;
-      const params = `toolbar=yes,scrollbars=yes,resizable=yes,top=300,left=300,width=${width},height=${height}`;
-      window.open(url, '_blank', params);
-    } else {
-      window.open(url, '_blank');
-    }
+    connectOnNewPage(node, false);
   }
 
   onMenuFavorite() {
