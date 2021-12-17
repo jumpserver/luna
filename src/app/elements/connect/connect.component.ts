@@ -6,7 +6,7 @@ import {MatDialog} from '@angular/material';
 import {SystemUser, TreeNode, ConnectData} from '@app/model';
 import {View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
-import {launchLocalApp} from '@app/utils/common';
+import {launchLocalApp, connectOnNewPage} from '@app/utils/common';
 
 
 @Component({
