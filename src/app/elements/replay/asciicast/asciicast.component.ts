@@ -1,8 +1,9 @@
 import {Component, OnInit, Input} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import 'rxjs/add/operator/filter';
-import {Replay} from '@app/model';
+import {Replay, Command} from '@app/model';
 import {formatTime} from '@app/utils/common';
+import {HttpService} from '@app/services';
 
 declare var asciinema: any;
 
@@ -25,16 +26,21 @@ export class ElementReplayAsciicastComponent implements OnInit {
   position: string;
   timer: any; // 多长时间播放下一个
   startTime = null;
+  startTimeStamp = null;
+  commands: Command[];
+  page = 0;
 
-  constructor(private route: ActivatedRoute) {
+  constructor(private route: ActivatedRoute,private _http: HttpService) {
     this.startAt = 0;
   }
 
   ngOnInit() {
+    this.commands = new Array<Command>();
     const start = new Date(this.replay.date_start);
     const end = new Date(this.replay.date_end);
     const duration = end.getTime() - start.getTime();
     const date = new Date(Date.parse(this.replay.date_start));
+    this.startTimeStamp = Date.parse(this.replay.date_start);
     this.startTime = this.toSafeLocalDateStr(date);
     this.route.queryParams.filter(params => params.timestamp).subscribe(params => {
         // 计算开始时间时，减去 5 秒误差
@@ -55,6 +61,7 @@ export class ElementReplayAsciicastComponent implements OnInit {
     this.isPlaying = true;
     this.player.play();
     this.createTimer();
+    this.getCommands(this.page);
   }
 
   speedDown() {
@@ -116,7 +123,7 @@ export class ElementReplayAsciicastComponent implements OnInit {
     if (this.player) {
       this.player.pause();
     }
-    const el = document.getElementById('player');
+    const el = document.getElementById('screen');
     asciinema.player.js.UnmountPlayer(el);
     this.player = this.createPlayer();
   }
@@ -132,7 +139,7 @@ export class ElementReplayAsciicastComponent implements OnInit {
   }
 
   createPlayer() {
-    const el = document.getElementById('player');
+    const el = document.getElementById('screen');
     const opt = this.getPlayerOptions();
     return asciinema.player.js.CreatePlayer(el, this.replay.src, opt);
   }
@@ -149,5 +156,36 @@ export class ElementReplayAsciicastComponent implements OnInit {
   toSafeLocalDateStr(d) {
     const date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
     return date_s.split('/').join('-');
+  }
+
+  getCommands(page: number) {  
+    if (!this.startTimeStamp){
+      return;
+    }
+    this._http.getCommandsData(this.replay.id, page)
+    .subscribe(
+      data => {
+        let results = data.results;
+        const startPlayTime = new Date(this.replay.date_start).getTime();
+        results.forEach(element => {
+          element.atime = formatTime(element.timestamp * 1000 - startPlayTime);
+        });
+        this.commands = this.commands.concat(results);
+      },
+      err => {
+        alert('没找到命令记录');
+      }
+    );
+  }
+
+  onScroll() {
+    this.getCommands(++this.page);
+  }
+
+  commandClick(item: Command){
+    const startPlayTime = new Date(this.replay.date_start).getTime() / 1000;
+    const time = (item.timestamp - 5) - startPlayTime;
+    this.startAt = time;
+    this.resetPlayer();
   }
 }
