@@ -211,7 +211,14 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   async initApplicationTree() {
-    const setting = Object.assign({}, this.setting);
+    const setting = Object.assign({
+      async: {
+        enable: true,
+        url: '/api/v1/perms/users/applications/tree/',
+        autoParam: ['id=id', 'name=n', 'level=lv'],
+        type: 'get'
+      }
+    }, this.setting);
     setting['callback'] = {
       onClick: this.debouncedOnApplicationTreeNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
