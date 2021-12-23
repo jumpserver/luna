@@ -1,0 +1,46 @@
+#player {
+  position: relative;
+  background: #1f1b1b;
+  padding: 0 5px;
+  height: calc(100vh - 35px);
+}
+
+#player .command-results {
+  height: 100%;
+  overflow-y: auto;
+}
+
+#player .item{
+  height: 80px;
+  border-bottom: #000 solid 1px;
+  color: #f0f0f0;
+  padding: 10px 5px;
+}
+
+#player .command {
+  padding: 5px 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+#player .timestamp {
+  overflow: hidden;
+  float: right;
+  padding: 5px 10px;
+}
+
+.command-results::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 2px rgba(0, 0, 0, 0);
+  background-color: #00000000;
+}
+
+.command-results::-webkit-scrollbar-thumb {
+  background-color: #000000;
+}
+
+.command-results::-webkit-scrollbar {
+  height: 3px;
+  width: 3px;
+}
