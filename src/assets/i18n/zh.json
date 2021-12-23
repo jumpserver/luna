@@ -55,6 +55,7 @@
   "SQL Client": "SQL 客户端",
   "Database disabled": "不支持此种链接方式，请联系管理员",
   "Info": "提示",
+  "LeftInfo": "点击命令记录可快速定位录像",
   "Asset disabled": "该资产已被禁用，请联系管理员",
   "User: ": "用户: {{value}}",
   "Asset: ": "资产: {{value}}",

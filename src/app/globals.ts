@@ -67,6 +67,7 @@ export const ProtocolConnectTypes = {
   vnc: [TYPE_WEB_GUI],
   telnet: [TYPE_WEB_CLI],
   mysql: [TYPE_WEB_CLI, TYPE_DB_GUI],
+  sqlserver: [TYPE_WEB_CLI],
   redis: [TYPE_WEB_CLI],
   redis_acl: [TYPE_WEB_CLI],
   postgresql: [TYPE_DB_GUI],

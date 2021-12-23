@@ -32,6 +32,7 @@ export class PagesReplayComponent implements OnInit {
           }
           if (data['type']) {
             Object.assign(this.replay, data);
+            this.replay.id = sid;
             clearInterval(interval);
             this._settingSvc.createWaterMarkIfNeed(
               document.body, `${this.replay.user}\n${this.replay.asset}`
@@ -44,5 +45,14 @@ export class PagesReplayComponent implements OnInit {
         }
       );
     }, 2000);
+  }
+
+  isLoad() {
+    const tp = this.replay.type;
+    const supportedType = {
+      'json': true,
+      'guacamole': true,
+      'asciicast': true};
+    return !supportedType[tp];
   }
 }

@@ -1,5 +1,6 @@
 import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
+import { InfiniteScrollModule } from 'ngx-infinite-scroll';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms'; // <-- NgModel lives here
 import {NGXLogger} from 'ngx-logger';
 import {CookieService} from 'ngx-cookie-service';
@@ -36,6 +37,7 @@ export function HttpLoaderFactory(http: HttpClient) {
 @NgModule({
   imports: [
     BrowserModule,
+    InfiniteScrollModule,
     FormsModule,
     HttpClientModule,
     BrowserAnimationsModule,

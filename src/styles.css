@@ -146,3 +146,8 @@ body ::-webkit-scrollbar-thumb {
 .mat-form-field-infix {
   font-size: 14px;
 }
+
+
+#player .asciinema-player .asciinema-terminal {
+   height: calc(100vh - 60px)!important;
+}

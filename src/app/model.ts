@@ -247,6 +247,7 @@ export class Replay {
   asset: string;
   system_user: string;
   date_start: string;
+  date_end: string;
   height: number;
   width: number;
   download_url: string;
@@ -264,6 +265,20 @@ export class Session {
   terminal: string;
   user: string;
   user_id: string;
+}
+
+export class Command {
+  id: string;
+  user: string;
+  asset: string;
+  system_user: string;
+  input: string;
+  output: string;
+  session: string;
+  risk_level: number;
+  risk_level_display: string;
+  org_id: string;
+  timestamp: number;
 }
 
 export class SystemUserGroup {
