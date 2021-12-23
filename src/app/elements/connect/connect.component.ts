@@ -201,9 +201,13 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const response = await this._http.getRDPClientUrl(data, this._settingSvc.setting);
     const url = response['url'];
     launchLocalApp(url, () => {
-      const msg = this._i18n.instant('InstallClientMsg');
-      if (window.confirm(msg)) {
-        window.open('/core/download/', '_blank');
+      const downLoadStatus = localStorage.getItem('hasDownLoadApp');
+      if (!downLoadStatus) {
+        const msg = this._i18n.instant('InstallClientMsg');
+        if (window.confirm(msg)) {
+          window.open('/core/download/', '_blank');
+          localStorage.setItem('hasDownLoadApp', '1');
+        }
       }
     });
   }
