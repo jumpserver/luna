@@ -42,7 +42,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       'id': 'new-connection',
       'name': 'Open in new window',
       'fa': 'fa-external-link',
-      'hide': false,
+      'hide': this.isk8sNode(),
       'click': this.onMenuConnectNewTab.bind(this)
     }, {
       'id': 'file-manager',
@@ -215,7 +215,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       async: {
         enable: true,
         url: '/api/v1/perms/users/applications/tree/',
-        autoParam: ['id=id', 'name=n', 'level=lv'],
+        autoParam: ['id=tree_id', 'parentInfo=parentInfo', 'level=lv'],
         type: 'get'
       }
     }, this.setting);
@@ -320,6 +320,10 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     return this.rightClickSelectNode.meta.type === 'asset';
   }
 
+  isk8sNode() {
+    return this.rightClickSelectNode.meta.data.type === 'k8s';
+  }
+
   forceRefreshTree() {
     this.initAssetsTree(true).then();
   }
@@ -367,7 +371,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (!treeNode) {
       return null;
     }
-    if (treeNode.isParent) {
+
+    if (treeNode.isParent && ['container', 'system_user'].indexOf(treeNode.meta.data.identity) === -1) {
       this.expandAllChildren(treeId, treeNode, !treeNode.open);
       return;
     }
