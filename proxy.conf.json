@@ -11,7 +11,7 @@
     "ws": true
   },
   "/koko/*": {
-    "target": "http://localhost:9530",
+    "target": "http://localhost:5000",
     "secure": false,
     "ws": true,
     "changeOrigin": true
