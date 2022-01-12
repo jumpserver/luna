@@ -184,7 +184,8 @@ export class ElementReplayAsciicastComponent implements OnInit {
 
   commandClick(item: Command){
     const startPlayTime = new Date(this.replay.date_start).getTime() / 1000;
-    const time = (item.timestamp - 5) - startPlayTime;
+    const instructStartTime = (item.timestamp - 5) - startPlayTime;
+    const time = instructStartTime > 0 ? instructStartTime : 0;
     this.startAt = time;
     this.resetPlayer();
   }
