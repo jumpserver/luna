@@ -42,13 +42,37 @@ export class ElementConnectorKokoComponent implements OnInit {
     }
   }
 
+  AnalysisId(idStr) {
+    var idObject = new Object();
+    var idStr = idStr.split("&");
+    for (var i = 0; i < idStr.length; i++) {
+      idObject[idStr[i].split("=")[0]] = (idStr[i].split("=")[1]);
+    }
+    return idObject;
+  }
+
   generateNodeConnectUrl() {
     const baseUrl = `${document.location.origin}/koko/terminal`;
     let type = this.view.protocol;
+
     if (this.view.type === 'remote_app') {
       type = 'remoteapp';
     }
-    this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=${type}&system_user_id=${this.sysUser.id}`;
+    if (this.node.meta.data.type === 'k8s') {
+      const identity = this.node.meta.data.identity
+      const parentInfo = this.AnalysisId(this.node['parentInfo'])
+      const pod = parentInfo['pod']
+      const appId = parentInfo['app_id']
+      const namespace = parentInfo['namespace']
+      const container = parentInfo['container']
+      const SystemUserId = parentInfo['system_user_id']
+      this.iframeURL = `${baseUrl}/?target_id=${appId}&type=${type}` + `&system_user_id=${SystemUserId}`
+       if (identity === 'container') {
+        this.iframeURL = this.iframeURL + `&namespace=${namespace}` + `&pod=${pod}` + `&container=${container}`
+      }
+    } else {
+       this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=${type}&system_user_id=${this.sysUser.id}`;
+    }
   }
 
   generateTokenURL() {

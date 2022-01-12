@@ -6,7 +6,7 @@ import {MatDialog} from '@angular/material';
 import {SystemUser, TreeNode, ConnectData} from '@app/model';
 import {View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
-import {launchLocalApp} from '@app/utils/common';
+import {launchLocalApp, connectOnNewPage} from '@app/utils/common';
 
 
 @Component({
@@ -148,6 +148,15 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     connectEvt.unsubscribe();
   }
 
+  analysisId(idStr) {
+    var idObject = new Object();
+    var idStr = idStr.split("&");
+    for (var i = 0; i < idStr.length; i++) {
+      idObject[idStr[i].split("=")[0]] = (idStr[i].split("=")[1]);
+    }
+    return idObject;
+  }
+
   async connectNode(node) {
     if (!node) {
       return;
@@ -162,7 +171,12 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       alert('未知的类型: ' + tp);
       return;
     }
-    const systemUsers = await this._http[handleName](node.id).toPromise();
+    if (["container", 'system_user'].indexOf(node.meta.data.identity) !== -1) {
+      var appId = this.analysisId(node['parentInfo'])['app_id']
+    } else {
+      var appId = node.id
+    }
+    const systemUsers = await this._http[handleName](appId).toPromise();
     const connectInfo = await this.selectLoginSystemUsers(systemUsers, node);
     if (!connectInfo) {
       this._logger.info('Just close the dialog');
@@ -202,9 +216,13 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const response = await this._http.getRDPClientUrl(data, this._settingSvc.setting);
     const url = response['url'];
     launchLocalApp(url, () => {
-      const msg = this._i18n.instant('InstallClientMsg');
-      if (window.confirm(msg)) {
-        window.open('/core/download/', '_blank');
+      const downLoadStatus = localStorage.getItem('hasDownLoadApp');
+      if (!downLoadStatus) {
+        const msg = this._i18n.instant('InstallClientMsg');
+        if (window.confirm(msg)) {
+          window.open('/core/download/', '_blank');
+          localStorage.setItem('hasDownLoadApp', '1');
+        }
       }
     });
   }

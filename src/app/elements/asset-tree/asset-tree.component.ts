@@ -4,7 +4,7 @@ import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
 import {ToastrService} from 'ngx-toastr';
-import {groupBy} from '@app/utils/common';
+import {groupBy, connectOnNewPage} from '@app/utils/common';
 import * as _ from 'lodash';
 import {AppService, HttpService, LogService, SettingService, TreeFilterService, I18nService} from '@app/services';
 import {connectEvt} from '@app/globals';
@@ -42,7 +42,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       'id': 'new-connection',
       'name': 'Open in new window',
       'fa': 'fa-external-link',
-      'hide': false,
+      'hide': this.isk8sNode(),
       'click': this.onMenuConnectNewTab.bind(this)
     }, {
       'id': 'file-manager',
@@ -211,7 +211,14 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   async initApplicationTree() {
-    const setting = Object.assign({}, this.setting);
+    const setting = Object.assign({
+      async: {
+        enable: true,
+        url: '/api/v1/perms/users/applications/tree/',
+        autoParam: ['id=tree_id', 'parentInfo=parentInfo', 'level=lv'],
+        type: 'get'
+      }
+    }, this.setting);
     setting['callback'] = {
       onClick: this.debouncedOnApplicationTreeNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
@@ -234,10 +241,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   onApplicationTreeNodeClick(event, treeId, treeNode: TreeNode, clickFlag) {
     if (!treeNode.isParent) {
-      if (treeNode.meta.data.category === 'remote_app') {
-        this.connectOnNewPage(treeNode, true);
-        return;
-      }
       this._http.getUserProfile().subscribe();
       this.connectAsset(treeNode);
     } else {
@@ -313,6 +316,10 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     return this.rightClickSelectNode.meta.type === 'asset';
   }
 
+  isk8sNode() {
+    return this.rightClickSelectNode.meta.data.type === 'k8s';
+  }
+
   forceRefreshTree() {
     this.initAssetsTree(true).then();
   }
@@ -360,7 +367,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (!treeNode) {
       return null;
     }
-    if (treeNode.isParent) {
+
+    if (treeNode.isParent && ['container', 'system_user'].indexOf(treeNode.meta.data.identity) === -1) {
       this.expandAllChildren(treeId, treeNode, !treeNode.open);
       return;
     }
@@ -391,19 +399,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   onMenuConnectNewTab() {
     const node = this.rightClickSelectNode;
-    this.connectOnNewPage(node, false);
-  }
-
-  connectOnNewPage(node: TreeNode, newWindow?: boolean) {
-    const url = `/luna/connect?login_to=${node.id}&type=${node.meta.type}`;
-    if (newWindow) {
-      const height = window.innerHeight;
-      const width = window.innerWidth;
-      const params = `toolbar=yes,scrollbars=yes,resizable=yes,top=300,left=300,width=${width},height=${height}`;
-      window.open(url, '_blank', params);
-    } else {
-      window.open(url, '_blank');
-    }
+    connectOnNewPage(node, false);
   }
 
   onMenuFavorite() {

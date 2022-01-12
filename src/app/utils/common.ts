@@ -1,4 +1,5 @@
 import {Terminal} from 'xterm';
+import {TreeNode} from '@app/model';
 
 export function groupBy(array, f) {
     const groups = {};
@@ -228,4 +229,21 @@ export function launchLocalApp(url, fail) {
       curDone();
     }
   }, 3000);
+}
+
+/**
+ * 打开新页卡
+ * @param {Object} node
+ * @param {Boolean} newWindow
+ */
+export function connectOnNewPage(node: TreeNode, newWindow?: boolean) {
+  const url = `/luna/connect?login_to=${node.id}&type=${node.meta.type}`;
+  if (newWindow) {
+    const height = window.innerHeight;
+    const width = window.innerWidth;
+    const params = `toolbar=yes,scrollbars=yes,resizable=yes,top=300,left=300,width=${width},height=${height}`;
+    window.open(url, '_blank', params);
+  } else {
+    window.open(url, '_blank');
+  }
 }
