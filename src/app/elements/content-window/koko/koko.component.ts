@@ -65,7 +65,7 @@ export class ElementConnectorKokoComponent implements OnInit {
       const appId = parentInfo['app_id']
       const namespace = parentInfo['namespace']
       const container = parentInfo['container']
-      const SystemUserId = parentInfo['system_user_id']
+      const SystemUserId = parentInfo['system_user_id'] ? parentInfo['system_user_id'] : this.sysUser['id']
       this.iframeURL = `${baseUrl}/?target_id=${appId}&type=${type}` + `&system_user_id=${SystemUserId}`
        if (identity === 'container') {
         this.iframeURL = this.iframeURL + `&namespace=${namespace}` + `&pod=${pod}` + `&container=${container}`
