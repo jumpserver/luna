@@ -228,7 +228,7 @@ export function launchLocalApp(url, fail) {
       fail();
       curDone();
     }
-  }, 3000);
+  }, 2000);
 }
 
 /**

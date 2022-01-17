@@ -112,6 +112,10 @@ export class ElementNavComponent implements OnInit {
         this._i18n.use('zh');
         break;
       }
+      case 'DownLoad': {
+        window.open('/core/download/', '_blank');
+        break;
+      }
       default: {
         break;
       }
@@ -217,7 +221,13 @@ export class ElementNavComponent implements OnInit {
             id: 'Support',
             click: 'Support',
             name: 'Support'
-          }]
+          },
+          {
+            id: 'Download',
+            click: 'DownLoad',
+            name: 'Tool download',
+          }
+        ]
       },
     ];
   }
