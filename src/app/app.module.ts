@@ -29,6 +29,7 @@ import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {ElementConnectDialogComponent} from './elements/connect/connect-dialog/connect-dialog.component';
 import {environment} from '@src/environments/environment';
+import {ElementDownloadDialogComponent} from './elements/connect/download-dialog/download-dialog.component';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, environment.production ? '/luna/assets/i18n/' : '/assets/i18n/');
@@ -59,6 +60,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     ...Pipes,
     ...ElementComponents,
     ...PagesComponents,
+    ElementDownloadDialogComponent,
   ],
   entryComponents: [
     ChangLanWarningDialogComponent,
@@ -66,6 +68,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     PageMainComponent,
     ElementSettingComponent,
     ElementConnectDialogComponent,
+    ElementDownloadDialogComponent,
   ],
   bootstrap: [AppComponent],
   providers: [
