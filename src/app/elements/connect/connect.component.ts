@@ -6,7 +6,8 @@ import {MatDialog} from '@angular/material';
 import {SystemUser, TreeNode, ConnectData} from '@app/model';
 import {View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
-import {launchLocalApp} from '@app/utils/common';
+import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
+import {launchLocalApp, connectOnNewPage} from '@app/utils/common';
 
 
 @Component({
@@ -215,15 +216,16 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
     const response = await this._http.getRDPClientUrl(data, this._settingSvc.setting);
     const url = response['url'];
+
     launchLocalApp(url, () => {
       const downLoadStatus = localStorage.getItem('hasDownLoadApp');
-      if (!downLoadStatus) {
-        const msg = this._i18n.instant('InstallClientMsg');
-        if (window.confirm(msg)) {
-          window.open('/core/download/', '_blank');
-          localStorage.setItem('hasDownLoadApp', '1');
+        if (downLoadStatus !== '1') {
+          this._dialog.open(ElementDownloadDialogComponent, {
+            height: 'auto',
+            width: '500px',
+            disableClose: true
+          });
         }
-      }
     });
   }
 
