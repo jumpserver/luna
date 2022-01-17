@@ -264,6 +264,7 @@ export class HttpService {
     const url = `/api/v1/assets/system-users/${systemUser.id}/temp-auth/`;
     const data = {
       instance_id: node.id,
+      protocol: systemUser.protocol,
       ...auth
     };
     return this.post(url, data).toPromise();
