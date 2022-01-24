@@ -1,3 +1,37 @@
+.controls {
+  width: 100%;
+  height: 35px;
+
+  /* IE10 */
+  display: -ms-flexbox;
+  -ms-flex-align: center;
+  -ms-flex-direction: row;
+
+  /* Ancient Mozilla */
+  display: -moz-box;
+  -moz-box-align: center;
+  -moz-box-orient: horizontal;
+
+  /* Ancient WebKit */
+  display: -webkit-box;
+  -webkit-box-align: center;
+  -webkit-box-orient: horizontal;
+
+  /* Old WebKit */
+  display: -webkit-flex;
+  -webkit-align-items: center;
+  -webkit-flex-direction: row;
+
+  /* W3C */
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+}
+
+.controls > * {
+  margin: 0.25em;
+}
+
 #player {
   position: relative;
   background: #1f1b1b;
