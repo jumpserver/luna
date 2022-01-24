@@ -30,7 +30,7 @@ export class ElementReplayAsciicastComponent implements OnInit {
   commands: Command[];
   page = 0;
 
-  constructor(private route: ActivatedRoute,private _http: HttpService) {
+  constructor(private route: ActivatedRoute, private _http: HttpService) {
     this.startAt = 0;
   }
 
@@ -158,14 +158,14 @@ export class ElementReplayAsciicastComponent implements OnInit {
     return date_s.split('/').join('-');
   }
 
-  getCommands(page: number) {  
-    if (!this.startTimeStamp){
+  getCommands(page: number) {
+    if (!this.startTimeStamp) {
       return;
     }
     this._http.getCommandsData(this.replay.id, page)
     .subscribe(
       data => {
-        let results = data.results;
+        const results = data.results;
         const startPlayTime = new Date(this.replay.date_start).getTime();
         results.forEach(element => {
           element.atime = formatTime(element.timestamp * 1000 - startPlayTime);
@@ -182,7 +182,7 @@ export class ElementReplayAsciicastComponent implements OnInit {
     this.getCommands(++this.page);
   }
 
-  commandClick(item: Command){
+  commandClick(item: Command) {
     const startPlayTime = new Date(this.replay.date_start).getTime() / 1000;
     const instructStartTime = (item.timestamp - 5) - startPlayTime;
     const time = instructStartTime > 0 ? instructStartTime : 0;
