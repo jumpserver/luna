@@ -32,6 +32,9 @@ export class ElementSettingComponent implements OnInit {
   ngOnInit() {
     this.setting = this.settingSrv.setting;
     this.globalSetting = this.settingSrv.globalSetting;
+    if (!this.setting.backspaceAsCrtlH) {
+      this.setting.backspaceAsCrtlH = '0';
+    }
   }
 
   onSubmit() {
