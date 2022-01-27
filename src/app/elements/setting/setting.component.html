@@ -20,6 +20,13 @@
 </mat-form-field>
 
 <mat-form-field>
+  <mat-select [(value)]="setting.backspaceAsCrtlH" 
+    placeholder="{{'Backspace as Ctrl+H'| translate }}" >
+    <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name| translate}}</mat-option>
+  </mat-select>
+</mat-form-field>
+
+<mat-form-field>
   <mat-select [(value)]="setting.isLoadTreeAsync"
     placeholder="{{'Load tree async'| translate }}" >
     <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name| translate}}</mat-option>

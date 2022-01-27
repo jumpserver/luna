@@ -235,7 +235,7 @@ export class ElementNavComponent implements OnInit {
     this._dialog.open(
       ElementSettingComponent,
       {
-        height: '450px',
+        height: 'auto',
         width: '500px',
       });
   }
