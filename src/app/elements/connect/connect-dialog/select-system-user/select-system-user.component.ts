@@ -34,7 +34,7 @@ export class ElementSelectSystemUserComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.systemUsersGroups = this.groupSystemUsers();
-    this.systemUserSelected = this.systemUsers[0];
+    this.systemUserSelected = this.getPreferSystemUser();
     this.filteredUsersGroups.next(this.systemUsersGroups.slice());
 
     this.filteredCtrl.valueChanges
@@ -58,6 +58,13 @@ export class ElementSelectSystemUserComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this._onDestroy.next();
     this._onDestroy.complete();
+  }
+
+  getPreferSystemUser() {
+    const preferId = this._appSvc.getNodePreferSystemUser(this.node.id);
+    const matchedSystemUsers = this.systemUsers.find((item) => item.id === preferId);
+    if (matchedSystemUsers) return matchedSystemUsers;
+    return this.systemUsers[0];
   }
 
   groupSystemUsers() {
