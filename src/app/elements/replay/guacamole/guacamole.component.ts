@@ -4,6 +4,9 @@ import {Replay, Command} from '@app/model';
 import {HttpService} from '@app/services';
 import {formatTime} from '@app/utils/common';
 import {TranslateService} from '@ngx-translate/core';
+import {Observable, fromEvent, Subscription} from 'rxjs';
+import {debounceTime, distinctUntilChanged} from 'rxjs/operators';
+import 'rxjs/Observable';
 
 
 @Component({
@@ -28,8 +31,10 @@ export class ElementReplayGuacamoleComponent implements OnInit {
   commands: Command[];
   page = 0;
   leftInfo = null;
+  winSizeChange$: Observable<any>;
+  winSizeSub: Subscription;
 
-  constructor(private _http: HttpService,private _translate: TranslateService) {}
+  constructor(private _http: HttpService, private _translate: TranslateService) {}
 
   ngOnInit() {
     if (!this.replay.src) {
@@ -39,7 +44,7 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     this.commands = new Array<Command>();
     const date = new Date(Date.parse(this.replay.date_start));
     this.startTime = this.toSafeLocalDateStr(date);
-    this.startTimeStamp = Date.parse(this.replay.date_start)
+    this.startTimeStamp = Date.parse(this.replay.date_start);
     this.playerRef = document.getElementById('player');
     this.displayRef = document.getElementById('display');
     this.screenRef = document.getElementById('screen');
@@ -53,7 +58,15 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     this.getCommands(this.page);
     this._translate.get('LeftInfo').subscribe((res: string) => {
       this.leftInfo = res;
-  });
+    });
+    this.winSizeChange$ = fromEvent(window, 'resize').pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+    );
+    this.winSizeSub = this.winSizeChange$
+      .subscribe(() => {
+        this.recordingDisplay.onresize(this.recordingDisplay.getWidth(), this.recordingDisplay.getHeight());
+      });
   }
 
   initRecording() {
@@ -146,13 +159,13 @@ export class ElementReplayGuacamoleComponent implements OnInit {
   }
 
   getCommands(page: number) {
-    if (!this.startTimeStamp){
+    if (!this.startTimeStamp) {
       return;
     }
     this._http.getCommandsData(this.replay.id, page)
     .subscribe(
       data => {
-        let results = data.results
+        const results = data.results;
         results.forEach(element => {
           element.atime = formatTime(element.timestamp * 1000 - this.startTimeStamp);
         });
@@ -168,9 +181,9 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     this.getCommands(++this.page);
   }
 
-  commandClick(item: Command){
-    let time = (item.timestamp  - 10) * 1000 - this.startTimeStamp
-    this.percent = time <=0 ? 0 : time;
-    this.runFrom()
+  commandClick(item: Command) {
+    const time = (item.timestamp  - 10) * 1000 - this.startTimeStamp;
+    this.percent = time <= 0 ? 0 : time;
+    this.runFrom();
   }
 }

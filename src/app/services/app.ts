@@ -16,7 +16,9 @@ export class AppService {
   // user:User = user  ;
   public lang: string;
   private protocolPreferConnectTypes: object = {};
+  private assetPreferSystemUser: object = {};
   private protocolPreferKey = 'ProtocolPreferLoginType';
+  private systemUserPreferKey = 'PreferSystemUser';
 
   constructor(private _http: HttpService,
               private _router: Router,
@@ -26,6 +28,7 @@ export class AppService {
               private _localStorage: LocalStorageService) {
     this.setLogLevel();
     this.checkLogin();
+    this.loadPreferData();
     this.loadOriManualAuthInfo();
   }
 
@@ -104,6 +107,17 @@ export class AppService {
     return validTypes;
   }
 
+  loadPreferData() {
+    const protocolPreferData = this._localStorage.get(this.protocolPreferKey);
+    if (protocolPreferData && typeof protocolPreferData === 'object') {
+      this.protocolPreferConnectTypes = protocolPreferData;
+    }
+    const systemUserPreferData = this._localStorage.get(this.systemUserPreferKey);
+    if (systemUserPreferData && typeof systemUserPreferData === 'object') {
+      this.assetPreferSystemUser = systemUserPreferData;
+    }
+  }
+
   loadOriManualAuthInfo() {
     const manualAuthInfoKey = 'ManualAuthInfo';
     const authInfos = this._localStorage.get(manualAuthInfoKey);
@@ -126,6 +140,19 @@ export class AppService {
   setProtocolPreferLoginType(protocol: string, type: string) {
     this.protocolPreferConnectTypes[protocol] = type;
     this._localStorage.set(this.protocolPreferKey, this.protocolPreferConnectTypes);
+  }
+
+  getNodePreferSystemUser(nodeId: string): string {
+    return this.assetPreferSystemUser[nodeId];
+  }
+
+  setNodePreferSystemUser(nodeId: string, systemUserId: string) {
+    this.assetPreferSystemUser[nodeId] = systemUserId;
+    try {
+      this._localStorage.set(this.systemUserPreferKey, this.assetPreferSystemUser);
+    } catch (e) {
+      // pass
+    }
   }
 
   encrypt(s) {

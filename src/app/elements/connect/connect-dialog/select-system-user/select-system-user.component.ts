@@ -3,7 +3,7 @@ import {SystemUser, SystemUserGroup, TreeNode, View} from '@app/model';
 import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
 import {FormControl, Validators} from '@angular/forms';
 import {groupByProp} from '@app/utils/common';
-import {AppService, LocalStorageService, LogService, SettingService} from '@app/services';
+import {AppService, LocalStorageService, LogService, SettingService, I18nService} from '@app/services';
 import {takeUntil} from 'rxjs/operators';
 
 @Component({
@@ -30,11 +30,12 @@ export class ElementSelectSystemUserComponent implements OnInit, OnDestroy {
               private _logger: LogService,
               private _appSvc: AppService,
               private _localStorage: LocalStorageService,
+              private _i18n: I18nService,
   ) {}
 
   ngOnInit() {
+    this.systemUserSelected = this.getPreferSystemUser();
     this.systemUsersGroups = this.groupSystemUsers();
-    this.systemUserSelected = this.systemUsers[0];
     this.filteredUsersGroups.next(this.systemUsersGroups.slice());
 
     this.filteredCtrl.valueChanges
@@ -60,8 +61,21 @@ export class ElementSelectSystemUserComponent implements OnInit, OnDestroy {
     this._onDestroy.complete();
   }
 
+  getPreferSystemUser() {
+    const preferId = this._appSvc.getNodePreferSystemUser(this.node.id);
+    const matchedSystemUsers = this.systemUsers.find((item) => item.id === preferId);
+    if (matchedSystemUsers) return matchedSystemUsers;
+    return this.systemUsers[0];
+  }
+
   groupSystemUsers() {
     const groups = [];
+    if(this.systemUserSelected) {
+      groups.push({
+        name: this._i18n.instant('Last login'),
+        systemUsers: [this.systemUserSelected]
+      });
+    }
     const protocolSysUsersMapper = groupByProp(this.systemUsers, 'protocol');
     for (const [protocol, users] of Object.entries(protocolSysUsersMapper)) {
       groups.push({

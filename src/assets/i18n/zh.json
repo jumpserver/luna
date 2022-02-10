@@ -91,5 +91,6 @@
   "Username@Domain": "用户名@AD域",
   "InstallClientMsg": "JumpServer 客户端没有安装，现在去下载安装?",
   "LoginExpireMsg": "登录已过期，请重新登录",
-  "No permission": "没有权限"
+  "No permission": "没有权限",
+	"Last login": "上次登录"
 }
