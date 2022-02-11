@@ -86,7 +86,8 @@ export class ElementConnectDialogComponent implements OnInit {
     }
 
     this.onSubmit$.next(true);
-    this._appSvc.setNodePreferSystemUser(this.node.id, this.systemUserSelected.id);
+    const nodeID = this._appSvc.getNodeTypeID(this.node);
+    this._appSvc.setNodePreferSystemUser(nodeID, this.systemUserSelected.id);
     this._appSvc.setProtocolPreferLoginType(this.systemUserSelected.protocol, this.connectType.id);
     this.dialogRef.close(this.outputData);
   }

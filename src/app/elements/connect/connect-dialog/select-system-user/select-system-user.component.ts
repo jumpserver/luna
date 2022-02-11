@@ -34,7 +34,7 @@ export class ElementSelectSystemUserComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.systemUserSelected = this.getPreferSystemUser();
+    this.systemUserSelected = this.systemUsers[0];
     this.systemUsersGroups = this.groupSystemUsers();
     this.filteredUsersGroups.next(this.systemUsersGroups.slice());
 
@@ -62,18 +62,21 @@ export class ElementSelectSystemUserComponent implements OnInit, OnDestroy {
   }
 
   getPreferSystemUser() {
-    const preferId = this._appSvc.getNodePreferSystemUser(this.node.id);
+    const nodeID = this._appSvc.getNodeTypeID(this.node);
+    const preferId = this._appSvc.getNodePreferSystemUser(nodeID);
     const matchedSystemUsers = this.systemUsers.find((item) => item.id === preferId);
-    if (matchedSystemUsers) return matchedSystemUsers;
-    return this.systemUsers[0];
+    if (preferId && matchedSystemUsers) return matchedSystemUsers;
+    return null;
   }
 
   groupSystemUsers() {
     const groups = [];
-    if(this.systemUserSelected) {
+    const preferSystemUser:any = this.getPreferSystemUser();
+    if(preferSystemUser) {
+      this.systemUserSelected = preferSystemUser;
       groups.push({
         name: this._i18n.instant('Last login'),
-        systemUsers: [this.systemUserSelected]
+        systemUsers: [preferSystemUser]
       });
     }
     const protocolSysUsersMapper = groupByProp(this.systemUsers, 'protocol');

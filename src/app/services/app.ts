@@ -146,8 +146,20 @@ export class AppService {
     return this.assetPreferSystemUser[nodeId];
   }
 
+  // 根据当前节点信息判断是不是k8s类型，解析id格式
+  getNodeTypeID(node: TreeNode): string {
+    let nodeID = node.id || '';
+    const nodeType = node.meta.data.type || '';
+    if (nodeType === 'k8s') {
+      const curAppID = nodeID.split('&')[0] || '';
+      nodeID = curAppID.substr(curAppID.lastIndexOf('=') + 1) || '';
+    }
+    return nodeID
+  }
+
   setNodePreferSystemUser(nodeId: string, systemUserId: string) {
     this.assetPreferSystemUser[nodeId] = systemUserId;
+    
     try {
       this._localStorage.set(this.systemUserPreferKey, this.assetPreferSystemUser);
     } catch (e) {
