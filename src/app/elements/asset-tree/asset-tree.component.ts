@@ -330,9 +330,10 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         const childNode = treeNode.children[i];
         const self = this;
         const targetTree = $.fn.zTree.getZTreeObj(treeId);
+        if (treeNode.meta.data.type !== 'k8s') {
         targetTree.reAsyncChildNodesPromise(childNode, 'refresh', silent).then(function () {
           self.reAsyncChildNodes(treeId, childNode, silent);
-        });
+        })}
       }
     }
   }
@@ -354,7 +355,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         targetTree.expandNode(treeNode, expandFlag, false, false, false);
         if (treeNode.children && treeNode.children.length > 0) {
           treeNode.children.forEach(function(childNode) {
-            self.expandAllChildren(treeId, childNode, expandFlag);
+            if (childNode.meta.data.type !== 'k8s') {
+              self.expandAllChildren(treeId, childNode, expandFlag);
+            }
           });
         }
       } else {
