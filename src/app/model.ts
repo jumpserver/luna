@@ -227,6 +227,7 @@ export class Setting {
   rdpFullScreen: number = 0;
   rdpDrivesRedirect: number = 0;
   fontSize: number = 14;
+  backspaceAsCrtlH: string = '0';
   isLoadTreeAsync: string = '1';
   isSkipAllManualPassword: string = '0';
   quickPaste = '0';
