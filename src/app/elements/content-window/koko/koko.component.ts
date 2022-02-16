@@ -66,21 +66,21 @@ export class ElementConnectorKokoComponent implements OnInit {
       const namespace = parentInfo['namespace']
       const container = parentInfo['container']
       const SystemUserId = parentInfo['system_user_id'] ? parentInfo['system_user_id'] : this.sysUser['id']
-      this.iframeURL = `${baseUrl}/?target_id=${appId}&type=${type}` + `&system_user_id=${SystemUserId}`
+      this.iframeURL = `${baseUrl}/?target_id=${appId}&type=${type}` + `&system_user_id=${SystemUserId}&_=${Date.now()}`
        if (identity === 'container') {
         this.iframeURL = this.iframeURL + `&namespace=${namespace}` + `&pod=${pod}` + `&container=${container}`
       }
     } else {
-       this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=${type}&system_user_id=${this.sysUser.id}`;
+       this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=${type}&system_user_id=${this.sysUser.id}&_=${Date.now()}`;
     }
   }
 
   generateTokenURL() {
     const tokenUrl = `${document.location.origin}/koko/token`;
-    this.iframeURL = `${tokenUrl}/?target_id=${this.view.token}&type=token`;
+    this.iframeURL = `${tokenUrl}/?target_id=${this.view.token}&type=token&_=${Date.now()}`;
   }
 
   generateFileManagerURL() {
-    this.iframeURL = `/koko/elfinder/sftp/${this.node.id}/`;
+    this.iframeURL = `/koko/elfinder/sftp/${this.node.id}/?_=${Date.now()}`;
   }
 }

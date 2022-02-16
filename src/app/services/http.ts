@@ -7,6 +7,7 @@ import {User} from '@app/globals';
 import {getCookie} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
+import {aesEncryptByCsrf} from '@app/utils/crypto';
 
 
 @Injectable()
@@ -260,8 +261,9 @@ export class HttpService {
     return this.post(url.href, data).toPromise();
   }
 
-  createSystemUserTempAuth(systemUser: SystemUser, node: TreeNode, auth: object) {
+  createSystemUserTempAuth(systemUser: SystemUser, node: TreeNode, auth: any) {
     const url = `/api/v1/assets/system-users/${systemUser.id}/temp-auth/`;
+    auth.password = aesEncryptByCsrf(auth.password);
     const data = {
       instance_id: node.id,
       protocol: systemUser.protocol,
