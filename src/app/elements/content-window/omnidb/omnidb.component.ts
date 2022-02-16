@@ -38,7 +38,7 @@ export class ElementConnectorOmnidbComponent implements OnInit {
     const baseURL = `${document.location.origin}/omnidb/jumpserver`;
     const app = this.view.node;
     const sysUser = this.view.sysUser;
-    this.iframeURL = `${baseURL}/connect/workspace/?database_id=${app.id}&system_user_id=${sysUser.id}`;
+    this.iframeURL = `${baseURL}/connect/workspace/?database_id=${app.id}&system_user_id=${sysUser.id}&_=${Date.now()}`;
   }
 
   generateTokenURL() {
