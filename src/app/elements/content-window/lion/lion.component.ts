@@ -49,9 +49,9 @@ export class ElementConnectorLionComponent implements OnInit {
   generateNodeURL() {
     if (this.view.type === 'remote_app' || this.view.type === 'application' ) {
       const appId = this.node.id
-      this.iframeURL = `${this.baseUrl}/?target_id=${appId}&type=remoteapp&system_user_id=${this.sysUser.id}`;
+      this.iframeURL = `${this.baseUrl}/?target_id=${appId}&type=remoteapp&system_user_id=${this.sysUser.id}&_=${Date.now()}`;
     } else {
-      this.iframeURL = `${this.baseUrl}/?target_id=${this.node.id}&type=${this.protocol}&system_user_id=${this.sysUser.id}`;
+      this.iframeURL = `${this.baseUrl}/?target_id=${this.node.id}&type=${this.protocol}&system_user_id=${this.sysUser.id}&_=${Date.now()}`;
     }
   }
 
@@ -59,7 +59,7 @@ export class ElementConnectorLionComponent implements OnInit {
   }
 
   generateTokenURL() {
-    this.iframeURL = `${this.baseUrl}/?token=${this.view.token}`;
+    this.iframeURL = `${this.baseUrl}/?token=${this.view.token}&_=${Date.now()}`;
   }
 
   active() {
