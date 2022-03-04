@@ -1,4 +1,4 @@
-<div [id]="id" #contentWindow class="window" [ngClass]="{'active':view.active}" style="height: 100%;width: 100%">
+<div [id]="id" #contentWindow class="window" [ngClass]="{'active':view.active}" style="height: 100%; width: 100%">
   <elements-connector-koko
     [view]="view"
     *ngIf="connector === 'koko'"
@@ -13,4 +13,9 @@
     *ngIf="connector ==='omnidb'"
     [view]="view">
   </elements-connector-omnidb>
+  <elements-connector-magnus
+    *ngIf="connector ==='magnus'"
+    [view]="view">
+  >
+  </elements-connector-magnus>
 </div>

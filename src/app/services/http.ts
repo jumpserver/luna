@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
 import {Browser} from '@app/globals';
 import {retryWhen, delay, scan, map, retry, catchError} from 'rxjs/operators';
-import {SystemUser, TreeNode, User as _User, Session} from '@app/model';
+import {SystemUser, TreeNode, User as _User, Session, ConnectionToken} from '@app/model';
 import {User} from '@app/globals';
 import {getCookie} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
@@ -192,12 +192,12 @@ export class HttpService {
     return this.get(src);
   }
 
-  getCommandsData(sid:string, page: number) {
+  getCommandsData(sid: string, page: number) {
     const params = new HttpParams()
     .set('session_id', sid)
     .set('limit', '30')
     .set('offset', String(30 * page))
-    .set('order', 'timestamp')
+    .set('order', 'timestamp');
     return this.get('/api/v1/terminal/commands/', {params: params});
   }
 
@@ -269,6 +269,19 @@ export class HttpService {
       protocol: systemUser.protocol,
       ...auth
     };
+    return this.post(url, data).toPromise();
+  }
+
+  getConnectionToken(systemUserId: string, assetId: string, appId): Promise<ConnectionToken> {
+    const url = '/api/v1/authentication/connection-token/';
+    const data = {
+      'system_user': systemUserId,
+    };
+    if (assetId) {
+      data['asset'] = assetId;
+    } else {
+      data['application'] = appId;
+    }
     return this.post(url, data).toPromise();
   }
 }

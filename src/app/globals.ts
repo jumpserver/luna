@@ -49,6 +49,12 @@ export const TYPE_DB_GUI: ConnectType = {
   requireXPack: true
 };
 
+export const TYPE_DB_CLI: ConnectType = {
+  name: 'DB CLI',
+  id: 'dbCLi',
+  requireXPack: false
+};
+
 export const TYPE_RDP_CLIENT: ConnectType = {
   name: 'RDP Client',
   id: 'rdpClient',
@@ -66,11 +72,11 @@ export const ProtocolConnectTypes = {
   rdp: [TYPE_WEB_GUI, TYPE_RDP_CLIENT, TYPE_RDP_FILE],
   vnc: [TYPE_WEB_GUI],
   telnet: [TYPE_WEB_CLI],
-  mysql: [TYPE_WEB_CLI, TYPE_DB_GUI],
+  mysql: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLI],
   sqlserver: [TYPE_WEB_CLI],
   redis: [TYPE_WEB_CLI],
-  postgresql: [TYPE_DB_GUI],
+  postgresql: [TYPE_DB_GUI, TYPE_DB_CLI],
   oracle: [TYPE_DB_GUI],
-  mariadb: [TYPE_WEB_CLI, TYPE_DB_GUI],
+  mariadb: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLI],
   k8s: [TYPE_WEB_CLI],
 };
