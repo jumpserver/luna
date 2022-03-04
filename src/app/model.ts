@@ -299,3 +299,10 @@ export class ConnectData {
   manualAuthInfo: AuthInfo;
   connectType: ConnectType;
 }
+
+export class ConnectionToken {
+  id: string;
+  secret: string;
+  type: string;
+  protocol: string;
+}
