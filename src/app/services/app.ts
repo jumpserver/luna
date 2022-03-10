@@ -2,7 +2,7 @@ import {Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
-import {DataStore, User, ProtocolConnectTypes, TYPE_RDP_CLIENT, TYPE_RDP_FILE} from '@app/globals';
+import {DataStore, User, ProtocolConnectTypes, TYPE_RDP_CLIENT, TYPE_RDP_FILE, TYPE_DB_CLI} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
@@ -97,6 +97,9 @@ export class AppService {
         if (xrdpEnabled === false && [TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1) {
           return false;
         }
+        if (!localStorage.getItem('MAGNUS_ENABLE')) {
+          return TYPE_DB_CLI.id !== tp.id;
+        }
         if (!xpackEnabled && tp.requireXPack) {
           return false;
         } else {
@@ -154,12 +157,12 @@ export class AppService {
       const curAppID = nodeID.split('&')[0] || '';
       nodeID = curAppID.substr(curAppID.lastIndexOf('=') + 1) || '';
     }
-    return nodeID
+    return nodeID;
   }
 
   setNodePreferSystemUser(nodeId: string, systemUserId: string) {
     this.assetPreferSystemUser[nodeId] = systemUserId;
-    
+
     try {
       this._localStorage.set(this.systemUserPreferKey, this.assetPreferSystemUser);
     } catch (e) {

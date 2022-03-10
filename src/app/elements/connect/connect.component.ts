@@ -172,10 +172,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       alert('未知的类型: ' + tp);
       return;
     }
-    if (["container", 'system_user'].indexOf(node.meta.data.identity) !== -1) {
-      var appId = this.analysisId(node['parentInfo'])['app_id']
+    let appId;
+    if (['container', 'system_user'].indexOf(node.meta.data.identity) !== -1) {
+      appId = this.analysisId(node['parentInfo'])['app_id'];
     } else {
-      var appId = node.id
+      appId = node.id;
     }
     const systemUsers = await this._http[handleName](appId).toPromise();
     const connectInfo = await this.selectLoginSystemUsers(systemUsers, node);

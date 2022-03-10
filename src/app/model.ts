@@ -224,7 +224,7 @@ export class GlobalSetting {
 
 export class Setting {
   rdpResolution: string = 'Auto';
-  rdpFullScreen: number = 0;
+  rdpFullScreen: number = 1;
   rdpDrivesRedirect: number = 0;
   fontSize: number = 14;
   backspaceAsCrtlH: string = '0';
@@ -298,4 +298,11 @@ export class ConnectData {
   systemUser: SystemUser;
   manualAuthInfo: AuthInfo;
   connectType: ConnectType;
+}
+
+export class ConnectionToken {
+  id: string;
+  secret: string;
+  type: string;
+  protocol: string;
 }

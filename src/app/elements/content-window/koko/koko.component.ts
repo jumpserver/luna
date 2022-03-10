@@ -42,11 +42,11 @@ export class ElementConnectorKokoComponent implements OnInit {
     }
   }
 
-  AnalysisId(idStr) {
-    var idObject = new Object();
-    var idStr = idStr.split("&");
-    for (var i = 0; i < idStr.length; i++) {
-      idObject[idStr[i].split("=")[0]] = (idStr[i].split("=")[1]);
+  analysisId(idStr) {
+    const idObject = {};
+    idStr = idStr.split('&');
+    for (let i = 0; i < idStr.length; i++) {
+      idObject[idStr[i].split('=')[0]] = (idStr[i].split('=')[1]);
     }
     return idObject;
   }
@@ -59,16 +59,16 @@ export class ElementConnectorKokoComponent implements OnInit {
       type = 'remoteapp';
     }
     if (this.node.meta.data.type === 'k8s') {
-      const identity = this.node.meta.data.identity
-      const parentInfo = this.AnalysisId(this.node['parentInfo'])
-      const pod = parentInfo['pod']
-      const appId = parentInfo['app_id']
-      const namespace = parentInfo['namespace']
-      const container = parentInfo['container']
-      const SystemUserId = parentInfo['system_user_id'] ? parentInfo['system_user_id'] : this.sysUser['id']
-      this.iframeURL = `${baseUrl}/?target_id=${appId}&type=${type}` + `&system_user_id=${SystemUserId}&_=${Date.now()}`
+      const identity = this.node.meta.data.identity;
+      const parentInfo = this.analysisId(this.node['parentInfo']);
+      const pod = parentInfo['pod'];
+      const appId = parentInfo['app_id'];
+      const namespace = parentInfo['namespace'];
+      const container = parentInfo['container'];
+      const SystemUserId = parentInfo['system_user_id'] ? parentInfo['system_user_id'] : this.sysUser['id'];
+      this.iframeURL = `${baseUrl}/?target_id=${appId}&type=${type}` + `&system_user_id=${SystemUserId}&_=${Date.now()}`;
        if (identity === 'container') {
-        this.iframeURL = this.iframeURL + `&namespace=${namespace}` + `&pod=${pod}` + `&container=${container}`
+        this.iframeURL = this.iframeURL + `&namespace=${namespace}` + `&pod=${pod}` + `&container=${container}`;
       }
     } else {
        this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=${type}&system_user_id=${this.sysUser.id}&_=${Date.now()}`;
