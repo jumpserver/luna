@@ -94,17 +94,16 @@ export class AppService {
     for (const [protocol, types] of Object.entries(ProtocolConnectTypes)) {
       validTypes[protocol] = types.filter((tp) => {
         // 没有开启 xrdp 不支持 连接 xrdp
-        if (xrdpEnabled === false && [TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1) {
+        if ([TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1 && !xrdpEnabled) {
           return false;
         }
-        if (!localStorage.getItem('MAGNUS_ENABLE')) {
-          return TYPE_DB_CLI.id !== tp.id;
+        if (TYPE_DB_CLI.id === tp.id) {
+          return localStorage.getItem('MAGNUS_ENABLE');
         }
-        if (!xpackEnabled && tp.requireXPack) {
+        if (tp.requireXPack && !xpackEnabled) {
           return false;
-        } else {
-          return true;
         }
+        return true;
       });
     }
     return validTypes;
