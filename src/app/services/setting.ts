@@ -27,7 +27,7 @@ export class SettingService {
   }
   async getPublicSettings() {
     const resp = await this._http.get<any>('/api/v1/settings/public/').toPromise();
-    this.globalSetting  = resp['data'];
+    this.globalSetting = resp['data'];
     this.setting.commandExecution = this.globalSetting.SECURITY_COMMAND_EXECUTION;
 
     // 更改favicon

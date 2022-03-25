@@ -1,6 +1,29 @@
-<div style="background: wheat; height: 100%">
-  <h2>请用命令行登录，或者使用工具</h2>
-  <pre>
-    {{ this.cli }}
-  </pre>
+<div class="content">
+  <div>
+    <h2 class="subject">数据库连接信息</h2>
+    <table>
+      <tr>
+        <td class="title">{{ 'Username'|translate }}: </td>
+        <td class="text-td">{{ username }}</td>
+      </tr>
+      <tr>
+        <td class="title">{{ 'Password'|translate }}: </td>
+        <td class="text-td">{{ password }}</td>
+      </tr>
+      <tr>
+        <td class="title">{{ 'Host'|translate }}: </td>
+        <td class="text-td">{{ host }}</td>
+      </tr>
+      <tr>
+        <td class="title">{{ 'Port'|translate }}: </td>
+        <td class="text-td">{{ port }}</td>
+      </tr>
+    </table>
+  </div>
+  <div>
+    <h2 class="subject">命令行直接连接</h2>
+    <div class="command">
+      <pre>{{ cli }}</pre>
+    </div>
+  </div>
 </div>
