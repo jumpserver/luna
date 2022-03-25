@@ -217,9 +217,13 @@ export class GlobalSetting {
   SECURITY_COMMAND_EXECUTION: boolean;
   SECURITY_LUNA_REMEMBER_AUTH: boolean;
   SECURITY_WATERMARK_ENABLED: boolean;
-  XRDP_ENABLED: boolean;
   HELP_DOCUMENT_URL: string;
   HELP_SUPPORT_URL: string;
+  XRDP_ENABLED: boolean;
+  TERMINAL_MAGNUS_ENABLED: boolean;
+  TERMINAL_MAGNUS_HOST: string;
+  TERMINAL_MAGNUS_MYSQL_PORT: number;
+  TERMINAL_MAGNUS_POSTGRE_PORT: number;
 }
 
 export class Setting {

@@ -1,3 +1,117 @@
 iframe {
   border-width: 0;
 }
+
+.title {
+  width: 80px;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.subject {
+  margin-top: 20px
+}
+
+.content {
+  padding: 50px;
+  background: #191818;
+  color: #c9d1d9;
+  height: 100%;
+}
+
+
+.content table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.content table td {
+  padding: 6px 13px;
+  border: 1px solid #30363d;
+}
+
+.content table .text-td {
+  position: relative;
+  padding-right: 30px;
+  word-wrap: break-word;
+  white-space: normal;
+  word-break: break-all;
+}
+
+.content table .text-td .btn {
+  cursor: pointer;
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  display: none;
+}
+
+.content table .text-td:hover .btn {
+  display: block;
+
+}
+
+.content table .text-td .btn:hover .icon path {
+  fill: #ffffff;
+}
+
+.content table .text-td .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.content table .text-td .icon path {
+  fill: #8b949e;
+}
+
+.content table tr:nth-child(2n) {
+  background-color: #212325;
+}
+
+.content .command {
+  position: relative;
+  background: #161b22;
+  padding: 10px 20px;
+  border-radius: 6px;
+}
+
+.content .command pre {
+  font-size: 12px;
+  word-wrap: break-word;
+  white-space: normal;
+  word-break: break-all;
+  margin-right: 50px;
+  color: white;
+}
+
+.content .command .btn {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  font-size: 13px;
+  border: 1px solid rgba(240, 246, 252, 0.1);
+  background-color: #21262d;
+  border-radius: 5px;
+  padding: 6px 8px;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.content .command .btn .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.content .command .btn .icon path {
+  fill: #8b949e;
+}
+
+.content .command .btn:hover {
+  border-color: #8b949e;
+  background: #30363d;
+}
+
+.content .command .btn:hover .icon path {
+  fill: #ffffff;
+}
