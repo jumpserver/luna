@@ -113,6 +113,10 @@ export class ElementNavComponent implements OnInit {
         this._i18n.use('zh');
         break;
       }
+      case 'Japanese': {
+        this._i18n.use('ja');
+        break;
+      }
       case 'DownLoad': {
         window.open('/core/download/', '_blank');
         break;
@@ -194,6 +198,11 @@ export class ElementNavComponent implements OnInit {
           id: 'Chinese',
           click: 'Chinese',
           name: '中文'
+        },
+        {
+          id: 'Japanese',
+          click: 'Japanese',
+          name: '日本語'
         }
       ]
     },
