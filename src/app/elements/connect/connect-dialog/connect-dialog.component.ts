@@ -2,7 +2,7 @@ import {Component, OnInit, Inject, ViewChild, ChangeDetectorRef} from '@angular/
 import 'rxjs/add/operator/toPromise';
 import {AppService, LocalStorageService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
-import {ConnectType, ConnectData, TreeNode, SystemUser, AuthInfo} from '@app/model';
+import {ConnectType, ConnectData, TreeNode, SystemUser, AuthInfo, AdvancedOption} from '@app/model';
 import {ElementManualAuthComponent} from './manual-auth/manual-auth.component';
 import {BehaviorSubject} from 'rxjs';
 
@@ -18,24 +18,40 @@ export class ElementConnectDialogComponent implements OnInit {
   public outputData: ConnectData = new ConnectData();
   public systemUsers: SystemUser[];
   public manualAuthInfo: AuthInfo = new AuthInfo();
+  public AdvancedOption: AdvancedOption[];
 
   public systemUserSelected: SystemUser = null;
   public connectType: ConnectType;
   public connectTypes = [];
   public autoLogin = false;
+  public disableautohash = 1;
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
               private _cdRef: ChangeDetectorRef,
               private _logger: LogService,
               private _appSvc: AppService,
-              private _localStorage: LocalStorageService,
               @Inject(MAT_DIALOG_DATA) public data: any,
   ) {}
 
   ngOnInit() {
     this.systemUsers = this.data.systemUsers;
     this.node = this.data.node;
+    this.AdvancedOption = [
+      {
+        type: 'checkbox',
+        field: 'auto-login',
+        label: '选择',
+        value: true
+      },
+      {
+        type: 'radio',
+        field: 'auto-login2',
+        label: '季节',
+        value: '春天',
+        options: ['春天', '夏天']
+      }
+    ]
   }
 
   onSelectSystemUser(systemUser) {

@@ -28,6 +28,12 @@
     </div>
   </div>
 
+  <elements-advanced-option
+    *ngIf="disableautohash=== 1"
+    [AdvancedOption]="AdvancedOption"
+  >
+  </elements-advanced-option>
+
   <div class="auto-connect">
     <label class="zone-label" style="display: block">{{ "Remember select" | translate }}</label>
     <mat-checkbox name="auto-login" [(ngModel)]="autoLogin">

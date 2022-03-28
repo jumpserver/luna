@@ -310,3 +310,11 @@ export class ConnectionToken {
   type: string;
   protocol: string;
 }
+
+export class AdvancedOption {
+  type: 'checkbox' | 'radio';
+  field: string;
+  label: string;
+  value: string | boolean | number;
+  options?: any[];
+}

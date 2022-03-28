@@ -21,6 +21,7 @@ import {ElementConnectorOmnidbComponent} from './content-window/omnidb/omnidb.co
 import {ElementManualAuthComponent} from './connect/connect-dialog/manual-auth/manual-auth.component';
 import {ElementSelectSystemUserComponent} from './connect/connect-dialog/select-system-user/select-system-user.component';
 import {ElementReplayAsciicastComponent} from '@app/elements/replay/asciicast/asciicast.component';
+import {ElementAdvancedOptionComponent} from './connect/connect-dialog/advanced-option/advanced-option.component';
 
 
 export const ElementComponents = [
@@ -48,5 +49,6 @@ export const ElementComponents = [
   ElementManualAuthComponent,
   ElementConnectorOmnidbComponent,
   ElementSelectSystemUserComponent,
-  ElementReplayAsciicastComponent
+  ElementReplayAsciicastComponent,
+  ElementAdvancedOptionComponent
 ];
