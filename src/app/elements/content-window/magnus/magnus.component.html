@@ -1,29 +1,39 @@
 <div class="content">
-  <div>
+  <div *ngIf="!loading">
     <h2 class="subject">数据库连接信息</h2>
     <table>
-      <tr>
-        <td class="title">{{ 'Username'|translate }}: </td>
-        <td class="text-td">{{ username }}</td>
-      </tr>
-      <tr>
-        <td class="title">{{ 'Password'|translate }}: </td>
-        <td class="text-td">{{ password }}</td>
-      </tr>
-      <tr>
-        <td class="title">{{ 'Host'|translate }}: </td>
-        <td class="text-td">{{ host }}</td>
-      </tr>
-      <tr>
-        <td class="title">{{ 'Port'|translate }}: </td>
-        <td class="text-td">{{ port }}</td>
+      <tr *ngFor="let item of dbInfoItems">
+        <td class="title">{{ item.label | async }}: </td>
+        <td class="text-td">
+          <span *ngIf="item.name === 'password'">
+            ****** <i class="show-password fa fa-eye"></i>
+          </span>
+          <span *ngIf="item.name !== 'password'">
+            {{ this.dbInfo[item.name] }}
+          </span>
+          <span class="btn" #tooltip="matTooltip"
+            [matTooltip]="'Copy' | translate"
+            matTooltipPosition="right"
+            ngxClipboard
+            [cbContent]="this.dbInfo[item.name]"
+          >
+            <i class="fa fa-clipboard icon"></i>
+          </span>
+        </td>
       </tr>
     </table>
   </div>
   <div>
     <h2 class="subject">命令行直接连接</h2>
     <div class="command">
-      <pre>{{ cli }}</pre>
+      <pre>$ {{ cli }}</pre>
+      <span class="btn"
+        #tooltip="matTooltip"
+        [matTooltip]="'Copy' | translate"
+        ngxClipboard [cbContent]="cli"
+      >
+        <i class="fa fa-clipboard icon"></i>
+      </span>
     </div>
   </div>
 </div>

@@ -96,6 +96,9 @@
   "Last login": "上次登录",
   "Host": "主机",
   "Port": "端口",
-  "User": "用户"
+  "User": "用户",
+  "Protocol": "协议",
+  "Database": "数据库",
+  "Copy": "复制"
 }
 

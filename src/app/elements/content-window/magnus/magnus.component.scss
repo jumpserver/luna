@@ -3,7 +3,7 @@ iframe {
 }
 
 .title {
-  width: 80px;
+  max-width: 180px;
   font-size: 15px;
   font-weight: 400;
 }
@@ -13,7 +13,7 @@ iframe {
 }
 
 .content {
-  padding: 50px;
+  padding: 50px 100px;
   background: #191818;
   color: #c9d1d9;
   height: 100%;
@@ -27,42 +27,16 @@ iframe {
 }
 
 .content table td {
-  padding: 6px 13px;
+  padding: 7px 13px;
   border: 1px solid #30363d;
 }
 
 .content table .text-td {
   position: relative;
-  padding-right: 30px;
+  padding-right: 35px;
   word-wrap: break-word;
   white-space: normal;
   word-break: break-all;
-}
-
-.content table .text-td .btn {
-  cursor: pointer;
-  position: absolute;
-  right: 10px;
-  top: 8px;
-  display: none;
-}
-
-.content table .text-td:hover .btn {
-  display: block;
-
-}
-
-.content table .text-td .btn:hover .icon path {
-  fill: #ffffff;
-}
-
-.content table .text-td .icon {
-  width: 15px;
-  height: 15px;
-}
-
-.content table .text-td .icon path {
-  fill: #8b949e;
 }
 
 .content table tr:nth-child(2n) {
@@ -71,7 +45,7 @@ iframe {
 
 .content .command {
   position: relative;
-  background: #161b22;
+  background: #212325;
   padding: 10px 20px;
   border-radius: 6px;
 }
@@ -81,30 +55,47 @@ iframe {
   word-wrap: break-word;
   white-space: normal;
   word-break: break-all;
-  margin-right: 50px;
+  margin: 5px 50px 5px 0;
   color: white;
 }
 
-.content .command .btn {
+.content .btn .fa.icon {
+  width: 15px;
+  height: 15px;
+  color: #cec6c6;
+  font-size: 13px;
+}
+
+.content .btn:hover .fa.icon {
+  color: white;
+}
+
+.content .btn {
   position: absolute;
-  right: 10px;
-  top: 10px;
+  right: 0;
+  top: 0;
   font-size: 13px;
   border: 1px solid rgba(240, 246, 252, 0.1);
-  background-color: #21262d;
   border-radius: 5px;
-  padding: 6px 8px;
+  padding: 8px;
   display: inline-block;
   cursor: pointer;
+  color: #cec6c6;
 }
 
-.content .command .btn .icon {
-  width: 18px;
-  height: 18px;
+.content td .btn {
+  border: none;
+  display: none;
 }
 
-.content .command .btn .icon path {
-  fill: #8b949e;
+.content td:hover .btn {
+  display: block;
+}
+
+.content .command .btn {
+  padding: 8px 10px;
+  top: 6px;
+  right: 8px;
 }
 
 .content .command .btn:hover {
@@ -112,6 +103,6 @@ iframe {
   background: #30363d;
 }
 
-.content .command .btn:hover .icon path {
-  fill: #ffffff;
+.show-password {
+  cursor: pointer;
 }

@@ -95,5 +95,7 @@
   "No permission": "No permission",
 	"Last login": "Last login",
   "Host": "Host",
-  "Port": "Port"
+  "Port": "Port",
+  "Protocol": "Protocol",
+  "Database": "Database"
 }

@@ -1,6 +1,6 @@
-import {Component, Input, OnInit, ViewChild, ElementRef, Inject} from '@angular/core';
+import {Component, Input, OnInit} from '@angular/core';
 import {View, SystemUser, TreeNode} from '@app/model';
-import {HttpService, LogService, SettingService} from '@app/services';
+import {HttpService, I18nService, LogService, SettingService} from '@app/services';
 
 
 @Component({
@@ -10,7 +10,6 @@ import {HttpService, LogService, SettingService} from '@app/services';
 })
 export class ElementConnectorMagnusComponent implements OnInit {
   @Input() view: View;
-  @ViewChild('terminal', {static: false}) iframe: ElementRef;
 
   iframeURL: any;
   node: TreeNode;
@@ -22,43 +21,71 @@ export class ElementConnectorMagnusComponent implements OnInit {
   port: number = 33060;
   cli: string;
   protocolPorts: object;
+  dbInfoItems: Array<any>;
+  dbInfo: any;
+  globalSetting: any;
+  loading = true;
 
   constructor(private _logger: LogService,
               private _http: HttpService,
+              private _i18n: I18nService,
               private _settingSvc: SettingService
   ) {
+    this.dbInfoItems = [
+      {name: 'host', label: this._i18n.t('Host')},
+      {name: 'port',  label: this._i18n.t('Port')},
+      {name: 'username', label: this._i18n.t('Username')},
+      {name: 'password',  label: this._i18n.t('Password')},
+      {name: 'database', label: this._i18n.t('Database')},
+      {name: 'protocol', label: this._i18n.t('Protocol')},
+    ];
+    this.dbInfo = {username: '', password: '', host: '', port: '', database: '', protocol: ''};
+    this.globalSetting = this._settingSvc.globalSetting;
   }
 
   ngOnInit() {
     const {node, sysUser, protocol} = this.view;
-    this.host = this._settingSvc.globalSetting.TERMINAL_MAGNUS_HOST;
+    this.dbInfo.host = this.globalSetting.TERMINAL_MAGNUS_HOST;
     this.protocolPorts = {
-      mysql: this._settingSvc.globalSetting.TERMINAL_MAGNUS_MYSQL_PORT,
-      postgresql: this._settingSvc.globalSetting.TERMINAL_MAGNUS_POSTGRE_PORT
+      mysql: this.globalSetting.TERMINAL_MAGNUS_MYSQL_PORT,
+      postgresql: this.globalSetting.TERMINAL_MAGNUS_POSTGRE_PORT
     };
     this.node = node;
     this.sysUser = sysUser;
-    this.protocol = protocol;
-    this.port = this.protocolPorts[protocol];
+    this.dbInfo.protocol = protocol;
+    this.dbInfo.port = this.protocolPorts[protocol];
+    this.dbInfo.database = node.meta.data.attrs.database;
     this.generateConnectCLI();
   }
 
   generateConnectCLI() {
     this._http.getConnectionToken(this.sysUser.id, '', this.node.id).then((token) => {
-      this.username = token.id;
-      this.password = token.secret;
+      this.dbInfo.username = token.id;
+      this.dbInfo.password = token.secret;
 
-      switch (this.protocol) {
+      switch (this.dbInfo.protocol) {
         case 'mysql':
         case 'mariadb':
-          this.cli = `$ mysql -u${token.id} -p${token.secret} -hjumpserver-test.fit2cloud.com -P${this.port}`;
+          this.cli = `mysql
+            -u ${token.id}
+            -p${token.secret}
+            -h ${this.dbInfo.host}
+            -P ${this.dbInfo.port}
+            ${this.dbInfo.database}
+          `;
           break;
         case 'postgresql':
-          this.cli = `$ psql -U ${token.id} -h jumpserver-test.fit2cloud.com -p ${this.port}\n Password: ${token.secret}`;
+          this.cli = `psql
+            -U ${token.id}
+            -h ${this.dbInfo.host}
+            -d ${this.dbInfo.database}
+            -p ${this.dbInfo.port}
+          `;
           break;
         default:
-          this.cli = `Protocol '${this.protocol}' Not support now`;
+          this.cli = `Protocol '${this.dbInfo.protocol}' Not support now`;
       }
+      this.loading = false;
     });
   }
 }
