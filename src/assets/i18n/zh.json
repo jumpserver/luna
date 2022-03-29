@@ -101,8 +101,10 @@
   "Database": "数据库",
   "Click to copy": "点击复制",
   "Copied": "已复制",
-  "Database info": "数据库连接信息",
+  "Database info": "数据库信息",
+  "Database connect info": "数据库连接信息",
   "Command line": "连接命令行",
-  "Run it by client": "使用客户端执行"
+  "Run it by client": "使用客户端执行",
+  "Name": "名称"
 }
 

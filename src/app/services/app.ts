@@ -90,6 +90,7 @@ export class AppService {
   getProtocolConnectTypes(remoteApp: Boolean) {
     const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
     const xrdpEnabled = this._settingSvc.globalSetting.XRDP_ENABLED;
+    const magnusEnabled = this._settingSvc.globalSetting.TERMINAL_MAGNUS_ENABLED;
     const validTypes = {};
     for (const [protocol, types] of Object.entries(ProtocolConnectTypes)) {
       validTypes[protocol] = types.filter((tp) => {
@@ -100,6 +101,9 @@ export class AppService {
         // 没有开启 xrdp 不支持 连接 xrdp
         if ([TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1 && !xrdpEnabled) {
           return false;
+        }
+        if (tp.id === TYPE_DB_CLI.id && !magnusEnabled) {
+          return false
         }
         return true;
       });

@@ -116,10 +116,6 @@ export class View {
   closed: boolean;
   node: TreeNode;
   sysUser: SystemUser;
-  // remoteApp: string;
-  // room: string;
-  // Rdp: any;
-  // Term: any;
   token: string;
   connectType: ConnectType;
   termComp: any;
@@ -223,6 +219,7 @@ export class GlobalSetting {
   TERMINAL_MAGNUS_ENABLED: boolean;
   TERMINAL_MAGNUS_HOST: string;
   TERMINAL_MAGNUS_MYSQL_PORT: number;
+  TERMINAL_MAGNUS_MARIADB_PORT: number;
   TERMINAL_MAGNUS_POSTGRE_PORT: number;
 }
 
