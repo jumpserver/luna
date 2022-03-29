@@ -4,6 +4,7 @@ import {AppService, LocalStorageService, LogService, SettingService} from '@app/
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {ConnectType, ConnectData, TreeNode, SystemUser, AuthInfo, AdvancedOption} from '@app/model';
 import {ElementManualAuthComponent} from './manual-auth/manual-auth.component';
+import {ElementAdvancedOptionComponent} from './advanced-option/advanced-option.component';
 import {BehaviorSubject} from 'rxjs';
 
 @Component({
@@ -13,18 +14,19 @@ import {BehaviorSubject} from 'rxjs';
 })
 export class ElementConnectDialogComponent implements OnInit {
   @ViewChild('manualAuth', {static: false}) manualAuthRef: ElementManualAuthComponent;
+  @ViewChild('advancedOption', {static: false}) advancedOptionRef: ElementAdvancedOptionComponent;
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
   public node: TreeNode;
   public outputData: ConnectData = new ConnectData();
   public systemUsers: SystemUser[];
   public manualAuthInfo: AuthInfo = new AuthInfo();
-  public AdvancedOption: AdvancedOption[];
-
+  
   public systemUserSelected: SystemUser = null;
   public connectType: ConnectType;
   public connectTypes = [];
   public autoLogin = false;
-  public disableautohash = 1;
+  public AdvancedOption: AdvancedOption[];
+  public isShowAdvancedOption = false;
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
@@ -37,29 +39,16 @@ export class ElementConnectDialogComponent implements OnInit {
   ngOnInit() {
     this.systemUsers = this.data.systemUsers;
     this.node = this.data.node;
-    this.AdvancedOption = [
-      {
-        type: 'checkbox',
-        field: 'auto-login',
-        label: '选择',
-        value: true
-      },
-      {
-        type: 'radio',
-        field: 'auto-login2',
-        label: '季节',
-        value: '春天',
-        options: ['春天', '夏天']
-      }
-    ]
   }
 
   onSelectSystemUser(systemUser) {
     this.systemUserSelected = systemUser;
+
     if (!systemUser) {
       return;
     }
     this.setConnectTypes();
+    this.handleAdvancedOption()
     // this._cdRef.detectChanges();
     setTimeout(() => {
       if (this.manualAuthRef) {
@@ -72,6 +61,23 @@ export class ElementConnectDialogComponent implements OnInit {
     const isRemoteApp = this.node.meta.type === 'application';
     this.connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[this.systemUserSelected.protocol];
     this.connectType = this.getPreferConnectType() || this.connectTypes[0];
+  }
+
+  handleAdvancedOption() {
+    const systemUserProtocol = this.systemUserSelected.protocol;
+    this.isShowAdvancedOption = systemUserProtocol === 'mysql' && this.connectType.id === 'webCLI';
+    this.AdvancedOption = [
+      {
+        type: 'checkbox',
+        field: 'disableautohash',
+        label: 'Disable auto completion',
+        value: false
+      }
+    ]
+  }
+
+  handleRadioGroupChange() {
+    this.handleAdvancedOption()
   }
 
   onCancel(): void {
@@ -96,6 +102,8 @@ export class ElementConnectDialogComponent implements OnInit {
     this.outputData.systemUser = this.systemUserSelected;
     this.outputData.connectType = this.connectType;
     this.outputData.manualAuthInfo = this.manualAuthInfo;
+    const disableautohash = this.advancedOptionRef.checkboxStatus ? 1 : '';
+    this.outputData.disableautohash = disableautohash;
 
     if (this.autoLogin) {
       this._appSvc.setPreLoginSelect(this.node, this.outputData);
