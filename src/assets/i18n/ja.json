@@ -90,8 +90,17 @@
   "Automatic login next": "次回の自動登録 (右クリック資産接続は再選択できます)",
   "Don't prompt again": "次回は提示しない",
   "Username@Domain": "ユーザー名 @ ADドメイン",
-  "InstallClientMsg": "Jupseserverクライアントがインストールされていない、今ダウンロードしてインストールしますか?",
+  "InstallClientMsg": "JumpServerクライアントがインストールされていない、今ダウンロードしてインストールしますか?",
   "LoginExpireMsg": "ログインが期限切れになりました。ログインし直してください",
   "No permission": "権限がありません",
-  "Last login": "前回ログイン"
+  "Last login": "前回ログイン",
+  "Host": "ホスト",
+  "Port": "ポート",
+  "Protocol": "プロトコル",
+  "Database": "データベース",
+  "Click to copy": "クリックしてコピーする",
+  "Copied": "複製済み",
+  "Database info": "データベース接続情報",
+  "Command line": "命令行",
+  "Run it by client": "クライアントで実行する"
 }

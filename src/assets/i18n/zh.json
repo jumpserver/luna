@@ -96,6 +96,13 @@
   "Last login": "上次登录",
   "Host": "主机",
   "Port": "端口",
-  "User": "用户"
+  "User": "用户",
+  "Protocol": "协议",
+  "Database": "数据库",
+  "Click to copy": "点击复制",
+  "Copied": "已复制",
+  "Database info": "数据库连接信息",
+  "Command line": "连接命令行",
+  "Run it by client": "使用客户端执行"
 }
 
