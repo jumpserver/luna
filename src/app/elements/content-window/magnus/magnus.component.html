@@ -1,29 +1,56 @@
 <div class="content">
-  <div>
-    <h2 class="subject">数据库连接信息</h2>
+  <div *ngIf="!loading">
+    <h2 class="subject">{{ 'Database info' | translate }}</h2>
     <table>
-      <tr>
-        <td class="title">{{ 'Username'|translate }}: </td>
-        <td class="text-td">{{ username }}</td>
-      </tr>
-      <tr>
-        <td class="title">{{ 'Password'|translate }}: </td>
-        <td class="text-td">{{ password }}</td>
-      </tr>
-      <tr>
-        <td class="title">{{ 'Host'|translate }}: </td>
-        <td class="text-td">{{ host }}</td>
-      </tr>
-      <tr>
-        <td class="title">{{ 'Port'|translate }}: </td>
-        <td class="text-td">{{ port }}</td>
+      <tr *ngFor="let item of dbInfoItems">
+        <td class="title">{{ item.label | async }}: </td>
+        <td class="text-td"
+          #tooltip="matTooltip"
+          [matTooltip]="'Click to copy' | translate"
+          matTooltipPosition="right"
+          ngxClipboard
+          (cbOnSuccess)="onCopySuccess($event)"
+          [cbContent]="this.dbInfo[item.name]"
+        >
+          <span *ngIf="item.name === 'password'" (click)="showPassword($event)" class="show-password">
+            <span style="vertical-align: middle">
+              {{ passwordShow }}
+            </span>
+            <i class="fa fa-eye"></i>
+          </span>
+          <span *ngIf="item.name !== 'password'">
+            {{ this.dbInfo[item.name] }}
+          </span>
+          <span class="btn"
+          >
+            <i class="fa fa-clipboard icon"></i>
+          </span>
+        </td>
       </tr>
     </table>
   </div>
   <div>
-    <h2 class="subject">命令行直接连接</h2>
+    <h2 class="subject">
+      {{ 'Command line' | translate }}
+    </h2>
     <div class="command">
-      <pre>{{ cli }}</pre>
+      <pre>$ {{ cliSafe }}</pre>
+      <span class="start btn"
+        #tooltip="matTooltip"
+        [matTooltip]="'Run it by client' | translate"
+        (click)="startClient()"
+      >
+        <i class="fa fa-caret-square-o-right icon"></i>
+      </span>
+      <span class="btn"
+        #tooltip="matTooltip"
+        [matTooltip]="'Click to copy' | translate"
+        ngxClipboard
+        [cbContent]="cli"
+        (cbOnSuccess)="onCopySuccess($event)"
+      >
+        <i class="fa fa-clipboard icon"></i>
+      </span>
     </div>
   </div>
 </div>
