@@ -13,10 +13,10 @@ import {ToastrService} from 'ngx-toastr';
 export class ElementConnectorMagnusComponent implements OnInit {
   @Input() view: View;
 
-  iframeURL: any;
   node: TreeNode;
   sysUser: SystemUser;
   protocol: string;
+  name: string;
   cli: string;
   cliSafe: string;
   protocolPorts: object;
@@ -26,6 +26,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
   loading = true;
   passwordMask = '******';
   passwordShow = '******';
+  token: any;
 
   constructor(private _logger: LogService,
               private _http: HttpService,
@@ -33,67 +34,73 @@ export class ElementConnectorMagnusComponent implements OnInit {
               private _toastr: ToastrService,
               private _settingSvc: SettingService
   ) {
-    this.dbInfoItems = [
-      {name: 'host', label: this._i18n.t('Host')},
-      {name: 'port',  label: this._i18n.t('Port')},
-      {name: 'username', label: this._i18n.t('Username')},
-      {name: 'password',  label: this._i18n.t('Password')},
-      {name: 'database', label: this._i18n.t('Database')},
-      {name: 'protocol', label: this._i18n.t('Protocol')},
-    ];
-    this.dbInfo = {username: '', password: '', host: '', port: '', database: '', protocol: ''};
     this.globalSetting = this._settingSvc.globalSetting;
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     const {node, sysUser, protocol} = this.view;
-    this.dbInfo.host = this.globalSetting.TERMINAL_MAGNUS_HOST;
-    this.protocolPorts = {
-      mysql: this.globalSetting.TERMINAL_MAGNUS_MYSQL_PORT,
-      postgresql: this.globalSetting.TERMINAL_MAGNUS_POSTGRE_PORT
-    };
     this.node = node;
     this.sysUser = sysUser;
-    this.dbInfo.protocol = protocol;
-    this.dbInfo.port = this.protocolPorts[protocol];
-    this.dbInfo.database = node.meta.data.attrs.database;
-    this.generateConnectCLI();
+    this.protocol = protocol;
+    this.protocolPorts = {
+      mysql: this.globalSetting.TERMINAL_MAGNUS_MYSQL_PORT,
+      postgresql: this.globalSetting.TERMINAL_MAGNUS_POSTGRE_PORT,
+      mariadb: this.globalSetting.TERMINAL_MAGNUS_MARIADB_PORT
+    };
+    const oriHost = this.node.meta.data.attrs.host;
+    this.name = `${this.node.name}(${oriHost})`;
+    this.token = await this._http.getConnectionToken(this.sysUser.id, '', this.node.id);
+    this.setDBInfo();
+    this.generateConnCli();
+    this.loading = false;
   }
 
-  generateConnectCLI() {
-    this._http.getConnectionToken(this.sysUser.id, '', this.node.id).then((token) => {
-      this.dbInfo.username = token.id;
-      this.dbInfo.password = token.secret;
-      // 密码占位，因为有 safe cli, 需要把密码隐藏，所以占位替换
-      const passwordHolder = `@${this.dbInfo.password}@`;
-      let cli = '';
+  setDBInfo() {
+    const host = this.globalSetting.TERMINAL_MAGNUS_HOST;
+    const port = this.protocolPorts[this.protocol];
+    const database = this.node.meta.data.attrs.database;
+    this.dbInfoItems = [
+      {name: 'name', value: this.name, label: this._i18n.t('Name')},
+      {name: 'host', value: host, label: this._i18n.t('Host')},
+      {name: 'port', value: port,  label: this._i18n.t('Port')},
+      {name: 'username', value: this.token.id, label: this._i18n.t('Username')},
+      {name: 'password', value: this.token.secret,  label: this._i18n.t('Password')},
+      {name: 'database', value: database, label: this._i18n.t('Database')},
+      {name: 'protocol', value: this.protocol, label: this._i18n.t('Protocol')},
+    ];
+    this.dbInfo = this.dbInfoItems.reduce((pre, current) => {
+      pre[current.name] = current.value;
+      return pre;
+    }, {});
+  }
 
-      switch (this.dbInfo.protocol) {
-        case 'mysql':
-        case 'mariadb':
-          cli = `mysql
-            -u ${token.id}
-            -p${passwordHolder}
-            -h ${this.dbInfo.host}
-            -P ${this.dbInfo.port}
-            ${this.dbInfo.database}
-          `;
-          break;
-        case 'postgresql':
-          cli = `PGPASSWORD=${passwordHolder} psql
-            -U ${token.id}
-            -h ${this.dbInfo.host}
-            -d ${this.dbInfo.database}
-            -p ${this.dbInfo.port}
-          `;
-          break;
-        default:
-          cli = `Protocol '${this.dbInfo.protocol}' Not support now`;
-      }
-      this.cliSafe = cli.replace(passwordHolder, this.passwordMask);
-      this.cli = cli.replace(passwordHolder, this.dbInfo.password);
-      this.loading = false;
-    });
+  generateConnCli() {
+    // 密码占位，因为有 safe cli, 需要把密码隐藏，所以占位替换
+    const passwordHolder = `@${this.dbInfo.password}@`;
+    let cli = '';
+
+    switch (this.protocol) {
+      case 'mysql':
+      case 'mariadb':
+        cli = `mysql` +
+          ` -u ${this.token.id}` +
+          ` -p${passwordHolder}` +
+          ` -h ${this.dbInfo.host}` +
+          ` -P ${this.dbInfo.port}` +
+          ` ${this.dbInfo.database}`;
+        break;
+      case 'postgresql':
+        cli = `PGPASSWORD=${passwordHolder} psql` +
+          ` -U ${this.token.id}` +
+          ` -h ${this.dbInfo.host}` +
+          ` -d ${this.dbInfo.database}` +
+          ` -p ${this.dbInfo.port}`;
+        break;
+      default:
+        cli = `Protocol '${this.dbInfo.protocol}' Not support now`;
+    }
+    this.cliSafe = cli.replace(passwordHolder, this.passwordMask);
+    this.cli = cli.replace(passwordHolder, this.dbInfo.password);
   }
 
   startClient() {
