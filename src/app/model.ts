@@ -123,8 +123,9 @@ export class View {
   token: string;
   connectType: ConnectType;
   termComp: any;
+  disableautohash?: any;
 
-  constructor(node: TreeNode, user: SystemUser, connectFrom: string, type: string, protocol: string) {
+  constructor(node: TreeNode, user: SystemUser, connectFrom: string, type: string, protocol: string, disableautohash?: any) {
     this.connected = true;
     this.editable = false;
     this.closed = false;
@@ -134,6 +135,7 @@ export class View {
     this.connectFrom = connectFrom;
     this.type = type;
     this.protocol = protocol;
+    this.disableautohash = disableautohash;
   }
 }
 
@@ -302,6 +304,7 @@ export class ConnectData {
   systemUser: SystemUser;
   manualAuthInfo: AuthInfo;
   connectType: ConnectType;
+  disableautohash?: any;
 }
 
 export class ConnectionToken {

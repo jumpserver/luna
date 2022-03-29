@@ -1,43 +1,43 @@
 {
   "/koko/elfinder/*": {
-    "target": "https://jumpserver-test.fit2cloud.com",
+    "target": "http://localhost:5000",
     "secure": false,
     "ws": true,
     "changeOrigin": true
   },
   "/koko/static/*": {
-    "target": "https://jumpserver-test.fit2cloud.com",
+    "target": "http://localhost:5000",
     "secure": false,
     "ws": true
   },
   "/koko/*": {
-    "target": "https://jumpserver-test.fit2cloud.com",
+    "target": "http://localhost:5000",
     "secure": false,
     "ws": true,
     "changeOrigin": true
   },
   "/media/": {
-    "target": "https://jumpserver-test.fit2cloud.com",
+    "target": "http://localhost:8080",
     "secure": false,
     "changeOrigin": true
   },
   "/api/": {
-    "target": "https://jumpserver-test.fit2cloud.com",
+    "target": "http://localhost:8080",
     "secure": false,
     "changeOrigin": true
   },
   "/core": {
-    "target": "https://jumpserver-test.fit2cloud.com",
+    "target": "http://localhost:8080",
     "secure": false,
     "changeOrigin": true
   },
   "/static": {
-    "target": "https://jumpserver-test.fit2cloud.com",
+    "target": "http://localhost:8080",
     "secure": false,
     "changeOrigin": true
   },
   "/lion": {
-    "target": "https://jumpserver-test.fit2cloud.com",
+    "target": "http://localhost:9529",
     "secure": false,
     "pathRewrite": {
       "^/lion/monitor": "/monitor"
@@ -46,7 +46,7 @@
     "changeOrigin": true
   },
   "/omnidb": {
-    "target": "https://jumpserver-test.fit2cloud.com",
+    "target": "http://localhost:8082",
     "secure": false,
     "ws": true,
     "changeOrigin": true

@@ -93,5 +93,7 @@
   "InstallClientMsg": "Jupseserverクライアントがインストールされていない、今ダウンロードしてインストールしますか?",
   "LoginExpireMsg": "ログインが期限切れになりました。ログインし直してください",
   "No permission": "権限がありません",
-  "Last login": "前回ログイン"
+  "Last login": "前回ログイン",
+  "Disable auto completion": "自動補完の無効化",
+  "Advanced option": "上級オプション"
 }

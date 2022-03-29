@@ -22,14 +22,21 @@
   <div class="connect-type">
     <label class="zone-label" for="connect-type">{{ "Connect Type" | translate }}</label>
     <div class="connect-type-group">
-      <mat-radio-group aria-label="Select an option" name="connect-type" [(ngModel)]="connectType" id="connect-type">
+      <mat-radio-group
+        aria-label="Select an option"
+        name="connect-type"
+        [(ngModel)]="connectType"
+        id="connect-type"
+        (ngModelChange)="handleRadioGroupChange($event)"
+      >
         <mat-radio-button *ngFor="let type of connectTypes" [value]="type">{{ type.name | translate }}</mat-radio-button>
       </mat-radio-group>
     </div>
   </div>
 
   <elements-advanced-option
-    *ngIf="disableautohash=== 1"
+    #advancedOption
+    *ngIf="isShowAdvancedOption"
     [AdvancedOption]="AdvancedOption"
   >
   </elements-advanced-option>
