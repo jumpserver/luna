@@ -13,8 +13,10 @@
           [cbContent]="this.dbInfo[item.name]"
         >
           <span *ngIf="item.name === 'password'" (click)="showPassword($event)" class="show-password">
-            {{ passwordShow }}
-            <i class="show-password fa fa-eye"></i>
+            <span style="vertical-align: middle">
+              {{ passwordShow }}
+            </span>
+            <i class="fa fa-eye"></i>
           </span>
           <span *ngIf="item.name !== 'password'">
             {{ this.dbInfo[item.name] }}
