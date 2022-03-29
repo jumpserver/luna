@@ -24,7 +24,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
   dbInfo: any;
   globalSetting: any;
   loading = true;
-  passwordDark = '******';
+  passwordMask = '******';
   passwordShow = '******';
 
   constructor(private _logger: LogService,
@@ -90,7 +90,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
         default:
           cli = `Protocol '${this.dbInfo.protocol}' Not support now`;
       }
-      this.cliSafe = cli.replace(passwordHolder, this.passwordDark);
+      this.cliSafe = cli.replace(passwordHolder, this.passwordMask);
       this.cli = cli.replace(passwordHolder, this.dbInfo.password);
       this.loading = false;
     });
@@ -110,10 +110,10 @@ export class ElementConnectorMagnusComponent implements OnInit {
 
   showPassword($event) {
     $event.stopPropagation();
-    if (this.passwordShow === this.passwordDark) {
+    if (this.passwordShow === this.passwordMask) {
       this.passwordShow = this.dbInfo.password;
     } else {
-      this.passwordShow = this.passwordDark;
+      this.passwordShow = this.passwordMask;
     }
   }
 
