@@ -231,8 +231,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   createNodeView(connectInfo: ConnectData, node: TreeNode) {
-    const {systemUser, disableautohash} = connectInfo;
-    const view = new View(node, systemUser, 'node', node.meta.type, systemUser.protocol, disableautohash);
+    const {systemUser, automaticCompletion} = connectInfo;
+    const connectOptions = {
+      automaticCompletion
+    }
+    const view = new View(node, systemUser, 'node', node.meta.type, systemUser.protocol, connectOptions);
     view.connectType = connectInfo.connectType;
     this.onNewView.emit(view);
   }
