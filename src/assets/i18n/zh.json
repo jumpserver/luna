@@ -102,6 +102,7 @@
   "Click to copy": "点击复制",
   "Copied": "已复制",
   "Database info": "数据库连接信息",
-  "Command line": "连接命令行"
+  "Command line": "连接命令行",
+  "Run it by client": "使用客户端执行"
 }
 
