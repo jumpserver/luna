@@ -1,6 +1,8 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {View, SystemUser, TreeNode} from '@app/model';
 import {HttpService, I18nService, LogService, SettingService} from '@app/services';
+import {User} from '@app/globals';
+import {ToastrService} from 'ngx-toastr';
 
 
 @Component({
@@ -15,20 +17,20 @@ export class ElementConnectorMagnusComponent implements OnInit {
   node: TreeNode;
   sysUser: SystemUser;
   protocol: string;
-  username: string;
-  password: string;
-  host: string;
-  port: number = 33060;
   cli: string;
+  cliSafe: string;
   protocolPorts: object;
   dbInfoItems: Array<any>;
   dbInfo: any;
   globalSetting: any;
   loading = true;
+  passwordDark = '******';
+  passwordShow = '******';
 
   constructor(private _logger: LogService,
               private _http: HttpService,
               private _i18n: I18nService,
+              private _toastr: ToastrService,
               private _settingSvc: SettingService
   ) {
     this.dbInfoItems = [
@@ -62,20 +64,23 @@ export class ElementConnectorMagnusComponent implements OnInit {
     this._http.getConnectionToken(this.sysUser.id, '', this.node.id).then((token) => {
       this.dbInfo.username = token.id;
       this.dbInfo.password = token.secret;
+      // 密码占位，因为有 safe cli, 需要把密码隐藏，所以占位替换
+      const passwordHolder = `@${this.dbInfo.password}@`;
+      let cli = '';
 
       switch (this.dbInfo.protocol) {
         case 'mysql':
         case 'mariadb':
-          this.cli = `mysql
+          cli = `mysql
             -u ${token.id}
-            -p${token.secret}
+            -p${passwordHolder}
             -h ${this.dbInfo.host}
             -P ${this.dbInfo.port}
             ${this.dbInfo.database}
           `;
           break;
         case 'postgresql':
-          this.cli = `psql
+          cli = `PGPASSWORD=${passwordHolder} psql
             -U ${token.id}
             -h ${this.dbInfo.host}
             -d ${this.dbInfo.database}
@@ -83,9 +88,37 @@ export class ElementConnectorMagnusComponent implements OnInit {
           `;
           break;
         default:
-          this.cli = `Protocol '${this.dbInfo.protocol}' Not support now`;
+          cli = `Protocol '${this.dbInfo.protocol}' Not support now`;
       }
+      this.cliSafe = cli.replace(passwordHolder, this.passwordDark);
+      this.cli = cli.replace(passwordHolder, this.dbInfo.password);
       this.loading = false;
     });
+  }
+
+  startClient() {
+    const data = {
+      protocol: this.dbInfo.protocol,
+      username: User.username,
+      command: this.cli
+    };
+    const json = JSON.stringify(data);
+    const b64 = window.btoa(json);
+    const url = 'jms://' + b64;
+    window.open(url);
+  }
+
+  showPassword($event) {
+    $event.stopPropagation();
+    if (this.passwordShow === this.passwordDark) {
+      this.passwordShow = this.dbInfo.password;
+    } else {
+      this.passwordShow = this.passwordDark;
+    }
+  }
+
+  async onCopySuccess(evt) {
+    const msg = await this._i18n.t('Copied');
+    this._toastr.success(msg);
   }
 }

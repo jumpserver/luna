@@ -37,6 +37,7 @@ iframe {
   word-wrap: break-word;
   white-space: normal;
   word-break: break-all;
+  cursor: pointer;
 }
 
 .content table tr:nth-child(2n) {
@@ -55,7 +56,7 @@ iframe {
   word-wrap: break-word;
   white-space: normal;
   word-break: break-all;
-  margin: 5px 50px 5px 0;
+  margin: 5px 100px 5px 0;
   color: white;
 }
 
@@ -98,6 +99,10 @@ iframe {
   right: 8px;
 }
 
+.content .command .start.btn {
+  right: 50px;
+}
+
 .content .command .btn:hover {
   border-color: #8b949e;
   background: #30363d;
@@ -105,4 +110,6 @@ iframe {
 
 .show-password {
   cursor: pointer;
+  width: 15px;
+  height: 15px;
 }
