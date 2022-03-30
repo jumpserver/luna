@@ -2,7 +2,7 @@ import {Component, OnInit, Inject, ViewChild, ChangeDetectorRef} from '@angular/
 import 'rxjs/add/operator/toPromise';
 import {AppService, LocalStorageService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
-import {ConnectType, ConnectData, TreeNode, SystemUser, AuthInfo, AdvancedOption} from '@app/model';
+import {ConnectType, ConnectData, TreeNode, SystemUser, AuthInfo} from '@app/model';
 import {ElementManualAuthComponent} from './manual-auth/manual-auth.component';
 import {ElementAdvancedOptionComponent} from './advanced-option/advanced-option.component';
 import {BehaviorSubject} from 'rxjs';
@@ -25,8 +25,6 @@ export class ElementConnectDialogComponent implements OnInit {
   public connectType: ConnectType;
   public connectTypes = [];
   public autoLogin = false;
-  public AdvancedOption: AdvancedOption[];
-  public isShowAdvancedOption = false;
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
@@ -48,7 +46,6 @@ export class ElementConnectDialogComponent implements OnInit {
       return;
     }
     this.setConnectTypes();
-    this.handleAdvancedOption()
     // this._cdRef.detectChanges();
     setTimeout(() => {
       if (this.manualAuthRef) {
@@ -61,23 +58,6 @@ export class ElementConnectDialogComponent implements OnInit {
     const isRemoteApp = this.node.meta.type === 'application';
     this.connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[this.systemUserSelected.protocol];
     this.connectType = this.getPreferConnectType() || this.connectTypes[0];
-  }
-
-  handleAdvancedOption() {
-    const systemUserProtocol = this.systemUserSelected.protocol;
-    this.isShowAdvancedOption = systemUserProtocol === 'mysql' && this.connectType.id === 'webCLI';
-    this.AdvancedOption = [
-      {
-        type: 'checkbox',
-        field: 'disableautohash',
-        label: 'Disable auto completion',
-        value: false
-      }
-    ]
-  }
-
-  handleRadioGroupChange() {
-    this.handleAdvancedOption()
   }
 
   onCancel(): void {
@@ -102,8 +82,8 @@ export class ElementConnectDialogComponent implements OnInit {
     this.outputData.systemUser = this.systemUserSelected;
     this.outputData.connectType = this.connectType;
     this.outputData.manualAuthInfo = this.manualAuthInfo;
-    const disableautohash = this.advancedOptionRef.checkboxStatus ? 1 : '';
-    this.outputData.disableautohash = disableautohash;
+    const automaticCompletion = this.advancedOptionRef.checkboxStatus ? 1 : '';
+    this.outputData.automaticCompletion = automaticCompletion;
 
     if (this.autoLogin) {
       this._appSvc.setPreLoginSelect(this.node, this.outputData);

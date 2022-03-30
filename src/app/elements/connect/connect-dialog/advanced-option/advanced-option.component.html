@@ -1,4 +1,4 @@
-<div class="advanced-option">
+<div class="advanced-option" *ngIf="isShowAdvancedOption">
   <mat-accordion>
     <mat-expansion-panel>
       <mat-expansion-panel-header style="height: 32px;">
@@ -11,6 +11,7 @@
         <mat-checkbox
           #checkbox
           *ngIf="item.type == 'checkbox'"
+          [hidden]="!item.hidden"
           [name]="item.field"
           [(ngModel)]="item.value"
           (ngModelChange)="onCheckboxChange($event)"
@@ -18,7 +19,10 @@
           {{ item.label | translate }}
         </mat-checkbox>
 
-        <div *ngIf="item.type == 'radio'">
+        <div
+          *ngIf="item.type == 'radio'"
+          [hidden]="!item.hidden"
+        >
           <label id="radio-label">
             {{item.label + ':'}}
           </label>

@@ -27,7 +27,7 @@
         name="connect-type"
         [(ngModel)]="connectType"
         id="connect-type"
-        (ngModelChange)="handleRadioGroupChange($event)"
+        (ngModelChange)="advancedOption.handleAdvancedOption($event)"
       >
         <mat-radio-button *ngFor="let type of connectTypes" [value]="type">{{ type.name | translate }}</mat-radio-button>
       </mat-radio-group>
@@ -36,8 +36,8 @@
 
   <elements-advanced-option
     #advancedOption
-    *ngIf="isShowAdvancedOption"
-    [AdvancedOption]="AdvancedOption"
+    [connectType]="connectType"
+    [systemUserSelected]="systemUserSelected"
   >
   </elements-advanced-option>
 
