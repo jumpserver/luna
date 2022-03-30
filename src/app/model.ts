@@ -116,14 +116,10 @@ export class View {
   closed: boolean;
   node: TreeNode;
   sysUser: SystemUser;
-  // remoteApp: string;
-  // room: string;
-  // Rdp: any;
-  // Term: any;
   token: string;
   connectType: ConnectType;
   termComp: any;
-  connectOptions?: any;
+  connectOptions: ConnectOption[];
 
   constructor(node: TreeNode, user: SystemUser, connectFrom: string, type: string, protocol: string, connectOptions?: any) {
     this.connected = true;
@@ -299,12 +295,22 @@ export class AuthInfo {
   password: string;
 }
 
+export class ConnectOption {
+  type: 'checkbox' | 'radio';
+  field: string;
+  hidden: Function;
+  label: string;
+  value: string | boolean | number;
+  options?: any[];
+}
+
+
 export class ConnectData {
   node: TreeNode;
   systemUser: SystemUser;
   manualAuthInfo: AuthInfo;
   connectType: ConnectType;
-  automaticCompletion?: any;
+  connectOptions: ConnectOption[];
 }
 
 export class ConnectionToken {
@@ -314,11 +320,3 @@ export class ConnectionToken {
   protocol: string;
 }
 
-export class AdvancedOption {
-  type: 'checkbox' | 'radio';
-  field: string;
-  hidden: boolean;
-  label: string;
-  value: string | boolean | number;
-  options?: any[];
-}

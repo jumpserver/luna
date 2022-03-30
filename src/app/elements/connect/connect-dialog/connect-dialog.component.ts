@@ -1,10 +1,9 @@
 import {Component, OnInit, Inject, ViewChild, ChangeDetectorRef} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {AppService, LocalStorageService, LogService, SettingService} from '@app/services';
+import {AppService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
-import {ConnectType, ConnectData, TreeNode, SystemUser, AuthInfo} from '@app/model';
+import {ConnectType, ConnectData, TreeNode, SystemUser, AuthInfo, ConnectOption} from '@app/model';
 import {ElementManualAuthComponent} from './manual-auth/manual-auth.component';
-import {ElementAdvancedOptionComponent} from './advanced-option/advanced-option.component';
 import {BehaviorSubject} from 'rxjs';
 
 @Component({
@@ -14,17 +13,16 @@ import {BehaviorSubject} from 'rxjs';
 })
 export class ElementConnectDialogComponent implements OnInit {
   @ViewChild('manualAuth', {static: false}) manualAuthRef: ElementManualAuthComponent;
-  @ViewChild('advancedOption', {static: false}) advancedOptionRef: ElementAdvancedOptionComponent;
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
   public node: TreeNode;
   public outputData: ConnectData = new ConnectData();
   public systemUsers: SystemUser[];
   public manualAuthInfo: AuthInfo = new AuthInfo();
-  
   public systemUserSelected: SystemUser = null;
   public connectType: ConnectType;
   public connectTypes = [];
   public autoLogin = false;
+  public connectOptions: ConnectOption[] = [];
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
@@ -82,8 +80,7 @@ export class ElementConnectDialogComponent implements OnInit {
     this.outputData.systemUser = this.systemUserSelected;
     this.outputData.connectType = this.connectType;
     this.outputData.manualAuthInfo = this.manualAuthInfo;
-    const automaticCompletion = this.advancedOptionRef.checkboxStatus ? 1 : '';
-    this.outputData.automaticCompletion = automaticCompletion;
+    this.outputData.connectOptions = this.connectOptions;
 
     if (this.autoLogin) {
       this._appSvc.setPreLoginSelect(this.node, this.outputData);
@@ -94,5 +91,9 @@ export class ElementConnectDialogComponent implements OnInit {
     this._appSvc.setNodePreferSystemUser(nodeID, this.systemUserSelected.id);
     this._appSvc.setProtocolPreferLoginType(this.systemUserSelected.protocol, this.connectType.id);
     this.dialogRef.close(this.outputData);
+  }
+
+  onAdvancedOptionChanged(evt) {
+    this.connectOptions = evt;
   }
 }
