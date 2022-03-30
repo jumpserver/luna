@@ -1,44 +1,39 @@
-import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
-import {ConnectType, AdvancedOption} from '@app/model';
+import {Component, Input, OnInit, OnChanges, Output, EventEmitter} from '@angular/core';
+import {ConnectType, ConnectOption} from '@app/model';
 
 @Component({
   selector: 'elements-advanced-option',
   templateUrl: './advanced-option.component.html',
   styleUrls: ['./advanced-option.component.scss'],
 })
-export class ElementAdvancedOptionComponent implements  OnInit {
+export class ElementAdvancedOptionComponent implements  OnInit, OnChanges {
   @Input() connectType: ConnectType;
   @Input() systemUserSelected: any;
-  @ViewChild('checkbox', {static: false}) checkboxRef: ElementRef;
-  public AdvancedOption: AdvancedOption[];
+  @Output() onOptionsChange = new EventEmitter<ConnectOption[]>();
+  public advancedOptions: ConnectOption[] = [];
   public isShowAdvancedOption = false;
-  checkboxStatus = false;
 
   constructor() {}
 
   ngOnInit() {
-    console.log(this.connectType, 'connectType----------------------');
-    console.log(this.systemUserSelected, 'systemUserSelected---------------------');
-  }
-  onCheckboxChange(event) {
-    this.checkboxStatus = event;
-  }
-  handleAdvancedOption(event) {
-    console.log('event: ', event);
-    console.log('this.systemUserSelected: ', this.systemUserSelected);
-    console.log('this.connectType: ', this.connectType);
-    const systemUserProtocol = this.systemUserSelected.protocol;
-    const connectType = event ? event.id : this.connectType.id;
-    this.AdvancedOption = [
+    this.advancedOptions = [
       {
         type: 'checkbox',
         field: 'disableautohash',
-        hidden: systemUserProtocol === 'mysql' && connectType === 'webCLI',
+        hidden: () => {
+          return this.systemUserSelected.protocol === 'mysql' && this.connectType.id === 'webCLI';
+        },
         label: 'Disable auto completion',
         value: false
       }
-    ]
-    this.isShowAdvancedOption = this.AdvancedOption.some(i => i.hidden);
-    console.log('this.isShowAdvancedOption: ', this.isShowAdvancedOption);
+    ];
+  }
+
+  ngOnChanges(changes) {
+    this.isShowAdvancedOption = this.advancedOptions.some(i => i.hidden());
+  }
+
+  optionChange(event) {
+    this.onOptionsChange.emit(this.advancedOptions);
   }
 }

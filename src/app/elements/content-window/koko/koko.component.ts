@@ -51,10 +51,16 @@ export class ElementConnectorKokoComponent implements OnInit {
     return idObject;
   }
 
+  getFilteredField(field: string) {
+    const filteredField = this.view.connectOptions.find(i => i.field === field);
+    return filteredField;
+  }
+
   generateNodeConnectUrl() {
     const baseUrl = `${document.location.origin}/koko/terminal`;
     let type = this.view.protocol;
-    const automaticCompletion = this.view.connectOptions.automaticCompletion || '';
+    const getFieldDisableAutoHash = this.getFilteredField('disableautohash');
+    const automaticCompletion = getFieldDisableAutoHash && getFieldDisableAutoHash.value ? 1 : '';
 
     if (this.view.type === 'remote_app') {
       type = 'remoteapp';

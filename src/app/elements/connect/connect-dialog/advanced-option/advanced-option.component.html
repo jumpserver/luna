@@ -7,21 +7,21 @@
         </mat-panel-title>
       </mat-expansion-panel-header>
   
-      <ng-container *ngFor="let item of AdvancedOption">
+      <ng-container *ngFor="let item of advancedOptions">
         <mat-checkbox
           #checkbox
           *ngIf="item.type == 'checkbox'"
-          [hidden]="!item.hidden"
+          [hidden]="!item.hidden()"
           [name]="item.field"
           [(ngModel)]="item.value"
-          (ngModelChange)="onCheckboxChange($event)"
-          >
+          (ngModelChange)="optionChange($event)"
+        >
           {{ item.label | translate }}
         </mat-checkbox>
 
         <div
           *ngIf="item.type == 'radio'"
-          [hidden]="!item.hidden"
+          [hidden]="!item.hidden()"
         >
           <label id="radio-label">
             {{item.label + ':'}}
@@ -29,7 +29,9 @@
           <mat-radio-group
             aria-labelledby="example-radio-group-label"
             class="example-radio-group"
-            [(ngModel)]="item.value">
+            (ngModelChange)="optionChange($event)"
+            [(ngModel)]="item.value"
+          >
             <mat-radio-button
               *ngFor="let i of item.options"
               [value]="i"
