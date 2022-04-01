@@ -97,6 +97,8 @@
   "Host": "主机",
   "Port": "端口",
   "User": "用户",
+  "Disable auto completion": "禁用自动补全",
+  "Advanced option": "高级选项",
   "Protocol": "协议",
   "Database": "数据库",
   "Click to copy": "点击复制",

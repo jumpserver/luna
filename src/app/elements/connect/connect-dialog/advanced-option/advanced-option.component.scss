@@ -1,0 +1,36 @@
+.advanced-option {
+  margin-top: 1.25em;
+}
+.mat-expansion-panel-header {
+  height: 32px!important;
+  padding: 0;
+  padding-right: 4px;
+}
+.mat-expansion-panel-header-title {
+  color: rgba(0, 0, 0, 0.54);
+  font-size: 13px;
+}
+.mat-expansion-panel:not([class*=mat-elevation-z]) {
+  box-shadow: none;
+}
+.mat-expansion-panel {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.42);
+  &::ng-deep .mat-expansion-panel-body {
+    padding: 0 0 14px!important;
+  }
+}
+.mat-accordion .mat-expansion-panel:last-of-type {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.example-radio-group {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+.example-radio-button {
+  margin: 2px;
+}
+.ng-star-inserted {
+  margin-top: 5px;
+}

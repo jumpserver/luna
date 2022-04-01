@@ -22,11 +22,24 @@
   <div class="connect-type">
     <label class="zone-label" for="connect-type">{{ "Connect Type" | translate }}</label>
     <div class="connect-type-group">
-      <mat-radio-group aria-label="Select an option" name="connect-type" [(ngModel)]="connectType" id="connect-type">
+      <mat-radio-group
+        aria-label="Select an option"
+        name="connect-type"
+        [(ngModel)]="connectType"
+        id="connect-type"
+      >
         <mat-radio-button *ngFor="let type of connectTypes" [value]="type">{{ type.name | translate }}</mat-radio-button>
       </mat-radio-group>
     </div>
   </div>
+
+  <elements-advanced-option
+    #advancedOption
+    [connectType]="connectType"
+    [systemUserSelected]="systemUserSelected"
+    (onOptionsChange)="onAdvancedOptionChanged($event)"
+  >
+  </elements-advanced-option>
 
   <div class="auto-connect">
     <label class="zone-label" style="display: block">{{ "Remember select" | translate }}</label>

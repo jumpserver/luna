@@ -1,0 +1,48 @@
+<div class="advanced-option" *ngIf="isShowAdvancedOption">
+  <mat-accordion>
+    <mat-expansion-panel>
+      <mat-expansion-panel-header style="height: 32px;">
+        <mat-panel-title>
+          {{ 'Advanced option' | translate }}
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+  
+      <ng-container *ngFor="let item of advancedOptions">
+        <mat-checkbox
+          #checkbox
+          *ngIf="item.type == 'checkbox'"
+          [hidden]="!item.hidden()"
+          [name]="item.field"
+          [(ngModel)]="item.value"
+          (ngModelChange)="optionChange($event)"
+        >
+          {{ item.label | translate }}
+        </mat-checkbox>
+
+        <div
+          *ngIf="item.type == 'radio'"
+          [hidden]="!item.hidden()"
+        >
+          <label id="radio-label">
+            {{item.label + ':'}}
+          </label>
+          <mat-radio-group
+            aria-labelledby="example-radio-group-label"
+            class="example-radio-group"
+            (ngModelChange)="optionChange($event)"
+            [(ngModel)]="item.value"
+          >
+            <mat-radio-button
+              *ngFor="let i of item.options"
+              [value]="i"
+              class="example-radio-button"
+            >
+              {{i}}
+            </mat-radio-button>
+          </mat-radio-group>
+        </div>
+      </ng-container>
+
+    </mat-expansion-panel>
+  </mat-accordion>
+</div>

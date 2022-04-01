@@ -119,8 +119,9 @@ export class View {
   token: string;
   connectType: ConnectType;
   termComp: any;
+  connectOptions: ConnectOption[];
 
-  constructor(node: TreeNode, user: SystemUser, connectFrom: string, type: string, protocol: string) {
+  constructor(node: TreeNode, user: SystemUser, connectFrom: string, type: string, protocol: string, connectOptions?: any) {
     this.connected = true;
     this.editable = false;
     this.closed = false;
@@ -130,6 +131,7 @@ export class View {
     this.connectFrom = connectFrom;
     this.type = type;
     this.protocol = protocol;
+    this.connectOptions = connectOptions;
   }
 }
 
@@ -294,11 +296,22 @@ export class AuthInfo {
   password: string;
 }
 
+export class ConnectOption {
+  type: 'checkbox' | 'radio';
+  field: string;
+  hidden: Function;
+  label: string;
+  value: string | boolean | number;
+  options?: any[];
+}
+
+
 export class ConnectData {
   node: TreeNode;
   systemUser: SystemUser;
   manualAuthInfo: AuthInfo;
   connectType: ConnectType;
+  connectOptions: ConnectOption[];
 }
 
 export class ConnectionToken {
@@ -307,3 +320,4 @@ export class ConnectionToken {
   type: string;
   protocol: string;
 }
+

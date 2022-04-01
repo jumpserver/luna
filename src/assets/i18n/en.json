@@ -96,6 +96,8 @@
   "Last login": "Last login",
   "Host": "Host",
   "Port": "Port",
+	"Disable auto completion": "Disable auto completion",
+	"Advanced option": "Advanced option",
   "Protocol": "Protocol",
   "Database": "Database",
   "Click to copy": "Click to copy",

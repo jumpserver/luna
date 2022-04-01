@@ -51,9 +51,16 @@ export class ElementConnectorKokoComponent implements OnInit {
     return idObject;
   }
 
+  getFilteredField(field: string) {
+    const filteredField = this.view.connectOptions.find(i => i.field === field);
+    return filteredField;
+  }
+
   generateNodeConnectUrl() {
     const baseUrl = `${document.location.origin}/koko/terminal`;
     let type = this.view.protocol;
+    const getFieldDisableAutoHash = this.getFilteredField('disableautohash');
+    const automaticCompletion = getFieldDisableAutoHash && getFieldDisableAutoHash.value ? 1 : '';
 
     if (this.view.type === 'remote_app') {
       type = 'remoteapp';
@@ -66,12 +73,12 @@ export class ElementConnectorKokoComponent implements OnInit {
       const namespace = parentInfo['namespace'];
       const container = parentInfo['container'];
       const SystemUserId = parentInfo['system_user_id'] ? parentInfo['system_user_id'] : this.sysUser['id'];
-      this.iframeURL = `${baseUrl}/?target_id=${appId}&type=${type}` + `&system_user_id=${SystemUserId}&_=${Date.now()}`;
+      this.iframeURL = `${baseUrl}/?target_id=${appId}&type=${type}` + `&system_user_id=${SystemUserId}&disableautohash=${automaticCompletion}&_=${Date.now()}`;
        if (identity === 'container') {
-        this.iframeURL = this.iframeURL + `&namespace=${namespace}` + `&pod=${pod}` + `&container=${container}`;
+        this.iframeURL = this.iframeURL + `&namespace=${namespace}` + `&pod=${pod}` + `&container=${container}` + `&disableautohash=${automaticCompletion}`;
       }
     } else {
-       this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=${type}&system_user_id=${this.sysUser.id}&_=${Date.now()}`;
+      this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=${type}&system_user_id=${this.sysUser.id}&disableautohash=${automaticCompletion}&_=${Date.now()}`;
     }
   }
 
