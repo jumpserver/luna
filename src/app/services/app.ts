@@ -19,7 +19,7 @@ export class AppService {
   private assetPreferSystemUser: object = {};
   private protocolPreferKey = 'ProtocolPreferLoginType';
   private systemUserPreferKey = 'PreferSystemUser';
-  private endpoints: Endpoint[];
+  private endpoints: Endpoint[] = [];
 
   constructor(private _http: HttpService,
               private _router: Router,
@@ -272,7 +272,7 @@ export class AppService {
   }
 
   loadEndpoints() {
-    this.endpoints = [
+    const fakeEndpoints = [
       {
         id: 'yy',
         name: 'YY',
@@ -308,9 +308,14 @@ export class AppService {
         ]
       }
     ];
+    fakeEndpoints.forEach(item => {
+      let endpoint = new Endpoint();
+      endpoint = Object.assign(endpoint, item);
+      this.endpoints.push(endpoint);
+    });
   }
 
-  getOptimalEndpoint(view: View, connector: string) {
+  getOptimalEndpoint(view: View, protocol: string) {
     if (window.location.host === 'jumpserver-test.fit2cloud.com') {
       return this.endpoints[0];
     } else {

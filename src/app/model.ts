@@ -336,7 +336,7 @@ export class Endpoint {
   host: string;
   protocols: Protocol[];
 
-  getProtocolPort(protocol: string): number {
+  getProtocolPort(protocol: string) {
     const matched = this.protocols.filter(item => item.name === protocol);
     if (matched.length > 0) {
       return matched[0].port;
