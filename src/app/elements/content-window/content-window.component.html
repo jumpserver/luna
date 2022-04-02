@@ -1,21 +1,22 @@
-<div [id]="id" #contentWindow class="window" [ngClass]="{'active':view.active}" style="height: 100%; width: 100%">
-  <elements-connector-koko
-    [view]="view"
-    *ngIf="connector === 'koko'"
-  >
-  </elements-connector-koko>
+<div [ngSwitch]="connector" [id]="id" #contentWindow class="window" [ngClass]="{'active':view.active}">
   <elements-connector-lion
+    *ngSwitchCase="'lion'"
     [view]="view"
-    *ngIf="connector === 'lion'"
   >
   </elements-connector-lion>
   <elements-connector-omnidb
-    *ngIf="connector ==='omnidb'"
-    [view]="view">
+    *ngSwitchCase="'omnidb'"
+    [view]="view"
+  >
   </elements-connector-omnidb>
   <elements-connector-magnus
-    *ngIf="connector ==='magnus'"
-    [view]="view">
+    *ngSwitchCase="'magnus'"
+    [view]="view"
   >
   </elements-connector-magnus>
+  <elements-connector-koko
+    *ngSwitchDefault
+    [view]="view"
+  >
+  </elements-connector-koko>
 </div>

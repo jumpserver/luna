@@ -1,5 +1,5 @@
 import {Component, Input, OnInit, ViewChild, ElementRef, Inject} from '@angular/core';
-import {View, SystemUser, TreeNode} from '@app/model';
+import {View, SystemUser, TreeNode, Endpoint} from '@app/model';
 import {LogService} from '@app/services';
 
 
@@ -16,15 +16,20 @@ export class ElementConnectorKokoComponent implements OnInit {
   node: TreeNode;
   sysUser: SystemUser;
   protocol: string;
+  baseUrl: string;
+  connectEndpoint: Endpoint;
 
   constructor(private _logger: LogService) {
   }
 
   ngOnInit() {
-    const {node, sysUser, protocol} = this.view;
+    const {node, sysUser, protocol, connectEndpoint} = this.view;
     this.node = node;
     this.sysUser = sysUser;
     this.protocol = protocol;
+    const proto = window.location.protocol;
+    const port = connectEndpoint.getProtocolPort(proto);
+    this.baseUrl = `${proto}://${connectEndpoint.host}:${port}/koko`;
     this.generateIframeURL();
   }
 
@@ -57,7 +62,6 @@ export class ElementConnectorKokoComponent implements OnInit {
   }
 
   generateNodeConnectUrl() {
-    const baseUrl = `${document.location.origin}/koko/terminal`;
     let type = this.view.protocol;
     const getFieldDisableAutoHash = this.getFilteredField('disableautohash');
     const automaticCompletion = getFieldDisableAutoHash && getFieldDisableAutoHash.value ? 1 : '';
@@ -65,29 +69,40 @@ export class ElementConnectorKokoComponent implements OnInit {
     if (this.view.type === 'remote_app') {
       type = 'remoteapp';
     }
-    if (this.node.meta.data.type === 'k8s') {
-      const identity = this.node.meta.data.identity;
-      const parentInfo = this.analysisId(this.node['parentInfo']);
-      const pod = parentInfo['pod'];
-      const appId = parentInfo['app_id'];
-      const namespace = parentInfo['namespace'];
-      const container = parentInfo['container'];
-      const SystemUserId = parentInfo['system_user_id'] ? parentInfo['system_user_id'] : this.sysUser['id'];
-      this.iframeURL = `${baseUrl}/?target_id=${appId}&type=${type}` + `&system_user_id=${SystemUserId}&disableautohash=${automaticCompletion}&_=${Date.now()}`;
-       if (identity === 'container') {
-        this.iframeURL = this.iframeURL + `&namespace=${namespace}` + `&pod=${pod}` + `&container=${container}` + `&disableautohash=${automaticCompletion}`;
-      }
-    } else {
-      this.iframeURL = `${baseUrl}/?target_id=${this.node.id}&type=${type}&system_user_id=${this.sysUser.id}&disableautohash=${automaticCompletion}&_=${Date.now()}`;
+
+    if (this.node.meta.data.type !== 'k8s') {
+      this.iframeURL = `${this.baseUrl}/terminal/?target_id=${this.node.id}` +
+        `&type=${type}&system_user_id=${this.sysUser.id}` +
+        `&disableautohash=${automaticCompletion}&_=${Date.now()}`;
+      return;
+    }
+
+    const parentInfo = this.analysisId(this.node['parentInfo']);
+    const pod = parentInfo['pod'];
+    const appId = parentInfo['app_id'];
+    const namespace = parentInfo['namespace'];
+    const container = parentInfo['container'];
+    const systemUserId = parentInfo['system_user_id'] || this.sysUser['id'];
+
+    this.iframeURL = `${this.baseUrl}/terminal/` +
+      `?target_id=${appId}&type=${type}` +
+      `&system_user_id=${systemUserId}` +
+      `&disableautohash=${automaticCompletion}` +
+      `&_=${Date.now()}`;
+
+    const identity = this.node.meta.data.identity;
+    if (identity === 'container') {
+      this.iframeURL += `&namespace=${namespace}&pod=${pod}` +
+        `&container=${container}&disableautohash=${automaticCompletion}`;
     }
   }
 
   generateTokenURL() {
-    const tokenUrl = `${document.location.origin}/koko/token`;
+    const tokenUrl = `${this.baseUrl}/token`;
     this.iframeURL = `${tokenUrl}/?target_id=${this.view.token}&type=token&_=${Date.now()}`;
   }
 
   generateFileManagerURL() {
-    this.iframeURL = `/koko/elfinder/sftp/${this.node.id}/?_=${Date.now()}`;
+    this.iframeURL = `${this.baseUrl}/elfinder/sftp/${this.node.id}/?_=${Date.now()}`;
   }
 }

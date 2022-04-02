@@ -1,5 +1,5 @@
 import {Component, OnInit, Input} from '@angular/core';
-import {View} from '@app/model';
+import {SystemUser, TreeNode, View} from '@app/model';
 
 @Component({
   selector: 'elements-connector-omnidb',
@@ -9,11 +9,22 @@ import {View} from '@app/model';
 export class ElementConnectorOmnidbComponent implements OnInit {
   @Input() view: View;
   iframeURL: string;
+  baseUrl: string;
+  node: TreeNode;
+  sysUser: SystemUser;
+  protocol: string;
 
   constructor() {
   }
 
   ngOnInit() {
+    const {node, protocol, sysUser, connectEndpoint} = this.view;
+    const proto = window.location.protocol;
+    const port = connectEndpoint.getProtocolPort(proto);
+    this.node = node;
+    this.sysUser = sysUser;
+    this.protocol = protocol;
+    this.baseUrl = `${proto}://${connectEndpoint.host}:${port}/omnidb/jumpserver`;
     this.generateIframeURL();
   }
 
@@ -35,10 +46,8 @@ export class ElementConnectorOmnidbComponent implements OnInit {
   }
 
   generateNodeURL() {
-    const baseURL = `${document.location.origin}/omnidb/jumpserver`;
-    const app = this.view.node;
-    const sysUser = this.view.sysUser;
-    this.iframeURL = `${baseURL}/connect/workspace/?database_id=${app.id}&system_user_id=${sysUser.id}&_=${Date.now()}`;
+    this.iframeURL = `${this.baseUrl}/connect/workspace/?database_id=${this.node.id}` +
+      `&system_user_id=${this.sysUser.id}&_=${Date.now()}`;
   }
 
   generateTokenURL() {

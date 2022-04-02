@@ -6,7 +6,7 @@ import {DataStore, User, ProtocolConnectTypes, TYPE_RDP_CLIENT, TYPE_RDP_FILE, T
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
-import {AuthInfo, ConnectData, TreeNode} from '@app/model';
+import {AuthInfo, ConnectData, SystemUser, TreeNode, Endpoint, Protocol, View} from '@app/model';
 import * as CryptoJS from 'crypto-js';
 
 declare function unescape(s: string): string;
@@ -19,6 +19,7 @@ export class AppService {
   private assetPreferSystemUser: object = {};
   private protocolPreferKey = 'ProtocolPreferLoginType';
   private systemUserPreferKey = 'PreferSystemUser';
+  private endpoints: Endpoint[];
 
   constructor(private _http: HttpService,
               private _router: Router,
@@ -30,6 +31,7 @@ export class AppService {
     this.checkLogin();
     this.loadPreferData();
     this.loadOriManualAuthInfo();
+    this.loadEndpoints();
   }
 
   setLogLevel() {
@@ -103,7 +105,7 @@ export class AppService {
           return false;
         }
         if (tp.id === TYPE_DB_CLI.id && !magnusEnabled) {
-          return false
+          return false;
         }
         return true;
       });
@@ -267,5 +269,52 @@ export class AppService {
     auths = auths.filter((item) => item.username !== newAuth.username);
     auths.splice(0, 0, newAuth);
     this._localStorage.set(localKey, auths);
+  }
+
+  loadEndpoints() {
+    this.endpoints = [
+      {
+        id: 'yy',
+        name: 'YY',
+        host: 'yy.fit2cloud.com',
+        protocols: [
+          {
+            name: 'ssh',
+            port: 2222
+          },
+          {
+            name: 'rdp',
+            port: 3389
+          }
+        ]
+      },
+      {
+        id: 'Test',
+        name: 'JumpServer-Test',
+        host: 'jumpserver-test.fit2cloud.com',
+        protocols: [
+          {
+            name: 'ssh',
+            port: 2222
+          },
+          {
+            name: 'rdp',
+            port: 3389
+          },
+          {
+            name: 'mysql',
+            port: 33060
+          }
+        ]
+      }
+    ];
+  }
+
+  getOptimalEndpoint(view: View, connector: string) {
+    if (window.location.host === 'jumpserver-test.fit2cloud.com') {
+      return this.endpoints[0];
+    } else {
+      return this.endpoints[1];
+    }
   }
 }

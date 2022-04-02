@@ -1,5 +1,5 @@
 import {Component, Input, OnInit} from '@angular/core';
-import {View, SystemUser, TreeNode} from '@app/model';
+import {View, SystemUser, TreeNode, Endpoint} from '@app/model';
 import {HttpService, I18nService, LogService, SettingService} from '@app/services';
 import {User} from '@app/globals';
 import {ToastrService} from 'ngx-toastr';
@@ -16,6 +16,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
   node: TreeNode;
   sysUser: SystemUser;
   protocol: string;
+  endpoint: Endpoint;
   name: string;
   cli: string;
   cliSafe: string;
@@ -38,15 +39,12 @@ export class ElementConnectorMagnusComponent implements OnInit {
   }
 
   async ngOnInit() {
-    const {node, sysUser, protocol} = this.view;
+    const {node, sysUser, protocol, connectEndpoint} = this.view;
     this.node = node;
     this.sysUser = sysUser;
     this.protocol = protocol;
-    this.protocolPorts = {
-      mysql: this.globalSetting.TERMINAL_MAGNUS_MYSQL_PORT,
-      postgresql: this.globalSetting.TERMINAL_MAGNUS_POSTGRE_PORT,
-      mariadb: this.globalSetting.TERMINAL_MAGNUS_MARIADB_PORT
-    };
+    this.endpoint = connectEndpoint;
+
     const oriHost = this.node.meta.data.attrs.host;
     this.name = `${this.node.name}(${oriHost})`;
     this.token = await this._http.getConnectionToken(this.sysUser.id, '', this.node.id);
@@ -56,8 +54,8 @@ export class ElementConnectorMagnusComponent implements OnInit {
   }
 
   setDBInfo() {
-    const host = this.globalSetting.TERMINAL_MAGNUS_HOST;
-    const port = this.protocolPorts[this.protocol];
+    const host = this.endpoint.host;
+    const port = this.endpoint.getProtocolPort(this.protocol);
     const database = this.node.meta.data.attrs.database;
     this.dbInfoItems = [
       {name: 'name', value: this.name, label: this._i18n.t('Name')},

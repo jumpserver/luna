@@ -15,14 +15,16 @@ export class ElementConnectorLionComponent implements OnInit {
   node: TreeNode;
   sysUser: SystemUser;
   protocol: string;
-
-  public baseUrl = `${document.location.origin}/lion`;
+  public baseUrl: string;
 
   constructor(private _logger: LogService) {
   }
 
   ngOnInit() {
-    const {node, protocol, sysUser} = this.view;
+    const {node, protocol, sysUser, connectEndpoint} = this.view;
+    const proto = window.location.protocol;
+    const port = connectEndpoint.getProtocolPort(proto);
+    this.baseUrl = `${proto}://${connectEndpoint.host}:${port}`;
     this.node = node;
     this.sysUser = sysUser;
     this.protocol = protocol;
@@ -47,12 +49,11 @@ export class ElementConnectorLionComponent implements OnInit {
   }
 
   generateNodeURL() {
+    let type = this.protocol;
     if (this.view.type === 'remote_app' || this.view.type === 'application' ) {
-      const appId = this.node.id
-      this.iframeURL = `${this.baseUrl}/?target_id=${appId}&type=remoteapp&system_user_id=${this.sysUser.id}&_=${Date.now()}`;
-    } else {
-      this.iframeURL = `${this.baseUrl}/?target_id=${this.node.id}&type=${this.protocol}&system_user_id=${this.sysUser.id}&_=${Date.now()}`;
+      type = 'remoteapp';
     }
+    this.iframeURL = `${this.baseUrl}/?target_id=${this.node.id}&type=${type}&system_user_id=${this.sysUser.id}&_=${Date.now()}`;
   }
 
   generateMonitorURL() {

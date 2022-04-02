@@ -120,8 +120,11 @@ export class View {
   connectType: ConnectType;
   termComp: any;
   connectOptions: ConnectOption[];
+  connectEndpoint: Endpoint;
 
-  constructor(node: TreeNode, user: SystemUser, connectFrom: string, type: string, protocol: string, connectOptions?: any) {
+  constructor(node: TreeNode, user: SystemUser, connectFrom: string,
+              type: string, protocol: string, connectOptions?: any
+  ) {
     this.connected = true;
     this.editable = false;
     this.closed = false;
@@ -321,3 +324,23 @@ export class ConnectionToken {
   protocol: string;
 }
 
+
+export class Protocol  {
+  name: string;
+  port: number;
+}
+
+export class Endpoint {
+  id: string;
+  name: string;
+  host: string;
+  protocols: Protocol[];
+
+  getProtocolPort(protocol: string): number {
+    const matched = this.protocols.filter(item => item.name === protocol);
+    if (matched.length > 0) {
+      return matched[0].port;
+    }
+    return 0;
+  }
+}
