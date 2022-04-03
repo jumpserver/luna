@@ -86,6 +86,7 @@
   "Driver redirect": "Driver redirect",
   "RDP File": "RDP File",
   "RDP Client": "RDP Client",
+  "SSH Client": "SSH Client",
   "Remember select": "Remember selected",
   "Automatic login next": "Automatic Login next time (right click asset Connection to re-select)",
   "Don't prompt again": "Don't prompt again",

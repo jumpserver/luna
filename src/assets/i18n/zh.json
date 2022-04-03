@@ -86,6 +86,7 @@
   "Driver redirect": "磁盘挂载",
   "RDP Client": "RDP 客户端",
   "RDP File": "RDP 文件",
+  "SSH Client": "SSH 客户端",
   "Remember select": "记住选择",
   "Automatic login next": "下次自动登录 (右击资产连接可以重新选择)",
   "Don't prompt again": "下次不再提示",
@@ -105,6 +106,7 @@
   "Copied": "已复制",
   "Database info": "数据库信息",
   "Database connect info": "数据库连接信息",
+  "Asset connect info": "资产连接信息",
   "Command line": "连接命令行",
   "Run it by client": "使用客户端执行",
   "Name": "名称"

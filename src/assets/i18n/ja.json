@@ -85,6 +85,7 @@
   "Full screen": "全画面",
   "Driver redirect": "ディスクマウント",
   "RDP Client": "RDPクライアント",
+  "SSH Client": "SSHクライアント",
   "RDP File": "RDPファイル",
   "Remember select": "選択を覚える",
   "Automatic login next": "次回の自動登録 (右クリック資産接続は再選択できます)",

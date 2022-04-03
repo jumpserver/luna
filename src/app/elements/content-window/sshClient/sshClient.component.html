@@ -1,0 +1,56 @@
+<div class="content" *ngIf="!loading">
+  <div>
+    <h2 class="subject">{{ 'Asset connect info' | translate }}: {{ name }}</h2>
+    <table>
+      <tr *ngFor="let item of sshInfoItems">
+        <td class="title">{{ item.label | async }}: </td>
+        <td class="text-td"
+          #tooltip="matTooltip"
+          [matTooltip]="'Click to copy' | translate"
+          matTooltipPosition="right"
+          ngxClipboard
+          (cbOnSuccess)="onCopySuccess($event)"
+          [cbContent]="this.sshInfo[item.name]"
+        >
+          <span *ngIf="item.name === 'password'" (click)="showPassword($event)" class="show-password">
+            <span style="vertical-align: middle">
+              {{ passwordShow }}
+            </span>
+            <i class="fa fa-eye"></i>
+          </span>
+          <span *ngIf="item.name !== 'password'">
+            {{ this.sshInfo[item.name] }}
+          </span>
+          <span class="btn"
+          >
+            <i class="fa fa-clipboard icon"></i>
+          </span>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div>
+    <h2 class="subject">
+      {{ 'Command line' | translate }}
+    </h2>
+    <div class="command">
+      <pre>$ {{ cliSafe }}</pre>
+      <span class="start btn"
+        #tooltip="matTooltip"
+        [matTooltip]="'Run it by client' | translate"
+        (click)="startClient()"
+      >
+        <i class="fa fa-caret-square-o-right icon"></i>
+      </span>
+      <span class="btn"
+        #tooltip="matTooltip"
+        [matTooltip]="'Click to copy' | translate"
+        ngxClipboard
+        [cbContent]="cli"
+        (cbOnSuccess)="onCopySuccess($event)"
+      >
+        <i class="fa fa-clipboard icon"></i>
+      </span>
+    </div>
+  </div>
+</div>
