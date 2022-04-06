@@ -12,6 +12,7 @@ export class ElementAdvancedOptionComponent implements  OnInit, OnChanges {
   @Output() onOptionsChange = new EventEmitter<ConnectOption[]>();
   public advancedOptions: ConnectOption[] = [];
   public isShowAdvancedOption = false;
+  needShowAutoCompletionProtocols: Array<string> = ['mysql', 'mariadb'];
 
   constructor() {}
 
@@ -21,7 +22,7 @@ export class ElementAdvancedOptionComponent implements  OnInit, OnChanges {
         type: 'checkbox',
         field: 'disableautohash',
         hidden: () => {
-          return this.systemUserSelected.protocol === 'mysql' && this.connectType.id === 'webCLI';
+          return this.connectType.id === 'webCLI' && this.needShowAutoCompletionProtocols.includes(this.systemUserSelected.protocol);
         },
         label: 'Disable auto completion',
         value: false
