@@ -2,7 +2,7 @@
   <div>
     <h2 class="subject">{{ 'Database connect info' | translate }}: {{ name }}</h2>
     <table>
-      <tr *ngFor="let item of dbInfoItems">
+      <tr *ngFor="let item of infoItems">
         <td class="title">{{ item.label | async }}: </td>
         <td class="text-td"
           #tooltip="matTooltip"
@@ -10,7 +10,7 @@
           matTooltipPosition="right"
           ngxClipboard
           (cbOnSuccess)="onCopySuccess($event)"
-          [cbContent]="this.dbInfo[item.name]"
+          [cbContent]="this.info[item.name]"
         >
           <span *ngIf="item.name === 'password'" (click)="showPassword($event)" class="show-password">
             <span style="vertical-align: middle">
@@ -19,7 +19,7 @@
             <i class="fa fa-eye"></i>
           </span>
           <span *ngIf="item.name !== 'password'">
-            {{ this.dbInfo[item.name] }}
+            {{ this.info[item.name] }}
           </span>
           <span class="btn"
           >
