@@ -321,3 +321,8 @@ export class ConnectionToken {
   protocol: string;
 }
 
+export interface ConnectionTokenParam {
+  system_user: string;
+  asset?: string;
+  application?: string;
+}

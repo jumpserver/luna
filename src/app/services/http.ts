@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
 import {Browser} from '@app/globals';
 import {retryWhen, delay, scan, map, retry, catchError} from 'rxjs/operators';
-import {SystemUser, TreeNode, User as _User, Session, ConnectionToken} from '@app/model';
+import {SystemUser, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam} from '@app/model';
 import {User} from '@app/globals';
 import {getCookie} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
@@ -272,16 +272,9 @@ export class HttpService {
     return this.post(url, data).toPromise();
   }
 
-  getConnectionToken(systemUserId: string, assetId: string, appId): Promise<ConnectionToken> {
+  getConnectionToken(object: ConnectionTokenParam): Promise<ConnectionToken> {
     const url = '/api/v1/authentication/connection-token/';
-    const data = {
-      'system_user': systemUserId,
-    };
-    if (assetId) {
-      data['asset'] = assetId;
-    } else {
-      data['application'] = appId;
-    }
+    const data = object;
     return this.post(url, data).toPromise();
   }
 }
