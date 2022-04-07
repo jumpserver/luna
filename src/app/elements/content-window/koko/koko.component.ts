@@ -28,7 +28,7 @@ export class ElementConnectorKokoComponent implements OnInit {
     this.sysUser = sysUser;
     this.protocol = protocol;
     const proto = window.location.protocol;
-    this.baseUrl = `${proto}://${connectEndpoint.host}:${connectEndpoint.port}/koko`;
+    this.baseUrl = `${proto}//${connectEndpoint.host}:${connectEndpoint.port}/koko`;
     this.generateIframeURL();
   }
 

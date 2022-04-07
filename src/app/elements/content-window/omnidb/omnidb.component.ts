@@ -23,7 +23,7 @@ export class ElementConnectorOmnidbComponent implements OnInit {
     this.node = node;
     this.sysUser = sysUser;
     this.protocol = protocol;
-    this.baseUrl = `${proto}://${connectEndpoint.host}:${connectEndpoint.port}/omnidb/jumpserver`;
+    this.baseUrl = `${proto}//${connectEndpoint.host}:${connectEndpoint.port}/omnidb/jumpserver`;
     this.generateIframeURL();
   }
 

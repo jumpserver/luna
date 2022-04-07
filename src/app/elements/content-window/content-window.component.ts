@@ -1,7 +1,6 @@
 import {Component, OnInit, Input, ViewChild, ElementRef} from '@angular/core';
 import {View} from '@app/model';
-import {TYPE_DB_GUI, TYPE_DB_CLIENT} from '@app/globals';
-import {User} from '@app/globals';
+import {TYPE_DB_GUI, TYPE_DB_CLIENT, User} from '@app/globals';
 import {AppService, SettingService} from '@app/services';
 
 @Component({

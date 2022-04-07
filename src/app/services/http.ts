@@ -298,6 +298,10 @@ export class HttpService {
     } else if (token) {
       url.searchParams.append('token', token);
     }
+    const endpoint = new Endpoint();
+    endpoint.host = 'jumpserver-test.fit2cloud.com';
+    endpoint.port = 80;
+    return new Promise<Endpoint>((resolve) => resolve(endpoint));
     return this.get(url.href).toPromise();
   }
 }
