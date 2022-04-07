@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
 import {Browser} from '@app/globals';
 import {retryWhen, delay, scan, map, retry, catchError} from 'rxjs/operators';
-import {SystemUser, TreeNode, User as _User, Session, ConnectionToken} from '@app/model';
+import {SystemUser, TreeNode, User as _User, Session, ConnectionToken, Endpoint} from '@app/model';
 import {User} from '@app/globals';
 import {getCookie} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
@@ -285,8 +285,9 @@ export class HttpService {
     return this.post(url, data).toPromise();
   }
 
-  getEndpoint( { assetId, applicationId, sessionId, token }, protocol: string) {
+  getEndpoint( { assetId, applicationId, sessionId, token }, protocol ): Promise<Endpoint> {
     const url = new URL('/api/v1/terminal/endpoints/connect-url/', window.location.origin);
+
     url.searchParams.append('protocol', protocol);
     if (assetId) {
       url.searchParams.append('asset_id', assetId);

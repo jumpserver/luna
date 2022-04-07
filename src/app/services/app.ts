@@ -2,7 +2,7 @@ import {Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
-import {DataStore, User, ProtocolConnectTypes, TYPE_RDP_CLIENT, TYPE_RDP_FILE, TYPE_DB_CLI} from '@app/globals';
+import {DataStore, User, ProtocolConnectTypes, TYPE_RDP_CLIENT, TYPE_RDP_FILE, TYPE_DB_CLIENT, TYPE_WEB_CLI} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
@@ -104,7 +104,7 @@ export class AppService {
         if ([TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1 && !xrdpEnabled) {
           return false;
         }
-        if (tp.id === TYPE_DB_CLI.id && !magnusEnabled) {
+        if (tp.id === TYPE_DB_CLIENT.id && !magnusEnabled) {
           return false;
         }
         return true;
@@ -315,8 +315,13 @@ export class AppService {
     });
   }
 
-  getOptimalEndpoint(view: View) {
-    const protocol = view.protocol;
+  getOptimalEndpoint(view: View): Promise<Endpoint> {
+    let protocol = view.connectType.protocol;
+    if (protocol === TYPE_DB_CLIENT.protocol) {
+      protocol = view.protocol;
+    } else if (protocol === TYPE_WEB_CLI.protocol) {
+      protocol = window.location.protocol.replace(':', '');
+    }
     const data = { 'assetId': '', 'applicationId': '', 'sessionId': '', 'token': '' };
     if (view.node.meta.type === 'application' && view.node.meta.data.category === 'remote_app') {
       data['applicationId'] = view.node.id;
@@ -324,11 +329,5 @@ export class AppService {
       data['assetId'] = view.node.id;
     }
     return this._http.getEndpoint(data, protocol);
-
-    // if (window.location.host === 'jumpserver-test.fit2cloud.com') {
-    //   return this.endpoints[0];
-    // } else {
-    //   return this.endpoints[1];
-    // }
   }
 }

@@ -1,6 +1,6 @@
 import {Component, OnInit, Input, ViewChild, ElementRef} from '@angular/core';
 import {Endpoint, View} from '@app/model';
-import {TYPE_DB_GUI, TYPE_DB_CLI} from '@app/globals';
+import {TYPE_DB_GUI, TYPE_DB_CLIENT} from '@app/globals';
 import {User} from '@app/globals';
 import {AppService, SettingService} from '@app/services';
 
@@ -40,7 +40,7 @@ export class ElementContentWindowComponent implements OnInit {
       case 'node':
         if (this.view.connectType.id === TYPE_DB_GUI.id) {
           this.connector = 'omnidb';
-        } else if (this.view.connectType.id === TYPE_DB_CLI.id) {
+        } else if (this.view.connectType.id === TYPE_DB_CLIENT.id) {
           this.connector = 'magnus';
         } else if (['rdp', 'vnc'].indexOf(this.view.protocol) > -1) {
           this.connector = 'lion';

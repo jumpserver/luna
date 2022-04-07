@@ -152,6 +152,7 @@ export class ConnectType {
   name: string;
   id: string;
   requireXPack: boolean;
+  protocol: string;
 }
 
 export class DataStore {
