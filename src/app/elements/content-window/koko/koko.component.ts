@@ -30,6 +30,7 @@ export class ElementConnectorKokoComponent implements OnInit {
     const proto = window.location.protocol;
     this.baseUrl = `${proto}//${connectEndpoint.host}:${connectEndpoint.port}/koko`;
     this.generateIframeURL();
+    console.log('>>>>>> iframe url', this.iframeURL);
   }
 
   generateIframeURL() {
