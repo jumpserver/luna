@@ -13,6 +13,7 @@ export class ElementContentWindowComponent implements OnInit {
   @Input() view: View;
   @ViewChild('contentWindow', {static: true}) windowRef: ElementRef;
   connector: string; // koko, omnidb, lion
+  loading = true;
   public id: string;
 
   constructor(private _settingSvc: SettingService,
@@ -24,6 +25,7 @@ export class ElementContentWindowComponent implements OnInit {
     this.computeConnector();
     this.createWaterMark();
     this.view.connectEndpoint = await this._appSvc.getOptimalEndpoint(this.view);
+    this.loading = false;
     console.log('>>>>>>>>>>>', this.view.connectEndpoint);
   }
 

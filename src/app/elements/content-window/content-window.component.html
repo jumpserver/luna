@@ -1,28 +1,30 @@
-<div *ngIf="connector"
-   [ngSwitch]="connector"
-   [id]="id"
-   #contentWindow
-   class="window"
-   [ngClass]="{'active':view.active}"
+<div
+  [ngSwitch]="connector"
+  [id]="id"
+  #contentWindow
+  class="window"
+  [ngClass]="{'active':view.active}"
 >
-  <elements-connector-lion
-    *ngSwitchCase="'lion'"
-    [view]="view"
-  >
-  </elements-connector-lion>
-  <elements-connector-omnidb
-    *ngSwitchCase="'omnidb'"
-    [view]="view"
-  >
-  </elements-connector-omnidb>
-  <elements-connector-magnus
-    *ngSwitchCase="'magnus'"
-    [view]="view"
-  >
-  </elements-connector-magnus>
-  <elements-connector-koko
-    *ngSwitchDefault
-    [view]="view"
-  >
-  </elements-connector-koko>
+  <div *ngIf="!loading">
+    <elements-connector-lion
+      *ngSwitchCase="'lion'"
+      [view]="view"
+    >
+    </elements-connector-lion>
+    <elements-connector-omnidb
+      *ngSwitchCase="'omnidb'"
+      [view]="view"
+    >
+    </elements-connector-omnidb>
+    <elements-connector-magnus
+      *ngSwitchCase="'magnus'"
+      [view]="view"
+    >
+    </elements-connector-magnus>
+    <elements-connector-koko
+      *ngSwitchDefault
+      [view]="view"
+    >
+    </elements-connector-koko>
+  </div>
 </div>
