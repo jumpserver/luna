@@ -331,16 +331,6 @@ export class Protocol  {
 }
 
 export class Endpoint {
-  id: string;
-  name: string;
   host: string;
-  protocols: Protocol[];
-
-  getProtocolPort(protocol: string) {
-    const matched = this.protocols.filter(item => item.name === protocol);
-    if (matched.length > 0) {
-      return matched[0].port;
-    }
-    return 0;
-  }
+  port: number;
 }

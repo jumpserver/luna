@@ -315,11 +315,20 @@ export class AppService {
     });
   }
 
-  getOptimalEndpoint(view: View, protocol: string) {
-    if (window.location.host === 'jumpserver-test.fit2cloud.com') {
-      return this.endpoints[0];
+  getOptimalEndpoint(view: View) {
+    const protocol = view.protocol;
+    const data = { 'assetId': '', 'applicationId': '', 'sessionId': '', 'token': '' };
+    if (view.node.meta.type === 'application' && view.node.meta.data.category === 'remote_app') {
+      data['applicationId'] = view.node.id;
     } else {
-      return this.endpoints[1];
+      data['assetId'] = view.node.id;
     }
+    return this._http.getEndpoint(data, protocol);
+
+    // if (window.location.host === 'jumpserver-test.fit2cloud.com') {
+    //   return this.endpoints[0];
+    // } else {
+    //   return this.endpoints[1];
+    // }
   }
 }

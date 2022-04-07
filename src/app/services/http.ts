@@ -284,4 +284,19 @@ export class HttpService {
     }
     return this.post(url, data).toPromise();
   }
+
+  getEndpoint( { assetId, applicationId, sessionId, token }, protocol: string) {
+    const url = new URL('/api/v1/terminal/endpoints/connect-url/', window.location.origin);
+    url.searchParams.append('protocol', protocol);
+    if (assetId) {
+      url.searchParams.append('asset_id', assetId);
+    } else if (applicationId) {
+      url.searchParams.append('application_id', applicationId);
+    } else if (sessionId) {
+      url.searchParams.append('session_id', sessionId);
+    } else if (token) {
+      url.searchParams.append('token', token);
+    }
+    return this.get(url.href).toPromise();
+  }
 }

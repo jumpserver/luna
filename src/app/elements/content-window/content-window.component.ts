@@ -19,11 +19,12 @@ export class ElementContentWindowComponent implements OnInit {
               private _appSvc: AppService
   ) {}
 
-  ngOnInit() {
+  async ngOnInit() {
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.computeConnector();
     this.createWaterMark();
-    this.view.connectEndpoint = this._appSvc.getOptimalEndpoint(this.view, this.connector);
+    this.view.connectEndpoint = await this._appSvc.getOptimalEndpoint(this.view);
+    console.log('>>>>>>>>>>>', this.view.connectEndpoint);
   }
 
   createWaterMark() {
