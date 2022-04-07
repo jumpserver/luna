@@ -223,10 +223,6 @@ export class GlobalSetting {
   HELP_SUPPORT_URL: string;
   XRDP_ENABLED: boolean;
   TERMINAL_MAGNUS_ENABLED: boolean;
-  TERMINAL_MAGNUS_HOST: string;
-  TERMINAL_MAGNUS_MYSQL_PORT: number;
-  TERMINAL_MAGNUS_MARIADB_PORT: number;
-  TERMINAL_MAGNUS_POSTGRE_PORT: number;
 }
 
 export class Setting {
