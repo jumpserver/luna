@@ -1,4 +1,10 @@
-<div [ngSwitch]="connector" [id]="id" #contentWindow class="window" [ngClass]="{'active':view.active}">
+<div *ngIf="connector"
+   [ngSwitch]="connector"
+   [id]="id"
+   #contentWindow
+   class="window"
+   [ngClass]="{'active':view.active}"
+>
   <elements-connector-lion
     *ngSwitchCase="'lion'"
     [view]="view"
