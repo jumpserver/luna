@@ -223,10 +223,6 @@ export class GlobalSetting {
   HELP_SUPPORT_URL: string;
   XRDP_ENABLED: boolean;
   TERMINAL_MAGNUS_ENABLED: boolean;
-  TERMINAL_MAGNUS_HOST: string;
-  TERMINAL_MAGNUS_MYSQL_PORT: number;
-  TERMINAL_MAGNUS_MARIADB_PORT: number;
-  TERMINAL_MAGNUS_POSTGRE_PORT: number;
 }
 
 export class Setting {
@@ -234,7 +230,7 @@ export class Setting {
   rdpFullScreen: number = 1;
   rdpDrivesRedirect: number = 0;
   fontSize: number = 14;
-  backspaceAsCrtlH: string = '0';
+  backspaceAsCtrlH: string = '0';
   isLoadTreeAsync: string = '1';
   isSkipAllManualPassword: string = '0';
   quickPaste = '0';
