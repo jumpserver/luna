@@ -289,14 +289,14 @@ export class HttpService {
     return this.post(url, data).toPromise();
   }
 
-  getEndpoint( { assetId, applicationId, sessionId, token }, protocol ): Promise<Endpoint> {
-    const url = new URL('/api/v1/terminal/endpoints/connect-url/', window.location.origin);
+  getSmartEndpoint( { assetId, appId, sessionId, token }, protocol ): Promise<Endpoint> {
+    const url = new URL('/api/v1/terminal/endpoints/smart/', window.location.origin);
 
     url.searchParams.append('protocol', protocol);
     if (assetId) {
       url.searchParams.append('asset_id', assetId);
-    } else if (applicationId) {
-      url.searchParams.append('application_id', applicationId);
+    } else if (appId) {
+      url.searchParams.append('app_id', appId);
     } else if (sessionId) {
       url.searchParams.append('session_id', sessionId);
     } else if (token) {

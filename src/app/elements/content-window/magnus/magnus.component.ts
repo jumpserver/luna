@@ -39,11 +39,11 @@ export class ElementConnectorMagnusComponent implements OnInit {
   }
 
   async ngOnInit() {
-    const {node, sysUser, protocol, connectEndpoint} = this.view;
+    const {node, sysUser, protocol, smartEndpoint} = this.view;
     this.node = node;
     this.sysUser = sysUser;
     this.protocol = protocol;
-    this.endpoint = connectEndpoint;
+    this.endpoint = smartEndpoint;
 
     const oriHost = this.node.meta.data.attrs.host;
     this.name = `${this.node.name}(${oriHost})`;
@@ -54,8 +54,8 @@ export class ElementConnectorMagnusComponent implements OnInit {
   }
 
   setDBInfo() {
-    const host = this.endpoint.host;
-    const port = this.endpoint.port;
+    const host = this.endpoint.smart_host;
+    const port = this.endpoint.smart_port;
     const database = this.node.meta.data.attrs.database;
     this.dbInfoItems = [
       {name: 'name', value: this.name, label: this._i18n.t('Name')},

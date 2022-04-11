@@ -18,12 +18,12 @@ export class ElementConnectorOmnidbComponent implements OnInit {
   }
 
   ngOnInit() {
-    const {node, protocol, sysUser, connectEndpoint} = this.view;
+    const {node, protocol, sysUser, smartEndpoint} = this.view;
     const proto = window.location.protocol;
     this.node = node;
     this.sysUser = sysUser;
     this.protocol = protocol;
-    this.baseUrl = `${proto}//${connectEndpoint.host}:${connectEndpoint.port}/omnidb/jumpserver`;
+    this.baseUrl = `${proto}//${smartEndpoint.smart_url}/omnidb/jumpserver`;
     this.generateIframeURL();
   }
 

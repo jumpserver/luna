@@ -120,7 +120,7 @@ export class View {
   connectType: ConnectType;
   termComp: any;
   connectOptions: ConnectOption[];
-  connectEndpoint: Endpoint;
+  smartEndpoint: Endpoint;
 
   constructor(node: TreeNode, user: SystemUser, connectFrom: string,
               type: string, protocol: string, connectOptions?: any
@@ -328,6 +328,7 @@ export class Protocol  {
 }
 
 export class Endpoint {
-  host: string;
-  port: number;
+  smart_host: string;
+  smart_port: number;
+  smart_url: string;
 }

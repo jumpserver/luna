@@ -2,6 +2,7 @@ import {Component, OnInit, Input, ViewChild, ElementRef} from '@angular/core';
 import {View} from '@app/model';
 import {TYPE_DB_GUI, TYPE_DB_CLIENT, User} from '@app/globals';
 import {AppService, SettingService} from '@app/services';
+import {ActivatedRoute} from '@angular/router';
 
 @Component({
   selector: 'elements-content-window',
@@ -16,16 +17,17 @@ export class ElementContentWindowComponent implements OnInit {
   public id: string;
 
   constructor(private _settingSvc: SettingService,
-              private _appSvc: AppService
+              private _appSvc: AppService,
+              private _route: ActivatedRoute
   ) {}
 
   async ngOnInit() {
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.computeConnector();
     this.createWaterMark();
-    this.view.connectEndpoint = await this._appSvc.getOptimalEndpoint(this.view);
+    this.view.smartEndpoint = await this._appSvc.getSmartEndpoint(this.view);
     this.loading = false;
-    console.log('>>>>>>>>>>>', this.view.connectEndpoint);
+    console.log('>>>>>>>>>>>', this.view.smartEndpoint);
   }
 
   createWaterMark() {

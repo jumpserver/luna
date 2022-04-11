@@ -315,19 +315,19 @@ export class AppService {
     });
   }
 
-  getOptimalEndpoint(view: View): Promise<Endpoint> {
+  getSmartEndpoint(view: View): Promise<Endpoint> {
     let protocol = view.connectType.protocol;
     if (protocol === TYPE_DB_CLIENT.protocol) {
       protocol = view.protocol;
     } else if (protocol === TYPE_WEB_CLI.protocol) {
       protocol = window.location.protocol.replace(':', '');
     }
-    const data = { 'assetId': '', 'applicationId': '', 'sessionId': '', 'token': '' };
-    if (view.node.meta.type === 'application' && view.node.meta.data.category === 'remote_app') {
-      data['applicationId'] = view.node.id;
+    const data = { 'assetId': '', 'appId': '', 'sessionId': '', 'token': this.getQueryString('token') };
+    if (view.node.meta.type === 'application') {
+      data['appId'] = view.node.id;
     } else {
       data['assetId'] = view.node.id;
     }
-    return this._http.getEndpoint(data, protocol);
+    return this._http.getSmartEndpoint(data, protocol);
   }
 }

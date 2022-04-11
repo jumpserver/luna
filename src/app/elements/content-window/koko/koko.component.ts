@@ -17,18 +17,18 @@ export class ElementConnectorKokoComponent implements OnInit {
   sysUser: SystemUser;
   protocol: string;
   baseUrl: string;
-  connectEndpoint: Endpoint;
+  smartEndpoint: Endpoint;
 
   constructor(private _logger: LogService) {
   }
 
   ngOnInit() {
-    const {node, sysUser, protocol, connectEndpoint} = this.view;
+    const {node, sysUser, protocol, smartEndpoint} = this.view;
     this.node = node;
     this.sysUser = sysUser;
     this.protocol = protocol;
     const proto = window.location.protocol;
-    this.baseUrl = `${proto}//${connectEndpoint.host}:${connectEndpoint.port}/koko`;
+    this.baseUrl = `${proto}//${smartEndpoint.smart_url}/koko`;
     this.generateIframeURL();
     console.log('>>>>>> iframe url', this.iframeURL);
   }
