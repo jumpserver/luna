@@ -322,8 +322,10 @@ export class AppService {
     } else if (protocol === TYPE_WEB_CLI.protocol) {
       protocol = window.location.protocol.replace(':', '');
     }
-    const data = { 'assetId': '', 'appId': '', 'sessionId': '', 'token': this.getQueryString('token') };
-    if (view.node.meta.type === 'application') {
+    const data = { 'assetId': '', 'appId': '', 'sessionId': '', 'token': '' };
+    if (view.token) {
+      data['token'] = view.token;
+    } else if (view.node.meta.type === 'application') {
       data['appId'] = view.node.id;
     } else {
       data['assetId'] = view.node.id;

@@ -134,7 +134,7 @@ export class View {
     this.connectFrom = connectFrom;
     this.type = type;
     this.protocol = protocol;
-    this.connectOptions = connectOptions;
+    this.connectOptions = connectOptions || [];
   }
 }
 

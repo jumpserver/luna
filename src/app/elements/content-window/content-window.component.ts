@@ -27,7 +27,6 @@ export class ElementContentWindowComponent implements OnInit {
     this.createWaterMark();
     this.view.smartEndpoint = await this._appSvc.getSmartEndpoint(this.view);
     this.loading = false;
-    console.log('>>>>>>>>>>>', this.view.smartEndpoint);
   }
 
   createWaterMark() {
