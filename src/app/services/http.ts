@@ -18,21 +18,27 @@ export class HttpService {
 
   setOptionsCSRFToken(options) {
     const csrfToken = getCookie('csrftoken');
-    let headers;
-    if (!options) {
-      options = {};
-    }
-    if (!options.headers) {
-      headers = new HttpHeaders();
-    } else {
-      headers = options.headers;
-    }
+    if (!options) { options = {}; }
+    let headers = options.headers || new HttpHeaders();
     headers = headers.set('X-CSRFToken', csrfToken);
     options.headers = headers;
     return options;
   }
 
+  setOptionsRootOrgIfNeed(url, options) {
+    if (!options) { options = {}; }
+    let headers = options.headers || new HttpHeaders();
+    const rootOrgUrls = ['/api/v1/perms', '/api/v1/assets/favorite-assets/'];
+    const toRootOrg = rootOrgUrls.some((i) => url.indexOf(i) > -1);
+    if (toRootOrg) {
+      headers = headers.set('X-JMS-ORG', 'ROOT');
+    }
+    options.headers = headers;
+    return options;
+  }
+
   get<T>(url: string, options?: any): Observable<any> {
+    options = this.setOptionsRootOrgIfNeed(url, options);
     return this.http.get(url, options).pipe(
       catchError(this.handleError.bind(this))
     );
@@ -115,7 +121,6 @@ export class HttpService {
   }
 
   getMyGrantedNodes(async: boolean, refresh?: boolean) {
-    const cachePolicy = refresh ? `2&rebuild_tree=1` : '1';
     const syncUrl = `/api/v1/perms/users/nodes-with-assets/tree/`;
     const asyncUrl = `/api/v1/perms/users/nodes/children-with-assets/tree/`;
     const url = async ? asyncUrl : syncUrl;
@@ -158,15 +163,14 @@ export class HttpService {
 
   favoriteAsset(assetId: string, favorite: boolean) {
     let url: string;
+    url = `/api/v1/assets/favorite-assets/`;
     if (favorite) {
-      url = `/api/v1/assets/favorite-assets/`;
       const data = {
         asset: assetId
       };
       return this.post(url, data);
     } else {
-      url = `/api/v1/assets/favorite-assets/?asset=${assetId}`;
-      return this.delete(url);
+      return this.delete(`${url}&asset=${assetId}`);
     }
   }
 
