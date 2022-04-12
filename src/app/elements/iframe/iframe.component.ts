@@ -21,7 +21,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    this.onIframeLoadDone();
+    // this.onIframeLoadDone();
   }
 
   setActive() {

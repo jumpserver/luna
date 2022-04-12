@@ -22,8 +22,7 @@ export class ElementConnectorLionComponent implements OnInit {
 
   ngOnInit() {
     const {node, protocol, sysUser, smartEndpoint} = this.view;
-    const proto = window.location.protocol;
-    this.baseUrl = `${proto}//${smartEndpoint.smart_url}`;
+    this.baseUrl = smartEndpoint.getUrl();
     this.node = node;
     this.sysUser = sysUser;
     this.protocol = protocol;

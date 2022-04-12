@@ -302,6 +302,6 @@ export class HttpService {
     } else if (token) {
       url.searchParams.append('token', token);
     }
-    return this.get(url.href).toPromise();
+    return this.get(url.href).pipe(map(res => Object.assign(new Endpoint(), res))).toPromise();
   }
 }

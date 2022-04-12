@@ -27,8 +27,8 @@ export class ElementConnectorKokoComponent implements OnInit {
     this.node = node;
     this.sysUser = sysUser;
     this.protocol = protocol;
-    const proto = window.location.protocol;
-    this.baseUrl = `${proto}//${smartEndpoint.smart_url}/koko`;
+    const url = smartEndpoint.getUrl();
+    this.baseUrl = `${url}/koko`;
     this.generateIframeURL();
     console.log('Iframe URL: ', this.iframeURL);
   }

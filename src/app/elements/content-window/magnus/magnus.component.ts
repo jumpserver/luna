@@ -54,8 +54,8 @@ export class ElementConnectorMagnusComponent implements OnInit {
   }
 
   setDBInfo() {
-    const host = this.endpoint.smart_host;
-    const port = this.endpoint.smart_port;
+    const host = this.endpoint.getHost();
+    const port = this.endpoint.getPort(this.protocol);
     const database = this.node.meta.data.attrs.database;
     this.dbInfoItems = [
       {name: 'name', value: this.name, label: this._i18n.t('Name')},

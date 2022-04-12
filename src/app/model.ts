@@ -328,7 +328,33 @@ export class Protocol  {
 }
 
 export class Endpoint {
-  smart_host: string;
-  smart_port: number;
-  smart_url: string;
+  host: string;
+  https_port: number;
+  http_port: number;
+  mysql_port: number;
+  mariadb_port: number;
+  postgresql_port: number;
+
+  getHost(): string {
+    return this.host || window.location.host;
+  }
+
+  getPort(protocol?: string): string {
+    const _protocol = protocol || window.location.protocol;
+    let port = this[_protocol.replace(':', '') + '_port'];
+    if (['http', 'https'].indexOf(_protocol) !== -1 && port === 0) {
+      port = window.location.port;
+    }
+    return port;
+  }
+
+  getUrl(): string {
+    const proto = window.location.protocol;
+    let endpoint = this.getHost();
+    const port = this.getPort();
+    if (port) {
+      endpoint = `${endpoint}:${port}`;
+    }
+    return `${proto}//${endpoint}`;
+  }
 }
