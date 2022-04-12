@@ -37,11 +37,12 @@ export class PagesMonitorComponent implements OnInit {
     const protocol = window.location.protocol.replace(':', '');
     const data = { 'assetId': '', 'appId': '', 'sessionId': this.sessionID, 'token': ''};
     const smartEndpoint = await this._http.getSmartEndpoint(data, protocol);
-    const endpointUrl = smartEndpoint.smart_url;
+    const proto = window.location.protocol;
+    const baseUrl = `${proto}//${smartEndpoint.smart_url}`;
     if (['rdp', 'vnc'].indexOf(this.sessionDetail.protocol) > -1) {
-      this.iframeURL = `${endpointUrl}/lion/monitor/?session=${this.sessionID}`;
+      this.iframeURL = `${baseUrl}/lion/monitor/?session=${this.sessionID}`;
     } else {
-      this.iframeURL = `${endpointUrl}/koko/monitor/${this.sessionID}/`;
+      this.iframeURL = `${baseUrl}/koko/monitor/${this.sessionID}/`;
     }
   }
 }
