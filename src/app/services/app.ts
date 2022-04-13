@@ -2,11 +2,11 @@ import {Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
-import {DataStore, User, ProtocolConnectTypes, TYPE_RDP_CLIENT, TYPE_RDP_FILE, TYPE_DB_CLI} from '@app/globals';
+import {DataStore, User, ProtocolConnectTypes, TYPE_RDP_CLIENT, TYPE_RDP_FILE, TYPE_DB_CLIENT, TYPE_WEB_CLI} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
-import {AuthInfo, ConnectData, TreeNode} from '@app/model';
+import {AuthInfo, ConnectData, SystemUser, TreeNode, Endpoint, Protocol, View} from '@app/model';
 import * as CryptoJS from 'crypto-js';
 
 declare function unescape(s: string): string;
@@ -19,6 +19,7 @@ export class AppService {
   private assetPreferSystemUser: object = {};
   private protocolPreferKey = 'ProtocolPreferLoginType';
   private systemUserPreferKey = 'PreferSystemUser';
+  private endpoints: Endpoint[] = [];
 
   constructor(private _http: HttpService,
               private _router: Router,
@@ -30,6 +31,7 @@ export class AppService {
     this.checkLogin();
     this.loadPreferData();
     this.loadOriManualAuthInfo();
+    this.loadEndpoints();
   }
 
   setLogLevel() {
@@ -102,8 +104,8 @@ export class AppService {
         if ([TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1 && !xrdpEnabled) {
           return false;
         }
-        if (tp.id === TYPE_DB_CLI.id && !magnusEnabled) {
-          return false
+        if (tp.id === TYPE_DB_CLIENT.id && !magnusEnabled) {
+          return false;
         }
         return true;
       });
@@ -267,5 +269,67 @@ export class AppService {
     auths = auths.filter((item) => item.username !== newAuth.username);
     auths.splice(0, 0, newAuth);
     this._localStorage.set(localKey, auths);
+  }
+
+  loadEndpoints() {
+    const fakeEndpoints = [
+      {
+        id: 'yy',
+        name: 'YY',
+        host: 'yy.fit2cloud.com',
+        protocols: [
+          {
+            name: 'ssh',
+            port: 2222
+          },
+          {
+            name: 'rdp',
+            port: 3389
+          }
+        ]
+      },
+      {
+        id: 'Test',
+        name: 'JumpServer-Test',
+        host: 'jumpserver-test.fit2cloud.com',
+        protocols: [
+          {
+            name: 'ssh',
+            port: 2222
+          },
+          {
+            name: 'rdp',
+            port: 3389
+          },
+          {
+            name: 'mysql',
+            port: 33060
+          }
+        ]
+      }
+    ];
+    fakeEndpoints.forEach(item => {
+      let endpoint = new Endpoint();
+      endpoint = Object.assign(endpoint, item);
+      this.endpoints.push(endpoint);
+    });
+  }
+
+  getSmartEndpoint(view: View): Promise<Endpoint> {
+    let protocol = view.connectType.protocol;
+    if (protocol === TYPE_DB_CLIENT.protocol) {
+      protocol = view.protocol;
+    } else if (protocol === TYPE_WEB_CLI.protocol) {
+      protocol = window.location.protocol.replace(':', '');
+    }
+    const data = { 'assetId': '', 'appId': '', 'sessionId': '', 'token': '' };
+    if (view.token) {
+      data['token'] = view.token;
+    } else if (view.node.meta.type === 'application') {
+      data['appId'] = view.node.id;
+    } else {
+      data['assetId'] = view.node.id;
+    }
+    return this._http.getSmartEndpoint(data, protocol);
   }
 }

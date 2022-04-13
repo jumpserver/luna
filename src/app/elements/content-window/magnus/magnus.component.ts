@@ -1,5 +1,5 @@
 import {Component, Input, OnInit} from '@angular/core';
-import {View, SystemUser, TreeNode, ConnectionTokenParam} from '@app/model';
+import {View, SystemUser, TreeNode, ConnectionTokenParam, Endpoint} from '@app/model';
 import {HttpService, I18nService, SettingService} from '@app/services';
 import {User} from '@app/globals';
 import {ToastrService} from 'ngx-toastr';
@@ -11,17 +11,18 @@ interface InfoItem {
 }
 
 @Component({
-  selector: 'elements-connector-static',
-  templateUrl: './static.component.html',
-  styleUrls: ['./static.component.scss']
+  selector: 'elements-connector-magnus',
+  templateUrl: './magnus.component.html',
+  styleUrls: ['./magnus.component.scss']
 })
 
-export class ElementConnectorStaticComponent implements OnInit {
+export class ElementConnectorMagnusComponent implements OnInit {
   @Input() view: View;
 
   node: TreeNode;
   sysUser: SystemUser;
   protocol: string;
+  endpoint: Endpoint;
   name: string;
   cli: string;
   cliSafe: string;
@@ -42,43 +43,34 @@ export class ElementConnectorStaticComponent implements OnInit {
     this.globalSetting = this._settingSvc.globalSetting;
   }
 
-  ngOnInit() {
-    this.init();
-  }
-
-  async init() {
-    const {node, sysUser, protocol} = this.view;
+  async ngOnInit() {
+    const {node, sysUser, protocol, smartEndpoint} = this.view;
     this.node = node;
     this.sysUser = sysUser;
     this.protocol = protocol;
-    this.protocolPorts = {
-      mysql: this.globalSetting.TERMINAL_MAGNUS_MYSQL_PORT,
-      postgresql: this.globalSetting.TERMINAL_MAGNUS_POSTGRE_PORT,
-      mariadb: this.globalSetting.TERMINAL_MAGNUS_MARIADB_PORT
-    };
-    const currentNodeData = node.meta.data || {}
-    const oriHost = currentNodeData.attrs ? currentNodeData.attrs.host : node.meta.data.ip;
-    this.name = `${node.name}(${oriHost})`;
+    this.endpoint = smartEndpoint;
 
+    const oriHost = this.node.meta.data.attrs.host;
+    this.name = `${this.node.name}(${oriHost})`;
     const param: ConnectionTokenParam = {
       system_user: sysUser.id,
-      ...({application: node.id}) 
-    }
+      ...({application: node.id})
+    };
     this.token = await this._http.getConnectionToken(param);
-    this.setInfo();
+    this.setDBInfo();
     this.generateConnCli();
     this.loading = false;
   }
 
-  setInfo() {
-    const host = this.globalSetting.TERMINAL_MAGNUS_HOST;
-    const port = this.protocolPorts[this.protocol];
+  setDBInfo() {
+    const host = this.endpoint.getHost();
+    const port = this.endpoint.getPort(this.protocol);
     const attrs = this.node.meta.data.attrs || {};
     const database = attrs.database || '';
     this.infoItems = [
       {name: 'name', value: this.name, label: this._i18n.t('Name')},
       {name: 'host', value: host, label: this._i18n.t('Host')},
-      {name: 'port', value: port,  label: this._i18n.t('Port')},
+      {name: 'port', value: port, label: this._i18n.t('Port')},
       {name: 'username', value: this.token.id, label: this._i18n.t('Username')},
       {name: 'password', value: this.token.secret,  label: this._i18n.t('Password')},
       {name: 'database', value: database, label: this._i18n.t('Database')},
