@@ -31,7 +31,6 @@ export class AppService {
     this.checkLogin();
     this.loadPreferData();
     this.loadOriManualAuthInfo();
-    this.loadEndpoints();
   }
 
   setLogLevel() {
@@ -269,50 +268,6 @@ export class AppService {
     auths = auths.filter((item) => item.username !== newAuth.username);
     auths.splice(0, 0, newAuth);
     this._localStorage.set(localKey, auths);
-  }
-
-  loadEndpoints() {
-    const fakeEndpoints = [
-      {
-        id: 'yy',
-        name: 'YY',
-        host: 'yy.fit2cloud.com',
-        protocols: [
-          {
-            name: 'ssh',
-            port: 2222
-          },
-          {
-            name: 'rdp',
-            port: 3389
-          }
-        ]
-      },
-      {
-        id: 'Test',
-        name: 'JumpServer-Test',
-        host: 'jumpserver-test.fit2cloud.com',
-        protocols: [
-          {
-            name: 'ssh',
-            port: 2222
-          },
-          {
-            name: 'rdp',
-            port: 3389
-          },
-          {
-            name: 'mysql',
-            port: 33060
-          }
-        ]
-      }
-    ];
-    fakeEndpoints.forEach(item => {
-      let endpoint = new Endpoint();
-      endpoint = Object.assign(endpoint, item);
-      this.endpoints.push(endpoint);
-    });
   }
 
   getSmartEndpoint(view: View): Promise<Endpoint> {
