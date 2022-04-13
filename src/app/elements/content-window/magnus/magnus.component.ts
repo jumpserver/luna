@@ -1,6 +1,6 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {View, SystemUser, TreeNode, ConnectionTokenParam, Endpoint} from '@app/model';
-import {HttpService, I18nService, LogService, SettingService} from '@app/services';
+import {HttpService, I18nService, SettingService} from '@app/services';
 import {User} from '@app/globals';
 import {ToastrService} from 'ngx-toastr';
 
@@ -11,12 +11,12 @@ interface InfoItem {
 }
 
 @Component({
-  selector: 'elements-connector-static',
-  templateUrl: './static.component.html',
-  styleUrls: ['./static.component.scss']
+  selector: 'elements-connector-magnus',
+  templateUrl: './magnus.component.html',
+  styleUrls: ['./magnus.component.scss']
 })
 
-export class ElementConnectorStaticComponent implements OnInit {
+export class ElementConnectorMagnusComponent implements OnInit {
   @Input() view: View;
 
   node: TreeNode;
