@@ -76,7 +76,8 @@ export const TYPE_RDP_FILE: ConnectType = {
 export const TYPE_SSH_CLIENT: ConnectType = {
   name: 'SSH Client',
   id: 'sshClient',
-  requireXPack: true
+  requireXPack: true,
+  protocol: 'ssh'
 };
 
 export const ProtocolConnectTypes = {
