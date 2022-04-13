@@ -5,6 +5,7 @@ import {ElementContentWindowComponent} from './content-window/content-window.com
 import {ElementContentTabComponent} from './content-tab/content-tab.component';
 import {ElementAssetTreeComponent, DisabledAssetsDialogComponent} from './asset-tree/asset-tree.component';
 import {ElementTreeFilterComponent} from './tree-filter/tree-filter.component';
+import {ElementOrganizationComponent} from './organization/organization.component';
 import {ElementTermComponent} from './term/term.component';
 import {ChangLanWarningDialogComponent, ElementNavComponent} from './nav/nav.component';
 import {ElementIframeComponent} from './iframe/iframe.component';
@@ -31,6 +32,7 @@ export const ElementComponents = [
   ElementContentWindowComponent,
   ElementConnectComponent,
   ElementTreeFilterComponent,
+  ElementOrganizationComponent,
   ElementTermComponent,
   ElementNavComponent,
   ElementIframeComponent,

@@ -1,0 +1,20 @@
+.organization {
+  height: 30px;
+  line-height: 25px;
+  padding: 2px 6px;
+  background-color: #1F1B1B;
+  border-bottom: 1px solid #19aa8d;
+  &::ng-deep .mat-select-value {
+    color: #f0f0f1;
+  }
+  &::ng-deep .mat-select-arrow {
+    color: #f0f0f1;
+  }
+  &::ng-deep .ng-star-inserted {
+    font-size: 14px;
+  }
+}
+.org-option {
+  line-height: 2.2em!important;
+  height: 2.2em!important;
+}
