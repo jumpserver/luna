@@ -4,14 +4,16 @@
   /*border: none;*/
 /*}*/
 .search {
-  border: none;
+  border: 1px solid #676a6c;
+  border-radius: 14px;
   border-left-width: 0;
-  border-bottom: #19aa8d 1px inset;
+  /* border-bottom: #19aa8d 1px inset; */
   width: 100%;
-  background: #2f2a2a;
+  background: #3a3333;
   color: #d6cbcb;
   height: 30px;
   padding-left: 10px;
+  margin-top: 6px;
 /* padding-top: 30px;
 //position: fixed;
 //height: 28px;
