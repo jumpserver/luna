@@ -33,7 +33,6 @@ export class ElementNavComponent implements OnInit {
   ngOnInit() {
     this.navs = this.getNav();
     this.viewList = this._viewSrv.viewList;
-    this.setHelpUrl();
   }
 
   click(event) {
@@ -97,10 +96,12 @@ export class ElementNavComponent implements OnInit {
         break;
       }
       case 'Document': {
+        this.HELP_DOCUMENT_URL = this._settingSvc.globalSetting.HELP_DOCUMENT_URL;
         window.open(this.HELP_DOCUMENT_URL);
         break;
       }
       case 'Support': {
+        this.HELP_SUPPORT_URL = this._settingSvc.globalSetting.HELP_SUPPORT_URL;
         window.open(this.HELP_SUPPORT_URL);
         break;
       }
@@ -110,6 +111,10 @@ export class ElementNavComponent implements OnInit {
       }
       case 'Chinese': {
         this._i18n.use('zh');
+        break;
+      }
+      case 'Japanese': {
+        this._i18n.use('ja');
         break;
       }
       case 'DownLoad': {
@@ -193,6 +198,11 @@ export class ElementNavComponent implements OnInit {
           id: 'Chinese',
           click: 'Chinese',
           name: '中文'
+        },
+        {
+          id: 'Japanese',
+          click: 'Japanese',
+          name: '日本語'
         }
       ]
     },
@@ -238,10 +248,6 @@ export class ElementNavComponent implements OnInit {
         height: 'auto',
         width: '500px',
       });
-  }
-  setHelpUrl() {
-      this.HELP_DOCUMENT_URL = this._settingSvc.globalSetting.HELP_DOCUMENT_URL;
-      this.HELP_SUPPORT_URL = this._settingSvc.globalSetting.HELP_SUPPORT_URL;
   }
 }
 

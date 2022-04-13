@@ -5,6 +5,7 @@ import {ElementContentWindowComponent} from './content-window/content-window.com
 import {ElementContentTabComponent} from './content-tab/content-tab.component';
 import {ElementAssetTreeComponent, DisabledAssetsDialogComponent} from './asset-tree/asset-tree.component';
 import {ElementTreeFilterComponent} from './tree-filter/tree-filter.component';
+import {ElementOrganizationComponent} from './organization/organization.component';
 import {ElementTermComponent} from './term/term.component';
 import {ChangLanWarningDialogComponent, ElementNavComponent} from './nav/nav.component';
 import {ElementIframeComponent} from './iframe/iframe.component';
@@ -21,6 +22,7 @@ import {ElementConnectorOmnidbComponent} from './content-window/omnidb/omnidb.co
 import {ElementManualAuthComponent} from './connect/connect-dialog/manual-auth/manual-auth.component';
 import {ElementSelectSystemUserComponent} from './connect/connect-dialog/select-system-user/select-system-user.component';
 import {ElementReplayAsciicastComponent} from '@app/elements/replay/asciicast/asciicast.component';
+import {ElementAdvancedOptionComponent} from './connect/connect-dialog/advanced-option/advanced-option.component';
 
 
 export const ElementComponents = [
@@ -30,6 +32,7 @@ export const ElementComponents = [
   ElementContentWindowComponent,
   ElementConnectComponent,
   ElementTreeFilterComponent,
+  ElementOrganizationComponent,
   ElementTermComponent,
   ElementNavComponent,
   ElementIframeComponent,
@@ -48,5 +51,6 @@ export const ElementComponents = [
   ElementManualAuthComponent,
   ElementConnectorOmnidbComponent,
   ElementSelectSystemUserComponent,
-  ElementReplayAsciicastComponent
+  ElementReplayAsciicastComponent,
+  ElementAdvancedOptionComponent
 ];

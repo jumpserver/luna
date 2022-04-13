@@ -116,15 +116,15 @@ export class View {
   closed: boolean;
   node: TreeNode;
   sysUser: SystemUser;
-  // remoteApp: string;
-  // room: string;
-  // Rdp: any;
-  // Term: any;
   token: string;
   connectType: ConnectType;
   termComp: any;
+  connectOptions: ConnectOption[];
+  smartEndpoint: Endpoint;
 
-  constructor(node: TreeNode, user: SystemUser, connectFrom: string, type: string, protocol: string) {
+  constructor(node: TreeNode, user: SystemUser, connectFrom: string,
+              type: string, protocol: string, connectOptions?: any
+  ) {
     this.connected = true;
     this.editable = false;
     this.closed = false;
@@ -134,6 +134,7 @@ export class View {
     this.connectFrom = connectFrom;
     this.type = type;
     this.protocol = protocol;
+    this.connectOptions = connectOptions || [];
   }
 }
 
@@ -151,6 +152,7 @@ export class ConnectType {
   name: string;
   id: string;
   requireXPack: boolean;
+  protocol: string;
 }
 
 export class DataStore {
@@ -217,9 +219,10 @@ export class GlobalSetting {
   SECURITY_COMMAND_EXECUTION: boolean;
   SECURITY_LUNA_REMEMBER_AUTH: boolean;
   SECURITY_WATERMARK_ENABLED: boolean;
-  XRDP_ENABLED: boolean;
   HELP_DOCUMENT_URL: string;
   HELP_SUPPORT_URL: string;
+  XRDP_ENABLED: boolean;
+  TERMINAL_MAGNUS_ENABLED: boolean;
 }
 
 export class Setting {
@@ -227,7 +230,7 @@ export class Setting {
   rdpFullScreen: number = 1;
   rdpDrivesRedirect: number = 0;
   fontSize: number = 14;
-  backspaceAsCrtlH: string = '0';
+  backspaceAsCtrlH: string = '0';
   isLoadTreeAsync: string = '1';
   isSkipAllManualPassword: string = '0';
   quickPaste = '0';
@@ -293,11 +296,22 @@ export class AuthInfo {
   password: string;
 }
 
+export class ConnectOption {
+  type: 'checkbox' | 'radio';
+  field: string;
+  hidden: Function;
+  label: string;
+  value: string | boolean | number;
+  options?: any[];
+}
+
+
 export class ConnectData {
   node: TreeNode;
   systemUser: SystemUser;
   manualAuthInfo: AuthInfo;
   connectType: ConnectType;
+  connectOptions: ConnectOption[];
 }
 
 export class ConnectionToken {
@@ -305,4 +319,47 @@ export class ConnectionToken {
   secret: string;
   type: string;
   protocol: string;
+}
+
+export interface ConnectionTokenParam {
+  system_user: string;
+  asset?: string;
+  application?: string;
+}
+
+export class Protocol  {
+  name: string;
+  port: number;
+}
+
+export class Endpoint {
+  host: string;
+  https_port: number;
+  http_port: number;
+  mysql_port: number;
+  mariadb_port: number;
+  postgresql_port: number;
+
+  getHost(): string {
+    return this.host || window.location.host;
+  }
+
+  getPort(protocol?: string): string {
+    const _protocol = protocol || window.location.protocol;
+    let port = this[_protocol.replace(':', '') + '_port'];
+    if (['http', 'https'].indexOf(_protocol) !== -1 && port === 0) {
+      port = window.location.port;
+    }
+    return port;
+  }
+
+  getUrl(): string {
+    const proto = window.location.protocol;
+    let endpoint = this.getHost();
+    const port = this.getPort();
+    if (port) {
+      endpoint = `${endpoint}:${port}`;
+    }
+    return `${proto}//${endpoint}`;
+  }
 }

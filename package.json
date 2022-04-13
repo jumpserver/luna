@@ -4,7 +4,7 @@
   "license": "GPLv3",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --proxy-config proxy.conf.json --host 0.0.0.0 --disable-host-check",
+    "start": "ng serve --proxy-config proxy.conf.json --host 0.0.0.0 --base-href=/luna/ --disable-host-check",
     "build": "ng build --prod --base-href=/luna/ --output-path 'luna'",
     "extract": "ngx-translate-extract --input ./src --output ./src/assets/i18n/*.json  --sort --format namespaced-json",
     "test": "ng test",
@@ -69,6 +69,7 @@
     "material-design-icons": "^3.0.1",
     "metismenu": "^2.7.9",
     "neffos.js": "^0.1.19",
+    "ngx-clipboard": "^12.2.1",
     "ngx-cookie-service": "^2.3.0",
     "ngx-infinite-scroll": "^10.0.1",
     "ngx-logger": "4.0.4",

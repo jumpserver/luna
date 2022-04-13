@@ -9,6 +9,7 @@ elements-term, elements-guacamole {
 .window {
   display: none;
   height: 100%;
+  width: 100%;
   /*padding: 15px;*/
 }
 
