@@ -73,8 +73,14 @@ export const TYPE_RDP_FILE: ConnectType = {
   protocol: 'rdp'
 };
 
+export const TYPE_SSH_CLIENT: ConnectType = {
+  name: 'SSH Client',
+  id: 'sshClient',
+  requireXPack: true
+};
+
 export const ProtocolConnectTypes = {
-  ssh: [TYPE_WEB_CLI],
+  ssh: [TYPE_WEB_CLI, TYPE_SSH_CLIENT],
   rdp: [TYPE_WEB_GUI, TYPE_RDP_CLIENT, TYPE_RDP_FILE],
   vnc: [TYPE_WEB_GUI],
   telnet: [TYPE_WEB_CLI],

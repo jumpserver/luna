@@ -1,0 +1,100 @@
+iframe {
+  border-width: 0;
+}
+
+.title {
+  max-width: 180px;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.subject {
+  margin-top: 20px
+}
+
+.content {
+  padding: 50px 100px;
+  background: #191818;
+  color: #c9d1d9;
+  height: 100%;
+  table {
+    border-spacing: 0;
+    border-collapse: collapse;
+    font-size: 14px;
+    td {
+      padding: 7px 13px;
+      border: 1px solid #30363d;
+    }
+    .text-td {
+      position: relative;
+      padding-right: 35px;
+      word-wrap: break-word;
+      white-space: normal;
+      word-break: break-all;
+      cursor: pointer;
+    }
+    tr:nth-child(2n) {
+      background-color: #212325;
+    }
+  }
+  .command {
+    position: relative;
+    background: #212325;
+    padding: 10px 20px;
+    border-radius: 6px;
+    pre {
+      font-size: 12px;
+      word-wrap: break-word;
+      white-space: normal;
+      word-break: break-all;
+      margin: 5px 100px 5px 0;
+      color: white;
+    }
+    .btn {
+      padding: 8px 10px;
+      top: 6px;
+      right: 8px;
+      &:hover {
+        border-color: #8b949e;
+        background: #30363d;
+      }
+    }
+    .start.btn {
+      right: 50px;
+    }
+  }
+  .btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    font-size: 13px;
+    border: 1px solid rgba(240, 246, 252, 0.1);
+    border-radius: 5px;
+    padding: 8px;
+    display: inline-block;
+    cursor: pointer;
+    color: #cec6c6;
+    &:hover .fa.icon {
+      color: white;
+    }
+    .fa.icon {
+      width: 15px;
+      height: 15px;
+      color: #cec6c6;
+      font-size: 13px;
+    }
+  }
+  td .btn {
+    border: none;
+    display: none;
+    &:hover .btn {
+      display: block;
+    }
+  }
+}
+
+.show-password {
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+}

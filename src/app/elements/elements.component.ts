@@ -15,7 +15,7 @@ import {ElementSettingComponent} from './setting/setting.component';
 import {ElementReplayGuacamoleComponent} from './replay/guacamole/guacamole.component';
 import {ElementReplayJsonComponent} from './replay/json/json.component';
 import {ElementConnectorKokoComponent} from './content-window/koko/koko.component';
-import {ElementConnectorMagnusComponent} from './content-window/magnus/magnus.component';
+import {ElementConnectorStaticComponent} from './content-window/static/static.component';
 import {ElementConnectorLionComponent} from './content-window/lion/lion.component';
 import {ElementConnectorOmnidbComponent} from './content-window/omnidb/omnidb.component';
 import {ElementManualAuthComponent} from './connect/connect-dialog/manual-auth/manual-auth.component';
@@ -38,7 +38,7 @@ export const ElementComponents = [
   ElementConnectorLionComponent,
   ElementAssetTreeComponent,
   ElementConnectorKokoComponent,
-  ElementConnectorMagnusComponent,
+  ElementConnectorStaticComponent,
   ElementConnectComponent,
   ElementReplayGuacamoleComponent,
   ElementReplayJsonComponent,

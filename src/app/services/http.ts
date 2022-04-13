@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
 import {Browser} from '@app/globals';
 import {retryWhen, delay, scan, map, retry, catchError} from 'rxjs/operators';
-import {SystemUser, TreeNode, User as _User, Session, ConnectionToken, Endpoint} from '@app/model';
+import {SystemUser, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam, Endpoint} from '@app/model';
 import {User} from '@app/globals';
 import {getCookie} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
@@ -276,17 +276,9 @@ export class HttpService {
     return this.post(url, data).toPromise();
   }
 
-  getConnectionToken(systemUserId: string, assetId: string, appId): Promise<ConnectionToken> {
+  getConnectionToken(param: ConnectionTokenParam): Promise<ConnectionToken> {
     const url = '/api/v1/authentication/connection-token/';
-    const data = {
-      'system_user': systemUserId,
-    };
-    if (assetId) {
-      data['asset'] = assetId;
-    } else {
-      data['application'] = appId;
-    }
-    return this.post(url, data).toPromise();
+    return this.post(url, param).toPromise();
   }
 
   getSmartEndpoint( { assetId, appId, sessionId, token }, protocol ): Promise<Endpoint> {
