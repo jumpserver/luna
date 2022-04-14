@@ -1,0 +1,89 @@
+.user-file {
+  display: inline-block;
+  .head-portrait {
+    color: #f0f0f1;
+    font-size: 16px;
+    padding: 0 11px;
+    line-height: 27px;
+    &:hover {
+      color: rgb(252, 252, 252);;
+    }
+  }
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  &:hover .dropdown-content {
+    display: block;
+  }
+  a {
+    color: #f0f0f1;
+    font-family: Roboto,sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    text-decoration: none;
+    padding: 6px 15px;
+    height: 30px;
+    &:hover {
+      color: #fff;
+      cursor: pointer
+    }
+  }
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: black;
+  color: #c6bcbc;
+  padding: 4px 0;
+  z-index: 999;
+  float: none;
+  list-style: none;
+  line-height: normal;
+  direction: ltr;
+  width: auto;
+  top: auto;
+  right: 0;
+  margin-left: 0;
+  margin-top: 0;
+  min-width: 150px;
+  li {
+    display: flex;
+    &:hover {
+      background-color: #3a3333;
+      color: black;
+      width: 100%;
+    }
+  }
+  a {
+    padding: 6px 14px 6px 25px;
+    white-space: nowrap;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    position: relative;
+    text-decoration: none;
+    min-width: 150px;
+    line-height: normal;
+  }
+  li.disabled {
+    &:hover {
+      background-color: black;
+    }
+    a {
+      color: #c5babc;
+      &:hover {
+        cursor: default;
+        color: #c5babc;
+      }
+    }
+  }
+}
+
+ul li.disconnected {
+  background-color: darkgray;
+}
+

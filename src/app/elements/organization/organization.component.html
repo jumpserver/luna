@@ -1,8 +1,9 @@
 <div class="organization">
   <mat-select [(value)]="selectedOrganization" (selectionChange)='selectHandleChange($event)'>
     <mat-select-trigger>
-      <i class="fa fa-sitemap" style="margin-right: 6px;"></i>
+      <i class="fa fa-sitemap"></i>
       &nbsp;{{selectedOrganization.name}}&nbsp;
+      <i class="fa fa-chevron-down"></i>
     </mat-select-trigger>
     <mat-option *ngFor="let i of organizations" class="org-option" [value]="i">
       {{i.name}}

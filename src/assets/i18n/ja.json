@@ -94,6 +94,7 @@
   "LoginExpireMsg": "ログインが期限切れになりました。ログインし直してください",
   "No permission": "権限がありません",
   "Last login": "前回ログイン",
+  "Log out": "ログインを終了",
   "Disable auto completion": "自動補完の無効化",
   "Advanced option": "上級オプション",
   "Host": "ホスト",

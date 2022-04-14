@@ -94,6 +94,7 @@
   "LoginExpireMsg": "Login session expired, please re-login",
   "No permission": "No permission",
   "Last login": "Last login",
+  "Log out": "Log out",
   "Host": "Host",
   "Port": "Port",
 	"Disable auto completion": "Disable auto completion",
