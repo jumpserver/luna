@@ -345,11 +345,13 @@ export class Endpoint {
   }
 
   getPort(protocol?: string): string {
-    const _protocol = protocol || window.location.protocol;
-    let port = this[_protocol.replace(':', '') + '_port'];
+    let _protocol = protocol || window.location.protocol;
+    _protocol = _protocol.replace(':', '');
+    let port = this[_protocol + '_port'];
     if (['http', 'https'].indexOf(_protocol) !== -1 && port === 0) {
       port = window.location.port;
     }
+    console.log('getPort: ', port);
     return port;
   }
 
