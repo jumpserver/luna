@@ -43,7 +43,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit {
       }
       switch (msg.name) {
         case 'PONG':
-          console.log('Iframe has been done');
           this.iframeRef.nativeElement.style.visibility = '';
           this.view.termComp = this;
           clearInterval(pingInterval);
@@ -60,8 +59,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit {
 
   sendCommand(data) {
     this.iframeWindow.postMessage({name: 'CMD', data: data.data}, this.iframeWindow.origin);
-    // const iframeWindow = this.iframeRef.nativeElement.iframeWindow;
-    // iframeWindow.SendTerminalData(data.data);
   }
 
   reconnect() {
