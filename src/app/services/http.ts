@@ -38,7 +38,6 @@ export class HttpService {
   }
 
   get<T>(url: string, options?: any): Observable<any> {
-    options = this.setOptionsRootOrgIfNeed(url, options);
     return this.http.get(url, options).pipe(
       catchError(this.handleError.bind(this))
     );

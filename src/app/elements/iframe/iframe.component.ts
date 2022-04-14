@@ -64,7 +64,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     this.ping = setInterval(() => {
       this.iframeWindow.postMessage({name: 'PING', id: this.id}, '*');
     }, 500);
-
     window.addEventListener('message', this.eventHandler);
   }
 
