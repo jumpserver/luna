@@ -6,7 +6,7 @@ import {ActivatedRoute} from '@angular/router';
 import {ToastrService} from 'ngx-toastr';
 import {groupBy, connectOnNewPage} from '@app/utils/common';
 import * as _ from 'lodash';
-import {AppService, HttpService, LogService, SettingService, TreeFilterService, I18nService} from '@app/services';
+import {AppService, HttpService, LogService, SettingService, TreeFilterService, I18nService, OrganizationService} from '@app/services';
 import {connectEvt} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
 
@@ -28,6 +28,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
               private _logger: LogService,
               private _i18n: I18nService,
               private _toastr: ToastrService,
+              private _organizationSvc: OrganizationService,
   ) {}
 
   get RMenuList() {
@@ -122,7 +123,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.isLoadTreeAsync = this._settingSvc.isLoadTreeAsync();
+
     this.initTree();
+    this._organizationSvc.emitSwitchOrganizationHandle().subscribe(() => {
+      this.initTree();
+    });
+
     document.addEventListener('click', this.hideRMenu.bind(this), false);
 
     this.treeFilterSubscription = this._treeFilterSvc.onFilter.subscribe(

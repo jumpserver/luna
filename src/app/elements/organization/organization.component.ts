@@ -1,6 +1,6 @@
 import {Component, OnInit, Output, EventEmitter} from '@angular/core';
 import {CookieService} from 'ngx-cookie-service';
-import {HttpService} from '@app/services';
+import {HttpService, OrganizationService} from '@app/services';
 
 interface OrganizationItem {
   id?: string;
@@ -18,7 +18,8 @@ export class ElementOrganizationComponent implements OnInit {
   organizations = [];
 
   constructor(private _http: HttpService,
-              private _cookie: CookieService) {}
+              private _cookie: CookieService,
+              private _organizationSvc: OrganizationService) {}
 
   ngOnInit() {
     this.init();
@@ -39,6 +40,6 @@ export class ElementOrganizationComponent implements OnInit {
     this.selectedOrganization = event.value;
     console.log('SEt cookie to: ', event.value.id);
     this._cookie.set('X-JMS-ORG', event.value.id, 3600, '/', '', true, 'Lax');
-    this.outer.emit(this.selectedOrganization);
+    this._organizationSvc.onSwitchOrganizationHandle();
   }
 }
