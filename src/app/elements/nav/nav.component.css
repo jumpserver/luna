@@ -1,5 +1,5 @@
 .nav {
-  display: block;
+  display: flex;
   height: 30px;
   padding-top: 0;
   background-color: #463e3e;
@@ -8,13 +8,14 @@
 
 .nav ul {
   list-style-type: none;
-  line-height: 24px;
+  line-height: 27px;
   margin: 0;
   box-sizing: border-box;
   font-weight: 400;
   text-align: left;
 }
 .nav ul.nav-main {
+  display: inline-block;
   padding-inline-start: 15px;
 }
 
@@ -123,4 +124,17 @@
 
 .active .flag {
   display: inline;
+}
+
+.nav-right {
+  flex: 1;
+  display: flex;
+  float: right;
+  height: 100%;
+  line-height: 30px;
+}
+
+.elements-organization {
+  flex: 1;
+  text-align: right;
 }

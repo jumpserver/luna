@@ -1,0 +1,12 @@
+
+<div class="user-file">
+  <div class="dropdown" >
+    <span class="fa fa-user-circle-o head-portrait"></span>
+    <ul class="dropdown-content">
+      <li *ngFor="let vv of menus" [ngClass]="{'disabled': vv.disable}">
+        <a *ngIf="vv.href" [routerLink]="[vv.href]">{{vv.name| translate}}</a>
+        <a id="{{vv.id}}" *ngIf="vv.click && !vv.hide" (click)="click(vv.click)">{{vv.name| translate}}</a>
+      </li>
+    </ul>
+  </div>
+</div>

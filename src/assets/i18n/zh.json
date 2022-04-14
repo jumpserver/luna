@@ -94,6 +94,7 @@
   "LoginExpireMsg": "登录已过期，请重新登录",
   "No permission": "没有权限",
   "Last login": "上次登录",
+  "Log out": "退出登录",
   "Host": "主机",
   "Port": "端口",
   "User": "用户",

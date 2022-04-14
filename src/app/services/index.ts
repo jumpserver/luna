@@ -19,6 +19,9 @@ export {SettingService} from './setting';
 import {ViewService} from './view';
 export {ViewService} from './view';
 
+import {OrganizationService} from './organization';
+export {OrganizationService} from './organization';
+
 import {I18nService} from './i18n';
 export {I18nService};
 
@@ -32,6 +35,7 @@ export const AllServices = [
   TreeFilterService,
   SettingService,
   ViewService,
+  OrganizationService,
   I18nService
 ];
 
