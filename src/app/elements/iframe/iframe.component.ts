@@ -12,6 +12,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit {
   @Input() view: View;
   @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
+  iframeWindow: Window;
 
   constructor() {
   }
@@ -21,47 +22,46 @@ export class ElementIframeComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    this.onIframeLoadDone();
+    this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
+    this.handleIframeEvent();
   }
 
   setActive() {
-    const win = this.iframeRef.nativeElement.contentWindow;
-    win.dispatchEvent(new Event('jmsFocus'));
+    this.iframeWindow.postMessage({name: 'FOCUS'}, '*');
   }
 
-  onIframeLoadDone() {
-    let t ;
-    const that = this;
-    t = window.setInterval(() => {
-      const i = this.iframeRef.nativeElement;
-      if (i.contentWindow.document.readyState === 'complete') {
-        window.clearInterval(t);
-        this.view.termComp = that;
+  handleIframeEvent() {
+    const pingInterval = setInterval(() => {
+      this.iframeWindow.postMessage({name: 'PING', id: this.id}, this.iframeWindow.origin);
+    }, 500);
 
-        // iframe 点击的时候，透传到外层，一些菜单会折叠
-        setTimeout(() => {
-          i.contentWindow.addEventListener('click', function() {
-            document.body.click();
-          });
-        }, 300);
-
-        // 内部加载完成后再显示
-        setTimeout(() => {
-          i.style.visibility = '';
-          i.contentWindow.addEventListener('CLOSE', (e) => {
-            this.view.connected = false;
-          });
-        }, 300);
+    window.addEventListener('message', (e) => {
+      const msg = e.data;
+      console.log('Get msg from iframe: ', msg);
+      if (msg.id !== this.id) {
+        return;
       }
-    }, 100);
-    setTimeout(() => {
-      window.clearInterval(t);
-    }, 5000);
+      switch (msg.name) {
+        case 'PONG':
+          console.log('Iframe has been done');
+          this.iframeRef.nativeElement.style.visibility = '';
+          this.view.termComp = this;
+          clearInterval(pingInterval);
+          break;
+        case 'CLOSE':
+          this.view.connected = false;
+          break;
+        case 'CLICK':
+          document.body.click();
+          break;
+      }
+    });
   }
 
   sendCommand(data) {
-    const iframeWindow = this.iframeRef.nativeElement.contentWindow;
-    iframeWindow.SendTerminalData(data.data);
+    this.iframeWindow.postMessage({name: 'CMD', data: data.data}, this.iframeWindow.origin);
+    // const iframeWindow = this.iframeRef.nativeElement.iframeWindow;
+    // iframeWindow.SendTerminalData(data.data);
   }
 
   reconnect() {
