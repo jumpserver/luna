@@ -30,7 +30,6 @@ export class ElementConnectorKokoComponent implements OnInit {
     const url = smartEndpoint.getUrl();
     this.baseUrl = `${url}/koko`;
     this.generateIframeURL();
-    console.log('Iframe URL: ', this.iframeURL);
   }
 
   generateIframeURL() {

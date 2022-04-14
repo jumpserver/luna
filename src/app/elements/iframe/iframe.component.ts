@@ -22,13 +22,14 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   ngOnInit() {
+    console.log(`IFrame URL: ${this.src}`);
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.eventHandler = function (e: any) {
       const msg = e.data;
-      console.log('Get msg from iframe: ', msg);
       if (msg.id !== this.id) {
         return;
       }
+      console.log(`[Luna] Receive ${msg.name} from: ${msg.id}`);
       switch (msg.name) {
         case 'PONG':
           setTimeout(() => {
@@ -57,18 +58,21 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   setActive() {
+    console.log(`[Luna] Send FOCUS to: ${this.id}`);
     this.iframeWindow.postMessage({name: 'FOCUS'}, '*');
   }
 
   handleIframeEvent() {
     this.ping = setInterval(() => {
+      console.log(`[Luna] Send PING to: ${this.id}`);
       this.iframeWindow.postMessage({name: 'PING', id: this.id}, '*');
     }, 500);
     window.addEventListener('message', this.eventHandler);
   }
 
   sendCommand(data) {
-    this.iframeWindow.postMessage({name: 'CMD', data: data.data}, '*');
+    console.log(`[Luna] Send CMD to: ${this.id}`);
+    this.iframeWindow.postMessage({name: 'CMD', data: data.data}, '*' );
   }
 
   reconnect() {
