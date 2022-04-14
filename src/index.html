@@ -121,12 +121,6 @@
 <span id="marker" style="display: none;font-size: 14px">marker</span>
 </body>
 <script>
-  const domain = document.domain.split('.').slice(-2).join('.');
-  let isDomain = /^(\w+)\.([A-Za-z]+)$/.test(domain);
-  if (isDomain) {
-    document.domain = domain;
-  }
-  
   window.onload = function (ev) {
     let clipboardData = "";
     if (!document.hasFocus()) {

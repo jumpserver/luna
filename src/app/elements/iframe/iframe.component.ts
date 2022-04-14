@@ -1,67 +1,78 @@
-import {Component, Input, OnInit, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter} from '@angular/core';
+import {Component, Input, OnInit, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter, OnDestroy} from '@angular/core';
 import {View} from '@app/model';
+import {TimeInterval} from 'rxjs';
 
 @Component({
   selector: 'elements-iframe',
   templateUrl: './iframe.component.html',
   styleUrls: ['./iframe.component.scss']
 })
-export class ElementIframeComponent implements OnInit, AfterViewInit {
+export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() src: any;
   @Input() id: string;
   @Input() view: View;
   @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
+  iframeWindow: Window;
+  show = false;
+  eventHandler: EventListenerOrEventListenerObject;
+  ping: number;
 
   constructor() {
   }
 
   ngOnInit() {
+    console.log(`IFrame URL: ${this.src}`);
     this.id = 'window-' + Math.random().toString(36).substr(2);
+    this.eventHandler = function (e: any) {
+      const msg = e.data;
+      if (msg.id !== this.id) {
+        return;
+      }
+      console.log(`[Luna] Receive ${msg.name} from: ${msg.id}`);
+      switch (msg.name) {
+        case 'PONG':
+          setTimeout(() => {
+            this.show = true;
+          });
+          this.view.termComp = this;
+          clearInterval(this.ping);
+          break;
+        case 'CLOSE':
+          this.view.connected = false;
+          break;
+        case 'CLICK':
+          document.body.click();
+          break;
+      }
+    }.bind(this);
   }
 
   ngAfterViewInit() {
-    this.onIframeLoadDone();
+    this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
+    this.handleIframeEvent();
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('message', this.eventHandler);
   }
 
   setActive() {
-    const win = this.iframeRef.nativeElement.contentWindow;
-    win.dispatchEvent(new Event('jmsFocus'));
+    console.log(`[Luna] Send FOCUS to: ${this.id}`);
+    this.iframeWindow.postMessage({name: 'FOCUS'}, '*');
   }
 
-  onIframeLoadDone() {
-    let t ;
-    const that = this;
-    t = window.setInterval(() => {
-      const i = this.iframeRef.nativeElement;
-      if (i.contentWindow.document.readyState === 'complete') {
-        window.clearInterval(t);
-        this.view.termComp = that;
-
-        // iframe 点击的时候，透传到外层，一些菜单会折叠
-        setTimeout(() => {
-          i.contentWindow.addEventListener('click', function() {
-            document.body.click();
-          });
-        }, 300);
-
-        // 内部加载完成后再显示
-        setTimeout(() => {
-          i.style.visibility = '';
-          i.contentWindow.addEventListener('CLOSE', (e) => {
-            this.view.connected = false;
-          });
-        }, 300);
-      }
-    }, 100);
-    setTimeout(() => {
-      window.clearInterval(t);
-    }, 5000);
+  handleIframeEvent() {
+    this.ping = setInterval(() => {
+      console.log(`[Luna] Send PING to: ${this.id}`);
+      this.iframeWindow.postMessage({name: 'PING', id: this.id}, '*');
+    }, 500);
+    window.addEventListener('message', this.eventHandler);
   }
 
   sendCommand(data) {
-    const iframeWindow = this.iframeRef.nativeElement.contentWindow;
-    iframeWindow.SendTerminalData(data.data);
+    console.log(`[Luna] Send CMD to: ${this.id}`);
+    this.iframeWindow.postMessage({name: 'CMD', data: data.data}, '*' );
   }
 
   reconnect() {
