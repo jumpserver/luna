@@ -17,7 +17,7 @@
     >
     </elements-connector-omnidb>
     <elements-connector-magnus
-      *ngIf="connector ==='magnus'"
+      *ngSwitchCase="'magnus'"
       [view]="view">
       >
     </elements-connector-magnus>
