@@ -1,11 +1,10 @@
 import {Component, OnInit} from '@angular/core';
-import {CookieService} from 'ngx-cookie-service';
 import {HttpService} from '@app/services';
 
 interface MenuItem {
   id: string;
   name: string;
-  click: string;
+  click: Function;
 }
 
 @Component({
@@ -27,22 +26,10 @@ export class ElementUserFileComponent implements OnInit {
       {
         id: 'logout',
         name: 'Log out',
-        click: 'logout',
+        click: () => {
+          window.location.href = document.location.origin + '/core/auth/logout/';
+        },
       }
     ];
-  }
-  click(event) {
-    switch (event) {
-      case 'logout': {
-        this.logout();
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-  }
-  logout() {
-    window.location.href = document.location.origin + '/core/auth/logout/';
   }
 }

@@ -128,7 +128,6 @@
 
 .nav-right {
   flex: 1;
-  display: flex;
   float: right;
   height: 100%;
   line-height: 30px;

@@ -35,98 +35,6 @@ export class ElementNavComponent implements OnInit {
     this.viewList = this._viewSrv.viewList;
   }
 
-  click(event) {
-    switch (event) {
-      case 'ConnectSFTP': {
-        window.open('/koko/elfinder/sftp/');
-        break;
-      }
-      case 'HideLeft': {
-        ElementLeftBarComponent.Hide();
-        this.refreshNav();
-        break;
-      }
-      case 'ShowLeft': {
-        ElementLeftBarComponent.Show();
-        this.refreshNav();
-        break;
-      }
-      case 'Setting': {
-        this.Setting();
-        break;
-      }
-      case 'Copy': {
-        // this._appService.copy();
-        break;
-      }
-      case 'FullScreen': {
-        const ele: any = document.getElementsByClassName('window active')[0];
-        if (!ele) {
-          return;
-        }
-        if (ele.requestFullscreen) {
-          ele.requestFullscreen();
-        } else if (ele.mozRequestFullScreen) {
-          ele.mozRequestFullScreen();
-        } else if (ele.msRequestFullscreen) {
-          ele.msRequestFullscreen();
-        } else if (ele.webkitRequestFullscreen) {
-          ele.webkitRequestFullScreen();
-        } else {
-          throw new Error('不支持全屏api');
-        }
-        window.dispatchEvent(new Event('resize'));
-        break;
-      }
-      case 'Reconnect': {
-        break;
-      }
-      case 'Disconnect': {
-        if (!confirm('断开当前连接? (RDP暂不支持)')) {
-          break;
-        }
-        this._navSvc.disconnectConnection();
-        break;
-      }
-      case'DisconnectAll': {
-        if (!confirm('断开所有连接?')) {
-          break;
-        }
-        this._navSvc.disconnectAllConnection();
-        break;
-      }
-      case 'Document': {
-        this.HELP_DOCUMENT_URL = this._settingSvc.globalSetting.HELP_DOCUMENT_URL;
-        window.open(this.HELP_DOCUMENT_URL);
-        break;
-      }
-      case 'Support': {
-        this.HELP_SUPPORT_URL = this._settingSvc.globalSetting.HELP_SUPPORT_URL;
-        window.open(this.HELP_SUPPORT_URL);
-        break;
-      }
-      case 'English': {
-        this._i18n.use('en');
-        break;
-      }
-      case 'Chinese': {
-        this._i18n.use('zh');
-        break;
-      }
-      case 'Japanese': {
-        this._i18n.use('ja');
-        break;
-      }
-      case 'DownLoad': {
-        window.open('/core/download/', '_blank');
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-  }
-
   refreshNav() {
     this.navs = this.getNav();
   }
@@ -139,7 +47,9 @@ export class ElementNavComponent implements OnInit {
       children: [
         {
           id: 'Connect',
-          click: 'ConnectSFTP',
+          click: () => {
+            window.open('/koko/elfinder/sftp/');
+          },
           name: 'Connect'
         },
       ]
@@ -150,13 +60,19 @@ export class ElementNavComponent implements OnInit {
       children: [
         {
           id: 'HideLeftManager',
-          click: 'HideLeft',
+          click: () => {
+            ElementLeftBarComponent.Hide();
+            this.refreshNav();
+          },
           name: 'Hide left manager',
           hide: !DataStore.showLeftBar
         },
         {
           id: 'ShowLeftManager',
-          click: 'ShowLeft',
+          click: () => {
+            ElementLeftBarComponent.Show();
+            this.refreshNav();
+          },
           name: 'Show left manager',
           hide: DataStore.showLeftBar
         },
@@ -180,7 +96,24 @@ export class ElementNavComponent implements OnInit {
         },
         {
           id: 'FullScreen',
-          click: 'FullScreen',
+          click: () => {
+            const ele: any = document.getElementsByClassName('window active')[0];
+            if (!ele) {
+              return;
+            }
+            if (ele.requestFullscreen) {
+              ele.requestFullscreen();
+            } else if (ele.mozRequestFullScreen) {
+              ele.mozRequestFullScreen();
+            } else if (ele.msRequestFullscreen) {
+              ele.msRequestFullscreen();
+            } else if (ele.webkitRequestFullscreen) {
+              ele.webkitRequestFullScreen();
+            } else {
+              throw new Error('不支持全屏api');
+            }
+            window.dispatchEvent(new Event('resize'));
+          },
           name: 'Full Screen'
         },
       ]
@@ -191,17 +124,23 @@ export class ElementNavComponent implements OnInit {
       children: [
         {
           id: 'English',
-          click: 'English',
+          click: () => {
+            this._i18n.use('en');
+          },
           name: 'English'
         },
         {
           id: 'Chinese',
-          click: 'Chinese',
+          click: () => {
+            this._i18n.use('zh');
+          },
           name: '中文'
         },
         {
           id: 'Japanese',
-          click: 'Japanese',
+          click: () => {
+            this._i18n.use('ja');
+          },
           name: '日本語'
         }
       ]
@@ -209,11 +148,17 @@ export class ElementNavComponent implements OnInit {
       {
       id: 'Setting',
       name: 'Setting',
-      click: 'Setting',
       children: [
         {
           id: 'Setting',
-          click: 'Setting',
+          click: () => {
+            this._dialog.open(
+              ElementSettingComponent,
+              {
+                height: 'auto',
+                width: '500px',
+              });
+          },
           name: 'Setting'
         }
       ]
@@ -224,30 +169,30 @@ export class ElementNavComponent implements OnInit {
         children: [
           {
             id: 'Document',
-            click: 'Document',
+            click: () => {
+              this.HELP_DOCUMENT_URL = this._settingSvc.globalSetting.HELP_DOCUMENT_URL;
+              window.open(this.HELP_DOCUMENT_URL);
+            },
             name: 'Document'
           },
           {
             id: 'Support',
-            click: 'Support',
+            click: () => {
+              this.HELP_SUPPORT_URL = this._settingSvc.globalSetting.HELP_SUPPORT_URL;
+              window.open(this.HELP_SUPPORT_URL);
+            },
             name: 'Support'
           },
           {
             id: 'Download',
-            click: 'DownLoad',
+            click: () => {
+              window.open('/core/download/', '_blank');
+            },
             name: 'Tool download',
           }
         ]
       },
     ];
-  }
-  Setting() {
-    this._dialog.open(
-      ElementSettingComponent,
-      {
-        height: 'auto',
-        width: '500px',
-      });
   }
 }
 
