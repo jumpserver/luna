@@ -84,7 +84,7 @@ export const TYPE_WEB_SFTP: ConnectType = {
   name: 'WEB Sftp',
   id: 'webSftp',
   requireXPack: true,
-  protocol: 'ssh'
+  protocol: 'http'
 };
 
 export const ProtocolConnectTypes = {
