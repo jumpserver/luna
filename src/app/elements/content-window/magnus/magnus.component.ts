@@ -22,6 +22,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
   node: TreeNode;
   sysUser: SystemUser;
   protocol: string;
+  expire_time: string;
   endpoint: Endpoint;
   name: string;
   cli: string;
@@ -75,6 +76,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
       {name: 'password', value: this.token.secret,  label: this._i18n.t('Password')},
       {name: 'database', value: database, label: this._i18n.t('Database')},
       {name: 'protocol', value: this.protocol, label: this._i18n.t('Protocol')},
+      {name: 'expire_time', value: `${this.token.expire_time} s` , label: this._i18n.t('Expire time')},
     ];
     this.info = this.infoItems.reduce((pre, current) => {
       pre[current.name] = current.value;

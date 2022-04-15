@@ -1,9 +1,9 @@
 <div class="content" *ngIf="!loading">
   <div>
-    <h2 class="subject">{{ 'Database connect info' | translate }}: {{ name }}</h2>
+    <h2 class="subject">{{ 'Database connect info' | translate }}</h2>
     <table>
       <tr *ngFor="let item of infoItems">
-        <td class="title">{{ item.label | async }}: </td>
+        <td class="title">{{ item.label | async }} </td>
         <td class="text-td"
           #tooltip="matTooltip"
           [matTooltip]="'Click to copy' | translate"
