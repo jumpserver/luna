@@ -28,7 +28,7 @@ export class HttpService {
   setOptionsRootOrgIfNeed(url, options) {
     if (!options) { options = {}; }
     let headers = options.headers || new HttpHeaders();
-    const rootOrgUrls = ['/api/v1/assets/favorite-assets/'];
+    const rootOrgUrls = ['/api/v1/perms', '/api/v1/assets/favorite-assets/'];
     const toRootOrg = rootOrgUrls.some((i) => url.indexOf(i) > -1);
     if (toRootOrg) {
       headers = headers.set('X-JMS-ORG', 'ROOT');
