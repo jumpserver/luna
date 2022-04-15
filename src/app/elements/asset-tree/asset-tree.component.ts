@@ -180,7 +180,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (this.isLoadTreeAsync) {
       setting['async'] = {
         enable: true,
-        url: '/api/v1/perms/users/nodes/children-with-assets/tree/',
+        url: '/api/v1/perms/users/nodes/children-with-assets/tree/?oid=ROOT',
         autoParam: ['id=key', 'name=n', 'level=lv'],
         type: 'get'
       };
@@ -220,7 +220,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     const setting = Object.assign({
       async: {
         enable: true,
-        url: '/api/v1/perms/users/applications/tree/',
+        url: '/api/v1/perms/users/applications/tree/?oid=ROOT',
         autoParam: ['id=tree_id', 'parentInfo=parentInfo', 'level=lv'],
         type: 'get'
       }
