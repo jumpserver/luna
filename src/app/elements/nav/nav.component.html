@@ -8,7 +8,7 @@
       <ul [ngClass]="{'dropdown-content': v.children}" *ngIf="v.children">
         <li *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
           <a *ngIf="vv.href" [routerLink]="[vv.href]">{{vv.name| translate}}</a>
-          <a id="{{vv.id}}" *ngIf="vv.click && !vv.hide" (click)="click(vv.click)">{{vv.name| translate}}</a>
+          <a id="{{vv.id}}" *ngIf="vv.click && !vv.hide" (click)="vv.click && vv.click()">{{vv.name| translate}}</a>
         </li>
       </ul>
     </li>
@@ -26,7 +26,6 @@
     </li>
   </ul>
   <div class="nav-right">
-    <elements-organization class="elements-organization"></elements-organization>
     <elements-user-file></elements-user-file>
   </div>
 </div>
