@@ -99,11 +99,12 @@ export class ElementConnectorMagnusComponent implements OnInit {
           ` ${database}`;
         break;
       case 'postgresql':
-        cli = `PGPASSWORD=${passwordHolder} psql` +
-          ` -U ${this.token.id}` +
-          ` -h ${host}` +
-          ` -d ${database}` +
-          ` -p ${port || ''}`;
+        cli = `psql` +
+          ` "user=${this.token.id}` +
+          ` password=${passwordHolder}` +
+          ` host=${host}` +
+          ` dbname=${database}` +
+          ` port=${port || ''}"`;
         break;
       default:
         cli = `Protocol '${protocol}' Not support now`;
