@@ -271,7 +271,7 @@ export class AppService {
   }
 
   getSmartEndpoint(view: View): Promise<Endpoint> {
-    let protocol = view.connectType.protocol;
+    let protocol = (view.connectType && view.connectType.protocol);
     if (protocol === TYPE_DB_CLIENT.protocol) {
       protocol = view.protocol;
     } else if (protocol === TYPE_WEB_CLI.protocol) {

@@ -1,6 +1,6 @@
 import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {connectEvt, TYPE_RDP_CLIENT, TYPE_SSH_CLIENT, TYPE_WEB_CLI, TYPE_RDP_FILE, TYPE_WEB_GUI, TYPE_DB_GUI} from '@app/globals';
+import {connectEvt, TYPE_RDP_CLIENT, TYPE_SSH_CLIENT, TYPE_WEB_CLI, TYPE_RDP_FILE, TYPE_WEB_GUI, TYPE_DB_GUI, TYPE_WEB_SFTP} from '@app/globals';
 import {AppService, HttpService, I18nService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {SystemUser, TreeNode, ConnectData} from '@app/model';
@@ -356,6 +356,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   connectFileManager(node: TreeNode) {
     const view = new View(node, null, 'fileManager', 'asset', 'sftp');
     view.nick = '[FILE] ' + node.name;
+    view.connectType = TYPE_WEB_SFTP;
     this.onNewView.emit(view);
   }
 

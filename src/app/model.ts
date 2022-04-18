@@ -87,7 +87,7 @@ export class Nav {
   name: string;
   children?: Array<Nav>;
   hide?: boolean = false;
-  click?: string;
+  click?: Function;
   href?: string;
   disable?: boolean = false;
 

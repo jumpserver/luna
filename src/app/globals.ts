@@ -80,6 +80,13 @@ export const TYPE_SSH_CLIENT: ConnectType = {
   protocol: 'ssh'
 };
 
+export const TYPE_WEB_SFTP: ConnectType = {
+  name: 'WEB Sftp',
+  id: 'webSftp',
+  requireXPack: true,
+  protocol: 'http'
+};
+
 export const ProtocolConnectTypes = {
   ssh: [TYPE_WEB_CLI, TYPE_SSH_CLIENT],
   rdp: [TYPE_WEB_GUI, TYPE_RDP_CLIENT, TYPE_RDP_FILE],
