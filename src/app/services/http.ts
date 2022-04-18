@@ -4,7 +4,7 @@ import {Browser} from '@app/globals';
 import {retryWhen, delay, scan, map, retry, catchError} from 'rxjs/operators';
 import {SystemUser, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam, Endpoint} from '@app/model';
 import {User} from '@app/globals';
-import {getCookie} from '@app/utils/common';
+import {getCookie, getCsrfTokenFromCookie} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
 import {aesEncryptByCsrf} from '@app/utils/crypto';
@@ -17,7 +17,7 @@ export class HttpService {
   constructor(private http: HttpClient, private _i18n: I18nService) {}
 
   setOptionsCSRFToken(options) {
-    const csrfToken = getCookie('csrftoken');
+    const csrfToken = getCsrfTokenFromCookie();
     if (!options) { options = {}; }
     let headers = options.headers || new HttpHeaders();
     headers = headers.set('X-CSRFToken', csrfToken);
