@@ -270,6 +270,15 @@ export class AppService {
     this._localStorage.set(localKey, auths);
   }
 
+  analysisId(idStr) {
+    const idObject = {};
+    idStr = idStr.split('&');
+    for (let i = 0; i < idStr.length; i++) {
+      idObject[idStr[i].split('=')[0]] = (idStr[i].split('=')[1]);
+    }
+    return idObject;
+  }
+
   getSmartEndpoint(view: View): Promise<Endpoint> {
     let protocol = (view.connectType && view.connectType.protocol);
     if (protocol === TYPE_DB_CLIENT.protocol) {
@@ -281,7 +290,11 @@ export class AppService {
     if (view.token) {
       data['token'] = view.token;
     } else if (view.node.meta.type === 'application') {
-      data['appId'] = view.node.id;
+      if (view.node.meta.data.type === 'k8s') {
+        data['appId'] = this.analysisId(view.node.id)['app_id'];
+      } else {
+        data['appId'] = view.node.id;
+      }
     } else {
       data['assetId'] = view.node.id;
     }
