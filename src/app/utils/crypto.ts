@@ -1,5 +1,5 @@
 import * as CryptoJS from 'crypto-js';
-import {getCookie} from '@app/utils/common';
+import {getCsrfTokenFromCookie} from '@app/utils/common';
 import {Buffer} from 'buffer';
 
 export function fillKey(key: string): Buffer {
@@ -40,13 +40,13 @@ export function aesDecrypt(cipherText: string, originKey: string): string {
 }
 
 export function aesEncryptByCsrf(text: string): string {
-  const key = getCookie('csrftoken');
+  const key = getCsrfTokenFromCookie();
   if (!key) { console.log('Not found csrf token'); }
   return aesEncrypt(text, key);
 }
 
 export function aesDecryptByCsrf(cipherText: string): string {
-  const key = getCookie('csrftoken');
+  const key = getCsrfTokenFromCookie();
   if (!key) { console.log('Not found csrf token'); }
   return aesDecrypt(cipherText, key);
 }

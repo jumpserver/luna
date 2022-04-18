@@ -49,6 +49,13 @@ export function getCookie(name: string): string {
     return cookieValue;
 }
 
+export function getCsrfTokenFromCookie(): string {
+  let prefix = getCookie('SESSION_COOKIE_NAME_PREFIX');
+  if (!prefix) { prefix = ''; }
+  const name = `${prefix}csrftoken`;
+  return getCookie(name);
+}
+
 export function groupByProp(xs, key) {
   return xs.reduce(function(rv, x) {
     (rv[x[key]] = rv[x[key]] || []).push(x);
