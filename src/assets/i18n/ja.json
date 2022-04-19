@@ -74,6 +74,8 @@
   "Select system users": "システムユーザーの選択",
   "No matching found": "マッチがありません",
   "Connect Type": "接続方法",
+  "Need to use": "使用する必要がある",
+
   "Yes": "はい",
   "No": "いいえ",
   "Web Terminal": "Web端末",
