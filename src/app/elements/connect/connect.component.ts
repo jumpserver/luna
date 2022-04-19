@@ -186,10 +186,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
     await this.createTempAuthIfNeed(node, connectInfo);
     this._logger.debug('Connect info: ', connectInfo);
-    if (connectInfo.connectType.id === TYPE_RDP_CLIENT.id) {
+
+    if (connectInfo.connectType.client) {
       this.callLocalClient(connectInfo, node).then();
-    }else if (connectInfo.connectType.id === TYPE_SSH_CLIENT.id) {
-        this.callLocalClient(connectInfo, node).then();
     } else if (connectInfo.connectType.id === TYPE_RDP_FILE.id) {
       this.downloadRDPFile(connectInfo, node).then();
     } else {

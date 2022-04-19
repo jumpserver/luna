@@ -28,7 +28,12 @@
         [(ngModel)]="connectType"
         id="connect-type"
       >
-        <mat-radio-button *ngFor="let type of connectTypes" [value]="type">{{ type.name | translate }}</mat-radio-button>
+        <mat-radio-button *ngFor="let type of connectTypes" [value]="type">
+          {{ type.name | translate }}
+          <span class="my-tooltip" attr.data-tooltip="{{'Need to use'| translate}}{{ type.name | translate }}">
+            <i *ngIf="type.client" class="fa fa-question-circle-o question"></i>
+          </span>
+        </mat-radio-button>
       </mat-radio-group>
     </div>
   </div>

@@ -1,5 +1,6 @@
 .mat-radio-button ~ .mat-radio-button {
   margin-left: 16px;
+  vertical-align: middle;
 }
 
 .zone-label {
@@ -19,4 +20,8 @@
 
 .auto-connect {
   padding-top: 15px;
+}
+
+.question {
+  font-size: 14px;
 }

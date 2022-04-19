@@ -35,56 +35,64 @@ export const TYPE_WEB_CLI: ConnectType = {
   name: 'Web CLI',
   id: 'webCLI',
   requireXPack: false,
-  protocol: 'http'
+  protocol: 'http',
+  client: false
 };
 
 export const TYPE_WEB_GUI: ConnectType = {
   name: 'Web GUI',
   id: 'webGUI',
   requireXPack: false,
-  protocol: 'http'
+  protocol: 'http',
+  client: false
 };
 
 export const TYPE_DB_GUI: ConnectType = {
   name: 'Web GUI',
   id: 'dbGUI',
   requireXPack: true,
-  protocol: 'http'
+  protocol: 'http',
+  client: true
 };
 
 export const TYPE_DB_CLIENT: ConnectType = {
   name: 'DB Client',
   id: 'dbClient',
   requireXPack: false,
-  protocol: 'db'
+  protocol: 'db',
+  client: false
 };
 
 export const TYPE_RDP_CLIENT: ConnectType = {
   name: 'RDP Client',
   id: 'rdpClient',
   requireXPack: true,
-  protocol: 'rdp'
+  protocol: 'rdp',
+  client: false
 };
 
 export const TYPE_RDP_FILE: ConnectType = {
   name: 'RDP File',
   id: 'rdpFile',
   requireXPack: true,
-  protocol: 'rdp'
+  protocol: 'rdp',
+  client: false
 };
 
 export const TYPE_SSH_CLIENT: ConnectType = {
   name: 'SSH Client',
   id: 'sshClient',
   requireXPack: true,
-  protocol: 'ssh'
+  protocol: 'ssh',
+  client: true
 };
 
 export const TYPE_WEB_SFTP: ConnectType = {
   name: 'WEB Sftp',
   id: 'webSftp',
   requireXPack: true,
-  protocol: 'http'
+  protocol: 'http',
+  client: false
 };
 
 export const ProtocolConnectTypes = {

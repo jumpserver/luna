@@ -151,3 +151,47 @@ body ::-webkit-scrollbar-thumb {
 #player .asciinema-player .asciinema-terminal {
    height: calc(100vh - 60px)!important;
 }
+
+.my-tooltip {
+  position: relative;
+}
+
+.my-tooltip:before {
+  content: attr(data-tooltip);
+  position: absolute;
+  min-width: 100px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  padding: 10px;
+  line-height: 1.2;
+  border-radius: 6px;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity .4s;
+  bottom: 130%;
+  left: 50%;
+  margin-left: -50px;
+  font-size: 0.75em;
+  visibility: hidden;
+}
+
+.my-tooltip:after {
+  content: "";
+  position: absolute;
+  bottom: 75%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  opacity: 0;
+  transition: opacity .4s;
+  border-color: black transparent transparent transparent;
+  visibility: hidden;
+}
+
+.my-tooltip:hover:before,
+.my-tooltip:hover:after {
+  opacity: 1;
+  visibility: visible;
+}
