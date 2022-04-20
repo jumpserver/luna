@@ -108,5 +108,6 @@
   "Database info": "Database info",
   "Command line": "Command line",
   "Run it by client": "Run it by client",
-  "Name": "Name"
+  "Name": "Name",
+  "Failed to open address": "Failed to open address"
 }
