@@ -1,6 +1,7 @@
 import {Component, Input, OnInit, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter, OnDestroy} from '@angular/core';
 import {View} from '@app/model';
 import {TimeInterval} from 'rxjs';
+import {I18nService} from '@app/services';
 
 @Component({
   selector: 'elements-iframe',
@@ -18,7 +19,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   eventHandler: EventListenerOrEventListenerObject;
   ping: number;
 
-  constructor() {
+  constructor(
+    private _i18n: I18nService
+  ) {
   }
 
   ngOnInit() {
@@ -72,6 +75,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     setTimeout(function () {
       // 长时间未PING通, 则主动关闭
       clearInterval(this.ping);
+      const msg = this._i18n.instant('Failed to open address');
+      alert(`${msg}:\n${this.src}`);
     }.bind(this), 500 * 20);
   }
 

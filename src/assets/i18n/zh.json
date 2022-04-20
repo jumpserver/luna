@@ -110,6 +110,8 @@
   "Database connect info": "数据库连接信息",
   "Command line": "连接命令行",
   "Run it by client": "使用客户端执行",
-  "Name": "名称"
+  "Name": "名称",
+  "Failed to open address": "打开地址失败"
+
 }
 
