@@ -25,7 +25,7 @@
             [infiniteScrollThrottle]="50"
             (scrolled)="onScroll()"
             [scrollWindow]="false">
-          <div class="item" [title]="leftInfo" *ngFor="let item of commands" (click)="commandClick(item)"> 
+          <div class="item" *ngFor="let item of commands" (click)="commandClick(item)"> 
             <div class="command" [title]="item.input">{{ item.input }}</div>
             <div class="timestamp">{{ item.atime }}</div>
           </div>

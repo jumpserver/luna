@@ -68,7 +68,7 @@ export const TYPE_RDP_CLIENT: ConnectType = {
   id: 'rdpClient',
   requireXPack: true,
   protocol: 'rdp',
-  client: false
+  client: true
 };
 
 export const TYPE_RDP_FILE: ConnectType = {
