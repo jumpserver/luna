@@ -52,7 +52,7 @@ export const TYPE_DB_GUI: ConnectType = {
   id: 'dbGUI',
   requireXPack: true,
   protocol: 'http',
-  client: true
+  client: false
 };
 
 export const TYPE_DB_CLIENT: ConnectType = {
