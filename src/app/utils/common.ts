@@ -51,7 +51,7 @@ export function getCookie(name: string): string {
 
 export function getCsrfTokenFromCookie(): string {
   let prefix = getCookie('SESSION_COOKIE_NAME_PREFIX');
-  if (!prefix) { prefix = ''; }
+  if (!prefix || [`""`, `''`].indexOf(prefix) > -1) { prefix = ''; }
   const name = `${prefix}csrftoken`;
   return getCookie(name);
 }
