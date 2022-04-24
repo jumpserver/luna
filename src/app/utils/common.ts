@@ -119,7 +119,7 @@ export function canvasWaterMark({
 
   const base64Url = canvas.toDataURL();
   const watermarkDiv = document.createElement('div');
-  const config = { attributes: true, characterData: true };
+  const config = { attributes: true };
 
   // 监听dom节点的style属性变化
   const observer = new MutationObserver(mutations => {
@@ -128,6 +128,8 @@ export function canvasWaterMark({
       setTimeout(() => {
         observer.disconnect();
         // 重新添加水印
+        watermarkDiv.style.width = '100%';
+        watermarkDiv.style.height = '100%';
         watermarkDiv.style.backgroundImage = `url('${base64Url}')`;
         observer.observe(watermarkDiv, config);
       });
