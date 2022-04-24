@@ -1,6 +1,4 @@
 FROM node:10 as stage-build
-ARG VERSION
-ENV VERSION=$VERSION
 ARG NPM_REGISTRY="https://registry.npm.taobao.org"
 ENV NPM_REGISTY=$NPM_REGISTRY
 ARG SASS_BINARY_SITE="https://npm.taobao.org/mirrors/node-sass"
@@ -15,6 +13,8 @@ COPY package.json package-lock.json /data/
 COPY utils /data/utils
 RUN cd utils && bash -ixeu build.sh dep
 
+ARG VERSION
+ENV VERSION=$VERSION
 # Build
 ADD . /data
 RUN cd utils && ls .. && bash -ixeu build.sh build
