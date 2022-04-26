@@ -104,7 +104,7 @@ export const ProtocolConnectTypes = {
   sqlserver: [TYPE_WEB_CLI],
   redis: [TYPE_WEB_CLI],
   mongodb: [TYPE_WEB_CLI],
-  postgresql: [TYPE_DB_GUI, TYPE_DB_CLIENT],
+  postgresql: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLIENT],
   oracle: [TYPE_DB_GUI],
   mariadb: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLIENT],
   k8s: [TYPE_WEB_CLI],
