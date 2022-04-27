@@ -2,7 +2,7 @@ import {Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
-import {DataStore, User, ProtocolConnectTypes, TYPE_RDP_CLIENT, TYPE_RDP_FILE, TYPE_DB_CLIENT, TYPE_WEB_CLI} from '@app/globals';
+import {DataStore, User, ProtocolConnectTypes, TYPE_RDP_CLIENT, TYPE_RDP_FILE, TYPE_DB_CLIENT, TYPE_WEB_CLI, TYPE_SSH_CLIENT} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
@@ -92,6 +92,7 @@ export class AppService {
     const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
     const xrdpEnabled = this._settingSvc.globalSetting.XRDP_ENABLED;
     const magnusEnabled = this._settingSvc.globalSetting.TERMINAL_MAGNUS_ENABLED;
+    const sshClientEnabled = this._settingSvc.globalSetting.TERMINAL_KOKO_SSH_ENABLED;
     const validTypes = {};
     for (const [protocol, types] of Object.entries(ProtocolConnectTypes)) {
       validTypes[protocol] = types.filter((tp) => {
@@ -104,6 +105,9 @@ export class AppService {
           return false;
         }
         if (tp.id === TYPE_DB_CLIENT.id && !magnusEnabled) {
+          return false;
+        }
+        if (tp.id === TYPE_SSH_CLIENT.id && !sshClientEnabled) {
           return false;
         }
         return true;

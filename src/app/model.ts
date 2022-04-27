@@ -224,6 +224,7 @@ export class GlobalSetting {
   HELP_SUPPORT_URL: string;
   XRDP_ENABLED: boolean;
   TERMINAL_MAGNUS_ENABLED: boolean;
+  TERMINAL_KOKO_SSH_ENABLED: boolean;
 }
 
 export class Setting {
