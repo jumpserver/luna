@@ -121,6 +121,11 @@
 <span id="marker" style="display: none;font-size: 14px">marker</span>
 </body>
 <script>
+  if (navigator.keyboard && navigator.keyboard.lock) {
+    navigator.keyboard.lock(['Escape']);
+  } else {
+    console.log('浏览器不支持 ESC 长摁退出功能')
+  }
   window.onload = function (ev) {
     let clipboardData = "";
     if (!document.hasFocus()) {
