@@ -29,16 +29,15 @@ export class ElementOrganizationComponent implements OnInit {
     const org = this._cookie.get('X-JMS-ORG');
     this._http.getUserProfile().subscribe(
       user => {
-        this.organizations = user.myorgs || [];
+        this.organizations = user.workbench_orgs || [];
         const defaultOrganization = this.organizations.find(i => i.id === org);
-        this.selectedOrganization = defaultOrganization || user.myorgs[0] || {};
+        this.selectedOrganization = defaultOrganization || user.workbench_orgs[0] || {};
       }
     );
   }
 
   selectHandleChange(event) {
     this.selectedOrganization = event.value;
-    console.log('SEt cookie to: ', event.value.id);
     this._cookie.set('X-JMS-ORG', event.value.id, 3600, '/', document.domain, true, 'Lax');
     this._organizationSvc.onSwitchOrganizationHandle();
   }

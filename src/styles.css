@@ -76,7 +76,7 @@ app-root {
 }
 
 body ::-webkit-scrollbar-track {
-  -webkit-box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
   background-color: #272323;
   border-radius: 6px;
 }
@@ -123,16 +123,6 @@ body ::-webkit-scrollbar-thumb {
   text-align: center;
   display: inline-block;
   font: normal normal normal 14px/1 FontAwesome !important;
-}
-
-
-#toast-container > .toast-warning:before {
-}
-
-#toast-container > .toast-error:before {
-}
-
-#toast-container > .toast-info:before {
 }
 
 #toast-container > .toast-success:before {
@@ -194,4 +184,50 @@ body ::-webkit-scrollbar-thumb {
 .my-tooltip:hover:after {
   opacity: 1;
   visibility: visible;
+}
+
+.tree-search {
+  position: relative;
+  width: 18px;
+  height: 60px;
+  background: #fff;
+  border-radius: 60px;
+  transition: .25s;
+  overflow: hidden;
+}
+
+.tree-search .icon {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  cursor: pointer;
+}
+
+#myAssets_tree_search.active, #applicationsTree_tree_search.active  {
+  width: 160px;
+  box-shadow: 0 0 0 1px #19aa8d;
+}
+
+.tree-search.active:hover {
+  border-radius: 60px;
+  box-shadow: 0 0 0 1px #19aa8d;
+}
+
+.tree-search input {
+  position: relative;
+  left: 18px;
+  width: 135px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  outline: none;
 }

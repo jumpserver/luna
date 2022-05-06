@@ -74,6 +74,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   @Input() query: string;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu', {static: false}) rMenu: ElementRef;
+  @ViewChild('treeSearch', {static: false}) treeSearch: ElementRef;
   Data = [];
   nodes = [];
   setting = {
@@ -147,6 +148,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   onAssetsNodeClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
       this.assetsTree.expandNode(treeNode);
+      this.switchShowTreeNode(treeNode, 'applicationsTree');
       return;
     }
     if (treeNode.chkDisabled) {
@@ -202,11 +204,27 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       this.assetsTree = myAssetsTree;
       this.rootNodeAddDom(myAssetsTree, () => {
         this.refreshAssetsTree();
+      }, () => {
+        this.searchAssetsTree();
       });
       _assetTree.destroy();
     }, error => {
       this.loading = false;
     });
+  }
+
+  searchAssetsTree() {
+    const vm = this;
+    const searchInputRef = $('#myAssets_tree_search')[0];
+    const treeInputSearch = $('.tree-input')[0];
+    searchInputRef.classList.toggle('active');
+    treeInputSearch.focus();
+    treeInputSearch.onblur = function() {
+      searchInputRef.classList.toggle('active');
+    };
+    searchInputRef.onchange = function(e) {
+      vm.filterAssets(e.target.value);
+    };
   }
 
   addApplicationNodesIfNeed(nodes, rootNode, applicationNodes) {
@@ -233,9 +251,25 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       const tree = $.fn.zTree.init($('#applicationsTree'), setting, resp);
       this.rootNodeAddDom(tree, () => {
         this.refreshApplicationTree();
+      }, () => {
+        this.searchApplicationTree();
       });
       this.applicationsTree = tree;
     });
+  }
+
+  searchApplicationTree() {
+    const vm = this;
+    const searchApp = $('#applicationsTree_tree_search')[0];
+    const treeInputSearch = $('.tree-input')[1];
+    searchApp.classList.toggle('active');
+    treeInputSearch.focus();
+    treeInputSearch.onblur = function() {
+      searchApp.classList.toggle('active');
+    };
+    searchApp.onchange = function(e) {
+      vm.filterApplicationsTree(e.target.value);
+    };
   }
 
   refreshApplicationTree() {
@@ -251,6 +285,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       this.connectAsset(treeNode);
     } else {
       this.applicationsTree.expandNode(treeNode);
+      this.switchShowTreeNode(treeNode, 'myAssets');
     }
   }
 
@@ -264,10 +299,15 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     connectEvt.next(evt);
   }
 
-  rootNodeAddDom(ztree, callback) {
+  rootNodeAddDom(ztree, callback, searchcallback) {
     const tId = ztree.setting.treeId + '_tree_refresh';
+    const searchId = ztree.setting.treeId + '_tree_search';
+    const iconId = ztree.setting.treeId + '_icon';
     const refreshIcon = '<a id=' + tId + ' class="tree-refresh">' +
-      '<i class="fa fa-refresh" style="font-family: FontAwesome !important;" ></i></a>';
+      '<i class="fa fa-refresh" style="font-family: FontAwesome !important;" ></i></a>' +
+      '<a id=' + searchId + ' class="tree-search" style="float: right!important;">' +
+      '<i id=' + iconId + ' class="fa fa-search icon" style="font-family: FontAwesome!important;"></i>' +
+      '<input type="text" id="treeInputSearch" class="tree-input"></a>';
     const rootNode = ztree.getNodes()[0];
     if (!rootNode) {
       return;
@@ -277,6 +317,10 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     const refreshIconRef = $('#' + tId);
     refreshIconRef.bind('click', function () {
       callback();
+    });
+    const searchIconRef = $('#' + iconId);
+    searchIconRef.bind('click', function () {
+      searchcallback();
     });
   }
 
@@ -339,7 +383,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         if (treeNode.meta.data.type !== 'k8s') {
         targetTree.reAsyncChildNodesPromise(childNode, 'refresh', silent).then(function () {
           self.reAsyncChildNodes(treeId, childNode, silent);
-        })}
+        }); }
       }
     }
   }
@@ -458,20 +502,24 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     }
     let shouldShow = [];
     const matchedNodes = tree.getNodesByFilter(filterCallback);
-    matchedNodes.forEach((node) => {
-      const parents = this.recurseParent(node);
-      const children = this.recurseChildren(node);
-      shouldShow = [...shouldShow, ...parents, ...children, node];
-    });
-    tree.hiddenNodes = nodes;
-    tree.expandNodes = shouldShow;
-    tree.hideNodes(nodes);
-    tree.showNodes(shouldShow);
-    shouldShow.forEach((node) => {
-      if (node.isParent) {
-        tree.expandNode(node, true);
-      }
-    });
+    if (matchedNodes.length > 0) {
+      matchedNodes.forEach((node) => {
+        const parents = this.recurseParent(node);
+        const children = this.recurseChildren(node);
+        shouldShow = [...shouldShow, ...parents, ...children, node];
+      });
+      tree.hiddenNodes = nodes;
+      tree.expandNodes = shouldShow;
+      tree.hideNodes(nodes);
+      tree.showNodes(shouldShow);
+      shouldShow.forEach((node) => {
+        if (node.isParent) {
+          tree.expandNode(node, true);
+        }
+      });
+    } else {
+      shouldShow = [];
+    }
   }
 
   filterApplicationsTree(keyword) {
@@ -485,10 +533,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   filterAssetsServer(keyword) {
+    // debugger;
     if (!this.assetsTree) {
       return;
     }
     let searchNode = this.assetsTree.getNodesByFilter((node) => node.id === 'search');
+
     if (searchNode) {
       this.assetsTree.removeChildNodes(searchNode[0]);
       this.assetsTree.removeNode(searchNode[0]);
@@ -509,11 +559,21 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.filterAssetCancel$))
       .subscribe(nodes => {
         this.loading = false;
+
         let name = this._i18n.instant('Search');
         const assetsAmount = nodes.length;
         name = `${name} (${assetsAmount})`;
         const newNode = {id: 'search', name: name, isParent: true, open: true, zAsync: true};
+
+        const beforeTreeNode = this.assetsTree.getNodes()[0];
+        this.assetsTree.removeNode(beforeTreeNode);
         searchNode = this.assetsTree.addNodes(null, newNode)[0];
+        this.rootNodeAddDom(this.assetsTree, () => {
+          this.refreshAssetsTree();
+        }, () => {
+          this.searchAssetsTree();
+        });
+
         searchNode.zAsync = true;
         const nodesGroupByOrg = groupBy(nodes, (node) => {
           return node.meta.data.org_name;
@@ -570,6 +630,12 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       allChildren = [...children, ...this.recurseChildren(n)];
     });
     return allChildren;
+  }
+
+  switchShowTreeNode(treeNode: TreeNode, treeId: string) {
+    const needSwitchShowTreeNode = $.fn.zTree.getZTreeObj(treeId);
+    const nodes = needSwitchShowTreeNode.getNodes()[0];
+    needSwitchShowTreeNode.expandNode(nodes, !treeNode.open);
   }
 }
 
