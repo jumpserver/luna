@@ -1,6 +1,7 @@
 import * as CryptoJS from 'crypto-js';
-import {getCsrfTokenFromCookie} from '@app/utils/common';
+import {getCsrfTokenFromCookie, getCookie} from '@app/utils/common';
 import {Buffer} from 'buffer';
+import {JSEncrypt} from 'jsencrypt';
 
 export function fillKey(key: string): Buffer {
   let keySize = 128;
@@ -49,4 +50,18 @@ export function aesDecryptByCsrf(cipherText: string): string {
   const key = getCsrfTokenFromCookie();
   if (!key) { console.log('Not found csrf token'); }
   return aesDecrypt(cipherText, key);
+}
+
+export function encryptPassword(password) {
+  if (!password) {
+    return '';
+  }
+  let rsaPublicKeyText = getCookie('jms_public_key');
+  while (rsaPublicKeyText.indexOf('"') > -1) {
+    rsaPublicKeyText = rsaPublicKeyText.replace('"', '');
+  }
+  const rsaPublicKey = atob(rsaPublicKeyText);
+  const jsencrypt = new JSEncrypt();
+  jsencrypt.setPublicKey(rsaPublicKey);
+  return jsencrypt.encrypt(password);
 }
