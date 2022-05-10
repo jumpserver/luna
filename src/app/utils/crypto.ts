@@ -1,8 +1,7 @@
 import * as CryptoJS from 'crypto-js';
-import {JSEncrypt} from 'jsencrypt';
-import {getCsrfTokenFromCookie} from '@app/utils/common';
-import {getCookie} from '@app/utils/common';
+import {getCsrfTokenFromCookie, getCookie} from '@app/utils/common';
 import {Buffer} from 'buffer';
+import {JSEncrypt} from 'jsencrypt';
 
 
 export function fillKey(key: string): Buffer {
