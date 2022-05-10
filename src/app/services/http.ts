@@ -1,13 +1,13 @@
 import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
 import {Browser} from '@app/globals';
-import {retryWhen, delay, scan, map, retry, catchError} from 'rxjs/operators';
+import {retryWhen, delay, scan, map, catchError} from 'rxjs/operators';
 import {SystemUser, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam, Endpoint} from '@app/model';
 import {User} from '@app/globals';
-import {getCookie, getCsrfTokenFromCookie} from '@app/utils/common';
+import {getCsrfTokenFromCookie} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
-import {aesEncryptByCsrf} from '@app/utils/crypto';
+import {encryptPassword} from '@app/utils/crypto';
 
 
 @Injectable()
@@ -267,7 +267,7 @@ export class HttpService {
 
   createSystemUserTempAuth(systemUser: SystemUser, node: TreeNode, auth: any) {
     const url = `/api/v1/assets/system-users/${systemUser.id}/temp-auth/`;
-    auth.password = aesEncryptByCsrf(auth.password);
+    auth.password = encryptPassword(auth.password);
     const data = {
       instance_id: node.id,
       protocol: systemUser.protocol,
