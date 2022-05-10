@@ -1,7 +1,7 @@
 import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
 import {Browser} from '@app/globals';
-import {retryWhen, delay, scan, map, retry, catchError} from 'rxjs/operators';
+import {retryWhen, delay, scan, map, catchError} from 'rxjs/operators';
 import {SystemUser, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam, Endpoint} from '@app/model';
 import {User} from '@app/globals';
 import {getCsrfTokenFromCookie} from '@app/utils/common';

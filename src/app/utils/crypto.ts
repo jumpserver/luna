@@ -3,6 +3,7 @@ import {getCsrfTokenFromCookie, getCookie} from '@app/utils/common';
 import {Buffer} from 'buffer';
 import {JSEncrypt} from 'jsencrypt';
 
+
 export function fillKey(key: string): Buffer {
   let keySize = 128;
   // 如果超过 key 16 位, 最大取 32 位，需要更改填充
@@ -10,15 +11,16 @@ export function fillKey(key: string): Buffer {
     key = key.slice(0, 32);
     keySize = keySize * 2;
   }
-  key = key.slice(0, keySize);
+  const filledKeyLength = keySize / 8;
+  if (key.length >= filledKeyLength) {
+    return key.slice(0, filledKeyLength);
+  }
   const filledKey = Buffer.alloc(keySize / 8);
   const keys = Buffer.from(key);
-  if (keys.length < filledKey.length) {
-    filledKey.map((b, i) => filledKey[i] = keys[i]);
-    return filledKey;
-  } else {
-    return keys;
+  for (let i = 0; i < keys.length; i++) {
+    filledKey[i] = keys[i];
   }
+  return filledKey;
 }
 
 
@@ -52,16 +54,23 @@ export function aesDecryptByCsrf(cipherText: string): string {
   return aesDecrypt(cipherText, key);
 }
 
+export function rsaEncrypt(text, pubKey) {
+  const jsEncrypt = new JSEncrypt();
+  jsEncrypt.setPublicKey(pubKey);
+  return jsEncrypt.encrypt(text);
+}
+
 export function encryptPassword(password) {
   if (!password) {
     return '';
   }
-  let rsaPublicKeyText = getCookie('jms_public_key');
-  while (rsaPublicKeyText.indexOf('"') > -1) {
-    rsaPublicKeyText = rsaPublicKeyText.replace('"', '');
-  }
+  const aesKey = (Math.random() + 1).toString(36).substring(2);
+  // public key 是 base64 存储的
+  const rsaPublicKeyText = getCookie('jms_public_key')
+    .replace('"', '')
+    .replace('"', '');
   const rsaPublicKey = atob(rsaPublicKeyText);
-  const jsencrypt = new JSEncrypt();
-  jsencrypt.setPublicKey(rsaPublicKey);
-  return jsencrypt.encrypt(password);
+  const keyCipher = rsaEncrypt(aesKey, rsaPublicKey);
+  const passwordCipher = aesEncrypt(password, aesKey);
+  return `${keyCipher}:${passwordCipher}`;
 }
