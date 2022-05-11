@@ -1,5 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {HttpService} from '@app/services';
+import {User} from '@app/globals';
 
 interface MenuItem {
   id: string;
@@ -8,17 +9,18 @@ interface MenuItem {
 }
 
 @Component({
-  selector: 'elements-user-file',
-  templateUrl: './user-file.component.html',
-  styleUrls: ['./user-file.component.scss'],
+  selector: 'elements-user-profile',
+  templateUrl: './profile.component.html',
+  styleUrls: ['./profile.component.scss'],
 })
 export class ElementUserFileComponent implements OnInit {
   menus: Array<MenuItem>;
-
+  user: object;
   constructor(private _http: HttpService) {}
 
   ngOnInit() {
     this.init();
+    this.user = User;
   }
 
   init() {
