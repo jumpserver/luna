@@ -1,10 +1,22 @@
 .user-file {
   float: right;
+  padding-right: 10px;
+
   .head-portrait {
     color: #f0f0f1;
-    font-size: 16px;
+    font-size: 13px;
     padding: 0 11px;
-    line-height: 27px;
+    line-height: 12px;
+    font-weight: 300;
+
+    .icon {
+      padding-right: 5px;
+    }
+
+    .username {
+      font-size: 12px;
+    }
+
     &:hover {
       color: rgb(252, 252, 252);;
     }
