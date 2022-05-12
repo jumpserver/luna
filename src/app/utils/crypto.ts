@@ -4,7 +4,7 @@ import {Buffer} from 'buffer';
 import {JSEncrypt} from 'jsencrypt';
 
 
-export function fillKey(key: string): Buffer {
+export function fillKey(key: string): Buffer|string {
   let keySize = 128;
   // 如果超过 key 16 位, 最大取 32 位，需要更改填充
   if (key.length > 16) {
