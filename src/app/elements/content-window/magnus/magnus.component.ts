@@ -109,8 +109,9 @@ export class ElementConnectorMagnusComponent implements OnInit {
           ` port=${port || ''}"`;
         break;
       case 'redis':
-        cli = `redis-cli -p` +
-          ` ${port ? port : ''}` +
+        cli = `redis-cli` +
+          ` -h ${host}` +
+          ` -p ${port ? port : ''}` +
           ` -a ${this.token.id}` +
           `@${passwordHolder}`;
         break;
