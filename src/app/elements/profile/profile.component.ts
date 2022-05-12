@@ -1,6 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {HttpService} from '@app/services';
 import {User} from '@app/globals';
+import {User as ModelUser} from '@app/model';
 
 interface MenuItem {
   id: string;
@@ -15,7 +16,7 @@ interface MenuItem {
 })
 export class ElementUserFileComponent implements OnInit {
   menus: Array<MenuItem>;
-  user: object;
+  user: ModelUser;
   constructor(private _http: HttpService) {}
 
   ngOnInit() {
