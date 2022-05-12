@@ -341,6 +341,7 @@ export class Endpoint {
   mysql_port: number;
   mariadb_port: number;
   postgresql_port: number;
+  redis_port: number;
 
   getHost(): string {
     return this.host || window.location.host;
