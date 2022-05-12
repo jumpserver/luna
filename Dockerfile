@@ -6,12 +6,11 @@ ENV SASS_BINARY_SITE=$SASS_BINARY_SITE
 
 WORKDIR /data
 
-# Install deps
 RUN npm config set sass_binary_site=${SASS_BINARY_SITE}
 RUN npm config set registry ${NPM_REGISTRY}
 COPY package.json package-lock.json /data/
-COPY utils /data/utils
-RUN cd utils && bash -ixeu build.sh dep
+RUN npm install
+RUN npm rebuild node-sass
 
 ARG VERSION
 ENV VERSION=$VERSION
