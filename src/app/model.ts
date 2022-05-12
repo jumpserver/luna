@@ -224,6 +224,7 @@ export class GlobalSetting {
   HELP_SUPPORT_URL: string;
   XRDP_ENABLED: boolean;
   TERMINAL_MAGNUS_ENABLED: boolean;
+  TERMINAL_KOKO_SSH_ENABLED: boolean;
 }
 
 export class Setting {
@@ -340,6 +341,7 @@ export class Endpoint {
   mysql_port: number;
   mariadb_port: number;
   postgresql_port: number;
+  redis_port: number;
 
   getHost(): string {
     return this.host || window.location.host;

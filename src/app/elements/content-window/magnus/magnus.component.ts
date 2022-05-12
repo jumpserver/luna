@@ -108,6 +108,12 @@ export class ElementConnectorMagnusComponent implements OnInit {
           ` dbname=${database}` +
           ` port=${port || ''}"`;
         break;
+      case 'redis':
+        cli = `redis-cli -p` +
+          ` ${port ? port : ''}` +
+          ` -a ${this.token.id}` +
+          `@${passwordHolder}`;
+        break;
       default:
         cli = `Protocol '${protocol}' Not support now`;
     }

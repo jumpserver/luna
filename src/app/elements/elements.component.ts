@@ -6,7 +6,7 @@ import {ElementContentTabComponent} from './content-tab/content-tab.component';
 import {ElementAssetTreeComponent, DisabledAssetsDialogComponent} from './asset-tree/asset-tree.component';
 import {ElementTreeFilterComponent} from './tree-filter/tree-filter.component';
 import {ElementOrganizationComponent} from './organization/organization.component';
-import {ElementUserFileComponent} from './user-file/user-file.component';
+import {ElementUserFileComponent} from './profile/profile.component';
 import {ElementTermComponent} from './term/term.component';
 import {ChangLanWarningDialogComponent, ElementNavComponent} from './nav/nav.component';
 import {ElementIframeComponent} from './iframe/iframe.component';

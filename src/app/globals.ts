@@ -82,7 +82,7 @@ export const TYPE_RDP_FILE: ConnectType = {
 export const TYPE_SSH_CLIENT: ConnectType = {
   name: 'SSH Client',
   id: 'sshClient',
-  requireXPack: true,
+  requireXPack: false,
   protocol: 'ssh',
   client: true
 };
@@ -102,9 +102,9 @@ export const ProtocolConnectTypes = {
   telnet: [TYPE_WEB_CLI],
   mysql: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLIENT],
   sqlserver: [TYPE_WEB_CLI],
-  redis: [TYPE_WEB_CLI],
+  redis: [TYPE_WEB_CLI, TYPE_DB_CLIENT],
   mongodb: [TYPE_WEB_CLI],
-  postgresql: [TYPE_DB_GUI, TYPE_DB_CLIENT],
+  postgresql: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLIENT],
   oracle: [TYPE_DB_GUI],
   mariadb: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLIENT],
   k8s: [TYPE_WEB_CLI],
