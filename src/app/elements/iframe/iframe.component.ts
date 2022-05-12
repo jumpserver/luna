@@ -79,7 +79,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
         const msg = this._i18n.instant('Failed to open address');
         alert(`${msg}:\n${this.src}`);
       }
-    }.bind(this), 500 * 20);
+    }.bind(this), 1000 * 30);
   }
 
   sendCommand(data) {
