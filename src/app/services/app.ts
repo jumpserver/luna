@@ -8,8 +8,14 @@ import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
 import {AuthInfo, ConnectData, SystemUser, TreeNode, Endpoint, Protocol, View} from '@app/model';
 import * as CryptoJS from 'crypto-js';
+import {getCookie, setCookie} from '@app/utils/common';
 
 declare function unescape(s: string): string;
+
+function gotoLogin() {
+  const currentPath = encodeURI(document.location.pathname + document.location.search);
+  window.location.href = document.location.origin + '/core/auth/login/?next=' + currentPath;
+}
 
 @Injectable()
 export class AppService {
@@ -56,6 +62,18 @@ export class AppService {
       }
       return;
     }
+
+    // Determine whether the user has logged in
+    const sessionExpire = getCookie('jms_session_expire');
+    if (!sessionExpire) {
+      gotoLogin();
+      return;
+    } else if (sessionExpire === 'close') {
+      setInterval(() => {
+        setCookie('jms_session_expire', 'close', 120);
+      }, 10 * 1000);
+    }
+
     this._http.getUserProfile().subscribe(
       user => {
         Object.assign(User, user);

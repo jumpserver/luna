@@ -33,6 +33,13 @@ export function newTerminal(fontSize?: number) {
   });
 }
 
+export function setCookie(name, value, seconds) {
+   const d = new Date();
+   d.setTime(d.getTime() + seconds * 1000);
+   const expires = 'expires=' + d.toUTCString();
+   document.cookie = name + '=' + value + '; ' + expires;
+}
+
 export function getCookie(name: string): string {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
