@@ -70,7 +70,7 @@ export class AppService {
       return;
     } else if (sessionExpire === 'close') {
       setInterval(() => {
-        setCookie('jms_session_expire', 'close', 120);
+        setCookie('jms_session_expire', sessionExpire, 120);
       }, 10 * 1000);
     }
 
