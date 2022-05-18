@@ -83,10 +83,9 @@ export class AppService {
       err => {
         // this._logger.error(err);
         User.logined = false;
-        const currentPath = encodeURI(document.location.pathname + document.location.search);
         const token = this.getQueryString('token');
         if (!token) {
-          window.location.href = document.location.origin + '/core/auth/login/?next=' + currentPath;
+         gotoLogin();
         }
         // this._router.navigate(['login']);
       },
