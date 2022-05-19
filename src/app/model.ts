@@ -225,6 +225,8 @@ export class GlobalSetting {
   XRDP_ENABLED: boolean;
   TERMINAL_MAGNUS_ENABLED: boolean;
   TERMINAL_KOKO_SSH_ENABLED: boolean;
+  SECURITY_WATERMARK_DISPLAY_CONTENT: string;
+  SECURITY_WATERMARK_DISPLAY_OPTION: Array<string>;
 }
 
 export class Setting {
@@ -257,6 +259,7 @@ export class Replay {
   height: number;
   width: number;
   download_url: string;
+  watermark: string;
 }
 
 export class Session {
@@ -271,6 +274,7 @@ export class Session {
   terminal: string;
   user: string;
   user_id: string;
+  watermark: string;
 }
 
 export class Command {

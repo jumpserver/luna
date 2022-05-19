@@ -29,10 +29,30 @@ export class ElementContentWindowComponent implements OnInit {
     this.loading = false;
   }
 
+  getWaterMarkContent() {
+    let timestamp = '', user = '', content = '', asset = '', sessionStart = '';
+    const options = this._settingSvc.globalSetting.SECURITY_WATERMARK_DISPLAY_OPTION || [];
+    for (const i in options) {
+      if (options[i] === 'session_start') {
+        sessionStart = `${new Date().toJSON()}\n`;
+      } else if (options[i] === 'asset') {
+        asset = `${this.view.node.name}\n`;
+      } else if (options[i] === 'timestamp') {
+        timestamp = Date.now() + '\n';
+      } else if (options[i] === 'user') {
+        user = `${User.name}(${User.username})\n`;
+      }
+    }
+    if (this._settingSvc.globalSetting.SECURITY_WATERMARK_DISPLAY_CONTENT) {
+      content = this._settingSvc.globalSetting.SECURITY_WATERMARK_DISPLAY_CONTENT;
+    }
+    return `${asset}${sessionStart}${timestamp}${user}${content}`;
+  }
+
   createWaterMark() {
+    const content = this.getWaterMarkContent();
     this._settingSvc.createWaterMarkIfNeed(
-      this.windowRef.nativeElement,
-      `${User.name}(${User.username})\n${this.view.node.name}`
+      this.windowRef.nativeElement, content
     );
   }
 

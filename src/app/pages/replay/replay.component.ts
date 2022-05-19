@@ -35,7 +35,7 @@ export class PagesReplayComponent implements OnInit {
             this.replay.id = sid;
             clearInterval(interval);
             this._settingSvc.createWaterMarkIfNeed(
-              document.body, `${this.replay.user}\n${this.replay.asset}`
+              document.body, this.replay.watermark
             );
           }
         },

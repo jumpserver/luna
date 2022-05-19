@@ -26,7 +26,7 @@ export class PagesMonitorComponent implements OnInit {
       this.generateMonitorURL().then(() => {
         this._settingSvc.createWaterMarkIfNeed(
           this.windowRef.nativeElement,
-          `${this.sessionDetail.user}\n${this.sessionDetail.asset}`
+          this.sessionDetail.watermark
         );
       });
     });
