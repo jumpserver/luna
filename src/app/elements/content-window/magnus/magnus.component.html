@@ -21,9 +21,8 @@
           <span *ngIf="item.name !== 'password'">
             {{ this.info[item.name] }}
           </span>
-          <span class="btn"
-          >
-            <i class="fa fa-clipboard icon"></i>
+          <span class="btn">
+            <i class="fa fa-clone icon"></i>
           </span>
         </td>
       </tr>
@@ -49,7 +48,7 @@
         [cbContent]="cli"
         (cbOnSuccess)="onCopySuccess($event)"
       >
-        <i class="fa fa-clipboard icon"></i>
+        <i class="fa fa-clone icon"></i>
       </span>
     </div>
   </div>
