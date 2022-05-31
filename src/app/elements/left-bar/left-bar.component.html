@@ -7,6 +7,9 @@
   </div>
 
   <div fxflex="30px" class="footer-version">
+    <span class="menu-active" (click)="active()">
+      <i class="fa fa-outdent" [ngClass]="{'icon-active': iconActive}"></i>
+    </span>
     <p> Version <strong>{{version}}</strong></p>
   </div>
 </div>

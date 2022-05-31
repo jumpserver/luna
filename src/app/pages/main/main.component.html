@@ -7,13 +7,24 @@
           (gutterClick)="splitGutterClick($event)">
   <as-split-area [size]="20" id="left-side"
                  *ngIf="store.showLeftBar"
+                 #leftArea
                  order="0" class="left-side"
-                 style="min-width:100px;max-width: 50%;">
-    <div>
-      <elements-left-bar></elements-left-bar>
+                 style="min-width:54px;max-width: 50%;">
+    <div class="layout">
+      <div class="menu-icon" [ngClass]="{'menu-active':showMenu}">
+        <div class="menu-item" *ngFor="let item of menus">
+          <span><i class="fa" [ngClass]="item.icon"></i></span>
+        </div>
+      </div>
+      <elements-left-bar (menuActive)="menuActive()"></elements-left-bar>
     </div>
   </as-split-area>
-  <as-split-area [size]="80" class="content" order="1">
+  <as-split-area
+    [size]="80"
+    class="content"
+    order="1"
+    #rightArea
+  >
     <div>
       <elements-content></elements-content>
       <div [hidden]="showIframeHider === false"

@@ -31,9 +31,22 @@ label {
   border-top: 1px solid #e7eaec;
   bottom: 0;
   height: 30px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  .menu-active {
+    color: white;
+    cursor: pointer;
+    padding-right: 8px;
+    transition: all .2s;
+  }
+  .icon-active {
+    transform: rotate(180deg);
+  }
 }
 
 .footer-version > p {
+  display: inline-block;
   height: 8px;
   font-size: 13px;
   padding-top: 2px;
