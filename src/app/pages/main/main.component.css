@@ -109,3 +109,31 @@ as-split ::ng-deep .as-split-gutter-icon:before{
   width: 100%;
   height: 100%;
 }
+.layout {
+  position: relative;
+}
+.menu-icon {
+  position: absolute;
+  display: none;
+  width: 100%;
+  height: calc(100% - 28px);
+  padding-top: 30px;
+  text-align: center;
+  color: white;
+  transition: all .2s;
+}
+.menu-item {
+  position: relative;
+  width: 100%;
+  height: 46px;
+  line-height: 46px;
+  cursor: pointer;
+}
+.menu-item:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+.menu-active {
+  display: block;
+  z-index: 11;
+  background: #2f2a2a;
+}

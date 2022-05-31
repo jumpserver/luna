@@ -1,7 +1,6 @@
-import {Component} from '@angular/core';
+import {Component, Output, EventEmitter} from '@angular/core';
 import {DataStore} from '@app/globals';
 import {version} from '@src/environments/environment';
-
 
 @Component({
   selector: 'elements-left-bar',
@@ -9,8 +8,11 @@ import {version} from '@src/environments/environment';
   styleUrls: ['./left-bar.component.scss'],
 })
 export class ElementLeftBarComponent {
+  @Output() menuActive = new EventEmitter();
+
   DataStore = DataStore;
   version = version;
+  iconActive = false;
 
   static Hide() {
     DataStore.showLeftBar = false;
@@ -22,4 +24,8 @@ export class ElementLeftBarComponent {
     window.dispatchEvent(new Event('resize'));
   }
 
+  active() {
+    this.iconActive = !this.iconActive;
+    this.menuActive.emit();
+  }
 }
