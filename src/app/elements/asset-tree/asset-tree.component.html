@@ -1,11 +1,37 @@
 <div>
+  <div class="tree-type">
+    <span class="tree-type-banner">
+      <span class="tree-type-banner-label">
+        我的资产
+      </span>
+      <span class="tree-banner-icon-zone">
+        <i class="fa fa-search tree-banner-icon"></i>
+        <i class="fa fa-refresh tree-banner-icon"></i>
+      </span>
+    </span>
+    <div class="tree-type-content">
+      <ul id="assetsTree" class="ztree">
+      </ul>
+    </div>
+  </div>
+  
+  <div class="tree-type">
+    <span class="tree-type-banner">
+      <span class="tree-type-banner-label">
+        我的应用
+      </span>
+      <span class="tree-banner-icon-zone">
+        <i class="fa fa-search tree-banner-icon"></i>
+        <i class="fa fa-refresh tree-banner-icon"></i>
+      </span>
+    </span>
+    <div class="tree-type-content">
+      <ul id="applicationsTree" class="ztree">
+      </ul>
+    </div>
+  </div>
+  
   <p *ngIf="loading" style="padding: 3px">{{ "Loading"| translate }} ...</p>
-  <ul id="myAssets" class="ztree">
-    <ul id="assetsTree" class="ztree" style="display: none">
-    </ul>
-  </ul>
-  <ul id="applicationsTree" class="ztree">
-  </ul>
 </div>
 
 

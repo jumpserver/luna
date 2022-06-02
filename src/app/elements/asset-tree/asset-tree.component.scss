@@ -85,7 +85,6 @@
     padding: 0;
     border-left: none;
     text-shadow: 0 0 0 transparent;
-    box-shadow: 0;
     -webkit-border-radius: 0;
     -moz-border-radius: 0;
     border-radius: 0;
@@ -109,3 +108,36 @@ tr:hover {
   padding: 0 6px;
 }
 
+.tree-type-banner {
+  height: 31px;
+  display: block;
+  line-height: 31px;
+  padding: 0 10px;
+  background-color: #3a3333;
+  border-right: rgba(58, 51, 51, 0.5) 1px solid;
+}
+
+.tree-type-banner:hover {
+  cursor: pointer;
+}
+
+.tree-type-banner-label {
+  color: white;
+}
+
+.tree-type-content {
+  padding: 5px 10px;
+}
+
+.tree-banner-icon {
+  padding: 0 5px;
+}
+
+.tree-banner-icon:hover {
+  cursor: pointer;
+}
+
+.tree-banner-icon-zone {
+  line-height: 31px;
+  float: right;
+}

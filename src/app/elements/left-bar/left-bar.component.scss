@@ -44,3 +44,21 @@ label {
 .ngx-scroll-overlay {
   overflow: auto; // for FF
 }
+
+.organization {
+  height: 31px;
+  background-color: #3a3333;
+  border-right: rgba(31, 27, 27, 0.5) 1px solid;
+  padding: 0 20px 0 10px;
+  line-height: 31px;
+  color: white;
+  border-bottom: rgba(31, 27, 27, 0.5) 1px solid;
+}
+
+.organization:hover {
+  cursor: pointer;
+}
+
+.organization-text {
+  font-weight: bold;
+}

@@ -165,14 +165,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   async initAssetsTree(refresh?: boolean) {
     const setting = Object.assign({}, this.setting);
-    const myAssetsNodes = [
-      {
-        name: await this._i18n.t('My assets'),
-        id: 'myAssets', isParent: true,
-        title: 'My assets',
-        children: [], open: true
-      }
-    ];
+    const myAssetsNodes = [];
     setting['callback'] = {
       onClick: this.debouncedOnAssetsNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
@@ -197,13 +190,14 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         this.assetsTree.destroy();
       }
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
-      myAssetsNodes[0].children = _assetTree.getNodes();
-      const myAssetsTree = $.fn.zTree.init($('#myAssets'), setting, myAssetsNodes);
-      this.assetsTree = myAssetsTree;
-      this.rootNodeAddDom(myAssetsTree, () => {
-        this.refreshAssetsTree();
-      });
-      _assetTree.destroy();
+      myAssetsNodes.push(_assetTree.getNodes());
+
+      // const myAssetsTree = $.fn.zTree.init($('#myAssets'), setting, myAssetsNodes);
+      // this.assetsTree = myAssetsTree;
+      // this.rootNodeAddDom(myAssetsTree, () => {
+      //   this.refreshAssetsTree();
+      // });
+      // _assetTree.destroy();
     }, error => {
       this.loading = false;
     });

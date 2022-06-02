@@ -21,5 +21,4 @@ export class ElementLeftBarComponent {
     DataStore.showLeftBar = true;
     window.dispatchEvent(new Event('resize'));
   }
-
 }
