@@ -22,10 +22,6 @@
   /*overflow: hidden !important;*/
 /*}*/
 
-.left-side {
-
-}
-
 .handle {
   outline: none;
   -webkit-user-select: none;
@@ -117,7 +113,6 @@ as-split ::ng-deep .as-split-gutter-icon:before{
   display: none;
   width: 100%;
   height: calc(100% - 28px);
-  padding-top: 30px;
   text-align: center;
   color: white;
   transition: all .2s;
@@ -128,6 +123,11 @@ as-split ::ng-deep .as-split-gutter-icon:before{
   height: 46px;
   line-height: 46px;
   cursor: pointer;
+}
+.menu-item:first-child {
+  height: 30px;
+  line-height: 30px;
+  border-bottom: 1px solid #19aa8d;
 }
 .menu-item:hover {
   background-color: rgba(0, 0, 0, 0.25);

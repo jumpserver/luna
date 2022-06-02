@@ -466,3 +466,21 @@ ul.ztree.zTreeDragUL {
   filter: alpha(opacity=0);
   position: absolute;
 }
+.ztree li span.button.assets_ico_open::before,
+.ztree li span.button.assets_ico_close::before {
+  content: "\F01C";
+  font-family: FontAwesome;
+  padding-top: 10px;
+  padding-left: 2px;
+  display: inline-block;
+  color: #676a6c;
+}
+.ztree li span.button.applications_ico_open::before,
+.ztree li span.button.applications_ico_close::before {
+  content: "";
+  font-family: FontAwesome;
+  padding-top: 10px;
+  padding-left: 2px;
+  display: inline-block;
+  color: #676a6c;
+}
