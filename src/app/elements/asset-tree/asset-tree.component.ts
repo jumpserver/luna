@@ -170,6 +170,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         name: await this._i18n.t('My assets'),
         id: 'myAssets', isParent: true,
         title: 'My assets',
+        iconSkin: 'assets',
         children: [], open: true
       }
     ];

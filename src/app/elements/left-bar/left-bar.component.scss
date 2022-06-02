@@ -27,7 +27,7 @@ label {
   font-size: 9pt;
   left: 0;
   width: 100%;
-  padding: 1px 20px 0 20px;
+  padding: 1px 20px 0 0;
   border-top: 1px solid #e7eaec;
   bottom: 0;
   height: 30px;
@@ -35,13 +35,20 @@ label {
   white-space: nowrap;
   text-overflow: ellipsis;
   .menu-active {
+    display: inline-block;
+    height: 100%;
+    padding-left: 20px;
+    padding-right: 10px;
     color: white;
     cursor: pointer;
-    padding-right: 8px;
     transition: all .2s;
+    &:hover {
+      color: #d6cbcb;
+    }
   }
   .icon-active {
     transform: rotate(180deg);
+    margin-right: 12px;
   }
 }
 

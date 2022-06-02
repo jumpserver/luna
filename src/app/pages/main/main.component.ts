@@ -1,8 +1,9 @@
 import {Component, HostListener, OnInit, ViewChild, ElementRef} from '@angular/core';
 import {DataStore, User} from '@app/globals';
 import {IOutputData, SplitComponent} from 'angular-split';
-import {environment} from '@src/environments/environment';
 import {ViewService} from '@app/services';
+import * as _ from 'lodash';
+declare var $: any;
 
 @Component({
   selector: 'pages-main',
@@ -18,6 +19,10 @@ export class PageMainComponent implements OnInit {
   showIframeHider = false;
   showMenu: any = false;
   menus: Array<object>;
+  settingLayoutWidth = {
+    leftWidth: '20%',
+    rightWidth: '80%'
+  };
 
   constructor(public viewSrv: ViewService) {}
 
@@ -35,12 +40,14 @@ export class PageMainComponent implements OnInit {
   ngOnInit(): void {
     this.menus = [
       {
-        name: '我的资产',
+        name: 'myAssets',
         icon: 'fa-inbox',
+        click: (name) => this.menuClick(this.settingLayoutWidth, name),
       },
       {
-        name: '我的应用',
+        name: 'applicationsTree',
         icon: 'fa-th',
+        click: (name) => this.menuClick(this.settingLayoutWidth, name),
       }
     ];
   }
@@ -80,16 +87,24 @@ export class PageMainComponent implements OnInit {
   }
 
   menuActive() {
-    let leftWidth = '20%';
-    let rightWidth = '80%';
+    const settings = _.cloneDeep(this.settingLayoutWidth);
     if (!this.showMenu) {
-      leftWidth = '0%';
-      rightWidth = '100%';
+      settings.leftWidth = '0%';
+      settings.rightWidth = '100%';
     }
     setTimeout(() => {
-      this.leftArea.nativeElement.style = `min-width: 54px; max-width: 50%; order: 0; flex: 0 0 calc(${leftWidth} - 0px);`;
-      this.rightArea.nativeElement.style = `order: 2; flex: 0 0 calc(${rightWidth} - 0px);`;
-      this.showMenu = !this.showMenu;
-    }, 100);
+      this.menuClick(settings, '');
+    }, 30);
+  }
+
+  menuClick(settings = this.settingLayoutWidth, type = '') {
+    this.leftArea.nativeElement.style = `min-width: 54px; order: 0; flex: 0 0 calc(${settings.leftWidth} - 0px);`;
+    this.rightArea.nativeElement.style = `order: 2; flex: 0 0 calc(${settings.rightWidth} - 0px);`;
+    this.showMenu = !this.showMenu;
+    if (type) {
+      const myTree = $.fn.zTree.getZTreeObj(type);
+      const nodes = myTree.transformToArray(myTree.getNodes());
+      myTree.expandNode(nodes[0], true);
+    }
   }
 }
