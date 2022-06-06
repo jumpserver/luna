@@ -107,7 +107,7 @@ export class AppService {
 
   getProtocolConnectTypes(remoteApp: Boolean) {
     const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
-    const xrdpEnabled = this._settingSvc.globalSetting.XRDP_ENABLED;
+    const RazorEnabled = this._settingSvc.globalSetting.TERMINAL_RAZOR_ENABLED;
     const magnusEnabled = this._settingSvc.globalSetting.TERMINAL_MAGNUS_ENABLED;
     const sshClientEnabled = this._settingSvc.globalSetting.TERMINAL_KOKO_SSH_ENABLED;
     const validTypes = {};
@@ -117,8 +117,8 @@ export class AppService {
         if (tp.requireXPack && !xpackEnabled) {
           return false;
         }
-        // 没有开启 xrdp 不支持 连接 xrdp
-        if ([TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1 && !xrdpEnabled) {
+        // 没有开启 razor 不支持 连接 razor
+        if ([TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1 && !RazorEnabled) {
           return false;
         }
         if (tp.id === TYPE_DB_CLIENT.id && !magnusEnabled) {
