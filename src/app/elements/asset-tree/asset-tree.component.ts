@@ -108,7 +108,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   treeFilterSubscription: any;
   isLoadTreeAsync: boolean;
   filterAssetCancel$: Subject<boolean> = new Subject();
-  loading = true;
+  assetsLoading = true;
+  applicationsLoading = true;
   favoriteAssets = [];
 
   debouncedOnAssetsNodeClick = _.debounce(this.onAssetsNodeClick, 300, {
@@ -183,11 +184,11 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       this.favoriteAssets = resp.map(i => i.asset);
     });
 
-    this.loading = true;
+    this.assetsLoading = true;
     this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
-      this.loading = false;
+      this.assetsLoading = false;
       if (refresh) {
-        this.assetsTree.destroy();
+        // this.assetsTree.destroy();
       }
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
       myAssetsNodes.push(_assetTree.getNodes());
@@ -199,7 +200,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       // });
       // _assetTree.destroy();
     }, error => {
-      this.loading = false;
+      this.assetsLoading = false;
     });
   }
 
@@ -223,18 +224,22 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       onClick: this.debouncedOnApplicationTreeNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
+    this.applicationsLoading = true;
     this._http.getMyGrantedAppsNodes().subscribe(resp => {
       const tree = $.fn.zTree.init($('#applicationsTree'), setting, resp);
       this.rootNodeAddDom(tree, () => {
         this.refreshApplicationTree();
       });
       this.applicationsTree = tree;
+      this.applicationsLoading = false;
+    }, error => {
+      this.applicationsLoading = false;
     });
   }
 
   refreshApplicationTree() {
     if (this.applicationsTree) {
-      this.applicationsTree.destroy();
+      // this.applicationsTree.destroy();
       this.initApplicationTree().then();
     }
   }
@@ -498,11 +503,11 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     if (treeNodes.length !== 0) {
       this.assetsTree.hideNodes(treeNodes);
     }
-    this.loading = true;
+    this.assetsLoading = true;
     this._http.getMyGrantedAssets(keyword)
       .pipe(takeUntil(this.filterAssetCancel$))
       .subscribe(nodes => {
-        this.loading = false;
+        this.assetsLoading = false;
         let name = this._i18n.instant('Search');
         const assetsAmount = nodes.length;
         name = `${name} (${assetsAmount})`;
@@ -564,6 +569,21 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       allChildren = [...children, ...this.recurseChildren(n)];
     });
     return allChildren;
+  }
+
+  treeSearch(type) {
+    const vm = this;
+    const assetsSearchIcon = $(`#${type}Icon`)[0];
+    const assetsSearchInput = $(`#${type}Input`)[0];
+    assetsSearchIcon.classList.toggle('active');
+    assetsSearchInput.focus();
+    assetsSearchIcon.onchange = function(e) {
+      if (type === 'applicationsSearch') {
+        vm.filterApplicationsTree(e.target.value);
+      } else {
+        vm.filterAssets(e.target.value);
+      }
+    };
   }
 }
 

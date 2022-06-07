@@ -2,14 +2,20 @@
   <div class="tree-type">
     <span class="tree-type-banner">
       <span class="tree-type-banner-label">
-        我的资产
+        {{ "My assets"| translate }}
       </span>
       <span class="tree-banner-icon-zone">
-        <i class="fa fa-search tree-banner-icon"></i>
-        <i class="fa fa-refresh tree-banner-icon"></i>
+        <a class="tree-search" id="assetsSearchIcon">
+          <i class="fa fa-search icon" (click)="treeSearch('assetsSearch')"></i>
+          <input type="text" id="assetsSearchInput" class="tree-input">
+        </a>
+        <i class="fa fa-refresh tree-banner-icon" (click)="refreshAssetsTree()"></i>
       </span>
     </span>
     <div class="tree-type-content">
+      <div *ngIf="assetsLoading" class="tree-type-loading">
+        <mat-spinner diameter="20"></mat-spinner>
+      </div>
       <ul id="assetsTree" class="ztree">
       </ul>
     </div>
@@ -18,22 +24,25 @@
   <div class="tree-type">
     <span class="tree-type-banner">
       <span class="tree-type-banner-label">
-        我的应用
+        {{ "My applications"| translate }}
       </span>
       <span class="tree-banner-icon-zone">
-        <i class="fa fa-search tree-banner-icon"></i>
-        <i class="fa fa-refresh tree-banner-icon"></i>
+        <a class="tree-search" id="applicationsSearchIcon">
+          <i class="fa fa-search icon" (click)="treeSearch('applicationsSearch')"></i>
+          <input type="text" id="applicationsSearchInput" class="tree-input">
+        </a>
+        <i class="fa fa-refresh tree-banner-icon" (click)="refreshApplicationTree()"></i>
       </span>
     </span>
     <div class="tree-type-content">
+      <div *ngIf="applicationsLoading" class="tree-type-loading">
+        <mat-spinner diameter="20"></mat-spinner>
+      </div>
       <ul id="applicationsTree" class="ztree">
       </ul>
     </div>
   </div>
-  
-  <p *ngIf="loading" style="padding: 3px">{{ "Loading"| translate }} ...</p>
 </div>
-
 
 <div #rMenu *ngIf="isShowRMenu" class="basicContext" style="position: fixed" [style.top]="pos.top" [style.left]="pos.left">
   <table>
