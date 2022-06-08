@@ -1,15 +1,15 @@
 <div>
   <div class="tree-type">
-    <span class="tree-type-banner">
+    <span class="tree-type-banner" (click)="foldTree(0)">
       <span class="tree-type-banner-label">
         {{ "My assets"| translate }}
       </span>
       <span class="tree-banner-icon-zone">
         <a class="tree-search" id="assetsSearchIcon">
-          <i class="fa fa-search icon" (click)="treeSearch('assetsSearch')"></i>
+          <i class="fa fa-search icon" (click)="treeSearch($event, 'assetsSearch')"></i>
           <input type="text" id="assetsSearchInput" class="tree-input">
         </a>
-        <i class="fa fa-refresh tree-banner-icon" (click)="refreshAssetsTree()"></i>
+        <i class="fa fa-refresh tree-banner-icon" (click)="refreshTree($event, 'asset')"></i>
       </span>
     </span>
     <div class="tree-type-content">
@@ -22,16 +22,16 @@
   </div>
   
   <div class="tree-type">
-    <span class="tree-type-banner">
+    <span class="tree-type-banner" (click)="foldTree(1)">
       <span class="tree-type-banner-label">
         {{ "My applications"| translate }}
       </span>
       <span class="tree-banner-icon-zone">
         <a class="tree-search" id="applicationsSearchIcon">
-          <i class="fa fa-search icon" (click)="treeSearch('applicationsSearch')"></i>
+          <i class="fa fa-search icon" (click)="treeSearch($event, 'applicationsSearch')"></i>
           <input type="text" id="applicationsSearchInput" class="tree-input">
         </a>
-        <i class="fa fa-refresh tree-banner-icon" (click)="refreshApplicationTree()"></i>
+        <i class="fa fa-refresh tree-banner-icon" (click)="refreshTree($event, 'application')"></i>
       </span>
     </span>
     <div class="tree-type-content">

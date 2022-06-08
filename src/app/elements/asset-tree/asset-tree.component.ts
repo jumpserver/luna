@@ -188,7 +188,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
       this.assetsLoading = false;
       if (refresh) {
-        // this.assetsTree.destroy();
+        this.assetsTree.destroy();
       }
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
       myAssetsNodes.push(_assetTree.getNodes());
@@ -239,7 +239,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   refreshApplicationTree() {
     if (this.applicationsTree) {
-      // this.applicationsTree.destroy();
+      this.applicationsTree.destroy();
       this.initApplicationTree().then();
     }
   }
@@ -571,19 +571,38 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     return allChildren;
   }
 
-  treeSearch(type) {
+  treeSearch(event, type: string) {
+    event.stopPropagation();
     const vm = this;
     const assetsSearchIcon = $(`#${type}Icon`)[0];
     const assetsSearchInput = $(`#${type}Input`)[0];
     assetsSearchIcon.classList.toggle('active');
     assetsSearchInput.focus();
-    assetsSearchIcon.onchange = function(e) {
+    assetsSearchInput.onclick = (e) => {
+      e.stopPropagation();
+    };
+    assetsSearchIcon.onchange = (e) => {
+      e.stopPropagation();
       if (type === 'applicationsSearch') {
         vm.filterApplicationsTree(e.target.value);
       } else {
         vm.filterAssets(e.target.value);
       }
     };
+  }
+
+  refreshTree(event, type: string) {
+    event.stopPropagation();
+    if (type === 'application') {
+      this.refreshApplicationTree();
+    } else {
+      this.refreshAssetsTree();
+    }
+  }
+
+  foldTree(num: number) {
+    const tree = $(`.tree-type-content`)[num];
+    tree.classList.toggle('fold-tree');
   }
 }
 

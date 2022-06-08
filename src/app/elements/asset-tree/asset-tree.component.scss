@@ -108,6 +108,10 @@ tr:hover {
   padding: 0 6px;
 }
 
+.tree-type {
+  border-bottom: rgba(58, 51, 51, 0.5) 1px solid;
+}
+
 .tree-type-banner {
   height: 31px;
   display: block;
@@ -156,4 +160,9 @@ tr:hover {
 .tree-banner-icon-zone {
   line-height: 31px;
   float: right;
+}
+
+.fold-tree {
+  display: none;
+  animation: all 1s;
 }
