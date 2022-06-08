@@ -158,12 +158,15 @@ tr:hover {
 
 .tree-banner-icon {
   padding: 0 0 0 5px;
-  color: white;
+  color: rgb(204, 204, 204);
   vertical-align: text-top;
+  width: 20px;
+  height: 20px;
 }
 
 .tree-banner-icon:hover {
   cursor: pointer;
+  color: white;
 }
 
 .tree-banner-icon-zone {
@@ -178,7 +181,7 @@ tr:hover {
 
 .tree-type .tree-search {
   position: relative;
-  width: 16px;
+  width: 20px;
   height: 20px;
   display: inline-block;
   border-radius: 60px;
@@ -187,13 +190,12 @@ tr:hover {
   overflow: hidden;
 }
 
-.tree-type .tree-search .icon {
+.tree-type .tree-search .tree-banner-icon {
   position: absolute;
   top: 8px;
-  left: 6px;
+  left: 8px;
   width: 6px;
   height: 6px;
-  color: white;
   border-radius: 60px;
   display: flex;
   justify-content: center;
