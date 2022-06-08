@@ -117,6 +117,7 @@ tr:hover {
   display: block;
   line-height: 31px;
   padding: 0 11px;
+  cursor: pointer;
   background-color: #3a3333;
   border-right: rgba(58, 51, 51, 0.5) 1px solid;
   .tree-icon-rotate {
@@ -127,10 +128,9 @@ tr:hover {
   .rotate {
     transform: rotate(-90deg);
   }
-}
-
-.tree-type-banner:hover {
-  cursor: pointer;
+  .show {
+    display: none;
+  }
 }
 
 .tree-type-banner-label {
