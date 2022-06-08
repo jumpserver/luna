@@ -203,13 +203,11 @@ tr:hover {
 
 .tree-type .tree-search.active, .tree-search.active  {
   width: 160px;
-  background: #2f2a2a;
-  box-shadow: 0 0 0 1px #19aa8d;
+  background: black;
 }
 
 .tree-type .tree-search.active:hover {
   border-radius: 60px;
-  box-shadow: 0 0 0 1px #19aa8d;
 }
 
 .tree-type .tree-search input {
