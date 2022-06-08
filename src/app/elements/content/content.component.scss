@@ -62,6 +62,9 @@
   border-left-width: 0;
   width: 100%;
   padding: 0 2px 0 0;
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 #batchCommandDiv > input {
@@ -72,6 +75,9 @@
   border: none;
   background: #2f2a2a;
   color: #ffffff;
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 .basicContext {
