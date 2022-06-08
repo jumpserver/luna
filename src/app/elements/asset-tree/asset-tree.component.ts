@@ -602,7 +602,9 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   foldTree(num: number) {
     const tree = $(`.tree-type-content`)[num];
+    const icon = $(`.tree-icon-rotate`)[num];
     tree.classList.toggle('fold-tree');
+    icon.classList.toggle('rotate');
   }
 }
 

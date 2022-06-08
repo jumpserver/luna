@@ -116,9 +116,17 @@ tr:hover {
   height: 31px;
   display: block;
   line-height: 31px;
-  padding: 0 10px;
+  padding: 0 11px;
   background-color: #3a3333;
   border-right: rgba(58, 51, 51, 0.5) 1px solid;
+  .tree-icon-rotate {
+    font-size: 16px;
+    margin-right: 7px;
+    color: white;
+  }
+  .rotate {
+    transform: rotate(-90deg);
+  }
 }
 
 .tree-type-banner:hover {
@@ -141,7 +149,7 @@ tr:hover {
   width: 100%;
   height: 100%;
   min-height: 100%;
-  background: rgba(0, 0, 0, .2);
+  background: rgba(0, 0, 0, .1);
   display:flex;
   justify-content:center;
   align-items:center;
@@ -165,4 +173,54 @@ tr:hover {
 .fold-tree {
   display: none;
   animation: all 1s;
+}
+
+.tree-type .tree-search {
+  position: relative;
+  width: 16px;
+  height: 20px;
+  display: inline-block;
+  border-radius: 60px;
+  vertical-align: sub;
+  transition: .25s;
+  overflow: hidden;
+}
+
+.tree-type .tree-search .icon {
+  position: absolute;
+  top: 8px;
+  left: 6px;
+  width: 6px;
+  height: 6px;
+  color: white;
+  border-radius: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.tree-type .tree-search.active, .tree-search.active  {
+  width: 160px;
+  background: #2f2a2a;
+  box-shadow: 0 0 0 1px #19aa8d;
+}
+
+.tree-type .tree-search.active:hover {
+  border-radius: 60px;
+  box-shadow: 0 0 0 1px #19aa8d;
+}
+
+.tree-type .tree-search input {
+  position: relative;
+  left: 16px;
+  width: 135px;
+  height: 100%;
+  background-color: transparent;
+  color: #f0f0f1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  outline: none;
 }

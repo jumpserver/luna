@@ -19,6 +19,18 @@
 ::ng-deep .mat-select-panel {
   margin-top: 35px;
   min-width: 100%!important;
+  border-radius: initial!important;
+  background: black;
+}
+::ng-deep .mat-option {
+  color: #f0f0f1;
+  &:hover {
+    background-color: rgba(53, 54, 51, 0.7)!important;
+  }
+}
+::ng-deep .mat-option.mat-active {
+  color: #f0f0f1;
+  background-color: rgba(53, 54, 51, 0.7)!important;
 }
 .org-option {
   line-height: 2.2em!important;
