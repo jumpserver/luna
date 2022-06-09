@@ -40,7 +40,7 @@ export class PageMainComponent implements OnInit {
   ngOnInit(): void {
     this.menus = [
       {
-        name: 'myAssets',
+        name: 'assetsTree',
         icon: 'fa-inbox',
         click: (name) => this.menuClick(this.settingLayoutWidth, name),
       },
@@ -101,9 +101,16 @@ export class PageMainComponent implements OnInit {
     this.rightArea.nativeElement.style = `order: 2; flex: 0 0 calc(${settings.rightWidth} - 0px);`;
     this.showMenu = !this.showMenu;
     if (type) {
-      const myTree = $.fn.zTree.getZTreeObj(type);
-      const nodes = myTree.transformToArray(myTree.getNodes());
-      myTree.expandNode(nodes[0], true);
+      const typeIndex = type === 'assetsTree' ? 0 : 1;
+      const treeContent = $(`.tree-type-content`)[typeIndex];
+      const treeSelect = $(`.tree-icon-rotate`)[typeIndex];
+      const bannerIcon = $(`.tree-banner-icon-zone`)[typeIndex];
+      const menuActiveStatus = treeContent.classList.value.indexOf('fold-tree') > -1;
+      if (menuActiveStatus) {
+        treeContent.classList.toggle('fold-tree');
+        treeSelect.classList.toggle('rotate');
+        bannerIcon.classList.toggle('show');
+      }
     }
   }
 }
