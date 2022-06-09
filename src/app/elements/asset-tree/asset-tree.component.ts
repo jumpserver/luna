@@ -193,13 +193,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
       myAssetsNodes.push(_assetTree.getNodes());
       this.assetsTree = _assetTree;
-
-      // const myAssetsTree = $.fn.zTree.init($('#myAssets'), setting, myAssetsNodes);
-      // this.assetsTree = myAssetsTree;
-      // this.rootNodeAddDom(myAssetsTree, () => {
-      //   this.refreshAssetsTree();
-      // });
-      // _assetTree.destroy();
     }, error => {
       this.assetsLoading = false;
     });

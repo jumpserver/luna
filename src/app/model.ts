@@ -222,7 +222,7 @@ export class GlobalSetting {
   SECURITY_WATERMARK_ENABLED: boolean;
   HELP_DOCUMENT_URL: string;
   HELP_SUPPORT_URL: string;
-  XRDP_ENABLED: boolean;
+  TERMINAL_RAZOR_ENABLED: boolean;
   TERMINAL_MAGNUS_ENABLED: boolean;
   TERMINAL_KOKO_SSH_ENABLED: boolean;
 }

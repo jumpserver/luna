@@ -1,8 +1,7 @@
-import {Component} from '@angular/core';
+import {Component, Output, EventEmitter} from '@angular/core';
 import {DataStore} from '@app/globals';
 import {version} from '@src/environments/environment';
 import {SettingService} from '@app/services';
-
 
 
 @Component({
@@ -11,10 +10,16 @@ import {SettingService} from '@app/services';
   styleUrls: ['./left-bar.component.scss'],
 })
 export class ElementLeftBarComponent {
-  constructor(private _settingSvc: SettingService) {}
+  @Output() menuActive = new EventEmitter();
+  hasXPack = false;
+
+  constructor(private _settingSvc: SettingService) {
+    this.hasXPack = _settingSvc.hasXPack();
+  }
 
   DataStore = DataStore;
   version = version;
+  iconActive = false;
 
   static Hide() {
     DataStore.showLeftBar = false;
@@ -24,5 +29,10 @@ export class ElementLeftBarComponent {
   static Show() {
     DataStore.showLeftBar = true;
     window.dispatchEvent(new Event('resize'));
+  }
+
+  toggle() {
+    this.iconActive = !this.iconActive;
+    this.menuActive.emit();
   }
 }
