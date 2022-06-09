@@ -1,15 +1,20 @@
 <elements-nav></elements-nav>
-<as-split direction="horizontal"
-          id="container"
-          gutterSize="0"
-          (dragStart)="dragStartHandler($event)"
-          (dragEnd)="dragEndHandler($event)"
-          (gutterClick)="splitGutterClick($event)">
-  <as-split-area [size]="20" id="left-side"
-                 *ngIf="store.showLeftBar"
-                 #leftArea
-                 order="0" class="left-side"
-                 style="min-width:54px;max-width: 50%;">
+<as-split
+  direction="horizontal"
+  id="container"
+  gutterSize="0"
+  (dragStart)="dragStartHandler($event)"
+  (dragEnd)="dragEndHandler($event)"
+  (gutterClick)="splitGutterClick($event)"
+>
+  <as-split-area
+    id="left-side"
+    [size]="20"
+    *ngIf="store.showLeftBar"
+    #leftArea
+    order="0" class="left-side"
+    style="min-width:54px;max-width: 50%;"
+  >
     <div class="layout">
       <div class="menu-icon" [ngClass]="{'menu-active':showMenu}">
         <div class="menu-item" (click)="menuClick()">
@@ -38,8 +43,11 @@
   >
     <div>
       <elements-content></elements-content>
-      <div [hidden]="showIframeHider === false"
-           class="hack-iframe-hider"></div>
+      <div
+        [hidden]="showIframeHider === false"
+        class="hack-iframe-hider"
+      >
+      </div>
     </div>
   </as-split-area>
 </as-split>

@@ -55,23 +55,29 @@
 }
 
 #winContainer {
-  height: calc(100% - 30px - 26px);
+  height: calc(100% - 30px - 29px);
 }
 #batchCommandDiv {
-  height: 26px;
-  border-left-width: 0;
+  height: 28px;
+  border-left: solid 1px black;
   width: 100%;
   padding: 0 2px 0 0;
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 #batchCommandDiv > input {
-  height: 26px;
+  height: 28px;
   padding-left: 14px;
   width: 100%;
-  line-height: 26px;
+  line-height: 28px;
   border: none;
   background: #3a3333;
   color: #ffffff;
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 .basicContext {

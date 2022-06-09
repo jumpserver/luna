@@ -1,13 +1,50 @@
 <div>
-  <p *ngIf="loading" style="padding: 3px">{{ "Loading"| translate }} ...</p>
-  <ul id="myAssets" class="ztree">
-    <ul id="assetsTree" class="ztree" style="display: none">
-    </ul>
-  </ul>
-  <ul id="applicationsTree" class="ztree">
-  </ul>
+  <div class="tree-type">
+    <span class="tree-type-banner" (click)="foldTree(0)">
+      <i class="fa fa-caret-down tree-icon-rotate"></i>
+      <span class="tree-type-banner-label">
+        {{ "My assets"| translate }}
+      </span>
+      <span class="tree-banner-icon-zone">
+        <a class="tree-search" id="assetsSearchIcon">
+          <i class="fa fa-search tree-banner-icon" (click)="treeSearch($event, 'assetsSearch')"></i>
+          <input type="text" id="assetsSearchInput" class="tree-input">
+        </a>
+        <i class="fa fa-refresh tree-banner-icon" (click)="refreshTree($event, 'asset')"></i>
+      </span>
+    </span>
+    <div class="tree-type-content">
+      <div *ngIf="assetsLoading" class="tree-type-loading">
+        <mat-spinner diameter="20"></mat-spinner>
+      </div>
+      <ul id="assetsTree" class="ztree">
+      </ul>
+    </div>
+  </div>
+  
+  <div class="tree-type">
+    <span class="tree-type-banner" (click)="foldTree(1)">
+      <i class="fa fa-caret-down tree-icon-rotate"></i>
+      <span class="tree-type-banner-label">
+        {{ "My applications"| translate }}
+      </span>
+      <span class="tree-banner-icon-zone">
+        <a class="tree-search" id="applicationsSearchIcon">
+          <i class="fa fa-search tree-banner-icon" (click)="treeSearch($event, 'applicationsSearch')"></i>
+          <input type="text" id="applicationsSearchInput" class="tree-input">
+        </a>
+        <i class="fa fa-refresh tree-banner-icon" (click)="refreshTree($event, 'application')"></i>
+      </span>
+    </span>
+    <div class="tree-type-content">
+      <div *ngIf="applicationsLoading" class="tree-type-loading">
+        <mat-spinner diameter="20"></mat-spinner>
+      </div>
+      <ul id="applicationsTree" class="ztree">
+      </ul>
+    </div>
+  </div>
 </div>
-
 
 <div #rMenu *ngIf="isShowRMenu" class="basicContext" style="position: fixed" [style.top]="pos.top" [style.left]="pos.left">
   <table>

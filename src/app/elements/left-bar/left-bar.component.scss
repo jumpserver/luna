@@ -64,3 +64,28 @@ label {
 .ngx-scroll-overlay {
   overflow: auto; // for FF
 }
+
+.organization {
+  height: 31px;
+  background-color: #3a3333;
+  padding: 0 16px 0 5px;
+  line-height: 31px;
+  color: white;
+  border-bottom: 1px solid #19aa8d;
+}
+
+.organization:hover {
+  cursor: pointer;
+}
+
+.organization-text {
+  font-weight: bold;
+}
+
+.my-assets {
+  height: calc(100vh - 60px);
+}
+
+.my-assets.has-org {
+  height: calc(100vh - 90px);
+}
