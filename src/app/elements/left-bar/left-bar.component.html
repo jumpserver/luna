@@ -1,5 +1,5 @@
 <div class="sidebar" fxLayout="column" >
-  <div class="organization">
+  <div class="organization" *ngIf="_settingSvc.hasXPack()">
     <elements-organization></elements-organization>
   </div>
 

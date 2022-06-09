@@ -1,6 +1,8 @@
 import {Component} from '@angular/core';
 import {DataStore} from '@app/globals';
 import {version} from '@src/environments/environment';
+import {SettingService} from '@app/services';
+
 
 
 @Component({
@@ -9,6 +11,8 @@ import {version} from '@src/environments/environment';
   styleUrls: ['./left-bar.component.scss'],
 })
 export class ElementLeftBarComponent {
+  constructor(private _settingSvc: SettingService) {}
+
   DataStore = DataStore;
   version = version;
 
