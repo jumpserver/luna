@@ -16,20 +16,20 @@
     font-size: 13px;
   }
 }
-::ng-deep .mat-select-panel {
-  margin-top: 30px;
+::ng-deep .org-panel.mat-select-panel {
+  margin-top: 27px;
   min-width: 100%!important;
   border-radius: initial!important;
   background: black;
   padding: 10px 0 !important;
 }
-::ng-deep .mat-option {
+::ng-deep .org-panel .mat-option {
   color: #f0f0f1;
   &:hover {
     background-color: rgba(53, 54, 51, 0.7)!important;
   }
 }
-::ng-deep .mat-option.mat-active {
+::ng-deep .org-panel .mat-option.mat-active {
   color: #f0f0f1;
   font-weight: bold;
   background-color: rgba(53, 54, 51, 0.8)!important;

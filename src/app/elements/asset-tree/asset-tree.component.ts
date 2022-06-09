@@ -582,7 +582,13 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     assetsSearchInput.onclick = (e) => {
       e.stopPropagation();
     };
-    assetsSearchIcon.onchange = (e) => {
+    assetsSearchInput.onblur = (e) => {
+      e.stopPropagation();
+      if (!e.target.value) {
+        assetsSearchIcon.classList.toggle('active');
+      }
+    };
+    assetsSearchIcon.oninput = (e) => {
       e.stopPropagation();
       if (type === 'applicationsSearch') {
         vm.filterApplicationsTree(e.target.value);

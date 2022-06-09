@@ -159,9 +159,8 @@ tr:hover {
 .tree-banner-icon {
   padding: 0 0 0 5px;
   color: rgb(204, 204, 204);
-  vertical-align: text-top;
   width: 20px;
-  height: 20px;
+  line-height: 30px;
 }
 
 .tree-banner-icon:hover {
@@ -170,7 +169,7 @@ tr:hover {
 }
 
 .tree-banner-icon-zone {
-  line-height: 31px;
+  line-height: 30px;
   float: right;
 }
 
@@ -181,22 +180,26 @@ tr:hover {
 
 .tree-type .tree-search {
   position: relative;
+  top: 1px;
   width: 20px;
   height: 20px;
   display: inline-block;
-  border-radius: 60px;
+  border-radius: 12px;
   vertical-align: sub;
   transition: .25s;
   overflow: hidden;
+  .fa-search {
+    padding-top: 1px;
+  }
 }
 
 .tree-type .tree-search .tree-banner-icon {
   position: absolute;
   top: 8px;
-  left: 8px;
+  left: 6px;
   width: 6px;
   height: 6px;
-  border-radius: 60px;
+  border-radius: 12px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -209,12 +212,12 @@ tr:hover {
 }
 
 .tree-type .tree-search.active:hover {
-  border-radius: 60px;
+  border-radius: 12px;
 }
 
 .tree-type .tree-search input {
   position: relative;
-  left: 16px;
+  left: 19px;
   width: 135px;
   height: 100%;
   background-color: transparent;
