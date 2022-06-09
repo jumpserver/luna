@@ -1,23 +1,53 @@
 <elements-nav></elements-nav>
-<as-split direction="horizontal"
-          id="container"
-          gutterSize="0"
-          (dragStart)="dragStartHandler($event)"
-          (dragEnd)="dragEndHandler($event)"
-          (gutterClick)="splitGutterClick($event)">
-  <as-split-area [size]="20" id="left-side"
-                 *ngIf="store.showLeftBar"
-                 order="0" class="left-side"
-                 style="min-width:100px;max-width: 50%;">
-    <div>
-      <elements-left-bar></elements-left-bar>
+<as-split
+  direction="horizontal"
+  id="container"
+  gutterSize="0"
+  (dragStart)="dragStartHandler($event)"
+  (dragEnd)="dragEndHandler($event)"
+  (gutterClick)="splitGutterClick($event)"
+>
+  <as-split-area
+    id="left-side"
+    [size]="20"
+    *ngIf="store.showLeftBar"
+    #leftArea
+    order="0" class="left-side"
+    style="min-width:54px;max-width: 50%;"
+  >
+    <div class="layout">
+      <div class="menu-icon" [ngClass]="{'menu-active':showMenu}">
+        <div class="menu-item" (click)="menuClick()">
+          <span style="color: #737373; font-size: 13px;">
+            {{ 'Search' | translate }}
+          </span>
+        </div>
+        <div
+          *ngFor="let item of menus"
+          class="menu-item"
+          (click)="item.click(item.name)"
+        >
+          <span>
+            <i class="fa" [ngClass]="item.icon"></i>
+          </span>
+        </div>
+      </div>
+      <elements-left-bar (menuActive)="menuActive()"></elements-left-bar>
     </div>
   </as-split-area>
-  <as-split-area [size]="80" class="content" order="1">
+  <as-split-area
+    [size]="80"
+    class="content"
+    order="1"
+    #rightArea
+  >
     <div>
       <elements-content></elements-content>
-      <div [hidden]="showIframeHider === false"
-           class="hack-iframe-hider"></div>
+      <div
+        [hidden]="showIframeHider === false"
+        class="hack-iframe-hider"
+      >
+      </div>
     </div>
   </as-split-area>
 </as-split>

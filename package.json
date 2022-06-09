@@ -55,7 +55,7 @@
     "@ngx-translate/http-loader": "~4.0.0",
     "@types/jquery": "^3.3.6",
     "@types/neffos.js": "^0.1.1",
-    "ajv": "^6.5.0",
+    "ajv": "^6.12.3",
     "angular-split": "^4.0.0",
     "animate.css": "^3.6.1",
     "bootstrap": "^4.3.1",

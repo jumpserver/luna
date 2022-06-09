@@ -1,6 +1,6 @@
 .organization {
   display: inline-block;
-  width: 230px;
+  width: 100%;
   height: 30px;
   line-height: 25px;
   padding: 2px 6px;
@@ -9,11 +9,30 @@
     color: #f0f0f1;
   }
   &::ng-deep .mat-select-arrow {
-    opacity:0;
+    margin-right: -11px;
+    color: #f0f0f1;
   }
   &::ng-deep .ng-star-inserted {
     font-size: 13px;
   }
+}
+::ng-deep .org-panel.mat-select-panel {
+  margin-top: 27px;
+  min-width: 100%!important;
+  border-radius: initial!important;
+  background: black;
+  padding: 10px 0 !important;
+}
+::ng-deep .org-panel .mat-option {
+  color: #f0f0f1;
+  &:hover {
+    background-color: rgba(53, 54, 51, 0.7)!important;
+  }
+}
+::ng-deep .org-panel .mat-option.mat-active {
+  color: #f0f0f1;
+  font-weight: bold;
+  background-color: rgba(53, 54, 51, 0.8)!important;
 }
 .org-option {
   line-height: 2.2em!important;

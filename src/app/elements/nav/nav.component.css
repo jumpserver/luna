@@ -92,7 +92,7 @@
 }
 
 .dropdown-content li:hover {
-  background-color: #3a3333;
+  background-color: rgba(53,54,51, 0.7);
   color: black;
   width: 100%;
 }

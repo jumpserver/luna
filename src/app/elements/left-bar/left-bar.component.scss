@@ -27,13 +27,33 @@ label {
   font-size: 9pt;
   left: 0;
   width: 100%;
-  padding: 1px 20px 0 20px;
+  padding: 1px 20px 0 0;
   border-top: 1px solid #e7eaec;
   bottom: 0;
   height: 30px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  .menu-active {
+    display: inline-block;
+    height: 100%;
+    padding-left: 20px;
+    padding-right: 10px;
+    color: white;
+    cursor: pointer;
+    transition: all .2s;
+    &:hover {
+      color: #d6cbcb;
+    }
+  }
+  .icon-active {
+    transform: rotate(180deg);
+    margin-right: 12px;
+  }
 }
 
 .footer-version > p {
+  display: inline-block;
   height: 8px;
   font-size: 13px;
   padding-top: 2px;
@@ -43,4 +63,29 @@ label {
 
 .ngx-scroll-overlay {
   overflow: auto; // for FF
+}
+
+.organization {
+  height: 31px;
+  background-color: #3a3333;
+  padding: 0 16px 0 5px;
+  line-height: 31px;
+  color: white;
+  border-bottom: 1px solid #19aa8d;
+}
+
+.organization:hover {
+  cursor: pointer;
+}
+
+.organization-text {
+  font-weight: bold;
+}
+
+.my-assets {
+  height: calc(100vh - 60px);
+}
+
+.my-assets.has-org {
+  height: calc(100vh - 90px);
 }
