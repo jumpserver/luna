@@ -11,10 +11,8 @@ import {SettingService} from '@app/services';
 })
 export class ElementLeftBarComponent {
   @Output() menuActive = new EventEmitter();
-  hasXPack = false;
 
-  constructor(private _settingSvc: SettingService) {
-    this.hasXPack = _settingSvc.hasXPack();
+  constructor(public _settingSvc: SettingService) {
   }
 
   DataStore = DataStore;

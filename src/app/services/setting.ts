@@ -31,7 +31,8 @@ export class SettingService {
     this.setting.commandExecution = this.globalSetting.SECURITY_COMMAND_EXECUTION;
 
     // 更改favicon
-    const link: any = document.querySelector('link[rel*=\'icon\']') || document.createElement('link');
+    const link: any = document.querySelector('link[rel*=\'icon\']') ||
+      document.createElement('link');
     link.type = 'image/x-icon';
     link.rel = 'shortcut icon';
     link.href = resp.LOGO_URLS.favicon;
