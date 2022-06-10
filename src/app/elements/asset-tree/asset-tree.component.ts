@@ -163,7 +163,7 @@ export class ElementAssetTreeComponent implements OnInit {
     if (this.isLoadTreeAsync) {
       setting['async'] = {
         enable: true,
-        url: '/api/v1/perms/users/nodes/children-with-assets/tree/?oid=ROOT',
+        url: '/api/v1/perms/users/nodes/children-with-assets/tree/',
         autoParam: ['id=key', 'name=n', 'level=lv'],
         type: 'get'
       };
@@ -191,7 +191,7 @@ export class ElementAssetTreeComponent implements OnInit {
     const setting = Object.assign({
       async: {
         enable: true,
-        url: '/api/v1/perms/users/applications/tree/?oid=ROOT',
+        url: '/api/v1/perms/users/applications/tree/',
         autoParam: ['id=tree_id', 'parentInfo=parentInfo', 'level=lv'],
         type: 'get'
       }
