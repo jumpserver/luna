@@ -170,7 +170,7 @@ export class HttpService {
       };
       return this.post(url, data);
     } else {
-      return this.delete(`${url}&asset=${assetId}`);
+      return this.delete(`${url}?asset=${assetId}`);
     }
   }
 
