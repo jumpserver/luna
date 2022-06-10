@@ -63,7 +63,7 @@ export class I18nService {
     } else {
       useLang = 'zh-hans';
     }
-    this._cookie.set('django_language', useLang, 3600, '/', '', true, 'Lax');
+    this._cookie.set('django_language', useLang, 30, '/');
     localStorage.setItem('lang', useLang);
   }
 }

@@ -1,11 +1,7 @@
 import {Component, OnInit, Output, EventEmitter} from '@angular/core';
 import {CookieService} from 'ngx-cookie-service';
 import {HttpService, OrganizationService} from '@app/services';
-
-interface OrganizationItem {
-  id?: string;
-  name?: string;
-}
+import {Organization} from '@app/model';
 
 @Component({
   selector: 'elements-organization',
@@ -14,30 +10,29 @@ interface OrganizationItem {
 })
 export class ElementOrganizationComponent implements OnInit {
   @Output() private outer = new EventEmitter();
-  @Output() private clearAllSearchInput = new EventEmitter();
 
-  selectedOrganization: OrganizationItem = {};
+  currentOrg: Organization = {id: '', name: ''};
   organizations = [];
 
   constructor(private _http: HttpService,
               private _cookie: CookieService,
-              private _organizationSvc: OrganizationService) {}
+              private _orgSvc: OrganizationService
+  ) {}
 
   ngOnInit() {
-    const cookieOrg = this._cookie.get('X-JMS-ORG');
-    this._organizationSvc.onProfile.subscribe(user => {
-      this.organizations = user.workbench_orgs || [];
-      const defaultOrganization = this.organizations.find(i => i.id === cookieOrg);
-      this.selectedOrganization = defaultOrganization || user.workbench_orgs[0] || {};
-      if (!defaultOrganization) {
-        this._organizationSvc.switchOrganization(this.selectedOrganization);
+    const cookieOrgId = this._cookie.get('X-JMS-ORG');
+    this._orgSvc.orgListChange$.subscribe(() => {
+      this.organizations = this._orgSvc.workbenchOrgs;
+      const cookieOrg = this.organizations.find(i => i.id === cookieOrgId);
+      this.currentOrg = cookieOrg || this.organizations[0] || {};
+      if (!cookieOrg) {
+        this._orgSvc.switchOrg(this.currentOrg);
       }
     });
   }
 
-  changeOrganization(event) {
-    this.selectedOrganization = event.value;
-    this._organizationSvc.switchOrganization(this.selectedOrganization);
-    this.clearAllSearchInput.emit();
+  changeOrg(event) {
+    this.currentOrg = event.value;
+    this._orgSvc.switchOrg(this.currentOrg);
   }
 }

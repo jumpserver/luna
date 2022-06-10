@@ -1,4 +1,4 @@
-import {Component, Input, OnInit, OnDestroy, ElementRef, ViewChild, Inject} from '@angular/core';
+import {Component, Input, OnInit, ElementRef, ViewChild, Inject} from '@angular/core';
 import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
 import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
@@ -17,7 +17,7 @@ declare var $: any;
   templateUrl: './asset-tree.component.html',
   styleUrls: ['./asset-tree.component.scss'],
 })
-export class ElementAssetTreeComponent implements OnInit, OnDestroy {
+export class ElementAssetTreeComponent implements OnInit {
 
   constructor(private _appSvc: AppService,
               private _treeFilterSvc: TreeFilterService,
@@ -28,7 +28,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
               private _logger: LogService,
               private _i18n: I18nService,
               private _toastr: ToastrService,
-              private _organizationSvc: OrganizationService,
+              private _orgSvc: OrganizationService,
   ) {}
 
   get RMenuList() {
@@ -129,25 +129,8 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.isLoadTreeAsync = this._settingSvc.isLoadTreeAsync();
-
     this.initTree();
-    this._organizationSvc.emitSwitchOrganizationHandle().subscribe(() => {
-      this.initTree();
-    });
-
     document.addEventListener('click', this.hideRMenu.bind(this), false);
-
-    this.treeFilterSubscription = this._treeFilterSvc.onFilter.subscribe(
-      keyword => {
-        this._logger.debug('Filter tree: ', keyword);
-        this.filterAssets(keyword);
-        this.filterApplicationsTree(keyword);
-      }
-    );
-  }
-
-  ngOnDestroy(): void {
-    this.treeFilterSubscription.unsubscribe();
   }
 
   onAssetsNodeClick(event, treeId, treeNode, clickFlag) {
@@ -202,13 +185,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     }, error => {
       this.assetsLoading = false;
     });
-  }
-
-  addApplicationNodesIfNeed(nodes, rootNode, applicationNodes) {
-      rootNode['children'] = nodes;
-      if (nodes.length > 0) {
-        applicationNodes[0].children.push(rootNode);
-      }
   }
 
   async initApplicationTree() {
@@ -307,10 +283,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     return this.rightClickSelectNode.meta.data.type === 'k8s';
   }
 
-  forceRefreshTree() {
-    this.initAssetsTree(true).then();
-  }
-
   reAsyncChildNodes(treeId, treeNode, silent) {
     if (treeNode && treeNode.isParent && treeNode.children) {
       for (let i = 0; i < treeNode.children.length; i++) {
@@ -318,9 +290,10 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
         const self = this;
         const targetTree = $.fn.zTree.getZTreeObj(treeId);
         if (treeNode.meta.data.type !== 'k8s') {
-        targetTree.reAsyncChildNodesPromise(childNode, 'refresh', silent).then(function () {
-          self.reAsyncChildNodes(treeId, childNode, silent);
-        })}
+          targetTree.reAsyncChildNodesPromise(childNode, 'refresh', silent).then(() => {
+            self.reAsyncChildNodes(treeId, childNode, silent);
+          });
+        }
       }
     }
   }
