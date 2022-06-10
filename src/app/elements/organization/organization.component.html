@@ -2,7 +2,7 @@
   <mat-select
     panelClass="org-panel"
     [(value)]="selectedOrganization"
-    (selectionChange)='selectHandleChange($event)'
+    (selectionChange)='changeOrganization($event)'
   >
     <mat-select-trigger>
       <i class="fa fa-sitemap"></i>

@@ -15,6 +15,7 @@ interface OrganizationItem {
 export class ElementOrganizationComponent implements OnInit {
   @Output() private outer = new EventEmitter();
   @Output() private clearAllSearchInput = new EventEmitter();
+
   selectedOrganization: OrganizationItem = {};
   organizations = [];
 
@@ -23,25 +24,20 @@ export class ElementOrganizationComponent implements OnInit {
               private _organizationSvc: OrganizationService) {}
 
   ngOnInit() {
-    this.init();
-  }
-
-  init() {
-    const org = this._cookie.get('X-JMS-ORG');
-    this._http.getUserProfile().subscribe(
-      user => {
-        this.organizations = user.workbench_orgs || [];
-        const defaultOrganization = this.organizations.find(i => i.id === org);
-        this.selectedOrganization = defaultOrganization || user.workbench_orgs[0] || {};
+    const cookieOrg = this._cookie.get('X-JMS-ORG');
+    this._organizationSvc.onProfile.subscribe(user => {
+      this.organizations = user.workbench_orgs || [];
+      const defaultOrganization = this.organizations.find(i => i.id === cookieOrg);
+      this.selectedOrganization = defaultOrganization || user.workbench_orgs[0] || {};
+      if (!defaultOrganization) {
+        this._organizationSvc.switchOrganization(this.selectedOrganization);
       }
-    );
+    });
   }
 
-  selectHandleChange(event) {
+  changeOrganization(event) {
     this.selectedOrganization = event.value;
-    console.log('SEt cookie to: ', event.value.id);
-    this._cookie.set('X-JMS-ORG', event.value.id, 3600, '/', document.domain, true, 'Lax');
-    this._organizationSvc.onSwitchOrganizationHandle();
+    this._organizationSvc.switchOrganization(this.selectedOrganization);
     this.clearAllSearchInput.emit();
   }
 }
