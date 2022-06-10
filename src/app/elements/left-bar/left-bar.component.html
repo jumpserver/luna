@@ -1,6 +1,6 @@
 <div class="sidebar" fxLayout="column" >
   <div class="organization" *ngIf="this._settingSvc.hasXPack()">
-    <elements-organization></elements-organization>
+    <elements-organization (clearAllSearchInput)="assetTree.clearAllSearchInput()"></elements-organization>
   </div>
 
   <div class="my-assets" [ngClass]="{'has-org': this._settingSvc.hasXPack()}">
