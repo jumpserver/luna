@@ -34,7 +34,7 @@ export class AppService {
               private _logger: LogService,
               private _settingSvc: SettingService,
               private _localStorage: LocalStorageService,
-              private _organizationSvc: OrganizationService) {
+              private _orgSvc: OrganizationService) {
     this.setLogLevel();
     this.checkLogin();
     this.loadPreferData();
@@ -78,7 +78,7 @@ export class AppService {
 
     this._http.getUserProfile().subscribe(
       user => {
-        this._organizationSvc.onProfile.emit(user);
+        this._orgSvc.setWorkbenchOrgs(user['workbench_orgs']);
         Object.assign(User, user);
         User.logined = true;
         this._localStorage.set('user', user.id);
