@@ -1,8 +1,9 @@
-import {Injectable} from '@angular/core';
+import {EventEmitter, Injectable} from '@angular/core';
 import {Subject, Observable} from 'rxjs';
 
 @Injectable()
 export class OrganizationService {
+  onProfile: EventEmitter<{}> = new EventEmitter<{}>();
   private _change: Subject<any> = new Subject<any>();
 
   constructor() {}
