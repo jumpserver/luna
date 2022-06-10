@@ -354,7 +354,6 @@ export class Endpoint {
     if (['http', 'https'].indexOf(_protocol) !== -1 && port === 0) {
       port = window.location.port;
     }
-    console.log('getPort: ', port);
     return port;
   }
 
@@ -367,4 +366,11 @@ export class Endpoint {
     }
     return `${proto}//${endpoint}`;
   }
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  is_root?: boolean;
+  is_default?: boolean;
 }

@@ -1,7 +1,7 @@
 import {Component, Output, EventEmitter} from '@angular/core';
 import {DataStore} from '@app/globals';
 import {version} from '@src/environments/environment';
-import {SettingService} from '@app/services';
+import {OrganizationService, SettingService} from '@app/services';
 
 
 @Component({
@@ -11,15 +11,15 @@ import {SettingService} from '@app/services';
 })
 export class ElementLeftBarComponent {
   @Output() menuActive = new EventEmitter();
-  hasXPack = false;
-
-  constructor(private _settingSvc: SettingService) {
-    this.hasXPack = _settingSvc.hasXPack();
-  }
-
-  DataStore = DataStore;
+  showTree = true;
   version = version;
   iconActive = false;
+
+  constructor(public _settingSvc: SettingService,
+              private _orgSvc: OrganizationService
+  ) {
+    this.onOrgChangeReloadTree();
+  }
 
   static Hide() {
     DataStore.showLeftBar = false;
@@ -29,6 +29,13 @@ export class ElementLeftBarComponent {
   static Show() {
     DataStore.showLeftBar = true;
     window.dispatchEvent(new Event('resize'));
+  }
+
+  onOrgChangeReloadTree() {
+    this._orgSvc.currentOrgChange$.subscribe(() => {
+      this.showTree = false;
+      setTimeout(() => this.showTree = true, 100);
+    });
   }
 
   toggle() {

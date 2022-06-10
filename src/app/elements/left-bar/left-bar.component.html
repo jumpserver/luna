@@ -1,14 +1,14 @@
 <div class="sidebar" fxLayout="column" >
-  <div class="organization" *ngIf="hasXPack">
+  <div class="organization" *ngIf="this._settingSvc.hasXPack()">
     <elements-organization></elements-organization>
   </div>
 
-  <div class="my-assets" [ngClass]="{'has-org': hasXPack}">
+  <div *ngIf="showTree" class="my-assets" [ngClass]="{'has-org': this._settingSvc.hasXPack()}">
     <div class="overflow ngx-scroll-overlay">
       <elements-asset-tree style="width: 100%" #assetTree></elements-asset-tree>
     </div>
   </div>
-  
+
   <div style="height: 30px" class="footer-version">
     <span class="menu-active" (click)="toggle()">
       <i class="fa fa-outdent" [ngClass]="{'icon-active': iconActive}"></i>

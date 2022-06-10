@@ -1,12 +1,12 @@
 <div class="organization">
   <mat-select
     panelClass="org-panel"
-    [(value)]="selectedOrganization"
-    (selectionChange)='selectHandleChange($event)'
+    [(value)]="currentOrg"
+    (selectionChange)='changeOrg($event)'
   >
     <mat-select-trigger>
       <i class="fa fa-sitemap"></i>
-      &nbsp;{{selectedOrganization.name}}
+      &nbsp;{{currentOrg.name}}
     </mat-select-trigger>
     <mat-option *ngFor="let i of organizations" class="org-option" [value]="i">
       {{i.name}}

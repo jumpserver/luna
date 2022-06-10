@@ -1,17 +1,22 @@
-import {Injectable} from '@angular/core';
-import {Subject, Observable} from 'rxjs';
+import {EventEmitter, Injectable} from '@angular/core';
+import {CookieService} from 'ngx-cookie-service';
+import {Organization} from '@app/model';
 
 @Injectable()
 export class OrganizationService {
-  private _change: Subject<any> = new Subject<any>();
+  orgListChange$: EventEmitter<void> = new EventEmitter();
+  currentOrgChange$: EventEmitter<void> = new EventEmitter();
+  workbenchOrgs = [];
 
-  constructor() {}
+  constructor(private _cookie: CookieService) {}
 
-  public onSwitchOrganizationHandle(): void {
-    this._change.next();
+  public switchOrg(org): void {
+    this._cookie.set('X-JMS-ORG', org.id, 30, '/');
+    this.currentOrgChange$.emit();
   }
 
-  public emitSwitchOrganizationHandle(): Observable<any> {
-    return this._change.asObservable();
+  setWorkbenchOrgs(orgs: Array<Organization>) {
+    this.workbenchOrgs = orgs;
+    this.orgListChange$.emit();
   }
 }
