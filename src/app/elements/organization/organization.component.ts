@@ -24,27 +24,20 @@ export class ElementOrganizationComponent implements OnInit {
               private _organizationSvc: OrganizationService) {}
 
   ngOnInit() {
-    this.init();
-  }
-
-  async init() {
     const cookieOrg = this._cookie.get('X-JMS-ORG');
-    await this._organizationSvc.onProfile.subscribe(user => {
+    this._organizationSvc.onProfile.subscribe(user => {
       this.organizations = user.workbench_orgs || [];
       const defaultOrganization = this.organizations.find(i => i.id === cookieOrg);
       this.selectedOrganization = defaultOrganization || user.workbench_orgs[0] || {};
       if (!defaultOrganization) {
-        this._cookie.set('X-JMS-ORG', this.selectedOrganization.id, 3600, '/', document.domain, true, 'Lax');
-        this._organizationSvc.onSwitchOrganizationHandle();
+        this._organizationSvc.switchOrganization(this.selectedOrganization);
       }
     });
   }
 
-  selectHandleChange(event) {
+  changeOrganization(event) {
     this.selectedOrganization = event.value;
-    console.log('SEt cookie to: ', event.value.id);
-    this._cookie.set('X-JMS-ORG', event.value.id, 3600, '/', document.domain, true, 'Lax');
-    this._organizationSvc.onSwitchOrganizationHandle();
+    this._organizationSvc.switchOrganization(this.selectedOrganization);
     this.clearAllSearchInput.emit();
   }
 }
