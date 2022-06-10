@@ -9,6 +9,7 @@ import {SettingService} from '@app/services/setting';
 import {AuthInfo, ConnectData, SystemUser, TreeNode, Endpoint, Protocol, View} from '@app/model';
 import * as CryptoJS from 'crypto-js';
 import {getCookie, setCookie} from '@app/utils/common';
+import {OrganizationService} from './organization';
 
 declare function unescape(s: string): string;
 
@@ -32,7 +33,8 @@ export class AppService {
               private _cookie: CookieService,
               private _logger: LogService,
               private _settingSvc: SettingService,
-              private _localStorage: LocalStorageService) {
+              private _localStorage: LocalStorageService,
+              private _organizationSvc: OrganizationService) {
     this.setLogLevel();
     this.checkLogin();
     this.loadPreferData();
@@ -76,6 +78,7 @@ export class AppService {
 
     this._http.getUserProfile().subscribe(
       user => {
+        this._organizationSvc.user.emit(user);
         Object.assign(User, user);
         User.logined = true;
         this._localStorage.set('user', user.id);
