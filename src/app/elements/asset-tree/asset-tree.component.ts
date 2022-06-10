@@ -108,9 +108,14 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   treeFilterSubscription: any;
   isLoadTreeAsync: boolean;
   filterAssetCancel$: Subject<boolean> = new Subject();
+  favoriteAssets = [];
+
+  showAssetsTree = true;
+  showApplicationsTree = true;
   assetsLoading = true;
   applicationsLoading = true;
-  favoriteAssets = [];
+  assetsSearchValue = '';
+  applicationsSearchValue = '';
 
   debouncedOnAssetsNodeClick = _.debounce(this.onAssetsNodeClick, 300, {
     'leading': true,
@@ -161,6 +166,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   refreshAssetsTree() {
+    this.assetsSearchValue = '';
     this.initAssetsTree(true).then();
   }
 
@@ -221,9 +227,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     this.applicationsLoading = true;
     this._http.getMyGrantedAppsNodes().subscribe(resp => {
       const tree = $.fn.zTree.init($('#applicationsTree'), setting, resp);
-      this.rootNodeAddDom(tree, () => {
-        this.refreshApplicationTree();
-      });
       this.applicationsTree = tree;
       this.applicationsLoading = false;
     }, error => {
@@ -232,6 +235,7 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   }
 
   refreshApplicationTree() {
+    this.applicationsSearchValue = '';
     if (this.applicationsTree) {
       this.applicationsTree.destroy();
       this.initApplicationTree().then();
@@ -255,22 +259,6 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
   connectAsset(node: TreeNode) {
     const evt = new ConnectEvt(node, 'asset');
     connectEvt.next(evt);
-  }
-
-  rootNodeAddDom(ztree, callback) {
-    const tId = ztree.setting.treeId + '_tree_refresh';
-    const refreshIcon = '<a id=' + tId + ' class="tree-refresh">' +
-      '<i class="fa fa-refresh" style="font-family: FontAwesome !important;" ></i></a>';
-    const rootNode = ztree.getNodes()[0];
-    if (!rootNode) {
-      return;
-    }
-    const $rootNodeRef = $('#' + rootNode.tId + '_a');
-    $rootNodeRef.after(refreshIcon);
-    const refreshIconRef = $('#' + tId);
-    refreshIconRef.bind('click', function () {
-      callback();
-    });
   }
 
   showRMenu(left, top) {
@@ -597,23 +585,29 @@ export class ElementAssetTreeComponent implements OnInit, OnDestroy {
     };
     assetsSearchIcon.oninput = _.debounce((e) => {
       e.stopPropagation();
+      const value = e.target.value || '';
       if (type === 'applicationsSearch') {
-        vm.filterApplicationsTree(e.target.value);
+        vm.applicationsSearchValue = value;
+        vm.filterApplicationsTree(value);
       } else {
-        vm.filterAssets(e.target.value);
+        vm.assetsSearchValue = value;
+        vm.filterAssets(value);
       }
     }, 450);
   }
 
   refreshTree(event, type: string) {
     event.stopPropagation();
-    const searchInput = $(`#${type}sSearchInput`)[0];
-    searchInput.value = '';
     if (type === 'application') {
       this.refreshApplicationTree();
     } else {
       this.refreshAssetsTree();
     }
+  }
+
+  clearAllSearchInput() {
+    this.assetsSearchValue = '';
+    this.applicationsSearchValue = '';
   }
 
   foldTree(num: number) {

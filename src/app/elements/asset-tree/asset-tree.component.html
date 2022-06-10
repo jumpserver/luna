@@ -8,7 +8,12 @@
       <span class="tree-banner-icon-zone">
         <a class="tree-search" id="assetsSearchIcon">
           <i class="fa fa-search tree-banner-icon" (click)="treeSearch($event, 'assetsSearch')"></i>
-          <input type="text" id="assetsSearchInput" class="tree-input">
+          <input
+            type="text"
+            id="assetsSearchInput"
+            class="tree-input"
+            [(ngModel)]="assetsSearchValue"
+          />
         </a>
         <i class="fa fa-refresh tree-banner-icon" (click)="refreshTree($event, 'asset')"></i>
       </span>
@@ -31,7 +36,12 @@
       <span class="tree-banner-icon-zone">
         <a class="tree-search" id="applicationsSearchIcon">
           <i class="fa fa-search tree-banner-icon" (click)="treeSearch($event, 'applicationsSearch')"></i>
-          <input type="text" id="applicationsSearchInput" class="tree-input">
+          <input
+            type="text"
+            id="applicationsSearchInput"
+            class="tree-input"
+            [(ngModel)]="applicationsSearchValue"
+          />
         </a>
         <i class="fa fa-refresh tree-banner-icon" (click)="refreshTree($event, 'application')"></i>
       </span>

@@ -14,6 +14,7 @@ interface OrganizationItem {
 })
 export class ElementOrganizationComponent implements OnInit {
   @Output() private outer = new EventEmitter();
+  @Output() private clearAllSearchInput = new EventEmitter();
   selectedOrganization: OrganizationItem = {};
   organizations = [];
 
@@ -41,5 +42,6 @@ export class ElementOrganizationComponent implements OnInit {
     console.log('SEt cookie to: ', event.value.id);
     this._cookie.set('X-JMS-ORG', event.value.id, 3600, '/', document.domain, true, 'Lax');
     this._organizationSvc.onSwitchOrganizationHandle();
+    this.clearAllSearchInput.emit();
   }
 }
