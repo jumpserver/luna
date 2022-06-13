@@ -1,13 +1,25 @@
 <div>
   <div class="tree-type">
-    <span class="tree-type-banner" (click)="foldTree(0)">
-      <i class="fa fa-caret-down tree-icon-rotate"></i>
+    <span
+      class="tree-type-banner"
+      (click)="foldTree('assets')"
+    >
+      <i
+        id="assetsFoldStatus"
+        class="fa fa-caret-down tree-icon-rotate"
+      ></i>
       <span class="tree-type-banner-label">
         {{ "My assets"| translate }}
       </span>
-      <span class="tree-banner-icon-zone">
+      <span
+        class="tree-banner-icon-zone"
+        [hidden]="assetsTreeHidden"
+      >
         <a class="tree-search" id="assetsSearchIcon">
-          <i class="fa fa-search tree-banner-icon" (click)="treeSearch($event, 'assetsSearch')"></i>
+          <i
+            class="fa fa-search tree-banner-icon"
+            (click)="treeSearch($event, 'assets')"
+          ></i>
           <input
             type="text"
             id="assetsSearchInput"
@@ -15,10 +27,16 @@
             [(ngModel)]="assetsSearchValue"
           />
         </a>
-        <i class="fa fa-refresh tree-banner-icon" (click)="refreshTree($event, 'asset')"></i>
+        <i
+          class="fa fa-refresh tree-banner-icon"
+          (click)="refreshTree($event, 'asset')"
+        ></i>
       </span>
     </span>
-    <div class="tree-type-content">
+    <div
+      class="tree-type-content"
+      [hidden]="assetsTreeHidden"
+    >
       <div *ngIf="assetsLoading" class="tree-type-loading">
         <mat-spinner diameter="20"></mat-spinner>
       </div>
@@ -28,14 +46,26 @@
   </div>
   
   <div class="tree-type">
-    <span class="tree-type-banner" (click)="foldTree(1)">
-      <i class="fa fa-caret-down tree-icon-rotate"></i>
+    <span
+      class="tree-type-banner"
+      (click)="foldTree('applications')"
+    >
+      <i
+        id="applicationsFoldStatus"
+        class="fa fa-caret-down tree-icon-rotate"
+      ></i>
       <span class="tree-type-banner-label">
         {{ "My applications"| translate }}
       </span>
-      <span class="tree-banner-icon-zone">
+      <span
+        class="tree-banner-icon-zone"
+        [hidden]="applicationsTreeHidden"
+      >
         <a class="tree-search" id="applicationsSearchIcon">
-          <i class="fa fa-search tree-banner-icon" (click)="treeSearch($event, 'applicationsSearch')"></i>
+          <i
+            class="fa fa-search tree-banner-icon"
+            (click)="treeSearch($event, 'applications')"
+          ></i>
           <input
             type="text"
             id="applicationsSearchInput"
@@ -43,10 +73,16 @@
             [(ngModel)]="applicationsSearchValue"
           />
         </a>
-        <i class="fa fa-refresh tree-banner-icon" (click)="refreshTree($event, 'application')"></i>
+        <i
+          class="fa fa-refresh tree-banner-icon"
+          (click)="refreshTree($event, 'applications')"
+        ></i>
       </span>
     </span>
-    <div class="tree-type-content">
+    <div
+      class="tree-type-content"
+      [hidden]="applicationsTreeHidden"
+    >
       <div *ngIf="applicationsLoading" class="tree-type-loading">
         <mat-spinner diameter="20"></mat-spinner>
       </div>

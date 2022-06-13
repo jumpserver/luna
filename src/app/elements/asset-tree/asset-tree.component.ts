@@ -74,6 +74,7 @@ export class ElementAssetTreeComponent implements OnInit {
   @Input() query: string;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu', {static: false}) rMenu: ElementRef;
+
   Data = [];
   nodes = [];
   setting = {
@@ -110,8 +111,8 @@ export class ElementAssetTreeComponent implements OnInit {
   filterAssetCancel$: Subject<boolean> = new Subject();
   favoriteAssets = [];
 
-  showAssetsTree = true;
-  showApplicationsTree = true;
+  assetsTreeHidden = false;
+  applicationsTreeHidden = false;
   assetsLoading = true;
   applicationsLoading = true;
   assetsSearchValue = '';
@@ -543,23 +544,23 @@ export class ElementAssetTreeComponent implements OnInit {
   treeSearch(event, type: string) {
     event.stopPropagation();
     const vm = this;
-    const assetsSearchIcon = $(`#${type}Icon`)[0];
-    const assetsSearchInput = $(`#${type}Input`)[0];
-    assetsSearchIcon.classList.toggle('active');
-    assetsSearchInput.focus();
-    assetsSearchInput.onclick = (e) => {
+    const searchIcon = document.getElementById(`${type}SearchIcon`);
+    const searchInput = document.getElementById(`${type}SearchInput`);
+    searchIcon.classList.toggle('active');
+    searchInput.focus();
+    searchInput.onclick = (e) => {
       e.stopPropagation();
     };
-    assetsSearchInput.onblur = (e) => {
+    searchInput.onblur = (e: any) => {
       e.stopPropagation();
-      if (!e.target.value) {
-        assetsSearchIcon.classList.toggle('active');
+      if (!(e.target.value)) {
+        searchIcon.classList.toggle('active');
       }
     };
-    assetsSearchIcon.oninput = _.debounce((e) => {
+    searchIcon.oninput = _.debounce((e) => {
       e.stopPropagation();
       const value = e.target.value || '';
-      if (type === 'applicationsSearch') {
+      if (type === 'applications') {
         vm.applicationsSearchValue = value;
         vm.filterApplicationsTree(value);
       } else {
@@ -571,7 +572,7 @@ export class ElementAssetTreeComponent implements OnInit {
 
   refreshTree(event, type: string) {
     event.stopPropagation();
-    if (type === 'application') {
+    if (type === 'applications') {
       this.refreshApplicationTree();
     } else {
       this.refreshAssetsTree();
@@ -583,13 +584,10 @@ export class ElementAssetTreeComponent implements OnInit {
     this.applicationsSearchValue = '';
   }
 
-  foldTree(num: number) {
-    const treeContent = $(`.tree-type-content`)[num];
-    const treeSelect = $(`.tree-icon-rotate`)[num];
-    const bannerIcon = $(`.tree-banner-icon-zone`)[num];
-    treeContent.classList.toggle('fold-tree');
-    treeSelect.classList.toggle('rotate');
-    bannerIcon.classList.toggle('show');
+  foldTree(type: string) {
+    this[`${type}TreeHidden`] = !this[`${type}TreeHidden`];
+    const foldStatus = document.getElementById(`${type}FoldStatus`);
+    foldStatus.classList.toggle('rotate');
   }
 }
 

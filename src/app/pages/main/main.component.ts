@@ -40,12 +40,12 @@ export class PageMainComponent implements OnInit {
   ngOnInit(): void {
     this.menus = [
       {
-        name: 'assetsTree',
+        name: 'assets',
         icon: 'fa-inbox',
         click: (name) => this.menuClick(this.settingLayoutWidth, name),
       },
       {
-        name: 'applicationsTree',
+        name: 'applications',
         icon: 'fa-th',
         click: (name) => this.menuClick(this.settingLayoutWidth, name),
       }
@@ -65,15 +65,13 @@ export class PageMainComponent implements OnInit {
   dragStartHandler($event: IOutputData) {
     this.showIframeHider = true;
     setTimeout(() => {
-      if (this.showMenu) {
-        this.showMenu = false;
-      }
-    }, 320);
+      this.showMenu = !this.showMenu;
+    }, 400);
   }
 
   dragEndHandler($event: IOutputData) {
     const layoutWidth = $event.sizes[0];
-    this.showMenu = layoutWidth < 4;
+    this.showMenu = layoutWidth < 6;
     this.showIframeHider = false;
   }
 
@@ -100,17 +98,5 @@ export class PageMainComponent implements OnInit {
     this.leftArea.nativeElement.style = `min-width: 54px; order: 0; flex: 0 0 calc(${settings.leftWidth} - 0px);`;
     this.rightArea.nativeElement.style = `order: 2; flex: 0 0 calc(${settings.rightWidth} - 0px);`;
     this.showMenu = !this.showMenu;
-    if (type) {
-      const typeIndex = type === 'assetsTree' ? 0 : 1;
-      const treeContent = $(`.tree-type-content`)[typeIndex];
-      const treeSelect = $(`.tree-icon-rotate`)[typeIndex];
-      const bannerIcon = $(`.tree-banner-icon-zone`)[typeIndex];
-      const menuActiveStatus = treeContent.classList.value.indexOf('fold-tree') > -1;
-      if (menuActiveStatus) {
-        treeContent.classList.toggle('fold-tree');
-        treeSelect.classList.toggle('rotate');
-        bannerIcon.classList.toggle('show');
-      }
-    }
   }
 }
