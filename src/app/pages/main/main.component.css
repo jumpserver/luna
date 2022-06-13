@@ -112,7 +112,7 @@ as-split ::ng-deep .as-split-gutter-icon:before{
   position: absolute;
   display: none;
   width: 100%;
-  height: calc(100% - 28px);
+  height: calc(100% - 30px);
   text-align: center;
   color: white;
   transition: all .2s;
