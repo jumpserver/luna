@@ -18,6 +18,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   show = false;
   eventHandler: EventListenerOrEventListenerObject;
   ping: number;
+  loadingError = false;
 
   constructor(
     private _i18n: I18nService
@@ -76,10 +77,11 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       // 长时间未PING通, 则主动关闭
       clearInterval(this.ping);
       if (!this.show) {
-        const msg = this._i18n.instant('Failed to open address');
-        alert(`${msg}:\n${this.src}`);
+        this.loadingError = true;
+        // const msg = this._i18n.instant('Failed to open address');
+        // this.loadingError = `${msg}:\n${this.src}`;
       }
-    }.bind(this), 1000 * 30);
+    }.bind(this), 1000 * 1);
   }
 
   sendCommand(data) {

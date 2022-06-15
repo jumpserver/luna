@@ -4,3 +4,9 @@ iframe {
   border: none;
   background-color: white;
 }
+
+.loading {
+  position: absolute;
+  top: 50%;
+  left: calc(50% - 70px);
+}
