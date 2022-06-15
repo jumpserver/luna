@@ -1,13 +1,4 @@
-<div *ngIf="!show">
-  <mat-spinner
-    *ngIf="!loadingError"
-    [diameter]="70"
-    class="loading"
-  ></mat-spinner>
-  <div *ngIf="loadingError" class="loading-error">
-    {{ 'Failed to open address' | translate }}: <a [href]="src" target="_blank">{{ 'Manual pen' | translate}}</a>
-  </div>
-</div>
+<mat-spinner *ngIf="!show" [diameter]="50" class="loading"></mat-spinner>
 
 <iframe
   #iFrame
