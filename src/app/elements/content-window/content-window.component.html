@@ -5,6 +5,7 @@
   class="window"
   [ngClass]="{'active':view.active}"
 >
+  <mat-spinner *ngIf="loading" style="position: absolute;top: 50%; left: calc(50% - 80px);"></mat-spinner>
   <div *ngIf="!loading">
     <elements-connector-lion
       *ngSwitchCase="'lion'"
