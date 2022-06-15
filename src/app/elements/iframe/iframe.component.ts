@@ -1,7 +1,7 @@
 import {Component, Input, OnInit, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter, OnDestroy} from '@angular/core';
 import {View} from '@app/model';
 import {TimeInterval} from 'rxjs';
-import {I18nService} from '@app/services';
+import {I18nService, LogService} from '@app/services';
 
 @Component({
   selector: 'elements-iframe',
@@ -20,12 +20,13 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   ping: number;
 
   constructor(
-    private _i18n: I18nService
+    private _i18n: I18nService,
+    private _logger: LogService
   ) {
   }
 
   ngOnInit() {
-    console.log(`IFrame URL: ${this.src}`);
+    this._logger.info(`IFrame URL: ${this.src}`);
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.eventHandler = function (e: any) {
       const msg = e.data;
@@ -61,13 +62,13 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   setActive() {
-    console.log(`[Luna] Send FOCUS to: ${this.id}`);
+    this._logger.debug(`[Luna] Send FOCUS to: ${this.id}`);
     this.iframeWindow.postMessage({name: 'FOCUS'}, '*');
   }
 
   handleIframeEvent() {
     this.ping = setInterval(() => {
-      console.log(`[Luna] Send PING to: ${this.id}`);
+      this._logger.info(`[Luna] Send PING to: ${this.id}`);
       this.iframeWindow.postMessage({name: 'PING', id: this.id}, '*');
     }, 500);
     window.addEventListener('message', this.eventHandler);
@@ -75,15 +76,12 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     setTimeout(function () {
       // 长时间未PING通, 则主动关闭
       clearInterval(this.ping);
-      if (!this.show) {
-        const msg = this._i18n.instant('Failed to open address');
-        alert(`${msg}:\n${this.src}`);
-      }
-    }.bind(this), 1000 * 30);
+      this.show = true;
+    }.bind(this), 1000 * 10);
   }
 
   sendCommand(data) {
-    console.log(`[Luna] Send CMD to: ${this.id}`);
+    this._logger.info(`[Luna] Send CMD to: ${this.id}`);
     this.iframeWindow.postMessage({name: 'CMD', data: data.data}, '*' );
   }
 
