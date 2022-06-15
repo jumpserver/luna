@@ -32,7 +32,10 @@
           </span>
         </div>
       </div>
-      <elements-left-bar (menuActive)="menuActive()"></elements-left-bar>
+      <elements-left-bar
+        #leftBar
+        (menuActive)="menuActive()"
+      ></elements-left-bar>
     </div>
   </as-split-area>
   <as-split-area
