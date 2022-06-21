@@ -188,7 +188,7 @@ export class ElementNavComponent implements OnInit {
             click: () => {
               window.open('/core/download/', '_blank');
             },
-            name: 'Tool download',
+            name: 'Download',
           }
         ]
       },
