@@ -116,6 +116,8 @@ tr:hover {
   height: 31px;
   display: block;
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   line-height: 31px;
   padding: 0 11px;
   cursor: pointer;
