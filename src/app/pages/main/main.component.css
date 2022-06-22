@@ -127,9 +127,10 @@ as-split ::ng-deep .as-split-gutter-icon:before{
 .menu-organization {
   height: 30px;
   line-height: 30px;
+  cursor: pointer;
   border-bottom: 1px solid #19aa8d;
 }
-.menu-item:hover {
+.menu-item:hover, .menu-organization:hover {
   background-color: rgba(0, 0, 0, 0.25);
 }
 .menu-active {
