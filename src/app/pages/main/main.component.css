@@ -124,7 +124,7 @@ as-split ::ng-deep .as-split-gutter-icon:before{
   line-height: 46px;
   cursor: pointer;
 }
-.menu-item:first-child {
+.menu-organization {
   height: 30px;
   line-height: 30px;
   border-bottom: 1px solid #19aa8d;
