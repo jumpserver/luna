@@ -1,7 +1,7 @@
 import {Component, HostListener, OnInit, ViewChild, ElementRef} from '@angular/core';
 import {DataStore, User} from '@app/globals';
 import {IOutputData, SplitComponent} from 'angular-split';
-import {ViewService} from '@app/services';
+import {ViewService, SettingService} from '@app/services';
 import * as _ from 'lodash';
 declare var $: any;
 
@@ -24,7 +24,8 @@ export class PageMainComponent implements OnInit {
     rightWidth: '80%'
   };
 
-  constructor(public viewSrv: ViewService) {}
+  constructor(public viewSrv: ViewService,
+              public _settingSvc: SettingService) {}
 
   get currentView() {
     return this.viewSrv.currentView;
@@ -64,9 +65,6 @@ export class PageMainComponent implements OnInit {
   }
   dragStartHandler($event: IOutputData) {
     this.showIframeHider = true;
-    setTimeout(() => {
-      this.showMenu = !this.showMenu;
-    }, 400);
   }
 
   dragEndHandler($event: IOutputData) {

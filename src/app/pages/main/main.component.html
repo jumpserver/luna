@@ -17,9 +17,13 @@
   >
     <div class="layout">
       <div class="menu-icon" [ngClass]="{'menu-active':showMenu}">
-        <div class="menu-item" (click)="menuClick()">
-          <span style="color: #737373; font-size: 13px;">
-            {{ 'Search' | translate }}
+        <div
+          *ngIf="this._settingSvc.hasXPack()"
+          class="menu-organization"
+          (click)="menuClick()"
+        >
+          <span style="font-size: 13px;">
+            <i class="fa fa-sitemap"></i>
           </span>
         </div>
         <div
