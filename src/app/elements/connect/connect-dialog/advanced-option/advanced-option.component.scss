@@ -34,3 +34,6 @@
 .ng-star-inserted {
   margin-top: 5px;
 }
+::ng-deep .mat-checkbox-layout {
+  margin-left: 12px!important;
+}
