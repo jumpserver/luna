@@ -32,7 +32,6 @@ export class SettingService {
     this.setLogo();
     this.setTitle();
     this.setFavicon();
-    this.setPrimaryColor();
     return new Promise((resolve) => { resolve(true); });
   }
 

@@ -117,6 +117,7 @@ export class ElementAssetTreeComponent implements OnInit {
   applicationsLoading = true;
   assetsSearchValue = '';
   applicationsSearchValue = '';
+  applicationTreeHasNodes = false;
 
   debouncedOnAssetsNodeClick = _.debounce(this.onAssetsNodeClick, 300, {
     'leading': true,
@@ -205,6 +206,7 @@ export class ElementAssetTreeComponent implements OnInit {
     this._http.getMyGrantedAppsNodes().subscribe(resp => {
       const tree = $.fn.zTree.init($('#applicationsTree'), setting, resp);
       this.applicationsTree = tree;
+      this.applicationTreeHasNodes = resp && resp.length > 1;
       this.applicationsLoading = false;
     }, error => {
       this.applicationsLoading = false;

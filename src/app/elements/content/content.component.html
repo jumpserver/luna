@@ -19,7 +19,11 @@
   <div id="winContainer">
     <elements-content-window *ngFor="let view of viewList" [view]="view" ></elements-content-window>
   </div>
-  <div id="batchCommandDiv" *ngIf="settingSvc.setting.commandExecution">
+  <div
+    *ngIf="settingSvc.setting.commandExecution"
+    [hidden]="!this.viewSrv.currentView || this.viewSrv.currentView.protocol != 'ssh'"
+    id="batchCommandDiv"
+  >
     <input placeholder=" {{'Send text to all ssh terminals'| translate }} ..."
            maxlength="2048"
            title="{{'Send text to all ssh terminals'| translate }} ..."

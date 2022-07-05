@@ -60,7 +60,7 @@ elements-nav {
  as-split ::ng-deep .as-split-gutter {
   background-color: grey !important;
   position: relative;
-  flex-basis: 0px !important;
+  flex-basis: 0 !important;
 }
  as-split ::ng-deep .as-split-gutter-icon {
   background-image: url('../../../static/imgs/sideBarHandler.svg') !important;
