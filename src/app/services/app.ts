@@ -2,7 +2,17 @@ import {Injectable, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
-import {DataStore, User, ProtocolConnectTypes, TYPE_RDP_CLIENT, TYPE_RDP_FILE, TYPE_DB_CLIENT, TYPE_WEB_CLI, TYPE_SSH_CLIENT} from '@app/globals';
+import {
+  DataStore,
+  User,
+  ProtocolConnectTypes,
+  TYPE_RDP_CLIENT,
+  TYPE_RDP_FILE,
+  TYPE_DB_CLIENT,
+  TYPE_WEB_CLI,
+  TYPE_SSH_CLIENT,
+  TYPE_DB_GUI,
+} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
@@ -111,6 +121,7 @@ export class AppService {
   getProtocolConnectTypes(remoteApp: Boolean) {
     const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
     const razorEnabled = this._settingSvc.globalSetting.TERMINAL_RAZOR_ENABLED;
+    const omnidbEnabled = this._settingSvc.globalSetting.TERMINAL_OMNIDB_ENABLED;
     const magnusEnabled = this._settingSvc.globalSetting.TERMINAL_MAGNUS_ENABLED;
     const sshClientEnabled = this._settingSvc.globalSetting.TERMINAL_KOKO_SSH_ENABLED;
     const validTypes = {};
@@ -122,6 +133,9 @@ export class AppService {
         }
         // 没有开启 razor 不支持 连接 razor
         if ([TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1 && !razorEnabled) {
+          return false;
+        }
+        if (tp.id === TYPE_DB_GUI.id && !omnidbEnabled) {
           return false;
         }
         if (tp.id === TYPE_DB_CLIENT.id && !magnusEnabled) {

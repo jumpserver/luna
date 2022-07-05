@@ -226,6 +226,7 @@ export class GlobalSetting {
   TERMINAL_MAGNUS_ENABLED: boolean;
   TERMINAL_KOKO_SSH_ENABLED: boolean;
   INTERFACE: any;
+  TERMINAL_OMNIDB_ENABLED: boolean;
 }
 
 export class Setting {
