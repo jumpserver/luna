@@ -6,7 +6,7 @@
 .search {
   border: none;
   border-left-width: 0;
-  border-bottom: #19aa8d 1px inset;
+  border-bottom: var(--primary-color) 1px inset;
   width: 100%;
   background: #2f2a2a;
   color: #d6cbcb;
