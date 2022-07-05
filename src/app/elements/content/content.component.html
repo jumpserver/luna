@@ -16,7 +16,7 @@
       </ul>
     </div>
   </div>
-  <div id="winContainer">
+  <div [hidden]="!this.viewSrv.currentView || this.viewSrv.currentView.protocol != 'ssh'" id="winContainer">
     <elements-content-window *ngFor="let view of viewList" [view]="view" ></elements-content-window>
   </div>
   <div id="batchCommandDiv" *ngIf="settingSvc.setting.commandExecution">
