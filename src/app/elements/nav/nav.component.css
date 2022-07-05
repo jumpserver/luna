@@ -117,7 +117,7 @@
 
 .flag {
   display: none;
-  color: #19aa8d;
+  color: var(--primary-color);
   padding-right: 10px;
 
 }
