@@ -65,14 +65,14 @@ export class ElementSelectSystemUserComponent implements OnInit, OnDestroy {
     const nodeID = this._appSvc.getNodeTypeID(this.node);
     const preferId = this._appSvc.getNodePreferSystemUser(nodeID);
     const matchedSystemUsers = this.systemUsers.find((item) => item.id === preferId);
-    if (preferId && matchedSystemUsers) return matchedSystemUsers;
+    if (preferId && matchedSystemUsers) { return matchedSystemUsers; }
     return null;
   }
 
   groupSystemUsers() {
     const groups = [];
-    const preferSystemUser:any = this.getPreferSystemUser();
-    if(preferSystemUser) {
+    const preferSystemUser: any = this.getPreferSystemUser();
+    if (preferSystemUser) {
       this.systemUserSelected = preferSystemUser;
       groups.push({
         name: this._i18n.instant('Last login'),

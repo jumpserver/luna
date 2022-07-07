@@ -24,7 +24,7 @@ export class ElementContentComponent implements OnInit {
     return (this.viewList.length + 1) * 151 + 10;
   }
 
-  constructor(private viewSrv: ViewService,
+  constructor(public viewSrv: ViewService,
               public settingSvc: SettingService
   ) {
   }

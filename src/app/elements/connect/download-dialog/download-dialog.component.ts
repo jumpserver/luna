@@ -18,13 +18,13 @@ export class ElementDownloadDialogComponent implements OnInit {
   }
   onCancel(): void {
     if (this.hasDownLoad) {
-      localStorage.setItem('hasDownLoadApp', '1');  
+      localStorage.setItem('hasDownLoadApp', '1');
     }
     this.dialogRef.close();
   }
   onConfirm(): void {
     if (this.hasDownLoad) {
-      localStorage.setItem('hasDownLoadApp', '1');  
+      localStorage.setItem('hasDownLoadApp', '1');
     }
     this.dialogRef.close();
     window.open('/core/download/', '_blank');

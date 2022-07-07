@@ -1,9 +1,25 @@
 import {Component, Inject, Injectable, OnInit} from '@angular/core';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {LogService} from '@app/services';
-import {FormControl, Validators} from '@angular/forms';
 
-// import * as layer from 'layui-layer/src/layer.js';
+
+@Component({
+  selector: 'elements-alert',
+  templateUrl: 'alert.html',
+  styleUrls: ['./alert.scss']
+})
+export class ElementDialogAlertComponent {
+
+  constructor(public dialogRef: MatDialogRef<ElementDialogAlertComponent>,
+              @Inject(MAT_DIALOG_DATA) public data: any,
+              private _logger: LogService) {
+  }
+
+  onNoClick(): void {
+    this.dialogRef.close();
+  }
+}
+
 
 @Injectable()
 export class DialogService {
@@ -19,7 +35,6 @@ export class DialogService {
   }
 
   confirm() {
-
   }
 
   tip() {
@@ -38,23 +53,5 @@ export class DialogService {
 
   close(index: any) {
     // layer.close(index);
-  }
-}
-
-
-@Component({
-  selector: 'elements-alert',
-  templateUrl: 'alert.html',
-  styleUrls: ['./alert.scss']
-})
-export class ElementDialogAlertComponent {
-
-  constructor(public dialogRef: MatDialogRef<ElementDialogAlertComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any,
-              private _logger: LogService) {
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
   }
 }

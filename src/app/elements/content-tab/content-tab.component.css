@@ -25,7 +25,7 @@ li {
 
 li.active {
   box-sizing: border-box;
-  border-bottom: 3px solid var(--primary-color);
+  border-bottom: 2px solid var(--primary-color);
 }
 
 li span {

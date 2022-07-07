@@ -1,6 +1,3 @@
-$-border-x: #5a5959;
-$-border-y: #1f1b1b;
-
 .sidebar {
   height: 100%;
   width: 100%;
@@ -31,7 +28,7 @@ label {
   left: 0;
   width: 100%;
   padding: 1px 20px 0 0;
-  border-top: 1px solid $-border-x;
+  border-top: 1px solid #948b8b;
   bottom: 0;
   height: 30px;
   overflow: hidden;
@@ -74,7 +71,7 @@ label {
   padding: 0 16px 0 5px;
   line-height: 31px;
   color: white;
-  border-bottom: 2px solid $-border-x;
+  border-bottom: 1px solid var(--primary-color);
 }
 
 .organization:hover {

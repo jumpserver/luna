@@ -6,11 +6,34 @@ import {ActivatedRoute} from '@angular/router';
 import {ToastrService} from 'ngx-toastr';
 import {groupBy, connectOnNewPage} from '@app/utils/common';
 import * as _ from 'lodash';
-import {AppService, HttpService, LogService, SettingService, TreeFilterService, I18nService, OrganizationService} from '@app/services';
+import {
+  AppService, HttpService, LogService, SettingService,
+  TreeFilterService, I18nService, OrganizationService
+} from '@app/services';
 import {connectEvt} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
 
 declare var $: any;
+
+@Component({
+  selector: 'elements-asset-tree-dialog',
+  templateUrl: 'disabledWarning.html',
+  styles: ['.mat-form-field { width: 100%; }']
+})
+export class DisabledAssetsDialogComponent implements OnInit {
+
+  constructor(public dialogRef: MatDialogRef<DisabledAssetsDialogComponent>,
+              @Inject(MAT_DIALOG_DATA) public data: any) {
+  }
+
+  ngOnInit() {
+  }
+
+  onNoClick() {
+    this.dialogRef.close();
+  }
+}
+
 
 @Component({
   selector: 'elements-asset-tree',
@@ -29,41 +52,42 @@ export class ElementAssetTreeComponent implements OnInit {
               private _i18n: I18nService,
               private _toastr: ToastrService,
               private _orgSvc: OrganizationService,
-  ) {}
+  ) {
+  }
 
   get RMenuList() {
-    const menuList = [{
+    const menuList = [
+      {
       'id': 'connect',
       'name': 'Connect',
       'fa': 'fa-terminal',
       'hide': false,
       'click': this.onMenuConnect.bind(this)
-    },
-      {
-      'id': 'new-connection',
-      'name': 'Open in new window',
-      'fa': 'fa-external-link',
-      'hide': this.isk8sNode(),
-      'click': this.onMenuConnectNewTab.bind(this)
     }, {
-      'id': 'file-manager',
-      'name': 'File Manager',
-      'fa': 'fa-file',
-      'hide': !this.nodeSupportSSH(),
-      'click': this.onMenuConnectFileManager.bind(this)
-    }, {
-      'id': 'favorite',
-      'name': 'Favorite',
-      'fa': 'fa-star-o',
-      'hide': this.isAssetFavorite() || !this.isAssetNode(),
-      'click': this.onMenuFavorite.bind(this)
-    }, {
-      'id': 'disfavor',
-      'name': 'Disfavor',
-      'fa': 'fa-star',
-      'hide': !this.isAssetFavorite() || !this.isAssetNode(),
-      'click': this.onMenuFavorite.bind(this)
-    }];
+        'id': 'new-connection',
+        'name': 'Open in new window',
+        'fa': 'fa-external-link',
+        'hide': this.isk8sNode(),
+        'click': this.onMenuConnectNewTab.bind(this)
+      }, {
+        'id': 'file-manager',
+        'name': 'File Manager',
+        'fa': 'fa-file',
+        'hide': !this.nodeSupportSSH(),
+        'click': this.onMenuConnectFileManager.bind(this)
+      }, {
+        'id': 'favorite',
+        'name': 'Favorite',
+        'fa': 'fa-star-o',
+        'hide': this.isAssetFavorite() || !this.isAssetNode(),
+        'click': this.onMenuFavorite.bind(this)
+      }, {
+        'id': 'disfavor',
+        'name': 'Disfavor',
+        'fa': 'fa-star',
+        'hide': !this.isAssetFavorite() || !this.isAssetNode(),
+        'click': this.onMenuFavorite.bind(this)
+      }];
     if (!this.rightClickSelectNode) {
       return [];
     }
@@ -117,6 +141,7 @@ export class ElementAssetTreeComponent implements OnInit {
   applicationsLoading = true;
   assetsSearchValue = '';
   applicationsSearchValue = '';
+  applicationTreeHasNodes = false;
 
   debouncedOnAssetsNodeClick = _.debounce(this.onAssetsNodeClick, 300, {
     'leading': true,
@@ -205,6 +230,7 @@ export class ElementAssetTreeComponent implements OnInit {
     this._http.getMyGrantedAppsNodes().subscribe(resp => {
       const tree = $.fn.zTree.init($('#applicationsTree'), setting, resp);
       this.applicationsTree = tree;
+      this.applicationTreeHasNodes = resp && resp.length > 1;
       this.applicationsLoading = false;
     }, error => {
       this.applicationsLoading = false;
@@ -244,7 +270,7 @@ export class ElementAssetTreeComponent implements OnInit {
       top -= 60;
     }
     this.pos.left = left + 'px';
-    this.pos.top = (top - 25)  + 'px';
+    this.pos.top = (top - 25) + 'px';
     this.isShowRMenu = true;
   }
 
@@ -315,7 +341,7 @@ export class ElementAssetTreeComponent implements OnInit {
       if (expandFlag) {
         targetTree.expandNode(treeNode, expandFlag, false, false, false);
         if (treeNode.children && treeNode.children.length > 0) {
-          treeNode.children.forEach(function(childNode) {
+          treeNode.children.forEach(function (childNode) {
             if (childNode.meta.data.type !== 'k8s') {
               self.expandAllChildren(treeId, childNode, expandFlag);
             }
@@ -339,7 +365,7 @@ export class ElementAssetTreeComponent implements OnInit {
     this.rightClickSelectNode = treeNode;
 
     if (!treeNode && event.target.tagName.toLowerCase() !== 'button'
-          && $(event.target).parents('a').length === 0) {
+      && $(event.target).parents('a').length === 0) {
       this.assetsTree.cancelSelectedNode();
       this.showRMenu(event.clientX, event.clientY);
     } else if (treeNode && !treeNode.noR) {
@@ -590,23 +616,3 @@ export class ElementAssetTreeComponent implements OnInit {
     foldStatus.classList.toggle('rotate');
   }
 }
-
-@Component({
-  selector: 'elements-asset-tree-dialog',
-  templateUrl: 'disabledWarning.html',
-  styles: ['.mat-form-field { width: 100%; }']
-})
-export class DisabledAssetsDialogComponent implements OnInit {
-
-  constructor(public dialogRef: MatDialogRef<DisabledAssetsDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any) {
-  }
-
-  ngOnInit() {
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-}
-

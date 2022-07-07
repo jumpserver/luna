@@ -1,13 +1,13 @@
 import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {connectEvt, TYPE_RDP_CLIENT, TYPE_SSH_CLIENT, TYPE_WEB_CLI, TYPE_RDP_FILE, TYPE_WEB_GUI, TYPE_DB_GUI, TYPE_WEB_SFTP} from '@app/globals';
+import {connectEvt, TYPE_WEB_CLI, TYPE_RDP_FILE, TYPE_WEB_GUI, TYPE_DB_GUI, TYPE_WEB_SFTP} from '@app/globals';
 import {AppService, HttpService, I18nService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {SystemUser, TreeNode, ConnectData} from '@app/model';
 import {View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
-import {launchLocalApp, connectOnNewPage} from '@app/utils/common';
+import {launchLocalApp} from '@app/utils/common';
 
 
 @Component({
@@ -150,12 +150,12 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   analysisId(idStr) {
-    var idObject = new Object();
-    var idStr = idStr.split("&");
-    for (var i = 0; i < idStr.length; i++) {
-      idObject[idStr[i].split("=")[0]] = (idStr[i].split("=")[1]);
+    const idObj = new Object();
+    idStr = idStr.split('&');
+    for (let i = 0; i < idStr.length; i++) {
+      idObj[idStr[i].split('=')[0]] = (idStr[i].split('=')[1]);
     }
-    return idObject;
+    return idObj;
   }
 
   async connectNode(node) {
