@@ -1,3 +1,6 @@
+$-border-x: #5a5959;
+$-border-y: #1f1b1b;
+
 .tabs {
   height: 30px;
   overflow-y: hidden;
@@ -55,11 +58,11 @@
 }
 
 #winContainer {
-  height: calc(100% - 30px - 29px);
+  height: calc(100% - 30px - 30px);
 }
 #batchCommandDiv {
-  height: 28px;
-  border-left: solid 1px black;
+  height: 29px;
+  border-left: solid 1px $-border-y;
   width: 100%;
   padding: 0 2px 0 0;
   &:focus-visible {
@@ -68,10 +71,10 @@
 }
 
 #batchCommandDiv > input {
-  height: 28px;
+  height: 29px;
   padding-left: 14px;
   width: 100%;
-  line-height: 28px;
+  line-height: 29px;
   border: none;
   background: #2f2a2a;
   color: #ffffff;
@@ -87,7 +90,7 @@
   -moz-border-radius: 2px;
   border-radius: 2px;
   margin: 0;
-  box-shadow: 0 3px 6px 0px rgba(0,0,0,0.16);
+  box-shadow: 0 3px 6px 0 rgba(0,0,0,0.16);
   position: absolute;
   opacity: 1;
   padding: 6px 0;
@@ -174,6 +177,9 @@ tr:hover {
   padding: 0 6px;
 }
 
+.tab-bar {
+  border-left: solid 1px $-border-y;
+}
 
 //
 //.window {

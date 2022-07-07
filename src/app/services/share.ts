@@ -72,7 +72,7 @@ export class LocalStorageService {
       const data = JSON.stringify(value);
       return localStorage.setItem(key, data);
     } catch (e) {
-      console.log('Error set localstorage: ', e)
+      console.log('Error set localstorage: ', e);
     }
   }
 
