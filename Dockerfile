@@ -1,7 +1,7 @@
 FROM node:10 as stage-build
-ARG NPM_REGISTRY="https://registry.npm.taobao.org"
+ARG NPM_REGISTRY="https://registry.npmmirror.com"
 ENV NPM_REGISTY=$NPM_REGISTRY
-ARG SASS_BINARY_SITE="https://npm.taobao.org/mirrors/node-sass"
+ARG SASS_BINARY_SITE="https://npmmirror.com/mirrors/node-sass"
 ENV SASS_BINARY_SITE=$SASS_BINARY_SITE
 
 WORKDIR /data
