@@ -115,6 +115,14 @@ export class ElementConnectorMagnusComponent implements OnInit {
           ` -a ${this.token.id}` +
           `@${passwordHolder}`;
         break;
+      case 'oracle':
+        cli = `sqlplus` +
+          ` ${this.token.id}` +
+          `/${passwordHolder}` +
+          `@${host}` +
+          `:${port ? port : ''}` +
+          `/${database}`;
+        break;
       default:
         cli = `Protocol '${protocol}' Not support now`;
     }
