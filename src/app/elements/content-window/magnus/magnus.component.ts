@@ -120,7 +120,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
           ` ${this.token.id}` +
           `/${passwordHolder}` +
           `@${host}` +
-          `:${port ? port : ''}` +
+          `:${this.endpoint.getPort(this.protocol)}` +
           `/${database}`;
         break;
       default:
