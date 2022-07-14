@@ -60,7 +60,7 @@ elements-nav {
  as-split ::ng-deep .as-split-gutter {
   background-color: grey !important;
   position: relative;
-  flex-basis: 0px !important;
+  flex-basis: 0 !important;
 }
  as-split ::ng-deep .as-split-gutter-icon {
   background-image: url('../../../static/imgs/sideBarHandler.svg') !important;
@@ -124,12 +124,13 @@ as-split ::ng-deep .as-split-gutter-icon:before{
   line-height: 46px;
   cursor: pointer;
 }
-.menu-item:first-child {
+.menu-organization {
   height: 30px;
   line-height: 30px;
-  border-bottom: 1px solid #19aa8d;
+  cursor: pointer;
+  border-bottom: 1px solid var(--primary-color);
 }
-.menu-item:hover {
+.menu-item:hover, .menu-organization:hover {
   background-color: rgba(0, 0, 0, 0.25);
 }
 .menu-active {

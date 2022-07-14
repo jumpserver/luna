@@ -3,6 +3,7 @@ import {DefaultFlexDirective} from '@angular/flex-layout';
 
 @Directive({
   selector: '[ngxSplitArea]',
+  // tslint:disable-next-line:use-host-property-decorator
   host: {
     style: 'overflow: auto;'
   }

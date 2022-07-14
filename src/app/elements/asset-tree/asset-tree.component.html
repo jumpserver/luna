@@ -2,6 +2,9 @@
   <div class="tree-type">
     <span
       class="tree-type-banner"
+    >
+    <div
+      class="tree-banner-left"
       (click)="foldTree('assets')"
     >
       <i
@@ -11,6 +14,8 @@
       <span class="tree-type-banner-label">
         {{ "My assets"| translate }}
       </span>
+    </div>
+
       <span
         class="tree-banner-icon-zone"
         [hidden]="assetsTreeHidden"
@@ -45,9 +50,12 @@
     </div>
   </div>
   
-  <div class="tree-type">
+  <div [hidden]="!applicationTreeHasNodes" class="tree-type tree-type-app">
     <span
       class="tree-type-banner"
+    >
+    <div
+      class="tree-banner-left"
       (click)="foldTree('applications')"
     >
       <i
@@ -57,6 +65,8 @@
       <span class="tree-type-banner-label">
         {{ "My applications"| translate }}
       </span>
+    </div>
+
       <span
         class="tree-banner-icon-zone"
         [hidden]="applicationsTreeHidden"

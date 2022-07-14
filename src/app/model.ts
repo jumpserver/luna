@@ -225,6 +225,8 @@ export class GlobalSetting {
   TERMINAL_RAZOR_ENABLED: boolean;
   TERMINAL_MAGNUS_ENABLED: boolean;
   TERMINAL_KOKO_SSH_ENABLED: boolean;
+  INTERFACE: any;
+  TERMINAL_OMNIDB_ENABLED: boolean;
 }
 
 export class Setting {
