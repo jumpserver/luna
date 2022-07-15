@@ -3,7 +3,7 @@ import {Setting, GlobalSetting} from '@app/model';
 import {LocalStorageService} from './share';
 import {HttpClient} from '@angular/common/http';
 import {I18nService} from '@app/services/i18n';
-import {canvasWaterMark} from '@app/utils/common';
+import {canvasWaterMark, getQueryParamFromURL} from '@app/utils/common';
 
 @Injectable()
 export class SettingService {
@@ -26,15 +26,19 @@ export class SettingService {
     this.init().then();
   }
   async getPublicSettings() {
-    this.globalSetting = await this._http.get<any>('/api/v1/settings/public/').toPromise();
+    let url = '/api/v1/settings/public/';
+    const connectionToken = getQueryParamFromURL('token');
+    if (connectionToken) {
+      // 解决 /luna/connect?token= 直接方式权限认证问题
+      url += `?token=${connectionToken}`;
+    }
+    this.globalSetting = await this._http.get<any>(url).toPromise();
     this.setting.commandExecution = this.globalSetting.SECURITY_COMMAND_EXECUTION;
-
     this.setLogo();
     this.setTitle();
     this.setFavicon();
     return new Promise((resolve) => { resolve(true); });
   }
-
   setTitle() {
     document.title = this._i18n.instant('Web Terminal') + ` - ${this.globalSetting.INTERFACE.login_title}`;
   }
