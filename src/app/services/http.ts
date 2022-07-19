@@ -8,13 +8,16 @@ import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
 import {encryptPassword} from '@app/utils/crypto';
+import {CookieService} from 'ngx-cookie-service';
 
 
 @Injectable()
 export class HttpService {
   headers = new HttpHeaders();
 
-  constructor(private http: HttpClient, private _i18n: I18nService) {}
+  constructor(private http: HttpClient,
+    private _i18n: I18nService,
+    private _cookie: CookieService) {}
 
   setOptionsCSRFToken(options) {
     const csrfToken = getCsrfTokenFromCookie();
@@ -25,20 +28,16 @@ export class HttpService {
     return options;
   }
 
-  setOptionsRootOrgIfNeed(url, options) {
+  setOrgIDToRequestHeader(url, options) {
     if (!options) { options = {}; }
     const headers = options.headers || new HttpHeaders();
-    // const rootOrgUrls = ['/api/v1/perms', '/api/v1/assets/favorite-assets/'];
-    // const toRootOrg = rootOrgUrls.some((i) => url.indexOf(i) > -1);
-    // if (toRootOrg) {
-    //   headers = headers.set('X-JMS-ORG', 'ROOT');
-    // }
-    options.headers = headers;
+    const orgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
+    options.headers = headers.set('X-JMS-ORG', orgID);
     return options;
   }
 
   get<T>(url: string, options?: any): Observable<any> {
-    options = this.setOptionsRootOrgIfNeed(url, options);
+    options = this.setOrgIDToRequestHeader(url, options);
     return this.http.get(url, options).pipe(
       catchError(this.handleError.bind(this))
     );
