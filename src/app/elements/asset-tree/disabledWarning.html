@@ -1,9 +1,15 @@
 <h1 mat-dialog-title>{{"Info"| translate}}</h1>
 
-<h3>
+<div style="font-size: 15px;">
   {{"Asset disabled"| translate}}
-</h3>
-<div style="float: right">
+</div>
+<div style="float: right; margin-top: 36px;">
 <!--  <button mat-raised-button (click)="onCancel()">{{data.cancel}}</button>-->
-  <button mat-raised-button color="primary"  [mat-dialog-close]="true"  cdkFocusInitial>{{"Confirm"| translate}}</button>
+  <button
+    mat-raised-button color="primary" 
+    [mat-dialog-close]="true" 
+    cdkFocusInitial
+  >
+    {{"Confirm"| translate}}
+  </button>
 </div>

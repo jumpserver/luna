@@ -4,7 +4,7 @@ import {Browser} from '@app/globals';
 import {retryWhen, delay, scan, map, catchError} from 'rxjs/operators';
 import {SystemUser, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam, Endpoint} from '@app/model';
 import {User} from '@app/globals';
-import {getCsrfTokenFromCookie} from '@app/utils/common';
+import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
 import {encryptPassword} from '@app/utils/crypto';
@@ -107,7 +107,13 @@ export class HttpService {
   }
 
   getUserProfile() {
-    return this.get<_User>('/api/v1/users/profile/');
+    let url = '/api/v1/users/profile/';
+    const connectionToken = getQueryParamFromURL('token');
+    if (connectionToken) {
+      // 解决 /luna/connect?token= 直接方式权限认证问题
+      url += `?token=${connectionToken}`;
+    }
+    return this.get<_User>(url);
   }
 
   getMyGrantedAssets(keyword) {
