@@ -20,7 +20,7 @@ export class ElementOrganizationComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    const cookieOrgId = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
+    const cookieOrgId = this._cookie.get('X-JMS-ORG');
     this._orgSvc.orgListChange$.subscribe(() => {
       this.organizations = this._orgSvc.workbenchOrgs;
       const cookieOrg = this.organizations.find(i => i.id === cookieOrgId);
