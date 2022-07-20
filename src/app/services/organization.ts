@@ -11,7 +11,7 @@ export class OrganizationService {
   constructor(private _cookie: CookieService) {}
 
   public switchOrg(org): void {
-    this._cookie.set('X-JMS-LUNA-ORG', org.id, 30, '/');
+    this._cookie.set('X-JMS-ORG', org.id, 30, '/');
     this.currentOrgChange$.emit();
   }
 
