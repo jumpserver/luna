@@ -12,6 +12,7 @@ import {
 } from '@app/services';
 import {connectEvt} from '@app/globals';
 import {TreeNode, ConnectEvt} from '@app/model';
+import {CookieService} from 'ngx-cookie-service';
 
 declare var $: any;
 
@@ -52,6 +53,7 @@ export class ElementAssetTreeComponent implements OnInit {
               private _i18n: I18nService,
               private _toastr: ToastrService,
               private _orgSvc: OrganizationService,
+              private _cookie: CookieService
   ) {
   }
 
@@ -142,6 +144,8 @@ export class ElementAssetTreeComponent implements OnInit {
   assetsSearchValue = '';
   applicationsSearchValue = '';
   applicationTreeHasNodes = false;
+  currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
+
 
   debouncedOnAssetsNodeClick = _.debounce(this.onAssetsNodeClick, 300, {
     'leading': true,
@@ -191,7 +195,10 @@ export class ElementAssetTreeComponent implements OnInit {
         enable: true,
         url: '/api/v1/perms/users/nodes/children-with-assets/tree/',
         autoParam: ['id=key', 'name=n', 'level=lv'],
-        type: 'get'
+        type: 'get',
+        headers: {
+          'X-JMS-ORG': this.currentOrgID
+        }
       };
     }
 
@@ -219,7 +226,10 @@ export class ElementAssetTreeComponent implements OnInit {
         enable: true,
         url: '/api/v1/perms/users/applications/tree/',
         autoParam: ['id=tree_id', 'parentInfo=parentInfo', 'level=lv'],
-        type: 'get'
+        type: 'get',
+        headers: {
+          'X-JMS-ORG': this.currentOrgID
+        }
       }
     }, this.setting);
     setting['callback'] = {
