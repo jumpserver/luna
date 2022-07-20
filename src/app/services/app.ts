@@ -75,9 +75,11 @@ export class AppService {
       return;
     }
 
+    // Connection token 方式不用检查过期了
+    const token = this.getQueryString('token');
     // Determine whether the user has logged in
     const sessionExpire = getCookie('jms_session_expire');
-    if (!sessionExpire) {
+    if (!sessionExpire && !token) {
       gotoLogin();
       return;
     } else if (sessionExpire === 'close') {
@@ -96,7 +98,6 @@ export class AppService {
       err => {
         // this._logger.error(err);
         User.logined = false;
-        const token = this.getQueryString('token');
         if (!token) {
          gotoLogin();
         }
