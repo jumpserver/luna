@@ -157,6 +157,7 @@ tr:hover {
   padding: 5px 10px;
   min-height: 40px;
   overflow-x: auto;
+  height: calc(100% - 31px);
 }
 
 .tree-type-loading {
@@ -192,14 +193,25 @@ tr:hover {
 
 .fold-tree {
   display: none;
-  animation: all 1s;
 }
 
-.tree-type-app {
-  flex: auto;
-  .tree-type-content {
-    height: calc(100% - 31px);
-  }
+.open-tree {
+  flex: 1;
+}
+
+.tree-type {
+  height: calc(100% - 31px);
+  transition: all .3s;
+}
+
+.tree-type-asset {
+  flex: none;
+  height: initial;
+}
+
+.tree-type-application {
+  display: flex;
+  flex-direction: column-reverse;
 }
 
 .tree-type .tree-search {
