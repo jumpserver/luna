@@ -150,6 +150,8 @@ tr:hover {
   position: relative;
   padding: 5px 10px;
   min-height: 40px;
+  overflow-x: auto;
+  height: calc(100% - 31px);
 }
 
 .tree-type-loading {
@@ -186,6 +188,10 @@ tr:hover {
 .fold-tree {
   display: none;
   animation: all 1s;
+}
+
+.tree-type {
+  height: 100%;
 }
 
 .tree-type .tree-search {
