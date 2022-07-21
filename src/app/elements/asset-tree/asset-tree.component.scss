@@ -1,3 +1,9 @@
+.tree-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .tree-refresh .fa {
   width: 24px;
   height: 24px;
@@ -151,7 +157,6 @@ tr:hover {
   padding: 5px 10px;
   min-height: 40px;
   overflow-x: auto;
-  height: calc(100% - 31px);
 }
 
 .tree-type-loading {
@@ -190,8 +195,11 @@ tr:hover {
   animation: all 1s;
 }
 
-.tree-type {
-  height: 100%;
+.tree-type-app {
+  flex: auto;
+  .tree-type-content {
+    height: calc(100% - 31px);
+  }
 }
 
 .tree-type .tree-search {
