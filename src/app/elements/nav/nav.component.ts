@@ -2,7 +2,6 @@ import {Component, Inject, OnInit} from '@angular/core';
 import {HttpService, NavService, LogService, ViewService, SettingService} from '@app/services';
 import {DataStore} from '@app/globals';
 import {CookieService} from 'ngx-cookie-service';
-import {ElementLeftBarComponent} from '@app/elements/left-bar/left-bar.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {Nav, View} from '@app/model';
@@ -58,24 +57,6 @@ export class ElementNavComponent implements OnInit {
       id: 'View',
       name: 'View',
       children: [
-        {
-          id: 'HideLeftManager',
-          click: () => {
-            ElementLeftBarComponent.Hide();
-            this.refreshNav();
-          },
-          name: 'Hide left manager',
-          hide: !DataStore.showLeftBar
-        },
-        {
-          id: 'ShowLeftManager',
-          click: () => {
-            ElementLeftBarComponent.Show();
-            this.refreshNav();
-          },
-          name: 'Show left manager',
-          hide: DataStore.showLeftBar
-        },
         {
           id: 'SplitVertical',
           href: '',
