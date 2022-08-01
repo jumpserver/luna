@@ -28,14 +28,13 @@
               "src/sass/style.scss",
               "src/styles.css",
               "src/theme.scss",
-              "src/assets/ztree/awesomeStyle/awesome.css",
               "node_modules/asciinema-player/resources/public/css/asciinema-player.css"
             ],
             "scripts": [
               "node_modules/jquery/dist/jquery.min.js",
               "node_modules/xterm/dist/xterm.js",
-              "src/assets/ztree/jquery.ztree.all.min.js",
-              "src/assets/ztree/jquery.ztree.exhide.min.js",
+              "node_modules/@ztree/ztree_v3/js/jquery.ztree.all.min.js",
+              "node_modules/@ztree/ztree_v3/js/jquery.ztree.exhide.min.js",
               "node_modules/asciinema-player/resources/public/js/asciinema-player.js"
             ]
           },
@@ -86,15 +85,14 @@
             "scripts": [
               "node_modules/jquery/dist/jquery.min.js",
               "node_modules/xterm/dist/xterm.js",
-              "src/assets/ztree/jquery.ztree.all.min.js",
-              "src/assets/ztree/jquery.ztree.exhide.min.js"
+              "node_modules/@ztree/ztree_v3/js/jquery.ztree.all.min.js",
+              "node_modules/@ztree/ztree_v3/js/jquery.ztree.exhide.min.js"
             ],
             "styles": [
               "node_modules/animate.css/animate.min.css",
               "node_modules/xterm/dist/xterm.css",
               "src/sass/style.scss",
-              "src/styles.css",
-              "src/assets/ztree/awesomeStyle/awesome.css"
+              "src/styles.css"
             ],
             "assets": [
               "src/assets",
