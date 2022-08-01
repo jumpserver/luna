@@ -58,7 +58,6 @@
     "ajv": "^6.12.3",
     "angular-split": "^4.0.0",
     "animate.css": "^3.6.1",
-    "bootstrap": "^4.3.1",
     "buffer": "^4.9.2",
     "codemirror": "^5.42.0",
     "core-js": "^2.5.4",

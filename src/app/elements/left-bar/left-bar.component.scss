@@ -27,7 +27,8 @@ label {
   font-size: 9pt;
   left: 0;
   width: 100%;
-  padding: 1px 20px 0 0;
+  line-height: 30px;
+  padding: 0 20px 0 0;
   border-top: 1px solid #948b8b;
   bottom: 0;
   height: 30px;
@@ -56,9 +57,9 @@ label {
   display: inline-block;
   height: 8px;
   font-size: 13px;
-  padding-top: 2px;
   padding-bottom: 2px;
   color: #d6cbcb;
+  margin: 0;
 }
 
 .ngx-scroll-overlay {
