@@ -191,27 +191,17 @@ tr:hover {
   right: 6px;
 }
 
-.fold-tree {
-  display: none;
-}
-
 .open-tree {
   flex: 1;
 }
 
 .tree-type {
-  height: calc(100% - 31px);
   transition: all .3s;
 }
 
 .tree-type-asset {
   flex: none;
   height: initial;
-}
-
-.tree-type-application {
-  display: flex;
-  flex-direction: column-reverse;
 }
 
 .tree-type .tree-search {

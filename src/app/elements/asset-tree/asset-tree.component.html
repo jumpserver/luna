@@ -1,21 +1,18 @@
 <div class="tree-container">
-  <div class="tree-type open-tree">
-    <span
-      class="tree-type-banner"
-    >
+  <div class="tree-type open-tree" [ngClass]="{'tree-type-asset': assetsTreeHidden}">
+    <span class="tree-type-banner">
     <div
       class="tree-banner-left"
       (click)="foldTree('assets')"
     >
       <i
-        id="assetsFoldStatus"
         class="fa fa-caret-down tree-icon-rotate"
+        [ngClass]="{'rotate': assetsTreeHidden}"
       ></i>
       <span class="tree-type-banner-label">
         {{ "My assets"| translate }}
       </span>
     </div>
-
       <span
         class="tree-banner-icon-zone"
         [hidden]="assetsTreeHidden"
@@ -50,23 +47,24 @@
     </div>
   </div>
   
-  <div [hidden]="!applicationTreeHasNodes" class="tree-type open-tree">
-    <span
-      class="tree-type-banner"
-    >
+  <div
+    class="tree-type"
+    [hidden]="!applicationTreeHasNodes"
+    [ngClass]="{'open-tree': !applicationsTreeHidden}"
+  >
+    <span class="tree-type-banner">
     <div
       class="tree-banner-left"
       (click)="foldTree('applications')"
     >
       <i
-        id="applicationsFoldStatus"
         class="fa fa-caret-down tree-icon-rotate"
+        [ngClass]="{'rotate': applicationsTreeHidden}"
       ></i>
       <span class="tree-type-banner-label">
         {{ "My applications"| translate }}
       </span>
     </div>
-
       <span
         class="tree-banner-icon-zone"
         [hidden]="applicationsTreeHidden"
