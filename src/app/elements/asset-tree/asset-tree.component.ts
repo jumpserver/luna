@@ -146,7 +146,6 @@ export class ElementAssetTreeComponent implements OnInit {
   applicationTreeHasNodes = false;
   currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
 
-
   debouncedOnAssetsNodeClick = _.debounce(this.onAssetsNodeClick, 300, {
     'leading': true,
     'trailing': false
@@ -621,15 +620,6 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   foldTree(type: string) {
-    const dom: any = document.getElementsByClassName('tree-type');
-    if (type === 'assets') {
-      dom[0].classList.toggle('tree-type-asset');
-    } else if (type === 'applications') {
-      dom[0].classList.toggle('open-tree');
-      dom[1].classList.toggle('tree-type-application');
-    }
     this[`${type}TreeHidden`] = !this[`${type}TreeHidden`];
-    const foldStatus = document.getElementById(`${type}FoldStatus`);
-    foldStatus.classList.toggle('rotate');
   }
 }
