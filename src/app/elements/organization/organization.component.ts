@@ -1,6 +1,6 @@
-import {Component, OnInit, Output, EventEmitter} from '@angular/core';
+import {Component, OnInit, Output, EventEmitter, OnDestroy} from '@angular/core';
 import {CookieService} from 'ngx-cookie-service';
-import {HttpService, OrganizationService} from '@app/services';
+import {OrganizationService} from '@app/services';
 import {Organization} from '@app/model';
 
 @Component({
@@ -8,27 +8,28 @@ import {Organization} from '@app/model';
   templateUrl: './organization.component.html',
   styleUrls: ['./organization.component.scss'],
 })
-export class ElementOrganizationComponent implements OnInit {
-  @Output() private outer = new EventEmitter();
-
+export class ElementOrganizationComponent implements OnInit, OnDestroy {
   currentOrg: Organization = {id: '', name: ''};
   organizations = [];
 
-  constructor(private _http: HttpService,
-              private _cookie: CookieService,
+  constructor(private _cookie: CookieService,
               private _orgSvc: OrganizationService
   ) {}
 
   ngOnInit() {
     const cookieOrgId = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
-    this._orgSvc.orgListChange$.subscribe(() => {
-      this.organizations = this._orgSvc.workbenchOrgs;
-      const cookieOrg = this.organizations.find(i => i.id === cookieOrgId);
+    this._orgSvc.orgListChange$.subscribe(async(res) => {
+      this.organizations = res;
+      const cookieOrg = await this.organizations.find(i => i.id === cookieOrgId);
       this.currentOrg = cookieOrg || this.organizations[0] || {};
       if (!cookieOrg) {
         this._orgSvc.switchOrg(this.currentOrg);
       }
     });
+  }
+
+  ngOnDestroy() {
+    this._orgSvc.orgListChange$.unsubscribe();
   }
 
   changeOrg(event) {
