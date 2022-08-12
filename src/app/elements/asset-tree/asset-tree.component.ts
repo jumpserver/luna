@@ -146,7 +146,6 @@ export class ElementAssetTreeComponent implements OnInit {
   applicationTreeHasNodes = false;
   currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
 
-
   debouncedOnAssetsNodeClick = _.debounce(this.onAssetsNodeClick, 300, {
     'leading': true,
     'trailing': false
@@ -622,7 +621,5 @@ export class ElementAssetTreeComponent implements OnInit {
 
   foldTree(type: string) {
     this[`${type}TreeHidden`] = !this[`${type}TreeHidden`];
-    const foldStatus = document.getElementById(`${type}FoldStatus`);
-    foldStatus.classList.toggle('rotate');
   }
 }

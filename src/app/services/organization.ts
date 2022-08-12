@@ -4,7 +4,7 @@ import {Organization} from '@app/model';
 
 @Injectable()
 export class OrganizationService {
-  orgListChange$: EventEmitter<void> = new EventEmitter();
+  orgListChange$: EventEmitter<any> = new EventEmitter();
   currentOrgChange$: EventEmitter<void> = new EventEmitter();
   workbenchOrgs = [];
 
@@ -17,6 +17,6 @@ export class OrganizationService {
 
   setWorkbenchOrgs(orgs: Array<Organization>) {
     this.workbenchOrgs = orgs;
-    this.orgListChange$.emit();
+    this.orgListChange$.next(orgs);
   }
 }
