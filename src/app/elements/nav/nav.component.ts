@@ -175,6 +175,10 @@ export class ElementNavComponent implements OnInit {
       },
     ];
   }
+
+  onJumpUi() {
+    window.open('/ui/', '_blank');
+  }
 }
 
 
