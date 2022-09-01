@@ -1,7 +1,9 @@
 <div class="nav">
   <ul class="nav-main">
     <li style="padding-right: 10px">
-      <a><img src="" id="left-logo" height="26px"/></a>
+      <a style="display: inline-block; padding-top: 1px;">
+        <img src="" id="left-logo" height="26px" (click)="onJumpUi()" />
+      </a>
     </li>
     <li *ngFor="let v of navs" [ngClass]="{'dropdown': v.children}" >
       <a>{{v.name|translate}}</a>
