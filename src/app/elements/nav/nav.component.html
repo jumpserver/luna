@@ -5,15 +5,6 @@
         <img src="" id="left-logo" height="26px" (click)="onJumpUi()" />
       </a>
     </li>
-    <li *ngFor="let v of navs" [ngClass]="{'dropdown': v.children}" >
-      <a>{{v.name|translate}}</a>
-      <ul [ngClass]="{'dropdown-content': v.children}" *ngIf="v.children">
-        <li *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
-          <a *ngIf="vv.href" [routerLink]="[vv.href]">{{vv.name| translate}}</a>
-          <a id="{{vv.id}}" *ngIf="vv.click && !vv.hide" (click)="vv.click && vv.click()">{{vv.name| translate}}</a>
-        </li>
-      </ul>
-    </li>
     <li [ngClass]="{'dropdown': true}">
       <a>{{"Tab List"| translate}}</a>
       <ul *ngIf="viewList.length > 0" [ngClass]="{'dropdown-content': true}">
@@ -24,6 +15,15 @@
           </span>
           </li>
         </ng-container>
+      </ul>
+    </li>
+    <li *ngFor="let v of navs" [ngClass]="{'dropdown': v.children}" >
+      <a>{{v.name|translate}}</a>
+      <ul [ngClass]="{'dropdown-content': v.children}" *ngIf="v.children">
+        <li *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
+          <a *ngIf="vv.href" [routerLink]="[vv.href]">{{vv.name| translate}}</a>
+          <a id="{{vv.id}}" *ngIf="vv.click && !vv.hide" (click)="vv.click && vv.click()">{{vv.name| translate}}</a>
+        </li>
       </ul>
     </li>
   </ul>
