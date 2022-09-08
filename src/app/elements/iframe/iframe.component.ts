@@ -45,6 +45,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
         case 'CLOSE':
           this.view.connected = false;
           break;
+        case 'CONNECTED':
+          this.view.connected = true;
+          break;
         case 'CLICK':
           document.body.click();
           break;
@@ -86,6 +89,12 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   reconnect() {
+    // @ts-ignore
+    if (typeof (this.iframeWindow.Reconnect) === 'function') {
+      // @ts-ignore
+      this.iframeWindow.Reconnect();
+      return;
+    }
     const url = this.src;
     this.src = 'about:blank';
     setTimeout(() => {
