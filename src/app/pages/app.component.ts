@@ -12,7 +12,8 @@ export class AppComponent {
     public viewSrv: ViewService
   ) {}
   @HostListener('window:keydown', ['$event'])
-  onKeyPress($event: KeyboardEvent) {
+  onKeyDown($event: KeyboardEvent) {
+    $event.stopPropagation();
     const condition = this.viewSrv.viewList.length > 1 && $event.shiftKey;
       if (condition && $event.keyCode === 37) {
         this.viewSrv.switchView('left');
