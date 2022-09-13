@@ -60,7 +60,11 @@ export function encryptPassword(password) {
   }
   const aesKey = (Math.random() + 1).toString(36).substring(2);
   // public key 是 base64 存储的
-  const rsaPublicKeyText = getCookie('jms_public_key')
+  let rsaPublicKeyText = getCookie('jms_public_key');
+  if (!rsaPublicKeyText) {
+    return password;
+  }
+  rsaPublicKeyText = rsaPublicKeyText
     .replace('"', '')
     .replace('"', '');
   const rsaPublicKey = atob(rsaPublicKeyText);
