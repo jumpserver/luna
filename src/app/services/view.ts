@@ -40,24 +40,4 @@ export class ViewService {
     const index = this.viewList.indexOf(view);
     this.viewList.splice(index, 1);
   }
-
-  switchView(direction: ('left' | 'right')) {
-    const viewList = this.viewList;
-    const viewListLength = viewList.length;
-    for (let i = 0; i < viewListLength; i++) {
-      const current: View = viewList[i];
-      if (current.id === this.currentView.id) {
-        let nextView: View, nextViewLength: number;
-        const next: number = direction === 'left' ? i - 1 : i + 1;
-        if (direction === 'left') {
-          nextViewLength = next < 0 ? viewListLength - 1 : next;
-        } else {
-          nextViewLength = next >= viewListLength ? 0 : next;
-        }
-        nextView = viewList[nextViewLength];
-        if (nextView) { this.activeView(nextView); }
-        break;
-      }
-    }
-  }
 }
