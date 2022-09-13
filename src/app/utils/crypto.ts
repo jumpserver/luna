@@ -63,6 +63,9 @@ export function encryptPassword(password) {
   const rsaPublicKeyText = getCookie('jms_public_key')
     .replace('"', '')
     .replace('"', '');
+  if (!rsaPublicKeyText) {
+    return password;
+  }
   const rsaPublicKey = atob(rsaPublicKeyText);
   const keyCipher = rsaEncrypt(aesKey, rsaPublicKey);
   const passwordCipher = aesEncrypt(password, aesKey);
