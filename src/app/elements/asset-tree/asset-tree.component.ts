@@ -157,7 +157,9 @@ export class ElementAssetTreeComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.isLoadTreeAsync = this._settingSvc.isLoadTreeAsync();
+    this._settingSvc.isLoadTreeAsync$.subscribe((state) => {
+      this.isLoadTreeAsync = state;
+    });
     this.initTree();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
@@ -212,6 +214,9 @@ export class ElementAssetTreeComponent implements OnInit {
         this.assetsTree.destroy();
       }
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
+      _assetTree.setting.view.expandSpeed = '';
+      _assetTree.expandAll(false);
+      _assetTree.setting.view.expandSpeed = 'fast';
       myAssetsNodes.push(_assetTree.getNodes());
       this.assetsTree = _assetTree;
     }, error => {
