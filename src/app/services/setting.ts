@@ -4,6 +4,7 @@ import {LocalStorageService} from './share';
 import {HttpClient} from '@angular/common/http';
 import {I18nService} from '@app/services/i18n';
 import {canvasWaterMark, getQueryParamFromURL} from '@app/utils/common';
+import {BehaviorSubject} from 'rxjs';
 
 @Injectable()
 export class SettingService {
@@ -11,6 +12,7 @@ export class SettingService {
   public globalSetting: GlobalSetting = new GlobalSetting();
   settingKey = 'LunaSetting';
   private inited = false;
+  public isLoadTreeAsync$ = new BehaviorSubject<boolean>(true);
 
   constructor(
     private _localStorage: LocalStorageService,
@@ -20,6 +22,7 @@ export class SettingService {
     const settingData = this._localStorage.get(this.settingKey);
     if (settingData && typeof settingData === 'object') {
       this.setting = settingData;
+      this.setIsLoadTreeAsync();
     } else {
       this.setting = new Setting();
     }
@@ -78,10 +81,11 @@ export class SettingService {
 
   save() {
     this._localStorage.set(this.settingKey, this.setting);
+    this.setIsLoadTreeAsync();
   }
 
-  isLoadTreeAsync(): boolean {
-    return this.setting.isLoadTreeAsync === '1';
+  setIsLoadTreeAsync() {
+    this.isLoadTreeAsync$.next(this.setting.isLoadTreeAsync === '1');
   }
 
   // 全局跳过手动输入windows账号密码
