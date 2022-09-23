@@ -21,6 +21,7 @@
 
 .nav li {
   display: inline-block;
+  vertical-align: top;
 }
 
 .nav .dropdown a {
@@ -40,7 +41,7 @@
 
 .dropdown {
   position: relative;
-  top: -6px;
+  top: 0px;
   display: inline-block;
 }
 
