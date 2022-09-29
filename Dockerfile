@@ -13,7 +13,7 @@ RUN set -ex \
     && yarn config set cache-folder /root/.cache/yarn/luna
 
 ADD . /data
-RUN RUN --mount=type=cache,target=/root/.cache/yarn \
+RUN --mount=type=cache,target=/root/.cache/yarn \
     sed -i "s@[0-9].[0-9].[0-9]@${VERSION}@g" src/environments/environment.prod.ts \
     && yarn install \
     && yarn build \
