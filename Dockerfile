@@ -14,8 +14,11 @@ RUN set -ex \
 
 ADD . /data
 RUN RUN --mount=type=cache,target=/root/.cache/yarn \
-    yarn install && cd utils && bash -xieu build.sh build
+    sed -i "s@[0-9].[0-9].[0-9]@${VERSION}@g" src/environments/environment.prod.ts \
+    && yarn install \
+    && yarn build \
+    && cp -R src/assets/i18n luna/
 
 FROM nginx:alpine
-COPY --from=stage-build /data/release/luna /opt/luna/
+COPY --from=stage-build /data/luna /opt/luna
 COPY nginx.conf /etc/nginx/conf.d/default.conf
