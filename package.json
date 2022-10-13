@@ -65,7 +65,7 @@
     "crypto-js": "^4.1.1",
     "font-awesome": "4.7.0",
     "guacamole-common-js": "1.1.0",
-    "jquery": "^3.4.1",
+    "jquery": "^3.6.1",
     "jsencrypt": "^3.2.1",
     "material-design-icons": "^3.0.1",
     "metismenu": "^2.7.9",
