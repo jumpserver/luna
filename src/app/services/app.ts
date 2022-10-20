@@ -337,6 +337,8 @@ export class AppService {
     } else {
       data['assetId'] = view.node.id;
     }
-    return this._http.getSmartEndpoint(data, protocol);
+    const res = this._http.getSmartEndpoint(data, protocol);
+    res.catch((err) => { alert(err.error.detail); });
+    return res;
   }
 }
