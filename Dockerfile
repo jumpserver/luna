@@ -1,7 +1,5 @@
 FROM node:14.16 as stage-build
 ARG TARGETARCH
-ARG VERSION
-ENV VERSION=$VERSION
 ARG NPM_REGISTRY="https://registry.npmmirror.com"
 ENV NPM_REGISTY=$NPM_REGISTRY
 
@@ -12,10 +10,15 @@ RUN set -ex \
     && yarn config set registry ${NPM_REGISTRY} \
     && yarn config set cache-folder /root/.cache/yarn/luna
 
+ADD package.json package-lock.json yarn.lock /data
+RUN --mount=type=cache,target=/root/.cache/yarn \
+    yarn install
+
+ARG VERSION
+ENV VERSION=$VERSION
 ADD . /data
 RUN --mount=type=cache,target=/root/.cache/yarn \
     sed -i "s@[0-9].[0-9].[0-9]@${VERSION}@g" src/environments/environment.prod.ts \
-    && yarn install \
     && yarn build \
     && cp -R src/assets/i18n luna/
 
