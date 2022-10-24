@@ -10,7 +10,7 @@ RUN set -ex \
     && yarn config set registry ${NPM_REGISTRY} \
     && yarn config set cache-folder /root/.cache/yarn/luna
 
-ADD package.json package-lock.json yarn.lock /data
+ADD package.json yarn.lock /data
 RUN --mount=type=cache,target=/root/.cache/yarn \
     yarn install
 
