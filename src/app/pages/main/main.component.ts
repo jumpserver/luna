@@ -94,7 +94,7 @@ export class PageMainComponent implements OnInit {
 
   menuClick(settings = this.settingLayoutWidth, type = '') {
     this.leftArea.nativeElement.style = `min-width: 54px; order: 0; flex: 0 0 calc(${settings.leftWidth} - 0px);`;
-    this.rightArea.nativeElement.style = `order: 2; flex: 0 0 calc(${settings.rightWidth} - 0px);`;
+    this.rightArea.nativeElement.style = `max-width: calc(100% - 54px); order: 2; flex: 0 0 calc(${settings.rightWidth} - 0px);`;
     this.showMenu = !this.showMenu;
   }
 }
