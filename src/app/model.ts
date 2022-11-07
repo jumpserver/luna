@@ -227,6 +227,7 @@ export class GlobalSetting {
   TERMINAL_KOKO_SSH_ENABLED: boolean;
   INTERFACE: any;
   TERMINAL_OMNIDB_ENABLED: boolean;
+  TERMINAL_GRAPHICAL_RESOLUTION: string;
 }
 
 export class Setting {

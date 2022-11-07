@@ -40,6 +40,7 @@ export class SettingService {
     this.setLogo();
     this.setTitle();
     this.setFavicon();
+    this.setRDPResolution();
     return new Promise((resolve) => { resolve(true); });
   }
   setTitle() {
@@ -62,6 +63,13 @@ export class SettingService {
     link.type = 'image/x-icon';
     link.rel = 'shortcut icon';
     link.href = this.globalSetting.INTERFACE.favicon;
+  }
+
+  setRDPResolution() {
+    const value = this._localStorage.get(this.settingKey);
+    if (!value || !value.rdpResolution) {
+      this.setting.rdpResolution = this.globalSetting.TERMINAL_GRAPHICAL_RESOLUTION;
+    }
   }
 
   setPrimaryColor() {
