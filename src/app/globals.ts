@@ -102,10 +102,11 @@ export const ProtocolConnectTypes = {
   telnet: [TYPE_WEB_CLI],
   mysql: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLIENT],
   sqlserver: [TYPE_WEB_CLI],
-  redis: [TYPE_WEB_CLI, TYPE_DB_CLIENT],
-  mongodb: [TYPE_WEB_CLI],
   postgresql: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLIENT],
   oracle: [TYPE_DB_GUI, TYPE_DB_CLIENT],
   mariadb: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLIENT],
+  clickhouse: [TYPE_WEB_CLI],
+  redis: [TYPE_WEB_CLI, TYPE_DB_CLIENT],
+  mongodb: [TYPE_WEB_CLI],
   k8s: [TYPE_WEB_CLI],
 };
