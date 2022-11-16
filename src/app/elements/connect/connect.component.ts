@@ -274,7 +274,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       minHeight: '300px',
       height: 'auto',
       width: '600px',
-      disableClose: true,
       data: {accounts: accounts, node: node}
     });
 

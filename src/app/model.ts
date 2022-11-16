@@ -33,7 +33,7 @@ export class Account {
   id: string;
   name: string;
   username: string;
-  has_secret: string;
+  has_secret: boolean;
   secret: string;
   actions: Array<Action>;
 }

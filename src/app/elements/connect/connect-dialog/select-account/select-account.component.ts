@@ -4,7 +4,6 @@ import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
 import {FormControl, Validators} from '@angular/forms';
 import {AppService, LocalStorageService, LogService, SettingService, I18nService} from '@app/services';
 import {takeUntil} from 'rxjs/operators';
-import {User} from '@app/globals';
 
 @Component({
   selector: 'elements-select-account',
@@ -58,6 +57,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this.accountSelected = this.normalAccounts[0];
     this.groupedAccounts = this.groupAccounts();
     this.filteredUsersGroups.next(this.groupedAccounts.slice());
+    this.manualAuthInfo.username = this.accountSelected.username;
 
     this.filteredCtl.valueChanges
       .pipe(takeUntil(this._onDestroy))
@@ -68,7 +68,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this.accountCtl.valueChanges
       .pipe(takeUntil(this._onDestroy))
       .subscribe(() => {
-        console.log('Account: ', this.accountSelected);
         this.onSelectAccount.emit(this.accountSelected);
       });
 
@@ -170,9 +169,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     if (this.authsOptions && this.authsOptions.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.authsOptions[0]);
     }
-    // if (this.accountSelected.username_same_with_user) {
-    //   this.manualAuthInfo.username = User.username;
-    // }
     if (!this.manualAuthInfo.username && this.accountSelected.username) {
       this.manualAuthInfo.username = this.accountSelected.username;
     }

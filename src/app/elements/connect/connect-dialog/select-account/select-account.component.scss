@@ -8,8 +8,16 @@
   margin-bottom: 20px;
 }
 
+.remember-auth {
+  width: 30%;
+  font-size: 12px;
+  vertical-align: sub;
+  float: right;
+  text-align: right;
+}
+
 .remember-auth ::ng-deep .mat-checkbox-layout {
-  padding-bottom: 10px;
+  //padding-bottom: 10px;
 }
 
 .mat-option {
@@ -26,4 +34,8 @@
 .account-info {
   border: solid #cbc9c9 1px;
   padding: 10px 10px 0 10px;
+}
+
+.input-field {
+  width: 100%;
 }

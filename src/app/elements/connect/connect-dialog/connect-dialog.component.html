@@ -1,7 +1,21 @@
 <div>
-  <h2 mat-dialog-title>{{"Connect" | translate}} - {{ node.name | truncatechars:30 }}</h2>
+  <div mat-dialog-title>
+    <h3>{{"Connect" | translate}} - {{ node.name | truncatechars:30 }}</h3>
+    <button mat-icon-button aria-label="close dialog" mat-dialog-close>
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
 
-  <div (keyup.enter)="onConfirm()" style="padding-top: 10px">
+  <nav *ngIf="protocols.length > 1" mat-tab-nav-bar style="margin-bottom: 20px" class="protocol-tab" >
+    <a mat-tab-link *ngFor="let p of protocols"
+       (click)="protocol = p.name"
+       [active]="protocol == p.name"
+    >
+      {{ p.name | uppercase }}
+    </a>
+  </nav>
+
+  <div mat-dialog-content (keyup.enter)="onConfirm()" class="dialog-body">
     <elements-select-account
       [node]="node"
       [accounts]="accounts"
@@ -11,22 +25,8 @@
     >
     </elements-select-account>
 
-    <div class="connect-type">
+    <div class="connect-type form-field">
       <label class="zone-label" for="connect-type">{{ "Connect Method" | translate }}</label>
-
-      <div class="protocol-group">
-        <mat-radio-group
-          aria-label="Select an option"
-          name="protocol"
-          [(ngModel)]="protocol"
-          id="protocol"
-        >
-          <mat-radio-button *ngFor="let protocol of protocols" [value]="protocol.name">
-            {{ protocol.name | uppercase }}
-          </mat-radio-button>
-        </mat-radio-group>
-      </div>
-
       <div class="connect-type-group">
         <mat-radio-group
           aria-label="Select an option"
@@ -59,10 +59,11 @@
       </mat-checkbox>
     </div>
 
-    <mat-dialog-actions  style="float: right; margin: 20px 0 10px 0;">
-      <button mat-raised-button (click)="onCancel()">{{"Cancel"| translate}}</button>
-      <button mat-raised-button color="primary" type="submit" [mat-dialog-close]="outputData" (click)="onConfirm()">{{"Confirm"| translate}}</button>
+    <mat-dialog-actions style="float: right; margin: 20px 0 10px 0; width: 100%">
+      <button mat-raised-button color="primary" style="width: 100%" type="submit" [mat-dialog-close]="outputData"
+              (click)="onConfirm()">
+        {{"Login"| translate}}
+      </button>
     </mat-dialog-actions>
   </div>
-
 </div>

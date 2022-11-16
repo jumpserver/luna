@@ -1,6 +1,6 @@
-<div class="select-user">
+<div class="select-user form-field">
   <label class="zone-label" style="margin-bottom: 0" for="selectAccount">{{ "Select account" | translate }}</label>
-  <mat-form-field style="width: 100%;margin-top:-10px" >
+  <mat-form-field style="width: 100%;margin-top:-10px">
     <mat-select
       id="selectAccount"
       [(value)]="accountSelected"
@@ -18,45 +18,47 @@
       </mat-option>
       <mat-optgroup *ngFor="let group of filteredUsersGroups | async"
                     [label]="group.name"
-                    [disabled]="group.disabled">
+                    [disabled]="group.disabled"
+      >
         <mat-option *ngFor="let account of group.accounts" [value]="account">
           {{ account.name }}
         </mat-option>
       </mat-optgroup>
     </mat-select>
   </mat-form-field>
-  <mat-error *ngIf="accountCtl.hasError('required')">{{"Please choose a User"| translate}}</mat-error>
+  <mat-error *ngIf="accountCtl.hasError('required')">{{"Please choose a account"| translate}}</mat-error>
 </div>
 
-<div class="manual-auth" *ngIf="!accountSelected?.has_secret">
-  <label class="zone-label">{{ "Account info" | translate }}</label>
-  <div class="account-info">
-    <mat-form-field style="width: 45%">
-      <mat-label>{{'Username'| translate}}</mat-label>
-      <input
-        #username
-        matInput
-        name="username"
-        [placeholder]="usernamePlaceholder"
-        autofocus
-        [(ngModel)]="manualAuthInfo.username"
-        (ngModelChange)="onUsernameChanges()"
-        (focus)="onFocus()"
-        [matAutocomplete]="auto"
-      >
-      <mat-autocomplete #auto="matAutocomplete">
-        <mat-option *ngFor="let i of filteredOptions" [value]="i.username">
-          {{i.username}}
-        </mat-option>
-      </mat-autocomplete>
-    </mat-form-field>
+<div *ngIf="accountSelected.username == '@INPUT'" class="form-field">
+  <label class="zone-label" style="margin-bottom: 0">{{ "Username" | translate }}</label>
+  <mat-form-field class="input-field" floatLabel='never'>
+    <input
+      #username
+      matInput
+      name="username"
+      [placeholder]="usernamePlaceholder"
+      autofocus
+      [(ngModel)]="manualAuthInfo.username"
+      (ngModelChange)="onUsernameChanges()"
+      (focus)="onFocus()"
+      [matAutocomplete]="auto"
+    >
+    <mat-autocomplete #auto="matAutocomplete">
+      <mat-option *ngFor="let i of filteredOptions" [value]="i.username">
+        {{i.username}}
+      </mat-option>
+    </mat-autocomplete>
+  </mat-form-field>
+</div>
 
-    <mat-form-field style="width: 45%; margin-left: 10%">
+<div class="form-field">
+  <label class="zone-label" style="margin-bottom: 0; display: block">{{ "Password" | translate }}</label>
+  <div>
+    <mat-form-field class="input-field password" floatLabel='never' style="width: 70%">
       <input matInput [type]="hidePassword ? 'password' : 'text'"
              #password
              name="password"
              [(ngModel)]="manualAuthInfo.secret"
-             placeholder="{{'Password'| translate}}"
              [attr.cdkFocusInitial]="manualAuthInfo.username? true : null"
              autofocus
       >
@@ -64,14 +66,15 @@
               (click)="hidePassword = !hidePassword"
               [attr.aria-label]="'Hide secret'"
               [attr.aria-pressed]="hidePassword"
-              [disabled]="accountSelected?.login_mode !== 'manual'"
       >
         <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
       </button>
     </mat-form-field>
     <mat-checkbox *ngIf="!rememberAuthDisabled" [(ngModel)]="rememberAuth" class="remember-auth">
-      {{ "Remember in browser" | translate }}
+      {{ "Remember password" | translate }}
     </mat-checkbox>
   </div>
 </div>
+
+
 

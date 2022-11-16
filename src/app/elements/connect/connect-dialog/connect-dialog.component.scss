@@ -26,8 +26,27 @@
   font-size: 14px;
 }
 
-::ng-deep .mat-tab-label, ::ng-deep .mat-tab-label-active {
+.dialog-body {
+  padding: 0;
+  margin: 0 10px 10px;
+}
+
+.protocol-tab ::ng-deep .mat-tab-label, .protocol-tab  ::ng-deep .mat-tab-label-active {
   height: 35px !important;
-  padding: 0 20px !important;
+  //padding: 0 20px !important;
   min-width: 20px !important;
+}
+
+.dialog-body ::ng-deep .mat-form-field-infix {
+  border-top: 1px;
+}
+
+.mat-dialog-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mat-dialog-title h3 {
+  margin: 0;
 }

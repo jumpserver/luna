@@ -12,7 +12,7 @@ import {BehaviorSubject} from 'rxjs';
 })
 export class ElementConnectDialogComponent implements OnInit {
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
-  public protocol = 'ssh';
+  public protocol = '';
   public protocols: Array<Protocol>;
   public node: TreeNode;
   public outputData: ConnectData = new ConnectData();
@@ -36,6 +36,7 @@ export class ElementConnectDialogComponent implements OnInit {
     this.accounts = this.data.accounts;
     this.node = this.data.node;
     this.protocols = this.node.meta.data.protocols;
+    this.protocol = this.protocols[0].name;
   }
 
   onSelectAccount(account) {

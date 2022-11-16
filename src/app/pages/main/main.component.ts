@@ -60,12 +60,15 @@ export class PageMainComponent implements OnInit {
 
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any) {
-    if (environment.production) {
-      return false;
-    }
-    const notInIframe = window.self === window.top;
-    const notInReplay = location.pathname.indexOf('/luna/replay') === -1;
-    return !(notInIframe && notInReplay);
+    // console.log('environment', environment);
+    // if (!environment.production) {
+    //   $event.returnValue = null;
+    //   console.log('Return false');
+    //   return null;
+    // }
+    // const notInIframe = window.self === window.top;
+    // const notInReplay = location.pathname.indexOf('/luna/replay') === -1;
+    // return !(notInIframe && notInReplay);
   }
 
   dragStartHandler($event: IOutputData) {
