@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
 import {Browser} from '@app/globals';
 import {retryWhen, delay, scan, map, catchError} from 'rxjs/operators';
-import {SystemUser, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam, Endpoint} from '@app/model';
+import {Account, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam, Endpoint} from '@app/model';
 import {User} from '@app/globals';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
@@ -143,26 +143,9 @@ export class HttpService {
       )));
   }
 
-  getMyGrantedAppsNodes() {
-    const url = '/api/v1/perms/users/applications/tree/';
-    return this.get<Array<TreeNode>>(url);
-  }
-
-  getMyGrantedAppNodesDetail(id: string) {
-    const url = `/api/v1/perms/users/applications/tree/?id=${id}`;
-    return this.get<Array<TreeNode>>(url).pipe(
-      map(nodes => nodes.filter(node => node.id === id))
-    );
-  }
-
-  getMyAppSystemUsers(remoteAppId: string) {
-    const url = `/api/v1/perms/users/applications/${remoteAppId}/system-users/`;
-    return this.get<Array<SystemUser>>(url);
-  }
-
-  getMyAssetSystemUsers(assetId: string) {
-    const url = `/api/v1/perms/users/assets/${assetId}/system-users/`;
-    return this.get<Array<SystemUser>>(url);
+  getMyAssetAccounts(assetId: string) {
+    const url = `/api/v1/perms/users/self/assets/${assetId}/accounts/`;
+    return this.get<Array<Account>>(url);
   }
 
   favoriteAsset(assetId: string, favorite: boolean) {
@@ -234,14 +217,14 @@ export class HttpService {
     return cleanedParams;
   }
 
-  downloadRDPFile({assetId, appId, systemUserId}, params: Object) {
+  downloadRDPFile({assetId, appId, accountId}, params: Object) {
     const url = new URL('/api/v1/authentication/connection-token/rdp/file/', window.location.origin);
     if (assetId) {
       url.searchParams.append('asset', assetId);
     } else {
       url.searchParams.append('application', appId);
     }
-    url.searchParams.append('system_user', systemUserId);
+    url.searchParams.append('system_user', accountId);
     params = this.cleanRDPParams(params);
     if (params) {
       for (const [k, v] of Object.entries(params)) {
@@ -251,7 +234,7 @@ export class HttpService {
     return window.open(url.href);
   }
 
-  getRDPClientUrl({assetId, appId, systemUserId}, params: Object) {
+  getRDPClientUrl({assetId, appId, accountId}, params: Object) {
     const url = new URL('/api/v1/authentication/connection-token/client-url/', window.location.origin);
     const data = {};
     if (assetId) {
@@ -259,7 +242,7 @@ export class HttpService {
     } else {
       data['application'] = appId;
     }
-    data['system_user'] = systemUserId;
+    data['system_user'] = accountId;
     params = this.cleanRDPParams(params);
     if (params) {
       for (const [k, v] of Object.entries(params)) {
@@ -267,17 +250,6 @@ export class HttpService {
       }
     }
     return this.post(url.href, data).toPromise();
-  }
-
-  createSystemUserTempAuth(systemUser: SystemUser, node: TreeNode, auth: any) {
-    const url = `/api/v1/assets/system-users/${systemUser.id}/temp-auth/`;
-    auth.password = encryptPassword(auth.password);
-    const data = {
-      instance_id: node.id,
-      protocol: systemUser.protocol,
-      ...auth
-    };
-    return this.post(url, data).toPromise();
   }
 
   getConnectionToken(param: ConnectionTokenParam): Promise<ConnectionToken> {

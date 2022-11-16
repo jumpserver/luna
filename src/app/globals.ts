@@ -1,7 +1,7 @@
 'use strict';
 import {EventEmitter} from 'events/events';
 import {BehaviorSubject} from 'rxjs';
-import {ConnectEvt, ConnectType, User as _User} from './model';
+import {ConnectEvt, ConnectMethod, User as _User} from './model';
 import {DataStore as _DataStore, Browser as _Browser, Video as _Video, Monitor as _Monitor} from './model';
 
 export let TermWS = null;
@@ -31,7 +31,7 @@ export const i18n = new Map();
 
 export const connectEvt = new BehaviorSubject<ConnectEvt>(new ConnectEvt(null, null));
 
-export const TYPE_WEB_CLI: ConnectType = {
+export const TYPE_WEB_CLI: ConnectMethod = {
   name: 'Web CLI',
   id: 'webCLI',
   requireXPack: false,
@@ -39,7 +39,7 @@ export const TYPE_WEB_CLI: ConnectType = {
   client: false
 };
 
-export const TYPE_WEB_GUI: ConnectType = {
+export const TYPE_WEB_GUI: ConnectMethod = {
   name: 'Web GUI',
   id: 'webGUI',
   requireXPack: false,
@@ -47,7 +47,7 @@ export const TYPE_WEB_GUI: ConnectType = {
   client: false
 };
 
-export const TYPE_DB_GUI: ConnectType = {
+export const TYPE_DB_GUI: ConnectMethod = {
   name: 'Web GUI',
   id: 'dbGUI',
   requireXPack: true,
@@ -55,7 +55,7 @@ export const TYPE_DB_GUI: ConnectType = {
   client: false
 };
 
-export const TYPE_DB_CLIENT: ConnectType = {
+export const TYPE_DB_CLIENT: ConnectMethod = {
   name: 'DB Client',
   id: 'dbClient',
   requireXPack: false,
@@ -63,7 +63,7 @@ export const TYPE_DB_CLIENT: ConnectType = {
   client: false
 };
 
-export const TYPE_RDP_CLIENT: ConnectType = {
+export const TYPE_RDP_CLIENT: ConnectMethod = {
   name: 'RDP Client',
   id: 'rdpClient',
   requireXPack: true,
@@ -71,7 +71,7 @@ export const TYPE_RDP_CLIENT: ConnectType = {
   client: true
 };
 
-export const TYPE_RDP_FILE: ConnectType = {
+export const TYPE_RDP_FILE: ConnectMethod = {
   name: 'RDP File',
   id: 'rdpFile',
   requireXPack: true,
@@ -79,7 +79,7 @@ export const TYPE_RDP_FILE: ConnectType = {
   client: false
 };
 
-export const TYPE_SSH_CLIENT: ConnectType = {
+export const TYPE_SSH_CLIENT: ConnectMethod = {
   name: 'SSH Client',
   id: 'sshClient',
   requireXPack: false,
@@ -87,7 +87,7 @@ export const TYPE_SSH_CLIENT: ConnectType = {
   client: true
 };
 
-export const TYPE_WEB_SFTP: ConnectType = {
+export const TYPE_WEB_SFTP: ConnectMethod = {
   name: 'WEB Sftp',
   id: 'webSftp',
   requireXPack: true,

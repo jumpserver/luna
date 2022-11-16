@@ -1,4 +1,34 @@
-<div class="manual-auth">
+<div class="select-user">
+  <label class="zone-label" style="margin-bottom: 0" for="selectAccount">{{ "Select account" | translate }}</label>
+  <mat-form-field style="width: 100%;margin-top:-10px" >
+    <mat-select
+      id="selectAccount"
+      [(value)]="accountSelected"
+      [compareWith]="compareFn"
+      [formControl]="accountCtl"
+    >
+      <mat-option>
+        <ngx-mat-select-search
+          placeholderLabel="{{ 'Search' | translate }}"
+          [formControl]="filteredCtl"
+          noEntriesFoundLabel="{{ 'No matching found' | translate }}"
+        >
+          <mat-icon ngxMatSelectSearchClear>close</mat-icon>
+        </ngx-mat-select-search>
+      </mat-option>
+      <mat-optgroup *ngFor="let group of filteredUsersGroups | async"
+                    [label]="group.name"
+                    [disabled]="group.disabled">
+        <mat-option *ngFor="let account of group.accounts" [value]="account">
+          {{ account.name }}
+        </mat-option>
+      </mat-optgroup>
+    </mat-select>
+  </mat-form-field>
+  <mat-error *ngIf="accountCtl.hasError('required')">{{"Please choose a User"| translate}}</mat-error>
+</div>
+
+<div class="manual-auth" *ngIf="!accountSelected?.has_secret">
   <label class="zone-label">{{ "Account info" | translate }}</label>
   <div class="account-info">
     <mat-form-field style="width: 45%">
@@ -25,16 +55,16 @@
       <input matInput [type]="hidePassword ? 'password' : 'text'"
              #password
              name="password"
-             [(ngModel)]="manualAuthInfo.password"
+             [(ngModel)]="manualAuthInfo.secret"
              placeholder="{{'Password'| translate}}"
              [attr.cdkFocusInitial]="manualAuthInfo.username? true : null"
              autofocus
       >
       <button mat-icon-button matSuffix
               (click)="hidePassword = !hidePassword"
-              [attr.aria-label]="'Hide password'"
+              [attr.aria-label]="'Hide secret'"
               [attr.aria-pressed]="hidePassword"
-              [disabled]="systemUserSelected?.login_mode !== 'manual'"
+              [disabled]="accountSelected?.login_mode !== 'manual'"
       >
         <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
       </button>
@@ -44,3 +74,4 @@
     </mat-checkbox>
   </div>
 </div>
+

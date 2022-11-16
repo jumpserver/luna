@@ -3,7 +3,7 @@ import 'rxjs/add/operator/toPromise';
 import {connectEvt, TYPE_WEB_CLI, TYPE_RDP_FILE, TYPE_WEB_GUI, TYPE_DB_GUI, TYPE_WEB_SFTP} from '@app/globals';
 import {AppService, HttpService, I18nService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
-import {SystemUser, TreeNode, ConnectData} from '@app/model';
+import {Account, TreeNode, ConnectData} from '@app/model';
 import {View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
@@ -162,34 +162,18 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (!node) {
       return;
     }
-    const tp = node.meta.type;
-    const grantedSystemUsersHandlerMapper = {
-      asset: 'getMyAssetSystemUsers',
-      application: 'getMyAppSystemUsers',
-    };
-    const handleName = grantedSystemUsersHandlerMapper[tp];
-    if (!handleName) {
-      alert('未知的类型: ' + tp);
-      return;
-    }
-    let appId;
-    if (['container', 'system_user'].indexOf(node.meta.data.identity) !== -1) {
-      appId = this.analysisId(node['parentInfo'])['app_id'];
-    } else {
-      appId = node.id;
-    }
-    const systemUsers = await this._http[handleName](appId).toPromise();
-    const connectInfo = await this.selectLoginSystemUsers(systemUsers, node);
+    const id = node.meta.data.id;
+    const accounts = await this._http.getMyAssetAccounts(id).toPromise();
+    const connectInfo = await this.getConnectData(accounts, node);
     if (!connectInfo) {
       this._logger.info('Just close the dialog');
       return;
     }
-    await this.createTempAuthIfNeed(node, connectInfo);
     this._logger.debug('Connect info: ', connectInfo);
 
-    if (connectInfo.connectType.client) {
+    if (connectInfo.connectMethod.client) {
       this.callLocalClient(connectInfo, node).then();
-    } else if (connectInfo.connectType.id === TYPE_RDP_FILE.id) {
+    } else if (connectInfo.connectMethod.id === TYPE_RDP_FILE.id) {
       this.downloadRDPFile(connectInfo, node).then();
     } else {
       this.createNodeView(connectInfo, node);
@@ -197,8 +181,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   async downloadRDPFile(connectInfo: ConnectData, node: TreeNode) {
-    const { systemUser } = connectInfo;
-    const data = { systemUserId: systemUser.id, appId: '', assetId: '' };
+    const { account } = connectInfo;
+    const data = { accountId: account.id, appId: '', assetId: '' };
     if (node.meta.type === 'application' && node.meta.data.category === 'remote_app') {
       data['appId'] = node.id;
     } else {
@@ -209,8 +193,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   async callLocalClient(connectInfo: ConnectData, node: TreeNode) {
     this._logger.debug('Call local client');
-    const { systemUser } = connectInfo;
-    const data = { systemUserId: systemUser.id, appId: '', assetId: '' };
+    const { account } = connectInfo;
+    const data = { accountId: account.id, appId: '', assetId: '' };
     if (node.meta.type === 'application' && node.meta.data.category === 'remote_app') {
       data['appId'] = node.id;
     } else {
@@ -224,7 +208,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         if (downLoadStatus !== '1') {
           this._dialog.open(ElementDownloadDialogComponent, {
             height: 'auto',
-            width: '500px',
+            width: '800px',
             disableClose: true
           });
         }
@@ -232,42 +216,43 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   createNodeView(connectInfo: ConnectData, node: TreeNode) {
-    const {systemUser, connectOptions} = connectInfo;
-    const view = new View(node, systemUser, 'node', node.meta.type, systemUser.protocol, connectOptions);
-    view.connectType = connectInfo.connectType;
+    const {account, protocol, connectOptions} = connectInfo;
+    const view = new View(node, account, 'node', node.meta.type, protocol.name, connectOptions);
+    view.connectType = connectInfo.connectMethod;
     this.onNewView.emit(view);
   }
 
-  validatePreConnectData(node: TreeNode, systemUsers: SystemUser[], preData: ConnectData): Boolean {
-    if (!preData || !preData.systemUser || preData.node) {
+  checkPreConnectData(node: TreeNode, accounts: Account[], preData: ConnectData): Boolean {
+    return false;
+    if (!preData || !preData.account || preData.node) {
       this._logger.debug('No system user or node');
       return false;
     }
     // 验证系统用户是否有效
-    const preSystemUser = preData.systemUser;
-    const inSystemUsers = systemUsers.filter(item => {
-      return item.id === preSystemUser.id;
+    const preAccount = preData.account;
+    const inAccounts = accounts.filter(item => {
+      return item.id === preAccount.id;
     });
-    if (inSystemUsers.length !== 1) {
+    if (inAccounts.length !== 1) {
       this._logger.debug('System user may be not valid');
       return false;
     }
     // 验证登录
-    const systemUser = inSystemUsers[0];
+    const account = inAccounts[0];
     const preAuth = preData.manualAuthInfo;
-    if (systemUser['login_mode'] === 'manual' && !preAuth.password) {
+    if (account['login_mode'] === 'manual' && !preAuth.secret) {
       this._logger.debug('System user no manual auth');
       return false;
     }
     // 验证连接方式
     const isRemoteApp = node.meta.type === 'application';
-    const connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[systemUser.protocol];
-    if (!connectTypes) {
+    const connectMethods = this._appSvc.getProtocolConnectMethods(isRemoteApp)['ssh'];
+    if (!connectMethods) {
       this._logger.debug('No matched connect types');
       return false;
     }
-    const inConnectType = connectTypes.filter(item => {
-      return item.id === preData.connectType.id;
+    const inConnectType = connectMethods.filter(item => {
+      return item.id === preData.connectMethod.id;
     });
     if (inConnectType.length !== 1) {
       this._logger.error('No matched connect type, may be changed');
@@ -276,9 +261,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  getConnectData(systemUserMaxPriority: SystemUser[], node: TreeNode): Promise<ConnectData> {
+  getConnectData(accounts: Account[], node: TreeNode): Promise<ConnectData> {
     const preConnectData = this._appSvc.getPreLoginSelect(node);
-    const isValid = this.validatePreConnectData(node, systemUserMaxPriority, preConnectData);
+    const isValid = this.checkPreConnectData(node, accounts, preConnectData);
     if (isValid) {
       return new Promise<ConnectData>(resolve => {
         resolve(preConnectData);
@@ -288,9 +273,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const dialogRef = this._dialog.open(ElementConnectDialogComponent, {
       minHeight: '300px',
       height: 'auto',
-      width: '500px',
+      width: '600px',
       disableClose: true,
-      data: {systemUsers: systemUserMaxPriority, node: node}
+      data: {accounts: accounts, node: node}
     });
 
     return new Promise<ConnectData>(resolve => {
@@ -300,68 +285,10 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
   }
 
-  selectLoginSystemUsers(systemUsers: Array<SystemUser>, node: TreeNode): Promise<ConnectData> {
-    let systemUserMaxPriority = this.filterHighestPrioritySystemUsers(systemUsers);
-    const systemUserId = this._appSvc.getQueryString('system_user');
-    if (systemUserId) {
-      systemUserMaxPriority = systemUserMaxPriority.filter(s => {
-        s.id = systemUserId;
-      });
-    }
-    if (systemUserMaxPriority.length === 0) {
-      alert('没有系统用户');
-      return new Promise<ConnectData>((resolve, reject) => {
-        reject('没有系统用户');
-      });
-    } else if (systemUserMaxPriority.length > 1) {
-      return this.getConnectData(systemUserMaxPriority, node);
-    }
-    // 系统用户等于 1 个的情况
-    const systemUser = systemUserMaxPriority[0];
-    const isRemoteApp = node.meta.type === 'application';
-    const connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[systemUser.protocol];
-    if (!connectTypes) {
-      alert('没有匹配的连接方式');
-      return new Promise<ConnectData>((resolve, reject) => {
-        reject('没有匹配的连接方式');
-      });
-    }
-    let connectType = null;
-    if (connectTypes && connectTypes.length === 1) {
-      connectType = connectTypes[0];
-    }
-    if (systemUser && connectType && systemUser.login_mode === 'auto') {
-      return new Promise<ConnectData>(resolve => {
-        const outputData = new ConnectData();
-        outputData.systemUser = systemUser;
-        outputData.connectType = connectType;
-        resolve(outputData);
-      });
-    } else {
-      return this.getConnectData(systemUserMaxPriority, node);
-    }
-  }
-
-  createTempAuthIfNeed(node: TreeNode, outputData: ConnectData) {
-    const auth = outputData.manualAuthInfo;
-    if (!auth) {
-      return;
-    }
-    if (auth.password) {
-      return this._http.createSystemUserTempAuth(outputData.systemUser, node, auth);
-    }
-  }
-
   connectFileManager(node: TreeNode) {
     const view = new View(node, null, 'fileManager', 'asset', 'sftp');
     view.nick = '[FILE] ' + node.name;
     view.connectType = TYPE_WEB_SFTP;
     this.onNewView.emit(view);
-  }
-
-  filterHighestPrioritySystemUsers(sysUsers: Array<SystemUser>): Array<SystemUser> {
-    const priorityAll: Array<number> = sysUsers.map(s => s.priority);
-    const HighestPriority = Math.min(...priorityAll);
-    return sysUsers.filter(s => s.priority === HighestPriority);
   }
 }

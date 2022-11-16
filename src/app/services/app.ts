@@ -16,7 +16,7 @@ import {
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
-import {AuthInfo, ConnectData, SystemUser, TreeNode, Endpoint, Protocol, View} from '@app/model';
+import {AuthInfo, ConnectData, Account, TreeNode, Endpoint, Protocol, View} from '@app/model';
 import * as CryptoJS from 'crypto-js';
 import {getCookie, setCookie} from '@app/utils/common';
 import {OrganizationService} from './organization';
@@ -33,9 +33,9 @@ export class AppService {
   // user:User = user  ;
   public lang: string;
   private protocolPreferConnectTypes: object = {};
-  private assetPreferSystemUser: object = {};
+  private assetPreferAccount: object = {};
   private protocolPreferKey = 'ProtocolPreferLoginType';
-  private systemUserPreferKey = 'PreferSystemUser';
+  private accountPreferKey = 'PreferAccount';
   private endpoints: Endpoint[] = [];
 
   constructor(private _http: HttpService,
@@ -119,7 +119,7 @@ export class AppService {
     return null;
   }
 
-  getProtocolConnectTypes(remoteApp: Boolean) {
+  getProtocolConnectMethods(remoteApp: Boolean) {
     const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
     const razorEnabled = this._settingSvc.globalSetting.TERMINAL_RAZOR_ENABLED;
     const omnidbEnabled = this._settingSvc.globalSetting.TERMINAL_OMNIDB_ENABLED;
@@ -156,9 +156,9 @@ export class AppService {
     if (protocolPreferData && typeof protocolPreferData === 'object') {
       this.protocolPreferConnectTypes = protocolPreferData;
     }
-    const systemUserPreferData = this._localStorage.get(this.systemUserPreferKey);
-    if (systemUserPreferData && typeof systemUserPreferData === 'object') {
-      this.assetPreferSystemUser = systemUserPreferData;
+    const accountPreferData = this._localStorage.get(this.accountPreferKey);
+    if (accountPreferData && typeof accountPreferData === 'object') {
+      this.assetPreferAccount = accountPreferData;
     }
   }
 
@@ -186,8 +186,8 @@ export class AppService {
     this._localStorage.set(this.protocolPreferKey, this.protocolPreferConnectTypes);
   }
 
-  getNodePreferSystemUser(nodeId: string): string {
-    return this.assetPreferSystemUser[nodeId];
+  getNodePreferAccount(nodeId: string): string {
+    return this.assetPreferAccount[nodeId];
   }
 
   // 根据当前节点信息判断是不是k8s类型，解析id格式
@@ -201,11 +201,11 @@ export class AppService {
     return nodeID;
   }
 
-  setNodePreferSystemUser(nodeId: string, systemUserId: string) {
-    this.assetPreferSystemUser[nodeId] = systemUserId;
+  setNodePreferAccount(nodeId: string, accountId: string) {
+    this.assetPreferAccount[nodeId] = accountId;
 
     try {
-      this._localStorage.set(this.systemUserPreferKey, this.assetPreferSystemUser);
+      this._localStorage.set(this.accountPreferKey, this.assetPreferAccount);
     } catch (e) {
       // pass
     }
@@ -233,10 +233,10 @@ export class AppService {
   setPreLoginSelect(node: TreeNode, outputData: ConnectData) {
     const tmp = JSON.parse(JSON.stringify(outputData)) as ConnectData;
     if (tmp.manualAuthInfo) {
-      tmp.manualAuthInfo.password = '';
+      tmp.manualAuthInfo.secret = '';
     }
-    if (tmp.systemUser.actions) {
-      tmp.systemUser.actions = [];
+    if (tmp.account.actions) {
+      tmp.account.actions = [];
     }
     const key = 'JMS_PL_' + node.id;
     this._localStorage.set(key, tmp);
@@ -248,16 +248,16 @@ export class AppService {
     if (!connectData || !connectData.manualAuthInfo) {
       return null;
     }
-    if (connectData.systemUser.login_mode !== 'manual') {
+    if (connectData.account.has_secret) {
       return connectData;
     }
     // 获取手动的密码
     const manualAuth = connectData.manualAuthInfo;
     if (manualAuth.username) {
-      const auths = this.getNodeSystemUserAuth(node.id, connectData.systemUser.id);
+      const auths = this.getAccountLocalAuth(node.id, connectData.account.id);
       const matched = auths.filter(item => item.username === manualAuth.username);
       if (matched.length === 1) {
-        manualAuth.password = matched[0].password;
+        manualAuth.secret = matched[0].secret;
       }
     }
     return connectData;
@@ -268,18 +268,16 @@ export class AppService {
     this._localStorage.delete(key);
   }
 
-  getNodeSystemUserAuth(nodeId: string, systemUserId: string, decrypt= true): AuthInfo[] {
-    const localKey = `JMS_MA_${systemUserId}_${nodeId}`;
+  getAccountLocalAuth(nodeId: string, accountUsername: string, decrypt= true): AuthInfo[] {
+    const localKey = `JMS_MA_${accountUsername}_${nodeId}`;
     let auths = this._localStorage.get(localKey);
 
     if (!auths) {
       return [];
     }
-
     if (!Array.isArray(auths)) {
       auths = [auths];
     }
-
     if (!decrypt) {
       return auths;
     }
@@ -293,16 +291,16 @@ export class AppService {
     return newAuths;
   }
 
-  saveNodeSystemUserAuth(nodeId: string, systemUserId: string, auth: AuthInfo) {
+  saveNodeAccountAuth(nodeId: string, accountId: string, auth: AuthInfo) {
     const newAuth = Object.assign({}, auth);
-    if (!auth.password) {
-      auth.password = '';
+    if (!auth.secret) {
+      auth.secret = '';
     } else {
-      newAuth.password = this.encrypt(auth.password);
+      newAuth.secret = this.encrypt(auth.secret);
     }
 
-    let auths = this.getNodeSystemUserAuth(nodeId, systemUserId, false);
-    const localKey = `JMS_MA_${systemUserId}_${nodeId}`;
+    let auths = this.getAccountLocalAuth(nodeId, accountId, false);
+    const localKey = `JMS_MA_${accountId}_${nodeId}`;
 
     auths = auths.filter((item) => item.username !== newAuth.username);
     auths.splice(0, 0, newAuth);

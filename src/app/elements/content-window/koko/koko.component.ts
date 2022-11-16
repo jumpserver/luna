@@ -1,5 +1,5 @@
 import {Component, Input, OnInit, ViewChild, ElementRef, Inject} from '@angular/core';
-import {View, SystemUser, TreeNode, Endpoint} from '@app/model';
+import {View, Account, TreeNode, Endpoint} from '@app/model';
 import {LogService} from '@app/services';
 
 
@@ -14,7 +14,7 @@ export class ElementConnectorKokoComponent implements OnInit {
 
   iframeURL: any;
   node: TreeNode;
-  sysUser: SystemUser;
+  sysUser: Account;
   protocol: string;
   baseUrl: string;
   smartEndpoint: Endpoint;
@@ -81,11 +81,11 @@ export class ElementConnectorKokoComponent implements OnInit {
     const appId = parentInfo['app_id'];
     const namespace = parentInfo['namespace'];
     const container = parentInfo['container'];
-    const systemUserId = parentInfo['system_user_id'] || this.sysUser['id'];
+    const accountId = parentInfo['system_user_id'] || this.sysUser['id'];
 
     this.iframeURL = `${this.baseUrl}/terminal/` +
       `?target_id=${appId}&type=${type}` +
-      `&system_user_id=${systemUserId}` +
+      `&system_user_id=${accountId}` +
       `&disableautohash=${automaticCompletion}` +
       `&_=${Date.now()}`;
 

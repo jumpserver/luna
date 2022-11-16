@@ -25,3 +25,9 @@
 .question {
   font-size: 14px;
 }
+
+::ng-deep .mat-tab-label, ::ng-deep .mat-tab-label-active {
+  height: 35px !important;
+  padding: 0 20px !important;
+  min-width: 20px !important;
+}

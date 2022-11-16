@@ -60,12 +60,12 @@ export class ElementAssetTreeComponent implements OnInit {
   get RMenuList() {
     const menuList = [
       {
-      'id': 'connect',
-      'name': 'Connect',
-      'fa': 'fa-terminal',
-      'hide': false,
-      'click': this.onMenuConnect.bind(this)
-    }, {
+        'id': 'connect',
+        'name': 'Connect',
+        'fa': 'fa-terminal',
+        'hide': false,
+        'click': this.onMenuConnect.bind(this)
+      }, {
         'id': 'new-connection',
         'name': 'Open in new window',
         'fa': 'fa-external-link',
@@ -138,20 +138,11 @@ export class ElementAssetTreeComponent implements OnInit {
   favoriteAssets = [];
 
   assetsTreeHidden = false;
-  applicationsTreeHidden = false;
   assetsLoading = true;
-  applicationsLoading = true;
   assetsSearchValue = '';
-  applicationsSearchValue = '';
-  applicationTreeHasNodes = false;
   currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
 
   debouncedOnAssetsNodeClick = _.debounce(this.onAssetsNodeClick, 300, {
-    'leading': true,
-    'trailing': false
-  });
-
-  debouncedOnApplicationTreeNodeClick = _.debounce(this.onApplicationTreeNodeClick, 300, {
     'leading': true,
     'trailing': false
   });
@@ -184,7 +175,6 @@ export class ElementAssetTreeComponent implements OnInit {
 
   async initAssetsTree(refresh?: boolean) {
     const setting = Object.assign({}, this.setting);
-    const myAssetsNodes = [];
     setting['callback'] = {
       onClick: this.debouncedOnAssetsNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
@@ -211,61 +201,17 @@ export class ElementAssetTreeComponent implements OnInit {
       if (refresh) {
         this.assetsTree.destroy();
       }
-      const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
-      myAssetsNodes.push(_assetTree.getNodes());
-      this.assetsTree = _assetTree;
+      for (const node of resp) {
+        node.open = true;
+      }
+      this.assetsTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
     }, error => {
       this.assetsLoading = false;
     });
   }
 
-  async initApplicationTree() {
-    const setting = Object.assign({
-      async: {
-        enable: true,
-        url: '/api/v1/perms/users/applications/tree/',
-        autoParam: ['id=tree_id', 'parentInfo=parentInfo', 'level=lv'],
-        type: 'get',
-        headers: {
-          'X-JMS-ORG': this.currentOrgID
-        }
-      }
-    }, this.setting);
-    setting['callback'] = {
-      onClick: this.debouncedOnApplicationTreeNodeClick.bind(this),
-      onRightClick: this.onRightClick.bind(this)
-    };
-    this.applicationsLoading = true;
-    this._http.getMyGrantedAppsNodes().subscribe(resp => {
-      const tree = $.fn.zTree.init($('#applicationsTree'), setting, resp);
-      this.applicationsTree = tree;
-      this.applicationTreeHasNodes = resp && resp.length > 1;
-      this.applicationsLoading = false;
-    }, error => {
-      this.applicationsLoading = false;
-    });
-  }
-
-  refreshApplicationTree() {
-    this.applicationsSearchValue = '';
-    if (this.applicationsTree) {
-      this.applicationsTree.destroy();
-      this.initApplicationTree().then();
-    }
-  }
-
-  onApplicationTreeNodeClick(event, treeId, treeNode: TreeNode, clickFlag) {
-    if (!treeNode.isParent) {
-      this._http.getUserProfile().subscribe();
-      this.connectAsset(treeNode);
-    } else {
-      this.applicationsTree.expandNode(treeNode);
-    }
-  }
-
   initTree() {
     this.initAssetsTree(false).then();
-    this.initApplicationTree().then();
   }
 
   connectAsset(node: TreeNode) {
@@ -478,16 +424,6 @@ export class ElementAssetTreeComponent implements OnInit {
     });
   }
 
-  filterApplicationsTree(keyword) {
-    if (!this.applicationsTree) {
-      return null;
-    }
-    const filterCallback = (node: TreeNode) => {
-      return node.name.toLowerCase().indexOf(keyword.toLowerCase()) !== -1;
-    };
-    return this.filterTree(keyword, this.applicationsTree, filterCallback);
-  }
-
   filterAssetsServer(keyword) {
     if (!this.assetsTree) {
       return;
@@ -595,28 +531,18 @@ export class ElementAssetTreeComponent implements OnInit {
     searchIcon.oninput = _.debounce((e) => {
       e.stopPropagation();
       const value = e.target.value || '';
-      if (type === 'applications') {
-        vm.applicationsSearchValue = value;
-        vm.filterApplicationsTree(value);
-      } else {
-        vm.assetsSearchValue = value;
-        vm.filterAssets(value);
-      }
+      vm.assetsSearchValue = value;
+      vm.filterAssets(value);
     }, 450);
   }
 
   refreshTree(event, type: string) {
     event.stopPropagation();
-    if (type === 'applications') {
-      this.refreshApplicationTree();
-    } else {
-      this.refreshAssetsTree();
-    }
+    this.refreshAssetsTree();
   }
 
   clearAllSearchInput() {
     this.assetsSearchValue = '';
-    this.applicationsSearchValue = '';
   }
 
   foldTree(type: string) {

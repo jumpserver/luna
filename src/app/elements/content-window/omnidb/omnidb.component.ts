@@ -1,5 +1,5 @@
 import {Component, OnInit, Input} from '@angular/core';
-import {SystemUser, TreeNode, View} from '@app/model';
+import {Account, TreeNode, View} from '@app/model';
 
 @Component({
   selector: 'elements-connector-omnidb',
@@ -11,7 +11,7 @@ export class ElementConnectorOmnidbComponent implements OnInit {
   iframeURL: string;
   baseUrl: string;
   node: TreeNode;
-  sysUser: SystemUser;
+  sysUser: Account;
   protocol: string;
 
   constructor() {

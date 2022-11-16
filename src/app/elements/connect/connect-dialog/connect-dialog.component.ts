@@ -2,8 +2,7 @@ import {Component, OnInit, Inject, ViewChild, ChangeDetectorRef} from '@angular/
 import 'rxjs/add/operator/toPromise';
 import {AppService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
-import {ConnectType, ConnectData, TreeNode, SystemUser, AuthInfo, ConnectOption} from '@app/model';
-import {ElementManualAuthComponent} from './manual-auth/manual-auth.component';
+import {ConnectMethod, ConnectData, TreeNode, Account, AuthInfo, ConnectOption, Protocol} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
 
 @Component({
@@ -12,15 +11,16 @@ import {BehaviorSubject} from 'rxjs';
   styleUrls: ['./connect-dialog.component.scss'],
 })
 export class ElementConnectDialogComponent implements OnInit {
-  @ViewChild('manualAuth', {static: false}) manualAuthRef: ElementManualAuthComponent;
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
+  public protocol = 'ssh';
+  public protocols: Array<Protocol>;
   public node: TreeNode;
   public outputData: ConnectData = new ConnectData();
-  public systemUsers: SystemUser[];
+  public accounts: Account[];
   public manualAuthInfo: AuthInfo = new AuthInfo();
-  public systemUserSelected: SystemUser = null;
-  public connectType: ConnectType;
-  public connectTypes = [];
+  public accountSelected: Account = null;
+  public connectMethod: ConnectMethod;
+  public connectMethods = [];
   public autoLogin = false;
   public connectOptions: ConnectOption[] = [];
 
@@ -33,29 +33,25 @@ export class ElementConnectDialogComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.systemUsers = this.data.systemUsers;
+    this.accounts = this.data.accounts;
     this.node = this.data.node;
+    this.protocols = this.node.meta.data.protocols;
   }
 
-  onSelectSystemUser(systemUser) {
-    this.systemUserSelected = systemUser;
+  onSelectAccount(account) {
+    this.accountSelected = account;
 
-    if (!systemUser) {
+    if (!account) {
       return;
     }
-    this.setConnectTypes();
+    this.setConnectMethods();
     // this._cdRef.detectChanges();
-    setTimeout(() => {
-      if (this.manualAuthRef) {
-        this.manualAuthRef.onSystemUserChanged();
-      }
-    });
   }
 
-  setConnectTypes() {
+  setConnectMethods() {
     const isRemoteApp = this.node.meta.type === 'application';
-    this.connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[this.systemUserSelected.protocol];
-    this.connectType = this.getPreferConnectType() || this.connectTypes[0];
+    this.connectMethods = this._appSvc.getProtocolConnectMethods(isRemoteApp)['ssh'];
+    this.connectMethod = this.getPreferConnectMethod() || this.connectMethods[0];
   }
 
   onCancel(): void {
@@ -63,22 +59,22 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   hasRDPClientTypes() {
-    return this.connectType && this.connectType.id === 'rdpClient';
+    return this.connectMethod && this.connectMethod.id === 'rdpClient';
   }
 
-  getPreferConnectType() {
-    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType(this.systemUserSelected.protocol);
-    const matchedTypes = this.connectTypes.filter((item) => item.id === preferConnectTypeId);
+  getPreferConnectMethod() {
+    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType('ssh');
+    const matchedTypes = this.connectMethods.filter((item) => item.id === preferConnectTypeId);
     if (matchedTypes.length === 1) {
       return matchedTypes[0];
     } else {
-      return this.connectTypes[0];
+      return this.connectMethods[0];
     }
   }
 
   onConfirm() {
-    this.outputData.systemUser = this.systemUserSelected;
-    this.outputData.connectType = this.connectType;
+    this.outputData.account = this.accountSelected;
+    this.outputData.connectMethod = this.connectMethod;
     this.outputData.manualAuthInfo = this.manualAuthInfo;
     this.outputData.connectOptions = this.connectOptions;
 
@@ -88,8 +84,8 @@ export class ElementConnectDialogComponent implements OnInit {
 
     this.onSubmit$.next(true);
     const nodeID = this._appSvc.getNodeTypeID(this.node);
-    this._appSvc.setNodePreferSystemUser(nodeID, this.systemUserSelected.id);
-    this._appSvc.setProtocolPreferLoginType(this.systemUserSelected.protocol, this.connectType.id);
+    this._appSvc.setNodePreferAccount(nodeID, this.accountSelected.id);
+    this._appSvc.setProtocolPreferLoginType('ssh', this.connectMethod.id);
     this.dialogRef.close(this.outputData);
   }
 

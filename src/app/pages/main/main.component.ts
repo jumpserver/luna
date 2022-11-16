@@ -2,6 +2,7 @@ import {Component, HostListener, OnInit, ViewChild, ElementRef} from '@angular/c
 import {DataStore, User} from '@app/globals';
 import {IOutputData, SplitComponent} from 'angular-split';
 import {ViewService, SettingService} from '@app/services';
+import { environment } from '@src/environments/environment';
 import * as _ from 'lodash';
 declare var $: any;
 
@@ -59,10 +60,14 @@ export class PageMainComponent implements OnInit {
 
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any) {
+    if (environment.production) {
+      return false;
+    }
     const notInIframe = window.self === window.top;
     const notInReplay = location.pathname.indexOf('/luna/replay') === -1;
     return !(notInIframe && notInReplay);
   }
+
   dragStartHandler($event: IOutputData) {
     this.showIframeHider = true;
   }

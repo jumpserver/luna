@@ -24,16 +24,18 @@ export class User {
   logined: boolean;
 }
 
-export class SystemUser {
+export class Action {
+  label: string;
+  value: string;
+}
+
+export class Account {
   id: string;
   name: string;
-  login_mode: string;
   username: string;
-  priority: number;
-  protocol: string;
-  password: string;
-  actions: Array<string>;
-  username_same_with_user: boolean;
+  has_secret: string;
+  secret: string;
+  actions: Array<Action>;
 }
 
 class TreeNodeMeta {
@@ -115,14 +117,14 @@ export class View {
   hide: boolean;
   closed: boolean;
   node: TreeNode;
-  sysUser: SystemUser;
+  sysUser: Account;
   token: string;
-  connectType: ConnectType;
+  connectType: ConnectMethod;
   termComp: any;
   connectOptions: ConnectOption[];
   smartEndpoint: Endpoint;
 
-  constructor(node: TreeNode, user: SystemUser, connectFrom: string,
+  constructor(node: TreeNode, user: Account, connectFrom: string,
               type: string, protocol: string, connectOptions?: any
   ) {
     this.connected = true;
@@ -148,7 +150,7 @@ export class ViewAction {
   }
 }
 
-export class ConnectType {
+export class ConnectMethod {
   name: string;
   id: string;
   requireXPack: boolean;
@@ -289,15 +291,15 @@ export class Command {
   timestamp: number;
 }
 
-export class SystemUserGroup {
+export class AccountGroup {
   name: string;
   disabled: boolean;
-  systemUsers: SystemUser[];
+  accounts: Account[];
 }
 
 export class AuthInfo {
   username: string;
-  password: string;
+  secret: string;
 }
 
 export class ConnectOption {
@@ -312,9 +314,10 @@ export class ConnectOption {
 
 export class ConnectData {
   node: TreeNode;
-  systemUser: SystemUser;
+  account: Account;
+  protocol: Protocol;
   manualAuthInfo: AuthInfo;
-  connectType: ConnectType;
+  connectMethod: ConnectMethod;
   connectOptions: ConnectOption[];
 }
 

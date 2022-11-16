@@ -20,8 +20,7 @@ import {ElementConnectorKokoComponent} from './content-window/koko/koko.componen
 import {ElementConnectorMagnusComponent} from './content-window/magnus/magnus.component';
 import {ElementConnectorLionComponent} from './content-window/lion/lion.component';
 import {ElementConnectorOmnidbComponent} from './content-window/omnidb/omnidb.component';
-import {ElementManualAuthComponent} from './connect/connect-dialog/manual-auth/manual-auth.component';
-import {ElementSelectSystemUserComponent} from './connect/connect-dialog/select-system-user/select-system-user.component';
+import {ElementSelectAccountComponent} from './connect/connect-dialog/select-account/select-account.component';
 import {ElementReplayAsciicastComponent} from '@app/elements/replay/asciicast/asciicast.component';
 import {ElementAdvancedOptionComponent} from './connect/connect-dialog/advanced-option/advanced-option.component';
 
@@ -50,9 +49,8 @@ export const ElementComponents = [
   DisabledAssetsDialogComponent,
   ElementSettingComponent,
   ElementConnectDialogComponent,
-  ElementManualAuthComponent,
   ElementConnectorOmnidbComponent,
-  ElementSelectSystemUserComponent,
+  ElementSelectAccountComponent,
   ElementReplayAsciicastComponent,
   ElementAdvancedOptionComponent
 ];

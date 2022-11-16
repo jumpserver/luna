@@ -1,5 +1,5 @@
 import {Component, Input, OnInit} from '@angular/core';
-import {View, SystemUser, TreeNode, ConnectionTokenParam, Endpoint} from '@app/model';
+import {View, Account, TreeNode, ConnectionTokenParam, Endpoint} from '@app/model';
 import {HttpService, I18nService, SettingService} from '@app/services';
 import {User} from '@app/globals';
 import {ToastrService} from 'ngx-toastr';
@@ -20,7 +20,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
   @Input() view: View;
 
   node: TreeNode;
-  sysUser: SystemUser;
+  sysUser: Account;
   protocol: string;
   expire_time: string;
   endpoint: Endpoint;
@@ -86,7 +86,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
 
   generateConnCli() {
     const {username, password, host, port, database, protocol} = this.info;
-    // Password placeholders. Because there is a safe cli, the password needs to be hidden, so the placeholders are replaced
+    // Password placeholders. Because there is a safe cli, the secret needs to be hidden, so the placeholders are replaced
     const passwordHolder = `@${password}@`;
     let cli = '';
 
