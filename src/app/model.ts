@@ -151,8 +151,8 @@ export class ViewAction {
 }
 
 export class ConnectMethod {
-  name: string;
-  id: string;
+  label: string;
+  value: string;
   requireXPack: boolean;
   protocol: string;
   client: boolean;

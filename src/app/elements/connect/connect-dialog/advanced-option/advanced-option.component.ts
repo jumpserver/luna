@@ -22,7 +22,7 @@ export class ElementAdvancedOptionComponent implements  OnInit, OnChanges {
         type: 'checkbox',
         field: 'disableautohash',
         hidden: () => {
-          return this.connectType.id === 'webCLI' && this.needShowAutoCompletionProtocols.includes(this.accountSelected.protocol);
+          return this.connectType.value === 'webCLI' && this.needShowAutoCompletionProtocols.includes(this.accountSelected.protocol);
         },
         label: 'Disable auto completion',
         value: false

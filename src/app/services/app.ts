@@ -37,6 +37,7 @@ export class AppService {
   private protocolPreferKey = 'ProtocolPreferLoginType';
   private accountPreferKey = 'PreferAccount';
   private endpoints: Endpoint[] = [];
+  private protocolConnectTypesMap: object = {};
 
   constructor(private _http: HttpService,
               private _router: Router,
@@ -49,6 +50,7 @@ export class AppService {
     this.checkLogin();
     this.loadPreferData();
     this.loadOriManualAuthInfo();
+    this.getConnectMethods();
   }
 
   setLogLevel() {
@@ -119,36 +121,44 @@ export class AppService {
     return null;
   }
 
+  getConnectMethods() {
+    const url = '/api/v1/terminal/components/connect-methods/';
+    this._http.get(url).subscribe(response => {
+      this.protocolConnectTypesMap = response;
+    });
+  }
+
   getProtocolConnectMethods(remoteApp: Boolean) {
-    const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
-    const razorEnabled = this._settingSvc.globalSetting.TERMINAL_RAZOR_ENABLED;
-    const omnidbEnabled = this._settingSvc.globalSetting.TERMINAL_OMNIDB_ENABLED;
-    const magnusEnabled = this._settingSvc.globalSetting.TERMINAL_MAGNUS_ENABLED;
-    const sshClientEnabled = this._settingSvc.globalSetting.TERMINAL_KOKO_SSH_ENABLED;
-    const validTypes = {};
-    for (const [protocol, types] of Object.entries(ProtocolConnectTypes)) {
-      validTypes[protocol] = types.filter((tp) => {
-        // 没开启 xpack
-        if (tp.requireXPack && !xpackEnabled) {
-          return false;
-        }
-        // 没有开启 razor 不支持 连接 razor
-        if ([TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1 && !razorEnabled) {
-          return false;
-        }
-        if (tp.id === TYPE_DB_GUI.id && !omnidbEnabled) {
-          return false;
-        }
-        if (tp.id === TYPE_DB_CLIENT.id && !magnusEnabled) {
-          return false;
-        }
-        if (tp.id === TYPE_SSH_CLIENT.id && !sshClientEnabled) {
-          return false;
-        }
-        return true;
-      });
-    }
-    return validTypes;
+    return this.protocolConnectTypesMap;
+    // const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
+    // const razorEnabled = this._settingSvc.globalSetting.TERMINAL_RAZOR_ENABLED;
+    // const omnidbEnabled = this._settingSvc.globalSetting.TERMINAL_OMNIDB_ENABLED;
+    // const magnusEnabled = this._settingSvc.globalSetting.TERMINAL_MAGNUS_ENABLED;
+    // const sshClientEnabled = this._settingSvc.globalSetting.TERMINAL_KOKO_SSH_ENABLED;
+    // const validTypes = {};
+    // for (const [protocol, types] of Object.entries(ProtocolConnectTypes)) {
+    //   validTypes[protocol] = types.filter((tp) => {
+    //     // 没开启 xpack
+    //     if (tp.requireXPack && !xpackEnabled) {
+    //       return false;
+    //     }
+    //     // 没有开启 razor 不支持 连接 razor
+    //     if ([TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1 && !razorEnabled) {
+    //       return false;
+    //     }
+    //     if (tp.id === TYPE_DB_GUI.id && !omnidbEnabled) {
+    //       return false;
+    //     }
+    //     if (tp.id === TYPE_DB_CLIENT.id && !magnusEnabled) {
+    //       return false;
+    //     }
+    //     if (tp.id === TYPE_SSH_CLIENT.id && !sshClientEnabled) {
+    //       return false;
+    //     }
+    //     return true;
+    //   });
+    // }
+    // return validTypes;
   }
 
   loadPreferData() {

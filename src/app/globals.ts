@@ -32,64 +32,64 @@ export const i18n = new Map();
 export const connectEvt = new BehaviorSubject<ConnectEvt>(new ConnectEvt(null, null));
 
 export const TYPE_WEB_CLI: ConnectMethod = {
-  name: 'Web CLI',
-  id: 'webCLI',
+  label: 'Web CLI',
+  value: 'webCLI',
   requireXPack: false,
   protocol: 'http',
   client: false
 };
 
 export const TYPE_WEB_GUI: ConnectMethod = {
-  name: 'Web GUI',
-  id: 'webGUI',
+  label: 'Web GUI',
+  value: 'webGUI',
   requireXPack: false,
   protocol: 'http',
   client: false
 };
 
 export const TYPE_DB_GUI: ConnectMethod = {
-  name: 'Web GUI',
-  id: 'dbGUI',
+  label: 'Web GUI',
+  value: 'dbGUI',
   requireXPack: true,
   protocol: 'http',
   client: false
 };
 
 export const TYPE_DB_CLIENT: ConnectMethod = {
-  name: 'DB Client',
-  id: 'dbClient',
+  label: 'DB Client',
+  value: 'dbClient',
   requireXPack: false,
   protocol: 'db',
   client: false
 };
 
 export const TYPE_RDP_CLIENT: ConnectMethod = {
-  name: 'RDP Client',
-  id: 'rdpClient',
+  label: 'RDP Client',
+  value: 'rdpClient',
   requireXPack: true,
   protocol: 'rdp',
   client: true
 };
 
 export const TYPE_RDP_FILE: ConnectMethod = {
-  name: 'RDP File',
-  id: 'rdpFile',
+  label: 'RDP File',
+  value: 'rdpFile',
   requireXPack: true,
   protocol: 'rdp',
   client: false
 };
 
 export const TYPE_SSH_CLIENT: ConnectMethod = {
-  name: 'SSH Client',
-  id: 'sshClient',
+  label: 'SSH Client',
+  value: 'sshClient',
   requireXPack: false,
   protocol: 'ssh',
   client: true
 };
 
 export const TYPE_WEB_SFTP: ConnectMethod = {
-  name: 'WEB Sftp',
-  id: 'webSftp',
+  label: 'WEB Sftp',
+  value: 'webSftp',
   requireXPack: true,
   protocol: 'http',
   client: false

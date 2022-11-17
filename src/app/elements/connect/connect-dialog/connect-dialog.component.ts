@@ -60,7 +60,7 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   hasRDPClientTypes() {
-    return this.connectMethod && this.connectMethod.id === 'rdpClient';
+    return this.connectMethod && this.connectMethod.value === 'rdpClient';
   }
 
   getPreferConnectMethod() {
@@ -86,7 +86,7 @@ export class ElementConnectDialogComponent implements OnInit {
     this.onSubmit$.next(true);
     const nodeID = this._appSvc.getNodeTypeID(this.node);
     this._appSvc.setNodePreferAccount(nodeID, this.accountSelected.id);
-    this._appSvc.setProtocolPreferLoginType('ssh', this.connectMethod.id);
+    this._appSvc.setProtocolPreferLoginType('ssh', this.connectMethod.value);
     this.dialogRef.close(this.outputData);
   }
 

@@ -173,7 +173,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
     if (connectInfo.connectMethod.client) {
       this.callLocalClient(connectInfo, node).then();
-    } else if (connectInfo.connectMethod.id === TYPE_RDP_FILE.id) {
+    } else if (connectInfo.connectMethod.value === TYPE_RDP_FILE.value) {
       this.downloadRDPFile(connectInfo, node).then();
     } else {
       this.createNodeView(connectInfo, node);
@@ -252,7 +252,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return false;
     }
     const inConnectType = connectMethods.filter(item => {
-      return item.id === preData.connectMethod.id;
+      return item.id === preData.connectMethod.value;
     });
     if (inConnectType.length !== 1) {
       this._logger.error('No matched connect type, may be changed');
