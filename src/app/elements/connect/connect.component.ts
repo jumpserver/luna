@@ -245,16 +245,15 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return false;
     }
     // 验证连接方式
-    const isRemoteApp = node.meta.type === 'application';
-    const connectMethods = this._appSvc.getProtocolConnectMethods(isRemoteApp)['ssh'];
+    const connectMethods = this._appSvc.getProtocolConnectMethods(preData.protocol.name);
     if (!connectMethods) {
       this._logger.debug('No matched connect types');
       return false;
     }
-    const inConnectType = connectMethods.filter(item => {
+    const inConnectMethod = connectMethods.filter(item => {
       return item.id === preData.connectMethod.value;
     });
-    if (inConnectType.length !== 1) {
+    if (inConnectMethod.length !== 1) {
       this._logger.error('No matched connect type, may be changed');
       return false;
     }

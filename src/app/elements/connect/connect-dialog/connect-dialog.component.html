@@ -1,13 +1,14 @@
 <div>
   <div mat-dialog-title>
     <h3>{{"Connect" | translate}} - {{ node.name | truncatechars:30 }}</h3>
-    <button mat-icon-button aria-label="close dialog" mat-dialog-close>
+    <button mat-icon-button aria-label="close dialog" mat-dialog-close="">
       <mat-icon>close</mat-icon>
     </button>
   </div>
 
-  <nav *ngIf="protocols.length > 1" mat-tab-nav-bar style="margin-bottom: 20px" class="protocol-tab" >
-    <a mat-tab-link *ngFor="let p of protocols"
+  <nav mat-tab-nav-bar style="margin-bottom: 20px" class="protocol-tab" >
+    <a mat-tab-link
+       *ngFor="let p of protocols"
        (click)="protocol = p.name"
        [active]="protocol == p.name"
     >
@@ -34,10 +35,10 @@
           [(ngModel)]="connectMethod"
           id="connect-type"
         >
-          <mat-radio-button *ngFor="let type of connectMethods" [value]="type">
-            {{ type.label | translate }}
-            <span class="my-tooltip" attr.data-tooltip="{{'Need to use'| translate}}&nbsp;{{ type.label | translate }}">
-            <i *ngIf="type.client" class="fa fa-question-circle-o question"></i>
+          <mat-radio-button *ngFor="let method of connectMethods" [value]="method">
+            {{ method.label | translate }}
+            <span class="my-tooltip" attr.data-tooltip="{{'Need to use'| translate}}&nbsp;{{ method.label | translate }}">
+            <i *ngIf="method.type === 'native'" class="fa fa-question-circle-o question"></i>
           </span>
           </mat-radio-button>
         </mat-radio-group>

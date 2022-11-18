@@ -16,9 +16,10 @@
           <mat-icon ngxMatSelectSearchClear>close</mat-icon>
         </ngx-mat-select-search>
       </mat-option>
-      <mat-optgroup *ngFor="let group of filteredUsersGroups | async"
-                    [label]="group.name"
-                    [disabled]="group.disabled"
+      <mat-optgroup
+        *ngFor="let group of filteredUsersGroups | async"
+        [label]="group.name"
+        [disabled]="group.disabled"
       >
         <mat-option *ngFor="let account of group.accounts" [value]="account">
           {{ account.name }}
@@ -29,7 +30,7 @@
   <mat-error *ngIf="accountCtl.hasError('required')">{{"Please choose a account"| translate}}</mat-error>
 </div>
 
-<div *ngIf="accountSelected.username == '@INPUT'" class="form-field">
+<div *ngIf="accountSelected?.username == '@INPUT'" class="form-field">
   <label class="zone-label" style="margin-bottom: 0">{{ "Username" | translate }}</label>
   <mat-form-field class="input-field" floatLabel='never'>
     <input

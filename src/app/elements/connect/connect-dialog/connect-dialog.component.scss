@@ -1,5 +1,5 @@
-.mat-radio-button ~ .mat-radio-button {
-  margin-left: 16px;
+.mat-radio-button {
+  margin-right: 16px;
   vertical-align: middle;
 }
 
@@ -15,7 +15,8 @@
 
 .connect-type-group {
   border: solid #cbc9c9 1px;
-  padding: 5px
+  padding: 8px;
+  display: flex;
 }
 
 .auto-connect {
@@ -49,4 +50,8 @@
 
 .mat-dialog-title h3 {
   margin: 0;
+}
+
+.mat-dialog-content {
+  overflow: hidden;
 }

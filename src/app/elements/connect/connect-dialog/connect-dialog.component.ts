@@ -36,7 +36,12 @@ export class ElementConnectDialogComponent implements OnInit {
     this.accounts = this.data.accounts;
     this.node = this.data.node;
     this.protocols = this.node.meta.data.protocols;
-    this.protocol = this.protocols[0].name;
+    this.onProtocolChange(this.protocols[0]);
+  }
+
+  onProtocolChange(protocol) {
+    this.protocol = protocol.name;
+    this.setConnectMethods();
   }
 
   onSelectAccount(account) {
@@ -45,13 +50,10 @@ export class ElementConnectDialogComponent implements OnInit {
     if (!account) {
       return;
     }
-    this.setConnectMethods();
-    // this._cdRef.detectChanges();
   }
 
   setConnectMethods() {
-    const isRemoteApp = this.node.meta.type === 'application';
-    this.connectMethods = this._appSvc.getProtocolConnectMethods(isRemoteApp)['ssh'];
+    this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol);
     this.connectMethod = this.getPreferConnectMethod() || this.connectMethods[0];
   }
 
@@ -59,12 +61,8 @@ export class ElementConnectDialogComponent implements OnInit {
     this.dialogRef.close();
   }
 
-  hasRDPClientTypes() {
-    return this.connectMethod && this.connectMethod.value === 'rdpClient';
-  }
-
   getPreferConnectMethod() {
-    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType('ssh');
+    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType(this.protocol);
     const matchedTypes = this.connectMethods.filter((item) => item.id === preferConnectTypeId);
     if (matchedTypes.length === 1) {
       return matchedTypes[0];

@@ -54,10 +54,11 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.accountSelected = this.normalAccounts[0];
+    this.accountSelected = this.accounts[0];
+    console.log('this.accounts', this.accounts);
     this.groupedAccounts = this.groupAccounts();
     this.filteredUsersGroups.next(this.groupedAccounts.slice());
-    this.manualAuthInfo.username = this.accountSelected.username;
+    this.manualAuthInfo.username = this.accountSelected.username.startsWith('@') ? '' : this.accountSelected.username;
 
     this.filteredCtl.valueChanges
       .pipe(takeUntil(this._onDestroy))

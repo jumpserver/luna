@@ -128,8 +128,8 @@ export class AppService {
     });
   }
 
-  getProtocolConnectMethods(remoteApp: Boolean) {
-    return this.protocolConnectTypesMap;
+  getProtocolConnectMethods(protocol: string) {
+    return this.protocolConnectTypesMap[protocol] || [];
     // const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
     // const razorEnabled = this._settingSvc.globalSetting.TERMINAL_RAZOR_ENABLED;
     // const omnidbEnabled = this._settingSvc.globalSetting.TERMINAL_OMNIDB_ENABLED;
