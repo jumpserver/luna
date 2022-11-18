@@ -1,22 +1,15 @@
-import {Injectable, OnInit} from '@angular/core';
+import {Injectable} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
 import {
   DataStore,
   User,
-  ProtocolConnectTypes,
-  TYPE_RDP_CLIENT,
-  TYPE_RDP_FILE,
-  TYPE_DB_CLIENT,
-  TYPE_WEB_CLI,
-  TYPE_SSH_CLIENT,
-  TYPE_DB_GUI,
 } from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
-import {AuthInfo, ConnectData, Account, TreeNode, Endpoint, Protocol, View} from '@app/model';
+import {AuthInfo, ConnectData, TreeNode, Endpoint, View} from '@app/model';
 import * as CryptoJS from 'crypto-js';
 import {getCookie, setCookie} from '@app/utils/common';
 import {OrganizationService} from './organization';
@@ -130,35 +123,14 @@ export class AppService {
 
   getProtocolConnectMethods(protocol: string) {
     return this.protocolConnectTypesMap[protocol] || [];
-    // const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
-    // const razorEnabled = this._settingSvc.globalSetting.TERMINAL_RAZOR_ENABLED;
-    // const omnidbEnabled = this._settingSvc.globalSetting.TERMINAL_OMNIDB_ENABLED;
-    // const magnusEnabled = this._settingSvc.globalSetting.TERMINAL_MAGNUS_ENABLED;
-    // const sshClientEnabled = this._settingSvc.globalSetting.TERMINAL_KOKO_SSH_ENABLED;
-    // const validTypes = {};
-    // for (const [protocol, types] of Object.entries(ProtocolConnectTypes)) {
-    //   validTypes[protocol] = types.filter((tp) => {
-    //     // 没开启 xpack
-    //     if (tp.requireXPack && !xpackEnabled) {
-    //       return false;
-    //     }
-    //     // 没有开启 razor 不支持 连接 razor
-    //     if ([TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1 && !razorEnabled) {
-    //       return false;
-    //     }
-    //     if (tp.id === TYPE_DB_GUI.id && !omnidbEnabled) {
-    //       return false;
-    //     }
-    //     if (tp.id === TYPE_DB_CLIENT.id && !magnusEnabled) {
-    //       return false;
-    //     }
-    //     if (tp.id === TYPE_SSH_CLIENT.id && !sshClientEnabled) {
-    //       return false;
-    //     }
-    //     return true;
-    //   });
-    // }
-    // return validTypes;
+  }
+
+  createPermToken() {
+    const url = '/api/v1/terminal/perm-token/';
+    return {
+      token: '123123123123123'
+    };
+    // return this._http.post(url, {});
   }
 
   loadPreferData() {
@@ -327,21 +299,13 @@ export class AppService {
   }
 
   getSmartEndpoint(view: View): Promise<Endpoint> {
-    let protocol = (view.connectType && view.connectType.protocol);
-    if (protocol === TYPE_DB_CLIENT.protocol) {
-      protocol = view.protocol;
-    } else if (protocol === TYPE_WEB_CLI.protocol) {
+    let protocol = view.protocol;
+    if (protocol === 'http') {
       protocol = window.location.protocol.replace(':', '');
     }
-    const data = { 'assetId': '', 'appId': '', 'sessionId': '', 'token': '' };
+    const data = { 'assetId': '', 'sessionId': '', 'token': '' };
     if (view.token) {
       data['token'] = view.token;
-    } else if (view.node.meta.type === 'application') {
-      if (view.node.meta.data.type === 'k8s') {
-        data['appId'] = this.analysisId(view.node.id)['app_id'];
-      } else {
-        data['appId'] = view.node.id;
-      }
     } else {
       data['assetId'] = view.node.id;
     }

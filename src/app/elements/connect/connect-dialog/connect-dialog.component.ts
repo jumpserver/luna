@@ -1,9 +1,10 @@
-import {Component, OnInit, Inject, ViewChild, ChangeDetectorRef} from '@angular/core';
+import {Component, OnInit, Inject, ChangeDetectorRef} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {AppService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {ConnectMethod, ConnectData, TreeNode, Account, AuthInfo, ConnectOption, Protocol} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
+
 
 @Component({
   selector: 'elements-asset-tree-dialog',
@@ -12,7 +13,7 @@ import {BehaviorSubject} from 'rxjs';
 })
 export class ElementConnectDialogComponent implements OnInit {
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
-  public protocol = '';
+  public protocol: Protocol;
   public protocols: Array<Protocol>;
   public node: TreeNode;
   public outputData: ConnectData = new ConnectData();
@@ -40,7 +41,7 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   onProtocolChange(protocol) {
-    this.protocol = protocol.name;
+    this.protocol = protocol;
     this.setConnectMethods();
   }
 
@@ -53,16 +54,12 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   setConnectMethods() {
-    this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol);
+    this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
     this.connectMethod = this.getPreferConnectMethod() || this.connectMethods[0];
   }
 
-  onCancel(): void {
-    this.dialogRef.close();
-  }
-
   getPreferConnectMethod() {
-    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType(this.protocol);
+    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType(this.protocol.name);
     const matchedTypes = this.connectMethods.filter((item) => item.id === preferConnectTypeId);
     if (matchedTypes.length === 1) {
       return matchedTypes[0];
@@ -76,6 +73,7 @@ export class ElementConnectDialogComponent implements OnInit {
     this.outputData.connectMethod = this.connectMethod;
     this.outputData.manualAuthInfo = this.manualAuthInfo;
     this.outputData.connectOptions = this.connectOptions;
+    this.outputData.protocol = this.protocol;
 
     if (this.autoLogin) {
       this._appSvc.setPreLoginSelect(this.node, this.outputData);

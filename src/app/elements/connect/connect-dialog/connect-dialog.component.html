@@ -9,8 +9,8 @@
   <nav mat-tab-nav-bar style="margin-bottom: 20px" class="protocol-tab" >
     <a mat-tab-link
        *ngFor="let p of protocols"
-       (click)="protocol = p.name"
-       [active]="protocol == p.name"
+       (click)="onProtocolChange(p)"
+       [active]="protocol.name === p.name"
     >
       {{ p.name | uppercase }}
     </a>
@@ -46,7 +46,6 @@
     </div>
 
     <elements-advanced-option
-      #advancedOption
       [connectType]="connectMethod"
       [accountSelected]="accountSelected"
       (onOptionsChange)="onAdvancedOptionChanged($event)"

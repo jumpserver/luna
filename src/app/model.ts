@@ -117,26 +117,32 @@ export class View {
   hide: boolean;
   closed: boolean;
   node: TreeNode;
-  sysUser: Account;
+  account: Account;
   token: string;
-  connectType: ConnectMethod;
   termComp: any;
+  connectMethod: ConnectMethod;
   connectOptions: ConnectOption[];
   smartEndpoint: Endpoint;
 
-  constructor(node: TreeNode, user: Account, connectFrom: string,
-              type: string, protocol: string, connectOptions?: any
+  constructor(node: TreeNode, account: Account, connectFrom: string, type: string,
+              protocol: string, connectMethod: ConnectMethod, connectOptions?: any
   ) {
     this.connected = true;
     this.editable = false;
     this.closed = false;
     this.nick = node.name;
     this.node = node;
-    this.sysUser = user;
+    this.account = account;
     this.connectFrom = connectFrom;
     this.type = type;
     this.protocol = protocol;
+    this.connectMethod = connectMethod;
     this.connectOptions = connectOptions || [];
+  }
+
+  getConnectOption(field: string) {
+    const filteredField = this.connectOptions.find(i => i.field === field);
+    return filteredField ? filteredField.value.toString() : '';
   }
 }
 
@@ -153,9 +159,8 @@ export class ViewAction {
 export class ConnectMethod {
   label: string;
   value: string;
-  requireXPack: boolean;
-  protocol: string;
-  client: boolean;
+  type: string;
+  component: string;
 }
 
 export class DataStore {

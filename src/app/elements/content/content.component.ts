@@ -17,9 +17,6 @@ export class ElementContentComponent implements OnInit {
   isShowRMenu = false;
   rIdx = -1;
 
-  static DisconnectAll() {
-  }
-
   get tabsWidth() {
     return (this.viewList.length + 1) * 151 + 10;
   }
@@ -35,7 +32,7 @@ export class ElementContentComponent implements OnInit {
   }
 
   onNewView(view) {
-    this.scrollToEnd();
+    this.scrollEnd();
     setTimeout(() => {
       this.viewSrv.addView(view);
       this.setViewActive(view);
@@ -84,7 +81,7 @@ export class ElementContentComponent implements OnInit {
     this.tabsRef.nativeElement.scrollLeft += 150 * 2;
   }
 
-  scrollToEnd() {
+  scrollEnd() {
     this.tabsRef.nativeElement.scrollLeft = this.tabsRef.nativeElement.scrollWidth;
   }
 
@@ -100,7 +97,6 @@ export class ElementContentComponent implements OnInit {
         continue;
       }
       const d = {'data': cmd};
-
       this.viewList[i].termComp.sendCommand(d);
     }
 
@@ -169,6 +165,7 @@ export class ElementContentComponent implements OnInit {
     this.viewList.splice(id, 0, v);
     this.setViewActive(v);
   }
+
   rReconnect() {
     this.viewList[this.rIdx].termComp.reconnect();
   }

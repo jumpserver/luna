@@ -32,8 +32,9 @@
   margin: 0 10px 10px;
 }
 
-.protocol-tab ::ng-deep .mat-tab-label, .protocol-tab  ::ng-deep .mat-tab-label-active {
+.protocol-tab ::ng-deep .mat-tab-link, .protocol-tab  ::ng-deep .mat-tab-label-active {
   height: 35px !important;
+  width: 100px;
   //padding: 0 20px !important;
   min-width: 20px !important;
 }

@@ -1,7 +1,7 @@
 import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {connectEvt, TYPE_WEB_CLI, TYPE_RDP_FILE, TYPE_WEB_GUI, TYPE_DB_GUI, TYPE_WEB_SFTP} from '@app/globals';
-import {AppService, HttpService, I18nService, LogService, SettingService} from '@app/services';
+import {connectEvt} from '@app/globals';
+import {AppService, HttpService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {Account, TreeNode, ConnectData} from '@app/model';
 import {View} from '@app/model';
@@ -16,20 +16,18 @@ import {launchLocalApp} from '@app/utils/common';
 })
 export class ElementConnectComponent implements OnInit, OnDestroy {
   @Output() onNewView: EventEmitter<View> = new EventEmitter<View>();
-
   hasLoginTo = false;
 
   constructor(private _appSvc: AppService,
               private _dialog: MatDialog,
               private _logger: LogService,
-              private _settingSvc: SettingService,
               private _http: HttpService,
-              private _i18n: I18nService,
+              private _settingSvc: SettingService,
   ) {
   }
 
   ngOnInit(): void {
-    this.keepSubscribeConnectEvent();
+    this.subscribeConnectEvent();
     this.connectDirectIfNeed();
     this.connectTokenIfNeed();
   }
@@ -56,7 +54,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
     const node = new TreeNode();
     node.name = 'Token';
-    const view = new View(node, null, 'token', type, protocol);
+    const view = new View(node, null, 'token', type, protocol, null);
     view.token = token;
 
     switch (protocol) {
@@ -66,17 +64,17 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       case 'postgresql':
       case 'mariadb':
         if (this._settingSvc.hasXPack()) {
-          view.connectType = TYPE_DB_GUI;
+          // view.connectMethod = TYPE_DB_GUI;
         } else {
-          view.connectType = TYPE_WEB_GUI;
+          // view.connectMethod = TYPE_WEB_GUI;
         }
         break;
       case 'rdp':
       case 'vnc':
-        view.connectType = TYPE_WEB_GUI;
+        // view.connectMethod = TYPE_WEB_GUI;
         break;
       default:
-        view.connectType = TYPE_WEB_CLI;
+        // view.connectMethod = TYPE_WEB_CLI;
     }
     this.onNewView.emit(view);
   }
@@ -122,11 +120,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       } else {
         node = nodes[1];
       }
-      this.connectNode(node).then();
+      this.connectAsset(node).then();
     });
   }
 
-  keepSubscribeConnectEvent() {
+  subscribeConnectEvent() {
     connectEvt.asObservable().subscribe(evt => {
       switch (evt.action) {
         case 'sftp': {
@@ -135,11 +133,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         }
         case 'connect': {
           this._appSvc.delPreLoginSelect(evt.node);
-          this.connectNode(evt.node).then();
+          this.connectAsset(evt.node).then();
           break;
         }
         default: {
-          this.connectNode(evt.node).then();
+          this.connectAsset(evt.node).then();
         }
       }
     });
@@ -149,16 +147,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     connectEvt.unsubscribe();
   }
 
-  analysisId(idStr) {
-    const idObj = new Object();
-    idStr = idStr.split('&');
-    for (let i = 0; i < idStr.length; i++) {
-      idObj[idStr[i].split('=')[0]] = (idStr[i].split('=')[1]);
-    }
-    return idObj;
-  }
-
-  async connectNode(node) {
+  async connectAsset(node) {
     if (!node) {
       return;
     }
@@ -171,12 +160,12 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
     this._logger.debug('Connect info: ', connectInfo);
 
-    if (connectInfo.connectMethod.client) {
+    if (connectInfo.connectMethod.type === 'native') {
       this.callLocalClient(connectInfo, node).then();
-    } else if (connectInfo.connectMethod.value === TYPE_RDP_FILE.value) {
+    } else if (connectInfo.connectMethod.type === 'applet') {
       this.downloadRDPFile(connectInfo, node).then();
     } else {
-      this.createNodeView(connectInfo, node);
+      this.createWebView(connectInfo, node);
     }
   }
 
@@ -215,23 +204,21 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
   }
 
-  createNodeView(connectInfo: ConnectData, node: TreeNode) {
-    const {account, protocol, connectOptions} = connectInfo;
-    const view = new View(node, account, 'node', node.meta.type, protocol.name, connectOptions);
-    view.connectType = connectInfo.connectMethod;
+  createWebView(connectInfo: ConnectData, node: TreeNode) {
+    const {account, protocol, connectMethod, connectOptions} = connectInfo;
+    const view = new View(node, account, 'node', node.meta.type, protocol.name, connectMethod, connectOptions);
     this.onNewView.emit(view);
   }
 
   checkPreConnectData(node: TreeNode, accounts: Account[], preData: ConnectData): Boolean {
-    return false;
     if (!preData || !preData.account || preData.node) {
-      this._logger.debug('No system user or node');
+      this._logger.debug('No account or node');
       return false;
     }
     // 验证系统用户是否有效
     const preAccount = preData.account;
     const inAccounts = accounts.filter(item => {
-      return item.id === preAccount.id;
+      return item.username === preAccount.username;
     });
     if (inAccounts.length !== 1) {
       this._logger.debug('System user may be not valid');
@@ -240,8 +227,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     // 验证登录
     const account = inAccounts[0];
     const preAuth = preData.manualAuthInfo;
-    if (account['login_mode'] === 'manual' && !preAuth.secret) {
-      this._logger.debug('System user no manual auth');
+    if (!account.has_secret && !preAuth.secret) {
+      this._logger.debug('Account no manual auth');
       return false;
     }
     // 验证连接方式
@@ -284,9 +271,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   connectFileManager(node: TreeNode) {
-    const view = new View(node, null, 'fileManager', 'asset', 'sftp');
+    const view = new View(node, null, 'fileManager', 'asset', 'sftp', null);
     view.nick = '[FILE] ' + node.name;
-    view.connectType = TYPE_WEB_SFTP;
     this.onNewView.emit(view);
   }
 }

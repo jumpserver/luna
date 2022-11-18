@@ -1,4 +1,4 @@
-import {Component, Input, OnInit, OnChanges} from '@angular/core';
+import {Component, Input, OnInit} from '@angular/core';
 import {Terminal} from 'xterm';
 import {HttpService} from '@app/services';
 import {Replay} from '@app/model';

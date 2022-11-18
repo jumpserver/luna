@@ -18,9 +18,9 @@ export class ElementConnectorOmnidbComponent implements OnInit {
   }
 
   ngOnInit() {
-    const {node, protocol, sysUser, smartEndpoint} = this.view;
+    const {node, protocol, account, smartEndpoint} = this.view;
     this.node = node;
-    this.sysUser = sysUser;
+    this.sysUser = account;
     this.protocol = protocol;
     const url = smartEndpoint.getUrl();
     this.baseUrl = `${url}/omnidb/jumpserver`;
@@ -45,8 +45,7 @@ export class ElementConnectorOmnidbComponent implements OnInit {
   }
 
   generateNodeURL() {
-    this.iframeURL = `${this.baseUrl}/connect/workspace/?database_id=${this.node.id}` +
-      `&system_user_id=${this.sysUser.id}&_=${Date.now()}`;
+    this.iframeURL = `${this.baseUrl}/connect/workspace/?perm_token=${this.view.token}`;
   }
 
   generateTokenURL() {

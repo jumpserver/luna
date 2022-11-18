@@ -257,14 +257,12 @@ export class HttpService {
     return this.post(url, param).toPromise();
   }
 
-  getSmartEndpoint( { assetId, appId, sessionId, token }, protocol ): Promise<Endpoint> {
+  getSmartEndpoint({ assetId, sessionId, token }, protocol ): Promise<Endpoint> {
     const url = new URL('/api/v1/terminal/endpoints/smart/', window.location.origin);
 
     url.searchParams.append('protocol', protocol);
     if (assetId) {
       url.searchParams.append('asset_id', assetId);
-    } else if (appId) {
-      url.searchParams.append('app_id', appId);
     } else if (sessionId) {
       url.searchParams.append('session_id', sessionId);
     } else if (token) {

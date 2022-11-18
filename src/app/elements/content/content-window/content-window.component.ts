@@ -1,6 +1,6 @@
 import {Component, OnInit, Input, ViewChild, ElementRef} from '@angular/core';
-import {Endpoint, View} from '@app/model';
-import {TYPE_DB_GUI, TYPE_DB_CLIENT, User} from '@app/globals';
+import {View} from '@app/model';
+import {User} from '@app/globals';
 import {AppService, SettingService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
 
@@ -13,6 +13,7 @@ export class ElementContentWindowComponent implements OnInit {
   @Input() view: View;
   @ViewChild('contentWindow', {static: true}) windowRef: ElementRef;
   connector: string; // koko, omnidb, lion
+  permToken: string;
   loading = true;
   public id: string;
 
@@ -37,24 +38,8 @@ export class ElementContentWindowComponent implements OnInit {
   }
 
   computeConnector() {
-    switch (this.view.connectFrom) {
-      case 'token':
-      case 'node':
-        if (this.view.connectType.value === TYPE_DB_GUI.value) {
-          this.connector = 'omnidb';
-        } else if (this.view.connectType.value === TYPE_DB_CLIENT.value) {
-          this.connector = 'magnus';
-        } else if (['rdp', 'vnc'].indexOf(this.view.protocol) > -1) {
-          this.connector = 'lion';
-        } else {
-          this.connector = 'koko';
-        }
-        break;
-      case 'fileManager':
-        if (this.view.protocol === 'sftp') {
-          this.connector = 'koko';
-        }
-        break;
-    }
+    const response = this._appSvc.createPermToken();
+    this.connector = this.view.connectMethod.component;
+    this.permToken = response.token;
   }
 }

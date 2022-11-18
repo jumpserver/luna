@@ -21,10 +21,10 @@ export class ElementConnectorLionComponent implements OnInit {
   }
 
   ngOnInit() {
-    const {node, protocol, sysUser, smartEndpoint} = this.view;
-    this.baseUrl = smartEndpoint.getUrl() + '/lion';
+    const {node, protocol, account, smartEndpoint} = this.view;
+    this.baseUrl = smartEndpoint.getUrl() ;
     this.node = node;
-    this.sysUser = sysUser;
+    this.sysUser = account;
     this.protocol = protocol;
     this.generateIframeURL();
   }
@@ -40,25 +40,15 @@ export class ElementConnectorLionComponent implements OnInit {
       case 'token':
         this.generateTokenURL();
         break;
-      case 'monitor':
-        this.generateMonitorURL();
-        break;
     }
   }
 
   generateNodeURL() {
-    let type = this.protocol;
-    if (this.view.type === 'remote_app' || this.view.type === 'application' ) {
-      type = 'remoteapp';
-    }
-    this.iframeURL = `${this.baseUrl}/?target_id=${this.node.id}&type=${type}&system_user_id=${this.sysUser.id}&_=${Date.now()}`;
-  }
-
-  generateMonitorURL() {
+    this.iframeURL = `${this.baseUrl}/lion/perm-token/?token=${this.view.token}`;
   }
 
   generateTokenURL() {
-    this.iframeURL = `${this.baseUrl}/?token=${this.view.token}&_=${Date.now()}`;
+    this.iframeURL = `${this.baseUrl}/lion/connect-token/?token=${this.view.token}`;
   }
 
   active() {

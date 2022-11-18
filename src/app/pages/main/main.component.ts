@@ -2,9 +2,7 @@ import {Component, HostListener, OnInit, ViewChild, ElementRef} from '@angular/c
 import {DataStore, User} from '@app/globals';
 import {IOutputData, SplitComponent} from 'angular-split';
 import {ViewService, SettingService} from '@app/services';
-import { environment } from '@src/environments/environment';
 import * as _ from 'lodash';
-declare var $: any;
 
 @Component({
   selector: 'pages-main',

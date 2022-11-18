@@ -48,12 +48,12 @@
   </div>
 </div>
 
-<div #rMenu *ngIf="isShowRMenu" class="basicContext" style="position: fixed" [style.top]="pos.top" [style.left]="pos.left">
+<div #rMenu *ngIf="isShowRMenu" class="view-menu" style="position: fixed" [style.top]="pos.top" [style.left]="pos.left">
   <table>
       <tbody>
-        <tr *ngFor="let menu of RMenuList; let i = index" class="basicContext__item ">
-            <td class="basicContext__data" [attr.data-num]="i" (click)="menu.click()" [ngStyle]="{'display': menu.hide ? 'none': ''}">
-              <span class="basicContext__icon fa" [ngClass]="menu.fa"></span> {{ menu.name| translate }}
+        <tr *ngFor="let menu of RMenuList; let i = index" class="view-menu__item ">
+            <td class="view-menu__data" [attr.data-num]="i" (click)="menu.click()" [ngStyle]="{'display': menu.hide ? 'none': ''}">
+              <span class="view-menu__icon fa" [ngClass]="menu.fa"></span> {{ menu.name| translate }}
             </td>
         </tr>
         </tbody>

@@ -1,6 +1,5 @@
 import {Component, Input, OnInit, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter, OnDestroy} from '@angular/core';
 import {View} from '@app/model';
-import {TimeInterval} from 'rxjs';
 import {I18nService, LogService} from '@app/services';
 
 @Component({

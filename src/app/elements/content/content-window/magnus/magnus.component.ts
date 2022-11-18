@@ -45,16 +45,16 @@ export class ElementConnectorMagnusComponent implements OnInit {
   }
 
   async ngOnInit() {
-    const {node, sysUser, protocol, smartEndpoint} = this.view;
+    const {node, account, protocol, smartEndpoint} = this.view;
     this.node = node;
-    this.sysUser = sysUser;
+    this.sysUser = account;
     this.protocol = protocol;
     this.endpoint = smartEndpoint;
 
     const oriHost = this.node.meta.data.attrs.host;
     this.name = `${this.node.name}(${oriHost})`;
     const param: ConnectionTokenParam = {
-      system_user: sysUser.id,
+      system_user: account.id,
       ...({application: node.id})
     };
     this.token = await this._http.getConnectionToken(param);
@@ -85,7 +85,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
   }
 
   generateConnCli() {
-    const {username, password, host, port, database, protocol} = this.info;
+    const {password, host, port, database, protocol} = this.info;
     // Password placeholders. Because there is a safe cli, the secret needs to be hidden, so the placeholders are replaced
     const passwordHolder = `@${password}@`;
     let cli = '';
