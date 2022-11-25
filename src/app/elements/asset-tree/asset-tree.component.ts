@@ -142,7 +142,7 @@ export class ElementAssetTreeComponent implements OnInit {
   assetsSearchValue = '';
   currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
 
-  debouncedOnAssetsNodeClick = _.debounce(this.onAssetsNodeClick, 300, {
+  debouncedOnAssetsNodeClick = _.debounce(this.onNodeClick, 300, {
     'leading': true,
     'trailing': false
   });
@@ -153,16 +153,17 @@ export class ElementAssetTreeComponent implements OnInit {
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
-  onAssetsNodeClick(event, treeId, treeNode, clickFlag) {
+  onNodeClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
       this.assetsTree.expandNode(treeNode);
       return;
     }
     if (treeNode.chkDisabled) {
-      this._dialog.open(DisabledAssetsDialogComponent, {
+      const config = {
         height: '200px',
         width: '450px'
-      });
+      };
+      this._dialog.open(DisabledAssetsDialogComponent, config);
       return;
     }
     this.connectAsset(treeNode);
@@ -214,7 +215,7 @@ export class ElementAssetTreeComponent implements OnInit {
     this.initAssetsTree(false).then();
   }
 
-  connectAsset(node: TreeNode) {
+  async connectAsset(node: TreeNode) {
     const evt = new ConnectEvt(node, 'asset');
     connectEvt.next(evt);
   }
@@ -328,6 +329,10 @@ export class ElementAssetTreeComponent implements OnInit {
       this.showRMenu(event.clientX, event.clientY);
       this.rightClickSelectNode = treeNode;
     }
+  }
+
+  getNodeAsset(node) {
+    return this._http.getAssetDetail(node.id).toPromise();
   }
 
   onMenuConnect() {

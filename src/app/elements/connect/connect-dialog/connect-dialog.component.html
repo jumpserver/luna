@@ -1,6 +1,6 @@
 <div>
   <div mat-dialog-title>
-    <h3>{{"Connect" | translate}} - {{ node.name | truncatechars:30 }}</h3>
+    <h3>{{"Connect" | translate}} - {{ asset.name | truncatechars:30 }}</h3>
     <button mat-icon-button aria-label="close dialog" mat-dialog-close="">
       <mat-icon>close</mat-icon>
     </button>
@@ -18,7 +18,7 @@
 
   <div mat-dialog-content (keyup.enter)="onConfirm()" class="dialog-body">
     <elements-select-account
-      [node]="node"
+      [asset]="asset"
       [accounts]="accounts"
       [onSubmit]="onSubmit$"
       [manualAuthInfo]="manualAuthInfo"

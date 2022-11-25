@@ -30,25 +30,7 @@ export class ElementConnectorLionComponent implements OnInit {
   }
 
   generateIframeURL() {
-    if (this.iframeURL) {
-      return null;
-    }
-    switch (this.view.connectFrom) {
-      case 'node':
-        this.generateNodeURL();
-        break;
-      case 'token':
-        this.generateTokenURL();
-        break;
-    }
-  }
-
-  generateNodeURL() {
-    this.iframeURL = `${this.baseUrl}/lion/perm-token/?token=${this.view.token}`;
-  }
-
-  generateTokenURL() {
-    this.iframeURL = `${this.baseUrl}/lion/connect-token/?token=${this.view.token}`;
+    this.iframeURL = `${this.baseUrl}/lion/connect/?token=${this.view.token}`;
   }
 
   active() {

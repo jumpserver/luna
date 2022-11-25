@@ -1,7 +1,7 @@
 import {Component, OnInit, Input, ViewChild, ElementRef} from '@angular/core';
 import {View} from '@app/model';
 import {User} from '@app/globals';
-import {AppService, SettingService} from '@app/services';
+import {AppService, SettingService, HttpService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
 
 @Component({
@@ -13,18 +13,19 @@ export class ElementContentWindowComponent implements OnInit {
   @Input() view: View;
   @ViewChild('contentWindow', {static: true}) windowRef: ElementRef;
   connector: string; // koko, omnidb, lion
-  permToken: string;
+  token: string;
   loading = true;
   public id: string;
 
   constructor(private _settingSvc: SettingService,
               private _appSvc: AppService,
+              private _http: HttpService,
               private _route: ActivatedRoute
   ) {}
 
   async ngOnInit() {
     this.id = 'window-' + Math.random().toString(36).substr(2);
-    this.computeConnector();
+    await this.computeConnector();
     this.createWaterMark();
     this.view.smartEndpoint = await this._appSvc.getSmartEndpoint(this.view);
     this.loading = false;
@@ -37,9 +38,11 @@ export class ElementContentWindowComponent implements OnInit {
     );
   }
 
-  computeConnector() {
-    const response = this._appSvc.createPermToken();
-    this.connector = this.view.connectMethod.component;
-    this.permToken = response.token;
+  async computeConnector() {
+    const { node, connectData } = this.view;
+    const response = await this._http.createConnectToken(node, connectData).toPromise();
+    this.connector = connectData.connectMethod.component;
+    this.token = response.id;
+    this.view.token = this.token;
   }
 }

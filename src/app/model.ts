@@ -63,21 +63,20 @@ export class Node {
 
 export class Asset {
   id: string;
-  hostname: string;
-  ip: string;
+  name: string;
+  address: string;
   comment: string;
-  domain: string;
-  os: string;
-  platform: string;
-  protocols: Array<string>;
+  type: object;
+  category: object;
+  protocols: Array<Protocol>;
 }
 
 
 export class ConnectEvt {
-  node: TreeNode;
   action: string;
+  node: TreeNode;
 
-  constructor(node: TreeNode, action: string) {
+  constructor(node, action: string) {
     this.node = node;
     this.action = action;
   }
@@ -107,37 +106,33 @@ export class NavEvt {
 
 export class View {
   id: string;
-  nick: string;
+  name: string;
   connectFrom: string; // token, node, fileManager
   type: string; // database_app, remote_app, asset, k8s_app
   protocol: string;
-  editable: boolean;
   active: boolean;
-  connected: boolean;
-  hide: boolean;
   closed: boolean;
+  editable: boolean;
+  connected: boolean;
   node: TreeNode;
   account: Account;
   token: string;
   termComp: any;
+  connectData: ConnectData;
   connectMethod: ConnectMethod;
   connectOptions: ConnectOption[];
   smartEndpoint: Endpoint;
 
-  constructor(node: TreeNode, account: Account, connectFrom: string, type: string,
-              protocol: string, connectMethod: ConnectMethod, connectOptions?: any
-  ) {
+  constructor(node: TreeNode, connectInfo: ConnectData, connectFrom: string = 'node') {
     this.connected = true;
-    this.editable = false;
-    this.closed = false;
-    this.nick = node.name;
+    this.name = node.name;
     this.node = node;
-    this.account = account;
+    this.account = connectInfo.account;
     this.connectFrom = connectFrom;
-    this.type = type;
-    this.protocol = protocol;
-    this.connectMethod = connectMethod;
-    this.connectOptions = connectOptions || [];
+    this.protocol = connectInfo.protocol.name;
+    this.connectData = connectInfo;
+    this.closed = false;
+    this.editable = false;
   }
 
   getConnectOption(field: string) {
@@ -318,7 +313,7 @@ export class ConnectOption {
 
 
 export class ConnectData {
-  node: TreeNode;
+  asset: Asset;
   account: Account;
   protocol: Protocol;
   manualAuthInfo: AuthInfo;

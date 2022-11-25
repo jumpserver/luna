@@ -3,7 +3,7 @@ import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {AppService, HttpService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
-import {Account, TreeNode, ConnectData} from '@app/model';
+import {Account, TreeNode, ConnectData, Asset} from '@app/model';
 import {View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
@@ -54,7 +54,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
     const node = new TreeNode();
     node.name = 'Token';
-    const view = new View(node, null, 'token', type, protocol, null);
+    const view = new View(node, null, 'token');
     view.token = token;
 
     switch (protocol) {
@@ -81,24 +81,13 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   connectDirectIfNeed() {
     let loginTo = this._appSvc.getQueryString('login_to');
-    let tp = this._appSvc.getQueryString('type') || 'asset';
+    const tp = this._appSvc.getQueryString('type') || 'asset';
     const assetId = this._appSvc.getQueryString('asset');
-    const remoteAppId = this._appSvc.getQueryString('remote_app');
-    const databaseAppId = this._appSvc.getQueryString('database_app');
-    const k8sId = this._appSvc.getQueryString('k8s_app');
 
-    if (tp !== 'asset') {
-      tp = 'application';
-    }
     if (assetId) {
       loginTo = assetId;
-    } else if (remoteAppId) {
-      loginTo = remoteAppId;
-    } else if (databaseAppId) {
-      loginTo = databaseAppId;
-    } else if (k8sId) {
-      loginTo = k8sId;
     }
+
     if (this.hasLoginTo || !loginTo) {
       return;
     }
@@ -120,7 +109,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       } else {
         node = nodes[1];
       }
-      this.connectAsset(node).then();
+      this.connectNode(node).then();
     });
   }
 
@@ -132,12 +121,12 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           break;
         }
         case 'connect': {
-          this._appSvc.delPreLoginSelect(evt.node);
-          this.connectAsset(evt.node).then();
+          this._appSvc.delPreLoginSelect(evt.node.id);
+          this.connectNode(evt.node).then();
           break;
         }
         default: {
-          this.connectAsset(evt.node).then();
+          this.connectNode(evt.node).then();
         }
       }
     });
@@ -147,22 +136,24 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     connectEvt.unsubscribe();
   }
 
-  async connectAsset(node) {
+  async connectNode(node) {
     if (!node) {
       return;
     }
     const id = node.meta.data.id;
+    const asset = await this._http.getAssetDetail(id).toPromise();
     const accounts = await this._http.getMyAssetAccounts(id).toPromise();
-    const connectInfo = await this.getConnectData(accounts, node);
+    const connectInfo = await this.getConnectData(accounts, asset);
     if (!connectInfo) {
       this._logger.info('Just close the dialog');
       return;
     }
     this._logger.debug('Connect info: ', connectInfo);
+    const { type } = connectInfo.connectMethod;
 
-    if (connectInfo.connectMethod.type === 'native') {
+    if (type === 'native') {
       this.callLocalClient(connectInfo, node).then();
-    } else if (connectInfo.connectMethod.type === 'applet') {
+    } else if (type === 'applet') {
       this.downloadRDPFile(connectInfo, node).then();
     } else {
       this.createWebView(connectInfo, node);
@@ -183,7 +174,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   async callLocalClient(connectInfo: ConnectData, node: TreeNode) {
     this._logger.debug('Call local client');
     const { account } = connectInfo;
-    const data = { accountId: account.id, appId: '', assetId: '' };
+    const data = { accountId: account.id, assetId: node.id };
     if (node.meta.type === 'application' && node.meta.data.category === 'remote_app') {
       data['appId'] = node.id;
     } else {
@@ -205,13 +196,12 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   createWebView(connectInfo: ConnectData, node: TreeNode) {
-    const {account, protocol, connectMethod, connectOptions} = connectInfo;
-    const view = new View(node, account, 'node', node.meta.type, protocol.name, connectMethod, connectOptions);
+    const view = new View(node, connectInfo);
     this.onNewView.emit(view);
   }
 
-  checkPreConnectData(node: TreeNode, accounts: Account[], preData: ConnectData): Boolean {
-    if (!preData || !preData.account || preData.node) {
+  checkPreConnectData(asset: Asset, accounts: Account[], preData: ConnectData): Boolean {
+    if (!preData || !preData.account || preData.asset) {
       this._logger.debug('No account or node');
       return false;
     }
@@ -247,9 +237,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  getConnectData(accounts: Account[], node: TreeNode): Promise<ConnectData> {
-    const preConnectData = this._appSvc.getPreLoginSelect(node);
-    const isValid = this.checkPreConnectData(node, accounts, preConnectData);
+  getConnectData(accounts: Account[], asset: Asset): Promise<ConnectData> {
+    const preConnectData = this._appSvc.getPreLoginSelect(asset);
+    const isValid = this.checkPreConnectData(asset, accounts, preConnectData);
     if (isValid) {
       return new Promise<ConnectData>(resolve => {
         resolve(preConnectData);
@@ -260,7 +250,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       minHeight: '300px',
       height: 'auto',
       width: '600px',
-      data: {accounts: accounts, node: node}
+      data: {accounts, asset}
     });
 
     return new Promise<ConnectData>(resolve => {
@@ -271,8 +261,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   connectFileManager(node: TreeNode) {
-    const view = new View(node, null, 'fileManager', 'asset', 'sftp', null);
-    view.nick = '[FILE] ' + node.name;
+    const view = new View(node, null, 'fileManager');
+    view.name = '[FILE] ' + node.name;
     this.onNewView.emit(view);
   }
 }

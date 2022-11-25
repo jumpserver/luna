@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
 import {Browser} from '@app/globals';
 import {retryWhen, delay, scan, map, catchError} from 'rxjs/operators';
-import {Account, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam, Endpoint} from '@app/model';
+import {Account, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam, Endpoint, ConnectData, Asset} from '@app/model';
 import {User} from '@app/globals';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
@@ -148,6 +148,11 @@ export class HttpService {
     return this.get<Array<Account>>(url);
   }
 
+  getAssetDetail(id) {
+    const url = `/api/v1/assets/assets/${id}/`;
+    return this.get<Asset>(url);
+  }
+
   favoriteAsset(assetId: string, favorite: boolean) {
     let url: string;
     url = `/api/v1/assets/favorite-assets/`;
@@ -217,6 +222,18 @@ export class HttpService {
     return cleanedParams;
   }
 
+  createConnectToken(node: TreeNode, connectData: ConnectData) {
+    const url = '/api/v1/authentication/connection-token/';
+    const data = {
+      asset: node.id,
+      login: connectData.account.name,
+      protocol: connectData.protocol.name,
+      username: connectData.manualAuthInfo.username,
+      secret: connectData.manualAuthInfo.secret
+    };
+    return this.post(url, data);
+  }
+
   downloadRDPFile({assetId, appId, accountId}, params: Object) {
     const url = new URL('/api/v1/authentication/connection-token/rdp/file/', window.location.origin);
     if (assetId) {
@@ -234,15 +251,11 @@ export class HttpService {
     return window.open(url.href);
   }
 
-  getRDPClientUrl({assetId, appId, accountId}, params: Object) {
+  getRDPClientUrl({assetId, accountId}, params: Object) {
     const url = new URL('/api/v1/authentication/connection-token/client-url/', window.location.origin);
     const data = {};
-    if (assetId) {
-      data['asset'] = assetId;
-    } else {
-      data['application'] = appId;
-    }
-    data['system_user'] = accountId;
+    data['asset'] = assetId;
+    data['login'] = accountId;
     params = this.cleanRDPParams(params);
     if (params) {
       for (const [k, v] of Object.entries(params)) {

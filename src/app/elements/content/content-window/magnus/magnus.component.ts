@@ -20,7 +20,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
   @Input() view: View;
 
   node: TreeNode;
-  sysUser: Account;
+  account: Account;
   protocol: string;
   expire_time: string;
   endpoint: Endpoint;
@@ -47,7 +47,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
   async ngOnInit() {
     const {node, account, protocol, smartEndpoint} = this.view;
     this.node = node;
-    this.sysUser = account;
+    this.account = account;
     this.protocol = protocol;
     this.endpoint = smartEndpoint;
 

@@ -34,14 +34,11 @@ export class ElementConnectorKokoComponent implements OnInit {
 
   generateIframeURL() {
     switch (this.view.connectFrom) {
-      case 'node':
-        this.generateNodeConnectUrl();
-        break;
-      case 'token':
-        this.generateTokenURL();
-        break;
       case 'fileManager':
         this.generateFileManagerURL();
+        break;
+      default:
+        this.generateNodeConnectUrl();
         break;
     }
   }
@@ -69,11 +66,7 @@ export class ElementConnectorKokoComponent implements OnInit {
       }
     }
 
-    this.iframeURL = `${this.baseUrl}/perm-token/?` + params.toString();
-  }
-
-  generateTokenURL() {
-    this.iframeURL = `${this.baseUrl}/connect-token/?token=${this.view.token}`;
+    this.iframeURL = `${this.baseUrl}/connect/?` + params.toString();
   }
 
   generateFileManagerURL() {

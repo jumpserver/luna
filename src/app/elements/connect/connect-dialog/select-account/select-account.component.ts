@@ -1,5 +1,5 @@
 import {ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
-import {Account, AccountGroup, AuthInfo, TreeNode} from '@app/model';
+import {Account, AccountGroup, AuthInfo, Asset} from '@app/model';
 import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
 import {FormControl, Validators} from '@angular/forms';
 import {AppService, LocalStorageService, LogService, SettingService, I18nService} from '@app/services';
@@ -11,7 +11,7 @@ import {takeUntil} from 'rxjs/operators';
   styleUrls: ['./select-account.component.scss'],
 })
 export class ElementSelectAccountComponent implements OnInit, OnDestroy {
-  @Input() node: TreeNode;
+  @Input() asset: Asset;
   @Input() accounts: Account[];
   @Input() onSubmit: BehaviorSubject<boolean>;
   @Output() onSelectAccount: EventEmitter<Account> = new EventEmitter<Account>();
@@ -85,8 +85,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   }
 
   getPreferAccount() {
-    const nodeID = this._appSvc.getNodeTypeID(this.node);
-    const preferId = this._appSvc.getNodePreferAccount(nodeID);
+    const preferId = this._appSvc.getAssetPreferAccount(this.asset.id);
     const matchedAccounts = this.accounts.find((item) => item.id === preferId);
     if (preferId && matchedAccounts) { return matchedAccounts; }
     return null;
@@ -166,7 +165,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }
     this.manualAuthInfo.username = '';
     this.manualAuthInfo.secret = '';
-    this.authsOptions = this._appSvc.getAccountLocalAuth(this.node.id, this.accountSelected.id);
+    this.authsOptions = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.id);
     if (this.authsOptions && this.authsOptions.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.authsOptions[0]);
     }
@@ -204,13 +203,13 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   subscribeSubmitEvent() {
     this.onSubmit$.subscribe(() => {
       if (this.rememberAuth) {
-        this._logger.debug('Save auth to local storage: ', this.node.id, this.accountSelected.id, this.manualAuthInfo);
-        this._appSvc.saveNodeAccountAuth(this.node.id, this.accountSelected.id, this.manualAuthInfo);
+        this._logger.debug('Save auth to local storage: ', this.asset.id, this.accountSelected.id, this.manualAuthInfo);
+        this._appSvc.saveAssetAccountAuth(this.asset.id, this.accountSelected.id, this.manualAuthInfo);
       }
     });
   }
 
   getSavedAuthInfos() {
-    this.authsOptions = this._appSvc.getAccountLocalAuth(this.node.id, this.accountSelected.id);
+    this.authsOptions = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.id);
   }
 }

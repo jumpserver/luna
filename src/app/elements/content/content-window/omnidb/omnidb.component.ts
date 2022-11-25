@@ -1,5 +1,5 @@
 import {Component, OnInit, Input} from '@angular/core';
-import {Account, TreeNode, View} from '@app/model';
+import {TreeNode, View} from '@app/model';
 
 @Component({
   selector: 'elements-connector-omnidb',
@@ -11,19 +11,17 @@ export class ElementConnectorOmnidbComponent implements OnInit {
   iframeURL: string;
   baseUrl: string;
   node: TreeNode;
-  sysUser: Account;
   protocol: string;
 
   constructor() {
   }
 
   ngOnInit() {
-    const {node, protocol, account, smartEndpoint} = this.view;
+    const {node, protocol, smartEndpoint} = this.view;
     this.node = node;
-    this.sysUser = account;
     this.protocol = protocol;
-    const url = smartEndpoint.getUrl();
-    this.baseUrl = `${url}/omnidb/jumpserver`;
+    const endpointUrl = smartEndpoint.getUrl();
+    this.baseUrl = `${endpointUrl}/omnidb/jumpserver`;
     this.generateIframeURL();
   }
 
@@ -31,26 +29,6 @@ export class ElementConnectorOmnidbComponent implements OnInit {
     if (this.iframeURL) {
       return null;
     }
-    switch (this.view.connectFrom) {
-      case 'node':
-        this.generateNodeURL();
-        break;
-      case 'token':
-        this.generateTokenURL();
-        break;
-      case 'monitor':
-        this.generateMonitorURL();
-        break;
-    }
-  }
-
-  generateNodeURL() {
-    this.iframeURL = `${this.baseUrl}/connect/workspace/?perm_token=${this.view.token}`;
-  }
-
-  generateTokenURL() {
-  }
-
-  generateMonitorURL() {
+    this.iframeURL = `${this.baseUrl}/connect/workspace/?token=${this.view.token}`;
   }
 }
