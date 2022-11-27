@@ -1,7 +1,6 @@
 FROM node:14.16 as stage-build
 ARG TARGETARCH
 ARG NPM_REGISTRY="https://registry.npmmirror.com"
-ENV NPM_REGISTY=$NPM_REGISTRY
 
 WORKDIR /data
 
