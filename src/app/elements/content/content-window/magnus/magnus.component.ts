@@ -1,5 +1,5 @@
 import {Component, Input, OnInit} from '@angular/core';
-import {View, Account, TreeNode, ConnectionTokenParam, Endpoint} from '@app/model';
+import {View, Account, Endpoint, Asset, ConnectionToken} from '@app/model';
 import {HttpService, I18nService, SettingService} from '@app/services';
 import {User} from '@app/globals';
 import {ToastrService} from 'ngx-toastr';
@@ -19,7 +19,7 @@ interface InfoItem {
 export class ElementConnectorMagnusComponent implements OnInit {
   @Input() view: View;
 
-  node: TreeNode;
+  asset: Asset;
   account: Account;
   protocol: string;
   expire_time: string;
@@ -27,14 +27,13 @@ export class ElementConnectorMagnusComponent implements OnInit {
   name: string;
   cli: string;
   cliSafe: string;
-  protocolPorts: object;
   infoItems: Array<InfoItem>;
   info: any;
   globalSetting: any;
   loading = true;
   passwordMask = '******';
   passwordShow = '******';
-  token: any;
+  token: ConnectionToken;
 
   constructor(private _http: HttpService,
               private _i18n: I18nService,
@@ -42,22 +41,18 @@ export class ElementConnectorMagnusComponent implements OnInit {
               private _settingSvc: SettingService
   ) {
     this.globalSetting = this._settingSvc.globalSetting;
+    this.token = this.view.token;
   }
 
   async ngOnInit() {
-    const {node, account, protocol, smartEndpoint} = this.view;
-    this.node = node;
+    const {asset, account, protocol, smartEndpoint} = this.view;
+    this.asset = asset;
     this.account = account;
     this.protocol = protocol;
     this.endpoint = smartEndpoint;
 
-    const oriHost = this.node.meta.data.attrs.host;
-    this.name = `${this.node.name}(${oriHost})`;
-    const param: ConnectionTokenParam = {
-      system_user: account.id,
-      ...({application: node.id})
-    };
-    this.token = await this._http.getConnectionToken(param);
+    const oriHost = this.asset.address;
+    this.name = `${this.asset.name}(${oriHost})`;
     this.setDBInfo();
     this.generateConnCli();
     this.loading = false;
@@ -66,14 +61,13 @@ export class ElementConnectorMagnusComponent implements OnInit {
   setDBInfo() {
     const host = this.endpoint.getHost();
     const port = this.endpoint.getPort(this.protocol);
-    const attrs = this.node.meta.data.attrs || {};
-    const database = attrs.database || '';
+    const database = this.asset.specific.db_name;
     this.infoItems = [
       {name: 'name', value: this.name, label: this._i18n.t('Name')},
       {name: 'host', value: host, label: this._i18n.t('Host')},
       {name: 'port', value: port, label: this._i18n.t('Port')},
       {name: 'username', value: this.token.id, label: this._i18n.t('Username')},
-      {name: 'password', value: this.token.secret,  label: this._i18n.t('Password')},
+      {name: 'password', value: this.token.value,  label: this._i18n.t('Password')},
       {name: 'database', value: database, label: this._i18n.t('Database')},
       {name: 'protocol', value: this.protocol, label: this._i18n.t('Protocol')},
       {name: 'expire_time', value: `${this.token.expire_time} s` , label: this._i18n.t('Expire time')},

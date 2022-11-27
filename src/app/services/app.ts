@@ -277,7 +277,7 @@ export class AppService {
     if (view.token) {
       data['token'] = view.token;
     } else {
-      data['assetId'] = view.node.id;
+      data['assetId'] = view.asset.id;
     }
     return this._http.getSmartEndpoint(data, protocol);
   }

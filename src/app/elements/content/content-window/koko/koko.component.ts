@@ -1,5 +1,5 @@
 import {Component, Input, OnInit, ViewChild, ElementRef, Inject} from '@angular/core';
-import {View, Account, TreeNode, Endpoint} from '@app/model';
+import {View, Account, TreeNode, Endpoint, Asset} from '@app/model';
 import {LogService} from '@app/services';
 import {HttpParams} from '@angular/common/http';
 
@@ -14,8 +14,7 @@ export class ElementConnectorKokoComponent implements OnInit {
   @ViewChild('terminal', {static: false}) iframe: ElementRef;
 
   iframeURL: any;
-  node: TreeNode;
-  sysUser: Account;
+  asset: Asset;
   protocol: string;
   baseUrl: string;
 
@@ -23,9 +22,8 @@ export class ElementConnectorKokoComponent implements OnInit {
   }
 
   ngOnInit() {
-    const {node, account, protocol, smartEndpoint} = this.view;
-    this.node = node;
-    this.sysUser = account;
+    const {asset, protocol, smartEndpoint} = this.view;
+    this.asset = asset;
     this.protocol = protocol;
     const url = smartEndpoint.getUrl();
     this.baseUrl = `${url}/koko`;
@@ -59,17 +57,18 @@ export class ElementConnectorKokoComponent implements OnInit {
     params.set('token', this.view.token);
     params.set('_', Date.now().toString());
 
-    if (this.node.meta.data.type === 'k8s' && this.node.meta.data.identity) {
-      const k8sInfo = this.analysisId(this.node['parentInfo']);
-      for (const [key, value] of Object.entries(k8sInfo)) {
-        params.set(key, value.toString());
-      }
-    }
+    // Todo: K8S
+    // if (this.asset.type === 'k8s' && this.node.meta.data.identity) {
+    //   const k8sInfo = this.analysisId(this.node['parentInfo']);
+    //   for (const [key, value] of Object.entries(k8sInfo)) {
+    //     params.set(key, value.toString());
+    //   }
+    // }
 
     this.iframeURL = `${this.baseUrl}/connect/?` + params.toString();
   }
 
   generateFileManagerURL() {
-    this.iframeURL = `${this.baseUrl}/elfinder/sftp/${this.node.id}/`;
+    this.iframeURL = `${this.baseUrl}/elfinder/sftp/${this.asset.id}/`;
   }
 }

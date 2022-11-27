@@ -2,12 +2,14 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
 import {Browser} from '@app/globals';
 import {retryWhen, delay, scan, map, catchError} from 'rxjs/operators';
-import {Account, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam, Endpoint, ConnectData, Asset} from '@app/model';
+import {
+  Account, TreeNode, User as _User, Session,
+  ConnectionToken, Endpoint, ConnectData, Asset
+} from '@app/model';
 import {User} from '@app/globals';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
-import {encryptPassword} from '@app/utils/crypto';
 import {CookieService} from 'ngx-cookie-service';
 
 @Injectable()
@@ -222,16 +224,16 @@ export class HttpService {
     return cleanedParams;
   }
 
-  createConnectToken(node: TreeNode, connectData: ConnectData) {
+  createConnectToken(asset: Asset, connectData: ConnectData) {
     const url = '/api/v1/authentication/connection-token/';
     const data = {
-      asset: node.id,
-      login: connectData.account.name,
+      asset: asset.id,
+      account_name: connectData.account.name,
       protocol: connectData.protocol.name,
-      username: connectData.manualAuthInfo.username,
-      secret: connectData.manualAuthInfo.secret
+      input_username: connectData.manualAuthInfo.username,
+      input_secret: connectData.manualAuthInfo.secret
     };
-    return this.post(url, data);
+    return this.post<ConnectionToken>(url, data);
   }
 
   downloadRDPFile({assetId, appId, accountId}, params: Object) {

@@ -1,5 +1,5 @@
 import {Component, OnInit, Input, ViewChild, ElementRef} from '@angular/core';
-import {View} from '@app/model';
+import {ConnectionToken, View} from '@app/model';
 import {User} from '@app/globals';
 import {AppService, SettingService, HttpService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
@@ -13,7 +13,7 @@ export class ElementContentWindowComponent implements OnInit {
   @Input() view: View;
   @ViewChild('contentWindow', {static: true}) windowRef: ElementRef;
   connector: string; // koko, omnidb, lion
-  token: string;
+  token: ConnectionToken;
   loading = true;
   public id: string;
 
@@ -34,15 +34,15 @@ export class ElementContentWindowComponent implements OnInit {
   createWaterMark() {
     this._settingSvc.createWaterMarkIfNeed(
       this.windowRef.nativeElement,
-      `${User.name}(${User.username})\n${this.view.node.name}`
+      `${User.name}(${User.username})\n${this.view.asset.name}`
     );
   }
 
   async computeConnector() {
-    const { node, connectData } = this.view;
-    const response = await this._http.createConnectToken(node, connectData).toPromise();
+    const { asset, connectData } = this.view;
+    const token = await this._http.createConnectToken(asset, connectData).toPromise();
     this.connector = connectData.connectMethod.component;
-    this.token = response.id;
-    this.view.token = this.token;
+    this.token = token;
+    this.view.token = token;
   }
 }

@@ -147,7 +147,7 @@ export class ElementContentComponent implements OnInit {
   rCloseRight() {
     // 关闭右侧tab
     for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
-      this.closeView(this.viewList[i].node);
+      this.closeView(this.viewList[i].asset);
     }
   }
 

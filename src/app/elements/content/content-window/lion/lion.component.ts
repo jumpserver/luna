@@ -1,6 +1,6 @@
 import {Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
 import {LogService} from '@app/services';
-import {TreeNode, Account} from '@app/model';
+import {TreeNode, Account, Asset} from '@app/model';
 import {View} from '@app/model';
 
 @Component({
@@ -12,8 +12,7 @@ export class ElementConnectorLionComponent implements OnInit {
   @Input() view: View;
   @ViewChild('terminal', {static: false}) el: ElementRef;
   iframeURL: any;
-  node: TreeNode;
-  sysUser: Account;
+  asset: Asset;
   protocol: string;
   public baseUrl: string;
 
@@ -21,10 +20,9 @@ export class ElementConnectorLionComponent implements OnInit {
   }
 
   ngOnInit() {
-    const {node, protocol, account, smartEndpoint} = this.view;
+    const {asset, protocol, account, smartEndpoint} = this.view;
     this.baseUrl = smartEndpoint.getUrl() ;
-    this.node = node;
-    this.sysUser = account;
+    this.asset = asset;
     this.protocol = protocol;
     this.generateIframeURL();
   }

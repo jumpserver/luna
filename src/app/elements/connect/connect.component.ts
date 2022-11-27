@@ -29,54 +29,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.subscribeConnectEvent();
     this.connectDirectIfNeed();
-    this.connectTokenIfNeed();
-  }
-
-  connectTokenIfNeed() {
-    const token = this._appSvc.getQueryString('token');
-    if (!token) {
-      return;
-    }
-    const system = this._appSvc.getQueryString('system');
-    const type = this._appSvc.getQueryString('type') || 'asset';
-    let protocol = this._appSvc.getQueryString('protocol') || 'ssh';
-
-    if (system) {
-      switch (system) {
-        case 'linux':
-          protocol = 'ssh';
-          break;
-        case 'window':
-        case 'windows':
-          protocol = 'rdp';
-          break;
-      }
-    }
-    const node = new TreeNode();
-    node.name = 'Token';
-    const view = new View(node, null, 'token');
-    view.token = token;
-
-    switch (protocol) {
-      case 'mysql':
-      case 'sqlserver':
-      case 'oracle':
-      case 'postgresql':
-      case 'mariadb':
-        if (this._settingSvc.hasXPack()) {
-          // view.connectMethod = TYPE_DB_GUI;
-        } else {
-          // view.connectMethod = TYPE_WEB_GUI;
-        }
-        break;
-      case 'rdp':
-      case 'vnc':
-        // view.connectMethod = TYPE_WEB_GUI;
-        break;
-      default:
-        // view.connectMethod = TYPE_WEB_CLI;
-    }
-    this.onNewView.emit(view);
   }
 
   connectDirectIfNeed() {
@@ -115,20 +67,25 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   subscribeConnectEvent() {
     connectEvt.asObservable().subscribe(evt => {
-      switch (evt.action) {
-        case 'sftp': {
-          this.connectFileManager(evt.node);
-          break;
-        }
-        case 'connect': {
-          this._appSvc.delPreLoginSelect(evt.node.id);
-          this.connectNode(evt.node).then();
-          break;
-        }
-        default: {
-          this.connectNode(evt.node).then();
-        }
+      if (!evt.node) {
+        return;
       }
+      this._http.getAssetDetail(evt.node.id).subscribe(asset => {
+        switch (evt.action) {
+          case 'sftp': {
+            this.connectFileManager(asset);
+            break;
+          }
+          case 'connect': {
+            this._appSvc.delPreLoginSelect(asset.id);
+            this.connectNode(asset).then();
+            break;
+          }
+          default: {
+            this.connectNode(asset).then();
+          }
+        }
+      });
     });
   }
 
@@ -136,13 +93,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     connectEvt.unsubscribe();
   }
 
-  async connectNode(node) {
-    if (!node) {
+  async connectNode(asset) {
+    if (!asset) {
       return;
     }
-    const id = node.meta.data.id;
-    const asset = await this._http.getAssetDetail(id).toPromise();
-    const accounts = await this._http.getMyAssetAccounts(id).toPromise();
+    const accounts = await this._http.getMyAssetAccounts(asset.id).toPromise();
     const connectInfo = await this.getConnectData(accounts, asset);
     if (!connectInfo) {
       this._logger.info('Just close the dialog');
@@ -152,34 +107,24 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const { type } = connectInfo.connectMethod;
 
     if (type === 'native') {
-      this.callLocalClient(connectInfo, node).then();
+      this.callLocalClient(asset, connectInfo).then();
     } else if (type === 'applet') {
-      this.downloadRDPFile(connectInfo, node).then();
+      this.downloadRDPFile(asset, connectInfo).then();
     } else {
-      this.createWebView(connectInfo, node);
+      this.createWebView(asset, connectInfo);
     }
   }
 
-  async downloadRDPFile(connectInfo: ConnectData, node: TreeNode) {
+  async downloadRDPFile(asset: Asset, connectInfo: ConnectData) {
     const { account } = connectInfo;
-    const data = { accountId: account.id, appId: '', assetId: '' };
-    if (node.meta.type === 'application' && node.meta.data.category === 'remote_app') {
-      data['appId'] = node.id;
-    } else {
-      data['assetId'] = node.id;
-    }
+    const data = { accountId: account.id, appId: '', assetId: asset.id };
     await this._http.downloadRDPFile(data, this._settingSvc.setting);
   }
 
-  async callLocalClient(connectInfo: ConnectData, node: TreeNode) {
+  async callLocalClient(asset: Asset, connectInfo: ConnectData) {
     this._logger.debug('Call local client');
     const { account } = connectInfo;
-    const data = { accountId: account.id, assetId: node.id };
-    if (node.meta.type === 'application' && node.meta.data.category === 'remote_app') {
-      data['appId'] = node.id;
-    } else {
-      data['assetId'] = node.id;
-    }
+    const data = { accountId: account.id, assetId: asset.id };
     const response = await this._http.getRDPClientUrl(data, this._settingSvc.setting);
     const url = response['url'];
 
@@ -195,8 +140,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
   }
 
-  createWebView(connectInfo: ConnectData, node: TreeNode) {
-    const view = new View(node, connectInfo);
+  createWebView(asset: Asset, connectInfo: ConnectData) {
+    const view = new View(asset, connectInfo);
     this.onNewView.emit(view);
   }
 
@@ -260,9 +205,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
   }
 
-  connectFileManager(node: TreeNode) {
-    const view = new View(node, null, 'fileManager');
-    view.name = '[FILE] ' + node.name;
+  connectFileManager(asset: Asset) {
+    const view = new View(asset, null, 'fileManager');
+    view.name = '[FILE] ' + asset.name;
     this.onNewView.emit(view);
   }
 }

@@ -1,5 +1,5 @@
 import {Component, OnInit, Input} from '@angular/core';
-import {TreeNode, View} from '@app/model';
+import {Asset, TreeNode, View} from '@app/model';
 
 @Component({
   selector: 'elements-connector-omnidb',
@@ -10,15 +10,15 @@ export class ElementConnectorOmnidbComponent implements OnInit {
   @Input() view: View;
   iframeURL: string;
   baseUrl: string;
-  node: TreeNode;
+  asset: Asset;
   protocol: string;
 
   constructor() {
   }
 
   ngOnInit() {
-    const {node, protocol, smartEndpoint} = this.view;
-    this.node = node;
+    const {asset, protocol, smartEndpoint} = this.view;
+    this.asset = asset;
     this.protocol = protocol;
     const endpointUrl = smartEndpoint.getUrl();
     this.baseUrl = `${endpointUrl}/omnidb/jumpserver`;

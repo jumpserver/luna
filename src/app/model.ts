@@ -61,14 +61,24 @@ export class Node {
   value: string;
 }
 
+class Choice {
+  label: string;
+  value: string;
+}
+
+class Specific {
+  db_name?: string;
+}
+
 export class Asset {
   id: string;
   name: string;
   address: string;
   comment: string;
-  type: object;
-  category: object;
+  type: Choice;
+  category: Choice;
   protocols: Array<Protocol>;
+  specific: Specific;
 }
 
 
@@ -114,21 +124,23 @@ export class View {
   closed: boolean;
   editable: boolean;
   connected: boolean;
-  node: TreeNode;
+  asset: Asset;
   account: Account;
-  token: string;
+  token: ConnectionToken;
   termComp: any;
   connectData: ConnectData;
   connectMethod: ConnectMethod;
   connectOptions: ConnectOption[];
   smartEndpoint: Endpoint;
 
-  constructor(node: TreeNode, connectInfo: ConnectData, connectFrom: string = 'node') {
+  constructor(asset: Asset, connectInfo: ConnectData, connectFrom: string = 'node') {
     this.connected = true;
-    this.name = node.name;
-    this.node = node;
+    this.name = asset.name;
+    this.asset = asset;
     this.account = connectInfo.account;
     this.connectFrom = connectFrom;
+    this.connectMethod = connectInfo.connectMethod;
+    this.connectOptions = connectInfo.connectOptions;
     this.protocol = connectInfo.protocol.name;
     this.connectData = connectInfo;
     this.closed = false;
@@ -323,15 +335,12 @@ export class ConnectData {
 
 export class ConnectionToken {
   id: string;
-  secret: string;
-  type: string;
+  value: string;
   protocol: string;
-}
-
-export interface ConnectionTokenParam {
-  system_user: string;
-  asset?: string;
-  application?: string;
+  asset: string;
+  user?: string;
+  account_name: string;
+  expire_time: number;
 }
 
 export class Protocol  {
