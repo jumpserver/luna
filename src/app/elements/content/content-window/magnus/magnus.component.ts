@@ -41,11 +41,12 @@ export class ElementConnectorMagnusComponent implements OnInit {
               private _settingSvc: SettingService
   ) {
     this.globalSetting = this._settingSvc.globalSetting;
-    this.token = this.view.connectToken;
   }
 
   async ngOnInit() {
-    const {asset, account, protocol, smartEndpoint} = this.view;
+    const {asset, account, protocol, smartEndpoint, connectToken } = this.view;
+    this.token = connectToken;
+    console.log('View: ', this.view);
     this.asset = asset;
     this.account = account;
     this.protocol = protocol;

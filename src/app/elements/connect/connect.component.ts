@@ -94,12 +94,17 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return;
     }
     this._logger.debug('Connect info: ', connectInfo);
-    const { type } = connectInfo.connectMethod;
-
+    const connectMethod = connectInfo.connectMethod;
     const connToken = await this._http.createConnectToken(asset, connectInfo).toPromise();
-    if (type === 'native') {
+
+    // 特殊处理
+    if (connectMethod.value === 'db_client') {
+      return this.createWebView(asset, connectInfo, connToken);
+    }
+
+    if (connectMethod.type === 'native') {
       this.callLocalClient(connToken).then();
-    } else if (type === 'applet') {
+    } else if (connectMethod.type === 'applet') {
       this.downloadRDPFile(connToken).then();
     } else {
       this.createWebView(asset, connectInfo, connToken);

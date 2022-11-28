@@ -20,14 +20,15 @@ export class ElementContentWindowComponent implements OnInit {
               private _appSvc: AppService,
               private _http: HttpService,
               private _route: ActivatedRoute
-  ) {}
+  ) {
+  }
 
   async ngOnInit() {
     this.id = 'window-' + Math.random().toString(36).substr(2);
     await this.computeConnector();
     this.createWaterMark();
     this.view.smartEndpoint = await this._appSvc.getSmartEndpoint(this.view);
-    this.loading = false;
+    setTimeout(() => { this.loading = false }, 1000);
   }
 
   createWaterMark() {
@@ -38,8 +39,8 @@ export class ElementContentWindowComponent implements OnInit {
   }
 
   async computeConnector() {
-    const { asset, connectData } = this.view;
+    const { connectData } = this.view;
     this.connector = connectData.connectMethod.component;
-    this.view.connectToken = await this._http.createConnectToken(asset, connectData).toPromise();
+    console.log('Content view is: ', this.view);
   }
 }
