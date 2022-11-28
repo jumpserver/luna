@@ -2,14 +2,11 @@ import {Injectable} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
-import {
-  DataStore,
-  User,
-} from '@app/globals';
+import {DataStore, User} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
-import {AuthInfo, ConnectData, TreeNode, Endpoint, View} from '@app/model';
+import {AuthInfo, ConnectData, TreeNode, Endpoint, View, Asset} from '@app/model';
 import * as CryptoJS from 'crypto-js';
 import {getCookie, setCookie} from '@app/utils/common';
 import {OrganizationService} from './organization';
@@ -70,7 +67,7 @@ export class AppService {
       return;
     }
 
-    // Connection token 方式不用检查过期了
+    // Connection connectToken 方式不用检查过期了
     const token = this.getQueryString('token');
     // Determine whether the user has logged in
     const sessionExpire = getCookie('jms_session_expire');
@@ -125,14 +122,6 @@ export class AppService {
     return this.protocolConnectTypesMap[protocol] || [];
   }
 
-  createPermToken() {
-    const url = '/api/v1/terminal/perm-token/';
-    return {
-      token: '123123123123123'
-    };
-    // return this._http.post(url, {});
-  }
-
   loadPreferData() {
     const protocolPreferData = this._localStorage.get(this.protocolPreferKey);
     if (protocolPreferData && typeof protocolPreferData === 'object') {
@@ -168,22 +157,12 @@ export class AppService {
     this._localStorage.set(this.protocolPreferKey, this.protocolPreferConnectTypes);
   }
 
-  getNodePreferAccount(nodeId: string): string {
+  getAssetPreferAccount(nodeId: string): string {
     return this.assetPreferAccount[nodeId];
   }
 
-  // 根据当前节点信息判断是不是k8s类型，解析id格式
-  getNodeTypeID(node: TreeNode): string {
-    let nodeID = node.id || '';
-    const nodeType = node.meta.data.type || '';
-    if (nodeType === 'k8s') {
-      const curAppID = nodeID.split('&')[0] || '';
-      nodeID = curAppID.substr(curAppID.lastIndexOf('=') + 1) || '';
-    }
-    return nodeID;
-  }
 
-  setNodePreferAccount(nodeId: string, accountId: string) {
+  setAssetPreferAccount(nodeId: string, accountId: string) {
     this.assetPreferAccount[nodeId] = accountId;
 
     try {
@@ -212,7 +191,7 @@ export class AppService {
     }
   }
 
-  setPreLoginSelect(node: TreeNode, outputData: ConnectData) {
+  setPreLoginSelect(asset: Asset, outputData: ConnectData) {
     const tmp = JSON.parse(JSON.stringify(outputData)) as ConnectData;
     if (tmp.manualAuthInfo) {
       tmp.manualAuthInfo.secret = '';
@@ -220,12 +199,12 @@ export class AppService {
     if (tmp.account.actions) {
       tmp.account.actions = [];
     }
-    const key = 'JMS_PL_' + node.id;
+    const key = 'JMS_PL_' + asset.id;
     this._localStorage.set(key, tmp);
   }
 
-  getPreLoginSelect(node: TreeNode): ConnectData {
-    const key = 'JMS_PL_' + node.id;
+  getPreLoginSelect(asset: Asset): ConnectData {
+    const key = 'JMS_PL_' + asset.id;
     const connectData = this._localStorage.get(key) as ConnectData;
     if (!connectData || !connectData.manualAuthInfo) {
       return null;
@@ -236,7 +215,7 @@ export class AppService {
     // 获取手动的密码
     const manualAuth = connectData.manualAuthInfo;
     if (manualAuth.username) {
-      const auths = this.getAccountLocalAuth(node.id, connectData.account.id);
+      const auths = this.getAccountLocalAuth(asset.id, connectData.account.id);
       const matched = auths.filter(item => item.username === manualAuth.username);
       if (matched.length === 1) {
         manualAuth.secret = matched[0].secret;
@@ -245,13 +224,13 @@ export class AppService {
     return connectData;
   }
 
-  delPreLoginSelect(node: TreeNode) {
-    const key = 'JMS_PL_' + node.id;
+  delPreLoginSelect(id) {
+    const key = 'JMS_PL_' + id;
     this._localStorage.delete(key);
   }
 
-  getAccountLocalAuth(nodeId: string, accountUsername: string, decrypt= true): AuthInfo[] {
-    const localKey = `JMS_MA_${accountUsername}_${nodeId}`;
+  getAccountLocalAuth(assetId: string, accountUsername: string, decrypt= true): AuthInfo[] {
+    const localKey = `JMS_MA_${accountUsername}_${assetId}`;
     let auths = this._localStorage.get(localKey);
 
     if (!auths) {
@@ -273,7 +252,7 @@ export class AppService {
     return newAuths;
   }
 
-  saveNodeAccountAuth(nodeId: string, accountId: string, auth: AuthInfo) {
+  saveAssetAccountAuth(assetId: string, accountId: string, auth: AuthInfo) {
     const newAuth = Object.assign({}, auth);
     if (!auth.secret) {
       auth.secret = '';
@@ -281,21 +260,12 @@ export class AppService {
       newAuth.secret = this.encrypt(auth.secret);
     }
 
-    let auths = this.getAccountLocalAuth(nodeId, accountId, false);
-    const localKey = `JMS_MA_${accountId}_${nodeId}`;
+    let auths = this.getAccountLocalAuth(assetId, accountId, false);
+    const localKey = `JMS_MA_${accountId}_${assetId}`;
 
     auths = auths.filter((item) => item.username !== newAuth.username);
     auths.splice(0, 0, newAuth);
     this._localStorage.set(localKey, auths);
-  }
-
-  analysisId(idStr) {
-    const idObject = {};
-    idStr = idStr.split('&');
-    for (let i = 0; i < idStr.length; i++) {
-      idObject[idStr[i].split('=')[0]] = (idStr[i].split('=')[1]);
-    }
-    return idObject;
   }
 
   getSmartEndpoint(view: View): Promise<Endpoint> {
@@ -304,10 +274,10 @@ export class AppService {
       protocol = window.location.protocol.replace(':', '');
     }
     const data = { 'assetId': '', 'sessionId': '', 'token': '' };
-    if (view.token) {
-      data['token'] = view.token;
+    if (view.connectToken) {
+      data['token'] = view.connectToken.id;
     } else {
-      data['assetId'] = view.node.id;
+      data['assetId'] = view.asset.id;
     }
     return this._http.getSmartEndpoint(data, protocol);
   }

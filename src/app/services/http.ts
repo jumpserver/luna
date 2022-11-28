@@ -2,12 +2,14 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
 import {Browser} from '@app/globals';
 import {retryWhen, delay, scan, map, catchError} from 'rxjs/operators';
-import {Account, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam, Endpoint} from '@app/model';
+import {
+  Account, TreeNode, User as _User, Session,
+  ConnectionToken, Endpoint, ConnectData, Asset
+} from '@app/model';
 import {User} from '@app/globals';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
-import {encryptPassword} from '@app/utils/crypto';
 import {CookieService} from 'ngx-cookie-service';
 
 @Injectable()
@@ -108,7 +110,7 @@ export class HttpService {
     let url = '/api/v1/users/profile/';
     const connectionToken = getQueryParamFromURL('token');
     if (connectionToken) {
-      // 解决 /luna/connect?token= 直接方式权限认证问题
+      // 解决 /luna/connect?connectToken= 直接方式权限认证问题
       url += `?token=${connectionToken}`;
     }
     return this.get<_User>(url);
@@ -146,6 +148,11 @@ export class HttpService {
   getMyAssetAccounts(assetId: string) {
     const url = `/api/v1/perms/users/self/assets/${assetId}/accounts/`;
     return this.get<Array<Account>>(url);
+  }
+
+  getAssetDetail(id) {
+    const url = `/api/v1/assets/assets/${id}/`;
+    return this.get<Asset>(url);
   }
 
   favoriteAsset(assetId: string, favorite: boolean) {
@@ -217,44 +224,27 @@ export class HttpService {
     return cleanedParams;
   }
 
-  downloadRDPFile({assetId, appId, accountId}, params: Object) {
-    const url = new URL('/api/v1/authentication/connection-token/rdp/file/', window.location.origin);
-    if (assetId) {
-      url.searchParams.append('asset', assetId);
-    } else {
-      url.searchParams.append('application', appId);
-    }
-    url.searchParams.append('system_user', accountId);
-    params = this.cleanRDPParams(params);
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        url.searchParams.append(k, v);
-      }
-    }
+  createConnectToken(asset: Asset, connectData: ConnectData) {
+    const url = '/api/v1/authentication/connection-token/';
+    const data = {
+      asset: asset.id,
+      account_name: connectData.account.name,
+      protocol: connectData.protocol.name,
+      input_username: connectData.manualAuthInfo.username,
+      input_secret: connectData.manualAuthInfo.secret
+    };
+    return this.post<ConnectionToken>(url, data);
+  }
+
+  downloadRDPFile(token) {
+    const url = new URL(`/api/v1/authentication/connection-token/${token.id}/rdp-file/`, window.location.origin);
     return window.open(url.href);
   }
 
-  getRDPClientUrl({assetId, appId, accountId}, params: Object) {
-    const url = new URL('/api/v1/authentication/connection-token/client-url/', window.location.origin);
-    const data = {};
-    if (assetId) {
-      data['asset'] = assetId;
-    } else {
-      data['application'] = appId;
-    }
-    data['system_user'] = accountId;
-    params = this.cleanRDPParams(params);
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        url.searchParams.append(k, v);
-      }
-    }
-    return this.post(url.href, data).toPromise();
-  }
-
-  getConnectionToken(param: ConnectionTokenParam): Promise<ConnectionToken> {
-    const url = '/api/v1/authentication/connection-token/';
-    return this.post(url, param).toPromise();
+  getLocalClientUrl(token) {
+    console.log('Token id: ', token);
+    const url = new URL(`/api/v1/authentication/connection-token/${token.id}/client-url/`, window.location.origin);
+    return this.get(url.href);
   }
 
   getSmartEndpoint({ assetId, sessionId, token }, protocol ): Promise<Endpoint> {

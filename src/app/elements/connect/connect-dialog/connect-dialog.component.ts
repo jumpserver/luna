@@ -2,7 +2,7 @@ import {Component, OnInit, Inject, ChangeDetectorRef} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {AppService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
-import {ConnectMethod, ConnectData, TreeNode, Account, AuthInfo, ConnectOption, Protocol} from '@app/model';
+import {ConnectMethod, ConnectData, Account, AuthInfo, ConnectOption, Protocol, Asset} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
 
 
@@ -15,7 +15,7 @@ export class ElementConnectDialogComponent implements OnInit {
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
   public protocol: Protocol;
   public protocols: Array<Protocol>;
-  public node: TreeNode;
+  public asset: Asset;
   public outputData: ConnectData = new ConnectData();
   public accounts: Account[];
   public manualAuthInfo: AuthInfo = new AuthInfo();
@@ -35,8 +35,8 @@ export class ElementConnectDialogComponent implements OnInit {
 
   ngOnInit() {
     this.accounts = this.data.accounts;
-    this.node = this.data.node;
-    this.protocols = this.node.meta.data.protocols;
+    this.asset = this.data.asset;
+    this.protocols = this.asset.protocols;
     this.onProtocolChange(this.protocols[0]);
   }
 
@@ -76,13 +76,12 @@ export class ElementConnectDialogComponent implements OnInit {
     this.outputData.protocol = this.protocol;
 
     if (this.autoLogin) {
-      this._appSvc.setPreLoginSelect(this.node, this.outputData);
+      this._appSvc.setPreLoginSelect(this.asset, this.outputData);
     }
 
     this.onSubmit$.next(true);
-    const nodeID = this._appSvc.getNodeTypeID(this.node);
-    this._appSvc.setNodePreferAccount(nodeID, this.accountSelected.id);
-    this._appSvc.setProtocolPreferLoginType('ssh', this.connectMethod.value);
+    this._appSvc.setAssetPreferAccount(this.asset.id, this.accountSelected.id);
+    this._appSvc.setProtocolPreferLoginType(this.protocol.name, this.connectMethod.value);
     this.dialogRef.close(this.outputData);
   }
 

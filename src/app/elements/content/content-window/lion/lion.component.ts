@@ -1,6 +1,6 @@
 import {Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
 import {LogService} from '@app/services';
-import {TreeNode, Account} from '@app/model';
+import {Asset} from '@app/model';
 import {View} from '@app/model';
 
 @Component({
@@ -12,8 +12,7 @@ export class ElementConnectorLionComponent implements OnInit {
   @Input() view: View;
   @ViewChild('terminal', {static: false}) el: ElementRef;
   iframeURL: any;
-  node: TreeNode;
-  sysUser: Account;
+  asset: Asset;
   protocol: string;
   public baseUrl: string;
 
@@ -21,34 +20,15 @@ export class ElementConnectorLionComponent implements OnInit {
   }
 
   ngOnInit() {
-    const {node, protocol, account, smartEndpoint} = this.view;
+    const {asset, protocol, account, smartEndpoint} = this.view;
     this.baseUrl = smartEndpoint.getUrl() ;
-    this.node = node;
-    this.sysUser = account;
+    this.asset = asset;
     this.protocol = protocol;
     this.generateIframeURL();
   }
 
   generateIframeURL() {
-    if (this.iframeURL) {
-      return null;
-    }
-    switch (this.view.connectFrom) {
-      case 'node':
-        this.generateNodeURL();
-        break;
-      case 'token':
-        this.generateTokenURL();
-        break;
-    }
-  }
-
-  generateNodeURL() {
-    this.iframeURL = `${this.baseUrl}/lion/perm-token/?token=${this.view.token}`;
-  }
-
-  generateTokenURL() {
-    this.iframeURL = `${this.baseUrl}/lion/connect-token/?token=${this.view.token}`;
+    this.iframeURL = `${this.baseUrl}/lion/connect/?token=${this.view.connectToken.id}`;
   }
 
   active() {

@@ -61,23 +61,32 @@ export class Node {
   value: string;
 }
 
+class Choice {
+  label: string;
+  value: string;
+}
+
+class Specific {
+  db_name?: string;
+}
+
 export class Asset {
   id: string;
-  hostname: string;
-  ip: string;
+  name: string;
+  address: string;
   comment: string;
-  domain: string;
-  os: string;
-  platform: string;
-  protocols: Array<string>;
+  type: Choice;
+  category: Choice;
+  protocols: Array<Protocol>;
+  specific: Specific;
 }
 
 
 export class ConnectEvt {
-  node: TreeNode;
   action: string;
+  node: TreeNode;
 
-  constructor(node: TreeNode, action: string) {
+  constructor(node, action: string) {
     this.node = node;
     this.action = action;
   }
@@ -107,42 +116,45 @@ export class NavEvt {
 
 export class View {
   id: string;
-  nick: string;
-  connectFrom: string; // token, node, fileManager
+  name: string;
+  connectFrom: string; // connectToken, node, fileManager
   type: string; // database_app, remote_app, asset, k8s_app
   protocol: string;
-  editable: boolean;
   active: boolean;
-  connected: boolean;
-  hide: boolean;
   closed: boolean;
-  node: TreeNode;
+  editable: boolean;
+  connected: boolean;
+  asset: Asset;
   account: Account;
-  token: string;
   termComp: any;
+  connectData: ConnectData;
+  connectToken: ConnectionToken;
   connectMethod: ConnectMethod;
   connectOptions: ConnectOption[];
   smartEndpoint: Endpoint;
 
-  constructor(node: TreeNode, account: Account, connectFrom: string, type: string,
-              protocol: string, connectMethod: ConnectMethod, connectOptions?: any
-  ) {
-    this.connected = true;
-    this.editable = false;
+  constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node') {
     this.closed = false;
-    this.nick = node.name;
-    this.node = node;
-    this.account = account;
+    this.editable = false;
+    this.connected = true;
+    this.name = asset.name;
+    this.asset = asset;
+    this.account = connectInfo.account;
     this.connectFrom = connectFrom;
-    this.type = type;
-    this.protocol = protocol;
-    this.connectMethod = connectMethod;
-    this.connectOptions = connectOptions || [];
+    this.connectToken = connToken;
+    this.connectMethod = connectInfo.connectMethod;
+    this.connectOptions = connectInfo.connectOptions;
+    this.protocol = connectInfo.protocol.name;
+    this.connectData = connectInfo;
   }
 
   getConnectOption(field: string) {
     const filteredField = this.connectOptions.find(i => i.field === field);
     return filteredField ? filteredField.value.toString() : '';
+  }
+
+  toString() {
+    return this.id;
   }
 }
 
@@ -318,7 +330,7 @@ export class ConnectOption {
 
 
 export class ConnectData {
-  node: TreeNode;
+  asset: Asset;
   account: Account;
   protocol: Protocol;
   manualAuthInfo: AuthInfo;
@@ -328,15 +340,12 @@ export class ConnectData {
 
 export class ConnectionToken {
   id: string;
-  secret: string;
-  type: string;
+  value: string;
   protocol: string;
-}
-
-export interface ConnectionTokenParam {
-  system_user: string;
-  asset?: string;
-  application?: string;
+  asset: string;
+  user?: string;
+  account_name: string;
+  expire_time: number;
 }
 
 export class Protocol  {

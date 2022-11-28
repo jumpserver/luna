@@ -169,8 +169,8 @@ class SSHws(ProxyNamespace):
 
     def on_token(self, message):
         # 此处获取token含有的主机的信息
-        logger.debug("On token trigger")
-        token = message.get('token', None)
+        logger.debug("On connectToken trigger")
+        token = message.get('connectToken', None)
         secret = message.get('secret', None)
         size = message.get('size', (80, 24))
         room = self.new_room()

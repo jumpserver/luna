@@ -12,10 +12,10 @@ export class ElementContentTabComponent implements OnInit {
   public iconCls: string;
 
   ngOnInit(): void {
-    if (!this.view.node) {
+    if (!this.view.asset) {
       this.iconCls = 'fa-linux';
     } else {
-      this.iconCls = 'fa-' + this.view.node.iconSkin;
+      this.iconCls = 'fa-' + this.view.asset.type.value;
     }
   }
 
