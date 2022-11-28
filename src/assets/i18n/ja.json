@@ -110,5 +110,7 @@
   "Command line": "命令行",
   "Run it by client": "クライアントで実行する",
   "Name": "めいしょう",
-  "Failed to open address": "アドレスを開くことができませんでした"
+  "Failed to open address": "アドレスを開くことができませんでした",
+  "Normal accounts": "通常のログインアカウント",
+  "Special accounts": "特別ログインアカウント"
 }

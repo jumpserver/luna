@@ -108,5 +108,7 @@
   "Database info": "Database info",
   "Command line": "Command line",
   "Run it by client": "Run it by client",
-  "Name": "Name"
+  "Name": "Name",
+  "Normal accounts": "Normal accounts",
+  "Special accounts": "Special accounts"
 }

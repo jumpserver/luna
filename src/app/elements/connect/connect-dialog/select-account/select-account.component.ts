@@ -24,7 +24,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   public rememberAuth = false;
   public rememberAuthDisabled = false;
   usernameControl = new FormControl();
-  authsOptions: AuthInfo[];
+  localAuthItems: AuthInfo[];
   filteredOptions: AuthInfo[];
   accountManualAuthInit = false;
   usernamePlaceholder: string = 'Username';
@@ -105,7 +105,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         this.accountSelected = this.normalAccounts[0];
       }
       groups.push({
-        name: 'Normal accounts',
+        name: this._i18n.instant('Normal accounts'),
         accounts: this.normalAccounts
       });
     }
@@ -114,7 +114,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         this.accountSelected = this.specialAccounts[0];
       }
       groups.push({
-        name: 'Special accounts',
+        name: this._i18n.instant('Special accounts'),
         accounts: this.specialAccounts
       });
     }
@@ -169,14 +169,19 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   }
 
   onAccountChanged() {
-    if (!this.accountSelected || this.accountSelected['login_mode'] !== 'manual') {
+    if (!this.accountSelected) {
       return;
     }
-    this.manualAuthInfo.username = '';
-    this.manualAuthInfo.secret = '';
-    this.authsOptions = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.id);
-    if (this.authsOptions && this.authsOptions.length > 0) {
-      this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.authsOptions[0]);
+    if (this.accountSelected.username === '@INPUT') {
+      this.manualAuthInfo.username = '';
+    }
+    if (!this.accountSelected.has_secret) {
+      this.manualAuthInfo.secret = '';
+    }
+
+    this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.username);
+    if (this.localAuthItems && this.localAuthItems.length > 0) {
+      this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
     }
     if (!this.manualAuthInfo.username && this.accountSelected.username) {
       this.manualAuthInfo.username = this.accountSelected.username;
@@ -201,7 +206,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
 
   onUsernameChanges() {
     const filterValue = this.manualAuthInfo.username.toLowerCase();
-    this.filteredOptions = this.authsOptions.filter(authInfo => {
+    this.filteredOptions = this.localAuthItems.filter(authInfo => {
       if (authInfo.username.toLowerCase() === filterValue) {
         this.manualAuthInfo = Object.assign(this.manualAuthInfo, authInfo);
       }
@@ -219,6 +224,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   }
 
   getSavedAuthInfos() {
-    this.authsOptions = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.id);
+    this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.id);
   }
 }

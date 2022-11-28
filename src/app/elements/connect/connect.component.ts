@@ -51,7 +51,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       } else {
         node = nodes[1];
       }
-      this.connectNode(node).then();
+      this.connectAsset(node).then();
     });
   }
 
@@ -68,11 +68,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           }
           case 'connect': {
             this._appSvc.delPreLoginSelect(asset.id);
-            this.connectNode(asset).then();
+            this.connectAsset(asset).then();
             break;
           }
           default: {
-            this.connectNode(asset).then();
+            this.connectAsset(asset).then();
           }
         }
       });
@@ -83,7 +83,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     connectEvt.unsubscribe();
   }
 
-  async connectNode(asset) {
+  async connectAsset(asset) {
     if (!asset) {
       return;
     }
