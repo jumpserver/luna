@@ -41,21 +41,16 @@ export class ElementConnectorKokoComponent implements OnInit {
     }
   }
 
-  analysisId(idStr) {
-    const idObject = {};
-    idStr = idStr.split('&');
-    for (let i = 0; i < idStr.length; i++) {
-      idObject[idStr[i].split('=')[0]] = (idStr[i].split('=')[1]);
-    }
-    return idObject;
-  }
-
 
   generateNodeConnectUrl() {
-    const params = new HttpParams();
-    params.set('disableautohash', this.view.getConnectOption('disableautohash'));
-    params.set('token', this.view.token);
-    params.set('_', Date.now().toString());
+    const params = {};
+    params['disableautohash'] = this.view.getConnectOption('disableautohash');
+    params['connectToken'] = this.view.connectToken.id;
+    params['_'] = Date.now().toString();
+
+    const query = Object.entries(params)
+      .map(([key, value]) => { return `${key}=${value}`; })
+      .reduce((a, b) => { return `${a}&${b}`; });
 
     // Todo: K8S
     // if (this.asset.type === 'k8s' && this.node.meta.data.identity) {
@@ -65,7 +60,9 @@ export class ElementConnectorKokoComponent implements OnInit {
     //   }
     // }
 
-    this.iframeURL = `${this.baseUrl}/connect/?` + params.toString();
+    console.log('query', query);
+
+    this.iframeURL = `${this.baseUrl}/connect/?` + query;
   }
 
   generateFileManagerURL() {

@@ -1,5 +1,5 @@
 import {Component, OnInit, Input, ViewChild, ElementRef} from '@angular/core';
-import {ConnectionToken, View} from '@app/model';
+import {View} from '@app/model';
 import {User} from '@app/globals';
 import {AppService, SettingService, HttpService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
@@ -13,7 +13,6 @@ export class ElementContentWindowComponent implements OnInit {
   @Input() view: View;
   @ViewChild('contentWindow', {static: true}) windowRef: ElementRef;
   connector: string; // koko, omnidb, lion
-  token: ConnectionToken;
   loading = true;
   public id: string;
 
@@ -40,9 +39,7 @@ export class ElementContentWindowComponent implements OnInit {
 
   async computeConnector() {
     const { asset, connectData } = this.view;
-    const token = await this._http.createConnectToken(asset, connectData).toPromise();
     this.connector = connectData.connectMethod.component;
-    this.token = token;
-    this.view.token = token;
+    this.view.connectToken = await this._http.createConnectToken(asset, connectData).toPromise();
   }
 }

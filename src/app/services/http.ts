@@ -110,7 +110,7 @@ export class HttpService {
     let url = '/api/v1/users/profile/';
     const connectionToken = getQueryParamFromURL('token');
     if (connectionToken) {
-      // 解决 /luna/connect?token= 直接方式权限认证问题
+      // 解决 /luna/connect?connectToken= 直接方式权限认证问题
       url += `?token=${connectionToken}`;
     }
     return this.get<_User>(url);
@@ -236,40 +236,15 @@ export class HttpService {
     return this.post<ConnectionToken>(url, data);
   }
 
-  downloadRDPFile({assetId, appId, accountId}, params: Object) {
-    const url = new URL('/api/v1/authentication/connection-token/rdp/file/', window.location.origin);
-    if (assetId) {
-      url.searchParams.append('asset', assetId);
-    } else {
-      url.searchParams.append('application', appId);
-    }
-    url.searchParams.append('system_user', accountId);
-    params = this.cleanRDPParams(params);
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        url.searchParams.append(k, v);
-      }
-    }
+  downloadRDPFile(token) {
+    const url = new URL(`/api/v1/authentication/connection-token/${token.id}/rdp-file/`, window.location.origin);
     return window.open(url.href);
   }
 
-  getRDPClientUrl({assetId, accountId}, params: Object) {
-    const url = new URL('/api/v1/authentication/connection-token/client-url/', window.location.origin);
-    const data = {};
-    data['asset'] = assetId;
-    data['login'] = accountId;
-    params = this.cleanRDPParams(params);
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        url.searchParams.append(k, v);
-      }
-    }
-    return this.post(url.href, data).toPromise();
-  }
-
-  getConnectionToken(param: ConnectionTokenParam): Promise<ConnectionToken> {
-    const url = '/api/v1/authentication/connection-token/';
-    return this.post(url, param).toPromise();
+  getLocalClientUrl(token) {
+    console.log('Token id: ', token);
+    const url = new URL(`/api/v1/authentication/connection-token/${token.id}/client-url/`, window.location.origin);
+    return this.get(url.href);
   }
 
   getSmartEndpoint({ assetId, sessionId, token }, protocol ): Promise<Endpoint> {

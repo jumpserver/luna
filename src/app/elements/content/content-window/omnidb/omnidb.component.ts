@@ -29,6 +29,6 @@ export class ElementConnectorOmnidbComponent implements OnInit {
     if (this.iframeURL) {
       return null;
     }
-    this.iframeURL = `${this.baseUrl}/connect/workspace/?token=${this.view.token}`;
+    this.iframeURL = `${this.baseUrl}/connect/workspace/?token=${this.view.connectToken}`;
   }
 }

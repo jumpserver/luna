@@ -117,7 +117,7 @@ export class NavEvt {
 export class View {
   id: string;
   name: string;
-  connectFrom: string; // token, node, fileManager
+  connectFrom: string; // connectToken, node, fileManager
   type: string; // database_app, remote_app, asset, k8s_app
   protocol: string;
   active: boolean;
@@ -126,30 +126,35 @@ export class View {
   connected: boolean;
   asset: Asset;
   account: Account;
-  token: ConnectionToken;
   termComp: any;
   connectData: ConnectData;
+  connectToken: ConnectionToken;
   connectMethod: ConnectMethod;
   connectOptions: ConnectOption[];
   smartEndpoint: Endpoint;
 
-  constructor(asset: Asset, connectInfo: ConnectData, connectFrom: string = 'node') {
+  constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node') {
+    this.closed = false;
+    this.editable = false;
     this.connected = true;
     this.name = asset.name;
     this.asset = asset;
     this.account = connectInfo.account;
     this.connectFrom = connectFrom;
+    this.connectToken = connToken;
     this.connectMethod = connectInfo.connectMethod;
     this.connectOptions = connectInfo.connectOptions;
     this.protocol = connectInfo.protocol.name;
     this.connectData = connectInfo;
-    this.closed = false;
-    this.editable = false;
   }
 
   getConnectOption(field: string) {
     const filteredField = this.connectOptions.find(i => i.field === field);
     return filteredField ? filteredField.value.toString() : '';
+  }
+
+  toString() {
+    return this.id;
   }
 }
 

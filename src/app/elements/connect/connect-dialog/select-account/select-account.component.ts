@@ -14,9 +14,9 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @Input() asset: Asset;
   @Input() accounts: Account[];
   @Input() onSubmit: BehaviorSubject<boolean>;
-  @Output() onSelectAccount: EventEmitter<Account> = new EventEmitter<Account>();
   @Input() onSubmit$: BehaviorSubject<boolean>;
   @Input() manualAuthInfo: AuthInfo;
+  @Output() onSelectAccount: EventEmitter<Account> = new EventEmitter<Account>();
   @ViewChild('username', {static: false}) usernameRef: ElementRef;
   @ViewChild('password', {static: false}) passwordRef: ElementRef;
 
@@ -34,7 +34,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   public groupedAccounts: AccountGroup[];
   public filteredUsersGroups: ReplaySubject<AccountGroup[]> = new ReplaySubject<AccountGroup[]>(1);
   public accountCtl: FormControl = new FormControl();
-  public filteredCtl: FormControl = new FormControl();
+  public accountFilterCtl: FormControl = new FormControl();
   public compareFn = (f1, f2) => f1 && f2 && f1.id === f2.id;
 
   constructor(private _settingSvc: SettingService,
@@ -54,13 +54,11 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.accountSelected = this.accounts[0];
-    console.log('this.accounts', this.accounts);
     this.groupedAccounts = this.groupAccounts();
     this.filteredUsersGroups.next(this.groupedAccounts.slice());
     this.manualAuthInfo.username = this.accountSelected.username.startsWith('@') ? '' : this.accountSelected.username;
 
-    this.filteredCtl.valueChanges
+    this.accountFilterCtl.valueChanges
       .pipe(takeUntil(this._onDestroy))
       .subscribe(() => {
         this.filterAccounts();
@@ -70,6 +68,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this._onDestroy))
       .subscribe(() => {
         this.onSelectAccount.emit(this.accountSelected);
+        this.onAccountChanged();
       });
 
     setTimeout(() => {
@@ -101,14 +100,24 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         accounts: [preferAccount]
       });
     }
-    groups.push({
-      name: 'Normal accounts',
-      accounts: this.normalAccounts
-    });
-    groups.push({
-      name: 'Special accounts',
-      accounts: this.specialAccounts
-    });
+    if (this.normalAccounts.length > 0) {
+      if (!this.accountSelected) {
+        this.accountSelected = this.normalAccounts[0];
+      }
+      groups.push({
+        name: 'Normal accounts',
+        accounts: this.normalAccounts
+      });
+    }
+    if (this.specialAccounts.length > 0) {
+      if (!this.accountSelected) {
+        this.accountSelected = this.specialAccounts[0];
+      }
+      groups.push({
+        name: 'Special accounts',
+        accounts: this.specialAccounts
+      });
+    }
     return groups;
   }
 
@@ -116,7 +125,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     if (!this.groupedAccounts) {
       return;
     }
-    let search = this.filteredCtl.value;
+    let search = this.accountFilterCtl.value;
     const accountsGroupsCopy = this.copyGroupedAccounts(this.groupedAccounts);
 
     if (!search) {

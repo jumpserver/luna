@@ -67,7 +67,7 @@ export class AppService {
       return;
     }
 
-    // Connection token 方式不用检查过期了
+    // Connection connectToken 方式不用检查过期了
     const token = this.getQueryString('token');
     // Determine whether the user has logged in
     const sessionExpire = getCookie('jms_session_expire');
@@ -274,8 +274,8 @@ export class AppService {
       protocol = window.location.protocol.replace(':', '');
     }
     const data = { 'assetId': '', 'sessionId': '', 'token': '' };
-    if (view.token) {
-      data['token'] = view.token;
+    if (view.connectToken) {
+      data['token'] = view.connectToken.id;
     } else {
       data['assetId'] = view.asset.id;
     }

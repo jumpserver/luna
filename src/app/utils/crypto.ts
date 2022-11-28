@@ -38,13 +38,13 @@ export function aesDecrypt(cipherText: string, originKey: string): string {
 
 export function aesEncryptByCsrf(text: string): string {
   const key = getCsrfTokenFromCookie();
-  if (!key) { console.log('Not found csrf token'); }
+  if (!key) { console.log('Not found csrf connectToken'); }
   return aesEncrypt(text, key);
 }
 
 export function aesDecryptByCsrf(cipherText: string): string {
   const key = getCsrfTokenFromCookie();
-  if (!key) { console.log('Not found csrf token'); }
+  if (!key) { console.log('Not found csrf connectToken'); }
   return aesDecrypt(cipherText, key);
 }
 

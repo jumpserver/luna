@@ -1,6 +1,6 @@
 import {Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
 import {LogService} from '@app/services';
-import {TreeNode, Account, Asset} from '@app/model';
+import {Asset} from '@app/model';
 import {View} from '@app/model';
 
 @Component({
@@ -28,7 +28,7 @@ export class ElementConnectorLionComponent implements OnInit {
   }
 
   generateIframeURL() {
-    this.iframeURL = `${this.baseUrl}/lion/connect/?token=${this.view.token}`;
+    this.iframeURL = `${this.baseUrl}/lion/connect/?token=${this.view.connectToken.id}`;
   }
 
   active() {

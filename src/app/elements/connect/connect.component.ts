@@ -3,7 +3,7 @@ import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {AppService, HttpService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
-import {Account, TreeNode, ConnectData, Asset} from '@app/model';
+import {Account, TreeNode, ConnectData, Asset, ConnectionToken} from '@app/model';
 import {View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
@@ -43,18 +43,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (this.hasLoginTo || !loginTo) {
       return;
     }
-    const getTreeNodeHandlerMapper = {
-      asset: 'filterMyGrantedAssetsById',
-      application: 'getMyGrantedAppNodesDetail',
-    };
-
-    const handlerName = getTreeNodeHandlerMapper[tp];
-    if (!handlerName) {
-      alert('未知的类型: ' + tp);
-      return;
-    }
     this.hasLoginTo = true;
-    this._http[handlerName](loginTo).subscribe(nodes => {
+    this._http.filterMyGrantedAssetsById(loginTo).subscribe(nodes => {
       let node;
       if (nodes.length === 1) {
         node = nodes[0];
@@ -106,26 +96,23 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     this._logger.debug('Connect info: ', connectInfo);
     const { type } = connectInfo.connectMethod;
 
+    const connToken = await this._http.createConnectToken(asset, connectInfo).toPromise();
     if (type === 'native') {
-      this.callLocalClient(asset, connectInfo).then();
+      this.callLocalClient(connToken).then();
     } else if (type === 'applet') {
-      this.downloadRDPFile(asset, connectInfo).then();
+      this.downloadRDPFile(connToken).then();
     } else {
-      this.createWebView(asset, connectInfo);
+      this.createWebView(asset, connectInfo, connToken);
     }
   }
 
-  async downloadRDPFile(asset: Asset, connectInfo: ConnectData) {
-    const { account } = connectInfo;
-    const data = { accountId: account.id, appId: '', assetId: asset.id };
-    await this._http.downloadRDPFile(data, this._settingSvc.setting);
+  async downloadRDPFile(connToken: ConnectionToken) {
+    await this._http.downloadRDPFile(connToken);
   }
 
-  async callLocalClient(asset: Asset, connectInfo: ConnectData) {
+  async callLocalClient(connToken: ConnectionToken) {
     this._logger.debug('Call local client');
-    const { account } = connectInfo;
-    const data = { accountId: account.id, assetId: asset.id };
-    const response = await this._http.getRDPClientUrl(data, this._settingSvc.setting);
+    const response = await this._http.getLocalClientUrl(connToken).toPromise();
     const url = response['url'];
 
     launchLocalApp(url, () => {
@@ -140,8 +127,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
   }
 
-  createWebView(asset: Asset, connectInfo: ConnectData) {
-    const view = new View(asset, connectInfo);
+  createWebView(asset: Asset, connectInfo: ConnectData, connToken: ConnectionToken) {
+    const view = new View(asset, connectInfo, connToken);
     this.onNewView.emit(view);
   }
 
@@ -206,7 +193,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   connectFileManager(asset: Asset) {
-    const view = new View(asset, null, 'fileManager');
+    const view = new View(asset, null, null, 'fileManager');
     view.name = '[FILE] ' + asset.name;
     this.onNewView.emit(view);
   }
