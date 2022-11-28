@@ -41,6 +41,5 @@ export class ElementContentWindowComponent implements OnInit {
   async computeConnector() {
     const { connectData } = this.view;
     this.connector = connectData.connectMethod.component;
-    console.log('Content view is: ', this.view);
   }
 }

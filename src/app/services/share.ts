@@ -62,7 +62,6 @@ export class LocalStorageService {
       data = JSON.parse(data);
       return data;
     } catch (e) {
-      console.log('Error get local storage: ', e);
       return null;
     }
   }

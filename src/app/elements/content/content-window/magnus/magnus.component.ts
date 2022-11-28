@@ -46,7 +46,6 @@ export class ElementConnectorMagnusComponent implements OnInit {
   async ngOnInit() {
     const {asset, account, protocol, smartEndpoint, connectToken } = this.view;
     this.token = connectToken;
-    console.log('View: ', this.view);
     this.asset = asset;
     this.account = account;
     this.protocol = protocol;

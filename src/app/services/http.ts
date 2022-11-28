@@ -247,7 +247,6 @@ export class HttpService {
   }
 
   getLocalClientUrl(token) {
-    console.log('Token id: ', token);
     const url = new URL(`/api/v1/authentication/connection-token/${token.id}/client-url/`, window.location.origin);
     return this.get(url.href);
   }

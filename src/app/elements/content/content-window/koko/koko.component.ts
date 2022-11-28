@@ -59,7 +59,6 @@ export class ElementConnectorKokoComponent implements OnInit {
     //     params.set(key, value.toString());
     //   }
     // }
-
     console.log('query', query);
 
     this.iframeURL = `${this.baseUrl}/connect/?` + query;
