@@ -238,7 +238,6 @@ export class HttpService {
       input_username: manualAuthInfo.username,
       input_secret: manualAuthInfo.secret,
       connect_method: connectMethod.value,
-      endpoint_protocol: connectMethod.endpoint_protocol,
     };
     console.log('Request connenet token', data);
     return this.post<ConnectionToken>(url, data);

@@ -173,7 +173,6 @@ export class ConnectMethod {
   value: string;
   type: string;
   component: string;
-  endpoint_protocol: string;
 }
 
 export class DataStore {
@@ -337,6 +336,7 @@ export class ConnectData {
   manualAuthInfo: AuthInfo;
   connectMethod: ConnectMethod;
   connectOptions: ConnectOption[];
+  downloadRDP: boolean;
 }
 
 export class ConnectionToken {

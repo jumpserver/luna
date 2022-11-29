@@ -37,8 +37,11 @@
         >
           <mat-radio-button *ngFor="let method of connectMethods" [value]="method">
             {{ method.label | translate }}
-            <span class="my-tooltip" attr.data-tooltip="{{'Need to use'| translate}}&nbsp;{{ method.label | translate }}">
-            <i *ngIf="method.type === 'native'" class="fa fa-question-circle-o question"></i>
+
+            <span class="my-tooltip" attr.data-tooltip="{{'Click to download rdp file'| translate}}">
+            <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
+               (click)="downloadRDPFile(method)" class="fa fa-question-circle-o question"
+            ></i>
           </span>
           </mat-radio-button>
         </mat-radio-group>
@@ -60,8 +63,13 @@
     </div>
 
     <mat-dialog-actions style="float: right; margin: 20px 0 10px 0; width: 100%">
-      <button mat-raised-button color="primary" style="width: 100%" type="submit" [mat-dialog-close]="outputData"
-              (click)="onConfirm()">
+      <button mat-raised-button
+              color="primary"
+              style="width: 100%"
+              type="submit"
+              [mat-dialog-close]="outputData"
+              (click)="onConfirm()"
+      >
         {{"Login"| translate}}
       </button>
     </mat-dialog-actions>

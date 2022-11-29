@@ -68,20 +68,28 @@ export class ElementConnectDialogComponent implements OnInit {
     }
   }
 
-  onConfirm() {
+  downloadRDPFile(method) {
+    this.connectMethod = method;
+    this.onConfirm(true);
+  }
+
+  onConfirm(downloadRDP = false) {
     this.outputData.account = this.accountSelected;
     this.outputData.connectMethod = this.connectMethod;
     this.outputData.manualAuthInfo = this.manualAuthInfo;
     this.outputData.connectOptions = this.connectOptions;
     this.outputData.protocol = this.protocol;
+    this.outputData.downloadRDP = downloadRDP;
 
-    if (this.autoLogin) {
-      this._appSvc.setPreLoginSelect(this.asset, this.outputData);
+    if (!downloadRDP) {
+      if (this.autoLogin) {
+        this._appSvc.setPreLoginSelect(this.asset, this.outputData);
+      }
+      this._appSvc.setAssetPreferAccount(this.asset.id, this.accountSelected.id);
+      this._appSvc.setProtocolPreferLoginType(this.protocol.name, this.connectMethod.value);
     }
 
     this.onSubmit$.next(true);
-    this._appSvc.setAssetPreferAccount(this.asset.id, this.accountSelected.id);
-    this._appSvc.setProtocolPreferLoginType(this.protocol.name, this.connectMethod.value);
     this.dialogRef.close(this.outputData);
   }
 
