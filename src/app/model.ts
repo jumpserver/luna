@@ -173,6 +173,7 @@ export class ConnectMethod {
   value: string;
   type: string;
   component: string;
+  endpoint_protocol: string;
 }
 
 export class DataStore {
