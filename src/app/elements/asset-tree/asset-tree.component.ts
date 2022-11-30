@@ -72,12 +72,6 @@ export class ElementAssetTreeComponent implements OnInit {
         'hide': this.isk8sNode(),
         'click': this.onMenuConnectNewTab.bind(this)
       }, {
-        'id': 'file-manager',
-        'name': 'File Manager',
-        'fa': 'fa-file',
-        'hide': !this.nodeSupportSSH(),
-        'click': this.onMenuConnectFileManager.bind(this)
-      }, {
         'id': 'favorite',
         'name': 'Favorite',
         'fa': 'fa-star-o',
@@ -101,8 +95,6 @@ export class ElementAssetTreeComponent implements OnInit {
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu', {static: false}) rMenu: ElementRef;
 
-  Data = [];
-  nodes = [];
   setting = {
     view: {
       dblClickExpand: false,
@@ -125,18 +117,12 @@ export class ElementAssetTreeComponent implements OnInit {
     },
   };
   pos = {left: '100px', top: '200px'};
-  hiddenNodes: any;
-  expandNodes: any;
   assetsTree: any;
-  applicationsTree: any;
   isShowRMenu = false;
   rightClickSelectNode: any;
-  hasLoginTo = false;
-  treeFilterSubscription: any;
   isLoadTreeAsync: boolean;
   filterAssetCancel$: Subject<boolean> = new Subject();
   favoriteAssets = [];
-
   assetsTreeHidden = false;
   assetsLoading = true;
   assetsSearchValue = '';
@@ -166,15 +152,15 @@ export class ElementAssetTreeComponent implements OnInit {
       this._dialog.open(DisabledAssetsDialogComponent, config);
       return;
     }
-    this.connectAsset(treeNode);
+    this.connectAsset(treeNode).then();
   }
 
   refreshAssetsTree() {
     this.assetsSearchValue = '';
-    this.initAssetsTree(true).then();
+    this.initAssetTree(true).then();
   }
 
-  async initAssetsTree(refresh?: boolean) {
+  async initAssetTree(refresh?: boolean) {
     const setting = Object.assign({}, this.setting);
     setting['callback'] = {
       onClick: this.debouncedOnAssetsNodeClick.bind(this),
@@ -212,7 +198,7 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   initTree() {
-    this.initAssetsTree(false).then();
+    this.initAssetTree(false).then();
   }
 
   async connectAsset(node: TreeNode) {
@@ -232,25 +218,6 @@ export class ElementAssetTreeComponent implements OnInit {
 
   hideRMenu() {
     this.isShowRMenu = false;
-  }
-
-  nodeSupportSSH() {
-    const host = this.rightClickSelectNode.meta.data;
-    if (!host) {
-      return false;
-    }
-    let findSSHProtocol = false;
-    const protocols = host.protocols || [];
-    if (host.protocol) {
-      protocols.push(host.protocol);
-    }
-    for (let i = 0; i < protocols.length; i++) {
-      const protocol = protocols[i];
-      if (protocol && protocol.startsWith('ssh')) {
-        findSSHProtocol = true;
-      }
-    }
-    return findSSHProtocol;
   }
 
   isAssetFavorite() {
@@ -331,19 +298,9 @@ export class ElementAssetTreeComponent implements OnInit {
     }
   }
 
-  getNodeAsset(node) {
-    return this._http.getAssetDetail(node.id).toPromise();
-  }
-
   onMenuConnect() {
     const node = this.rightClickSelectNode;
     const evt = new ConnectEvt(node, 'connect');
-    connectEvt.next(evt);
-  }
-
-  onMenuConnectFileManager() {
-    const node = this.rightClickSelectNode;
-    const evt = new ConnectEvt(node, 'sftp');
     connectEvt.next(evt);
   }
 
@@ -544,10 +501,6 @@ export class ElementAssetTreeComponent implements OnInit {
   refreshTree(event, type: string) {
     event.stopPropagation();
     this.refreshAssetsTree();
-  }
-
-  clearAllSearchInput() {
-    this.assetsSearchValue = '';
   }
 
   foldTree(type: string) {

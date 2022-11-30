@@ -32,25 +32,38 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   protected _onDestroy = new Subject<void>();
   public accountSelected: Account;
   public groupedAccounts: AccountGroup[];
-  public filteredUsersGroups: ReplaySubject<AccountGroup[]> = new ReplaySubject<AccountGroup[]>(1);
   public accountCtl: FormControl = new FormControl();
   public accountFilterCtl: FormControl = new FormControl();
+  public filteredUsersGroups: ReplaySubject<AccountGroup[]> = new ReplaySubject<AccountGroup[]>(1);
   public compareFn = (f1, f2) => f1 && f2 && f1.id === f2.id;
 
-  constructor(private _settingSvc: SettingService,
-              private _cdRef: ChangeDetectorRef,
-              private _logger: LogService,
+  constructor(private _logger: LogService,
               private _appSvc: AppService,
-              private _localStorage: LocalStorageService,
               private _i18n: I18nService,
+              private _settingSvc: SettingService,
+              private _cdRef: ChangeDetectorRef,
+              private _localStorage: LocalStorageService
   ) {}
 
-  get specialAccounts() {
-    return this.accounts.filter((item) => item.username.startsWith('@'));
+  get noSecretAccounts() {
+    return this.accounts
+      .filter((item) => !item.has_secret)
+      .sort((a, b) => {
+        const eq = +a.username.startsWith('@') - +b.username.startsWith('@');
+        if (eq !== 0) { return eq; }
+        if (a.name === 'root') {
+          return -1;
+        }
+        return a.name.localeCompare(b.name);
+      });
   }
 
-  get normalAccounts() {
-    return this.accounts.filter((item) => !item.username.startsWith('@'));
+  get hasSecretAccounts() {
+    return this.accounts
+      .filter((item) => item.has_secret)
+      .sort((a, b) => {
+        return a.name.localeCompare(b.name);
+      });
   }
 
   ngOnInit() {
@@ -100,22 +113,24 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         accounts: [preferAccount]
       });
     }
-    if (this.normalAccounts.length > 0) {
+
+    if (this.hasSecretAccounts.length > 0) {
       if (!this.accountSelected) {
-        this.accountSelected = this.normalAccounts[0];
+        this.accountSelected = this.hasSecretAccounts[0];
       }
       groups.push({
-        name: this._i18n.instant('Normal accounts'),
-        accounts: this.normalAccounts
+        name: this._i18n.instant('With secret accounts'),
+        accounts: this.hasSecretAccounts
       });
     }
-    if (this.specialAccounts.length > 0) {
+
+    if (this.noSecretAccounts.length > 0) {
       if (!this.accountSelected) {
-        this.accountSelected = this.specialAccounts[0];
+        this.accountSelected = this.noSecretAccounts[0];
       }
       groups.push({
-        name: this._i18n.instant('Special accounts'),
-        accounts: this.specialAccounts
+        name: this._i18n.instant('Manual accounts'),
+        accounts: this.noSecretAccounts
       });
     }
     return groups;
@@ -138,11 +153,9 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       accountsGroupsCopy.filter(group => {
         const showGroup = group.name.toLowerCase().indexOf(search) > -1;
         if (!showGroup) {
-          group.accounts = group.accounts.filter(
-            account => {
-              return account.name.toLowerCase().indexOf(search) > -1;
-            }
-          );
+          group.accounts = group.accounts.filter(account => {
+            return account.name.toLowerCase().indexOf(search) > -1;
+          });
         }
         return group.accounts.length > 0;
       })

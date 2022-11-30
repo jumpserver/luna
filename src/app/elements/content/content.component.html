@@ -37,39 +37,13 @@
 <div #rMenu *ngIf="isShowRMenu" class="view-menu" [style.top]="pos.top" [style.left]="pos.left">
   <table>
     <tbody>
-    <tr class="view-menu__item ">
-      <td class="view-menu__data" (click)="rCloneConnect()"><span class="view-menu__icon fa fa-copy"></span> {{ "Clone Connect"| translate }} </td>
+    <tr *ngFor="let item of rMenuItems()" class="view-menu__item view-menu__item--separator">
+      <ng-template [ngIf]="!item.disabled">
+        <td class="view-menu__data" (click)="item.callback()" >
+          <span class="view-menu__icon fa" [ngClass]="item.icon"></span> {{ item.title | translate }}
+        </td>
+      </ng-template>
     </tr>
-    <tr class="view-menu__item view-menu__item--separator"></tr>
-    <tr class="view-menu__item ">
-      <td class="view-menu__data" (click)="rReconnect()"><span class="view-menu__icon fa fa-refresh"></span> {{ "Reconnect"| translate }} </td>
-    </tr>
-    <tr class="view-menu__item view-menu__item--separator"></tr>
-    <tr class="view-menu__item ">
-      <td class="view-menu__data" (click)="rClose()"> <span class="view-menu__icon fa fa-close "></span> {{ "Close Current Tab"| translate }} </td>
-    </tr>
-    <ng-template [ngIf]="viewList.length>1">
-      <tr class="view-menu__item view-menu__item--separator"></tr>
-      <tr class="view-menu__item ">
-        <td class="view-menu__data" (click)="rCloseAll()"><span class="view-menu__icon fa fa-close"></span> {{ "Close All Tabs"| translate }} </td>
-      </tr>
-      <tr class="view-menu__item view-menu__item--separator"></tr>
-      <tr class="view-menu__item ">
-        <td class="view-menu__data" (click)="rCloseOthers()"><span class="view-menu__icon fa fa-close"></span> {{ "Close Other Tabs"| translate }} </td>
-      </tr>
-    </ng-template>
-    <ng-template [ngIf]="rIdx>0">
-      <tr class="view-menu__item view-menu__item--separator"></tr>
-      <tr class="view-menu__item ">
-        <td class="view-menu__data" (click)="rCloseLeft()"><span class="view-menu__icon fa fa-close"></span> {{ "Close Left Tabs"| translate }} </td>
-      </tr>
-    </ng-template>
-    <ng-template [ngIf]="rIdx!=viewList.length-1">
-      <tr class="view-menu__item view-menu__item--separator"></tr>
-      <tr class="view-menu__item ">
-        <td class="view-menu__data" (click)="rCloseRight()"><span class="view-menu__icon fa fa-close"></span> {{ "Close Right Tabs"| translate }} </td>
-      </tr>
-    </ng-template>
     </tbody>
   </table>
 </div>

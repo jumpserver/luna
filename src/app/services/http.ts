@@ -151,8 +151,8 @@ export class HttpService {
   }
 
   getAssetDetail(id) {
-    const url = `/api/v1/assets/assets/${id}/`;
-    return this.get<Asset>(url);
+    const url = `/api/v1/perms/users/assets/?id=${id}`;
+    return this.get<Asset>(url).pipe(map(res => res[0]));
   }
 
   favoriteAsset(assetId: string, favorite: boolean) {
@@ -199,13 +199,6 @@ export class HttpService {
     return this.get('/api/v1/terminal/commands/', {params: params});
   }
 
-  getUserIdFromToken(token: string) {
-    const params = new HttpParams()
-      .set('user-only', '1')
-      .set('token', token);
-    return this.get('/api/v1/users/connection-token/', {params: params});
-  }
-
   cleanRDPParams(params) {
     const cleanedParams = {};
     const {rdpResolution, rdpFullScreen, rdpDrivesRedirect } = params;
@@ -239,7 +232,6 @@ export class HttpService {
       input_secret: manualAuthInfo.secret,
       connect_method: connectMethod.value,
     };
-    console.log('Request connenet token', data);
     return this.post<ConnectionToken>(url, data);
   }
 

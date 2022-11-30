@@ -195,7 +195,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   connectFileManager(asset: Asset) {
     const view = new View(asset, null, null, 'fileManager');
-    view.name = '[FILE] ' + asset.name;
+    view.name = '[SFTP] ' + asset.name;
     this.onNewView.emit(view);
   }
 }

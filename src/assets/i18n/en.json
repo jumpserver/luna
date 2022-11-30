@@ -109,6 +109,6 @@
   "Command line": "Command line",
   "Run it by client": "Run it by client",
   "Name": "Name",
-  "Normal accounts": "Normal accounts",
-  "Special accounts": "Special accounts"
+  "With secret accounts": "With secret accounts",
+  "Manual accounts": "Manual accounts"
 }

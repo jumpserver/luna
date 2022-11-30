@@ -112,7 +112,7 @@
   "Run it by client": "使用客户端执行",
   "Name": "名称",
   "Failed to open address": "打开地址失败",
-  "Normal accounts": "一般账号",
-  "Special accounts": "特殊账号"
+  "With secret accounts": "托管账号",
+  "Manual accounts": "手动账号"
 }
 

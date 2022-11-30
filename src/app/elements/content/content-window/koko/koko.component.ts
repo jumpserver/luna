@@ -31,8 +31,8 @@ export class ElementConnectorKokoComponent implements OnInit {
   }
 
   generateIframeURL() {
-    switch (this.view.connectFrom) {
-      case 'fileManager':
+    switch (this.view.connectMethod.value) {
+      case 'web_sftp':
         this.generateFileManagerURL();
         break;
       default:
@@ -45,7 +45,7 @@ export class ElementConnectorKokoComponent implements OnInit {
   generateNodeConnectUrl() {
     const params = {};
     params['disableautohash'] = this.view.getConnectOption('disableautohash');
-    params['connectToken'] = this.view.connectToken.id;
+    params['token'] = this.view.connectToken.id;
     params['_'] = Date.now().toString();
 
     const query = Object.entries(params)
@@ -59,12 +59,10 @@ export class ElementConnectorKokoComponent implements OnInit {
     //     params.set(key, value.toString());
     //   }
     // }
-    console.log('query', query);
-
     this.iframeURL = `${this.baseUrl}/connect/?` + query;
   }
 
   generateFileManagerURL() {
-    this.iframeURL = `${this.baseUrl}/elfinder/sftp/${this.asset.id}/`;
+    this.iframeURL = `${this.baseUrl}/elfinder/sftp/?token=${this.view.connectToken.id}&asset=${this.asset.id}`;
   }
 }
