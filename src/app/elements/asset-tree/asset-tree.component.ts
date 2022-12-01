@@ -169,7 +169,7 @@ export class ElementAssetTreeComponent implements OnInit {
     if (this.isLoadTreeAsync) {
       setting['async'] = {
         enable: true,
-        url: '/api/v1/perms/users/nodes/children-with-assets/tree/',
+        url: '/api/v1/perms/users/self/nodes/children-with-assets/tree/',
         autoParam: ['id=key', 'name=n', 'level=lv'],
         type: 'get',
         headers: {

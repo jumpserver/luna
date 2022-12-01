@@ -117,18 +117,18 @@ export class HttpService {
   }
 
   getMyGrantedAssets(keyword) {
-    const url = `/api/v1/perms/users/assets/tree/?search=${keyword}`;
+    const url = `/api/v1/perms/users/self/assets/tree/?search=${keyword}`;
     return this.get<Array<TreeNode>>(url);
   }
 
   filterMyGrantedAssetsById(id: string) {
-    const url = `/api/v1/perms/users/assets/tree/?id=${id}`;
+    const url = `/api/v1/perms/users/self/assets/tree/?id=${id}`;
     return this.get<Array<TreeNode>>(url);
   }
 
   getMyGrantedNodes(async: boolean, refresh?: boolean) {
-    const syncUrl = `/api/v1/perms/users/nodes-with-assets/tree/`;
-    const asyncUrl = `/api/v1/perms/users/nodes/children-with-assets/tree/`;
+    const syncUrl = `/api/v1/perms/users/self/nodes-with-assets/tree/`;
+    const asyncUrl = `/api/v1/perms/users/self/nodes/children-with-assets/tree/`;
     const url = async ? asyncUrl : syncUrl;
     return this.get<Array<TreeNode>>(url).pipe(
       retryWhen(err => err.pipe(
@@ -151,7 +151,7 @@ export class HttpService {
   }
 
   getAssetDetail(id) {
-    const url = `/api/v1/perms/users/assets/?id=${id}`;
+    const url = `/api/v1/perms/users/self/assets/?id=${id}`;
     return this.get<Asset>(url).pipe(map(res => res[0]));
   }
 
