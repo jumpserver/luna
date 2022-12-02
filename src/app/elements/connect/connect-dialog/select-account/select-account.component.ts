@@ -187,6 +187,8 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }
     if (this.accountSelected.username === '@INPUT') {
       this.manualAuthInfo.username = '';
+    } else {
+      this.manualAuthInfo.username = this.accountSelected.username;
     }
     if (!this.accountSelected.has_secret) {
       this.manualAuthInfo.secret = '';
@@ -195,9 +197,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.username);
     if (this.localAuthItems && this.localAuthItems.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
-    }
-    if (!this.manualAuthInfo.username && this.accountSelected.username) {
-      this.manualAuthInfo.username = this.accountSelected.username;
     }
     this.setUsernamePlaceholder();
     this._cdRef.detectChanges();
