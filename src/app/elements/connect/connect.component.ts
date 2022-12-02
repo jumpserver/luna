@@ -62,10 +62,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       }
       this._http.getAssetDetail(evt.node.id).subscribe(asset => {
         switch (evt.action) {
-          case 'sftp': {
-            this.connectFileManager(asset);
-            break;
-          }
           case 'connect': {
             this._appSvc.delPreLoginSelect(asset.id);
             this.connectAsset(asset).then();

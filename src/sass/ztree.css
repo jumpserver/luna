@@ -109,9 +109,11 @@ website:    http://code.google.com/p/jquerytree/
   background-attachment: scroll;
 }
 .ztree li span.button::before {
-  color: #676a6c;
   font-family: FontAwesome;
   padding-top: 10px;
+  padding-left: 2px;
+  display: inline-block;
+  color: #676a6c;
 }
 .ztree li span.button.chk {
   margin: 0px;
@@ -213,179 +215,92 @@ website:    http://code.google.com/p/jquerytree/
 }
 .ztree li span.button.root_open::before {
   content: "\f107";
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
 }
 .ztree li span.button.root_close::before {
   content: "\f105";
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
 }
 .ztree li span.button.roots_open::before {
   content: "\f107";
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
 }
 .ztree li span.button.roots_close::before {
   content: "\f105";
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
 }
 .ztree li span.button.center_open::before {
   content: "\f107";
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
 }
 .ztree li span.button.center_close::before {
   content: "\f105";
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
 }
 .ztree li span.button.bottom_open::before {
   content: "\f107";
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
 }
 .ztree li span.button.bottom_close::before {
   content: "\f105";
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
 }
 .ztree li span.button.root_docu {
   background: none;
 }
 .ztree li span.button.roots_docu::before {
   content: "\f114";
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
-}
-.ztree li span.button.center_docu::before {
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
-}
-.ztree li span.button.bottom_docu::before {
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.noline_docu {
   background: none;
 }
 .ztree li span.button.ico_open::before {
   content: "\f07c";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.ico_close::before {
   content: "\f07b";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.ico_docu::before {
   content: "\f07b";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.file_ico_docu::before {
   content: "\f022";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.linux_ico_docu::before {
   content: "\f17c";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.windows_ico_docu::before {
   content: "\f17a";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.user-tie_ico_close::before {
   content: "\f2be";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.user-tie_ico_open::before {
   content: "\f2be";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.cloud_ico_close::before {
   content: "\f0c2";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.cloud_ico_open::before {
   content: "\f0c2";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.chrome_ico_docu::before {
   content: "\f268";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
+
+.ztree li span.button.k8s_ico_docu {
+  background: url('../assets/icons/k8s.png') no-repeat scroll 0 0 transparent;
+}
+
+.ztree li span.button.mysql_ico_docu {
+  background: url('../assets/icons/mysql.png') no-repeat scroll 0 0 transparent;
+}
+
+.ztree li span.button.oracle_ico_docu::before {
+  content: "\f1c0";
+}
+
+.ztree li span.button.oracle_ico_docu::before {
+  content: "\f1c0";
+}
+
 .ztree li span.button.database_ico_docu::before {
   content: "\f1c0";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.cloud_ico_docu::before {
   content: "\f0c2";
-  font-family: FontAwesome;
-  padding-top: 10px;
-  padding-left: 2px;
-  display: inline-block;
-  color: #676a6c;
 }
 .ztree li span.button.edit {
   margin-left: 4px;
@@ -396,7 +311,6 @@ website:    http://code.google.com/p/jquerytree/
 }
 .ztree li span.button.edit::before {
   content: "\f044";
-  font-family: FontAwesome;
 }
 .ztree li span.button.remove {
   margin-left: 4px;
@@ -407,7 +321,6 @@ website:    http://code.google.com/p/jquerytree/
 }
 .ztree li span.button.remove::before {
   content: "\f1f8";
-  font-family: FontAwesome;
 }
 .ztree li span.button.add {
   margin-left: 4px;
@@ -418,7 +331,6 @@ website:    http://code.google.com/p/jquerytree/
 }
 .ztree li span.button.add::before {
   content: "\f067";
-  font-family: FontAwesome;
 }
 .ztree li span.button.ico_loading {
   margin-right: 2px;
