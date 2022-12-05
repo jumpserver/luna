@@ -345,7 +345,7 @@ export class ConnectionToken {
   protocol: string;
   asset: string;
   user?: string;
-  account_name: string;
+  account: string;
   expire_time: number;
 }
 

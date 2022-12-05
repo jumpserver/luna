@@ -194,6 +194,12 @@
   content: "\f268";
 }
 
+.ztree li span.button {
+  margin-right: 2px;
+  width: 16px;
+  height: 16px;
+}
+
 .ztree li span.button.k8s_ico_docu {
   background: url('./icons/k8s.png') no-repeat scroll 0 0 transparent;
 }

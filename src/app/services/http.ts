@@ -226,7 +226,7 @@ export class HttpService {
     }
     const data = {
       asset: asset.id,
-      account_name: accountName,
+      account: accountName,
       protocol: protocol.name,
       input_username: manualAuthInfo.username,
       input_secret: manualAuthInfo.secret,
