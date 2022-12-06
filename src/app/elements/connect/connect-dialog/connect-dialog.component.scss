@@ -1,5 +1,5 @@
-.mat-radio-button ~ .mat-radio-button {
-  margin-left: 16px;
+.mat-radio-button {
+  margin-right: 16px;
   vertical-align: middle;
 }
 
@@ -15,7 +15,8 @@
 
 .connect-type-group {
   border: solid #cbc9c9 1px;
-  padding: 5px
+  padding: 8px;
+  display: flex;
 }
 
 .auto-connect {
@@ -24,4 +25,34 @@
 
 .question {
   font-size: 14px;
+}
+
+.dialog-body {
+  padding: 0;
+  margin: 0 10px 10px;
+}
+
+.protocol-tab ::ng-deep .mat-tab-link, .protocol-tab  ::ng-deep .mat-tab-label-active {
+  height: 35px !important;
+  width: 100px;
+  //padding: 0 20px !important;
+  min-width: 20px !important;
+}
+
+.dialog-body ::ng-deep .mat-form-field-infix {
+  border-top: 1px;
+}
+
+.mat-dialog-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mat-dialog-title h3 {
+  margin: 0;
+}
+
+.mat-dialog-content {
+  overflow: hidden;
 }

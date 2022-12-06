@@ -25,7 +25,7 @@
   "Backspace as Ctrl+H": "字符终端Backspace As Ctrl+H",
   "Loading": "加载中",
   "Password": "密码",
-  "Please choose a User": "请选择一个用户",
+  "Please choose an account": "请选择一个用户",
   "Please input password": "请输入密码",
   "Reconnect": "重新连接",
   "Search": "搜索",
@@ -71,14 +71,14 @@
   "Kubernetes": "Kubernetes",
   "Command Line": "命令行",
   "Force refresh": "强制刷新",
-  "Select system users": "选择系统用户",
+  "Select account": "选择账号",
   "No matching found": "没有匹配项",
-  "Connect Type": "连接方式",
+  "Connect Method": "连接方式",
   "Need to use": "需要使用",
   "Yes": "是",
   "No": "否",
   "Web Terminal": "Web终端",
-  "Remember in browser": "记住密码到浏览器",
+  "Remember password": "记住密码",
   "Account info": "账号信息",
   "Download": "下载",
   "Tool download": "工具下载",
@@ -111,7 +111,8 @@
   "Command line": "连接命令行",
   "Run it by client": "使用客户端执行",
   "Name": "名称",
-  "Failed to open address": "打开地址失败"
-
+  "Failed to open address": "打开地址失败",
+  "With secret accounts": "托管账号",
+  "Manual accounts": "手动账号"
 }
 

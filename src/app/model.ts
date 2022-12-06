@@ -24,16 +24,18 @@ export class User {
   logined: boolean;
 }
 
-export class SystemUser {
+export class Action {
+  label: string;
+  value: string;
+}
+
+export class Account {
   id: string;
   name: string;
-  login_mode: string;
   username: string;
-  priority: number;
-  protocol: string;
-  password: string;
-  actions: Array<string>;
-  username_same_with_user: boolean;
+  has_secret: boolean;
+  secret: string;
+  actions: Array<Action>;
 }
 
 class TreeNodeMeta {
@@ -59,23 +61,32 @@ export class Node {
   value: string;
 }
 
+class Choice {
+  label: string;
+  value: string;
+}
+
+class Specific {
+  db_name?: string;
+}
+
 export class Asset {
   id: string;
-  hostname: string;
-  ip: string;
+  name: string;
+  address: string;
   comment: string;
-  domain: string;
-  os: string;
-  platform: string;
-  protocols: Array<string>;
+  type: Choice;
+  category: Choice;
+  protocols: Array<Protocol>;
+  specific: Specific;
 }
 
 
 export class ConnectEvt {
-  node: TreeNode;
   action: string;
+  node: TreeNode;
 
-  constructor(node: TreeNode, action: string) {
+  constructor(node, action: string) {
     this.node = node;
     this.action = action;
   }
@@ -105,36 +116,45 @@ export class NavEvt {
 
 export class View {
   id: string;
-  nick: string;
-  connectFrom: string; // token, node, fileManager
+  name: string;
+  connectFrom: string; // connectToken, node, fileManager
   type: string; // database_app, remote_app, asset, k8s_app
   protocol: string;
-  editable: boolean;
   active: boolean;
-  connected: boolean;
-  hide: boolean;
   closed: boolean;
-  node: TreeNode;
-  sysUser: SystemUser;
-  token: string;
-  connectType: ConnectType;
+  editable: boolean;
+  connected: boolean;
+  asset: Asset;
+  account: Account;
   termComp: any;
+  connectData: ConnectData;
+  connectToken: ConnectionToken;
+  connectMethod: ConnectMethod;
   connectOptions: ConnectOption[];
   smartEndpoint: Endpoint;
 
-  constructor(node: TreeNode, user: SystemUser, connectFrom: string,
-              type: string, protocol: string, connectOptions?: any
-  ) {
-    this.connected = true;
-    this.editable = false;
+  constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node') {
     this.closed = false;
-    this.nick = node.name;
-    this.node = node;
-    this.sysUser = user;
+    this.editable = false;
+    this.connected = true;
+    this.name = asset.name;
+    this.asset = asset;
+    this.account = connectInfo.account;
     this.connectFrom = connectFrom;
-    this.type = type;
-    this.protocol = protocol;
-    this.connectOptions = connectOptions || [];
+    this.connectToken = connToken;
+    this.connectMethod = connectInfo.connectMethod;
+    this.connectOptions = connectInfo.connectOptions;
+    this.protocol = connectInfo.protocol.name;
+    this.connectData = connectInfo;
+  }
+
+  getConnectOption(field: string) {
+    const filteredField = this.connectOptions.find(i => i.field === field);
+    return filteredField ? filteredField.value.toString() : '';
+  }
+
+  toString() {
+    return this.id;
   }
 }
 
@@ -148,12 +168,11 @@ export class ViewAction {
   }
 }
 
-export class ConnectType {
-  name: string;
-  id: string;
-  requireXPack: boolean;
-  protocol: string;
-  client: boolean;
+export class ConnectMethod {
+  label: string;
+  value: string;
+  type: string;
+  component: string;
 }
 
 export class DataStore {
@@ -290,15 +309,15 @@ export class Command {
   timestamp: number;
 }
 
-export class SystemUserGroup {
+export class AccountGroup {
   name: string;
   disabled: boolean;
-  systemUsers: SystemUser[];
+  accounts: Account[];
 }
 
 export class AuthInfo {
   username: string;
-  password: string;
+  secret: string;
 }
 
 export class ConnectOption {
@@ -312,24 +331,23 @@ export class ConnectOption {
 
 
 export class ConnectData {
-  node: TreeNode;
-  systemUser: SystemUser;
+  asset: Asset;
+  account: Account;
+  protocol: Protocol;
   manualAuthInfo: AuthInfo;
-  connectType: ConnectType;
+  connectMethod: ConnectMethod;
   connectOptions: ConnectOption[];
+  downloadRDP: boolean;
 }
 
 export class ConnectionToken {
   id: string;
-  secret: string;
-  type: string;
+  value: string;
   protocol: string;
-}
-
-export interface ConnectionTokenParam {
-  system_user: string;
-  asset?: string;
-  application?: string;
+  asset: string;
+  user?: string;
+  account: string;
+  expire_time: number;
 }
 
 export class Protocol  {

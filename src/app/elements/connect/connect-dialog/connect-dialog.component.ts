@@ -1,10 +1,10 @@
-import {Component, OnInit, Inject, ViewChild, ChangeDetectorRef} from '@angular/core';
+import {Component, OnInit, Inject, ChangeDetectorRef} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {AppService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
-import {ConnectType, ConnectData, TreeNode, SystemUser, AuthInfo, ConnectOption} from '@app/model';
-import {ElementManualAuthComponent} from './manual-auth/manual-auth.component';
+import {ConnectMethod, ConnectData, Account, AuthInfo, ConnectOption, Protocol, Asset} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
+
 
 @Component({
   selector: 'elements-asset-tree-dialog',
@@ -12,15 +12,16 @@ import {BehaviorSubject} from 'rxjs';
   styleUrls: ['./connect-dialog.component.scss'],
 })
 export class ElementConnectDialogComponent implements OnInit {
-  @ViewChild('manualAuth', {static: false}) manualAuthRef: ElementManualAuthComponent;
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
-  public node: TreeNode;
+  public protocol: Protocol;
+  public protocols: Array<Protocol>;
+  public asset: Asset;
   public outputData: ConnectData = new ConnectData();
-  public systemUsers: SystemUser[];
+  public accounts: Account[];
   public manualAuthInfo: AuthInfo = new AuthInfo();
-  public systemUserSelected: SystemUser = null;
-  public connectType: ConnectType;
-  public connectTypes = [];
+  public accountSelected: Account = null;
+  public connectMethod: ConnectMethod;
+  public connectMethods = [];
   public autoLogin = false;
   public connectOptions: ConnectOption[] = [];
 
@@ -33,63 +34,62 @@ export class ElementConnectDialogComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.systemUsers = this.data.systemUsers;
-    this.node = this.data.node;
+    this.accounts = this.data.accounts;
+    this.asset = this.data.asset;
+    this.protocols = this.asset.protocols;
+    this.onProtocolChange(this.protocols[0]);
   }
 
-  onSelectSystemUser(systemUser) {
-    this.systemUserSelected = systemUser;
+  onProtocolChange(protocol) {
+    this.protocol = protocol;
+    this.setConnectMethods();
+  }
 
-    if (!systemUser) {
+  onSelectAccount(account) {
+    this.accountSelected = account;
+
+    if (!account) {
       return;
     }
-    this.setConnectTypes();
-    // this._cdRef.detectChanges();
-    setTimeout(() => {
-      if (this.manualAuthRef) {
-        this.manualAuthRef.onSystemUserChanged();
-      }
-    });
   }
 
-  setConnectTypes() {
-    const isRemoteApp = this.node.meta.type === 'application';
-    this.connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[this.systemUserSelected.protocol];
-    this.connectType = this.getPreferConnectType() || this.connectTypes[0];
+  setConnectMethods() {
+    this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
+    this.connectMethod = this.getPreferConnectMethod() || this.connectMethods[0];
   }
 
-  onCancel(): void {
-    this.dialogRef.close();
-  }
-
-  hasRDPClientTypes() {
-    return this.connectType && this.connectType.id === 'rdpClient';
-  }
-
-  getPreferConnectType() {
-    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType(this.systemUserSelected.protocol);
-    const matchedTypes = this.connectTypes.filter((item) => item.id === preferConnectTypeId);
+  getPreferConnectMethod() {
+    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType(this.protocol.name);
+    const matchedTypes = this.connectMethods.filter((item) => item.id === preferConnectTypeId);
     if (matchedTypes.length === 1) {
       return matchedTypes[0];
     } else {
-      return this.connectTypes[0];
+      return this.connectMethods[0];
     }
   }
 
-  onConfirm() {
-    this.outputData.systemUser = this.systemUserSelected;
-    this.outputData.connectType = this.connectType;
+  downloadRDPFile(method) {
+    this.connectMethod = method;
+    this.onConfirm(true);
+  }
+
+  onConfirm(downloadRDP = false) {
+    this.outputData.account = this.accountSelected;
+    this.outputData.connectMethod = this.connectMethod;
     this.outputData.manualAuthInfo = this.manualAuthInfo;
     this.outputData.connectOptions = this.connectOptions;
+    this.outputData.protocol = this.protocol;
+    this.outputData.downloadRDP = downloadRDP;
 
-    if (this.autoLogin) {
-      this._appSvc.setPreLoginSelect(this.node, this.outputData);
+    if (!downloadRDP) {
+      if (this.autoLogin) {
+        this._appSvc.setPreLoginSelect(this.asset, this.outputData);
+      }
+      this._appSvc.setAssetPreferAccount(this.asset.id, this.accountSelected.id);
+      this._appSvc.setProtocolPreferLoginType(this.protocol.name, this.connectMethod.value);
     }
 
     this.onSubmit$.next(true);
-    const nodeID = this._appSvc.getNodeTypeID(this.node);
-    this._appSvc.setNodePreferSystemUser(nodeID, this.systemUserSelected.id);
-    this._appSvc.setProtocolPreferLoginType(this.systemUserSelected.protocol, this.connectType.id);
     this.dialogRef.close(this.outputData);
   }
 

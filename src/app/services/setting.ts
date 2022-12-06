@@ -32,7 +32,7 @@ export class SettingService {
     let url = '/api/v1/settings/public/';
     const connectionToken = getQueryParamFromURL('token');
     if (connectionToken) {
-      // 解决 /luna/connect?token= 直接方式权限认证问题
+      // 解决 /luna/connect?connectToken= 直接方式权限认证问题
       url += `?token=${connectionToken}`;
     }
     this.globalSetting = await this._http.get<any>(url).toPromise();

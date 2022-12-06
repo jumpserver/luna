@@ -1,3 +1,7 @@
+<div *ngIf="debug">
+  <pre style="color: white; padding: 20px">{{ src }}</pre>
+</div>
+
 <div *ngIf="!show" class="container">
   <mat-spinner [diameter]="50" class="loading"></mat-spinner>
 </div>

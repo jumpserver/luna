@@ -1,4 +1,4 @@
-import {Component, OnInit, Output, EventEmitter, OnDestroy} from '@angular/core';
+import {Component, OnInit, OnDestroy} from '@angular/core';
 import {CookieService} from 'ngx-cookie-service';
 import {OrganizationService} from '@app/services';
 import {Organization} from '@app/model';
