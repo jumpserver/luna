@@ -1,5 +1,5 @@
 import {Component, Input, OnInit, OnChanges, Output, EventEmitter} from '@angular/core';
-import {ConnectType, ConnectOption} from '@app/model';
+import {ConnectMethod, ConnectOption} from '@app/model';
 
 @Component({
   selector: 'elements-advanced-option',
@@ -7,8 +7,8 @@ import {ConnectType, ConnectOption} from '@app/model';
   styleUrls: ['./advanced-option.component.scss'],
 })
 export class ElementAdvancedOptionComponent implements  OnInit, OnChanges {
-  @Input() connectType: ConnectType;
-  @Input() systemUserSelected: any;
+  @Input() connectType: ConnectMethod;
+  @Input() accountSelected: any;
   @Output() onOptionsChange = new EventEmitter<ConnectOption[]>();
   public advancedOptions: ConnectOption[] = [];
   public isShowAdvancedOption = false;
@@ -22,7 +22,7 @@ export class ElementAdvancedOptionComponent implements  OnInit, OnChanges {
         type: 'checkbox',
         field: 'disableautohash',
         hidden: () => {
-          return this.connectType.id === 'webCLI' && this.needShowAutoCompletionProtocols.includes(this.systemUserSelected.protocol);
+          return this.connectType.value === 'webCLI' && this.needShowAutoCompletionProtocols.includes(this.accountSelected.protocol);
         },
         label: 'Disable auto completion',
         value: false

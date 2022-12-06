@@ -60,23 +60,17 @@ export class ElementAssetTreeComponent implements OnInit {
   get RMenuList() {
     const menuList = [
       {
-      'id': 'connect',
-      'name': 'Connect',
-      'fa': 'fa-terminal',
-      'hide': false,
-      'click': this.onMenuConnect.bind(this)
-    }, {
+        'id': 'connect',
+        'name': 'Connect',
+        'fa': 'fa-terminal',
+        'hide': false,
+        'click': this.onMenuConnect.bind(this)
+      }, {
         'id': 'new-connection',
         'name': 'Open in new window',
         'fa': 'fa-external-link',
         'hide': this.isk8sNode(),
         'click': this.onMenuConnectNewTab.bind(this)
-      }, {
-        'id': 'file-manager',
-        'name': 'File Manager',
-        'fa': 'fa-file',
-        'hide': !this.nodeSupportSSH(),
-        'click': this.onMenuConnectFileManager.bind(this)
       }, {
         'id': 'favorite',
         'name': 'Favorite',
@@ -101,8 +95,6 @@ export class ElementAssetTreeComponent implements OnInit {
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu', {static: false}) rMenu: ElementRef;
 
-  Data = [];
-  nodes = [];
   setting = {
     view: {
       dblClickExpand: false,
@@ -125,33 +117,18 @@ export class ElementAssetTreeComponent implements OnInit {
     },
   };
   pos = {left: '100px', top: '200px'};
-  hiddenNodes: any;
-  expandNodes: any;
   assetsTree: any;
-  applicationsTree: any;
   isShowRMenu = false;
   rightClickSelectNode: any;
-  hasLoginTo = false;
-  treeFilterSubscription: any;
   isLoadTreeAsync: boolean;
   filterAssetCancel$: Subject<boolean> = new Subject();
   favoriteAssets = [];
-
   assetsTreeHidden = false;
-  applicationsTreeHidden = false;
   assetsLoading = true;
-  applicationsLoading = true;
   assetsSearchValue = '';
-  applicationsSearchValue = '';
-  applicationTreeHasNodes = false;
   currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
 
-  debouncedOnAssetsNodeClick = _.debounce(this.onAssetsNodeClick, 300, {
-    'leading': true,
-    'trailing': false
-  });
-
-  debouncedOnApplicationTreeNodeClick = _.debounce(this.onApplicationTreeNodeClick, 300, {
+  debouncedOnAssetsNodeClick = _.debounce(this.onNodeClick, 300, {
     'leading': true,
     'trailing': false
   });
@@ -164,29 +141,29 @@ export class ElementAssetTreeComponent implements OnInit {
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
-  onAssetsNodeClick(event, treeId, treeNode, clickFlag) {
+  onNodeClick(event, treeId, treeNode, clickFlag) {
     if (treeNode.isParent) {
       this.assetsTree.expandNode(treeNode);
       return;
     }
     if (treeNode.chkDisabled) {
-      this._dialog.open(DisabledAssetsDialogComponent, {
+      const config = {
         height: '200px',
         width: '450px'
-      });
+      };
+      this._dialog.open(DisabledAssetsDialogComponent, config);
       return;
     }
-    this.connectAsset(treeNode);
+    this.connectAsset(treeNode).then();
   }
 
   refreshAssetsTree() {
     this.assetsSearchValue = '';
-    this.initAssetsTree(true).then();
+    this.initAssetTree(true).then();
   }
 
-  async initAssetsTree(refresh?: boolean) {
+  async initAssetTree(refresh?: boolean) {
     const setting = Object.assign({}, this.setting);
-    const myAssetsNodes = [];
     setting['callback'] = {
       onClick: this.debouncedOnAssetsNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
@@ -194,7 +171,7 @@ export class ElementAssetTreeComponent implements OnInit {
     if (this.isLoadTreeAsync) {
       setting['async'] = {
         enable: true,
-        url: '/api/v1/perms/users/nodes/children-with-assets/tree/',
+        url: '/api/v1/perms/users/self/nodes/children-with-assets/tree/',
         autoParam: ['id=key', 'name=n', 'level=lv'],
         type: 'get',
         headers: {
@@ -217,63 +194,17 @@ export class ElementAssetTreeComponent implements OnInit {
       _assetTree.setting.view.expandSpeed = '';
       _assetTree.expandAll(false);
       _assetTree.setting.view.expandSpeed = 'fast';
-      myAssetsNodes.push(_assetTree.getNodes());
       this.assetsTree = _assetTree;
     }, error => {
       this.assetsLoading = false;
     });
   }
 
-  async initApplicationTree() {
-    const setting = Object.assign({
-      async: {
-        enable: true,
-        url: '/api/v1/perms/users/applications/tree/',
-        autoParam: ['id=tree_id', 'parentInfo=parentInfo', 'level=lv'],
-        type: 'get',
-        headers: {
-          'X-JMS-ORG': this.currentOrgID
-        }
-      }
-    }, this.setting);
-    setting['callback'] = {
-      onClick: this.debouncedOnApplicationTreeNodeClick.bind(this),
-      onRightClick: this.onRightClick.bind(this)
-    };
-    this.applicationsLoading = true;
-    this._http.getMyGrantedAppsNodes().subscribe(resp => {
-      const tree = $.fn.zTree.init($('#applicationsTree'), setting, resp);
-      this.applicationsTree = tree;
-      this.applicationTreeHasNodes = resp && resp.length > 1;
-      this.applicationsLoading = false;
-    }, error => {
-      this.applicationsLoading = false;
-    });
-  }
-
-  refreshApplicationTree() {
-    this.applicationsSearchValue = '';
-    if (this.applicationsTree) {
-      this.applicationsTree.destroy();
-      this.initApplicationTree().then();
-    }
-  }
-
-  onApplicationTreeNodeClick(event, treeId, treeNode: TreeNode, clickFlag) {
-    if (!treeNode.isParent) {
-      this._http.getUserProfile().subscribe();
-      this.connectAsset(treeNode);
-    } else {
-      this.applicationsTree.expandNode(treeNode);
-    }
-  }
-
   initTree() {
-    this.initAssetsTree(false).then();
-    this.initApplicationTree().then();
+    this.initAssetTree(false).then();
   }
 
-  connectAsset(node: TreeNode) {
+  async connectAsset(node: TreeNode) {
     const evt = new ConnectEvt(node, 'asset');
     connectEvt.next(evt);
   }
@@ -290,25 +221,6 @@ export class ElementAssetTreeComponent implements OnInit {
 
   hideRMenu() {
     this.isShowRMenu = false;
-  }
-
-  nodeSupportSSH() {
-    const host = this.rightClickSelectNode.meta.data;
-    if (!host) {
-      return false;
-    }
-    let findSSHProtocol = false;
-    const protocols = host.protocols || [];
-    if (host.protocol) {
-      protocols.push(host.protocol);
-    }
-    for (let i = 0; i < protocols.length; i++) {
-      const protocol = protocols[i];
-      if (protocol && protocol.startsWith('ssh')) {
-        findSSHProtocol = true;
-      }
-    }
-    return findSSHProtocol;
   }
 
   isAssetFavorite() {
@@ -395,12 +307,6 @@ export class ElementAssetTreeComponent implements OnInit {
     connectEvt.next(evt);
   }
 
-  onMenuConnectFileManager() {
-    const node = this.rightClickSelectNode;
-    const evt = new ConnectEvt(node, 'sftp');
-    connectEvt.next(evt);
-  }
-
   onMenuConnectNewTab() {
     const node = this.rightClickSelectNode;
     connectOnNewPage(node, false);
@@ -481,16 +387,6 @@ export class ElementAssetTreeComponent implements OnInit {
         tree.expandNode(node, true);
       }
     });
-  }
-
-  filterApplicationsTree(keyword) {
-    if (!this.applicationsTree) {
-      return null;
-    }
-    const filterCallback = (node: TreeNode) => {
-      return node.name.toLowerCase().indexOf(keyword.toLowerCase()) !== -1;
-    };
-    return this.filterTree(keyword, this.applicationsTree, filterCallback);
   }
 
   filterAssetsServer(keyword) {
@@ -600,28 +496,14 @@ export class ElementAssetTreeComponent implements OnInit {
     searchIcon.oninput = _.debounce((e) => {
       e.stopPropagation();
       const value = e.target.value || '';
-      if (type === 'applications') {
-        vm.applicationsSearchValue = value;
-        vm.filterApplicationsTree(value);
-      } else {
-        vm.assetsSearchValue = value;
-        vm.filterAssets(value);
-      }
+      vm.assetsSearchValue = value;
+      vm.filterAssets(value);
     }, 450);
   }
 
   refreshTree(event, type: string) {
     event.stopPropagation();
-    if (type === 'applications') {
-      this.refreshApplicationTree();
-    } else {
-      this.refreshAssetsTree();
-    }
-  }
-
-  clearAllSearchInput() {
-    this.assetsSearchValue = '';
-    this.applicationsSearchValue = '';
+    this.refreshAssetsTree();
   }
 
   foldTree(type: string) {

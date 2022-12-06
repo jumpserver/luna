@@ -1,60 +1,77 @@
-<h1 mat-dialog-title>{{"Connect" | translate}} {{ node.name | truncatechars:30 }}</h1>
+<div>
+  <div mat-dialog-title>
+    <h3>{{"Connect" | translate}} - {{ asset.name | truncatechars:30 }}</h3>
+    <button mat-icon-button aria-label="close dialog" mat-dialog-close="">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
 
-<div (keyup.enter)="onConfirm()" >
-  <elements-select-system-user
-    [node]="node"
-    [systemUsers]="systemUsers"
-    [onSubmit]="onSubmit$"
-    (onSelectSystemUser)="onSelectSystemUser($event)"
-  >
-  </elements-select-system-user>
+  <nav mat-tab-nav-bar style="margin-bottom: 20px" class="protocol-tab" >
+    <a mat-tab-link
+       *ngFor="let p of protocols"
+       (click)="onProtocolChange(p)"
+       [active]="protocol.name === p.name"
+    >
+      {{ p.name | uppercase }}
+    </a>
+  </nav>
 
-  <elements-manual-auth
-    #manualAuth
-    *ngIf="systemUserSelected?.login_mode === 'manual'"
-    [node]="node"
-    [systemUserSelected]="systemUserSelected"
-    [manualAuthInfo]="manualAuthInfo"
-    [onSubmit$]="onSubmit$"
-  >
-  </elements-manual-auth>
+  <div mat-dialog-content (keyup.enter)="onConfirm()" class="dialog-body">
+    <elements-select-account
+      [asset]="asset"
+      [accounts]="accounts"
+      [onSubmit]="onSubmit$"
+      [manualAuthInfo]="manualAuthInfo"
+      (onSelectAccount)="onSelectAccount($event)"
+    >
+    </elements-select-account>
 
-  <div class="connect-type">
-    <label class="zone-label" for="connect-type">{{ "Connect Type" | translate }}</label>
-    <div class="connect-type-group">
-      <mat-radio-group
-        aria-label="Select an option"
-        name="connect-type"
-        [(ngModel)]="connectType"
-        id="connect-type"
-      >
-        <mat-radio-button *ngFor="let type of connectTypes" [value]="type">
-          {{ type.name | translate }}
-          <span class="my-tooltip" attr.data-tooltip="{{'Need to use'| translate}}&nbsp;{{ type.name | translate }}">
-            <i *ngIf="type.client" class="fa fa-question-circle-o question"></i>
+    <div class="connect-type form-field">
+      <label class="zone-label" for="connect-type">{{ "Connect Method" | translate }}</label>
+      <div class="connect-type-group">
+        <mat-radio-group
+          aria-label="Select an option"
+          name="connect-type"
+          [(ngModel)]="connectMethod"
+          id="connect-type"
+        >
+          <mat-radio-button *ngFor="let method of connectMethods" [value]="method">
+            {{ method.label | translate }}
+
+            <span class="my-tooltip" attr.data-tooltip="{{'Click to download rdp file'| translate}}">
+            <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
+               (click)="downloadRDPFile(method)" class="fa fa-question-circle-o question"
+            ></i>
           </span>
-        </mat-radio-button>
-      </mat-radio-group>
+          </mat-radio-button>
+        </mat-radio-group>
+      </div>
     </div>
+
+    <elements-advanced-option
+      [connectType]="connectMethod"
+      [accountSelected]="accountSelected"
+      (onOptionsChange)="onAdvancedOptionChanged($event)"
+    >
+    </elements-advanced-option>
+
+    <div class="auto-connect">
+      <label class="zone-label" style="display: block">{{ "Remember select" | translate }}</label>
+      <mat-checkbox name="auto-login" [(ngModel)]="autoLogin">
+        {{ "Automatic login next" | translate }}
+      </mat-checkbox>
+    </div>
+
+    <mat-dialog-actions style="float: right; margin: 20px 0 10px 0; width: 100%">
+      <button mat-raised-button
+              color="primary"
+              style="width: 100%"
+              type="submit"
+              [mat-dialog-close]="outputData"
+              (click)="onConfirm()"
+      >
+        {{"Login"| translate}}
+      </button>
+    </mat-dialog-actions>
   </div>
-
-  <elements-advanced-option
-    #advancedOption
-    [connectType]="connectType"
-    [systemUserSelected]="systemUserSelected"
-    (onOptionsChange)="onAdvancedOptionChanged($event)"
-  >
-  </elements-advanced-option>
-
-  <div class="auto-connect">
-    <label class="zone-label" style="display: block">{{ "Remember select" | translate }}</label>
-    <mat-checkbox name="auto-login" [(ngModel)]="autoLogin">
-      {{ "Automatic login next" | translate }}
-    </mat-checkbox>
-  </div>
-
-  <mat-dialog-actions  style="float: right; margin: 20px 0 10px 0;">
-    <button mat-raised-button (click)="onCancel()">{{"Cancel"| translate}}</button>
-    <button mat-raised-button color="primary" type="submit" [mat-dialog-close]="outputData" (click)="onConfirm()">{{"Confirm"| translate}}</button>
-  </mat-dialog-actions>
 </div>

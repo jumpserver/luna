@@ -1,7 +1,7 @@
 'use strict';
 import {EventEmitter} from 'events/events';
 import {BehaviorSubject} from 'rxjs';
-import {ConnectEvt, ConnectType, User as _User} from './model';
+import {ConnectEvt, User as _User} from './model';
 import {DataStore as _DataStore, Browser as _Browser, Video as _Video, Monitor as _Monitor} from './model';
 
 export let TermWS = null;
@@ -31,82 +31,3 @@ export const i18n = new Map();
 
 export const connectEvt = new BehaviorSubject<ConnectEvt>(new ConnectEvt(null, null));
 
-export const TYPE_WEB_CLI: ConnectType = {
-  name: 'Web CLI',
-  id: 'webCLI',
-  requireXPack: false,
-  protocol: 'http',
-  client: false
-};
-
-export const TYPE_WEB_GUI: ConnectType = {
-  name: 'Web GUI',
-  id: 'webGUI',
-  requireXPack: false,
-  protocol: 'http',
-  client: false
-};
-
-export const TYPE_DB_GUI: ConnectType = {
-  name: 'Web GUI',
-  id: 'dbGUI',
-  requireXPack: true,
-  protocol: 'http',
-  client: false
-};
-
-export const TYPE_DB_CLIENT: ConnectType = {
-  name: 'DB Client',
-  id: 'dbClient',
-  requireXPack: false,
-  protocol: 'db',
-  client: false
-};
-
-export const TYPE_RDP_CLIENT: ConnectType = {
-  name: 'RDP Client',
-  id: 'rdpClient',
-  requireXPack: true,
-  protocol: 'rdp',
-  client: true
-};
-
-export const TYPE_RDP_FILE: ConnectType = {
-  name: 'RDP File',
-  id: 'rdpFile',
-  requireXPack: true,
-  protocol: 'rdp',
-  client: false
-};
-
-export const TYPE_SSH_CLIENT: ConnectType = {
-  name: 'SSH Client',
-  id: 'sshClient',
-  requireXPack: false,
-  protocol: 'ssh',
-  client: true
-};
-
-export const TYPE_WEB_SFTP: ConnectType = {
-  name: 'WEB Sftp',
-  id: 'webSftp',
-  requireXPack: true,
-  protocol: 'http',
-  client: false
-};
-
-export const ProtocolConnectTypes = {
-  ssh: [TYPE_WEB_CLI, TYPE_SSH_CLIENT],
-  rdp: [TYPE_WEB_GUI, TYPE_RDP_CLIENT, TYPE_RDP_FILE],
-  vnc: [TYPE_WEB_GUI],
-  telnet: [TYPE_WEB_CLI],
-  mysql: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLIENT],
-  sqlserver: [TYPE_WEB_CLI],
-  postgresql: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLIENT],
-  oracle: [TYPE_DB_GUI, TYPE_DB_CLIENT],
-  mariadb: [TYPE_WEB_CLI, TYPE_DB_GUI, TYPE_DB_CLIENT],
-  clickhouse: [TYPE_WEB_CLI],
-  redis: [TYPE_WEB_CLI, TYPE_DB_CLIENT],
-  mongodb: [TYPE_WEB_CLI],
-  k8s: [TYPE_WEB_CLI],
-};
