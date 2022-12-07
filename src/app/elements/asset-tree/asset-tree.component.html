@@ -4,6 +4,7 @@
     <div
       class="tree-banner-left"
       (click)="foldTree('assets')"
+      *ngIf="!this.isK8s"
     >
       <i
         class="fa fa-caret-down tree-icon-rotate"
@@ -16,6 +17,7 @@
       <span
         class="tree-banner-icon-zone"
         [hidden]="assetsTreeHidden"
+        *ngIf="!this.isK8s"
       >
         <a class="tree-search" id="assetsSearchIcon">
           <i

@@ -75,7 +75,7 @@ export class ElementAssetTreeComponent implements OnInit {
         'id': 'favorite',
         'name': 'Favorite',
         'fa': 'fa-star-o',
-        'hide': this.isAssetFavorite() || !this.isAssetNode(),
+        'hide': this.isAssetFavorite() || !this.isAssetNode() || this.isk8sNode(),
         'click': this.onMenuFavorite.bind(this)
       }, {
         'id': 'disfavor',
@@ -92,6 +92,7 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   @Input() query: string;
+  @Input() isK8s:boolean = false;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu', {static: false}) rMenu: ElementRef;
 
@@ -140,6 +141,11 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   onNodeClick(event, treeId, treeNode, clickFlag) {
+    if (!this.isK8s && treeNode.meta.data.platform_type === 'k8s') {
+      window.open(`/luna/k8s?id=${treeNode.id}`);
+      return;
+    }
+    
     if (treeNode.isParent) {
       this.assetsTree.expandNode(treeNode);
       return;
@@ -166,10 +172,17 @@ export class ElementAssetTreeComponent implements OnInit {
       onClick: this.debouncedOnAssetsNodeClick.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
+    const tree_id = this._route.snapshot.queryParams.id;
+    var url = '';
+    if (this.isK8s) {
+      url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?tree_id=${tree_id}`
+    } else {
+      url = '/api/v1/perms/users/self/nodes/children-with-assets/tree/?'
+    }
     if (this.isLoadTreeAsync) {
       setting['async'] = {
         enable: true,
-        url: '/api/v1/perms/users/self/nodes/children-with-assets/tree/',
+        url: url,
         autoParam: ['id=key', 'name=n', 'level=lv'],
         type: 'get',
         headers: {
@@ -181,9 +194,9 @@ export class ElementAssetTreeComponent implements OnInit {
     this._http.getFavoriteAssets().subscribe(resp => {
       this.favoriteAssets = resp.map(i => i.asset);
     });
-
+    const k8sUrl = this.isK8s ? url : undefined;
     this.assetsLoading = true;
-    this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
+    this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh, k8sUrl).subscribe(resp => {
       this.assetsLoading = false;
       if (refresh) {
         this.assetsTree.destroy();
@@ -280,13 +293,12 @@ export class ElementAssetTreeComponent implements OnInit {
     if (!treeNode) {
       return null;
     }
-
-    if (treeNode.isParent && ['container', 'system_user'].indexOf(treeNode.meta.data.identity) === -1) {
+    const metaData = treeNode.meta.data
+    if (treeNode.isParent && ['container', 'account', 'asset'].indexOf(treeNode.meta.data.identity) === -1) {
       this.expandAllChildren(treeId, treeNode, !treeNode.open);
       return;
     }
     this.rightClickSelectNode = treeNode;
-
     if (!treeNode && event.target.tagName.toLowerCase() !== 'button'
       && $(event.target).parents('a').length === 0) {
       this.assetsTree.cancelSelectedNode();

@@ -6,6 +6,7 @@ import {PagesConnectComponent} from './pages/connect/connect.component';
 import {PagesReplayComponent} from './pages/replay/replay.component';
 import {PagesMonitorComponent} from './pages/monitor/monitor.component';
 import {PageMainComponent} from './pages/main/main.component';
+import {PageK8sComponent} from './pages/kubernetes/main.component';
 import {PageSftpComponent} from './pages/sftp/sftp.component';
 
 
@@ -16,6 +17,7 @@ const appRoutes: Routes = [
   {path: 'sftp', component: PageSftpComponent},
   {path: 'undefined', component: PagesBlankComponent},
   {path: '', component: PageMainComponent},
+  {path: 'k8s', component: PageK8sComponent},
   // {path: '**', component: PagesNotFoundComponent}
 ];
 

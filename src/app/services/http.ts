@@ -126,10 +126,11 @@ export class HttpService {
     return this.get<Array<TreeNode>>(url);
   }
 
-  getMyGrantedNodes(async: boolean, refresh?: boolean) {
-    const syncUrl = `/api/v1/perms/users/self/nodes-with-assets/tree/`;
-    const asyncUrl = `/api/v1/perms/users/self/nodes/children-with-assets/tree/`;
-    const url = async ? asyncUrl : syncUrl;
+  getMyGrantedNodes(async: boolean, refresh?: boolean, k8sUrl?: string) {
+    const syncUrl = '/api/v1/perms/users/self/nodes-with-assets/tree/';
+    const asyncUrl = '/api/v1/perms/users/self/nodes/children-with-assets/tree/';
+    var url = async ? asyncUrl : syncUrl;
+    url = k8sUrl ? k8sUrl : url;
     return this.get<Array<TreeNode>>(url).pipe(
       retryWhen(err => err.pipe(
         scan(
