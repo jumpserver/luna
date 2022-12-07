@@ -44,10 +44,13 @@ export class ElementConnectorKokoComponent implements OnInit {
 
   generateNodeConnectUrl() {
     const params = {};
+
     params['disableautohash'] = this.view.getConnectOption('disableautohash');
     params['token'] = this.view.connectToken.id;
+    params['namespace'] = this.view.k8sInfo.namespace;
+    params['pod'] = this.view.k8sInfo.pod;
+    params['container'] = this.view.k8sInfo.container;
     params['_'] = Date.now().toString();
-
     const query = Object.entries(params)
       .map(([key, value]) => { return `${key}=${value}`; })
       .reduce((a, b) => { return `${a}&${b}`; });

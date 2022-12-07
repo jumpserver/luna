@@ -3,7 +3,7 @@ import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {AppService, HttpService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
-import {Account, TreeNode, ConnectData, Asset, ConnectionToken} from '@app/model';
+import {Account, TreeNode, ConnectData, Asset, ConnectionToken, k8sInfo} from '@app/model';
 import {View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
@@ -55,11 +55,65 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
   }
 
+  analysisId(id: string) {
+    const idObject = {};
+    const idList = id.split('&');
+    for (let i = 0; i < idList.length; i++) {
+      idObject[idList[i].split('=')[0]] = (idList[i].split('=')[1]);
+    }
+    return idObject;
+  }
+
+  connectK8sAsset(asset) {
+      const idObject = this.analysisId(asset.id);
+      const assetId = idObject['asset_id'];
+      this._http.getAssetDetail(assetId).subscribe(async asset => {
+        const accounts = await this._http.getMyAssetAccounts(asset.id).toPromise();
+        console.log('accounts', asset)
+        var account = accounts.filter(item => item.username === idObject['account'])
+        if (account.length === 0) {
+          console.log('account is not exist')
+          return;
+        }
+        account = account[0];
+        const connectInfo = new ConnectData();
+        connectInfo.asset = asset
+        connectInfo.account = account,
+        connectInfo.protocol = asset.protocols[0]
+        connectInfo.manualAuthInfo = {
+            'username': account.username,
+            'secret': undefined,
+          }
+        connectInfo.connectMethod = {
+          'type': 'k8s',
+          'value': 'web_cli',
+          'component': 'web_cli',
+          'label': 'k8s'
+
+        }
+
+        const kInfo = new k8sInfo();
+        kInfo.namespace = idObject['namespace'];
+        kInfo.pod = idObject['pod'];
+        kInfo.container = idObject['container'];
+
+        this._logger.debug('Connect info: ', connectInfo);
+        const connToken = await this._http.createConnectToken(asset, connectInfo).toPromise();
+        this.createWebView(asset, connectInfo, connToken, kInfo);
+      });
+  }
+
   subscribeConnectEvent() {
     connectEvt.asObservable().subscribe(evt => {
       if (!evt.node) {
         return;
       }
+      const data = evt.node.meta.data
+      if (data.type === 'k8s' && ['container', 'account'].indexOf(data.identity) !== -1) {
+        this.connectK8sAsset(evt.node)
+        return;
+      }
+      evt.node.id = evt.node.id.replace('asset_id=', '')
       this._http.getAssetDetail(evt.node.id).subscribe(asset => {
         switch (evt.action) {
           case 'connect': {
@@ -111,7 +165,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     this._logger.debug('Call local client');
     const response = await this._http.getLocalClientUrl(connToken).toPromise();
     const url = response['url'];
-
     launchLocalApp(url, () => {
       const downLoadStatus = localStorage.getItem('hasDownLoadApp');
         if (downLoadStatus !== '1') {
@@ -124,8 +177,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
   }
 
-  createWebView(asset: Asset, connectInfo: ConnectData, connToken: ConnectionToken) {
-    const view = new View(asset, connectInfo, connToken);
+  createWebView(asset: Asset, connectInfo: any, connToken: ConnectionToken, k8sInfo?: k8sInfo) {
+    const view = new View(asset, connectInfo, connToken, 'node', k8sInfo);
     this.onNewView.emit(view);
   }
 
@@ -188,6 +241,22 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       });
     });
   }
+
+  // getK8sConnectData(accounts: Account[], asset: Asset): Promise<ConnectData> {
+
+  //   this.outputData.account = this.accountSelected;
+  //   this.outputData.connectMethod = this.connectMethod;
+  //   this.outputData.manualAuthInfo = this.manualAuthInfo;
+  //   this.outputData.connectOptions = this.connectOptions;
+  //   this.outputData.protocol = this.protocol;
+  //   this.outputData.downloadRDP = downloadRDP;
+
+  //   if (isValid) {
+  //     return new Promise<ConnectData>(resolve => {
+  //       resolve(preConnectData);
+  //     });
+  //   }
+  // }
 
   connectFileManager(asset: Asset) {
     const view = new View(asset, null, null, 'fileManager');
