@@ -242,22 +242,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
   }
 
-  // getK8sConnectData(accounts: Account[], asset: Asset): Promise<ConnectData> {
-
-  //   this.outputData.account = this.accountSelected;
-  //   this.outputData.connectMethod = this.connectMethod;
-  //   this.outputData.manualAuthInfo = this.manualAuthInfo;
-  //   this.outputData.connectOptions = this.connectOptions;
-  //   this.outputData.protocol = this.protocol;
-  //   this.outputData.downloadRDP = downloadRDP;
-
-  //   if (isValid) {
-  //     return new Promise<ConnectData>(resolve => {
-  //       resolve(preConnectData);
-  //     });
-  //   }
-  // }
-
   connectFileManager(asset: Asset) {
     const view = new View(asset, null, null, 'fileManager');
     view.name = '[SFTP] ' + asset.name;
