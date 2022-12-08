@@ -41,6 +41,14 @@ export class ElementConnectorKokoComponent implements OnInit {
     }
   }
 
+  setK8sParams(params) {
+    Object.keys(this.view.k8sInfo).forEach(k => {
+      const v = this.view.k8sInfo[k];
+      if (v) {
+        params[k] = this.view.k8sInfo[k];
+      }
+    })
+  }
 
   generateNodeConnectUrl() {
     const params = {};
@@ -48,9 +56,7 @@ export class ElementConnectorKokoComponent implements OnInit {
     params['disableautohash'] = this.view.getConnectOption('disableautohash');
     params['token'] = this.view.connectToken.id;
     if (this.view.k8sInfo) {
-      params['namespace'] = this.view.k8sInfo.namespace;
-      params['pod'] = this.view.k8sInfo.pod;
-      params['container'] = this.view.k8sInfo.container;
+      this.setK8sParams(params);
     }
 
     params['_'] = Date.now().toString();

@@ -69,7 +69,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       const assetId = idObject['asset_id'];
       this._http.getAssetDetail(assetId).subscribe(async asset => {
         const accounts = await this._http.getMyAssetAccounts(asset.id).toPromise();
-        console.log('accounts', asset)
         var account = accounts.filter(item => item.username === idObject['account'])
         if (account.length === 0) {
           console.log('account is not exist')
