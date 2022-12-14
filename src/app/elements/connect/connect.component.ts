@@ -156,6 +156,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     } else if (connectMethod.type === 'native') {
       this.callLocalClient(connToken).then();
     } else {
+      // todo: applet 拉起本地客户端
       this.createWebView(asset, connectInfo, connToken);
     }
   }

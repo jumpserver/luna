@@ -40,6 +40,12 @@ export class ElementContentWindowComponent implements OnInit {
 
   async computeConnector() {
     const { connectData } = this.view;
-    this.connector = connectData.connectMethod.component;
+    if (connectData.connectMethod.component === 'tinker') {
+      // todo:  applet 使用 web gui 的方式
+      this.connector = 'lion';
+    } else {
+      this.connector = connectData.connectMethod.component;
+    }
+
   }
 }
