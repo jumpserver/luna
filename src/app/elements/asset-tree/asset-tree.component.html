@@ -8,10 +8,18 @@
       <i
         class="fa fa-caret-down tree-icon-rotate"
         [ngClass]="{'rotate': assetsTreeHidden}"
-        *ngIf="!this.isK8s"
       ></i>
-      <span class="tree-type-banner-label">
+      <span 
+      class="tree-type-banner-label"
+      *ngIf="!this.isK8s"
+      >
         {{ "My assets"| translate }}
+      </span>
+      <span 
+      class="tree-type-banner-label"
+      *ngIf="this.isK8s"
+      >
+        {{ "Kubernetes"| translate }}
       </span>
     </div>
       <span

@@ -1,6 +1,6 @@
 <div class="sidebar" fxLayout="column" >
-  <div class="organization" *ngIf="this._settingSvc.hasXPack() && !this.isK8s">
-    <elements-organization></elements-organization>
+  <div class="organization" *ngIf="this._settingSvc.hasXPack()">
+    <elements-organization [isK8s]="isK8s"></elements-organization>
   </div>
 
   <div *ngIf="showTree" class="my-assets" [ngClass]="{'has-org': this._settingSvc.hasXPack()}">

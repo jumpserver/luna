@@ -1,4 +1,4 @@
-import {Component, OnInit, OnDestroy} from '@angular/core';
+import {Component, OnInit, OnDestroy, Input} from '@angular/core';
 import {CookieService} from 'ngx-cookie-service';
 import {OrganizationService} from '@app/services';
 import {Organization} from '@app/model';
@@ -11,7 +11,7 @@ import {Organization} from '@app/model';
 export class ElementOrganizationComponent implements OnInit, OnDestroy {
   currentOrg: Organization = {id: '', name: ''};
   organizations = [];
-
+  @Input() isK8s: boolean = false;
   constructor(private _cookie: CookieService,
               private _orgSvc: OrganizationService
   ) {}

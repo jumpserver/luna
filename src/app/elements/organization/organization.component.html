@@ -8,7 +8,11 @@
       <i class="fa fa-sitemap"></i>
       &nbsp;{{currentOrg.name}}
     </mat-select-trigger>
-    <mat-option *ngFor="let i of organizations" class="org-option" [value]="i">
+    <mat-option
+    *ngFor="let i of organizations"
+    class="org-option"
+    [value]="i"
+    >
       {{i.name}}
     </mat-option>
   </mat-select>
