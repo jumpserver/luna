@@ -162,8 +162,8 @@ export class AppService {
   }
 
 
-  setAssetPreferAccount(nodeId: string, accountId: string) {
-    this.assetPreferAccount[nodeId] = accountId;
+  setAssetPreferAccount(nodeId: string, accountAlias: string) {
+    this.assetPreferAccount[nodeId] = accountAlias;
 
     try {
       this._localStorage.set(this.accountPreferKey, this.assetPreferAccount);
@@ -215,7 +215,7 @@ export class AppService {
     // 获取手动的密码
     const manualAuth = connectData.manualAuthInfo;
     if (manualAuth.username) {
-      const auths = this.getAccountLocalAuth(asset.id, connectData.account.id);
+      const auths = this.getAccountLocalAuth(asset.id, connectData.account.alias);
       const matched = auths.filter(item => item.username === manualAuth.username);
       if (matched.length === 1) {
         manualAuth.secret = matched[0].secret;
@@ -252,7 +252,7 @@ export class AppService {
     return newAuths;
   }
 
-  saveAssetAccountAuth(assetId: string, accountId: string, auth: AuthInfo) {
+  saveAssetAccountAuth(assetId: string, accountAlias: string, auth: AuthInfo) {
     const newAuth = Object.assign({}, auth);
     if (!auth.secret) {
       auth.secret = '';
@@ -260,8 +260,8 @@ export class AppService {
       newAuth.secret = this.encrypt(auth.secret);
     }
 
-    let auths = this.getAccountLocalAuth(assetId, accountId, false);
-    const localKey = `JMS_MA_${accountId}_${assetId}`;
+    let auths = this.getAccountLocalAuth(assetId, accountAlias, false);
+    const localKey = `JMS_MA_${accountAlias}_${assetId}`;
 
     auths = auths.filter((item) => item.username !== newAuth.username);
     auths.splice(0, 0, newAuth);

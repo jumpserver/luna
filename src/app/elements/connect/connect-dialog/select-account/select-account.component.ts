@@ -98,7 +98,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
 
   getPreferAccount() {
     const preferId = this._appSvc.getAssetPreferAccount(this.asset.id);
-    const matchedAccounts = this.accounts.find((item) => item.id === preferId);
+    const matchedAccounts = this.accounts.find((item) => item.alias === preferId);
     if (preferId && matchedAccounts) { return matchedAccounts; }
     return null;
   }
@@ -229,13 +229,13 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   subscribeSubmitEvent() {
     this.onSubmit$.subscribe(() => {
       if (this.rememberAuth) {
-        this._logger.debug('Save auth to local storage: ', this.asset.id, this.accountSelected.id, this.manualAuthInfo);
-        this._appSvc.saveAssetAccountAuth(this.asset.id, this.accountSelected.id, this.manualAuthInfo);
+        this._logger.debug('Save auth to local storage: ', this.asset.id, this.accountSelected.alias, this.manualAuthInfo);
+        this._appSvc.saveAssetAccountAuth(this.asset.id, this.accountSelected.alias, this.manualAuthInfo);
       }
     });
   }
 
   getSavedAuthInfos() {
-    this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.id);
+    this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.alias);
   }
 }

@@ -85,7 +85,7 @@ export class ElementConnectDialogComponent implements OnInit {
       if (this.autoLogin) {
         this._appSvc.setPreLoginSelect(this.asset, this.outputData);
       }
-      this._appSvc.setAssetPreferAccount(this.asset.id, this.accountSelected.id);
+      this._appSvc.setAssetPreferAccount(this.asset.id, this.accountSelected.alias);
       this._appSvc.setProtocolPreferLoginType(this.protocol.name, this.connectMethod.value);
     }
 
