@@ -10,7 +10,7 @@ import {OrganizationService, SettingService} from '@app/services';
   styleUrls: ['./left-bar.component.scss'],
 })
 export class ElementLeftBarComponent {
-  @Input() isK8s:boolean = false;
+  @Input() isK8s: boolean = false;
   @Output() menuActive = new EventEmitter();
   showTree = true;
   version = version;

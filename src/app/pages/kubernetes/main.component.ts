@@ -31,13 +31,6 @@ export class PageK8sComponent implements OnInit {
     return this.viewSrv.currentView;
   }
 
-  get showSplitter() {
-    if (this.currentView && this.currentView.type === 'rdp') {
-      return false;
-    }
-    return this.store.showLeftBar;
-  }
-
   ngOnInit(): void {
     this.menus = [
       {
@@ -46,14 +39,6 @@ export class PageK8sComponent implements OnInit {
         click: (name) => this.menuClick(this.settingLayoutWidth, name),
       }
     ];
-  }
-
-  dragSplitBtn(evt) {
-    window.dispatchEvent(new Event('resize'));
-  }
-
-  @HostListener('window:beforeunload', ['$event'])
-  unloadNotification($event: any) {
   }
 
   dragStartHandler($event: IOutputData) {

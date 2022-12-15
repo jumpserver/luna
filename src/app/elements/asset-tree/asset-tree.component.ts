@@ -92,7 +92,7 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   @Input() query: string;
-  @Input() isK8s:boolean = false;
+  @Input() isK8s: boolean = false;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu', {static: false}) rMenu: ElementRef;
 
@@ -147,7 +147,7 @@ export class ElementAssetTreeComponent implements OnInit {
       window.open(`/luna/k8s?id=${treeNode.id}`);
       return;
     }
-    
+
     if (treeNode.isParent) {
       this.assetsTree.expandNode(treeNode);
       return;
@@ -209,7 +209,7 @@ export class ElementAssetTreeComponent implements OnInit {
       if (!this.isK8s) {
         _assetTree.expandAll(false);
       }
-      
+
       _assetTree.setting.view.expandSpeed = 'fast';
       this.assetsTree = _assetTree;
     }, error => {
