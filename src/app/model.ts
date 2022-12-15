@@ -30,7 +30,7 @@ export class Action {
 }
 
 export class Account {
-  id: string;
+  alias: string;
   name: string;
   username: string;
   has_secret: boolean;
