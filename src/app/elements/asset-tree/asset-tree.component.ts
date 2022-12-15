@@ -205,7 +205,11 @@ export class ElementAssetTreeComponent implements OnInit {
       }
       const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
       _assetTree.setting.view.expandSpeed = '';
-      _assetTree.expandAll(false);
+
+      if (!this.isK8s) {
+        _assetTree.expandAll(false);
+      }
+      
       _assetTree.setting.view.expandSpeed = 'fast';
       this.assetsTree = _assetTree;
     }, error => {

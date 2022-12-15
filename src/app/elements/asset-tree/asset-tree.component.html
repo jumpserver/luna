@@ -4,11 +4,11 @@
     <div
       class="tree-banner-left"
       (click)="foldTree('assets')"
-      *ngIf="!this.isK8s"
     >
       <i
         class="fa fa-caret-down tree-icon-rotate"
         [ngClass]="{'rotate': assetsTreeHidden}"
+        *ngIf="!this.isK8s"
       ></i>
       <span class="tree-type-banner-label">
         {{ "My assets"| translate }}
@@ -17,18 +17,19 @@
       <span
         class="tree-banner-icon-zone"
         [hidden]="assetsTreeHidden"
-        *ngIf="!this.isK8s"
       >
         <a class="tree-search" id="assetsSearchIcon">
           <i
             class="fa fa-search tree-banner-icon"
             (click)="treeSearch($event, 'assets')"
+            *ngIf="!this.isK8s"
           ></i>
           <input
             type="text"
             id="assetsSearchInput"
             class="tree-input"
             [(ngModel)]="assetsSearchValue"
+            *ngIf="!this.isK8s"
           />
         </a>
         <i
