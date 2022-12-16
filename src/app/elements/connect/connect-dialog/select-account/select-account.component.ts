@@ -185,21 +185,20 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     if (!this.accountSelected) {
       return;
     }
+    if (this.accountSelected.has_secret) {
+      return;
+    }
     if (this.accountSelected.username === '@INPUT') {
       this.manualAuthInfo.username = '';
     } else {
       this.manualAuthInfo.username = this.accountSelected.username;
     }
-    if (!this.accountSelected.has_secret) {
-      this.manualAuthInfo.secret = '';
-    }
-
+    this.manualAuthInfo.secret = '';
     this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.username);
     if (this.localAuthItems && this.localAuthItems.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
     }
     this.setUsernamePlaceholder();
-    this._cdRef.detectChanges();
     setTimeout(() => {
       if (this.manualAuthInfo.username) {
         this.passwordRef.nativeElement.focus();
@@ -207,6 +206,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         this.usernameRef.nativeElement.focus();
       }
     }, 10);
+    this._cdRef.detectChanges();
   }
 
   onFocus() {

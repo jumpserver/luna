@@ -131,16 +131,43 @@ export class ElementNavComponent implements OnInit {
       name: 'Setting',
       children: [
         {
-          id: 'Setting',
+          id: 'General',
+          name: 'General',
           click: () => {
             this._dialog.open(
               ElementSettingComponent,
               {
                 height: 'auto',
                 width: '500px',
+                data: {type: 'general', name: 'General'}
               });
           },
-          name: 'Setting'
+        },
+        {
+          id: 'GUI',
+          name: this._i18n.instant('GUI'),
+          click: () => {
+            this._dialog.open(
+              ElementSettingComponent,
+              {
+                height: 'auto',
+                width: '500px',
+                data: {type: 'gui', name: 'GUI'}
+              });
+          }
+        },
+        {
+          id: 'CLI',
+          name: this._i18n.instant('CLI'),
+          click: () => {
+            this._dialog.open(
+              ElementSettingComponent,
+              {
+                height: 'auto',
+                width: '500px',
+                data: {type: 'cli', name: 'GUI'}
+              });
+          }
         }
       ]
     },

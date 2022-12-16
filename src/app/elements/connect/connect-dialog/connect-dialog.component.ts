@@ -1,6 +1,6 @@
 import {Component, OnInit, Inject, ChangeDetectorRef} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {AppService, LogService, SettingService} from '@app/services';
+import {AppService, LogService, SettingService, I18nService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {ConnectMethod, ConnectData, Account, AuthInfo, ConnectOption, Protocol, Asset} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
@@ -22,6 +22,7 @@ export class ElementConnectDialogComponent implements OnInit {
   public accountSelected: Account = null;
   public connectMethod: ConnectMethod;
   public connectMethods = [];
+  public groupedConnectMethods = [];
   public autoLogin = false;
   public connectOptions: ConnectOption[] = [];
 
@@ -30,6 +31,7 @@ export class ElementConnectDialogComponent implements OnInit {
               private _cdRef: ChangeDetectorRef,
               private _logger: LogService,
               private _appSvc: AppService,
+              private _i18n: I18nService,
               @Inject(MAT_DIALOG_DATA) public data: any,
   ) {}
 
@@ -55,7 +57,27 @@ export class ElementConnectDialogComponent implements OnInit {
 
   setConnectMethods() {
     this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
+    this.groupedConnectMethods = this.groupConnectMethods();
+    console.log('Methods', this.connectMethods);
     this.connectMethod = this.getPreferConnectMethod() || this.connectMethods[0];
+  }
+
+  groupConnectMethods() {
+    const grouped = [];
+    const types = [
+      ['web', 'Web'],
+      ['native', this._i18n.instant('Native')],
+      ['applet', this._i18n.instant('Applet')],
+    ];
+
+    for (const [tp, label] of types) {
+      const methods = this.connectMethods.filter(m => m.type === tp);
+      if (methods.length > 0) {
+        grouped.push([label, methods]);
+      }
+    }
+    console.log('Grouped: ', grouped);
+    return grouped;
   }
 
   getPreferConnectMethod() {

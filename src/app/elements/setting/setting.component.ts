@@ -1,8 +1,9 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, Inject, OnInit} from '@angular/core';
 import {MatDialogRef} from '@angular/material';
 import {SettingService} from '@app/services';
 import {GlobalSetting, Setting} from '@app/model';
 import {I18nService} from '@app/services/i18n';
+import {MAT_DIALOG_DATA} from '@angular/material/dialog';
 
 
 @Component({
@@ -15,9 +16,11 @@ export class ElementSettingComponent implements OnInit {
   public boolChoices: any[];
   setting: Setting;
   globalSetting: GlobalSetting;
+  type = 'general';
 
   constructor(public dialogRef: MatDialogRef<ElementSettingComponent>,
               private _i18n: I18nService,
+              @Inject(MAT_DIALOG_DATA) public data: any,
               private settingSrv: SettingService) {
     this.boolChoices = [
       {name: _i18n.instant('Yes'), value: '1'},
@@ -32,6 +35,7 @@ export class ElementSettingComponent implements OnInit {
   ngOnInit() {
     this.setting = this.settingSrv.setting;
     this.globalSetting = this.settingSrv.globalSetting;
+    this.type = this.data.type;
     if (!this.setting.backspaceAsCtrlH) {
       this.setting.backspaceAsCtrlH = '0';
     }

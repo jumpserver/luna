@@ -113,6 +113,13 @@
   "Name": "名称",
   "Failed to open address": "打开地址失败",
   "With secret accounts": "托管账号",
-  "Manual accounts": "手动账号"
+  "Manual accounts": "手动账号",
+  "Native": "客户端",
+  "Applet": "远程应用",
+  "GUI": "图形化",
+  "CLI": "命令行",
+  "General": "一般",
+  "Applet connect method": "远程应用连接方式",
+  "Client": "客户端"
 }
 

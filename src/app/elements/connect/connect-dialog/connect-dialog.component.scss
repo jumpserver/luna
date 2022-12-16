@@ -16,7 +16,6 @@
 .connect-type-group {
   border: solid #cbc9c9 1px;
   padding: 8px;
-  display: flex;
 }
 
 .auto-connect {
@@ -55,4 +54,16 @@
 
 .mat-dialog-content {
   overflow: hidden;
+}
+
+.connect-grouped-methods {
+  margin-left: 10px;
+}
+
+.connect-method-item {
+  min-width: 80px;
+}
+
+.connect-grouped-title {
+  width: 70px;
 }

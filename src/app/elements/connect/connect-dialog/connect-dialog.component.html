@@ -27,23 +27,31 @@
     </elements-select-account>
 
     <div class="connect-type form-field">
-      <label class="zone-label" for="connect-type">{{ "Connect Method" | translate }}</label>
+      <label class="zone-label">
+        {{ "Connect Method" | translate }}
+      </label>
       <div class="connect-type-group">
         <mat-radio-group
-          aria-label="Select an option"
-          name="connect-type"
+          *ngFor="let item of groupedConnectMethods"
+          name="connect-method"
+          class="connect-method-group"
           [(ngModel)]="connectMethod"
-          id="connect-type"
+          style="display: block"
         >
-          <mat-radio-button *ngFor="let method of connectMethods" [value]="method">
-            {{ method.label | translate }}
+          <label class="connect-grouped-title">
+            {{ item[0] }}
+          </label>
+          <span class="connect-grouped-methods">
+            <mat-radio-button *ngFor="let method of item[1]" [value]="method" class="connect-method-item">
+              {{ method.label | translate }}
 
-            <span class="my-tooltip" attr.data-tooltip="{{'Click to download rdp file'| translate}}">
-            <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
-               (click)="downloadRDPFile(method)" class="fa fa-question-circle-o question"
-            ></i>
+              <span class="my-tooltip" attr.data-tooltip="{{'Click to download rdp file'| translate}}">
+              <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
+                 (click)="downloadRDPFile(method)" class="fa fa-question-circle-o question"
+              ></i>
+            </span>
+            </mat-radio-button>
           </span>
-          </mat-radio-button>
         </mat-radio-group>
       </div>
     </div>

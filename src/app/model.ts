@@ -270,6 +270,7 @@ export class Setting {
   quickPaste = '0';
   sqlClient = '1';
   commandExecution: boolean = true;
+  appletConnectMethod: string = 'client';
 }
 
 
