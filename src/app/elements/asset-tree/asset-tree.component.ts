@@ -175,11 +175,11 @@ export class ElementAssetTreeComponent implements OnInit {
       onRightClick: this.onRightClick.bind(this)
     };
     const tree_id = this._route.snapshot.queryParams.id;
-    var url = '';
+    let url = '';
     if (this.isK8s) {
-      url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?tree_id=${tree_id}`
+      url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?tree_id=${tree_id}`;
     } else {
-      url = '/api/v1/perms/users/self/nodes/children-with-assets/tree/?'
+      url = '/api/v1/perms/users/self/nodes/children-with-assets/tree/?';
     }
     if (this.isLoadTreeAsync) {
       setting['async'] = {
@@ -199,20 +199,16 @@ export class ElementAssetTreeComponent implements OnInit {
     const k8sUrl = this.isK8s ? url : undefined;
     this.assetsLoading = true;
     this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh, k8sUrl).subscribe(resp => {
-      this.assetsLoading = false;
       if (refresh) {
+        this.assetsTree.expandAll(false);
         this.assetsTree.destroy();
       }
-      const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
-      _assetTree.setting.view.expandSpeed = '';
-
-      if (!this.isK8s) {
-        _assetTree.expandAll(false);
-      }
-
-      _assetTree.setting.view.expandSpeed = 'fast';
-      this.assetsTree = _assetTree;
+      setTimeout(() => {
+        this.assetsTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
+      }, 100);
     }, error => {
+      console.error('Get tree error: ', error);
+    }, () => {
       this.assetsLoading = false;
     });
   }

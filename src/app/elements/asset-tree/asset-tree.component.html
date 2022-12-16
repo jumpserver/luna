@@ -1,27 +1,27 @@
 <div class="tree-container">
   <div class="tree-type open-tree" [ngClass]="{'tree-type-asset': assetsTreeHidden}" >
     <span class="tree-type-banner">
-    <div
-      class="tree-banner-left"
-      (click)="foldTree('assets')"
-    >
-      <i
-        class="fa fa-caret-down tree-icon-rotate"
-        [ngClass]="{'rotate': assetsTreeHidden}"
-      ></i>
-      <span 
-      class="tree-type-banner-label"
-      *ngIf="!this.isK8s"
+      <div
+        class="tree-banner-left"
+        (click)="foldTree('assets')"
       >
-        {{ "My assets"| translate }}
-      </span>
-      <span 
-      class="tree-type-banner-label"
-      *ngIf="this.isK8s"
-      >
-        {{ "Kubernetes"| translate }}
-      </span>
-    </div>
+        <i
+          class="fa fa-caret-down tree-icon-rotate"
+          [ngClass]="{'rotate': assetsTreeHidden}"
+        ></i>
+        <span
+          class="tree-type-banner-label"
+          *ngIf="!this.isK8s"
+        >
+          {{ "My assets"| translate }}
+        </span>
+        <span
+          class="tree-type-banner-label"
+          *ngIf="this.isK8s"
+        >
+          {{ "Kubernetes"| translate }}
+        </span>
+      </div>
       <span
         class="tree-banner-icon-zone"
         [hidden]="assetsTreeHidden"
