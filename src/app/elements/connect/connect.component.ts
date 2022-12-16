@@ -71,25 +71,24 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         const accounts = await this._http.getMyAssetAccounts(asset.id).toPromise();
         var account = accounts.filter(item => item.username === idObject['account'])
         if (account.length === 0) {
-          console.log('account is not exist')
+          console.log('account is not exist');
           return;
         }
         account = account[0];
         const connectInfo = new ConnectData();
-        connectInfo.asset = asset
-        connectInfo.account = account,
-        connectInfo.protocol = asset.protocols[0]
+        connectInfo.asset = asset;
+        connectInfo.account = account;
+        connectInfo.protocol = asset.protocols[0];
         connectInfo.manualAuthInfo = {
             'username': account.username,
             'secret': undefined,
-          }
+        };
         connectInfo.connectMethod = {
           'type': 'k8s',
           'value': 'web_cli',
           'component': 'web_cli',
-          'label': 'k8s'
-
-        }
+          'label': 'k8s',
+        };
 
         const kInfo = new k8sInfo();
         kInfo.namespace = idObject['namespace'];
