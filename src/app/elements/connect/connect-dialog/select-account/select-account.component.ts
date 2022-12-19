@@ -16,7 +16,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @Input() onSubmit: BehaviorSubject<boolean>;
   @Input() onSubmit$: BehaviorSubject<boolean>;
   @Input() manualAuthInfo: AuthInfo;
-  @Output() onSelectAccount: EventEmitter<Account> = new EventEmitter<Account>();
+  @Output() accountSelectedChange: EventEmitter<Account> = new EventEmitter<Account>();
   @ViewChild('username', {static: false}) usernameRef: ElementRef;
   @ViewChild('password', {static: false}) passwordRef: ElementRef;
 
@@ -80,7 +80,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this.accountCtl.valueChanges
       .pipe(takeUntil(this._onDestroy))
       .subscribe(() => {
-        this.onSelectAccount.emit(this.accountSelected);
+        this.accountSelectedChange.emit(this.accountSelected);
         this.onAccountChanged();
       });
 
@@ -96,21 +96,21 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this._onDestroy.complete();
   }
 
-  getPreferAccount() {
-    const preferId = this._appSvc.getAssetPreferAccount(this.asset.id);
-    const matchedAccounts = this.accounts.find((item) => item.alias === preferId);
-    if (preferId && matchedAccounts) { return matchedAccounts; }
-    return null;
+  getPreAccountSelected() {
+    const preConnectData = this._appSvc.getPreConnectData(this.asset);
+    if (preConnectData && preConnectData.account) {
+      return this.accounts.find(item => item.alias === preConnectData.account.alias);
+    }
   }
 
   groupAccounts() {
     const groups = [];
-    const preferAccount: any = this.getPreferAccount();
-    if (preferAccount) {
-      this.accountSelected = preferAccount;
+    const preAccountSelected = this.getPreAccountSelected();
+    if (preAccountSelected) {
+      this.accountSelected = preAccountSelected;
       groups.push({
         name: this._i18n.instant('Last login'),
-        accounts: [preferAccount]
+        accounts: [preAccountSelected]
       });
     }
 
@@ -223,15 +223,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         this.manualAuthInfo = Object.assign(this.manualAuthInfo, authInfo);
       }
       return authInfo.username.toLowerCase().includes(filterValue);
-    });
-  }
-
-  subscribeSubmitEvent() {
-    this.onSubmit$.subscribe(() => {
-      if (this.rememberAuth) {
-        this._logger.debug('Save auth to local storage: ', this.asset.id, this.accountSelected.alias, this.manualAuthInfo);
-        this._appSvc.saveAssetAccountAuth(this.asset.id, this.accountSelected.alias, this.manualAuthInfo);
-      }
     });
   }
 

@@ -80,14 +80,15 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       connectInfo.account = account;
       connectInfo.protocol = asset.protocols[0];
       connectInfo.manualAuthInfo = {
-          'username': account.username,
-          'secret': undefined,
+        alias: account.alias,
+        username: account.username,
+        secret: undefined,
       };
       connectInfo.connectMethod = {
-        'type': 'k8s',
-        'value': 'web_cli',
-        'component': 'web_cli',
-        'label': 'k8s'
+        type: 'k8s',
+        value: 'web_cli',
+        component: 'web_cli',
+        label: 'k8s'
       };
 
       const kInfo = new k8sInfo();
@@ -107,16 +108,19 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         return;
       }
       const data = evt.node.meta.data;
-      if (data.type === 'k8s' && ['container', 'account'].indexOf(data.identity) !== -1) {
-        this.connectK8sAsset(evt.node);
-        return;
-      }
-      evt.node.id = evt.node.id.replace('asset_id=', '');
       this._http.getAssetDetail(evt.node.id).subscribe(asset => {
         switch (evt.action) {
           case 'connect': {
-            this._appSvc.delPreLoginSelect(asset.id);
+            this._appSvc.disableAutoConnect(asset.id);
             this.connectAsset(asset).then();
+            break;
+          }
+          case 'k8s': {
+            if (data.type === 'k8s' && ['container', 'account'].indexOf(data.identity) !== -1) {
+              this.connectK8sAsset(evt.node);
+              return;
+            }
+            evt.node.id = evt.node.id.replace('asset_id=', '');
             break;
           }
           default: {
@@ -181,24 +185,27 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     this.onNewView.emit(view);
   }
 
-  checkPreConnectData(asset: Asset, accounts: Account[], preData: ConnectData): Boolean {
+  checkPreConnectDataForAuto(asset: Asset, accounts: Account[], preData: ConnectData): Boolean {
     if (!preData || !preData.account || preData.asset) {
       this._logger.debug('No account or node');
       return false;
     }
-    // 验证系统用户是否有效
-    const preAccount = preData.account;
-    const inAccounts = accounts.filter(item => {
-      return item.username === preAccount.username;
-    });
-    if (inAccounts.length !== 1) {
-      this._logger.debug('System user may be not valid');
+    if (!preData.autoLogin) {
+      this._logger.debug('Not auto login');
       return false;
     }
-    // 验证登录
-    const account = inAccounts[0];
+    // 验证账号是否有效
+    const preAccount = preData.account;
+    const account = accounts.find(item => {
+      return item.alias === preAccount.alias;
+    });
+    if (!account) {
+      this._logger.debug('Account may be not valid');
+      return false;
+    }
+    // 验证登录信息
     const preAuth = preData.manualAuthInfo;
-    if (!account.has_secret && !preAuth.secret) {
+    if (!account.has_secret && (!preAuth || !preAuth.secret)) {
       this._logger.debug('Account no manual auth');
       return false;
     }
@@ -208,19 +215,19 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       this._logger.debug('No matched connect types');
       return false;
     }
-    const inConnectMethod = connectMethods.filter(item => {
-      return item.id === preData.connectMethod.value;
+    const connectMethod = connectMethods.find(item => {
+      return item.value === preData.connectMethod.value;
     });
-    if (inConnectMethod.length !== 1) {
-      this._logger.error('No matched connect type, may be changed');
+    if (!connectMethod) {
+      this._logger.error('No matched connect type, may be changed: ', preData.connectMethod.value);
       return false;
     }
     return true;
   }
 
   getConnectData(accounts: Account[], asset: Asset): Promise<ConnectData> {
-    const preConnectData = this._appSvc.getPreLoginSelect(asset);
-    const isValid = this.checkPreConnectData(asset, accounts, preConnectData);
+    const preConnectData = this._appSvc.getPreConnectData(asset);
+    const isValid = this.checkPreConnectDataForAuto(asset, accounts, preConnectData);
     if (isValid) {
       return new Promise<ConnectData>(resolve => {
         resolve(preConnectData);
@@ -231,7 +238,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       minHeight: '300px',
       height: 'auto',
       width: '600px',
-      data: {accounts, asset}
+      data: {accounts, asset, preConnectData}
     });
 
     return new Promise<ConnectData>(resolve => {

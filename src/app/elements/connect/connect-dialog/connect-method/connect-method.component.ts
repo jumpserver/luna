@@ -36,8 +36,12 @@ export class ElementConnectMethodComponent implements OnInit {
     this.setConnectMethods();
   }
 
-  get currentConnectMethodTypeIndex() {
-    return this.connectMethodTypes.map((item) => item.value).indexOf(this.connectMethod.type);
+  currentConnectMethodTypeIndex() {
+    const i = this.connectMethodTypes.map((item) => item.value).indexOf(this.connectMethod.type);
+    if (i === -1) {
+      return 0;
+    }
+    return i;
   }
 
   onConnectMethodTypeChange(value) {
@@ -47,7 +51,9 @@ export class ElementConnectMethodComponent implements OnInit {
   setConnectMethods() {
     this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
     this.groupConnectMethods();
-    this.connectMethod = this.getPreferConnectMethod() || this.connectMethods[0];
+    if (!this.connectMethod || !this.connectMethod.value) {
+      this.connectMethod = this.connectMethods[0];
+    }
   }
 
   groupConnectMethods() {
@@ -62,16 +68,6 @@ export class ElementConnectMethodComponent implements OnInit {
     }
     this.connectMethodTypes = connectMethodTypes.filter((item) => item['methods'].length > 0);
     // return connectMethodTypes;
-  }
-
-  getPreferConnectMethod() {
-    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType(this.protocol.name);
-    const matchedTypes = this.connectMethods.filter((item) => item.id === preferConnectTypeId);
-    if (matchedTypes.length === 1) {
-      return matchedTypes[0];
-    } else {
-      return this.connectMethods[0];
-    }
   }
 
   downloadRDPFile(method) {

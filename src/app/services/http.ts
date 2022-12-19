@@ -225,7 +225,7 @@ export class HttpService {
       asset: asset.id,
       account: account.alias,
       protocol: protocol.name,
-      input_username: manualAuthInfo.username,
+      input_username: account.username || manualAuthInfo.username,
       input_secret: manualAuthInfo.secret,
       connect_method: connectMethod.value,
     };

@@ -4,10 +4,12 @@
   </label>
   <div class="connect-type-group">
     <mat-tab-group
-      [selectedIndex]="currentConnectMethodTypeIndex"
+      [selectedIndex]="currentConnectMethodTypeIndex()"
       (selectedIndexChange)="onConnectMethodTypeChange($event)"
       animationDuration="0ms"
       dynamicHeight
+      mat-stretch-tabs="true"
+      mat-align-tabs="center"
     >
       <mat-tab
         *ngFor="let item of connectMethodTypes "

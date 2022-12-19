@@ -327,6 +327,7 @@ export class AccountGroup {
 }
 
 export class AuthInfo {
+  alias: string;
   username: string;
   secret: string;
 }
@@ -349,6 +350,7 @@ export class ConnectData {
   connectMethod: ConnectMethod;
   connectOptions: ConnectOption[];
   downloadRDP: boolean;
+  autoLogin: boolean;
 }
 
 export class ConnectionToken {

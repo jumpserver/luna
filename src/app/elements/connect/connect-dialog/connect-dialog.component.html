@@ -22,7 +22,7 @@
       [accounts]="accounts"
       [onSubmit]="onSubmit$"
       [manualAuthInfo]="manualAuthInfo"
-      (onSelectAccount)="onSelectAccount($event)"
+      (accountSelectedChange)="onSelectAccount($event)"
     >
     </elements-select-account>
 
@@ -30,11 +30,12 @@
       class="connect-method-zone"
       [protocol]="protocol"
       [(connectMethod)]="connectMethod"
+      (onDownloadRDPFile)="onConfirm(true)"
     >
     </elements-connect-method>
 
     <elements-advanced-option
-      [connectType]="connectMethod"
+      [connectMethod]="connectMethod"
       [accountSelected]="accountSelected"
       (onOptionsChange)="onAdvancedOptionChanged($event)"
     >

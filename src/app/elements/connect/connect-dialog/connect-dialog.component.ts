@@ -23,6 +23,7 @@ export class ElementConnectDialogComponent implements OnInit {
   public autoLogin = false;
   public connectOptions: ConnectOption[] = [];
   public connectMethod: ConnectMethod = new ConnectMethod();
+  public preConnectData: ConnectData = new ConnectData();
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
@@ -36,15 +37,34 @@ export class ElementConnectDialogComponent implements OnInit {
   ngOnInit() {
     this.accounts = this.data.accounts;
     this.asset = this.data.asset;
+    this.preConnectData = this.data.preConnectData;
     this.protocols = this.asset.protocols;
-    this.onProtocolChange(this.protocols[0]);
+    this.setDefaults();
+  }
+
+  setDefaults() {
+    if (this.preConnectData) {
+      this.protocol = this.protocols.find(p => p.name === this.preConnectData.protocol.name);
+      this.accountSelected = this.accounts.find(a => a.alias === this.preConnectData.account.alias) || new Account();
+      this.connectMethod = this._appSvc.getProtocolConnectMethods(this.protocol.name).find(
+        cm => cm.value === this.preConnectData.connectMethod.value
+      );
+    }
+
+    if (!this.protocol) {
+      this.protocol = this.protocols[0];
+    }
+    if (!this.accountSelected) {
+      this.accountSelected = this.accounts[0];
+    }
+    if (!this.connectMethod) {
+      this.connectMethod = this._appSvc.getProtocolConnectMethods(this.protocol.name)[0];
+    }
   }
 
   onProtocolChange(protocol) {
     this.protocol = protocol;
-    // this.setConnectMethods();
   }
-
 
   onSelectAccount(account) {
     this.accountSelected = account;
@@ -61,14 +81,9 @@ export class ElementConnectDialogComponent implements OnInit {
     this.outputData.connectOptions = this.connectOptions;
     this.outputData.protocol = this.protocol;
     this.outputData.downloadRDP = downloadRDP;
+    this.outputData.autoLogin = this.autoLogin;
 
-    if (!downloadRDP) {
-      if (this.autoLogin) {
-        this._appSvc.setPreLoginSelect(this.asset, this.outputData);
-      }
-      this._appSvc.setAssetPreferAccount(this.asset.id, this.accountSelected.alias);
-      this._appSvc.setProtocolPreferLoginType(this.protocol.name, this.connectMethod.value);
-    }
+    this._appSvc.setPreConnectData(this.asset, this.outputData);
 
     this.onSubmit$.next(true);
     this.dialogRef.close(this.outputData);
