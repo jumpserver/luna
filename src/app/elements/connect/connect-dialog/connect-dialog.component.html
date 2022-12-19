@@ -31,27 +31,26 @@
         {{ "Connect Method" | translate }}
       </label>
       <div class="connect-type-group">
-        <mat-radio-group
-          *ngFor="let item of groupedConnectMethods"
-          name="connect-method"
-          class="connect-method-group"
-          [(ngModel)]="connectMethod"
-          style="display: block"
-        >
-          <label class="connect-grouped-title">
-            {{ item[0] }}
-          </label>
-          <span class="connect-grouped-methods">
-            <mat-radio-button *ngFor="let method of item[1]" [value]="method" class="connect-method-item">
-              {{ method.label | translate }}
+        <mat-button-toggle-group [(ngModel)]="connectMethodType" (change)="onConnectMethodTypeChange($event)">
+          <mat-button-toggle *ngFor="let item of connectMethodTypes " [value]="item.id">
+            {{ item.name }}
+          </mat-button-toggle>
+        </mat-button-toggle-group>
 
-              <span class="my-tooltip" attr.data-tooltip="{{'Click to download rdp file'| translate}}">
-              <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
-                 (click)="downloadRDPFile(method)" class="fa fa-question-circle-o question"
-              ></i>
-            </span>
-            </mat-radio-button>
+        <mat-radio-group
+          name="connect-method"
+          [(ngModel)]="connectMethod"
+          style="display: block; padding-top: 10px"
+        >
+          <mat-radio-button *ngFor="let method of currentTypeConnectMethods" [value]="method">
+            {{ method.label }}
+
+            <span class="my-tooltip" attr.data-tooltip="{{'Click to download rdp file'| translate}}">
+            <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
+               (click)="downloadRDPFile(method)" class="fa fa-question-circle-o question"
+            ></i>
           </span>
+          </mat-radio-button>
         </mat-radio-group>
       </div>
     </div>

@@ -4,6 +4,7 @@ import {AppService, LogService, SettingService, I18nService} from '@app/services
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {ConnectMethod, ConnectData, Account, AuthInfo, ConnectOption, Protocol, Asset} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
+import {groupByProp} from '@app/utils/common';
 
 
 @Component({
@@ -22,7 +23,9 @@ export class ElementConnectDialogComponent implements OnInit {
   public accountSelected: Account = null;
   public connectMethod: ConnectMethod;
   public connectMethods = [];
-  public groupedConnectMethods = [];
+  public connectMethodTypes = [];
+  public connectMethodType = 'web';
+  public groupedConnectMethods = {};
   public autoLogin = false;
   public connectOptions: ConnectOption[] = [];
 
@@ -42,9 +45,19 @@ export class ElementConnectDialogComponent implements OnInit {
     this.onProtocolChange(this.protocols[0]);
   }
 
+  get currentTypeConnectMethods() {
+    console.log('Grouped methods: ', this.groupedConnectMethods);
+    return this.groupedConnectMethods[this.connectMethodType];
+  }
+
   onProtocolChange(protocol) {
     this.protocol = protocol;
     this.setConnectMethods();
+  }
+
+  onConnectMethodTypeChange(value) {
+    console.log('Connect method type changed: ', value);
+    this.connectMethod = this.currentTypeConnectMethods[0];
   }
 
   onSelectAccount(account) {
@@ -57,27 +70,21 @@ export class ElementConnectDialogComponent implements OnInit {
 
   setConnectMethods() {
     this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
-    this.groupedConnectMethods = this.groupConnectMethods();
-    console.log('Methods', this.connectMethods);
+    this.groupConnectMethods();
     this.connectMethod = this.getPreferConnectMethod() || this.connectMethods[0];
+    this.connectMethodType = this.connectMethod.type;
   }
 
   groupConnectMethods() {
-    const grouped = [];
-    const types = [
-      ['web', 'Web'],
-      ['native', this._i18n.instant('Native')],
-      ['applet', this._i18n.instant('Applet')],
+    const connectMethodTypes = [
+      {id: 'web', name: 'Web'},
+      {id: 'native', name: this._i18n.instant('Native')},
+      {id: 'applet', name: this._i18n.instant('Applet')},
     ];
 
-    for (const [tp, label] of types) {
-      const methods = this.connectMethods.filter(m => m.type === tp);
-      if (methods.length > 0) {
-        grouped.push([label, methods]);
-      }
-    }
-    console.log('Grouped: ', grouped);
-    return grouped;
+    this.groupedConnectMethods = groupByProp(this.connectMethods, 'type');
+    const supportedTypes = Object.keys(this.groupedConnectMethods);
+    this.connectMethodTypes = connectMethodTypes.filter(item => supportedTypes.includes(item.id));
   }
 
   getPreferConnectMethod() {
