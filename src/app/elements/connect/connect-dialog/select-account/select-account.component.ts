@@ -194,7 +194,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       this.manualAuthInfo.username = this.accountSelected.username;
     }
     this.manualAuthInfo.secret = '';
-    this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.username);
+    this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id);
     if (this.localAuthItems && this.localAuthItems.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
     }
@@ -227,6 +227,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   }
 
   getSavedAuthInfos() {
-    this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.alias);
+    this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id);
   }
 }

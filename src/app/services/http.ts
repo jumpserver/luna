@@ -126,24 +126,31 @@ export class HttpService {
     return this.get<Array<TreeNode>>(url);
   }
 
-  getMyGrantedNodes(async: boolean, refresh?: boolean, k8sUrl?: string) {
+  withRetry() {
+    return retryWhen(err => err.pipe(
+      scan(
+        (retryCount, _err) => {
+          if (retryCount > 10) {
+            throw _err;
+          } else {
+            return retryCount + 1;
+          }
+        }, 0
+      ),
+      delay(10000)
+    ));
+  }
+
+  getMyGrantedNodes(async: boolean) {
     const syncUrl = '/api/v1/perms/users/self/nodes-with-assets/tree/';
     const asyncUrl = '/api/v1/perms/users/self/nodes/children-with-assets/tree/';
-    var url = async ? asyncUrl : syncUrl;
-    url = k8sUrl ? k8sUrl : url;
-    return this.get<Array<TreeNode>>(url).pipe(
-      retryWhen(err => err.pipe(
-        scan(
-          (retryCount, _err) => {
-            if (retryCount > 10) {
-              throw _err;
-            } else {
-              return retryCount + 1;
-            }
-          }, 0
-        ),
-        delay(10000)
-      )));
+    const url = async ? asyncUrl : syncUrl;
+    return this.get<Array<TreeNode>>(url).pipe(this.withRetry());
+  }
+
+  getMyGrantedK8sNodes(treeId: string, async: boolean) {
+    const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?tree_id=${treeId}&async=${async}`;
+    return this.get<Array<TreeNode>>(url);
   }
 
   getMyAssetAccounts(assetId: string) {
