@@ -4,7 +4,6 @@ import {AppService, LogService, SettingService, I18nService} from '@app/services
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {ConnectMethod, ConnectData, Account, AuthInfo, ConnectOption, Protocol, Asset} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
-import {groupByProp} from '@app/utils/common';
 
 
 @Component({
@@ -21,11 +20,9 @@ export class ElementConnectDialogComponent implements OnInit {
   public accounts: Account[];
   public manualAuthInfo: AuthInfo = new AuthInfo();
   public accountSelected: Account = null;
-  public connectMethod: ConnectMethod;
-  public connectMethods = [];
-  public connectMethodTypes = [];
   public autoLogin = false;
   public connectOptions: ConnectOption[] = [];
+  public connectMethod: ConnectMethod = new ConnectMethod();
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
@@ -45,17 +42,9 @@ export class ElementConnectDialogComponent implements OnInit {
 
   onProtocolChange(protocol) {
     this.protocol = protocol;
-    this.setConnectMethods();
+    // this.setConnectMethods();
   }
 
-  get currentConnectMethodTypeIndex() {
-    return this.connectMethodTypes.map((item) => item.value).indexOf(this.connectMethod.type);
-  }
-
-  onConnectMethodTypeChange(value) {
-    console.log('Connect method type changed: ', value);
-    this.connectMethod = this.connectMethodTypes[value].methods[0];
-  }
 
   onSelectAccount(account) {
     this.accountSelected = account;
@@ -63,42 +52,6 @@ export class ElementConnectDialogComponent implements OnInit {
     if (!account) {
       return;
     }
-  }
-
-  setConnectMethods() {
-    this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
-    this.groupConnectMethods();
-    this.connectMethod = this.getPreferConnectMethod() || this.connectMethods[0];
-    // this.connectMethodType = this.connectMethod.type;
-  }
-
-  groupConnectMethods() {
-    const connectMethodTypes = [
-      {value: 'web', label: 'Web', methods: []},
-      {value: 'native', label: this._i18n.instant('Native'), methods: []},
-      {value: 'applet', label: this._i18n.instant('Applet'), methods: []},
-    ];
-
-    for (const type of connectMethodTypes) {
-      type['methods'] = this.connectMethods.filter((item) => item.type === type.value);
-    }
-    this.connectMethodTypes = connectMethodTypes.filter((item) => item['methods'].length > 0);
-    // return connectMethodTypes;
-  }
-
-  getPreferConnectMethod() {
-    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType(this.protocol.name);
-    const matchedTypes = this.connectMethods.filter((item) => item.id === preferConnectTypeId);
-    if (matchedTypes.length === 1) {
-      return matchedTypes[0];
-    } else {
-      return this.connectMethods[0];
-    }
-  }
-
-  downloadRDPFile(method) {
-    this.connectMethod = method;
-    this.onConfirm(true);
   }
 
   onConfirm(downloadRDP = false) {

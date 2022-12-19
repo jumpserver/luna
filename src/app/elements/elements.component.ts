@@ -23,6 +23,7 @@ import {ElementConnectorOmnidbComponent} from './content/content-window/omnidb/o
 import {ElementSelectAccountComponent} from './connect/connect-dialog/select-account/select-account.component';
 import {ElementReplayAsciicastComponent} from '@app/elements/replay/asciicast/asciicast.component';
 import {ElementAdvancedOptionComponent} from './connect/connect-dialog/advanced-option/advanced-option.component';
+import {ElementConnectMethodComponent} from './connect/connect-dialog/connect-method/connect-method.component';
 
 
 export const ElementComponents = [
@@ -52,5 +53,6 @@ export const ElementComponents = [
   ElementConnectorOmnidbComponent,
   ElementSelectAccountComponent,
   ElementReplayAsciicastComponent,
-  ElementAdvancedOptionComponent
+  ElementAdvancedOptionComponent,
+  ElementConnectMethodComponent
 ];

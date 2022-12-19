@@ -26,40 +26,12 @@
     >
     </elements-select-account>
 
-    <div class="connect-type form-field">
-      <label class="zone-label">
-        {{ "Connect Method" | translate }}
-      </label>
-      <div class="connect-type-group">
-        <mat-tab-group
-          [selectedIndex]="currentConnectMethodTypeIndex"
-          (selectedIndexChange)="onConnectMethodTypeChange($event)"
-          animationDuration="0ms"
-          dynamicHeight
-        >
-          <mat-tab
-            *ngFor="let item of connectMethodTypes "
-            [label]="item['label']"
-          >
-            <mat-radio-group
-              name="connect-method"
-              [(ngModel)]="connectMethod"
-              style="display: block; padding: 18px 10px 10px"
-            >
-              <mat-radio-button *ngFor="let method of item['methods']" [value]="method">
-                {{ method.label }}
-
-                <span class="my-tooltip" attr.data-tooltip="{{'Click to download rdp file'| translate}}">
-                  <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
-                     (click)="downloadRDPFile(method)" class="fa fa-question-circle-o question"
-                  ></i>
-                </span>
-              </mat-radio-button>
-            </mat-radio-group>
-          </mat-tab>
-        </mat-tab-group>
-      </div>
-    </div>
+    <elements-connect-method
+      class="connect-method-zone"
+      [protocol]="protocol"
+      [(connectMethod)]="connectMethod"
+    >
+    </elements-connect-method>
 
     <elements-advanced-option
       [connectType]="connectMethod"
