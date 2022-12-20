@@ -11,6 +11,7 @@ import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
 import {CookieService} from 'ngx-cookie-service';
+import {encryptPassword} from '@app/utils/crypto';
 
 @Injectable()
 export class HttpService {
@@ -229,12 +230,13 @@ export class HttpService {
     const url = '/api/v1/authentication/connection-token/';
     const { account, protocol, manualAuthInfo, connectMethod } = connectData;
     const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
+    const secret = encryptPassword(manualAuthInfo.secret);
     const data = {
       asset: asset.id,
       account: account.alias,
       protocol: protocol.name,
       input_username: username,
-      input_secret: manualAuthInfo.secret,
+      input_secret: secret,
       connect_method: connectMethod.value,
     };
     return this.post<ConnectionToken>(url, data);
