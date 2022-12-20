@@ -114,7 +114,7 @@ export class NavEvt {
   }
 }
 
-export class k8sInfo {
+export class K8sInfo {
   pod: string = '';
   namespace: string = '';
   container: string = '';
@@ -138,9 +138,9 @@ export class View {
   connectMethod: ConnectMethod;
   connectOptions: ConnectOption[] = [];
   smartEndpoint: Endpoint;
-  k8sInfo: k8sInfo;
+  k8sInfo: K8sInfo;
 
-  constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node', k8sInfo?: k8sInfo) {
+  constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node', k8sInfo?: K8sInfo) {
     this.closed = false;
     this.editable = false;
     this.connected = true;
@@ -158,7 +158,7 @@ export class View {
 
   getConnectOption(field: string) {
     const connectOptions = this.connectOptions || [];
-    if (connectOptions.length === 0) return ''
+    if (connectOptions.length === 0) { return ''; }
     const filteredField = connectOptions.find(i => i.field === field);
     return filteredField ? filteredField.value.toString() : '';
   }
