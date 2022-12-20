@@ -171,10 +171,6 @@ export class ElementAssetTreeComponent implements OnInit {
       this._dialog.open(DisabledAssetsDialogComponent, config);
       return;
     }
-    if (!this.isK8s && treeNode.meta.data.platform_type === 'k8s') {
-      window.open(`/luna/k8s?id=${treeNode.id}`);
-      return;
-    }
     this.connectAsset(treeNode).then();
   }
 
@@ -190,8 +186,8 @@ export class ElementAssetTreeComponent implements OnInit {
     } else {
       this.trees.push(tree);
     }
-    const treeId = this._route.snapshot.queryParams.id;
-    const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?tree_id=${treeId}`;
+    const token = this._route.snapshot.queryParams.token;
+    const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?token_id=${token}`;
     const setting = Object.assign({
       async: {
         enable: true,
