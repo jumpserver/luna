@@ -84,24 +84,24 @@ export class ElementAssetTreeComponent implements OnInit {
         'id': 'new-connection',
         'name': 'Open in new window',
         'fa': 'fa-external-link',
+        'hide': this.isK8s,
         'click': this.onMenuConnectNewTab.bind(this)
       }, {
         'id': 'favorite',
         'name': 'Favorite',
         'fa': 'fa-star-o',
-        'hide': this.isAssetFavorite(),
+        'hide': this.isAssetFavorite() || this.isK8s,
         'click': this.onMenuFavorite.bind(this)
       }, {
         'id': 'disfavor',
         'name': 'Disfavor',
         'fa': 'fa-star',
-        'hide': !this.isAssetFavorite(),
+        'hide': !this.isAssetFavorite() || this.isK8s,
         'click': this.onMenuFavorite.bind(this)
       }];
     if (!this.rightClickSelectNode) {
       return [];
     }
-
     return menuList;
   }
 
@@ -196,7 +196,7 @@ export class ElementAssetTreeComponent implements OnInit {
       async: {
         enable: true,
         url: url,
-        autoParam: ['id=tree_id', 'parentInfo=parentInfo', 'level=lv'],
+        autoParam: ['id=key', 'name=n', 'level=lv'],
         type: 'get',
         headers: {
           'X-JMS-ORG': this.currentOrgID
@@ -208,6 +208,7 @@ export class ElementAssetTreeComponent implements OnInit {
         'leading': true,
         'trailing': false
       }).bind(this),
+      onRightClick: this.onRightClick.bind(this)
     };
     tree.loading = true;
     this._http.get(url).subscribe(resp => {
@@ -269,7 +270,6 @@ export class ElementAssetTreeComponent implements OnInit {
     }, () => {
       tree.loading = false;
     });
-
   }
 
   initTree() {
@@ -363,7 +363,7 @@ export class ElementAssetTreeComponent implements OnInit {
     }
     const ztree = this.trees.find(t => t.name === treeId).ztree;
     const metaData = treeNode.meta.data;
-    if (treeNode.isParent && ['container', 'account', 'asset'].indexOf(treeNode.meta.data.identity) === -1) {
+    if (treeNode.isParent && ['container', 'account', 'asset'].indexOf(metaData.identity) === -1) {
       this.expandAllChildren(treeId, treeNode, !treeNode.open);
       return;
     }
@@ -381,7 +381,8 @@ export class ElementAssetTreeComponent implements OnInit {
 
   onMenuConnect() {
     const node = this.rightClickSelectNode;
-    const evt = new ConnectEvt(node, 'connect');
+    const action = this.isK8s ? 'k8s' : 'connect';
+    const evt = new ConnectEvt(node, action);
     connectEvt.next(evt);
   }
 

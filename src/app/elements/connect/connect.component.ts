@@ -3,10 +3,11 @@ import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {MatDialog} from '@angular/material';
 import {AppService, HttpService, LogService, SettingService} from '@app/services';
-import {Account, ConnectData, Asset, ConnectionToken, k8sInfo, View} from '@app/model';
+import {Account, ConnectData, Asset, ConnectionToken, View, K8sInfo} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
 import {launchLocalApp} from '@app/utils/common';
+import {fromArray} from 'rxjs-compat/observable/fromArray';
 
 
 @Component({
@@ -63,11 +64,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     return idObject;
   }
 
-  connectK8sAsset(asset) {
-    const idObject = this.analysisId(asset.id);
-    const assetId = idObject['asset_id'];
-    this._http.getAssetDetail(assetId).subscribe(async asset => {
-      const accounts = await this._http.getMyAssetAccounts(asset.id).toPromise();
+  connectK8sAsset(asset, treeId) {
+    const idObject = this.analysisId('asset_id=' + treeId);
+    this._http.getMyAssetAccounts(asset.id).subscribe(accounts => {
       let account = accounts.filter(item => item.username === idObject['account']);
       if (account.length === 0) {
         console.log('account is not exist');
@@ -89,15 +88,15 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         component: 'web_cli',
         label: 'k8s'
       };
-
-      const kInfo = new k8sInfo();
+      const kInfo = new K8sInfo();
       kInfo.namespace = idObject['namespace'];
       kInfo.pod = idObject['pod'];
       kInfo.container = idObject['container'];
 
       this._logger.debug('Connect info: ', connectInfo);
-      const connToken = await this._http.createConnectToken(asset, connectInfo).toPromise();
-      this.createWebView(asset, connectInfo, connToken, kInfo);
+      this._http.createConnectToken(asset, connectInfo).subscribe(connToken => {
+        this.createWebView(asset, connectInfo, connToken, kInfo);
+      });
     });
   }
 
@@ -107,6 +106,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         return;
       }
       const data = evt.node.meta.data;
+      evt.node.id = evt.node.id.replace('asset_id=', '');
       this._http.getAssetDetail(evt.node.id).subscribe(asset => {
         switch (evt.action) {
           case 'connect': {
@@ -115,11 +115,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
             break;
           }
           case 'k8s': {
-            if (data.type === 'k8s' && ['container', 'account'].indexOf(data.identity) !== -1) {
-              this.connectK8sAsset(evt.node);
+            if (['container', 'account'].indexOf(data.identity) !== -1) {
+              this.connectK8sAsset(asset, evt.node.id);
               return;
             }
-            evt.node.id = evt.node.id.replace('asset_id=', '');
+            this.connectAsset(asset).then();
             break;
           }
           default: {
@@ -180,7 +180,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
   }
 
-  createWebView(asset: Asset, connectInfo: any, connToken: ConnectionToken, k8sInfo?: k8sInfo) {
+
+  createWebView(asset: Asset, connectInfo: any, connToken: ConnectionToken, k8sInfo?: K8sInfo) {
     const view = new View(asset, connectInfo, connToken, 'node', k8sInfo);
     this.onNewView.emit(view);
   }
