@@ -58,9 +58,9 @@ export class ElementConnectMethodComponent implements OnInit {
 
   groupConnectMethods() {
     const connectMethodTypes = [
-      {value: 'web', label: 'Web', methods: []},
-      {value: 'native', label: this._i18n.instant('Native'), methods: []},
-      {value: 'applet', label: this._i18n.instant('Applet'), methods: []},
+      {value: 'web', label: 'Web', fa: 'fa-globe', methods: []},
+      {value: 'native', label: this._i18n.instant('Native'), fa: 'fa-desktop', methods: []},
+      {value: 'applet', label: this._i18n.instant('Applet'), fa: 'fa-windows', methods: []},
     ];
 
     for (const type of connectMethodTypes) {

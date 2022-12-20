@@ -1,10 +1,9 @@
 import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
-import {AppService, HttpService, LogService, SettingService} from '@app/services';
 import {MatDialog} from '@angular/material';
-import {Account, TreeNode, ConnectData, Asset, ConnectionToken, k8sInfo} from '@app/model';
-import {View} from '@app/model';
+import {AppService, HttpService, LogService, SettingService} from '@app/services';
+import {Account, ConnectData, Asset, ConnectionToken, k8sInfo, View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
 import {launchLocalApp} from '@app/utils/common';
@@ -158,8 +157,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return this._http.downloadRDPFile(connToken);
     } else if (connectMethod.type === 'native') {
       this.callLocalClient(connToken).then();
+    } else if (connectMethod.type === 'applet' && this._settingSvc.setting.appletConnectMethod !== 'web') {
+      this.callLocalClient(connToken).then();
     } else {
-      // todo: applet 拉起本地客户端
       this.createWebView(asset, connectInfo, connToken);
     }
   }

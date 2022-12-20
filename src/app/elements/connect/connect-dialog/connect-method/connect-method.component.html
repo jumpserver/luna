@@ -13,8 +13,11 @@
     >
       <mat-tab
         *ngFor="let item of connectMethodTypes "
-        [label]="item['label']"
       >
+        <ng-template mat-tab-label>
+          <i [class]="'fa ' + item.fa" style="padding-right: 10px"></i> {{ item.label }}
+        </ng-template>
+
         <mat-radio-group
           name="connect-method"
           [(ngModel)]="connectMethod"
@@ -24,10 +27,11 @@
             {{ method.label }}
 
             <span class="my-tooltip" attr.data-tooltip="{{'Click to download rdp file'| translate}}">
-                  <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
-                     (click)="downloadRDPFile(method)" class="fa fa-question-circle-o question"
-                  ></i>
-                </span>
+              <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
+                 (click)="downloadRDPFile(method)"
+                 class="fa fa-question-circle-o question"
+              ></i>
+            </span>
           </mat-radio-button>
         </mat-radio-group>
       </mat-tab>
