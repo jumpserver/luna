@@ -228,11 +228,12 @@ export class HttpService {
   createConnectToken(asset: Asset, connectData: ConnectData) {
     const url = '/api/v1/authentication/connection-token/';
     const { account, protocol, manualAuthInfo, connectMethod } = connectData;
+    const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
     const data = {
       asset: asset.id,
       account: account.alias,
       protocol: protocol.name,
-      input_username: account.username || manualAuthInfo.username,
+      input_username: username,
       input_secret: manualAuthInfo.secret,
       connect_method: connectMethod.value,
     };

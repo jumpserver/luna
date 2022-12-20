@@ -118,7 +118,7 @@
   "Applet": "远程应用",
   "GUI": "图形化",
   "CLI": "命令行",
-  "General": "一般",
+  "General": "基本配置",
   "Applet connect method": "远程应用连接方式",
   "Client": "客户端"
 }
