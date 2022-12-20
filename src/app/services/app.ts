@@ -151,9 +151,7 @@ export class AppService {
   setPreConnectData(asset: Asset, connectData: ConnectData) {
     const {account, protocol, connectMethod, manualAuthInfo, connectOptions} = connectData;
     const key = `JMS_PRE_${asset.id}`;
-    if (manualAuthInfo.secret) {
-      manualAuthInfo.secret = this.encrypt(manualAuthInfo.secret);
-    }
+
     const saveData = {
       account: {alias: account.alias, username: account.username, has_secret: account.has_secret},
       connectMethod: {value: connectMethod.value},
