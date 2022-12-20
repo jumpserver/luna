@@ -7,7 +7,6 @@ import {Account, ConnectData, Asset, ConnectionToken, View, K8sInfo} from '@app/
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
 import {launchLocalApp} from '@app/utils/common';
-import {fromArray} from 'rxjs-compat/observable/fromArray';
 
 
 @Component({
@@ -147,6 +146,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     this._logger.debug('Connect info: ', connectInfo);
     const connectMethod = connectInfo.connectMethod;
     const connToken = await this._http.createConnectToken(asset, connectInfo).toPromise();
+
+    // if (connToken.protocol === 'k8s') {
+    //   window.open(`/luna/k8s?token=${connToken.id}`);
+    //   return;
+    // }
 
     // 特殊处理
     if (connectMethod.value.startsWith('db_client')) {
