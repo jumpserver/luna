@@ -175,9 +175,9 @@
 .ztree li span.button.linux_ico_docu::before {
   content: "\f17c";
 }
-.ztree li span.button.windows_ico_docu::before {
+/* .ztree li span.button.windows_ico_docu::before {
   content: "\f17a";
-}
+} */
 .ztree li span.button.user-tie_ico_close::before {
   content: "\f2be";
 }
@@ -197,15 +197,55 @@
 .ztree li span.button {
   margin-right: 2px;
   width: 16px;
-  height: 16px;
+  height: 20px;
 }
 
 .ztree li span.button.k8s_ico_docu {
-  background: url('./icons/k8s.png') no-repeat scroll 0 0 transparent;
+  background: url('./icons/k8s.png') center left no-repeat;
 }
 
 .ztree li span.button.mysql_ico_docu {
-  background: url('./icons/mysql.svg') no-repeat scroll 0 0 transparent;
+  background: url('./icons/mysql.png') no-repeat center left transparent;
+}
+
+.ztree li span.button.redis_ico_docu {
+  background: url('./icons/redis.png') no-repeat center left transparent;
+}
+
+.ztree li span.button.mariadb_ico_docu {
+  background: url('./icons/mariadb.png') no-repeat center left transparent;
+}
+
+.ztree li span.button.postgresql_ico_docu {
+  background: url('./icons/postgresql.png') no-repeat center left transparent;
+}
+
+.ztree li span.button.mongodb_ico_docu {
+  background: url('./icons/mongodb.png') no-repeat center left transparent;
+}
+
+.ztree li span.button.unix_ico_docu {
+  background: url('./icons/unix.png') no-repeat center left transparent;
+}
+
+.ztree li span.button.private_ico_docu {
+  background: url('./icons/private.png') no-repeat center left transparent;
+}
+
+.ztree li span.button.sqlserver_ico_docu {
+  background: url('./icons/sqlserver.png') no-repeat center left transparent;
+}
+
+.ztree li span.button.website_ico_docu {
+  background: url('./icons/website.png') no-repeat center left transparent;
+}
+
+.ztree li span.button.clickhouse_ico_docu {
+  background: url('./icons/clickhouse.png') no-repeat center left transparent;
+}
+
+.ztree li span.button.windows_ico_docu {
+  background: url('./icons/windows.png') no-repeat center left transparent;
 }
 
 .ztree li span.button.oracle_ico_docu::before {
