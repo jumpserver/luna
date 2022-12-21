@@ -40,13 +40,15 @@ class Tree {
   label: string;
   open: boolean;
   loading: boolean;
+  search: boolean;
   ztree: any;
 
-  constructor(name, label, open, loading) {
+  constructor(name, label, open, loading, search) {
     this.name = name;
     this.label = label;
     this.open = open;
     this.loading = loading;
+    this.search = search;
   }
 }
 
@@ -150,13 +152,6 @@ export class ElementAssetTreeComponent implements OnInit {
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
-  onK8sNodeClick(event, treeId, treeNode, clickFlag) {
-    if (!this.isK8s && treeNode.meta.data.platform_type === 'k8s') {
-      window.open(`/luna/k8s?id=${treeNode.id}`);
-      return;
-    }
-  }
-
   onNodeClick(event, treeId, treeNode, clickFlag) {
     const ztree = this.trees.find(t => t.name === treeId).ztree;
     if (treeNode.isParent) {
@@ -180,6 +175,7 @@ export class ElementAssetTreeComponent implements OnInit {
       this._i18n.instant('Kubernetes'),
       true,
       true,
+      false
     );
     if (refresh) {
       tree = this.trees.find(t => t.name === tree.name);
@@ -187,7 +183,7 @@ export class ElementAssetTreeComponent implements OnInit {
       this.trees.push(tree);
     }
     const token = this._route.snapshot.queryParams.token;
-    const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?token_id=${token}`;
+    const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?token=${token}`;
     const setting = Object.assign({
       async: {
         enable: true,
@@ -200,7 +196,7 @@ export class ElementAssetTreeComponent implements OnInit {
       }
     }, this.setting);
     setting['callback'] = {
-      onClick:  _.debounce(this.onK8sNodeClick, 300, {
+      onClick: _.debounce(this.onNodeClick, 300, {
         'leading': true,
         'trailing': false
       }).bind(this),
@@ -222,6 +218,7 @@ export class ElementAssetTreeComponent implements OnInit {
       'My assets',
       true,
       true,
+      true
     );
     if (refresh) {
       tree = this.trees.find(t => t.name === tree.name);
@@ -287,7 +284,8 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   async connectAsset(node: TreeNode) {
-    const evt = new ConnectEvt(node, 'asset');
+    const action = this.isK8s ? 'k8s' : 'asset';
+    const evt = new ConnectEvt(node, action);
     connectEvt.next(evt);
   }
 
@@ -359,7 +357,7 @@ export class ElementAssetTreeComponent implements OnInit {
     }
     const ztree = this.trees.find(t => t.name === treeId).ztree;
     const metaData = treeNode.meta.data;
-    if (treeNode.isParent && ['container', 'account', 'asset'].indexOf(metaData.identity) === -1) {
+    if (treeNode.isParent && ['container', 'asset'].indexOf(metaData.identity) === -1) {
       this.expandAllChildren(treeId, treeNode, !treeNode.open);
       return;
     }

@@ -47,7 +47,7 @@ export class ElementConnectorKokoComponent implements OnInit {
       if (v) {
         params[k] = this.view.k8sInfo[k];
       }
-    })
+    });
   }
 
   generateNodeConnectUrl() {
