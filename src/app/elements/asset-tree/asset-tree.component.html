@@ -23,7 +23,11 @@
         class="tree-banner-icon-zone"
         [hidden]="!tree.open"
       >
-        <a class="tree-search" [id]="tree.name + 'SearchIcon'">
+        <a
+          class="tree-search"
+          [id]="tree.name + 'SearchIcon'"
+          *ngIf="tree.search"
+        >
           <i
             class="fa fa-search tree-banner-icon"
             (click)="treeSearch($event, tree)"

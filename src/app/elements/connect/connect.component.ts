@@ -7,7 +7,7 @@ import {Account, ConnectData, Asset, ConnectionToken, View, K8sInfo} from '@app/
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
 import {launchLocalApp} from '@app/utils/common';
-import {fromArray} from 'rxjs-compat/observable/fromArray';
+import {ActivatedRoute} from '@angular/router';
 
 
 @Component({
@@ -21,6 +21,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   constructor(private _appSvc: AppService,
               private _dialog: MatDialog,
               private _logger: LogService,
+              private _route: ActivatedRoute,
               private _http: HttpService,
               private _settingSvc: SettingService,
   ) {
@@ -64,38 +65,44 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     return idObject;
   }
 
-  connectK8sAsset(asset, treeId) {
-    const idObject = this.analysisId('asset_id=' + treeId);
-    this._http.getMyAssetAccounts(asset.id).subscribe(accounts => {
-      let account = accounts.filter(item => item.username === idObject['account']);
-      if (account.length === 0) {
-        console.log('account is not exist');
-        return;
-      }
-      account = account[0];
-      const connectInfo = new ConnectData();
-      connectInfo.asset = asset;
-      connectInfo.account = account;
-      connectInfo.protocol = asset.protocols[0];
-      connectInfo.manualAuthInfo = {
-        alias: account.alias,
-        username: account.username,
-        secret: undefined,
-      };
-      connectInfo.connectMethod = {
-        type: 'k8s',
-        value: 'web_cli',
-        component: 'web_cli',
-        label: 'k8s'
-      };
-      const kInfo = new K8sInfo();
-      kInfo.namespace = idObject['namespace'];
-      kInfo.pod = idObject['pod'];
-      kInfo.container = idObject['container'];
+  connectK8sAsset(id) {
+    const idObject = this.analysisId(id);
+    const token = this._route.snapshot.queryParams.token;
+    this._http.getConnectToken(token).subscribe(connToken => {
+      this._http.getMyAssetAccounts(connToken.asset.id).subscribe(accounts => {
+        let account = accounts.filter(item => item.username === connToken.account);
+        if (account.length === 0) {
+          console.log('account is not exist');
+          return;
+        }
+        account = account[0];
+        const type = 'k8s';
+        const connectInfo = new ConnectData();
+        connToken.asset['type'] = {'value': type};
+        connectInfo.asset = connToken.asset;
+        connectInfo.account = account;
+        connectInfo.protocol = {
+          'name': type,
+          'port': undefined
+        };
+        connectInfo.manualAuthInfo = {
+          alias: account.alias,
+          username: account.username,
+          secret: undefined,
+        };
+        connectInfo.connectMethod = {
+          type: type,
+          value: 'web_cli',
+          component: 'web_cli',
+          label: type
+        };
+        const kInfo = new K8sInfo();
+        kInfo.pod = idObject['pod'];
+        kInfo.namespace = idObject['namespace'];
+        kInfo.container = idObject['container'];
 
-      this._logger.debug('Connect info: ', connectInfo);
-      this._http.createConnectToken(asset, connectInfo).subscribe(connToken => {
-        this.createWebView(asset, connectInfo, connToken, kInfo);
+        this._logger.debug('Connect info: ', connectInfo);
+        this.createWebView(connToken.asset, connectInfo, connToken, kInfo);
       });
     });
   }
@@ -105,20 +112,17 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       if (!evt.node) {
         return;
       }
-      const data = evt.node.meta.data;
-      evt.node.id = evt.node.id.replace('asset_id=', '');
+      if (evt.action === 'k8s') {
+        if (['asset', 'container'].indexOf(evt.node.meta.data.identity) !== -1) {
+          this.connectK8sAsset(evt.node.id);
+          return;
+        }
+      }
+
       this._http.getAssetDetail(evt.node.id).subscribe(asset => {
         switch (evt.action) {
           case 'connect': {
             this._appSvc.disableAutoConnect(asset.id);
-            this.connectAsset(asset).then();
-            break;
-          }
-          case 'k8s': {
-            if (['container', 'account'].indexOf(data.identity) !== -1) {
-              this.connectK8sAsset(asset, evt.node.id);
-              return;
-            }
             this.connectAsset(asset).then();
             break;
           }
@@ -147,6 +151,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     this._logger.debug('Connect info: ', connectInfo);
     const connectMethod = connectInfo.connectMethod;
     const connToken = await this._http.createConnectToken(asset, connectInfo).toPromise();
+
+    if (connToken.protocol === 'k8s') {
+      window.open(`/luna/k8s?token=${connToken.id}`);
+      return;
+    }
 
     // 特殊处理
     if (connectMethod.value.startsWith('db_client')) {

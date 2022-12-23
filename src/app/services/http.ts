@@ -242,6 +242,11 @@ export class HttpService {
     return this.post<ConnectionToken>(url, data);
   }
 
+  getConnectToken(token) {
+    const url = new URL(`/api/v1/authentication/connection-token/${token}/`, window.location.origin);
+    return this.get(url.href);
+  }
+
   downloadRDPFile(token) {
     const url = new URL(`/api/v1/authentication/connection-token/${token.id}/rdp-file/`, window.location.origin);
     return window.open(url.href);
