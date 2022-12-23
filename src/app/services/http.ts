@@ -143,7 +143,7 @@ export class HttpService {
   }
 
   getMyGrantedNodes(async: boolean) {
-    const syncUrl = '/api/v1/perms/users/self/nodes-with-assets/tree/';
+    const syncUrl = '/api/v1/perms/users/self/nodes/all-with-assets/tree/';
     const asyncUrl = '/api/v1/perms/users/self/nodes/children-with-assets/tree/';
     const url = async ? asyncUrl : syncUrl;
     return this.get<Array<TreeNode>>(url).pipe(this.withRetry());
