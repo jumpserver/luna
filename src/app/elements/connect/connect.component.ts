@@ -309,9 +309,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       });
     }
     if (systemUserMaxPriority.length === 0) {
-      alert('没有系统用户');
+      alert(this._i18n.t('No System User'));
       return new Promise<ConnectData>((resolve, reject) => {
-        reject('没有系统用户');
+        reject(this._i18n.t('No System User'));
       });
     } else if (systemUserMaxPriority.length > 1) {
       return this.getConnectData(systemUserMaxPriority, node);
@@ -321,9 +321,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const isRemoteApp = node.meta.type === 'application';
     const connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[systemUser.protocol];
     if (!connectTypes) {
-      alert('没有匹配的连接方式');
+      alert(this._i18n.t('No Matching Connection'));
       return new Promise<ConnectData>((resolve, reject) => {
-        reject('没有匹配的连接方式');
+        reject(this._i18n.t('No Matching Connection'));
       });
     }
     let connectType = null;
