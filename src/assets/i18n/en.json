@@ -108,5 +108,7 @@
   "Database info": "Database info",
   "Command line": "Command line",
   "Run it by client": "Run it by client",
-  "Name": "Name"
+  "Name": "Name",
+  "No System User": "No System User",
+  "No Matching Connection": "No Matching Connection"
 }
