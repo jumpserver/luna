@@ -111,7 +111,8 @@
   "Command line": "连接命令行",
   "Run it by client": "使用客户端执行",
   "Name": "名称",
-  "Failed to open address": "打开地址失败"
-
+  "Failed to open address": "打开地址失败",
+  "No System User": "没有系统用户",
+  "No Matching Connection": "没有匹配的连接方式"
 }
 

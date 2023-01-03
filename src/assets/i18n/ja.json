@@ -110,5 +110,7 @@
   "Command line": "命令行",
   "Run it by client": "クライアントで実行する",
   "Name": "めいしょう",
-  "Failed to open address": "アドレスを開くことができませんでした"
+  "Failed to open address": "アドレスを開くことができませんでした",
+  "No System User": "システムユーザーなし",
+  "No Matching Connection": "一致する接続がありません"
 }
