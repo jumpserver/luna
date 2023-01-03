@@ -70,7 +70,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const token = this._route.snapshot.queryParams.token;
     this._http.getConnectToken(token).subscribe(connToken => {
       this._http.getMyAssetAccounts(connToken.asset.id).subscribe(accounts => {
-        let account = accounts.filter(item => item.username === connToken.account);
+        let account = accounts.filter(item => item.name === connToken.account);
         if (account.length === 0) {
           console.log('account is not exist');
           return;
