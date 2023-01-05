@@ -23,6 +23,52 @@
       </div>
     </div>
 
+    <div *ngSwitchCase="'ticket_review_pending'">
+      <div mat-dialog-content>
+        <p>本次登录正在审核中，请稍等 ... </p>
+      </div>
+      <div mat-dialog-actions>
+        <button mat-raised-button color="primary" (click)="onCancelWait()">{{ "Cancel" | translate }}</button>
+      </div>
+    </div>
+
+    <div *ngSwitchCase="'ticket_review_rejected'">
+      <div mat-dialog-content>
+        <p>本次登录审核结果，拒绝登录 </p>
+      </div>
+      <div mat-dialog-actions>
+        <button mat-raised-button color="primary" (click)="closeDialog()">{{ "Close" | translate }}</button>
+      </div>
+    </div>
+
+    <div *ngSwitchCase="'ticket_review_closed'">
+      <div mat-dialog-content>
+        <p>本次登录审核结果，已关闭，拒绝登录... </p>
+      </div>
+      <div mat-dialog-actions>
+        <button mat-raised-button color="primary" (click)="closeDialog()">{{ "Close" | translate }}</button>
+      </div>
+    </div>
+
+    <div *ngSwitchCase="'ticket_review_approved'">
+      <div mat-dialog-content>
+        <p>本次登录审核结果，已同意，是否连接资产？</p>
+      </div>
+      <div mat-dialog-actions>
+        <button mat-raised-button color="primary" (click)="onCancelConnect()">{{ "Cancel" | translate }}</button>
+        <button mat-raised-button color="primary" (click)="onConfirmConnect()">{{ "Confirm" | translate }}</button>
+      </div>
+    </div>
+
+    <div *ngSwitchCase="'other'">
+      <div mat-dialog-content>
+        <p>{{ otherError }}</p>>
+      </div>
+      <div mat-dialog-actions>
+        <button mat-raised-button color="primary" (click)="closeDialog()">{{ "Close" | translate }}</button>
+      </div>
+    </div>
+
   </div>
 
 </div>

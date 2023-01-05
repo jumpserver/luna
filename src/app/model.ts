@@ -353,6 +353,10 @@ export class ConnectData {
   autoLogin: boolean;
 }
 
+class FromTicket {
+  id: string;
+}
+
 export class ConnectionToken {
   id: string;
   value: string;
@@ -361,6 +365,8 @@ export class ConnectionToken {
   user?: string;
   account: string;
   expire_time: number;
+  is_active: boolean;
+  from_ticket: FromTicket;
 }
 
 export class Protocol  {
