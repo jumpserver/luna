@@ -153,7 +153,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
     this._logger.debug('Connect info: ', connectInfo);
     const connectMethod = connectInfo.connectMethod;
-    const connToken = this.createConnectionToken(asset, connectInfo);
+    const connToken = await this.createConnectionToken(asset, connectInfo);
+
+    console.log('>>>>>>>> after create connection token', connToken);
 
     if (!connToken) {
       this._logger.info('Create connection token failed');
@@ -266,29 +268,30 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
   }
 
-  createConnectionToken(asset: Asset, connectInfo: ConnectData): ConnectionToken {
-    let connToken: ConnectionToken;
-    this._http.createConnectToken(asset, connectInfo).subscribe(
-      (token: ConnectionToken) => {
-        connToken = token;
-      },
-      (error) => {
-        if (error.error.code.startsWith('acl_')) {
-          const dialogRef = this._dialog.open(ElementACLDialogComponent, {
-            height: 'auto',
-            width: '400px',
-            disableClose: true,
-            data: {asset, connectInfo, code: error.error.code}
-          });
-          dialogRef.afterClosed().subscribe(token => {
-            connToken = token;
-          });
-        } else {
-          this._dialogAlert.alert('Error', error.error.detail);
+  createConnectionToken(asset: Asset, connectInfo: ConnectData): Promise<ConnectionToken> {
+    return new Promise<ConnectionToken>((resolve, reject) => {
+      this._http.createConnectToken(asset, connectInfo).subscribe(
+        (token: ConnectionToken) => {
+           resolve(token);
+        },
+        (error) => {
+          if (error.error.code.startsWith('acl_')) {
+            const dialogRef = this._dialog.open(ElementACLDialogComponent, {
+              height: 'auto',
+              width: '400px',
+              disableClose: true,
+              data: {asset, connectInfo, code: error.error.code}
+            });
+            dialogRef.afterClosed().subscribe(token => {
+              console.log('>>>>>>>>>> on dialog close token: ', token);
+              resolve(token);
+            });
+          } else {
+            reject(error.error.detail);
+          }
         }
-      }
-    );
-    return connToken;
+      );
+    });
   }
 
   connectFileManager(asset: Asset) {

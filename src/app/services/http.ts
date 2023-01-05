@@ -226,8 +226,9 @@ export class HttpService {
     return cleanedParams;
   }
 
-  createConnectToken(asset: Asset, connectData: ConnectData) {
-    const url = '/api/v1/authentication/connection-token/';
+  createConnectToken(asset: Asset, connectData: ConnectData, createTicket = false) {
+    const params = createTicket ? '?create_ticket=1' : '';
+    const url = '/api/v1/authentication/connection-token/' + params;
     const { account, protocol, manualAuthInfo, connectMethod } = connectData;
     const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
     const secret = encryptPassword(manualAuthInfo.secret);
@@ -240,6 +241,17 @@ export class HttpService {
       connect_method: connectMethod.value,
     };
     return this.post<ConnectionToken>(url, data);
+  }
+
+  getTicketDetail(ticketID: string) {
+    const url = `/api/v1/tickets/tickets/${ticketID}/`;
+    return this.get(url, {});
+  }
+
+  closeTicket(ticketID: string) {
+    console.log('>>>>>>>>close ticket');
+    const url = `/api/v1/tickets/tickets/${ticketID}/close/`;
+    return this.put(url, {});
   }
 
   getConnectToken(token) {
