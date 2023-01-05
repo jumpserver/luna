@@ -1,0 +1,28 @@
+<div>
+  <div mat-dialog-title>
+    登录提醒
+  </div>
+
+  <div [ngSwitch]="code" >
+    <div *ngSwitchCase="'acl_reject'">
+      <div mat-dialog-content>
+        <p>本次登录已被拒绝，原因是访问控制策略不允许您访问。</p>
+      </div>
+      <div mat-dialog-actions>
+        <button mat-raised-button color="primary" (click)="closeDialog()">{{ "Close" | translate }}</button>
+      </div>
+    </div>
+
+    <div *ngSwitchCase="'acl_review'">
+      <div mat-dialog-content>
+        <p>本次登录需要进行人工审核，是否继续?</p>
+      </div>
+      <div mat-dialog-actions>
+        <button mat-raised-button color="primary" (click)="onCancelReview()">{{ "Cancel" | translate }}</button>
+        <button mat-raised-button color="primary" (click)="onConfirmReview()">{{ "Confirm" | translate }}</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>

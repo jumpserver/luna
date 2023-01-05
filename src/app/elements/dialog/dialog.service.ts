@@ -43,11 +43,11 @@ export class DialogService {
   loading() {
   }
 
-  alert(msg: string) {
+  alert(msg: string, title= 'Tips') {
     this._dialog.open(ElementDialogAlertComponent, {
       height: '200px',
       width: '300px',
-      data: {msg: msg}
+      data: {title: title, msg: msg}
     });
   }
 

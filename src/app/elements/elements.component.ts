@@ -24,6 +24,8 @@ import {ElementSelectAccountComponent} from './connect/connect-dialog/select-acc
 import {ElementReplayAsciicastComponent} from '@app/elements/replay/asciicast/asciicast.component';
 import {ElementAdvancedOptionComponent} from './connect/connect-dialog/advanced-option/advanced-option.component';
 import {ElementConnectMethodComponent} from './connect/connect-dialog/connect-method/connect-method.component';
+import {ElementDownloadDialogComponent} from '@app/elements/connect/download-dialog/download-dialog.component';
+import {ElementACLDialogComponent} from '@app/elements/connect/acl-dialog/acl-dialog.component';
 
 
 export const ElementComponents = [
@@ -44,6 +46,8 @@ export const ElementComponents = [
   ElementConnectorKokoComponent,
   ElementConnectorMagnusComponent,
   ElementConnectComponent,
+  ElementDownloadDialogComponent,
+  ElementACLDialogComponent,
   ElementReplayGuacamoleComponent,
   ElementReplayJsonComponent,
   ChangLanWarningDialogComponent,
@@ -54,5 +58,5 @@ export const ElementComponents = [
   ElementSelectAccountComponent,
   ElementReplayAsciicastComponent,
   ElementAdvancedOptionComponent,
-  ElementConnectMethodComponent
+  ElementConnectMethodComponent,
 ];
