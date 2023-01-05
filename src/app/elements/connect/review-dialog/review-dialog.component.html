@@ -1,0 +1,25 @@
+<h1 mat-dialog-title>{{ "Review" | translate }}</h1>
+
+<div [ngSwitch]="state">
+  <div *ngSwitchCase="'login_reject'">
+    <p > 登录资产 ACL 被拒绝 </p>
+    <button mat-raised-button color="primary" (click)="closeDialog()">{{ "Close" | translate }}</button>
+  </div>
+  <div *ngSwitchCase="'need_review'">
+    <p> 登录资产需要复核，是否继续？</p>
+    <button mat-raised-button color="primary" (click)="closeDialog()">{{ "Close" | translate }}</button>
+    <button mat-raised-button color="primary" (click)="onContinueReview()">{{ "Continue" | translate }}</button>
+  </div>
+  <div *ngSwitchCase="'pending'">
+    <p> 已成功创建登录资产复核工单，等待复核 ...</p>
+    <button mat-raised-button color="primary" (click)="onCancelWait()">{{ "Cancel" | translate }}</button>
+  </div>
+  <div *ngSwitchCase="'approve'">
+    <p> 登录资产复核工单审批通过，是否连接? </p>
+    <button mat-raised-button color="primary" (click)="onCancelConnect()">{{ "Cancel" | translate }}</button>
+    <button mat-raised-button color="primary" (click)="onConfirmConnect()">{{ "Confirm" | translate }}</button>
+  </div>
+  <div *ngSwitchCase="'closed'">
+    <p> 工单已关闭, 无法连接资产 </p>
+  </div>
+</div>

@@ -1,7 +1,7 @@
 'use strict';
 import {EventEmitter} from 'events/events';
 import {BehaviorSubject} from 'rxjs';
-import {ConnectEvt, User as _User} from './model';
+import {ConnectEvt, CreateConnectTokenEvt, PerformConnectEvt, User as _User} from './model';
 import {DataStore as _DataStore, Browser as _Browser, Video as _Video, Monitor as _Monitor} from './model';
 
 export let TermWS = null;
@@ -30,4 +30,7 @@ export let Browser = new _Browser();
 export const i18n = new Map();
 
 export const connectEvt = new BehaviorSubject<ConnectEvt>(new ConnectEvt(null, null));
+export const createConnectTokenEvt = new BehaviorSubject<CreateConnectTokenEvt>(new CreateConnectTokenEvt(null, null, false));
+
+export const performConnectEvt = new BehaviorSubject<PerformConnectEvt>(new PerformConnectEvt(null, null, null));
 

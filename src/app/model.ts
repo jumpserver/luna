@@ -93,6 +93,28 @@ export class ConnectEvt {
 }
 
 
+export class CreateConnectTokenEvt {
+  asset: Asset;
+  connectInfo: ConnectData;
+  autoCreateTicket: boolean;
+  constructor(asset: Asset, connectInfo: ConnectData, autoCreateTicket: boolean) {
+    this.asset = asset;
+    this.connectInfo = connectInfo;
+    this.autoCreateTicket = autoCreateTicket;
+  }
+}
+
+export class PerformConnectEvt {
+  asset: Asset;
+  connectInfo: ConnectData;
+  connToken: ConnectionToken;
+  constructor(asset: Asset, connectInfo: ConnectData, connToken: ConnectionToken) {
+    this.asset = asset;
+    this.connectInfo = connectInfo;
+    this.connToken = connToken;
+  }
+}
+
 export class Nav {
   id: string;
   name: string;
@@ -353,6 +375,10 @@ export class ConnectData {
   autoLogin: boolean;
 }
 
+class FromTicket {
+  id: string;
+}
+
 export class ConnectionToken {
   id: string;
   value: string;
@@ -361,6 +387,8 @@ export class ConnectionToken {
   user?: string;
   account: string;
   expire_time: number;
+  is_active: boolean;
+  from_ticket: FromTicket;
 }
 
 export class Protocol  {

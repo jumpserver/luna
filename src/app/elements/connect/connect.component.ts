@@ -1,11 +1,12 @@
 import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {connectEvt} from '@app/globals';
+import {connectEvt, createConnectTokenEvt, performConnectEvt} from '@app/globals';
 import {MatDialog} from '@angular/material';
 import {AppService, HttpService, LogService, SettingService} from '@app/services';
-import {Account, ConnectData, Asset, ConnectionToken, View, K8sInfo} from '@app/model';
+import {Account, ConnectData, Asset, ConnectionToken, View, K8sInfo, CreateConnectTokenEvt} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
+import {ElementReviewDialogComponent} from './review-dialog/review-dialog.component';
 import {launchLocalApp} from '@app/utils/common';
 import {ActivatedRoute} from '@angular/router';
 
@@ -132,6 +133,12 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         }
       });
     });
+    createConnectTokenEvt.asObservable().subscribe(evt => {
+      this.createConnectToken(evt.asset, evt.connectInfo, evt.autoCreateTicket);
+    });
+    performConnectEvt.asObservable().subscribe(evt => {
+      this.performConnect(evt.asset, evt.connectInfo, evt.connToken);
+    });
   }
 
   ngOnDestroy(): void {
@@ -149,19 +156,53 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return;
     }
     this._logger.debug('Connect info: ', connectInfo);
-    const connectMethod = connectInfo.connectMethod;
-    const connToken = await this._http.createConnectToken(asset, connectInfo).toPromise();
+    this.createConnectToken(asset, connectInfo);
+  }
 
+  createConnectToken(asset, connectInfo, autoCreateTicket = false) {
+    if (!asset || !connectInfo) {
+      return;
+    }
+    this._http.createConnectToken(asset, connectInfo, autoCreateTicket).subscribe(
+      connToken => {
+        if (!connToken.is_active) {
+          this._dialog.open(ElementReviewDialogComponent, {
+            minHeight: '300px',
+            height: 'auto',
+            width: '600px',
+            data: {asset: asset, state: 'pending', connectInfo: connectInfo, connectionToken: connToken}
+          });
+          return;
+        }
+        this.performConnect(asset, connectInfo, connToken);
+      },
+      err => {
+        if (['login_reject', 'need_review'].includes(err.error.code)) {
+          console.log('pre >>>>', asset);
+          this._dialog.open(ElementReviewDialogComponent, {
+            minHeight: '300px',
+            height: 'auto',
+            width: '600px',
+            data: {asset: asset, state: err.error.code, connectInfo: connectInfo}
+          });
+        }
+      }
+    );
+  }
+
+  performConnect(asset: Asset, connectInfo: ConnectData, connToken: ConnectionToken) {
+    if (!asset || !connectInfo || !connToken) {
+      return;
+    }
+    const connectMethod = connectInfo.connectMethod;
     if (connToken.protocol === 'k8s') {
       window.open(`/luna/k8s?token=${connToken.id}`);
       return;
     }
-
     // 特殊处理
     if (connectMethod.value.startsWith('db_client')) {
-      return this.createWebView(asset, connectInfo, connToken);
+      this.createWebView(asset, connectInfo, connToken);
     }
-
     if (connectInfo.downloadRDP) {
       return this._http.downloadRDPFile(connToken);
     } else if (connectMethod.type === 'native') {

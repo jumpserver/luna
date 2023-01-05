@@ -13,6 +13,8 @@ import {ElementIframeComponent} from './iframe/iframe.component';
 import {ElementDialogAlertComponent} from './dialog/dialog.service';
 import {ElementConnectComponent} from './connect/connect.component';
 import {ElementConnectDialogComponent} from './connect/connect-dialog/connect-dialog.component';
+import {ElementDownloadDialogComponent} from './connect/download-dialog/download-dialog.component';
+import {ElementReviewDialogComponent} from './connect/review-dialog/review-dialog.component';
 import {ElementSettingComponent} from './setting/setting.component';
 import {ElementReplayGuacamoleComponent} from './replay/guacamole/guacamole.component';
 import {ElementReplayJsonComponent} from './replay/json/json.component';
@@ -50,6 +52,8 @@ export const ElementComponents = [
   DisabledAssetsDialogComponent,
   ElementSettingComponent,
   ElementConnectDialogComponent,
+  ElementDownloadDialogComponent,
+  ElementReviewDialogComponent,
   ElementConnectorOmnidbComponent,
   ElementSelectAccountComponent,
   ElementReplayAsciicastComponent,
