@@ -76,10 +76,6 @@ export class ElementACLDialogComponent implements OnInit {
     this.closeDialog();
   }
 
-  onCancelConnect() {
-    this.closeDialog();
-  }
-
   onConfirmConnect() {
     this.dialogRef.close(this.connectionToken);
   }
@@ -92,17 +88,19 @@ export class ElementACLDialogComponent implements OnInit {
   checkTicket() {
     this.timerCheckTicket = setInterval(() => {
       this._http.getTicketDetail(this.ticketID).subscribe(
-        ticket => {
+        async ticket => {
           const ticketFinished = ticket.status.value === 'closed';
           if (!ticketFinished) {
             // 工单未结束
-            this.ticketAssignees = this.getticketAssignees(ticket);
+            this.ticketAssignees = this.getTicketAssignees(ticket);
             this.code = 'ticket_review_pending';
             return;
           }
           const state = ticket.state.value;
           if (state === 'approved') {
-            this.code = 'ticket_review_approved';
+            const msg = await this._i18n.t('Login review approved');
+            this._toastr.success(msg);
+            this.dialogRef.close(this.connectionToken);
           } else if (state === 'rejected') {
             this.code = 'ticket_review_rejected';
           } else if (state === 'closed') {
@@ -119,7 +117,7 @@ export class ElementACLDialogComponent implements OnInit {
     }, 1000);
   }
 
-  getticketAssignees(ticket) {
+  getTicketAssignees(ticket) {
     if (ticket && ticket.process_map.length === 1) {
       return ticket.process_map[0].assignees_display.join(',');
     }
