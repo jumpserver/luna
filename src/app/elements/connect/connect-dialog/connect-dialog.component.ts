@@ -43,7 +43,6 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   setDefaults() {
-    console.log('>>>>>>>>', this.data, '>>>>>', this.asset);
     if (this.preConnectData) {
       this.protocol = this.protocols.find(p => p.name === this.preConnectData.protocol.name);
       this.accountSelected = this.accounts.find(a => a.alias === this.preConnectData.account.alias) || new Account();

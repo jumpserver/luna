@@ -29,23 +29,13 @@
           {{ 'Assignees' | translate }}: <b>{{ ticketAssignees }}</b>
           <br><br>
           {{ 'Do not close this page' | translate }}
+          <br><br>
+          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
         </div>
       </mat-dialog-content>
       <mat-dialog-actions>
         <button mat-raised-button (click)="onCancelWait()">{{ "Cancel" | translate }}</button>
         <button mat-raised-button color="primary" ngxClipboard [cbContent]="ticketDetailURL" (cbOnSuccess)="onCopySuccess($event)" >{{ "Copy link" | translate }}</button>
-      </mat-dialog-actions>
-    </div>
-
-    <div *ngSwitchCase="'ticket_review_approved'">
-      <mat-dialog-content>
-        <div>
-          {{ 'Ticket review approved for login asset' | translate }}
-        </div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button mat-raised-button (click)="onCancelConnect()">{{ "Cancel" | translate }}</button>
-        <button mat-raised-button color="primary" (click)="onConfirmConnect()">{{ "Confirm" | translate }}</button>
       </mat-dialog-actions>
     </div>
 

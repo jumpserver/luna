@@ -117,12 +117,11 @@
   "Login reminder": "ログインリマインダー",
   "ACL reject login asset": "アクセス制御ポリシーの制限により、このログインは拒否されました",
   "Need review for login asset": "このログインは手動で確認する必要があります。続行しますか?",
-  "Ticket review pending for login asset": "ログインアプリケーションが送信され、承認者によるレビューを待っています。リンクをコピーして承認者に送信することもできます",
+  "Ticket review pending for login asset": "ログイン アプリケーションが送信され、承認者が確認するのを待っています。リンクをコピーして承認者に送信することもできます。",
   "Assignees": "受信者",
   "Do not close this page": "このページを閉じないでください",
-  "Ticket review approved for login asset": "このログイン監査に合格しました。アセットは接続されていますか?",
   "Ticket review rejected for login asset": "このログイン レビューは拒否されたため、アセットを接続できません",
   "Ticket review closed for login asset": "このログイン レビューは終了しており、アセットを接続できません",
-  "Copy link": "リンクをコピーする"
-
+  "Copy link": "リンクをコピーする",
+  "Login review approved": "ログイン監査に合格し、アセットを接続しています..."
 }
