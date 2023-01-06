@@ -1,7 +1,8 @@
 import {Component, Inject, OnInit} from '@angular/core';
 import {Asset, ConnectData, ConnectionToken} from '@app/model';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
-import {HttpService} from '@app/services';
+import {HttpService, I18nService} from '@app/services';
+import {ToastrService} from 'ngx-toastr';
 
 @Component({
   selector: 'elements-acl-dialog',
@@ -9,21 +10,28 @@ import {HttpService} from '@app/services';
   styleUrls: ['./acl-dialog.component.scss']
 })
 export class ElementACLDialogComponent implements OnInit {
-
   public asset: Asset;
-
   public connectInfo: ConnectData;
-
-  // acl_reject, acl_review
   public code: string;
-
   public connectionToken: ConnectionToken = null;
-
   public otherError: string;
-
+  public ticketAssignees: string = '-';
   private timerCheckTicket: number;
 
+  get ticketID(): string {
+    if (this.connectionToken && this.connectionToken.from_ticket) {
+      return this.connectionToken.from_ticket.id;
+    }
+  }
+
+  get ticketDetailURL(): string {
+    const url = `/ui/#/tickets/tickets/login-host-confirm/${this.ticketID}`;
+    return new URL(url, window.location.origin).href;
+  }
+
   constructor( public dialogRef: MatDialogRef<ElementACLDialogComponent>,
+               private _i18n: I18nService,
+               private _toastr: ToastrService,
                private _http: HttpService,
                @Inject(MAT_DIALOG_DATA) public data: any
   ) {}
@@ -32,6 +40,11 @@ export class ElementACLDialogComponent implements OnInit {
     this.asset = this.data.asset;
     this.connectInfo = this.data.connectInfo;
     this.code = this.data.code;
+  }
+
+  async onCopySuccess(evt) {
+    const msg = await this._i18n.t('Copied');
+    this._toastr.success(msg);
   }
 
   onCancelReview() {
@@ -78,15 +91,16 @@ export class ElementACLDialogComponent implements OnInit {
 
   checkTicket() {
     this.timerCheckTicket = setInterval(() => {
-      this._http.getTicketDetail(this.connectionToken.from_ticket.id).subscribe(
-        res => {
-          const ticketFinished = res.status.value === 'closed';
+      this._http.getTicketDetail(this.ticketID).subscribe(
+        ticket => {
+          const ticketFinished = ticket.status.value === 'closed';
           if (!ticketFinished) {
             // 工单未结束
+            this.ticketAssignees = this.getticketAssignees(ticket);
             this.code = 'ticket_review_pending';
             return;
           }
-          const state = res.state.value;
+          const state = ticket.state.value;
           if (state === 'approved') {
             this.code = 'ticket_review_approved';
           } else if (state === 'rejected') {
@@ -103,6 +117,12 @@ export class ElementACLDialogComponent implements OnInit {
         }
       );
     }, 1000);
+  }
+
+  getticketAssignees(ticket) {
+    if (ticket && ticket.process_map.length === 1) {
+      return ticket.process_map[0].assignees_display.join(',');
+    }
   }
 
 }

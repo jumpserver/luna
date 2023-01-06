@@ -70,9 +70,9 @@ export class HttpService {
     );
   }
 
-  put<T>(url: string, options?: any): Observable<any> {
+  put<T>(url: string, body?: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.put(url, options).pipe(
+    return this.http.put(url, body, options).pipe(
       catchError(this.handleError.bind(this))
     );
   }
@@ -249,9 +249,8 @@ export class HttpService {
   }
 
   closeTicket(ticketID: string) {
-    console.log('>>>>>>>>close ticket');
     const url = `/api/v1/tickets/tickets/${ticketID}/close/`;
-    return this.put(url, {});
+    return this.put(url);
   }
 
   getConnectToken(token) {
