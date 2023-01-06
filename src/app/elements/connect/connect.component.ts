@@ -54,7 +54,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       } else {
         node = nodes[1];
       }
-      this.connectAsset(node).then();
+      this._http.getAssetDetail(node.id).subscribe(asset => {
+        this.connectAsset(asset).then();
+      });
     });
   }
 
@@ -154,8 +156,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     this._logger.debug('Connect info: ', connectInfo);
     const connectMethod = connectInfo.connectMethod;
     const connToken = await this.createConnectionToken(asset, connectInfo);
-
-    console.log('>>>>>>>> after create connection token', connToken);
 
     if (!connToken) {
       this._logger.info('Create connection token failed');
@@ -278,12 +278,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           if (error.error.code.startsWith('acl_')) {
             const dialogRef = this._dialog.open(ElementACLDialogComponent, {
               height: 'auto',
-              width: '400px',
+              width: '450px',
               disableClose: true,
               data: {asset, connectInfo, code: error.error.code}
             });
             dialogRef.afterClosed().subscribe(token => {
-              console.log('>>>>>>>>>> on dialog close token: ', token);
               resolve(token);
             });
           } else {

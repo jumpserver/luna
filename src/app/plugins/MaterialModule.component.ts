@@ -69,7 +69,7 @@ import {NgxMatSelectSearchModule} from 'ngx-mat-select-search';
     MatTabsModule,
     MatToolbarModule,
     MatTooltipModule,
-    NgxMatSelectSearchModule
+    NgxMatSelectSearchModule,
   ]
 })
 export class MaterialModule {

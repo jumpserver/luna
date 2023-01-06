@@ -31,6 +31,7 @@ import {ElementConnectDialogComponent} from './elements/connect/connect-dialog/c
 import {ElementDownloadDialogComponent} from './elements/connect/download-dialog/download-dialog.component';
 import {ElementACLDialogComponent} from './elements/connect/acl-dialog/acl-dialog.component';
 import {ElementDialogAlertComponent} from './elements/dialog/dialog.service';
+import {ClipboardService} from 'ngx-clipboard';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, '/luna/assets/i18n/');
@@ -79,7 +80,8 @@ export function HttpLoaderFactory(http: HttpClient) {
     ...AllServices,
     CookieService,
     NGXLogger,
-    {provide: MAT_LABEL_GLOBAL_OPTIONS, useValue: {float: 'always'}}
+    {provide: MAT_LABEL_GLOBAL_OPTIONS, useValue: {float: 'always'}},
+    ClipboardService,
   ]
 })
 export class AppModule {
