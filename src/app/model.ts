@@ -373,7 +373,11 @@ export class Endpoint {
   https_port: number;
   http_port: number;
   ssh_port: number;
-  magnus_listen_db_port: number;
+  mysql_port: number;
+  mariadb_port: number;
+  postgresql_port: number;
+  redis_port: number;
+  oracle_port: number;
 
   getHost(): string {
     return this.host || window.location.host;
@@ -382,14 +386,7 @@ export class Endpoint {
   getPort(protocol?: string): string {
     let _protocol = protocol || window.location.protocol;
     _protocol = _protocol.replace(':', '');
-    let port;
-    if (['http', 'https', 'ssh'].indexOf(_protocol) !== -1) {
-      // 先获取后台返回的 port 地址
-      port = this[_protocol + '_port'];
-    } else {
-      // db protocol 的端口统一使用 magnus_listen_db_port
-      port = this['magnus_listen_db_port'];
-    }
+    let port = this[_protocol + '_port'];
     // 处理 http(s) 协议的后台端口为0的时候, 使用当前地址中的端口
     if (['http', 'https'].indexOf(_protocol) !== -1 && port === 0) {
       port = window.location.port;
