@@ -25,6 +25,10 @@ export {OrganizationService} from './organization';
 import {I18nService} from './i18n';
 export {I18nService};
 
+import {DialogService} from '@app/elements/dialog/dialog.service';
+export {DialogService};
+
+
 export const AllServices = [
   LogService,
   LocalStorageService,
@@ -36,6 +40,7 @@ export const AllServices = [
   SettingService,
   ViewService,
   OrganizationService,
-  I18nService
+  I18nService,
+  DialogService,
 ];
 

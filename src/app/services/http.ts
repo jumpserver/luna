@@ -70,9 +70,9 @@ export class HttpService {
     );
   }
 
-  put<T>(url: string, options?: any): Observable<any> {
+  put<T>(url: string, body?: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.put(url, options).pipe(
+    return this.http.put(url, body, options).pipe(
       catchError(this.handleError.bind(this))
     );
   }
@@ -226,8 +226,9 @@ export class HttpService {
     return cleanedParams;
   }
 
-  createConnectToken(asset: Asset, connectData: ConnectData) {
-    const url = '/api/v1/authentication/connection-token/';
+  createConnectToken(asset: Asset, connectData: ConnectData, createTicket = false) {
+    const params = createTicket ? '?create_ticket=1' : '';
+    const url = '/api/v1/authentication/connection-token/' + params;
     const { account, protocol, manualAuthInfo, connectMethod } = connectData;
     const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
     const secret = encryptPassword(manualAuthInfo.secret);
@@ -240,6 +241,16 @@ export class HttpService {
       connect_method: connectMethod.value,
     };
     return this.post<ConnectionToken>(url, data);
+  }
+
+  getTicketDetail(ticketID: string) {
+    const url = `/api/v1/tickets/tickets/${ticketID}/`;
+    return this.get(url, {});
+  }
+
+  closeTicket(ticketID: string) {
+    const url = `/api/v1/tickets/tickets/${ticketID}/close/`;
+    return this.put(url);
   }
 
   getConnectToken(token) {

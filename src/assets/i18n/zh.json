@@ -120,6 +120,18 @@
   "CLI": "命令行",
   "General": "基本配置",
   "Applet connect method": "远程应用连接方式",
-  "Client": "客户端"
+  "Client": "客户端",
+
+  "Login reminder": "登录提醒",
+  "ACL reject login asset": "本次登录已拒绝，原因是访问控制策略的限制",
+  "Need review for login asset": "本次登录需要进行人工审核，是否继续?",
+  "Ticket review pending for login asset": "登录申请已提交，等待受理人进行复核，你也可以复制链接发给他",
+  "Assignees": "受理人",
+  "Do not close this page": "不要关闭本页面",
+  "Ticket review approved for login asset": "本次登录审核已通过，是否连接资产？",
+  "Ticket review rejected for login asset": "本次登录审核已拒绝，不能连接资产",
+  "Ticket review closed for login asset": "本次登录审核已关闭，不能连接资产",
+  "Copy link": "复制链接",
+  "Login review approved": "登录审核已通过, 正在连接资产..."
 }
 

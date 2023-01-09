@@ -2,10 +2,11 @@ import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core'
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {MatDialog} from '@angular/material';
-import {AppService, HttpService, LogService, SettingService} from '@app/services';
+import {AppService, HttpService, LogService, SettingService, DialogService} from '@app/services';
 import {Account, ConnectData, Asset, ConnectionToken, View, K8sInfo} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
+import {ElementACLDialogComponent} from './acl-dialog/acl-dialog.component';
 import {launchLocalApp} from '@app/utils/common';
 import {ActivatedRoute} from '@angular/router';
 
@@ -19,6 +20,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   hasLoginTo = false;
 
   constructor(private _appSvc: AppService,
+              private _dialogAlert: DialogService,
               private _dialog: MatDialog,
               private _logger: LogService,
               private _route: ActivatedRoute,
@@ -52,7 +54,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       } else {
         node = nodes[1];
       }
-      this.connectAsset(node).then();
+      this._http.getAssetDetail(node.id).subscribe(asset => {
+        this.connectAsset(asset).then();
+      });
     });
   }
 
@@ -70,7 +74,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const token = this._route.snapshot.queryParams.token;
     this._http.getConnectToken(token).subscribe(connToken => {
       this._http.getMyAssetAccounts(connToken.asset.id).subscribe(accounts => {
-        let account = accounts.filter(item => item.username === connToken.account);
+        let account = accounts.filter(item => item.name === connToken.account);
         if (account.length === 0) {
           console.log('account is not exist');
           return;
@@ -140,6 +144,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   async connectAsset(asset) {
     if (!asset) {
+      this._dialogAlert.alert('Asset not found or You have no permission to access it, please refresh asset tree');
       return;
     }
     const accounts = await this._http.getMyAssetAccounts(asset.id).toPromise();
@@ -150,7 +155,12 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
     this._logger.debug('Connect info: ', connectInfo);
     const connectMethod = connectInfo.connectMethod;
-    const connToken = await this._http.createConnectToken(asset, connectInfo).toPromise();
+    const connToken = await this.createConnectionToken(asset, connectInfo);
+
+    if (!connToken) {
+      this._logger.info('Create connection token failed');
+      return;
+    }
 
     if (connToken.protocol === 'k8s') {
       window.open(`/luna/k8s?token=${connToken.id}`);
@@ -255,6 +265,31 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       dialogRef.afterClosed().subscribe(outputData  => {
         resolve(outputData);
       });
+    });
+  }
+
+  createConnectionToken(asset: Asset, connectInfo: ConnectData): Promise<ConnectionToken> {
+    return new Promise<ConnectionToken>((resolve, reject) => {
+      this._http.createConnectToken(asset, connectInfo).subscribe(
+        (token: ConnectionToken) => {
+           resolve(token);
+        },
+        (error) => {
+          if (error.error.code.startsWith('acl_')) {
+            const dialogRef = this._dialog.open(ElementACLDialogComponent, {
+              height: 'auto',
+              width: '450px',
+              disableClose: true,
+              data: {asset, connectInfo, code: error.error.code}
+            });
+            dialogRef.afterClosed().subscribe(token => {
+              resolve(token);
+            });
+          } else {
+            reject(error.error.detail);
+          }
+        }
+      );
     });
   }
 
