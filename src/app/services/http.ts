@@ -243,16 +243,6 @@ export class HttpService {
     return this.post<ConnectionToken>(url, data);
   }
 
-  getTicketDetail(ticketID: string) {
-    const url = `/api/v1/tickets/tickets/${ticketID}/`;
-    return this.get(url, {});
-  }
-
-  closeTicket(ticketID: string) {
-    const url = `/api/v1/tickets/tickets/${ticketID}/close/`;
-    return this.put(url);
-  }
-
   getConnectToken(token) {
     const url = new URL(`/api/v1/authentication/connection-token/${token}/`, window.location.origin);
     return this.get(url.href);

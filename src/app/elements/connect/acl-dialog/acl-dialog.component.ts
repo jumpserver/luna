@@ -18,16 +18,6 @@ export class ElementACLDialogComponent implements OnInit {
   public ticketAssignees: string = '-';
   private timerCheckTicket: number;
 
-  get ticketID(): string {
-    if (this.connectionToken && this.connectionToken.from_ticket) {
-      return this.connectionToken.from_ticket.id;
-    }
-  }
-
-  get ticketDetailURL(): string {
-    const url = `/ui/#/tickets/tickets/login-host-confirm/${this.ticketID}`;
-    return new URL(url, window.location.origin).href;
-  }
 
   constructor( public dialogRef: MatDialogRef<ElementACLDialogComponent>,
                private _i18n: I18nService,
@@ -42,6 +32,10 @@ export class ElementACLDialogComponent implements OnInit {
     this.code = this.data.code;
   }
 
+  get ticketDetailPageURL(): string {
+    return this.connectionToken.from_ticket_info.ticket_detail_page_url;
+  }
+
   async onCopySuccess(evt) {
     const msg = await this._i18n.t('Copied');
     this._toastr.success(msg);
@@ -54,7 +48,7 @@ export class ElementACLDialogComponent implements OnInit {
   onConfirmReview() {
     this._http.createConnectToken(this.asset, this.connectInfo, true).subscribe(
       (connToken: ConnectionToken) => {
-        if (connToken && !connToken.is_active && connToken.from_ticket) {
+        if (connToken && connToken.from_ticket) {
           this.connectionToken = connToken;
           this.code = 'ticket_review_pending';
           this.checkTicket();
@@ -72,12 +66,10 @@ export class ElementACLDialogComponent implements OnInit {
   }
 
   onCancelWait() {
-    this._http.closeTicket(this.connectionToken.from_ticket.id).subscribe();
+    const closeMethod = this.connectionToken.from_ticket_info.close_ticket_api.method.toLowerCase();
+    const closeURL = this.connectionToken.from_ticket_info.close_ticket_api.url;
+    this._http[closeMethod](closeURL).subscribe();
     this.closeDialog();
-  }
-
-  onConfirmConnect() {
-    this.dialogRef.close(this.connectionToken);
   }
 
   closeDialog() {
@@ -86,13 +78,15 @@ export class ElementACLDialogComponent implements OnInit {
   }
 
   checkTicket() {
+    const checkMethod = this.connectionToken.from_ticket_info.check_ticket_api.method.toLowerCase();
+    const checkURL = this.connectionToken.from_ticket_info.check_ticket_api.url;
+    const ticketAssignees = this.connectionToken.from_ticket_info.assignees.join(', ');
     this.timerCheckTicket = setInterval(() => {
-      this._http.getTicketDetail(this.ticketID).subscribe(
+      this._http[checkMethod](checkURL).subscribe(
         async ticket => {
-          const ticketFinished = ticket.status.value === 'closed';
-          if (!ticketFinished) {
-            // 工单未结束
-            this.ticketAssignees = this.getTicketAssignees(ticket);
+          if (ticket.status.value !== 'closed') {
+            // 工单未关闭
+            this.ticketAssignees = ticketAssignees;
             this.code = 'ticket_review_pending';
             return;
           }
@@ -110,17 +104,10 @@ export class ElementACLDialogComponent implements OnInit {
         },
         error => {
           this.code = 'other';
-          this.otherError = error.error.detail;
+          this.otherError = error.error.detail + `(${checkURL})`;
           clearInterval(this.timerCheckTicket);
         }
       );
-    }, 1000);
+    }, 3000);
   }
-
-  getTicketAssignees(ticket) {
-    if (ticket && ticket.process_map.length === 1) {
-      return ticket.process_map[0].assignees_display.join(',');
-    }
-  }
-
 }

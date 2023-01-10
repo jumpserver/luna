@@ -35,7 +35,7 @@
       </mat-dialog-content>
       <mat-dialog-actions>
         <button mat-raised-button (click)="onCancelWait()">{{ "Cancel" | translate }}</button>
-        <button mat-raised-button color="primary" ngxClipboard [cbContent]="ticketDetailURL" (cbOnSuccess)="onCopySuccess($event)" >{{ "Copy link" | translate }}</button>
+        <button mat-raised-button color="primary" ngxClipboard [cbContent]="ticketDetailPageURL" (cbOnSuccess)="onCopySuccess($event)" >{{ "Copy link" | translate }}</button>
       </mat-dialog-actions>
     </div>
 

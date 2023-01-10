@@ -357,6 +357,19 @@ class FromTicket {
   id: string;
 }
 
+class FromTicketInfo {
+  check_ticket_api: {
+    method: string,
+    url: string,
+  };
+  close_ticket_api: {
+    method: string,
+    url: string,
+  };
+  ticket_detail_page_url: string;
+  assignees: Array<string>;
+}
+
 export class ConnectionToken {
   id: string;
   value: string;
@@ -366,7 +379,10 @@ export class ConnectionToken {
   account: string;
   expire_time: number;
   is_active: boolean;
-  from_ticket: FromTicket;
+  from_ticket: {
+    id: string;
+  };
+  from_ticket_info: FromTicketInfo;
 }
 
 export class Protocol  {
