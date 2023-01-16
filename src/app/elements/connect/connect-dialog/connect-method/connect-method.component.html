@@ -26,7 +26,7 @@
           <mat-radio-button *ngFor="let method of item['methods']" [value]="method">
             {{ method.label }}
 
-            <span matTooltip="{{'Click to download rdp file1'| translate}}">
+            <span matTooltip="{{'Click to download rdp file'| translate}}">
               <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
                  (click)="downloadRDPFile(method)"
                  class="fa fa-question-circle-o question"
