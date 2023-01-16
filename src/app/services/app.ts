@@ -6,7 +6,7 @@ import {DataStore, User} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
-import {AuthInfo, ConnectData, TreeNode, Endpoint, View, Asset} from '@app/model';
+import {AuthInfo, ConnectData, Endpoint, View, Asset, Account} from '@app/model';
 import * as CryptoJS from 'crypto-js';
 import {getCookie, setCookie} from '@app/utils/common';
 import {OrganizationService} from './organization';
@@ -148,28 +148,40 @@ export class AppService {
     this._localStorage.delete(manualAuthInfoKey);
   }
 
-  getProtocolPreferLoginType(protocol: string): string {
-    return this.protocolPreferConnectTypes[protocol];
+  setPreConnectData(asset: Asset, connectData: ConnectData) {
+    const {account, protocol, connectMethod, manualAuthInfo, connectOptions} = connectData;
+    const key = `JMS_PRE_${asset.id}`;
+
+    const saveData = {
+      account: {alias: account.alias, username: account.username, has_secret: account.has_secret},
+      connectMethod: {value: connectMethod.value},
+      protocol: {name: protocol.name},
+      downloadRDP: connectData.downloadRDP,
+      autoLogin: connectData.autoLogin,
+      connectOptions,
+    };
+    this.setAccountLocalAuth(asset, account, manualAuthInfo);
+    this._localStorage.set(key, saveData);
   }
 
-  setProtocolPreferLoginType(protocol: string, type: string) {
-    this.protocolPreferConnectTypes[protocol] = type;
-    this._localStorage.set(this.protocolPreferKey, this.protocolPreferConnectTypes);
-  }
-
-  getAssetPreferAccount(nodeId: string): string {
-    return this.assetPreferAccount[nodeId];
-  }
-
-
-  setAssetPreferAccount(nodeId: string, accountId: string) {
-    this.assetPreferAccount[nodeId] = accountId;
-
-    try {
-      this._localStorage.set(this.accountPreferKey, this.assetPreferAccount);
-    } catch (e) {
-      // pass
+  getPreConnectData(asset: Asset): ConnectData {
+    const key = `JMS_PRE_${asset.id}`;
+    const connectData = this._localStorage.get(key) as ConnectData;
+    if (!connectData) {
+      return null;
     }
+    connectData.manualAuthInfo = new AuthInfo();
+    if (connectData.account.has_secret) {
+      return connectData;
+    }
+    if (connectData.account) {
+      const auths = this.getAccountLocalAuth(asset.id);
+      const matched = auths.find(item => item.alias === connectData.account.alias);
+      if (matched) {
+        connectData.manualAuthInfo = matched;
+      }
+    }
+    return connectData;
   }
 
   encrypt(s) {
@@ -191,53 +203,21 @@ export class AppService {
     }
   }
 
-  setPreLoginSelect(asset: Asset, outputData: ConnectData) {
-    const tmp = JSON.parse(JSON.stringify(outputData)) as ConnectData;
-    if (tmp.manualAuthInfo) {
-      tmp.manualAuthInfo.secret = '';
+  disableAutoConnect(assetId) {
+    const key = 'JMS_PRE_' + assetId;
+    const connectData = this._localStorage.get(key);
+    if (connectData) {
+      connectData.autoLogin = false;
+      this._localStorage.set(key, connectData);
     }
-    if (tmp.account.actions) {
-      tmp.account.actions = [];
-    }
-    const key = 'JMS_PL_' + asset.id;
-    this._localStorage.set(key, tmp);
   }
 
-  getPreLoginSelect(asset: Asset): ConnectData {
-    const key = 'JMS_PL_' + asset.id;
-    const connectData = this._localStorage.get(key) as ConnectData;
-    if (!connectData || !connectData.manualAuthInfo) {
-      return null;
-    }
-    if (connectData.account.has_secret) {
-      return connectData;
-    }
-    // 获取手动的密码
-    const manualAuth = connectData.manualAuthInfo;
-    if (manualAuth.username) {
-      const auths = this.getAccountLocalAuth(asset.id, connectData.account.id);
-      const matched = auths.filter(item => item.username === manualAuth.username);
-      if (matched.length === 1) {
-        manualAuth.secret = matched[0].secret;
-      }
-    }
-    return connectData;
-  }
+  getAccountLocalAuth(assetId: string, decrypt = true): AuthInfo[] {
+    const localKey = `JMS_MA_${assetId}`;
+    const auths = this._localStorage.get(localKey);
 
-  delPreLoginSelect(id) {
-    const key = 'JMS_PL_' + id;
-    this._localStorage.delete(key);
-  }
-
-  getAccountLocalAuth(assetId: string, accountUsername: string, decrypt= true): AuthInfo[] {
-    const localKey = `JMS_MA_${accountUsername}_${assetId}`;
-    let auths = this._localStorage.get(localKey);
-
-    if (!auths) {
+    if (!auths || !Array.isArray(auths)) {
       return [];
-    }
-    if (!Array.isArray(auths)) {
-      auths = [auths];
     }
     if (!decrypt) {
       return auths;
@@ -246,22 +226,23 @@ export class AppService {
     const newAuths: AuthInfo[] = [];
     for (const auth of auths) {
       const newAuth = Object.assign({}, auth);
-      newAuth.password = this.decrypt(newAuth.password);
+      newAuth.secret = this.decrypt(newAuth.secret);
       newAuths.push(newAuth);
     }
     return newAuths;
   }
 
-  saveAssetAccountAuth(assetId: string, accountId: string, auth: AuthInfo) {
-    const newAuth = Object.assign({}, auth);
+  setAccountLocalAuth(asset: Asset, account: Account, auth: AuthInfo) {
+    const assetId = asset.id;
+    const newAuth = Object.assign({alias: account.alias, username: account.username}, auth);
     if (!auth.secret) {
       auth.secret = '';
     } else {
       newAuth.secret = this.encrypt(auth.secret);
     }
 
-    let auths = this.getAccountLocalAuth(assetId, accountId, false);
-    const localKey = `JMS_MA_${accountId}_${assetId}`;
+    let auths = this.getAccountLocalAuth(assetId, false);
+    const localKey = `JMS_MA_${assetId}`;
 
     auths = auths.filter((item) => item.username !== newAuth.username);
     auths.splice(0, 0, newAuth);

@@ -30,7 +30,7 @@ export class Action {
 }
 
 export class Account {
-  id: string;
+  alias: string;
   name: string;
   username: string;
   has_secret: boolean;
@@ -114,6 +114,12 @@ export class NavEvt {
   }
 }
 
+export class K8sInfo {
+  pod: string = '';
+  namespace: string = '';
+  container: string = '';
+}
+
 export class View {
   id: string;
   name: string;
@@ -130,10 +136,11 @@ export class View {
   connectData: ConnectData;
   connectToken: ConnectionToken;
   connectMethod: ConnectMethod;
-  connectOptions: ConnectOption[];
+  connectOptions: ConnectOption[] = [];
   smartEndpoint: Endpoint;
+  k8sInfo: K8sInfo;
 
-  constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node') {
+  constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node', k8sInfo?: K8sInfo) {
     this.closed = false;
     this.editable = false;
     this.connected = true;
@@ -146,10 +153,13 @@ export class View {
     this.connectOptions = connectInfo.connectOptions;
     this.protocol = connectInfo.protocol.name;
     this.connectData = connectInfo;
+    this.k8sInfo = k8sInfo;
   }
 
   getConnectOption(field: string) {
-    const filteredField = this.connectOptions.find(i => i.field === field);
+    const connectOptions = this.connectOptions || [];
+    if (connectOptions.length === 0) { return ''; }
+    const filteredField = connectOptions.find(i => i.field === field);
     return filteredField ? filteredField.value.toString() : '';
   }
 
@@ -260,6 +270,7 @@ export class Setting {
   quickPaste = '0';
   sqlClient = '1';
   commandExecution: boolean = true;
+  appletConnectMethod: string = 'client';
 }
 
 
@@ -316,6 +327,7 @@ export class AccountGroup {
 }
 
 export class AuthInfo {
+  alias: string;
   username: string;
   secret: string;
 }
@@ -338,6 +350,24 @@ export class ConnectData {
   connectMethod: ConnectMethod;
   connectOptions: ConnectOption[];
   downloadRDP: boolean;
+  autoLogin: boolean;
+}
+
+class FromTicket {
+  id: string;
+}
+
+class FromTicketInfo {
+  check_ticket_api: {
+    method: string,
+    url: string,
+  };
+  close_ticket_api: {
+    method: string,
+    url: string,
+  };
+  ticket_detail_page_url: string;
+  assignees: Array<string>;
 }
 
 export class ConnectionToken {
@@ -348,6 +378,11 @@ export class ConnectionToken {
   user?: string;
   account: string;
   expire_time: number;
+  is_active: boolean;
+  from_ticket: {
+    id: string;
+  };
+  from_ticket_info: FromTicketInfo;
 }
 
 export class Protocol  {
@@ -360,7 +395,11 @@ export class Endpoint {
   https_port: number;
   http_port: number;
   ssh_port: number;
-  magnus_listen_db_port: number;
+  mysql_port: number;
+  mariadb_port: number;
+  postgresql_port: number;
+  redis_port: number;
+  oracle_port: number;
 
   getHost(): string {
     return this.host || window.location.host;
@@ -369,14 +408,7 @@ export class Endpoint {
   getPort(protocol?: string): string {
     let _protocol = protocol || window.location.protocol;
     _protocol = _protocol.replace(':', '');
-    let port;
-    if (['http', 'https', 'ssh'].indexOf(_protocol) !== -1) {
-      // 先获取后台返回的 port 地址
-      port = this[_protocol + '_port'];
-    } else {
-      // db protocol 的端口统一使用 magnus_listen_db_port
-      port = this['magnus_listen_db_port'];
-    }
+    let port = this[_protocol + '_port'];
     // 处理 http(s) 协议的后台端口为0的时候, 使用当前地址中的端口
     if (['http', 'https'].indexOf(_protocol) !== -1 && port === 0) {
       port = window.location.port;

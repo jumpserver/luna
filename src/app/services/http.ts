@@ -11,6 +11,7 @@ import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
 import {CookieService} from 'ngx-cookie-service';
+import {encryptPassword} from '@app/utils/crypto';
 
 @Injectable()
 export class HttpService {
@@ -69,9 +70,9 @@ export class HttpService {
     );
   }
 
-  put<T>(url: string, options?: any): Observable<any> {
+  put<T>(url: string, body?: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.put(url, options).pipe(
+    return this.http.put(url, body, options).pipe(
       catchError(this.handleError.bind(this))
     );
   }
@@ -126,23 +127,31 @@ export class HttpService {
     return this.get<Array<TreeNode>>(url);
   }
 
-  getMyGrantedNodes(async: boolean, refresh?: boolean) {
-    const syncUrl = `/api/v1/perms/users/self/nodes-with-assets/tree/`;
-    const asyncUrl = `/api/v1/perms/users/self/nodes/children-with-assets/tree/`;
+  withRetry() {
+    return retryWhen(err => err.pipe(
+      scan(
+        (retryCount, _err) => {
+          if (retryCount > 10) {
+            throw _err;
+          } else {
+            return retryCount + 1;
+          }
+        }, 0
+      ),
+      delay(10000)
+    ));
+  }
+
+  getMyGrantedNodes(async: boolean) {
+    const syncUrl = '/api/v1/perms/users/self/nodes/all-with-assets/tree/';
+    const asyncUrl = '/api/v1/perms/users/self/nodes/children-with-assets/tree/';
     const url = async ? asyncUrl : syncUrl;
-    return this.get<Array<TreeNode>>(url).pipe(
-      retryWhen(err => err.pipe(
-        scan(
-          (retryCount, _err) => {
-            if (retryCount > 10) {
-              throw _err;
-            } else {
-              return retryCount + 1;
-            }
-          }, 0
-        ),
-        delay(10000)
-      )));
+    return this.get<Array<TreeNode>>(url).pipe(this.withRetry());
+  }
+
+  getMyGrantedK8sNodes(treeId: string, async: boolean) {
+    const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?tree_id=${treeId}&async=${async}`;
+    return this.get<Array<TreeNode>>(url);
   }
 
   getMyAssetAccounts(assetId: string) {
@@ -217,22 +226,26 @@ export class HttpService {
     return cleanedParams;
   }
 
-  createConnectToken(asset: Asset, connectData: ConnectData) {
-    const url = '/api/v1/authentication/connection-token/';
+  createConnectToken(asset: Asset, connectData: ConnectData, createTicket = false) {
+    const params = createTicket ? '?create_ticket=1' : '';
+    const url = '/api/v1/authentication/connection-token/' + params;
     const { account, protocol, manualAuthInfo, connectMethod } = connectData;
-    let accountName = account.name;
-    if (account.username.startsWith('@')) {
-      accountName = account.username;
-    }
+    const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
+    const secret = encryptPassword(manualAuthInfo.secret);
     const data = {
       asset: asset.id,
-      account: accountName,
+      account: account.alias,
       protocol: protocol.name,
-      input_username: manualAuthInfo.username,
-      input_secret: manualAuthInfo.secret,
+      input_username: username,
+      input_secret: secret,
       connect_method: connectMethod.value,
     };
     return this.post<ConnectionToken>(url, data);
+  }
+
+  getConnectToken(token) {
+    const url = new URL(`/api/v1/authentication/connection-token/${token}/`, window.location.origin);
+    return this.get(url.href);
   }
 
   downloadRDPFile(token) {

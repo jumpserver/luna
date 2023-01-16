@@ -1,48 +1,58 @@
 <div class="tree-container">
-  <div class="tree-type open-tree" [ngClass]="{'tree-type-asset': assetsTreeHidden}" >
+  <div
+    *ngFor="let tree of trees"
+    class="tree-type open-tree"
+    [ngClass]="{'tree-type-asset': tree.open}"
+  >
     <span class="tree-type-banner">
-    <div
-      class="tree-banner-left"
-      (click)="foldTree('assets')"
-    >
-      <i
-        class="fa fa-caret-down tree-icon-rotate"
-        [ngClass]="{'rotate': assetsTreeHidden}"
-      ></i>
-      <span class="tree-type-banner-label">
-        {{ "My assets"| translate }}
-      </span>
-    </div>
+      <div
+        class="tree-banner-left"
+        (click)="foldTree(tree)"
+      >
+        <i
+          class="fa fa-caret-down tree-icon-rotate"
+          [ngClass]="{'rotate': !tree.open}"
+        ></i>
+        <span
+          class="tree-type-banner-label"
+        >
+          {{ tree.label | translate }}
+        </span>
+      </div>
       <span
         class="tree-banner-icon-zone"
-        [hidden]="assetsTreeHidden"
+        [hidden]="!tree.open"
       >
-        <a class="tree-search" id="assetsSearchIcon">
+        <a
+          class="tree-search"
+          [id]="tree.name + 'SearchIcon'"
+          *ngIf="tree.search"
+        >
           <i
             class="fa fa-search tree-banner-icon"
-            (click)="treeSearch($event, 'assets')"
+            (click)="treeSearch($event, tree)"
           ></i>
           <input
             type="text"
-            id="assetsSearchInput"
+            [id]="tree.name + 'SearchInput'"
             class="tree-input"
-            [(ngModel)]="assetsSearchValue"
+            [(ngModel)]="searchValue"
           />
         </a>
         <i
           class="fa fa-refresh tree-banner-icon"
-          (click)="refreshTree($event, 'asset')"
+          (click)="refreshTree($event, tree)"
         ></i>
       </span>
     </span>
     <div
       class="tree-type-content"
-      [hidden]="assetsTreeHidden"
+      [hidden]="!tree.open"
     >
-      <div *ngIf="assetsLoading" class="tree-type-loading">
+      <div *ngIf="tree.loading" class="tree-type-loading">
         <mat-spinner diameter="20"></mat-spinner>
       </div>
-      <ul id="assetsTree" class="ztree">
+      <ul [id]="tree.name" class="ztree">
       </ul>
     </div>
   </div>

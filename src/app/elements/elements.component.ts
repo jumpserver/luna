@@ -23,6 +23,9 @@ import {ElementConnectorOmnidbComponent} from './content/content-window/omnidb/o
 import {ElementSelectAccountComponent} from './connect/connect-dialog/select-account/select-account.component';
 import {ElementReplayAsciicastComponent} from '@app/elements/replay/asciicast/asciicast.component';
 import {ElementAdvancedOptionComponent} from './connect/connect-dialog/advanced-option/advanced-option.component';
+import {ElementConnectMethodComponent} from './connect/connect-dialog/connect-method/connect-method.component';
+import {ElementDownloadDialogComponent} from './connect/download-dialog/download-dialog.component';
+import {ElementACLDialogComponent} from './connect/acl-dialog/acl-dialog.component';
 
 
 export const ElementComponents = [
@@ -43,6 +46,8 @@ export const ElementComponents = [
   ElementConnectorKokoComponent,
   ElementConnectorMagnusComponent,
   ElementConnectComponent,
+  ElementDownloadDialogComponent,
+  ElementACLDialogComponent,
   ElementReplayGuacamoleComponent,
   ElementReplayJsonComponent,
   ChangLanWarningDialogComponent,
@@ -52,5 +57,6 @@ export const ElementComponents = [
   ElementConnectorOmnidbComponent,
   ElementSelectAccountComponent,
   ElementReplayAsciicastComponent,
-  ElementAdvancedOptionComponent
+  ElementAdvancedOptionComponent,
+  ElementConnectMethodComponent,
 ];

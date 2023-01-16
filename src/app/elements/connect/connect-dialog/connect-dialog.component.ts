@@ -1,6 +1,6 @@
 import {Component, OnInit, Inject, ChangeDetectorRef} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {AppService, LogService, SettingService} from '@app/services';
+import {AppService, LogService, SettingService, I18nService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {ConnectMethod, ConnectData, Account, AuthInfo, ConnectOption, Protocol, Asset} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
@@ -20,29 +20,50 @@ export class ElementConnectDialogComponent implements OnInit {
   public accounts: Account[];
   public manualAuthInfo: AuthInfo = new AuthInfo();
   public accountSelected: Account = null;
-  public connectMethod: ConnectMethod;
-  public connectMethods = [];
   public autoLogin = false;
   public connectOptions: ConnectOption[] = [];
+  public connectMethod: ConnectMethod = new ConnectMethod();
+  public preConnectData: ConnectData = new ConnectData();
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
               private _cdRef: ChangeDetectorRef,
               private _logger: LogService,
               private _appSvc: AppService,
+              private _i18n: I18nService,
               @Inject(MAT_DIALOG_DATA) public data: any,
   ) {}
 
   ngOnInit() {
     this.accounts = this.data.accounts;
     this.asset = this.data.asset;
+    this.preConnectData = this.data.preConnectData;
     this.protocols = this.asset.protocols;
-    this.onProtocolChange(this.protocols[0]);
+    this.setDefaults();
+  }
+
+  setDefaults() {
+    if (this.preConnectData) {
+      this.protocol = this.protocols.find(p => p.name === this.preConnectData.protocol.name);
+      this.accountSelected = this.accounts.find(a => a.alias === this.preConnectData.account.alias) || new Account();
+      this.connectMethod = this._appSvc.getProtocolConnectMethods(this.protocol.name).find(
+        cm => cm.value === this.preConnectData.connectMethod.value
+      );
+    }
+
+    if (!this.protocol) {
+      this.protocol = this.protocols[0];
+    }
+    if (!this.accountSelected) {
+      this.accountSelected = this.accounts[0];
+    }
+    if (!this.connectMethod) {
+      this.connectMethod = this._appSvc.getProtocolConnectMethods(this.protocol.name)[0];
+    }
   }
 
   onProtocolChange(protocol) {
     this.protocol = protocol;
-    this.setConnectMethods();
   }
 
   onSelectAccount(account) {
@@ -53,26 +74,6 @@ export class ElementConnectDialogComponent implements OnInit {
     }
   }
 
-  setConnectMethods() {
-    this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
-    this.connectMethod = this.getPreferConnectMethod() || this.connectMethods[0];
-  }
-
-  getPreferConnectMethod() {
-    const preferConnectTypeId = this._appSvc.getProtocolPreferLoginType(this.protocol.name);
-    const matchedTypes = this.connectMethods.filter((item) => item.id === preferConnectTypeId);
-    if (matchedTypes.length === 1) {
-      return matchedTypes[0];
-    } else {
-      return this.connectMethods[0];
-    }
-  }
-
-  downloadRDPFile(method) {
-    this.connectMethod = method;
-    this.onConfirm(true);
-  }
-
   onConfirm(downloadRDP = false) {
     this.outputData.account = this.accountSelected;
     this.outputData.connectMethod = this.connectMethod;
@@ -80,14 +81,9 @@ export class ElementConnectDialogComponent implements OnInit {
     this.outputData.connectOptions = this.connectOptions;
     this.outputData.protocol = this.protocol;
     this.outputData.downloadRDP = downloadRDP;
+    this.outputData.autoLogin = this.autoLogin;
 
-    if (!downloadRDP) {
-      if (this.autoLogin) {
-        this._appSvc.setPreLoginSelect(this.asset, this.outputData);
-      }
-      this._appSvc.setAssetPreferAccount(this.asset.id, this.accountSelected.id);
-      this._appSvc.setProtocolPreferLoginType(this.protocol.name, this.connectMethod.value);
-    }
+    this._appSvc.setPreConnectData(this.asset, this.outputData);
 
     this.onSubmit$.next(true);
     this.dialogRef.close(this.outputData);

@@ -7,12 +7,12 @@ import {ConnectMethod, ConnectOption} from '@app/model';
   styleUrls: ['./advanced-option.component.scss'],
 })
 export class ElementAdvancedOptionComponent implements  OnInit, OnChanges {
-  @Input() connectType: ConnectMethod;
+  @Input() connectMethod: ConnectMethod;
   @Input() accountSelected: any;
   @Output() onOptionsChange = new EventEmitter<ConnectOption[]>();
   public advancedOptions: ConnectOption[] = [];
   public isShowAdvancedOption = false;
-  needShowAutoCompletionProtocols: Array<string> = ['mysql', 'mariadb'];
+  public needShowAutoCompletionProtocols: Array<string> = ['mysql', 'mariadb'];
 
   constructor() {}
 
@@ -22,7 +22,8 @@ export class ElementAdvancedOptionComponent implements  OnInit, OnChanges {
         type: 'checkbox',
         field: 'disableautohash',
         hidden: () => {
-          return this.connectType.value === 'webCLI' && this.needShowAutoCompletionProtocols.includes(this.accountSelected.protocol);
+          return this.connectMethod.value === 'web_cli'
+            && this.needShowAutoCompletionProtocols.includes(this.accountSelected.protocol);
         },
         label: 'Disable auto completion',
         value: false

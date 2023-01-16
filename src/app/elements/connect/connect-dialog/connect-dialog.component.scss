@@ -1,8 +1,4 @@
-.mat-radio-button {
-  margin-right: 16px;
-  vertical-align: middle;
-}
-
+.connect-method-zone ::ng-deep .zone-label,
 .zone-label {
   color: rgba(0, 0, 0, 0.54);
   cursor: pointer;
@@ -11,12 +7,6 @@
 
 .mat-form-field-infix {
   border-top-width: 0!important;
-}
-
-.connect-type-group {
-  border: solid #cbc9c9 1px;
-  padding: 8px;
-  display: flex;
 }
 
 .auto-connect {
@@ -32,11 +22,16 @@
   margin: 0 10px 10px;
 }
 
-.protocol-tab ::ng-deep .mat-tab-link, .protocol-tab  ::ng-deep .mat-tab-label-active {
-  height: 35px !important;
-  width: 100px;
-  //padding: 0 20px !important;
-  min-width: 20px !important;
+.protocol-tab ::ng-deep .mat-tab-links {
+  .mat-tab-link, .mat-tab-label-active {
+    height: 35px !important;
+    width: 100px;
+    //padding: 0 20px !important;
+    min-width: 20px !important;
+  }
+  .mat-tab-link:focus {
+    background-color: white;
+  }
 }
 
 .dialog-body ::ng-deep .mat-form-field-infix {
@@ -56,3 +51,16 @@
 .mat-dialog-content {
   overflow: hidden;
 }
+
+.mat-button-toggle-group {
+  height: 32px;
+  align-items: center;
+}
+
+.mat-button-toggle:hover {
+  background-color: transparent;
+}
+
+.mat-button-toggle-checked {
+}
+

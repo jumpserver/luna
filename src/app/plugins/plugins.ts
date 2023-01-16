@@ -12,7 +12,7 @@ export const PluginModules = [
   LoggerModule.forRoot({level: NgxLoggerLevel.DEBUG, serverLogLevel: NgxLoggerLevel.ERROR}),
   FlexLayoutModule,
   SplitModule,
-  ClipboardModule
+  ClipboardModule,
 ];
 
 

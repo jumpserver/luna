@@ -41,24 +41,29 @@ export class ElementConnectorKokoComponent implements OnInit {
     }
   }
 
+  setK8sParams(params) {
+    Object.keys(this.view.k8sInfo).forEach(k => {
+      const v = this.view.k8sInfo[k];
+      if (v) {
+        params[k] = this.view.k8sInfo[k];
+      }
+    });
+  }
 
   generateNodeConnectUrl() {
     const params = {};
+
     params['disableautohash'] = this.view.getConnectOption('disableautohash');
     params['token'] = this.view.connectToken.id;
-    params['_'] = Date.now().toString();
+    if (this.view.k8sInfo) {
+      this.setK8sParams(params);
+    }
 
+    params['_'] = Date.now().toString();
     const query = Object.entries(params)
       .map(([key, value]) => { return `${key}=${value}`; })
       .reduce((a, b) => { return `${a}&${b}`; });
 
-    // Todo: K8S
-    // if (this.asset.type === 'k8s' && this.node.meta.data.identity) {
-    //   const k8sInfo = this.analysisId(this.node['parentInfo']);
-    //   for (const [key, value] of Object.entries(k8sInfo)) {
-    //     params.set(key, value.toString());
-    //   }
-    // }
     this.iframeURL = `${this.baseUrl}/connect/?` + query;
   }
 

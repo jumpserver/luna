@@ -16,7 +16,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @Input() onSubmit: BehaviorSubject<boolean>;
   @Input() onSubmit$: BehaviorSubject<boolean>;
   @Input() manualAuthInfo: AuthInfo;
-  @Output() onSelectAccount: EventEmitter<Account> = new EventEmitter<Account>();
+  @Output() accountSelectedChange: EventEmitter<Account> = new EventEmitter<Account>();
   @ViewChild('username', {static: false}) usernameRef: ElementRef;
   @ViewChild('password', {static: false}) passwordRef: ElementRef;
 
@@ -80,7 +80,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this.accountCtl.valueChanges
       .pipe(takeUntil(this._onDestroy))
       .subscribe(() => {
-        this.onSelectAccount.emit(this.accountSelected);
+        this.accountSelectedChange.emit(this.accountSelected);
         this.onAccountChanged();
       });
 
@@ -96,21 +96,21 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this._onDestroy.complete();
   }
 
-  getPreferAccount() {
-    const preferId = this._appSvc.getAssetPreferAccount(this.asset.id);
-    const matchedAccounts = this.accounts.find((item) => item.id === preferId);
-    if (preferId && matchedAccounts) { return matchedAccounts; }
-    return null;
+  getPreAccountSelected() {
+    const preConnectData = this._appSvc.getPreConnectData(this.asset);
+    if (preConnectData && preConnectData.account) {
+      return this.accounts.find(item => item.alias === preConnectData.account.alias);
+    }
   }
 
   groupAccounts() {
     const groups = [];
-    const preferAccount: any = this.getPreferAccount();
-    if (preferAccount) {
-      this.accountSelected = preferAccount;
+    const preAccountSelected = this.getPreAccountSelected();
+    if (preAccountSelected) {
+      this.accountSelected = preAccountSelected;
       groups.push({
         name: this._i18n.instant('Last login'),
-        accounts: [preferAccount]
+        accounts: [preAccountSelected]
       });
     }
 
@@ -185,21 +185,20 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     if (!this.accountSelected) {
       return;
     }
+    if (this.accountSelected.has_secret) {
+      return;
+    }
     if (this.accountSelected.username === '@INPUT') {
       this.manualAuthInfo.username = '';
     } else {
       this.manualAuthInfo.username = this.accountSelected.username;
     }
-    if (!this.accountSelected.has_secret) {
-      this.manualAuthInfo.secret = '';
-    }
-
-    this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.username);
+    this.manualAuthInfo.secret = '';
+    this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id);
     if (this.localAuthItems && this.localAuthItems.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
     }
     this.setUsernamePlaceholder();
-    this._cdRef.detectChanges();
     setTimeout(() => {
       if (this.manualAuthInfo.username) {
         this.passwordRef.nativeElement.focus();
@@ -207,6 +206,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         this.usernameRef.nativeElement.focus();
       }
     }, 10);
+    this._cdRef.detectChanges();
   }
 
   onFocus() {
@@ -226,16 +226,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     });
   }
 
-  subscribeSubmitEvent() {
-    this.onSubmit$.subscribe(() => {
-      if (this.rememberAuth) {
-        this._logger.debug('Save auth to local storage: ', this.asset.id, this.accountSelected.id, this.manualAuthInfo);
-        this._appSvc.saveAssetAccountAuth(this.asset.id, this.accountSelected.id, this.manualAuthInfo);
-      }
-    });
-  }
-
   getSavedAuthInfos() {
-    this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id, this.accountSelected.id);
+    this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id);
   }
 }

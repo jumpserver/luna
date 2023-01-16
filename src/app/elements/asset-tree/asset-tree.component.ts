@@ -35,6 +35,23 @@ export class DisabledAssetsDialogComponent implements OnInit {
   }
 }
 
+class Tree {
+  name: string;
+  label: string;
+  open: boolean;
+  loading: boolean;
+  search: boolean;
+  ztree: any;
+
+  constructor(name, label, open, loading, search) {
+    this.name = name;
+    this.label = label;
+    this.open = open;
+    this.loading = loading;
+    this.search = search;
+  }
+}
+
 
 @Component({
   selector: 'elements-asset-tree',
@@ -69,29 +86,29 @@ export class ElementAssetTreeComponent implements OnInit {
         'id': 'new-connection',
         'name': 'Open in new window',
         'fa': 'fa-external-link',
-        'hide': this.isk8sNode(),
+        'hide': this.isK8s,
         'click': this.onMenuConnectNewTab.bind(this)
       }, {
         'id': 'favorite',
         'name': 'Favorite',
         'fa': 'fa-star-o',
-        'hide': this.isAssetFavorite() || !this.isAssetNode(),
+        'hide': this.isAssetFavorite() || this.isK8s,
         'click': this.onMenuFavorite.bind(this)
       }, {
         'id': 'disfavor',
         'name': 'Disfavor',
         'fa': 'fa-star',
-        'hide': !this.isAssetFavorite() || !this.isAssetNode(),
+        'hide': !this.isAssetFavorite() || this.isK8s,
         'click': this.onMenuFavorite.bind(this)
       }];
     if (!this.rightClickSelectNode) {
       return [];
     }
-
     return menuList;
   }
 
   @Input() query: string;
+  @Input() isK8s: boolean = false;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu', {static: false}) rMenu: ElementRef;
 
@@ -123,15 +140,9 @@ export class ElementAssetTreeComponent implements OnInit {
   isLoadTreeAsync: boolean;
   filterAssetCancel$: Subject<boolean> = new Subject();
   favoriteAssets = [];
-  assetsTreeHidden = false;
-  assetsLoading = true;
-  assetsSearchValue = '';
+  searchValue = '';
   currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
-
-  debouncedOnAssetsNodeClick = _.debounce(this.onNodeClick, 300, {
-    'leading': true,
-    'trailing': false
-  });
+  trees: Array<Tree> = [];
 
   ngOnInit() {
     this._settingSvc.isLoadTreeAsync$.subscribe((state) => {
@@ -142,8 +153,9 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   onNodeClick(event, treeId, treeNode, clickFlag) {
+    const ztree = this.trees.find(t => t.name === treeId).ztree;
     if (treeNode.isParent) {
-      this.assetsTree.expandNode(treeNode);
+      ztree.expandNode(treeNode);
       return;
     }
     if (treeNode.chkDisabled) {
@@ -157,21 +169,75 @@ export class ElementAssetTreeComponent implements OnInit {
     this.connectAsset(treeNode).then();
   }
 
-  refreshAssetsTree() {
-    this.assetsSearchValue = '';
-    this.initAssetTree(true).then();
-  }
-
-  async initAssetTree(refresh?: boolean) {
-    const setting = Object.assign({}, this.setting);
+  async initK8sTree(refresh = false) {
+    let tree = new Tree(
+      'K8sTree',
+      this._i18n.instant('Kubernetes'),
+      true,
+      true,
+      false
+    );
+    if (refresh) {
+      tree = this.trees.find(t => t.name === tree.name);
+    } else {
+      this.trees.push(tree);
+    }
+    const token = this._route.snapshot.queryParams.token;
+    const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?token=${token}`;
+    const setting = Object.assign({
+      async: {
+        enable: true,
+        url: url,
+        autoParam: ['id=key', 'name=n', 'level=lv'],
+        type: 'get',
+        headers: {
+          'X-JMS-ORG': this.currentOrgID
+        }
+      }
+    }, this.setting);
     setting['callback'] = {
-      onClick: this.debouncedOnAssetsNodeClick.bind(this),
+      onClick: _.debounce(this.onNodeClick, 300, {
+        'leading': true,
+        'trailing': false
+      }).bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
+    tree.loading = true;
+    this._http.get(url).subscribe(resp => {
+      tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, resp);
+    }, err => {
+      this._logger.error('Get k8s tree error: ', err);
+    }, () => {
+      tree.loading = false;
+    });
+  }
+
+  async initAssetTree(refresh = false) {
+    let tree = new Tree(
+      'AssetTree',
+      'My assets',
+      true,
+      true,
+      true
+    );
+    if (refresh) {
+      tree = this.trees.find(t => t.name === tree.name);
+    } else {
+      this.trees.push(tree);
+    }
+    const setting = Object.assign({}, this.setting);
+    setting['callback'] = {
+      onClick: _.debounce(this.onNodeClick, 300, {
+        'leading': true,
+        'trailing': false
+      }).bind(this),
+      onRightClick: this.onRightClick.bind(this)
+    };
+    const url = '/api/v1/perms/users/self/nodes/children-with-assets/tree/?';
     if (this.isLoadTreeAsync) {
       setting['async'] = {
         enable: true,
-        url: '/api/v1/perms/users/self/nodes/children-with-assets/tree/',
+        url: url,
         autoParam: ['id=key', 'name=n', 'level=lv'],
         type: 'get',
         headers: {
@@ -183,29 +249,43 @@ export class ElementAssetTreeComponent implements OnInit {
     this._http.getFavoriteAssets().subscribe(resp => {
       this.favoriteAssets = resp.map(i => i.asset);
     });
-
-    this.assetsLoading = true;
-    this._http.getMyGrantedNodes(this.isLoadTreeAsync, refresh).subscribe(resp => {
-      this.assetsLoading = false;
+    tree.loading = true;
+    this._http.getMyGrantedNodes(this.isLoadTreeAsync).subscribe(resp => {
       if (refresh) {
-        this.assetsTree.destroy();
+        tree.ztree.expandAll(false);
+        tree.ztree.destroy();
       }
-      const _assetTree = $.fn.zTree.init($('#assetsTree'), setting, resp);
-      _assetTree.setting.view.expandSpeed = '';
-      _assetTree.expandAll(false);
-      _assetTree.setting.view.expandSpeed = 'fast';
-      this.assetsTree = _assetTree;
+      setTimeout(() => {
+        tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, resp);
+      }, 100);
     }, error => {
-      this.assetsLoading = false;
+      console.error('Get tree error: ', error);
+    }, () => {
+      tree.loading = false;
     });
   }
 
   initTree() {
-    this.initAssetTree(false).then();
+    if (this.isK8s) {
+      this.initK8sTree().then();
+    } else {
+      this.initAssetTree().then();
+    }
+  }
+
+  async refreshTree(event) {
+    event.stopPropagation();
+    this.searchValue = '';
+    if (this.isK8s) {
+      this.initK8sTree(true).then();
+    } else {
+      this.initAssetTree(true).then();
+    }
   }
 
   async connectAsset(node: TreeNode) {
-    const evt = new ConnectEvt(node, 'asset');
+    const action = this.isK8s ? 'k8s' : 'asset';
+    const evt = new ConnectEvt(node, action);
     connectEvt.next(evt);
   }
 
@@ -226,14 +306,6 @@ export class ElementAssetTreeComponent implements OnInit {
   isAssetFavorite() {
     const assetId = this.rightClickSelectNode.id;
     return this.favoriteAssets.indexOf(assetId) !== -1;
-  }
-
-  isAssetNode() {
-    return this.rightClickSelectNode.meta.type === 'asset';
-  }
-
-  isk8sNode() {
-    return this.rightClickSelectNode.meta.data.type === 'k8s';
   }
 
   reAsyncChildNodes(treeId, treeNode, silent) {
@@ -283,19 +355,19 @@ export class ElementAssetTreeComponent implements OnInit {
     if (!treeNode) {
       return null;
     }
-
-    if (treeNode.isParent && ['container', 'system_user'].indexOf(treeNode.meta.data.identity) === -1) {
+    const ztree = this.trees.find(t => t.name === treeId).ztree;
+    const metaData = treeNode.meta.data;
+    if (treeNode.isParent && ['container', 'asset'].indexOf(metaData.identity) === -1) {
       this.expandAllChildren(treeId, treeNode, !treeNode.open);
       return;
     }
     this.rightClickSelectNode = treeNode;
-
     if (!treeNode && event.target.tagName.toLowerCase() !== 'button'
       && $(event.target).parents('a').length === 0) {
-      this.assetsTree.cancelSelectedNode();
+      ztree.cancelSelectedNode();
       this.showRMenu(event.clientX, event.clientY);
     } else if (treeNode && !treeNode.noR) {
-      this.assetsTree.selectNode(treeNode);
+      ztree.selectNode(treeNode);
       this.showRMenu(event.clientX, event.clientY);
       this.rightClickSelectNode = treeNode;
     }
@@ -303,7 +375,8 @@ export class ElementAssetTreeComponent implements OnInit {
 
   onMenuConnect() {
     const node = this.rightClickSelectNode;
-    const evt = new ConnectEvt(node, 'connect');
+    const action = this.isK8s ? 'k8s' : 'connect';
+    const evt = new ConnectEvt(node, action);
     connectEvt.next(evt);
   }
 
@@ -330,17 +403,17 @@ export class ElementAssetTreeComponent implements OnInit {
     }
   }
 
-  filterAssets(keyword) {
+  filterAssets(keyword, tree) {
     if (this.isLoadTreeAsync) {
       this._logger.debug('Filter assets server');
-      this.filterAssetsServer(keyword);
+      this.filterAssetsServer(keyword, tree.ztree);
     } else {
       this._logger.debug('Filter assets local');
-      this.filterAssetsLocal(keyword);
+      this.filterAssetsLocal(keyword, tree.ztree);
     }
   }
 
-  filterTree(keyword, tree, filterCallback) {
+  _filterZTree(keyword, tree, filterCallback) {
     const searchNode = tree.getNodesByFilter((node) => node.id === 'search');
     if (searchNode) {
       tree.removeNode(searchNode[0]);
@@ -389,36 +462,34 @@ export class ElementAssetTreeComponent implements OnInit {
     });
   }
 
-  filterAssetsServer(keyword) {
-    if (!this.assetsTree) {
+  filterAssetsServer(keyword, ztree) {
+    if (!ztree) {
       return;
     }
-    let searchNode = this.assetsTree.getNodesByFilter((node) => node.id === 'search');
+    let searchNode = ztree.getNodesByFilter((node) => node.id === 'search');
     if (searchNode) {
-      this.assetsTree.removeChildNodes(searchNode[0]);
-      this.assetsTree.removeNode(searchNode[0]);
+      ztree.removeChildNodes(searchNode[0]);
+      ztree.removeNode(searchNode[0]);
     }
-    const treeNodes = this.assetsTree.getNodes();
+    const treeNodes = ztree.getNodes();
     if (!keyword) {
       if (treeNodes.length !== 0) {
-        this.assetsTree.showNodes(treeNodes);
+        ztree.showNodes(treeNodes);
       }
       return;
     }
     this.filterAssetCancel$.next(true);
     if (treeNodes.length !== 0) {
-      this.assetsTree.hideNodes(treeNodes);
+      ztree.hideNodes(treeNodes);
     }
-    this.assetsLoading = true;
     this._http.getMyGrantedAssets(keyword)
       .pipe(takeUntil(this.filterAssetCancel$))
       .subscribe(nodes => {
-        this.assetsLoading = false;
         let name = this._i18n.instant('Search');
         const assetsAmount = nodes.length;
         name = `${name} (${assetsAmount})`;
         const newNode = {id: 'search', name: name, isParent: true, open: true, zAsync: true};
-        searchNode = this.assetsTree.addNodes(null, newNode)[0];
+        searchNode = ztree.addNodes(null, newNode)[0];
         searchNode.zAsync = true;
         const nodesGroupByOrg = groupBy(nodes, (node) => {
           return node.meta.data.org_name;
@@ -426,17 +497,17 @@ export class ElementAssetTreeComponent implements OnInit {
         nodesGroupByOrg.forEach((item) => {
           const orgName = item[0].meta.data.org_name;
           const orgNodeData = {id: orgName, name: orgName, isParent: true, open: true, zAsync: true};
-          const orgNode = this.assetsTree.addNodes(searchNode, orgNodeData)[0];
+          const orgNode = ztree.addNodes(searchNode, orgNodeData)[0];
           orgNode.zAsync = true;
-          this.assetsTree.addNodes(orgNode, item);
+          ztree.addNodes(orgNode, item);
         });
         searchNode.open = true;
       });
     return;
   }
 
-  filterAssetsLocal(keyword) {
-    if (!this.assetsTree) {
+  filterAssetsLocal(keyword, ztree) {
+    if (!ztree) {
       return null;
     }
     const filterAssetsCallback = (node: TreeNode) => {
@@ -444,11 +515,10 @@ export class ElementAssetTreeComponent implements OnInit {
         return false;
       }
       const host = node.meta.data;
-      return host.hostname.toLowerCase().indexOf(keyword.toLowerCase()) !== -1
-        || host.ip.indexOf(keyword.toLowerCase()) !== -1;
+      return host.name.toLowerCase().indexOf(keyword.toLowerCase()) !== -1
+        || host.address.indexOf(keyword.toLowerCase()) !== -1;
     };
-    return this.filterTree(keyword, this.assetsTree, filterAssetsCallback);
-    // zTreeObj.expandAll(true);
+    return this._filterZTree(keyword, ztree, filterAssetsCallback);
   }
 
   recurseParent(node) {
@@ -477,11 +547,11 @@ export class ElementAssetTreeComponent implements OnInit {
     return allChildren;
   }
 
-  treeSearch(event, type: string) {
+  treeSearch(event, tree: Tree) {
     event.stopPropagation();
     const vm = this;
-    const searchIcon = document.getElementById(`${type}SearchIcon`);
-    const searchInput = document.getElementById(`${type}SearchInput`);
+    const searchIcon = document.getElementById(`${tree.name}SearchIcon`);
+    const searchInput = document.getElementById(`${tree.name}SearchInput`);
     searchIcon.classList.toggle('active');
     searchInput.focus();
     searchInput.onclick = (e) => {
@@ -496,17 +566,12 @@ export class ElementAssetTreeComponent implements OnInit {
     searchIcon.oninput = _.debounce((e) => {
       e.stopPropagation();
       const value = e.target.value || '';
-      vm.assetsSearchValue = value;
-      vm.filterAssets(value);
+      vm.searchValue = value;
+      vm.filterAssets(value, tree);
     }, 450);
   }
 
-  refreshTree(event, type: string) {
-    event.stopPropagation();
-    this.refreshAssetsTree();
-  }
-
-  foldTree(type: string) {
-    this[`${type}TreeHidden`] = !this[`${type}TreeHidden`];
+  foldTree(tree: Tree) {
+    tree.open = !tree.open;
   }
 }

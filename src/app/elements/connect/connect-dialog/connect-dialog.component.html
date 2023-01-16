@@ -22,34 +22,20 @@
       [accounts]="accounts"
       [onSubmit]="onSubmit$"
       [manualAuthInfo]="manualAuthInfo"
-      (onSelectAccount)="onSelectAccount($event)"
+      (accountSelectedChange)="onSelectAccount($event)"
     >
     </elements-select-account>
 
-    <div class="connect-type form-field">
-      <label class="zone-label" for="connect-type">{{ "Connect Method" | translate }}</label>
-      <div class="connect-type-group">
-        <mat-radio-group
-          aria-label="Select an option"
-          name="connect-type"
-          [(ngModel)]="connectMethod"
-          id="connect-type"
-        >
-          <mat-radio-button *ngFor="let method of connectMethods" [value]="method">
-            {{ method.label | translate }}
-
-            <span class="my-tooltip" attr.data-tooltip="{{'Click to download rdp file'| translate}}">
-            <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
-               (click)="downloadRDPFile(method)" class="fa fa-question-circle-o question"
-            ></i>
-          </span>
-          </mat-radio-button>
-        </mat-radio-group>
-      </div>
-    </div>
+    <elements-connect-method
+      class="connect-method-zone"
+      [protocol]="protocol"
+      [(connectMethod)]="connectMethod"
+      (onDownloadRDPFile)="onConfirm(true)"
+    >
+    </elements-connect-method>
 
     <elements-advanced-option
-      [connectType]="connectMethod"
+      [connectMethod]="connectMethod"
       [accountSelected]="accountSelected"
       (onOptionsChange)="onAdvancedOptionChanged($event)"
     >
