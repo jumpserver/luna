@@ -132,6 +132,7 @@
   "Ticket review rejected for login asset": "本次登录审核已拒绝，不能连接资产",
   "Ticket review closed for login asset": "本次登录审核已关闭，不能连接资产",
   "Copy link": "复制链接",
-  "Login review approved": "登录审核已通过, 正在连接资产..."
+  "Login review approved": "登录审核已通过, 正在连接资产...",
+  "No account available": "没有可用账号"
 }
 

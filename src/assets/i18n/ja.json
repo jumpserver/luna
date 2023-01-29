@@ -123,5 +123,6 @@
   "Ticket review rejected for login asset": "このログイン レビューは拒否されたため、アセットを接続できません",
   "Ticket review closed for login asset": "このログイン レビューは終了しており、アセットを接続できません",
   "Copy link": "リンクをコピーする",
-  "Login review approved": "ログイン監査に合格し、アセットを接続しています..."
+  "Login review approved": "ログイン監査に合格し、アセットを接続しています...",
+  "No account available": "アカウントがありません"
 }
