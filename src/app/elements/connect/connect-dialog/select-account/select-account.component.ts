@@ -69,7 +69,10 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.groupedAccounts = this.groupAccounts();
     this.filteredUsersGroups.next(this.groupedAccounts.slice());
-    this.manualAuthInfo.username = this.accountSelected.username.startsWith('@') ? '' : this.accountSelected.username;
+
+    if (this.accountSelected) {
+      this.manualAuthInfo.username = this.accountSelected.username.startsWith('@') ? '' : this.accountSelected.username;
+    }
 
     this.accountFilterCtl.valueChanges
       .pipe(takeUntil(this._onDestroy))
@@ -131,6 +134,12 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       groups.push({
         name: this._i18n.instant('Manual accounts'),
         accounts: this.noSecretAccounts
+      });
+    }
+    if (groups.length === 0) {
+      groups.push({
+        name: this._i18n.instant('No account available'),
+        accounts: []
       });
     }
     return groups;

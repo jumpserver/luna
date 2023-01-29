@@ -20,7 +20,6 @@ export class ElementConnectMethodComponent implements OnInit {
   @Input() set connectMethod(c: ConnectMethod) {
     this._connectMethod = c;
     this.connectMethodChange.emit(c);
-    console.log('Changed: ', c);
   }
   get connectMethod() {
     return this._connectMethod;
