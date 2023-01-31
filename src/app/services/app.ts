@@ -1,22 +1,12 @@
-import {Injectable, OnInit} from '@angular/core';
+import {Injectable} from '@angular/core';
 import {Router} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {environment} from '@src/environments/environment';
-import {
-  DataStore,
-  User,
-  ProtocolConnectTypes,
-  TYPE_RDP_CLIENT,
-  TYPE_RDP_FILE,
-  TYPE_DB_CLIENT,
-  TYPE_WEB_CLI,
-  TYPE_SSH_CLIENT,
-  TYPE_DB_GUI,
-} from '@app/globals';
+import {DataStore, User} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
-import {AuthInfo, ConnectData, SystemUser, TreeNode, Endpoint, Protocol, View} from '@app/model';
+import {AuthInfo, ConnectData, Endpoint, View, Asset, Account} from '@app/model';
 import * as CryptoJS from 'crypto-js';
 import {getCookie, setCookie} from '@app/utils/common';
 import {OrganizationService} from './organization';
@@ -33,10 +23,11 @@ export class AppService {
   // user:User = user  ;
   public lang: string;
   private protocolPreferConnectTypes: object = {};
-  private assetPreferSystemUser: object = {};
+  private assetPreferAccount: object = {};
   private protocolPreferKey = 'ProtocolPreferLoginType';
-  private systemUserPreferKey = 'PreferSystemUser';
+  private accountPreferKey = 'PreferAccount';
   private endpoints: Endpoint[] = [];
+  private protocolConnectTypesMap: object = {};
 
   constructor(private _http: HttpService,
               private _router: Router,
@@ -49,6 +40,7 @@ export class AppService {
     this.checkLogin();
     this.loadPreferData();
     this.loadOriManualAuthInfo();
+    this.getConnectMethods();
   }
 
   setLogLevel() {
@@ -75,7 +67,7 @@ export class AppService {
       return;
     }
 
-    // Connection token 方式不用检查过期了
+    // Connection connectToken 方式不用检查过期了
     const token = this.getQueryString('token');
     // Determine whether the user has logged in
     const sessionExpire = getCookie('jms_session_expire');
@@ -119,36 +111,15 @@ export class AppService {
     return null;
   }
 
-  getProtocolConnectTypes(remoteApp: Boolean) {
-    const xpackEnabled = this._settingSvc.globalSetting.XPACK_LICENSE_IS_VALID;
-    const razorEnabled = this._settingSvc.globalSetting.TERMINAL_RAZOR_ENABLED;
-    const omnidbEnabled = this._settingSvc.globalSetting.TERMINAL_OMNIDB_ENABLED;
-    const magnusEnabled = this._settingSvc.globalSetting.TERMINAL_MAGNUS_ENABLED;
-    const sshClientEnabled = this._settingSvc.globalSetting.TERMINAL_KOKO_SSH_ENABLED;
-    const validTypes = {};
-    for (const [protocol, types] of Object.entries(ProtocolConnectTypes)) {
-      validTypes[protocol] = types.filter((tp) => {
-        // 没开启 xpack
-        if (tp.requireXPack && !xpackEnabled) {
-          return false;
-        }
-        // 没有开启 razor 不支持 连接 razor
-        if ([TYPE_RDP_CLIENT.id, TYPE_RDP_FILE.id].indexOf(tp.id) > -1 && !razorEnabled) {
-          return false;
-        }
-        if (tp.id === TYPE_DB_GUI.id && !omnidbEnabled) {
-          return false;
-        }
-        if (tp.id === TYPE_DB_CLIENT.id && !magnusEnabled) {
-          return false;
-        }
-        if (tp.id === TYPE_SSH_CLIENT.id && !sshClientEnabled) {
-          return false;
-        }
-        return true;
-      });
-    }
-    return validTypes;
+  getConnectMethods() {
+    const url = '/api/v1/terminal/components/connect-methods/';
+    this._http.get(url).subscribe(response => {
+      this.protocolConnectTypesMap = response;
+    });
+  }
+
+  getProtocolConnectMethods(protocol: string) {
+    return this.protocolConnectTypesMap[protocol] || [];
   }
 
   loadPreferData() {
@@ -156,9 +127,9 @@ export class AppService {
     if (protocolPreferData && typeof protocolPreferData === 'object') {
       this.protocolPreferConnectTypes = protocolPreferData;
     }
-    const systemUserPreferData = this._localStorage.get(this.systemUserPreferKey);
-    if (systemUserPreferData && typeof systemUserPreferData === 'object') {
-      this.assetPreferSystemUser = systemUserPreferData;
+    const accountPreferData = this._localStorage.get(this.accountPreferKey);
+    if (accountPreferData && typeof accountPreferData === 'object') {
+      this.assetPreferAccount = accountPreferData;
     }
   }
 
@@ -177,38 +148,40 @@ export class AppService {
     this._localStorage.delete(manualAuthInfoKey);
   }
 
-  getProtocolPreferLoginType(protocol: string): string {
-    return this.protocolPreferConnectTypes[protocol];
+  setPreConnectData(asset: Asset, connectData: ConnectData) {
+    const {account, protocol, connectMethod, manualAuthInfo, connectOptions} = connectData;
+    const key = `JMS_PRE_${asset.id}`;
+
+    const saveData = {
+      account: {alias: account.alias, username: account.username, has_secret: account.has_secret},
+      connectMethod: {value: connectMethod.value},
+      protocol: {name: protocol.name},
+      downloadRDP: connectData.downloadRDP,
+      autoLogin: connectData.autoLogin,
+      connectOptions,
+    };
+    this.setAccountLocalAuth(asset, account, manualAuthInfo);
+    this._localStorage.set(key, saveData);
   }
 
-  setProtocolPreferLoginType(protocol: string, type: string) {
-    this.protocolPreferConnectTypes[protocol] = type;
-    this._localStorage.set(this.protocolPreferKey, this.protocolPreferConnectTypes);
-  }
-
-  getNodePreferSystemUser(nodeId: string): string {
-    return this.assetPreferSystemUser[nodeId];
-  }
-
-  // 根据当前节点信息判断是不是k8s类型，解析id格式
-  getNodeTypeID(node: TreeNode): string {
-    let nodeID = node.id || '';
-    const nodeType = node.meta.data.type || '';
-    if (nodeType === 'k8s') {
-      const curAppID = nodeID.split('&')[0] || '';
-      nodeID = curAppID.substr(curAppID.lastIndexOf('=') + 1) || '';
+  getPreConnectData(asset: Asset): ConnectData {
+    const key = `JMS_PRE_${asset.id}`;
+    const connectData = this._localStorage.get(key) as ConnectData;
+    if (!connectData) {
+      return null;
     }
-    return nodeID;
-  }
-
-  setNodePreferSystemUser(nodeId: string, systemUserId: string) {
-    this.assetPreferSystemUser[nodeId] = systemUserId;
-
-    try {
-      this._localStorage.set(this.systemUserPreferKey, this.assetPreferSystemUser);
-    } catch (e) {
-      // pass
+    connectData.manualAuthInfo = new AuthInfo();
+    if (connectData.account.has_secret) {
+      return connectData;
     }
+    if (connectData.account) {
+      const auths = this.getAccountLocalAuth(asset.id);
+      const matched = auths.find(item => item.alias === connectData.account.alias);
+      if (matched) {
+        connectData.manualAuthInfo = matched;
+      }
+    }
+    return connectData;
   }
 
   encrypt(s) {
@@ -230,56 +203,22 @@ export class AppService {
     }
   }
 
-  setPreLoginSelect(node: TreeNode, outputData: ConnectData) {
-    const tmp = JSON.parse(JSON.stringify(outputData)) as ConnectData;
-    if (tmp.manualAuthInfo) {
-      tmp.manualAuthInfo.password = '';
+  disableAutoConnect(assetId) {
+    const key = 'JMS_PRE_' + assetId;
+    const connectData = this._localStorage.get(key);
+    if (connectData) {
+      connectData.autoLogin = false;
+      this._localStorage.set(key, connectData);
     }
-    if (tmp.systemUser.actions) {
-      tmp.systemUser.actions = [];
-    }
-    const key = 'JMS_PL_' + node.id;
-    this._localStorage.set(key, tmp);
   }
 
-  getPreLoginSelect(node: TreeNode): ConnectData {
-    const key = 'JMS_PL_' + node.id;
-    const connectData = this._localStorage.get(key) as ConnectData;
-    if (!connectData || !connectData.manualAuthInfo) {
-      return null;
-    }
-    if (connectData.systemUser.login_mode !== 'manual') {
-      return connectData;
-    }
-    // 获取手动的密码
-    const manualAuth = connectData.manualAuthInfo;
-    if (manualAuth.username) {
-      const auths = this.getNodeSystemUserAuth(node.id, connectData.systemUser.id);
-      const matched = auths.filter(item => item.username === manualAuth.username);
-      if (matched.length === 1) {
-        manualAuth.password = matched[0].password;
-      }
-    }
-    return connectData;
-  }
+  getAccountLocalAuth(assetId: string, decrypt = true): AuthInfo[] {
+    const localKey = `JMS_MA_${assetId}`;
+    const auths = this._localStorage.get(localKey);
 
-  delPreLoginSelect(node: TreeNode) {
-    const key = 'JMS_PL_' + node.id;
-    this._localStorage.delete(key);
-  }
-
-  getNodeSystemUserAuth(nodeId: string, systemUserId: string, decrypt= true): AuthInfo[] {
-    const localKey = `JMS_MA_${systemUserId}_${nodeId}`;
-    let auths = this._localStorage.get(localKey);
-
-    if (!auths) {
+    if (!auths || !Array.isArray(auths)) {
       return [];
     }
-
-    if (!Array.isArray(auths)) {
-      auths = [auths];
-    }
-
     if (!decrypt) {
       return auths;
     }
@@ -287,55 +226,39 @@ export class AppService {
     const newAuths: AuthInfo[] = [];
     for (const auth of auths) {
       const newAuth = Object.assign({}, auth);
-      newAuth.password = this.decrypt(newAuth.password);
+      newAuth.secret = this.decrypt(newAuth.secret);
       newAuths.push(newAuth);
     }
     return newAuths;
   }
 
-  saveNodeSystemUserAuth(nodeId: string, systemUserId: string, auth: AuthInfo) {
-    const newAuth = Object.assign({}, auth);
-    if (!auth.password) {
-      auth.password = '';
+  setAccountLocalAuth(asset: Asset, account: Account, auth: AuthInfo) {
+    const assetId = asset.id;
+    const newAuth = Object.assign({alias: account.alias, username: account.username}, auth);
+    if (!auth.secret) {
+      auth.secret = '';
     } else {
-      newAuth.password = this.encrypt(auth.password);
+      newAuth.secret = this.encrypt(auth.secret);
     }
 
-    let auths = this.getNodeSystemUserAuth(nodeId, systemUserId, false);
-    const localKey = `JMS_MA_${systemUserId}_${nodeId}`;
+    let auths = this.getAccountLocalAuth(assetId, false);
+    const localKey = `JMS_MA_${assetId}`;
 
     auths = auths.filter((item) => item.username !== newAuth.username);
     auths.splice(0, 0, newAuth);
     this._localStorage.set(localKey, auths);
   }
 
-  analysisId(idStr) {
-    const idObject = {};
-    idStr = idStr.split('&');
-    for (let i = 0; i < idStr.length; i++) {
-      idObject[idStr[i].split('=')[0]] = (idStr[i].split('=')[1]);
-    }
-    return idObject;
-  }
-
   getSmartEndpoint(view: View): Promise<Endpoint> {
-    let protocol = (view.connectType && view.connectType.protocol);
-    if (protocol === TYPE_DB_CLIENT.protocol) {
-      protocol = view.protocol;
-    } else if (protocol === TYPE_WEB_CLI.protocol) {
+    let protocol = view.protocol;
+    if (protocol === 'http') {
       protocol = window.location.protocol.replace(':', '');
     }
-    const data = { 'assetId': '', 'appId': '', 'sessionId': '', 'token': '' };
-    if (view.token) {
-      data['token'] = view.token;
-    } else if (view.node.meta.type === 'application') {
-      if (view.node.meta.data.type === 'k8s') {
-        data['appId'] = this.analysisId(view.node.id)['app_id'];
-      } else {
-        data['appId'] = view.node.id;
-      }
+    const data = { 'assetId': '', 'sessionId': '', 'token': '' };
+    if (view.connectToken) {
+      data['token'] = view.connectToken.id;
     } else {
-      data['assetId'] = view.node.id;
+      data['assetId'] = view.asset.id;
     }
     const res = this._http.getSmartEndpoint(data, protocol);
     res.catch((err) => { alert(err.error.detail); });

@@ -134,7 +134,7 @@
      * @param ip {string} ip target for rdp
      * @param domain {string} microsoft domain
      * @param username {string} session username
-     * @param password {string} session password
+     * @param secret {string} session secret
      * @param next {function} asynchrone end callback
      */
     connect: function (token, socket) {

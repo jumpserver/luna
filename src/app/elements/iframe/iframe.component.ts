@@ -1,7 +1,7 @@
 import {Component, Input, OnInit, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter, OnDestroy} from '@angular/core';
 import {View} from '@app/model';
-import {TimeInterval} from 'rxjs';
 import {I18nService, LogService} from '@app/services';
+import {environment} from '@src/environments/environment';
 
 @Component({
   selector: 'elements-iframe',
@@ -14,10 +14,11 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   @Input() view: View;
   @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
+  eventHandler: EventListenerOrEventListenerObject;
   iframeWindow: Window;
   show = false;
-  eventHandler: EventListenerOrEventListenerObject;
   ping: number;
+  debug = false;
 
   constructor(
     private _i18n: I18nService,
@@ -27,6 +28,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
   ngOnInit() {
     this._logger.info(`IFrame URL: ${this.src}`);
+    if (!environment.production) {
+      this.debug = true;
+    }
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.eventHandler = function (e: any) {
       const msg = e.data;

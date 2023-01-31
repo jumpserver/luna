@@ -1,0 +1,32 @@
+
+.connect-type-group {
+  border: solid #cbc9c9 1px;
+  padding: 8px;
+}
+
+.connect-grouped-methods {
+  margin-left: 10px;
+}
+
+.connect-method-item {
+  min-width: 80px;
+}
+
+.connect-grouped-title {
+  width: 70px;
+}
+
+.connect-type-group ::ng-deep .mat-tab-group {
+  .mat-tab-label {
+    height: 32px !important;
+    padding: 0 10px !important;
+  }
+
+  .mat-tab-label:focus {
+    background-color: white;
+  }
+
+  .mat-tab-label-active {
+    background-color: white;
+  }
+}

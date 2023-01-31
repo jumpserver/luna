@@ -1,4 +1,4 @@
-import {Component, Inject, Injectable, OnInit} from '@angular/core';
+import {Component, Inject, Injectable} from '@angular/core';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {LogService} from '@app/services';
 
@@ -43,11 +43,11 @@ export class DialogService {
   loading() {
   }
 
-  alert(msg: string) {
+  alert(msg: string, title= 'Tips') {
     this._dialog.open(ElementDialogAlertComponent, {
       height: '200px',
       width: '300px',
-      data: {msg: msg}
+      data: {title: title, msg: msg}
     });
   }
 

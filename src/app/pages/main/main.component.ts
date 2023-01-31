@@ -3,7 +3,6 @@ import {DataStore, User} from '@app/globals';
 import {IOutputData, SplitComponent} from 'angular-split';
 import {ViewService, SettingService} from '@app/services';
 import * as _ from 'lodash';
-declare var $: any;
 
 @Component({
   selector: 'pages-main',
@@ -59,10 +58,17 @@ export class PageMainComponent implements OnInit {
 
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any) {
-    const notInIframe = window.self === window.top;
-    const notInReplay = location.pathname.indexOf('/luna/replay') === -1;
-    return !(notInIframe && notInReplay);
+    // console.log('environment', environment);
+    // if (!environment.production) {
+    //   $event.returnValue = null;
+    //   console.log('Return false');
+    //   return null;
+    // }
+    // const notInIframe = window.self === window.top;
+    // const notInReplay = location.pathname.indexOf('/luna/replay') === -1;
+    // return !(notInIframe && notInReplay);
   }
+
   dragStartHandler($event: IOutputData) {
     this.showIframeHider = true;
   }

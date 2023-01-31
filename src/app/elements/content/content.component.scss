@@ -83,7 +83,7 @@ $-border-y: #1f1b1b;
   }
 }
 
-.basicContext {
+.view-menu {
   background: #000;
   border: none;
   -webkit-border-radius: 2px;
@@ -100,11 +100,11 @@ $-border-y: #1f1b1b;
   -ms-user-select: none;
   user-select: none;
 }
-.basicContext, .basicContext * {
+.view-menu, .view-menu * {
   box-sizing: border-box;
 }
 
-.basicContextContainer {
+.view-menuContainer {
   position: fixed;
   width: 100%;
   height: 100%;
@@ -112,16 +112,16 @@ $-border-y: #1f1b1b;
   -webkit-tap-highlight-color: transparent;
 }
 
-.basicContext tr {
+.view-menu tr {
   margin: 0;
 }
 
-.basicContext__item {
+.view-menu__item {
   cursor: pointer;
   padding: 0 6px;
 }
 
-.basicContext td {
+.view-menu td {
   display: block;
   padding: 0 15px;
   text-decoration: none;
@@ -138,11 +138,11 @@ $-border-y: #1f1b1b;
   color: rgb(214, 203, 203);
 }
 
-.basicContext__icon {
+.view-menu__icon {
   padding-right: 5px;
 }
 
-.basicContext__item.basicContext__item--separator {
+.view-menu__item.view-menu__item--separator {
   background: #181414;
   border: 0;
   border-top: none;
@@ -169,11 +169,11 @@ tr:hover {
   background-color: #463e3e;
 }
 
-.basicContext table {
+.view-menu table {
   border-spacing: 0 !important;
 }
 
-.basicContext__data {
+.view-menu__data {
   padding: 0 6px;
 }
 

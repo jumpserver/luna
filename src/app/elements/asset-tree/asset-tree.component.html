@@ -1,111 +1,69 @@
 <div class="tree-container">
-  <div class="tree-type open-tree" [ngClass]="{'tree-type-asset': assetsTreeHidden}" >
-    <span class="tree-type-banner">
-    <div
-      class="tree-banner-left"
-      (click)="foldTree('assets')"
-    >
-      <i
-        class="fa fa-caret-down tree-icon-rotate"
-        [ngClass]="{'rotate': assetsTreeHidden}"
-      ></i>
-      <span class="tree-type-banner-label">
-        {{ "My assets"| translate }}
-      </span>
-    </div>
-      <span
-        class="tree-banner-icon-zone"
-        [hidden]="assetsTreeHidden"
-      >
-        <a class="tree-search" id="assetsSearchIcon">
-          <i
-            class="fa fa-search tree-banner-icon"
-            (click)="treeSearch($event, 'assets')"
-          ></i>
-          <input
-            type="text"
-            id="assetsSearchInput"
-            class="tree-input"
-            [(ngModel)]="assetsSearchValue"
-          />
-        </a>
-        <i
-          class="fa fa-refresh tree-banner-icon"
-          (click)="refreshTree($event, 'asset')"
-        ></i>
-      </span>
-    </span>
-    <div
-      class="tree-type-content"
-      [hidden]="assetsTreeHidden"
-    >
-      <div *ngIf="assetsLoading" class="tree-type-loading">
-        <mat-spinner diameter="20"></mat-spinner>
-      </div>
-      <ul id="assetsTree" class="ztree">
-      </ul>
-    </div>
-  </div>
-  
   <div
-    class="tree-type"
-    [hidden]="!applicationTreeHasNodes"
-    [ngClass]="{'open-tree': !applicationsTreeHidden}"
+    *ngFor="let tree of trees"
+    class="tree-type open-tree"
+    [ngClass]="{'tree-type-asset': tree.open}"
   >
     <span class="tree-type-banner">
-    <div
-      class="tree-banner-left"
-      (click)="foldTree('applications')"
-    >
-      <i
-        class="fa fa-caret-down tree-icon-rotate"
-        [ngClass]="{'rotate': applicationsTreeHidden}"
-      ></i>
-      <span class="tree-type-banner-label">
-        {{ "My applications"| translate }}
-      </span>
-    </div>
+      <div
+        class="tree-banner-left"
+        (click)="foldTree(tree)"
+      >
+        <i
+          class="fa fa-caret-down tree-icon-rotate"
+          [ngClass]="{'rotate': !tree.open}"
+        ></i>
+        <span
+          class="tree-type-banner-label"
+        >
+          {{ tree.label | translate }}
+        </span>
+      </div>
       <span
         class="tree-banner-icon-zone"
-        [hidden]="applicationsTreeHidden"
+        [hidden]="!tree.open"
       >
-        <a class="tree-search" id="applicationsSearchIcon">
+        <a
+          class="tree-search"
+          [id]="tree.name + 'SearchIcon'"
+          *ngIf="tree.search"
+        >
           <i
             class="fa fa-search tree-banner-icon"
-            (click)="treeSearch($event, 'applications')"
+            (click)="treeSearch($event, tree)"
           ></i>
           <input
             type="text"
-            id="applicationsSearchInput"
+            [id]="tree.name + 'SearchInput'"
             class="tree-input"
-            [(ngModel)]="applicationsSearchValue"
+            [(ngModel)]="searchValue"
           />
         </a>
         <i
           class="fa fa-refresh tree-banner-icon"
-          (click)="refreshTree($event, 'applications')"
+          (click)="refreshTree($event, tree)"
         ></i>
       </span>
     </span>
     <div
       class="tree-type-content"
-      [hidden]="applicationsTreeHidden"
+      [hidden]="!tree.open"
     >
-      <div *ngIf="applicationsLoading" class="tree-type-loading">
+      <div *ngIf="tree.loading" class="tree-type-loading">
         <mat-spinner diameter="20"></mat-spinner>
       </div>
-      <ul id="applicationsTree" class="ztree">
+      <ul [id]="tree.name" class="ztree">
       </ul>
     </div>
   </div>
 </div>
 
-<div #rMenu *ngIf="isShowRMenu" class="basicContext" style="position: fixed" [style.top]="pos.top" [style.left]="pos.left">
+<div #rMenu *ngIf="isShowRMenu" class="view-menu" style="position: fixed" [style.top]="pos.top" [style.left]="pos.left">
   <table>
       <tbody>
-        <tr *ngFor="let menu of RMenuList; let i = index" class="basicContext__item ">
-            <td class="basicContext__data" [attr.data-num]="i" (click)="menu.click()" [ngStyle]="{'display': menu.hide ? 'none': ''}">
-              <span class="basicContext__icon fa" [ngClass]="menu.fa"></span> {{ menu.name| translate }}
+        <tr *ngFor="let menu of RMenuList; let i = index" class="view-menu__item ">
+            <td class="view-menu__data" [attr.data-num]="i" (click)="menu.click()" [ngStyle]="{'display': menu.hide ? 'none': ''}">
+              <span class="view-menu__icon fa" [ngClass]="menu.fa"></span> {{ menu.name| translate }}
             </td>
         </tr>
         </tbody>

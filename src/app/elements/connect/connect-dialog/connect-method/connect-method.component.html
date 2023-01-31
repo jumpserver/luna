@@ -1,0 +1,40 @@
+<div class="connect-type form-field">
+  <label class="zone-label">
+    {{ "Connect Method" | translate }}
+  </label>
+  <div class="connect-type-group">
+    <mat-tab-group
+      [selectedIndex]="currentConnectMethodTypeIndex()"
+      (selectedIndexChange)="onConnectMethodTypeChange($event)"
+      animationDuration="0ms"
+      dynamicHeight
+      mat-stretch-tabs="true"
+      mat-align-tabs="center"
+    >
+      <mat-tab
+        *ngFor="let item of connectMethodTypes "
+      >
+        <ng-template mat-tab-label>
+          <i [class]="'fa ' + item.fa" style="padding-right: 10px"></i> {{ item.label }}
+        </ng-template>
+
+        <mat-radio-group
+          name="connect-method"
+          [(ngModel)]="connectMethod"
+          style="display: block; padding: 18px 10px 10px"
+        >
+          <mat-radio-button *ngFor="let method of item['methods']" [value]="method">
+            {{ method.label }}
+
+            <span matTooltip="{{'Click to download rdp file'| translate}}">
+              <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
+                 (click)="downloadRDPFile(method)"
+                 class="fa fa-question-circle-o question"
+              ></i>
+            </span>
+          </mat-radio-button>
+        </mat-radio-group>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+</div>

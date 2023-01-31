@@ -1,6 +1,6 @@
 import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
-import {SettingService, ViewService} from '@app/services';
+import {SettingService, ViewService, I18nService} from '@app/services';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import * as _ from 'lodash';
 
@@ -17,16 +17,13 @@ export class ElementContentComponent implements OnInit {
   isShowRMenu = false;
   rIdx = -1;
 
-  static DisconnectAll() {
-  }
-
   get tabsWidth() {
     return (this.viewList.length + 1) * 151 + 10;
   }
 
   constructor(public viewSrv: ViewService,
-              public settingSvc: SettingService
-  ) {
+              public settingSvc: SettingService,
+              private _i18n: I18nService) {
   }
 
   ngOnInit() {
@@ -35,7 +32,7 @@ export class ElementContentComponent implements OnInit {
   }
 
   onNewView(view) {
-    this.scrollToEnd();
+    this.scrollEnd();
     setTimeout(() => {
       this.viewSrv.addView(view);
       this.setViewActive(view);
@@ -84,7 +81,7 @@ export class ElementContentComponent implements OnInit {
     this.tabsRef.nativeElement.scrollLeft += 150 * 2;
   }
 
-  scrollToEnd() {
+  scrollEnd() {
     this.tabsRef.nativeElement.scrollLeft = this.tabsRef.nativeElement.scrollWidth;
   }
 
@@ -100,11 +97,83 @@ export class ElementContentComponent implements OnInit {
         continue;
       }
       const d = {'data': cmd};
-
       this.viewList[i].termComp.sendCommand(d);
     }
 
     this.batchCommand = '';
+  }
+
+  rMenuItems() {
+    return [
+      {
+        title: 'Clone Connect',
+        icon: 'fa-copy',
+        callback: () => {
+          const id = this.rIdx + 1;
+          const v = _.cloneDeep(this.viewList[this.rIdx]);
+          this.viewList.splice(id, 0, v);
+          this.setViewActive(v);
+        }
+      },
+      {
+        title: 'Reconnect',
+        icon: 'fa-refresh',
+        callback: () => {
+          this.viewList[this.rIdx].termComp.reconnect();
+        }
+      },
+      {
+        title: 'Close Current Tab',
+        icon: 'fa-close',
+        callback: () => {
+          this.closeView(this.viewList[this.rIdx]);
+        }
+      },
+      {
+        title: 'Close All Tabs',
+        icon: 'fa-close',
+        disabled: this.viewList.length === 0,
+        callback: () => {
+          while (this.viewList.length > 0) {
+            this.closeView(this.viewList[0]);
+          }
+        },
+      },
+      {
+        title: 'Close Other Tabs',
+        icon: 'fa-close',
+        disabled: this.viewList.length <= 1,
+        callback: () => {
+          for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
+            this.closeView(this.viewList[i]);
+          }
+          while (this.viewList.length > 1) {
+            this.closeView(this.viewList[0]);
+          }
+        },
+      },
+      {
+        title: 'Close Left Tabs',
+        icon: 'fa-close',
+        callback: () => {
+          const keepNum = this.viewList.length - this.rIdx;
+          while (this.viewList.length > keepNum) {
+            this.closeView(this.viewList[0]);
+          }
+        },
+        disabled: this.rIdx === 0
+      },
+      {
+        title: 'Close Right Tabs',
+        icon: 'fa-close',
+        callback: () => {
+          for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
+            this.closeView(this.viewList[i].asset);
+          }
+        },
+        disabled: this.rIdx === this.viewList.length - 1
+      }
+    ];
   }
 
   showRMenu(left, top) {
@@ -125,52 +194,4 @@ export class ElementContentComponent implements OnInit {
     this.rIdx = tabIdx;
     event.preventDefault();
   }
-
-  rClose() {
-    // 关闭当前tab
-    this.closeView(this.viewList[this.rIdx]);
-  }
-
-  rCloseAll() {
-    // 关闭所有tab
-    while (this.viewList.length > 0) {
-      this.closeView(this.viewList[0]);
-    }
-  }
-
-  rCloseOthers() {
-    // 关闭其他tab
-    for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
-      this.closeView(this.viewList[i]);
-    }
-    while (this.viewList.length > 1) {
-      this.closeView(this.viewList[0]);
-    }
-  }
-
-  rCloseRight() {
-    // 关闭右侧tab
-    for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
-      this.closeView(this.viewList[i].node);
-    }
-  }
-
-  rCloseLeft() {
-    // 关闭左侧tab
-    const keepNum = this.viewList.length - this.rIdx;
-    while (this.viewList.length > keepNum) {
-      this.closeView(this.viewList[0]);
-    }
-  }
-
-  rCloneConnect() {
-    const id = this.rIdx + 1;
-    const v = _.cloneDeep(this.viewList[this.rIdx]);
-    this.viewList.splice(id, 0, v);
-    this.setViewActive(v);
-  }
-  rReconnect() {
-    this.viewList[this.rIdx].termComp.reconnect();
-  }
-
 }

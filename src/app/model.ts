@@ -24,16 +24,18 @@ export class User {
   logined: boolean;
 }
 
-export class SystemUser {
-  id: string;
+export class Action {
+  label: string;
+  value: string;
+}
+
+export class Account {
+  alias: string;
   name: string;
-  login_mode: string;
   username: string;
-  priority: number;
-  protocol: string;
-  password: string;
-  actions: Array<string>;
-  username_same_with_user: boolean;
+  has_secret: boolean;
+  secret: string;
+  actions: Array<Action>;
 }
 
 class TreeNodeMeta {
@@ -59,23 +61,32 @@ export class Node {
   value: string;
 }
 
+class Choice {
+  label: string;
+  value: string;
+}
+
+class Specific {
+  db_name?: string;
+}
+
 export class Asset {
   id: string;
-  hostname: string;
-  ip: string;
+  name: string;
+  address: string;
   comment: string;
-  domain: string;
-  os: string;
-  platform: string;
-  protocols: Array<string>;
+  type: Choice;
+  category: Choice;
+  protocols: Array<Protocol>;
+  specific: Specific;
 }
 
 
 export class ConnectEvt {
-  node: TreeNode;
   action: string;
+  node: TreeNode;
 
-  constructor(node: TreeNode, action: string) {
+  constructor(node, action: string) {
     this.node = node;
     this.action = action;
   }
@@ -103,38 +114,57 @@ export class NavEvt {
   }
 }
 
+export class K8sInfo {
+  pod: string = '';
+  namespace: string = '';
+  container: string = '';
+}
+
 export class View {
   id: string;
-  nick: string;
-  connectFrom: string; // token, node, fileManager
+  name: string;
+  connectFrom: string; // connectToken, node, fileManager
   type: string; // database_app, remote_app, asset, k8s_app
   protocol: string;
-  editable: boolean;
   active: boolean;
-  connected: boolean;
-  hide: boolean;
   closed: boolean;
-  node: TreeNode;
-  sysUser: SystemUser;
-  token: string;
-  connectType: ConnectType;
+  editable: boolean;
+  connected: boolean;
+  asset: Asset;
+  account: Account;
   termComp: any;
-  connectOptions: ConnectOption[];
+  connectData: ConnectData;
+  connectToken: ConnectionToken;
+  connectMethod: ConnectMethod;
+  connectOptions: ConnectOption[] = [];
   smartEndpoint: Endpoint;
+  k8sInfo: K8sInfo;
 
-  constructor(node: TreeNode, user: SystemUser, connectFrom: string,
-              type: string, protocol: string, connectOptions?: any
-  ) {
-    this.connected = true;
-    this.editable = false;
+  constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node', k8sInfo?: K8sInfo) {
     this.closed = false;
-    this.nick = node.name;
-    this.node = node;
-    this.sysUser = user;
+    this.editable = false;
+    this.connected = true;
+    this.name = asset.name;
+    this.asset = asset;
+    this.account = connectInfo.account;
     this.connectFrom = connectFrom;
-    this.type = type;
-    this.protocol = protocol;
-    this.connectOptions = connectOptions || [];
+    this.connectToken = connToken;
+    this.connectMethod = connectInfo.connectMethod;
+    this.connectOptions = connectInfo.connectOptions;
+    this.protocol = connectInfo.protocol.name;
+    this.connectData = connectInfo;
+    this.k8sInfo = k8sInfo;
+  }
+
+  getConnectOption(field: string) {
+    const connectOptions = this.connectOptions || [];
+    if (connectOptions.length === 0) { return ''; }
+    const filteredField = connectOptions.find(i => i.field === field);
+    return filteredField ? filteredField.value.toString() : '';
+  }
+
+  toString() {
+    return this.id;
   }
 }
 
@@ -148,12 +178,11 @@ export class ViewAction {
   }
 }
 
-export class ConnectType {
-  name: string;
-  id: string;
-  requireXPack: boolean;
-  protocol: string;
-  client: boolean;
+export class ConnectMethod {
+  label: string;
+  value: string;
+  type: string;
+  component: string;
 }
 
 export class DataStore {
@@ -241,6 +270,7 @@ export class Setting {
   quickPaste = '0';
   sqlClient = '1';
   commandExecution: boolean = true;
+  appletConnectMethod: string = 'client';
 }
 
 
@@ -290,15 +320,16 @@ export class Command {
   timestamp: number;
 }
 
-export class SystemUserGroup {
+export class AccountGroup {
   name: string;
   disabled: boolean;
-  systemUsers: SystemUser[];
+  accounts: Account[];
 }
 
 export class AuthInfo {
+  alias: string;
   username: string;
-  password: string;
+  secret: string;
 }
 
 export class ConnectOption {
@@ -312,24 +343,46 @@ export class ConnectOption {
 
 
 export class ConnectData {
-  node: TreeNode;
-  systemUser: SystemUser;
+  asset: Asset;
+  account: Account;
+  protocol: Protocol;
   manualAuthInfo: AuthInfo;
-  connectType: ConnectType;
+  connectMethod: ConnectMethod;
   connectOptions: ConnectOption[];
+  downloadRDP: boolean;
+  autoLogin: boolean;
+}
+
+class FromTicket {
+  id: string;
+}
+
+class FromTicketInfo {
+  check_ticket_api: {
+    method: string,
+    url: string,
+  };
+  close_ticket_api: {
+    method: string,
+    url: string,
+  };
+  ticket_detail_page_url: string;
+  assignees: Array<string>;
 }
 
 export class ConnectionToken {
   id: string;
-  secret: string;
-  type: string;
+  value: string;
   protocol: string;
-}
-
-export interface ConnectionTokenParam {
-  system_user: string;
-  asset?: string;
-  application?: string;
+  asset: string;
+  user?: string;
+  account: string;
+  expire_time: number;
+  is_active: boolean;
+  from_ticket: {
+    id: string;
+  };
+  from_ticket_info: FromTicketInfo;
 }
 
 export class Protocol  {
@@ -342,7 +395,11 @@ export class Endpoint {
   https_port: number;
   http_port: number;
   ssh_port: number;
-  magnus_listen_db_port: number;
+  mysql_port: number;
+  mariadb_port: number;
+  postgresql_port: number;
+  redis_port: number;
+  oracle_port: number;
 
   getHost(): string {
     return this.host || window.location.host;
@@ -351,14 +408,7 @@ export class Endpoint {
   getPort(protocol?: string): string {
     let _protocol = protocol || window.location.protocol;
     _protocol = _protocol.replace(':', '');
-    let port;
-    if (['http', 'https', 'ssh'].indexOf(_protocol) !== -1) {
-      // 先获取后台返回的 port 地址
-      port = this[_protocol + '_port'];
-    } else {
-      // db protocol 的端口统一使用 magnus_listen_db_port
-      port = this['magnus_listen_db_port'];
-    }
+    let port = this[_protocol + '_port'];
     // 处理 http(s) 协议的后台端口为0的时候, 使用当前地址中的端口
     if (['http', 'https'].indexOf(_protocol) !== -1 && port === 0) {
       port = window.location.port;

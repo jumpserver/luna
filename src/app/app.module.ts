@@ -29,6 +29,9 @@ import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {ElementConnectDialogComponent} from './elements/connect/connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './elements/connect/download-dialog/download-dialog.component';
+import {ElementACLDialogComponent} from './elements/connect/acl-dialog/acl-dialog.component';
+import {ElementDialogAlertComponent} from './elements/dialog/dialog.service';
+import {ClipboardService} from 'ngx-clipboard';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, '/luna/assets/i18n/');
@@ -59,7 +62,6 @@ export function HttpLoaderFactory(http: HttpClient) {
     ...Pipes,
     ...ElementComponents,
     ...PagesComponents,
-    ElementDownloadDialogComponent,
   ],
   entryComponents: [
     ChangLanWarningDialogComponent,
@@ -68,6 +70,8 @@ export function HttpLoaderFactory(http: HttpClient) {
     ElementSettingComponent,
     ElementConnectDialogComponent,
     ElementDownloadDialogComponent,
+    ElementACLDialogComponent,
+    ElementDialogAlertComponent,
   ],
   bootstrap: [AppComponent],
   providers: [
@@ -76,7 +80,8 @@ export function HttpLoaderFactory(http: HttpClient) {
     ...AllServices,
     CookieService,
     NGXLogger,
-    {provide: MAT_LABEL_GLOBAL_OPTIONS, useValue: {float: 'always'}}
+    {provide: MAT_LABEL_GLOBAL_OPTIONS, useValue: {float: 'always'}},
+    ClipboardService,
   ]
 })
 export class AppModule {

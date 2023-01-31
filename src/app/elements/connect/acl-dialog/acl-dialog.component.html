@@ -1,0 +1,71 @@
+<div>
+  <h2 mat-dialog-title> {{ 'Login reminder' | translate }} </h2>
+
+  <div [ngSwitch]="code" >
+    <div *ngSwitchCase="'acl_reject'">
+      <mat-dialog-content>
+        <div class="error-message">{{ 'ACL reject login asset' | translate }}</div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button mat-button color="primary" (click)="closeDialog()">{{ "Close" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
+    <div *ngSwitchCase="'acl_review'">
+      <mat-dialog-content>
+        <div>{{ 'Need review for login asset' | translate }}</div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button mat-raised-button (click)="onCancelReview()">{{ "Cancel" | translate }}</button>
+        <button mat-raised-button color="primary" (click)="onConfirmReview()">{{ "Confirm" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
+    <div *ngSwitchCase="'ticket_review_pending'">
+      <mat-dialog-content>
+        <div>
+          {{ 'Ticket review pending for login asset' | translate }}
+          <br><br>
+          {{ 'Assignees' | translate }}: <b>{{ ticketAssignees }}</b>
+          <br><br>
+          {{ 'Do not close this page' | translate }}
+          <br><br>
+          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        </div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button mat-raised-button (click)="onCancelWait()">{{ "Cancel" | translate }}</button>
+        <button mat-raised-button color="primary" ngxClipboard [cbContent]="ticketDetailPageURL" (cbOnSuccess)="onCopySuccess($event)" >{{ "Copy link" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
+    <div *ngSwitchCase="'ticket_review_rejected'">
+      <mat-dialog-content>
+        <div class="error-message">{{ 'Ticket review rejected for login asset' | translate }}</div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button mat-raised-button (click)="closeDialog()">{{ "Close" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
+    <div *ngSwitchCase="'ticket_review_closed'">
+      <mat-dialog-content>
+        <div class="error-message">{{ 'Ticket review closed for login asset' | translate }}</div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button mat-raised-button (click)="closeDialog()">{{ "Close" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
+    <div *ngSwitchCase="'other'">
+      <mat-dialog-content>
+        <div class="error-message">{{ otherError }}</div>>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button mat-raised-button (click)="closeDialog()">{{ "Close" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
+  </div>
+
+</div>

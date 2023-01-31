@@ -2,13 +2,16 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
 import {Browser} from '@app/globals';
 import {retryWhen, delay, scan, map, catchError} from 'rxjs/operators';
-import {SystemUser, TreeNode, User as _User, Session, ConnectionToken, ConnectionTokenParam, Endpoint} from '@app/model';
+import {
+  Account, TreeNode, User as _User, Session,
+  ConnectionToken, Endpoint, ConnectData, Asset
+} from '@app/model';
 import {User} from '@app/globals';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable, throwError} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
-import {encryptPassword} from '@app/utils/crypto';
 import {CookieService} from 'ngx-cookie-service';
+import {encryptPassword} from '@app/utils/crypto';
 
 @Injectable()
 export class HttpService {
@@ -67,9 +70,9 @@ export class HttpService {
     );
   }
 
-  put<T>(url: string, options?: any): Observable<any> {
+  put<T>(url: string, body?: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.put(url, options).pipe(
+    return this.http.put(url, body, options).pipe(
       catchError(this.handleError.bind(this))
     );
   }
@@ -108,61 +111,57 @@ export class HttpService {
     let url = '/api/v1/users/profile/';
     const connectionToken = getQueryParamFromURL('token');
     if (connectionToken) {
-      // 解决 /luna/connect?token= 直接方式权限认证问题
+      // 解决 /luna/connect?connectToken= 直接方式权限认证问题
       url += `?token=${connectionToken}`;
     }
     return this.get<_User>(url);
   }
 
   getMyGrantedAssets(keyword) {
-    const url = `/api/v1/perms/users/assets/tree/?search=${keyword}`;
+    const url = `/api/v1/perms/users/self/assets/tree/?search=${keyword}`;
     return this.get<Array<TreeNode>>(url);
   }
 
   filterMyGrantedAssetsById(id: string) {
-    const url = `/api/v1/perms/users/assets/tree/?id=${id}`;
+    const url = `/api/v1/perms/users/self/assets/tree/?id=${id}`;
     return this.get<Array<TreeNode>>(url);
   }
 
-  getMyGrantedNodes(async: boolean, refresh?: boolean) {
-    const syncUrl = `/api/v1/perms/users/nodes-with-assets/tree/`;
-    const asyncUrl = `/api/v1/perms/users/nodes/children-with-assets/tree/`;
+  withRetry() {
+    return retryWhen(err => err.pipe(
+      scan(
+        (retryCount, _err) => {
+          if (retryCount > 10) {
+            throw _err;
+          } else {
+            return retryCount + 1;
+          }
+        }, 0
+      ),
+      delay(10000)
+    ));
+  }
+
+  getMyGrantedNodes(async: boolean) {
+    const syncUrl = '/api/v1/perms/users/self/nodes/all-with-assets/tree/';
+    const asyncUrl = '/api/v1/perms/users/self/nodes/children-with-assets/tree/';
     const url = async ? asyncUrl : syncUrl;
-    return this.get<Array<TreeNode>>(url).pipe(
-      retryWhen(err => err.pipe(
-        scan(
-          (retryCount, _err) => {
-            if (retryCount > 10) {
-              throw _err;
-            } else {
-              return retryCount + 1;
-            }
-          }, 0
-        ),
-        delay(10000)
-      )));
+    return this.get<Array<TreeNode>>(url).pipe(this.withRetry());
   }
 
-  getMyGrantedAppsNodes() {
-    const url = '/api/v1/perms/users/applications/tree/';
+  getMyGrantedK8sNodes(treeId: string, async: boolean) {
+    const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?tree_id=${treeId}&async=${async}`;
     return this.get<Array<TreeNode>>(url);
   }
 
-  getMyGrantedAppNodesDetail(id: string) {
-    const url = `/api/v1/perms/users/applications/tree/?id=${id}`;
-    return this.get<Array<TreeNode>>(url).pipe(
-      map(nodes => nodes.filter(node => node.id === id))
-    );
+  getMyAssetAccounts(assetId: string) {
+    const url = `/api/v1/perms/users/self/assets/${assetId}/accounts/`;
+    return this.get<Array<Account>>(url);
   }
 
-  getMyAppSystemUsers(remoteAppId: string) {
-    const url = `/api/v1/perms/users/applications/${remoteAppId}/system-users/`;
-    return this.get<Array<SystemUser>>(url);
-  }
-
-  getMyAssetSystemUsers(assetId: string) {
-    const url = `/api/v1/perms/users/assets/${assetId}/system-users/`;
-    return this.get<Array<SystemUser>>(url);
+  getAssetDetail(id) {
+    const url = `/api/v1/perms/users/self/assets/?id=${id}`;
+    return this.get<Asset>(url).pipe(map(res => res[0]));
   }
 
   favoriteAsset(assetId: string, favorite: boolean) {
@@ -209,13 +208,6 @@ export class HttpService {
     return this.get('/api/v1/terminal/commands/', {params: params});
   }
 
-  getUserIdFromToken(token: string) {
-    const params = new HttpParams()
-      .set('user-only', '1')
-      .set('token', token);
-    return this.get('/api/v1/users/connection-token/', {params: params});
-  }
-
   cleanRDPParams(params) {
     const cleanedParams = {};
     const {rdpResolution, rdpFullScreen, rdpDrivesRedirect } = params;
@@ -234,65 +226,44 @@ export class HttpService {
     return cleanedParams;
   }
 
-  downloadRDPFile({assetId, appId, systemUserId}, params: Object) {
-    const url = new URL('/api/v1/authentication/connection-token/rdp/file/', window.location.origin);
-    if (assetId) {
-      url.searchParams.append('asset', assetId);
-    } else {
-      url.searchParams.append('application', appId);
-    }
-    url.searchParams.append('system_user', systemUserId);
-    params = this.cleanRDPParams(params);
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        url.searchParams.append(k, v);
-      }
-    }
+  createConnectToken(asset: Asset, connectData: ConnectData, createTicket = false) {
+    const params = createTicket ? '?create_ticket=1' : '';
+    const url = '/api/v1/authentication/connection-token/' + params;
+    const { account, protocol, manualAuthInfo, connectMethod } = connectData;
+    const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
+    const secret = encryptPassword(manualAuthInfo.secret);
+    const data = {
+      asset: asset.id,
+      account: account.alias,
+      protocol: protocol.name,
+      input_username: username,
+      input_secret: secret,
+      connect_method: connectMethod.value,
+    };
+    return this.post<ConnectionToken>(url, data);
+  }
+
+  getConnectToken(token) {
+    const url = new URL(`/api/v1/authentication/connection-token/${token}/`, window.location.origin);
+    return this.get(url.href);
+  }
+
+  downloadRDPFile(token) {
+    const url = new URL(`/api/v1/authentication/connection-token/${token.id}/rdp-file/`, window.location.origin);
     return window.open(url.href);
   }
 
-  getRDPClientUrl({assetId, appId, systemUserId}, params: Object) {
-    const url = new URL('/api/v1/authentication/connection-token/client-url/', window.location.origin);
-    const data = {};
-    if (assetId) {
-      data['asset'] = assetId;
-    } else {
-      data['application'] = appId;
-    }
-    data['system_user'] = systemUserId;
-    params = this.cleanRDPParams(params);
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        url.searchParams.append(k, v);
-      }
-    }
-    return this.post(url.href, data).toPromise();
+  getLocalClientUrl(token) {
+    const url = new URL(`/api/v1/authentication/connection-token/${token.id}/client-url/`, window.location.origin);
+    return this.get(url.href);
   }
 
-  createSystemUserTempAuth(systemUser: SystemUser, node: TreeNode, auth: any) {
-    const url = `/api/v1/assets/system-users/${systemUser.id}/temp-auth/`;
-    auth.password = encryptPassword(auth.password);
-    const data = {
-      instance_id: node.id,
-      protocol: systemUser.protocol,
-      ...auth
-    };
-    return this.post(url, data).toPromise();
-  }
-
-  getConnectionToken(param: ConnectionTokenParam): Promise<ConnectionToken> {
-    const url = '/api/v1/authentication/connection-token/';
-    return this.post(url, param).toPromise();
-  }
-
-  getSmartEndpoint( { assetId, appId, sessionId, token }, protocol ): Promise<Endpoint> {
+  getSmartEndpoint({ assetId, sessionId, token }, protocol ): Promise<Endpoint> {
     const url = new URL('/api/v1/terminal/endpoints/smart/', window.location.origin);
 
     url.searchParams.append('protocol', protocol);
     if (assetId) {
       url.searchParams.append('asset_id', assetId);
-    } else if (appId) {
-      url.searchParams.append('app_id', appId);
     } else if (sessionId) {
       url.searchParams.append('session_id', sessionId);
     } else if (token) {
