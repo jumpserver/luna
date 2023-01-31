@@ -66,7 +66,7 @@ class Choice {
   value: string;
 }
 
-class Specific {
+class SpecInfo {
   db_name?: string;
 }
 
@@ -78,7 +78,7 @@ export class Asset {
   type: Choice;
   category: Choice;
   protocols: Array<Protocol>;
-  specific: Specific;
+  spec_info: SpecInfo;
 }
 
 
