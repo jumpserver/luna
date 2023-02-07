@@ -59,6 +59,7 @@
       <input matInput [type]="hidePassword ? 'password' : 'text'"
              #password
              name="password"
+             [autocomplete]="hidePassword ? 'new-password' : 'off'"
              [(ngModel)]="manualAuthInfo.secret"
              [attr.cdkFocusInitial]="manualAuthInfo.username? true : null"
              autofocus
