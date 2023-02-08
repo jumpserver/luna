@@ -2,7 +2,7 @@ import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core'
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {MatDialog} from '@angular/material';
-import {AppService, HttpService, LogService, SettingService, DialogService} from '@app/services';
+import {AppService, HttpService, LogService, SettingService, DialogService, I18nService} from '@app/services';
 import {Account, ConnectData, Asset, ConnectionToken, View, K8sInfo} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
@@ -25,6 +25,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
               private _logger: LogService,
               private _route: ActivatedRoute,
               private _http: HttpService,
+              private _i18n: I18nService,
               private _settingSvc: SettingService,
   ) {
   }
@@ -144,7 +145,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   async connectAsset(asset) {
     if (!asset) {
-      this._dialogAlert.alert('Asset not found or You have no permission to access it, please refresh asset tree');
+      const msg = await this._i18n.t('Asset not found or You have no permission to access it, please refresh asset tree')
+      await this._dialogAlert.alert(msg)
       return;
     }
     const accounts = await this._http.getMyAssetAccounts(asset.id).toPromise();

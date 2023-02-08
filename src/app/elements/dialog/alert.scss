@@ -1,13 +1,19 @@
-h1 {
-  border-bottom: 1px solid #eee;
-  width: 100%;
-}
-
-button {
+mat-dialog-actions {
   float: right;
-  bottom: 0;
+  margin: 20px 0 0 0;
 }
 
-.alert {
-  height: 100%;
+mat-dialog-content > div {
+  padding: 16px;
+  border-radius: 4px;
+
+  color: #3c763d;
+  background-color: #dff0d8;
+  border-color: #d6e9c6;
+}
+
+mat-dialog-content > div.error-message {
+  color: #a94442;
+  background-color: #f2dede;
+  border-color: #ebccd1;
 }
