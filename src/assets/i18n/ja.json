@@ -61,7 +61,7 @@
   "Asset disabled": "この資産はすでに無効になっている場合、管理者に連絡してください",
   "User: ": "ユーザー: {{value}}",
   "Asset: ": "アセット: {{value}}",
-  "System User: ": "システムユーザー: {{value}}",
+  "Account: ": "アカウント: {{value}}",
   "Start Time: ": "開始時間: {{value}}",
   "Protocol: ": "プロトコル: {{value}}",
   "My assets": "マイ資産",
