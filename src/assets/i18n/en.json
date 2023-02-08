@@ -61,7 +61,7 @@
   "Asset disabled": "This asset has been disabled, please contact an administrator",
   "User: ": "User: {{value}}",
   "Asset: ": "Asset: {{value}}",
-  "System User: ": "System user: {{value}}",
+  "Account: ": "Account: {{value}}",
   "Start Time: ": "Start time: {{value}}",
   "Protocol: ": "Protocol: {{value}}",
   "My assets": "My assets",

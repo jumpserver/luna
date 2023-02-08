@@ -299,8 +299,7 @@ export class Session {
   login_from_display: String;
   protocol: string;
   remote_addr: string;
-  system_user: string;
-  system_user_id: string;
+  account: string;
   terminal: string;
   user: string;
   user_id: string;
