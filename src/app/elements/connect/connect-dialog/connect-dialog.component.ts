@@ -12,18 +12,18 @@ import {BehaviorSubject} from 'rxjs';
   styleUrls: ['./connect-dialog.component.scss'],
 })
 export class ElementConnectDialogComponent implements OnInit {
-  public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
-  public protocol: Protocol;
-  public protocols: Array<Protocol>;
   public asset: Asset;
-  public outputData: ConnectData = new ConnectData();
-  public accounts: Account[];
-  public manualAuthInfo: AuthInfo = new AuthInfo();
-  public accountSelected: Account = null;
   public autoLogin = false;
+  public protocol: Protocol;
+  public accounts: Account[];
+  public protocols: Array<Protocol>;
+  public accountSelected: Account = null;
   public connectOptions: ConnectOption[] = [];
+  public outputData: ConnectData = new ConnectData();
+  public manualAuthInfo: AuthInfo = new AuthInfo();
   public connectMethod: ConnectMethod = new ConnectMethod();
   public preConnectData: ConnectData = new ConnectData();
+  public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
@@ -38,7 +38,10 @@ export class ElementConnectDialogComponent implements OnInit {
     this.accounts = this.data.accounts;
     this.asset = this.data.asset;
     this.preConnectData = this.data.preConnectData;
-    this.protocols = this.asset.protocols;
+    this.protocols = this.asset.protocols || [];
+    if (this.protocols.length === 0) {
+      this.protocols = [{name: 'ssh', port: 22}];
+    }
     this.setDefaults();
   }
 
