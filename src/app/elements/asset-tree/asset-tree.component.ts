@@ -206,6 +206,9 @@ export class ElementAssetTreeComponent implements OnInit {
     this._http.get(url).subscribe(resp => {
       tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, resp);
     }, err => {
+      if (err.status === 400) {
+        alert(err.error.detail);
+      }
       this._logger.error('Get k8s tree error: ', err);
     }, () => {
       tree.loading = false;
