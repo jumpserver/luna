@@ -49,10 +49,18 @@ export class ElementConnectMethodComponent implements OnInit {
 
   setConnectMethods() {
     this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
+    if (this.protocol.name === 'oracle') {
+      this.oracleFilterConnectMethods();
+    }
     this.groupConnectMethods();
     if (!this.connectMethod || !this.connectMethod.value) {
       this.connectMethod = this.connectMethods[0];
     }
+  }
+
+  oracleFilterConnectMethods() {
+    this.connectMethods = this.connectMethods.filter((item) => (item.value !== 'web_cli'));
+    this.connectMethod = this.connectMethods[0];
   }
 
   groupConnectMethods() {
