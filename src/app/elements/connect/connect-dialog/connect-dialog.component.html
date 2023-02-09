@@ -6,7 +6,7 @@
     </button>
   </div>
 
-  <nav mat-tab-nav-bar style="margin-bottom: 20px" class="protocol-tab" >
+  <nav mat-tab-nav-bar style="margin-bottom: 20px" class="protocol-tab">
     <a mat-tab-link
        *ngFor="let p of protocols"
        (click)="onProtocolChange(p)"
@@ -53,6 +53,7 @@
               color="primary"
               style="width: 100%"
               type="submit"
+              [disabled]="accounts.length===0"
               [mat-dialog-close]="outputData"
               (click)="onConfirm()"
       >
