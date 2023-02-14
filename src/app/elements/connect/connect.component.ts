@@ -99,7 +99,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           type: type,
           value: 'web_cli',
           component: 'web_cli',
-          label: type
+          label: type,
+          disabled: false,
         };
         const kInfo = new K8sInfo();
         kInfo.pod = idObject['pod'];
