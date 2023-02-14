@@ -78,6 +78,9 @@ export class ElementConnectMethodComponent implements OnInit {
   }
 
   downloadRDPFile(method) {
+    if (method.disabled) {
+      return;
+    }
     this.connectMethod = method;
     this.onDownloadRDPFile.emit(this.connectMethod);
   }
