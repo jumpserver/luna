@@ -23,7 +23,7 @@
           [(ngModel)]="connectMethod"
           style="display: block; padding: 18px 10px 10px"
         >
-          <mat-radio-button *ngFor="let method of item['methods']" [value]="method">
+          <mat-radio-button *ngFor="let method of item['methods']" [value]="method"  [disabled]="method.disabled">
             {{ method.label }}
 
             <span matTooltip="{{'Click to download rdp file'| translate}}">
