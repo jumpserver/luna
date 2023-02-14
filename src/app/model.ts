@@ -183,6 +183,8 @@ export class ConnectMethod {
   value: string;
   type: string;
   component: string;
+
+  disabled: boolean;
 }
 
 export class DataStore {
