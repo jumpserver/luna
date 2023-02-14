@@ -53,7 +53,7 @@
               color="primary"
               style="width: 100%"
               type="submit"
-              [disabled]="accounts.length===0"
+              [disabled]="accounts.length===0 || connectMethod.disabled"
               [mat-dialog-close]="outputData"
               (click)="onConfirm()"
       >
