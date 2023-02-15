@@ -17,18 +17,19 @@ export class ElementAdvancedOptionComponent implements  OnInit, OnChanges {
   constructor() {}
 
   ngOnInit() {
+    const accountSelectedProtocol = this.accountSelected.hasOwnProperty('protocol') ? this.accountSelected.protocol : '';
     this.advancedOptions = [
       {
         type: 'checkbox',
         field: 'disableautohash',
         hidden: () => {
           return this.connectMethod.value === 'web_cli'
-            && this.needShowAutoCompletionProtocols.includes(this.accountSelected.protocol);
-        },
-        label: 'Disable auto completion',
-        value: false
-      }
-    ];
+            && this.needShowAutoCompletionProtocols.includes(accountSelectedProtocol);
+          },
+          label: 'Disable auto completion',
+          value: false
+        }
+      ];
   }
 
   ngOnChanges(changes) {
