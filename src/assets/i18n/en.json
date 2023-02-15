@@ -114,6 +114,9 @@
   "With secret accounts": "With secret accounts",
   "Close": "Close",
   "Manual accounts": "Manual accounts",
+  "General": "General",
+  "GUI": "GUI",
+  "CLI": "CLI",
 
   "Login reminder": "Login reminder",
   "ACL reject login asset": "This login has been rejected due to access control policy restrictions",
