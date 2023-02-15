@@ -12,6 +12,7 @@ export class ElementConnectMethodComponent implements OnInit {
   @Input() set protocol(protocol: Protocol) {
     this._protocol = protocol;
     this.setConnectMethods();
+    this.connectMethod = this.connectMethods[0];
   }
   get protocol() {
     return this._protocol;
