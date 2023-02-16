@@ -300,18 +300,21 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
   }
 
-  selectLoginSystemUsers(systemUsers: Array<SystemUser>, node: TreeNode): Promise<ConnectData> {
+  async selectLoginSystemUsers(systemUsers: Array<SystemUser>, node: TreeNode): Promise<ConnectData> {
     let systemUserMaxPriority = this.filterHighestPrioritySystemUsers(systemUsers);
     const systemUserId = this._appSvc.getQueryString('system_user');
+    const noSystemUserMsg = await this._i18n.t('No System User');
+    const noMatchingConnectionMsg = await this._i18n.t('No Matching Connection');
+
     if (systemUserId) {
       systemUserMaxPriority = systemUserMaxPriority.filter(s => {
         s.id = systemUserId;
       });
     }
     if (systemUserMaxPriority.length === 0) {
-      alert(this._i18n.t('No System User'));
+      alert(noSystemUserMsg);
       return new Promise<ConnectData>((resolve, reject) => {
-        reject(this._i18n.t('No System User'));
+        reject(noSystemUserMsg);
       });
     } else if (systemUserMaxPriority.length > 1) {
       return this.getConnectData(systemUserMaxPriority, node);
@@ -321,9 +324,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const isRemoteApp = node.meta.type === 'application';
     const connectTypes = this._appSvc.getProtocolConnectTypes(isRemoteApp)[systemUser.protocol];
     if (!connectTypes) {
-      alert(this._i18n.t('No Matching Connection'));
+      alert(noMatchingConnectionMsg);
       return new Promise<ConnectData>((resolve, reject) => {
-        reject(this._i18n.t('No Matching Connection'));
+        reject(noMatchingConnectionMsg);
       });
     }
     let connectType = null;
