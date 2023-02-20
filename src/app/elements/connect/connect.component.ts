@@ -278,19 +278,15 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
            resolve(token);
         },
         (error) => {
-          if (error.error.code.startsWith('acl_')) {
-            const dialogRef = this._dialog.open(ElementACLDialogComponent, {
-              height: 'auto',
-              width: '450px',
-              disableClose: true,
-              data: {asset, connectInfo, code: error.error.code}
-            });
-            dialogRef.afterClosed().subscribe(token => {
-              resolve(token);
-            });
-          } else {
-            reject(error.error.detail);
-          }
+          const dialogRef = this._dialog.open(ElementACLDialogComponent, {
+            height: 'auto',
+            width: '450px',
+            disableClose: true,
+            data: {asset, connectInfo, code: error.error.code}
+          });
+          dialogRef.afterClosed().subscribe(token => {
+            resolve(token);
+          });
         }
       );
     });

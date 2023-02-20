@@ -126,6 +126,7 @@
   "Do not close this page": "Do not close this page",
   "Ticket review rejected for login asset": "This login review has been rejected, and the asset cannot be connected",
   "Ticket review closed for login asset": "This login review has been closed, and the asset cannot be connected",
+  "Account not found": "Account not found",
   "Copy link": "Copy link",
   "Login review approved": "Login review has been approved, connecting assets...",
   "No account available": "No available accounts"

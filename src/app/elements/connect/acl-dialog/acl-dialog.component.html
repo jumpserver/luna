@@ -57,6 +57,15 @@
       </mat-dialog-actions>
     </div>
 
+    <div *ngSwitchCase="'perm_account_invalid'">
+      <mat-dialog-content>
+        <div class="error-message 11">{{ 'Account not found' | translate }}</div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button mat-raised-button (click)="closeDialog()">{{ "Close" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
     <div *ngSwitchCase="'other'">
       <mat-dialog-content>
         <div class="error-message">{{ otherError }}</div>>
@@ -65,7 +74,6 @@
         <button mat-raised-button (click)="closeDialog()">{{ "Close" | translate }}</button>
       </mat-dialog-actions>
     </div>
-
   </div>
 
 </div>
