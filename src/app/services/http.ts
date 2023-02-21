@@ -259,8 +259,14 @@ export class HttpService {
     return window.open(url.href);
   }
 
-  getLocalClientUrl(token) {
+  getLocalClientUrl(token, params: Object) {
     const url = new URL(`/api/v1/authentication/connection-token/${token.id}/client-url/`, window.location.origin);
+    params = this.cleanRDPParams(params);
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        url.searchParams.append(k, v);
+      }
+    }
     return this.get(url.href);
   }
 
