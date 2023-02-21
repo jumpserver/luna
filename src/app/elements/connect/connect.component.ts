@@ -176,7 +176,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
 
     if (connectInfo.downloadRDP) {
-      return this._http.downloadRDPFile(connToken,this._settingSvc.setting);
+      return this._http.downloadRDPFile(connToken, this._settingSvc.setting);
     } else if (connectMethod.type === 'native') {
       this.callLocalClient(connToken).then();
     } else if (connectMethod.type === 'applet' && this._settingSvc.setting.appletConnectMethod !== 'web') {
