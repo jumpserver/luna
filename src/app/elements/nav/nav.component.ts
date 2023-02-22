@@ -132,7 +132,7 @@ export class ElementNavComponent implements OnInit {
       children: [
         {
           id: 'General',
-          name: 'General',
+          name: this._i18n.instant('General'),
           click: () => {
             this._dialog.open(
               ElementSettingComponent,

@@ -66,7 +66,7 @@ class Choice {
   value: string;
 }
 
-class Specific {
+class SpecInfo {
   db_name?: string;
 }
 
@@ -78,7 +78,7 @@ export class Asset {
   type: Choice;
   category: Choice;
   protocols: Array<Protocol>;
-  specific: Specific;
+  spec_info: SpecInfo;
 }
 
 
@@ -183,6 +183,8 @@ export class ConnectMethod {
   value: string;
   type: string;
   component: string;
+
+  disabled: boolean;
 }
 
 export class DataStore {
@@ -299,8 +301,7 @@ export class Session {
   login_from_display: String;
   protocol: string;
   remote_addr: string;
-  system_user: string;
-  system_user_id: string;
+  account: string;
   terminal: string;
   user: string;
   user_id: string;

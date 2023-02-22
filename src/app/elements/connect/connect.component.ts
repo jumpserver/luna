@@ -2,7 +2,7 @@ import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core'
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {MatDialog} from '@angular/material';
-import {AppService, HttpService, LogService, SettingService, DialogService} from '@app/services';
+import {AppService, HttpService, LogService, SettingService, DialogService, I18nService} from '@app/services';
 import {Account, ConnectData, Asset, ConnectionToken, View, K8sInfo} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
@@ -25,6 +25,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
               private _logger: LogService,
               private _route: ActivatedRoute,
               private _http: HttpService,
+              private _i18n: I18nService,
               private _settingSvc: SettingService,
   ) {
   }
@@ -73,13 +74,21 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const idObject = this.analysisId(id);
     const token = this._route.snapshot.queryParams.token;
     this._http.getConnectToken(token).subscribe(connToken => {
-      this._http.getMyAssetAccounts(connToken.asset.id).subscribe(accounts => {
-        let account = accounts.filter(item => item.name === connToken.account);
-        if (account.length === 0) {
-          console.log('account is not exist');
-          return;
+      this._http.getMyAssetAccounts(connToken.asset.id).subscribe(accountList => {
+        console.log('connToken', connToken);
+        let account = new Account();
+        if (['@INPUT', '@USER'].includes(connToken.account)) {
+          account.name = connToken.input_username;
+          account.username = connToken.input_username;
+          account.alias = connToken.account;
+        } else {
+          const accounts = accountList.filter(item => item.name === connToken.account);
+          if (accounts.length === 0) {
+            console.log('account is not exist');
+            return;
+          }
+          account = accounts[0];
         }
-        account = account[0];
         const type = 'k8s';
         const connectInfo = new ConnectData();
         connToken.asset['type'] = {'value': type};
@@ -98,7 +107,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           type: type,
           value: 'web_cli',
           component: 'web_cli',
-          label: type
+          label: type,
+          disabled: false,
         };
         const kInfo = new K8sInfo();
         kInfo.pod = idObject['pod'];
@@ -144,7 +154,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   async connectAsset(asset) {
     if (!asset) {
-      this._dialogAlert.alert('Asset not found or You have no permission to access it, please refresh asset tree');
+      const msg = await this._i18n.t('Asset not found or You have no permission to access it, please refresh asset tree')
+      await this._dialogAlert.alert(msg)
       return;
     }
     const accounts = await this._http.getMyAssetAccounts(asset.id).toPromise();
@@ -173,7 +184,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
 
     if (connectInfo.downloadRDP) {
-      return this._http.downloadRDPFile(connToken);
+      return this._http.downloadRDPFile(connToken, this._settingSvc.setting);
     } else if (connectMethod.type === 'native') {
       this.callLocalClient(connToken).then();
     } else if (connectMethod.type === 'applet' && this._settingSvc.setting.appletConnectMethod !== 'web') {
@@ -185,7 +196,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   async callLocalClient(connToken: ConnectionToken) {
     this._logger.debug('Call local client');
-    const response = await this._http.getLocalClientUrl(connToken).toPromise();
+    const response = await this._http.getLocalClientUrl(connToken, this._settingSvc.setting).toPromise();
     const url = response['url'];
     launchLocalApp(url, () => {
       const downLoadStatus = localStorage.getItem('hasDownLoadApp');
@@ -275,19 +286,15 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
            resolve(token);
         },
         (error) => {
-          if (error.error.code.startsWith('acl_')) {
-            const dialogRef = this._dialog.open(ElementACLDialogComponent, {
-              height: 'auto',
-              width: '450px',
-              disableClose: true,
-              data: {asset, connectInfo, code: error.error.code}
-            });
-            dialogRef.afterClosed().subscribe(token => {
-              resolve(token);
-            });
-          } else {
-            reject(error.error.detail);
-          }
+          const dialogRef = this._dialog.open(ElementACLDialogComponent, {
+            height: 'auto',
+            width: '450px',
+            disableClose: true,
+            data: {asset, connectInfo, code: error.error.code}
+          });
+          dialogRef.afterClosed().subscribe(token => {
+            resolve(token);
+          });
         }
       );
     });

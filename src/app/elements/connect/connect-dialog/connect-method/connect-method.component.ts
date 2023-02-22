@@ -12,6 +12,7 @@ export class ElementConnectMethodComponent implements OnInit {
   @Input() set protocol(protocol: Protocol) {
     this._protocol = protocol;
     this.setConnectMethods();
+    this.connectMethod = this.connectMethods[0];
   }
   get protocol() {
     return this._protocol;
@@ -49,10 +50,18 @@ export class ElementConnectMethodComponent implements OnInit {
 
   setConnectMethods() {
     this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
+    if (this.protocol.name === 'oracle') {
+      this.oracleFilterConnectMethods();
+    }
     this.groupConnectMethods();
     if (!this.connectMethod || !this.connectMethod.value) {
       this.connectMethod = this.connectMethods[0];
     }
+  }
+
+  oracleFilterConnectMethods() {
+    this.connectMethods = this.connectMethods.filter((item) => (item.value !== 'web_cli'));
+    this.connectMethod = this.connectMethods[0];
   }
 
   groupConnectMethods() {
@@ -70,6 +79,9 @@ export class ElementConnectMethodComponent implements OnInit {
   }
 
   downloadRDPFile(method) {
+    if (method.disabled) {
+      return;
+    }
     this.connectMethod = method;
     this.onDownloadRDPFile.emit(this.connectMethod);
   }

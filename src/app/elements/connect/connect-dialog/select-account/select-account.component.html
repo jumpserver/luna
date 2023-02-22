@@ -52,13 +52,14 @@
   </mat-form-field>
 </div>
 
-<div *ngIf="!accountSelected?.has_secret" class="form-field">
+<div *ngIf="accountSelected && !accountSelected?.has_secret" class="form-field">
   <label class="zone-label" style="margin-bottom: 0; display: block">{{ "Password" | translate }}</label>
   <div>
     <mat-form-field class="input-field password" floatLabel='never' style="width: 70%">
       <input matInput [type]="hidePassword ? 'password' : 'text'"
              #password
              name="password"
+             [autocomplete]="hidePassword ? 'new-password' : 'off'"
              [(ngModel)]="manualAuthInfo.secret"
              [attr.cdkFocusInitial]="manualAuthInfo.username? true : null"
              autofocus

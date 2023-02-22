@@ -1,4 +1,6 @@
-<h1 mat-dialog-title>{{ data.name | translate }}{{"Setting"| translate}} </h1>
+<h1 mat-dialog-title>
+  {{ (data.type === 'cli' ? 'CLI' : data.name) | translate }}{{"Setting"| translate}}
+</h1>
 
 <div *ngIf="type === 'general'">
   <mat-form-field>

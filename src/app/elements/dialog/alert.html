@@ -1,5 +1,9 @@
-<div class="alert">
-  <h1 mat-dialog-title>{{ data.title }}</h1>
-  <p>{{ data.msg }}</p>
-  <button mat-raised-button (click)="onNoClick()">Close</button>
+<div>
+  <h2 mat-dialog-title> {{ data.title }} </h2>
+  <mat-dialog-content>
+    <div class="error-message"> {{ data.msg }} </div>
+  </mat-dialog-content>
+  <mat-dialog-actions>
+    <button mat-raised-button color="primary" (click)="onNoClick()">{{ "Close" | translate }}</button>
+  </mat-dialog-actions>
 </div>
