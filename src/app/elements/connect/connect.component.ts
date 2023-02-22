@@ -74,13 +74,21 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const idObject = this.analysisId(id);
     const token = this._route.snapshot.queryParams.token;
     this._http.getConnectToken(token).subscribe(connToken => {
-      this._http.getMyAssetAccounts(connToken.asset.id).subscribe(accounts => {
-        let account = accounts.filter(item => item.name === connToken.account);
-        if (account.length === 0) {
-          console.log('account is not exist');
-          return;
+      this._http.getMyAssetAccounts(connToken.asset.id).subscribe(accountList => {
+        console.log('connToken', connToken);
+        let account = new Account();
+        if (['@INPUT', '@USER'].includes(connToken.account)) {
+          account.name = connToken.input_username;
+          account.username = connToken.input_username;
+          account.alias = connToken.account;
+        } else {
+          const accounts = accountList.filter(item => item.name === connToken.account);
+          if (accounts.length === 0) {
+            console.log('account is not exist');
+            return;
+          }
+          account = accounts[0];
         }
-        account = account[0];
         const type = 'k8s';
         const connectInfo = new ConnectData();
         connToken.asset['type'] = {'value': type};
