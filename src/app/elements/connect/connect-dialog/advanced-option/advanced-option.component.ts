@@ -17,7 +17,7 @@ export class ElementAdvancedOptionComponent implements  OnInit, OnChanges {
   constructor() {}
 
   ngOnInit() {
-    const accountSelectedProtocol = this.accountSelected.hasOwnProperty('protocol') ? this.accountSelected.protocol : '';
+    const accountSelectedProtocol = this.accountSelected && this.accountSelected.hasOwnProperty('protocol') ? this.accountSelected.protocol : '';
     this.advancedOptions = [
       {
         type: 'checkbox',
