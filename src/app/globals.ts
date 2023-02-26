@@ -28,6 +28,9 @@ export const DataStore: _DataStore = {
 
 export let Browser = new _Browser();
 export const i18n = new Map();
+export const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000002';
+export const SYSTEM_ORG_ID = '00000000-0000-0000-0000-000000000004';
+export const ROOT_ORG_ID = '00000000-0000-0000-0000-000000000000';
 
 export const connectEvt = new BehaviorSubject<ConnectEvt>(new ConnectEvt(null, null));
 
