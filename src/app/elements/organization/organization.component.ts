@@ -1,7 +1,8 @@
 import {Component, OnInit, OnDestroy, Input} from '@angular/core';
 import {CookieService} from 'ngx-cookie-service';
-import {OrganizationService} from '@app/services';
+import {OrganizationService, SettingService} from '@app/services';
 import {Organization} from '@app/model';
+import {DEFAULT_ORG_ID, ROOT_ORG_ID} from '@app/globals';
 
 @Component({
   selector: 'elements-organization',
@@ -13,6 +14,7 @@ export class ElementOrganizationComponent implements OnInit, OnDestroy {
   organizations = [];
   @Input() isK8s: boolean = false;
   constructor(private _cookie: CookieService,
+              public _settingSvc: SettingService,
               private _orgSvc: OrganizationService
   ) {}
 
@@ -21,15 +23,28 @@ export class ElementOrganizationComponent implements OnInit, OnDestroy {
     this._orgSvc.orgListChange$.subscribe(async(res) => {
       this.organizations = res;
       const cookieOrg = await this.organizations.find(i => i.id === cookieOrgId);
-      this.currentOrg = cookieOrg || this.organizations[0] || {};
       if (!cookieOrg) {
+        this.currentOrg = this.getPropOrg();
         this._orgSvc.switchOrg(this.currentOrg);
+      } else {
+        this.currentOrg = cookieOrg;
       }
     });
   }
 
   ngOnDestroy() {
     this._orgSvc.orgListChange$.unsubscribe();
+  }
+
+  getPropOrg() {
+    let org = this.organizations.find(item => item.id === DEFAULT_ORG_ID);
+    if (!org) {
+      org = this.organizations.filter(item => item.id !== ROOT_ORG_ID)[0];
+    }
+    if (!org) {
+      org = this.organizations[0];
+    }
+    return org;
   }
 
   changeOrg(event) {
