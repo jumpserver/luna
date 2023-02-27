@@ -1,4 +1,4 @@
-<div class="organization">
+<div class="organization" *ngIf="this._settingSvc.hasXPack()">
   <mat-select
     panelClass="org-panel"
     [(value)]="currentOrg"

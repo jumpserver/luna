@@ -5,6 +5,7 @@ import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
 import {ToastrService} from 'ngx-toastr';
 import {groupBy, connectOnNewPage} from '@app/utils/common';
+import {DEFAULT_ORG_ID, SYSTEM_ORG_ID} from '@app/globals';
 import * as _ from 'lodash';
 import {
   AppService, HttpService, LogService, SettingService,
@@ -141,13 +142,18 @@ export class ElementAssetTreeComponent implements OnInit {
   filterAssetCancel$: Subject<boolean> = new Subject();
   favoriteAssets = [];
   searchValue = '';
-  currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
+  currentOrgID = '';
   trees: Array<Tree> = [];
 
   ngOnInit() {
     this._settingSvc.isLoadTreeAsync$.subscribe((state) => {
       this.isLoadTreeAsync = state;
     });
+    this.currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
+    if (this.currentOrgID === SYSTEM_ORG_ID) {
+      this.currentOrgID = DEFAULT_ORG_ID;
+      console.log('Currnt orgId: ', this.currentOrgID);
+    }
     this.initTree();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
