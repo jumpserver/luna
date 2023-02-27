@@ -1,5 +1,5 @@
 <div class="sidebar" fxLayout="column" >
-  <div class="organization" *ngIf="this._settingSvc.hasXPack()">
+  <div class="organization" [style.display]="this._settingSvc.hasXPack() ? '' : 'none'">
     <elements-organization [isK8s]="isK8s"></elements-organization>
   </div>
 
