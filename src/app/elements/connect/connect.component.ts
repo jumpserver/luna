@@ -154,8 +154,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   async connectAsset(asset) {
     if (!asset) {
-      const msg = await this._i18n.t('Asset not found or You have no permission to access it, please refresh asset tree')
-      await this._dialogAlert.alert(msg)
+      const msg = await this._i18n.t('Asset not found or You have no permission to access it, please refresh asset tree');
+      await this._dialogAlert.alert(msg);
       return;
     }
     const accounts = await this._http.getMyAssetAccounts(asset.id).toPromise();
@@ -253,6 +253,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       this._logger.error('No matched connect type, may be changed: ', preData.connectMethod.value);
       return false;
     }
+    preData.connectMethod = connectMethod;
     return true;
   }
 
