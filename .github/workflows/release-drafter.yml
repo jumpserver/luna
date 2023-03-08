@@ -31,6 +31,9 @@ jobs:
           config-name: release-config.yml
           version: ${{ steps.get_version.outputs.TAG }}
           tag: ${{ steps.get_version.outputs.TAG }}
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14.16'
 
   build-and-release:
     needs: create-realese
