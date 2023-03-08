@@ -2,11 +2,10 @@ import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core'
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {MatDialog} from '@angular/material';
-import {AppService, HttpService, LogService, SettingService, DialogService, I18nService} from '@app/services';
+import {AppService, HttpService, LogService, SettingService, DialogService, I18nService, ConnectTokenService} from '@app/services';
 import {Account, ConnectData, Asset, ConnectionToken, View, K8sInfo} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
-import {ElementACLDialogComponent} from './acl-dialog/acl-dialog.component';
 import {launchLocalApp} from '@app/utils/common';
 import {ActivatedRoute} from '@angular/router';
 
@@ -25,6 +24,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
               private _logger: LogService,
               private _route: ActivatedRoute,
               private _http: HttpService,
+              private _connectTokenSvc: ConnectTokenService,
               private _i18n: I18nService,
               private _settingSvc: SettingService,
   ) {
@@ -166,7 +166,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
     this._logger.debug('Connect info: ', connectInfo);
     const connectMethod = connectInfo.connectMethod;
-    const connToken = await this.createConnectionToken(asset, connectInfo);
+    const connToken = await this._connectTokenSvc.create(asset, connectInfo);
 
     if (!connToken) {
       this._logger.info('Create connection token failed');
@@ -277,27 +277,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       dialogRef.afterClosed().subscribe(outputData  => {
         resolve(outputData);
       });
-    });
-  }
-
-  createConnectionToken(asset: Asset, connectInfo: ConnectData): Promise<ConnectionToken> {
-    return new Promise<ConnectionToken>((resolve, reject) => {
-      this._http.createConnectToken(asset, connectInfo).subscribe(
-        (token: ConnectionToken) => {
-           resolve(token);
-        },
-        (error) => {
-          const dialogRef = this._dialog.open(ElementACLDialogComponent, {
-            height: 'auto',
-            width: '450px',
-            disableClose: true,
-            data: {asset, connectInfo, code: error.error.code, tokenAction: 'create'}
-          });
-          dialogRef.afterClosed().subscribe(token => {
-            resolve(token);
-          });
-        }
-      );
     });
   }
 
