@@ -52,7 +52,7 @@ export class ElementContentComponent implements OnInit {
     }
   }
 
-  setViewActive(view) {
+  setViewActive(view){
     this.viewSrv.activeView(view);
   }
 
@@ -105,17 +105,18 @@ export class ElementContentComponent implements OnInit {
 
   rMenuItems() {
     return [
-      /*
-      TODO: 目前使用 connect token 连接资产，Clone 和 Reconnect 时 token 已经失效
-      暂且不提供这两个功能，后续再考虑
+      //TODO: 目前使用 connect token 连接资产，Clone 和 Reconnect 时 token 已经失效
+      // 暂且不提供这两个功能，后续再考虑
       {
         title: 'Clone Connect',
         icon: 'fa-copy',
         callback: () => {
           const id = this.rIdx + 1;
           const v = _.cloneDeep(this.viewList[this.rIdx]);
-          this.viewList.splice(id, 0, v);
-          this.setViewActive(v);
+          v.termComp.reconnect().then(() => {
+            this.viewList.splice(id, 0, v);
+            this.setViewActive(v);
+          })
         }
       },
       {
@@ -125,7 +126,6 @@ export class ElementContentComponent implements OnInit {
           this.viewList[this.rIdx].termComp.reconnect();
         }
       },
-       */
       {
         title: 'Close Current Tab',
         icon: 'fa-close',

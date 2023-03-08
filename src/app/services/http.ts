@@ -243,6 +243,13 @@ export class HttpService {
     return this.post<ConnectionToken>(url, data);
   }
 
+  exchangeConnectToken(tokenID: string, createTicket = false) {
+    const params = createTicket ? '?create_ticket=1' : '';
+    const url = '/api/v1/authentication/connection-token/exchange/' + params;
+    const data = { 'id': tokenID}
+    return this.post<ConnectionToken>(url, data);
+  }
+
   getConnectToken(token) {
     const url = new URL(`/api/v1/authentication/connection-token/${token}/`, window.location.origin);
     return this.get(url.href);

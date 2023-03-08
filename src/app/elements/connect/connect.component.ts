@@ -291,7 +291,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
             height: 'auto',
             width: '450px',
             disableClose: true,
-            data: {asset, connectInfo, code: error.error.code}
+            data: {asset, connectInfo, code: error.error.code, tokenAction: 'create'}
           });
           dialogRef.afterClosed().subscribe(token => {
             resolve(token);
