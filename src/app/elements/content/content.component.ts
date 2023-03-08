@@ -105,8 +105,6 @@ export class ElementContentComponent implements OnInit {
 
   rMenuItems() {
     return [
-      //TODO: 目前使用 connect token 连接资产，Clone 和 Reconnect 时 token 已经失效
-      // 暂且不提供这两个功能，后续再考虑
       {
         title: 'Clone Connect',
         icon: 'fa-copy',
