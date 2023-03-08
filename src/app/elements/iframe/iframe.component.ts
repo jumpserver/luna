@@ -1,6 +1,6 @@
 import {Component, Input, OnInit, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter, OnDestroy} from '@angular/core';
 import {ConnectionToken, View} from '@app/model';
-import {HttpService, I18nService, LogService} from '@app/services';
+import {HttpService, I18nService, LogService, ConnectTokenService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {environment} from '@src/environments/environment';
 import {ElementACLDialogComponent} from '@app/elements/connect/acl-dialog/acl-dialog.component';
@@ -25,6 +25,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   constructor(
     private _i18n: I18nService,
     private _logger: LogService,
+    private _connectTokenSvc: ConnectTokenService,
     private _http: HttpService,
     private _dialog: MatDialog,
   ) {
@@ -98,9 +99,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   async reconnect() {
-    console.log('>>> reconnect')
     const oldConnectToken = this.view.connectToken
-    const newConnectToken = await this.exchangeConnectionToken(oldConnectToken)
+    const newConnectToken = await this._connectTokenSvc.exchange(oldConnectToken)
     if (!newConnectToken) {
       return
     }
@@ -113,28 +113,4 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     }, 100);
     this.view.connected = true;
   }
-
-  exchangeConnectionToken(connectToken) {
-    return new Promise<ConnectionToken>((resolve, reject) => {
-      this._http.exchangeConnectToken(connectToken.id).subscribe(
-        (token: ConnectionToken) => {
-          resolve(token);
-        },
-        (error) => {
-          console.log('>> error', error, connectToken)
-          const dialogRef = this._dialog.open(ElementACLDialogComponent, {
-            id: Math.random().toString(),
-            height: 'auto',
-            width: '450px',
-            disableClose: true,
-            data: {tokenID: connectToken.id, code: error.error.code, tokenAction: 'exchange'}
-          });
-          dialogRef.afterClosed().subscribe(token => {
-            resolve(token);
-          });
-        }
-      );
-    });
-  }
-
 }

@@ -1,8 +1,7 @@
 import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
-import {View, ViewAction} from '@app/model';
-import {SettingService, ViewService, I18nService} from '@app/services';
+import {View, ViewAction, ConnectData} from '@app/model';
+import {SettingService, ViewService, I18nService, HttpService, ConnectTokenService} from '@app/services';
 import * as jQuery from 'jquery/dist/jquery.min.js';
-import * as _ from 'lodash';
 
 @Component({
   selector: 'elements-content',
@@ -23,8 +22,9 @@ export class ElementContentComponent implements OnInit {
 
   constructor(public viewSrv: ViewService,
               public settingSvc: SettingService,
-              private _i18n: I18nService) {
-  }
+              private _i18n: I18nService,
+              private _connectTokenSvc: ConnectTokenService,
+  ) {}
 
   ngOnInit() {
     this.viewList = this.viewSrv.viewList;
@@ -112,10 +112,12 @@ export class ElementContentComponent implements OnInit {
         icon: 'fa-copy',
         callback: () => {
           const id = this.rIdx + 1;
-          const v = _.cloneDeep(this.viewList[this.rIdx]);
-          v.termComp.reconnect().then(() => {
-            this.viewList.splice(id, 0, v);
-            this.setViewActive(v);
+          const oldView = this.viewList[this.rIdx];
+          const oldConnectToken = oldView.connectToken
+          this._connectTokenSvc.exchange(oldConnectToken).then((newConnectToken) => {
+            const newView = new View(oldView.asset, oldView.connectData, newConnectToken)
+            this.viewList.splice(id, 0, newView);
+            this.setViewActive(newView);
           })
         }
       },
