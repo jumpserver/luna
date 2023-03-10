@@ -27,7 +27,7 @@
             {{ method.label }}
 
             <span matTooltip="{{'Click to download rdp file'| translate}}">
-              <i *ngIf="method.component === 'razor'|| method.component == 'tinker'"
+              <i *ngIf="(method.component === 'razor'|| method.component == 'tinker') && !isWebConnectMethod"
                  (click)="downloadRDPFile(method)"
                  class="fa fa-question-circle-o question"
               ></i>
