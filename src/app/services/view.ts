@@ -18,7 +18,7 @@ export class ViewService {
     this.viewList.forEach((v, k) => {
       if (v === view) {
         v.active = true;
-        if (view.termComp) {
+        if (view.termComp && typeof view.termComp.setActive === 'function') {
           setTimeout(() => {
             view.termComp.setActive();
           }, 100);
