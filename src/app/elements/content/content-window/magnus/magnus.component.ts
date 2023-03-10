@@ -1,6 +1,6 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {View, Account, Endpoint, Asset, ConnectionToken} from '@app/model';
-import {HttpService, I18nService, SettingService} from '@app/services';
+import {ConnectTokenService, HttpService, I18nService, SettingService} from '@app/services';
 import {User} from '@app/globals';
 import {ToastrService} from 'ngx-toastr';
 
@@ -38,6 +38,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
   constructor(private _http: HttpService,
               private _i18n: I18nService,
               private _toastr: ToastrService,
+              private _connectTokenSvc: ConnectTokenService,
               private _settingSvc: SettingService
   ) {
     this.globalSetting = this._settingSvc.globalSetting;
@@ -56,6 +57,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
     this.setDBInfo();
     this.generateConnCli();
     this.loading = false;
+    this.view.termComp = this
   }
 
   setDBInfo() {
@@ -149,5 +151,18 @@ export class ElementConnectorMagnusComponent implements OnInit {
   async onCopySuccess(evt) {
     const msg = await this._i18n.t('Copied');
     this._toastr.success(msg);
+  }
+
+  async reconnect() {
+    const oldConnectToken = this.view.connectToken
+    const newConnectToken = await this._connectTokenSvc.exchange(oldConnectToken)
+    if (!newConnectToken) {
+      return
+    }
+    // 更新当前 view 的 connectToken
+    this.view.connectToken = newConnectToken
+    await this.ngOnInit()
+    // 刷新完成隐藏密码
+    this.passwordShow = this.passwordMask;
   }
 }
