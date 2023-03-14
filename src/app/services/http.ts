@@ -240,13 +240,15 @@ export class HttpService {
       input_secret: secret,
       connect_method: connectMethod.value,
     };
-    return this.post<ConnectionToken>(url, data);
+    return this.post<ConnectionToken>(url, data).pipe(
+      catchError(this.handleConnectMethodExpiredError.bind(this))
+    );
   }
 
   exchangeConnectToken(tokenID: string, createTicket = false) {
     const params = createTicket ? '?create_ticket=1' : '';
     const url = '/api/v1/authentication/connection-token/exchange/' + params;
-    const data = { 'id': tokenID}
+    const data = { 'id': tokenID};
     return this.post<ConnectionToken>(url, data);
   }
 
@@ -274,7 +276,16 @@ export class HttpService {
         url.searchParams.append(k, v);
       }
     }
-    return this.get(url.href);
+    return this.get(url.href).pipe(
+      catchError(this.handleConnectMethodExpiredError.bind(this))
+    );
+  }
+
+  handleConnectMethodExpiredError(error) {
+    if (error.status === 400 && error.error && error.error.error && error.error.error.startsWith('Connect method')) {
+      alert('该链接方式已失效，请刷新页面 (Refresh current page)');
+      return throwError('Error: ' + error);
+    }
   }
 
   getSmartEndpoint({ assetId, sessionId, token }, protocol ): Promise<Endpoint> {
