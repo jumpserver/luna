@@ -1,6 +1,6 @@
 import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
 import {ConnectMethod, ConnectOption, Protocol} from '@app/model';
-import {AppService, I18nService} from '@app/services';
+import {AppService, I18nService, SettingService} from '@app/services';
 
 @Component({
   selector: 'elements-connect-method',
@@ -29,10 +29,18 @@ export class ElementConnectMethodComponent implements OnInit {
   @Output() onDownloadRDPFile = new EventEmitter<ConnectMethod>();
   public connectMethods = [];
   public connectMethodTypes = [];
+  public isWebConnectMethod = false;
 
-  constructor(private _i18n: I18nService, private _appSvc: AppService) { }
+
+  constructor(private _i18n: I18nService,
+    private _appSvc: AppService,
+    private _settingSvc: SettingService
+  ) {}
 
   ngOnInit() {
+    this._settingSvc.appletConnectMethod$.subscribe((state) => {
+      this.isWebConnectMethod = state === 'web';
+    });
     this.setConnectMethods();
   }
 
