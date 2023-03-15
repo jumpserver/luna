@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
-import {Browser} from '@app/globals';
+import {Browser, SYSTEM_ORG_ID} from '@app/globals';
 import {retryWhen, delay, scan, map, catchError} from 'rxjs/operators';
 import {
   Account, TreeNode, User as _User, Session,
@@ -240,6 +240,15 @@ export class HttpService {
       input_secret: secret,
       connect_method: connectMethod.value,
     };
+    return this.post<ConnectionToken>(url, data).pipe(
+      catchError(this.handleConnectMethodExpiredError.bind(this))
+    );
+  }
+
+  exchangeConnectToken(tokenID: string, createTicket = false) {
+    const params = createTicket ? '?create_ticket=1' : '';
+    const url = '/api/v1/authentication/connection-token/exchange/' + params;
+    const data = { 'id': tokenID};
     return this.post<ConnectionToken>(url, data);
   }
 
@@ -267,7 +276,17 @@ export class HttpService {
         url.searchParams.append(k, v);
       }
     }
-    return this.get(url.href);
+    return this.get(url.href).pipe(
+      catchError(this.handleConnectMethodExpiredError.bind(this))
+    );
+  }
+
+  async handleConnectMethodExpiredError(error) {
+    if (error.status === 400 && error.error && error.error.error && error.error.error.startsWith('Connect method')) {
+      const errMsg = await this._i18n.t('The connection method is invalid, please refresh the page')
+      alert(errMsg)
+    }
+    return throwError(error);
   }
 
   getSmartEndpoint({ assetId, sessionId, token }, protocol ): Promise<Endpoint> {

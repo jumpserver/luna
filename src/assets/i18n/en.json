@@ -73,6 +73,7 @@
   "Force refresh": "Force refresh",
   "Select account": "Select account",
   "No matching found": "No matching found",
+  "Connect Method": "Connect Method",
   "Need to use": "Need to use",
   "Download the client": "Please download",
   "Yes": "Yes",
@@ -114,6 +115,8 @@
   "With secret accounts": "With secret accounts",
   "Close": "Close",
   "Manual accounts": "Manual accounts",
+  "Native": "Native",
+  "Applet": "Applet",
   "General": "General",
   "GUI": "GUI",
   "CLI": "CLI",
@@ -129,5 +132,6 @@
   "Account not found": "Account not found",
   "Copy link": "Copy link",
   "Login review approved": "Login review has been approved, connecting assets...",
-  "No account available": "No available accounts"
+  "No account available": "No available accounts",
+  "The connection method is invalid, please refresh the page": "The connection method is invalid, please refresh the page"
 }

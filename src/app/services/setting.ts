@@ -13,6 +13,7 @@ export class SettingService {
   settingKey = 'LunaSetting';
   private inited = false;
   public isLoadTreeAsync$ = new BehaviorSubject<boolean>(true);
+  public appletConnectMethod$ = new BehaviorSubject<string>('');
 
   constructor(
     private _localStorage: LocalStorageService,
@@ -90,10 +91,15 @@ export class SettingService {
   save() {
     this._localStorage.set(this.settingKey, this.setting);
     this.setIsLoadTreeAsync();
+    this.setAppletConnectMethod();
   }
 
   setIsLoadTreeAsync() {
     this.isLoadTreeAsync$.next(this.setting.isLoadTreeAsync === '1');
+  }
+
+  setAppletConnectMethod() {
+    this.appletConnectMethod$.next(this.setting.appletConnectMethod);
   }
 
   // 全局跳过手动输入windows账号密码

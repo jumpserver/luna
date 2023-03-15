@@ -28,6 +28,9 @@ export {I18nService};
 import {DialogService} from '@app/elements/dialog/dialog.service';
 export {DialogService};
 
+import {ConnectTokenService} from '@app/services/connect-token';
+export {ConnectTokenService};
+
 
 export const AllServices = [
   LogService,
@@ -42,5 +45,6 @@ export const AllServices = [
   OrganizationService,
   I18nService,
   DialogService,
+  ConnectTokenService,
 ];
 

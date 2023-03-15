@@ -16,6 +16,9 @@ export class ElementACLDialogComponent implements OnInit {
   public connectionToken: ConnectionToken = null;
   public otherError: string;
   public ticketAssignees: string = '-';
+  // Token 的行为，创建或者兑换 Token, create, exchange
+  public tokenAction: string = 'create';
+  public tokenID: string;
   private timerCheckTicket: number;
 
 
@@ -27,9 +30,14 @@ export class ElementACLDialogComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    // 创建 Token 的时候，需要传入 Asset 和 ConnectInfo
     this.asset = this.data.asset;
     this.connectInfo = this.data.connectInfo;
     this.code = this.data.code;
+    // 兑换 Token 的时候，需要传入 Token ID
+    this.tokenID = this.data.tokenID
+    // 控制 token 的行为, 创建还是兑换
+    this.tokenAction = this.data.tokenAction
   }
 
   get ticketDetailPageURL(): string {
@@ -46,23 +54,26 @@ export class ElementACLDialogComponent implements OnInit {
   }
 
   onConfirmReview() {
-    this._http.createConnectToken(this.asset, this.connectInfo, true).subscribe(
-      (connToken: ConnectionToken) => {
-        if (connToken && connToken.from_ticket) {
-          this.connectionToken = connToken;
-          this.code = 'ticket_review_pending';
-          this.checkTicket();
-        }
-      },
-      (error) => {
-        if (error.error.code.startsWith('acl_')) {
-          this.code = error.error.code;
-        } else {
-          this.code = 'other';
-          this.otherError = error.error.detail;
-        }
-      },
-    );
+    const successCallback = (connToken: ConnectionToken) => {
+      if (connToken && connToken.from_ticket) {
+        this.connectionToken = connToken;
+        this.code = 'ticket_review_pending';
+        this.checkTicket();
+      }
+    }
+    const errorCallback = (error) => {
+      if (error.error.code.startsWith('acl_')) {
+        this.code = error.error.code;
+      } else {
+        this.code = 'other';
+        this.otherError = error.error.detail;
+      }
+    }
+    if (this.tokenAction === 'exchange') {
+      this._http.exchangeConnectToken(this.tokenID, true).subscribe(successCallback, errorCallback)
+    } else {
+      this._http.createConnectToken(this.asset, this.connectInfo, true).subscribe(successCallback, errorCallback)
+    }
   }
 
   onCancelWait() {
