@@ -281,11 +281,12 @@ export class HttpService {
     );
   }
 
-  handleConnectMethodExpiredError(error) {
+  async handleConnectMethodExpiredError(error) {
     if (error.status === 400 && error.error && error.error.error && error.error.error.startsWith('Connect method')) {
-      alert('该链接方式已失效，请刷新页面 (Refresh current page)');
-      return throwError('Error: ' + error);
+      const errMsg = await this._i18n.t('The connection method is invalid, please refresh the page')
+      alert(errMsg)
     }
+    return throwError(error);
   }
 
   getSmartEndpoint({ assetId, sessionId, token }, protocol ): Promise<Endpoint> {
