@@ -130,5 +130,6 @@
   "Account not found": "アカウントが見つかりません",
   "Copy link": "リンクをコピーする",
   "Login review approved": "ログイン監査に合格し、アセットを接続しています...",
-  "No account available": "アカウントがありません"
+  "No account available": "アカウントがありません",
+  "The connection method is invalid, please refresh the page": "接続方法が無効です。ページを更新してください"
 }
