@@ -109,9 +109,13 @@
   "Database info": "データベース接続情報",
   "Command line": "命令行",
   "Close": "閉鎖",
+  "Manual accounts": "手動アカウント",
+  "Native": "クライアント",
+  "Applet": "アプレット",
   "General": "基本構成",
   "GUI": "グラフィカル",
   "CLI": "コマンドライン",
+
   "Asset not found or You have no permission to access it, please refresh asset tree": "アセットが見つからないか、アクセスする権限がありません。アセット ツリーを更新してください",
   "Run it by client": "クライアントで実行する",
   "Name": "めいしょう",
