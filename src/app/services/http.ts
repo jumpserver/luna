@@ -286,7 +286,7 @@ export class HttpService {
       const errMsg = await this._i18n.t('The connection method is invalid, please refresh the page')
       alert(errMsg)
     }
-    return throwError(error);
+    throw error
   }
 
   getSmartEndpoint({ assetId, sessionId, token }, protocol ): Promise<Endpoint> {
