@@ -29,7 +29,7 @@ export class ElementConnectMethodComponent implements OnInit {
   @Output() onDownloadRDPFile = new EventEmitter<ConnectMethod>();
   public connectMethods = [];
   public connectMethodTypes = [];
-  public isWebConnectMethod = false;
+  public isAppletClientMethod = false;
 
 
   constructor(private _i18n: I18nService,
@@ -39,7 +39,7 @@ export class ElementConnectMethodComponent implements OnInit {
 
   ngOnInit() {
     this._settingSvc.appletConnectMethod$.subscribe((state) => {
-      this.isWebConnectMethod = state === 'web';
+      this.isAppletClientMethod = state === 'client';
     });
     this.setConnectMethods();
   }
@@ -84,6 +84,19 @@ export class ElementConnectMethodComponent implements OnInit {
     }
     this.connectMethodTypes = connectMethodTypes.filter((item) => item['methods'].length > 0);
     // return connectMethodTypes;
+  }
+
+  canDownloadRDPFile(method): Boolean {
+    if (!this._settingSvc.hasXPack()) {
+      return false;
+    }
+    if (method.component === 'razor') {
+      return true;
+    }
+    if (method.type === 'applet' && this.isAppletClientMethod) {
+      return true;
+    }
+    return false;
   }
 
   downloadRDPFile(method) {
