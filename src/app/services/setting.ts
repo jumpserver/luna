@@ -24,6 +24,7 @@ export class SettingService {
     if (settingData && typeof settingData === 'object') {
       this.setting = settingData;
       this.setIsLoadTreeAsync();
+      this.setAppletConnectMethod();
     } else {
       this.setting = new Setting();
     }
