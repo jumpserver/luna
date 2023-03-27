@@ -256,10 +256,6 @@ export function connectOnNewPage(node: TreeNode, newWindowMode?: string) {
   const url = `/luna/connect?login_to=${node.id}&type=${node.meta.type}`;
   let params = 'toolbar=yes,scrollbars=yes,resizable=yes';
   if (newWindowMode === 'auto') {
-    console.log('window.innerWidth: ', window.innerWidth);
-    console.log('window.innerHeight: ', window.innerHeight);
-    console.log('screen.width: ', screen.width);
-    console.log('screen.height: ', screen.height);
     let count: number;
     let top = 50;
     const count_string = window.sessionStorage.getItem('newWindowCount');
