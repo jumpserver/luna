@@ -258,8 +258,7 @@ export function connectOnNewPage(node: TreeNode, newWindowMode?: string) {
   if (newWindowMode === 'auto') {
     let count: number;
     let top = 50;
-    const count_string = window.sessionStorage.getItem('newWindowCount');
-    count = parseInt(count_string, 10);
+    count = parseInt(window.sessionStorage.getItem('newWindowCount'), 10);
     if (isNaN(count)) {
       count = 0;
     }
