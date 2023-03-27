@@ -250,14 +250,35 @@ export function launchLocalApp(url, fail) {
 /**
  * 打开新页卡
  * @param {Object} node
- * @param {Boolean} newWindow
+ * @param {String} newWindowMode
  */
-export function connectOnNewPage(node: TreeNode, newWindow?: boolean) {
+export function connectOnNewPage(node: TreeNode, newWindowMode?: string) {
   const url = `/luna/connect?login_to=${node.id}&type=${node.meta.type}`;
-  if (newWindow) {
-    const height = window.innerHeight;
-    const width = window.innerWidth;
-    const params = `toolbar=yes,scrollbars=yes,resizable=yes,top=300,left=300,width=${width},height=${height}`;
+  let params = 'toolbar=yes,scrollbars=yes,resizable=yes';
+  if (newWindowMode === 'auto') {
+    console.log('window.innerWidth: ', window.innerWidth);
+    console.log('window.innerHeight: ', window.innerHeight);
+    console.log('screen.width: ', screen.width);
+    console.log('screen.height: ', screen.height);
+    let count: number;
+    let top = 50;
+    const count_string = window.sessionStorage.getItem('newWindowCount');
+    count = parseInt(count_string, 10);
+    if (isNaN(count)) {
+      count = 0;
+    }
+    let left = 100 + count * 100;
+    if (left + screen.width / 3 > screen.width) {
+      // 支持两排足以
+      top = screen.height / 3;
+      count = 1;
+      left = 100;
+    }
+    params = params + `,top=${top},left=${left},width=${screen.width / 3},height=${screen.height / 3}`;
+    window.sessionStorage.setItem('newWindowCount', `${count + 1}`);
+    window.open(url, '_blank', params);
+  } else if (newWindowMode === 'new') {
+    params = params + `,top=50,left=100,width=${window.innerWidth},height=${window.innerHeight}`;
     window.open(url, '_blank', params);
   } else {
     window.open(url, '_blank');

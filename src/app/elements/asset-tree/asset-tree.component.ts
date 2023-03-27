@@ -391,7 +391,7 @@ export class ElementAssetTreeComponent implements OnInit {
 
   onMenuConnectNewTab() {
     const node = this.rightClickSelectNode;
-    connectOnNewPage(node, false);
+    connectOnNewPage(node, 'auto');
   }
 
   onMenuFavorite() {
