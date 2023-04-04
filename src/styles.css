@@ -90,6 +90,10 @@ body ::-webkit-scrollbar {
   height:8px;
 }
 
+body ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 body ::-webkit-scrollbar-thumb {
   background-color: #494141;
   border-radius: 6px;
