@@ -38,11 +38,16 @@ export class ElementConnectDialogComponent implements OnInit {
     this.accounts = this.data.accounts;
     this.asset = this.data.asset;
     this.preConnectData = this.data.preConnectData;
-    this.protocols = this.asset.protocols || [];
+    this.protocols = this.getProtocols();
     if (this.protocols.length === 0) {
-      this.protocols = [{name: 'ssh', port: 22}];
+      this.protocols = [{name: 'ssh', port: 22, public: true, setting: {sftp_enabled: true}}];
     }
     this.setDefaults();
+  }
+
+  getProtocols() {
+    const protocols = this.asset.protocols.filter((item) => item.public);
+    return protocols || [];
   }
 
   setDefaults() {
