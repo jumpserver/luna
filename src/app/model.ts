@@ -389,6 +389,10 @@ export class ConnectionToken {
 export class Protocol  {
   name: string;
   port: number;
+  public: boolean;
+  setting: {
+    sftp_enabled: boolean
+  };
 }
 
 export class Endpoint {

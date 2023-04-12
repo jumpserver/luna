@@ -61,6 +61,9 @@ export class ElementConnectMethodComponent implements OnInit {
     if (this.protocol.name === 'oracle') {
       this.oracleFilterConnectMethods();
     }
+    if (this.protocol.name === 'ssh') {
+      this.sshFilterConnectMethods();
+    }
     this.groupConnectMethods();
     if (!this.connectMethod || !this.connectMethod.value) {
       this.connectMethod = this.connectMethods[0];
@@ -70,6 +73,12 @@ export class ElementConnectMethodComponent implements OnInit {
   oracleFilterConnectMethods() {
     this.connectMethods = this.connectMethods.filter((item) => (item.value !== 'web_cli'));
     this.connectMethod = this.connectMethods[0];
+  }
+
+  sshFilterConnectMethods() {
+    if (!this.protocol.setting.sftp_enabled) {
+      this.connectMethods = this.connectMethods.filter((item) => (item.value !== 'web_sftp'));
+    }
   }
 
   groupConnectMethods() {

@@ -96,7 +96,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         connectInfo.account = account;
         connectInfo.protocol = {
           'name': type,
-          'port': undefined
+          'port': undefined,
+          'public': true,
+          'setting': {
+            sftp_enabled: true
+          }
         };
         connectInfo.manualAuthInfo = {
           alias: account.alias,
