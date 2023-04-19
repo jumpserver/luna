@@ -24,6 +24,7 @@ export class ElementConnectDialogComponent implements OnInit {
   public connectMethod: ConnectMethod = new ConnectMethod();
   public preConnectData: ConnectData = new ConnectData();
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
+  public isAppletClientMethod = false;
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
@@ -42,6 +43,9 @@ export class ElementConnectDialogComponent implements OnInit {
     if (this.protocols.length === 0) {
       this.protocols = [{name: 'ssh', port: 22, public: true, setting: {sftp_enabled: true}}];
     }
+    this._settingSvc.appletConnectMethod$.subscribe((state) => {
+      this.isAppletClientMethod = state === 'client';
+    });
     this.setDefaults();
   }
 
@@ -80,6 +84,22 @@ export class ElementConnectDialogComponent implements OnInit {
     if (!account) {
       return;
     }
+  }
+
+  isConnectDisabled(): Boolean {
+    if (this.accounts.length === 0) {
+      return true;
+    }
+    if (this.connectMethod.disabled === true) {
+      return true;
+    }
+    if (
+      this.connectMethod.component === 'razor' ||
+      (this.connectMethod.type === 'applet' && this.isAppletClientMethod)
+    ) {
+      return !this._settingSvc.hasXPack();
+    }
+    return false;
   }
 
   onConfirm(downloadRDP = false) {
