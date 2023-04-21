@@ -42,7 +42,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       if (msg.id !== this.id) {
         return;
       }
-      console.log(`[Luna] Receive ${msg.name} from: ${msg.id}`);
       switch (msg.name) {
         case 'PONG':
           setTimeout(() => {
