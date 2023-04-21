@@ -185,6 +185,14 @@ export class ConnectMethod {
   component: string;
 
   disabled: boolean;
+
+  constructor(label: string, value: string, type: string, component: string, disabled: boolean = false) {
+    this.label = label;
+    this.value = value;
+    this.type = type;
+    this.component = component;
+    this.disabled = disabled;
+  }
 }
 
 export class DataStore {
