@@ -75,7 +75,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const token = this._route.snapshot.queryParams.token;
     this._http.getConnectToken(token).subscribe(connToken => {
       this._http.getMyAssetAccounts(connToken.asset.id).subscribe(accountList => {
-        console.log('connToken', connToken);
         let account = new Account();
         if (['@INPUT', '@USER'].includes(connToken.account)) {
           account.name = connToken.input_username;
@@ -84,7 +83,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         } else {
           const accounts = accountList.filter(item => item.name === connToken.account);
           if (accounts.length === 0) {
-            console.log('account is not exist');
             return;
           }
           account = accounts[0];

@@ -152,7 +152,6 @@ export class ElementAssetTreeComponent implements OnInit {
     this.currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
     if (this.currentOrgID === SYSTEM_ORG_ID) {
       this.currentOrgID = DEFAULT_ORG_ID;
-      console.log('Currnt orgId: ', this.currentOrgID);
     }
     this.initTree();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
