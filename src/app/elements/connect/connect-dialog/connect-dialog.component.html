@@ -11,6 +11,7 @@
        *ngFor="let p of protocols"
        (click)="onProtocolChange(p)"
        [active]="protocol.name === p.name"
+       [title]="p.name"
     >
       {{ p.name | uppercase }}
     </a>
