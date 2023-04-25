@@ -203,10 +203,13 @@
 .ztree li span.button.public_ico_docu::before,
 .ztree li span.button.router_ico_docu::before,
 .ztree li span.button.other_ico_docu::before,
-.ztree li span.button.switch_ico_docu::before,
 .ztree li span.button.firewall_ico_docu::before,
 .ztree li span.button.general_ico_docu::before {
   content: "\F07B";
+}
+
+.ztree li span.button.switch_ico_docu {
+  background: url('./icons/switch.png') no-repeat center left transparent;
 }
 
 .ztree li span.button.k8s_ico_docu {
