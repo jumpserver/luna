@@ -26,6 +26,7 @@ import {ElementAdvancedOptionComponent} from './connect/connect-dialog/advanced-
 import {ElementConnectMethodComponent} from './connect/connect-dialog/connect-method/connect-method.component';
 import {ElementDownloadDialogComponent} from './connect/download-dialog/download-dialog.component';
 import {ElementACLDialogComponent} from './connect/acl-dialog/acl-dialog.component';
+import { ElementsReplayMp4Component } from './replay/mp4/mp4.component';
 
 
 export const ElementComponents = [
@@ -59,4 +60,5 @@ export const ElementComponents = [
   ElementReplayAsciicastComponent,
   ElementAdvancedOptionComponent,
   ElementConnectMethodComponent,
+  ElementsReplayMp4Component,
 ];

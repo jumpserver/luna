@@ -2,6 +2,7 @@
   <elements-replay-json [replay]="replay" *ngIf="replay.type=='json'"></elements-replay-json>
   <elements-replay-guacamole [replay]="replay" *ngIf="replay.type=='guacamole'"></elements-replay-guacamole>
   <elements-replay-asciicast [replay]="replay" *ngIf="replay.type=='asciicast'"></elements-replay-asciicast>
+  <elements-replay-mp4 [replay]="replay" *ngIf="replay.type=='mp4'"></elements-replay-mp4>
   <div id="loading">
     <div class="lds-spinner" *ngIf="isLoad()">
       <div></div>
