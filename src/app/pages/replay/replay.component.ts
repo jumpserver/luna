@@ -52,7 +52,8 @@ export class PagesReplayComponent implements OnInit {
     const supportedType = {
       'json': true,
       'guacamole': true,
-      'asciicast': true};
+      'asciicast': true,
+      'mp4': true,};
     return !supportedType[tp];
   }
 }
