@@ -281,6 +281,7 @@ export class Setting {
   sqlClient = '1';
   commandExecution: boolean = true;
   appletConnectMethod: string = 'web';
+  keyboardLayout: string = '';
 }
 
 
