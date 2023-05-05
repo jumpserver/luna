@@ -14,6 +14,8 @@ export class SettingService {
   private inited = false;
   public isLoadTreeAsync$ = new BehaviorSubject<boolean>(true);
   public appletConnectMethod$ = new BehaviorSubject<string>('');
+  public keyboardLayout$ = new BehaviorSubject<string>('');
+
 
   constructor(
     private _localStorage: LocalStorageService,
@@ -25,6 +27,7 @@ export class SettingService {
       this.setting = settingData;
       this.setIsLoadTreeAsync();
       this.setAppletConnectMethod();
+      this.setKeyboardLayout();
     } else {
       this.setting = new Setting();
     }
@@ -93,6 +96,7 @@ export class SettingService {
     this._localStorage.set(this.settingKey, this.setting);
     this.setIsLoadTreeAsync();
     this.setAppletConnectMethod();
+    this.setKeyboardLayout();
   }
 
   setIsLoadTreeAsync() {
@@ -101,6 +105,10 @@ export class SettingService {
 
   setAppletConnectMethod() {
     this.appletConnectMethod$.next(this.setting.appletConnectMethod);
+  }
+
+  setKeyboardLayout() {
+    this.keyboardLayout$.next(this.setting.keyboardLayout);
   }
 
   // 全局跳过手动输入windows账号密码

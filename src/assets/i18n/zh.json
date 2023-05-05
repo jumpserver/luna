@@ -124,7 +124,15 @@
   "General": "基本配置",
   "Applet connect method": "远程应用连接方式",
   "Client": "客户端",
-
+  
+  "Keyboard layout": "键盘布局",
+  "UK English keyboard layout": "UK English (Qwerty)",
+  "US English keyboard layout": "US English (Qwerty)",
+  "Japanese keyboard layout": "Japanese (Qwerty)",
+  "French keyboard layout": "French (Azerty)",
+  "Swiss French keyboard layout": "Swiss French (Qwertz)",
+  "Belgian French keyboard layout": "Belgian French (Azerty)",
+  "Turkey keyboard layout": "Turkish-Q (Qwerty)",
   "Login reminder": "登录提醒",
   "ACL reject login asset": "本次登录已拒绝，原因是访问控制策略的限制",
   "Need review for login asset": "本次登录需要进行人工审核，是否继续?",
