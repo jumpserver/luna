@@ -149,6 +149,12 @@ export class HttpService {
     return this.get<Array<TreeNode>>(url).pipe(this.withRetry());
   }
 
+  getAssetTypeTree(sync: boolean) {
+    const isSync = !sync ? 1 : 0;
+    const url = `/api/v1/perms/users/self/nodes/children-with-assets/category/tree/?sync=${isSync}`;
+    return this.get<Array<TreeNode>>(url).pipe(this.withRetry());
+  }
+
   getMyGrantedK8sNodes(treeId: string, async: boolean) {
     const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?tree_id=${treeId}&async=${async}`;
     return this.get<Array<TreeNode>>(url);

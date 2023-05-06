@@ -156,6 +156,7 @@ tr:hover {
   position: relative;
   padding: 5px 10px;
   min-height: 40px;
+  overflow-x: auto;
   height: calc(100% - 31px);
 }
 
@@ -198,9 +199,8 @@ tr:hover {
   transition: all .3s;
 }
 
-.tree-type-asset {
-  flex: none;
-  height: initial;
+.expand-tree {
+  height: 100%;
 }
 
 .tree-type .tree-search {

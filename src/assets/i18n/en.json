@@ -66,6 +66,7 @@
   "Protocol: ": "Protocol: {{value}}",
   "My assets": "My assets",
   "My applications": "My applications",
+  "Type tree": "Type tree",
   "Databases": "Databases",
   "Remote apps": "Remote apps",
   "Kubernetes": "Kubernetes",

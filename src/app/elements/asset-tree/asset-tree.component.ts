@@ -12,7 +12,7 @@ import {
   TreeFilterService, I18nService, OrganizationService
 } from '@app/services';
 import {connectEvt} from '@app/globals';
-import {TreeNode, ConnectEvt} from '@app/model';
+import {TreeNode, ConnectEvt, InitTreeConfig} from '@app/model';
 import {CookieService} from 'ngx-cookie-service';
 
 declare var $: any;
@@ -157,6 +157,15 @@ export class ElementAssetTreeComponent implements OnInit {
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
+  initTree() {
+    if (this.isK8s) {
+      this.initK8sTree().then();
+    } else {
+      this.initAssetTree().then();
+      this.initTypeTree().then();
+    }
+  }
+
   onNodeClick(event, treeId, treeNode, clickFlag) {
     const ztree = this.trees.find(t => t.name === treeId).ztree;
     if (treeNode.isParent) {
@@ -175,65 +184,77 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   async initK8sTree(refresh = false) {
-    let tree = new Tree(
+    const tree = new Tree(
       'K8sTree',
       this._i18n.instant('Kubernetes'),
       true,
       true,
       false
     );
-    if (refresh) {
-      tree = this.trees.find(t => t.name === tree.name);
-    } else {
-      this.trees.push(tree);
-    }
     const token = this._route.snapshot.queryParams.token;
     const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?token=${token}`;
-    const setting = Object.assign({
-      async: {
-        enable: true,
-        url: url,
-        autoParam: ['id=key', 'name=n', 'level=lv'],
-        type: 'get',
-        headers: {
-          'X-JMS-ORG': this.currentOrgID
+    this.initTreeInfo(tree, {
+      refresh,
+      url,
+      setting: {
+        async: {
+          enable: true,
+          url: url,
+          autoParam: ['id=key', 'name=n', 'level=lv'],
+          type: 'get',
+          headers: {
+            'X-JMS-ORG': this.currentOrgID
+          }
         }
-      }
-    }, this.setting);
-    setting['callback'] = {
-      onClick: _.debounce(this.onNodeClick, 300, {
-        'leading': true,
-        'trailing': false
-      }).bind(this),
-      onRightClick: this.onRightClick.bind(this)
-    };
-    tree.loading = true;
-    this._http.get(url).subscribe(resp => {
-      tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, resp);
-    }, err => {
-      if (err.status === 400) {
-        alert(err.error.detail);
-      }
-      this._logger.error('Get k8s tree error: ', err);
-    }, () => {
-      tree.loading = false;
+      },
+      showFavoriteAssets: false
     });
   }
 
   async initAssetTree(refresh = false) {
-    let tree = new Tree(
+    const tree = new Tree(
       'AssetTree',
       'My assets',
       true,
       true,
       true
     );
-    if (refresh) {
+    this.initTreeInfo(tree, {
+      refresh,
+      apiName: 'getMyGrantedNodes',
+      showFavoriteAssets: true,
+      loadTreeAsyncUrl: '/api/v1/perms/users/self/nodes/children-with-assets/tree/?'
+    });
+  }
+
+  async initTypeTree(refresh = false) {
+    const tree = new Tree(
+      'AssetTypeTree',
+      this._i18n.instant('Type tree'),
+      true,
+      true,
+      false
+    );
+    this.initTreeInfo(tree, {
+      refresh,
+      apiName: 'getAssetTypeTree',
+      showFavoriteAssets: false,
+      loadTreeAsyncUrl: '/api/v1/perms/users/self/nodes/children-with-assets/category/tree/?',
+      setting: {
+        async: {
+          autoParam: ['type']
+        }
+      },
+    });
+  }
+
+  async initTreeInfo(tree: Tree, config: InitTreeConfig) {
+    if (config.refresh) {
       tree = this.trees.find(t => t.name === tree.name);
     } else {
       this.trees.push(tree);
     }
-    const setting = Object.assign({}, this.setting);
+    let setting = Object.assign({}, this.setting);
     setting['callback'] = {
       onClick: _.debounce(this.onNodeClick, 300, {
         'leading': true,
@@ -241,11 +262,10 @@ export class ElementAssetTreeComponent implements OnInit {
       }).bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
-    const url = '/api/v1/perms/users/self/nodes/children-with-assets/tree/?';
     if (this.isLoadTreeAsync) {
       setting['async'] = {
         enable: true,
-        url: url,
+        url: config.loadTreeAsyncUrl,
         autoParam: ['id=key', 'name=n', 'level=lv'],
         type: 'get',
         headers: {
@@ -253,13 +273,18 @@ export class ElementAssetTreeComponent implements OnInit {
         }
       };
     }
+    setting = _.merge(setting,  config.setting || {});
 
-    this._http.getFavoriteAssets().subscribe(resp => {
-      this.favoriteAssets = resp.map(i => i.asset);
-    });
+    if (config.showFavoriteAssets) {
+      this._http.getFavoriteAssets().subscribe(resp => {
+        this.favoriteAssets = resp.map(i => i.asset);
+      });
+    }
     tree.loading = true;
-    this._http.getMyGrantedNodes(this.isLoadTreeAsync).subscribe(resp => {
-      if (refresh) {
+    const request = config.hasOwnProperty('apiName') ?
+      this._http[config.apiName](this.isLoadTreeAsync) : this._http.get(config.url);
+    request.subscribe(resp => {
+      if (config.refresh) {
         tree.ztree.expandAll(false);
         tree.ztree.destroy();
       }
@@ -267,18 +292,13 @@ export class ElementAssetTreeComponent implements OnInit {
         tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, resp);
       }, 100);
     }, error => {
-      console.error('Get tree error: ', error);
+      if (error.status === 400) {
+        alert(error.error.detail);
+      }
+      this._logger.error('Get tree error: ', error);
     }, () => {
       tree.loading = false;
     });
-  }
-
-  initTree() {
-    if (this.isK8s) {
-      this.initK8sTree().then();
-    } else {
-      this.initAssetTree().then();
-    }
   }
 
   async refreshTree(event) {
@@ -288,6 +308,7 @@ export class ElementAssetTreeComponent implements OnInit {
       this.initK8sTree(true).then();
     } else {
       this.initAssetTree(true).then();
+      this.initTypeTree(true).then();
     }
   }
 
@@ -580,6 +601,12 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   foldTree(tree: Tree) {
-    tree.open = !tree.open;
+    this.trees.map(item => {
+      if (tree.name === item.name) {
+        item.open = !item.open;
+      } else {
+        item.open = false;
+      }
+    });
   }
 }
