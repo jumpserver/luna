@@ -1,8 +1,8 @@
 <div class="tree-container">
   <div
     *ngFor="let tree of trees"
-    class="tree-type open-tree"
-    [ngClass]="{'tree-type-asset': tree.open}"
+    class="tree-type"
+    [ngClass]="{'expand-tree': tree.open}"
   >
     <span class="tree-type-banner">
       <div

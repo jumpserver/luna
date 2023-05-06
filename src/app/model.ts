@@ -450,3 +450,11 @@ export interface Organization {
   is_root?: boolean;
   is_default?: boolean;
 }
+export class InitTreeConfig {
+  refresh: boolean;
+  apiName?: string;
+  url?: string;
+  setting?: any = {};
+  showFavoriteAssets?: boolean = false;
+  loadTreeAsyncUrl?: string;
+}

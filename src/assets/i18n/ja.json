@@ -66,6 +66,7 @@
   "Protocol: ": "プロトコル: {{value}}",
   "My assets": "マイ資産",
   "My applications": "私の応用",
+  "Type tree": "タイプツリー",
   "Databases": "データベース",
   "Remote apps": "リモートアプリケーション",
   "Kubernetes": "Kubernetes",
