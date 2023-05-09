@@ -8,7 +8,8 @@ import {MatDialog} from '@angular/material';
 export class ConnectTokenService {
   constructor(private _http: HttpService,
               private _dialog: MatDialog
-  ) {}
+  ) {
+  }
 
   handleError(data, resolve) {
     const dialogRef = this._dialog.open(ElementACLDialogComponent, {
@@ -25,10 +26,11 @@ export class ConnectTokenService {
   create(asset: Asset, connectInfo: ConnectData): Promise<ConnectionToken> {
     return new Promise<ConnectionToken>((resolve, reject) => {
       this._http.createConnectToken(asset, connectInfo).subscribe(
-        (token: ConnectionToken) => { resolve(token); },
+        (token: ConnectionToken) => {
+          resolve(token);
+        },
         (error) => {
-          console.log('Error: ', error);
-          this.handleError({asset, connectInfo, code: error.error.code, tokenAction: 'create', error: error}, resolve );
+          this.handleError({asset, connectInfo, code: error.error.code, tokenAction: 'create', error: error}, resolve);
         }
       );
     });
@@ -37,7 +39,9 @@ export class ConnectTokenService {
   exchange(connectToken) {
     return new Promise<ConnectionToken>((resolve, reject) => {
       this._http.exchangeConnectToken(connectToken.id).subscribe(
-        (token: ConnectionToken) => { resolve(token); },
+        (token: ConnectionToken) => {
+          resolve(token);
+        },
         (error) => {
           this.handleError({tokenID: connectToken.id, code: error.error.code, tokenAction: 'exchange'}, resolve);
         }
