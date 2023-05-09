@@ -267,6 +267,7 @@ export class GlobalSetting {
   INTERFACE: any;
   TERMINAL_OMNIDB_ENABLED: boolean;
   TERMINAL_GRAPHICAL_RESOLUTION: string;
+  CONNECTION_TOKEN_REUSABLE: boolean;
 }
 
 export class Setting {
@@ -389,6 +390,8 @@ export class ConnectionToken {
   account: string;
   expire_time: number;
   is_active: boolean;
+  date_expired: Date;
+  is_reusable: boolean;
   from_ticket: {
     id: string;
   };

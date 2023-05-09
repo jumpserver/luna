@@ -146,5 +146,7 @@
   "Copy link": "リンクをコピーする",
   "Login review approved": "ログイン監査に合格し、アセットを接続しています...",
   "No account available": "アカウントがありません",
+  "Set reusable": "再利用可能な",
+  "Re-use for a long time after opening": "開いた後、長い間再利用する",
   "The connection method is invalid, please refresh the page": "接続方法が無効です。ページを更新してください"
 }
