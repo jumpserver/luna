@@ -84,9 +84,9 @@ export class HttpService {
     );
   }
 
-  patch<T>(url: string, options?: any): Observable<any> {
+  patch<T>(url: string, body?: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.patch(url, options).pipe(
+    return this.http.patch(url, body, options).pipe(
       catchError(this.handleError.bind(this))
     );
   }
@@ -282,11 +282,13 @@ export class HttpService {
   }
 
   async handleConnectMethodExpiredError(error) {
-    if (error.status === 400 && error.error && error.error.error && error.error.error.startsWith('Connect method')) {
-      const errMsg = await this._i18n.t('The connection method is invalid, please refresh the page')
-      alert(errMsg)
+    if (error.status === 400 ) {
+      if (error.error && error.error.error && error.error.error.startsWith('Connect method')) {
+        const errMsg = await this._i18n.t('The connection method is invalid, please refresh the page');
+        alert(errMsg);
+      }
     }
-    throw error
+    throw error;
   }
 
   getSmartEndpoint({ assetId, sessionId, token }, protocol ): Promise<Endpoint> {

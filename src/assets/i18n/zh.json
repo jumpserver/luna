@@ -124,7 +124,7 @@
   "General": "基本配置",
   "Applet connect method": "远程应用连接方式",
   "Client": "客户端",
-  
+
   "Keyboard layout": "键盘布局",
   "UK English keyboard layout": "UK English (Qwerty)",
   "US English keyboard layout": "US English (Qwerty)",
@@ -146,6 +146,8 @@
   "Copy link": "复制链接",
   "Login review approved": "登录审核已通过, 正在连接资产...",
   "No account available": "没有可用账号",
+  "Set reusable": "开启复用",
+  "Re-use for a long time after opening": "开启后该连接信息可长时间多次使用",
   "The connection method is invalid, please refresh the page": "该连接方式已失效，请刷新页面"
 }
 
