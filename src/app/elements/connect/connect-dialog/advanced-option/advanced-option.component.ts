@@ -1,14 +1,14 @@
-import {Component, Input, OnInit, OnChanges, Output, EventEmitter} from '@angular/core';
-import {ConnectMethod, ConnectOption} from '@app/model';
+import {Component, Input, OnChanges, Output, EventEmitter} from '@angular/core';
+import {ConnectMethod, ConnectOption, Protocol} from '@app/model';
 
 @Component({
   selector: 'elements-advanced-option',
   templateUrl: './advanced-option.component.html',
   styleUrls: ['./advanced-option.component.scss'],
 })
-export class ElementAdvancedOptionComponent implements  OnInit, OnChanges {
+export class ElementAdvancedOptionComponent implements OnChanges {
+  @Input() protocol: Protocol;
   @Input() connectMethod: ConnectMethod;
-  @Input() accountSelected: any;
   @Output() onOptionsChange = new EventEmitter<ConnectOption[]>();
   public advancedOptions: ConnectOption[] = [];
   public isShowAdvancedOption = false;
@@ -16,23 +16,19 @@ export class ElementAdvancedOptionComponent implements  OnInit, OnChanges {
 
   constructor() {}
 
-  ngOnInit() {
-    const accountSelectedProtocol = this.accountSelected && this.accountSelected.hasOwnProperty('protocol') ? this.accountSelected.protocol : '';
+  ngOnChanges() {
     this.advancedOptions = [
       {
         type: 'checkbox',
         field: 'disableautohash',
         hidden: () => {
           return this.connectMethod.value === 'web_cli'
-            && this.needShowAutoCompletionProtocols.includes(accountSelectedProtocol);
+            && this.needShowAutoCompletionProtocols.includes(this.protocol.name);
           },
           label: 'Disable auto completion',
           value: false
         }
       ];
-  }
-
-  ngOnChanges(changes) {
     this.isShowAdvancedOption = this.advancedOptions.some(i => i.hidden());
   }
 
