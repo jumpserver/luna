@@ -154,6 +154,7 @@ export class ElementAssetTreeComponent implements OnInit {
       this.currentOrgID = DEFAULT_ORG_ID;
     }
     this.initTree();
+    this.trees.map((tree, index) => (index === 0 ? tree.open = true : tree.open = false));
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
@@ -301,14 +302,14 @@ export class ElementAssetTreeComponent implements OnInit {
     });
   }
 
-  async refreshTree(event) {
+  async refreshTree(event, tree) {
     event.stopPropagation();
     this.searchValue = '';
     if (this.isK8s) {
       this.initK8sTree(true).then();
     } else {
-      this.initAssetTree(true).then();
-      this.initTypeTree(true).then();
+      if (tree.name === 'AssetTree') { this.initAssetTree(true).then(); }
+      if (tree.name === 'AssetTypeTree') { this.initTypeTree(true).then(); }
     }
   }
 
