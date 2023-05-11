@@ -10,6 +10,7 @@ import {AuthInfo, ConnectData, Endpoint, View, Asset, Account} from '@app/model'
 import * as CryptoJS from 'crypto-js';
 import {getCookie, setCookie} from '@app/utils/common';
 import {OrganizationService} from './organization';
+import {Organization} from '@app/model';
 
 declare function unescape(s: string): string;
 
@@ -37,6 +38,7 @@ export class AppService {
               private _localStorage: LocalStorageService,
               private _orgSvc: OrganizationService) {
     this.setLogLevel();
+    this.setOrgFromQueryString();
     this.checkLogin();
     this.loadPreferData();
     this.loadOriManualAuthInfo();
@@ -50,6 +52,14 @@ export class AppService {
         logLevel = environment.production ? '1' : '5';
     }
     this._logger.level = parseInt(logLevel, 10);
+  }
+
+  setOrgFromQueryString() {
+    const oid = this.getQueryString('oid');
+    if (oid) {
+      const currentOrg: Organization = {id: oid, name: ''};
+      this._orgSvc.switchOrg(currentOrg);
+    }
   }
 
   checkLogin() {
