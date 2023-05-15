@@ -7,7 +7,7 @@ import {formatTime} from '@app/utils/common';
 @Component({
   selector: 'elements-replay-mp4',
   templateUrl: './mp4.component.html',
-  styleUrls: ['./mp4.component.css']
+  styleUrls: ['./mp4.component.scss']
 })
 export class ElementsReplayMp4Component implements OnInit {
   @Input() replay: Replay;
@@ -61,6 +61,14 @@ export class ElementsReplayMp4Component implements OnInit {
         alert('没找到命令记录');
       }
     );
+  }
+
+  onScroll() {
+    this.getCommands(++this.page);
+  }
+
+  commandClick(item: Command) {
+
   }
 
 }
