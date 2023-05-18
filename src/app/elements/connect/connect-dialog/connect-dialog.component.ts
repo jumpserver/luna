@@ -21,7 +21,7 @@ export class ElementConnectDialogComponent implements OnInit {
   public connectOptions: ConnectOption[] = [];
   public outputData: ConnectData = new ConnectData();
   public manualAuthInfo: AuthInfo = new AuthInfo();
-  public connectMethod: ConnectMethod = new ConnectMethod();
+  public connectMethod: ConnectMethod = new ConnectMethod('Null', '', 'null', 'null');
   public preConnectData: ConnectData = new ConnectData();
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
   public isAppletClientMethod = false;
@@ -70,7 +70,10 @@ export class ElementConnectDialogComponent implements OnInit {
       this.accountSelected = this.accounts[0];
     }
     if (!this.connectMethod) {
-      this.connectMethod = this._appSvc.getProtocolConnectMethods(this.protocol.name)[0];
+      const connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
+      if (connectMethods) {
+        this.connectMethod = connectMethods[0];
+      }
     }
   }
 
@@ -90,7 +93,7 @@ export class ElementConnectDialogComponent implements OnInit {
     if (this.accounts.length === 0) {
       return true;
     }
-    if (this.connectMethod.disabled === true) {
+    if (!this.connectMethod || this.connectMethod.disabled === true) {
       return true;
     }
     if (

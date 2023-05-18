@@ -11,6 +11,7 @@
        *ngFor="let p of protocols"
        (click)="onProtocolChange(p)"
        [active]="protocol.name === p.name"
+       [title]="p.name"
     >
       {{ p.name | uppercase }}
     </a>
@@ -35,8 +36,8 @@
     </elements-connect-method>
 
     <elements-advanced-option
+      [protocol]="protocol"
       [connectMethod]="connectMethod"
-      [accountSelected]="accountSelected"
       (onOptionsChange)="onAdvancedOptionChanged($event)"
     >
     </elements-advanced-option>

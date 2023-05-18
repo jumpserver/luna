@@ -66,6 +66,7 @@
   "Protocol: ": "プロトコル: {{value}}",
   "My assets": "マイ資産",
   "My applications": "私の応用",
+  "Type tree": "タイプツリー",
   "Databases": "データベース",
   "Remote apps": "リモートアプリケーション",
   "Kubernetes": "Kubernetes",
@@ -123,6 +124,17 @@
   "Normal accounts": "通常のログインアカウント",
   "Special accounts": "特別ログインアカウント",
   "Tips": "ヒント",
+  "Applet connect method": "アプレット接続方法",
+  "Client": "お客様",
+
+  "Keyboard layout": "キーボードレイアウト",
+  "UK English keyboard layout": "UK English (Qwerty)",
+  "US English keyboard layout": "US English (Qwerty)",
+  "Japanese keyboard layout": "Japanese (Qwerty)",
+  "French keyboard layout": "French (Azerty)",
+  "Swiss French keyboard layout": "Swiss French (Qwertz)",
+  "Belgian French keyboard layout": "Belgian French (Azerty)",
+  "Turkey keyboard layout": "Turkish-Q (Qwerty)",
   "Login reminder": "ログインリマインダー",
   "ACL reject login asset": "アクセス制御ポリシーの制限により、このログインは拒否されました",
   "Need review for login asset": "このログインは手動で確認する必要があります。続行しますか?",
@@ -135,5 +147,7 @@
   "Copy link": "リンクをコピーする",
   "Login review approved": "ログイン監査に合格し、アセットを接続しています...",
   "No account available": "アカウントがありません",
+  "Set reusable": "再利用可能な",
+  "Re-use for a long time after opening": "開いた後、長い間再利用する",
   "The connection method is invalid, please refresh the page": "接続方法が無効です。ページを更新してください"
 }

@@ -66,6 +66,7 @@
   "Protocol: ": "协议: {{value}}",
   "My assets": "我的资产",
   "My applications": "我的应用",
+  "Type tree": "类型树",
   "Databases": "数据库",
   "Remote apps": "远程应用",
   "Kubernetes": "Kubernetes",
@@ -125,6 +126,14 @@
   "Applet connect method": "远程应用连接方式",
   "Client": "客户端",
 
+  "Keyboard layout": "键盘布局",
+  "UK English keyboard layout": "UK English (Qwerty)",
+  "US English keyboard layout": "US English (Qwerty)",
+  "Japanese keyboard layout": "Japanese (Qwerty)",
+  "French keyboard layout": "French (Azerty)",
+  "Swiss French keyboard layout": "Swiss French (Qwertz)",
+  "Belgian French keyboard layout": "Belgian French (Azerty)",
+  "Turkey keyboard layout": "Turkish-Q (Qwerty)",
   "Login reminder": "登录提醒",
   "ACL reject login asset": "本次登录已拒绝，原因是访问控制策略的限制",
   "Need review for login asset": "本次登录需要进行人工审核，是否继续?",
@@ -138,6 +147,8 @@
   "Copy link": "复制链接",
   "Login review approved": "登录审核已通过, 正在连接资产...",
   "No account available": "没有可用账号",
+  "Set reusable": "开启复用",
+  "Re-use for a long time after opening": "开启后该连接信息可长时间多次使用",
   "The connection method is invalid, please refresh the page": "该连接方式已失效，请刷新页面"
 }
 

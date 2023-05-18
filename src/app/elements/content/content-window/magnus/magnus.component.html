@@ -1,25 +1,35 @@
-<div class="content" *ngIf="!loading">
+<div *ngIf="!loading" class="content">
   <div>
     <h2 class="subject">{{ 'Database connect info' | translate }}</h2>
     <table>
       <tr *ngFor="let item of infoItems">
         <td class="title">{{ item.label | async }} </td>
-        <td class="text-td"
+        <td
           #tooltip="matTooltip"
-          [matTooltip]="'Click to copy' | translate"
+          (cbOnSuccess)="onCopySuccess($event)"
+          (mouseenter)="onHoverClipRef($event)"
+          [cbContent]="this.info[item.name]"
+          [matTooltip]="hoverClipTip"
+          class="text-td"
           matTooltipPosition="right"
           ngxClipboard
-          (cbOnSuccess)="onCopySuccess($event)"
-          [cbContent]="this.info[item.name]"
         >
-          <span *ngIf="item.name === 'password'" (click)="showPassword($event)" class="show-password">
+          <span (click)="showPassword($event)" *ngIf="item.name === 'password'" class="show-password">
             <span style="vertical-align: middle">
               {{ passwordShow }}
             </span>
             <i class="fa fa-eye"></i>
           </span>
-          <span *ngIf="item.name !== 'password'">
+          <span *ngIf="item.name !== 'password' && item.name !== 'set_reusable'">
             {{ this.info[item.name] }}
+          </span>
+          <span *ngIf="item.name == 'set_reusable'" class="reusable-button">
+            <mat-slide-toggle
+              (change)="setReusable($event)"
+              [(ngModel)]="token.is_reusable"
+            >
+              {{ "Re-use for a long time after opening" | translate }}
+            </mat-slide-toggle>
           </span>
           <span class="btn">
             <i class="fa fa-clone icon"></i>
@@ -34,19 +44,21 @@
     </h2>
     <div class="command">
       <pre>$ {{ cliSafe }}</pre>
-      <span class="start btn"
-        #tooltip="matTooltip"
-        [matTooltip]="'Run it by client' | translate"
-        (click)="startClient()"
+      <span #tooltip="matTooltip"
+            (click)="startClient()"
+            [matTooltip]="'Run it by client' | translate"
+            class="start btn"
       >
         <i class="fa fa-caret-square-o-right icon"></i>
       </span>
-      <span class="btn"
+      <span
         #tooltip="matTooltip"
-        [matTooltip]="'Click to copy' | translate"
-        ngxClipboard
-        [cbContent]="cli"
         (cbOnSuccess)="onCopySuccess($event)"
+        (mouseenter)="onHoverClipRef($event)"
+        [cbContent]="cli"
+        [matTooltip]="hoverClipTip"
+        class="btn"
+        ngxClipboard
       >
         <i class="fa fa-clone icon"></i>
       </span>

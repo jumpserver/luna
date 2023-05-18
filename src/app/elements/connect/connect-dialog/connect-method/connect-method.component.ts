@@ -31,7 +31,6 @@ export class ElementConnectMethodComponent implements OnInit {
   public connectMethodTypes = [];
   public isAppletClientMethod = false;
 
-
   constructor(private _i18n: I18nService,
     private _appSvc: AppService,
     private _settingSvc: SettingService
@@ -45,7 +44,9 @@ export class ElementConnectMethodComponent implements OnInit {
   }
 
   currentConnectMethodTypeIndex() {
-    const i = this.connectMethodTypes.map((item) => item.value).indexOf(this.connectMethod.type);
+    const i = this.connectMethodTypes
+      .map((item) => item.value)
+      .indexOf(this.connectMethod.type);
     if (i === -1) {
       return 0;
     }

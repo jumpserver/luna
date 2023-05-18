@@ -11,7 +11,7 @@
   </mat-form-field>
 </div>
 <div *ngIf="type === 'gui'">
-  <mat-form-field style="padding-top: 15px">
+  <mat-form-field>
     <mat-select [(value)]="setting.rdpResolution"
                 placeholder="{{'RDP resolution'| translate}}" >
       <mat-option *ngFor="let s of resolutionsChoices" value="{{s}}">{{s}}</mat-option>
@@ -19,20 +19,31 @@
   </mat-form-field>
 
   <div *ngIf="hasLicense()">
-      <label class="field-label">{{ 'RDP client options' | translate }}</label>
-      <section>
-        <mat-checkbox [(ngModel)]="setting.rdpFullScreen">{{ 'Full screen'| translate}}</mat-checkbox>
-        <mat-checkbox [(ngModel)]="setting.rdpDrivesRedirect" style="padding-left: 20px">{{ 'Driver redirect'| translate}}</mat-checkbox>
-      </section>
+    <label class="field-label">{{ 'RDP client options' | translate }}</label>
+    <section>
+      <mat-checkbox [(ngModel)]="setting.rdpFullScreen">{{ 'Full screen'| translate}}</mat-checkbox>
+      <mat-checkbox [(ngModel)]="setting.rdpDrivesRedirect" style="padding-left: 20px">{{ 'Driver redirect'| translate}}</mat-checkbox>
+    </section>
 
-      <label class="field-label" style="padding-top: 15px">{{ 'Applet connect method' | translate }}</label>
-      <mat-radio-group
-        aria-label="Select an option"
-        [(ngModel)]="setting.appletConnectMethod"
-      >
-        <mat-radio-button value="web">Web</mat-radio-button>
-        <mat-radio-button value="client" style="padding-left: 20px">{{ 'Client' | translate }}</mat-radio-button>
-      </mat-radio-group>
+    <label class="field-label space">{{ 'Applet connect method' | translate }}</label>
+    <mat-radio-group
+      aria-label="Select an option"
+      [(ngModel)]="setting.appletConnectMethod"
+    >
+      <mat-radio-button value="web">Web</mat-radio-button>
+      <mat-radio-button value="client" style="padding-left: 20px">{{ 'Client' | translate }}</mat-radio-button>
+    </mat-radio-group>
+
+    <mat-form-field>
+      <label class="field-label" style="padding-bottom: 7px;">
+        {{'Keyboard layout'| translate }}
+      </label>
+      <mat-select [(value)]="setting.keyboardLayout">
+        <mat-option *ngFor="let item of keyboardLayoutOptions" value="{{item.value}}">
+          {{item.label}}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
   </div>
 </div>
 
@@ -47,7 +58,6 @@
       <mat-option *ngFor="let s of boolChoices"  value="{{s.value}}">{{s.name| translate}}</mat-option>
     </mat-select>
   </mat-form-field>
-
 
   <mat-form-field>
     <mat-select [(value)]="setting.quickPaste"

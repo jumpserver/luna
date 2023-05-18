@@ -185,6 +185,14 @@ export class ConnectMethod {
   component: string;
 
   disabled: boolean;
+
+  constructor(label: string, value: string, type: string, component: string, disabled: boolean = false) {
+    this.label = label;
+    this.value = value;
+    this.type = type;
+    this.component = component;
+    this.disabled = disabled;
+  }
 }
 
 export class DataStore {
@@ -259,6 +267,7 @@ export class GlobalSetting {
   INTERFACE: any;
   TERMINAL_OMNIDB_ENABLED: boolean;
   TERMINAL_GRAPHICAL_RESOLUTION: string;
+  CONNECTION_TOKEN_REUSABLE: boolean;
 }
 
 export class Setting {
@@ -273,6 +282,7 @@ export class Setting {
   sqlClient = '1';
   commandExecution: boolean = true;
   appletConnectMethod: string = 'web';
+  keyboardLayout: string = '';
 }
 
 
@@ -380,6 +390,8 @@ export class ConnectionToken {
   account: string;
   expire_time: number;
   is_active: boolean;
+  date_expired: Date;
+  is_reusable: boolean;
   from_ticket: {
     id: string;
   };
@@ -437,4 +449,12 @@ export interface Organization {
   name: string;
   is_root?: boolean;
   is_default?: boolean;
+}
+export class InitTreeConfig {
+  refresh: boolean;
+  apiName?: string;
+  url?: string;
+  setting?: any = {};
+  showFavoriteAssets?: boolean = false;
+  loadTreeAsyncUrl?: string;
 }

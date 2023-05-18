@@ -3,6 +3,7 @@ import {Asset, ConnectData, ConnectionToken} from '@app/model';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {HttpService, I18nService} from '@app/services';
 import {ToastrService} from 'ngx-toastr';
+import {HttpErrorResponse} from '@angular/common/http';
 
 @Component({
   selector: 'elements-acl-dialog',
@@ -14,6 +15,7 @@ export class ElementACLDialogComponent implements OnInit {
   public connectInfo: ConnectData;
   public code: string;
   public connectionToken: ConnectionToken = null;
+  public error: HttpErrorResponse;
   public otherError: string;
   public ticketAssignees: string = '-';
   // Token 的行为，创建或者兑换 Token, create, exchange
@@ -21,13 +23,17 @@ export class ElementACLDialogComponent implements OnInit {
   public tokenID: string;
   private timerCheckTicket: number;
 
+  constructor(public dialogRef: MatDialogRef<ElementACLDialogComponent>,
+              private _i18n: I18nService,
+              private _toastr: ToastrService,
+              private _http: HttpService,
+              @Inject(MAT_DIALOG_DATA) public data: any
+  ) {
+  }
 
-  constructor( public dialogRef: MatDialogRef<ElementACLDialogComponent>,
-               private _i18n: I18nService,
-               private _toastr: ToastrService,
-               private _http: HttpService,
-               @Inject(MAT_DIALOG_DATA) public data: any
-  ) {}
+  get ticketDetailPageURL(): string {
+    return this.connectionToken.from_ticket_info.ticket_detail_page_url;
+  }
 
   ngOnInit() {
     // 创建 Token 的时候，需要传入 Asset 和 ConnectInfo
@@ -35,13 +41,9 @@ export class ElementACLDialogComponent implements OnInit {
     this.connectInfo = this.data.connectInfo;
     this.code = this.data.code;
     // 兑换 Token 的时候，需要传入 Token ID
-    this.tokenID = this.data.tokenID
+    this.tokenID = this.data.tokenID;
     // 控制 token 的行为, 创建还是兑换
-    this.tokenAction = this.data.tokenAction
-  }
-
-  get ticketDetailPageURL(): string {
-    return this.connectionToken.from_ticket_info.ticket_detail_page_url;
+    this.tokenAction = this.data.tokenAction;
   }
 
   async onCopySuccess(evt) {
@@ -60,7 +62,7 @@ export class ElementACLDialogComponent implements OnInit {
         this.code = 'ticket_review_pending';
         this.checkTicket();
       }
-    }
+    };
     const errorCallback = (error) => {
       if (error.error.code.startsWith('acl_')) {
         this.code = error.error.code;
@@ -68,11 +70,11 @@ export class ElementACLDialogComponent implements OnInit {
         this.code = 'other';
         this.otherError = error.error.detail;
       }
-    }
+    };
     if (this.tokenAction === 'exchange') {
-      this._http.exchangeConnectToken(this.tokenID, true).subscribe(successCallback, errorCallback)
+      this._http.exchangeConnectToken(this.tokenID, true).subscribe(successCallback, errorCallback);
     } else {
-      this._http.createConnectToken(this.asset, this.connectInfo, true).subscribe(successCallback, errorCallback)
+      this._http.createConnectToken(this.asset, this.connectInfo, true).subscribe(successCallback, errorCallback);
     }
   }
 

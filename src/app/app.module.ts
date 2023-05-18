@@ -32,6 +32,7 @@ import {ElementDownloadDialogComponent} from './elements/connect/download-dialog
 import {ElementACLDialogComponent} from './elements/connect/acl-dialog/acl-dialog.component';
 import {ElementDialogAlertComponent} from './elements/dialog/dialog.service';
 import {ClipboardService} from 'ngx-clipboard';
+import { ElementsReplayMp4Component } from './elements/replay/mp4/mp4.component';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, '/luna/assets/i18n/');
@@ -62,6 +63,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     ...Pipes,
     ...ElementComponents,
     ...PagesComponents,
+    ElementsReplayMp4Component,
   ],
   entryComponents: [
     ChangLanWarningDialogComponent,

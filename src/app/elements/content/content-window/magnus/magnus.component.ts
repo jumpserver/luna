@@ -1,8 +1,9 @@
-import {Component, Input, OnInit} from '@angular/core';
-import {View, Account, Endpoint, Asset, ConnectionToken} from '@app/model';
+import {Component, Input, OnInit, ViewChild} from '@angular/core';
+import {Account, Asset, ConnectionToken, Endpoint, View} from '@app/model';
 import {ConnectTokenService, HttpService, I18nService, SettingService} from '@app/services';
 import {User} from '@app/globals';
 import {ToastrService} from 'ngx-toastr';
+import {MatTooltip} from '@angular/material/tooltip';
 
 interface InfoItem {
   name: string;
@@ -18,6 +19,7 @@ interface InfoItem {
 
 export class ElementConnectorMagnusComponent implements OnInit {
   @Input() view: View;
+  @ViewChild(MatTooltip, {static: false}) tooltip: MatTooltip;
 
   asset: Asset;
   account: Account;
@@ -34,6 +36,8 @@ export class ElementConnectorMagnusComponent implements OnInit {
   passwordMask = '******';
   passwordShow = '******';
   token: ConnectionToken;
+  showSetReusable: boolean;
+  hoverClipTip: string = this._i18n.instant('Click to copy');
 
   constructor(private _http: HttpService,
               private _i18n: I18nService,
@@ -42,10 +46,11 @@ export class ElementConnectorMagnusComponent implements OnInit {
               private _settingSvc: SettingService
   ) {
     this.globalSetting = this._settingSvc.globalSetting;
+    this.showSetReusable = this.globalSetting.CONNECTION_TOKEN_REUSABLE;
   }
 
   async ngOnInit() {
-    const {asset, account, protocol, smartEndpoint, connectToken } = this.view;
+    const {asset, account, protocol, smartEndpoint, connectToken} = this.view;
     this.token = connectToken;
     this.asset = asset;
     this.account = account;
@@ -57,7 +62,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
     this.setDBInfo();
     this.generateConnCli();
     this.loading = false;
-    this.view.termComp = this
+    this.view.termComp = this;
   }
 
   setDBInfo() {
@@ -69,11 +74,14 @@ export class ElementConnectorMagnusComponent implements OnInit {
       {name: 'host', value: host, label: this._i18n.t('Host')},
       {name: 'port', value: port, label: this._i18n.t('Port')},
       {name: 'username', value: this.token.id, label: this._i18n.t('Username')},
-      {name: 'password', value: this.token.value,  label: this._i18n.t('Password')},
+      {name: 'password', value: this.token.value, label: this._i18n.t('Password')},
       {name: 'database', value: database, label: this._i18n.t('Database')},
       {name: 'protocol', value: this.protocol, label: this._i18n.t('Protocol')},
-      {name: 'expire_time', value: `${this.token.expire_time} s` , label: this._i18n.t('Expire time')},
+      {name: 'date_expired', value: `${this.token.date_expired}`, label: this._i18n.t('Expire time')},
     ];
+    if (this.showSetReusable) {
+      this.infoItems.push({name: 'set_reusable', value: '', label: this._i18n.t('Set reusable')});
+    }
     this.info = this.infoItems.reduce((pre, current) => {
       pre[current.name] = current.value;
       return pre;
@@ -126,6 +134,19 @@ export class ElementConnectorMagnusComponent implements OnInit {
     this.cli = cli.replace(passwordHolder, password);
   }
 
+  setReusable(event) {
+    this._connectTokenSvc.setReusable(this.token, event.checked).subscribe(
+      res => {
+        this.token = Object.assign(this.token, res);
+        this.info['date_expired'] = `${this.token.date_expired}`;
+      },
+      error => {
+        this.token.is_reusable = false;
+        this._toastr.error(error.error.msg || error.error.is_reusable || error.message);
+      }
+    );
+  }
+
   startClient() {
     const {protocol} = this.info;
     const data = {
@@ -149,19 +170,22 @@ export class ElementConnectorMagnusComponent implements OnInit {
   }
 
   async onCopySuccess(evt) {
-    const msg = await this._i18n.t('Copied');
-    this._toastr.success(msg);
+    this.hoverClipTip = this._i18n.instant('Copied');
+  }
+
+  onHoverClipRef(evt) {
+    this.hoverClipTip = this._i18n.instant('Click to copy');
   }
 
   async reconnect() {
-    const oldConnectToken = this.view.connectToken
-    const newConnectToken = await this._connectTokenSvc.exchange(oldConnectToken)
+    const oldConnectToken = this.view.connectToken;
+    const newConnectToken = await this._connectTokenSvc.exchange(oldConnectToken);
     if (!newConnectToken) {
-      return
+      return;
     }
     // 更新当前 view 的 connectToken
-    this.view.connectToken = newConnectToken
-    await this.ngOnInit()
+    this.view.connectToken = newConnectToken;
+    await this.ngOnInit();
     // 刷新完成隐藏密码
     this.passwordShow = this.passwordMask;
   }
