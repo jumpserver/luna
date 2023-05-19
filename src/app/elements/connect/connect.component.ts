@@ -307,9 +307,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const noMatchingConnectionMsg = await this._i18n.t('No Matching Connection');
 
     if (systemUserId) {
-      systemUserMaxPriority = systemUserMaxPriority.filter(s => {
-        s.id = systemUserId;
-      });
+      systemUserMaxPriority = systemUserMaxPriority.filter(s => s.id == systemUserId);
     }
     if (systemUserMaxPriority.length === 0) {
       alert(noSystemUserMsg);
