@@ -18,6 +18,17 @@
     </mat-select>
   </mat-form-field>
 
+  <mat-form-field>
+    <label class="field-label" style="padding-bottom: 7px;">
+      {{'Keyboard layout'| translate }}
+    </label>
+    <mat-select [(value)]="setting.keyboardLayout">
+      <mat-option *ngFor="let item of keyboardLayoutOptions" value="{{item.value}}">
+        {{item.label}}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
   <div *ngIf="hasLicense()">
     <label class="field-label">{{ 'RDP client options' | translate }}</label>
     <section>
@@ -33,17 +44,6 @@
       <mat-radio-button value="web">Web</mat-radio-button>
       <mat-radio-button value="client" style="padding-left: 20px">{{ 'Client' | translate }}</mat-radio-button>
     </mat-radio-group>
-
-    <mat-form-field>
-      <label class="field-label" style="padding-bottom: 7px;">
-        {{'Keyboard layout'| translate }}
-      </label>
-      <mat-select [(value)]="setting.keyboardLayout">
-        <mat-option *ngFor="let item of keyboardLayoutOptions" value="{{item.value}}">
-          {{item.label}}
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
   </div>
 </div>
 
