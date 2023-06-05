@@ -1,6 +1,6 @@
 <div class="advanced-option">
   <mat-accordion>
-    <mat-expansion-panel [disabled]="!isShowAdvancedOption">
+    <mat-expansion-panel [class.panel-show]="isShowAdvancedOption" [disabled]="!isShowAdvancedOption">
       <mat-expansion-panel-header style="height: 32px;">
         <mat-panel-title>
           {{ 'Advanced option' | translate }}

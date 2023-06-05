@@ -24,7 +24,7 @@
   }
 }
 
-.mat-expansion-panel.mat-expanded {
+.mat-expansion-panel.panel-show.mat-expanded {
   border-bottom: none;
 
   &::ng-deep .mat-expansion-panel-content {
@@ -56,10 +56,7 @@
 .option-item {
   flex: 0 0 49%;
   box-sizing: border-box;
-}
-
-.option-item:first-child {
-  margin-left: 0;
+  padding: 0 5px;
 }
 
 .mat-checkbox-layout {

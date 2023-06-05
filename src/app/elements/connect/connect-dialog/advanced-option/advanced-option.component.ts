@@ -13,6 +13,10 @@ export class ElementAdvancedOptionComponent implements OnChanges {
   @Output() onOptionsChange = new EventEmitter<ConnectOption[]>();
   public advancedOptions: ConnectOption[] = [];
   public isShowAdvancedOption = false;
+  private boolChoices = [
+    {label: 'Yes', value: true},
+    {label: 'No', value: false},
+  ];
 
   constructor() {
   }
@@ -25,7 +29,6 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         label: 'Charset',
         hidden: () => {
           const protocolsCanCharset: Array<string> = ['ssh', 'telnet'];
-          console.log('CUrrent protocol', this.protocol);
           return this.connectMethod.component !== 'koko' || !protocolsCanCharset.includes(this.protocol.name);
         },
         value: 'default',
@@ -39,28 +42,33 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         type: 'select',
         field: 'disableautohash',
         hidden: () => {
-          console.log('CUrrent protocol hash', this.protocol);
           const protocolsCanAutoHash: Array<string> = ['mysql', 'mariadb'];
           return this.connectMethod.component !== 'koko' || !protocolsCanAutoHash.includes(this.protocol.name);
         },
         label: 'Disable auto completion',
         value: false,
-        options: [
-          {label: 'Yes', value: true},
-          {label: 'No', value: false},
-        ]
+        options: this.boolChoices
       },
       {
         type: 'select',
         field: 'resolution',
         hidden: () => {
           const protocolsCanResolution: Array<string> = ['rdp'];
-          console.log('CUrrent protocol res', this.protocol);
           return !protocolsCanResolution.includes(this.protocol.name);
         },
         options: resolutionsChoices.map(i => ({label: i, value: i})),
         label: 'Resolution',
         value: 'Auto'
+      },
+      {
+        type: 'select',
+        field: 'backspaceAsCtrlH',
+        hidden: () => {
+          return this.connectMethod.component !== 'koko';
+        },
+        options: this.boolChoices,
+        label: 'Backspace as Ctrl+H',
+        value: false
       }
     ];
     this.advancedOptions = this.advancedOptions.filter(i => !i.hidden());
