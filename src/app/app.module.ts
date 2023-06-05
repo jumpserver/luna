@@ -1,6 +1,6 @@
 import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
-import { InfiniteScrollModule } from 'ngx-infinite-scroll';
+import {InfiniteScrollModule} from 'ngx-infinite-scroll';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms'; // <-- NgModel lives here
 import {NGXLogger} from 'ngx-logger';
 import {CookieService} from 'ngx-cookie-service';
@@ -8,7 +8,7 @@ import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {ToastrModule} from 'ngx-toastr';
 import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 import {HttpClient, HttpClientModule} from '@angular/common/http';
-import {TranslateModule, TranslateLoader} from '@ngx-translate/core';
+import {TranslateLoader, TranslateModule} from '@ngx-translate/core';
 import {TranslateHttpLoader} from '@ngx-translate/http-loader';
 
 // service
@@ -29,10 +29,10 @@ import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {ElementConnectDialogComponent} from './elements/connect/connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './elements/connect/download-dialog/download-dialog.component';
-import {ElementACLDialogComponent} from './elements/connect/acl-dialog/acl-dialog.component';
-import {ElementDialogAlertComponent} from './elements/dialog/dialog.service';
+import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/acl-dialog.component';
+import {ElementDialogAlertComponent} from '@app/services/dialog/dialog.service';
 import {ClipboardService} from 'ngx-clipboard';
-import { ElementsReplayMp4Component } from './elements/replay/mp4/mp4.component';
+import {ElementsReplayMp4Component} from './elements/replay/mp4/mp4.component';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, '/luna/assets/i18n/');

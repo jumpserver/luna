@@ -1,9 +1,9 @@
-import {Component, OnInit, Output, OnDestroy, EventEmitter} from '@angular/core';
+import {Component, EventEmitter, OnDestroy, OnInit, Output} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {MatDialog} from '@angular/material';
-import {AppService, HttpService, LogService, SettingService, DialogService, I18nService, ConnectTokenService} from '@app/services';
-import {Account, ConnectData, Asset, ConnectionToken, View, K8sInfo} from '@app/model';
+import {AppService, ConnectTokenService, DialogService, HttpService, I18nService, LogService, SettingService} from '@app/services';
+import {Account, Asset, ConnectData, ConnectionToken, K8sInfo, View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
 import {launchLocalApp} from '@app/utils/common';
@@ -202,13 +202,13 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const url = response['url'];
     launchLocalApp(url, () => {
       const downLoadStatus = localStorage.getItem('hasDownLoadApp');
-        if (downLoadStatus !== '1') {
-          this._dialog.open(ElementDownloadDialogComponent, {
-            height: 'auto',
-            width: '800px',
-            disableClose: true
-          });
-        }
+      if (downLoadStatus !== '1') {
+        this._dialog.open(ElementDownloadDialogComponent, {
+          height: 'auto',
+          width: '800px',
+          disableClose: true
+        });
+      }
     });
   }
 
@@ -276,7 +276,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     });
 
     return new Promise<ConnectData>(resolve => {
-      dialogRef.afterClosed().subscribe(outputData  => {
+      dialogRef.afterClosed().subscribe(outputData => {
         resolve(outputData);
       });
     });

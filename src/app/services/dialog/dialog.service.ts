@@ -1,6 +1,7 @@
 import {Component, Inject, Injectable} from '@angular/core';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
-import {I18nService, LogService} from '@app/services';
+import {I18nService} from '../i18n';
+import {LogService} from '../share';
 
 
 @Component({
@@ -45,9 +46,9 @@ export class DialogService {
   loading() {
   }
 
-  async alert(msg: string, title: string='') {
+  async alert(msg: string, title: string = '') {
     if (!title) {
-      title = await this._i18n.t('Tips')
+      title = await this._i18n.t('Tips');
     }
     this._dialog.open(ElementDialogAlertComponent, {
       height: 'auto',
