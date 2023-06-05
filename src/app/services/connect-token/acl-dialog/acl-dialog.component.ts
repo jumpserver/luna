@@ -1,7 +1,8 @@
 import {Component, Inject, OnInit} from '@angular/core';
 import {Asset, ConnectData, ConnectionToken} from '@app/model';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
-import {HttpService, I18nService} from '@app/services';
+import {I18nService} from '@app/services/i18n';
+import {HttpService} from '@app/services/http';
 import {ToastrService} from 'ngx-toastr';
 import {HttpErrorResponse} from '@angular/common/http';
 
