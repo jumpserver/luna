@@ -5,6 +5,14 @@
 .mat-expansion-panel-header {
   height: 32px !important;
   padding: 0 4px 0 0;
+
+  &:hover {
+    background-color: rgb(255, 255, 255);
+  }
+}
+
+.mat-expansion-panel:not(.mat-expanded) .mat-expansion-panel-header:not([aria-disabled=true]):hover {
+  background: rgba(0, 0, 0, 0);
 }
 
 .mat-expansion-panel-header-title {
