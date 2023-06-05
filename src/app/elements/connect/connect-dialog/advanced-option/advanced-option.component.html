@@ -1,48 +1,45 @@
-<div class="advanced-option" *ngIf="isShowAdvancedOption">
+<div class="advanced-option">
   <mat-accordion>
-    <mat-expansion-panel>
+    <mat-expansion-panel [disabled]="!isShowAdvancedOption">
       <mat-expansion-panel-header style="height: 32px;">
         <mat-panel-title>
           {{ 'Advanced option' | translate }}
         </mat-panel-title>
       </mat-expansion-panel-header>
-  
-      <ng-container *ngFor="let item of advancedOptions">
-        <mat-checkbox
-          #checkbox
-          *ngIf="item.type == 'checkbox'"
-          [hidden]="!item.hidden()"
-          [name]="item.field"
-          [(ngModel)]="item.value"
-          (ngModelChange)="optionChange($event)"
-        >
-          {{ item.label | translate }}
-        </mat-checkbox>
 
-        <div
-          *ngIf="item.type == 'radio'"
-          [hidden]="!item.hidden()"
-        >
-          <label id="radio-label">
-            {{item.label + ':'}}
-          </label>
-          <mat-radio-group
-            aria-labelledby="example-radio-group-label"
-            class="example-radio-group"
-            (ngModelChange)="optionChange($event)"
-            [(ngModel)]="item.value"
-          >
-            <mat-radio-button
-              *ngFor="let i of item.options"
-              [value]="i"
-              class="example-radio-button"
+      <div *ngIf="isShowAdvancedOption" class="options-container">
+        <ng-container *ngFor="let item of advancedOptions">
+          <div *ngIf="item.type === 'checkbox'" class="option-item">
+            <mat-checkbox
+              (ngModelChange)="optionChange($event)"
+              [(ngModel)]="item.value"
+              [name]="item.field"
             >
-              {{i}}
-            </mat-radio-button>
-          </mat-radio-group>
-        </div>
-      </ng-container>
-
+              {{ item.label | translate }}
+            </mat-checkbox>
+          </div>
+          <ng-container *ngIf="item.type === 'select'">
+            <mat-form-field class="option-item">
+              <mat-label>{{ item.label | translate }}</mat-label>
+              <mat-select [(ngModel)]="item.value" [name]="item.field">
+                <mat-option *ngFor="let option of item.options" [value]="option.value">
+                  {{ option.label | translate }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </ng-container>
+          <ng-container *ngIf="item.type === 'radio'">
+            <div class="option-item">
+              <mat-radio-group [(ngModel)]="item.value" [name]="item.field">
+                <mat-label style="margin-right: 10px">{{ item.label | translate }}</mat-label>
+                <mat-radio-button *ngFor="let option of item.options" [value]="option.value">
+                  {{ option.label | translate }}
+                </mat-radio-button>
+              </mat-radio-group>
+            </div>
+          </ng-container>
+        </ng-container>
+      </div>
     </mat-expansion-panel>
   </mat-accordion>
 </div>

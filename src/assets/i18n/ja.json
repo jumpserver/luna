@@ -76,7 +76,6 @@
   "No matching found": "マッチがありません",
   "Connect Method": "接続方法",
   "Need to use": "使用する必要がある",
-
   "Yes": "はい",
   "No": "いいえ",
   "Web Terminal": "Web端末",
@@ -116,7 +115,6 @@
   "General": "基本構成",
   "GUI": "グラフィカル",
   "CLI": "コマンドライン",
-
   "Asset not found or You have no permission to access it, please refresh asset tree": "アセットが見つからないか、アクセスする権限がありません。アセット ツリーを更新してください",
   "Run it by client": "クライアントで実行する",
   "Name": "めいしょう",
@@ -126,7 +124,6 @@
   "Tips": "ヒント",
   "Applet connect method": "アプレット接続方法",
   "Client": "お客様",
-
   "Keyboard layout": "キーボードレイアウト",
   "UK English keyboard layout": "UK English (Qwerty)",
   "US English keyboard layout": "US English (Qwerty)",
@@ -149,5 +146,6 @@
   "No account available": "アカウントがありません",
   "Set reusable": "再利用可能な",
   "Re-use for a long time after opening": "開いた後、長い間再利用する",
+  "Charset": "文字セット",
   "The connection method is invalid, please refresh the page": "接続方法が無効です。ページを更新してください"
 }

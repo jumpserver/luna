@@ -1,8 +1,7 @@
 'use strict';
 import {EventEmitter} from 'events/events';
 import {BehaviorSubject} from 'rxjs';
-import {ConnectEvt, User as _User} from './model';
-import {DataStore as _DataStore, Browser as _Browser, Video as _Video, Monitor as _Monitor} from './model';
+import {Browser as _Browser, ConnectEvt, DataStore as _DataStore, Monitor as _Monitor, User as _User, Video as _Video} from './model';
 
 export let TermWS = null;
 export const emitter = new (EventEmitter);
@@ -34,3 +33,4 @@ export const ROOT_ORG_ID = '00000000-0000-0000-0000-000000000000';
 
 export const connectEvt = new BehaviorSubject<ConnectEvt>(new ConnectEvt(null, null));
 
+export const resolutionsChoices = ['Auto', '1024x768', '1366x768', '1600x900', '1920x1080'];
