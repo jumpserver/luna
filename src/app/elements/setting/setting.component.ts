@@ -4,6 +4,7 @@ import {SettingService} from '@app/services';
 import {GlobalSetting, Setting} from '@app/model';
 import {I18nService} from '@app/services/i18n';
 import {MAT_DIALOG_DATA} from '@angular/material/dialog';
+import {resolutionsChoices} from '@app/globals';
 
 
 @Component({
@@ -12,12 +13,12 @@ import {MAT_DIALOG_DATA} from '@angular/material/dialog';
   styleUrls: ['./setting.component.css']
 })
 export class ElementSettingComponent implements OnInit {
-  resolutionsChoices = ['Auto', '1024x768', '1366x768', '1600x900', '1920x1080'];
   public boolChoices: any[];
   public keyboardLayoutOptions: any[];
   setting: Setting;
   globalSetting: GlobalSetting;
   type = 'general';
+  resolutionsChoices = resolutionsChoices;
 
   constructor(public dialogRef: MatDialogRef<ElementSettingComponent>,
               private _i18n: I18nService,
@@ -28,13 +29,13 @@ export class ElementSettingComponent implements OnInit {
       {name: _i18n.instant('No'), value: '0'}
     ];
     this.keyboardLayoutOptions = [
-      { value: 'en-us-qwerty', label: _i18n.instant('US English keyboard layout') },
-      { value: 'en-gb-qwerty', label: _i18n.instant('UK English keyboard layout') },
-      { value: 'ja-jp-qwerty', label: _i18n.instant('Japanese keyboard layout') },
-      { value: 'fr-fr-azerty', label: _i18n.instant('French keyboard layout') },
-      { value: 'fr-ch-qwertz', label: _i18n.instant('Swiss French keyboard layout') },
-      { value: 'fr-be-azerty', label: _i18n.instant('Belgian French keyboard layout') },
-      { value: 'tr-tr-qwerty', label: _i18n.instant('Turkey keyboard layout') }
+      {value: 'en-us-qwerty', label: _i18n.instant('US English keyboard layout')},
+      {value: 'en-gb-qwerty', label: _i18n.instant('UK English keyboard layout')},
+      {value: 'ja-jp-qwerty', label: _i18n.instant('Japanese keyboard layout')},
+      {value: 'fr-fr-azerty', label: _i18n.instant('French keyboard layout')},
+      {value: 'fr-ch-qwertz', label: _i18n.instant('Swiss French keyboard layout')},
+      {value: 'fr-be-azerty', label: _i18n.instant('Belgian French keyboard layout')},
+      {value: 'tr-tr-qwerty', label: _i18n.instant('Turkey keyboard layout')}
     ];
   }
 

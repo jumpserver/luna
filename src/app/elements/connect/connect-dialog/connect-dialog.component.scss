@@ -6,7 +6,7 @@
 }
 
 .mat-form-field-infix {
-  border-top-width: 0!important;
+  border-top-width: 0 !important;
 }
 
 .auto-connect {
@@ -29,6 +29,7 @@
     //padding: 0 20px !important;
     min-width: 20px !important;
   }
+
   .mat-tab-link:focus {
     background-color: white;
   }
@@ -62,5 +63,9 @@
 }
 
 .mat-button-toggle-checked {
+}
+
+button.mat-raised-button {
+  margin-left: 0;
 }
 
