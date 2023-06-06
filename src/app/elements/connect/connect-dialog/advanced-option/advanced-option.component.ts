@@ -1,6 +1,7 @@
 import {Component, EventEmitter, Input, OnChanges, Output} from '@angular/core';
-import {ConnectMethod, ConnectOption, Protocol} from '@app/model';
+import {ConnectMethod, ConnectOption, Protocol, Setting} from '@app/model';
 import {resolutionsChoices} from '@app/globals';
+import {SettingService} from '@app/services';
 
 @Component({
   selector: 'elements-advanced-option',
@@ -13,12 +14,14 @@ export class ElementAdvancedOptionComponent implements OnChanges {
   @Output() onOptionsChange = new EventEmitter<ConnectOption[]>();
   public advancedOptions: ConnectOption[] = [];
   public isShowAdvancedOption = false;
+  public setting: Setting;
   private boolChoices = [
     {label: 'Yes', value: true},
     {label: 'No', value: false},
   ];
 
-  constructor() {
+  constructor(_settingSvc: SettingService) {
+    this.setting = _settingSvc.setting;
   }
 
   ngOnChanges() {
@@ -58,7 +61,7 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         },
         options: resolutionsChoices.map(i => ({label: i, value: i})),
         label: 'Resolution',
-        value: 'Auto'
+        value: this.setting.rdpResolution
       },
       {
         type: 'select',
@@ -68,7 +71,7 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         },
         options: this.boolChoices,
         label: 'Backspace as Ctrl+H',
-        value: false
+        value: this.setting.backspaceAsCtrlH
       }
     ];
     this.advancedOptions = this.advancedOptions.filter(i => !i.hidden());
