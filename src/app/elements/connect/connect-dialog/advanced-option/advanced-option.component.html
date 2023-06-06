@@ -21,7 +21,7 @@
           <ng-container *ngIf="item.type === 'select'">
             <mat-form-field class="option-item">
               <mat-label>{{ item.label | translate }}</mat-label>
-              <mat-select [(ngModel)]="item.value" [name]="item.field">
+              <mat-select (ngModelChange)="optionChange(item)" [(ngModel)]="item.value" [name]="item.field">
                 <mat-option *ngFor="let option of item.options" [value]="option.value">
                   {{ option.label | translate }}
                 </mat-option>
@@ -30,7 +30,7 @@
           </ng-container>
           <ng-container *ngIf="item.type === 'radio'">
             <div class="option-item">
-              <mat-radio-group [(ngModel)]="item.value" [name]="item.field">
+              <mat-radio-group (ngModelChange)="optionChange(item)" [(ngModel)]="item.value" [name]="item.field">
                 <mat-label style="margin-right: 10px">{{ item.label | translate }}</mat-label>
                 <mat-radio-button *ngFor="let option of item.options" [value]="option.value">
                   {{ option.label | translate }}

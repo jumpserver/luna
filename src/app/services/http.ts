@@ -239,10 +239,10 @@ export class HttpService {
     const {account, protocol, manualAuthInfo, connectMethod} = connectData;
     const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
     const secret = encryptPassword(manualAuthInfo.secret);
-    const connectOption = connectData.connectOptions.reduce((result, option) => {
-      result[option.field] = option.value;
-      return result;
-    }, {});
+    const connectOption = {};
+    for (const option of connectData.connectOptions) {
+      connectOption[option.field] = option.value;
+    }
     const data = {
       asset: asset.id,
       account: account.alias,

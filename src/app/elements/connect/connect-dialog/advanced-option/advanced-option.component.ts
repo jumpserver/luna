@@ -73,6 +73,7 @@ export class ElementAdvancedOptionComponent implements OnChanges {
     ];
     this.advancedOptions = this.advancedOptions.filter(i => !i.hidden());
     this.isShowAdvancedOption = this.advancedOptions.length > 0;
+    this.optionChange(null);
   }
 
   optionChange(event) {
