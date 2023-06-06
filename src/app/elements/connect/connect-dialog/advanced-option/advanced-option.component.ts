@@ -71,7 +71,7 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         },
         options: this.boolChoices,
         label: 'Backspace as Ctrl+H',
-        value: this.setting.backspaceAsCtrlH
+        value: !!this.setting.backspaceAsCtrlH
       }
     ];
     this.advancedOptions = this.advancedOptions.filter(i => !i.hidden());
