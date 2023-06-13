@@ -1,7 +1,7 @@
 .tree-container {
   display: flex;
   flex-direction: column;
-  height: calc(100% - 31px);
+  height: 100%;
 }
 
 .tree-refresh .fa {
@@ -200,7 +200,7 @@ tr:hover {
 }
 
 .expand-tree {
-  height: 100%;
+  height: calc(100% - 31px);
 }
 
 .tree-type .tree-search {
