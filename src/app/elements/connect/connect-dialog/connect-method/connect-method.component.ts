@@ -46,7 +46,7 @@ export class ElementConnectMethodComponent implements OnInit {
   currentConnectMethodTypeIndex() {
     const i = this.connectMethodTypes
       .map((item) => item.value)
-      .indexOf(this.connectMethod.type);
+      .indexOf(this.connectMethod && this.connectMethod.type);
     if (i === -1) {
       return 0;
     }

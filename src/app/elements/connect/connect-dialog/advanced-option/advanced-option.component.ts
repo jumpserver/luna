@@ -32,7 +32,7 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         label: 'Charset',
         hidden: () => {
           const protocolsCanCharset: Array<string> = ['ssh', 'telnet'];
-          return this.connectMethod.component !== 'koko' || !protocolsCanCharset.includes(this.protocol.name);
+          return this.connectMethod && this.connectMethod.component !== 'koko' || !protocolsCanCharset.includes(this.protocol.name);
         },
         value: 'default',
         options: [
@@ -46,7 +46,7 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         field: 'disableautohash',
         hidden: () => {
           const protocolsCanAutoHash: Array<string> = ['mysql', 'mariadb'];
-          return this.connectMethod.component !== 'koko' || !protocolsCanAutoHash.includes(this.protocol.name);
+          return this.connectMethod && this.connectMethod.component !== 'koko' || !protocolsCanAutoHash.includes(this.protocol.name);
         },
         label: 'Disable auto completion',
         value: false,
@@ -67,7 +67,7 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         type: 'select',
         field: 'backspaceAsCtrlH',
         hidden: () => {
-          return this.connectMethod.component !== 'koko';
+          return this.connectMethod && this.connectMethod.component !== 'koko';
         },
         options: this.boolChoices,
         label: 'Backspace as Ctrl+H',
