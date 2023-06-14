@@ -1,62 +1,62 @@
 <div>
   <div mat-dialog-title>
     <h3>{{"Connect" | translate}} - {{ asset.name | truncatechars:30 }}</h3>
-    <button mat-icon-button aria-label="close dialog" mat-dialog-close="">
+    <button aria-label="close dialog" mat-dialog-close="" mat-icon-button>
       <mat-icon>close</mat-icon>
     </button>
   </div>
 
-  <nav mat-tab-nav-bar style="margin-bottom: 20px" class="protocol-tab">
-    <a mat-tab-link
+  <nav class="protocol-tab" mat-tab-nav-bar style="margin-bottom: 20px">
+    <a (click)="onProtocolChange(p)"
        *ngFor="let p of protocols"
-       (click)="onProtocolChange(p)"
        [active]="protocol.name === p.name"
        [title]="p.name"
+       mat-tab-link
     >
       {{ p.name | uppercase }}
     </a>
   </nav>
 
-  <div mat-dialog-content (keyup.enter)="onConfirm()" class="dialog-body">
+  <div (keyup.enter)="onConfirm()" class="dialog-body" mat-dialog-content>
     <elements-select-account
-      [asset]="asset"
-      [accounts]="accounts"
-      [onSubmit]="onSubmit$"
-      [manualAuthInfo]="manualAuthInfo"
       (accountSelectedChange)="onSelectAccount($event)"
+      [accounts]="accounts"
+      [asset]="asset"
+      [manualAuthInfo]="manualAuthInfo"
+      [onSubmit]="onSubmit$"
     >
     </elements-select-account>
 
     <elements-connect-method
-      class="connect-method-zone"
-      [protocol]="protocol"
-      [connectMethod]="connectMethod"
       (onDownloadRDPFile)="onConfirm(true)"
+      [(connectMethod)]="connectMethod"
+      [protocol]="protocol"
+      class="connect-method-zone"
     >
     </elements-connect-method>
 
     <elements-advanced-option
-      [protocol]="protocol"
-      [connectMethod]="connectMethod"
       (onOptionsChange)="onAdvancedOptionChanged($event)"
+      [connectMethod]="connectMethod"
+      [protocol]="protocol"
     >
     </elements-advanced-option>
 
     <div class="auto-connect">
       <label class="zone-label" style="display: block">{{ "Remember select" | translate }}</label>
-      <mat-checkbox name="auto-login" [(ngModel)]="autoLogin">
+      <mat-checkbox [(ngModel)]="autoLogin" name="auto-login">
         {{ "Automatic login next" | translate }}
       </mat-checkbox>
     </div>
 
     <mat-dialog-actions style="float: right; margin: 20px 0 10px 0; width: 100%">
-      <button mat-raised-button
-              color="primary"
-              style="width: 100%"
-              type="submit"
+      <button (click)="onConfirm()"
               [disabled]="isConnectDisabled()"
               [mat-dialog-close]="outputData"
-              (click)="onConfirm()"
+              color="primary"
+              mat-raised-button
+              style="width: 100%"
+              type="submit"
       >
         {{"Connect"| translate}}
       </button>
