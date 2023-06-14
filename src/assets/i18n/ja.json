@@ -75,6 +75,7 @@
   "Select account": "システムユーザーの選択",
   "No matching found": "マッチがありません",
   "Connect Method": "接続方法",
+  "No available connect method": "接続方法がありません",
   "Need to use": "使用する必要がある",
   "Yes": "はい",
   "No": "いいえ",
