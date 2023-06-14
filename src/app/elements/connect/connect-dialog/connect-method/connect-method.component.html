@@ -2,7 +2,7 @@
   <label class="zone-label">
     {{ "Connect Method" | translate }}
   </label>
-  <div class="connect-type-group">
+  <div *ngIf="connectMethodTypes.length > 0; else empty" class="connect-type-group">
     <mat-tab-group
       [selectedIndex]="currentConnectMethodTypeIndex()"
       (selectedIndexChange)="onConnectMethodTypeChange($event)"
@@ -37,4 +37,9 @@
       </mat-tab>
     </mat-tab-group>
   </div>
+  <ng-template #empty>
+    <div class="empty">
+      {{ "No available connect method" | translate }}
+    </div>
+  </ng-template>
 </div>
