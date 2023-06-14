@@ -1,8 +1,8 @@
 import {ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
-import {Account, AccountGroup, AuthInfo, Asset} from '@app/model';
+import {Account, AccountGroup, Asset, AuthInfo} from '@app/model';
 import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
 import {FormControl, Validators} from '@angular/forms';
-import {AppService, LocalStorageService, LogService, SettingService, I18nService} from '@app/services';
+import {AppService, I18nService, LocalStorageService, LogService, SettingService} from '@app/services';
 import {takeUntil} from 'rxjs/operators';
 
 @Component({
@@ -28,14 +28,12 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   filteredOptions: AuthInfo[];
   accountManualAuthInit = false;
   usernamePlaceholder: string = 'Username';
-
-  protected _onDestroy = new Subject<void>();
   public accountSelected: Account;
   public groupedAccounts: AccountGroup[];
   public accountCtl: FormControl = new FormControl();
   public accountFilterCtl: FormControl = new FormControl();
   public filteredUsersGroups: ReplaySubject<AccountGroup[]> = new ReplaySubject<AccountGroup[]>(1);
-  public compareFn = (f1, f2) => f1 && f2 && f1.id === f2.id;
+  protected _onDestroy = new Subject<void>();
 
   constructor(private _logger: LogService,
               private _appSvc: AppService,
@@ -43,14 +41,17 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
               private _settingSvc: SettingService,
               private _cdRef: ChangeDetectorRef,
               private _localStorage: LocalStorageService
-  ) {}
+  ) {
+  }
 
   get noSecretAccounts() {
     return this.accounts
       .filter((item) => !item.has_secret)
       .sort((a, b) => {
         const eq = +a.username.startsWith('@') - +b.username.startsWith('@');
-        if (eq !== 0) { return eq; }
+        if (eq !== 0) {
+          return eq;
+        }
         if (a.name === 'root') {
           return -1;
         }
@@ -65,6 +66,8 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         return a.name.localeCompare(b.name);
       });
   }
+
+  public compareFn = (f1, f2) => f1 && f2 && f1.alias === f2.alias;
 
   ngOnInit() {
     this.groupedAccounts = this.groupAccounts();
@@ -155,31 +158,18 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     if (!search) {
       this.filteredUsersGroups.next(this.groupedAccounts.slice());
       return;
-    } else {
-      search = search.toLowerCase();
     }
-    this.filteredUsersGroups.next(
-      accountsGroupsCopy.filter(group => {
-        const showGroup = group.name.toLowerCase().indexOf(search) > -1;
-        if (!showGroup) {
-          group.accounts = group.accounts.filter(account => {
-            return account.name.toLowerCase().indexOf(search) > -1;
-          });
-        }
-        return group.accounts.length > 0;
-      })
-    );
-  }
-
-  protected copyGroupedAccounts(groups) {
-    const accountsCopy = [];
-    groups.forEach(group => {
-      accountsCopy.push({
-        name: group.name,
-        accounts: group.accounts.slice()
-      });
+    search = search.toLowerCase();
+    const filteredGroups = accountsGroupsCopy.filter(group => {
+      const showGroup = group.name.toLowerCase().indexOf(search) > -1;
+      if (!showGroup) {
+        group.accounts = group.accounts.filter(account => {
+          return account.name.toLowerCase().indexOf(search) > -1;
+        });
+      }
+      return group.accounts.length > 0;
     });
-    return accountsCopy;
+    this.filteredUsersGroups.next(filteredGroups);
   }
 
   setUsernamePlaceholder() {
@@ -237,5 +227,16 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
 
   getSavedAuthInfos() {
     this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id);
+  }
+
+  protected copyGroupedAccounts(groups) {
+    const accountsCopy = [];
+    groups.forEach(group => {
+      accountsCopy.push({
+        name: group.name,
+        accounts: group.accounts.slice()
+      });
+    });
+    return accountsCopy;
   }
 }
