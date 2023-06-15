@@ -13,6 +13,7 @@
 #display .command-results {
   height: 100%;
   overflow-y: auto;
+  border-right: #000 solid 2px;
 }
 
 #display .item{
@@ -48,6 +49,14 @@
 .command-results::-webkit-scrollbar {
   height: 3px;
   width: 3px;
+}
+
+video {
+  width: 100%;
+  height: calc(100vh - 35px);
+  top: 0;
+  left: 0;
+  bottom: 0;
 }
 
 #screen * {}

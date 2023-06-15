@@ -1,9 +1,8 @@
-import {Component, Input, OnInit, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter, OnDestroy} from '@angular/core';
-import {ConnectionToken, View} from '@app/model';
-import {HttpService, I18nService, LogService, ConnectTokenService} from '@app/services';
+import {AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
+import {View} from '@app/model';
+import {ConnectTokenService, HttpService, I18nService, LogService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {environment} from '@src/environments/environment';
-import {ElementACLDialogComponent} from '@app/elements/connect/acl-dialog/acl-dialog.component';
 
 @Component({
   selector: 'elements-iframe',
@@ -93,18 +92,18 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
   sendCommand(data) {
     this._logger.info(`[Luna] Send CMD to: ${this.id}`);
-    this.iframeWindow.postMessage({name: 'CMD', data: data.data}, '*' );
+    this.iframeWindow.postMessage({name: 'CMD', data: data.data}, '*');
   }
 
   async reconnect() {
-    const oldConnectToken = this.view.connectToken
-    const newConnectToken = await this._connectTokenSvc.exchange(oldConnectToken)
+    const oldConnectToken = this.view.connectToken;
+    const newConnectToken = await this._connectTokenSvc.exchange(oldConnectToken);
     if (!newConnectToken) {
-      return
+      return;
     }
     // 更新当前 view 的 connectToken
-    this.view.connectToken = newConnectToken
-    const url = this.src.replace(oldConnectToken.id, newConnectToken.id)
+    this.view.connectToken = newConnectToken;
+    const url = this.src.replace(oldConnectToken.id, newConnectToken.id);
     this.src = 'about:blank';
     setTimeout(() => {
       this.src = url;

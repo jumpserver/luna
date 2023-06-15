@@ -20,6 +20,6 @@ RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lun
     && yarn build \
     && cp -R src/assets/i18n luna/
 
-FROM nginx:alpine
+FROM nginx:1.24
 COPY --from=stage-build /data/luna /opt/luna
 COPY nginx.conf /etc/nginx/conf.d/default.conf

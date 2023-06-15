@@ -20,7 +20,7 @@ export class User {
   date_joined: string;
   last_login: string;
   date_expired: string;
-  groups: Array <UserGroup>;
+  groups: Array<UserGroup>;
   logined: boolean;
 }
 
@@ -158,7 +158,9 @@ export class View {
 
   getConnectOption(field: string) {
     const connectOptions = this.connectOptions || [];
-    if (connectOptions.length === 0) { return ''; }
+    if (connectOptions.length === 0) {
+      return '';
+    }
     const filteredField = connectOptions.find(i => i.field === field);
     return filteredField ? filteredField.value.toString() : '';
   }
@@ -344,7 +346,7 @@ export class AuthInfo {
 }
 
 export class ConnectOption {
-  type: 'checkbox' | 'radio';
+  type: 'checkbox' | 'radio' | 'select';
   field: string;
   hidden: Function;
   label: string;
@@ -398,7 +400,7 @@ export class ConnectionToken {
   from_ticket_info: FromTicketInfo;
 }
 
-export class Protocol  {
+export class Protocol {
   name: string;
   port: number;
   public: boolean;
@@ -450,6 +452,7 @@ export interface Organization {
   is_root?: boolean;
   is_default?: boolean;
 }
+
 export class InitTreeConfig {
   refresh: boolean;
   apiName?: string;

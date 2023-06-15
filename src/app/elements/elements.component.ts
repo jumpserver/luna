@@ -3,14 +3,14 @@ import {ElementLeftBarComponent} from './left-bar/left-bar.component';
 import {ElementContentComponent} from './content/content.component';
 import {ElementContentWindowComponent} from './content/content-window/content-window.component';
 import {ElementContentTabComponent} from './content/content-tab/content-tab.component';
-import {ElementAssetTreeComponent, DisabledAssetsDialogComponent} from './asset-tree/asset-tree.component';
+import {DisabledAssetsDialogComponent, ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
 import {ElementTreeFilterComponent} from './tree-filter/tree-filter.component';
 import {ElementOrganizationComponent} from './organization/organization.component';
 import {ElementUserFileComponent} from './profile/profile.component';
 import {ElementTermComponent} from './term/term.component';
 import {ChangLanWarningDialogComponent, ElementNavComponent} from './nav/nav.component';
 import {ElementIframeComponent} from './iframe/iframe.component';
-import {ElementDialogAlertComponent} from './dialog/dialog.service';
+import {ElementDialogAlertComponent} from '@app/services/dialog/dialog.service';
 import {ElementConnectComponent} from './connect/connect.component';
 import {ElementConnectDialogComponent} from './connect/connect-dialog/connect-dialog.component';
 import {ElementSettingComponent} from './setting/setting.component';
@@ -25,8 +25,8 @@ import {ElementReplayAsciicastComponent} from '@app/elements/replay/asciicast/as
 import {ElementAdvancedOptionComponent} from './connect/connect-dialog/advanced-option/advanced-option.component';
 import {ElementConnectMethodComponent} from './connect/connect-dialog/connect-method/connect-method.component';
 import {ElementDownloadDialogComponent} from './connect/download-dialog/download-dialog.component';
-import {ElementACLDialogComponent} from './connect/acl-dialog/acl-dialog.component';
-import { ElementsReplayMp4Component } from './replay/mp4/mp4.component';
+import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/acl-dialog.component';
+import {ElementsReplayMp4Component} from './replay/mp4/mp4.component';
 
 
 export const ElementComponents = [

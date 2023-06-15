@@ -200,7 +200,7 @@ tr:hover {
 }
 
 .expand-tree {
-  height: 100%;
+  height: calc(100% - 31px);
 }
 
 .tree-type .tree-search {

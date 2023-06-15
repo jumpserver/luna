@@ -1,8 +1,8 @@
 import {Injectable} from '@angular/core';
 import {Asset, ConnectData, ConnectionToken} from '@app/model';
-import {ElementACLDialogComponent} from '@app/elements/connect/acl-dialog/acl-dialog.component';
 import {HttpService} from '@app/services/http';
 import {MatDialog} from '@angular/material';
+import {ElementACLDialogComponent} from './acl-dialog/acl-dialog.component';
 
 @Injectable()
 export class ConnectTokenService {

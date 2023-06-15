@@ -1,14 +1,10 @@
 import {Injectable} from '@angular/core';
-import {HttpClient, HttpHeaders, HttpParams, HttpErrorResponse} from '@angular/common/http';
-import {Browser, SYSTEM_ORG_ID} from '@app/globals';
-import {retryWhen, delay, scan, map, catchError} from 'rxjs/operators';
-import {
-  Account, TreeNode, User as _User, Session,
-  ConnectionToken, Endpoint, ConnectData, Asset
-} from '@app/model';
-import {User} from '@app/globals';
+import {HttpClient, HttpErrorResponse, HttpHeaders, HttpParams} from '@angular/common/http';
+import {Browser, User} from '@app/globals';
+import {catchError, delay, map, retryWhen, scan} from 'rxjs/operators';
+import {Account, Asset, ConnectData, ConnectionToken, Endpoint, Session, TreeNode, User as _User} from '@app/model';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
-import {Observable, throwError} from 'rxjs';
+import {Observable} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
 import {CookieService} from 'ngx-cookie-service';
 import {encryptPassword} from '@app/utils/crypto';
@@ -18,12 +14,15 @@ export class HttpService {
   headers = new HttpHeaders();
 
   constructor(private http: HttpClient,
-    private _i18n: I18nService,
-    private _cookie: CookieService) {}
+              private _i18n: I18nService,
+              private _cookie: CookieService) {
+  }
 
   setOptionsCSRFToken(options) {
     const csrfToken = getCsrfTokenFromCookie();
-    if (!options) { options = {}; }
+    if (!options) {
+      options = {};
+    }
     let headers = options.headers || new HttpHeaders();
     headers = headers.set('X-CSRFToken', csrfToken);
     options.headers = headers;
@@ -31,7 +30,9 @@ export class HttpService {
   }
 
   setOrgIDToRequestHeader(url, options) {
-    if (!options) { options = {}; }
+    if (!options) {
+      options = {};
+    }
     const headers = options.headers || new HttpHeaders();
     const orgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
     options.headers = headers.set('X-JMS-ORG', orgID);
@@ -207,16 +208,16 @@ export class HttpService {
 
   getCommandsData(sid: string, page: number) {
     const params = new HttpParams()
-    .set('session_id', sid)
-    .set('limit', '30')
-    .set('offset', String(30 * page))
-    .set('order', 'timestamp');
+      .set('session_id', sid)
+      .set('limit', '30')
+      .set('offset', String(30 * page))
+      .set('order', 'timestamp');
     return this.get('/api/v1/terminal/commands/', {params: params});
   }
 
   cleanRDPParams(params) {
     const cleanedParams = {};
-    const {rdpResolution, rdpFullScreen, rdpDrivesRedirect } = params;
+    const {rdpResolution, rdpFullScreen, rdpDrivesRedirect} = params;
 
     if (rdpResolution && rdpResolution.indexOf('x') > -1) {
       const [width, height] = rdpResolution.split('x');
@@ -235,9 +236,13 @@ export class HttpService {
   createConnectToken(asset: Asset, connectData: ConnectData, createTicket = false) {
     const params = createTicket ? '?create_ticket=1' : '';
     const url = '/api/v1/authentication/connection-token/' + params;
-    const { account, protocol, manualAuthInfo, connectMethod } = connectData;
+    const {account, protocol, manualAuthInfo, connectMethod} = connectData;
     const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
     const secret = encryptPassword(manualAuthInfo.secret);
+    const connectOption = {};
+    for (const option of connectData.connectOptions) {
+      connectOption[option.field] = option.value;
+    }
     const data = {
       asset: asset.id,
       account: account.alias,
@@ -245,6 +250,7 @@ export class HttpService {
       input_username: username,
       input_secret: secret,
       connect_method: connectMethod.value,
+      connect_options: connectOption
     };
     return this.post<ConnectionToken>(url, data).pipe(
       catchError(this.handleConnectMethodExpiredError.bind(this))
@@ -254,7 +260,7 @@ export class HttpService {
   exchangeConnectToken(tokenID: string, createTicket = false) {
     const params = createTicket ? '?create_ticket=1' : '';
     const url = '/api/v1/authentication/connection-token/exchange/' + params;
-    const data = { 'id': tokenID};
+    const data = {'id': tokenID};
     return this.post<ConnectionToken>(url, data);
   }
 
@@ -288,7 +294,7 @@ export class HttpService {
   }
 
   async handleConnectMethodExpiredError(error) {
-    if (error.status === 400 ) {
+    if (error.status === 400) {
       if (error.error && error.error.error && error.error.error.startsWith('Connect method')) {
         const errMsg = await this._i18n.t('The connection method is invalid, please refresh the page');
         alert(errMsg);
@@ -297,7 +303,7 @@ export class HttpService {
     throw error;
   }
 
-  getSmartEndpoint({ assetId, sessionId, token }, protocol ): Promise<Endpoint> {
+  getSmartEndpoint({assetId, sessionId, token}, protocol): Promise<Endpoint> {
     const url = new URL('/api/v1/terminal/endpoints/smart/', window.location.origin);
 
     url.searchParams.append('protocol', protocol);

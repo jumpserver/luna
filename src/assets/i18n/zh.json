@@ -75,6 +75,7 @@
   "Select account": "选择账号",
   "No matching found": "没有匹配项",
   "Connect Method": "连接方式",
+  "No available connect method": "没有可用的连接方法",
   "Need to use": "需要使用",
   "Yes": "是",
   "No": "否",
@@ -125,7 +126,7 @@
   "General": "基本配置",
   "Applet connect method": "远程应用连接方式",
   "Client": "客户端",
-
+  "Charset": "字符集",
   "Keyboard layout": "键盘布局",
   "UK English keyboard layout": "UK English (Qwerty)",
   "US English keyboard layout": "US English (Qwerty)",
