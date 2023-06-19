@@ -1,9 +1,9 @@
 <div
-  [ngSwitch]="connector"
-  [id]="id"
   #contentWindow
-  class="window"
+  [id]="id"
   [ngClass]="{'active': view.active}"
+  [ngSwitch]="connector"
+  class="window"
 >
   <div *ngIf="!loading">
     <elements-connector-lion
@@ -11,11 +11,11 @@
       [view]="view"
     >
     </elements-connector-lion>
-    <elements-connector-omnidb
-      *ngSwitchCase="'omnidb'"
+    <elements-connector-chen
+      *ngSwitchCase="'chen'"
       [view]="view"
     >
-    </elements-connector-omnidb>
+    </elements-connector-chen>
     <elements-connector-magnus
       *ngSwitchCase="'magnus'"
       [view]="view">
