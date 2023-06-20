@@ -45,8 +45,8 @@
     "ws": true,
     "changeOrigin": true
   },
-  "/omnidb": {
-    "target": "http://localhost:8082",
+  "/chen": {
+    "target": "http://localhost:9523",
     "secure": false,
     "ws": true,
     "changeOrigin": true
