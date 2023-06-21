@@ -314,9 +314,15 @@ export class Session {
   protocol: string;
   remote_addr: string;
   account: string;
-  terminal: string;
+  terminal: Terminal;
   user: string;
   user_id: string;
+}
+
+export class Terminal {
+  id: string;
+  name: string;
+  type: string;
 }
 
 export class Command {

@@ -38,7 +38,7 @@ export class PagesMonitorComponent implements OnInit {
     const data = { 'assetId': '', 'appId': '', 'sessionId': this.sessionID, 'token': ''};
     const smartEndpoint = await this._http.getSmartEndpoint(data, protocol);
     const baseUrl = smartEndpoint.getUrl();
-    if (['rdp', 'vnc'].indexOf(this.sessionDetail.protocol) > -1) {
+    if (this.sessionDetail.terminal.type === 'lion') {
       this.iframeURL = `${baseUrl}/lion/monitor/?session=${this.sessionID}`;
     } else {
       this.iframeURL = `${baseUrl}/koko/monitor/${this.sessionID}/`;
