@@ -69,7 +69,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   }
 
   get anonymousAccounts() {
-    const allowAnonymousCategory = ['custom', 'web', 'host'];
+    const allowAnonymousCategory = ['custom', 'web'];
     return this.accounts.filter(item => {
       return item.alias === '@ANON' && allowAnonymousCategory.indexOf(this.asset.category.value) >= 0;
     });
