@@ -215,12 +215,13 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }
     this.setUsernamePlaceholder();
     setTimeout(() => {
-      if (this.manualAuthInfo.username) {
+      if (this.manualAuthInfo.username && this.passwordRef) {
         this.passwordRef.nativeElement.focus();
-      } else {
+      } else if (this.usernameRef) {
         this.usernameRef.nativeElement.focus();
       }
     }, 10);
+
     this._cdRef.detectChanges();
   }
 
