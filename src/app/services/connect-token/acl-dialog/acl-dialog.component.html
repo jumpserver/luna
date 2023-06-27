@@ -35,9 +35,13 @@
       </mat-dialog-content>
       <mat-dialog-actions>
         <button (click)="onCancelWait()" mat-raised-button>{{ "Cancel" | translate }}</button>
-        <button (cbOnSuccess)="onCopySuccess($event)" [cbContent]="ticketDetailPageURL" color="primary"
-                mat-raised-button
-                ngxClipboard>{{ "Copy link" | translate }}</button>
+        <button
+          (cbOnSuccess)="onCopySuccess($event)"
+          [cbContent]="ticketDetailPageURL"
+          color="primary"
+          mat-raised-button
+          ngxClipboard
+        >{{ "Copy link" | translate }}</button>
       </mat-dialog-actions>
     </div>
 
@@ -70,7 +74,7 @@
 
     <div *ngSwitchCase="'other'">
       <mat-dialog-content>
-        <div class="error-message">{{ otherError }}</div>
+        <div class="error-message">{{ otherError }} </div>
         >
       </mat-dialog-content>
       <mat-dialog-actions>
@@ -80,7 +84,7 @@
 
     <div *ngSwitchDefault>
       <mat-dialog-content>
-        <div class="error-message">{{ data.error.error | json }}</div>
+        <div class="error-message">{{ errorDetail }}</div>
       </mat-dialog-content>
       <mat-dialog-actions>
         <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>

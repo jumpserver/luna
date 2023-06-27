@@ -36,6 +36,16 @@ export class ElementACLDialogComponent implements OnInit {
     return this.connectionToken.from_ticket_info.ticket_detail_page_url;
   }
 
+  get errorDetail() {
+    let error = this.data.error.error;
+    if (Array.isArray(error)) {
+      error = error.join(' ');
+    } else if (typeof error === 'object') {
+      error = JSON.stringify(error);
+    }
+    return error;
+  }
+
   ngOnInit() {
     // 创建 Token 的时候，需要传入 Asset 和 ConnectInfo
     this.asset = this.data.asset;
