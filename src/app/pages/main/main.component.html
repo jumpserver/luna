@@ -9,14 +9,14 @@
 >
   <as-split-area
     id="left-side"
-    [size]="20"
+    [size]="settingLayoutSize.leftWidth"
     *ngIf="store.showLeftBar"
     #leftArea
+    [visible]="action1v"
     order="0" class="left-side"
-    style="min-width:54px;max-width: 50%;"
   >
     <div class="layout">
-      <div class="menu-icon" [ngClass]="{'menu-active':showMenu}">
+      <div class="menu-icon" [ngClass]="{'menu-active':showSubMenu}">
         <div
           *ngIf="this._settingSvc.hasXPack()"
           class="menu-organization"
@@ -43,13 +43,13 @@
     </div>
   </as-split-area>
   <as-split-area
-    [size]="80"
+    [size]="settingLayoutSize.rightWidth"
     class="content"
     order="1"
     #rightArea
   >
     <div>
-      <elements-content></elements-content>
+      <elements-content (toggleMenu)="onToggleMobileLayout()"></elements-content>
       <div
         [hidden]="showIframeHider === false"
         class="hack-iframe-hider"

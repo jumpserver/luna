@@ -1,5 +1,8 @@
 <div id="content">
   <div class="tab-bar">
+    <span class="mobile-menu-icon" (click)="toggleMenu.emit()">
+      <i class="fa fa-sitemap"></i>
+    </span>
     <div class="scroll-button">
       <a class="left" (click)="scrollLeft()"><i class="fa fa-caret-left"></i></a>
       <a class="right" (click)="scrollRight()"><i class="fa fa-caret-right"></i></a>

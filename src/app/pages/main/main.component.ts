@@ -16,11 +16,13 @@ export class PageMainComponent implements OnInit {
   User = User;
   store = DataStore;
   showIframeHider = false;
-  showMenu: any = false;
+  showSubMenu: any = false;
+  _isMobile = false;
+  _overlayMenu = false;
   menus: Array<object>;
-  settingLayoutWidth = {
-    leftWidth: '20%',
-    rightWidth: '80%'
+  settingLayoutSize = {
+    leftWidth: '20',
+    rightWidth: '80'
   };
 
   constructor(public viewSrv: ViewService,
@@ -37,24 +39,75 @@ export class PageMainComponent implements OnInit {
     return this.store.showLeftBar;
   }
 
+  get isMobile() {
+    return this._isMobile;
+  }
+
+  set isMobile(value) {
+    this._isMobile = value;
+    let settings: any = {};
+    if (!value) {
+      settings = this.settingLayoutSize;
+      this.showSubMenu = true;
+    } else {
+      settings.leftWidth = '100';
+      settings.rightWidth = '0';
+      this.showSubMenu = false;
+    }
+    setTimeout(() => {
+      this.menuClick(settings);
+    }, 10);
+  }
+
+  get overlayMenu () {
+    return this._overlayMenu;
+  }
+
+  set overlayMenu (value) {
+    console.log('value: ', value);
+    this._overlayMenu = value;
+    const settings: any = {};
+    if (this.isMobile) {
+      if (this.overlayMenu) {
+        settings.leftWidth = '100';
+        settings.rightWidth = '0';
+      } else {
+        settings.leftWidth = '0';
+        settings.rightWidth = '100';
+      }
+    }
+    setTimeout(() => {
+      this.menuClick(settings);
+    }, 10);
+  }
+
   ngOnInit(): void {
     this.menus = [
       {
         name: 'assets',
         icon: 'fa-inbox',
-        click: (name) => this.menuClick(this.settingLayoutWidth, name),
+        click: () => this.menuClick(this.settingLayoutSize),
       },
       {
         name: 'applications',
         icon: 'fa-th',
-        click: (name) => this.menuClick(this.settingLayoutWidth, name),
+        click: () => this.menuClick(this.settingLayoutSize),
       }
     ];
+    this.onResize(window);
+    window.addEventListener('resize', _.debounce(this.onResize, 300));
   }
 
-  dragSplitBtn(evt) {
-    window.dispatchEvent(new Event('resize'));
+  onResize(event) {
+    const width = event.currentTarget ? event.currentTarget.innerWidth : event.innerWidth;
+    if (width < 768) {
+      this.isMobile = true;
+      this.overlayMenu = true;
+    } else {
+      this.isMobile = false;
+    }
   }
+
 
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any) {
@@ -75,7 +128,7 @@ export class PageMainComponent implements OnInit {
 
   dragEndHandler($event: IOutputData) {
     const layoutWidth = $event.sizes[0];
-    this.showMenu = layoutWidth < 6;
+    this.showSubMenu = layoutWidth < 6;
     this.showIframeHider = false;
   }
 
@@ -88,19 +141,45 @@ export class PageMainComponent implements OnInit {
   }
 
   menuActive() {
-    const settings = _.cloneDeep(this.settingLayoutWidth);
-    if (!this.showMenu) {
-      settings.leftWidth = '0%';
-      settings.rightWidth = '100%';
+    const settings = _.cloneDeep(this.settingLayoutSize);
+    if (this.isMobile) {
+      this.onToggleMobileLayout();
+      if (this.overlayMenu) {
+        settings.leftWidth = '100';
+        settings.rightWidth = '0';
+      } else {
+        settings.leftWidth = '0';
+        settings.rightWidth = '100';
+      }
+    } else {
+      if (this.showSubMenu) {
+        settings.leftWidth = '20';
+        settings.rightWidth = '80';
+      } else {
+        settings.leftWidth = '0';
+        settings.rightWidth = '100';
+      }
     }
     setTimeout(() => {
-      this.menuClick(settings, '');
+      this.menuClick(settings);
     }, 30);
   }
 
-  menuClick(settings = this.settingLayoutWidth, type = '') {
-    this.leftArea.nativeElement.style = `min-width: 54px; order: 0; flex: 0 0 calc(${settings.leftWidth} - 0px);`;
-    this.rightArea.nativeElement.style = `max-width: calc(100% - 54px); order: 2; flex: 0 0 calc(${settings.rightWidth} - 0px);`;
-    this.showMenu = !this.showMenu;
+  menuClick(settings = this.settingLayoutSize) {
+    let leftAreaStyle = `order: 0; flex: 0 0 ${settings.leftWidth}%!important;`;
+    let rightAreaStyle = `order: 2; flex: 0 0 ${settings.rightWidth}%!important;`;
+    if (!this.isMobile) {
+      leftAreaStyle = leftAreaStyle + ' min-width: 54px;';
+      rightAreaStyle = rightAreaStyle + ' max-width: calc(100% - 54px);';
+      this.showSubMenu = !this.showSubMenu;
+    }
+    this.leftArea.nativeElement.style = leftAreaStyle;
+    this.rightArea.nativeElement.style = rightAreaStyle;
+  }
+
+  onToggleMobileLayout() {
+    if (this.isMobile) {
+      this.overlayMenu = !this.overlayMenu;
+    }
   }
 }
