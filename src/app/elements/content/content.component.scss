@@ -38,6 +38,7 @@ $-border-y: #1f1b1b;
   font-size: 20px;
   float: left;
   height: 30px;
+  line-height: 31px;
   overflow: hidden;
   background-color: #3a3333;
   color: white;
@@ -181,7 +182,17 @@ tr:hover {
   border-left: solid 1px $-border-y;
 }
 
-//
-//.window {
-//  height: 100%;
-//}
+.mobile-menu-icon {
+  float: left;
+  display: none;
+  height: 30px;
+  width: 54px;
+  line-height: 30px;
+  background-color: #2f2a2a;
+  color: #FFFFFF;
+  cursor: pointer;
+  text-align: center;
+  &:hover {
+    border-bottom: 1px solid var(--primary-color);
+  }
+}

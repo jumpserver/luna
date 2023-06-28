@@ -1,4 +1,4 @@
-import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
+import {Component, ElementRef, OnInit, ViewChild, Output, EventEmitter} from '@angular/core';
 import {View, ViewAction, ConnectData} from '@app/model';
 import {SettingService, ViewService, I18nService, HttpService, ConnectTokenService} from '@app/services';
 import * as jQuery from 'jquery/dist/jquery.min.js';
@@ -10,6 +10,7 @@ import * as jQuery from 'jquery/dist/jquery.min.js';
 })
 export class ElementContentComponent implements OnInit {
   @ViewChild('tabs', {static: false}) tabsRef: ElementRef;
+  @Output() toggleMenu: EventEmitter<any> = new EventEmitter<any>();
   viewList: Array<View>;
   batchCommand: string;
   pos = {left: '100px', top: '100px'};
@@ -33,6 +34,7 @@ export class ElementContentComponent implements OnInit {
 
   onNewView(view) {
     this.scrollEnd();
+    this.toggleMenu.emit();
     setTimeout(() => {
       this.viewSrv.addView(view);
       this.setViewActive(view);

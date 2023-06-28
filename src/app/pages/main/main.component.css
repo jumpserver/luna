@@ -10,17 +10,11 @@
   height: 100%;
   padding: 0;
   background-color: #1f1b1b;
-  /*background-color: red;*/
   margin: 0;
   width: 100%;
   position: initial;
   min-width: 50%;
 }
-
-
-/*.content {*/
-  /*overflow: hidden !important;*/
-/*}*/
 
 .handle {
   outline: none;
@@ -69,9 +63,7 @@ elements-nav {
   opacity: 0.5;
   position: absolute;
 }
-as-split ::ng-deep .as-split-gutter-icon:before{
 
-}
  as-split ::ng-deep .as-split-gutter.as-dragged .as-split-gutter-icon, .ex-b as-split ::ng-deep .as-split-gutter-icon:hover {
   opacity: 0.2;
 }
@@ -137,4 +129,40 @@ as-split ::ng-deep .as-split-gutter-icon:before{
   display: block;
   z-index: 11;
   background: #2f2a2a;
+}
+
+.mobile-menu {
+  display: none;
+  width: 100%;
+  height: calc(100% - 29px);
+  position: fixed;
+  top: 30px;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.mobile-menu > .content {
+  width: 100%;
+}
+
+@media screen and (max-width: 768px) {
+  #left-side {
+    min-width: 0 !important;
+    flex: 0 0 100% !important;
+  }
+  .as-split-area.content {
+    flex: 0 0 0px !important;
+  }
+  ::ng-deep as-split .as-split-gutter {
+    display: none !important;
+  }
+  ::ng-deep .mobile-menu-icon {
+    display: inline-block !important;
+  }
+  ::ng-deep .nav .dropdown a {
+    padding: 6 10px !important;
+  }
+  ::ng-deep .user-file {
+    min-width: 71px !important;
+  }
 }
