@@ -148,12 +148,17 @@ export class ElementConnectorMagnusComponent implements OnInit {
   }
 
   startClient() {
-    const {protocol} = this.info;
     const data = {
-      protocol,
-      username: User.username,
-      ...({command: this.cli})
-    };
+      'id': this.token.id,
+      'name': this.endpoint.getHost() + '-' + this.token.id.substring(0, 18),
+      'protocol': this.protocol,
+      'host': this.endpoint.getHost(),
+      'port': this.endpoint.getPort(this.protocol),
+      'dbname': this.asset.spec_info.db_name,
+      'username': this.token.id,
+      'value': this.token.value,
+      'command': this.cli,
+    }
     const json = JSON.stringify(data);
     const b64 = window.btoa(json);
     const url = 'jms://' + b64;
