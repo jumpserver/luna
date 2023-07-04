@@ -100,7 +100,7 @@ export class ElementConnectMethodComponent implements OnInit {
     if (!this._settingSvc.hasXPack()) {
       return false;
     }
-    if (['razor', 'xrdp'].includes(method.component)) {
+    if (method.component === 'razor') {
       return true;
     }
     if (method.type === 'applet' && this.isAppletClientMethod) {
