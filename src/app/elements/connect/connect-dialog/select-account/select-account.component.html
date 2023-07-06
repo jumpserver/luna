@@ -2,24 +2,24 @@
   <label class="zone-label" for="selectAccount">{{ "Select account" | translate }}</label>
   <mat-form-field style="width: 100%;margin-top:-10px">
     <mat-select
-      id="selectAccount"
       [(value)]="accountSelected"
       [compareWith]="compareFn"
       [formControl]="accountCtl"
+      id="selectAccount"
     >
       <mat-option>
         <ngx-mat-select-search
-          placeholderLabel="{{ 'Search' | translate }}"
           [formControl]="accountFilterCtl"
           noEntriesFoundLabel="{{ 'No matching found' | translate }}"
+          placeholderLabel="{{ 'Search' | translate }}"
         >
           <mat-icon ngxMatSelectSearchClear>close</mat-icon>
         </ngx-mat-select-search>
       </mat-option>
       <mat-optgroup
         *ngFor="let group of filteredUsersGroups | async"
-        [label]="group.name"
         [disabled]="group.disabled"
+        [label]="group.name"
       >
         <mat-option *ngFor="let account of group.accounts" [value]="account">
           {{ account.name }}
@@ -30,19 +30,20 @@
   <mat-error *ngIf="accountCtl.hasError('required')">{{"Please choose a account"| translate}}</mat-error>
 </div>
 
-<div *ngIf="accountSelected?.username == '@INPUT'" class="form-field">
+<div *ngIf="accountSelected?.username == '@INPUT' || accountSelected.alias === '@USER'" class="form-field">
   <label class="zone-label" style="margin-bottom: 0">{{ "Username" | translate }}</label>
   <mat-form-field class="input-field" floatLabel='never'>
     <input
       #username
+      (focus)="onFocus()"
+      (ngModelChange)="onUsernameChanges()"
+      [(ngModel)]="manualAuthInfo.username"
+      [matAutocomplete]="auto"
+      [placeholder]="usernamePlaceholder"
+      [readonly]="accountSelected.alias === '@USER'"
+      autofocus
       matInput
       name="username"
-      [placeholder]="usernamePlaceholder"
-      autofocus
-      [(ngModel)]="manualAuthInfo.username"
-      (ngModelChange)="onUsernameChanges()"
-      (focus)="onFocus()"
-      [matAutocomplete]="auto"
     >
     <mat-autocomplete #auto="matAutocomplete">
       <mat-option *ngFor="let i of filteredOptions" [value]="i.username">
@@ -52,22 +53,26 @@
   </mat-form-field>
 </div>
 
-<div *ngIf="accountSelected && !accountSelected?.has_secret" class="form-field">
+<div *ngIf="accountSelected && !accountSelected?.has_secret && accountSelected.alias !== '@ANON'" class="form-field">
   <label class="zone-label" style="margin-bottom: 0; display: block">{{ "Password" | translate }}</label>
   <div>
     <mat-form-field class="input-field password" floatLabel='never' style="width: 70%">
-      <input matInput [type]="hidePassword ? 'password' : 'text'"
-             #password
-             name="password"
-             [autocomplete]="hidePassword ? 'new-password' : 'off'"
-             [(ngModel)]="manualAuthInfo.secret"
-             [attr.cdkFocusInitial]="manualAuthInfo.username? true : null"
-             autofocus
+      <input
+        #password
+        [(ngModel)]="manualAuthInfo.secret"
+        [attr.cdkFocusInitial]="manualAuthInfo.username? true : null"
+        [autocomplete]="hidePassword ? 'new-password' : 'off'"
+        [type]="hidePassword ? 'password' : 'text'"
+        autofocus
+        matInput
+        name="password"
       >
-      <button mat-icon-button matSuffix
-              (click)="hidePassword = !hidePassword"
-              [attr.aria-label]="'Hide secret'"
-              [attr.aria-pressed]="hidePassword"
+      <button
+        (click)="hidePassword = !hidePassword"
+        [attr.aria-label]="'Hide secret'"
+        [attr.aria-pressed]="hidePassword"
+        mat-icon-button
+        matSuffix
       >
         <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
       </button>

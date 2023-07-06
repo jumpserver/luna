@@ -102,8 +102,8 @@
   "Log out": "Log out",
   "Host": "Host",
   "Port": "Port",
-	"Disable auto completion": "Disable auto completion",
-	"Advanced option": "Advanced option",
+  "Disable auto completion": "Disable auto completion",
+  "Advanced option": "Advanced option",
   "Protocol": "Protocol",
   "Database": "Database",
   "Click to copy": "Click to copy",
@@ -124,7 +124,6 @@
   "CLI": "CLI",
   "Applet connect method": "Applet connect method",
   "Client": "Client",
-
   "Keyboard layout": "Keyboard layout",
   "UK English keyboard layout": "UK English (Qwerty)",
   "US English keyboard layout": "US English (Qwerty)",
@@ -147,5 +146,6 @@
   "No account available": "No available accounts",
   "Set reusable": "Set reusable",
   "Re-use for a long time after opening": "Re-use for a long time after opening",
-  "The connection method is invalid, please refresh the page": "The connection method is invalid, please refresh the page"
+  "The connection method is invalid, please refresh the page": "The connection method is invalid, please refresh the page",
+  "Special accounts": "Special accounts"
 }

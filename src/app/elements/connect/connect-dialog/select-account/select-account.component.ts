@@ -47,6 +47,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   get noSecretAccounts() {
     return this.accounts
       .filter((item) => !item.has_secret)
+      .filter((item) => item.alias !== '@ANON')
       .sort((a, b) => {
         const eq = +a.username.startsWith('@') - +b.username.startsWith('@');
         if (eq !== 0) {
@@ -65,6 +66,13 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       .sort((a, b) => {
         return a.name.localeCompare(b.name);
       });
+  }
+
+  get anonymousAccounts() {
+    const allowAnonymousCategory = ['custom', 'web'];
+    return this.accounts.filter(item => {
+      return item.alias === '@ANON' && allowAnonymousCategory.indexOf(this.asset.category.value) >= 0;
+    });
   }
 
   public compareFn = (f1, f2) => f1 && f2 && f1.alias === f2.alias;
@@ -139,6 +147,14 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         accounts: this.noSecretAccounts
       });
     }
+
+    if (this.anonymousAccounts.length > 0) {
+      groups.push({
+        name: this._i18n.instant('Special accounts'),
+        accounts: this.anonymousAccounts
+      });
+    }
+
     if (groups.length === 0) {
       groups.push({
         name: this._i18n.instant('No account available'),
@@ -199,12 +215,13 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }
     this.setUsernamePlaceholder();
     setTimeout(() => {
-      if (this.manualAuthInfo.username) {
+      if (this.manualAuthInfo.username && this.passwordRef) {
         this.passwordRef.nativeElement.focus();
-      } else {
+      } else if (this.usernameRef) {
         this.usernameRef.nativeElement.focus();
       }
     }, 10);
+
     this._cdRef.detectChanges();
   }
 

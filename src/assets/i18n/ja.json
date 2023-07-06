@@ -148,5 +148,6 @@
   "Set reusable": "再利用可能な",
   "Re-use for a long time after opening": "開いた後、長い間再利用する",
   "Charset": "文字セット",
-  "The connection method is invalid, please refresh the page": "接続方法が無効です。ページを更新してください"
+  "The connection method is invalid, please refresh the page": "接続方法が無効です。ページを更新してください",
+  "Special account": "特別なアカウント"
 }
