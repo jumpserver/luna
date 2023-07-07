@@ -1,5 +1,5 @@
 import {ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
-import {Account, AccountGroup, Asset, AuthInfo} from '@app/model';
+import {Account, AccountGroup, Asset, AuthInfo, Protocol} from '@app/model';
 import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
 import {FormControl, Validators} from '@angular/forms';
 import {AppService, I18nService, LocalStorageService, LogService, SettingService} from '@app/services';
@@ -16,6 +16,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @Input() onSubmit: BehaviorSubject<boolean>;
   @Input() onSubmit$: BehaviorSubject<boolean>;
   @Input() manualAuthInfo: AuthInfo;
+  @Input() protocol: Protocol;
   @Output() accountSelectedChange: EventEmitter<Account> = new EventEmitter<Account>();
   @ViewChild('username', {static: false}) usernameRef: ElementRef;
   @ViewChild('password', {static: false}) passwordRef: ElementRef;
@@ -47,6 +48,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   get noSecretAccounts() {
     return this.accounts
       .filter((item) => !item.has_secret)
+      .filter((item) => item.alias !== '@ANON')
       .sort((a, b) => {
         const eq = +a.username.startsWith('@') - +b.username.startsWith('@');
         if (eq !== 0) {
@@ -65,6 +67,25 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       .sort((a, b) => {
         return a.name.localeCompare(b.name);
       });
+  }
+
+  get anonymousAccounts() {
+    const allowAnonymousCategory = ['custom', 'web'];
+    return this.accounts.filter(item => {
+      return item.alias === '@ANON' && allowAnonymousCategory.indexOf(this.asset.category.value) >= 0;
+    });
+  }
+
+  get adDomain() {
+    if (this.protocol.name !== 'rdp') {
+      return '';
+    }
+    const rdp = this.asset.protocols.find(item => item.name === 'rdp');
+    if (!rdp) {
+      return '';
+    }
+    const extra = (rdp.setting || {})['setting'] || {};
+    return extra['ad_domain'];
   }
 
   public compareFn = (f1, f2) => f1 && f2 && f1.alias === f2.alias;
@@ -139,6 +160,14 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         accounts: this.noSecretAccounts
       });
     }
+
+    if (this.anonymousAccounts.length > 0) {
+      groups.push({
+        name: this._i18n.instant('Special accounts'),
+        accounts: this.anonymousAccounts
+      });
+    }
+
     if (groups.length === 0) {
       groups.push({
         name: this._i18n.instant('No account available'),
@@ -199,12 +228,13 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }
     this.setUsernamePlaceholder();
     setTimeout(() => {
-      if (this.manualAuthInfo.username) {
+      if (this.manualAuthInfo.username && this.passwordRef) {
         this.passwordRef.nativeElement.focus();
-      } else {
+      } else if (this.usernameRef) {
         this.usernameRef.nativeElement.focus();
       }
     }, 10);
+
     this._cdRef.detectChanges();
   }
 
