@@ -81,11 +81,10 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       return '';
     }
     const rdp = this.asset.protocols.find(item => item.name === 'rdp');
-    if (!rdp) {
+    if (!rdp || !rdp.setting || typeof rdp.setting !== 'object') {
       return '';
     }
-    const extra = (rdp.setting || {})['setting'] || {};
-    return extra['ad_domain'];
+    return rdp.setting['ad_domain'];
   }
 
   public compareFn = (f1, f2) => f1 && f2 && f1.alias === f2.alias;
