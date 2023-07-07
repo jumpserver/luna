@@ -150,6 +150,7 @@
   "No account available": "没有可用账号",
   "Set reusable": "开启复用",
   "Re-use for a long time after opening": "开启后该连接信息可长时间多次使用",
-  "The connection method is invalid, please refresh the page": "该连接方式已失效，请刷新页面"
+  "The connection method is invalid, please refresh the page": "该连接方式已失效，请刷新页面",
+  "Special accounts": "特殊账号"
 }
 
