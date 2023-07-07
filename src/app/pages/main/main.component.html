@@ -9,10 +9,9 @@
 >
   <as-split-area
     id="left-side"
-    [size]="settingLayoutSize.leftWidth"
+    [size]="20"
     *ngIf="store.showLeftBar"
     #leftArea
-    [visible]="action1v"
     order="0" class="left-side"
   >
     <div class="layout">
@@ -43,7 +42,7 @@
     </div>
   </as-split-area>
   <as-split-area
-    [size]="settingLayoutSize.rightWidth"
+    [size]="80"
     class="content"
     order="1"
     #rightArea
