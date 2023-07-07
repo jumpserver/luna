@@ -1,38 +1,37 @@
 <elements-nav></elements-nav>
 <as-split
-  direction="horizontal"
-  id="container"
-  gutterSize="0"
-  (dragStart)="dragStartHandler($event)"
   (dragEnd)="dragEndHandler($event)"
+  (dragStart)="dragStartHandler($event)"
   (gutterClick)="splitGutterClick($event)"
+  direction="horizontal"
+  gutterSize="0"
+  id="container"
 >
   <as-split-area
-    id="left-side"
-    [size]="settingLayoutSize.leftWidth"
-    *ngIf="store.showLeftBar"
     #leftArea
-    [visible]="action1v"
-    order="0" class="left-side"
+    *ngIf="store.showLeftBar"
+    [size]="settingLayoutSize.leftWidth"
+    class="left-side"
+    id="left-side" order="0"
   >
     <div class="layout">
-      <div class="menu-icon" [ngClass]="{'menu-active':showSubMenu}">
+      <div [ngClass]="{'menu-active':showSubMenu}" class="menu-icon">
         <div
+          (click)="menuClick()"
           *ngIf="this._settingSvc.hasXPack()"
           class="menu-organization"
-          (click)="menuClick()"
         >
           <span style="font-size: 13px;">
             <i class="fa fa-sitemap"></i>
           </span>
         </div>
         <div
+          (click)="item.click(item.name)"
           *ngFor="let item of menus"
           class="menu-item"
-          (click)="item.click(item.name)"
         >
           <span>
-            <i class="fa" [ngClass]="item.icon"></i>
+            <i [ngClass]="item.icon" class="fa"></i>
           </span>
         </div>
       </div>
@@ -43,10 +42,10 @@
     </div>
   </as-split-area>
   <as-split-area
+    #rightArea
     [size]="settingLayoutSize.rightWidth"
     class="content"
     order="1"
-    #rightArea
   >
     <div>
       <elements-content (toggleMenu)="onToggleMobileLayout()"></elements-content>
