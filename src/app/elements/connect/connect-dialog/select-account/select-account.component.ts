@@ -1,5 +1,5 @@
 import {ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
-import {Account, AccountGroup, Asset, AuthInfo} from '@app/model';
+import {Account, AccountGroup, Asset, AuthInfo, Protocol} from '@app/model';
 import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
 import {FormControl, Validators} from '@angular/forms';
 import {AppService, I18nService, LocalStorageService, LogService, SettingService} from '@app/services';
@@ -16,6 +16,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @Input() onSubmit: BehaviorSubject<boolean>;
   @Input() onSubmit$: BehaviorSubject<boolean>;
   @Input() manualAuthInfo: AuthInfo;
+  @Input() protocol: Protocol;
   @Output() accountSelectedChange: EventEmitter<Account> = new EventEmitter<Account>();
   @ViewChild('username', {static: false}) usernameRef: ElementRef;
   @ViewChild('password', {static: false}) passwordRef: ElementRef;
@@ -73,6 +74,18 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     return this.accounts.filter(item => {
       return item.alias === '@ANON' && allowAnonymousCategory.indexOf(this.asset.category.value) >= 0;
     });
+  }
+
+  get adDomain() {
+    if (!this.protocol || this.protocol.name !== 'rdp') {
+      return '';
+    }
+    const rdp = this.asset.protocols.find(item => item.name === 'rdp');
+    if (!rdp) {
+      return '';
+    }
+    const extra = (rdp.setting || {})['setting'] || {};
+    return extra['ad_domain'];
   }
 
   public compareFn = (f1, f2) => f1 && f2 && f1.alias === f2.alias;

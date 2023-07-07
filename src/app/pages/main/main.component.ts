@@ -1,7 +1,7 @@
-import {Component, HostListener, OnInit, ViewChild, ElementRef} from '@angular/core';
+import {Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/core';
 import {DataStore, User} from '@app/globals';
 import {IOutputData, SplitComponent} from 'angular-split';
-import {ViewService, SettingService} from '@app/services';
+import {SettingService, ViewService} from '@app/services';
 import * as _ from 'lodash';
 
 @Component({
@@ -17,27 +17,17 @@ export class PageMainComponent implements OnInit {
   store = DataStore;
   showIframeHider = false;
   showSubMenu: any = false;
-  _isMobile = false;
-  _overlayMenu = false;
   menus: Array<object>;
   settingLayoutSize = {
-    leftWidth: '20',
-    rightWidth: '80'
+    leftWidth: 20,
+    rightWidth: 80
   };
 
   constructor(public viewSrv: ViewService,
-              public _settingSvc: SettingService) {}
-
-  get currentView() {
-    return this.viewSrv.currentView;
+              public _settingSvc: SettingService) {
   }
 
-  get showSplitter() {
-    if (this.currentView && this.currentView.type === 'rdp') {
-      return false;
-    }
-    return this.store.showLeftBar;
-  }
+  _isMobile = false;
 
   get isMobile() {
     return this._isMobile;
@@ -59,11 +49,13 @@ export class PageMainComponent implements OnInit {
     }, 10);
   }
 
-  get overlayMenu () {
+  _overlayMenu = false;
+
+  get overlayMenu() {
     return this._overlayMenu;
   }
 
-  set overlayMenu (value) {
+  set overlayMenu(value) {
     console.log('value: ', value);
     this._overlayMenu = value;
     const settings: any = {};
@@ -79,6 +71,17 @@ export class PageMainComponent implements OnInit {
     setTimeout(() => {
       this.menuClick(settings);
     }, 10);
+  }
+
+  get currentView() {
+    return this.viewSrv.currentView;
+  }
+
+  get showSplitter() {
+    if (this.currentView && this.currentView.type === 'rdp') {
+      return false;
+    }
+    return this.store.showLeftBar;
   }
 
   ngOnInit(): void {
@@ -132,7 +135,7 @@ export class PageMainComponent implements OnInit {
     this.showIframeHider = false;
   }
 
-  splitGutterClick({ gutterNum }: IOutputData) {
+  splitGutterClick({gutterNum}: IOutputData) {
     // By default, clicking the gutter without changing position does not trigger the 'dragEnd' event
     // This can be fixed by manually notifying the component
     // See issue: https://github.com/angular-split/angular-split/issues/186

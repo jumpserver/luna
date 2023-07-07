@@ -2,7 +2,7 @@
 .zone-label {
   color: rgba(0, 0, 0, 0.54);
   cursor: pointer;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 }
 
 .mat-form-field-infix {
@@ -10,7 +10,7 @@
 }
 
 .auto-connect {
-  padding-top: 15px;
+  padding-top: 10px;
 }
 
 .question {
@@ -18,8 +18,9 @@
 }
 
 .dialog-body {
-  padding: 0;
-  margin: 0 10px 10px;
+  padding: 0 20px;
+  margin: 0 -10px;
+  overflow: auto;
 }
 
 .protocol-tab ::ng-deep .mat-tab-links {
@@ -43,15 +44,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 1px;
+  line-height: 28px;
+  font-size: 18px;
 }
 
 .mat-dialog-title h3 {
   margin: 0;
 }
 
-.mat-dialog-content {
-  overflow: hidden;
-}
 
 .mat-button-toggle-group {
   height: 32px;
@@ -69,3 +70,10 @@ button.mat-raised-button {
   margin-left: 0;
 }
 
+.mat-dialog-container {
+  padding-top: 15px;
+}
+
+
+.auto-overflow {
+}

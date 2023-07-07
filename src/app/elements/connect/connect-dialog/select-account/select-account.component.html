@@ -1,6 +1,6 @@
-<div class="select-user form-field">
+<div class="select-user form-field" style="width: 100%;">
   <label class="zone-label" for="selectAccount">{{ "Select account" | translate }}</label>
-  <mat-form-field style="width: 100%;margin-top:-10px">
+  <mat-form-field style="width: 100%; margin-top:-10px">
     <mat-select
       [(value)]="accountSelected"
       [compareWith]="compareFn"
@@ -26,8 +26,13 @@
         </mat-option>
       </mat-optgroup>
     </mat-select>
+    <span *ngIf="adDomain" [attr.aria-label]="'AD'" class="ad-domain" disabled matSuffix title="AD">
+      @{{ adDomain }}
+    </span>
   </mat-form-field>
-  <mat-error *ngIf="accountCtl.hasError('required')">{{"Please choose a account"| translate}}</mat-error>
+  <mat-error *ngIf="accountCtl.hasError('required')">
+    {{"Please choose a account"| translate}}
+  </mat-error>
 </div>
 
 <div *ngIf="accountSelected?.username == '@INPUT' || accountSelected.alias === '@USER'" class="form-field">

@@ -28,7 +28,7 @@
 .zone-label {
   color: rgba(0, 0, 0, 0.54);
   cursor: pointer;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 }
 
 .account-info {
@@ -38,4 +38,9 @@
 
 .input-field {
   width: 100%;
+}
+
+.ad-domain {
+  font-size: 15px;
+  padding-left: 10px;
 }

@@ -4,12 +4,12 @@
   </label>
   <div *ngIf="connectMethodTypes.length > 0; else empty" class="connect-type-group">
     <mat-tab-group
-      [selectedIndex]="currentConnectMethodTypeIndex()"
       (selectedIndexChange)="onConnectMethodTypeChange($event)"
+      [selectedIndex]="currentConnectMethodTypeIndex()"
       animationDuration="0ms"
       dynamicHeight
-      mat-stretch-tabs="true"
       mat-align-tabs="center"
+      mat-stretch-tabs="true"
     >
       <mat-tab
         *ngFor="let item of connectMethodTypes "
@@ -19,16 +19,16 @@
         </ng-template>
 
         <mat-radio-group
-          name="connect-method"
           [(ngModel)]="connectMethod"
-          style="display: block; padding: 18px 10px 10px"
+          name="connect-method"
+          style="display: block; padding: 12px 10px 10px 10px;"
         >
-          <mat-radio-button *ngFor="let method of item['methods']" [value]="method"  [disabled]="method.disabled">
+          <mat-radio-button *ngFor="let method of item['methods']" [disabled]="method.disabled" [value]="method">
             {{ method.label }}
 
             <span matTooltip="{{'Click to download rdp file'| translate}}">
-              <i *ngIf="canDownloadRDPFile(method)"
-                 (click)="downloadRDPFile(method)"
+              <i (click)="downloadRDPFile(method)"
+                 *ngIf="canDownloadRDPFile(method)"
                  class="fa fa-question-circle-o question"
               ></i>
             </span>
