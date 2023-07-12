@@ -3,16 +3,16 @@
     <span style="color: white; padding: 20px">{{ src }}</span>
   </div>
 
-  <div *ngIf="!show" class="spinner-container">
+  <div *ngIf="!showIframe" class="spinner-container">
     <mat-spinner [diameter]="50" class="loading"></mat-spinner>
   </div>
 
   <iframe
     #iFrame
-    *ngIf="src && show"
+    *ngIf="src"
     [id]="id"
     [src]="src | safeUrl"
-    [style.visibility]="show ? 'visible' : 'hidden'"
+    [style.visibility]="showIframe ? 'visible' : 'hidden'"
     allowtransparency="true"
     height="100%"
     width="100%"

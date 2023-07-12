@@ -17,7 +17,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   eventHandler: EventListenerOrEventListenerObject;
   iframeWindow: Window;
-  show = false;
+  showIframe = false;
+  showValue: boolean = !window['debugIframe'];
   ping: number;
   debug = false;
 
@@ -47,7 +48,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       switch (msg.name) {
         case 'PONG':
           setTimeout(() => {
-            this.show = true;
+            this.showIframe = this.showValue;
           });
           this.view.termComp = this;
           clearInterval(this.ping);
@@ -90,7 +91,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     setTimeout(function () {
       // 长时间未PING通, 则主动关闭
       clearInterval(this.ping);
-      this.show = true;
+      this.showIframe = this.showValue;
     }.bind(this), 1000 * 10);
   }
 
