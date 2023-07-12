@@ -2,6 +2,7 @@ import {AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, On
 import {View} from '@app/model';
 import {ConnectTokenService, HttpService, I18nService, LogService} from '@app/services';
 import {MatDialog} from '@angular/material';
+import {environment} from '@src/environments/environment';
 
 @Component({
   selector: 'elements-iframe',
@@ -31,12 +32,12 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
   ngOnInit() {
     this._logger.info(`IFrame URL: ${this.src}`);
-    // if (!environment.production) {
-    // this.debug = true;
-    // setTimeout(() => {
-    // this.debug = false;
-    // }, 5000);
-    // }
+    if (!environment.production) {
+      this.debug = true;
+      setTimeout(() => {
+        this.debug = false;
+      }, 5000);
+    }
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.eventHandler = function (e: any) {
       const msg = e.data;
@@ -65,8 +66,10 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   ngAfterViewInit() {
-    this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
-    this.handleIframeEvent();
+    if (this.iframeRef) {
+      this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
+      this.handleIframeEvent();
+    }
   }
 
   ngOnDestroy() {
