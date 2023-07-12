@@ -26,11 +26,15 @@
     *ngIf="showBatchCommand"
     id="batchCommandDiv"
   >
-    <input (keydown.enter)="sendBatchCommand()"
-           [(ngModel)]="batchCommand"
-           maxlength="2048"
-           placeholder=" {{'Send text to all ssh terminals'| translate }} ..."
-           spellcheck="false" tabindex="2" title="{{'Send text to all ssh terminals'| translate }} ..." type="text">
+    <input
+      (keydown.enter)="sendBatchCommand()"
+      [(ngModel)]="batchCommand"
+      maxlength="2048"
+      placeholder=" {{'Send text to all ssh terminals'| translate }} ..."
+      spellcheck="false" tabindex="2"
+      title="{{'Send text to all ssh terminals'| translate }} ..."
+      type="text"
+    >
   </div>
 </div>
 
