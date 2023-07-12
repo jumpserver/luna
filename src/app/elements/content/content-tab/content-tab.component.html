@@ -1,11 +1,18 @@
 <li
+  (click)="setActive()"
+  (dblclick)="view.editable=true;setActive()" [id]="view.id"
   [ngClass]="{'active': view.active,'disconnected': !view.connected, 'hidden': view.closed != false}"
-  [id]="view.id" (click)="setActive()" (dblclick)="view.editable=true;setActive()"
   [title]="view.name"
 >
   <span *ngIf="view.name && !view.editable" [title]="view.name">
-    <i class="fa" [ngClass]="iconCls"></i> {{view.name | truncatechars:100 }}
+  <i [ngClass]="view.asset.type.value + '_ico_docu'" class="view_icon"></i>
+    {{ view.name | truncatechars:100 }}
+    <!--    <i [ngClass]="iconCls" class="fa"></i> {{view.name | truncatechars:100 }}-->
   </span>
-  <input *ngIf="view.editable" [(ngModel)]="view.name" (blur)="view.editable=false" (keyup.enter)="view.editable=false" autofocus="autofocus"/>
-  <a class="close" (click)="close()">&times;</a>
+  <input (blur)="view.editable=false"
+         (keyup.enter)="view.editable=false"
+         *ngIf="view.editable"
+         [(ngModel)]="view.name"
+         autofocus="autofocus"/>
+  <a (click)="close()" class="close">&times;</a>
 </li>
