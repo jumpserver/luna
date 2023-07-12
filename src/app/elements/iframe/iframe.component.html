@@ -1,9 +1,9 @@
-<div class="frame-container">
+<div [ngClass]="{'debug': debug}" class="frame-container">
   <div *ngIf="debug" class="debug-msg">
-    <pre style="color: white; padding: 20px">{{ src }}</pre>
+    <span style="color: white; padding: 20px">{{ src }}</span>
   </div>
 
-  <div *ngIf="!show" [ngClass]="{'debug': debug}" class="spinner-container">
+  <div *ngIf="!show" class="spinner-container">
     <mat-spinner [diameter]="50" class="loading"></mat-spinner>
   </div>
 

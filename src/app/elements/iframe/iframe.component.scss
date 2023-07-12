@@ -1,28 +1,32 @@
-iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
-}
 
 .frame-container {
   width: 100%;
   height: 100%;
+
+  .debug-msg {
+  }
+
+  .spinner-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    clear: both;
+    position: relative;
+    vertical-align: middle;
+  }
+
+  .spinner-container.debug {
+    height: calc(100% - 55px);
+  }
+
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
 }
 
-.spinner-container {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  clear: both;
-  position: relative;
-  vertical-align: middle;
-}
 
-.spinner-container.debug {
-  height: calc(100% - 55px);
-}
-
-.debug-msg {
-}
