@@ -9,7 +9,7 @@
 
   <iframe
     #iFrame
-    *ngIf="src"
+    *ngIf="src && show"
     [id]="id"
     [src]="src | safeUrl"
     [style.visibility]="show ? 'visible' : 'hidden'"
