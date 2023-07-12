@@ -7,6 +7,7 @@ li.disconnected {
   background-color: darkgray;
 }
 
+
 li.hidden {
   display: none;
 }
@@ -21,28 +22,42 @@ li {
   background-color: #463a3a66;
   border-right: 1px solid #6b6565c2;
   border-radius: 2px;
-}
 
-li.active {
-  box-sizing: border-box;
-  border-bottom: 2px solid var(--primary-color);
-}
+  .view_icon {
+    width: 12px;
+    height: 12px;
+    vertical-align: baseline;
+    display: inline-block;
+  }
 
-li span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #f1f0f0;
-  font-family: 'Roboto', sans-serif;
-  font-size: 13px;
-  text-decoration: none;
-  padding-left: 12px;
-  padding-right: 14px;
-  line-height: 26px;
-  cursor: default;
-  width: 145px;
-  height: 26px;
-  display: block;
+  // 复用了 ztree 的 icon
+  .view_icon::before {
+    font-family: FontAwesome;
+    color: #ffffff;
+    display: inline-block;
+  }
+
+  &.active {
+    box-sizing: border-box;
+    border-bottom: 2px solid var(--primary-color);
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #f1f0f0;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    text-decoration: none;
+    padding-left: 12px;
+    padding-right: 14px;
+    line-height: 26px;
+    cursor: default;
+    width: 142px;
+    height: 26px;
+    display: block;
+  }
 }
 
 li a.close {
