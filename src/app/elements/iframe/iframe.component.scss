@@ -20,5 +20,9 @@ iframe {
   vertical-align: middle;
 }
 
+.spinner-container.debug {
+  height: calc(100% - 55px);
+}
+
 .debug-msg {
 }

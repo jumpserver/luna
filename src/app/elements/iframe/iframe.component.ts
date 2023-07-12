@@ -38,7 +38,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
         this.debug = false;
       }, 5000);
     }
-    return;
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.eventHandler = function (e: any) {
       const msg = e.data;
@@ -86,8 +85,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       this.iframeWindow.postMessage({name: 'PING', id: this.id}, '*');
     }, 500);
     window.addEventListener('message', this.eventHandler);
-
-    return;
     setTimeout(function () {
       // 长时间未PING通, 则主动关闭
       clearInterval(this.ping);
