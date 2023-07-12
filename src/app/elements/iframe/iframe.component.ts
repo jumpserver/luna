@@ -47,7 +47,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       switch (msg.name) {
         case 'PONG':
           setTimeout(() => {
-            // this.show = true;
+            this.show = true;
           });
           this.view.termComp = this;
           clearInterval(this.ping);
@@ -90,7 +90,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     setTimeout(function () {
       // 长时间未PING通, 则主动关闭
       clearInterval(this.ping);
-      // this.show = true;
+      this.show = true;
     }.bind(this), 1000 * 10);
   }
 
