@@ -42,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build it and upload
-        uses: jumpserver/action-build-upload-assets@node10
+        uses: jumpserver/action-build-upload-assets@node14.16
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
