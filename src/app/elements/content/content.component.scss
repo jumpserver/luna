@@ -60,11 +60,11 @@ $-border-y: #1f1b1b;
 }
 
 #winContainer {
-  height: calc(100% - 30px);
+  height: 100%;
 }
 
 #winContainer.batch-input {
-  height: calc(100% - 60px);
+  height: calc(100% - 30px);
 }
 
 #batchCommandDiv {
