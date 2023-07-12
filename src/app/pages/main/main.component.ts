@@ -56,7 +56,6 @@ export class PageMainComponent implements OnInit {
   }
 
   set overlayMenu(value) {
-    console.log('value: ', value);
     this._overlayMenu = value;
     const settings: any = {};
     if (this.isMobile) {
