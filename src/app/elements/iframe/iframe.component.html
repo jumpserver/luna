@@ -12,7 +12,7 @@
     *ngIf="src"
     [id]="id"
     [src]="src | safeUrl"
-    [style.visibility]="showIframe ? 'visible' : 'hidden'"
+    [style.display]="showIframe ? 'initial' : 'none'"
     allowtransparency="true"
     height="100%"
     width="100%"
