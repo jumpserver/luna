@@ -34,7 +34,11 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     this._logger.info(`IFrame URL: ${this.src}`);
     if (!environment.production) {
       this.debug = true;
+      setTimeout(() => {
+        this.debug = false;
+      }, 5000);
     }
+    return;
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.eventHandler = function (e: any) {
       const msg = e.data;
@@ -83,6 +87,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     }, 500);
     window.addEventListener('message', this.eventHandler);
 
+    return;
     setTimeout(function () {
       // 长时间未PING通, 则主动关闭
       clearInterval(this.ping);

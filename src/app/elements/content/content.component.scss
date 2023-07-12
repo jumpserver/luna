@@ -18,6 +18,7 @@ $-border-y: #1f1b1b;
   padding-left: 0;
   margin: 0;
 }
+
 /*
  *  scrollbar
  */
@@ -59,13 +60,19 @@ $-border-y: #1f1b1b;
 }
 
 #winContainer {
-  height: calc(100% - 30px - 30px);
+  height: calc(100% - 30px);
 }
+
+#winContainer.batch-input {
+  height: calc(100% - 60px);
+}
+
 #batchCommandDiv {
   height: 29px;
   border-left: solid 1px $-border-y;
   width: 100%;
   padding: 0 2px 0 0;
+
   &:focus-visible {
     outline: none;
   }
@@ -79,6 +86,7 @@ $-border-y: #1f1b1b;
   border: none;
   background: #2f2a2a;
   color: #ffffff;
+
   &:focus-visible {
     outline: none;
   }
@@ -91,7 +99,7 @@ $-border-y: #1f1b1b;
   -moz-border-radius: 2px;
   border-radius: 2px;
   margin: 0;
-  box-shadow: 0 3px 6px 0 rgba(0,0,0,0.16);
+  box-shadow: 0 3px 6px 0 rgba(0, 0, 0, 0.16);
   position: absolute;
   opacity: 1;
   padding: 6px 0;
@@ -101,6 +109,7 @@ $-border-y: #1f1b1b;
   -ms-user-select: none;
   user-select: none;
 }
+
 .view-menu, .view-menu * {
   box-sizing: border-box;
 }
@@ -192,6 +201,7 @@ tr:hover {
   color: #FFFFFF;
   cursor: pointer;
   text-align: center;
+
   &:hover {
     border-bottom: 1px solid var(--primary-color);
   }
