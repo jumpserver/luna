@@ -56,7 +56,7 @@ $-border-y: #1f1b1b;
 }
 
 #content {
-  height: 100%;
+  height: calc(100% - 30px);;
 }
 
 #winContainer {
