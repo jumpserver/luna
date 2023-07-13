@@ -26,7 +26,7 @@ li {
   .view_icon {
     width: 12px;
     height: 12px;
-    vertical-align: baseline;
+    vertical-align: middle;
     display: inline-block;
   }
 
@@ -57,6 +57,10 @@ li {
     width: 142px;
     height: 26px;
     display: block;
+
+    i {
+      line-height: 12px;
+    }
   }
 }
 
