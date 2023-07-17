@@ -50,7 +50,7 @@ export class ConnectTokenService {
   }
 
   setReusable(connectToken: ConnectionToken, reusable: Boolean) {
-    const url = `/api/v1/authentication/connection-token/${connectToken.id}/`;
+    const url = `/api/v1/authentication/connection-token/${connectToken.id}/reuse/`;
     const data = {is_reusable: reusable};
     return this._http.patch(url, data);
   }
