@@ -151,6 +151,8 @@
   "Set reusable": "开启复用",
   "Re-use for a long time after opening": "开启后该连接信息可长时间多次使用",
   "The connection method is invalid, please refresh the page": "该连接方式已失效，请刷新页面",
-  "Special accounts": "特殊账号"
+  "Special accounts": "特殊账号",
+  "Database token help text": "数据库类型 token 会缓存 5 分钟，也就是说 token 使用后，不会立刻失效，而是客户端断开 5 分钟后，这个 token 才会完全失效",
+  "Help text": "说明"
 }
 
