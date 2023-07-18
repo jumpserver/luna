@@ -4,6 +4,7 @@ import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
 import {FormControl, Validators} from '@angular/forms';
 import {AppService, I18nService, LocalStorageService, LogService, SettingService} from '@app/services';
 import {takeUntil} from 'rxjs/operators';
+import {User} from '@app/globals';
 
 @Component({
   selector: 'elements-select-account',
@@ -94,7 +95,11 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this.filteredUsersGroups.next(this.groupedAccounts.slice());
 
     if (this.accountSelected) {
-      this.manualAuthInfo.username = this.accountSelected.username.startsWith('@') ? '' : this.accountSelected.username;
+      const username = this.accountSelected.username;
+      this.manualAuthInfo.username = username.startsWith('@') ? '' : username;
+      if (username === '@USER') {
+        this.manualAuthInfo.username = User.username;
+      }
     }
 
     this.accountFilterCtl.valueChanges
@@ -217,12 +222,17 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }
     if (this.accountSelected.username === '@INPUT') {
       this.manualAuthInfo.username = '';
+    } else if (this.accountSelected.username === '@USER') {
+      this.manualAuthInfo.username = User.username;
     } else {
       this.manualAuthInfo.username = this.accountSelected.username;
     }
     this.manualAuthInfo.secret = '';
     this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id);
-    if (this.localAuthItems && this.localAuthItems.length > 0) {
+    if (this.manualAuthInfo.username === '' && this.localAuthItems && this.localAuthItems.length > 0) {
+      if (this.accountSelected.username === '') {
+        this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
+      }
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
     }
     this.setUsernamePlaceholder();
