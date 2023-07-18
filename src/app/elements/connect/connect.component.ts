@@ -94,7 +94,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         connectInfo.account = account;
         connectInfo.protocol = {
           'name': type,
-          'port': undefined,
+          'port': 443,
           'public': true,
           'setting': {
             sftp_enabled: true
@@ -108,7 +108,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         connectInfo.connectMethod = {
           type: type,
           value: 'web_cli',
-          component: 'web_cli',
+          component: 'koko',
           label: type,
           disabled: false,
         };
