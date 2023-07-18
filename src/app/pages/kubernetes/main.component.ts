@@ -1,13 +1,13 @@
-import {Component, HostListener, OnInit, ViewChild, ElementRef} from '@angular/core';
+import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {DataStore, User} from '@app/globals';
 import {IOutputData, SplitComponent} from 'angular-split';
-import {ViewService, SettingService} from '@app/services';
+import {SettingService, ViewService} from '@app/services';
 import * as _ from 'lodash';
 
 @Component({
   selector: 'pages-main',
   templateUrl: './main.component.html',
-  styleUrls: ['./main.component.css'],
+  styleUrls: ['./main.component.scss'],
 })
 export class PageK8sComponent implements OnInit {
   @ViewChild(SplitComponent, {read: false, static: false}) split: SplitComponent;
@@ -25,7 +25,8 @@ export class PageK8sComponent implements OnInit {
   };
 
   constructor(public viewSrv: ViewService,
-              public _settingSvc: SettingService) {}
+              public _settingSvc: SettingService) {
+  }
 
   get currentView() {
     return this.viewSrv.currentView;
@@ -51,7 +52,7 @@ export class PageK8sComponent implements OnInit {
     this.showIframeHider = false;
   }
 
-  splitGutterClick({ gutterNum }: IOutputData) {
+  splitGutterClick({gutterNum}: IOutputData) {
     this.split.notify('end', gutterNum);
   }
 

@@ -1,53 +1,54 @@
 <elements-nav></elements-nav>
 <as-split
-  direction="horizontal"
-  id="container"
-  gutterSize="0"
-  (dragStart)="dragStartHandler($event)"
   (dragEnd)="dragEndHandler($event)"
+  (dragStart)="dragStartHandler($event)"
   (gutterClick)="splitGutterClick($event)"
+  direction="horizontal"
+  gutterSize="0"
+  id="container"
 >
   <as-split-area
-    id="left-side"
-    [size]="20"
-    *ngIf="store.showLeftBar"
     #leftArea
-    order="0" class="left-side"
+    *ngIf="store.showLeftBar"
+    [size]="20"
+    class="left-side"
+    id="left-side"
+    order="0"
     style="min-width:54px;max-width: 50%;"
   >
     <div class="layout">
-      <div class="menu-icon" [ngClass]="{'menu-active':showMenu}">
+      <div [ngClass]="{'menu-active':showMenu}" class="menu-icon">
         <div
+          (click)="menuClick()"
           *ngIf="this._settingSvc.hasXPack()"
           class="menu-organization"
-          (click)="menuClick()"
         >
           <span style="font-size: 13px;">
             <i class="fa fa-sitemap"></i>
           </span>
         </div>
         <div
+          (click)="item.click(item.name)"
           *ngFor="let item of menus"
           class="menu-item"
-          (click)="item.click(item.name)"
         >
           <span>
-            <i class="fa" [ngClass]="item.icon"></i>
+            <i [ngClass]="item.icon" class="fa"></i>
           </span>
         </div>
       </div>
       <elements-left-bar
         #leftBar
-        [isK8s]="isK8s"
         (menuActive)="menuActive()"
+        [isK8s]="isK8s"
       ></elements-left-bar>
     </div>
   </as-split-area>
   <as-split-area
+    #rightArea
     [size]="80"
     class="content"
     order="1"
-    #rightArea
   >
     <div>
       <elements-content></elements-content>

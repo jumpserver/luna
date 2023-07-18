@@ -125,6 +125,14 @@
     content: "\f0c2";
   }
 
+  &.cloud_ico_open::before {
+    content: "\f07c";
+  }
+
+  &.cloud_ico_close::before {
+    content: "\f07b";
+  }
+
   &.chrome_ico_docu::before {
     content: "\f268";
   }

@@ -152,3 +152,9 @@ as-split.as-vertical ::ng-deep .as-split-gutter-icon {
   z-index: 11;
   background: #2f2a2a;
 }
+
+#left-side {
+  ::ng-deep .tree-type-content {
+    height: 100%;
+  }
+}
