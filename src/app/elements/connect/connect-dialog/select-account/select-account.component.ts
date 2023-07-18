@@ -229,10 +229,10 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }
     this.manualAuthInfo.secret = '';
     this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id);
-    if (this.manualAuthInfo.username === '' && this.localAuthItems && this.localAuthItems.length > 0) {
-      if (this.accountSelected.username === '') {
-        this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
-      }
+    if (this.manualAuthInfo.username) {
+      this.localAuthItems = this.localAuthItems.filter(item => item.username === this.manualAuthInfo.username);
+    }
+    if (this.localAuthItems && this.localAuthItems.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
     }
     this.setUsernamePlaceholder();
