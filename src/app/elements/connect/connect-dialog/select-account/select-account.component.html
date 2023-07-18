@@ -35,7 +35,7 @@
   </mat-error>
 </div>
 
-<div *ngIf="accountSelected?.username == '@INPUT' || accountSelected.alias === '@USER'" class="form-field">
+<div *ngIf="showManualUsernameInput" class="form-field">
   <label class="zone-label" style="margin-bottom: 0">{{ "Username" | translate }}</label>
   <mat-form-field class="input-field" floatLabel='never'>
     <input

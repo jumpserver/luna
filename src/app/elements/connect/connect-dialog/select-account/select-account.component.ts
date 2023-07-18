@@ -88,6 +88,13 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     return rdp.setting['ad_domain'];
   }
 
+  get showManualUsernameInput() {
+    if (!this.accountSelected) {
+      return false;
+    }
+    return this.accountSelected.username === '@INPUT' || this.accountSelected.alias === '@USER';
+  }
+
   public compareFn = (f1, f2) => f1 && f2 && f1.alias === f2.alias;
 
   ngOnInit() {
@@ -135,41 +142,34 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   }
 
   groupAccounts() {
-    const groups = [];
+    let groups = [];
     const preAccountSelected = this.getPreAccountSelected();
     if (preAccountSelected) {
-      this.accountSelected = preAccountSelected;
       groups.push({
         name: this._i18n.instant('Last login'),
         accounts: [preAccountSelected]
       });
     }
 
-    if (this.hasSecretAccounts.length > 0) {
-      if (!this.accountSelected) {
-        this.accountSelected = this.hasSecretAccounts[0];
-      }
-      groups.push({
-        name: this._i18n.instant('With secret accounts'),
-        accounts: this.hasSecretAccounts
-      });
-    }
+    groups.push({
+      name: this._i18n.instant('With secret accounts'),
+      accounts: this.hasSecretAccounts
+    });
+    groups.push({
+      name: this._i18n.instant('Manual accounts'),
+      accounts: this.noSecretAccounts
+    });
+    groups.push({
+      name: this._i18n.instant('Special accounts'),
+      accounts: this.anonymousAccounts
+    });
 
-    if (this.noSecretAccounts.length > 0) {
-      if (!this.accountSelected) {
-        this.accountSelected = this.noSecretAccounts[0];
-      }
-      groups.push({
-        name: this._i18n.instant('Manual accounts'),
-        accounts: this.noSecretAccounts
-      });
-    }
+    groups = groups.filter(group => group.accounts.length > 0);
 
-    if (this.anonymousAccounts.length > 0) {
-      groups.push({
-        name: this._i18n.instant('Special accounts'),
-        accounts: this.anonymousAccounts
-      });
+    for (const group of groups) {
+      if (group.accounts.length > 0) {
+        this.accountSelected = group.accounts[0];
+      }
     }
 
     if (groups.length === 0) {
