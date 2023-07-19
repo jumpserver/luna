@@ -169,6 +169,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     for (const group of groups) {
       if (group.accounts.length > 0) {
         this.accountSelected = group.accounts[0];
+        break;
       }
     }
 
