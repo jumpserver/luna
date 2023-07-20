@@ -185,7 +185,7 @@ export class ConnectMethod {
   value: string;
   type: string;
   component: string;
-
+  endpoint_protocol: string;
   disabled: boolean;
 
   constructor(label: string, value: string, type: string, component: string, disabled: boolean = false) {
