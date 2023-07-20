@@ -1,6 +1,6 @@
-import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
-import {View, ViewAction, ConnectData} from '@app/model';
-import {SettingService, ViewService, I18nService, HttpService, ConnectTokenService} from '@app/services';
+import {Component, ElementRef, EventEmitter, OnInit, Output, ViewChild} from '@angular/core';
+import {View, ViewAction} from '@app/model';
+import {ConnectTokenService, I18nService, LogService, SettingService, ViewService} from '@app/services';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
@@ -10,21 +10,30 @@ import * as jQuery from 'jquery/dist/jquery.min.js';
 })
 export class ElementContentComponent implements OnInit {
   @ViewChild('tabs', {static: false}) tabsRef: ElementRef;
+  @Output() toggleMenu: EventEmitter<any> = new EventEmitter<any>();
   viewList: Array<View>;
   batchCommand: string;
   pos = {left: '100px', top: '100px'};
   isShowRMenu = false;
   rIdx = -1;
 
+  constructor(public viewSrv: ViewService,
+              public settingSvc: SettingService,
+              private _i18n: I18nService,
+              private _logger: LogService,
+              private _connectTokenSvc: ConnectTokenService,
+  ) {
+  }
+
   get tabsWidth() {
     return (this.viewList.length + 1) * 151 + 10;
   }
 
-  constructor(public viewSrv: ViewService,
-              public settingSvc: SettingService,
-              private _i18n: I18nService,
-              private _connectTokenSvc: ConnectTokenService,
-  ) {}
+  get showBatchCommand() {
+    return this.settingSvc.setting.commandExecution
+      && this.viewSrv.currentView
+      && this.viewSrv.currentView.protocol === 'ssh';
+  }
 
   ngOnInit() {
     this.viewList = this.viewSrv.viewList;
@@ -33,6 +42,7 @@ export class ElementContentComponent implements OnInit {
 
   onNewView(view) {
     this.scrollEnd();
+    this.toggleMenu.emit();
     setTimeout(() => {
       this.viewSrv.addView(view);
       this.setViewActive(view);
@@ -52,7 +62,7 @@ export class ElementContentComponent implements OnInit {
     }
   }
 
-  setViewActive(view){
+  setViewActive(view) {
     this.viewSrv.activeView(view);
   }
 
@@ -111,12 +121,12 @@ export class ElementContentComponent implements OnInit {
         callback: () => {
           const id = this.rIdx + 1;
           const oldView = this.viewList[this.rIdx];
-          const oldConnectToken = oldView.connectToken
+          const oldConnectToken = oldView.connectToken;
           this._connectTokenSvc.exchange(oldConnectToken).then((newConnectToken) => {
-            const newView = new View(oldView.asset, oldView.connectData, newConnectToken)
+            const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
             this.viewList.splice(id, 0, newView);
             this.setViewActive(newView);
-          })
+          });
         }
       },
       {

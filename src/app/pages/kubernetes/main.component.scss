@@ -19,7 +19,7 @@
 
 
 /*.content {*/
-  /*overflow: hidden !important;*/
+/*overflow: hidden !important;*/
 /*}*/
 
 .handle {
@@ -48,43 +48,50 @@ elements-nav {
 }
 
 /*.container-fluid {*/
-  /*padding-top: 30px;*/
+/*padding-top: 30px;*/
 /*}*/
 
 /* as-split .as-split-area {*/
 /*  background-color: lightgrey;*/
 /*}*/
- as-split .as-split-area > p {
+as-split .as-split-area > p {
   padding: 5px;
 }
- as-split ::ng-deep .as-split-gutter {
+
+as-split ::ng-deep .as-split-gutter {
   background-color: grey !important;
   position: relative;
   flex-basis: 0 !important;
 }
- as-split ::ng-deep .as-split-gutter-icon {
-  background-image: url('../../../assets/icons/sideBarHandler.svg') !important;
+
+as-split ::ng-deep .as-split-gutter-icon {
+  background-image: url('../../../assets/icons/drag.png') !important;
   background-color: unset !important;
   transition: opacity 0.3s;
   opacity: 0.5;
   position: absolute;
 }
-as-split ::ng-deep .as-split-gutter-icon:before{
+
+as-split ::ng-deep .as-split-gutter-icon:before {
 
 }
- as-split ::ng-deep .as-split-gutter.as-dragged .as-split-gutter-icon, .ex-b as-split ::ng-deep .as-split-gutter-icon:hover {
+
+as-split ::ng-deep .as-split-gutter.as-dragged .as-split-gutter-icon, .ex-b as-split ::ng-deep .as-split-gutter-icon:hover {
   opacity: 0.2;
 }
- as-split.as-horizontal ::ng-deep .as-split-gutter-icon {
+
+as-split.as-horizontal ::ng-deep .as-split-gutter-icon {
   width: 8px !important;
   left: -1px;
   right: 2px;
 }
- as-split.as-vertical ::ng-deep .as-split-gutter-icon {
+
+as-split.as-vertical ::ng-deep .as-split-gutter-icon {
   height: 17px !important;
   top: -8px;
   bottom: 8px;
 }
+
 .btns {
   display: flex;
   justify-content: center;
@@ -97,6 +104,7 @@ as-split ::ng-deep .as-split-gutter-icon:before{
   height: 100%;
   overflow: hidden;
 }
+
 .hack-iframe-hider {
   background: rgba(0, 0, 0, 0.25);
   position: absolute;
@@ -105,9 +113,11 @@ as-split ::ng-deep .as-split-gutter-icon:before{
   width: 100%;
   height: 100%;
 }
+
 .layout {
   position: relative;
 }
+
 .menu-icon {
   position: absolute;
   display: none;
@@ -117,6 +127,7 @@ as-split ::ng-deep .as-split-gutter-icon:before{
   color: white;
   transition: all .2s;
 }
+
 .menu-item {
   position: relative;
   width: 100%;
@@ -124,17 +135,26 @@ as-split ::ng-deep .as-split-gutter-icon:before{
   line-height: 46px;
   cursor: pointer;
 }
+
 .menu-organization {
   height: 30px;
   line-height: 30px;
   cursor: pointer;
   border-bottom: 1px solid var(--primary-color);
 }
+
 .menu-item:hover, .menu-organization:hover {
   background-color: rgba(0, 0, 0, 0.25);
 }
+
 .menu-active {
   display: block;
   z-index: 11;
   background: #2f2a2a;
+}
+
+#left-side {
+  ::ng-deep .tree-type-content {
+    height: 100%;
+  }
 }

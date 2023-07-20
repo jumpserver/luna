@@ -1,10 +1,10 @@
-import {Component, OnInit, Input, Output, EventEmitter} from '@angular/core';
+import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
 import {View, ViewAction} from '@app/model';
 
 @Component({
   selector: 'elements-content-tab',
   templateUrl: './content-tab.component.html',
-  styleUrls: ['./content-tab.component.css'],
+  styleUrls: ['./content-tab.component.scss'],
 })
 export class ElementContentTabComponent implements OnInit {
   @Input() view: View;

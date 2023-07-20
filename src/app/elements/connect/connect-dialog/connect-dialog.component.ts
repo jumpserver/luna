@@ -1,8 +1,8 @@
-import {Component, OnInit, Inject, ChangeDetectorRef} from '@angular/core';
+import {ChangeDetectorRef, Component, Inject, OnInit} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {AppService, LogService, SettingService, I18nService} from '@app/services';
+import {AppService, I18nService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
-import {ConnectMethod, ConnectData, Account, AuthInfo, ConnectOption, Protocol, Asset} from '@app/model';
+import {Account, Asset, AuthInfo, ConnectData, ConnectMethod, ConnectOption, Protocol} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
 
 
@@ -33,7 +33,8 @@ export class ElementConnectDialogComponent implements OnInit {
               private _appSvc: AppService,
               private _i18n: I18nService,
               @Inject(MAT_DIALOG_DATA) public data: any,
-  ) {}
+  ) {
+  }
 
   ngOnInit() {
     this.accounts = this.data.accounts;
@@ -58,9 +59,12 @@ export class ElementConnectDialogComponent implements OnInit {
     if (this.preConnectData) {
       this.protocol = this.protocols.find(p => p.name === this.preConnectData.protocol.name);
       this.accountSelected = this.accounts.find(a => a.alias === this.preConnectData.account.alias) || new Account();
-      this.connectMethod = this._appSvc.getProtocolConnectMethods(this.protocol.name).find(
+      const connectMethod = this._appSvc.getProtocolConnectMethods(this.protocol.name).find(
         cm => cm.value === this.preConnectData.connectMethod.value
       );
+      if (connectMethod) {
+        this.connectMethod = connectMethod;
+      }
     }
 
     if (!this.protocol) {
@@ -71,7 +75,7 @@ export class ElementConnectDialogComponent implements OnInit {
     }
     if (!this.connectMethod) {
       const connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
-      if (connectMethods) {
+      if (connectMethods.length > 0) {
         this.connectMethod = connectMethods[0];
       }
     }

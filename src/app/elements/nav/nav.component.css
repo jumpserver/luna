@@ -1,5 +1,6 @@
 .nav {
   display: flex;
+  justify-content: space-between;
   height: 30px;
   padding-top: 0;
   background-color: #463e3e;
@@ -134,8 +135,6 @@
 }
 
 .nav-right {
-  flex: 1;
-  float: right;
   height: 100%;
   line-height: 30px;
 }

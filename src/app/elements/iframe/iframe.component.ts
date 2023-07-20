@@ -17,7 +17,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   eventHandler: EventListenerOrEventListenerObject;
   iframeWindow: Window;
-  show = false;
+  showIframe = false;
+  showValue: boolean = !window['debugIframe'];
   ping: number;
   debug = false;
 
@@ -34,6 +35,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     this._logger.info(`IFrame URL: ${this.src}`);
     if (!environment.production) {
       this.debug = true;
+      setTimeout(() => {
+        this.debug = false;
+      }, 5000);
     }
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.eventHandler = function (e: any) {
@@ -44,7 +48,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       switch (msg.name) {
         case 'PONG':
           setTimeout(() => {
-            this.show = true;
+            this.showIframe = this.showValue;
           });
           this.view.termComp = this;
           clearInterval(this.ping);
@@ -63,8 +67,10 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   ngAfterViewInit() {
-    this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
-    this.handleIframeEvent();
+    if (this.iframeRef) {
+      this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
+      this.handleIframeEvent();
+    }
   }
 
   ngOnDestroy() {
@@ -82,11 +88,10 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       this.iframeWindow.postMessage({name: 'PING', id: this.id}, '*');
     }, 500);
     window.addEventListener('message', this.eventHandler);
-
     setTimeout(function () {
       // 长时间未PING通, 则主动关闭
       clearInterval(this.ping);
-      this.show = true;
+      this.showIframe = this.showValue;
     }.bind(this), 1000 * 10);
   }
 

@@ -185,15 +185,16 @@ export class ConnectMethod {
   value: string;
   type: string;
   component: string;
-
   disabled: boolean;
+  endpoint_protocol: string;
 
-  constructor(label: string, value: string, type: string, component: string, disabled: boolean = false) {
+  constructor(label: string, value: string, type: string, component: string, endpoint_protocol: string = '', disabled: boolean = false) {
     this.label = label;
     this.value = value;
     this.type = type;
     this.component = component;
     this.disabled = disabled;
+    this.endpoint_protocol = endpoint_protocol;
   }
 }
 
@@ -267,7 +268,6 @@ export class GlobalSetting {
   TERMINAL_MAGNUS_ENABLED: boolean;
   TERMINAL_KOKO_SSH_ENABLED: boolean;
   INTERFACE: any;
-  TERMINAL_OMNIDB_ENABLED: boolean;
   TERMINAL_GRAPHICAL_RESOLUTION: string;
   CONNECTION_TOKEN_REUSABLE: boolean;
 }
@@ -314,9 +314,15 @@ export class Session {
   protocol: string;
   remote_addr: string;
   account: string;
-  terminal: string;
+  terminal: Terminal;
   user: string;
   user_id: string;
+}
+
+export class Terminal {
+  id: string;
+  name: string;
+  type: string;
 }
 
 export class Command {

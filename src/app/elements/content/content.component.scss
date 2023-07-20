@@ -18,6 +18,7 @@ $-border-y: #1f1b1b;
   padding-left: 0;
   margin: 0;
 }
+
 /*
  *  scrollbar
  */
@@ -38,6 +39,7 @@ $-border-y: #1f1b1b;
   font-size: 20px;
   float: left;
   height: 30px;
+  line-height: 31px;
   overflow: hidden;
   background-color: #3a3333;
   color: white;
@@ -54,17 +56,23 @@ $-border-y: #1f1b1b;
 }
 
 #content {
-  height: 100%;
+  height: calc(100% - 30px);;
 }
 
 #winContainer {
-  height: calc(100% - 30px - 30px);
+  height: 100%;
 }
+
+#winContainer.batch-input {
+  height: calc(100% - 30px);
+}
+
 #batchCommandDiv {
   height: 29px;
   border-left: solid 1px $-border-y;
   width: 100%;
   padding: 0 2px 0 0;
+
   &:focus-visible {
     outline: none;
   }
@@ -78,6 +86,7 @@ $-border-y: #1f1b1b;
   border: none;
   background: #2f2a2a;
   color: #ffffff;
+
   &:focus-visible {
     outline: none;
   }
@@ -90,7 +99,7 @@ $-border-y: #1f1b1b;
   -moz-border-radius: 2px;
   border-radius: 2px;
   margin: 0;
-  box-shadow: 0 3px 6px 0 rgba(0,0,0,0.16);
+  box-shadow: 0 3px 6px 0 rgba(0, 0, 0, 0.16);
   position: absolute;
   opacity: 1;
   padding: 6px 0;
@@ -100,6 +109,7 @@ $-border-y: #1f1b1b;
   -ms-user-select: none;
   user-select: none;
 }
+
 .view-menu, .view-menu * {
   box-sizing: border-box;
 }
@@ -181,7 +191,18 @@ tr:hover {
   border-left: solid 1px $-border-y;
 }
 
-//
-//.window {
-//  height: 100%;
-//}
+.mobile-menu-icon {
+  float: left;
+  display: none;
+  height: 30px;
+  width: 54px;
+  line-height: 30px;
+  background-color: #2f2a2a;
+  color: #FFFFFF;
+  cursor: pointer;
+  text-align: center;
+
+  &:hover {
+    border-bottom: 1px solid var(--primary-color);
+  }
+}

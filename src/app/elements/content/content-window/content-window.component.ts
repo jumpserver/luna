@@ -1,7 +1,7 @@
-import {Component, OnInit, Input, ViewChild, ElementRef} from '@angular/core';
+import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {View} from '@app/model';
 import {User} from '@app/globals';
-import {AppService, SettingService, HttpService} from '@app/services';
+import {AppService, HttpService, SettingService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
 
 @Component({
@@ -28,7 +28,9 @@ export class ElementContentWindowComponent implements OnInit {
     await this.computeConnector();
     this.createWaterMark();
     this.view.smartEndpoint = await this._appSvc.getSmartEndpoint(this.view);
-    setTimeout(() => { this.loading = false }, 1000);
+    setTimeout(() => {
+      this.loading = false;
+    }, 1000);
   }
 
   createWaterMark() {
@@ -39,7 +41,7 @@ export class ElementContentWindowComponent implements OnInit {
   }
 
   async computeConnector() {
-    const { connectData } = this.view;
+    const {connectData} = this.view;
     if (connectData.connectMethod.component === 'tinker') {
       // todo:  applet 使用 web gui 的方式
       this.connector = 'lion';

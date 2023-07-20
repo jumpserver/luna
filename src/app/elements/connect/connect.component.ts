@@ -55,6 +55,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       } else {
         node = nodes[1];
       }
+      const titles = document.title.split(' - ');
+      document.title = node.name + ' - ' + titles[titles.length - 1];
       this._http.getAssetDetail(node.id).subscribe(asset => {
         this.connectAsset(asset).then();
       });
@@ -94,7 +96,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         connectInfo.account = account;
         connectInfo.protocol = {
           'name': type,
-          'port': undefined,
+          'port': 443,
           'public': true,
           'setting': {
             sftp_enabled: true
@@ -108,8 +110,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         connectInfo.connectMethod = {
           type: type,
           value: 'web_cli',
-          component: 'web_cli',
+          component: 'koko',
           label: type,
+          endpoint_protocol: 'http',
           disabled: false,
         };
         const kInfo = new K8sInfo();
