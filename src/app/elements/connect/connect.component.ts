@@ -55,6 +55,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       } else {
         node = nodes[1];
       }
+      const titles = document.title.split(' - ');
+      document.title = node.name + ' - ' + titles[titles.length - 1];
       this._http.getAssetDetail(node.id).subscribe(asset => {
         this.connectAsset(asset).then();
       });
