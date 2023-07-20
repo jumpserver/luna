@@ -110,6 +110,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           value: 'web_cli',
           component: 'koko',
           label: type,
+          endpoint_protocol: 'http',
           disabled: false,
         };
         const kInfo = new K8sInfo();
