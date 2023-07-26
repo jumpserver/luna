@@ -16,14 +16,27 @@ export class ElementContentComponent implements OnInit {
   pos = {left: '100px', top: '100px'};
   isShowRMenu = false;
   rIdx = -1;
+  systemTips = [
+    {
+      content: 'Reselect connection method',
+      action: 'Right click asset'
+    },
+    {
+      content: 'Expand all asset',
+      action: 'Right click node'
+    },
+    {
+      content: 'Asset tree loading method',
+      action: 'Settings or basic settings'
+    }
+  ]
 
   constructor(public viewSrv: ViewService,
               public settingSvc: SettingService,
               private _i18n: I18nService,
               private _logger: LogService,
               private _connectTokenSvc: ConnectTokenService,
-  ) {
-  }
+  ) {}
 
   get tabsWidth() {
     return (this.viewList.length + 1) * 151 + 10;

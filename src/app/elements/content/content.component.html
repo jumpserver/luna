@@ -20,6 +20,14 @@
     </div>
   </div>
   <div [ngClass]="{'batch-input': showBatchCommand  }" id="winContainer">
+    <div *ngIf="!viewList.length" class="system-tips">
+      <div class="tips">
+        <p *ngFor="let item of systemTips">
+          <span *ngIf="item.action" class="crucial">{{ item.action | translate }}</span>
+          <span class="tip">{{ item.content | translate }}</span>
+        </p>
+      </div>
+    </div>
     <elements-content-window *ngFor="let view of viewList" [view]="view"></elements-content-window>
   </div>
   <div

@@ -1,5 +1,11 @@
 {
   "Are you sure to reconnect it?(RDP not support)": "确定要重新连接吗? (RDP暂不支持)",
+  "Reselect connection method": "重新选择资产连接方式",
+  "Right click asset": "右击资产",
+  "Expand all asset": "展开当前节点下的全部资产",
+  "Right click node": "右击节点",
+  "Asset tree loading method": "配置资产树加载方式",
+  "Settings or basic settings": "设置 -> 基本设置",
   "Cancel": "取消",
   "Choose a User": "选择一个用户",
   "Clone Connect": "复制窗口",

@@ -206,3 +206,15 @@ tr:hover {
     border-bottom: 1px solid var(--primary-color);
   }
 }
+.system-tips {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: #a0a0a0;
+  overflow: hidden;
+  .crucial {
+    margin-right: 6px;
+    color: #7494f3;
+  }
+}
