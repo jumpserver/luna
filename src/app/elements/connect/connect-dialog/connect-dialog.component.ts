@@ -42,7 +42,7 @@ export class ElementConnectDialogComponent implements OnInit {
     this.preConnectData = this.data.preConnectData;
     this.protocols = this.getProtocols();
     if (this.protocols.length === 0) {
-      this.protocols = [{name: 'ssh', port: 22, public: true, setting: {sftp_enabled: true}}];
+      this.protocols = [{name: 'ssh', port: 22, public: true, setting: {}}];
     }
     this._settingSvc.appletConnectMethod$.subscribe((state) => {
       this.isAppletClientMethod = state === 'client';
