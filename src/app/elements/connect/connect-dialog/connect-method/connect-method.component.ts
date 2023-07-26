@@ -1,5 +1,5 @@
 import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
-import {ConnectMethod, ConnectOption, Protocol} from '@app/model';
+import {ConnectMethod, Protocol} from '@app/model';
 import {AppService, I18nService, SettingService} from '@app/services';
 
 @Component({
@@ -8,23 +8,6 @@ import {AppService, I18nService, SettingService} from '@app/services';
   styleUrls: ['./connect-method.component.scss']
 })
 export class ElementConnectMethodComponent implements OnInit {
-  private _protocol: Protocol;
-  @Input() set protocol(protocol: Protocol) {
-    this._protocol = protocol;
-    this.setConnectMethods();
-    this.connectMethod = this.connectMethods[0];
-  }
-  get protocol() {
-    return this._protocol;
-  }
-  private _connectMethod: ConnectMethod;
-  @Input() set connectMethod(c: ConnectMethod) {
-    this._connectMethod = c;
-    this.connectMethodChange.emit(c);
-  }
-  get connectMethod() {
-    return this._connectMethod;
-  }
   @Output() connectMethodChange = new EventEmitter<ConnectMethod>();
   @Output() onDownloadRDPFile = new EventEmitter<ConnectMethod>();
   public connectMethods = [];
@@ -32,9 +15,33 @@ export class ElementConnectMethodComponent implements OnInit {
   public isAppletClientMethod = false;
 
   constructor(private _i18n: I18nService,
-    private _appSvc: AppService,
-    private _settingSvc: SettingService
-  ) {}
+              private _appSvc: AppService,
+              private _settingSvc: SettingService
+  ) {
+  }
+
+  private _protocol: Protocol;
+
+  get protocol() {
+    return this._protocol;
+  }
+
+  @Input() set protocol(protocol: Protocol) {
+    this._protocol = protocol;
+    this.setConnectMethods();
+    this.connectMethod = this.connectMethods[0];
+  }
+
+  private _connectMethod: ConnectMethod;
+
+  get connectMethod() {
+    return this._connectMethod;
+  }
+
+  @Input() set connectMethod(c: ConnectMethod) {
+    this._connectMethod = c;
+    this.connectMethodChange.emit(c);
+  }
 
   ngOnInit() {
     this._settingSvc.appletConnectMethod$.subscribe((state) => {
@@ -59,26 +66,9 @@ export class ElementConnectMethodComponent implements OnInit {
 
   setConnectMethods() {
     this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
-    if (this.protocol.name === 'oracle') {
-      this.oracleFilterConnectMethods();
-    }
-    if (this.protocol.name === 'ssh') {
-      this.sshFilterConnectMethods();
-    }
     this.groupConnectMethods();
     if (!this.connectMethod || !this.connectMethod.value) {
       this.connectMethod = this.connectMethods[0];
-    }
-  }
-
-  oracleFilterConnectMethods() {
-    this.connectMethods = this.connectMethods.filter((item) => (item.value !== 'web_cli'));
-    this.connectMethod = this.connectMethods[0];
-  }
-
-  sshFilterConnectMethods() {
-    if (!this.protocol.setting.sftp_enabled) {
-      this.connectMethods = this.connectMethods.filter((item) => (item.value !== 'web_sftp'));
     }
   }
 
@@ -92,7 +82,9 @@ export class ElementConnectMethodComponent implements OnInit {
     for (const type of connectMethodTypes) {
       type['methods'] = this.connectMethods.filter((item) => item.type === type.value);
     }
-    this.connectMethodTypes = connectMethodTypes.filter((item) => item['methods'].length > 0);
+    this.connectMethodTypes = connectMethodTypes.filter((item) => {
+      return item['methods'].length > 0;
+    });
     // return connectMethodTypes;
   }
 
