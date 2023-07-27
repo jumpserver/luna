@@ -6,7 +6,7 @@
   height: 20px;
   display: inline-block;
   vertical-align: top;
-  border: 0px solid;
+  border: 0 solid;
   cursor: pointer;
   outline: none;
   background-color: transparent;
@@ -25,13 +25,11 @@
   }
 }
 
-
 .ztree li span.button::before {
   font-family: FontAwesome;
   padding-top: 10px;
   padding-left: 2px;
   display: inline-block;
-  color: #ffffff;
 }
 
 .ztree li span.button.chk {
@@ -321,7 +319,6 @@
   }
 
   &.roots_docu::before {
-    content: "\f114";
   }
 
   &.noline_docu {
