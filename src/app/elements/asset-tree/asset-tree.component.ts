@@ -42,14 +42,16 @@ class Tree {
   open: boolean;
   loading: boolean;
   search: boolean;
+  checkbox: boolean;
   ztree: any;
 
-  constructor(name, label, open, loading, search) {
+  constructor(name, label, open, loading, search, checkbox) {
     this.name = name;
     this.label = label;
     this.open = open;
     this.loading = loading;
     this.search = search;
+    this.checkbox = checkbox;
   }
 }
 
@@ -144,6 +146,11 @@ export class ElementAssetTreeComponent implements OnInit {
   searchValue = '';
   currentOrgID = '';
   trees: Array<Tree> = [];
+  assetTreeChecked = [];
+  hoverSearchTip: string = this._i18n.instant('Search');
+  hoverRefreshTip: string = this._i18n.instant('Refresh');
+  hoverCheckboxTip: string = this._i18n.instant('Checkbox');
+  hoverConnectTip: string = this._i18n.instant('Batch connect');
 
   ngOnInit() {
     this._settingSvc.isLoadTreeAsync$.subscribe((state) => {
@@ -168,6 +175,7 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   onNodeClick(event, treeId, treeNode, clickFlag) {
+    // debugger
     const ztree = this.trees.find(t => t.name === treeId).ztree;
     if (treeNode.isParent) {
       ztree.expandNode(treeNode);
@@ -184,12 +192,18 @@ export class ElementAssetTreeComponent implements OnInit {
     this.connectAsset(treeNode).then();
   }
 
+  onAssetTreeCheck(event, treeId) {
+    const ztree = this.trees.find(t => t.name === treeId).ztree;
+    this.assetTreeChecked = ztree.getCheckedNodes().filter(i => !i.isParent);
+  }
+
   async initK8sTree(refresh = false) {
     const tree = new Tree(
       'K8sTree',
       this._i18n.instant('Kubernetes'),
       true,
       true,
+      false,
       false
     );
     const token = this._route.snapshot.queryParams.token;
@@ -218,6 +232,7 @@ export class ElementAssetTreeComponent implements OnInit {
       'My assets',
       true,
       true,
+      true,
       true
     );
     this.initTreeInfo(tree, {
@@ -234,7 +249,8 @@ export class ElementAssetTreeComponent implements OnInit {
       this._i18n.instant('Type tree'),
       true,
       true,
-      false
+      false,
+      true
     );
     this.initTreeInfo(tree, {
       refresh,
@@ -261,6 +277,7 @@ export class ElementAssetTreeComponent implements OnInit {
         'leading': true,
         'trailing': false
       }).bind(this),
+      onCheck: this.onAssetTreeCheck.bind(this),
       onRightClick: this.onRightClick.bind(this)
     };
     if (this.isLoadTreeAsync) {
@@ -302,6 +319,30 @@ export class ElementAssetTreeComponent implements OnInit {
     });
   }
 
+  checkboxTree(event, tree) {
+    event.stopPropagation();
+    const treeObj = tree.ztree;
+    treeObj.setting.check.enable = !treeObj.setting.check.enable;
+    treeObj.refresh();
+  }
+
+  batchConnectAsset(event, tree) {
+    event.stopPropagation();
+    this.clearCheckedNodes(tree);
+  }
+
+  async clearCheckedNodes(tree) {
+    const treeObj = tree.ztree;
+    if (treeObj.setting.check.enable) {
+      const nodes = treeObj.getCheckedNodes();
+      for (let i = 0, len = nodes.length; i < len; i++) {
+        this.connectAsset(nodes[i]).then();
+        treeObj.checkNode(nodes[i], false, false);
+      }
+      this.assetTreeChecked = [];
+    }
+  }
+
   async refreshTree(event, tree) {
     event.stopPropagation();
     this.searchValue = '';
@@ -312,6 +353,8 @@ export class ElementAssetTreeComponent implements OnInit {
       if (tree.name === 'AssetTypeTree') { this.initTypeTree(true).then(); }
     }
   }
+
+
 
   async connectAsset(node: TreeNode) {
     const action = this.isK8s ? 'k8s' : 'asset';

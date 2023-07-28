@@ -30,6 +30,7 @@
         >
           <i
             class="fa fa-search tree-banner-icon"
+            [matTooltip]="hoverSearchTip"
             (click)="treeSearch($event, tree)"
           ></i>
           <input
@@ -40,7 +41,22 @@
           />
         </a>
         <i
+          *ngIf="tree.checkbox && assetTreeChecked.length < 1; else connect"
+          class="fa fa-check-square tree-banner-icon"
+          [matTooltip]="hoverCheckboxTip"
+          (click)="checkboxTree($event, tree)"
+        ></i>
+        <ng-template #connect>
+          <i
+            class="fa fa-terminal tree-banner-icon"
+            style="font-weight: 900;"
+            [matTooltip]="hoverConnectTip"
+            (click)="batchConnectAsset($event, tree)"
+          ></i>
+        </ng-template>
+        <i
           class="fa fa-refresh tree-banner-icon"
+          [matTooltip]="hoverRefreshTip"
           (click)="refreshTree($event, tree)"
         ></i>
       </span>
