@@ -17,7 +17,7 @@ function gotoLogin() {
   const currentPath = encodeURI(document.location.pathname + document.location.search);
   setTimeout(() => {
     window.location.href = document.location.origin + '/core/auth/login/?next=' + currentPath;
-  }, 1000);
+  }, 500);
 }
 
 @Injectable()
