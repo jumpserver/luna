@@ -15,7 +15,9 @@ declare function unescape(s: string): string;
 
 function gotoLogin() {
   const currentPath = encodeURI(document.location.pathname + document.location.search);
-  window.location.href = document.location.origin + '/core/auth/login/?next=' + currentPath;
+  setTimeout(() => {
+    window.location.href = document.location.origin + '/core/auth/login/?next=' + currentPath;
+  }, 1000);
 }
 
 @Injectable()
@@ -81,6 +83,7 @@ export class AppService {
     // Determine whether the user has logged in
     const sessionExpire = getCookie('jms_session_expire');
     if (!sessionExpire && !token) {
+      setCookie('jms_session_expire', 'close', 120);
       gotoLogin();
       return;
     } else if (sessionExpire === 'close') {
