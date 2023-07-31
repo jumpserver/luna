@@ -1,6 +1,7 @@
 import {Component, ElementRef, EventEmitter, OnInit, Output, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
 import {ConnectTokenService, I18nService, LogService, SettingService, ViewService} from '@app/services';
+import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
@@ -207,5 +208,9 @@ export class ElementContentComponent implements OnInit {
     this.showRMenu(x, y);
     this.rIdx = tabIdx;
     event.preventDefault();
+  }
+
+  onItemDropped(event: CdkDragDrop<string[]>) {
+    moveItemInArray(this.viewList, event.previousIndex, event.currentIndex);
   }
 }
