@@ -8,12 +8,21 @@
       <a (click)="scrollRight()" class="right"><i class="fa fa-caret-right"></i></a>
     </div>
     <div #tabs class="tabs">
-      <ul [ngStyle]="{'width':tabsWidth+'px'}">
+      <ul
+        cdkDropList
+        class="drag-list"
+        [ngStyle]="{'width':tabsWidth+'px'}"
+        cdkDropListOrientation="horizontal"
+        (cdkDropListDropped)="onItemDropped($event)"
+      >
         <elements-content-tab
+          *ngFor="let view of viewList;let i = index"
+          cdkDrag
+          class="drag-box"
+          cdkDragLockAxis="x"
+          [view]="view"
           (contextmenu)="onRightClick($event, i)"
           (onAction)="onViewAction($event)"
-          *ngFor="let view of viewList;let i = index"
-          [view]="view"
         >
         </elements-content-tab>
       </ul>
