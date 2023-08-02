@@ -10,6 +10,7 @@ import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 import {HttpClient, HttpClientModule} from '@angular/common/http';
 import {TranslateLoader, TranslateModule} from '@ngx-translate/core';
 import {TranslateHttpLoader} from '@ngx-translate/http-loader';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 // service
 import {AllServices} from '@app/services';
@@ -40,6 +41,7 @@ export function HttpLoaderFactory(http: HttpClient) {
 
 @NgModule({
   imports: [
+    DragDropModule,
     BrowserModule,
     InfiniteScrollModule,
     FormsModule,

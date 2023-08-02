@@ -410,9 +410,7 @@ export class Protocol {
   name: string;
   port: number;
   public: boolean;
-  setting: {
-    sftp_enabled: boolean
-  };
+  setting: any;
 }
 
 export class Endpoint {

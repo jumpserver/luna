@@ -98,9 +98,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           'name': type,
           'port': 443,
           'public': true,
-          'setting': {
-            sftp_enabled: true
-          }
+          'setting': {}
         };
         connectInfo.manualAuthInfo = {
           alias: account.alias,
