@@ -30,14 +30,15 @@ export class ElementContentComponent implements OnInit {
       content: 'Asset tree loading method',
       action: 'Settings or basic settings'
     }
-  ]
+  ];
 
   constructor(public viewSrv: ViewService,
               public settingSvc: SettingService,
               private _i18n: I18nService,
               private _logger: LogService,
               private _connectTokenSvc: ConnectTokenService,
-  ) {}
+  ) {
+  }
 
   get tabsWidth() {
     return (this.viewList.length + 1) * 151 + 10;
