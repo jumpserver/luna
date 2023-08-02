@@ -1,5 +1,11 @@
 {
   "Are you sure to reconnect it?(RDP not support)": "本当に再接続しますか? (RDPは一時的にサポートしていない)",
+  "Reselect connection method": "資産の接続方法の再選択",
+  "Right click asset": "右クリック資産",
+  "Expand all asset": "現在のノードの下にあるすべてのアセットを展開",
+  "Right click node": "右クリックノード",
+  "Asset tree loading method": "資産ツリーのロード方法の設定",
+  "Settings or basic settings": "設定 -> 基本設定",
   "Cancel": "キャンセル",
   "Choose a User": "ユーザーを選択します",
   "Clone Connect": "コピーウィンドウ",
