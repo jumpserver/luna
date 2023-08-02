@@ -9,20 +9,20 @@
     </div>
     <div #tabs class="tabs">
       <ul
-        cdkDropList
-        class="drag-list"
-        [ngStyle]="{'width':tabsWidth+'px'}"
-        cdkDropListOrientation="horizontal"
         (cdkDropListDropped)="onItemDropped($event)"
+        [ngStyle]="{'width':tabsWidth+'px'}"
+        cdkDropList
+        cdkDropListOrientation="horizontal"
+        class="drag-list"
       >
         <elements-content-tab
-          *ngFor="let view of viewList;let i = index"
-          cdkDrag
-          class="drag-box"
-          cdkDragLockAxis="x"
-          [view]="view"
           (contextmenu)="onRightClick($event, i)"
           (onAction)="onViewAction($event)"
+          *ngFor="let view of viewList;let i = index"
+          [view]="view"
+          cdkDrag
+          cdkDragLockAxis="x"
+          class="drag-box"
         >
         </elements-content-tab>
       </ul>
