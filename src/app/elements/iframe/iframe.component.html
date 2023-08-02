@@ -1,19 +1,23 @@
-<div *ngIf="debug">
-  <pre style="color: white; padding: 20px">{{ src }}</pre>
+<div [ngClass]="{'debug': debug}" class="frame-container">
+  <div *ngIf="debug" class="debug-msg">
+    <span style="color: white; padding: 20px">{{ src }}</span>
+  </div>
+
+  <div *ngIf="!showIframe" class="spinner-container">
+    <mat-spinner [diameter]="50" class="loading"></mat-spinner>
+  </div>
+
+  <iframe
+    #iFrame
+    *ngIf="src"
+    [id]="id"
+    [src]="src | safeUrl"
+    [style.visibility]="showIframe ? 'visible' : 'hidden'"
+    allowtransparency="true"
+    height="100%"
+    width="100%"
+  >
+  </iframe>
 </div>
 
-<div *ngIf="!show" class="container">
-  <mat-spinner [diameter]="50" class="loading"></mat-spinner>
-</div>
 
-<iframe
-  #iFrame
-  *ngIf="src"
-  [src]="src | safeUrl"
-  [id]="id"
-  [style.visibility]="show ? 'visible' : 'hidden'"
-  allowtransparency="true"
-  width="100%"
-  height="100%"
->
-</iframe>

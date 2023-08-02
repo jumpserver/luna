@@ -6,17 +6,18 @@ import {DataStore, User} from '@app/globals';
 import {HttpService} from './http';
 import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
-import {AuthInfo, ConnectData, Endpoint, View, Asset, Account} from '@app/model';
+import {Account, Asset, AuthInfo, ConnectData, Endpoint, Organization, View} from '@app/model';
 import * as CryptoJS from 'crypto-js';
 import {getCookie, setCookie} from '@app/utils/common';
 import {OrganizationService} from './organization';
-import {Organization} from '@app/model';
 
 declare function unescape(s: string): string;
 
 function gotoLogin() {
   const currentPath = encodeURI(document.location.pathname + document.location.search);
-  window.location.href = document.location.origin + '/core/auth/login/?next=' + currentPath;
+  setTimeout(() => {
+    window.location.href = document.location.origin + '/core/auth/login/?next=' + currentPath;
+  }, 500);
 }
 
 @Injectable()
@@ -49,7 +50,7 @@ export class AppService {
     // 设置logger level
     let logLevel = this._cookie.get('logLevel');
     if (!logLevel) {
-        logLevel = environment.production ? '1' : '5';
+      logLevel = environment.production ? '1' : '5';
     }
     this._logger.level = parseInt(logLevel, 10);
   }
@@ -82,6 +83,7 @@ export class AppService {
     // Determine whether the user has logged in
     const sessionExpire = getCookie('jms_session_expire');
     if (!sessionExpire && !token) {
+      setCookie('jms_session_expire', 'close', 120);
       gotoLogin();
       return;
     } else if (sessionExpire === 'close') {
@@ -101,7 +103,7 @@ export class AppService {
         // this._logger.error(err);
         User.logined = false;
         if (!token) {
-         gotoLogin();
+          gotoLogin();
         }
         // this._router.navigate(['login']);
       },
@@ -260,18 +262,20 @@ export class AppService {
   }
 
   getSmartEndpoint(view: View): Promise<Endpoint> {
-    let protocol = view.protocol;
+    let protocol = view.connectMethod.endpoint_protocol || view.protocol;
     if (protocol === 'http') {
       protocol = window.location.protocol.replace(':', '');
     }
-    const data = { 'assetId': '', 'sessionId': '', 'token': '' };
+    const data = {'assetId': '', 'sessionId': '', 'token': ''};
     if (view.connectToken) {
       data['token'] = view.connectToken.id;
     } else {
       data['assetId'] = view.asset.id;
     }
     const res = this._http.getSmartEndpoint(data, protocol);
-    res.catch((err) => { alert(err.error.detail); });
+    res.catch((err) => {
+      alert(err.error.detail);
+    });
     return res;
   }
 }

@@ -1,9 +1,10 @@
 import {ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
-import {Account, AccountGroup, Asset, AuthInfo} from '@app/model';
+import {Account, AccountGroup, Asset, AuthInfo, Protocol} from '@app/model';
 import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
 import {FormControl, Validators} from '@angular/forms';
 import {AppService, I18nService, LocalStorageService, LogService, SettingService} from '@app/services';
 import {takeUntil} from 'rxjs/operators';
+import {User} from '@app/globals';
 
 @Component({
   selector: 'elements-select-account',
@@ -16,6 +17,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @Input() onSubmit: BehaviorSubject<boolean>;
   @Input() onSubmit$: BehaviorSubject<boolean>;
   @Input() manualAuthInfo: AuthInfo;
+  @Input() protocol: Protocol;
   @Output() accountSelectedChange: EventEmitter<Account> = new EventEmitter<Account>();
   @ViewChild('username', {static: false}) usernameRef: ElementRef;
   @ViewChild('password', {static: false}) passwordRef: ElementRef;
@@ -47,6 +49,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   get noSecretAccounts() {
     return this.accounts
       .filter((item) => !item.has_secret)
+      .filter((item) => item.alias !== '@ANON')
       .sort((a, b) => {
         const eq = +a.username.startsWith('@') - +b.username.startsWith('@');
         if (eq !== 0) {
@@ -67,6 +70,31 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       });
   }
 
+  get anonymousAccounts() {
+    const allowAnonymousCategory = ['custom', 'web'];
+    return this.accounts.filter(item => {
+      return item.alias === '@ANON' && allowAnonymousCategory.indexOf(this.asset.category.value) >= 0;
+    });
+  }
+
+  get adDomain() {
+    if (!this.protocol || this.protocol.name !== 'rdp') {
+      return '';
+    }
+    const rdp = this.asset.protocols.find(item => item.name === 'rdp');
+    if (!rdp || !rdp.setting || typeof rdp.setting !== 'object') {
+      return '';
+    }
+    return rdp.setting['ad_domain'];
+  }
+
+  get showManualUsernameInput() {
+    if (!this.accountSelected) {
+      return false;
+    }
+    return this.accountSelected.username === '@INPUT' || this.accountSelected.alias === '@USER';
+  }
+
   public compareFn = (f1, f2) => f1 && f2 && f1.alias === f2.alias;
 
   ngOnInit() {
@@ -74,7 +102,11 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this.filteredUsersGroups.next(this.groupedAccounts.slice());
 
     if (this.accountSelected) {
-      this.manualAuthInfo.username = this.accountSelected.username.startsWith('@') ? '' : this.accountSelected.username;
+      const username = this.accountSelected.username;
+      this.manualAuthInfo.username = username.startsWith('@') ? '' : username;
+      if (username === '@USER') {
+        this.manualAuthInfo.username = User.username;
+      }
     }
 
     this.accountFilterCtl.valueChanges
@@ -110,35 +142,37 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   }
 
   groupAccounts() {
-    const groups = [];
+    let groups = [];
     const preAccountSelected = this.getPreAccountSelected();
     if (preAccountSelected) {
-      this.accountSelected = preAccountSelected;
       groups.push({
         name: this._i18n.instant('Last login'),
         accounts: [preAccountSelected]
       });
     }
 
-    if (this.hasSecretAccounts.length > 0) {
-      if (!this.accountSelected) {
-        this.accountSelected = this.hasSecretAccounts[0];
+    groups.push({
+      name: this._i18n.instant('With secret accounts'),
+      accounts: this.hasSecretAccounts
+    });
+    groups.push({
+      name: this._i18n.instant('Manual accounts'),
+      accounts: this.noSecretAccounts
+    });
+    groups.push({
+      name: this._i18n.instant('Special accounts'),
+      accounts: this.anonymousAccounts
+    });
+
+    groups = groups.filter(group => group.accounts.length > 0);
+
+    for (const group of groups) {
+      if (group.accounts.length > 0) {
+        this.accountSelected = group.accounts[0];
+        break;
       }
-      groups.push({
-        name: this._i18n.instant('With secret accounts'),
-        accounts: this.hasSecretAccounts
-      });
     }
 
-    if (this.noSecretAccounts.length > 0) {
-      if (!this.accountSelected) {
-        this.accountSelected = this.noSecretAccounts[0];
-      }
-      groups.push({
-        name: this._i18n.instant('Manual accounts'),
-        accounts: this.noSecretAccounts
-      });
-    }
     if (groups.length === 0) {
       groups.push({
         name: this._i18n.instant('No account available'),
@@ -189,22 +223,28 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }
     if (this.accountSelected.username === '@INPUT') {
       this.manualAuthInfo.username = '';
+    } else if (this.accountSelected.username === '@USER') {
+      this.manualAuthInfo.username = User.username;
     } else {
       this.manualAuthInfo.username = this.accountSelected.username;
     }
     this.manualAuthInfo.secret = '';
     this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id);
+    if (this.manualAuthInfo.username) {
+      this.localAuthItems = this.localAuthItems.filter(item => item.username === this.manualAuthInfo.username);
+    }
     if (this.localAuthItems && this.localAuthItems.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
     }
     this.setUsernamePlaceholder();
     setTimeout(() => {
-      if (this.manualAuthInfo.username) {
+      if (this.manualAuthInfo.username && this.passwordRef) {
         this.passwordRef.nativeElement.focus();
-      } else {
+      } else if (this.usernameRef) {
         this.usernameRef.nativeElement.focus();
       }
     }, 10);
+
     this._cdRef.detectChanges();
   }
 

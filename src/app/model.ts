@@ -185,15 +185,16 @@ export class ConnectMethod {
   value: string;
   type: string;
   component: string;
-
   disabled: boolean;
+  endpoint_protocol: string;
 
-  constructor(label: string, value: string, type: string, component: string, disabled: boolean = false) {
+  constructor(label: string, value: string, type: string, component: string, endpoint_protocol: string = '', disabled: boolean = false) {
     this.label = label;
     this.value = value;
     this.type = type;
     this.component = component;
     this.disabled = disabled;
+    this.endpoint_protocol = endpoint_protocol;
   }
 }
 
@@ -409,9 +410,7 @@ export class Protocol {
   name: string;
   port: number;
   public: boolean;
-  setting: {
-    sftp_enabled: boolean
-  };
+  setting: any;
 }
 
 export class Endpoint {

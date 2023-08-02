@@ -82,6 +82,9 @@ export class ElementConnectorMagnusComponent implements OnInit {
     if (this.showSetReusable) {
       this.infoItems.push({name: 'set_reusable', value: '', label: this._i18n.t('Set reusable')});
     }
+    this.infoItems.push(
+      {name: 'help_text', value: this._i18n.instant('Database token help text'), label: this._i18n.t('Help text')}
+    );
     this.info = this.infoItems.reduce((pre, current) => {
       pre[current.name] = current.value;
       return pre;

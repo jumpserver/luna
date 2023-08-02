@@ -1,46 +1,61 @@
 <div id="content">
   <div class="tab-bar">
+    <span (click)="toggleMenu.emit()" class="mobile-menu-icon">
+      <i class="fa fa-sitemap"></i>
+    </span>
     <div class="scroll-button">
-      <a class="left" (click)="scrollLeft()"><i class="fa fa-caret-left"></i></a>
-      <a class="right" (click)="scrollRight()"><i class="fa fa-caret-right"></i></a>
+      <a (click)="scrollLeft()" class="left"><i class="fa fa-caret-left"></i></a>
+      <a (click)="scrollRight()" class="right"><i class="fa fa-caret-right"></i></a>
     </div>
-    <div class="tabs" #tabs>
-      <ul [ngStyle]="{'width':tabsWidth+'px'}">
+    <div #tabs class="tabs">
+      <ul
+        cdkDropList
+        class="drag-list"
+        [ngStyle]="{'width':tabsWidth+'px'}"
+        cdkDropListOrientation="horizontal"
+        (cdkDropListDropped)="onItemDropped($event)"
+      >
         <elements-content-tab
           *ngFor="let view of viewList;let i = index"
+          cdkDrag
+          class="drag-box"
+          cdkDragLockAxis="x"
           [view]="view"
-          (onAction)="onViewAction($event)"
           (contextmenu)="onRightClick($event, i)"
+          (onAction)="onViewAction($event)"
         >
         </elements-content-tab>
       </ul>
     </div>
   </div>
-  <div id="winContainer">
-    <elements-content-window *ngFor="let view of viewList" [view]="view" ></elements-content-window>
+  <div [ngClass]="{'batch-input': showBatchCommand  }" id="winContainer">
+    <elements-content-window *ngFor="let view of viewList" [view]="view"></elements-content-window>
   </div>
   <div
-    *ngIf="settingSvc.setting.commandExecution"
-    [hidden]="!this.viewSrv.currentView || this.viewSrv.currentView.protocol != 'ssh'"
+    *ngIf="showBatchCommand"
     id="batchCommandDiv"
   >
-    <input placeholder=" {{'Send text to all ssh terminals'| translate }} ..."
-           maxlength="2048"
-           title="{{'Send text to all ssh terminals'| translate }} ..."
-           (keydown.enter)="sendBatchCommand()"
-           type="text" tabindex="2" spellcheck="false" [(ngModel)]="batchCommand">
+    <input
+      (keydown.enter)="sendBatchCommand()"
+      [(ngModel)]="batchCommand"
+      maxlength="2048"
+      placeholder=" {{'Send text to all ssh terminals'| translate }} ..."
+      spellcheck="false" tabindex="2"
+      title="{{'Send text to all ssh terminals'| translate }} ..."
+      type="text"
+    >
   </div>
 </div>
 
-<elements-connect [ngStyle]="{'display': 'none'}" (onNewView)="onNewView($event)" ></elements-connect>
+<elements-connect (onNewView)="onNewView($event)" [ngStyle]="{'display': 'none'}"></elements-connect>
 
-<div #rMenu *ngIf="isShowRMenu" class="view-menu" [style.top]="pos.top" [style.left]="pos.left">
+<div #rMenu *ngIf="isShowRMenu" [style.left]="pos.left" [style.top]="pos.top" class="view-menu">
   <table>
     <tbody>
     <tr *ngFor="let item of rMenuItems()" class="view-menu__item view-menu__item--separator">
       <ng-template [ngIf]="!item.disabled">
-        <td class="view-menu__data" (click)="item.callback()" >
-          <span class="view-menu__icon fa" [ngClass]="item.icon"></span> {{ item.title | translate }}
+        <td (click)="item.callback()" class="view-menu__data">
+          <span [ngClass]="item.icon" class="view-menu__icon fa"></span> {{ item.title | translate }}
         </td>
       </ng-template>
     </tr>

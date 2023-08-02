@@ -18,8 +18,7 @@ import {ElementReplayGuacamoleComponent} from './replay/guacamole/guacamole.comp
 import {ElementReplayJsonComponent} from './replay/json/json.component';
 import {ElementConnectorKokoComponent} from './content/content-window/koko/koko.component';
 import {ElementConnectorMagnusComponent} from './content/content-window/magnus/magnus.component';
-import {ElementConnectorLionComponent} from './content/content-window/lion/lion.component';
-import {ElementConnectorChenComponent} from '@app/elements/content/content-window/chen/chen.component';
+import {ElementConnectorDefaultComponent} from '@app/elements/content/content-window/default/default.component';
 import {ElementSelectAccountComponent} from './connect/connect-dialog/select-account/select-account.component';
 import {ElementReplayAsciicastComponent} from '@app/elements/replay/asciicast/asciicast.component';
 import {ElementAdvancedOptionComponent} from './connect/connect-dialog/advanced-option/advanced-option.component';
@@ -42,7 +41,6 @@ export const ElementComponents = [
   ElementNavComponent,
   ElementIframeComponent,
   ElementDialogAlertComponent,
-  ElementConnectorLionComponent,
   ElementAssetTreeComponent,
   ElementConnectorKokoComponent,
   ElementConnectorMagnusComponent,
@@ -55,7 +53,7 @@ export const ElementComponents = [
   DisabledAssetsDialogComponent,
   ElementSettingComponent,
   ElementConnectDialogComponent,
-  ElementConnectorChenComponent,
+  ElementConnectorDefaultComponent,
   ElementSelectAccountComponent,
   ElementReplayAsciicastComponent,
   ElementAdvancedOptionComponent,

@@ -6,25 +6,21 @@
   class="window"
 >
   <div *ngIf="!loading">
-    <elements-connector-lion
-      *ngSwitchCase="'lion'"
-      [view]="view"
-    >
-    </elements-connector-lion>
-    <elements-connector-chen
-      *ngSwitchCase="'chen'"
-      [view]="view"
-    >
-    </elements-connector-chen>
     <elements-connector-magnus
       *ngSwitchCase="'magnus'"
       [view]="view">
       >
     </elements-connector-magnus>
     <elements-connector-koko
-      *ngSwitchDefault
+      *ngSwitchCase="'koko'"
       [view]="view"
     >
     </elements-connector-koko>
+    <elements-connector-default
+      *ngSwitchDefault
+      [connector]="connector"
+      [view]="view"
+    >
+    </elements-connector-default>
   </div>
 </div>
