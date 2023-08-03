@@ -137,7 +137,7 @@ function createWatermarkDiv(content, {
       background-repeat:repeat;
       background-image:url('${base64Url}')`
   );
-  return watermarkDiv;
+  return {watermark: watermarkDiv, base64: base64Url};
 }
 
 export function canvasWaterMark({
@@ -149,12 +149,14 @@ export function canvasWaterMark({
                                 } = {}) {
 
   container.style.position = 'relative';
-  const watermarkDiv = createWatermarkDiv(content, settings);
+  const res = createWatermarkDiv(content, settings);
+  const watermarkDiv = res.watermark;
   container.insertBefore(watermarkDiv, container.firstChild);
 
   const config = {childList: true, attributes: true, subtree: true};
   // 监听dom节点的style属性变化
   const observer = new MutationObserver(mutations => {
+    console.log('Fond style changed, re-render watermark.');
     setTimeout(() => {
       const parent = watermarkDiv.parentElement;
       parent.removeChild(watermarkDiv);
@@ -162,6 +164,25 @@ export function canvasWaterMark({
     });
   });
   observer.observe(watermarkDiv, config);
+
+  const containerObserver = new MutationObserver(mutations => {
+    const removed = mutations.filter(m => m.type === 'childList' && m.removedNodes.length > 0);
+    if (removed.length === 0) {
+      return;
+    }
+    const removedNodes = removed[0].removedNodes;
+    if (removedNodes.length === 0) {
+      return;
+    }
+    const removedHtml = removedNodes[0]['outerHTML'];
+    if (removedHtml.indexOf(res.base64) < 0) {
+      return;
+    }
+    setTimeout(() => {
+      canvasWaterMark({container, content, settings});
+    });
+  });
+  containerObserver.observe(container, config);
 }
 
 export function windowOpen(url) {
