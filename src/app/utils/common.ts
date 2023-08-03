@@ -128,6 +128,8 @@ function createWatermarkDiv(content, {
 
   watermarkDiv.setAttribute('style', `
       position:absolute;
+      display:block;
+      visibility:visible;
       top:0;
       left:0;
       width:100%;
