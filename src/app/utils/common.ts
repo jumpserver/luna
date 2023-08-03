@@ -126,7 +126,7 @@ export function canvasWaterMark({
 
   const base64Url = canvas.toDataURL();
   const watermarkDiv = document.createElement('div');
-  watermarkDiv.classList.add('watermark')
+  watermarkDiv.classList.add('watermark');
   const config = { childList: true, attributes: true, subtree: true };
 
   watermarkDiv.setAttribute('style', `
@@ -143,10 +143,10 @@ export function canvasWaterMark({
 
   container.style.position = 'relative';
   container.insertBefore(watermarkDiv, container.firstChild);
-  
+
   // 监听dom节点的style属性变化
   const observer = new MutationObserver(mutations => {
-    const watermark = document.querySelector('.watermark')
+    const watermark = document.querySelector('.watermark');
     if (!watermark) {
       container.insertBefore(watermarkDiv, container.firstChild);
       return;
