@@ -148,7 +148,6 @@ export function canvasWaterMark({
   const observer = new MutationObserver(mutations => {
     const watermark = document.querySelector('.watermark')
     if (!watermark) {
-      console.log('Watermark deleted！！！');
       container.insertBefore(watermarkDiv, container.firstChild);
       return;
     }
