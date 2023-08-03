@@ -126,23 +126,8 @@ export function canvasWaterMark({
 
   const base64Url = canvas.toDataURL();
   const watermarkDiv = document.createElement('div');
-  const config = { attributes: true };
-
-  // 监听dom节点的style属性变化
-  const observer = new MutationObserver(mutations => {
-    const record = mutations[0];
-    if (record.type === 'attributes' && record.attributeName === 'style') {
-      setTimeout(() => {
-        observer.disconnect();
-        // 重新添加水印
-        watermarkDiv.style.width = '100%';
-        watermarkDiv.style.height = '100%';
-        watermarkDiv.style.backgroundImage = `url('${base64Url}')`;
-        observer.observe(watermarkDiv, config);
-      });
-    }
-  });
-  observer.observe(watermarkDiv, config);
+  watermarkDiv.classList.add('watermark')
+  const config = { childList: true, attributes: true, subtree: true };
 
   watermarkDiv.setAttribute('style', `
           position:absolute;
@@ -158,6 +143,27 @@ export function canvasWaterMark({
 
   container.style.position = 'relative';
   container.insertBefore(watermarkDiv, container.firstChild);
+  
+  // 监听dom节点的style属性变化
+  const observer = new MutationObserver(mutations => {
+    const watermark = document.querySelector('.watermark')
+    if (!watermark) {
+      console.log('Watermark deleted！！！');
+      container.insertBefore(watermarkDiv, container.firstChild);
+      return;
+    }
+    const record = mutations[0];
+    if (record.type === 'attributes' && record.attributeName === 'style') {
+      setTimeout(() => {
+        // 重新添加水印
+        watermarkDiv.style.width = '100%';
+        watermarkDiv.style.height = '100%';
+        watermarkDiv.style.backgroundImage = `url('${base64Url}')`;
+        observer.observe(watermarkDiv, config);
+      });
+    }
+  });
+  observer.observe(document.body, config);
 }
 
 export function windowOpen(url) {
