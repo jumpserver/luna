@@ -2,15 +2,15 @@ import {Terminal} from 'xterm';
 import {TreeNode} from '@app/model';
 
 export function groupBy(array, f) {
-    const groups = {};
-    array.forEach( function( o ) {
-        const group = JSON.stringify( f(o) );
-        groups[group] = groups[group] || [];
-        groups[group].push( o );
-    });
-    return Object.keys(groups).map( function( group ) {
-        return groups[group];
-    });
+  const groups = {};
+  array.forEach(function (o) {
+    const group = JSON.stringify(f(o));
+    groups[group] = groups[group] || [];
+    groups[group].push(o);
+  });
+  return Object.keys(groups).map(function (group) {
+    return groups[group];
+  });
 }
 
 export function newTerminal(fontSize?: number) {
@@ -23,48 +23,50 @@ export function newTerminal(fontSize?: number) {
     lineHeight = 1.2;
   }
   return new Terminal({
-      fontFamily: 'monaco, Consolas, "Lucida Console", monospace',
-      lineHeight: lineHeight,
-      fontSize: fontSize,
-      rightClickSelectsWord: true,
-      theme: {
-        background: '#1f1b1b'
-      }
+    fontFamily: 'monaco, Consolas, "Lucida Console", monospace',
+    lineHeight: lineHeight,
+    fontSize: fontSize,
+    rightClickSelectsWord: true,
+    theme: {
+      background: '#1f1b1b'
+    }
   });
 }
 
 export function setCookie(name, value, seconds) {
-   const d = new Date();
-   d.setTime(d.getTime() + seconds * 1000);
-   const expires = 'expires=' + d.toUTCString();
-   document.cookie = name + '=' + value + '; ' + expires;
+  const d = new Date();
+  d.setTime(d.getTime() + seconds * 1000);
+  const expires = 'expires=' + d.toUTCString();
+  document.cookie = name + '=' + value + '; ' + expires;
 }
 
 export function getCookie(name: string): string {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            // Does this cookie string begin with the name we want?
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      // Does this cookie string begin with the name we want?
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
     }
-    return cookieValue;
+  }
+  return cookieValue;
 }
 
 export function getCsrfTokenFromCookie(): string {
   let prefix = getCookie('SESSION_COOKIE_NAME_PREFIX');
-  if (!prefix || [`""`, `''`].indexOf(prefix) > -1) { prefix = ''; }
+  if (!prefix || [`""`, `''`].indexOf(prefix) > -1) {
+    prefix = '';
+  }
   const name = `${prefix}csrftoken`;
   return getCookie(name);
 }
 
 export function groupByProp(xs, key) {
-  return xs.reduce(function(rv, x) {
+  return xs.reduce(function (rv, x) {
     (rv[x[key]] = rv[x[key]] || []).push(x);
     return rv;
   }, {});
@@ -74,25 +76,21 @@ export function truncateCenter(s: string, l: number) {
   if (s.length <= l) {
     return s;
   }
-  const centerIndex = Math.ceil(l  / 2);
+  const centerIndex = Math.ceil(l / 2);
   return s.slice(0, centerIndex - 2) + '...' + s.slice(centerIndex + 1, l);
 }
 
-export function canvasWaterMark({
-    // 使用 ES6 的函数默认值方式设置参数的默认取值
-    // 具体参见 https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Functions/Default_parameters
-    container = document.body,
-    width = 300,
-    height = 300,
-    textAlign = 'center',
-    textBaseline = 'middle',
-    alpha = 0.3,
-    font = '20px monaco, microsoft yahei',
-    fillStyle = 'rgba(184, 184, 184, 0.8)',
-    content = 'JumpServer',
-    rotate = -45,
-    zIndex = 1000
-} = {}) {
+function createWatermarkDiv(content, {
+  width = 300,
+  height = 300,
+  textAlign = 'center',
+  textBaseline = 'middle',
+  alpha = 0.3,
+  font = '20px monaco, microsoft yahei',
+  fillStyle = 'rgba(184, 184, 184, 0.8)',
+  rotate = -45,
+  zIndex = 1000
+}) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
@@ -122,48 +120,48 @@ export function canvasWaterMark({
       y += _lineHeight;
     }
   }
+
   generateMultiLineText(ctx, content, width, 24);
 
   const base64Url = canvas.toDataURL();
   const watermarkDiv = document.createElement('div');
-  watermarkDiv.classList.add('watermark')
-  const config = { childList: true, attributes: true, subtree: true };
 
   watermarkDiv.setAttribute('style', `
-          position:absolute;
-          top:0;
-          left:0;
-          width:100%;
-          height:100%;
-          z-index:${zIndex};
-          pointer-events:none;
-          background-repeat:repeat;
-          background-image:url('${base64Url}')`
+      position:absolute;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      z-index:${zIndex};
+      pointer-events:none;
+      background-repeat:repeat;
+      background-image:url('${base64Url}')`
   );
+  return watermarkDiv;
+}
+
+export function canvasWaterMark({
+                                  // 使用 ES6 的函数默认值方式设置参数的默认取值
+                                  // 具体参见 https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Functions/Default_parameters
+                                  container = document.body,
+                                  content = 'JumpServer',
+                                  settings = {}
+                                } = {}) {
 
   container.style.position = 'relative';
+  const watermarkDiv = createWatermarkDiv(content, settings);
   container.insertBefore(watermarkDiv, container.firstChild);
-  
+
+  const config = {childList: true, attributes: true, subtree: true};
   // 监听dom节点的style属性变化
   const observer = new MutationObserver(mutations => {
-    const watermark = document.querySelector('.watermark')
-    if (!watermark) {
-      console.log('Watermark deleted！！！');
-      container.insertBefore(watermarkDiv, container.firstChild);
-      return;
-    }
-    const record = mutations[0];
-    if (record.type === 'attributes' && record.attributeName === 'style') {
-      setTimeout(() => {
-        // 重新添加水印
-        watermarkDiv.style.width = '100%';
-        watermarkDiv.style.height = '100%';
-        watermarkDiv.style.backgroundImage = `url('${base64Url}')`;
-        observer.observe(watermarkDiv, config);
-      });
-    }
+    setTimeout(() => {
+      const parent = watermarkDiv.parentElement;
+      parent.removeChild(watermarkDiv);
+      canvasWaterMark({container, content, settings});
+    });
   });
-  observer.observe(document.body, config);
+  observer.observe(watermarkDiv, config);
 }
 
 export function windowOpen(url) {
