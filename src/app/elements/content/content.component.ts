@@ -2,7 +2,6 @@ import {Component, ElementRef, EventEmitter, OnInit, Output, ViewChild} from '@a
 import {View, ViewAction} from '@app/model';
 import {ConnectTokenService, I18nService, LogService, SettingService, ViewService} from '@app/services';
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
-import {User} from '@app/globals';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
@@ -12,7 +11,6 @@ import * as jQuery from 'jquery/dist/jquery.min.js';
 })
 export class ElementContentComponent implements OnInit {
   @ViewChild('tabs', {static: false}) tabsRef: ElementRef;
-  @ViewChild('contentPlaceholder', {static: false}) contentPlaceholderRef: ElementRef;
   @Output() toggleMenu: EventEmitter<any> = new EventEmitter<any>();
   viewList: Array<View>;
   batchCommand: string;
@@ -55,19 +53,6 @@ export class ElementContentComponent implements OnInit {
   ngOnInit() {
     this.viewList = this.viewSrv.viewList;
     document.addEventListener('click', this.hideRMenu.bind(this), false);
-    this.createWaterMark();
-  }
-
-  createWaterMark() {
-    const t = setInterval(() => {
-      if (User.name) {
-        this.settingSvc.createWaterMarkIfNeed(
-          this.contentPlaceholderRef.nativeElement,
-          `${User.name}(${User.username})`
-        );
-        clearInterval(t);
-      }
-    }, 100);
   }
 
   onNewView(view) {
