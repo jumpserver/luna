@@ -126,19 +126,32 @@ function createWatermarkDiv(content, {
   const base64Url = canvas.toDataURL();
   const watermarkDiv = document.createElement('div');
 
-  watermarkDiv.setAttribute('style', `
-      position:absolute;
-      display:block;
-      visibility:visible;
-      top:0;
-      left:0;
-      width:100%;
-      height:100%;
-      z-index:${zIndex};
-      pointer-events:none;
-      background-repeat:repeat;
-      background-image:url('${base64Url}')`
-  );
+  const styles = {
+    position: 'absolute',
+    display: 'block',
+    visibility: 'visible',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    'z-index': zIndex,
+    'pointer-events': 'none',
+    'background-repeat': 'repeat',
+    'background-image': `url('${base64Url}')`
+  };
+  const layoutStyles = ['margin', 'padding', 'border'];
+  const directionStyles = ['top', 'right', 'bottom', 'left'];
+  layoutStyles.forEach(lay => {
+    directionStyles.forEach(direction => {
+      const key = `${lay}-${direction}`;
+      styles[key] = '0';
+    });
+  });
+  const style = Object.keys(styles)
+    .reduce((prev, key) => {
+      return `${prev}${key}:${styles[key]};`;
+    }, '');
+  watermarkDiv.setAttribute('style', style);
   return {watermark: watermarkDiv, base64: base64Url};
 }
 
@@ -156,7 +169,7 @@ export function canvasWaterMark({
   container.insertBefore(watermarkDiv, container.firstChild);
 
   const config = {childList: true, attributes: true, subtree: true};
-  // 监听dom节点的style属性变化
+  // 监听 dom 节点的 style 属性变化
   const observer = new MutationObserver(mutations => {
     console.log('Fond style changed, re-render watermark.');
     setTimeout(() => {
@@ -165,7 +178,7 @@ export function canvasWaterMark({
       canvasWaterMark({container, content, settings});
     });
   });
-  observer.observe(watermarkDiv, config);
+  observer.observe(watermarkDiv, {childList: false, attributes: true, subtree: false});
 
   const containerObserver = new MutationObserver(mutations => {
     const removed = mutations.filter(m => m.type === 'childList' && m.removedNodes.length > 0);
@@ -184,7 +197,7 @@ export function canvasWaterMark({
       canvasWaterMark({container, content, settings});
     });
   });
-  containerObserver.observe(container, config);
+  containerObserver.observe(container, {childList: true, attributes: false, subtree: false});
 }
 
 export function windowOpen(url) {
