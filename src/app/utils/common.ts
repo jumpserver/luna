@@ -134,6 +134,7 @@ function createWatermarkDiv(content, {
     left: 0,
     width: '100%',
     height: '100%',
+    opacity: 1,
     'z-index': zIndex,
     'pointer-events': 'none',
     'background-repeat': 'repeat',
@@ -168,15 +169,13 @@ export function canvasWaterMark({
   const watermarkDiv = res.watermark;
   container.insertBefore(watermarkDiv, container.firstChild);
 
-  const config = {childList: true, attributes: true, subtree: true};
   // 监听 dom 节点的 style 属性变化
   const observer = new MutationObserver(mutations => {
-    console.log('Fond style changed, re-render watermark.');
     setTimeout(() => {
-      const parent = watermarkDiv.parentElement;
-      parent.removeChild(watermarkDiv);
-      canvasWaterMark({container, content, settings});
-    });
+      container.removeChild(container.firstChild);
+      // 这里不用再新建了，因为下面监听了 container 的子节点变化，会重新创建的
+      // canvasWaterMark({container, content, settings});
+    }, 100);
   });
   observer.observe(watermarkDiv, {childList: false, attributes: true, subtree: false});
 
@@ -195,7 +194,7 @@ export function canvasWaterMark({
     }
     setTimeout(() => {
       canvasWaterMark({container, content, settings});
-    });
+    }, 100);
   });
   containerObserver.observe(container, {childList: true, attributes: false, subtree: false});
 }
