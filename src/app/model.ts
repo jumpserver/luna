@@ -317,6 +317,7 @@ export class Session {
   terminal: Terminal;
   user: string;
   user_id: string;
+  is_finished: boolean;
 }
 
 export class Terminal {
@@ -464,4 +465,17 @@ export class InitTreeConfig {
   setting?: any = {};
   showFavoriteAssets?: boolean = false;
   loadTreeAsyncUrl?: string;
+}
+
+export class Ticket {
+  id: string;
+  title: string;
+  type: {
+    value: string,
+    label: string,
+  };
+  status: {
+    value: string,
+    label: string,
+  }
 }
