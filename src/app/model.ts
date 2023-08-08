@@ -465,3 +465,16 @@ export class InitTreeConfig {
   showFavoriteAssets?: boolean = false;
   loadTreeAsyncUrl?: string;
 }
+
+export class Ticket {
+  id: string;
+  title: string;
+  type: {
+    value: string,
+    label: string,
+  };
+  status: {
+    value: string,
+    label: string,
+  }
+}

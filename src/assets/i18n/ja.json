@@ -157,5 +157,10 @@
   "The connection method is invalid, please refresh the page": "接続方法が無効です。ページを更新してください",
   "Special account": "特別なアカウント",
   "Database token help text": "  クライアントが接続するデータベースの種類のトークンは、コンポーネントによって5分間キャッシュされます。つまり、トークンは使用後すぐに無効になるわけではありませんが、クライアントが切断されてから5分後に無効になります",
-  "Help text": "します"
+  "Help text": "します",
+  "Pause task has been send": "一時停止タスクが送信されました",
+  "Resume task has been send": "タスクが再開されました",
+  "Action: ": "アクション: ",
+  "Pause": "タスクを一時停止",
+  "Resume": "タスクを再開"
 }

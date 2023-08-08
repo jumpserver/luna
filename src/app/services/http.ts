@@ -2,7 +2,8 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpErrorResponse, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Browser, User} from '@app/globals';
 import {catchError, delay, map, retryWhen, scan} from 'rxjs/operators';
-import {Account, Asset, ConnectData, ConnectionToken, Endpoint, Session, TreeNode, User as _User} from '@app/model';
+import {Account, Asset, ConnectData, ConnectionToken,
+  Endpoint, Session, TreeNode, User as _User, Ticket} from '@app/model';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
@@ -315,5 +316,28 @@ export class HttpService {
       url.searchParams.append('token', token);
     }
     return this.get(url.href).pipe(map(res => Object.assign(new Endpoint(), res))).toPromise();
+  }
+
+  getTicketDetail(ticketId: string): Promise<Ticket> {
+    const url = `/api/v1/tickets/tickets/${ticketId}/`;
+    return this.get<Ticket>(url).toPromise();
+  }
+
+  toggleLockSession(sessionId: string, lock: boolean):Promise<any> {
+    const url = `/api/v1/terminal/tasks/toggle-lock-session/`;
+    const taskName = lock ? 'lock_session' : 'unlock_session';
+    const data = {
+      session_id: sessionId,
+      task_name: taskName};
+    return this.post(url, data).toPromise();
+  }
+
+  toggleLockSessionForTicket(ticketId: string, sessionId:string, lock: boolean):Promise<any> {
+    const url = `/api/v1/terminal/tasks/toggle-lock-session-for-ticket/`;
+    const taskName = lock ? 'lock_session' : 'unlock_session';
+    const data = {
+      session_id: sessionId,
+      task_name: taskName};
+    return this.post(url, data).toPromise();
   }
 }

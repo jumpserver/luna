@@ -16,6 +16,14 @@
       <li>
         <p>{{ 'Protocol: ' | translate:{value: sessionDetail.protocol} }}</p>
       </li>
+      <li *ngIf="sessionDetail.can_join">
+       <p> {{ 'Action: ' | translate  }}
+         <button (click)="togglePause($event)">
+            <span *ngIf="!isPaused">{{ 'Pause' | translate }}</span>
+            <span *ngIf="isPaused">{{ 'Resume' | translate }}</span>
+         </button>
+       </p>
+      </li>
     </ng-container>
   </ul>
 </div>
