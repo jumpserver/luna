@@ -317,6 +317,7 @@ export class Session {
   terminal: Terminal;
   user: string;
   user_id: string;
+  is_finished: boolean;
 }
 
 export class Terminal {

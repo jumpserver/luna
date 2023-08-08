@@ -37,12 +37,10 @@ export class PagesMonitorComponent implements OnInit {
       });
     });
     this._route.queryParams.subscribe(params => {
-      console.log(params, "queryParams")
       this.ticketID = params['ticket_id'];
       if (this.ticketID) {
         this._http.getTicketDetail(this.ticketID).then((res) => {
           this.ticketDetail = res;
-          console.log(this.ticketDetail, "ticketDetail")
         });
       }
     });
@@ -64,6 +62,9 @@ export class PagesMonitorComponent implements OnInit {
   togglePause($event) {
     if (!this.sessionDetail) {
       return
+    }
+    if (this.sessionDetail.is_finished) {
+      return;
     }
     if (this.ticketID && !this.ticketDetail) {
       this._http.toggleLockSessionForTicket(this.ticketID, this.sessionID, !this.isPaused
