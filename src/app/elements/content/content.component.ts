@@ -160,7 +160,7 @@ export class ElementContentComponent implements OnInit {
       },
       {
         title: 'Close All Tabs',
-        icon: 'fa-close',
+        icon: '',
         disabled: this.viewList.length === 0,
         callback: () => {
           while (this.viewList.length > 0) {
@@ -170,7 +170,7 @@ export class ElementContentComponent implements OnInit {
       },
       {
         title: 'Close Other Tabs',
-        icon: 'fa-close',
+        icon: '',
         disabled: this.viewList.length <= 1,
         callback: () => {
           for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
@@ -183,7 +183,7 @@ export class ElementContentComponent implements OnInit {
       },
       {
         title: 'Close Left Tabs',
-        icon: 'fa-close',
+        icon: '',
         callback: () => {
           const keepNum = this.viewList.length - this.rIdx;
           while (this.viewList.length > keepNum) {
@@ -194,7 +194,7 @@ export class ElementContentComponent implements OnInit {
       },
       {
         title: 'Close Right Tabs',
-        icon: 'fa-close',
+        icon: '',
         callback: () => {
           for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
             this.closeView(this.viewList[i].asset);
