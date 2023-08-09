@@ -1,14 +1,9 @@
 import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {Account, Asset, ConnectionToken, Endpoint, View} from '@app/model';
-import {I18nService, LogService} from '@app/services';
-import {MatTooltip} from '@angular/material/tooltip';
+import {ConnectTokenService, HttpService, I18nService, LogService} from '@app/services';
 import {User} from '@app/globals';
+import {Command, InfoItem} from '../guide/model';
 
-interface InfoItem {
-  name: string;
-  value: string;
-  label: any;
-}
 
 @Component({
   selector: 'elements-connector-koko',
@@ -18,7 +13,6 @@ interface InfoItem {
 export class ElementConnectorKokoComponent implements OnInit {
   @Input() view: View;
   @ViewChild('terminal', {static: false}) iframe: ElementRef;
-  @ViewChild(MatTooltip, {static: false}) tooltip: MatTooltip;
 
   iframeURL: any;
   asset: Asset;
@@ -26,20 +20,18 @@ export class ElementConnectorKokoComponent implements OnInit {
   baseUrl: string;
   token: ConnectionToken;
 
-  infoItems: Array<InfoItem>;
+  infoItems: Array<InfoItem> = [];
+  commands: Array<Command> = [];
   info: any;
-  cliSafe: string;
-  cli: string;
-  cliDirect: string;
   account: Account;
   endpoint: Endpoint;
-  hoverClipTip: string;
   methodName: string;
-  passwordShow: string = '******';
-  passwordMask: string = '******';
+  loading = false;
 
   constructor(private _logger: LogService,
               private _i18n: I18nService,
+              private _http: HttpService,
+              private _connectTokenSvc: ConnectTokenService,
   ) {
   }
 
@@ -59,6 +51,7 @@ export class ElementConnectorKokoComponent implements OnInit {
     } else {
       this.generateIframeURL();
     }
+    this.view.termComp = this;
   }
 
   setInfoItems() {
@@ -77,21 +70,31 @@ export class ElementConnectorKokoComponent implements OnInit {
     }, {});
   }
 
-  showPassword($event) {
-    $event.stopPropagation();
-    if (this.passwordShow === this.passwordMask) {
-      this.passwordShow = this.info.password;
-    } else {
-      this.passwordShow = this.passwordMask;
-    }
-  }
-
   generateCli() {
     const port = this.endpoint.getPort('ssh');
-    this.cli = `ssh -l JMS-${this.token.id} -p ${port} ${this.endpoint.host}`;
-    this.cliSafe = this.cli;
+    let cli = `ssh JMS-${this.token.id}@${this.endpoint.host}`;
+    let cliDirect = `ssh ${User.username}#${this.account.username}#${this.asset.id}@${this.endpoint.host}`;
+    if (port !== '22') {
+      cli += ` -p ${port}`;
+      cliDirect += ` -p ${port}`;
+    }
 
-    this.cliDirect = `ssh -l ${User.username}#${this.account.username}#${this.asset.id} -p ${port} ${this.endpoint.host}`;
+    this.commands = [
+      {
+        title: this._i18n.instant('Connect command line') + ' (' + this._i18n.instant('Using token') + ')',
+        value: cli,
+        safeValue: cli,
+        helpText: this._i18n.instant('Password is token password on the table'),
+        callClient: true
+      },
+      {
+        title: this._i18n.instant('Connect command line') + ' (' + this._i18n.instant('Directly') + ')',
+        value: cliDirect,
+        safeValue: cliDirect,
+        helpText: this._i18n.instant('Password is your password login to system'),
+        callClient: true
+      }
+    ];
   }
 
   generateIframeURL() {
@@ -116,7 +119,6 @@ export class ElementConnectorKokoComponent implements OnInit {
 
   generateNodeConnectUrl() {
     const params = {};
-
     params['disableautohash'] = this.view.getConnectOption('disableautohash');
     params['token'] = this.view.connectToken.id;
     if (this.view.k8sInfo) {
@@ -139,16 +141,16 @@ export class ElementConnectorKokoComponent implements OnInit {
     this.iframeURL = `${this.baseUrl}/elfinder/sftp/?token=${this.view.connectToken.id}&asset=${this.asset.id}`;
   }
 
-  async onCopySuccess(evt) {
-    this.hoverClipTip = this._i18n.instant('Copied');
+  async reconnect() {
+    this.loading = true;
+    const oldConnectToken = this.view.connectToken;
+    const newConnectToken = await this._connectTokenSvc.exchange(oldConnectToken);
+    if (!newConnectToken) {
+      return;
+    }
+    // 更新当前 view 的 connectToken
+    this.view.connectToken = newConnectToken;
+    await this.ngOnInit();
+    this.loading = false;
   }
-
-  onHoverClipRef(evt) {
-    this.hoverClipTip = this._i18n.instant('Click to copy');
-  }
-
-  startClient(event) {
-
-  }
-
 }
