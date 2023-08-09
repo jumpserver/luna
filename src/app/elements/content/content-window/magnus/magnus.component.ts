@@ -24,7 +24,6 @@ export class ElementConnectorMagnusComponent implements OnInit {
   asset: Asset;
   account: Account;
   protocol: string;
-  expire_time: string;
   endpoint: Endpoint;
   name: string;
   cli: string;

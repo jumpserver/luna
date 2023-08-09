@@ -1,2 +1,84 @@
+<div *ngIf="methodName === 'ssh_guide'" class="ssh-guide">
+  <div>
+    <h2 class="subject">{{ 'Asset connect info' | translate }}</h2>
+    <table>
+      <tr *ngFor="let item of infoItems">
+        <td class="title">{{ item.label | async }} </td>
+        <td
+          #tooltip="matTooltip"
+          (cbOnSuccess)="onCopySuccess($event)"
+          (mouseenter)="onHoverClipRef($event)"
+          [cbContent]="item.value"
+          [matTooltip]="hoverClipTip"
+          class="text-td"
+          matTooltipPosition="right"
+          ngxClipboard
+        >
+          <span (click)="showPassword($event)" *ngIf="item.name === 'password'" class="show-password">
+            <span style="vertical-align: middle">
+              {{ passwordShow }}
+            </span>
+            <i class="fa fa-eye"></i>
+          </span>
+          <span *ngIf="item.name !== 'password'">
+            {{ this.info[item.name] }}
+          </span>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div>
+    <h2 class="subject">
+      {{ 'Command line' | translate }}
+    </h2>
+    <div class="command">
+      <pre>$ {{ cliSafe }}</pre>
+      <span #tooltip="matTooltip"
+            (click)="startClient()"
+            [matTooltip]="'Run it by client' | translate"
+            class="start btn"
+      >
+        <i class="fa fa-caret-square-o-right icon"></i>
+      </span>
+      <span
+        #tooltip="matTooltip"
+        (cbOnSuccess)="onCopySuccess($event)"
+        (mouseenter)="onHoverClipRef($event)"
+        [cbContent]="cli"
+        [matTooltip]="hoverClipTip"
+        class="btn"
+        ngxClipboard
+      >
+        <i class="fa fa-clone icon"></i>
+      </span>
+    </div>
+  </div>
+  <div *ngIf="cliDirect">
+    <h2 class="subject">
+      {{ 'Command line for direct' | translate }}
+    </h2>
+    <div class="command">
+      <pre>$ {{ cliDirect }}</pre>
+      <span #tooltip="matTooltip"
+            (click)="startClient"
+            [matTooltip]="'Run it by client' | translate"
+            class="start btn"
+      >
+        <i class="fa fa-caret-square-o-right icon"></i>
+      </span>
+      <span
+        #tooltip="matTooltip"
+        (cbOnSuccess)="onCopySuccess($event)"
+        (mouseenter)="onHoverClipRef($event)"
+        [cbContent]="cliDirect"
+        [matTooltip]="hoverClipTip"
+        class="btn"
+        ngxClipboard
+      >
+        <i class="fa fa-clone icon"></i>
+      </span>
+    </div>
+</div>
+
 <elements-iframe *ngIf="iframeURL" [src]="iframeURL" [view]="view">
 </elements-iframe>

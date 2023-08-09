@@ -28,6 +28,7 @@ export class ElementContentWindowComponent implements OnInit {
     await this.computeConnector();
     this.createWaterMark();
     this.view.smartEndpoint = await this._appSvc.getSmartEndpoint(this.view);
+    console.log('view', this.view);
     setTimeout(() => {
       this.loading = false;
     }, 1000);
@@ -48,6 +49,5 @@ export class ElementContentWindowComponent implements OnInit {
     } else {
       this.connector = connectData.connectMethod.component;
     }
-
   }
 }
