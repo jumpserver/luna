@@ -17,6 +17,7 @@ export class PagesMonitorComponent implements OnInit {
   isPaused : boolean = false;
   ticketID: string;
   ticketDetail: Ticket;
+  supportedLock: boolean = false;
 
   constructor(private _appService: AppService,
               private _settingSvc: SettingService,
@@ -48,6 +49,8 @@ export class PagesMonitorComponent implements OnInit {
 
   async generateMonitorURL() {
     this.sessionDetail = await this._http.getSessionDetail(this.sessionID);
+    const supportedType = ['koko', 'lion', 'magnus', 'chen', 'kael'];
+    this.supportedLock = supportedType.includes(this.sessionDetail.terminal.type);
     const protocol = window.location.protocol.replace(':', '');
     const data = { 'assetId': '', 'appId': '', 'sessionId': this.sessionID, 'token': ''};
     const smartEndpoint = await this._http.getSmartEndpoint(data, protocol);
