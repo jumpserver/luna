@@ -164,6 +164,10 @@
   "Resume task has been send": "恢复任务已发送",
   "Action: ": "操作: ",
   "Pause": "暂停",
-  "Resume": "恢复"
+  "Resume": "恢复",
+  "connect info": "连接信息",
+  "Connect command line": "连接命令行",
+  "Using token": "使用 Token",
+  "Directly": "直接方式"
 }
 

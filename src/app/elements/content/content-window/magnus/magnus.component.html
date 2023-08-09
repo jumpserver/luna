@@ -1,67 +1,7 @@
-<div *ngIf="!loading" class="content">
-  <div>
-    <h2 class="subject">{{ 'Database connect info' | translate }}</h2>
-    <table>
-      <tr *ngFor="let item of infoItems">
-        <td class="title">{{ item.label | async }} </td>
-        <td
-          #tooltip="matTooltip"
-          (cbOnSuccess)="onCopySuccess($event)"
-          (mouseenter)="onHoverClipRef($event)"
-          [cbContent]="this.info[item.name]"
-          [matTooltip]="hoverClipTip"
-          class="text-td"
-          matTooltipPosition="right"
-          ngxClipboard
-        >
-          <span (click)="showPassword($event)" *ngIf="item.name === 'password'" class="show-password">
-            <span style="vertical-align: middle">
-              {{ passwordShow }}
-            </span>
-            <i class="fa fa-eye"></i>
-          </span>
-          <span *ngIf="item.name !== 'password' && item.name !== 'set_reusable'">
-            {{ this.info[item.name] }}
-          </span>
-          <span *ngIf="item.name == 'set_reusable'" class="reusable-button">
-            <mat-slide-toggle
-              (change)="setReusable($event)"
-              [(ngModel)]="token.is_reusable"
-            >
-              {{ "Re-use for a long time after opening" | translate }}
-            </mat-slide-toggle>
-          </span>
-          <span class="btn">
-            <i class="fa fa-clone icon"></i>
-          </span>
-        </td>
-      </tr>
-    </table>
-  </div>
-  <div>
-    <h2 class="subject">
-      {{ 'Command line' | translate }}
-    </h2>
-    <div class="command">
-      <pre>$ {{ cliSafe }}</pre>
-      <span #tooltip="matTooltip"
-            (click)="startClient()"
-            [matTooltip]="'Run it by client' | translate"
-            class="start btn"
-      >
-        <i class="fa fa-caret-square-o-right icon"></i>
-      </span>
-      <span
-        #tooltip="matTooltip"
-        (cbOnSuccess)="onCopySuccess($event)"
-        (mouseenter)="onHoverClipRef($event)"
-        [cbContent]="cli"
-        [matTooltip]="hoverClipTip"
-        class="btn"
-        ngxClipboard
-      >
-        <i class="fa fa-clone icon"></i>
-      </span>
-    </div>
-  </div>
-</div>
+<elements-connector-guide
+  [assetType]="('Database' | translate)"
+  [canReuse]="true"
+  [commands]="commands"
+  [infoItems]="infoItems"
+  [token]="token"
+></elements-connector-guide>

@@ -2,8 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpErrorResponse, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Browser, User} from '@app/globals';
 import {catchError, delay, map, retryWhen, scan} from 'rxjs/operators';
-import {Account, Asset, ConnectData, ConnectionToken,
-  Endpoint, Session, TreeNode, User as _User, Ticket} from '@app/model';
+import {Account, Asset, ConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
@@ -281,7 +280,7 @@ export class HttpService {
     return window.open(url.href);
   }
 
-  getLocalClientUrl(token, params: Object) {
+  getLocalClientUrl(token, params: Object = {}) {
     const url = new URL(`/api/v1/authentication/connection-token/${token.id}/client-url/`, window.location.origin);
     params = this.cleanRDPParams(params);
     if (params) {
@@ -292,6 +291,24 @@ export class HttpService {
     return this.get(url.href).pipe(
       catchError(this.handleConnectMethodExpiredError.bind(this))
     );
+  }
+
+  getLocalClientUrlAndSetCommand(token, command: string, params: Object = {}) {
+    const setCommand = (res) => {
+      const protocol = 'jms://';
+      const buf = res.url.replace(protocol, '');
+      const bufObj = JSON.parse(window.atob(buf));
+      bufObj['command'] = command;
+      const bufStr = window.btoa(JSON.stringify(bufObj));
+      res.url = protocol + bufStr;
+      return res;
+    };
+    return new Promise((resolve, reject) => {
+      this.getLocalClientUrl(token, params).subscribe(
+        res => resolve(setCommand(res)),
+        err => reject(err)
+      );
+    });
   }
 
   async handleConnectMethodExpiredError(error) {
@@ -323,21 +340,23 @@ export class HttpService {
     return this.get<Ticket>(url).toPromise();
   }
 
-  toggleLockSession(sessionId: string, lock: boolean):Promise<any> {
+  toggleLockSession(sessionId: string, lock: boolean): Promise<any> {
     const url = `/api/v1/terminal/tasks/toggle-lock-session/`;
     const taskName = lock ? 'lock_session' : 'unlock_session';
     const data = {
       session_id: sessionId,
-      task_name: taskName};
+      task_name: taskName
+    };
     return this.post(url, data).toPromise();
   }
 
-  toggleLockSessionForTicket(ticketId: string, sessionId:string, lock: boolean):Promise<any> {
+  toggleLockSessionForTicket(ticketId: string, sessionId: string, lock: boolean): Promise<any> {
     const url = `/api/v1/terminal/tasks/toggle-lock-session-for-ticket/`;
     const taskName = lock ? 'lock_session' : 'unlock_session';
     const data = {
       session_id: sessionId,
-      task_name: taskName};
+      task_name: taskName
+    };
     return this.post(url, data).toPromise();
   }
 }

@@ -162,5 +162,9 @@
   "Resume task has been send": "タスクが再開されました",
   "Action: ": "アクション: ",
   "Pause": "タスクを一時停止",
-  "Resume": "タスクを再開"
+  "Resume": "タスクを再開",
+  "connect info": "接続情報",
+  "Connect command line": "接続コマンドライン",
+  "Using token": "トークンを使用する",
+  "Directly": "直接接続"
 }
