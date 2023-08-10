@@ -217,7 +217,7 @@ export class HttpService {
 
   cleanRDPParams(params) {
     const cleanedParams = {};
-    const {rdpResolution, rdpFullScreen, rdpDrivesRedirect} = params;
+    const {rdpResolution, rdpFullScreen, rdpMultiScreen, rdpDrivesRedirect} = params;
 
     if (rdpResolution && rdpResolution.indexOf('x') > -1) {
       const [width, height] = rdpResolution.split('x');
@@ -226,6 +226,9 @@ export class HttpService {
     }
     if (rdpFullScreen) {
       cleanedParams['full_screen'] = '1';
+    }
+    if (rdpMultiScreen) {
+      cleanedParams['multi_mon'] = '1';
     }
     if (rdpDrivesRedirect) {
       cleanedParams['drives_redirect'] = '1';

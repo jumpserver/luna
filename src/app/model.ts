@@ -275,6 +275,7 @@ export class GlobalSetting {
 export class Setting {
   rdpResolution: string = 'Auto';
   rdpFullScreen: number = 1;
+  rdpMultiScreen: number = 0;
   rdpDrivesRedirect: number = 0;
   fontSize: number = 14;
   backspaceAsCtrlH: string = '0';
