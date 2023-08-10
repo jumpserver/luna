@@ -160,5 +160,9 @@
   "Resume task has been send": "Resume task has been send",
   "Action: ": "Action:",
   "Pause": "Pause",
-  "Resume": "Resume"
+  "Resume": "Resume",
+  "connect info": "connect info",
+  "Connect command line": "Connect command line",
+  "Using token": "Using token",
+  "Directly": "Directly"
 }
