@@ -29,6 +29,10 @@ export class ElementContentComponent implements OnInit {
     {
       content: 'Asset tree loading method',
       action: 'Settings or basic settings'
+    },
+    {
+      content: 'Download the latest client',
+      action: 'Help or download'
     }
   ];
 
