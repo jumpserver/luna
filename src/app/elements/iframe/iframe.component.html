@@ -9,9 +9,8 @@
 
   <iframe
     #iFrame
-    *ngIf="src"
     [id]="id"
-    [src]="src | safeUrl"
+    [src]="safeSrc"
     [style.visibility]="showIframe ? 'visible' : 'hidden'"
     allowtransparency="true"
     height="100%"
