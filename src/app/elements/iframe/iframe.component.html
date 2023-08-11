@@ -10,7 +10,7 @@
   <iframe
     #iFrame
     [id]="id"
-    [src]="safeSrc"
+    [src]="src | safeUrl"
     [style.visibility]="showIframe ? 'visible' : 'hidden'"
     allowtransparency="true"
     height="100%"
