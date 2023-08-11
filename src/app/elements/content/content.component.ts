@@ -35,7 +35,7 @@ export class ElementContentComponent implements OnInit {
       action: 'Help or download'
     }
   ];
-  viewTabs: Array<string> = [];
+  viewIds: Array<string> = [];
 
   constructor(public viewSrv: ViewService,
               public settingSvc: SettingService,
@@ -61,7 +61,7 @@ export class ElementContentComponent implements OnInit {
 
   ngOnInit() {
     this.viewList = this.viewSrv.viewList;
-    this.viewTabs = this.viewSrv.viewIds;
+    this.viewIds = this.viewSrv.viewIds;
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
@@ -241,6 +241,6 @@ export class ElementContentComponent implements OnInit {
   }
 
   onItemDropped(event: CdkDragDrop<string[]>) {
-    moveItemInArray(this.viewTabs, event.previousIndex, event.currentIndex);
+    moveItemInArray(this.viewIds, event.previousIndex, event.currentIndex);
   }
 }
