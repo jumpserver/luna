@@ -152,5 +152,10 @@
   "The connection method is invalid, please refresh the page": "The connection method is invalid, please refresh the page",
   "Special accounts": "Special accounts",
   "Database token help text": "The database type token that the client connects to will be cached by the component for 5 minutes, which means that the token will not be invalidated immediately after it is used, but five minutes after the client disconnects",
-  "Help text": "Help text"
+  "Help text": "Help text",
+  "Connect checked": "Connect checked",
+  "Batch actions": "Batch actions",
+  "Expand": "Expand",
+  "Expand all": "Expand all",
+  "Collapse": "Collapse"
 }

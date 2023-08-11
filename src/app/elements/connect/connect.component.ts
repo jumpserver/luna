@@ -269,6 +269,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       });
     }
 
+    this._appSvc.connectDialogShown = true;
     const dialogRef = this._dialog.open(ElementConnectDialogComponent, {
       minHeight: '300px',
       height: 'auto',
@@ -278,6 +279,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
     return new Promise<ConnectData>(resolve => {
       dialogRef.afterClosed().subscribe(outputData => {
+        this._appSvc.connectDialogShown = false;
         resolve(outputData);
       });
     });

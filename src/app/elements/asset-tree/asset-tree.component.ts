@@ -1,18 +1,23 @@
-import {Component, Input, OnInit, ElementRef, ViewChild, Inject} from '@angular/core';
-import {MatDialog, MatDialogRef, MAT_DIALOG_DATA} from '@angular/material';
+import {Component, ElementRef, Inject, Input, OnInit, ViewChild} from '@angular/core';
+import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
 import {ToastrService} from 'ngx-toastr';
-import {groupBy, connectOnNewPage} from '@app/utils/common';
-import {DEFAULT_ORG_ID, SYSTEM_ORG_ID} from '@app/globals';
+import {connectOnNewPage, groupBy} from '@app/utils/common';
+import {connectEvt, DEFAULT_ORG_ID, SYSTEM_ORG_ID} from '@app/globals';
 import * as _ from 'lodash';
 import {
-  AppService, HttpService, LogService, SettingService,
-  TreeFilterService, I18nService, OrganizationService
+  AppService,
+  HttpService,
+  I18nService,
+  LogService,
+  OrganizationService,
+  SettingService,
+  TreeFilterService,
+  ViewService
 } from '@app/services';
-import {connectEvt} from '@app/globals';
-import {TreeNode, ConnectEvt, InitTreeConfig} from '@app/model';
+import {ConnectEvt, InitTreeConfig, TreeNode} from '@app/model';
 import {CookieService} from 'ngx-cookie-service';
 
 declare var $: any;
@@ -62,59 +67,10 @@ class Tree {
   styleUrls: ['./asset-tree.component.scss'],
 })
 export class ElementAssetTreeComponent implements OnInit {
-
-  constructor(private _appSvc: AppService,
-              private _treeFilterSvc: TreeFilterService,
-              private _route: ActivatedRoute,
-              private _http: HttpService,
-              private _settingSvc: SettingService,
-              private _dialog: MatDialog,
-              private _logger: LogService,
-              private _i18n: I18nService,
-              private _toastr: ToastrService,
-              private _orgSvc: OrganizationService,
-              private _cookie: CookieService
-  ) {
-  }
-
-  get RMenuList() {
-    const menuList = [
-      {
-        'id': 'connect',
-        'name': 'Connect',
-        'fa': 'fa-terminal',
-        'hide': false,
-        'click': this.onMenuConnect.bind(this)
-      }, {
-        'id': 'new-connection',
-        'name': 'Open in new window',
-        'fa': 'fa-external-link',
-        'hide': this.isK8s,
-        'click': this.onMenuConnectNewTab.bind(this)
-      }, {
-        'id': 'favorite',
-        'name': 'Favorite',
-        'fa': 'fa-star-o',
-        'hide': this.isAssetFavorite() || this.isK8s,
-        'click': this.onMenuFavorite.bind(this)
-      }, {
-        'id': 'disfavor',
-        'name': 'Disfavor',
-        'fa': 'fa-star',
-        'hide': !this.isAssetFavorite() || this.isK8s,
-        'click': this.onMenuFavorite.bind(this)
-      }];
-    if (!this.rightClickSelectNode) {
-      return [];
-    }
-    return menuList;
-  }
-
   @Input() query: string;
   @Input() isK8s: boolean = false;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu', {static: false}) rMenu: ElementRef;
-
   setting = {
     view: {
       dblClickExpand: false,
@@ -137,7 +93,6 @@ export class ElementAssetTreeComponent implements OnInit {
     },
   };
   pos = {left: '100px', top: '200px'};
-  assetsTree: any;
   isShowRMenu = false;
   rightClickSelectNode: any;
   isLoadTreeAsync: boolean;
@@ -147,10 +102,104 @@ export class ElementAssetTreeComponent implements OnInit {
   currentOrgID = '';
   trees: Array<Tree> = [];
   assetTreeChecked = [];
-  hoverSearchTip: string = this._i18n.instant('Search');
-  hoverRefreshTip: string = this._i18n.instant('Refresh');
-  hoverCheckboxTip: string = this._i18n.instant('Checkbox');
-  hoverConnectTip: string = this._i18n.instant('Batch connect');
+  hoverCheckboxTip = this._i18n.t('Batch actions');
+
+  constructor(private _appSvc: AppService,
+              private _treeFilterSvc: TreeFilterService,
+              private _route: ActivatedRoute,
+              private _http: HttpService,
+              private _settingSvc: SettingService,
+              private _dialog: MatDialog,
+              private _logger: LogService,
+              private _i18n: I18nService,
+              private _toastr: ToastrService,
+              private _orgSvc: OrganizationService,
+              private _cookie: CookieService,
+              private _viewSvc: ViewService
+  ) {
+  }
+
+  get RMenuList() {
+    if (!this.rightClickSelectNode) {
+      return [];
+    }
+    const cnode = this.rightClickSelectNode;
+    const tree = this.rightClickSelectNode.ztree;
+    const checkedNodes = tree.getCheckedNodes(true);
+    const checkedLeafs = checkedNodes.filter(node => !node.isParent);
+    const treeChecked = (tree.setting && tree.setting.check && tree.setting.check.enable);
+    return [
+      {
+        'id': 'batch-connect',
+        'name': this._i18n.instant('Connect checked') + ` (${checkedLeafs.length})`,
+        'fa': 'fa-check-square-o',
+        'hide': checkedLeafs.length === 0 || !treeChecked,
+        'click': this.onMenuConnectChecked.bind(this)
+      },
+      {
+        'id': 'connect',
+        'name': 'Connect',
+        'fa': 'fa-terminal',
+        'hide': cnode.isParent,
+        'click': this.onMenuConnect.bind(this)
+      },
+      {
+        'id': 'new-connection',
+        'name': 'Open in new window',
+        'fa': 'fa-external-link',
+        'hide': this.isK8s || cnode.isParent,
+        'click': this.onMenuConnectNewTab.bind(this)
+      },
+      {
+        'id': 'expand',
+        'name': 'Expand',
+        'fa': 'fa-angle-double-down',
+        'hide': !cnode.isParent || cnode.open,
+        'click': () => {
+          tree.expandNode(cnode, true, false, true);
+        }
+      },
+      {
+        'id': 'fold',
+        'name': 'Fold',
+        'fa': 'fa-angle-double-up',
+        'hide': !cnode.isParent || !cnode.open,
+        'click': () => {
+          tree.expandNode(cnode, false, false, true);
+        }
+      },
+      {
+        'id': 'expand-all',
+        'name': 'Expand all',
+        'fa': 'fa-expand',
+        'hide': !cnode.isParent || cnode.open,
+        'click': this.onMenuExpandAllChildren.bind(this)
+      },
+      {
+        'id': 'fold-all',
+        'name': 'Fold all',
+        'fa': 'fa-compress',
+        'hide': !cnode.isParent || !cnode.open,
+        'click': () => {
+          tree.expandNode(cnode, false, true, true);
+        }
+      },
+      {
+        'id': 'favorite',
+        'name': 'Favorite',
+        'fa': 'fa-star-o',
+        'hide': this.isAssetFavorite() || this.isK8s || cnode.isParent,
+        'click': this.onMenuFavorite.bind(this)
+      },
+      {
+        'id': 'disfavor',
+        'name': 'Disfavor',
+        'fa': 'fa-star',
+        'hide': !this.isAssetFavorite() || this.isK8s || cnode.isParent,
+        'click': this.onMenuFavorite.bind(this)
+      }
+    ];
+  }
 
   ngOnInit() {
     this._settingSvc.isLoadTreeAsync$.subscribe((state) => {
@@ -223,7 +272,7 @@ export class ElementAssetTreeComponent implements OnInit {
         }
       },
       showFavoriteAssets: false
-    });
+    }).then();
   }
 
   async initAssetTree(refresh = false) {
@@ -235,7 +284,7 @@ export class ElementAssetTreeComponent implements OnInit {
       true,
       true
     );
-    this.initTreeInfo(tree, {
+    await this.initTreeInfo(tree, {
       refresh,
       apiName: 'getMyGrantedNodes',
       showFavoriteAssets: true,
@@ -252,7 +301,7 @@ export class ElementAssetTreeComponent implements OnInit {
       false,
       true
     );
-    this.initTreeInfo(tree, {
+    await this.initTreeInfo(tree, {
       refresh,
       apiName: 'getAssetTypeTree',
       showFavoriteAssets: false,
@@ -291,7 +340,7 @@ export class ElementAssetTreeComponent implements OnInit {
         }
       };
     }
-    setting = _.merge(setting,  config.setting || {});
+    setting = _.merge(setting, config.setting || {});
 
     if (config.showFavoriteAssets) {
       this._http.getFavoriteAssets().subscribe(resp => {
@@ -299,48 +348,71 @@ export class ElementAssetTreeComponent implements OnInit {
       });
     }
     tree.loading = true;
-    const request = config.hasOwnProperty('apiName') ?
-      this._http[config.apiName](this.isLoadTreeAsync) : this._http.get(config.url);
-    request.subscribe(resp => {
-      if (config.refresh) {
-        tree.ztree.expandAll(false);
-        tree.ztree.destroy();
-      }
-      setTimeout(() => {
-        tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, resp);
-      }, 100);
-    }, error => {
-      if (error.status === 400) {
-        alert(error.error.detail);
-      }
-      this._logger.error('Get tree error: ', error);
-    }, () => {
-      tree.loading = false;
+    const request = config.hasOwnProperty('apiName')
+      ? this._http[config.apiName](this.isLoadTreeAsync)
+      : this._http.get(config.url);
+    request.subscribe(
+      resp => {
+        if (config.refresh) {
+          tree.ztree.expandAll(false);
+          tree.ztree.destroy();
+        }
+        setTimeout(() => {
+          tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, resp);
+        }, 100);
+      },
+      error => {
+        if (error.status === 400) {
+          alert(error.error.detail);
+        }
+        this._logger.error('Get tree error: ', error);
+      },
+      () => {
+        tree.loading = false;
+      });
+  }
+
+  isTreeCheckEnabled(tree) {
+    const treeObj = tree.ztree;
+    if (treeObj && treeObj.setting && treeObj.setting.check) {
+      return treeObj.setting.check.enable;
+    }
+    return false;
+  }
+
+  toggleTreeCheckable(event, tree) {
+    event.stopPropagation();
+    const treeObj = tree.ztree;
+    const currentChecked = treeObj.setting.check.enable;
+    if (currentChecked) {
+      treeObj.checkAllNodes(false);
+    }
+    setTimeout(() => {
+      treeObj.setting.check.enable = !currentChecked;
+      treeObj.refresh();
     });
   }
 
-  checkboxTree(event, tree) {
-    event.stopPropagation();
-    const treeObj = tree.ztree;
-    treeObj.setting.check.enable = !treeObj.setting.check.enable;
-    treeObj.refresh();
-  }
-
-  batchConnectAsset(event, tree) {
-    event.stopPropagation();
-    this.clearCheckedNodes(tree);
-  }
-
-  async clearCheckedNodes(tree) {
-    const treeObj = tree.ztree;
-    if (treeObj.setting.check.enable) {
-      const nodes = treeObj.getCheckedNodes();
-      for (let i = 0, len = nodes.length; i < len; i++) {
-        this.connectAsset(nodes[i]).then();
-        treeObj.checkNode(nodes[i], false, false);
-      }
-      this.assetTreeChecked = [];
+  onMenuConnectChecked() {
+    const ztree = this.rightClickSelectNode.ztree;
+    if (!ztree.setting.check.enable) {
+      return;
     }
+    const nodes = ztree.getCheckedNodes().filter(node => !node.isParent);
+    const t = setInterval(() => {
+      if (nodes.length === 0) {
+        clearInterval(t);
+        this.assetTreeChecked = [];
+        return;
+      }
+      if (this._appSvc.connectDialogShown) {
+        return;
+      }
+      const node = nodes.shift();
+      this.connectAsset(node).then(() => {
+        ztree.checkNode(node, false, false);
+      });
+    }, 500);
   }
 
   async refreshTree(event, tree) {
@@ -349,12 +421,14 @@ export class ElementAssetTreeComponent implements OnInit {
     if (this.isK8s) {
       this.initK8sTree(true).then();
     } else {
-      if (tree.name === 'AssetTree') { this.initAssetTree(true).then(); }
-      if (tree.name === 'AssetTypeTree') { this.initTypeTree(true).then(); }
+      if (tree.name === 'AssetTree') {
+        this.initAssetTree(true).then();
+      }
+      if (tree.name === 'AssetTypeTree') {
+        this.initTypeTree(true).then();
+      }
     }
   }
-
-
 
   async connectAsset(node: TreeNode) {
     const action = this.isK8s ? 'k8s' : 'asset';
@@ -387,13 +461,16 @@ export class ElementAssetTreeComponent implements OnInit {
         const childNode = treeNode.children[i];
         const self = this;
         const targetTree = $.fn.zTree.getZTreeObj(treeId);
-        if (treeNode.meta.data.type !== 'k8s') {
-          targetTree.reAsyncChildNodesPromise(childNode, 'refresh', silent).then(() => {
-            self.reAsyncChildNodes(treeId, childNode, silent);
-          });
-        }
+        targetTree.reAsyncChildNodesPromise(childNode, 'refresh', silent).then(() => {
+          self.reAsyncChildNodes(treeId, childNode, silent);
+        });
       }
     }
+  }
+
+  onMenuExpandAllChildren(event, tree) {
+    const ztree = this.rightClickSelectNode.ztree;
+    this.expandAllChildren(ztree.setting.treeId, this.rightClickSelectNode, true);
   }
 
   expandAllChildren(treeId, treeNode, expandFlag) {
@@ -402,24 +479,23 @@ export class ElementAssetTreeComponent implements OnInit {
     }
     // 异步加载时需要加载全部子节点
     const self = this;
-    const targetTree = $.fn.zTree.getZTreeObj(treeId);
-    if (targetTree.setting.async.enable && (!treeNode.children || treeNode.children.length === 0)) {
-      targetTree.reAsyncChildNodesPromise(treeNode, 'refresh', false).then(function () {
-        self.reAsyncChildNodes(treeId, treeNode, false);
+    const ztree = $.fn.zTree.getZTreeObj(treeId);
+    const treeIsAsync = ztree.setting.async.enable;
+    if (treeIsAsync) {
+      ztree.reAsyncChildNodesPromise(treeNode, 'refresh', false).then(() => {
+        this.reAsyncChildNodes(treeId, treeNode, false);
       });
     } else {
       // 展开时递归展开，防止用户手动展开子级折叠后无法再次展开孙子级
       if (expandFlag) {
-        targetTree.expandNode(treeNode, expandFlag, false, false, false);
+        ztree.expandNode(treeNode, expandFlag, false, false, false);
         if (treeNode.children && treeNode.children.length > 0) {
           treeNode.children.forEach(function (childNode) {
-            if (childNode.meta.data.type !== 'k8s') {
-              self.expandAllChildren(treeId, childNode, expandFlag);
-            }
+            self.expandAllChildren(treeId, childNode, expandFlag);
           });
         }
       } else {
-        targetTree.expandNode(treeNode, expandFlag, true, false, false);
+        ztree.expandNode(treeNode, expandFlag, true, false, false);
       }
     }
   }
@@ -429,21 +505,15 @@ export class ElementAssetTreeComponent implements OnInit {
       return null;
     }
     const ztree = this.trees.find(t => t.name === treeId).ztree;
-    const metaData = treeNode.meta.data;
-    if (treeNode.isParent && ['container', 'asset'].indexOf(metaData.identity) === -1) {
-      this.expandAllChildren(treeId, treeNode, !treeNode.open);
-      return;
-    }
     this.rightClickSelectNode = treeNode;
+    this.rightClickSelectNode.ztree = ztree;
     if (!treeNode && event.target.tagName.toLowerCase() !== 'button'
       && $(event.target).parents('a').length === 0) {
       ztree.cancelSelectedNode();
-      this.showRMenu(event.clientX, event.clientY);
     } else if (treeNode && !treeNode.noR) {
       ztree.selectNode(treeNode);
-      this.showRMenu(event.clientX, event.clientY);
-      this.rightClickSelectNode = treeNode;
     }
+    this.showRMenu(event.clientX, event.clientY);
   }
 
   onMenuConnect() {
@@ -515,7 +585,12 @@ export class ElementAssetTreeComponent implements OnInit {
       let name = this._i18n.instant('Search');
       const assetsAmount = matchedNodes.length;
       name = `${name} (${assetsAmount})`;
-      const newNode = {id: 'search', name: name, isParent: true, open: true};
+      const newNode = {
+        id: 'search',
+        name: name,
+        isParent: true,
+        open: true
+      };
       tree.addNodes(null, newNode);
     }
 

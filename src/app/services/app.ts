@@ -22,11 +22,11 @@ function gotoLogin() {
 export class AppService {
   // user:User = user  ;
   public lang: string;
+  public connectDialogShown = false;
   private protocolPreferConnectTypes: object = {};
   private assetPreferAccount: object = {};
   private protocolPreferKey = 'ProtocolPreferLoginType';
   private accountPreferKey = 'PreferAccount';
-  private endpoints: Endpoint[] = [];
   private protocolConnectTypesMap: object = {};
 
   constructor(private _http: HttpService,

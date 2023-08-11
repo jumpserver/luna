@@ -156,6 +156,12 @@
   "The connection method is invalid, please refresh the page": "该连接方式已失效，请刷新页面",
   "Special accounts": "特殊账号",
   "Database token help text": "数据库类型 token 会缓存 5 分钟，也就是说 token 使用后，不会立刻失效，而是客户端断开 5 分钟后，这个 token 才会完全失效",
-  "Help text": "说明"
+  "Help text": "说明",
+  "Connect checked": "连接选中",
+  "Batch actions": "批量操作",
+  "Expand": "展开",
+  "Fold": "折叠",
+  "Expand all": "展开全部",
+  "Fold all": "折叠全部"
 }
 
