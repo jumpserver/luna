@@ -210,11 +210,12 @@ tr:hover {
 .system-tips {
   position: absolute;
   left: 50%;
-  top: 50%;
+  top: 40%;
   transform: translate(-50%, -50%);
   color: #a0a0a0;
   overflow: hidden;
   font-size: 15px;
+  opacity: 0.8;
 
   .crucial {
     margin-right: 6px;
@@ -224,6 +225,10 @@ tr:hover {
 
   .tip {
     font-weight: 400;
+  }
+
+  li {
+    line-height: 2;
   }
 }
 
