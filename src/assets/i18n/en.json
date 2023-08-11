@@ -38,6 +38,9 @@
   "Please input password": "Please input password",
   "Reconnect": "Reconnect",
   "Search": "Search",
+  "Refresh": "Refresh",
+  "Checkbox": "Checkbox",
+  "Batch connect": "Batch connect",
   "RDP resolution": "RDP resolution",
   "Send text to all ssh terminals": "Send text to all ssh terminals",
   "Setting": "Setting",
@@ -167,5 +170,10 @@
   "connect info": "connect info",
   "Connect command line": "Connect command line",
   "Using token": "Using token",
-  "Directly": "Directly"
+  "Directly": "Directly",
+  "Connect checked": "Connect checked",
+  "Batch actions": "Batch actions",
+  "Expand": "Expand",
+  "Expand all": "Expand all",
+  "Collapse": "Collapse"
 }

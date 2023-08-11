@@ -38,6 +38,9 @@
   "Please input password": "请输入密码",
   "Reconnect": "重新连接",
   "Search": "搜索",
+  "Refresh": "刷新",
+  "Checkbox": "多选",
+  "Batch connect": "批量连接",
   "RDP resolution": "RDP分辨率",
   "Send text to all ssh terminals": "发送文本到所有ssh终端",
   "Setting": "设置",
@@ -171,6 +174,12 @@
   "connect info": "连接信息",
   "Connect command line": "连接命令行",
   "Using token": "使用 Token",
-  "Directly": "直接方式"
+  "Directly": "直接方式",
+  "Connect checked": "连接选中",
+  "Batch actions": "批量操作",
+  "Expand": "展开",
+  "Fold": "折叠",
+  "Expand all": "展开全部",
+  "Fold all": "折叠全部"
 }
 

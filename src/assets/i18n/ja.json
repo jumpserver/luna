@@ -38,6 +38,9 @@
   "Please input password": "パスワードを入力してください",
   "Reconnect": "再接続",
   "Search": "検索",
+  "Refresh": "リフレッシュ",
+  "Checkbox": "複数選択",
+  "Batch connect": "バッチ接続",
   "RDP resolution": "RDP解像度",
   "Send text to all ssh terminals": "すべてのssh端末にテキストを送信します",
   "Setting": "設定",
@@ -169,5 +172,11 @@
   "connect info": "接続情報",
   "Connect command line": "接続コマンドライン",
   "Using token": "トークンを使用する",
-  "Directly": "直接接続"
+  "Directly": "直接接続",
+  "Connect checked": "接続済み",
+  "Batch actions": "バッチ操作",
+  "Expand": "展開",
+  "Fold": "折りたたみ",
+  "Expand all": "すべて展開",
+  "Fold all": "すべて折りたたみ"
 }

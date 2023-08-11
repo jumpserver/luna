@@ -104,6 +104,12 @@ body ::-webkit-scrollbar-thumb {
   font-size: 13px !important;
 }
 
+.ztree li span.button.chk {
+  width: 16px !important;
+  padding-top: 0;
+  padding-left: 0;
+}
+
 /*.scroll-botton {*/
   /*font-size: 20px;*/
   /*float: left;*/
