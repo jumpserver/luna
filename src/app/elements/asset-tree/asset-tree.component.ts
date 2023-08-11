@@ -461,7 +461,7 @@ export class ElementAssetTreeComponent implements OnInit {
         const childNode = treeNode.children[i];
         const self = this;
         const targetTree = $.fn.zTree.getZTreeObj(treeId);
-        targetTree.reAsyncChildNodesPromise(childNode, 'refresh', silent).then(() => {
+        targetTree.reAsyncChildNodesPromise(childNode, 'no', silent).then(() => {
           self.reAsyncChildNodes(treeId, childNode, silent);
         });
       }
@@ -482,7 +482,7 @@ export class ElementAssetTreeComponent implements OnInit {
     const ztree = $.fn.zTree.getZTreeObj(treeId);
     const treeIsAsync = ztree.setting.async.enable;
     if (treeIsAsync) {
-      ztree.reAsyncChildNodesPromise(treeNode, 'refresh', false).then(() => {
+      ztree.reAsyncChildNodesPromise(treeNode, 'no', false).then(() => {
         this.reAsyncChildNodes(treeId, treeNode, false);
       });
     } else {
