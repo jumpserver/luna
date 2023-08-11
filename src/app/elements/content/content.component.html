@@ -18,8 +18,8 @@
         <elements-content-tab
           (contextmenu)="onRightClick($event, i)"
           (onAction)="onViewAction($event)"
-          *ngFor="let view of viewList;let i = index; trackBy: trackByFn"
-          [view]="view"
+          *ngFor="let id of viewTabs;let i = index; trackBy: trackByFn"
+          [view]="getViewById(id)"
           cdkDrag
           cdkDragLockAxis="x"
           class="drag-box"

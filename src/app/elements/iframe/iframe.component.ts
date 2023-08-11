@@ -3,7 +3,6 @@ import {View} from '@app/model';
 import {ConnectTokenService, HttpService, I18nService, LogService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {environment} from '@src/environments/environment';
-import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 
 @Component({
   selector: 'elements-iframe',
@@ -22,7 +21,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   showValue: boolean = !window['debugIframe'];
   ping: number;
   debug = false;
-  safeSrc: SafeResourceUrl;
 
   constructor(
     private _i18n: I18nService,
@@ -30,13 +28,11 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private _connectTokenSvc: ConnectTokenService,
     private _http: HttpService,
     private _dialog: MatDialog,
-    private sanitizer: DomSanitizer
   ) {
   }
 
   ngOnInit() {
     this._logger.info(`IFrame URL: ${this.src}`);
-    this.safeSrc = this.sanitizer.bypassSecurityTrustResourceUrl(this.src);
 
     if (!environment.production) {
       this.debug = true;
