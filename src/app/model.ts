@@ -319,6 +319,10 @@ export class Session {
   user: string;
   user_id: string;
   is_finished: boolean;
+  type: {
+    label: string;
+    value: string;
+  };
 }
 
 export class Terminal {
