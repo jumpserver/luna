@@ -54,6 +54,10 @@ export class ElementContentComponent implements OnInit {
       && this.viewSrv.currentView.protocol === 'ssh';
   }
 
+  trackByFn(index, item) {
+    return item.id;
+  }
+
   ngOnInit() {
     this.viewList = this.viewSrv.viewList;
     document.addEventListener('click', this.hideRMenu.bind(this), false);
