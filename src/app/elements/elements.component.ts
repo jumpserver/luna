@@ -26,6 +26,7 @@ import {ElementConnectMethodComponent} from './connect/connect-dialog/connect-me
 import {ElementDownloadDialogComponent} from './connect/download-dialog/download-dialog.component';
 import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/acl-dialog.component';
 import {ElementsReplayMp4Component} from './replay/mp4/mp4.component';
+import {ElementConnectorGuideComponent} from '@app/elements/content/content-window/guide/guide.component';
 
 
 export const ElementComponents = [
@@ -59,4 +60,5 @@ export const ElementComponents = [
   ElementAdvancedOptionComponent,
   ElementConnectMethodComponent,
   ElementsReplayMp4Component,
+  ElementConnectorGuideComponent,
 ];

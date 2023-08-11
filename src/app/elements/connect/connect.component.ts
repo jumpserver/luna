@@ -182,7 +182,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
 
     // 特殊处理
-    if (connectMethod.value.startsWith('db_client')) {
+    if (connectMethod.value.endsWith('_guide')) {
       return this.createWebView(asset, connectInfo, connToken);
     }
 

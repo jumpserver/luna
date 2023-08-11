@@ -8,18 +8,37 @@
       <a (click)="scrollRight()" class="right"><i class="fa fa-caret-right"></i></a>
     </div>
     <div #tabs class="tabs">
-      <ul [ngStyle]="{'width':tabsWidth+'px'}">
+      <ul
+        (cdkDropListDropped)="onItemDropped($event)"
+        [ngStyle]="{'width':tabsWidth+'px'}"
+        cdkDropList
+        cdkDropListOrientation="horizontal"
+        class="drag-list"
+      >
         <elements-content-tab
           (contextmenu)="onRightClick($event, i)"
           (onAction)="onViewAction($event)"
           *ngFor="let view of viewList;let i = index"
           [view]="view"
+          cdkDrag
+          cdkDragLockAxis="x"
+          class="drag-box"
         >
         </elements-content-tab>
       </ul>
     </div>
   </div>
   <div [ngClass]="{'batch-input': showBatchCommand  }" id="winContainer">
+    <div #contentPlaceholder [style.display]="viewList.length < 1 ? 'block' : 'none'" class="content-placeholder">
+      <div class="system-tips">
+        <div class="tips">
+          <p *ngFor="let item of systemTips">
+            <span *ngIf="item.action" class="crucial">{{ item.action | translate }}</span>
+            <span class="tip">{{ item.content | translate }}</span>
+          </p>
+        </div>
+      </div>
+    </div>
     <elements-content-window *ngFor="let view of viewList" [view]="view"></elements-content-window>
   </div>
   <div
@@ -46,7 +65,8 @@
     <tr *ngFor="let item of rMenuItems()" class="view-menu__item view-menu__item--separator">
       <ng-template [ngIf]="!item.disabled">
         <td (click)="item.callback()" class="view-menu__data">
-          <span [ngClass]="item.icon" class="view-menu__icon fa"></span> {{ item.title | translate }}
+          <span [ngClass]="item.icon" class="view-menu__icon fa"></span>
+          {{ item.title | translate }}
         </td>
       </ng-template>
     </tr>

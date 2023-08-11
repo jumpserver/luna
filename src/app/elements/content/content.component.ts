@@ -1,6 +1,7 @@
 import {Component, ElementRef, EventEmitter, OnInit, Output, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
 import {ConnectTokenService, I18nService, LogService, SettingService, ViewService} from '@app/services';
+import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
@@ -16,6 +17,24 @@ export class ElementContentComponent implements OnInit {
   pos = {left: '100px', top: '100px'};
   isShowRMenu = false;
   rIdx = -1;
+  systemTips = [
+    {
+      content: 'Reselect connection method',
+      action: 'Right click asset'
+    },
+    {
+      content: 'Expand all asset',
+      action: 'Right click node'
+    },
+    {
+      content: 'Asset tree loading method',
+      action: 'Settings or basic settings'
+    },
+    {
+      content: 'Download the latest client',
+      action: 'Help or download'
+    }
+  ];
 
   constructor(public viewSrv: ViewService,
               public settingSvc: SettingService,
@@ -145,7 +164,7 @@ export class ElementContentComponent implements OnInit {
       },
       {
         title: 'Close All Tabs',
-        icon: 'fa-close',
+        icon: '',
         disabled: this.viewList.length === 0,
         callback: () => {
           while (this.viewList.length > 0) {
@@ -155,7 +174,7 @@ export class ElementContentComponent implements OnInit {
       },
       {
         title: 'Close Other Tabs',
-        icon: 'fa-close',
+        icon: '',
         disabled: this.viewList.length <= 1,
         callback: () => {
           for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
@@ -168,7 +187,7 @@ export class ElementContentComponent implements OnInit {
       },
       {
         title: 'Close Left Tabs',
-        icon: 'fa-close',
+        icon: '',
         callback: () => {
           const keepNum = this.viewList.length - this.rIdx;
           while (this.viewList.length > keepNum) {
@@ -179,7 +198,7 @@ export class ElementContentComponent implements OnInit {
       },
       {
         title: 'Close Right Tabs',
-        icon: 'fa-close',
+        icon: '',
         callback: () => {
           for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
             this.closeView(this.viewList[i].asset);
@@ -207,5 +226,9 @@ export class ElementContentComponent implements OnInit {
     this.showRMenu(x, y);
     this.rIdx = tabIdx;
     event.preventDefault();
+  }
+
+  onItemDropped(event: CdkDragDrop<string[]>) {
+    moveItemInArray(this.viewList, event.previousIndex, event.currentIndex);
   }
 }
