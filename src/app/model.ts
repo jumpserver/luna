@@ -323,6 +323,7 @@ export class Session {
     label: string;
     value: string;
   };
+  is_locked: boolean;
 }
 
 export class Terminal {
