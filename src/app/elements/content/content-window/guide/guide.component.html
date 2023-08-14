@@ -65,5 +65,8 @@
         <i class="fa fa-clone icon"></i>
       </span>
     </div>
+    <div *ngIf="cmd.helpText" class="help-block">
+      {{ cmd.helpText }}
+    </div>
   </div>
 </div>
