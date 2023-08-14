@@ -53,6 +53,7 @@ export class PagesMonitorComponent implements OnInit {
     const isSupportComponent = supportedType.includes(this.sessionDetail.terminal.type);
     const isNormalSession = this.sessionDetail.type.value === 'normal';
     this.supportedLock = isSupportComponent && isNormalSession;
+    this.isPaused = this.sessionDetail.is_locked;
     const protocol = window.location.protocol.replace(':', '');
     const data = { 'assetId': '', 'appId': '', 'sessionId': this.sessionID, 'token': ''};
     const smartEndpoint = await this._http.getSmartEndpoint(data, protocol);
