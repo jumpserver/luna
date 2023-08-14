@@ -47,7 +47,7 @@
 
       <span #tooltip="matTooltip"
             (click)="startClient(cmd)"
-            *ngIf="cmd.callClient"
+            *ngIf="cmd.callClient && showClient"
             [matTooltip]="'Run it by client' | translate"
             class="start btn"
       >
@@ -64,6 +64,9 @@
       >
         <i class="fa fa-clone icon"></i>
       </span>
+    </div>
+    <div *ngIf="cmd.helpText" class="help-block">
+      {{ cmd.helpText }}
     </div>
   </div>
 </div>

@@ -22,6 +22,7 @@ export class ElementConnectorGuideComponent implements OnInit {
   passwordMask = '******';
   passwordShow = '******';
   hoverClipTip: string = this._i18n.instant('Click to copy');
+  showClient = false;
 
   constructor(private _http: HttpService,
               private _i18n: I18nService,
@@ -49,9 +50,10 @@ export class ElementConnectorGuideComponent implements OnInit {
   }
 
   startClient(cmd) {
-    this._http.getLocalClientUrlAndSetCommand(this.token, cmd.value).then((res: any) => {
-      window.open(res.url);
-    });
+    this._http.getLocalClientUrlAndSetCommand(this.token, cmd.value)
+      .then((res: any) => {
+        window.open(res.url);
+      });
   }
 
   showPassword($event) {
