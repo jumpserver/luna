@@ -1,4 +1,4 @@
-FROM jumpserver/node:16.17.1 as stage-build
+FROM node:16.17.1-bullseye-slim as stage-build
 ARG TARGETARCH
 ARG NPM_REGISTRY="https://registry.npmmirror.com"
 
@@ -20,6 +20,6 @@ RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lun
     && yarn build \
     && cp -R src/assets/i18n luna/
 
-FROM nginx:1.24
+FROM nginx:1.24-bullseye
 COPY --from=stage-build /data/luna /opt/luna
 COPY nginx.conf /etc/nginx/conf.d/default.conf
