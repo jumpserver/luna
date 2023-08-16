@@ -102,7 +102,6 @@ export class ElementAssetTreeComponent implements OnInit {
   currentOrgID = '';
   trees: Array<Tree> = [];
   assetTreeChecked = [];
-  hoverCheckboxTip = this._i18n.t('Batch actions');
 
   constructor(private _appSvc: AppService,
               private _treeFilterSvc: TreeFilterService,
@@ -140,7 +139,7 @@ export class ElementAssetTreeComponent implements OnInit {
         'id': 'connect',
         'name': 'Connect',
         'fa': 'fa-terminal',
-        'hide': cnode.isParent,
+        'hide': cnode.isParent && !this.isK8s,
         'click': this.onMenuConnect.bind(this)
       },
       {

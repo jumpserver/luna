@@ -57,6 +57,8 @@
     background: url('./icons/switch.png') no-repeat center left transparent;
   }
 
+  &.k8s_ico_open,
+  &.k8s_ico_close,
   &.k8s_ico_docu {
     background: url('./icons/k8s.png') center left no-repeat;
   }
