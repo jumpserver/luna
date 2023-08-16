@@ -350,25 +350,22 @@ export class ElementAssetTreeComponent implements OnInit {
     const request = config.hasOwnProperty('apiName')
       ? this._http[config.apiName](this.isLoadTreeAsync)
       : this._http.get(config.url);
-    request.subscribe(
-      resp => {
-        if (config.refresh) {
-          tree.ztree.expandAll(false);
-          tree.ztree.destroy();
-        }
-        setTimeout(() => {
-          tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, resp);
-        }, 100);
-      },
-      error => {
-        if (error.status === 400) {
-          alert(error.error.detail);
-        }
-        this._logger.error('Get tree error: ', error);
-      },
-      () => {
-        tree.loading = false;
-      });
+    request.subscribe(resp => {
+      if (config.refresh) {
+        tree.ztree.expandAll(false);
+        tree.ztree.destroy();
+      }
+      setTimeout(() => {
+        tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, resp);
+      }, 100);
+    }, error => {
+      if (error.status === 400) {
+        alert(error.error.detail);
+      }
+      this._logger.error('Get tree error: ', error);
+    }, () => {
+      tree.loading = false;
+    });
   }
 
   isTreeCheckEnabled(tree) {
@@ -480,7 +477,8 @@ export class ElementAssetTreeComponent implements OnInit {
     const self = this;
     const ztree = $.fn.zTree.getZTreeObj(treeId);
     const treeIsAsync = ztree.setting.async.enable;
-    if (treeIsAsync) {
+    const hasChildren = treeNode.children && treeNode.children.length > 0;
+    if (!hasChildren && treeIsAsync) {
       ztree.reAsyncChildNodesPromise(treeNode, 'no', false).then(() => {
         this.reAsyncChildNodes(treeId, treeNode, false);
       });
