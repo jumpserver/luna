@@ -149,7 +149,7 @@ export class ElementContentComponent implements OnInit {
           const oldConnectToken = oldView.connectToken;
           this._connectTokenSvc.exchange(oldConnectToken).then((newConnectToken) => {
             const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
-            this.viewList.splice(id, 0, newView);
+            this.viewSrv.addView(newView);
             this.setViewActive(newView);
           });
         }
