@@ -249,10 +249,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }
     if (this.localAuthItems && this.localAuthItems.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
-      // 清除上次记住的密码
-      if (!this.manualAuthInfo.rememberAuth) {
-        this.manualAuthInfo.secret = '';
-      }
     }
     this.setUsernamePlaceholder();
     setTimeout(() => {
