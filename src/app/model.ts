@@ -356,6 +356,7 @@ export class AuthInfo {
   alias: string;
   username: string;
   secret: string;
+  rememberAuth: boolean;
 }
 
 export class ConnectOption {

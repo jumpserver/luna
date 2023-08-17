@@ -247,7 +247,7 @@ export class AppService {
   setAccountLocalAuth(asset: Asset, account: Account, auth: AuthInfo) {
     const assetId = asset.id;
     const newAuth = Object.assign({alias: account.alias, username: account.username}, auth);
-    if (!auth.secret) {
+    if (!auth.secret || !auth.rememberAuth) {
       auth.secret = '';
     } else {
       newAuth.secret = this.encrypt(auth.secret);

@@ -23,7 +23,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @ViewChild('password', {static: false}) passwordRef: ElementRef;
 
   public hidePassword = true;
-  public rememberAuth = false;
   public rememberAuthDisabled = false;
   usernameControl = new FormControl();
   localAuthItems: AuthInfo[];
@@ -129,7 +128,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       this.accountCtl.setValue(this.accountSelected);
       this.accountCtl.setValidators([Validators.required]);
     }, 100);
-
   }
 
   ngOnDestroy() {
@@ -166,7 +164,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       name: this._i18n.instant('Special accounts'),
       accounts: this.anonymousAccounts
     });
-    
+
     groups = groups.filter(group => group.accounts.length > 0);
 
     for (const group of groups) {
