@@ -98,14 +98,13 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           'name': type,
           'port': 443,
           'public': true,
-          'setting': {
-            sftp_enabled: true
-          }
+          'setting': {}
         };
         connectInfo.manualAuthInfo = {
           alias: account.alias,
           username: account.username,
           secret: undefined,
+          rememberAuth: false
         };
         connectInfo.connectMethod = {
           type: type,
@@ -184,7 +183,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
 
     // 特殊处理
-    if (connectMethod.value.startsWith('db_client')) {
+    if (connectMethod.value.endsWith('_guide')) {
       return this.createWebView(asset, connectInfo, connToken);
     }
 
@@ -271,6 +270,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       });
     }
 
+    this._appSvc.connectDialogShown = true;
     const dialogRef = this._dialog.open(ElementConnectDialogComponent, {
       minHeight: '300px',
       height: 'auto',
@@ -280,6 +280,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
     return new Promise<ConnectData>(resolve => {
       dialogRef.afterClosed().subscribe(outputData => {
+        this._appSvc.connectDialogShown = false;
         resolve(outputData);
       });
     });

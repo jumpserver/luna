@@ -15,18 +15,20 @@ declare function unescape(s: string): string;
 
 function gotoLogin() {
   const currentPath = encodeURI(document.location.pathname + document.location.search);
-  window.location.href = document.location.origin + '/core/auth/login/?next=' + currentPath;
+  setTimeout(() => {
+    window.location.href = document.location.origin + '/core/auth/login/?next=' + currentPath;
+  }, 500);
 }
 
 @Injectable()
 export class AppService {
   // user:User = user  ;
   public lang: string;
+  public connectDialogShown = false;
   private protocolPreferConnectTypes: object = {};
   private assetPreferAccount: object = {};
   private protocolPreferKey = 'ProtocolPreferLoginType';
   private accountPreferKey = 'PreferAccount';
-  private endpoints: Endpoint[] = [];
   private protocolConnectTypesMap: object = {};
 
   constructor(private _http: HttpService,
@@ -81,6 +83,7 @@ export class AppService {
     // Determine whether the user has logged in
     const sessionExpire = getCookie('jms_session_expire');
     if (!sessionExpire && !token) {
+      setCookie('jms_session_expire', 'close', 120);
       gotoLogin();
       return;
     } else if (sessionExpire === 'close') {
@@ -244,7 +247,7 @@ export class AppService {
   setAccountLocalAuth(asset: Asset, account: Account, auth: AuthInfo) {
     const assetId = asset.id;
     const newAuth = Object.assign({alias: account.alias, username: account.username}, auth);
-    if (!auth.secret) {
+    if (!auth.secret || !auth.rememberAuth) {
       auth.secret = '';
     } else {
       newAuth.secret = this.encrypt(auth.secret);

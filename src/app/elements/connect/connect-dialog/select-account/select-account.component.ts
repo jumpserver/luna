@@ -23,7 +23,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @ViewChild('password', {static: false}) passwordRef: ElementRef;
 
   public hidePassword = true;
-  public rememberAuth = false;
   public rememberAuthDisabled = false;
   usernameControl = new FormControl();
   localAuthItems: AuthInfo[];
@@ -101,6 +100,9 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this.groupedAccounts = this.groupAccounts();
     this.filteredUsersGroups.next(this.groupedAccounts.slice());
 
+    // 检查url中是否有 login_account 参数
+    this.checkUrlForLoginAccountParam();
+
     if (this.accountSelected) {
       const username = this.accountSelected.username;
       this.manualAuthInfo.username = username.startsWith('@') ? '' : username;
@@ -126,7 +128,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       this.accountCtl.setValue(this.accountSelected);
       this.accountCtl.setValidators([Validators.required]);
     }, 100);
-
   }
 
   ngOnDestroy() {
@@ -180,6 +181,19 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       });
     }
     return groups;
+  }
+
+  checkUrlForLoginAccountParam() {
+    const loginAccount = this._appSvc.getQueryString('login_account');
+    const accounts: Array<any> = this.accounts || [];
+    if (loginAccount && accounts.length > 0) {
+      for (const i of accounts) {
+        if (loginAccount === i.id) {
+          this.accountSelected = i;
+          break;
+        }
+      }
+    }
   }
 
   filterAccounts() {

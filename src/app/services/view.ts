@@ -7,11 +7,13 @@ export class ViewService {
   viewList: Array<View> = [];
   currentView: View;
   num = 0;
+  viewIds: Array<string> = [];
 
   addView(view: View) {
     this.num += 1;
     view.id = 'View_' + this.num;
     this.viewList.push(view);
+    this.viewIds.push(view.id);
   }
 
   activeView(view: View) {
@@ -39,5 +41,7 @@ export class ViewService {
   removeView(view: View) {
     const index = this.viewList.indexOf(view);
     this.viewList.splice(index, 1);
+    const idIndex = this.viewIds.indexOf(view.id);
+    this.viewIds.splice(idIndex, 1);
   }
 }

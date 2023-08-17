@@ -6,7 +6,7 @@
   height: 20px;
   display: inline-block;
   vertical-align: top;
-  border: 0px solid;
+  border: 0 solid;
   cursor: pointer;
   outline: none;
   background-color: transparent;
@@ -25,22 +25,19 @@
   }
 }
 
-
 .ztree li span.button::before {
   font-family: FontAwesome;
   padding-top: 10px;
   padding-left: 2px;
   display: inline-block;
-  color: #ffffff;
 }
 
 .ztree li span.button.chk {
-  margin: 0;
+  margin: 0 3px 0 0;
   cursor: auto;
   width: 12px;
   display: inline-block;
-  padding-top: 10px;
-  padding-left: 2px;
+  padding: 0;
 }
 
 
@@ -60,6 +57,8 @@
     background: url('./icons/switch.png') no-repeat center left transparent;
   }
 
+  &.k8s_ico_open,
+  &.k8s_ico_close,
   &.k8s_ico_docu {
     background: url('./icons/k8s.png') center left no-repeat;
   }
@@ -321,7 +320,6 @@
   }
 
   &.roots_docu::before {
-    content: "\f114";
   }
 
   &.noline_docu {

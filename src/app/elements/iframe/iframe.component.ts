@@ -33,6 +33,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
   ngOnInit() {
     this._logger.info(`IFrame URL: ${this.src}`);
+
     if (!environment.production) {
       this.debug = true;
       setTimeout(() => {

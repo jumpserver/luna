@@ -1,6 +1,7 @@
 import {Component, ElementRef, EventEmitter, OnInit, Output, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
 import {ConnectTokenService, I18nService, LogService, SettingService, ViewService} from '@app/services';
+import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
@@ -16,6 +17,25 @@ export class ElementContentComponent implements OnInit {
   pos = {left: '100px', top: '100px'};
   isShowRMenu = false;
   rIdx = -1;
+  systemTips = [
+    {
+      content: 'Reselect connection method',
+      action: 'Right click asset'
+    },
+    {
+      content: 'Expand all asset',
+      action: 'Right click node'
+    },
+    {
+      content: 'Asset tree loading method',
+      action: 'Settings or basic settings'
+    },
+    {
+      content: 'Download the latest client',
+      action: 'Help or download'
+    }
+  ];
+  viewIds: Array<string> = [];
 
   constructor(public viewSrv: ViewService,
               public settingSvc: SettingService,
@@ -35,8 +55,13 @@ export class ElementContentComponent implements OnInit {
       && this.viewSrv.currentView.protocol === 'ssh';
   }
 
+  trackByFn(index, item) {
+    return item.id;
+  }
+
   ngOnInit() {
     this.viewList = this.viewSrv.viewList;
+    this.viewIds = this.viewSrv.viewIds;
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
@@ -124,7 +149,7 @@ export class ElementContentComponent implements OnInit {
           const oldConnectToken = oldView.connectToken;
           this._connectTokenSvc.exchange(oldConnectToken).then((newConnectToken) => {
             const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
-            this.viewList.splice(id, 0, newView);
+            this.viewSrv.addView(newView);
             this.setViewActive(newView);
           });
         }
@@ -145,7 +170,7 @@ export class ElementContentComponent implements OnInit {
       },
       {
         title: 'Close All Tabs',
-        icon: 'fa-close',
+        icon: '',
         disabled: this.viewList.length === 0,
         callback: () => {
           while (this.viewList.length > 0) {
@@ -155,7 +180,7 @@ export class ElementContentComponent implements OnInit {
       },
       {
         title: 'Close Other Tabs',
-        icon: 'fa-close',
+        icon: '',
         disabled: this.viewList.length <= 1,
         callback: () => {
           for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
@@ -168,7 +193,7 @@ export class ElementContentComponent implements OnInit {
       },
       {
         title: 'Close Left Tabs',
-        icon: 'fa-close',
+        icon: '',
         callback: () => {
           const keepNum = this.viewList.length - this.rIdx;
           while (this.viewList.length > keepNum) {
@@ -179,7 +204,7 @@ export class ElementContentComponent implements OnInit {
       },
       {
         title: 'Close Right Tabs',
-        icon: 'fa-close',
+        icon: '',
         callback: () => {
           for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
             this.closeView(this.viewList[i].asset);
@@ -200,6 +225,12 @@ export class ElementContentComponent implements OnInit {
     this.isShowRMenu = false;
   }
 
+  getViewById(id) {
+    return this.viewList.find((view) => {
+      return view.id === id;
+    });
+  }
+
   onRightClick(event, tabIdx) {
     const sideX = jQuery('#left-side').width();
     const x = event.pageX - sideX;
@@ -207,5 +238,9 @@ export class ElementContentComponent implements OnInit {
     this.showRMenu(x, y);
     this.rIdx = tabIdx;
     event.preventDefault();
+  }
+
+  onItemDropped(event: CdkDragDrop<string[]>) {
+    moveItemInArray(this.viewIds, event.previousIndex, event.currentIndex);
   }
 }

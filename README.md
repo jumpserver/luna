@@ -1,66 +1,36 @@
 # Luna
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 1.3.2.
+Luna 是 JumpServer 的 Web Terminal 项目,
+主要使用 [Angular](https://angular.io/), [Material](https://material.angular.io/) 完成,
+名字来源于 Dota 英雄 [Luna](https://www.dota2.com/hero/luna)
 
-## Development server
+## 开发运行
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+```
+0. 前置条件: 部署运行好 JumpServer API 服务器
 
-## Code scaffolding
+1. 安装依赖
+$ npm install
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+2. 运行
+$ npm run start
 
-## Build
+3. 构建
+$ rm -fr luna
+$ npm run-script build
+```
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `-prod` flag for a production build.
+## 生产中部署
 
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
-Before running the tests make sure you are serving the app via `ng serve`.
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
-
-
-## Running On Your Server
-Untar the luna release tar file, and put it under the folder you like.
-
-Nginx config:
+下载 RELEASE 文件，放到合适的目录，修改 nginx配置文件如下Nginx config:
 
 ```
   location /luna/ {
     try_files $uri / /index.html;
     alias /path/of/your/luna/;
   }
-  
-  location /socket.io/ {
-        proxy_pass http://localhost:5000/socket.io/;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-        # WebSocket support (nginx 1.4)
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-  }
 ```
 
-# Luna in Docker
-## build
-Run this script, it will build automatically.
-```bash
-./tools/docker_build.sh
-```
+## License & Copyright
 
-## run
-
-```bash
-docker run -d -p 80:80 luna
-```
+Be consistent with [jumpserver](https://github.com/jumpserver/jumpserver)

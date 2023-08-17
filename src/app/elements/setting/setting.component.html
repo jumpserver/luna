@@ -33,6 +33,7 @@
     <label class="field-label">{{ 'RDP client options' | translate }}</label>
     <section>
       <mat-checkbox [(ngModel)]="setting.rdpFullScreen">{{ 'Full screen'| translate}}</mat-checkbox>
+      <mat-checkbox [(ngModel)]="setting.rdpMultiScreen" style="padding-left: 20px">{{ 'Multi Screen'| translate}}</mat-checkbox>
       <mat-checkbox [(ngModel)]="setting.rdpDrivesRedirect" style="padding-left: 20px">{{ 'Driver redirect'| translate}}</mat-checkbox>
     </section>
 

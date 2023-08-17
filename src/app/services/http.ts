@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpErrorResponse, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Browser, User} from '@app/globals';
 import {catchError, delay, map, retryWhen, scan} from 'rxjs/operators';
-import {Account, Asset, ConnectData, ConnectionToken, Endpoint, Session, TreeNode, User as _User} from '@app/model';
+import {Account, Asset, ConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
@@ -217,7 +217,7 @@ export class HttpService {
 
   cleanRDPParams(params) {
     const cleanedParams = {};
-    const {rdpResolution, rdpFullScreen, rdpDrivesRedirect} = params;
+    const {rdpResolution, rdpFullScreen, rdpMultiScreen, rdpDrivesRedirect} = params;
 
     if (rdpResolution && rdpResolution.indexOf('x') > -1) {
       const [width, height] = rdpResolution.split('x');
@@ -226,6 +226,9 @@ export class HttpService {
     }
     if (rdpFullScreen) {
       cleanedParams['full_screen'] = '1';
+    }
+    if (rdpMultiScreen) {
+      cleanedParams['multi_mon'] = '1';
     }
     if (rdpDrivesRedirect) {
       cleanedParams['drives_redirect'] = '1';
@@ -280,7 +283,7 @@ export class HttpService {
     return window.open(url.href);
   }
 
-  getLocalClientUrl(token, params: Object) {
+  getLocalClientUrl(token, params: Object = {}) {
     const url = new URL(`/api/v1/authentication/connection-token/${token.id}/client-url/`, window.location.origin);
     params = this.cleanRDPParams(params);
     if (params) {
@@ -291,6 +294,24 @@ export class HttpService {
     return this.get(url.href).pipe(
       catchError(this.handleConnectMethodExpiredError.bind(this))
     );
+  }
+
+  getLocalClientUrlAndSetCommand(token, command: string, params: Object = {}) {
+    const setCommand = (res) => {
+      const protocol = 'jms://';
+      const buf = res.url.replace(protocol, '');
+      const bufObj = JSON.parse(window.atob(buf));
+      bufObj['command'] = command;
+      const bufStr = window.btoa(JSON.stringify(bufObj));
+      res.url = protocol + bufStr;
+      return res;
+    };
+    return new Promise((resolve, reject) => {
+      this.getLocalClientUrl(token, params).subscribe(
+        res => resolve(setCommand(res)),
+        err => reject(err)
+      );
+    });
   }
 
   async handleConnectMethodExpiredError(error) {
@@ -315,5 +336,30 @@ export class HttpService {
       url.searchParams.append('token', token);
     }
     return this.get(url.href).pipe(map(res => Object.assign(new Endpoint(), res))).toPromise();
+  }
+
+  getTicketDetail(ticketId: string): Promise<Ticket> {
+    const url = `/api/v1/tickets/tickets/${ticketId}/`;
+    return this.get<Ticket>(url).toPromise();
+  }
+
+  toggleLockSession(sessionId: string, lock: boolean): Promise<any> {
+    const url = `/api/v1/terminal/tasks/toggle-lock-session/`;
+    const taskName = lock ? 'lock_session' : 'unlock_session';
+    const data = {
+      session_id: sessionId,
+      task_name: taskName
+    };
+    return this.post(url, data).toPromise();
+  }
+
+  toggleLockSessionForTicket(ticketId: string, sessionId: string, lock: boolean): Promise<any> {
+    const url = `/api/v1/terminal/tasks/toggle-lock-session-for-ticket/`;
+    const taskName = lock ? 'lock_session' : 'unlock_session';
+    const data = {
+      session_id: sessionId,
+      task_name: taskName
+    };
+    return this.post(url, data).toPromise();
   }
 }
