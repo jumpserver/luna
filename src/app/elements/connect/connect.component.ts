@@ -104,6 +104,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           alias: account.alias,
           username: account.username,
           secret: undefined,
+          rememberAuth: false
         };
         connectInfo.connectMethod = {
           type: type,
