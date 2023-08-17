@@ -57,7 +57,8 @@ export class ElementConnectDialogComponent implements OnInit {
 
   setDefaults() {
     if (this.preConnectData) {
-      this.protocol = this.protocols.find(p => p.name === this.preConnectData.protocol.name);
+      const preProtocol = this.preConnectData.protocol || this.protocols[0];
+      this.protocol = this.protocols.find(p => p.name === preProtocol.name) || this.protocols[0];
       this.accountSelected = this.accounts.find(a => a.alias === this.preConnectData.account.alias) || new Account();
       const connectMethod = this._appSvc.getProtocolConnectMethods(this.protocol.name).find(
         cm => cm.value === this.preConnectData.connectMethod.value
