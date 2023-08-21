@@ -248,7 +248,7 @@ export class AppService {
     const assetId = asset.id;
     const newAuth = Object.assign({alias: account.alias, username: account.username}, auth);
     if (!auth.secret || !auth.rememberAuth) {
-      auth.secret = '';
+      newAuth.secret = '';
     } else {
       newAuth.secret = this.encrypt(auth.secret);
     }
