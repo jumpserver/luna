@@ -11,7 +11,7 @@ export class SettingService {
   setting: Setting;
   public globalSetting: GlobalSetting = new GlobalSetting();
   settingKey = 'LunaSetting';
-  private inited = false;
+  public initialized$ = new BehaviorSubject<boolean>(false);
   public isLoadTreeAsync$ = new BehaviorSubject<boolean>(true);
   public appletConnectMethod$ = new BehaviorSubject<string>('');
   public keyboardLayout$ = new BehaviorSubject<string>('');
@@ -85,11 +85,11 @@ export class SettingService {
   }
 
   async init() {
-    if (this.inited) {
-      return ;
+    if (this.initialized$.value) {
+      return;
     }
     await this.getPublicSettings();
-    this.inited = true;
+    this.initialized$.next(true);
   }
 
   save() {
