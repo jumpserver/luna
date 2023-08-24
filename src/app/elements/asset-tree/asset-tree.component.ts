@@ -408,9 +408,7 @@ export class ElementAssetTreeComponent implements OnInit {
         return;
       }
       const node = nodes.shift();
-      this.connectAsset(node).then(() => {
-        ztree.checkNode(node, false, false);
-      });
+      this.connectAsset(node).then();
     }, 500);
   }
 
