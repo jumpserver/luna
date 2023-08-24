@@ -205,10 +205,14 @@ export class ElementAssetTreeComponent implements OnInit {
       this.isLoadTreeAsync = state;
     });
     this.currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
-    if (this.currentOrgID === SYSTEM_ORG_ID) {
-      this.currentOrgID = DEFAULT_ORG_ID;
-    }
-    this.initTree();
+    this._settingSvc.initialized$.subscribe((state) => {
+      if (state) {
+        if (!this._settingSvc.hasXPack() && this.currentOrgID === SYSTEM_ORG_ID) {
+          this.currentOrgID = DEFAULT_ORG_ID;
+        }
+        this.initTree();
+      }
+    });
     this.trees.map((tree, index) => (index === 0 ? tree.open = true : tree.open = false));
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
@@ -223,7 +227,6 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   onNodeClick(event, treeId, treeNode, clickFlag) {
-    // debugger
     const ztree = this.trees.find(t => t.name === treeId).ztree;
     if (treeNode.isParent) {
       ztree.expandNode(treeNode);
