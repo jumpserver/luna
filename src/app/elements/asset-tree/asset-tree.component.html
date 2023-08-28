@@ -72,6 +72,7 @@
     <tr *ngFor="let menu of RMenuList; let i = index" class="view-menu__item ">
       <td (click)="menu.click()"
           [attr.data-num]="i"
+          [attr.disabled]="true"
           [ngStyle]="{'display': menu.hide ? 'none': ''}"
           class="view-menu__data"
       >

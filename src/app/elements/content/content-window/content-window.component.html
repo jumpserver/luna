@@ -5,7 +5,10 @@
   [ngSwitch]="connector"
   class="window"
 >
-  <div *ngIf="!loading">
+  <div *ngIf="!loading" class="container">
+    <div *ngIf="view.subViews.length > 0" class="head">
+      <span>{{ getMainViewName() }}</span>
+    </div>
     <elements-connector-magnus
       *ngSwitchCase="'magnus'"
       [view]="view">
@@ -22,5 +25,33 @@
       [view]="view"
     >
     </elements-connector-default>
+  </div>
+  <div style="flex: 1;" *ngFor="let sub of view.subViews">
+    <div *ngIf="sub.smartEndpoint" class="container">
+      <div class="head">
+        <span>{{ sub.name }}</span>
+        <span style="float: right;">
+          <span class="close" (click)="closeSubView(sub)">&times;</span>
+        </span>
+      </div>
+      <div [ngSwitch]="computeConnector(sub)" class="sub-view">
+        <elements-connector-magnus
+          *ngSwitchCase="'magnus'"
+          [view]="sub"
+        >
+        </elements-connector-magnus>
+        <elements-connector-koko
+          *ngSwitchCase="'koko'"
+          [view]="sub"
+        >
+        </elements-connector-koko>
+        <elements-connector-default
+          *ngSwitchDefault
+          [connector]="computeConnector(sub)"
+          [view]="sub"
+        >
+        </elements-connector-default>
+      </div>  
+    </div>
   </div>
 </div>
