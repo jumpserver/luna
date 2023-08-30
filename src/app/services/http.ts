@@ -362,4 +362,14 @@ export class HttpService {
     };
     return this.post(url, data).toPromise();
   }
+
+  getQuickCommand() {
+    const url = '/api/v1/ops/adhocs/';
+    return this.get(url).toPromise();
+  }
+
+  addQuickCommand(data) {
+    const url = '/api/v1/ops/adhocs/';
+    return this.post(url, data);
+  }
 }

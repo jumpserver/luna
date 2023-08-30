@@ -1,7 +1,9 @@
 import {Component, ElementRef, EventEmitter, OnInit, Output, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
-import {ConnectTokenService, I18nService, LogService, SettingService, ViewService} from '@app/services';
+import {ConnectTokenService, I18nService, LogService, SettingService, ViewService, HttpService} from '@app/services';
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
+import {MatDialog} from '@angular/material';
+import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
@@ -36,11 +38,15 @@ export class ElementContentComponent implements OnInit {
     }
   ];
   viewIds: Array<string> = [];
+  isShowInputCommand = true;
+  quickCommands = [];
 
   constructor(public viewSrv: ViewService,
               public settingSvc: SettingService,
               private _i18n: I18nService,
               private _logger: LogService,
+              private _http: HttpService,
+              private _dialog: MatDialog,
               private _connectTokenSvc: ConnectTokenService,
   ) {
   }
@@ -59,9 +65,10 @@ export class ElementContentComponent implements OnInit {
     return item.id;
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.viewList = this.viewSrv.viewList;
     this.viewIds = this.viewSrv.viewIds;
+    this.quickCommands = await this._http.getQuickCommand();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
@@ -136,6 +143,11 @@ export class ElementContentComponent implements OnInit {
     }
 
     this.batchCommand = '';
+  }
+
+  sendQuickCommand(command) {
+    this.batchCommand = command;
+    this.sendBatchCommand();
   }
 
   rMenuItems() {
@@ -242,5 +254,26 @@ export class ElementContentComponent implements OnInit {
 
   onItemDropped(event: CdkDragDrop<string[]>) {
     moveItemInArray(this.viewIds, event.previousIndex, event.currentIndex);
+  }
+
+  async switchCommand() {
+    this.batchCommand = '';
+    this.isShowInputCommand = !this.isShowInputCommand;
+    if (!this.isShowInputCommand) {
+      this.quickCommands = await this._http.getQuickCommand();
+    }
+  }
+
+  onSendCommand() {
+    if (!this.batchCommand) { return; }
+
+    this._dialog.open(
+      ElementCommandDialogComponent,
+      {
+        height: 'auto',
+        width: '500px',
+        data: {command: this.batchCommand}
+      }
+    );
   }
 }
