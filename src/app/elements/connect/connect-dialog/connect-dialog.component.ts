@@ -25,9 +25,9 @@ export class ElementConnectDialogComponent implements OnInit {
   public connectMethod: ConnectMethod = new ConnectMethod('Null', '', 'null', 'null');
   public preConnectData: ConnectData = new ConnectData();
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
-  public isAppletClientMethod = false;
-  public onlineNum: number = 0;
   public accountOrUsernameChanged = new BehaviorSubject(false);
+  public isAppletClientMethod = false;
+  public onlineNum: number = null;
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
@@ -52,7 +52,7 @@ export class ElementConnectDialogComponent implements OnInit {
       this.isAppletClientMethod = state === 'client';
     });
     this.setDefaults();
-    this.accountOrUsernameChanged.pipe(debounceTime(1000))
+    this.accountOrUsernameChanged.pipe(debounceTime(500))
       .subscribe(_ => {
         this.getOnlineNum();
       });
