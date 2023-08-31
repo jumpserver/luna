@@ -180,5 +180,6 @@
   "Expand all": "すべて展開",
   "Fold all": "すべて折りたたみ",
   "Password is token password on the table": "パスワードは、テーブルのトークンパスワードです",
-  "Password is your password login to system": "パスワードは、システムにログインするためのパスワードです"
+  "Password is your password login to system": "パスワードは、システムにログインするためのパスワードです",
+  "Current online": "現在オンライン"
 }
