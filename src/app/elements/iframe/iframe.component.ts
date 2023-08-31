@@ -94,16 +94,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       clearInterval(this.ping);
       this.showIframe = this.showValue;
     }.bind(this), 1000 * 10);
-    const clickEvent = new MouseEvent('click', {
-      bubbles: true,
-      cancelable: true,
-      view: window
-    });
-    console.log('Add click event listener');
-    this.iframeWindow.document.addEventListener('click', () => {
-      console.log('On iframe window click ');
-      window.dispatchEvent(clickEvent);
-    });
   }
 
   sendCommand(data) {
