@@ -19,28 +19,28 @@
 
   <div (keyup.enter)="onConfirm()" class="dialog-body" mat-dialog-content>
     <elements-select-account
-        (accountSelectedChange)="onSelectAccount($event)"
-        (manualUsernameChanged)="onManualUsernameChanged($event)"
-        [accounts]="accounts"
-        [asset]="asset"
-        [manualAuthInfo]="manualAuthInfo"
-        [onSubmit]="onSubmit$"
-        [protocol]="protocol"
+      (accountSelectedChange)="onSelectAccount($event)"
+      (manualUsernameChanged)="onManualUsernameChanged($event)"
+      [accounts]="accounts"
+      [asset]="asset"
+      [manualAuthInfo]="manualAuthInfo"
+      [onSubmit]="onSubmit$"
+      [protocol]="protocol"
     >
     </elements-select-account>
 
     <elements-connect-method
-        (onDownloadRDPFile)="onConfirm(true)"
-        [(connectMethod)]="connectMethod"
-        [protocol]="protocol"
-        class="connect-method-zone"
+      (onDownloadRDPFile)="onConfirm(true)"
+      [(connectMethod)]="connectMethod"
+      [protocol]="protocol"
+      class="connect-method-zone"
     >
     </elements-connect-method>
 
     <elements-advanced-option
-        (onOptionsChange)="onAdvancedOptionChanged($event)"
-        [connectMethod]="connectMethod"
-        [protocol]="protocol"
+      (onOptionsChange)="onAdvancedOptionChanged($event)"
+      [connectMethod]="connectMethod"
+      [protocol]="protocol"
     >
     </elements-advanced-option>
 
@@ -52,13 +52,14 @@
     </div>
 
     <mat-dialog-actions style="float: right; margin: 8px 0 0 0; width: 100%">
-      <button (click)="onConfirm()"
-              [disabled]="isConnectDisabled()"
-              [mat-dialog-close]="outputData"
-              class="confirm-btn"
-              color="primary"
-              mat-raised-button
-              type="submit"
+      <button
+        (click)="onConfirm()"
+        [disabled]="isConnectDisabled()"
+        [mat-dialog-close]="outputData"
+        class="confirm-btn"
+        color="primary"
+        mat-raised-button
+        type="submit"
       >
         {{"Connect"| translate}}
         <span *ngIf="protocol.name === 'rdp'" class="online-num">
