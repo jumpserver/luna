@@ -20,6 +20,7 @@
   <div (keyup.enter)="onConfirm()" class="dialog-body" mat-dialog-content>
     <elements-select-account
       (accountSelectedChange)="onSelectAccount($event)"
+      (manualUsernameChanged)="onManualUsernameChanged($event)"
       [accounts]="accounts"
       [asset]="asset"
       [manualAuthInfo]="manualAuthInfo"
@@ -54,12 +55,15 @@
       <button (click)="onConfirm()"
               [disabled]="isConnectDisabled()"
               [mat-dialog-close]="outputData"
+              class="confirm-btn"
               color="primary"
               mat-raised-button
-              style="width: 100%"
               type="submit"
       >
         {{"Connect"| translate}}
+        <span *ngIf="onlineNum !== null && protocol.name === 'rdp'" class="online-num">
+          ({{ 'Current online' | translate}}: {{ onlineNum }})
+        </span>
       </button>
     </mat-dialog-actions>
   </div>

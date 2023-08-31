@@ -1,9 +1,10 @@
 import {ChangeDetectorRef, Component, Inject, OnInit} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {AppService, I18nService, LogService, SettingService} from '@app/services';
+import {AppService, HttpService, I18nService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {Account, Asset, AuthInfo, ConnectData, ConnectMethod, ConnectOption, Protocol} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
+import {debounceTime} from 'rxjs/operators';
 
 
 @Component({
@@ -25,10 +26,13 @@ export class ElementConnectDialogComponent implements OnInit {
   public preConnectData: ConnectData = new ConnectData();
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
   public isAppletClientMethod = false;
+  public onlineNum: number = 0;
+  public accountOrUsernameChanged = new BehaviorSubject(false);
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
               private _cdRef: ChangeDetectorRef,
+              private _http: HttpService,
               private _logger: LogService,
               private _appSvc: AppService,
               private _i18n: I18nService,
@@ -48,6 +52,10 @@ export class ElementConnectDialogComponent implements OnInit {
       this.isAppletClientMethod = state === 'client';
     });
     this.setDefaults();
+    this.accountOrUsernameChanged.pipe(debounceTime(1000))
+      .subscribe(_ => {
+        this.getOnlineNum();
+      });
   }
 
   getProtocols() {
@@ -84,14 +92,37 @@ export class ElementConnectDialogComponent implements OnInit {
 
   onProtocolChange(protocol) {
     this.protocol = protocol;
+    this.getOnlineNum();
+  }
+
+  getOnlineNum() {
+    if (this.protocol.name !== 'rdp') {
+      return;
+    }
+    let account = this.accountSelected.username;
+    if (!this.accountSelected.has_secret) {
+      account = this.manualAuthInfo.username;
+    }
+    if (!account) {
+      return;
+    }
+    this._http.getSessionOnlineNum(this.asset.id, account)
+      .subscribe((data) => {
+        this.onlineNum = data['count'];
+      });
   }
 
   onSelectAccount(account) {
     this.accountSelected = account;
+    this.accountOrUsernameChanged.next(true);
 
     if (!account) {
       return;
     }
+  }
+
+  onManualUsernameChanged(evt) {
+    this.accountOrUsernameChanged.next(true);
   }
 
   isConnectDisabled(): Boolean {
