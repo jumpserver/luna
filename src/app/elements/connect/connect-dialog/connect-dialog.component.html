@@ -52,17 +52,18 @@
     </div>
 
     <mat-dialog-actions style="float: right; margin: 8px 0 0 0; width: 100%">
-      <button (click)="onConfirm()"
-              [disabled]="isConnectDisabled()"
-              [mat-dialog-close]="outputData"
-              class="confirm-btn"
-              color="primary"
-              mat-raised-button
-              type="submit"
+      <button
+        (click)="onConfirm()"
+        [disabled]="isConnectDisabled()"
+        [mat-dialog-close]="outputData"
+        class="confirm-btn"
+        color="primary"
+        mat-raised-button
+        type="submit"
       >
         {{"Connect"| translate}}
-        <span *ngIf="onlineNum !== null && protocol.name === 'rdp'" class="online-num">
-          ({{ 'Current online' | translate}}: {{ onlineNum }})
+        <span *ngIf="protocol.name === 'rdp'" class="online-num">
+          ({{ 'Current online' | translate}}: {{ onlineNum === null ? '- ' : onlineNum }})
         </span>
       </button>
     </mat-dialog-actions>
