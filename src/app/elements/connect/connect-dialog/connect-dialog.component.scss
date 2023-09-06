@@ -45,7 +45,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1px;
-  line-height: 28px;
+  line-height: 20px;
   font-size: 18px;
 }
 
@@ -69,8 +69,8 @@ button.mat-raised-button {
   margin-left: 0;
 }
 
-.mat-dialog-container {
-  padding-top: 15px;
+::ng-deep .mat-dialog-container {
+  padding-top: 15px !important;
 }
 
 .auto-overflow {
