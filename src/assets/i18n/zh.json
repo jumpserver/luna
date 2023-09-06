@@ -46,6 +46,8 @@
   "Switch to quick command": "切换到快捷命令",
   "Switch to input command": "切换到输入命令",
   "Not quick command": "暂无快捷命令",
+  "Save Command": "保存命令",
+  "Save Success": "保存成功",
   "Setting": "设置",
   "Show left manager": "显示左边栏",
   "Skip": "跳过",
@@ -127,7 +129,6 @@
   "Database connect info": "数据库连接信息",
   "Command line": "连接命令行",
   "Run it by client": "使用客户端执行",
-  "Save Command": "保存命令",
   "Name": "名称",
   "Failed to open address": "打开地址失败",
   "With secret accounts": "托管账号",
@@ -186,6 +187,7 @@
   "Expand all": "展开全部",
   "Fold all": "折叠全部",
   "Password is token password on the table": "密码是表格中的 Token 密码",
-  "Password is your password login to system": "密码是你登录系统的密码"
+  "Password is your password login to system": "密码是你登录系统的密码",
+  "Current online": "当前在线"
 }
 

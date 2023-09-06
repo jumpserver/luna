@@ -53,7 +53,6 @@
   margin: 0;
 }
 
-
 .mat-button-toggle-group {
   height: 32px;
   align-items: center;
@@ -74,6 +73,14 @@ button.mat-raised-button {
   padding-top: 15px;
 }
 
-
 .auto-overflow {
+}
+
+.confirm-btn {
+  width: 100%;
+}
+
+.online-num {
+  font-size: 12px;
+  font-weight: 300;
 }

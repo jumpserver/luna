@@ -46,6 +46,8 @@
   "Switch to quick command": "クイックコマンドに切り替え",
   "Switch to input command": "入力コマンドに切り替え",
   "Not quick command": "非高速コマンド",
+  "Save Command": "保存コマンド",
+  "Save Success": "保存に成功",
   "Setting": "設定",
   "Show left manager": "左サイドバーを表示",
   "Skip": "スキップ",
@@ -133,7 +135,6 @@
   "CLI": "コマンドライン",
   "Asset not found or You have no permission to access it, please refresh asset tree": "アセットが見つからないか、アクセスする権限がありません。アセット ツリーを更新してください",
   "Run it by client": "クライアントで実行する",
-  "Save Command": "保存コマンド",
   "Name": "めいしょう",
   "Failed to open address": "アドレスを開くことができませんでした",
   "Normal accounts": "通常のログインアカウント",
@@ -184,5 +185,6 @@
   "Expand all": "すべて展開",
   "Fold all": "すべて折りたたみ",
   "Password is token password on the table": "パスワードは、テーブルのトークンパスワードです",
-  "Password is your password login to system": "パスワードは、システムにログインするためのパスワードです"
+  "Password is your password login to system": "パスワードは、システムにログインするためのパスワードです",
+  "Current online": "現在オンライン"
 }

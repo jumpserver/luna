@@ -372,4 +372,9 @@ export class HttpService {
     const url = '/api/v1/ops/adhocs/';
     return this.post(url, data);
   }
+
+  getSessionOnlineNum(assetId: string, account: string) {
+    const url = `/api/v1/terminal/sessions/online-info/?asset_id=${assetId}&account=${account}`;
+    return this.get(url);
+  }
 }
