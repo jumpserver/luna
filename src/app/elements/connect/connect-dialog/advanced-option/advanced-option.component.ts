@@ -61,7 +61,7 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         },
         options: resolutionsChoices.map(i => ({label: i, value: i})),
         label: 'Resolution',
-        value: this.setting.rdpResolution
+        value: this.setting.graphics.rdp_resolution
       },
       {
         type: 'select',
@@ -71,7 +71,7 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         },
         options: this.boolChoices,
         label: 'Backspace as Ctrl+H',
-        value: !!this.setting.backspaceAsCtrlH
+        value: this.setting.command_line.is_backspace_as_ctrl_h
       }
     ];
     this.advancedOptions = this.advancedOptions.filter(i => !i.hidden());

@@ -1,11 +1,10 @@
 import {Component, Inject, OnInit} from '@angular/core';
 import {MatDialogRef} from '@angular/material';
-import {SettingService} from '@app/services';
+import {SettingService, HttpService} from '@app/services';
 import {GlobalSetting, Setting} from '@app/model';
 import {I18nService} from '@app/services/i18n';
 import {MAT_DIALOG_DATA} from '@angular/material/dialog';
-import {resolutionsChoices} from '@app/globals';
-
+import * as _ from 'lodash';
 
 @Component({
   selector: 'elements-setting',
@@ -14,28 +13,25 @@ import {resolutionsChoices} from '@app/globals';
 })
 export class ElementSettingComponent implements OnInit {
   public boolChoices: any[];
-  public keyboardLayoutOptions: any[];
+  keyboardLayoutOptions: any[];
+  resolutionsOptions: any[];
   setting: Setting;
   globalSetting: GlobalSetting;
   type = 'general';
-  resolutionsChoices = resolutionsChoices;
+  rdpClientConfig = {
+    full_screen: false,
+    multi_screen: false,
+    drives_redirect: false,
+  };
 
   constructor(public dialogRef: MatDialogRef<ElementSettingComponent>,
               private _i18n: I18nService,
+              private _http: HttpService,
               @Inject(MAT_DIALOG_DATA) public data: any,
               private settingSrv: SettingService) {
     this.boolChoices = [
-      {name: _i18n.instant('Yes'), value: '1'},
-      {name: _i18n.instant('No'), value: '0'}
-    ];
-    this.keyboardLayoutOptions = [
-      {value: 'en-us-qwerty', label: _i18n.instant('US English keyboard layout')},
-      {value: 'en-gb-qwerty', label: _i18n.instant('UK English keyboard layout')},
-      {value: 'ja-jp-qwerty', label: _i18n.instant('Japanese keyboard layout')},
-      {value: 'fr-fr-azerty', label: _i18n.instant('French keyboard layout')},
-      {value: 'fr-ch-qwertz', label: _i18n.instant('Swiss French keyboard layout')},
-      {value: 'fr-be-azerty', label: _i18n.instant('Belgian French keyboard layout')},
-      {value: 'tr-tr-qwerty', label: _i18n.instant('Turkey keyboard layout')}
+      {name: _i18n.instant('Yes'), value: true},
+      {name: _i18n.instant('No'), value: false}
     ];
   }
 
@@ -44,15 +40,42 @@ export class ElementSettingComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.getSettingOptions();
     this.setting = this.settingSrv.setting;
+    this.getRdpClientConfig();
     this.globalSetting = this.settingSrv.globalSetting;
     this.type = this.data.type;
-    if (!this.setting.backspaceAsCtrlH) {
-      this.setting.backspaceAsCtrlH = '0';
+  }
+
+  async getSettingOptions() {
+    const url = '/api/v1/users/preference/?category=luna';
+    const res: any = await this._http.options(url).toPromise();
+    const graphics = res.actions.GET.graphics.children;
+    this.resolutionsOptions = graphics.rdp_resolution.choices;
+    this.keyboardLayoutOptions = graphics.keyboard_layout.choices;
+  }
+
+  getRdpClientConfig() {
+    const rdpClientConfig = this.setting.graphics.rdp_client_option || [];
+    for (const i of rdpClientConfig) {
+      this.rdpClientConfig[i] = true;
     }
   }
 
+  setRdpClientConfig() {
+    let rdpClientConfig = this.setting.graphics.rdp_client_option || [];
+    for (const i in this.rdpClientConfig) {
+      if (this.rdpClientConfig[i]) {
+        rdpClientConfig.push(i);
+      } else {
+        rdpClientConfig = _.pull(rdpClientConfig, i);
+      }
+    }
+    this.setting.graphics.rdp_client_option = _.uniq(rdpClientConfig);
+  }
+
   onSubmit() {
+    this.setRdpClientConfig();
     this.settingSrv.save();
     this.dialogRef.close();
   }
