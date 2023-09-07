@@ -1,14 +1,14 @@
 import {Injectable} from '@angular/core';
 import {Setting, GlobalSetting} from '@app/model';
 import {LocalStorageService} from './share';
-import {HttpClient} from '@angular/common/http';
 import {I18nService} from '@app/services/i18n';
+import {HttpService} from '@app/services/http';
 import {canvasWaterMark, getQueryParamFromURL} from '@app/utils/common';
 import {BehaviorSubject} from 'rxjs';
 
 @Injectable()
 export class SettingService {
-  setting: Setting;
+  setting: Setting = new Setting();
   public globalSetting: GlobalSetting = new GlobalSetting();
   settingKey = 'LunaSetting';
   public initialized$ = new BehaviorSubject<boolean>(false);
@@ -19,18 +19,14 @@ export class SettingService {
 
   constructor(
     private _localStorage: LocalStorageService,
-    private _http: HttpClient,
+    private _http: HttpService,
     private _i18n: I18nService
   ) {
-    const settingData = this._localStorage.get(this.settingKey);
-    if (settingData && typeof settingData === 'object') {
-      this.setting = settingData;
+    this.getSystemSetting().then(() => {
       this.setIsLoadTreeAsync();
       this.setAppletConnectMethod();
       this.setKeyboardLayout();
-    } else {
-      this.setting = new Setting();
-    }
+    });
     this.init().then();
   }
   async getPublicSettings() {
@@ -48,6 +44,17 @@ export class SettingService {
     this.setRDPResolution();
     return new Promise((resolve) => { resolve(true); });
   }
+
+   getSystemSetting() {
+    return new Promise<void>(async (resolve) => {
+      const url = '/api/v1/users/preference/?category=luna';
+      const serverSetting = await this._http.get<any>(url).toPromise();
+      const localSetting = this._localStorage.get(this.settingKey) || {};
+      this.setting = Object.assign(this.setting, localSetting, serverSetting);
+      resolve();
+    });
+  }
+
   setTitle() {
     document.title = this._i18n.instant('Web Terminal') + ` - ${this.globalSetting.INTERFACE.login_title}`;
   }
@@ -72,8 +79,8 @@ export class SettingService {
 
   setRDPResolution() {
     const value = this._localStorage.get(this.settingKey);
-    if (!value || !value.rdpResolution) {
-      this.setting.rdpResolution = this.globalSetting.TERMINAL_GRAPHICAL_RESOLUTION;
+    if (!value || (value.graphics && !value.graphics.rdp_resolution)) {
+      this.setting.graphics.rdp_resolution = this.globalSetting.TERMINAL_GRAPHICAL_RESOLUTION;
     }
   }
 
@@ -93,6 +100,8 @@ export class SettingService {
   }
 
   save() {
+    const url = '/api/v1/users/preference/?category=luna';
+    this._http.patch(url, this.setting).toPromise();
     this._localStorage.set(this.settingKey, this.setting);
     this.setIsLoadTreeAsync();
     this.setAppletConnectMethod();
@@ -100,15 +109,15 @@ export class SettingService {
   }
 
   setIsLoadTreeAsync() {
-    this.isLoadTreeAsync$.next(this.setting.isLoadTreeAsync === '1');
+    this.isLoadTreeAsync$.next(this.setting.basic.is_async_asset_tree);
   }
 
   setAppletConnectMethod() {
-    this.appletConnectMethod$.next(this.setting.appletConnectMethod);
+    this.appletConnectMethod$.next(this.setting.graphics.remote_application_connection_method);
   }
 
   setKeyboardLayout() {
-    this.keyboardLayout$.next(this.setting.keyboardLayout);
+    this.keyboardLayout$.next(this.setting.graphics.keyboard_layout);
   }
 
   // 全局跳过手动输入windows账号密码
