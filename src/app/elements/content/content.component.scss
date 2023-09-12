@@ -179,7 +179,7 @@ $-border-y: #1f1b1b;
 
 .view-menu td {
   display: block;
-  padding: 0 15px;
+  padding: 1px 15px;
   text-decoration: none;
   min-width: 150px;
   width: auto;
@@ -199,13 +199,8 @@ $-border-y: #1f1b1b;
 }
 
 .view-menu__item.view-menu__item--separator {
-  background: #181414;
   border: 0;
   border-top: none;
-  height: 1px;
-  min-height: 1px;
-  max-height: 1px;
-  padding: 0;
   border-left: none;
   text-shadow: 0 0 0 transparent;
   box-shadow: none;
@@ -213,6 +208,9 @@ $-border-y: #1f1b1b;
   -moz-border-radius: 0;
   border-radius: 0;
   margin: 2px 0;
+  &:hover {
+    background-color: rgba(53,54,51, 0.7);
+  }
 }
 
 tr {

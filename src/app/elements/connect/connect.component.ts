@@ -2,7 +2,16 @@ import {Component, EventEmitter, OnDestroy, OnInit, Output} from '@angular/core'
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {MatDialog} from '@angular/material';
-import {AppService, ConnectTokenService, DialogService, HttpService, I18nService, LogService, SettingService} from '@app/services';
+import {
+  AppService,
+  ConnectTokenService,
+  DialogService,
+  HttpService,
+  I18nService,
+  LogService,
+  SettingService,
+  ViewService
+} from '@app/services';
 import {Account, Asset, ConnectData, ConnectionToken, K8sInfo, View} from '@app/model';
 import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
@@ -27,6 +36,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
               private _connectTokenSvc: ConnectTokenService,
               private _i18n: I18nService,
               private _settingSvc: SettingService,
+              public viewSrv: ViewService,
   ) {
   }
 
@@ -141,11 +151,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         switch (evt.action) {
           case 'connect': {
             this._appSvc.disableAutoConnect(asset.id);
-            this.connectAsset(asset).then();
+            this.connectAsset(asset, evt.splitConnect).then();
             break;
           }
           default: {
-            this.connectAsset(asset).then();
+            this.connectAsset(asset, evt.splitConnect).then();
           }
         }
       });
@@ -156,7 +166,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     connectEvt.unsubscribe();
   }
 
-  async connectAsset(asset) {
+  /**
+   * @param asset
+   * @param splitConnect 是否分屏连接
+   */
+  async connectAsset(asset, splitConnect = false) {
     if (!asset) {
       const msg = await this._i18n.t('Asset not found or You have no permission to access it, please refresh asset tree');
       await this._dialogAlert.alert(msg);
@@ -180,6 +194,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (connToken.protocol === 'k8s') {
       window.open(`/luna/k8s?token=${connToken.id}`);
       return;
+    }
+
+    // 分屏连接
+    if (splitConnect) {
+      return this.currentWebSubView(asset, connectInfo, connToken);
     }
 
     // 特殊处理
@@ -218,6 +237,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   createWebView(asset: Asset, connectInfo: any, connToken: ConnectionToken, k8sInfo?: K8sInfo) {
     const view = new View(asset, connectInfo, connToken, 'node', k8sInfo);
     this.onNewView.emit(view);
+  }
+
+  currentWebSubView(asset: Asset, connectInfo: any, connToken: ConnectionToken, k8sInfo?: K8sInfo) {
+    const view = new View(asset, connectInfo, connToken, 'node', k8sInfo);
+    this.viewSrv.addSubViewToCurrentView(view);
   }
 
   checkPreConnectDataForAuto(asset: Asset, accounts: Account[], preData: ConnectData): Boolean {

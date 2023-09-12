@@ -44,4 +44,28 @@ export class ViewService {
     const idIndex = this.viewIds.indexOf(view.id);
     this.viewIds.splice(idIndex, 1);
   }
+
+  addSubViewToCurrentView(view: View) {
+    this.currentView.subViews.push(view);
+    this.setCurrentViewTitle('concat');
+  }
+
+  ClearSubViewOfCurrentView() {
+    this.currentView.subViews = [];
+    this.setCurrentViewTitle('revert');
+  }
+
+  setCurrentViewTitle(status) {
+    const { name } = this.currentView;
+    const index = name.indexOf('|');
+    switch (status) {
+      case 'concat':
+        const subViewName = this.currentView.subViews[0].name || '';
+        this.currentView.name = index > -1 ? name.substring(0, index + 1) + subViewName : name + ' | ' + subViewName;
+        break;
+      case 'revert':
+        this.currentView.name = name.substring(0, index);
+        break;
+    }
+  }
 }

@@ -61,10 +61,6 @@ export class ElementContentComponent implements OnInit {
       && this.viewSrv.currentView.protocol === 'ssh';
   }
 
-  trackByFn(index, item) {
-    return item.id;
-  }
-
   async ngOnInit() {
     this.viewList = this.viewSrv.viewList;
     this.viewIds = this.viewSrv.viewIds;
@@ -172,6 +168,18 @@ export class ElementContentComponent implements OnInit {
         callback: () => {
           this.viewList[this.rIdx].termComp.reconnect();
         }
+      },
+      {
+        title: 'Split vertically',
+        icon: 'fa-columns',
+        callback: () => {
+          const oldView = this.viewList[this.rIdx];
+          this._connectTokenSvc.exchange(oldView.connectToken).then((newConnectToken) => {
+            const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
+            this.viewSrv.addSubViewToCurrentView(newView);
+          });
+        },
+        disabled: this.viewList[this.rIdx].subViews.length > 0
       },
       {
         title: 'Close Current Tab',

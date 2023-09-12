@@ -85,10 +85,12 @@ export class Asset {
 export class ConnectEvt {
   action: string;
   node: TreeNode;
+  splitConnect?: boolean;
 
-  constructor(node, action: string) {
+  constructor(node, action: string, splitConnect = false) {
     this.node = node;
     this.action = action;
+    this.splitConnect = splitConnect;
   }
 }
 
@@ -130,6 +132,7 @@ export class View {
   closed: boolean;
   editable: boolean;
   connected: boolean;
+  subViews?: Array<any>;
   asset: Asset;
   account: Account;
   termComp: any;
@@ -144,6 +147,7 @@ export class View {
     this.closed = false;
     this.editable = false;
     this.connected = true;
+    this.subViews = [];
     this.name = asset.name;
     this.asset = asset;
     this.account = connectInfo.account;
