@@ -2,25 +2,26 @@
   <ul class="nav-main">
     <li style="padding-right: 10px">
       <a style="display: inline-block; padding-top: 1px;">
-        <img src="" id="left-logo" height="26px" (click)="onJumpUi()" />
+        <img (click)="onJumpUi()" height="26px" id="left-logo" src=""/>
       </a>
     </li>
-    <li *ngFor="let v of navs" [ngClass]="{'dropdown': v.children}" >
+    <li *ngFor="let v of navs" [ngClass]="{'dropdown': v.children}">
       <a>{{v.name|translate}}</a>
-      <ul [ngClass]="{'dropdown-content': v.children}" *ngIf="v.children">
+      <ul *ngIf="v.children" [ngClass]="{'dropdown-content': v.children}">
         <li *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
           <a *ngIf="vv.href" [routerLink]="[vv.href]">{{vv.name| translate}}</a>
-          <a id="{{vv.id}}" *ngIf="vv.click && !vv.hide" (click)="vv.click && vv.click()">{{vv.name| translate}}</a>
+          <a (click)="vv.click && vv.click()" *ngIf="vv.click && !vv.hide" id="{{vv.id}}">{{vv.name| translate}}</a>
         </li>
       </ul>
     </li>
     <li [ngClass]="{'dropdown': true}">
       <a>{{"Tab List"| translate}}</a>
       <ul *ngIf="viewList.length > 0" [ngClass]="{'dropdown-content': true}">
-        <ng-container *ngFor="let v of viewList, let idx = index" >
+        <ng-container *ngFor="let v of viewListSorted">
           <li *ngIf="v.name!=null" [ngClass]="{'disconnected':!v.connected, 'hidden': v.closed != false}">
           <span [class.active]="v.active">
-            <a id="{{ 'tab' + idx }}"  (click)="_viewSrv.activeView(v)"><i class="fa fa-circle flag"></i> {{v.name}} </a>
+            <a (click)="_viewSrv.activeView(v)" id="{{ 'tab' + v.id }}"><i
+              class="fa fa-circle flag"></i> {{v.name}} </a>
           </span>
           </li>
         </ng-container>

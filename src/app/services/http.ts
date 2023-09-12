@@ -217,20 +217,20 @@ export class HttpService {
 
   cleanRDPParams(params) {
     const cleanedParams = {};
-    const {rdpResolution, rdpFullScreen, rdpMultiScreen, rdpDrivesRedirect} = params;
+    const {rdp_resolution, rdp_client_option} = params.graphics;
 
-    if (rdpResolution && rdpResolution.indexOf('x') > -1) {
-      const [width, height] = rdpResolution.split('x');
+    if (rdp_resolution && rdp_resolution.indexOf('x') > -1) {
+      const [width, height] = rdp_resolution.split('x');
       cleanedParams['width'] = width;
       cleanedParams['height'] = height;
     }
-    if (rdpFullScreen) {
+    if (rdp_client_option.includes('full_screen')) {
       cleanedParams['full_screen'] = '1';
     }
-    if (rdpMultiScreen) {
+    if (rdp_client_option.includes('multi_screen')) {
       cleanedParams['multi_mon'] = '1';
     }
-    if (rdpDrivesRedirect) {
+    if (rdp_client_option.includes('drives_redirect')) {
       cleanedParams['drives_redirect'] = '1';
     }
     return cleanedParams;
@@ -361,5 +361,20 @@ export class HttpService {
       task_name: taskName
     };
     return this.post(url, data).toPromise();
+  }
+
+  getQuickCommand() {
+    const url = '/api/v1/ops/adhocs/';
+    return this.get(url).toPromise();
+  }
+
+  addQuickCommand(data) {
+    const url = '/api/v1/ops/adhocs/';
+    return this.post(url, data);
+  }
+
+  getSessionOnlineNum(assetId: string, account: string) {
+    const url = `/api/v1/terminal/sessions/online-info/?asset_id=${assetId}&account=${account}`;
+    return this.get(url);
   }
 }

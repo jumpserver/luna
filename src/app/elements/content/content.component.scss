@@ -68,19 +68,30 @@ $-border-y: #1f1b1b;
 }
 
 #batchCommandDiv {
+  display: flex;
   height: 29px;
   border-left: solid 1px $-border-y;
   width: 100%;
   padding: 0 2px 0 0;
+  background: #2f2a2a;
 
   &:focus-visible {
     outline: none;
   }
+
+  i {
+    margin: auto 7px;
+    color: #ffffff;
+    cursor: pointer;
+    &:hover {
+      color: #d6cbcb;
+    }
+  }
 }
 
-#batchCommandDiv > input {
+#batchCommandDiv input {
+  flex: 1;
   height: 29px;
-  padding-left: 14px;
   width: 100%;
   line-height: 29px;
   border: none;
@@ -89,6 +100,41 @@ $-border-y: #1f1b1b;
 
   &:focus-visible {
     outline: none;
+  }
+}
+
+#batchCommandDiv {
+  .command-list {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 3px 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    .command-box {
+      display: inline-block;
+      height: 100%;
+      line-height: 15px;
+      padding: 4px;
+      margin-right: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: none;
+      color: #d6cbcb;
+      background-color: #463e3e;
+      &:hover {
+        color: #ffffff;
+      }
+      &:active {
+        color: #ccc8c8;
+      }
+    }
+  }
+  .not-command {
+    line-height: 29px;
+    padding-left: 6px;
+    color: #717171;
   }
 }
 
@@ -277,4 +323,11 @@ tr:hover {
 
 .view-menu__icon.fa {
   width: 15px;
+}
+
+
+.input-box {
+  display: flex;
+  width: 100%;
+  height: 100%;
 }

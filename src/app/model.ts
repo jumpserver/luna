@@ -277,19 +277,24 @@ export class GlobalSetting {
 }
 
 export class Setting {
-  rdpResolution: string = 'Auto';
-  rdpFullScreen: number = 1;
-  rdpMultiScreen: number = 0;
-  rdpDrivesRedirect: number = 0;
-  fontSize: number = 14;
-  backspaceAsCtrlH: string = '0';
-  isLoadTreeAsync: string = '1';
-  isSkipAllManualPassword: string = '0';
-  quickPaste = '0';
-  sqlClient = '1';
   commandExecution: boolean = true;
-  appletConnectMethod: string = 'web';
-  keyboardLayout: string = '';
+  isSkipAllManualPassword: string = '0';
+  sqlClient = '1';
+
+  basic = {
+    is_async_asset_tree: false
+  };
+  graphics = {
+    rdp_resolution: 'Auto',
+    keyboard_layout: 'en-us-qwerty',
+    rdp_client_option: [],
+    remote_application_connection_method: 'web'
+  };
+  command_line = {
+    character_terminal_font_size: 14,
+    is_backspace_as_ctrl_h: false,
+    is_right_click_quickly_paste: false
+  };
 }
 
 
@@ -488,5 +493,5 @@ export class Ticket {
   status: {
     value: string,
     label: string,
-  }
+  };
 }

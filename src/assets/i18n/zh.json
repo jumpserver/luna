@@ -5,9 +5,9 @@
   "Expand all asset": "展开节点下的所有资产",
   "Right click node": "右击节点 → 展开全部",
   "Asset tree loading method": "配置资产树加载方式",
-  "Settings or basic settings": "设置 → 基本设置",
+  "Settings or basic settings": "菜单设置 → 基本设置",
   "Download the latest client": "下载最新客户端",
-  "Help or download": "帮助 → 下载",
+  "Help or download": "菜单帮助 → 下载",
   "Cancel": "取消",
   "Choose a User": "选择一个用户",
   "Clone Connect": "复制窗口",
@@ -43,6 +43,11 @@
   "Batch connect": "批量连接",
   "RDP resolution": "RDP分辨率",
   "Send text to all ssh terminals": "发送文本到所有ssh终端",
+  "Switch to quick command": "切换到快捷命令",
+  "Switch to input command": "切换到输入命令",
+  "Not quick command": "暂无快捷命令",
+  "Save Command": "保存命令",
+  "Save Success": "保存成功",
   "Setting": "设置",
   "Show left manager": "显示左边栏",
   "Skip": "跳过",
@@ -186,6 +191,7 @@
   "Expand all": "展开全部",
   "Fold all": "折叠全部",
   "Password is token password on the table": "密码是表格中的 Token 密码",
-  "Password is your password login to system": "密码是你登录系统的密码"
+  "Password is your password login to system": "密码是你登录系统的密码",
+  "Current online": "当前在线"
 }
 
