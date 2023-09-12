@@ -22,7 +22,7 @@
         [label]="group.name"
       >
         <mat-option *ngFor="let account of group.accounts" [value]="account">
-          {{ account.name }}
+          {{ account.name }}{{ account.alias === account.username || account.alias.startsWith('@') ? '' : '(' + account.username + ')' }}
         </mat-option>
       </mat-optgroup>
     </mat-select>
