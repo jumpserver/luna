@@ -1,5 +1,5 @@
 import {Injectable} from '@angular/core';
-import {Setting, GlobalSetting} from '@app/model';
+import {GlobalSetting, Setting} from '@app/model';
 import {LocalStorageService} from './share';
 import {I18nService} from '@app/services/i18n';
 import {HttpService} from '@app/services/http';
@@ -29,6 +29,7 @@ export class SettingService {
     });
     this.init().then();
   }
+
   async getPublicSettings() {
     let url = '/api/v1/settings/public/';
     const connectionToken = getQueryParamFromURL('token');
@@ -42,10 +43,12 @@ export class SettingService {
     this.setTitle();
     this.setFavicon();
     this.setRDPResolution();
-    return new Promise((resolve) => { resolve(true); });
+    return new Promise((resolve) => {
+      resolve(true);
+    });
   }
 
-   getSystemSetting() {
+  getSystemSetting() {
     return new Promise<void>(async (resolve) => {
       const url = '/api/v1/users/preference/?category=luna';
       const serverSetting = await this._http.get<any>(url).toPromise();
@@ -113,7 +116,7 @@ export class SettingService {
   }
 
   setAppletConnectMethod() {
-    this.appletConnectMethod$.next(this.setting.graphics.remote_application_connection_method);
+    this.appletConnectMethod$.next(this.setting.graphics.applet_connection_method);
   }
 
   setKeyboardLayout() {

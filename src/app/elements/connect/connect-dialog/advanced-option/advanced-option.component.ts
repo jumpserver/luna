@@ -11,7 +11,8 @@ import {SettingService} from '@app/services';
 export class ElementAdvancedOptionComponent implements OnChanges {
   @Input() protocol: Protocol;
   @Input() connectMethod: ConnectMethod;
-  @Output() onOptionsChange = new EventEmitter<ConnectOption[]>();
+  @Output() onOptionsChange = new EventEmitter<Object>();
+  @Input() connectOption: Object = {};
   public advancedOptions: ConnectOption[] = [];
   public isShowAdvancedOption = false;
   public setting: Setting;
@@ -72,14 +73,27 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         options: this.boolChoices,
         label: 'Backspace as Ctrl+H',
         value: this.setting.command_line.is_backspace_as_ctrl_h
+      },
+      {
+        type: 'select',
+        field: 'RemoteappUsing',
+        options: [
+          {label: 'Web', value: 'web'},
+          {label: 'Client', value: 'client'}
+        ],
+        label: 'Applet connect method',
+        value: this.setting.graphics.applet_connection_method,
+        hidden: () => {
+          return !this.connectMethod || this.connectMethod.component !== 'tinker';
+        }
       }
     ];
     this.advancedOptions = this.advancedOptions.filter(i => !i.hidden());
+    this.advancedOptions.forEach(i => {
+      if (this.connectOption[i.field] === undefined) {
+        this.connectOption[i.field] = i.value;
+      }
+    });
     this.isShowAdvancedOption = this.advancedOptions.length > 0;
-    this.optionChange(null);
-  }
-
-  optionChange(event) {
-    this.onOptionsChange.emit(this.advancedOptions);
   }
 }

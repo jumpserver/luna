@@ -5,7 +5,7 @@
 <div *ngIf="type === 'general'">
   <mat-form-field>
     <mat-select [(value)]="setting.basic.is_async_asset_tree"
-                placeholder="{{'Load tree async'| translate }}" >
+                placeholder="{{'Load tree async'| translate }}">
       <mat-option *ngFor="let s of boolChoices" [value]="s.value">{{s.name| translate}}</mat-option>
     </mat-select>
   </mat-form-field>
@@ -13,7 +13,7 @@
 <div *ngIf="type === 'gui'">
   <mat-form-field>
     <mat-select [(value)]="setting.graphics.rdp_resolution"
-                placeholder="{{'RDP resolution'| translate}}" >
+                placeholder="{{'RDP resolution'| translate}}">
       <mat-option *ngFor="let s of resolutionsOptions" [value]="s.value">
         {{s.label}}
       </mat-option>
@@ -47,30 +47,31 @@
 
     <label class="field-label space">{{ 'Applet connect method' | translate }}</label>
     <mat-radio-group
+      [(ngModel)]="setting.graphics.applet_connection_method"
       aria-label="Select an option"
-      [(ngModel)]="setting.graphics.remote_application_connection_method"
     >
       <mat-radio-button value="web">Web</mat-radio-button>
-      <mat-radio-button value="client" style="padding-left: 20px">{{ 'Client' | translate }}</mat-radio-button>
+      <mat-radio-button style="padding-left: 20px" value="client">{{ 'Client' | translate }}</mat-radio-button>
     </mat-radio-group>
   </div>
 </div>
 
 <div *ngIf="type === 'cli'">
-  <mat-form-field >
-    <input [(ngModel)]="setting.command_line.character_terminal_font_size" matInput placeholder='{{"CLI font size"| translate}}' name="fontSize" type="number" min="5" max="60" >
+  <mat-form-field>
+    <input [(ngModel)]="setting.command_line.character_terminal_font_size" matInput
+           max="60" min="5" name="fontSize" placeholder='{{"CLI font size"| translate}}' type="number">
   </mat-form-field>
 
   <mat-form-field>
     <mat-select [(value)]="setting.command_line.is_backspace_as_ctrl_h"
-                placeholder="{{'Backspace as Ctrl+H'| translate }}" >
+                placeholder="{{'Backspace as Ctrl+H'| translate }}">
       <mat-option *ngFor="let s of boolChoices" [value]="s.value">{{s.name| translate}}</mat-option>
     </mat-select>
   </mat-form-field>
 
   <mat-form-field>
     <mat-select [(value)]="setting.command_line.is_right_click_quickly_paste"
-                placeholder="{{'Right mouse quick paste'| translate }}" >
+                placeholder="{{'Right mouse quick paste'| translate }}">
       <mat-option *ngFor="let s of boolChoices" [value]="s.value">{{s.name| translate}}</mat-option>
     </mat-select>
   </mat-form-field>
@@ -78,6 +79,6 @@
 
 
 <div style="float: right; padding-top: 20px">
-  <button mat-raised-button (click)="onNoClick()">{{"Cancel"| translate}}</button>
-  <button mat-raised-button color="primary" (click)="onSubmit()">{{"Confirm"| translate}}</button>
+  <button (click)="onNoClick()" mat-raised-button>{{"Cancel"| translate}}</button>
+  <button (click)="onSubmit()" color="primary" mat-raised-button>{{"Confirm"| translate}}</button>
 </div>

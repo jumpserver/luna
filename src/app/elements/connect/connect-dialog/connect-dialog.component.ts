@@ -2,7 +2,7 @@ import {ChangeDetectorRef, Component, Inject, OnInit} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {AppService, HttpService, I18nService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
-import {Account, Asset, AuthInfo, ConnectData, ConnectMethod, ConnectOption, Protocol} from '@app/model';
+import {Account, Asset, AuthInfo, ConnectData, ConnectMethod, Protocol} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
 import {debounceTime} from 'rxjs/operators';
 
@@ -19,7 +19,7 @@ export class ElementConnectDialogComponent implements OnInit {
   public accounts: Account[];
   public protocols: Array<Protocol>;
   public accountSelected: Account = null;
-  public connectOptions: ConnectOption[] = [];
+  public connectOption: Object;
   public outputData: ConnectData = new ConnectData();
   public manualAuthInfo: AuthInfo = new AuthInfo();
   public connectMethod: ConnectMethod = new ConnectMethod('Null', '', 'null', 'null');
@@ -44,6 +44,10 @@ export class ElementConnectDialogComponent implements OnInit {
     this.accounts = this.data.accounts;
     this.asset = this.data.asset;
     this.preConnectData = this.data.preConnectData;
+    this.connectOption = this.preConnectData.connectOption || {};
+    if (typeof this.connectOption !== 'object' || Array.isArray(this.connectOption)) {
+      this.connectOption = {};
+    }
     this.protocols = this.getProtocols();
     if (this.protocols.length === 0) {
       this.protocols = [{name: 'ssh', port: 22, public: true, setting: {}}];
@@ -145,18 +149,20 @@ export class ElementConnectDialogComponent implements OnInit {
     this.outputData.account = this.accountSelected;
     this.outputData.connectMethod = this.connectMethod;
     this.outputData.manualAuthInfo = this.manualAuthInfo;
-    this.outputData.connectOptions = this.connectOptions;
+    this.outputData.connectOption = this.connectOption;
     this.outputData.protocol = this.protocol;
     this.outputData.downloadRDP = downloadRDP;
     this.outputData.autoLogin = this.autoLogin;
 
     this._appSvc.setPreConnectData(this.asset, this.outputData);
+    console.log('Pref Connect Data', this.outputData);
 
     this.onSubmit$.next(true);
     this.dialogRef.close(this.outputData);
   }
 
   onAdvancedOptionChanged(evt) {
-    this.connectOptions = evt;
+    console.log('On changed: ', evt);
+    this.connectOption = evt;
   }
 }

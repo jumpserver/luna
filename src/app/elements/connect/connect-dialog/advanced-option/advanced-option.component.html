@@ -1,6 +1,6 @@
 <div class="advanced-option">
   <mat-accordion>
-    <mat-expansion-panel [class.panel-show]="isShowAdvancedOption" [disabled]="!isShowAdvancedOption">
+    <mat-expansion-panel *ngIf="isShowAdvancedOption" [class.panel-show]="isShowAdvancedOption">
       <mat-expansion-panel-header style="height: 32px;">
         <mat-panel-title>
           {{ 'Advanced option' | translate }}
@@ -11,8 +11,7 @@
         <ng-container *ngFor="let item of advancedOptions">
           <div *ngIf="item.type === 'checkbox'" class="option-item">
             <mat-checkbox
-              (ngModelChange)="optionChange($event)"
-              [(ngModel)]="item.value"
+              [(ngModel)]="connectOption[item.field]"
               [name]="item.field"
             >
               {{ item.label | translate }}
@@ -21,7 +20,7 @@
           <ng-container *ngIf="item.type === 'select'">
             <mat-form-field class="option-item">
               <mat-label>{{ item.label | translate }}</mat-label>
-              <mat-select (ngModelChange)="optionChange(item)" [(ngModel)]="item.value" [name]="item.field">
+              <mat-select [(ngModel)]="connectOption[item.field]" [name]="item.field">
                 <mat-option *ngFor="let option of item.options" [value]="option.value">
                   {{ option.label | translate }}
                 </mat-option>
@@ -30,7 +29,7 @@
           </ng-container>
           <ng-container *ngIf="item.type === 'radio'">
             <div class="option-item">
-              <mat-radio-group (ngModelChange)="optionChange(item)" [(ngModel)]="item.value" [name]="item.field">
+              <mat-radio-group [(ngModel)]="connectOption[item.field]" [name]="item.field">
                 <mat-label style="margin-right: 10px">{{ item.label | translate }}</mat-label>
                 <mat-radio-button *ngFor="let option of item.options" [value]="option.value">
                   {{ option.label | translate }}
