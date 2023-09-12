@@ -153,6 +153,7 @@ function createWatermarkDiv(content, {
       return `${prev}${key}:${styles[key]};`;
     }, '');
   watermarkDiv.setAttribute('style', style);
+  watermarkDiv.classList.add('watermark');
   return {watermark: watermarkDiv, base64: base64Url};
 }
 
@@ -171,32 +172,23 @@ export function canvasWaterMark({
 
   // 监听 dom 节点的 style 属性变化
   const observer = new MutationObserver(mutations => {
-    setTimeout(() => {
-      container.removeChild(container.firstChild);
-      // 这里不用再新建了，因为下面监听了 container 的子节点变化，会重新创建的
-      // canvasWaterMark({container, content, settings});
-    }, 100);
+    const watermark = document.querySelector('.watermark');
+    if (!watermark) {
+      container.insertBefore(watermarkDiv, container.firstChild);
+      return;
+    }
+    const record = mutations[0];
+    if (record.type === 'attributes' && record.attributeName === 'style') {
+      setTimeout(() => {
+        // 重新添加水印
+        watermarkDiv.style.width = '100%';
+        watermarkDiv.style.height = '100%';
+        watermarkDiv.style.backgroundImage = `url('${res.base64}')`;
+        observer.observe(watermarkDiv, { childList: true, attributes: true, subtree: true });
+      });
+    }
   });
-  observer.observe(watermarkDiv, {childList: false, attributes: true, subtree: false});
-
-  const containerObserver = new MutationObserver(mutations => {
-    const removed = mutations.filter(m => m.type === 'childList' && m.removedNodes.length > 0);
-    if (removed.length === 0) {
-      return;
-    }
-    const removedNodes = removed[0].removedNodes;
-    if (removedNodes.length === 0) {
-      return;
-    }
-    const removedHtml = removedNodes[0]['outerHTML'];
-    if (removedHtml.indexOf(res.base64) < 0) {
-      return;
-    }
-    setTimeout(() => {
-      canvasWaterMark({container, content, settings});
-    }, 100);
-  });
-  containerObserver.observe(container, {childList: true, attributes: false, subtree: false});
+  observer.observe(container, { childList: true, attributes: true, subtree: true });
 }
 
 export function windowOpen(url) {
