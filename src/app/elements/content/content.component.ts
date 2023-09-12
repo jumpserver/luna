@@ -123,7 +123,7 @@ export class ElementContentComponent implements OnInit {
     this.tabsRef.nativeElement.scrollLeft = this.tabsRef.nativeElement.scrollWidth;
   }
 
-  sendBatchCommand() {
+  sendBatchCommand(splitSend = false) {
     this.batchCommand = this.batchCommand.trim();
     if (this.batchCommand === '') {
       return;
@@ -136,14 +136,23 @@ export class ElementContentComponent implements OnInit {
       }
       const d = {'data': cmd};
       this.viewList[i].termComp.sendCommand(d);
+      const subViews = this.viewList[i].subViews;
+      if (subViews.length > 0 && splitSend) {
+        for (let j = 0; j < subViews.length; j++) {
+          if (subViews[j].protocol !== 'ssh' || subViews[j].connected !== true) {
+            continue;
+          }
+          subViews[j].termComp.sendCommand(d);
+        }
+      }
     }
 
     this.batchCommand = '';
   }
 
   sendQuickCommand(command) {
-    this.batchCommand = command;
-    this.sendBatchCommand();
+    this.batchCommand = command.args;
+    this.sendBatchCommand(true);
   }
 
   rMenuItems() {
