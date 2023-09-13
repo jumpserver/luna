@@ -223,9 +223,9 @@ export class ElementAssetTreeComponent implements OnInit {
           this.currentOrgID = DEFAULT_ORG_ID;
         }
         this.initTree();
+        this.trees.map((tree, index) => (index === 0 ? tree.open = true : tree.open = false));
       }
     });
-    this.trees.map((tree, index) => (index === 0 ? tree.open = true : tree.open = false));
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
