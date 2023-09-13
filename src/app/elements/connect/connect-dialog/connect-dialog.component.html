@@ -32,14 +32,16 @@
     <elements-connect-method
       (onDownloadRDPFile)="onConfirm(true)"
       [(connectMethod)]="connectMethod"
+      [account]="accountSelected"
+      [connectOption]="connectOption"
       [protocol]="protocol"
       class="connect-method-zone"
     >
     </elements-connect-method>
 
     <elements-advanced-option
-      (onOptionsChange)="onAdvancedOptionChanged($event)"
       [connectMethod]="connectMethod"
+      [connectOption]="connectOption"
       [protocol]="protocol"
     >
     </elements-advanced-option>
@@ -62,7 +64,7 @@
         type="submit"
       >
         {{"Connect"| translate}}
-        <span *ngIf="protocol.name === 'rdp'" class="online-num">
+        <span *ngIf="protocol && protocol.name === 'rdp'" class="online-num">
           ({{ 'Current online' | translate}}: {{ onlineNum === null ? '- ' : onlineNum }})
         </span>
       </button>

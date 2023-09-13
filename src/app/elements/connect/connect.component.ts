@@ -184,6 +184,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
     this._logger.debug('Connect info: ', connectInfo);
     const connectMethod = connectInfo.connectMethod;
+    const connectOption = connectInfo.connectOption;
     const connToken = await this._connectTokenSvc.create(asset, connectInfo);
 
     if (!connToken) {
@@ -210,7 +211,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return this._http.downloadRDPFile(connToken, this._settingSvc.setting);
     } else if (connectMethod.type === 'native') {
       this.callLocalClient(connToken).then();
-    } else if (connectMethod.type === 'applet' && this._settingSvc.setting.graphics.remote_application_connection_method !== 'web') {
+    } else if (connectMethod.type === 'applet' && connectOption['appletConnectMethod'] !== 'web') {
       this.callLocalClient(connToken).then();
     } else {
       this.createWebView(asset, connectInfo, connToken);

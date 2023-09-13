@@ -20,8 +20,8 @@
         <ng-container *ngFor="let v of viewListSorted">
           <li *ngIf="v.name!=null" [ngClass]="{'disconnected':!v.connected, 'hidden': v.closed != false}">
           <span [class.active]="v.active">
-            <a (click)="_viewSrv.activeView(v)" id="{{ 'tab' + v.id }}"><i
-              class="fa fa-circle flag"></i> {{v.name}} </a>
+            <a (click)="_viewSrv.activeView(v)" id="{{ 'tab' + v.id }}">
+              <i class="fa fa-circle flag"></i> {{v.name}} </a>
           </span>
           </li>
         </ng-container>

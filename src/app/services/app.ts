@@ -161,7 +161,7 @@ export class AppService {
   }
 
   setPreConnectData(asset: Asset, connectData: ConnectData) {
-    const {account, protocol, connectMethod, manualAuthInfo, connectOptions} = connectData;
+    const {account, protocol, connectMethod, manualAuthInfo, connectOption} = connectData;
     const key = `JMS_PRE_${asset.id}`;
 
     const saveData = {
@@ -170,7 +170,7 @@ export class AppService {
       protocol: {name: protocol.name},
       downloadRDP: connectData.downloadRDP,
       autoLogin: connectData.autoLogin,
-      connectOptions,
+      connectOption,
     };
     this.setAccountLocalAuth(asset, account, manualAuthInfo);
     this._localStorage.set(key, saveData);

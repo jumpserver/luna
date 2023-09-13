@@ -139,7 +139,7 @@ export class View {
   connectData: ConnectData;
   connectToken: ConnectionToken;
   connectMethod: ConnectMethod;
-  connectOptions: ConnectOption[] = [];
+  connectOption: Object;
   smartEndpoint: Endpoint;
   k8sInfo: K8sInfo;
 
@@ -154,19 +154,15 @@ export class View {
     this.connectFrom = connectFrom;
     this.connectToken = connToken;
     this.connectMethod = connectInfo.connectMethod;
-    this.connectOptions = connectInfo.connectOptions;
+    this.connectOption = connectInfo.connectOption;
     this.protocol = connectInfo.protocol.name;
     this.connectData = connectInfo;
     this.k8sInfo = k8sInfo;
   }
 
   getConnectOption(field: string) {
-    const connectOptions = this.connectOptions || [];
-    if (connectOptions.length === 0) {
-      return '';
-    }
-    const filteredField = connectOptions.find(i => i.field === field);
-    return filteredField ? filteredField.value.toString() : '';
+    const connectOption = this.connectOption || {};
+    return connectOption[field] === undefined ? '' : connectOption[field];
   }
 
   toString() {
@@ -288,7 +284,7 @@ export class Setting {
     rdp_resolution: 'Auto',
     keyboard_layout: 'en-us-qwerty',
     rdp_client_option: [],
-    remote_application_connection_method: 'web'
+    applet_connection_method: 'web'
   };
   command_line = {
     character_terminal_font_size: 14,
@@ -384,7 +380,7 @@ export class ConnectData {
   protocol: Protocol;
   manualAuthInfo: AuthInfo;
   connectMethod: ConnectMethod;
-  connectOptions: ConnectOption[];
+  connectOption: Object;
   downloadRDP: boolean;
   autoLogin: boolean;
 }
