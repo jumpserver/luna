@@ -123,6 +123,10 @@ export class ElementContentComponent implements OnInit {
     this.tabsRef.nativeElement.scrollLeft = this.tabsRef.nativeElement.scrollWidth;
   }
 
+  trackByFn(index, item) {
+    return item.id;
+  }
+
   sendBatchCommand(splitSend = false) {
     this.batchCommand = this.batchCommand.trim();
     if (this.batchCommand === '') {
