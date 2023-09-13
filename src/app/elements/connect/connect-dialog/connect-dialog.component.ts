@@ -155,14 +155,8 @@ export class ElementConnectDialogComponent implements OnInit {
     this.outputData.autoLogin = this.autoLogin;
 
     this._appSvc.setPreConnectData(this.asset, this.outputData);
-    console.log('Pref Connect Data', this.outputData);
 
     this.onSubmit$.next(true);
     this.dialogRef.close(this.outputData);
-  }
-
-  onAdvancedOptionChanged(evt) {
-    console.log('On changed: ', evt);
-    this.connectOption = evt;
   }
 }

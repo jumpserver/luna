@@ -1,4 +1,4 @@
-import {Component, EventEmitter, Input, OnChanges, Output} from '@angular/core';
+import {Component, Input, OnChanges} from '@angular/core';
 import {ConnectMethod, ConnectOption, Protocol, Setting} from '@app/model';
 import {resolutionsChoices} from '@app/globals';
 import {SettingService} from '@app/services';
@@ -11,7 +11,6 @@ import {SettingService} from '@app/services';
 export class ElementAdvancedOptionComponent implements OnChanges {
   @Input() protocol: Protocol;
   @Input() connectMethod: ConnectMethod;
-  @Output() onOptionsChange = new EventEmitter<Object>();
   @Input() connectOption: Object = {};
   public advancedOptions: ConnectOption[] = [];
   public isShowAdvancedOption = false;
