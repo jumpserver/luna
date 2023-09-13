@@ -32,6 +32,8 @@
     <elements-connect-method
       (onDownloadRDPFile)="onConfirm(true)"
       [(connectMethod)]="connectMethod"
+      [account]="accountSelected"
+      [connectOption]="connectOption"
       [protocol]="protocol"
       class="connect-method-zone"
     >
