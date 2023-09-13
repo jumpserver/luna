@@ -20,7 +20,7 @@ export class ElementAdvancedOptionComponent implements OnChanges {
     {label: 'No', value: false},
   ];
 
-  constructor(_settingSvc: SettingService) {
+  constructor(public _settingSvc: SettingService) {
     this.setting = _settingSvc.setting;
   }
 
@@ -75,7 +75,7 @@ export class ElementAdvancedOptionComponent implements OnChanges {
       },
       {
         type: 'select',
-        field: 'RemoteappUsing',
+        field: 'appletConnectMethod',
         options: [
           {label: 'Web', value: 'web'},
           {label: 'Client', value: 'client'}
@@ -83,6 +83,9 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         label: 'Applet connect method',
         value: this.setting.graphics.applet_connection_method,
         hidden: () => {
+          if (!this._settingSvc.hasXPack()) {
+            return true;
+          }
           return !this.connectMethod || this.connectMethod.component !== 'tinker';
         }
       }

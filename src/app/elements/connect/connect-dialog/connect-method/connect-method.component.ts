@@ -10,14 +10,18 @@ import {AppService, I18nService, SettingService} from '@app/services';
 export class ElementConnectMethodComponent implements OnInit {
   @Output() connectMethodChange = new EventEmitter<ConnectMethod>();
   @Output() onDownloadRDPFile = new EventEmitter<ConnectMethod>();
+  @Input() connectOption: Object = {};
   public connectMethods = [];
   public connectMethodTypes = [];
-  public isAppletClientMethod = false;
 
   constructor(private _i18n: I18nService,
               private _appSvc: AppService,
               private _settingSvc: SettingService
   ) {
+  }
+
+  get isAppletClientMethod() {
+    return this.connectOption['appletClientMethod'] === 'client';
   }
 
   private _protocol: Protocol;
@@ -44,9 +48,6 @@ export class ElementConnectMethodComponent implements OnInit {
   }
 
   ngOnInit() {
-    this._settingSvc.appletConnectMethod$.subscribe((state) => {
-      this.isAppletClientMethod = state === 'client';
-    });
     this.setConnectMethods();
   }
 

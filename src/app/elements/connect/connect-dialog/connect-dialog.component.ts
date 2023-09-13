@@ -26,7 +26,6 @@ export class ElementConnectDialogComponent implements OnInit {
   public preConnectData: ConnectData = new ConnectData();
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
   public accountOrUsernameChanged = new BehaviorSubject(false);
-  public isAppletClientMethod = false;
   public onlineNum: number = null;
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
@@ -44,17 +43,7 @@ export class ElementConnectDialogComponent implements OnInit {
     this.accounts = this.data.accounts;
     this.asset = this.data.asset;
     this.preConnectData = this.data.preConnectData;
-    this.connectOption = this.preConnectData.connectOption || {};
-    if (typeof this.connectOption !== 'object' || Array.isArray(this.connectOption)) {
-      this.connectOption = {};
-    }
     this.protocols = this.getProtocols();
-    if (this.protocols.length === 0) {
-      this.protocols = [{name: 'ssh', port: 22, public: true, setting: {}}];
-    }
-    this._settingSvc.appletConnectMethod$.subscribe((state) => {
-      this.isAppletClientMethod = state === 'client';
-    });
     this.setDefaults();
     this.accountOrUsernameChanged.pipe(debounceTime(500))
       .subscribe(_ => {
@@ -63,8 +52,11 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   getProtocols() {
-    const protocols = this.asset.protocols.filter((item) => item.public);
-    return protocols || [];
+    let protocols = this.asset.protocols.filter((item) => item.public);
+    if (!protocols || protocols.length === 0) {
+      protocols = [{name: 'ssh', port: 22, public: true, setting: {}}];
+    }
+    return protocols;
   }
 
   setDefaults() {
@@ -78,6 +70,11 @@ export class ElementConnectDialogComponent implements OnInit {
       if (connectMethod) {
         this.connectMethod = connectMethod;
       }
+      this.connectOption = this.preConnectData.connectOption || {};
+    }
+
+    if (typeof this.connectOption !== 'object' || Array.isArray(this.connectOption)) {
+      this.connectOption = {};
     }
 
     if (!this.protocol) {
@@ -135,12 +132,6 @@ export class ElementConnectDialogComponent implements OnInit {
     }
     if (!this.connectMethod || this.connectMethod.disabled === true) {
       return true;
-    }
-    if (
-      this.connectMethod.component === 'razor' ||
-      (this.connectMethod.type === 'applet' && this.isAppletClientMethod)
-    ) {
-      return !this._settingSvc.hasXPack();
     }
     return false;
   }
