@@ -118,6 +118,8 @@ export class ElementConnectorKokoComponent implements OnInit {
   }
 
   generateNodeConnectUrl() {
+    this.iframeURL = 'http://localhost:4200/api/health/';
+    return;
     const params = {};
     params['disableautohash'] = this.view.getConnectOption('disableautohash');
     params['token'] = this.view.connectToken.id;

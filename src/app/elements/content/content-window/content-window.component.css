@@ -24,11 +24,12 @@ div, elements-term, elements-guacamole {
 }
 
 .head {
-  height: 26px;
-  line-height: 26px;
-  padding: 0 10px 0 8px;
+  height: 32px;
+  line-height: 32px;
+  padding: 0 10px 0 10px;
   color: #ffffff;
   background-color: #2f2a2a;
+
 }
 
 .close {
