@@ -65,6 +65,7 @@ export class ElementContentComponent implements OnInit {
     this.viewList = this.viewSrv.viewList;
     this.viewIds = this.viewSrv.viewIds;
     this.quickCommands = await this._http.getQuickCommand();
+    this.isContentOverflow();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
@@ -296,5 +297,19 @@ export class ElementContentComponent implements OnInit {
         data: {command: this.batchCommand}
       }
     );
+  }
+
+  onScrollLeft() {
+    const container: any = document.querySelector('.command-list');
+    if (container) {
+      container.scrollBy(-container.offsetWidth, 0);
+    }
+  }
+
+  onScrollRight() {
+    const container: any = document.querySelector('.command-list');
+    if (container) {
+      container.scrollBy(container.offsetWidth, 0);
+    }
   }
 }
