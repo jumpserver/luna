@@ -70,11 +70,21 @@
       ></i>
     </div>
     <ng-template #quickCommand>
+      <i
+        *ngIf="quickCommands.length > 0"
+        class="fa fa-angle-double-left"
+        (click)="onScrollLeft()"
+      ></i>
       <ul class="command-list" *ngIf="quickCommands.length > 0; else empty">
         <li class="command-box" *ngFor="let command of quickCommands" (click)="sendQuickCommand(command)">
-          {{ command.args }}
+          {{ command.name }}
         </li>
       </ul>
+      <i
+        *ngIf="quickCommands.length > 0"
+        class="fa fa-angle-double-right"
+        (click)="onScrollRight()"
+      ></i>
       <ng-template #empty>
         <div class="not-command">{{'Not quick command'| translate }}</div>
       </ng-template>

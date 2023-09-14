@@ -297,4 +297,18 @@ export class ElementContentComponent implements OnInit {
       }
     );
   }
+
+  onScrollLeft() {
+    const container: any = document.querySelector('.command-list');
+    if (container) {
+      container.scrollBy(-container.offsetWidth, 0);
+    }
+  }
+
+  onScrollRight() {
+    const container: any = document.querySelector('.command-list');
+    if (container) {
+      container.scrollBy(container.offsetWidth, 0);
+    }
+  }
 }
