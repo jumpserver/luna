@@ -2,10 +2,6 @@ div, elements-term, elements-guacamole {
   height: 100%;
 }
 
-elements-term, elements-guacamole {
-  /*padding-bottom: 30px;*/
-}
-
 .window {
   display: none;
   height: 100%;
@@ -19,6 +15,8 @@ elements-term, elements-guacamole {
 
 .container {
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .container:nth-child(2n - 1) {
