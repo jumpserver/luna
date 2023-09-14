@@ -127,7 +127,7 @@ export class ElementContentComponent implements OnInit {
     return item.id;
   }
 
-  sendBatchCommand(splitSend = false) {
+  sendBatchCommand() {
     this.batchCommand = this.batchCommand.trim();
     if (this.batchCommand === '') {
       return;
@@ -141,7 +141,7 @@ export class ElementContentComponent implements OnInit {
       const d = {'data': cmd};
       this.viewList[i].termComp.sendCommand(d);
       const subViews = this.viewList[i].subViews;
-      if (subViews.length > 0 && splitSend) {
+      if (subViews.length > 0) {
         for (let j = 0; j < subViews.length; j++) {
           if (subViews[j].protocol !== 'ssh' || subViews[j].connected !== true) {
             continue;
@@ -156,7 +156,7 @@ export class ElementContentComponent implements OnInit {
 
   sendQuickCommand(command) {
     this.batchCommand = command.args;
-    this.sendBatchCommand(true);
+    this.sendBatchCommand();
   }
 
   rMenuItems() {
