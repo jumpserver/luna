@@ -47,24 +47,24 @@ export class ViewService {
 
   addSubViewToCurrentView(view: View) {
     this.currentView.subViews.push(view);
-    this.setCurrentViewTitle('concat');
+    this.setCurrentViewTitle(view, 'concat');
   }
 
-  ClearSubViewOfCurrentView() {
-    this.currentView.subViews = [];
-    this.setCurrentViewTitle('revert');
+  clearSubViewOfCurrentView(view: View) {
+    const index = this.currentView.subViews.indexOf(view);
+    this.currentView.subViews.splice(index, 1);
+    this.setCurrentViewTitle(view, 'delete');
   }
 
-  setCurrentViewTitle(status) {
+  setCurrentViewTitle(view, status) {
     const { name } = this.currentView;
-    const index = name.indexOf('|');
     switch (status) {
       case 'concat':
-        const subViewName = this.currentView.subViews[0].name || '';
-        this.currentView.name = index > -1 ? name.substring(0, index + 1) + subViewName : name + ' | ' + subViewName;
+        this.currentView.name = name + '|' + view.name;
         break;
-      case 'revert':
-        this.currentView.name = name.substring(0, index);
+        case 'delete':
+        const newName = name.split('|').filter(i => i !== view.name);
+        this.currentView.name = newName.join('|');
         break;
     }
   }

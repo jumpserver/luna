@@ -1,0 +1,27 @@
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.head {
+  height: 26px;
+  line-height: 26px;
+  padding: 0 10px 0 8px;
+  color: #ffffff;
+  background-color: #2f2a2a;
+}
+
+.close {
+  display: inline-block;
+  line-height: 25px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  color: #808080;
+}
+
+.close:hover {
+  color: #ffffff;
+}
