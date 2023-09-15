@@ -530,7 +530,7 @@ export class ElementAssetTreeComponent implements OnInit {
    * @param splitConnect 是否分屏连接
    */
   async onMenuConnect(splitConnect = false) {
-    if (this._viewSrv.currentView.subViews.length >= 3) {
+    if (splitConnect && this._viewSrv.currentView.subViews.length >= 3) {
       const msg = await this._i18n.instant('Split connect number');
       this.snackBar.open(msg, '', {
         verticalPosition: 'top',
