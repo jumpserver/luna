@@ -73,7 +73,7 @@
   "Split connect": "スクリーン接続",
   "Split vertically": "垂直分割",
   "Close split connect": "分割表示を閉じる",
-  "Split connect number": "1つのセッションで最大1つの画面分割接続をサポート",
+  "Split connect number": "1つのセッションで最大3つの画面分割接続をサポート",
   "Right mouse quick paste": "右クイック貼り付け",
   "SQL Client": "SQLクライアント",
   "Database disabled": "このリンク方式をサポートしていない、管理者に連絡してください",
