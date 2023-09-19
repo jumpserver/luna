@@ -52,8 +52,11 @@ export class SettingService {
     return new Promise<void>(async (resolve) => {
       const url = '/api/v1/users/preference/?category=luna';
       const serverSetting = await this._http.get<any>(url).toPromise();
-      const localSetting = this._localStorage.get(this.settingKey) || {};
+      const localSetting = this._localStorage.get(this.settingKey);
       this.setting = Object.assign(this.setting, localSetting, serverSetting);
+      if (!localSetting) {
+        this._localStorage.set(this.settingKey, this.setting);
+      }
       resolve();
     });
   }
