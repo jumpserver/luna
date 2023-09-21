@@ -85,10 +85,12 @@ export class Asset {
 export class ConnectEvt {
   action: string;
   node: TreeNode;
+  splitConnect?: boolean;
 
-  constructor(node, action: string) {
+  constructor(node, action: string, splitConnect = false) {
     this.node = node;
     this.action = action;
+    this.splitConnect = splitConnect;
   }
 }
 
@@ -130,13 +132,14 @@ export class View {
   closed: boolean;
   editable: boolean;
   connected: boolean;
+  subViews?: Array<any>;
   asset: Asset;
   account: Account;
   termComp: any;
   connectData: ConnectData;
   connectToken: ConnectionToken;
   connectMethod: ConnectMethod;
-  connectOptions: ConnectOption[] = [];
+  connectOption: Object;
   smartEndpoint: Endpoint;
   k8sInfo: K8sInfo;
 
@@ -144,25 +147,22 @@ export class View {
     this.closed = false;
     this.editable = false;
     this.connected = true;
+    this.subViews = [];
     this.name = asset.name;
     this.asset = asset;
     this.account = connectInfo.account;
     this.connectFrom = connectFrom;
     this.connectToken = connToken;
     this.connectMethod = connectInfo.connectMethod;
-    this.connectOptions = connectInfo.connectOptions;
+    this.connectOption = connectInfo.connectOption;
     this.protocol = connectInfo.protocol.name;
     this.connectData = connectInfo;
     this.k8sInfo = k8sInfo;
   }
 
   getConnectOption(field: string) {
-    const connectOptions = this.connectOptions || [];
-    if (connectOptions.length === 0) {
-      return '';
-    }
-    const filteredField = connectOptions.find(i => i.field === field);
-    return filteredField ? filteredField.value.toString() : '';
+    const connectOption = this.connectOption || {};
+    return connectOption[field] === undefined ? '' : connectOption[field];
   }
 
   toString() {
@@ -273,19 +273,24 @@ export class GlobalSetting {
 }
 
 export class Setting {
-  rdpResolution: string = 'Auto';
-  rdpFullScreen: number = 1;
-  rdpMultiScreen: number = 0;
-  rdpDrivesRedirect: number = 0;
-  fontSize: number = 14;
-  backspaceAsCtrlH: string = '0';
-  isLoadTreeAsync: string = '1';
-  isSkipAllManualPassword: string = '0';
-  quickPaste = '0';
-  sqlClient = '1';
   commandExecution: boolean = true;
-  appletConnectMethod: string = 'web';
-  keyboardLayout: string = '';
+  isSkipAllManualPassword: string = '0';
+  sqlClient = '1';
+
+  basic = {
+    is_async_asset_tree: false
+  };
+  graphics = {
+    rdp_resolution: 'Auto',
+    keyboard_layout: 'en-us-qwerty',
+    rdp_client_option: [],
+    applet_connection_method: 'web'
+  };
+  command_line = {
+    character_terminal_font_size: 14,
+    is_backspace_as_ctrl_h: false,
+    is_right_click_quickly_paste: false
+  };
 }
 
 
@@ -375,7 +380,7 @@ export class ConnectData {
   protocol: Protocol;
   manualAuthInfo: AuthInfo;
   connectMethod: ConnectMethod;
-  connectOptions: ConnectOption[];
+  connectOption: Object;
   downloadRDP: boolean;
   autoLogin: boolean;
 }
@@ -484,5 +489,5 @@ export class Ticket {
   status: {
     value: string,
     label: string,
-  }
+  };
 }

@@ -1,5 +1,5 @@
 import {Component, ElementRef, Inject, Input, OnInit, ViewChild} from '@angular/core';
-import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
+import {MAT_DIALOG_DATA, MatDialog, MatDialogRef, MatSnackBar} from '@angular/material';
 import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
@@ -15,6 +15,7 @@ import {
   OrganizationService,
   SettingService,
   TreeFilterService,
+  ConnectTokenService,
   ViewService
 } from '@app/services';
 import {ConnectEvt, InitTreeConfig, TreeNode} from '@app/model';
@@ -114,7 +115,9 @@ export class ElementAssetTreeComponent implements OnInit {
               private _toastr: ToastrService,
               private _orgSvc: OrganizationService,
               private _cookie: CookieService,
-              private _viewSvc: ViewService
+              private snackBar: MatSnackBar,
+              private _connectTokenSvc: ConnectTokenService,
+              private _viewSrv: ViewService
   ) {
   }
 
@@ -127,6 +130,8 @@ export class ElementAssetTreeComponent implements OnInit {
     const checkedNodes = tree.getCheckedNodes(true);
     const checkedLeafs = checkedNodes.filter(node => !node.isParent);
     const treeChecked = (tree.setting && tree.setting.check && tree.setting.check.enable);
+    const viewList = this._viewSrv.viewList;
+
     return [
       {
         'id': 'batch-connect',
@@ -148,6 +153,13 @@ export class ElementAssetTreeComponent implements OnInit {
         'fa': 'fa-external-link',
         'hide': this.isK8s || cnode.isParent,
         'click': this.onMenuConnectNewTab.bind(this)
+      },
+      {
+        'id': 'split-connect',
+        'name': 'Split connect',
+        'fa': 'fa-columns',
+        'hide': viewList.length <= 0 || (cnode.isParent && !this.isK8s),
+        'click': this.onMenuConnect.bind(this, true)
       },
       {
         'id': 'expand',
@@ -205,11 +217,15 @@ export class ElementAssetTreeComponent implements OnInit {
       this.isLoadTreeAsync = state;
     });
     this.currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
-    if (this.currentOrgID === SYSTEM_ORG_ID) {
-      this.currentOrgID = DEFAULT_ORG_ID;
-    }
-    this.initTree();
-    this.trees.map((tree, index) => (index === 0 ? tree.open = true : tree.open = false));
+    this._settingSvc.initialized$.subscribe((state) => {
+      if (state) {
+        if (!this._settingSvc.hasXPack() && this.currentOrgID === SYSTEM_ORG_ID) {
+          this.currentOrgID = DEFAULT_ORG_ID;
+        }
+        this.initTree();
+        this.trees.map((tree, index) => (index === 0 ? tree.open = true : tree.open = false));
+      }
+    });
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
@@ -223,7 +239,6 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   onNodeClick(event, treeId, treeNode, clickFlag) {
-    // debugger
     const ztree = this.trees.find(t => t.name === treeId).ztree;
     if (treeNode.isParent) {
       ztree.expandNode(treeNode);
@@ -405,9 +420,7 @@ export class ElementAssetTreeComponent implements OnInit {
         return;
       }
       const node = nodes.shift();
-      this.connectAsset(node).then(() => {
-        ztree.checkNode(node, false, false);
-      });
+      this.connectAsset(node).then();
     }, 500);
   }
 
@@ -513,10 +526,21 @@ export class ElementAssetTreeComponent implements OnInit {
     this.showRMenu(event.clientX, event.clientY);
   }
 
-  onMenuConnect() {
+  /**
+   * @param splitConnect 是否分屏连接
+   */
+  async onMenuConnect(splitConnect = false) {
+    if (splitConnect && this._viewSrv.currentView.subViews.length >= 3) {
+      const msg = await this._i18n.instant('Split connect number');
+      this.snackBar.open(msg, '', {
+        verticalPosition: 'top',
+        duration: 1600
+      });
+      return;
+    }
     const node = this.rightClickSelectNode;
     const action = this.isK8s ? 'k8s' : 'connect';
-    const evt = new ConnectEvt(node, action);
+    const evt = splitConnect ? new ConnectEvt(node, action, true) : new ConnectEvt(node, action);
     connectEvt.next(evt);
   }
 

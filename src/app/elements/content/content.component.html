@@ -47,19 +47,48 @@
     </div>
     <elements-content-window *ngFor="let view of viewList" [view]="view"></elements-content-window>
   </div>
-  <div
-    *ngIf="showBatchCommand"
-    id="batchCommandDiv"
-  >
-    <input
-      (keydown.enter)="sendBatchCommand()"
-      [(ngModel)]="batchCommand"
-      maxlength="2048"
-      placeholder=" {{'Send text to all ssh terminals'| translate }} ..."
-      spellcheck="false" tabindex="2"
-      title="{{'Send text to all ssh terminals'| translate }} ..."
-      type="text"
-    >
+  <div *ngIf="showBatchCommand" id="batchCommandDiv">
+    <i
+      class="fa fa-exchange"
+      matTooltip="{{ (isShowInputCommand ? 'Switch to quick command' : 'Switch to input command') | translate }}"
+      (click)="switchCommand()"
+    ></i>
+    <div *ngIf="isShowInputCommand; else quickCommand" class="input-box">
+      <input
+        (keydown.enter)="sendBatchCommand()"
+        [(ngModel)]="batchCommand"
+        maxlength="2048"
+        placeholder=" {{'Send text to all ssh terminals'| translate }} ..."
+        spellcheck="false" tabindex="2"
+        title="{{'Send text to all ssh terminals'| translate }} ..."
+        type="text"
+      >
+      <i
+        class="fa fa-save"
+        matTooltip="{{ 'Save Command' | translate }}"
+        (click)="onSendCommand()"
+      ></i>
+    </div>
+    <ng-template #quickCommand>
+      <i
+        *ngIf="quickCommands.length > 0"
+        class="fa fa-angle-double-left"
+        (click)="onScrollLeft()"
+      ></i>
+      <ul class="command-list" *ngIf="quickCommands.length > 0; else empty">
+        <li class="command-box" *ngFor="let command of quickCommands" (click)="sendQuickCommand(command)">
+          {{ command.name }}
+        </li>
+      </ul>
+      <i
+        *ngIf="quickCommands.length > 0"
+        class="fa fa-angle-double-right"
+        (click)="onScrollRight()"
+      ></i>
+      <ng-template #empty>
+        <div class="not-command">{{'Not quick command'| translate }}</div>
+      </ng-template>
+    </ng-template>
   </div>
 </div>
 

@@ -43,6 +43,11 @@
   "Batch connect": "バッチ接続",
   "RDP resolution": "RDP解像度",
   "Send text to all ssh terminals": "すべてのssh端末にテキストを送信します",
+  "Switch to quick command": "クイックコマンドに切り替え",
+  "Switch to input command": "入力コマンドに切り替え",
+  "Not quick command": "非高速コマンド",
+  "Save Command": "保存コマンド",
+  "Save Success": "保存に成功",
   "Setting": "設定",
   "Show left manager": "左サイドバーを表示",
   "Skip": "スキップ",
@@ -65,6 +70,10 @@
   "system user": "システムユーザー",
   "user": "ユーザー",
   "Open in new window": "新しいウィンドウが開きます",
+  "Split connect": "スクリーン接続",
+  "Split vertically": "垂直分割",
+  "Close split connect": "分割表示を閉じる",
+  "Split connect number": "1つのセッションで最大3つの画面分割接続をサポート",
   "Right mouse quick paste": "右クイック貼り付け",
   "SQL Client": "SQLクライアント",
   "Database disabled": "このリンク方式をサポートしていない、管理者に連絡してください",
@@ -180,5 +189,6 @@
   "Expand all": "すべて展開",
   "Fold all": "すべて折りたたみ",
   "Password is token password on the table": "パスワードは、テーブルのトークンパスワードです",
-  "Password is your password login to system": "パスワードは、システムにログインするためのパスワードです"
+  "Password is your password login to system": "パスワードは、システムにログインするためのパスワードです",
+  "Current online": "現在オンライン"
 }

@@ -19,6 +19,7 @@ import {ElementReplayJsonComponent} from './replay/json/json.component';
 import {ElementConnectorKokoComponent} from './content/content-window/koko/koko.component';
 import {ElementConnectorMagnusComponent} from './content/content-window/magnus/magnus.component';
 import {ElementConnectorDefaultComponent} from '@app/elements/content/content-window/default/default.component';
+import {ElementContentViewComponent} from '@app/elements/content/content-window/content-view/content-view.component';
 import {ElementSelectAccountComponent} from './connect/connect-dialog/select-account/select-account.component';
 import {ElementReplayAsciicastComponent} from '@app/elements/replay/asciicast/asciicast.component';
 import {ElementAdvancedOptionComponent} from './connect/connect-dialog/advanced-option/advanced-option.component';
@@ -27,6 +28,7 @@ import {ElementDownloadDialogComponent} from './connect/download-dialog/download
 import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/acl-dialog.component';
 import {ElementsReplayMp4Component} from './replay/mp4/mp4.component';
 import {ElementConnectorGuideComponent} from '@app/elements/content/content-window/guide/guide.component';
+import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 
 
 export const ElementComponents = [
@@ -55,10 +57,12 @@ export const ElementComponents = [
   ElementSettingComponent,
   ElementConnectDialogComponent,
   ElementConnectorDefaultComponent,
+  ElementContentViewComponent,
   ElementSelectAccountComponent,
   ElementReplayAsciicastComponent,
   ElementAdvancedOptionComponent,
   ElementConnectMethodComponent,
   ElementsReplayMp4Component,
   ElementConnectorGuideComponent,
+  ElementCommandDialogComponent,
 ];

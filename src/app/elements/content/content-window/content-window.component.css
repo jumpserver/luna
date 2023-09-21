@@ -2,10 +2,6 @@ div, elements-term, elements-guacamole {
   height: 100%;
 }
 
-elements-term, elements-guacamole {
-  /*padding-bottom: 30px;*/
-}
-
 .window {
   display: none;
   height: 100%;
@@ -14,5 +10,27 @@ elements-term, elements-guacamole {
 }
 
 .active {
-  display: block;
+  display: flex;
+}
+
+.view {
+  flex: 1;
+  display: flex;
+  flex-flow: row wrap;
+  align-content: flex-start;
+}
+
+.sub-view {
+  flex: 1;
+  height: 100%;
+  border-left: 1px solid black;
+}
+
+.many-view {
+  flex: 0 0 50%;
+  height: 50%;
+}
+
+.three-view {
+  flex: 0 0 100%;
 }

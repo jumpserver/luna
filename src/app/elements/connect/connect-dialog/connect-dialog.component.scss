@@ -45,14 +45,13 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1px;
-  line-height: 28px;
+  line-height: 20px;
   font-size: 18px;
 }
 
 .mat-dialog-title h3 {
   margin: 0;
 }
-
 
 .mat-button-toggle-group {
   height: 32px;
@@ -70,10 +69,18 @@ button.mat-raised-button {
   margin-left: 0;
 }
 
-.mat-dialog-container {
-  padding-top: 15px;
+::ng-deep .mat-dialog-container {
+  padding-top: 15px !important;
 }
 
-
 .auto-overflow {
+}
+
+.confirm-btn {
+  width: 100%;
+}
+
+.online-num {
+  font-size: 12px;
+  font-weight: 300;
 }

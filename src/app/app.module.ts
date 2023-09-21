@@ -34,6 +34,7 @@ import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/
 import {ElementDialogAlertComponent} from '@app/services/dialog/dialog.service';
 import {ClipboardService} from 'ngx-clipboard';
 import {ElementsReplayMp4Component} from './elements/replay/mp4/mp4.component';
+import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, '/luna/assets/i18n/');
@@ -76,6 +77,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     ElementDownloadDialogComponent,
     ElementACLDialogComponent,
     ElementDialogAlertComponent,
+    ElementCommandDialogComponent,
   ],
   bootstrap: [AppComponent],
   providers: [

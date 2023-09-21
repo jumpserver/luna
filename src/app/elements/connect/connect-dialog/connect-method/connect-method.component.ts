@@ -1,5 +1,5 @@
 import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
-import {ConnectMethod, Protocol} from '@app/model';
+import {Account, ConnectMethod, Protocol} from '@app/model';
 import {AppService, I18nService, SettingService} from '@app/services';
 
 @Component({
@@ -10,14 +10,19 @@ import {AppService, I18nService, SettingService} from '@app/services';
 export class ElementConnectMethodComponent implements OnInit {
   @Output() connectMethodChange = new EventEmitter<ConnectMethod>();
   @Output() onDownloadRDPFile = new EventEmitter<ConnectMethod>();
+  @Input() connectOption: Object;
+  @Input() account: Account;
   public connectMethods = [];
   public connectMethodTypes = [];
-  public isAppletClientMethod = false;
 
   constructor(private _i18n: I18nService,
               private _appSvc: AppService,
               private _settingSvc: SettingService
   ) {
+  }
+
+  get isAppletClientMethod() {
+    return this.connectOption['appletConnectMethod'] === 'client';
   }
 
   private _protocol: Protocol;
@@ -44,9 +49,6 @@ export class ElementConnectMethodComponent implements OnInit {
   }
 
   ngOnInit() {
-    this._settingSvc.appletConnectMethod$.subscribe((state) => {
-      this.isAppletClientMethod = state === 'client';
-    });
     this.setConnectMethods();
   }
 
@@ -90,6 +92,9 @@ export class ElementConnectMethodComponent implements OnInit {
 
   canDownloadRDPFile(method): Boolean {
     if (!this._settingSvc.hasXPack()) {
+      return false;
+    }
+    if (!this.account.has_secret) {
       return false;
     }
     if (method.component === 'razor') {

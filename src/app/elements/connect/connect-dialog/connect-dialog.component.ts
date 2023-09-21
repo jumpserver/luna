@@ -1,9 +1,10 @@
 import {ChangeDetectorRef, Component, Inject, OnInit} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {AppService, I18nService, LogService, SettingService} from '@app/services';
+import {AppService, HttpService, I18nService, LogService, SettingService} from '@app/services';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
-import {Account, Asset, AuthInfo, ConnectData, ConnectMethod, ConnectOption, Protocol} from '@app/model';
+import {Account, Asset, AuthInfo, ConnectData, ConnectMethod, Protocol} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
+import {debounceTime} from 'rxjs/operators';
 
 
 @Component({
@@ -18,17 +19,19 @@ export class ElementConnectDialogComponent implements OnInit {
   public accounts: Account[];
   public protocols: Array<Protocol>;
   public accountSelected: Account = null;
-  public connectOptions: ConnectOption[] = [];
+  public connectOption: Object;
   public outputData: ConnectData = new ConnectData();
   public manualAuthInfo: AuthInfo = new AuthInfo();
   public connectMethod: ConnectMethod = new ConnectMethod('Null', '', 'null', 'null');
   public preConnectData: ConnectData = new ConnectData();
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
-  public isAppletClientMethod = false;
+  public accountOrUsernameChanged = new BehaviorSubject(false);
+  public onlineNum: number = null;
 
   constructor(public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
               private _settingSvc: SettingService,
               private _cdRef: ChangeDetectorRef,
+              private _http: HttpService,
               private _logger: LogService,
               private _appSvc: AppService,
               private _i18n: I18nService,
@@ -41,18 +44,19 @@ export class ElementConnectDialogComponent implements OnInit {
     this.asset = this.data.asset;
     this.preConnectData = this.data.preConnectData;
     this.protocols = this.getProtocols();
-    if (this.protocols.length === 0) {
-      this.protocols = [{name: 'ssh', port: 22, public: true, setting: {}}];
-    }
-    this._settingSvc.appletConnectMethod$.subscribe((state) => {
-      this.isAppletClientMethod = state === 'client';
-    });
     this.setDefaults();
+    this.accountOrUsernameChanged.pipe(debounceTime(500))
+      .subscribe(_ => {
+        this.getOnlineNum();
+      });
   }
 
   getProtocols() {
-    const protocols = this.asset.protocols.filter((item) => item.public);
-    return protocols || [];
+    let protocols = this.asset.protocols.filter((item) => item.public);
+    if (!protocols || protocols.length === 0) {
+      protocols = [{name: 'ssh', port: 22, public: true, setting: {}}];
+    }
+    return protocols;
   }
 
   setDefaults() {
@@ -66,6 +70,11 @@ export class ElementConnectDialogComponent implements OnInit {
       if (connectMethod) {
         this.connectMethod = connectMethod;
       }
+      this.connectOption = this.preConnectData.connectOption || {};
+    }
+
+    if (typeof this.connectOption !== 'object' || Array.isArray(this.connectOption)) {
+      this.connectOption = {};
     }
 
     if (!this.protocol) {
@@ -84,14 +93,37 @@ export class ElementConnectDialogComponent implements OnInit {
 
   onProtocolChange(protocol) {
     this.protocol = protocol;
+    this.getOnlineNum();
+  }
+
+  getOnlineNum() {
+    if (this.protocol.name !== 'rdp') {
+      return;
+    }
+    let account = this.accountSelected.username;
+    if (!this.accountSelected.has_secret) {
+      account = this.manualAuthInfo.username;
+    }
+    if (!account) {
+      return;
+    }
+    this._http.getSessionOnlineNum(this.asset.id, account)
+      .subscribe((data) => {
+        this.onlineNum = data['count'];
+      });
   }
 
   onSelectAccount(account) {
     this.accountSelected = account;
+    this.accountOrUsernameChanged.next(true);
 
     if (!account) {
       return;
     }
+  }
+
+  onManualUsernameChanged(evt) {
+    this.accountOrUsernameChanged.next(true);
   }
 
   isConnectDisabled(): Boolean {
@@ -101,12 +133,6 @@ export class ElementConnectDialogComponent implements OnInit {
     if (!this.connectMethod || this.connectMethod.disabled === true) {
       return true;
     }
-    if (
-      this.connectMethod.component === 'razor' ||
-      (this.connectMethod.type === 'applet' && this.isAppletClientMethod)
-    ) {
-      return !this._settingSvc.hasXPack();
-    }
     return false;
   }
 
@@ -114,7 +140,7 @@ export class ElementConnectDialogComponent implements OnInit {
     this.outputData.account = this.accountSelected;
     this.outputData.connectMethod = this.connectMethod;
     this.outputData.manualAuthInfo = this.manualAuthInfo;
-    this.outputData.connectOptions = this.connectOptions;
+    this.outputData.connectOption = this.connectOption;
     this.outputData.protocol = this.protocol;
     this.outputData.downloadRDP = downloadRDP;
     this.outputData.autoLogin = this.autoLogin;
@@ -123,9 +149,5 @@ export class ElementConnectDialogComponent implements OnInit {
 
     this.onSubmit$.next(true);
     this.dialogRef.close(this.outputData);
-  }
-
-  onAdvancedOptionChanged(evt) {
-    this.connectOptions = evt;
   }
 }

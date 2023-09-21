@@ -19,6 +19,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @Input() manualAuthInfo: AuthInfo;
   @Input() protocol: Protocol;
   @Output() accountSelectedChange: EventEmitter<Account> = new EventEmitter<Account>();
+  @Output() manualUsernameChanged: EventEmitter<string> = new EventEmitter<string>();
   @ViewChild('username', {static: false}) usernameRef: ElementRef;
   @ViewChild('password', {static: false}) passwordRef: ElementRef;
 
@@ -277,6 +278,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       }
       return authInfo.username.toLowerCase().includes(filterValue);
     });
+    this.manualUsernameChanged.emit(this.manualAuthInfo.username);
   }
 
   getSavedAuthInfos() {

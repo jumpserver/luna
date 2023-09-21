@@ -153,6 +153,7 @@ function createWatermarkDiv(content, {
       return `${prev}${key}:${styles[key]};`;
     }, '');
   watermarkDiv.setAttribute('style', style);
+  watermarkDiv.classList.add('watermark');
   return {watermark: watermarkDiv, base64: base64Url};
 }
 

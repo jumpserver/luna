@@ -2,25 +2,31 @@
   #contentWindow
   [id]="id"
   [ngClass]="{'active': view.active}"
-  [ngSwitch]="connector"
   class="window"
 >
-  <div *ngIf="!loading">
-    <elements-connector-magnus
-      *ngSwitchCase="'magnus'"
-      [view]="view">
-      >
-    </elements-connector-magnus>
-    <elements-connector-koko
-      *ngSwitchCase="'koko'"
-      [view]="view"
+  <div class="view">
+    <div
+      *ngIf="!loading"
+      class="sub-view"
+      [ngClass]="{'many-view': subViews.length > 1, 'three-view': subViews.length == 2}">
+      <elements-content-view
+        [view]="view"
+        [hasHead]="true"
+        [canClose]="false"
+      ></elements-content-view>
+    </div>
+    <div
+      *ngFor="let sub of subViews"
+      class="sub-view"
+      [ngClass]="{'many-view': subViews.length > 1}"
     >
-    </elements-connector-koko>
-    <elements-connector-default
-      *ngSwitchDefault
-      [connector]="connector"
-      [view]="view"
-    >
-    </elements-connector-default>
+      <div *ngIf="sub.smartEndpoint">
+        <elements-content-view
+          [view]="sub"
+          [hasHead]="true"
+          [canClose]="true"
+        ></elements-content-view> 
+      </div>
+    </div>
   </div>
 </div>

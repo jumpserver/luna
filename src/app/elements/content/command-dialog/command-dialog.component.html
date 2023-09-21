@@ -1,0 +1,14 @@
+<h1 mat-dialog-title>
+  {{"Save Command"| translate}}
+</h1>
+
+<div>
+  <mat-form-field style="width: 100%;">
+    <input [(ngModel)]="name" matInput required placeholder='{{"Name"| translate}}' name="fontSize" max="60" >
+  </mat-form-field>
+</div>
+
+
+<div style="float: right; padding-top: 20px">
+  <button mat-raised-button color="primary" (click)="onSubmit()">{{"Confirm"| translate}}</button>
+</div>

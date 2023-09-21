@@ -1,7 +1,9 @@
 import {Component, ElementRef, EventEmitter, OnInit, Output, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
-import {ConnectTokenService, I18nService, LogService, SettingService, ViewService} from '@app/services';
+import {ConnectTokenService, I18nService, LogService, SettingService, ViewService, HttpService} from '@app/services';
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
+import {MatDialog} from '@angular/material';
+import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
@@ -36,11 +38,15 @@ export class ElementContentComponent implements OnInit {
     }
   ];
   viewIds: Array<string> = [];
+  isShowInputCommand = true;
+  quickCommands = [];
 
   constructor(public viewSrv: ViewService,
               public settingSvc: SettingService,
               private _i18n: I18nService,
               private _logger: LogService,
+              private _http: HttpService,
+              private _dialog: MatDialog,
               private _connectTokenSvc: ConnectTokenService,
   ) {
   }
@@ -55,13 +61,10 @@ export class ElementContentComponent implements OnInit {
       && this.viewSrv.currentView.protocol === 'ssh';
   }
 
-  trackByFn(index, item) {
-    return item.id;
-  }
-
-  ngOnInit() {
+  async ngOnInit() {
     this.viewList = this.viewSrv.viewList;
     this.viewIds = this.viewSrv.viewIds;
+    this.quickCommands = await this._http.getQuickCommand();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
@@ -120,6 +123,10 @@ export class ElementContentComponent implements OnInit {
     this.tabsRef.nativeElement.scrollLeft = this.tabsRef.nativeElement.scrollWidth;
   }
 
+  trackByFn(index, item) {
+    return item.id;
+  }
+
   sendBatchCommand() {
     this.batchCommand = this.batchCommand.trim();
     if (this.batchCommand === '') {
@@ -133,9 +140,23 @@ export class ElementContentComponent implements OnInit {
       }
       const d = {'data': cmd};
       this.viewList[i].termComp.sendCommand(d);
+      const subViews = this.viewList[i].subViews;
+      if (subViews.length > 0) {
+        for (let j = 0; j < subViews.length; j++) {
+          if (subViews[j].protocol !== 'ssh' || subViews[j].connected !== true) {
+            continue;
+          }
+          subViews[j].termComp.sendCommand(d);
+        }
+      }
     }
 
     this.batchCommand = '';
+  }
+
+  sendQuickCommand(command) {
+    this.batchCommand = command.args;
+    this.sendBatchCommand();
   }
 
   rMenuItems() {
@@ -160,6 +181,18 @@ export class ElementContentComponent implements OnInit {
         callback: () => {
           this.viewList[this.rIdx].termComp.reconnect();
         }
+      },
+      {
+        title: 'Split vertically',
+        icon: 'fa-columns',
+        callback: () => {
+          const oldView = this.viewList[this.rIdx];
+          this._connectTokenSvc.exchange(oldView.connectToken).then((newConnectToken) => {
+            const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
+            this.viewSrv.addSubViewToCurrentView(newView);
+          });
+        },
+        disabled: this.viewList[this.rIdx].subViews.length > 0
       },
       {
         title: 'Close Current Tab',
@@ -242,5 +275,40 @@ export class ElementContentComponent implements OnInit {
 
   onItemDropped(event: CdkDragDrop<string[]>) {
     moveItemInArray(this.viewIds, event.previousIndex, event.currentIndex);
+  }
+
+  async switchCommand() {
+    this.batchCommand = '';
+    this.isShowInputCommand = !this.isShowInputCommand;
+    if (!this.isShowInputCommand) {
+      this.quickCommands = await this._http.getQuickCommand();
+    }
+  }
+
+  onSendCommand() {
+    if (!this.batchCommand) { return; }
+
+    this._dialog.open(
+      ElementCommandDialogComponent,
+      {
+        height: 'auto',
+        width: '500px',
+        data: {command: this.batchCommand}
+      }
+    );
+  }
+
+  onScrollLeft() {
+    const container: any = document.querySelector('.command-list');
+    if (container) {
+      container.scrollBy(-container.offsetWidth, 0);
+    }
+  }
+
+  onScrollRight() {
+    const container: any = document.querySelector('.command-list');
+    if (container) {
+      container.scrollBy(container.offsetWidth, 0);
+    }
   }
 }
