@@ -12,7 +12,6 @@ import {ActivatedRoute} from '@angular/router';
 export class ElementContentWindowComponent implements OnInit, DoCheck {
   @Input() view: View;
   @ViewChild('contentWindow', {static: true}) windowRef: ElementRef;
-  loading = true;
   public id: string;
   private iterableDiffer: any;
 
@@ -33,23 +32,18 @@ export class ElementContentWindowComponent implements OnInit, DoCheck {
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.createWaterMark();
     this.view.smartEndpoint = await this._appSvc.getSmartEndpoint(this.view);
-    setTimeout(() => {
-      this.loading = false;
-    }, 1000);
+    this.subViews.push(this.view);
   }
 
   async ngDoCheck() {
     const iterableChanges = this.iterableDiffer.diff(this.view.subViews);
 
-    if (iterableChanges) {
+    if (iterableChanges && iterableChanges.collection.length > 1) {
       // subViews 数组发生变化
       iterableChanges.forEachAddedItem(async (item) => {
         const smartEndpoint = await this._appSvc.getSmartEndpoint(item.item).then();
         const index = this.view.subViews.findIndex(i => i.connectToken.id === item.item.connectToken.id);
         this.view.subViews[index].smartEndpoint = smartEndpoint;
-      });
-      iterableChanges.forEachRemovedItem((item) => {
-        console.log('Removed item:', item);
       });
     }
   }

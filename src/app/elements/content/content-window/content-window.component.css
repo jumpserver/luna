@@ -28,6 +28,9 @@ div, elements-term, elements-guacamole {
 
 .many-view {
   flex: 0 0 50%;
+}
+
+.height-view {
   height: 50%;
 }
 
