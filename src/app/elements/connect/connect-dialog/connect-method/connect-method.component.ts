@@ -22,7 +22,7 @@ export class ElementConnectMethodComponent implements OnInit {
   }
 
   get isAppletClientMethod() {
-    return this.connectOption['appletConnectMethod'] === 'client';
+    return this.connectOption && this.connectOption['appletConnectMethod'] === 'client';
   }
 
   private _protocol: Protocol;
