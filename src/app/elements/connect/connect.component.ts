@@ -206,8 +206,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (connectMethod.value.endsWith('_guide')) {
       return this.createWebView(asset, connectInfo, connToken);
     }
-
-    let appletConnectMethod = connectOption['appletConnectMethod'];
+    let appletConnectMethod = connectOption ? connectOption['appletConnectMethod'] : 'web';
     if (!this._settingSvc.hasXPack()) {
       appletConnectMethod = 'web';
     }
