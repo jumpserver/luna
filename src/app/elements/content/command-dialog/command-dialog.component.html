@@ -6,6 +6,12 @@
   <mat-form-field style="width: 100%;">
     <input [(ngModel)]="name" matInput required placeholder='{{"Name"| translate}}' name="fontSize" max="60" >
   </mat-form-field>
+  <mat-form-field style="width: 100%;">
+    <mat-select [(value)]="module"
+                placeholder="{{'Module'| translate }}">
+      <mat-option *ngFor="let type of commandModules" [value]="type.value">{{type.label}}</mat-option>
+    </mat-select>
+  </mat-form-field>
 </div>
 
 

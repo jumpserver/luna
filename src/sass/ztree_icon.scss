@@ -111,6 +111,10 @@
   &.ico_loading {
     background: url(./icons/loading.gif) no-repeat scroll 0 0 transparent;
   }
+  
+  &.shell_ico_docu {
+    background: url('./icons/shell.png') no-repeat center left transparent;
+  }
 
   &.oracle_ico_docu::before {
     content: "\f1c0";
