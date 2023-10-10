@@ -77,7 +77,8 @@
       ></i>
       <ul class="command-list" *ngIf="quickCommands.length > 0; else empty">
         <li class="command-box" *ngFor="let command of quickCommands" (click)="sendQuickCommand(command)">
-          {{ command.name }}
+          <i [ngClass]="command.module.value + '_ico_docu'" class="view_icon"></i>
+          <span style="vertical-align: middle;">{{ command.name }}</span>
         </li>
       </ul>
       <i

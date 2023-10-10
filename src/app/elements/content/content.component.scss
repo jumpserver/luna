@@ -87,6 +87,21 @@ $-border-y: #1f1b1b;
       color: #d6cbcb;
     }
   }
+
+  .view_icon {
+    width: 12px;
+    height: 12px;
+    margin: 0 !important;
+    margin-right: 3px !important;
+    vertical-align: middle;
+    display: inline-block;
+  }
+  
+  .view_icon::before {
+    font-family: FontAwesome;
+    color: #ffffff;
+    display: inline-block;
+  }
 }
 
 #batchCommandDiv input {
@@ -328,7 +343,6 @@ tr:hover {
 .view-menu__icon.fa {
   width: 15px;
 }
-
 
 .input-box {
   display: flex;
