@@ -10,6 +10,7 @@ import {Account, Asset, AuthInfo, ConnectData, Endpoint, Organization, View} fro
 import * as CryptoJS from 'crypto-js';
 import {getCookie, setCookie} from '@app/utils/common';
 import {OrganizationService} from './organization';
+import {I18nService} from '@app/services/i18n';
 
 declare function unescape(s: string): string;
 
@@ -34,6 +35,7 @@ export class AppService {
   constructor(private _http: HttpService,
               private _router: Router,
               private _cookie: CookieService,
+              private _i18n: I18nService,
               private _logger: LogService,
               private _settingSvc: SettingService,
               private _localStorage: LocalStorageService,
@@ -61,6 +63,23 @@ export class AppService {
       const currentOrg: Organization = {id: oid, name: ''};
       this._orgSvc.switchOrg(currentOrg);
     }
+  }
+
+  intervalCheckLogin(ttl: number = 1000 * 60, clear: boolean = false) {
+    const interval = setInterval(() => {
+      this._http.getUserProfile().subscribe(
+        (res) => {
+          if (clear) {
+            clearInterval(interval);
+            this.intervalCheckLogin();
+          }
+        },
+        (err) => {
+          clearInterval(interval);
+          alert(this._i18n.instant('LoginExpireMsg'));
+          this.intervalCheckLogin(1000 * 2, true);
+        });
+    }, ttl);
   }
 
   checkLogin() {
@@ -98,6 +117,7 @@ export class AppService {
         Object.assign(User, user);
         User.logined = true;
         this._localStorage.set('user', user.id);
+        this.intervalCheckLogin();
       },
       err => {
         // this._logger.error(err);
