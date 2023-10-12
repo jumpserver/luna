@@ -64,8 +64,9 @@ as-split ::ng-deep .as-split-gutter.as-dragged .as-split-gutter-icon, .ex-b as-s
 }
 
 as-split.as-horizontal ::ng-deep .as-split-gutter-icon {
-  width: 8px !important;
-  left: -6px;
+  width: 5px !important;
+  left: -1px;
+  z-index: 1;
 }
 
 as-split.as-vertical ::ng-deep .as-split-gutter-icon {
