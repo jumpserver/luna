@@ -13,7 +13,7 @@
       <div *ngIf="sub.smartEndpoint">
         <elements-content-view
           [view]="sub"
-          [hasHead]="true"
+          [hasHead]="subViews.length > 1"
           [canClose]="i !== 0"
         ></elements-content-view> 
       </div>
