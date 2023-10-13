@@ -141,7 +141,7 @@ export class ElementContentComponent implements OnInit {
       const d = {'data': cmd};
       this.viewList[i].termComp.sendCommand(d);
       const subViews = this.viewList[i].subViews;
-      if (subViews.length > 0) {
+      if (subViews.length > 1) {
         for (let j = 0; j < subViews.length; j++) {
           if (subViews[j].protocol !== 'ssh' || subViews[j].connected !== true) {
             continue;
