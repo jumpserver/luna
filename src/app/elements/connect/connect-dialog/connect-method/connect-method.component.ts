@@ -1,5 +1,5 @@
 import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
-import {Account, ConnectMethod, Protocol} from '@app/model';
+import {Account, ConnectMethod, AuthInfo, Protocol} from '@app/model';
 import {AppService, I18nService, SettingService} from '@app/services';
 
 @Component({
@@ -10,6 +10,7 @@ import {AppService, I18nService, SettingService} from '@app/services';
 export class ElementConnectMethodComponent implements OnInit {
   @Output() connectMethodChange = new EventEmitter<ConnectMethod>();
   @Output() onDownloadRDPFile = new EventEmitter<ConnectMethod>();
+  @Input() manualAuthInfo: AuthInfo;
   @Input() connectOption: Object;
   @Input() account: Account;
   public connectMethods = [];
@@ -95,7 +96,11 @@ export class ElementConnectMethodComponent implements OnInit {
       return false;
     }
     if (!this.account.has_secret) {
-      return false;
+      const aliases = ['@USER', '@INPUT'];
+      // 同名账号、手动输入可以下载RDP文件
+      if (!aliases.includes(this.account.alias) || (!this.manualAuthInfo.secret || !this.manualAuthInfo.username)) {
+        return false;
+      }
     }
     if (method.component === 'razor') {
       return true;
