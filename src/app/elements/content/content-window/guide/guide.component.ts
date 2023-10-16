@@ -44,6 +44,11 @@ export class ElementConnectorGuideComponent implements OnInit {
       },
       error => {
         this.token.is_reusable = false;
+        if (error.status === 404) {
+          this._toastr.error(this._i18n.instant('Token expired'));
+          return;
+        }
+
         this._toastr.error(error.error.msg || error.error.is_reusable || error.message);
       }
     );

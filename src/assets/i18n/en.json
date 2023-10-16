@@ -187,5 +187,6 @@
   "Expand all": "Expand all",
   "Collapse": "Collapse",
   "Password is token password on the table": "Password is token password on the table",
-  "Password is your password login to system": "Password is your password login to system"
+  "Password is your password login to system": "Password is your password login to system",
+  "Token expired": "Token has expired"
 }
