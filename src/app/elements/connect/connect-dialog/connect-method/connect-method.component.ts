@@ -95,7 +95,7 @@ export class ElementConnectMethodComponent implements OnInit {
     if (!this._settingSvc.hasXPack()) {
       return false;
     }
-    if (!this.account.has_secret) {
+    if (this.account && !this.account.has_secret) {
       const aliases = ['@USER', '@INPUT'];
       // 同名账号、手动输入可以下载RDP文件
       if (!aliases.includes(this.account.alias) || (!this.manualAuthInfo.secret || !this.manualAuthInfo.username)) {
