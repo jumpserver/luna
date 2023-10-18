@@ -67,8 +67,10 @@ export class AppService {
 
   intervalCheckLogin(ttl: number = 1000 * 60, clear: boolean = false) {
     const interval = setInterval(() => {
+      User.logined = false;
       this._http.getUserProfile().subscribe(
         (res) => {
+          User.logined = true;
           if (clear) {
             clearInterval(interval);
             this.intervalCheckLogin();
@@ -76,8 +78,11 @@ export class AppService {
         },
         (err) => {
           clearInterval(interval);
-          alert(this._i18n.instant('LoginExpireMsg'));
-          this.intervalCheckLogin(1000 * 2, true);
+          const login = confirm(this._i18n.instant('LoginExpireMsg'));
+          if (login) {
+            window.open('/core/auth/login/?next=/luna/');
+          }
+          this.intervalCheckLogin(1000, true);
         });
     }, ttl);
   }
