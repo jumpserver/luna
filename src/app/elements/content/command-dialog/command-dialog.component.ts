@@ -9,6 +9,13 @@ import {MAT_DIALOG_DATA} from '@angular/material/dialog';
 })
 export class ElementCommandDialogComponent implements OnInit {
   public name = '';
+  public module = 'shell';
+  public commandModules = [
+    {
+      label: 'Shell',
+      value: 'shell'
+    }
+  ];
 
   constructor(public dialogRef: MatDialogRef<ElementCommandDialogComponent>,
               @Inject(MAT_DIALOG_DATA) public data: any,
@@ -20,12 +27,11 @@ export class ElementCommandDialogComponent implements OnInit {
   ngOnInit() {}
 
   async onSubmit() {
-    console.log('this.name: ', this.name);
     if (!this.name) { return; }
     const data = {
       name: this.name,
       args: this.data.command,
-      module: 'shell',
+      module: this.module,
     };
     this._http.addQuickCommand(data).subscribe(
       async () => {

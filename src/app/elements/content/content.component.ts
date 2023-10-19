@@ -64,7 +64,7 @@ export class ElementContentComponent implements OnInit {
   async ngOnInit() {
     this.viewList = this.viewSrv.viewList;
     this.viewIds = this.viewSrv.viewIds;
-    this.quickCommands = await this._http.getQuickCommand();
+    this.quickCommands = await this.quickCommandsFilter();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
@@ -141,7 +141,7 @@ export class ElementContentComponent implements OnInit {
       const d = {'data': cmd};
       this.viewList[i].termComp.sendCommand(d);
       const subViews = this.viewList[i].subViews;
-      if (subViews.length > 0) {
+      if (subViews.length > 1) {
         for (let j = 0; j < subViews.length; j++) {
           if (subViews[j].protocol !== 'ssh' || subViews[j].connected !== true) {
             continue;
@@ -277,11 +277,17 @@ export class ElementContentComponent implements OnInit {
     moveItemInArray(this.viewIds, event.previousIndex, event.currentIndex);
   }
 
+  async quickCommandsFilter() {
+    let list = await this._http.getQuickCommand();
+    list = list.filter(i => i.module.value === 'shell');
+    return list;
+  }
+
   async switchCommand() {
     this.batchCommand = '';
     this.isShowInputCommand = !this.isShowInputCommand;
     if (!this.isShowInputCommand) {
-      this.quickCommands = await this._http.getQuickCommand();
+      this.quickCommands = await this.quickCommandsFilter();
     }
   }
 

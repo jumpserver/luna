@@ -10,7 +10,7 @@ import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 import {HttpClient, HttpClientModule} from '@angular/common/http';
 import {TranslateLoader, TranslateModule} from '@ngx-translate/core';
 import {TranslateHttpLoader} from '@ngx-translate/http-loader';
-import { DragDropModule } from '@angular/cdk/drag-drop';
+import {DragDropModule} from '@angular/cdk/drag-drop';
 
 // service
 import {AllServices} from '@app/services';
@@ -35,9 +35,10 @@ import {ElementDialogAlertComponent} from '@app/services/dialog/dialog.service';
 import {ClipboardService} from 'ngx-clipboard';
 import {ElementsReplayMp4Component} from './elements/replay/mp4/mp4.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
+import {version} from '../environments/environment';
 
 export function HttpLoaderFactory(http: HttpClient) {
-  return new TranslateHttpLoader(http, '/luna/assets/i18n/');
+  return new TranslateHttpLoader(http, '/luna/assets/i18n/', '.json?v=' + version);
 }
 
 @NgModule({

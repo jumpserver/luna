@@ -206,12 +206,16 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (connectMethod.value.endsWith('_guide')) {
       return this.createWebView(asset, connectInfo, connToken);
     }
+    let appletConnectMethod = connectOption ? connectOption['appletConnectMethod'] : 'web';
+    if (!this._settingSvc.hasXPack()) {
+      appletConnectMethod = 'web';
+    }
 
     if (connectInfo.downloadRDP) {
       return this._http.downloadRDPFile(connToken, this._settingSvc.setting);
     } else if (connectMethod.type === 'native') {
       this.callLocalClient(connToken).then();
-    } else if (connectMethod.type === 'applet' && connectOption['appletConnectMethod'] !== 'web') {
+    } else if (connectMethod.type === 'applet' && appletConnectMethod === 'client') {
       this.callLocalClient(connToken).then();
     } else {
       this.createWebView(asset, connectInfo, connToken);

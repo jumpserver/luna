@@ -10,6 +10,7 @@ import {Account, Asset, AuthInfo, ConnectData, Endpoint, Organization, View} fro
 import * as CryptoJS from 'crypto-js';
 import {getCookie, setCookie} from '@app/utils/common';
 import {OrganizationService} from './organization';
+import {I18nService} from '@app/services/i18n';
 
 declare function unescape(s: string): string;
 
@@ -34,6 +35,7 @@ export class AppService {
   constructor(private _http: HttpService,
               private _router: Router,
               private _cookie: CookieService,
+              private _i18n: I18nService,
               private _logger: LogService,
               private _settingSvc: SettingService,
               private _localStorage: LocalStorageService,
@@ -61,6 +63,28 @@ export class AppService {
       const currentOrg: Organization = {id: oid, name: ''};
       this._orgSvc.switchOrg(currentOrg);
     }
+  }
+
+  intervalCheckLogin(ttl: number = 1000 * 60, clear: boolean = false) {
+    const interval = setInterval(() => {
+      User.logined = false;
+      this._http.getUserProfile().subscribe(
+        (res) => {
+          User.logined = true;
+          if (clear) {
+            clearInterval(interval);
+            this.intervalCheckLogin();
+          }
+        },
+        (err) => {
+          clearInterval(interval);
+          const login = confirm(this._i18n.instant('LoginExpireMsg'));
+          if (login) {
+            window.open('/core/auth/login/?next=/luna/');
+          }
+          this.intervalCheckLogin(1000, true);
+        });
+    }, ttl);
   }
 
   checkLogin() {
@@ -98,6 +122,7 @@ export class AppService {
         Object.assign(User, user);
         User.logined = true;
         this._localStorage.set('user', user.id);
+        this.intervalCheckLogin();
       },
       err => {
         // this._logger.error(err);

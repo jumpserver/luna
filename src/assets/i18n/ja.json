@@ -48,6 +48,7 @@
   "Not quick command": "非高速コマンド",
   "Save Command": "保存コマンド",
   "Save Success": "保存に成功",
+  "Module": "ユニット",
   "Setting": "設定",
   "Show left manager": "左サイドバーを表示",
   "Skip": "スキップ",
@@ -190,5 +191,6 @@
   "Fold all": "すべて折りたたみ",
   "Password is token password on the table": "パスワードは、テーブルのトークンパスワードです",
   "Password is your password login to system": "パスワードは、システムにログインするためのパスワードです",
-  "Current online": "現在オンライン"
+  "Current online": "現在オンライン",
+  "Token expired": "トークンの有効期限が切れました"
 }

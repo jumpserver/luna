@@ -48,6 +48,7 @@
   "Not quick command": "Not quick command",
   "Save Command": "Save Command",
   "Save Success": "Save Success",
+  "Module": "Module",
   "Setting": "Setting",
   "Show left manager": "Show left manager",
   "Skip": "Skip",
@@ -186,5 +187,6 @@
   "Expand all": "Expand all",
   "Collapse": "Collapse",
   "Password is token password on the table": "Password is token password on the table",
-  "Password is your password login to system": "Password is your password login to system"
+  "Password is your password login to system": "Password is your password login to system",
+  "Token expired": "Token has expired"
 }
