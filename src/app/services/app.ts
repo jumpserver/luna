@@ -68,7 +68,7 @@ export class AppService {
   intervalCheckLogin(ttl: number = 1000 * 60, clear: boolean = false) {
     const interval = setInterval(() => {
       User.logined = false;
-      this._http.getUserProfile().subscribe(
+      this._http.get(`/api/v1/users/profile/?fields_size=mini`).subscribe(
         (res) => {
           User.logined = true;
           if (clear) {
