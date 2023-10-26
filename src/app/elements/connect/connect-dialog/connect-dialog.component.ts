@@ -52,7 +52,7 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   getProtocols() {
-    let protocols = this.asset.protocols.filter((item) => item.public);
+    let protocols = this.asset.permed_protocols.filter((item) => item.public);
     if (!protocols || protocols.length === 0) {
       protocols = [{name: 'ssh', port: 22, public: true, setting: {}}];
     }
