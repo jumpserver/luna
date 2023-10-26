@@ -77,7 +77,8 @@ export class Asset {
   comment: string;
   type: Choice;
   category: Choice;
-  protocols: Array<Protocol>;
+  permed_protocols: Array<Protocol>;
+  permed_accounts: Array<Account>;
   spec_info: SpecInfo;
 }
 

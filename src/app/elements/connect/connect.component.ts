@@ -86,7 +86,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const idObject = this.analysisId(id);
     const token = this._route.snapshot.queryParams.token;
     this._http.getConnectToken(token).subscribe(connToken => {
-      this._http.getMyAssetAccounts(connToken.asset.id).subscribe(accountList => {
+      this._http.getAssetDetail(connToken.asset.id).subscribe(asset => {
+        const accountList = asset.permed_accounts;
         let account = new Account();
         if (['@INPUT', '@USER'].includes(connToken.account)) {
           account.name = connToken.input_username;
@@ -176,7 +177,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       await this._dialogAlert.alert(msg);
       return;
     }
-    const accounts = await this._http.getMyAssetAccounts(asset.id).toPromise();
+    const accounts = asset.permed_accounts;
     const connectInfo = await this.getConnectData(accounts, asset);
     if (!connectInfo) {
       this._logger.info('Just close the dialog');
