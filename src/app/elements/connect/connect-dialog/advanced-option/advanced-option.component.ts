@@ -39,6 +39,8 @@ export class ElementAdvancedOptionComponent implements OnChanges {
           {label: 'Default', value: 'default'},
           {label: 'UTF-8', value: 'utf8'},
           {label: 'GBK', value: 'gbk'},
+          {label: 'GB2312', value: 'gb2312'},
+          {label: 'IOS-8859-1', value: 'ios-8859-1'},
         ]
       },
       {
