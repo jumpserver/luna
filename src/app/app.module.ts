@@ -35,6 +35,7 @@ import {ElementDialogAlertComponent} from '@app/services/dialog/dialog.service';
 import {ClipboardService} from 'ngx-clipboard';
 import {ElementsReplayMp4Component} from './elements/replay/mp4/mp4.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
+import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
 import {version} from '../environments/environment';
 
 export function HttpLoaderFactory(http: HttpClient) {
@@ -79,6 +80,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     ElementACLDialogComponent,
     ElementDialogAlertComponent,
     ElementCommandDialogComponent,
+    ElementSendCommandDialogComponent,
   ],
   bootstrap: [AppComponent],
   providers: [

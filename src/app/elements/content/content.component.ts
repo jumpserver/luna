@@ -4,6 +4,7 @@ import {ConnectTokenService, I18nService, LogService, SettingService, ViewServic
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import {MatDialog} from '@angular/material';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
+import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
@@ -64,7 +65,7 @@ export class ElementContentComponent implements OnInit {
   async ngOnInit() {
     this.viewList = this.viewSrv.viewList;
     this.viewIds = this.viewSrv.viewIds;
-    this.quickCommands = await this.quickCommandsFilter();
+    await this.quickCommandsFilter();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
@@ -127,26 +128,30 @@ export class ElementContentComponent implements OnInit {
     return item.id;
   }
 
-  sendBatchCommand() {
+  sendBatchCommand(value) {
+    let list = this.viewList;
     this.batchCommand = this.batchCommand.trim();
     if (this.batchCommand === '') {
       return;
     }
 
     const cmd = this.batchCommand + '\r';
-    for (let i = 0; i < this.viewList.length; i++) {
-      if (this.viewList[i].protocol !== 'ssh' || this.viewList[i].connected !== true) {
+    if (value === 'current') {
+      const view = this.viewList.filter(i => i.id === this.viewSrv.currentView.id);
+      list = view;
+    }
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].protocol !== 'ssh' || list[i].connected !== true) {
         continue;
       }
-      const d = {'data': cmd};
-      this.viewList[i].termComp.sendCommand(d);
-      const subViews = this.viewList[i].subViews;
+      list[i].termComp.sendCommand({'data': cmd});
+      const subViews = list[i].subViews;
       if (subViews.length > 1) {
         for (let j = 0; j < subViews.length; j++) {
           if (subViews[j].protocol !== 'ssh' || subViews[j].connected !== true) {
             continue;
           }
-          subViews[j].termComp.sendCommand(d);
+          subViews[j].termComp.sendCommand({'data': cmd});
         }
       }
     }
@@ -156,7 +161,14 @@ export class ElementContentComponent implements OnInit {
 
   sendQuickCommand(command) {
     this.batchCommand = command.args;
-    this.sendBatchCommand();
+    this._dialog.open(
+      ElementSendCommandDialogComponent,
+      {
+        height: 'auto',
+        width: '500px',
+        data: {send: this.sendBatchCommand.bind(this)}
+      }
+    );
   }
 
   rMenuItems() {
@@ -280,14 +292,14 @@ export class ElementContentComponent implements OnInit {
   async quickCommandsFilter() {
     let list = await this._http.getQuickCommand();
     list = list.filter(i => i.module.value === 'shell');
-    return list;
+    this.quickCommands = list;
   }
 
   async switchCommand() {
     this.batchCommand = '';
     this.isShowInputCommand = !this.isShowInputCommand;
     if (!this.isShowInputCommand) {
-      this.quickCommands = await this.quickCommandsFilter();
+      await this.quickCommandsFilter();
     }
   }
 
