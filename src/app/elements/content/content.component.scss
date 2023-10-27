@@ -155,6 +155,13 @@ $-border-y: #1f1b1b;
     padding-left: 6px;
     color: #717171;
   }
+  .action-left,
+  .action-right {
+    line-height: 29px;
+  }
+  .action-right {
+    display: flex;
+  }
 }
 
 .view-menu {

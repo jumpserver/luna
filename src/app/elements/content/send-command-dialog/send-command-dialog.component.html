@@ -1,0 +1,16 @@
+<h1 mat-dialog-title>
+  {{"Send command"| translate}}
+</h1>
+
+<div>
+  <mat-radio-group [(ngModel)]="value" aria-label="Select an option">
+    <mat-radio-button *ngFor="let item of options" [value]="item.value">
+      {{ item.label | translate }}
+    </mat-radio-button>
+  </mat-radio-group>
+</div>
+
+
+<div style="float: right; padding-top: 20px">
+  <button mat-raised-button color="primary" (click)="onSubmit()">{{"Confirm"| translate}}</button>
+</div>

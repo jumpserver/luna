@@ -55,7 +55,7 @@
     ></i>
     <div *ngIf="isShowInputCommand; else quickCommand" class="input-box">
       <input
-        (keydown.enter)="sendBatchCommand()"
+        (keydown.enter)="sendBatchCommand('current')"
         [(ngModel)]="batchCommand"
         maxlength="2048"
         placeholder=" {{'Send text to all ssh terminals'| translate }} ..."
@@ -65,27 +65,34 @@
       >
       <i
         class="fa fa-save"
-        matTooltip="{{ 'Save Command' | translate }}"
+        matTooltip="{{ 'Save command' | translate }}"
         (click)="onSendCommand()"
       ></i>
     </div>
     <ng-template #quickCommand>
-      <i
-        *ngIf="quickCommands.length > 0"
-        class="fa fa-angle-double-left"
-        (click)="onScrollLeft()"
-      ></i>
+      <span class="action-left">
+        <i
+          *ngIf="quickCommands.length > 0"
+          class="fa fa-angle-double-left"
+          (click)="onScrollLeft()"
+        ></i>
+      </span>
       <ul class="command-list" *ngIf="quickCommands.length > 0; else empty">
-        <li class="command-box" *ngFor="let command of quickCommands" (click)="sendQuickCommand(command)">
+        <li
+          class="command-box"
+          *ngFor="let command of quickCommands"
+          matTooltipPosition="above"
+          [matTooltip]="command.args"
+          (click)="sendQuickCommand(command)"
+        >
           <i [ngClass]="command.module.value + '_ico_docu'" class="view_icon"></i>
           <span style="vertical-align: middle;">{{ command.name }}</span>
         </li>
       </ul>
-      <i
-        *ngIf="quickCommands.length > 0"
-        class="fa fa-angle-double-right"
-        (click)="onScrollRight()"
-      ></i>
+      <span class="action-right">
+        <i *ngIf="quickCommands.length > 0" class="fa fa-angle-double-right" (click)="onScrollRight()"></i>
+        <i class="fa fa-refresh" (click)="quickCommandsFilter()"></i>
+      </span>
       <ng-template #empty>
         <div class="not-command">{{'Not quick command'| translate }}</div>
       </ng-template>

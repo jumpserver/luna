@@ -29,6 +29,7 @@ import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/
 import {ElementsReplayMp4Component} from './replay/mp4/mp4.component';
 import {ElementConnectorGuideComponent} from '@app/elements/content/content-window/guide/guide.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
+import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
 
 
 export const ElementComponents = [
@@ -65,4 +66,5 @@ export const ElementComponents = [
   ElementsReplayMp4Component,
   ElementConnectorGuideComponent,
   ElementCommandDialogComponent,
+  ElementSendCommandDialogComponent,
 ];
