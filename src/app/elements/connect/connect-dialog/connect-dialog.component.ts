@@ -44,6 +44,9 @@ export class ElementConnectDialogComponent implements OnInit {
     this.asset = this.data.asset;
     this.preConnectData = this.data.preConnectData;
     this.protocols = this.getProtocols();
+    if (this.protocols.length === 0) {
+      return;
+    }
     this.setDefaults();
     this.accountOrUsernameChanged.pipe(debounceTime(500))
       .subscribe(_ => {
@@ -52,11 +55,7 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   getProtocols() {
-    let protocols = this.asset.permed_protocols.filter((item) => item.public);
-    if (!protocols || protocols.length === 0) {
-      protocols = [{name: 'ssh', port: 22, public: true, setting: {}}];
-    }
-    return protocols;
+    return this.asset.permed_protocols.filter((item) => item.public);
   }
 
   setDefaults() {
