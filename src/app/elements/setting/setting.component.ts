@@ -15,6 +15,7 @@ export class ElementSettingComponent implements OnInit {
   public boolChoices: any[];
   keyboardLayoutOptions: any[];
   resolutionsOptions: any[];
+  rdpSmartSizeOptions: any[];
   setting: Setting;
   globalSetting: GlobalSetting;
   type = 'general';
@@ -52,6 +53,7 @@ export class ElementSettingComponent implements OnInit {
     const res: any = await this._http.options(url).toPromise();
     const graphics = res.actions.GET.graphics.children;
     this.resolutionsOptions = graphics.rdp_resolution.choices;
+    this.rdpSmartSizeOptions = graphics.rdp_smart_size.choices;
     this.keyboardLayoutOptions = graphics.keyboard_layout.choices;
   }
 
