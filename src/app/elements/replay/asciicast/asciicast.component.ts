@@ -65,10 +65,10 @@ export class ElementReplayAsciicastComponent implements OnInit {
   }
 
   speedDown() {
-    this.speed--;
-    if (this.speed <= 0) {
-      this.speed = 1;
+    if (this.speed <= 1) {
+      return
     }
+    this.speed--;
     this.currentTime = this.player.getCurrentTime();
     this.resetPlayer();
     this.player.setCurrentTime(this.currentTime);
