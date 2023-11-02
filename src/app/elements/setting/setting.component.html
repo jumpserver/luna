@@ -21,6 +21,15 @@
   </mat-form-field>
 
   <mat-form-field>
+    <mat-select [(value)]="setting.graphics.rdp_smart_size"
+                placeholder="{{'RDP smart size'| translate}}">
+      <mat-option *ngFor="let s of rdpSmartSizeOptions" [value]="s.value">
+        {{s.label}}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field>
     <label class="field-label" style="padding-bottom: 7px;">
       {{'Keyboard layout'| translate }}
     </label>

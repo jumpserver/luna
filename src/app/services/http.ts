@@ -213,7 +213,7 @@ export class HttpService {
 
   cleanRDPParams(params) {
     const cleanedParams = {};
-    const {rdp_resolution, rdp_client_option} = params.graphics;
+    const {rdp_resolution, rdp_client_option, rdp_smart_size} = params.graphics;
 
     if (rdp_resolution && rdp_resolution.indexOf('x') > -1) {
       const [width, height] = rdp_resolution.split('x');
@@ -229,6 +229,8 @@ export class HttpService {
     if (rdp_client_option.includes('drives_redirect')) {
       cleanedParams['drives_redirect'] = '1';
     }
+
+    cleanedParams['rdp_smart_size'] = rdp_smart_size;
     return cleanedParams;
   }
 

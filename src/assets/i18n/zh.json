@@ -42,6 +42,7 @@
   "Checkbox": "多选",
   "Batch connect": "批量连接",
   "RDP resolution": "RDP分辨率",
+  "RDP smart size": "RDP 智能大小",
   "Send text to all ssh terminals": "发送文本到所有ssh终端",
   "Switch to quick command": "切换到快捷命令",
   "Switch to input command": "切换到输入命令",
