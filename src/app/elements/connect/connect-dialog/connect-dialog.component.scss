@@ -84,3 +84,15 @@ button.mat-raised-button {
   font-size: 12px;
   font-weight: 300;
 }
+
+.el-alert--error {
+  background-color: #fdeef0;
+  border: solid 1px #ffd6d9;
+  color: #e3263a;
+  padding: 15px;
+  margin-top: 20px;
+}
+
+::ng-deep .mat-dialog-container {
+  min-height: 200px;
+}

@@ -195,5 +195,6 @@
   "Password is token password on the table": "パスワードは、テーブルのトークンパスワードです",
   "Password is your password login to system": "パスワードは、システムにログインするためのパスワードです",
   "Current online": "現在オンライン",
-  "Token expired": "トークンの有効期限が切れました"
+  "Token expired": "トークンの有効期限が切れました",
+  "No protocol available": "利用可能なプロトコルがありません"
 }

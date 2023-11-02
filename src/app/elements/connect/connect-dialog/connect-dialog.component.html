@@ -6,69 +6,78 @@
     </button>
   </div>
 
-  <nav class="protocol-tab" mat-tab-nav-bar style="margin-bottom: 10px">
-    <a (click)="onProtocolChange(p)"
-       *ngFor="let p of protocols"
-       [active]="protocol.name === p.name"
-       [title]="p.name"
-       mat-tab-link
-    >
-      {{ p.name | uppercase }}
-    </a>
-  </nav>
-
-  <div (keyup.enter)="onConfirm()" class="dialog-body" mat-dialog-content>
-    <elements-select-account
-      (accountSelectedChange)="onSelectAccount($event)"
-      (manualUsernameChanged)="onManualUsernameChanged($event)"
-      [accounts]="accounts"
-      [asset]="asset"
-      [manualAuthInfo]="manualAuthInfo"
-      [onSubmit]="onSubmit$"
-      [protocol]="protocol"
-    >
-    </elements-select-account>
-
-    <elements-connect-method
-      (onDownloadRDPFile)="onConfirm(true)"
-      [(connectMethod)]="connectMethod"
-      [manualAuthInfo]="manualAuthInfo"
-      [account]="accountSelected"
-      [connectOption]="connectOption"
-      [protocol]="protocol"
-      class="connect-method-zone"
-    >
-    </elements-connect-method>
-
-    <elements-advanced-option
-      [connectMethod]="connectMethod"
-      [connectOption]="connectOption"
-      [protocol]="protocol"
-    >
-    </elements-advanced-option>
-
-    <div class="auto-connect">
-      <label class="zone-label" style="display: block">{{ "Remember select" | translate }}</label>
-      <mat-checkbox [(ngModel)]="autoLogin" name="auto-login">
-        {{ "Automatic login next" | translate }}
-      </mat-checkbox>
+  <div *ngIf="protocols.length === 0">
+    <div class="el-alert el-alert--error is-light" role="alert">
+      <div class="el-alert__content">
+        <p class="el-alert__description">{{ "No protocol available" | translate }}</p>
+      </div>
     </div>
-
-    <mat-dialog-actions style="float: right; margin: 8px 0 0 0; width: 100%">
-      <button
-        (click)="onConfirm()"
-        [disabled]="isConnectDisabled()"
-        [mat-dialog-close]="outputData"
-        class="confirm-btn"
-        color="primary"
-        mat-raised-button
-        type="submit"
+  </div>
+  <div *ngIf="protocols && protocols.length > 0">
+    <nav class="protocol-tab" mat-tab-nav-bar style="margin-bottom: 10px">
+      <a (click)="onProtocolChange(p)"
+         *ngFor="let p of protocols"
+         [active]="protocol.name === p.name"
+         [title]="p.name"
+         mat-tab-link
       >
-        {{"Connect"| translate}}
-        <span *ngIf="protocol && protocol.name === 'rdp'" class="online-num">
+        {{ p.name | uppercase }}
+      </a>
+    </nav>
+
+    <div (keyup.enter)="onConfirm()" class="dialog-body" mat-dialog-content>
+      <elements-select-account
+        (accountSelectedChange)="onSelectAccount($event)"
+        (manualUsernameChanged)="onManualUsernameChanged($event)"
+        [accounts]="accounts"
+        [asset]="asset"
+        [manualAuthInfo]="manualAuthInfo"
+        [onSubmit]="onSubmit$"
+        [protocol]="protocol"
+      >
+      </elements-select-account>
+
+      <elements-connect-method
+        (onDownloadRDPFile)="onConfirm(true)"
+        [(connectMethod)]="connectMethod"
+        [account]="accountSelected"
+        [connectOption]="connectOption"
+        [manualAuthInfo]="manualAuthInfo"
+        [protocol]="protocol"
+        class="connect-method-zone"
+      >
+      </elements-connect-method>
+
+      <elements-advanced-option
+        [connectMethod]="connectMethod"
+        [connectOption]="connectOption"
+        [protocol]="protocol"
+      >
+      </elements-advanced-option>
+
+      <div class="auto-connect">
+        <label class="zone-label" style="display: block">{{ "Remember select" | translate }}</label>
+        <mat-checkbox [(ngModel)]="autoLogin" name="auto-login">
+          {{ "Automatic login next" | translate }}
+        </mat-checkbox>
+      </div>
+
+      <mat-dialog-actions style="float: right; margin: 8px 0 0 0; width: 100%">
+        <button
+          (click)="onConfirm()"
+          [disabled]="isConnectDisabled()"
+          [mat-dialog-close]="outputData"
+          class="confirm-btn"
+          color="primary"
+          mat-raised-button
+          type="submit"
+        >
+          {{"Connect"| translate}}
+          <span *ngIf="protocol && protocol.name === 'rdp'" class="online-num">
           ({{ 'Current online' | translate}}: {{ onlineNum === null ? '- ' : onlineNum }})
         </span>
-      </button>
-    </mat-dialog-actions>
+        </button>
+      </mat-dialog-actions>
+    </div>
   </div>
 </div>
