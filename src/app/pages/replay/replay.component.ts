@@ -53,7 +53,7 @@ export class PagesReplayComponent implements OnInit {
       'json': true,
       'guacamole': true,
       'asciicast': true,
-      'mp4': true,};
+      'mp4': true, };
     return !supportedType[tp];
   }
 }
