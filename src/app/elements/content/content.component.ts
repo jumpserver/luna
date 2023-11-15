@@ -178,7 +178,8 @@ export class ElementContentComponent implements OnInit {
         icon: 'fa-copy',
         callback: () => {
           const id = this.rIdx + 1;
-          const oldView = this.viewList[this.rIdx];
+          const oldId = this.viewIds[this.rIdx];
+          const oldView = this.viewList.find(i => i.id === oldId);
           const oldConnectToken = oldView.connectToken;
           this._connectTokenSvc.exchange(oldConnectToken).then((newConnectToken) => {
             const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
