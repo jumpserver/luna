@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpErrorResponse, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Browser, User} from '@app/globals';
 import {catchError, delay, map, retryWhen, scan} from 'rxjs/operators';
-import {Account, Asset, ConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
+import {Asset, ConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
@@ -161,14 +161,10 @@ export class HttpService {
     return this.get<Array<TreeNode>>(url);
   }
 
-  getMyAssetAccounts(assetId: string) {
-    const url = `/api/v1/perms/users/self/assets/${assetId}/accounts/`;
-    return this.get<Array<Account>>(url);
-  }
 
   getAssetDetail(id) {
-    const url = `/api/v1/perms/users/self/assets/?id=${id}`;
-    return this.get<Asset>(url).pipe(map(res => res[0]));
+    const url = `/api/v1/perms/users/self/assets/${id}/`;
+    return this.get<Asset>(url);
   }
 
   favoriteAsset(assetId: string, favorite: boolean) {
@@ -217,7 +213,7 @@ export class HttpService {
 
   cleanRDPParams(params) {
     const cleanedParams = {};
-    const {rdp_resolution, rdp_client_option} = params.graphics;
+    const {rdp_resolution, rdp_client_option, rdp_smart_size} = params.graphics;
 
     if (rdp_resolution && rdp_resolution.indexOf('x') > -1) {
       const [width, height] = rdp_resolution.split('x');
@@ -233,6 +229,8 @@ export class HttpService {
     if (rdp_client_option.includes('drives_redirect')) {
       cleanedParams['drives_redirect'] = '1';
     }
+
+    cleanedParams['rdp_smart_size'] = rdp_smart_size;
     return cleanedParams;
   }
 

@@ -68,7 +68,7 @@ export class AppService {
   intervalCheckLogin(ttl: number = 1000 * 60, clear: boolean = false) {
     const interval = setInterval(() => {
       User.logined = false;
-      this._http.getUserProfile().subscribe(
+      this._http.get(`/api/v1/users/profile/?fields_size=mini`).subscribe(
         (res) => {
           User.logined = true;
           if (clear) {
@@ -296,6 +296,13 @@ export class AppService {
       data['token'] = view.connectToken.id;
     } else {
       data['assetId'] = view.asset.id;
+    }
+    if (view.connectMethod && view.connectMethod.type === 'applet') {
+      if (view.connectOption && view.connectOption['appletConnectMethod'] === 'client') {
+        protocol = 'rdp';
+      } else {
+        protocol = 'http';
+      }
     }
     const res = this._http.getSmartEndpoint(data, protocol);
     res.catch((err) => {

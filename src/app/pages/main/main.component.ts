@@ -1,7 +1,7 @@
 import {Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/core';
 import {DataStore, User} from '@app/globals';
 import {IOutputData, SplitComponent} from 'angular-split';
-import {SettingService, ViewService} from '@app/services';
+import {LogService, SettingService, ViewService} from '@app/services';
 import * as _ from 'lodash';
 import {environment} from '@src/environments/environment';
 
@@ -25,6 +25,7 @@ export class PageMainComponent implements OnInit {
   };
 
   constructor(public viewSrv: ViewService,
+              private _logger: LogService,
               public _settingSvc: SettingService) {
   }
 
@@ -85,6 +86,7 @@ export class PageMainComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    console.log('main init');
     this.menus = [
       {
         name: 'assets',
@@ -99,6 +101,30 @@ export class PageMainComponent implements OnInit {
     ];
     this.onResize(window);
     window.addEventListener('resize', _.debounce(this.onResize, 300));
+    this.connectWebsocket();
+  }
+
+  connectWebsocket() {
+    const scheme = document.location.protocol === 'https:' ? 'wss' : 'ws';
+    const port = document.location.port ? ':' + document.location.port : '';
+    const url = '/ws/notifications/site-msg/';
+    const wsURL = scheme + '://' + document.location.hostname + port + url;
+
+    const ws = new WebSocket(wsURL);
+    ws.onopen = (event) => {
+      this._logger.debug('Websocket connected: ', event);
+    };
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        this._logger.debug('Data: ', data);
+      } catch (e) {
+        this._logger.debug('Recv site message error');
+      }
+    };
+    ws.onerror = (error) => {
+      this._logger.debug('site message ws error: ', error);
+    };
   }
 
   onResize(event) {

@@ -35,7 +35,7 @@ export class ElementCommandDialogComponent implements OnInit {
     };
     this._http.addQuickCommand(data).subscribe(
       async () => {
-        const msg = await this._i18n.t('Save Success');
+        const msg = await this._i18n.t('Save success');
         this.snackBar.open(msg, '', {
           verticalPosition: 'top',
           duration: 1600

@@ -42,12 +42,16 @@
   "Checkbox": "複数選択",
   "Batch connect": "バッチ接続",
   "RDP resolution": "RDP解像度",
+  "RDP smart size": "RDP スマート・サイズ",
   "Send text to all ssh terminals": "すべてのssh端末にテキストを送信します",
   "Switch to quick command": "クイックコマンドに切り替え",
   "Switch to input command": "入力コマンドに切り替え",
   "Not quick command": "非高速コマンド",
-  "Save Command": "保存コマンド",
-  "Save Success": "保存に成功",
+  "Save command": "保存コマンド",
+  "Save success": "保存に成功",
+  "Send command": "コマンドを送信",
+  "Current window": "現在のウィンドウ",
+  "All window": "すべてのウィンドウ",
   "Module": "ユニット",
   "Setting": "設定",
   "Show left manager": "左サイドバーを表示",
@@ -192,5 +196,6 @@
   "Password is token password on the table": "パスワードは、テーブルのトークンパスワードです",
   "Password is your password login to system": "パスワードは、システムにログインするためのパスワードです",
   "Current online": "現在オンライン",
-  "Token expired": "トークンの有効期限が切れました"
+  "Token expired": "トークンの有効期限が切れました",
+  "No protocol available": "利用可能なプロトコルがありません"
 }

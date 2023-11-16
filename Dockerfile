@@ -1,4 +1,4 @@
-FROM node:16.17.1-bullseye-slim as stage-build
+FROM node:16.20-bullseye-slim as stage-build
 ARG TARGETARCH
 ARG NPM_REGISTRY="https://registry.npmmirror.com"
 

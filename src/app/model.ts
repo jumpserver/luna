@@ -77,7 +77,8 @@ export class Asset {
   comment: string;
   type: Choice;
   category: Choice;
-  protocols: Array<Protocol>;
+  permed_protocols: Array<Protocol>;
+  permed_accounts: Array<Account>;
   spec_info: SpecInfo;
 }
 
@@ -284,7 +285,8 @@ export class Setting {
     rdp_resolution: 'Auto',
     keyboard_layout: 'en-us-qwerty',
     rdp_client_option: [],
-    applet_connection_method: 'web'
+    applet_connection_method: 'web',
+    rdp_smart_size: '0'
   };
   command_line = {
     character_terminal_font_size: 14,

@@ -81,7 +81,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     if (!this.protocol || this.protocol.name !== 'rdp') {
       return '';
     }
-    const rdp = this.asset.protocols.find(item => item.name === 'rdp');
+    const rdp = this.asset.permed_protocols.find(item => item.name === 'rdp');
     if (!rdp || !rdp.setting || typeof rdp.setting !== 'object') {
       return '';
     }

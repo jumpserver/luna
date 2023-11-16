@@ -42,12 +42,16 @@
   "Checkbox": "Checkbox",
   "Batch connect": "Batch connect",
   "RDP resolution": "RDP resolution",
+  "RDP smart size": "RDP smart size",
   "Send text to all ssh terminals": "Send text to all ssh terminals",
   "Switch to quick command": "Switch to quick command",
   "Switch to input command": "Switch to input command",
   "Not quick command": "Not quick command",
-  "Save Command": "Save Command",
-  "Save Success": "Save Success",
+  "Save command": "Save command",
+  "Save success": "Save success",
+  "Send command": "Send command",
+  "Current window": "Current window",
+  "All window": "All window",
   "Module": "Module",
   "Setting": "Setting",
   "Show left manager": "Show left manager",
@@ -188,5 +192,6 @@
   "Collapse": "Collapse",
   "Password is token password on the table": "Password is token password on the table",
   "Password is your password login to system": "Password is your password login to system",
-  "Token expired": "Token has expired"
+  "Token expired": "Token has expired",
+  "No protocol available": "No protocol available"
 }
