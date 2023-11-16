@@ -23,10 +23,12 @@ export class ElementContentViewComponent implements OnInit {
   computeConnector(view) {
     let connector;
     const {connectData} = view;
-    if (connectData.connectMethod.component === 'tinker') {
-      // todo:  applet 使用 web gui 的方式
-      connector = 'lion';
-    } else {
+    switch (connectData.connectMethod.component) {
+      case 'panda':
+      case 'tinker':
+        connector = 'lion';
+        break;
+      default:
       connector = connectData.connectMethod.component;
     }
     return connector;
