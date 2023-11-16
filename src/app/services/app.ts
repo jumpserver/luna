@@ -297,6 +297,13 @@ export class AppService {
     } else {
       data['assetId'] = view.asset.id;
     }
+    if (view.connectMethod && view.connectMethod.type === 'applet') {
+      if (view.connectOption && view.connectOption['appletConnectMethod'] === 'client') {
+        protocol = 'rdp';
+      } else {
+        protocol = 'http';
+      }
+    }
     const res = this._http.getSmartEndpoint(data, protocol);
     res.catch((err) => {
       alert(err.error.detail);
