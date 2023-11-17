@@ -19,9 +19,7 @@ jobs:
         id: get_version
         run: |
           TAG=$(basename ${GITHUB_REF})
-          VERSION=${TAG/v/}
           echo "::set-output name=TAG::$TAG"
-          echo "::set-output name=VERSION::$VERSION"
       - name: Create Release
         id: create_release
         uses: release-drafter/release-drafter@v5
@@ -38,17 +36,17 @@ jobs:
         run: yarn install
       - name: Build web
         run: |
-          sed -i "s@[0-9].[0-9].[0-9]@${{ steps.get_version.outputs.TAG }}@g" src/environments/environment.prod.ts
+          sed -i "s@version =.*;@version = '${{ steps.get_version.outputs.TAG }}';@g" src/environments/environment.prod.ts
           yarn build
       - name: Create Upload Assets
         run: |
           mkdir -p build
           rm -rf build/*
           cp -R src/assets/i18n luna/
-          mv luna luna-${{ steps.get_version.outputs.VERSION }}
-          tar -czf luna-${{ steps.get_version.outputs.VERSION }}.tar.gz luna-${{ steps.get_version.outputs.VERSION }}
-          echo $(md5sum luna-${{ steps.get_version.outputs.VERSION }}.tar.gz | awk '{print $1}') > build/luna-${{ steps.get_version.outputs.VERSION }}.tar.gz.md5
-          mv luna-${{ steps.get_version.outputs.VERSION }}.tar.gz build/
+          mv luna luna-${{ steps.get_version.outputs.TAG }}
+          tar -czf luna-${{ steps.get_version.outputs.TAG }}.tar.gz luna-${{ steps.get_version.outputs.TAG }}
+          echo $(md5sum luna-${{ steps.get_version.outputs.TAG }}.tar.gz | awk '{print $1}') > build/luna-${{ steps.get_version.outputs.TAG }}.tar.gz.md5
+          mv luna-${{ steps.get_version.outputs.TAG }}.tar.gz build/
       - name: Release Upload Assets
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
