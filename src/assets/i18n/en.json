@@ -192,6 +192,7 @@
   "Collapse": "Collapse",
   "Password is token password on the table": "Password is token password on the table",
   "Password is your password login to system": "Password is your password login to system",
+  "Current online": "Current online",
   "Token expired": "Token has expired",
   "No protocol available": "No protocol available"
 }
