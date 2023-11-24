@@ -31,6 +31,8 @@ export class AppService {
   private protocolPreferKey = 'ProtocolPreferLoginType';
   private accountPreferKey = 'PreferAccount';
   private protocolConnectTypesMap: object = {};
+  private checkIntervalId: number;
+  private newLoginHasOpen = false;
 
   constructor(private _http: HttpService,
               private _router: Router,
@@ -65,26 +67,33 @@ export class AppService {
     }
   }
 
-  intervalCheckLogin(ttl: number = 1000 * 60, clear: boolean = false) {
-    const interval = setInterval(() => {
-      User.logined = false;
-      this._http.get(`/api/v1/users/profile/?fields_size=mini`).subscribe(
-        (res) => {
-          User.logined = true;
-          if (clear) {
-            clearInterval(interval);
-            this.intervalCheckLogin();
-          }
-        },
-        (err) => {
-          clearInterval(interval);
-          const login = confirm(this._i18n.instant('LoginExpireMsg'));
-          if (login) {
-            window.open('/core/auth/login/?next=/luna/');
-          }
-          this.intervalCheckLogin(1000, true);
-        });
-    }, ttl);
+  doCheckProfile() {
+    User.logined = false;
+    this._http.get(`/api/v1/users/profile/?fields_size=mini`).subscribe(
+      (res) => {
+        User.logined = true;
+        this.newLoginHasOpen = false;
+      },
+      (err) => {
+        const ok = confirm(this._i18n.instant('LoginExpireMsg'));
+        if (ok && !this.newLoginHasOpen) {
+          window.open('/core/auth/login/?next=/luna/');
+          this.newLoginHasOpen = true;
+        }
+        setTimeout(() => {
+          this.doCheckProfile();
+        }, 2000);
+      }
+    );
+  }
+
+  intervalCheckLogin(second: number = 60 * 2, clear: boolean = false) {
+    if (this.checkIntervalId) {
+      clearInterval(this.checkIntervalId);
+    }
+    this.checkIntervalId = setInterval(() => {
+      this.doCheckProfile();
+    }, second * 1000);
   }
 
   checkLogin() {
