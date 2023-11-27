@@ -32,7 +32,8 @@ export class AppService {
   private accountPreferKey = 'PreferAccount';
   private protocolConnectTypesMap: object = {};
   private checkIntervalId: number;
-  private newLoginHasOpen = false;
+  private newLoginHasOpen = false; // 避免多次打开新登录页
+  private isCheckingProfile = false; // 是否在检查中
 
   constructor(private _http: HttpService,
               private _router: Router,
@@ -68,11 +69,16 @@ export class AppService {
   }
 
   doCheckProfile() {
+    if (this.isCheckingProfile) {
+      return;
+    }
+    this.isCheckingProfile = true;
     User.logined = false;
     this._http.get(`/api/v1/users/profile/?fields_size=mini`).subscribe(
       (res) => {
         User.logined = true;
         this.newLoginHasOpen = false;
+        this.isCheckingProfile = false;
       },
       (err) => {
         const ok = confirm(this._i18n.instant('LoginExpireMsg'));
@@ -80,9 +86,10 @@ export class AppService {
           window.open('/core/auth/login/?next=/luna/');
           this.newLoginHasOpen = true;
         }
+        this.isCheckingProfile = false;
         setTimeout(() => {
           this.doCheckProfile();
-        }, 2000);
+        }, 5000);
       }
     );
   }
