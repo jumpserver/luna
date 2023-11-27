@@ -1,10 +1,11 @@
-import {Component, ElementRef, EventEmitter, OnInit, Output, ViewChild} from '@angular/core';
+import {Component, ElementRef, EventEmitter, OnInit, OnDestroy, Output, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
 import {ConnectTokenService, I18nService, LogService, SettingService, ViewService, HttpService} from '@app/services';
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import {MatDialog} from '@angular/material';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
+import {fromEvent, Subscription} from 'rxjs';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
 @Component({
@@ -12,7 +13,7 @@ import * as jQuery from 'jquery/dist/jquery.min.js';
   templateUrl: './content.component.html',
   styleUrls: ['./content.component.scss']
 })
-export class ElementContentComponent implements OnInit {
+export class ElementContentComponent implements OnInit, OnDestroy {
   @ViewChild('tabs', {static: false}) tabsRef: ElementRef;
   @Output() toggleMenu: EventEmitter<any> = new EventEmitter<any>();
   viewList: Array<View>;
@@ -47,11 +48,16 @@ export class ElementContentComponent implements OnInit {
     {
       content: 'Download the latest client',
       action: 'Help or download'
+    },
+    {
+      content: 'Keyboard keys',
+      action: 'Keyboard switch session'
     }
   ];
   viewIds: Array<string> = [];
   isShowInputCommand = true;
   quickCommands = [];
+  keyboardSubscription: Subscription;
 
   constructor(public viewSrv: ViewService,
               public settingSvc: SettingService,
@@ -77,7 +83,44 @@ export class ElementContentComponent implements OnInit {
     this.viewList = this.viewSrv.viewList;
     this.viewIds = this.viewSrv.viewIds;
     await this.quickCommandsFilter();
+    this.handleKeyDownTabChange();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
+  }
+  ngOnDestroy() {
+    this.keyboardSubscription.unsubscribe();
+  }
+
+  handleKeyDownTabChange() {
+    this.keyboardSubscription = fromEvent(window, 'keydown').subscribe((event: any) => {
+      if (event.altKey && (event.key === 'ArrowRight' || event.key === 'ArrowLeft') && this.viewList.length > 1) {
+        window.onblur = () => {
+          setTimeout(() => window.focus(), 100);
+        };
+        let nextViewId: any = 0;
+        let nextActiveView = null;
+        const viewIds = this.viewSrv.viewIds;
+        const currentViewIndex = viewIds.findIndex(i => i === this.viewSrv.currentView.id);
+        if (event.key === 'ArrowRight') {
+          if (currentViewIndex === viewIds.length - 1 && currentViewIndex !== 0) {
+            nextActiveView = this.viewList.find(i => i.id === viewIds[0]);
+          } else {
+            nextViewId = viewIds[currentViewIndex + 1];
+            nextActiveView = this.viewList.find(i => i.id === nextViewId);
+          }
+        }
+        if (event.key === 'ArrowLeft') {
+          if (currentViewIndex === 0) {
+            nextActiveView = this.viewList.find(i => i.id === viewIds[viewIds.length - 1]);
+          } else {
+            nextViewId = viewIds[currentViewIndex - 1];
+            nextActiveView = this.viewList.find(i => i.id === nextViewId);
+          }
+        }
+        if (nextActiveView) {
+          this.setViewActive(nextActiveView);
+        }
+      }
+    });
   }
 
   onNewView(view) {
