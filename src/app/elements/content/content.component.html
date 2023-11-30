@@ -48,6 +48,11 @@
     <elements-content-window *ngFor="let view of viewList" [view]="view"></elements-content-window>
   </div>
   <div *ngIf="showBatchCommand" id="batchCommandDiv">
+    <mat-select [(ngModel)]="sendCommandRange" class="send-range"  panelClass="command-panel">
+      <mat-option *ngFor="let option of sendCommandOptions" class="command-option" [value]="option.value">
+        {{ option.label | translate }}
+      </mat-option>
+    </mat-select>
     <i
       class="fa fa-exchange"
       matTooltip="{{ (isShowInputCommand ? 'Switch to quick command' : 'Switch to input command') | translate }}"
@@ -55,7 +60,7 @@
     ></i>
     <div *ngIf="isShowInputCommand; else quickCommand" class="input-box">
       <input
-        (keydown.enter)="sendBatchCommand('current')"
+        (keydown.enter)="sendBatchCommand()"
         [(ngModel)]="batchCommand"
         maxlength="2048"
         placeholder=" {{'Send text to all ssh terminals'| translate }} ..."

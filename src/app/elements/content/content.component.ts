@@ -20,6 +20,17 @@ export class ElementContentComponent implements OnInit {
   pos = {left: '100px', top: '100px'};
   isShowRMenu = false;
   rIdx = -1;
+  sendCommandRange = 'current';
+  sendCommandOptions = [
+    {
+      value: 'all',
+      label: 'All sessions'
+    },
+    {
+      value: 'current',
+      label: 'Current session'
+    }
+  ];
   systemTips = [
     {
       content: 'Reselect connection method',
@@ -128,7 +139,7 @@ export class ElementContentComponent implements OnInit {
     return item.id;
   }
 
-  sendBatchCommand(value) {
+  sendBatchCommand() {
     let list = this.viewList;
     this.batchCommand = this.batchCommand.trim();
     if (this.batchCommand === '') {
@@ -136,7 +147,7 @@ export class ElementContentComponent implements OnInit {
     }
 
     const cmd = this.batchCommand + '\r';
-    if (value === 'current') {
+    if (this.sendCommandRange === 'current') {
       const view = this.viewList.filter(i => i.id === this.viewSrv.currentView.id);
       list = view;
     }
@@ -161,14 +172,7 @@ export class ElementContentComponent implements OnInit {
 
   sendQuickCommand(command) {
     this.batchCommand = command.args;
-    this._dialog.open(
-      ElementSendCommandDialogComponent,
-      {
-        height: 'auto',
-        width: '500px',
-        data: {send: this.sendBatchCommand.bind(this)}
-      }
-    );
+    this.sendBatchCommand();
   }
 
   rMenuItems() {

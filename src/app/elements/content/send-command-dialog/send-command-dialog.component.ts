@@ -10,11 +10,11 @@ export class ElementSendCommandDialogComponent implements OnInit {
   public value = 'current';
   public options = [
     {
-      label: 'Current window',
+      label: 'Current session',
       value: 'current'
     },
     {
-      label: 'All window',
+      label: 'All sessions',
       value: 'all'
     }
   ];
