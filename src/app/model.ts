@@ -286,7 +286,8 @@ export class Setting {
     keyboard_layout: 'en-us-qwerty',
     rdp_client_option: [],
     applet_connection_method: 'web',
-    rdp_smart_size: '0'
+    rdp_smart_size: '0',
+    rdp_color_quality: '32'
   };
   command_line = {
     character_terminal_font_size: 14,

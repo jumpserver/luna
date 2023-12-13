@@ -16,6 +16,7 @@ export class ElementSettingComponent implements OnInit {
   keyboardLayoutOptions: any[];
   resolutionsOptions: any[];
   rdpSmartSizeOptions: any[];
+  colorQualityOptions: any[];
   setting: Setting;
   globalSetting: GlobalSetting;
   type = 'general';
@@ -54,6 +55,7 @@ export class ElementSettingComponent implements OnInit {
     const graphics = res.actions.GET.graphics.children;
     this.resolutionsOptions = graphics.rdp_resolution.choices;
     this.rdpSmartSizeOptions = graphics.rdp_smart_size.choices;
+    this.colorQualityOptions = graphics.rdp_color_quality.choices;
     this.keyboardLayoutOptions = graphics.keyboard_layout.choices;
   }
 

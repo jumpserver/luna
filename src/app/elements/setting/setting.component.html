@@ -30,6 +30,15 @@
   </mat-form-field>
 
   <mat-form-field>
+    <mat-select [(value)]="setting.graphics.rdp_color_quality"
+                placeholder="{{'RDP color quality'| translate}}">
+      <mat-option *ngFor="let s of colorQualityOptions" [value]="s.value">
+        {{s.label}}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field>
     <label class="field-label" style="padding-bottom: 7px;">
       {{'Keyboard layout'| translate }}
     </label>
