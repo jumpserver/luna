@@ -48,7 +48,15 @@ export class ElementAdvancedOptionComponent implements OnChanges {
         field: 'disableautohash',
         hidden: () => {
           const protocolsCanAutoHash: Array<string> = ['mysql', 'mariadb'];
-          return this.connectMethod && this.connectMethod.component !== 'koko' || !protocolsCanAutoHash.includes(this.protocol.name);
+          if (this.connectMethod) {
+            if (this.connectMethod.component === 'koko') {
+              return this.connectMethod.component !== 'koko' || !protocolsCanAutoHash.includes(this.protocol.name);
+            }
+            if (this.connectMethod.component === 'chen') {
+              return false;
+            }
+          }
+          return true;
         },
         label: 'Disable auto completion',
         value: false,
