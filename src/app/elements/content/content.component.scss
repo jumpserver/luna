@@ -96,7 +96,7 @@ $-border-y: #1f1b1b;
     vertical-align: middle;
     display: inline-block;
   }
-  
+
   .view_icon::before {
     font-family: FontAwesome;
     color: #ffffff;
@@ -119,6 +119,21 @@ $-border-y: #1f1b1b;
 }
 
 #batchCommandDiv {
+  .send-range {
+    width: auto;
+    margin-left: 5px;
+    &::ng-deep .mat-select-trigger {
+      min-width: 70px;
+      line-height: 29px;
+      .mat-select-value {
+        max-width: none;
+        color: #ffffff;
+      }
+      .mat-select-arrow {
+        color: #ffffff;
+      }
+    }
+  }
   .command-list {
     width: 100%;
     height: 100%;
@@ -151,6 +166,7 @@ $-border-y: #1f1b1b;
     }
   }
   .not-command {
+    flex: 1;
     line-height: 29px;
     padding-left: 6px;
     color: #717171;
@@ -163,6 +179,30 @@ $-border-y: #1f1b1b;
     display: flex;
   }
 }
+
+::ng-deep .command-panel.mat-select-panel {
+  margin-top: 27px;
+  min-width: 100%!important;
+  border-radius: initial!important;
+  background: black;
+  padding: 10px 0 !important;
+}
+::ng-deep .command-panel .mat-option {
+  color: #f0f0f1;
+  &:hover {
+    background-color: rgba(53, 54, 51, 0.7)!important;
+  }
+}
+::ng-deep .command-panel .mat-option.mat-active {
+  color: #f0f0f1;
+  font-weight: bold;
+  background-color: rgba(53, 54, 51, 0.8)!important;
+}
+.command-option {
+  line-height: 2.2em!important;
+  height: 2.2em!important;
+}
+
 
 .view-menu {
   background: #000;

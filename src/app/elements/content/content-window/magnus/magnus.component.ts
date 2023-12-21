@@ -120,6 +120,13 @@ export class ElementConnectorMagnusComponent implements OnInit {
           `:${this.endpoint.getPort(this.protocol)}` +
           `/${database}`;
         break;
+      case 'sqlserver':
+        cli = `sqlcmd` +
+          ` -S ${host},${port}` +
+          ` -U ${this.token.id}` +
+          ` -P ${passwordHolder}` +
+          ` -d ${database}`;
+        break;
       default:
         cli = `Protocol '${protocol}' Not support now`;
     }

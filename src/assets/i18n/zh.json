@@ -8,6 +8,8 @@
   "Settings or basic settings": "菜单设置 → 基本设置",
   "Download the latest client": "下载最新客户端",
   "Help or download": "菜单帮助 → 下载",
+  "Keyboard switch session": "切换会话 → 快捷键",
+  "Keyboard keys": "Option + Left / Option + Right",
   "Cancel": "取消",
   "Choose a User": "选择一个用户",
   "Clone Connect": "复制窗口",
@@ -41,8 +43,9 @@
   "Refresh": "刷新",
   "Checkbox": "多选",
   "Batch connect": "批量连接",
-  "RDP resolution": "RDP分辨率",
+  "RDP resolution": "RDP 分辨率",
   "RDP smart size": "RDP 智能大小",
+  "RDP color quality": "RDP 颜色质量",
   "Send text to all ssh terminals": "发送文本到所有ssh终端",
   "Switch to quick command": "切换到快捷命令",
   "Switch to input command": "切换到输入命令",
@@ -50,8 +53,8 @@
   "Save command": "保存命令",
   "Save success": "保存成功",
   "Send command": "发送命令",
-  "Current window": "当前窗口",
-  "All window": "全部窗口",
+  "Current session": "当前会话",
+  "All sessions": "全部会话",
   "Module": "模块",
   "Setting": "设置",
   "Show left manager": "显示左边栏",
@@ -199,6 +202,7 @@
   "Password is your password login to system": "密码是你登录系统的密码",
   "Current online": "当前在线",
   "Token expired": "Token 已过期, 请重新连接",
-  "No protocol available": "没有可用的协议"
+  "No protocol available": "没有可用的协议",
+  "VirtualApp":"虚拟应用"
 }
 

@@ -80,6 +80,7 @@ export class ElementConnectMethodComponent implements OnInit {
       {value: 'web', label: 'Web', fa: 'fa-globe', methods: []},
       {value: 'native', label: this._i18n.instant('Native'), fa: 'fa-desktop', methods: []},
       {value: 'applet', label: this._i18n.instant('Applet'), fa: 'fa-windows', methods: []},
+      {value: 'virtual_app', label: this._i18n.instant('VirtualApp'), fa: 'fa-desktop', methods: []},
     ];
 
     for (const type of connectMethodTypes) {

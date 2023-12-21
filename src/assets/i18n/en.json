@@ -8,6 +8,8 @@
   "Settings or basic settings": "Settings → Basic Settings",
   "Download the latest client": "Download the latest client",
   "Help or download": "Help → Download",
+  "Keyboard switch session": "Switch session → Shortcut keys",
+  "Keyboard keys": "Option + Left / Option + Right",
   "Cancel": "Cancel",
   "Choose a User": "Choose a User",
   "Clone Connect": "Clone Connect",
@@ -50,8 +52,8 @@
   "Save command": "Save command",
   "Save success": "Save success",
   "Send command": "Send command",
-  "Current window": "Current window",
-  "All window": "All window",
+  "Current session": "Current session",
+  "All sessions": "All sessions",
   "Module": "Module",
   "Setting": "Setting",
   "Show left manager": "Show left manager",
@@ -192,6 +194,8 @@
   "Collapse": "Collapse",
   "Password is token password on the table": "Password is token password on the table",
   "Password is your password login to system": "Password is your password login to system",
+  "Current online": "Current online",
   "Token expired": "Token has expired",
-  "No protocol available": "No protocol available"
+  "No protocol available": "No protocol available",
+  "VirtualApp":"Virtual App"
 }
