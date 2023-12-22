@@ -93,8 +93,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   handleKeyDownTabChange() {
     this.keyboardSubscription = fromEvent(window, 'keydown').subscribe((event: any) => {
       if (event.altKey && (event.key === 'ArrowRight' || event.key === 'ArrowLeft') && this.viewList.length > 1) {
+        let timer = null;
         window.onblur = () => {
-          setTimeout(() => window.focus(), 100);
+          timer = setTimeout(() => window.focus(), 100);
         };
         let nextViewId: any = 0;
         let nextActiveView = null;
@@ -118,6 +119,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
         }
         if (nextActiveView) {
           this.setViewActive(nextActiveView);
+          timer = null;
         }
       }
     });
