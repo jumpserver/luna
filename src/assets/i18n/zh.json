@@ -202,6 +202,7 @@
   "Password is your password login to system": "密码是你登录系统的密码",
   "Current online": "当前在线",
   "Token expired": "Token 已过期, 请重新连接",
-  "No protocol available": "没有可用的协议"
+  "No protocol available": "没有可用的协议",
+  "Stop": "停止"
 }
 

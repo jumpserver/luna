@@ -116,6 +116,10 @@ export class SettingService {
     this.isLoadTreeAsync$.next(this.setting.basic.is_async_asset_tree);
   }
 
+  isLoadTreeAsync() {
+    return this.setting.basic.is_async_asset_tree;
+  }
+
   setAppletConnectMethod() {
     this.appletConnectMethod$.next(this.setting.graphics.applet_connection_method);
   }
