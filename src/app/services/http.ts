@@ -147,13 +147,13 @@ export class HttpService {
     const syncUrl = '/api/v1/perms/users/self/nodes/all-with-assets/tree/';
     const asyncUrl = '/api/v1/perms/users/self/nodes/children-with-assets/tree/';
     const url = async ? asyncUrl : syncUrl;
-    return this.get<Array<TreeNode>>(url).pipe(this.withRetry());
+    return this.get(url, {observe: 'response'}).pipe(this.withRetry());
   }
 
-  getAssetTypeTree(sync: boolean) {
-    const isSync = !sync ? 1 : 0;
+  getAssetTypeTree(async: boolean) {
+    const isSync = !async ? 1 : 0;
     const url = `/api/v1/perms/users/self/nodes/children-with-assets/category/tree/?sync=${isSync}`;
-    return this.get<Array<TreeNode>>(url).pipe(this.withRetry());
+    return this.get<Array<TreeNode>>(url, {observe: 'response'}).pipe(this.withRetry());
   }
 
   getMyGrantedK8sNodes(treeId: string, async: boolean) {
