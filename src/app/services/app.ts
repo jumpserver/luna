@@ -103,6 +103,17 @@ export class AppService {
     }, second * 1000);
   }
 
+  isRenewalExpired(renewalTime: number = 60 * 2) {
+    const currentTimeStamp = Math.floor(new Date().getTime() / 1000);
+    const sessionExpireTimestamp = getCookie('jms_session_expire_timestamp');
+
+    if (!sessionExpireTimestamp) {
+      return false;
+    }
+    const timeDifferenceInSeconds = currentTimeStamp - parseInt(sessionExpireTimestamp, 10);
+    return timeDifferenceInSeconds > renewalTime;
+  }
+
   checkLogin() {
     this._logger.debug('Check user auth');
     if (!DataStore.Path) {
@@ -122,13 +133,18 @@ export class AppService {
     const token = this.getQueryString('token');
     // Determine whether the user has logged in
     const sessionExpire = getCookie('jms_session_expire');
+    const renewalTime = 60 * 2;
     if (!sessionExpire && !token) {
-      setCookie('jms_session_expire', 'close', 120);
+      setCookie('jms_session_expire', 'close', renewalTime);
       gotoLogin();
       return;
     } else if (sessionExpire === 'close') {
-      setInterval(() => {
-        setCookie('jms_session_expire', sessionExpire, 120);
+      const intervalId = setInterval(() => {
+        if (!this.isRenewalExpired(renewalTime)) {
+          setCookie('jms_session_expire', sessionExpire, renewalTime);
+        } else {
+          clearInterval(intervalId);
+        }
       }, 10 * 1000);
     }
 
