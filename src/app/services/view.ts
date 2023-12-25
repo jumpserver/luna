@@ -1,7 +1,6 @@
 import {Injectable} from '@angular/core';
 import {View} from '@app/model';
 
-
 @Injectable()
 export class ViewService {
   viewList: Array<View> = [];
@@ -70,6 +69,32 @@ export class ViewService {
         }
         this.currentView.name = names.join('|');
         break;
+    }
+  }
+
+  keyboardSwitchTab(key) {
+    let nextViewId: any = 0;
+    let nextActiveView = null;
+    const viewIds = this.viewIds;
+    const currentViewIndex = viewIds.findIndex(i => i === this.currentView.id);
+    if (key === 'alt+right') {
+      if (currentViewIndex === viewIds.length - 1 && currentViewIndex !== 0) {
+        nextActiveView = this.viewList.find(i => i.id === viewIds[0]);
+      } else {
+        nextViewId = viewIds[currentViewIndex + 1];
+        nextActiveView = this.viewList.find(i => i.id === nextViewId);
+      }
+    }
+    if (key === 'alt+left') {
+      if (currentViewIndex === 0) {
+        nextActiveView = this.viewList.find(i => i.id === viewIds[viewIds.length - 1]);
+      } else {
+        nextViewId = viewIds[currentViewIndex - 1];
+        nextActiveView = this.viewList.find(i => i.id === nextViewId);
+      }
+    }
+    if (nextActiveView) {
+      this.activeView(nextActiveView);
     }
   }
 }
