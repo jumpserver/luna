@@ -56,5 +56,10 @@
     "secure": false,
     "ws": true,
     "changeOrigin": true
+  },
+  "/ui/": {
+    "target": "http://localhost:9528",
+    "secure": false,
+    "changeOrigin": true
   }
 }
