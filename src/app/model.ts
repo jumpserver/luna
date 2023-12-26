@@ -143,6 +143,7 @@ export class View {
   connectOption: Object;
   smartEndpoint: Endpoint;
   k8sInfo: K8sInfo;
+  iframeElement: Window;
 
   constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node', k8sInfo?: K8sInfo) {
     this.closed = false;
@@ -271,6 +272,7 @@ export class GlobalSetting {
   INTERFACE: any;
   TERMINAL_GRAPHICAL_RESOLUTION: string;
   CONNECTION_TOKEN_REUSABLE: boolean;
+  CHAT_AI_ENABLED: boolean;
 }
 
 export class Setting {

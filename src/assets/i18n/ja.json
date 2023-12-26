@@ -145,6 +145,7 @@
   "General": "基本構成",
   "GUI": "グラフィカル",
   "CLI": "コマンドライン",
+  "Question answer": "質問-答え",
   "Asset not found or You have no permission to access it, please refresh asset tree": "アセットが見つからないか、アクセスする権限がありません。アセット ツリーを更新してください",
   "Run it by client": "クライアントで実行する",
   "Name": "めいしょう",

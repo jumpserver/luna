@@ -76,6 +76,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   ngAfterViewInit() {
     if (this.iframeRef) {
       this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
+      this.view.iframeElement = this.iframeWindow;
       this.handleIframeEvent();
     }
   }
