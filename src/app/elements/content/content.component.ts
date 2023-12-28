@@ -220,7 +220,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
         title: 'Reconnect',
         icon: 'fa-refresh',
         callback: () => {
-          this.viewList[this.rIdx].termComp.reconnect();
+          const viewId = this.viewIds[this.rIdx];
+          const currentView = this.viewList.find(i => i.id === viewId);
+          currentView.termComp.reconnect();
         }
       },
       {
@@ -239,7 +241,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
         title: 'Close Current Tab',
         icon: 'fa-close',
         callback: () => {
-          this.closeView(this.viewList[this.rIdx]);
+          const viewId = this.viewIds[this.rIdx];
+          const currentView = this.viewList.find(i => i.id === viewId);
+          this.closeView(currentView);
         }
       },
       {
