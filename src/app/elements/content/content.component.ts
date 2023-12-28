@@ -179,7 +179,6 @@ export class ElementContentComponent implements OnInit, OnDestroy {
       if (list[i].protocol !== 'ssh' || list[i].connected !== true) {
         continue;
       }
-      list[i].termComp.sendCommand({'data': cmd});
       const subViews = list[i].subViews;
       if (subViews.length > 1) {
         for (let j = 0; j < subViews.length; j++) {
@@ -188,6 +187,8 @@ export class ElementContentComponent implements OnInit, OnDestroy {
           }
           subViews[j].termComp.sendCommand({'data': cmd});
         }
+      } else {
+        list[i].termComp.sendCommand({'data': cmd});
       }
     }
 
