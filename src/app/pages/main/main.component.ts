@@ -1,5 +1,5 @@
 import {Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/core';
-import {DataStore, User} from '@app/globals';
+import {DataStore, DEFAULT_ORG_ID, SYSTEM_ORG_ID, User} from '@app/globals';
 import {IOutputData, SplitComponent} from 'angular-split';
 import {LogService, SettingService, ViewService} from '@app/services';
 import * as _ from 'lodash';
@@ -19,6 +19,7 @@ export class PageMainComponent implements OnInit {
   showIframeHider = false;
   showSubMenu: any = false;
   menus: Array<object>;
+  isDirectNavigation: boolean;
   settingLayoutSize = {
     leftWidth: 20,
     rightWidth: 80
@@ -87,6 +88,9 @@ export class PageMainComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('main init');
+    this._settingSvc.isDirectNavigation$.subscribe((state) => {
+      this.isDirectNavigation = state;
+    });
     this.menus = [
       {
         name: 'assets',
@@ -140,9 +144,10 @@ export class PageMainComponent implements OnInit {
 
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any) {
-    if (!environment.production) {
+    if (!environment.production || this.isDirectNavigation) {
       return;
     }
+
     const notInIframe = window.self === window.top;
     const notInReplay = location.pathname.indexOf('/luna/replay') === -1;
     const returnValue = !(notInIframe && notInReplay);

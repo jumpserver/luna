@@ -146,6 +146,7 @@ export class AppService {
         if (currentTimeStamp >= parseInt(sessionExpireTimestamp, 10)) {
           confirm(this._i18n.instant('LoginExpireMsg'));
           if (!this.newLoginHasOpen) {
+            this._settingSvc.isDirectNavigation$.next(true);
             window.location.href = document.location.origin + '/core/auth/logout/';
             this.newLoginHasOpen = true;
           }
