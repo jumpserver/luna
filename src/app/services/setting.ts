@@ -15,6 +15,7 @@ export class SettingService {
   public isLoadTreeAsync$ = new BehaviorSubject<boolean>(true);
   public appletConnectMethod$ = new BehaviorSubject<string>('');
   public keyboardLayout$ = new BehaviorSubject<string>('');
+  public isDirectNavigation$ = new BehaviorSubject<boolean>(false);
 
 
   constructor(

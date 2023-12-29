@@ -93,32 +93,13 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   handleKeyDownTabChange() {
     this.keyboardSubscription = fromEvent(window, 'keydown').subscribe((event: any) => {
       if (event.altKey && (event.key === 'ArrowRight' || event.key === 'ArrowLeft') && this.viewList.length > 1) {
-        window.onblur = () => {
-          setTimeout(() => window.focus(), 100);
-        };
-        let nextViewId: any = 0;
-        let nextActiveView = null;
-        const viewIds = this.viewSrv.viewIds;
-        const currentViewIndex = viewIds.findIndex(i => i === this.viewSrv.currentView.id);
+        let key = '';
         if (event.key === 'ArrowRight') {
-          if (currentViewIndex === viewIds.length - 1 && currentViewIndex !== 0) {
-            nextActiveView = this.viewList.find(i => i.id === viewIds[0]);
-          } else {
-            nextViewId = viewIds[currentViewIndex + 1];
-            nextActiveView = this.viewList.find(i => i.id === nextViewId);
-          }
+          key = 'alt+right';
+        } else if (event.key === 'ArrowLeft') {
+          key = 'alt+left';
         }
-        if (event.key === 'ArrowLeft') {
-          if (currentViewIndex === 0) {
-            nextActiveView = this.viewList.find(i => i.id === viewIds[viewIds.length - 1]);
-          } else {
-            nextViewId = viewIds[currentViewIndex - 1];
-            nextActiveView = this.viewList.find(i => i.id === nextViewId);
-          }
-        }
-        if (nextActiveView) {
-          this.setViewActive(nextActiveView);
-        }
+        this.viewSrv.keyboardSwitchTab(key);
       }
     });
   }
@@ -198,7 +179,6 @@ export class ElementContentComponent implements OnInit, OnDestroy {
       if (list[i].protocol !== 'ssh' || list[i].connected !== true) {
         continue;
       }
-      list[i].termComp.sendCommand({'data': cmd});
       const subViews = list[i].subViews;
       if (subViews.length > 1) {
         for (let j = 0; j < subViews.length; j++) {
@@ -207,6 +187,8 @@ export class ElementContentComponent implements OnInit, OnDestroy {
           }
           subViews[j].termComp.sendCommand({'data': cmd});
         }
+      } else {
+        list[i].termComp.sendCommand({'data': cmd});
       }
     }
 
@@ -239,7 +221,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
         title: 'Reconnect',
         icon: 'fa-refresh',
         callback: () => {
-          this.viewList[this.rIdx].termComp.reconnect();
+          const viewId = this.viewIds[this.rIdx];
+          const currentView = this.viewList.find(i => i.id === viewId);
+          currentView.termComp.reconnect();
         }
       },
       {
@@ -258,7 +242,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
         title: 'Close Current Tab',
         icon: 'fa-close',
         callback: () => {
-          this.closeView(this.viewList[this.rIdx]);
+          const viewId = this.viewIds[this.rIdx];
+          const currentView = this.viewList.find(i => i.id === viewId);
+          this.closeView(currentView);
         }
       },
       {
