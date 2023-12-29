@@ -34,7 +34,7 @@ export class HttpService {
       options = {};
     }
     const headers = options.headers || new HttpHeaders();
-    if (headers.get('X-JMS-ORG')) {
+    if (!headers.get('X-JMS-ORG')) {
       const orgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
       options.headers = headers.set('X-JMS-ORG', orgID);
     }
