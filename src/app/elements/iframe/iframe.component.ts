@@ -1,9 +1,8 @@
 import {AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
 import {View} from '@app/model';
-import {ConnectTokenService, HttpService, I18nService, LogService} from '@app/services';
+import {ConnectTokenService, HttpService, I18nService, LogService, ViewService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {environment} from '@src/environments/environment';
-
 @Component({
   selector: 'elements-iframe',
   templateUrl: './iframe.component.html',
@@ -28,6 +27,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private _connectTokenSvc: ConnectTokenService,
     private _http: HttpService,
     private _dialog: MatDialog,
+    public viewSrv: ViewService,
   ) {
   }
 
@@ -62,6 +62,12 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           break;
         case 'CLICK':
           document.body.click();
+          break;
+        case 'KEYEVENT':
+          window.focus();
+          setTimeout(() => {
+            this.viewSrv.keyboardSwitchTab(msg.data);
+          }, 200);
           break;
       }
     }.bind(this);
