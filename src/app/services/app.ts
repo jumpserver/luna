@@ -11,6 +11,7 @@ import * as CryptoJS from 'crypto-js';
 import {getCookie, setCookie} from '@app/utils/common';
 import {OrganizationService} from './organization';
 import {I18nService} from '@app/services/i18n';
+import {config} from 'rxjs';
 
 declare function unescape(s: string): string;
 
@@ -103,6 +104,14 @@ export class AppService {
     }, second * 1000);
   }
 
+  isRenewalExpired(currentTimeStamp, sessionExpireTimestamp, renewalTime: number = 60 * 2) {
+    if (!sessionExpireTimestamp) {
+      return false;
+    }
+    const timeDifferenceInSeconds = currentTimeStamp - parseInt(sessionExpireTimestamp, 10);
+    return timeDifferenceInSeconds > renewalTime;
+  }
+
   checkLogin() {
     this._logger.debug('Check user auth');
     if (!DataStore.Path) {
@@ -122,13 +131,27 @@ export class AppService {
     const token = this.getQueryString('token');
     // Determine whether the user has logged in
     const sessionExpire = getCookie('jms_session_expire');
+    const renewalTime = 120;
     if (!sessionExpire && !token) {
-      setCookie('jms_session_expire', 'close', 120);
+      setCookie('jms_session_expire', 'close', renewalTime);
       gotoLogin();
       return;
     } else if (sessionExpire === 'close') {
-      setInterval(() => {
-        setCookie('jms_session_expire', sessionExpire, 120);
+      const intervalId = setInterval(() => {
+        const currentTimeStamp = Math.floor(new Date().getTime() / 1000);
+        const sessionExpireTimestamp = getCookie('jms_session_expire_timestamp');
+        if (!this.isRenewalExpired(currentTimeStamp, sessionExpireTimestamp, renewalTime)) {
+          setCookie('jms_session_expire', sessionExpire, renewalTime);
+        }
+        if (currentTimeStamp >= parseInt(sessionExpireTimestamp, 10)) {
+          confirm(this._i18n.instant('LoginExpireMsg'));
+          if (!this.newLoginHasOpen) {
+            this._settingSvc.isDirectNavigation$.next(true);
+            window.location.href = document.location.origin + '/core/auth/logout/';
+            this.newLoginHasOpen = true;
+          }
+          clearInterval(intervalId);
+        }
       }, 10 * 1000);
     }
 

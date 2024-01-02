@@ -184,6 +184,10 @@ tr:hover {
   color: rgb(204, 204, 204);
   width: 20px;
   line-height: 30px;
+  &.fa-square-o {
+    font-weight: bold;
+    padding: 0 0 0 6px;
+  }
 }
 
 .tree-banner-icon:hover {
