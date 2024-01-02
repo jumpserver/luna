@@ -23,11 +23,6 @@ export class SettingService {
     private _http: HttpService,
     private _i18n: I18nService
   ) {
-    this.getSystemSetting().then(() => {
-      this.setIsLoadTreeAsync();
-      this.setAppletConnectMethod();
-      this.setKeyboardLayout();
-    });
     this.init().then();
   }
 
@@ -100,8 +95,23 @@ export class SettingService {
     if (this.initialized$.value) {
       return;
     }
+    await this.getSystemSetting();
     await this.getPublicSettings();
+    this.setIsLoadTreeAsync();
+    this.setAppletConnectMethod();
+    this.setKeyboardLayout();
     this.initialized$.next(true);
+  }
+
+  afterInited() {
+    if (this.initialized$.value) {
+      return Promise.resolve(true);
+    }
+    return new Promise((resolve) => {
+      this.initialized$.subscribe(() => {
+        resolve(true);
+      });
+    });
   }
 
   save() {

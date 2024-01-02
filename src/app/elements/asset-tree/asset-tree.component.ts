@@ -219,7 +219,7 @@ export class ElementAssetTreeComponent implements OnInit {
 
   ngOnInit() {
     this.currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
-    this._settingSvc.initialized$.subscribe((state) => {
+    this._settingSvc.afterInited().then((state) => {
       this.isLoadTreeAsync = this._settingSvc.isLoadTreeAsync();
       if (state) {
         if (!this._settingSvc.hasXPack() && this.currentOrgID === SYSTEM_ORG_ID) {
