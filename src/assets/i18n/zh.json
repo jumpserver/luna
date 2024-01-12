@@ -47,6 +47,7 @@
   "RDP smart size": "RDP 智能大小",
   "RDP color quality": "RDP 颜色质量",
   "Send text to all ssh terminals": "发送文本到所有ssh终端",
+  "Send text to current ssh terminals": "发送文本到当前ssh终端",
   "Switch to quick command": "切换到快捷命令",
   "Switch to input command": "切换到输入命令",
   "Not quick command": "暂无快捷命令",
