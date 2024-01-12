@@ -47,6 +47,7 @@
   "RDP smart size": "RDP スマート・サイズ",
   "RDP color quality": "RDP 色品質",
   "Send text to all ssh terminals": "すべてのssh端末にテキストを送信します",
+  "Send text to current ssh terminals": "現在の SSH 端末にテキストを送信する",
   "Switch to quick command": "クイックコマンドに切り替え",
   "Switch to input command": "入力コマンドに切り替え",
   "Not quick command": "非高速コマンド",
