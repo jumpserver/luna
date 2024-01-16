@@ -277,10 +277,10 @@ export class ElementAssetTreeComponent implements OnInit {
     const config = {
       refresh,
       url,
+      asyncUrl: url,
       setting: {
         async: {
           enable: true,
-          url: url,
           autoParam: ['id=key', 'name=n', 'level=lv'],
           type: 'get',
           headers: {
