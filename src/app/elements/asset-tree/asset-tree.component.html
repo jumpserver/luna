@@ -48,8 +48,15 @@
         ></i>
         <i
           (click)="refreshTree($event, tree)"
+          *ngIf="tree.complete"
           [matTooltip]="('Refresh' | translate)"
           class="fa fa-refresh tree-banner-icon"
+        ></i>
+        <i
+          (click)="stopOffsetTree(tree)"
+          *ngIf="!tree.complete"
+          [matTooltip]="('Stop' | translate)"
+          class="fa fa-square tree-banner-icon"
         ></i>
       </span>
     </span>

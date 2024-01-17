@@ -479,7 +479,7 @@ export class InitTreeConfig {
   url?: string;
   setting?: any = {};
   showFavoriteAssets?: boolean = false;
-  loadTreeAsyncUrl?: string;
+  asyncUrl?: string;
 }
 
 export class Ticket {

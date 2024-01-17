@@ -34,9 +34,15 @@ export class HttpService {
       options = {};
     }
     const headers = options.headers || new HttpHeaders();
-    const orgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
-    options.headers = headers.set('X-JMS-ORG', orgID);
+    if (!headers.get('X-JMS-ORG')) {
+      const orgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
+      options.headers = headers.set('X-JMS-ORG', orgID);
+    }
     return options;
+  }
+
+  getJMSOrg() {
+    return new HttpHeaders().set('X-JMS-ORG', this._cookie.get('X-JMS-ORG'));
   }
 
   get<T>(url: string, options?: any): Observable<any> {
@@ -147,13 +153,13 @@ export class HttpService {
     const syncUrl = '/api/v1/perms/users/self/nodes/all-with-assets/tree/';
     const asyncUrl = '/api/v1/perms/users/self/nodes/children-with-assets/tree/';
     const url = async ? asyncUrl : syncUrl;
-    return this.get<Array<TreeNode>>(url).pipe(this.withRetry());
+    return this.get(url, {observe: 'response'}).pipe(this.withRetry());
   }
 
-  getAssetTypeTree(sync: boolean) {
-    const isSync = !sync ? 1 : 0;
+  getAssetTypeTree(async: boolean) {
+    const isSync = !async ? 1 : 0;
     const url = `/api/v1/perms/users/self/nodes/children-with-assets/category/tree/?sync=${isSync}`;
-    return this.get<Array<TreeNode>>(url).pipe(this.withRetry());
+    return this.get<Array<TreeNode>>(url, {observe: 'response'}).pipe(this.withRetry());
   }
 
   getMyGrantedK8sNodes(treeId: string, async: boolean) {
@@ -191,11 +197,15 @@ export class HttpService {
   }
 
   getReplay(sessionId: string) {
-    return this.get(`/api/v1/terminal/sessions/${sessionId}/replay/`);
+    return this.get(
+      `/api/v1/terminal/sessions/${sessionId}/replay/`, {headers: this.getJMSOrg()}
+    );
   }
 
   getSessionDetail(sid: string): Promise<Session> {
-    return this.get<Session>(`/api/v1/terminal/sessions/${sid}/`).toPromise();
+    return this.get<Session>(
+      `/api/v1/terminal/sessions/${sid}/`, {headers: this.getJMSOrg()}
+    ).toPromise();
   }
 
   getReplayData(src: string) {
@@ -208,7 +218,9 @@ export class HttpService {
       .set('limit', '30')
       .set('offset', String(30 * page))
       .set('order', 'timestamp');
-    return this.get('/api/v1/terminal/commands/', {params: params});
+    return this.get(
+      '/api/v1/terminal/commands/', {params: params, headers: this.getJMSOrg()}
+    );
   }
 
   cleanRDPParams(params) {

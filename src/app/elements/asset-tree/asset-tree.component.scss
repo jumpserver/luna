@@ -264,3 +264,8 @@ tr:hover {
   border: none;
   outline: none;
 }
+
+.tree-banner-icon-zone .disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}

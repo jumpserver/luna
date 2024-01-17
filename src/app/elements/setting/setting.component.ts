@@ -1,6 +1,6 @@
 import {Component, Inject, OnInit} from '@angular/core';
 import {MatDialogRef} from '@angular/material';
-import {SettingService, HttpService} from '@app/services';
+import {HttpService, SettingService} from '@app/services';
 import {GlobalSetting, Setting} from '@app/model';
 import {I18nService} from '@app/services/i18n';
 import {MAT_DIALOG_DATA} from '@angular/material/dialog';
@@ -41,8 +41,7 @@ export class ElementSettingComponent implements OnInit {
     return this.settingSrv.globalSetting.XPACK_LICENSE_IS_VALID;
   }
 
-  ngOnInit() {
-    this.getSettingOptions();
+  async ngOnInit() {
     this.setting = this.settingSrv.setting;
     this.getRdpClientConfig();
     this.globalSetting = this.settingSrv.globalSetting;
