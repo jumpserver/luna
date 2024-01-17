@@ -46,6 +46,7 @@
   "RDP resolution": "RDP resolution",
   "RDP smart size": "RDP smart size",
   "Send text to all ssh terminals": "Send text to all ssh terminals",
+  "Send text to current ssh terminals": "Send text to current ssh terminals",
   "Switch to quick command": "Switch to quick command",
   "Switch to input command": "Switch to input command",
   "Not quick command": "Not quick command",

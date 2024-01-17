@@ -63,9 +63,9 @@
         (keydown.enter)="sendBatchCommand()"
         [(ngModel)]="batchCommand"
         maxlength="2048"
-        placeholder=" {{'Send text to all ssh terminals'| translate }} ..."
+        placeholder="{{ sendCommandRange=='all' ? ('Send text to all ssh terminals' | translate) : ('Send text to current ssh terminals' | translate) }}..."
         spellcheck="false" tabindex="2"
-        title="{{'Send text to all ssh terminals'| translate }} ..."
+        title="{{ sendCommandRange=='all' ? ('Send text to all ssh terminals' | translate) : ('Send text to current ssh terminals' | translate) }} ..."
         type="text"
       >
       <i
