@@ -42,6 +42,7 @@ export class ElementSettingComponent implements OnInit {
   }
 
   async ngOnInit() {
+    this.getSettingOptions();
     this.setting = this.settingSrv.setting;
     this.getRdpClientConfig();
     this.globalSetting = this.settingSrv.globalSetting;
