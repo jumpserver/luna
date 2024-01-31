@@ -69,6 +69,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
             this.viewSrv.keyboardSwitchTab(msg.data);
           }, 200);
           break;
+        case 'RENEWAL':
+          this._http.get(`/api/v1/health/`).subscribe();
+          break;
       }
     }.bind(this);
   }

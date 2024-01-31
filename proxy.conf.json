@@ -57,6 +57,12 @@
     "ws": true,
     "changeOrigin": true
   },
+  "/kael": {
+    "target": "http://localhost:5173",
+    "secure": false,
+    "ws": true,
+    "changeOrigin": true
+  },
   "/ui/": {
     "target": "http://localhost:9528",
     "secure": false,
