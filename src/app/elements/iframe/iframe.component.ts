@@ -2,7 +2,10 @@ import {AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, On
 import {View} from '@app/model';
 import {ConnectTokenService, HttpService, I18nService, LogService, ViewService} from '@app/services';
 import {MatDialog} from '@angular/material';
+import {Subject} from 'rxjs';
+import {debounceTime} from 'rxjs/operators';
 import {environment} from '@src/environments/environment';
+
 @Component({
   selector: 'elements-iframe',
   templateUrl: './iframe.component.html',
@@ -15,6 +18,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   eventHandler: EventListenerOrEventListenerObject;
+  private renewalTrigger = new Subject<void>();
   iframeWindow: Window;
   showIframe = false;
   showValue: boolean = !window['debugIframe'];
@@ -40,6 +44,13 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
         this.debug = false;
       }, 5000);
     }
+
+    this.renewalTrigger.pipe(
+      debounceTime(2000)
+    ).subscribe(() => {
+      this._http.get(`/api/v1/health/`).subscribe();
+    });
+
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.eventHandler = function (e: any) {
       const msg = e.data;
@@ -69,8 +80,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
             this.viewSrv.keyboardSwitchTab(msg.data);
           }, 200);
           break;
-        case 'RENEWAL':
-          this._http.get(`/api/v1/health/`).subscribe();
+        case 'KEYBOARDEVENT':
+        case 'MOUSEEVENT':
+          this.renewalTrigger.next();
           break;
       }
     }.bind(this);
