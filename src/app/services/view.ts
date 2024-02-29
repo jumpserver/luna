@@ -1,5 +1,6 @@
 import {Injectable} from '@angular/core';
 import {View} from '@app/model';
+import {BehaviorSubject} from 'rxjs';
 
 @Injectable()
 export class ViewService {
@@ -7,6 +8,7 @@ export class ViewService {
   currentView: View;
   num = 0;
   viewIds: Array<string> = [];
+  public currentView$ = new BehaviorSubject<Object>({});
 
   addView(view: View) {
     this.num += 1;
@@ -35,6 +37,7 @@ export class ViewService {
       }
     }, 100);
     this.currentView = view;
+    this.setCurrentView();
   }
 
   removeView(view: View) {
@@ -42,18 +45,23 @@ export class ViewService {
     this.viewList.splice(index, 1);
     const idIndex = this.viewIds.indexOf(view.id);
     this.viewIds.splice(idIndex, 1);
+    if (this.viewList.length === 0) {
+      this.setCurrentView({});
+    }
   }
 
   addSubViewToCurrentView(view: View) {
     this.currentView.subViews.push(view);
     const index = this.currentView.subViews.length;
     this.setCurrentViewTitle(view, index + 1, 'concat');
+    this.setCurrentView();
   }
 
   clearSubViewOfCurrentView(view: View) {
     const index = this.currentView.subViews.indexOf(view);
     this.currentView.subViews.splice(index, 1);
     this.setCurrentViewTitle(view, index + 1, 'delete');
+    this.setCurrentView();
   }
 
   setCurrentViewTitle(view, index, status) {
@@ -70,6 +78,7 @@ export class ViewService {
         this.currentView.name = names.join('|');
         break;
     }
+    this.setCurrentView();
   }
 
   keyboardSwitchTab(key) {
@@ -96,5 +105,9 @@ export class ViewService {
     if (nextActiveView) {
       this.activeView(nextActiveView);
     }
+  }
+
+  setCurrentView(view: Object = this.currentView) {
+    this.currentView$.next(view);
   }
 }

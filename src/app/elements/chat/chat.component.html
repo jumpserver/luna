@@ -1,0 +1,25 @@
+<div id="chatContainer" class="chat-container" [ngClass]="{'show': !isShow}">
+  <div class="modal" (click)="toggle()"></div>
+  <div class="drawer-panel">
+    <div id="dragBox" [hidden]="!isShow">
+      <div
+        class="drag-setting"
+        [hidden]="!isShowSetting || subViews.length > 1"
+        (click)="onSettingOpenDrawer()"
+      >
+        <i class="fa fa-cog"></i>
+      </div>
+      <div [hidden]="!chatAiEnabled" class="drag-button">
+        <img src="assets/icons/robot-assistant.png" alt="" />
+      </div>
+    </div>
+    <div class="content">
+      <iframe
+        [src]="iframeURL | safeUrl"
+        title="chat"
+        height="100%"
+        width="100%"
+      ></iframe>
+    </div>
+  </div>
+</div>

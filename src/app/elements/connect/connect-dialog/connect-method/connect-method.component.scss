@@ -19,7 +19,8 @@
 .connect-type-group ::ng-deep .mat-tab-group {
   .mat-tab-label {
     height: 32px !important;
-    padding: 0 10px !important;
+    min-width:20px !important;
+    padding: 0 0!important;
   }
 
   .mat-tab-label:focus {

@@ -30,7 +30,7 @@ import {ElementsReplayMp4Component} from './replay/mp4/mp4.component';
 import {ElementConnectorGuideComponent} from '@app/elements/content/content-window/guide/guide.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
-
+import {ElementChatComponent} from '@app/elements/chat/chat.component';
 
 export const ElementComponents = [
   ElementLeftBarComponent,
@@ -43,6 +43,7 @@ export const ElementComponents = [
   ElementUserFileComponent,
   ElementTermComponent,
   ElementNavComponent,
+  ElementChatComponent,
   ElementIframeComponent,
   ElementDialogAlertComponent,
   ElementAssetTreeComponent,

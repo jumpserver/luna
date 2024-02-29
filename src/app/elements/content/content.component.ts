@@ -70,7 +70,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   }
 
   get tabsWidth() {
-    return (this.viewList.length + 1) * 151 + 10;
+    return this.viewList.length * 201;
   }
 
   get showBatchCommand() {
@@ -148,11 +148,11 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   }
 
   scrollLeft() {
-    this.tabsRef.nativeElement.scrollLeft -= 150 * 2;
+    this.tabsRef.nativeElement.scrollLeft -= 200 * 2;
   }
 
   scrollRight() {
-    this.tabsRef.nativeElement.scrollLeft += 150 * 2;
+    this.tabsRef.nativeElement.scrollLeft += 200 * 2;
   }
 
   scrollEnd() {
