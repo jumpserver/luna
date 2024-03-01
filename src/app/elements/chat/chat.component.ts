@@ -20,7 +20,7 @@ export class ElementChatComponent implements OnInit, OnDestroy {
   ) {}
 
   get isShowSetting() {
-    const connectMethods = ['koko', 'lion'];
+    const connectMethods = ['koko', 'lion', 'tinker', 'panda'];
     return (
       this.currentView.hasOwnProperty('connectMethod')
       && connectMethods.includes(this.currentView.connectMethod.component)
