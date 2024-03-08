@@ -281,7 +281,8 @@ export class Setting {
   sqlClient = '1';
 
   basic = {
-    is_async_asset_tree: false
+    is_async_asset_tree: false,
+    connect_default_open_method: 'new'
   };
   graphics = {
     rdp_resolution: 'Auto',
