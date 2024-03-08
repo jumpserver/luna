@@ -13,6 +13,7 @@ export class SettingService {
   settingKey = 'LunaSetting';
   public initialized$ = new BehaviorSubject<boolean>(false);
   public isLoadTreeAsync$ = new BehaviorSubject<boolean>(true);
+  public isOpenNewWindow$ = new BehaviorSubject<boolean>(false);
   public appletConnectMethod$ = new BehaviorSubject<string>('');
   public keyboardLayout$ = new BehaviorSubject<string>('');
   public isDirectNavigation$ = new BehaviorSubject<boolean>(false);
@@ -126,6 +127,11 @@ export class SettingService {
   isLoadTreeAsync() {
     return this.setting.basic.is_async_asset_tree;
   }
+
+  isOpenNewWindow() {
+    return this.setting.basic.connect_default_open_method === 'new';
+  }
+
 
   setAppletConnectMethod() {
     this.appletConnectMethod$.next(this.setting.graphics.applet_connection_method);
