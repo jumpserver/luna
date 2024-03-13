@@ -58,10 +58,16 @@ export class PagesMonitorComponent implements OnInit {
     const data = { 'assetId': '', 'appId': '', 'sessionId': this.sessionID, 'token': ''};
     const smartEndpoint = await this._http.getSmartEndpoint(data, protocol);
     const baseUrl = smartEndpoint.getUrl();
-    if (this.sessionDetail.terminal.type === 'lion') {
-      this.iframeURL = `${baseUrl}/lion/monitor/?session=${this.sessionID}`;
-    } else {
-      this.iframeURL = `${baseUrl}/koko/monitor/${this.sessionID}/`;
+    const terminal_type = this.sessionDetail.terminal.type;
+    switch (terminal_type) {
+      case 'razor':
+        this.iframeURL = `${baseUrl}/razor/monitor/${this.sessionID}/`;
+        break;
+      case 'lion':
+        this.iframeURL = `${baseUrl}/lion/monitor/?session=${this.sessionID}`;
+        break;
+      default:
+        this.iframeURL = `${baseUrl}/koko/monitor/${this.sessionID}/`;
     }
   }
 
