@@ -69,9 +69,9 @@ export class ElementAdvancedOptionComponent implements OnChanges {
           const protocolsCanResolution: Array<string> = ['rdp'];
           return !protocolsCanResolution.includes(this.protocol.name);
         },
-        options: resolutionsChoices.map(i => ({label: i, value: i})),
-        label: 'Resolution',
-        value: this.setting.graphics.rdp_resolution
+        options: resolutionsChoices.map(i => ({label: i, value: i.toLowerCase()})),
+        label: 'RDP resolution',
+        value: this.setting.graphics.rdp_resolution || 'auto'
       },
       {
         type: 'select',
@@ -96,10 +96,31 @@ export class ElementAdvancedOptionComponent implements OnChanges {
           if (!this._settingSvc.hasXPack()) {
             return true;
           }
+
           return !this.connectMethod || this.connectMethod.component !== 'tinker';
+        }
+      },
+      {
+        type: 'select',
+        field: 'reusable',
+        options: this.boolChoices,
+        label: 'RDP file reusable',
+        value: false,
+        hidden: () => {
+          if (!this.connectMethod) {
+            return true;
+          }
+          if (!this._settingSvc.globalSetting.CONNECTION_TOKEN_REUSABLE) {
+            return true;
+          }
+          return this.connectMethod.component !== 'tinker' && this.connectMethod.component !== 'razor';
         }
       }
     ];
+    const onlyUsingDefaultFields = ['reusable'];
+    onlyUsingDefaultFields.forEach(i => {
+      this.connectOption[i] = this.advancedOptions.find(j => j.field === i).value;
+    });
     this.advancedOptions = this.advancedOptions.filter(i => !i.hidden());
     this.advancedOptions.forEach(i => {
       if (this.connectOption[i.field] === undefined) {

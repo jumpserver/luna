@@ -44,6 +44,7 @@
   "Checkbox": "Checkbox",
   "Batch connect": "Batch connect",
   "RDP resolution": "RDP resolution",
+  "RDP file reusable": "RDP file reusable",
   "RDP smart size": "RDP smart size",
   "Send text to all ssh terminals": "Send text to all ssh terminals",
   "Send text to current ssh terminals": "Send text to current ssh terminals",
@@ -199,5 +200,5 @@
   "Current online": "Current online",
   "Token expired": "Token has expired",
   "No protocol available": "No protocol available",
-  "VirtualApp":"Virtual App"
+  "VirtualApp": "Virtual App"
 }

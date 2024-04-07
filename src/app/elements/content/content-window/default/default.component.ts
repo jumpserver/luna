@@ -8,7 +8,7 @@ import {Asset, Endpoint, View} from '@app/model';
 })
 export class ElementConnectorDefaultComponent implements OnInit {
   @Input() view: View;
-  @Input() connector: String;
+  @Input() connector: string;
   @ViewChild('terminal', {static: false}) el: ElementRef;
   iframeURL: string;
   baseUrl: string;

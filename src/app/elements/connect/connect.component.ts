@@ -76,8 +76,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   analysisId(id: string) {
     const idObject = {};
     const idList = id.split('&');
-    for (let i = 0; i < idList.length; i++) {
-      idObject[idList[i].split('=')[0]] = (idList[i].split('=')[1]);
+    for (const element of idList) {
+      idObject[element.split('=')[0]] = (element.split('=')[1]);
     }
     return idObject;
   }
@@ -213,7 +213,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
 
     if (connectInfo.downloadRDP) {
-      return this._http.downloadRDPFile(connToken, this._settingSvc.setting);
+      return this._http.downloadRDPFile(connToken, this._settingSvc.setting, connectInfo.connectOption);
     } else if (connectMethod.type === 'native') {
       this.callLocalClient(connToken).then();
     } else if (connectMethod.type === 'applet' && appletConnectMethod === 'client') {
@@ -295,9 +295,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const preConnectData = this._appSvc.getPreConnectData(asset);
     const isValid = this.checkPreConnectDataForAuto(asset, accounts, preConnectData);
     if (isValid) {
-      return new Promise<ConnectData>(resolve => {
-        resolve(preConnectData);
-      });
+      return Promise.resolve(preConnectData);
     }
 
     this._appSvc.connectDialogShown = true;
