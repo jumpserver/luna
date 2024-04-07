@@ -1,5 +1,5 @@
 import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
-import {Account, ConnectMethod, AuthInfo, Protocol} from '@app/model';
+import {Account, AuthInfo, ConnectMethod, Protocol} from '@app/model';
 import {AppService, I18nService, SettingService} from '@app/services';
 
 @Component({

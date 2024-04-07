@@ -1,9 +1,9 @@
 <div class="content">
   <div>
-    <h2 class="subject">{{ assetType }}{{ 'connect info' | translate }}</h2>
+    <h2 class="subject">{{ assetType }} {{ 'connect info' | translate }}</h2>
     <table>
       <tr *ngFor="let item of infoItems">
-        <td class="title">{{ item.label | async }} </td>
+        <td class="title">{{ item.label | async }}</td>
         <td
           #tooltip="matTooltip"
           (cbOnSuccess)="onCopySuccess($event)"

@@ -44,6 +44,7 @@
   "Checkbox": "多选",
   "Batch connect": "批量连接",
   "RDP resolution": "RDP 分辨率",
+  "RDP file reusable": "RDP 文件复用",
   "RDP smart size": "RDP 智能大小",
   "RDP color quality": "RDP 颜色质量",
   "Send text to all ssh terminals": "发送文本到所有ssh终端",

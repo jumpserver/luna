@@ -280,13 +280,16 @@ export class HttpService {
     return this.get(url.href);
   }
 
-  downloadRDPFile(token, params: Object) {
+  downloadRDPFile(token, params: Object, connectOption: any) {
     const url = new URL(`/api/v1/authentication/connection-token/${token.id}/rdp-file/`, window.location.origin);
     params = this.cleanRDPParams(params);
     if (params) {
       for (const [k, v] of Object.entries(params)) {
         url.searchParams.append(k, v);
       }
+    }
+    if (connectOption && connectOption.reusable) {
+      url.searchParams.append('reusable', '1');
     }
     return window.open(url.href);
   }
