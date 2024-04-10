@@ -6,7 +6,7 @@ import {CookieService} from 'ngx-cookie-service';
 @Injectable()
 export class I18nService {
   LANG_COOKIE_NAME = 'django_language';
-  SUPPORTED_LANG_CODES = ['en', 'zh', 'ja'];
+  SUPPORTED_LANG_CODES = ['en', 'zh', 'ja', 'zh-hant'];
 
   constructor(
     private _translate: TranslateService,
@@ -26,6 +26,8 @@ export class I18nService {
       return 'en';
     } else if (langCode.indexOf('ja') > -1) {
       return 'ja';
+    }  else if (langCode.indexOf('zh-hant') > -1) {
+      return 'zh-hant';
     } else {
       return 'zh';
     }
@@ -60,6 +62,8 @@ export class I18nService {
       useLang = 'en';
     } else if (lang.indexOf('ja') > -1) {
       useLang = 'ja';
+    } else if (lang.indexOf('zh-hant') > -1) {
+      useLang = 'zh-hant';
     } else {
       useLang = 'zh-hans';
     }
