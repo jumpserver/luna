@@ -13,7 +13,7 @@
         <img alt="" src="assets/icons/chat-ai.png"/>
       </div>
     </div>
-    <div class="content">
+    <div *ngIf="chatAiEnabled" class="content">
       <iframe
         [src]="iframeURL | safeUrl"
         height="100%"
