@@ -1,7 +1,7 @@
 import {Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/core';
 import {DataStore, DEFAULT_ORG_ID, SYSTEM_ORG_ID, User} from '@app/globals';
 import {IOutputData, SplitComponent} from 'angular-split';
-import {LogService, SettingService, ViewService} from '@app/services';
+import {HttpService, LogService, SettingService, ViewService} from '@app/services';
 import * as _ from 'lodash';
 import {environment} from '@src/environments/environment';
 
@@ -26,6 +26,7 @@ export class PageMainComponent implements OnInit {
   };
 
   constructor(public viewSrv: ViewService,
+              private _http: HttpService,
               private _logger: LogService,
               public _settingSvc: SettingService) {
   }
@@ -88,6 +89,7 @@ export class PageMainComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('main init');
+    this._http.getUserSession().subscribe();
     this._settingSvc.isDirectNavigation$.subscribe((state) => {
       this.isDirectNavigation = state;
     });
@@ -144,6 +146,7 @@ export class PageMainComponent implements OnInit {
 
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any) {
+    this._http.deleteUserSession().subscribe();
     if (!environment.production || this.isDirectNavigation) {
       return;
     }
