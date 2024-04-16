@@ -124,6 +124,16 @@ export class HttpService {
     return this.get<_User>(url);
   }
 
+  getUserSession() {
+    const url = '/api/v1/authentication/user-session/';
+    return this.get<_User>(url);
+  }
+
+  deleteUserSession() {
+    const url = '/api/v1/authentication/user-session/';
+    return this.delete<_User>(url);
+  }
+
   getMyGrantedAssets(keyword) {
     const url = `/api/v1/perms/users/self/assets/tree/?search=${keyword}`;
     return this.get<Array<TreeNode>>(url);
