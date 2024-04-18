@@ -84,7 +84,7 @@ export class AppService {
       (err) => {
         const ok = confirm(this._i18n.instant('LoginExpireMsg'));
         if (ok && !this.newLoginHasOpen) {
-          window.open('/core/auth/login/?next=/luna/');
+          window.open('/core/auth/login/?next=/luna/', '_self');
           this.newLoginHasOpen = true;
         }
         this.isCheckingProfile = false;
