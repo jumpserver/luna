@@ -102,6 +102,7 @@ export class ElementAssetTreeComponent implements OnInit {
   isShowRMenu = false;
   rightClickSelectNode: any;
   isLoadTreeAsync: boolean;
+  isOpenNewWindow: boolean;
   filterAssetCancel$: Subject<boolean> = new Subject();
   favoriteAssets = [];
   searchValue = '';
@@ -221,6 +222,8 @@ export class ElementAssetTreeComponent implements OnInit {
     this.currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
     this._settingSvc.afterInited().then((state) => {
       this.isLoadTreeAsync = this._settingSvc.isLoadTreeAsync();
+      this.isOpenNewWindow = this._settingSvc.isOpenNewWindow();
+
       if (state) {
         if (!this._settingSvc.hasXPack() && this.currentOrgID === SYSTEM_ORG_ID) {
           this.currentOrgID = DEFAULT_ORG_ID;
@@ -255,7 +258,11 @@ export class ElementAssetTreeComponent implements OnInit {
       this._dialog.open(DisabledAssetsDialogComponent, config);
       return;
     }
-    this.connectAsset(treeNode).then();
+    if (this.isOpenNewWindow) {
+      connectOnNewPage(treeNode, 'auto');
+    } else {
+      this.connectAsset(treeNode).then();
+    }
   }
 
   onAssetTreeCheck(event, treeId) {

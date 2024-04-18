@@ -281,7 +281,8 @@ export class Setting {
   sqlClient = '1';
 
   basic = {
-    is_async_asset_tree: false
+    is_async_asset_tree: false,
+    connect_default_open_method: 'new'
   };
   graphics = {
     rdp_resolution: 'Auto',
@@ -321,7 +322,7 @@ export class Session {
   asset: string;
   asset_id: string;
   date_start: string;
-  login_from_display: String;
+  login_from_display: string;
   protocol: string;
   remote_addr: string;
   account: string;

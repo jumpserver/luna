@@ -1,7 +1,9 @@
 .chat-container {
   overflow: hidden;
+
   .content {
     height: 100%;
+
     iframe {
       border: none;
     }
@@ -12,7 +14,6 @@
   position: fixed;
   top: 0;
   right: 0;
-  width: 100%;
   width: 440px;
   min-width: 260px;
   height: 100vh;
@@ -23,11 +24,12 @@
   transform: translate(100%);
   background: #FFFFFF;
   z-index: 120;
+  opacity: 0.95;
 }
 
 #dragBox {
   position: absolute;
-  top: 30%;
+  bottom: 20%;
   left: -48px;
 }
 
@@ -42,26 +44,30 @@
   z-index: 0;
   pointer-events: auto;
   color: #fff;
-  background-color: #FFFFFF;
+  background-color: rgba(88, 88, 88, .8);
   box-shadow: 0 0 8px 4px #00000014;
   cursor: pointer;
 
   &:hover {
-    left: -50px !important;
-    width: 50px !important;
-    transform: translateZ(0) scale(1.06);
-    transform-style: preserve-3d;
     backface-visibility: hidden;
+
+    img {
+      opacity: 1;
+    }
   }
+
   i {
     font-size: 20px;
     line-height: 45px;
+    opacity: 0.8;
   }
+
   img {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     transform: translateY(10%);
     margin-left: 3px;
+    opacity: 0.8;
   }
 }
 
@@ -69,26 +75,34 @@
   width: 36px;
   height: 36px;
   line-height: 38px;
-  margin-bottom: 10px;
+  margin-bottom: 2px;
   text-align: center;
   border-radius: 50%;
   cursor: pointer;
   transform: translateX(20%);
-  background-color: #FFFFFF;
+  background-color: rgba(88, 88, 88, .8);
   border: 1px solid transparent;
   transition: border-color 0.3s ease;
+  position: relative;
+
   &:hover {
-    background-color: #f0f1f5;
-    border-color: #a0a0a0;
+    .setting-list {
+      display: block;
+      transform: translateY(0);
+    }
+
+    i {
+      opacity: 1;
+      transform: rotate(45deg);
+    }
   }
+
   i {
     font-size: 18px;
+    color: white;
+    opacity: 0.8;
   }
-}
 
-.drag-setting {
-  position: relative;
-  transition: all 1s;
   .setting-list {
     position: absolute;
     bottom: 35px;
@@ -99,6 +113,7 @@
     list-style-type: none;
     transition: all 0.3s ease;
     transform: translateY(100%);
+
     .setting-item {
       width: 28px;
       height: 28px;
@@ -108,19 +123,14 @@
       margin-bottom: 2px;
       overflow: hidden;
       background-color: #FFFFFF;
+
       &:hover {
         background-color: #f0f1f5;
         border-color: #a0a0a0;
       }
     }
   }
-  &:hover {
-    .setting-list {
-      display: block;
-      transform: translateY(0);
-    }
-  }
- }
+}
 
 .show {
   transition: all .3s cubic-bezier(.7, .3, .1, 1);

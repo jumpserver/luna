@@ -1,6 +1,6 @@
 import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {Account, Asset, ConnectionToken, Endpoint, View} from '@app/model';
-import {ConnectTokenService, HttpService, I18nService, LogService} from '@app/services';
+import {ConnectTokenService, HttpService, I18nService, LogService, SettingService} from '@app/services';
 import {User} from '@app/globals';
 import {Command, InfoItem} from '../guide/model';
 
@@ -27,12 +27,15 @@ export class ElementConnectorKokoComponent implements OnInit {
   endpoint: Endpoint;
   methodName: string;
   loading = false;
+  showSetReusable = false;
 
   constructor(private _logger: LogService,
               private _i18n: I18nService,
               private _http: HttpService,
               private _connectTokenSvc: ConnectTokenService,
+              private _settingSvc: SettingService
   ) {
+    this.showSetReusable = this._settingSvc.globalSetting.CONNECTION_TOKEN_REUSABLE;
   }
 
   ngOnInit() {
@@ -64,6 +67,9 @@ export class ElementConnectorKokoComponent implements OnInit {
       {name: 'protocol', value: this.protocol, label: this._i18n.t('Protocol')},
       {name: 'date_expired', value: `${this.token.date_expired}`, label: this._i18n.t('Expire time')},
     ];
+    if (this.showSetReusable) {
+      this.infoItems.push({name: 'set_reusable', value: '', label: this._i18n.t('Set reusable')});
+    }
     this.info = this.infoItems.reduce((pre, current) => {
       pre[current.name] = current.value;
       return pre;

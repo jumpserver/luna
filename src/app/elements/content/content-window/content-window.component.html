@@ -8,14 +8,14 @@
     <div
       *ngFor="let sub of subViews; let i = index"
       class="sub-view"
-      [ngClass]="{'many-view': subViews.length > 1, 'height-view': subViews.length > 2, 'three-view': subViews.length == 3 && i == 2}"
+      [ngClass]="{'sub-border-style':subViews.length > 1, 'many-view': subViews.length > 1, 'height-view': subViews.length > 2, 'three-view': subViews.length == 3 && i == 2}"
     >
       <div *ngIf="sub.smartEndpoint">
         <elements-content-view
           [view]="sub"
           [hasHead]="subViews.length > 1"
           [canClose]="i !== 0"
-        ></elements-content-view> 
+        ></elements-content-view>
       </div>
     </div>
   </div>

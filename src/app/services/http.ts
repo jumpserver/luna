@@ -56,7 +56,7 @@ export class HttpService {
     if (error.status === 401 && User.logined) {
       const msg = await this._i18n.t('LoginExpireMsg');
       if (confirm(msg)) {
-        window.open('/core/auth/login/?next=/luna/');
+        window.open('/core/auth/login/?next=/luna/', '_self');
       }
     } else if (error.status === 403) {
       const msg = await this._i18n.t('No permission');
@@ -122,6 +122,16 @@ export class HttpService {
       url += `?token=${connectionToken}`;
     }
     return this.get<_User>(url);
+  }
+
+  getUserSession() {
+    const url = '/api/v1/authentication/user-session/';
+    return this.get<_User>(url);
+  }
+
+  deleteUserSession() {
+    const url = '/api/v1/authentication/user-session/';
+    return this.delete<_User>(url);
   }
 
   getMyGrantedAssets(keyword) {
@@ -280,13 +290,16 @@ export class HttpService {
     return this.get(url.href);
   }
 
-  downloadRDPFile(token, params: Object) {
+  downloadRDPFile(token, params: Object, connectOption: any) {
     const url = new URL(`/api/v1/authentication/connection-token/${token.id}/rdp-file/`, window.location.origin);
     params = this.cleanRDPParams(params);
     if (params) {
       for (const [k, v] of Object.entries(params)) {
         url.searchParams.append(k, v);
       }
+    }
+    if (connectOption && connectOption.reusable) {
+      url.searchParams.append('reusable', '1');
     }
     return window.open(url.href);
   }
