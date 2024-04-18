@@ -65,7 +65,7 @@ export class ElementReplayGuacamoleComponent implements OnInit {
     );
     this.winSizeSub = this.winSizeChange$
       .subscribe(() => {
-        this.recordingDisplay.onresize(this.recordingDisplay.getWidth(), this.recordingDisplay.getHeight());
+        this.recordingDisplay.scale(this.getPropScale());
       });
   }
 
@@ -96,12 +96,23 @@ export class ElementReplayGuacamoleComponent implements OnInit {
       if (!height) {
         return;
       }
-      // Scale displayRef to fit width of container
-      const widthScale = this.displayRef.offsetWidth / width;
-      const heightScale = this.displayRef.offsetHeight / height;
-      const minScale = widthScale < heightScale ? widthScale : heightScale;
-      this.recordingDisplay.scale(minScale);
+      this.recordingDisplay.scale(this.getPropScale());
     };
+  }
+
+  getPropScale () {
+    let scale = 1;
+    if (this.recordingDisplay) {
+      const width = this.recordingDisplay.getWidth();
+      const height = this.recordingDisplay.getHeight();
+      if (!width || !height) {
+        return scale;
+      }
+      const widthScale = this.screenRef.offsetWidth / width;
+      const heightScale = this.screenRef.offsetHeight / height;
+      scale = Math.min(widthScale, heightScale);
+    }
+    return scale;
   }
 
   restart() {

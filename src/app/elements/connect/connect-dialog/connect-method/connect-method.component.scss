@@ -19,8 +19,8 @@
 .connect-type-group ::ng-deep .mat-tab-group {
   .mat-tab-label {
     height: 32px !important;
-    min-width:20px !important;
-    padding: 0 0!important;
+    min-width: 20px !important;
+    padding: 0 0 !important;
   }
 
   .mat-tab-label:focus {
@@ -30,4 +30,8 @@
   .mat-tab-label-active {
     background-color: white;
   }
+}
+
+.question {
+  color: #5d5d5d;
 }
