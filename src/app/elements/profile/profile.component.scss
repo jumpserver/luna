@@ -27,17 +27,19 @@
   position: relative;
   display: inline-block;
   cursor: pointer;
+
   &:hover .dropdown-content {
     display: block;
   }
+
   a {
     color: #f0f0f1;
-    font-family: Roboto,sans-serif;
     font-size: 13px;
     font-weight: 300;
     text-decoration: none;
     padding: 6px 15px;
     height: 30px;
+
     &:hover {
       color: #fff;
       cursor: pointer
@@ -62,18 +64,20 @@
   margin-left: 0;
   margin-top: 0;
   min-width: 150px;
+
   li {
     display: flex;
+
     &:hover {
-      background-color: rgba(55,56,54,0.7);
+      background-color: rgba(55, 56, 54, 0.7);
       color: black;
       width: 100%;
     }
   }
+
   a {
     padding: 6px 14px 6px 25px;
     white-space: nowrap;
-    font-family: 'Roboto', sans-serif;
     font-size: 13px;
     font-weight: 300;
     position: relative;
@@ -81,12 +85,15 @@
     min-width: 150px;
     line-height: normal;
   }
+
   li.disabled {
     &:hover {
       background-color: black;
     }
+
     a {
       color: #c5babc;
+
       &:hover {
         cursor: default;
         color: #c5babc;

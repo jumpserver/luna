@@ -15,7 +15,7 @@
   overflow-y: auto;
 }
 
-#display .item{
+#display .item {
   height: 80px;
   border-bottom: #000 solid 1px;
   color: #f0f0f0;
@@ -50,7 +50,8 @@
   width: 3px;
 }
 
-#screen * {}
+#screen * {
+}
 
 #player .notification-container {
   position: absolute;
@@ -83,7 +84,6 @@
   display: table-cell;
   text-align: center;
   vertical-align: middle;
-  font-family: sans-serif;
 }
 
 #player .controls {
