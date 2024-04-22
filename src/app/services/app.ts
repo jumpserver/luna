@@ -8,10 +8,8 @@ import {LocalStorageService, LogService} from './share';
 import {SettingService} from '@app/services/setting';
 import {Account, Asset, AuthInfo, ConnectData, Endpoint, Organization, View} from '@app/model';
 import * as CryptoJS from 'crypto-js';
-import {getCookie, setCookie} from '@app/utils/common';
 import {OrganizationService} from './organization';
 import {I18nService} from '@app/services/i18n';
-import {config} from 'rxjs';
 
 declare function unescape(s: string): string;
 
@@ -34,7 +32,7 @@ export class AppService {
   private protocolConnectTypesMap: object = {};
   private checkIntervalId: number;
   private newLoginHasOpen = false; // 避免多次打开新登录页
-  private isCheckingProfile = false; // 是否在检查中
+  private checkSecond = 120;
 
   constructor(private _http: HttpService,
               private _router: Router,
@@ -69,33 +67,62 @@ export class AppService {
     }
   }
 
-  doCheckProfile() {
-    if (this.isCheckingProfile) {
-      return;
-    }
-    this.isCheckingProfile = true;
-    User.logined = false;
-    this._http.get(`/api/v1/users/profile/?fields_size=mini`).subscribe(
-      (res) => {
-        User.logined = true;
-        this.newLoginHasOpen = false;
-        this.isCheckingProfile = false;
-      },
-      (err) => {
-        const ok = confirm(this._i18n.instant('LoginExpireMsg'));
-        if (ok && !this.newLoginHasOpen) {
-          window.open('/core/auth/login/?next=/luna/', '_self');
-          this.newLoginHasOpen = true;
+  async getProfileStatus(recheck = false) {
+    let status = '';
+    let statusTime = '';
+    // From local storage
+    if (!recheck) {
+      statusTime = localStorage.getItem('CheckProfile');
+      if (statusTime && statusTime.split(' ').length === 2) {
+        const time = statusTime.split(' ')[1];
+        const expired = new Date().getTime() - parseInt(time, 10) > 1000 * this.checkSecond;
+        if (!expired) {
+          status = statusTime.split(' ')[0];
         }
-        this.isCheckingProfile = false;
-        setTimeout(() => {
-          this.doCheckProfile();
-        }, 5000);
       }
-    );
+    }
+
+    if (!status) {
+      User.logined = false;
+      try {
+        await this._http.get(`/api/v1/users/profile/?fields_size=mini`).toPromise();
+        status = 'ok';
+        User.logined = true;
+      } catch (err) {
+        status = 'error';
+      } finally {
+        localStorage.setItem('CheckProfile', status + ' ' + new Date().getTime());
+      }
+    } else {
+      this._logger.debug('Found cache using: ', statusTime);
+    }
+    return status;
   }
 
-  intervalCheckLogin(second: number = 60 * 2, clear: boolean = false) {
+  async doCheckProfile(recheck = false) {
+    const status = await this.getProfileStatus(recheck);
+    if (status === 'ok') {
+      this.newLoginHasOpen = false;
+      // 重新检查时，如果好了，重启 check
+      if (recheck) {
+        this.intervalCheckLogin().then();
+      }
+    } else {
+      clearInterval(this.checkIntervalId);
+      const ok = confirm(this._i18n.instant('LoginExpireMsg'));
+      if (ok && !this.newLoginHasOpen) {
+        window.open('/core/auth/login/?next=/luna/', '_self');
+        this.newLoginHasOpen = true;
+      }
+      setTimeout(() => this.doCheckProfile(true), 5 * 1000);
+    }
+    return status;
+  }
+
+  async intervalCheckLogin(second = null, clear: boolean = false) {
+    if (second == null) {
+      second = this.checkSecond;
+    }
     if (this.checkIntervalId) {
       clearInterval(this.checkIntervalId);
     }
