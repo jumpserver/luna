@@ -18,6 +18,13 @@ $asset-path: '../static/imgs/inspinia';
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'Open Sans';
+  src: url('../assets/fonts/OpenSans-Light.ttf');
+  font-weight: 300;
+  font-style: normal;
+}
+
 //@import '~@swimlane/ngx-datatable/release/index.css';
 //@import '~@swimlane/ngx-datatable/release/themes/material.css';
 //@import '~@swimlane/ngx-datatable/release/assets/icons.css';

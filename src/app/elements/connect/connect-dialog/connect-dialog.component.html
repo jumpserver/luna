@@ -1,6 +1,6 @@
 <div>
   <div mat-dialog-title>
-    <h3>{{"Connect" | translate}} - {{ asset.name | truncatechars:30 }}</h3>
+    <h3>{{ "Connect" | translate }} - {{ asset.name | truncatechars:30 }}</h3>
     <button aria-label="close dialog" mat-dialog-close="" mat-icon-button>
       <mat-icon>close</mat-icon>
     </button>
@@ -72,9 +72,9 @@
           mat-raised-button
           type="submit"
         >
-          {{"Connect"| translate}}
+          {{ "CONNECT"| translate }}
           <span *ngIf="protocol && protocol.name === 'rdp'" class="online-num">
-          ({{ 'Current online' | translate}}: {{ onlineNum === null ? '- ' : onlineNum }})
+          ({{ 'Current online' | translate }}: {{ onlineNum === null ? '- ' : onlineNum }})
         </span>
         </button>
       </mat-dialog-actions>
