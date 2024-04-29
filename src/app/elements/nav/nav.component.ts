@@ -191,6 +191,11 @@ export class ElementNavComponent implements OnInit {
         ]
       },
       {
+        id: 'Tabs',
+        name: 'Tabs',
+        children: []
+      },
+      {
         id: 'Help',
         name: 'Help',
         children: [

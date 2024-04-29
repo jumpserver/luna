@@ -2,29 +2,29 @@
   <ul class="nav-main">
     <li style="padding-right: 10px">
       <a style="display: inline-block; padding-top: 1px;">
-        <img (click)="onJumpUi()" height="26px" id="left-logo" src=""/>
+        <img (click)="onJumpUi()" alt="logo" height="26px" id="left-logo" src=""/>
       </a>
     </li>
     <li *ngFor="let v of navs" [ngClass]="{'dropdown': v.children}">
-      <a>{{v.name|translate}}</a>
-      <ul *ngIf="v.children" [ngClass]="{'dropdown-content': v.children}">
-        <li *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
-          <a *ngIf="vv.href" [routerLink]="[vv.href]">{{vv.name| translate}}</a>
-          <a (click)="vv.click && vv.click()" *ngIf="vv.click && !vv.hide" id="{{vv.id}}">{{vv.name| translate}}</a>
-        </li>
-      </ul>
-    </li>
-    <li [ngClass]="{'dropdown': true}">
-      <a>{{"Tab List"| translate}}</a>
-      <ul *ngIf="viewList.length > 0" [ngClass]="{'dropdown-content': true}">
-        <ng-container *ngFor="let v of viewListSorted">
-          <li *ngIf="v.name!=null" [ngClass]="{'disconnected':!v.connected, 'hidden': v.closed != false}">
+      <a>{{ v.name|translate }}</a>
+      <ul *ngIf="v.id === 'Tabs' " [ngClass]="{'dropdown-content': true}">
+        <li *ngIf="viewListSorted.length === 0"><a>{{ 'No tabs' | translate }}</a></li>
+        <ng-container *ngIf="viewListSorted.length > 0">
+          <ng-container *ngFor="let v of viewListSorted">
+            <li *ngIf="v.name!=null" [ngClass]="{'disconnected':!v.connected, 'hidden': v.closed != false}">
           <span [class.active]="v.active">
             <a (click)="_viewSrv.activeView(v)" id="{{ 'tab' + v.id }}">
-              <i class="fa fa-circle flag"></i> {{v.name}} </a>
+              <i class="fa fa-circle flag"></i> {{ v.name }} </a>
           </span>
-          </li>
+            </li>
+          </ng-container>
         </ng-container>
+      </ul>
+      <ul *ngIf="v.children && v.id !== 'Tabs'" [ngClass]="{'dropdown-content': v.children}">
+        <li *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
+          <a *ngIf="vv.href" [routerLink]="[vv.href]">{{ vv.name| translate }}</a>
+          <a (click)="vv.click && vv.click()" *ngIf="vv.click && !vv.hide" id="{{vv.id}}">{{ vv.name| translate }}</a>
+        </li>
       </ul>
     </li>
   </ul>

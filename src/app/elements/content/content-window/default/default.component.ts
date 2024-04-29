@@ -47,8 +47,6 @@ export class ElementConnectorDefaultComponent implements OnInit {
         return url;
       case 'lion':
         return `${endpointUrl}/lion/connect?token=${token}`;
-      case 'kael':
-        return `${endpointUrl}/kael/connect?token=${token}`;
       case 'default':
         return `${endpointUrl}/koko/connect?token=${token}`;
     }

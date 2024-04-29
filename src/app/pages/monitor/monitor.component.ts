@@ -49,7 +49,7 @@ export class PagesMonitorComponent implements OnInit {
 
   async generateMonitorURL() {
     this.sessionDetail = await this._http.getSessionDetail(this.sessionID);
-    const supportedType = ['koko', 'lion', 'chen', 'kael'];
+    const supportedType = ['koko', 'lion', 'chen'];
     const isSupportComponent = supportedType.includes(this.sessionDetail.terminal.type);
     const isNormalSession = this.sessionDetail.type.value === 'normal';
     this.supportedLock = isSupportComponent && isNormalSession;
