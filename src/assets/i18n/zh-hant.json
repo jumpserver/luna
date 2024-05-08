@@ -206,6 +206,9 @@
   "Token expired": "Token 已過期, 請重新連接",
   "No protocol available": "沒有可用的協議",
   "Stop": "停止",
-  "VirtualApp": "虛擬應用"
+  "VirtualApp": "虛擬應用",
+  "connectDisabledTipsNoAccount": "提示：未找到有效的授權帳號，當前資源無法連接，請聯繫管理員進行處理",
+  "connectDisabledTipsNoConnectMethod": "提示：未找到有效的連接方式，當前資源無法連接，請聯繫管理員進行處理",
+  "connectDisabledTipsMethodDisabled": "提示：未找到有效的遠程應用發布機，當前資源無法連接，請聯繫管理員進行處理"
 }
 
