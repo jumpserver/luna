@@ -65,7 +65,8 @@
       <mat-dialog-actions style="float: right; margin: 8px 0 0 0; width: 100%">
         <button
           (click)="onConfirm()"
-          [disabled]="isConnectDisabled()"
+          [disabled]="connectButtonInfo().disabled"
+          [title]="connectButtonInfo().reason"
           [mat-dialog-close]="outputData"
           class="confirm-btn"
           color="primary"

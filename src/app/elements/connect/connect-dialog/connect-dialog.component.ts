@@ -6,6 +6,10 @@ import {Account, Asset, AuthInfo, ConnectData, ConnectMethod, Protocol} from '@a
 import {BehaviorSubject} from 'rxjs';
 import {debounceTime} from 'rxjs/operators';
 
+class ConnectButtonInfo{
+  disabled: boolean = false;
+  reason: string = '';
+}
 
 @Component({
   selector: 'elements-asset-tree-dialog',
@@ -125,14 +129,25 @@ export class ElementConnectDialogComponent implements OnInit {
     this.accountOrUsernameChanged.next(true);
   }
 
-  isConnectDisabled(): Boolean {
+  connectButtonInfo():ConnectButtonInfo {
+    const connectButtonInfo = new ConnectButtonInfo()
+    let disabled = false;
+    let transKey= '';
     if (this.accounts.length === 0) {
-      return true;
+      disabled = true;
+      transKey = 'connectDisabledTipsNoAccount'
     }
-    if (!this.connectMethod || this.connectMethod.disabled === true) {
-      return true;
+    else if(this.connectMethod && this.connectMethod.disabled === true){
+      disabled = true;
+      transKey = 'connectDisabledTipsMethodDisabled'
     }
-    return false;
+    else if (!this.connectMethod){
+      disabled = true;
+      transKey = 'connectDisabledTipsNoConnectMethod'
+    }
+    connectButtonInfo.disabled = disabled;
+    connectButtonInfo.reason = transKey ? this._i18n.instant(transKey): '';
+    return connectButtonInfo;
   }
 
   onConfirm(downloadRDP = false) {

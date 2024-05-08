@@ -207,6 +207,9 @@
   "Token expired": "Token 已过期, 请重新连接",
   "No protocol available": "没有可用的协议",
   "Stop": "停止",
-  "VirtualApp": "虚拟应用"
+  "VirtualApp": "虚拟应用",
+  "connectDisabledTipsNoAccount": "提示：未找到有效的授权账号，当前资源无法连接，请联系管理员进行处理",
+  "connectDisabledTipsNoConnectMethod": "提示：未找到有效的连接方式，当前资源无法连接，请联系管理员进行处理",
+  "connectDisabledTipsMethodDisabled": "提示：未找到有效的远程应用发布机，当前资源无法连接，请联系管理员进行处理"
 }
 

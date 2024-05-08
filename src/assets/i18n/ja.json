@@ -204,5 +204,8 @@
   "Token expired": "トークンの有効期限が切れました",
   "No protocol available": "利用可能なプロトコルがありません",
   "Stop": "Stop",
-  "VirtualApp": "仮想アプリ"
+  "VirtualApp": "仮想アプリ",
+  "connectDisabledTipsNoAccount": "ヒント：有効な認可アカウントが見つかりませんでした。このリソースは接続できません。管理者に連絡してください",
+  "connectDisabledTipsNoConnectMethod": "ヒント：有効な接続方法が見つかりませんでした。このリソースは接続できません。管理者に連絡してください",
+  "connectDisabledTipsMethodDisabled": "ヒント：有効なリモートアプリケーションデプロイメントマシンが見つかりませんでした。このリソースは接続できません。管理者に連絡してください"
 }

@@ -200,5 +200,8 @@
   "Current online": "Current online",
   "Token expired": "Token has expired",
   "No protocol available": "No protocol available",
-  "VirtualApp": "Virtual App"
+  "VirtualApp": "Virtual App",
+  "connectDisabledTipsNoAccount": "Tips: No valid authorization account found, current resource cannot be connected. Please contact the administrator for assistance",
+  "connectDisabledTipsNoConnectMethod": "Tips: No valid connection method found, current resource cannot be connected. Please contact the administrator for assistance",
+  "connectDisabledTipsMethodDisabled": "Tips: No valid remote application deployment machine found, current resource cannot be connected. Please contact the administrator for assistance"
 }
