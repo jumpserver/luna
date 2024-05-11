@@ -127,6 +127,8 @@
   "Username@Domain": "Username@Domain",
   "InstallClientMsg": "JumpServer client not found, Go to download and install?",
   "LoginExpireMsg": "Login session expired, please re-login",
+  "Bad request. The server does not understand the syntax of the request": "Bad request. The server does not understand the syntax of the request",
+  "The server encountered an error while trying to process the request": "The server encountered an error while trying to process the request",
   "No permission": "No permission",
   "Last login": "Last login",
   "Log out": "Log out",
