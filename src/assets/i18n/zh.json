@@ -127,6 +127,8 @@
   "Username@Domain": "用户名@AD域",
   "InstallClientMsg": "JumpServer 客户端没有安装，现在去下载安装?",
   "LoginExpireMsg": "登录已过期，请重新登录",
+  "Bad request. The server does not understand the syntax of the request": "错误的请求。 服务器不理解请求的语法",
+  "The server encountered an error while trying to process the request": "服务器在尝试处理请求时遇到错误",
   "No permission": "没有权限",
   "Last login": "上次登录",
   "Log out": "退出登录",
