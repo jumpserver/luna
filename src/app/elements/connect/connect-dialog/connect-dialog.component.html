@@ -65,7 +65,7 @@
       <mat-dialog-actions style="float: right; margin: 8px 0 0 0; width: 100%">
         <button
           (click)="onConfirm()"
-          [disabled]="isConnectDisabled()"
+          [disabled]="connectButtonInfo().disabled"
           [mat-dialog-close]="outputData"
           class="confirm-btn"
           color="primary"
@@ -77,6 +77,7 @@
           ({{ 'Current online' | translate}}: {{ onlineNum === null ? '- ' : onlineNum }})
         </span>
         </button>
+        <label class="zone-label" style="display: block">{{ connectButtonInfo().reason }}</label>
       </mat-dialog-actions>
     </div>
   </div>

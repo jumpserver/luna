@@ -126,6 +126,8 @@
   "Username@Domain": "使用者名稱@AD域",
   "InstallClientMsg": "JumpServer 用戶端沒有安裝，現在去下載安裝?",
   "LoginExpireMsg": "登入已過期，請重新登入",
+  "Bad request. The server does not understand the syntax of the request": "錯誤的請求。 服務器不理解請求的語法",
+  "The server encountered an error while trying to process the request": "服務器在嘗試處理請求時遇到錯誤",
   "No permission": "沒有權限",
   "Last login": "上次登入",
   "Log out": "退出登入",
@@ -206,6 +208,9 @@
   "Token expired": "Token 已過期, 請重新連接",
   "No protocol available": "沒有可用的協議",
   "Stop": "停止",
-  "VirtualApp": "虛擬應用"
+  "VirtualApp": "虛擬應用",
+  "connectDisabledTipsNoAccount": "提示：未找到有效的授權帳號，當前資源無法連接，請聯繫管理員進行處理",
+  "connectDisabledTipsNoConnectMethod": "提示：未找到有效的連接方式，當前資源無法連接，請聯繫管理員進行處理",
+  "connectDisabledTipsMethodDisabled": "提示：未找到有效的遠程應用發布機，當前資源無法連接，請聯繫管理員進行處理"
 }
 

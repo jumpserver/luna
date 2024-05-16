@@ -127,6 +127,8 @@
   "Username@Domain": "Username@Domain",
   "InstallClientMsg": "JumpServer client not found, Go to download and install?",
   "LoginExpireMsg": "Login session expired, please re-login",
+  "Bad request. The server does not understand the syntax of the request": "Bad request. The server does not understand the syntax of the request",
+  "The server encountered an error while trying to process the request": "The server encountered an error while trying to process the request",
   "No permission": "No permission",
   "Last login": "Last login",
   "Log out": "Log out",
@@ -200,5 +202,8 @@
   "Current online": "Current online",
   "Token expired": "Token has expired",
   "No protocol available": "No protocol available",
-  "VirtualApp": "Virtual App"
+  "VirtualApp": "Virtual App",
+  "connectDisabledTipsNoAccount": "Tips: No valid authorization account found, current resource cannot be connected. Please contact the administrator for assistance",
+  "connectDisabledTipsNoConnectMethod": "Tips: No valid connection method found, current resource cannot be connected. Please contact the administrator for assistance",
+  "connectDisabledTipsMethodDisabled": "Tips: No valid remote application deployment machine found, current resource cannot be connected. Please contact the administrator for assistance"
 }

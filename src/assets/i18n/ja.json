@@ -126,6 +126,8 @@
   "Username@Domain": "ユーザー名 @ ADドメイン",
   "InstallClientMsg": "JumpServerクライアントがインストールされていない、今ダウンロードしてインストールしますか?",
   "LoginExpireMsg": "ログインが期限切れになりました。ログインし直してください",
+  "Bad request. The server does not understand the syntax of the request": "要求の形式が正しくありません。 サーバーはリクエストの構文を理解していません",
+  "The server encountered an error while trying to process the request": "サーバーがリクエストを処理しようとしたときにエラーが発生しました",
   "No permission": "権限がありません",
   "Last login": "前回ログイン",
   "Log out": "ログインを終了",
@@ -204,5 +206,8 @@
   "Token expired": "トークンの有効期限が切れました",
   "No protocol available": "利用可能なプロトコルがありません",
   "Stop": "Stop",
-  "VirtualApp": "仮想アプリ"
+  "VirtualApp": "仮想アプリ",
+  "connectDisabledTipsNoAccount": "ヒント：有効な認可アカウントが見つかりませんでした。このリソースは接続できません。管理者に連絡してください",
+  "connectDisabledTipsNoConnectMethod": "ヒント：有効な接続方法が見つかりませんでした。このリソースは接続できません。管理者に連絡してください",
+  "connectDisabledTipsMethodDisabled": "ヒント：有効なリモートアプリケーションデプロイメントマシンが見つかりませんでした。このリソースは接続できません。管理者に連絡してください"
 }
