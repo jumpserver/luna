@@ -1,3 +1,10 @@
+<div
+  (click)="onSettingOpenDrawer()"
+  [hidden]="!isShowSetting || subViews.length > 1"
+  class="drag-setting"
+>
+  <i class="fa fa-cog"></i>
+</div>
 <div *ngIf="chatAiEnabled" class="chat-container" id="chatContainer">
   <iframe
     [src]="iframeURL | safeUrl"

@@ -12,3 +12,66 @@
     border: none;
   }
 }
+
+.drag-setting {
+  position: absolute;
+  right: 10px;
+  bottom: 100px;
+  width: 36px;
+  height: 36px;
+  line-height: 38px;
+  margin-bottom: 2px;
+  text-align: center;
+  border-radius: 50%;
+  cursor: pointer;
+  transform: translateX(20%);
+  background-color: rgba(88, 88, 88, .8);
+  border: 1px solid transparent;
+  transition: border-color 0.3s ease;
+
+  &:hover {
+    .setting-list {
+      display: block;
+      transform: translateY(0);
+    }
+
+    i {
+      opacity: 1;
+      transform: rotate(45deg);
+    }
+  }
+
+  i {
+    font-size: 18px;
+    color: white;
+    opacity: 0.8;
+  }
+
+  .setting-list {
+    position: absolute;
+    bottom: 35px;
+    right: 4px;
+    margin: 0;
+    padding: 0;
+    display: none;
+    list-style-type: none;
+    transition: all 0.3s ease;
+    transform: translateY(100%);
+
+    .setting-item {
+      width: 28px;
+      height: 28px;
+      line-height: 28px;
+      padding: 2px;
+      border-radius: 50%;
+      margin-bottom: 2px;
+      overflow: hidden;
+      background-color: #FFFFFF;
+
+      &:hover {
+        background-color: #f0f1f5;
+        border-color: #a0a0a0;
+      }
+    }
+  }
+}

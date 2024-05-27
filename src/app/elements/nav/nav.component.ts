@@ -54,7 +54,7 @@ export class ElementNavComponent implements OnInit {
     return [
       {
         id: 'FileManager',
-        name: 'File Manager',
+        name: 'File Explorer',
         children: [
           {
             id: 'Connect',

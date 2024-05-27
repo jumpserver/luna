@@ -19,8 +19,25 @@ export class ElementChatComponent implements OnInit {
   ) {
   }
 
+  get isShowSetting() {
+    return true;
+    const connectMethods = ['koko', 'lion', 'tinker', 'panda'];
+    return (
+      this.currentView.hasOwnProperty('connectMethod')
+      && connectMethods.includes(this.currentView.connectMethod.component)
+    );
+  }
+
+  get subViews() {
+    return this.currentView.hasOwnProperty('subViews') ? this.currentView.subViews : [];
+  }
+
   get chatAiEnabled() {
     return this._settingSvc.globalSetting.CHAT_AI_ENABLED;
+  }
+
+  onSettingOpenDrawer() {
+    this.currentView.iframeElement.postMessage({name: 'OPEN'}, '*');
   }
 
   ngOnInit() {
