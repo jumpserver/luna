@@ -1,8 +1,26 @@
-<div *ngIf="chatAiEnabled" class="chat-container" id="chatContainer">
-  <iframe
-    [src]="iframeURL | safeUrl"
-    height="100%"
-    title="chat"
-    width="100%"
-  ></iframe>
+<div class="chat-container" id="chatContainer">
+  <div [hidden]="!showBtn" id="dragBox">
+    <div
+      (click)="onSettingOpenDrawer()"
+      [hidden]="!isShowSetting || subViews.length > 1"
+      class="drag-setting"
+    >
+      <i class="fa fa-cog"></i>
+    </div>
+    <div (click)="showChatAI()" [hidden]="!chatAiEnabled" class="robot-button">
+      <img alt="" src="assets/icons/chat-ai.png"/>
+    </div>
+  </div>
+  <div *ngIf="chatAiEnabled" [style.display]="chatAIShown ? 'block' : 'none'" class="drawer-panel">
+    <div class="content">
+      <iframe
+        #contentWindow
+        [src]="iframeURL | safeUrl"
+        height="100%"
+        id="chat-frame"
+        title="chat"
+        width="100%"
+      ></iframe>
+    </div>
+  </div>
 </div>
