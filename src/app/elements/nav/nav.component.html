@@ -22,7 +22,7 @@
       </ul>
       <ul *ngIf="v.children && v.id !== 'Tabs'" [ngClass]="{'dropdown-content': v.children}">
         <li *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
-          <a *ngIf="vv.href" [routerLink]="[vv.href]">{{ vv.name| translate }}</a>
+          <a *ngIf="vv.href" [routerLink]="[vv.href]">{{ vv.name | translate }}</a>
           <a (click)="vv.click && vv.click()" *ngIf="vv.click && !vv.hide" id="{{vv.id}}">{{ vv.name| translate }}</a>
         </li>
       </ul>

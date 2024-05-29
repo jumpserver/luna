@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  background-color: var(--el-menu-fold-panel-bg-color);
 }
 
 .tree-refresh .fa {
@@ -20,7 +21,7 @@
 
 .ztree {
   height: 100%;
-  background-color: inherit;
+  background-color: var(--el-menu-fold-panel-bg-color);
 }
 
 .view-menu {
@@ -125,7 +126,7 @@ tr:hover {
   text-overflow: ellipsis;
   line-height: 31px;
   padding: 0 11px;
-  background-color: #3a3333;
+  background-color: var(--el-menu-panel-item-bg-color);
   border-bottom: solid 1px #2f2a2a;
   border-right: rgba(58, 51, 51, 0.5) 1px solid;
 
@@ -133,7 +134,7 @@ tr:hover {
     height: 30px;
     padding: 6px 0;
     font-size: 16px;
-    color: white;
+    color: var(--el-menu-text-color);
   }
 
   .rotate {
@@ -164,6 +165,7 @@ tr:hover {
   min-height: 40px;
   overflow-x: auto;
   height: calc(100% - 31px);
+  background-color: var(--el-menu-fold-panel-bg-color);
 }
 
 .tree-type-loading {

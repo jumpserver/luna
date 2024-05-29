@@ -19,7 +19,7 @@ li {
   height: 30px;
   position: relative;
   box-sizing: border-box;
-  background-color: #463a3a66;
+  background-color: var(--el-header-tab-item-bg-color);
   border-right: 1px solid #6b6565c2;
   border-radius: 2px;
 

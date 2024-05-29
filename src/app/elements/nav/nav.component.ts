@@ -10,7 +10,7 @@ import {I18nService} from '@app/services/i18n';
 @Component({
   selector: 'elements-nav',
   templateUrl: './nav.component.html',
-  styleUrls: ['./nav.component.css'],
+  styleUrls: ['./nav.component.scss'],
 })
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
@@ -69,21 +69,22 @@ export class ElementNavComponent implements OnInit {
         id: 'View',
         name: 'View',
         children: [
+          // 此处直接使用空串的话，在渲染时会被 nif 判断为 false 从而只有禁用效果而不展示文字内容
           {
             id: 'SplitVertical',
-            href: '',
+            href: '/',
             name: 'Split vertical',
             disable: true
           },
           {
             id: 'CommandBar',
-            href: '',
+            href: '/',
             name: 'Command bar',
             disable: true
           },
           {
             id: 'ShareSession',
-            href: '',
+            href: '/',
             name: 'Share session (read/write)',
             disable: true
           },
