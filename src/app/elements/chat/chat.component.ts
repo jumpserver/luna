@@ -25,7 +25,6 @@ export class ElementChatComponent implements OnInit, OnDestroy {
   }
 
   get isShowSetting() {
-    return true;
     const connectMethods = ['koko', 'lion', 'tinker', 'panda'];
     return (
       this.currentView.hasOwnProperty('connectMethod')
@@ -42,7 +41,6 @@ export class ElementChatComponent implements OnInit, OnDestroy {
   }
 
   get chatAiEnabled() {
-    return true;
     return this._settingSvc.globalSetting.CHAT_AI_ENABLED;
   }
 
@@ -139,7 +137,9 @@ export class ElementChatComponent implements OnInit, OnDestroy {
   }
 
   onSettingOpenDrawer() {
-    this.currentView.iframeElement.postMessage({name: 'OPEN'}, '*');
+    if (this.currentView.iframeElement) {
+      this.currentView.iframeElement.postMessage({name: 'OPEN'}, '*');
+    }
   }
 
   isDifferenceWithinThreshold(num1, num2, threshold = 5) {
