@@ -34,12 +34,27 @@ $-border-y: #1f1b1b;
       overflow-x: hidden;
 
       ul {
-        display: inline-block;
+        display: flex;
         height: 30px;
         min-width: 100%;
         padding-left: 0;
         margin: 0;
         background-color: var(--el-header-tab-item-bg-color);
+
+        .drag-box {
+          display: inline-flex;
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+          box-sizing: border-box;
+          cursor: move;
+          //flex-grow: 1;
+          flex-basis: 0;
+
+          &:last-child {
+            border: none;
+          }
+        }
       }
     }
   }
@@ -347,16 +362,6 @@ tr:hover {
   }
 }
 
-.drag-box {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  box-sizing: border-box;
-  cursor: move;
-  flex-grow: 1;
-  flex-basis: 0;
-}
 
 .cdk-drag-preview {
   box-sizing: border-box;
@@ -371,10 +376,6 @@ tr:hover {
 
 .cdk-drag-animating {
   transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
-}
-
-.drag-box:last-child {
-  border: none;
 }
 
 .drag-list.cdk-drop-list-dragging .drag-box:not(.cdk-drag-placeholder) {
