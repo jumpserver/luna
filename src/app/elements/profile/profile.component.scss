@@ -30,6 +30,7 @@
     }
 
     .dropdown-content {
+      padding: 5px 0;
       @include GeneralDropdown(0, null);
 
       li {

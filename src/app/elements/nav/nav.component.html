@@ -1,8 +1,8 @@
 <div class="nav">
   <ul class="nav-main">
-    <li style="padding-right: 10px">
-      <a style="display: inline-block; padding-top: 1px;">
-        <img (click)="onJumpUi()" alt="logo" height="26px" id="left-logo" src=""/>
+    <li style="margin-right: 10px; width: 60px">
+      <a style="padding-top: 1px;">
+        <img (click)="onJumpUi()" alt="" height="30px" id="left-logo" src=""/>
       </a>
     </li>
     <li *ngFor="let v of navs" [ngClass]="{'dropdown': v.children}">
