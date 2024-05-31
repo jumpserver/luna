@@ -57,12 +57,16 @@
         // 刷新按钮不需要 padding-right
         .fa-refresh.tree-banner-icon {
           padding-right: 0;
-          margin-top: 3px;
+          margin-top: 2px;
         }
 
         // 批量操作按钮需要给一些 padding-top 使得看上去垂直居中
         .fa-square-o.tree-banner-icon {
-          padding-top: 4px;
+          padding-top: 2px;
+        }
+
+        .fa-check-square.tree-banner-icon {
+          padding-top: 2px;
         }
 
         .tree-banner-icon {
@@ -85,7 +89,6 @@
           display: flex;
           align-items: center;
           position: relative;
-          margin-top: 4px;
           transition: .25s;
           overflow: hidden;
 
@@ -98,7 +101,7 @@
             outline: none;
             border-radius: 10px;
             color: var(--el-menu-text-color);
-            transition: all .5s ease-in-out;
+            transition: all .4s ease-in-out;
           }
 
           &.active {
