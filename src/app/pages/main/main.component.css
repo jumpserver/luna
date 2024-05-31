@@ -107,7 +107,7 @@ as-split.as-vertical ::ng-deep .as-split-gutter-icon {
   width: 100%;
   height: calc(100% - 30px);
   text-align: center;
-  color: white;
+  color: var(--el-menu-text-color);
   transition: all .2s;
 }
 
@@ -133,7 +133,7 @@ as-split.as-vertical ::ng-deep .as-split-gutter-icon {
 .menu-active {
   display: block;
   z-index: 11;
-  background: #2f2a2a;
+  background: var(--el-assets-bg-color);
 }
 
 .mobile-menu {

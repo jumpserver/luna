@@ -18,7 +18,7 @@
       <div [ngClass]="{'menu-active':showSubMenu}" class="menu-icon">
         <div
           (click)="menuClick()"
-          *ngIf="this._settingSvc.hasXPack()"
+          *ngIf="true"
           class="menu-organization"
         >
           <span style="font-size: 13px;">
@@ -57,5 +57,4 @@
     </div>
   </as-split-area>
 </as-split>
-
 <elements-chat></elements-chat>

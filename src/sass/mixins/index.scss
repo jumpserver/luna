@@ -1,0 +1,47 @@
+@mixin GeneralDropdown($right: null, $left: null) {
+  display: none;
+  position: absolute;
+  top: 30px;
+  right: $right;
+  left: $left;
+  margin-left: 0;
+  z-index: 999;
+  background-color: var(--el-header-nav-bg-color);
+}
+
+// dropdown 下 li 标签的通用样式
+@mixin GeneralDropdownLi {
+  min-width: 150px;
+  width: auto;
+  line-height: 30px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// dropdown 下 a 标签的通用样式
+@mixin GeneralDropdownA {
+  font-size: 13px;
+  font-weight: 300;
+  padding: 0 15px;
+}
+
+// dropdown 下 li 的 a 标签通用样式
+@mixin GeneralDropdownLia {
+  width: 100%;
+  color: var(--el-header-nav-text-color);
+
+  &:hover {
+    cursor: pointer;
+    background-color: var(--el-header-nav-select-hover-bg-color);
+  }
+}
+
+@mixin DropdownHover {
+  background-color: var(--el-header-nav-select-bg-color);
+
+  .dropdown-content {
+    display: flex;
+    flex-direction: column;
+  }
+}

@@ -2,6 +2,160 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  background-color: var(--el-assets-bg-color);
+
+  .tree-type {
+    transition: all .3s;
+
+    .tree-type-banner {
+      position: relative;
+      display: flex;
+      height: 31px;
+      line-height: 31px;
+      padding: 0 11px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--el-menu-text-color);
+      border-bottom: 1px solid var(--el-assets-border-bottom-color);
+      border-right: 1px solid var(--el-assets-border-right-color);
+      background-color: var(--el-assets-fold-item-bg-color);
+
+      .tree-banner-left {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        flex: 1;
+
+        .tree-icon-rotate {
+          display: flex;
+          align-items: center;
+          height: 30px;
+          padding-top: 3px;
+          padding-right: 3px;
+          font-size: 16px;
+          color: var(--el-menu-text-color);
+        }
+
+        .tree-type-banner-label {
+          margin-left: 7px;
+          padding-top: 2px;
+          font-size: 13px;
+          cursor: pointer;
+        }
+      }
+
+      .tree-banner-icon-zone {
+        display: flex;
+        align-items: center;
+
+        // todo)) 未找到对应的
+        .disabled {
+          pointer-events: none;
+          opacity: 0.6;
+        }
+
+        // 刷新按钮不需要 padding-right
+        .fa-refresh.tree-banner-icon {
+          padding-right: 0;
+          margin-top: 3px;
+        }
+
+        // 批量操作按钮需要给一些 padding-top 使得看上去垂直居中
+        .fa-square-o.tree-banner-icon {
+          padding-top: 4px;
+        }
+
+        .tree-banner-icon {
+          display: flex;
+          align-items: center;
+          width: 20px;
+          height: 100%;
+          padding: 0 5px;
+          cursor: pointer;
+          color: var(--el-assets-icon-color);
+
+          &:hover {
+            cursor: pointer;
+            color: #ffffff;
+            font-weight: bold;
+          }
+        }
+
+        .tree-search {
+          display: flex;
+          align-items: center;
+          position: relative;
+          margin-top: 4px;
+          transition: .25s;
+          overflow: hidden;
+
+          .tree-input {
+            opacity: 0;
+            width: 0;
+            line-height: 20px;
+            background-color: var(--el-assets-bg-color);
+            border: none;
+            outline: none;
+            border-radius: 10px;
+            color: var(--el-menu-text-color);
+            transition: all .5s ease-in-out;
+          }
+
+          &.active {
+            .fa-search {
+              position: absolute;
+              left: 5px;
+            }
+
+            .tree-input {
+              opacity: 1;
+              display: flex;
+              align-items: center;
+              width: 130px;
+              padding-left: 30px;
+            }
+          }
+        }
+      }
+
+
+      .rotate {
+        transform: rotate(-90deg);
+      }
+
+      .show {
+        display: none;
+      }
+    }
+
+    .tree-type-content {
+      position: relative;
+      padding: 5px 10px;
+      min-height: 40px;
+      overflow-x: auto;
+      height: calc(100% - 31px);
+      background-color: var(--el-assets-extend-bg-color);
+
+      .tree-type-loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        min-height: 100%;
+        background: rgba(0, 0, 0, .1);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+
+      .ztree {
+        height: 100%;
+        background-color: var(--el-assets-extend-bg-color);
+      }
+    }
+  }
 }
 
 .tree-refresh .fa {
@@ -18,10 +172,6 @@
   font: normal normal normal 14px/1 FontAwesome !important;
 }
 
-.ztree {
-  height: 100%;
-  background-color: inherit;
-}
 
 .view-menu {
   background: #000;
@@ -117,155 +267,10 @@ tr:hover {
   padding: 0 6px;
 }
 
-.tree-type-banner {
-  position: relative;
-  height: 31px;
-  display: flex;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 31px;
-  padding: 0 11px;
-  background-color: #3a3333;
-  border-bottom: solid 1px #2f2a2a;
-  border-right: rgba(58, 51, 51, 0.5) 1px solid;
-
-  .tree-icon-rotate {
-    height: 30px;
-    padding: 6px 0;
-    font-size: 16px;
-    color: white;
-  }
-
-  .rotate {
-    transform: rotate(-90deg);
-  }
-
-  .show {
-    display: none;
-  }
-}
-
-.tree-banner-left {
-  display: inline-block;
-  cursor: pointer;
-  flex: 1;
-}
-
-.tree-type-banner-label {
-  padding: 9px 8px;
-  color: white;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.tree-type-content {
-  position: relative;
-  padding: 5px 10px;
-  min-height: 40px;
-  overflow-x: auto;
-  height: calc(100% - 31px);
-}
-
-.tree-type-loading {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
-  background: rgba(0, 0, 0, .1);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.tree-banner-icon {
-  padding: 0 0 0 5px;
-  color: rgb(204, 204, 204);
-  width: 20px;
-  line-height: 30px;
-  &.fa-square-o {
-    font-weight: bold;
-    padding: 0 0 0 6px;
-  }
-}
-
-.tree-banner-icon:hover {
-  cursor: pointer;
-  color: white;
-}
-
-.tree-banner-icon-zone {
-  line-height: 30px;
-  position: absolute;
-  right: 6px;
-}
-
 .open-tree {
   flex: 1;
 }
 
-.tree-type {
-  transition: all .3s;
-}
-
 .expand-tree {
   height: calc(100% - 31px);
-}
-
-.tree-type .tree-search {
-  position: relative;
-  top: 1px;
-  width: 20px;
-  height: 20px;
-  display: inline-block;
-  border-radius: 12px;
-  vertical-align: sub;
-  transition: .25s;
-  overflow: hidden;
-
-  .fa-search {
-    padding-top: 1px;
-  }
-}
-
-.tree-type .tree-search .tree-banner-icon {
-  position: absolute;
-  top: 8px;
-  left: 6px;
-  width: 6px;
-  height: 6px;
-  border-radius: 12px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-}
-
-.tree-type .tree-search.active, .tree-search.active {
-  width: 160px;
-  background: #1e1b1b;
-}
-
-.tree-type .tree-search.active:hover {
-  border-radius: 12px;
-}
-
-.tree-type .tree-search input {
-  position: relative;
-  left: 19px;
-  width: 135px;
-  height: 100%;
-  background-color: transparent;
-  color: #f0f0f1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border: none;
-  outline: none;
-}
-
-.tree-banner-icon-zone .disabled {
-  pointer-events: none;
-  opacity: 0.6;
 }

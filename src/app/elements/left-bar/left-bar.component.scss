@@ -2,6 +2,80 @@
   height: 100%;
   width: 100%;
   overflow: auto;
+
+  .organization {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 31px;
+    line-height: 31px;
+    //padding: 0 15px 0 5px;
+    color: var(--el-header-text-color);
+    border-bottom: 1px solid var(--primary-color);
+    background-color: var(--el-menu-org-bg-color);
+
+    &:hover {
+      cursor: pointer;
+    }
+  }
+
+  .my-assets {
+    height: calc(100vh - 60px);
+    color: var(--el-menu-text-color);
+
+    &.has-org {
+      height: calc(100vh - 90px) !important;
+    }
+
+    .overflow {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    .ngx-scroll-overlay {
+      overflow: auto; // for FF
+    }
+  }
+
+  .footer-version {
+    display: flex;
+    align-items: center;
+    line-height: 30px;
+    font-size: 9pt;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    border-top: 1px solid var(--el-border-color-x);
+    background-color: var(--el-header-tab-item-bg-color);
+    color: var(--el-header-nav-text-color);
+
+    p {
+      display: flex;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+      font-size: 13px;
+    }
+
+    .menu-active {
+      display: flex;
+      align-items: center;
+      height: 100%;
+      padding: 0 10px 0 20px;
+      cursor: pointer;
+      transition: all .2s;
+
+      &:hover {
+        color: var(--el-icon-hover-color);
+      }
+
+      .icon-active {
+        transform: rotate(180deg);
+        margin-right: 12px;
+      }
+    }
+  }
 }
 
 label {
@@ -10,83 +84,4 @@ label {
 
 .fa.fa-undefined:before {
   content: "\f26c";
-}
-
-.overflow {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  float: left;
-  position: inherit;
-  background: #2f2a2a;
-  color: #d6cbcb;
-}
-
-.footer-version {
-  background: #2f2a2a;
-  font-size: 9pt;
-  left: 0;
-  width: 100%;
-  line-height: 30px;
-  padding: 0 20px 0 0;
-  border-top: 1px solid #948b8b;
-  bottom: 0;
-  height: 30px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  .menu-active {
-    display: inline-block;
-    height: 100%;
-    padding-left: 20px;
-    padding-right: 10px;
-    color: white;
-    cursor: pointer;
-    transition: all .2s;
-    &:hover {
-      color: #d6cbcb;
-    }
-  }
-  .icon-active {
-    transform: rotate(180deg);
-    margin-right: 12px;
-  }
-}
-
-.footer-version > p {
-  display: inline-block;
-  height: 8px;
-  font-size: 13px;
-  padding-bottom: 2px;
-  color: #d6cbcb;
-  margin: 0;
-}
-
-.ngx-scroll-overlay {
-  overflow: auto; // for FF
-}
-
-.organization {
-  height: 31px;
-  background-color: #3a3333;
-  padding: 0 16px 0 5px;
-  line-height: 31px;
-  color: white;
-  border-bottom: 1px solid var(--primary-color);
-}
-
-.organization:hover {
-  cursor: pointer;
-}
-
-.organization-text {
-  font-weight: bold;
-}
-
-.my-assets {
-  height: calc(100vh - 60px);
-}
-
-.my-assets.has-org {
-  height: calc(100vh - 90px);
 }
