@@ -41,6 +41,7 @@
           color: var(--el-header-dropdown-disable-text-color) !important;
 
           &:hover {
+            background-color: var(--el-header-nav-select-bg-color) !important;
             cursor: not-allowed !important;
           }
         }

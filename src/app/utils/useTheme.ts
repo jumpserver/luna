@@ -1,37 +1,37 @@
-import { Theme } from '@src/sass/theme/interface';
-import { headerTheme } from '@src/sass/theme/header';
-import { mainTheme } from '@src/sass/theme/main';
-import { menuTheme } from '@src/sass/theme/menu';
+import {Theme} from '@src/sass/theme/interface';
+import {headerTheme} from '@src/sass/theme/header';
+import {mainTheme} from '@src/sass/theme/main';
+import {menuTheme} from '@src/sass/theme/menu';
 
 export const useTheme = () => {
-  // 后续若有拓展可在此基础上进行，例如在 Luna 的基础上切换主体颜色等
-  // 现阶段可通过手动切换函数中的 type 来查看样式效果
-  const setMenuTheme = () => {
-    const type: Theme.ThemeType = 'darkBlue';
+  // 获取并设置主题类型
+  const ThemeType = localStorage.getItem('ThemeType') || 'default';
+  const html = document.documentElement as HTMLElement;
 
-    // todo)) 从localStorage中获取主题类型
-
-    const theme = menuTheme[type];
-    for (const [key, value] of Object.entries(theme)) {
-      document.documentElement.style.setProperty(key, value);
-    }
+  // 通用设置主题的方法
+  const applyTheme = (theme: Record<string, string>) => {
+    Object.entries(theme).forEach(([key, value]) => {
+      html.style.setProperty(key, value);
+    });
   };
-  const setMainTheme = () => {
-    const type: Theme.ThemeType = 'darkBlue';
 
-    const theme = mainTheme[type];
-    for (const [key, value] of Object.entries(theme)) {
-      document.documentElement.style.setProperty(key, value);
+  // 切换主题方法
+  const switchTheme = () => {
+    if (ThemeType === 'darkBlue') {
+      html.setAttribute('class', 'darkBlue');
+    } else {
+      html.setAttribute('class', '');
     }
-  };
-  const setHeaderTheme = () => {
-    const type: Theme.ThemeType = 'darkBlue';
 
-    const theme = headerTheme[type];
-    for (const [key, value] of Object.entries(theme)) {
-      document.documentElement.style.setProperty(key, value);
-    }
+    setMenuTheme();
+    setMainTheme();
+    setHeaderTheme();
   };
+
+  // 初始化并设置菜单、主体和头部主题
+  const setMenuTheme = () => applyTheme(menuTheme[ThemeType]);
+  const setMainTheme = () => applyTheme(mainTheme[ThemeType]);
+  const setHeaderTheme = () => applyTheme(headerTheme[ThemeType]);
 
   const initTheme = () => {
     setMenuTheme();
@@ -43,6 +43,8 @@ export const useTheme = () => {
     initTheme,
     setMenuTheme,
     setMainTheme,
-    setHeaderTheme
+    setHeaderTheme,
+    switchTheme
   };
 };
+

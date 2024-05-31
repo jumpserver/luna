@@ -9,13 +9,32 @@
     justify-content: center;
     height: 31px;
     line-height: 31px;
-    padding: 0 15px 0 5px;
+    //padding: 0 15px 0 5px;
     color: var(--el-header-text-color);
     border-bottom: 1px solid var(--primary-color);
-    background-color: var(--el-header-tab-item-bg-color);
+    background-color: var(--el-menu-org-bg-color);
 
     &:hover {
       cursor: pointer;
+    }
+  }
+
+  .my-assets {
+    height: calc(100vh - 60px);
+    color: var(--el-menu-text-color);
+
+    &.has-org {
+      height: calc(100vh - 90px) !important;
+    }
+
+    .overflow {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    .ngx-scroll-overlay {
+      overflow: auto; // for FF
     }
   }
 
@@ -65,29 +84,4 @@ label {
 
 .fa.fa-undefined:before {
   content: "\f26c";
-}
-
-.overflow {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  float: left;
-  position: inherit;
-  background: #2f2a2a;
-  color: #d6cbcb;
-}
-
-
-.ngx-scroll-overlay {
-  overflow: auto; // for FF
-}
-
-
-
-.my-assets {
-  height: calc(100vh - 60px);
-}
-
-.my-assets.has-org {
-  height: calc(100vh - 90px);
 }

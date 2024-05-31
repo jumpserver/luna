@@ -6,6 +6,7 @@ import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {Nav, View} from '@app/model';
 import {I18nService} from '@app/services/i18n';
+import {useTheme} from '@app/utils/useTheme';
 
 @Component({
   selector: 'elements-nav',
@@ -195,6 +196,28 @@ export class ElementNavComponent implements OnInit {
         id: 'Tabs',
         name: 'Tabs',
         children: []
+      },
+      {
+        id: 'Theme',
+        name: 'Theme',
+        children: [
+          {
+            id: 'Default',
+            click: () => {
+              localStorage.setItem('ThemeType', 'default');
+              useTheme().switchTheme();
+            },
+            name: 'Default'
+          },
+          {
+            id: 'DarkBlue',
+            click: () => {
+              localStorage.setItem('ThemeType', 'darkBlue');
+              useTheme().switchTheme();
+            },
+            name: 'DarkBlue'
+          }
+        ]
       },
       {
         id: 'Help',

@@ -45,7 +45,7 @@ app-root {
 
 body ::-webkit-scrollbar-track {
   -webkit-box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
-  background-color: #272323;
+  background-color: var(--el-scroll-bar-track-bg-color);
   border-radius: 6px;
 }
 
@@ -68,7 +68,7 @@ body ::-webkit-scrollbar-corner {
 }
 
 body ::-webkit-scrollbar-thumb {
-  background-color: #494141;
+  background-color: var(--el-scroll-bar-thumb-bg-color);
   border-radius: 6px;
 }
 
