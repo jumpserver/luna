@@ -6,7 +6,7 @@
   left: $left;
   margin-left: 0;
   z-index: 999;
-  background-color: var(--el-header-nav-bg-color);
+  background-color: var(--el-header-nav-select-bg-color);
 }
 
 // dropdown 下 li 标签的通用样式
@@ -38,7 +38,7 @@
 }
 
 @mixin DropdownHover {
-  background-color: var(--el-header-nav-select-bg-color);
+  background-color: var(--el-header-tab-bg-color);
 
   .dropdown-content {
     display: flex;

@@ -35,8 +35,7 @@ export class ElementNavComponent implements OnInit {
   get viewListSorted() {
     const viewList = [];
     this.viewIds.forEach((id, index) => {
-      const view = this.viewList.find(i => i.id === id);
-      viewList[index] = view;
+      viewList[index] = this.viewList.find(i => i.id === id);
     });
     return viewList;
   }

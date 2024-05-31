@@ -5,31 +5,37 @@
   height: 30px;
 
 
-  ::ng-deep .mat-select .mat-select-trigger {
-    display: flex;
-    align-items: center;
+  ::ng-deep .mat-select {
+    position: relative;
+    padding: 0 15px;
 
-    .mat-select-value {
+    .mat-select-trigger {
       display: flex;
       align-items: center;
-      padding-left: 10px;
-      max-width: calc(100% - 30px);
-      color: var(--el-menu-text-color);
 
-      .ng-star-inserted {
-        font-size: 13px;
-      }
-    }
-
-    .mat-select-arrow-wrapper {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 30px;
-      height: 30px;
-
-      .mat-select-arrow {
+      .mat-select-value {
+        display: flex;
+        align-items: center;
+        max-width: calc(100% - 30px);
         color: var(--el-menu-text-color);
+
+        .ng-star-inserted {
+          font-size: 13px;
+        }
+      }
+
+      .mat-select-arrow-wrapper {
+        position: absolute;
+        right: -10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 30px;
+        height: 30px;
+
+        .mat-select-arrow {
+          color: var(--el-menu-text-color);
+        }
       }
     }
   }

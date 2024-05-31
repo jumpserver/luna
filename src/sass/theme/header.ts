@@ -7,9 +7,11 @@ export const headerTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     // 头部导航字体颜色
     '--el-header-nav-text-color': '#EFEFF0',
     // 头部导航下拉菜单背景
-    '--el-header-nav-select-bg-color': '#2E2828',
+    '--el-header-nav-select-bg-color': '#000000',
+    // 头部 tab select 背景
+    '--el-header-tab-bg-color': '#2d2828',
     // 头部导航下拉菜单 hover 背景
-    '--el-header-nav-select-hover-bg-color': '#484242',
+    '--el-header-nav-select-hover-bg-color': 'rgba(53, 54, 51, .7)',
     // 头部 tab item 背景
     '--el-header-tab-item-bg-color': '#3B3333',
     // 头部 tab icon 颜色

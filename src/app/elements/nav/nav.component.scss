@@ -23,13 +23,23 @@
       }
 
       .dropdown-content {
+        padding: 5px 0;
         @include GeneralDropdown(null, 0);
 
         li {
           @include GeneralDropdownLi;
 
+          .active {
+            display: flex;
+            width: 100%;
+          }
+
           a {
             @include GeneralDropdownLia;
+          }
+
+          &.disconnected {
+            background-color: var(--el-header-dropdown-disable-text-color);
           }
         }
       }
@@ -57,11 +67,6 @@
     display: flex;
     align-items: center;
   }
-}
-
-
-.nav ul li.disconnected {
-  background-color: darkgray;
 }
 
 .flag {
