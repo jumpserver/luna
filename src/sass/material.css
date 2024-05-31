@@ -561,7 +561,8 @@ input.mat-input-element {
   top: 0;
   left: 0;
   height: 100%;
-  width: 100%
+  width: 100%;
+  font-size: 13px;
 }
 
 .cdk-overlay-container {

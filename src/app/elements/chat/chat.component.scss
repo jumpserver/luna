@@ -23,7 +23,7 @@
   transition: transform .25s cubic-bezier(.7, .3, .1, 1);
   box-shadow: 0 0 8px 4px #00000014;
   transform: translate(100%);
-  z-index: 120;
+  z-index: 1000;
   opacity: 0.95;
 }
 
@@ -33,7 +33,7 @@
   right: 1px;
   cursor: pointer;
   pointer-events: auto;
-  z-index: 9999;
+  z-index: 999;
   display: flex;
   flex-direction: column; /* 垂直方向排列子元素 */
   align-items: flex-end; /* 右对齐子元素 */
@@ -118,6 +118,7 @@
     list-style-type: none;
     transition: all 0.3s ease;
     transform: translateY(100%);
+    z-index: 1000;
 
     .setting-item {
       width: 28px;
