@@ -12,7 +12,8 @@
     *ngIf="store.showLeftBar"
     [size]="settingLayoutSize.leftWidth"
     class="left-side"
-    id="left-side" order="0"
+    id="left-side"
+    order="0"
   >
     <div class="layout">
       <div [ngClass]="{'menu-active':showSubMenu}" class="menu-icon">
@@ -45,6 +46,7 @@
     #rightArea
     [size]="settingLayoutSize.rightWidth"
     class="content"
+    id="right-side"
     order="1"
   >
     <div>

@@ -143,7 +143,6 @@ export class PageMainComponent implements OnInit {
     }
   }
 
-
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any) {
     this._http.deleteUserSession().subscribe();

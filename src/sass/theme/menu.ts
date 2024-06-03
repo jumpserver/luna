@@ -27,7 +27,11 @@ export const menuTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     // 滚动条的滚动块背景
     '--el-scroll-bar-thumb-bg-color': '#605959',
     // 滚动条轨道背景
-    '--el-scroll-bar-track-bg-color': '#2A2525'
+    '--el-scroll-bar-track-bg-color': '#2A2525',
+    // rMenu 背景
+    '--el-rMenu-bg-color': '#000000',
+    // rMenu 项 hover 背景
+    '--el-rMenu-hover-bg-color': '#463e3e'
   },
   darkBlue: {
     // 侧边栏背景
@@ -55,6 +59,10 @@ export const menuTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     // 滚动条的滚动块背景
     '--el-scroll-bar-thumb-bg-color': '#3B3F45',
     // 滚动条轨道背景
-    '--el-scroll-bar-track-bg-color': '#2A2D32'
+    '--el-scroll-bar-track-bg-color': '#2A2D32',
+    // rMenu 背景
+    '--el-rMenu-bg-color': '#2F3238',
+    // rMenu 项 hover 背景
+    '--el-rMenu-hover-bg-color': '#41464D'
   }
 };

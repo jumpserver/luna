@@ -32,6 +32,8 @@ export const headerTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     '--el-header-nav-text-color': '#EFEFF0',
     // 头部导航下拉菜单背景
     '--el-header-nav-select-bg-color': '#2F3238',
+    // 头部 tab select 背景
+    '--el-header-tab-bg-color': '#41464D',
     // 头部导航下拉菜单 hover 背景
     '--el-header-nav-select-hover-bg-color': '#41464D',
     // 头部 tab item 背景

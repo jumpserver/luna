@@ -1,3 +1,16 @@
+@mixin overflowText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin flex($align: null, $justify: null)  {
+  display: flex;
+  justify-content: $justify;
+  align-items: $align;
+  @content;
+}
+
 .tree-container {
   display: flex;
   flex-direction: column;
@@ -22,14 +35,13 @@
       background-color: var(--el-assets-fold-item-bg-color);
 
       .tree-banner-left {
-        display: flex;
-        align-items: center;
         cursor: pointer;
         flex: 1;
+        @include flex(center);
+        @include overflowText;
 
         .tree-icon-rotate {
-          display: flex;
-          align-items: center;
+          @include flex(center);
           height: 30px;
           padding-top: 3px;
           padding-right: 3px;
@@ -42,12 +54,12 @@
           padding-top: 2px;
           font-size: 13px;
           cursor: pointer;
+          @include overflowText;
         }
       }
 
       .tree-banner-icon-zone {
-        display: flex;
-        align-items: center;
+        @include flex(center);
 
         // todo)) 未找到对应的
         .disabled {
@@ -71,8 +83,7 @@
         }
 
         .tree-banner-icon {
-          display: flex;
-          align-items: center;
+          @include flex(center);
           width: 20px;
           height: 100%;
           padding: 0 5px;
@@ -87,8 +98,7 @@
         }
 
         .tree-search {
-          display: flex;
-          align-items: center;
+          @include flex(center);
           position: relative;
           transition: .25s;
           overflow: hidden;
@@ -112,9 +122,8 @@
             }
 
             .tree-input {
+              @include flex(center);
               opacity: 1;
-              display: flex;
-              align-items: center;
               width: 130px;
               padding-left: 30px;
             }
@@ -148,9 +157,7 @@
         height: 100%;
         min-height: 100%;
         background: rgba(0, 0, 0, .1);
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        @include flex(center, center);
       }
 
 
@@ -158,6 +165,10 @@
         height: 100%;
         background-color: var(--el-assets-extend-bg-color);
       }
+    }
+
+    &.expand-tree {
+      height: calc(100% - 31px);
     }
   }
 }
@@ -176,23 +187,42 @@
   font: normal normal normal 14px/1 FontAwesome !important;
 }
 
-
 .view-menu {
-  background: #000;
-  border: none;
-  -webkit-border-radius: 2px;
-  -moz-border-radius: 2px;
-  border-radius: 2px;
-  margin: 0;
-  box-shadow: 0 3px 6px 0px rgba(0, 0, 0, 0.16);
   position: absolute;
-  opacity: 1;
+  margin: 0;
   padding: 6px 0;
-  z-index: 1000;
-  -moz-user-select: none;
-  -webkit-user-select: none;
-  -ms-user-select: none;
+  opacity: 1;
   user-select: none;
+  border: none;
+  border-radius: 2px;
+  -webkit-border-radius: 2px;
+  -webkit-user-select: none;
+  -moz-border-radius: 2px;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  background-color: var(--el-rMenu-bg-color);
+  box-shadow: 0 3px 6px 0 rgba(0, 0, 0, 0.16);
+  z-index: 1000;
+
+  tr {
+    margin: 0;
+  }
+
+  td {
+    display: block;
+    padding: 0 15px;
+    text-decoration: none;
+    min-width: 150px;
+    width: auto;
+    opacity: 1;
+    white-space: nowrap;
+    line-height: 24px;
+    text-shadow: none;
+    -webkit-border-radius: 0;
+    -moz-border-radius: 0;
+    border-radius: 0;
+    cursor: pointer;
+  }
 }
 
 .view-menu, .view-menu * {
@@ -207,30 +237,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.view-menu tr {
-  margin: 0;
-}
-
 .view-menu__item {
   cursor: pointer;
   padding: 0 6px;
 }
 
-.view-menu td {
-  display: block;
-  padding: 0 15px;
-  text-decoration: none;
-  min-width: 150px;
-  width: auto;
-  opacity: 1;
-  white-space: nowrap;
-  line-height: 24px;
-  text-shadow: none;
-  -webkit-border-radius: 0;
-  -moz-border-radius: 0;
-  border-radius: 0;
-  cursor: pointer;
-}
 
 .view-menu__icon {
   padding-right: 5px;
@@ -260,7 +271,7 @@ tr {
 }
 
 tr:hover {
-  background-color: #463e3e;
+  background-color: var(--el-rMenu-hover-bg-color);
 }
 
 .view-menu table {
@@ -275,6 +286,3 @@ tr:hover {
   flex: 1;
 }
 
-.expand-tree {
-  height: calc(100% - 31px);
-}
