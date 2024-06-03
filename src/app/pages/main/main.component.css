@@ -99,6 +99,7 @@ as-split.as-vertical ::ng-deep .as-split-gutter-icon {
 
 .layout {
   position: relative;
+  background-color: var(--el-assets-extend-bg-color);
 }
 
 .menu-icon {
@@ -150,6 +151,16 @@ as-split.as-vertical ::ng-deep .as-split-gutter-icon {
   width: 100%;
 }
 
+@media screen and (max-width: 992px) {
+  #left-side {
+    flex: 0 0 0 0 !important;
+  }
+
+  #right-side {
+    flex: 0 0 0 100% !important;
+  }
+}
+
 @media screen and (max-width: 768px) {
   #left-side {
     min-width: 0 !important;
@@ -161,6 +172,7 @@ as-split.as-vertical ::ng-deep .as-split-gutter-icon {
   }
 
   ::ng-deep as-split .as-split-gutter {
+
     display: none !important;
   }
 
