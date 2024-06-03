@@ -97,6 +97,10 @@ export class ElementAssetTreeComponent implements OnInit {
         title: 'title'
       }
     },
+    check: {
+      enable: false,
+      chkboxType: { 'Y': 'ps', 'N': 'ps' }
+    },
   };
   pos = {left: '100px', top: '200px'};
   isShowRMenu = false;
@@ -146,20 +150,20 @@ export class ElementAssetTreeComponent implements OnInit {
         'hide': checkedLeafs.length === 0 || !treeChecked,
         'click': this.onMenuConnectChecked.bind(this)
       },
-      {
-        'id': 'connect',
-        'name': 'Connect',
-        'fa': 'fa-terminal',
-        'hide': cnode.isParent && !this.isK8s,
-        'click': this.onMenuConnect.bind(this)
-      },
-      {
-        'id': 'new-connection',
-        'name': 'Open in new window',
-        'fa': 'fa-external-link',
-        'hide': this.isK8s || cnode.isParent,
-        'click': this.onMenuConnectNewTab.bind(this)
-      },
+      // {
+      //   'id': 'connect',
+      //   'name': 'Connect',
+      //   'fa': 'fa-terminal',
+      //   'hide': cnode.isParent && !this.isK8s,
+      //   'click': this.onMenuConnect.bind(this)
+      // },
+      // {
+      //   'id': 'new-connection',
+      //   'name': 'Open in new window',
+      //   'fa': 'fa-external-link',
+      //   'hide': this.isK8s || cnode.isParent,
+      //   'click': this.onMenuConnectNewTab.bind(this)
+      // },
       {
         'id': 'split-connect',
         'name': 'Split connect',
@@ -214,6 +218,13 @@ export class ElementAssetTreeComponent implements OnInit {
         'fa': 'fa-star',
         'hide': !this.isAssetFavorite() || this.isK8s || cnode.isParent,
         'click': this.onMenuFavorite.bind(this)
+      },
+      {
+        'id': 'batch-select',
+        'name': 'Batch Select',
+        'fa': 'fa-check-square',
+        'hide': false,
+        'click': this.onBatchSelect.bind(this)
       }
     ];
   }
@@ -242,6 +253,21 @@ export class ElementAssetTreeComponent implements OnInit {
       this.initAssetTree().then();
       this.initTypeTree().then();
     }
+  }
+
+  onBatchSelect() {
+    const tree = this.rightClickSelectNode.ztree;
+    const currentChecked = tree.setting.check.enable;
+
+    this.rightClickSelectNode.checked = !this.rightClickSelectNode.checked;
+
+    if (currentChecked) {
+      tree.checkAllNodes(false);
+    }
+    setTimeout(() => {
+      tree.setting.check.enable = !currentChecked;
+      tree.refresh();
+    });
   }
 
   onNodeClick(event, treeId, treeNode, clickFlag) {
