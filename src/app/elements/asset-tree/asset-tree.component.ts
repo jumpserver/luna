@@ -255,11 +255,28 @@ export class ElementAssetTreeComponent implements OnInit {
     }
   }
 
+  checkHasParent(node) {
+    const prNode = node.getParentNode();
+    if (prNode !== null) {
+      prNode.checked = !prNode.checked;
+      this.checkHasParent(prNode);
+    }
+  }
+
   onBatchSelect() {
+    const parentNode = this.rightClickSelectNode;
     const tree = this.rightClickSelectNode.ztree;
     const currentChecked = tree.setting.check.enable;
 
-    this.rightClickSelectNode.checked = !this.rightClickSelectNode.checked;
+    // 但 select 是展开子项的 item 时的联动
+    if (parentNode.children && parentNode.children.length > 0) {
+      const childrenNode = parentNode.children;
+      return childrenNode.forEach(item => item.checked = !item.checked);
+    }
+
+    // 当所选 item 为深层次的子节点时
+    this.checkHasParent(parentNode);
+    parentNode.checked = !parentNode.checked;
 
     if (currentChecked) {
       tree.checkAllNodes(false);
