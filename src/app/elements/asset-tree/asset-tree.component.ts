@@ -113,6 +113,7 @@ export class ElementAssetTreeComponent implements OnInit {
   currentOrgID = '';
   trees: Array<Tree> = [];
   assetTreeChecked = [];
+  isBatchSelectActive: boolean = false;
 
   constructor(private _appSvc: AppService,
               private _treeFilterSvc: TreeFilterService,
@@ -150,20 +151,20 @@ export class ElementAssetTreeComponent implements OnInit {
         'hide': checkedLeafs.length === 0 || !treeChecked,
         'click': this.onMenuConnectChecked.bind(this)
       },
-      // {
-      //   'id': 'connect',
-      //   'name': 'Connect',
-      //   'fa': 'fa-terminal',
-      //   'hide': cnode.isParent && !this.isK8s,
-      //   'click': this.onMenuConnect.bind(this)
-      // },
-      // {
-      //   'id': 'new-connection',
-      //   'name': 'Open in new window',
-      //   'fa': 'fa-external-link',
-      //   'hide': this.isK8s || cnode.isParent,
-      //   'click': this.onMenuConnectNewTab.bind(this)
-      // },
+      {
+        'id': 'connect',
+        'name': 'Connect',
+        'fa': 'fa-terminal',
+        'hide': cnode.isParent && !this.isK8s,
+        'click': this.onMenuConnect.bind(this)
+      },
+      {
+        'id': 'new-connection',
+        'name': 'Open in new window',
+        'fa': 'fa-external-link',
+        'hide': this.isBatchSelectActive || this.isK8s || cnode.isParent,
+        'click': this.onMenuConnectNewTab.bind(this)
+      },
       {
         'id': 'split-connect',
         'name': 'Split connect',
@@ -209,14 +210,14 @@ export class ElementAssetTreeComponent implements OnInit {
         'id': 'favorite',
         'name': 'Favorite',
         'fa': 'fa-star-o',
-        'hide': this.isAssetFavorite() || this.isK8s || cnode.isParent,
+        'hide': this.isBatchSelectActive || this.isAssetFavorite() || this.isK8s || cnode.isParent,
         'click': this.onMenuFavorite.bind(this)
       },
       {
         'id': 'disfavor',
         'name': 'Disfavor',
         'fa': 'fa-star',
-        'hide': !this.isAssetFavorite() || this.isK8s || cnode.isParent,
+        'hide': this.isBatchSelectActive || !this.isAssetFavorite() || this.isK8s || cnode.isParent,
         'click': this.onMenuFavorite.bind(this)
       },
       {
@@ -264,11 +265,12 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   onBatchSelect() {
+    this.isBatchSelectActive = !this.isBatchSelectActive;
     const parentNode = this.rightClickSelectNode;
     const tree = this.rightClickSelectNode.ztree;
     const currentChecked = tree.setting.check.enable;
 
-    // 但 select 是展开子项的 item 时的联动
+    // 当 select 是展开子项的 item 时的联动
     if (parentNode.children && parentNode.children.length > 0) {
       const childrenNode = parentNode.children;
       return childrenNode.forEach(item => item.checked = !item.checked);
