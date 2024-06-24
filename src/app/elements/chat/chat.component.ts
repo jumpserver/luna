@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit} from '@angular/core';
+import {Component, ElementRef, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {SettingService, ViewService} from '@app/services';
 import {View} from '@app/model';
 
@@ -9,10 +9,14 @@ import {View} from '@app/model';
 })
 
 export class ElementChatComponent implements OnInit, OnDestroy {
-  isShow = true;
+  @ViewChild('contentWindow', {static: false}) iframeRef: ElementRef;
+  showBtn = true;
   element: any;
   iframeURL: string;
   currentView: View;
+  chatAIShown = false;
+  chatAIInited = false;
+  isDragging = false;
 
   constructor(
     public viewSrv: ViewService,
@@ -28,6 +32,10 @@ export class ElementChatComponent implements OnInit, OnDestroy {
     );
   }
 
+  get hasChatContainer() {
+    return;
+  }
+
   get subViews() {
     return this.currentView.hasOwnProperty('subViews') ? this.currentView.subViews : [];
   }
@@ -36,13 +44,22 @@ export class ElementChatComponent implements OnInit, OnDestroy {
     return this._settingSvc.globalSetting.CHAT_AI_ENABLED;
   }
 
+
   ngOnInit() {
     this.viewSrv.currentView$.subscribe((state: View) => {
       this.currentView = state;
     });
-    this.iframeURL = '/ui/#/chat/chat-ai';
-    this.init();
+    this.iframeURL = '/ui/#/chat/chat-ai?from=luna';
+    this.addDragBtn();
     this.insertToBody();
+    window.addEventListener('message', (event) => {
+      // 确认消息的来源是你信任的域
+      if (event.data === 'close-chat-panel') {
+        this.chatAIShown = false;
+        this.showBtn = !this.showBtn;
+        console.log('Received message from iframe:', event.data);
+      }
+    });
   }
 
   ngOnDestroy() {
@@ -50,31 +67,39 @@ export class ElementChatComponent implements OnInit, OnDestroy {
     this.viewSrv.currentView$.unsubscribe();
   }
 
-  init() {
+  showChatAI() {
+    if (this.isDragging) {
+      return;
+    }
+    if (!this.chatAIInited) {
+      this.chatAIInited = true;
+    } else {
+      this.iframeRef.nativeElement.contentWindow.postMessage('show-chat-panel');
+    }
+    this.chatAIShown = true;
+    this.showBtn = false;
+  }
+
+  addDragBtn() {
     const clientOffset: any = {};
     const dragBox = document.getElementById('dragBox');
-    const dragButton = document.querySelector('.drag-button');
+    const dragButton = document.querySelector('.robot-button');
     dragBox.addEventListener('mousedown', (event) => {
       event.stopPropagation();
-      const offsetX = dragBox.getBoundingClientRect().left;
       const offsetY = dragBox.getBoundingClientRect().top;
-      const innerX = event.clientX - offsetX;
       const innerY = event.clientY - offsetY;
 
-      clientOffset.clientX = event.clientX;
       clientOffset.clientY = event.clientY;
+      const vm = this;
       document.onmousemove = function (ev: any) {
-        dragBox.style.left = ev.clientX - innerX + 'px';
+        vm.isDragging = true;
         dragBox.style.top = ev.clientY - innerY + 'px';
         const dragDivTop = window.innerHeight - dragBox.getBoundingClientRect().height;
-        const dragDivLeft = window.innerWidth - dragBox.getBoundingClientRect().width;
-        dragBox.style.left = dragDivLeft + 'px';
-        dragBox.style.left = '-48px';
-        if (dragBox.getBoundingClientRect().top <= 0) {
-          dragBox.style.top = '0px';
+        if (dragBox.getBoundingClientRect().top <= 10) {
+          dragBox.style.top = '10px';
         }
         if (dragBox.getBoundingClientRect().top >= dragDivTop) {
-          dragBox.style.top = dragDivTop + 'px';
+          dragBox.style.top = dragDivTop - 100 + 'px';
         }
         ev.preventDefault();
         ev.stopPropagation();
@@ -85,15 +110,16 @@ export class ElementChatComponent implements OnInit, OnDestroy {
       };
     }, false);
     dragBox.addEventListener('mouseup', (event) => {
-      const clientX = event.clientX;
       const clientY = event.clientY;
       if (
-        this.isDifferenceWithinThreshold(clientX, clientOffset.clientX)
-        && this.isDifferenceWithinThreshold(clientY, clientOffset.clientY)
+        this.isDifferenceWithinThreshold(clientY, clientOffset.clientY)
         && (event.target === dragButton || this.isDescendant(event.target, dragButton))
       ) {
-        this.isShow = !this.isShow;
+        this.showBtn = !this.showBtn;
       }
+      setTimeout(() => {
+        this.isDragging = false;
+      }, 500);
     });
   }
 
@@ -111,7 +137,9 @@ export class ElementChatComponent implements OnInit, OnDestroy {
   }
 
   onSettingOpenDrawer() {
-    this.currentView.iframeElement.postMessage({name: 'OPEN'}, '*');
+    if (this.currentView.iframeElement) {
+      this.currentView.iframeElement.postMessage({name: 'OPEN'}, '*');
+    }
   }
 
   isDifferenceWithinThreshold(num1, num2, threshold = 5) {
@@ -120,6 +148,6 @@ export class ElementChatComponent implements OnInit, OnDestroy {
   }
 
   toggle() {
-    this.isShow = !this.isShow;
+    this.showBtn = !this.showBtn;
   }
 }

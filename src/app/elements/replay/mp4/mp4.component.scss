@@ -16,7 +16,7 @@
   border-right: #000 solid 2px;
 }
 
-#display .item{
+#display .item {
   height: 80px;
   border-bottom: #000 solid 1px;
   color: #f0f0f0;
@@ -59,7 +59,8 @@ video {
   bottom: 0;
 }
 
-#screen * {}
+#screen * {
+}
 
 #player .notification-container {
   position: absolute;
@@ -147,7 +148,7 @@ video {
 
 #player .controls #position,
 #player .controls #duration {
-  font-family: monospace;
+  font-family: 'open sans', 'Monaco', 'Consolas', 'monospace';
 }
 
 #player .controls #duration {

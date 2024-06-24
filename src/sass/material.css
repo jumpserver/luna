@@ -121,7 +121,7 @@
 .mat-h5, .mat-typography h5 {
   font-size: 11.62px;
   font-weight: 400;
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   line-height: 20px;
   margin: 0 0 12px
 }
@@ -129,7 +129,7 @@
 .mat-h6, .mat-typography h6 {
   font-size: 9.38px;
   font-weight: 400;
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   line-height: 20px;
   margin: 0 0 12px
 }
@@ -174,17 +174,17 @@
 }
 
 .mat-button, .mat-fab, .mat-icon-button, .mat-mini-fab, .mat-raised-button {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   font-size: 14px;
   font-weight: 500
 }
 
 .mat-button-toggle {
-  font-family: Roboto, "Helvetica Neue", sans-serif
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif
 }
 
 .mat-card {
-  font-family: Roboto, "Helvetica Neue", sans-serif
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif
 }
 
 .mat-card-title {
@@ -197,7 +197,7 @@
 }
 
 .mat-checkbox {
-  font-family: Roboto, "Helvetica Neue", sans-serif
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif
 }
 
 .mat-checkbox-layout .mat-checkbox-label {
@@ -214,7 +214,7 @@
 }
 
 .mat-table {
-  font-family: Roboto, "Helvetica Neue", sans-serif
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif
 }
 
 .mat-header-cell {
@@ -227,7 +227,7 @@
 }
 
 .mat-calendar {
-  font-family: Roboto, "Helvetica Neue", sans-serif
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif
 }
 
 .mat-calendar-body {
@@ -249,7 +249,7 @@
 }
 
 .mat-expansion-panel-header {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   font-size: 15px;
   font-weight: 400
 }
@@ -259,7 +259,7 @@
 }
 
 .mat-form-field {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   font-size: inherit;
   font-weight: 400;
   line-height: 1.125
@@ -347,22 +347,22 @@ input.mat-input-element {
 }
 
 .mat-menu-item {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   font-size: 16px;
   font-weight: 400
 }
 
 .mat-paginator, .mat-paginator-page-size .mat-select-trigger {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   font-size: 12px
 }
 
 .mat-radio-button {
-  font-family: Roboto, "Helvetica Neue", sans-serif
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif
 }
 
 .mat-select {
-  font-family: Roboto, "Helvetica Neue", sans-serif
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif
 }
 
 .mat-select-trigger {
@@ -374,13 +374,13 @@ input.mat-input-element {
 }
 
 .mat-slider-thumb-label-text {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   font-size: 12px;
   font-weight: 500
 }
 
 .mat-stepper-horizontal, .mat-stepper-vertical {
-  font-family: Roboto, "Helvetica Neue", sans-serif
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif
 }
 
 .mat-step-label {
@@ -394,11 +394,11 @@ input.mat-input-element {
 }
 
 .mat-tab-group {
-  font-family: Roboto, "Helvetica Neue", sans-serif
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif
 }
 
 .mat-tab-label, .mat-tab-link {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   font-size: 14px;
   font-weight: 500
 }
@@ -409,18 +409,18 @@ input.mat-input-element {
 }
 
 .mat-tooltip {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   font-size: 10px;
   padding-top: 6px;
   padding-bottom: 6px
 }
 
 .mat-list-item {
-  font-family: Roboto, "Helvetica Neue", sans-serif
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif
 }
 
 .mat-list-option {
-  font-family: Roboto, "Helvetica Neue", sans-serif
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif
 }
 
 .mat-list .mat-list-item, .mat-nav-list .mat-list-item, .mat-selection-list .mat-list-item {
@@ -456,7 +456,7 @@ input.mat-input-element {
 }
 
 .mat-list .mat-subheader, .mat-nav-list .mat-subheader, .mat-selection-list .mat-subheader {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   font-size: 14px;
   font-weight: 500
 }
@@ -494,13 +494,13 @@ input.mat-input-element {
 }
 
 .mat-list[dense] .mat-subheader, .mat-nav-list[dense] .mat-subheader, .mat-selection-list[dense] .mat-subheader {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   font-size: 12px;
   font-weight: 500
 }
 
 .mat-option {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   font-size: 16px
 }
 
@@ -509,7 +509,7 @@ input.mat-input-element {
 }
 
 .mat-simple-snackbar {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: "open sans", Roboto, "Helvetica Neue", sans-serif;
   font-size: 14px
 }
 
@@ -561,7 +561,8 @@ input.mat-input-element {
   top: 0;
   left: 0;
   height: 100%;
-  width: 100%
+  width: 100%;
+  font-size: 13px;
 }
 
 .cdk-overlay-container {

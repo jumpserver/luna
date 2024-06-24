@@ -11,6 +11,14 @@ body {
   background-color: rgb(243, 243, 244);
   overflow-y: hidden;
   margin: 0;
+  font-family: "open sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+ul,
+li {
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }
 
 *, ::after, ::before {
@@ -27,52 +35,8 @@ app-root {
   left: 0;
   z-index: -1;
   font-size: 14px !important;
-  font-family: 'Monaco', 'Consolas', 'monospace' !important;
   color: white;
 }
-
-/*.terminal {*/
-  /*font-family: 'Monaco', 'Consolas', 'monospace' !important;*/
-  /*font-size: 13px;*/
-  /*white-space: nowrap;*/
-  /*!*display: inline-block;*!*/
-  /*!*background-color: #1f1b1b;*!*/
-/*}*/
-
-/*.terminal div {*/
-  /*user-select: text;*/
-/*}*/
-
-/*.terminal .xterm-rows {*/
-  /*background-color: #1f1b1b;*/
-  /*!*margin: 15px;*!*/
-/*}*/
-
-/*.xterm-rows {*/
-  /*padding: 15px;*/
-/*}*/
-
-/*.xterm .composition-view {*/
-    /*!* TODO: Composition position got messed up somewhere *!*/
-    /*background: #1f1b1b !important;*/
-    /*color: #FFF;*/
-    /*display: none;*/
-    /*position: absolute;*/
-    /*white-space: nowrap;*/
-    /*z-index: 1;*/
-/*}*/
-
-/*.xterm .xterm-viewport {*/
-    /*!* On OS X this is required in order for the scroll bar to appear fully opaque *!*/
-    /*background: #1f1b1b !important;*/
-    /*overflow-y: scroll;*/
-    /*cursor: default;*/
-    /*position: absolute;*/
-    /*right: 0;*/
-    /*left: 0;*/
-    /*top: 0;*/
-    /*bottom: 0;*/
-/*}*/
 
 .terminal .xterm-viewport {
   background-color: #1f1b1b;
@@ -81,13 +45,22 @@ app-root {
 
 body ::-webkit-scrollbar-track {
   -webkit-box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
-  background-color: #272323;
+  background-color: var(--el-scroll-bar-track-bg-color);
+  border-radius: 6px;
+}
+
+.cdk-overlay-pane ::-webkit-scrollbar-track {
+  background-color: #fffcfc;
+}
+
+.cdk-overlay-pane ::-webkit-scrollbar-thumb {
+  background-color: #c6c6c6;
   border-radius: 6px;
 }
 
 body ::-webkit-scrollbar {
   width: 8px;
-  height:8px;
+  height: 8px;
 }
 
 body ::-webkit-scrollbar-corner {
@@ -95,12 +68,12 @@ body ::-webkit-scrollbar-corner {
 }
 
 body ::-webkit-scrollbar-thumb {
-  background-color: #494141;
+  background-color: var(--el-scroll-bar-thumb-bg-color);
   border-radius: 6px;
 }
 
 .ztree *:not(.fa) {
-  font-family: 'Monaco', 'Consolas', 'monospace' !important;
+  font-family: 'Open Sans', 'Monaco', 'Consolas', 'monospace' !important;
   font-size: 13px !important;
 }
 
@@ -111,22 +84,23 @@ body ::-webkit-scrollbar-thumb {
 }
 
 /*.scroll-botton {*/
-  /*font-size: 20px;*/
-  /*float: left;*/
-  /*height: 30px;*/
-  /*overflow: hidden;*/
-  /*background-color: #3a3333;*/
-  /*color: white*/
+/*font-size: 20px;*/
+/*float: left;*/
+/*height: 30px;*/
+/*overflow: hidden;*/
+/*background-color: #3a3333;*/
+/*color: white*/
 /*}*/
 
 .ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default {
-    background: #F9F9F9;
-    border: none !important;
-    line-height: 15px;
-    font-weight: bold;
-    color: #676a6c;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  background: #F9F9F9;
+  border: none !important;
+  line-height: 15px;
+  font-weight: bold;
+  color: #676a6c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
+
 .ui-state-active, .ui-widget-content .ui-state-active, .ui-widget-header .ui-state-active {
   color: white;
   font-weight: bolder;
@@ -163,7 +137,7 @@ body ::-webkit-scrollbar-thumb {
 
 
 #player .asciinema-player .asciinema-terminal {
-   height: calc(100vh - 60px)!important;
+  height: calc(100vh - 60px) !important;
 }
 
 .my-tooltip {

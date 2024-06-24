@@ -408,7 +408,6 @@ export class ElementAssetTreeComponent implements OnInit {
       url = config.asyncUrl;
     }
     setting = _.merge(setting, config.setting || {});
-    console.log('Is load tree async: ', this.isLoadTreeAsync, url);
     return {setting, url};
   }
 

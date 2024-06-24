@@ -1,0 +1,86 @@
+@import '../../../sass/mixins/index.scss';
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  background-color: var(--el-header-nav-bg-color);
+  color: var(--el-header-nav-text-color);
+  font-weight: 400;
+
+  .nav-main {
+    display: flex;
+    align-items: center;
+
+    li,
+    .dropdown {
+      position: relative;
+      display: flex;
+      align-items: center;
+      height: 30px;
+
+      a {
+        @include GeneralDropdownA;
+      }
+
+      .dropdown-content {
+        padding: 5px 0;
+        @include GeneralDropdown(null, 0);
+
+        li {
+          @include GeneralDropdownLi;
+
+          .active {
+            display: flex;
+            width: 100%;
+          }
+
+          a {
+            @include GeneralDropdownLia;
+          }
+
+          &.disconnected {
+            background-color: var(--el-header-dropdown-disable-text-color);
+          }
+        }
+      }
+
+      .disabled {
+        a {
+          text-decoration: none;
+          background-color: var(--el-header-nav-select-bg-color);
+          color: var(--el-header-dropdown-disable-text-color) !important;
+
+          &:hover {
+            background-color: var(--el-header-nav-select-bg-color) !important;
+            cursor: not-allowed !important;
+          }
+        }
+      }
+
+      &:hover {
+        @include DropdownHover;
+      }
+    }
+  }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+  }
+}
+
+.flag {
+  display: none;
+  color: var(--primary-color);
+  padding-right: 5px;
+
+}
+
+.active .flag {
+  display: inline;
+}
+
+.elements-organization {
+  flex: 1;
+  text-align: right;
+}

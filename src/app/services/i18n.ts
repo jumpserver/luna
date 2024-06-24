@@ -36,7 +36,7 @@ export class I18nService {
   public initialLang() {
     // 语言初始化(若未设置语言, 则取浏览器语言)
     const currentLanguage = this.getLangCode();
-    this._translate.setDefaultLang('zh');
+    this._translate.setDefaultLang('en');
     this._translate.use(currentLanguage);
 
     this._logger.debug('Lang is: ', currentLanguage);
@@ -67,7 +67,6 @@ export class I18nService {
     } else {
       useLang = 'zh-hans';
     }
-    this._cookie.set('django_language', useLang, 30, '/');
-    localStorage.setItem('lang', useLang);
+    this._cookie.set('django_language', useLang, 365, '/');
   }
 }

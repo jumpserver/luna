@@ -6,11 +6,12 @@ import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {Nav, View} from '@app/model';
 import {I18nService} from '@app/services/i18n';
+import {useTheme} from '@app/utils/useTheme';
 
 @Component({
   selector: 'elements-nav',
   templateUrl: './nav.component.html',
-  styleUrls: ['./nav.component.css'],
+  styleUrls: ['./nav.component.scss'],
 })
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
@@ -34,8 +35,7 @@ export class ElementNavComponent implements OnInit {
   get viewListSorted() {
     const viewList = [];
     this.viewIds.forEach((id, index) => {
-      const view = this.viewList.find(i => i.id === id);
-      viewList[index] = view;
+      viewList[index] = this.viewList.find(i => i.id === id);
     });
     return viewList;
   }
@@ -69,21 +69,22 @@ export class ElementNavComponent implements OnInit {
         id: 'View',
         name: 'View',
         children: [
+          // 此处直接使用空串的话，在渲染时会被 nif 判断为 false 从而只有禁用效果而不展示文字内容
           {
             id: 'SplitVertical',
-            href: '',
+            href: '/',
             name: 'Split vertical',
             disable: true
           },
           {
             id: 'CommandBar',
-            href: '',
+            href: '/',
             name: 'Command bar',
             disable: true
           },
           {
             id: 'ShareSession',
-            href: '',
+            href: '/',
             name: 'Share session (read/write)',
             disable: true
           },
@@ -187,6 +188,33 @@ export class ElementNavComponent implements OnInit {
                   data: {type: 'cli', name: 'GUI'}
                 });
             }
+          }
+        ]
+      },
+      {
+        id: 'Tabs',
+        name: 'Tabs',
+        children: []
+      },
+      {
+        id: 'Theme',
+        name: 'Theme',
+        children: [
+          {
+            id: 'Default',
+            click: () => {
+              localStorage.setItem('ThemeType', 'default');
+              useTheme().switchTheme();
+            },
+            name: 'Default'
+          },
+          {
+            id: 'DarkBlue',
+            click: () => {
+              localStorage.setItem('ThemeType', 'darkBlue');
+              useTheme().switchTheme();
+            },
+            name: 'DarkBlue'
           }
         ]
       },
