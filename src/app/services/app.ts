@@ -89,7 +89,12 @@ export class AppService {
         status = 'ok';
         User.logined = true;
       } catch (err) {
-        status = 'error';
+        status = 'error'; // 默认错误状态
+        if (err.status === 401) {
+          status = 'unauthorized';
+        } else if (err.status === 400) {
+          status = 'badrequest';
+        }
       } finally {
         localStorage.setItem('CheckProfile', status + ' ' + new Date().getTime());
       }
@@ -101,22 +106,32 @@ export class AppService {
 
   async doCheckProfile(recheck = false) {
     const status = await this.getProfileStatus(recheck);
-    if (status === 'ok') {
-      this.newLoginHasOpen = false;
-      // 重新检查时，如果好了，重启 check
-      if (recheck) {
-        this.intervalCheckLogin().then();
-      }
-    } else {
+    if (['unauthorized', 'badrequest', 'error'].includes(status)) {
       clearInterval(this.checkIntervalId);
-      const ok = confirm(this._i18n.instant('LoginExpireMsg'));
+      const ok = confirm(this._i18n.instant(this.getErrorMsg(status)));
       if (ok && !this.newLoginHasOpen) {
         window.open('/core/auth/login/?next=/luna/', '_self');
         this.newLoginHasOpen = true;
       }
-      setTimeout(() => this.doCheckProfile(true), 5 * 1000);
+      setTimeout(() => this.doCheckProfile(true), 5000);
+      this._logger.debug(`${status}, redirect to login`);
+    } else if (status === 'ok') {
+      this.newLoginHasOpen = false;
+      if (recheck) {
+        this.intervalCheckLogin().then();
+      }
+      this._logger.debug('Profile is ok');
     }
     return status;
+  }
+
+  getErrorMsg(status: string) {
+    const messages = {
+      'unauthorized': 'LoginExpireMsg',
+      'badrequest': 'Bad request. The server does not understand the syntax of the request',
+      'error': 'The server encountered an error while trying to process the request'
+    };
+    return messages[status];
   }
 
   async intervalCheckLogin(second = null, clear: boolean = false) {
