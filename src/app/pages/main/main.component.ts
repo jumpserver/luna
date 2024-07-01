@@ -1,5 +1,5 @@
 import {Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/core';
-import {DataStore, DEFAULT_ORG_ID, SYSTEM_ORG_ID, User} from '@app/globals';
+import {DataStore, User} from '@app/globals';
 import {IOutputData, SplitComponent} from 'angular-split';
 import {HttpService, LogService, SettingService, ViewService} from '@app/services';
 import * as _ from 'lodash';
@@ -8,7 +8,7 @@ import {environment} from '@src/environments/environment';
 @Component({
   selector: 'pages-main',
   templateUrl: './main.component.html',
-  styleUrls: ['./main.component.css'],
+  styleUrls: ['./main.component.scss'],
 })
 export class PageMainComponent implements OnInit {
   @ViewChild(SplitComponent, {read: false, static: false}) split: SplitComponent;
