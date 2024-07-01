@@ -1,4 +1,4 @@
-import { Theme } from './interface/index';
+import {Theme} from './interface/index';
 
 export const headerTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
   default: {

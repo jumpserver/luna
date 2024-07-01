@@ -1,5 +1,5 @@
 $-border-x: #5a5959;
-$-border-y: #1f1b1b;
+$-border-y: var(--el-main-bg-color);
 
 #content {
   height: calc(100% - 30px);
@@ -95,7 +95,7 @@ $-border-y: #1f1b1b;
       }
     }
 
-    .batch-input {
+    &.batch-input {
       height: calc(100% - 30px);
     }
   }
@@ -123,7 +123,7 @@ $-border-y: #1f1b1b;
   border-left: solid 1px $-border-y;
   width: 100%;
   padding: 0 2px 0 0;
-  background: #2f2a2a;
+  background: var(--el-main-bg-color);
 
   &:focus-visible {
     outline: none;
@@ -133,6 +133,7 @@ $-border-y: #1f1b1b;
     margin: auto 7px;
     color: #ffffff;
     cursor: pointer;
+
     &:hover {
       color: #d6cbcb;
     }
@@ -160,7 +161,7 @@ $-border-y: #1f1b1b;
   width: 100%;
   line-height: 29px;
   border: none;
-  background: #2f2a2a;
+  background: var(--el-main-bg-color);
   color: #ffffff;
 
   &:focus-visible {
@@ -172,18 +173,22 @@ $-border-y: #1f1b1b;
   .send-range {
     width: auto;
     margin-left: 5px;
+
     &::ng-deep .mat-select-trigger {
       min-width: 70px;
       line-height: 29px;
+
       .mat-select-value {
         max-width: none;
         color: #ffffff;
       }
+
       .mat-select-arrow {
         color: #ffffff;
       }
     }
   }
+
   .command-list {
     width: 100%;
     height: 100%;
@@ -192,6 +197,7 @@ $-border-y: #1f1b1b;
     overflow: hidden;
     white-space: nowrap;
     transition: all .3s;
+
     .command-box {
       display: inline-block;
       max-width: 260px;
@@ -207,24 +213,29 @@ $-border-y: #1f1b1b;
       user-select: none;
       color: #d6cbcb;
       background-color: #463e3e;
+
       &:hover {
         color: #ffffff;
       }
+
       &:active {
         color: #ccc8c8;
       }
     }
   }
+
   .not-command {
     flex: 1;
     line-height: 29px;
     padding-left: 6px;
     color: #717171;
   }
+
   .action-left,
   .action-right {
     line-height: 29px;
   }
+
   .action-right {
     display: flex;
   }
@@ -232,25 +243,29 @@ $-border-y: #1f1b1b;
 
 ::ng-deep .command-panel.mat-select-panel {
   margin-top: 27px;
-  min-width: 100%!important;
-  border-radius: initial!important;
+  min-width: 100% !important;
+  border-radius: initial !important;
   background: black;
   padding: 10px 0 !important;
 }
+
 ::ng-deep .command-panel .mat-option {
   color: #f0f0f1;
+
   &:hover {
-    background-color: rgba(53, 54, 51, 0.7)!important;
+    background-color: rgba(53, 54, 51, 0.7) !important;
   }
 }
+
 ::ng-deep .command-panel .mat-option.mat-active {
   color: #f0f0f1;
   font-weight: bold;
-  background-color: rgba(53, 54, 51, 0.8)!important;
+  background-color: rgba(53, 54, 51, 0.8) !important;
 }
+
 .command-option {
-  line-height: 2.2em!important;
-  height: 2.2em!important;
+  line-height: 2.2em !important;
+  height: 2.2em !important;
 }
 
 .view-menu {
@@ -323,8 +338,9 @@ $-border-y: #1f1b1b;
   -moz-border-radius: 0;
   border-radius: 0;
   margin: 2px 0;
+
   &:hover {
-    background-color: rgba(53,54,51, 0.7);
+    background-color: rgba(53, 54, 51, 0.7);
   }
 }
 

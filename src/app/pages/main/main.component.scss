@@ -3,13 +3,13 @@
   width: 100%;
   padding: 0;
   margin: 0;
-  background-color: #1f1b1b;
+  background-color: var(--el-main-bg-color);
 }
 
 .content {
   height: 100%;
   padding: 0;
-  background-color: #1f1b1b;
+  background-color: var(--el-main-bg-color);
   margin: 0;
   width: 100%;
   position: initial;
