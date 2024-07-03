@@ -8,7 +8,7 @@
     <li *ngFor="let v of navs" [ngClass]="{'dropdown': v.children}">
       <a>{{ v.name|translate }}</a>
       <ul *ngIf="v.id === 'Tabs' " [ngClass]="{'dropdown-content': true}">
-        <li *ngIf="viewListSorted.length === 0"><a>{{ 'No tabs' | translate }}</a></li>
+        <li *ngIf="viewListSorted.length === 0"><a>{{ 'NoTabs' | translate }}</a></li>
         <ng-container *ngIf="viewListSorted.length > 0">
           <ng-container *ngFor="let v of viewListSorted">
             <li *ngIf="v.name!=null" [ngClass]="{'disconnected':!v.connected, 'hidden': v.closed != false}">
