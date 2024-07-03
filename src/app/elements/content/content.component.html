@@ -29,7 +29,7 @@
     </div>
   </div>
   <div [ngClass]="{'batch-input': showBatchCommand  }" id="winContainer">
-    <div #contentPlaceholder [style.display]="viewList.length < 1 ? 'block' : 'none'" class="content-placeholder">
+    <div #contentPlaceholder [style.display]="viewList.length < 1 ? 'flex' : 'none'" class="content-placeholder">
       <div class="system-tips">
         <div class="tips">
           <ul>
@@ -48,15 +48,15 @@
     <elements-content-window *ngFor="let view of viewList" [view]="view"></elements-content-window>
   </div>
   <div *ngIf="showBatchCommand" id="batchCommandDiv">
-    <mat-select [(ngModel)]="sendCommandRange" class="send-range"  panelClass="command-panel">
-      <mat-option *ngFor="let option of sendCommandOptions" class="command-option" [value]="option.value">
+    <mat-select [(ngModel)]="sendCommandRange" class="send-range" panelClass="command-panel">
+      <mat-option *ngFor="let option of sendCommandOptions" [value]="option.value" class="command-option">
         {{ option.label | translate }}
       </mat-option>
     </mat-select>
     <i
+      (click)="switchCommand()"
       class="fa fa-exchange"
       matTooltip="{{ (isShowInputCommand ? 'Switch to quick command' : 'Switch to input command') | translate }}"
-      (click)="switchCommand()"
     ></i>
     <div *ngIf="isShowInputCommand; else quickCommand" class="input-box">
       <input
@@ -69,37 +69,37 @@
         type="text"
       >
       <i
+        (click)="onSendCommand()"
         class="fa fa-save"
         matTooltip="{{ 'Save command' | translate }}"
-        (click)="onSendCommand()"
       ></i>
     </div>
     <ng-template #quickCommand>
       <span class="action-left">
         <i
+          (click)="onScrollLeft()"
           *ngIf="quickCommands.length > 0"
           class="fa fa-angle-double-left"
-          (click)="onScrollLeft()"
         ></i>
       </span>
-      <ul class="command-list" *ngIf="quickCommands.length > 0; else empty">
+      <ul *ngIf="quickCommands.length > 0; else empty" class="command-list">
         <li
-          class="command-box"
-          *ngFor="let command of quickCommands"
-          matTooltipPosition="above"
-          [matTooltip]="command.args"
           (click)="sendQuickCommand(command)"
+          *ngFor="let command of quickCommands"
+          [matTooltip]="command.args"
+          class="command-box"
+          matTooltipPosition="above"
         >
           <i [ngClass]="command.module.value + '_ico_docu'" class="view_icon"></i>
           <span style="vertical-align: middle;">{{ command.name }}</span>
         </li>
       </ul>
       <span class="action-right">
-        <i *ngIf="quickCommands.length > 0" class="fa fa-angle-double-right" (click)="onScrollRight()"></i>
-        <i class="fa fa-refresh" (click)="quickCommandsFilter()"></i>
+        <i (click)="onScrollRight()" *ngIf="quickCommands.length > 0" class="fa fa-angle-double-right"></i>
+        <i (click)="quickCommandsFilter()" class="fa fa-refresh"></i>
       </span>
       <ng-template #empty>
-        <div class="not-command">{{'Not quick command'| translate }}</div>
+        <div class="not-command">{{ 'Not quick command'| translate }}</div>
       </ng-template>
     </ng-template>
   </div>

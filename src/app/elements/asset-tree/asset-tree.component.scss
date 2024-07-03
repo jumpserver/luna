@@ -1,7 +1,176 @@
+@mixin overflowText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin flex($align: null, $justify: null)  {
+  display: flex;
+  justify-content: $justify;
+  align-items: $align;
+  @content;
+}
+
 .tree-container {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background-color: var(--el-assets-bg-color);
+
+  .tree-type {
+    transition: all .3s;
+
+    .tree-type-banner {
+      position: relative;
+      display: flex;
+      height: 31px;
+      line-height: 31px;
+      padding-right: 11px;
+      padding-left: 15px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--el-menu-text-color);
+      border-bottom: 1px solid var(--el-assets-border-bottom-color);
+      border-right: 1px solid var(--el-assets-border-right-color);
+      background-color: var(--el-assets-fold-item-bg-color);
+
+      .tree-banner-left {
+        cursor: pointer;
+        flex: 1;
+        @include flex(center);
+        @include overflowText;
+
+        .tree-icon-rotate {
+          @include flex(center);
+          height: 30px;
+          padding-top: 3px;
+          padding-right: 3px;
+          font-size: 16px;
+          color: var(--el-menu-text-color);
+        }
+
+        .tree-type-banner-label {
+          margin-left: 7px;
+          padding-top: 2px;
+          font-size: 13px;
+          cursor: pointer;
+          @include overflowText;
+        }
+      }
+
+      .tree-banner-icon-zone {
+        @include flex(center);
+
+        // todo)) 未找到对应的
+        .disabled {
+          pointer-events: none;
+          opacity: 0.6;
+        }
+
+        // 刷新按钮不需要 padding-right
+        .fa-refresh.tree-banner-icon {
+          padding-right: 0;
+          margin-top: 2px;
+        }
+
+        // 批量操作按钮需要给一些 padding-top 使得看上去垂直居中
+        .fa-square-o.tree-banner-icon {
+          padding-top: 2px;
+        }
+
+        .fa-check-square.tree-banner-icon {
+          padding-top: 2px;
+        }
+
+        .tree-banner-icon {
+          @include flex(center);
+          width: 20px;
+          height: 100%;
+          padding: 0 5px;
+          cursor: pointer;
+          color: var(--el-assets-icon-color);
+
+          &:hover {
+            cursor: pointer;
+            color: #ffffff;
+            font-weight: bold;
+          }
+        }
+
+        .tree-search {
+          @include flex(center);
+          position: relative;
+          transition: .25s;
+          overflow: hidden;
+
+          .tree-input {
+            opacity: 0;
+            width: 0;
+            line-height: 20px;
+            background-color: var(--el-assets-bg-color);
+            border: none;
+            outline: none;
+            border-radius: 10px;
+            color: var(--el-menu-text-color);
+            transition: all .4s ease-in-out;
+          }
+
+          &.active {
+            .fa-search {
+              position: absolute;
+              left: 5px;
+            }
+
+            .tree-input {
+              @include flex(center);
+              opacity: 1;
+              width: 130px;
+              padding-left: 30px;
+            }
+          }
+        }
+      }
+
+
+      .rotate {
+        transform: rotate(-90deg);
+      }
+
+      .show {
+        display: none;
+      }
+    }
+
+    .tree-type-content {
+      position: relative;
+      padding: 5px 10px;
+      min-height: 40px;
+      overflow-x: auto;
+      height: calc(100% - 31px);
+      background-color: var(--el-assets-extend-bg-color);
+
+      .tree-type-loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        min-height: 100%;
+        background: rgba(0, 0, 0, .1);
+        @include flex(center, center);
+      }
+
+
+      .ztree {
+        height: 100%;
+        background-color: var(--el-assets-extend-bg-color);
+      }
+    }
+
+    &.expand-tree {
+      height: calc(100% - 31px);
+    }
+  }
 }
 
 .tree-refresh .fa {
@@ -18,27 +187,42 @@
   font: normal normal normal 14px/1 FontAwesome !important;
 }
 
-.ztree {
-  height: 100%;
-  background-color: inherit;
-}
-
 .view-menu {
-  background: #000;
-  border: none;
-  -webkit-border-radius: 2px;
-  -moz-border-radius: 2px;
-  border-radius: 2px;
-  margin: 0;
-  box-shadow: 0 3px 6px 0px rgba(0, 0, 0, 0.16);
   position: absolute;
-  opacity: 1;
+  margin: 0;
   padding: 6px 0;
-  z-index: 1000;
-  -moz-user-select: none;
-  -webkit-user-select: none;
-  -ms-user-select: none;
+  opacity: 1;
   user-select: none;
+  border: none;
+  border-radius: 2px;
+  -webkit-border-radius: 2px;
+  -webkit-user-select: none;
+  -moz-border-radius: 2px;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  background-color: var(--el-rMenu-bg-color);
+  box-shadow: 0 3px 6px 0 rgba(0, 0, 0, 0.16);
+  z-index: 1000;
+
+  tr {
+    margin: 0;
+  }
+
+  td {
+    display: block;
+    padding: 0 15px;
+    text-decoration: none;
+    min-width: 150px;
+    width: auto;
+    opacity: 1;
+    white-space: nowrap;
+    line-height: 24px;
+    text-shadow: none;
+    -webkit-border-radius: 0;
+    -moz-border-radius: 0;
+    border-radius: 0;
+    cursor: pointer;
+  }
 }
 
 .view-menu, .view-menu * {
@@ -53,30 +237,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.view-menu tr {
-  margin: 0;
-}
-
 .view-menu__item {
   cursor: pointer;
   padding: 0 6px;
 }
 
-.view-menu td {
-  display: block;
-  padding: 0 15px;
-  text-decoration: none;
-  min-width: 150px;
-  width: auto;
-  opacity: 1;
-  white-space: nowrap;
-  line-height: 24px;
-  text-shadow: none;
-  -webkit-border-radius: 0;
-  -moz-border-radius: 0;
-  border-radius: 0;
-  cursor: pointer;
-}
 
 .view-menu__icon {
   padding-right: 5px;
@@ -106,7 +271,7 @@ tr {
 }
 
 tr:hover {
-  background-color: #463e3e;
+  background-color: var(--el-rMenu-hover-bg-color);
 }
 
 .view-menu table {
@@ -117,155 +282,7 @@ tr:hover {
   padding: 0 6px;
 }
 
-.tree-type-banner {
-  position: relative;
-  height: 31px;
-  display: flex;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 31px;
-  padding: 0 11px;
-  background-color: #3a3333;
-  border-bottom: solid 1px #2f2a2a;
-  border-right: rgba(58, 51, 51, 0.5) 1px solid;
-
-  .tree-icon-rotate {
-    height: 30px;
-    padding: 6px 0;
-    font-size: 16px;
-    color: white;
-  }
-
-  .rotate {
-    transform: rotate(-90deg);
-  }
-
-  .show {
-    display: none;
-  }
-}
-
-.tree-banner-left {
-  display: inline-block;
-  cursor: pointer;
-  flex: 1;
-}
-
-.tree-type-banner-label {
-  padding: 9px 8px;
-  color: white;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.tree-type-content {
-  position: relative;
-  padding: 5px 10px;
-  min-height: 40px;
-  overflow-x: auto;
-  height: calc(100% - 31px);
-}
-
-.tree-type-loading {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
-  background: rgba(0, 0, 0, .1);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.tree-banner-icon {
-  padding: 0 0 0 5px;
-  color: rgb(204, 204, 204);
-  width: 20px;
-  line-height: 30px;
-  &.fa-square-o {
-    font-weight: bold;
-    padding: 0 0 0 6px;
-  }
-}
-
-.tree-banner-icon:hover {
-  cursor: pointer;
-  color: white;
-}
-
-.tree-banner-icon-zone {
-  line-height: 30px;
-  position: absolute;
-  right: 6px;
-}
-
 .open-tree {
   flex: 1;
 }
 
-.tree-type {
-  transition: all .3s;
-}
-
-.expand-tree {
-  height: calc(100% - 31px);
-}
-
-.tree-type .tree-search {
-  position: relative;
-  top: 1px;
-  width: 20px;
-  height: 20px;
-  display: inline-block;
-  border-radius: 12px;
-  vertical-align: sub;
-  transition: .25s;
-  overflow: hidden;
-
-  .fa-search {
-    padding-top: 1px;
-  }
-}
-
-.tree-type .tree-search .tree-banner-icon {
-  position: absolute;
-  top: 8px;
-  left: 6px;
-  width: 6px;
-  height: 6px;
-  border-radius: 12px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-}
-
-.tree-type .tree-search.active, .tree-search.active {
-  width: 160px;
-  background: #1e1b1b;
-}
-
-.tree-type .tree-search.active:hover {
-  border-radius: 12px;
-}
-
-.tree-type .tree-search input {
-  position: relative;
-  left: 19px;
-  width: 135px;
-  height: 100%;
-  background-color: transparent;
-  color: #f0f0f1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border: none;
-  outline: none;
-}
-
-.tree-banner-icon-zone .disabled {
-  pointer-events: none;
-  opacity: 0.6;
-}

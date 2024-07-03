@@ -1,40 +1,73 @@
 .organization {
-  display: inline-block;
+  display: flex;
+  align-items: center;
   width: 100%;
   height: 30px;
-  line-height: 25px;
-  padding: 2px 6px;
-  margin-right: -12px;
-  &::ng-deep .mat-select-value {
-    color: #f0f0f1;
-  }
-  &::ng-deep .mat-select-arrow {
-    margin-right: -11px;
-    color: #f0f0f1;
-  }
-  &::ng-deep .ng-star-inserted {
-    font-size: 13px;
+
+
+  ::ng-deep .mat-select {
+    position: relative;
+    padding: 0 15px;
+
+    .mat-select-trigger {
+      display: flex;
+      align-items: center;
+
+      .mat-select-value {
+        display: flex;
+        align-items: center;
+        max-width: calc(100% - 30px);
+        color: var(--el-menu-text-color);
+
+        .ng-star-inserted {
+          font-size: 13px;
+        }
+      }
+
+      .mat-select-arrow-wrapper {
+        position: absolute;
+        right: -10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 30px;
+        height: 30px;
+
+        .mat-select-arrow {
+          color: var(--el-menu-text-color);
+        }
+      }
+    }
   }
 }
+
+// 可能会影响其他位置
+::ng-deep .cdk-overlay-pane {
+  transform: translateX(0) !important;
+}
+
 ::ng-deep .org-panel.mat-select-panel {
+  min-width: 100% !important;
   margin-top: 27px;
-  min-width: 100%!important;
-  border-radius: initial!important;
-  background: black;
   padding: 10px 0 !important;
+  border-radius: initial !important;
+  background-color: var(--el-menu-select-bg-color);
 }
+
 ::ng-deep .org-panel .mat-option {
-  color: #f0f0f1;
+  color: var(--el-menu-text-color);
+
   &:hover {
-    background-color: rgba(53, 54, 51, 0.7)!important;
+    background-color: var(--el-menu-select-hover-bg-color) ;
   }
 }
+
 ::ng-deep .org-panel .mat-option.mat-active {
-  color: #f0f0f1;
   font-weight: bold;
-  background-color: rgba(53, 54, 51, 0.8)!important;
+  background-color: var(--el-menu-select-hover-bg-color) !important;
 }
+
 .org-option {
-  line-height: 2.2em!important;
-  height: 2.2em!important;
+  line-height: 2.2em !important;
+  height: 2.2em !important;
 }

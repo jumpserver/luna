@@ -3,13 +3,13 @@
   width: 100%;
   padding: 0;
   margin: 0;
-  background-color: #1f1b1b;
+  background-color: var(--el-main-bg-color);
 }
 
 .content {
   height: 100%;
   padding: 0;
-  background-color: #1f1b1b;
+  background-color: var(--el-main-bg-color);
   /*background-color: red;*/
   margin: 0;
   width: 100%;
@@ -82,7 +82,7 @@ as-split ::ng-deep .as-split-gutter.as-dragged .as-split-gutter-icon, .ex-b as-s
 
 as-split.as-horizontal ::ng-deep .as-split-gutter-icon {
   width: 8px !important;
-  left: -1px;
+  left: -3px;
   right: 2px;
 }
 

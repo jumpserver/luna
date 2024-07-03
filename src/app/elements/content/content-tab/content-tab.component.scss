@@ -3,91 +3,69 @@
   /*padding: 15px;*/
 }
 
-li.disconnected {
-  background-color: darkgray;
-}
-
-
-li.hidden {
-  display: none;
-}
-
 li {
-  display: inline-block;
+  display: flex;
+  align-items: center;
   max-width: 200px;
-  min-width: 90px;
+  //min-width: 90px;
   height: 30px;
+  padding-left: 15px;
   position: relative;
   box-sizing: border-box;
-  background-color: #463a3a66;
-  border-right: 1px solid #6b6565c2;
+  background-color: var(--el-header-tab-item-bg-color);
+  border-right: 2px solid var(--el-border-color-y);
+  border-bottom: 2px solid transparent;
   border-radius: 2px;
-
-  .view_icon {
-    width: 12px;
-    height: 12px;
-    vertical-align: middle;
-    display: inline-block;
-  }
-
-  // 复用了 ztree 的 icon
-  .view_icon::before {
-    font-family: FontAwesome;
-    color: #ffffff;
-    display: inline-block;
-  }
 
   &.active {
     box-sizing: border-box;
     border-bottom: 2px solid var(--primary-color);
   }
 
-  span {
+  &.disconnected {
+    background-color: var(--el-main-tab-item-disconnected-bg-color);
+  }
+
+  & > span {
+    display: flex;
+    align-items: center;
+    height: 30px;
     overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
-    color: #f1f0f0;
+    font-size: 13px;
+    cursor: default;
+    color: var(--el-header-tab-icon-color);
+
+    .view_icon {
+      margin-right: 5px;
+      line-height: 30px;
+      font-style: normal;
+
+      &::before {
+        display: inline-block;
+        color: var(--el-header-tab-icon-color);
+        font-family: FontAwesome;
+      }
+    }
+  }
+
+  & a.close {
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    line-height: 30px;
     font-family: 'Roboto', sans-serif;
     font-size: 13px;
-    text-decoration: none;
-    padding-left: 12px;
-    padding-right: 18px;
-    line-height: 26px;
-    cursor: default;
-    height: 26px;
-    display: block;
-
-    i {
-      line-height: 12px;
-    }
+    color: var(--el-header-tab-icon-color);
+    cursor: pointer;
   }
 }
 
-li a.close {
-  font-family: 'Roboto', sans-serif;
-  font-size: 13px;
-  position: absolute;
-  color: gray;
-  top: 0;
-  right: 6px;
-  cursor: pointer;
-  line-height: 26px;
-  display: inline-block;
-}
-
-li.active a {
-  color: white;
-}
-
-li.active span {
-  padding-left: 12px;
-  line-height: 26px;
-  color: white;
-  height: 26px;
+li.hidden {
+  display: none;
 }
 
 li input {
-  font-family: 'Roboto', sans-serif;
   font-size: 13px;
   width: 120px;
   border: none;

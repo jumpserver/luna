@@ -1,10 +1,9 @@
-import {Component, ElementRef, EventEmitter, OnInit, OnDestroy, Output, ViewChild} from '@angular/core';
+import {Component, ElementRef, EventEmitter, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
-import {ConnectTokenService, I18nService, LogService, SettingService, ViewService, HttpService} from '@app/services';
+import {ConnectTokenService, HttpService, I18nService, LogService, SettingService, ViewService} from '@app/services';
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import {MatDialog} from '@angular/material';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
-import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
 import {fromEvent, Subscription} from 'rxjs';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
@@ -86,6 +85,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     this.handleKeyDownTabChange();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
+
   ngOnDestroy() {
     this.keyboardSubscription.unsubscribe();
   }
@@ -338,7 +338,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   }
 
   onSendCommand() {
-    if (!this.batchCommand) { return; }
+    if (!this.batchCommand) {
+      return;
+    }
 
     this._dialog.open(
       ElementCommandDialogComponent,
