@@ -73,19 +73,19 @@ export class ElementNavComponent implements OnInit {
           {
             id: 'SplitVertical',
             href: '/',
-            name: 'Split vertical',
+            name: this._i18n.instant('Split vertical'),
             disable: true
           },
           {
             id: 'CommandBar',
             href: '/',
-            name: 'Command bar',
+            name: this._i18n.instant('Command bar'),
             disable: true
           },
           {
             id: 'ShareSession',
             href: '/',
-            name: 'Share session (read/write)',
+            name: this._i18n.instant('Share session (read/write)'),
             disable: true
           },
           {
@@ -193,12 +193,12 @@ export class ElementNavComponent implements OnInit {
       },
       {
         id: 'Tabs',
-        name: 'Tabs',
+        name: this._i18n.instant('Tabs'),
         children: []
       },
       {
         id: 'Theme',
-        name: 'Theme',
+        name: this._i18n.instant('Theme'),
         children: [
           {
             id: 'Default',
@@ -206,7 +206,7 @@ export class ElementNavComponent implements OnInit {
               localStorage.setItem('ThemeType', 'default');
               useTheme().switchTheme();
             },
-            name: 'Default'
+            name: this._i18n.instant('Default')
           },
           {
             id: 'DarkBlue',
@@ -214,7 +214,7 @@ export class ElementNavComponent implements OnInit {
               localStorage.setItem('ThemeType', 'darkBlue');
               useTheme().switchTheme();
             },
-            name: 'DarkBlue'
+            name: this._i18n.instant('DarkBlue')
           }
         ]
       },
