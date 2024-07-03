@@ -73,19 +73,19 @@ export class ElementNavComponent implements OnInit {
           {
             id: 'SplitVertical',
             href: '/',
-            name: this._i18n.instant('Split vertical'),
+            name: this._i18n.instant('SplitVertical'),
             disable: true
           },
           {
             id: 'CommandBar',
             href: '/',
-            name: this._i18n.instant('Command bar'),
+            name: this._i18n.instant('CommandBar'),
             disable: true
           },
           {
             id: 'ShareSession',
             href: '/',
-            name: this._i18n.instant('Share session (read/write)'),
+            name: this._i18n.instant('ShareSession'),
             disable: true
           },
           {
