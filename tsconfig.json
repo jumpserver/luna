@@ -1,32 +1,11 @@
 {
-  "compileOnSave": false,
-  "compilerOptions": {
-    "baseUrl": "src",
-    "paths": {
-      "@src/*": [
-        "*"
-      ],
-      "@app/*": [
-        "app/*"
-      ]
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
     },
-    "allowJs": true,
-    "outDir": "./dist/out-tsc",
-    "sourceMap": true,
-    "declaration": false,
-    "moduleResolution": "node",
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "target": "es5",
-    "importHelpers": true,
-    "typeRoots": [
-      "node_modules/@types"
-    ],
-    "lib": [
-      "es2017",
-      "dom"
-    ],
-    "module": "es2015",
-    "allowSyntheticDefaultImports": true
-  }
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ]
 }

@@ -57,5 +57,3 @@ jobs:
             build/luna-${{ steps.get_version.outputs.TAG }}.tar.gz.md5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-

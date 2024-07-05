@@ -1,11 +1,23 @@
-import {enableProdMode} from '@angular/core';
-import {platformBrowserDynamic} from '@angular/platform-browser-dynamic';
+import App from './App.vue';
+import naive from 'naive-ui';
+import pinia from '@/stores';
+import i18n from '@/languages';
+import router from '@/routers';
 
-import {AppModule} from './app/app.module';
-import {environment} from './environments/environment';
+// 初始化浏览器样式
+import 'normalize.css';
+// 全局字体
+import 'vfonts/OpenSans.css';
+// 引入自定义初始化样式
+import '@/styles/reset.scss';
 
-if (environment.production) {
-  enableProdMode();
-}
+import { createApp } from 'vue';
 
-platformBrowserDynamic().bootstrapModule(AppModule);
+const app = createApp(App);
+
+app.use(i18n);
+app.use(naive);
+app.use(pinia);
+app.use(router);
+
+app.mount('#app');
