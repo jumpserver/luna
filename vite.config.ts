@@ -16,5 +16,16 @@ export default defineConfig({
     alias: {
       '@': pathResolve('src')
     }
+  },
+  server: {
+    host: '127.0.0.1',
+    port: 4200,
+    cors: true,
+    proxy: {
+      '/api': {
+        target: 'http://192.168.200.29:8080',
+        changeOrigin: true
+      }
+    }
   }
 });

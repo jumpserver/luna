@@ -1,3 +1,5 @@
+import { createApp } from 'vue';
+
 import App from './App.vue';
 import naive from 'naive-ui';
 import pinia from '@/stores';
@@ -10,8 +12,6 @@ import 'normalize.css';
 import 'vfonts/OpenSans.css';
 // 引入自定义初始化样式
 import '@/styles/reset.scss';
-
-import { createApp } from 'vue';
 
 const app = createApp(App);
 
