@@ -1,5 +1,3 @@
-import { LANG_COOKIE_NAME } from '@/config';
-
 export const getBrowserLang = (): string => {
   const browserLang = navigator.language;
   let defaultLang = '';
@@ -51,7 +49,8 @@ export const getCsrfTokenFromCookie = () => {
  * @description 获取当前系统语言
  */
 export const getCurrentLanguage = (): string => {
-  let langCode = getCookie(LANG_COOKIE_NAME);
+  // 现在就只是单独设置了这个项目的 Language，并没有与 Lina 同步
+  let langCode = JSON.parse(window.localStorage['luna-user']).language;
 
   if (!langCode) {
     langCode = navigator.language;

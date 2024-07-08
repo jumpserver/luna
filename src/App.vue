@@ -1,22 +1,22 @@
 <template>
   <n-config-provider :locale="zhCN" :date-locale="dateZhCN">
     <n-message-provider>
-      <router-view />
+      <n-spin :show="isLoading">
+        <router-view />
+      </n-spin>
     </n-message-provider>
   </n-config-provider>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { zhCN, dateZhCN } from 'naive-ui';
 import { NConfigProvider } from 'naive-ui';
-import { useUserStore } from '@/stores/modules/user.ts';
-import { useTranslations } from '@/hooks/useTranslate.ts';
-import { onMounted } from 'vue';
+import { useLoadingStore } from '@/stores/modules/loading.ts';
 
-const userStore = useUserStore();
-const { updateTranslations } = useTranslations();
+const loadingStore = useLoadingStore();
 
-onMounted(async () => {
-  await updateTranslations(userStore.language);
+const isLoading = computed(() => {
+  return loadingStore.isLoading;
 });
 </script>

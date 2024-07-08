@@ -4,9 +4,10 @@ import { getTranslation } from '@/API/modules/init';
 
 export function useTranslations() {
   const { locale, mergeLocaleMessage } = useI18n();
+
   const currentLang = ref(locale.value);
 
-  const updateTranslations = async (lang: string) => {
+  const updateTranslations = async (lang: string): Promise<void> => {
     try {
       const res = await getTranslation(lang);
 
@@ -14,6 +15,7 @@ export function useTranslations() {
       mergeLocaleMessage(lang, res);
 
       console.log(`Updated i18n messages for ${lang}:`, res);
+
       locale.value = lang;
       currentLang.value = lang;
     } catch (e) {

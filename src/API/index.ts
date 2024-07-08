@@ -7,6 +7,7 @@ import axios, {
 } from 'axios';
 import type { ResultData } from './interface';
 import { ResultEnum } from '@/enums/httpEnum.ts';
+import { useLoadingStore } from '@/stores/modules/loading.ts';
 import { useUserStore } from '@/stores/modules/user.ts';
 
 export interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -64,23 +65,32 @@ class RequestHttp {
 
     this.service.interceptors.request.use(
       (config: CustomAxiosRequestConfig) => {
+        const loadingStore = useLoadingStore();
         const userStore = useUserStore();
 
+        loadingStore.startLoading();
+
         if (config.headers) {
-          config.headers.set('X-CSRFToken', userStore.token);
+          config.headers.set('X-CSRFToken', userStore.csrfToken);
         }
         return config;
       },
       (error: AxiosError) => {
+        const loadingStore = useLoadingStore();
+        loadingStore.stopLoading();
         return Promise.reject(error);
       }
     );
 
     this.service.interceptors.response.use(
       (response: AxiosResponse) => {
+        const loadingStore = useLoadingStore();
+        loadingStore.stopLoading();
         return response.data;
       },
       (error: AxiosError) => {
+        const loadingStore = useLoadingStore();
+        loadingStore.stopLoading();
         return Promise.reject(error);
       }
     );

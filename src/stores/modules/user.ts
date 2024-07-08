@@ -34,6 +34,7 @@ export const useUserStore = defineStore({
     setLunaOrganize(org: string) {
       this.JMSLunaOra = org;
     },
+    // 设置组织
     setOrganize(org: string) {
       this.JMSOrg = org;
     }

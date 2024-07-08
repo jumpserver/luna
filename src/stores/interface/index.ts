@@ -6,3 +6,7 @@ export interface UserState {
   JMSLunaOra: string;
   userInfo: { name: string };
 }
+
+export interface UseLoading {
+  isLoading: boolean;
+}

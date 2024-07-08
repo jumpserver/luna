@@ -7,8 +7,13 @@
       v-for="(option, index) of options"
       :key="index"
     >
-      <n-dropdown trigger="hover" :options="option.children" :show-arrow="true">
-        {{ option.label }}
+      <n-dropdown
+        trigger="hover"
+        :options="option.children"
+        :show-arrow="true"
+        @select="handleSelect"
+      >
+        <n-button quaternary>{{ option.label }}</n-button>
       </n-dropdown>
     </n-flex>
   </n-flex>
@@ -17,27 +22,20 @@
 <script setup lang="ts">
 import type { IActionOptions } from '../../types/index.ts';
 
-const props = defineProps<{
+defineProps<{
   options: IActionOptions[];
 }>();
 
-console.log(props);
+const handleSelect = (...args: any) => {
+  const { click } = args[1];
+  click();
+};
 </script>
 
 <style scoped lang="scss">
-.n-flex {
-  height: 35px;
-  .action-item {
-    height: 100%;
-    cursor: pointer;
-    &:hover {
-      background-color: #1ab394;
-    }
-  }
-}
 :lang(en) {
   .action-item {
-    min-width: 100px;
+    min-width: 115px;
   }
 }
 </style>
