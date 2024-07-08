@@ -20,6 +20,16 @@ li {
   &.active {
     box-sizing: border-box;
     border-bottom: 2px solid var(--primary-color);
+
+    span {
+      color: var(--el-header-tab-icon-color);
+    }
+  }
+
+  &:hover {
+    span {
+      color: var(--el-header-tab-icon-color);
+    }
   }
 
   &.disconnected {
@@ -34,7 +44,7 @@ li {
     white-space: nowrap;
     font-size: 13px;
     cursor: default;
-    color: var(--el-header-tab-icon-color);
+    color: #cacaca;
 
     .view_icon {
       margin-right: 5px;

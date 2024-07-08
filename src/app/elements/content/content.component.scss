@@ -16,6 +16,7 @@ $-border-y: var(--el-main-bg-color);
       font-size: 20px;
       color: var(--el-header-tab-icon-color);
       background-color: var(--el-header-tab-item-bg-color);
+      cursor: pointer;
 
       .right {
         padding-left: 5px;
