@@ -164,7 +164,7 @@ export class ElementAssetTreeComponent implements OnInit {
         'id': 'split-connect',
         'name': 'Split connect',
         'fa': 'fa-columns',
-        'hide': viewList.length <= 0 || (cnode.isParent && !this.isK8s),
+        'hide': viewList.length <= 0 || cnode.isParent || cnode.meta.data.platform_type ==='k8s' || this.isK8s,
         'click': this.onMenuConnect.bind(this, true)
       },
       {
