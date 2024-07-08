@@ -9,10 +9,14 @@
 <script setup lang="ts">
 import { zhCN, dateZhCN } from 'naive-ui';
 import { NConfigProvider } from 'naive-ui';
-import { getTranslation } from './API/modules/init.ts';
+import { useUserStore } from '@/stores/modules/user.ts';
+import { useTranslations } from '@/hooks/useTranslate.ts';
 import { onMounted } from 'vue';
 
+const userStore = useUserStore();
+const { updateTranslations } = useTranslations();
+
 onMounted(async () => {
-  await getTranslation('en');
+  await updateTranslations(userStore.language);
 });
 </script>

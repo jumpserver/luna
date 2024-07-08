@@ -9,10 +9,13 @@
 
 <script setup lang="ts">
 import type { IActionOptions } from './types/index.ts';
+import { useI18n } from 'vue-i18n';
 
 import Logo from './components/Logo/index.vue';
 import ActionOptions from './components/ActionOptions/index.vue';
 
+const { t } = useI18n();
+console.log(t);
 const options: IActionOptions[] = [
   {
     key: 'FileManager',
@@ -190,11 +193,6 @@ const options: IActionOptions[] = [
 .header-left {
   .action-options {
     margin-left: 50px;
-    :deep(div) {
-      min-width: 50px;
-      text-align: center;
-      cursor: pointer;
-    }
   }
 }
 </style>

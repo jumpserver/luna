@@ -78,7 +78,7 @@ class RequestHttp {
 
     this.service.interceptors.response.use(
       (response: AxiosResponse) => {
-        return response;
+        return response.data;
       },
       (error: AxiosError) => {
         return Promise.reject(error);
