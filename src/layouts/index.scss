@@ -1,4 +1,9 @@
-.header-content {
-  color: #ffffff;
-  background-color: #1ab394;
+.custom-layout {
+  :deep(.n-layout-scroll-container) {
+    flex-direction: column !important;
+    .header-content {
+      color: #ffffff;
+      background-color: grey;
+    }
+  }
 }

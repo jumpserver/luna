@@ -48,6 +48,7 @@ export const getCsrfTokenFromCookie = () => {
 /**
  * @description 获取当前系统语言
  */
+// todo))
 export const getCurrentLanguage = (): string => {
   // 现在就只是单独设置了这个项目的 Language，并没有与 Lina 同步
   let langCode = JSON.parse(window.localStorage['luna-user']).language;
@@ -65,4 +66,29 @@ export const getCurrentLanguage = (): string => {
   } else {
     return 'zh';
   }
+};
+
+/**
+ * @description 获取查询参数
+ * @param {string} queryKey
+ */
+export function getQueryParamFromURL(queryKey: string): string | null {
+  const queryString = location.search.substring(1);
+  const queryParams = new URLSearchParams(queryString);
+
+  for (const [key, value] of queryParams.entries()) {
+    if (key === queryKey) {
+      return decodeURIComponent(value);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * @description 设置 title
+ * @param {string} title
+ */
+export const setTitle = (title: string) => {
+  document.title = title;
 };

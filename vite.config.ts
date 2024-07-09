@@ -24,7 +24,13 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://192.168.200.29:8080',
-        changeOrigin: true
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api/, ' ')
+      },
+      '/static': {
+        target: 'http://192.168.200.29:8080',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/static/, ' ')
       }
     }
   }

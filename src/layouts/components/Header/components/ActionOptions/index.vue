@@ -33,6 +33,10 @@ const handleSelect = (...args: any) => {
 </script>
 
 <style scoped lang="scss">
+.action-item .n-button {
+  height: 30px;
+  color: #ffffff;
+}
 :lang(en) {
   .action-item {
     min-width: 115px;

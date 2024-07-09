@@ -13,6 +13,7 @@ declare module 'vue' {
     NDropdown: typeof import('naive-ui')['NDropdown']
     NFlex: typeof import('naive-ui')['NFlex']
     NH2: typeof import('naive-ui')['NH2']
+    NImage: typeof import('naive-ui')['NImage']
     NLayout: typeof import('naive-ui')['NLayout']
     NLayoutContent: typeof import('naive-ui')['NLayoutContent']
     NLayoutFooter: typeof import('naive-ui')['NLayoutFooter']

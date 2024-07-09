@@ -20,6 +20,9 @@ importers:
       pinia-plugin-persistedstate:
         specifier: ^3.2.1
         version: 3.2.1(pinia@2.1.7(typescript@5.5.3)(vue@3.4.31(typescript@5.5.3)))
+      vite-project:
+        specifier: 'link:'
+        version: 'link:'
       vue:
         specifier: ^3.4.31
         version: 3.4.31(typescript@5.5.3)

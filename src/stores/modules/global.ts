@@ -1,16 +1,18 @@
 import { defineStore } from 'pinia';
-import type { UserState } from '../interface/index';
 import piniaPersistConfig from '@/stores/helper/persist';
 
-export const useUserStore = defineStore({
-  id: 'luna-user',
+import type { UserState, OpenSetting } from '../interface/index';
+
+export const useGlobalStore = defineStore({
+  id: 'luna-global',
   state: (): UserState => ({
     token: '',
     JMSOrg: '',
     language: '',
     csrfToken: '',
     JMSLunaOra: '',
-    userInfo: { name: '' }
+    userInfo: { name: '' },
+    interface: {}
   }),
   getters: {},
   actions: {
@@ -37,6 +39,10 @@ export const useUserStore = defineStore({
     // 设置组织
     setOrganize(org: string) {
       this.JMSOrg = org;
+    },
+    // 设置全局配置
+    setInterface(setting: OpenSetting) {
+      this.interface = setting;
     }
   },
   persist: piniaPersistConfig('luna-user')

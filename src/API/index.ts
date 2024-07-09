@@ -5,10 +5,13 @@ import axios, {
   InternalAxiosRequestConfig,
   AxiosResponse
 } from 'axios';
-import type { ResultData } from './interface';
 import { ResultEnum } from '@/enums/httpEnum.ts';
 import { useLoadingStore } from '@/stores/modules/loading.ts';
-import { useUserStore } from '@/stores/modules/user.ts';
+import { useGlobalStore } from '@/stores/modules/global.ts';
+import { createDiscreteApi } from 'naive-ui';
+
+import type { ResultData } from './interface';
+import { useI18n } from 'vue-i18n';
 
 export interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   loading?: boolean;
@@ -23,10 +26,12 @@ const config = {
   withCredentials: true
 };
 
-// ! 注意：下面这两个函数中 useUserStore 不能提升到全局，否则 Pinia 会在 APP 实例被挂在前调用从而报错
+const { message } = createDiscreteApi(['message']);
+
+// ! 注意：下面这两个函数中 useGlobalStore 不能提升到全局，否则 Pinia 会在 APP 实例被挂在前调用从而报错
 const setOptionsCSRFToken = (config: AxiosRequestConfig): AxiosRequestConfig => {
-  const userStore = useUserStore();
-  const csrfToken = userStore.csrfToken;
+  const globalStore = useGlobalStore();
+  const csrfToken = globalStore.csrfToken;
 
   if (!config) {
     config = {};
@@ -42,8 +47,8 @@ const setOptionsCSRFToken = (config: AxiosRequestConfig): AxiosRequestConfig => 
   return config;
 };
 const setOrgIDToRequestHeader = (config?: AxiosRequestConfig): AxiosRequestConfig => {
-  const userStore = useUserStore();
-  const orgID = userStore.JMSOrg || userStore.JMSLunaOra;
+  const globalStore = useGlobalStore();
+  const orgID = globalStore.JMSOrg || globalStore.JMSLunaOra;
 
   config = config || {};
 
@@ -66,12 +71,12 @@ class RequestHttp {
     this.service.interceptors.request.use(
       (config: CustomAxiosRequestConfig) => {
         const loadingStore = useLoadingStore();
-        const userStore = useUserStore();
+        const globalStore = useGlobalStore();
 
         loadingStore.startLoading();
 
         if (config.headers) {
-          config.headers.set('X-CSRFToken', userStore.csrfToken);
+          config.headers.set('X-CSRFToken', globalStore.csrfToken);
         }
         return config;
       },
@@ -89,8 +94,16 @@ class RequestHttp {
         return response.data;
       },
       (error: AxiosError) => {
+        const { t } = useI18n();
         const loadingStore = useLoadingStore();
         loadingStore.stopLoading();
+
+        // 请求超时 && 网络错误单独判断，没有 response
+        if (error.message.indexOf('timeout') !== -1) message.error('请求超时！请您稍后重试');
+        if (error.message.indexOf('Network Error') !== -1) message.error('网络错误！请您稍后重试');
+
+        message.error(t('ServerError'));
+
         return Promise.reject(error);
       }
     );

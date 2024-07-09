@@ -1,7 +1,7 @@
 <template>
-  <div v-if="isLoaded">
+  <div>
     <n-flex class="header-left">
-      <logo />
+      <logo :logo-image="logoImage!" />
       <n-space class="action-options">
         <action-options :options="options" />
       </n-space>
@@ -11,23 +11,25 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { ref, onMounted, reactive, watchEffect } from 'vue';
-
-import { useUserStore } from '@/stores/modules/user.ts';
+import { onMounted, reactive, watchEffect } from 'vue';
+import { useGlobalStore } from '@/stores/modules/global';
 import { useTranslations } from '@/hooks/useTranslate';
+
+import type { IActionOptions } from './types/index.ts';
 
 import Logo from './components/Logo/index.vue';
 import ActionOptions from './components/ActionOptions/index.vue';
 
-import type { IActionOptions } from './types/index.ts';
+const { t } = useI18n();
+const globalStore = useGlobalStore();
+const { updateTranslations } = useTranslations();
 
-// 创建加载状态变量
-const isLoaded = ref(false);
+const logoImage = globalStore.interface.logo_logout;
 const options = reactive<IActionOptions[]>([]);
 
-const userStore = useUserStore();
-const { t } = useI18n();
-const { updateTranslations } = useTranslations();
+onMounted(() => {
+  updateOptions();
+});
 
 const updateOptions = () => {
   options.splice(
@@ -41,7 +43,7 @@ const updateOptions = () => {
           {
             key: 'Connect',
             click: () => {
-              // window.open('/koko/elfinder/sftp/');
+              console.log('Connect');
             },
             label: t('Connect')
           }
@@ -72,22 +74,7 @@ const updateOptions = () => {
           {
             key: 'FullScreen',
             click: () => {
-              // const ele: any = document.getElementsByClassName('window active')[0];
-              // if (!ele) {
-              //   return;
-              // }
-              // if (ele.requestFullscreen) {
-              //   ele.requestFullscreen();
-              // } else if (ele.mozRequestFullScreen) {
-              //   ele.mozRequestFullScreen();
-              // } else if (ele.msRequestFullscreen) {
-              //   ele.msRequestFullscreen();
-              // } else if (ele.webkitRequestFullscreen) {
-              //   ele.webkitRequestFullScreen();
-              // } else {
-              //   throw new Error('不支持全屏api');
-              // }
-              // window.dispatchEvent(new Event('resize'));
+              console.log('FullScreen');
             },
             label: t('Full Screen')
           }
@@ -100,7 +87,7 @@ const updateOptions = () => {
           {
             key: 'English',
             click: () => {
-              userStore.setLanguage('en');
+              globalStore.setLanguage('en');
               updateTranslations('en');
             },
             label: 'English'
@@ -108,7 +95,7 @@ const updateOptions = () => {
           {
             key: 'Chinese',
             click: () => {
-              userStore.setLanguage('zh');
+              globalStore.setLanguage('zh');
               updateTranslations('zh');
             },
             label: '中文'
@@ -116,7 +103,7 @@ const updateOptions = () => {
           {
             key: 'Chinese-hant',
             click: () => {
-              userStore.setLanguage('zh-hant');
+              globalStore.setLanguage('zh-hant');
               updateTranslations('zh-hant');
             },
             label: '中文(繁體)'
@@ -124,7 +111,7 @@ const updateOptions = () => {
           {
             key: 'Japanese',
             click: () => {
-              userStore.setLanguage('ja');
+              globalStore.setLanguage('ja');
               updateTranslations('ja');
             },
             label: '日本語'
@@ -139,35 +126,21 @@ const updateOptions = () => {
             key: 'General',
             label: t('General'),
             click: () => {
-              // this._dialog.open(
-              // 	ElementSettingComponent,
-              // 	{
-              // 		height: 'auto',
-              // 		width: '500px',
-              // 		data: {type: 'general', label: 'General'}
-              // 	});
+              console.log('General');
             }
           },
           {
             key: 'GUI',
             label: t('GUI'),
             click: () => {
-              // this._dialog.open(ElementSettingComponent, {
-              //   height: 'auto',
-              //   width: '500px',
-              //   data: { type: 'gui', label: 'GUI' }
-              // });
+              console.log('GUI');
             }
           },
           {
             key: 'CLI',
             label: t('CLI'),
             click: () => {
-              // this._dialog.open(ElementSettingComponent, {
-              //   height: 'auto',
-              //   width: '500px',
-              //   data: { type: 'cli', label: 'GUI' }
-              // });
+              console.log('CLI');
             }
           }
         ]
@@ -184,23 +157,21 @@ const updateOptions = () => {
           {
             key: 'Document',
             click: () => {
-              // this.HELP_DOCUMENT_URL = this._settingSvc.globalSetting.HELP_DOCUMENT_URL;
-              // window.open(this.HELP_DOCUMENT_URL);
+              console.log('Document');
             },
             label: t('Document')
           },
           {
             key: 'Support',
             click: () => {
-              // this.HELP_SUPPORT_URL = this._settingSvc.globalSetting.HELP_SUPPORT_URL;
-              // window.open(this.HELP_SUPPORT_URL);
+              console.log('Support');
             },
             label: t('Support')
           },
           {
             key: 'Download',
             click: () => {
-              // window.open('/core/download/', '_blank');
+              console.log('Download');
             },
             label: t('Download')
           }
@@ -210,14 +181,6 @@ const updateOptions = () => {
   );
 };
 
-// 在翻译数据加载完成后调用 updateOptions 并设置 isLoaded
-onMounted(async () => {
-  await updateTranslations(userStore.language);
-  updateOptions();
-  isLoaded.value = true;
-});
-
-// 监听语言变化并更新选项
 watchEffect(() => {
   updateOptions();
 });

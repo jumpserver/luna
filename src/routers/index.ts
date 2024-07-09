@@ -1,9 +1,10 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
-import { useUserStore } from '@/stores/modules/user';
+import { useGlobalStore } from '@/stores/modules/global';
 import type { RouteRecordRaw } from 'vue-router';
 
 import Layout from '@/layouts/index.vue';
 import { getCsrfTokenFromCookie, getCurrentLanguage, getCookie } from '@/utils';
+import { getPublicSetting } from '@/API/modules/init.ts';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -20,22 +21,23 @@ const router = createRouter({
   scrollBehavior: () => ({ left: 0, top: 0 })
 });
 
-router.beforeEach((to, from, next) => {
-  const userStore = useUserStore();
+router.beforeEach(async (to, from, next) => {
+  const globalStore = useGlobalStore();
 
   const CSRFToken: string = getCsrfTokenFromCookie();
   const currentLanguage: string = getCurrentLanguage();
   const JMSOrg: string = getCookie('X-JMS-ORG');
   const JSMLunaOrg: string = getCookie('X-JMS-LUNA-ORG');
 
+  const { INTERFACE } = await getPublicSetting();
+
   console.log(to, from);
 
-  userStore.setOrganize(JMSOrg);
-  userStore.setCSRFToken(CSRFToken);
-  userStore.setLunaOrganize(JSMLunaOrg);
-  userStore.setLanguage(currentLanguage);
-
-  console.log(userStore);
+  globalStore.setOrganize(JMSOrg);
+  globalStore.setCSRFToken(CSRFToken);
+  globalStore.setInterface(INTERFACE);
+  globalStore.setLunaOrganize(JSMLunaOrg);
+  globalStore.setLanguage(currentLanguage);
 
   next();
 });
