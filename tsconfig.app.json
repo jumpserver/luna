@@ -21,7 +21,8 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    /* Linting */
+		"types": ["vue"],
+		/* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

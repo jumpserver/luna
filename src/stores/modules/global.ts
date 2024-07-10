@@ -8,7 +8,7 @@ export const useGlobalStore = defineStore({
   id: 'luna-global',
   state: (): GlobalState => ({
     // 深色模式
-    isDark: false,
+    isDark: true,
     token: '',
     JMSOrg: '',
     language: '',

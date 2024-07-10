@@ -42,5 +42,8 @@ export interface HeaderRightOptions {
   component: Component;
 
   // 下拉菜单选项
-  options: optionsDetail[];
+  options?: optionsDetail[];
+
+  // 顶层的回调
+  onClick?: () => void;
 }

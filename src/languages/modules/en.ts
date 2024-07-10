@@ -9,5 +9,6 @@ export default {
   InvalidJson: 'Invalid JSON format.',
   requiredHasUserNameMapped: 'Username attr is required.',
   'Web Terminal': 'Web Terminal',
-  'Theme reset': 'The theme color has been reset to'
+  'Theme reset': 'The theme color has been reset to',
+  'Custom Setting': 'Custom Setting'
 };

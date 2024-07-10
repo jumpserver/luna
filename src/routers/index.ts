@@ -41,8 +41,6 @@ router.beforeEach(async (to, from, next) => {
   globalStore.setGlobalState('language', currentLanguage);
   globalStore.setHelpLink(HELP_SUPPORT_URL, HELP_DOCUMENT_URL);
 
-  console.log(globalStore.interface);
-
   next();
 });
 

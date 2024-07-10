@@ -9,22 +9,29 @@
       </n-layout-header>
       <n-layout-sider
         collapse-mode="width"
-        :collapsed-width="120"
+        :collapsed-width="0"
         :width="240"
         show-trigger="arrow-circle"
         content-style="padding: 24px;"
         bordered
       >
-        <p>海淀桥 海淀桥 海淀桥 海淀桥 海淀桥</p>
+        <FileManagement class="file-management"></FileManagement>
       </n-layout-sider>
-      <n-layout-footer></n-layout-footer>
+      <n-layout>
+        <n-layout-header
+          style="width: 100%; height: 40px; border-bottom: 1px solid #000000"
+        ></n-layout-header>
+      </n-layout>
     </n-layout>
   </n-space>
+  <SettingDrawer />
 </template>
 
 <script setup lang="ts">
 import HeaderLeft from './components/Header/headerLeft.vue';
 import HeaderRight from './components/Header/headerRight.vue';
+import FileManagement from './components/FileManagement/index.vue';
+import SettingDrawer from './components/SettingDrawer/index.vue';
 
 import { ref } from 'vue';
 import { useLoadingStore } from '@/stores/modules/loading.ts';
@@ -41,5 +48,5 @@ if (!useLoading.isLoading) {
 </script>
 
 <style scoped lang="scss">
-@import 'index.scss';
+@import 'index';
 </style>

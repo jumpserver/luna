@@ -9,5 +9,6 @@ export default {
   InvalidJson: 'JSON 格式错误.',
   requiredHasUserNameMapped: '用户名属性是必需的。',
   'Web Terminal': 'Web 终端',
-  'Theme reset': '主题颜色已重置为'
+  'Theme reset': '主题颜色已重置为',
+  'Custom Setting': '自定义设置'
 };

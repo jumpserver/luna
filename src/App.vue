@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider :locale="zhCN" :date-locale="dateZhCN" :theme-overrides="ThemeOverride">
+  <n-config-provider :locale="zhCN" :date-locale="dateZhCN">
     <n-message-provider>
       <n-spin :show="isLoading">
         <router-view />
@@ -16,7 +16,6 @@ import { useTheme } from '@/hooks/useTheme.ts';
 import { useTranslations } from '@/hooks/useTranslate.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
 import { useLoadingStore } from '@/stores/modules/loading.ts';
-import { LightThemeOverrides, DarkThemeOverrides } from './themeOverride.ts';
 
 import { setFavicon } from '@/utils';
 
@@ -28,8 +27,6 @@ const { updateTranslations } = useTranslations();
 const isLoading = computed(() => {
   return loadingStore.isLoading;
 });
-
-console.log(LightThemeOverrides, DarkThemeOverrides);
 
 onBeforeMount(() => {
   // 初始化主题样式

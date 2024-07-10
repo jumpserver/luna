@@ -1,8 +1,10 @@
 <template>
   <n-flex justify="center" align="center" class="top-item">
     <logo :logo-image="logoImage!" />
-    <n-flex>
-      <svg-icon class="tree-icon" :name="icon.name" :icon-style="iconStyle" />
+    <n-flex justify="center" align="center">
+      <n-button text>
+        <svg-icon class="tree-icon" :name="icon.name" :icon-style="iconStyle" />
+      </n-button>
     </n-flex>
 
     <n-space class="action-options">
@@ -29,7 +31,7 @@ const globalStore = useGlobalStore();
 const { updateTranslations } = useTranslations();
 
 const iconStyle: CSSProperties = {
-  fill: '#fff',
+  fill: '#646A73',
   width: '25px',
   height: '25px',
   transition: 'fill 0.3s'
@@ -178,14 +180,15 @@ watchEffect(() => {
 
 <style scoped lang="scss">
 .top-item {
-  gap: 15px 12px !important;
+  gap: 30px 12px !important;
   width: 100%;
-  margin-top: 15px;
+  margin-top: 25px;
   cursor: pointer;
-}
-:deep(.tree-icon) {
-  svg:hover {
-    fill: #000000 !important;
+  :deep(.n-flex) {
+    width: 100%;
+    .tree-icon:hover {
+      fill: var(--el-color-primary-light-1) !important;
+    }
   }
 }
 </style>

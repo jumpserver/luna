@@ -24,6 +24,7 @@ export const useTheme = () => {
   const switchDark = (): void => {
     const html: HTMLElement = document.documentElement;
 
+    console.log(isDark);
     if (isDark.value) {
       html.setAttribute('class', 'dark');
     } else {

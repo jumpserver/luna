@@ -30,7 +30,7 @@ export const getPublic = (): Promise<any> => {
   let requestUrl = '/api/v1/settings/public/';
 
   const connectionToken = getQueryParamFromURL('token');
-  console.log(connectionToken);
+
   // ! 解决 /luna/connect?connectToken= 直接方式权限认证问题
   if (connectionToken) {
     requestUrl += `?token=${connectionToken}`;

@@ -26,3 +26,9 @@ const props = withDefaults(defineProps<SvgProps>(), {
 
 const symbolId = computed(() => `#${props.prefix}-${props.name}`);
 </script>
+
+<style lang="scss" scoped>
+svg:focus {
+  outline: unset;
+}
+</style>

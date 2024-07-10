@@ -6,6 +6,7 @@
         :is="option.component"
         :options="option.options"
         :icon-style="option.iconStyle"
+        :on-click="option.onClick"
       />
     </template>
   </n-flex>
@@ -17,6 +18,8 @@ import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useGlobalStore } from '@/stores/modules/global.ts';
 import { NAvatar, NText } from 'naive-ui';
+
+import mittBus from '@/utils/mittBus.ts';
 
 import Help from './components/Help/index.vue';
 import Profile from './components/Profile/index.vue';
@@ -120,7 +123,9 @@ const bottomOptions: HeaderRightOptions[] = [
     iconStyle,
     name: 'setting',
     component: Setting,
-    options: []
+    onClick: () => {
+      mittBus.emit('openSettingDrawer');
+    }
   }
 ];
 </script>
