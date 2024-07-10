@@ -1,7 +1,8 @@
 .custom-layout {
   :deep(.n-layout-scroll-container) {
-    flex-direction: column !important;
     .header-content {
+      width: 50px;
+      height: 100vh;
       color: #ffffff;
       background-color: grey;
     }

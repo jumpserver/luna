@@ -1,16 +1,18 @@
 import { defineStore } from 'pinia';
 import piniaPersistConfig from '@/stores/helper/persist';
 
-import type { UserState, OpenSetting } from '../interface/index';
+import type { GlobalState, OpenSetting } from '../interface/index';
 
 export const useGlobalStore = defineStore({
   id: 'luna-global',
-  state: (): UserState => ({
+  state: (): GlobalState => ({
     token: '',
     JMSOrg: '',
     language: '',
     csrfToken: '',
     JMSLunaOra: '',
+    HELP_SUPPORT_URL: '',
+    HELP_DOCUMENT_URL: '',
     userInfo: { name: '' },
     interface: {}
   }),
@@ -25,7 +27,7 @@ export const useGlobalStore = defineStore({
       this.csrfToken = csrfToken;
     },
     // 设置用户信息
-    setUserInfo(userInfo: UserState['userInfo']) {
+    setUserInfo(userInfo: GlobalState['userInfo']) {
       this.userInfo = userInfo;
     },
     // 设置语言
@@ -43,6 +45,11 @@ export const useGlobalStore = defineStore({
     // 设置全局配置
     setInterface(setting: OpenSetting) {
       this.interface = setting;
+    },
+    // 设置帮助选项中的跳转链接
+    setHelpLink(HELP_SUPPORT_URL: string, HELP_DOCUMENT_URL: string) {
+      this.HELP_SUPPORT_URL = HELP_SUPPORT_URL;
+      this.HELP_DOCUMENT_URL = HELP_DOCUMENT_URL;
     }
   },
   persist: piniaPersistConfig('luna-user')

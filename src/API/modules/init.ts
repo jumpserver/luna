@@ -14,10 +14,23 @@ export const getTranslation = (lang: string) => {
 /**
  * @description 获取公共设置
  */
-export const getPublicSetting = () => {
+export const getPublicOption = (): Promise<any> => {
   let requestUrl = '/api/v1/settings/public/open/';
   const connectionToken = getQueryParamFromURL('token');
 
+  // ! 解决 /luna/connect?connectToken= 直接方式权限认证问题
+  if (connectionToken) {
+    requestUrl += `?token=${connectionToken}`;
+  }
+
+  return http.get(requestUrl);
+};
+
+export const getPublic = (): Promise<any> => {
+  let requestUrl = '/api/v1/settings/public/';
+
+  const connectionToken = getQueryParamFromURL('token');
+  console.log(connectionToken);
   // ! 解决 /luna/connect?connectToken= 直接方式权限认证问题
   if (connectionToken) {
     requestUrl += `?token=${connectionToken}`;
@@ -31,4 +44,11 @@ export const getPublicSetting = () => {
  */
 export const getSystemSetting = () => {
   return http.get('/api/v1/users/preference/?category=luna');
+};
+
+/**
+ * @description获取当前用户信息
+ */
+export const getProfile = () => {
+  return http.get('/api/v1/users/profile/');
 };

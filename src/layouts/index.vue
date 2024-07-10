@@ -2,7 +2,7 @@
   <n-space vertical size="large">
     <n-layout has-sider class="custom-layout">
       <n-layout-header>
-        <n-flex class="header-content" align="center" justify="space-between">
+        <n-flex class="header-content" vertical align="center" justify="space-between">
           <header-left v-if="languageLoaded"></header-left>
           <header-right></header-right>
         </n-flex>

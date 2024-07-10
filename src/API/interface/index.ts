@@ -7,6 +7,8 @@ export interface ResultData<T = any> extends Result {
   data: T;
 }
 
+export interface INTERFACE {}
+
 export interface GlobalSetting {
   WINDOWS_SKIP_ALL_MANUAL_PASSWORD: boolean;
   SECURITY_MAX_IDLE_TIME: number;

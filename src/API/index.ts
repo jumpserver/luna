@@ -10,8 +10,10 @@ import { useLoadingStore } from '@/stores/modules/loading.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
 import { createDiscreteApi } from 'naive-ui';
 
-import type { ResultData } from './interface';
 import { useI18n } from 'vue-i18n';
+import type { ResultData } from './interface';
+
+import { setOptionsCSRFToken } from '@/API/helper';
 
 export interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   loading?: boolean;
@@ -28,24 +30,6 @@ const config = {
 
 const { message } = createDiscreteApi(['message']);
 
-// ! 注意：下面这两个函数中 useGlobalStore 不能提升到全局，否则 Pinia 会在 APP 实例被挂在前调用从而报错
-const setOptionsCSRFToken = (config: AxiosRequestConfig): AxiosRequestConfig => {
-  const globalStore = useGlobalStore();
-  const csrfToken = globalStore.csrfToken;
-
-  if (!config) {
-    config = {};
-  }
-
-  if (csrfToken) {
-    if (!config.headers) {
-      config.headers = {};
-    }
-    config.headers['X-CSRFToken'] = csrfToken;
-  }
-
-  return config;
-};
 const setOrgIDToRequestHeader = (config?: AxiosRequestConfig): AxiosRequestConfig => {
   const globalStore = useGlobalStore();
   const orgID = globalStore.JMSOrg || globalStore.JMSLunaOra;

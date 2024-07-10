@@ -186,10 +186,4 @@ watchEffect(() => {
 });
 </script>
 
-<style scoped lang="scss">
-.header-left {
-  .action-options {
-    margin-left: 50px;
-  }
-}
-</style>
+<style scoped lang="scss"></style>

@@ -7,3 +7,13 @@ defineProps<{
   logoImage: string;
 }>();
 </script>
+
+<style scoped lang="scss">
+.n-image {
+  padding: 0 20px;
+  &:hover {
+    cursor: pointer;
+    background-color: green;
+  }
+}
+</style>

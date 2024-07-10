@@ -3,6 +3,7 @@ import Components from 'unplugin-vue-components/vite';
 
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
+import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 import { NaiveUiResolver } from 'unplugin-vue-components/resolvers';
 
 const pathResolve = (dir: string): string => {
@@ -10,7 +11,14 @@ const pathResolve = (dir: string): string => {
 };
 
 export default defineConfig({
-  plugins: [vue(), Components({ dts: true, resolvers: [NaiveUiResolver()] })],
+  plugins: [
+    vue(),
+    Components({ dts: true, resolvers: [NaiveUiResolver()] }),
+    createSvgIconsPlugin({
+      iconDirs: [resolve(process.cwd(), 'src/assets/icons')],
+      symbolId: 'icon-[dir]-[name]'
+    })
+  ],
   resolve: {
     extensions: ['.ts', '.tsx', '.vue', '.js', '.json'],
     alias: {

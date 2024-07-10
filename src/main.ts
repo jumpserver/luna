@@ -12,6 +12,8 @@ import 'normalize.css';
 import 'vfonts/OpenSans.css';
 // 引入自定义初始化样式
 import '@/styles/reset.scss';
+// 引入图标注册脚本
+import 'virtual:svg-icons-register';
 
 const app = createApp(App);
 

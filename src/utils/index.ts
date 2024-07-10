@@ -87,8 +87,30 @@ export function getQueryParamFromURL(queryKey: string): string | null {
 
 /**
  * @description 设置 title
- * @param {string} title
+ * @param {string} title tab 页标题
  */
 export const setTitle = (title: string) => {
   document.title = title;
+};
+
+/**
+ * @description 设置 ico
+ * @param {string} faviconUrl ico 图标地址
+ */
+export const setFavicon = (faviconUrl: string) => {
+  if (!faviconUrl) {
+    console.error('No favicon URL provided');
+    return;
+  }
+
+  let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
+
+  if (!link) {
+    link = document.createElement('link');
+    link.type = 'image/x-icon';
+    link.rel = 'shortcut icon';
+    document.getElementsByTagName('head')[0].appendChild(link);
+  }
+
+  link.href = faviconUrl;
 };

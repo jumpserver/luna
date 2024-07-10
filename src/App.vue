@@ -16,6 +16,8 @@ import { useTranslations } from '@/hooks/useTranslate.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
 import { useLoadingStore } from '@/stores/modules/loading.ts';
 
+import { setFavicon } from '@/utils';
+
 const globalStore = useGlobalStore();
 const loadingStore = useLoadingStore();
 const { updateTranslations } = useTranslations();
@@ -25,10 +27,21 @@ const isLoading = computed(() => {
 });
 
 onBeforeMount(() => {
+  // 设置语言
   setCurrentLanguage();
+  // 设置 ico
+  setFavicon(globalStore.interface.favicon!);
 });
 
 const setCurrentLanguage = () => {
   updateTranslations(globalStore.language);
 };
 </script>
+
+<style scoped lang="scss">
+.n-config-provider,
+.n-spin-container {
+  width: 100%;
+  height: 100%;
+}
+</style>
