@@ -34,12 +34,14 @@ router.beforeEach(async (to, from, next) => {
 
   console.log(to, from);
 
-  globalStore.setOrganize(JMSOrg);
-  globalStore.setCSRFToken(CSRFToken);
-  globalStore.setInterface(INTERFACE);
-  globalStore.setLunaOrganize(JSMLunaOrg);
-  globalStore.setLanguage(currentLanguage);
+  globalStore.setGlobalState('JMSOrg', JMSOrg);
+  globalStore.setGlobalState('csrfToken', CSRFToken);
+  globalStore.setGlobalState('interface', INTERFACE);
+  globalStore.setGlobalState('JMSLunaOra', JSMLunaOrg);
+  globalStore.setGlobalState('language', currentLanguage);
   globalStore.setHelpLink(HELP_SUPPORT_URL, HELP_DOCUMENT_URL);
+
+  console.log(globalStore.interface);
 
   next();
 });

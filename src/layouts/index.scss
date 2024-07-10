@@ -1,10 +1,14 @@
 .custom-layout {
   :deep(.n-layout-scroll-container) {
-    .header-content {
-      width: 50px;
-      height: 100vh;
-      color: #ffffff;
-      background-color: grey;
+    .n-layout-header {
+      width: 40px;
+      .header-content {
+        width: 40px;
+        height: 100vh;
+        color: #ffffff;
+        background-color: var(--el-aside-bg-color);
+        border-right: var(--el-aside-border-color);
+      }
     }
   }
 }

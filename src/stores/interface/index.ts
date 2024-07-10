@@ -1,4 +1,6 @@
 export interface GlobalState {
+  primary: string;
+  isDark: Boolean;
   token: string;
   JMSOrg: string;
   language: string;
@@ -47,3 +49,7 @@ export interface UserState {
   // 用户名
   name: string;
 }
+
+export type ObjToKeyValArray<T> = {
+  [K in keyof T]: [K, T[K]];
+}[keyof T];

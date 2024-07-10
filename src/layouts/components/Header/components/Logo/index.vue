@@ -10,7 +10,8 @@ defineProps<{
 
 <style scoped lang="scss">
 .n-image {
-  padding: 0 20px;
+  justify-content: center;
+  width: 100%;
   &:hover {
     cursor: pointer;
     background-color: green;

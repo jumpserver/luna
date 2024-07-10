@@ -31,12 +31,14 @@ export default defineConfig({
     cors: true,
     proxy: {
       '/api': {
-        target: 'http://192.168.200.29:8080',
+        // target: 'http://192.168.200.29:8080',
+        target: 'http://localhost:8081',
         changeOrigin: true,
         rewrite: (path: string) => path.replace(/^\/api/, ' ')
       },
       '/static': {
-        target: 'http://192.168.200.29:8080',
+        // target: 'http://192.168.200.29:8080',
+        target: 'http://localhost:8081',
         changeOrigin: true,
         rewrite: (path: string) => path.replace(/^\/static/, ' ')
       }

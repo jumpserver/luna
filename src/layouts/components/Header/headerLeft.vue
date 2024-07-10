@@ -1,28 +1,45 @@
 <template>
-  <div>
-    <n-flex class="header-left">
-      <logo :logo-image="logoImage!" />
-      <n-space class="action-options">
-        <action-options :options="options" />
-      </n-space>
+  <n-flex justify="center" align="center" class="top-item">
+    <logo :logo-image="logoImage!" />
+    <n-flex>
+      <svg-icon class="tree-icon" :name="icon.name" :icon-style="iconStyle" />
     </n-flex>
-  </div>
+
+    <n-space class="action-options">
+      <!--      <action-options :options="options" />-->
+    </n-space>
+  </n-flex>
 </template>
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { onMounted, reactive, watchEffect } from 'vue';
+import { type CSSProperties, onMounted, reactive, watchEffect } from 'vue';
 import { useGlobalStore } from '@/stores/modules/global';
 import { useTranslations } from '@/hooks/useTranslate';
 
 import type { IActionOptions } from './types/index.ts';
 
 import Logo from './components/Logo/index.vue';
-import ActionOptions from './components/ActionOptions/index.vue';
+// import ActionOptions from './components/ActionOptions/index.vue';
+import SvgIcon from '@/components/SvgIcon/index.vue';
+import Profile from '@/layouts/components/Header/components/Profile/index.vue';
 
 const { t } = useI18n();
 const globalStore = useGlobalStore();
 const { updateTranslations } = useTranslations();
+
+const iconStyle: CSSProperties = {
+  fill: '#fff',
+  width: '25px',
+  height: '25px',
+  transition: 'fill 0.3s'
+};
+
+const icon = {
+  iconStyle,
+  name: 'tree',
+  component: Profile
+};
 
 const logoImage = globalStore.interface.logo_logout;
 const options = reactive<IActionOptions[]>([]);
@@ -149,33 +166,6 @@ const updateOptions = () => {
         key: 'Tabs',
         label: t('Tabs'),
         children: []
-      },
-      {
-        key: 'Help',
-        label: t('Help'),
-        children: [
-          {
-            key: 'Document',
-            click: () => {
-              console.log('Document');
-            },
-            label: t('Document')
-          },
-          {
-            key: 'Support',
-            click: () => {
-              console.log('Support');
-            },
-            label: t('Support')
-          },
-          {
-            key: 'Download',
-            click: () => {
-              console.log('Download');
-            },
-            label: t('Download')
-          }
-        ]
       }
     ]
   );
@@ -186,4 +176,16 @@ watchEffect(() => {
 });
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.top-item {
+  gap: 15px 12px !important;
+  width: 100%;
+  margin-top: 15px;
+  cursor: pointer;
+}
+:deep(.tree-icon) {
+  svg:hover {
+    fill: #000000 !important;
+  }
+}
+</style>

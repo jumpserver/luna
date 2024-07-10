@@ -8,5 +8,6 @@ export default {
   notParenthesis: '不能包含括号。',
   InvalidJson: 'JSON 格式错误.',
   requiredHasUserNameMapped: '用户名属性是必需的。',
-  'Web Terminal': 'Web 终端'
+  'Web Terminal': 'Web 终端',
+  'Theme reset': '主题颜色已重置为'
 };

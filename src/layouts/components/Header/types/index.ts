@@ -25,7 +25,9 @@ export interface IActionOptions {
 
 export interface optionsDetail {
   key: string;
-  label: string;
+  label?: string;
+  type?: string;
+  render?: () => JSX.Element;
   onClink?: () => void;
 }
 

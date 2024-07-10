@@ -8,5 +8,6 @@ export default {
   notParenthesis: 'Parentheses are not allowed.',
   InvalidJson: 'Invalid JSON format.',
   requiredHasUserNameMapped: 'Username attr is required.',
-  'Web Terminal': 'Web Terminal'
+  'Web Terminal': 'Web Terminal',
+  'Theme reset': 'The theme color has been reset to'
 };
