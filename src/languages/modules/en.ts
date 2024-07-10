@@ -10,5 +10,7 @@ export default {
   requiredHasUserNameMapped: 'Username attr is required.',
   'Web Terminal': 'Web Terminal',
   'Theme reset': 'The theme color has been reset to',
-  'Custom Setting': 'Custom Setting'
+  'Custom Setting': 'Custom Setting',
+  'Dark Mode': '黑暗模式',
+  'Primary Color': 'Primary Color'
 };

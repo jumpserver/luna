@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider :locale="zhCN" :date-locale="dateZhCN">
+  <n-config-provider :locale="zhCN" :date-locale="dateZhCN" :theme="isDark ? darkTheme : null">
     <n-message-provider>
       <n-spin :show="isLoading">
         <router-view />
@@ -9,20 +9,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeMount } from 'vue';
+import { darkTheme } from 'naive-ui';
 import { zhCN, dateZhCN } from 'naive-ui';
 import { NConfigProvider } from 'naive-ui';
+import { computed, onBeforeMount } from 'vue';
 import { useTheme } from '@/hooks/useTheme.ts';
 import { useTranslations } from '@/hooks/useTranslate.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
 import { useLoadingStore } from '@/stores/modules/loading.ts';
 
 import { setFavicon } from '@/utils';
+import { storeToRefs } from 'pinia';
 
 const { initTheme } = useTheme();
+const { updateTranslations } = useTranslations();
+
 const globalStore = useGlobalStore();
 const loadingStore = useLoadingStore();
-const { updateTranslations } = useTranslations();
+
+const { isDark } = storeToRefs(globalStore);
 
 const isLoading = computed(() => {
   return loadingStore.isLoading;

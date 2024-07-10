@@ -6,6 +6,7 @@ import { createDiscreteApi } from 'naive-ui';
 import { asideTheme } from '@/styles/theme/aside.ts';
 import { getLightColor, getDarkColor } from '@/utils';
 import { useGlobalStore } from '@/stores/modules/global.ts';
+import { mainContentTheme } from '@/styles/theme/mainContent.ts';
 
 /**
  * @description 全局主题 hooks
@@ -32,6 +33,7 @@ export const useTheme = () => {
     }
 
     changePrimary(primary.value);
+    setMainTheme();
     setAsideTheme();
   };
 
@@ -70,6 +72,20 @@ export const useTheme = () => {
     if (isDark.value) type = 'dark';
 
     const theme = asideTheme[type!];
+    for (const [key, value] of Object.entries(theme)) {
+      document.documentElement.style.setProperty(key, value);
+    }
+  };
+
+  /**
+   * @description 设置主题样式
+   */
+  const setMainTheme = () => {
+    let type: Theme.ThemeType = 'light';
+
+    if (isDark.value) type = 'dark';
+
+    const theme = mainContentTheme[type!];
     for (const [key, value] of Object.entries(theme)) {
       document.documentElement.style.setProperty(key, value);
     }

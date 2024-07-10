@@ -17,9 +17,14 @@
       >
         <FileManagement class="file-management"></FileManagement>
       </n-layout-sider>
-      <n-layout>
+      <n-layout style="background-color: var(--el-main-bg-color)">
         <n-layout-header
-          style="width: 100%; height: 40px; border-bottom: 1px solid #000000"
+          style="
+            width: 100%;
+            height: 40px;
+            background-color: var(--el-main-bg-color);
+            border-bottom: 1px solid #000000;
+          "
         ></n-layout-header>
       </n-layout>
     </n-layout>

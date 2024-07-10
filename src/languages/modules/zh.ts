@@ -10,5 +10,7 @@ export default {
   requiredHasUserNameMapped: '用户名属性是必需的。',
   'Web Terminal': 'Web 终端',
   'Theme reset': '主题颜色已重置为',
-  'Custom Setting': '自定义设置'
+  'Custom Setting': '自定义设置',
+  'Dark Mode': '黑暗模式',
+  'Primary Color': '主题颜色'
 };
