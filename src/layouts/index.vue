@@ -8,25 +8,20 @@
         </n-flex>
       </n-layout-header>
       <n-layout-sider
+        ref="siderRef"
         collapse-mode="width"
+        :show-collapsed-content="false"
+        :collapsed="isCollapsed"
         :collapsed-width="0"
         :width="240"
         show-trigger="arrow-circle"
         content-style="padding: 24px;"
         bordered
+        @trigger-click="handleTriggerClick"
       >
         <FileManagement class="file-management"></FileManagement>
       </n-layout-sider>
-      <n-layout style="background-color: var(--el-main-bg-color)">
-        <n-layout-header
-          style="
-            width: 100%;
-            height: 40px;
-            background-color: var(--el-main-bg-color);
-            border-bottom: 1px solid #000000;
-          "
-        ></n-layout-header>
-      </n-layout>
+      <main-content></main-content>
     </n-layout>
   </n-space>
   <SettingDrawer />
@@ -35,13 +30,17 @@
 <script setup lang="ts">
 import HeaderLeft from './components/Header/headerLeft.vue';
 import HeaderRight from './components/Header/headerRight.vue';
+import MainContent from './components/MainContent/index.vue';
 import FileManagement from './components/FileManagement/index.vue';
 import SettingDrawer from './components/SettingDrawer/index.vue';
 
-import { ref } from 'vue';
+import { onUnmounted, ref, onMounted } from 'vue';
 import { useLoadingStore } from '@/stores/modules/loading.ts';
+import mittBus from '@/utils/mittBus.ts';
 
 const languageLoaded = ref(false);
+
+const isCollapsed = ref(false);
 
 const useLoading = useLoadingStore();
 if (!useLoading.isLoading) {
@@ -50,6 +49,31 @@ if (!useLoading.isLoading) {
     languageLoaded.value = true;
   }, 100);
 }
+
+const siderRef = ref(null);
+
+mittBus.on('treeClick', () => {
+  isCollapsed.value = !isCollapsed.value;
+});
+
+const handleTriggerClick = () => {
+  isCollapsed.value = !isCollapsed.value;
+};
+
+onMounted(() => {
+  const trigger = document.querySelector('.n-layout-toggle-button');
+  if (trigger) {
+    trigger.addEventListener('click', handleTriggerClick);
+  }
+});
+
+onUnmounted(() => {
+  mittBus.off('treeClick');
+  const trigger = document.querySelector('.n-layout-toggle-button');
+  if (trigger) {
+    trigger.removeEventListener('click', handleTriggerClick);
+  }
+});
 </script>
 
 <style scoped lang="scss">

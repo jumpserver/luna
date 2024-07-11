@@ -8,9 +8,17 @@ export default {
   notParenthesis: '不能包含括号。',
   InvalidJson: 'JSON 格式错误.',
   requiredHasUserNameMapped: '用户名属性是必需的。',
+  General: '通用配置',
+  GUI: '图形化配置',
+  CLI: '命令行配置',
   'Web Terminal': 'Web 终端',
   'Theme reset': '主题颜色已重置为',
   'Custom Setting': '自定义设置',
   'Dark Mode': '黑暗模式',
+  'Theme Settings': '主题设置',
+  'Language Settings': '语言设置',
+  'Page configuration': '页面配置',
+  'Please select': '请选择',
+  'Language Selection': '语言选择',
   'Primary Color': '主题颜色'
 };

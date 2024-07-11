@@ -1,15 +1,11 @@
 <template>
   <n-flex justify="center" align="center" class="top-item">
-    <logo :logo-image="logoImage!" />
+    <logo :logo-image="logoImage || ''" />
     <n-flex justify="center" align="center">
-      <n-button text>
+      <n-button text @click="handleTreeClick">
         <svg-icon class="tree-icon" :name="icon.name" :icon-style="iconStyle" />
       </n-button>
     </n-flex>
-
-    <n-space class="action-options">
-      <!--      <action-options :options="options" />-->
-    </n-space>
   </n-flex>
 </template>
 
@@ -25,6 +21,7 @@ import Logo from './components/Logo/index.vue';
 // import ActionOptions from './components/ActionOptions/index.vue';
 import SvgIcon from '@/components/SvgIcon/index.vue';
 import Profile from '@/layouts/components/Header/components/Profile/index.vue';
+import mittBus from '@/utils/mittBus.ts';
 
 const { t } = useI18n();
 const globalStore = useGlobalStore();
@@ -32,8 +29,8 @@ const { updateTranslations } = useTranslations();
 
 const iconStyle: CSSProperties = {
   fill: '#646A73',
-  width: '25px',
-  height: '25px',
+  width: '30px',
+  height: '30px',
   transition: 'fill 0.3s'
 };
 
@@ -41,6 +38,10 @@ const icon = {
   iconStyle,
   name: 'tree',
   component: Profile
+};
+
+const handleTreeClick = () => {
+  mittBus.emit('treeClick');
 };
 
 const logoImage = globalStore.interface.logo_logout;
@@ -142,6 +143,7 @@ const updateOptions = () => {
         label: t('Setting'),
         children: [
           {
+            // 通用配置
             key: 'General',
             label: t('General'),
             click: () => {
@@ -149,6 +151,7 @@ const updateOptions = () => {
             }
           },
           {
+            // 图形化配置
             key: 'GUI',
             label: t('GUI'),
             click: () => {
@@ -156,6 +159,7 @@ const updateOptions = () => {
             }
           },
           {
+            // 命令行配置
             key: 'CLI',
             label: t('CLI'),
             click: () => {
@@ -180,7 +184,7 @@ watchEffect(() => {
 
 <style scoped lang="scss">
 .top-item {
-  gap: 30px 12px !important;
+  gap: 20px 12px !important;
   width: 100%;
   margin-top: 25px;
   cursor: pointer;

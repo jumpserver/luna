@@ -8,9 +8,17 @@ export default {
   notParenthesis: 'Parentheses are not allowed.',
   InvalidJson: 'Invalid JSON format.',
   requiredHasUserNameMapped: 'Username attr is required.',
+  General: 'General',
+  GUI: 'GUI',
+  CLI: 'CLI',
   'Web Terminal': 'Web Terminal',
   'Theme reset': 'The theme color has been reset to',
   'Custom Setting': 'Custom Setting',
   'Dark Mode': '黑暗模式',
+  'Theme Settings': 'Theme Settings',
+  'Language Settings': 'Language Settings',
+  'Page configuration': 'Page configuration',
+  'Please select': 'Please select',
+  'Language Selection': 'Language Selection',
   'Primary Color': 'Primary Color'
 };

@@ -1,5 +1,10 @@
 <template>
-  <n-config-provider :locale="zhCN" :date-locale="dateZhCN" :theme="isDark ? darkTheme : null">
+  <n-config-provider
+    :locale="zhCN"
+    :date-locale="dateZhCN"
+    :theme="isDark ? darkTheme : null"
+    :theme-overrides="isDark ? darkThemeOverrides : lightThemeOverrides"
+  >
     <n-message-provider>
       <loading>
         <router-view />
@@ -16,6 +21,7 @@ import { onBeforeMount } from 'vue';
 import { useTheme } from '@/hooks/useTheme.ts';
 import { useTranslations } from '@/hooks/useTranslate.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
+import { lightThemeOverrides, darkThemeOverrides } from '@/ThemeOverrides.ts';
 
 import { setFavicon } from '@/utils';
 import { storeToRefs } from 'pinia';
