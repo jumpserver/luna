@@ -8,12 +8,10 @@ import axios, {
 import { ResultEnum } from '@/enums/httpEnum.ts';
 import { useLoadingStore } from '@/stores/modules/loading.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
-import { createDiscreteApi } from 'naive-ui';
 
-import { useI18n } from 'vue-i18n';
 import type { ResultData } from './interface';
 
-import { setOptionsCSRFToken } from '@/API/helper';
+import { setOptionsCSRFToken, setOrgIDToRequestHeader } from '@/API/helper';
 
 export interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   loading?: boolean;
@@ -28,34 +26,16 @@ const config = {
   withCredentials: true
 };
 
-const { message } = createDiscreteApi(['message']);
-
-const setOrgIDToRequestHeader = (config?: AxiosRequestConfig): AxiosRequestConfig => {
-  const globalStore = useGlobalStore();
-  const orgID = globalStore.JMSOrg || globalStore.JMSLunaOra;
-
-  config = config || {};
-
-  if (orgID) {
-    if (!config.headers) {
-      config.headers = {};
-    }
-    if (!('X-JMS-ORG' in config.headers)) {
-      config.headers['X-JMS-ORG'] = orgID;
-    }
-  }
-  return config;
-};
-
 class RequestHttp {
   service: AxiosInstance;
   public constructor(config: AxiosRequestConfig) {
     this.service = axios.create(config);
 
+    // 请求拦截器
     this.service.interceptors.request.use(
       (config: CustomAxiosRequestConfig) => {
-        const loadingStore = useLoadingStore();
         const globalStore = useGlobalStore();
+        const loadingStore = useLoadingStore();
 
         loadingStore.startLoading();
 
@@ -65,12 +45,14 @@ class RequestHttp {
         return config;
       },
       (error: AxiosError) => {
+        console.log(error);
         const loadingStore = useLoadingStore();
         loadingStore.stopLoading();
         return Promise.reject(error);
       }
     );
 
+    // 响应拦截器
     this.service.interceptors.response.use(
       (response: AxiosResponse) => {
         const loadingStore = useLoadingStore();
@@ -78,16 +60,6 @@ class RequestHttp {
         return response.data;
       },
       (error: AxiosError) => {
-        const { t } = useI18n();
-        const loadingStore = useLoadingStore();
-        loadingStore.stopLoading();
-
-        // 请求超时 && 网络错误单独判断，没有 response
-        if (error.message.indexOf('timeout') !== -1) message.error('请求超时！请您稍后重试');
-        if (error.message.indexOf('Network Error') !== -1) message.error('网络错误！请您稍后重试');
-
-        message.error(t('ServerError'));
-
         return Promise.reject(error);
       }
     );
