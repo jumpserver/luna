@@ -72,7 +72,7 @@ export class AppService {
     let statusTime = '';
     // From local storage
     if (!recheck) {
-      statusTime = localStorage.getItem('CheckProfile');
+      statusTime = localStorage.getItem('checkProfile');
       if (statusTime && statusTime.split(' ').length === 2) {
         const time = statusTime.split(' ')[1];
         const expired = new Date().getTime() - parseInt(time, 10) > 1000 * this.checkSecond;
@@ -96,7 +96,7 @@ export class AppService {
           status = 'badrequest';
         }
       } finally {
-        localStorage.setItem('CheckProfile', status + ' ' + new Date().getTime());
+        localStorage.setItem('checkProfile', status + ' ' + new Date().getTime());
       }
     } else {
       this._logger.debug('Found cache using: ', statusTime);
