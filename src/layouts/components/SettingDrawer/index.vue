@@ -5,7 +5,7 @@
     :width="defaultWidth"
     v-model:show="showSettingDrawer"
     :default-width="defaultWidth"
-    style="transition: width 0.7s ease-in-out"
+    class="transition-drawer"
   >
     <n-drawer-content :title="t('Custom Setting')" class="drawer-content" closable>
       <n-divider> {{ t('Theme Settings') }} </n-divider>
@@ -186,28 +186,37 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
-.drawer-content {
-  :deep(.n-drawer-body-content-wrapper) {
-    .dark-setting,
-    .asset-async,
-    .page-setting,
-    .language-setting {
-      width: 100%;
-    }
-    .asset-async {
-      margin-top: 15px;
-    }
-    .page-setting {
-      flex-wrap: nowrap;
-      margin-top: 15px;
-      .n-select {
-        width: 150px;
+.transition-drawer {
+  opacity: 0;
+  transition:
+    width 0.7s ease-in-out,
+    opacity 0.7s ease-in-out;
+  &.n-drawer--show {
+    opacity: 1;
+  }
+  .drawer-content {
+    :deep(.n-drawer-body-content-wrapper) {
+      .dark-setting,
+      .asset-async,
+      .page-setting,
+      .language-setting {
+        width: 100%;
       }
-    }
-    .language-setting {
-      flex-wrap: nowrap;
-      .n-select {
-        width: 150px;
+      .asset-async {
+        margin-top: 15px;
+      }
+      .page-setting {
+        flex-wrap: nowrap;
+        margin-top: 15px;
+        .n-select {
+          width: 150px;
+        }
+      }
+      .language-setting {
+        flex-wrap: nowrap;
+        .n-select {
+          width: 150px;
+        }
       }
     }
   }

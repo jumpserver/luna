@@ -1,5 +1,11 @@
 <template>
-  <n-dropdown trigger="hover" :show-arrow="true" placement="right" :options="options">
+  <n-dropdown
+    trigger="hover"
+    :show-arrow="true"
+    placement="right"
+    :options="options"
+    @select="handleSelect"
+  >
     <svg-icon :name="name" :icon-style="iconStyle" />
   </n-dropdown>
 </template>
@@ -15,4 +21,10 @@ defineProps<{
   options: optionsDetail[];
   iconStyle: CSSProperties;
 }>();
+
+const handleSelect = (...args: any) => {
+  if (args[0] === 'logout') {
+    args[1].onClink();
+  }
+};
 </script>

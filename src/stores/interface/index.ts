@@ -48,6 +48,12 @@ export interface UserState {
 
   // 用户名
   name: string;
+
+  // 电子邮箱
+  email: string;
+
+  // 来源
+  source: string;
 }
 
 export interface TreeState {

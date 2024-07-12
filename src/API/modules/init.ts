@@ -45,10 +45,3 @@ export const getPublic = (): Promise<any> => {
 export const getSystemSetting = () => {
   return http.get('/api/v1/users/preference/?category=luna');
 };
-
-/**
- * @description获取当前用户信息
- */
-export const getProfile = () => {
-  return http.get('/api/v1/users/profile/');
-};

@@ -18,7 +18,11 @@
         :collapsed-width="0"
         :collapsed="isCollapsed"
         :show-collapsed-content="false"
-        :style="{ width: sideWidth + 'px', maxWidth: '600px' }"
+        :style="{
+          width: sideWidth + 'px',
+          maxWidth: '600px',
+          transition: 'width 0.5s ease-in-out'
+        }"
       >
         <FileManagement class="file-management" />
       </n-layout-sider>

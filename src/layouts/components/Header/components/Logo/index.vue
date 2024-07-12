@@ -14,7 +14,6 @@ defineProps<{
   width: 100%;
   &:hover {
     cursor: pointer;
-    background-color: green;
   }
 }
 </style>

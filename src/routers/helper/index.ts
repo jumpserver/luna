@@ -1,9 +1,12 @@
 import { createDiscreteApi } from 'naive-ui';
+import { getProfile } from '@/API/modules/user.ts';
+import { useUserStore } from '@/stores/modules/user.ts';
 import { useGlobalStore } from '@/stores/modules/global';
 import { useLoadingStore } from '@/stores/modules/loading.ts';
 import { getPublicOption, getPublic } from '@/API/modules/init.ts';
 import { getCsrfTokenFromCookie, getCurrentLanguage, getCookie } from '@/utils';
 import type { RouteLocationNormalized, NavigationGuardNext } from 'vue-router';
+
 import { GlobalState } from '@/stores/interface';
 
 const { message } = createDiscreteApi(['message']);
@@ -17,6 +20,7 @@ export const guard = async (
   from: RouteLocationNormalized,
   next: NavigationGuardNext
 ) => {
+  const userStore = useUserStore();
   const globalStore = useGlobalStore();
   const loadingStore = useLoadingStore();
 
@@ -28,6 +32,8 @@ export const guard = async (
   try {
     const { INTERFACE } = await getPublicOption();
     const { HELP_SUPPORT_URL, HELP_DOCUMENT_URL } = await getPublic();
+    const { username, avatar_url, email, source } = await getProfile();
+
     // const res = await Promise.allSettled([getPublicOption(), getPublic()]);
 
     const globalStates = {
@@ -42,13 +48,10 @@ export const guard = async (
       globalStore.setGlobalState(key, value);
     });
 
-    // console.log(res);
-
-    // globalStore.setGlobalState('JMSOrg', JMSOrg);
-    // globalStore.setGlobalState('csrfToken', CSRFToken);
-    // globalStore.setGlobalState('interface', INTERFACE);
-    // globalStore.setGlobalState('JMSLunaOra', JSMLunaOrg);
-    // globalStore.setGlobalState('language', currentLanguage);
+    userStore.setEmail(email);
+    userStore.setName(username);
+    userStore.setAvatar(avatar_url);
+    userStore.setSource(source.label);
     globalStore.setHelpLink(HELP_SUPPORT_URL, HELP_DOCUMENT_URL);
   } catch (error: any) {
     // 请求超时 && 网络错误单独判断，没有 response

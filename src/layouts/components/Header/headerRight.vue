@@ -16,8 +16,9 @@
 import { unref, h } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
-import { useGlobalStore } from '@/stores/modules/global.ts';
 import { NAvatar, NText } from 'naive-ui';
+import { useUserStore } from '@/stores/modules/user.ts';
+import { useGlobalStore } from '@/stores/modules/global.ts';
 
 import mittBus from '@/utils/mittBus.ts';
 
@@ -29,8 +30,10 @@ import type { CSSProperties } from 'vue';
 import type { HeaderRightOptions } from './types/index';
 
 const { t } = useI18n();
+const userStore = useUserStore();
 const globalStore = useGlobalStore();
 
+const { name, avatar_url, email, source } = storeToRefs(userStore);
 const { HELP_SUPPORT_URL, HELP_DOCUMENT_URL } = storeToRefs(globalStore);
 
 const iconStyle: CSSProperties = {
@@ -50,10 +53,10 @@ function renderCustomHeader() {
       h(NAvatar, {
         round: true,
         style: 'margin-right: 12px;',
-        src: 'https://07akioni.oss-cn-beijing.aliyuncs.com/demo1.JPG'
+        src: avatar_url.value
       }),
       h('div', null, [
-        h('div', null, [h(NText, { depth: 2 }, { default: () => '打工仔' })]),
+        h('div', null, [h(NText, { depth: 2 }, { default: () => name.value })]),
         h('div', { style: 'font-size: 12px;' }, [
           h(NText, { depth: 3 }, { default: () => '毫无疑问，你是办公室里最亮的星' })
         ])
@@ -106,16 +109,19 @@ const bottomOptions: HeaderRightOptions[] = [
         type: 'divider'
       },
       {
-        label: '处理群消息 342 条',
-        key: 'stmt1'
+        label: `${t('Source')}: ${source.value}`,
+        key: 'source'
       },
       {
-        label: '被 @ 58 次',
-        key: 'stmt2'
+        label: `${t('Email')}: ${email.value}`,
+        key: 'email'
       },
       {
-        label: '加入群 17 个',
-        key: 'stmt3'
+        label: t('Logout'),
+        key: 'logout',
+        onClink: () => {
+          window.location.href = document.location.origin + '/core/auth/logout/';
+        }
       }
     ]
   },

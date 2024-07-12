@@ -1,31 +1,45 @@
 <template>
-  <n-tabs type="segment" animated>
-    <n-tab-pane name="chap1" :tab="t('Asset Tree')">
-      <n-input v-model:value="pattern" placeholder="搜索" />
-      <n-tree
-        checkable
-        block-line
-        expand-on-click
-        checkbox-placement="left"
-        :show-line="true"
-        :pattern="pattern"
-        :data="testData"
-        :node-props="nodeProps"
-        :on-update:expanded-keys="updatePrefixWithExpaned"
-      />
-    </n-tab-pane>
-    <n-tab-pane name="chap2" :tab="t('Asset Type')">
-      <n-input v-model:value="pattern" :placeholder="t('Search')" />
-      <n-tree
-        block-line
-        :pattern="pattern"
-        expand-on-click
-        :data="data2"
-        :node-props="nodeProps"
-        :on-update:expanded-keys="updatePrefixWithExpaned"
-      />
-    </n-tab-pane>
-  </n-tabs>
+  <div>
+    <n-tabs type="segment" animated>
+      <n-tab-pane name="chap1" :tab="t('Asset Tree')">
+        <n-input v-model:value="pattern" placeholder="搜索" />
+        <n-tree
+          checkable
+          block-line
+          expand-on-click
+          checkbox-placement="left"
+          :show-line="true"
+          :pattern="pattern"
+          :data="testData"
+          :node-props="nodeProps"
+          :on-update:expanded-keys="updatePrefixWithExpaned"
+        />
+      </n-tab-pane>
+      <n-tab-pane name="chap2" :tab="t('Asset Type')">
+        <n-input v-model:value="pattern" :placeholder="t('Search')" />
+        <n-tree
+          block-line
+          :pattern="pattern"
+          expand-on-click
+          :data="data2"
+          :node-props="nodeProps"
+          :on-update:expanded-keys="updatePrefixWithExpaned"
+        />
+      </n-tab-pane>
+    </n-tabs>
+
+    <!-- 右键菜单	-->
+    <n-dropdown
+      trigger="manual"
+      placement="bottom-start"
+      :show="showDropdownRef"
+      :options="optionsRef as any"
+      :x="xRef"
+      :y="yRef"
+      @select="handleSelect"
+      @clickoutside="handleClickoutside"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -33,7 +47,7 @@ import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { getTreeSource } from '@/API/modules/tree';
 import { useTreeStore } from '@/stores/modules/tree.ts';
-import { useMessage, NIcon, TreeOption } from 'naive-ui';
+import { useMessage, NIcon, TreeOption, DropdownOption } from 'naive-ui';
 import { reactive, ref, h, onUnmounted, onMounted } from 'vue';
 import { Folder, FolderOpenOutline, FileTrayFullOutline } from '@vicons/ionicons5';
 
@@ -89,6 +103,11 @@ const data2 = reactive([
   }
 ]);
 
+const showDropdownRef = ref(false);
+const optionsRef = ref<DropdownOption[]>([]);
+const xRef = ref(0);
+const yRef = ref(0);
+
 const updatePrefixWithExpaned = (
   _keys: Array<string | number>,
   _option: Array<TreeOption | null>,
@@ -119,10 +138,20 @@ const nodeProps = ({ option }: { option: TreeOption }) => {
       if (!option.children && !option.disabled) {
         message.info('[Click] ' + option.label);
       }
+    },
+    onContextmenu(e: MouseEvent): void {
+      optionsRef.value = [option];
+      showDropdownRef.value = true;
+      xRef.value = e.clientX;
+      yRef.value = e.clientY;
+      console.log(e.clientX, e.clientY);
+      e.preventDefault();
     }
   };
 };
 
+// todo)) 由于会出现同一个资产挂载到不同的父节点上的情况，此时点击会将两个资产一同点击，因此不能单纯的拿 id 作为 key，
+// todo)) 对于异步加载需要额外处理添加 on-load
 const loadTree = async (isAsync: Boolean) => {
   try {
     // 默认异步加载资产树
@@ -154,6 +183,14 @@ const loadTree = async (isAsync: Boolean) => {
   } catch (e) {
     console.log(e);
   }
+};
+
+const handleSelect = () => {
+  showDropdownRef.value = false;
+};
+
+const handleClickoutside = () => {
+  showDropdownRef.value = false;
 };
 
 onMounted(async () => {
