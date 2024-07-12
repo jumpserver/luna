@@ -147,8 +147,6 @@ const loadTree = async (isAsync: Boolean) => {
     const data = Object.values(treeMap).filter(node => !node.pId);
 
     testData.value = data;
-    console.log(res);
-    console.log(data);
   } catch (e) {
     console.log(e);
   }

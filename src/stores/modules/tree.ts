@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { TreeState } from '../interface/index';
+import piniaPersistConfig from '@/stores/helper/persist';
 
 export const useTreeStore = defineStore('tree', {
   state: (): TreeState => ({
@@ -10,5 +11,6 @@ export const useTreeStore = defineStore('tree', {
     changeState(newValue: Boolean) {
       newValue && (this.isAsync = newValue);
     }
-  }
+  },
+  persist: piniaPersistConfig('tree')
 });

@@ -1,17 +1,11 @@
 <template>
-  <n-drawer
-    v-model:show="showSettingDrawer"
-    :default-width="290"
-    placement="right"
-    resizable
-    closable
-  >
-    <n-drawer-content :title="t('Custom Setting')" class="drawer-content">
+  <n-drawer v-model:show="showSettingDrawer" :default-width="290" placement="right" resizable>
+    <n-drawer-content :title="t('Custom Setting')" class="drawer-content" closable>
       <n-divider> {{ t('Theme Settings') }} </n-divider>
       <n-flex>
         <n-flex class="dark-setting" justify="space-between" align="center">
           {{ t('Dark Mode') }}
-          <n-switch v-model:value="active" @update:value="handleChange">
+          <n-switch v-model:value="darkModeActive" @update:value="handleDarkModeChange">
             <template #checked-icon>
               <n-icon :component="MoonOutline" />
             </template>
@@ -20,15 +14,31 @@
             </template>
           </n-switch>
         </n-flex>
+        <n-flex class="asset-async" justify="space-between" align="center">
+          <n-popover placement="bottom" trigger="hover">
+            <template #trigger>
+              {{ t('Asset Async') }}
+            </template>
+            {{ t('Asset Async Explain') }}
+          </n-popover>
+          <n-switch v-model:value="assetAsyncActive" @update:value="handleAssetAsyncChange">
+            <template #checked-icon>
+              <n-icon :component="ArrowBackCircleOutline" />
+            </template>
+            <template #unchecked-icon>
+              <n-icon :component="ArrowForwardCircleOutline" />
+            </template>
+          </n-switch>
+        </n-flex>
         <n-flex class="page-setting" justify="space-between" align="center">
-          {{ t('Page configuration') }}
+          {{ t('Page Configuration') }}
           <n-select
-            v-model:value="pageOptionValue"
-            :options="pageOptions"
             clearable
             size="small"
+            v-model:value="pageOptionValue"
+            :options="pageOptions"
+            :placeholder="t('Please Select')"
             @update-value="handlePageConfigurationChange"
-            :placeholder="t('Please select')"
           />
         </n-flex>
       </n-flex>
@@ -37,12 +47,12 @@
       <n-flex class="language-setting" justify="space-between" align="center">
         {{ t('Language Selection') }}
         <n-select
-          v-model:value="languageOptionValue"
-          :options="languageOptions"
           clearable
           size="small"
+          v-model:value="languageOptionValue"
+          :options="languageOptions"
+          :placeholder="t('Please Select')"
           @update-value="handlePageConfigurationChange"
-          :placeholder="t('Please select')"
         />
       </n-flex>
     </n-drawer-content>
@@ -55,23 +65,36 @@ import { storeToRefs } from 'pinia';
 import { SelectOption } from 'naive-ui';
 import { useTheme } from '@/hooks/useTheme.ts';
 import { onBeforeUnmount, reactive, ref } from 'vue';
+import { useTreeStore } from '@/stores/modules/tree.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
 
 import mittBus from '@/utils/mittBus.ts';
-import { MoonOutline, SunnyOutline } from '@vicons/ionicons5';
+import {
+  MoonOutline,
+  SunnyOutline,
+  ArrowBackCircleOutline,
+  ArrowForwardCircleOutline
+} from '@vicons/ionicons5';
 
+const treeStore = useTreeStore();
 const globalStore = useGlobalStore();
 
 const { t } = useI18n();
 const { switchDark } = useTheme();
 const { isDark } = storeToRefs(globalStore);
+const { isAsync } = storeToRefs(treeStore);
 
-const active = isDark;
+const darkModeActive = isDark;
+const assetAsyncActive = isAsync;
 const showSettingDrawer = ref<Boolean>(false);
 
-const handleChange = (value: Boolean) => {
+const handleDarkModeChange = (value: Boolean) => {
   globalStore.setGlobalState('isDark', value);
   switchDark();
+};
+const handleAssetAsyncChange = (value: Boolean) => {
+  treeStore.changeState(value);
+  mittBus.emit('tree-load');
 };
 
 const handlePageConfigurationChange = (value: string, option: SelectOption) => {
@@ -126,18 +149,22 @@ onBeforeUnmount(() => {
 <style scoped lang="scss">
 .drawer-content {
   :deep(.n-drawer-body-content-wrapper) {
-    .dark-setting {
+    .dark-setting,
+    .asset-async,
+    .page-setting,
+    .language-setting {
       width: 100%;
     }
+    .asset-async {
+      margin-top: 15px;
+    }
     .page-setting {
-      width: 100%;
       margin-top: 15px;
       .n-select {
         width: 150px;
       }
     }
     .language-setting {
-      width: 100%;
       .n-select {
         width: 150px;
       }

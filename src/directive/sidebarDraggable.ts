@@ -9,7 +9,7 @@ export const draggable = {
       const newWidth = startWidth + (event.clientX - startX);
 
       // 确保宽度在合理范围内
-      if (newWidth >= 100 && newWidth <= 600) {
+      if (newWidth >= 240 && newWidth <= 600) {
         el.style.width = `${newWidth}px`;
 
         // 更新传递的 ref 变量

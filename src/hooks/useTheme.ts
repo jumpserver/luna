@@ -42,7 +42,7 @@ export const useTheme = () => {
   const changePrimary = (val: string | null) => {
     if (!val) {
       val = DEFAULT_PRIMARY;
-      message.success(`${t('Theme reset')} ${DEFAULT_PRIMARY}`);
+      message.success(`${t('Theme Reset')} ${DEFAULT_PRIMARY}`);
     }
 
     // 计算主题颜色变化

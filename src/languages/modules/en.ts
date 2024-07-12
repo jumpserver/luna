@@ -12,13 +12,15 @@ export default {
   GUI: 'GUI',
   CLI: 'CLI',
   'Web Terminal': 'Web Terminal',
-  'Theme reset': 'The theme color has been reset to',
+  'Theme Reset': 'The theme color has been reset to',
   'Custom Setting': 'Custom Setting',
   'Dark Mode': '黑暗模式',
   'Theme Settings': 'Theme Settings',
   'Language Settings': 'Language Settings',
-  'Page configuration': 'Page configuration',
-  'Please select': 'Please select',
+  'Page Configuration': 'Page Configuration',
+  'Please Select': 'Please Select',
   'Language Selection': 'Language Selection',
+  'Asset Async': 'Asynchronous loading',
+  'Asset Async Explain': 'Whether assets are loaded asynchronously',
   'Primary Color': 'Primary Color'
 };
