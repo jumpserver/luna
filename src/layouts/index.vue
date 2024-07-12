@@ -38,7 +38,7 @@ import SettingDrawer from './components/SettingDrawer/index.vue';
 import { useLoadingStore } from '@/stores/modules/loading.ts';
 import mittBus from '@/utils/mittBus.ts';
 
-const sideWidth = ref(240);
+const sideWidth = ref(300);
 const isCollapsed = ref(false);
 const languageLoaded = ref(false);
 
@@ -55,7 +55,7 @@ const handleTriggerClick = () => {
   isCollapsed.value = !isCollapsed.value;
 
   if (!isCollapsed.value) {
-    sideWidth.value = 240;
+    sideWidth.value = 300;
   }
 };
 

@@ -11,6 +11,7 @@ export default {
   General: '通用配置',
   GUI: '图形化配置',
   CLI: '命令行配置',
+  Search: '搜索',
   'Web Terminal': 'Web 终端',
   'Theme Reset': '主题颜色已重置为',
   'Custom Setting': '自定义设置',
@@ -20,6 +21,8 @@ export default {
   'Page Configuration': '页面配置',
   'Please Select': '请选择',
   'Asset Async': '异步加载',
+  'Asset Tree': '资产树',
+  'Asset Type': '类型数',
   'Asset Async Explain': '是否异步加载资产',
   'Language Selection': '语言选择',
   'Primary Color': '主题颜色'

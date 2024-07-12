@@ -1,6 +1,6 @@
 <template>
   <n-tabs type="segment" animated>
-    <n-tab-pane name="chap1" tab="资产树">
+    <n-tab-pane name="chap1" :tab="t('Asset Tree')">
       <n-input v-model:value="pattern" placeholder="搜索" />
       <n-tree
         checkable
@@ -14,8 +14,8 @@
         :on-update:expanded-keys="updatePrefixWithExpaned"
       />
     </n-tab-pane>
-    <n-tab-pane name="chap2" tab="类型树">
-      <n-input v-model:value="pattern" placeholder="搜索" />
+    <n-tab-pane name="chap2" :tab="t('Asset Type')">
+      <n-input v-model:value="pattern" :placeholder="t('Search')" />
       <n-tree
         block-line
         :pattern="pattern"
@@ -29,16 +29,20 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, h, onUnmounted, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { getTreeSource } from '@/API/modules/tree';
 import { useTreeStore } from '@/stores/modules/tree.ts';
 import { useMessage, NIcon, TreeOption } from 'naive-ui';
+import { reactive, ref, h, onUnmounted, onMounted } from 'vue';
 import { Folder, FolderOpenOutline, FileTrayFullOutline } from '@vicons/ionicons5';
-import mittBus from '@/utils/mittBus.ts';
+
 import type { Tree } from '@/API/interface';
 
+import mittBus from '@/utils/mittBus.ts';
+
 const treeStore = useTreeStore();
+const { t } = useI18n();
 const { isAsync } = storeToRefs(treeStore);
 
 const message = useMessage();
