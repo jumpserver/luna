@@ -9,6 +9,8 @@ export const useGlobalStore = defineStore({
   state: (): GlobalState => ({
     // 深色模式
     isDark: true,
+    // 全屏展示
+    isFullScreen: false,
     token: '',
     JMSOrg: '',
     language: '',

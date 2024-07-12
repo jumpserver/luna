@@ -10,7 +10,7 @@
     <n-drawer-content :title="t('Custom Setting')" class="drawer-content" closable>
       <n-divider> {{ t('Theme Settings') }} </n-divider>
       <n-flex>
-        <n-flex class="dark-setting" justify="space-between" align="center">
+        <n-flex class="setting-item dark-setting" justify="space-between" align="center">
           {{ t('Dark Mode') }}
           <n-switch v-model:value="darkModeActive" @update:value="handleDarkModeChange">
             <template #checked-icon>
@@ -21,7 +21,7 @@
             </template>
           </n-switch>
         </n-flex>
-        <n-flex class="asset-async" justify="space-between" align="center">
+        <n-flex class="setting-item asset-async" justify="space-between" align="center">
           <n-popover placement="bottom" trigger="hover">
             <template #trigger>
               {{ t('Asset Async') }}
@@ -37,7 +37,18 @@
             </template>
           </n-switch>
         </n-flex>
-        <n-flex class="page-setting" justify="space-between" align="center">
+        <n-flex class="setting-item full-screen" justify="space-between" align="center">
+          {{ t('Full Screen') }}
+          <n-switch v-model:value="fullScreenActive" @update:value="handleFullScreenChange">
+            <template #checked-icon>
+              <n-icon :component="ContractOutline" />
+            </template>
+            <template #unchecked-icon>
+              <n-icon :component="Expand" />
+            </template>
+          </n-switch>
+        </n-flex>
+        <n-flex class="setting-item page-setting" justify="space-between" align="center">
           {{ t('Page Configuration') }}
           <n-select
             clearable
@@ -50,7 +61,7 @@
       </n-flex>
 
       <n-divider> {{ t('Language Settings') }} </n-divider>
-      <n-flex class="language-setting" justify="space-between" align="center">
+      <n-flex class="setting-item language-setting" justify="space-between" align="center">
         {{ t('Language Selection') }}
         <n-select
           clearable
@@ -77,8 +88,10 @@ import { watch, onBeforeUnmount, reactive, ref } from 'vue';
 
 import mittBus from '@/utils/mittBus.ts';
 import {
+  Expand,
   MoonOutline,
   SunnyOutline,
+  ContractOutline,
   ArrowBackCircleOutline,
   ArrowForwardCircleOutline
 } from '@vicons/ionicons5';
@@ -93,11 +106,12 @@ const { updateTranslations } = useTranslations();
 
 const { t } = useI18n();
 const { switchDark } = useTheme();
-const { isDark } = storeToRefs(globalStore);
 const { isAsync } = storeToRefs(treeStore);
+const { isDark, isFullScreen } = storeToRefs(globalStore);
 
 const darkModeActive = isDark;
 const assetAsyncActive = isAsync;
+const fullScreenActive = isFullScreen;
 
 const showSettingDrawer = ref<Boolean>(false);
 const defaultWidth = ref(globalStore.language === 'en' ? 390 : 300);
@@ -105,10 +119,6 @@ const defaultWidth = ref(globalStore.language === 'en' ? 390 : 300);
 const pageOptionValue = ref();
 const languageOptionValue = ref(globalStore.language);
 const pageOptions = reactive([
-  {
-    label: t('General'),
-    value: 'General'
-  },
   {
     label: t('GUI'),
     value: 'GUI'
@@ -161,6 +171,9 @@ const handleAssetAsyncChange = (value: Boolean) => {
   treeStore.changeState(value);
   mittBus.emit('tree-load');
 };
+const handleFullScreenChange = (value: Boolean) => {
+  globalStore.setGlobalState('isFullScreen', value);
+};
 
 /* eslint-disable-next-line no-unused-vars */
 const handlePageConfigurationChange = (value: string, option: CustomSelectOption) => {
@@ -177,6 +190,7 @@ watch(
 );
 
 mittBus.on('open-setting-drawer', () => {
+  console.log(2);
   showSettingDrawer.value = true;
 });
 
@@ -196,27 +210,15 @@ onBeforeUnmount(() => {
   }
   .drawer-content {
     :deep(.n-drawer-body-content-wrapper) {
-      .dark-setting,
-      .asset-async,
-      .page-setting,
-      .language-setting {
+      .setting-item {
         width: 100%;
+        margin-top: 10px;
       }
-      .asset-async {
-        margin-top: 15px;
+      .page-setting .n-select {
+        width: 150px;
       }
-      .page-setting {
-        flex-wrap: nowrap;
-        margin-top: 15px;
-        .n-select {
-          width: 150px;
-        }
-      }
-      .language-setting {
-        flex-wrap: nowrap;
-        .n-select {
-          width: 150px;
-        }
+      .language-setting .n-select {
+        width: 150px;
       }
     }
   }

@@ -26,6 +26,7 @@
     "vite-project": "link:",
     "vue": "^3.4.31",
     "vue-draggable-plus": "^0.5.2",
+    "vue-fullscreen": "^3.1.2",
     "vue-i18n": "^9.13.1",
     "vue-router": "^4.4.0"
   },

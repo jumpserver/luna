@@ -15,6 +15,7 @@ export default {
   Email: '电子邮件',
   Source: '来源',
   Logout: '退出登录',
+  'Full Screen': '全屏展示',
   'Web Terminal': 'Web 终端',
   'Theme Reset': '主题颜色已重置为',
   'Custom Setting': '自定义设置',

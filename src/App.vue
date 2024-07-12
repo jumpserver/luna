@@ -1,16 +1,18 @@
 <template>
-  <n-config-provider
-    :locale="zhCN"
-    :date-locale="dateZhCN"
-    :theme="isDark ? darkTheme : null"
-    :theme-overrides="isDark ? darkThemeOverrides : lightThemeOverrides"
-  >
-    <n-message-provider>
-      <loading>
-        <router-view />
-      </loading>
-    </n-message-provider>
-  </n-config-provider>
+  <fullscreen v-model:fullscreen="isFull" teleport="true">
+    <n-config-provider
+      :locale="zhCN"
+      :date-locale="dateZhCN"
+      :theme="isDark ? darkTheme : null"
+      :theme-overrides="isDark ? darkThemeOverrides : lightThemeOverrides"
+    >
+      <n-message-provider>
+        <loading>
+          <router-view />
+        </loading>
+      </n-message-provider>
+    </n-config-provider>
+  </fullscreen>
 </template>
 
 <script setup lang="ts">
@@ -21,6 +23,7 @@ import { onBeforeMount } from 'vue';
 import { useTheme } from '@/hooks/useTheme.ts';
 import { useTranslations } from '@/hooks/useTranslate.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
+import { component as fullscreen } from 'vue-fullscreen';
 import { lightThemeOverrides, darkThemeOverrides } from '@/ThemeOverrides.ts';
 
 import { setFavicon } from '@/utils';
@@ -33,7 +36,9 @@ const { updateTranslations } = useTranslations();
 
 const globalStore = useGlobalStore();
 
-const { isDark } = storeToRefs(globalStore);
+const { isDark, isFullScreen } = storeToRefs(globalStore);
+
+const isFull = isFullScreen;
 
 onBeforeMount(() => {
   // 初始化主题样式

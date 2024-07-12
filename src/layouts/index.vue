@@ -9,7 +9,6 @@
       </n-layout-header>
       <n-layout-sider
         v-draggable="sideWidth"
-        ref="sideRef"
         bordered
         collapse-mode="width"
         show-trigger="arrow-circle"
@@ -18,10 +17,10 @@
         :collapsed-width="0"
         :collapsed="isCollapsed"
         :show-collapsed-content="false"
+        class="transition-sider"
         :style="{
           width: sideWidth + 'px',
-          maxWidth: '600px',
-          transition: 'width 0.5s ease-in-out'
+          maxWidth: '600px'
         }"
       >
         <FileManagement class="file-management" />
@@ -83,8 +82,6 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 @import 'index';
-
-// 增加侧边栏右侧边缘拖动手柄的样式
 .n-layout-sider {
   position: relative;
 }
@@ -94,7 +91,7 @@ onUnmounted(() => {
   right: 0;
   width: 10px; // 右侧边缘宽度
   height: 100%;
-  cursor: ew-resize; // 鼠标悬停样式
+  cursor: ew-resize;
   content: '';
 }
 </style>

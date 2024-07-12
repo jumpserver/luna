@@ -14,6 +14,8 @@ import 'vfonts/OpenSans.css';
 import '@/styles/reset.scss';
 // 引入图标注册脚本
 import 'virtual:svg-icons-register';
+// 引入 vue-fullscreen
+import VueFullscreen from 'vue-fullscreen';
 // 引入指令
 import { draggable } from '@/directive/sidebarDraggable.ts';
 
@@ -23,6 +25,7 @@ app.use(i18n);
 app.use(naive);
 app.use(pinia);
 app.use(router);
+app.use(VueFullscreen);
 
 app.directive('draggable', draggable);
 

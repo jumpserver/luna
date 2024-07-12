@@ -1,8 +1,9 @@
 export interface GlobalState {
-  primary: string;
   isDark: Boolean;
+  isFullScreen: Boolean;
   token: string;
   JMSOrg: string;
+  primary: string;
   language: string;
   csrfToken: string;
   JMSLunaOra: string;
