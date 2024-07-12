@@ -28,7 +28,7 @@ export const guard = async (
   try {
     const { INTERFACE } = await getPublicOption();
     const { HELP_SUPPORT_URL, HELP_DOCUMENT_URL } = await getPublic();
-    const res = await Promise.allSettled([getPublicOption(), getPublic()]);
+    // const res = await Promise.allSettled([getPublicOption(), getPublic()]);
 
     const globalStates = {
       JMSOrg,
@@ -42,7 +42,7 @@ export const guard = async (
       globalStore.setGlobalState(key, value);
     });
 
-    console.log(res);
+    // console.log(res);
 
     // globalStore.setGlobalState('JMSOrg', JMSOrg);
     // globalStore.setGlobalState('csrfToken', CSRFToken);

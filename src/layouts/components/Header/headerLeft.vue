@@ -2,7 +2,7 @@
   <n-flex justify="center" align="center" class="top-item">
     <logo :logo-image="logoImage || ''" />
     <n-flex justify="center" align="center">
-      <n-button text @click="handleTreeClick">
+      <n-button text @click="handleTreeIconClick">
         <svg-icon class="tree-icon" :name="icon.name" :icon-style="iconStyle" />
       </n-button>
     </n-flex>
@@ -40,8 +40,8 @@ const icon = {
   component: Profile
 };
 
-const handleTreeClick = () => {
-  mittBus.emit('treeClick');
+const handleTreeIconClick = () => {
+  mittBus.emit('tree-click');
 };
 
 const logoImage = globalStore.interface.logo_logout;

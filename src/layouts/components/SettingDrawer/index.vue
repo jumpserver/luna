@@ -114,12 +114,12 @@ const languageOptions = reactive([
   }
 ]);
 
-mittBus.on('openSettingDrawer', () => {
+mittBus.on('open-setting-drawer', () => {
   showSettingDrawer.value = true;
 });
 
 onBeforeUnmount(() => {
-  mittBus.off('openSettingDrawer');
+  mittBus.off('open-setting-drawer');
 });
 </script>
 

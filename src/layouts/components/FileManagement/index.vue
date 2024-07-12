@@ -3,10 +3,13 @@
     <n-tab-pane name="chap1" tab="资产树">
       <n-input v-model:value="pattern" placeholder="搜索" />
       <n-tree
+        checkable
         block-line
-        :pattern="pattern"
         expand-on-click
-        :data="data1"
+        checkbox-placement="left"
+        :show-line="true"
+        :pattern="pattern"
+        :data="testData"
         :node-props="nodeProps"
         :on-update:expanded-keys="updatePrefixWithExpaned"
       />
@@ -26,88 +29,22 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, h } from 'vue';
+import { reactive, ref, h, onUnmounted, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
+import { getTreeSource } from '@/API/modules/tree';
+import { useTreeStore } from '@/stores/modules/tree.ts';
 import { useMessage, NIcon, TreeOption } from 'naive-ui';
 import { Folder, FolderOpenOutline, FileTrayFullOutline } from '@vicons/ionicons5';
+import mittBus from '@/utils/mittBus.ts';
+import type { Tree } from '@/API/interface';
+
+const treeStore = useTreeStore();
+const { isAsync } = storeToRefs(treeStore);
 
 const message = useMessage();
 const pattern = ref('');
-const data1 = reactive([
-  {
-    key: '收藏夹',
-    label: '收藏夹',
-    prefix: () =>
-      h(NIcon, null, {
-        default: () => h(Folder)
-      }),
-    children: [
-      {
-        key: '空的',
-        label: '空的',
-        disabled: true,
-        prefix: () =>
-          h(NIcon, null, {
-            default: () => h(Folder)
-          })
-      },
-      {
-        key: '我的文件',
-        label: '我的文件',
-        prefix: () =>
-          h(NIcon, null, {
-            default: () => h(Folder)
-          }),
-        children: [
-          {
-            label: 'template.txt',
-            key: 'template.txt',
-            prefix: () =>
-              h(NIcon, null, {
-                default: () => h(FileTrayFullOutline)
-              })
-          }
-        ]
-      }
-    ]
-  },
-  {
-    key: 'Default',
-    label: 'Default',
-    prefix: () =>
-      h(NIcon, null, {
-        default: () => h(Folder)
-      }),
-    children: [
-      {
-        key: '空的',
-        label: '空的',
-        disabled: true,
-        prefix: () =>
-          h(NIcon, null, {
-            default: () => h(Folder)
-          })
-      },
-      {
-        key: '我的文件',
-        label: '我的文件',
-        prefix: () =>
-          h(NIcon, null, {
-            default: () => h(Folder)
-          }),
-        children: [
-          {
-            label: 'template.txt',
-            key: 'template.txt',
-            prefix: () =>
-              h(NIcon, null, {
-                default: () => h(FileTrayFullOutline)
-              })
-          }
-        ]
-      }
-    ]
-  }
-]);
+
+let testData = ref<TreeOption[]>([]);
 const data2 = reactive([
   {
     key: '所有类型',
@@ -147,6 +84,7 @@ const data2 = reactive([
     ]
   }
 ]);
+
 const updatePrefixWithExpaned = (
   _keys: Array<string | number>,
   _option: Array<TreeOption | null>,
@@ -180,6 +118,53 @@ const nodeProps = ({ option }: { option: TreeOption }) => {
     }
   };
 };
+
+const loadTree = async (isAsync: Boolean) => {
+  try {
+    // 默认异步加载资产树
+    const res: Tree[] = await getTreeSource(isAsync);
+    const treeMap: { [key: string]: TreeOption } = {};
+
+    res.forEach(node => {
+      treeMap[node.id] = {
+        key: node.id,
+        label: node.name,
+        prefix: () =>
+          h(NIcon, null, {
+            default: () => h(node.isParent ? Folder : FileTrayFullOutline)
+          }),
+        children: [],
+        ...node
+      };
+    });
+
+    res.forEach(node => {
+      if (node.pId && treeMap[node.pId]) {
+        treeMap[node.pId]?.children?.push(treeMap[node.id]);
+      }
+    });
+
+    const data = Object.values(treeMap).filter(node => !node.pId);
+
+    testData.value = data;
+    console.log(res);
+    console.log(data);
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+onMounted(async () => {
+  await loadTree(isAsync.value);
+});
+
+mittBus.on('tree-load', () => {
+  loadTree(isAsync.value);
+});
+
+onUnmounted(() => {
+  mittBus.off('tree-load');
+});
 </script>
 
 <style scoped lang="scss"></style>

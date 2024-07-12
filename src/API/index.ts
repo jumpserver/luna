@@ -65,7 +65,7 @@ class RequestHttp {
     );
   }
 
-  get<T>(url: string, options?: any): Promise<ResultData<T>> {
+  get(url: string, options?: any): Promise<any> {
     options = setOrgIDToRequestHeader(options);
     return this.service.get(url, options);
   }

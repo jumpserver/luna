@@ -26,3 +26,29 @@ export interface GlobalSetting {
   CONNECTION_TOKEN_REUSABLE: boolean;
   CHAT_AI_ENABLED: boolean;
 }
+
+export interface TreeMeta {
+  type: string;
+
+  data: {
+    id: string;
+    key: string;
+    value: string;
+  };
+}
+
+export interface Tree {
+  id: string;
+
+  isParent: Boolean;
+
+  name: string;
+
+  open: Boolean;
+
+  pId: string;
+
+  title: string;
+
+  meta: TreeMeta;
+}

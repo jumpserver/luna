@@ -50,6 +50,10 @@ export interface UserState {
   name: string;
 }
 
+export interface TreeState {
+  isAsync: Boolean;
+}
+
 export type ObjToKeyValArray<T> = {
   [K in keyof T]: [K, T[K]];
 }[keyof T];

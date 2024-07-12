@@ -14,6 +14,8 @@ import 'vfonts/OpenSans.css';
 import '@/styles/reset.scss';
 // 引入图标注册脚本
 import 'virtual:svg-icons-register';
+// 引入指令
+import { draggable } from '@/directive/sidebarDraggable.ts';
 
 const app = createApp(App);
 
@@ -21,5 +23,7 @@ app.use(i18n);
 app.use(naive);
 app.use(pinia);
 app.use(router);
+
+app.directive('draggable', draggable);
 
 app.mount('#app');

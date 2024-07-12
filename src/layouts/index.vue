@@ -3,44 +3,44 @@
     <n-layout has-sider class="custom-layout">
       <n-layout-header>
         <n-flex class="header-content" vertical align="center" justify="space-between">
-          <header-left v-if="languageLoaded"></header-left>
-          <header-right></header-right>
+          <HeaderLeft v-if="languageLoaded" />
+          <HeaderRight />
         </n-flex>
       </n-layout-header>
       <n-layout-sider
-        ref="siderRef"
+        v-draggable="sideWidth"
+        ref="sideRef"
+        bordered
         collapse-mode="width"
-        :show-collapsed-content="false"
-        :collapsed="isCollapsed"
-        :collapsed-width="0"
-        :width="240"
         show-trigger="arrow-circle"
         content-style="padding: 24px;"
-        bordered
-        @trigger-click="handleTriggerClick"
+        :width="sideWidth"
+        :collapsed-width="0"
+        :collapsed="isCollapsed"
+        :show-collapsed-content="false"
+        :style="{ width: sideWidth + 'px', maxWidth: '600px' }"
       >
-        <FileManagement class="file-management"></FileManagement>
+        <FileManagement class="file-management" />
       </n-layout-sider>
-      <main-content></main-content>
+      <MainContent />
     </n-layout>
   </n-space>
   <SettingDrawer />
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
 import HeaderLeft from './components/Header/headerLeft.vue';
 import HeaderRight from './components/Header/headerRight.vue';
 import MainContent from './components/MainContent/index.vue';
 import FileManagement from './components/FileManagement/index.vue';
 import SettingDrawer from './components/SettingDrawer/index.vue';
-
-import { onUnmounted, ref, onMounted } from 'vue';
 import { useLoadingStore } from '@/stores/modules/loading.ts';
 import mittBus from '@/utils/mittBus.ts';
 
-const languageLoaded = ref(false);
-
+const sideWidth = ref(240);
 const isCollapsed = ref(false);
+const languageLoaded = ref(false);
 
 const useLoading = useLoadingStore();
 if (!useLoading.isLoading) {
@@ -50,15 +50,16 @@ if (!useLoading.isLoading) {
   }, 100);
 }
 
-const siderRef = ref(null);
-
-mittBus.on('treeClick', () => {
-  isCollapsed.value = !isCollapsed.value;
-});
-
 const handleTriggerClick = () => {
+  sideWidth.value = 0;
   isCollapsed.value = !isCollapsed.value;
+
+  if (!isCollapsed.value) {
+    sideWidth.value = 240;
+  }
 };
+
+mittBus.on('tree-click', handleTriggerClick);
 
 onMounted(() => {
   const trigger = document.querySelector('.n-layout-toggle-button');
@@ -68,7 +69,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  mittBus.off('treeClick');
+  mittBus.off('tree-click');
   const trigger = document.querySelector('.n-layout-toggle-button');
   if (trigger) {
     trigger.removeEventListener('click', handleTriggerClick);
@@ -78,4 +79,18 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 @import 'index';
+
+// 增加侧边栏右侧边缘拖动手柄的样式
+.n-layout-sider {
+  position: relative;
+}
+.n-layout-sider::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px; // 右侧边缘宽度
+  height: 100%;
+  cursor: ew-resize; // 鼠标悬停样式
+  content: '';
+}
 </style>
