@@ -1,6 +1,7 @@
 <li
   (click)="setActive()"
-  (dblclick)="view.editable=true;setActive()" [id]="view.id"
+  (dblclick)="onDoubleClick()"
+  [id]="view.id"
   [ngClass]="{'active': view.active,'disconnected': !view.connected, 'hidden': view.closed != false}"
   [title]="view.name"
 >
@@ -8,7 +9,8 @@
   <i [ngClass]="view.asset.type.value + '_ico_docu'" class="view_icon"></i>
     {{ view.name | truncatechars:100 }}
   </span>
-  <input (blur)="view.editable=false"
+  <input #inputElement
+         (blur)="onBlur()"
          (keyup.enter)="view.editable=false"
          *ngIf="view.editable"
          [(ngModel)]="view.name"
