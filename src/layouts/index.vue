@@ -1,45 +1,44 @@
 <template>
-  <n-space vertical size="large">
-    <n-layout has-sider class="custom-layout">
-      <n-layout-header>
-        <n-flex class="header-content" vertical align="center" justify="space-between">
-          <HeaderLeft v-if="languageLoaded" />
-          <HeaderRight />
-        </n-flex>
-      </n-layout-header>
-      <n-layout-sider
-        v-draggable="sideWidth"
-        bordered
-        collapse-mode="width"
-        show-trigger="arrow-circle"
-        content-style="padding: 24px;"
-        :width="sideWidth"
-        :collapsed-width="0"
-        :collapsed="isCollapsed"
-        :show-collapsed-content="false"
-        class="transition-sider"
-        :style="{
-          width: sideWidth + 'px',
-          maxWidth: '600px'
-        }"
-      >
-        <FileManagement class="file-management" />
-      </n-layout-sider>
-      <MainContent />
-    </n-layout>
-  </n-space>
+  <n-layout has-sider class="custom-layout">
+    <n-layout-header>
+      <n-flex class="header-content" vertical align="center" justify="space-between">
+        <HeaderLeft v-if="languageLoaded" />
+        <HeaderRight />
+      </n-flex>
+    </n-layout-header>
+    <n-layout-sider
+      v-draggable="sideWidth"
+      bordered
+      collapse-mode="width"
+      show-trigger="arrow-circle"
+      content-style="padding: 24px;"
+      :width="sideWidth"
+      :collapsed-width="0"
+      :collapsed="isCollapsed"
+      :show-collapsed-content="false"
+      class="transition-sider"
+      :style="{
+        width: sideWidth + 'px',
+        maxWidth: '600px'
+      }"
+    >
+      <FileManagement class="file-management" />
+    </n-layout-sider>
+    <MainContent />
+  </n-layout>
   <SettingDrawer />
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import mittBus from '@/utils/mittBus.ts';
 import HeaderLeft from './components/Header/headerLeft.vue';
-import HeaderRight from './components/Header/headerRight.vue';
 import MainContent from './components/MainContent/index.vue';
+import HeaderRight from './components/Header/headerRight.vue';
 import FileManagement from './components/FileManagement/index.vue';
 import SettingDrawer from './components/SettingDrawer/index.vue';
+
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useLoadingStore } from '@/stores/modules/loading.ts';
-import mittBus from '@/utils/mittBus.ts';
 
 const sideWidth = ref(300);
 const isCollapsed = ref(false);

@@ -6,6 +6,7 @@
         <n-tree
           checkable
           block-line
+          block-node
           expand-on-click
           checkbox-placement="left"
           :show-line="true"
@@ -45,11 +46,12 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
-import { getTreeSource } from '@/API/modules/tree';
 import { useTreeStore } from '@/stores/modules/tree.ts';
-import { useMessage, NIcon, TreeOption, DropdownOption } from 'naive-ui';
+import { getTreeSource, getTreeDetailById } from '@/API/modules/tree';
+import { NIcon, TreeOption, DropdownOption, useDialog } from 'naive-ui';
 import { reactive, ref, h, onUnmounted, onMounted } from 'vue';
 import { Folder, FolderOpenOutline, FileTrayFullOutline } from '@vicons/ionicons5';
+import ConnectionDialog from '@/components/ConnectionDialog/index.vue';
 
 import type { Tree } from '@/API/interface';
 
@@ -58,9 +60,10 @@ import mittBus from '@/utils/mittBus.ts';
 const treeStore = useTreeStore();
 const { t } = useI18n();
 const { isAsync } = storeToRefs(treeStore);
+const dialog = useDialog();
 
-const message = useMessage();
 const pattern = ref('');
+const showDialog = ref(false);
 
 let testData = ref<TreeOption[]>([]);
 const data2 = reactive([
@@ -134,9 +137,22 @@ const updatePrefixWithExpaned = (
 };
 const nodeProps = ({ option }: { option: TreeOption }) => {
   return {
-    onClick() {
-      if (!option.children && !option.disabled) {
-        message.info('[Click] ' + option.label);
+    onClick: async () => {
+      const { id } = option;
+
+      try {
+        if (id) {
+          const res = await getTreeDetailById(id as string);
+
+          dialog.success({
+            title: '123',
+            content: () => h(ConnectionDialog)
+          });
+          showDialog.value = true;
+          console.log(res);
+        }
+      } catch (e) {
+        console.log(e);
       }
     },
     onContextmenu(e: MouseEvent): void {

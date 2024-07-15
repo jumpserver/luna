@@ -1,16 +1,18 @@
 <template>
-  <fullscreen v-model:fullscreen="isFull" teleport="true">
+  <fullscreen v-model:fullscreen="isFull" :teleport="true">
     <n-config-provider
       :locale="zhCN"
       :date-locale="dateZhCN"
       :theme="isDark ? darkTheme : null"
       :theme-overrides="isDark ? darkThemeOverrides : lightThemeOverrides"
     >
-      <n-message-provider>
-        <loading>
-          <router-view />
-        </loading>
-      </n-message-provider>
+      <n-dialog-provider>
+        <n-message-provider>
+          <loading>
+            <router-view />
+          </loading>
+        </n-message-provider>
+      </n-dialog-provider>
     </n-config-provider>
   </fullscreen>
 </template>
