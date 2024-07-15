@@ -11,27 +11,30 @@
 
 <script setup lang="ts">
 import { reactive } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const systemTips = reactive([
   {
-    content: 'Reselect connection method',
-    action: 'Right click asset'
+    content: t('Reselect connection method'),
+    action: t('Right click asset')
   },
   {
-    content: 'Expand all asset',
-    action: 'Right click node'
+    content: t('Expand all asset'),
+    action: t('Right click node')
   },
   {
-    content: 'Asset tree loading method',
-    action: 'Settings or basic settings'
+    content: t('Asset tree loading method'),
+    action: t('Settings or basic settings')
   },
   {
-    content: 'Download the latest client',
-    action: 'Help or download'
+    content: t('Download the latest client'),
+    action: t('Help or download')
   },
   {
-    content: 'Keyboard keys',
-    action: 'Keyboard switch session'
+    content: t('Keyboard keys'),
+    action: t('Keyboard switch session')
   }
 ]);
 </script>

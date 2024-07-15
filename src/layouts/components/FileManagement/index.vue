@@ -140,13 +140,26 @@ const nodeProps = ({ option }: { option: TreeOption }) => {
     onClick: async () => {
       const { id } = option;
 
+      // todo)) 只有资产才能点击
       try {
         if (id) {
           const res = await getTreeDetailById(id as string);
 
           dialog.success({
-            title: '123',
-            content: () => h(ConnectionDialog)
+            showIcon: false,
+            closeOnEsc: false,
+            closable: true,
+            autoFocus: true,
+            title: `${t('Connect')} - ${res.name}`,
+            content: () =>
+              h(ConnectionDialog, {
+                id: res.id,
+                permedAccounts: res.permed_accounts,
+                permedProtocols: res.permed_protocols
+              }),
+            style: {
+              width: 'auto'
+            }
           });
           showDialog.value = true;
           console.log(res);

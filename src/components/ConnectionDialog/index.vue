@@ -1,17 +1,81 @@
 <template>
-  <n-dialog v-if="showDialog" closable autofocus :show-icon="false" :title="`1xas`">
-    <n-tabs type="line" animated>
-      <n-tab-pane name="oasis" tab="Oasis"> Wonderwall </n-tab-pane>
-      <n-tab-pane name="the beatles" tab="the Beatles"> Hey Jude </n-tab-pane>
-      <n-tab-pane name="jay chou" tab="周杰伦"> 七里香 </n-tab-pane>
-    </n-tabs>
-  </n-dialog>
+  <n-tabs animated trigger="hover" size="large">
+    <n-tab-pane
+      v-for="(protocol, index) of permed_protocols"
+      :key="index"
+      :name="protocol.name"
+      :tab="protocol.name.toUpperCase()"
+    >
+      <n-form ref="formRef" size="large" label-placement="top">
+        <n-grid :cols="24" :x-gap="24">
+          <n-form-item-gi :span="24" :label="t('Select account')">
+            <n-select
+              v-model:value="model.selectValue"
+              :placeholder="t('Select account')"
+              :options="assetCount"
+            />
+          </n-form-item-gi>
+
+          <n-form-item-gi :span="24" :label="t('Password')">
+            <n-grid :cols="24" :x-gap="24">
+              <n-grid-item :span="18">
+                <n-input
+                  v-model:value="model.inputValue"
+                  :placeholder="t('Please input password')"
+                  clearable
+                  type="password"
+                  show-password-on="mousedown"
+                />
+              </n-grid-item>
+              <n-grid-item :span="6" class="remember-password">
+                <n-checkbox>{{ t('Remember password') }}</n-checkbox>
+              </n-grid-item>
+            </n-grid>
+          </n-form-item-gi>
+        </n-grid>
+      </n-form>
+    </n-tab-pane>
+  </n-tabs>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, reactive } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-const showDialog = ref(true);
+const { t } = useI18n();
+
+const props = defineProps<{
+  id: string;
+  permedAccounts: any;
+  permedProtocols: any;
+}>();
+
+const assetCount = computed(() => {
+  //todo)) 类型
+  const tempArr = [];
+  props.permedAccounts.forEach((item: any) => {
+    tempArr.push({
+      label: item.username,
+      value: item.username
+    });
+  });
+
+  return tempArr!;
+});
+
+console.log(assetCount);
+console.log(props);
+
+const model = reactive({
+  inputValue: '',
+  selectValue: null
+});
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.remember-password {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+</style>

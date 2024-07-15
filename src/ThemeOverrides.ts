@@ -28,6 +28,9 @@ export const lightThemeOverrides: GlobalThemeOverrides = {
     textColor: '#eee',
     fontSizeLarge: '15px',
     padding: '0 12px'
+  },
+  Divider: {
+    margin: '0 12px'
   }
 };
 
@@ -57,5 +60,8 @@ export const darkThemeOverrides: GlobalThemeOverrides = {
     textColor: '#eee',
     fontSizeLarge: '15px',
     padding: '0 12px'
+  },
+  Divider: {
+    margin: '0 12px'
   }
 };
