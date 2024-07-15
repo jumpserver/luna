@@ -6,7 +6,7 @@ export const lightThemeOverrides: GlobalThemeOverrides = {
   },
   Spin: {
     color: '#1ab394',
-    textColor: '#292827 '
+    textColor: '#292827'
   },
   Dropdown: {
     optionColorHover: '#48c2a9',
@@ -17,6 +17,17 @@ export const lightThemeOverrides: GlobalThemeOverrides = {
   },
   Switch: {
     // railColor: '#48c2a9'
+  },
+  List: {
+    textColor: '#1ab394',
+    fontSize: '15px',
+    fontWeight: '700'
+  },
+  Tag: {
+    color: '#000',
+    textColor: '#eee',
+    fontSizeLarge: '15px',
+    padding: '0 12px'
   }
 };
 
@@ -34,5 +45,17 @@ export const darkThemeOverrides: GlobalThemeOverrides = {
   },
   Switch: {
     railColorActive: '#48c2a9'
+  },
+  List: {
+    color: '#101014',
+    textColor: '#fff',
+    fontSize: '15px',
+    fontWeight: '500'
+  },
+  Tag: {
+    color: '#fff',
+    textColor: '#eee',
+    fontSizeLarge: '15px',
+    padding: '0 12px'
   }
 };

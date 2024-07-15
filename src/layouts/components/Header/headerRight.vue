@@ -130,7 +130,6 @@ const bottomOptions: HeaderRightOptions[] = [
     name: 'setting',
     component: Setting,
     onClick: () => {
-      console.log(1);
       mittBus.emit('open-setting-drawer');
     }
   }

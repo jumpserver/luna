@@ -190,7 +190,6 @@ watch(
 );
 
 mittBus.on('open-setting-drawer', () => {
-  console.log(2);
   showSettingDrawer.value = true;
 });
 
