@@ -22,9 +22,10 @@ export const useGlobalStore = defineStore({
     // 主题颜色
     primary: DEFAULT_PRIMARY,
 
-    // 用户信息
-    userInfo: { name: '' },
-    interface: {}
+    interface: {},
+
+    // 连接方式
+    connectMethods: {}
   }),
   getters: {},
   actions: {

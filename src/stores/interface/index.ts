@@ -9,8 +9,8 @@ export interface GlobalState {
   JMSLunaOra: string;
   HELP_SUPPORT_URL: string;
   HELP_DOCUMENT_URL: string;
-  userInfo: { name: string };
   interface: OpenSetting;
+  connectMethods: any;
 }
 
 export interface UseLoading {

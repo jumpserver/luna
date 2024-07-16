@@ -84,7 +84,7 @@ import { useTheme } from '@/hooks/useTheme.ts';
 import { useTranslations } from '@/hooks/useTranslate';
 import { useTreeStore } from '@/stores/modules/tree.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
-import { watch, onBeforeUnmount, reactive, ref } from 'vue';
+import { watch, onBeforeUnmount, reactive, ref, nextTick } from 'vue';
 
 import mittBus from '@/utils/mittBus.ts';
 import {
@@ -164,8 +164,10 @@ const languageOptions = reactive([
 ]);
 
 const handleDarkModeChange = (value: Boolean) => {
-  globalStore.setGlobalState('isDark', value);
-  switchDark();
+  nextTick(() => {
+    globalStore.setGlobalState('isDark', value);
+    switchDark();
+  });
 };
 const handleAssetAsyncChange = (value: Boolean) => {
   treeStore.changeState(value);

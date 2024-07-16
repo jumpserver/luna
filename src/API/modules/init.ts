@@ -45,3 +45,10 @@ export const getPublic = (): Promise<any> => {
 export const getSystemSetting = () => {
   return http.get('/api/v1/users/preference/?category=luna');
 };
+
+/**
+ * @description 获取连接方式
+ */
+export const getConnectMethods = (): Promise<any> => {
+  return http.get('/api/v1/terminal/components/connect-methods/');
+};

@@ -3,7 +3,7 @@ import { getProfile } from '@/API/modules/user.ts';
 import { useUserStore } from '@/stores/modules/user.ts';
 import { useGlobalStore } from '@/stores/modules/global';
 import { useLoadingStore } from '@/stores/modules/loading.ts';
-import { getPublicOption, getPublic } from '@/API/modules/init.ts';
+import { getPublicOption, getPublic, getConnectMethods } from '@/API/modules/init.ts';
 import { getCsrfTokenFromCookie, getCurrentLanguage, getCookie } from '@/utils';
 import type { RouteLocationNormalized, NavigationGuardNext } from 'vue-router';
 
@@ -30,16 +30,41 @@ export const guard = async (
   const JSMLunaOrg: string = getCookie('X-JMS-LUNA-ORG');
 
   try {
-    const { INTERFACE } = await getPublicOption();
-    const { HELP_SUPPORT_URL, HELP_DOCUMENT_URL } = await getPublic();
-    const { username, avatar_url, email, source } = await getProfile();
+    const results = await Promise.allSettled([
+      getPublicOption(),
+      getPublic(),
+      getProfile(),
+      getConnectMethods()
+    ]);
 
-    // const res = await Promise.allSettled([getPublicOption(), getPublic()]);
+    const [publicOptionResult, publicResult, profileResult, connectMethodsResult] = results;
+
+    if (publicOptionResult.status === 'fulfilled') {
+      const { INTERFACE } = publicOptionResult.value;
+      globalStore.setGlobalState('interface', INTERFACE);
+    }
+
+    if (publicResult.status === 'fulfilled') {
+      const { HELP_SUPPORT_URL, HELP_DOCUMENT_URL } = publicResult.value;
+      globalStore.setHelpLink(HELP_SUPPORT_URL, HELP_DOCUMENT_URL);
+    }
+
+    if (profileResult.status === 'fulfilled') {
+      const { username, avatar_url, email, source } = profileResult.value;
+      userStore.setEmail(email);
+      userStore.setName(username);
+      userStore.setAvatar(avatar_url);
+      userStore.setSource(source.label);
+    }
+
+    if (connectMethodsResult.status === 'fulfilled') {
+      // 这里你可以根据需要处理 connectMethodsResult.value
+      globalStore.setGlobalState('connectMethods', connectMethodsResult.value);
+    }
 
     const globalStates = {
       JMSOrg,
       csrfToken: CSRFToken,
-      interface: INTERFACE,
       JMSLunaOra: JSMLunaOrg,
       language: currentLanguage
     } as Partial<GlobalState>;
@@ -47,12 +72,6 @@ export const guard = async (
     (Object.entries(globalStates) as [keyof GlobalState, any][]).forEach(([key, value]) => {
       globalStore.setGlobalState(key, value);
     });
-
-    userStore.setEmail(email);
-    userStore.setName(username);
-    userStore.setAvatar(avatar_url);
-    userStore.setSource(source.label);
-    globalStore.setHelpLink(HELP_SUPPORT_URL, HELP_DOCUMENT_URL);
   } catch (error: any) {
     // 请求超时 && 网络错误单独判断，没有 response
     if (error.message.indexOf('timeout') !== -1) message.error('请求超时！请您稍后重试');
