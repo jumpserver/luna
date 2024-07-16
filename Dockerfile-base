@@ -1,0 +1,8 @@
+FROM node:16.20-bullseye-slim
+
+WORKDIR /data
+
+COPY package.json yarn.lock ./
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=luna \
+    yarn install
+
