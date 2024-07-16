@@ -17,7 +17,7 @@ import { View, ViewAction } from "@app/model";
 export class ElementContentTabComponent implements OnInit {
   @Input() view: View;
   @Output() onAction: EventEmitter<ViewAction> = new EventEmitter<ViewAction>();
-  @ViewChild("inputElement") inputElement: ElementRef;
+  @ViewChild("inputElement", { static: true }) inputElement: ElementRef;
 
   public iconCls: string;
   private shouldFocusInput = false;
