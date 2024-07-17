@@ -1,5 +1,5 @@
 import {Component, Input, OnChanges, OnInit} from '@angular/core';
-import {ConnectMethod, ConnectOption, Protocol, Setting} from '@app/model';
+import {ConnectMethod, ConnectOption, Protocol, Setting, GlobalSetting} from '@app/model';
 import {resolutionsChoices} from '@app/globals';
 import {SettingService} from '@app/services';
 
@@ -15,6 +15,7 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
   public advancedOptions: ConnectOption[] = [];
   public isShowAdvancedOption = false;
   public setting: Setting;
+  public globalSetting: GlobalSetting;
   private allOptions: ConnectOption[] = [];
   private boolChoices = [
     {label: 'Yes', value: true},
@@ -23,6 +24,7 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
 
   constructor(public _settingSvc: SettingService) {
     this.setting = _settingSvc.setting;
+    this.globalSetting = _settingSvc.globalSetting;
     this.allOptions = [
       {
         type: 'select',
@@ -85,8 +87,8 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         type: 'select',
         field: 'appletConnectMethod',
         options: [
-          {label: 'Web', value: 'web'},
-          {label: 'Client', value: 'client'}
+          { label: 'Web', value: 'web' },
+          ...(this.globalSetting.TERMINAL_RAZOR_ENABLED ? [{ label: 'Client', value: 'client' }] : [])
         ],
         label: 'Applet connect method',
         value: this.setting.graphics.applet_connection_method,
