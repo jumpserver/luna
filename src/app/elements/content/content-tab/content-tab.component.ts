@@ -31,13 +31,6 @@ export class ElementContentTabComponent implements OnInit {
     }
   }
 
-  ngAfterViewChecked(): void {
-    if (this.shouldFocusInput && this.inputElement) {
-      this.inputElement.nativeElement.focus();
-      this.shouldFocusInput = false;
-    }
-  }
-
   close() {
     const action = new ViewAction(this.view, 'close');
     this.onAction.emit(action);
