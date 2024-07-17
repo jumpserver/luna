@@ -6,18 +6,18 @@ import {
   OnInit,
   Output,
   ViewChild,
-} from "@angular/core";
-import { View, ViewAction } from "@app/model";
+} from '@angular/core';
+import { View, ViewAction } from '@app/model';
 
 @Component({
-  selector: "elements-content-tab",
-  templateUrl: "./content-tab.component.html",
-  styleUrls: ["./content-tab.component.scss"],
+  selector: 'elements-content-tab',
+  templateUrl: './content-tab.component.html',
+  styleUrls: ['./content-tab.component.scss'],
 })
 export class ElementContentTabComponent implements OnInit {
   @Input() view: View;
   @Output() onAction: EventEmitter<ViewAction> = new EventEmitter<ViewAction>();
-  @ViewChild("inputElement") inputElement: ElementRef;
+  @ViewChild('inputElement', { static: false }) inputElement: ElementRef;
 
   public iconCls: string;
   private shouldFocusInput = false;
@@ -25,9 +25,9 @@ export class ElementContentTabComponent implements OnInit {
 
   ngOnInit(): void {
     if (!this.view.asset) {
-      this.iconCls = "fa-linux";
+      this.iconCls = 'fa-linux';
     } else {
-      this.iconCls = "fa-" + this.view.asset.type.value;
+      this.iconCls = 'fa-' + this.view.asset.type.value;
     }
   }
 
@@ -39,7 +39,7 @@ export class ElementContentTabComponent implements OnInit {
   }
 
   close() {
-    const action = new ViewAction(this.view, "close");
+    const action = new ViewAction(this.view, 'close');
     this.onAction.emit(action);
   }
 
@@ -51,7 +51,7 @@ export class ElementContentTabComponent implements OnInit {
 
     // 延迟300毫秒，检查是否有双击事件
     this.clickTimeout = setTimeout(() => {
-      const action = new ViewAction(this.view, "active");
+      const action = new ViewAction(this.view, 'active');
       this.onAction.emit(action);
       this.clickTimeout = null;
     }, 300);
