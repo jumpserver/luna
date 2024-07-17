@@ -4,7 +4,7 @@
       :locale="zhCN"
       :date-locale="dateZhCN"
       :theme="isDark ? darkTheme : null"
-      :theme-overrides="isDark ? darkThemeOverrides : lightThemeOverrides"
+      :theme-overrides="currentThemeOverrides"
     >
       <n-dialog-provider>
         <n-message-provider>
@@ -21,7 +21,7 @@
 import { darkTheme } from 'naive-ui';
 import { zhCN, dateZhCN } from 'naive-ui';
 import { NConfigProvider } from 'naive-ui';
-import { onBeforeMount } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useTheme } from '@/hooks/useTheme.ts';
 import { useTranslations } from '@/hooks/useTranslate.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
@@ -41,8 +41,9 @@ const globalStore = useGlobalStore();
 const { isDark, isFullScreen } = storeToRefs(globalStore);
 
 const isFull = isFullScreen;
+const currentThemeOverrides = ref(isDark ? darkThemeOverrides : lightThemeOverrides);
 
-onBeforeMount(() => {
+onMounted(() => {
   // 初始化主题样式
   initTheme();
   // 设置语言

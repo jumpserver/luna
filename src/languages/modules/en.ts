@@ -15,6 +15,7 @@ export default {
   Email: 'Email',
   Source: 'Source',
   Logout: 'Log Out',
+  'Theme colors': 'Theme colors',
   'Full Screen': 'Full Screen',
   'Web Terminal': 'Web Terminal',
   'Theme Reset': 'The theme color has been reset to',

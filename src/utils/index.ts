@@ -125,7 +125,7 @@ export const setFavicon = (faviconUrl: string) => {
  */
 export function hexToRgb(str: any) {
   let hexs: any = '';
-  let reg = /^\#?[0-9A-Fa-f]{6}$/;
+  let reg = /^\#?[0-9A-Fa-f]{6,8}$/;
   if (!reg.test(str)) return message.warning('输入错误的hex');
   str = str.replace('#', '');
   hexs = str.match(/../g);
@@ -152,7 +152,7 @@ export function rgbToHex(r: any, g: any, b: any) {
  * @description 设置亮色主题下的梯度颜色
  */
 export function getLightColor(color: string, level: number) {
-  let reg = /^#?[0-9A-Fa-f]{6}$/;
+  let reg = /^#?[0-9A-Fa-f]{6,8}$/;
   if (!reg.test(color)) return message.warning('输入错误的hex颜色值');
   let rgb = hexToRgb(color);
   for (let i = 0; i < 3; i++) rgb[i] = Math.round(255 * level + rgb[i] * (1 - level));
@@ -166,8 +166,8 @@ export function getLightColor(color: string, level: number) {
  * @returns {String} 返回处理后的颜色值
  */
 export function getDarkColor(color: string, level: number) {
-  let reg = /^#?[0-9A-Fa-f]{6}$/;
-  if (!reg.test(color)) return message.warning('输入错误的hex颜色值');
+  let reg = /^#?[0-9A-Fa-f]{6,8}$/;
+  if (!reg.test(color)) return message.warning('输入错误的 hex 颜色值');
   let rgb = hexToRgb(color);
   for (let i = 0; i < 3; i++) rgb[i] = Math.round(20.5 * level + rgb[i] * (1 - level));
   return rgbToHex(rgb[0], rgb[1], rgb[2]);

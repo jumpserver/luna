@@ -58,6 +58,16 @@
             :placeholder="t('Please Select')"
           />
         </n-flex>
+        <n-flex class="setting-item theme-colors" justify="space-between" align="center">
+          {{ t('Theme colors') }}
+          <n-color-picker
+            size="small"
+            :actions="['confirm']"
+            :modes="['hex']"
+            @confirm="handleThemeColor"
+            v-model:value="primary"
+          />
+        </n-flex>
       </n-flex>
 
       <n-divider> {{ t('Language Settings') }} </n-divider>
@@ -105,9 +115,9 @@ const globalStore = useGlobalStore();
 const { updateTranslations } = useTranslations();
 
 const { t } = useI18n();
-const { switchDark } = useTheme();
+const { switchDark, changePrimary } = useTheme();
 const { isAsync } = storeToRefs(treeStore);
-const { isDark, isFullScreen } = storeToRefs(globalStore);
+const { isDark, isFullScreen, primary } = storeToRefs(globalStore);
 
 const darkModeActive = isDark;
 const assetAsyncActive = isAsync;
@@ -163,6 +173,9 @@ const languageOptions = reactive([
   }
 ]);
 
+const handleThemeColor = (value: string) => {
+  changePrimary(value);
+};
 const handleDarkModeChange = (value: Boolean) => {
   nextTick(() => {
     globalStore.setGlobalState('isDark', value);
@@ -219,6 +232,9 @@ onBeforeUnmount(() => {
         width: 150px;
       }
       .language-setting .n-select {
+        width: 150px;
+      }
+      .theme-colors .n-color-picker {
         width: 150px;
       }
     }

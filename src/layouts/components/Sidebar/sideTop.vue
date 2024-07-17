@@ -20,7 +20,7 @@ import type { IActionOptions } from './types/index.ts';
 import Logo from './components/Logo/index.vue';
 // import ActionOptions from './components/ActionOptions/index.vue';
 import SvgIcon from '@/components/SvgIcon/index.vue';
-import Profile from '@/layouts/components/Header/components/Profile/index.vue';
+import Profile from '@/layouts/components/Sidebar/components/Profile/index.vue';
 import mittBus from '@/utils/mittBus.ts';
 
 const { t } = useI18n();

@@ -1,10 +1,11 @@
-import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
+import { storeToRefs } from 'pinia';
 import { Theme } from '@/styles/types';
 import { DEFAULT_PRIMARY } from '@/config';
 import { createDiscreteApi } from 'naive-ui';
 import { asideTheme } from '@/styles/theme/aside.ts';
 import { getLightColor, getDarkColor } from '@/utils';
+import { initialThemeOverrides } from '@/ThemeOverrides.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
 import { mainContentTheme } from '@/styles/theme/mainContent.ts';
 
@@ -36,6 +37,31 @@ export const useTheme = () => {
     setAsideTheme();
   };
 
+  const getCssVariableValue = (variableName: string) => {
+    return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+  };
+  console.log(getCssVariableValue);
+  const lightOverrides = () => {
+    const lightOverrides = initialThemeOverrides();
+    console.log(lightOverrides);
+    // lightOverrides.common?.primaryColor = getCssVariableValue('--el-color-primary');
+    // lightOverrides.common?.primaryColorHover = getCssVariableValue('--el-color-primary-hover');
+    // lightOverrides.common?.primaryColorPressed = getCssVariableValue('--el-color-primary-pressed');
+    // lightOverrides.common?.primaryColorSuppl = getCssVariableValue('--el-color-primary-suppl');
+  };
+  const darkOverrides = () => {
+    const darkOverrides = initialThemeOverrides();
+    console.log(darkOverrides);
+  };
+
+  /**
+   * 组件颜色重写
+   * @param isDark
+   */
+  const initThemeColor = (isDark: boolean) => {
+    isDark ? darkOverrides() : lightOverrides();
+  };
+
   /**
    * @description 切换主题颜色
    */
@@ -59,6 +85,7 @@ export const useTheme = () => {
       document.documentElement.style.setProperty(`--el-color-primary-light-${i}`, primaryColor);
     }
 
+    initThemeColor(isDark.value as boolean);
     globalStore.setGlobalState('primary', val);
   };
 

@@ -31,9 +31,9 @@
 
 <script setup lang="ts">
 import mittBus from '@/utils/mittBus.ts';
-import HeaderLeft from './components/Header/headerLeft.vue';
+import HeaderLeft from './components/Sidebar/sideTop.vue';
 import MainContent from './components/MainContent/index.vue';
-import HeaderRight from './components/Header/headerRight.vue';
+import HeaderRight from './components/Sidebar/sideBottom.vue';
 import FileManagement from './components/FileManagement/index.vue';
 import SettingDrawer from './components/SettingDrawer/index.vue';
 

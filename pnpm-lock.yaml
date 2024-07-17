@@ -67,7 +67,7 @@ importers:
         specifier: ^4.2.2
         version: 4.2.2
       '@types/node':
-        specifier: ^20.14.9
+        specifier: ^20.14.10
         version: 20.14.10
       '@typescript-eslint/eslint-plugin':
         specifier: ^7.1.0

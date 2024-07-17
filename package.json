@@ -36,7 +36,7 @@
     "@commitlint/config-conventional": "^18.4.3",
     "@commitlint/prompt-cli": "^19.3.1",
     "@types/crypto-js": "^4.2.2",
-    "@types/node": "^20.14.9",
+    "@types/node": "^20.14.10",
     "@typescript-eslint/eslint-plugin": "^7.1.0",
     "@typescript-eslint/parser": "^7.1.0",
     "@vitejs/plugin-vue": "^5.0.5",

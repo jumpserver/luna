@@ -19,6 +19,7 @@
               size="medium"
               :placeholder="t('Select account')"
               :options="accountOptions"
+              @update:value="handleAccountSelect"
             />
           </n-form-item-gi>
 
@@ -142,7 +143,7 @@
 
           <!-- 连接按钮-->
           <n-form-item-gi :span="24" justify="center">
-            <n-button type="primary" round style="width: 100%" size="medium">
+            <n-button type="primary" round style="width: 100%" size="medium" @click="handleConnect">
               {{ t('Connect') }}
             </n-button>
           </n-form-item-gi>
@@ -157,80 +158,21 @@ import { computed, reactive, ref } from 'vue';
 
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
+// import { SelectOption } from 'naive-ui';
 import { ArrowDown, ArrowUp } from '@vicons/ionicons5';
-import { useUserStore } from '@/stores/modules/user.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
+import { checkPreConnectDataForAuto, getPreConnectData, setPreConnectData } from './helper/index';
+import {
+  Account,
+  ConnectData,
+  connectMethodItem,
+  Protocol
+} from '@/components/ConnectionDialog/types';
 
-// import * as CryptoJS from 'crypto-js/core';
+const globalStore = useGlobalStore();
 
 const { t } = useI18n();
-const userStore = useUserStore();
-const globalStore = useGlobalStore();
 const { connectMethods } = storeToRefs(globalStore);
-console.log(userStore);
-interface Protocol {
-  name: string;
-  port: number;
-  public: boolean;
-  setting: {
-    sftp_enabled: boolean;
-    sftp_home: string;
-  };
-}
-interface connectMethodItem {
-  component: string;
-  endpoint_protocol: string;
-  label: string;
-  type: string;
-  value: string;
-  disabled?: boolean;
-}
-interface ConnectData {
-  asset?: Asset;
-  account?: Account;
-  protocol?: Protocol;
-  manualAuthInfo?: AuthInfo;
-  connectMethod?: connectMethodItem;
-  connectOption?: Object;
-  downloadRDP?: boolean;
-  autoLogin?: boolean;
-}
-interface Account {
-  alias: string;
-  name: string;
-  username: string;
-  has_secret: boolean;
-  secret: string;
-  actions: Array<Action>;
-}
-interface Action {
-  label: string;
-  value: string;
-}
-interface Choice {
-  label: string;
-  value: string;
-}
-interface SpecInfo {
-  db_name?: string;
-}
-interface Asset {
-  id: string;
-  name: string;
-  address: string;
-  comment: string;
-  type: Choice;
-  category: Choice;
-  permed_protocols: Array<Protocol>;
-  permed_accounts: Array<Account>;
-  spec_info: SpecInfo;
-}
-interface AuthInfo {
-  alias: string;
-  username: string;
-  secret: string;
-  rememberAuth: boolean;
-}
 
 const props = defineProps<{
   id: string;
@@ -238,12 +180,8 @@ const props = defineProps<{
   permedProtocols: any;
 }>();
 
-const a: ConnectData = {};
-console.log(a);
-// console.log('props', props);
-// console.log('connectMethods', connectMethods.value);
-
 const showAdvanced = ref(false);
+const modelAccount = ref<Account>({});
 const model = reactive({
   account: '',
   asset: props.id,
@@ -257,24 +195,6 @@ const model = reactive({
   backspaceAsCtrlH: 'true'
 });
 
-const connectMethodTypes = [
-  { value: 'web', label: 'Web', methods: [] },
-  { value: 'native', label: t('Native'), methods: [] },
-  { value: 'applet', label: t('Applet'), methods: [] },
-  { value: 'virtual_app', label: t('VirtualApp'), methods: [] }
-];
-
-const accountOptions = computed(() => {
-  return props.permedAccounts.map((item: any) => {
-    return {
-      label: item.username,
-      value: item.username
-    };
-  });
-});
-
-// console.log('accountOptions', accountOptions.value);
-
 const backspaceOptions = [
   {
     label: '是',
@@ -285,7 +205,24 @@ const backspaceOptions = [
     value: 'false'
   }
 ];
+const connectMethodTypes = [
+  { value: 'web', label: 'Web', methods: [] },
+  { value: 'native', label: t('Native'), methods: [] },
+  { value: 'applet', label: t('Applet'), methods: [] },
+  { value: 'virtual_app', label: t('VirtualApp'), methods: [] }
+];
 
+const accountOptions = computed(() => {
+  return props.permedAccounts.map((item: any) => {
+    return {
+      ...item,
+      label: item.username,
+      value: item.username
+    };
+  });
+});
+
+console.log('accountOptions', accountOptions);
 // 整合 连接方式 tab 数据
 const connectConnectTypeComputed = computed(() => {
   return props.permedProtocols.map((protocol: Protocol) => {
@@ -311,56 +248,33 @@ const handleShowAdvanced = () => {
   showAdvanced.value = !showAdvanced.value;
 };
 
-// const decrypt = (secret: string): string => {
-//   const secretKey = `${userStore.id}_${userStore.username}`;
-//
-//   try {
-//     const bytes = CryptoJS.AES.decrypt(secret, secretKey);
-//     return bytes.toString(CryptoJS.enc.Utf8);
-//   } catch (e) {
-//     return '';
-//   }
-// };
-// const getAccountLocalAuth = (assetId: string, shouldDecrypt = true) => {
-//   const key = `JMS_MA_${assetId}`;
-//   const authString = localStorage.getItem(key);
-//   const auth = authString ? JSON.parse(authString) : [];
-//
-//   if (!auth || !Array.isArray(auth)) {
-//     return [];
-//   }
-//
-//   return auth.map((item: AuthInfo) => {
-//     const newAuths: AuthInfo = { ...item };
-//
-//     if (shouldDecrypt && newAuths.secret) {
-//       newAuths.secret = decrypt(newAuths.secret);
-//     }
-//
-//     return newAuths;
-//   });
-// };
+const handleAccountSelect = (value: string, option: Account) => {
+  delete option.value;
+  delete option.label;
 
-// const getPreConnectData = () => {
-//   const key = `JMS_PRE_${props.id}`;
-//   const connectData: ConnectData = JSON.parse(<string>localStorage.getItem(key));
-//
-//   const res = getAccountLocalAuth(props.id);
-//
-//   console.log(res);
-//
-//   if (connectData.account.has_secret) {
-//     return connectData;
-//   }
-//
-//   if (connectData.account) {
-//     getAccountLocalAuth(props.id);
-//   }
-//
-//   return connectData;
-// };
+  console.log(value, option);
+  modelAccount.value = option;
+};
 
-// getPreConnectData();
+const getConnectData = () => {
+  const preConnectData = getPreConnectData(props.id) as ConnectData;
+  const isValid = checkPreConnectDataForAuto(props.permedAccounts, preConnectData);
+
+  if (isValid) {
+    return Promise.resolve(preConnectData);
+  } else {
+    return Promise.reject(false);
+  }
+};
+getConnectData();
+
+const handleConnect = async () => {
+  setPreConnectData(props.id, model);
+  // const connectInfo = await getConnectData();
+  // if (!connectInfo) {
+  // }
+  // console.log('connectInfo', connectInfo);
+};
 
 // console.log('connectConnectTypeComputed', connectConnectTypeComputed);
 </script>

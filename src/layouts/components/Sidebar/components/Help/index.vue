@@ -12,19 +12,22 @@
 
 <script setup lang="ts">
 import { CSSProperties } from 'vue';
-import { optionsDetail } from '@/layouts/components/Header/types';
+import { optionsDetail } from '@/layouts/components/Sidebar/types';
 
 import SvgIcon from '@/components/SvgIcon/index.vue';
 
-defineProps<{
+const props = defineProps<{
   name: string;
   options: optionsDetail[];
   iconStyle: CSSProperties;
 }>();
 
-const handleSelect = (...args: any) => {
-  if (args[0] === 'logout') {
-    args[1].onClink();
-  }
+const handleSelect = (key: string) => {
+  props.options.forEach(item => {
+    // 类型收窄
+    if (item.key === key && typeof item.onClink === 'function') {
+      item.onClink();
+    }
+  });
 };
 </script>

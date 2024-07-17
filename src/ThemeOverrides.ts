@@ -1,5 +1,11 @@
 import { GlobalThemeOverrides } from 'naive-ui';
 
+export const initialThemeOverrides = (): GlobalThemeOverrides => ({
+  common: {
+    primaryColor: '#1ab394'
+  }
+});
+
 export const lightThemeOverrides: GlobalThemeOverrides = {
   common: {
     primaryColor: '#1ab394'
