@@ -1,4 +1,4 @@
-FROM node:16.20-bullseye-slim
+FROM node:20.15-bullseye-slim
 
 WORKDIR /data
 
