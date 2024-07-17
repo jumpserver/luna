@@ -145,6 +145,8 @@ const nodeProps = ({ option }: { option: TreeOption }) => {
         if (id) {
           const res = await getTreeDetailById(id as string);
 
+          console.log('res', res);
+
           dialog.success({
             showIcon: false,
             closeOnEsc: false,
@@ -162,7 +164,6 @@ const nodeProps = ({ option }: { option: TreeOption }) => {
             }
           });
           showDialog.value = true;
-          console.log(res);
         }
       } catch (e) {
         console.log(e);

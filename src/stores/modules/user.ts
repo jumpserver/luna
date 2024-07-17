@@ -4,9 +4,11 @@ import piniaPersistConfig from '@/stores/helper/persist';
 
 export const useUserStore = defineStore('user', {
   state: (): UserState => ({
+    id: '',
     name: '',
     email: '',
     source: '',
+    username: '',
     avatar_url: ''
   }),
   actions: {
@@ -21,6 +23,12 @@ export const useUserStore = defineStore('user', {
     },
     setSource(source: string) {
       this.source = source;
+    },
+    setUserName(username: string) {
+      this.username = username;
+    },
+    setUserId(id: string) {
+      this.id = id;
     }
   },
   persist: piniaPersistConfig('user')

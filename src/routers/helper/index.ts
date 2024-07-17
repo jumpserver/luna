@@ -50,9 +50,11 @@ export const guard = async (
     }
 
     if (profileResult.status === 'fulfilled') {
-      const { username, avatar_url, email, source } = profileResult.value;
+      const { name, avatar_url, email, source, username, id } = profileResult.value;
+      userStore.setUserId(id);
+      userStore.setName(name);
       userStore.setEmail(email);
-      userStore.setName(username);
+      userStore.setUserName(username);
       userStore.setAvatar(avatar_url);
       userStore.setSource(source.label);
     }

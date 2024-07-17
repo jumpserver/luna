@@ -44,6 +44,8 @@ export interface OpenSetting {
 }
 
 export interface UserState {
+  id: string;
+
   // 用户头像
   avatar_url: string;
 
@@ -55,6 +57,8 @@ export interface UserState {
 
   // 来源
   source: string;
+
+  username: string;
 }
 
 export interface TreeState {
