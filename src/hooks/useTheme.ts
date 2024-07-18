@@ -37,10 +37,17 @@ export const useTheme = () => {
     setAsideTheme();
   };
 
+  /**
+   * @description 获取 HTML 标签中设定的色值
+   * @param {string} variableName
+   */
   const getCssVariableValue = (variableName: string) => {
     return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
   };
 
+  /**
+   * @description 亮色主题下颜色的重设
+   */
   const lightOverrides = () => {
     const lightOverrides: GlobalThemeOverrides = initialThemeOverrides();
 
@@ -110,6 +117,9 @@ export const useTheme = () => {
     return lightOverrides;
   };
 
+  /**
+   * @description 暗色主题下颜色的重设
+   */
   const darkOverrides = () => {
     const darkOverrides: GlobalThemeOverrides = initialThemeOverrides();
 
@@ -179,8 +189,7 @@ export const useTheme = () => {
   };
 
   /**
-   * 组件颜色重写
-   * @param isDark
+   * @description 组件颜色重写
    */
   const initThemeColor = () => {
     return isDark.value ? darkOverrides() : lightOverrides();

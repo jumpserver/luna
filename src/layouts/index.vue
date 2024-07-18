@@ -2,8 +2,8 @@
   <n-layout has-sider class="custom-layout">
     <n-layout-header>
       <n-flex class="header-content" vertical align="center" justify="space-between">
-        <HeaderLeft v-if="languageLoaded" />
-        <HeaderRight />
+        <SideTop v-if="languageLoaded" />
+        <SideBottom />
       </n-flex>
     </n-layout-header>
     <n-layout-sider
@@ -31,9 +31,9 @@
 
 <script setup lang="ts">
 import mittBus from '@/utils/mittBus.ts';
-import HeaderLeft from './components/Sidebar/sideTop.vue';
+import SideTop from './components/Sidebar/sideTop.vue';
 import MainContent from './components/MainContent/index.vue';
-import HeaderRight from './components/Sidebar/sideBottom.vue';
+import SideBottom from './components/Sidebar/sideBottom.vue';
 import FileManagement from './components/FileManagement/index.vue';
 import SettingDrawer from './components/SettingDrawer/index.vue';
 

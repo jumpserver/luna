@@ -67,6 +67,7 @@
           {{ t('Theme colors') }}
           <n-color-picker
             size="small"
+            :show-alpha="false"
             :actions="['confirm']"
             :swatches="['#1ab394']"
             :modes="['hex']"

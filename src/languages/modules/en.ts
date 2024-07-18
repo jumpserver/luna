@@ -30,5 +30,6 @@ export default {
   'Asset Tree': 'Asset Tree',
   'Asset Type': 'Asset Type',
   'Asset Async Explain': 'Whether assets are loaded asynchronously',
-  'Primary Color': 'Primary Color'
+  'Primary Color': 'Primary Color',
+  'Choosing organization': 'Choosing organization'
 };
