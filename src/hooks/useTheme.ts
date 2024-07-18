@@ -2,7 +2,7 @@ import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { Theme } from '@/styles/types';
 import { DEFAULT_PRIMARY } from '@/config';
-import { createDiscreteApi } from 'naive-ui';
+import { createDiscreteApi, GlobalThemeOverrides } from 'naive-ui';
 import { asideTheme } from '@/styles/theme/aside.ts';
 import { getLightColor, getDarkColor } from '@/utils';
 import { initialThemeOverrides } from '@/ThemeOverrides.ts';
@@ -40,26 +40,150 @@ export const useTheme = () => {
   const getCssVariableValue = (variableName: string) => {
     return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
   };
-  console.log(getCssVariableValue);
+
   const lightOverrides = () => {
-    const lightOverrides = initialThemeOverrides();
-    console.log(lightOverrides);
-    // lightOverrides.common?.primaryColor = getCssVariableValue('--el-color-primary');
-    // lightOverrides.common?.primaryColorHover = getCssVariableValue('--el-color-primary-hover');
-    // lightOverrides.common?.primaryColorPressed = getCssVariableValue('--el-color-primary-pressed');
-    // lightOverrides.common?.primaryColorSuppl = getCssVariableValue('--el-color-primary-suppl');
+    const lightOverrides: GlobalThemeOverrides = initialThemeOverrides();
+
+    // Spin 相关
+    (lightOverrides.Spin as NonNullable<GlobalThemeOverrides['Spin']>).color = getCssVariableValue(
+      '--el-color-primary-light-1'
+    );
+    (lightOverrides.Spin as NonNullable<GlobalThemeOverrides['Spin']>).textColor =
+      getCssVariableValue('--el-main-text-color');
+
+    // List 相关
+    (lightOverrides.List as NonNullable<GlobalThemeOverrides['List']>).fontSize = '14px';
+    (lightOverrides.List as NonNullable<GlobalThemeOverrides['List']>).color =
+      getCssVariableValue('--el-main-bg-color');
+    (lightOverrides.List as NonNullable<GlobalThemeOverrides['List']>).textColor =
+      getCssVariableValue('--el-aside-text-color');
+
+    // Tag 相关
+    (lightOverrides.Tag as NonNullable<GlobalThemeOverrides['Tag']>).textColor =
+      getCssVariableValue('--el-color-primary-light-1');
+    (lightOverrides.Tag as NonNullable<GlobalThemeOverrides['Tag']>).colorBordered =
+      getCssVariableValue('--el-color-primary-light-9');
+
+    // Switch 相关
+    (lightOverrides.Switch as NonNullable<GlobalThemeOverrides['Switch']>).railColorActive =
+      getCssVariableValue('--el-color-primary-light-1');
+    (lightOverrides.Switch as NonNullable<GlobalThemeOverrides['Switch']>).boxShadowFocus =
+      getCssVariableValue('--el-color-primary-light-5');
+
+    // Dropdown 相关
+    (lightOverrides.Dropdown as NonNullable<GlobalThemeOverrides['Dropdown']>).optionColorHover =
+      getCssVariableValue('--el-color-primary-light-2');
+    (
+      lightOverrides.Dropdown as NonNullable<GlobalThemeOverrides['Dropdown']>
+    ).optionTextColorHover = '#fff';
+
+    // Select 相关
+    (
+      lightOverrides.InternalSelection as NonNullable<GlobalThemeOverrides['InternalSelection']>
+    ).borderFocus = getCssVariableValue('--el-color-primary-light-6');
+    (
+      lightOverrides.InternalSelection as NonNullable<GlobalThemeOverrides['InternalSelection']>
+    ).borderActive = getCssVariableValue('--el-color-primary-light-6');
+    (
+      lightOverrides.InternalSelection as NonNullable<GlobalThemeOverrides['InternalSelection']>
+    ).borderHover = getCssVariableValue('--el-color-primary-light-6');
+    (
+      lightOverrides.InternalSelection as NonNullable<GlobalThemeOverrides['InternalSelection']>
+    ).boxShadowFocus = getCssVariableValue('--el-color-primary-light-6');
+    (
+      lightOverrides.InternalSelection as NonNullable<GlobalThemeOverrides['InternalSelection']>
+    ).boxShadowActive = getCssVariableValue('--el-color-primary-light-6');
+
+    (
+      lightOverrides.InternalSelectMenu as NonNullable<GlobalThemeOverrides['InternalSelectMenu']>
+    ).optionCheckColor = '#fff';
+    (
+      lightOverrides.InternalSelectMenu as NonNullable<GlobalThemeOverrides['InternalSelectMenu']>
+    ).optionTextColorActive = '#fff';
+    (
+      lightOverrides.InternalSelectMenu as NonNullable<GlobalThemeOverrides['InternalSelectMenu']>
+    ).optionColorActive = getCssVariableValue('--el-color-primary-light-2');
+    (
+      lightOverrides.InternalSelectMenu as NonNullable<GlobalThemeOverrides['InternalSelectMenu']>
+    ).optionColorActivePending = getCssVariableValue('--el-color-primary-light-2');
+
+    return lightOverrides;
   };
+
   const darkOverrides = () => {
-    const darkOverrides = initialThemeOverrides();
-    console.log(darkOverrides);
+    const darkOverrides: GlobalThemeOverrides = initialThemeOverrides();
+
+    (darkOverrides.Spin as NonNullable<GlobalThemeOverrides['Spin']>).color = getCssVariableValue(
+      '--el-color-primary-light-1'
+    );
+    (darkOverrides.Spin as NonNullable<GlobalThemeOverrides['Spin']>).textColor =
+      getCssVariableValue('--el-main-text-color');
+
+    // List 相关
+    (darkOverrides.List as NonNullable<GlobalThemeOverrides['List']>).fontSize = '14px';
+    (darkOverrides.List as NonNullable<GlobalThemeOverrides['List']>).color =
+      getCssVariableValue('--el-main-bg-color');
+    (darkOverrides.List as NonNullable<GlobalThemeOverrides['List']>).textColor =
+      getCssVariableValue('--el-aside-text-color');
+
+    // Tag 相关
+    (darkOverrides.Tag as NonNullable<GlobalThemeOverrides['Tag']>).textColor = getCssVariableValue(
+      '--el-color-primary-light-1'
+    );
+    (darkOverrides.Tag as NonNullable<GlobalThemeOverrides['Tag']>).colorBordered =
+      getCssVariableValue('--el-color-primary-light-9');
+
+    // Switch 相关
+    (darkOverrides.Switch as NonNullable<GlobalThemeOverrides['Switch']>).railColorActive =
+      getCssVariableValue('--el-color-primary-light-1');
+    (darkOverrides.Switch as NonNullable<GlobalThemeOverrides['Switch']>).boxShadowFocus =
+      getCssVariableValue('--el-color-primary-light-5');
+
+    // Dropdown 相关
+    (darkOverrides.Dropdown as NonNullable<GlobalThemeOverrides['Dropdown']>).optionColorHover =
+      getCssVariableValue('--el-color-primary-light-2');
+    (darkOverrides.Dropdown as NonNullable<GlobalThemeOverrides['Dropdown']>).optionTextColorHover =
+      '#fff';
+
+    // Select 相关
+    (
+      darkOverrides.InternalSelection as NonNullable<GlobalThemeOverrides['InternalSelection']>
+    ).borderFocus = getCssVariableValue('--el-color-primary-light-6');
+    (
+      darkOverrides.InternalSelection as NonNullable<GlobalThemeOverrides['InternalSelection']>
+    ).borderActive = getCssVariableValue('--el-color-primary-light-6');
+    (
+      darkOverrides.InternalSelection as NonNullable<GlobalThemeOverrides['InternalSelection']>
+    ).borderHover = getCssVariableValue('--el-color-primary-light-6');
+    (
+      darkOverrides.InternalSelection as NonNullable<GlobalThemeOverrides['InternalSelection']>
+    ).boxShadowFocus = getCssVariableValue('--el-color-primary-light-6');
+    (
+      darkOverrides.InternalSelection as NonNullable<GlobalThemeOverrides['InternalSelection']>
+    ).boxShadowActive = getCssVariableValue('--el-color-primary-light-6');
+
+    (
+      darkOverrides.InternalSelectMenu as NonNullable<GlobalThemeOverrides['InternalSelectMenu']>
+    ).optionCheckColor = '#fff';
+    (
+      darkOverrides.InternalSelectMenu as NonNullable<GlobalThemeOverrides['InternalSelectMenu']>
+    ).optionTextColorActive = '#fff';
+    (
+      darkOverrides.InternalSelectMenu as NonNullable<GlobalThemeOverrides['InternalSelectMenu']>
+    ).optionColorActive = getCssVariableValue('--el-color-primary-light-2');
+    (
+      darkOverrides.InternalSelectMenu as NonNullable<GlobalThemeOverrides['InternalSelectMenu']>
+    ).optionColorActivePending = getCssVariableValue('--el-color-primary-light-2');
+
+    return darkOverrides;
   };
 
   /**
    * 组件颜色重写
    * @param isDark
    */
-  const initThemeColor = (isDark: boolean) => {
-    isDark ? darkOverrides() : lightOverrides();
+  const initThemeColor = () => {
+    return isDark.value ? darkOverrides() : lightOverrides();
   };
 
   /**
@@ -85,7 +209,8 @@ export const useTheme = () => {
       document.documentElement.style.setProperty(`--el-color-primary-light-${i}`, primaryColor);
     }
 
-    initThemeColor(isDark.value as boolean);
+    initThemeColor();
+
     globalStore.setGlobalState('primary', val);
   };
 
@@ -128,6 +253,7 @@ export const useTheme = () => {
     initTheme,
     switchDark,
     setAsideTheme,
-    changePrimary
+    changePrimary,
+    initThemeColor
   };
 };

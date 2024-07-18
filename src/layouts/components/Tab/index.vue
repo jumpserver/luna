@@ -49,7 +49,7 @@ const draggable = useDraggable<UseDraggableReturn>(el, list, {
 .header-tab {
   width: 100%;
   height: 40px;
-  background-color: var(--el-main-bg-color);
+  background-color: var(--el-main-header-bg-color);
   border-bottom: 1px solid #000000;
   .tab-item {
     width: 60px;

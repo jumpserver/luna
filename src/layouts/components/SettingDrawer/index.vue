@@ -3,11 +3,16 @@
     resizable
     placement="right"
     :width="defaultWidth"
-    v-model:show="showSettingDrawer"
     :default-width="defaultWidth"
+    v-model:show="showSettingDrawer"
     class="transition-drawer"
   >
-    <n-drawer-content :title="t('Custom Setting')" class="drawer-content" closable>
+    <n-drawer-content
+      :title="t('Custom Setting')"
+      class="drawer-content"
+      closable
+      :native-scrollbar="false"
+    >
       <n-divider> {{ t('Theme Settings') }} </n-divider>
       <n-flex>
         <n-flex class="setting-item dark-setting" justify="space-between" align="center">
@@ -63,6 +68,7 @@
           <n-color-picker
             size="small"
             :actions="['confirm']"
+            :swatches="['#1ab394']"
             :modes="['hex']"
             @confirm="handleThemeColor"
             v-model:value="primary"
@@ -175,11 +181,15 @@ const languageOptions = reactive([
 
 const handleThemeColor = (value: string) => {
   changePrimary(value);
+  nextTick(() => {
+    mittBus.emit('theme-color', value);
+  });
 };
 const handleDarkModeChange = (value: Boolean) => {
+  globalStore.setGlobalState('isDark', value);
   nextTick(() => {
-    globalStore.setGlobalState('isDark', value);
     switchDark();
+    mittBus.emit('theme-color', primary.value);
   });
 };
 const handleAssetAsyncChange = (value: Boolean) => {

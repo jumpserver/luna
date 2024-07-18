@@ -11,6 +11,7 @@ export const asideTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     '--el-aside-bg-color': '#292C33',
     '--el-aside-tree-bg-color': '#22252A',
     '--el-aside-logo-text-color': '#dadada',
+    '--el-aside-text-color': '#ffffff',
     '--el-aside-border-color': '#414243'
   }
 };

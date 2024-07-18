@@ -18,22 +18,22 @@
 </template>
 
 <script setup lang="ts">
-import { darkTheme } from 'naive-ui';
+import { darkTheme, GlobalThemeOverrides } from 'naive-ui';
 import { zhCN, dateZhCN } from 'naive-ui';
 import { NConfigProvider } from 'naive-ui';
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { useTheme } from '@/hooks/useTheme.ts';
 import { useTranslations } from '@/hooks/useTranslate.ts';
 import { useGlobalStore } from '@/stores/modules/global.ts';
 import { component as fullscreen } from 'vue-fullscreen';
-import { lightThemeOverrides, darkThemeOverrides } from '@/ThemeOverrides.ts';
 
 import { setFavicon } from '@/utils';
 import { storeToRefs } from 'pinia';
 
+import mittBus from '@/utils/mittBus.ts';
 import Loading from '@/components/Loading/index.vue';
 
-const { initTheme } = useTheme();
+const { initTheme, initThemeColor } = useTheme();
 const { updateTranslations } = useTranslations();
 
 const globalStore = useGlobalStore();
@@ -41,7 +41,8 @@ const globalStore = useGlobalStore();
 const { isDark, isFullScreen } = storeToRefs(globalStore);
 
 const isFull = isFullScreen;
-const currentThemeOverrides = ref(isDark ? darkThemeOverrides : lightThemeOverrides);
+
+const currentThemeOverrides = ref<GlobalThemeOverrides>({});
 
 onMounted(() => {
   // 初始化主题样式
@@ -50,6 +51,17 @@ onMounted(() => {
   setCurrentLanguage();
   // 设置 ico
   setFavicon(globalStore.interface.favicon!);
+
+  // 设置主题颜色
+  currentThemeOverrides.value = initThemeColor();
+
+  mittBus.on('theme-color', () => {
+    currentThemeOverrides.value = initThemeColor();
+  });
+});
+
+onUnmounted(() => {
+  mittBus.off('theme-color');
 });
 
 const setCurrentLanguage = () => {
