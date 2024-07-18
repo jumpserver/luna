@@ -1,6 +1,6 @@
 <template>
   <n-layout has-sider class="custom-layout">
-    <n-layout-header>
+    <n-layout-header bordered>
       <n-flex class="header-content" vertical align="center" justify="space-between">
         <SideTop v-if="languageLoaded" />
         <SideBottom />
@@ -34,8 +34,8 @@ import mittBus from '@/utils/mittBus.ts';
 import SideTop from './components/Sidebar/sideTop.vue';
 import MainContent from './components/MainContent/index.vue';
 import SideBottom from './components/Sidebar/sideBottom.vue';
-import FileManagement from './components/FileManagement/index.vue';
 import SettingDrawer from './components/SettingDrawer/index.vue';
+import FileManagement from './components/FileManagement/index.vue';
 
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useLoadingStore } from '@/stores/modules/loading.ts';

@@ -1,5 +1,12 @@
 <template>
-  <n-layout-header class="header-tab" style="width: 100%; height: 40px">
+  <n-layout-header class="header-tab">
+    <n-flex class="search-part" justify="center" align="middle">
+      <n-input round placeholder="搜索" size="small" clearable autosize style="min-width: 50%">
+        <template #prefix>
+          <n-icon size="22px" :component="SearchOutline"></n-icon>
+        </template>
+      </n-input>
+    </n-flex>
     <n-flex ref="el">
       <n-flex justify="center" align="center" v-for="item in list" :key="item.id" class="tab-item">
         {{ item.name }}
@@ -10,6 +17,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
+import { SearchOutline } from '@vicons/ionicons5';
 import { useDraggable, type UseDraggableReturn } from 'vue-draggable-plus';
 
 const el = ref();
@@ -47,10 +55,13 @@ const draggable = useDraggable<UseDraggableReturn>(el, list, {
 
 <style scoped lang="scss">
 .header-tab {
-  width: 100%;
-  height: 40px;
+  width: 100% !important;
+  height: 80px;
+  padding: 10px 0;
   background-color: var(--el-main-header-bg-color);
-  border-bottom: 1px solid #000000;
+  .search-part {
+    padding-left: 10px;
+  }
   .tab-item {
     width: 60px;
     height: 40px;

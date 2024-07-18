@@ -1,33 +1,62 @@
 <template>
   <div>
-    <n-tabs type="segment" animated>
-      <n-tab-pane name="chap1" :tab="t('Asset Tree')">
-        <n-input v-model:value="pattern" placeholder="搜索" />
-        <n-tree
-          checkable
-          block-line
-          block-node
-          expand-on-click
-          checkbox-placement="left"
-          :show-line="true"
-          :pattern="pattern"
-          :data="testData"
-          :node-props="nodeProps"
-          :on-update:expanded-keys="updatePrefixWithExpaned"
-        />
-      </n-tab-pane>
-      <n-tab-pane name="chap2" :tab="t('Asset Type')">
-        <n-input v-model:value="pattern" :placeholder="t('Search')" />
-        <n-tree
-          block-line
-          :pattern="pattern"
-          expand-on-click
-          :data="data2"
-          :node-props="nodeProps"
-          :on-update:expanded-keys="updatePrefixWithExpaned"
-        />
-      </n-tab-pane>
-    </n-tabs>
+    <n-descriptions label-placement="top" title="资产列表">
+      <n-descriptions-item>
+        <n-collapse arrow-placement="right">
+          <n-collapse-item title="资产树" name="1">
+            <n-tree
+              checkable
+              block-line
+              block-node
+              expand-on-click
+              checkbox-placement="left"
+              :show-line="true"
+              :pattern="pattern"
+              :data="testData"
+              :node-props="nodeProps"
+              :on-update:expanded-keys="updatePrefixWithExpaned"
+            />
+          </n-collapse-item>
+          <n-collapse-item title="类型数">
+            <n-tree
+              block-line
+              :pattern="pattern"
+              expand-on-click
+              :data="data2"
+              :node-props="nodeProps"
+              :on-update:expanded-keys="updatePrefixWithExpaned"
+            />
+          </n-collapse-item>
+        </n-collapse>
+      </n-descriptions-item>
+    </n-descriptions>
+    <!--    <n-tabs type="segment" animated>-->
+    <!--      <n-tab-pane name="chap1" :tab="t('Asset Tree')">-->
+    <!--        <n-tree-->
+    <!--          checkable-->
+    <!--          block-line-->
+    <!--          block-node-->
+    <!--          expand-on-click-->
+    <!--          checkbox-placement="left"-->
+    <!--          :show-line="true"-->
+    <!--          :pattern="pattern"-->
+    <!--          :data="testData"-->
+    <!--          :node-props="nodeProps"-->
+    <!--          :on-update:expanded-keys="updatePrefixWithExpaned"-->
+    <!--        />-->
+    <!--      </n-tab-pane>-->
+    <!--      <n-tab-pane name="chap2" :tab="t('Asset Type')">-->
+    <!--        <n-input v-model:value="pattern" :placeholder="t('Search')" />-->
+    <!--            <n-tree-->
+    <!--              block-line-->
+    <!--              :pattern="pattern"-->
+    <!--              expand-on-click-->
+    <!--              :data="data2"-->
+    <!--              :node-props="nodeProps"-->
+    <!--              :on-update:expanded-keys="updatePrefixWithExpaned"-->
+    <!--            />-->
+    <!--      </n-tab-pane>-->
+    <!--    </n-tabs>-->
 
     <!-- 右键菜单	-->
     <n-dropdown

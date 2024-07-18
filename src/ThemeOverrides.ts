@@ -10,5 +10,6 @@ export const initialThemeOverrides = (): GlobalThemeOverrides => ({
   Switch: {},
   Dropdown: {},
   InternalSelection: {},
-  InternalSelectMenu: {}
+  InternalSelectMenu: {},
+  Layout: {}
 });

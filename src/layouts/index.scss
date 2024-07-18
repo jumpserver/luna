@@ -1,5 +1,6 @@
 .custom-layout {
   :deep(.n-layout-scroll-container) {
+    height: 100vh;
     .n-layout-header {
       width: 40px;
       .header-content {
@@ -7,11 +8,12 @@
         height: 100vh;
         color: #ffffff;
         background-color: var(--el-aside-bg-color);
-        border-right: var(--el-aside-border-color);
+        border-right: 1px soild var(--el-aside-border-color);
       }
     }
     .n-layout-sider {
       background-color: var(--el-aside-tree-bg-color);
+      border-left: 1px solid var(--el-aside-border-color);
 
       // 设置折叠状态下 padding 为零，否则侧边 item 图标无法点击
       &.n-layout-sider--collapsed .n-layout-sider-scroll-container {

@@ -52,7 +52,7 @@ const systemTips = reactive([
   display: flex;
   align-items: center;
   justify-content: center;
-  height: calc(100% - 40px);
+  height: calc(100% - 80px);
   :deep(.n-layout-scroll-container) {
     display: flex;
     align-items: center;
