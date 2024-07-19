@@ -69,10 +69,4 @@ const setCurrentLanguage = () => {
 };
 </script>
 
-<style scoped lang="scss">
-.n-config-provider,
-.n-spin-container {
-  width: 100%;
-  height: 100%;
-}
-</style>
+<style scoped lang="scss"></style>

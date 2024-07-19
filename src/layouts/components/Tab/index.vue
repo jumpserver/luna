@@ -1,15 +1,31 @@
 <template>
   <n-layout-header class="header-tab">
-    <n-flex class="search-part" justify="center" align="middle">
-      <n-input round placeholder="搜索" size="small" clearable autosize style="min-width: 50%">
-        <template #prefix>
-          <n-icon size="22px" :component="SearchOutline"></n-icon>
-        </template>
-      </n-input>
-    </n-flex>
-    <n-flex ref="el">
-      <n-flex justify="center" align="center" v-for="item in list" :key="item.id" class="tab-item">
-        {{ item.name }}
+    <n-flex justify="space-between" align="center">
+      <n-flex ref="el">
+        <n-flex
+          justify="center"
+          align="center"
+          v-for="item in list"
+          :key="item.id"
+          class="tab-item"
+        >
+          {{ item.name }}
+        </n-flex>
+      </n-flex>
+      <n-flex justify="space-between" align="center" class="operation-item">
+        <n-popover>
+          <template #trigger>
+            <n-icon size="18px" :component="CopyOutline" />
+          </template>
+          拆分
+        </n-popover>
+
+        <n-popover>
+          <template #trigger>
+            <n-icon size="18px" :component="EllipsisHorizontal" />
+          </template>
+          操作
+        </n-popover>
       </n-flex>
     </n-flex>
   </n-layout-header>
@@ -17,7 +33,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
-import { SearchOutline } from '@vicons/ionicons5';
+import { CopyOutline, EllipsisHorizontal } from '@vicons/ionicons5';
 import { useDraggable, type UseDraggableReturn } from 'vue-draggable-plus';
 
 const el = ref();
@@ -55,16 +71,28 @@ const draggable = useDraggable<UseDraggableReturn>(el, list, {
 
 <style scoped lang="scss">
 .header-tab {
+  position: relative;
   width: 100% !important;
-  height: 80px;
-  padding: 10px 0;
+  height: 40px;
   background-color: var(--el-main-header-bg-color);
-  .search-part {
-    padding-left: 10px;
-  }
   .tab-item {
     width: 60px;
     height: 40px;
+  }
+  .operation-item {
+    margin-right: 15px;
+    .n-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3px;
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+      &:hover {
+        background-color: #363737;
+        border-radius: 5px;
+      }
+    }
   }
 }
 </style>

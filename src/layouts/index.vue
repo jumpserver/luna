@@ -1,4 +1,5 @@
 <template>
+  <NavSearch />
   <n-layout has-sider class="custom-layout">
     <n-layout-header bordered>
       <n-flex class="header-content" vertical align="center" justify="space-between">
@@ -36,6 +37,7 @@ import MainContent from './components/MainContent/index.vue';
 import SideBottom from './components/Sidebar/sideBottom.vue';
 import SettingDrawer from './components/SettingDrawer/index.vue';
 import FileManagement from './components/FileManagement/index.vue';
+import NavSearch from './components/NavSearch/index.vue';
 
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useLoadingStore } from '@/stores/modules/loading.ts';

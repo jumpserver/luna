@@ -1,11 +1,11 @@
 .custom-layout {
+  height: calc(100vh - 35px);
   :deep(.n-layout-scroll-container) {
-    height: 100vh;
     .n-layout-header {
       width: 40px;
       .header-content {
         width: 40px;
-        height: 100vh;
+        height: 100%;
         color: #ffffff;
         background-color: var(--el-aside-bg-color);
         border-right: 1px soild var(--el-aside-border-color);

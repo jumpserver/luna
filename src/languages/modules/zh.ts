@@ -31,5 +31,6 @@ export default {
   'Asset Async Explain': '是否异步加载资产',
   'Language Selection': '语言选择',
   'Primary Color': '主题颜色',
+  'List of Assets': '资产列表',
   'Choosing organization': '选择组织'
 };

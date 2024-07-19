@@ -31,5 +31,6 @@ export default {
   'Asset Type': 'Asset Type',
   'Asset Async Explain': 'Whether assets are loaded asynchronously',
   'Primary Color': 'Primary Color',
+  'List of Assets': 'List of Assets',
   'Choosing organization': 'Choosing organization'
 };

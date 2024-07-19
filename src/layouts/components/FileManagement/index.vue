@@ -1,14 +1,18 @@
 <template>
   <div>
-    <n-descriptions label-placement="top" title="资产列表">
+    <n-descriptions label-placement="top" class="tree-wrapper" :title="t('List of Assets')">
       <n-descriptions-item>
-        <n-collapse arrow-placement="right">
-          <n-collapse-item title="资产树" name="1">
+        <n-collapse arrow-placement="left" :default-expanded-names="['asset-tree']">
+          <n-collapse-item title="资产树" name="asset-tree">
+            <template #header-extra>
+              <n-icon size="16px" :component="CheckboxOutline" />
+            </template>
             <n-tree
-              checkable
               block-line
               block-node
               expand-on-click
+              draggable
+              check-on-click
               checkbox-placement="left"
               :show-line="true"
               :pattern="pattern"
@@ -17,7 +21,7 @@
               :on-update:expanded-keys="updatePrefixWithExpaned"
             />
           </n-collapse-item>
-          <n-collapse-item title="类型数">
+          <n-collapse-item title="类型树" name="asset-type">
             <n-tree
               block-line
               :pattern="pattern"
@@ -30,33 +34,6 @@
         </n-collapse>
       </n-descriptions-item>
     </n-descriptions>
-    <!--    <n-tabs type="segment" animated>-->
-    <!--      <n-tab-pane name="chap1" :tab="t('Asset Tree')">-->
-    <!--        <n-tree-->
-    <!--          checkable-->
-    <!--          block-line-->
-    <!--          block-node-->
-    <!--          expand-on-click-->
-    <!--          checkbox-placement="left"-->
-    <!--          :show-line="true"-->
-    <!--          :pattern="pattern"-->
-    <!--          :data="testData"-->
-    <!--          :node-props="nodeProps"-->
-    <!--          :on-update:expanded-keys="updatePrefixWithExpaned"-->
-    <!--        />-->
-    <!--      </n-tab-pane>-->
-    <!--      <n-tab-pane name="chap2" :tab="t('Asset Type')">-->
-    <!--        <n-input v-model:value="pattern" :placeholder="t('Search')" />-->
-    <!--            <n-tree-->
-    <!--              block-line-->
-    <!--              :pattern="pattern"-->
-    <!--              expand-on-click-->
-    <!--              :data="data2"-->
-    <!--              :node-props="nodeProps"-->
-    <!--              :on-update:expanded-keys="updatePrefixWithExpaned"-->
-    <!--            />-->
-    <!--      </n-tab-pane>-->
-    <!--    </n-tabs>-->
 
     <!-- 右键菜单	-->
     <n-dropdown
@@ -76,11 +53,11 @@
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useTreeStore } from '@/stores/modules/tree.ts';
-import { getTreeSource, getTreeDetailById } from '@/API/modules/tree';
-import { NIcon, TreeOption, DropdownOption, useDialog } from 'naive-ui';
 import { reactive, ref, h, onUnmounted, onMounted } from 'vue';
-import { Folder, FolderOpenOutline, FileTrayFullOutline } from '@vicons/ionicons5';
+import { getTreeSource, getTreeDetailById } from '@/API/modules/tree';
 import ConnectionDialog from '@/components/ConnectionDialog/index.vue';
+import { NIcon, TreeOption, DropdownOption, useDialog } from 'naive-ui';
+import { Folder, FolderOpenOutline, FileTrayFullOutline, CheckboxOutline } from '@vicons/ionicons5';
 
 import type { Tree } from '@/API/interface';
 
@@ -265,4 +242,8 @@ onUnmounted(() => {
 });
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.tree-wrapper {
+  overflow: hidden;
+}
+</style>

@@ -8,10 +8,10 @@ export const asideTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     '--el-aside-border-color': '#e4e7ed'
   },
   dark: {
-    '--el-aside-bg-color': '#292C33',
-    '--el-aside-tree-bg-color': '#2A2C32',
+    '--el-aside-bg-color': '#333333',
+    '--el-aside-tree-bg-color': '#252526',
     '--el-aside-logo-text-color': '#dadada',
-    '--el-aside-text-color': '#ffffff',
+    '--el-aside-text-color': '#CCCCCC',
     '--el-aside-border-color': '#414243'
   }
 };
