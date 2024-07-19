@@ -17,6 +17,7 @@
       :collapsed-width="0"
       :collapsed="isCollapsed"
       :show-collapsed-content="false"
+      :native-scrollbar="false"
       class="transition-sider"
       :style="{
         width: sideWidth + 'px',

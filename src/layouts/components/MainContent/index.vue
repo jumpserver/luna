@@ -1,5 +1,5 @@
 <template>
-  <n-layout>
+  <n-layout :native-scrollbar="false" content-style="height: 100%">
     <tab></tab>
     <Main></Main>
   </n-layout>

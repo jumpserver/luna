@@ -1,5 +1,7 @@
 <template>
   <n-flex class="search-part" justify="center" align="center">
+    <n-icon color="#CCCCCC" size="16px" :component="ArrowBack" />
+    <n-icon color="#CCCCCC" size="16px" :component="ArrowForward" />
     <n-input
       round
       placeholder="搜索"
@@ -16,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { SearchOutline } from '@vicons/ionicons5';
+import { SearchOutline, ArrowBack, ArrowForward } from '@vicons/ionicons5';
 </script>
 
 <style scoped lang="scss">

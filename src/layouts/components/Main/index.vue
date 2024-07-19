@@ -53,6 +53,7 @@ const systemTips = reactive([
   align-items: center;
   justify-content: center;
   height: calc(100% - 40px);
+  min-height: 385px;
   background-color: var(--el-main-bg-color);
   :deep(.n-layout-scroll-container) {
     display: flex;

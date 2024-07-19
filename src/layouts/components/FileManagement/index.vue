@@ -56,7 +56,7 @@ import { useTreeStore } from '@/stores/modules/tree.ts';
 import { reactive, ref, h, onUnmounted, onMounted } from 'vue';
 import { getTreeSource, getTreeDetailById } from '@/API/modules/tree';
 import ConnectionDialog from '@/components/ConnectionDialog/index.vue';
-import { NIcon, TreeOption, DropdownOption, useDialog } from 'naive-ui';
+import { NIcon, TreeOption, DropdownOption, useDialog, NPopover } from 'naive-ui';
 import { Folder, FolderOpenOutline, FileTrayFullOutline, CheckboxOutline } from '@vicons/ionicons5';
 
 import type { Tree } from '@/API/interface';
@@ -182,6 +182,25 @@ const nodeProps = ({ option }: { option: TreeOption }) => {
       yRef.value = e.clientY;
       console.log(e.clientX, e.clientY);
       e.preventDefault();
+    },
+    render: () => {
+      return h(
+        NPopover,
+        {
+          trigger: 'hover',
+          content: option.label
+        },
+        {
+          default: () =>
+            h(
+              'div',
+              {
+                class: 'tree-node-content'
+              },
+              [option.label]
+            )
+        }
+      );
     }
   };
 };
