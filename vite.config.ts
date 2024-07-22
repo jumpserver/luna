@@ -1,4 +1,6 @@
 import vue from '@vitejs/plugin-vue';
+import tailwindcss from 'tailwindcss';
+import autoprefixer from 'autoprefixer';
 import Components from 'unplugin-vue-components/vite';
 
 import { resolve } from 'path';
@@ -19,6 +21,11 @@ export default defineConfig({
       symbolId: 'icon-[dir]-[name]'
     })
   ],
+  css: {
+    postcss: {
+      plugins: [tailwindcss, autoprefixer]
+    }
+  },
   resolve: {
     extensions: ['.ts', '.tsx', '.vue', '.js', '.json'],
     alias: {

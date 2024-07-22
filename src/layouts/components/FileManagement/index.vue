@@ -1,6 +1,12 @@
 <template>
   <div>
-    <n-descriptions label-placement="top" class="tree-wrapper" :title="t('List of Assets')">
+    <n-descriptions label-placement="top" class="tree-wrapper">
+      <template #header>
+        <n-flex align="center" justify="space-between">
+          {{ t('List of Assets') }}
+          <n-icon size="16px" :component="EllipsisHorizontal" class="mr-2.5 cursor-pointer" />
+        </n-flex>
+      </template>
       <n-descriptions-item>
         <n-collapse arrow-placement="left" :default-expanded-names="['asset-tree']">
           <n-collapse-item title="资产树" class="collapse-item" name="asset-tree">
@@ -59,7 +65,12 @@ import { reactive, ref, h, onUnmounted, onMounted } from 'vue';
 import { getTreeSource, getTreeDetailById } from '@/API/modules/tree';
 import ConnectionDialog from '@/components/ConnectionDialog/index.vue';
 import { NIcon, TreeOption, DropdownOption, useDialog, NPopover } from 'naive-ui';
-import { Folder, FolderOpenOutline, FileTrayFullOutline } from '@vicons/ionicons5';
+import {
+  Folder,
+  FolderOpenOutline,
+  FileTrayFullOutline,
+  EllipsisHorizontal
+} from '@vicons/ionicons5';
 
 import type { Tree } from '@/API/interface';
 
@@ -270,8 +281,9 @@ onUnmounted(() => {
   :deep(.n-descriptions-header) {
     height: 35px;
     margin-bottom: unset;
-    margin-left: 21px;
+    margin-left: 24px;
     font-size: 11px;
+    font-weight: 400;
     line-height: 40px;
     color: var(--el-aside-tree-text-color);
   }
@@ -284,14 +296,22 @@ onUnmounted(() => {
       padding-top: 0;
       .n-collapse-item__header-main {
         height: 22px;
+        margin-left: 5px;
+        .n-collapse-item-arrow {
+          font-size: 16px;
+        }
       }
     }
     :deep(.n-collapse-item__content-wrapper) {
+      margin-left: 16px;
       .n-collapse-item__content-inner {
         padding-top: 0;
         .tree-item .n-tree-node-wrapper {
           padding: unset;
           line-height: 22px;
+          .n-tree-node-content {
+            padding: 0 6px 0 0;
+          }
         }
       }
     }

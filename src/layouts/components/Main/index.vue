@@ -2,7 +2,7 @@
   <n-layout-content class="main-content" content-style="padding: 24px;">
     <n-list class="tips" :show-divider="false">
       <n-list-item v-for="(tip, index) of systemTips" :key="index">
-        <n-flex align="center">
+        <n-flex align="center" style="flex-wrap: nowrap">
           <n-tag size="large" round>
             {{ tip.action }}
             <template #icon>
