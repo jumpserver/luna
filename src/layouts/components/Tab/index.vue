@@ -6,9 +6,8 @@
           justify="center"
           align="center"
           v-for="item in list"
-          class="tab-item"
+          class="tab-item py-0 px-1.25"
           :key="item.id"
-          style="padding: 0 5px"
           :class="{
             'active-tab': item.isActive,
             'first-click': item.clickCount === 1,

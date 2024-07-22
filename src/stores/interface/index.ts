@@ -63,6 +63,8 @@ export interface UserState {
 
 export interface TreeState {
   isAsync: Boolean;
+
+  isCollapsed: Boolean;
 }
 
 export type ObjToKeyValArray<T> = {

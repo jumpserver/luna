@@ -12,7 +12,7 @@ import 'normalize.css';
 import 'vfonts/OpenSans.css';
 // 引入自定义初始化样式
 import '@/styles/reset.scss';
-// 引入 Tailwind
+// 引入 TailwindCSS
 import 'tailwindcss/tailwind.css';
 // 引入图标注册脚本
 import 'virtual:svg-icons-register';
@@ -20,6 +20,8 @@ import 'virtual:svg-icons-register';
 import VueFullscreen from 'vue-fullscreen';
 // 引入指令
 import { draggable } from '@/directive/sidebarDraggable.ts';
+
+import './main.css';
 
 const app = createApp(App);
 

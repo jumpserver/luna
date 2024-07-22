@@ -1,5 +1,5 @@
 <template>
-  <n-flex justify="center" align="center" class="bottom-item">
+  <n-flex justify="center" align="center" class="w-full cursor-pointer mb-[15px] bottom-item">
     <template v-for="option of bottomOptions" :key="option.key">
       <component
         :name="option.name"
@@ -139,11 +139,8 @@ const bottomOptions: HeaderRightOptions[] = [
 <style scoped lang="scss">
 .bottom-item {
   gap: 15px 12px !important;
-  width: 100%;
-  margin-bottom: 15px;
-  cursor: pointer;
-  :deep(svg:hover) {
-    fill: var(--el-color-primary-light-1) !important;
+  :deep(.tree-icon):hover {
+    fill: var(--el-color-primary) !important;
   }
 }
 </style>

@@ -76,10 +76,10 @@ import type { Tree } from '@/API/interface';
 
 import mittBus from '@/utils/mittBus.ts';
 
-const treeStore = useTreeStore();
 const { t } = useI18n();
-const { isAsync } = storeToRefs(treeStore);
 const dialog = useDialog();
+const treeStore = useTreeStore();
+const { isAsync } = storeToRefs(treeStore);
 
 const pattern = ref('');
 const showDialog = ref(false);

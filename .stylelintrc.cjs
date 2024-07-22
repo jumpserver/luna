@@ -8,13 +8,19 @@ module.exports = {
 		"stylelint-config-html/vue", // 配置 vue 中 template 样式格式化
 		"stylelint-config-standard-scss", // 配置 stylelint scss 插件
 		"stylelint-config-recommended-vue/scss", // 配置 vue 中 scss 样式格式化
-		"stylelint-config-recess-order" // 配置 stylelint css 属性书写顺序插件,
+		"stylelint-config-recess-order", // 配置 stylelint css 属性书写顺序插件,
+		"stylelint-config-recommended",
+		"stylelint-config-tailwindcss"
 	],
 	overrides: [
 		// 扫描 .vue/html 文件中的 <style> 标签内的样式
 		{
 			files: ["**/*.{vue,html}"],
 			customSyntax: "postcss-html"
+		},
+		{
+			files: ["**/*.{scss,css}"],
+			customSyntax: "postcss-scss"
 		}
 	],
 	rules: {
@@ -34,7 +40,19 @@ module.exports = {
 			{
 				ignorePseudoClasses: ["global", "v-deep", "deep"]
 			}
+		],
+		"at-rule-no-unknown": [
+			true,
+			{
+				ignoreAtRules: ["tailwind", "apply", "variants", "responsive", "screen"]
+			}
+		],
+		"scss/at-rule-no-unknown": [
+			true,
+			{
+				ignoreAtRules: ["tailwind", "apply", "variants", "responsive", "screen"]
+			}
 		]
 	},
-	ignoreFiles: ["**/*.js", "**/*.jsx", "**/*.tsx", "**/*.ts","**/*.html"]
+	ignoreFiles: ["**/*.js", "**/*.jsx", "**/*.tsx", "**/*.ts", "**/*.html"]
 };

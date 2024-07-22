@@ -5,11 +5,16 @@ import piniaPersistConfig from '@/stores/helper/persist';
 export const useTreeStore = defineStore('tree', {
   state: (): TreeState => ({
     // 默认异步加载资产树
-    isAsync: true
+    isAsync: true,
+
+    isCollapsed: false
   }),
   actions: {
     changeState(newValue: Boolean) {
       newValue && (this.isAsync = newValue);
+    },
+    changeCollapsed(newValue: Boolean) {
+      this.isCollapsed = newValue;
     }
   },
   persist: piniaPersistConfig('tree')

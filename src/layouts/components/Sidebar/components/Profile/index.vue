@@ -6,7 +6,7 @@
     :options="options"
     @select="handleSelect"
   >
-    <svg-icon :name="name" :icon-style="iconStyle" />
+    <svg-icon class="tree-icon" :name="name" :icon-style="iconStyle" />
   </n-dropdown>
 </template>
 

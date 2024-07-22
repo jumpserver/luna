@@ -1,5 +1,10 @@
 <template>
-  <n-image height="30px" lazy :src="logoImage" alt="Logo 图片" />
+  <n-image
+    lazy
+    :src="logoImage"
+    alt="Logo 图片"
+    class="h-8 w-8 justify-center object-fill hover: cursor-pointer"
+  />
 </template>
 
 <script setup lang="ts">
@@ -7,13 +12,3 @@ defineProps<{
   logoImage: string;
 }>();
 </script>
-
-<style scoped lang="scss">
-.n-image {
-  justify-content: center;
-  width: 100%;
-  &:hover {
-    cursor: pointer;
-  }
-}
-</style>

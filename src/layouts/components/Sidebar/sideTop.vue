@@ -1,7 +1,7 @@
 <template>
-  <n-flex justify="center" align="center" class="top-item">
+  <n-flex justify="center" align="center" class="w-full my-[15px] cursor-pointer">
     <logo :logo-image="logoImage || ''" />
-    <n-flex justify="center" align="center">
+    <n-flex justify="center" align="center" class="w-full">
       <template v-for="option of topIconOptions" :key="option.name">
         <component :is="option.component" :name="option.name" :icon-style="option.iconStyle" />
       </template>
@@ -44,14 +44,10 @@ const logoImage = globalStore.interface.logo_logout;
 </script>
 
 <style scoped lang="scss">
-.top-item {
-  gap: 20px 12px !important;
-  width: 100%;
-  margin-top: 25px;
-  cursor: pointer;
-  :deep(.n-flex) {
-    gap: 20px 12px !important;
-    width: 100%;
+:deep(.n-flex) {
+  gap: 10px 12px !important;
+  .tree-icon:hover {
+    fill: var(--el-color-primary) !important;
   }
 }
 </style>

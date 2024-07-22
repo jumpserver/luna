@@ -1,7 +1,7 @@
 <template>
   <n-popover placement="right" trigger="hover">
     <template #trigger>
-      <svg-icon :name="name" :icon-style="iconStyle" @click="handleSetting" />
+      <svg-icon class="tree-icon" :name="name" :icon-style="iconStyle" @click="handleSetting" />
     </template>
     {{ t('Custom Setting') }}
   </n-popover>

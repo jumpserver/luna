@@ -1,5 +1,5 @@
 <template>
-  <n-flex class="search-part" justify="center" align="center">
+  <n-flex class="h-[35px] search-part" justify="center" align="center">
     <n-icon color="#CCCCCC" size="16px" :component="ArrowBack" />
     <n-icon color="#CCCCCC" size="16px" :component="ArrowForward" />
     <n-input
@@ -8,7 +8,7 @@
       size="small"
       clearable
       autosize
-      style="min-width: 50%; height: 24px; border-radius: 5px"
+      class="h-[24px] min-w-[50%] rounded-[5px] min-w-1/2"
     >
       <template #prefix>
         <n-icon size="16px" :component="SearchOutline"></n-icon>
@@ -23,7 +23,6 @@ import { SearchOutline, ArrowBack, ArrowForward } from '@vicons/ionicons5';
 
 <style scoped lang="scss">
 .search-part {
-  height: 35px;
   background-color: var(--el-main-nav-bg-color);
 }
 </style>

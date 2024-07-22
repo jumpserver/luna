@@ -3,7 +3,7 @@
   <n-layout has-sider class="custom-layout">
     <n-layout-header bordered>
       <n-flex class="header-content" vertical align="center" justify="space-between">
-        <SideTop v-if="languageLoaded" />
+        <SideTop />
         <SideBottom />
       </n-flex>
     </n-layout-header>
@@ -18,7 +18,7 @@
       :collapsed="isCollapsed"
       :show-collapsed-content="false"
       :native-scrollbar="false"
-      class="transition-sider"
+      class="relative transition-sider"
       :style="{
         width: sideWidth + 'px',
         maxWidth: '600px'
@@ -34,33 +34,27 @@
 <script setup lang="ts">
 import mittBus from '@/utils/mittBus.ts';
 import SideTop from './components/Sidebar/sideTop.vue';
+import NavSearch from './components/NavSearch/index.vue';
 import MainContent from './components/MainContent/index.vue';
 import SideBottom from './components/Sidebar/sideBottom.vue';
 import SettingDrawer from './components/SettingDrawer/index.vue';
 import FileManagement from './components/FileManagement/index.vue';
-import NavSearch from './components/NavSearch/index.vue';
 
 import { ref, onMounted, onUnmounted } from 'vue';
-import { useLoadingStore } from '@/stores/modules/loading.ts';
+import { useTreeStore } from '@/stores/modules/tree.ts';
+import { storeToRefs } from 'pinia';
+
+const treeStore = useTreeStore();
+const { isCollapsed } = storeToRefs(treeStore);
 
 const sideWidth = ref(300);
-const isCollapsed = ref(false);
-const languageLoaded = ref(false);
-
-const useLoading = useLoadingStore();
-if (!useLoading.isLoading) {
-  // updateTranslations 是一个异步的，而子组件的渲染是同步的，因此在子组件中直接使用 t 函数将会曝出警告
-  setTimeout(() => {
-    languageLoaded.value = true;
-  }, 100);
-}
 
 const handleTriggerClick = () => {
-  sideWidth.value = 0;
-  isCollapsed.value = !isCollapsed.value;
-
+  treeStore.changeCollapsed(!isCollapsed.value);
   if (!isCollapsed.value) {
     sideWidth.value = 300;
+  } else {
+    sideWidth.value = 0;
   }
 };
 
@@ -84,16 +78,4 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 @import 'index';
-.n-layout-sider {
-  position: relative;
-}
-.n-layout-sider::after {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 10px; // 右侧边缘宽度
-  height: 100%;
-  cursor: ew-resize;
-  content: '';
-}
 </style>
