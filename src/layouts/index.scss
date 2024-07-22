@@ -14,6 +14,12 @@
     .n-layout-sider {
       background-color: var(--el-aside-tree-bg-color);
       border-left: 1px solid var(--el-aside-border-color);
+      .n-scrollbar .n-scrollbar-container .n-scrollbar-content {
+        padding: 0 !important;
+        .file-management {
+          height: calc(100vh - 35px);
+        }
+      }
 
       // 设置折叠状态下 padding 为零，否则侧边 item 图标无法点击
       &.n-layout-sider--collapsed .n-layout-sider-scroll-container {

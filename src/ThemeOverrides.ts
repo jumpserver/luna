@@ -11,5 +11,7 @@ export const initialThemeOverrides = (): GlobalThemeOverrides => ({
   Dropdown: {},
   InternalSelection: {},
   InternalSelectMenu: {},
-  Layout: {}
+  Layout: {},
+  Collapse: {},
+  Tree: {}
 });

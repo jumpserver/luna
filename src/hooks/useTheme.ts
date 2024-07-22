@@ -185,6 +185,20 @@ export const useTheme = () => {
       darkOverrides.InternalSelectMenu as NonNullable<GlobalThemeOverrides['InternalSelectMenu']>
     ).optionColorActivePending = getCssVariableValue('--el-color-primary-light-2');
 
+    // 折叠面板
+    (darkOverrides.Collapse as NonNullable<GlobalThemeOverrides['Collapse']>).titleTextColor =
+      '#CCCCCC';
+    (darkOverrides.Collapse as NonNullable<GlobalThemeOverrides['Collapse']>).titleFontSize =
+      '11px';
+    (darkOverrides.Collapse as NonNullable<GlobalThemeOverrides['Collapse']>).titleFontWeight =
+      '700';
+    (darkOverrides.Collapse as NonNullable<GlobalThemeOverrides['Collapse']>).arrowColor =
+      '#C5C5C5';
+
+    // Tree
+    (darkOverrides.Tree as NonNullable<GlobalThemeOverrides['Tree']>).fontSize = '13px';
+    (darkOverrides.Tree as NonNullable<GlobalThemeOverrides['Tree']>).nodeTextColor = '#cccccc';
+
     return darkOverrides;
   };
 

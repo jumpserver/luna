@@ -3,9 +3,9 @@
     <n-descriptions label-placement="top" class="tree-wrapper" :title="t('List of Assets')">
       <n-descriptions-item>
         <n-collapse arrow-placement="left" :default-expanded-names="['asset-tree']">
-          <n-collapse-item title="资产树" name="asset-tree">
+          <n-collapse-item title="资产树" class="collapse-item" name="asset-tree">
             <template #header-extra>
-              <n-icon size="16px" :component="CheckboxOutline" />
+              <!--              <n-icon :size="16" :component="CheckboxOutline" />-->
             </template>
             <n-tree
               block-line
@@ -14,6 +14,7 @@
               draggable
               check-on-click
               checkbox-placement="left"
+              class="tree-item"
               :show-line="true"
               :pattern="pattern"
               :data="testData"
@@ -21,11 +22,12 @@
               :on-update:expanded-keys="updatePrefixWithExpaned"
             />
           </n-collapse-item>
-          <n-collapse-item title="类型树" name="asset-type">
+          <n-collapse-item title="类型树" class="collapse-item" name="asset-type">
             <n-tree
               block-line
               :pattern="pattern"
               expand-on-click
+              class="tree-item"
               :data="data2"
               :node-props="nodeProps"
               :on-update:expanded-keys="updatePrefixWithExpaned"
@@ -57,7 +59,7 @@ import { reactive, ref, h, onUnmounted, onMounted } from 'vue';
 import { getTreeSource, getTreeDetailById } from '@/API/modules/tree';
 import ConnectionDialog from '@/components/ConnectionDialog/index.vue';
 import { NIcon, TreeOption, DropdownOption, useDialog, NPopover } from 'naive-ui';
-import { Folder, FolderOpenOutline, FileTrayFullOutline, CheckboxOutline } from '@vicons/ionicons5';
+import { Folder, FolderOpenOutline, FileTrayFullOutline } from '@vicons/ionicons5';
 
 import type { Tree } from '@/API/interface';
 
@@ -263,6 +265,36 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .tree-wrapper {
+  height: 100%;
   overflow: hidden;
+  :deep(.n-descriptions-header) {
+    height: 35px;
+    margin-bottom: unset;
+    margin-left: 21px;
+    font-size: 11px;
+    line-height: 40px;
+    color: var(--el-aside-tree-text-color);
+  }
+  .collapse-item {
+    margin: 0;
+    &.n-collapse-item--active {
+      height: calc(100vh - 94px);
+    }
+    :deep(.n-collapse-item__header) {
+      padding-top: 0;
+      .n-collapse-item__header-main {
+        height: 22px;
+      }
+    }
+    :deep(.n-collapse-item__content-wrapper) {
+      .n-collapse-item__content-inner {
+        padding-top: 0;
+        .tree-item .n-tree-node-wrapper {
+          padding: unset;
+          line-height: 22px;
+        }
+      }
+    }
+  }
 }
 </style>
