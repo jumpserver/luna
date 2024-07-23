@@ -278,6 +278,7 @@ onUnmounted(() => {
 .tree-wrapper {
   height: 100%;
   overflow: hidden;
+
   :deep(.n-descriptions-header) {
     height: 35px;
     margin-bottom: unset;
@@ -285,30 +286,40 @@ onUnmounted(() => {
     font-size: 11px;
     font-weight: 400;
     line-height: 40px;
-    color: var(--el-aside-tree-text-color);
+    color: var(--el-aside-tree-head-title-color);
   }
+
   .collapse-item {
     margin: 0;
+
     &.n-collapse-item--active {
       height: calc(100vh - 94px);
     }
+
     :deep(.n-collapse-item__header) {
       padding-top: 0;
+
       .n-collapse-item__header-main {
         height: 22px;
         margin-left: 5px;
+
         .n-collapse-item-arrow {
           font-size: 16px;
+          color: var(--el-aside-tree-item-arrow-color);
         }
       }
     }
+
     :deep(.n-collapse-item__content-wrapper) {
       margin-left: 16px;
+
       .n-collapse-item__content-inner {
         padding-top: 0;
+
         .tree-item .n-tree-node-wrapper {
           padding: unset;
           line-height: 22px;
+
           .n-tree-node-content {
             padding: 0 6px 0 0;
           }

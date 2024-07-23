@@ -1,7 +1,7 @@
 <template>
   <n-popover placement="right" trigger="hover">
     <template #trigger>
-      <n-button text @click="handleOrganizationIconClick">
+      <n-button text @click="handleOrganizationIconClick" class="w-full py-[5px]">
         <svg-icon class="organization-icon" :name="name" :icon-style="iconStyle" />
       </n-button>
     </template>

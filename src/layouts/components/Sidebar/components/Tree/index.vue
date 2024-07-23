@@ -1,5 +1,10 @@
 <template>
-  <n-button text @click="handleTreeIconClick" :class="isCollapsed ? '' : 'icon-wrapper'">
+  <n-button
+    text
+    @click="handleTreeIconClick"
+    class="py-[5px]"
+    :class="isCollapsed ? '' : 'icon-wrapper'"
+  >
     <svg-icon class="tree-icon" :name="name" :icon-style="iconStyle" />
   </n-button>
 </template>
@@ -29,9 +34,11 @@ const handleTreeIconClick = () => {
 .icon-wrapper {
   position: relative;
   width: 100%;
+
   .tree-icon {
     fill: var(--el-color-primary-light-1) !important;
   }
+
   &::before {
     position: absolute;
     top: 0;

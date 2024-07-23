@@ -1,24 +1,16 @@
 <template>
-  <n-flex justify="center" align="center" class="w-full my-[15px] cursor-pointer">
-    <logo :logo-image="logoImage || ''" />
-    <n-flex justify="center" align="center" class="w-full mt-[5px]">
-      <template v-for="option of topIconOptions" :key="option.name">
-        <component :is="option.component" :name="option.name" :icon-style="option.iconStyle" />
-      </template>
-    </n-flex>
+  <n-flex justify="center" align="center" class="w-full cursor-pointer">
+    <template v-for="option of topIconOptions" :key="option.name">
+      <component :is="option.component" :name="option.name" :icon-style="option.iconStyle" />
+    </template>
   </n-flex>
 </template>
 
 <script setup lang="ts">
-import { useGlobalStore } from '@/stores/modules/global';
-
-import Logo from './components/Logo/index.vue';
 import Tree from './components/Tree/index.vue';
 import Organization from './components/Organization/index.vue';
 
 import type { CSSProperties } from 'vue';
-
-const globalStore = useGlobalStore();
 
 const iconStyle: CSSProperties = {
   fill: '#646A73',
@@ -39,13 +31,12 @@ const topIconOptions = [
     component: Organization
   }
 ];
-
-const logoImage = globalStore.interface.logo_logout;
 </script>
 
 <style scoped lang="scss">
 :deep(.n-flex) {
   gap: 15px 12px !important;
+
   .tree-icon:hover {
     fill: var(--el-color-primary) !important;
   }

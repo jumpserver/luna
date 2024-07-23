@@ -139,6 +139,7 @@ const bottomOptions: HeaderRightOptions[] = [
 <style scoped lang="scss">
 .bottom-item {
   gap: 15px 12px !important;
+
   :deep(.tree-icon):hover {
     fill: var(--el-color-primary) !important;
   }

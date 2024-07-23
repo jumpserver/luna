@@ -289,6 +289,7 @@ const handleConnect = async () => {
   .n-form-item-label {
     margin-bottom: 25px;
   }
+
   .n-form-item-blank,
   .n-form-item-feedback-wrapper {
     display: none !important;
@@ -301,6 +302,7 @@ const handleConnect = async () => {
     display: none;
   }
 }
+
 .remember-password,
 .advanced_option {
   display: flex;

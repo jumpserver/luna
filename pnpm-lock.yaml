@@ -147,6 +147,9 @@ importers:
       stylelint-config-tailwindcss:
         specifier: ^0.0.7
         version: 0.0.7(stylelint@16.6.1(typescript@5.5.3))(tailwindcss@3.4.6)
+      stylelint-order:
+        specifier: ^6.0.4
+        version: 6.0.4(stylelint@16.6.1(typescript@5.5.3))
       tailwindcss:
         specifier: ^3.4.6
         version: 3.4.6

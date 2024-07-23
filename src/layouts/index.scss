@@ -1,25 +1,29 @@
 .custom-layout {
   height: calc(100vh - 35px);
+
   :deep(.n-layout-scroll-container) {
     .n-layout-header {
       width: 40px;
+
       .header-content {
         width: 40px;
         height: 100%;
         color: #ffffff;
         background-color: var(--el-aside-bg-color);
-        border-right: 1px soild var(--el-aside-border-color);
       }
     }
+
     .n-layout-sider {
       background-color: var(--el-aside-tree-bg-color);
-      border-left: 1px solid var(--el-aside-border-color);
+
       .n-scrollbar .n-scrollbar-container .n-scrollbar-content {
         padding: 0 !important;
+
         .file-management {
           height: calc(100vh - 35px);
         }
       }
+
       &::after {
         position: absolute;
         top: 0;

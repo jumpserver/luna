@@ -1,24 +1,19 @@
 <template>
-  <n-flex class="h-[35px] search-part" justify="center" align="center">
-    <n-icon color="#CCCCCC" size="16px" :component="ArrowBack" />
-    <n-icon color="#CCCCCC" size="16px" :component="ArrowForward" />
-    <n-input
-      round
-      placeholder="搜索"
-      size="small"
-      clearable
-      autosize
-      class="h-[24px] min-w-[50%] rounded-[5px] min-w-1/2"
+  <n-flex class="h-[35px] search-part" justify="start" align="center">
+    <n-image
+      lazy
+      :src="globalStore.interface.logo_logout"
+      alt="Logo 图片"
+      class="h-8 w-8 ml-[5px] justify-center object-fill hover: cursor-pointer"
     >
-      <template #prefix>
-        <n-icon size="16px" :component="SearchOutline"></n-icon>
-      </template>
-    </n-input>
+    </n-image>
   </n-flex>
 </template>
 
 <script setup lang="ts">
-import { SearchOutline, ArrowBack, ArrowForward } from '@vicons/ionicons5';
+import { useGlobalStore } from '@/stores/modules/global';
+
+const globalStore = useGlobalStore();
 </script>
 
 <style scoped lang="scss">

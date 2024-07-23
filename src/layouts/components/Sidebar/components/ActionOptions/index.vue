@@ -37,6 +37,7 @@ const handleSelect = (...args: any) => {
   height: 30px;
   color: #ffffff;
 }
+
 :lang(en) {
   .action-item {
     min-width: 115px;

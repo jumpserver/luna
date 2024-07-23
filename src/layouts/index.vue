@@ -1,7 +1,7 @@
 <template>
   <NavSearch />
   <n-layout has-sider class="custom-layout">
-    <n-layout-header bordered>
+    <n-layout-header>
       <n-flex class="header-content" vertical align="center" justify="space-between">
         <SideTop />
         <SideBottom />

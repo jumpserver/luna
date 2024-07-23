@@ -230,21 +230,26 @@ onBeforeUnmount(() => {
   transition:
     width 0.7s ease-in-out,
     opacity 0.7s ease-in-out;
+
   &.n-drawer--show {
     opacity: 1;
   }
+
   .drawer-content {
     :deep(.n-drawer-body-content-wrapper) {
       .setting-item {
         width: 100%;
         margin-top: 10px;
       }
+
       .page-setting .n-select {
         width: 150px;
       }
+
       .language-setting .n-select {
         width: 150px;
       }
+
       .theme-colors .n-color-picker {
         width: 150px;
       }
