@@ -115,7 +115,7 @@ function createWatermarkDiv(content, {
 
     for (let n = 0; n < words.length; n++) {
       line = words[n];
-      line = truncateCenter(line, 25);
+      line = truncateCenter(line, 64);
       _ctx.fillText(line, x, y);
       y += _lineHeight;
     }
