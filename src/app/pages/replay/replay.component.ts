@@ -1,7 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-import {HttpService, LogService, SettingService} from '@app/services';
-import {Replay} from '@app/model';
+import {HttpService, I18nService, LogService, SettingService} from '@app/services';
+import {Replay, User} from '@app/model';
 
 @Component({
   selector: 'pages-replay',
@@ -10,11 +10,20 @@ import {Replay} from '@app/model';
 })
 export class PagesReplayComponent implements OnInit {
   replay: Replay = new Replay();
+  user: User;
 
   constructor(private route: ActivatedRoute,
               private _http: HttpService,
               private _settingSvc: SettingService,
+              private _i18n: I18nService,
               private _logger: LogService) {
+    this.getCurrentUser();
+  }
+
+  getCurrentUser() {
+    this._http.getUserProfile().subscribe(user => {
+      this.user = user;
+    });
   }
 
   ngOnInit() {
@@ -34,8 +43,11 @@ export class PagesReplayComponent implements OnInit {
             Object.assign(this.replay, data);
             this.replay.id = sid;
             clearInterval(interval);
+            const auditorUser =  `${this._i18n.instant('Viewer')}: ${this.user.name}(${this.user.username})`;
+            const sessionContent = `${this._i18n.instant('Operator')}: ${this.replay.user}\n${this.replay.asset}`;
+            const content = `${auditorUser}\n${sessionContent}`;
             this._settingSvc.createWaterMarkIfNeed(
-              document.body, `${this.replay.user}\n${this.replay.asset}`
+              document.body, `${content}`
             );
           }
         },

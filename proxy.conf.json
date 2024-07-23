@@ -6,12 +6,12 @@
     "changeOrigin": true
   },
   "/koko/static/*": {
-    "target": "http://localhost:5050",
+    "target": "http://localhost:5000",
     "secure": false,
     "ws": true
   },
   "/koko/*": {
-    "target": "http://localhost:5050",
+    "target": "http://localhost:5000",
     "secure": false,
     "ws": true,
     "changeOrigin": true
