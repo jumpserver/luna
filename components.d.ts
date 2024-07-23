@@ -11,6 +11,7 @@ declare module 'vue' {
     Hello: typeof import('./src/components/Hello.vue')['default']
     Loading: typeof import('./src/components/Loading/index.vue')['default']
     NButton: typeof import('naive-ui')['NButton']
+    NButtonGroup: typeof import('naive-ui')['NButtonGroup']
     NCard: typeof import('naive-ui')['NCard']
     NCheckbox: typeof import('naive-ui')['NCheckbox']
     NCollapse: typeof import('naive-ui')['NCollapse']

@@ -1,5 +1,5 @@
 <template>
-  <NavSearch />
+  <Nav />
   <n-layout has-sider class="custom-layout">
     <n-layout-header>
       <n-flex class="header-content" vertical align="center" justify="space-between">
@@ -33,8 +33,8 @@
 
 <script setup lang="ts">
 import mittBus from '@/utils/mittBus.ts';
+import Nav from '@/layouts/components/Nav/index.vue';
 import SideTop from './components/Sidebar/sideTop.vue';
-import NavSearch from './components/NavSearch/index.vue';
 import MainContent from './components/MainContent/index.vue';
 import SideBottom from './components/Sidebar/sideBottom.vue';
 import SettingDrawer from './components/SettingDrawer/index.vue';

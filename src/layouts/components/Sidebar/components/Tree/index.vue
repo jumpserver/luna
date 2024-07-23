@@ -50,4 +50,8 @@ const handleTreeIconClick = () => {
     background-color: var(--el-color-primary-light-1);
   }
 }
+
+.tree-icon:hover {
+  fill: var(--el-color-primary-light-1) !important;
+}
 </style>
