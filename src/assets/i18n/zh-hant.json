@@ -211,6 +211,8 @@
   "VirtualApp": "虛擬應用",
   "connectDisabledTipsNoAccount": "提示：未找到有效的授權帳號，當前資源無法連接，請聯繫管理員進行處理",
   "connectDisabledTipsNoConnectMethod": "提示：未找到有效的連接方式，當前資源無法連接，請聯繫管理員進行處理",
-  "connectDisabledTipsMethodDisabled": "提示：未找到有效的遠程應用發布機，當前資源無法連接，請聯繫管理員進行處理"
+  "connectDisabledTipsMethodDisabled": "提示：未找到有效的遠程應用發布機，當前資源無法連接，請聯繫管理員進行處理",
+  "Viewer": "查看人",
+  "Operator": "操作人"
 }
 
