@@ -1,7 +1,7 @@
 <template>
   <n-flex justify="center" align="center" class="w-full my-[15px] cursor-pointer">
     <logo :logo-image="logoImage || ''" />
-    <n-flex justify="center" align="center" class="w-full">
+    <n-flex justify="center" align="center" class="w-full mt-[5px]">
       <template v-for="option of topIconOptions" :key="option.name">
         <component :is="option.component" :name="option.name" :icon-style="option.iconStyle" />
       </template>
@@ -45,7 +45,7 @@ const logoImage = globalStore.interface.logo_logout;
 
 <style scoped lang="scss">
 :deep(.n-flex) {
-  gap: 10px 12px !important;
+  gap: 15px 12px !important;
   .tree-icon:hover {
     fill: var(--el-color-primary) !important;
   }

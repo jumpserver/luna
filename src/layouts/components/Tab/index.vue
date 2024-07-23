@@ -1,12 +1,12 @@
 <template>
-  <n-layout-header class="header-tab">
-    <n-flex justify="space-between" align="center">
+  <n-layout-header class="header-tab relative">
+    <n-space justify="space-between" align="center">
       <n-flex ref="el" style="gap: 0">
         <n-flex
           justify="center"
           align="center"
           v-for="item in list"
-          class="tab-item py-0 px-1.25"
+          class="tab-item cursor-pointer"
           :key="item.id"
           :class="{
             'active-tab': item.isActive,
@@ -15,38 +15,64 @@
           }"
           @click="handleTabClick(item)"
         >
-          {{ item.name }}
+          <n-text class="px-[10px] flex items-center text-white">
+            <span class="inline-flex h-[35px] min-w-[85px] text-[13px] justify-center items-center">
+              {{ item.name }}
+            </span>
+            <n-icon
+              v-if="item.isActive"
+              :size="14"
+              class="text-white"
+              :component="CloseOutline"
+            ></n-icon>
+          </n-text>
         </n-flex>
       </n-flex>
-      <n-flex justify="space-between" align="center" class="operation-item">
+      <!--	todo)) 组件拆分		-->
+      <n-flex
+        justify="space-between"
+        align="center"
+        class="h-[35px] mr-[15px]"
+        style="column-gap: 5px"
+      >
         <n-popover>
           <template #trigger>
-            <n-icon size="18px" :component="CopyOutline" />
+            <div
+              class="flex justify-center items-center w-[25px] h-[25px] cursor-pointer transition-all duration-300 ease-in-out hover:rounded-[5px] hover:bg-custom-icon-hover-color"
+            >
+              <svg-icon name="split" :icon-style="iconStyle" />
+            </div>
           </template>
           拆分
         </n-popover>
 
         <n-popover>
           <template #trigger>
-            <n-icon size="18px" :component="EllipsisHorizontal" />
+            <div
+              class="flex justify-center items-center w-[25px] h-[25px] cursor-pointer transition-all duration-300 ease-in-out hover:rounded-[5px] hover:bg-custom-icon-hover-color"
+            >
+              <n-icon size="16px" :component="EllipsisHorizontal" />
+            </div>
           </template>
           操作
         </n-popover>
       </n-flex>
-    </n-flex>
+      <!--	todo)) 组件拆分		-->
+    </n-space>
   </n-layout-header>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
-import { CopyOutline, EllipsisHorizontal } from '@vicons/ionicons5';
+import { type CSSProperties, reactive, ref } from 'vue';
+import SvgIcon from '@/components/SvgIcon/index.vue';
 import { useDraggable, type UseDraggableReturn } from 'vue-draggable-plus';
+import { EllipsisHorizontal, CloseOutline } from '@vicons/ionicons5';
 
 const el = ref();
 
 const list = reactive([
   {
-    name: 'Joao',
+    name: 'index.js',
     id: 1,
     clickCount: 0,
     isActive: false
@@ -56,20 +82,16 @@ const list = reactive([
     id: 2,
     clickCount: 0,
     isActive: false
-  },
-  {
-    name: 'Johanna',
-    id: 3,
-    clickCount: 0,
-    isActive: false
-  },
-  {
-    name: 'Juan',
-    id: 4,
-    clickCount: 0,
-    isActive: false
   }
 ]);
+
+const iconStyle: CSSProperties = {
+  fill: '#D8D8D8',
+  width: '16px',
+  height: '16px',
+  transition: 'fill 0.3s'
+};
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const draggable = useDraggable<UseDraggableReturn>(el, list, {
   animation: 150,
@@ -96,17 +118,9 @@ const handleTabClick = (item: { id: number }) => {
 
 <style scoped lang="scss">
 .header-tab {
-  position: relative;
   width: 100% !important;
-  height: 35px;
   background-color: var(--el-main-header-bg-color);
   .tab-item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 60px;
-    height: 35px;
-    cursor: pointer;
     transition: all 0.3s ease-in-out;
     &.first-click {
       font-style: italic;
@@ -117,23 +131,8 @@ const handleTabClick = (item: { id: number }) => {
       color: rgb(255 255 255 / 50%);
     }
     &.active-tab {
-      color: #ffffff;
+      color: #ffffff !important;
       background-color: var(--el-main-bg-color);
-    }
-  }
-  .operation-item {
-    margin-right: 15px;
-    .n-icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 3px;
-      cursor: pointer;
-      transition: all 0.3s ease-in-out;
-      &:hover {
-        background-color: #363737;
-        border-radius: 5px;
-      }
     }
   }
 }
