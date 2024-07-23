@@ -83,5 +83,10 @@ li input {
   color: white;
   padding: 5px 20px 4px 15px;
   height: 26px;
+
+  &:focus {
+    outline: none;
+    border: none;
+  }
 }
 

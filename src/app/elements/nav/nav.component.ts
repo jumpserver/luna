@@ -203,7 +203,7 @@ export class ElementNavComponent implements OnInit {
           {
             id: 'Default',
             click: () => {
-              localStorage.setItem('ThemeType', 'default');
+              localStorage.setItem('themeType', 'default');
               useTheme().switchTheme();
             },
             name: this._i18n.instant('Default')
@@ -211,7 +211,7 @@ export class ElementNavComponent implements OnInit {
           {
             id: 'DarkBlue',
             click: () => {
-              localStorage.setItem('ThemeType', 'darkBlue');
+              localStorage.setItem('themeType', 'darkBlue');
               useTheme().switchTheme();
             },
             name: this._i18n.instant('DarkBlue')
