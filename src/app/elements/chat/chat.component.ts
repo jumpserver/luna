@@ -13,6 +13,9 @@ export class ElementChatComponent implements OnInit, OnDestroy {
   element: any;
   iframeURL: string;
   currentView: View;
+  private isLongPress: boolean;
+  private longPressTimeout: number;
+  private isDragging: boolean;
 
   constructor(
     public viewSrv: ViewService,
@@ -54,52 +57,76 @@ export class ElementChatComponent implements OnInit, OnDestroy {
     const clientOffset: any = {};
     const dragBox = document.getElementById('dragBox');
     const dragButton = document.querySelector('.drag-button');
-    dragBox.addEventListener('mousedown', (event) => {
-      event.stopPropagation();
-      const offsetX = dragBox.getBoundingClientRect().left;
-      const offsetY = dragBox.getBoundingClientRect().top;
-      const innerX = event.clientX - offsetX;
-      const innerY = event.clientY - offsetY;
+    const chatImg = dragButton.querySelector('.chat-img');
+    const elements = [dragButton, chatImg];
 
-      clientOffset.clientX = event.clientX;
-      clientOffset.clientY = event.clientY;
-      document.onmousemove = function (ev: any) {
-        dragBox.style.left = ev.clientX - innerX + 'px';
-        dragBox.style.top = ev.clientY - innerY + 'px';
-        const dragDivTop = window.innerHeight - dragBox.getBoundingClientRect().height;
-        const dragDivLeft = window.innerWidth - dragBox.getBoundingClientRect().width;
-        dragBox.style.left = dragDivLeft + 'px';
-        dragBox.style.left = '-48px';
-        if (dragBox.getBoundingClientRect().top <= 0) {
-          dragBox.style.top = '0px';
+    elements.forEach(element => {
+      element.addEventListener('mousedown', (event: MouseEvent) => {
+        event.stopPropagation();
+        event.preventDefault();
+        const offsetY = dragBox.getBoundingClientRect().top;
+        const innerY = event.clientY - offsetY;
+
+        clientOffset.clientY = event.clientY;
+        this.isLongPress = false;
+
+        this.longPressTimeout = setTimeout(() => {
+          this.isLongPress = true;
+          document.onmousemove = (ev: MouseEvent) => {
+            if (!this.isLongPress) { return; }
+
+            let newTop = ev.clientY - innerY;
+
+            // 确保 dragBox 在窗口可视范围内
+            const dragDivTop = window.innerHeight - dragBox.offsetHeight;
+
+            if (newTop < 0) { newTop = 0; }
+            if (newTop > dragDivTop) { newTop = dragDivTop; }
+
+            dragBox.style.top = newTop + 'px';
+            dragBox.style.left = '-48px';
+
+            ev.preventDefault();
+            ev.stopPropagation();
+          };
+        }, 300); // 300ms 作为长按检测时间
+
+        document.onmouseup = () => {
+          document.onmousemove = null;
+          document.onmouseup = null;
+
+          if (!this.isLongPress) {
+            clearTimeout(this.longPressTimeout); // 确保清除长按检测
+            this.isShow = !this.isShow;
+          }
+
+          setTimeout(() => {
+            this.isLongPress = false;
+          }, 500);
+        };
+      }, false);
+
+      element.addEventListener('mouseup', (event: MouseEvent) => {
+        const clientY = event.clientY;
+        if (
+          this.isDifferenceWithinThreshold(clientY, clientOffset.clientY)
+          && (event.target === dragButton || this.isDescendant(event.target as Element, dragButton))
+        ) {
+          this.isShow = !this.isShow;
         }
-        if (dragBox.getBoundingClientRect().top >= dragDivTop) {
-          dragBox.style.top = dragDivTop + 'px';
-        }
-        ev.preventDefault();
-        ev.stopPropagation();
-      };
-      document.onmouseup = function () {
-        document.onmousemove = null;
-        document.onmouseup = null;
-      };
-    }, false);
-    dragBox.addEventListener('mouseup', (event) => {
-      const clientX = event.clientX;
-      const clientY = event.clientY;
-      if (
-        this.isDifferenceWithinThreshold(clientX, clientOffset.clientX)
-        && this.isDifferenceWithinThreshold(clientY, clientOffset.clientY)
-        && (event.target === dragButton || this.isDescendant(event.target, dragButton))
-      ) {
-        this.isShow = !this.isShow;
-      }
+        setTimeout(() => {
+          this.isDragging = false;
+        }, 500);
+      });
     });
   }
 
-  isDescendant(element, ancestor) {
-    if (element.parentNode === ancestor) {
-      return true;
+  isDescendant(element: Element, ancestor: Element) {
+    while (element) {
+      if (element === ancestor) {
+        return true;
+      }
+      element = element.parentElement;
     }
     return false;
   }
