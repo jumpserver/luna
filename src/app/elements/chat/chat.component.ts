@@ -84,36 +84,71 @@ export class ElementChatComponent implements OnInit, OnDestroy {
     const clientOffset: any = {};
     const dragBox = document.getElementById('dragBox');
     const dragButton = document.querySelector('.robot-button');
-    dragBox.addEventListener('mousedown', (event) => {
+    const initialHeight = dragBox.style.height;
+    let longPressTimeout: any;
+    let isLongPress = false;
+
+    const startDrag = (event: MouseEvent) => {
       event.stopPropagation();
       const offsetY = dragBox.getBoundingClientRect().top;
       const innerY = event.clientY - offsetY;
 
       clientOffset.clientY = event.clientY;
       const vm = this;
-      document.onmousemove = function (ev: any) {
+
+      longPressTimeout = setTimeout(() => {
+        isLongPress = true;
         vm.isDragging = true;
-        dragBox.style.top = ev.clientY - innerY + 'px';
-        const dragDivTop = window.innerHeight - dragBox.getBoundingClientRect().height;
-        if (dragBox.getBoundingClientRect().top <= 10) {
-          dragBox.style.top = '10px';
-        }
-        if (dragBox.getBoundingClientRect().top >= dragDivTop) {
-          dragBox.style.top = dragDivTop - 100 + 'px';
-        }
-        ev.preventDefault();
-        ev.stopPropagation();
-      };
+
+        document.onmousemove = function (ev: MouseEvent) {
+          if (!vm.isDragging) { return; }
+
+          dragBox.style.top = ev.clientY - innerY + 'px';
+          dragBox.style.height = initialHeight;
+
+          const dragDivTop = window.innerHeight - dragBox.getBoundingClientRect().height;
+          if (dragBox.getBoundingClientRect().top <= 10) {
+            dragBox.style.top = '10px';
+          }
+          if (dragBox.getBoundingClientRect().top >= dragDivTop) {
+            dragBox.style.top = dragDivTop - 100 + 'px';
+          }
+
+          ev.preventDefault();
+          ev.stopPropagation();
+        };
+      }, 300); // 300ms 作为长按检测时间
+
       document.onmouseup = function () {
         document.onmousemove = null;
         document.onmouseup = null;
+
+        if (!isLongPress) {
+          clearTimeout(longPressTimeout);
+          vm.showBtn = !vm.showBtn;
+        }
+
+        setTimeout(() => {
+          vm.isDragging = false;
+          isLongPress = false;
+        }, 300);
       };
-    }, false);
-    dragBox.addEventListener('mouseup', (event) => {
+    };
+
+    const elements = [dragButton, dragButton.querySelector('.chat-img')];
+
+    elements.forEach(element => {
+      element.addEventListener('mousedown', (event: MouseEvent) => {
+        event.preventDefault();
+        startDrag(event);
+      }, false);
+    });
+
+    dragBox.addEventListener('mouseup', (event: MouseEvent) => {
       const clientY = event.clientY;
       if (
         this.isDifferenceWithinThreshold(clientY, clientOffset.clientY)
-        && (event.target === dragButton || this.isDescendant(event.target, dragButton))
+        && (event.target === dragButton || this.isDescendant(event.target as Element, dragButton))
       ) {
         this.showBtn = !this.showBtn;
       }
@@ -123,9 +158,12 @@ export class ElementChatComponent implements OnInit, OnDestroy {
     });
   }
 
-  isDescendant(element, ancestor) {
-    if (element.parentNode === ancestor) {
-      return true;
+  isDescendant(element: Element, ancestor: Element) {
+    while (element) {
+      if (element === ancestor) {
+        return true;
+      }
+      element = element.parentElement;
     }
     return false;
   }
