@@ -97,6 +97,10 @@ export class ElementAssetTreeComponent implements OnInit {
         title: 'title'
       }
     },
+    check: {
+      enable: false,
+      chkboxType: { 'Y': 'ps', 'N': 'ps' }
+    },
   };
   pos = {left: '100px', top: '200px'};
   isShowRMenu = false;
@@ -109,6 +113,7 @@ export class ElementAssetTreeComponent implements OnInit {
   currentOrgID = '';
   trees: Array<Tree> = [];
   assetTreeChecked = [];
+  isBatchSelectActive: boolean = false;
 
   constructor(private _appSvc: AppService,
               private _treeFilterSvc: TreeFilterService,
@@ -157,7 +162,7 @@ export class ElementAssetTreeComponent implements OnInit {
         'id': 'new-connection',
         'name': 'Open in new window',
         'fa': 'fa-external-link',
-        'hide': this.isK8s || cnode.isParent,
+        'hide': this.isBatchSelectActive || this.isK8s || cnode.isParent,
         'click': this.onMenuConnectNewTab.bind(this)
       },
       {
@@ -205,15 +210,22 @@ export class ElementAssetTreeComponent implements OnInit {
         'id': 'favorite',
         'name': 'Favorite',
         'fa': 'fa-star-o',
-        'hide': this.isAssetFavorite() || this.isK8s || cnode.isParent,
+        'hide': this.isBatchSelectActive || this.isAssetFavorite() || this.isK8s || cnode.isParent,
         'click': this.onMenuFavorite.bind(this)
       },
       {
         'id': 'disfavor',
         'name': 'Disfavor',
         'fa': 'fa-star',
-        'hide': !this.isAssetFavorite() || this.isK8s || cnode.isParent,
+        'hide': this.isBatchSelectActive || !this.isAssetFavorite() || this.isK8s || cnode.isParent,
         'click': this.onMenuFavorite.bind(this)
+      },
+      {
+        'id': 'batch-select',
+        'name': 'Batch Select',
+        'fa': 'fa-check-square',
+        'hide': false,
+        'click': this.onBatchSelect.bind(this)
       }
     ];
   }
@@ -242,6 +254,39 @@ export class ElementAssetTreeComponent implements OnInit {
       this.initAssetTree().then();
       this.initTypeTree().then();
     }
+  }
+
+  checkHasParent(node) {
+    const prNode = node.getParentNode();
+    if (prNode !== null) {
+      prNode.checked = !prNode.checked;
+      this.checkHasParent(prNode);
+    }
+  }
+
+  onBatchSelect() {
+    this.isBatchSelectActive = !this.isBatchSelectActive;
+    const parentNode = this.rightClickSelectNode;
+    const tree = this.rightClickSelectNode.ztree;
+    const currentChecked = tree.setting.check.enable;
+
+    // 当 select 是展开子项的 item 时的联动
+    if (parentNode.children && parentNode.children.length > 0) {
+      const childrenNode = parentNode.children;
+      return childrenNode.forEach(item => item.checked = !item.checked);
+    }
+
+    // 当所选 item 为深层次的子节点时
+    this.checkHasParent(parentNode);
+    parentNode.checked = !parentNode.checked;
+
+    if (currentChecked) {
+      tree.checkAllNodes(false);
+    }
+    setTimeout(() => {
+      tree.setting.check.enable = !currentChecked;
+      tree.refresh();
+    });
   }
 
   onNodeClick(event, treeId, treeNode, clickFlag) {
