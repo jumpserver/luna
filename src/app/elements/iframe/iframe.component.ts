@@ -135,7 +135,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     this.src = 'about:blank';
     setTimeout(() => {
       this.src = url;
+      this.view.connected = true;
+      this.view.active = true;
     }, 100);
-    this.view.connected = true;
   }
 }
