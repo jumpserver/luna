@@ -110,7 +110,7 @@ export class AppService {
       clearInterval(this.checkIntervalId);
       const ok = confirm(this._i18n.instant(this.getErrorMsg(status)));
       if (ok && !this.newLoginHasOpen) {
-        window.open('/core/auth/login/?next=/luna/', '_self');
+        window.open('/core/auth/login/?next=/luna/', '_blank');
         this.newLoginHasOpen = true;
       }
       setTimeout(() => this.doCheckProfile(true), 5000);
