@@ -42,6 +42,11 @@ export class ElementContentTabComponent implements OnInit {
       this.clickTimeout = null;
     }
 
+    // 点击时需要额外确定当前是否是在编辑状态
+    if (this.view.editable) {
+      return;
+    }
+
     // 延迟300毫秒，检查是否有双击事件
     this.clickTimeout = setTimeout(() => {
       const action = new ViewAction(this.view, 'active');
