@@ -8,7 +8,7 @@
       <i class="fa fa-cog"></i>
     </div>
     <div (click)="showChatAI()" [hidden]="!chatAiEnabled" class="robot-button">
-      <img alt="" src="assets/icons/chat-ai.png"/>
+      <img alt="" class="chat-img" src="assets/icons/chat-ai.png"/>
     </div>
   </div>
   <div *ngIf="chatAiEnabled" [style.display]="chatAIShown ? 'block' : 'none'" class="drawer-panel">

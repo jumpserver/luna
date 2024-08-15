@@ -32,11 +32,13 @@
   bottom: 20%;
   right: 1px;
   cursor: pointer;
-  pointer-events: auto;
+  //pointer-events: auto;
+  width: auto;
+  height: auto;
   z-index: 999;
   display: flex;
-  flex-direction: column; /* 垂直方向排列子元素 */
-  align-items: flex-end; /* 右对齐子元素 */
+  flex-direction: column;
+  align-items: flex-end;
 
   &:hover {
     cursor: pointer;

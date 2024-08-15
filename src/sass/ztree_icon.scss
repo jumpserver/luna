@@ -87,6 +87,10 @@
     background: url('./icons/unix.png') no-repeat center left transparent;
   }
 
+  &.WebCloud_ico_docu {
+    background: url('./icons/cloud.png') no-repeat center left transparent;
+    background-size: contain;
+  }
 
   &.private_ico_docu {
     background: url('./icons/private.png') no-repeat center left transparent;
