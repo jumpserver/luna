@@ -5,6 +5,12 @@
     "ws": true,
     "changeOrigin": true
   },
+  "/koko/k8s/*": {
+    "target": "http://localhost:5000",
+    "secure": false,
+    "ws": true,
+    "changeOrigin": true
+  },
   "/koko/static/*": {
     "target": "http://localhost:5000",
     "secure": false,

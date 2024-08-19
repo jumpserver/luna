@@ -1,4 +1,4 @@
-import {Component, Output, Input, EventEmitter} from '@angular/core';
+import {Component, Output, EventEmitter} from '@angular/core';
 import {DataStore} from '@app/globals';
 import {version} from '@src/environments/environment';
 import {OrganizationService, SettingService} from '@app/services';
@@ -10,7 +10,6 @@ import {OrganizationService, SettingService} from '@app/services';
   styleUrls: ['./left-bar.component.scss'],
 })
 export class ElementLeftBarComponent {
-  @Input() isK8s: boolean = false;
   @Output() menuActive = new EventEmitter();
   showTree = true;
   version = version;

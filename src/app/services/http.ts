@@ -172,12 +172,6 @@ export class HttpService {
     return this.get<Array<TreeNode>>(url, {observe: 'response'}).pipe(this.withRetry());
   }
 
-  getMyGrantedK8sNodes(treeId: string, async: boolean) {
-    const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?tree_id=${treeId}&async=${async}`;
-    return this.get<Array<TreeNode>>(url);
-  }
-
-
   getAssetDetail(id) {
     const url = `/api/v1/perms/users/self/assets/${id}/`;
     return this.get<Asset>(url);

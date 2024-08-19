@@ -114,22 +114,10 @@ export class ElementConnectorKokoComponent implements OnInit {
     }
   }
 
-  setK8sParams(params) {
-    Object.keys(this.view.k8sInfo).forEach(k => {
-      const v = this.view.k8sInfo[k];
-      if (v) {
-        params[k] = this.view.k8sInfo[k];
-      }
-    });
-  }
-
   generateNodeConnectUrl() {
     const params = {};
     params['disableautohash'] = this.view.getConnectOption('disableautohash');
     params['token'] = this.view.connectToken.id;
-    if (this.view.k8sInfo) {
-      this.setK8sParams(params);
-    }
 
     params['_'] = Date.now().toString();
     const query = Object.entries(params)
