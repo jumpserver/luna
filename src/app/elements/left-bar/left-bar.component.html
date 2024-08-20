@@ -1,4 +1,7 @@
 <div class="sidebar" fxLayout="column">
+  <div class="organization" [style.display]="this._settingSvc.hasXPack() ? '' : 'none'">
+    <elements-organization [isK8s]="isK8s"></elements-organization>
+  </div>
 
   <div *ngIf="showTree" class="my-assets" [ngClass]="{'has-org': this._settingSvc.hasXPack()}">
     <div class="overflow ngx-scroll-overlay">
