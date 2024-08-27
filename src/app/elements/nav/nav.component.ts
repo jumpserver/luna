@@ -71,24 +71,6 @@ export class ElementNavComponent implements OnInit {
         children: [
           // 此处直接使用空串的话，在渲染时会被 nif 判断为 false 从而只有禁用效果而不展示文字内容
           {
-            id: 'SplitVertical',
-            href: '/',
-            name: this._i18n.instant('SplitVertical'),
-            disable: true
-          },
-          {
-            id: 'CommandBar',
-            href: '/',
-            name: this._i18n.instant('CommandBar'),
-            disable: true
-          },
-          {
-            id: 'ShareSession',
-            href: '/',
-            name: this._i18n.instant('ShareSession'),
-            disable: true
-          },
-          {
             id: 'FullScreen',
             click: () => {
               const ele: any = document.getElementsByClassName('window active')[0];
