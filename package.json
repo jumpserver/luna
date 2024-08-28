@@ -76,7 +76,7 @@
     "ngx-mat-select-search": "^1.8.0",
     "ngx-toastr": "^10.2.0",
     "popper.js": "^1.14.7",
-    "requirejs": "^2.3.5",
+    "requirejs": "^2.3.7",
     "rxjs": "~6.6.7",
     "rxjs-compat": "^6.0.0-rc.0",
     "tslib": "^2.4.0",
