@@ -134,7 +134,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
 
     if (connToken.protocol === 'k8s') {
-      window.open(`/koko/k8s/?token=${connToken.id}`);
+      const baseUrl = `${window.location.protocol}//${window.location.host}/`;
+      const fullUrl = `${baseUrl}koko/k8s/?token=${connToken.id}`;
+      window.open(fullUrl);
       return;
     }
 
