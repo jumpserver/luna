@@ -86,7 +86,7 @@ export class ViewService {
     let nextActiveView = null;
     const viewIds = this.viewIds;
     const currentViewIndex = viewIds.findIndex(i => i === this.currentView.id);
-    if (key === 'alt+right') {
+    if (key === 'alt+shift+right') {
       if (currentViewIndex === viewIds.length - 1 && currentViewIndex !== 0) {
         nextActiveView = this.viewList.find(i => i.id === viewIds[0]);
       } else {
@@ -94,7 +94,7 @@ export class ViewService {
         nextActiveView = this.viewList.find(i => i.id === nextViewId);
       }
     }
-    if (key === 'alt+left') {
+    if (key === 'alt+shift+left') {
       if (currentViewIndex === 0) {
         nextActiveView = this.viewList.find(i => i.id === viewIds[viewIds.length - 1]);
       } else {
