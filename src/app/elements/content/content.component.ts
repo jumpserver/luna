@@ -92,12 +92,12 @@ export class ElementContentComponent implements OnInit, OnDestroy {
 
   handleKeyDownTabChange() {
     this.keyboardSubscription = fromEvent(window, 'keydown').subscribe((event: any) => {
-      if (event.altKey && (event.key === 'ArrowRight' || event.key === 'ArrowLeft') && this.viewList.length > 1) {
+      if (event.altKey && event.shiftKey && (event.key === 'ArrowRight' || event.key === 'ArrowLeft') && this.viewList.length > 1) {
         let key = '';
         if (event.key === 'ArrowRight') {
-          key = 'alt+right';
+          key = 'alt+shift+right';
         } else if (event.key === 'ArrowLeft') {
-          key = 'alt+left';
+          key = 'alt+shift+left';
         }
         this.viewSrv.keyboardSwitchTab(key);
       }
