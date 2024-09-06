@@ -27,13 +27,13 @@
     </div>
     <as-split direction="horizontal" gutterSize="0">
       <as-split-area *ngIf="commands.length" [size]="15" [maxSize]="15" [minSize]="0" order="0">
-        <div class="command-results" 
+        <div class="command-results"
               infiniteScroll
               [infiniteScrollDistance]="2"
               [infiniteScrollThrottle]="50"
               (scrolled)="onScroll()"
               [scrollWindow]="false">
-            <div class="item" [title]="leftInfo" *ngFor="let item of commands" (click)="commandClick(item)"> 
+            <div class="item" [title]="leftInfo" *ngFor="let item of commands" (click)="commandClick(item)">
               <div class="command" [title]="item.input">{{ item.input }}</div>
               <div class="timestamp">{{ item.atime }}</div>
             </div>

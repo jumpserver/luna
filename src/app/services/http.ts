@@ -206,6 +206,13 @@ export class HttpService {
     );
   }
 
+  getPartFileReplay(sessionId: string, filename: string) {
+    const params = new HttpParams().set('part_filename', filename);
+    return this.get(
+      `/api/v1/terminal/sessions/${sessionId}/replay/`, {headers: this.getJMSOrg(), params: params}
+    );
+  }
+
   getSessionDetail(sid: string): Promise<Session> {
     return this.get<Session>(
       `/api/v1/terminal/sessions/${sid}/`, {headers: this.getJMSOrg()}
