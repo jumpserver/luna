@@ -3,6 +3,7 @@
   <elements-replay-guacamole [replay]="replay" *ngIf="replay.type=='guacamole'"></elements-replay-guacamole>
   <elements-replay-asciicast [replay]="replay" *ngIf="replay.type=='asciicast'"></elements-replay-asciicast>
   <elements-replay-mp4 [replay]="replay" *ngIf="replay.type=='mp4'"></elements-replay-mp4>
+  <elements-replay-parts [replay]="replay" *ngIf="replay.type=='parts'"></elements-replay-parts>
   <div id="loading">
     <div class="lds-spinner" *ngIf="isLoad()">
       <div></div>

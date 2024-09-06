@@ -293,21 +293,22 @@ export class Setting {
 
 
 export class Replay {
-  id: string;
-  src: string;
-  type: string;
-  status: string;
-  timelist: Array<number>;
-  totalTime: number;
-  json: any;
-  user: string;
-  asset: string;
-  system_user: string;
-  date_start: string;
-  date_end: string;
-  height: number;
-  width: number;
-  download_url: string;
+  id?: string;
+  src?: string;
+  type?: string;
+  status?: string;
+  timelist?: Array<number>;
+  totalTime?: number;
+  json?: any;
+  user?: string;
+  asset?: string;
+  system_user?: string;
+  date_start?: string;
+  date_end?: string;
+  height?: number;
+  width?: number;
+  download_url?: string;
+  account?: string;
 }
 
 export class Session {
