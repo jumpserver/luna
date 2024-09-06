@@ -31,6 +31,8 @@ import {ElementConnectorGuideComponent} from '@app/elements/content/content-wind
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
 import {ElementChatComponent} from '@app/elements/chat/chat.component';
+import {ElementsPartsComponent} from './replay/parts/parts.component';
+
 
 export const ElementComponents = [
   ElementLeftBarComponent,
@@ -68,4 +70,5 @@ export const ElementComponents = [
   ElementConnectorGuideComponent,
   ElementCommandDialogComponent,
   ElementSendCommandDialogComponent,
+  ElementsPartsComponent,
 ];
