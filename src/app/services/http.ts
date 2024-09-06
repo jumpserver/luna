@@ -379,7 +379,7 @@ export class HttpService {
   }
 
   getQuickCommand() {
-    const url = '/api/v1/ops/adhocs/';
+    const url = '/api/v1/ops/adhocs/?only_mine=true';
     return this.get(url).toPromise();
   }
 
