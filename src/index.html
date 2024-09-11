@@ -129,20 +129,23 @@
   } else {
     console.log('浏览器不支持 ESC 长摁退出功能')
   }
-  window.onload = function (ev) {
+  window.onload = async function (ev) {
     let clipboardData = "";
-    if (!document.hasFocus()) {
-      return
-    }
 
-    if (navigator.clipboard && navigator.clipboard.readText) {
-      navigator.clipboard.readText().then(function textRead(text) {
-        clipboardData = text;
-      });
-    }
+    if (!document.hasFocus()) return
 
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(clipboardData)
+    try {
+      // 读取粘贴板内容
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        clipboardData = await navigator.clipboard.readText()
+      }
+
+      // 写会内容
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(clipboardData);
+      }
+    } catch (e) {
+      console.info(e)
     }
   }
 </script>
