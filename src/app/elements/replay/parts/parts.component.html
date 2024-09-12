@@ -1,9 +1,64 @@
-<div id="player">
-  <div class="controls">
-    <span id="user" style="padding-left: 20px" *ngIf="replay.user">{{"user"| translate}} : {{replay.user}}</span>
-    <span id="asset" style="padding-left: 20px" *ngIf="replay.asset">{{"asset"| translate}} : {{replay.asset}}</span>
-    <span id="system_user" style="padding-left: 20px" *ngIf="replay.system_user">{{"system user"| translate}} : {{replay.system_user}}</span>
-    <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{"start time"| translate}} : {{startTime}} </span>
-    <span id="download" style="padding-left: 30px" *ngIf="replay.download_url"><a type="button" [href]="replay.download_url">{{"download"| translate}}</a></span>
+<div class="wrapper">
+  <div
+    style="
+      width: 100%;
+      display: inline-flex;
+      justify-content: flex-start;
+      padding-left: 25px;
+    "
+  >
+    <mat-card class="control-part">
+      <span id="user" style="padding-left: 20px" *ngIf="replay?.user">
+        {{ "user" | translate }} : {{ currentVideo?.user }}
+      </span>
+      <span id="asset" style="padding-left: 20px" *ngIf="replay?.asset">
+        {{ "asset" | translate }} : {{ currentVideo?.asset }}
+      </span>
+      <span
+        id="system_user"
+        style="padding-left: 20px"
+        *ngIf="currentVideo?.system_user"
+      >
+        {{ "system user" | translate }} : {{ currentVideo?.system_user }}
+      </span>
+      <span
+        id="date_start"
+        style="padding-left: 20px"
+        *ngIf="currentVideo?.date_start"
+      >
+        {{ "start time" | translate }} : {{ startTime }}
+      </span>
+      <span
+        id="download"
+        style="padding-left: 30px"
+        *ngIf="currentVideo?.download_url"
+      >
+        <a type="button" [href]="currentVideo?.download_url">
+          {{ "download" | translate }}
+        </a>
+      </span>
+    </mat-card>
+  </div>
+
+  <div class="video-part">
+    <mat-card class="video-main">
+      <elements-replay-guacamole class='guacamole-video' [replay]="currentVideo" *ngIf="currentVideo?.type=='guacamole'"></elements-replay-guacamole>
+    </mat-card>
+    <mat-card class="video-list">
+      <mat-list>
+        <h3 mat-subheader>Folders</h3>
+        <mat-list-item
+          *ngFor="let folder of folders"
+          matTooltip="{{ folder.name }}"
+          matTooltipPosition="above"
+          matTooltipShowDelay="1000"
+          (click)="selectPart(folder)"
+        >
+          <mat-icon mat-list-icon>folder</mat-icon>
+          <h4 mat-line>{{ folder.name }}</h4>
+          <p mat-line>{{ folder.updated | date }}</p>
+        </mat-list-item>
+      </mat-list>
+    </mat-card>
   </div>
 </div>

@@ -1,10 +1,10 @@
-import {Component, OnInit, Input} from '@angular/core';
+import {Component, Input, OnInit, ViewEncapsulation} from '@angular/core';
 import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
-import {Replay, Command} from '@app/model';
+import {Command, Replay} from '@app/model';
 import {HttpService} from '@app/services';
 import {formatTime} from '@app/utils/common';
 import {TranslateService} from '@ngx-translate/core';
-import {Observable, fromEvent, Subscription} from 'rxjs';
+import {fromEvent, Observable, Subscription} from 'rxjs';
 import {debounceTime, distinctUntilChanged} from 'rxjs/operators';
 import 'rxjs/Observable';
 
@@ -12,7 +12,8 @@ import 'rxjs/Observable';
 @Component({
   selector: 'elements-replay-guacamole',
   templateUrl: './guacamole.component.html',
-  styleUrls: ['./guacamole.component.scss']
+  styleUrls: ['./guacamole.component.scss'],
+  encapsulation: ViewEncapsulation.None
 })
 export class ElementReplayGuacamoleComponent implements OnInit {
   isPlaying = false;
