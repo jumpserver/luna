@@ -28,14 +28,17 @@ export interface IFile {
 export class ElementsPartsComponent implements OnInit {
   @Input() replay: Replay;
 
-  files = [];
   replayData: any;
   startTime = null;
   id: string;
   replayType: string;
   currentVideo: Section;
 
+  files: IFile[] = [];
   folders: Section[] = [];
+
+  loading = false;
+  alertShown = false;
 
   constructor(
     private _http: HttpService,
@@ -95,12 +98,19 @@ export class ElementsPartsComponent implements OnInit {
             });
             retry = false;
           } else {
-            alert('录像正在上传中，请稍候');
+            if (!this.alertShown) {
+              alert('录像正在上传中，请稍候');
+              this.alertShown = true;
+            }
+
+            this.loading = true;
             await this.delay(3000);
           }
         } catch (e) {
           this._logger.error(e);
           retry = false;
+        } finally {
+          this.loading = false;
         }
       }
     }
@@ -134,7 +144,6 @@ export class ElementsPartsComponent implements OnInit {
    * @description点击列表的回调
    */
   selectPart(folder: Section) {
-    console.log(folder);
     switch (folder.type) {
       case 'guacamole': {
         this.currentVideo = {...folder};

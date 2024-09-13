@@ -7,6 +7,26 @@
   height: 100vh;
   background-color: #3c3c3c;
 
+  .loading-spinner {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+
+    ::ng-deep .mat-spinner {
+      width: 30px !important;
+      height: 30px !important;
+
+      svg {
+        width: 30px !important;
+        height: 30px !important;
+      }
+    }
+
+  }
+
   .control-part {
     width: calc(100vw - 345px);
     min-width: 800px;
@@ -71,6 +91,11 @@
         transition: all 0.5s;
         cursor: pointer;
         border-radius: 5px;
+
+        &.selected {
+          background-color: #e0e0e0 !important;
+          color: #000 !important;
+        }
 
         &:hover {
           background-color: #363737;

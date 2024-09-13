@@ -1,64 +1,71 @@
 <div class="wrapper">
-  <div
-    style="
+
+  <div *ngIf="loading" class="loading-spinner">
+    <mat-spinner></mat-spinner>
+  </div>
+  <div *ngIf="!loading">
+    <div
+      style="
       width: 100%;
       display: inline-flex;
       justify-content: flex-start;
       padding-left: 25px;
     "
-  >
-    <mat-card class="control-part">
+    >
+      <mat-card class="control-part">
       <span id="user" style="padding-left: 20px" *ngIf="replay?.user">
         {{ "user" | translate }} : {{ currentVideo?.user }}
       </span>
-      <span id="asset" style="padding-left: 20px" *ngIf="replay?.asset">
+        <span id="asset" style="padding-left: 20px" *ngIf="replay?.asset">
         {{ "asset" | translate }} : {{ currentVideo?.asset }}
       </span>
-      <span
-        id="system_user"
-        style="padding-left: 20px"
-        *ngIf="currentVideo?.system_user"
-      >
+        <span
+          id="system_user"
+          style="padding-left: 20px"
+          *ngIf="currentVideo?.system_user"
+        >
         {{ "system user" | translate }} : {{ currentVideo?.system_user }}
       </span>
-      <span
-        id="date_start"
-        style="padding-left: 20px"
-        *ngIf="currentVideo?.date_start"
-      >
+        <span
+          id="date_start"
+          style="padding-left: 20px"
+          *ngIf="currentVideo?.date_start"
+        >
         {{ "start time" | translate }} : {{ startTime }}
       </span>
-      <span
-        id="download"
-        style="padding-left: 30px"
-        *ngIf="currentVideo?.download_url"
-      >
+        <span
+          id="download"
+          style="padding-left: 30px"
+          *ngIf="currentVideo?.download_url"
+        >
         <a type="button" [href]="currentVideo?.download_url">
           {{ "download" | translate }}
         </a>
       </span>
-    </mat-card>
-  </div>
+      </mat-card>
+    </div>
 
-  <div class="video-part">
-    <mat-card class="video-main">
-      <elements-replay-guacamole class='guacamole-video' [replay]="currentVideo" *ngIf="currentVideo?.type=='guacamole'"></elements-replay-guacamole>
-    </mat-card>
-    <mat-card class="video-list">
-      <mat-list>
-        <h3 mat-subheader>Folders</h3>
-        <mat-list-item
-          *ngFor="let folder of folders"
-          matTooltip="{{ folder.name }}"
-          matTooltipPosition="above"
-          matTooltipShowDelay="1000"
-          (click)="selectPart(folder)"
-        >
-          <mat-icon mat-list-icon>folder</mat-icon>
-          <h4 mat-line>{{ folder.name }}</h4>
-          <p mat-line>{{ folder.updated | date }}</p>
-        </mat-list-item>
-      </mat-list>
-    </mat-card>
+    <div class="video-part">
+      <mat-card class="video-main">
+        <elements-replay-guacamole class='guacamole-video' [replay]="currentVideo" *ngIf="currentVideo?.type=='guacamole'"></elements-replay-guacamole>
+      </mat-card>
+      <mat-card class="video-list">
+        <mat-list>
+          <h3 mat-subheader>Folders</h3>
+          <mat-list-item
+            *ngFor="let folder of folders"
+            matTooltip="{{ folder.name }}"
+            matTooltipPosition="above"
+            matTooltipShowDelay="1000"
+            [ngClass]="{ 'selected': currentVideo?.name === folder?.name }"
+            (click)="selectPart(folder)"
+          >
+            <mat-icon mat-list-icon>folder</mat-icon>
+            <h4 mat-line>{{ folder.name }}</h4>
+            <p mat-line>{{ folder.updated | date }}</p>
+          </mat-list-item>
+        </mat-list>
+      </mat-card>
+    </div>
   </div>
 </div>
