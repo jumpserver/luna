@@ -39,6 +39,7 @@ export class ElementsPartsComponent implements OnInit {
 
   loading = false;
   alertShown = false;
+  videoLoading = false;
 
   constructor(
     private _http: HttpService,
@@ -146,8 +147,15 @@ export class ElementsPartsComponent implements OnInit {
   selectPart(folder: Section) {
     switch (folder.type) {
       case 'guacamole': {
+        this.videoLoading = true;
         this.currentVideo = {...folder};
+
         this.cdRef.detectChanges();
+
+        setTimeout(() => {
+          this.videoLoading = false;
+        }, 500);
+
         break;
       }
     }

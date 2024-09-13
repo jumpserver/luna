@@ -47,7 +47,10 @@
 
     <div class="video-part">
       <mat-card class="video-main">
-        <elements-replay-guacamole class='guacamole-video' [replay]="currentVideo" *ngIf="currentVideo?.type=='guacamole'"></elements-replay-guacamole>
+        <div class="loading-spinner">
+          <mat-spinner *ngIf="videoLoading"></mat-spinner>
+        </div>
+        <elements-replay-guacamole class='guacamole-video' [replay]="currentVideo" *ngIf="currentVideo?.type=='guacamole' && !videoLoading"></elements-replay-guacamole>
       </mat-card>
       <mat-card class="video-list">
         <mat-list>
