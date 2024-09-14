@@ -61,7 +61,7 @@
       ::ng-deep #player {
         display: flex;
         flex-direction: column-reverse;
-        justify-content: center;
+        justify-content: space-evenly;
         align-items: center;
         background-color: #0F0F10;
 
@@ -82,9 +82,13 @@
         }
 
         ::ng-deep #display {
-          width: 100%;
-          height: calc(100% - 50px);
+          width: calc(100vw - 350px);
+          //height: calc(100% - 50px);
+          //height: auto;
+          height: calc(100vh - 350px);
           box-sizing: content-box;
+          background-color: #0F0F10;
+          padding: unset;
 
           .as-split-area {
             background-color: #272727;
@@ -110,9 +114,9 @@
     align-items: flex-start;
     justify-content: flex-start;
     flex-grow: 0;
-    width: 250px;
+    width: 300px;
     height: calc(100vh - 100px);
-    min-width: 250px;;
+    min-width: 300px;;
     background-color: #0F0F0F;
 
     .mat-list {
