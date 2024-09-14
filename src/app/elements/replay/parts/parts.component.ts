@@ -2,7 +2,6 @@ import { Replay } from '@app/model';
 import {HttpService, I18nService, LogService} from '@app/services';
 import { TranslateService } from '@ngx-translate/core';
 import {Component, Input, OnInit} from '@angular/core';
-import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
 import { ActivatedRoute } from '@angular/router';
 import {MatDialog} from '@angular/material/dialog';
 import { ChangeDetectorRef } from '@angular/core';
@@ -28,7 +27,7 @@ export interface IFile {
 })
 export class ElementsPartsComponent implements OnInit {
   @Input() replay: Replay;
-  //
+
   replayData: any;
   startTime = null;
   id: string;
@@ -74,6 +73,10 @@ export class ElementsPartsComponent implements OnInit {
     }
   }
 
+  /**
+   * 格式化文件大小
+   * @param size
+   */
   formatFileSize(size: number): string {
     const kb = 1024;
     const mb = kb * 1024;
@@ -92,6 +95,10 @@ export class ElementsPartsComponent implements OnInit {
     return result;
   }
 
+  /**
+   * 格式化时间
+   * @param duration
+   */
   formatDuration(duration: number): string {
     const seconds = Math.floor(duration / 1000);
     const hours = Math.floor(seconds / 3600);
@@ -113,6 +120,11 @@ export class ElementsPartsComponent implements OnInit {
     return result.trim();
   }
 
+  /**
+   * 分割 File 对象
+   * @param file
+   * @param sessionId
+   */
   async handlePartFileReplay(file: IFile[], sessionId: string) {
     let isFirstPush = true;
 
@@ -145,7 +157,7 @@ export class ElementsPartsComponent implements OnInit {
             this.folders.push(section);
 
             if (isFirstPush) {
-              this.currentVideo = section;
+              // this.currentVideo = section;
               this.videoLoading = true;
               this.cdRef.detectChanges();
 
@@ -159,7 +171,7 @@ export class ElementsPartsComponent implements OnInit {
             retry = false;
           } else {
             if (!this.alertShown) {
-              alert('录像正在上传中，请稍候');
+              alert('录像正在下载中，请稍候');
               this.alertShown = true;
             }
             this.loading = true;
@@ -175,6 +187,10 @@ export class ElementsPartsComponent implements OnInit {
     }
   }
 
+  /**
+   * 延时执行函数
+   * @param ms
+   */
   delay(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
