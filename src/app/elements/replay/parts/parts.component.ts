@@ -37,8 +37,7 @@ export class ElementsPartsComponent implements OnInit {
   files: IFile[] = [];
   folders: Section[] = [];
 
-  loading = false;
-  alertShown = false;
+  alertShown = true;
   videoLoading = false;
 
   constructor(
@@ -170,19 +169,15 @@ export class ElementsPartsComponent implements OnInit {
             }
 
             retry = false;
-          } else {
-            if (!this.alertShown) {
-              alert(this._i18n.instant('recordingIsBeingDownloaded'));
-              this.alertShown = true;
-            }
-            this.loading = true;
+          } else if (res && res.status === 'running') {
+            this.alertShown = true;
             await this.delay(3000);
           }
         } catch (e) {
           this._logger.error(e);
           retry = false;
         } finally {
-          this.loading = false;
+          this.alertShown = false;
         }
       }
     }
