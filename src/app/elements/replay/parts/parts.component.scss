@@ -50,7 +50,7 @@
     min-width: 540px;
     padding: unset;
     margin-top: 15px;
-    background-color: #272727;
+    background-color: #0F0F10;
     overflow: hidden;
 
     .guacamole-video {
@@ -110,9 +110,9 @@
     align-items: flex-start;
     justify-content: flex-start;
     flex-grow: 0;
-    width: 300px;
+    width: 250px;
     height: calc(100vh - 100px);
-    min-width: 300px;
+    min-width: 250px;;
     background-color: #0F0F0F;
 
     .mat-list {

@@ -239,15 +239,6 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
             element.atime = formatTime(element.timestamp * 1000 - this.startTimeStamp);
           });
           this.commands = this.commands.concat(results);
-
-          this.commands = this.commands.concat({
-            length: 0, slice(start: number | undefined, end: number | undefined): Command[] {
-              return [];
-            }, join(separator?: string): string {
-              return '';
-            },
-            input: '21344'
-          });
         },
         err => {
           alert('没找到命令记录');

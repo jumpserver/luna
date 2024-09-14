@@ -106,15 +106,16 @@ export class ElementsPartsComponent implements OnInit {
     const remainingSeconds = seconds % 60;
 
     let result = '';
+    const currentLang = this.getUserLang();
 
     if (hours > 0) {
-      result += `${hours} 小时 `;
+      result += currentLang === 'zh-CN' ? `${hours} 小时 ` : `${hours} hour `;
     }
     if (minutes > 0) {
-      result += `${minutes} 分钟 `;
+      result += currentLang === 'zh-CN' ? `${minutes} 分钟 ` : `${minutes} min `;
     }
     if (remainingSeconds > 0 || (!hours && !minutes)) {
-      result += `${remainingSeconds} 秒`;
+      result +=  currentLang === 'zh-CN' ?  `${remainingSeconds} 秒` : `${remainingSeconds} s`;
     }
 
     return result.trim();
@@ -157,7 +158,7 @@ export class ElementsPartsComponent implements OnInit {
             this.folders.push(section);
 
             if (isFirstPush) {
-              // this.currentVideo = section;
+              this.currentVideo = section;
               this.videoLoading = true;
               this.cdRef.detectChanges();
 
@@ -171,7 +172,7 @@ export class ElementsPartsComponent implements OnInit {
             retry = false;
           } else {
             if (!this.alertShown) {
-              alert('录像正在下载中，请稍候');
+              alert(this._i18n.instant('recordingIsBeingDownloaded'));
               this.alertShown = true;
             }
             this.loading = true;
