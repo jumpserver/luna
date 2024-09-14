@@ -1,60 +1,52 @@
 <div class="wrapper">
-
   <div *ngIf="loading" class="loading-spinner">
     <mat-spinner></mat-spinner>
   </div>
   <div *ngIf="!loading">
-    <div
-      style="
-      width: 100%;
-      display: inline-flex;
-      justify-content: flex-start;
-      padding-left: 25px;
-    "
-    >
-      <mat-card class="control-part">
-      <span id="user" style="padding-left: 20px" *ngIf="replay?.user">
-        {{ "user" | translate }} : {{ currentVideo?.user }}
-      </span>
-        <span id="asset" style="padding-left: 20px" *ngIf="replay?.asset">
-        {{ "asset" | translate }} : {{ currentVideo?.asset }}
-      </span>
-        <span
-          id="system_user"
-          style="padding-left: 20px"
-          *ngIf="currentVideo?.system_user"
-        >
-        {{ "system user" | translate }} : {{ currentVideo?.system_user }}
-      </span>
-        <span
-          id="date_start"
-          style="padding-left: 20px"
-          *ngIf="currentVideo?.date_start"
-        >
-        {{ "start time" | translate }} : {{ startTime }}
-      </span>
-        <span
-          id="download"
-          style="padding-left: 30px"
-          *ngIf="currentVideo?.download_url"
-        >
-        <a type="button" [href]="currentVideo?.download_url">
-          {{ "download" | translate }}
-        </a>
-      </span>
-      </mat-card>
-    </div>
-
     <div class="video-part">
-      <mat-card class="video-main">
-        <div class="loading-spinner">
-          <mat-spinner *ngIf="videoLoading"></mat-spinner>
-        </div>
-        <elements-replay-guacamole class='guacamole-video' [replay]="currentVideo" *ngIf="currentVideo?.type=='guacamole' && !videoLoading"></elements-replay-guacamole>
-      </mat-card>
+      <div style='display: flex; flex-direction: column; align-items: center; justify-content: center'>
+        <mat-card class="video-main">
+          <div class="loading-spinner">
+            <mat-spinner *ngIf="videoLoading"></mat-spinner>
+          </div>
+          <elements-replay-guacamole class='guacamole-video' [replay]="currentVideo" *ngIf="currentVideo?.type=='guacamole' && !videoLoading"></elements-replay-guacamole>
+        </mat-card>
+        <mat-card class="control-part">
+        <span id="user" style="padding-left: 20px" *ngIf="replay?.user">
+          {{ "user" | translate }} : {{ currentVideo?.user }}
+        </span>
+            <span id="asset" style="padding-left: 20px" *ngIf="replay?.asset">
+          {{ "asset" | translate }} : {{ currentVideo?.asset }}
+        </span>
+            <span
+              id="system_user"
+              style="padding-left: 20px"
+              *ngIf="currentVideo?.system_user"
+            >
+          {{ "system user" | translate }} : {{ currentVideo?.system_user }}
+        </span>
+            <span
+              id="date_start"
+              style="padding-left: 20px"
+              *ngIf="currentVideo?.date_start"
+            >
+          {{ "start time" | translate }} : {{ startTime }}
+        </span>
+            <span
+              id="download"
+              style="padding-left: 30px"
+              *ngIf="currentVideo?.download_url"
+            >
+          <a type="button" [href]="currentVideo?.download_url">
+            {{ "download" | translate }}
+          </a>
+        </span>
+          </mat-card>
+      </div>
+
       <mat-card class="video-list">
         <mat-list>
-          <h3 mat-subheader>Folders</h3>
+          <h3 mat-subheader>播放列表</h3>
           <mat-list-item
             *ngFor="let folder of folders"
             matTooltip="{{ folder.name }}"
@@ -63,9 +55,16 @@
             [ngClass]="{ 'selected': currentVideo?.name === folder?.name }"
             (click)="selectPart(folder)"
           >
-            <mat-icon mat-list-icon>folder</mat-icon>
-            <h4 mat-line>{{ folder.name }}</h4>
-            <p mat-line>{{ folder.updated | date }}</p>
+            <mat-icon mat-list-icon>play_arrow</mat-icon>
+            <h4 mat-line style='display: flex; align-items: center; font-size: 16px; flex: 1'>{{ folder.name }}</h4>
+            <div mat-line style='display: flex; flex: 1; justify-content: space-between; align-items: center'>
+              <p>
+                {{ folder.updated }}
+              </p>
+              <p>
+                {{ folder.size }}
+              </p>
+            </div>
           </mat-list-item>
         </mat-list>
       </mat-card>

@@ -1,5 +1,5 @@
 import { Replay } from '@app/model';
-import { HttpService, LogService } from '@app/services';
+import {HttpService, I18nService, LogService} from '@app/services';
 import { TranslateService } from '@ngx-translate/core';
 import {Component, Input, OnInit} from '@angular/core';
 import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
@@ -9,7 +9,8 @@ import { ChangeDetectorRef } from '@angular/core';
 
 export interface Section extends Replay {
   name: string;
-  updated: Date;
+  updated: string;
+  size: string;
 }
 
 export interface IFile {
@@ -27,7 +28,7 @@ export interface IFile {
 })
 export class ElementsPartsComponent implements OnInit {
   @Input() replay: Replay;
-
+  //
   replayData: any;
   startTime = null;
   id: string;
@@ -42,6 +43,7 @@ export class ElementsPartsComponent implements OnInit {
   videoLoading = false;
 
   constructor(
+    public _i18n: I18nService,
     private _http: HttpService,
     private _dialog: MatDialog,
     private _logger: LogService,
@@ -72,7 +74,48 @@ export class ElementsPartsComponent implements OnInit {
     }
   }
 
+  formatFileSize(size: number): string {
+    const kb = 1024;
+    const mb = kb * 1024;
+    const gb = mb * 1024;
+
+    let result = '';
+
+    if (size >= gb) {
+      result = (size / gb).toFixed(2) + ' GB';
+    } else if (size >= mb) {
+      result = (size / mb).toFixed(2) + ' MB';
+    } else {
+      result = (size / kb).toFixed(2) + ' KB';
+    }
+
+    return result;
+  }
+
+  formatDuration(duration: number): string {
+    const seconds = Math.floor(duration / 1000);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    let result = '';
+
+    if (hours > 0) {
+      result += `${hours} 小时 `;
+    }
+    if (minutes > 0) {
+      result += `${minutes} 分钟 `;
+    }
+    if (remainingSeconds > 0 || (!hours && !minutes)) {
+      result += `${remainingSeconds} 秒`;
+    }
+
+    return result.trim();
+  }
+
   async handlePartFileReplay(file: IFile[], sessionId: string) {
+    let isFirstPush = true;
+
     for (const item of file) {
       let res: Replay;
       let retry = true;
@@ -84,7 +127,7 @@ export class ElementsPartsComponent implements OnInit {
             .toPromise();
 
           if (res && res.status !== 'running') {
-            this.folders.push({
+            const section: Section = {
               id: this.id,
               account: res.account,
               asset: res.asset,
@@ -94,16 +137,31 @@ export class ElementsPartsComponent implements OnInit {
               src: res.src,
               type: res.type,
               user: res.user,
-              name: item.name,
-              updated: new Date(Date.parse(res.date_start)),
-            });
+              size: this.formatFileSize(item.size),
+              name: `Part ${this.folders.length + 1}`,
+              updated: this.formatDuration(item.duration),
+            };
+
+            this.folders.push(section);
+
+            if (isFirstPush) {
+              this.currentVideo = section;
+              this.videoLoading = true;
+              this.cdRef.detectChanges();
+
+              setTimeout(() => {
+                this.videoLoading = false;
+              }, 300);
+
+              isFirstPush = false;
+            }
+
             retry = false;
           } else {
             if (!this.alertShown) {
               alert('录像正在上传中，请稍候');
               this.alertShown = true;
             }
-
             this.loading = true;
             await this.delay(3000);
           }
