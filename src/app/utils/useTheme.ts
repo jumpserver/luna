@@ -5,7 +5,7 @@ import {menuTheme} from '@src/sass/theme/menu';
 
 export const useTheme = () => {
   // 获取并设置主题类型
-  const ThemeType = localStorage.getItem('ThemeType') || 'default';
+  const ThemeType = localStorage.getItem('themeType') || 'default';
   const html = document.documentElement as HTMLElement;
 
   // 通用设置主题的方法
