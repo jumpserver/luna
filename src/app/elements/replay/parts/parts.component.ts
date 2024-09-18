@@ -1,9 +1,9 @@
 import { Replay } from '@app/model';
-import {HttpService, I18nService, LogService} from '@app/services';
+import { HttpService, I18nService, LogService } from '@app/services';
 import { TranslateService } from '@ngx-translate/core';
-import {Component, Input, OnInit} from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import {MatDialog} from '@angular/material/dialog';
+import { MatDialog } from '@angular/material/dialog';
 import { ChangeDetectorRef } from '@angular/core';
 
 export interface Section extends Replay {
@@ -111,7 +111,7 @@ export class ElementsPartsComponent implements OnInit {
       result += currentLang === 'zh-CN' ? `${hours} 小时 ` : `${hours} hour `;
     }
     if (minutes > 0) {
-      result += currentLang === 'zh-CN' ? `${minutes} 分钟 ` : `${minutes} min `;
+      result += currentLang === 'zh-CN' ? `${minutes} 分 ` : `${minutes} min `;
     }
     if (remainingSeconds > 0 || (!hours && !minutes)) {
       result +=  currentLang === 'zh-CN' ?  `${remainingSeconds} 秒` : `${remainingSeconds} s`;
