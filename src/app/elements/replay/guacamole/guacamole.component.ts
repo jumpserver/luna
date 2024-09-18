@@ -191,8 +191,14 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
   }
 
   runFrom() {
-    this.recording.seek(this.percent, () =>
-      this.playerRef.className = ''
+    const sliderElement = document.getElementById('position-slider') as HTMLInputElement;
+
+    sliderElement.disabled = true;
+
+    this.recording.seek(this.percent, () => {
+        this.playerRef.className = '';
+        sliderElement.disabled = false;
+      }
     );
 
     // Seek is in progress
