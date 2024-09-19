@@ -6,7 +6,7 @@
     <button type="button" class="btn" (click)="restart()">
       <i class="fa fa-repeat" aria-hidden="true"></i>
     </button>
-    <input id="position-slider" type="range" [(ngModel)]="percent" [attr.max]="max" (mouseup)="runFrom()">
+    <span [ngClass]="rangeHideClass" style="width: 100%"><input id="position-slider" type="range" [(ngModel)]="percent" [attr.max]="max" (mouseup)="runFrom()"></span>
     <span id="position">{{ position }}</span>
     <span>/</span>
     <span id="duration">{{ duration }}</span>

@@ -39,6 +39,10 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
   leftInfo = null;
   winSizeChange$: Observable<any>;
   winSizeSub: Subscription;
+  firstLoad = true;
+  rangeHideClass = 'hideCursor';
+  lastDuration: number = 0;
+  interval: number;
 
   constructor(private _http: HttpService, private _translate: TranslateService) {}
 
@@ -98,9 +102,14 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     };
 
     this.recording.onprogress = (millis) => {
+      if (millis >= this.max) {
       this.duration = formatTime(millis);
       this.max = millis;
-      this.play();
+      }
+      if (!this.recording.isPlaying() && this.firstLoad) {
+        this.recording.play();
+        this.firstLoad = false;
+      }
     };
 
     // If paused, the play/pause button should read "Play"
@@ -115,6 +124,15 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       }
       this.recordingDisplay.scale(this.getPropScale());
     };
+    clearInterval(this.interval);
+    this.interval = setInterval(() => {
+      if (this.lastDuration === this.max) {
+        clearInterval(this.interval);
+        this.rangeHideClass = '';
+      } else {
+        this.lastDuration = this.max;
+      }
+    }, 1000);
   }
 
   destroy() {
@@ -140,6 +158,10 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       this.winSizeSub.unsubscribe();
       this.winSizeSub = null;
     }
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
+    this.interval = null;
 
     this.playerRef = null;
     this.displayRef = null;
@@ -154,6 +176,9 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     this.commands = [];
     this.page = 0;
     this.leftInfo = null;
+    this.firstLoad = true;
+    this.rangeHideClass = 'hideCursor';
+    this.lastDuration = 0;
   }
 
   getPropScale() {
@@ -190,14 +215,17 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     return date_s.split('/').join('-');
   }
 
-  runFrom() {
+  setDisableStatusSiderElement(disable: boolean) {
     const sliderElement = document.getElementById('position-slider') as HTMLInputElement;
+    sliderElement.disabled = disable;
+  }
 
-    sliderElement.disabled = true;
+  runFrom() {
+    this.setDisableStatusSiderElement(true);
 
     this.recording.seek(this.percent, () => {
         this.playerRef.className = '';
-        sliderElement.disabled = false;
+      this.setDisableStatusSiderElement(false);
       }
     );
 
@@ -209,6 +237,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     this.recording.play();
     this.playerRef.className = '';
     e.stopPropagation();
+    this.setDisableStatusSiderElement(false);
   }
 
   play() {
