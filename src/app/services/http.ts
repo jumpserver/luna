@@ -172,12 +172,6 @@ export class HttpService {
     return this.get<Array<TreeNode>>(url, {observe: 'response'}).pipe(this.withRetry());
   }
 
-  getMyGrantedK8sNodes(treeId: string, async: boolean) {
-    const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?tree_id=${treeId}&async=${async}`;
-    return this.get<Array<TreeNode>>(url);
-  }
-
-
   getAssetDetail(id) {
     const url = `/api/v1/perms/users/self/assets/${id}/`;
     return this.get<Asset>(url);
@@ -209,6 +203,13 @@ export class HttpService {
   getReplay(sessionId: string) {
     return this.get(
       `/api/v1/terminal/sessions/${sessionId}/replay/`, {headers: this.getJMSOrg()}
+    );
+  }
+
+  getPartFileReplay(sessionId: string, filename: string) {
+    const params = new HttpParams().set('part_filename', filename);
+    return this.get(
+      `/api/v1/terminal/sessions/${sessionId}/replay/`, {headers: this.getJMSOrg(), params: params}
     );
   }
 
@@ -385,7 +386,7 @@ export class HttpService {
   }
 
   getQuickCommand() {
-    const url = '/api/v1/ops/adhocs/';
+    const url = '/api/v1/ops/adhocs/?only_mine=true';
     return this.get(url).toPromise();
   }
 

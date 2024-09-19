@@ -117,17 +117,11 @@ export class NavEvt {
   }
 }
 
-export class K8sInfo {
-  pod: string = '';
-  namespace: string = '';
-  container: string = '';
-}
-
 export class View {
   id: string;
   name: string;
   connectFrom: string; // connectToken, node, fileManager
-  type: string; // database_app, remote_app, asset, k8s_app
+  type: string; // database_app, remote_app, asset
   protocol: string;
   active: boolean;
   closed: boolean;
@@ -142,10 +136,9 @@ export class View {
   connectMethod: ConnectMethod;
   connectOption: Object;
   smartEndpoint: Endpoint;
-  k8sInfo: K8sInfo;
   iframeElement: Window;
 
-  constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node', k8sInfo?: K8sInfo) {
+  constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node') {
     this.closed = false;
     this.editable = false;
     this.connected = true;
@@ -159,7 +152,6 @@ export class View {
     this.connectOption = connectInfo.connectOption;
     this.protocol = connectInfo.protocol.name;
     this.connectData = connectInfo;
-    this.k8sInfo = k8sInfo;
   }
 
   getConnectOption(field: string) {
@@ -301,21 +293,22 @@ export class Setting {
 
 
 export class Replay {
-  id: string;
-  src: string;
-  type: string;
-  status: string;
-  timelist: Array<number>;
-  totalTime: number;
-  json: any;
-  user: string;
-  asset: string;
-  system_user: string;
-  date_start: string;
-  date_end: string;
-  height: number;
-  width: number;
-  download_url: string;
+  id?: string;
+  src?: string;
+  type?: string;
+  status?: string;
+  timelist?: Array<number>;
+  totalTime?: number;
+  json?: any;
+  user?: string;
+  asset?: string;
+  system_user?: string;
+  date_start?: string;
+  date_end?: string;
+  height?: number;
+  width?: number;
+  download_url?: string;
+  account?: string;
 }
 
 export class Session {

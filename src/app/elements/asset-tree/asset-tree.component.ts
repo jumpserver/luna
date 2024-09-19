@@ -74,7 +74,6 @@ class Tree {
 })
 export class ElementAssetTreeComponent implements OnInit {
   @Input() query: string;
-  @Input() isK8s: boolean = false;
   @Input() searchEvt$: BehaviorSubject<string>;
   @ViewChild('rMenu', {static: false}) rMenu: ElementRef;
   setting = {
@@ -150,21 +149,21 @@ export class ElementAssetTreeComponent implements OnInit {
         'id': 'connect',
         'name': 'Connect',
         'fa': 'fa-terminal',
-        'hide': cnode.isParent && !this.isK8s,
+        'hide': cnode.isParent,
         'click': this.onMenuConnect.bind(this)
       },
       {
         'id': 'new-connection',
         'name': 'Open in new window',
         'fa': 'fa-external-link',
-        'hide': this.isK8s || cnode.isParent,
+        'hide': cnode.isParent,
         'click': this.onMenuConnectNewTab.bind(this)
       },
       {
         'id': 'split-connect',
         'name': 'Split connect',
         'fa': 'fa-columns',
-        'hide': viewList.length <= 0 || cnode.isParent || cnode.meta.data.platform_type ==='k8s' || this.isK8s,
+        'hide': viewList.length <= 0 || cnode.isParent,
         'click': this.onMenuConnect.bind(this, true)
       },
       {
@@ -205,14 +204,14 @@ export class ElementAssetTreeComponent implements OnInit {
         'id': 'favorite',
         'name': 'Favorite',
         'fa': 'fa-star-o',
-        'hide': this.isAssetFavorite() || this.isK8s || cnode.isParent,
+        'hide': this.isAssetFavorite() || cnode.isParent,
         'click': this.onMenuFavorite.bind(this)
       },
       {
         'id': 'disfavor',
         'name': 'Disfavor',
         'fa': 'fa-star',
-        'hide': !this.isAssetFavorite() || this.isK8s || cnode.isParent,
+        'hide': !this.isAssetFavorite() || cnode.isParent,
         'click': this.onMenuFavorite.bind(this)
       }
     ];
@@ -236,12 +235,8 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   initTree() {
-    if (this.isK8s) {
-      this.initK8sTree().then();
-    } else {
-      this.initAssetTree().then();
-      this.initTypeTree().then();
-    }
+    this.initAssetTree().then();
+    this.initTypeTree().then();
   }
 
   onNodeClick(event, treeId, treeNode, clickFlag) {
@@ -268,39 +263,6 @@ export class ElementAssetTreeComponent implements OnInit {
   onAssetTreeCheck(event, treeId) {
     const ztree = this.trees.find(t => t.name === treeId).ztree;
     this.assetTreeChecked = ztree.getCheckedNodes().filter(i => !i.isParent);
-  }
-
-  async initK8sTree(refresh = false) {
-    const tree = new Tree(
-      'K8sTree',
-      this._i18n.instant('Kubernetes'),
-      true,
-      true,
-      false,
-      false
-    );
-    const token = this._route.snapshot.queryParams.token;
-    const url = `/api/v1/perms/users/self/nodes/children-with-k8s/tree/?token=${token}`;
-    const config = {
-      refresh,
-      url,
-      asyncUrl: url,
-      setting: {
-        async: {
-          enable: true,
-          autoParam: ['id=key', 'name=n', 'level=lv'],
-          type: 'get',
-          headers: {
-            'X-JMS-ORG': this.currentOrgID
-          }
-        }
-      },
-      showFavoriteAssets: false
-    };
-    if (!refresh) {
-      this.trees.push(tree);
-    }
-    this.initTreeInfo(tree, config).then();
   }
 
   async initAssetTree(refresh = false) {
@@ -506,9 +468,7 @@ export class ElementAssetTreeComponent implements OnInit {
   async refreshTree(event, tree) {
     event.stopPropagation();
     this.searchValue = '';
-    if (this.isK8s) {
-      this.initK8sTree(true).then();
-    } else if (tree.name === 'AssetTree') {
+    if (tree.name === 'AssetTree') {
       this.initAssetTree(true).then();
     } else if (tree.name === 'AssetTypeTree') {
       this.initTypeTree(true).then();
@@ -520,7 +480,7 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   async connectAsset(node: TreeNode) {
-    const action = this.isK8s ? 'k8s' : 'asset';
+    const action = 'asset';
     const evt = new ConnectEvt(node, action);
     connectEvt.next(evt);
   }
@@ -619,7 +579,7 @@ export class ElementAssetTreeComponent implements OnInit {
       return;
     }
     const node = this.rightClickSelectNode;
-    const action = this.isK8s ? 'k8s' : 'connect';
+    const action = 'connect';
     const evt = splitConnect ? new ConnectEvt(node, action, true) : new ConnectEvt(node, action);
     connectEvt.next(evt);
   }
