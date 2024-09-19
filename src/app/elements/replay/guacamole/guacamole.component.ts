@@ -106,7 +106,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       this.duration = formatTime(millis);
       this.max = millis;
       }
-      if (!this.recording.isPlaying() && this.firstLoad) {
+      if (this.firstLoad) {
         this.recording.play();
         this.firstLoad = false;
       }
