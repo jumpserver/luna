@@ -13,6 +13,7 @@ import { formatTime } from '@app/utils/common';
 import { TranslateService } from '@ngx-translate/core';
 import { fromEvent, Observable, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import {Tunnel} from '@glokon/guacamole-common-js';
 
 @Component({
   selector: 'elements-replay-guacamole',
@@ -66,17 +67,41 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     const date = new Date(Date.parse(this.replay.date_start));
     this.startTime = this.toSafeLocalDateStr(date);
     this.startTimeStamp = Date.parse(this.replay.date_start);
+
     this.playerRef = document.getElementById('player');
     this.displayRef = document.getElementById('display');
     this.screenRef = document.getElementById('screen');
+
+    console.log(this.replay.src);
+
     const tunnel = new Guacamole.StaticHTTPTunnel(this.replay.src);
     this.recording = new Guacamole.SessionRecording(tunnel);
+
     this.recordingDisplay = this.recording.getDisplay();
     const recordingElement = this.recordingDisplay.getElement();
+
     recordingElement.style.margin = '0 auto';
+
+    tunnel.onstatechange = (state: number) => {
+      console.log('Tunnel state changed:', state);
+      switch (state) {
+        case Tunnel.State.CONNECTING:
+          console.log('Tunnel is connecting...');
+          break;
+        case Tunnel.State.OPEN:
+          console.log('Tunnel is open.');
+          break;
+        case Tunnel.State.CLOSED:
+          console.log('Tunnel is closed.');
+          break;
+      }
+    };
+
     this.screenRef.appendChild(recordingElement);
+
     this.initRecording();
     this.getCommands(this.page);
+
     this._translate.get('LeftInfo').subscribe((res: string) => {
       this.leftInfo = res;
     });
@@ -124,7 +149,10 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       }
       this.recordingDisplay.scale(this.getPropScale());
     };
+
     clearInterval(this.interval);
+
+    // @ts-ignore
     this.interval = setInterval(() => {
       if (this.lastDuration === this.max) {
         clearInterval(this.interval);
@@ -225,7 +253,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
 
     this.recording.seek(this.percent, () => {
         this.playerRef.className = '';
-      this.setDisableStatusSiderElement(false);
+        this.setDisableStatusSiderElement(false);
       }
     );
 
