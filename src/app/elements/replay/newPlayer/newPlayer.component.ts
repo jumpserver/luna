@@ -50,6 +50,7 @@ export class ElementReplayNewPlayerComponent implements OnInit {
   public rangeMax: number;
   public currentRange: number;
   public startTimeStamp: number;
+  public mouseMoveTime: string;
   public startTime: string;
   public totalDuration: string;
   public currentPosition: string;
@@ -86,7 +87,7 @@ export class ElementReplayNewPlayerComponent implements OnInit {
     this.commands = [];
     this.controls = [
        {
-         isShow: this.isPause,
+         isShow: !this.isPause,
          iconTips: '播放',
          iconName: 'play_arrow',
          click: (e: MouseEvent) => {
@@ -94,7 +95,7 @@ export class ElementReplayNewPlayerComponent implements OnInit {
          }
        },
        {
-         isShow: !this.isPause,
+         isShow: this.isPause,
          iconTips: '暂停',
          iconName: 'pause_circle',
          click: (e: MouseEvent) => {
@@ -165,10 +166,6 @@ export class ElementReplayNewPlayerComponent implements OnInit {
       return;
     }
 
-    // if (this.recording.isPlaying()) {
-    //   return this.recording.pause();
-    // }
-
     this.tunnel = new StaticHTTPTunnel(this.replay.src, true);
     this.recording = new SessionRecording(this.tunnel);
 
@@ -178,12 +175,6 @@ export class ElementReplayNewPlayerComponent implements OnInit {
     const width = this.screenRef.offsetWidth;
     const height = this.screenRef.offsetHeight;
     this.recordingDisplay.resize(this.recordingDisplay.getDefaultLayer(), width, height);
-
-    const canvas = this.recordingElement.querySelector('canvas');
-    if (canvas) {
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-    }
 
     this.screenRef.appendChild(this.recordingElement);
 
@@ -210,8 +201,13 @@ export class ElementReplayNewPlayerComponent implements OnInit {
     };
 
     this.recording.onseek = (position: number, _current: number, _total: number) => {
-      this.currentPosition = formatTime(position);
-      this.currentRange = position;
+      // 二者为 1 表示正常速率播放，没有进行 seek
+      if (_current === 1 || _total === 1) {
+        this.currentPosition = formatTime(position);
+        this.currentRange = position;
+
+        return;
+      }
     };
 
     this.recording.onprogress = (duration: number, _parsedSize: number) => {
@@ -223,15 +219,20 @@ export class ElementReplayNewPlayerComponent implements OnInit {
       this.progressTimeout = setTimeout(() => {
         this._logger.info('Final duration to process:', duration);
 
-        this.isLoading = false;
-        this.rangeMax = duration;
-        this.totalDuration = formatTime(duration);
-        this.recording.play();
+        this.recording.seek(duration, () => {
+          this.isLoading = false;
+          this.rangeMax = duration;
+          this.totalDuration = formatTime(duration);
+          this.currentPosition = '00:00';
+          this.recording.seek(0);
+        });
       }, 300);
     };
 
     this.recording.onerror = (error) => {
       console.log('Recording error:', error);
+
+      this.isShowControl = false;
 
       this._snackBar.open('播放时发生错误', '', {
         duration: 2000,
@@ -239,7 +240,7 @@ export class ElementReplayNewPlayerComponent implements OnInit {
       });
     };
 
-    this.recordingDisplay.resize = (layer, width, height) => {
+    this.recordingDisplay.onresize = (_width: number, height: number) => {
       if (!height) {
         return;
       }
@@ -253,22 +254,53 @@ export class ElementReplayNewPlayerComponent implements OnInit {
    *
    * @param _e
    */
-  handleMouseDown(_e: MouseEvent) {
+   async jumpPosition(_e: Event) {
+    _e.stopPropagation();
     this.recording.pause();
-    this.isLoading = true;
 
-    this._ngZone.runOutsideAngular(() => {
+    const target: HTMLInputElement = _e.target as HTMLInputElement;
+    const jumpPosition: number = Number(target.value);
+    this.currentPosition = formatTime(jumpPosition);
 
-      setTimeout(() => {
-        this.recording.seek(this.currentRange, () => {
-          this.currentPosition = formatTime(this.currentRange);
-          this.isLoading = false;
-          this.recording.play();
+    this.recording.seek(jumpPosition);
+  }
 
-          this._ngZone.run(() => {});
-        });
-      }, 0);
-    });
+  /**
+   * 鼠标悬浮进度条展示时间信息
+   * @param _e
+   */
+  showTime(_e: Event) {
+    const target: HTMLInputElement = _e.target as HTMLInputElement;
+
+    // 获取 input 的边界
+    const rect = target.getBoundingClientRect();
+
+    // @ts-ignore 鼠标相对于 input 元素的 X 坐标
+    const mouseX = _e.clientX - rect.left;
+
+    // 进度条宽度
+    const width = rect.width;
+
+    let newValue = (mouseX / width) * (Number(target.max) - Number(target.min)) + Number(target.min);
+    newValue = Math.max(Number(target.min), Math.min(newValue, Number(target.max)));
+
+    this.mouseMoveTime = formatTime(newValue);
+  }
+
+  /**
+   * 快进
+   */
+  fastForward() {
+    this.recording.pause();
+
+    const currentPosition = this.recording.getPosition();
+    const newPosition = currentPosition + 10000;
+
+    if (newPosition >= 0 && newPosition <= this.recording.getDuration()) {
+      this.recording.seek(newPosition, () => {
+        this.currentPosition = formatTime(newPosition);
+      });
+    }
   }
 
   /**
@@ -310,9 +342,6 @@ export class ElementReplayNewPlayerComponent implements OnInit {
       const width = this.recordingDisplay.getWidth();
       const height = this.recordingDisplay.getHeight();
 
-      console.log(width);
-      console.log(height);
-
       if (!width || !height) {
         return scale;
       }
@@ -323,7 +352,6 @@ export class ElementReplayNewPlayerComponent implements OnInit {
       scale = Math.min(widthScale, heightScale);
     }
 
-    console.log(scale);
     return scale;
   }
 
@@ -401,8 +429,17 @@ export class ElementReplayNewPlayerComponent implements OnInit {
 
     this.isShowControl = false;
 
-    if (this.recording && this.recording.isPlaying()) {
+    if (this.recording) {
+      // 断开当前的播放会话
       this.recording.disconnect();
+
+      if (this.recordingElement && this.recordingElement.parentNode) {
+        this.recordingElement.parentNode.removeChild(this.recordingElement);
+      }
+
+      // 重置 recordingDisplay 以确保新的会话不会受到影响
+      this.recordingDisplay = null;
+      this.recordingElement = null;
     }
 
     switch (folder.type) {

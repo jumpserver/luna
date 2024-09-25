@@ -1,13 +1,36 @@
 $text_color: #F1F1F1;
 
 .container {
+  position: relative;
   display: flex;
   justify-content: space-evenly;
-  padding: 20px;
   width: 100vw;
   height: 100vh;
   background-color: #272727;
   color: $text_color;
+
+  .model {
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.75);
+    z-index: 9999999;
+
+    .custom-spin {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 30px !important;
+      height: 30px !important;
+      transform: translate(-50%, -50%);
+      z-index: 99999;
+
+      ::ng-deep svg {
+        width: 30px !important;
+        height: 30px !important;
+      }
+    }
+  }
 
   .video-section {
     display: flex;
@@ -15,98 +38,70 @@ $text_color: #F1F1F1;
     width: calc(100% - 300px);
     min-width: 770px;
     height: 100%;
+    padding: 20px;
 
+    .playing-info {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      width: 100%;
+      margin-top: 20px;
+      border-radius: 5px;
+    }
 
     .video-part {
-      position: relative;
       width: 100%;
       height: 100%;
       margin-top: 50px;
 
-      .custom-spin {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 30px !important;
-        height: 30px !important;
-        transform: translate(-50%, -50%);
-        z-index: 99999;
-
-        ::ng-deep svg {
-          width: 30px !important;
-          height: 30px !important;
-        }
-      }
-
       .player-main {
         width: 100%;
         height: 100%;
-        //border: 1px solid $text_color;
         border-radius: 5px;
         overflow: hidden;
 
         #screen {
-          position: relative;
-          display: flex;
-          flex-direction: column-reverse;
-          justify-content: flex-end;
           width: 100%;
           height: calc(100% - 50px);
-
-          .control-part {
-            //position: absolute;
-            //bottom: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 50px;
-            width: 100%;
-
-            .progress {
-              display: flex;
-              align-items: center;
-              width: 100%;
-            }
-
-            .below {
-              display: flex;
-              justify-content: flex-start;
-              align-items: center;
-              width: 100%;
-
-              .time {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-
-                .split {
-                  padding: 0 5px;
-                }
-              }
-
-              .controls {
-                display: flex;
-                align-items: center;
-
-                .button-group {
-                  &:hover {
-                    cursor: pointer;
-                  }
-                }
-              }
-
-              .settings {}
-            }
-          }
         }
       }
     }
 
-    .playing-info {
+    .control-part {
+      display: flex;
+      align-items: center;
+      height: 50px;
       width: 100%;
-      margin-top: 20px;
-      //border: 1px solid $text_color;
-      border-radius: 5px;
+
+      .controls {
+        display: flex;
+        align-items: center;
+
+        .button-group {
+          &:hover {
+            cursor: pointer;
+          }
+        }
+      }
+
+      .progress {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        padding: 0 5px;
+        z-index: 999999;
+      }
+
+      .time {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding-left: 5px;
+
+        .split {
+          padding: 0 5px;
+        }
+      }
     }
   }
 
@@ -115,8 +110,7 @@ $text_color: #F1F1F1;
     min-width: 370px;
     max-width: 370px;
     margin: 0 0 0 20px;
-    padding: 0 20px;
-    //border: 1px solid $text_color;
+    padding: 20px 20px 0 20px;
     border-radius: 5px;
 
     ::ng-deep.mat-tab-label.mat-tab-disabled {
@@ -161,6 +155,7 @@ $text_color: #F1F1F1;
 }
 
 input[type="range"] {
+  transition: none;
   background: transparent;
   width: 100%;
   margin: 0;

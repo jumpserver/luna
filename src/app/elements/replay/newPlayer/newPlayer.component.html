@@ -1,4 +1,7 @@
 <div class='container'>
+  <div class='model' *ngIf='isLoading'>
+    <mat-spinner class='custom-spin'></mat-spinner>
+  </div>
   <div class='video-section'>
     <div class='playing-info'>
       <div class="control-part">
@@ -34,51 +37,49 @@
       </div>
     </div>
     <div class='video-part'>
-      <mat-spinner *ngIf='isLoading' class='custom-spin'></mat-spinner>
       <div class='player-main'>
-        <div id='screen' (click)='handleToggle($event)'>
-          <div class='control-part' *ngIf='isShowControl'>
-            <div class='progress'>
-              <input
-                class='progress-bar'
-                type='range'
-                [max]='rangeMax'
-                [(ngModel)]="currentRange"
-                (mousedown)='handleMouseDown($event)'
-              />
-            </div>
-            <div class='below'>
-              <div class='controls'  *ngFor='let control of controls'>
-                <button
-                  mat-icon-button
-                  class='button-group'
-                  matTooltipPosition="above"
-                  *ngIf='control.isShow'
-                  [matTooltip]="control.iconTips"
-                  (click)='control.click($event)'
-                >
-                  <mat-icon>{{ control.iconName }}</mat-icon>
-                </button>
-              </div>
-              <div class='time'>
-                <span>{{ currentPosition }}</span>
-                <span class='split'> / </span>
-                <span>{{ totalDuration }}</span>
-              </div>
-              <div class='settings'>
-                <button mat-button [matMenuTriggerFor]="menu">倍速</button>
-                <mat-menu #menu="matMenu">
-                  <button mat-menu-item>2.0x</button>
-                  <button mat-menu-item>1.5x</button>
-                  <button mat-menu-item>1.25x</button>
-                  <button mat-menu-item>1.0x</button>
-                  <button mat-menu-item>0.75x</button>
-                  <button mat-menu-item>0.5x</button>
-                </mat-menu>
-              </div>
-            </div>
-          </div>
+        <div
+          id='screen'
+          (click)='handleToggle($event)'
+          [ngStyle]='{ visibility: !isLoading ? "visible" : "hidden" }'
+        >
         </div>
+      </div>
+    </div>
+    <div class='control-part' >
+      <!-- *ngIf='isShowControl' -->
+      <div class='controls'>
+        <div *ngFor='let control of controls'>
+          <button
+            mat-icon-button
+            class='button-group'
+            matTooltipPosition="above"
+            *ngIf='control.isShow'
+            [disabled]='isLoading'
+            [matTooltip]="control.iconTips"
+            (click)='control.click($event)'
+          >
+            <mat-icon>{{ control.iconName }}</mat-icon>
+          </button>
+        </div>
+      </div>
+      <div class='progress'>
+        <input
+          class='progress-bar'
+          type='range'
+          matTooltipPosition="above"
+          [matTooltip]="mouseMoveTime"
+          [attr.max]='rangeMax'
+          [(ngModel)]="currentRange"
+          (mouseenter)='showTime($event)'
+          (mousemove)='showTime($event)'
+          (change)='jumpPosition($event)'
+        />
+      </div>
+      <div class='time'>
+        <span>{{ currentPosition }}</span>
+        <span class='split'> / </span>
+        <span>{{ totalDuration }}</span>
       </div>
     </div>
   </div>
@@ -114,7 +115,6 @@
               </div>
             </mat-list-item>
           </mat-list>
-<!--          <mat-icon *ngIf='commands.length === 0'>home</mat-icon>-->
         </div>
       </mat-tab>
     </mat-tab-group>
