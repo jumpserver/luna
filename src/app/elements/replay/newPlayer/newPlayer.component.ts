@@ -67,6 +67,7 @@ export class ElementReplayNewPlayerComponent implements OnInit {
   public progressTimeout: any;
   public recordingElement: HTMLElement;
   public recordingDisplay: Display;
+  public currentFolder: Section;
 
   constructor(
     private _ngZone: NgZone,
@@ -106,7 +107,9 @@ export class ElementReplayNewPlayerComponent implements OnInit {
         isShow: true,
         iconTips: '下一集',
         iconName: 'skip_next',
-        click: (e: MouseEvent) => {}
+        click: async (e: MouseEvent) => {
+          await this.handleNextFolder();
+        }
       },
        {
          isShow: true,
@@ -151,6 +154,19 @@ export class ElementReplayNewPlayerComponent implements OnInit {
   initDateTime(): void {
     const date: Date = new Date(Date.parse(this.replay.date_start));
     this.startTime = date.toLocaleString(this.getUserLang(), { hour12: false }).split('/').join('-');
+  }
+
+  /**
+   * @description 播放下一个
+   */
+  async handleNextFolder() {
+    const index = this.folders.findIndex(folder => folder === this.currentFolder);
+
+    const nextIndex = (index + 1) % this.folders.length;
+
+    const nextFolder = this.folders[nextIndex];
+
+    await this.selectPart(nextFolder);
   }
 
   /**
@@ -208,6 +224,10 @@ export class ElementReplayNewPlayerComponent implements OnInit {
 
         return;
       }
+
+      if (!_current || !_total ) {
+        this.recording.play();
+      }
     };
 
     this.recording.onprogress = (duration: number, _parsedSize: number) => {
@@ -256,20 +276,15 @@ export class ElementReplayNewPlayerComponent implements OnInit {
    */
    async jumpPosition(_e: Event) {
     _e.stopPropagation();
-    this.recording.pause();
+    this.handleToggle();
 
-    const target: HTMLInputElement = _e.target as HTMLInputElement;
-    const jumpPosition: number = Number(target.value);
-    this.currentPosition = formatTime(jumpPosition);
+    const position = this.gerAbsolutelyPosition(_e);
 
-    this.recording.seek(jumpPosition);
+    this.currentPosition = formatTime(position);
+    this.recording.seek(position);
   }
 
-  /**
-   * 鼠标悬浮进度条展示时间信息
-   * @param _e
-   */
-  showTime(_e: Event) {
+  gerAbsolutelyPosition(_e: Event) {
     const target: HTMLInputElement = _e.target as HTMLInputElement;
 
     // 获取 input 的边界
@@ -284,7 +299,16 @@ export class ElementReplayNewPlayerComponent implements OnInit {
     let newValue = (mouseX / width) * (Number(target.max) - Number(target.min)) + Number(target.min);
     newValue = Math.max(Number(target.min), Math.min(newValue, Number(target.max)));
 
-    this.mouseMoveTime = formatTime(newValue);
+    return newValue;
+  }
+
+  /**
+   * 鼠标悬浮进度条展示时间信息
+   * @param _e
+   */
+  showTime(_e: Event) {
+    const position = this.gerAbsolutelyPosition(_e);
+    this.mouseMoveTime = formatTime(position);
   }
 
   /**
@@ -369,8 +393,9 @@ export class ElementReplayNewPlayerComponent implements OnInit {
   /**
    * @description 播放状态的转换
    */
-  handleToggle(e: MouseEvent) {
-    e.stopPropagation();
+  handleToggle(e?: MouseEvent) {
+    // tslint:disable-next-line:no-unused-expression
+    e ? e.stopPropagation() : '';
 
     if (this.recording.isPlaying()) {
       this.isPause = true;
@@ -428,6 +453,7 @@ export class ElementReplayNewPlayerComponent implements OnInit {
   async selectPart(folder: Section) {
 
     this.isShowControl = false;
+    this.currentFolder = folder;
 
     if (this.recording) {
       // 断开当前的播放会话

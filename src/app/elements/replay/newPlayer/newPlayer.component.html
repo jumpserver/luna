@@ -73,7 +73,7 @@
           [(ngModel)]="currentRange"
           (mouseenter)='showTime($event)'
           (mousemove)='showTime($event)'
-          (change)='jumpPosition($event)'
+          (mouseup)='jumpPosition($event)'
         />
       </div>
       <div class='time'>
