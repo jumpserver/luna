@@ -1,7 +1,4 @@
 <div class='container'>
-  <div class='model' *ngIf='isLoading'>
-    <mat-spinner class='custom-spin'></mat-spinner>
-  </div>
   <div class='video-section'>
     <div class='playing-info'>
       <div class="control-part">
@@ -38,6 +35,10 @@
     </div>
     <div class='video-part'>
       <div class='player-main'>
+        <div class='model' *ngIf='isLoading'>
+          <mat-progress-spinner class='custom-spin' mode='indeterminate'></mat-progress-spinner>
+          <span class='loading-text'>正在解析中，请稍候...</span>
+        </div>
         <div
           id='screen'
           (click)='handleToggle($event)'
@@ -56,6 +57,7 @@
             *ngIf='control.isShow'
             [disabled]='isLoading'
             [matTooltip]="control.iconTips"
+            [ngClass]="{'disabled-button': isLoading}"
             (click)='control.click($event)'
           >
             <mat-icon>{{ control.iconName }}</mat-icon>

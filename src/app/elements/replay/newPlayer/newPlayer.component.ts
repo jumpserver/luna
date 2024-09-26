@@ -195,7 +195,7 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.tunnel = new StaticHTTPTunnel(this.replay.src, true);
+    this.tunnel = new StaticHTTPTunnel(this.replay.src);
     this.recording = new SessionRecording(this.tunnel);
 
     this.recordingDisplay = this.recording.getDisplay();
@@ -290,15 +290,18 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
    */
   jumpPosition(_e: Event) {
     this.handleToggle(_e);
+    this.isLoading = true;
     this.progressDisabled = true;
-    _e.stopPropagation();
 
     const position = Math.floor(this.gerAbsolutelyPosition(_e));
 
     this.recording.seek(position, () => {
-      this.handleToggle(_e);
-      this.progressDisabled = false;
-      this.currentPosition = formatTime(position);
+      this.recordingDisplay.flush(() => {
+        this.handleToggle(_e);
+        this.isLoading = false;
+        this.progressDisabled = false;
+        this.currentPosition = formatTime(position);
+      });
     });
   }
 

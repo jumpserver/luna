@@ -9,29 +9,6 @@ $text_color: #F1F1F1;
   background-color: #272727;
   color: $text_color;
 
-  .model {
-    position: absolute;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0);
-    z-index: 9999999;
-
-    .custom-spin {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 30px !important;
-      height: 30px !important;
-      transform: translate(-50%, -50%);
-      z-index: 99999;
-
-      ::ng-deep svg {
-        width: 30px !important;
-        height: 30px !important;
-      }
-    }
-  }
-
   .video-section {
     display: flex;
     flex-direction: column;
@@ -55,6 +32,7 @@ $text_color: #F1F1F1;
       margin-top: 50px;
 
       .player-main {
+        position: relative;
         width: 100%;
         height: 100%;
         border-radius: 5px;
@@ -64,7 +42,36 @@ $text_color: #F1F1F1;
           width: 100%;
           height: calc(100% - 50px);
         }
+
+        .model {
+          position: absolute;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: calc(100% - 50px);
+          background-color: rgba(0, 0, 0);
+          z-index: 9999999;
+
+          .custom-spin {
+            width: 30px !important;
+            height: 30px !important;
+            z-index: 99999;
+
+            ::ng-deep svg {
+              width: 30px !important;
+              height: 30px !important;
+            }
+          }
+
+          .loading-text {
+            color: #fff;
+            margin-top: 10px;
+          }
+        }
       }
+
     }
 
     .control-part {
@@ -76,10 +83,15 @@ $text_color: #F1F1F1;
       .controls {
         display: flex;
         align-items: center;
+        z-index: 999999;
 
         .button-group {
           &:hover {
             cursor: pointer;
+          }
+
+          &.disabled-button {
+            color: #fff;
           }
         }
       }
