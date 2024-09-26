@@ -58,17 +58,17 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
   public isLoading: boolean;
   public isShowControl: boolean;
   public progressDisabled: boolean;
-  public commands: Command[];
-  public controls: IControls[];
 
+  public commands: Command[];
   public tunnel: StaticHTTPTunnel;
-  public screenRef: HTMLElement;
-  public recording: SessionRecording;
   public winSizeSub: Subscription;
-  public progressTimeout: any;
+  public recording: SessionRecording;
+  public controls: IControls[];
+  public screenRef: HTMLElement;
+  public currentFolder: Section;
   public recordingElement: HTMLElement;
   public recordingDisplay: Display;
-  public currentFolder: Section;
+  public progressTimeout: any;
 
   constructor(
     private _ngZone: NgZone,
@@ -81,50 +81,7 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
    async ngOnInit(): Promise<void> {
     this.screenRef = document.getElementById('screen');
 
-    this.page = 0;
-    this.rangeMax = 100;
-    this.currentRange = 0;
-    this.totalDuration = '00:00';
-    this.currentPosition = '00:00';
-    this.commands = [];
-    this.controls = [
-       {
-         isShow: !this.isPause,
-         iconTips: '播放',
-         iconName: 'play_arrow',
-         click: (e: MouseEvent) => {
-           this.handleToggle(e);
-         }
-       },
-       {
-         isShow: this.isPause,
-         iconTips: '暂停',
-         iconName: 'pause_circle',
-         click: (e: MouseEvent) => {
-           this.handleToggle(e);
-         }
-       },
-      {
-        isShow: true,
-        iconTips: '下一集',
-        iconName: 'skip_next',
-        click: async (e: MouseEvent) => {
-          await this.handleNextFolder();
-        }
-      },
-       {
-         isShow: true,
-         iconTips: '重新播放',
-         iconName: 'refresh',
-         click: (e: MouseEvent) => {
-           this.rePlay();
-         }
-       }
-     ];
-    this.isPause = true;
-    this.isLoading = false;
-    this.isShowControl = false;
-    this.startTimeStamp = this.replay ? Date.parse(this.replay.date_start) : 0;
+    this.initStatus();
 
     if (this.folders) {
      await this.selectPart(this.folders[0]);
@@ -143,9 +100,62 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
     window.removeEventListener('keydown', () => {});
   }
 
+  /**
+   * @description 更新控件状态
+   */
   updateControls() {
     this.controls[0].isShow = this.isPause;
     this.controls[1].isShow = !this.isPause;
+  }
+
+  /**
+   * @description 初始化组件状态
+   */
+  initStatus(): void {
+    this.page = 0;
+    this.rangeMax = 100;
+    this.currentRange = 0;
+    this.totalDuration = '00:00';
+    this.currentPosition = '00:00';
+    this.commands = [];
+    this.controls = [
+      {
+        isShow: !this.isPause,
+        iconTips: '播放',
+        iconName: 'play_arrow',
+        click: (e: MouseEvent) => {
+          this.handleToggle(e);
+        }
+      },
+      {
+        isShow: this.isPause,
+        iconTips: '暂停',
+        iconName: 'pause_circle',
+        click: (e: MouseEvent) => {
+          this.handleToggle(e);
+        }
+      },
+      {
+        isShow: true,
+        iconTips: '下一集',
+        iconName: 'skip_next',
+        click: async (e: MouseEvent) => {
+          await this.handleNextFolder();
+        }
+      },
+      {
+        isShow: true,
+        iconTips: '重新播放',
+        iconName: 'refresh',
+        click: (e: MouseEvent) => {
+          this.rePlay();
+        }
+      }
+    ];
+    this.isPause = true;
+    this.isLoading = false;
+    this.isShowControl = false;
+    this.startTimeStamp = this.replay ? Date.parse(this.replay.date_start) : 0;
   }
 
   /**
@@ -175,8 +185,16 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
   async handleNextFolder() {
     const index = this.folders.findIndex(folder => folder === this.currentFolder);
 
-    const nextIndex = (index + 1) % this.folders.length;
+    // 最后一个额外提示
+    if (index === this.folders.length - 1) {
+      this._snackBar.open('It\'s the last one', '', {
+        duration: 2000,
+        verticalPosition: 'top'
+      });
+      return;
+    }
 
+    const nextIndex = (index + 1) % this.folders.length;
     const nextFolder = this.folders[nextIndex];
 
     await this.selectPart(nextFolder);
@@ -239,9 +257,6 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
       }
 
       if (_current || _total) {
-        console.log('_current', _current);
-        console.log('_total', _total);
-
         this.currentRange = position;
         this.currentPosition = formatTime(position);
       }
@@ -477,6 +492,7 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
 
     if (this.recording) {
       // 断开当前的播放会话
+      this.recording.abort();
       this.recording.disconnect();
 
       if (this.recordingElement && this.recordingElement.parentNode) {
@@ -486,6 +502,8 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
       // 重置 recordingDisplay 以确保新的会话不会受到影响
       this.recordingDisplay = null;
       this.recordingElement = null;
+
+      this.initStatus();
     }
 
     switch (folder.type) {
