@@ -239,6 +239,9 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
       }
 
       if (_current || _total) {
+        console.log('_current', _current);
+        console.log('_total', _total);
+
         this.currentRange = position;
         this.currentPosition = formatTime(position);
       }
