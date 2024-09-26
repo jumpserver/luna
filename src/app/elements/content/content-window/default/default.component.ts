@@ -39,14 +39,16 @@ export class ElementConnectorDefaultComponent implements OnInit {
     const token = this.view.connectToken.id;
     switch (this.connector) {
       case 'chen':
-        const url = `${endpointUrl}/chen/connect?token=${token}`;
+        // const url = `${endpointUrl}/chen/connect?token=${token}`;
+        const url = ` http://localhost:9523/chen/connect?token=${token}`;
         const disableautohash = this.view.getConnectOption('disableautohash');
         if (disableautohash) {
           return `${url}&disableautohash=true`;
         }
         return url;
       case 'lion':
-        return `${endpointUrl}/lion/connect?token=${token}`;
+        // return `${endpointUrl}/lion/connect?token=${token}`;
+        return `http://localhost:9529/lion/connect?token=${token}`;
       case 'default':
         return `${endpointUrl}/koko/connect?token=${token}`;
     }

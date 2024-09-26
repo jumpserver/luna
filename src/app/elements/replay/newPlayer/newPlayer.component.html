@@ -1,0 +1,130 @@
+<div class='container'>
+  <div class='video-section'>
+    <div class='playing-info'>
+      <div class="control-part">
+        <span id="user" *ngIf="replay?.user">
+            {{ "user" | translate }} : {{ replay?.user }}
+        </span>
+        <span id="asset" style="padding-left: 20px" *ngIf="replay?.asset">
+          {{ "asset" | translate }} : {{ replay?.asset }}
+        </span>
+          <span
+            id="system_user"
+            style="padding-left: 20px"
+            *ngIf="replay?.system_user"
+          >
+            {{ "system user" | translate }} : {{ replay?.system_user }}
+          </span>
+        <span
+          id="date_start"
+          style="padding-left: 20px"
+          *ngIf="replay?.date_start"
+        >
+          {{ "start time" | translate }} : {{ startTime }}
+        </span>
+        <span
+          id="download"
+          style="padding-left: 30px"
+          *ngIf="replay?.download_url"
+        >
+          <a type="button" style='color: #1E90FF' [href]="replay?.download_url">
+            {{ "download" | translate }}
+          </a>
+        </span>
+      </div>
+    </div>
+    <div class='video-part'>
+      <div class='player-main'>
+        <div class='model' *ngIf='isLoading'>
+          <mat-progress-spinner class='custom-spin' mode='indeterminate'></mat-progress-spinner>
+          <span class='loading-text'>正在解析中，请稍候...</span>
+        </div>
+        <div
+          id='screen'
+          (click)='handleToggle($event)'
+          [ngStyle]='{ visibility: !isLoading ? "visible" : "hidden" }'
+        >
+        </div>
+      </div>
+    </div>
+    <div class='control-part' >
+      <div class='controls'>
+        <div *ngFor='let control of controls'>
+          <button
+            mat-icon-button
+            class='button-group'
+            matTooltipPosition="above"
+            *ngIf='control.isShow'
+            [disabled]='isLoading'
+            [matTooltip]="control.iconTips"
+            [ngClass]="{'disabled-button': isLoading}"
+            (click)='control.click($event)'
+          >
+            <mat-icon>{{ control.iconName }}</mat-icon>
+          </button>
+        </div>
+      </div>
+      <div class='progress'>
+        <input
+          class='progress-bar'
+          type='range'
+          matTooltipPosition="above"
+          [matTooltip]="mouseMoveTime"
+          [attr.max]='rangeMax'
+          [(ngModel)]="currentRange"
+          [disabled]='progressDisabled'
+          (mouseenter)='showTime($event)'
+          (mousemove)='showTime($event)'
+          (mouseup)='jumpPosition($event)'
+        />
+      </div>
+      <div class='time'>
+        <span>{{ currentPosition }}</span>
+        <span class='split'> / </span>
+        <span>{{ totalDuration }}</span>
+      </div>
+    </div>
+  </div>
+  <div class='list-section'>
+    <mat-tab-group>
+      <mat-tab label="播放列表">
+        <div class='slice-part'>
+          <mat-list>
+            <mat-list-item *ngFor="let folder of folders" (click)="selectPart(folder)">
+              <mat-icon mat-list-icon>play_arrow</mat-icon>
+              <h4 mat-line style='display: flex; align-items: center; font-size: 16px; flex: 1'>{{ folder.name }}</h4>
+              <div mat-line style='display: flex; flex: 1; justify-content: space-between; align-items: center'>
+                <p>
+                  {{ folder.updated }}
+                </p>
+                <p>
+                  {{ folder.size }}
+                </p>
+              </div>
+            </mat-list-item>
+          </mat-list>
+        </div>
+      </mat-tab>
+      <mat-tab label="命令列表" [disabled]="commands.length === 0" >
+        <div class='command-part'>
+          <mat-list
+            infiniteScroll
+            [scrollWindow]="false"
+            [infiniteScrollDistance]="2"
+            [infiniteScrollThrottle]="50"
+            (scrolled)="onScroll()"
+          >
+            <mat-list-item *ngFor="let command of commands" (click)="commandClick(command)">
+              <div>
+                {{ command.input }}
+              </div>
+              <div>
+                {{ command.atime }}
+              </div>
+            </mat-list-item>
+          </mat-list>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+</div>

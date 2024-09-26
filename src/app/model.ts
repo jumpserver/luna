@@ -348,6 +348,7 @@ export class Command {
   risk_level_display: string;
   org_id: string;
   timestamp: number;
+  atime?: string;
 }
 
 export class AccountGroup {

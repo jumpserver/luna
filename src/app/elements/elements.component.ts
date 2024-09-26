@@ -32,7 +32,7 @@ import {ElementCommandDialogComponent} from '@app/elements/content/command-dialo
 import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
 import {ElementChatComponent} from '@app/elements/chat/chat.component';
 import {ElementsPartsComponent} from './replay/parts/parts.component';
-
+import {ElementReplayNewPlayerComponent} from './replay/newPlayer/newPlayer.component';
 
 export const ElementComponents = [
   ElementLeftBarComponent,
@@ -71,4 +71,5 @@ export const ElementComponents = [
   ElementCommandDialogComponent,
   ElementSendCommandDialogComponent,
   ElementsPartsComponent,
+  ElementReplayNewPlayerComponent
 ];
