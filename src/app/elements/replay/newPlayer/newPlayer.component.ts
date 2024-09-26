@@ -1,15 +1,15 @@
-import {HttpService, LogService} from '@app/services';
-import { TranslateService } from '@ngx-translate/core';
-
-import {Component, Input, NgZone, OnDestroy, OnInit} from '@angular/core';
-import { StaticHTTPTunnel, SessionRecording } from '@glokon/guacamole-common-js';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { Display } from '@glokon/guacamole-common-js/types/Display';
-import { formatTime } from '@app/utils/common';
 import { Command } from '@app/model';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslateService } from '@ngx-translate/core';
+import { HttpService, LogService } from '@app/services';
+import { StaticHTTPTunnel, SessionRecording } from '@glokon/guacamole-common-js';
+
+import { Section } from '@app/elements/replay/parts/parts.component';
+import { Component, Input, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { formatTime } from '@app/utils/common';
 import { fromEvent, Observable, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
-import { Section } from '@app/elements/replay/parts/parts.component';
+import { Display } from '@glokon/guacamole-common-js/types/Display';
 
 interface IReplay {
   id?: string;
@@ -46,7 +46,6 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
   @Input() folders: Section[];
 
   public page: number;
-  public percent: number;
   public rangeMax: number;
   public currentRange: number;
   public startTimeStamp: number;
@@ -421,16 +420,32 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
    * @param item
    */
   commandClick(item: Command) {
+    this.handleToggle();
+    this.isLoading = true;
+    this.progressDisabled = true;
+
     const time: number = (item.timestamp - 10) * 1000 - this.startTimeStamp;
 
-    this.percent = time <= 0 ? 0 : time;
+    // todo)) 待测试
+    this.currentRange = time <= 0 ? 0 : time;
+
+    this.recording.seek(this.currentRange, () => {
+      this.recordingDisplay.flush(() => {
+        this.handleToggle();
+        this.isLoading = false;
+        this.progressDisabled = false;
+        this.currentPosition = formatTime(this.currentRange);
+      });
+    });
   }
 
   /**
    * @description 播放状态的转换
    */
-  handleToggle(e: MouseEvent | Event) {
-    e.stopPropagation();
+  handleToggle(e?: MouseEvent | Event) {
+    if (e) {
+      e.stopPropagation();
+    }
 
     if (this.recording.isPlaying()) {
       this.isPause = true;
@@ -469,7 +484,6 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
 
       const results = commandData.results;
 
-      // todo)) 修改 any 类型
       results.map((result: any) => {
         result.atime = formatTime(result.timestamp * 1000 - this.startTimeStamp);
       });
@@ -485,6 +499,11 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
    await this.getCommands(++this.page);
   }
 
+  /**
+   * @description 选择播放的 Part
+   *
+   * @param folder
+   */
   async selectPart(folder: Section) {
 
     this.isShowControl = false;

@@ -107,8 +107,14 @@
       </mat-tab>
       <mat-tab label="命令列表" [disabled]="commands.length === 0" >
         <div class='command-part'>
-          <mat-list>
-            <mat-list-item *ngFor="let command of commands">
+          <mat-list
+            infiniteScroll
+            [scrollWindow]="false"
+            [infiniteScrollDistance]="2"
+            [infiniteScrollThrottle]="50"
+            (scrolled)="onScroll()"
+          >
+            <mat-list-item *ngFor="let command of commands" (click)="commandClick(command)">
               <div>
                 {{ command.input }}
               </div>
