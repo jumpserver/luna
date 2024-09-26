@@ -72,8 +72,6 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     this.displayRef = document.getElementById('display');
     this.screenRef = document.getElementById('screen');
 
-    console.log(this.replay.src);
-
     const tunnel = new Guacamole.StaticHTTPTunnel(this.replay.src);
     this.recording = new Guacamole.SessionRecording(tunnel);
 

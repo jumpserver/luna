@@ -299,8 +299,6 @@ export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
       this.handleToggle(_e);
       this.progressDisabled = false;
       this.currentPosition = formatTime(position);
-
-      console.log('currentPosition', this.currentPosition);
     });
   }
 
