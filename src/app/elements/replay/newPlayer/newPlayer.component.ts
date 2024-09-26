@@ -1,7 +1,7 @@
 import {HttpService, LogService} from '@app/services';
 import { TranslateService } from '@ngx-translate/core';
 
-import { Component, Input, NgZone, OnInit } from '@angular/core';
+import {Component, Input, NgZone, OnDestroy, OnInit} from '@angular/core';
 import { StaticHTTPTunnel, SessionRecording } from '@glokon/guacamole-common-js';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Display } from '@glokon/guacamole-common-js/types/Display';
@@ -41,7 +41,7 @@ interface IControls {
   templateUrl: './newPlayer.component.html',
   styleUrls: ['./newPlayer.component.scss']
 })
-export class ElementReplayNewPlayerComponent implements OnInit {
+export class ElementReplayNewPlayerComponent implements OnInit, OnDestroy {
   @Input() replay: IReplay;
   @Input() folders: Section[];
 
@@ -57,6 +57,7 @@ export class ElementReplayNewPlayerComponent implements OnInit {
   public isPause: boolean;
   public isLoading: boolean;
   public isShowControl: boolean;
+  public progressDisabled: boolean;
   public commands: Command[];
   public controls: IControls[];
 
@@ -128,6 +129,18 @@ export class ElementReplayNewPlayerComponent implements OnInit {
     if (this.folders) {
      await this.selectPart(this.folders[0]);
     }
+
+    window.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') {
+        console.log('Left arrow key pressed');
+      } else if (event.key === 'ArrowRight') {
+        console.log('Right arrow key pressed');
+      }
+    }, false);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('keydown', () => {});
   }
 
   updateControls() {
@@ -225,8 +238,9 @@ export class ElementReplayNewPlayerComponent implements OnInit {
         return;
       }
 
-      if (!_current || !_total ) {
-        this.recording.play();
+      if (_current || _total) {
+        this.currentRange = position;
+        this.currentPosition = formatTime(position);
       }
     };
 
@@ -239,13 +253,10 @@ export class ElementReplayNewPlayerComponent implements OnInit {
       this.progressTimeout = setTimeout(() => {
         this._logger.info('Final duration to process:', duration);
 
-        this.recording.seek(duration, () => {
-          this.isLoading = false;
-          this.rangeMax = duration;
-          this.totalDuration = formatTime(duration);
-          this.currentPosition = '00:00';
-          this.recording.seek(0);
-        });
+        this.isLoading = false;
+        this.rangeMax = duration;
+        this.totalDuration = formatTime(duration);
+        this.recording.play();
       }, 300);
     };
 
@@ -274,14 +285,20 @@ export class ElementReplayNewPlayerComponent implements OnInit {
    *
    * @param _e
    */
-   async jumpPosition(_e: Event) {
+  jumpPosition(_e: Event) {
+    this.handleToggle(_e);
+    this.progressDisabled = true;
     _e.stopPropagation();
-    this.handleToggle();
 
-    const position = this.gerAbsolutelyPosition(_e);
+    const position = Math.floor(this.gerAbsolutelyPosition(_e));
 
-    this.currentPosition = formatTime(position);
-    this.recording.seek(position);
+    this.recording.seek(position, () => {
+      this.handleToggle(_e);
+      this.progressDisabled = false;
+      this.currentPosition = formatTime(position);
+
+      console.log('currentPosition', this.currentPosition);
+    });
   }
 
   gerAbsolutelyPosition(_e: Event) {
@@ -303,7 +320,7 @@ export class ElementReplayNewPlayerComponent implements OnInit {
   }
 
   /**
-   * 鼠标悬浮进度条展示时间信息
+   * @description 鼠标悬浮进度条展示时间信息
    * @param _e
    */
   showTime(_e: Event) {
@@ -393,9 +410,8 @@ export class ElementReplayNewPlayerComponent implements OnInit {
   /**
    * @description 播放状态的转换
    */
-  handleToggle(e?: MouseEvent) {
-    // tslint:disable-next-line:no-unused-expression
-    e ? e.stopPropagation() : '';
+  handleToggle(e: MouseEvent | Event) {
+    e.stopPropagation();
 
     if (this.recording.isPlaying()) {
       this.isPause = true;

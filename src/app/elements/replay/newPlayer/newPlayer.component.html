@@ -47,7 +47,6 @@
       </div>
     </div>
     <div class='control-part' >
-      <!-- *ngIf='isShowControl' -->
       <div class='controls'>
         <div *ngFor='let control of controls'>
           <button
@@ -71,6 +70,7 @@
           [matTooltip]="mouseMoveTime"
           [attr.max]='rangeMax'
           [(ngModel)]="currentRange"
+          [disabled]='progressDisabled'
           (mouseenter)='showTime($event)'
           (mousemove)='showTime($event)'
           (mouseup)='jumpPosition($event)'
