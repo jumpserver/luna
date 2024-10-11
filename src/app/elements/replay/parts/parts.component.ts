@@ -128,47 +128,50 @@ export class ElementsPartsComponent implements OnInit {
    * @param isFirstPush
    */
   async fetchSection (item: IFile, sessionId: string, isFirstPush: boolean): Promise<boolean> {
+    let section: Section;
     try {
       const res: Replay = await this._http.getPartFileReplay(sessionId, item.name).toPromise();
 
-      if (res && res.status !== 'running') {
-        if (!res.src) {
-          this._logger.warn('Replay data missing src property');
-          return isFirstPush;
-        }
+      if (res) {
+        // 3.5 的 TS 版本无法使用 ?.
+        // @ts-ignore
+        const data = res.type ? res : (res.resp ? res.resp.data : undefined);
 
-        const section: Section = {
-          id: this.id,
-          account: res.account,
-          asset: res.asset,
-          date_end: res.date_end,
-          date_start: res.date_start,
-          download_url: res.download_url,
-          src: res.src,
-          type: res.type,
-          user: res.user,
-          size: this.formatFileSize(item.size),
-          name: `Part ${this.folders.length + 1}`,
-          updated: this.formatDuration(item.duration),
-        };
+        if (data && data.src && res.status !== 'running') {
+          section = {
+            id: this.id,
+            account: data.account,
+            asset: data.asset,
+            date_end: data.date_end,
+            date_start: data.date_start,
+            download_url: data.download_url,
+            src: data.src,
+            type: data.type,
+            user: data.user,
+            size: this.formatFileSize(item.size),
+            name: `Part ${this.folders.length + 1}`,
+            updated: this.formatDuration(item.duration),
+          };
 
-        this.folders.push(section);
+          this.folders.push(section);
 
-        if (isFirstPush && section.src) {
-          this.currentVideo = section;
-          this.videoLoading = true;
-          this.cdRef.detectChanges();
+          if (isFirstPush && section.src) {
+            this.currentVideo = section;
+            this.videoLoading = true;
+            this.cdRef.detectChanges();
 
-          setTimeout(() => {
-            this.videoLoading = false;
-          }, 300);
+            setTimeout(() => {
+              this.videoLoading = false;
+            }, 300);
 
-          return false;
-        }
+            return false;
+          }
+
       } else if (res && res.status === 'running') {
-        this.alertShown = true;
-        await this.delay(3000);
-        return await this.fetchSection(item, sessionId, isFirstPush);
+          this.alertShown = true;
+          await this.delay(3000);
+          return await this.fetchSection(item, sessionId, isFirstPush);
+        }
       }
     } catch (e) {
       this._logger.error(e);
