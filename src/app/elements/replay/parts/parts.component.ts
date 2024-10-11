@@ -139,6 +139,11 @@ export class ElementsPartsComponent implements OnInit {
             .toPromise();
 
           if (res && res.status !== 'running') {
+            if (!res.src) {
+              this._logger.warn("Replay data missing src property");
+              continue;
+            }
+
             const section: Section = {
               id: this.id,
               account: res.account,
@@ -156,7 +161,7 @@ export class ElementsPartsComponent implements OnInit {
 
             this.folders.push(section);
 
-            if (isFirstPush) {
+            if (isFirstPush && section.src) {
               this.currentVideo = section;
               this.videoLoading = true;
               this.cdRef.detectChanges();
