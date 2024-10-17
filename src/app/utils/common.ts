@@ -303,6 +303,7 @@ export function connectOnNewPage(node: TreeNode, newWindowMode?: string) {
       count = 0;
     }
     let left = 100 + count * 100;
+    top = 50 + count * 50;
     if (left + screen.width / 3 > screen.width) {
       // 支持两排足以
       top = screen.height / 3;
