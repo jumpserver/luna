@@ -217,7 +217,6 @@ $-border-y: var(--el-main-bg-color);
       user-select: none;
       color: #d6cbcb;
       background-color: #463e3e;
-
       &:hover {
         color: #ffffff;
       }
@@ -225,6 +224,10 @@ $-border-y: var(--el-main-bg-color);
       &:active {
         color: #ccc8c8;
       }
+    }
+    .command-box-variable {
+      @extend .command-box;
+      background-color: #6f4f3a;
     }
   }
 
