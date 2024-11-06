@@ -17,7 +17,7 @@
     </div>
   </div>
   <mat-form-field *ngIf="command"  class="full-width">
-    <mat-label>命令</mat-label>
+    <mat-label>{{ 'Command'| translate }}</mat-label>
     <textarea  rows="5" matInput [formControlName]="'sendCommand'" [value]="command.args"></textarea>
   </mat-form-field>
 

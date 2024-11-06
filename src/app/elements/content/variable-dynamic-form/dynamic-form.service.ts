@@ -10,14 +10,12 @@ export class DynamicFormService {
     for (const field in fields) {
       const fieldDefinition = fields[field];
       const validators = [];
-
       if (fieldDefinition.required) {
         validators.push(Validators.required);
       }
-
-      group['jms_'+field] = new FormControl(fieldDefinition.default || '', validators,)
+      group['jms_'+field] = new FormControl(fieldDefinition.default || '', validators)
     }
-    group["sendCommand"] = new FormControl("",)
+    group["sendCommand"] = new FormControl("")
     return new FormGroup(group);
   }
 }

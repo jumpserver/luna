@@ -31,9 +31,9 @@ import {ElementConnectorGuideComponent} from '@app/elements/content/content-wind
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
 import {ElementSendCommandWithVariableDialogComponent} from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
+import {DynamicFormComponent} from '@app/elements/content/variable-dynamic-form/variable-dynamic-form.component';
 import {ElementChatComponent} from '@app/elements/chat/chat.component';
 import {ElementsPartsComponent} from './replay/parts/parts.component';
-import {DynamicFormComponent} from '@app/elements/content/variable-dynamic-form/variable-dynamic-form.component';
 
 
 export const ElementComponents = [

@@ -1,4 +1,3 @@
-// dynamic-form.component.ts
 import {Component, Input, Output, OnInit, SimpleChanges,EventEmitter} from '@angular/core';
 import {FormGroup} from '@angular/forms';
 import {DynamicFormService} from './dynamic-form.service';
@@ -43,7 +42,6 @@ export class DynamicFormComponent implements OnInit {
     this.dynamicForm.get('sendCommand').setValue(commandText);
   }
 
-  // 提交表单
   onSubmit() {
     if (this.dynamicForm.valid) {
       this.formSubmitted.emit(this.dynamicForm.value);
