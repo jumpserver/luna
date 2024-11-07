@@ -4,6 +4,7 @@ import {ConnectTokenService, HttpService, I18nService, LogService, SettingServic
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import {MatDialog} from '@angular/material';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
+import {ElementSendCommandWithVariableDialogComponent} from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
 import {fromEvent, Subscription} from 'rxjs';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 
@@ -197,7 +198,26 @@ export class ElementContentComponent implements OnInit, OnDestroy {
 
   sendQuickCommand(command) {
     this.batchCommand = command.args;
-    this.sendBatchCommand();
+    if(command.variable.length>0){
+      const dialogRef=this._dialog.open(
+        ElementSendCommandWithVariableDialogComponent,
+      {
+        height: 'auto',
+        width: '500px',
+        data: {command:command}
+      }
+    )
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) {
+          this.batchCommand = result
+          this.sendBatchCommand();
+        }
+      })
+    }
+    else{
+      this.sendBatchCommand();
+    }
+
   }
 
   rMenuItems() {

@@ -88,6 +88,7 @@
           *ngFor="let command of quickCommands"
           [matTooltip]="command.args"
           class="command-box"
+          [ngClass]="{'command-box-variable': command.variable.length !== 0}"
           matTooltipPosition="above"
         >
           <i [ngClass]="command.module.value + '_ico_docu'" class="view_icon"></i>
