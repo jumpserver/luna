@@ -51,13 +51,13 @@ export class ElementConnectorNecComponent implements OnInit {
 
     const oriHost = this.asset.address;
     this.name = `${this.asset.name}(${oriHost})`;
-    this.setDBInfo();
+    this.setConnectionInfo();
     this.genConnCli();
     this.loading = false;
     this.view.termComp = this;
   }
 
-  setDBInfo() {
+  setConnectionInfo() {
     this.infoItems = [
       {name: 'name', value: this.name, label: this._i18n.t('Name')},
       {name: 'host', value: this.endpoint.getHost(), label: this._i18n.t('Host')},
