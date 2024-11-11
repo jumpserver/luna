@@ -58,7 +58,6 @@ export class ElementConnectorNecComponent implements OnInit {
   }
 
   setDBInfo() {
-    const database = this.asset['spec_info']['db_name'];
     this.infoItems = [
       {name: 'name', value: this.name, label: this._i18n.t('Name')},
       {name: 'host', value: this.endpoint.getHost(), label: this._i18n.t('Host')},
@@ -79,7 +78,7 @@ export class ElementConnectorNecComponent implements OnInit {
   }
 
   genConnCli() {
-    const {password, host, port, database, protocol} = this.info;
+    const {password, host, port, protocol} = this.info;
     // Password placeholders. Because there is a safe cli, the secret needs to be hidden, so the placeholders are replaced
     const passwordHolder = `@${password}@`;
     let cli = '';
