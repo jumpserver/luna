@@ -1,0 +1,127 @@
+<div class='pam-connect'>
+  <mat-sidenav-container (backdropClick)="closeDrawer()">
+
+    <mat-sidenav #sidenav position='end' mode="over" class='file-manage-drawer'>
+      <div class='drawer-header'>
+
+        <mat-icon style='cursor: pointer' (click)='closeDrawer()'>close</mat-icon>
+
+        <p>
+          文件管理
+        </p>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <div class='drawer-manage'>
+       <div class='path'>
+         <mat-icon>home</mat-icon>
+         <div class='delimiter'>/</div>
+       </div>
+
+        <div class='upload'>
+          <button mat-raised-button color="primary">
+            上传文件
+          </button>
+        </div>
+      </div>
+
+      <div class='drawer-table'>
+        <table mat-table
+               [dataSource]="dataSource" multiTemplateDataRows
+               class="mat-elevation-z8">
+
+          <ng-container matColumnDef="{{column}}" *ngFor="let column of columnsToDisplay">
+            <th mat-header-cell *matHeaderCellDef> {{column}} </th>
+            <td mat-cell *matCellDef="let element"> {{element[column]}} </td>
+          </ng-container>
+
+          <!-- Expanded Content Column - The detail row is made up of this one column that spans across all columns -->
+          <ng-container matColumnDef="expandedDetail">
+            <td mat-cell *matCellDef="let element" [attr.colspan]="columnsToDisplay.length">
+              <div class="example-element-detail"
+                   [@detailExpand]="element == expandedElement ? 'expanded' : 'collapsed'">
+                <div class="example-element-diagram">
+                  <div class="example-element-position"> {{element.position}} </div>
+                  <div class="example-element-symbol"> {{element.symbol}} </div>
+                  <div class="example-element-name"> {{element.name}} </div>
+                  <div class="example-element-weight"> {{element.weight}} </div>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnsToDisplay"></tr>
+          <tr mat-row *matRowDef="let element; columns: columnsToDisplay;"
+              class="example-element-row"
+              [class.example-expanded-row]="expandedElement === element"
+              (click)="expandedElement = expandedElement === element ? null : element">
+          </tr>
+          <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="example-detail-row"></tr>
+        </table>
+      </div>
+
+
+    </mat-sidenav>
+
+    <mat-sidenav-content>
+      <mat-card>
+        <mat-card-header style='height: 55px; align-items: center'>
+          <mat-card-title>
+            SSH 会话
+          </mat-card-title>
+
+          <mat-divider [vertical]='true'> </mat-divider>
+
+          <div class='info-section'>
+            <div class='top-part'>
+              <mat-icon matTooltip="资产信息">dvr</mat-icon>
+              <div class='desc'>
+                <div style='font-weight: 700; margin-right: 5px'>
+                  资产信息:
+                </div>
+                root@y4.cmdb.cc - (yy)
+              </div>
+            </div>
+
+            <div class='bottom-part'>
+              <mat-icon matTooltip="连接时间">date_range</mat-icon>
+
+              <div class='desc'>
+                <div style='font-weight: 700; margin-right: 5px'>
+                  连接时间:
+                </div>
+                九月 24,2024 10:46 上午
+              </div>
+
+            </div>
+          </div>
+          <div class='action-section'>
+            <div class='time-part'>
+              <div [class.active]='isActive' class='active-state'></div>
+              <div class='desc'>{{ totalConnectTime }}</div>
+            </div>
+
+            <mat-divider [vertical]='true'> </mat-divider>
+
+            <div class='file-manage action-icon'>
+              <mat-icon matTooltip="文件管理" (click)="sidenav.open()">folder</mat-icon>
+            </div>
+
+            <div class='exit action-icon'>
+              <mat-icon matTooltip="退出">close</mat-icon>
+            </div>
+          </div>
+        </mat-card-header>
+      </mat-card>
+
+      <mat-card style='margin: 20px; height: calc(100% - 130px); background-color: #F7F8F9'>
+        <mat-card-content style='height: calc(100% - 50px);'>
+          123
+        </mat-card-content>
+      </mat-card>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</div>
+
+

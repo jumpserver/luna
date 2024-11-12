@@ -1,0 +1,259 @@
+.pam-connect {
+  display: flex;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+
+  .file-manage-drawer {
+    position: absolute;
+    width: 500px;
+    z-index: 999999;
+  }
+
+  .mat-drawer-container {
+    width: 100%;
+
+    ::ng-deep .mat-drawer-inner-container {
+      //overflow: hidden;
+
+      .drawer-header {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        width: 100%;
+        padding: 0 20px;
+
+        p {
+          font-size: 16px;
+          font-weight: 700;
+          margin-left: 10px;
+        }
+      }
+
+      .mat-divider {
+        height: 10px;
+      }
+
+      .drawer-manage {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        height: 50px;
+
+        .path {
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          flex: 2;
+          height: 100%;
+
+          .delimiter {
+            margin-left: 5px;
+            font-size: 1.3rem;
+          }
+        }
+
+        .upload {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          flex: 1;
+
+          .mat-raised-button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 30px;
+            width: 100px;
+          }
+        }
+      }
+
+      .drawer-table {
+        width: 100%;
+        height: 100%;
+
+        .mat-table {
+          width: inherit;
+          height: 100%;
+          box-shadow: unset;
+        }
+
+        table {
+          width: 100%;
+        }
+
+        tr.example-detail-row {
+          height: 0;
+        }
+
+        tr.example-element-row:not(.example-expanded-row):hover {
+          background: #f5f5f5;
+        }
+
+        tr.example-element-row:not(.example-expanded-row):active {
+          background: #efefef;
+        }
+
+        .example-element-row td {
+          border-bottom-width: 0;
+        }
+
+        .example-element-detail {
+          overflow: hidden;
+          display: flex;
+        }
+
+        .example-element-diagram {
+          min-width: 80px;
+          border: 2px solid black;
+          padding: 8px;
+          font-weight: lighter;
+          margin: 8px 0;
+          height: 104px;
+        }
+
+        .example-element-symbol {
+          font-weight: bold;
+          font-size: 40px;
+          line-height: normal;
+        }
+
+        .example-element-description {
+          padding: 16px;
+        }
+
+        .example-element-description-attribution {
+          opacity: 0.5;
+        }
+      }
+    }
+
+
+    ::ng-deep .mat-drawer-content {
+      overflow: hidden;
+    }
+  }
+
+
+
+
+  ::ng-deep .mat-card-header-text {
+    display: flex;
+    align-items: center;
+    height: 100%;
+
+    .mat-card-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      margin: 0 20px;
+    }
+  }
+
+  .mat-divider {
+    height: 100%;
+    border-right-width: 2px;
+    border-right-color: #DCDDDE;
+  }
+
+  .info-section {
+    display: flex;
+    flex: 2;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    height: 100%;
+    margin: 0 20px;
+    font-size: 14px;
+
+    .top-part,
+    .bottom-part {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      height: 50%;
+      color: #313538;
+      font-size: 14px;
+
+      .mat-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 20px;
+        cursor: pointer;
+      }
+
+      .desc {
+        display: flex;
+        align-items: stretch;
+        margin-left: 5px;
+      }
+
+    }
+
+  }
+
+  .action-section {
+    display: flex;
+    flex: 1;
+    justify-content: flex-end;
+    align-items: center;
+    height: 100%;
+
+    .time-part {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 150px;
+      font-size: 16px;
+
+      .active-state {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #cccccc;
+        transition: background-color 0.3s;
+
+        &.active {
+          background-color: #ff6666;
+        }
+      }
+
+      .desc {
+        color: #A2A8AE;
+        margin-left: 10px;
+      }
+    }
+
+    .mat-divider {
+      height:  40%;
+      border-right-width: 2px;
+      border-right-color: #DCDDDE;
+    }
+
+    .action-icon {
+      display: flex;
+      align-items: center;
+      height: 100%;
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+
+      &:hover {
+        color: #1ab394;
+      }
+    }
+
+    .file-manage {
+      margin-left: 30px;
+      margin-right: 10px;
+    }
+
+    .exit {
+      margin-left: 10px;
+      margin-right: 20px;
+    }
+
+  }
+}
