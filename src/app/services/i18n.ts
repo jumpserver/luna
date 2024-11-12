@@ -20,16 +20,17 @@ export class I18nService {
   getLangCode() {
     let langCode = this._cookie.get(this.LANG_COOKIE_NAME);
     if (!langCode) {
-      langCode = navigator.language;
+      langCode = navigator.language.toLowerCase();
     }
-    if (langCode.indexOf('en') > -1) {
-      return 'en';
+    if (['zh', 'zh-cn'].includes(langCode)) {
+      return 'zh';
+    }  else if (langCode.indexOf('zh-') > -1) {
+      // zh-hant zh-tw zh-hk
+      return 'zh-hant';
     } else if (langCode.indexOf('ja') > -1) {
       return 'ja';
-    }  else if (langCode.indexOf('zh-hant') > -1) {
-      return 'zh-hant';
     } else {
-      return 'zh';
+      return 'en';
     }
   }
 
