@@ -19,49 +19,58 @@
          <div class='delimiter'>/</div>
        </div>
 
-        <div class='upload'>
-          <button mat-raised-button color="primary">
-            上传文件
-          </button>
+        <div class='upload-btn'>
+          <label for='file-input' class="file-label">
+            <button mat-raised-button color="primary" >
+              上传文件
+            </button>
+          </label>
+
+          <input
+            multiple
+            type="file"
+            id='file-input'
+            name="templateFileUploadControl2"
+            [(ngModel)]="manualChangesFiles"
+            (change)="onFileSelected($event)"
+          >
         </div>
       </div>
 
       <div class='drawer-table'>
-        <table mat-table
-               [dataSource]="dataSource" multiTemplateDataRows
-               class="mat-elevation-z8">
+        <mat-table [dataSource]="dataSource">
 
-          <ng-container matColumnDef="{{column}}" *ngFor="let column of columnsToDisplay">
-            <th mat-header-cell *matHeaderCellDef> {{column}} </th>
-            <td mat-cell *matCellDef="let element"> {{element[column]}} </td>
+          <!-- Position Column -->
+          <ng-container matColumnDef="name">
+            <mat-header-cell  *matHeaderCellDef> 名称 </mat-header-cell>
+            <mat-cell  *matCellDef="let element"> {{element.name}} </mat-cell>
           </ng-container>
 
-          <!-- Expanded Content Column - The detail row is made up of this one column that spans across all columns -->
-          <ng-container matColumnDef="expandedDetail">
-            <td mat-cell *matCellDef="let element" [attr.colspan]="columnsToDisplay.length">
-              <div class="example-element-detail"
-                   [@detailExpand]="element == expandedElement ? 'expanded' : 'collapsed'">
-                <div class="example-element-diagram">
-                  <div class="example-element-position"> {{element.position}} </div>
-                  <div class="example-element-symbol"> {{element.symbol}} </div>
-                  <div class="example-element-name"> {{element.name}} </div>
-                  <div class="example-element-weight"> {{element.weight}} </div>
-                </div>
-              </div>
-            </td>
+          <ng-container matColumnDef="size">
+            <mat-header-cell  *matHeaderCellDef> 大小 </mat-header-cell>
+            <mat-cell  *matCellDef="let element"> {{element.size}} </mat-cell>
           </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="columnsToDisplay"></tr>
-          <tr mat-row *matRowDef="let element; columns: columnsToDisplay;"
-              class="example-element-row"
-              [class.example-expanded-row]="expandedElement === element"
-              (click)="expandedElement = expandedElement === element ? null : element">
-          </tr>
-          <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="example-detail-row"></tr>
-        </table>
+          <ng-container matColumnDef="modification-time">
+            <mat-header-cell  *matHeaderCellDef> 修改时间 </mat-header-cell>
+            <mat-cell  *matCellDef="let element"> {{element.modificationTime}} </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="attributes">
+            <mat-header-cell  *matHeaderCellDef> 属性 </mat-header-cell>
+            <mat-cell  *matCellDef="let element"> {{element.attributes}} </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="action">
+            <mat-header-cell  *matHeaderCellDef> 操作 </mat-header-cell>
+            <mat-cell  *matCellDef="let element">  </mat-cell>
+          </ng-container>
+
+          <mat-header-row  *matHeaderRowDef="displayedColumns; sticky: true"></mat-header-row>
+          <mat-row  *matRowDef="let row; columns: displayedColumns;"></mat-row>
+        </mat-table>
+
       </div>
-
-
     </mat-sidenav>
 
     <mat-sidenav-content>
@@ -117,7 +126,8 @@
 
       <mat-card style='margin: 20px; height: calc(100% - 130px); background-color: #F7F8F9'>
         <mat-card-content style='height: calc(100% - 50px);'>
-          123
+          <elements-iframe *ngIf="iframeURL" [src]="iframeURL" [origin]='"pam"'>
+          </elements-iframe>
         </mat-card-content>
       </mat-card>
     </mat-sidenav-content>

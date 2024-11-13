@@ -38,6 +38,7 @@ import {ElementCommandDialogComponent} from '@app/elements/content/command-dialo
 import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
 import {version} from '../environments/environment';
 import {BehaviorSubject, forkJoin, Observable, of} from 'rxjs';
+import {FileInputAccessorModule} from 'file-input-accessor';
 import {catchError, mergeMap} from 'rxjs/operators';
 
 
@@ -95,6 +96,7 @@ export class CustomLoader implements TranslateLoader {
         deps: [HttpClient]
       }
     }),
+    FileInputAccessorModule,
     ...PluginModules,
   ],
   declarations: [

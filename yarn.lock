@@ -3719,6 +3719,13 @@ figures@^3.0.0:
   dependencies:
     escape-string-regexp "^1.0.5"
 
+file-input-accessor@2.0:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/file-input-accessor/-/file-input-accessor-2.0.2.tgz#0dc46e687aa9b600f43c2f06e156d99673a88c66"
+  integrity sha512-4mIMri8YhtmNhirsze6GJGau3i2mNdtfDnlET1t1kNWwFfTubYf5BeYcZ/ujkTS9UGCDqTXIaqyJJOrD4jkceg==
+  dependencies:
+    tslib "^1.9.0"
+
 file-loader@4.2.0:
   version "4.2.0"
   resolved "https://registry.npmmirror.com/file-loader/-/file-loader-4.2.0.tgz#5fb124d2369d7075d70a9a5abecd12e60a95215e"
