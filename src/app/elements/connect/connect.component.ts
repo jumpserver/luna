@@ -57,16 +57,22 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (this.hasLoginTo || !loginTo) {
       return;
     }
+
     this.hasLoginTo = true;
+
     this._http.filterMyGrantedAssetsById(loginTo).subscribe(nodes => {
       let node;
+
       if (nodes.length === 1) {
         node = nodes[0];
       } else {
         node = nodes[1];
       }
+
       const titles = document.title.split(' - ');
+
       document.title = node.name + ' - ' + titles[titles.length - 1];
+
       this._http.getAssetDetail(node.id).subscribe(asset => {
         this.connectAsset(asset).then();
       });
@@ -117,13 +123,17 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       await this._dialogAlert.alert(msg);
       return;
     }
+
     const accounts = asset.permed_accounts;
     const connectInfo = await this.getConnectData(accounts, asset);
+
     if (!connectInfo) {
       this._logger.info('Just close the dialog');
       return;
     }
+
     this._logger.debug('Connect info: ', connectInfo);
+
     const connectMethod = connectInfo.connectMethod;
     const connectOption = connectInfo.connectOption;
     const connToken = await this._connectTokenSvc.create(asset, connectInfo);
@@ -236,6 +246,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   getConnectData(accounts: Account[], asset: Asset): Promise<ConnectData> {
     const preConnectData = this._appSvc.getPreConnectData(asset);
     const isValid = this.checkPreConnectDataForAuto(asset, accounts, preConnectData);
+
     if (isValid) {
       return Promise.resolve(preConnectData);
     }
@@ -251,6 +262,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     return new Promise<ConnectData>(resolve => {
       dialogRef.afterClosed().subscribe(outputData => {
         this._appSvc.connectDialogShown = false;
+
         resolve(outputData);
       });
     });
