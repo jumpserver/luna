@@ -15,6 +15,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   @Input() src: any;
   @Input() id: string;
   @Input() view: View;
+  @Input() origin: string;
   @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   eventHandler: EventListenerOrEventListenerObject;
@@ -51,12 +52,14 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       this._http.get(`/api/v1/health/`).subscribe();
     });
 
+
     this.id = 'window-' + Math.random().toString(36).substr(2);
+
     this.eventHandler = function (e: any) {
       const msg = e.data;
-      if (msg.id !== this.id) {
-        return;
-      }
+
+      if (msg.id !== this.id) { return; }
+
       switch (msg.name) {
         case 'PONG':
           setTimeout(() => {
@@ -89,11 +92,16 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   ngAfterViewInit() {
-    if (this.iframeRef) {
+    if (this.origin !== 'pam' && this.iframeRef) {
       this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
       this.view.iframeElement = this.iframeWindow;
       this.handleIframeEvent();
+
+      return;
     }
+
+    this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
+    this.handleIframeEvent();
   }
 
   ngOnDestroy() {

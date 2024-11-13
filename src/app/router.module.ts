@@ -7,6 +7,7 @@ import {PagesReplayComponent} from './pages/replay/replay.component';
 import {PagesMonitorComponent} from './pages/monitor/monitor.component';
 import {PageMainComponent} from './pages/main/main.component';
 import {PageSftpComponent} from './pages/sftp/sftp.component';
+import {PagePamComponent} from '@app/pages/pam/pam.component';
 
 
 const appRoutes: Routes = [
@@ -17,6 +18,7 @@ const appRoutes: Routes = [
   {path: 'undefined', component: PagesBlankComponent},
   {path: '', component: PageMainComponent},
   // {path: '**', component: PagesNotFoundComponent}
+  {path: 'pamConnect/:sid', component: PagePamComponent}
 ];
 
 @NgModule({

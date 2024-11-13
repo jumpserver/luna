@@ -5,6 +5,7 @@ import {PagesReplayComponent} from './replay/replay.component';
 import {PagesNotFoundComponent} from './not-found/not-found.component';
 import {PageSftpComponent} from './sftp/sftp.component';
 import {PagesMonitorComponent} from './monitor/monitor.component';
+import {PagePamComponent} from './pam/pam.component';
 
 export const PagesComponents = [
   PageMainComponent,
@@ -13,5 +14,6 @@ export const PagesComponents = [
   PagesReplayComponent,
   PagesNotFoundComponent,
   PageSftpComponent,
-  PagesMonitorComponent
+  PagesMonitorComponent,
+  PagePamComponent
 ];
