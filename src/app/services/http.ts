@@ -279,6 +279,33 @@ export class HttpService {
     );
   }
 
+  adminConnectToken (asset: Asset, connectData: ConnectData, createTicket = false) {
+    const params = createTicket ? '?create_ticket=1' : '';
+
+    const url = '/api/v1/authentication/admin-connection-token/' + params;
+
+    const {account, protocol, manualAuthInfo, connectMethod} = connectData;
+
+    const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
+
+    const secret = encryptPassword(manualAuthInfo.secret);
+    const connectOption = connectData.connectOption;
+
+    const data = {
+      asset: asset.id,
+      account: account.alias,
+      protocol: protocol.name,
+      input_username: username,
+      input_secret: secret,
+      connect_method: connectMethod.value,
+      connect_options: connectOption
+    };
+
+    return this.post<ConnectionToken>(url, data).pipe(
+      catchError(this.handleConnectMethodExpiredError.bind(this))
+    );
+  }
+
   exchangeConnectToken(tokenID: string, createTicket = false) {
     const params = createTicket ? '?create_ticket=1' : '';
     const url = '/api/v1/authentication/connection-token/exchange/' + params;
