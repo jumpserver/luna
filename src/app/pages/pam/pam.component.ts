@@ -5,7 +5,7 @@ import {EMPTY, Observable} from 'rxjs';
 import {ICustomFile} from 'file-input-accessor';
 import {AppService, ConnectTokenService, DialogService, HttpService, I18nService, LogService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
-import {Account, Asset, ConnectData, View} from '@app/model';
+import {Account, Asset, ConnectData, ConnectionToken, View} from '@app/model';
 import {MatDialog} from '@angular/material/dialog';
 
 export interface PeriodicElement {
@@ -170,6 +170,15 @@ export class PagePamComponent implements OnInit, OnDestroy {
     }
   }
 
+  private getToken(asset: Asset, connectInfo: ConnectData): Promise<ConnectionToken> {
+    return new Promise<ConnectionToken>((resolve) => {
+      this._http.adminConnectToken(asset, connectInfo).subscribe(
+        (token: ConnectionToken) => {  resolve(token); },
+        (error) => { console.log(error); }
+      );
+    });
+}
+
   /**
    * @description 校验信息并发起连接
    * @param asset
@@ -205,7 +214,7 @@ export class PagePamComponent implements OnInit, OnDestroy {
       }
     } as unknown as ConnectData;
 
-    const connToken = await this._connectTokenSvc.create(asset, connectInfo);
+    const connToken = await this.getToken(asset, connectInfo);
 
     if (!connToken) {
       return this._logger.info('Create connection token failed');
