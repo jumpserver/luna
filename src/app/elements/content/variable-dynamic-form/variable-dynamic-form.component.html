@@ -5,9 +5,9 @@
       <input matInput [formControlName]="'jms_'+fieldKey" />
       <mat-hint>{{ formConfig[fieldKey].help_text }}</mat-hint>
     </mat-form-field>
-    <div  *ngSwitchCase="'labeled_choice'" class="radio-group">
+    <div  *ngSwitchCase="'labeled_choice'" class="radio-group full-width">
       <label class="zone-label">{{ formConfig[fieldKey].label }}</label>
-      <mat-radio-group style="display: block; padding: 12px 10px 10px 10px;" [formControlName]="'jms_'+fieldKey">
+      <mat-radio-group style="display: block; padding: 5px 0;" [formControlName]="'jms_'+fieldKey">
         <mat-radio-button *ngFor="let choice of formConfig[fieldKey].choices"
                           [value]="choice.value">
           {{ choice.label }}
@@ -17,10 +17,9 @@
     </div>
   </div>
   <mat-form-field *ngIf="command"  class="full-width">
-    <mat-label>{{ 'Command'| translate }}</mat-label>
+    <label class="zone-label">{{ 'Command'| translate }}</label>
     <textarea  rows="5" matInput [formControlName]="'sendCommand'" [value]="command.args"></textarea>
   </mat-form-field>
-
   <div style="float: right; padding-top: 20px">
     <button mat-raised-button color="primary" type="submit" [disabled]="dynamicForm.invalid">{{"Confirm"| translate}}</button>
   </div>
