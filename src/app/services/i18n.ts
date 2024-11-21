@@ -19,17 +19,22 @@ export class I18nService {
 
   getLangCode() {
     let langCode = this._cookie.get(this.LANG_COOKIE_NAME);
+
     if (!langCode) {
-      langCode = navigator.language;
+      langCode = navigator.language.toLowerCase();
     }
-    if (langCode.indexOf('en') > -1) {
-      return 'en';
+
+    if (['zh', 'zh-cn'].includes(langCode)) {
+      return 'zh-hans';
+    }  else if (langCode.indexOf('zh_hant') > -1) {
+      // zh-hant zh-tw zh-hk
+      return 'zh_hant';
+    } else if (langCode.indexOf('zh-hans')  > -1) {
+      return 'zh';
     } else if (langCode.indexOf('ja') > -1) {
       return 'ja';
-    }  else if (langCode.indexOf('zh-hant') > -1) {
-      return 'zh-hant';
     } else {
-      return 'zh';
+      return 'en';
     }
   }
 
@@ -57,16 +62,19 @@ export class I18nService {
 
   use(lang) {
     let useLang;
+
     this._translate.use(lang);
+
     if (lang.indexOf('en') > -1) {
       useLang = 'en';
     } else if (lang.indexOf('ja') > -1) {
       useLang = 'ja';
-    } else if (lang.indexOf('zh-hant') > -1) {
-      useLang = 'zh-hant';
+    } else if (lang.indexOf('zh_hant') > -1) {
+      useLang = 'zh_hant';
     } else {
       useLang = 'zh-hans';
     }
+
     this._cookie.set('django_language', useLang, 365, '/');
   }
 }

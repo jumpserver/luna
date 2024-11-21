@@ -16,6 +16,11 @@
       [view]="view"
     >
     </elements-connector-koko>
+    <elements-connector-nec
+      *ngSwitchCase="'nec'"
+      [view]="view"
+    >
+    </elements-connector-nec>
     <elements-connector-default
       *ngSwitchDefault
       [connector]="connector"

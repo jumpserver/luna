@@ -30,8 +30,12 @@ import {ElementsReplayMp4Component} from './replay/mp4/mp4.component';
 import {ElementConnectorGuideComponent} from '@app/elements/content/content-window/guide/guide.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
+// tslint:disable-next-line:max-line-length
+import {ElementSendCommandWithVariableDialogComponent} from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
+import {DynamicFormComponent} from '@app/elements/content/variable-dynamic-form/variable-dynamic-form.component';
 import {ElementChatComponent} from '@app/elements/chat/chat.component';
 import {ElementsPartsComponent} from './replay/parts/parts.component';
+import {ElementConnectorNecComponent} from '@app/elements/content/content-window/nec/nec.component';
 
 
 export const ElementComponents = [
@@ -51,6 +55,7 @@ export const ElementComponents = [
   ElementAssetTreeComponent,
   ElementConnectorKokoComponent,
   ElementConnectorMagnusComponent,
+  ElementConnectorNecComponent,
   ElementConnectComponent,
   ElementDownloadDialogComponent,
   ElementACLDialogComponent,
@@ -70,5 +75,7 @@ export const ElementComponents = [
   ElementConnectorGuideComponent,
   ElementCommandDialogComponent,
   ElementSendCommandDialogComponent,
+  ElementSendCommandWithVariableDialogComponent,
+  DynamicFormComponent,
   ElementsPartsComponent,
 ];
