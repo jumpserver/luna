@@ -115,7 +115,7 @@ export class ElementNavComponent implements OnInit {
           {
             id: 'Chinese-hant',
             click: () => {
-              this._i18n.use('zh-hant');
+              this._i18n.use('zh_hant');
             },
             name: '中文(繁體)'
           },
