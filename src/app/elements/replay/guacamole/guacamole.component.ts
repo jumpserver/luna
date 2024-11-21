@@ -124,7 +124,10 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       }
       this.recordingDisplay.scale(this.getPropScale());
     };
+
     clearInterval(this.interval);
+
+    // @ts-ignore
     this.interval = setInterval(() => {
       if (this.lastDuration === this.max) {
         clearInterval(this.interval);
