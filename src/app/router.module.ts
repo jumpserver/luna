@@ -18,7 +18,7 @@ const appRoutes: Routes = [
   {path: 'undefined', component: PagesBlankComponent},
   {path: '', component: PageMainComponent},
   // {path: '**', component: PagesNotFoundComponent}
-  {path: 'pamConnect/:sid', component: PagePamComponent}
+  {path: 'pam_connect/:sid', component: PagePamComponent}
 ];
 
 @NgModule({
