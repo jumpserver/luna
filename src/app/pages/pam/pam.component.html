@@ -36,41 +36,6 @@
           >
         </div>
       </div>
-
-      <div class='drawer-table'>
-        <mat-table [dataSource]="dataSource">
-
-          <!-- Position Column -->
-          <ng-container matColumnDef="name">
-            <mat-header-cell  *matHeaderCellDef> 名称 </mat-header-cell>
-            <mat-cell  *matCellDef="let element"> {{element.name}} </mat-cell>
-          </ng-container>
-
-          <ng-container matColumnDef="size">
-            <mat-header-cell  *matHeaderCellDef> 大小 </mat-header-cell>
-            <mat-cell  *matCellDef="let element"> {{element.size}} </mat-cell>
-          </ng-container>
-
-          <ng-container matColumnDef="modification-time">
-            <mat-header-cell  *matHeaderCellDef> 修改时间 </mat-header-cell>
-            <mat-cell  *matCellDef="let element"> {{element.modificationTime}} </mat-cell>
-          </ng-container>
-
-          <ng-container matColumnDef="attributes">
-            <mat-header-cell  *matHeaderCellDef> 属性 </mat-header-cell>
-            <mat-cell  *matCellDef="let element"> {{element.attributes}} </mat-cell>
-          </ng-container>
-
-          <ng-container matColumnDef="action">
-            <mat-header-cell  *matHeaderCellDef> 操作 </mat-header-cell>
-            <mat-cell  *matCellDef="let element">  </mat-cell>
-          </ng-container>
-
-          <mat-header-row  *matHeaderRowDef="displayedColumns; sticky: true"></mat-header-row>
-          <mat-row  *matRowDef="let row; columns: displayedColumns;"></mat-row>
-        </mat-table>
-
-      </div>
     </mat-sidenav>
 
     <mat-sidenav-content>
@@ -114,7 +79,7 @@
             <mat-divider [vertical]='true'> </mat-divider>
 
             <div class='file-manage action-icon'>
-              <mat-icon matTooltip="文件管理" (click)="sidenav.open()">folder</mat-icon>
+              <mat-icon matTooltip="文件管理" (click)="handleOpenFileManage()">folder</mat-icon>
             </div>
 
             <div class='exit action-icon'>
@@ -125,8 +90,8 @@
       </mat-card>
 
       <mat-card style='margin: 20px; height: calc(100% - 130px); background-color: #F7F8F9'>
-        <mat-card-content style='height: calc(100% - 50px);'>
-          <elements-iframe *ngIf="iframeURL" [src]="iframeURL" [origin]='"pam"'>
+        <mat-card-content style='height: 100%;'>
+          <elements-iframe #iFrame *ngIf="iframeURL" [src]="iframeURL" [origin]='"pam"'>
           </elements-iframe>
         </mat-card-content>
       </mat-card>
