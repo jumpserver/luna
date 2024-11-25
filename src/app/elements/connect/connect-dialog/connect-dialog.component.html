@@ -73,7 +73,7 @@
           type="submit"
         >
           {{"Connect"| translate}}
-          <span *ngIf="protocol && protocol.name === 'rdp'" class="online-num">
+          <span *ngIf="protocol && protocol.name === 'rdp' && viewAssetOnlineSessionInfo" class="online-num">
           ({{ 'Current online' | translate}}: {{ onlineNum === null ? '- ' : onlineNum }})
         </span>
         </button>
