@@ -25,6 +25,7 @@ export class ElementConnectDialogComponent implements OnInit {
   public accountSelected: Account = null;
   public connectOption: Object;
   public outputData: ConnectData = new ConnectData();
+  public viewAssetOnlineSessionInfo: boolean = true;
   public manualAuthInfo: AuthInfo = new AuthInfo();
   public connectMethod: ConnectMethod = new ConnectMethod('Null', '', 'null', 'null');
   public preConnectData: ConnectData = new ConnectData();
@@ -92,6 +93,7 @@ export class ElementConnectDialogComponent implements OnInit {
         this.connectMethod = connectMethods[0];
       }
     }
+    this.viewAssetOnlineSessionInfo = this._settingSvc.globalSetting.VIEW_ASSET_ONLINE_SESSION_INFO
   }
 
   onProtocolChange(protocol) {
@@ -100,6 +102,9 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   getOnlineNum() {
+    if (!this.viewAssetOnlineSessionInfo) {
+      return;
+    }
     if (this.protocol.name !== 'rdp') {
       return;
     }
