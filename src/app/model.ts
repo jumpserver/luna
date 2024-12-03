@@ -99,7 +99,7 @@ export class ConnectEvt {
 export class Nav {
   id: string;
   name: string;
-  children?: Array<Nav>;
+  children?: Array<Nav> | Function;
   hide?: boolean = false;
   click?: Function;
   href?: string;
@@ -266,6 +266,7 @@ export class GlobalSetting {
   CONNECTION_TOKEN_REUSABLE: boolean;
   CHAT_AI_ENABLED: boolean;
   VIEW_ASSET_ONLINE_SESSION_INFO: boolean;
+  LANGUAGES: any;
 }
 
 export class Setting {
