@@ -43,6 +43,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
   rangeHideClass = 'hideCursor';
   lastDuration: number = 0;
   interval: number;
+  initializedCommand: boolean = false;
 
   constructor(private _http: HttpService, private _translate: TranslateService) {}
 
@@ -59,24 +60,36 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
 
   initialize() {
     if (!this.replay || !this.replay.src) {
-      alert('Not found replay');
-      return;
+      return alert('Not found replay');
     }
+
     this.commands = [];
+
+
     const date = new Date(Date.parse(this.replay.date_start));
     this.startTime = this.toSafeLocalDateStr(date);
     this.startTimeStamp = Date.parse(this.replay.date_start);
     this.playerRef = document.getElementById('player');
     this.displayRef = document.getElementById('display');
     this.screenRef = document.getElementById('screen');
+
     const tunnel = new Guacamole.StaticHTTPTunnel(this.replay.src);
     this.recording = new Guacamole.SessionRecording(tunnel);
     this.recordingDisplay = this.recording.getDisplay();
     const recordingElement = this.recordingDisplay.getElement();
+
     recordingElement.style.margin = '0 auto';
+
     this.screenRef.appendChild(recordingElement);
+
     this.initRecording();
-    this.getCommands(this.page);
+
+    if (!this.initializedCommand) {
+      this.getCommands(this.page);
+
+      this.initializedCommand = true;
+    }
+
     this._translate.get('LeftInfo').subscribe((res: string) => {
       this.leftInfo = res;
     });
@@ -103,8 +116,8 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
 
     this.recording.onprogress = (millis) => {
       if (millis >= this.max) {
-      this.duration = formatTime(millis);
-      this.max = millis;
+        this.duration = formatTime(millis);
+        this.max = millis;
       }
       if (this.firstLoad) {
         this.recording.play();
@@ -228,7 +241,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
 
     this.recording.seek(this.percent, () => {
         this.playerRef.className = '';
-      this.setDisableStatusSiderElement(false);
+        this.setDisableStatusSiderElement(false);
       }
     );
 
@@ -269,13 +282,16 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     if (!this.startTimeStamp) {
       return;
     }
+
     this._http.getCommandsData(this.replay.id, page)
       .subscribe(
         data => {
           const results = data.results;
-          results.forEach(element => {
+
+          results.forEach((element: any) => {
             element.atime = formatTime(element.timestamp * 1000 - this.startTimeStamp);
           });
+
           this.commands = this.commands.concat(results);
         },
         err => {
