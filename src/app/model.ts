@@ -414,6 +414,7 @@ export class ConnectionToken {
   is_active: boolean;
   date_expired: Date;
   is_reusable: boolean;
+  face_token: string;
   from_ticket: {
     id: string;
   };

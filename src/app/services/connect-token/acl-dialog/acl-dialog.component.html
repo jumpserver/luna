@@ -21,6 +21,34 @@
       </mat-dialog-actions>
     </div>
 
+    <div *ngSwitchCase="'acl_face_verify'">
+      <mat-dialog-content>
+        <div>{{ 'Facial recognition is required. Do you want to proceed?' | translate }}</div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button (click)="onCancelFaceVerify()" mat-raised-button>{{ "Cancel" | translate }}</button>
+        <button (click)="onConfirmFaceVerify()" color="primary" mat-raised-button>{{ "Confirm" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
+    <div *ngSwitchCase="'no_face_feature'">
+      <mat-dialog-content>
+        <div class="error-message">No available facial features,go to <a href="/ui/#/profile/index">profile</a>page to bind your facial data</div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
+    <div *ngSwitchCase="'face_verify_capture'">
+      <iframe
+        *ngIf="faceVerifyUrl"
+        [src]="faceVerifyUrl"
+        allow="camera"
+        sandbox="allow-scripts allow-same-origin"
+        style="width: 100%; height: 540px;border: none;"></iframe>
+    </div>
+
     <div *ngSwitchCase="'ticket_review_pending'">
       <mat-dialog-content>
         <div>
@@ -41,7 +69,8 @@
           color="primary"
           mat-raised-button
           ngxClipboard
-        >{{ "Copy link" | translate }}</button>
+        >{{ "Copy link" | translate }}
+        </button>
       </mat-dialog-actions>
     </div>
 
@@ -74,8 +103,7 @@
 
     <div *ngSwitchCase="'other'">
       <mat-dialog-content>
-        <div class="error-message">{{ otherError }} </div>
-        >
+        <div class="error-message">{{ otherError }}</div>
       </mat-dialog-content>
       <mat-dialog-actions>
         <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
