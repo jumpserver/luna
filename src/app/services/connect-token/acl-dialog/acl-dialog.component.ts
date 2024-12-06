@@ -5,6 +5,8 @@ import {I18nService} from '@app/services/i18n';
 import {HttpService} from '@app/services/http';
 import {ToastrService} from 'ngx-toastr';
 import {HttpErrorResponse} from '@angular/common/http';
+import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
+
 
 @Component({
   selector: 'elements-acl-dialog',
@@ -24,10 +26,14 @@ export class ElementACLDialogComponent implements OnInit {
   public tokenID: string;
   private timerCheckTicket: number;
 
+  public faceVerifyUrl: SafeResourceUrl;
+
+
   constructor(public dialogRef: MatDialogRef<ElementACLDialogComponent>,
               private _i18n: I18nService,
               private _toastr: ToastrService,
               private _http: HttpService,
+              private sanitizer: DomSanitizer,
               @Inject(MAT_DIALOG_DATA) public data: any
   ) {
   }
@@ -65,6 +71,45 @@ export class ElementACLDialogComponent implements OnInit {
   onCancelReview() {
     this.closeDialog();
   }
+
+  onConfirmFaceVerify() {
+    const successCallback = (connToken: ConnectionToken) => {
+      if (connToken && connToken.face_token) {
+        this.faceVerifyUrl = this.sanitizer.bypassSecurityTrustResourceUrl('/facelive/capture?token=' + connToken.face_token);
+        this.code = 'face_verify_capture';
+
+        const timer = setInterval(() => {
+          this._http.getFaceVerifyState(connToken.face_token).subscribe(async (data) => {
+            if (data.is_finished) {
+              clearInterval(timer);
+              if (!data.success) {
+                this.code = 'other';
+                this.otherError = data.error_message;
+              } else {
+                const msg = await this._i18n.t('Face verify success');
+                this._toastr.success(msg);
+                this.dialogRef.close(connToken);
+              }
+            }
+          });
+        }, 1000);
+      }
+    };
+    const errorCallback = (error) => {
+      if (error.error.code === 'no_face_feature') {
+        this.code = error.error.code;
+      } else {
+        this.code = 'other';
+        this.otherError = error.error.detail;
+      }
+    };
+    this._http.createConnectToken(this.asset, this.connectInfo, false, true).subscribe(successCallback, errorCallback);
+  }
+
+  onCancelFaceVerify() {
+    this.closeDialog();
+  }
+
 
   onConfirmReview() {
     const successCallback = (connToken: ConnectionToken) => {
