@@ -259,7 +259,7 @@ export class HttpService {
   }
 
   getFaceVerifyState(token: string) {
-    const url = `/api/v1/authentication/mfa/face/context/?token=${token}`;
+    const url = `/api/v1/authentication/face/context/?token=${token}`;
     return this.get(url);
   }
 
