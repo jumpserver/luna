@@ -21,6 +21,16 @@
       </mat-dialog-actions>
     </div>
 
+    <div *ngSwitchCase="'acl_face_online'">
+      <mat-dialog-content>
+        <div>{{ '需要人脸识别且监控，是否继续？' | translate }}</div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button (click)="onCancelFaceVerify()" mat-raised-button>{{ "Cancel" | translate }}</button>
+        <button (click)="onConfirmFaceOnline()" color="primary" mat-raised-button>{{ "Confirm" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
     <div *ngSwitchCase="'acl_face_verify'">
       <mat-dialog-content>
         <div>{{ 'Facial recognition is required. Do you want to proceed?' | translate }}</div>

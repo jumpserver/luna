@@ -64,13 +64,13 @@
     "changeOrigin": true
   },
   "/facelive": {
-    "target": "http://localhost:9999",
+    "target": "http://localhost:5173",
     "secure": false,
     "ws": true,
     "changeOrigin": true
   },
   "/kael": {
-    "target": "http://localhost:5173",
+    "target": "http://localhost:5172",
     "secure": false,
     "ws": true,
     "changeOrigin": true

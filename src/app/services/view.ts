@@ -1,6 +1,7 @@
 import {Injectable} from '@angular/core';
 import {View} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
+import {FaceService} from '@app/services/face';
 
 @Injectable()
 export class ViewService {
@@ -10,11 +11,18 @@ export class ViewService {
   viewIds: Array<string> = [];
   public currentView$ = new BehaviorSubject<Object>({});
 
+  constructor(private faceService: FaceService) {
+  }
+
   addView(view: View) {
     this.num += 1;
     view.id = 'View_' + this.num;
     this.viewList.push(view);
     this.viewIds.push(view.id);
+
+    if (view.connectToken.face_monitor_token) {
+      this.faceService.addMonitoringTab(view.id);
+    }
   }
 
   activeView(view: View) {
@@ -48,6 +56,9 @@ export class ViewService {
     if (this.viewList.length === 0) {
       this.setCurrentView({});
     }
+    if (view.connectToken.face_monitor_token) {
+      this.faceService.removeMonitoringTab(view.id);
+    }
   }
 
   addSubViewToCurrentView(view: View) {
@@ -65,7 +76,7 @@ export class ViewService {
   }
 
   setCurrentViewTitle(view, index, status) {
-    const { name } = this.currentView;
+    const {name} = this.currentView;
     switch (status) {
       case 'concat':
         this.currentView.name = name + '|' + view.name;

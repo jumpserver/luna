@@ -263,9 +263,11 @@ export class HttpService {
     return this.get(url);
   }
 
-  createConnectToken(asset: Asset, connectData: ConnectData, createTicket = false, face_verify = false) {
+  createConnectToken(asset: Asset, connectData: ConnectData, createTicket = false, face_verify = false, face_monitor_token?: string) {
+
     let params = createTicket ? '?create_ticket=1' : '';
     params += face_verify ? '?face_verify=1' : '';
+    params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/connection-token/' + params;
     const {account, protocol, manualAuthInfo, connectMethod} = connectData;
     const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
