@@ -1,0 +1,50 @@
+.box {
+  position: absolute;
+  width: 400px;
+  height: 460px;
+  bottom: 0;
+  right: 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 99999;
+}
+
+.box.minimized {
+  height: 40px;
+}
+
+.box-header {
+  height: 40px;
+  background-color: #3a3433;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+}
+
+.box-title {
+  font-weight: bold;
+}
+
+.box-controls button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 14px;
+  margin-left: 5px;
+  cursor: pointer;
+}
+
+.box-controls button:hover {
+  text-decoration: underline;
+}
+
+.box-content {
+  flex: 1;
+  padding: 8px;
+  background-color: #2f2a2a;
+  overflow: auto;
+}

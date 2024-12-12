@@ -9,6 +9,7 @@ import {OrganizationService} from './organization';
 import {I18nService} from './i18n';
 import {DialogService} from './dialog/dialog.service';
 import {ConnectTokenService} from './connect-token/';
+import {FaceService} from '@app/services/face';
 
 export {LogService, LocalStorageService, UUIDService} from './share';
 
@@ -47,5 +48,6 @@ export const AllServices = [
   I18nService,
   DialogService,
   ConnectTokenService,
+  FaceService,
 ];
 
