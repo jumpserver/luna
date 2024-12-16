@@ -287,8 +287,10 @@ export class HttpService {
     );
   }
 
-  exchangeConnectToken(tokenID: string, createTicket = false) {
-    const params = createTicket ? '?create_ticket=1' : '';
+  exchangeConnectToken(tokenID: string, createTicket = false, face_verify = false, face_monitor_token?: string) {
+    let params = createTicket ? '?create_ticket=1' : '';
+    params += face_verify ? '?face_verify=1' : '';
+    params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/connection-token/exchange/' + params;
     const data = {'id': tokenID};
     return this.post<ConnectionToken>(url, data);
