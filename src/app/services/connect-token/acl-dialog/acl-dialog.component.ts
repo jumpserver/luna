@@ -144,7 +144,12 @@ export class ElementACLDialogComponent implements OnInit {
         this.otherError = error.error.detail;
       }
     };
-    this._http.createConnectToken(this.asset, this.connectInfo, false, true).subscribe(successCallback, errorCallback);
+
+    if (this.tokenAction === 'exchange') {
+      this._http.exchangeConnectToken(this.tokenID, false, true).subscribe(successCallback, errorCallback);
+    } else {
+      this._http.createConnectToken(this.asset, this.connectInfo, false, true).subscribe(successCallback, errorCallback);
+    }
   }
 
   onCancelFaceVerify() {
