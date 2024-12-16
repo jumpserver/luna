@@ -200,7 +200,7 @@ export class ElementNavComponent implements OnInit {
   }
 
   getLanguageOptions() {
-    let langOptions = []
+    const langOptions = [];
     this._settingSvc.afterInited().then((state) => {
       const languages = this._settingSvc.globalSetting.LANGUAGES;
       for (const langObj of languages) {
@@ -208,13 +208,13 @@ export class ElementNavComponent implements OnInit {
           id: langObj.code,
           click: () => {
             this._i18n.use(langObj.code);
+            window.location.reload();
           },
           name: langObj.name
-        })
+        });
       }
-    })
-    return langOptions
-
+    });
+    return langOptions;
   }
 
   onJumpUi() {
