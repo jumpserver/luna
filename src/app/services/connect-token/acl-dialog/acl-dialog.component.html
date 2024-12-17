@@ -32,7 +32,7 @@
 
     <div *ngSwitchCase="'acl_face_online'">
       <mat-dialog-content>
-        <div>{{ '需要人脸识别且监控，是否继续？' | translate }}</div>
+        <div>{{ 'Face online required' | translate }}</div>
       </mat-dialog-content>
       <mat-dialog-actions>
         <button (click)="onCancelFaceVerify()" mat-raised-button>{{ "Cancel" | translate }}</button>
@@ -42,7 +42,7 @@
 
     <div *ngSwitchCase="'acl_face_verify'">
       <mat-dialog-content>
-        <div>{{ 'Facial recognition is required. Do you want to proceed?' | translate }}</div>
+        <div>{{ 'Face verify required' | translate }}</div>
       </mat-dialog-content>
       <mat-dialog-actions>
         <button (click)="onCancelFaceVerify()" mat-raised-button>{{ "Cancel" | translate }}</button>
@@ -52,8 +52,9 @@
 
     <div *ngSwitchCase="'no_face_feature'">
       <mat-dialog-content>
-        <div class="error-message">No available facial features,go to <a href="/ui/#/profile/index">profile</a>page to
-          bind your facial data
+        <div class="error-message">
+          {{ 'No facial features' |translate }}
+          <a href="/ui/#/profile/index">{{ 'Go to profile' | translate }}</a>
         </div>
       </mat-dialog-content>
       <mat-dialog-actions>
