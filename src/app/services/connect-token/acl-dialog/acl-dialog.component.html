@@ -21,6 +21,15 @@
       </mat-dialog-actions>
     </div>
 
+    <div *ngSwitchCase="'acl_face_online_not_supported'">
+      <mat-dialog-content>
+        <div class="error-message">{{ 'ACL action "Face Online" not supported for this asset.' |translate }}</div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
     <div *ngSwitchCase="'acl_face_online'">
       <mat-dialog-content>
         <div>{{ '需要人脸识别且监控，是否继续？' | translate }}</div>
@@ -43,7 +52,9 @@
 
     <div *ngSwitchCase="'no_face_feature'">
       <mat-dialog-content>
-        <div class="error-message">No available facial features,go to <a href="/ui/#/profile/index">profile</a>page to bind your facial data</div>
+        <div class="error-message">No available facial features,go to <a href="/ui/#/profile/index">profile</a>page to
+          bind your facial data
+        </div>
       </mat-dialog-content>
       <mat-dialog-actions>
         <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
@@ -104,7 +115,7 @@
 
     <div *ngSwitchCase="'perm_account_invalid'">
       <mat-dialog-content>
-        <div class="error-message 11">{{ 'Account not found' | translate }}</div>
+        <div class="error-message">{{ 'Account not found' | translate }}</div>
       </mat-dialog-content>
       <mat-dialog-actions>
         <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
