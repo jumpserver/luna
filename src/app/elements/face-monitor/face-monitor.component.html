@@ -2,8 +2,13 @@
   <div class="box-header">
     <span class="box-title" style="color: red" *ngIf="monitoringTabCount">●&nbsp;[{{ monitoringTabCount }}]个会话正在被监控中</span>
     <div class="box-controls">
-      <button (click)="minimizeBox()">_</button>
-      <button (click)="closeBox()">×</button>
+      <button (click)="minimizeBox()">
+        <i *ngIf="!isMinimized" class="fa fa-window-minimize"></i>
+        <i *ngIf="isMinimized" class="fa fa-window-maximize"></i>
+      </button>
+      <button (click)="closeBox()">
+        <i class="fa fa-window-close"></i>
+      </button>
     </div>
   </div>
   <div class="box-content" [hidden]="isMinimized">
