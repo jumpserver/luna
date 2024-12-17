@@ -5,6 +5,7 @@ import {MatDialog} from '@angular/material';
 import {Subject} from 'rxjs';
 import {debounceTime} from 'rxjs/operators';
 import {environment} from '@src/environments/environment';
+import {FaceService} from '@app/services/face';
 
 @Component({
   selector: 'elements-iframe',
@@ -32,6 +33,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private _http: HttpService,
     private _dialog: MatDialog,
     public viewSrv: ViewService,
+    private faceService: FaceService
   ) {
   }
 
@@ -67,9 +69,15 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           break;
         case 'CLOSE':
           this.view.connected = false;
+          if (this.view.connectToken.face_monitor_token) {
+            this.faceService.removeMonitoringTab(this.view.id);
+          }
           break;
         case 'CONNECTED':
           this.view.connected = true;
+          if (this.view.connectToken.face_monitor_token) {
+            this.faceService.addMonitoringTab(this.view.id);
+          }
           break;
         case 'CLICK':
           document.body.click();
