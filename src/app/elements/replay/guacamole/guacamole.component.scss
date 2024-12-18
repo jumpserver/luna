@@ -294,83 +294,78 @@ input[type="range"]:focus::-ms-fill-upper {
       min-height: 35px;
       padding: 8px;
       flex-wrap: wrap;
-      gap: 8px;
-      background: rgba(0, 0, 0, 0.8);
 
-
-      button.btn {
-        min-width: 40px;
-        height: 40px;
-        padding: 0;
-        border-radius: 4px;
-        background: rgba(255, 255, 255, 0.1);
-
-        i.fa {
-          font-size: 16px;
-          color: #fff;
-        }
-
-        &:active {
-          background: rgba(255, 255, 255, 0.2);
-        }
-      }
-
+      // 进度条容器
       span[class*="range"] {
         order: -1;
         width: 100%;
-        padding: 8px 0;
+        padding: 4px 0;
       }
 
-      #position, #duration {
-        color: #fff;
-        font-size: 12px;
+      // 基础控制按钮和时间信息保持在同一行
+      #play-pause,
+      #position,
+      #duration {
+        margin: 4px;
       }
 
-      #user, #asset, #system_user, #date_start {
+      // 资产信息换行显示
+      #user,
+      #asset,
+      #system_user,
+      #date_start,
+      #download {
         width: 100%;
         padding: 4px 0 !important;
-        color: rgba(255, 255, 255, 0.7);
-        font-size: 12px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
-
-      #download {
-        padding: 4px 0 !important;
-
-        a {
-          color: #5AF;
-          text-decoration: none;
-        }
-      }
     }
 
     #display {
-      height: calc(100vh - 180px);
+      height: auto;
+      min-height: 200px;
+      padding: 0;
 
+      // 隐藏左侧命令列表
       as-split-area[order="0"] {
         display: none;
       }
 
+      // 视频区域自适应
       as-split-area[order="1"] {
         width: 100% !important;
         max-width: 100% !important;
         min-width: 100% !important;
       }
 
-      .seek-notification {
-        button#cancel-seek {
-          padding: 8px 16px;
-          border-radius: 4px;
-          background: rgba(255, 255, 255, 0.1);
-          color: #fff;
-          border: none;
-          font-size: 14px;
+      #screen {
+        width: 100%;
+        height: calc(100vh - 200px); // 减去控制栏和其他元素的高度
+        display: flex;
+        align-items: center;
+        justify-content: center;
 
-          &:active {
-            background: rgba(255, 255, 255, 0.2);
-          }
+        // 确保视频内容居中显示
+        > * {
+          max-width: 100%;
+          max-height: 100%;
+          margin: auto;
+        }
+      }
+
+      // 优化 seeking 提示
+      .seek-notification {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        p {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          align-items: center;
         }
       }
     }
