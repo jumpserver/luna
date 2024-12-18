@@ -101,6 +101,10 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       .subscribe(() => {
         this.recordingDisplay.scale(this.getPropScale());
       });
+
+    if (this.isMobile()) {
+      this.initTouchEvents();
+    }
   }
 
   initRecording() {
@@ -308,5 +312,59 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     const time = (item.timestamp - 10) * 1000 - this.startTimeStamp;
     this.percent = time <= 0 ? 0 : time;
     this.runFrom();
+  }
+
+  private isMobile(): boolean {
+    return window.innerWidth < 768;
+  }
+
+  private initTouchEvents() {
+    const screen = document.getElementById('screen');
+    if (!screen) return;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+
+    screen.addEventListener('touchstart', (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+    });
+
+    screen.addEventListener('touchmove', (e: TouchEvent) => {
+      // 防止页面滚动
+      if (Math.abs(e.touches[0].clientY - touchStartY) > 10) {
+        e.preventDefault();
+      }
+    });
+
+    screen.addEventListener('touchend', (e: TouchEvent) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const touchEndTime = Date.now();
+
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+      const deltaTime = touchEndTime - touchStartTime;
+
+      // 点击判定
+      if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10 && deltaTime < 200) {
+        this.toggle();
+      }
+
+      // 左右滑动判定
+      if (Math.abs(deltaX) > 50 && Math.abs(deltaY) < 30) {
+        const seekTime = 5000; // 5秒
+        if (deltaX > 0) {
+          // 向右滑动，前进
+          this.percent = Math.min(this.percent + seekTime, this.max);
+        } else {
+          // 向左滑动，后退
+          this.percent = Math.max(this.percent - seekTime, 0);
+        }
+        this.runFrom();
+      }
+    });
   }
 }

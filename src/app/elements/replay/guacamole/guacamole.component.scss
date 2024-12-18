@@ -286,3 +286,93 @@ input[type="range"]:focus::-ms-fill-upper {
     background: #5AF;
   }
 }
+
+@media screen and (max-width: 768px) {
+  #player {
+    .controls {
+      height: auto;
+      min-height: 35px;
+      padding: 8px;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.8);
+
+
+      button.btn {
+        min-width: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+
+        i.fa {
+          font-size: 16px;
+          color: #fff;
+        }
+
+        &:active {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      }
+
+      span[class*="range"] {
+        order: -1;
+        width: 100%;
+        padding: 8px 0;
+      }
+
+      #position, #duration {
+        color: #fff;
+        font-size: 12px;
+      }
+
+      #user, #asset, #system_user, #date_start {
+        width: 100%;
+        padding: 4px 0 !important;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      #download {
+        padding: 4px 0 !important;
+
+        a {
+          color: #5AF;
+          text-decoration: none;
+        }
+      }
+    }
+
+    #display {
+      height: calc(100vh - 180px);
+
+      as-split-area[order="0"] {
+        display: none;
+      }
+
+      as-split-area[order="1"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+      }
+
+      .seek-notification {
+        button#cancel-seek {
+          padding: 8px 16px;
+          border-radius: 4px;
+          background: rgba(255, 255, 255, 0.1);
+          color: #fff;
+          border: none;
+          font-size: 14px;
+
+          &:active {
+            background: rgba(255, 255, 255, 0.2);
+          }
+        }
+      }
+    }
+  }
+}
