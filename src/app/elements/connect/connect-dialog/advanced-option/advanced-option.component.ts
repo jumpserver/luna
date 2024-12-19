@@ -120,6 +120,20 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
           }
           return true;
         }
+      },
+      {
+        type: 'select',
+        field: 'rdp_connection_speed',
+        label: 'RDP connection speed',
+        hidden: () => {
+          return this.connectMethod && this.connectMethod.component !== 'razor';
+        },
+        value: 'auto',
+        options: [
+          {label: 'Auto', value: 'auto'},
+          {label: 'Low Speed Broadband (256 Kbps - 2 Mbps)', value: 'low_speed_broadband'},
+          {label: 'High-speed broadband (2 Mbps – 10 Mbps )', value: 'high_speed_broadband'},
+        ]
       }
     ];
   }

@@ -5,6 +5,9 @@ import {I18nService} from '@app/services/i18n';
 import {HttpService} from '@app/services/http';
 import {ToastrService} from 'ngx-toastr';
 import {HttpErrorResponse} from '@angular/common/http';
+import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
+import {FaceService} from '@app/services/face';
+
 
 @Component({
   selector: 'elements-acl-dialog',
@@ -24,10 +27,15 @@ export class ElementACLDialogComponent implements OnInit {
   public tokenID: string;
   private timerCheckTicket: number;
 
+  public faceVerifyUrl: SafeResourceUrl;
+
+
   constructor(public dialogRef: MatDialogRef<ElementACLDialogComponent>,
               private _i18n: I18nService,
               private _toastr: ToastrService,
               private _http: HttpService,
+              private sanitizer: DomSanitizer,
+              private faceService: FaceService,
               @Inject(MAT_DIALOG_DATA) public data: any
   ) {
   }
@@ -65,6 +73,94 @@ export class ElementACLDialogComponent implements OnInit {
   onCancelReview() {
     this.closeDialog();
   }
+
+  onConfirmFaceOnline() {
+
+    const faceMonitorToken = this.faceService.getToken();
+
+    const successCallback = (connToken: ConnectionToken) => {
+      if (connToken && connToken.face_token) {
+        this.faceVerifyUrl = this.sanitizer.bypassSecurityTrustResourceUrl('/facelive/capture?token=' + connToken.face_token);
+        this.code = 'face_verify_capture';
+
+        const timer = setInterval(() => {
+          this._http.getFaceVerifyState(connToken.face_token).subscribe(async (data) => {
+            if (data.is_finished) {
+              clearInterval(timer);
+              if (!data.success) {
+                this.code = 'other';
+                this.otherError = data.error_message;
+              } else {
+                const msg = await this._i18n.t('Face verify success');
+                this._toastr.success(msg);
+                this.dialogRef.close(connToken);
+                this.faceService.openFaceMonitor();
+              }
+            }
+          });
+        }, 1000);
+      }
+    };
+    const errorCallback = (error) => {
+      if (error.error.code === 'no_face_feature') {
+        this.code = error.error.code;
+      } else {
+        this.code = 'other';
+        this.otherError = error.error.detail;
+      }
+    };
+
+
+    if (this.tokenAction === 'exchange') {
+      this._http.exchangeConnectToken(this.tokenID, false, true, faceMonitorToken).subscribe(successCallback, errorCallback);
+    } else {
+      this._http.createConnectToken(this.asset, this.connectInfo, false, true, faceMonitorToken).subscribe(successCallback, errorCallback);
+    }
+  }
+
+  onConfirmFaceVerify() {
+    const successCallback = (connToken: ConnectionToken) => {
+      if (connToken && connToken.face_token) {
+        this.faceVerifyUrl = this.sanitizer.bypassSecurityTrustResourceUrl('/facelive/capture?token=' + connToken.face_token);
+        this.code = 'face_verify_capture';
+
+        const timer = setInterval(() => {
+          this._http.getFaceVerifyState(connToken.face_token).subscribe(async (data) => {
+            if (data.is_finished) {
+              clearInterval(timer);
+              if (!data.success) {
+                this.code = 'other';
+                this.otherError = data.error_message;
+              } else {
+                const msg = await this._i18n.t('Face verify success');
+                this._toastr.success(msg);
+                this.dialogRef.close(connToken);
+              }
+            }
+          });
+        }, 1000);
+      }
+    };
+    const errorCallback = (error) => {
+      if (error.error.code === 'no_face_feature') {
+        this.code = error.error.code;
+      } else {
+        this.code = 'other';
+        this.otherError = error.error.detail;
+      }
+    };
+
+    if (this.tokenAction === 'exchange') {
+      this._http.exchangeConnectToken(this.tokenID, false, true).subscribe(successCallback, errorCallback);
+    } else {
+      this._http.createConnectToken(this.asset, this.connectInfo, false, true).subscribe(successCallback, errorCallback);
+    }
+  }
+
+  onCancelFaceVerify() {
+    this.closeDialog();
+  }
+
 
   onConfirmReview() {
     const successCallback = (connToken: ConnectionToken) => {
@@ -105,6 +201,8 @@ export class ElementACLDialogComponent implements OnInit {
     const checkMethod = this.connectionToken.from_ticket_info.check_ticket_api.method.toLowerCase();
     const checkURL = this.connectionToken.from_ticket_info.check_ticket_api.url;
     const ticketAssignees = this.connectionToken.from_ticket_info.assignees.join(', ');
+
+    // @ts-ignore
     this.timerCheckTicket = setInterval(() => {
       this._http[checkMethod](checkURL).subscribe(
         async ticket => {

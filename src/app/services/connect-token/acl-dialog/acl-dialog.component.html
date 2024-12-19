@@ -21,6 +21,56 @@
       </mat-dialog-actions>
     </div>
 
+    <div *ngSwitchCase="'acl_face_online_not_supported'">
+      <mat-dialog-content>
+        <div class="error-message">{{ 'ACL action "Face Online" not supported for this asset.' |translate }}</div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
+    <div *ngSwitchCase="'acl_face_online'">
+      <mat-dialog-content>
+        <div>{{ 'Face online required' | translate }}</div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button (click)="onCancelFaceVerify()" mat-raised-button>{{ "Cancel" | translate }}</button>
+        <button (click)="onConfirmFaceOnline()" color="primary" mat-raised-button>{{ "Confirm" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
+    <div *ngSwitchCase="'acl_face_verify'">
+      <mat-dialog-content>
+        <div>{{ 'Face verify required' | translate }}</div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button (click)="onCancelFaceVerify()" mat-raised-button>{{ "Cancel" | translate }}</button>
+        <button (click)="onConfirmFaceVerify()" color="primary" mat-raised-button>{{ "Confirm" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
+    <div *ngSwitchCase="'no_face_feature'">
+      <mat-dialog-content>
+        <div class="error-message">
+          {{ 'No facial features' |translate }}
+          <a href="/ui/#/profile/index">{{ 'Go to profile' | translate }}</a>
+        </div>
+      </mat-dialog-content>
+      <mat-dialog-actions>
+        <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
+      </mat-dialog-actions>
+    </div>
+
+    <div *ngSwitchCase="'face_verify_capture'">
+      <iframe
+        *ngIf="faceVerifyUrl"
+        [src]="faceVerifyUrl"
+        allow="camera"
+        sandbox="allow-scripts allow-same-origin"
+        style="width: 100%; height: 540px;border: none;"></iframe>
+    </div>
+
     <div *ngSwitchCase="'ticket_review_pending'">
       <mat-dialog-content>
         <div>
@@ -41,7 +91,8 @@
           color="primary"
           mat-raised-button
           ngxClipboard
-        >{{ "Copy link" | translate }}</button>
+        >{{ "Copy link" | translate }}
+        </button>
       </mat-dialog-actions>
     </div>
 
@@ -65,7 +116,7 @@
 
     <div *ngSwitchCase="'perm_account_invalid'">
       <mat-dialog-content>
-        <div class="error-message 11">{{ 'Account not found' | translate }}</div>
+        <div class="error-message">{{ 'Account not found' | translate }}</div>
       </mat-dialog-content>
       <mat-dialog-actions>
         <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
@@ -74,8 +125,7 @@
 
     <div *ngSwitchCase="'other'">
       <mat-dialog-content>
-        <div class="error-message">{{ otherError }} </div>
-        >
+        <div class="error-message">{{ otherError }}</div>
       </mat-dialog-content>
       <mat-dialog-actions>
         <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>

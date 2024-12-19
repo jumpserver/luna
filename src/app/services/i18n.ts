@@ -6,7 +6,6 @@ import {CookieService} from 'ngx-cookie-service';
 @Injectable()
 export class I18nService {
   LANG_COOKIE_NAME = 'django_language';
-  SUPPORTED_LANG_CODES = ['en', 'zh', 'ja', 'zh-hant'];
 
   constructor(
     private _translate: TranslateService,
@@ -18,33 +17,14 @@ export class I18nService {
   }
 
   getLangCode() {
-    let langCode = this._cookie.get(this.LANG_COOKIE_NAME);
-
-    if (!langCode) {
-      langCode = navigator.language.toLowerCase();
-    }
-
-    if (['zh', 'zh-cn'].includes(langCode)) {
-      return 'zh-hans';
-    }  else if (langCode.indexOf('zh_hant') > -1) {
-      // zh-hant zh-tw zh-hk
-      return 'zh_hant';
-    } else if (langCode.indexOf('zh-hans')  > -1) {
-      return 'zh';
-    } else if (langCode.indexOf('ja') > -1) {
-      return 'ja';
-    } else {
-      return 'en';
-    }
+    return this._cookie.get(this.LANG_COOKIE_NAME) || navigator.language.toLowerCase();
   }
 
   public initialLang() {
     // 语言初始化(若未设置语言, 则取浏览器语言)
-    const currentLanguage = this.getLangCode();
-    this._translate.setDefaultLang('en');
-    this._translate.use(currentLanguage);
-
-    this._logger.debug('Lang is: ', currentLanguage);
+    const lang = this.getLangCode();
+    this._translate.use(lang);
+    this._logger.debug('Lang is: ', lang);
     // 记录当前设置的语言
   }
 
@@ -61,20 +41,6 @@ export class I18nService {
   }
 
   use(lang) {
-    let useLang;
-
-    this._translate.use(lang);
-
-    if (lang.indexOf('en') > -1) {
-      useLang = 'en';
-    } else if (lang.indexOf('ja') > -1) {
-      useLang = 'ja';
-    } else if (lang.indexOf('zh_hant') > -1) {
-      useLang = 'zh_hant';
-    } else {
-      useLang = 'zh-hans';
-    }
-
-    this._cookie.set('django_language', useLang, 365, '/');
+    this._cookie.set(this.LANG_COOKIE_NAME, lang, 365, '/');
   }
 }

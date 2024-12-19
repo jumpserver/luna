@@ -286,3 +286,88 @@ input[type="range"]:focus::-ms-fill-upper {
     background: #5AF;
   }
 }
+
+@media screen and (max-width: 768px) {
+  #player {
+    .controls {
+      height: auto;
+      min-height: 35px;
+      padding: 8px;
+      flex-wrap: wrap;
+
+      // 进度条容器
+      span[class*="range"] {
+        order: -1;
+        width: 100%;
+        padding: 4px 0;
+      }
+
+      // 基础控制按钮和时间信息保持在同一行
+      #play-pause,
+      #position,
+      #duration {
+        margin: 4px;
+      }
+
+      // 资产信息换行显示
+      #user,
+      #asset,
+      #system_user,
+      #date_start,
+      #download {
+        width: 100%;
+        padding: 4px 0 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    #display {
+      height: auto;
+      min-height: 200px;
+      padding: 0;
+
+      // 隐藏左侧命令列表
+      as-split-area[order="0"] {
+        display: none;
+      }
+
+      // 视频区域自适应
+      as-split-area[order="1"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+      }
+
+      #screen {
+        width: 100%;
+        height: calc(100vh - 200px); // 减去控制栏和其他元素的高度
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        // 确保视频内容居中显示
+        > * {
+          max-width: 100%;
+          max-height: 100%;
+          margin: auto;
+        }
+      }
+
+      // 优化 seeking 提示
+      .seek-notification {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        p {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          align-items: center;
+        }
+      }
+    }
+  }
+}
