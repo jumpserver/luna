@@ -79,8 +79,6 @@
         }
       }
 
-
-
       .drawer-table {
         width: 100%;
         height: calc(100% - 114px);
@@ -123,14 +121,10 @@
       }
     }
 
-
     ::ng-deep .mat-drawer-content {
       overflow: hidden;
     }
   }
-
-
-
 
   ::ng-deep .mat-card-header-text {
     display: flex;
@@ -149,7 +143,7 @@
   .mat-divider {
     height: 100%;
     border-right-width: 2px;
-    border-right-color: #DCDDDE;
+    border-right-color: #dcddde;
   }
 
   .info-section {
@@ -183,9 +177,7 @@
         align-items: stretch;
         margin-left: 5px;
       }
-
     }
-
   }
 
   .action-section {
@@ -194,60 +186,79 @@
     justify-content: flex-end;
     align-items: center;
     height: 100%;
-
-    .time-part {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 150px;
-      font-size: 16px;
-
-      .active-state {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background-color: #cccccc;
-        transition: background-color 0.3s;
-
-        &.active {
-          background-color: #ff6666;
-        }
-      }
-
-      .desc {
-        color: #A2A8AE;
-        margin-left: 10px;
-      }
-    }
+    padding: 0 20px;
 
     .mat-divider {
-      height:  40%;
-      border-right-width: 2px;
-      border-right-color: #DCDDDE;
+      height: 40%;
+      margin: 0 20px;
     }
 
-    .action-icon {
+    .actions {
       display: flex;
       align-items: center;
-      height: 100%;
-      cursor: pointer;
-      transition: all 0.3s ease-in-out;
+      gap: 20px;
 
-      &:hover {
-        color: #1ab394;
+      .action-icon {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        cursor: pointer;
+        transition: all 0.3s ease-in-out;
+        padding: 8px;
+
+        &:hover {
+          color: #1ab394;
+        }
+
+        .mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
       }
     }
-
-    .file-manage {
-      margin-left: 30px;
-      margin-right: 10px;
-    }
-
-    .exit {
-      margin-left: 10px;
-      margin-right: 20px;
-    }
-
   }
 }
 
+.timer-container {
+  .timer {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 6px 12px;
+    border-radius: 100px;
+    color: white;
+    font-family: monospace;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+    span {
+      margin-left: 4px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #dc3545;
+      margin-right: 6px;
+      transition: opacity 0.3s ease;
+
+      &.active {
+        animation: blink 1s infinite;
+      }
+    }
+  }
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}

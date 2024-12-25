@@ -279,6 +279,24 @@ export class HttpService {
     );
   }
 
+  // pam 直连的接口
+  createDirectiveConnectToken(connectData: any, method: string) {
+
+    const url = '/api/v1/authentication/connection-token/';
+    const data = {
+      asset: connectData.asset,
+      account: connectData.account,
+      protocol: connectData.protocol,
+      input_username: connectData.input_username,
+      input_secret: connectData.input_secret,
+      connect_method: method,
+    };
+
+    return this.post<ConnectionToken>(url, data).pipe(
+      catchError(this.handleConnectMethodExpiredError.bind(this))
+    );
+  }
+
   adminConnectToken (asset: Asset, connectData: ConnectData, createTicket = false) {
     const params = createTicket ? '?create_ticket=1' : '';
 

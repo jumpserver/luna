@@ -1,0 +1,15 @@
+<div class="pam-gui">
+  <div class="timer-container">
+    <div class="timer">
+      <div [class.active]="isActive" class="status-dot"></div>
+      <span>{{ totalConnectTime }}</span>
+    </div>
+  </div>
+
+  <elements-iframe
+    #iFrame
+    *ngIf="iframeURL"
+    [src]="iframeURL"
+    [origin]="'pam'"
+  ></elements-iframe>
+</div>
