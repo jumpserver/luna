@@ -1,12 +1,27 @@
-import {Component, ElementRef, EventEmitter, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
-import {MatSidenav} from '@angular/material/sidenav';
-import {FormControl} from '@angular/forms';
-import {EMPTY, Observable} from 'rxjs';
-import {ICustomFile} from 'file-input-accessor';
-import {AppService, ConnectTokenService, DialogService, HttpService, I18nService, LogService} from '@app/services';
-import {ActivatedRoute} from '@angular/router';
-import {Account, Asset, ConnectData, ConnectionToken, View} from '@app/model';
-import {MatDialog} from '@angular/material/dialog';
+import {
+  Component,
+  ElementRef,
+  EventEmitter,
+  OnDestroy,
+  OnInit,
+  Output,
+  ViewChild,
+} from "@angular/core";
+import { MatSidenav } from "@angular/material/sidenav";
+import { FormControl } from "@angular/forms";
+import { EMPTY, Observable } from "rxjs";
+import { ICustomFile } from "file-input-accessor";
+import {
+  AppService,
+  ConnectTokenService,
+  DialogService,
+  HttpService,
+  I18nService,
+  LogService,
+} from "@app/services";
+import { ActivatedRoute } from "@angular/router";
+import { Account, Asset, ConnectData, ConnectionToken, View } from "@app/model";
+import { MatDialog } from "@angular/material/dialog";
 
 export interface PeriodicElement {
   name: string;
@@ -16,15 +31,12 @@ export interface PeriodicElement {
   action: object;
 }
 
-
 @Component({
-  selector: 'pages-pam',
-  templateUrl: './pam.component.html',
-  styleUrls: ['./pam.component.scss'],
-
+  selector: "pages-pam-terminal",
+  templateUrl: "./terminal.component.html",
+  styleUrls: ["./terminal.component.scss"],
 })
-export class PagePamComponent implements OnInit, OnDestroy {
-
+export class PagePamTerminalComponent implements OnInit, OnDestroy {
   constructor(
     private _http: HttpService,
     private _i18n: I18nService,
@@ -33,20 +45,21 @@ export class PagePamComponent implements OnInit, OnDestroy {
     private _logger: LogService,
     private route: ActivatedRoute,
     private _dialogAlert: DialogService,
-    private _connectTokenSvc: ConnectTokenService,
-  ) {}
-  @ViewChild('sidenav', {static: false}) sidenav: MatSidenav;
-  @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
+    private _connectTokenSvc: ConnectTokenService
+  ) {
+    this.checkPageVisibility();
+  }
+  @ViewChild("sidenav", { static: false }) sidenav: MatSidenav;
+  @ViewChild("iFrame", { static: false }) iframeRef: ElementRef;
   @Output() onNewView: EventEmitter<View> = new EventEmitter<View>();
 
-  public isActive: boolean = false;
+  public isActive: boolean = true;
   public iframeWindow: Window;
-  public connectType: string = 'SSH';
-  public sid: string = '';
+  public connectType: string = "SSH";
+  public sid: string = "";
 
   baseUrl: string;
   iframeURL: string;
-
 
   private pausedElapsedTime: number = 0;
   private isTimerPaused: boolean = false;
@@ -59,7 +72,13 @@ export class PagePamComponent implements OnInit, OnDestroy {
   fileControl = new FormControl();
   manualChangesFiles: ICustomFile[] = [];
 
-  displayedColumns: string[] = ['name', 'size', 'modification-time', 'attributes', 'action'];
+  displayedColumns: string[] = [
+    "name",
+    "size",
+    "modification-time",
+    "attributes",
+    "action",
+  ];
 
   async ngOnInit(): Promise<any> {
     this.baseUrl = `http:localhost:9530/koko`;
@@ -68,27 +87,26 @@ export class PagePamComponent implements OnInit, OnDestroy {
 
     this.startTimer();
 
-    this.route.params.subscribe(params => {
-      this.sid = params['sid'];
+    this.route.params.subscribe((params) => {
+      this.sid = params["sid"];
     });
 
     await this.getAssetDetail();
 
-    document.addEventListener('visibilitychange', () => {
+    document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
-        console.log('Page is hidden');
-
+        console.log("Page is hidden");
         this.isActive = false;
         this.stopTimer();
-
         const currentTime = new Date().getTime();
         this.pausedElapsedTime += currentTime - this.startTime.getTime();
       } else {
-        console.log('Page is visible');
-
-        this.isActive = true;
-        this.startTime = new Date();
-        this.startTimer();
+        console.log("Page is visible");
+        setTimeout(() => {
+          this.isActive = true;
+          this.startTime = new Date();
+          this.startTimer();
+        }, 0);
       }
     });
   }
@@ -99,14 +117,27 @@ export class PagePamComponent implements OnInit, OnDestroy {
     }
   }
 
-  private getToken(asset: Asset, connectInfo: ConnectData): Promise<ConnectionToken> {
-    return new Promise<ConnectionToken>((resolve) => {
+  private getToken(
+    asset: Asset,
+    connectInfo: ConnectData
+  ): Promise<ConnectionToken> {
+    return new Promise<ConnectionToken>((resolve, reject) => {
       this._http.adminConnectToken(asset, connectInfo).subscribe(
-        (token: ConnectionToken) => {  resolve(token); },
-        (error) => { console.log(error); }
+        (token: ConnectionToken) => {
+          resolve(token);
+        },
+        async (error) => {
+          this.stopTimer();
+          this.isActive = false;
+
+          const msg = await this._i18n.t("Connection failed, please try again");
+          await this._dialogAlert.alert(msg);
+
+          reject(error);
+        }
       );
     });
-}
+  }
 
   private uploadFiles(files: ICustomFile[]): Observable<Object> {
     if (!files || files.length === 0) {
@@ -116,9 +147,9 @@ export class PagePamComponent implements OnInit, OnDestroy {
     const data = new FormData();
 
     for (const file of files) {
-      data.append('file', file.slice(), file.name);
+      data.append("file", file.slice(), file.name);
     }
-    return this._http.post('/api/files', data);
+    return this._http.post("/api/files", data);
   }
 
   private startTimer(): void {
@@ -138,70 +169,75 @@ export class PagePamComponent implements OnInit, OnDestroy {
    */
   private updateConnectTime(): void {
     const currentTime = new Date();
-    const elapsed = (currentTime.getTime() - this.startTime.getTime()) + this.pausedElapsedTime;
+    const elapsed =
+      currentTime.getTime() - this.startTime.getTime() + this.pausedElapsedTime;
 
     const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
     const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
     const seconds = Math.floor((elapsed / 1000) % 60);
 
-    this.totalConnectTime = `${this.padZero(hours)}:${this.padZero(minutes)}:${this.padZero(seconds)}`;
+    this.totalConnectTime = `${this.padZero(hours)}:${this.padZero(
+      minutes
+    )}:${this.padZero(seconds)}`;
   }
 
   private padZero(value: number): string {
-    return String(value).padStart(2, '0');
+    return String(value).padStart(2, "0");
   }
 
   /**
    * @description 校验信息并发起连接
    * @param asset
    */
-   public async connectAsset(asset: any) {
+  public async connectAsset(asset: any) {
     if (!asset) {
-      const msg: string = await this._i18n.t('Asset not found or You have no permission to access it, please refresh asset tree');
+      const msg: string = await this._i18n.t(
+        "Asset not found or You have no permission to access it, please refresh asset tree"
+      );
       return await this._dialogAlert.alert(msg);
     }
 
     // todo)) 有些默认数据可能不对
-    const connectInfo =  {
+    const connectInfo = {
       account: asset.permed_accounts[0],
       connectMethod: {
-        value: 'web_cli'
+        value: "web_cli",
       },
       manualAuthInfo: {
         alias: asset.permed_accounts[0].alias,
         username: asset.permed_accounts[0].username,
       },
       connectOption: {
-        appletConnectMethod: 'web',
+        appletConnectMethod: "web",
         backspaceAsCtrlH: false,
-        charset: 'default',
+        charset: "default",
         disableautohash: false,
-        resolution: 'auto',
-        reusable: false
+        resolution: "auto",
+        reusable: false,
       },
       downloadRDP: false,
       autoLogin: false,
       protocol: {
-        name: 'ssh'
-      }
+        name: "ssh",
+      },
     } as unknown as ConnectData;
 
     const connToken = await this.getToken(asset, connectInfo);
 
     if (!connToken) {
-      return this._logger.info('Create connection token failed');
+      return this._logger.info("Create connection token failed");
     }
 
-    const view = new View(asset, connectInfo, connToken, 'node');
+    const view = new View(asset, connectInfo, connToken, "node");
     view.smartEndpoint = await this._appSvc.getSmartEndpoint(view);
 
-    const { protocol, smartEndpoint} = view;
+    const { protocol, smartEndpoint } = view;
 
     const params = {};
-    params['disableautohash'] = view.getConnectOption('disableautohash');
-    params['token'] = connToken.id;
+    params["disableautohash"] = view.getConnectOption("disableautohash");
+    params["token"] = connToken.id;
 
-    params['_'] = Date.now().toString();
+    params["_"] = Date.now().toString();
 
     const query = Object.entries(params)
       .map(([key, value]) => {
@@ -221,29 +257,28 @@ export class PagePamComponent implements OnInit, OnDestroy {
    */
   public getAssetDetail() {
     this._http.getAssetDetail(this.sid).subscribe(async (asset) => {
-
       this._appSvc.setPreConnectData(asset, {
         account: asset.permed_accounts[0],
         connectMethod: {
-          value: 'web_cli'
+          value: "web_cli",
         },
         manualAuthInfo: {
           alias: asset.permed_accounts[0].alias,
           username: asset.permed_accounts[0].username,
         },
         connectOption: {
-          appletConnectMethod: 'web',
+          appletConnectMethod: "web",
           backspaceAsCtrlH: false,
-          charset: 'default',
+          charset: "default",
           disableautohash: false,
-          resolution: 'auto',
-          reusable: false
+          resolution: "auto",
+          reusable: false,
         },
         downloadRDP: false,
         autoLogin: false,
         protocol: {
-          name: 'ssh'
-        }
+          name: "ssh",
+        },
       } as unknown as ConnectData);
 
       await this.connectAsset(asset);
@@ -251,8 +286,9 @@ export class PagePamComponent implements OnInit, OnDestroy {
   }
 
   public submitFiles() {
-    this.uploadFiles(this.manualChangesFiles)
-      .subscribe(() => (this.manualChangesFiles = []));
+    this.uploadFiles(this.manualChangesFiles).subscribe(
+      () => (this.manualChangesFiles = [])
+    );
   }
 
   public closeDrawer() {
@@ -271,11 +307,16 @@ export class PagePamComponent implements OnInit, OnDestroy {
   }
 
   public handleOpenFileManage() {
-    const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window }).iframeWindow;
+    const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window })
+      .iframeWindow;
 
     if (iframeWindow) {
-      iframeWindow.postMessage({ name: 'FILE' }, '*');
+      iframeWindow.postMessage({ name: "FILE" }, "*");
       this._logger.info(`[Luna] Send FILE`);
     }
+  }
+
+  private checkPageVisibility() {
+    this.isActive = !document.hidden;
   }
 }
