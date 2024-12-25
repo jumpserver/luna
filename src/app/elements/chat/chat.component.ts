@@ -62,6 +62,10 @@ export class ElementChatComponent implements OnInit, OnDestroy {
 
     elements.forEach(element => {
       element.addEventListener('mousedown', (event: MouseEvent) => {
+        if (event.button !== 0) {
+          return;
+        }
+
         event.stopPropagation();
         event.preventDefault();
         const offsetY = dragBox.getBoundingClientRect().top;
@@ -70,6 +74,7 @@ export class ElementChatComponent implements OnInit, OnDestroy {
         clientOffset.clientY = event.clientY;
         this.isLongPress = false;
 
+        // @ts-ignore
         this.longPressTimeout = setTimeout(() => {
           this.isLongPress = true;
           document.onmousemove = (ev: MouseEvent) => {
@@ -89,14 +94,14 @@ export class ElementChatComponent implements OnInit, OnDestroy {
             ev.preventDefault();
             ev.stopPropagation();
           };
-        }, 300); // 300ms 作为长按检测时间
+        }, 300);
 
         document.onmouseup = () => {
           document.onmousemove = null;
           document.onmouseup = null;
 
           if (!this.isLongPress) {
-            clearTimeout(this.longPressTimeout); // 确保清除长按检测
+            clearTimeout(this.longPressTimeout);
             this.isShow = !this.isShow;
           }
 
