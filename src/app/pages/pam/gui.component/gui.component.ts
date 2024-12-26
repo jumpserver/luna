@@ -92,8 +92,6 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
         return;
       }
 
-      console.log("🚀 ~ PagePamGUIComponent ~ accountToUse:", accountToUse);
-
       switch (protocol.name) {
         case "ssh":
         case "telnet":
@@ -117,16 +115,36 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
           {
             asset: asset.id,
             account: accountToUse[0].name,
-            protocol: protocol,
+            protocol: protocol.name,
             input_username: accountToUse[0].username,
             input_secret: "",
           },
           method
         )
         .subscribe((res) => {
-          console.log(res);
+          if (res) {
+            const url = this.getUrl();
+
+            this.iframeURL = `${url}/koko/connect?token=${res.id}`;
+          }
         });
     });
+  }
+
+  private getUrl(): string {
+    let host: string = "";
+
+    const endpoint = window.location.host.split(":")[0];
+    const protocole = window.location.protocol;
+    const port = "9529";
+
+    if (port) {
+      host = `${endpoint}:${port}`;
+    }
+
+    this._logger.info(`Current host: ${protocole}//${host}`);
+
+    return `${protocole}//${host}`;
   }
 
   /**

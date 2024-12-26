@@ -16,10 +16,6 @@
           <mat-icon>home</mat-icon>
           <div class="delimiter">/</div>
         </div>
-
-        <div class="file-list">
-          <!-- 文件列表内容 -->
-        </div>
       </div>
     </mat-sidenav>
 
@@ -35,7 +31,7 @@
               <mat-icon matTooltip="资产信息">dvr</mat-icon>
               <div class="desc">
                 <div style="font-weight: 700; margin-right: 5px">资产信息:</div>
-                root@y4.cmdb.cc - (yy)
+                {{ assetName }}
               </div>
             </div>
 
@@ -44,7 +40,7 @@
 
               <div class="desc">
                 <div style="font-weight: 700; margin-right: 5px">连接时间:</div>
-                九月 24,2024 10:46 上午
+                {{ startTime.toLocaleString() }}
               </div>
             </div>
           </div>
