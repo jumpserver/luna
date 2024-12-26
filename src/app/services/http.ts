@@ -279,7 +279,12 @@ export class HttpService {
     );
   }
 
-  // pam 直连的接口
+  /**
+   * @description 创建 Pam 的直连 Token
+   * @param connectData
+   * @param method
+   * @returns
+   */
   createDirectiveConnectToken(connectData: any, method: string) {
 
     const url = '/api/v1/authentication/connection-token/';

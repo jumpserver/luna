@@ -1,27 +1,33 @@
-import {
-  Component,
-  ElementRef,
-  EventEmitter,
-  OnDestroy,
-  OnInit,
-  Output,
-  ViewChild,
-} from "@angular/core";
-import { MatSidenav } from "@angular/material/sidenav";
-import { FormControl } from "@angular/forms";
 import { EMPTY, Observable } from "rxjs";
+import { ActivatedRoute } from "@angular/router";
 import { ICustomFile } from "file-input-accessor";
+import { MatDialog } from "@angular/material/dialog";
+import { MatSidenav } from "@angular/material/sidenav";
 import {
+  Account,
+  Asset,
+  ConnectData,
+  ConnectionToken,
+  View,
+  Protocol,
+} from "@app/model";
+import {
+  LogService,
   AppService,
-  ConnectTokenService,
-  DialogService,
   HttpService,
   I18nService,
-  LogService,
+  DialogService,
+  ConnectTokenService,
 } from "@app/services";
-import { ActivatedRoute } from "@angular/router";
-import { Account, Asset, ConnectData, ConnectionToken, View } from "@app/model";
-import { MatDialog } from "@angular/material/dialog";
+import {
+  OnInit,
+  Output,
+  Component,
+  ViewChild,
+  OnDestroy,
+  ElementRef,
+  EventEmitter,
+} from "@angular/core";
 
 export interface PeriodicElement {
   name: string;
@@ -37,6 +43,10 @@ export interface PeriodicElement {
   styleUrls: ["./terminal.component.scss"],
 })
 export class PagePamTerminalComponent implements OnInit, OnDestroy {
+  @ViewChild("sidenav", { static: false }) sidenav: MatSidenav;
+  @ViewChild("iFrame", { static: false }) iframeRef: ElementRef;
+  @Output() onNewView: EventEmitter<View> = new EventEmitter<View>();
+
   constructor(
     private _http: HttpService,
     private _i18n: I18nService,
@@ -48,15 +58,15 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
     private _connectTokenSvc: ConnectTokenService
   ) {
     this.checkPageVisibility();
+    this.startTime = new Date();
   }
-  @ViewChild("sidenav", { static: false }) sidenav: MatSidenav;
-  @ViewChild("iFrame", { static: false }) iframeRef: ElementRef;
-  @Output() onNewView: EventEmitter<View> = new EventEmitter<View>();
 
   public isActive: boolean = true;
   public iframeWindow: Window;
-  public connectType: string = "SSH";
+
   public sid: string = "";
+  public assetName: string = "";
+  public connectType: string = "SSH";
 
   baseUrl: string;
   iframeURL: string;
@@ -67,9 +77,7 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
   public totalConnectTime: string;
   private startTime: Date;
   private timerInterval: any;
-  hasLoginTo = false;
 
-  fileControl = new FormControl();
   manualChangesFiles: ICustomFile[] = [];
 
   displayedColumns: string[] = [
@@ -81,17 +89,15 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
   ];
 
   async ngOnInit(): Promise<any> {
-    this.baseUrl = `http:localhost:9530/koko`;
-    this.startTime = new Date();
     this.updateConnectTime();
 
-    this.startTimer();
-
-    this.route.params.subscribe((params) => {
+    this.route.params.subscribe(async (params) => {
       this.sid = params["sid"];
+
+      await this.getAssetDetail();
     });
 
-    await this.getAssetDetail();
+    this.startTimer();
 
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
@@ -117,6 +123,88 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * @description 获取链接资产信息
+   */
+  public getAssetDetail() {
+    this._http.getAssetDetail(this.sid).subscribe(async (asset: Asset) => {
+      const specialAliases = ["@ANON", "@USER", "@INPUT"];
+
+      let method: string = "";
+
+      console.log(
+        "🚀 ~ PagePamTerminalComponent ~ this._http.getAssetDetail ~ asset:",
+        asset
+      );
+
+      this.assetName = asset.name;
+
+      const protocol: Protocol = asset.permed_protocols[0];
+      const accountToUse = asset.permed_accounts.filter((account: Account) => {
+        return !specialAliases.includes(account.alias);
+      });
+
+      if (!accountToUse) {
+        const msg = await this._i18n.t("No valid account found");
+        await this._dialogAlert.alert(msg);
+        return;
+      }
+
+      switch (protocol.name) {
+        case "ssh":
+        case "telnet":
+          method = "ssh_client";
+          break;
+        case "rdp":
+          method = "mstsc";
+          break;
+        case "sftp":
+          method = "sftp_client";
+          break;
+        case "vnc":
+          method = "vnc_client";
+          break;
+        default:
+          method = "db_client";
+      }
+
+      this._http
+        .createDirectiveConnectToken(
+          {
+            asset: asset.id,
+            account: accountToUse[0].name,
+            protocol: protocol.name,
+            input_username: accountToUse[0].username,
+            input_secret: "",
+          },
+          method
+        )
+        .subscribe((res) => {
+          if (res) {
+            const url = this.getUrl();
+
+            this.iframeURL = `${url}/koko/connect?token=${res.id}`;
+          }
+        });
+    });
+  }
+
+  private getUrl(): string {
+    let host: string = "";
+
+    const endpoint = window.location.host.split(":")[0];
+    const protocole = window.location.protocol;
+    const port = "9530";
+
+    if (port) {
+      host = `${endpoint}:${port}`;
+    }
+
+    this._logger.info(`Current host: ${protocole}//${host}`);
+
+    return `${protocole}//${host}`;
+  }
+
   private getToken(
     asset: Asset,
     connectInfo: ConnectData
@@ -139,52 +227,6 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
     });
   }
 
-  private uploadFiles(files: ICustomFile[]): Observable<Object> {
-    if (!files || files.length === 0) {
-      return EMPTY;
-    }
-
-    const data = new FormData();
-
-    for (const file of files) {
-      data.append("file", file.slice(), file.name);
-    }
-    return this._http.post("/api/files", data);
-  }
-
-  private startTimer(): void {
-    if (!this.isTimerPaused) {
-      this.timerInterval = setInterval(() => this.updateConnectTime(), 1000);
-    }
-  }
-
-  private stopTimer(): void {
-    clearInterval(this.timerInterval);
-    this.isTimerPaused = true;
-  }
-
-  /**
-   * @description 计算页面打开时间
-   * @private
-   */
-  private updateConnectTime(): void {
-    const currentTime = new Date();
-    const elapsed =
-      currentTime.getTime() - this.startTime.getTime() + this.pausedElapsedTime;
-
-    const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
-    const seconds = Math.floor((elapsed / 1000) % 60);
-
-    this.totalConnectTime = `${this.padZero(hours)}:${this.padZero(
-      minutes
-    )}:${this.padZero(seconds)}`;
-  }
-
-  private padZero(value: number): string {
-    return String(value).padStart(2, "0");
-  }
-
   /**
    * @description 校验信息并发起连接
    * @param asset
@@ -197,7 +239,6 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
       return await this._dialogAlert.alert(msg);
     }
 
-    // todo)) 有些默认数据可能不对
     const connectInfo = {
       account: asset.permed_accounts[0],
       connectMethod: {
@@ -223,6 +264,8 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
     } as unknown as ConnectData;
 
     const connToken = await this.getToken(asset, connectInfo);
+
+    console.log(connToken);
 
     if (!connToken) {
       return this._logger.info("Create connection token failed");
@@ -252,58 +295,8 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
     this.iframeURL = `${baseUrl}/koko/connect?${query}`;
   }
 
-  /**
-   * @description 获取链接资产信息
-   */
-  public getAssetDetail() {
-    this._http.getAssetDetail(this.sid).subscribe(async (asset) => {
-      this._appSvc.setPreConnectData(asset, {
-        account: asset.permed_accounts[0],
-        connectMethod: {
-          value: "web_cli",
-        },
-        manualAuthInfo: {
-          alias: asset.permed_accounts[0].alias,
-          username: asset.permed_accounts[0].username,
-        },
-        connectOption: {
-          appletConnectMethod: "web",
-          backspaceAsCtrlH: false,
-          charset: "default",
-          disableautohash: false,
-          resolution: "auto",
-          reusable: false,
-        },
-        downloadRDP: false,
-        autoLogin: false,
-        protocol: {
-          name: "ssh",
-        },
-      } as unknown as ConnectData);
-
-      await this.connectAsset(asset);
-    });
-  }
-
-  public submitFiles() {
-    this.uploadFiles(this.manualChangesFiles).subscribe(
-      () => (this.manualChangesFiles = [])
-    );
-  }
-
   public closeDrawer() {
     this.sidenav.close();
-  }
-
-  public onFileSelected(event: Event) {
-    const input = event.target as HTMLInputElement;
-
-    if (input.files) {
-      this.manualChangesFiles = Array.from(input.files);
-      console.log(this.manualChangesFiles);
-
-      this.submitFiles();
-    }
   }
 
   public handleOpenFileManage() {
@@ -318,5 +311,38 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
 
   private checkPageVisibility() {
     this.isActive = !document.hidden;
+  }
+
+  private padZero(value: number): string {
+    return String(value).padStart(2, "0");
+  }
+
+  /**
+   * @description 计算页面打开时间
+   * @private
+   */
+  private updateConnectTime(): void {
+    const currentTime = new Date();
+    const elapsed =
+      currentTime.getTime() - this.startTime.getTime() + this.pausedElapsedTime;
+
+    const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
+    const seconds = Math.floor((elapsed / 1000) % 60);
+
+    this.totalConnectTime = `${this.padZero(hours)}:${this.padZero(
+      minutes
+    )}:${this.padZero(seconds)}`;
+  }
+
+  private startTimer(): void {
+    if (!this.isTimerPaused) {
+      this.timerInterval = setInterval(() => this.updateConnectTime(), 1000);
+    }
+  }
+
+  private stopTimer(): void {
+    clearInterval(this.timerInterval);
+    this.isTimerPaused = true;
   }
 }
