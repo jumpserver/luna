@@ -3,6 +3,7 @@ import { ActivatedRoute } from "@angular/router";
 import { ICustomFile } from "file-input-accessor";
 import { MatDialog } from "@angular/material/dialog";
 import { MatSidenav } from "@angular/material/sidenav";
+import { User } from "../../../model";
 import {
   Account,
   Asset,
@@ -50,12 +51,9 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
   constructor(
     private _http: HttpService,
     private _i18n: I18nService,
-    private _dialog: MatDialog,
-    private _appSvc: AppService,
     private _logger: LogService,
     private route: ActivatedRoute,
     private _dialogAlert: DialogService,
-    private _connectTokenSvc: ConnectTokenService
   ) {
     this.checkPageVisibility();
     this.startTime = new Date();
@@ -64,50 +62,97 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
   public isActive: boolean = true;
   public iframeWindow: Window;
 
-  public sid: string = "";
+  public userId: string = "";
+  public username: string = "";
+  public assetId: string = "";
   public assetName: string = "";
-  public connectType: string = "SSH";
 
-  baseUrl: string;
+  public connectType: string = "SSH";
+  public totalConnectTime: string;
+
   iframeURL: string;
 
   private pausedElapsedTime: number = 0;
   private isTimerPaused: boolean = false;
 
-  public totalConnectTime: string;
   private startTime: Date;
   private timerInterval: any;
 
-  manualChangesFiles: ICustomFile[] = [];
-
-  displayedColumns: string[] = [
-    "name",
-    "size",
-    "modification-time",
-    "attributes",
-    "action",
-  ];
-
   async ngOnInit(): Promise<any> {
-    this.updateConnectTime();
-
     this.route.params.subscribe(async (params) => {
-      this.sid = params["sid"];
+      this.userId = params["userId"];
+      this.username = params["username"];
+      this.assetId = params["assetId"];
+      this.assetName = params["assetName"];
 
-      await this.getAssetDetail();
+      this._http
+        .getAssetDetail(this.assetId)
+        .subscribe(async (asset: Asset) => {
+          const currentUserInfo = asset.permed_accounts.find(
+            (item: Account) => item.id === this.userId
+          );
+
+          let method: string = "";
+          let protocol: Protocol = asset.permed_protocols[0];
+
+          switch (protocol.name) {
+            case "ssh":
+            case "telnet":
+              method = "ssh_client";
+              break;
+            case "rdp":
+              method = "mstsc";
+              break;
+            case "sftp":
+              method = "sftp_client";
+              break;
+            case "vnc":
+              method = "vnc_client";
+              break;
+            default:
+              method = "db_client";
+          }
+
+          const assetMessage = {
+            id: this.assetId,
+            name: this.assetName,
+            address: asset.address,
+            comment: asset.comment,
+            type: asset.type,
+            category: asset.category,
+            permed_protocols: asset.permed_protocols,
+            permed_accounts: asset.permed_accounts,
+            spec_info: asset.spec_info,
+          };
+          const connectData = {
+            method,
+            protocol,
+            asset: assetMessage,
+            account: currentUserInfo,
+            input_username: this.username,
+          };
+
+          this._http
+            .adminConnectToken(assetMessage, connectData)
+            .subscribe((res) => {
+              if (res) {
+                const url = this.getUrl();
+
+                this.iframeURL = `${url}/koko/connect?token=${res.id}`;
+              }
+            });
+        });
     });
 
     this.startTimer();
 
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
-        console.log("Page is hidden");
         this.isActive = false;
         this.stopTimer();
         const currentTime = new Date().getTime();
         this.pausedElapsedTime += currentTime - this.startTime.getTime();
       } else {
-        console.log("Page is visible");
         setTimeout(() => {
           this.isActive = true;
           this.startTime = new Date();
@@ -117,76 +162,18 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-    }
+  public closeDrawer() {
+    this.sidenav.close();
   }
 
-  /**
-   * @description 获取链接资产信息
-   */
-  public getAssetDetail() {
-    this._http.getAssetDetail(this.sid).subscribe(async (asset: Asset) => {
-      const specialAliases = ["@ANON", "@USER", "@INPUT"];
+  public handleOpenFileManage() {
+    const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window })
+      .iframeWindow;
 
-      let method: string = "";
-
-      console.log(
-        "🚀 ~ PagePamTerminalComponent ~ this._http.getAssetDetail ~ asset:",
-        asset
-      );
-
-      this.assetName = asset.name;
-
-      const protocol: Protocol = asset.permed_protocols[0];
-      const accountToUse = asset.permed_accounts.filter((account: Account) => {
-        return !specialAliases.includes(account.alias);
-      });
-
-      if (!accountToUse) {
-        const msg = await this._i18n.t("No valid account found");
-        await this._dialogAlert.alert(msg);
-        return;
-      }
-
-      switch (protocol.name) {
-        case "ssh":
-        case "telnet":
-          method = "ssh_client";
-          break;
-        case "rdp":
-          method = "mstsc";
-          break;
-        case "sftp":
-          method = "sftp_client";
-          break;
-        case "vnc":
-          method = "vnc_client";
-          break;
-        default:
-          method = "db_client";
-      }
-
-      this._http
-        .createDirectiveConnectToken(
-          {
-            asset: asset.id,
-            account: accountToUse[0].name,
-            protocol: protocol.name,
-            input_username: accountToUse[0].username,
-            input_secret: "",
-          },
-          method
-        )
-        .subscribe((res) => {
-          if (res) {
-            const url = this.getUrl();
-
-            this.iframeURL = `${url}/koko/connect?token=${res.id}`;
-          }
-        });
-    });
+    if (iframeWindow) {
+      iframeWindow.postMessage({ name: "FILE" }, "*");
+      this._logger.info(`[Luna] Send FILE`);
+    }
   }
 
   private getUrl(): string {
@@ -205,110 +192,6 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
     return `${protocole}//${host}`;
   }
 
-  private getToken(
-    asset: Asset,
-    connectInfo: ConnectData
-  ): Promise<ConnectionToken> {
-    return new Promise<ConnectionToken>((resolve, reject) => {
-      this._http.adminConnectToken(asset, connectInfo).subscribe(
-        (token: ConnectionToken) => {
-          resolve(token);
-        },
-        async (error) => {
-          this.stopTimer();
-          this.isActive = false;
-
-          const msg = await this._i18n.t("Connection failed, please try again");
-          await this._dialogAlert.alert(msg);
-
-          reject(error);
-        }
-      );
-    });
-  }
-
-  /**
-   * @description 校验信息并发起连接
-   * @param asset
-   */
-  public async connectAsset(asset: any) {
-    if (!asset) {
-      const msg: string = await this._i18n.t(
-        "Asset not found or You have no permission to access it, please refresh asset tree"
-      );
-      return await this._dialogAlert.alert(msg);
-    }
-
-    const connectInfo = {
-      account: asset.permed_accounts[0],
-      connectMethod: {
-        value: "web_cli",
-      },
-      manualAuthInfo: {
-        alias: asset.permed_accounts[0].alias,
-        username: asset.permed_accounts[0].username,
-      },
-      connectOption: {
-        appletConnectMethod: "web",
-        backspaceAsCtrlH: false,
-        charset: "default",
-        disableautohash: false,
-        resolution: "auto",
-        reusable: false,
-      },
-      downloadRDP: false,
-      autoLogin: false,
-      protocol: {
-        name: "ssh",
-      },
-    } as unknown as ConnectData;
-
-    const connToken = await this.getToken(asset, connectInfo);
-
-    console.log(connToken);
-
-    if (!connToken) {
-      return this._logger.info("Create connection token failed");
-    }
-
-    const view = new View(asset, connectInfo, connToken, "node");
-    view.smartEndpoint = await this._appSvc.getSmartEndpoint(view);
-
-    const { protocol, smartEndpoint } = view;
-
-    const params = {};
-    params["disableautohash"] = view.getConnectOption("disableautohash");
-    params["token"] = connToken.id;
-
-    params["_"] = Date.now().toString();
-
-    const query = Object.entries(params)
-      .map(([key, value]) => {
-        return `${key}=${value}`;
-      })
-      .reduce((a, b) => {
-        return `${a}&${b}`;
-      });
-
-    const baseUrl = smartEndpoint.getUrl();
-
-    this.iframeURL = `${baseUrl}/koko/connect?${query}`;
-  }
-
-  public closeDrawer() {
-    this.sidenav.close();
-  }
-
-  public handleOpenFileManage() {
-    const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window })
-      .iframeWindow;
-
-    if (iframeWindow) {
-      iframeWindow.postMessage({ name: "FILE" }, "*");
-      this._logger.info(`[Luna] Send FILE`);
-    }
-  }
-
   private checkPageVisibility() {
     this.isActive = !document.hidden;
   }
@@ -317,10 +200,6 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
     return String(value).padStart(2, "0");
   }
 
-  /**
-   * @description 计算页面打开时间
-   * @private
-   */
   private updateConnectTime(): void {
     const currentTime = new Date();
     const elapsed =
@@ -336,13 +215,17 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
   }
 
   private startTimer(): void {
-    if (!this.isTimerPaused) {
-      this.timerInterval = setInterval(() => this.updateConnectTime(), 1000);
-    }
+    this.timerInterval = setInterval(() => this.updateConnectTime(), 1000);
   }
 
   private stopTimer(): void {
     clearInterval(this.timerInterval);
     this.isTimerPaused = true;
+  }
+
+  ngOnDestroy(): void {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+    }
   }
 }

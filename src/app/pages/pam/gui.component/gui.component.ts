@@ -40,13 +40,11 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
   private pausedElapsedTime: number = 0;
 
   constructor(
-    private route: ActivatedRoute,
-    private viewSrv: ViewService,
     private _http: HttpService,
-    private _appSvc: AppService,
-    private _dialogAlert: DialogService,
     private _i18n: I18nService,
-    private _logger: LogService
+    private _logger: LogService,
+    private _dialogAlert: DialogService,
+    private route: ActivatedRoute
   ) {
     this.startTime = new Date();
   }
@@ -125,7 +123,7 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
           if (res) {
             const url = this.getUrl();
 
-            this.iframeURL = `${url}/koko/connect?token=${res.id}`;
+            this.iframeURL = `${url}/lion/connect?token=${res.id}`;
           }
         });
     });

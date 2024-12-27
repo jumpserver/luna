@@ -36,6 +36,7 @@ export class Account {
   has_secret: boolean;
   secret: string;
   actions: Array<Action>;
+  id?: string;
 }
 
 class TreeNodeMeta {
@@ -372,6 +373,13 @@ export class ConnectOption {
   options?: any[];
 }
 
+export class AdminConnectData {
+  asset: Asset;
+  account: Account;
+  protocol: Protocol;
+  input_username: string;
+  method: string;
+}
 
 export class ConnectData {
   asset: Asset;
@@ -451,7 +459,7 @@ export class Endpoint {
     if (['http', 'https'].indexOf(_protocol) !== -1 && port === 0) {
       port = window.location.port;
     }
-    
+
     return port;
   }
 

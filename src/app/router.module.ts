@@ -17,7 +17,7 @@ const appRoutes: Routes = [
   { path: "sftp", component: PageSftpComponent },
   { path: "undefined", component: PagesBlankComponent },
   { path: "", component: PageMainComponent },
-  { path: "pam_terminal_connect/:sid", component: PagePamTerminalComponent },
+  { path: "pam_terminal_connect/:userId/:username/:assetId/:assetName", component: PagePamTerminalComponent },
   { path: "pam_gui_connect/:sid", component: PagePamGUIComponent },
   // { path: '**', component: PagesNotFoundComponent }
 ];
