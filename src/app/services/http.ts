@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpErrorResponse, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Browser, User} from '@app/globals';
 import {catchError, delay, map, retryWhen, scan} from 'rxjs/operators';
-import {Asset, ConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
+import {Asset, ConnectData, AdminConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
@@ -279,49 +279,19 @@ export class HttpService {
     );
   }
 
-  /**
-   * @description 创建 Pam 的直连 Token
-   * @param connectData
-   * @param method
-   * @returns
-   */
-  createDirectiveConnectToken(connectData: any, method: string) {
-
-    const url = '/api/v1/authentication/connection-token/';
-    const data = {
-      asset: connectData.asset,
-      account: connectData.account,
-      protocol: connectData.protocol,
-      input_username: connectData.input_username,
-      input_secret: connectData.input_secret,
-      connect_method: method,
-    };
-
-    return this.post<ConnectionToken>(url, data).pipe(
-      catchError(this.handleConnectMethodExpiredError.bind(this))
-    );
-  }
-
-  adminConnectToken (asset: Asset, connectData: ConnectData, createTicket = false) {
+  adminConnectToken (asset: Asset, connectData: AdminConnectData, createTicket = false) {
     const params = createTicket ? '?create_ticket=1' : '';
 
     const url = '/api/v1/authentication/admin-connection-token/' + params;
 
-    const {account, protocol, manualAuthInfo, connectMethod} = connectData;
-
-    const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
-
-    const secret = encryptPassword(manualAuthInfo.secret);
-    const connectOption = connectData.connectOption;
+    const { account, protocol } = connectData;
 
     const data = {
       asset: asset.id,
       account: account.alias,
       protocol: protocol.name,
-      input_username: username,
-      input_secret: secret,
-      connect_method: connectMethod.value,
-      connect_options: connectOption
+      input_username: connectData.input_username,
+      connect_method: connectData.method,
     };
 
     return this.post<ConnectionToken>(url, data).pipe(
