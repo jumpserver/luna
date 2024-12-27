@@ -18,7 +18,7 @@ const appRoutes: Routes = [
   { path: "undefined", component: PagesBlankComponent },
   { path: "", component: PageMainComponent },
   { path: "pam_terminal_connect/:userId/:username/:assetId/:assetName", component: PagePamTerminalComponent },
-  { path: "pam_gui_connect/:sid", component: PagePamGUIComponent },
+  { path: "pam_gui_connect/:userId/:username/:assetId/:assetName", component: PagePamGUIComponent },
   // { path: '**', component: PagesNotFoundComponent }
 ];
 

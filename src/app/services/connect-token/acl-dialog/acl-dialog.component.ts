@@ -105,6 +105,8 @@ export class ElementACLDialogComponent implements OnInit {
     const checkMethod = this.connectionToken.from_ticket_info.check_ticket_api.method.toLowerCase();
     const checkURL = this.connectionToken.from_ticket_info.check_ticket_api.url;
     const ticketAssignees = this.connectionToken.from_ticket_info.assignees.join(', ');
+
+    // @ts-ignore
     this.timerCheckTicket = setInterval(() => {
       this._http[checkMethod](checkURL).subscribe(
         async ticket => {

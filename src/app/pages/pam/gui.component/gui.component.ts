@@ -30,9 +30,11 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
   public startTime: Date;
   public endpoint: Endpoint;
 
-  public sid: string = "";
+  public userId: string = "";
+  public username: string = "";
+  public assetId: string = "";
+  public assetName: string = "";
   public iframeURL: string = "";
-  public endpointUrl: string = "";
   public totalConnectTime: string = "00:00:00";
   public isActive: boolean = true;
 
@@ -51,8 +53,66 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.route.params.subscribe(async (params: Params) => {
-      this.sid = params["sid"];
-      await this.getAssetDetail();
+      this.userId = params["userId"];
+      this.username = params["username"];
+      this.assetId = params["assetId"];
+      this.assetName = params["assetName"];
+
+      this._http.getAssetDetail(this.assetId).subscribe((asset: Asset) => {
+        const currentUserInfo = asset.permed_accounts.find(
+          (item: Account) => item.id === this.userId
+        );
+
+        let method: string = "";
+        let protocol: Protocol = asset.permed_protocols[0];
+
+        switch (protocol.name) {
+          case "ssh":
+          case "telnet":
+            method = "ssh_client";
+            break;
+          case "rdp":
+            method = "mstsc";
+            break;
+          case "sftp":
+            method = "sftp_client";
+            break;
+          case "vnc":
+            method = "vnc_client";
+            break;
+          default:
+            method = "db_client";
+        }
+
+        const assetMessage = {
+          id: this.assetId,
+          name: this.assetName,
+          address: asset.address,
+          comment: asset.comment,
+          type: asset.type,
+          category: asset.category,
+          permed_protocols: asset.permed_protocols,
+          permed_accounts: asset.permed_accounts,
+          spec_info: asset.spec_info,
+        };
+        const connectData = {
+          method,
+          protocol,
+          asset: assetMessage,
+          account: currentUserInfo,
+          input_username: this.username,
+        };
+
+        this._http
+          .adminConnectToken(assetMessage, connectData)
+          .subscribe((res) => {
+            if (res) {
+              const url = this.getUrl();
+
+              this.iframeURL = `${url}/lion/connect?token=${res.id}`;
+            }
+          });
+      });
     });
 
     this.startTimer();
@@ -70,62 +130,6 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
           this.startTimer();
         }, 0);
       }
-    });
-  }
-
-  private async getAssetDetail() {
-    this._http.getAssetDetail(this.sid).subscribe(async (asset: Asset) => {
-      const specialAliases = ["@ANON", "@USER", "@INPUT"];
-
-      let method: string = "";
-
-      const protocol: Protocol = asset.permed_protocols[0];
-      const accountToUse = asset.permed_accounts.filter((account: Account) => {
-        return !specialAliases.includes(account.alias);
-      });
-
-      if (!accountToUse) {
-        const msg = await this._i18n.t("No valid account found");
-        await this._dialogAlert.alert(msg);
-        return;
-      }
-
-      switch (protocol.name) {
-        case "ssh":
-        case "telnet":
-          method = "ssh_client";
-          break;
-        case "rdp":
-          method = "mstsc";
-          break;
-        case "sftp":
-          method = "sftp_client";
-          break;
-        case "vnc":
-          method = "vnc_client";
-          break;
-        default:
-          method = "db_client";
-      }
-
-      this._http
-        .createDirectiveConnectToken(
-          {
-            asset: asset.id,
-            account: accountToUse[0].name,
-            protocol: protocol.name,
-            input_username: accountToUse[0].username,
-            input_secret: "",
-          },
-          method
-        )
-        .subscribe((res) => {
-          if (res) {
-            const url = this.getUrl();
-
-            this.iframeURL = `${url}/lion/connect?token=${res.id}`;
-          }
-        });
     });
   }
 
