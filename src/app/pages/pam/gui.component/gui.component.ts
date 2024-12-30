@@ -1,18 +1,8 @@
 import { ActivatedRoute, Params } from "@angular/router";
 import { Component, OnInit, OnDestroy, ViewChild } from "@angular/core";
+import { Protocol, Account, Endpoint, Asset } from "@app/model";
 import {
-  View,
-  Protocol,
-  Account,
-  Endpoint,
-  Asset,
-  ConnectData,
-  ConnectionToken,
-} from "@app/model";
-import {
-  ViewService,
   HttpService,
-  AppService,
   DialogService,
   I18nService,
   LogService,
@@ -40,6 +30,8 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
 
   private timerInterval: any;
   private pausedElapsedTime: number = 0;
+
+  public showActionIcons: boolean = false;
 
   constructor(
     private _http: HttpService,
@@ -131,6 +123,14 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
         }, 0);
       }
     });
+
+    document.addEventListener("mousemove", this.handleMouseMove.bind(this));
+  }
+
+  public async handleCloseConnect() {
+    window.confirm("确定要关闭当前连接吗?");
+
+    window.close();
   }
 
   private getUrl(): string {
@@ -191,8 +191,13 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
     return String(value).padStart(2, "0");
   }
 
+  private handleMouseMove(event: MouseEvent): void {
+    this.showActionIcons = event.clientY <= 65;
+  }
+
   ngOnDestroy() {
     this.stopTimer();
+    document.removeEventListener("mousemove", this.handleMouseMove.bind(this));
   }
 
   public closeDrawer() {
