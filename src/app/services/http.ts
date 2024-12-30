@@ -289,7 +289,7 @@ export class HttpService {
     const data = {
       asset: asset.id,
       account: account.alias,
-      protocol: protocol.name,
+      protocol: protocol,
       input_username: connectData.input_username,
       connect_method: connectData.method,
     };
