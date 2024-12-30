@@ -1,54 +1,61 @@
-import { ActivatedRoute, Params } from "@angular/router";
-import { Component, OnInit, OnDestroy, ViewChild } from "@angular/core";
-import { Protocol, Account, Endpoint, Asset } from "@app/model";
-import {
-  HttpService,
-  DialogService,
-  I18nService,
-  LogService,
-} from "@app/services";
 import { MatSidenav } from "@angular/material/sidenav";
+import { ActivatedRoute, Params } from "@angular/router";
+import { Protocol, Account, Endpoint, Asset } from "@app/model";
+import { HttpService, I18nService, LogService } from "@app/services";
+import {
+  Component,
+  ViewChild,
+  OnInit,
+  OnDestroy,
+  ElementRef,
+} from "@angular/core";
 
 @Component({
-  selector: "pages-pam-gui",
-  templateUrl: "./gui.component.html",
-  styleUrls: ["./gui.component.scss"],
+  selector: "pages-pam",
+  templateUrl: "./pam.component.html",
+  styleUrls: ["./pam.component.scss"],
 })
-export class PagePamGUIComponent implements OnInit, OnDestroy {
+export class PagePamComponent implements OnInit, OnDestroy {
   @ViewChild("sidenav", { static: false }) sidenav: MatSidenav;
+  @ViewChild("iFrame", { static: false }) iframeRef: ElementRef;
 
   public startTime: Date;
   public endpoint: Endpoint;
 
   public userId: string = "";
-  public username: string = "";
   public assetId: string = "";
+  public username: string = "";
   public assetName: string = "";
-  public iframeURL: string = "";
+  public protocol: string = "";
+
+  public iframeRDPURL: string = "";
+  public iframeVNCURL: string = "";
+  public iframeSFTPURL: string = "";
+  public iframeTerminalURL: string = "";
+
   public totalConnectTime: string = "00:00:00";
   public isActive: boolean = true;
+  public showActionIcons: boolean = false;
 
   private timerInterval: any;
   private pausedElapsedTime: number = 0;
-
-  public showActionIcons: boolean = false;
 
   constructor(
     private _http: HttpService,
     private _i18n: I18nService,
     private _logger: LogService,
-    private _dialogAlert: DialogService,
-    private route: ActivatedRoute
+    private _route: ActivatedRoute
   ) {
     this.startTime = new Date();
   }
 
-  ngOnInit(): void {
-    this.route.params.subscribe(async (params: Params) => {
+  ngOnInit() {
+    this._route.params.subscribe(async (params: Params) => {
       this.userId = params["userId"];
       this.username = params["username"];
       this.assetId = params["assetId"];
       this.assetName = params["assetName"];
+      this.protocol = params["protocol"];
 
       this._http.getAssetDetail(this.assetId).subscribe((asset: Asset) => {
         const currentUserInfo = asset.permed_accounts.find(
@@ -56,24 +63,23 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
         );
 
         let method: string = "";
-        let protocol: Protocol = asset.permed_protocols[0];
 
-        switch (protocol.name) {
+        switch (this.protocol) {
           case "ssh":
           case "telnet":
-            method = "ssh_client";
+            method = "web_cli";
             break;
           case "rdp":
-            method = "mstsc";
+            method = "web_gui";
             break;
           case "sftp":
-            method = "sftp_client";
+            method = "web_sftp";
             break;
           case "vnc":
-            method = "vnc_client";
+            method = "web_gui";
             break;
           default:
-            method = "db_client";
+            method = "web_cli";
         }
 
         const assetMessage = {
@@ -89,7 +95,7 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
         };
         const connectData = {
           method,
-          protocol,
+          protocol: this.protocol,
           asset: assetMessage,
           account: currentUserInfo,
           input_username: this.username,
@@ -101,7 +107,31 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
             if (res) {
               const url = this.getUrl();
 
-              this.iframeURL = `${url}/lion/connect?token=${res.id}`;
+              switch (this.protocol) {
+                case "ssh": {
+                  this.iframeTerminalURL = `${url}/koko/connect?token=${res.id}`;
+                  break;
+                }
+                case "sftp": {
+                  this.iframeSFTPURL = `${url}/koko/elfinder/sftp/`;
+                  break;
+                }
+                case "rdp": {
+                  this.iframeRDPURL = `${url}/lion/connect?token=${res.id}`;
+                  break;
+                }
+                case "vnc": {
+                  this.iframeVNCURL = `${url}/lion/connect?token=${res.id}`;
+                  break;
+                }
+                case "telnet": {
+                  this.iframeTerminalURL = `${url}/koko/connect?token=${res.id}`;
+                  break;
+                }
+                default: {
+                  break;
+                }
+              }
             }
           });
       });
@@ -127,12 +157,45 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
     document.addEventListener("mousemove", this.handleMouseMove.bind(this));
   }
 
-  public async handleCloseConnect() {
-    window.confirm("确定要关闭当前连接吗?");
-
-    window.close();
+  ngOnDestroy() {
+    this.stopTimer();
+    document.removeEventListener("mousemove", this.handleMouseMove.bind(this));
   }
 
+  /**
+   * 关闭当前连接
+   */
+  public async handleCloseConnect() {
+    if (window.confirm("确定要关闭当前连接吗?")) {
+      window.close();
+    }
+  }
+
+  /**
+   * 打开文件管理器
+   */
+  public handleOpenFileManage() {
+    const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window })
+      .iframeWindow;
+
+    if (iframeWindow) {
+      iframeWindow.postMessage({ name: "FILE" }, "*");
+      this._logger.info(`[Luna] Send FILE`);
+    }
+  }
+
+  /**
+   * windows 的关闭按钮
+   * @param event
+   */
+  private handleMouseMove(event: MouseEvent): void {
+    this.showActionIcons = event.clientY <= 65;
+  }
+
+  /**
+   * @description 获取当前 host 的信息
+   * @returns
+   */
   private getUrl(): string {
     let host: string = "";
 
@@ -166,6 +229,15 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * 补零
+   * @param value
+   * @returns
+   */
+  private padZero(value: number): string {
+    return String(value).padStart(2, "0");
+  }
+
+  /**
    * 更新连接时间
    */
   private updateConnectTime(): void {
@@ -183,24 +255,9 @@ export class PagePamGUIComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * 补零
-   * @param value
-   * @returns
+   * 关闭抽屉
    */
-  private padZero(value: number): string {
-    return String(value).padStart(2, "0");
-  }
-
-  private handleMouseMove(event: MouseEvent): void {
-    this.showActionIcons = event.clientY <= 65;
-  }
-
-  ngOnDestroy() {
-    this.stopTimer();
-    document.removeEventListener("mousemove", this.handleMouseMove.bind(this));
-  }
-
-  public closeDrawer() {
+  private closeDrawer(): void {
     this.sidenav.close();
   }
 }

@@ -7,8 +7,7 @@ import { PagesReplayComponent } from "./pages/replay/replay.component";
 import { PagesMonitorComponent } from "./pages/monitor/monitor.component";
 import { PageMainComponent } from "./pages/main/main.component";
 import { PageSftpComponent } from "./pages/sftp/sftp.component";
-import { PagePamGUIComponent } from "./pages/pam/gui.component/gui.component";
-import { PagePamTerminalComponent } from "./pages/pam/terminal.component/terminal.component";
+import { PagePamComponent } from "./pages/pam/pam.component";
 
 const appRoutes: Routes = [
   { path: "replay/:sid", component: PagesReplayComponent },
@@ -17,8 +16,7 @@ const appRoutes: Routes = [
   { path: "sftp", component: PageSftpComponent },
   { path: "undefined", component: PagesBlankComponent },
   { path: "", component: PageMainComponent },
-  { path: "pam_terminal_connect/:userId/:username/:assetId/:assetName", component: PagePamTerminalComponent },
-  { path: "pam_gui_connect/:userId/:username/:assetId/:assetName", component: PagePamGUIComponent },
+  { path: "pam_connect/:userId/:username/:assetId/:assetName/:protocol", component: PagePamComponent },
   // { path: '**', component: PagesNotFoundComponent }
 ];
 

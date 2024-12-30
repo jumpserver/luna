@@ -376,7 +376,7 @@ export class ConnectOption {
 export class AdminConnectData {
   asset: Asset;
   account: Account;
-  protocol: Protocol;
+  protocol: string;
   input_username: string;
   method: string;
 }
