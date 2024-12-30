@@ -12,7 +12,7 @@
 
 .timer-container {
   position: fixed;
-  top: 20px;
+  bottom: 70px;
   right: 20px;
   z-index: 999999;
 
@@ -42,6 +42,49 @@
       &.active {
         animation: blink 1s infinite;
       }
+    }
+  }
+}
+
+.action-icons {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 999999;
+  display: flex;
+  gap: 10px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+  transition-delay: 0s, 0.3s;
+
+  &.show {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .close-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.8);
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.9);
+      transform: scale(1.05);
+    }
+
+    mat-icon {
+      color: white;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
     }
   }
 }

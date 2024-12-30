@@ -1,9 +1,5 @@
-import { EMPTY, Observable } from "rxjs";
 import { ActivatedRoute } from "@angular/router";
-import { ICustomFile } from "file-input-accessor";
-import { MatDialog } from "@angular/material/dialog";
 import { MatSidenav } from "@angular/material/sidenav";
-import { User } from "../../../model";
 import {
   Account,
   Asset,
@@ -52,8 +48,7 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
     private _http: HttpService,
     private _i18n: I18nService,
     private _logger: LogService,
-    private route: ActivatedRoute,
-    private _dialogAlert: DialogService,
+    private route: ActivatedRoute
   ) {
     this.checkPageVisibility();
     this.startTime = new Date();
@@ -160,6 +155,12 @@ export class PagePamTerminalComponent implements OnInit, OnDestroy {
         }, 0);
       }
     });
+  }
+
+  public handleCloseConnect() {
+    window.confirm("确定要关闭当前连接吗?");
+
+    window.close();
   }
 
   public closeDrawer() {

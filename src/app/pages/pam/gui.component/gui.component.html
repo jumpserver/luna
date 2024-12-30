@@ -6,8 +6,13 @@
     </div>
   </div>
 
+  <div class="action-icons" [class.show]="showActionIcons">
+    <div class="close-icon" (click)="handleCloseConnect()">
+      <mat-icon matTooltip="退出">close</mat-icon>
+    </div>
+  </div>
+
   <elements-iframe
-    #iFrame
     *ngIf="iframeURL"
     [src]="iframeURL"
     [origin]="'pam'"
