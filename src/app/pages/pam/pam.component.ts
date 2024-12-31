@@ -57,83 +57,85 @@ export class PagePamComponent implements OnInit, OnDestroy {
       this.assetName = params["assetName"];
       this.protocol = params["protocol"];
 
-      this._http.getAssetDetail(this.assetId).subscribe((asset: Asset) => {
-        const currentUserInfo = asset.permed_accounts.find(
-          (item: Account) => item.id === this.userId
-        );
+      this._http.directiveConnect(this.assetId).subscribe((res) => {
+        if (res) {
+          let method: string = "";
 
-        let method: string = "";
+          const currentUserInfo = res.accounts.find(
+            (item: Account) => item.id === this.userId
+          );
 
-        switch (this.protocol) {
-          case "ssh":
-          case "telnet":
-            method = "web_cli";
-            break;
-          case "rdp":
-            method = "web_gui";
-            break;
-          case "sftp":
-            method = "web_sftp";
-            break;
-          case "vnc":
-            method = "web_gui";
-            break;
-          default:
-            method = "web_cli";
-        }
+          switch (this.protocol) {
+            case "ssh":
+            case "telnet":
+              method = "web_cli";
+              break;
+            case "rdp":
+              method = "web_gui";
+              break;
+            case "sftp":
+              method = "web_sftp";
+              break;
+            case "vnc":
+              method = "web_gui";
+              break;
+            default:
+              method = "web_cli";
+          }
 
-        const assetMessage = {
-          id: this.assetId,
-          name: this.assetName,
-          address: asset.address,
-          comment: asset.comment,
-          type: asset.type,
-          category: asset.category,
-          permed_protocols: asset.permed_protocols,
-          permed_accounts: asset.permed_accounts,
-          spec_info: asset.spec_info,
-        };
-        const connectData = {
-          method,
-          protocol: this.protocol,
-          asset: assetMessage,
-          account: currentUserInfo,
-          input_username: this.username,
-        };
+          const assetMessage = {
+            id: this.assetId,
+            name: this.assetName,
+            address: res.address,
+            comment: res.comment,
+            type: res.type,
+            category: res.category,
+            permed_protocols: res.protocols,
+            permed_accounts: res.accounts,
+            spec_info: res.spec_info,
+          };
+          const connectData = {
+            method,
+            protocol: this.protocol,
+            asset: assetMessage,
+            account: currentUserInfo,
+            input_username: this.username,
+          };
 
-        this._http
-          .adminConnectToken(assetMessage, connectData)
-          .subscribe((res) => {
-            if (res) {
-              const url = this.getUrl();
+          this._http
+            .adminConnectToken(assetMessage, connectData)
+            .subscribe((res) => {
+              if (res) {
+                const url = this.getUrl();
 
-              switch (this.protocol) {
-                case "ssh": {
-                  this.iframeTerminalURL = `${url}/koko/connect?token=${res.id}`;
-                  break;
-                }
-                case "sftp": {
-                  this.iframeSFTPURL = `${url}/koko/elfinder/sftp/`;
-                  break;
-                }
-                case "rdp": {
-                  this.iframeRDPURL = `${url}/lion/connect?token=${res.id}`;
-                  break;
-                }
-                case "vnc": {
-                  this.iframeVNCURL = `${url}/lion/connect?token=${res.id}`;
-                  break;
-                }
-                case "telnet": {
-                  this.iframeTerminalURL = `${url}/koko/connect?token=${res.id}`;
-                  break;
-                }
-                default: {
-                  break;
+                switch (this.protocol) {
+                  case "ssh": {
+                    this.iframeTerminalURL = `${url}/koko/connect?token=${res.id}`;
+                    break;
+                  }
+                  case "sftp": {
+                    this.iframeSFTPURL = `${url}/koko/elfinder/sftp/`;
+                    break;
+                  }
+                  case "rdp": {
+                    this.iframeRDPURL = `${url}/lion/connect?token=${res.id}`;
+                    break;
+                  }
+                  case "vnc": {
+                    this.iframeVNCURL = `${url}/lion/connect?token=${res.id}`;
+                    break;
+                  }
+                  case "telnet": {
+                    this.iframeTerminalURL = `${url}/koko/connect?token=${res.id}`;
+                    break;
+                  }
+                  default: {
+                    break;
+                  }
                 }
               }
-            }
-          });
+            });
+        }
       });
     });
 
@@ -198,10 +200,20 @@ export class PagePamComponent implements OnInit, OnDestroy {
    */
   private getUrl(): string {
     let host: string = "";
+    let port: string = "";
 
     const endpoint = window.location.host.split(":")[0];
     const protocole = window.location.protocol;
-    const port = "9529";
+
+    switch (this.protocol) {
+      case "ssh":
+      case "sftp":
+      case "telnet":
+        port = "9530";
+        break;
+      default:
+        port = "9529";
+    }
 
     if (port) {
       host = `${endpoint}:${port}`;

@@ -279,21 +279,22 @@ export class HttpService {
     );
   }
 
+  directiveConnect(assetId: String) {
+    const url = `/api/v1/assets/assets/${assetId}`
+    return this.get(url)
+  }
+
   adminConnectToken (asset: Asset, connectData: AdminConnectData, createTicket = false) {
     const params = createTicket ? '?create_ticket=1' : '';
-
     const url = '/api/v1/authentication/admin-connection-token/' + params;
-
     const { account, protocol } = connectData;
-
     const data = {
       asset: asset.id,
-      account: account.alias,
+      account: account.name,
       protocol: protocol,
       input_username: connectData.input_username,
       connect_method: connectData.method,
     };
-
     return this.post<ConnectionToken>(url, data).pipe(
       catchError(this.handleConnectMethodExpiredError.bind(this))
     );
