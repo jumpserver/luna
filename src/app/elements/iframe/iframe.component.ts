@@ -5,6 +5,8 @@ import {MatDialog} from '@angular/material';
 import {Subject} from 'rxjs';
 import {debounceTime} from 'rxjs/operators';
 import {environment} from '@src/environments/environment';
+import {SafeResourceUrl} from '@angular/platform-browser';
+import {DomSanitizer} from '@angular/platform-browser';
 
 @Component({
   selector: 'elements-iframe',
@@ -25,6 +27,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   showValue: boolean = !window['debugIframe'];
   ping: number;
   debug = false;
+  trustedUrl: SafeResourceUrl;
+  termComp: any = {};
 
   constructor(
     private _i18n: I18nService,
@@ -33,9 +37,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private _http: HttpService,
     private _dialog: MatDialog,
     public viewSrv: ViewService,
+    private sanitizer: DomSanitizer
   ) {
   }
-
   ngOnInit() {
     this._logger.info(`IFrame URL: ${this.src}`);
 
@@ -65,7 +69,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           setTimeout(() => {
             this.showIframe = this.showValue;
           });
-          this.view.termComp = this;
+          if (this.view) {
+            this.view.termComp = this;
+          }
           clearInterval(this.ping);
           break;
         case 'CLOSE':
@@ -89,6 +95,10 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           break;
       }
     }.bind(this);
+
+    this.trustedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.src);
+
+    window.addEventListener('message', this.messageHandler);
   }
 
   ngAfterViewInit() {
@@ -106,6 +116,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
   ngOnDestroy() {
     window.removeEventListener('message', this.eventHandler);
+    window.removeEventListener('message', this.messageHandler);
   }
 
   setActive() {
@@ -131,6 +142,12 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     this._logger.info(`[Luna] Send CMD to: ${this.id}`);
     this.iframeWindow.postMessage({name: 'CMD', data: data.data}, '*');
   }
+
+  messageHandler = (event: MessageEvent) => {
+    if (event.data && typeof event.data === 'object') {
+      this.termComp = event.data;
+    }
+  };
 
   async reconnect() {
     const oldConnectToken = this.view.connectToken;

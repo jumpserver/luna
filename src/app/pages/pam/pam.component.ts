@@ -57,86 +57,40 @@ export class PagePamComponent implements OnInit, OnDestroy {
       this.assetName = params["assetName"];
       this.protocol = params["protocol"];
 
-      this._http.directiveConnect(this.assetId).subscribe((res) => {
-        if (res) {
-          let method: string = "";
+      try {
+        const res = await this._http.directiveConnect(this.assetId).toPromise();
+        if (!res) return;
 
-          const currentUserInfo = res.accounts.find(
-            (item: Account) => item.id === this.userId
-          );
+        const currentUserInfo = res.accounts.find(
+          (item: Account) => item.id === this.userId
+        );
 
-          switch (this.protocol) {
-            case "ssh":
-            case "telnet":
-              method = "web_cli";
-              break;
-            case "rdp":
-              method = "web_gui";
-              break;
-            case "sftp":
-              method = "web_sftp";
-              break;
-            case "vnc":
-              method = "web_gui";
-              break;
-            default:
-              method = "web_cli";
-          }
+        const method = this.getMethodByProtocol(this.protocol);
 
-          const assetMessage = {
-            id: this.assetId,
-            name: this.assetName,
-            address: res.address,
-            comment: res.comment,
-            type: res.type,
-            category: res.category,
-            permed_protocols: res.protocols,
-            permed_accounts: res.accounts,
-            spec_info: res.spec_info,
-          };
-          const connectData = {
-            method,
-            protocol: this.protocol,
-            asset: assetMessage,
-            account: currentUserInfo,
-            input_username: this.username,
-          };
+        const assetMessage = {
+          id: this.assetId,
+          name: this.assetName,
+          address: res.address,
+          comment: res.comment,
+          type: res.type,
+          category: res.category,
+          permed_protocols: res.protocols,
+          permed_accounts: res.accounts,
+          spec_info: res.spec_info,
+        };
 
-          this._http
-            .adminConnectToken(assetMessage, connectData)
-            .subscribe((res) => {
-              if (res) {
-                const url = this.getUrl();
+        const connectData = {
+          method,
+          protocol: this.protocol,
+          asset: assetMessage,
+          account: currentUserInfo,
+          input_username: this.username,
+        };
 
-                switch (this.protocol) {
-                  case "ssh": {
-                    this.iframeTerminalURL = `${url}/koko/connect?token=${res.id}`;
-                    break;
-                  }
-                  case "sftp": {
-                    this.iframeSFTPURL = `${url}/koko/elfinder/sftp/`;
-                    break;
-                  }
-                  case "rdp": {
-                    this.iframeRDPURL = `${url}/lion/connect?token=${res.id}`;
-                    break;
-                  }
-                  case "vnc": {
-                    this.iframeVNCURL = `${url}/lion/connect?token=${res.id}`;
-                    break;
-                  }
-                  case "telnet": {
-                    this.iframeTerminalURL = `${url}/koko/connect?token=${res.id}`;
-                    break;
-                  }
-                  default: {
-                    break;
-                  }
-                }
-              }
-            });
-        }
-      });
+        await this.getConnectToken(assetMessage, connectData);
+      } catch (error) {
+        this._logger.error("Failed to connect:", error);
+      }
     });
 
     this.startTimer();
@@ -207,6 +161,7 @@ export class PagePamComponent implements OnInit, OnDestroy {
 
     switch (this.protocol) {
       case "ssh":
+      case "k8s":
       case "sftp":
       case "telnet":
         port = "9530";
@@ -271,5 +226,70 @@ export class PagePamComponent implements OnInit, OnDestroy {
    */
   private closeDrawer(): void {
     this.sidenav.close();
+  }
+
+  /**
+   * 获取连接令牌
+   * @param assetMessage
+   * @param connectData
+   */
+  private async getConnectToken(assetMessage: any, connectData: any) {
+    try {
+      const firstRes = await this._http
+        .adminConnectToken(assetMessage, connectData)
+        .toPromise();
+      if (!firstRes) return;
+
+      const url = this.getUrl();
+
+      // 只有 SSH 协议需要第二个 token 用于 SFTP
+      if (this.protocol === "ssh") {
+        const secondRes = await this._http
+          .adminConnectToken(assetMessage, connectData)
+          .toPromise();
+        this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}&sftp=${secondRes.id}`;
+        return;
+      }
+
+      switch (this.protocol) {
+        case "k8s":
+          this.iframeTerminalURL = `${url}/koko/k8s/?token=${firstRes.id}`;
+          break;
+        case "sftp":
+          this.iframeSFTPURL = `${url}/koko/elfinder/sftp/`;
+          break;
+        case "rdp":
+          this.iframeRDPURL = `${url}/lion/connect?token=${firstRes.id}`;
+          break;
+        case "vnc":
+          this.iframeVNCURL = `${url}/lion/connect?token=${firstRes.id}`;
+          break;
+        case "telnet":
+          this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}`;
+          break;
+      }
+    } catch (error) {
+      this._logger.error("Failed to get connect token:", error);
+    }
+  }
+
+  /**
+   * 根据协议确定连接方法
+   * @param protocol
+   * @returns
+   */
+  private getMethodByProtocol(protocol: string): string {
+    switch (protocol) {
+      case "ssh":
+      case "telnet":
+        return "web_cli";
+      case "rdp":
+      case "vnc":
+        return "web_gui";
+      case "sftp":
+        return "web_sftp";
+      default:
+        return "web_cli";
+    }
   }
 }
