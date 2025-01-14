@@ -23,7 +23,7 @@
 
     <div *ngSwitchCase="'acl_face_online_not_supported'">
       <mat-dialog-content>
-        <div class="error-message">{{ 'ACL action "Face Online" not supported for this asset.' |translate }}</div>
+        <div class="error-message">{{errorDetail }}</div>
       </mat-dialog-content>
       <mat-dialog-actions>
         <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
