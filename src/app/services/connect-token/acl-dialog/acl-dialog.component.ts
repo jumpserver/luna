@@ -49,6 +49,9 @@ export class ElementACLDialogComponent implements OnInit {
     if (Array.isArray(error)) {
       error = error.join(' ');
     } else if (typeof error === 'object') {
+      if (error.detail) {
+        error = error.detail;
+      }
       error = JSON.stringify(error);
     }
     return error;
