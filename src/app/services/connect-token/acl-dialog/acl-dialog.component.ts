@@ -51,8 +51,9 @@ export class ElementACLDialogComponent implements OnInit {
     } else if (typeof error === 'object') {
       if (error.detail) {
         error = error.detail;
+      } else {
+        error = JSON.stringify(error);
       }
-      error = JSON.stringify(error);
     }
     return error;
   }
