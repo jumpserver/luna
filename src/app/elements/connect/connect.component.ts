@@ -234,17 +234,20 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   getConnectData(accounts: Account[], asset: Asset): Promise<ConnectData> {
+    let dialogWidth = '600px';
     const preConnectData = this._appSvc.getPreConnectData(asset);
     const isValid = this.checkPreConnectDataForAuto(asset, accounts, preConnectData);
     if (isValid) {
       return Promise.resolve(preConnectData);
     }
-
+    if (this._i18n.getLangCode() === 'pt-br') {
+      dialogWidth = '730px'
+    }
     this._appSvc.connectDialogShown = true;
     const dialogRef = this._dialog.open(ElementConnectDialogComponent, {
       minHeight: '300px',
       height: 'auto',
-      width: '600px',
+      width: dialogWidth,
       data: {accounts, asset, preConnectData}
     });
 
