@@ -55,9 +55,11 @@ export class HttpService {
   async handleError(error: HttpErrorResponse) {
     if (error.status === 401 && User.logined) {
       const msg = await this._i18n.t('LoginExpireMsg');
-      if (confirm(msg)) {
-        window.open('/core/auth/login/?next=/luna/', '_blank');
+      const isConfirm = confirm(msg);
+      if (isConfirm) {
+        return window.open('/core/auth/login/?next=/luna/', '_blank');
       }
+      window.location.reload();
     } else if (error.status === 403) {
       const msg = await this._i18n.t('No permission');
       alert(msg);
