@@ -1,6 +1,7 @@
 <div class="box" [class.minimized]="isMinimized" *ngIf="isVisible">
   <div class="box-header">
-    <span class="box-title" style="color: red" *ngIf="monitoringTabCount">●&nbsp;[{{ monitoringTabCount }}]个会话正在被监控中</span>
+    <span class="box-title" style="color: red" *ngIf="monitoringTabCount">●&nbsp;[{{ monitoringTabCount }}
+      ]{{ 'SessionIsBeingMonitored' | translate }}</span>
     <div class="box-controls">
       <button (click)="minimizeBox()">
         <i *ngIf="!isMinimized" class="fa fa-window-minimize"></i>
