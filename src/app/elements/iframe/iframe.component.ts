@@ -38,7 +38,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private _http: HttpService,
     private _dialog: MatDialog,
     public viewSrv: ViewService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
     private faceService: FaceService
   ) {
   }
