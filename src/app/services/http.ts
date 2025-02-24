@@ -292,8 +292,11 @@ export class HttpService {
     return this.get(url)
   }
 
-  adminConnectToken (asset: Asset, connectData: AdminConnectData, createTicket = false) {
-    const params = createTicket ? '?create_ticket=1' : '';
+  adminConnectToken (asset: Asset, connectData: AdminConnectData, createTicket = false, face_verify = false, face_monitor_token?: string) {
+    let params = '';
+    params += createTicket ? '?create_ticket=1' : '';
+    params += face_verify ? '?face_verify=1' : '';
+    params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/admin-connection-token/' + params;
     const { account, protocol } = connectData;
     const data = {

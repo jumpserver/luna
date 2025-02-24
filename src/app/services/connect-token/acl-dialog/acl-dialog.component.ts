@@ -114,7 +114,6 @@ export class ElementACLDialogComponent implements OnInit {
       }
     };
 
-
     if (this.tokenAction === 'exchange') {
       this._http.exchangeConnectToken(this.tokenID, false, true, faceMonitorToken).subscribe(successCallback, errorCallback);
     } else {
@@ -164,7 +163,6 @@ export class ElementACLDialogComponent implements OnInit {
   onCancelFaceVerify() {
     this.closeDialog();
   }
-
 
   onConfirmReview() {
     const successCallback = (connToken: ConnectionToken) => {
