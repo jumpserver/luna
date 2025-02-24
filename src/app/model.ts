@@ -36,6 +36,7 @@ export class Account {
   has_secret: boolean;
   secret: string;
   actions: Array<Action>;
+  id?: string;
 }
 
 class TreeNodeMeta {
@@ -374,6 +375,13 @@ export class ConnectOption {
   options?: any[];
 }
 
+export class AdminConnectData {
+  asset: Asset;
+  account: Account;
+  protocol: string;
+  input_username: string;
+  method: string;
+}
 
 export class ConnectData {
   asset: Asset;
@@ -446,12 +454,16 @@ export class Endpoint {
 
   getPort(protocol?: string): string {
     let _protocol = protocol || window.location.protocol;
+
     _protocol = _protocol.replace(':', '');
+
     let port = this[_protocol + '_port'];
+
     // 处理 http(s) 协议的后台端口为0的时候, 使用当前地址中的端口
     if (['http', 'https'].indexOf(_protocol) !== -1 && port === 0) {
       port = window.location.port;
     }
+
     return port;
   }
 

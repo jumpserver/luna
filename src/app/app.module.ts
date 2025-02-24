@@ -40,6 +40,7 @@ import {ElementSendCommandWithVariableDialogComponent} from '@app/elements/conte
 import {DynamicFormComponent} from '@app/elements/content/variable-dynamic-form/variable-dynamic-form.component';
 import {version} from '../environments/environment';
 import {BehaviorSubject, forkJoin, Observable, of} from 'rxjs';
+import {FileInputAccessorModule} from 'file-input-accessor';
 import {catchError, mergeMap} from 'rxjs/operators';
 
 
@@ -97,6 +98,7 @@ export class CustomLoader implements TranslateLoader {
         deps: [HttpClient]
       }
     }),
+    FileInputAccessorModule,
     ...PluginModules,
   ],
   declarations: [

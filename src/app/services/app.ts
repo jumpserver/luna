@@ -141,6 +141,8 @@ export class AppService {
     if (this.checkIntervalId) {
       clearInterval(this.checkIntervalId);
     }
+
+    // @ts-ignore
     this.checkIntervalId = setInterval(() => {
       this.doCheckProfile();
     }, second * 1000);
@@ -251,21 +253,28 @@ export class AppService {
 
   getPreConnectData(asset: Asset): ConnectData {
     const key = `JMS_PRE_${asset.id}`;
+
     const connectData = this._localStorage.get(key) as ConnectData;
+
     if (!connectData) {
       return null;
     }
+
     connectData.manualAuthInfo = new AuthInfo();
+
     if (connectData.account.has_secret) {
       return connectData;
     }
+
     if (connectData.account) {
       const auths = this.getAccountLocalAuth(asset.id);
       const matched = auths.find(item => item.alias === connectData.account.alias);
+
       if (matched) {
         connectData.manualAuthInfo = matched;
       }
     }
+
     return connectData;
   }
 
