@@ -258,8 +258,16 @@ export class HttpService {
     return cleanedParams;
   }
 
-  createConnectToken(asset: Asset, connectData: ConnectData, createTicket = false) {
-    const params = createTicket ? '?create_ticket=1' : '';
+  getFaceVerifyState(token: string) {
+    const url = `/api/v1/authentication/face/context/?token=${token}`;
+    return this.get(url);
+  }
+
+  createConnectToken(asset: Asset, connectData: ConnectData, createTicket = false, face_verify = false, face_monitor_token?: string) {
+
+    let params = createTicket ? '?create_ticket=1' : '';
+    params += face_verify ? '?face_verify=1' : '';
+    params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/connection-token/' + params;
     const {account, protocol, manualAuthInfo, connectMethod} = connectData;
     const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
@@ -300,8 +308,10 @@ export class HttpService {
     );
   }
 
-  exchangeConnectToken(tokenID: string, createTicket = false) {
-    const params = createTicket ? '?create_ticket=1' : '';
+  exchangeConnectToken(tokenID: string, createTicket = false, face_verify = false, face_monitor_token?: string) {
+    let params = createTicket ? '?create_ticket=1' : '';
+    params += face_verify ? '?face_verify=1' : '';
+    params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/connection-token/exchange/' + params;
     const data = {'id': tokenID};
     return this.post<ConnectionToken>(url, data);

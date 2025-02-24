@@ -1,0 +1,7 @@
+<h1 mat-dialog-title>
+  {{"Send command"| translate}}
+</h1>
+
+<div>
+  <variable-dynamic-form [formConfig]="formConfig" [command]="command" (formSubmitted)="onFormSubmitted($event)"></variable-dynamic-form>
+</div>

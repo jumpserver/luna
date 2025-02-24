@@ -100,7 +100,7 @@ export class ConnectEvt {
 export class Nav {
   id: string;
   name: string;
-  children?: Array<Nav>;
+  children?: Array<Nav> | Function;
   hide?: boolean = false;
   click?: Function;
   href?: string;
@@ -266,6 +266,8 @@ export class GlobalSetting {
   TERMINAL_GRAPHICAL_RESOLUTION: string;
   CONNECTION_TOKEN_REUSABLE: boolean;
   CHAT_AI_ENABLED: boolean;
+  VIEW_ASSET_ONLINE_SESSION_INFO: boolean;
+  LANGUAGES: any;
 }
 
 export class Setting {
@@ -420,10 +422,12 @@ export class ConnectionToken {
   is_active: boolean;
   date_expired: Date;
   is_reusable: boolean;
+  face_token: string;
   from_ticket: {
     id: string;
   };
   from_ticket_info: FromTicketInfo;
+  face_monitor_token: string;
 }
 
 export class Protocol {

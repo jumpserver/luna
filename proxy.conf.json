@@ -63,8 +63,14 @@
     "ws": true,
     "changeOrigin": true
   },
-  "/kael": {
+  "/facelive": {
     "target": "http://localhost:5173",
+    "secure": false,
+    "ws": true,
+    "changeOrigin": true
+  },
+  "/kael": {
+    "target": "http://localhost:5172",
     "secure": false,
     "ws": true,
     "changeOrigin": true

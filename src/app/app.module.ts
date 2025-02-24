@@ -36,6 +36,8 @@ import {ClipboardService} from 'ngx-clipboard';
 import {ElementsReplayMp4Component} from './elements/replay/mp4/mp4.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
+import {ElementSendCommandWithVariableDialogComponent} from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
+import {DynamicFormComponent} from '@app/elements/content/variable-dynamic-form/variable-dynamic-form.component';
 import {version} from '../environments/environment';
 import {BehaviorSubject, forkJoin, Observable, of} from 'rxjs';
 import {FileInputAccessorModule} from 'file-input-accessor';
@@ -117,6 +119,8 @@ export class CustomLoader implements TranslateLoader {
     ElementDialogAlertComponent,
     ElementCommandDialogComponent,
     ElementSendCommandDialogComponent,
+    DynamicFormComponent,
+    ElementSendCommandWithVariableDialogComponent
   ],
   bootstrap: [AppComponent],
   providers: [

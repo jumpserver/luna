@@ -139,6 +139,7 @@ export class ElementChatComponent implements OnInit, OnDestroy {
 
     elements.forEach(element => {
       element.addEventListener('mousedown', (event: MouseEvent) => {
+        if (event.button !== 0) return;
         event.preventDefault();
         startDrag(event);
       }, false);

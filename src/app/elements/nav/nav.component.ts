@@ -46,10 +46,6 @@ export class ElementNavComponent implements OnInit {
     this.viewIds = this._viewSrv.viewIds;
   }
 
-  refreshNav() {
-    this.navs = this.getNav();
-  }
-
   getNav() {
     return [
       {
@@ -97,36 +93,7 @@ export class ElementNavComponent implements OnInit {
       {
         id: 'Language',
         name: 'Language',
-        children: [
-          {
-            id: 'English',
-            click: () => {
-              this._i18n.use('en');
-            },
-            name: 'English'
-          },
-          {
-            id: 'Chinese',
-            click: () => {
-              this._i18n.use('zh');
-            },
-            name: '中文'
-          },
-          {
-            id: 'Chinese-hant',
-            click: () => {
-              this._i18n.use('zh-hant');
-            },
-            name: '中文(繁體)'
-          },
-          {
-            id: 'Japanese',
-            click: () => {
-              this._i18n.use('ja');
-            },
-            name: '日本語'
-          }
-        ]
+        children: this.getLanguageOptions(),
       },
       {
         id: 'Setting',
@@ -230,6 +197,24 @@ export class ElementNavComponent implements OnInit {
         ]
       },
     ];
+  }
+
+  getLanguageOptions() {
+    const langOptions = [];
+    this._settingSvc.afterInited().then((state) => {
+      const languages = this._settingSvc.globalSetting.LANGUAGES;
+      for (const langObj of languages) {
+        langOptions.push({
+          id: langObj.code,
+          click: () => {
+            this._i18n.use(langObj.code);
+            window.location.reload();
+          },
+          name: langObj.name
+        });
+      }
+    });
+    return langOptions;
   }
 
   onJumpUi() {
