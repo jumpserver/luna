@@ -1,7 +1,8 @@
 import { MatSidenav } from "@angular/material/sidenav";
 import { ActivatedRoute, Params } from "@angular/router";
-import { Protocol, Account, Endpoint, Asset } from "@app/model";
+import { Account, Endpoint, Asset } from "@app/model";
 import { HttpService, I18nService, LogService } from "@app/services";
+import { environment } from '@src/environments/environment';
 import {
   Component,
   ViewChild,
@@ -159,19 +160,21 @@ export class PagePamComponent implements OnInit, OnDestroy {
     const endpoint = window.location.host.split(":")[0];
     const protocole = window.location.protocol;
 
-    switch (this.protocol) {
-      case "ssh":
-      case "k8s":
-      case "sftp":
-      case "telnet":
-        port = "9530";
-        break;
-      default:
-        port = "9529";
-    }
+    if (!environment.production) {
+      switch (this.protocol) {
+        case "ssh":
+        case "k8s":
+        case "sftp":
+        case "telnet":
+          port = "9530";
+          break;
+        default:
+          port = "9529";
+      }
 
-    if (port) {
       host = `${endpoint}:${port}`;
+    } else {
+      host = `${endpoint}`;
     }
 
     this._logger.info(`Current host: ${protocole}//${host}`);
@@ -238,6 +241,7 @@ export class PagePamComponent implements OnInit, OnDestroy {
       const firstRes = await this._http
         .adminConnectToken(assetMessage, connectData, false, false, '')
         .toPromise();
+
       if (!firstRes) return;
 
       const url = this.getUrl();
