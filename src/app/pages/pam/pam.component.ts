@@ -286,6 +286,15 @@ export class PagePamComponent implements OnInit, OnDestroy {
     switch (protocol) {
       case "ssh":
       case "telnet":
+      case "mysql":
+      case "mariadb":
+      case "postgresql":
+      case "redis":
+      case "oracle":
+      case "sqlserver":
+      case "mongodb":
+      case "clickhouse":
+      case "kubernetes":
         return "web_cli";
       case "rdp":
       case "vnc":
