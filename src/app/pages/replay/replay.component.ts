@@ -11,6 +11,7 @@ import {Replay, User} from '@app/model';
 export class PagesReplayComponent implements OnInit {
   replay: Replay = new Replay();
   user: User;
+  loading: boolean = true;
 
   constructor(private route: ActivatedRoute,
               private _http: HttpService,
@@ -37,12 +38,14 @@ export class PagesReplayComponent implements OnInit {
           if (data['error']) {
             alert('没找到录像文件');
             clearInterval(interval);
+            this.loading = false;
             return;
           }
           if (data['type']) {
             Object.assign(this.replay, data);
             this.replay.id = sid;
             clearInterval(interval);
+            this.loading = false;
             const auditorUser =  `${this._i18n.instant('Viewer')}: ${this.user.name}(${this.user.username})`;
             const sessionContent = `${this._i18n.instant('Operator')}: ${this.replay.user}\n${this.replay.asset}`;
             const content = `${auditorUser}\n${sessionContent}`;
@@ -54,12 +57,17 @@ export class PagesReplayComponent implements OnInit {
         err => {
           alert('没找到录像文件');
           clearInterval(interval);
+          this.loading = false;
         }
       );
     }, 2000);
   }
 
   isLoad() {
+    if (!this.loading) {
+      return false;
+    }
+
     const tp = this.replay.type;
     const supportedType = {
       'json': true,
