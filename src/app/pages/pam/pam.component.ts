@@ -269,6 +269,14 @@ export class PagePamComponent implements OnInit, OnDestroy {
           this.iframeVNCURL = `${url}/lion/connect?token=${firstRes.id}`;
           break;
         case "telnet":
+        case "mysql":
+        case "mariadb":
+        case "postgresql":
+        case "redis":
+        case "oracle":
+        case "sqlserver":
+        case "mongodb":
+        case "clickhouse":
           this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}`;
           break;
       }
