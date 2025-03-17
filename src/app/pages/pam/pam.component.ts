@@ -277,6 +277,8 @@ export class PagePamComponent implements OnInit, OnDestroy {
         case "sqlserver":
         case "mongodb":
         case "clickhouse":
+        case "http":
+        case "https":
           this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}`;
           break;
       }
@@ -302,7 +304,9 @@ export class PagePamComponent implements OnInit, OnDestroy {
       case "sqlserver":
       case "mongodb":
       case "clickhouse":
-      case "kubernetes":
+      case "k8s":
+      case "http":
+      case "https":
         return "web_cli";
       case "rdp":
       case "vnc":
