@@ -135,4 +135,25 @@
       [origin]="'pam'"
     ></elements-iframe>
   </div>
+
+  <div class="pam-gui" *ngIf="iframeVNCURL">
+    <div class="timer-container">
+      <div class="timer">
+        <div [class.active]="isActive" class="status-dot"></div>
+        <span>{{ totalConnectTime }}</span>
+      </div>
+    </div>
+
+    <div class="action-icons" [class.show]="showActionIcons">
+      <div class="close-icon" (click)="handleCloseConnect()">
+        <mat-icon matTooltip="退出">close</mat-icon>
+      </div>
+    </div>
+
+    <elements-iframe
+      *ngIf="iframeVNCURL"
+      [src]="iframeVNCURL"
+      [origin]="'pam'"
+    ></elements-iframe>
+  </div>
 </div>
