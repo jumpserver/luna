@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpErrorResponse, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Browser, User} from '@app/globals';
 import {catchError, delay, map, retryWhen, scan} from 'rxjs/operators';
-import {Asset, ConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
+import {Asset, ConnectData, AdminConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
 import {Observable} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
@@ -281,6 +281,30 @@ export class HttpService {
       input_secret: secret,
       connect_method: connectMethod.value,
       connect_options: connectOption
+    };
+    return this.post<ConnectionToken>(url, data).pipe(
+      catchError(this.handleConnectMethodExpiredError.bind(this))
+    );
+  }
+
+  directiveConnect(assetId: String) {
+    const url = `/api/v1/assets/assets/${assetId}`
+    return this.get(url)
+  }
+
+  adminConnectToken (asset: Asset, connectData: AdminConnectData, createTicket = false, face_verify = false, face_monitor_token?: string) {
+    let params = '';
+    params += createTicket ? '?create_ticket=1' : '';
+    params += face_verify ? '?face_verify=1' : '';
+    params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
+    const url = '/api/v1/authentication/admin-connection-token/' + params;
+    const { account, protocol } = connectData;
+    const data = {
+      asset: asset.id,
+      account: account.name,
+      protocol: protocol,
+      input_username: connectData.input_username,
+      connect_method: connectData.method,
     };
     return this.post<ConnectionToken>(url, data).pipe(
       catchError(this.handleConnectMethodExpiredError.bind(this))

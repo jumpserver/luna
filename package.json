@@ -63,6 +63,7 @@
     "codemirror": "^5.42.0",
     "core-js": "^2.5.4",
     "crypto-js": "^4.2.0",
+    "file-input-accessor": "2.0",
     "font-awesome": "4.7.0",
     "guacamole-common-js": "1.1.0",
     "jquery": "^3.6.1",
