@@ -248,10 +248,11 @@ export class PagePamComponent implements OnInit, OnDestroy {
 
       // 只有 SSH 协议需要第二个 token 用于 SFTP
       if (this.protocol === "ssh") {
-        const secondRes = await this._http
-          .adminConnectToken(assetMessage, connectData, false, false, '')
-          .toPromise();
-        this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}&sftp=${secondRes.id}`;
+        // const secondRes = await this._http
+        //   .adminConnectToken(assetMessage, connectData, false, false, '')
+        //   .toPromise();
+        // this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}&sftp=${secondRes.id}`;
+        this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}`;
         return;
       }
 
