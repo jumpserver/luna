@@ -8,9 +8,9 @@
         class="file-manage-drawer"
       >
         <div class="drawer-header">
-          <mat-icon style="cursor: pointer" (click)="closeDrawer()">close</mat-icon>
+          <mat-icon style="cursor: pointer" (click)="closeDrawer()">{{ _i18n.instant('Close') }}</mat-icon>
 
-          <p>文件管理</p>
+          <p>{{ _i18n.instant('File Manager') }}</p>
         </div>
 
         <mat-divider></mat-divider>
@@ -26,27 +26,27 @@
       <mat-sidenav-content>
         <mat-card>
           <mat-card-header style="height: 55px; align-items: center">
-            <mat-card-title> SSH 会话 </mat-card-title>
+            <mat-card-title> {{ protocol.toUpperCase() }} {{ _i18n.instant('Session') }} </mat-card-title>
 
             <mat-divider [vertical]="true"> </mat-divider>
 
             <div class="info-section">
               <div class="top-part">
-                <mat-icon matTooltip="资产信息">dvr</mat-icon>
+                <mat-icon [matTooltip]="_i18n.instant('asset')">dvr</mat-icon>
                 <div class="desc">
                   <div style="font-weight: 700; margin-right: 5px">
-                    资产信息:
+                    {{ _i18n.instant('asset') }}:
                   </div>
                   {{ assetName }}
                 </div>
               </div>
 
               <div class="bottom-part">
-                <mat-icon matTooltip="连接时间">date_range</mat-icon>
+                <mat-icon [matTooltip]="_i18n.instant('ConnectionTime')">date_range</mat-icon>
 
                 <div class="desc">
                   <div style="font-weight: 700; margin-right: 5px">
-                    连接时间:
+                    {{ _i18n.instant('ConnectionTime') }}:
                   </div>
                   {{ startTime.toLocaleString() }}
                 </div>
@@ -67,7 +67,7 @@
                 <div class="file-manage action-icon">
                   <button mat-icon-button [disabled]="disabledOpenFileManage">
                     <mat-icon
-                    matTooltip="文件管理"
+                    [matTooltip]="_i18n.instant('File Manager')"
                     (click)="handleOpenFileManage()">folder</mat-icon
                   >
                   </button>
@@ -75,7 +75,7 @@
 
                 <div class="exit action-icon">
                   <button mat-icon-button>
-                    <mat-icon matTooltip="退出" (click)="handleCloseConnect()">close</mat-icon>
+                    <mat-icon [matTooltip]="_i18n.instant('Close')" (click)="handleCloseConnect()">close</mat-icon>
                   </button>
                 </div>
               </div>
@@ -109,7 +109,7 @@
 
     <div class="action-icons" [class.show]="showActionIcons">
       <div class="close-icon" (click)="handleCloseConnect()">
-        <mat-icon matTooltip="退出">close</mat-icon>
+        <mat-icon [matTooltip]="_i18n.instant('Close')">close</mat-icon>
       </div>
     </div>
 
@@ -126,7 +126,7 @@
 
     <div class="action-icons" [class.show]="showActionIcons">
       <div class="close-icon" (click)="handleCloseConnect()">
-        <mat-icon matTooltip="退出">close</mat-icon>
+        <mat-icon [matTooltip]="_i18n.instant('Close')">close</mat-icon>
       </div>
     </div>
 
@@ -147,7 +147,7 @@
 
     <div class="action-icons" [class.show]="showActionIcons">
       <div class="close-icon" (click)="handleCloseConnect()">
-        <mat-icon matTooltip="退出">close</mat-icon>
+        <mat-icon [matTooltip]="_i18n.instant('Close')">close</mat-icon>
       </div>
     </div>
 
