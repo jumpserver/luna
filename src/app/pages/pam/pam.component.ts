@@ -129,7 +129,7 @@ export class PagePamComponent implements OnInit, OnDestroy {
    * 关闭当前连接
    */
   public async handleCloseConnect() {
-    if (window.confirm("确定要关闭当前连接吗?")) {
+    if (window.confirm(`${this._i18n.instant('TurnOffReminders')}`)) {
       window.close();
     }
   }
