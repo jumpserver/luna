@@ -22,6 +22,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   @Output() socketCloseEvent: EventEmitter<Boolean> = new EventEmitter<Boolean>();
+  @Output() createFileConnectToken: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   eventHandler: EventListenerOrEventListenerObject;
   private renewalTrigger = new Subject<void>();
   iframeWindow: Window;
@@ -104,6 +105,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
         case 'KEYBOARDEVENT':
         case 'MOUSEEVENT':
           this.renewalTrigger.next();
+          break;
+        case 'CREATE_FILE_CONNECT_TOKEN':
+          this.createFileConnectToken.emit(true);
           break;
       }
     }.bind(this);
