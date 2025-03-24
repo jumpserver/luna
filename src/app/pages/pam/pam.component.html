@@ -64,18 +64,19 @@
               <mat-divider [vertical]="true"> </mat-divider>
 
               <div class="actions">
-                <!-- <div class="file-manage action-icon">
-                  <mat-icon
+                <div class="file-manage action-icon">
+                  <button mat-icon-button [disabled]="disabledOpenFileManage">
+                    <mat-icon
                     matTooltip="文件管理"
-                    (click)="handleOpenFileManage()"
-                    >folder</mat-icon
+                    (click)="handleOpenFileManage()">folder</mat-icon
                   >
-                </div> -->
+                  </button>
+                </div>
 
                 <div class="exit action-icon">
-                  <mat-icon matTooltip="退出" (click)="handleCloseConnect()"
-                    >close</mat-icon
-                  >
+                  <button mat-icon-button>
+                    <mat-icon matTooltip="退出" (click)="handleCloseConnect()">close</mat-icon>
+                  </button>
                 </div>
               </div>
             </div>
@@ -90,7 +91,7 @@
           "
         >
           <mat-card-content style="height: 100%">
-            <elements-iframe #iFrame [src]="iframeTerminalURL" [origin]="'pam'">
+            <elements-iframe #iFrame [src]="iframeTerminalURL" [origin]="'pam'" (socketCloseEvent)="handleSocketCloseEvent($event)">
             </elements-iframe>
           </mat-card-content>
         </mat-card>
