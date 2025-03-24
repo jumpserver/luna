@@ -21,6 +21,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   @Input() origin: string;
   @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
+  @Output() socketCloseEvent: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   eventHandler: EventListenerOrEventListenerObject;
   private renewalTrigger = new Subject<void>();
   iframeWindow: Window;
@@ -77,8 +78,11 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           clearInterval(this.ping);
           break;
         case 'CLOSE':
-          this.view.connected = false;
-          if (this.view.connectToken.face_monitor_token) {
+          if (this.view && this.view.connected) {
+            this.view.connected = false;
+          }
+          this.socketCloseEvent.emit(true);
+          if (this.view && this.view.connectToken && this.view.connectToken.face_monitor_token) {
             this.faceService.removeMonitoringTab(this.view.id);
           }
           break;

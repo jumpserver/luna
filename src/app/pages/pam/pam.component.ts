@@ -1,6 +1,6 @@
 import { MatSidenav } from "@angular/material/sidenav";
 import { ActivatedRoute, Params } from "@angular/router";
-import { Account, Endpoint, Asset } from "@app/model";
+import { Account, Endpoint, Asset, View } from "@app/model";
 import { HttpService, I18nService, LogService } from "@app/services";
 import { environment } from '@src/environments/environment';
 import {
@@ -9,6 +9,7 @@ import {
   OnInit,
   OnDestroy,
   ElementRef,
+  Input,
 } from "@angular/core";
 
 @Component({
@@ -17,6 +18,7 @@ import {
   styleUrls: ["./pam.component.scss"],
 })
 export class PagePamComponent implements OnInit, OnDestroy {
+  @Input() view: View;
   @ViewChild("sidenav", { static: false }) sidenav: MatSidenav;
   @ViewChild("iFrame", { static: false }) iframeRef: ElementRef;
 
@@ -37,9 +39,13 @@ export class PagePamComponent implements OnInit, OnDestroy {
   public totalConnectTime: string = "00:00:00";
   public isActive: boolean = true;
   public showActionIcons: boolean = false;
+  public disabledOpenFileManage: boolean = false;
 
   private timerInterval: any;
   private pausedElapsedTime: number = 0;
+
+  private assetMessage: any;
+  private connectData: any;
 
   constructor(
     private _http: HttpService,
@@ -68,7 +74,7 @@ export class PagePamComponent implements OnInit, OnDestroy {
 
         const method = this.getMethodByProtocol(this.protocol);
 
-        const assetMessage = {
+        this.assetMessage = {
           id: this.assetId,
           name: this.assetName,
           address: res.address,
@@ -80,15 +86,15 @@ export class PagePamComponent implements OnInit, OnDestroy {
           spec_info: res.spec_info,
         };
 
-        const connectData = {
+        this.connectData = {
           method,
           protocol: this.protocol,
-          asset: assetMessage,
+          asset: this.assetMessage,
           account: currentUserInfo,
           input_username: this.username,
         };
 
-        await this.getConnectToken(assetMessage, connectData);
+        await this.getConnectToken(this.assetMessage, this.connectData);
       } catch (error) {
         this._logger.error("Failed to connect:", error);
       }
@@ -128,15 +134,25 @@ export class PagePamComponent implements OnInit, OnDestroy {
     }
   }
 
+  public handleSocketCloseEvent(_event: any) {
+    this.disabledOpenFileManage = true;
+  }
+
   /**
    * 打开文件管理器
    */
-  public handleOpenFileManage() {
+  public async handleOpenFileManage() {
     const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window })
       .iframeWindow;
 
-    if (iframeWindow) {
-      iframeWindow.postMessage({ name: "FILE" }, "*");
+      if (iframeWindow) {
+      const res = await this._http
+      .adminConnectToken(this.assetMessage, this.connectData, false, false, '')
+      .toPromise();
+
+      const SFTP_Token = res ? res.id : '';
+
+      iframeWindow.postMessage({ name: "FILE", SFTP_Token }, "*");
       this._logger.info(`[Luna] Send FILE`);
     }
   }
@@ -246,7 +262,6 @@ export class PagePamComponent implements OnInit, OnDestroy {
 
       const url = this.getUrl();
 
-      // 只有 SSH 协议需要第二个 token 用于 SFTP
       if (this.protocol === "ssh") {
         // const secondRes = await this._http
         //   .adminConnectToken(assetMessage, connectData, false, false, '')

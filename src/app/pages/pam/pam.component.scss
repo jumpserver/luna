@@ -367,14 +367,14 @@
     }
 
     .mat-divider {
-      height: 40%;
+      height: 100%;
       margin: 0 20px;
     }
 
     .actions {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: 0;
 
       .action-icon {
         display: flex;
