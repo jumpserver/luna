@@ -130,11 +130,13 @@ export class PagePamComponent implements OnInit, OnDestroy {
    */
   public async handleCloseConnect() {
     if (window.confirm(`${this._i18n.instant('TurnOffReminders')}`)) {
+      this.stopTimer();
       window.close();
     }
   }
 
   public handleSocketCloseEvent(_event: any) {
+    this.stopTimer();
     this.disabledOpenFileManage = true;
   }
 
