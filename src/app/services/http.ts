@@ -288,7 +288,7 @@ export class HttpService {
   }
 
   directiveConnect(assetId: String) {
-    const url = `/api/v1/assets/assets/${assetId}`
+    const url = `/api/v1/assets/assets/${assetId}/`
     return this.get(url)
   }
 
