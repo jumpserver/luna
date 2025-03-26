@@ -91,7 +91,7 @@
           "
         >
           <mat-card-content style="height: 100%">
-            <elements-iframe #iFrame [src]="iframeTerminalURL" [origin]="'pam'" (socketCloseEvent)="handleSocketCloseEvent($event)">
+            <elements-iframe #iFrame [src]="iframeTerminalURL" [origin]="'direct'" (socketCloseEvent)="handleSocketCloseEvent($event)">
             </elements-iframe>
           </mat-card-content>
         </mat-card>
@@ -113,7 +113,12 @@
       </div>
     </div>
 
-    <pages-sftp></pages-sftp>
+    <elements-iframe
+      *ngIf="iframeSFTPURL"
+      [src]="iframeSFTPURL"
+      [origin]="'direct'"
+      style="height: 100%; width: 100%"
+    ></elements-iframe>
   </div>
 
   <div class="pam-gui" *ngIf="iframeRDPURL">
@@ -133,7 +138,7 @@
     <elements-iframe
       *ngIf="iframeRDPURL"
       [src]="iframeRDPURL"
-      [origin]="'pam'"
+      [origin]="'direct'"
     ></elements-iframe>
   </div>
 
@@ -154,7 +159,7 @@
     <elements-iframe
       *ngIf="iframeVNCURL"
       [src]="iframeVNCURL"
-      [origin]="'pam'"
+      [origin]="'direct'"
     ></elements-iframe>
   </div>
 </div>

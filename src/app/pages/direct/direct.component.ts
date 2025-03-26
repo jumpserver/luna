@@ -13,11 +13,11 @@ import {
 } from "@angular/core";
 
 @Component({
-  selector: "pages-pam",
-  templateUrl: "./pam.component.html",
-  styleUrls: ["./pam.component.scss"],
+  selector: "pages-direct",
+  templateUrl: "./direct.component.html",
+  styleUrls: ["./direct.component.scss"],
 })
-export class PagePamComponent implements OnInit, OnDestroy {
+export class PageDirectComponent implements OnInit, OnDestroy {
   @Input() view: View;
   @ViewChild("sidenav", { static: false }) sidenav: MatSidenav;
   @ViewChild("iFrame", { static: false }) iframeRef: ElementRef;
@@ -59,10 +59,10 @@ export class PagePamComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this._route.params.subscribe(async (params: Params) => {
       this.userId = params["userId"];
-      this.username = params["username"];
       this.assetId = params["assetId"];
-      this.assetName = params["assetName"];
       this.protocol = params["protocol"];
+      this.username = params["username"];
+      this.assetName = params["assetName"];
 
       try {
         const res = await this._http.directiveConnect(this.assetId).toPromise();
@@ -184,6 +184,7 @@ export class PagePamComponent implements OnInit, OnDestroy {
         case "k8s":
         case "sftp":
         case "telnet":
+        case "mysql":
           port = "9530";
           break;
         default:
@@ -264,21 +265,15 @@ export class PagePamComponent implements OnInit, OnDestroy {
 
       const url = this.getUrl();
 
-      if (this.protocol === "ssh") {
-        // const secondRes = await this._http
-        //   .adminConnectToken(assetMessage, connectData, false, false, '')
-        //   .toPromise();
-        // this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}&sftp=${secondRes.id}`;
-        this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}`;
-        return;
-      }
-
       switch (this.protocol) {
+        case 'ssh':
+          this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}`;
+          break;
         case "k8s":
           this.iframeTerminalURL = `${url}/koko/k8s/?token=${firstRes.id}`;
           break;
         case "sftp":
-          this.iframeSFTPURL = `${url}/koko/elfinder/sftp/`;
+          this.iframeSFTPURL = `${url}/koko/sftp?token=${firstRes.id}`;
           break;
         case "rdp":
           this.iframeRDPURL = `${url}/lion/connect?token=${firstRes.id}`;
