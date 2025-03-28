@@ -1,8 +1,8 @@
+import { Account, Endpoint, View } from "@app/model";
 import { MatSidenav } from "@angular/material/sidenav";
 import { ActivatedRoute, Params } from "@angular/router";
-import { Account, Endpoint, Asset, View } from "@app/model";
-import { HttpService, I18nService, LogService } from "@app/services";
 import { environment } from '@src/environments/environment';
+import { HttpService, I18nService, LogService, SettingService } from "@app/services";
 import {
   Component,
   ViewChild,
@@ -21,6 +21,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   @Input() view: View;
   @ViewChild("sidenav", { static: false }) sidenav: MatSidenav;
   @ViewChild("iFrame", { static: false }) iframeRef: ElementRef;
+  @ViewChild('contentWindow', {static: true}) windowRef: ElementRef;
 
   public startTime: Date;
   public endpoint: Endpoint;
@@ -34,6 +35,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   public iframeRDPURL: string = "";
   public iframeVNCURL: string = "";
   public iframeSFTPURL: string = "";
+  public waterMarkContext: string = "";
   public iframeTerminalURL: string = "";
 
   public totalConnectTime: string = "00:00:00";
@@ -51,7 +53,8 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     private _http: HttpService,
     private _i18n: I18nService,
     private _logger: LogService,
-    private _route: ActivatedRoute
+    private _route: ActivatedRoute,
+    private _settingSvc: SettingService
   ) {
     this.startTime = new Date();
   }
@@ -265,6 +268,9 @@ export class PageDirectComponent implements OnInit, OnDestroy {
 
       const url = this.getUrl();
 
+      this.waterMarkContext = firstRes.user_display
+      this.createWaterMark();
+
       switch (this.protocol) {
         case 'ssh':
           this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}`;
@@ -329,5 +335,16 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       default:
         return "web_cli";
     }
+  }
+
+
+  /**
+   * @description 创建水印
+   */
+  private createWaterMark() {
+    this._settingSvc.createWaterMarkIfNeed(
+      this.windowRef.nativeElement,
+      `${this.waterMarkContext}\n${this.assetName}`
+    );
   }
 }
