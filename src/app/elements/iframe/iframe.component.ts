@@ -69,6 +69,10 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       if (msg.id !== this.id) { return; }
 
       switch (msg.name) {
+        case 'PING': {
+          this.iframeWindow.postMessage({name: 'PONG', id: this.id}, '*');
+          break;
+        }
         case 'PONG':
           setTimeout(() => {
             this.showIframe = this.showValue;
@@ -146,9 +150,11 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       this._logger.info(`[Luna] Send PING to: ${this.id}`);
       this.iframeWindow.postMessage({name: 'PING', id: this.id}, '*');
     }, 500);
+
     window.addEventListener('message', this.eventHandler);
+
+    // 长时间未PING通, 则主动关闭
     setTimeout(function () {
-      // 长时间未PING通, 则主动关闭
       clearInterval(this.ping);
       this.showIframe = this.showValue;
     }.bind(this), 1000 * 10);
@@ -168,13 +174,17 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   async reconnect() {
     const oldConnectToken = this.view.connectToken;
     const newConnectToken = await this._connectTokenSvc.exchange(oldConnectToken);
+
     if (!newConnectToken) {
       return;
     }
+
     // 更新当前 view 的 connectToken
-    this.view.connectToken = newConnectToken;
-    const url = this.src.replace(oldConnectToken.id, newConnectToken.id);
     this.src = 'about:blank';
+    this.view.connectToken = newConnectToken;
+
+    const url = this.src.replace(oldConnectToken.id, newConnectToken.id);
+
     setTimeout(() => {
       this.src = url;
       this.view.connected = true;
