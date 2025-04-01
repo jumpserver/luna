@@ -64,7 +64,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
       {name: 'port', value: this.endpoint.getPort(this.protocol), label: this._i18n.t('Port')},
       {name: 'username', value: this.token.id, label: this._i18n.t('Username')},
       {name: 'password', value: this.token.value, label: this._i18n.t('Password')},
-      {name: 'database', value: database, label: this._i18n.t('Database')},
+      {name: 'database', value: this.protocol === 'oracle' ? this.token.id : database, label: this._i18n.t('Database')},
       {name: 'protocol', value: this.protocol, label: this._i18n.t('Protocol')},
       {name: 'date_expired', value: `${this.token.date_expired}`, label: this._i18n.t('Expire time')},
     ];
@@ -118,7 +118,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
           `/${passwordHolder}` +
           `@${host}` +
           `:${this.endpoint.getPort(this.protocol)}` +
-          `/${database}`;
+          `/${this.token.id}`;
         break;
       case 'sqlserver':
         cli = `sqlcmd` +
