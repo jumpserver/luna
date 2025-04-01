@@ -153,11 +153,11 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
     window.addEventListener('message', this.eventHandler);
 
-    // 长时间未PING通, 则主动关闭
+    // 30s 内未PING通, 则主动关闭
     setTimeout(function () {
       clearInterval(this.ping);
       this.showIframe = this.showValue;
-    }.bind(this), 1000 * 10);
+    }.bind(this), 1000 * 30);
   }
 
   sendCommand(data) {
