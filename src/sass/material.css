@@ -651,8 +651,9 @@ input.mat-input-element {
   color: rgba(0, 0, 0, .38)
 }
 
-.mat-optgroup-label {
-  color: rgba(0, 0, 0, .54)
+.mat-select-panel .mat-optgroup-label {
+  color: rgba(0, 0, 0, .64);
+  font-size: 13px;
 }
 
 .mat-optgroup-disabled .mat-optgroup-label {
