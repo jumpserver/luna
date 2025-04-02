@@ -269,12 +269,13 @@ export class HttpService {
     params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/connection-token/' + params;
     const {account, protocol, manualAuthInfo, connectMethod} = connectData;
-    const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
+    const isVirtual = account.username.startsWith('@');
+    const username = isVirtual ? manualAuthInfo.username : account.username;
     const secret = encryptPassword(manualAuthInfo.secret);
     const connectOption = connectData.connectOption;
     const data = {
       asset: asset.id,
-      account: account.alias,
+      account: isVirtual ? account.username : account.id, // 主要是有特殊账号，匿名、虚拟
       protocol: protocol.name,
       input_username: username,
       input_secret: secret,
@@ -287,11 +288,12 @@ export class HttpService {
   }
 
   directiveConnect(assetId: String) {
-    const url = `/api/v1/assets/assets/${assetId}/`
-    return this.get(url)
+    const url = `/api/v1/assets/assets/${assetId}/`;
+    return this.get(url);
   }
 
-  adminConnectToken (asset: Asset, connectData: AdminConnectData, createTicket = false, face_verify = false, face_monitor_token?: string) {
+  adminConnectToken(asset: Asset, connectData: AdminConnectData, createTicket = false,
+                     face_verify = false, face_monitor_token?: string) {
     let params = '';
     params += createTicket ? '?create_ticket=1' : '';
     params += face_verify ? '?face_verify=1' : '';
@@ -303,7 +305,7 @@ export class HttpService {
       account: account.name,
       protocol: protocol,
       input_username: connectData.input_username,
-      connect_method: connectData.method,
+      connect_method: connectData.method
     };
     return this.post<ConnectionToken>(url, data).pipe(
       catchError(this.handleConnectMethodExpiredError.bind(this))

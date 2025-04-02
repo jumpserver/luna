@@ -49,7 +49,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   get noSecretAccounts() {
     return this.accounts
       .filter((item) => !item.has_secret)
-      .filter((item) => item.alias !== '@ANON')
+      .filter((item) => item.username !== '@ANON')
       .sort((a, b) => {
         const eq = +a.username.startsWith('@') - +b.username.startsWith('@');
         if (eq !== 0) {
@@ -61,7 +61,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         return a.name.localeCompare(b.name);
       });
   }
-
   get hasSecretAccounts() {
     return this.accounts
       .filter((item) => item.has_secret)
@@ -73,7 +72,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   get anonymousAccounts() {
     const allowAnonymousCategory = ['custom', 'web'];
     return this.accounts.filter(item => {
-      return item.alias === '@ANON' && allowAnonymousCategory.indexOf(this.asset.category.value) >= 0;
+      return item.username === '@ANON' && allowAnonymousCategory.indexOf(this.asset.category.value) >= 0;
     });
   }
 
@@ -92,7 +91,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     if (!this.accountSelected) {
       return false;
     }
-    return this.accountSelected.username === '@INPUT' || this.accountSelected.alias === '@USER';
+    return this.accountSelected.username === '@INPUT' || this.accountSelected.username === '@USER';
   }
 
   public compareFn = (f1, f2) => f1 && f2 && f1.alias === f2.alias;
@@ -140,6 +139,16 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     const preConnectData = this._appSvc.getPreConnectData(this.asset);
     if (preConnectData && preConnectData.account) {
       return this.accounts.find(item => item.alias === preConnectData.account.alias);
+    }
+  }
+
+  getAccountDisplay(account: Account) {
+    if (account.username.startsWith('@')) {
+      return account.name;
+    } else if (account.name === account.username) {
+      return account.name;
+    } else {
+      return `${account.name}(${account.username})`;
     }
   }
 
