@@ -1,8 +1,8 @@
-import { Account, Endpoint, View } from "@app/model";
-import { MatSidenav } from "@angular/material/sidenav";
-import { ActivatedRoute, Params } from "@angular/router";
+import { Account, Endpoint, View } from '@app/model';
+import { MatSidenav } from '@angular/material/sidenav';
+import { ActivatedRoute, Params } from '@angular/router';
 import { environment } from '@src/environments/environment';
-import { HttpService, I18nService, LogService, SettingService } from "@app/services";
+import { HttpService, I18nService, LogService, SettingService } from '@app/services';
 import {
   Component,
   ViewChild,
@@ -10,35 +10,35 @@ import {
   OnDestroy,
   ElementRef,
   Input,
-} from "@angular/core";
+} from '@angular/core';
 
 @Component({
-  selector: "pages-direct",
-  templateUrl: "./direct.component.html",
-  styleUrls: ["./direct.component.scss"],
+  selector: 'pages-direct',
+  templateUrl: './direct.component.html',
+  styleUrls: ['./direct.component.scss'],
 })
 export class PageDirectComponent implements OnInit, OnDestroy {
   @Input() view: View;
-  @ViewChild("sidenav", { static: false }) sidenav: MatSidenav;
-  @ViewChild("iFrame", { static: false }) iframeRef: ElementRef;
+  @ViewChild('sidenav', { static: false }) sidenav: MatSidenav;
+  @ViewChild('iFrame', { static: false }) iframeRef: ElementRef;
   @ViewChild('contentWindow', {static: true}) windowRef: ElementRef;
 
   public startTime: Date;
   public endpoint: Endpoint;
 
-  public userId: string = "";
-  public assetId: string = "";
-  public username: string = "";
-  public assetName: string = "";
-  public protocol: string = "";
+  public accountId: string = '';
+  public assetId: string = '';
+  public username: string = '';
+  public assetName: string = '';
+  public protocol: string = '';
 
-  public iframeRDPURL: string = "";
-  public iframeVNCURL: string = "";
-  public iframeSFTPURL: string = "";
-  public waterMarkContext: string = "";
-  public iframeTerminalURL: string = "";
+  public iframeRDPURL: string = '';
+  public iframeVNCURL: string = '';
+  public iframeSFTPURL: string = '';
+  public waterMarkContext: string = '';
+  public iframeTerminalURL: string = '';
 
-  public totalConnectTime: string = "00:00:00";
+  public totalConnectTime: string = '00:00:00';
   public isActive: boolean = true;
   public showActionIcons: boolean = false;
   public disabledOpenFileManage: boolean = false;
@@ -46,8 +46,11 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   private timerInterval: any;
   private pausedElapsedTime: number = 0;
 
-  private assetMessage: any;
+  private permedAsset: any;
   private connectData: any;
+  private account: Account;
+  private asset: any;
+  private method: string;
 
   constructor(
     private _http: HttpService,
@@ -59,53 +62,17 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     this.startTime = new Date();
   }
 
-  ngOnInit() {
-    this._route.params.subscribe(async (params: Params) => {
-      this.userId = params["userId"];
-      this.assetId = params["assetId"];
-      this.protocol = params["protocol"];
-      this.username = params["username"];
-      this.assetName = params["assetName"];
-
-      try {
-        const res = await this._http.directiveConnect(this.assetId).toPromise();
-        if (!res) return;
-
-        const currentUserInfo = res.accounts.find(
-          (item: Account) => item.id === this.userId
-        );
-
-        const method = this.getMethodByProtocol(this.protocol);
-
-        this.assetMessage = {
-          id: this.assetId,
-          name: this.assetName,
-          address: res.address,
-          comment: res.comment,
-          type: res.type,
-          category: res.category,
-          permed_protocols: res.protocols,
-          permed_accounts: res.accounts,
-          spec_info: res.spec_info,
-        };
-
-        this.connectData = {
-          method,
-          protocol: this.protocol,
-          asset: this.assetMessage,
-          account: currentUserInfo,
-          input_username: this.username,
-        };
-
-        await this.getConnectToken(this.assetMessage, this.connectData);
-      } catch (error) {
-        this._logger.error("Failed to connect:", error);
-      }
-    });
-
+  async ngOnInit() {
+    this._logger.info('DirectComponent initialized');
+    await this.getConnectData();
+    this._logger.info('DirectComponent getConnectData', this.asset);
+    await this.createConnectionToken();
     this.startTimer();
+    this.handleEventChangeTime();
+  }
 
-    document.addEventListener("visibilitychange", () => {
+  handleEventChangeTime() {
+    document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         this.isActive = false;
         this.stopTimer();
@@ -119,13 +86,54 @@ export class PageDirectComponent implements OnInit, OnDestroy {
         }, 0);
       }
     });
+    document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+  }
 
-    document.addEventListener("mousemove", this.handleMouseMove.bind(this));
+  async getConnectData() {
+    const params = this._route.snapshot.queryParams;
+    this.accountId = params['account'];
+    this.assetId = params['asset'];
+    this.protocol = params['protocol'];
+
+    this.asset = await this._http.directiveConnect(this.assetId).toPromise();
+    if (!this.asset) {
+      alert(this._i18n.instant('NoAsset'));
+      return;
+    }
+
+    this.account = this.asset.accounts.find((item: Account) => item.id === this.accountId);
+    this.method = this.getMethodByProtocol(this.protocol);
+  }
+
+  async createConnectionToken() {
+    const asset = this.asset;
+
+    this.permedAsset = {
+      id: this.assetId,
+      name: this.assetName,
+      address: asset.address,
+      comment: asset.comment,
+      type: asset.type,
+      category: asset.category,
+      permed_protocols: asset.protocols,
+      permed_accounts: asset.accounts,
+      spec_info: asset.spec_info,
+    };
+
+    this.connectData = {
+      method: this.method,
+      protocol: this.protocol,
+      asset: this.permedAsset,
+      account: this.account,
+      input_username: this.account.username,
+    };
+
+    await this.getConnectToken(this.permedAsset, this.connectData);
   }
 
   ngOnDestroy() {
     this.stopTimer();
-    document.removeEventListener("mousemove", this.handleMouseMove.bind(this));
+    document.removeEventListener('mousemove', this.handleMouseMove.bind(this));
   }
 
   /**
@@ -147,17 +155,13 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    * 打开文件管理器
    */
   public async handleOpenFileManage() {
-    const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window })
-      .iframeWindow;
+    const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window }).iframeWindow;
 
       if (iframeWindow) {
-      const res = await this._http
-      .adminConnectToken(this.assetMessage, this.connectData, false, false, '')
-      .toPromise();
+      const res = await this._http.adminConnectToken(this.permedAsset, this.connectData, false, false, '').toPromise();
 
       const SFTP_Token = res ? res.id : '';
-
-      iframeWindow.postMessage({ name: "FILE", SFTP_Token }, "*");
+      iframeWindow.postMessage({ name: 'FILE', SFTP_Token }, '*');
       this._logger.info(`[Luna] Send FILE`);
     }
   }
@@ -175,23 +179,23 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    * @returns
    */
   private getUrl(): string {
-    let host: string = "";
-    let port: string = "";
+    let host: string = '';
+    let port: string = '';
 
-    const endpoint = window.location.host.split(":")[0];
+    const endpoint = window.location.host.split(':')[0];
     const protocole = window.location.protocol;
 
     if (!environment.production) {
       switch (this.protocol) {
-        case "ssh":
-        case "k8s":
-        case "sftp":
-        case "telnet":
-        case "mysql":
-          port = "9530";
+        case 'ssh':
+        case 'k8s':
+        case 'sftp':
+        case 'telnet':
+        case 'mysql':
+          port = '9530';
           break;
         default:
-          port = "9529";
+          port = '9529';
       }
 
       host = `${endpoint}:${port}`;
@@ -226,7 +230,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    * @returns
    */
   private padZero(value: number): string {
-    return String(value).padStart(2, "0");
+    return String(value).padStart(2, '0');
   }
 
   /**
@@ -275,34 +279,34 @@ export class PageDirectComponent implements OnInit, OnDestroy {
         case 'ssh':
           this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}`;
           break;
-        case "k8s":
+        case 'k8s':
           this.iframeTerminalURL = `${url}/koko/k8s/?token=${firstRes.id}`;
           break;
-        case "sftp":
+        case 'sftp':
           this.iframeSFTPURL = `${url}/koko/sftp?token=${firstRes.id}`;
           break;
-        case "rdp":
+        case 'rdp':
           this.iframeRDPURL = `${url}/lion/connect?token=${firstRes.id}`;
           break;
-        case "vnc":
+        case 'vnc':
           this.iframeVNCURL = `${url}/lion/connect?token=${firstRes.id}`;
           break;
-        case "telnet":
-        case "mysql":
-        case "mariadb":
-        case "postgresql":
-        case "redis":
-        case "oracle":
-        case "sqlserver":
-        case "mongodb":
-        case "clickhouse":
-        case "http":
-        case "https":
+        case 'telnet':
+        case 'mysql':
+        case 'mariadb':
+        case 'postgresql':
+        case 'redis':
+        case 'oracle':
+        case 'sqlserver':
+        case 'mongodb':
+        case 'clickhouse':
+        case 'http':
+        case 'https':
           this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}`;
           break;
       }
     } catch (error) {
-      this._logger.error("Failed to get connect token:", error);
+      this._logger.error('Failed to get connect token:', error);
     }
   }
 
@@ -313,27 +317,27 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    */
   private getMethodByProtocol(protocol: string): string {
     switch (protocol) {
-      case "ssh":
-      case "telnet":
-      case "mysql":
-      case "mariadb":
-      case "postgresql":
-      case "redis":
-      case "oracle":
-      case "sqlserver":
-      case "mongodb":
-      case "clickhouse":
-      case "k8s":
-      case "http":
-      case "https":
-        return "web_cli";
-      case "rdp":
-      case "vnc":
-        return "web_gui";
-      case "sftp":
-        return "web_sftp";
+      case 'ssh':
+      case 'telnet':
+      case 'mysql':
+      case 'mariadb':
+      case 'postgresql':
+      case 'redis':
+      case 'oracle':
+      case 'sqlserver':
+      case 'mongodb':
+      case 'clickhouse':
+      case 'k8s':
+      case 'http':
+      case 'https':
+        return 'web_cli';
+      case 'rdp':
+      case 'vnc':
+        return 'web_gui';
+      case 'sftp':
+        return 'web_sftp';
       default:
-        return "web_cli";
+        return 'web_cli';
     }
   }
 
