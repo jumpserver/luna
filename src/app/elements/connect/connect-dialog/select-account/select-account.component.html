@@ -26,9 +26,6 @@
         </mat-option>
       </mat-optgroup>
     </mat-select>
-    <span *ngIf="adDomain" [attr.aria-label]="'AD'" class="ad-domain" disabled matSuffix title="AD">
-      @{{ adDomain }}
-    </span>
   </mat-form-field>
   <mat-error *ngIf="accountCtl.hasError('required')">
     {{"Please choose a account"| translate}}
