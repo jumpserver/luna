@@ -2,7 +2,7 @@ import {ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy
 import {Account, AccountGroup, Asset, AuthInfo, Protocol} from '@app/model';
 import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
 import {FormControl, Validators} from '@angular/forms';
-import {AppService, I18nService, LocalStorageService, LogService, SettingService} from '@app/services';
+import {AppService, I18nService, LogService} from '@app/services';
 import {takeUntil} from 'rxjs/operators';
 import {User} from '@app/globals';
 
@@ -40,9 +40,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   constructor(private _logger: LogService,
               private _appSvc: AppService,
               private _i18n: I18nService,
-              private _settingSvc: SettingService,
               private _cdRef: ChangeDetectorRef,
-              private _localStorage: LocalStorageService
   ) {
   }
 
@@ -142,13 +140,24 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }
   }
 
+  getAccountUsername(account: Account) {
+    if (account.username.includes('@')) {
+      return account.username;
+    }
+    if (this.adDomain) {
+      return `${account.username}@${this.adDomain}`;
+    }
+    return account.username;
+  }
+
   getAccountDisplay(account: Account) {
-    if (account.username.startsWith('@')) {
+    const username = this.getAccountUsername(account);
+    if (username.startsWith('@')) {
       return account.name;
-    } else if (account.name === account.username) {
+    } else if (account.name === username) {
       return account.name;
     } else {
-      return `${account.name}(${account.username})`;
+      return `${account.name}(${username})`;
     }
   }
 
