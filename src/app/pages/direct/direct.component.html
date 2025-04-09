@@ -13,7 +13,7 @@
         <div class="info-section">
           <div class="top-part">
             <div class="desc">
-              <div style="font-weight: 400; color: #646A73; margin-right: 5px">
+              <div style="font-weight: 400; margin-right: 5px">
                 {{ _i18n.instant('asset') }}:
               </div>
               {{ assetName }}
@@ -22,7 +22,7 @@
 
           <div class="bottom-part">
             <div class="desc">
-              <div style="font-weight: 400; color: #646A73; margin-right: 5px">
+              <div style="font-weight: 400; margin-right: 5px">
                 {{ _i18n.instant('ConnectionTime') }}:
               </div>
               {{ startTime.toLocaleString() }}
@@ -40,19 +40,13 @@
 
           <div class="actions">
             <div class="action-item">
-              <button mat-stroked-button (click)="handleOpenDrawer('setting')">
+              <button mat-icon-button (click)="handleOpenDrawer('setting')">
                 <mat-icon >settings</mat-icon>
-                <span>
-                  {{ _i18n.instant('Setting') }}
-                </span>
               </button>
             </div>
             <div class="action-item">
-              <button mat-flat-button color="primary" (click)="handleOpenDrawer('file')">
+              <button mat-icon-button (click)="handleOpenDrawer('file')">
                 <mat-icon>folder</mat-icon>
-                <span>
-                  {{ _i18n.instant('File Manager') }}
-                </span>
               </button>
             </div>
           </div>
