@@ -122,6 +122,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   ngAfterViewInit() {
+    // TODO 统一改为 iframeRef
     if (this.origin !== 'direct' && this.iframeRef) {
       this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
       this.view.iframeElement = this.iframeWindow;
