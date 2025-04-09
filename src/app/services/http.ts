@@ -275,7 +275,7 @@ export class HttpService {
     const connectOption = connectData.connectOption;
     const data = {
       asset: asset.id,
-      account: isVirtual ? account.username : account.id, // 主要是有特殊账号，匿名、虚拟
+      account: account.alias, // 主要是有特殊账号，匿名、虚拟
       protocol: protocol.name,
       input_username: username,
       input_secret: secret,
@@ -302,7 +302,7 @@ export class HttpService {
     const { account, protocol } = connectData;
     const data = {
       asset: asset.id,
-      account: account.name,
+      account: account.id,
       protocol: protocol,
       input_username: connectData.input_username,
       connect_method: connectData.method
