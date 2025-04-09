@@ -39,7 +39,7 @@
 
           <div class="actions">
             <div class="action-item">
-              <button mat-stroked-button>
+              <button mat-stroked-button (click)="handleOpenDrawer('setting')">
                 <mat-icon >settings</mat-icon>
                 <span>
                   {{ _i18n.instant('Setting') }}
@@ -47,7 +47,7 @@
               </button>
             </div>
             <div class="action-item">
-              <button mat-flat-button color="primary" (click)="handleOpenFileManage()">
+              <button mat-flat-button color="primary" (click)="handleOpenDrawer('file')">
                 <mat-icon>folder</mat-icon>
                 <span>
                   {{ _i18n.instant('File Manager') }}
