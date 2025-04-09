@@ -1,102 +1,70 @@
 <div #contentWindow>
   <div class="terminal-connect" *ngIf="iframeTerminalURL">
-    <mat-sidenav-container (backdropClick)="closeDrawer()">
-      <mat-sidenav
-        #sidenav
-        position="end"
-        mode="over"
-        class="file-manage-drawer"
-      >
-        <div class="drawer-header">
-          <mat-icon style="cursor: pointer" (click)="closeDrawer()">{{ _i18n.instant('Close') }}</mat-icon>
+    <mat-card class="header-card">
+      <mat-card-header style="align-items: center">
+        <mat-card-title>
+          <mat-icon [matTooltip]="_i18n.instant('Close')" (click)="handleCloseConnect()">close</mat-icon>
+          {{ protocol.toUpperCase() }} {{ _i18n.instant('Session') }}
+        </mat-card-title>
 
-          <p>{{ _i18n.instant('File Manager') }}</p>
-        </div>
+        <mat-divider [vertical]="true"> </mat-divider>
 
-        <mat-divider></mat-divider>
+        <div class="info-section">
+          <div class="top-part">
+            <div class="desc">
+              <div style="font-weight: 400; color: #646A73; margin-right: 5px">
+                {{ _i18n.instant('asset') }}:
+              </div>
+              {{ assetName }}
+            </div>
+          </div>
 
-        <div class="drawer-manage">
-          <div class="path">
-            <mat-icon>home</mat-icon>
-            <div class="delimiter">/</div>
+          <div class="bottom-part">
+            <div class="desc">
+              <div style="font-weight: 400; color: #646A73; margin-right: 5px">
+                {{ _i18n.instant('ConnectionTime') }}:
+              </div>
+              {{ startTime.toLocaleString() }}
+            </div>
           </div>
         </div>
-      </mat-sidenav>
 
-      <mat-sidenav-content>
-        <mat-card>
-          <mat-card-header style="height: 55px; align-items: center">
-            <mat-card-title> {{ protocol.toUpperCase() }} {{ _i18n.instant('Session') }} </mat-card-title>
-
-            <mat-divider [vertical]="true"> </mat-divider>
-
-            <div class="info-section">
-              <div class="top-part">
-                <mat-icon [matTooltip]="_i18n.instant('asset')">dvr</mat-icon>
-                <div class="desc">
-                  <div style="font-weight: 700; margin-right: 5px">
-                    {{ _i18n.instant('asset') }}:
-                  </div>
-                  {{ assetName }}
-                </div>
-              </div>
-
-              <div class="bottom-part">
-                <mat-icon [matTooltip]="_i18n.instant('ConnectionTime')">date_range</mat-icon>
-
-                <div class="desc">
-                  <div style="font-weight: 700; margin-right: 5px">
-                    {{ _i18n.instant('ConnectionTime') }}:
-                  </div>
-                  {{ startTime.toLocaleString() }}
-                </div>
-              </div>
+        <div class="action-section">
+          <div class="timer-container">
+            <div class="timer">
+              <div [class.active]="isActive" class="status-dot"></div>
+              <span>{{ totalConnectTime }}</span>
             </div>
+          </div>
 
-            <div class="action-section">
-              <div class="timer-container">
-                <div class="timer">
-                  <div [class.active]="isActive" class="status-dot"></div>
-                  <span>{{ totalConnectTime }}</span>
-                </div>
-              </div>
-
-              <mat-divider [vertical]="true"> </mat-divider>
-
-              <div class="actions">
-                <div class="file-manage action-icon">
-                  <button mat-icon-button [disabled]="disabledOpenFileManage">
-                    <mat-icon
-                    [matTooltip]="_i18n.instant('File Manager')"
-                    (click)="handleOpenFileManage()">folder</mat-icon
-                  >
-                  </button>
-                </div>
-
-                <div class="exit action-icon">
-                  <button mat-icon-button>
-                    <mat-icon [matTooltip]="_i18n.instant('Close')" (click)="handleCloseConnect()">close</mat-icon>
-                  </button>
-                </div>
-              </div>
+          <div class="actions">
+            <div class="action-item">
+              <button mat-stroked-button>
+                <mat-icon >settings</mat-icon>
+                <span>
+                  {{ _i18n.instant('Setting') }}
+                </span>
+              </button>
             </div>
-          </mat-card-header>
-        </mat-card>
+            <div class="action-item">
+              <button mat-flat-button color="primary" (click)="handleOpenFileManage()">
+                <mat-icon>folder</mat-icon>
+                <span>
+                  {{ _i18n.instant('File Manager') }}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </mat-card-header>
+    </mat-card>
 
-        <mat-card
-          style="
-            margin: 20px;
-            height: calc(100% - 130px);
-            background-color: #f7f8f9;
-          "
-        >
-          <mat-card-content style="height: 100%">
-            <elements-iframe #iFrame [src]="iframeTerminalURL" [origin]="'direct'" (socketCloseEvent)="handleSocketCloseEvent($event)">
-            </elements-iframe>
-          </mat-card-content>
-        </mat-card>
-      </mat-sidenav-content>
-    </mat-sidenav-container>
+    <mat-card class="terminal-card">
+      <mat-card-content style="height: 100%">
+        <elements-iframe #iFrame [src]="iframeTerminalURL" [origin]="'direct'" (socketCloseEvent)="handleSocketCloseEvent($event)">
+        </elements-iframe>
+      </mat-card-content>
+    </mat-card>
   </div>
 
   <div class="sftp-connect" *ngIf="iframeSFTPURL">

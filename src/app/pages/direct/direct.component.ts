@@ -183,7 +183,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     let port: string = '';
 
     const endpoint = window.location.host.split(':')[0];
-    const protocole = window.location.protocol;
+    const protocol = window.location.protocol;
 
     if (!environment.production) {
       switch (this.protocol) {
@@ -203,9 +203,9 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       host = `${endpoint}`;
     }
 
-    this._logger.info(`Current host: ${protocole}//${host}`);
+    this._logger.info(`Current host: ${protocol}//${host}`);
 
-    return `${protocole}//${host}`;
+    return `${protocol}//${host}`;
   }
 
   /**
