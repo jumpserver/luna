@@ -1,7 +1,7 @@
 @mixin time-container {
   position: fixed;
-  bottom: 80px;
-  right: 45px;
+  bottom: 30px;
+  right: 30px;
   z-index: 999999;
 
   .timer {
@@ -235,7 +235,7 @@
         .actions {
           display: flex;
           align-items: center;
-          gap: 1rem;
+          gap: 0.5rem;
 
           .action-item {
             display: flex;
@@ -253,9 +253,10 @@
 
             ::ng-deep .mat-button-wrapper {
               .mat-icon {
-                width: 18px;
-                height: 18px;
-                font-size: 18px;
+                width: 20px;
+                height: 20px;
+                font-size: 20px;
+                line-height: 20px;
               }
 
               span {
@@ -295,8 +296,8 @@
         height: 20px;
         width: 20px;
         font-size: 20px;
+        line-height: 20px;
         color: #646A73;
-        cursor: pointer;
       }
     }
 
