@@ -96,11 +96,13 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     this.protocol = params['protocol'];
 
     this.asset = await this._http.directiveConnect(this.assetId).toPromise();
+    
     if (!this.asset) {
       alert(this._i18n.instant('NoAsset'));
       return;
     }
 
+    this.assetName = this.asset.name;
     this.account = this.asset.accounts.find((item: Account) => item.id === this.accountId);
     this.method = this.getMethodByProtocol(this.protocol);
   }
