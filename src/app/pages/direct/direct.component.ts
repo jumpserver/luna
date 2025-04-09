@@ -160,7 +160,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window }).iframeWindow;
 
     if (iframeWindow && type === 'setting') {
-      iframeWindow.postMessage({ name: 'SETTING' }, '*');
+      iframeWindow.postMessage({ name: 'OPEN' }, '*');
       this._logger.info(`[Luna] Send OPEN SETTING`);
     }
 
