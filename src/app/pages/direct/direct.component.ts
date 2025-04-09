@@ -96,7 +96,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     this.protocol = params['protocol'];
 
     this.asset = await this._http.directiveConnect(this.assetId).toPromise();
-    
+
     if (!this.asset) {
       alert(this._i18n.instant('NoAsset'));
       return;
@@ -154,17 +154,22 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * 打开文件管理器
+   * @description 打开设置
    */
-  public async handleOpenFileManage() {
+  public async handleOpenDrawer (type: string) {
     const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window }).iframeWindow;
 
-      if (iframeWindow) {
+    if (iframeWindow && type === 'setting') {
+      iframeWindow.postMessage({ name: 'SETTING' }, '*');
+      this._logger.info(`[Luna] Send OPEN SETTING`);
+    }
+
+    if (iframeWindow && type === 'file') {
       const res = await this._http.adminConnectToken(this.permedAsset, this.connectData, false, false, '').toPromise();
 
       const SFTP_Token = res ? res.id : '';
       iframeWindow.postMessage({ name: 'FILE', SFTP_Token }, '*');
-      this._logger.info(`[Luna] Send FILE`);
+      this._logger.info(`[Luna] Send OPEN FILE`);
     }
   }
 
