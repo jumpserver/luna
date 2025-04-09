@@ -10,6 +10,7 @@ import {ToastrService} from 'ngx-toastr';
   styleUrls: ['./monitor.component.scss']
 })
 export class PagesMonitorComponent implements OnInit {
+  @ViewChild('iFrame', { static: false }) iframeRef: ElementRef;
   @ViewChild('contentWindow', {static: false}) windowRef: ElementRef;
   iframeURL: string;
   sessionDetail: Session = null;

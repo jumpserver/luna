@@ -28,7 +28,16 @@
   </ul>
 </div>
 <div #contentWindow style="width: 100%; height: calc(100% - 30px)">
-  <iframe #terminal [src]="iframeURL | safeUrl" *ngIf="iframeURL" width="100%" height="100%"></iframe>
+  <!-- TODO 统一改为 iframeRef -->
+  <elements-iframe
+    #terminal
+    *ngIf="iframeURL"
+    [src]="iframeURL | safeUrl"
+    [origin]="'direct'"
+    style="height: 100%; width: 100%"
+  ></elements-iframe>
+
+  <!-- <iframe #terminal [src]="iframeURL | safeUrl" *ngIf="iframeURL" width="100%" height="100%"></iframe> -->
 </div>
 
 
