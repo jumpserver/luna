@@ -1,15 +1,15 @@
-import { Account, Endpoint, View } from '@app/model';
-import { MatSidenav } from '@angular/material/sidenav';
-import { ActivatedRoute, Params } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { environment } from '@src/environments/environment';
-import { HttpService, I18nService, LogService, SettingService } from '@app/services';
+import { Account, Endpoint, View, ConnectionToken, ConnectMethod } from '@app/model';
+import { HttpService, I18nService, LogService, ViewService, IframeCommunicationService } from '@app/services';
 import {
   Component,
   ViewChild,
   OnInit,
   OnDestroy,
   ElementRef,
-  Input,
+  ViewChildren,
+  QueryList,
 } from '@angular/core';
 
 @Component({
@@ -18,25 +18,19 @@ import {
   styleUrls: ['./direct.component.scss'],
 })
 export class PageDirectComponent implements OnInit, OnDestroy {
-  @Input() view: View;
-  @ViewChild('sidenav', { static: false }) sidenav: MatSidenav;
-  @ViewChild('iFrame', { static: false }) iframeRef: ElementRef;
-  @ViewChild('contentWindow', {static: true}) windowRef: ElementRef;
+  // @ViewChild('contentWindow', {static: false}) iframeRef: ElementRef;
+  @ViewChildren('contentWindow') contentWindows: QueryList<ElementRef>;
 
   public startTime: Date;
   public endpoint: Endpoint;
+
+  public view: View;
 
   public accountId: string = '';
   public assetId: string = '';
   public username: string = '';
   public assetName: string = '';
   public protocol: string = '';
-
-  public iframeRDPURL: string = '';
-  public iframeVNCURL: string = '';
-  public iframeSFTPURL: string = '';
-  public waterMarkContext: string = '';
-  public iframeTerminalURL: string = '';
 
   public totalConnectTime: string = '00:00:00';
   public isActive: boolean = true;
@@ -49,26 +43,35 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   private permedAsset: any;
   private connectData: any;
   private account: Account;
+  private connectToken: ConnectionToken;
+  private connectMethod: ConnectMethod;
   private asset: any;
   private method: string;
 
   constructor(
     private _http: HttpService,
     private _i18n: I18nService,
+    public viewSrv: ViewService,
     private _logger: LogService,
     private _route: ActivatedRoute,
-    private _settingSvc: SettingService
+    private iframeCommunicationService: IframeCommunicationService
   ) {
     this.startTime = new Date();
   }
 
   async ngOnInit() {
     this._logger.info('DirectComponent initialized');
+
     await this.getConnectData();
     this._logger.info('DirectComponent getConnectData', this.asset);
-    await this.createConnectionToken();
-    this.startTimer();
-    this.handleEventChangeTime();
+
+    const finish = await this.createConnectionToken();
+
+    if (finish) {
+      this.onNewView();
+      this.startTimer();
+      this.handleEventChangeTime();
+    }
   }
 
   handleEventChangeTime() {
@@ -130,12 +133,40 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       input_username: this.account.username,
     };
 
-    await this.getConnectToken(this.permedAsset, this.connectData);
+    const res = await this.getConnectToken(this.permedAsset, this.connectData);
+
+    if (res) {
+      return res
+    }
+
+    return new Promise((resolve, reject) => {
+      if (res) {
+        resolve(res);
+      } else {
+        reject(new Error('Failed to get connect token'));
+      }
+    })
   }
 
   ngOnDestroy() {
     this.stopTimer();
     document.removeEventListener('mousemove', this.handleMouseMove.bind(this));
+  }
+
+  public onNewView() {
+    this.view = new View (
+      this.asset,
+      {
+        ...this.connectData,
+        protocol: { name: this.protocol },
+        connectMethod: this.connectMethod,
+      },
+      this.connectToken,
+      'node'
+    )
+
+    this.viewSrv.addView(this.view);
+    this.viewSrv.activeView(this.view);
   }
 
   /**
@@ -157,19 +188,17 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    * @description 打开设置
    */
   public async handleOpenDrawer (type: string) {
-    const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window }).iframeWindow;
-
-    if (iframeWindow && type === 'setting') {
-      iframeWindow.postMessage({ name: 'OPEN' }, '*');
-      this._logger.info(`[Luna] Send OPEN SETTING`);
+    if (type === 'setting') {
+      this.iframeCommunicationService.sendMessage({ name: 'OPEN', noFileTab: true });
+      return this._logger.info(`[Luna] Send OPEN SETTING`);
     }
 
-    if (iframeWindow && type === 'file') {
+    if (type === 'file') {
       const res = await this._http.adminConnectToken(this.permedAsset, this.connectData, false, false, '').toPromise();
 
       const SFTP_Token = res ? res.id : '';
-      iframeWindow.postMessage({ name: 'FILE', SFTP_Token }, '*');
-      this._logger.info(`[Luna] Send OPEN FILE`);
+      this.iframeCommunicationService.sendMessage({ name: 'FILE', SFTP_Token });
+      return this._logger.info(`[Luna] Send OPEN FILE`);
     }
   }
 
@@ -258,63 +287,23 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * 关闭抽屉
-   */
-  private closeDrawer(): void {
-    this.sidenav.close();
-  }
-
-  /**
    * 获取连接令牌
    * @param assetMessage
    * @param connectData
    */
-  private async getConnectToken(assetMessage: any, connectData: any) {
-    try {
-      const firstRes = await this._http
-        .adminConnectToken(assetMessage, connectData, false, false, '')
-        .toPromise();
+  private getConnectToken(assetMessage: any, connectData: any) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        this.connectToken = await this._http
+          .adminConnectToken(assetMessage, connectData, false, false, '')
+          .toPromise();
 
-      if (!firstRes) return;
-
-      const url = this.getUrl();
-
-      this.waterMarkContext = firstRes.user_display
-      this.createWaterMark();
-
-      switch (this.protocol) {
-        case 'ssh':
-          this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}`;
-          break;
-        case 'k8s':
-          this.iframeTerminalURL = `${url}/koko/k8s/?token=${firstRes.id}`;
-          break;
-        case 'sftp':
-          this.iframeSFTPURL = `${url}/koko/sftp?token=${firstRes.id}`;
-          break;
-        case 'rdp':
-          this.iframeRDPURL = `${url}/lion/connect?token=${firstRes.id}`;
-          break;
-        case 'vnc':
-          this.iframeVNCURL = `${url}/lion/connect?token=${firstRes.id}`;
-          break;
-        case 'telnet':
-        case 'mysql':
-        case 'mariadb':
-        case 'postgresql':
-        case 'redis':
-        case 'oracle':
-        case 'sqlserver':
-        case 'mongodb':
-        case 'clickhouse':
-        case 'http':
-        case 'https':
-          this.iframeTerminalURL = `${url}/koko/connect?token=${firstRes.id}`;
-          break;
+        resolve(true);
+      } catch (error) {
+        this._logger.error('Failed to get connect token:', error);
+        reject(error);
       }
-    } catch (error) {
-      this._logger.error('Failed to get connect token:', error);
-    }
+    })
   }
 
   /**
@@ -323,6 +312,8 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    * @returns
    */
   private getMethodByProtocol(protocol: string): string {
+    const endpointProtocol = window.location.protocol.replace(':', '');
+
     switch (protocol) {
       case 'ssh':
       case 'telnet':
@@ -337,25 +328,30 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       case 'k8s':
       case 'http':
       case 'https':
+        this.connectMethod = {
+          component: 'koko',
+          type: 'web',
+          value: 'web_cli',
+          label: 'Web CLI',
+          endpoint_protocol: endpointProtocol,
+          disabled: false,
+        }
         return 'web_cli';
       case 'rdp':
       case 'vnc':
+        this.connectMethod = {
+          component: 'lion',
+          type: 'web',
+          value: 'web_gui',
+          label: 'Web GUI',
+          endpoint_protocol: endpointProtocol,
+          disabled: false,
+        }
         return 'web_gui';
       case 'sftp':
         return 'web_sftp';
       default:
         return 'web_cli';
     }
-  }
-
-
-  /**
-   * @description 创建水印
-   */
-  private createWaterMark() {
-    this._settingSvc.createWaterMarkIfNeed(
-      this.windowRef.nativeElement,
-      `${this.waterMarkContext}\n${this.assetName}`
-    );
   }
 }

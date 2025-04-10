@@ -6,7 +6,7 @@ import { PagesReplayComponent } from "./replay/replay.component";
 import { PagesConnectComponent } from "./connect/connect.component";
 import { PagesMonitorComponent } from "./monitor/monitor.component";
 import { PagesNotFoundComponent } from "./not-found/not-found.component";
-import { PagesKubernetesComponent } from "./Kubernetes/kubernetes.component";
+import { PagesKubernetesComponent } from "./kubernetes/kubernetes.component";
 
 export const PagesComponents = [
   PageMainComponent,
