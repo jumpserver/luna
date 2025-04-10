@@ -8,7 +8,7 @@ import { PageDirectComponent } from './pages/direct/direct.component';
 import { PagesReplayComponent } from './pages/replay/replay.component';
 import { PagesConnectComponent } from './pages/connect/connect.component';
 import { PagesMonitorComponent } from './pages/monitor/monitor.component';
-import { PagesKubernetesComponent } from './pages/Kubernetes/kubernetes.component';
+import { PagesKubernetesComponent } from './pages/kubernetes/kubernetes.component';
 
 const appRoutes: Routes = [
   { path: '', component: PageMainComponent },

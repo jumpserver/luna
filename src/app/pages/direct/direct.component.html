@@ -1,6 +1,6 @@
 <!-- TODO 统一改为 iframeRef -->
 <div #contentWindow>
-  <div class="terminal-connect" *ngIf="iframeTerminalURL">
+  <div class="terminal-connect" *ngIf="view && view.connectMethod.component === 'koko'">
     <mat-card class="header-card">
       <mat-card-header style="align-items: center">
         <mat-card-title>
@@ -56,13 +56,12 @@
 
     <mat-card class="terminal-card">
       <mat-card-content style="height: 100%">
-        <elements-iframe #iFrame [src]="iframeTerminalURL" [origin]="'direct'" (socketCloseEvent)="handleSocketCloseEvent($event)">
-        </elements-iframe>
+        <elements-content-window #contentWindow *ngIf="view" [view]="view"></elements-content-window>
       </mat-card-content>
     </mat-card>
   </div>
 
-  <div class="sftp-connect" *ngIf="iframeSFTPURL">
+  <div class="gui" *ngIf="view && view.connectMethod.component === 'lion'">
     <div class="timer-container">
       <div class="timer">
         <div [class.active]="isActive" class="status-dot"></div>
@@ -76,53 +75,6 @@
       </div>
     </div>
 
-    <elements-iframe
-      *ngIf="iframeSFTPURL"
-      [src]="iframeSFTPURL"
-      [origin]="'direct'"
-      style="height: 100%; width: 100%"
-    ></elements-iframe>
-  </div>
-
-  <div class="pam-gui" *ngIf="iframeRDPURL">
-    <div class="timer-container">
-      <div class="timer">
-        <div [class.active]="isActive" class="status-dot"></div>
-        <span>{{ totalConnectTime }}</span>
-      </div>
-    </div>
-
-    <div class="action-icons" [class.show]="showActionIcons">
-      <div class="close-icon" (click)="handleCloseConnect()">
-        <mat-icon [matTooltip]="_i18n.instant('Close')">close</mat-icon>
-      </div>
-    </div>
-
-    <elements-iframe
-      *ngIf="iframeRDPURL"
-      [src]="iframeRDPURL"
-      [origin]="'direct'"
-    ></elements-iframe>
-  </div>
-
-  <div class="pam-gui" *ngIf="iframeVNCURL">
-    <div class="timer-container">
-      <div class="timer">
-        <div [class.active]="isActive" class="status-dot"></div>
-        <span>{{ totalConnectTime }}</span>
-      </div>
-    </div>
-
-    <div class="action-icons" [class.show]="showActionIcons">
-      <div class="close-icon" (click)="handleCloseConnect()">
-        <mat-icon [matTooltip]="_i18n.instant('Close')">close</mat-icon>
-      </div>
-    </div>
-
-    <elements-iframe
-      *ngIf="iframeVNCURL"
-      [src]="iframeVNCURL"
-      [origin]="'direct'"
-    ></elements-iframe>
+    <elements-content-window *ngIf="view" [view]="view" style="height: 100%; width: 100%"></elements-content-window>
   </div>
 </div>

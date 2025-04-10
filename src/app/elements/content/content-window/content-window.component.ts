@@ -29,10 +29,14 @@ export class ElementContentWindowComponent implements OnInit, DoCheck {
     return this.view.subViews;
   }
   async ngOnInit() {
-    this.id = 'window-' + Math.random().toString(36).substr(2);
-    this.createWaterMark();
-    this.view.smartEndpoint = await this._appSvc.getSmartEndpoint(this.view);
-    this.subViews.push(this.view);
+    try {
+      this.id = 'window-' + Math.random().toString(36).substr(2);
+      this.createWaterMark();
+      this.view.smartEndpoint = await this._appSvc.getSmartEndpoint(this.view);
+      this.subViews.push(this.view);
+    } catch(e) {
+      throw new Error(e)
+    }
   }
 
   async ngDoCheck() {

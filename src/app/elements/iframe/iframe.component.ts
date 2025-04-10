@@ -1,6 +1,6 @@
 import {AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
 import {View} from '@app/model';
-import {ConnectTokenService, HttpService, I18nService, LogService, ViewService} from '@app/services';
+import {ConnectTokenService, HttpService, I18nService, LogService, ViewService, IframeCommunicationService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {Subject} from 'rxjs';
 import {debounceTime} from 'rxjs/operators';
@@ -8,6 +8,7 @@ import {environment} from '@src/environments/environment';
 import {SafeResourceUrl} from '@angular/platform-browser';
 import {DomSanitizer} from '@angular/platform-browser';
 import {FaceService} from '@app/services/face';
+import {Subscription} from 'rxjs';
 
 @Component({
   selector: 'elements-iframe',
@@ -25,6 +26,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   @Output() createFileConnectToken: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   eventHandler: EventListenerOrEventListenerObject;
   private renewalTrigger = new Subject<void>();
+  private subscription: Subscription;
   iframeWindow: Window;
   showIframe = false;
   showValue: boolean = !window['debugIframe'];
@@ -41,7 +43,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private _dialog: MatDialog,
     public viewSrv: ViewService,
     private sanitizer: DomSanitizer,
-    private faceService: FaceService
+    private faceService: FaceService,
+    private iframeCommunicationService: IframeCommunicationService
   ) {
   }
   ngOnInit() {
@@ -59,7 +62,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     ).subscribe(() => {
       this._http.get(`/api/v1/health/`).subscribe();
     });
-
 
     this.id = 'window-' + Math.random().toString(36).substr(2);
 
@@ -122,16 +124,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   ngAfterViewInit() {
-    // TODO 统一改为 iframeRef
-    if (this.origin !== 'direct' && this.iframeRef) {
-      this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
-      this.view.iframeElement = this.iframeWindow;
-      this.handleIframeEvent();
-
-      return;
-    }
-
     this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
+    this.view.iframeElement = this.iframeWindow;
     this.handleIframeEvent();
   }
 
@@ -151,6 +145,10 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       this._logger.info(`[Luna] Send PING to: ${this.id}`);
       this.iframeWindow.postMessage({name: 'PING', id: this.id}, '*');
     }, 500);
+
+    this.subscription = this.iframeCommunicationService.message$.subscribe((message) => {
+      this.iframeWindow.postMessage(message, '*');
+    });
 
     window.addEventListener('message', this.eventHandler);
 

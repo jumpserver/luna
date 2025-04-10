@@ -344,7 +344,12 @@ export class AppService {
   }
 
   getSmartEndpoint(view: View): Promise<Endpoint> {
-    let protocol = view.connectMethod.endpoint_protocol || view.protocol;
+    let protocol = '';
+    if (view && view.connectMethod && view.connectMethod.endpoint_protocol) {
+      protocol = view.connectMethod.endpoint_protocol;
+    } else if (view && view.protocol) {
+      protocol = view.protocol;
+    }
     if (protocol === 'http') {
       protocol = window.location.protocol.replace(':', '');
     }

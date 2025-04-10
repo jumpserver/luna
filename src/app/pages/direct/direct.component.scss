@@ -304,29 +304,7 @@
   }
 }
 
-.sftp-connect {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  height: 100vh;
-  width: 100vw;
-
-  .timer-container {
-    @include time-container;
-  }
-
-  .action-icons {
-    @include time-icons;
-  }
-
-  pages-sftp {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-}
-
-.pam-gui {
+.gui {
   position: relative;
   width: 100vw;
   height: 100vh;
