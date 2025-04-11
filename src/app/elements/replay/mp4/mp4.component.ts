@@ -1,5 +1,5 @@
-import { Component, OnInit,Input } from '@angular/core';
-import {Replay,Command} from '@app/model';
+import { Component, OnInit, Input } from '@angular/core';
+import {Replay, Command} from '@app/model';
 import {HttpService} from '@app/services';
 import {TranslateService} from '@ngx-translate/core';
 import {formatTime} from '@app/utils/common';

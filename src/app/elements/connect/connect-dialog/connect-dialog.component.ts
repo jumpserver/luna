@@ -98,7 +98,7 @@ export class ElementConnectDialogComponent implements OnInit {
         this.connectMethod = connectMethods[0];
       }
     }
-    this.viewAssetOnlineSessionInfo = this._settingSvc.globalSetting.VIEW_ASSET_ONLINE_SESSION_INFO
+    this.viewAssetOnlineSessionInfo = this._settingSvc.globalSetting.VIEW_ASSET_ONLINE_SESSION_INFO;
   }
 
   onProtocolChange(protocol) {
