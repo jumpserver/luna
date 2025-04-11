@@ -14,8 +14,7 @@ export class PagesKubernetesComponent implements OnInit {
   constructor(private _route: ActivatedRoute) {}
 
   ngOnInit(): void {
-    // const baseUrl = `${window.location.protocol}//${window.location.host}`;
-    const baseUrl = `http://localhost:9530`;
+    const baseUrl = `${window.location.protocol}//${window.location.host}`;
 
     this._route.params.subscribe((params: Params) => {
       this.token = params['token'];
