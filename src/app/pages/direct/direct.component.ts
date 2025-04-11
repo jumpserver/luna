@@ -136,7 +136,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     const res = await this.getConnectToken(this.permedAsset, this.connectData);
 
     if (res) {
-      return res
+      return res;
     }
 
     return new Promise((resolve, reject) => {
@@ -145,7 +145,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       } else {
         reject(new Error('Failed to get connect token'));
       }
-    })
+    });
   }
 
   ngOnDestroy() {
@@ -163,7 +163,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       },
       this.connectToken,
       'node'
-    )
+    );
 
     this.viewSrv.addView(this.view);
     this.viewSrv.activeView(this.view);
@@ -303,7 +303,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
         this._logger.error('Failed to get connect token:', error);
         reject(error);
       }
-    })
+    });
   }
 
   /**
@@ -335,7 +335,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
           label: 'Web CLI',
           endpoint_protocol: endpointProtocol,
           disabled: false,
-        }
+        };
         return 'web_cli';
       case 'rdp':
       case 'vnc':
@@ -346,7 +346,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
           label: 'Web GUI',
           endpoint_protocol: endpointProtocol,
           disabled: false,
-        }
+        };
         return 'web_gui';
       case 'sftp':
         return 'web_sftp';

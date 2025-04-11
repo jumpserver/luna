@@ -15,11 +15,11 @@ export class ElementSendCommandWithVariableDialogComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.getVariableFormMeta()
+    this.getVariableFormMeta();
   }
   async getVariableFormMeta() {
-    const adhoc = this.data.command.id
-    const url=`/api/v1/ops/variables/form-data/?t=${new Date().getTime()}&adhoc=${adhoc}`
+    const adhoc = this.data.command.id;
+    const url = `/api/v1/ops/variables/form-data/?t=${new Date().getTime()}&adhoc=${adhoc}`;
     const res: any = await this._http.options(url).toPromise();
     this.formConfig = res.actions.GET;
     this.command = this.data.command;

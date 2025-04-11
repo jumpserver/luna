@@ -251,7 +251,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return Promise.resolve(preConnectData);
     }
     if (this._i18n.getLangCode() === 'pt-br') {
-      dialogWidth = '730px'
+      dialogWidth = '730px';
     }
     this._appSvc.connectDialogShown = true;
     const dialogRef = this._dialog.open(ElementConnectDialogComponent, {

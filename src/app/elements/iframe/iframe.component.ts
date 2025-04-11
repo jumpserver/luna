@@ -168,7 +168,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     if (event.data && typeof event.data === 'object') {
       this.termComp = event.data;
     }
-  };
+  }
 
   async reconnect() {
     const oldConnectToken = this.view.connectToken;

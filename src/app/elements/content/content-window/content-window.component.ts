@@ -34,8 +34,8 @@ export class ElementContentWindowComponent implements OnInit, DoCheck {
       this.createWaterMark();
       this.view.smartEndpoint = await this._appSvc.getSmartEndpoint(this.view);
       this.subViews.push(this.view);
-    } catch(e) {
-      throw new Error(e)
+    } catch (e) {
+      throw new Error(e);
     }
   }
 
