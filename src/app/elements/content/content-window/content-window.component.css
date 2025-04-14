@@ -18,7 +18,7 @@ div, elements-term, elements-guacamole {
   display: flex;
   flex-flow: row wrap;
   align-content: flex-start;
-  overflow-y: scroll;
+  /* overflow-y: scroll; */
 }
 
 .sub-view {
