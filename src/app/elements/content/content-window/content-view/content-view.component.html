@@ -6,26 +6,9 @@
     </span>
   </div>
   <div [ngSwitch]="connector" style="flex: 1;">
-    <elements-connector-magnus
-      *ngSwitchCase="'magnus'"
-      [view]="view"
-    >
-    </elements-connector-magnus>
-    <elements-connector-koko
-      *ngSwitchCase="'koko'"
-      [view]="view"
-    >
-    </elements-connector-koko>
-    <elements-connector-nec
-      *ngSwitchCase="'nec'"
-      [view]="view"
-    >
-    </elements-connector-nec>
-    <elements-connector-default
-      *ngSwitchDefault
-      [connector]="connector"
-      [view]="view"
-    >
-    </elements-connector-default>
+    <elements-connector-magnus *ngSwitchCase="'magnus'" [view]="view"></elements-connector-magnus>
+    <elements-connector-koko *ngSwitchCase="'koko'" [view]="view"></elements-connector-koko>
+    <elements-connector-nec *ngSwitchCase="'nec'" [view]="view"></elements-connector-nec>
+    <elements-connector-default *ngSwitchDefault [connector]="connector" [view]="view"></elements-connector-default>
   </div>
 </div>

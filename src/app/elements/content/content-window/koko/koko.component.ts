@@ -142,6 +142,10 @@ export class ElementConnectorKokoComponent implements OnInit {
         return `${a}&${b}`;
       });
 
+    if (this.protocol === 'k8s') {
+      return this.iframeURL = `${this.baseUrl}/k8s/?` + query;
+    }
+
     this.iframeURL = `${this.baseUrl}/connect/?` + query;
   }
 
