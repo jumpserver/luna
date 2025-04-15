@@ -98,7 +98,8 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     this.assetId = params['asset'];
     this.protocol = params['protocol'];
 
-    this.asset = await this._http.directiveConnect(this.assetId).toPromise();
+    this.asset = await this._http.getAssetDetail(this.assetId).toPromise();
+    this.account = await this._http.getAccountDetail(this.accountId).toPromise();
 
     if (!this.asset) {
       alert(this._i18n.instant('NoAsset'));
@@ -106,7 +107,6 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     }
 
     this.assetName = this.asset.name;
-    this.account = this.asset.accounts.find((item: Account) => item.id === this.accountId);
     this.method = this.getMethodByProtocol(this.protocol);
   }
 
