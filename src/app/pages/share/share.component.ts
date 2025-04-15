@@ -11,6 +11,7 @@ export class PagesShareComponent implements OnInit, AfterViewInit  {
 
   public ping;
   public id: string = '';
+  public type: string = '';
   public shareId: string = '';
   public iframeURL: string = '';
 
@@ -19,7 +20,14 @@ export class PagesShareComponent implements OnInit, AfterViewInit  {
   ngOnInit(): void {
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.shareId = this._route.snapshot.params['id'];
+    this.type = this._route.snapshot.params['type'];
+
     const baseUrl = `${window.location.protocol}//${window.location.host}`;
+
+    if (this.type && this.type === 'lino') {
+      this.iframeURL = `${baseUrl}/lino/share/${this.shareId}`;
+      return;
+    }
 
     this.iframeURL = `${baseUrl}/koko/share/${this.shareId}`;
   }
