@@ -1,6 +1,7 @@
 import { PageSftpComponent } from './sftp/sftp.component';
 import { PageMainComponent } from './main/main.component';
 import { PagesBlankComponent } from './blank/blank.component';
+import { PagesShareComponent } from './share/share.component';
 import { PageDirectComponent } from './direct/direct.component';
 import { PagesReplayComponent } from './replay/replay.component';
 import { PagesConnectComponent } from './connect/connect.component';
@@ -13,6 +14,7 @@ export const PagesComponents = [
   PageSftpComponent,
   PagesBlankComponent,
   PageDirectComponent,
+  PagesShareComponent,
   PagesReplayComponent,
   PagesConnectComponent,
   PagesMonitorComponent,
