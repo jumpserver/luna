@@ -177,6 +177,11 @@ export class HttpService {
     return this.get<Asset>(url);
   }
 
+  getAccountDetail(id) {
+    const url = `/api/v1/accounts/accounts/${id}/`;
+    return this.get<any>(url);
+  }
+
   favoriteAsset(assetId: string, favorite: boolean) {
     let url: string;
     url = `/api/v1/assets/favorite-assets/`;
