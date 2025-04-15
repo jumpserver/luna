@@ -310,6 +310,7 @@ export class HttpService {
     return this.post<ConnectionToken>(url, data).pipe(
       catchError((error) => {
         if (error.code === 'acl_face_online') {
+          alert('Please perform face authentication and connection in Luna.')
           return null
         }
 
