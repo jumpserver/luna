@@ -308,7 +308,13 @@ export class HttpService {
       connect_method: connectData.method
     };
     return this.post<ConnectionToken>(url, data).pipe(
-      catchError(this.handleConnectMethodExpiredError.bind(this))
+      catchError((error) => {
+        if (error.code === 'acl_face_online') {
+          return null
+        }
+
+        this.handleConnectMethodExpiredError.bind(this)
+      })
     );
   }
 
