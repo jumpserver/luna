@@ -73,7 +73,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
       document.title = node.name + ' - ' + titles[titles.length - 1];
 
-      this._http.getAssetDetail(node.id).subscribe(asset => {
+      this._http.getPermedAssetDetail(node.id).subscribe(asset => {
         this.connectAsset(asset).then();
       });
     });
@@ -94,7 +94,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         return;
       }
 
-      this._http.getAssetDetail(evt.node.id).subscribe(asset => {
+      this._http.getPermedAssetDetail(evt.node.id).subscribe(asset => {
         switch (evt.action) {
           case 'connect': {
             this._appSvc.disableAutoConnect(asset.id);
