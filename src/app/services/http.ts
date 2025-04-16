@@ -172,8 +172,13 @@ export class HttpService {
     return this.get<Array<TreeNode>>(url, {observe: 'response'}).pipe(this.withRetry());
   }
 
-  getAssetDetail(id) {
+  getPermedAssetDetail(id) {
     const url = `/api/v1/perms/users/self/assets/${id}/`;
+    return this.get<Asset>(url);
+  }
+
+  getAssetDetail(id) {
+    const url = `/api/v1/assets/assets/${id}/`;
     return this.get<Asset>(url);
   }
 
