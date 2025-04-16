@@ -92,6 +92,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           if (this.view && this.view.connectToken && this.view.connectToken.face_monitor_token) {
             this.faceService.removeMonitoringTab(this.view.id);
           }
+          this.iframeCommunicationService.sendMessage({ name: 'CLOSE' })
           break;
         case 'CONNECTED':
           this.view.connected = true;

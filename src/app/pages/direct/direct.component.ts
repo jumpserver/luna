@@ -11,6 +11,7 @@ import {
   ViewChildren,
   QueryList,
 } from '@angular/core';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'pages-direct',
@@ -33,6 +34,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   public protocol: string = '';
 
   public totalConnectTime: string = '00:00:00';
+  public isTimerStopped: boolean = false;
   public isActive: boolean = true;
   public showActionIcons: boolean = false;
   public disabledOpenFileManage: boolean = false;
@@ -44,6 +46,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   private connectData: any;
   private account: Account;
   private connectToken: ConnectionToken;
+  private subscription: Subscription;
   private connectMethod: ConnectMethod;
   private asset: any;
   private method: string;
@@ -61,6 +64,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     this._logger.info('DirectComponent initialized');
+    this.isTimerStopped = false;
 
     await this.getConnectData();
     this._logger.info('DirectComponent getConnectData', this.asset);
@@ -71,6 +75,11 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       this.onNewView();
       this.startTimer();
       this.handleEventChangeTime();
+      this.subscription = this.iframeCommunicationService.message$.subscribe((message) => {
+        if (message.name === 'CLOSE') {
+          this.stopTimer();
+        }
+      });
     }
   }
 
@@ -248,6 +257,9 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    * 开始计时器
    */
   private startTimer(): void {
+    if (this.timerInterval) {
+      this.stopTimer();
+    }
     this.timerInterval = setInterval(() => this.updateConnectTime(), 1000);
   }
 
@@ -257,6 +269,8 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   private stopTimer(): void {
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
+      this.timerInterval = null;
+      this.isTimerStopped = true;
     }
   }
 
@@ -273,6 +287,10 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    * 更新连接时间
    */
   private updateConnectTime(): void {
+    if (this.isTimerStopped) {
+      return;
+    }
+
     const currentTime = new Date();
     const elapsed =
       currentTime.getTime() - this.startTime.getTime() + this.pausedElapsedTime;
