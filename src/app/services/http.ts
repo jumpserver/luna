@@ -4,7 +4,7 @@ import {Browser, User} from '@app/globals';
 import {catchError, delay, map, retryWhen, scan} from 'rxjs/operators';
 import {Asset, ConnectData, AdminConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
-import {Observable} from 'rxjs';
+import {Observable, of} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
 import {CookieService} from 'ngx-cookie-service';
 import {encryptPassword} from '@app/utils/crypto';
@@ -316,7 +316,7 @@ export class HttpService {
       catchError((error) => {
         if (error.code === 'acl_face_online') {
           alert('Please perform face authentication and connection in Luna.')
-          return null
+          return of(null);
         }
 
         this.handleConnectMethodExpiredError.bind(this)
