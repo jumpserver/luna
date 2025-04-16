@@ -20,12 +20,12 @@ export class PagesShareComponent implements OnInit, AfterViewInit  {
   ngOnInit(): void {
     this.id = 'window-' + Math.random().toString(36).substr(2);
     this.shareId = this._route.snapshot.params['id'];
-    this.type = this._route.snapshot.params['type'];
+    this.type = this._route.snapshot.queryParams['type'];
 
     const baseUrl = `${window.location.protocol}//${window.location.host}`;
 
-    if (this.type && this.type === 'lino') {
-      this.iframeURL = `${baseUrl}/lino/share/${this.shareId}`;
+    if (this.type && this.type === 'lion') {
+      this.iframeURL = `${baseUrl}/lion/share/${this.shareId}`;
       return;
     }
 
