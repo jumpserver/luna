@@ -43,7 +43,7 @@
                 <mat-icon >settings</mat-icon>
               </button>
             </div>
-            <div class="action-item">
+            <div class="action-item" *ngIf="!isDatabaseProtocol()">
               <button mat-icon-button (click)="handleOpenDrawer('file')">
                 <mat-icon>folder</mat-icon>
               </button>

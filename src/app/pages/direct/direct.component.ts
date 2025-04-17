@@ -194,6 +194,24 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * 判断当前协议是否为数据库相关协议
+   * @returns boolean
+   */
+  public isDatabaseProtocol(): boolean {
+    const databaseProtocols = [
+      'mysql',
+      'mariadb',
+      'postgresql',
+      'redis',
+      'oracle',
+      'sqlserver',
+      'mongodb',
+      'clickhouse',
+    ];
+    return databaseProtocols.includes(this.protocol);
+  }
+
+  /**
    * @description 打开设置
    */
   public async handleOpenDrawer (type: string) {
