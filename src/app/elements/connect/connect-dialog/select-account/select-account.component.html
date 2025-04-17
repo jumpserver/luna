@@ -22,13 +22,10 @@
         [label]="group.name"
       >
         <mat-option *ngFor="let account of group.accounts" [value]="account">
-          {{ account.name }}{{ account.alias === account.username || account.alias.startsWith('@') ? '' : '(' + account.username + ')' }}
+          {{ getAccountDisplay(account) }}
         </mat-option>
       </mat-optgroup>
     </mat-select>
-    <span *ngIf="adDomain" [attr.aria-label]="'AD'" class="ad-domain" disabled matSuffix title="AD">
-      @{{ adDomain }}
-    </span>
   </mat-form-field>
   <mat-error *ngIf="accountCtl.hasError('required')">
     {{"Please choose a account"| translate}}
@@ -49,7 +46,7 @@
       [(ngModel)]="manualAuthInfo.username"
       [matAutocomplete]="auto"
       [placeholder]="usernamePlaceholder"
-      [readonly]="accountSelected.alias === '@USER'"
+      [readonly]="accountSelected.username === '@USER'"
       autofocus
       matInput
       name="username"
@@ -62,7 +59,7 @@
   </mat-form-field>
 </div>
 
-<div *ngIf="accountSelected && !accountSelected?.has_secret && accountSelected.alias !== '@ANON'" class="form-field">
+<div *ngIf="accountSelected && !accountSelected?.has_secret && accountSelected.username !== '@ANON'" class="form-field">
   <label class="zone-label" style="margin-bottom: 0; display: block">{{ "Password" | translate }}</label>
   <div>
     <mat-form-field class="input-field password" floatLabel='never' style="width: 70%">

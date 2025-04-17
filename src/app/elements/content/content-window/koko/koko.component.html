@@ -7,5 +7,10 @@
   [token]="token"
 ></elements-connector-guide>
 
-<elements-iframe *ngIf="iframeURL" [src]="iframeURL" [view]="view">
+<elements-iframe
+  #iFrame *ngIf="iframeURL"
+  [src]="iframeURL"
+  [view]="view"
+  (createFileConnectToken)="createFileConnectToken($event)"
+>
 </elements-iframe>

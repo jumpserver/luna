@@ -1,0 +1,337 @@
+@mixin time-container {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 999999;
+
+  .timer {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 6px 12px;
+    border-radius: 100px;
+    color: white;
+    font-family: monospace;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+    span {
+      margin-left: 4px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #dc3545;
+      margin-right: 6px;
+      transition: opacity 0.3s ease;
+
+      &.active {
+        animation: blink 1s infinite;
+      }
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+    right: 50%;
+    transform: translateX(50%);
+  }
+}
+
+@mixin time-icons {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 999999;
+  display: flex;
+  gap: 10px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+  transition-delay: 0s, 0.3s;
+
+  &.show {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .close-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.8);
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.9);
+      transform: scale(1.05);
+    }
+
+    mat-icon {
+      color: white;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+.terminal-connect {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+
+  .header-card {
+    height: 3.75rem;
+    padding: unset;
+    box-shadow: unset;
+
+    .mat-divider {
+      height: 35%;
+      border-right-width: 2px;
+      border-right-color: #dcddde;
+    }
+
+    .mat-card-header {
+      height: 100%;
+
+      .info-section {
+        display: flex;
+        flex: 2;
+        justify-content: start;
+        align-items: center;
+        height: 100%;
+        margin: 0 20px;
+        font-size: 14px;
+        gap: 1rem;
+
+        @media screen and (max-width: 768px) {
+          margin: 15px 0;
+          padding: 0 10px;
+
+          flex: none;
+          width: 100%;
+          height: auto;
+        }
+
+        .top-part,
+        .bottom-part {
+          display: flex;
+          align-items: center;
+          color: #1F2329;
+          font: 400 14px/22px 'PingFang SC';
+
+          @media screen and (max-width: 768px) {
+            height: auto;
+            margin: 8px 0;
+
+            .mat-icon {
+              margin-right: 8px;
+            }
+
+            .desc {
+              display: flex;
+              flex-wrap: wrap;
+              align-items: center;
+              margin-left: 0;
+
+              div {
+                display: flex;
+                align-items: center;
+
+                &:first-child {
+                  margin-right: 8px;
+                }
+              }
+            }
+          }
+
+          .mat-icon {
+            width: 20px;
+            height: 20px;
+            font-size: 20px;
+            cursor: pointer;
+          }
+
+          .desc {
+            display: flex;
+            align-items: stretch;
+            margin-left: 5px;
+          }
+        }
+      }
+
+      .action-section {
+        display: flex;
+        flex: 1;
+        justify-content: flex-end;
+        align-items: center;
+        height: 100%;
+        padding: 0 20px;
+
+        .timer-container {
+          @include time-container;
+        }
+
+        @media screen and (max-width: 768px) {
+          width: 100%;
+          margin-top: 15px;
+          padding: 15px 0 0;
+          border-top: 1px solid #eee;
+
+          .mat-divider {
+            display: none;
+          }
+
+          .actions {
+            width: 100%;
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px !important;
+            padding: 0 10px;
+
+            .action-icon {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              background: #f5f6f7;
+              border-radius: 8px;
+              padding: 12px;
+              gap: 8px;
+              height: auto;
+              transition: all 0.2s ease;
+
+              &:hover {
+                background: #eef0f2;
+                transform: translateY(-1px);
+              }
+
+              .mat-icon {
+                font-size: 24px !important;
+                width: 24px !important;
+                height: 24px !important;
+                color: #666;
+              }
+
+              &::after {
+                content: attr(mattooltip);
+                font-size: 13px;
+                color: #666;
+                font-weight: 500;
+              }
+            }
+          }
+        }
+
+        .actions {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+
+          .action-item {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+
+            button {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 32px;
+            }
+
+            ::ng-deep .mat-button-wrapper {
+              .mat-icon {
+                width: 20px;
+                height: 20px;
+                font-size: 20px;
+                line-height: 20px;
+              }
+
+              span {
+                font: 400 14px/22px 'PingFang SC';
+              }
+            }
+
+            &:hover {
+              color: #1ab394;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .terminal-card {
+    box-shadow: unset;
+    padding: unset;
+    margin: 20px;
+    height: calc(100% - 100px);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  ::ng-deep .mat-card-header-text {
+    .mat-card-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      margin: 0 0 0 10px;
+      font: 500 16px/24px 'PingFang SC';
+      gap: 1rem;
+
+      .mat-icon {
+        height: 20px;
+        width: 20px;
+        font-size: 20px;
+        line-height: 20px;
+        color: #646A73;
+      }
+    }
+
+  }
+}
+
+.gui {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+
+  .timer-container {
+    @include time-container;
+  }
+
+  .action-icons {
+    @include time-icons;
+  }
+
+  elements-iframe {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}

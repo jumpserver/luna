@@ -2,7 +2,7 @@ import {ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy
 import {Account, AccountGroup, Asset, AuthInfo, Protocol} from '@app/model';
 import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
 import {FormControl, Validators} from '@angular/forms';
-import {AppService, I18nService, LocalStorageService, LogService, SettingService} from '@app/services';
+import {AppService, I18nService, LogService} from '@app/services';
 import {takeUntil} from 'rxjs/operators';
 import {User} from '@app/globals';
 
@@ -40,16 +40,14 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   constructor(private _logger: LogService,
               private _appSvc: AppService,
               private _i18n: I18nService,
-              private _settingSvc: SettingService,
               private _cdRef: ChangeDetectorRef,
-              private _localStorage: LocalStorageService
   ) {
   }
 
   get noSecretAccounts() {
     return this.accounts
       .filter((item) => !item.has_secret)
-      .filter((item) => item.alias !== '@ANON')
+      .filter((item) => item.username !== '@ANON')
       .sort((a, b) => {
         const eq = +a.username.startsWith('@') - +b.username.startsWith('@');
         if (eq !== 0) {
@@ -61,7 +59,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         return a.name.localeCompare(b.name);
       });
   }
-
   get hasSecretAccounts() {
     return this.accounts
       .filter((item) => item.has_secret)
@@ -73,7 +70,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   get anonymousAccounts() {
     const allowAnonymousCategory = ['custom', 'web'];
     return this.accounts.filter(item => {
-      return item.alias === '@ANON' && allowAnonymousCategory.indexOf(this.asset.category.value) >= 0;
+      return item.username === '@ANON' && allowAnonymousCategory.indexOf(this.asset.category.value) >= 0;
     });
   }
 
@@ -92,7 +89,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     if (!this.accountSelected) {
       return false;
     }
-    return this.accountSelected.username === '@INPUT' || this.accountSelected.alias === '@USER';
+    return this.accountSelected.username === '@INPUT' || this.accountSelected.username === '@USER';
   }
 
   public compareFn = (f1, f2) => f1 && f2 && f1.alias === f2.alias;
@@ -140,6 +137,27 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     const preConnectData = this._appSvc.getPreConnectData(this.asset);
     if (preConnectData && preConnectData.account) {
       return this.accounts.find(item => item.alias === preConnectData.account.alias);
+    }
+  }
+
+  getAccountUsername(account: Account) {
+    if (account.username.includes('@')) {
+      return account.username;
+    }
+    if (this.adDomain) {
+      return `${account.username}@${this.adDomain}`;
+    }
+    return account.username;
+  }
+
+  getAccountDisplay(account: Account) {
+    const username = this.getAccountUsername(account);
+    if (username.startsWith('@')) {
+      return account.name;
+    } else if (account.name === username) {
+      return account.name;
+    } else {
+      return `${account.name}(${username})`;
     }
   }
 

@@ -83,7 +83,7 @@ export class PagesMonitorComponent implements OnInit {
 
   togglePause($event) {
     if (!this.sessionDetail) {
-      return
+      return;
     }
     if (this.sessionDetail.is_finished) {
       return;

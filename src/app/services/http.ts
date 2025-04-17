@@ -4,7 +4,7 @@ import {Browser, User} from '@app/globals';
 import {catchError, delay, map, retryWhen, scan} from 'rxjs/operators';
 import {Asset, ConnectData, AdminConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
-import {Observable} from 'rxjs';
+import {Observable, of} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
 import {CookieService} from 'ngx-cookie-service';
 import {encryptPassword} from '@app/utils/crypto';
@@ -172,9 +172,19 @@ export class HttpService {
     return this.get<Array<TreeNode>>(url, {observe: 'response'}).pipe(this.withRetry());
   }
 
-  getAssetDetail(id) {
+  getPermedAssetDetail(id) {
     const url = `/api/v1/perms/users/self/assets/${id}/`;
     return this.get<Asset>(url);
+  }
+
+  getAssetDetail(id) {
+    const url = `/api/v1/assets/assets/${id}/`;
+    return this.get<Asset>(url);
+  }
+
+  getAccountDetail(id) {
+    const url = `/api/v1/accounts/accounts/${id}/`;
+    return this.get<any>(url);
   }
 
   favoriteAsset(assetId: string, favorite: boolean) {
@@ -264,18 +274,18 @@ export class HttpService {
   }
 
   createConnectToken(asset: Asset, connectData: ConnectData, createTicket = false, face_verify = false, face_monitor_token?: string) {
-
     let params = createTicket ? '?create_ticket=1' : '';
     params += face_verify ? '?face_verify=1' : '';
     params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/connection-token/' + params;
     const {account, protocol, manualAuthInfo, connectMethod} = connectData;
-    const username = account.username.startsWith('@') ? manualAuthInfo.username : account.username;
+    const isVirtual = account.username.startsWith('@');
+    const username = isVirtual ? manualAuthInfo.username : account.username;
     const secret = encryptPassword(manualAuthInfo.secret);
     const connectOption = connectData.connectOption;
     const data = {
       asset: asset.id,
-      account: account.alias,
+      account: account.alias, // 主要是有特殊账号，匿名、虚拟
       protocol: protocol.name,
       input_username: username,
       input_secret: secret,
@@ -288,11 +298,12 @@ export class HttpService {
   }
 
   directiveConnect(assetId: String) {
-    const url = `/api/v1/assets/assets/${assetId}`
-    return this.get(url)
+    const url = `/api/v1/assets/assets/${assetId}/`;
+    return this.get(url);
   }
 
-  adminConnectToken (asset: Asset, connectData: AdminConnectData, createTicket = false, face_verify = false, face_monitor_token?: string) {
+  adminConnectToken(asset: Asset, connectData: AdminConnectData, createTicket = false,
+                     face_verify = false, face_monitor_token?: string) {
     let params = '';
     params += createTicket ? '?create_ticket=1' : '';
     params += face_verify ? '?face_verify=1' : '';
@@ -301,13 +312,20 @@ export class HttpService {
     const { account, protocol } = connectData;
     const data = {
       asset: asset.id,
-      account: account.name,
+      account: account.id,
       protocol: protocol,
       input_username: connectData.input_username,
-      connect_method: connectData.method,
+      connect_method: connectData.method
     };
     return this.post<ConnectionToken>(url, data).pipe(
-      catchError(this.handleConnectMethodExpiredError.bind(this))
+      catchError((error) => {
+        if (error.code === 'acl_face_online') {
+          alert('Please perform face authentication and connection in Luna.')
+          return of(null);
+        }
+
+        this.handleConnectMethodExpiredError.bind(this)
+      })
     );
   }
 

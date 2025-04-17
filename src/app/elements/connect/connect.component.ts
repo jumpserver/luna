@@ -73,7 +73,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
       document.title = node.name + ' - ' + titles[titles.length - 1];
 
-      this._http.getAssetDetail(node.id).subscribe(asset => {
+      this._http.getPermedAssetDetail(node.id).subscribe(asset => {
         this.connectAsset(asset).then();
       });
     });
@@ -94,7 +94,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         return;
       }
 
-      this._http.getAssetDetail(evt.node.id).subscribe(asset => {
+      this._http.getPermedAssetDetail(evt.node.id).subscribe(asset => {
         switch (evt.action) {
           case 'connect': {
             this._appSvc.disableAutoConnect(asset.id);
@@ -144,9 +144,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
 
     if (connToken.protocol === 'k8s') {
-      const baseUrl = `${window.location.protocol}//${window.location.host}/`;
-      const fullUrl = `${baseUrl}koko/k8s/?token=${connToken.id}`;
-      window.open(fullUrl);
+      const url = `${window.location.protocol}//${window.location.host}/luna/k8s/${connToken.id}`;
+      window.open(url);
       return;
     }
 
@@ -252,7 +251,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return Promise.resolve(preConnectData);
     }
     if (this._i18n.getLangCode() === 'pt-br') {
-      dialogWidth = '730px'
+      dialogWidth = '730px';
     }
     this._appSvc.connectDialogShown = true;
     const dialogRef = this._dialog.open(ElementConnectDialogComponent, {

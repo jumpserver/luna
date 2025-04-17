@@ -1,6 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {View} from '@app/model';
-import {SettingService, ViewService} from '@app/services';
+import {ViewService} from '@app/services';
 
 @Component({
   selector: 'pages-connect',

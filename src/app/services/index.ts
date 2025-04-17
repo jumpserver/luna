@@ -10,6 +10,7 @@ import {I18nService} from './i18n';
 import {DialogService} from './dialog/dialog.service';
 import {ConnectTokenService} from './connect-token/';
 import {FaceService} from '@app/services/face';
+import {IframeCommunicationService} from './communication';
 
 export {LogService, LocalStorageService, UUIDService} from './share';
 
@@ -33,6 +34,8 @@ export {DialogService};
 
 export {ConnectTokenService};
 
+export {IframeCommunicationService};
+
 
 export const AllServices = [
   LogService,
@@ -49,5 +52,6 @@ export const AllServices = [
   DialogService,
   ConnectTokenService,
   FaceService,
+  IframeCommunicationService
 ];
 

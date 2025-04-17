@@ -1,4 +1,4 @@
-import {Component, Input, Output, OnInit, SimpleChanges,EventEmitter} from '@angular/core';
+import {Component, Input, Output, OnInit, SimpleChanges, EventEmitter} from '@angular/core';
 import {FormGroup} from '@angular/forms';
 import {DynamicFormService} from './dynamic-form.service';
 import * as _ from 'lodash';
@@ -33,8 +33,8 @@ export class DynamicFormComponent implements OnInit {
   }
   updateTextarea(): void {
     _.templateSettings.interpolate = /{{\s*([a-zA-Z0-9_]+)\s*}}/g;
-    let compiled = _.template(this.command.args);
-    let context= {}
+    const compiled = _.template(this.command.args);
+    const context = {};
     this.fieldKeys.forEach(fieldKey => {
       context[`jms_${fieldKey}`] = this.dynamicForm.get(`jms_${fieldKey}`).value;
     });

@@ -13,9 +13,9 @@ export class DynamicFormService {
       if (fieldDefinition.required) {
         validators.push(Validators.required);
       }
-      group['jms_'+field] = new FormControl(fieldDefinition.default || '', validators)
+      group['jms_' + field] = new FormControl(fieldDefinition.default || '', validators);
     }
-    group["sendCommand"] = new FormControl("")
+    group['sendCommand'] = new FormControl('');
     return new FormGroup(group);
   }
 }

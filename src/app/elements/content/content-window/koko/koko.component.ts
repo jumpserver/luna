@@ -13,6 +13,7 @@ import {Command, InfoItem} from '../guide/model';
 export class ElementConnectorKokoComponent implements OnInit {
   @Input() view: View;
   @ViewChild('terminal', {static: false}) iframe: ElementRef;
+  @ViewChild('iFrame', { static: false }) iframeRef: ElementRef;
 
   iframeURL: any;
   asset: Asset;
@@ -55,6 +56,19 @@ export class ElementConnectorKokoComponent implements OnInit {
       this.generateIframeURL();
     }
     this.view.termComp = this;
+  }
+
+  async createFileConnectToken() {
+    const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window })
+      .iframeWindow;
+    const oldConnectToken = this.view.connectToken;
+    const newConnectToken = await this._connectTokenSvc.exchange(oldConnectToken);
+
+    if (!newConnectToken) {
+      return;
+    }
+
+    iframeWindow.postMessage({ name: 'CREATE_FILE_CONNECT_TOKEN', SFTP_Token: newConnectToken.id }, '*');
   }
 
   setInfoItems() {
@@ -127,6 +141,10 @@ export class ElementConnectorKokoComponent implements OnInit {
       .reduce((a, b) => {
         return `${a}&${b}`;
       });
+
+    if (this.protocol === 'k8s') {
+      return this.iframeURL = `${this.baseUrl}/k8s/?` + query;
+    }
 
     this.iframeURL = `${this.baseUrl}/connect/?` + query;
   }

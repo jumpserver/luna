@@ -203,23 +203,22 @@ export class ElementContentComponent implements OnInit, OnDestroy {
 
   sendQuickCommand(command) {
     this.batchCommand = command.args;
-    if(command.variable.length>0){
-      const dialogRef=this._dialog.open(
+    if (command.variable.length > 0) {
+      const dialogRef = this._dialog.open(
         ElementSendCommandWithVariableDialogComponent,
       {
         height: 'auto',
         width: '500px',
-        data: {command:command}
+        data: { command: command }
       }
-    )
+    );
       dialogRef.afterClosed().subscribe(result => {
         if (result) {
-          this.batchCommand = result
+          this.batchCommand = result;
           this.sendBatchCommand();
         }
-      })
-    }
-    else{
+      });
+    } else {
       this.sendBatchCommand();
     }
 

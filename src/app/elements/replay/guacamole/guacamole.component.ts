@@ -320,7 +320,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
 
   private initTouchEvents() {
     const screen = document.getElementById('screen');
-    if (!screen) return;
+    if (!screen) { return; }
 
     let touchStartX = 0;
     let touchStartY = 0;
