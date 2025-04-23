@@ -49,7 +49,8 @@
 
 
 .ztree li span.button, .view_icon {
-  &.windows_ico_docu {
+  &.windows_ico_docu,
+  &.windows_ad_ico_docu {
     background: url('./icons/windows.png') no-repeat center left transparent;
   }
 

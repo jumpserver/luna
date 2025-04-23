@@ -20,7 +20,7 @@
         </span>
       </div>
       <span
-        [hidden]="!tree.open"
+        *ngIf="tree.open"
         class="tree-banner-icon-zone"
       >
         <a

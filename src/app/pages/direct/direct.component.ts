@@ -385,6 +385,14 @@ export class PageDirectComponent implements OnInit, OnDestroy {
         };
         return 'web_gui';
       case 'sftp':
+        this.connectMethod = {
+          component: 'koko',
+          type: 'web',
+          value: 'web_sftp',
+          label: 'Web SFTP',
+          endpoint_protocol: endpointProtocol,
+          disabled: false,
+        };
         return 'web_sftp';
       default:
         return 'web_cli';
