@@ -313,19 +313,12 @@ export class HttpService {
     const data = {
       asset: asset.id,
       account: account.id,
-      protocol: protocol,
+      protocol: protocol.name,
       input_username: connectData.input_username,
       connect_method: connectData.method
     };
     return this.post<ConnectionToken>(url, data).pipe(
-      catchError((error) => {
-        if (error.code === 'acl_face_online') {
-          alert('Please perform face authentication and connection in Luna.')
-          return of(null);
-        }
-
-        this.handleConnectMethodExpiredError.bind(this)
-      })
+      catchError(this.handleConnectMethodExpiredError.bind(this))
     );
   }
 

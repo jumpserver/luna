@@ -246,6 +246,7 @@ export class AppService {
       downloadRDP: connectData.downloadRDP,
       autoLogin: connectData.autoLogin,
       connectOption,
+      direct: connectData.direct,
     };
     this.setAccountLocalAuth(asset, account, manualAuthInfo);
     this._localStorage.set(key, saveData);

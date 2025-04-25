@@ -378,7 +378,7 @@ export class ConnectOption {
 export class AdminConnectData {
   asset: Asset;
   account: Account;
-  protocol: string;
+  protocol: Protocol;
   input_username: string;
   method: string;
 }
@@ -392,6 +392,7 @@ export class ConnectData {
   connectOption: Object;
   downloadRDP: boolean;
   autoLogin: boolean;
+  direct?: boolean;
 }
 
 class FromTicket {

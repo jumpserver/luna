@@ -1,10 +1,9 @@
+import { MatDialog } from '@angular/material';
 import { ActivatedRoute } from '@angular/router';
-import { environment } from '@src/environments/environment';
-import { Account, Endpoint, View, ConnectionToken, ConnectMethod } from '@app/model';
-import { HttpService, I18nService, LogService, ViewService, IframeCommunicationService } from '@app/services';
+import { Account, Endpoint, View, ConnectionToken, ConnectMethod, AuthInfo } from '@app/model';
+import { HttpService, I18nService, LogService, ViewService, IframeCommunicationService, AppService } from '@app/services';
 import {
   Component,
-  ViewChild,
   OnInit,
   OnDestroy,
   ElementRef,
@@ -12,6 +11,7 @@ import {
   QueryList,
 } from '@angular/core';
 import { Subscription } from 'rxjs';
+import { ElementACLDialogComponent } from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
 
 @Component({
   selector: 'pages-direct',
@@ -19,7 +19,6 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./direct.component.scss'],
 })
 export class PageDirectComponent implements OnInit, OnDestroy {
-  // @ViewChild('contentWindow', {static: false}) iframeRef: ElementRef;
   @ViewChildren('contentWindow') contentWindows: QueryList<ElementRef>;
 
   public startTime: Date;
@@ -52,9 +51,11 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   private method: string;
 
   constructor(
+    private _dialog: MatDialog,
     private _http: HttpService,
     private _i18n: I18nService,
     public viewSrv: ViewService,
+    private _appSvc: AppService,
     private _logger: LogService,
     private _route: ActivatedRoute,
     private iframeCommunicationService: IframeCommunicationService
@@ -136,13 +137,21 @@ export class PageDirectComponent implements OnInit, OnDestroy {
 
     this.connectData = {
       method: this.method,
-      protocol: this.protocol,
+      protocol: { name: this.protocol },
       asset: this.permedAsset,
       account: this.account,
+      autoLogin: true,
       input_username: this.account.username,
+      connectMethod: this.connectMethod,
+      manualAuthInfo: new AuthInfo(),
+      direct: true,
     };
 
+    this._appSvc.setPreConnectData(this.asset, this.connectData);
+
     const res = await this.getConnectToken(this.permedAsset, this.connectData);
+
+    console.log('res', res);
 
     if (res) {
       return res;
@@ -162,17 +171,21 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     document.removeEventListener('mousemove', this.handleMouseMove.bind(this));
   }
 
-  public onNewView() {
-    this.view = new View (
-      this.asset,
-      {
-        ...this.connectData,
-        protocol: { name: this.protocol },
-        connectMethod: this.connectMethod,
-      },
-      this.connectToken,
-      'node'
-    );
+  public onNewView(event?: any) {
+    if (event) {
+      this.view = event;
+    } else {
+      this.view = new View(
+        this.asset,
+        {
+          ...this.connectData,
+          protocol: { name: this.protocol },
+          connectMethod: this.connectMethod,
+        },
+        this.connectToken,
+        "node"
+      );
+    }
 
     this.viewSrv.addView(this.view);
     this.viewSrv.activeView(this.view);
@@ -238,40 +251,6 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * @description 获取当前 host 的信息
-   * @returns
-   */
-  private getUrl(): string {
-    let host: string = '';
-    let port: string = '';
-
-    const endpoint = window.location.host.split(':')[0];
-    const protocol = window.location.protocol;
-
-    if (!environment.production) {
-      switch (this.protocol) {
-        case 'ssh':
-        case 'k8s':
-        case 'sftp':
-        case 'telnet':
-        case 'mysql':
-          port = '9530';
-          break;
-        default:
-          port = '9529';
-      }
-
-      host = `${endpoint}:${port}`;
-    } else {
-      host = `${endpoint}`;
-    }
-
-    this._logger.info(`Current host: ${protocol}//${host}`);
-
-    return `${protocol}//${host}`;
-  }
-
-  /**
    * 开始计时器
    */
   private startTimer(): void {
@@ -330,11 +309,34 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   private getConnectToken(assetMessage: any, connectData: any) {
     return new Promise(async (resolve, reject) => {
       try {
-        this.connectToken = await this._http
+        this._http
           .adminConnectToken(assetMessage, connectData, false, false, '')
-          .toPromise();
+          .subscribe(res => {
+              this.connectToken = res;
+              resolve(true);
+            },
+          error => {
+            const dialogRef = this._dialog.open(ElementACLDialogComponent, {
+              height: 'auto',
+              width: '450px',
+              disableClose: true,
+              data: {
+                asset: assetMessage,
+                connectData: connectData,
+                code: error.error.code,
+                tokenAction: 'create',
+                error: error,
+              },
+            })
 
-        resolve(true);
+            dialogRef.afterClosed().subscribe(token => {
+              console.log('token', token);
+
+              this.connectToken = token
+              this.onNewView();
+            });
+          }
+        )
       } catch (error) {
         this._logger.error('Failed to get connect token:', error);
         reject(error);
