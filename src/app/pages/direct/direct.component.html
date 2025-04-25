@@ -60,6 +60,7 @@
 
       <mat-card class="terminal-card">
         <mat-card-content style="height: 100%">
+          <elements-connect (onNewView)="onNewView($event)" [ngStyle]="{'display': 'none'}"></elements-connect>
           <elements-content-window #contentWindow *ngIf="view" [view]="view"></elements-content-window>
         </mat-card-content>
       </mat-card>

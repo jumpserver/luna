@@ -132,6 +132,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (connectInfo.direct) {
+      this._logger.debug('Direct connect');
+      return;
+    }
+
     this._logger.debug('Connect info: ', connectInfo);
 
     const connectMethod = connectInfo.connectMethod;
@@ -210,6 +215,10 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       this._logger.debug('Not auto login');
       return false;
     }
+
+    if (preData.direct) {
+      return true;
+    }
     // 验证账号是否有效
     const preAccount = preData.account;
     const account = accounts.find(item => {
@@ -250,10 +259,13 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (isValid) {
       return Promise.resolve(preConnectData);
     }
+
     if (this._i18n.getLangCode() === 'pt-br') {
       dialogWidth = '730px';
     }
+
     this._appSvc.connectDialogShown = true;
+
     const dialogRef = this._dialog.open(ElementConnectDialogComponent, {
       minHeight: '300px',
       height: 'auto',
