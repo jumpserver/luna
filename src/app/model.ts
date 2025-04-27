@@ -429,6 +429,7 @@ export class ConnectionToken {
   };
   from_ticket_info: FromTicketInfo;
   face_monitor_token: string;
+  connect_options: {};
 }
 
 export class Protocol {

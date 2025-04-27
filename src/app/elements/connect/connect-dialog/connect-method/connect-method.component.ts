@@ -1,6 +1,6 @@
-import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
-import {Account, AuthInfo, ConnectMethod, Protocol} from '@app/model';
-import {AppService, I18nService, SettingService} from '@app/services';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Account, AuthInfo, ConnectMethod, Protocol } from '@app/model';
+import { AppService, I18nService, SettingService } from '@app/services';
 
 @Component({
   selector: 'elements-connect-method',
@@ -10,6 +10,7 @@ import {AppService, I18nService, SettingService} from '@app/services';
 export class ElementConnectMethodComponent implements OnInit {
   @Output() connectMethodChange = new EventEmitter<ConnectMethod>();
   @Output() onDownloadRDPFile = new EventEmitter<ConnectMethod>();
+  @Output() onGuidePage = new EventEmitter<ConnectMethod>();
   @Input() manualAuthInfo: AuthInfo;
   @Input() connectOption: Object;
   @Input() account: Account;
@@ -17,13 +18,17 @@ export class ElementConnectMethodComponent implements OnInit {
   public connectMethodTypes = [];
 
   constructor(private _i18n: I18nService,
-              private _appSvc: AppService,
-              private _settingSvc: SettingService
+    private _appSvc: AppService,
+    private _settingSvc: SettingService
   ) {
   }
 
   get isAppletClientMethod() {
     return this.connectOption && this.connectOption['appletConnectMethod'] === 'client';
+  }
+
+  get isVirtualAppClientMethod() {
+    return this.connectOption && this.connectOption['virtualappConnectMethod'] === 'client';
   }
 
   private _protocol: Protocol;
@@ -77,10 +82,10 @@ export class ElementConnectMethodComponent implements OnInit {
 
   groupConnectMethods() {
     const connectMethodTypes = [
-      {value: 'web', label: 'Web', fa: 'fa-globe', methods: []},
-      {value: 'native', label: this._i18n.instant('Native'), fa: 'fa-desktop', methods: []},
-      {value: 'applet', label: this._i18n.instant('Applet'), fa: 'fa-windows', methods: []},
-      {value: 'virtual_app', label: this._i18n.instant('VirtualApp'), fa: 'fa-desktop', methods: []},
+      { value: 'web', label: 'Web', fa: 'fa-globe', methods: [] },
+      { value: 'native', label: this._i18n.instant('Native'), fa: 'fa-desktop', methods: [] },
+      { value: 'applet', label: this._i18n.instant('Applet'), fa: 'fa-windows', methods: [] },
+      { value: 'virtual_app', label: this._i18n.instant('VirtualApp'), fa: 'fa-desktop', methods: [] },
     ];
 
     for (const type of connectMethodTypes) {
@@ -118,5 +123,20 @@ export class ElementConnectMethodComponent implements OnInit {
     }
     this.connectMethod = method;
     this.onDownloadRDPFile.emit(this.connectMethod);
+  }
+
+  CanGuide(method) {
+    if (method.type === 'virtual_app' && this.isVirtualAppClientMethod) {
+      return true;
+    }
+    return false;
+  }
+
+  ChangeToGuidePage(method) {
+    if (method.disabled) {
+      return;
+    }
+    this.connectMethod = method;
+    this.onGuidePage.emit(this.connectMethod);
   }
 }
