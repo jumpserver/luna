@@ -101,6 +101,22 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
       },
       {
         type: 'select',
+        field: 'virtualappConnectMethod',
+        options: [
+          { label: 'Web', value: 'web' },
+          ...(true ? [{ label: 'Client', value: 'client' }] : [])
+        ],
+        label: 'Virtualapp connect method',
+        value: this.setting.graphics.applet_connection_method,
+        hidden: () => {
+          if (!this._settingSvc.hasXPack()) {
+            return true;
+          }
+          return !this.connectMethod || this.connectMethod.component !== 'panda';
+        }
+      },
+      {
+        type: 'select',
         field: 'reusable',
         options: this.boolChoices,
         label: 'RDP file reusable',

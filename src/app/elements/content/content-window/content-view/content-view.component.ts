@@ -25,6 +25,10 @@ export class ElementContentViewComponent implements OnInit {
     const {connectData} = view;
     switch (connectData.connectMethod.component) {
       case 'panda':
+        if (connectData.connectOption.virtualappConnectMethod === 'client') {
+          connector = 'nec'
+          break;
+        }
       case 'tinker':
         connector = 'lion';
         break;

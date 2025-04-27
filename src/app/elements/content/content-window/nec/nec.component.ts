@@ -49,6 +49,16 @@ export class ElementConnectorNecComponent implements OnInit {
     this.protocol = protocol;
     this.endpoint = smartEndpoint;
 
+    // 处理 panda nec connect method
+    switch (this.token.connect_options['virtualappConnectMethod']) {
+      case 'client':
+        this.protocol = 'vnc';
+        break;
+      default:
+        break;
+    }
+
+
     const oriHost = this.asset.address;
     this.name = `${this.asset.name}(${oriHost})`;
     this.setConnectionInfo();
@@ -101,11 +111,11 @@ export class ElementConnectorNecComponent implements OnInit {
 
     this.commands = [
       {
-      title: this._i18n.instant('Connect command line') + ' (' + this._i18n.instant('Using token') + ')',
-      value: cliValue,
-      safeValue: cliSafe,
-      helpText:  this._i18n.instant('Password is token password on the table'),
-      callClient: false
+        title: this._i18n.instant('Connect command line') + ' (' + this._i18n.instant('Using token') + ')',
+        value: cliValue,
+        safeValue: cliSafe,
+        helpText:  this._i18n.instant('Password is token password on the table'),
+        callClient: false
     },
       {
         title: this._i18n.instant('Connect command line') + ' (' + this._i18n.instant('Directly') + ')',
