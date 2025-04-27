@@ -114,14 +114,26 @@ export class HttpService {
     return this.post('/api/checklogin', user);
   }
 
-  getUserProfile() {
+  getPerms() {
+    const url = '/api/v1/users/profile/permissions/';
+    return this.get(url);
+  }
+
+  getProfile() {
     let url = '/api/v1/users/profile/';
     const connectionToken = getQueryParamFromURL('token');
     if (connectionToken) {
       // 解决 /luna/connect?connectToken= 直接方式权限认证问题
       url += `?token=${connectionToken}`;
     }
-    return this.get<_User>(url);
+    return    this.get<ConnectionToken>(url);
+  }
+
+  async getUserProfile() {
+    const profile = this.getProfile().toPromise();
+    const perms = this.getPerms().toPromise();
+    const res = await Promise.all([profile, perms]);
+    return Object.assign({}, res[0], res[1]);
   }
 
   getUserSession() {

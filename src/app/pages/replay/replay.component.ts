@@ -22,7 +22,7 @@ export class PagesReplayComponent implements OnInit {
   }
 
   getCurrentUser() {
-    this._http.getUserProfile().subscribe(user => {
+    this._http.getUserProfile().then(user => {
       this.user = user;
     });
   }
