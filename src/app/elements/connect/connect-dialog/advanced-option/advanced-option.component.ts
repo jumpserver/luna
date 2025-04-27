@@ -99,7 +99,7 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
           return !this.connectMethod || this.connectMethod.component !== 'tinker';
         }
       },
-            {
+      {
         type: 'select',
         field: 'virtualappConnectMethod',
         options: [

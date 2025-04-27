@@ -1,6 +1,6 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { Account, AuthInfo, ConnectMethod, Protocol } from '@app/model';
-import { AppService, I18nService, SettingService } from '@app/services';
+import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
+import {Account, AuthInfo, ConnectMethod, Protocol} from '@app/model';
+import {AppService, I18nService, SettingService} from '@app/services';
 
 @Component({
   selector: 'elements-connect-method',
@@ -18,8 +18,8 @@ export class ElementConnectMethodComponent implements OnInit {
   public connectMethodTypes = [];
 
   constructor(private _i18n: I18nService,
-    private _appSvc: AppService,
-    private _settingSvc: SettingService
+              private _appSvc: AppService,
+              private _settingSvc: SettingService
   ) {
   }
 
@@ -82,10 +82,10 @@ export class ElementConnectMethodComponent implements OnInit {
 
   groupConnectMethods() {
     const connectMethodTypes = [
-      { value: 'web', label: 'Web', fa: 'fa-globe', methods: [] },
-      { value: 'native', label: this._i18n.instant('Native'), fa: 'fa-desktop', methods: [] },
-      { value: 'applet', label: this._i18n.instant('Applet'), fa: 'fa-windows', methods: [] },
-      { value: 'virtual_app', label: this._i18n.instant('VirtualApp'), fa: 'fa-desktop', methods: [] },
+      {value: 'web', label: 'Web', fa: 'fa-globe', methods: []},
+      {value: 'native', label: this._i18n.instant('Native'), fa: 'fa-desktop', methods: []},
+      {value: 'applet', label: this._i18n.instant('Applet'), fa: 'fa-windows', methods: []},
+      {value: 'virtual_app', label: this._i18n.instant('VirtualApp'), fa: 'fa-desktop', methods: []},
     ];
 
     for (const type of connectMethodTypes) {
