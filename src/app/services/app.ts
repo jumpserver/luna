@@ -166,7 +166,7 @@ export class AppService {
     // Connection connectToken 方式不用检查过期了
     const token = this.getQueryString('token');
 
-    this._http.getUserProfile().subscribe(
+    this._http.getUserProfile().then(
       user => {
         this._orgSvc.setWorkbenchOrgs(user['workbench_orgs']);
         Object.assign(User, user);
