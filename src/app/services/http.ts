@@ -126,7 +126,7 @@ export class HttpService {
       // 解决 /luna/connect?connectToken= 直接方式权限认证问题
       url += `?token=${connectionToken}`;
     }
-    return    this.get<ConnectionToken>(url);
+    return this.get<ConnectionToken>(url);
   }
 
   async getUserProfile() {

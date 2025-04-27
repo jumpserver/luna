@@ -168,6 +168,7 @@ export class AppService {
 
     this._http.getUserProfile().then(
       user => {
+        console.log('User is: ', user);
         this._orgSvc.setWorkbenchOrgs(user['workbench_orgs']);
         Object.assign(User, user);
         User.logined = true;
@@ -189,7 +190,7 @@ export class AppService {
     this._http.reportBrowser();
   }
 
-  getQueryString(name) {
+  getQueryString(name: string) {
     const reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
     const r = window.location.search.substr(1).match(reg);
     if (r != null) {
