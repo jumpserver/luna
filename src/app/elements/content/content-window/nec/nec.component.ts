@@ -3,8 +3,8 @@ import {Account, Asset, ConnectionToken, Endpoint, View} from '@app/model';
 import {ConnectTokenService, HttpService, I18nService, SettingService} from '@app/services';
 import {ToastrService} from 'ngx-toastr';
 
-import { Command, InfoItem } from '../guide/model';
-import { User } from '@app/globals';
+import {Command, InfoItem} from '../guide/model';
+import {User} from '@app/globals';
 
 @Component({
   selector: 'elements-connector-nec',
@@ -42,7 +42,7 @@ export class ElementConnectorNecComponent implements OnInit {
   }
 
   async ngOnInit() {
-    const { asset, account, protocol, smartEndpoint, connectToken } = this.view;
+    const {asset, account, protocol, smartEndpoint, connectToken} = this.view;
     this.token = connectToken;
     this.asset = asset;
     this.account = account;
