@@ -24,8 +24,8 @@ export class ElementOrganizationComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     const cookieOrgId = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
-    this._orgSvc.orgListChange$.subscribe((res) => {
-      this.organizations = res;
+    this._orgSvc.orgListChange$.subscribe((res: Array<Organization>) => {
+      this.organizations = res || [];
       const cookieOrg = this.organizations.find(i => i.id === cookieOrgId);
       if (!cookieOrg) {
         this.currentOrg = this.getPropOrg();
