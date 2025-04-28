@@ -1,5 +1,6 @@
 import {Terminal} from 'xterm';
-import {TreeNode} from '@app/model';
+import {User, Asset, TreeNode} from '@app/model';
+import {SettingService} from '@app/services';
 
 export function groupBy(array, f) {
   const groups = {};
@@ -72,6 +73,34 @@ export function groupByProp(xs, key) {
   }, {});
 }
 
+export function getWaterMarkFields(user: User, asset: Asset) {
+  const userId = user.id;
+  const name = user.name;
+  const userName = user.username;
+  const assetId = asset.id;
+  const assetName = asset.name;
+  const assetAddress = asset.address;
+  const currentTime = formatDate(new Date());
+  return {userId, name, userName, assetId, assetName, assetAddress, currentTime};
+}
+
+export function getWaterMarkContent(user: User, asset: Asset, settingService: SettingService) {
+  const fields = getWaterMarkFields(user, asset);
+  const template = settingService.globalSetting.SECURITY_WATERMARK_SESSION_CONTENT || '';
+  // 找出模板中所有的变量占位符 ${xxx}
+  const placeholders = template.match(/\${([^}]+)}/g) || [];
+  const allVariables = {};
+  // 为模板中的每个变量准备值
+  placeholders.forEach(placeholder => {
+    const varName = placeholder.slice(2, -1); // 提取变量名，去掉 ${ 和 }
+    allVariables[varName] = fields[varName] !== undefined ? fields[varName] : 'N/A';
+  });
+  // 合并用户现有的字段和模板中可能缺失的字段
+  const safeFields = {...fields, ...allVariables};
+  // 安全解析模板
+  return new Function(...Object.keys(safeFields), `return \`${template}\`;`)(...Object.values(safeFields));
+}
+
 export function truncateCenter(s: string, l: number) {
   if (s.length <= l) {
     return s;
@@ -89,7 +118,8 @@ function createWatermarkDiv(content, {
   font = '20px monaco, microsoft yahei',
   fillStyle = 'rgba(184, 184, 184, 0.8)',
   rotate = -45,
-  zIndex = 1000
+  zIndex = 1000,
+  lineHeight = 24
 }) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -115,13 +145,13 @@ function createWatermarkDiv(content, {
 
     for (let n = 0; n < words.length; n++) {
       line = words[n];
-      line = truncateCenter(line, 64);
+      // line = truncateCenter(line, 64);
       _ctx.fillText(line, x, y);
       y += _lineHeight;
     }
   }
 
-  generateMultiLineText(ctx, content, width, 24);
+  generateMultiLineText(ctx, content, width, lineHeight);
 
   const base64Url = canvas.toDataURL();
   const watermarkDiv = document.createElement('div');
@@ -164,7 +194,6 @@ export function canvasWaterMark({
                                   content = 'JumpServer',
                                   settings = {}
                                 } = {}) {
-
   container.style.position = 'relative';
   const res = createWatermarkDiv(content, settings);
   const watermarkDiv = res.watermark;
@@ -247,6 +276,19 @@ export function formatTime(millis: number) {
     time = zeroPad(hour, 2) + ':' + time;
   }
   return time;
+}
+
+export function formatDate(date: Date) {
+  const pad = (n) => n.toString().padStart(2, '0');
+
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1); // 月份从0开始
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 /**

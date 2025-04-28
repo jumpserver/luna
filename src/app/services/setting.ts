@@ -155,10 +155,18 @@ export class SettingService {
 
   createWaterMarkIfNeed(element, content) {
     this.init().then(() => {
-      if (this.globalSetting.SECURITY_WATERMARK_ENABLED) {
+      if (this.globalSetting.SECURITY_WATERMARK_ENABLED && this.hasXPack()) {
         canvasWaterMark({
           container: element,
-          content: content
+          content: content,
+          settings: {
+            width: this.globalSetting.SECURITY_WATERMARK_WIDTH,
+            height: this.globalSetting.SECURITY_WATERMARK_HEIGHT,
+            font: this.globalSetting.SECURITY_WATERMARK_FONT_SIZE + 'px monaco, microsoft yahei',
+            fillStyle: this.globalSetting.SECURITY_WATERMARK_COLOR,
+            rotate: this.globalSetting.SECURITY_WATERMARK_ROTATE,
+            lineHeight: this.globalSetting.SECURITY_WATERMARK_FONT_SIZE
+          }
         });
       }
     });

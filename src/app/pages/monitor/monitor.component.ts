@@ -3,6 +3,7 @@ import {AppService, HttpService, I18nService, SettingService} from '@app/service
 import {ActivatedRoute} from '@angular/router';
 import {Session, Ticket, User} from '@app/model';
 import {ToastrService} from 'ngx-toastr';
+import {getWaterMarkContent} from '@app/utils/common';
 
 @Component({
   selector: 'pages-monitor',
@@ -35,13 +36,15 @@ export class PagesMonitorComponent implements OnInit {
     });
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this._route.params.subscribe(params => {
       this.sessionID = params['sid'];
-      this.generateMonitorURL().then(() => {
+      this.generateMonitorURL().then(async () => {
         const sessionObj = this.sessionDetail;
-        const auditorUser =  `${this._i18n.instant('Viewer')}: ${this.user.name}(${this.user.username})`;
-        const sessionContent = `${this._i18n.instant('Operator')}: ${sessionObj.user}\n${sessionObj.asset}`;
+        const asset = await this._http.getAssetDetail(sessionObj.asset_id).toPromise();
+        const sessionUser = await this._http.getUserDetail(sessionObj.user_id);
+        const auditorUser = `${this._i18n.instant('Viewer')}: ${this.user.name}(${this.user.username})`;
+        const sessionContent = getWaterMarkContent(sessionUser, asset, this._settingSvc);
         const content = `${auditorUser}\n${sessionContent}`;
         this._settingSvc.createWaterMarkIfNeed(
           this.windowRef.nativeElement, content);
@@ -65,7 +68,7 @@ export class PagesMonitorComponent implements OnInit {
     this.supportedLock = isSupportComponent && isNormalSession;
     this.isPaused = this.sessionDetail.is_locked;
     const protocol = window.location.protocol.replace(':', '');
-    const data = { 'assetId': '', 'appId': '', 'sessionId': this.sessionID, 'token': ''};
+    const data = {'assetId': '', 'appId': '', 'sessionId': this.sessionID, 'token': ''};
     const smartEndpoint = await this._http.getSmartEndpoint(data, protocol);
     const baseUrl = smartEndpoint.getUrl();
     const terminal_type = this.sessionDetail.terminal.type;
@@ -95,7 +98,7 @@ export class PagesMonitorComponent implements OnInit {
       });
     } else {
       this._http.toggleLockSession(this.sessionID, !this.isPaused).then((res) => {
-       this.handleToggleResponse(res).then();
+        this.handleToggleResponse(res).then();
       });
     }
   }
@@ -104,7 +107,7 @@ export class PagesMonitorComponent implements OnInit {
     const pauseTaskMsg = await this._i18n.t('Pause task has been send');
     const resumeTaskMsg = await this._i18n.t('Resume task has been send');
     const session_ids = res['ok'];
-    const msg = this.isPaused ?  resumeTaskMsg : pauseTaskMsg;
+    const msg = this.isPaused ? resumeTaskMsg : pauseTaskMsg;
     this._toastr.success(msg);
     if (session_ids.indexOf(this.sessionID) !== -1) {
 
