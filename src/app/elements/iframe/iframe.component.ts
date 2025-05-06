@@ -180,10 +180,10 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     }
 
     // 更新当前 view 的 connectToken
-    this.src = 'about:blank';
     this.view.connectToken = newConnectToken;
 
     const url = this.src.replace(oldConnectToken.id, newConnectToken.id);
+    this.src = 'about:blank';
 
     setTimeout(() => {
       this.src = url;
