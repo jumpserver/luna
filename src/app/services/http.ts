@@ -315,13 +315,13 @@ export class HttpService {
   }
 
   adminConnectToken(asset: Asset, connectData: AdminConnectData, createTicket = false,
-                     face_verify = false, face_monitor_token?: string) {
+                    face_verify = false, face_monitor_token?: string) {
     let params = '';
     params += createTicket ? '?create_ticket=1' : '';
     params += face_verify ? '?face_verify=1' : '';
     params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/admin-connection-token/' + params;
-    const { account, protocol } = connectData;
+    const {account, protocol} = connectData;
     const data = {
       asset: asset.id,
       account: account.id,
@@ -455,5 +455,10 @@ export class HttpService {
   getSessionOnlineNum(assetId: string, account: string) {
     const url = `/api/v1/terminal/sessions/online-info/?asset_id=${assetId}&account=${account}`;
     return this.get(url);
+  }
+
+  getUserDetail(uid: string): Promise<_User> {
+    const url = `/api/v1/users/users/${uid}/`;
+    return this.get<_User>(url).toPromise();
   }
 }
