@@ -330,10 +330,12 @@ export class PageDirectComponent implements OnInit, OnDestroy {
             })
 
             dialogRef.afterClosed().subscribe(token => {
-              console.log('token', token);
+              if (token) {
+                this.connectToken = token
+                this.onNewView();
+              }
 
-              this.connectToken = token
-              this.onNewView();
+              window.close();
             });
           }
         )
@@ -397,6 +399,14 @@ export class PageDirectComponent implements OnInit, OnDestroy {
         };
         return 'web_sftp';
       default:
+        this.connectMethod = {
+          component: 'koko',
+          type: 'web',
+          value: 'web_cli',
+          label: 'Web CLI',
+          endpoint_protocol: endpointProtocol,
+          disabled: false,
+        };
         return 'web_cli';
     }
   }
