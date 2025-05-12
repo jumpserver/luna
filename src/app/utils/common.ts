@@ -117,7 +117,7 @@ function createWatermarkDiv(content, {
   alpha = 0.3,
   font = '20px monaco, microsoft yahei',
   fillStyle = 'rgba(184, 184, 184, 0.8)',
-  rotate = -45,
+  rotate = 45,
   zIndex = 1000,
   lineHeight = 24
 }) {
@@ -135,7 +135,7 @@ function createWatermarkDiv(content, {
   ctx.globalAlpha = alpha;
 
   ctx.translate(0.5 * width, 0.5 * height);
-  ctx.rotate((rotate * Math.PI) / 180);
+  ctx.rotate(-(rotate * Math.PI) / 180);
 
   function generateMultiLineText(_ctx: CanvasRenderingContext2D, _text: string, _width: number, _lineHeight: number) {
     const words = _text.split('\n');
