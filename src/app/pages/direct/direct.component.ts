@@ -210,8 +210,8 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    * 判断当前协议是否为数据库相关协议
    * @returns boolean
    */
-  public isDatabaseProtocol(): boolean {
-    const databaseProtocols = [
+  public isNoneProtocol(): boolean {
+    const protocols = [
       'mysql',
       'mariadb',
       'postgresql',
@@ -220,8 +220,11 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       'sqlserver',
       'mongodb',
       'clickhouse',
+      'k8s',
+      'http',
+      'https',
     ];
-    return databaseProtocols.includes(this.protocol);
+    return protocols.includes(this.protocol);
   }
 
   /**

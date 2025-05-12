@@ -45,11 +45,11 @@
 
             <div class="actions">
               <div class="action-item">
-                <button mat-icon-button (click)="handleOpenDrawer('setting')">
+                <button mat-icon-button (click)="handleOpenDrawer('setting')" *ngIf="protocol !== 'k8s'">
                   <mat-icon >settings</mat-icon>
                 </button>
               </div>
-              <div class="action-item" *ngIf="!isDatabaseProtocol()">
+              <div class="action-item" *ngIf="!isNoneProtocol()">
                 <button mat-icon-button (click)="handleOpenDrawer('file')">
                   <mat-icon>folder</mat-icon>
                 </button>
