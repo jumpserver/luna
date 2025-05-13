@@ -99,25 +99,37 @@ export class ElementsPartsComponent implements OnInit {
    * @param duration
    */
   formatDuration(duration: number): string {
+    const currentLang = this.getUserLang();
+    const isZhCN = currentLang === 'zh-CN';
+
+    if (!duration) {
+      return isZhCN ? '0 秒' : '0 s';
+    }
+
     const seconds = Math.floor(duration / 1000);
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
 
-    let result = '';
-    const currentLang = this.getUserLang();
+    const timeUnits = [
+      { value: hours, zhLabel: '小时', enLabel: 'hour' },
+      { value: minutes, zhLabel: '分', enLabel: 'min' },
+      { value: remainingSeconds, zhLabel: '秒', enLabel: 's' },
+    ];
 
-    if (hours > 0) {
-      result += currentLang === 'zh-CN' ? `${hours} 小时 ` : `${hours} hour `;
-    }
-    if (minutes > 0) {
-      result += currentLang === 'zh-CN' ? `${minutes} 分 ` : `${minutes} min `;
-    }
-    if (remainingSeconds > 0 || (!hours && !minutes)) {
-      result +=  currentLang === 'zh-CN' ?  `${remainingSeconds} 秒` : `${remainingSeconds} s`;
-    }
+    let result = timeUnits
+      .filter(
+        (unit) =>
+          unit.value > 0 ||
+          (unit.value === 0 &&
+            unit === timeUnits[2] &&
+            hours === 0 &&
+            minutes === 0)
+      )
+      .map((unit) => `${unit.value} ${isZhCN ? unit.zhLabel : unit.enLabel}`)
+      .join(" ");
 
-    return result.trim();
+    return result;
   }
 
   /**
@@ -216,7 +228,7 @@ export class ElementsPartsComponent implements OnInit {
     });
 
     if (!sessionId) {
-      return console.warn('sessionId 未设置');
+      return console.warn('sessionId is not set');
     }
 
     await this.handlePartFileReplay(file, sessionId);
@@ -244,6 +256,7 @@ export class ElementsPartsComponent implements OnInit {
 
   getUserLang() {
     const userLangEN = document.cookie.indexOf('django_language=en');
+    console.log('userLangEN', userLangEN);
     if (userLangEN === -1) {
       return 'zh-CN';
     } else {
