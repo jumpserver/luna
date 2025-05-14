@@ -236,12 +236,41 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       return this._logger.info(`[Luna] Send OPEN SETTING`);
     }
 
+    // TODO 当前版本前端实现，用户打开文件管理时，需要重新去校验 ACL 权限
     if (type === 'file') {
-      const res = await this._http.adminConnectToken(this.permedAsset, this.connectData, false, false, '').toPromise();
+      const res = await this._http
+        .adminConnectToken(this.permedAsset, this.connectData, false, false, '')
+        .subscribe(
+          (res) => {
+            const SFTP_Token = res ? res.id : '';
+            this.iframeCommunicationService.sendMessage({ name: 'FILE', SFTP_Token });
+            return this._logger.info(`[Luna] Send OPEN FILE`);
+          },
+          (error) => {
+            const dialogRef = this._dialog.open(ElementACLDialogComponent, {
+              height: 'auto',
+              width: '450px',
+              disableClose: true,
+              data: {
+                asset: this.permedAsset,
+                connectData: this.connectData,
+                code: error.error.code,
+                tokenAction: 'create',
+                error: error,
+              },
+            });
 
-      const SFTP_Token = res ? res.id : '';
-      this.iframeCommunicationService.sendMessage({ name: 'FILE', SFTP_Token });
-      return this._logger.info(`[Luna] Send OPEN FILE`);
+            dialogRef.afterClosed().subscribe((token) => {
+              if (token) {
+                this.iframeCommunicationService.sendMessage({ name: "FILE", token });
+
+                return;
+              }
+
+              window.close();
+            });
+          }
+        );
     }
   }
 
