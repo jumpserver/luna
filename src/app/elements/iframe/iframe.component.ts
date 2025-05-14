@@ -47,6 +47,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private iframeCommunicationService: IframeCommunicationService
   ) {
   }
+
   ngOnInit() {
     this._logger.info(`IFrame URL: ${this.src}`);
 
@@ -68,7 +69,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     this.eventHandler = function (e: any) {
       const msg = e.data;
 
-      if (msg.id !== this.id) { return; }
+      if (msg.id !== this.id) {
+        return;
+      }
 
       switch (msg.name) {
         case 'PING': {
@@ -83,6 +86,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
             this.view.termComp = this;
           }
           clearInterval(this.ping);
+          this.iframeCommunicationService.sendMessage({name: 'CLEAR'});
           break;
         case 'CLOSE':
           if (this.view && this.view.connected) {
@@ -92,7 +96,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           if (this.view && this.view.connectToken && this.view.connectToken.face_monitor_token) {
             this.faceService.removeMonitoringTab(this.view.id);
           }
-          this.iframeCommunicationService.sendMessage({ name: 'CLOSE' })
+          this.iframeCommunicationService.sendMessage({name: 'CLOSE'});
           break;
         case 'CONNECTED':
           this.view.connected = true;
@@ -169,7 +173,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     if (event.data && typeof event.data === 'object') {
       this.termComp = event.data;
     }
-  }
+  };
 
   async reconnect() {
     const oldConnectToken = this.view.connectToken;
