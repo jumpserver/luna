@@ -336,6 +336,8 @@ export class PageDirectComponent implements OnInit, OnDestroy {
               if (token) {
                 this.connectToken = token
                 this.onNewView();
+
+                return;
               }
 
               window.close();
