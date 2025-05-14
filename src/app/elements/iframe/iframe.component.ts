@@ -144,7 +144,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     // @ts-ignore
     this.ping = setInterval(() => {
       this._logger.info(`[Luna] Send PING to: ${this.id}`);
-      this.iframeWindow.postMessage({name: 'PING', id: this.id}, '*');
+      this.iframeWindow.postMessage({name: 'PING', id: this.id, protocol: this.view.protocol}, '*');
     }, 500);
 
     this.subscription = this.iframeCommunicationService.message$.subscribe((message) => {
