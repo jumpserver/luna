@@ -20,9 +20,17 @@ export class PagesKubernetesComponent implements OnInit, AfterViewInit {
   public token: string = '';
   public iframeURL: string = '';
 
-  constructor(private _route: ActivatedRoute, private _logger: LogService) {}
+  constructor(private _route: ActivatedRoute, private _logger: LogService, private _http: HttpService, private _settingSvc: SettingService, public viewSrv: ViewService,
+  ) {
+  }
 
-  ngOnInit(): void {
+  ngOnInit() {
+    this._route.queryParams.subscribe(async (params: Params) => {
+      const user = await this._http.getUserProfile();
+      const asset = await this._http.getAssetDetail(params['asset']).toPromise();
+      const content = getWaterMarkContent(user, asset, this._settingSvc);
+      this._settingSvc.createWaterMarkIfNeed(document.body, content);
+    });
     this.id = 'window-' + Math.random().toString(36).substr(2);
     const baseUrl = `${window.location.protocol}//${window.location.host}`;
 
