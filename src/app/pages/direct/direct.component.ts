@@ -1,7 +1,15 @@
-import { MatDialog } from '@angular/material';
-import { ActivatedRoute } from '@angular/router';
-import { Account, Endpoint, View, ConnectionToken, ConnectMethod, AuthInfo } from '@app/model';
-import { HttpService, I18nService, LogService, ViewService, IframeCommunicationService, AppService } from '@app/services';
+import {MatDialog} from '@angular/material';
+import {ActivatedRoute} from '@angular/router';
+import {Account, Endpoint, View, ConnectionToken, ConnectMethod, AuthInfo} from '@app/model';
+import {
+  HttpService,
+  I18nService,
+  LogService,
+  ViewService,
+  IframeCommunicationService,
+  AppService,
+  LocalStorageService
+} from '@app/services';
 import {
   Component,
   OnInit,
@@ -10,8 +18,8 @@ import {
   ViewChildren,
   QueryList,
 } from '@angular/core';
-import { Subscription } from 'rxjs';
-import { ElementACLDialogComponent } from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
+import {Subscription} from 'rxjs';
+import {ElementACLDialogComponent} from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
 
 @Component({
   selector: 'pages-direct',
@@ -57,6 +65,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     public viewSrv: ViewService,
     private _appSvc: AppService,
     private _logger: LogService,
+    private _localStorage: LocalStorageService,
     private _route: ActivatedRoute,
     private iframeCommunicationService: IframeCommunicationService
   ) {
@@ -77,6 +86,10 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       this.startTimer();
       this.handleEventChangeTime();
       this.subscription = this.iframeCommunicationService.message$.subscribe((message) => {
+        if (message.name === 'CLEAR') {
+          const key = `JMS_PRE_${this.asset.id}`;
+          this._localStorage.delete(key);
+        }
         if (message.name === 'CLOSE') {
           this.stopTimer();
         }
@@ -137,7 +150,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
 
     this.connectData = {
       method: this.method,
-      protocol: { name: this.protocol },
+      protocol: {name: this.protocol},
       asset: this.permedAsset,
       account: this.account,
       autoLogin: true,
@@ -179,11 +192,11 @@ export class PageDirectComponent implements OnInit, OnDestroy {
         this.asset,
         {
           ...this.connectData,
-          protocol: { name: this.protocol },
+          protocol: {name: this.protocol},
           connectMethod: this.connectMethod,
         },
         this.connectToken,
-        "node"
+        'node'
       );
     }
 
@@ -230,9 +243,9 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   /**
    * @description 打开设置
    */
-  public async handleOpenDrawer (type: string) {
+  public async handleOpenDrawer(type: string) {
     if (type === 'setting') {
-      this.iframeCommunicationService.sendMessage({ name: 'OPEN', noFileTab: true });
+      this.iframeCommunicationService.sendMessage({name: 'OPEN', noFileTab: true});
       return this._logger.info(`[Luna] Send OPEN SETTING`);
     }
 
@@ -243,7 +256,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
         .subscribe(
           (res) => {
             const SFTP_Token = res ? res.id : '';
-            this.iframeCommunicationService.sendMessage({ name: 'FILE', SFTP_Token });
+            this.iframeCommunicationService.sendMessage({name: 'FILE', SFTP_Token});
             return this._logger.info(`[Luna] Send OPEN FILE`);
           },
           (error) => {
@@ -262,7 +275,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
 
             dialogRef.afterClosed().subscribe((token) => {
               if (token) {
-                this.iframeCommunicationService.sendMessage({ name: "FILE", token });
+                this.iframeCommunicationService.sendMessage({name: 'FILE', token});
 
                 return;
               }
@@ -347,33 +360,33 @@ export class PageDirectComponent implements OnInit, OnDestroy {
               this.connectToken = res;
               resolve(true);
             },
-          error => {
-            const dialogRef = this._dialog.open(ElementACLDialogComponent, {
-              height: 'auto',
-              width: '450px',
-              disableClose: true,
-              data: {
-                asset: assetMessage,
-                connectData: connectData,
-                code: error.error.code,
-                tokenAction: 'create',
-                error: error,
-              },
-            })
+            error => {
+              const dialogRef = this._dialog.open(ElementACLDialogComponent, {
+                height: 'auto',
+                width: '450px',
+                disableClose: true,
+                data: {
+                  asset: assetMessage,
+                  connectData: connectData,
+                  code: error.error.code,
+                  tokenAction: 'create',
+                  error: error,
+                },
+              });
 
-            dialogRef.afterClosed().subscribe(token => {
-              if (token) {
-                this.connectToken = token
-                this.onNewView();
-                this.startTimer();
+              dialogRef.afterClosed().subscribe(token => {
+                if (token) {
+                  this.connectToken = token;
+                  this.onNewView();
+                  this.startTimer();
 
-                return;
-              }
+                  return;
+                }
 
-              window.close();
-            });
-          }
-        )
+                window.close();
+              });
+            }
+          );
       } catch (error) {
         this._logger.error('Failed to get connect token:', error);
         reject(error);
