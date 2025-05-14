@@ -5,8 +5,9 @@ import {
   ElementRef,
   AfterViewInit,
 } from '@angular/core';
-import { ActivatedRoute, Params } from '@angular/router';
-import { LogService } from '@app/services';
+import {ActivatedRoute, Params} from '@angular/router';
+import {HttpService, LogService, SettingService, ViewService} from '@app/services';
+import {getWaterMarkContent} from '@app/utils/common';
 
 @Component({
   selector: 'pages-kubernetes',
