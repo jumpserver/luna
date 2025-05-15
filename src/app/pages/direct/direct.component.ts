@@ -274,7 +274,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
                 return;
               }
 
-              window.close();
+              alert(this._i18n.instant('VerificationFailed'));
             });
           }
         );
