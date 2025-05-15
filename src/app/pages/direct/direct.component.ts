@@ -79,21 +79,22 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     await this.getConnectData();
     this._logger.info('DirectComponent getConnectData', this.asset);
 
+    this.subscription = this.iframeCommunicationService.message$.subscribe((message) => {
+      if (message.name === 'CLEAR') {
+        const key = `JMS_PRE_${this.asset.id}`;
+        this._localStorage.delete(key);
+      }
+      if (message.name === 'CLOSE') {
+        this.stopTimer();
+      }
+    });
+
     const finish = await this.createConnectionToken();
 
     if (finish) {
       this.onNewView();
       this.startTimer();
       this.handleEventChangeTime();
-      this.subscription = this.iframeCommunicationService.message$.subscribe((message) => {
-        if (message.name === 'CLEAR') {
-          const key = `JMS_PRE_${this.asset.id}`;
-          this._localStorage.delete(key);
-        }
-        if (message.name === 'CLOSE') {
-          this.stopTimer();
-        }
-      });
     }
   }
 
@@ -164,8 +165,6 @@ export class PageDirectComponent implements OnInit, OnDestroy {
 
     const res = await this.getConnectToken(this.permedAsset, this.connectData);
 
-    console.log('res', res);
-
     if (res) {
       return res;
     }
@@ -212,11 +211,6 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       this.stopTimer();
       window.close();
     }
-  }
-
-  public handleSocketCloseEvent(_event: any) {
-    this.stopTimer();
-    this.disabledOpenFileManage = true;
   }
 
   /**
