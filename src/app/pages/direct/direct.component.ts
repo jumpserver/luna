@@ -1,17 +1,25 @@
-import { ActivatedRoute } from '@angular/router';
-import { environment } from '@src/environments/environment';
-import { Account, Endpoint, View, ConnectionToken, ConnectMethod } from '@app/model';
-import { HttpService, I18nService, LogService, ViewService, IframeCommunicationService } from '@app/services';
+import {MatDialog} from '@angular/material';
+import {ActivatedRoute} from '@angular/router';
+import {Account, Endpoint, View, ConnectionToken, ConnectMethod, AuthInfo} from '@app/model';
+import {
+  HttpService,
+  I18nService,
+  LogService,
+  ViewService,
+  IframeCommunicationService,
+  AppService,
+  LocalStorageService
+} from '@app/services';
 import {
   Component,
-  ViewChild,
   OnInit,
   OnDestroy,
   ElementRef,
   ViewChildren,
   QueryList,
 } from '@angular/core';
-import { Subscription } from 'rxjs';
+import {Subscription} from 'rxjs';
+import {ElementACLDialogComponent} from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
 
 @Component({
   selector: 'pages-direct',
@@ -19,7 +27,6 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./direct.component.scss'],
 })
 export class PageDirectComponent implements OnInit, OnDestroy {
-  // @ViewChild('contentWindow', {static: false}) iframeRef: ElementRef;
   @ViewChildren('contentWindow') contentWindows: QueryList<ElementRef>;
 
   public startTime: Date;
@@ -52,10 +59,13 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   private method: string;
 
   constructor(
+    private _dialog: MatDialog,
     private _http: HttpService,
     private _i18n: I18nService,
     public viewSrv: ViewService,
+    private _appSvc: AppService,
     private _logger: LogService,
+    private _localStorage: LocalStorageService,
     private _route: ActivatedRoute,
     private iframeCommunicationService: IframeCommunicationService
   ) {
@@ -69,17 +79,18 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     await this.getConnectData();
     this._logger.info('DirectComponent getConnectData', this.asset);
 
+    this.subscription = this.iframeCommunicationService.message$.subscribe((message) => {
+      if (message.name === 'CLOSE') {
+        this.stopTimer();
+      }
+    });
+
     const finish = await this.createConnectionToken();
 
     if (finish) {
       this.onNewView();
       this.startTimer();
       this.handleEventChangeTime();
-      this.subscription = this.iframeCommunicationService.message$.subscribe((message) => {
-        if (message.name === 'CLOSE') {
-          this.stopTimer();
-        }
-      });
     }
   }
 
@@ -136,11 +147,17 @@ export class PageDirectComponent implements OnInit, OnDestroy {
 
     this.connectData = {
       method: this.method,
-      protocol: this.protocol,
+      protocol: {name: this.protocol},
       asset: this.permedAsset,
       account: this.account,
+      autoLogin: true,
       input_username: this.account.username,
+      connectMethod: this.connectMethod,
+      manualAuthInfo: new AuthInfo(),
+      direct: true,
     };
+
+    this._appSvc.setPreConnectData(this.asset, this.connectData);
 
     const res = await this.getConnectToken(this.permedAsset, this.connectData);
 
@@ -162,17 +179,21 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     document.removeEventListener('mousemove', this.handleMouseMove.bind(this));
   }
 
-  public onNewView() {
-    this.view = new View (
-      this.asset,
-      {
-        ...this.connectData,
-        protocol: { name: this.protocol },
-        connectMethod: this.connectMethod,
-      },
-      this.connectToken,
-      'node'
-    );
+  public onNewView(event?: any) {
+    if (event) {
+      this.view = event;
+    } else {
+      this.view = new View(
+        this.asset,
+        {
+          ...this.connectData,
+          protocol: {name: this.protocol},
+          connectMethod: this.connectMethod,
+        },
+        this.connectToken,
+        'node'
+      );
+    }
 
     this.viewSrv.addView(this.view);
     this.viewSrv.activeView(this.view);
@@ -188,17 +209,12 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     }
   }
 
-  public handleSocketCloseEvent(_event: any) {
-    this.stopTimer();
-    this.disabledOpenFileManage = true;
-  }
-
   /**
    * 判断当前协议是否为数据库相关协议
    * @returns boolean
    */
-  public isDatabaseProtocol(): boolean {
-    const databaseProtocols = [
+  public isNoneProtocol(): boolean {
+    const protocols = [
       'mysql',
       'mariadb',
       'postgresql',
@@ -207,25 +223,57 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       'sqlserver',
       'mongodb',
       'clickhouse',
+      'k8s',
+      'http',
+      'https',
     ];
-    return databaseProtocols.includes(this.protocol);
+    return protocols.includes(this.protocol);
   }
 
   /**
    * @description 打开设置
    */
-  public async handleOpenDrawer (type: string) {
+  public async handleOpenDrawer(type: string) {
     if (type === 'setting') {
-      this.iframeCommunicationService.sendMessage({ name: 'OPEN', noFileTab: true });
+      this.iframeCommunicationService.sendMessage({name: 'OPEN', noFileTab: true});
       return this._logger.info(`[Luna] Send OPEN SETTING`);
     }
 
+    // TODO 当前版本前端实现，用户打开文件管理时，需要重新去校验 ACL 权限
     if (type === 'file') {
-      const res = await this._http.adminConnectToken(this.permedAsset, this.connectData, false, false, '').toPromise();
+      const res = await this._http
+        .adminConnectToken(this.permedAsset, this.connectData, false, false, '')
+        .subscribe(
+          (res) => {
+            const SFTP_Token = res ? res.id : '';
+            this.iframeCommunicationService.sendMessage({name: 'FILE', SFTP_Token});
+            return this._logger.info(`[Luna] Send OPEN FILE`);
+          },
+          (error) => {
+            const dialogRef = this._dialog.open(ElementACLDialogComponent, {
+              height: 'auto',
+              width: '450px',
+              disableClose: true,
+              data: {
+                asset: this.permedAsset,
+                connectData: this.connectData,
+                code: error.error.code,
+                tokenAction: 'create',
+                error: error,
+              },
+            });
 
-      const SFTP_Token = res ? res.id : '';
-      this.iframeCommunicationService.sendMessage({ name: 'FILE', SFTP_Token });
-      return this._logger.info(`[Luna] Send OPEN FILE`);
+            dialogRef.afterClosed().subscribe((token) => {
+              if (token) {
+                this.iframeCommunicationService.sendMessage({name: 'FILE', token});
+
+                return;
+              }
+
+              alert(this._i18n.instant('VerificationFailed'));
+            });
+          }
+        );
     }
   }
 
@@ -235,40 +283,6 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    */
   private handleMouseMove(event: MouseEvent): void {
     this.showActionIcons = event.clientY <= 65;
-  }
-
-  /**
-   * @description 获取当前 host 的信息
-   * @returns
-   */
-  private getUrl(): string {
-    let host: string = '';
-    let port: string = '';
-
-    const endpoint = window.location.host.split(':')[0];
-    const protocol = window.location.protocol;
-
-    if (!environment.production) {
-      switch (this.protocol) {
-        case 'ssh':
-        case 'k8s':
-        case 'sftp':
-        case 'telnet':
-        case 'mysql':
-          port = '9530';
-          break;
-        default:
-          port = '9529';
-      }
-
-      host = `${endpoint}:${port}`;
-    } else {
-      host = `${endpoint}`;
-    }
-
-    this._logger.info(`Current host: ${protocol}//${host}`);
-
-    return `${protocol}//${host}`;
   }
 
   /**
@@ -330,11 +344,39 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   private getConnectToken(assetMessage: any, connectData: any) {
     return new Promise(async (resolve, reject) => {
       try {
-        this.connectToken = await this._http
+        this._http
           .adminConnectToken(assetMessage, connectData, false, false, '')
-          .toPromise();
+          .subscribe(res => {
+              this.connectToken = res;
+              resolve(true);
+            },
+            error => {
+              const dialogRef = this._dialog.open(ElementACLDialogComponent, {
+                height: 'auto',
+                width: '450px',
+                disableClose: true,
+                data: {
+                  asset: assetMessage,
+                  connectData: connectData,
+                  code: error.error.code,
+                  tokenAction: 'create',
+                  error: error,
+                },
+              });
 
-        resolve(true);
+              dialogRef.afterClosed().subscribe(token => {
+                if (token) {
+                  this.connectToken = token;
+                  this.onNewView();
+                  this.startTimer();
+
+                  return;
+                }
+
+                window.close();
+              });
+            }
+          );
       } catch (error) {
         this._logger.error('Failed to get connect token:', error);
         reject(error);
@@ -385,8 +427,24 @@ export class PageDirectComponent implements OnInit, OnDestroy {
         };
         return 'web_gui';
       case 'sftp':
+        this.connectMethod = {
+          component: 'koko',
+          type: 'web',
+          value: 'web_sftp',
+          label: 'Web SFTP',
+          endpoint_protocol: endpointProtocol,
+          disabled: false,
+        };
         return 'web_sftp';
       default:
+        this.connectMethod = {
+          component: 'koko',
+          type: 'web',
+          value: 'web_cli',
+          label: 'Web CLI',
+          endpoint_protocol: endpointProtocol,
+          disabled: false,
+        };
         return 'web_cli';
     }
   }

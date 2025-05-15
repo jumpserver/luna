@@ -30,6 +30,8 @@ export class ElementConnectorNecComponent implements OnInit {
   token: ConnectionToken;
   showSetReusable: boolean;
   commands: Array<Command> = [];
+  isVirtualApp: boolean = false;
+  connectMethod: any;
 
   constructor(private _http: HttpService,
               private _i18n: I18nService,
@@ -42,12 +44,24 @@ export class ElementConnectorNecComponent implements OnInit {
   }
 
   async ngOnInit() {
-    const {asset, account, protocol, smartEndpoint, connectToken} = this.view;
+    const {asset, account, protocol, smartEndpoint, connectToken, connectMethod} = this.view;
     this.token = connectToken;
     this.asset = asset;
     this.account = account;
     this.protocol = protocol;
     this.endpoint = smartEndpoint;
+    this.connectMethod = connectMethod;
+
+    // 处理 panda nec connect method
+    switch (this.connectMethod['component']) {
+      case 'panda':
+        this.protocol = 'vnc';
+        this.isVirtualApp = true;
+        break;
+      default:
+        break;
+    }
+
 
     const oriHost = this.asset.address;
     this.name = `${this.asset.name}(${oriHost})`;
@@ -101,20 +115,23 @@ export class ElementConnectorNecComponent implements OnInit {
 
     this.commands = [
       {
-      title: this._i18n.instant('Connect command line') + ' (' + this._i18n.instant('Using token') + ')',
-      value: cliValue,
-      safeValue: cliSafe,
-      helpText:  this._i18n.instant('Password is token password on the table'),
-      callClient: false
-    },
-      {
+        title: this._i18n.instant('Connect command line') + ' (' + this._i18n.instant('Using token') + ')',
+        value: cliValue,
+        safeValue: cliSafe,
+        helpText: this._i18n.instant('Password is token password on the table'),
+        callClient: false
+      },
+    ];
+
+    if (!this.isVirtualApp) {
+      this.commands.push({
         title: this._i18n.instant('Connect command line') + ' (' + this._i18n.instant('Directly') + ')',
         value: cliDirect,
         safeValue: cliDirect,
         helpText: this._i18n.instant('Password is your password login to system'),
         callClient: false
-      }
-    ];
+      });
+    }
   }
 
   async reconnect() {

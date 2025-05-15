@@ -166,8 +166,9 @@ export class AppService {
     // Connection connectToken 方式不用检查过期了
     const token = this.getQueryString('token');
 
-    this._http.getUserProfile().subscribe(
+    this._http.getUserProfile().then(
       user => {
+        console.log('User is: ', user);
         this._orgSvc.setWorkbenchOrgs(user['workbench_orgs']);
         Object.assign(User, user);
         User.logined = true;
@@ -189,7 +190,7 @@ export class AppService {
     this._http.reportBrowser();
   }
 
-  getQueryString(name) {
+  getQueryString(name: string) {
     const reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
     const r = window.location.search.substr(1).match(reg);
     if (r != null) {
@@ -246,6 +247,7 @@ export class AppService {
       downloadRDP: connectData.downloadRDP,
       autoLogin: connectData.autoLogin,
       connectOption,
+      direct: connectData.direct,
     };
     this.setAccountLocalAuth(asset, account, manualAuthInfo);
     this._localStorage.set(key, saveData);

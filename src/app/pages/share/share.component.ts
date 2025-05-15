@@ -1,7 +1,7 @@
 import { ActivatedRoute } from '@angular/router';
 import { Component, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core'
 
-// TODO 4.9 发布后与 kubernetes 合并
+// TODO 与 kubernetes 合并
 @Component({
   selector: 'pages-share',
   templateUrl: './share.component.html',

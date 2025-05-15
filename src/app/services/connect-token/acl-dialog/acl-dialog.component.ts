@@ -8,7 +8,6 @@ import {HttpErrorResponse} from '@angular/common/http';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {FaceService} from '@app/services/face';
 
-
 @Component({
   selector: 'elements-acl-dialog',
   templateUrl: './acl-dialog.component.html',
@@ -117,6 +116,10 @@ export class ElementACLDialogComponent implements OnInit {
     if (this.tokenAction === 'exchange') {
       this._http.exchangeConnectToken(this.tokenID, false, true, faceMonitorToken).subscribe(successCallback, errorCallback);
     } else {
+      if (this.data.connectData && this.data.connectData.direct) {
+        this._http.adminConnectToken(this.asset, this.data.connectData, false, true, faceMonitorToken).subscribe(successCallback, errorCallback);
+        return;
+      }
       this._http.createConnectToken(this.asset, this.connectInfo, false, true, faceMonitorToken).subscribe(successCallback, errorCallback);
     }
   }
@@ -156,6 +159,10 @@ export class ElementACLDialogComponent implements OnInit {
     if (this.tokenAction === 'exchange') {
       this._http.exchangeConnectToken(this.tokenID, false, true).subscribe(successCallback, errorCallback);
     } else {
+      if (this.data.connectData && this.data.connectData.direct) {
+        this._http.adminConnectToken(this.asset, this.data.connectData, false, true).subscribe(successCallback, errorCallback);
+        return;
+      }
       this._http.createConnectToken(this.asset, this.connectInfo, false, true).subscribe(successCallback, errorCallback);
     }
   }
@@ -183,6 +190,10 @@ export class ElementACLDialogComponent implements OnInit {
     if (this.tokenAction === 'exchange') {
       this._http.exchangeConnectToken(this.tokenID, true).subscribe(successCallback, errorCallback);
     } else {
+      if (this.data.connectData && this.data.connectData.direct) {
+        this._http.adminConnectToken(this.asset, this.data.connectData, true).subscribe(successCallback, errorCallback);
+        return;
+      }
       this._http.createConnectToken(this.asset, this.connectInfo, true).subscribe(successCallback, errorCallback);
     }
   }

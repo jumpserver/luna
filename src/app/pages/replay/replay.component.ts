@@ -1,7 +1,8 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {HttpService, I18nService, LogService, SettingService} from '@app/services';
-import {Replay, User} from '@app/model';
+import {Replay, User, Session, Asset} from '@app/model';
+import {getWaterMarkContent} from '@app/utils/common';
 
 @Component({
   selector: 'pages-replay',
@@ -11,6 +12,9 @@ import {Replay, User} from '@app/model';
 export class PagesReplayComponent implements OnInit {
   replay: Replay = new Replay();
   user: User;
+  session: Session;
+  asset: Asset;
+  sessionUser: User;
   loading: boolean = true;
 
   constructor(private route: ActivatedRoute,
@@ -22,16 +26,19 @@ export class PagesReplayComponent implements OnInit {
   }
 
   getCurrentUser() {
-    this._http.getUserProfile().subscribe(user => {
+    this._http.getUserProfile().then(user => {
       this.user = user;
     });
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     let sid = '';
     this.route.params.subscribe(params => {
       sid = params['sid'];
     });
+    this.session = await this._http.getSessionDetail(sid);
+    this.asset = await this._http.getAssetDetail(this.session.asset_id).toPromise();
+    this.sessionUser = await this._http.getUserDetail(this.session.user_id);
     const interval = setInterval(() => {
       this._http.getReplay(sid).subscribe(
         data => {
@@ -46,8 +53,8 @@ export class PagesReplayComponent implements OnInit {
             this.replay.id = sid;
             clearInterval(interval);
             this.loading = false;
-            const auditorUser =  `${this._i18n.instant('Viewer')}: ${this.user.name}(${this.user.username})`;
-            const sessionContent = `${this._i18n.instant('Operator')}: ${this.replay.user}\n${this.replay.asset}`;
+            const auditorUser = `${this._i18n.instant('Viewer')}: ${this.user.name}(${this.user.username})`;
+            const sessionContent = getWaterMarkContent(this.sessionUser, this.asset, this._settingSvc);
             const content = `${auditorUser}\n${sessionContent}`;
             this._settingSvc.createWaterMarkIfNeed(
               document.body, `${content}`
@@ -74,7 +81,8 @@ export class PagesReplayComponent implements OnInit {
       'guacamole': true,
       'asciicast': true,
       'mp4': true,
-      'parts': true};
+      'parts': true
+    };
     return !supportedType[tp];
   }
 }

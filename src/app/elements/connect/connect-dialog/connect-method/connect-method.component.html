@@ -32,6 +32,12 @@
                  class="fa fa-arrow-circle-down question"
               ></i>
             </span>
+            <span matTooltip="{{'Client Guide'| translate}}">
+              <i (click)="ChangeToGuidePage(method)"
+                *ngIf="CanGuide(method)"
+                class="fa fa-book question"
+              ></i>
+            </span>
           </mat-radio-button>
         </mat-radio-group>
       </mat-tab>

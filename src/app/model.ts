@@ -257,6 +257,12 @@ export class GlobalSetting {
   SECURITY_COMMAND_EXECUTION: boolean;
   SECURITY_LUNA_REMEMBER_AUTH: boolean;
   SECURITY_WATERMARK_ENABLED: boolean;
+  SECURITY_WATERMARK_SESSION_CONTENT: string;
+  SECURITY_WATERMARK_COLOR: string;
+  SECURITY_WATERMARK_FONT_SIZE: number;
+  SECURITY_WATERMARK_HEIGHT: number;
+  SECURITY_WATERMARK_WIDTH: number;
+  SECURITY_WATERMARK_ROTATE: number;
   HELP_DOCUMENT_URL: string;
   HELP_SUPPORT_URL: string;
   TERMINAL_RAZOR_ENABLED: boolean;
@@ -378,7 +384,7 @@ export class ConnectOption {
 export class AdminConnectData {
   asset: Asset;
   account: Account;
-  protocol: string;
+  protocol: Protocol;
   input_username: string;
   method: string;
 }
@@ -392,6 +398,7 @@ export class ConnectData {
   connectOption: Object;
   downloadRDP: boolean;
   autoLogin: boolean;
+  direct?: boolean;
 }
 
 class FromTicket {
@@ -428,6 +435,7 @@ export class ConnectionToken {
   };
   from_ticket_info: FromTicketInfo;
   face_monitor_token: string;
+  connect_options: {};
 }
 
 export class Protocol {

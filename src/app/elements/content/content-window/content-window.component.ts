@@ -1,6 +1,7 @@
 import {Component, ElementRef, Input, OnInit, DoCheck, ViewChild, IterableDiffers} from '@angular/core';
 import {View} from '@app/model';
 import {User} from '@app/globals';
+import {getWaterMarkContent} from '@app/utils/common';
 import {AppService, HttpService, SettingService, ViewService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
 
@@ -20,14 +21,15 @@ export class ElementContentWindowComponent implements OnInit, DoCheck {
               private _http: HttpService,
               public viewSrv: ViewService,
               private iterableDiffers: IterableDiffers,
-              private _route: ActivatedRoute
+              private _route: ActivatedRoute,
   ) {
     this.iterableDiffer = this.iterableDiffers.find([]).create();
   }
 
-  get subViews () {
+  get subViews() {
     return this.view.subViews;
   }
+
   async ngOnInit() {
     try {
       this.id = 'window-' + Math.random().toString(36).substr(2);
@@ -53,9 +55,14 @@ export class ElementContentWindowComponent implements OnInit, DoCheck {
   }
 
   createWaterMark() {
-    this._settingSvc.createWaterMarkIfNeed(
-      this.windowRef.nativeElement,
-      `${User.name}(${User.username})\n${this.view.asset.name}`
-    );
+    try {
+      const content = getWaterMarkContent(User, this.view.asset, this._settingSvc);
+      this._settingSvc.createWaterMarkIfNeed(
+        this.windowRef.nativeElement,
+        content
+      );
+    } catch (e) {
+      console.error('Error creating watermark:', e);
+    }
   }
 }

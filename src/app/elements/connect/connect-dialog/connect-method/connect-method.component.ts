@@ -10,6 +10,7 @@ import {AppService, I18nService, SettingService} from '@app/services';
 export class ElementConnectMethodComponent implements OnInit {
   @Output() connectMethodChange = new EventEmitter<ConnectMethod>();
   @Output() onDownloadRDPFile = new EventEmitter<ConnectMethod>();
+  @Output() onGuidePage = new EventEmitter<ConnectMethod>();
   @Input() manualAuthInfo: AuthInfo;
   @Input() connectOption: Object;
   @Input() account: Account;
@@ -24,6 +25,10 @@ export class ElementConnectMethodComponent implements OnInit {
 
   get isAppletClientMethod() {
     return this.connectOption && this.connectOption['appletConnectMethod'] === 'client';
+  }
+
+  get isVirtualAppClientMethod() {
+    return this.connectOption && this.connectOption['virtualappConnectMethod'] === 'client';
   }
 
   private _protocol: Protocol;
@@ -118,5 +123,20 @@ export class ElementConnectMethodComponent implements OnInit {
     }
     this.connectMethod = method;
     this.onDownloadRDPFile.emit(this.connectMethod);
+  }
+
+  CanGuide(method) {
+    if (method.type === 'virtual_app' && this.isVirtualAppClientMethod) {
+      return true;
+    }
+    return false;
+  }
+
+  ChangeToGuidePage(method) {
+    if (method.disabled) {
+      return;
+    }
+    this.connectMethod = method;
+    this.onGuidePage.emit(this.connectMethod);
   }
 }

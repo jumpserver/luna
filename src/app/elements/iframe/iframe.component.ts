@@ -22,7 +22,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   @Input() origin: string;
   @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
-  @Output() socketCloseEvent: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   @Output() createFileConnectToken: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   eventHandler: EventListenerOrEventListenerObject;
   private renewalTrigger = new Subject<void>();
@@ -47,6 +46,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private iframeCommunicationService: IframeCommunicationService
   ) {
   }
+
   ngOnInit() {
     this._logger.info(`IFrame URL: ${this.src}`);
 
@@ -68,7 +68,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     this.eventHandler = function (e: any) {
       const msg = e.data;
 
-      if (msg.id !== this.id) { return; }
+      if (msg.id !== this.id) {
+        return;
+      }
 
       switch (msg.name) {
         case 'PING': {
@@ -88,11 +90,10 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           if (this.view && this.view.connected) {
             this.view.connected = false;
           }
-          this.socketCloseEvent.emit(true);
           if (this.view && this.view.connectToken && this.view.connectToken.face_monitor_token) {
             this.faceService.removeMonitoringTab(this.view.id);
           }
-          this.iframeCommunicationService.sendMessage({ name: 'CLOSE' })
+          this.iframeCommunicationService.sendMessage({name: 'CLOSE'});
           break;
         case 'CONNECTED':
           this.view.connected = true;
@@ -144,7 +145,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     // @ts-ignore
     this.ping = setInterval(() => {
       this._logger.info(`[Luna] Send PING to: ${this.id}`);
-      this.iframeWindow.postMessage({name: 'PING', id: this.id}, '*');
+      this.iframeWindow.postMessage({name: 'PING', id: this.id, protocol: this.view.protocol}, '*');
     }, 500);
 
     this.subscription = this.iframeCommunicationService.message$.subscribe((message) => {
@@ -169,7 +170,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     if (event.data && typeof event.data === 'object') {
       this.termComp = event.data;
     }
-  }
+  };
 
   async reconnect() {
     const oldConnectToken = this.view.connectToken;
@@ -180,10 +181,10 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     }
 
     // 更新当前 view 的 connectToken
-    this.src = 'about:blank';
     this.view.connectToken = newConnectToken;
 
     const url = this.src.replace(oldConnectToken.id, newConnectToken.id);
+    this.src = 'about:blank';
 
     setTimeout(() => {
       this.src = url;

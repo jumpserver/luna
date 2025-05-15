@@ -1,4 +1,4 @@
-import {Component, EventEmitter, OnDestroy, OnInit, Output} from '@angular/core';
+import {Component, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {MatDialog} from '@angular/material';
@@ -25,6 +25,7 @@ import {ActivatedRoute} from '@angular/router';
 })
 export class ElementConnectComponent implements OnInit, OnDestroy {
   @Output() onNewView: EventEmitter<View> = new EventEmitter<View>();
+  @Input() direct: boolean = false;
   hasLoginTo = false;
 
   constructor(private _appSvc: AppService,
@@ -132,6 +133,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.direct) {
+      this._logger.debug('Direct connect');
+      return;
+    }
+
     this._logger.debug('Connect info: ', connectInfo);
 
     const connectMethod = connectInfo.connectMethod;
@@ -144,7 +150,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
 
     if (connToken.protocol === 'k8s') {
-      const url = `${window.location.protocol}//${window.location.host}/luna/k8s/${connToken.id}`;
+      const url = `${window.location.protocol}//${window.location.host}/luna/k8s/${connToken.id}?asset=${asset.id}`;
       window.open(url);
       return;
     }
@@ -210,6 +216,10 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       this._logger.debug('Not auto login');
       return false;
     }
+
+    if (this.direct) {
+      return true;
+    }
     // 验证账号是否有效
     const preAccount = preData.account;
     const account = accounts.find(item => {
@@ -250,10 +260,13 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (isValid) {
       return Promise.resolve(preConnectData);
     }
+
     if (this._i18n.getLangCode() === 'pt-br') {
       dialogWidth = '730px';
     }
+
     this._appSvc.connectDialogShown = true;
+
     const dialogRef = this._dialog.open(ElementConnectDialogComponent, {
       minHeight: '300px',
       height: 'auto',
