@@ -7,8 +7,6 @@ import {ToastrService} from 'ngx-toastr';
 import {HttpErrorResponse} from '@angular/common/http';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {FaceService} from '@app/services/face';
-import {IframeCommunicationService} from '@app/services';
-
 
 @Component({
   selector: 'elements-acl-dialog',
@@ -37,7 +35,6 @@ export class ElementACLDialogComponent implements OnInit {
               private _http: HttpService,
               private sanitizer: DomSanitizer,
               private faceService: FaceService,
-              private iframeCommunicationService: IframeCommunicationService,
               @Inject(MAT_DIALOG_DATA) public data: any
   ) {
   }
@@ -96,7 +93,6 @@ export class ElementACLDialogComponent implements OnInit {
               if (!data.success) {
                 this.code = 'other';
                 this.otherError = data.error_message;
-                this.iframeCommunicationService.sendMessage({name: 'CLEAR'});
               } else {
                 const msg = await this._i18n.t('Face verify success');
                 this._toastr.success(msg);
@@ -115,7 +111,6 @@ export class ElementACLDialogComponent implements OnInit {
         this.code = 'other';
         this.otherError = error.error.detail;
       }
-      this.iframeCommunicationService.sendMessage({name: 'CLEAR'});
     };
 
     if (this.tokenAction === 'exchange') {
@@ -142,7 +137,6 @@ export class ElementACLDialogComponent implements OnInit {
               if (!data.success) {
                 this.code = 'other';
                 this.otherError = data.error_message;
-                this.iframeCommunicationService.sendMessage({name: 'CLEAR'});
               } else {
                 const msg = await this._i18n.t('Face verify success');
                 this._toastr.success(msg);
@@ -160,7 +154,6 @@ export class ElementACLDialogComponent implements OnInit {
         this.code = 'other';
         this.otherError = error.error.detail;
       }
-      this.iframeCommunicationService.sendMessage({name: 'CLEAR'});
     };
 
     if (this.tokenAction === 'exchange') {
@@ -193,7 +186,6 @@ export class ElementACLDialogComponent implements OnInit {
         this.code = 'other';
         this.otherError = error.error.detail;
       }
-      this.iframeCommunicationService.sendMessage({name: 'CLEAR'});
     };
     if (this.tokenAction === 'exchange') {
       this._http.exchangeConnectToken(this.tokenID, true).subscribe(successCallback, errorCallback);
@@ -240,10 +232,8 @@ export class ElementACLDialogComponent implements OnInit {
             this.dialogRef.close(this.connectionToken);
           } else if (state === 'rejected') {
             this.code = 'ticket_review_rejected';
-            this.iframeCommunicationService.sendMessage({name: 'CLEAR'});
           } else if (state === 'closed') {
             this.code = 'ticket_review_closed';
-            this.iframeCommunicationService.sendMessage({name: 'CLEAR'});
           }
           clearInterval(this.timerCheckTicket);
         },

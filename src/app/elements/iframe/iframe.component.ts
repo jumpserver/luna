@@ -85,7 +85,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
             this.view.termComp = this;
           }
           clearInterval(this.ping);
-          this.iframeCommunicationService.sendMessage({name: 'CLEAR'});
           break;
         case 'CLOSE':
           if (this.view && this.view.connected) {

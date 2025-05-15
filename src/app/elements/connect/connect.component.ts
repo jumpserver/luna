@@ -1,4 +1,4 @@
-import {Component, EventEmitter, OnDestroy, OnInit, Output} from '@angular/core';
+import {Component, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {MatDialog} from '@angular/material';
@@ -25,6 +25,7 @@ import {ActivatedRoute} from '@angular/router';
 })
 export class ElementConnectComponent implements OnInit, OnDestroy {
   @Output() onNewView: EventEmitter<View> = new EventEmitter<View>();
+  @Input() direct: boolean = false;
   hasLoginTo = false;
 
   constructor(private _appSvc: AppService,
@@ -132,7 +133,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (connectInfo.direct) {
+    if (this.direct) {
       this._logger.debug('Direct connect');
       return;
     }
@@ -216,7 +217,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    if (preData.direct) {
+    if (this.direct) {
       return true;
     }
     // 验证账号是否有效
