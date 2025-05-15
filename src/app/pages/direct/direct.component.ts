@@ -80,10 +80,6 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     this._logger.info('DirectComponent getConnectData', this.asset);
 
     this.subscription = this.iframeCommunicationService.message$.subscribe((message) => {
-      if (message.name === 'CLEAR') {
-        const key = `JMS_PRE_${this.asset.id}`;
-        this._localStorage.delete(key);
-      }
       if (message.name === 'CLOSE') {
         this.stopTimer();
       }
