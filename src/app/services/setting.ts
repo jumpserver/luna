@@ -155,7 +155,7 @@ export class SettingService {
 
   createWaterMarkIfNeed(element, content) {
     this.init().then(() => {
-      if (this.globalSetting.SECURITY_WATERMARK_ENABLED && this.hasXPack()) {
+      if (this.globalSetting.SECURITY_WATERMARK_ENABLED) {
         canvasWaterMark({
           container: element,
           content: content,
