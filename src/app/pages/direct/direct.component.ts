@@ -264,6 +264,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
             });
 
             dialogRef.afterClosed().subscribe((token) => {
+              console.log('token', token);
               if (token) {
                 this.iframeCommunicationService.sendMessage({name: 'FILE', SFTP_Token: token.id});
 
