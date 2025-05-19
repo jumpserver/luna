@@ -1,0 +1,57 @@
+<div  id="batchCommandDiv">
+    <mat-select [(ngModel)]="sendCommandRange" class="send-range" panelClass="command-panel">
+      <mat-option *ngFor="let option of sendCommandOptions" [value]="option.value" class="command-option">
+        {{ option.label | translate }}
+      </mat-option>
+    </mat-select>
+    <i
+      (click)="switchCommand()"
+      class="fa fa-exchange"
+      matTooltip="{{ (isShowInputCommand ? 'Switch to quick command' : 'Switch to input command') | translate }}"
+    ></i>
+    <div *ngIf="isShowInputCommand; else quickCommand" class="input-box">
+      <input
+        (keydown.enter)="sendBatchCommand()"
+        [(ngModel)]="batchCommand"
+        maxlength="2048"
+        placeholder="{{ sendCommandRange=='all' ? ('Send text to all ssh terminals' | translate) : ('Send text to current ssh terminals' | translate) }}..."
+        spellcheck="false" tabindex="2"
+        title="{{ sendCommandRange=='all' ? ('Send text to all ssh terminals' | translate) : ('Send text to current ssh terminals' | translate) }} ..."
+        type="text"
+      >
+      <i
+        (click)="onSendCommand()"
+        class="fa fa-save"
+        matTooltip="{{ 'Save command' | translate }}"
+      ></i>
+    </div>
+    <ng-template #quickCommand>
+      <span class="action-left">
+        <i
+          (click)="onScrollLeft()"
+          *ngIf="quickCommands.length > 0"
+          class="fa fa-angle-double-left"
+        ></i>
+      </span>
+      <ul *ngIf="quickCommands.length > 0; else empty" class="command-list">
+        <li
+          (click)="sendQuickCommand(command)"
+          *ngFor="let command of quickCommands"
+          [matTooltip]="command.args"
+          [ngClass]="{'command-box-variable': command.variable.length !== 0}"
+          class="command-box"
+          matTooltipPosition="above"
+        >
+          <i [ngClass]="command.module.value + '_ico_docu'" class="view_icon"></i>
+          <span style="vertical-align: middle;">{{ command.name }}</span>
+        </li>
+      </ul>
+      <span class="action-right">
+        <i (click)="onScrollRight()" *ngIf="quickCommands.length > 0" class="fa fa-angle-double-right"></i>
+        <i (click)="quickCommandsFilter()" class="fa fa-refresh"></i>
+      </span>
+      <ng-template #empty>
+        <div class="not-command">{{ 'Not quick command'| translate }}</div>
+      </ng-template>
+    </ng-template>
+  </div>

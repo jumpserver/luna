@@ -3,6 +3,7 @@ import {ElementLeftBarComponent} from './left-bar/left-bar.component';
 import {ElementContentComponent} from './content/content.component';
 import {ElementContentWindowComponent} from './content/content-window/content-window.component';
 import {ElementContentTabComponent} from './content/content-tab/content-tab.component';
+import {ElementContentFooterComponent} from './content/content-footer/content-footer.component';
 import {DisabledAssetsDialogComponent, ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
 import {ElementTreeFilterComponent} from './tree-filter/tree-filter.component';
 import {ElementOrganizationComponent} from './organization/organization.component';
@@ -59,6 +60,7 @@ export const ElementComponents = [
   ElementAssetTreeComponent,
   ElementConnectorKokoComponent,
   ElementConnectorMagnusComponent,
+  ElementContentFooterComponent,
   ElementConnectorNecComponent,
   ElementConnectComponent,
   ElementDownloadDialogComponent,

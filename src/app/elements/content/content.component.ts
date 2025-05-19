@@ -3,8 +3,6 @@ import {View, ViewAction} from '@app/model';
 import {ConnectTokenService, HttpService, I18nService, LogService, SettingService, ViewService} from '@app/services';
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import {MatDialog} from '@angular/material';
-import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
-import {ElementSendCommandWithVariableDialogComponent} from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
 import {fromEvent, Subscription} from 'rxjs';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import * as _ from 'lodash';
@@ -18,21 +16,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   @ViewChild('tabs', {static: false}) tabsRef: ElementRef;
   @Output() toggleMenu: EventEmitter<any> = new EventEmitter<any>();
   viewList: Array<View>;
-  batchCommand: string;
   pos = {left: '100px', top: '100px'};
   isShowRMenu = false;
   rIdx = -1;
-  sendCommandRange = 'current';
-  sendCommandOptions = [
-    {
-      value: 'all',
-      label: 'All sessions'
-    },
-    {
-      value: 'current',
-      label: 'Current session'
-    }
-  ];
   systemTips = [
     {
       content: 'Reselect connection method',
@@ -56,8 +42,6 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     }
   ];
   viewIds: Array<string> = [];
-  isShowInputCommand = true;
-  quickCommands = [];
   keyboardSubscription: Subscription;
 
   constructor(public viewSrv: ViewService,
@@ -70,20 +54,21 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   ) {
   }
 
+   get showBatchCommand() {
+    return true
+    // return this.settingSvc.setting.commandExecution
+    //   && this.viewSrv.currentView
+    //   && this.viewSrv.currentView.protocol === 'ssh';
+  }
+
   get tabsWidth() {
     return this.viewList.length * 201;
   }
 
-  get showBatchCommand() {
-    return this.settingSvc.setting.commandExecution
-      && this.viewSrv.currentView
-      && this.viewSrv.currentView.protocol === 'ssh';
-  }
 
   async ngOnInit() {
     this.viewList = this.viewSrv.viewList;
     this.viewIds = this.viewSrv.viewIds;
-    await this.quickCommandsFilter();
     this.handleKeyDownTabChange();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
@@ -167,61 +152,6 @@ export class ElementContentComponent implements OnInit, OnDestroy {
 
   trackByFn(index, item) {
     return item.id;
-  }
-
-  sendBatchCommand() {
-    let list = this.viewList;
-    this.batchCommand = this.batchCommand.trim();
-    if (this.batchCommand === '') {
-      return;
-    }
-
-    const cmd = this.batchCommand + '\r';
-    if (this.sendCommandRange === 'current') {
-      const view = this.viewList.filter(i => i.id === this.viewSrv.currentView.id);
-      list = view;
-    }
-    for (let i = 0; i < list.length; i++) {
-      if (list[i].protocol !== 'ssh' || list[i].connected !== true) {
-        continue;
-      }
-      const subViews = list[i].subViews;
-      if (subViews.length > 1) {
-        for (let j = 0; j < subViews.length; j++) {
-          if (subViews[j].protocol !== 'ssh' || subViews[j].connected !== true) {
-            continue;
-          }
-          subViews[j].termComp.sendCommand({'data': cmd});
-        }
-      } else {
-        list[i].termComp.sendCommand({'data': cmd});
-      }
-    }
-
-    this.batchCommand = '';
-  }
-
-  sendQuickCommand(command) {
-    this.batchCommand = command.args;
-    if (command.variable.length > 0) {
-      const dialogRef = this._dialog.open(
-        ElementSendCommandWithVariableDialogComponent,
-      {
-        height: 'auto',
-        width: '500px',
-        data: { command: command }
-      }
-    );
-      dialogRef.afterClosed().subscribe(result => {
-        if (result) {
-          this.batchCommand = result;
-          this.sendBatchCommand();
-        }
-      });
-    } else {
-      this.sendBatchCommand();
-    }
-
   }
 
   rMenuItems() {
@@ -347,46 +277,4 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     moveItemInArray(this.viewIds, event.previousIndex, event.currentIndex);
   }
 
-  async quickCommandsFilter() {
-    let list = await this._http.getQuickCommand();
-    list = list.filter(i => i.module.value === 'shell');
-    this.quickCommands = list;
-  }
-
-  async switchCommand() {
-    this.batchCommand = '';
-    this.isShowInputCommand = !this.isShowInputCommand;
-    if (!this.isShowInputCommand) {
-      await this.quickCommandsFilter();
-    }
-  }
-
-  onSendCommand() {
-    if (!this.batchCommand) {
-      return;
-    }
-
-    this._dialog.open(
-      ElementCommandDialogComponent,
-      {
-        height: 'auto',
-        width: '500px',
-        data: {command: this.batchCommand}
-      }
-    );
-  }
-
-  onScrollLeft() {
-    const container: any = document.querySelector('.command-list');
-    if (container) {
-      container.scrollBy(-container.offsetWidth, 0);
-    }
-  }
-
-  onScrollRight() {
-    const container: any = document.querySelector('.command-list');
-    if (container) {
-      container.scrollBy(container.offsetWidth, 0);
-    }
-  }
 }
