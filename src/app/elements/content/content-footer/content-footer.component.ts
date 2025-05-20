@@ -1,9 +1,8 @@
 import {
   Component,
-  Input,
   OnInit,
 } from '@angular/core';
-import { View, ViewAction } from '@app/model';
+import { View } from '@app/model';
 import { HttpService, I18nService, LogService, SettingService, ViewService} from '@app/services';
 import {MatDialog} from '@angular/material';
 import {
@@ -22,6 +21,7 @@ export class ElementContentFooterComponent implements OnInit {
   batchCommand: string;
   quickCommands = [];
   sendCommandRange = 'current';
+  showCommandZone = false;
   sendCommandOptions = [
     {
       value: 'all',
@@ -40,13 +40,6 @@ export class ElementContentFooterComponent implements OnInit {
               private _logger: LogService,
               private _http: HttpService,
   ) {
-  }
-
-  get showBatchCommand() {
-    return true
-    // return this.settingSvc.setting.commandExecution
-    //   && this.viewSrv.currentView
-    //   && this.viewSrv.currentView.protocol === 'ssh';
   }
 
   async ngOnInit() {

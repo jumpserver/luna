@@ -11,6 +11,7 @@ import {HttpClient, HttpClientModule} from '@angular/common/http';
 import {TranslateLoader, TranslateModule} from '@ngx-translate/core';
 import {TranslateHttpLoader} from '@ngx-translate/http-loader';
 import {DragDropModule} from '@angular/cdk/drag-drop';
+import {en_US, NgZorroAntdModule, NZ_I18N} from 'ng-zorro-antd';
 
 // service
 import {AllServices} from '@app/services';
@@ -36,7 +37,9 @@ import {ClipboardService} from 'ngx-clipboard';
 import {ElementsReplayMp4Component} from './elements/replay/mp4/mp4.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
-import {ElementSendCommandWithVariableDialogComponent} from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
+import {
+  ElementSendCommandWithVariableDialogComponent
+} from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
 import {DynamicFormComponent} from '@app/elements/content/variable-dynamic-form/variable-dynamic-form.component';
 import {version} from '../environments/environment';
 import {BehaviorSubject, forkJoin, Observable, of} from 'rxjs';
@@ -90,6 +93,7 @@ export class CustomLoader implements TranslateLoader {
     AppRouterModule,
     ToastrModule.forRoot(),
     AngularSplitModule.forRoot(),
+    NgZorroAntdModule,
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,
@@ -130,6 +134,7 @@ export class CustomLoader implements TranslateLoader {
     CookieService,
     NGXLogger,
     {provide: MAT_LABEL_GLOBAL_OPTIONS, useValue: {float: 'always'}},
+    {provide: NZ_I18N, useValue: en_US},
     ClipboardService,
   ]
 })

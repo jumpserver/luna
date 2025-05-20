@@ -21,16 +21,15 @@ import {
   MatRadioModule,
   MatRippleModule,
   MatSelectModule,
-  MatSidenavModule,
   MatSliderModule,
   MatSlideToggleModule,
   MatSnackBarModule,
   MatSortModule,
+  MatStepperModule,
   MatTableModule,
   MatTabsModule,
   MatToolbarModule,
   MatTooltipModule,
-  MatStepperModule,
 } from '@angular/material';
 import {CdkTableModule} from '@angular/cdk/table';
 import {NgxMatSelectSearchModule} from 'ngx-mat-select-search';
@@ -60,7 +59,7 @@ import {NgxMatSelectSearchModule} from 'ngx-mat-select-search';
     MatRadioModule,
     MatRippleModule,
     MatSelectModule,
-    MatSidenavModule,
+    // MatSidenavModule,
     MatSliderModule,
     MatSlideToggleModule,
     MatSnackBarModule,

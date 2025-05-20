@@ -3,27 +3,24 @@
     {{ "Connect method" | translate }}
   </label>
   <div *ngIf="connectMethodTypes.length > 0; else empty" class="connect-type-group">
-    <mat-tab-group
-      (selectedIndexChange)="onConnectMethodTypeChange($event)"
-      [selectedIndex]="currentConnectMethodTypeIndex()"
-      animationDuration="0ms"
-      dynamicHeight
-      mat-align-tabs="center"
-      mat-stretch-tabs="true"
+    <nz-tabset
+      (nzSelectedIndexChange)="onConnectMethodTypeChange($event)"
+      [nzSelectedIndex]="currentConnectMethodTypeIndex()"
     >
-      <mat-tab
-        *ngFor="let item of connectMethodTypes "
+      <nz-tab
+        *ngFor="let item of connectMethodTypes" [nzTitle]="titleTemplate"
       >
-        <ng-template mat-tab-label>
+        <ng-template #titleTemplate>
           <i [class]="'fa ' + item.fa" style="padding-right: 10px"></i> {{ item.label }}
         </ng-template>
 
-        <mat-radio-group
+        <nz-radio-group
           [(ngModel)]="connectMethod"
           name="connect-method"
           style="display: block; padding: 12px 10px 10px 10px;"
         >
-          <mat-radio-button *ngFor="let method of item['methods']" [disabled]="method.disabled" [value]="method">
+          <!--          <nz-radio-button *ngFor="let method of item['methods']" [disabled]="method.disabled" [value]="method">-->
+          <label *ngFor="let method of item['methods']" [nzValue]="method" nz-radio>
             {{ method.label }}
 
             <span matTooltip="{{'Click to download rdp file'| translate}}">
@@ -34,14 +31,14 @@
             </span>
             <span matTooltip="{{'Client Guide'| translate}}">
               <i (click)="ChangeToGuidePage(method)"
-                *ngIf="CanGuide(method)"
-                class="fa fa-book question"
+                 *ngIf="CanGuide(method)"
+                 class="fa fa-book question"
               ></i>
             </span>
-          </mat-radio-button>
-        </mat-radio-group>
-      </mat-tab>
-    </mat-tab-group>
+          </label>
+        </nz-radio-group>
+      </nz-tab>
+    </nz-tabset>
   </div>
   <ng-template #empty>
     <div class="empty">

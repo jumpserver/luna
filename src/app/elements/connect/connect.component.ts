@@ -1,7 +1,6 @@
 import {Component, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
-import {MatDialog} from '@angular/material';
 import {
   AppService,
   ConnectTokenService,
@@ -13,10 +12,10 @@ import {
   ViewService
 } from '@app/services';
 import {Account, Asset, ConnectData, ConnectionToken, View} from '@app/model';
-import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
-import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
 import {launchLocalApp} from '@app/utils/common';
 import {ActivatedRoute} from '@angular/router';
+import {ElementConnectDialogComponent} from '@app/elements/connect/connect-dialog/connect-dialog.component';
+import {NzModalService} from 'ng-zorro-antd';
 
 
 @Component({
@@ -27,10 +26,14 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   @Output() onNewView: EventEmitter<View> = new EventEmitter<View>();
   @Input() direct: boolean = false;
   hasLoginTo = false;
+  isVisible = false;
+  asset: Asset;
+  accounts: Array<Account>;
+  preConnectData: ConnectData;
 
   constructor(private _appSvc: AppService,
               private _dialogAlert: DialogService,
-              private _dialog: MatDialog,
+              private _modal: NzModalService,
               private _logger: LogService,
               private _route: ActivatedRoute,
               private _http: HttpService,
@@ -119,6 +122,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
    * @param splitConnect 是否分屏连接
    */
   async connectAsset(asset, splitConnect = false) {
+    console.log('Connect asset');
     if (!asset) {
       const msg = await this._i18n.t('Asset not found or You have no permission to access it, please refresh asset tree');
       await this._dialogAlert.alert(msg);
@@ -187,10 +191,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     launchLocalApp(url, () => {
       const downLoadStatus = localStorage.getItem('hasDownLoadApp');
       if (downLoadStatus !== '1') {
-        this._dialog.open(ElementDownloadDialogComponent, {
-          height: 'auto',
-          width: '800px',
-          disableClose: true
+        this._modal.create({
+          nzTitle: this._i18n.instant('Download client'),
+          nzContent: ElementConnectDialogComponent,
         });
       }
     });
@@ -253,7 +256,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   getConnectData(accounts: Account[], asset: Asset): Promise<ConnectData> {
-    let dialogWidth = '600px';
     const preConnectData = this._appSvc.getPreConnectData(asset);
     const isValid = this.checkPreConnectDataForAuto(asset, accounts, preConnectData);
 
@@ -261,21 +263,29 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return Promise.resolve(preConnectData);
     }
 
+    let dialogWidth = '600px';
     if (this._i18n.getLangCode() === 'pt-br') {
       dialogWidth = '730px';
     }
 
     this._appSvc.connectDialogShown = true;
 
-    const dialogRef = this._dialog.open(ElementConnectDialogComponent, {
-      minHeight: '300px',
-      height: 'auto',
-      width: dialogWidth,
-      data: {accounts, asset, preConnectData}
+    const dialogRef = this._modal.create({
+      nzTitle: this._i18n.instant('Connect') + ' - ' + asset.name,
+      nzContent: ElementConnectDialogComponent,
+      nzWidth: dialogWidth,
+      nzComponentParams: {
+        accounts,
+        asset,
+        preConnectData
+      },
+      nzClassName: 'connect-dialog',
+      nzWrapClassName: 'connect-dialog-wrap',
+      nzFooter: null,
     });
 
     return new Promise<ConnectData>(resolve => {
-      dialogRef.afterClosed().subscribe(outputData => {
+      dialogRef.afterClose.subscribe(outputData => {
         this._appSvc.connectDialogShown = false;
 
         resolve(outputData);

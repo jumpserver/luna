@@ -1,5 +1,50 @@
 
 $-border-y: var(--el-main-bg-color);
+
+.mat-button {
+  color: #ffffff;
+}
+.content-footer {
+  border-top: solid 1px #62686c;
+
+
+  .batch-command-zone {
+    height: 200px;
+    padding: 10px;
+
+    .command-header {
+      height: 30px;
+
+      button {
+        line-height: 1.6;
+      }
+    }
+
+
+    .command-input {
+      height: 150px;
+
+      textarea {
+        background: #383838;
+      }
+    }
+  }
+
+  .mat-button {
+    line-height: 30px;
+  }
+
+  .footer-bar {
+    height: 30px;
+
+    .footer-bar__left {
+      margin-left: 5px;
+    }
+
+  }
+}
+
+
 #batchCommandDiv {
   display: flex;
   height: 29px;

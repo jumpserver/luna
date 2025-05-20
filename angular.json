@@ -20,15 +20,20 @@
             "assets": [
               "src/assets",
               "src/static",
-              "src/favicon.ico"
+              "src/favicon.ico",
+              {
+                "glob": "**/*",
+                "input": "./node_modules/@ant-design/icons-angular/src/inline-svg/",
+                "output": "/assets/"
+              }
             ],
             "styles": [
               "node_modules/animate.css/animate.min.css",
               "node_modules/xterm/dist/xterm.css",
               "node_modules/ngx-toastr/toastr.css",
               "src/sass/style.scss",
-              "src/styles.css",
-              "src/theme.scss",
+              "src/styles.less",
+              "src/theme.less",
               "node_modules/asciinema-player/resources/public/css/asciinema-player.css"
             ],
             "scripts": [
@@ -93,7 +98,7 @@
               "node_modules/animate.css/animate.min.css",
               "node_modules/xterm/dist/xterm.css",
               "src/sass/style.scss",
-              "src/styles.css"
+              "src/styles.less"
             ],
             "assets": [
               "src/assets",

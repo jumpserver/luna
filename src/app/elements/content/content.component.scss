@@ -6,6 +6,10 @@ $-border-x: #5a5959;
   .tab-bar {
     border-left: 1px solid var(--el-border-color-y);
 
+    a {
+      color: white;
+    }
+
     .scroll-button {
       float: left;
       height: 30px;

@@ -1,50 +1,57 @@
 <div class="advanced-option">
-  <mat-accordion>
-    <mat-expansion-panel *ngIf="isShowAdvancedOption" [class.panel-show]="isShowAdvancedOption">
-      <mat-expansion-panel-header style="height: 32px;">
-        <mat-panel-title>
-          {{ 'Advanced option' | translate }}
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-
-      <div *ngIf="isShowAdvancedOption" class="options-container">
+  <nz-collapse>
+    <nz-collapse-panel *ngIf="isShowAdvancedOption"
+                       [nzHeader]="'Advanced option' | translate">
+      <div class="options-container">
         <ng-container *ngFor="let item of advancedOptions">
           <span>
             <div *ngIf="item.type === 'checkbox'" class="option-item">
-              <mat-checkbox
-                (change)="onChange()"
+              <label
+                (ngModelChange)="onChange()"
                 [(ngModel)]="connectOption[item.field]"
                 [name]="item.field"
+                nz-checkbox
               >
                 {{ item.label | translate }}
-              </mat-checkbox>
+              </label>
             </div>
             <ng-container *ngIf="item.type === 'select'">
-              <mat-form-field class="option-item">
-                <mat-label>{{ item.label | translate }}</mat-label>
-                <mat-select (selectionChange)="onChange()" [(ngModel)]="connectOption[item.field]"
-                            [name]="item.field"
+              <div class="option-item">
+                <nz-form-label>{{ item.label | translate }}</nz-form-label>
+                <nz-select
+                  (ngModelChange)="onChange()"
+                  [(ngModel)]="connectOption[item.field]"
+                  [name]="item.field"
+                  style="width: 100%"
                 >
-                  <mat-option *ngFor="let option of item.options" [value]="option.value">
-                    {{ option.label | translate }}
-                  </mat-option>
-                </mat-select>
-              </mat-form-field>
+
+                  <nz-option
+                    *ngFor="let option of item.options"
+                    [nzLabel]="option.label | translate"
+                    [nzValue]="option.value"
+                  ></nz-option>
+                </nz-select>
+              </div>
             </ng-container>
             <ng-container *ngIf="item.type === 'radio'">
               <div class="option-item">
-                <mat-radio-group (change)="onChange()" [(ngModel)]="connectOption[item.field]"
-                                 [name]="item.field">
-                  <mat-label style="margin-right: 10px">{{ item.label | translate }}</mat-label>
-                  <mat-radio-button *ngFor="let option of item.options" [value]="option.value">
-                    {{ option.label | translate }}
-                  </mat-radio-button>
-                </mat-radio-group>
+                <nz-form-label style="margin-right: 10px">{{ item.label | translate }}</nz-form-label>
+                <nz-radio-group
+                  (ngModelChange)="onChange()"
+                  [(ngModel)]="connectOption[item.field]"
+                  [name]="item.field"
+                >
+                  <label
+                    *ngFor="let option of item.options"
+                    [nzValue]="option.value"
+                    nz-radio
+                  >{{ option.label | translate }}</label>
+                </nz-radio-group>
               </div>
             </ng-container>
           </span>
         </ng-container>
       </div>
-    </mat-expansion-panel>
-  </mat-accordion>
+    </nz-collapse-panel>
+  </nz-collapse>
 </div>

@@ -2,49 +2,50 @@
   margin-top: 8px;
 }
 
-.mat-expansion-panel-header {
-  height: 32px !important;
-  padding: 0 4px 0 0;
+::ng-deep {
+  .ant-collapse > .ant-collapse-item > .ant-collapse-header {
+    height: 32px !important;
+    padding: 5px 0 0 40px;
+    border-bottom: none;
 
-  &:hover {
-    background-color: rgb(255, 255, 255);
+    &:hover {
+      background-color: rgb(255, 255, 255);
+    }
+  }
+
+  .ant-collapse-item:not(.ant-collapse-item-active) .ant-collapse-header:not([aria-disabled=true]):hover {
+    background: rgba(0, 0, 0, 0);
+  }
+
+  .ant-collapse-header-text {
+    color: rgba(0, 0, 0, 0.54);
+    font-size: 13px;
+  }
+
+  .ant-collapse {
+    box-shadow: none;
+    border-bottom: 1px solid rgb(0, 0, 0, 12%);
+
+    .ant-collapse-content {
+      padding: 0 0 0 !important;
+    }
+  }
+
+  .ant-collapse-item.panel-show.ant-collapse-item-active {
+    border-bottom: none;
+
+    .ant-collapse-content {
+      padding: 10px 5px 0 5px;
+      border: solid 1px rgb(0, 0, 0, 12%);
+    }
+  }
+
+  .ant-collapse .ant-collapse-item:last-child {
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
   }
 }
 
-.mat-expansion-panel:not(.mat-expanded) .mat-expansion-panel-header:not([aria-disabled=true]):hover {
-  background: rgba(0, 0, 0, 0);
-}
-
-.mat-expansion-panel-header-title {
-  color: rgba(0, 0, 0, 0.54);
-  font-size: 13px;
-}
-
-.mat-expansion-panel:not([class*=mat-elevation-z]) {
-  box-shadow: none;
-}
-
-.mat-expansion-panel {
-  border-bottom: 1px solid rgb(0, 0, 0, 12%);
-
-  &::ng-deep .mat-expansion-panel-body {
-    padding: 0 0 0 !important;
-  }
-}
-
-.mat-expansion-panel.panel-show.mat-expanded {
-  border-bottom: none;
-
-  &::ng-deep .mat-expansion-panel-content {
-    padding: 10px 5px 0 5px;
-    border: solid 1px rgb(0, 0, 0, 12%);
-  }
-}
-
-.mat-accordion .mat-expansion-panel:last-of-type {
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
-}
 
 .example-radio-group {
   display: flex;
@@ -56,8 +57,7 @@
   margin: 2px;
 }
 
-
-.option-item.mat-form-field {
+.option-item.ant-form-item {
   margin-top: 10px;
 }
 
@@ -67,17 +67,9 @@
   padding: 0 5px;
 }
 
-.mat-checkbox-layout {
-  margin-left: 12px !important;
-}
-
 .options-container {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline; /* 添加这一行 */
-}
-
-.options-container > ng-container {
-
+  align-items: baseline;
 }
 

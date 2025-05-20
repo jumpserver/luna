@@ -1,44 +1,47 @@
 <div *ngIf="accounts.length > 0; else empty" class="select-user form-field" style="width: 100%;">
-  <label class="zone-label" for="selectAccount">{{ "Select account" | translate }}</label>
-  <mat-form-field style="width: 100%; margin-top:-10px">
-    <mat-select
-      [(value)]="accountSelected"
+  <nz-form-label class="zone-label" for="selectAccount">{{ "Select account" | translate }}</nz-form-label>
+  <nz-form-item style="width: 100%; margin-top:-10px">
+    <nz-select
+      [(ngModel)]="accountSelected"
       [compareWith]="compareFn"
       [formControl]="accountCtl"
       id="selectAccount"
+      nzShowSearch
     >
-      <mat-option>
-        <ngx-mat-select-search
-          [formControl]="accountFilterCtl"
-          noEntriesFoundLabel="{{ 'No matching found' | translate }}"
-          placeholderLabel="{{ 'Search' | translate }}"
-        >
-          <mat-icon ngxMatSelectSearchClear>close</mat-icon>
-        </ngx-mat-select-search>
-      </mat-option>
-      <mat-optgroup
+      <!--      <nz-option>-->
+      <!--        <ngx-mat-select-search-->
+      <!--          [formControl]="accountFilterCtl"-->
+      <!--          noEntriesFoundLabel="{{ 'No matching found' | translate }}"-->
+      <!--          placeholderLabel="{{ 'Search' | translate }}"-->
+      <!--        >-->
+      <!--          <mat-icon ngxMatSelectSearchClear>close</mat-icon>-->
+      <!--        </ngx-mat-select-search>-->
+      <!--      </nz-option>-->
+      <nz-option-group
         *ngFor="let group of filteredUsersGroups | async"
-        [disabled]="group.disabled"
-        [label]="group.name"
+        [nzLabel]="group.name"
       >
-        <mat-option *ngFor="let account of group.accounts" [value]="account">
-          {{ getAccountDisplay(account) }}
-        </mat-option>
-      </mat-optgroup>
-    </mat-select>
-  </mat-form-field>
-  <mat-error *ngIf="accountCtl.hasError('required')">
-    {{"Please choose a account"| translate}}
-  </mat-error>
+        <nz-option
+          *ngFor="let account of group.accounts"
+          [nzDisabled]="group.disabled"
+          [nzValue]="account"
+          nzLabel="{{ getAccountDisplay(account) }}">
+        </nz-option>
+      </nz-option-group>
+    </nz-select>
+  </nz-form-item>
+  <nz-alert *ngIf="accountCtl.hasError('required')" nzType="error">
+    {{ "Please choose a account"| translate }}
+  </nz-alert>
 </div>
 
 <ng-template #empty>
-  <div class="not-account">{{'No account available'| translate }}</div>
+  <div class="not-account">{{ 'No account available'| translate }}</div>
 </ng-template>
 
 <div *ngIf="showManualUsernameInput" class="form-field">
-  <label class="zone-label" style="margin-bottom: 0">{{ "Username" | translate }}</label>
-  <mat-form-field class="input-field" floatLabel='never'>
+  <nz-form-label class="zone-label" style="margin-bottom: 0">{{ "Username" | translate }}</nz-form-label>
+  <nz-form-item class="input-field" floatLabel='never'>
     <input
       #username
       (focus)="onFocus()"
@@ -48,21 +51,22 @@
       [placeholder]="usernamePlaceholder"
       [readonly]="accountSelected.username === '@USER'"
       autofocus
-      matInput
       name="username"
+      nz-input
     >
     <mat-autocomplete #auto="matAutocomplete">
-      <mat-option *ngFor="let i of filteredOptions" [value]="i.username">
-        {{i.username}}
-      </mat-option>
+      <nz-option *ngFor="let i of filteredOptions" [nzValue]="i.username">
+        {{ i.username }}
+      </nz-option>
     </mat-autocomplete>
-  </mat-form-field>
+  </nz-form-item>
 </div>
 
 <div *ngIf="accountSelected && !accountSelected?.has_secret && accountSelected.username !== '@ANON'" class="form-field">
-  <label class="zone-label" style="margin-bottom: 0; display: block">{{ "Password" | translate }}</label>
+  <nz-form-label class="zone-label" style="margin-bottom: 0; display: block">{{ "Password" | translate }}
+  </nz-form-label>
   <div>
-    <mat-form-field class="input-field password" floatLabel='never' style="width: 70%">
+    <nz-form-item class="input-field password" floatLabel='never' style="width: 70%">
       <input
         #password
         [(ngModel)]="manualAuthInfo.secret"
@@ -70,8 +74,8 @@
         [autocomplete]="hidePassword ? 'new-password' : 'off'"
         [type]="hidePassword ? 'password' : 'text'"
         autofocus
-        matInput
         name="password"
+        nz-input
       >
       <button
         (click)="hidePassword = !hidePassword"
@@ -80,12 +84,12 @@
         mat-icon-button
         matSuffix
       >
-        <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+        <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
-    </mat-form-field>
-    <mat-checkbox *ngIf="!rememberAuthDisabled" [(ngModel)]="manualAuthInfo.rememberAuth" class="remember-auth">
+    </nz-form-item>
+    <label *ngIf="!rememberAuthDisabled" [(ngModel)]="manualAuthInfo.rememberAuth" class="remember-auth" nz-checkbox>
       {{ "Remember password" | translate }}
-    </mat-checkbox>
+    </label>
   </div>
 </div>
 
