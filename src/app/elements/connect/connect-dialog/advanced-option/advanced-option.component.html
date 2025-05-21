@@ -1,4 +1,4 @@
-<div class="advanced-option">
+<div *ngIf='advancedOptions && advancedOptions.length' class="advanced-option">
   <nz-collapse>
     <nz-collapse-panel
       *ngIf="isShowAdvancedOption"

@@ -16,6 +16,7 @@ import {launchLocalApp} from '@app/utils/common';
 import {ActivatedRoute} from '@angular/router';
 import {ElementConnectDialogComponent} from '@app/elements/connect/connect-dialog/connect-dialog.component';
 import {NzModalService} from 'ng-zorro-antd';
+import { ElementDownloadDialogComponent } from './download-dialog/download-dialog.component'
 
 
 @Component({
@@ -193,7 +194,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       if (downLoadStatus !== '1') {
         this._modal.create({
           nzTitle: this._i18n.instant('Download client'),
-          nzContent: ElementConnectDialogComponent,
+          nzContent: ElementDownloadDialogComponent,
+          nzFooter: null,
         });
       }
     });

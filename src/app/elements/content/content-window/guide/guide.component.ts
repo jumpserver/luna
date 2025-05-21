@@ -1,9 +1,9 @@
-import {Component, Input, OnInit, ViewChild} from '@angular/core';
-import {ConnectionToken} from '@app/model';
-import {ConnectTokenService, HttpService, I18nService, SettingService} from '@app/services';
-import {ToastrService} from 'ngx-toastr';
-import {MatTooltip} from '@angular/material/tooltip';
-import {Command, InfoItem} from './model';
+import { Component, Input, OnInit, ViewChild }                           from '@angular/core';
+import { ConnectionToken }                                               from '@app/model';
+import { ConnectTokenService, HttpService, I18nService, SettingService } from '@app/services';
+import { ToastrService }                                                 from 'ngx-toastr';
+import { MatTooltip }                                                    from '@angular/material/tooltip';
+import { Command, InfoItem }                                             from './model';
 
 
 @Component({
@@ -23,6 +23,7 @@ export class ElementConnectorGuideComponent implements OnInit {
   passwordShow = '******';
   hoverClipTip: string = this._i18n.instant('Click to copy');
   showClient = false;
+  reusable = false;
 
   constructor(private _http: HttpService,
               private _i18n: I18nService,
@@ -35,15 +36,15 @@ export class ElementConnectorGuideComponent implements OnInit {
   async ngOnInit() {
   }
 
-  setReusable(event) {
-    this._connectTokenSvc.setReusable(this.token, event.checked).subscribe(
+  setReusable() {
+    this._connectTokenSvc.setReusable(this.token, this.reusable).subscribe(
       res => {
         this.token = Object.assign(this.token, res);
         const tokenItem = this.infoItems.find(item => item.name === 'date_expired');
         tokenItem.value = `${this.token.date_expired}`;
       },
       error => {
-        this.token.is_reusable = false;
+        this.token.is_reusable = !this.reusable;
         if (error.status === 404) {
           this._toastr.error(this._i18n.instant('Token expired'));
           return;

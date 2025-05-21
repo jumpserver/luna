@@ -1,6 +1,6 @@
-import {Component, OnInit, Inject} from '@angular/core';
+import {Component, OnInit } from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
+import {NzModalRef} from 'ng-zorro-antd';
 
 @Component({
   selector: 'elements-asset-tree-dialog',
@@ -10,18 +10,24 @@ import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 export class ElementDownloadDialogComponent implements OnInit {
   public hasDownLoad = false;
 
-  constructor(public dialogRef: MatDialogRef<ElementDownloadDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: any
-  ) {}
+  constructor(
+    private dialogRef: NzModalRef
+  ) {
+    if (localStorage.getItem('hasDownLoadApp') === '1') {
+      this.hasDownLoad = true;
+    }
+  }
 
   ngOnInit() {
   }
+
   onCancel(): void {
     if (this.hasDownLoad) {
       localStorage.setItem('hasDownLoadApp', '1');
     }
     this.dialogRef.close();
   }
+
   onConfirm(): void {
     if (this.hasDownLoad) {
       localStorage.setItem('hasDownLoadApp', '1');

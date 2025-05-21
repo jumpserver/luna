@@ -45,11 +45,6 @@
       name="username"
       nz-input
     >
-    <mat-autocomplete #auto="matAutocomplete">
-      <nz-option *ngFor="let i of filteredOptions" [nzValue]="i.username">
-        {{ i.username }}
-      </nz-option>
-    </mat-autocomplete>
   </nz-form-control>
 </nz-form-item>
 
