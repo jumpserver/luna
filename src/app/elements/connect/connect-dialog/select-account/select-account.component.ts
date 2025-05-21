@@ -108,29 +108,16 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         this.manualAuthInfo.username = User.username;
       }
     }
-
-    this.accountFilterCtl.valueChanges
-      .pipe(takeUntil(this._onDestroy))
-      .subscribe(() => {
-        this.filterAccounts();
-      });
-
-    this.accountCtl.valueChanges
-      .pipe(takeUntil(this._onDestroy))
-      .subscribe(() => {
-        this.accountSelectedChange.emit(this.accountSelected);
-        this.onAccountChanged();
-      });
-
-    setTimeout(() => {
-      this.accountCtl.setValue(this.accountSelected);
-      this.accountCtl.setValidators([Validators.required]);
-    }, 100);
   }
 
   ngOnDestroy() {
     this._onDestroy.next();
     this._onDestroy.complete();
+  }
+
+  handleAccountChanged() {
+    this.accountSelectedChange.emit(this.accountSelected);
+    this.onAccountChanged();
   }
 
   getPreAccountSelected() {

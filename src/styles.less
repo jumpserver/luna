@@ -25,6 +25,10 @@ li {
   box-sizing: border-box;
 }
 
+::selection {
+  background: none;
+}
+
 app-root {
   height: 100%;
 }
@@ -191,3 +195,15 @@ body ::-webkit-scrollbar-thumb {
   opacity: 1;
   visibility: visible;
 }
+
+.full-width-tabs ::ng-deep .ant-tabs-nav > div {
+  display: flex;
+  width: 100%;
+
+  .ant-tabs-tab {
+    justify-content: center; /* 水平居中标题文字 */
+    text-align: center;
+    flex: 1;
+  }
+}
+

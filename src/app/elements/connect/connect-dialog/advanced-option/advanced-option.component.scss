@@ -11,65 +11,31 @@
     &:hover {
       background-color: rgb(255, 255, 255);
     }
+
   }
 
-  .ant-collapse-item:not(.ant-collapse-item-active) .ant-collapse-header:not([aria-disabled=true]):hover {
-    background: rgba(0, 0, 0, 0);
+  .ant-collapse-content > .ant-collapse-content-box {
+    padding: 8px 16px;
   }
 
-  .ant-collapse-header-text {
-    color: rgba(0, 0, 0, 0.54);
-    font-size: 13px;
-  }
-
-  .ant-collapse {
-    box-shadow: none;
-    border-bottom: 1px solid rgb(0, 0, 0, 12%);
-
-    .ant-collapse-content {
-      padding: 0 0 0 !important;
-    }
-  }
-
-  .ant-collapse-item.panel-show.ant-collapse-item-active {
-    border-bottom: none;
-
-    .ant-collapse-content {
-      padding: 10px 5px 0 5px;
-      border: solid 1px rgb(0, 0, 0, 12%);
-    }
-  }
-
-  .ant-collapse .ant-collapse-item:last-child {
-    border-bottom-right-radius: 0;
-    border-bottom-left-radius: 0;
-  }
-}
-
-
-.example-radio-group {
-  display: flex;
-  flex-direction: column;
-  margin-top: 4px;
-}
-
-.example-radio-button {
-  margin: 2px;
 }
 
 .option-item.ant-form-item {
   margin-top: 10px;
 }
 
-.option-item {
-  flex: 0 0 49%;
-  box-sizing: border-box;
-  padding: 0 5px;
-}
 
 .options-container {
   display: flex;
   flex-wrap: wrap;
+  gap: 10px;
   align-items: baseline;
+
+  ::ng-deep {
+    label {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+  }
 }
 

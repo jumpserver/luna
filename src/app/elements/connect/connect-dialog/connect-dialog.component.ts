@@ -165,6 +165,7 @@ export class ElementConnectDialogComponent implements OnInit {
 
     this._appSvc.setPreConnectData(this.asset, this.outputData);
 
+    console.log('outputData', this.outputData);
     this.onSubmit$.next(true);
     this._modalRef.close(this.outputData);
   }

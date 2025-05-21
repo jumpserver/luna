@@ -2,13 +2,53 @@
   .ant-modal-body {
     padding-top: 0;
   }
+
+  .ant-modal-header {
+    padding: 16px 24px 8px 24px;
+    border-bottom: none;
+  }
+  .ant-form-item-label {
+    color: rgba(0, 0, 0, 0.54);
+    line-height: 2;
+  }
+
+  .ant-form-item {
+    margin-bottom: 5px;
+  }
+
+  .ant-tabs-nav .ant-tabs-tab {
+    padding: 12px 24px;
+
+    &.ant-tabs-tab-active {
+      color: inherit;
+    }
+  }
+
+}
+
+
+.auto-connect {
+  label {
+    display: block;
+  }
+}
+
+.connect-btn-wrap {
+  button {
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    height: 36px;
+  }
+}
+
+.dialog-body {
+  padding: 0 10px;
 }
 
 .connect-method-zone ::ng-deep .zone-label,
 .zone-label {
-  color: rgba(0, 0, 0, 0.54);
   cursor: pointer;
-  margin-bottom: 5px;
 }
 
 //.nz-form-field-infix {

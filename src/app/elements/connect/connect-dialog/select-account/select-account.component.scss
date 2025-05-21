@@ -1,7 +1,5 @@
 .zone-label {
-  color: rgba(0, 0, 0, 0.54);
-  cursor: pointer;
-  margin-bottom: 8px;
+
 }
 
 .ant-select {
@@ -12,18 +10,6 @@
   margin-bottom: 20px;
 }
 
-.remember-auth {
-  width: 30%;
-  font-size: 12px;
-  vertical-align: sub;
-  float: right;
-  text-align: right;
-}
-
-.remember-auth ::ng-deep .mat-checkbox-layout {
-  //padding-bottom: 10px;
-}
-
 .mat-option {
   line-height: 25px;
   height: 35px;
@@ -31,9 +17,6 @@
 
 
 .zone-label {
-  color: rgba(0, 0, 0, 0.54);
-  cursor: pointer;
-  margin-bottom: 5px;
 }
 
 .account-info {
@@ -41,7 +24,22 @@
   padding: 10px 10px 0 10px;
 }
 
+.password {
+  ::ng-deep .ant-input-affix-wrapper {
+    width: 70%;
+  }
+
+  .remember-auth {
+    width: 30%;
+    display: inline-block;
+    font-size: 12px;
+    vertical-align: sub;
+    text-align: right;
+  }
+}
+
 .input-field {
+
   width: 100%;
 }
 

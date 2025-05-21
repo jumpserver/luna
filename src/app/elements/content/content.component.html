@@ -45,12 +45,14 @@
         </div>
       </div>
     </div>
-    <elements-content-window *ngFor="let view of viewList" [view]="view"></elements-content-window>
+    <div class='content-windows'>
+      <elements-content-window *ngFor="let view of viewList" [view]="view"></elements-content-window>
+    </div>
     <elements-content-footer *ngIf="showBatchCommand"></elements-content-footer>
   </div>
 </div>
 
-<elements-connect (onNewView)="onNewView($event)"></elements-connect>
+<elements-connect (onNewView)="onNewView($event)" style='display: none'></elements-connect>
 
 <div #rMenu *ngIf="isShowRMenu" [style.left]="pos.left" [style.top]="pos.top" class="view-menu">
   <table>

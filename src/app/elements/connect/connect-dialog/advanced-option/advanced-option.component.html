@@ -1,11 +1,14 @@
 <div class="advanced-option">
   <nz-collapse>
-    <nz-collapse-panel *ngIf="isShowAdvancedOption"
-                       [nzHeader]="'Advanced option' | translate">
+    <nz-collapse-panel
+      *ngIf="isShowAdvancedOption"
+      [nzHeader]="'Advanced option' | translate"
+    >
       <div class="options-container">
-        <ng-container *ngFor="let item of advancedOptions">
+        <nz-form-item *ngFor="let item of advancedOptions">
+          <nz-form-label nzNoColon>{{ item.label | translate }}</nz-form-label>
           <span>
-            <div *ngIf="item.type === 'checkbox'" class="option-item">
+            <ng-container *ngIf="item.type === 'checkbox'">
               <label
                 (ngModelChange)="onChange()"
                 [(ngModel)]="connectOption[item.field]"
@@ -14,28 +17,22 @@
               >
                 {{ item.label | translate }}
               </label>
-            </div>
+            </ng-container>
             <ng-container *ngIf="item.type === 'select'">
-              <div class="option-item">
-                <nz-form-label>{{ item.label | translate }}</nz-form-label>
                 <nz-select
                   (ngModelChange)="onChange()"
                   [(ngModel)]="connectOption[item.field]"
                   [name]="item.field"
                   style="width: 100%"
                 >
-
                   <nz-option
                     *ngFor="let option of item.options"
                     [nzLabel]="option.label | translate"
                     [nzValue]="option.value"
                   ></nz-option>
                 </nz-select>
-              </div>
             </ng-container>
             <ng-container *ngIf="item.type === 'radio'">
-              <div class="option-item">
-                <nz-form-label style="margin-right: 10px">{{ item.label | translate }}</nz-form-label>
                 <nz-radio-group
                   (ngModelChange)="onChange()"
                   [(ngModel)]="connectOption[item.field]"
@@ -47,10 +44,9 @@
                     nz-radio
                   >{{ option.label | translate }}</label>
                 </nz-radio-group>
-              </div>
             </ng-container>
           </span>
-        </ng-container>
+        </nz-form-item>
       </div>
     </nz-collapse-panel>
   </nz-collapse>
