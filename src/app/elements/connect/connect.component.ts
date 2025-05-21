@@ -16,7 +16,7 @@ import {launchLocalApp} from '@app/utils/common';
 import {ActivatedRoute} from '@angular/router';
 import {ElementConnectDialogComponent} from '@app/elements/connect/connect-dialog/connect-dialog.component';
 import {NzModalService} from 'ng-zorro-antd';
-import { ElementDownloadDialogComponent } from './download-dialog/download-dialog.component'
+import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component'
 
 
 @Component({

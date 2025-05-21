@@ -1,12 +1,12 @@
-import {Component, Inject, OnInit} from '@angular/core';
+import {Component, OnInit} from '@angular/core';
 import {HttpService, LogService, NavService, SettingService, ViewService} from '@app/services';
 import {DataStore} from '@app/globals';
 import {CookieService} from 'ngx-cookie-service';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
-import {MAT_DIALOG_DATA, MatDialog, MatDialogRef} from '@angular/material';
 import {Nav, View} from '@app/model';
 import {I18nService} from '@app/services/i18n';
 import {useTheme} from '@app/utils/useTheme';
+import {NzModalService, NzModalRef} from 'ng-zorro-antd';
 
 @Component({
   selector: 'elements-nav',
@@ -23,7 +23,7 @@ export class ElementNavComponent implements OnInit {
 
   constructor(private _http: HttpService,
               private _logger: LogService,
-              private _dialog: MatDialog,
+              private _dialog: NzModalService,
               private _navSvc: NavService,
               private _cookie: CookieService,
               private _i18n: I18nService,
@@ -103,39 +103,36 @@ export class ElementNavComponent implements OnInit {
             id: 'General',
             name: this._i18n.instant('General'),
             click: () => {
-              this._dialog.open(
-                ElementSettingComponent,
-                {
-                  height: 'auto',
-                  width: '500px',
-                  data: {type: 'general', name: 'General'}
-                });
-            },
+              this._dialog.create({
+                nzTitle: this._i18n.instant('General'),
+                nzContent: ElementSettingComponent,
+                nzWidth: '500px',
+                nzComponentParams: {type: 'general', name: 'General'}
+              });
+            }
           },
           {
             id: 'GUI',
             name: this._i18n.instant('GUI'),
             click: () => {
-              this._dialog.open(
-                ElementSettingComponent,
-                {
-                  height: 'auto',
-                  width: '500px',
-                  data: {type: 'gui', name: 'GUI'}
-                });
+              this._dialog.create({
+                nzTitle: this._i18n.instant('GUI'),
+                nzContent: ElementSettingComponent,
+                nzWidth: '500px',
+                nzComponentParams: {type: 'gui', name: 'GUI'}
+              });
             }
           },
           {
             id: 'CLI',
             name: this._i18n.instant('CLI'),
             click: () => {
-              this._dialog.open(
-                ElementSettingComponent,
-                {
-                  height: 'auto',
-                  width: '500px',
-                  data: {type: 'cli', name: 'GUI'}
-                });
+              this._dialog.create({
+                nzTitle: this._i18n.instant('CLI'),
+                nzContent: ElementSettingComponent,
+                nzWidth: '500px',
+                nzComponentParams: {type: 'cli', name: 'CLI'}
+              });
             }
           }
         ]
@@ -230,8 +227,8 @@ export class ElementNavComponent implements OnInit {
 })
 export class ChangLanWarningDialogComponent implements OnInit {
 
-  constructor(public dialogRef: MatDialogRef<ChangLanWarningDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any) {
+  constructor(public dialogRef: NzModalRef<ChangLanWarningDialogComponent>,
+  ) {
   }
 
   ngOnInit() {

@@ -1,102 +1,143 @@
-<h1 mat-dialog-title>
-  {{ (data.type === 'cli' ? 'CLI' : data.name) | translate }}
-</h1>
-
-<div *ngIf="type === 'general'">
-  <mat-form-field>
-    <mat-select [(value)]="setting.basic.is_async_asset_tree"
-                placeholder="{{'Load tree async'| translate }}">
-      <mat-option *ngFor="let s of boolChoices" [value]="s.value">{{s.name| translate}}</mat-option>
-    </mat-select>
-  </mat-form-field>
-</div>
-<div *ngIf="type === 'gui'">
-  <mat-form-field>
-    <mat-select [(value)]="setting.graphics.rdp_resolution"
-                placeholder="{{'RDP resolution'| translate}}">
-      <mat-option *ngFor="let s of resolutionsOptions" [value]="s.value">
-        {{s.label}}
-      </mat-option>
-    </mat-select>
-  </mat-form-field>
-
-  <mat-form-field>
-    <mat-select [(value)]="setting.graphics.rdp_smart_size"
-                placeholder="{{'RDP smart size'| translate}}">
-      <mat-option *ngFor="let s of rdpSmartSizeOptions" [value]="s.value">
-        {{s.label}}
-      </mat-option>
-    </mat-select>
-  </mat-form-field>
-
-  <mat-form-field>
-    <mat-select [(value)]="setting.graphics.rdp_color_quality"
-                placeholder="{{'RDP color quality'| translate}}">
-      <mat-option *ngFor="let s of colorQualityOptions" [value]="s.value">
-        {{s.label}}
-      </mat-option>
-    </mat-select>
-  </mat-form-field>
-
-  <mat-form-field>
-    <label class="field-label" style="padding-bottom: 7px;">
-      {{'Keyboard layout'| translate }}
-    </label>
-    <mat-select [(value)]="setting.graphics.keyboard_layout">
-      <mat-option *ngFor="let item of keyboardLayoutOptions" [value]="item.value">
-        {{item.label}}
-      </mat-option>
-    </mat-select>
-  </mat-form-field>
-
-  <div *ngIf="hasLicense()">
-    <label class="field-label">{{ 'RDP client options' | translate }}</label>
-    <section>
-      <mat-checkbox [(ngModel)]="rdpClientConfig.full_screen">
-        {{ 'Full screen'| translate}}
-      </mat-checkbox>
-      <mat-checkbox [(ngModel)]="rdpClientConfig.multi_screen" style="padding-left: 20px">
-        {{ 'Multi Screen'| translate}}
-      </mat-checkbox>
-      <mat-checkbox [(ngModel)]="rdpClientConfig.drives_redirect" style="padding-left: 20px">
-        {{ 'Driver redirect'| translate}}
-      </mat-checkbox>
-    </section>
-
-    <label class="field-label space">{{ 'Applet connect method' | translate }}</label>
-    <mat-radio-group
-      [(ngModel)]="setting.graphics.applet_connection_method"
-      aria-label="Select an option"
-    >
-      <mat-radio-button value="web">Web</mat-radio-button>
-      <mat-radio-button style="padding-left: 20px" value="client">{{ 'Client' | translate }}</mat-radio-button>
-    </mat-radio-group>
+<div class="setting">
+  <div *ngIf="type === 'general'">
+    <nz-form-item>
+      <nz-form-label [nzSpan]="8">
+        {{ 'Load tree async'| translate }}
+      </nz-form-label>
+      <nz-form-control [nzSpan]="14">
+        <nz-select [(ngModel)]="setting.basic.is_async_asset_tree">
+          <nz-option *ngFor="let s of boolChoices" [nzLabel]="s.name| translate" [nzValue]="s.value"></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
   </div>
+  <div *ngIf="type === 'gui'">
+    <nz-form-item>
+      <nz-form-label [nzSpan]="8">
+        {{ 'RDP resolution'| translate }}
+      </nz-form-label>
+      <nz-form-control [nzSpan]="14">
+        <nz-select name="rdp_resolution" [(ngModel)]="setting.graphics.rdp_resolution">
+          <nz-option *ngFor="let s of resolutionsOptions" [nzLabel]="s.label" [nzValue]="s.value"></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label [nzSpan]="8">
+        {{ 'RDP smart size'| translate }}
+      </nz-form-label>
+      <nz-form-control [nzSpan]="14">
+        <nz-select name="rdp_smart_size" [(ngModel)]="setting.graphics.rdp_smart_size">
+          <nz-option *ngFor="let s of rdpSmartSizeOptions" [nzLabel]="s.label" [nzValue]="s.value"></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label [nzSpan]="8">
+        {{ 'RDP color quality'| translate }}
+      </nz-form-label>
+      <nz-form-control [nzSpan]="14">
+        <nz-select
+          name="rdp_color_quality"
+          [(ngModel)]="setting.graphics.rdp_color_quality"
+        >
+          <nz-option *ngFor="let s of colorQualityOptions" [nzLabel]="s.label" [nzValue]="s.value"></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label [nzSpan]="8">
+        {{ 'Keyboard layout'| translate }}
+      </nz-form-label>
+      <nz-form-control [nzSpan]="14">
+        <nz-select
+          [(ngModel)]="setting.graphics.keyboard_layout">
+          <nz-option *ngFor="let item of keyboardLayoutOptions" [nzLabel]="item.label"
+                     [nzValue]="item.value"
+          ></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <div *ngIf="hasLicense()">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">{{ 'RDP client options' | translate }}</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <label [(ngModel)]="rdpClientConfig.full_screen" nz-checkbox>
+            {{ 'Full screen'| translate }}
+          </label>
+          <label [(ngModel)]="rdpClientConfig.multi_screen" nz-checkbox>
+            {{ 'Multi Screen'| translate }}
+          </label>
+          <label [(ngModel)]="rdpClientConfig.drives_redirect" nz-checkbox>
+            {{ 'Driver redirect'| translate }}
+          </label>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">{{ 'Applet connect method' | translate }}</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <nz-radio-group
+            name="applet_connection_method"
+            [(ngModel)]="setting.graphics.applet_connection_method"
+          >
+            <label nz-radio nzValue="web">Web</label>
+            <label nz-radio nzValue="client">{{ 'Client' | translate }}</label>
+          </nz-radio-group>
+        </nz-form-control>
+      </nz-form-item>
+    </div>
+  </div>
+
+  <div *ngIf="type === 'cli'">
+    <nz-form-item>
+      <nz-form-label [nzSpan]="8">
+        {{ 'CLI font size'| translate }}
+      </nz-form-label>
+      <nz-form-control [nzSpan]="14">
+        <nz-input-number
+          [(ngModel)]="setting.command_line.character_terminal_font_size"
+          [nzMax]="60" [nzMin]="5" [nzPlaceHolder]="'CLI font size'| translate"
+        ></nz-input-number>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label [nzSpan]="8">
+        {{ 'Backspace as Ctrl+H'| translate }}
+      </nz-form-label>
+      <nz-form-control [nzSpan]="14">
+        <nz-select
+          name="is_backspace_as_ctrl_h"
+          [(ngModel)]="setting.command_line.is_backspace_as_ctrl_h"
+          nzPlaceHolder="{{'Backspace as Ctrl+H'| translate }}"
+        >
+          <nz-option *ngFor="let s of boolChoices" [nzLabel]="s.name| translate" [nzValue]="s.value"></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label [nzSpan]="8">
+        {{ 'Right mouse quick paste'| translate }}
+      </nz-form-label>
+      <nz-form-control [nzSpan]="14">
+        <nz-select
+          name="is_right_click_quickly_paste"
+          [(ngModel)]="setting.command_line.is_right_click_quickly_paste"
+          nzPlaceHolder="{{'Right mouse quick paste'| translate }}"
+        >
+          <nz-option *ngFor="let s of boolChoices" [nzLabel]="s.name| translate" [nzValue]="s.value"></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+  </div>
+
 </div>
-
-<div *ngIf="type === 'cli'">
-  <mat-form-field>
-    <input [(ngModel)]="setting.command_line.character_terminal_font_size" matInput
-           max="60" min="5" name="fontSize" placeholder='{{"CLI font size"| translate}}' type="number">
-  </mat-form-field>
-
-  <mat-form-field>
-    <mat-select [(value)]="setting.command_line.is_backspace_as_ctrl_h"
-                placeholder="{{'Backspace as Ctrl+H'| translate }}">
-      <mat-option *ngFor="let s of boolChoices" [value]="s.value">{{s.name| translate}}</mat-option>
-    </mat-select>
-  </mat-form-field>
-
-  <mat-form-field>
-    <mat-select [(value)]="setting.command_line.is_right_click_quickly_paste"
-                placeholder="{{'Right mouse quick paste'| translate }}">
-      <mat-option *ngFor="let s of boolChoices" [value]="s.value">{{s.name| translate}}</mat-option>
-    </mat-select>
-  </mat-form-field>
-</div>
-
-
-<div style="float: right; padding-top: 20px">
-  <button (click)="onNoClick()" mat-raised-button>{{"Cancel"| translate}}</button>
-  <button (click)="onSubmit()" color="primary" mat-raised-button>{{"Confirm"| translate}}</button>
-</div>
+<!--<div style="float: right; padding-top: 20px">-->
+<!--  <button (click)="onNoClick()" nz-button>{{ 'Cancel'| translate }}</button>-->
+<!--  <button (click)="onSubmit()" nz-button nzType="primary">{{ 'Confirm'| translate }}</button>-->
+<!--</div>-->
