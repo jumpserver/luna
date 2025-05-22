@@ -255,11 +255,12 @@ export class ElementsPartsComponent implements OnInit {
   }
 
   getUserLang() {
-    const userLangEN = document.cookie.indexOf('django_language=en') || 'en-US';
-    if (userLangEN === -1) {
-      return 'zh-hans';
+    const userLangZh = document.cookie.indexOf('django_language=zh-hans');
+
+    if (userLangZh) {
+      return 'zh-hans'
     } else {
-      return 'en-US';
+      return 'en';
     }
   }
 
