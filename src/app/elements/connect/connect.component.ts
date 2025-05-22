@@ -2,9 +2,9 @@ import {Component, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angula
 import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {
+  AlertService,
   AppService,
   ConnectTokenService,
-  DialogService,
   HttpService,
   I18nService,
   LogService,
@@ -13,10 +13,9 @@ import {
 } from '@app/services';
 import {Account, Asset, ConnectData, ConnectionToken, View} from '@app/model';
 import {launchLocalApp} from '@app/utils/common';
-import {ActivatedRoute} from '@angular/router';
 import {ElementConnectDialogComponent} from '@app/elements/connect/connect-dialog/connect-dialog.component';
 import {NzModalService} from 'ng-zorro-antd';
-import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component'
+import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
 
 
 @Component({
@@ -33,10 +32,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   preConnectData: ConnectData;
 
   constructor(private _appSvc: AppService,
-              private _dialogAlert: DialogService,
-              private _modal: NzModalService,
+              private _alert: AlertService,
+              private _dialog: NzModalService,
               private _logger: LogService,
-              private _route: ActivatedRoute,
               private _http: HttpService,
               private _connectTokenSvc: ConnectTokenService,
               private _i18n: I18nService,
@@ -122,11 +120,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
    * @param asset
    * @param splitConnect 是否分屏连接
    */
-  async connectAsset(asset, splitConnect = false) {
-    console.log('Connect asset');
+  async connectAsset(asset: Asset, splitConnect = false) {
     if (!asset) {
-      const msg = await this._i18n.t('Asset not found or You have no permission to access it, please refresh asset tree');
-      await this._dialogAlert.alert(msg);
+      const msg = this._i18n.instant('Asset not found or You have no permission to access it, please refresh asset tree');
+      const title = await this._i18n.instant('Permission expired');
+      await this._alert.error(msg, title);
       return;
     }
 
@@ -192,10 +190,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     launchLocalApp(url, () => {
       const downLoadStatus = localStorage.getItem('hasDownLoadApp');
       if (downLoadStatus !== '1') {
-        this._modal.create({
+        this._dialog.create({
           nzTitle: this._i18n.instant('Download client'),
           nzContent: ElementDownloadDialogComponent,
-          nzFooter: null,
+          nzOnOk: (cmp => cmp.onConfirm()),
+          nzOnCancel: (cmp => cmp.onCancel()),
         });
       }
     });
@@ -272,7 +271,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
     this._appSvc.connectDialogShown = true;
 
-    const dialogRef = this._modal.create({
+    const dialogRef = this._dialog.create({
       nzTitle: this._i18n.instant('Connect') + ' - ' + asset.name,
       nzContent: ElementConnectDialogComponent,
       nzWidth: dialogWidth,

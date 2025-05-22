@@ -7,7 +7,7 @@ import {SettingService} from './setting';
 import {ViewService} from './view';
 import {OrganizationService} from './organization';
 import {I18nService} from './i18n';
-import {DialogService} from './dialog/dialog.service';
+import {AlertService} from './dialog/alert.service';
 import {ConnectTokenService} from './connect-token/';
 import {FaceService} from '@app/services/face';
 import {IframeCommunicationService} from './communication';
@@ -30,7 +30,7 @@ export {OrganizationService} from './organization';
 
 export {I18nService};
 
-export {DialogService};
+export {AlertService};
 
 export {ConnectTokenService};
 
@@ -49,7 +49,7 @@ export const AllServices = [
   ViewService,
   OrganizationService,
   I18nService,
-  DialogService,
+  AlertService,
   ConnectTokenService,
   FaceService,
   IframeCommunicationService

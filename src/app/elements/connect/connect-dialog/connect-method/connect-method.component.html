@@ -42,8 +42,6 @@
     </nz-tabset>
   </div>
   <ng-template #empty>
-    <div class="empty">
-      {{ "No available connect method" | translate }}
-    </div>
+    <nz-alert nzType="error" [nzMessage]="this._i18n.instant('No available connect method')"></nz-alert>
   </ng-template>
 </div>

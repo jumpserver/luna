@@ -1,6 +1,6 @@
-<nz-form-item *ngIf="accounts.length > 0; else empty" class="select-user form-field" style="width: 100%;">
+<nz-form-item class="select-user form-field" style="width: 100%;">
   <nz-form-label class="zone-label" nzFor='account' nzNoColon>{{ "Select account" | translate }}</nz-form-label>
-  <nz-form-control style="width: 100%; ">
+  <nz-form-control style="width: 100%; " *ngIf="accounts.length > 0; else empty">
     <nz-select
       (ngModelChange)="handleAccountChanged()"
       [(ngModel)]="accountSelected"
@@ -27,7 +27,7 @@
 </nz-form-item>
 
 <ng-template #empty>
-  <div class="not-account">{{ 'No account available'| translate }}</div>
+  <nz-alert nzType="error" [nzMessage]="_i18n.instant('No available accounts')"></nz-alert>
 </ng-template>
 
 <nz-form-item *ngIf="showManualUsernameInput" class="form-field username">
@@ -53,25 +53,25 @@
   class="form-field password"
 >
   <nz-form-label class="zone-label" nzFor='password' nzNoColon>{{ "Password" | translate }}</nz-form-label>
-    <nz-form-control class="input-field">
-      <nz-input-group [nzSuffix]="suffixTemplate">
-        <input
-          #password
-          [(ngModel)]="manualAuthInfo.secret"
-          [autocomplete]="hidePassword ? 'new-password' : 'off'"
-          [autofocus]='manualAuthInfo.username? true : null'
-          [type]="hidePassword ? 'password' : 'text'"
-          name="password"
-          nz-input
-        >
-        <ng-template #suffixTemplate>
-          <i (click)="hidePassword = !hidePassword" [nzType]="hidePassword ? 'eye-invisible' : 'eye'" nz-icon></i>
-        </ng-template>
-      </nz-input-group>
-      <label *ngIf="!rememberAuthDisabled" [(ngModel)]="manualAuthInfo.rememberAuth" class="remember-auth" nz-checkbox>
-        {{ "Remember password" | translate }}
-      </label>
-    </nz-form-control>
+  <nz-form-control class="input-field">
+    <nz-input-group [nzSuffix]="suffixTemplate">
+      <input
+        #password
+        [(ngModel)]="manualAuthInfo.secret"
+        [autocomplete]="hidePassword ? 'new-password' : 'off'"
+        [autofocus]='manualAuthInfo.username? true : null'
+        [type]="hidePassword ? 'password' : 'text'"
+        name="password"
+        nz-input
+      >
+      <ng-template #suffixTemplate>
+        <i (click)="hidePassword = !hidePassword" [nzType]="hidePassword ? 'eye-invisible' : 'eye'" nz-icon></i>
+      </ng-template>
+    </nz-input-group>
+    <label *ngIf="!rememberAuthDisabled" [(ngModel)]="manualAuthInfo.rememberAuth" class="remember-auth" nz-checkbox>
+      {{ "Remember password" | translate }}
+    </label>
+  </nz-form-control>
 
 </nz-form-item>
 

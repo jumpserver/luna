@@ -1,5 +1,5 @@
 <div>
-  <div *ngIf="!protocols || protocols.length === 0">
+  <div *ngIf="!protocols || protocols.length === 0;">
     <nz-alert [nzMessage]="'No protocol available' | translate" nzType="error"></nz-alert>
   </div>
   <div *ngIf="protocols && protocols.length > 0">
@@ -57,7 +57,7 @@
       <div class="connect-btn-wrap" style="margin: 10px 0 0 0; width: 100%">
         <button
           (click)="onConfirm()"
-          [disabled]="connectButtonInfo().disabled"
+          [disabled]="disabled"
           [nzLoading]="false"
           nz-button
           nzType="primary"
@@ -68,7 +68,7 @@
           ({{ 'Current online' | translate }}: {{ onlineNum === null ? '- ' : onlineNum }})
         </span>
         </button>
-        <label>{{ connectButtonInfo().reason }}</label>
+        <nz-alert *ngIf="disabledReason" nzType="error" [nzMessage]="disabledReason"></nz-alert>
       </div>
     </div>
   </div>

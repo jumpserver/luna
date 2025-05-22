@@ -32,6 +32,8 @@ export class ElementConnectDialogComponent implements OnInit {
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
   public accountOrUsernameChanged = new BehaviorSubject(false);
   public onlineNum: number = null;
+  public disabled: boolean = false;
+  public disabledReason: string = '';
 
   constructor(
     private _settingSvc: SettingService,
@@ -46,13 +48,38 @@ export class ElementConnectDialogComponent implements OnInit {
 
   ngOnInit() {
     this.protocols = this.getProtocols();
-    if (this.protocols.length === 0) {
+    const valid = this.validate();
+
+    if (!valid) {
       return;
     }
+
     this.setDefaults();
     this.accountOrUsernameChanged.pipe(debounceTime(500)).subscribe(_ => {
       this.getOnlineNum();
     });
+  }
+
+  validate() {
+    let disabled = false;
+    let transKey = '';
+
+    if (this.protocols.length === 0) {
+      disabled = true;
+      transKey = 'connectDisabledTipsNoProtocol';
+    } else if (this.accounts.length === 0) {
+      disabled = true;
+      transKey = 'connectDisabledTipsNoAccount';
+    } else if (this.connectMethod && this.connectMethod.disabled === true) {
+      disabled = true;
+      transKey = 'connectDisabledTipsMethodDisabled';
+    } else if (!this.connectMethod) {
+      disabled = true;
+      transKey = 'connectDisabledTipsNoConnectMethod';
+    }
+    this.disabled = disabled;
+    this.disabledReason = transKey ? this._i18n.instant(transKey) : '';
+    return !disabled;
   }
 
   getProtocols() {

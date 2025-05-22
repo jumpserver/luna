@@ -32,7 +32,7 @@ import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {ElementConnectDialogComponent} from './elements/connect/connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './elements/connect/download-dialog/download-dialog.component';
 import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/acl-dialog.component';
-import {ElementDialogAlertComponent} from '@app/services/dialog/dialog.service';
+import {ElementDialogAlertComponent} from '@app/services/dialog/alert.service';
 import {ClipboardService} from 'ngx-clipboard';
 import {ElementsReplayMp4Component} from './elements/replay/mp4/mp4.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';

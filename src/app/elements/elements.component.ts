@@ -11,7 +11,7 @@ import {ElementUserFileComponent} from './profile/profile.component';
 import {ElementTermComponent} from './term/term.component';
 import {ChangLanWarningDialogComponent, ElementNavComponent} from './nav/nav.component';
 import {ElementIframeComponent} from './iframe/iframe.component';
-import {ElementDialogAlertComponent} from '@app/services/dialog/dialog.service';
+import {ElementDialogAlertComponent} from '@app/services/dialog/alert.service';
 import {ElementConnectComponent} from './connect/connect.component';
 import {ElementConnectDialogComponent} from './connect/connect-dialog/connect-dialog.component';
 import {ElementSettingComponent} from './setting/setting.component';

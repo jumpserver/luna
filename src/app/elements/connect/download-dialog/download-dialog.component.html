@@ -1,14 +1,8 @@
-
 <div class="content">
   <p>
-    {{ "Not found jumpserver client, download it" | translate}}
+    {{ "Not found jumpserver client, download it" | translate }}
   </p>
-  <label nz-checkbox name="auto-login" [(ngModel)]="hasDownLoad">
+  <label nz-checkbox name="auto-login" [(ngModel)]="ignoreRemind">
     {{ "Don't prompt again" | translate }}
   </label>
-</div>
-
-<div class="ant-modal-footer" style="margin: 36px 0 0 0;">
-  <button nz-button (click)="onCancel()">{{'Cancel'| translate}}</button>
-  <button nz-button nzType="primary" [nzLoading]="false" (click)="onConfirm()">{{'Download'| translate}}</button>
 </div>

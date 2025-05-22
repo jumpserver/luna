@@ -1,5 +1,4 @@
 import {Component, Input, OnInit} from '@angular/core';
-import {NzModalRef} from 'ng-zorro-antd';
 import {HttpService, SettingService} from '@app/services';
 import {GlobalSetting, Setting} from '@app/model';
 import {I18nService} from '@app/services/i18n';
@@ -14,7 +13,6 @@ export class ElementSettingComponent implements OnInit {
   public boolChoices: any[];
   @Input() public name: string;
   @Input() public type: string = 'general';
-
   keyboardLayoutOptions: any[];
   resolutionsOptions: any[];
   rdpSmartSizeOptions: any[];
@@ -27,8 +25,7 @@ export class ElementSettingComponent implements OnInit {
     drives_redirect: false,
   };
 
-  constructor(public dialogRef: NzModalRef,
-              private _i18n: I18nService,
+  constructor(private _i18n: I18nService,
               private _http: HttpService,
               private settingSrv: SettingService) {
     this.boolChoices = [
@@ -80,10 +77,5 @@ export class ElementSettingComponent implements OnInit {
   onSubmit() {
     this.setRdpClientConfig();
     this.settingSrv.save();
-    this.dialogRef.close();
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
   }
 }

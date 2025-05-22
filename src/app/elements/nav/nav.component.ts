@@ -6,7 +6,7 @@ import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {Nav, View} from '@app/model';
 import {I18nService} from '@app/services/i18n';
 import {useTheme} from '@app/utils/useTheme';
-import {NzModalService, NzModalRef} from 'ng-zorro-antd';
+import {NzModalRef, NzModalService} from 'ng-zorro-antd';
 
 @Component({
   selector: 'elements-nav',
@@ -107,7 +107,8 @@ export class ElementNavComponent implements OnInit {
                 nzTitle: this._i18n.instant('General'),
                 nzContent: ElementSettingComponent,
                 nzWidth: '500px',
-                nzComponentParams: {type: 'general', name: 'General'}
+                nzComponentParams: {type: 'general', name: 'General'},
+                nzOnOk: (cmp) => cmp.onSubmit()
               });
             }
           },
@@ -119,7 +120,8 @@ export class ElementNavComponent implements OnInit {
                 nzTitle: this._i18n.instant('GUI'),
                 nzContent: ElementSettingComponent,
                 nzWidth: '500px',
-                nzComponentParams: {type: 'gui', name: 'GUI'}
+                nzComponentParams: {type: 'gui', name: 'GUI'},
+                nzOnOk: (cmp) => cmp.onSubmit()
               });
             }
           },
@@ -131,7 +133,8 @@ export class ElementNavComponent implements OnInit {
                 nzTitle: this._i18n.instant('CLI'),
                 nzContent: ElementSettingComponent,
                 nzWidth: '500px',
-                nzComponentParams: {type: 'cli', name: 'CLI'}
+                nzComponentParams: {type: 'cli', name: 'CLI'},
+                nzOnOk: (cmp) => cmp.onSubmit()
               });
             }
           }

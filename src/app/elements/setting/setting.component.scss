@@ -20,12 +20,17 @@
       width: 100%;
     }
 
+    .ant-checkbox-wrapper + .ant-checkbox-wrapper {
+      margin-left: 0;
+      line-height: 1.5;
+    }
+
     .ant-form-item {
       margin-bottom: 5px;
     }
 
     .ant-form-item-label {
-      line-height: 40px;
+      line-height: 1.5;
     }
 
   }

@@ -1,89 +1,89 @@
 <div #contentWindow>
-    <app-face-monitor></app-face-monitor>
-    <div class="terminal-connect" *ngIf="view && view.connectMethod.component === 'koko'">
-        <div *ngIf="view.connectMethod.value === 'web_sftp'" style="height: 100%; width: 100%">
-            <elements-content-window *ngIf="view" [view]="view"></elements-content-window>
-        </div>
+  <app-face-monitor></app-face-monitor>
+  <div class="terminal-connect" *ngIf="view && view.connectMethod.component === 'koko'">
+    <div *ngIf="view.connectMethod.value === 'web_sftp'" style="height: 100%; width: 100%">
+      <elements-content-window *ngIf="view" [view]="view"></elements-content-window>
+    </div>
 
-        <div *ngIf="view.connectMethod.value === 'web_cli'" style="height: 100%; width: 100%">
-            <mat-card class="header-card">
-                <mat-card-header style="align-items: center">
-                    <mat-card-title>
-                        <mat-icon [matTooltip]="_i18n.instant('Close')" (click)="handleCloseConnect()">close</mat-icon>
-                        {{ protocol.toUpperCase() }} {{ _i18n.instant('Session') }}
-                    </mat-card-title>
+    <div *ngIf="view.connectMethod.value === 'web_cli'" style="height: 100%; width: 100%">
+      <div class="card-header">
+        <div class="card-header-left">
+          <div class="card-title">
+            <span nz-icon nzType="close" nzTheme="outline" (click)="handleCloseConnect()"></span>
+            <span class="card-title-text">
+                            {{ protocol.toUpperCase() }} {{ _i18n.instant('Session') }}
+                        </span>
+          </div>
 
-                    <mat-divider [vertical]="true"></mat-divider>
+          <nz-divider class="divider" nzType="vertical"></nz-divider>
 
-                    <div class="info-section">
-                        <div class="top-part">
-                            <div class="desc">
-                                <div style="font-weight: 400; margin-right: 5px">
-                                    {{ _i18n.instant('asset') }}:
-                                </div>
+          <div class="info-section">
+                        <span class="top-part">
+                            <label>
+                                {{ _i18n.instant('asset') }}:
+                            </label>
+                            <span class="value">
                                 {{ assetName }}
-                            </div>
-                        </div>
+                            </span>
+                        </span>
 
-                        <div class="bottom-part">
+            <span class="bottom-part">
                             <div class="desc">
-                                <div style="font-weight: 400; margin-right: 5px">
+                                <label>
                                     {{ _i18n.instant('ConnectionTime') }}:
-                                </div>
-                                {{ startTime.toLocaleString() }}
+                                </label>
+                                <span class="value">
+                                    {{ startTime.toLocaleString() }}
+                                </span>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="action-section">
-                        <div class="timer-container">
-                            <div class="timer">
-                                <div [class.active]="isActive" class="status-dot"></div>
-                                <span>{{ totalConnectTime }}</span>
-                            </div>
-                        </div>
-
-                        <div class="actions">
-                            <div class="action-item">
-                                <button mat-icon-button (click)="handleOpenDrawer('setting')"
-                                        *ngIf="protocol !== 'k8s'">
-                                    <mat-icon>settings</mat-icon>
-                                </button>
-                            </div>
-                            <div class="action-item" *ngIf="!isNoneProtocol()">
-                                <button mat-icon-button (click)="handleOpenDrawer('file')">
-                                    <mat-icon>folder</mat-icon>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </mat-card-header>
-            </mat-card>
-
-            <mat-card class="terminal-card">
-                <mat-card-content style="height: 100%">
-                    <elements-connect [direct]="true" (onNewView)="onNewView($event)"
-                                      [ngStyle]="{'display': 'none'}"></elements-connect>
-                    <elements-content-window #contentWindow *ngIf="view" [view]="view"></elements-content-window>
-                </mat-card-content>
-            </mat-card>
+                        </span>
+          </div>
         </div>
+
+        <div class="card-header-right">
+          <div class="action-item">
+            <button nz-button nzType="link" (click)="handleOpenDrawer('setting')"
+                    *ngIf="protocol !== 'k8s'">
+              <span nz-icon nzType="setting" nzTheme="fill"></span>
+            </button>
+          </div>
+          <div class="action-item" *ngIf="!isNoneProtocol()">
+            <button nz-button nzType="link" (click)="handleOpenDrawer('file')">
+              <span nz-icon nzType="folder" nzTheme="fill"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="timer-container">
+        <div class="timer">
+          <div [class.active]="isActive" class="status-dot"></div>
+          <span>{{ totalConnectTime }}</span>
+        </div>
+      </div>
+      <nz-card class="terminal-card">
+        <div class="card-content" style="height: 100%">
+          <elements-connect [direct]="true" (onNewView)="onNewView($event)"
+                            [ngStyle]="{'display': 'none'}"></elements-connect>
+          <elements-content-window #contentWindow *ngIf="view" [view]="view"></elements-content-window>
+        </div>
+      </nz-card>
+    </div>
+  </div>
+
+  <div class="gui" *ngIf="view && view.connectMethod.component === 'lion'">
+    <div class="timer-container">
+      <div class="timer">
+        <div [class.active]="isActive" class="status-dot"></div>
+        <span>{{ totalConnectTime }}</span>
+      </div>
     </div>
 
-    <div class="gui" *ngIf="view && view.connectMethod.component === 'lion'">
-        <div class="timer-container">
-            <div class="timer">
-                <div [class.active]="isActive" class="status-dot"></div>
-                <span>{{ totalConnectTime }}</span>
-            </div>
-        </div>
-
-        <div class="action-icons" [class.show]="showActionIcons">
-            <div class="close-icon" (click)="handleCloseConnect()">
-                <mat-icon [matTooltip]="_i18n.instant('Close')">close</mat-icon>
-            </div>
-        </div>
-
-        <elements-content-window *ngIf="view" [view]="view" style="height: 100%; width: 100%"></elements-content-window>
+    <div class="action-icons" [class.show]="showActionIcons">
+      <div class="close-icon" (click)="handleCloseConnect()">
+        <mat-icon [matTooltip]="_i18n.instant('Close')">close</mat-icon>
+      </div>
     </div>
+
+    <elements-content-window *ngIf="view" [view]="view" style="height: 100%; width: 100%"></elements-content-window>
+  </div>
 </div>
