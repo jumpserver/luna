@@ -1,12 +1,27 @@
-import {Component, Inject, OnInit} from '@angular/core';
+import {Component, Input, OnInit} from '@angular/core';
 import {Asset, ConnectData, ConnectionToken} from '@app/model';
-import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material';
 import {I18nService} from '@app/services/i18n';
 import {HttpService} from '@app/services/http';
 import {ToastrService} from 'ngx-toastr';
 import {HttpErrorResponse} from '@angular/common/http';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {FaceService} from '@app/services/face';
+import {NzModalRef} from 'ng-zorro-antd/modal';
+import {NzModalService} from 'ng-zorro-antd';
+
+interface DialogAction {
+  text: string;
+  type?: 'primary' | 'default';
+  callback: () => void;
+}
+
+interface DialogContent {
+  title: string;
+  message: string;
+  isError?: boolean;
+  actions: DialogAction[];
+  customContent?: any;
+}
 
 @Component({
   selector: 'elements-acl-dialog',
@@ -14,6 +29,7 @@ import {FaceService} from '@app/services/face';
   styleUrls: ['./acl-dialog.component.scss']
 })
 export class ElementACLDialogComponent implements OnInit {
+  @Input() public data: any;
   public asset: Asset;
   public connectInfo: ConnectData;
   public code: string;
@@ -25,17 +41,18 @@ export class ElementACLDialogComponent implements OnInit {
   public tokenAction: string = 'create';
   public tokenID: string;
   private timerCheckTicket: number;
-
   public faceVerifyUrl: SafeResourceUrl;
 
+  content: DialogContent;
 
-  constructor(public dialogRef: MatDialogRef<ElementACLDialogComponent>,
-              private _i18n: I18nService,
-              private _toastr: ToastrService,
-              private _http: HttpService,
-              private sanitizer: DomSanitizer,
-              private faceService: FaceService,
-              @Inject(MAT_DIALOG_DATA) public data: any
+  constructor(
+    public dialogRef: NzModalRef<ElementACLDialogComponent>,
+    public _dialog: NzModalService,
+    private _i18n: I18nService,
+    private _toastr: ToastrService,
+    private _http: HttpService,
+    private sanitizer: DomSanitizer,
+    private faceService: FaceService,
   ) {
   }
 
@@ -59,6 +76,7 @@ export class ElementACLDialogComponent implements OnInit {
 
   ngOnInit() {
     // 创建 Token 的时候，需要传入 Asset 和 ConnectInfo
+    this.content = this.getDialogContent(this.data.code);
     this.asset = this.data.asset;
     this.connectInfo = this.data.connectInfo;
     this.code = this.data.code;
@@ -244,5 +262,155 @@ export class ElementACLDialogComponent implements OnInit {
         }
       );
     }, 3000);
+  }
+
+  private getDialogContent(code: string): DialogContent {
+    const vm = this;
+    const contentMap: { [key: string]: DialogContent } = {
+      'acl_reject': {
+        title: 'Login reminder',
+        message: 'ACL reject login asset',
+        isError: true,
+        actions: [{
+          text: 'Close',
+          type: 'primary',
+          callback: () => vm.closeDialog()
+        }]
+      },
+      'acl_review': {
+        title: 'Login reminder',
+        message: 'Need review for login asset',
+        actions: [
+          {
+            text: 'Cancel',
+            callback: () => vm.onCancelReview()
+          },
+          {
+            text: 'Confirm',
+            type: 'primary',
+            callback: () => vm.onConfirmReview()
+          }
+        ]
+      },
+      'acl_face_online': {
+        title: 'Login reminder',
+        message: 'Face online required',
+        actions: [
+          {
+            text: 'Cancel',
+            callback: () => vm.onCancelFaceVerify()
+          },
+          {
+            text: 'Confirm',
+            type: 'primary',
+            callback: () => vm.onConfirmFaceOnline()
+          }
+        ]
+      },
+      'acl_face_verify': {
+        title: 'Login reminder',
+        message: 'Face verify required',
+        actions: [
+          {
+            text: 'Cancel',
+            callback: () => vm.onCancelFaceVerify()
+          },
+          {
+            text: 'Confirm',
+            type: 'primary',
+            callback: () => vm.onConfirmFaceVerify()
+          }
+        ]
+      },
+      'acl_face_online_not_supported': {
+        title: 'Login reminder',
+        message: this.data.errorDetail,
+        isError: true,
+        actions: [{
+          text: 'Close',
+          callback: () => vm.closeDialog()
+        }]
+      },
+      'no_face_feature': {
+        title: 'Login reminder',
+        message: 'No facial features',
+        isError: true,
+        customContent: {
+          type: 'link',
+          link: '/ui/#/profile/index',
+          linkText: 'Go to profile'
+        },
+        actions: [{
+          text: 'Close',
+          callback: () => vm.closeDialog()
+        }]
+      },
+      'ticket_review_pending': {
+        title: 'Login reminder',
+        message: 'Ticket review pending for login asset',
+        customContent: {
+          type: 'ticket',
+          assignees: this.data.ticketAssignees,
+          ticketUrl: this.data.ticketDetailPageURL
+        },
+        actions: [
+          {
+            text: 'Cancel',
+            callback: () => vm.onCancelWait()
+          },
+          {
+            text: 'Copy link',
+            type: 'primary',
+            callback: () => vm.onCopySuccess(this.data.ticketDetailPageURL)
+          }
+        ]
+      },
+      'ticket_review_rejected': {
+        title: 'Login reminder',
+        message: 'Ticket review rejected for login asset',
+        isError: true,
+        actions: [{
+          text: 'Close',
+          callback: () => vm.closeDialog()
+        }]
+      },
+      'ticket_review_closed': {
+        title: 'Login reminder',
+        message: 'Ticket review closed for login asset',
+        isError: true,
+        actions: [{
+          text: 'Close',
+          callback: () => vm.closeDialog()
+        }]
+      },
+      'perm_account_invalid': {
+        title: 'Login reminder',
+        message: 'Account not found',
+        isError: true,
+        actions: [{
+          text: 'Close',
+          callback: () => vm.closeDialog()
+        }]
+      },
+      'other': {
+        title: 'Login reminder',
+        message: this.data.otherError,
+        isError: true,
+        actions: [{
+          text: 'Close',
+          callback: () => vm.closeDialog()
+        }]
+      }
+    };
+
+    return contentMap[code] || {
+      title: 'Login reminder',
+      message: this.data.errorDetail,
+      isError: true,
+      actions: [{
+        text: 'Close',
+        callback: () => vm.closeDialog()
+      }]
+    };
   }
 }

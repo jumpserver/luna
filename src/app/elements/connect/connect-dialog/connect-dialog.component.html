@@ -68,7 +68,7 @@
           ({{ 'Current online' | translate }}: {{ onlineNum === null ? '- ' : onlineNum }})
         </span>
         </button>
-        <nz-alert *ngIf="disabledReason" nzType="error" [nzMessage]="disabledReason"></nz-alert>
+        <nz-alert *ngIf="disabledReason" nzType="error" [nzMessage]="disabledReason" nzShowIcon></nz-alert>
       </div>
     </div>
   </div>
