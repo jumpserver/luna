@@ -1,7 +1,6 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {Account, Asset, ConnectionToken, Endpoint, View} from '@app/model';
 import {ConnectTokenService, HttpService, I18nService, SettingService} from '@app/services';
-import {ToastrService} from 'ngx-toastr';
 
 import {Command, InfoItem} from '../guide/model';
 import {User} from '@app/globals';

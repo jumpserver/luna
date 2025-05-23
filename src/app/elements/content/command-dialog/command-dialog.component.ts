@@ -1,12 +1,14 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, Input, OnInit} from '@angular/core';
 import {HttpService, I18nService} from '@app/services';
 import {NzModalRef} from 'ng-zorro-antd';
+import {NzNotificationService} from 'ng-zorro-antd/notification';
 
 @Component({
   selector: 'elements-command-dialog',
   templateUrl: './command-dialog.component.html',
 })
 export class ElementCommandDialogComponent implements OnInit {
+  @Input() data = {command: ''};
   public name = '';
   public module = 'shell';
   public commandModules = [
@@ -19,6 +21,7 @@ export class ElementCommandDialogComponent implements OnInit {
   constructor(public dialogRef: NzModalRef<ElementCommandDialogComponent>,
               private _http: HttpService,
               private _i18n: I18nService,
+              private _toastr: NzNotificationService,
   ) {
   }
 
@@ -37,18 +40,12 @@ export class ElementCommandDialogComponent implements OnInit {
     this._http.addQuickCommand(data).subscribe(
       async () => {
         const msg = await this._i18n.t('Save success');
-        this.snackBar.open(msg, '', {
-          verticalPosition: 'top',
-          duration: 1600
-        });
+        this._toastr.success('' + msg, '', {nzDuration: 2000});
         this.dialogRef.close();
       },
       (error) => {
         const msg = 'name:' + error.error.name;
-        this.snackBar.open(msg, '', {
-          verticalPosition: 'top',
-          duration: 1600
-        });
+        this._toastr.error(msg, '');
       }
     );
   }

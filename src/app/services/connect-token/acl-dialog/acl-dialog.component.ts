@@ -2,12 +2,11 @@ import {Component, Input, OnInit} from '@angular/core';
 import {Asset, ConnectData, ConnectionToken} from '@app/model';
 import {I18nService} from '@app/services/i18n';
 import {HttpService} from '@app/services/http';
-import {ToastrService} from 'ngx-toastr';
 import {HttpErrorResponse} from '@angular/common/http';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {FaceService} from '@app/services/face';
 import {NzModalRef} from 'ng-zorro-antd/modal';
-import {NzModalService} from 'ng-zorro-antd';
+import {NzModalService, NzNotificationService} from 'ng-zorro-antd';
 
 interface DialogAction {
   text: string;
@@ -49,7 +48,7 @@ export class ElementACLDialogComponent implements OnInit {
     public dialogRef: NzModalRef<ElementACLDialogComponent>,
     public _dialog: NzModalService,
     private _i18n: I18nService,
-    private _toastr: ToastrService,
+    private _toastr: NzNotificationService,
     private _http: HttpService,
     private sanitizer: DomSanitizer,
     private faceService: FaceService,
@@ -88,7 +87,7 @@ export class ElementACLDialogComponent implements OnInit {
 
   async onCopySuccess(evt) {
     const msg = await this._i18n.t('Copied');
-    this._toastr.success(msg);
+    this._toastr.success(msg, '');
   }
 
   onCancelReview() {
@@ -113,7 +112,7 @@ export class ElementACLDialogComponent implements OnInit {
                 this.otherError = data.error_message;
               } else {
                 const msg = await this._i18n.t('Face verify success');
-                this._toastr.success(msg);
+                this._toastr.success(msg, '');
                 this.dialogRef.close(connToken);
                 this.faceService.openFaceMonitor();
               }
@@ -157,7 +156,7 @@ export class ElementACLDialogComponent implements OnInit {
                 this.otherError = data.error_message;
               } else {
                 const msg = await this._i18n.t('Face verify success');
-                this._toastr.success(msg);
+                this._toastr.success(msg, '');
                 this.dialogRef.close(connToken);
               }
             }
@@ -246,7 +245,7 @@ export class ElementACLDialogComponent implements OnInit {
           const state = ticket.state.value;
           if (state === 'approved') {
             const msg = await this._i18n.t('Login review approved');
-            this._toastr.success(msg);
+            this._toastr.success(msg, '');
             this.dialogRef.close(this.connectionToken);
           } else if (state === 'rejected') {
             this.code = 'ticket_review_rejected';

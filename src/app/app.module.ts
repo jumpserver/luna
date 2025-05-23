@@ -5,7 +5,6 @@ import {FormsModule, ReactiveFormsModule} from '@angular/forms'; // <-- NgModel 
 import {NGXLogger} from 'ngx-logger';
 import {CookieService} from 'ngx-cookie-service';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
-import {ToastrModule} from 'ngx-toastr';
 import {HttpClient, HttpClientModule} from '@angular/common/http';
 import {TranslateLoader, TranslateModule} from '@ngx-translate/core';
 import {TranslateHttpLoader} from '@ngx-translate/http-loader';
@@ -88,7 +87,6 @@ export class CustomLoader implements TranslateLoader {
     BrowserAnimationsModule,
     ReactiveFormsModule,
     AppRouterModule,
-    ToastrModule.forRoot(),
     AngularSplitModule.forRoot(),
     NgZorroAntdModule,
     TranslateModule.forRoot({
