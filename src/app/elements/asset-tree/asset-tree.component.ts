@@ -1,9 +1,9 @@
-import {Component, ElementRef, Inject, Input, OnInit, ViewChild} from '@angular/core';
-import {MAT_DIALOG_DATA, MatDialog, MatDialogRef, MatSnackBar} from '@angular/material';
+import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
+import {NzMessageService} from 'ng-zorro-antd/message';
 import {BehaviorSubject, Subject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 import {ActivatedRoute} from '@angular/router';
-import {ToastrService} from 'ngx-toastr';
+import {NzNotificationService} from 'ng-zorro-antd/notification';
 import {connectOnNewPage, groupBy} from '@app/utils/common';
 import {connectEvt, DEFAULT_ORG_ID, SYSTEM_ORG_ID} from '@app/globals';
 import * as _ from 'lodash';
@@ -24,24 +24,6 @@ import {HttpHeaders} from '@angular/common/http';
 
 declare var $: any;
 
-@Component({
-  selector: 'elements-asset-tree-dialog',
-  templateUrl: 'disabledWarning.html',
-  styles: ['.mat-form-field { width: 100%; }']
-})
-export class DisabledAssetsDialogComponent implements OnInit {
-
-  constructor(public dialogRef: MatDialogRef<DisabledAssetsDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any) {
-  }
-
-  ngOnInit() {
-  }
-
-  onNoClick() {
-    this.dialogRef.close();
-  }
-}
 
 class Tree {
   name: string;
@@ -114,13 +96,12 @@ export class ElementAssetTreeComponent implements OnInit {
               private _route: ActivatedRoute,
               private _http: HttpService,
               private _settingSvc: SettingService,
-              private _dialog: MatDialog,
               private _logger: LogService,
               private _i18n: I18nService,
-              private _toastr: ToastrService,
+              private _toastr: NzNotificationService,
               private _orgSvc: OrganizationService,
               private _cookie: CookieService,
-              private snackBar: MatSnackBar,
+              private _message: NzMessageService,
               private _connectTokenSvc: ConnectTokenService,
               private _viewSrv: ViewService
   ) {
@@ -246,11 +227,7 @@ export class ElementAssetTreeComponent implements OnInit {
       return;
     }
     if (treeNode.chkDisabled) {
-      const config = {
-        height: '200px',
-        width: '450px'
-      };
-      this._dialog.open(DisabledAssetsDialogComponent, config);
+      this._message.warning(this._i18n.instant('Disabled asset'));
       return;
     }
     if (this.isOpenNewWindow) {
@@ -571,11 +548,8 @@ export class ElementAssetTreeComponent implements OnInit {
    */
   async onMenuConnect(splitConnect = false) {
     if (splitConnect && this._viewSrv.currentView.subViews.length >= 4) {
-      const msg = await this._i18n.instant('Split connect number');
-      this.snackBar.open(msg, '', {
-        verticalPosition: 'top',
-        duration: 1600
-      });
+      const msg = this._i18n.instant('Split connect number');
+      this._message.info(msg);
       return;
     }
     const node = this.rightClickSelectNode;
@@ -596,13 +570,13 @@ export class ElementAssetTreeComponent implements OnInit {
         const i = this.favoriteAssets.indexOf(assetId);
         this.favoriteAssets.splice(i, 1);
         const msg = this._i18n.instant('Disfavor') + ' ' + this._i18n.instant('success');
-        this._toastr.success(msg, '', {timeOut: 2000});
+        this._toastr.success(msg, '');
       });
     } else {
       this._http.favoriteAsset(assetId, true).subscribe(() => {
         this.favoriteAssets.push(assetId);
         const msg = this._i18n.instant('Favorite') + ' ' + this._i18n.instant('success');
-        this._toastr.success(msg, '', {timeOut: 2000});
+        this._toastr.success(msg, '');
       });
     }
   }

@@ -2,7 +2,7 @@ import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {AppService, HttpService, I18nService, SettingService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
 import {Session, Ticket, User} from '@app/model';
-import {ToastrService} from 'ngx-toastr';
+import {NzNotificationService} from 'ng-zorro-antd/notification';
 import {getWaterMarkContent} from '@app/utils/common';
 
 @Component({
@@ -21,11 +21,10 @@ export class PagesMonitorComponent implements OnInit {
   supportedLock: boolean = false;
   user: User;
 
-  constructor(private _appService: AppService,
-              private _settingSvc: SettingService,
+  constructor(private _settingSvc: SettingService,
               private _http: HttpService,
               private _route: ActivatedRoute,
-              private _toastr: ToastrService,
+              private _toastr: NzNotificationService,
               private _i18n: I18nService) {
     this.getCurrentUser();
   }
@@ -108,7 +107,7 @@ export class PagesMonitorComponent implements OnInit {
     const resumeTaskMsg = await this._i18n.t('Resume task has been send');
     const session_ids = res['ok'];
     const msg = this.isPaused ? resumeTaskMsg : pauseTaskMsg;
-    this._toastr.success(msg);
+    this._toastr.success(msg, '');
     if (session_ids.indexOf(this.sessionID) !== -1) {
 
     }

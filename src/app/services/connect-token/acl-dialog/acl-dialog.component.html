@@ -1,144 +1,44 @@
 <div>
-  <h2 mat-dialog-title> {{ 'Login reminder' | translate }} </h2>
+  <h3 nz-typography nzTitle>{{ content.title | translate }}</h3>
 
-  <div [ngSwitch]="code">
-    <div *ngSwitchCase="'acl_reject'">
-      <mat-dialog-content>
-        <div class="error-message">{{ 'ACL reject login asset' | translate }}</div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button (click)="closeDialog()" color="primary" mat-button>{{ "Close" | translate }}</button>
-      </mat-dialog-actions>
-    </div>
+  <div class="nz-modal-content">
+    <div [class.error-message]="content.isError">
+      {{ content.message | translate }}
+      
+      <!-- Custom content for no_face_feature -->
+      <ng-container *ngIf="content.customContent?.type === 'link'">
+        <a [href]="content.customContent.link">{{ content.customContent.linkText | translate }}</a>
+      </ng-container>
 
-    <div *ngSwitchCase="'acl_review'">
-      <mat-dialog-content>
-        <div>{{ 'Need review for login asset' | translate }}</div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button (click)="onCancelReview()" mat-raised-button>{{ "Cancel" | translate }}</button>
-        <button (click)="onConfirmReview()" color="primary" mat-raised-button>{{ "Confirm" | translate }}</button>
-      </mat-dialog-actions>
+      <!-- Custom content for ticket_review_pending -->
+      <ng-container *ngIf="content.customContent?.type === 'ticket'">
+        <br><br>
+        {{ 'Assignees' | translate }}: <b>{{ content.customContent.assignees }}</b>
+        <br><br>
+        {{ 'Do not close this page' | translate }}
+        <br><br>
+        <nz-progress nzStatus="active"></nz-progress>
+      </ng-container>
     </div>
+  </div>
 
-    <div *ngSwitchCase="'acl_face_online_not_supported'">
-      <mat-dialog-content>
-        <div class="error-message">{{errorDetail }}</div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
-      </mat-dialog-actions>
-    </div>
+  <!-- Face verify capture iframe -->
+  <ng-container *ngIf="code === 'face_verify_capture' && faceVerifyUrl">
+    <iframe
+      [src]="faceVerifyUrl"
+      allow="camera"
+      sandbox="allow-scripts allow-same-origin"
+      style="width: 100%; height: 540px;border: none;">
+    </iframe>
+  </ng-container>
 
-    <div *ngSwitchCase="'acl_face_online'">
-      <mat-dialog-content>
-        <div>{{ 'Face online required' | translate }}</div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button (click)="onCancelFaceVerify()" mat-raised-button>{{ "Cancel" | translate }}</button>
-        <button (click)="onConfirmFaceOnline()" color="primary" mat-raised-button>{{ "Confirm" | translate }}</button>
-      </mat-dialog-actions>
-    </div>
-
-    <div *ngSwitchCase="'acl_face_verify'">
-      <mat-dialog-content>
-        <div>{{ 'Face verify required' | translate }}</div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button (click)="onCancelFaceVerify()" mat-raised-button>{{ "Cancel" | translate }}</button>
-        <button (click)="onConfirmFaceVerify()" color="primary" mat-raised-button>{{ "Confirm" | translate }}</button>
-      </mat-dialog-actions>
-    </div>
-
-    <div *ngSwitchCase="'no_face_feature'">
-      <mat-dialog-content>
-        <div class="error-message">
-          {{ 'No facial features' |translate }}
-          <a href="/ui/#/profile/index">{{ 'Go to profile' | translate }}</a>
-        </div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
-      </mat-dialog-actions>
-    </div>
-
-    <div *ngSwitchCase="'face_verify_capture'">
-      <iframe
-        *ngIf="faceVerifyUrl"
-        [src]="faceVerifyUrl"
-        allow="camera"
-        sandbox="allow-scripts allow-same-origin"
-        style="width: 100%; height: 540px;border: none;"></iframe>
-    </div>
-
-    <div *ngSwitchCase="'ticket_review_pending'">
-      <mat-dialog-content>
-        <div>
-          {{ 'Ticket review pending for login asset' | translate }}
-          <br><br>
-          {{ 'Assignees' | translate }}: <b>{{ ticketAssignees }}</b>
-          <br><br>
-          {{ 'Do not close this page' | translate }}
-          <br><br>
-          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-        </div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button (click)="onCancelWait()" mat-raised-button>{{ "Cancel" | translate }}</button>
-        <button
-          (cbOnSuccess)="onCopySuccess($event)"
-          [cbContent]="ticketDetailPageURL"
-          color="primary"
-          mat-raised-button
-          ngxClipboard
-        >{{ "Copy link" | translate }}
-        </button>
-      </mat-dialog-actions>
-    </div>
-
-    <div *ngSwitchCase="'ticket_review_rejected'">
-      <mat-dialog-content>
-        <div class="error-message">{{ 'Ticket review rejected for login asset' | translate }}</div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
-      </mat-dialog-actions>
-    </div>
-
-    <div *ngSwitchCase="'ticket_review_closed'">
-      <mat-dialog-content>
-        <div class="error-message">{{ 'Ticket review closed for login asset' | translate }}</div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
-      </mat-dialog-actions>
-    </div>
-
-    <div *ngSwitchCase="'perm_account_invalid'">
-      <mat-dialog-content>
-        <div class="error-message">{{ 'Account not found' | translate }}</div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
-      </mat-dialog-actions>
-    </div>
-
-    <div *ngSwitchCase="'other'">
-      <mat-dialog-content>
-        <div class="error-message">{{ otherError }}</div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
-      </mat-dialog-actions>
-    </div>
-
-    <div *ngSwitchDefault>
-      <mat-dialog-content>
-        <div class="error-message">{{ errorDetail }}</div>
-      </mat-dialog-content>
-      <mat-dialog-actions>
-        <button (click)="closeDialog()" mat-raised-button>{{ "Close" | translate }}</button>
-      </mat-dialog-actions>
-    </div>
+  <div *nzModalFooter class="nz-modal-footer">
+    <ng-container *ngFor="let action of content.actions">
+      <button nz-button 
+              [nzType]="action.type || 'default'"
+              (click)="action.callback()">
+        {{ action.text | translate }}
+      </button>
+    </ng-container>
   </div>
 </div>

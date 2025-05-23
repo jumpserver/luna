@@ -1,6 +1,5 @@
 import {Component, Inject, OnInit} from '@angular/core';
-import {MatDialogRef} from '@angular/material';
-import {MAT_DIALOG_DATA} from '@angular/material/dialog';
+import {NzModalRef} from 'ng-zorro-antd';
 
 @Component({
   selector: 'elements-send-command-dialog',
@@ -19,8 +18,7 @@ export class ElementSendCommandDialogComponent implements OnInit {
     }
   ];
 
-  constructor(public dialogRef: MatDialogRef<ElementSendCommandDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any,
+  constructor(public dialogRef: NzModalRef,
   ) {}
 
   ngOnInit() {}
@@ -29,6 +27,5 @@ export class ElementSendCommandDialogComponent implements OnInit {
     setTimeout(() => {
       this.dialogRef.close();
     });
-    this.data.send(this.value);
   }
 }

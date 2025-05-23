@@ -277,27 +277,49 @@ export class GlobalSetting {
 }
 
 export class Setting {
-  commandExecution: boolean = true;
-  isSkipAllManualPassword: string = '0';
-  sqlClient = '1';
+  commandExecution: boolean;
+  isSkipAllManualPassword: string;
+  sqlClient: string;
+  basic: {
+    is_async_asset_tree: boolean;
+    connect_default_open_method: string;
+  };
+  graphics: {
+    rdp_resolution: string;
+    keyboard_layout: string;
+    rdp_client_option: any[];
+    applet_connection_method: string;
+    rdp_smart_size: string;
+    rdp_color_quality: string;
+  };
+  command_line: {
+    character_terminal_font_size: number;
+    is_backspace_as_ctrl_h: boolean;
+    is_right_click_quickly_paste: boolean;
+  };
 
-  basic = {
-    is_async_asset_tree: false,
-    connect_default_open_method: 'new'
-  };
-  graphics = {
-    rdp_resolution: 'Auto',
-    keyboard_layout: 'en-us-qwerty',
-    rdp_client_option: [],
-    applet_connection_method: 'web',
-    rdp_smart_size: '0',
-    rdp_color_quality: '32'
-  };
-  command_line = {
-    character_terminal_font_size: 14,
-    is_backspace_as_ctrl_h: false,
-    is_right_click_quickly_paste: false
-  };
+  constructor() {
+    this.commandExecution = true;
+    this.isSkipAllManualPassword = '0';
+    this.sqlClient = '1';
+    this.basic = {
+      is_async_asset_tree: false,
+      connect_default_open_method: 'new'
+    };
+    this.graphics = {
+      rdp_resolution: 'Auto',
+      keyboard_layout: 'en-us-qwerty',
+      rdp_client_option: [],
+      applet_connection_method: 'web',
+      rdp_smart_size: '0',
+      rdp_color_quality: '32'
+    };
+    this.command_line = {
+      character_terminal_font_size: 14,
+      is_backspace_as_ctrl_h: false,
+      is_right_click_quickly_paste: false
+    };
+  }
 }
 
 

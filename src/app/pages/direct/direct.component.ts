@@ -1,24 +1,17 @@
-import {MatDialog} from '@angular/material';
 import {ActivatedRoute} from '@angular/router';
-import {Account, Endpoint, View, ConnectionToken, ConnectMethod, AuthInfo} from '@app/model';
+import {Account, AuthInfo, ConnectionToken, ConnectMethod, Endpoint, View} from '@app/model';
 import {
+  AppService,
   HttpService,
   I18nService,
-  LogService,
-  ViewService,
   IframeCommunicationService,
-  AppService,
-  LocalStorageService
+  LocalStorageService,
+  LogService,
+  ViewService
 } from '@app/services';
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  ElementRef,
-  ViewChildren,
-  QueryList,
-} from '@angular/core';
+import {Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChildren,} from '@angular/core';
 import {Subscription} from 'rxjs';
+import {NzModalService} from 'ng-zorro-antd';
 import {ElementACLDialogComponent} from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
 
 @Component({
@@ -59,7 +52,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   private method: string;
 
   constructor(
-    private _dialog: MatDialog,
+    private _dialog: NzModalService,
     private _http: HttpService,
     private _i18n: I18nService,
     public viewSrv: ViewService,
@@ -243,31 +236,28 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     if (type === 'file') {
       const res = await this._http
         .adminConnectToken(this.permedAsset, this.connectData, false, false, '')
-        .subscribe(
-          (res) => {
+        .subscribe((res) => {
             const SFTP_Token = res ? res.id : '';
             this.iframeCommunicationService.sendMessage({name: 'FILE', SFTP_Token});
             return this._logger.info(`[Luna] Send OPEN FILE`);
           },
           (error) => {
-            const dialogRef = this._dialog.open(ElementACLDialogComponent, {
-              height: 'auto',
-              width: '450px',
-              disableClose: true,
-              data: {
-                asset: this.permedAsset,
-                connectData: this.connectData,
-                code: error.error.code,
-                tokenAction: 'create',
-                error: error,
-              },
+            const dialogRef = this._dialog.create({
+              nzContent: ElementACLDialogComponent,
+              nzComponentParams: {
+                data: {
+                  asset: this.permedAsset,
+                  connectData: this.connectData,
+                  code: error.error.code,
+                  tokenAction: 'create',
+                  error: error,
+                }
+              }
             });
 
-            dialogRef.afterClosed().subscribe((token) => {
-              console.log('token', token);
+            dialogRef.afterClose.subscribe((token) => {
               if (token) {
                 this.iframeCommunicationService.sendMessage({name: 'FILE', SFTP_Token: token.id});
-
                 return;
               }
 
@@ -352,20 +342,20 @@ export class PageDirectComponent implements OnInit, OnDestroy {
               resolve(true);
             },
             error => {
-              const dialogRef = this._dialog.open(ElementACLDialogComponent, {
-                height: 'auto',
-                width: '450px',
-                disableClose: true,
-                data: {
-                  asset: assetMessage,
-                  connectData: connectData,
-                  code: error.error.code,
-                  tokenAction: 'create',
-                  error: error,
+              const dialogRef = this._dialog.create({
+                nzContent: ElementACLDialogComponent,
+                nzComponentParams: {
+                  data: {
+                    asset: assetMessage,
+                    connectData: connectData,
+                    code: error.error.code,
+                    tokenAction: 'create',
+                    error: error,
+                  },
                 },
               });
 
-              dialogRef.afterClosed().subscribe(token => {
+              dialogRef.afterClose.subscribe(token => {
                 if (token) {
                   this.connectToken = token;
                   this.onNewView();

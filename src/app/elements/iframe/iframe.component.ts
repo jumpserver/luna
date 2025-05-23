@@ -1,14 +1,11 @@
 import {AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
 import {View} from '@app/model';
-import {ConnectTokenService, HttpService, I18nService, LogService, ViewService, IframeCommunicationService} from '@app/services';
-import {MatDialog} from '@angular/material';
-import {Subject} from 'rxjs';
+import {ConnectTokenService, HttpService, I18nService, IframeCommunicationService, LogService, ViewService} from '@app/services';
+import {Subject, Subscription} from 'rxjs';
 import {debounceTime} from 'rxjs/operators';
 import {environment} from '@src/environments/environment';
-import {SafeResourceUrl} from '@angular/platform-browser';
-import {DomSanitizer} from '@angular/platform-browser';
+import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {FaceService} from '@app/services/face';
-import {Subscription} from 'rxjs';
 
 @Component({
   selector: 'elements-iframe',
@@ -39,7 +36,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private _logger: LogService,
     private _connectTokenSvc: ConnectTokenService,
     private _http: HttpService,
-    private _dialog: MatDialog,
     public viewSrv: ViewService,
     private sanitizer: DomSanitizer,
     private faceService: FaceService,

@@ -10,6 +10,12 @@
   .nav-main {
     display: flex;
     align-items: center;
+    margin-bottom: 0;
+
+    a {
+      color: white;
+    }
+
 
     li,
     .dropdown {

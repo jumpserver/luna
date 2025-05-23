@@ -1,35 +1,32 @@
-import {Component, Inject, OnInit} from '@angular/core';
-import {MatDialogRef} from '@angular/material';
+import {Component, Input, OnInit} from '@angular/core';
 import {HttpService, SettingService} from '@app/services';
 import {GlobalSetting, Setting} from '@app/model';
 import {I18nService} from '@app/services/i18n';
-import {MAT_DIALOG_DATA} from '@angular/material/dialog';
 import * as _ from 'lodash';
 
 @Component({
   selector: 'elements-setting',
   templateUrl: './setting.component.html',
-  styleUrls: ['./setting.component.css']
+  styleUrls: ['./setting.component.scss']
 })
 export class ElementSettingComponent implements OnInit {
   public boolChoices: any[];
+  @Input() public name: string;
+  @Input() public type: string = 'general';
   keyboardLayoutOptions: any[];
   resolutionsOptions: any[];
   rdpSmartSizeOptions: any[];
   colorQualityOptions: any[];
-  setting: Setting;
+  setting: Setting = new Setting();
   globalSetting: GlobalSetting;
-  type = 'general';
   rdpClientConfig = {
     full_screen: false,
     multi_screen: false,
     drives_redirect: false,
   };
 
-  constructor(public dialogRef: MatDialogRef<ElementSettingComponent>,
-              private _i18n: I18nService,
+  constructor(private _i18n: I18nService,
               private _http: HttpService,
-              @Inject(MAT_DIALOG_DATA) public data: any,
               private settingSrv: SettingService) {
     this.boolChoices = [
       {name: _i18n.instant('Yes'), value: true},
@@ -42,11 +39,10 @@ export class ElementSettingComponent implements OnInit {
   }
 
   async ngOnInit() {
-    this.getSettingOptions();
+    await this.getSettingOptions();
     this.setting = this.settingSrv.setting;
     this.getRdpClientConfig();
     this.globalSetting = this.settingSrv.globalSetting;
-    this.type = this.data.type;
   }
 
   async getSettingOptions() {
@@ -81,10 +77,5 @@ export class ElementSettingComponent implements OnInit {
   onSubmit() {
     this.setRdpClientConfig();
     this.settingSrv.save();
-    this.dialogRef.close();
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
   }
 }

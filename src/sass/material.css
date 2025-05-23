@@ -179,6 +179,11 @@
   font-weight: 500
 }
 
+.mat-button:hover {
+  .mat-button-focus-overlay {
+  }
+}
+
 .mat-button-toggle {
   font-family: "open sans", Roboto, "Helvetica Neue", sans-serif
 }

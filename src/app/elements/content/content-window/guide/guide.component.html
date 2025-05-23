@@ -5,14 +5,14 @@
       <tr *ngFor="let item of infoItems">
         <td class="title">{{ item.label | async }}</td>
         <td
-          #tooltip="matTooltip"
           (cbOnSuccess)="onCopySuccess($event)"
           (mouseenter)="onHoverClipRef($event)"
           [cbContent]="item.value"
-          [matTooltip]="hoverClipTip"
+          [nzTooltipTitle]="hoverClipTip"
           class="text-td"
-          matTooltipPosition="right"
           ngxClipboard
+          nz-tooltip
+          nzTooltipPlacement="right"
         >
           <span (click)="showPassword($event)" *ngIf="item.name === 'password'" class="show-password">
             <span style="vertical-align: middle">
@@ -24,12 +24,12 @@
             {{ item.value }}
           </span>
           <span *ngIf="item.name == 'set_reusable' && canReuse" class="reusable-button">
-            <mat-slide-toggle
-              (change)="setReusable($event)"
-              [(ngModel)]="token.is_reusable"
+            <nz-switch
+              (ngModelChange)="setReusable()"
+              [(ngModel)]="reusable"
             >
-              {{ "Re-use for a long time after opening" | translate }}
-            </mat-slide-toggle>
+            </nz-switch>
+            {{ 'Re-use for a long time after opening' | translate }}}
           </span>
           <span class="btn">
             <i class="fa fa-clone icon"></i>
@@ -45,22 +45,22 @@
     <div class="command">
       <pre>$ {{ cmd.safeValue }}</pre>
 
-      <span #tooltip="matTooltip"
-            (click)="startClient(cmd)"
+      <span (click)="startClient(cmd)"
             *ngIf="cmd.callClient && showClient"
-            [matTooltip]="'Run it by client' | translate"
+            [nzTooltipTitle]="'Run it by client' | translate"
             class="start btn"
+            nz-tooltip
       >
         <i class="fa fa-caret-square-o-right icon"></i>
       </span>
       <span
-        #tooltip="matTooltip"
         (cbOnSuccess)="onCopySuccess($event)"
         (mouseenter)="onHoverClipRef($event)"
         [cbContent]="cmd.value"
-        [matTooltip]="hoverClipTip"
+        [nzTooltipTitle]="hoverClipTip"
         class="btn"
         ngxClipboard
+        nz-tooltip
       >
         <i class="fa fa-clone icon"></i>
       </span>

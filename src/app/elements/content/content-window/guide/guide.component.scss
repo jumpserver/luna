@@ -6,6 +6,7 @@ iframe {
   min-width: 100px;
   max-width: 180px;
   font-size: 14px;
+  color: white;
 }
 
 .subject {
@@ -17,6 +18,10 @@ iframe {
   background: #191818;
   color: #c9d1d9;
   height: 100%;
+
+  h2 {
+    color: #c9d1d9;
+  }
 
   table {
     border-spacing: 0;
@@ -120,12 +125,10 @@ iframe {
 }
 
 .reusable-button ::ng-deep {
-  .mat-slide-toggle-bar {
-    background-color: gray;
-  }
-
-  .mat-slide-toggle.mat-checked .mat-slide-toggle-bar {
-    background-color: var(--primary-color) !important;
+  .ant-switch {
+    &:not(.ant-switch-checked) {
+      background-color: gray;
+    }
   }
 
   .mat-slide-toggle.mat-checked:not(.mat-disabled) .mat-slide-toggle-thumb {

@@ -1,26 +1,30 @@
 <form *ngIf="dynamicForm && formConfig" [formGroup]="dynamicForm" (ngSubmit)="onSubmit()">
   <div *ngFor="let fieldKey of fieldKeys" [ngSwitch]="formConfig[fieldKey].type">
-    <mat-form-field  *ngSwitchCase="'string'" class="full-width">
-      <label class="zone-label">{{ formConfig[fieldKey].label }}</label>
-      <input matInput [formControlName]="'jms_'+fieldKey" />
-      <mat-hint>{{ formConfig[fieldKey].help_text }}</mat-hint>
-    </mat-form-field>
-    <div  *ngSwitchCase="'labeled_choice'" class="radio-group full-width">
-      <label class="zone-label">{{ formConfig[fieldKey].label }}</label>
-      <mat-radio-group style="display: block; padding: 5px 0;" [formControlName]="'jms_'+fieldKey">
-        <mat-radio-button *ngFor="let choice of formConfig[fieldKey].choices"
-                          [value]="choice.value">
-          {{ choice.label }}
-        </mat-radio-button>
-      </mat-radio-group>
-      <mat-hint>{{ formConfig[fieldKey].help_text }}</mat-hint>
-    </div>
+    <nz-form-item *ngSwitchCase="'string'" class="full-width">
+      <nz-form-label>{{ formConfig[fieldKey].label }}</nz-form-label>
+      <nz-form-control [nzExtra]="formConfig[fieldKey].help_text">
+        <input nz-input [formControlName]="'jms_'+fieldKey" />
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item *ngSwitchCase="'labeled_choice'" class="full-width">
+      <nz-form-label>{{ formConfig[fieldKey].label }}</nz-form-label>
+      <nz-form-control [nzExtra]="formConfig[fieldKey].help_text">
+        <nz-radio-group [formControlName]="'jms_'+fieldKey">
+          <label nz-radio *ngFor="let choice of formConfig[fieldKey].choices"
+                 [nzValue]="choice.value">
+            {{ choice.label }}
+          </label>
+        </nz-radio-group>
+      </nz-form-control>
+    </nz-form-item>
   </div>
-  <mat-form-field *ngIf="command"  class="full-width">
-    <label class="zone-label">{{ 'Command'| translate }}</label>
-    <textarea  rows="5" matInput [formControlName]="'sendCommand'" [value]="command.args"></textarea>
-  </mat-form-field>
-  <div style="float: right; padding-top: 20px">
-    <button mat-raised-button color="primary" type="submit" [disabled]="dynamicForm.invalid">{{"Confirm"| translate}}</button>
+  <nz-form-item *ngIf="command" class="full-width">
+    <nz-form-label>{{ 'Command'| translate }}</nz-form-label>
+    <nz-form-control>
+      <textarea rows="5" nz-input [formControlName]="'sendCommand'" [value]="command.args"></textarea>
+    </nz-form-control>
+  </nz-form-item>
+  <div style="text-align: right; padding-top: 20px">
+    <button nz-button nzType="primary" type="submit" [disabled]="dynamicForm.invalid">{{'Confirm'| translate}}</button>
   </div>
 </form>

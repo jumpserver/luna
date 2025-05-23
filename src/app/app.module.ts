@@ -6,11 +6,11 @@ import {NGXLogger} from 'ngx-logger';
 import {CookieService} from 'ngx-cookie-service';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {ToastrModule} from 'ngx-toastr';
-import {MAT_LABEL_GLOBAL_OPTIONS} from '@angular/material';
 import {HttpClient, HttpClientModule} from '@angular/common/http';
 import {TranslateLoader, TranslateModule} from '@ngx-translate/core';
 import {TranslateHttpLoader} from '@ngx-translate/http-loader';
 import {DragDropModule} from '@angular/cdk/drag-drop';
+import {en_US, NgZorroAntdModule, NZ_I18N} from 'ng-zorro-antd';
 
 // service
 import {AllServices} from '@app/services';
@@ -25,18 +25,18 @@ import {PagesComponents} from './pages/pages.component';
 import {ElementComponents} from './elements/elements.component';
 import {PageMainComponent} from '@app/pages/main/main.component';
 import {PluginModules} from './plugins/plugins';
-import {DisabledAssetsDialogComponent} from './elements/asset-tree/asset-tree.component';
-import {ChangLanWarningDialogComponent} from './elements/nav/nav.component';
 import {ElementSettingComponent} from '@app/elements/setting/setting.component';
 import {ElementConnectDialogComponent} from './elements/connect/connect-dialog/connect-dialog.component';
 import {ElementDownloadDialogComponent} from './elements/connect/download-dialog/download-dialog.component';
 import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/acl-dialog.component';
-import {ElementDialogAlertComponent} from '@app/services/dialog/dialog.service';
+import {ElementDialogAlertComponent} from '@app/services/dialog/alert.service';
 import {ClipboardService} from 'ngx-clipboard';
 import {ElementsReplayMp4Component} from './elements/replay/mp4/mp4.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
-import {ElementSendCommandWithVariableDialogComponent} from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
+import {
+  ElementSendCommandWithVariableDialogComponent
+} from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
 import {DynamicFormComponent} from '@app/elements/content/variable-dynamic-form/variable-dynamic-form.component';
 import {version} from '../environments/environment';
 import {BehaviorSubject, forkJoin, Observable, of} from 'rxjs';
@@ -90,6 +90,7 @@ export class CustomLoader implements TranslateLoader {
     AppRouterModule,
     ToastrModule.forRoot(),
     AngularSplitModule.forRoot(),
+    NgZorroAntdModule,
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,
@@ -109,8 +110,6 @@ export class CustomLoader implements TranslateLoader {
     ElementsReplayMp4Component,
   ],
   entryComponents: [
-    ChangLanWarningDialogComponent,
-    DisabledAssetsDialogComponent,
     PageMainComponent,
     ElementSettingComponent,
     ElementConnectDialogComponent,
@@ -124,12 +123,10 @@ export class CustomLoader implements TranslateLoader {
   ],
   bootstrap: [AppComponent],
   providers: [
-    // {provide: LoggerConfig, useValue: {level: LoggerLevel.WARN}},
-    // {provide: BrowserXhr, useClass: NgProgressBrowserXhr},
     ...AllServices,
     CookieService,
     NGXLogger,
-    {provide: MAT_LABEL_GLOBAL_OPTIONS, useValue: {float: 'always'}},
+    {provide: NZ_I18N, useValue: en_US},
     ClipboardService,
   ]
 })

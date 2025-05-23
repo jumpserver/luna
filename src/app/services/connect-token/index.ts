@@ -1,24 +1,25 @@
 import {Injectable} from '@angular/core';
 import {Asset, ConnectData, ConnectionToken} from '@app/model';
 import {HttpService} from '@app/services/http';
-import {MatDialog} from '@angular/material';
+import {NzModalService} from 'ng-zorro-antd';
 import {ElementACLDialogComponent} from './acl-dialog/acl-dialog.component';
 
 @Injectable()
 export class ConnectTokenService {
   constructor(private _http: HttpService,
-              private _dialog: MatDialog
+              private _dialog: NzModalService
   ) {
   }
 
   handleError(data, resolve) {
-    const dialogRef = this._dialog.open(ElementACLDialogComponent, {
-      height: 'auto',
-      width: '450px',
-      disableClose: true,
-      data: data,
+    const dialogRef = this._dialog.create({
+      nzContent: ElementACLDialogComponent,
+      nzWidth: '450px',
+      nzComponentParams: {
+        data: data
+      },
     });
-    dialogRef.afterClosed().subscribe(token => {
+    dialogRef.afterClose.subscribe((token) => {
       resolve(token);
     });
   }

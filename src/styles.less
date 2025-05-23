@@ -25,6 +25,10 @@ li {
   box-sizing: border-box;
 }
 
+::selection {
+  background: none;
+}
+
 app-root {
   height: 100%;
 }
@@ -49,6 +53,13 @@ body ::-webkit-scrollbar-track {
   border-radius: 6px;
 }
 
+.ant-modal-wrap {
+  z-index: 9999;
+  width: 100vw;
+  height: 100vh;
+}
+
+
 .cdk-overlay-pane ::-webkit-scrollbar-track {
   background-color: #fffcfc;
 }
@@ -71,6 +82,7 @@ body ::-webkit-scrollbar-thumb {
   background-color: var(--el-scroll-bar-thumb-bg-color);
   border-radius: 6px;
 }
+
 
 .ztree *:not(.fa) {
   font-family: 'Open Sans', 'Monaco', 'Consolas', 'monospace' !important;
@@ -183,3 +195,20 @@ body ::-webkit-scrollbar-thumb {
   opacity: 1;
   visibility: visible;
 }
+
+.full-width-tabs ::ng-deep .ant-tabs-nav > div {
+  display: flex;
+  width: 100%;
+
+  .ant-tabs-tab {
+    justify-content: center; /* 水平居中标题文字 */
+    text-align: center;
+    flex: 1;
+  }
+}
+
+body ::selection {
+  background: #BFDCFD !important;
+  color: initial !important;
+}
+

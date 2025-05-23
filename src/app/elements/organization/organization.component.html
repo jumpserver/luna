@@ -1,19 +1,20 @@
-<div class="organization" *ngIf="this._settingSvc.hasXPack()">
-  <mat-select
-    panelClass="org-panel"
-    [(value)]="currentOrg"
-    (selectionChange)='changeOrg($event)'
+<div *ngIf="this._settingSvc.hasXPack()" class="organization">
+  <i class="fa fa-sitemap"></i>
+  <nz-select
+    (ngModelChange)="changeOrg()"
+    [(ngModel)]="currentOrg"
+    [nzSuffixIcon]="customIcon"
+    class="org-select"
+    nzShowSearch
   >
-    <mat-select-trigger>
-      <i class="fa fa-sitemap"></i>
-      &nbsp;{{currentOrg.name}}
-    </mat-select-trigger>
-    <mat-option
-    *ngFor="let i of organizations"
-    class="org-option"
-    [value]="i"
-    >
-      {{i.name}}
-    </mat-option>
-  </mat-select>
+    <ng-template #customIcon>
+      <i nz-icon nzTheme="outline" nzType="caret-down"></i>
+    </ng-template>
+    <nz-option
+      *ngFor="let i of organizations"
+      [nzLabel]="i.name"
+      [nzValue]="i"
+      class="org-option"
+    ></nz-option>
+  </nz-select>
 </div>

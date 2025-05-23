@@ -1,10 +1,10 @@
-import { ChangeDetectorRef, Component, Inject, OnInit } from '@angular/core';
+import {ChangeDetectorRef, Component, Input, OnInit} from '@angular/core';
 import 'rxjs/add/operator/toPromise';
-import { AppService, HttpService, I18nService, LogService, SettingService } from '@app/services';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
-import { Account, Asset, AuthInfo, ConnectData, ConnectMethod, Protocol } from '@app/model';
-import { BehaviorSubject } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
+import {AppService, HttpService, I18nService, LogService, SettingService} from '@app/services';
+import {Account, Asset, AuthInfo, ConnectData, ConnectMethod, Protocol} from '@app/model';
+import {BehaviorSubject} from 'rxjs';
+import {debounceTime} from 'rxjs/operators';
+import {NzModalRef} from 'ng-zorro-antd';
 
 class ConnectButtonInfo {
   disabled: boolean = false;
@@ -12,15 +12,16 @@ class ConnectButtonInfo {
 }
 
 @Component({
-  selector: 'elements-asset-tree-dialog',
+  selector: 'elements-connect-dialog',
   templateUrl: 'connect-dialog.component.html',
   styleUrls: ['./connect-dialog.component.scss']
 })
 export class ElementConnectDialogComponent implements OnInit {
-  public asset: Asset;
+  @Input() public asset: Asset;
+  @Input() public accounts: Account[];
+  @Input() public preConnectData: ConnectData;
   public autoLogin = false;
   public protocol: Protocol;
-  public accounts: Account[];
   public protocols: Array<Protocol>;
   public accountSelected: Account = null;
   public connectOption: Object;
@@ -28,34 +29,57 @@ export class ElementConnectDialogComponent implements OnInit {
   public viewAssetOnlineSessionInfo: boolean = true;
   public manualAuthInfo: AuthInfo = new AuthInfo();
   public connectMethod: ConnectMethod = new ConnectMethod('Null', '', 'null', 'null');
-  public preConnectData: ConnectData = new ConnectData();
   public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
   public accountOrUsernameChanged = new BehaviorSubject(false);
   public onlineNum: number = null;
+  public disabled: boolean = false;
+  public disabledReason: string = '';
 
   constructor(
-    public dialogRef: MatDialogRef<ElementConnectDialogComponent>,
     private _settingSvc: SettingService,
     private _cdRef: ChangeDetectorRef,
+    private _modalRef: NzModalRef,
     private _http: HttpService,
     private _logger: LogService,
     private _appSvc: AppService,
-    private _i18n: I18nService,
-    @Inject(MAT_DIALOG_DATA) public data: any
-  ) {}
+    private _i18n: I18nService
+  ) {
+  }
 
   ngOnInit() {
-    this.accounts = this.data.accounts;
-    this.asset = this.data.asset;
-    this.preConnectData = this.data.preConnectData;
     this.protocols = this.getProtocols();
-    if (this.protocols.length === 0) {
+    const valid = this.validate();
+
+    if (!valid) {
       return;
     }
+
     this.setDefaults();
     this.accountOrUsernameChanged.pipe(debounceTime(500)).subscribe(_ => {
       this.getOnlineNum();
     });
+  }
+
+  validate() {
+    let disabled = false;
+    let transKey = '';
+
+    if (this.protocols.length === 0) {
+      disabled = true;
+      transKey = 'connectDisabledTipsNoProtocol';
+    } else if (this.accounts.length === 0) {
+      disabled = true;
+      transKey = 'connectDisabledTipsNoAccount';
+    } else if (this.connectMethod && this.connectMethod.disabled === true) {
+      disabled = true;
+      transKey = 'connectDisabledTipsMethodDisabled';
+    } else if (!this.connectMethod) {
+      disabled = true;
+      transKey = 'connectDisabledTipsNoConnectMethod';
+    }
+    this.disabled = disabled;
+    this.disabledReason = transKey ? this._i18n.instant(transKey) : '';
+    return !disabled;
   }
 
   getProtocols() {
@@ -138,25 +162,6 @@ export class ElementConnectDialogComponent implements OnInit {
     this.accountOrUsernameChanged.next(true);
   }
 
-  connectButtonInfo(): ConnectButtonInfo {
-    const connectButtonInfo = new ConnectButtonInfo();
-    let disabled = false;
-    let transKey = '';
-    if (this.accounts.length === 0) {
-      disabled = true;
-      transKey = 'connectDisabledTipsNoAccount';
-    } else if (this.connectMethod && this.connectMethod.disabled === true) {
-      disabled = true;
-      transKey = 'connectDisabledTipsMethodDisabled';
-    } else if (!this.connectMethod) {
-      disabled = true;
-      transKey = 'connectDisabledTipsNoConnectMethod';
-    }
-    connectButtonInfo.disabled = disabled;
-    connectButtonInfo.reason = transKey ? this._i18n.instant(transKey) : '';
-    return connectButtonInfo;
-  }
-
   onConfirm(downloadRDP = false) {
     this.outputData.account = this.accountSelected;
     this.outputData.connectMethod = this.connectMethod;
@@ -168,7 +173,8 @@ export class ElementConnectDialogComponent implements OnInit {
 
     this._appSvc.setPreConnectData(this.asset, this.outputData);
 
+    console.log('outputData', this.outputData);
     this.onSubmit$.next(true);
-    this.dialogRef.close(this.outputData);
+    this._modalRef.close(this.outputData);
   }
 }
