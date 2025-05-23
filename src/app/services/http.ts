@@ -291,6 +291,7 @@ export class HttpService {
     params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/connection-token/' + params;
     const {account, protocol, manualAuthInfo, connectMethod} = connectData;
+    console.log('>>>>>>>>>>', account, protocol, manualAuthInfo, connectMethod);
     const isVirtual = account.username.startsWith('@');
     const username = isVirtual ? manualAuthInfo.username : account.username;
     const secret = encryptPassword(manualAuthInfo.secret);

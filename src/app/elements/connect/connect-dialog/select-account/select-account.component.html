@@ -38,7 +38,6 @@
       (focus)="onFocus()"
       (ngModelChange)="onUsernameChanges()"
       [(ngModel)]="manualAuthInfo.username"
-      [matAutocomplete]="auto"
       [placeholder]="usernamePlaceholder"
       [readonly]="accountSelected.username === '@USER'"
       autofocus

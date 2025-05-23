@@ -162,25 +162,6 @@ export class ElementConnectDialogComponent implements OnInit {
     this.accountOrUsernameChanged.next(true);
   }
 
-  connectButtonInfo(): ConnectButtonInfo {
-    const connectButtonInfo = new ConnectButtonInfo();
-    let disabled = false;
-    let transKey = '';
-    if (this.accounts.length === 0) {
-      disabled = true;
-      transKey = 'connectDisabledTipsNoAccount';
-    } else if (this.connectMethod && this.connectMethod.disabled === true) {
-      disabled = true;
-      transKey = 'connectDisabledTipsMethodDisabled';
-    } else if (!this.connectMethod) {
-      disabled = true;
-      transKey = 'connectDisabledTipsNoConnectMethod';
-    }
-    connectButtonInfo.disabled = disabled;
-    connectButtonInfo.reason = transKey ? this._i18n.instant(transKey) : '';
-    return connectButtonInfo;
-  }
-
   onConfirm(downloadRDP = false) {
     this.outputData.account = this.accountSelected;
     this.outputData.connectMethod = this.connectMethod;

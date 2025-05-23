@@ -5,6 +5,22 @@
   height: 30px;
   padding-top: 3px;
 
+  ::ng-deep .ant-select-dropdown {
+    .ant-select-dropdown-menu-item {
+      background-color: var(--el-header-nav-select-bg-color) !important;
+      color: var(--el-menu-text-color);
+
+      &:hover {
+        opacity: 0.7;
+      }
+
+      &.ant-select-dropdown-menu-item-selected {
+        font-weight: bold;
+        opacity: 0.9;
+      }
+    }
+  }
+
   i {
     font-size: 16px;
     margin-left: 12px;
@@ -38,23 +54,6 @@
 
     .ant-select-arrow {
       color: var(--el-menu-text-color);
-    }
-  }
-}
-
-::ng-deep .ant-select-dropdown {
-
-  .ant-select-dropdown-menu-item {
-    background-color: var(--el-header-nav-select-bg-color) !important;
-    color: var(--el-menu-text-color);
-
-    &:hover {
-      opacity: 0.7;
-    }
-
-    &.ant-select-dropdown-menu-item-selected {
-      font-weight: bold;
-      opacity: 0.9;
     }
   }
 }

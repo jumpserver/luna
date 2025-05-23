@@ -1,14 +1,11 @@
-import {
-  Component,
-  OnInit,
-} from '@angular/core';
-import { View } from '@app/model';
-import { HttpService, I18nService, LogService, SettingService, ViewService} from '@app/services';
-import {MatDialog} from '@angular/material';
+import {Component, OnInit,} from '@angular/core';
+import {View} from '@app/model';
+import {HttpService, I18nService, LogService, SettingService, ViewService} from '@app/services';
 import {
   ElementSendCommandWithVariableDialogComponent
 } from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
+import {NzModalService} from 'ng-zorro-antd';
 
 @Component({
   selector: 'elements-content-footer',
@@ -36,7 +33,7 @@ export class ElementContentFooterComponent implements OnInit {
   constructor(public viewSrv: ViewService,
               public settingSvc: SettingService,
               private _i18n: I18nService,
-              private _dialog: MatDialog,
+              private _dialog: NzModalService,
               private _logger: LogService,
               private _http: HttpService,
   ) {
@@ -83,15 +80,15 @@ export class ElementContentFooterComponent implements OnInit {
   sendQuickCommand(command) {
     this.batchCommand = command.args;
     if (command.variable.length > 0) {
-      const dialogRef = this._dialog.open(
-        ElementSendCommandWithVariableDialogComponent,
-      {
-        height: 'auto',
-        width: '500px',
-        data: { command: command }
-      }
-    );
-      dialogRef.afterClosed().subscribe(result => {
+      const dialogRef = this._dialog.create({
+        nzTitle: this._i18n.instant('Send command'),
+        nzContent: ElementSendCommandWithVariableDialogComponent,
+        nzWidth: '500px',
+        nzComponentParams: {
+          command: command
+        }
+      });
+      dialogRef.afterClose.subscribe(result => {
         if (result) {
           this.batchCommand = result;
           this.sendBatchCommand();
@@ -103,7 +100,7 @@ export class ElementContentFooterComponent implements OnInit {
 
   }
 
-   async quickCommandsFilter() {
+  async quickCommandsFilter() {
     let list = await this._http.getQuickCommand();
     list = list.filter(i => i.module.value === 'shell');
     this.quickCommands = list;

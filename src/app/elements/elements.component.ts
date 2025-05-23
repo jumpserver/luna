@@ -4,12 +4,12 @@ import {ElementContentComponent} from './content/content.component';
 import {ElementContentWindowComponent} from './content/content-window/content-window.component';
 import {ElementContentTabComponent} from './content/content-tab/content-tab.component';
 import {ElementContentFooterComponent} from './content/content-footer/content-footer.component';
-import {DisabledAssetsDialogComponent, ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
+import {ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
 import {ElementTreeFilterComponent} from './tree-filter/tree-filter.component';
 import {ElementOrganizationComponent} from './organization/organization.component';
 import {ElementUserFileComponent} from './profile/profile.component';
 import {ElementTermComponent} from './term/term.component';
-import {ChangLanWarningDialogComponent, ElementNavComponent} from './nav/nav.component';
+import {ElementNavComponent} from './nav/nav.component';
 import {ElementIframeComponent} from './iframe/iframe.component';
 import {ElementDialogAlertComponent} from '@app/services/dialog/alert.service';
 import {ElementConnectComponent} from './connect/connect.component';
@@ -67,8 +67,6 @@ export const ElementComponents = [
   ElementACLDialogComponent,
   ElementReplayGuacamoleComponent,
   ElementReplayJsonComponent,
-  ChangLanWarningDialogComponent,
-  DisabledAssetsDialogComponent,
   ElementSettingComponent,
   ElementConnectDialogComponent,
   ElementConnectorDefaultComponent,

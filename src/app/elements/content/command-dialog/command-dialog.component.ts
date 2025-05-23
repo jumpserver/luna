@@ -1,7 +1,6 @@
-import {Component, Inject, OnInit} from '@angular/core';
-import {MatDialogRef, MatSnackBar} from '@angular/material';
+import {Component, OnInit} from '@angular/core';
 import {HttpService, I18nService} from '@app/services';
-import {MAT_DIALOG_DATA} from '@angular/material/dialog';
+import {NzModalRef} from 'ng-zorro-antd';
 
 @Component({
   selector: 'elements-command-dialog',
@@ -17,17 +16,19 @@ export class ElementCommandDialogComponent implements OnInit {
     }
   ];
 
-  constructor(public dialogRef: MatDialogRef<ElementCommandDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any,
-              private snackBar: MatSnackBar,
+  constructor(public dialogRef: NzModalRef<ElementCommandDialogComponent>,
               private _http: HttpService,
               private _i18n: I18nService,
-  ) {}
+  ) {
+  }
 
-  ngOnInit() {}
+  ngOnInit() {
+  }
 
   async onSubmit() {
-    if (!this.name) { return; }
+    if (!this.name) {
+      return;
+    }
     const data = {
       name: this.name,
       args: this.data.command,

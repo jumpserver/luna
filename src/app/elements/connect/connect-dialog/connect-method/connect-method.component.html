@@ -24,13 +24,13 @@
           <label *ngFor="let method of item['methods']" [nzValue]="method" nz-radio>
             {{ method.label }}
 
-            <span matTooltip="{{'Click to download rdp file'| translate}}">
+            <span nz-tooltip nzTooltipTitle="{{'Click to download rdp file'| translate}}">
               <i (click)="downloadRDPFile(method)"
                  *ngIf="canDownloadRDPFile(method)"
                  class="fa fa-arrow-circle-down question"
               ></i>
             </span>
-            <span matTooltip="{{'Client Guide'| translate}}">
+            <span nz-tooltip nzTooltipTitle="{{'Client Guide'| translate}}">
               <i (click)="ChangeToGuidePage(method)"
                  *ngIf="CanGuide(method)"
                  class="fa fa-book question"

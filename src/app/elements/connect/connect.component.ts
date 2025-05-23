@@ -264,17 +264,12 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return Promise.resolve(preConnectData);
     }
 
-    let dialogWidth = '600px';
-    if (this._i18n.getLangCode() === 'pt-br') {
-      dialogWidth = '730px';
-    }
-
     this._appSvc.connectDialogShown = true;
 
     const dialogRef = this._dialog.create({
       nzTitle: this._i18n.instant('Connect') + ' - ' + asset.name,
       nzContent: ElementConnectDialogComponent,
-      nzWidth: dialogWidth,
+      nzWidth: '730px',
       nzComponentParams: {
         accounts,
         asset,

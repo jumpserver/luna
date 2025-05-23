@@ -221,24 +221,3 @@ export class ElementNavComponent implements OnInit {
     window.open('/ui/', '_blank');
   }
 }
-
-
-@Component({
-  selector: 'elements-nav-dialog',
-  templateUrl: 'changeLanWarning.html',
-  styles: ['.mat-form-field { width: 100%; }']
-})
-export class ChangLanWarningDialogComponent implements OnInit {
-
-  constructor(public dialogRef: NzModalRef<ChangLanWarningDialogComponent>,
-  ) {
-  }
-
-  ngOnInit() {
-  }
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
-}
-

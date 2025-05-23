@@ -35,7 +35,6 @@ export class ElementConnectorNecComponent implements OnInit {
 
   constructor(private _http: HttpService,
               private _i18n: I18nService,
-              private _toastr: ToastrService,
               private _connectTokenSvc: ConnectTokenService,
               private _settingSvc: SettingService
   ) {

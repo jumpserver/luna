@@ -30,7 +30,8 @@
         >
           <i
             (click)="treeSearch($event, tree)"
-            [matTooltip]="('Search' | translate)"
+            [nzTooltipTitle]="('Search' | translate)"
+            nz-tooltip
             class="fa fa-search tree-banner-icon"
           ></i>
           <input
@@ -42,20 +43,23 @@
         </a>
         <i
           (click)="toggleTreeCheckable($event, tree)"
-          [matTooltip]="('Batch actions(select and right click)' | translate)"
+          [nzTooltipTitle]="('Batch actions(select and right click)' | translate)"
+          nz-tooltip
           [ngClass]="isTreeCheckEnabled(tree) ? 'fa-check-square' : 'fa-square-o'"
           class="fa tree-banner-icon"
         ></i>
         <i
           (click)="refreshTree($event, tree)"
           *ngIf="tree.complete"
-          [matTooltip]="('Refresh' | translate)"
+          [nzTooltipTitle]="('Refresh' | translate)"
+          nz-tooltip
           class="fa fa-refresh tree-banner-icon"
         ></i>
         <i
           (click)="stopOffsetTree(tree)"
           *ngIf="!tree.complete"
-          [matTooltip]="('Stop' | translate)"
+          [nzTooltipTitle]="('Stop' | translate)"
+          nz-tooltip
           class="fa fa-square tree-banner-icon"
         ></i>
       </span>

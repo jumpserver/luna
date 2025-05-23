@@ -1,9 +1,8 @@
 import {ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
 import {Account, AccountGroup, Asset, AuthInfo, Protocol} from '@app/model';
 import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
-import {FormControl, Validators} from '@angular/forms';
+import {FormControl} from '@angular/forms';
 import {AppService, I18nService, LogService} from '@app/services';
-import {takeUntil} from 'rxjs/operators';
 import {User} from '@app/globals';
 
 @Component({
@@ -59,6 +58,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         return a.name.localeCompare(b.name);
       });
   }
+
   get hasSecretAccounts() {
     return this.accounts
       .filter((item) => item.has_secret)
@@ -107,6 +107,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       if (username === '@USER') {
         this.manualAuthInfo.username = User.username;
       }
+      this.accountSelectedChange.emit(this.accountSelected);
     }
   }
 

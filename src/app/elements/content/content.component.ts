@@ -2,7 +2,6 @@ import {Component, ElementRef, EventEmitter, OnDestroy, OnInit, Output, ViewChil
 import {View, ViewAction} from '@app/model';
 import {ConnectTokenService, HttpService, I18nService, LogService, SettingService, ViewService} from '@app/services';
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
-import {MatDialog} from '@angular/material';
 import {fromEvent, Subscription} from 'rxjs';
 import * as jQuery from 'jquery/dist/jquery.min.js';
 import * as _ from 'lodash';
@@ -49,13 +48,12 @@ export class ElementContentComponent implements OnInit, OnDestroy {
               private _i18n: I18nService,
               private _logger: LogService,
               private _http: HttpService,
-              private _dialog: MatDialog,
               private _connectTokenSvc: ConnectTokenService,
   ) {
   }
 
-   get showBatchCommand() {
-    return true
+  get showBatchCommand() {
+    return true;
     // return this.settingSvc.setting.commandExecution
     //   && this.viewSrv.currentView
     //   && this.viewSrv.currentView.protocol === 'ssh';
