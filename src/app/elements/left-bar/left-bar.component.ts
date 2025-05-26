@@ -1,24 +1,84 @@
-import {Component, Output, EventEmitter} from '@angular/core';
+import {Component, EventEmitter, OnInit, Output} from '@angular/core';
 import {DataStore} from '@app/globals';
 import {version} from '@src/environments/environment';
 import {OrganizationService, SettingService} from '@app/services';
-
+import * as _ from 'lodash';
 
 @Component({
   selector: 'elements-left-bar',
   templateUrl: './left-bar.component.html',
   styleUrls: ['./left-bar.component.scss'],
 })
-export class ElementLeftBarComponent {
-  @Output() menuActive = new EventEmitter();
+export class ElementLeftBarComponent implements OnInit {
+  @Output() menuCollapsedToggle: EventEmitter<boolean> = new EventEmitter();
   showTree = true;
   version = version;
-  iconActive = false;
+  collapsed = false;
+  menus: any[] = [];
 
   constructor(public _settingSvc: SettingService,
               private _orgSvc: OrganizationService
   ) {
     this.onOrgChangeReloadTree();
+  }
+
+  ngOnInit() {
+    this.menus = [
+      {
+        name: 'assets',
+        icon: 'fa-inbox',
+        click: () => this.menuClick(),
+      },
+      {
+        name: 'applications',
+        icon: 'fa-th',
+        click: () => this.menuClick(),
+      }
+    ];
+    this.onResize(window);
+    window.addEventListener('resize', _.debounce(this.onResize, 300));
+  }
+
+  onResize(event) {
+    const width = event.currentTarget ? event.currentTarget.innerWidth : event.innerWidth;
+    if (width < 768) {
+      this.isMobile = true;
+      // this.overlayMenu = true;
+    } else {
+      this.isMobile = false;
+    }
+  }
+
+  menuClick(settings = null) {
+    this.toggle();
+  }
+
+  onToggleMobileLayout() {
+    if (this.isMobile) {
+      // this.overlayMenu = !this.overlayMenu;
+    }
+  }
+
+  _isMobile = false;
+
+  get isMobile() {
+    return this._isMobile;
+  }
+
+  set isMobile(value) {
+    // this._isMobile = value;
+    // let settings: any = {};
+    // if (!value) {
+    //   settings = this.settingLayoutSize;
+    //   this.collapsed = true;
+    // } else {
+    //   settings.leftWidth = '100';
+    //   settings.rightWidth = '0';
+    //   this.collapsed = false;
+    // }
+    // setTimeout(() => {
+    //   this.menuClick(settings);
+    // }, 10);
   }
 
   static Hide() {
@@ -39,7 +99,8 @@ export class ElementLeftBarComponent {
   }
 
   toggle() {
-    this.iconActive = !this.iconActive;
-    this.menuActive.emit();
+    this.collapsed = !this.collapsed;
+    this.menuCollapsedToggle.emit(this.collapsed);
+    // this.menuClick();
   }
 }

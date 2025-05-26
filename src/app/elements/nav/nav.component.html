@@ -1,32 +1,43 @@
 <div class="nav">
-  <ul class="nav-main">
-    <li style="margin-right: 10px; width: 60px">
-      <a style="padding-top: 1px;">
+  <ul nz-menu nzMode="horizontal" class="nav-main">
+    <li nz-menu-item class="logo-item">
+      <a>
         <img (click)="onJumpUi()" alt="" height="30px" id="left-logo" src=""/>
       </a>
     </li>
-    <li *ngFor="let v of navs" [ngClass]="{'dropdown': v.children}">
-      <a>{{ v.name|translate }}</a>
-      <ul *ngIf="v.id === 'Tabs' " [ngClass]="{'dropdown-content': true}">
-        <li *ngIf="viewListSorted.length === 0"><a>{{ 'NoTabs' | translate }}</a></li>
-        <ng-container *ngIf="viewListSorted.length > 0">
-          <ng-container *ngFor="let v of viewListSorted">
-            <li *ngIf="v.name!=null" [ngClass]="{'disconnected':!v.connected, 'hidden': v.closed != false}">
-          <span [class.active]="v.active">
-            <a (click)="_viewSrv.activeView(v)" id="{{ 'tab' + v.id }}">
-              <i class="fa fa-circle flag"></i> {{ v.name }} </a>
-          </span>
+    <ng-container *ngFor="let v of navs">
+      <li nz-submenu nzMenuClassName="dark-dropdown" *ngIf="v.children" [nzTitle]="v.name | translate" [ngClass]="{'dropdown': v.children}">
+        <ul [ngClass]="{'dropdown-content': true}">
+          <ng-container *ngIf="v.id === 'Tabs'">
+            <li nz-menu-item *ngIf="viewListSorted.length === 0">
+              <span>{{ 'NoTabs' | translate }}</span>
+            </li>
+            <ng-container *ngIf="viewListSorted.length > 0">
+              <li nz-menu-item *ngFor="let view of viewListSorted" 
+                  [ngClass]="{'disconnected':!view.connected, 'hidden': view.closed != false}"
+                  [style.display]="view.name ? 'block' : 'none'">
+                <span [class.active]="view.active">
+                  <a (click)="_viewSrv.activeView(view)" id="{{ 'tab' + view.id }}">
+                    <i class="fa fa-circle flag"></i> {{ view.name }}
+                  </a>
+                </span>
+              </li>
+            </ng-container>
+          </ng-container>
+          <ng-container *ngIf="v.id !== 'Tabs'">
+            <li nz-menu-item *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
+              <a *ngIf="vv.href" [routerLink]="[vv.href]">{{ vv.name | translate }}</a>
+              <a (click)="vv.click && vv.click()" *ngIf="vv.click && !vv.hide" id="{{vv.id}}">
+                {{ vv.name | translate }}
+              </a>
             </li>
           </ng-container>
-        </ng-container>
-      </ul>
-      <ul *ngIf="v.children && v.id !== 'Tabs'" [ngClass]="{'dropdown-content': v.children}">
-        <li *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
-          <a *ngIf="vv.href" [routerLink]="[vv.href]">{{ vv.name | translate }}</a>
-          <a (click)="vv.click && vv.click()" *ngIf="vv.click && !vv.hide" id="{{vv.id}}">{{ vv.name| translate }}</a>
-        </li>
-      </ul>
-    </li>
+        </ul>
+      </li>
+      <li nz-menu-item *ngIf="!v.children">
+        <a>{{ v.name | translate }}</a>
+      </li>
+    </ng-container>
   </ul>
   <div class="nav-right">
     <elements-user-profile></elements-user-profile>

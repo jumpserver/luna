@@ -3,6 +3,24 @@
   width: 100%;
   overflow: auto;
 
+  .tree {
+    display: block;
+  }
+
+  .menu-icon {
+    display: none;
+  }
+
+  &.collapsed {
+    .tree {
+      display: none;
+    }
+
+    .menu-icon {
+      display: block
+    }
+  }
+
   .organization {
     display: flex;
     flex-direction: column;
@@ -88,4 +106,53 @@ label {
 
 .fa.fa-undefined:before {
   content: "\f26c";
+}
+
+
+.menu-icon {
+  display: none;
+  width: 100%;
+  height: calc(100% - 30px);
+  text-align: center;
+  color: var(--el-menu-text-color);
+  transition: all .2s;
+}
+
+.menu-item {
+  position: relative;
+  width: 100%;
+  height: 46px;
+  line-height: 46px;
+  cursor: pointer;
+}
+
+.menu-organization {
+  height: 30px;
+  line-height: 30px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--primary-color);
+}
+
+.menu-item:hover, .menu-organization:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.menu-active {
+  display: block;
+  z-index: 11;
+  background: var(--el-assets-bg-color);
+}
+
+.mobile-menu {
+  display: none;
+  width: 100%;
+  height: calc(100% - 29px);
+  position: fixed;
+  top: 30px;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.mobile-menu > .content {
+  width: 100%;
 }

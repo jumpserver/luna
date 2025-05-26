@@ -4,28 +4,40 @@
   display: flex;
   justify-content: space-between;
   background-color: var(--el-header-nav-bg-color);
-  color: var(--el-header-nav-text-color);
   font-weight: 400;
 
   .nav-main {
     display: flex;
     align-items: center;
+    background-color: var(--el-header-nav-bg-color);
+    color: var(--el-header-nav-text-color);
     margin-bottom: 0;
+    padding: 0;
+    border-bottom: none;
 
-    a {
-      color: white;
+    ::ng-deep {
+      .ant-menu-submenu-title {
+        color: var(--el-header-nav-text-color);
+        font-weight: 300;
+        padding: 0 16px;
+
+        &:hover {
+          color: white;
+        }
+      } 
     }
 
-
-    li,
-    .dropdown {
+    li, .dropdown {
       position: relative;
       display: flex;
       align-items: center;
       height: 30px;
+      line-height: 30px;
+      border-bottom: none;
 
-      a {
-        @include GeneralDropdownA;
+      &.ant-menu-submenu-active {
+        border-bottom: none;
+        background-color: var(--el-header-tab-bg-color);
       }
 
       .dropdown-content {
@@ -33,7 +45,6 @@
         @include GeneralDropdown(null, 0);
 
         li {
-          @include GeneralDropdownLi;
 
           .active {
             display: flex;
@@ -72,6 +83,7 @@
   .nav-right {
     display: flex;
     align-items: center;
+    color: var(--el-header-nav-text-color);
   }
 }
 

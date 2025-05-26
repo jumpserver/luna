@@ -63,6 +63,8 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     return this.viewList.length * 201;
   }
 
+  onToggleMobileLayout() {
+  }
 
   async ngOnInit() {
     this.viewList = this.viewSrv.viewList;

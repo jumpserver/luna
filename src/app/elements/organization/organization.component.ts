@@ -1,9 +1,9 @@
-import { Component, OnDestroy, OnInit }        from '@angular/core';
-import { CookieService }                       from 'ngx-cookie-service';
-import { ActivatedRoute, Router }              from '@angular/router';
-import { OrganizationService, SettingService } from '@app/services';
-import { Organization }                        from '@app/model';
-import { DEFAULT_ORG_ID, ROOT_ORG_ID }         from '@app/globals';
+import {Component, OnDestroy, OnInit} from '@angular/core';
+import {CookieService} from 'ngx-cookie-service';
+import {ActivatedRoute, Router} from '@angular/router';
+import {OrganizationService, SettingService} from '@app/services';
+import {Organization} from '@app/model';
+import {DEFAULT_ORG_ID, ROOT_ORG_ID} from '@app/globals';
 
 @Component({
   selector: 'elements-organization',

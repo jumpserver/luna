@@ -119,12 +119,14 @@ export class ElementContentFooterComponent implements OnInit {
       return;
     }
 
-    this._dialog.open(
-      ElementCommandDialogComponent,
+    this._dialog.create(
       {
-        height: 'auto',
-        width: '500px',
-        data: {command: this.batchCommand}
+        nzTitle: this._i18n.instant('Send command'),
+        nzContent: ElementCommandDialogComponent,
+        nzWidth: '500px',
+        nzComponentParams: {
+          data: {command: this.batchCommand}
+        }
       }
     );
   }

@@ -17,29 +17,9 @@
     order="0"
   >
     <div class="layout">
-      <div [ngClass]="{'menu-active':showSubMenu}" class="menu-icon">
-        <div
-          (click)="menuClick()"
-          *ngIf="true"
-          class="menu-organization"
-        >
-          <span style="font-size: 13px;">
-            <i class="fa fa-sitemap"></i>
-          </span>
-        </div>
-        <div
-          (click)="item.click(item.name)"
-          *ngFor="let item of menus"
-          class="menu-item"
-        >
-          <span>
-            <i [ngClass]="item.icon" class="fa"></i>
-          </span>
-        </div>
-      </div>
       <elements-left-bar
         #leftBar
-        (menuActive)="menuActive()"
+        (menuCollapsedToggle)="handleLayoutSettingChange($event)"
       ></elements-left-bar>
     </div>
   </as-split-area>

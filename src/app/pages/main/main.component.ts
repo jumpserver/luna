@@ -2,7 +2,7 @@ import {Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/c
 import {DataStore, User} from '@app/globals';
 import {IOutputData, SplitComponent} from 'angular-split';
 import {HttpService, LogService, SettingService, ViewService} from '@app/services';
-import * as _ from 'lodash';
+
 import {environment} from '@src/environments/environment';
 
 @Component({
@@ -18,7 +18,6 @@ export class PageMainComponent implements OnInit {
   store = DataStore;
   showIframeHider = false;
   showSubMenu: any = false;
-  menus: Array<object>;
   isDirectNavigation: boolean;
   settingLayoutSize = {
     leftWidth: 20,
@@ -31,50 +30,6 @@ export class PageMainComponent implements OnInit {
               public _settingSvc: SettingService) {
   }
 
-  _isMobile = false;
-
-  get isMobile() {
-    return this._isMobile;
-  }
-
-  set isMobile(value) {
-    this._isMobile = value;
-    let settings: any = {};
-    if (!value) {
-      settings = this.settingLayoutSize;
-      this.showSubMenu = true;
-    } else {
-      settings.leftWidth = '100';
-      settings.rightWidth = '0';
-      this.showSubMenu = false;
-    }
-    setTimeout(() => {
-      this.menuClick(settings);
-    }, 10);
-  }
-
-  _overlayMenu = false;
-
-  get overlayMenu() {
-    return this._overlayMenu;
-  }
-
-  set overlayMenu(value) {
-    this._overlayMenu = value;
-    const settings: any = {};
-    if (this.isMobile) {
-      if (this.overlayMenu) {
-        settings.leftWidth = '100';
-        settings.rightWidth = '0';
-      } else {
-        settings.leftWidth = '0';
-        settings.rightWidth = '100';
-      }
-    }
-    setTimeout(() => {
-      this.menuClick(settings);
-    }, 10);
-  }
 
   get currentView() {
     return this.viewSrv.currentView;
@@ -88,26 +43,26 @@ export class PageMainComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    console.log('main init');
     this._http.getUserSession().subscribe();
     this._settingSvc.isDirectNavigation$.subscribe((state) => {
       this.isDirectNavigation = state;
     });
-    this.menus = [
-      {
-        name: 'assets',
-        icon: 'fa-inbox',
-        click: () => this.menuClick(this.settingLayoutSize),
-      },
-      {
-        name: 'applications',
-        icon: 'fa-th',
-        click: () => this.menuClick(this.settingLayoutSize),
-      }
-    ];
-    this.onResize(window);
-    window.addEventListener('resize', _.debounce(this.onResize, 300));
+
     this.connectWebsocket();
+  }
+
+  handleLayoutSettingChange(collapsed: boolean) {
+    if (collapsed) {
+      this.leftArea.nativeElement.style = 'width: 60px';
+      this.rightArea.nativeElement.style = 'width: calc(100% - 60px)';
+    } else {
+      this.leftArea.nativeElement.style = 'width: 20%';
+      this.rightArea.nativeElement.style = 'width: calc(100% - 20%)';
+    }
+  }
+
+  onToggleMobileLayout() {
+
   }
 
   connectWebsocket() {
@@ -131,16 +86,6 @@ export class PageMainComponent implements OnInit {
     ws.onerror = (error) => {
       this._logger.debug('site message ws error: ', error);
     };
-  }
-
-  onResize(event) {
-    const width = event.currentTarget ? event.currentTarget.innerWidth : event.innerWidth;
-    if (width < 768) {
-      this.isMobile = true;
-      this.overlayMenu = true;
-    } else {
-      this.isMobile = false;
-    }
   }
 
   @HostListener('window:beforeunload', ['$event'])
@@ -177,46 +122,4 @@ export class PageMainComponent implements OnInit {
     this.split.notify('end', gutterNum);
   }
 
-  menuActive() {
-    const settings = _.cloneDeep(this.settingLayoutSize);
-    if (this.isMobile) {
-      this.onToggleMobileLayout();
-      if (this.overlayMenu) {
-        settings.leftWidth = '100';
-        settings.rightWidth = '0';
-      } else {
-        settings.leftWidth = '0';
-        settings.rightWidth = '100';
-      }
-    } else {
-      if (this.showSubMenu) {
-        settings.leftWidth = '20';
-        settings.rightWidth = '80';
-      } else {
-        settings.leftWidth = '0';
-        settings.rightWidth = '100';
-      }
-    }
-    setTimeout(() => {
-      this.menuClick(settings);
-    }, 30);
-  }
-
-  menuClick(settings = this.settingLayoutSize) {
-    let leftAreaStyle = `order: 0; flex: 0 0 ${settings.leftWidth}%!important;`;
-    let rightAreaStyle = `order: 2; flex: 0 0 ${settings.rightWidth}%!important;`;
-    if (!this.isMobile) {
-      leftAreaStyle = leftAreaStyle + ' min-width: 54px;';
-      rightAreaStyle = rightAreaStyle + ' max-width: calc(100% - 54px);';
-      this.showSubMenu = !this.showSubMenu;
-    }
-    this.leftArea.nativeElement.style = leftAreaStyle;
-    this.rightArea.nativeElement.style = rightAreaStyle;
-  }
-
-  onToggleMobileLayout() {
-    if (this.isMobile) {
-      this.overlayMenu = !this.overlayMenu;
-    }
-  }
 }
