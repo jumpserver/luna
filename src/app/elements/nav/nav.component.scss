@@ -5,6 +5,7 @@
   justify-content: space-between;
   background-color: var(--el-header-nav-bg-color);
   font-weight: 400;
+  padding-bottom: 1px;
 
   .nav-main {
     display: flex;
@@ -14,6 +15,11 @@
     margin-bottom: 0;
     padding: 0;
     border-bottom: none;
+    font-size: 13px;
+
+    .logo-item {
+      height: 29px;
+    }
 
     ::ng-deep {
       .ant-menu-submenu-title {

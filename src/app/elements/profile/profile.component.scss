@@ -1,10 +1,12 @@
-@import '../../../sass/mixins/index.scss';
-
 .user-file {
   display: flex;
-  padding-right: 10px;
+  margin-right: 10px;
   font-size: 13px;
   font-weight: 300;
+
+  a {
+    color: white;
+  }
 
   .dropdown {
     .head-portrait {
@@ -24,30 +26,12 @@
         margin-left: 10px;
       }
     }
+  }
+}
 
-    a {
-      @include GeneralDropdownA;
-    }
-
-    .dropdown-content {
-      padding: 5px 0;
-      @include GeneralDropdown(0, null);
-
-      li {
-        @include GeneralDropdownLi;
-        text-align: center;
-
-        a {
-          display: inline-block;
-          @include GeneralDropdownLia;
-        }
-      }
-    }
-
-    &:hover {
-      cursor: pointer;
-      @include DropdownHover;
-    }
+::ng-deep .profile-dropdown {
+  .ant-dropdown-menu-item {
+    min-width: 146px;
   }
 }
 

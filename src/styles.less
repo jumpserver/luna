@@ -219,6 +219,21 @@ body ::selection {
 .dark-dropdown {
   background-color: var(--el-header-nav-select-bg-color);
 
+  .ant-dropdown-menu {
+    border-radius: 4px;
+    background-color: var(--el-header-nav-select-bg-color);
+
+    .ant-dropdown-menu-item {
+      &:hover {
+        background-color: var(--el-header-nav-select-hover-bg-color);
+      }
+
+      & > a {
+        color: var(--el-menu-text-color);
+      }
+    }
+  }
+
   // Submenu title
   .ant-menu-submenu.ant-menu-submenu-horizontal {
     .ant-menu-submenu-title {
