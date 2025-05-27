@@ -11,7 +11,7 @@ import {
 } from '@app/services';
 import {Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChildren,} from '@angular/core';
 import {Subscription} from 'rxjs';
-import {NzModalService} from 'ng-zorro-antd';
+import {NzModalService} from 'ng-zorro-antd/modal';
 import {ElementACLDialogComponent} from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
 
 @Component({

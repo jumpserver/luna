@@ -14,7 +14,7 @@ import {
 import {Account, Asset, ConnectData, ConnectionToken, View} from '@app/model';
 import {launchLocalApp} from '@app/utils/common';
 import {ElementConnectDialogComponent} from '@app/elements/connect/connect-dialog/connect-dialog.component';
-import {NzModalService} from 'ng-zorro-antd';
+import {NzModalService} from 'ng-zorro-antd/modal';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
 
 

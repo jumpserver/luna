@@ -1,7 +1,7 @@
 import {Injectable} from '@angular/core';
 import {Asset, ConnectData, ConnectionToken} from '@app/model';
 import {HttpService} from '@app/services/http';
-import {NzModalService} from 'ng-zorro-antd';
+import {NzModalService} from 'ng-zorro-antd/modal';
 import {ElementACLDialogComponent} from './acl-dialog/acl-dialog.component';
 
 @Injectable()

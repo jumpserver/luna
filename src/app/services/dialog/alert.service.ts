@@ -1,5 +1,5 @@
 import {Component, Injectable, Input} from '@angular/core';
-import {NzModalService} from 'ng-zorro-antd';
+import {NzModalService} from 'ng-zorro-antd/modal';
 import {I18nService} from '../i18n';
 
 

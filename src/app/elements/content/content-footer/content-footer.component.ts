@@ -5,7 +5,7 @@ import {
   ElementSendCommandWithVariableDialogComponent
 } from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
-import {NzModalService} from 'ng-zorro-antd';
+import {NzModalService} from 'ng-zorro-antd/modal';
 
 
 @Component({
