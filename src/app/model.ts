@@ -435,7 +435,9 @@ export class ConnectionToken {
   };
   from_ticket_info: FromTicketInfo;
   face_monitor_token: string;
-  connect_options: {};
+  connect_options: {
+    token_reusable: boolean;
+  };
 }
 
 export class Protocol {

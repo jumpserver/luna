@@ -182,6 +182,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   async callLocalClient(connToken: ConnectionToken) {
     this._logger.debug('Call local client');
+    if (connToken.connect_options.token_reusable) {
+      await this._connectTokenSvc.setReusable(connToken, true).toPromise();
+    }
     const response = await this._http.getLocalClientUrl(connToken, this._settingSvc.setting).toPromise();
     const url = response['url'];
     launchLocalApp(url, () => {
