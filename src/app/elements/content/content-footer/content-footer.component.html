@@ -1,17 +1,22 @@
 <div class="content-footer">
   <div *ngIf="showCommandZone" class="batch-command-zone">
     <div class="command-header">
-      <button nz-button nzType="primary">脚本库</button>
-      <button nz-button nzType="danger">Primary</button>
+      <button nz-button nzType="link">
+        <i nz-icon nzType="read" nzTheme="outline"></i>
+        脚本库
+      </button>
+      <nz-switch nzSize="small" [(ngModel)]="sendCommandToAll"></nz-switch>
+      <span style="margin-left: 5px;">Send to all sessions</span>
     </div>
     <div class="command-input">
-      <textarea style="height: 100%;width: 100%"></textarea>
+      <ngx-codemirror [(ngModel)]="batchCommand"></ngx-codemirror>
     </div>
   </div>
   <div class="footer-bar">
     <div class="footer-bar__left">
-      <button (click)="showCommandZone = !showCommandZone" mat-button>
-        批量命令
+      <button nz-button nzType="link" (click)="showCommandZone = !showCommandZone">
+        <i nz-icon nzType="read" nzTheme="outline"></i>
+        批量命令 <i nz-icon nzType="caret-right" nzTheme="outline" [class.rotate-icon]="showCommandZone"></i>
       </button>
     </div>
   </div>

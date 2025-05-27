@@ -11,6 +11,7 @@ body {
   background-color: rgb(243, 243, 244);
   overflow-y: hidden;
   margin: 0;
+  font-size: 13px;
   font-family: "open sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
@@ -216,6 +217,10 @@ body ::selection {
   top: 1px !important;
 }
 
+.ant-select {
+  font-size: 13px;
+}
+
 .dark-dropdown {
   background-color: var(--el-header-nav-select-bg-color);
 
@@ -299,57 +304,72 @@ body ::selection {
     }
   }
 
- 
+
   .ant-select-dropdown-menu {
     .ant-select-dropdown-menu-item {
-      background-color: var(--el-header-nav-select-bg-color); 
+      background-color: var(--el-header-nav-select-bg-color);
       color: var(--el-menu-text-color);
       line-height: 30px;
       height: 30px;
       margin: 0;
       padding: 0 10px;
       font-size: 13px;
-  
+
       a {
         color: var(--el-menu-text-color);
       }
-  
+
       &:first-child {
         border-top-left-radius: 0;
         border-top-right-radius: 0;
-  
+
         &:hover {
           border-radius: 0;
         }
       }
-  
+
       &:last-child {
         border-bottom-left-radius: 0;
         border-bottom-right-radius: 0;
-  
+
         &:hover {
           border-radius: 0;
         }
       }
-  
+
       &.ant-select-dropdown-menu-item-active {
-          // background-color: var(--el-header-nav-select-hover-bg-color);
+        // background-color: var(--el-header-nav-select-hover-bg-color);
       }
-  
+
       &:hover {
         background-color: var(--el-header-nav-select-hover-bg-color);
       }
-  
+
       &.ant-select-dropdown-menu-item-selected {
         &:hover {
           opacity: 0.7;
         }
-  
+
         font-weight: bold;
         opacity: 0.8;
       }
     }
   }
+}
 
- 
+.ant-switch {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+
+  &.ant-switch-checked {
+    background-color: #75d1be !important;
+  }
+}
+
+
+.ant-tabs-bar {
+  margin-bottom: 5px;
+}
+
+.ant-modal-footer {
+  padding: 16px;
 }

@@ -10,6 +10,7 @@ import {TranslateLoader, TranslateModule} from '@ngx-translate/core';
 import {TranslateHttpLoader} from '@ngx-translate/http-loader';
 import {DragDropModule} from '@angular/cdk/drag-drop';
 import {en_US, NgZorroAntdModule, NZ_I18N} from 'ng-zorro-antd';
+import {CodemirrorModule} from '@ctrl/ngx-codemirror';
 
 // service
 import {AllServices} from '@app/services';
@@ -89,6 +90,7 @@ export class CustomLoader implements TranslateLoader {
     AppRouterModule,
     AngularSplitModule.forRoot(),
     NgZorroAntdModule,
+    CodemirrorModule,
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,

@@ -7,6 +7,7 @@ import {
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {NzModalService} from 'ng-zorro-antd';
 
+
 @Component({
   selector: 'elements-content-footer',
   templateUrl: './content-footer.component.html',
@@ -15,10 +16,17 @@ import {NzModalService} from 'ng-zorro-antd';
 export class ElementContentFooterComponent implements OnInit {
   viewList: Array<View> = [];
   isShowInputCommand = true;
-  batchCommand: string;
+  batchCommand: string = '';
   quickCommands = [];
   sendCommandRange = 'current';
+  sendCommandToAll = false;
   showCommandZone = false;
+  codeEditorOptions = {
+    language: 'shell',
+    theme: 'dark',
+    lineNumbers: false,
+    minimap: {enabled: false},
+  };
   sendCommandOptions = [
     {
       value: 'all',

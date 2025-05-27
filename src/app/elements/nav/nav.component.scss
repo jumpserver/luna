@@ -7,6 +7,10 @@
   font-weight: 400;
   padding-bottom: 1px;
 
+  .ant-menu-horizontal > .ant-menu-submenu {
+    top: 0
+  }
+
   .nav-main {
     display: flex;
     align-items: center;
@@ -30,7 +34,7 @@
         &:hover {
           color: white;
         }
-      } 
+      }
     }
 
     li, .dropdown {
