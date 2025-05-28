@@ -15,9 +15,10 @@ import {NzModalService} from 'ng-zorro-antd/modal';
 import {ElementACLDialogComponent} from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
 
 @Component({
+  standalone: false,
   selector: 'pages-direct',
-  templateUrl: './direct.component.html',
-  styleUrls: ['./direct.component.scss'],
+  templateUrl: 'direct.component.html',
+  styleUrls: ['direct.component.scss'],
 })
 export class PageDirectComponent implements OnInit, OnDestroy {
   @ViewChildren('contentWindow') contentWindows: QueryList<ElementRef>;
@@ -234,17 +235,17 @@ export class PageDirectComponent implements OnInit, OnDestroy {
 
     // TODO 当前版本前端实现，用户打开文件管理时，需要重新去校验 ACL 权限
     if (type === 'file') {
-      const res = await this._http
+      const res = this._http
         .adminConnectToken(this.permedAsset, this.connectData, false, false, '')
-        .subscribe((res) => {
-            const SFTP_Token = res ? res.id : '';
+        .subscribe((resp) => {
+            const SFTP_Token = resp ? resp.id : '';
             this.iframeCommunicationService.sendMessage({name: 'FILE', SFTP_Token});
             return this._logger.info(`[Luna] Send OPEN FILE`);
           },
           (error) => {
             const dialogRef = this._dialog.create({
               nzContent: ElementACLDialogComponent,
-              nzComponentParams: {
+              nzData: {
                 data: {
                   asset: this.permedAsset,
                   connectData: this.connectData,
@@ -344,7 +345,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
             error => {
               const dialogRef = this._dialog.create({
                 nzContent: ElementACLDialogComponent,
-                nzComponentParams: {
+                nzData: {
                   data: {
                     asset: assetMessage,
                     connectData: connectData,

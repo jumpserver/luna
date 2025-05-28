@@ -2,6 +2,7 @@ import {Directive, Optional, Self} from '@angular/core';
 import {DefaultFlexDirective} from '@angular/flex-layout';
 
 @Directive({
+  standalone: false,
   selector: '[ngxSplitArea]',
   // tslint:disable-next-line:use-host-property-decorator
   host: {
@@ -9,5 +10,6 @@ import {DefaultFlexDirective} from '@angular/flex-layout';
   }
 })
 export class SplitAreaDirective {
-  constructor(@Optional() @Self() public flex: DefaultFlexDirective) {}
+  constructor(@Optional() @Self() public flex: DefaultFlexDirective) {
+  }
 }

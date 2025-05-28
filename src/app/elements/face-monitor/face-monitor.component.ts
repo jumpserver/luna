@@ -3,9 +3,10 @@ import {FaceService} from '@app/services/face';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 
 @Component({
+  standalone: false,
   selector: 'app-face-monitor',
-  templateUrl: './face-monitor.component.html',
-  styleUrls: ['./face-monitor.component.scss']
+  templateUrl: 'face-monitor.component.html',
+  styleUrls: ['face-monitor.component.scss']
 })
 export class ElementFaceMonitorComponent implements OnInit {
 

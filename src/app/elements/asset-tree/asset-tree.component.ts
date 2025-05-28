@@ -50,9 +50,10 @@ class Tree {
 
 
 @Component({
+  standalone: false,
   selector: 'elements-asset-tree',
-  templateUrl: './asset-tree.component.html',
-  styleUrls: ['./asset-tree.component.scss'],
+  templateUrl: 'asset-tree.component.html',
+  styleUrls: ['asset-tree.component.scss'],
 })
 export class ElementAssetTreeComponent implements OnInit {
   @Input() query: string;

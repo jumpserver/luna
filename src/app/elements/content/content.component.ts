@@ -7,9 +7,10 @@ import * as jQuery from 'jquery/dist/jquery.min.js';
 import * as _ from 'lodash';
 
 @Component({
+  standalone: false,
   selector: 'elements-content',
-  templateUrl: './content.component.html',
-  styleUrls: ['./content.component.scss']
+  templateUrl: 'content.component.html',
+  styleUrls: ['content.component.scss']
 })
 export class ElementContentComponent implements OnInit, OnDestroy {
   @ViewChild('tabs', {static: false}) tabsRef: ElementRef;

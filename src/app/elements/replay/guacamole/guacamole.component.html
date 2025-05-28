@@ -6,15 +6,20 @@
     <button type="button" class="btn" (click)="restart()">
       <i class="fa fa-repeat" aria-hidden="true"></i>
     </button>
-    <span [ngClass]="rangeHideClass" style="width: 100%"><input id="position-slider" type="range" [(ngModel)]="percent" [attr.max]="max" (mouseup)="runFrom()"></span>
+    <span [ngClass]="rangeHideClass" style="width: 100%"><input id="position-slider" type="range" [(ngModel)]="percent"
+                                                                [attr.max]="max" (mouseup)="runFrom()"></span>
     <span id="position">{{ position }}</span>
     <span>/</span>
     <span id="duration">{{ duration }}</span>
-    <span id="user" style="padding-left: 20px" *ngIf="replay.user">{{"user"| translate}} : {{replay.user}}</span>
-    <span id="asset" style="padding-left: 20px" *ngIf="replay.asset">{{"asset"| translate}} : {{replay.asset}}</span>
-    <span id="system_user" style="padding-left: 20px" *ngIf="replay.system_user">{{"system user"| translate}} : {{replay.system_user}}</span>
-    <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{"start time"| translate}} : {{startTime}} </span>
-    <span id="download" style="padding-left: 30px" *ngIf="replay.download_url"><a type="button" [href]="replay.download_url">{{"download"| translate}}</a></span>
+    <span id="user" style="padding-left: 20px" *ngIf="replay.user">{{ "user"| translate }} : {{ replay.user }}</span>
+    <span id="asset" style="padding-left: 20px" *ngIf="replay.asset">{{ "asset"| translate }}
+      : {{ replay.asset }}</span>
+    <span id="system_user" style="padding-left: 20px" *ngIf="replay.system_user">{{ "system user"| translate }}
+      : {{ replay.system_user }}</span>
+    <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{ "start time"| translate }}
+      : {{ startTime }} </span>
+    <span id="download" style="padding-left: 30px" *ngIf="replay.download_url"><a type="button"
+                                                                                  [href]="replay.download_url">{{ "download"| translate }}</a></span>
   </div>
   <div id="display">
     <div class="notification-container">
@@ -26,21 +31,21 @@
       </div>
     </div>
     <as-split direction="horizontal" gutterSize="0">
-      <as-split-area *ngIf="commands.length" [size]="15" [maxSize]="15" [minSize]="0" order="0">
+      <as-split-area *ngIf="commands.length" [size]="15" [maxSize]="15" order="0">
         <div class="command-results"
-              infiniteScroll
-              [infiniteScrollDistance]="2"
-              [infiniteScrollThrottle]="50"
-              (scrolled)="onScroll()"
-              [scrollWindow]="false">
-            <div class="item" [title]="leftInfo" *ngFor="let item of commands" (click)="commandClick(item)">
-              <div class="command" [title]="item.input">{{ item.input }}</div>
-              <div class="timestamp">{{ item.atime }}</div>
-            </div>
+             infiniteScroll
+             [infiniteScrollDistance]="2"
+             [infiniteScrollThrottle]="50"
+             (scrolled)="onScroll()"
+             [scrollWindow]="false">
+          <div class="item" [title]="leftInfo" *ngFor="let item of commands" (click)="commandClick(item)">
+            <div class="command" [title]="item.input">{{ item.input }}</div>
+            <div class="timestamp">{{ item.atime }}</div>
+          </div>
         </div>
       </as-split-area>
       <as-split-area [size]="85" [maxSize]="100" [minSize]="85" order="1">
-          <div id="screen" (click)="toggle()"></div>
+        <div id="screen" (click)="toggle()"></div>
       </as-split-area>
     </as-split>
   </div>

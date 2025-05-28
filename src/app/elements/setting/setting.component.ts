@@ -5,9 +5,10 @@ import {I18nService} from '@app/services/i18n';
 import * as _ from 'lodash';
 
 @Component({
+  standalone: false,
   selector: 'elements-setting',
-  templateUrl: './setting.component.html',
-  styleUrls: ['./setting.component.scss']
+  templateUrl: 'setting.component.html',
+  styleUrls: ['setting.component.scss']
 })
 export class ElementSettingComponent implements OnInit {
   public boolChoices: any[];

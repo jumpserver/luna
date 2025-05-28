@@ -1,7 +1,10 @@
 // font-awesome
-$fa-font-path: '~font-awesome/fonts';
-@import '~font-awesome/scss/font-awesome';
+@use 'font-awesome/scss/font-awesome';
+@use './ztree.css';
+@use './ztree_icon.scss';
+
 $asset-path: '../static/imgs/inspinia';
+$fa-font-path: '~font-awesome/fonts';
 
 @font-face {
   font-family: 'Open Sans';
@@ -24,12 +27,10 @@ $asset-path: '../static/imgs/inspinia';
   font-style: normal;
 }
 
-//@import '~@swimlane/ngx-datatable/release/index.css';
-//@import '~@swimlane/ngx-datatable/release/themes/material.css';
-//@import '~@swimlane/ngx-datatable/release/assets/icons.css';
+//@use '~@swimlane/ngx-datatable/release/index.css';
+//@use '~@swimlane/ngx-datatable/release/themes/material.css';
+//@use '~@swimlane/ngx-datatable/release/assets/icons.css';
 
-@import './ztree.css';
-@import './ztree_icon.scss';
 $label-margin-bottom: 0;
 .ztree * {
   background-color: inherit !important;

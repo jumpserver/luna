@@ -10,14 +10,17 @@ interface MenuItem {
 }
 
 @Component({
+  standalone: false,
   selector: 'elements-user-profile',
-  templateUrl: './profile.component.html',
-  styleUrls: ['./profile.component.scss'],
+  templateUrl: 'profile.component.html',
+  styleUrls: ['profile.component.scss'],
 })
 export class ElementUserFileComponent implements OnInit {
   menus: Array<MenuItem>;
   user: ModelUser;
-  constructor(private _http: HttpService) {}
+
+  constructor(private _http: HttpService) {
+  }
 
   ngOnInit() {
     this.init();

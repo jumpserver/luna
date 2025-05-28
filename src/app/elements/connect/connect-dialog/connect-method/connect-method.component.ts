@@ -3,9 +3,10 @@ import {Account, AuthInfo, ConnectMethod, Protocol} from '@app/model';
 import {AppService, I18nService, SettingService} from '@app/services';
 
 @Component({
+  standalone: false,
   selector: 'elements-connect-method',
-  templateUrl: './connect-method.component.html',
-  styleUrls: ['./connect-method.component.scss']
+  templateUrl: 'connect-method.component.html',
+  styleUrls: ['connect-method.component.scss']
 })
 export class ElementConnectMethodComponent implements OnInit {
   @Output() connectMethodChange = new EventEmitter<ConnectMethod>();

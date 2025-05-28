@@ -6,9 +6,10 @@ import {Command, InfoItem} from './model';
 
 
 @Component({
+  standalone: false,
   selector: 'elements-connector-guide',
-  templateUrl: './guide.component.html',
-  styleUrls: ['./guide.component.scss']
+  templateUrl: 'guide.component.html',
+  styleUrls: ['guide.component.scss']
 })
 
 export class ElementConnectorGuideComponent implements OnInit {

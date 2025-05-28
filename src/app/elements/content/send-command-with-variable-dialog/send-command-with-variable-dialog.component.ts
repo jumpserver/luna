@@ -1,10 +1,11 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {HttpService} from '@app/services';
-import {NzModalRef} from 'ng-zorro-antd';
+import {NzModalRef} from 'ng-zorro-antd/modal';
 
 @Component({
+  standalone: false,
   selector: 'elements-send-with-variable-command-dialog',
-  templateUrl: './send-command-with-variable-dialog.component.html',
+  templateUrl: 'send-command-with-variable-dialog.component.html',
 })
 export class ElementSendCommandWithVariableDialogComponent implements OnInit {
   public formConfig = [];

@@ -15,7 +15,7 @@ export class ConnectTokenService {
     const dialogRef = this._dialog.create({
       nzContent: ElementACLDialogComponent,
       nzWidth: '450px',
-      nzComponentParams: {
+      nzData: {
         data: data
       },
     });

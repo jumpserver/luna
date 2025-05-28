@@ -6,14 +6,15 @@ import {Command, InfoItem} from '../guide/model';
 
 
 @Component({
+  standalone: false,
   selector: 'elements-connector-koko',
-  templateUrl: './koko.component.html',
-  styleUrls: ['./koko.component.scss']
+  templateUrl: 'koko.component.html',
+  styleUrls: ['koko.component.scss']
 })
 export class ElementConnectorKokoComponent implements OnInit {
   @Input() view: View;
   @ViewChild('terminal', {static: false}) iframe: ElementRef;
-  @ViewChild('iFrame', { static: false }) iframeRef: ElementRef;
+  @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
 
   iframeURL: any;
   asset: Asset;
@@ -68,7 +69,7 @@ export class ElementConnectorKokoComponent implements OnInit {
       return;
     }
 
-    iframeWindow.postMessage({ name: 'CREATE_FILE_CONNECT_TOKEN', SFTP_Token: newConnectToken.id }, '*');
+    iframeWindow.postMessage({name: 'CREATE_FILE_CONNECT_TOKEN', SFTP_Token: newConnectToken.id}, '*');
   }
 
   setInfoItems() {

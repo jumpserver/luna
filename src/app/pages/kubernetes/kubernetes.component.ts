@@ -1,20 +1,15 @@
-import {
-  Component,
-  OnInit,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
-} from '@angular/core';
+import {AfterViewInit, Component, ElementRef, OnInit, ViewChild,} from '@angular/core';
 import {ActivatedRoute, Params} from '@angular/router';
 import {HttpService, LogService, SettingService, ViewService} from '@app/services';
 import {getWaterMarkContent} from '@app/utils/common';
 
 @Component({
+  standalone: false,
   selector: 'pages-kubernetes',
-  templateUrl: './kubernetes.component.html',
+  templateUrl: 'kubernetes.component.html',
 })
 export class PagesKubernetesComponent implements OnInit, AfterViewInit {
-  @ViewChild('iFrame', { static: false }) iframeRef: ElementRef;
+  @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
 
   public ping;
   public id: string = '';
@@ -49,7 +44,7 @@ export class PagesKubernetesComponent implements OnInit, AfterViewInit {
   private handleK8sIframeEvent() {
     this.ping = setInterval(() => {
       this._logger.info(`[Luna] Send K8s PING to: ${this.id}`);
-      this.iframeRef.nativeElement.contentWindow.postMessage({ name: 'PING', id: this.id }, '*');
+      this.iframeRef.nativeElement.contentWindow.postMessage({name: 'PING', id: this.id}, '*');
     }, 1000);
 
     window.addEventListener('message', (event) => {
@@ -60,7 +55,7 @@ export class PagesKubernetesComponent implements OnInit, AfterViewInit {
           clearInterval(this.ping);
           break;
         case 'PING':
-          this.iframeRef.nativeElement.contentWindow.postMessage({ name: 'PING', id: this.id }, '*');
+          this.iframeRef.nativeElement.contentWindow.postMessage({name: 'PING', id: this.id}, '*');
           break;
         default:
           break;

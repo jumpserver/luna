@@ -9,9 +9,10 @@ import {NzModalService} from 'ng-zorro-antd/modal';
 
 
 @Component({
+  standalone: false,
   selector: 'elements-content-footer',
-  templateUrl: './content-footer.component.html',
-  styleUrls: ['./content-footer.component.scss'],
+  templateUrl: 'content-footer.component.html',
+  styleUrls: ['content-footer.component.scss'],
 })
 export class ElementContentFooterComponent implements OnInit {
   viewList: Array<View> = [];
@@ -92,7 +93,7 @@ export class ElementContentFooterComponent implements OnInit {
         nzTitle: this._i18n.instant('Send command'),
         nzContent: ElementSendCommandWithVariableDialogComponent,
         nzWidth: '500px',
-        nzComponentParams: {
+        nzData: {
           command: command
         }
       });
@@ -132,7 +133,7 @@ export class ElementContentFooterComponent implements OnInit {
         nzTitle: this._i18n.instant('Send command'),
         nzContent: ElementCommandDialogComponent,
         nzWidth: '500px',
-        nzComponentParams: {
+        nzData: {
           data: {command: this.batchCommand}
         }
       }

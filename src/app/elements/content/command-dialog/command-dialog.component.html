@@ -1,12 +1,12 @@
 <div nz-dialog-title>
-  {{'Save command'| translate}}
+  {{ 'Save command'| translate }}
 </div>
 
 <form nz-form>
   <nz-form-item>
     <nz-form-control>
       <nz-input-group>
-        <input nz-input [(ngModel)]="name" required placeholder='{{'Name'| translate}}' name="fontSize" max="60">
+        <input nz-input [(ngModel)]="name" required [placeholder]="this._i18n.t('Name')" name="fontSize" max="60">
       </nz-input-group>
     </nz-form-control>
   </nz-form-item>
@@ -22,5 +22,5 @@
 </form>
 
 <div style="text-align: right; padding-top: 20px">
-  <button nz-button nzType="primary" (click)="onSubmit()">{{'Confirm'| translate}}</button>
+  <button nz-button nzType="primary" (click)="onSubmit()">{{ 'Confirm'| translate }}</button>
 </div>

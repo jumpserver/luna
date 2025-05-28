@@ -1,16 +1,17 @@
-import {Component, OnInit, Input} from '@angular/core';
+import {Component, Input, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-import 'rxjs/add/operator/filter';
-import {Replay, Command} from '@app/model';
+import {Command, Replay} from '@app/model';
 import {formatTime} from '@app/utils/common';
 import {HttpService} from '@app/services';
+import {filter} from 'rxjs';
 
 declare var asciinema: any;
 
 @Component({
+  standalone: false,
   selector: 'elements-replay-asciicast',
-  templateUrl: './asciicast.component.html',
-  styleUrls: ['./asciicast.component.scss']
+  templateUrl: 'asciicast.component.html',
+  styleUrls: ['asciicast.component.scss'],
 })
 export class ElementReplayAsciicastComponent implements OnInit {
 
@@ -42,17 +43,21 @@ export class ElementReplayAsciicastComponent implements OnInit {
     const date = new Date(Date.parse(this.replay.date_start));
     this.startTimeStamp = Date.parse(this.replay.date_start);
     this.startTime = this.toSafeLocalDateStr(date);
-    this.route.queryParams.filter(params => params.timestamp).subscribe(params => {
-        // 计算开始时间时，减去 5 秒误差
-        this.startAt = (end.getTime() / 1000) - parseInt(params.timestamp, 10) - 5;
-        if (this.startAt <= 0) {
-          this.startAt = 0;
+    this.route.queryParams
+      .pipe(
+        filter(params => params.timestamp)
+      )
+      .subscribe(params => {
+          // 计算开始时间时，减去 5 秒误差
+          this.startAt = (end.getTime() / 1000) - parseInt(params.timestamp, 10) - 5;
+          if (this.startAt <= 0) {
+            this.startAt = 0;
+          }
+          if (this.startAt >= duration) {
+            this.startAt = duration;
+          }
         }
-        if (this.startAt >= duration) {
-          this.startAt = duration;
-        }
-      }
-    );
+      );
     this.cols = window.innerWidth;
     this.rows = window.innerHeight - 50;
     this.position = '00:00';
@@ -147,9 +152,9 @@ export class ElementReplayAsciicastComponent implements OnInit {
   getUserLang() {
     const userLangEN = document.cookie.indexOf('django_language=en');
     if (userLangEN === -1) {
-    return 'zh-CN';
+      return 'zh-CN';
     } else {
-    return 'en-US';
+      return 'en-US';
     }
   }
 
@@ -163,19 +168,19 @@ export class ElementReplayAsciicastComponent implements OnInit {
       return;
     }
     this._http.getCommandsData(this.replay.id, page)
-    .subscribe(
-      data => {
-        const results = data.results;
-        const startPlayTime = new Date(this.replay.date_start).getTime();
-        results.forEach(element => {
-          element.atime = formatTime(element.timestamp * 1000 - startPlayTime);
-        });
-        this.commands = this.commands.concat(results);
-      },
-      err => {
-        alert('没找到命令记录');
-      }
-    );
+      .subscribe(
+        data => {
+          const results = data.results;
+          const startPlayTime = new Date(this.replay.date_start).getTime();
+          results.forEach(element => {
+            element.atime = formatTime(element.timestamp * 1000 - startPlayTime);
+          });
+          this.commands = this.commands.concat(results);
+        },
+        err => {
+          alert('没找到命令记录');
+        }
+      );
   }
 
   onScroll() {

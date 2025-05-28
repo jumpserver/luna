@@ -1,23 +1,17 @@
-import {
-  Component,
-  Input,
-  OnInit,
-  OnChanges,
-  SimpleChanges,
-  ViewEncapsulation
-} from '@angular/core';
-import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
-import { Command, Replay } from '@app/model';
-import { HttpService } from '@app/services';
-import { formatTime } from '@app/utils/common';
-import { TranslateService } from '@ngx-translate/core';
-import { fromEvent, Observable, Subscription } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import {Component, Input, OnChanges, OnInit, SimpleChanges, ViewEncapsulation} from '@angular/core';
+import * as Guacamole from 'guacamole-common-js';
+import {Command, Replay} from '@app/model';
+import {HttpService} from '@app/services';
+import {formatTime} from '@app/utils/common';
+import {TranslateService} from '@ngx-translate/core';
+import {fromEvent, Observable, Subscription} from 'rxjs';
+import {debounceTime, distinctUntilChanged} from 'rxjs/operators';
 
 @Component({
+  standalone: false,
   selector: 'elements-replay-guacamole',
-  templateUrl: './guacamole.component.html',
-  styleUrls: ['./guacamole.component.scss'],
+  templateUrl: 'guacamole.component.html',
+  styleUrls: ['guacamole.component.scss'],
   encapsulation: ViewEncapsulation.None
 })
 export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
@@ -45,7 +39,8 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
   interval: number;
   initializedCommand: boolean = false;
 
-  constructor(private _http: HttpService, private _translate: TranslateService) {}
+  constructor(private _http: HttpService, private _translate: TranslateService) {
+  }
 
   ngOnInit() {
     this.initialize();
@@ -231,7 +226,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
   }
 
   toSafeLocalDateStr(d) {
-    const date_s = d.toLocaleString(this.getUserLang(), { hour12: false });
+    const date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
     return date_s.split('/').join('-');
   }
 
@@ -320,7 +315,9 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
 
   private initTouchEvents() {
     const screen = document.getElementById('screen');
-    if (!screen) { return; }
+    if (!screen) {
+      return;
+    }
 
     let touchStartX = 0;
     let touchStartY = 0;

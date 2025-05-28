@@ -9,13 +9,28 @@
       "projectType": "application",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:browser",
+          "builder": "@angular-devkit/build-angular:application",
+          "baseHref": "/luna/",
           "options": {
             "outputPath": "dist",
             "index": "src/index.html",
-            "main": "src/main.ts",
+            "browser": "src/main.ts",
+            "polyfills": [
+              "src/polyfills.ts"
+            ],
+            "allowedCommonJsDependencies": [
+              "crypto-js",
+              "events",
+              "buffer"
+            ],
             "tsConfig": "src/tsconfig.app.json",
-            "polyfills": "src/polyfills.ts",
+            "stylePreprocessorOptions": {
+              "includePaths": [
+                "src",
+                "src/sass",
+                "node_modules"
+              ]
+            },
             "preserveSymlinks": true,
             "assets": [
               "src/assets",
@@ -28,19 +43,19 @@
               }
             ],
             "styles": [
-              "node_modules/animate.css/animate.min.css",
-              "node_modules/xterm/dist/xterm.css",
+              "animate.css/animate.min.css",
+              "@xterm/xterm/css/xterm.css",
               "src/sass/style.scss",
               "src/styles.less",
               "src/theme.less",
-              "node_modules/asciinema-player/resources/public/css/asciinema-player.css"
+              "asciinema-player/dist/bundle/asciinema-player.css"
             ],
             "scripts": [
               "node_modules/jquery/dist/jquery.min.js",
-              "node_modules/xterm/dist/xterm.js",
+              "node_modules/@xterm/xterm/lib/xterm.js",
               "node_modules/@ztree/ztree_v3/js/jquery.ztree.all.min.js",
               "node_modules/@ztree/ztree_v3/js/jquery.ztree.exhide.min.js",
-              "node_modules/asciinema-player/resources/public/js/asciinema-player.js"
+              "node_modules/asciinema-player/dist/bundle/asciinema-player.js"
             ]
           },
           "configurations": {
@@ -48,12 +63,17 @@
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,
-              "extractCss": true,
               "namedChunks": false,
-              "aot": true,
               "extractLicenses": true,
               "vendorChunk": false,
               "buildOptimizer": true,
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "2mb",
+                  "maximumError": "5mb"
+                }
+              ],
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
@@ -66,67 +86,36 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "WebTerminal:build"
+            "buildTarget": "WebTerminal:build"
           },
           "configurations": {
             "production": {
-              "browserTarget": "WebTerminal:build:production"
+              "buildTarget": "WebTerminal:build:production"
             }
           }
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "WebTerminal:build"
-          }
-        },
-        "test": {
-          "builder": "@angular-devkit/build-angular:karma",
-          "options": {
-            "main": "src/test.ts",
-            "karmaConfig": "./karma.conf.js",
-            "polyfills": "src/polyfills.ts",
-            "tsConfig": "src/tsconfig.spec.json",
-            "scripts": [
-              "node_modules/jquery/dist/jquery.min.js",
-              "node_modules/xterm/dist/xterm.js",
-              "node_modules/@ztree/ztree_v3/js/jquery.ztree.all.min.js",
-              "node_modules/@ztree/ztree_v3/js/jquery.ztree.exhide.min.js"
-            ],
-            "styles": [
-              "node_modules/animate.css/animate.min.css",
-              "node_modules/xterm/dist/xterm.css",
-              "src/sass/style.scss",
-              "src/styles.less"
-            ],
-            "assets": [
-              "src/assets",
-              "src/static",
-              "src/theme/default",
-              "src/favicon.ico"
-            ]
+            "buildTarget": "WebTerminal:build"
           }
         },
         "lint": {
-          "builder": "@angular-devkit/build-angular:tslint",
+          "builder": "@angular-eslint/builder:lint",
           "options": {
-            "tsConfig": [
-              "src/tsconfig.app.json",
-              "src/tsconfig.spec.json"
-            ],
-            "exclude": [
-              "**/node_modules/**"
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
             ]
           }
         }
       }
     }
   },
-  "defaultProject": "Luna",
   "schematics": {
     "@schematics/angular:component": {
       "prefix": "app",
-      "styleext": "scss"
+      "style": "scss"
     },
     "@schematics/angular:directive": {
       "prefix": "app"

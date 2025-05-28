@@ -4,6 +4,7 @@ import {fromEvent, Observable} from 'rxjs';
 import {map, switchMap, takeUntil, throttleTime} from 'rxjs/operators';
 
 @Directive({
+  standalone: false,
   selector: '[ngxSplitHandle]'
 })
 export class SplitHandleDirective {

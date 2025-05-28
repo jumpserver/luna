@@ -6,9 +6,10 @@ import {Organization} from '@app/model';
 import {DEFAULT_ORG_ID, ROOT_ORG_ID} from '@app/globals';
 
 @Component({
+  standalone: false,
   selector: 'elements-organization',
-  templateUrl: './organization.component.html',
-  styleUrls: ['./organization.component.scss'],
+  templateUrl: 'organization.component.html',
+  styleUrls: ['organization.component.scss'],
 })
 export class ElementOrganizationComponent implements OnInit, OnDestroy {
   currentOrg: Organization = {id: '', name: ''};

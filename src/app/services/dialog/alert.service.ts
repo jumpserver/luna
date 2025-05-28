@@ -4,9 +4,10 @@ import {I18nService} from '../i18n';
 
 
 @Component({
+  standalone: false,
   selector: 'elements-alert',
   templateUrl: 'alert.html',
-  styleUrls: ['./alert.scss']
+  styleUrls: ['alert.scss']
 })
 export class ElementDialogAlertComponent {
   @Input() msg: string;
@@ -49,7 +50,7 @@ export class AlertService {
     this._dialog.create({
       nzTitle: nzTitle,
       nzContent: ElementDialogAlertComponent,
-      nzComponentParams: {
+      nzData: {
         msg: msg,
         title: title,
         type: type

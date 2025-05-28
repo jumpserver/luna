@@ -1,9 +1,10 @@
-<input id="search" class="search"
-  [formControl]="searchControl"
-  placeholder=" {{'Search'| translate }} ..."
+<input
+  id="search" class="search"
+  [placeholder]="_i18n.t('Search')"
   maxlength="2048"
   name="keyword"
   autocomplete="off"
   title="Search"
-  type="text" tabindex="1" spellcheck="false"
+  type="text" tabindex="1"
+  spellcheck="false"
 >

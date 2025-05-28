@@ -1,12 +1,13 @@
-import {Component, Input, Output, OnInit, SimpleChanges, EventEmitter} from '@angular/core';
+import {Component, EventEmitter, Input, OnInit, Output, SimpleChanges} from '@angular/core';
 import {FormGroup} from '@angular/forms';
 import {DynamicFormService} from './dynamic-form.service';
 import * as _ from 'lodash';
 
 @Component({
+  standalone: false,
   selector: 'variable-dynamic-form',
-  templateUrl: './variable-dynamic-form.component.html',
-  styleUrls: ['./variable-dynamic-form.component.scss'],
+  templateUrl: 'variable-dynamic-form.component.html',
+  styleUrls: ['variable-dynamic-form.component.scss'],
 })
 export class DynamicFormComponent implements OnInit {
   @Input() formConfig: any;
@@ -14,9 +15,13 @@ export class DynamicFormComponent implements OnInit {
   @Output() formSubmitted = new EventEmitter<any>();
   dynamicForm: FormGroup;
   fieldKeys: string[];
-  constructor(private dynamicFormService: DynamicFormService) {}
+
+  constructor(private dynamicFormService: DynamicFormService) {
+  }
+
   ngOnInit(): void {
   }
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['formConfig'] && this.formConfig) {
       this.dynamicForm = this.dynamicFormService.createFormGroup(this.formConfig);
@@ -31,6 +36,7 @@ export class DynamicFormComponent implements OnInit {
       });
     }
   }
+
   updateTextarea(): void {
     _.templateSettings.interpolate = /{{\s*([a-zA-Z0-9_]+)\s*}}/g;
     const compiled = _.template(this.command.args);

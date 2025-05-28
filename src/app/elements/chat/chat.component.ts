@@ -3,9 +3,10 @@ import {SettingService, ViewService} from '@app/services';
 import {View} from '@app/model';
 
 @Component({
+  standalone: false,
   selector: 'elements-chat',
-  templateUrl: './chat.component.html',
-  styleUrls: ['./chat.component.scss'],
+  templateUrl: 'chat.component.html',
+  styleUrls: ['chat.component.scss'],
 })
 
 export class ElementChatComponent implements OnInit, OnDestroy {
@@ -101,7 +102,9 @@ export class ElementChatComponent implements OnInit, OnDestroy {
         vm.isDragging = true;
 
         document.onmousemove = function (ev: MouseEvent) {
-          if (!vm.isDragging) { return; }
+          if (!vm.isDragging) {
+            return;
+          }
 
           dragBox.style.top = ev.clientY - innerY + 'px';
           dragBox.style.height = initialHeight;
@@ -139,7 +142,9 @@ export class ElementChatComponent implements OnInit, OnDestroy {
 
     elements.forEach(element => {
       element.addEventListener('mousedown', (event: MouseEvent) => {
-        if (event.button !== 0) { return; }
+        if (event.button !== 0) {
+          return;
+        }
         event.preventDefault();
         startDrag(event);
       }, false);

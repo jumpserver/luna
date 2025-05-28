@@ -1,15 +1,15 @@
 import {Component, Input, OnInit} from '@angular/core';
-import {Terminal} from 'xterm';
+import {Terminal} from '@xterm/xterm';
 import {HttpService} from '@app/services';
 import {Replay} from '@app/model';
-import {newTerminal} from '@app/utils/common';
-import {formatTime} from '@app/utils/common';
+import {formatTime, newTerminal} from '@app/utils/common';
 
 
 @Component({
+  standalone: false,
   selector: 'elements-replay-json',
-  templateUrl: './json.component.html',
-  styleUrls: ['./json.component.css']
+  templateUrl: 'json.component.html',
+  styleUrls: ['json.component.css']
 })
 export class ElementReplayJsonComponent implements OnInit {
   isPlaying = false;
@@ -34,11 +34,14 @@ export class ElementReplayJsonComponent implements OnInit {
   get position() {
     return formatTime(this.time);
   }
+
   set position(data) {
   }
+
   @Input() replay: Replay;
 
-  constructor(private _http: HttpService) {}
+  constructor(private _http: HttpService) {
+  }
 
   ngOnInit() {
     this.term = newTerminal(14);
@@ -111,18 +114,21 @@ export class ElementReplayJsonComponent implements OnInit {
     clearInterval(this.timer);
     this.isPlaying = false;
   }
+
   getUserLang() {
     const userLangEN = document.cookie.indexOf('django_language=en');
     if (userLangEN === -1) {
-    return 'zh-CN';
+      return 'zh-CN';
     } else {
-    return 'en-US';
+      return 'en-US';
     }
   }
+
   toSafeLocalDateStr(d) {
     const date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
     return date_s.split('/').join('-');
   }
+
   speedUp() {
     this.speed += 1;
   }

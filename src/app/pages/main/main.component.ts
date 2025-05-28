@@ -1,14 +1,15 @@
 import {Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/core';
 import {DataStore, User} from '@app/globals';
-import {IOutputData, SplitComponent} from 'angular-split';
+import {SplitComponent} from 'angular-split';
 import {HttpService, LogService, SettingService, ViewService} from '@app/services';
 
 import {environment} from '@src/environments/environment';
 
 @Component({
+  standalone: false,
   selector: 'pages-main',
-  templateUrl: './main.component.html',
-  styleUrls: ['./main.component.scss'],
+  templateUrl: 'main.component.html',
+  styleUrls: ['main.component.scss'],
 })
 export class PageMainComponent implements OnInit {
   @ViewChild(SplitComponent, {read: false, static: false}) split: SplitComponent;
@@ -104,22 +105,22 @@ export class PageMainComponent implements OnInit {
     return returnValue;
   }
 
-  dragStartHandler($event: IOutputData) {
+  dragStartHandler($event) {
     this.showIframeHider = true;
   }
 
-  dragEndHandler($event: IOutputData) {
+  dragEndHandler($event) {
     const layoutWidth = $event.sizes[0];
     this.showSubMenu = layoutWidth < 6;
     this.showIframeHider = false;
   }
 
-  splitGutterClick({gutterNum}: IOutputData) {
+  splitGutterClick({gutterNum}) {
     // By default, clicking the gutter without changing position does not trigger the 'dragEnd' event
     // This can be fixed by manually notifying the component
     // See issue: https://github.com/angular-split/angular-split/issues/186
     // TODO: Create custom example for this, and document it
-    this.split.notify('end', gutterNum);
+    // this.split.notify('end', gutterNum);
   }
 
 }

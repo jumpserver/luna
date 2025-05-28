@@ -13,4 +13,5 @@ import {SplitHandleDirective} from './split-handle.directive';
   declarations: [SplitDirective, SplitAreaDirective, SplitHandleDirective],
   exports: [SplitDirective, SplitAreaDirective, SplitHandleDirective]
 })
-export class SplitModule {}
+export class SplitModule {
+}

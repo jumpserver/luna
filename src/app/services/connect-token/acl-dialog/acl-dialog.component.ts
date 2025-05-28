@@ -5,8 +5,9 @@ import {HttpService} from '@app/services/http';
 import {HttpErrorResponse} from '@angular/common/http';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {FaceService} from '@app/services/face';
-import {NzModalRef} from 'ng-zorro-antd/modal';
-import {NzModalService, NzNotificationService} from 'ng-zorro-antd';
+import {NzModalRef, NzModalService} from 'ng-zorro-antd/modal';
+import {NzNotificationService} from 'ng-zorro-antd/notification';
+
 
 interface DialogAction {
   text: string;
@@ -23,9 +24,10 @@ interface DialogContent {
 }
 
 @Component({
+  standalone: false,
   selector: 'elements-acl-dialog',
-  templateUrl: './acl-dialog.component.html',
-  styleUrls: ['./acl-dialog.component.scss']
+  templateUrl: 'acl-dialog.component.html',
+  styleUrls: ['acl-dialog.component.scss'],
 })
 export class ElementACLDialogComponent implements OnInit {
   @Input() public data: any;

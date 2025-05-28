@@ -1,12 +1,13 @@
 import {Component, Input, OnChanges, OnInit} from '@angular/core';
-import {ConnectMethod, ConnectOption, Protocol, Setting, GlobalSetting} from '@app/model';
+import {ConnectMethod, ConnectOption, GlobalSetting, Protocol, Setting} from '@app/model';
 import {resolutionsChoices} from '@app/globals';
 import {SettingService} from '@app/services';
 
 @Component({
+  standalone: false,
   selector: 'elements-advanced-option',
-  templateUrl: './advanced-option.component.html',
-  styleUrls: ['./advanced-option.component.scss'],
+  templateUrl: 'advanced-option.component.html',
+  styleUrls: ['advanced-option.component.scss'],
 })
 export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
   @Input() protocol: Protocol;
@@ -87,8 +88,8 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         type: 'select',
         field: 'appletConnectMethod',
         options: [
-          { label: 'Web', value: 'web' },
-          ...(this.globalSetting.TERMINAL_RAZOR_ENABLED ? [{ label: 'Client', value: 'client' }] : [])
+          {label: 'Web', value: 'web'},
+          ...(this.globalSetting.TERMINAL_RAZOR_ENABLED ? [{label: 'Client', value: 'client'}] : [])
         ],
         label: 'Applet connect method',
         value: this.setting.graphics.applet_connection_method,
@@ -103,8 +104,8 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         type: 'select',
         field: 'virtualappConnectMethod',
         options: [
-          { label: 'Web', value: 'web' },
-          ...(true ? [{ label: 'Client', value: 'client' }] : [])
+          {label: 'Web', value: 'web'},
+          ...(true ? [{label: 'Client', value: 'client'}] : [])
         ],
         label: 'Virtualapp connect method',
         value: this.setting.graphics.applet_connection_method,

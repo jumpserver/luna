@@ -1,9 +1,10 @@
 import {Component, OnInit} from '@angular/core';
 
 @Component({
+  standalone: false,
   selector: 'elements-asset-tree-dialog',
   templateUrl: 'download-dialog.component.html',
-  styles: ['./download-dialog.component.scss']
+  styles: ['download-dialog.component.scss']
 })
 export class ElementDownloadDialogComponent implements OnInit {
   public ignoreRemind = false;

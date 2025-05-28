@@ -6,9 +6,10 @@ import {AppService, I18nService, LogService} from '@app/services';
 import {User} from '@app/globals';
 
 @Component({
+  standalone: false,
   selector: 'elements-select-account',
   templateUrl: 'select-account.component.html',
-  styleUrls: ['./select-account.component.scss'],
+  styleUrls: ['select-account.component.scss'],
 })
 export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @Input() asset: Asset;

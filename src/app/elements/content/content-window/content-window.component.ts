@@ -1,4 +1,4 @@
-import {Component, ElementRef, Input, OnInit, DoCheck, ViewChild, IterableDiffers} from '@angular/core';
+import {Component, DoCheck, ElementRef, Input, IterableDiffers, OnInit, ViewChild} from '@angular/core';
 import {View} from '@app/model';
 import {User} from '@app/globals';
 import {getWaterMarkContent} from '@app/utils/common';
@@ -6,9 +6,10 @@ import {AppService, HttpService, SettingService, ViewService} from '@app/service
 import {ActivatedRoute} from '@angular/router';
 
 @Component({
+  standalone: false,
   selector: 'elements-content-window',
-  templateUrl: './content-window.component.html',
-  styleUrls: ['./content-window.component.css']
+  templateUrl: 'content-window.component.html',
+  styleUrls: ['content-window.component.css']
 })
 export class ElementContentWindowComponent implements OnInit, DoCheck {
   @Input() view: View;

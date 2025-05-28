@@ -1,15 +1,14 @@
-import {AfterViewInit, Component, Input, Output, OnInit, ViewChild, EventEmitter} from '@angular/core';
-import {ElementRef} from '@angular/core';
-import {Terminal} from 'xterm';
-import {fit} from 'xterm/lib/addons/fit/fit';
+import {AfterViewInit, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild} from '@angular/core';
+import {Terminal} from '@xterm/xterm';
+import {FitAddon} from '@xterm/addon-fit';
 import {LogService} from '@app/services';
-import {Observable, fromEvent, Subscription} from 'rxjs';
+import {fromEvent, Observable, Subscription} from 'rxjs';
 import {debounceTime, distinctUntilChanged} from 'rxjs/operators';
 import * as $ from 'jquery/dist/jquery.min.js';
-import 'rxjs/Observable';
 
 
 @Component({
+  standalone: false,
   selector: 'elements-term',
   templateUrl: './term.component.html',
   styleUrls: ['./term.component.css']
@@ -23,7 +22,8 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   winSizeChange$: Observable<any>;
   winSizeSub: Subscription;
 
-  constructor(private _logger: LogService) {}
+  constructor(private _logger: LogService) {
+  }
 
   ngOnInit() {
     this.winSizeChange$ = fromEvent(window, 'resize').pipe(
@@ -56,10 +56,10 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
     } else if (activeEle) {
       const elementStyle = window.getComputedStyle(this.term.element);
       const elementPadding = {
-          top: parseInt(elementStyle.getPropertyValue('padding-top'), 10),
-          bottom: parseInt(elementStyle.getPropertyValue('padding-bottom'), 10),
-          right: parseInt(elementStyle.getPropertyValue('padding-right'), 10),
-          left: parseInt(elementStyle.getPropertyValue('padding-left'), 10)
+        top: parseInt(elementStyle.getPropertyValue('padding-top'), 10),
+        bottom: parseInt(elementStyle.getPropertyValue('padding-bottom'), 10),
+        right: parseInt(elementStyle.getPropertyValue('padding-right'), 10),
+        left: parseInt(elementStyle.getPropertyValue('padding-left'), 10)
       };
       const elementPaddingVer = elementPadding.top + elementPadding.bottom;
       const elementPaddingHor = elementPadding.right + elementPadding.left;
@@ -87,7 +87,9 @@ export class ElementTermComponent implements OnInit, AfterViewInit {
   resizeTerm() {
     const size = this.getWinSize();
     if (isNaN(size[0]) || isNaN(size[1])) {
-      fit(this.term);
+      const fitAddOn = new FitAddon();
+      this.term.loadAddon(fitAddOn);
+      fitAddOn.fit();
     } else {
       (<any>this.term).renderer.clear();
       this.term.resize(size[0], size[1]);

@@ -19,9 +19,10 @@ export interface IFile {
 }
 
 @Component({
+  standalone: false,
   selector: 'elements-replay-parts',
-  templateUrl: './parts.component.html',
-  styleUrls: ['./parts.component.scss'],
+  templateUrl: 'parts.component.html',
+  styleUrls: ['parts.component.scss'],
 })
 export class ElementsPartsComponent implements OnInit {
   @Input() replay: Replay;

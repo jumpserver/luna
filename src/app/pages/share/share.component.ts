@@ -1,13 +1,14 @@
-import { ActivatedRoute } from '@angular/router';
-import { Component, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core'
+import {ActivatedRoute} from '@angular/router';
+import {AfterViewInit, Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 
 // TODO 与 kubernetes 合并
 @Component({
+  standalone: false,
   selector: 'pages-share',
-  templateUrl: './share.component.html',
+  templateUrl: 'share.component.html',
 })
-export class PagesShareComponent implements OnInit, AfterViewInit  {
-  @ViewChild('iFrame', { static: false }) iframeRef: ElementRef;
+export class PagesShareComponent implements OnInit, AfterViewInit {
+  @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
 
   public ping;
   public id: string = '';
@@ -15,7 +16,8 @@ export class PagesShareComponent implements OnInit, AfterViewInit  {
   public shareId: string = '';
   public iframeURL: string = '';
 
-  constructor(private _route: ActivatedRoute) {}
+  constructor(private _route: ActivatedRoute) {
+  }
 
   ngOnInit(): void {
     this.id = 'window-' + Math.random().toString(36).substr(2);
@@ -38,7 +40,7 @@ export class PagesShareComponent implements OnInit, AfterViewInit  {
 
   handleK8sIframeEvent() {
     this.ping = setInterval(() => {
-      this.iframeRef.nativeElement.contentWindow.postMessage({ name: 'PING', id: this.id }, '*');
+      this.iframeRef.nativeElement.contentWindow.postMessage({name: 'PING', id: this.id}, '*');
     }, 1000);
 
     window.addEventListener('message', (event) => {
@@ -49,7 +51,7 @@ export class PagesShareComponent implements OnInit, AfterViewInit  {
           clearInterval(this.ping);
           break;
         case 'PING':
-          this.iframeRef.nativeElement.contentWindow.postMessage({ name: 'PING', id: this.id }, '*');
+          this.iframeRef.nativeElement.contentWindow.postMessage({name: 'PING', id: this.id}, '*');
           break;
         default:
           break;

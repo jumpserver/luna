@@ -1,11 +1,12 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {HttpService, I18nService} from '@app/services';
-import {NzModalRef} from 'ng-zorro-antd';
+import {NzModalRef} from 'ng-zorro-antd/modal';
 import {NzNotificationService} from 'ng-zorro-antd/notification';
 
 @Component({
+  standalone: false,
   selector: 'elements-command-dialog',
-  templateUrl: './command-dialog.component.html',
+  templateUrl: 'command-dialog.component.html',
 })
 export class ElementCommandDialogComponent implements OnInit {
   @Input() data = {command: ''};
@@ -20,7 +21,7 @@ export class ElementCommandDialogComponent implements OnInit {
 
   constructor(public dialogRef: NzModalRef<ElementCommandDialogComponent>,
               private _http: HttpService,
-              private _i18n: I18nService,
+              public _i18n: I18nService,
               private _toastr: NzNotificationService,
   ) {
   }

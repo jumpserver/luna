@@ -1,10 +1,9 @@
 import {ChangeDetectorRef, Component, Input, OnInit} from '@angular/core';
-import 'rxjs/add/operator/toPromise';
 import {AppService, HttpService, I18nService, LogService, SettingService} from '@app/services';
 import {Account, Asset, AuthInfo, ConnectData, ConnectMethod, Protocol} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
 import {debounceTime} from 'rxjs/operators';
-import {NzModalRef} from 'ng-zorro-antd';
+import {NzModalRef} from 'ng-zorro-antd/modal';
 
 class ConnectButtonInfo {
   disabled: boolean = false;
@@ -12,9 +11,10 @@ class ConnectButtonInfo {
 }
 
 @Component({
+  standalone: false,
   selector: 'elements-connect-dialog',
   templateUrl: 'connect-dialog.component.html',
-  styleUrls: ['./connect-dialog.component.scss']
+  styleUrls: ['connect-dialog.component.scss']
 })
 export class ElementConnectDialogComponent implements OnInit {
   @Input() public asset: Asset;

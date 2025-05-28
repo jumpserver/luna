@@ -1,14 +1,15 @@
 import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
-import {AppService, HttpService, I18nService, SettingService} from '@app/services';
+import {HttpService, I18nService, SettingService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
 import {Session, Ticket, User} from '@app/model';
 import {NzNotificationService} from 'ng-zorro-antd/notification';
 import {getWaterMarkContent} from '@app/utils/common';
 
 @Component({
+  standalone: false,
   selector: 'pages-monitor',
-  templateUrl: './monitor.component.html',
-  styleUrls: ['./monitor.component.scss']
+  templateUrl: 'monitor.component.html',
+  styleUrls: ['monitor.component.scss']
 })
 export class PagesMonitorComponent implements OnInit {
   @ViewChild('contentWindow', {static: false}) windowRef: ElementRef;

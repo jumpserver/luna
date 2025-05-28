@@ -1,13 +1,14 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {HttpService, I18nService, LogService, SettingService} from '@app/services';
-import {Replay, User, Session, Asset} from '@app/model';
+import {Asset, Replay, Session, User} from '@app/model';
 import {getWaterMarkContent} from '@app/utils/common';
 
 @Component({
+  standalone: false,
   selector: 'pages-replay',
-  templateUrl: './replay.component.html',
-  styleUrls: ['./replay.component.css']
+  templateUrl: 'replay.component.html',
+  styleUrls: ['replay.component.css']
 })
 export class PagesReplayComponent implements OnInit {
   replay: Replay = new Replay();

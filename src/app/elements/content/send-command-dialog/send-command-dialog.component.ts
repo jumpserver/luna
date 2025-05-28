@@ -1,9 +1,10 @@
-import {Component, Inject, OnInit} from '@angular/core';
-import {NzModalRef} from 'ng-zorro-antd';
+import {Component, OnInit} from '@angular/core';
+import {NzModalRef} from 'ng-zorro-antd/modal';
 
 @Component({
+  standalone: false,
   selector: 'elements-send-command-dialog',
-  templateUrl: './send-command-dialog.component.html',
+  templateUrl: 'send-command-dialog.component.html',
 })
 export class ElementSendCommandDialogComponent implements OnInit {
   public value = 'current';
@@ -19,9 +20,11 @@ export class ElementSendCommandDialogComponent implements OnInit {
   ];
 
   constructor(public dialogRef: NzModalRef,
-  ) {}
+  ) {
+  }
 
-  ngOnInit() {}
+  ngOnInit() {
+  }
 
   async onSubmit() {
     setTimeout(() => {

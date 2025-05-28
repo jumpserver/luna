@@ -5,9 +5,10 @@ import {ConnectTokenService, HttpService, I18nService, SettingService} from '@ap
 import {Command, InfoItem} from '../guide/model';
 
 @Component({
+  standalone: false,
   selector: 'elements-connector-magnus',
-  templateUrl: './magnus.component.html',
-  styleUrls: ['./magnus.component.scss']
+  templateUrl: 'magnus.component.html',
+  styleUrls: ['magnus.component.scss']
 })
 
 export class ElementConnectorMagnusComponent implements OnInit {

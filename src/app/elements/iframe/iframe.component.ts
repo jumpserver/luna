@@ -8,9 +8,10 @@ import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {FaceService} from '@app/services/face';
 
 @Component({
+  standalone: false,
   selector: 'elements-iframe',
-  templateUrl: './iframe.component.html',
-  styleUrls: ['./iframe.component.scss']
+  templateUrl: 'iframe.component.html',
+  styleUrls: ['iframe.component.scss']
 })
 export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() src: any;

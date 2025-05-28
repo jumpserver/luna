@@ -1,5 +1,4 @@
 import {Component, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
-import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
 import {
   AlertService,
@@ -16,11 +15,13 @@ import {launchLocalApp} from '@app/utils/common';
 import {ElementConnectDialogComponent} from '@app/elements/connect/connect-dialog/connect-dialog.component';
 import {NzModalService} from 'ng-zorro-antd/modal';
 import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
+import {firstValueFrom} from 'rxjs';
 
 
 @Component({
+  standalone: false,
   selector: 'elements-connect',
-  templateUrl: './connect.component.html',
+  templateUrl: 'connect.component.html',
 })
 export class ElementConnectComponent implements OnInit, OnDestroy {
   @Output() onNewView: EventEmitter<View> = new EventEmitter<View>();
@@ -185,7 +186,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   async callLocalClient(connToken: ConnectionToken) {
     this._logger.debug('Call local client');
-    const response = await this._http.getLocalClientUrl(connToken, this._settingSvc.setting).toPromise();
+    const response = await firstValueFrom(this._http.getLocalClientUrl(connToken, this._settingSvc.setting));
     const url = response['url'];
     launchLocalApp(url, () => {
       const downLoadStatus = localStorage.getItem('hasDownLoadApp');
@@ -270,7 +271,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       nzTitle: this._i18n.instant('Connect') + ' - ' + asset.name,
       nzContent: ElementConnectDialogComponent,
       nzWidth: '730px',
-      nzComponentParams: {
+      nzData: {
         accounts,
         asset,
         preConnectData

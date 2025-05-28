@@ -8,10 +8,8 @@ import {ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
 import {ElementTreeFilterComponent} from './tree-filter/tree-filter.component';
 import {ElementOrganizationComponent} from './organization/organization.component';
 import {ElementUserFileComponent} from './profile/profile.component';
-import {ElementTermComponent} from './term/term.component';
 import {ElementNavComponent} from './nav/nav.component';
 import {ElementIframeComponent} from './iframe/iframe.component';
-import {ElementDialogAlertComponent} from '@app/services/dialog/alert.service';
 import {ElementConnectComponent} from './connect/connect.component';
 import {ElementConnectDialogComponent} from './connect/connect-dialog/connect-dialog.component';
 import {ElementSettingComponent} from './setting/setting.component';
@@ -26,12 +24,10 @@ import {ElementReplayAsciicastComponent} from '@app/elements/replay/asciicast/as
 import {ElementAdvancedOptionComponent} from './connect/connect-dialog/advanced-option/advanced-option.component';
 import {ElementConnectMethodComponent} from './connect/connect-dialog/connect-method/connect-method.component';
 import {ElementDownloadDialogComponent} from './connect/download-dialog/download-dialog.component';
-import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/acl-dialog.component';
 import {ElementsReplayMp4Component} from './replay/mp4/mp4.component';
 import {ElementConnectorGuideComponent} from '@app/elements/content/content-window/guide/guide.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
-// tslint:disable-next-line:max-line-length
 import {
   ElementSendCommandWithVariableDialogComponent
 } from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
@@ -41,6 +37,9 @@ import {ElementsPartsComponent} from './replay/parts/parts.component';
 import {ElementConnectorNecComponent} from '@app/elements/content/content-window/nec/nec.component';
 import {ElementFaceMonitorComponent} from '@app/elements/face-monitor/face-monitor.component';
 
+import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/acl-dialog.component';
+import {ElementDialogAlertComponent} from '@app/services/dialog/alert.service';
+import {ElementTermComponent} from './term/term.component';
 
 export const ElementComponents = [
   ElementLeftBarComponent,
@@ -51,12 +50,10 @@ export const ElementComponents = [
   ElementTreeFilterComponent,
   ElementOrganizationComponent,
   ElementUserFileComponent,
-  ElementTermComponent,
   ElementNavComponent,
   ElementChatComponent,
   ElementIframeComponent,
   ElementFaceMonitorComponent,
-  ElementDialogAlertComponent,
   ElementAssetTreeComponent,
   ElementConnectorKokoComponent,
   ElementConnectorMagnusComponent,
@@ -64,7 +61,6 @@ export const ElementComponents = [
   ElementConnectorNecComponent,
   ElementConnectComponent,
   ElementDownloadDialogComponent,
-  ElementACLDialogComponent,
   ElementReplayGuacamoleComponent,
   ElementReplayJsonComponent,
   ElementSettingComponent,
@@ -82,4 +78,7 @@ export const ElementComponents = [
   ElementSendCommandWithVariableDialogComponent,
   DynamicFormComponent,
   ElementsPartsComponent,
+  ElementACLDialogComponent,
+  ElementDialogAlertComponent,
+  ElementTermComponent,
 ];

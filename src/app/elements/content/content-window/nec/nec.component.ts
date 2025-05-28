@@ -6,9 +6,10 @@ import {Command, InfoItem} from '../guide/model';
 import {User} from '@app/globals';
 
 @Component({
+  standalone: false,
   selector: 'elements-connector-nec',
-  templateUrl: './nec.component.html',
-  styleUrls: ['./nec.component.scss']
+  templateUrl: 'nec.component.html',
+  styleUrls: ['nec.component.scss']
 })
 
 export class ElementConnectorNecComponent implements OnInit {
