@@ -1370,14 +1370,6 @@
   dependencies:
     "@jridgewell/trace-mapping" "0.3.9"
 
-"@ctrl/ngx-codemirror@^6.0.0":
-  version "6.1.0"
-  resolved "https://registry.npmmirror.com/@ctrl/ngx-codemirror/-/ngx-codemirror-6.1.0.tgz#9324a56e4b709be9c515364d21e05e1d7589f009"
-  integrity sha512-73QeoNbnluZalWmNw+SOFctsE+oz0+4Bl9KhlJOIfbCPK/U6OIc+vQNr28hMAp15Y/Idde3LntTwLBDFW0bRVA==
-  dependencies:
-    "@types/codemirror" "^5.60.5"
-    tslib "^2.3.0"
-
 "@ctrl/tinycolor@^3.6.0":
   version "3.6.1"
   resolved "https://registry.npmmirror.com/@ctrl/tinycolor/-/tinycolor-3.6.1.tgz#b6c75a56a1947cc916ea058772d666a2c8932f31"
@@ -2823,13 +2815,6 @@
   dependencies:
     "@types/node" "*"
 
-"@types/codemirror@^5.60.5":
-  version "5.60.15"
-  resolved "https://registry.npmmirror.com/@types/codemirror/-/codemirror-5.60.15.tgz#0f82be6f4126d1e59cf4c4830e56dcd49d3c3e8a"
-  integrity sha512-dTOvwEQ+ouKJ/rE9LT1Ue2hmP6H1mZv5+CCnNWu2qtiOe2LQa9lCprEY20HxiDmV/Bxh+dXjywmy5aKvoGjULA==
-  dependencies:
-    "@types/tern" "*"
-
 "@types/connect-history-api-fallback@^1.5.4":
   version "1.5.4"
   resolved "https://registry.npmmirror.com/@types/connect-history-api-fallback/-/connect-history-api-fallback-1.5.4.tgz#7de71645a103056b48ac3ce07b3520b819c1d5b3"
@@ -3049,13 +3034,6 @@
   integrity sha512-MK9V6NzAS1+Ud7JV9lJLFqW85VbC9dq3LmwZCuBe4wBDgKC0Kj/jd8Xl+nSviU+Qc3+m7umHHyHg//2KSa0a0Q==
   dependencies:
     "@types/node" "*"
-
-"@types/tern@*":
-  version "0.23.9"
-  resolved "https://registry.npmmirror.com/@types/tern/-/tern-0.23.9.tgz#6f6093a4a9af3e6bb8dde528e024924d196b367c"
-  integrity sha512-ypzHFE/wBzh+BlH6rrBgS5I/Z7RD21pGhZ2rltb/+ZrVM1awdZwjx7hE5XfuYgHWk9uvV5HLZN3SloevCAp3Bw==
-  dependencies:
-    "@types/estree" "*"
 
 "@types/ws@^8.5.10":
   version "8.18.1"
@@ -3934,11 +3912,6 @@ clone@^1.0.2:
   version "1.0.4"
   resolved "https://registry.npmmirror.com/clone/-/clone-1.0.4.tgz#da309cc263df15994c688ca902179ca3c7cd7c7e"
   integrity sha512-JQHZ2QMW6l3aH/j6xCqQThY/9OH4D/9ls34cgkUBiEeocRTU04tHfKPBsUK1PqZCUQM7GiA0IIXJSuXHI64Kbg==
-
-codemirror@^5.65.16:
-  version "5.65.19"
-  resolved "https://registry.npmmirror.com/codemirror/-/codemirror-5.65.19.tgz#71016c701d6a4b6e1982b0f6e7186be65e49653d"
-  integrity sha512-+aFkvqhaAVr1gferNMuN8vkTSrWIFvzlMV9I2KBLCWS2WpZ2+UAkZjlMZmEuT+gcXTi6RrGQCkWq1/bDtGqhIA==
 
 codemirror@^6.0.0:
   version "6.0.1"
