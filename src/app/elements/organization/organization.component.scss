@@ -20,6 +20,10 @@
     padding: 0 5px;
     width: 100%;
 
+    &.ant-select-focused:not(.ant-select-disabled).ant-select:not(.ant-select-customize-input) .ant-select-selector {
+      box-shadow: none !important;
+    }
+
     .ant-select-selection {
       background: transparent !important;
       box-shadow: none;
@@ -30,7 +34,13 @@
     .ant-select-selector {
       background: transparent !important;
       border: none !important;
-      padding: 0 !important;
+      //padding: 0 !important;
+    }
+
+    &.ant-select-open {
+     .ant-select-selector .ant-select-selection-item {
+        opacity: 0.6;
+      }
     }
 
     .ant-select-selection-item {

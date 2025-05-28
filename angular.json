@@ -43,12 +43,8 @@
               }
             ],
             "styles": [
-              "animate.css/animate.min.css",
-              "@xterm/xterm/css/xterm.css",
-              "src/sass/style.scss",
-              "src/styles.less",
-              "src/theme.less",
-              "asciinema-player/dist/bundle/asciinema-player.css"
+              "src/sass/ant.less",
+              "src/sass/styles.scss"
             ],
             "scripts": [
               "node_modules/jquery/dist/jquery.min.js",

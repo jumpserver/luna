@@ -7,6 +7,7 @@
     padding: 16px 24px 8px 24px;
     border-bottom: none;
   }
+
   .ant-form-item-label {
     color: rgba(0, 0, 0, 0.54);
     line-height: 2;
@@ -14,10 +15,15 @@
 
   .ant-form-item {
     margin-bottom: 5px;
+    display: block;
   }
 
-  .ant-tabs-nav .ant-tabs-tab {
-    padding: 12px 24px;
+  .ant-tabs-nav {
+    margin-bottom: 8px;
+  }
+
+  .ant-tabs-nav-list .ant-tabs-tab {
+    padding: 8px 25px;
 
     &.ant-tabs-tab-active {
       color: inherit;
@@ -26,11 +32,17 @@
 
 }
 
+.protocol-tab {
+
+}
+
+.auto-login {
+  ::ng-deep .ant-checkbox-input {
+  }
+}
 
 .auto-connect {
-  label {
-    display: block;
-  }
+  display: block;
 }
 
 .connect-btn-wrap {

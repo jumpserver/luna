@@ -1,11 +1,11 @@
-import {Component, Input, OnInit} from '@angular/core';
+import {Component, Inject, OnInit} from '@angular/core';
 import {Asset, ConnectData, ConnectionToken} from '@app/model';
 import {I18nService} from '@app/services/i18n';
 import {HttpService} from '@app/services/http';
 import {HttpErrorResponse} from '@angular/common/http';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {FaceService} from '@app/services/face';
-import {NzModalRef, NzModalService} from 'ng-zorro-antd/modal';
+import {NZ_MODAL_DATA, NzModalRef, NzModalService} from 'ng-zorro-antd/modal';
 import {NzNotificationService} from 'ng-zorro-antd/notification';
 
 
@@ -30,7 +30,6 @@ interface DialogContent {
   styleUrls: ['acl-dialog.component.scss'],
 })
 export class ElementACLDialogComponent implements OnInit {
-  @Input() public data: any;
   public asset: Asset;
   public connectInfo: ConnectData;
   public code: string;
@@ -41,10 +40,9 @@ export class ElementACLDialogComponent implements OnInit {
   // Token 的行为，创建或者兑换 Token, create, exchange
   public tokenAction: string = 'create';
   public tokenID: string;
-  private timerCheckTicket: number;
   public faceVerifyUrl: SafeResourceUrl;
-
   content: DialogContent;
+  private timerCheckTicket: number;
 
   constructor(
     public dialogRef: NzModalRef<ElementACLDialogComponent>,
@@ -53,8 +51,10 @@ export class ElementACLDialogComponent implements OnInit {
     private _toastr: NzNotificationService,
     private _http: HttpService,
     private sanitizer: DomSanitizer,
+    @Inject(NZ_MODAL_DATA) public data: any,
     private faceService: FaceService,
   ) {
+    this.data = data;
   }
 
   get ticketDetailPageURL(): string {

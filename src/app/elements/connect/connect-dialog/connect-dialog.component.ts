@@ -1,9 +1,9 @@
-import {ChangeDetectorRef, Component, Input, OnInit} from '@angular/core';
+import {ChangeDetectorRef, Component, Inject, OnInit} from '@angular/core';
 import {AppService, HttpService, I18nService, LogService, SettingService} from '@app/services';
 import {Account, Asset, AuthInfo, ConnectData, ConnectMethod, Protocol} from '@app/model';
 import {BehaviorSubject} from 'rxjs';
 import {debounceTime} from 'rxjs/operators';
-import {NzModalRef} from 'ng-zorro-antd/modal';
+import {NZ_MODAL_DATA, NzModalRef} from 'ng-zorro-antd/modal';
 
 class ConnectButtonInfo {
   disabled: boolean = false;
@@ -17,9 +17,9 @@ class ConnectButtonInfo {
   styleUrls: ['connect-dialog.component.scss']
 })
 export class ElementConnectDialogComponent implements OnInit {
-  @Input() public asset: Asset;
-  @Input() public accounts: Account[];
-  @Input() public preConnectData: ConnectData;
+  public asset: Asset;
+  public accounts: Array<Account>;
+  public preConnectData: ConnectData = null;
   public autoLogin = false;
   public protocol: Protocol;
   public protocols: Array<Protocol>;
@@ -36,6 +36,7 @@ export class ElementConnectDialogComponent implements OnInit {
   public disabledReason: string = '';
 
   constructor(
+    @Inject(NZ_MODAL_DATA) public data: any,
     private _settingSvc: SettingService,
     private _cdRef: ChangeDetectorRef,
     private _modalRef: NzModalRef,
@@ -44,6 +45,9 @@ export class ElementConnectDialogComponent implements OnInit {
     private _appSvc: AppService,
     private _i18n: I18nService
   ) {
+    this.asset = this.data.asset;
+    this.preConnectData = this.data.preConnectData || null;
+    this.accounts = this.data.accounts || [];
   }
 
   ngOnInit() {
@@ -83,6 +87,7 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   getProtocols() {
+    console.log('Asset: ', this.asset)
     return this.asset.permed_protocols.filter(item => item.public);
   }
 

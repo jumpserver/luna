@@ -1,6 +1,6 @@
 import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
-import {HttpClient, HttpClientModule} from '@angular/common/http';
+import {HttpClient, provideHttpClient} from '@angular/common/http';
 import {CommonModule} from '@angular/common';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms'; // <-- NgModel lives here
 import {NGXLogger} from 'ngx-logger';
@@ -68,7 +68,6 @@ export class CustomLoader implements TranslateLoader {
     CodemirrorModule,
     SharedPipeModule,
     AngularSplitModule,
-    HttpClientModule,
     ReactiveFormsModule,
     FileInputAccessorModule,
     BrowserAnimationsModule,
@@ -92,6 +91,7 @@ export class CustomLoader implements TranslateLoader {
     CookieService,
     NGXLogger,
     ClipboardService,
+    provideHttpClient()
   ]
 })
 export class AppModule {

@@ -1,5 +1,5 @@
 <div class="user-file">
-  <a nz-dropdown [nzDropdownMenu]="menu" class="dropdown" nzOverlayClassName="dark-dropdown profile-dropdown">
+  <a [nzDropdownMenu]="menu" class="dropdown" nz-dropdown nzOverlayClassName="dark-dropdown profile-dropdown">
     <span class="head-portrait">
       <i class="fa fa-user-circle-o icon"></i>
       <span class="username">{{ user.name }} </span>
@@ -7,13 +7,10 @@
     </span>
   </a>
   <nz-dropdown-menu #menu="nzDropdownMenu">
-    <ul nz-menu nzSelectable>
+    <ul [nzSelectable]='true' nz-menu>
       <li *ngFor="let item of menus" nz-menu-item>
-        <a id="{{item.id}}" *ngIf="item.click" (click)="item.click()">{{item.name|translate}}</a>
+        <a (click)="item.click()" *ngIf="item.click" id="{{item.id}}">{{ item.name|translate }}</a>
       </li>
-      <!-- <li nz-menu-item>1st menu item</li> -->
-      <!-- <li nz-menu-item>2nd menu item</li> -->
-      <!-- <li nz-menu-item>3rd menu item</li> -->
     </ul>
   </nz-dropdown-menu>
 </div>

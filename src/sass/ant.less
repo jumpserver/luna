@@ -1,0 +1,178 @@
+// -------- import official less file -----------
+//@import "../node_modules/ng-zorro-antd/ng-zorro-antd.dark.less";
+@import "ng-zorro-antd/ng-zorro-antd.less";
+
+// -------- override less var -----------
+@primary-color: #1ab394;
+@link-color: #1c84c6;
+@border-radius-base: '1px';
+
+.ant-menu-submenu.ant-menu-submenu-placement-bottom, .ant-menu-submenu.ant-menu-submenu-popup.ant-menu-submenu-placement-bottomLeft {
+  top: 1px !important;
+}
+
+.ant-select {
+  font-size: 13px;
+}
+
+.dark-dropdown {
+  background-color: var(--el-header-nav-select-bg-color);
+
+  .ant-dropdown-menu {
+    border-radius: 4px;
+    background-color: var(--el-header-nav-select-bg-color);
+
+    .ant-dropdown-menu-item {
+      &:hover {
+        background-color: var(--el-header-nav-select-hover-bg-color);
+      }
+
+      & > a {
+        color: var(--el-menu-text-color);
+      }
+    }
+  }
+
+  // Submenu title
+  .ant-menu-submenu.ant-menu-submenu-horizontal {
+    .ant-menu-submenu-title {
+      color: var(--el-menu-text-color);
+      font-weight: 300;
+      border-bottom: none;
+    }
+  }
+
+
+  &.ant-select-dropdown {
+    margin-top: 1px;
+  }
+
+  // Dropdown
+  &.ant-menu-vertical {
+    &.ant-menu {
+      background-color: var(--el-header-nav-select-bg-color);
+      border-radius: 0;
+    }
+
+    .ant-menu-item {
+      height: 30px;
+      padding: 0 15px;
+      font-weight: 300;
+      font-size: 13px;
+      line-height: 30px;
+      margin-bottom: 0;
+      margin-top: 0;
+      color: var(--el-menu-text-color);
+
+      &.ant-menu-item-selected {
+        background-color: inherit;
+      }
+
+      & > span.ant-menu-title-content > a {
+        color: var(--el-menu-text-color);
+      }
+
+      &:hover {
+        background-color: var(--el-header-nav-select-hover-bg-color);
+      }
+
+      &:first-child {
+        margin-top: 5px;
+      }
+
+      &:last-child {
+        margin-bottom: 5px;
+      }
+
+      &:not(:last-child) {
+        margin-bottom: 0
+      }
+
+      a {
+        &:hover {
+          color: var(--el-menu-text-color);
+        }
+      }
+    }
+  }
+
+
+  .ant-select-dropdown {
+    .ant-select-item {
+      font-size: 13px;
+
+      &.ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+        background-color: var(--el-header-nav-select-hover-bg-color);
+      }
+    }
+  }
+
+  .ant-select-dropdown-menu {
+    .ant-select-dropdown-menu-item {
+      background-color: var(--el-header-nav-select-bg-color);
+      color: var(--el-menu-text-color);
+      line-height: 30px;
+      height: 30px;
+      margin: 0;
+      padding: 0 10px;
+      font-size: 13px;
+
+      a {
+        color: var(--el-menu-text-color);
+      }
+
+      &:first-child {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+
+        &:hover {
+          border-radius: 0;
+        }
+      }
+
+      &:last-child {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+
+        &:hover {
+          border-radius: 0;
+        }
+      }
+
+      &.ant-select-dropdown-menu-item-active {
+        // background-color: var(--el-header-nav-select-hover-bg-color);
+      }
+
+      &:hover {
+        background-color: var(--el-header-nav-select-hover-bg-color);
+      }
+
+      &.ant-select-dropdown-menu-item-selected {
+        &:hover {
+          opacity: 0.7;
+        }
+
+        font-weight: bold;
+        opacity: 0.8;
+      }
+    }
+  }
+}
+
+.ant-switch {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+
+  &.ant-switch-checked {
+    background-color: #75d1be !important;
+  }
+}
+
+
+.ant-tabs-bar {
+  margin-bottom: 5px;
+}
+
+.ant-modal-footer {
+  padding: 16px;
+}
+

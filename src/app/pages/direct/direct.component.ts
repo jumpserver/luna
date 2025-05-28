@@ -246,13 +246,11 @@ export class PageDirectComponent implements OnInit, OnDestroy {
             const dialogRef = this._dialog.create({
               nzContent: ElementACLDialogComponent,
               nzData: {
-                data: {
-                  asset: this.permedAsset,
-                  connectData: this.connectData,
-                  code: error.error.code,
-                  tokenAction: 'create',
-                  error: error,
-                }
+                asset: this.permedAsset,
+                connectData: this.connectData,
+                code: error.error.code,
+                tokenAction: 'create',
+                error: error,
               }
             });
 
@@ -346,13 +344,11 @@ export class PageDirectComponent implements OnInit, OnDestroy {
               const dialogRef = this._dialog.create({
                 nzContent: ElementACLDialogComponent,
                 nzData: {
-                  data: {
-                    asset: assetMessage,
-                    connectData: connectData,
-                    code: error.error.code,
-                    tokenAction: 'create',
-                    error: error,
-                  },
+                  asset: assetMessage,
+                  connectData: connectData,
+                  code: error.error.code,
+                  tokenAction: 'create',
+                  error: error,
                 },
               });
 

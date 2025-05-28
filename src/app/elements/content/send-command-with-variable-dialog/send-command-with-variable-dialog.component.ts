@@ -1,6 +1,6 @@
-import {Component, Input, OnInit} from '@angular/core';
+import {Component, Inject, OnInit} from '@angular/core';
 import {HttpService} from '@app/services';
-import {NzModalRef} from 'ng-zorro-antd/modal';
+import {NZ_MODAL_DATA, NzModalRef} from 'ng-zorro-antd/modal';
 
 @Component({
   standalone: false,
@@ -9,11 +9,14 @@ import {NzModalRef} from 'ng-zorro-antd/modal';
 })
 export class ElementSendCommandWithVariableDialogComponent implements OnInit {
   public formConfig = [];
-  @Input() public command = {id: ''};
+  public command = {id: ''};
+  protected readonly Component = Component;
 
   constructor(private _http: HttpService,
+              @Inject(NZ_MODAL_DATA) public data: any,
               private _dialogRef: NzModalRef<ElementSendCommandWithVariableDialogComponent>,
   ) {
+    this.command = this.data.command;
   }
 
   ngOnInit() {
@@ -32,6 +35,4 @@ export class ElementSendCommandWithVariableDialogComponent implements OnInit {
       this._dialogRef.close(data.sendCommand);
     });
   }
-
-  protected readonly Component = Component;
 }

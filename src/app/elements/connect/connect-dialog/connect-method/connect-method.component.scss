@@ -20,13 +20,13 @@
 }
 
 .connect-type-group ::ng-deep {
-  .ant-tabs-nav {
+  .ant-tabs-nav-list {
     width: 100%;
 
-    &> div {
+    & > div {
       display: flex;
-
     }
+
     .ant-tabs-tab {
       min-width: 20px;
       padding-top: 6px;

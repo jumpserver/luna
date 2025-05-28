@@ -1,0 +1,287 @@
+/* You can add global styles to this file, and also import other style files */
+/*
+ * Style tweaks
+ * --------------------------------------------------
+ */
+// font-awesome
+@import 'font-awesome/scss/font-awesome.scss';
+@import 'ztree.css';
+@import 'ztree_icon.scss';
+@import "@xterm/xterm/css/xterm.css";
+@import "animate.css/animate.min.css";
+@import "asciinema-player/dist/bundle/asciinema-player.css";
+
+$asset-path: '../static/imgs/inspinia';
+$fa-font-path: '~font-awesome/fonts';
+
+@font-face {
+  font-family: 'Open Sans';
+  src: url('assets/fonts/OpenSans-Regular.ttf');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  src: url('assets/fonts/OpenSans-Bold.ttf');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  src: url('assets/fonts/OpenSans-Light.ttf');
+  font-weight: 300;
+  font-style: normal;
+}
+html,
+body {
+  overflow-x: hidden; /* Prevent scroll on narrow devices */
+  height: 100%;
+  width: 100%;
+  background-color: rgb(243, 243, 244);
+  overflow-y: hidden;
+  margin: 0;
+  font-size: 13px;
+  font-family: "open sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+ul,
+li {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+*, ::after, ::before {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: none;
+}
+
+app-root {
+  height: 100%;
+}
+
+#marker {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  font-size: 14px !important;
+  color: white;
+}
+
+.terminal .xterm-viewport {
+  background-color: #1f1b1b;
+  overflow: auto;
+}
+
+body ::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
+  background-color: var(--el-scroll-bar-track-bg-color);
+  border-radius: 6px;
+}
+
+.ant-modal-wrap {
+  z-index: 9999;
+  width: 100vw;
+  height: 100vh;
+}
+
+
+.cdk-overlay-pane ::-webkit-scrollbar-track {
+  background-color: #fffcfc;
+}
+
+.cdk-overlay-pane ::-webkit-scrollbar-thumb {
+  background-color: #c6c6c6;
+  border-radius: 6px;
+}
+
+body ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+body ::-webkit-scrollbar-thumb {
+  background-color: var(--el-scroll-bar-thumb-bg-color);
+  border-radius: 6px;
+}
+
+
+.ztree *:not(.fa) {
+  font-family: 'Open Sans', 'Monaco', 'Consolas', 'monospace' !important;
+  font-size: 13px !important;
+}
+
+.ztree li span.button.chk {
+  width: 16px !important;
+  padding-top: 0;
+  padding-left: 0;
+}
+
+/*.scroll-botton {*/
+/*font-size: 20px;*/
+/*float: left;*/
+/*height: 30px;*/
+/*overflow: hidden;*/
+/*background-color: #3a3333;*/
+/*color: white*/
+/*}*/
+
+.ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default {
+  background: #F9F9F9;
+  border: none !important;
+  line-height: 15px;
+  font-weight: bold;
+  color: #676a6c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.ui-state-active, .ui-widget-content .ui-state-active, .ui-widget-header .ui-state-active {
+  color: white;
+  font-weight: bolder;
+
+}
+
+#ztree .fa {
+  text-align: center;
+  display: inline-block;
+  font: normal normal normal 14px/1 FontAwesome !important;
+}
+
+
+#toast-container > .toast-warning:before {
+}
+
+#toast-container > .toast-error:before {
+}
+
+#toast-container > .toast-info:before {
+}
+
+#toast-container > .toast-success:before {
+  content: "";
+}
+
+.fa {
+  font-family: FontAwesome !important;
+}
+
+.mat-form-field-infix {
+  font-size: 14px;
+}
+
+
+#player .asciinema-player .asciinema-terminal {
+  height: calc(100vh - 60px) !important;
+}
+
+.my-tooltip {
+  position: relative;
+}
+
+.my-tooltip:before {
+  content: attr(data-tooltip);
+  position: absolute;
+  min-width: 100px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  padding: 10px;
+  line-height: 1.2;
+  border-radius: 6px;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity .4s;
+  bottom: 130%;
+  left: 50%;
+  margin-left: -50px;
+  font-size: 0.75em;
+  visibility: hidden;
+}
+
+.my-tooltip:after {
+  content: "";
+  position: absolute;
+  bottom: 75%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  opacity: 0;
+  transition: opacity .4s;
+  border-color: black transparent transparent transparent;
+  visibility: hidden;
+}
+
+.my-tooltip:hover:before,
+.my-tooltip:hover:after {
+  opacity: 1;
+  visibility: visible;
+}
+
+.full-width-tabs ::ng-deep .ant-tabs-nav > div {
+  display: flex;
+  width: 100%;
+
+  .ant-tabs-tab {
+    justify-content: center; /* 水平居中标题文字 */
+    text-align: center;
+    flex: 1;
+  }
+}
+
+body ::selection {
+  background: #BFDCFD !important;
+  color: initial !important;
+}
+
+$label-margin-bottom: 0;
+.ztree * {
+  background-color: inherit !important;
+  color: #ffffff;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+//.ztree li {
+//font-size: 15pt !important;
+//  padding-top: 5px !important;
+//}
+//
+//.ztree li span.node_name {
+//  padding-left: 8px !important;
+//}
+
+.ztree li span.button::before {
+  color: #ffffff !important;
+}
+
+button.icon-split-handle.ngx-split-button {
+  height: 100%;
+  //border: 1px solid #3a3333;
+  opacity: 0.0;
+}
+
+button.mat-raised-button {
+  margin-left: 5px;
+}
+
+label {
+  // Allow labels to use `margin` for spacing.
+  display: inline-block;
+  margin-bottom: 0;
+}
+
+body {
+  font-size: 13px;
+}
+

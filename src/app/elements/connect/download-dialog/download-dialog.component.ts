@@ -1,4 +1,5 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, Inject, OnInit} from '@angular/core';
+import {NZ_MODAL_DATA} from "ng-zorro-antd/modal";
 
 @Component({
   standalone: false,
@@ -9,7 +10,10 @@ import {Component, OnInit} from '@angular/core';
 export class ElementDownloadDialogComponent implements OnInit {
   public ignoreRemind = false;
 
-  constructor() {
+  constructor(
+    @Inject(NZ_MODAL_DATA) public data: any,
+  ) {
+    this.ignoreRemind = data?.ignoreRemind || false;
   }
 
   ngOnInit() {

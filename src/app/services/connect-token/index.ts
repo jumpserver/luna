@@ -16,7 +16,7 @@ export class ConnectTokenService {
       nzContent: ElementACLDialogComponent,
       nzWidth: '450px',
       nzData: {
-        data: data
+        ...data
       },
     });
     dialogRef.afterClose.subscribe((token) => {
@@ -44,7 +44,12 @@ export class ConnectTokenService {
           resolve(token);
         },
         (error) => {
-          this.handleError({tokenID: connectToken.id, code: error.error.code, tokenAction: 'exchange', error: error}, resolve);
+          this.handleError({
+            tokenID: connectToken.id,
+            code: error.error.code,
+            tokenAction: 'exchange',
+            error: error
+          }, resolve);
         }
       );
     });

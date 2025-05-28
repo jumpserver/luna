@@ -1,10 +1,10 @@
 import {Injectable} from '@angular/core';
 import {HttpClient, HttpErrorResponse, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Browser, User} from '@app/globals';
-import {catchError, delay, map, retryWhen, scan} from 'rxjs/operators';
-import {Asset, ConnectData, AdminConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
+import {catchError, map, retry} from 'rxjs/operators';
+import {AdminConnectData, Asset, ConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
-import {Observable, of} from 'rxjs';
+import {Observable} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
 import {CookieService} from 'ngx-cookie-service';
 import {encryptPassword} from '@app/utils/crypto';
@@ -157,18 +157,10 @@ export class HttpService {
   }
 
   withRetry() {
-    return retryWhen(err => err.pipe(
-      scan(
-        (retryCount, _err) => {
-          if (retryCount > 10) {
-            throw _err;
-          } else {
-            return retryCount + 1;
-          }
-        }, 0
-      ),
-      delay(10000)
-    ));
+    return retry({
+      count: 10,
+      delay: 10000  // 每次重试间隔 10 秒（单位毫秒）
+    });
   }
 
   getMyGrantedNodes(async: boolean) {

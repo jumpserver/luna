@@ -1,21 +1,20 @@
 .advanced-option {
   margin-top: 8px;
-}
 
-::ng-deep {
-  .ant-collapse > .ant-collapse-item > .ant-collapse-header {
-    height: 32px !important;
-    padding: 5px 0 0 40px;
-    border-bottom: none;
+  ::ng-deep {
+    .ant-collapse > .ant-collapse-item > .ant-collapse-header {
+      height: 32px;
+      padding: 5px 0 0 10px !important;
+      border-bottom: none;
 
-    &:hover {
-      background-color: rgb(255, 255, 255);
+      &:hover {
+        background-color: rgb(255, 255, 255);
+      }
     }
 
-  }
-
-  .ant-collapse-content > .ant-collapse-content-box {
-    padding: 8px 16px;
+    .ant-collapse-content > .ant-collapse-content-box {
+      padding: 8px 16px;
+    }
   }
 
 }

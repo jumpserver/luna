@@ -1,8 +1,9 @@
-import {Component, Input, OnInit} from '@angular/core';
+import {Component, Inject, OnInit} from '@angular/core';
 import {HttpService, SettingService} from '@app/services';
 import {GlobalSetting, Setting} from '@app/model';
 import {I18nService} from '@app/services/i18n';
 import * as _ from 'lodash';
+import {NZ_MODAL_DATA} from "ng-zorro-antd/modal";
 
 @Component({
   standalone: false,
@@ -12,8 +13,8 @@ import * as _ from 'lodash';
 })
 export class ElementSettingComponent implements OnInit {
   public boolChoices: any[];
-  @Input() public name: string;
-  @Input() public type: string = 'general';
+  public name: string;
+  public type: string = 'general';
   keyboardLayoutOptions: any[];
   resolutionsOptions: any[];
   rdpSmartSizeOptions: any[];
@@ -28,11 +29,14 @@ export class ElementSettingComponent implements OnInit {
 
   constructor(private _i18n: I18nService,
               private _http: HttpService,
+              @Inject(NZ_MODAL_DATA) public data: any,
               private settingSrv: SettingService) {
     this.boolChoices = [
       {name: _i18n.instant('Yes'), value: true},
       {name: _i18n.instant('No'), value: false}
     ];
+    this.name = data.name || this.name;
+    this.type = data.type || this.type;
   }
 
   hasLicense() {

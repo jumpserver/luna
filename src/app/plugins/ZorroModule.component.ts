@@ -10,6 +10,10 @@ import {NzCheckboxModule} from 'ng-zorro-antd/checkbox';
 import {NzCardModule} from 'ng-zorro-antd/card';
 import {NzSwitchModule} from 'ng-zorro-antd/switch';
 import {NzDropDownModule} from 'ng-zorro-antd/dropdown';
+import {NzMenuModule} from 'ng-zorro-antd/menu';
+import {NzTabsModule} from "ng-zorro-antd/tabs";
+import {NzRadioModule} from "ng-zorro-antd/radio";
+import {NzCollapseModule} from "ng-zorro-antd/collapse";
 
 
 @NgModule({
@@ -24,7 +28,11 @@ import {NzDropDownModule} from 'ng-zorro-antd/dropdown';
     NzCardModule,
     NzSwitchModule,
     NzDropDownModule,
-    NzCheckboxModule
+    NzCheckboxModule,
+    NzMenuModule,
+    NzTabsModule,
+    NzRadioModule,
+    NzCollapseModule,
   ]
 })
 export class NgZorroAntdModule {

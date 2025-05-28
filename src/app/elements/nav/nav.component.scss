@@ -1,4 +1,3 @@
-@import '../../../sass/mixins/index.scss';
 
 .nav {
   display: flex;
@@ -11,19 +10,21 @@
     top: 0
   }
 
+  .logo-item {
+    height: 29px;
+    width: 60px;
+
+    a {
+      padding: 0 14px;
+    }
+  }
+
   .nav-main {
     display: flex;
     align-items: center;
     background-color: var(--el-header-nav-bg-color);
     color: var(--el-header-nav-text-color);
-    margin-bottom: 0;
-    padding: 0;
-    border-bottom: none;
     font-size: 13px;
-
-    .logo-item {
-      height: 29px;
-    }
 
     ::ng-deep {
       .ant-menu-submenu-title {
@@ -35,58 +36,21 @@
           color: white;
         }
       }
+
+      .ant-menu-submenu-active, .ant-menu-submenu-open {
+        background: rgba(0, 0, 0, 0.6);
+      }
+
+      .ant-menu-submenu-horizontal.ant-menu-submenu {
+        padding: 0;
+      }
+
     }
 
-    li, .dropdown {
-      position: relative;
-      display: flex;
-      align-items: center;
+    li, .dropdown, {
       height: 30px;
       line-height: 30px;
-      border-bottom: none;
-
-      &.ant-menu-submenu-active {
-        border-bottom: none;
-        background-color: var(--el-header-tab-bg-color);
-      }
-
-      .dropdown-content {
-        padding: 5px 0;
-        @include GeneralDropdown(null, 0);
-
-        li {
-
-          .active {
-            display: flex;
-            width: 100%;
-          }
-
-          a {
-            @include GeneralDropdownLia;
-          }
-
-          &.disconnected {
-            background-color: var(--el-header-dropdown-disable-text-color);
-          }
-        }
-      }
-
-      .disabled {
-        a {
-          text-decoration: none;
-          background-color: var(--el-header-nav-select-bg-color);
-          color: var(--el-header-dropdown-disable-text-color) !important;
-
-          &:hover {
-            background-color: var(--el-header-nav-select-bg-color) !important;
-            cursor: not-allowed !important;
-          }
-        }
-      }
-
-      &:hover {
-        @include DropdownHover;
-      }
+      padding: 0;
     }
   }
 
@@ -97,18 +61,19 @@
   }
 }
 
-.flag {
-  display: none;
-  color: var(--primary-color);
-  padding-right: 5px;
-
-}
-
-.active .flag {
-  display: inline;
-}
-
-.elements-organization {
-  flex: 1;
-  text-align: right;
-}
+//
+//.flag {
+//  display: none;
+//  color: var(--primary-color);
+//  padding-right: 5px;
+//
+//}
+//
+//.active .flag {
+//  display: inline;
+//}
+//
+//.elements-organization {
+//  flex: 1;
+//  text-align: right;
+//}

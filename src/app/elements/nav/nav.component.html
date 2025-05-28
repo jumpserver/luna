@@ -1,6 +1,6 @@
 <div class="nav">
-  <ul nz-menu nzMode="horizontal" class="nav-main">
-    <li nz-menu-item class="logo-item">
+  <ul nz-menu nzMode="horizontal" nzTheme='dark' class='nav-main'>
+    <li class="logo-item">
       <a>
         <img (click)="onJumpUi()" alt="" height="30px" id="left-logo" src=""/>
       </a>
@@ -13,7 +13,7 @@
               <span>{{ 'NoTabs' | translate }}</span>
             </li>
             <ng-container *ngIf="viewListSorted.length > 0">
-              <li nz-menu-item *ngFor="let view of viewListSorted" 
+              <li nz-menu-item *ngFor="let view of viewListSorted"
                   [ngClass]="{'disconnected':!view.connected, 'hidden': view.closed != false}"
                   [style.display]="view.name ? 'block' : 'none'">
                 <span [class.active]="view.active">
