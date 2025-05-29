@@ -6,7 +6,7 @@ import {
 } from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {NzModalService} from 'ng-zorro-antd/modal';
-
+import {languages} from '@codemirror/language-data';
 
 @Component({
   standalone: false,
@@ -22,11 +22,14 @@ export class ElementContentFooterComponent implements OnInit {
   sendCommandRange = 'current';
   sendCommandToAll = false;
   showCommandZone = false;
-  codeEditorOptions = {
+  editorOption = {
     language: 'shell',
+    languages: languages,
     theme: 'dark',
     lineNumbers: false,
-    minimap: {enabled: false},
+    setup: 'minimal',
+    placeholder: 'Input command here..., Enter for new line, Ctrl+Enter to send',
+    autoFocus: true
   };
   sendCommandOptions = [
     {

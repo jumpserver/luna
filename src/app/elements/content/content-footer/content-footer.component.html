@@ -2,21 +2,30 @@
   <div *ngIf="showCommandZone" class="batch-command-zone">
     <div class="command-header">
       <button nz-button nzType="link">
-        <i nz-icon nzType="read" nzTheme="outline"></i>
+        <i nz-icon nzTheme="outline" nzType="read"></i>
         脚本库
       </button>
-      <nz-switch nzSize="small" [(ngModel)]="sendCommandToAll"></nz-switch>
+      <nz-switch [(ngModel)]="sendCommandToAll" nzSize="small"></nz-switch>
       <span style="margin-left: 5px;">Send to all sessions</span>
     </div>
     <div class="command-input">
-      <ngx-codemirror [(ngModel)]="batchCommand"></ngx-codemirror>
+        <code-editor [(ngModel)]="batchCommand"
+                     [language]='editorOption.language'
+                     [languages]='editorOption.languages'
+                     [placeholder]="editorOption.placeholder"
+                     setup='minimal'
+                     theme='dark'
+        ></code-editor>
+        <button (click)="sendBatchCommand()" class='send-btn' nz-button nzType="primary">
+          发送
+        </button>
     </div>
   </div>
   <div class="footer-bar">
     <div class="footer-bar__left">
-      <button nz-button nzType="link" (click)="showCommandZone = !showCommandZone">
-        <i nz-icon nzType="read" nzTheme="outline"></i>
-        批量命令 <i nz-icon nzType="caret-right" nzTheme="outline" [class.rotate-icon]="showCommandZone"></i>
+      <button (click)="showCommandZone = !showCommandZone" nz-button nzType="link">
+        <i nz-icon nzTheme="outline" nzType="read"></i>
+        批量命令 <i [class.rotate-icon]="showCommandZone" nz-icon nzTheme="outline" nzType="caret-right"></i>
       </button>
     </div>
   </div>

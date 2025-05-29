@@ -1,6 +1,6 @@
 import {Component, ElementRef, EventEmitter, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
-import {ConnectTokenService, HttpService, I18nService, LogService, SettingService, ViewService} from '@app/services';
+import {ConnectTokenService, ViewService} from '@app/services';
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import {fromEvent, Subscription} from 'rxjs';
 import * as jQuery from 'jquery/dist/jquery.min.js';
@@ -45,10 +45,6 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   keyboardSubscription: Subscription;
 
   constructor(public viewSrv: ViewService,
-              public settingSvc: SettingService,
-              private _i18n: I18nService,
-              private _logger: LogService,
-              private _http: HttpService,
               private _connectTokenSvc: ConnectTokenService,
   ) {
   }

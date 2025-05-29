@@ -1,16 +1,15 @@
 import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
 import {HttpClient, provideHttpClient} from '@angular/common/http';
-import {CommonModule} from '@angular/common';
+import {APP_BASE_HREF, CommonModule} from '@angular/common';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms'; // <-- NgModel lives here
 import {NGXLogger} from 'ngx-logger';
 import {CookieService} from 'ngx-cookie-service';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {TranslateLoader, TranslateModule} from '@ngx-translate/core';
-import {TranslateHttpLoader} from '@ngx-translate/http-loader';
 import {DragDropModule} from '@angular/cdk/drag-drop';
-import {CodemirrorModule} from '@ctrl/ngx-codemirror';
 import {AngularSplitModule} from 'angular-split';
+import {CodeEditorModule} from '@acrodata/code-editor';
 
 // service
 import {AllServices} from '@app/services';
@@ -28,9 +27,6 @@ import {FileInputAccessorModule} from 'file-input-accessor';
 import {catchError, mergeMap} from 'rxjs/operators';
 import {PagesComponents} from './pages/pages.component';
 
-export function HttpLoaderFactory(http: HttpClient) {
-  return new TranslateHttpLoader(http, '/api/v1/settings/i18n/luna/?lang=', '&v=' + version);
-}
 
 export class CustomLoader implements TranslateLoader {
 
@@ -57,7 +53,6 @@ export class CustomLoader implements TranslateLoader {
   }
 }
 
-
 @NgModule({
   imports: [
     DragDropModule,
@@ -65,12 +60,12 @@ export class CustomLoader implements TranslateLoader {
     CommonModule,
     FormsModule,
     AppRouterModule,
-    CodemirrorModule,
     SharedPipeModule,
     AngularSplitModule,
     ReactiveFormsModule,
     FileInputAccessorModule,
     BrowserAnimationsModule,
+    CodeEditorModule,
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,
@@ -88,6 +83,7 @@ export class CustomLoader implements TranslateLoader {
   bootstrap: [AppComponent],
   providers: [
     ...AllServices,
+    {provide: APP_BASE_HREF, useValue: '/luna/'},
     CookieService,
     NGXLogger,
     ClipboardService,

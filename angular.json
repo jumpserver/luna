@@ -3,14 +3,13 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "WebTerminal": {
+    "Luna": {
       "root": "",
       "sourceRoot": "src",
       "projectType": "application",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-angular:application",
-          "baseHref": "/luna/",
           "options": {
             "outputPath": "dist",
             "index": "src/index.html",
@@ -82,18 +81,19 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "buildTarget": "WebTerminal:build"
+            "buildTarget": "Luna:build",
+            "proxyConfig": "proxy.conf.json"
           },
           "configurations": {
             "production": {
-              "buildTarget": "WebTerminal:build:production"
+              "buildTarget": "Luna:build:production"
             }
           }
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "WebTerminal:build"
+            "buildTarget": "Luna:build"
           }
         },
         "lint": {

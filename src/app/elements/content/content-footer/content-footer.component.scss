@@ -4,7 +4,7 @@ $-border-y: var(--el-main-bg-color);
 .content-footer {
   border-top: solid 1px var(--el-border-color-y);
   border-left: 1px solid var(--el-border-color-y);
-  background: #1f1b1b;
+  background: var(--el-assets-extend-bg-color);;
   color: #ffffff;
   font-size: 12px;
 
@@ -17,7 +17,7 @@ $-border-y: var(--el-main-bg-color);
 
   .batch-command-zone {
     height: 200px;
-    padding: 10px;
+    padding: 10px 15px;
 
     button.ant-btn {
       height: 25px;
@@ -37,19 +37,20 @@ $-border-y: var(--el-main-bg-color);
 
     .command-input {
       height: 150px;
+      background-color: var(--el-editor-bg-color);
+      overflow: auto;
+      position: relative;
 
-      textarea {
-        font-size: 12px;
-        background: #383838;
-        width: 100%;
-        height: 100%;
-        border: none;
-        color: #ffffff;
+      .send-btn {
+        position: absolute;
+        right: 5px;
+        bottom: 5px;
+        z-index: 1;
+      }
 
-        &.ant-input:focus,
-        &.ant-input:hover {
-          border: none;
-          box-shadow: none;
+      ::ng-deep {
+        .cm-editor, .cm-content {
+          background-color: var(--el-editor-bg-color);
         }
       }
     }

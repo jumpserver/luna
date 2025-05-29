@@ -1,4 +1,4 @@
-import { Theme } from './interface/index';
+import {Theme} from './interface/index';
 
 export const menuTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
   default: {
@@ -31,7 +31,8 @@ export const menuTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     // rMenu 背景
     '--el-rMenu-bg-color': '#000000',
     // rMenu 项 hover 背景
-    '--el-rMenu-hover-bg-color': '#463e3e'
+    '--el-rMenu-hover-bg-color': '#463e3e',
+    '--el-editor-bg-color': '#3b3b3b',
   },
   darkBlue: {
     // 侧边栏背景
@@ -63,6 +64,7 @@ export const menuTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     // rMenu 背景
     '--el-rMenu-bg-color': '#2F3238',
     // rMenu 项 hover 背景
-    '--el-rMenu-hover-bg-color': '#41464D'
+    '--el-rMenu-hover-bg-color': '#41464D',
+    '--el-editor-bg-color': '#282c34',
   }
 };

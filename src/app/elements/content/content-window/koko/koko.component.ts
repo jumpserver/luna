@@ -59,7 +59,7 @@ export class ElementConnectorKokoComponent implements OnInit {
     this.view.termComp = this;
   }
 
-  async createFileConnectToken() {
+  async createFileConnectToken(evt) {
     const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window })
       .iframeWindow;
     const oldConnectToken = this.view.connectToken;
