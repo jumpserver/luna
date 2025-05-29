@@ -3,8 +3,8 @@ import {View, ViewAction} from '@app/model';
 import {ConnectTokenService, ViewService} from '@app/services';
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import {fromEvent, Subscription} from 'rxjs';
-import * as jQuery from 'jquery/dist/jquery.min.js';
-import * as _ from 'lodash';
+import jQuery from 'jquery';
+import _ from 'lodash-es';
 
 @Component({
   standalone: false,

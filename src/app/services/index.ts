@@ -1,4 +1,4 @@
-import {LocalStorageService, LogService, UUIDService} from './share';
+import {LocalStorageService, LogService} from './share';
 import {AppService} from './app';
 import {HttpService} from './http';
 import {NavService} from './nav';
@@ -12,7 +12,7 @@ import {ConnectTokenService} from './connect-token/';
 import {FaceService} from '@app/services/face';
 import {IframeCommunicationService} from './communication';
 
-export {LogService, LocalStorageService, UUIDService} from './share';
+export {LogService, LocalStorageService} from './share';
 
 export {AppService} from './app';
 
@@ -40,7 +40,6 @@ export {IframeCommunicationService};
 export const AllServices = [
   LogService,
   LocalStorageService,
-  UUIDService,
   AppService,
   HttpService,
   NavService,

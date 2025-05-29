@@ -2,7 +2,7 @@ import {Component, Inject, OnInit} from '@angular/core';
 import {HttpService, SettingService} from '@app/services';
 import {GlobalSetting, Setting} from '@app/model';
 import {I18nService} from '@app/services/i18n';
-import * as _ from 'lodash';
+import _ from 'lodash-es';
 import {NZ_MODAL_DATA} from "ng-zorro-antd/modal";
 
 @Component({

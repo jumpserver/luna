@@ -20,7 +20,7 @@ export class ElementConnectorGuideComponent implements OnInit {
   @Input() commands: Array<Command>;
   passwordMask = '******';
   passwordShow = '******';
-  hoverClipTip: string = this._i18n.instant('Click to copy');
+  hoverClipTip: string = '';
   showClient = false;
   reusable = false;
 
@@ -31,7 +31,8 @@ export class ElementConnectorGuideComponent implements OnInit {
   ) {
   }
 
-  async ngOnInit() {
+  ngOnInit() {
+    this.hoverClipTip = this._i18n.instant('Click to copy');
   }
 
   setReusable() {

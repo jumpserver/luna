@@ -4,7 +4,7 @@ import {FitAddon} from '@xterm/addon-fit';
 import {LogService} from '@app/services';
 import {fromEvent, Observable, Subscription} from 'rxjs';
 import {debounceTime, distinctUntilChanged} from 'rxjs/operators';
-import * as $ from 'jquery/dist/jquery.min.js';
+import $ from 'jquery';
 
 
 @Component({

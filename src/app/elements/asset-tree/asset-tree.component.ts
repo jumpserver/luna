@@ -6,7 +6,7 @@ import {ActivatedRoute} from '@angular/router';
 import {NzNotificationService} from 'ng-zorro-antd/notification';
 import {connectOnNewPage, groupBy} from '@app/utils/common';
 import {connectEvt, DEFAULT_ORG_ID, SYSTEM_ORG_ID} from '@app/globals';
-import * as _ from 'lodash';
+import _ from 'lodash-es';
 import {
   AppService,
   ConnectTokenService,

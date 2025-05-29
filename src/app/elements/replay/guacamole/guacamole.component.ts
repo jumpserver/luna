@@ -1,5 +1,5 @@
 import {Component, Input, OnChanges, OnInit, SimpleChanges, ViewEncapsulation} from '@angular/core';
-import * as Guacamole from 'guacamole-common-js';
+import Guacamole from 'guacamole-common-js';
 import {Command, Replay} from '@app/model';
 import {HttpService} from '@app/services';
 import {formatTime} from '@app/utils/common';

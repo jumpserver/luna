@@ -2,7 +2,7 @@ import {Component, EventEmitter, OnInit, Output} from '@angular/core';
 import {DataStore} from '@app/globals';
 import {version} from '@src/environments/environment';
 import {OrganizationService, SettingService} from '@app/services';
-import * as _ from 'lodash';
+import _ from 'lodash-es';
 
 @Component({
   standalone: false,

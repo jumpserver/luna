@@ -5,7 +5,7 @@ import {NZ_MODAL_DATA} from "ng-zorro-antd/modal";
   standalone: false,
   selector: 'elements-asset-tree-dialog',
   templateUrl: 'download-dialog.component.html',
-  styles: ['download-dialog.component.scss']
+  styleUrls: ['download-dialog.component.scss']
 })
 export class ElementDownloadDialogComponent implements OnInit {
   public ignoreRemind = false;

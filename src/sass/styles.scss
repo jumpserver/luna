@@ -4,12 +4,12 @@
  * --------------------------------------------------
  */
 // font-awesome
-@import 'font-awesome/scss/font-awesome.scss';
-@import 'ztree.css';
-@import 'ztree_icon.scss';
-@import "@xterm/xterm/css/xterm.css";
-@import "animate.css/animate.min.css";
-@import "asciinema-player/dist/bundle/asciinema-player.css";
+@use 'font-awesome/scss/font-awesome.scss';
+@use 'ztree.css';
+@use 'ztree_icon.scss';
+@use "@xterm/xterm/css/xterm.css";
+@use "animate.css/animate.min.css";
+@use "asciinema-player/dist/bundle/asciinema-player.css";
 
 $asset-path: '../static/imgs/inspinia';
 $fa-font-path: '~font-awesome/fonts';

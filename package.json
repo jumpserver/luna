@@ -4,8 +4,8 @@
   "license": "GPLv3",
   "scripts": {
     "ng": "ng",
-    "dev": "ng serve --hmr --proxy-config proxy.conf.json --host 0.0.0.0  --disable-host-check",
-    "start": "ng serve --hmr --proxy-config proxy.conf.json --host 0.0.0.0  --disable-host-check",
+    "dev": "ng serve --proxy-config proxy.conf.json --host 0.0.0.0  --disable-host-check",
+    "start": "ng serve --proxy-config proxy.conf.json --host 0.0.0.0  --disable-host-check",
     "build": "ng build --configuration production  --output-path 'luna'",
     "test": "ng test",
     "lint": "ng lint",
@@ -43,6 +43,7 @@
     "guacamole-common-js": "^1.5.0",
     "jquery": "^3.7.1",
     "jsencrypt": "^3.3.2",
+    "lodash-es": "^4.17.21",
     "metismenu": "^3.0.7",
     "ng-zorro-antd": "^19.3.0",
     "ngx-clipboard": "^16.0.0",
@@ -53,7 +54,6 @@
     "requirejs": "^2.3.6",
     "rxjs": "^7.8.1",
     "tslib": "^2.6.2",
-    "uuid-js": "^0.7.5",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {

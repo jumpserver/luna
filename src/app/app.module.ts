@@ -78,8 +78,8 @@ export class CustomLoader implements TranslateLoader {
   declarations: [
     AppComponent,
     ...ElementComponents,
-    ...PagesComponents,
-  ],
+    ...PagesComponents
+  ] as any[],
   bootstrap: [AppComponent],
   providers: [
     ...AllServices,

@@ -20,7 +20,10 @@
             "allowedCommonJsDependencies": [
               "crypto-js",
               "events",
-              "buffer"
+              "buffer",
+              "@xterm/xterm",
+              "@xterm/addon-fit",
+              "jquery"
             ],
             "tsConfig": "src/tsconfig.app.json",
             "stylePreprocessorOptions": {
@@ -46,10 +49,9 @@
               "src/sass/styles.scss"
             ],
             "scripts": [
-              "node_modules/jquery/dist/jquery.min.js",
-              "node_modules/@xterm/xterm/lib/xterm.js",
-              "node_modules/@ztree/ztree_v3/js/jquery.ztree.all.min.js",
-              "node_modules/@ztree/ztree_v3/js/jquery.ztree.exhide.min.js",
+              "jquery/dist/jquery.min.js",
+              "@ztree/ztree_v3/js/jquery.ztree.all.min.js",
+              "@ztree/ztree_v3/js/jquery.ztree.exhide.min.js",
               "node_modules/asciinema-player/dist/bundle/asciinema-player.js"
             ]
           },

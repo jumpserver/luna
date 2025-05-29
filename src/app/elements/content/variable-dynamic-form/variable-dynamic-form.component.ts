@@ -1,7 +1,7 @@
 import {Component, EventEmitter, Input, OnInit, Output, SimpleChanges} from '@angular/core';
 import {FormGroup} from '@angular/forms';
 import {DynamicFormService} from './dynamic-form.service';
-import * as _ from 'lodash';
+import _ from 'lodash-es';
 
 @Component({
   standalone: false,
