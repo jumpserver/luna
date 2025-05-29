@@ -8,8 +8,8 @@
   </a>
   <nz-dropdown-menu #menu="nzDropdownMenu">
     <ul [nzSelectable]='true' nz-menu>
-      <li *ngFor="let item of menus" nz-menu-item>
-        <a (click)="item.click()" *ngIf="item.click" id="{{item.id}}">{{ item.name|translate }}</a>
+      <li *ngFor="let item of menus" nz-menu-item (click)="item.click()">
+        {{ item.name | translate }}
       </li>
     </ul>
   </nz-dropdown-menu>

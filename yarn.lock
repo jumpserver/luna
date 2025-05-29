@@ -7005,7 +7005,7 @@ ngx-cookie-service@^19.0.0:
 
 ngx-infinite-scroll@^19.0.0:
   version "19.0.0"
-  resolved "https://registry.npmmirror.com/ngx-infinite-scroll/-/ngx-infinite-scroll-19.0.0.tgz"
+  resolved "https://registry.npmmirror.com/ngx-infinite-scroll/-/ngx-infinite-scroll-19.0.0.tgz#7b24d148426ccf9f0524d1a14eb4952d97cee415"
   integrity sha512-Ft4xNNDLXoDGi2hF6ylehjxbG8JIgfoL6qDWWcebGMcbh1CEfEsh0HGkDuFlX/cBBMenRh2HFbXlYq8BAtbvLw==
   dependencies:
     tslib "^2.3.0"
