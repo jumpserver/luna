@@ -2,7 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {HttpService, LogService, NavService, SettingService, ViewService} from '@app/services';
 import {DataStore} from '@app/globals';
 import {CookieService} from 'ngx-cookie-service';
-import {ElementSettingComponent} from '@app/elements/setting/setting.component';
+import {ElementSettingComponent} from '@app/elements/nav/setting/setting.component';
 import {Nav, View} from '@app/model';
 import {I18nService} from '@app/services/i18n';
 import {useTheme} from '@app/utils/useTheme';

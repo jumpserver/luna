@@ -5,14 +5,14 @@ import {ElementContentWindowComponent} from './content/content-window/content-wi
 import {ElementContentTabComponent} from './content/content-tab/content-tab.component';
 import {ElementContentFooterComponent} from './content/content-footer/content-footer.component';
 import {ElementAssetTreeComponent} from './asset-tree/asset-tree.component';
-import {ElementTreeFilterComponent} from './tree-filter/tree-filter.component';
-import {ElementOrganizationComponent} from './organization/organization.component';
-import {ElementUserFileComponent} from './profile/profile.component';
+import {ElementTreeFilterComponent} from '@app/elements/asset-tree/tree-filter/tree-filter.component';
+import {ElementOrganizationComponent} from '@app/elements/left-bar/organization/organization.component';
+import {ElementUserFileComponent} from '@app/elements/nav/profile/profile.component';
 import {ElementNavComponent} from './nav/nav.component';
 import {ElementIframeComponent} from './iframe/iframe.component';
 import {ElementConnectComponent} from './connect/connect.component';
 import {ElementConnectDialogComponent} from './connect/connect-dialog/connect-dialog.component';
-import {ElementSettingComponent} from './setting/setting.component';
+import {ElementSettingComponent} from '@app/elements/nav/setting/setting.component';
 import {ElementReplayGuacamoleComponent} from './replay/guacamole/guacamole.component';
 import {ElementReplayJsonComponent} from './replay/json/json.component';
 import {ElementConnectorKokoComponent} from './content/content-window/koko/koko.component';
@@ -27,7 +27,9 @@ import {ElementDownloadDialogComponent} from './connect/download-dialog/download
 import {ElementsReplayMp4Component} from './replay/mp4/mp4.component';
 import {ElementConnectorGuideComponent} from '@app/elements/content/content-window/guide/guide.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
-import {ElementSendCommandDialogComponent} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
+import {
+  ElementSendCommandDialogComponent
+} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
 import {
   ElementSendCommandWithVariableDialogComponent
 } from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
@@ -35,11 +37,11 @@ import {DynamicFormComponent} from '@app/elements/content/variable-dynamic-form/
 import {ElementChatComponent} from '@app/elements/chat/chat.component';
 import {ElementsPartsComponent} from './replay/parts/parts.component';
 import {ElementConnectorNecComponent} from '@app/elements/content/content-window/nec/nec.component';
-import {ElementFaceMonitorComponent} from '@app/elements/face-monitor/face-monitor.component';
+import {ElementFaceMonitorComponent} from '@app/elements/connect/face-monitor/face-monitor.component';
 
 import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/acl-dialog.component';
 import {ElementDialogAlertComponent} from '@app/services/dialog/alert.service';
-import {ElementTermComponent} from './term/term.component';
+import {ElementTermComponent} from '@app/elements/replay/term/term.component';
 
 export const ElementComponents = [
   ElementLeftBarComponent,
