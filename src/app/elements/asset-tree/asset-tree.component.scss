@@ -200,7 +200,7 @@
   -moz-border-radius: 2px;
   -moz-user-select: none;
   -ms-user-select: none;
-  background-color: var(--el-rMenu-bg-color);
+  background-color: var(--el-menu-bg-color);
   box-shadow: 0 3px 6px 0 rgba(0, 0, 0, 0.16);
   z-index: 1000;
 
@@ -271,7 +271,7 @@ tr {
 }
 
 tr:hover {
-  background-color: var(--el-rMenu-hover-bg-color);
+  background-color: var(--el-menu-hover-bg-color);
 }
 
 .view-menu table {

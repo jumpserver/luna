@@ -54,7 +54,7 @@
 
 <elements-connect (onNewView)="onNewView($event)" style='display: none'></elements-connect>
 
-<div #rMenu *ngIf="isShowRMenu" [style.left]="pos.left" [style.top]="pos.top" class="view-menu">
+<div #rMenu *ngIf="isShowRMenu" [style.left]="pos.left" [style.top]="pos.top" class="view-menu tab-r-menu">
   <table>
     <tbody>
     <tr *ngFor="let item of rMenuItems()" class="view-menu__item view-menu__item--separator">

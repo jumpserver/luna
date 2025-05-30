@@ -159,6 +159,9 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
   }
 
   checkOptions() {
+    if (!this.protocol) {
+      return;
+    }
     const onlyUsingDefaultFields = ['reusable'];
     this.allOptions.forEach(i => {
       if (this.connectOption[i.field] === undefined) {

@@ -197,7 +197,8 @@ $-border-x: #5a5959;
   margin: 2px 0;
 
   &:hover {
-    background-color: rgba(53, 54, 51, 0.7);
+    // background-color: rgba(53, 54, 51, 0.7);
+    background-color: var(--el-menu-hover-bg-color);
   }
 }
 

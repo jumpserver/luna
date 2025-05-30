@@ -7,7 +7,7 @@ nz-float-button {
 
 .chat-container {
   position: fixed;
-  bottom: 130px;
+  bottom: 300px;
   right: 5px;
   z-index: 1000;
   cursor: move;
@@ -29,7 +29,7 @@ nz-float-button {
     }
 
     .ant-float-btn-default, .ant-float-btn-default .ant-float-btn-body {
-      background: rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.05);
 
       &:hover {
         background: rgba(255, 255, 255, 0.1);

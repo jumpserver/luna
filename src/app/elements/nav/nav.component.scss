@@ -2,7 +2,7 @@
 .nav {
   display: flex;
   justify-content: space-between;
-  background-color: var(--el-header-nav-bg-color);
+  background-color: var(--el-menu-bg-color);
   font-weight: 400;
   padding-bottom: 1px;
 
@@ -22,13 +22,13 @@
   .nav-main {
     display: flex;
     align-items: center;
-    background-color: var(--el-header-nav-bg-color);
-    color: var(--el-header-nav-text-color);
+    background-color: var(--el-menu-bg-color);
+    color: var(--el-menu-text-color);
     font-size: 13px;
 
     ::ng-deep {
       .ant-menu-submenu-title {
-        color: var(--el-header-nav-text-color);
+        color: var(--el-menu-text-color);
         font-weight: 300;
         padding: 0 16px;
 
@@ -57,7 +57,7 @@
   .nav-right {
     display: flex;
     align-items: center;
-    color: var(--el-header-nav-text-color);
+    color: var(--el-menu-text-color);
   }
 }
 
