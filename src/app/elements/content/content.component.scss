@@ -17,7 +17,7 @@ $-border-x: #5a5959;
       overflow: hidden;
       line-height: 31px;
       font-size: 20px;
-      color: var(--el-header-tab-icon-color);
+      color: var(--el-menu-icon-color);
       background-color: var(--el-header-tab-item-bg-color);
       cursor: pointer;
 
@@ -92,6 +92,7 @@ $-border-x: #5a5959;
         opacity: 0.8;
 
         .crucial {
+          width: 300px;
           margin-right: 6px;
           color: var(--el-main-crucial-text-color);
           font-weight: 500;
@@ -198,7 +199,7 @@ $-border-x: #5a5959;
 
   &:hover {
     // background-color: rgba(53, 54, 51, 0.7);
-    background-color: var(--el-menu-hover-bg-color);
+    background-color: var(--el-dropdown-hover-bg-color);
   }
 }
 

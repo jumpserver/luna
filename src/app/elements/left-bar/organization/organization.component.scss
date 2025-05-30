@@ -8,14 +8,14 @@
   i {
     font-size: 14px;
     margin-left: 12px;
-    color: var(--el-menu-text-color);
+    color: var(--el-main-text-color);
   }
 
   ::ng-deep .org-select {
     position: relative;
     padding: 0 5px;
     width: 100%;
-    color: var(--el-menu-text-color);
+    color: var(--el-main-text-color);
 
     // 有绿边
     &.ant-select-focused .ant-select-selector {
@@ -25,7 +25,7 @@
     .ant-select-selection {
       background: transparent !important;
       box-shadow: none;
-      color: var(--el-menu-text-color);
+      color: var(--el-main-text-color);
       border: none;
     }
 
@@ -45,12 +45,12 @@
     .ant-select-selection-item {
       display: flex;
       align-items: center;
-      color: var(--el-menu-text-color);
+      color: var(--el-main-text-color);
       font-size: 13px;
     }
 
     .ant-select-arrow {
-      color: var(--el-menu-text-color);
+      color: var(--el-main-text-color);
     }
   }
 }

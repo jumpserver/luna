@@ -22,13 +22,13 @@ li {
     border-bottom: 2px solid var(--primary-color);
 
     span {
-      color: var(--el-header-tab-icon-color);
+      color: var(--el-menu-icon-color);
     }
   }
 
   &:hover {
     span {
-      color: var(--el-header-tab-icon-color);
+      color: var(--el-menu-icon-color);
     }
   }
 
@@ -53,7 +53,7 @@ li {
 
       &::before {
         display: inline-block;
-        color: var(--el-header-tab-icon-color);
+        color: var(--el-menu-icon-color);
         font-family: FontAwesome;
       }
     }
@@ -66,7 +66,7 @@ li {
     line-height: 30px;
     font-family: 'Roboto', sans-serif;
     font-size: 13px;
-    color: var(--el-header-tab-icon-color);
+    color: var(--el-menu-icon-color);
     cursor: pointer;
   }
 }

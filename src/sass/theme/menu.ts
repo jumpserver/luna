@@ -20,7 +20,7 @@ export const menuTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     '--el-scroll-bar-thumb-bg-color': '#605959',
     // 滚动条轨道背景
     '--el-scroll-bar-track-bg-color': '#2A2525',
-    '--el-editor-bg-color': '#3b3b3b',
+    '--el-editor-bg-color': '#f5f5f508',
   },
   darkBlue: {
     // // 侧边栏组织模块背景

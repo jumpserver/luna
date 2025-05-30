@@ -109,14 +109,14 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy() {
-    this.element.remove();
+    // this.element.remove();
     this.viewSrv.currentView$.unsubscribe();
   }
 
   showChatAI() {
-    if (this.isDragging) {
-      return;
-    }
+    // if (this.isDragging) {
+    //   return;
+    // }
     if (!this.chatAIInited) {
       this.chatAIInited = true;
     } else {
@@ -142,8 +142,7 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     body.insertBefore(this.element, body.firstChild);
   }
 
-  onSettingOpenDrawer() {
-    console.log('SHow  it setting')
+  showSettingDrawer() {
     if (this.currentView.iframeElement) {
       this.currentView.iframeElement.postMessage({name: 'OPEN'}, '*');
     }

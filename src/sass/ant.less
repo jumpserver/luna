@@ -16,21 +16,22 @@
 }
 
 .dark-dropdown {
-  background-color: var(--el-menu-bg-color);
+  background-color: var(--el-dropdown-bg-color);
 
   .ant-dropdown-menu {
     border-radius: 4px;
-    background-color: var(--el-menu-bg-color);
+    background-color: var(--el-dropdown-bg-color);
 
     .ant-dropdown-menu-item {
-      color: var(--el-menu-text-color);
+      color: var(--el-dropdown-text-color);
+      font-size: 13px;
 
       &:hover {
-        background-color: var(--el-menu-hover-bg-color);
+        background-color: var(--el-dropdown-hover-bg-color);
       }
 
       & > a {
-        color: var(--el-menu-text-color);
+        color: var(--el-dropdown-text-color);
       }
     }
   }
@@ -38,7 +39,7 @@
   // Submenu title
   .ant-menu-submenu.ant-menu-submenu-horizontal {
     .ant-menu-submenu-title {
-      color: var(--el-menu-text-color);
+      color: var(--el-dropdown-text-color);
       font-weight: 300;
       border-bottom: none;
     }
@@ -51,7 +52,7 @@
   // Dropdown
   &.ant-menu-vertical {
     &.ant-menu {
-      background-color: var(--el-menu-bg-color);
+      background-color: var(--el-dropdown-bg-color);
       border-radius: 0;
     }
 
@@ -63,18 +64,18 @@
       line-height: 30px;
       margin-bottom: 0;
       margin-top: 0;
-      color: var(--el-menu-text-color);
+      color: var(--el-dropdown-text-color);
 
       &.ant-menu-item-selected {
         background-color: inherit;
       }
 
       & > span.ant-menu-title-content > a {
-        color: var(--el-menu-text-color);
+        color: var(--el-dropdown-text-color);
       }
 
       &:hover {
-        background-color: var(--el-menu-hover-bg-color);
+        background-color: var(--el-dropdown-hover-bg-color);
       }
 
       &:first-child {
@@ -91,34 +92,34 @@
 
       a {
         &:hover {
-          color: var(--el-menu-text-color);
+          color: var(--el-dropdown-text-color);
         }
       }
     }
   }
 
   .ant-select-dropdown {
-    background-color: var(--el-menu-bg-color);
+    background-color: var(--el-dropdown-bg-color);
 
     .ant-select-item {
       font-size: 13px;
-      background-color: var(--el-menu-bg-color);
-      color: var(--el-menu-text-color);
+      background-color: var(--el-dropdown-bg-color);
+      color: var(--el-dropdown-text-color);
 
       &:hover {
-        background-color: var(--el-menu-hover-bg-color);
+        background-color: var(--el-dropdown-hover-bg-color);
       }
 
       &.ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
-        background-color: var(--el-menu-hover-bg-color);
+        background-color: var(--el-dropdown-hover-bg-color);
       }
     }
   }
 
   .ant-select-dropdown-menu {
     .ant-select-dropdown-menu-item {
-      background-color: var(--el-menu-bg-color);
-      color: var(--el-menu-text-color);
+      background-color: var(--el-dropdown-bg-color);
+      color: var(--el-dropdown-text-color);
       line-height: 30px;
       height: 30px;
       margin: 0;
@@ -126,7 +127,7 @@
       font-size: 13px;
 
       a {
-        color: var(--el-menu-text-color);
+        color: var(--el-dropdown-text-color);
       }
 
       &:first-child {
@@ -148,11 +149,11 @@
       }
 
       &.ant-select-dropdown-menu-item-active {
-        // background-color: var(--el-menu-hover-bg-color);
+        // background-color: var(--el-dropdown-hover-bg-color);
       }
 
       &:hover {
-        background-color: var(--el-menu-hover-bg-color);
+        background-color: var(--el-dropdown-hover-bg-color);
       }
 
       &.ant-select-dropdown-menu-item-selected {
