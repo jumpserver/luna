@@ -9,20 +9,20 @@
     </div>
     <div #tabs class="tabs">
       <ul
-        (cdkDropListDropped)="onItemDropped($event)"
-        [ngStyle]="{'width':tabsWidth+'px'}"
-        cdkDropList
-        cdkDropListOrientation="horizontal"
-        class="drag-list"
+              (cdkDropListDropped)="onItemDropped($event)"
+              [ngStyle]="{'width':tabsWidth+'px'}"
+              cdkDropList
+              cdkDropListOrientation="horizontal"
+              class="drag-list"
       >
         <elements-content-tab
-          (contextmenu)="onRightClick($event, i)"
-          (onAction)="onViewAction($event)"
-          *ngFor="let id of viewIds;let i = index; trackBy: trackByFn"
-          [view]="getViewById(id)"
-          cdkDrag
-          cdkDragLockAxis="x"
-          class="drag-box"
+                (contextmenu)="onRightClick($event, i)"
+                (onAction)="onViewAction($event)"
+                *ngFor="let id of viewIds;let i = index; trackBy: trackByFn"
+                [view]="getViewById(id)"
+                cdkDrag
+                cdkDragLockAxis="x"
+                class="drag-box"
         >
         </elements-content-tab>
       </ul>
@@ -61,7 +61,7 @@
       <ng-template [ngIf]="!item.disabled">
         <td (click)="item.callback()" class="view-menu__data">
           <span [ngClass]="item.icon" class="view-menu__icon fa"></span>
-          {{ item.title | translate }}
+            {{ item.title | translate }}
         </td>
       </ng-template>
     </tr>

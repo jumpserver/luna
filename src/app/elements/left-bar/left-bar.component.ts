@@ -1,14 +1,14 @@
-import {Component, EventEmitter, OnInit, Output} from '@angular/core';
-import {DataStore} from '@app/globals';
-import {version} from '@src/environments/environment';
-import {OrganizationService, SettingService} from '@app/services';
-import _ from 'lodash-es';
+import { Component, EventEmitter, OnInit, Output } from "@angular/core";
+import { DataStore } from "@app/globals";
+import { version } from "@src/environments/environment";
+import { OrganizationService, SettingService } from "@app/services";
+import _ from "lodash-es";
 
 @Component({
   standalone: false,
-  selector: 'elements-left-bar',
-  templateUrl: 'left-bar.component.html',
-  styleUrls: ['left-bar.component.scss'],
+  selector: "elements-left-bar",
+  templateUrl: "left-bar.component.html",
+  styleUrls: ["left-bar.component.scss"],
 })
 export class ElementLeftBarComponent implements OnInit {
   @Output() menuCollapsedToggle: EventEmitter<boolean> = new EventEmitter();
@@ -16,9 +16,11 @@ export class ElementLeftBarComponent implements OnInit {
   version = version;
   collapsed = false;
   menus: any[] = [];
+  hasXPack: boolean = localStorage.getItem("hasXPack") === "1";
 
-  constructor(public _settingSvc: SettingService,
-              private _orgSvc: OrganizationService
+  constructor(
+    public _settingSvc: SettingService,
+    private _orgSvc: OrganizationService
   ) {
     this.onOrgChangeReloadTree();
   }
@@ -26,22 +28,29 @@ export class ElementLeftBarComponent implements OnInit {
   ngOnInit() {
     this.menus = [
       {
-        name: 'assets',
-        icon: 'fa-inbox',
+        name: "assets",
+        icon: "fa-inbox",
         click: () => this.menuClick(),
       },
       {
-        name: 'applications',
-        icon: 'fa-th',
+        name: "applications",
+        icon: "fa-th",
         click: () => this.menuClick(),
-      }
+      },
     ];
     this.onResize(window);
-    window.addEventListener('resize', _.debounce(this.onResize, 300));
+    window.addEventListener("resize", _.debounce(this.onResize, 300));
+    this._settingSvc.afterInited().then(() => {
+      this.hasXPack = this._settingSvc.hasXPack();
+      localStorage.setItem("hasXPack", this.hasXPack ? "1" : "0");
+      console.log("hasXPack", this.hasXPack);
+    });
   }
 
   onResize(event) {
-    const width = event.currentTarget ? event.currentTarget.innerWidth : event.innerWidth;
+    const width = event.currentTarget
+      ? event.currentTarget.innerWidth
+      : event.innerWidth;
     if (width < 768) {
       this.isMobile = true;
       // this.overlayMenu = true;
@@ -84,18 +93,18 @@ export class ElementLeftBarComponent implements OnInit {
 
   static Hide() {
     DataStore.showLeftBar = false;
-    window.dispatchEvent(new Event('resize'));
+    window.dispatchEvent(new Event("resize"));
   }
 
   static Show() {
     DataStore.showLeftBar = true;
-    window.dispatchEvent(new Event('resize'));
+    window.dispatchEvent(new Event("resize"));
   }
 
   onOrgChangeReloadTree() {
     this._orgSvc.currentOrgChange$.subscribe(() => {
       this.showTree = false;
-      setTimeout(() => this.showTree = true, 100);
+      setTimeout(() => (this.showTree = true), 100);
     });
   }
 

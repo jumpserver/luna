@@ -1,13 +1,13 @@
 // -------- import official less file -----------
-//@import "../node_modules/ng-zorro-antd/ng-zorro-antd.dark.less";
 @import "ng-zorro-antd/ng-zorro-antd.less";
 
 // -------- override less var -----------
 @primary-color: #1ab394;
 @link-color: #1c84c6;
-@border-radius-base: '1px';
+@border-radius-base: "1px";
 
-.ant-menu-submenu.ant-menu-submenu-placement-bottom, .ant-menu-submenu.ant-menu-submenu-popup.ant-menu-submenu-placement-bottomLeft {
+.ant-menu-submenu.ant-menu-submenu-placement-bottom,
+.ant-menu-submenu.ant-menu-submenu-popup.ant-menu-submenu-placement-bottomLeft {
   top: 1px !important;
 }
 
@@ -44,7 +44,6 @@
     }
   }
 
-
   &.ant-select-dropdown {
     margin-top: 1px;
   }
@@ -75,7 +74,7 @@
       }
 
       &:hover {
-        background-color: var(--el-header-nav-select-hover-bg-color);
+        background-color: var(--el-header-tab-bg-color);
       }
 
       &:first-child {
@@ -87,7 +86,7 @@
       }
 
       &:not(:last-child) {
-        margin-bottom: 0
+        margin-bottom: 0;
       }
 
       a {
@@ -98,10 +97,17 @@
     }
   }
 
-
   .ant-select-dropdown {
+    background-color: var(--el-header-nav-select-bg-color);
+
     .ant-select-item {
       font-size: 13px;
+      background-color: var(--el-header-nav-select-bg-color);
+      color: var(--el-menu-text-color);
+
+      &:hover {
+        background-color: var(--el-header-nav-select-hover-bg-color);
+      }
 
       &.ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
         background-color: var(--el-header-nav-select-hover-bg-color);
@@ -169,7 +175,6 @@
   }
 }
 
-
 .ant-tabs-bar {
   margin-bottom: 5px;
 }
@@ -177,4 +182,3 @@
 .ant-modal-footer {
   padding: 16px;
 }
-

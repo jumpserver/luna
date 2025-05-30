@@ -1,6 +1,5 @@
 import {Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/core';
 import {DataStore, User} from '@app/globals';
-import {SplitComponent} from 'angular-split';
 import {HttpService, LogService, SettingService, ViewService} from '@app/services';
 
 import {environment} from '@src/environments/environment';
@@ -12,9 +11,6 @@ import {environment} from '@src/environments/environment';
   styleUrls: ['main.component.scss'],
 })
 export class PageMainComponent implements OnInit {
-  @ViewChild(SplitComponent, {read: false, static: false}) split: SplitComponent;
-  @ViewChild('leftArea', {static: false}) leftArea: ElementRef;
-  @ViewChild('rightArea', {static: false}) rightArea: ElementRef;
   User = User;
   store = DataStore;
   showIframeHider = false;
@@ -53,17 +49,13 @@ export class PageMainComponent implements OnInit {
   }
 
   handleLayoutSettingChange(collapsed: boolean) {
-    if (collapsed) {
-      this.leftArea.nativeElement.style = 'width: 60px';
-      this.rightArea.nativeElement.style = 'width: calc(100% - 60px)';
-    } else {
-      this.leftArea.nativeElement.style = 'width: 20%';
-      this.rightArea.nativeElement.style = 'width: calc(100% - 20%)';
-    }
+    const leftWidthPercent = 60 / window.innerWidth * 100;
+    const rightWidthPercent = 100 - leftWidthPercent;
+    this.settingLayoutSize.leftWidth = collapsed? leftWidthPercent : 20;
+    this.settingLayoutSize.rightWidth = collapsed? rightWidthPercent : 80;
   }
 
   onToggleMobileLayout() {
-
   }
 
   connectWebsocket() {

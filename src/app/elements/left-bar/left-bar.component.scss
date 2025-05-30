@@ -84,7 +84,7 @@
       display: flex;
       align-items: center;
       height: 100%;
-      padding: 0 10px 0 20px;
+      padding: 0 15px;
       cursor: pointer;
       transition: all .2s;
 
@@ -140,7 +140,6 @@ label {
 .menu-active {
   display: block;
   z-index: 11;
-  background: var(--el-assets-bg-color);
 }
 
 .mobile-menu {

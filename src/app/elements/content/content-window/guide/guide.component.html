@@ -1,6 +1,8 @@
 <div class="content">
   <div>
-    <h2 class="subject">{{ assetType }}{{ 'WordSep' | translate }}{{ 'connect info' | translate }}</h2>
+    <h2 class="subject">
+      {{ assetType }}{{ "WordSep" | translate }}{{ "connect info" | translate }}
+    </h2>
     <table>
       <tr *ngFor="let item of infoItems">
         <td class="title">{{ item.label | async }}</td>
@@ -14,22 +16,28 @@
           nz-tooltip
           nzTooltipPlacement="right"
         >
-          <span (click)="showPassword($event)" *ngIf="item.name === 'password'" class="show-password">
+          <span
+            (click)="showPassword($event)"
+            *ngIf="item.name === 'password'"
+            class="show-password"
+          >
             <span style="vertical-align: middle">
               {{ passwordShow }}
             </span>
             <i class="fa fa-eye"></i>
           </span>
-          <span *ngIf="item.name !== 'password' && item.name !== 'set_reusable'">
+          <span
+            *ngIf="item.name !== 'password' && item.name !== 'set_reusable'"
+          >
             {{ item.value }}
           </span>
-          <span *ngIf="item.name == 'set_reusable' && canReuse" class="reusable-button">
-            <nz-switch
-              (ngModelChange)="setReusable()"
-              [(ngModel)]="reusable"
-            >
+          <span
+            *ngIf="item.name == 'set_reusable' && canReuse"
+            class="reusable-button"
+          >
+            <nz-switch (ngModelChange)="setReusable()" [(ngModel)]="reusable">
             </nz-switch>
-            {{ 'Re-use for a long time after opening' | translate }}
+            {{ "Re-use for a long time after opening" | translate }}
           </span>
           <span class="btn">
             <i class="fa fa-clone icon"></i>
@@ -45,11 +53,12 @@
     <div class="command">
       <pre>$ {{ cmd.safeValue }}</pre>
 
-      <span (click)="startClient(cmd)"
-            *ngIf="cmd.callClient && showClient"
-            [nzTooltipTitle]="'Run it by client' | translate"
-            class="start btn"
-            nz-tooltip
+      <span
+        (click)="startClient(cmd)"
+        *ngIf="cmd.callClient && showClient"
+        [nzTooltipTitle]="'Run it by client' | translate"
+        class="start btn"
+        nz-tooltip
       >
         <i class="fa fa-caret-square-o-right icon"></i>
       </span>

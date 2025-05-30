@@ -1,26 +1,46 @@
-<div class="chat-container" id="chatContainer">
-  <div [hidden]="!showBtn || chatAIShown || !isShowSetting" id="dragBox">
-    <div
-      (click)="onSettingOpenDrawer()"
-      [hidden]="!isShowSetting || subViews.length > 1"
-      class="drag-setting"
-    >
-      <i class="fa fa-cog"></i>
+<div id="chatContainer" class="chat-container">
+    <nz-float-button-group>
+        <nz-float-button (click)="onSettingOpenDrawer()"
+                         [nzIcon]="setting"
+        ></nz-float-button>
+
+        <nz-float-button
+                (click)="showChatAI()"
+                [nzIcon]="customer"
+        >
+        </nz-float-button>
+    </nz-float-button-group>
+    <ng-template #setting>
+     <nz-icon nzTheme="outline" nzType="setting"/>
+    </ng-template>
+    <ng-template #customer>
+         <img alt="" class="chat-img" src="assets/icons/chat-ai.png"/>
+    </ng-template>
+
+    <div *ngIf="chatAiEnabled" [style.display]="chatAIShown ? 'block' : 'none'" class="drawer-panel">
+        <div class="content">
+          <iframe
+              #contentWindow
+              [src]="iframeURL | safeUrl"
+              height="100%"
+              id="chat-frame"
+              title="chat"
+              width="100%"
+          ></iframe>
+        </div>
     </div>
-    <div (click)="showChatAI()" [hidden]="!chatAiEnabled" class="robot-button">
-      <img alt="" class="chat-img" src="assets/icons/chat-ai.png"/>
-    </div>
-  </div>
-  <div *ngIf="chatAiEnabled" [style.display]="chatAIShown ? 'block' : 'none'" class="drawer-panel">
-    <div class="content">
-      <iframe
-        #contentWindow
-        [src]="iframeURL | safeUrl"
-        height="100%"
-        id="chat-frame"
-        title="chat"
-        width="100%"
-      ></iframe>
-    </div>
-  </div>
 </div>
+
+    <!--   <div [hidden]="!showBtn || chatAIShown || !isShowSetting" id="dragBox"> -->
+    <!--     <div -->
+    <!--             (click)="onSettingOpenDrawer()" -->
+    <!--             [hidden]="!isShowSetting || subViews.length > 1" -->
+    <!--             class="drag-setting" -->
+    <!--     > -->
+    <!--       <i class="fa fa-cog"></i> -->
+    <!--     </div> -->
+    <!--     <div (click)="showChatAI()" [hidden]="!chatAiEnabled" class="robot-button"> -->
+    <!--       <img alt="" class="chat-img" src="assets/icons/chat-ai.png"/> -->
+    <!--     </div> -->
+    <!--   </div> -->
+
