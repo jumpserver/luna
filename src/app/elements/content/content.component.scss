@@ -92,7 +92,8 @@ $-border-x: #5a5959;
         opacity: 0.8;
 
         .crucial {
-          width: 300px;
+          display: inline-block;
+          width: 256px;
           margin-right: 6px;
           color: var(--el-main-crucial-text-color);
           font-weight: 500;

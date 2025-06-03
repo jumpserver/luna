@@ -10,9 +10,9 @@ export const headerTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     // 头部 dropdown item 禁用文本颜色
     '--el-header-dropdown-disable-text-color': '#c5babc',
     // border x 颜色
-    '--el-border-color-x': '#5A4F4F',
+    '--el-border-color-x': '#202020',
     // border y 颜色
-    '--el-border-color-y': '#473C3C',
+    '--el-border-color-y': '#202020',
     // icon hover 时的颜色
     '--el-icon-hover-color': '#d6cbcb'
   },
@@ -25,9 +25,9 @@ export const headerTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     // 头部 dropdown item 禁用文本颜色
     '--el-header-dropdown-disable-text-color': '#606266',
     // border x 颜色
-    '--el-border-color-x': '#40454A',
+    '--el-border-color-x': '#202020',
     // border y 颜色
-    '--el-border-color-y': '#202328',
+    '--el-border-color-y': '#202020',
     // icon hover 时的颜色
     '--el-icon-hover-color': '#d6cbcb'
   }

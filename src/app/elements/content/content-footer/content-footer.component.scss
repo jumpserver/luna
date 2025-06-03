@@ -1,11 +1,10 @@
-$-border-y: var(--el-main-bg-color);
-
 
 .content-footer {
   // border-top: solid 1px var(--el-border-color-y);
   background: var(--el-assets-extend-bg-color);;
   color: #ffffff;
   font-size: 12px;
+  border-left: 1px solid var(--el-border-color-y);
 
   button.ant-btn {
     line-height: 1;
@@ -61,7 +60,6 @@ $-border-y: var(--el-main-bg-color);
   .footer-bar {
     height: 29px;
     background: var(--el-header-tab-item-bg-color);
-    border-left: 1px solid var(--el-border-color-y);
 
     .footer-bar__left {
       margin-left: 5px;
@@ -74,7 +72,6 @@ $-border-y: var(--el-main-bg-color);
 #batchCommandDiv {
   display: flex;
   height: 29px;
-  border-left: solid 1px $-border-y;
   width: 100%;
   padding: 0 2px 0 0;
   background: var(--el-main-bg-color);

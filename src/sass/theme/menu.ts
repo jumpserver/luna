@@ -11,7 +11,7 @@ export const menuTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     // 折叠面板展开时的背景
     '--el-assets-extend-bg-color': '#302A2A',
     // 下边框颜色
-    '--el-assets-border-bottom-color': '#2f2a2a',
+    '--el-border-color-x': '#2f2a2a',
     // 右边框颜色
     '--el-assets-border-right-color': 'rgba(58, 51, 51, 0.5)',
     // icon 颜色
@@ -20,7 +20,6 @@ export const menuTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     '--el-scroll-bar-thumb-bg-color': '#605959',
     // 滚动条轨道背景
     '--el-scroll-bar-track-bg-color': '#2A2525',
-    '--el-editor-bg-color': '#f5f5f508',
   },
   darkBlue: {
     // // 侧边栏组织模块背景
@@ -32,7 +31,7 @@ export const menuTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     // 折叠面板展开时的背景
     '--el-assets-extend-bg-color': '#1D1F26',
     // 下边框颜色
-    '--el-assets-border-bottom-color': '#1f1b1b',
+    '--el-border-color-x': '#1f1b1b',
     // 右边框颜色
     '--el-assets-border-right-color': '#1f1b1b',
     // icon 颜色
@@ -41,6 +40,5 @@ export const menuTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     '--el-scroll-bar-thumb-bg-color': '#3B3F45',
     // 滚动条轨道背景
     '--el-scroll-bar-track-bg-color': '#2A2D32',
-    '--el-editor-bg-color': '#282c34'
   }
 };

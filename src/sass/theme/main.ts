@@ -6,11 +6,13 @@ export const mainTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
     '--el-main-text-color': '#EFEFF0',
     '--el-main-crucial-text-color': '#7494f3',
     '--el-main-tab-item-disconnected-bg-color': '#5A5151',
+    '--el-editor-bg-color': '#313131',
   },
   darkBlue: {
     '--el-main-bg-color': '#141618',
     '--el-main-text-color': '#EFEFF0',
     '--el-main-crucial-text-color': '#7494f3',
-    '--el-main-tab-item-disconnected-bg-color': '#555B60'
+    '--el-main-tab-item-disconnected-bg-color': '#555B60',
+    '--el-editor-bg-color': '#282c34'
   }
 };
