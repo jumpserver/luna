@@ -1,4 +1,3 @@
-import {SplitModule} from '@app/plugins/split/split.module';
 import {FlexLayoutModule} from '@angular/flex-layout';
 import {NgZorroAntdModule} from './ZorroModule.component';
 import {LoggerModule, NgxLoggerLevel} from 'ngx-logger';
@@ -10,7 +9,6 @@ export const PluginModules = [
   BrowserAnimationsModule,
   NgZorroAntdModule,
   FlexLayoutModule,
-  SplitModule,
   ClipboardModule,
   InfiniteScrollModule,
   LoggerModule.forRoot({level: NgxLoggerLevel.DEBUG, serverLogLevel: NgxLoggerLevel.ERROR}),

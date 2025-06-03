@@ -8,7 +8,6 @@ import {CookieService} from 'ngx-cookie-service';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {TranslateLoader, TranslateModule} from '@ngx-translate/core';
 import {DragDropModule} from '@angular/cdk/drag-drop';
-import {AngularSplitModule} from 'angular-split';
 import {CodeEditorModule} from '@acrodata/code-editor';
 
 // service
@@ -61,7 +60,6 @@ export class CustomLoader implements TranslateLoader {
     FormsModule,
     AppRouterModule,
     SharedPipeModule,
-    AngularSplitModule,
     ReactiveFormsModule,
     FileInputAccessorModule,
     BrowserAnimationsModule,

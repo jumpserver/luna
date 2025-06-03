@@ -14,7 +14,6 @@ import {ElementConnectComponent} from './connect/connect.component';
 import {ElementConnectDialogComponent} from './connect/connect-dialog/connect-dialog.component';
 import {ElementSettingComponent} from '@app/elements/nav/setting/setting.component';
 import {ElementReplayGuacamoleComponent} from './replay/guacamole/guacamole.component';
-import {ElementReplayJsonComponent} from './replay/json/json.component';
 import {ElementConnectorKokoComponent} from './content/content-window/koko/koko.component';
 import {ElementConnectorMagnusComponent} from './content/content-window/magnus/magnus.component';
 import {ElementConnectorDefaultComponent} from '@app/elements/content/content-window/default/default.component';
@@ -64,7 +63,6 @@ export const ElementComponents = [
   ElementConnectComponent,
   ElementDownloadDialogComponent,
   ElementReplayGuacamoleComponent,
-  ElementReplayJsonComponent,
   ElementSettingComponent,
   ElementConnectDialogComponent,
   ElementConnectorDefaultComponent,

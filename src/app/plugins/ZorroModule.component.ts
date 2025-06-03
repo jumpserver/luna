@@ -15,10 +15,12 @@ import {NzTabsModule} from "ng-zorro-antd/tabs";
 import {NzRadioModule} from "ng-zorro-antd/radio";
 import {NzCollapseModule} from "ng-zorro-antd/collapse";
 import {NzFloatButtonModule} from 'ng-zorro-antd/float-button';
-
+import {NzSplitterModule} from 'ng-zorro-antd/splitter';
+import {NzListModule} from 'ng-zorro-antd/list';
 
 @NgModule({
   exports: [
+    NzListModule,
     NzButtonModule,
     NzModalModule,
     NzIconModule,
@@ -34,6 +36,7 @@ import {NzFloatButtonModule} from 'ng-zorro-antd/float-button';
     NzTabsModule,
     NzRadioModule,
     NzCollapseModule,
+    NzSplitterModule,
     NzFloatButtonModule,
   ]
 })

@@ -1,25 +1,11 @@
 <div>
-  <elements-replay-json [replay]="replay" *ngIf="replay.type=='json'"></elements-replay-json>
   <elements-replay-guacamole [replay]="replay" *ngIf="replay.type=='guacamole'"></elements-replay-guacamole>
   <elements-replay-asciicast [replay]="replay" *ngIf="replay.type=='asciicast'"></elements-replay-asciicast>
   <elements-replay-mp4 [replay]="replay" *ngIf="replay.type=='mp4'"></elements-replay-mp4>
   <elements-replay-parts [replay]="replay" *ngIf="replay.type=='parts'"></elements-replay-parts>
 
   <div id="loading" *ngIf="isLoad()">
-    <div class="lds-spinner">
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-    </div>
+    <nz-spin nzSimple></nz-spin>
   </div>
 </div>
 

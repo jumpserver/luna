@@ -7,7 +7,7 @@ nz-float-button {
 
 .chat-container {
   position: fixed;
-  bottom: 300px;
+  bottom: 200px;
   right: 5px;
   z-index: 1000;
   cursor: move;
@@ -22,6 +22,7 @@ nz-float-button {
     .ant-float-btn-group {
       position: absolute;
       padding: 10px 0;
+      opacity: 0.8;
     }
 
     .ant-float-btn-group-circle .ant-float-btn-circle:not(:last-child) {
@@ -58,20 +59,20 @@ nz-float-button {
 
 //
 .drawer-panel {
- background-color: transparent;
- position: fixed;
- top: 0;
- right: 440px;
- width: 440px;
- min-width: 260px;
- height: 100vh;
- user-select: none;
- border-radius: 10px 0 0 10px;
- transition: transform .25s cubic-bezier(.7, .3, .1, 1);
- box-shadow: 0 0 8px 4px #00000014;
- transform: translate(100%);
- z-index: 1000;
- opacity: 0.95;
+   background-color: transparent;
+   position: fixed;
+   top: 0;
+   right: 440px;
+   width: 440px;
+   min-width: 260px;
+   height: 100vh;
+   user-select: none;
+   border-radius: 10px 0 0 10px;
+   transition: transform .25s cubic-bezier(.7, .3, .1, 1);
+   box-shadow: 0 0 8px 4px #00000014;
+   transform: translate(100%);
+   z-index: 1000;
+   opacity: 0.95;
 }
 
 .show {

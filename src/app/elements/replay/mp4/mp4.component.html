@@ -11,8 +11,8 @@
                                                                                   [href]="replay.download_url">{{ "download"| translate }}</a></span>
   </div>
   <div id="display">
-    <as-split direction="horizontal" gutterSize="0">
-      <as-split-area *ngIf="commands.length" [size]="15" [maxSize]="15" [minSize]="0" order="0">
+    <nz-splitter direction="horizontal" gutterSize="0">
+      <nz-splitter-panel *ngIf="commands.length" [size]="15" [maxSize]="15" [minSize]="0" order="0">
         <div
           class="command-results"
           infiniteScroll
@@ -25,14 +25,14 @@
             <div class="timestamp">{{ item.atime }}</div>
           </div>
         </div>
-      </as-split-area>
-      <as-split-area [size]="85" [maxSize]="100" [minSize]="85" order="1">
+      </nz-splitter-panel>
+      <nz-splitter-panel [nzSize]="85" nzMin="85%" nzMax="100%" order="1">
         <div id="screen">
           <video controls>
             <source [src]="replay.src" type="video/mp4">
           </video>
         </div>
-      </as-split-area>
-    </as-split>
+      </nz-splitter-panel>
+    </nz-splitter>
   </div>
 </div>

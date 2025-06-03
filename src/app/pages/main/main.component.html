@@ -1,19 +1,16 @@
 <app-face-monitor></app-face-monitor>
 <elements-nav></elements-nav>
-<as-split
-  (dragEnd)="dragEndHandler($event)"
-  (dragStart)="dragStartHandler($event)"
+<nz-splitter
+  (nzResizeEnd)="dragEndHandler($event)"
+  (nzResizeStart)="dragStartHandler($event)"
   (gutterClick)="splitGutterClick($event)"
-  direction="horizontal"
-  gutterSize="0"
   id="container"
 >
-  <as-split-area
+  <nz-splitter-panel
     #leftArea
-    [size]="settingLayoutSize.leftWidth"
-    class="left-side"
+    nzDefaultSize="20%" nzMin="5%" nzMax="50%"
+    [ngClass]="{'left-side': true}"
     id="left-side"
-    order="0"
   >
     <div class="layout">
       <elements-left-bar
@@ -21,13 +18,11 @@
         (menuCollapsedToggle)="handleLayoutSettingChange($event)"
       ></elements-left-bar>
     </div>
-  </as-split-area>
-  <as-split-area
+  </nz-splitter-panel>
+  <nz-splitter-panel
     #rightArea
-    [size]="settingLayoutSize.rightWidth"
     class="content"
     id="right-side"
-    order="1"
   >
     <div>
       <elements-content (toggleMenu)="onToggleMobileLayout()"></elements-content>
@@ -37,6 +32,6 @@
       >
       </div>
     </div>
-  </as-split-area>
-</as-split>
+  </nz-splitter-panel>
+</nz-splitter>
 <elements-chat></elements-chat>

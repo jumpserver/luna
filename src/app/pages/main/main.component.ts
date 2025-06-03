@@ -1,7 +1,6 @@
-import {Component, ElementRef, HostListener, OnInit, ViewChild} from '@angular/core';
+import {Component, HostListener, OnInit} from '@angular/core';
 import {DataStore, User} from '@app/globals';
 import {HttpService, LogService, SettingService, ViewService} from '@app/services';
-
 import {environment} from '@src/environments/environment';
 
 @Component({
@@ -102,8 +101,8 @@ export class PageMainComponent implements OnInit {
   }
 
   dragEndHandler($event) {
-    const layoutWidth = $event.sizes[0];
-    this.showSubMenu = layoutWidth < 6;
+    // const layoutWidth = $event.sizes[0];
+    // this.showSubMenu = layoutWidth < 6;
     this.showIframeHider = false;
   }
 

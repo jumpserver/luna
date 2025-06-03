@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output } from "@angular/core";
+import { AfterViewInit, Component, ElementRef, EventEmitter, OnChanges, OnDestroy, OnInit, Output } from "@angular/core";
 import { DataStore } from "@app/globals";
 import { version } from "@src/environments/environment";
 import { OrganizationService, SettingService } from "@app/services";
@@ -10,8 +10,9 @@ import _ from "lodash-es";
   templateUrl: "left-bar.component.html",
   styleUrls: ["left-bar.component.scss"],
 })
-export class ElementLeftBarComponent implements OnInit {
+export class ElementLeftBarComponent implements OnInit, AfterViewInit, OnDestroy {
   @Output() menuCollapsedToggle: EventEmitter<boolean> = new EventEmitter();
+  private resizeObserver!: ResizeObserver;
   showTree = true;
   version = version;
   collapsed = false;
@@ -20,9 +21,14 @@ export class ElementLeftBarComponent implements OnInit {
 
   constructor(
     public _settingSvc: SettingService,
-    private _orgSvc: OrganizationService
+    private _orgSvc: OrganizationService,
+    private el: ElementRef
   ) {
     this.onOrgChangeReloadTree();
+  }
+
+  ngOnChanges(): void {
+    console.log("collapsed", this.collapsed);
   }
 
   ngOnInit() {
@@ -67,6 +73,22 @@ export class ElementLeftBarComponent implements OnInit {
     if (this.isMobile) {
       // this.overlayMenu = !this.overlayMenu;
     }
+  }
+
+  ngAfterViewInit() {
+    this.resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width;
+        console.log('Sidebar width changed:', width);
+        // 这里你可以触发你需要的逻辑
+      }
+    });
+
+    this.resizeObserver.observe(this.el.nativeElement);
+  }
+
+  ngOnDestroy() {
+    this.resizeObserver.disconnect();
   }
 
   _isMobile = false;

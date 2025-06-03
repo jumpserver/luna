@@ -9,7 +9,7 @@
       "projectType": "application",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:application",
+          "builder": "@angular/build:application",
           "options": {
             "outputPath": "dist",
             "index": "src/index.html",
@@ -52,7 +52,7 @@
               "jquery/dist/jquery.min.js",
               "@ztree/ztree_v3/js/jquery.ztree.all.min.js",
               "@ztree/ztree_v3/js/jquery.ztree.exhide.min.js",
-              "node_modules/asciinema-player/dist/bundle/asciinema-player.js"
+              "asciinema-player/dist/bundle/asciinema-player.min.js"
             ]
           },
           "configurations": {
@@ -62,8 +62,6 @@
               "sourceMap": false,
               "namedChunks": false,
               "extractLicenses": true,
-              "vendorChunk": false,
-              "buildOptimizer": true,
               "budgets": [
                 {
                   "type": "initial",
@@ -77,11 +75,16 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ]
+            },
+            "hmr": {
+              "optimization": false,
+              "sourceMap": true,
+              "namedChunks": true
             }
           }
         },
         "serve": {
-          "builder": "@angular-devkit/build-angular:dev-server",
+          "builder": "@angular/build:dev-server",
           "options": {
             "buildTarget": "Luna:build",
             "proxyConfig": "proxy.conf.json"
@@ -89,11 +92,14 @@
           "configurations": {
             "production": {
               "buildTarget": "Luna:build:production"
+            },
+            "hmr": {
+              "buildTarget": "Luna:build:hmr"
             }
           }
         },
         "extract-i18n": {
-          "builder": "@angular-devkit/build-angular:extract-i18n",
+          "builder": "@angular/build:extract-i18n",
           "options": {
             "buildTarget": "Luna:build"
           }

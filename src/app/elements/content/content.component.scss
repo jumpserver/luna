@@ -1,11 +1,8 @@
-$-border-x: #5a5959;
-
 #content {
   height: calc(100% - 30px);
+  border-left: 1px solid var(--el-border-color-x);
 
   .tab-bar {
-    border-left: 1px solid var(--el-border-color-y);
-
     a {
       color: white;
     }
