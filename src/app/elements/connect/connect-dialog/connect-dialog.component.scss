@@ -1,4 +1,26 @@
 ::ng-deep .ant-modal.connect-dialog {
+  @media screen and (max-width: 768px) and (orientation: portrait) {
+    width: 95vw !important;
+
+    .ant-modal-body {
+      max-height: calc(100vh - 110px);
+      overflow-y: auto;
+    }
+  }
+
+  @media screen and (max-width: 1024px) and (orientation: landscape) {
+    width: 85vw !important;
+    margin: 8px auto;
+    top: 10px;
+    transform: scale(0.8); /* 缩放整个 div，包括文字、图片等 */
+    transform-origin: center center; /* 从左上角缩放（可选） */
+
+    .ant-modal-body {
+      max-height: calc(100vh - 30px);
+      overflow-y: auto;
+    }
+  }
+
   .ant-modal-body {
     padding-top: 0;
   }
