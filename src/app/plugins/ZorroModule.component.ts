@@ -18,6 +18,7 @@ import { NzFloatButtonModule } from "ng-zorro-antd/float-button";
 import { NzSplitterModule } from "ng-zorro-antd/splitter";
 import { NzListModule } from "ng-zorro-antd/list";
 import { NzSpinModule } from "ng-zorro-antd/spin";
+import { NzToolTipModule } from "ng-zorro-antd/tooltip";
 
 @NgModule({
   exports: [
@@ -40,6 +41,7 @@ import { NzSpinModule } from "ng-zorro-antd/spin";
     NzSplitterModule,
     NzFloatButtonModule,
     NzSpinModule,
+    NzToolTipModule,
   ],
 })
 export class NgZorroAntdModule {}

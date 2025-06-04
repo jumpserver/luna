@@ -4,7 +4,7 @@
   white-space: nowrap;
 }
 
-@mixin flex($align: null, $justify: null)  {
+@mixin flex($align: null, $justify: null) {
   display: flex;
   justify-content: $justify;
   align-items: $align;
@@ -18,7 +18,7 @@
   background-color: var(--el-assets-bg-color);
 
   .tree-type {
-    transition: all .3s;
+    transition: all 0.3s;
 
     .tree-type-banner {
       position: relative;
@@ -100,7 +100,7 @@
         .tree-search {
           @include flex(center);
           position: relative;
-          transition: .25s;
+          transition: 0.25s;
           overflow: hidden;
 
           .tree-input {
@@ -112,7 +112,7 @@
             outline: none;
             border-radius: 10px;
             color: var(--el-main-text-color);
-            transition: all .4s ease-in-out;
+            transition: all 0.4s ease-in-out;
           }
 
           &.active {
@@ -130,7 +130,6 @@
           }
         }
       }
-
 
       .rotate {
         transform: rotate(-90deg);
@@ -156,10 +155,9 @@
         width: 100%;
         height: 100%;
         min-height: 100%;
-        background: rgba(0, 0, 0, .1);
+        background: rgba(0, 0, 0, 0.1);
         @include flex(center, center);
       }
-
 
       .ztree {
         height: 100%;
@@ -195,12 +193,12 @@
   user-select: none;
   border: none;
   border-radius: 2px;
+  background-color: var(--el-dropdown-bg-color);
   -webkit-border-radius: 2px;
   -webkit-user-select: none;
   -moz-border-radius: 2px;
   -moz-user-select: none;
   -ms-user-select: none;
-  background-color: var(--el-menu-bg-color);
   box-shadow: 0 3px 6px 0 rgba(0, 0, 0, 0.16);
   z-index: 1000;
 
@@ -225,7 +223,8 @@
   }
 }
 
-.view-menu, .view-menu * {
+.view-menu,
+.view-menu * {
   box-sizing: border-box;
 }
 
@@ -240,8 +239,12 @@
 .view-menu__item {
   cursor: pointer;
   padding: 0 6px;
-}
+  font-size: 12px;
 
+  &:hover {
+    background-color: var(--el-dropdown-hover-bg-color);
+  }
+}
 
 .view-menu__icon {
   padding-right: 5px;
@@ -285,4 +288,3 @@ tr:hover {
 .open-tree {
   flex: 1;
 }
-

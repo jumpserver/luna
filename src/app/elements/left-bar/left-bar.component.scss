@@ -1,7 +1,7 @@
 .sidebar {
   height: 100%;
   width: 100%;
-  overflow: auto;
+  overflow: hidden;
 
   .tree {
     display: block;
@@ -16,8 +16,12 @@
       display: none;
     }
 
+    .footer-version {
+      justify-content: center;
+    }
+
     .menu-icon {
-      display: block
+      display: block;
     }
   }
 
@@ -25,8 +29,8 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    height: 31px;
-    line-height: 31px;
+    height: 30px;
+    line-height: 30px;
     //padding: 0 15px 0 5px;
     color: var(--el-header-text-color);
     border-bottom: 1px solid var(--primary-color);
@@ -42,7 +46,7 @@
     color: var(--el-main-text-color);
 
     &.has-org {
-      height: calc(100vh - 90px) !important;
+      height: calc(100vh - 92px);
     }
 
     .overflow {
@@ -86,7 +90,7 @@
       height: 100%;
       padding: 0 15px;
       cursor: pointer;
-      transition: all .2s;
+      transition: all 0.2s;
 
       &:hover {
         color: var(--el-icon-hover-color);
@@ -94,7 +98,6 @@
 
       .icon-active {
         transform: rotate(180deg);
-        margin-right: 12px;
       }
     }
   }
@@ -108,14 +111,13 @@ label {
   content: "\f26c";
 }
 
-
 .menu-icon {
   display: none;
   width: 100%;
-  height: calc(100% - 30px);
+  height: calc(100% - 32px);
   text-align: center;
   color: var(--el-main-text-color);
-  transition: all .2s;
+  transition: all 0.2s;
 }
 
 .menu-item {
@@ -133,7 +135,8 @@ label {
   border-bottom: 1px solid var(--primary-color);
 }
 
-.menu-item:hover, .menu-organization:hover {
+.menu-item:hover,
+.menu-organization:hover {
   background-color: rgba(0, 0, 0, 0.25);
 }
 

@@ -8,8 +8,10 @@
 >
   <nz-splitter-panel
     #leftArea
-    nzDefaultSize="20%" nzMin="5%" nzMax="50%"
-    [ngClass]="{'left-side': true}"
+    nzMin="5%"
+    nzMax="50%"
+    [nzSize]="settingLayoutSize.leftWidth"
+    [ngClass]="{ 'left-side': true }"
     id="left-side"
   >
     <div class="layout">
@@ -19,18 +21,12 @@
       ></elements-left-bar>
     </div>
   </nz-splitter-panel>
-  <nz-splitter-panel
-    #rightArea
-    class="content"
-    id="right-side"
-  >
+  <nz-splitter-panel #rightArea class="content" id="right-side">
     <div>
-      <elements-content (toggleMenu)="onToggleMobileLayout()"></elements-content>
-      <div
-        [hidden]="showIframeHider === false"
-        class="hack-iframe-hider"
-      >
-      </div>
+      <elements-content
+        (toggleMenu)="onToggleMobileLayout()"
+      ></elements-content>
+      <div [hidden]="showIframeHider === false" class="hack-iframe-hider"></div>
     </div>
   </nz-splitter-panel>
 </nz-splitter>

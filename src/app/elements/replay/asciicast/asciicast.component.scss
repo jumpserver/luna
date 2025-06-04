@@ -1,6 +1,7 @@
 .header {
   display: flex;
   align-items: center;
+  gap: 10px;
   justify-content: flex-start;
   height: 35px;
   padding: 0 10px;
@@ -20,6 +21,10 @@
     padding: 0 5px;
     font-size: 12px;
     color: #000;
+
+    .label {
+      font-weight: bold;
+    }
   }
 }
 
@@ -44,9 +49,9 @@
       line-height: 40px;
       display: flex;
       justify-content: space-between;
+      padding: 0 5px;
 
       .command {
-        padding-left: 5px;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;

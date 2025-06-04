@@ -1,14 +1,12 @@
-
 .content-footer {
   // border-top: solid 1px var(--el-border-color-y);
-  background: var(--el-assets-extend-bg-color);;
+  background: var(--el-assets-extend-bg-color);
   color: #ffffff;
   font-size: 12px;
   // border-left: 1px solid var(--el-border-color-y);
 
   button.ant-btn {
     line-height: 1;
-    height: 28px;
     color: rgba(255, 255, 255, 0.8);
     font-size: 12px;
     // border: solid 1px rgba(255, 255, 255, 0.1);
@@ -50,7 +48,8 @@
       }
 
       ::ng-deep {
-        .cm-editor, .cm-content {
+        .cm-editor,
+        .cm-content {
           background-color: var(--el-editor-bg-color);
         }
       }
@@ -58,16 +57,14 @@
   }
 
   .footer-bar {
-    height: 29px;
+    height: 30px;
     background: var(--el-header-tab-item-bg-color);
 
     .footer-bar__left {
       margin-left: 5px;
     }
-
   }
 }
-
 
 #batchCommandDiv {
   display: flex;
@@ -148,7 +145,7 @@
     padding: 3px 0;
     overflow: hidden;
     white-space: nowrap;
-    transition: all .3s;
+    transition: all 0.3s;
 
     .command-box {
       display: inline-block;

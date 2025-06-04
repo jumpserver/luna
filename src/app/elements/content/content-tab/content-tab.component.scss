@@ -13,7 +13,7 @@ li {
   position: relative;
   box-sizing: border-box;
   background-color: var(--el-header-tab-item-bg-color);
-  border-right: 2px solid var(--el-border-color-y);
+  border-right: 1px solid var(--el-border-color-y);
   border-bottom: 2px solid transparent;
   border-radius: 2px;
 
@@ -64,7 +64,7 @@ li {
     align-items: center;
     padding: 0 10px;
     line-height: 30px;
-    font-family: 'Roboto', sans-serif;
+    font-family: "Roboto", sans-serif;
     font-size: 13px;
     color: var(--el-menu-icon-color);
     cursor: pointer;
@@ -89,4 +89,3 @@ li input {
     border: none;
   }
 }
-
