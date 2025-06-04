@@ -64,6 +64,16 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
       },
       {
         type: 'select',
+        field: 'token_reusable',
+        hidden: () => {
+          return !(this.connectMethod.component === 'magnus' && this.connectMethod.value === 'db_client');
+        },
+        label: 'Set reusable',
+        value: false,
+        options: this.boolChoices
+      },
+      {
+        type: 'select',
         field: 'resolution',
         hidden: () => {
           const protocolsCanResolution: Array<string> = ['rdp'];
@@ -87,8 +97,8 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         type: 'select',
         field: 'appletConnectMethod',
         options: [
-          { label: 'Web', value: 'web' },
-          ...(this.globalSetting.TERMINAL_RAZOR_ENABLED ? [{ label: 'Client', value: 'client' }] : [])
+          {label: 'Web', value: 'web'},
+          ...(this.globalSetting.TERMINAL_RAZOR_ENABLED ? [{label: 'Client', value: 'client'}] : [])
         ],
         label: 'Applet connect method',
         value: this.setting.graphics.applet_connection_method,
@@ -103,8 +113,8 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         type: 'select',
         field: 'virtualappConnectMethod',
         options: [
-          { label: 'Web', value: 'web' },
-          ...(true ? [{ label: 'Client', value: 'client' }] : [])
+          {label: 'Web', value: 'web'},
+          ...(true ? [{label: 'Client', value: 'client'}] : [])
         ],
         label: 'Virtualapp connect method',
         value: this.setting.graphics.applet_connection_method,
