@@ -4,33 +4,33 @@
  * --------------------------------------------------
  */
 // font-awesome
-@use 'font-awesome/scss/font-awesome.scss';
-@use 'ztree.css';
-@use 'ztree_icon.scss';
+@use "font-awesome/scss/font-awesome.scss";
+@use "ztree.css";
+@use "ztree_icon.scss";
 @use "@xterm/xterm/css/xterm.css";
 @use "animate.css/animate.min.css";
 @use "asciinema-player/dist/bundle/asciinema-player.css";
 
-$asset-path: '../static/imgs/inspinia';
-$fa-font-path: '~font-awesome/fonts';
+$asset-path: "../static/imgs/inspinia";
+$fa-font-path: "~font-awesome/fonts";
 
 @font-face {
-  font-family: 'Open Sans';
-  src: url('assets/fonts/OpenSans-Regular.ttf');
+  font-family: "Open Sans";
+  src: url("assets/fonts/OpenSans-Regular.ttf");
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
-  font-family: 'Open Sans';
-  src: url('assets/fonts/OpenSans-Bold.ttf');
+  font-family: "Open Sans";
+  src: url("assets/fonts/OpenSans-Bold.ttf");
   font-weight: bold;
   font-style: normal;
 }
 
 @font-face {
-  font-family: 'Open Sans';
-  src: url('assets/fonts/OpenSans-Light.ttf');
+  font-family: "Open Sans";
+  src: url("assets/fonts/OpenSans-Light.ttf");
   font-weight: 300;
   font-style: normal;
 }
@@ -53,7 +53,9 @@ li {
   list-style: none;
 }
 
-*, ::after, ::before {
+*,
+::after,
+::before {
   box-sizing: border-box;
 }
 
@@ -91,14 +93,14 @@ body ::-webkit-scrollbar-track {
   height: 100vh;
 }
 
-
 .cdk-overlay-pane ::-webkit-scrollbar-track {
   background-color: #fffcfc;
 }
 
 .cdk-overlay-pane ::-webkit-scrollbar-thumb {
-  background-color: #c6c6c6;
+  // background-color: #c6c6c6;
   border-radius: 6px;
+  opacity: 0.5;
 }
 
 body ::-webkit-scrollbar {
@@ -115,9 +117,8 @@ body ::-webkit-scrollbar-thumb {
   border-radius: 6px;
 }
 
-
 .ztree *:not(.fa) {
-  font-family: 'Open Sans', 'Monaco', 'Consolas', 'monospace' !important;
+  font-family: "Open Sans", "Monaco", "Consolas", "monospace" !important;
   font-size: 13px !important;
 }
 
@@ -136,8 +137,10 @@ body ::-webkit-scrollbar-thumb {
 /*color: white*/
 /*}*/
 
-.ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default {
-  background: #F9F9F9;
+.ui-state-default,
+.ui-widget-content .ui-state-default,
+.ui-widget-header .ui-state-default {
+  background: #f9f9f9;
   border: none !important;
   line-height: 15px;
   font-weight: bold;
@@ -145,10 +148,11 @@ body ::-webkit-scrollbar-thumb {
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
-.ui-state-active, .ui-widget-content .ui-state-active, .ui-widget-header .ui-state-active {
+.ui-state-active,
+.ui-widget-content .ui-state-active,
+.ui-widget-header .ui-state-active {
   color: white;
   font-weight: bolder;
-
 }
 
 #ztree .fa {
@@ -156,7 +160,6 @@ body ::-webkit-scrollbar-thumb {
   display: inline-block;
   font: normal normal normal 14px/1 FontAwesome !important;
 }
-
 
 #toast-container > .toast-warning:before {
 }
@@ -179,7 +182,6 @@ body ::-webkit-scrollbar-thumb {
   font-size: 14px;
 }
 
-
 #player .asciinema-player .asciinema-terminal {
   height: calc(100vh - 60px) !important;
 }
@@ -200,7 +202,7 @@ body ::-webkit-scrollbar-thumb {
   border-radius: 6px;
   z-index: 1;
   opacity: 0;
-  transition: opacity .4s;
+  transition: opacity 0.4s;
   bottom: 130%;
   left: 50%;
   margin-left: -50px;
@@ -217,7 +219,7 @@ body ::-webkit-scrollbar-thumb {
   border-width: 5px;
   border-style: solid;
   opacity: 0;
-  transition: opacity .4s;
+  transition: opacity 0.4s;
   border-color: black transparent transparent transparent;
   visibility: hidden;
 }
@@ -240,7 +242,7 @@ body ::-webkit-scrollbar-thumb {
 }
 
 body ::selection {
-  background: #BFDCFD !important;
+  background: #bfdcfd !important;
   color: initial !important;
 }
 
@@ -268,7 +270,7 @@ $label-margin-bottom: 0;
 button.icon-split-handle.ngx-split-button {
   height: 100%;
   //border: 1px solid #3a3333;
-  opacity: 0.0;
+  opacity: 0;
 }
 
 button.mat-raised-button {
@@ -284,4 +286,3 @@ label {
 body {
   font-size: 13px;
 }
-
