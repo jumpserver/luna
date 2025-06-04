@@ -102,8 +102,6 @@ export class PageMainComponent implements OnInit {
     let leftWidth = $event[0];
     let rightWidth = $event[1];
 
-    console.log(">>>>>>", $event);
-
     if (leftWidth < 100 && !this.collapsed) {
       leftWidth = 60;
       rightWidth = window.innerWidth - leftWidth;
