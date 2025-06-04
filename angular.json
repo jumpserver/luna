@@ -12,11 +12,16 @@
           "builder": "@angular/build:application",
           "options": {
             "outputPath": "dist",
+            "watch": true,
+            "optimization": false,
+            "progress": true,
+            "statsJson": false,
+            "aot": false,
+            "sourceMap": true,
+            "namedChunks": true,
             "index": "src/index.html",
             "browser": "src/main.ts",
-            "polyfills": [
-              "src/polyfills.ts"
-            ],
+            "polyfills": ["src/polyfills.ts"],
             "allowedCommonJsDependencies": [
               "crypto-js",
               "events",
@@ -27,11 +32,7 @@
             ],
             "tsConfig": "src/tsconfig.app.json",
             "stylePreprocessorOptions": {
-              "includePaths": [
-                "src",
-                "src/sass",
-                "node_modules"
-              ]
+              "includePaths": ["src", "src/sass", "node_modules"]
             },
             "preserveSymlinks": true,
             "assets": [
@@ -44,10 +45,7 @@
                 "output": "/assets/"
               }
             ],
-            "styles": [
-              "src/sass/ant.less",
-              "src/sass/styles.scss"
-            ],
+            "styles": ["src/sass/ant.less", "src/sass/styles.scss"],
             "scripts": [
               "jquery/dist/jquery.min.js",
               "@ztree/ztree_v3/js/jquery.ztree.all.min.js",
@@ -107,10 +105,7 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": [
-              "src/**/*.ts",
-              "src/**/*.html"
-            ]
+            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
           }
         }
       }

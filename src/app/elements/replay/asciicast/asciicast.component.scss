@@ -23,7 +23,6 @@
   }
 }
 
-
 #player {
   position: relative;
   background: #1f1b1b;
@@ -53,6 +52,8 @@
         text-overflow: ellipsis;
         cursor: pointer;
         width: calc(100% - 100px);
+        color: #f0f0f0;
+        // color: #000;
       }
 
       .timestamp {
