@@ -22,8 +22,9 @@ export class PageMainComponent implements OnInit {
   isDirectNavigation: boolean;
   settingLayoutSize = {
     leftWidth: "20%",
-    rightWidth: 80,
+    rightWidth: "80%",
   };
+  collapsed = false;
 
   constructor(
     public viewSrv: ViewService,
@@ -97,21 +98,26 @@ export class PageMainComponent implements OnInit {
     return returnValue;
   }
 
-  dragStartHandler($event) {
-    this.showIframeHider = true;
+  dragResize($event) {
+    let leftWidth = $event[0];
+    let rightWidth = $event[1];
+
+    console.log(">>>>>>", $event);
+
+    if (leftWidth < 100 && !this.collapsed) {
+      leftWidth = 60;
+      rightWidth = window.innerWidth - leftWidth;
+      this.collapsed = true;
+    } else if (leftWidth > 100 && this.collapsed) {
+      leftWidth = "20%";
+      rightWidth = "80%";
+      this.collapsed = false;
+    }
+    this.settingLayoutSize.leftWidth = leftWidth;
+    this.settingLayoutSize.rightWidth = rightWidth;
   }
 
-  dragEndHandler($event) {
-    // const layoutWidth = $event.sizes[0];
-    // this.showSubMenu = layoutWidth < 6;
-    this.showIframeHider = false;
-  }
+  dragStartHandler($event) {}
 
-  splitGutterClick({ gutterNum }) {
-    // By default, clicking the gutter without changing position does not trigger the 'dragEnd' event
-    // This can be fixed by manually notifying the component
-    // See issue: https://github.com/angular-split/angular-split/issues/186
-    // TODO: Create custom example for this, and document it
-    // this.split.notify('end', gutterNum);
-  }
+  dragEndHandler($event) {}
 }

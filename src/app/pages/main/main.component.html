@@ -1,14 +1,14 @@
 <app-face-monitor></app-face-monitor>
 <elements-nav></elements-nav>
 <nz-splitter
+  id="container"
+  (nzResize)="dragResize($event)"
   (nzResizeEnd)="dragEndHandler($event)"
   (nzResizeStart)="dragStartHandler($event)"
-  (gutterClick)="splitGutterClick($event)"
-  id="container"
 >
   <nz-splitter-panel
     #leftArea
-    nzMin="5%"
+    nzMin="60"
     nzMax="50%"
     [nzSize]="settingLayoutSize.leftWidth"
     [ngClass]="{ 'left-side': true }"
@@ -17,11 +17,17 @@
     <div class="layout">
       <elements-left-bar
         #leftBar
+        [collapsed]="collapsed"
         (menuCollapsedToggle)="handleLayoutSettingChange($event)"
       ></elements-left-bar>
     </div>
   </nz-splitter-panel>
-  <nz-splitter-panel #rightArea class="content" id="right-side">
+  <nz-splitter-panel
+    #rightArea
+    class="content"
+    id="right-side"
+    [nzSize]="settingLayoutSize.rightWidth"
+  >
     <div>
       <elements-content
         (toggleMenu)="onToggleMobileLayout()"

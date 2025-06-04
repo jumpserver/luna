@@ -1,4 +1,14 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, OnChanges, OnDestroy, OnInit, Output } from "@angular/core";
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  Output,
+} from "@angular/core";
 import { DataStore } from "@app/globals";
 import { version } from "@src/environments/environment";
 import { OrganizationService, SettingService } from "@app/services";
@@ -10,12 +20,14 @@ import _ from "lodash-es";
   templateUrl: "left-bar.component.html",
   styleUrls: ["left-bar.component.scss"],
 })
-export class ElementLeftBarComponent implements OnInit, AfterViewInit, OnDestroy {
+export class ElementLeftBarComponent
+  implements OnInit, AfterViewInit, OnDestroy
+{
   @Output() menuCollapsedToggle: EventEmitter<boolean> = new EventEmitter();
+  @Input() collapsed: boolean = false;
   private resizeObserver!: ResizeObserver;
   showTree = true;
   version = version;
-  collapsed = false;
   menus: any[] = [];
   hasXPack: boolean = localStorage.getItem("hasXPack") === "1";
 
@@ -76,10 +88,10 @@ export class ElementLeftBarComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   ngAfterViewInit() {
-    this.resizeObserver = new ResizeObserver(entries => {
+    this.resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = entry.contentRect.width;
-        console.log('Sidebar width changed:', width);
+        console.log("Sidebar width changed:", width);
         // 这里你可以触发你需要的逻辑
       }
     });
@@ -98,19 +110,7 @@ export class ElementLeftBarComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   set isMobile(value) {
-    // this._isMobile = value;
-    // let settings: any = {};
-    // if (!value) {
-    //   settings = this.settingLayoutSize;
-    //   this.collapsed = true;
-    // } else {
-    //   settings.leftWidth = '100';
-    //   settings.rightWidth = '0';
-    //   this.collapsed = false;
-    // }
-    // setTimeout(() => {
-    //   this.menuClick(settings);
-    // }, 10);
+    this._isMobile = value;
   }
 
   static Hide() {
