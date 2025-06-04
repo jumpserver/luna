@@ -1,47 +1,57 @@
-import { NgModule } from "@angular/core";
-import { NzButtonModule } from "ng-zorro-antd/button";
-import { NzModalModule } from "ng-zorro-antd/modal";
-import { NzIconModule } from "ng-zorro-antd/icon";
-import { NzInputModule } from "ng-zorro-antd/input";
-import { NzSelectModule } from "ng-zorro-antd/select";
-import { NzFormModule } from "ng-zorro-antd/form";
-import { NzAlertModule } from "ng-zorro-antd/alert";
-import { NzCheckboxModule } from "ng-zorro-antd/checkbox";
-import { NzCardModule } from "ng-zorro-antd/card";
-import { NzSwitchModule } from "ng-zorro-antd/switch";
-import { NzDropDownModule } from "ng-zorro-antd/dropdown";
-import { NzMenuModule } from "ng-zorro-antd/menu";
-import { NzTabsModule } from "ng-zorro-antd/tabs";
-import { NzRadioModule } from "ng-zorro-antd/radio";
-import { NzCollapseModule } from "ng-zorro-antd/collapse";
-import { NzFloatButtonModule } from "ng-zorro-antd/float-button";
-import { NzSplitterModule } from "ng-zorro-antd/splitter";
-import { NzListModule } from "ng-zorro-antd/list";
-import { NzSpinModule } from "ng-zorro-antd/spin";
-import { NzToolTipModule } from "ng-zorro-antd/tooltip";
+import { NgModule } from '@angular/core';
+import { NzFormModule } from 'ng-zorro-antd/form';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzMenuModule } from 'ng-zorro-antd/menu';
+import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
+import { NzListModule } from 'ng-zorro-antd/list';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzFlexModule } from 'ng-zorro-antd/flex';
+import { NzAlertModule } from 'ng-zorro-antd/alert';
+import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzRadioModule } from 'ng-zorro-antd/radio';
+import { NzSwitchModule } from 'ng-zorro-antd/switch';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzDrawerModule } from 'ng-zorro-antd/drawer';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
+import { NzCollapseModule } from 'ng-zorro-antd/collapse';
+import { NzSplitterModule } from 'ng-zorro-antd/splitter';
+import { NzSegmentedModule } from 'ng-zorro-antd/segmented';
+import { NzFloatButtonModule } from 'ng-zorro-antd/float-button';
+import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 
 @NgModule({
   exports: [
+    NzFlexModule,
     NzListModule,
-    NzButtonModule,
-    NzModalModule,
     NzIconModule,
-    NzInputModule,
-    NzSelectModule,
     NzFormModule,
-    NzAlertModule,
     NzCardModule,
-    NzSwitchModule,
-    NzDropDownModule,
-    NzCheckboxModule,
     NzMenuModule,
     NzTabsModule,
+    NzSpinModule,
+    NzModalModule,
+    NzInputModule,
     NzRadioModule,
+    NzAlertModule,
+    NzButtonModule,
+    NzSelectModule,
+    NzDrawerModule,
+    NzSwitchModule,
+    NzToolTipModule,
+    NzDividerModule,
+    NzDropDownModule,
+    NzCheckboxModule,
     NzCollapseModule,
     NzSplitterModule,
+    NzSegmentedModule,
     NzFloatButtonModule,
-    NzSpinModule,
-    NzToolTipModule,
-  ],
+    NzInputNumberModule
+  ]
 })
 export class NgZorroAntdModule {}

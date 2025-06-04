@@ -41,6 +41,7 @@ import {ElementFaceMonitorComponent} from '@app/elements/connect/face-monitor/fa
 import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/acl-dialog.component';
 import {ElementDialogAlertComponent} from '@app/services/dialog/alert.service';
 import {ElementTermComponent} from '@app/elements/replay/term/term.component';
+import {ElementDrawerComponent} from '@app/elements/drawer/drawer.component';
 
 export const ElementComponents = [
   ElementLeftBarComponent,
@@ -81,4 +82,5 @@ export const ElementComponents = [
   ElementACLDialogComponent,
   ElementDialogAlertComponent,
   ElementTermComponent,
+  ElementDrawerComponent
 ];

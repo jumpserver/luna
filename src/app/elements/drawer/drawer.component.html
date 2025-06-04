@@ -1,0 +1,209 @@
+<nz-drawer
+  nzPlacement="right"
+  nzWidth="600px"
+  nzTitle="配置"
+  [nzClosable]="false"
+  [nzVisible]="visible()"
+  (nzOnClose)="close()"
+  class="custom-drawer-wrapper"
+>
+  <ng-container *nzDrawerContent>
+
+    <nz-collapse [nzBordered]="false" nzExpandIconPosition="end">
+      @for (panel of panels; track panel) {
+        <nz-collapse-panel
+          #p
+          [nzHeader]="panel.name"
+          [nzActive]="panel.active"
+          [style]="customStyle"
+        >
+          <ng-template #expandedIcon let-active>
+            {{ active }}
+            <nz-icon nzType="caret-right" class="ant-collapse-arrow" [nzRotate]="p.nzActive ? 90 : -90" />
+          </ng-template>
+
+          @if (panel.type === 'command') {
+            <form nz-form [nzLayout]="'vertical'" [formGroup]="validateForm" (ngSubmit)="onSubmit()">
+
+              <!-- 字体配置区域 -->
+              <div class="config-section">
+                <nz-divider [nzDashed]="true" [nzText]="font" nzOrientation="left">
+                  <ng-template #font>
+                    <nz-icon nzType="font-size" nzTheme="outline"></nz-icon>
+                    <span class="section-title">字体</span>
+                  </ng-template>
+                </nz-divider>
+
+                <div class="form-row">
+                  <nz-form-item class="form-item-large">
+                    <nz-form-label>字体系列</nz-form-label>
+                    <nz-form-control>
+                      <nz-select
+                        formControlName="fontFamily"
+                        nzPlaceHolder="选择字体"
+                      >
+                        @for (font of fontFamilies; track font.value) {
+                          <nz-option [nzValue]="font.value" [nzLabel]="font.label"></nz-option>
+                        }
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+
+                  <nz-form-item class="form-item-small">
+                    <nz-form-label>字体大小</nz-form-label>
+                    <nz-form-control>
+                      <nz-input-number
+                        formControlName="fontSize"
+                        nzMin="8"
+                        nzMax="72"
+                        nzPlaceHolder="14" />
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+              </div>
+
+              <!-- 光标配置区域 -->
+              <div class="config-section">
+                <nz-divider [nzDashed]="true" [nzText]="cursor" nzOrientation="left">
+                  <ng-template #cursor>
+                    <nz-icon nzType="edit" nzTheme="outline"></nz-icon>
+                    <span class="section-title">光标</span>
+                  </ng-template>
+                </nz-divider>
+
+                <div class="form-row">
+                  <nz-form-item class="form-item-large">
+                    <nz-form-label>光标样式</nz-form-label>
+                    <nz-form-control>
+                      <nz-segmented
+                        formControlName="cursorStyle"
+                        [nzOptions]="cursorStyles">
+                      </nz-segmented>
+                    </nz-form-control>
+                  </nz-form-item>
+
+                  <nz-form-item class="form-item-small">
+                    <nz-form-label>光标闪烁</nz-form-label>
+                    <nz-form-control>
+                      <nz-switch formControlName="cursorBlink"></nz-switch>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+              </div>
+
+              <!-- 偏好设置区域 -->
+              <div class="config-section">
+                <nz-divider [nzDashed]="true" [nzText]="preference" nzOrientation="left">
+                  <ng-template #preference>
+                    <nz-icon nzType="setting" nzTheme="outline"></nz-icon>
+                    <span class="section-title">偏好</span>
+                  </ng-template>
+                </nz-divider>
+
+                <div class="preference-placeholder">
+                  <p>偏好设置内容待添加...</p>
+                </div>
+              </div>
+
+            </form>
+          }
+
+          @if (panel.type === 'graphic') {
+            <form nz-form [nzLayout]="'vertical'" [formGroup]="validateForm" (ngSubmit)="onSubmit()">
+
+              <!-- RDP 配置区域 -->
+              <div class="config-section">
+                <nz-divider [nzDashed]="true" [nzText]="rdp" nzOrientation="left">
+                  <ng-template #rdp>
+                    <nz-icon nzType="desktop" nzTheme="outline"></nz-icon>
+                    <span class="section-title">RDP 配置</span>
+                  </ng-template>
+                </nz-divider>
+
+                <div class="form-row">
+                  <nz-form-item class="form-item-large">
+                    <nz-form-label>RDP 分辨率</nz-form-label>
+                    <nz-form-control>
+                      <nz-select
+                        formControlName="rdpResolution"
+                        nzPlaceHolder="选择分辨率"
+                      >
+                        @for (resolution of rdpResolutions; track resolution.value) {
+                          <nz-option [nzValue]="resolution.value" [nzLabel]="resolution.label"></nz-option>
+                        }
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+
+                  <nz-form-item class="form-item-small">
+                    <nz-form-label>RDP 智能大小</nz-form-label>
+                    <nz-form-control>
+                      <nz-switch formControlName="rdpSmartSize"></nz-switch>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+
+                <nz-form-item>
+                  <nz-form-label>RDP 颜色质量</nz-form-label>
+                  <nz-form-control>
+                    <nz-select
+                      formControlName="rdpColorQuality"
+                      nzPlaceHolder="选择颜色质量"
+                    >
+                      @for (quality of rdpColorQualities; track quality.value) {
+                        <nz-option [nzValue]="quality.value" [nzLabel]="quality.label"></nz-option>
+                      }
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <!-- 显示配置区域 -->
+              <div class="config-section">
+                <nz-divider [nzDashed]="true" [nzText]="display" nzOrientation="left">
+                  <ng-template #display>
+                    <nz-icon nzType="monitor" nzTheme="outline"></nz-icon>
+                    <span class="section-title">显示配置</span>
+                  </ng-template>
+                </nz-divider>
+
+                <nz-form-item>
+                  <nz-form-label>显示选项</nz-form-label>
+                  <nz-form-control>
+                    <nz-checkbox-group formControlName="displayOptions">
+                      @for (option of displayOptions; track option.value) {
+                        <label nz-checkbox [nzValue]="option.value">{{ option.label }}</label>
+                      }
+                    </nz-checkbox-group>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <!-- 连接方式区域 -->
+              <div class="config-section">
+                <nz-divider [nzDashed]="true" [nzText]="connection" nzOrientation="left">
+                  <ng-template #connection>
+                    <nz-icon nzType="link" nzTheme="outline"></nz-icon>
+                    <span class="section-title">连接方式</span>
+                  </ng-template>
+                </nz-divider>
+
+                <nz-form-item>
+                  <nz-form-label>连接类型</nz-form-label>
+                  <nz-form-control>
+                    <nz-radio-group formControlName="connectionType">
+                      @for (type of connectionTypes; track type.value) {
+                        <label nz-radio [nzValue]="type.value">{{ type.label }}</label>
+                      }
+                    </nz-radio-group>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+            </form>
+          }
+        </nz-collapse-panel>
+      }
+    </nz-collapse>
+  </ng-container>
+</nz-drawer>
