@@ -100,9 +100,20 @@
                   </ng-template>
                 </nz-divider>
 
-                <div class="preference-placeholder">
-                  <p>偏好设置内容待添加...</p>
-                </div>
+                <nz-list nzSize="small" [nzSplit]="false" [nzBordered]="false">
+                  <nz-list-item>
+                    <nz-list-item-meta nzTitle="右键快速粘贴"></nz-list-item-meta>
+                    <nz-switch formControlName="rightClickPaste"></nz-switch>
+                  </nz-list-item>
+                  <nz-list-item>
+                    <nz-list-item-meta nzTitle="左键选中复制"></nz-list-item-meta>
+                    <nz-switch formControlName="leftClickCopy"></nz-switch>
+                  </nz-list-item>
+                  <nz-list-item>
+                    <nz-list-item-meta nzTitle="字符终端Backspace As Ctrl+H"></nz-list-item-meta>
+                    <nz-switch formControlName="backspaceAsCtrlH"></nz-switch>
+                  </nz-list-item>
+                </nz-list>
               </div>
 
             </form>
@@ -143,19 +154,21 @@
                   </nz-form-item>
                 </div>
 
-                <nz-form-item>
-                  <nz-form-label>RDP 颜色质量</nz-form-label>
-                  <nz-form-control>
-                    <nz-select
-                      formControlName="rdpColorQuality"
-                      nzPlaceHolder="选择颜色质量"
-                    >
-                      @for (quality of rdpColorQualities; track quality.value) {
-                        <nz-option [nzValue]="quality.value" [nzLabel]="quality.label"></nz-option>
-                      }
-                    </nz-select>
-                  </nz-form-control>
-                </nz-form-item>
+                <div class="form-row">
+                  <nz-form-item class="form-item-large">
+                    <nz-form-label>RDP 颜色质量</nz-form-label>
+                    <nz-form-control>
+                      <nz-select
+                        formControlName="rdpColorQuality"
+                        nzPlaceHolder="选择颜色质量"
+                      >
+                        @for (quality of rdpColorQualities; track quality.value) {
+                          <nz-option [nzValue]="quality.value" [nzLabel]="quality.label"></nz-option>
+                        }
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
               </div>
 
               <!-- 显示配置区域 -->

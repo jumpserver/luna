@@ -11,14 +11,20 @@
         background-color: var(--el-drawer-collapse-bg-color) !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
 
+        .ant-collapse-header {
+          font-size: 14px;
+          font-weight: 500;
+        }
+
         .ant-collapse-header,
         .ant-collapse-content {
           color: var(--el-drawer-text-color) !important;
 
           .config-section {
-            margin-bottom: 24px;
+            margin-bottom: 6px;
 
             .ant-divider {
+              margin: 0 0 12px 0;
               border-top-color: rgba(255, 255, 255, 0.15);
 
               ::ng-deep .ant-divider-inner-text {
@@ -42,9 +48,12 @@
               }
             }
 
+            .ant-list .ant-list-item-meta-title {
+              color: var(--el-drawer-text-color);
+            }
+
             .form-row {
               display: flex;
-              justify-content: space-between;
               gap: 16px;
 
               .form-item-large {
@@ -197,20 +206,6 @@
                   color: var(--el-drawer-text-color);
                 }
               }
-
-              .preference-placeholder {
-              padding: 24px;
-              text-align: center;
-              color: rgba(255, 255, 255, 0.5);
-              background-color: rgba(255, 255, 255, 0.02);
-              border-radius: 6px;
-              border: 1px dashed rgba(255, 255, 255, 0.15);
-              font-size: 13px;
-
-              p {
-                margin: 0;
-              }
-            }
           }
         }
       }
