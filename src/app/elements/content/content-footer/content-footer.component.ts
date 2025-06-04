@@ -1,9 +1,9 @@
-import {Component, OnInit,} from '@angular/core';
+import {Component, OnInit, HostListener} from '@angular/core';
 import {View} from '@app/model';
 import {HttpService, I18nService, LogService, SettingService, ViewService} from '@app/services';
 import {
   ElementSendCommandWithVariableDialogComponent
-} from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
+} from '@app/elements/content/content-footer/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {NzModalService} from 'ng-zorro-antd/modal';
 import {languages} from '@codemirror/language-data';
@@ -28,23 +28,12 @@ export class ElementContentFooterComponent implements OnInit {
     theme: 'dark',
     lineNumbers: false,
     setup: 'minimal',
-    placeholder: 'Input command here..., Enter for new line, Ctrl+Enter to send',
     autoFocus: true
   };
-  sendCommandOptions = [
-    {
-      value: 'all',
-      label: 'All sessions'
-    },
-    {
-      value: 'current',
-      label: 'Current session'
-    }
-  ];
 
   constructor(public viewSrv: ViewService,
               public settingSvc: SettingService,
-              private _i18n: I18nService,
+              protected _i18n: I18nService,
               private _dialog: NzModalService,
               private _logger: LogService,
               private _http: HttpService,
@@ -65,7 +54,7 @@ export class ElementContentFooterComponent implements OnInit {
     }
 
     const cmd = this.batchCommand + '\r';
-    if (this.sendCommandRange === 'current') {
+    if (!this.sendCommandToAll) {
       const view = this.viewList.filter(i => i.id === this.viewSrv.currentView.id);
       list = view;
     }
@@ -90,12 +79,12 @@ export class ElementContentFooterComponent implements OnInit {
   }
 
   sendQuickCommand(command) {
-    this.batchCommand = command.args;
     if (command.variable.length > 0) {
       const dialogRef = this._dialog.create({
         nzTitle: this._i18n.instant('Send command'),
         nzContent: ElementSendCommandWithVariableDialogComponent,
         nzWidth: '500px',
+        nzFooter: null,
         nzData: {
           command: command
         }
@@ -103,11 +92,10 @@ export class ElementContentFooterComponent implements OnInit {
       dialogRef.afterClose.subscribe(result => {
         if (result) {
           this.batchCommand = result;
-          this.sendBatchCommand();
         }
       });
     } else {
-      this.sendBatchCommand();
+      this.batchCommand = command.args;
     }
 
   }
@@ -126,22 +114,6 @@ export class ElementContentFooterComponent implements OnInit {
     }
   }
 
-  onSendCommand() {
-    if (!this.batchCommand) {
-      return;
-    }
-
-    this._dialog.create(
-      {
-        nzTitle: this._i18n.instant('Send command'),
-        nzContent: ElementCommandDialogComponent,
-        nzWidth: '500px',
-        nzData: {
-          data: {command: this.batchCommand}
-        }
-      }
-    );
-  }
 
   onScrollLeft() {
     const container: any = document.querySelector('.command-list');
@@ -157,4 +129,11 @@ export class ElementContentFooterComponent implements OnInit {
     }
   }
 
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    if (event.ctrlKey && event.key.toLowerCase() === 'enter') {
+      event.preventDefault(); // 阻止默认保存行为
+      this.sendBatchCommand();
+    }
+  }
 }

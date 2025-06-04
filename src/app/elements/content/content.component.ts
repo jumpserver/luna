@@ -1,6 +1,6 @@
 import {Component, ElementRef, EventEmitter, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
 import {View, ViewAction} from '@app/model';
-import {ConnectTokenService, ViewService} from '@app/services';
+import {ConnectTokenService, ViewService, SettingService} from '@app/services';
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import {fromEvent, Subscription} from 'rxjs';
 import jQuery from 'jquery';
@@ -46,14 +46,14 @@ export class ElementContentComponent implements OnInit, OnDestroy {
 
   constructor(public viewSrv: ViewService,
               private _connectTokenSvc: ConnectTokenService,
+              private _settingSvc: SettingService,
   ) {
   }
 
   get showBatchCommand() {
-    return true;
-    // return this.settingSvc.setting.commandExecution
-    //   && this.viewSrv.currentView
-    //   && this.viewSrv.currentView.protocol === 'ssh';
+    return this._settingSvc.setting.commandExecution
+      && this.viewSrv.currentView
+      && this.viewSrv.currentView.protocol === 'ssh';
   }
 
   get tabsWidth() {
