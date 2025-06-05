@@ -1,10 +1,27 @@
 import { lighten, darken } from "./util";
 
-export const themeColors: any = {
-  default: "#483D3D",
-  darkGary: "#303237",
-  deepBlue: "#1A212C",
-};
+export const themes = [
+  {
+    name: "default",
+    color: "#483D3D",
+    label: "Default"
+  },
+  {
+    name: "darkGary",
+    color: "#303237",
+    label: "DarkGray"
+  },
+  {
+    name: "deepBlue",
+    color: "#1A212C",
+    label: "DarkBlue"
+  }
+];
+
+export const themeColors: any = themes.reduce((acc, theme) => {
+  acc[theme.name] = theme.color;
+  return acc;
+}, {});
 
 // 简化后的主题对象
 export const mainTheme = () => {

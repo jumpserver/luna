@@ -6,6 +6,7 @@ import { ElementSettingComponent } from "@app/elements/nav/setting/setting.compo
 import { Nav, View } from "@app/model";
 import { I18nService } from "@app/services/i18n";
 import { useTheme } from "@src/sass/theme/util";
+import { themes } from "@src/sass/theme/main";
 import { NzModalService } from "ng-zorro-antd/modal";
 
 @Component({
@@ -149,30 +150,13 @@ export class ElementNavComponent implements OnInit {
       {
         id: "Theme",
         name: this._i18n.instant("Theme"),
-        children: [
-          {
-            id: "Default",
-            click: () => {
-              useTheme().switchTheme("default");
-            },
-            name: this._i18n.instant("Default"),
+        children: themes.map((theme) => ({
+          id: theme.name,
+          click: () => {
+            useTheme().switchTheme(theme.name);
           },
-          {
-            id: "DarkGary",
-            click: () => {
-              useTheme().switchTheme("darkGary");
-            },
-            // name: this._i18n.instant("DarkBlue"),
-            name: '深灰',
-          },
-          {
-            id: "DeepBlue",
-            click: () => {
-              useTheme().switchTheme("deepBlue");
-            },
-            name: this._i18n.instant("DarkBlue"),
-          },
-        ],
+          name: this._i18n.instant(theme.label),
+        })),
       },
       {
         id: "Help",

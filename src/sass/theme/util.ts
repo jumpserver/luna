@@ -1,7 +1,7 @@
 import { mainTheme, themeColors } from "./main";
 
 export namespace Theme {
-  export type ThemeType = "default" | "darkBlue";
+  export type ThemeType = "default" | "darkBlue" | "deepBlue" | "chinaRed";
 }
 
 // 获取当前主题的主色
