@@ -1,18 +1,16 @@
-import { Theme } from './interface/index';
+import { lighten, darken } from "./interface/index";
+import { getThemeColor } from "./themes";
 
-export const mainTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
-  default: {
-    '--el-main-bg-color': '#1E1C1C',
-    '--el-main-text-color': '#EFEFF0',
-    '--el-main-crucial-text-color': '#7494f3',
-    '--el-main-tab-item-disconnected-bg-color': '#5A5151',
-    '--el-editor-bg-color': '#313131',
-  },
-  darkBlue: {
-    '--el-main-bg-color': '#141618',
-    '--el-main-text-color': '#EFEFF0',
-    '--el-main-crucial-text-color': '#7494f3',
-    '--el-main-tab-item-disconnected-bg-color': '#555B60',
-    '--el-editor-bg-color': '#282c34'
-  }
+// 简化后的主题对象
+export const mainTheme = {
+  // 主区域背景
+  "--el-main-bg-color": darken(10, getThemeColor()),
+  // 主区域文本颜色
+  "--el-main-text-color": "#EFEFF0",
+  // 关键文本颜色
+  "--el-main-crucial-text-color": "#7494f3",
+  // 断开连接的标签项背景
+  "--el-main-tab-item-disconnected-bg-color": lighten(35, getThemeColor()),
+  // 编辑器背景
+  "--el-editor-bg-color": lighten(10, getThemeColor()),
 };
