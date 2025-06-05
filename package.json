@@ -9,7 +9,8 @@
     "build": "ng build --configuration production  --output-path 'luna'",
     "test": "ng test",
     "lint": "ng lint",
-    "e2e": "ng e2e"
+    "e2e": "ng e2e",
+    "format:prettier": "prettier --write \"src/**/*.{ts,scss,html}\""
   },
   "private": true,
   "dependencies": {

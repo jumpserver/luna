@@ -5,7 +5,7 @@ import { LogService } from '@app/services';
 interface Panel {
   name: string;
 
-  type: 'command' | 'graphic';
+  type: 'command' | 'graphic' | 'tree';
 
   active: boolean;
 }
@@ -79,6 +79,11 @@ export class ElementDrawerComponent implements OnInit {
       active: false,
       name: '图形化配置',
       type: 'graphic'
+    },
+    {
+      active: false,
+      name: '资产树加载',
+      type: 'tree'
     }
   ];
 
@@ -92,8 +97,6 @@ export class ElementDrawerComponent implements OnInit {
     border: '0px'
   };
 
-  // background-color: var(--el-assets-fold-item-bg-color);
-
   constructor(
     private _logger: LogService,
     private fb: FormBuilder
@@ -102,17 +105,23 @@ export class ElementDrawerComponent implements OnInit {
   ngOnInit(): void {
     this.validateForm = this.fb.group({
       // 命令行配置
-      fontFamily: ['Monaco', [Validators.required]],
-      fontSize: [14, [Validators.required, Validators.min(8), Validators.max(72)]],
-      cursorStyle: ['line', [Validators.required]],
       cursorBlink: [true],
+      leftClickCopy: [true],
+      rightClickPaste: [true],
+      backspaceAsCtrlH: [true],
+      cursorStyle: ['line'],
+      fontFamily: ['Monaco'],
+      fontSize: [14, [Validators.required, Validators.min(8), Validators.max(72)]],
 
       // 图形化配置
-      rdpResolution: ['1920x1080', [Validators.required]],
       rdpSmartSize: [false],
-      rdpColorQuality: ['32', [Validators.required]],
+      rdpResolution: ['自动'],
+      rdpColorQuality: ['32'],
+      connectionType: ['web'],
       displayOptions: [['keyboard', 'fullscreen']],
-      connectionType: ['web', [Validators.required]]
+
+      // 资产树配置
+      treeAsync: [false]
     });
   }
 
