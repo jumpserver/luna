@@ -276,6 +276,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         asset,
         preConnectData
       },
+      nzCentered: true,
       nzClassName: 'connect-dialog',
       nzWrapClassName: 'connect-dialog-wrap',
       nzFooter: null,

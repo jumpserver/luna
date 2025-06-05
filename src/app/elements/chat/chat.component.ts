@@ -1,16 +1,23 @@
-import {Component, ElementRef, OnDestroy, OnInit, ViewChild, HostListener, AfterViewInit} from '@angular/core';
-import {SettingService, ViewService} from '@app/services';
-import {View} from '@app/model';
+import { View } from '@app/model';
+import { SettingService, ViewService } from '@app/services';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  HostListener,
+  AfterViewInit
+} from '@angular/core';
 
 @Component({
   standalone: false,
   selector: 'elements-chat',
   templateUrl: 'chat.component.html',
-  styleUrls: ['chat.component.scss'],
+  styleUrls: ['chat.component.scss']
 })
-
 export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
-  @ViewChild('contentWindow', {static: false}) iframeRef: ElementRef;
+  @ViewChild('contentWindow', { static: false }) iframeRef: ElementRef;
   showBtn = true;
   element: any;
   iframeURL: string;
@@ -18,6 +25,7 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   chatAIShown = false;
   chatAIInited = false;
   isDragging = false;
+  showSettingDrawer = false;
   private startY = 0;
   private startTop = 0;
   private containerElement: HTMLElement;
@@ -26,8 +34,7 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     public viewSrv: ViewService,
     public _settingSvc: SettingService,
     private el: ElementRef
-  ) {
-  }
+  ) {}
 
   ngAfterViewInit() {
     this.containerElement = this.el.nativeElement.querySelector('.chat-container');
@@ -36,8 +43,8 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   get isShowSetting() {
     const connectMethods = ['koko', 'lion', 'tinker', 'panda'];
     return (
-      this.currentView.hasOwnProperty('connectMethod')
-      && connectMethods.includes(this.currentView.connectMethod.component)
+      this.currentView.hasOwnProperty('connectMethod') &&
+      connectMethods.includes(this.currentView.connectMethod.component)
     );
   }
 
@@ -56,10 +63,12 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   @HostListener('mousedown', ['$event'])
   onMouseDown(event: MouseEvent) {
     if (!this.containerElement) return;
-    
+
     // 如果点击的是按钮，不启动拖动
-    if (event.target instanceof HTMLElement && 
-        (event.target.closest('nz-float-button') || event.target.closest('.ant-float-btn'))) {
+    if (
+      event.target instanceof HTMLElement &&
+      (event.target.closest('nz-float-button') || event.target.closest('.ant-float-btn'))
+    ) {
       return;
     }
 
@@ -67,23 +76,23 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     this.startY = event.clientY;
     const rect = this.containerElement.getBoundingClientRect();
     this.startTop = rect.top;
-    
+
     event.preventDefault();
   }
 
   @HostListener('document:mousemove', ['$event'])
   onMouseMove(event: MouseEvent) {
     if (!this.isDragging || !this.containerElement) return;
-    
+
     const deltaY = event.clientY - this.startY;
     const newTop = this.startTop + deltaY;
-    
+
     // 限制拖动范围
     const minTop = 40; // 距离顶部最小距离
     const containerHeight = 100; // 组件实际高度
     const maxTop = window.innerHeight - containerHeight - 20; // 距离底部最小距离
     const boundedTop = Math.max(minTop, Math.min(newTop, maxTop));
-    
+
     this.containerElement.style.top = `${boundedTop}px`;
   }
 
@@ -93,12 +102,13 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit() {
-    console.log('Component initialized');
     this.viewSrv.currentView$.subscribe((state: View) => {
       this.currentView = state;
     });
+
     this.iframeURL = '/ui/#/chat/chat-ai?from=luna';
-    window.addEventListener('message', (event) => {
+
+    window.addEventListener('message', event => {
       // 确认消息的来源是你信任的域
       if (event.data === 'close-chat-panel') {
         this.chatAIShown = false;
@@ -142,10 +152,16 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     body.insertBefore(this.element, body.firstChild);
   }
 
-  showSettingDrawer() {
-    if (this.currentView.iframeElement) {
-      this.currentView.iframeElement.postMessage({name: 'OPEN'}, '*');
+  handleShowDrawer(visible?: boolean) {
+    if (!visible) {
+      this.showSettingDrawer = !this.showSettingDrawer;
+    } else {
+      this.showSettingDrawer = visible;
     }
+
+    // if (this.currentView.iframeElement) {
+    //   this.currentView.iframeElement.postMessage({name: 'OPEN'}, '*');
+    // }
   }
 
   isDifferenceWithinThreshold(num1, num2, threshold = 5) {

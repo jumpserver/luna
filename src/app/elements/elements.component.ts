@@ -28,11 +28,11 @@ import {ElementConnectorGuideComponent} from '@app/elements/content/content-wind
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {
   ElementSendCommandDialogComponent
-} from '@app/elements/content/send-command-dialog/send-command-dialog.component';
+} from '@app/elements/content/content-footer/send-command-dialog/send-command-dialog.component';
 import {
   ElementSendCommandWithVariableDialogComponent
-} from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
-import {DynamicFormComponent} from '@app/elements/content/variable-dynamic-form/variable-dynamic-form.component';
+} from '@app/elements/content/content-footer/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
+import {DynamicFormComponent} from '@app/elements/content/content-footer/variable-dynamic-form/variable-dynamic-form.component';
 import {ElementChatComponent} from '@app/elements/chat/chat.component';
 import {ElementsPartsComponent} from './replay/parts/parts.component';
 import {ElementConnectorNecComponent} from '@app/elements/content/content-window/nec/nec.component';
@@ -41,6 +41,7 @@ import {ElementFaceMonitorComponent} from '@app/elements/connect/face-monitor/fa
 import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/acl-dialog.component';
 import {ElementDialogAlertComponent} from '@app/services/dialog/alert.service';
 import {ElementTermComponent} from '@app/elements/replay/term/term.component';
+import {ElementDrawerComponent} from '@app/elements/drawer/drawer.component';
 
 export const ElementComponents = [
   ElementLeftBarComponent,
@@ -81,4 +82,5 @@ export const ElementComponents = [
   ElementACLDialogComponent,
   ElementDialogAlertComponent,
   ElementTermComponent,
+  ElementDrawerComponent
 ];

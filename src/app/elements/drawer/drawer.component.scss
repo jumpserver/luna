@@ -1,0 +1,231 @@
+// TODO 很多颜色先放到这里，后续抽离
+
+::ng-deep {
+  .ant-drawer-wrapper-body {
+    background-color: var(--el-assets-fold-item-bg-color);
+
+    .ant-collapse {
+      background-color: var(--el-drawer-collapse-bg-color);
+
+      .ant-collapse-item {
+        background-color: var(--el-drawer-collapse-bg-color) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+
+        .ant-collapse-header {
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .ant-collapse-header,
+        .ant-collapse-content {
+          color: var(--el-drawer-text-color) !important;
+
+          .config-section {
+            margin-bottom: 6px;
+
+            .ant-divider {
+              margin: 0 0 12px 0;
+              border-top-color: rgba(255, 255, 255, 0.15);
+
+              ::ng-deep .ant-divider-inner-text {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background-color: var(--el-drawer-collapse-bg-color);
+                padding: 0 12px;
+
+                .anticon {
+                  color: var(--el-drawer-text-color);
+                  font-size: 14px;
+                  opacity: 0.8;
+                }
+
+                .section-title {
+                  color: var(--el-drawer-text-color);
+                  font-weight: 500;
+                  font-size: 14px;
+                }
+              }
+            }
+
+            .ant-list .ant-list-item-meta-title {
+              color: var(--el-drawer-text-color);
+            }
+
+            .form-row {
+              display: flex;
+              gap: 16px;
+
+              .form-item-large {
+                flex: 2;
+              }
+
+              .form-item-small {
+                flex: 1;
+              }
+
+              .ant-select-dropdown {
+                background-color: var(--el-drawer-collapse-bg-color);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+                .ant-select-item {
+                  color: var(--el-drawer-text-color);
+
+                  &:hover {
+                    background-color: var(--el-drawer-bg-color);
+                  }
+
+                  &.ant-select-item-option-selected {
+                    background-color: rgba(255, 255, 255, 0.1);
+                    color: var(--el-drawer-text-color);
+                    font-weight: 500;
+                  }
+                }
+              }
+
+              .ant-segmented {
+                width: 100%;
+                background-color: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+
+                ::ng-deep .ant-segmented-item {
+                  font-size: 12px;
+                  color: var(--el-drawer-text-color);
+                  border: none;
+
+                  &:hover {
+                    background-color: rgba(255, 255, 255, 0.08);
+                  }
+
+                  &.ant-segmented-item-selected {
+                    background-color: var(--el-drawer-text-color);
+                    color: var(--el-drawer-collapse-bg-color);
+                    font-weight: 500;
+                  }
+                }
+              }
+
+              .ant-select {
+                .ant-select-selector {
+                  background-color: var(--el-drawer-collapse-bg-color);
+                  border: 1px solid rgba(255, 255, 255, 0.15);
+                  border-radius: 6px;
+                  color: var(--el-drawer-text-color);
+
+                  &:hover {
+                    border-color: rgba(255, 255, 255, 0.25);
+                    background-color: var(--el-drawer-bg-color);
+                  }
+                }
+
+                .ant-select-selection-placeholder {
+                  color: rgba(255, 255, 255, 0.5);
+                }
+
+                .ant-select-arrow {
+                  color: var(--el-drawer-text-color);
+                }
+              }
+
+              .ant-input {
+                background-color: var(--el-drawer-collapse-bg-color);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 6px;
+                color: var(--el-drawer-text-color);
+
+                &::placeholder {
+                  color: rgba(255, 255, 255, 0.5);
+                }
+
+                &:hover {
+                  border-color: rgba(255, 255, 255, 0.25);
+                  background-color: var(--el-drawer-bg-color);
+                }
+
+                &:focus {
+                  border-color: rgba(255, 255, 255, 0.4);
+                  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+                  background-color: var(--el-drawer-bg-color);
+                }
+              }
+
+              .ant-input-number {
+                width: 100%;
+                background-color: var(--el-drawer-collapse-bg-color);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 6px;
+
+                .ant-input-number-input {
+                  background-color: transparent;
+                  color: var(--el-drawer-text-color);
+
+                  &::placeholder {
+                    color: rgba(255, 255, 255, 0.5);
+                  }
+                }
+
+                .ant-input-number-handler-wrap {
+                  background-color: var(--el-drawer-collapse-bg-color);
+                  border-left: 1px solid rgba(255, 255, 255, 0.15);
+
+                  .ant-input-number-handler {
+                    border-color: rgba(255, 255, 255, 0.15);
+                    color: var(--el-drawer-text-color);
+
+                    &:hover {
+                      background-color: var(--el-drawer-bg-color);
+                    }
+                  }
+                }
+
+                &:hover {
+                  border-color: rgba(255, 255, 255, 0.25);
+                  background-color: var(--el-drawer-bg-color);
+                }
+
+                &:focus-within {
+                  border-color: rgba(255, 255, 255, 0.4);
+                  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+                  background-color: var(--el-drawer-bg-color);
+                }
+                              }
+              }
+
+              .ant-checkbox-group {
+                .ant-checkbox-wrapper {
+                  color: var(--el-drawer-text-color);
+                }
+              }
+
+              .ant-radio-group {
+                display: flex;
+                gap: 16px;
+
+                .ant-radio-wrapper {
+                  color: var(--el-drawer-text-color);
+                }
+              }
+          }
+        }
+      }
+    }
+  }
+
+  // 表单相关样式
+  .ant-form-item {
+    margin-bottom: 16px;
+
+    &-label {
+      padding-bottom: 4px;
+
+      > label {
+        font-size: 13px;
+        color: var(--el-drawer-text-color);
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+

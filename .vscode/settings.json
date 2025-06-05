@@ -1,3 +1,4 @@
 {
-  "prettier.singleQuote": true
+  "prettier.singleQuote": true,
+  "angular.enable-strict-mode-prompt": false
 }

@@ -1,8 +1,8 @@
-import {Theme} from '@src/sass/theme/interface';
-import {headerTheme} from '@src/sass/theme/header';
-import {mainTheme} from '@src/sass/theme/main';
-import {menuTheme} from '@src/sass/theme/menu';
-import {dropdownTheme} from '@src/sass/theme/dropdown';
+import { mainTheme } from '@src/sass/theme/main';
+import { menuTheme } from '@src/sass/theme/menu';
+import { headerTheme } from '@src/sass/theme/header';
+import { drawerTheme } from '@src/sass/theme/drawer';
+import { dropdownTheme } from '@src/sass/theme/dropdown';
 
 export const useTheme = () => {
   // 获取并设置主题类型
@@ -34,12 +34,14 @@ export const useTheme = () => {
   const setMenuTheme = () => applyTheme(menuTheme[ThemeType]);
   const setMainTheme = () => applyTheme(mainTheme[ThemeType]);
   const setHeaderTheme = () => applyTheme(headerTheme[ThemeType]);
+  const setDrawerTheme = () => applyTheme(drawerTheme[ThemeType]);
   const setDropdownTheme = () => applyTheme(dropdownTheme[ThemeType]);
 
   const initTheme = () => {
     setMenuTheme();
     setMainTheme();
     setHeaderTheme();
+    setDrawerTheme();
     setDropdownTheme();
   };
 
@@ -52,4 +54,3 @@ export const useTheme = () => {
     switchTheme
   };
 };
-
