@@ -21,8 +21,8 @@
 颜色处理函数可以接受一个或两个参数：
 
 ```typescript
-function lighten(amount: number, color?: string): string;
-function darken(amount: number, color?: string): string;
+function lighten(amount: number, color?: string, alphaValue?: number): string;
+function darken(amount: number, color?: string, alphaValue?: number): string;
 function saturate(amount: number, color?: string): string;
 function desaturate(amount: number, color?: string): string;
 function alpha(amount: number, color?: string): string;
@@ -30,6 +30,7 @@ function alpha(amount: number, color?: string): string;
 
 - `amount`: 处理的程度，对于 lighten 和 darken，表示百分比（0-100）；对于 alpha，表示透明度（0-1）
 - `color`: 基础颜色（可选）。如果不提供，函数会自动使用当前主题的主色
+- `alphaValue`: 透明度值（可选，仅 lighten 和 darken 支持）。取值范围 0-1，用于同时调整亮度和透明度
 
 ### 示例
 
@@ -40,6 +41,8 @@ import { lighten, darken } from "./interface/index";
 export const mainTheme = {
   // 主区域背景
   "--el-main-bg-color": darken(10), // 自动使用当前主题颜色
+  // 带透明度的元素
+  "--el-overlay-bg-color": darken(5, undefined, 0.8), // 80% 不透明度
   // 主区域文本颜色
   "--el-main-text-color": "#EFEFF0",
   // 其他 CSS 变量...

@@ -11,19 +11,33 @@ function getCurrentThemeColor(): string {
 }
 
 // 颜色处理函数：增加亮度
-export function lighten(amount: number, color?: string): string {
+export function lighten(amount: number, color?: string, alphaValue?: number): string {
   // 如果没有提供颜色，使用当前主题颜色
   const actualColor = color || getCurrentThemeColor();
   const hsl = hexToHSL(actualColor);
-  return hslToHex(hsl.h, hsl.s, Math.min(100, hsl.l + amount));
+  const hexColor = hslToHex(hsl.h, hsl.s, Math.min(100, hsl.l + amount));
+  
+  // 如果提供了透明度参数，应用透明度
+  if (alphaValue !== undefined) {
+    return alpha(alphaValue, hexColor);
+  }
+  
+  return hexColor;
 }
 
 // 颜色处理函数：降低亮度
-export function darken(amount: number, color?: string): string {
+export function darken(amount: number, color?: string, alphaValue?: number): string {
   // 如果没有提供颜色，使用当前主题颜色
   const actualColor = color || getCurrentThemeColor();
   const hsl = hexToHSL(actualColor);
-  return hslToHex(hsl.h, hsl.s, Math.max(0, hsl.l - amount));
+  const hexColor = hslToHex(hsl.h, hsl.s, Math.max(0, hsl.l - amount));
+  
+  // 如果提供了透明度参数，应用透明度
+  if (alphaValue !== undefined) {
+    return alpha(alphaValue, hexColor);
+  }
+  
+  return hexColor;
 }
 
 // 颜色处理函数：增加饱和度
@@ -50,7 +64,7 @@ export function alpha(alphaValue: number, color?: string): string {
   const alpha = Math.max(0, Math.min(1, alphaValue));
 
   // 移除#号并处理缩写形式
-  let hex = color.replace(/^#/, "");
+  let hex = actualColor.replace(/^#/, "");
   if (hex.length === 3) {
     hex = hex
       .split("")

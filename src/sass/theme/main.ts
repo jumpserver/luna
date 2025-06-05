@@ -17,9 +17,9 @@ export const mainTheme = () => {
     // 关键文本颜色
     "--el-main-crucial-text-color": "#7494f3",
     // 断开连接的标签项背景
-    "--el-main-tab-item-disconnected-bg-color": lighten(35),
+    "--el-main-tab-item-disconnected-bg-color": lighten(10),
     // 编辑器背景
-    "--el-editor-bg-color": lighten(10),
+    "--el-editor-bg-color": darken(2),
     // 头部导航背景
     "--el-nav-bg-color": lighten(0),
     // 头部导航字体颜色
@@ -48,7 +48,7 @@ export const mainTheme = () => {
     // 滚动条的滚动块背景
     "--el-scroll-bar-thumb-bg-color": lighten(10),
     // 滚动条轨道背景
-    "--el-scroll-bar-track-bg-color": lighten(5),
+    "--el-scroll-bar-track-bg-color": darken(10),
     // 头部导航背景
     "--el-dropdown-bg-color": "#000000",
     // 头部导航下拉菜单背景
