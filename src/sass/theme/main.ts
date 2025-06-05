@@ -55,8 +55,19 @@ export const mainTheme = () => {
     "--el-dropdown-selected-bg-color": lighten(5),
     // 头部导航下拉菜单 hover 背景
     "--el-dropdown-hover-bg-color": darken(4),
-    '--el-drawer-bg-color': '#302A2A',
+    // 抽屉背景
+    '--el-drawer-bg-color': darken(1),
     // 折叠面板背景
-    '--el-drawer-collapse-bg-color': '#1E1C1C'
+    '--el-drawer-collapse-bg-color': darken(2),
+    // 分割线颜色
+    '--el-divider-border-color': lighten(10),
+    // 表单 hover 边框颜色
+    '--el-form-hover-border-color': lighten(20),
+    // 表单 focus 边框颜色
+    '--el-form-focus-border-color': lighten(30),
+    // segmented 背景
+    '--el-segmented-bg-color': lighten(5),
+    // segmented hover 背景
+    '--el-segmented-hover-bg-color': lighten(10)
   };
 };

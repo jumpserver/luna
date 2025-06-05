@@ -1,6 +1,9 @@
+import { Setting } from '@app/model';
 import { Component, OnInit, input, output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { LogService } from '@app/services';
+import { LogService, SettingService, HttpService, I18nService } from '@app/services';
+import { takeUntil } from 'rxjs/operators';
+import { themeColors } from '../../../sass/theme/main';
 
 interface Panel {
   name: string;
@@ -17,11 +20,21 @@ interface Panel {
   styleUrls: ['drawer.component.scss']
 })
 export class ElementDrawerComponent implements OnInit {
-  visible = input<boolean>(false);
-
   visibleChange = output<boolean>();
-
+  visible = input<boolean>(false);
   validateForm!: FormGroup;
+
+  rdpClientConfig = {
+    full_screen: false,
+    multi_screen: false,
+    drives_redirect: false
+  };
+  resolutionsOptions: any[];
+  rdpSmartSizeOptions: any[];
+  colorQualityOptions: any[];
+  keyboardLayoutOptions: any[];
+
+  setting: Setting = new Setting();
 
   // 字体选项
   fontFamilies = [
@@ -38,36 +51,8 @@ export class ElementDrawerComponent implements OnInit {
     { label: '竖线', value: 'block' }
   ];
 
-  // RDP 分辨率选项
-  rdpResolutions = [
-    { label: '1920x1080', value: '1920x1080' },
-    { label: '1680x1050', value: '1680x1050' },
-    { label: '1440x900', value: '1440x900' },
-    { label: '1366x768', value: '1366x768' },
-    { label: '1280x1024', value: '1280x1024' },
-    { label: '1024x768', value: '1024x768' },
-    { label: '自适应', value: 'auto' }
-  ];
-
-  // RDP 颜色质量选项
-  rdpColorQualities = [
-    { label: '高 (32 bit)', value: '32' },
-    { label: '低 (16 bit)', value: '16' }
-  ];
-
-  // 显示选项
-  displayOptions = [
-    { label: '键盘布局', value: 'keyboard' },
-    { label: '全屏', value: 'fullscreen' },
-    { label: '多屏显示', value: 'multiscreen' },
-    { label: '磁盘挂载', value: 'disk' }
-  ];
-
-  // 连接类型选项
-  connectionTypes = [
-    { label: 'Web', value: 'web' },
-    { label: '客户端', value: 'client' }
-  ];
+  rdpScreenOptions = [];
+  currentRdpScreenOptions = '';
 
   readonly panels: Panel[] = [
     {
@@ -88,6 +73,7 @@ export class ElementDrawerComponent implements OnInit {
   ];
 
   readonly nzBodyStyle = {
+    borderRadius: '8px',
     backgroundColor: 'var(--el-assets-extend-bg-color)'
   };
 
@@ -98,47 +84,70 @@ export class ElementDrawerComponent implements OnInit {
   };
 
   constructor(
+    private fb: FormBuilder,
+    private _http: HttpService,
+    private _i18n: I18nService,
     private _logger: LogService,
-    private fb: FormBuilder
-  ) {}
+    private _settingSrv: SettingService
+  ) {
+    this.rdpScreenOptions = [
+      { label: this._i18n.instant('Full screen'), value: 'full_screen' },
+      { label: this._i18n.instant('Multi Screen'), value: 'multi_screen' }
+    ];
+  }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    await this.getSettingOptions();
+
+    this.setting = this._settingSrv.setting;
+    this.getRdpClientConfig();
+
     this.validateForm = this.fb.group({
-      // 命令行配置
       cursorBlink: [true],
       leftClickCopy: [true],
       rightClickPaste: [true],
       backspaceAsCtrlH: [true],
       cursorStyle: ['line'],
       fontFamily: ['Monaco'],
-      fontSize: [14, [Validators.required, Validators.min(8), Validators.max(72)]],
-
-      // 图形化配置
-      rdpSmartSize: [false],
-      rdpResolution: ['自动'],
-      rdpColorQuality: ['32'],
-      connectionType: ['web'],
-      displayOptions: [['keyboard', 'fullscreen']],
-
-      // 资产树配置
-      treeAsync: [false]
+      fontSize: [14, [Validators.min(8), Validators.max(72)]]
     });
+  }
+
+  hasLicense() {
+    return this._settingSrv.globalSetting.XPACK_LICENSE_IS_VALID;
+  }
+
+  async getSettingOptions() {
+    const url = '/api/v1/users/preference/?category=luna';
+    try {
+      const res: any = await this._http.options(url).toPromise();
+
+      const graphics = res.actions.GET.graphics.children;
+
+      this.resolutionsOptions = graphics.rdp_resolution.choices;
+      this.rdpSmartSizeOptions = graphics.rdp_smart_size.choices;
+      this.colorQualityOptions = graphics.rdp_color_quality.choices;
+      this.keyboardLayoutOptions = graphics.keyboard_layout.choices;
+    } catch (error) {
+      this._logger.error('Failed to get setting options', error);
+    }
   }
 
   close() {
     this.visibleChange.emit(false);
   }
 
-  onSubmit(): void {
-    if (this.validateForm.valid) {
-      console.log('Form values:', this.validateForm.value);
-    } else {
-      Object.values(this.validateForm.controls).forEach(control => {
-        if (control.invalid) {
-          control.markAsDirty();
-          control.updateValueAndValidity({ onlySelf: true });
-        }
-      });
-    }
+  getRdpClientConfig() {
+    const rdpClientConfig = this.setting.graphics.rdp_client_option || [];
+
+    this.rdpScreenOptions.forEach(item => {
+      if (rdpClientConfig.includes(item.value)) {
+        this.currentRdpScreenOptions = item.value;
+      }
+    });
+
+    console.log('rdpClientConfig', this.rdpClientConfig);
   }
+
+  onRdpOptionsChange(selectedOptions: string[]) {}
 }
