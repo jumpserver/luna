@@ -1,18 +1,60 @@
-import { Theme } from './interface/index';
+import { lighten, darken } from "./util";
 
-export const mainTheme: Record<Theme.ThemeType, { [key: string]: string }> = {
-  default: {
-    '--el-main-bg-color': '#1E1C1C',
-    '--el-main-text-color': '#EFEFF0',
-    '--el-main-crucial-text-color': '#7494f3',
-    '--el-main-tab-item-disconnected-bg-color': '#5A5151',
-    '--el-editor-bg-color': '#313131',
-  },
-  darkBlue: {
-    '--el-main-bg-color': '#141618',
-    '--el-main-text-color': '#EFEFF0',
-    '--el-main-crucial-text-color': '#7494f3',
-    '--el-main-tab-item-disconnected-bg-color': '#555B60',
-    '--el-editor-bg-color': '#282c34'
-  }
+export const themeColors: any = {
+  default: "#483D3D",
+  darkBlue: "#303237",
+};
+
+// 简化后的主题对象
+export const mainTheme = () => {
+  return {
+    // 主区域背景
+    // 主区域背景
+    "--el-main-bg-color": darken(10),
+    // 主区域文本颜色
+    "--el-main-text-color": "#EFEFF0",
+    // 关键文本颜色
+    "--el-main-crucial-text-color": "#7494f3",
+    // 断开连接的标签项背景
+    "--el-main-tab-item-disconnected-bg-color": lighten(35),
+    // 编辑器背景
+    "--el-editor-bg-color": lighten(10),
+    // 头部导航背景
+    "--el-nav-bg-color": lighten(0),
+    // 头部导航字体颜色
+    "--el-header-text-color": "#EFEFF0",
+    // 头部 tab item 背景
+    "--el-header-tab-item-bg-color": darken(5),
+    // 头部 tab icon 颜色
+    "--el-menu-icon-color": "#ffffff",
+    // 头部 dropdown item 禁用文本颜色
+    "--el-header-dropdown-disable-text-color": "#c5babc",
+    // border 颜色
+    "--el-border-color-x": "#202020",
+    "--el-border-color-y": "#202020",
+    // icon hover 时的颜色
+    "--el-icon-hover-color": "#d6cbcb",
+    // 侧边栏组织模块背景
+    "--el-menu-org-bg-color": darken(3),
+    // 资产区域背景
+    "--el-assets-bg-color": darken(7),
+    // 折叠面板项
+    "--el-assets-fold-item-bg-color": darken(3),
+    // 折叠面板展开时的背景
+    "--el-assets-extend-bg-color": darken(5),
+    // icon 颜色
+    "--el-assets-icon-color": "#CCCCCC",
+    // 滚动条的滚动块背景
+    "--el-scroll-bar-thumb-bg-color": lighten(10),
+    // 滚动条轨道背景
+    "--el-scroll-bar-track-bg-color": lighten(5),
+    // 头部导航背景
+    "--el-dropdown-bg-color": "#000000",
+    // 头部导航字体颜色
+    "--el-dropdown-text-color": "#EFEFF0",
+    // 头部导航下拉菜单背景
+    "--el-dropdown-selected-bg-color": lighten(5),
+    // 头部导航下拉菜单 hover 背景
+    "--el-dropdown-hover-bg-color": darken(4),
+  };
 };
