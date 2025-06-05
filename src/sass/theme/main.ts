@@ -2,7 +2,8 @@ import { lighten, darken } from "./util";
 
 export const themeColors: any = {
   default: "#483D3D",
-  darkBlue: "#303237",
+  darkGary: "#303237",
+  deepBlue: "#1A212C",
 };
 
 // 简化后的主题对象

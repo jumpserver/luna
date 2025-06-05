@@ -158,9 +158,17 @@ export class ElementNavComponent implements OnInit {
             name: this._i18n.instant("Default"),
           },
           {
-            id: "DarkBlue",
+            id: "DarkGary",
             click: () => {
-              useTheme().switchTheme("darkBlue");
+              useTheme().switchTheme("darkGary");
+            },
+            // name: this._i18n.instant("DarkBlue"),
+            name: '深灰',
+          },
+          {
+            id: "DeepBlue",
+            click: () => {
+              useTheme().switchTheme("deepBlue");
             },
             name: this._i18n.instant("DarkBlue"),
           },
