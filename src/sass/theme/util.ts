@@ -1,51 +1,51 @@
+import { mainTheme, themeColors } from "./main";
+
 export namespace Theme {
   export type ThemeType = "default" | "darkBlue";
 }
 
-// 默认主题颜色
-const defaultThemeColor = "#000000";
+// 获取当前主题的主色
+function getCurrentThemeColor(): string {
+  const themeType = localStorage.getItem("themeType") || "default";
+  return themeColors[themeType] || themeColors.default;
+}
 
 // 颜色处理函数：增加亮度
-export function lighten(
-  amount: number,
-  color: string = defaultThemeColor
-): string {
-  const hsl = hexToHSL(color);
+export function lighten(amount: number, color?: string): string {
+  // 如果没有提供颜色，使用当前主题颜色
+  const actualColor = color || getCurrentThemeColor();
+  const hsl = hexToHSL(actualColor);
   return hslToHex(hsl.h, hsl.s, Math.min(100, hsl.l + amount));
 }
 
 // 颜色处理函数：降低亮度
-export function darken(
-  amount: number,
-  color: string = defaultThemeColor
-): string {
-  const hsl = hexToHSL(color);
+export function darken(amount: number, color?: string): string {
+  // 如果没有提供颜色，使用当前主题颜色
+  const actualColor = color || getCurrentThemeColor();
+  const hsl = hexToHSL(actualColor);
   return hslToHex(hsl.h, hsl.s, Math.max(0, hsl.l - amount));
 }
 
 // 颜色处理函数：增加饱和度
-export function saturate(
-  amount: number,
-  color: string = defaultThemeColor
-): string {
-  const hsl = hexToHSL(color);
+export function saturate(amount: number, color?: string): string {
+  // 如果没有提供颜色，使用当前主题颜色
+  const actualColor = color || getCurrentThemeColor();
+  const hsl = hexToHSL(actualColor);
   return hslToHex(hsl.h, Math.min(100, hsl.s + amount), hsl.l);
 }
 
 // 颜色处理函数：降低饱和度
-export function desaturate(
-  amount: number,
-  color: string = defaultThemeColor
-): string {
-  const hsl = hexToHSL(color);
+export function desaturate(amount: number, color?: string): string {
+  // 如果没有提供颜色，使用当前主题颜色
+  const actualColor = color || getCurrentThemeColor();
+  const hsl = hexToHSL(actualColor);
   return hslToHex(hsl.h, Math.max(0, hsl.s - amount), hsl.l);
 }
 
 // 颜色处理函数：调整透明度
-export function alpha(
-  alphaValue: number,
-  color: string = defaultThemeColor
-): string {
+export function alpha(alphaValue: number, color?: string): string {
+  // 如果没有提供颜色，使用当前主题颜色
+  const actualColor = color || getCurrentThemeColor();
   // 确保透明度值在0-1之间
   const alpha = Math.max(0, Math.min(1, alphaValue));
 
@@ -161,3 +161,42 @@ export function hslToHex(h: number, s: number, l: number): string {
 
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
+
+export const useTheme = () => {
+  // 获取主题类型
+  const getThemeType = () => localStorage.getItem("themeType") || "default";
+  const html = document.documentElement as HTMLElement;
+
+  // 通用设置主题的方法
+  const applyTheme = (theme: Record<string, string>) => {
+    Object.entries(theme).forEach(([key, value]) => {
+      html.style.setProperty(key, value);
+    });
+  };
+
+  // 切换主题方法
+  const switchTheme = (theme: string) => {
+    localStorage.setItem("themeType", theme);
+    if (theme === "darkBlue") {
+      html.setAttribute("class", "darkBlue");
+    } else {
+      html.setAttribute("class", "");
+    }
+
+    // 应用所有主题
+    initTheme();
+  };
+
+  // 初始化并设置所有主题
+  const setMainTheme = () => applyTheme(mainTheme());
+
+  const initTheme = () => {
+    setMainTheme();
+  };
+
+  return {
+    initTheme,
+    setMainTheme,
+    switchTheme,
+  };
+};

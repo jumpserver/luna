@@ -1,18 +1,18 @@
-import {Component, OnInit} from '@angular/core';
-import {HttpService, LogService, NavService, SettingService, ViewService} from '@app/services';
-import {DataStore} from '@app/globals';
-import {CookieService} from 'ngx-cookie-service';
-import {ElementSettingComponent} from '@app/elements/nav/setting/setting.component';
-import {Nav, View} from '@app/model';
-import {I18nService} from '@app/services/i18n';
-import {useTheme} from '@app/utils/useTheme';
-import {NzModalService} from 'ng-zorro-antd/modal';
+import { Component, OnInit } from "@angular/core";
+import { HttpService, LogService, NavService, SettingService, ViewService } from "@app/services";
+import { DataStore } from "@app/globals";
+import { CookieService } from "ngx-cookie-service";
+import { ElementSettingComponent } from "@app/elements/nav/setting/setting.component";
+import { Nav, View } from "@app/model";
+import { I18nService } from "@app/services/i18n";
+import { useTheme } from "@src/sass/theme/util";
+import { NzModalService } from "ng-zorro-antd/modal";
 
 @Component({
   standalone: false,
-  selector: 'elements-nav',
-  templateUrl: 'nav.component.html',
-  styleUrls: ['nav.component.scss'],
+  selector: "elements-nav",
+  templateUrl: "nav.component.html",
+  styleUrls: ["nav.component.scss"],
 })
 export class ElementNavComponent implements OnInit {
   DataStore = DataStore;
@@ -22,21 +22,21 @@ export class ElementNavComponent implements OnInit {
   HELP_DOCUMENT_URL: string;
   HELP_SUPPORT_URL: string;
 
-  constructor(private _http: HttpService,
-              private _logger: LogService,
-              private _dialog: NzModalService,
-              private _navSvc: NavService,
-              private _cookie: CookieService,
-              private _i18n: I18nService,
-              private _settingSvc: SettingService,
-              public _viewSrv: ViewService,
-  ) {
-  }
+  constructor(
+    private _http: HttpService,
+    private _logger: LogService,
+    private _dialog: NzModalService,
+    private _navSvc: NavService,
+    private _cookie: CookieService,
+    private _i18n: I18nService,
+    private _settingSvc: SettingService,
+    public _viewSrv: ViewService
+  ) {}
 
   get viewListSorted() {
     const viewList = [];
     this.viewIds.forEach((id, index) => {
-      viewList[index] = this.viewList.find(i => i.id === id);
+      viewList[index] = this.viewList.find((i) => i.id === id);
     });
     return viewList;
   }
@@ -50,27 +50,27 @@ export class ElementNavComponent implements OnInit {
   getNav() {
     return [
       {
-        id: 'FileManager',
-        name: 'File Manager',
+        id: "FileManager",
+        name: "File Manager",
         children: [
           {
-            id: 'Connect',
+            id: "Connect",
             click: () => {
-              window.open('/koko/elfinder/sftp/');
+              window.open("/koko/elfinder/sftp/");
             },
-            name: 'Connect'
+            name: "Connect",
           },
-        ]
+        ],
       },
       {
-        id: 'View',
-        name: 'View',
+        id: "View",
+        name: "View",
         children: [
           // 此处直接使用空串的话，在渲染时会被 nif 判断为 false 从而只有禁用效果而不展示文字内容
           {
-            id: 'FullScreen',
+            id: "FullScreen",
             click: () => {
-              const ele: any = document.getElementsByClassName('window active')[0];
+              const ele: any = document.getElementsByClassName("window active")[0];
               if (!ele) {
                 return;
               }
@@ -83,119 +83,117 @@ export class ElementNavComponent implements OnInit {
               } else if (ele.webkitRequestFullscreen) {
                 ele.webkitRequestFullScreen();
               } else {
-                throw new Error('不支持全屏api');
+                throw new Error("不支持全屏api");
               }
-              window.dispatchEvent(new Event('resize'));
+              window.dispatchEvent(new Event("resize"));
             },
-            name: 'Full Screen'
+            name: "Full Screen",
           },
-        ]
+        ],
       },
       {
-        id: 'Language',
-        name: 'Language',
+        id: "Language",
+        name: "Language",
         children: this.getLanguageOptions(),
       },
       {
-        id: 'Setting',
-        name: 'Setting',
+        id: "Setting",
+        name: "Setting",
         children: [
           {
-            id: 'General',
-            name: this._i18n.instant('General'),
+            id: "General",
+            name: this._i18n.instant("General"),
             click: () => {
               this._dialog.create({
-                nzTitle: this._i18n.instant('General'),
+                nzTitle: this._i18n.instant("General"),
                 nzContent: ElementSettingComponent,
-                nzWidth: '500px',
-                nzData: {type: 'general', name: 'General'},
-                nzOnOk: (cmp) => cmp.onSubmit()
+                nzWidth: "500px",
+                nzData: { type: "general", name: "General" },
+                nzOnOk: (cmp) => cmp.onSubmit(),
               });
-            }
-          },
-          {
-            id: 'GUI',
-            name: this._i18n.instant('GUI'),
-            click: () => {
-              this._dialog.create({
-                nzTitle: this._i18n.instant('GUI'),
-                nzContent: ElementSettingComponent,
-                nzWidth: '500px',
-                nzData: {type: 'gui', name: 'GUI'},
-                nzOnOk: (cmp) => cmp.onSubmit()
-              });
-            }
-          },
-          {
-            id: 'CLI',
-            name: this._i18n.instant('CLI'),
-            click: () => {
-              this._dialog.create({
-                nzTitle: this._i18n.instant('CLI'),
-                nzContent: ElementSettingComponent,
-                nzWidth: '500px',
-                nzData: {type: 'cli', name: 'CLI'},
-                nzOnOk: (cmp) => cmp.onSubmit()
-              });
-            }
-          }
-        ]
-      },
-      {
-        id: 'Tabs',
-        name: this._i18n.instant('Tabs'),
-        children: []
-      },
-      {
-        id: 'Theme',
-        name: this._i18n.instant('Theme'),
-        children: [
-          {
-            id: 'Default',
-            click: () => {
-              localStorage.setItem('themeType', 'default');
-              useTheme().switchTheme();
             },
-            name: this._i18n.instant('Default')
           },
           {
-            id: 'DarkBlue',
+            id: "GUI",
+            name: this._i18n.instant("GUI"),
             click: () => {
-              localStorage.setItem('themeType', 'darkBlue');
-              useTheme().switchTheme();
+              this._dialog.create({
+                nzTitle: this._i18n.instant("GUI"),
+                nzContent: ElementSettingComponent,
+                nzWidth: "500px",
+                nzData: { type: "gui", name: "GUI" },
+                nzOnOk: (cmp) => cmp.onSubmit(),
+              });
             },
-            name: this._i18n.instant('DarkBlue')
-          }
-        ]
+          },
+          {
+            id: "CLI",
+            name: this._i18n.instant("CLI"),
+            click: () => {
+              this._dialog.create({
+                nzTitle: this._i18n.instant("CLI"),
+                nzContent: ElementSettingComponent,
+                nzWidth: "500px",
+                nzData: { type: "cli", name: "CLI" },
+                nzOnOk: (cmp) => cmp.onSubmit(),
+              });
+            },
+          },
+        ],
       },
       {
-        id: 'Help',
-        name: 'Help',
+        id: "Tabs",
+        name: this._i18n.instant("Tabs"),
+        children: [],
+      },
+      {
+        id: "Theme",
+        name: this._i18n.instant("Theme"),
         children: [
           {
-            id: 'Document',
+            id: "Default",
+            click: () => {
+              useTheme().switchTheme("default");
+            },
+            name: this._i18n.instant("Default"),
+          },
+          {
+            id: "DarkBlue",
+            click: () => {
+              useTheme().switchTheme("darkBlue");
+            },
+            name: this._i18n.instant("DarkBlue"),
+          },
+        ],
+      },
+      {
+        id: "Help",
+        name: "Help",
+        children: [
+          {
+            id: "Document",
             click: () => {
               this.HELP_DOCUMENT_URL = this._settingSvc.globalSetting.HELP_DOCUMENT_URL;
               window.open(this.HELP_DOCUMENT_URL);
             },
-            name: 'Document'
+            name: "Document",
           },
           {
-            id: 'Support',
+            id: "Support",
             click: () => {
               this.HELP_SUPPORT_URL = this._settingSvc.globalSetting.HELP_SUPPORT_URL;
               window.open(this.HELP_SUPPORT_URL);
             },
-            name: 'Support'
+            name: "Support",
           },
           {
-            id: 'Download',
+            id: "Download",
             click: () => {
-              window.open('/core/download/', '_blank');
+              window.open("/core/download/", "_blank");
             },
-            name: 'Download',
-          }
-        ]
+            name: "Download",
+          },
+        ],
       },
     ];
   }
@@ -211,7 +209,7 @@ export class ElementNavComponent implements OnInit {
             this._i18n.use(langObj.code);
             window.location.reload();
           },
-          name: langObj.name
+          name: langObj.name,
         });
       }
     });
@@ -219,6 +217,6 @@ export class ElementNavComponent implements OnInit {
   }
 
   onJumpUi() {
-    window.open('/ui/', '_blank');
+    window.open("/ui/", "_blank");
   }
 }

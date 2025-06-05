@@ -16,42 +16,30 @@
 
 ## 使用方法
 
-### 获取主题颜色
-
-使用 `getThemeColor` 函数获取当前主题的主色：
-
-```typescript
-import { getThemeColor } from "./themes";
-
-// 获取当前主题的主色
-const themeColor = getThemeColor();
-```
-
 ### 颜色处理函数
 
-颜色处理函数接受两个参数：
+颜色处理函数可以接受一个或两个参数：
 
 ```typescript
-function lighten(amount: number, color: string): string;
-function darken(amount: number, color: string): string;
-function saturate(amount: number, color: string): string;
-function desaturate(amount: number, color: string): string;
-function alpha(amount: number, color: string): string;
+function lighten(amount: number, color?: string): string;
+function darken(amount: number, color?: string): string;
+function saturate(amount: number, color?: string): string;
+function desaturate(amount: number, color?: string): string;
+function alpha(amount: number, color?: string): string;
 ```
 
 - `amount`: 处理的程度，对于 lighten 和 darken，表示百分比（0-100）；对于 alpha，表示透明度（0-1）
-- `color`: 基础颜色
+- `color`: 基础颜色（可选）。如果不提供，函数会自动使用当前主题的主色
 
 ### 示例
 
 ```typescript
 import { lighten, darken } from "./interface/index";
-import { getThemeColor } from "./themes";
 
 // 主题对象
 export const mainTheme = {
   // 主区域背景
-  "--el-main-bg-color": getThemeColor(),
+  "--el-main-bg-color": darken(10), // 自动使用当前主题颜色
   // 主区域文本颜色
   "--el-main-text-color": "#EFEFF0",
   // 其他 CSS 变量...
@@ -97,8 +85,8 @@ const switchTheme = () => {
 
 2. **亮度调整**：
 
-   - 对于比主色更亮的区域，使用 `lighten` 函数，如 `lighten(20, getThemeColor())`
-   - 对于比主色更暗的区域，使用 `darken` 函数，如 `darken(10, getThemeColor())`
+   - 对于比主色更亮的区域，使用 `lighten` 函数，如 `lighten(20)`
+   - 对于比主色更暗的区域，使用 `darken` 函数，如 `darken(10)`
    - 调整 `amount` 参数可以控制亮度变化的程度
 
 3. **特殊颜色**：对于一些特殊的颜色，如文本颜色、强调色等，可以使用固定的颜色值，如 `#EFEFF0`、`#7494f3` 等。
@@ -110,6 +98,7 @@ const switchTheme = () => {
 - **易于扩展**：添加新主题只需添加一个新的颜色值，无需为每个区域单独配置颜色
 - **灵活性**：通过颜色处理函数，可以基于主色生成各种不同明暗度和透明度的颜色
 - **接近原始设计**：通过调整颜色处理函数的参数，可以使生成的颜色接近原始设计的颜色
+- **简化使用**：颜色处理函数现在可以自动获取当前主题颜色，无需手动传入
 
 ## 切换主题
 
