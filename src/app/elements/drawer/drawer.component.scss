@@ -6,10 +6,28 @@
 
     .ant-collapse {
       background-color: var(--el-drawer-collapse-bg-color);
+      border-radius: 8px !important;
+      overflow: hidden;
 
       .ant-collapse-item {
         background-color: var(--el-drawer-collapse-bg-color) !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+
+        &:first-child {
+          border-top-left-radius: 8px;
+          border-top-right-radius: 8px;
+        }
+
+        &:last-child {
+          border-bottom-left-radius: 8px;
+          border-bottom-right-radius: 8px;
+          border-bottom: none;
+        }
+
+        .ant-collapse-header,
+        .ant-collapse-content {
+          border-radius: inherit;
+        }
 
         .ant-collapse-header {
           font-size: 14px;
@@ -49,6 +67,8 @@
             }
 
             .ant-list .ant-list-item-meta-title {
+              font-size: 14px;
+              font-weight: 400;
               color: var(--el-drawer-text-color);
             }
 
@@ -85,24 +105,35 @@
               }
 
               .ant-segmented {
-                width: 100%;
+                border-radius: 8px;
                 background-color: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.15);
 
                 ::ng-deep .ant-segmented-item {
                   font-size: 12px;
                   color: var(--el-drawer-text-color);
                   border: none;
+                  transition:
+                    background-color 0.3s ease,
+                    color 0.3s ease;
 
                   &:hover {
+                    border-radius: 8px;
                     background-color: rgba(255, 255, 255, 0.08);
                   }
 
                   &.ant-segmented-item-selected {
-                    background-color: var(--el-drawer-text-color);
-                    color: var(--el-drawer-collapse-bg-color);
-                    font-weight: 500;
+                    border-radius: 8px;
+                    background-color: rgba(255, 255, 255, 0.15);
+                    color: #ffffff;
                   }
+                }
+
+                ::ng-deep .ant-segmented-thumb {
+                  display: none !important;
+                }
+
+                ::ng-deep .ant-segmented-item-input {
+                  display: none;
                 }
               }
 
@@ -189,30 +220,29 @@
                   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
                   background-color: var(--el-drawer-bg-color);
                 }
-                              }
               }
+            }
 
-              .ant-checkbox-group {
-                .ant-checkbox-wrapper {
-                  color: var(--el-drawer-text-color);
-                }
+            .ant-checkbox-group {
+              .ant-checkbox-wrapper {
+                color: var(--el-drawer-text-color);
               }
+            }
 
-              .ant-radio-group {
-                display: flex;
-                gap: 16px;
+            .ant-radio-group {
+              display: flex;
+              gap: 16px;
 
-                .ant-radio-wrapper {
-                  color: var(--el-drawer-text-color);
-                }
+              .ant-radio-wrapper {
+                color: var(--el-drawer-text-color);
               }
+            }
           }
         }
       }
     }
   }
 
-  // 表单相关样式
   .ant-form-item {
     margin-bottom: 16px;
 
@@ -227,5 +257,3 @@
     }
   }
 }
-
-

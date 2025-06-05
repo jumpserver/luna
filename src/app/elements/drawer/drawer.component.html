@@ -27,7 +27,7 @@
 
               <!-- 字体配置区域 -->
               <div class="config-section">
-                <nz-divider [nzDashed]="true" [nzText]="font" nzOrientation="left">
+                <nz-divider [nzDashed]="true" [nzText]="font" nzOrientation="center">
                   <ng-template #font>
                     <nz-icon nzType="font-size" nzTheme="outline"></nz-icon>
                     <span class="section-title">字体</span>
@@ -64,7 +64,7 @@
 
               <!-- 光标配置区域 -->
               <div class="config-section">
-                <nz-divider [nzDashed]="true" [nzText]="cursor" nzOrientation="left">
+                <nz-divider [nzDashed]="true" [nzText]="cursor" nzOrientation="center">
                   <ng-template #cursor>
                     <nz-icon nzType="edit" nzTheme="outline"></nz-icon>
                     <span class="section-title">光标</span>
@@ -93,7 +93,7 @@
 
               <!-- 偏好设置区域 -->
               <div class="config-section">
-                <nz-divider [nzDashed]="true" [nzText]="preference" nzOrientation="left">
+                <nz-divider [nzDashed]="true" [nzText]="preference" nzOrientation="center">
                   <ng-template #preference>
                     <nz-icon nzType="setting" nzTheme="outline"></nz-icon>
                     <span class="section-title">偏好</span>
@@ -124,7 +124,7 @@
 
               <!-- RDP 配置区域 -->
               <div class="config-section">
-                <nz-divider [nzDashed]="true" [nzText]="rdp" nzOrientation="left">
+                <nz-divider [nzDashed]="true" [nzText]="rdp" nzOrientation="center">
                   <ng-template #rdp>
                     <nz-icon nzType="desktop" nzTheme="outline"></nz-icon>
                     <span class="section-title">RDP 配置</span>
@@ -173,7 +173,7 @@
 
               <!-- 显示配置区域 -->
               <div class="config-section">
-                <nz-divider [nzDashed]="true" [nzText]="display" nzOrientation="left">
+                <nz-divider [nzDashed]="true" [nzText]="display" nzOrientation="center">
                   <ng-template #display>
                     <nz-icon nzType="monitor" nzTheme="outline"></nz-icon>
                     <span class="section-title">显示配置</span>
@@ -194,7 +194,7 @@
 
               <!-- 连接方式区域 -->
               <div class="config-section">
-                <nz-divider [nzDashed]="true" [nzText]="connection" nzOrientation="left">
+                <nz-divider [nzDashed]="true" [nzText]="connection" nzOrientation="center">
                   <ng-template #connection>
                     <nz-icon nzType="link" nzTheme="outline"></nz-icon>
                     <span class="section-title">连接方式</span>
@@ -215,6 +215,27 @@
 
             </form>
           }
+
+          @if (panel.type === 'tree') {
+            <form nz-form [nzLayout]="'vertical'" [formGroup]="validateForm" (ngSubmit)="onSubmit()">
+              <div class="config-section">
+                <nz-divider [nzDashed]="true" [nzText]="tree" nzOrientation="center">
+                  <ng-template #tree>
+                    <nz-icon nzType="cluster" nzTheme="outline"></nz-icon>
+                    <span class="section-title">资产树</span>
+                  </ng-template>
+                </nz-divider>
+
+                <nz-list nzSize="small" [nzSplit]="false" [nzBordered]="false">
+                  <nz-list-item>
+                    <nz-list-item-meta nzTitle="是否异步加载资产树"></nz-list-item-meta>
+                    <nz-switch formControlName="treeAsync"></nz-switch>
+                  </nz-list-item>
+                </nz-list>
+              </div>
+            </form>
+          }
+
         </nz-collapse-panel>
       }
     </nz-collapse>
