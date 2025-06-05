@@ -1,7 +1,7 @@
 <div *ngIf="this._settingSvc.hasXPack()" class="organization">
   <i class="fa fa-sitemap"></i>
   <nz-select
-    (ngModelChange)="changeOrg()"
+    (ngModelChange)="changeOrg($event)"
     [(ngModel)]="currentOrg"
     [nzSuffixIcon]="customIcon"
     nzDropdownClassName="dark-dropdown"
