@@ -61,7 +61,7 @@
         <ng-template [ngIf]="!item.disabled">
           <td (click)="item.callback()" class="view-menu__data">
             <span [ngClass]="item.icon" class="view-menu__icon fa"></span>
-            {{ item.title | translate }}
+            {{ item.title | translate }} {{ item.callback }}
           </td>
         </ng-template>
       </tr>

@@ -23,12 +23,12 @@
     display: flex;
     align-items: center;
     background-color: var(--el-nav-bg-color);
-    color: var(--el-dropdown-text-color);
+    color: var(--el-text-color-light);
     font-size: 13px;
 
     ::ng-deep {
       .ant-menu-submenu-title {
-        color: var(--el-dropdown-text-color);
+        color: var(--el-text-color-light);
         font-weight: 300;
         padding: 0 16px;
 
@@ -57,7 +57,7 @@
   .nav-right {
     display: flex;
     align-items: center;
-    color: var(--el-dropdown-text-color);
+    color: var(--el-text-color-light);
   }
 }
 

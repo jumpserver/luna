@@ -36,7 +36,7 @@
 
         .ant-collapse-header,
         .ant-collapse-content {
-          color: var(--el-drawer-text-color) !important;
+          color: var(--el-text-color-dark) !important;
 
           .config-section {
             margin-bottom: 6px;
@@ -53,13 +53,13 @@
                 padding: 0 12px;
 
                 .anticon {
-                  color: var(--el-drawer-text-color);
+                  color: var(--el-text-color-dark);
                   font-size: 14px;
                   opacity: 0.8;
                 }
 
                 .section-title {
-                  color: var(--el-drawer-text-color);
+                  color: var(--el-text-color-dark);
                   font-weight: 500;
                   font-size: 14px;
                 }
@@ -69,7 +69,7 @@
             .ant-list .ant-list-item-meta-title {
               font-size: 14px;
               font-weight: 400;
-              color: var(--el-drawer-text-color);
+              color: var(--el-text-color-dark);
             }
 
             .form-row {
@@ -90,7 +90,7 @@
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 
                 .ant-select-item {
-                  color: var(--el-drawer-text-color);
+                  color: var(--el-text-color-dark);
 
                   &:hover {
                     background-color: var(--el-drawer-bg-color);
@@ -98,7 +98,7 @@
 
                   &.ant-select-item-option-selected {
                     background-color: rgba(255, 255, 255, 0.1);
-                    color: var(--el-drawer-text-color);
+                    color: var(--el-text-color-dark);
                     font-weight: 500;
                   }
                 }
@@ -110,7 +110,7 @@
 
                 ::ng-deep .ant-segmented-item {
                   font-size: 12px;
-                  color: var(--el-drawer-text-color);
+                  color: var(--el-text-color-dark);
                   border: none;
                   transition:
                     background-color 0.3s ease,
@@ -142,7 +142,7 @@
                   background-color: var(--el-drawer-collapse-bg-color);
                   border: 1px solid rgba(255, 255, 255, 0.15);
                   border-radius: 6px;
-                  color: var(--el-drawer-text-color);
+                  color: var(--el-text-color-dark);
 
                   &:hover {
                     border-color: rgba(255, 255, 255, 0.25);
@@ -155,7 +155,7 @@
                 }
 
                 .ant-select-arrow {
-                  color: var(--el-drawer-text-color);
+                  color: var(--el-text-color-dark);
                 }
               }
 
@@ -163,7 +163,7 @@
                 background-color: var(--el-drawer-collapse-bg-color);
                 border: 1px solid rgba(255, 255, 255, 0.15);
                 border-radius: 6px;
-                color: var(--el-drawer-text-color);
+                color: var(--el-text-color-dark);
 
                 &::placeholder {
                   color: rgba(255, 255, 255, 0.5);
@@ -189,7 +189,7 @@
 
                 .ant-input-number-input {
                   background-color: transparent;
-                  color: var(--el-drawer-text-color);
+                  color: var(--el-text-color-dark);
 
                   &::placeholder {
                     color: rgba(255, 255, 255, 0.5);
@@ -202,7 +202,7 @@
 
                   .ant-input-number-handler {
                     border-color: rgba(255, 255, 255, 0.15);
-                    color: var(--el-drawer-text-color);
+                    color: var(--el-text-color-dark);
 
                     &:hover {
                       background-color: var(--el-drawer-bg-color);
@@ -225,7 +225,7 @@
 
             .ant-checkbox-group {
               .ant-checkbox-wrapper {
-                color: var(--el-drawer-text-color);
+                color: var(--el-text-color-dark);
               }
             }
 
@@ -234,7 +234,7 @@
               gap: 16px;
 
               .ant-radio-wrapper {
-                color: var(--el-drawer-text-color);
+                color: var(--el-text-color-dark);
               }
             }
           }
@@ -251,7 +251,7 @@
 
       > label {
         font-size: 13px;
-        color: var(--el-drawer-text-color);
+        color: var(--el-text-color-dark);
         font-weight: 500;
       }
     }
