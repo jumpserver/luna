@@ -193,6 +193,8 @@ export const useTheme = () => {
     localStorage.setItem("themeType", theme);
     if (theme === "darkBlue") {
       html.setAttribute("class", "darkBlue");
+    } else if (theme === "deepBlue") {
+      html.setAttribute("class", "deepBlue");
     } else {
       html.setAttribute("class", "");
     }
