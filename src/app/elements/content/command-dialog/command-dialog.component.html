@@ -1,20 +1,21 @@
-<div nz-dialog-title>
-  {{ 'Save command'| translate }}
-</div>
-
 <form nz-form>
   <nz-form-item>
     <nz-form-control>
+      <nz-form-label>
+        {{ 'Name'| translate }}
+      </nz-form-label>
       <nz-input-group>
-        <input nz-input [(ngModel)]="name" required [placeholder]="this._i18n.t('Name')" name="fontSize" max="60">
+        <input nz-input [(ngModel)]="name" required name="fontSize" max="60">
       </nz-input-group>
     </nz-form-control>
   </nz-form-item>
 
   <nz-form-item>
     <nz-form-control>
-      <nz-select [(ngModel)]="module" name="module" style="width: 100%;"
-                 nzPlaceHolder="{{'Module'| translate }}">
+      <nz-form-label>
+        {{ 'Module'| translate }}
+      </nz-form-label>
+      <nz-select [(ngModel)]="module" name="module" style="width: 100%;">
         <nz-option *ngFor="let type of commandModules" [nzValue]="type.value" [nzLabel]="type.label"></nz-option>
       </nz-select>
     </nz-form-control>

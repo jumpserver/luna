@@ -7,6 +7,10 @@
         <i nz-icon nzTheme="outline" nzType="read"></i>
         脚本库
       </button>
+      <button nz-button style="padding: 4px" nzType="link" (click)="onSaveCommand()">
+        <i nz-icon nzTheme="outline" nzType="save"></i>
+        {{ "Save command" | translate }}
+      </button>
       <nz-dropdown-menu #menu="nzDropdownMenu">
         <ul nz-menu class="title">
           <li nz-menu-item>{{ "SelectCommand" | translate }}</li>
@@ -23,6 +27,9 @@
       </nz-dropdown-menu>
       <nz-switch [(ngModel)]="sendCommandToAll" nzSize="small"></nz-switch>
       <span style="margin-left: 5px;">{{ "Send text to all ssh terminals" | translate }}</span>
+      <nz-tag [nzColor]="'orange'"
+              [nzBordered]="false">{{ 'ConnectSessionCount' | translate:{count: connectViewCount} }}
+      </nz-tag>
     </div>
     <div class="command-input">
       <code-editor [(ngModel)]="batchCommand"

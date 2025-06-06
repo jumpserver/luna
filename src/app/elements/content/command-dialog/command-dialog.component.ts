@@ -1,6 +1,6 @@
-import {Component, Input, OnInit} from '@angular/core';
+import {Component, Inject, Input, OnInit} from '@angular/core';
 import {HttpService, I18nService} from '@app/services';
-import {NzModalRef} from 'ng-zorro-antd/modal';
+import {NZ_MODAL_DATA, NzModalRef} from 'ng-zorro-antd/modal';
 import {NzNotificationService} from 'ng-zorro-antd/notification';
 
 @Component({
@@ -9,9 +9,9 @@ import {NzNotificationService} from 'ng-zorro-antd/notification';
   templateUrl: 'command-dialog.component.html',
 })
 export class ElementCommandDialogComponent implements OnInit {
-  @Input() data = {command: ''};
   public name = '';
   public module = 'shell';
+  public command = '';
   public commandModules = [
     {
       label: 'Shell',
@@ -23,7 +23,9 @@ export class ElementCommandDialogComponent implements OnInit {
               private _http: HttpService,
               public _i18n: I18nService,
               private _toastr: NzNotificationService,
+              @Inject(NZ_MODAL_DATA) public data: any,
   ) {
+    this.command = data.command || '';
   }
 
   ngOnInit() {
@@ -35,7 +37,7 @@ export class ElementCommandDialogComponent implements OnInit {
     }
     const data = {
       name: this.name,
-      args: this.data.command,
+      args: this.command,
       module: this.module,
     };
     this._http.addQuickCommand(data).subscribe(

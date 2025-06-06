@@ -10,6 +10,8 @@ export class ViewService {
   num = 0;
   viewIds: Array<string> = [];
   public currentView$ = new BehaviorSubject<Object>({});
+  private connectViewCount = new BehaviorSubject<number>(0);
+  connectViewCount$ = this.connectViewCount.asObservable();
 
   constructor(private faceService: FaceService) {
   }
@@ -120,5 +122,6 @@ export class ViewService {
 
   setCurrentView(view: Object = this.currentView) {
     this.currentView$.next(view);
+    this.connectViewCount.next(this.viewList.filter(view => view.connected === true).length);
   }
 }

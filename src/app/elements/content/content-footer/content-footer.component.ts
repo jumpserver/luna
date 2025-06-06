@@ -1,4 +1,4 @@
-import {Component, OnInit, HostListener} from '@angular/core';
+import {Component, OnInit, HostListener, OnDestroy} from '@angular/core';
 import {View} from '@app/model';
 import {HttpService, I18nService, LogService, SettingService, ViewService} from '@app/services';
 import {
@@ -7,6 +7,7 @@ import {
 import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
 import {NzModalService} from 'ng-zorro-antd/modal';
 import {languages} from '@codemirror/language-data';
+import {Subscription} from 'rxjs';
 
 @Component({
   standalone: false,
@@ -14,7 +15,7 @@ import {languages} from '@codemirror/language-data';
   templateUrl: 'content-footer.component.html',
   styleUrls: ['content-footer.component.scss'],
 })
-export class ElementContentFooterComponent implements OnInit {
+export class ElementContentFooterComponent implements OnInit, OnDestroy {
   viewList: Array<View> = [];
   isShowInputCommand = true;
   batchCommand: string = '';
@@ -30,6 +31,8 @@ export class ElementContentFooterComponent implements OnInit {
     setup: 'minimal',
     autoFocus: true
   };
+  connectViewCount = 0;
+  private viewListSub: Subscription;
 
   constructor(public viewSrv: ViewService,
               public settingSvc: SettingService,
@@ -42,6 +45,9 @@ export class ElementContentFooterComponent implements OnInit {
 
   async ngOnInit() {
     this.viewList = this.viewSrv.viewList;
+    this.viewListSub = this.viewSrv.connectViewCount$.subscribe(count => {
+      this.connectViewCount = count;
+    });
     this.batchCommand = '';
     await this.quickCommandsFilter();
   }
@@ -100,6 +106,23 @@ export class ElementContentFooterComponent implements OnInit {
 
   }
 
+  onSaveCommand() {
+    if (!this.batchCommand) {
+      return;
+    }
+
+    this._dialog.create(
+      {
+        nzTitle: this._i18n.instant('Save command'),
+        nzContent: ElementCommandDialogComponent,
+        nzData: {
+          command: this.batchCommand
+        },
+        nzFooter: null,
+      }
+    );
+  }
+
   async quickCommandsFilter() {
     let list = await this._http.getQuickCommand();
     list = list.filter(i => i.module.value === 'shell');
@@ -127,6 +150,10 @@ export class ElementContentFooterComponent implements OnInit {
     if (container) {
       container.scrollBy(container.offsetWidth, 0);
     }
+  }
+
+  async ngOnDestroy() {
+    this.viewListSub?.unsubscribe();
   }
 
   @HostListener('document:keydown', ['$event'])
