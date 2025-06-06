@@ -26,32 +26,31 @@ export const themeColors: any = themes.reduce((acc, theme) => {
 // 简化后的主题对象
 export const mainTheme = () => {
   return {
-    // "--el-text-color-dark": "#000000d9",
+    // 全局
     "--el-text-color-dark": "#000000d9",
     "--el-text-color-light": "#EFEFF0",
     // 滚动条的滚动块背景
     "--el-scroll-bar-thumb-bg-color": lighten(10),
     // 滚动条轨道背景
     "--el-scroll-bar-track-bg-color": darken(10),
-
-    // 主区域背景
-    "--el-main-bg-color": darken(13),
-    // 关键文本颜色
-    "--el-main-crucial-text-color": "#7494f3",
-    // 断开连接的标签项背景
-    "--el-tab-deactive-bg-color": lighten(10),
-    // 编辑器背景
-    "--el-editor-bg-color": darken(2),
-    // 头部导航背景
-    "--el-nav-bg-color": lighten(0),
-    // 头部 tab item 背景
-    "--el-tab-bg-color": darken(5),
     // 头部 tab icon 颜色
     "--el-icon-color": "#ffffff",
     // icon hover 时的颜色
     "--el-icon-hover-color": "#d6cbcb",
     "--el-border-color-x": "#202020",
     "--el-border-color-y": "#202020",
+
+    // 头部导航背景
+    "--el-nav-bg-color": lighten(0),
+
+    // 主content区域背景
+    "--el-main-bg-color": darken(13),
+    // 断开连接的标签项背景
+    "--el-tab-deactive-bg-color": lighten(10),
+    // 编辑器背景
+    "--el-editor-bg-color": darken(2),
+    // 头部 tab item 背景
+    "--el-tab-bg-color": darken(5),
 
     // 侧边栏
     // 侧边栏组织模块背景
@@ -63,7 +62,7 @@ export const mainTheme = () => {
     // icon 颜色
     "--el-banner-icon-color": "#CCCCCC",
 
-    // 头部导航背景
+    // 下拉菜单或select
     "--el-dropdown-bg-color": "#000000",
     // 头部导航下拉菜单背景
     "--el-dropdown-selected-bg-color": lighten(5),
