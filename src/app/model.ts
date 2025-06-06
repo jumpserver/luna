@@ -403,14 +403,6 @@ export class ConnectOption {
   options?: any[];
 }
 
-export class AdminConnectData {
-  asset: Asset;
-  account: Account;
-  protocol: Protocol;
-  input_username: string;
-  method: string;
-}
-
 export class ConnectData {
   asset: Asset;
   account: Account;
@@ -421,6 +413,11 @@ export class ConnectData {
   downloadRDP: boolean;
   autoLogin: boolean;
   direct?: boolean;
+}
+
+export class AdminConnectData extends ConnectData {
+  input_username?: string;
+  method?: string;
 }
 
 class FromTicket {

@@ -3,8 +3,6 @@ import { Setting, View } from '@app/model';
 import { Component, OnInit, input, output, Input } from '@angular/core';
 import { LogService, SettingService, HttpService, I18nService } from '@app/services';
 
-import type { NzTabComponent } from 'ng-zorro-antd/tabs';
-
 interface terminalThemeMap {
   label: string;
   value: string;
@@ -42,7 +40,7 @@ export class ElementDrawerComponent implements OnInit {
         last: 'me'
       }
     }
-  ]
+  ];
 
   constructor(
     private _http: HttpService,
@@ -72,15 +70,29 @@ export class ElementDrawerComponent implements OnInit {
     ];
   }
 
-  onTabChange(index: number) {
+  async getSFTPToken() {
+    // TODO ACL
+    return new Promise((resolve, reject) => {
+      this._http
+        .adminConnectToken(this.view.asset, this.view.connectData, false, false, '')
+        .subscribe(resp => {
+          const token = resp ? resp.id : '';
+          console.log(token);
+
+          resolve(token);
+        });
+    });
+  }
+
+  async onTabChange(index: number) {
     try {
       const { smartEndpoint, iframeElement } = this.view;
 
       if (index === 1 && iframeElement) {
         const url = smartEndpoint.getUrl();
+        const token = await this.getSFTPToken();
 
-        // TODO 拿到 sftp 的 token
-        this.iframeURL = `${url}/koko/sftp?token=${this.view.connectToken.id}`;
+        this.iframeURL = `${url}/koko/sftp?token=${token}`;
         console.log('iframe URL:', this.iframeURL);
       }
     } catch (e) {
