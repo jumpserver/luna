@@ -15,7 +15,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--el-assets-bg-color);
+  background-color: var(--el-asset-tree-bg-color);
 
   .tree-type {
     transition: all 0.3s;
@@ -29,9 +29,9 @@
       padding-left: 15px;
       overflow: hidden;
       text-overflow: ellipsis;
-      color: var(--el-main-text-color);
+      color: var(--el-text-color-light);
       border-bottom: 1px solid var(--el-border-color-x);
-      background-color: var(--el-assets-fold-item-bg-color);
+      background-color: var(--el-banner-bg-color);
 
       .tree-banner-left {
         cursor: pointer;
@@ -45,7 +45,7 @@
           padding-top: 3px;
           padding-right: 3px;
           font-size: 16px;
-          color: var(--el-main-text-color);
+          color: var(--el-text-color-light);
         }
 
         .tree-type-banner-label {
@@ -87,7 +87,7 @@
           height: 100%;
           padding: 0 5px;
           cursor: pointer;
-          color: var(--el-assets-icon-color);
+          color: var(--el-banner-icon-color);
 
           &:hover {
             cursor: pointer;
@@ -106,11 +106,11 @@
             opacity: 0;
             width: 0;
             line-height: 20px;
-            background-color: var(--el-assets-bg-color);
+            background-color: var(--el-asset-tree-bg-color);
             border: none;
             outline: none;
             border-radius: 10px;
-            color: var(--el-main-text-color);
+            color: var(--el-text-color-light);
             transition: all 0.4s ease-in-out;
           }
 
@@ -145,7 +145,7 @@
       min-height: 40px;
       overflow-x: auto;
       height: calc(100% - 31px);
-      background-color: var(--el-assets-extend-bg-color);
+      background-color: var(--el-asset-tree-bg-color);
 
       .tree-type-loading {
         position: absolute;
@@ -160,7 +160,7 @@
 
       .ztree {
         height: 100%;
-        background-color: var(--el-assets-extend-bg-color);
+        background-color: var(--el-asset-tree-bg-color);
       }
     }
 

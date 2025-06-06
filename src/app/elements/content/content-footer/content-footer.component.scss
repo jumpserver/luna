@@ -1,6 +1,6 @@
 .content-footer {
   // border-top: solid 1px var(--el-border-color-y);
-  background: var(--el-assets-extend-bg-color);
+  background: var(--el-asset-tree-bg-color);
   color: #ffffff;
   font-size: 12px;
   // border-left: 1px solid var(--el-border-color-y);
@@ -53,7 +53,7 @@
 
   .footer-bar {
     height: 30px;
-    background: var(--el-header-tab-item-bg-color);
+    background: var(--el-tab-bg-color);
 
     .footer-bar__left {
       margin-left: 5px;

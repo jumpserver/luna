@@ -44,7 +44,7 @@ export const mainTheme = {
   // 带透明度的元素
   "--el-overlay-bg-color": darken(5, undefined, 0.8), // 80% 不透明度
   // 主区域文本颜色
-  "--el-main-text-color": "#EFEFF0",
+  "--el-text-color-light": "#EFEFF0",
   // 其他 CSS 变量...
 };
 ```

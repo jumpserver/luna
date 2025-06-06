@@ -22,7 +22,7 @@
 // dropdown 下 li 的 a 标签通用样式
 @mixin GeneralDropdownLia {
   width: 100%;
-  color: var(--el-main-text-color);
+  color: var(--el-text-color-light);
 
   &:hover {
     cursor: pointer;

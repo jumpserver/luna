@@ -74,7 +74,7 @@ export class ElementDrawerComponent implements OnInit {
 
   readonly nzBodyStyle = {
     borderRadius: '8px',
-    backgroundColor: 'var(--el-assets-extend-bg-color)'
+    backgroundColor: 'var(--el-asset-tree-bg-color)'
   };
 
   readonly customStyle = {
