@@ -35,7 +35,7 @@ export const mainTheme = () => {
     "--el-scroll-bar-track-bg-color": darken(10),
 
     // 主区域背景
-    "--el-main-bg-color": darken(10),
+    "--el-main-bg-color": darken(13),
     // 关键文本颜色
     "--el-main-crucial-text-color": "#7494f3",
     // 断开连接的标签项背景
@@ -55,9 +55,9 @@ export const mainTheme = () => {
 
     // 侧边栏
     // 侧边栏组织模块背景
-    "--el-org-bg-color": darken(4),
+    "--el-org-bg-color": darken(5),
     // 资产区域背景
-    "--el-asset-tree-bg-color": darken(6),
+    "--el-asset-tree-bg-color": darken(7),
     // 折叠面板项
     "--el-banner-bg-color": darken(3),
     // icon 颜色
