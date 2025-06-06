@@ -4,29 +4,23 @@
   [nzClosable]="false"
   [nzVisible]="visible()"
   (nzOnClose)="close()"
-  class="custom-drawer-wrapper"
+  nzWrapClassName="elements-drawer-wrapper"
 >
   <ng-container *nzDrawerContent>
-    <nz-collapse [nzBordered]="true" nzExpandIconPosition="end">
-      @for (panel of panels; track panel) {
-        <nz-collapse-panel
-          #p
-          [nzHeader]="panel.name"
-          [nzActive]="panel.active"
-          [style]="customStyle"
-        >
-          <ng-template #expandedIcon let-active>
+    <!-- <nz-collapse [nzBordered]="true" nzExpandIconPosition="end"> -->
+    <!-- @for (panel of panels; track panel) { -->
+    <!-- <nz-collapse-panel #p [nzHeader]="panel.name" [nzActive]="panel.active"> -->
+    <!-- <ng-template #expandedIcon let-active>
             {{ active }}
             <nz-icon
               nzType="caret-right"
               class="ant-collapse-arrow"
               [nzRotate]="p.nzActive ? 90 : -90"
             />
-          </ng-template>
+          </ng-template> -->
 
-          @if (panel.type === 'command') {
+    <!-- @if (panel.type === 'command') {
             <form nz-form [nzLayout]="'vertical'">
-              <!-- 字体配置区域 -->
               <div class="config-section">
                 <nz-divider [nzDashed]="true" [nzText]="font" nzOrientation="center">
                   <ng-template #font>
@@ -48,15 +42,19 @@
                   </nz-form-item>
 
                   <nz-form-item class="form-item-small">
-                    <nz-form-label>字体大小</nz-form-label>
+                    <nz-form-label>{{ 'CLI font size' | translate }}</nz-form-label>
                     <nz-form-control>
-                      <nz-input-number nzMin="8" nzMax="72" nzPlaceHolder="14" />
+                      <nz-input-number
+                        nzMin="5"
+                        nzMax="60"
+                        [ngModelOptions]="{ standalone: true }"
+                        [(ngModel)]="setting.command_line.character_terminal_font_size"
+                      />
                     </nz-form-control>
                   </nz-form-item>
                 </div>
               </div>
 
-              <!-- 光标配置区域 -->
               <div class="config-section">
                 <nz-divider [nzDashed]="true" [nzText]="cursor" nzOrientation="center">
                   <ng-template #cursor>
@@ -82,6 +80,7 @@
                     <nz-form-label>光标闪烁</nz-form-label>
                     <nz-form-control>
                       <nz-switch
+                        nzSize="small"
                         name="cursor_blink"
                         [ngModel]="true"
                         [ngModelOptions]="{ standalone: true }"
@@ -91,7 +90,6 @@
                 </div>
               </div>
 
-              <!-- 偏好设置区域 -->
               <div class="config-section">
                 <nz-divider [nzDashed]="true" [nzText]="preference" nzOrientation="center">
                   <ng-template #preference>
@@ -102,25 +100,36 @@
 
                 <nz-list nzSize="small" [nzSplit]="false" [nzBordered]="false">
                   <nz-list-item>
-                    <nz-list-item-meta nzTitle="右键快速粘贴"></nz-list-item-meta>
-                    <nz-switch nzSize="small"></nz-switch>
+                    <nz-list-item-meta
+                      [nzTitle]="'Right mouse quick paste' | translate"
+                    ></nz-list-item-meta>
+                    <nz-switch
+                      nzSize="small"
+                      [ngModelOptions]="{ standalone: true }"
+                      [(ngModel)]="setting.command_line.is_right_click_quickly_paste"
+                    ></nz-switch>
                   </nz-list-item>
                   <nz-list-item>
                     <nz-list-item-meta nzTitle="左键选中复制"></nz-list-item-meta>
                     <nz-switch nzSize="small"></nz-switch>
                   </nz-list-item>
                   <nz-list-item>
-                    <nz-list-item-meta nzTitle="字符终端Backspace As Ctrl+H"></nz-list-item-meta>
-                    <nz-switch nzSize="small"></nz-switch>
+                    <nz-list-item-meta
+                      [nzTitle]="'Backspace as Ctrl+H' | translate"
+                    ></nz-list-item-meta>
+                    <nz-switch
+                      nzSize="small"
+                      [ngModelOptions]="{ standalone: true }"
+                      [(ngModel)]="setting.command_line.is_left_click_copy"
+                    ></nz-switch>
                   </nz-list-item>
                 </nz-list>
               </div>
             </form>
-          }
+          } -->
 
-          @if (panel.type === 'graphic') {
+    <!-- @if (panel.type === 'graphic') {
             <form nz-form [nzLayout]="'vertical'">
-              <!-- RDP 配置区域 -->
               <div class="config-section">
                 <nz-divider [nzDashed]="true" [nzText]="rdp" nzOrientation="center">
                   <ng-template #rdp>
@@ -199,7 +208,6 @@
               </div>
 
               @if (hasLicense()) {
-                <!-- 显示配置区域 -->
                 <div class="config-section">
                   <nz-divider [nzDashed]="true" [nzText]="display" nzOrientation="center">
                     <ng-template #display>
@@ -226,7 +234,7 @@
                       <nz-form-control>
                         <nz-switch
                           nzSize="small"
-                          [ngModel]="true"
+                          [ngModel]="isDriverRedirect"
                           [ngModelOptions]="{ standalone: true }"
                         ></nz-switch>
                       </nz-form-control>
@@ -234,7 +242,6 @@
                   </div>
                 </div>
 
-                <!-- 连接方式区域 -->
                 <div class="config-section">
                   <nz-divider [nzDashed]="true" [nzText]="connection" nzOrientation="center">
                     <ng-template #connection>
@@ -258,9 +265,9 @@
                 </div>
               }
             </form>
-          }
+          } -->
 
-          @if (panel.type === 'tree') {
+    <!-- @if (panel.type === 'tree') {
             <form nz-form [nzLayout]="'vertical'">
               <div class="config-section">
                 <nz-divider [nzDashed]="true" [nzText]="tree" nzOrientation="center">
@@ -284,9 +291,75 @@
                 </nz-list>
               </div>
             </form>
+          } -->
+    <!-- </nz-collapse-panel> -->
+    <!-- } -->
+    <!-- </nz-collapse> -->
+
+    <nz-tabset (nzSelectChange)="onTabChange($event)">
+      <nz-tab nzTitle="设置">
+        <form nz-form nzLayout="vertical" class="setting-form">
+          <nz-form-item>
+            <nz-form-label>主题</nz-form-label>
+            <nz-form-control>
+              <nz-select
+                [ngModelOptions]="{ standalone: true }"
+                [(ngModel)]="setting.command_line.terminal_theme_name"
+                nzDropdownClassName="elements-drawer-dropdown"
+              >
+                @for (theme of terminalThemeMap; track theme.value) {
+                  <nz-option [nzValue]="theme.value" [nzLabel]="theme.label"></nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </form>
+      </nz-tab>
+      <nz-tab nzTitle="文件管理">
+        <iframe
+          [src]="iframeURL | safeUrl"
+          frameborder="0"
+          style="width: 100%; height: 100%"
+        ></iframe>
+      </nz-tab>
+      <nz-tab nzTitle="会话分享">
+        <nz-divider nzDashed [nzText]="text" nzOrientation="left">
+          <ng-template #text>
+            <nz-icon nzType="user" nzTheme="outline" />
+            会话分享用户列表
+          </ng-template>
+        </nz-divider>
+
+        <nz-list class="demo-loadmore-list" nzSize="small" [nzLoading]="initLoading">
+          @for (item of list; track item) {
+            <nz-list-item>
+              @if (item.loading) {
+                <nz-skeleton
+                  [nzAvatar]="true"
+                  [nzActive]="true"
+                  [nzTitle]="false"
+                  [nzLoading]="true"
+                />
+              } @else {
+                <ng-container>
+                  <nz-list-item-meta
+                    nzAvatar="https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png"
+                    nzDescription="Ant Design"
+                  >
+                    <nz-list-item-meta-title>
+                      {{ item.name.last }}
+                    </nz-list-item-meta-title>
+                  </nz-list-item-meta>
+
+                  <ul nz-list-item-actions>
+                    <nz-list-item-action>remove</nz-list-item-action>
+                  </ul>
+                </ng-container>
+              }
+            </nz-list-item>
           }
-        </nz-collapse-panel>
-      }
-    </nz-collapse>
+        </nz-list>
+      </nz-tab>
+    </nz-tabset>
   </ng-container>
 </nz-drawer>

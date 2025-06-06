@@ -55,6 +55,7 @@
     "requirejs": "^2.3.6",
     "rxjs": "^7.8.1",
     "tslib": "^2.6.2",
+    "xterm-theme": "^1.1.0",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
