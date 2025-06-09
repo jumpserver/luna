@@ -15,7 +15,7 @@
             <nz-form-control>
               <nz-select
                 [ngModelOptions]="{ standalone: true }"
-                [(ngModel)]="setting.command_line.terminal_theme_name"
+                [(ngModel)]="currentTheme"
                 (ngModelChange)="onThemeChange($event)"
                 nzDropdownClassName="elements-drawer-dropdown"
               >
@@ -74,7 +74,7 @@
 
                     <ul nz-list-item-actions>
                       <nz-list-item-action>
-                        <nz-icon nzType="delete" nzTheme="outline" />
+                        <nz-icon nzType="delete" nzTheme="outline" (click)="onDeleteShareUser(item)" />
                       </nz-list-item-action>
                     </ul>
                   </ng-container>

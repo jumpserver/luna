@@ -114,6 +114,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
         case 'CREATE_FILE_CONNECT_TOKEN':
           this.createFileConnectToken.emit(true);
           break;
+        case 'SHARE_USER_ADD':
+          this.iframeCommunicationService.sendMessage({name: 'SHARE_USER_ADD', data: msg.data});
+          break;
         case 'SHARE_CODE_RESPONSE':
           this.iframeCommunicationService.sendMessage({name: 'SHARE_CODE_RESPONSE', data: msg.data});
           break

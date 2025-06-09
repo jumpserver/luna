@@ -459,4 +459,14 @@ export class HttpService {
     const url = `/api/v1/users/users/?search=${keyword}`;
     return this.get<Array<_User>>(url);
   }
+
+  getTerminalPreference() {
+    const url = '/api/v1/users/preference/?category=koko'
+    return this.get(url);
+  }
+
+  setTerminalPreference(data) {
+    const url = '/api/v1/users/preference/?category=koko'
+    return this.patch(url, data);
+  }
 }

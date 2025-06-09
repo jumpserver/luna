@@ -7,6 +7,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { IframeCommunicationService } from '@app/services';
 import { Component, OnInit, input, output, Input, effect, signal } from '@angular/core';
 import { LogService, SettingService, HttpService, I18nService } from '@app/services';
+import { data } from 'jquery';
 
 interface terminalThemeMap {
   label: string;
@@ -46,6 +47,7 @@ export class ElementDrawerComponent implements OnInit {
   hasConnected = signal(false);
   shareLink = '';
   shareCode = '';
+  currentTheme = '';
   currentRdpScreenOptions = '';
   avatarUrl = '/static/img/avatar/admin.png';
   onLineUsers = [];
@@ -137,6 +139,12 @@ export class ElementDrawerComponent implements OnInit {
       { label: 'Default', value: 'Default' },
       ...Object.keys(xtermTheme).map(item => ({ label: item, value: item }))
     ];
+    this._http.getTerminalPreference().subscribe(res => {
+      console.log(res);
+      if (res) {
+        this.currentTheme = res.basic.terminal_theme_name;
+      }
+    });
   }
 
   subscriptonIframaMessage() {
@@ -148,11 +156,11 @@ export class ElementDrawerComponent implements OnInit {
 
         switch (this.view.connectMethod.component) {
           case 'koko':
-            this.shareLink = `${this.view.smartEndpoint.getUrl()}/luna/koko/share/${messageData.share_id}`;
+            this.shareLink = `${this.view.smartEndpoint.getUrl()}/luna/share/${messageData.share_id}`;
             console.log(this.shareLink);
             break;
           case 'lion':
-            this.shareLink = `${this.view.smartEndpoint.getUrl()}/luna/lion/share/${messageData.share_id}`;
+            this.shareLink = `${this.view.smartEndpoint.getUrl()}/luna/share/${messageData.share_id}?type=lion`;
             break;
           default:
             break;
@@ -160,6 +168,11 @@ export class ElementDrawerComponent implements OnInit {
 
         this.showCreateShareLinkForm = false;
         this.showLinkResult = true;
+      }
+
+      if (message.name === 'SHARE_USER_ADD') {
+        const messageData = JSON.parse(message.data);
+        console.log(messageData);
       }
     });
   }
@@ -199,6 +212,9 @@ export class ElementDrawerComponent implements OnInit {
 
   onThemeChange(theme: string) {
     this._iframeCommunicationService.sendMessage({ name: 'TERMINAL_THEME_CHANGE', theme });
+    this._http.setTerminalPreference({ basic: { terminal_theme_name: theme } }).subscribe(res => {
+      this._message.success(this._i18n.instant('主题同步成功'));
+    });
   }
 
   initShareLinkForm() {
@@ -244,6 +260,14 @@ export class ElementDrawerComponent implements OnInit {
       expired_time: this.shareLinkRequest.expired_time,
       action_permission: this.shareLinkRequest.action_permission,
       users: this.shareLinkRequest.users
+    });
+  }
+
+  onDeleteShareUser(item: ShareUserOptions) {
+    console.log(item);
+    this._iframeCommunicationService.sendMessage({
+      name: 'SHARE_USER_REMOVE',
+      data: {}
     });
   }
 
