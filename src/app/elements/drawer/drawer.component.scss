@@ -276,8 +276,16 @@
 
         }
 
+        .share-button {
+          border-radius: 8px;
+        }
+
+        .ant-empty {
+          color: var(--el-text-color-light);
+        }
+
         .ant-divider {
-          margin: 0 0 12px 0;
+          margin: 12px 0;
           border-top-color: var(--el-divider-border-color);
 
           ::ng-deep .ant-divider-inner-text {
@@ -332,6 +340,17 @@
         color: var(--el-text-color-light);
         font-weight: 500;
       }
+    }
+  }
+}
+
+::ng-deep .create-share-link-modal {
+  .ant-modal-content {
+    border-radius: 8px;
+    overflow: hidden;
+
+    .ant-modal-header {
+      border-radius: 8px 8px 0 0;
     }
   }
 }

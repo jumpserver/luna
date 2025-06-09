@@ -7,295 +7,6 @@
   nzWrapClassName="elements-drawer-wrapper"
 >
   <ng-container *nzDrawerContent>
-    <!-- <nz-collapse [nzBordered]="true" nzExpandIconPosition="end"> -->
-    <!-- @for (panel of panels; track panel) { -->
-    <!-- <nz-collapse-panel #p [nzHeader]="panel.name" [nzActive]="panel.active"> -->
-    <!-- <ng-template #expandedIcon let-active>
-            {{ active }}
-            <nz-icon
-              nzType="caret-right"
-              class="ant-collapse-arrow"
-              [nzRotate]="p.nzActive ? 90 : -90"
-            />
-          </ng-template> -->
-
-    <!-- @if (panel.type === 'command') {
-            <form nz-form [nzLayout]="'vertical'">
-              <div class="config-section">
-                <nz-divider [nzDashed]="true" [nzText]="font" nzOrientation="center">
-                  <ng-template #font>
-                    <nz-icon nzType="font-size" nzTheme="outline"></nz-icon>
-                    <span class="section-title">字体</span>
-                  </ng-template>
-                </nz-divider>
-
-                <div class="form-row">
-                  <nz-form-item class="form-item-large">
-                    <nz-form-label>字体系列</nz-form-label>
-                    <nz-form-control>
-                      <nz-select nzPlaceHolder="选择字体">
-                        @for (font of fontFamilies; track font.value) {
-                          <nz-option [nzValue]="font.value" [nzLabel]="font.label"></nz-option>
-                        }
-                      </nz-select>
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <nz-form-item class="form-item-small">
-                    <nz-form-label>{{ 'CLI font size' | translate }}</nz-form-label>
-                    <nz-form-control>
-                      <nz-input-number
-                        nzMin="5"
-                        nzMax="60"
-                        [ngModelOptions]="{ standalone: true }"
-                        [(ngModel)]="setting.command_line.character_terminal_font_size"
-                      />
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <div class="config-section">
-                <nz-divider [nzDashed]="true" [nzText]="cursor" nzOrientation="center">
-                  <ng-template #cursor>
-                    <nz-icon nzType="edit" nzTheme="outline"></nz-icon>
-                    <span class="section-title">光标</span>
-                  </ng-template>
-                </nz-divider>
-
-                <div class="form-row">
-                  <nz-form-item class="form-item-large">
-                    <nz-form-label>光标样式</nz-form-label>
-                    <nz-form-control>
-                      <nz-segmented
-                        name="cursor_style"
-                        [ngModel]="'line'"
-                        [nzOptions]="cursorStyles"
-                        [ngModelOptions]="{ standalone: true }"
-                      ></nz-segmented>
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <nz-form-item class="form-item-small">
-                    <nz-form-label>光标闪烁</nz-form-label>
-                    <nz-form-control>
-                      <nz-switch
-                        nzSize="small"
-                        name="cursor_blink"
-                        [ngModel]="true"
-                        [ngModelOptions]="{ standalone: true }"
-                      ></nz-switch>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <div class="config-section">
-                <nz-divider [nzDashed]="true" [nzText]="preference" nzOrientation="center">
-                  <ng-template #preference>
-                    <nz-icon nzType="setting" nzTheme="outline"></nz-icon>
-                    <span class="section-title">偏好</span>
-                  </ng-template>
-                </nz-divider>
-
-                <nz-list nzSize="small" [nzSplit]="false" [nzBordered]="false">
-                  <nz-list-item>
-                    <nz-list-item-meta
-                      [nzTitle]="'Right mouse quick paste' | translate"
-                    ></nz-list-item-meta>
-                    <nz-switch
-                      nzSize="small"
-                      [ngModelOptions]="{ standalone: true }"
-                      [(ngModel)]="setting.command_line.is_right_click_quickly_paste"
-                    ></nz-switch>
-                  </nz-list-item>
-                  <nz-list-item>
-                    <nz-list-item-meta nzTitle="左键选中复制"></nz-list-item-meta>
-                    <nz-switch nzSize="small"></nz-switch>
-                  </nz-list-item>
-                  <nz-list-item>
-                    <nz-list-item-meta
-                      [nzTitle]="'Backspace as Ctrl+H' | translate"
-                    ></nz-list-item-meta>
-                    <nz-switch
-                      nzSize="small"
-                      [ngModelOptions]="{ standalone: true }"
-                      [(ngModel)]="setting.command_line.is_left_click_copy"
-                    ></nz-switch>
-                  </nz-list-item>
-                </nz-list>
-              </div>
-            </form>
-          } -->
-
-    <!-- @if (panel.type === 'graphic') {
-            <form nz-form [nzLayout]="'vertical'">
-              <div class="config-section">
-                <nz-divider [nzDashed]="true" [nzText]="rdp" nzOrientation="center">
-                  <ng-template #rdp>
-                    <nz-icon nzType="desktop" nzTheme="outline"></nz-icon>
-                    <span class="section-title">RDP 配置</span>
-                  </ng-template>
-                </nz-divider>
-
-                <div class="form-row">
-                  <nz-form-item class="form-item-large">
-                    <nz-form-label>{{ 'RDP resolution' | translate }}</nz-form-label>
-                    <nz-form-control>
-                      <nz-select
-                        name="rdp_resolution"
-                        [(ngModel)]="setting.graphics.rdp_resolution"
-                      >
-                        @for (resolution of resolutionsOptions; track resolution.value) {
-                          <nz-option
-                            [nzValue]="resolution.value"
-                            [nzLabel]="resolution.label"
-                          ></nz-option>
-                        }
-                      </nz-select>
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <nz-form-item class="form-item-small">
-                    <nz-form-label>{{ 'RDP smart size' | translate }}</nz-form-label>
-                    <nz-form-control>
-                      <nz-select
-                        name="rdp_smart_size"
-                        [(ngModel)]="setting.graphics.rdp_smart_size"
-                      >
-                        @for (option of rdpSmartSizeOptions; track option.value) {
-                          <nz-option [nzValue]="option.value" [nzLabel]="option.label"></nz-option>
-                        }
-                      </nz-select>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-
-                <div class="form-row">
-                  <nz-form-item class="form-item-large">
-                    <nz-form-label>{{ 'RDP color quality' | translate }}</nz-form-label>
-                    <nz-form-control>
-                      <nz-select
-                        name="rdp_color_quality"
-                        [(ngModel)]="setting.graphics.rdp_color_quality"
-                      >
-                        @for (quality of colorQualityOptions; track quality.value) {
-                          <nz-option
-                            [nzValue]="quality.value"
-                            [nzLabel]="quality.label"
-                          ></nz-option>
-                        }
-                      </nz-select>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-
-                <div class="form-row">
-                  <nz-form-item class="form-item-large">
-                    <nz-form-label>{{ 'Keyboard layout' | translate }}</nz-form-label>
-                    <nz-form-control>
-                      <nz-select
-                        name="keyboard_layout"
-                        [(ngModel)]="setting.graphics.keyboard_layout"
-                      >
-                        @for (option of keyboardLayoutOptions; track option.value) {
-                          <nz-option [nzValue]="option.value" [nzLabel]="option.label"></nz-option>
-                        }
-                      </nz-select>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              @if (hasLicense()) {
-                <div class="config-section">
-                  <nz-divider [nzDashed]="true" [nzText]="display" nzOrientation="center">
-                    <ng-template #display>
-                      <nz-icon nzType="monitor" nzTheme="outline"></nz-icon>
-                      <span class="section-title">显示配置</span>
-                    </ng-template>
-                  </nz-divider>
-
-                  <div class="form-row">
-                    <nz-form-item class="form-item-large">
-                      <nz-form-label>{{ 'RDP client options' | translate }}</nz-form-label>
-                      <nz-form-control>
-                        <nz-segmented
-                          [ngModel]="currentRdpScreenOptions"
-                          [nzOptions]="rdpScreenOptions"
-                          [ngModelOptions]="{ standalone: true }"
-                        >
-                        </nz-segmented>
-                      </nz-form-control>
-                    </nz-form-item>
-
-                    <nz-form-item class="form-item-small">
-                      <nz-form-label>{{ 'Driver redirect' | translate }}</nz-form-label>
-                      <nz-form-control>
-                        <nz-switch
-                          nzSize="small"
-                          [ngModel]="isDriverRedirect"
-                          [ngModelOptions]="{ standalone: true }"
-                        ></nz-switch>
-                      </nz-form-control>
-                    </nz-form-item>
-                  </div>
-                </div>
-
-                <div class="config-section">
-                  <nz-divider [nzDashed]="true" [nzText]="connection" nzOrientation="center">
-                    <ng-template #connection>
-                      <nz-icon nzType="link" nzTheme="outline"></nz-icon>
-                      <span class="section-title">{{ 'Applet connect method' | translate }}</span>
-                    </ng-template>
-                  </nz-divider>
-
-                  <nz-form-item>
-                    <nz-form-label>连接类型</nz-form-label>
-                    <nz-form-control>
-                      <nz-radio-group
-                        name="applet_connection_method"
-                        [(ngModel)]="setting.graphics.applet_connection_method"
-                      >
-                        <label nz-radio nzValue="web">Web</label>
-                        <label nz-radio nzValue="client">{{ 'Client' | translate }}</label>
-                      </nz-radio-group>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              }
-            </form>
-          } -->
-
-    <!-- @if (panel.type === 'tree') {
-            <form nz-form [nzLayout]="'vertical'">
-              <div class="config-section">
-                <nz-divider [nzDashed]="true" [nzText]="tree" nzOrientation="center">
-                  <ng-template #tree>
-                    <nz-icon nzType="cluster" nzTheme="outline"></nz-icon>
-                    <span class="section-title">资产树</span>
-                  </ng-template>
-                </nz-divider>
-
-                <nz-list nzSize="small" [nzSplit]="false" [nzBordered]="false">
-                  <nz-list-item>
-                    <nz-list-item-meta
-                      nzTitle="{{ 'Load tree async' | translate }}"
-                    ></nz-list-item-meta>
-                    <nz-switch
-                      name="is_async_asset_tree"
-                      nzSize="small"
-                      [(ngModel)]="setting.basic.is_async_asset_tree"
-                    ></nz-switch>
-                  </nz-list-item>
-                </nz-list>
-              </div>
-            </form>
-          } -->
-    <!-- </nz-collapse-panel> -->
-    <!-- } -->
-    <!-- </nz-collapse> -->
-
     <nz-tabset (nzSelectChange)="onTabChange($event)">
       <nz-tab nzTitle="设置">
         <form nz-form nzLayout="vertical" class="setting-form">
@@ -305,6 +16,7 @@
               <nz-select
                 [ngModelOptions]="{ standalone: true }"
                 [(ngModel)]="setting.command_line.terminal_theme_name"
+                (ngModelChange)="onThemeChange($event)"
                 nzDropdownClassName="elements-drawer-dropdown"
               >
                 @for (theme of terminalThemeMap; track theme.value) {
@@ -316,13 +28,23 @@
         </form>
       </nz-tab>
       <nz-tab nzTitle="文件管理">
-        <iframe
-          [src]="iframeURL | safeUrl"
-          frameborder="0"
-          style="width: 100%; height: 100%"
-        ></iframe>
+        @if (hasConnected) {
+          <iframe
+            [src]="iframeURL | safeUrl"
+            frameborder="0"
+            style="width: 100%; height: 100%"
+          ></iframe>
+        } @else {
+          <nz-empty nzNotFoundImage="simple" nzNotFoundContent="请先连接到资产"></nz-empty>
+        }
       </nz-tab>
       <nz-tab nzTitle="会话分享">
+        <!-- [disabled]="!hasConnected" -->
+        <button nz-button nzType="primary" class="share-button" (click)="onCreateShareLink()">
+          <nz-icon nzType="usergroup-add" nzTheme="outline" />
+          创建分享链接
+        </button>
+
         <nz-divider nzDashed [nzText]="text" nzOrientation="left">
           <ng-template #text>
             <nz-icon nzType="user" nzTheme="outline" />
@@ -363,3 +85,72 @@
     </nz-tabset>
   </ng-container>
 </nz-drawer>
+
+<nz-modal
+  nzCentered
+  [(nzVisible)]="showCreateShareLinkModal"
+  [nzTitle]="modalTitle"
+  [nzContent]="modalContent"
+  [nzFooter]="modalFooter"
+  (nzOnCancel)="handleCancel()"
+  nzWrapClassName="create-share-link-modal"
+>
+  <ng-template #modalTitle>创建分享链接</ng-template>
+
+  <ng-template #modalContent>
+    <form nz-form nzLayout="vertical" [formGroup]="shareLinkForm">
+      <nz-form-item>
+        <nz-form-label>{{ 'ExpiredTime' | translate }}</nz-form-label>
+        <nz-form-control>
+          <nz-select formControlName="expired_time" nzPlaceHolder="请选择过期时间">
+            @for (option of shareExpiredOptions; track option.value) {
+              <nz-option [nzValue]="option.value" [nzLabel]="option.label"></nz-option>
+            }
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>权限设置</nz-form-label>
+        <nz-form-control>
+          <nz-select formControlName="action_perm" nzPlaceHolder="请选择权限类型">
+            @for (permission of shareUserPermissions; track permission.value) {
+              <nz-option [nzValue]="permission.value" [nzLabel]="permission.label"></nz-option>
+            }
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>分享用户</nz-form-label>
+        <nz-form-control>
+          <nz-select
+            nzShowSearch
+            nzAllowClear
+            nzServerSearch
+            nzMode="multiple"
+            formControlName="users"
+            nzPlaceHolder="请输入用户名"
+            (nzOnSearch)="debounceSearch($event)"
+          >
+            @if (!loading) {
+              @for (o of searchedUserList; track o) {
+                <nz-option [nzValue]="o" [nzLabel]="o.username"></nz-option>
+              }
+            } @else {
+              <nz-option nzDisabled nzCustomContent>
+                <nz-icon nzType="loading" class="loading-icon" />
+                Loading Data...
+              </nz-option>
+            }
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-template>
+
+  <ng-template #modalFooter>
+    <button nz-button nzType="default" (click)="handleCancel()">取消</button>
+    <button nz-button nzType="primary" (click)="handleOk()" [nzLoading]="false">确认创建</button>
+  </ng-template>
+</nz-modal>

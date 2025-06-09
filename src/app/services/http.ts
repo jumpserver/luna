@@ -454,4 +454,9 @@ export class HttpService {
     const url = `/api/v1/users/users/${uid}/`;
     return this.get<_User>(url).toPromise();
   }
+
+  getShareUserList(keyword: string) {
+    const url = `/api/v1/users/users/?search=${keyword}`;
+    return this.get<Array<_User>>(url);
+  }
 }
