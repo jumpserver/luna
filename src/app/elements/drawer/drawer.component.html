@@ -113,7 +113,7 @@
       <nz-form-item>
         <nz-form-label>权限设置</nz-form-label>
         <nz-form-control>
-          <nz-select formControlName="action_perm" nzPlaceHolder="请选择权限类型">
+          <nz-select formControlName="action_permission" nzPlaceHolder="请选择权限类型">
             @for (permission of shareUserPermissions; track permission.value) {
               <nz-option [nzValue]="permission.value" [nzLabel]="permission.label"></nz-option>
             }

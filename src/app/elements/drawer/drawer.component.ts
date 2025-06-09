@@ -40,6 +40,8 @@ export class ElementDrawerComponent implements OnInit {
   hasConnected = false;
   isDriverRedirect = false;
   showCreateShareLinkModal = false;
+  shareLink = '';
+  shareCode = '';
   currentRdpScreenOptions = '';
   rdpScreenOptions = [];
   searchedUserList = [];
@@ -47,7 +49,7 @@ export class ElementDrawerComponent implements OnInit {
   shareUserPermissions = [];
   shareLinkRequest = {
     expired_time: 10,
-    action_perm: 'writable',
+    action_permission: 'writable',
     users: [] as ShareUserOptions[]
   };
 
@@ -75,6 +77,7 @@ export class ElementDrawerComponent implements OnInit {
     this.sideEffect();
     this.initShareOptions();
     this.initShareLinkForm();
+    this.subscriptonIframaMessage();
   }
 
   async ngOnInit(): Promise<void> {
@@ -122,6 +125,27 @@ export class ElementDrawerComponent implements OnInit {
     ];
   }
 
+  subscriptonIframaMessage() {
+    this._iframeCommunicationService.message$.subscribe(message => {
+      if (message.name === 'SHARE_CODE_RESPONSE') {
+        const messageData = JSON.parse(message.data);
+        this.shareCode = messageData.share_code;
+
+        switch (this.view.connectMethod.component) {
+          case 'koko':
+            this.shareLink = `${this.view.smartEndpoint.getUrl()}/luna/koko/share/${messageData.share_id}`;
+            console.log(this.shareLink);
+            break;
+          case 'lion':
+            this.shareLink = `${this.view.smartEndpoint.getUrl()}/luna/lion/share/${messageData.share_id}`;
+            break;
+          default:
+            break;
+        }
+      }
+    });
+  }
+
   getMinuteLabel(minute: number) {
     let minuteLabel = this._i18n.instant('Minute');
 
@@ -163,14 +187,10 @@ export class ElementDrawerComponent implements OnInit {
   initShareLinkForm() {
     this.shareLinkForm = this._fb.group({
       expired_time: [this.shareLinkRequest.expired_time],
-      action_perm: [this.shareLinkRequest.action_perm],
+      action_permission: [this.shareLinkRequest.action_permission],
       users: [this.shareLinkRequest.users]
     });
   }
-
-  debounceSearch = _.debounce((value: string) => {
-    this.onShareUserSearch(value);
-  }, 500);
 
   onShareUserSearch(value: string) {
     this.loading = true;
@@ -186,7 +206,7 @@ export class ElementDrawerComponent implements OnInit {
     this.showCreateShareLinkModal = true;
     this.shareLinkForm.patchValue({
       expired_time: this.shareLinkRequest.expired_time,
-      action_perm: this.shareLinkRequest.action_perm,
+      action_permission: this.shareLinkRequest.action_permission,
       users: this.shareLinkRequest.users
     });
   }
@@ -208,7 +228,7 @@ export class ElementDrawerComponent implements OnInit {
         data: {
           users: this.shareLinkRequest.users,
           expired_time: this.shareLinkRequest.expired_time,
-          action_perm: this.shareLinkRequest.action_perm
+          action_permission: this.shareLinkRequest.action_permission
         }
       });
     } else {
@@ -218,7 +238,9 @@ export class ElementDrawerComponent implements OnInit {
     }
   }
 
-  async onTabChange(index: number) {
+  async onTabChange(event: { index: number; tab: any }) {
+    const index = event.index;
+    console.log('Tab changed to index:', index);
     try {
       const { smartEndpoint, iframeElement } = this.view;
 
@@ -233,4 +255,8 @@ export class ElementDrawerComponent implements OnInit {
       this._logger.error('Failed to get setting options', e);
     }
   }
+
+  debounceSearch = _.debounce((value: string) => {
+    this.onShareUserSearch(value);
+  }, 500);
 }

@@ -320,7 +320,7 @@ export class HttpService {
       account: account.id,
       protocol: protocol.name,
       input_username: connectData.input_username,
-      connect_method: connectData.method
+      connect_method: connectData.method || connectData.connectMethod.value
     };
     return this.post<ConnectionToken>(url, data).pipe(
       catchError(this.handleConnectMethodExpiredError.bind(this))

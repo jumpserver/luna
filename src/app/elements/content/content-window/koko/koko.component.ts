@@ -147,7 +147,8 @@ export class ElementConnectorKokoComponent implements OnInit {
       return this.iframeURL = `${this.baseUrl}/k8s/?` + query;
     }
 
-    this.iframeURL = `${this.baseUrl}/connect/?` + query;
+    // this.iframeURL = `${this.baseUrl}/connect/?` + query;
+    this.iframeURL = `http://localhost:9530/koko/connect/?` + query;
   }
 
   generateFileManagerURL() {
