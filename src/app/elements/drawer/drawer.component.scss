@@ -280,6 +280,10 @@
           border-radius: 8px;
         }
 
+        iframe {
+          height: calc(100vh - 120px);
+        }
+
         .ant-empty {
           color: var(--el-text-color-light);
         }
@@ -301,6 +305,8 @@
 
         .ant-list {
           .ant-list-item-meta {
+            align-items: center;
+
             .ant-list-item-meta-content {
 
               .ant-list-item-meta-description,
@@ -312,6 +318,15 @@
 
           .ant-list-item-action li {
             color: var(--el-text-color-light);
+
+            svg {
+              transition: color 0.3s ease;
+
+              &:hover {
+                cursor: pointer;
+                color: red;
+              }
+            }
           }
         }
       }

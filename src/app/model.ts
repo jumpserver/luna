@@ -442,7 +442,10 @@ export class ConnectionToken {
   value: string;
   protocol: string;
   asset: string;
-  user?: string;
+  user?: {
+    id: string;
+    name: string;
+  };
   account: string;
   expire_time: number;
   is_active: boolean;

@@ -26,6 +26,7 @@ import { NzSplitterModule } from 'ng-zorro-antd/splitter';
 import { NzSegmentedModule } from 'ng-zorro-antd/segmented';
 import { NzFloatButtonModule } from 'ng-zorro-antd/float-button';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
+import { NzNoAnimationModule } from 'ng-zorro-antd/core/no-animation';
 
 @NgModule({
   exports: [

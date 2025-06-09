@@ -1,9 +1,11 @@
 import _ from 'lodash-es';
 import xtermTheme from 'xterm-theme';
 import { Setting, View } from '@app/model';
+import { writeText } from 'clipboard-polyfill';
+import { FormBuilder, FormGroup } from '@angular/forms';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { IframeCommunicationService } from '@app/services';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Component, OnInit, input, output, Input, effect } from '@angular/core';
+import { Component, OnInit, input, output, Input, effect, signal } from '@angular/core';
 import { LogService, SettingService, HttpService, I18nService } from '@app/services';
 
 interface terminalThemeMap {
@@ -37,12 +39,16 @@ export class ElementDrawerComponent implements OnInit {
   setting: Setting = new Setting();
 
   loading = false;
-  hasConnected = false;
+  showLinkResult = false;
   isDriverRedirect = false;
+  showCreateShareLinkForm = true;
   showCreateShareLinkModal = false;
+  hasConnected = signal(false);
   shareLink = '';
   shareCode = '';
   currentRdpScreenOptions = '';
+  avatarUrl = '/static/img/avatar/admin.png';
+  onLineUsers = [];
   rdpScreenOptions = [];
   searchedUserList = [];
   shareExpiredOptions = [];
@@ -58,19 +64,13 @@ export class ElementDrawerComponent implements OnInit {
   iframeURL = '';
 
   terminalThemeMap: terminalThemeMap[] = [];
-  list = [
-    {
-      name: {
-        last: 'me'
-      }
-    }
-  ];
 
   constructor(
     private _fb: FormBuilder,
     private _http: HttpService,
     private _i18n: I18nService,
     private _logger: LogService,
+    private _message: NzMessageService,
     private _settingSrv: SettingService,
     private _iframeCommunicationService: IframeCommunicationService
   ) {
@@ -92,6 +92,20 @@ export class ElementDrawerComponent implements OnInit {
 
       if (isVisible) {
         this.checkIframeElement();
+      }
+    });
+
+    effect(() => {
+      if (this.hasConnected()) {
+        console.log(this.view);
+        this.onLineUsers = [
+          {
+            username: this.view.connectToken.user.name,
+            id: this.view.connectToken.user.id,
+            permissions: ['writable'],
+            avatar: this.avatarUrl
+          }
+        ];
       }
     });
   }
@@ -129,7 +143,8 @@ export class ElementDrawerComponent implements OnInit {
     this._iframeCommunicationService.message$.subscribe(message => {
       if (message.name === 'SHARE_CODE_RESPONSE') {
         const messageData = JSON.parse(message.data);
-        this.shareCode = messageData.share_code;
+        console.log(messageData);
+        this.shareCode = messageData.code;
 
         switch (this.view.connectMethod.component) {
           case 'koko':
@@ -142,6 +157,9 @@ export class ElementDrawerComponent implements OnInit {
           default:
             break;
         }
+
+        this.showCreateShareLinkForm = false;
+        this.showLinkResult = true;
       }
     });
   }
@@ -163,7 +181,6 @@ export class ElementDrawerComponent implements OnInit {
         .adminConnectToken(this.view.asset, this.view.connectData, false, false, '')
         .subscribe(resp => {
           const token = resp ? resp.id : '';
-          console.log(token);
 
           resolve(token);
         });
@@ -172,10 +189,10 @@ export class ElementDrawerComponent implements OnInit {
 
   checkIframeElement() {
     if (this.view?.iframeElement) {
-      this.hasConnected = true;
+      this.hasConnected.set(true);
       console.log('iframe 元素存在，已连接');
     } else {
-      this.hasConnected = false;
+      this.hasConnected.set(false);
       console.log('iframe 元素不存在，未连接');
     }
   }
@@ -190,6 +207,25 @@ export class ElementDrawerComponent implements OnInit {
       action_permission: [this.shareLinkRequest.action_permission],
       users: [this.shareLinkRequest.users]
     });
+  }
+
+  copyLink(event?: Event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    const linkTitle = this._i18n.instant('LinkAddr');
+    const codeTitle = this._i18n.instant('VerifyCode');
+
+    const text = `${linkTitle}: ${this.shareLink}\n${codeTitle}: ${this.shareCode}`;
+
+    writeText(text);
+
+    this._message.success(this._i18n.instant('Copied'));
+    this.showLinkResult = false;
+    this.showCreateShareLinkForm = true;
+    this.showCreateShareLinkModal = false;
   }
 
   onShareUserSearch(value: string) {
@@ -219,9 +255,8 @@ export class ElementDrawerComponent implements OnInit {
   handleOk() {
     if (this.shareLinkForm.valid) {
       this.shareLinkRequest = { ...this.shareLinkRequest, ...this.shareLinkForm.value };
-      console.log('分享链接请求数据:', this.shareLinkRequest);
 
-      this.showCreateShareLinkModal = false;
+      this.showCreateShareLinkForm = false;
 
       this._iframeCommunicationService.sendMessage({
         name: 'SHARE_CODE_REQUEST',
@@ -231,6 +266,8 @@ export class ElementDrawerComponent implements OnInit {
           action_permission: this.shareLinkRequest.action_permission
         }
       });
+
+      this.showLinkResult = true;
     } else {
       Object.values(this.shareLinkForm.controls).forEach(control => {
         control.markAsTouched();
@@ -240,11 +277,11 @@ export class ElementDrawerComponent implements OnInit {
 
   async onTabChange(event: { index: number; tab: any }) {
     const index = event.index;
-    console.log('Tab changed to index:', index);
+
     try {
       const { smartEndpoint, iframeElement } = this.view;
 
-      if (index === 1 && iframeElement) {
+      if (index === 1 && iframeElement && !this.iframeURL) {
         const url = smartEndpoint.getUrl();
         const token = await this.getSFTPToken();
 
