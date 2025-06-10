@@ -31,7 +31,8 @@ export class PagesShareComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    this.iframeURL = `${baseUrl}/koko/share/${this.shareId}`;
+    // this.iframeURL = `${baseUrl}/koko/share/${this.shareId}`;
+    this.iframeURL = `http://localhost:9530/koko/share/${this.shareId}`;
   }
 
   ngAfterViewInit(): void {

@@ -1,7 +1,7 @@
-import {Injectable} from '@angular/core';
-import {View} from '@app/model';
-import {BehaviorSubject} from 'rxjs';
-import {FaceService} from '@app/services/face';
+import { Injectable } from '@angular/core';
+import { View } from '@app/model';
+import { BehaviorSubject } from 'rxjs';
+import { FaceService } from '@app/services/face';
 
 @Injectable()
 export class ViewService {
@@ -13,8 +13,7 @@ export class ViewService {
   private connectViewCount = new BehaviorSubject<number>(0);
   connectViewCount$ = this.connectViewCount.asObservable();
 
-  constructor(private faceService: FaceService) {
-  }
+  constructor(private faceService: FaceService) {}
 
   addView(view: View) {
     this.num += 1;
@@ -78,7 +77,7 @@ export class ViewService {
   }
 
   setCurrentViewTitle(view, index, status) {
-    const {name} = this.currentView;
+    const { name } = this.currentView;
     switch (status) {
       case 'concat':
         this.currentView.name = name + '|' + view.name;

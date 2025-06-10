@@ -1,59 +1,75 @@
-import {Component, ElementRef, EventEmitter, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
-import {View, ViewAction} from '@app/model';
-import {ConnectTokenService, ViewService, SettingService} from '@app/services';
-import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
-import {fromEvent, Subscription} from 'rxjs';
-import jQuery from 'jquery';
 import _ from 'lodash-es';
+import jQuery from 'jquery';
+import { View, ViewAction } from '@app/model';
+import { fromEvent, Subscription } from 'rxjs';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import {
+  ViewService,
+  SettingService,
+  ConnectTokenService,
+  IframeCommunicationService
+} from '@app/services';
+import {
+  OnInit,
+  Output,
+  Component,
+  ViewChild,
+  OnDestroy,
+  ElementRef,
+  EventEmitter
+} from '@angular/core';
 
 @Component({
   standalone: false,
-  selector: "elements-content",
-  templateUrl: "content.component.html",
-  styleUrls: ["content.component.scss"],
+  selector: 'elements-content',
+  templateUrl: 'content.component.html',
+  styleUrls: ['content.component.scss']
 })
 export class ElementContentComponent implements OnInit, OnDestroy {
-  @ViewChild("tabs", { static: false }) tabsRef: ElementRef;
+  @ViewChild('tabs', { static: false }) tabsRef: ElementRef;
   @Output() toggleMenu: EventEmitter<any> = new EventEmitter<any>();
   viewList: Array<View>;
-  pos = { left: "100px", top: "100px" };
+  pos = { left: '100px', top: '100px' };
   isShowRMenu = false;
   rIdx = -1;
   systemTips = [
     {
-      content: "Reselect connection method",
-      action: "Right click asset",
+      content: 'Reselect connection method',
+      action: 'Right click asset'
     },
     {
-      content: "Expand all asset",
-      action: "Right click node",
+      content: 'Expand all asset',
+      action: 'Right click node'
     },
     {
-      content: "Asset tree loading method",
-      action: "Settings or basic settings",
+      content: 'Asset tree loading method',
+      action: 'Settings or basic settings'
     },
     {
-      content: "Download the latest client",
-      action: "Help or download",
+      content: 'Download the latest client',
+      action: 'Help or download'
     },
     {
-      content: "Keyboard keys",
-      action: "Keyboard switch session",
-    },
+      content: 'Keyboard keys',
+      action: 'Keyboard switch session'
+    }
   ];
   viewIds: Array<string> = [];
   keyboardSubscription: Subscription;
 
-  constructor(public viewSrv: ViewService,
-              private _connectTokenSvc: ConnectTokenService,
-              private _settingSvc: SettingService,
-  ) {
-  }
+  constructor(
+    public viewSrv: ViewService,
+    private _connectTokenSvc: ConnectTokenService,
+    private _settingSvc: SettingService,
+    private _iframeCommunicationService: IframeCommunicationService
+  ) {}
 
   get showBatchCommand() {
-    return this._settingSvc.setting.commandExecution
-      && this.viewSrv.currentView
-      && this.viewSrv.currentView.protocol === 'ssh';
+    return (
+      this._settingSvc.setting.commandExecution &&
+      this.viewSrv.currentView &&
+      this.viewSrv.currentView.protocol === 'ssh'
+    );
   }
 
   get tabsWidth() {
@@ -66,7 +82,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     this.viewList = this.viewSrv.viewList;
     this.viewIds = this.viewSrv.viewIds;
     this.handleKeyDownTabChange();
-    document.addEventListener("click", this.hideRMenu.bind(this), false);
+    document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
   ngOnDestroy() {
@@ -75,16 +91,21 @@ export class ElementContentComponent implements OnInit, OnDestroy {
 
   handleKeyDownTabChange() {
     const debouncedSwitch = _.debounce((key: string) => {
-      this.viewSrv.keyboardSwitchTab(key);
+      this.keyboardSwitchTab(key);
     }, 500);
 
-    this.keyboardSubscription = fromEvent(window, "keydown").subscribe((event: any) => {
-      if (event.altKey && event.shiftKey && (event.key === "ArrowRight" || event.key === "ArrowLeft") && this.viewList.length > 1) {
-        let key = "";
-        if (event.key === "ArrowRight") {
-          key = "alt+shift+right";
-        } else if (event.key === "ArrowLeft") {
-          key = "alt+shift+left";
+    this.keyboardSubscription = fromEvent(window, 'keydown').subscribe((event: any) => {
+      if (
+        event.altKey &&
+        event.shiftKey &&
+        (event.key === 'ArrowRight' || event.key === 'ArrowLeft') &&
+        this.viewList.length > 1
+      ) {
+        let key = '';
+        if (event.key === 'ArrowRight') {
+          key = 'alt+shift+right';
+        } else if (event.key === 'ArrowLeft') {
+          key = 'alt+shift+left';
         }
         debouncedSwitch(key);
       }
@@ -102,11 +123,11 @@ export class ElementContentComponent implements OnInit, OnDestroy {
 
   onViewAction(action: ViewAction) {
     switch (action.name) {
-      case "active": {
+      case 'active': {
         this.setViewActive(action.view);
         break;
       }
-      case "close": {
+      case 'close': {
         this.closeView(action.view);
         break;
       }
@@ -115,10 +136,46 @@ export class ElementContentComponent implements OnInit, OnDestroy {
 
   setViewActive(view) {
     this.viewSrv.activeView(view);
+
+    this._iframeCommunicationService.sendMessage({
+      name: 'TAB_VIEW_CHANGE',
+      data: view.id
+    });
+  }
+
+  keyboardSwitchTab(key) {
+    let nextViewId: any = 0;
+    let nextActiveView = null;
+
+    const viewIds = this.viewIds;
+    const currentViewIndex = viewIds.findIndex(i => i === this.viewSrv.currentView.id);
+
+    if (key === 'alt+shift+right') {
+      if (currentViewIndex === viewIds.length - 1 && currentViewIndex !== 0) {
+        nextActiveView = this.viewList.find(i => i.id === viewIds[0]);
+      } else {
+        nextViewId = viewIds[currentViewIndex + 1];
+        nextActiveView = this.viewList.find(i => i.id === nextViewId);
+      }
+    }
+
+    if (key === 'alt+shift+left') {
+      if (currentViewIndex === 0) {
+        nextActiveView = this.viewList.find(i => i.id === viewIds[viewIds.length - 1]);
+      } else {
+        nextViewId = viewIds[currentViewIndex - 1];
+        nextActiveView = this.viewList.find(i => i.id === nextViewId);
+      }
+    }
+
+    if (nextActiveView) {
+      this.setViewActive(nextActiveView);
+    }
   }
 
   closeView(view) {
     let nextActiveView = null;
+
     const index = this.viewList.indexOf(view);
     if (view.active) {
       // 如果关掉的是最后一个, 存在上一个
@@ -153,64 +210,63 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   rTabMenuItems() {
     return [
       {
-        title: "Clone Connect",
-        icon: "fa-copy",
+        title: 'Clone Connect',
+        icon: 'fa-copy',
         callback: () => {
-          console.log(">>>>>> clone connect");
           const id = this.rIdx + 1;
           const oldId = this.viewIds[this.rIdx];
-          const oldView = this.viewList.find((i) => i.id === oldId);
+          const oldView = this.viewList.find(i => i.id === oldId);
           const oldConnectToken = oldView.connectToken;
-          this._connectTokenSvc.exchange(oldConnectToken).then((newConnectToken) => {
+          this._connectTokenSvc.exchange(oldConnectToken).then(newConnectToken => {
             const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
             this.viewSrv.addView(newView);
             this.setViewActive(newView);
           });
-        },
+        }
       },
       {
-        title: "Reconnect",
-        icon: "fa-refresh",
+        title: 'Reconnect',
+        icon: 'fa-refresh',
         callback: () => {
           const viewId = this.viewIds[this.rIdx];
-          const currentView = this.viewList.find((i) => i.id === viewId);
+          const currentView = this.viewList.find(i => i.id === viewId);
           currentView.termComp.reconnect();
-        },
+        }
       },
       {
-        title: "Split vertically",
-        icon: "fa-columns",
+        title: 'Split vertically',
+        icon: 'fa-columns',
         callback: () => {
           const oldView = this.viewList[this.rIdx];
-          this._connectTokenSvc.exchange(oldView.connectToken).then((newConnectToken) => {
+          this._connectTokenSvc.exchange(oldView.connectToken).then(newConnectToken => {
             const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
             this.viewSrv.addSubViewToCurrentView(newView);
           });
         },
-        disabled: this.viewList[this.rIdx].subViews.length > 0,
+        disabled: this.viewList[this.rIdx].subViews.length > 0
       },
       {
-        title: "Close Current Tab",
-        icon: "fa-close",
+        title: 'Close Current Tab',
+        icon: 'fa-close',
         callback: () => {
           const viewId = this.viewIds[this.rIdx];
-          const currentView = this.viewList.find((i) => i.id === viewId);
+          const currentView = this.viewList.find(i => i.id === viewId);
           this.closeView(currentView);
-        },
+        }
       },
       {
-        title: "Close All Tabs",
-        icon: "",
+        title: 'Close All Tabs',
+        icon: '',
         disabled: this.viewList.length === 0,
         callback: () => {
           while (this.viewList.length > 0) {
             this.closeView(this.viewList[0]);
           }
-        },
+        }
       },
       {
-        title: "Close Other Tabs",
-        icon: "",
+        title: 'Close Other Tabs',
+        icon: '',
         disabled: this.viewList.length <= 1,
         callback: () => {
           for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
@@ -219,35 +275,35 @@ export class ElementContentComponent implements OnInit, OnDestroy {
           while (this.viewList.length > 1) {
             this.closeView(this.viewList[0]);
           }
-        },
+        }
       },
       {
-        title: "Close Left Tabs",
-        icon: "",
+        title: 'Close Left Tabs',
+        icon: '',
         callback: () => {
           const keepNum = this.viewList.length - this.rIdx;
           while (this.viewList.length > keepNum) {
             this.closeView(this.viewList[0]);
           }
         },
-        disabled: this.rIdx === 0,
+        disabled: this.rIdx === 0
       },
       {
-        title: "Close Right Tabs",
-        icon: "",
+        title: 'Close Right Tabs',
+        icon: '',
         callback: () => {
           for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
             this.closeView(this.viewList[i].asset);
           }
         },
-        disabled: this.rIdx === this.viewList.length - 1,
-      },
+        disabled: this.rIdx === this.viewList.length - 1
+      }
     ];
   }
 
   showRMenu(left, top) {
-    this.pos.left = left + "px";
-    this.pos.top = top + "px";
+    this.pos.left = left + 'px';
+    this.pos.top = top + 'px';
     this.isShowRMenu = true;
   }
 
@@ -256,13 +312,13 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   }
 
   getViewById(id) {
-    return this.viewList.find((view) => {
+    return this.viewList.find(view => {
       return view.id === id;
     });
   }
 
   onRightClick(event, tabIdx) {
-    const sideX = jQuery("#left-side").width();
+    const sideX = jQuery('#left-side').width();
     const x = event.pageX - sideX;
     const y = event.pageY - 30;
     this.showRMenu(x, y);

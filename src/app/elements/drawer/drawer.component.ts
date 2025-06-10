@@ -6,8 +6,9 @@ import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { IframeCommunicationService } from '@app/services';
 import { DrawerStateService } from '@src/app/services/drawer';
+import { LogService, SettingService, HttpService, I18nService, ViewService } from '@app/services';
 import { Component, OnInit, input, output, Input, effect, signal, OnDestroy } from '@angular/core';
-import { LogService, SettingService, HttpService, I18nService } from '@app/services';
+import { Subscription } from 'rxjs';
 
 interface terminalThemeMap {
   label: string;
@@ -69,11 +70,16 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   terminalThemeMap: terminalThemeMap[] = [];
 
+  drawerStateMap = new Map<string, any>();
+  private messageSubscription: Subscription;
+  private currentViewId: string | null = null;
+
   constructor(
     private _fb: FormBuilder,
     private _http: HttpService,
     private _i18n: I18nService,
     private _logger: LogService,
+    private _viewSrv: ViewService,
     private _message: NzMessageService,
     private _settingSrv: SettingService,
     private _iframeCommunicationService: IframeCommunicationService,
@@ -87,6 +93,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
   ngOnDestroy(): void {
     this.saveCurrentState();
+    this.messageSubscription.unsubscribe();
   }
 
   loadSavedState(): void {
@@ -99,7 +106,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   saveCurrentState(): void {
     this._drawerStateService.updateState({
       onLineUsers: this.onLineUsers,
-      iframeURL: this.iframeURL,
+      iframeURL: this.iframeURL
     });
   }
 
@@ -147,46 +154,83 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       { label: 'Default', value: 'Default' },
       ...Object.keys(xtermTheme).map(item => ({ label: item, value: item }))
     ];
-    this._http.getTerminalPreference().subscribe(res => {
-      if (res) {
-        this.currentTheme = res.basic.terminal_theme_name;
+    this._http.getTerminalPreference().subscribe({
+      next: res => {
+        if (res && res.basic && res.basic.terminal_theme_name) {
+          this.currentTheme = res.basic.terminal_theme_name;
+        } else {
+          this.currentTheme = 'Default';
+        }
+      },
+      error: error => {
+        console.error('Failed to get terminal preference:', error);
+        this.currentTheme = 'Default';
       }
     });
   }
 
   subscriptonIframaMessage() {
-    this._iframeCommunicationService.message$.subscribe(message => {
+    this.messageSubscription = this._iframeCommunicationService.message$.subscribe(message => {
       if (message.name === 'SHARE_CODE_RESPONSE') {
-        const messageData = JSON.parse(message.data);
-        this.shareCode = messageData.code;
+        try {
+          const messageData = JSON.parse(message.data);
+          console.log('SHARE_CODE_RESPONSE', messageData);
+          this.shareCode = messageData.code;
 
-        switch (this.view.connectMethod.component) {
-          case 'koko':
-            this.shareLink = `${this.view.smartEndpoint.getUrl()}/luna/share/${messageData.share_id}`;
-            console.log(this.shareLink);
-            break;
-          case 'lion':
-            this.shareLink = `${this.view.smartEndpoint.getUrl()}/luna/share/${messageData.share_id}?type=lion`;
-            break;
-          default:
-            break;
+          switch (this.view.connectMethod.component) {
+            case 'koko':
+              this.shareLink = `${this.view.smartEndpoint.getUrl()}/luna/share/${messageData.share_id}`;
+              break;
+            case 'lion':
+              this.shareLink = `${this.view.smartEndpoint.getUrl()}/luna/share/${messageData.share_id}?type=lion`;
+              break;
+            default:
+              break;
+          }
+
+          this.showCreateShareLinkForm = false;
+          this.showLinkResult = true;
+        } catch (error) {
+          console.error('Failed to parse SHARE_CODE_RESPONSE:', error);
         }
-
-        this.showCreateShareLinkForm = false;
-        this.showLinkResult = true;
       }
 
       if (message.name === 'SHARE_USER_ADD') {
-        const messageData: OnlineUsers = JSON.parse(message.data);
-        console.log(messageData);
+        try {
+          const messageData: OnlineUsers = JSON.parse(message.data);
 
-        this.onLineUsers.push({
-          user: messageData.user,
-          user_id: messageData.user_id,
-          terminal_id: messageData.terminal_id,
-          primary: messageData.primary,
-          writable: messageData.writable
-        });
+          this.onLineUsers.push({
+            user: messageData.user,
+            user_id: messageData.user_id,
+            terminal_id: messageData.terminal_id,
+            primary: messageData.primary,
+            writable: messageData.writable
+          });
+
+          // 保存当前状态到对应的 viewId
+          this.saveCurrentViewState();
+        } catch (error) {
+          console.error('Failed to parse SHARE_USER_ADD:', error);
+        }
+      }
+
+      if (message.name === 'TAB_VIEW_CHANGE') {
+        const viewId = message.data;
+
+        this.saveCurrentViewState();
+
+        if (this.drawerStateMap.has(viewId)) {
+          const savedState = this.drawerStateMap.get(viewId);
+          this.currentTheme = savedState.theme;
+          this.iframeURL = savedState.iframeURL;
+          this.onLineUsers = [...(savedState.onLineUsers || [])]; // 深拷贝数组
+        } else {
+          this.initializeNewTabState(viewId);
+        }
+
+        this.currentViewId = viewId;
+
+        console.log('drawerStateMap', this.drawerStateMap);
       }
     });
   }
@@ -206,10 +250,15 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     return new Promise((resolve, reject) => {
       this._http
         .createConnectToken(this.view.asset, this.view.connectData, false, false, '')
-        .subscribe(resp => {
-          const token = resp ? resp.id : '';
-
-          resolve(token);
+        .subscribe({
+          next: resp => {
+            const token = resp ? resp.id : '';
+            resolve(token);
+          },
+          error: error => {
+            console.error('Failed to get SFTP token:', error);
+            reject(error);
+          }
         });
     });
   }
@@ -226,8 +275,14 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   onThemeChange(theme: string) {
     this._iframeCommunicationService.sendMessage({ name: 'TERMINAL_THEME_CHANGE', theme });
-    this._http.setTerminalPreference({ basic: { terminal_theme_name: theme } }).subscribe(res => {
-      this._message.success(this._i18n.instant('主题同步成功'));
+    this._http.setTerminalPreference({ basic: { terminal_theme_name: theme } }).subscribe({
+      next: res => {
+        this._message.success(this._i18n.instant('主题同步成功'));
+      },
+      error: error => {
+        console.error('Failed to set theme preference:', error);
+        this._message.error(this._i18n.instant('主题同步失败'));
+      }
     });
   }
 
@@ -236,6 +291,29 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       expired_time: [this.shareLinkRequest.expired_time],
       action_permission: [this.shareLinkRequest.action_permission],
       users: [this.shareLinkRequest.users]
+    });
+  }
+
+  resetShareLinkModal() {
+    // 重置显示状态
+    this.showLinkResult = false;
+    this.showCreateShareLinkForm = true;
+    this.showCreateShareLinkModal = false;
+
+    // 清空链接和分享码
+    this.shareLink = '';
+    this.shareCode = '';
+
+    // 清空搜索相关状态
+    this.searchedUserList = [];
+    this.loading = false;
+
+    // 重置表单
+    this.shareLinkForm.reset();
+    this.shareLinkForm.patchValue({
+      expired_time: this.shareLinkRequest.expired_time,
+      action_permission: this.shareLinkRequest.action_permission,
+      users: []
     });
   }
 
@@ -253,28 +331,29 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     writeText(text);
 
     this._message.success(this._i18n.instant('Copied'));
-    this.showLinkResult = false;
-    this.showCreateShareLinkForm = true;
-    this.showCreateShareLinkModal = false;
+    this.resetShareLinkModal();
   }
 
   onShareUserSearch(value: string) {
     this.loading = true;
-    this._http.getShareUserList(value).subscribe(res => {
-      if (res) {
-        this.searchedUserList = res;
+    this._http.getShareUserList(value).subscribe({
+      next: res => {
+        if (res) {
+          this.searchedUserList = res;
+        }
         this.loading = false;
+      },
+      error: error => {
+        console.error('Failed to search users:', error);
+        this.loading = false;
+        this.searchedUserList = [];
       }
     });
   }
 
   onCreateShareLink() {
+    this.resetShareLinkModal();
     this.showCreateShareLinkModal = true;
-    this.shareLinkForm.patchValue({
-      expired_time: this.shareLinkRequest.expired_time,
-      action_permission: this.shareLinkRequest.action_permission,
-      users: this.shareLinkRequest.users
-    });
   }
 
   onDeleteShareUser(item: OnlineUsers) {
@@ -290,43 +369,69 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       }
       return true;
     });
+
+    // 保存当前状态到对应的 viewId
+    this.saveCurrentViewState();
+  }
+
+  saveCurrentViewState(): void {
+    if (this.currentViewId) {
+      this.drawerStateMap.set(this.currentViewId, {
+        theme: this.currentTheme,
+        onLineUsers: [...this.onLineUsers], // 深拷贝数组
+        iframeURL: this.iframeURL
+      });
+    }
+  }
+
+  initializeNewTabState(viewId: string): void {
+    this.onLineUsers = [];
+    this.iframeURL = '';
+
+    this.drawerStateMap.set(viewId, {
+      theme: this.currentTheme,
+      onLineUsers: [],
+      iframeURL: this.iframeURL
+    });
   }
 
   handleCancel() {
-    this.showCreateShareLinkModal = false;
-    this.shareLinkForm.reset();
+    this.resetShareLinkModal();
   }
 
   handleOk() {
-    if (this.shareLinkForm.valid) {
-      this.shareLinkRequest = { ...this.shareLinkRequest, ...this.shareLinkForm.value };
+    this.shareLinkRequest = { ...this.shareLinkRequest, ...this.shareLinkForm.value };
 
-      this.showCreateShareLinkForm = false;
+    this.showCreateShareLinkForm = false;
 
-      this._iframeCommunicationService.sendMessage({
-        name: 'SHARE_CODE_REQUEST',
-        data: {
-          users: this.shareLinkRequest.users,
-          expired_time: this.shareLinkRequest.expired_time,
-          action_permission: this.shareLinkRequest.action_permission
-        }
-      });
+    this._iframeCommunicationService.sendMessage({
+      name: 'SHARE_CODE_REQUEST',
+      data: {
+        users: this.shareLinkRequest.users,
+        expired_time: this.shareLinkRequest.expired_time,
+        action_permission: this.shareLinkRequest.action_permission
+      }
+    });
 
-      this.showLinkResult = true;
-    } else {
-      Object.values(this.shareLinkForm.controls).forEach(control => {
-        control.markAsTouched();
-      });
-    }
+    this.showLinkResult = true;
   }
 
   async onTabChange(event: { index: number; tab: any }) {
     const index = event.index;
 
     try {
+      if (!this.view) {
+        return;
+      }
+
       const { smartEndpoint, iframeElement } = this.view;
 
       if (index === 1 && iframeElement && !this.iframeURL) {
+        if (!smartEndpoint) {
+          console.warn('Smart endpoint is not available');
+          return;
+        }
+
         const url = smartEndpoint.getUrl();
         const token = await this.getSFTPToken();
 
@@ -334,7 +439,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
         console.log('iframe URL:', this.iframeURL);
       }
     } catch (e) {
-      this._logger.error('Failed to get setting options', e);
+      this._logger.error('Failed to initialize SFTP iframe', e);
     }
   }
 
