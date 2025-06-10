@@ -24,9 +24,9 @@ import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzSplitterModule } from 'ng-zorro-antd/splitter';
 import { NzSegmentedModule } from 'ng-zorro-antd/segmented';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzFloatButtonModule } from 'ng-zorro-antd/float-button';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
-import { NzNoAnimationModule } from 'ng-zorro-antd/core/no-animation';
 
 @NgModule({
   exports: [
@@ -55,6 +55,7 @@ import { NzNoAnimationModule } from 'ng-zorro-antd/core/no-animation';
     NzCollapseModule,
     NzSplitterModule,
     NzSegmentedModule,
+    NzPopconfirmModule,
     NzFloatButtonModule,
     NzInputNumberModule
   ]

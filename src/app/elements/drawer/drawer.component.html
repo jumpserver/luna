@@ -29,10 +29,7 @@
       </nz-tab>
       <nz-tab nzTitle="文件管理">
         @if (hasConnected()) {
-          <iframe
-            [src]="iframeURL | safeUrl"
-            frameborder="0"
-          ></iframe>
+          <iframe [src]="iframeURL | safeUrl" frameborder="0"></iframe>
         } @else {
           <nz-empty nzNotFoundImage="simple" nzNotFoundContent="请先连接到资产"></nz-empty>
         }
@@ -51,41 +48,39 @@
             </ng-template>
           </nz-divider>
 
-          <nz-list class="demo-loadmore-list" nzSize="small" [nzLoading]="initLoading">
+          <nz-list class="demo-loadmore-list" nzSize="small">
             @for (item of onLineUsers; track item) {
               <nz-list-item>
-                @if (item.loading) {
-                  <nz-skeleton
-                    [nzAvatar]="true"
-                    [nzActive]="true"
-                    [nzTitle]="false"
-                    [nzLoading]="true"
-                  />
-                } @else {
-                  <ng-container>
-                    <nz-list-item-meta
-                      [nzAvatar]="item.avatar"
-                      [nzDescription]="item.username"
-                    >
-                      <nz-list-item-meta-title>
-                        {{ item.permissions.join(',') }}
-                      </nz-list-item-meta-title>
-                    </nz-list-item-meta>
+                <ng-container>
+                  <nz-list-item-meta [nzAvatar]="item.avatar" [nzDescription]="item.user">
+                    <nz-list-item-meta-title>
+                      <nz-tag *ngIf="item.primary" nzColor="blue">主用户</nz-tag>
+                      <nz-tag *ngIf="item.writable" nzColor="green">可写</nz-tag>
+                    </nz-list-item-meta-title>
+                  </nz-list-item-meta>
 
-                    <ul nz-list-item-actions>
-                      <nz-list-item-action>
-                        <nz-icon nzType="delete" nzTheme="outline" (click)="onDeleteShareUser(item)" />
-                      </nz-list-item-action>
-                    </ul>
-                  </ng-container>
-                }
+                  <ul nz-list-item-actions>
+                    <nz-list-item-action>
+                      <a
+                        nz-popconfirm
+                        nzPopconfirmTitle="确定要移除该用户吗？"
+                        nzPopconfirmPlacement="bottom"
+                        (nzOnConfirm)="onDeleteShareUser(item)"
+                        [class.disabled]="item.primary"
+                        [style.opacity]="item.primary ? '0' : '1'"
+                        [style.pointer-events]="item.primary ? 'none' : 'auto'"
+                      >
+                        <nz-icon nzType="delete" nzTheme="outline" />
+                      </a>
+                    </nz-list-item-action>
+                  </ul>
+                </ng-container>
               </nz-list-item>
             }
           </nz-list>
         } @else {
           <nz-empty nzNotFoundImage="simple" nzNotFoundContent="请先连接到资产"></nz-empty>
         }
-
       </nz-tab>
     </nz-tabset>
   </ng-container>

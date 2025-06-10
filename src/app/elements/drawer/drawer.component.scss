@@ -312,6 +312,7 @@
 
               .ant-list-item-meta-description,
               .ant-list-item-meta-title {
+                margin-bottom: unset;
                 color: var(--el-text-color-light);
               }
             }

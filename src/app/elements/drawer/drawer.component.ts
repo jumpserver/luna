@@ -5,19 +5,21 @@ import { writeText } from 'clipboard-polyfill';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { IframeCommunicationService } from '@app/services';
-import { Component, OnInit, input, output, Input, effect, signal } from '@angular/core';
+import { DrawerStateService } from '@src/app/services/drawer';
+import { Component, OnInit, input, output, Input, effect, signal, OnDestroy } from '@angular/core';
 import { LogService, SettingService, HttpService, I18nService } from '@app/services';
-import { data } from 'jquery';
 
 interface terminalThemeMap {
   label: string;
   value: string;
 }
 
-interface ShareUsers {
-  username: string;
-  status: 'entered' | 'inviting' | 'me';
-  avatar: string;
+interface OnlineUsers {
+  user: string;
+  user_id: string;
+  terminal_id: string;
+  primary: boolean;
+  writable: boolean;
 }
 
 interface ShareUserOptions {
@@ -32,7 +34,7 @@ interface ShareUserOptions {
   templateUrl: 'drawer.component.html',
   styleUrls: ['drawer.component.scss']
 })
-export class ElementDrawerComponent implements OnInit {
+export class ElementDrawerComponent implements OnInit, OnDestroy {
   @Input() view: View;
   visibleChange = output<boolean>();
   visible = input<boolean>(false);
@@ -50,7 +52,6 @@ export class ElementDrawerComponent implements OnInit {
   currentTheme = '';
   currentRdpScreenOptions = '';
   avatarUrl = '/static/img/avatar/admin.png';
-  onLineUsers = [];
   rdpScreenOptions = [];
   searchedUserList = [];
   shareExpiredOptions = [];
@@ -60,6 +61,7 @@ export class ElementDrawerComponent implements OnInit {
     action_permission: 'writable',
     users: [] as ShareUserOptions[]
   };
+  onLineUsers: OnlineUsers[] = [];
 
   shareLinkForm: FormGroup;
 
@@ -74,12 +76,31 @@ export class ElementDrawerComponent implements OnInit {
     private _logger: LogService,
     private _message: NzMessageService,
     private _settingSrv: SettingService,
-    private _iframeCommunicationService: IframeCommunicationService
+    private _iframeCommunicationService: IframeCommunicationService,
+    private _drawerStateService: DrawerStateService
   ) {
     this.sideEffect();
     this.initShareOptions();
     this.initShareLinkForm();
     this.subscriptonIframaMessage();
+    this.loadSavedState();
+  }
+  ngOnDestroy(): void {
+    this.saveCurrentState();
+  }
+
+  loadSavedState(): void {
+    const savedState = this._drawerStateService.getState();
+
+    this.onLineUsers = savedState.onLineUsers;
+    this.iframeURL = savedState.iframeURL;
+  }
+
+  saveCurrentState(): void {
+    this._drawerStateService.updateState({
+      onLineUsers: this.onLineUsers,
+      iframeURL: this.iframeURL,
+    });
   }
 
   async ngOnInit(): Promise<void> {
@@ -96,20 +117,6 @@ export class ElementDrawerComponent implements OnInit {
         this.checkIframeElement();
       }
     });
-
-    effect(() => {
-      if (this.hasConnected()) {
-        console.log(this.view);
-        this.onLineUsers = [
-          {
-            username: this.view.connectToken.user.name,
-            id: this.view.connectToken.user.id,
-            permissions: ['writable'],
-            avatar: this.avatarUrl
-          }
-        ];
-      }
-    });
   }
 
   hasLicense() {
@@ -117,6 +124,7 @@ export class ElementDrawerComponent implements OnInit {
   }
 
   close() {
+    this.saveCurrentState();
     this.visibleChange.emit(false);
   }
 
@@ -140,7 +148,6 @@ export class ElementDrawerComponent implements OnInit {
       ...Object.keys(xtermTheme).map(item => ({ label: item, value: item }))
     ];
     this._http.getTerminalPreference().subscribe(res => {
-      console.log(res);
       if (res) {
         this.currentTheme = res.basic.terminal_theme_name;
       }
@@ -151,7 +158,6 @@ export class ElementDrawerComponent implements OnInit {
     this._iframeCommunicationService.message$.subscribe(message => {
       if (message.name === 'SHARE_CODE_RESPONSE') {
         const messageData = JSON.parse(message.data);
-        console.log(messageData);
         this.shareCode = messageData.code;
 
         switch (this.view.connectMethod.component) {
@@ -171,8 +177,16 @@ export class ElementDrawerComponent implements OnInit {
       }
 
       if (message.name === 'SHARE_USER_ADD') {
-        const messageData = JSON.parse(message.data);
+        const messageData: OnlineUsers = JSON.parse(message.data);
         console.log(messageData);
+
+        this.onLineUsers.push({
+          user: messageData.user,
+          user_id: messageData.user_id,
+          terminal_id: messageData.terminal_id,
+          primary: messageData.primary,
+          writable: messageData.writable
+        });
       }
     });
   }
@@ -191,7 +205,7 @@ export class ElementDrawerComponent implements OnInit {
     // TODO ACL
     return new Promise((resolve, reject) => {
       this._http
-        .adminConnectToken(this.view.asset, this.view.connectData, false, false, '')
+        .createConnectToken(this.view.asset, this.view.connectData, false, false, '')
         .subscribe(resp => {
           const token = resp ? resp.id : '';
 
@@ -263,11 +277,18 @@ export class ElementDrawerComponent implements OnInit {
     });
   }
 
-  onDeleteShareUser(item: ShareUserOptions) {
-    console.log(item);
+  onDeleteShareUser(item: OnlineUsers) {
     this._iframeCommunicationService.sendMessage({
       name: 'SHARE_USER_REMOVE',
-      data: {}
+      data: { ...item }
+    });
+
+    this.onLineUsers = this.onLineUsers.filter(user => {
+      // 如果是要删除的用户，需要同时匹配 terminal_id 和 primary 状态
+      if (user.terminal_id === item.terminal_id && user.primary === item.primary) {
+        return false;
+      }
+      return true;
     });
   }
 
