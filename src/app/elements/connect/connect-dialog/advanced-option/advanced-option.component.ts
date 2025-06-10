@@ -66,7 +66,7 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         type: 'select',
         field: 'token_reusable',
         hidden: () => {
-          return !(this.connectMethod.component === 'magnus' && this.connectMethod.value === 'db_client');
+          return !(this.connectMethod.component === 'magnus' && this.connectMethod.value === 'db_client' && this.globalSetting.CONNECTION_TOKEN_REUSABLE);
         },
         label: 'Set reusable',
         value: false,
