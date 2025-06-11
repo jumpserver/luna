@@ -1,5 +1,5 @@
 import { View } from '@app/model';
-import { SettingService, ViewService } from '@app/services';
+import { SettingService, ViewService, IframeCommunicationService } from '@app/services';
 import {
   Component,
   ElementRef,
@@ -33,7 +33,8 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     public viewSrv: ViewService,
     public _settingSvc: SettingService,
-    private el: ElementRef
+    private el: ElementRef,
+    private _iframeCommunicationService: IframeCommunicationService
   ) {}
 
   ngAfterViewInit() {
@@ -153,11 +154,9 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   handleShowDrawer(visible?: boolean) {
-    if (!visible) {
-      this.showSettingDrawer = !this.showSettingDrawer;
-    } else {
-      this.showSettingDrawer = visible;
-    }
+    this._iframeCommunicationService.sendMessage({
+      name: 'OPEN_SETTING'
+    });
 
     // if (this.currentView.iframeElement) {
     //   this.currentView.iframeElement.postMessage({name: 'OPEN'}, '*');

@@ -7,7 +7,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { IframeCommunicationService } from '@app/services';
 import { DrawerStateService } from '@src/app/services/drawer';
 import { LogService, SettingService, HttpService, I18nService } from '@app/services';
-import { Component, OnInit, input, output, Input, effect, signal, OnDestroy } from '@angular/core';
+import { Component, OnInit, Input, effect, signal, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
 
 interface terminalThemeMap {
@@ -37,14 +37,15 @@ interface ShareUserOptions {
 })
 export class ElementDrawerComponent implements OnInit, OnDestroy {
   @Input() view: View;
-  visibleChange = output<boolean>();
-  visible = input<boolean>(false);
 
   setting: Setting = new Setting();
 
+  showDrawer = false;
+
   loading = false;
+  showChat = false;
+  showSetting = false;
   showLinkResult = false;
-  isDriverRedirect = false;
   showCreateShareLinkForm = true;
   showCreateShareLinkModal = false;
   hasConnected = signal(false);
@@ -105,9 +106,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   sideEffect() {
     effect(() => {
-      const isVisible = this.visible();
-
-      if (isVisible) {
+      if (this.showDrawer && this.showSetting) {
         this.checkIframeElement();
 
         setTimeout(() => {
@@ -123,7 +122,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   close() {
     this.saveCurrentState();
-    this.visibleChange.emit(false);
+    this.showDrawer = false;
   }
 
   initShareOptions() {
@@ -222,6 +221,16 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
         this.currentViewId = viewId;
 
         console.log('drawerStateMap', this.drawerStateMap);
+      }
+
+      if (message.name === 'OPEN_SETTING') {
+        this.showDrawer = true;
+        this.showSetting = true;
+      }
+
+      if (message.name === 'OPEN_CHAT') {
+        this.showChat = true;
+        this.showDrawer = true;
       }
     });
   }

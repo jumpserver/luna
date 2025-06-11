@@ -58,6 +58,27 @@
     display: flex;
     align-items: center;
     color: var(--el-text-color-light);
+
+    .chat-trigger {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      width: 115px;
+      height: 25px;
+      margin-right: 10px;
+      padding: 0 10px;
+      border-radius: 50px;
+      border: 1px solid var(--el-divider-border-color);
+      background-color: var(--el-nav-bg-color);
+      color: var(--el-text-color-light);
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        color: white;
+        background-color: var(--el-dropdown-selected-bg-color);
+      }
+    }
   }
 }
 
