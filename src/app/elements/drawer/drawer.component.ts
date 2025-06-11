@@ -421,7 +421,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     if (this.iframeCache.has(viewId)) {
       const iframe = this.iframeCache.get(viewId);
       this.renderer.setStyle(iframe, 'display', 'block');
-      if (!iframe.parentNode) {
+      if (this.iframeContainer?.nativeElement) {
         this.renderer.appendChild(this.iframeContainer.nativeElement, iframe);
       }
     } else {
