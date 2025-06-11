@@ -5,7 +5,13 @@ import { writeText } from 'clipboard-polyfill';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { IframeCommunicationService } from '@app/services';
-import { LogService, SettingService, HttpService, I18nService } from '@app/services';
+import {
+  LogService,
+  SettingService,
+  HttpService,
+  I18nService,
+  ConnectTokenService
+} from '@app/services';
 import {
   Component,
   OnInit,
@@ -33,6 +39,30 @@ interface ShareUserOptions {
   username: string;
 }
 
+interface ShareLinkRequest {
+  expired_time: number;
+  action_permission: 'writable' | 'readonly';
+  users: ShareUserOptions[];
+}
+
+interface DrawerViewState {
+  onLineUsers: OnlineUsers[];
+  iframeURL: string;
+  isDrawerOpen: boolean;
+  isSettingOpen: boolean;
+  isChatOpen: boolean;
+}
+
+interface ExpiredOption {
+  label: string;
+  value: number;
+}
+
+interface PermissionOption {
+  label: string;
+  value: 'writable' | 'readonly';
+}
+
 @Component({
   standalone: false,
   selector: 'elements-drawer',
@@ -43,77 +73,81 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   @Input() view: View;
   @ViewChild('iframeContainer') iframeContainer: ElementRef;
 
-  setting: Setting = new Setting();
+  readonly showChat = signal(false);
+  readonly showDrawer = signal(false);
+  readonly showSetting = signal(false);
+  readonly iframeLoading = signal(false);
+  readonly hasConnected = signal(false);
 
-  showChat = signal(false);
-  showDrawer = signal(false);
-  showSetting = signal(false);
-  iframeLoading = signal(false);
-
-  loading = false;
   showLinkResult = false;
   showCreateShareLinkForm = true;
   showCreateShareLinkModal = false;
-  hasConnected = signal(false);
+  loading = false;
+
   shareLink = '';
   shareCode = '';
-  chatIframeURL = '';
-  currentRdpScreenOptions = '';
-  avatarUrl = '/static/img/avatar/admin.png';
+  shareLinkForm: FormGroup;
+  searchedUserList: ShareUserOptions[] = [];
+  shareExpiredOptions: ExpiredOption[] = [];
+  shareUserPermissions: PermissionOption[] = [];
+
   currentTabIndex = 0;
-  rdpScreenOptions = [];
-  searchedUserList = [];
-  shareExpiredOptions = [];
-  shareUserPermissions = [];
-  shareLinkRequest = {
+  currentViewId: string | null = null;
+  onLineUsers: OnlineUsers[] = [];
+  iframeURL = '';
+  chatIframeURL = '';
+
+  private readonly DEFAULT_SHARE_REQUEST: ShareLinkRequest = {
     expired_time: 10,
     action_permission: 'writable',
-    users: [] as ShareUserOptions[]
+    users: []
   };
-  onLineUsers: OnlineUsers[] = [];
 
-  shareLinkForm: FormGroup;
-
-  iframeURL = '';
-  private iframeCache = new Map<string, HTMLIFrameElement>();
-
-  drawerStateMap = new Map<string, any>();
-  messageSubscription: Subscription;
-  currentViewId: string | null = null;
+  private readonly iframeCache = new Map<string, HTMLIFrameElement>();
+  private readonly drawerStateMap = new Map<string, DrawerViewState>();
+  private messageSubscription: Subscription;
+  private shareLinkRequest: ShareLinkRequest = { ...this.DEFAULT_SHARE_REQUEST };
 
   constructor(
-    private _fb: FormBuilder,
-    private _http: HttpService,
-    private _i18n: I18nService,
-    private _logger: LogService,
-    private _message: NzMessageService,
-    private _settingSrv: SettingService,
-    private _iframeCommunicationService: IframeCommunicationService,
-    private renderer: Renderer2
+    private readonly _fb: FormBuilder,
+    private readonly _http: HttpService,
+    private readonly _i18n: I18nService,
+    private readonly renderer: Renderer2,
+    private readonly _logger: LogService,
+    private readonly _message: NzMessageService,
+    private readonly _settingSrv: SettingService,
+    private readonly _connectTokenSvc: ConnectTokenService,
+    private readonly _iframeCommunicationService: IframeCommunicationService
   ) {
-    this.sideEffect();
-    this.initShareOptions();
-    this.initShareLinkForm();
-    this.subscriptonIframaMessage();
-    this.showDrawer.set(false);
-    this.showSetting.set(false);
+    this.initializeComponent();
+  }
+
+  ngOnInit(): void {
+    this.resetDrawerState();
   }
 
   ngOnDestroy(): void {
-    this.messageSubscription.unsubscribe();
+    this.messageSubscription?.unsubscribe();
   }
 
-  async ngOnInit(): Promise<void> {
-    this.setting = this._settingSrv.setting;
-    this.showChat.set(false);
+  private initializeComponent(): void {
+    this.setupSideEffects();
+    this.initializeShareOptions();
+    this.initializeShareLinkForm();
+    this.subscribeToIframeMessages();
+    this.resetDrawerState();
+  }
+
+  private resetDrawerState(): void {
     this.showDrawer.set(false);
     this.showSetting.set(false);
+    this.showChat.set(false);
   }
 
-  sideEffect() {
+  private setupSideEffects(): void {
     effect(() => {
       if (this.showDrawer()) {
-        this.checkIframeElement();
+        this.checkConnectionStatus();
         if (this.showSetting() && this.currentTabIndex === 0) {
           setTimeout(() => this.handleFileManagerTab(), 0);
         }
@@ -123,146 +157,27 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     });
   }
 
-  hasLicense() {
-    return this._settingSrv.globalSetting.XPACK_LICENSE_IS_VALID;
+  private checkConnectionStatus(): void {
+    const isConnected = Boolean(this.view?.iframeElement);
+    this.hasConnected.set(isConnected);
+    console.log(
+      `iframe 元素${isConnected ? '存在' : '不存在'}，${isConnected ? '已连接' : '未连接'}`
+    );
   }
 
-  close() {
-    this.showDrawer.set(false);
-    this.showSetting.set(false);
-    this.showChat.set(false);
-  }
-
-  initShareOptions() {
+  private initializeShareOptions(): void {
     this.shareUserPermissions = [
       { label: this._i18n.instant('Writable'), value: 'writable' },
       { label: this._i18n.instant('ReadOnly'), value: 'readonly' }
     ];
-    this.shareExpiredOptions = [
-      { label: this.getMinuteLabel(1), value: 1 },
-      { label: this.getMinuteLabel(5), value: 5 },
-      { label: this.getMinuteLabel(10), value: 10 },
-      { label: this.getMinuteLabel(20), value: 20 },
-      { label: this.getMinuteLabel(60), value: 60 }
-    ];
+
+    this.shareExpiredOptions = [1, 5, 10, 20, 60].map(minutes => ({
+      label: this.getMinuteLabel(minutes),
+      value: minutes
+    }));
   }
 
-  subscriptonIframaMessage() {
-    this.messageSubscription = this._iframeCommunicationService.message$.subscribe(message => {
-      if (message.name === 'SHARE_CODE_RESPONSE') {
-        try {
-          const messageData = JSON.parse(message.data);
-          console.log('SHARE_CODE_RESPONSE', messageData);
-          this.shareCode = messageData.code;
-
-          switch (this.view.connectMethod.component) {
-            case 'koko':
-              this.shareLink = `${this.view.smartEndpoint.getUrl()}/luna/share/${messageData.share_id}`;
-              break;
-            case 'lion':
-              this.shareLink = `${this.view.smartEndpoint.getUrl()}/luna/share/${messageData.share_id}?type=lion`;
-              break;
-            default:
-              break;
-          }
-
-          this.showCreateShareLinkForm = false;
-          this.showLinkResult = true;
-        } catch (error) {
-          console.error('Failed to parse SHARE_CODE_RESPONSE:', error);
-        }
-      }
-
-      if (message.name === 'SHARE_USER_ADD') {
-        try {
-          const messageData: OnlineUsers = JSON.parse(message.data);
-
-          this.onLineUsers.push({
-            user: messageData.user,
-            user_id: messageData.user_id,
-            terminal_id: messageData.terminal_id,
-            primary: messageData.primary,
-            writable: messageData.writable
-          });
-
-          this.saveCurrentViewState();
-        } catch (error) {
-          console.error('Failed to parse SHARE_USER_ADD:', error);
-        }
-      }
-
-      if (message.name === 'TAB_VIEW_CHANGE') {
-        const viewId = message.data;
-        if (viewId === this.currentViewId) return;
-
-        this.saveCurrentViewState();
-
-        if (this.drawerStateMap.has(viewId)) {
-          const savedState = this.drawerStateMap.get(viewId);
-          this.onLineUsers = [...(savedState.onLineUsers || [])];
-        } else {
-          this.initializeNewTabState(viewId);
-        }
-
-        this.currentViewId = viewId;
-
-        if (this.showDrawer() && this.currentTabIndex === 0) {
-          this.handleFileManagerTab();
-        }
-      }
-
-      if (message.name === 'OPEN_SETTING') {
-        this.showDrawer.set(true);
-        this.showSetting.set(true);
-      }
-
-      if (message.name === 'OPEN_CHAT') {
-        this.chatIframeURL = message.data;
-        this.showChat.set(true);
-        this.showDrawer.set(true);
-      }
-    });
-  }
-
-  getMinuteLabel(minute: number) {
-    let minuteLabel = this._i18n.instant('Minute');
-
-    if (minute > 1) {
-      minuteLabel = this._i18n.instant('Minutes');
-    }
-
-    return `${minute} ${minuteLabel}`;
-  }
-
-  async getSFTPToken() {
-    // TODO ACL
-    return new Promise((resolve, reject) => {
-      this._http
-        .createConnectToken(this.view.asset, this.view.connectData, false, false, '')
-        .subscribe({
-          next: resp => {
-            const token = resp ? resp.id : '';
-            resolve(token);
-          },
-          error: error => {
-            console.error('Failed to get SFTP token:', error);
-            reject(error);
-          }
-        });
-    });
-  }
-
-  checkIframeElement() {
-    if (this.view?.iframeElement) {
-      this.hasConnected.set(true);
-      console.log('iframe 元素存在，已连接');
-    } else {
-      this.hasConnected.set(false);
-      console.log('iframe 元素不存在，未连接');
-    }
-  }
-
-  initShareLinkForm() {
+  private initializeShareLinkForm(): void {
     this.shareLinkForm = this._fb.group({
       expired_time: [this.shareLinkRequest.expired_time],
       action_permission: [this.shareLinkRequest.action_permission],
@@ -270,53 +185,215 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     });
   }
 
-  resetShareLinkModal() {
-    // 重置显示状态
+  private subscribeToIframeMessages(): void {
+    this.messageSubscription = this._iframeCommunicationService.message$.subscribe(message => {
+      this.handleIframeMessage(message);
+    });
+  }
+
+  private handleIframeMessage(message: any): void {
+    const messageHandlers = {
+      SHARE_CODE_RESPONSE: this.handleShareCodeResponse.bind(this),
+      SHARE_USER_ADD: this.handleShareUserAdd.bind(this),
+      TAB_VIEW_CHANGE: this.handleTabViewChange.bind(this),
+      OPEN_SETTING: this.handleOpenSetting.bind(this),
+      OPEN_CHAT: this.handleOpenChat.bind(this)
+    };
+
+    const handler = messageHandlers[message.name];
+    if (handler) {
+      handler(message.data);
+    }
+  }
+
+  private handleShareCodeResponse(data: string): void {
+    try {
+      const messageData = JSON.parse(data);
+      this.shareCode = messageData.code;
+      this.generateShareLink(messageData.share_id);
+      this.showCreateShareLinkForm = false;
+      this.showLinkResult = true;
+    } catch (error) {
+      console.error('Failed to parse SHARE_CODE_RESPONSE:', error);
+    }
+  }
+
+  private generateShareLink(shareId: string): void {
+    const baseUrl = this.view.smartEndpoint.getUrl();
+    const componentType = this.view.connectMethod.component;
+
+    switch (componentType) {
+      case 'koko':
+        this.shareLink = `${baseUrl}/luna/share/${shareId}`;
+        break;
+      case 'lion':
+        this.shareLink = `${baseUrl}/luna/share/${shareId}?type=lion`;
+        break;
+      default:
+        this.shareLink = `${baseUrl}/luna/share/${shareId}`;
+        break;
+    }
+  }
+
+  private handleShareUserAdd(data: string): void {
+    console.log('data', JSON.parse(data));
+    try {
+      const messageData: OnlineUsers = JSON.parse(data);
+      this.onLineUsers.push(messageData);
+      this.saveCurrentViewState();
+    } catch (error) {
+      console.error('Failed to parse SHARE_USER_ADD:', error);
+    }
+  }
+
+  private handleTabViewChange(viewId: string): void {
+    if (viewId === this.currentViewId) return;
+
+    this.saveCurrentViewState();
+    this.restoreViewState(viewId);
+    this.currentViewId = viewId;
+
+    if (this.showDrawer() && this.currentTabIndex === 0) {
+      this.handleFileManagerTab();
+    }
+  }
+
+  private handleOpenSetting(): void {
+    this.showDrawer.set(true);
+    this.showSetting.set(true);
+    this.saveCurrentViewState();
+  }
+
+  private handleOpenChat(chatIframeURL: string): void {
+    this.chatIframeURL = chatIframeURL;
+    this.showChat.set(true);
+    this.showDrawer.set(true);
+    this.saveCurrentViewState();
+  }
+
+  private restoreViewState(viewId: string): void {
+    if (this.drawerStateMap.has(viewId)) {
+      const savedState = this.drawerStateMap.get(viewId)!;
+      this.onLineUsers = [...savedState.onLineUsers];
+      this.showDrawer.set(savedState.isDrawerOpen);
+      this.showSetting.set(savedState.isSettingOpen);
+      this.showChat.set(savedState.isChatOpen);
+      this.iframeURL = savedState.iframeURL;
+    } else {
+      this.initializeNewTabState(viewId);
+    }
+  }
+
+  private createDefaultViewState(): DrawerViewState {
+    return {
+      onLineUsers: [],
+      iframeURL: '',
+      isDrawerOpen: false,
+      isSettingOpen: false,
+      isChatOpen: false
+    };
+  }
+
+  private getMinuteLabel(minute: number): string {
+    const minuteLabel = minute > 1 ? this._i18n.instant('Minutes') : this._i18n.instant('Minute');
+    return `${minute} ${minuteLabel}`;
+  }
+
+  private async getSFTPToken(): Promise<string | undefined> {
+    const oldToken = this.view.connectToken;
+    const newToken = await this._connectTokenSvc.exchange(oldToken);
+    return newToken?.id;
+  }
+
+  private async getIframeURL(): Promise<string> {
+    const token = await this.getSFTPToken();
+    return `${this.view.smartEndpoint.getUrl()}/koko/sftp?token=${token}`;
+  }
+
+  private hideAllIframes(): void {
+    this.iframeCache.forEach(iframe => {
+      if (iframe.parentNode) {
+        this.renderer.setStyle(iframe, 'display', 'none');
+      }
+    });
+  }
+
+  private async handleFileManagerTab(): Promise<void> {
+    if (!this.view || !this.hasConnected()) {
+      return;
+    }
+
+    const viewId = this.view.id;
+    this.currentViewId = viewId;
+
+    try {
+      const url = await this.getIframeURL();
+      this.iframeURL = url;
+    } catch (error) {
+      this._logger.error(`Failed to get iframe URL for ${viewId}`, error);
+    }
+  }
+
+  private resetShareLinkModal(): void {
     this.showLinkResult = false;
     this.showCreateShareLinkForm = true;
     this.showCreateShareLinkModal = false;
-
-    // 清空链接和分享码
     this.shareLink = '';
     this.shareCode = '';
-
-    // 清空搜索相关状态
     this.searchedUserList = [];
     this.loading = false;
 
-    // 重置表单
     this.shareLinkForm.reset();
     this.shareLinkForm.patchValue({
-      expired_time: this.shareLinkRequest.expired_time,
-      action_permission: this.shareLinkRequest.action_permission,
+      expired_time: this.DEFAULT_SHARE_REQUEST.expired_time,
+      action_permission: this.DEFAULT_SHARE_REQUEST.action_permission,
       users: []
     });
   }
 
-  copyLink(event?: Event) {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    const linkTitle = this._i18n.instant('LinkAddr');
-    const codeTitle = this._i18n.instant('VerifyCode');
-
-    const text = `${linkTitle}: ${this.shareLink}\n${codeTitle}: ${this.shareCode}`;
-
-    writeText(text);
-
-    this._message.success(this._i18n.instant('Copied'));
-    this.resetShareLinkModal();
+  // Public methods
+  hasLicense(): boolean {
+    return this._settingSrv.globalSetting.XPACK_LICENSE_IS_VALID;
   }
 
-  onShareUserSearch(value: string) {
+  close(): void {
+    this.resetDrawerState();
+    this.saveCurrentViewState();
+  }
+
+  async onTabChange(event: { index: number; tab: any }): Promise<void> {
+    this.currentTabIndex = event.index;
+
+    if (event.index === 0) {
+      await this.handleFileManagerTab();
+    } else {
+      this.hideAllIframes();
+    }
+  }
+
+  onCreateShareLink(): void {
+    this.resetShareLinkModal();
+    this.showCreateShareLinkModal = true;
+  }
+
+  onDeleteShareUser(item: OnlineUsers): void {
+    this._iframeCommunicationService.sendMessage({
+      name: 'SHARE_USER_REMOVE',
+      data: item
+    });
+
+    this.onLineUsers = this.onLineUsers.filter(
+      user => !(user.terminal_id === item.terminal_id && user.primary === item.primary)
+    );
+
+    this.saveCurrentViewState();
+  }
+
+  onShareUserSearch(value: string): void {
     this.loading = true;
     this._http.getShareUserList(value).subscribe({
       next: res => {
-        if (res) {
-          this.searchedUserList = res;
-        }
+        this.searchedUserList = res || [];
         this.loading = false;
       },
       error: error => {
@@ -327,131 +404,63 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     });
   }
 
-  onCreateShareLink() {
-    this.resetShareLinkModal();
-    this.showCreateShareLinkModal = true;
-  }
+  copyLink(event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
 
-  onDeleteShareUser(item: OnlineUsers) {
-    this._iframeCommunicationService.sendMessage({
-      name: 'SHARE_USER_REMOVE',
-      data: { ...item }
-    });
+    const linkTitle = this._i18n.instant('LinkAddr');
+    const codeTitle = this._i18n.instant('VerifyCode');
+    const text = `${linkTitle}: ${this.shareLink}\n${codeTitle}: ${this.shareCode}`;
 
-    this.onLineUsers = this.onLineUsers.filter(user => {
-      // 如果是要删除的用户，需要同时匹配 terminal_id 和 primary 状态
-      if (user.terminal_id === item.terminal_id && user.primary === item.primary) {
-        return false;
-      }
-      return true;
-    });
-
-    // 保存当前状态到对应的 viewId
-    this.saveCurrentViewState();
-  }
-
-  saveCurrentViewState(): void {
-    if (this.currentViewId) {
-      this.drawerStateMap.set(this.currentViewId, {
-        onLineUsers: [...this.onLineUsers], // 深拷贝数组
-        iframeURL: this.iframeURL
-      });
-    }
-  }
-
-  initializeNewTabState(viewId: string): void {
-    this.onLineUsers = [];
-    this.iframeURL = '';
-
-    this.drawerStateMap.set(viewId, {
-      onLineUsers: [],
-      iframeURL: this.iframeURL
-    });
-  }
-
-  handleCancel() {
+    writeText(text);
+    this._message.success(this._i18n.instant('Copied'));
     this.resetShareLinkModal();
   }
 
-  handleOk() {
+  handleCancel(): void {
+    this.resetShareLinkModal();
+  }
+
+  handleOk(): void {
     this.shareLinkRequest = { ...this.shareLinkRequest, ...this.shareLinkForm.value };
-
     this.showCreateShareLinkForm = false;
 
     this._iframeCommunicationService.sendMessage({
       name: 'SHARE_CODE_REQUEST',
-      data: {
-        users: this.shareLinkRequest.users,
-        expired_time: this.shareLinkRequest.expired_time,
-        action_permission: this.shareLinkRequest.action_permission
-      }
+      data: this.shareLinkRequest
     });
 
     this.showLinkResult = true;
   }
 
-  async onTabChange(event: { index: number; tab: any }) {
-    const index = event.index;
-    this.currentTabIndex = index;
-
-    if (index === 0) {
-      this.handleFileManagerTab();
-    } else {
-      this.hideAllIframes();
+  saveCurrentViewState(): void {
+    if (this.currentViewId) {
+      this.drawerStateMap.set(this.currentViewId, {
+        onLineUsers: [...this.onLineUsers],
+        iframeURL: this.iframeURL,
+        isDrawerOpen: this.showDrawer(),
+        isSettingOpen: this.showSetting(),
+        isChatOpen: this.showChat()
+      });
     }
   }
 
-  private hideAllIframes() {
-    this.iframeCache.forEach(iframe => {
-      if (iframe.parentNode) {
-        this.renderer.setStyle(iframe, 'display', 'none');
-      }
+  initializeNewTabState(viewId: string): void {
+    const defaultState = this.createDefaultViewState();
+    Object.assign(this, {
+      onLineUsers: defaultState.onLineUsers,
+      iframeURL: defaultState.iframeURL
     });
+
+    this.showDrawer.set(defaultState.isDrawerOpen);
+    this.showSetting.set(defaultState.isSettingOpen);
+    this.showChat.set(defaultState.isChatOpen);
+
+    this.drawerStateMap.set(viewId, defaultState);
   }
 
-  private async handleFileManagerTab() {
-    if (!this.view || !this.hasConnected()) {
-      return;
-    }
-    const viewId = this.view.id;
-    this.currentViewId = viewId;
-
-    this.hideAllIframes();
-
-    if (this.iframeCache.has(viewId)) {
-      const iframe = this.iframeCache.get(viewId);
-      this.renderer.setStyle(iframe, 'display', 'block');
-      if (this.iframeContainer?.nativeElement) {
-        this.renderer.appendChild(this.iframeContainer.nativeElement, iframe);
-      }
-    } else {
-      this.iframeLoading.set(true);
-      try {
-        const url = await this.getIframeURL();
-        if (this.iframeContainer?.nativeElement) {
-          const iframe = this.renderer.createElement('iframe');
-          this.renderer.setAttribute(iframe, 'src', url);
-          this.renderer.setAttribute(iframe, 'frameborder', '0');
-          this.renderer.setStyle(iframe, 'width', '100%');
-          this.renderer.setStyle(iframe, 'height', 'calc(100vh - 170px)');
-          this.iframeCache.set(viewId, iframe);
-          this.renderer.appendChild(this.iframeContainer.nativeElement, iframe);
-        }
-      } catch (e) {
-        this._logger.error(`Failed to create iframe for ${viewId}`, e);
-      } finally {
-        this.iframeLoading.set(false);
-      }
-    }
-  }
-
-  debounceSearch = _.debounce((value: string) => {
+  // Debounced search method
+  readonly debounceSearch = _.debounce((value: string) => {
     this.onShareUserSearch(value);
   }, 500);
-
-  async getIframeURL(): Promise<string> {
-    const token = await this.getSFTPToken();
-    const url = `${this.view.smartEndpoint.getUrl()}/koko/sftp?token=${token}`;
-    return url;
-  }
 }
