@@ -103,9 +103,10 @@ export class ElementNavComponent implements OnInit {
             name: this._i18n.instant('General'),
             click: () => {
               this._dialog.create({
-                nzTitle: this._i18n.instant('General'),
-                nzContent: ElementSettingComponent,
                 nzWidth: '500px',
+                nzCentered: true,
+                nzContent: ElementSettingComponent,
+                nzTitle: this._i18n.instant('General'),
                 nzData: { type: 'general', name: 'General' },
                 nzOnOk: cmp => cmp.onSubmit()
               });
@@ -119,6 +120,7 @@ export class ElementNavComponent implements OnInit {
                 nzTitle: this._i18n.instant('GUI'),
                 nzContent: ElementSettingComponent,
                 nzWidth: '500px',
+                nzCentered: true,
                 nzData: { type: 'gui', name: 'GUI' },
                 nzOnOk: cmp => cmp.onSubmit()
               });
@@ -132,6 +134,7 @@ export class ElementNavComponent implements OnInit {
                 nzTitle: this._i18n.instant('CLI'),
                 nzContent: ElementSettingComponent,
                 nzWidth: '500px',
+                nzCentered: true,
                 nzData: { type: 'cli', name: 'CLI' },
                 nzOnOk: cmp => cmp.onSubmit()
               });

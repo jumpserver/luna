@@ -1,19 +1,13 @@
 import _ from 'lodash-es';
-import xtermTheme from 'xterm-theme';
+
 import { Setting, View } from '@app/model';
 import { writeText } from 'clipboard-polyfill';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { IframeCommunicationService } from '@app/services';
-import { DrawerStateService } from '@src/app/services/drawer';
 import { LogService, SettingService, HttpService, I18nService } from '@app/services';
 import { Component, OnInit, Input, effect, signal, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
-
-interface terminalThemeMap {
-  label: string;
-  value: string;
-}
 
 interface OnlineUsers {
   user: string;
@@ -40,18 +34,17 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   setting: Setting = new Setting();
 
-  showDrawer = false;
+  showChat = signal(false);
+  showDrawer = signal(false);
+  showSetting = signal(false);
 
   loading = false;
-  showChat = false;
-  showSetting = false;
   showLinkResult = false;
   showCreateShareLinkForm = true;
   showCreateShareLinkModal = false;
   hasConnected = signal(false);
   shareLink = '';
   shareCode = '';
-  currentTheme = '';
   currentRdpScreenOptions = '';
   avatarUrl = '/static/img/avatar/admin.png';
   currentTabIndex = 0;
@@ -71,8 +64,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   iframeURL = '';
 
-  terminalThemeMap: terminalThemeMap[] = [];
-
   drawerStateMap = new Map<string, any>();
   messageSubscription: Subscription;
   currentViewId: string | null = null;
@@ -84,34 +75,35 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     private _logger: LogService,
     private _message: NzMessageService,
     private _settingSrv: SettingService,
-    private _drawerStateService: DrawerStateService,
     private _iframeCommunicationService: IframeCommunicationService
   ) {
     this.sideEffect();
     this.initShareOptions();
     this.initShareLinkForm();
     this.subscriptonIframaMessage();
-    this.loadSavedState();
   }
 
   ngOnDestroy(): void {
-    this.saveCurrentState();
     this.messageSubscription.unsubscribe();
   }
 
   async ngOnInit(): Promise<void> {
-    this.generateTerminalThemeMap();
     this.setting = this._settingSrv.setting;
+    this.showChat.set(false);
+    this.showDrawer.set(false);
+    this.showSetting.set(false);
   }
 
   sideEffect() {
     effect(() => {
-      if (this.showDrawer && this.showSetting) {
+      if (this.showDrawer()) {
         this.checkIframeElement();
 
-        setTimeout(() => {
-          this.currentTabIndex = this.lastActiveTabIndex;
-        }, 100);
+        if (this.showSetting()) {
+          setTimeout(() => {
+            this.currentTabIndex = this.lastActiveTabIndex;
+          }, 100);
+        }
       }
     });
   }
@@ -121,8 +113,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   close() {
-    this.saveCurrentState();
-    this.showDrawer = false;
+    this.showDrawer.set(false);
   }
 
   initShareOptions() {
@@ -137,26 +128,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       { label: this.getMinuteLabel(20), value: 20 },
       { label: this.getMinuteLabel(60), value: 60 }
     ];
-  }
-
-  generateTerminalThemeMap() {
-    this.terminalThemeMap = [
-      { label: 'Default', value: 'Default' },
-      ...Object.keys(xtermTheme).map(item => ({ label: item, value: item }))
-    ];
-    this._http.getTerminalPreference().subscribe({
-      next: res => {
-        if (res && res.basic && res.basic.terminal_theme_name) {
-          this.currentTheme = res.basic.terminal_theme_name;
-        } else {
-          this.currentTheme = 'Default';
-        }
-      },
-      error: error => {
-        console.error('Failed to get terminal preference:', error);
-        this.currentTheme = 'Default';
-      }
-    });
   }
 
   subscriptonIframaMessage() {
@@ -204,33 +175,14 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
         }
       }
 
-      if (message.name === 'TAB_VIEW_CHANGE') {
-        const viewId = message.data;
-
-        this.saveCurrentViewState();
-
-        if (this.drawerStateMap.has(viewId)) {
-          const savedState = this.drawerStateMap.get(viewId);
-          this.currentTheme = savedState.theme;
-          this.iframeURL = savedState.iframeURL;
-          this.onLineUsers = [...(savedState.onLineUsers || [])]; // 深拷贝数组
-        } else {
-          this.initializeNewTabState(viewId);
-        }
-
-        this.currentViewId = viewId;
-
-        console.log('drawerStateMap', this.drawerStateMap);
-      }
-
       if (message.name === 'OPEN_SETTING') {
-        this.showDrawer = true;
-        this.showSetting = true;
+        this.showDrawer.set(true);
+        this.showSetting.set(true);
       }
 
       if (message.name === 'OPEN_CHAT') {
-        this.showChat = true;
-        this.showDrawer = true;
+        this.showChat.set(true);
+        this.showDrawer.set(true);
       }
     });
   }
@@ -271,19 +223,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       this.hasConnected.set(false);
       console.log('iframe 元素不存在，未连接');
     }
-  }
-
-  onThemeChange(theme: string) {
-    this._iframeCommunicationService.sendMessage({ name: 'TERMINAL_THEME_CHANGE', theme });
-    this._http.setTerminalPreference({ basic: { terminal_theme_name: theme } }).subscribe({
-      next: res => {
-        this._message.success(this._i18n.instant('主题同步成功'));
-      },
-      error: error => {
-        console.error('Failed to set theme preference:', error);
-        this._message.error(this._i18n.instant('主题同步失败'));
-      }
-    });
   }
 
   initShareLinkForm() {
@@ -377,7 +316,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   saveCurrentViewState(): void {
     if (this.currentViewId) {
       this.drawerStateMap.set(this.currentViewId, {
-        theme: this.currentTheme,
         onLineUsers: [...this.onLineUsers], // 深拷贝数组
         iframeURL: this.iframeURL
       });
@@ -389,7 +327,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     this.iframeURL = '';
 
     this.drawerStateMap.set(viewId, {
-      theme: this.currentTheme,
       onLineUsers: [],
       iframeURL: this.iframeURL
     });
@@ -428,6 +365,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
       const { smartEndpoint, iframeElement } = this.view;
 
+      console.log('iframeElement', iframeElement);
+
       if (index === 1 && iframeElement) {
         if (!smartEndpoint) {
           console.warn('Smart endpoint is not available');
@@ -435,6 +374,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
         }
 
         this.iframeURL = await this.getIframeURL();
+
+        console.log('iframeURL', this.iframeURL);
       }
     } catch (e) {
       this._logger.error('Failed to initialize SFTP iframe', e);
@@ -449,19 +390,5 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     const token = await this.getSFTPToken();
     const url = `${this.view.smartEndpoint.getUrl()}/koko/sftp?token=${token}`;
     return url;
-  }
-
-  loadSavedState(): void {
-    const savedState = this._drawerStateService.getState();
-
-    this.onLineUsers = savedState.onLineUsers;
-    this.iframeURL = savedState.iframeURL;
-  }
-
-  saveCurrentState(): void {
-    this._drawerStateService.updateState({
-      onLineUsers: this.onLineUsers,
-      iframeURL: this.iframeURL
-    });
   }
 }

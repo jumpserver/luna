@@ -1,9 +1,17 @@
-import {Component, Inject, OnInit} from '@angular/core';
-import {HttpService, SettingService} from '@app/services';
-import {GlobalSetting, Setting} from '@app/model';
-import {I18nService} from '@app/services/i18n';
 import _ from 'lodash-es';
-import {NZ_MODAL_DATA} from "ng-zorro-antd/modal";
+import xtermTheme from 'xterm-theme';
+import { Subscription } from 'rxjs';
+import { I18nService } from '@app/services/i18n';
+import { GlobalSetting, Setting } from '@app/model';
+import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { Component, Inject, OnInit, OnDestroy } from '@angular/core';
+import { HttpService, SettingService, IframeCommunicationService } from '@app/services';
+
+interface terminalThemeMap {
+  label: string;
+  value: string;
+}
 
 @Component({
   standalone: false,
@@ -11,7 +19,7 @@ import {NZ_MODAL_DATA} from "ng-zorro-antd/modal";
   templateUrl: 'setting.component.html',
   styleUrls: ['setting.component.scss']
 })
-export class ElementSettingComponent implements OnInit {
+export class ElementSettingComponent implements OnInit, OnDestroy {
   public boolChoices: any[];
   public name: string;
   public type: string = 'general';
@@ -24,16 +32,24 @@ export class ElementSettingComponent implements OnInit {
   rdpClientConfig = {
     full_screen: false,
     multi_screen: false,
-    drives_redirect: false,
+    drives_redirect: false
   };
 
-  constructor(private _i18n: I18nService,
-              private _http: HttpService,
-              @Inject(NZ_MODAL_DATA) public data: any,
-              private settingSrv: SettingService) {
+  currentTheme = '';
+  terminalThemeMap: terminalThemeMap[] = [];
+  messageSubscription: Subscription;
+
+  constructor(
+    @Inject(NZ_MODAL_DATA) public data: any,
+    private _i18n: I18nService,
+    private _http: HttpService,
+    private settingSrv: SettingService,
+    private _message: NzMessageService,
+    private _iframeCommunicationService: IframeCommunicationService
+  ) {
     this.boolChoices = [
-      {name: _i18n.instant('Yes'), value: true},
-      {name: _i18n.instant('No'), value: false}
+      { name: _i18n.instant('Yes'), value: true },
+      { name: _i18n.instant('No'), value: false }
     ];
     this.name = data.name || this.name;
     this.type = data.type || this.type;
@@ -44,10 +60,46 @@ export class ElementSettingComponent implements OnInit {
   }
 
   async ngOnInit() {
+    this.generateTerminalThemeMap();
     await this.getSettingOptions();
     this.setting = this.settingSrv.setting;
     this.getRdpClientConfig();
     this.globalSetting = this.settingSrv.globalSetting;
+    this.subscriptonIframaMessage();
+  }
+
+  ngOnDestroy() {
+    if (this.messageSubscription) {
+      this.messageSubscription.unsubscribe();
+    }
+  }
+
+  generateTerminalThemeMap() {
+    this.terminalThemeMap = [
+      { label: 'Default', value: 'Default' },
+      ...Object.keys(xtermTheme).map(item => ({ label: item, value: item }))
+    ];
+    this._http.getTerminalPreference().subscribe({
+      next: res => {
+        if (res && res.basic && res.basic.terminal_theme_name) {
+          this.currentTheme = res.basic.terminal_theme_name;
+        } else {
+          this.currentTheme = 'Default';
+        }
+      },
+      error: error => {
+        console.error('Failed to get terminal preference:', error);
+        this.currentTheme = 'Default';
+      }
+    });
+  }
+
+  subscriptonIframaMessage() {
+    this.messageSubscription = this._iframeCommunicationService.message$.subscribe(message => {
+      if (message.name === 'TAB_VIEW_CHANGE') {
+        this.currentTheme = message.data;
+      }
+    });
   }
 
   async getSettingOptions() {
@@ -82,5 +134,18 @@ export class ElementSettingComponent implements OnInit {
   onSubmit() {
     this.setRdpClientConfig();
     this.settingSrv.save();
+  }
+
+  onThemeChange(theme: string) {
+    this._iframeCommunicationService.sendMessage({ name: 'TERMINAL_THEME_CHANGE', theme });
+    this._http.setTerminalPreference({ basic: { terminal_theme_name: theme } }).subscribe({
+      next: _res => {
+        this._message.success(this._i18n.instant('主题同步成功'));
+      },
+      error: error => {
+        console.error('Failed to set theme preference:', error);
+        this._message.error(this._i18n.instant('主题同步失败'));
+      }
+    });
   }
 }

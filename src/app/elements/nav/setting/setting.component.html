@@ -1,71 +1,47 @@
 <div class="setting">
   <div *ngIf="type === 'general'">
-    <nz-form-item>
-      <nz-form-label>
-        {{ 'Load tree async'| translate }}
-      </nz-form-label>
-      <nz-form-control>
+    <nz-descriptions [nzColumn]="1" nzBordered>
+      <nz-descriptions-item [nzTitle]="'Load tree async' | translate">
         <nz-select [(ngModel)]="setting.basic.is_async_asset_tree">
           <nz-option *ngFor="let s of boolChoices" [nzLabel]="s.name| translate" [nzValue]="s.value"></nz-option>
         </nz-select>
-      </nz-form-control>
-    </nz-form-item>
+      </nz-descriptions-item>
+    </nz-descriptions>
   </div>
   <div *ngIf="type === 'gui'">
-    <nz-form-item>
-      <nz-form-label>
-        {{ 'RDP resolution'| translate }}
-      </nz-form-label>
-      <nz-form-control>
+    <nz-descriptions [nzColumn]="1" nzBordered>
+      <nz-descriptions-item [nzTitle]="'RDP resolution' | translate">
         <nz-select name="rdp_resolution" [(ngModel)]="setting.graphics.rdp_resolution">
           <nz-option *ngFor="let s of resolutionsOptions" [nzLabel]="s.label" [nzValue]="s.value"></nz-option>
         </nz-select>
-      </nz-form-control>
-    </nz-form-item>
+      </nz-descriptions-item>
 
-    <nz-form-item>
-      <nz-form-label>
-        {{ 'RDP smart size'| translate }}
-      </nz-form-label>
-      <nz-form-control>
+      <nz-descriptions-item [nzTitle]="'RDP smart size' | translate">
         <nz-select name="rdp_smart_size" [(ngModel)]="setting.graphics.rdp_smart_size">
           <nz-option *ngFor="let s of rdpSmartSizeOptions" [nzLabel]="s.label" [nzValue]="s.value"></nz-option>
         </nz-select>
-      </nz-form-control>
-    </nz-form-item>
+      </nz-descriptions-item>
 
-    <nz-form-item>
-      <nz-form-label>
-        {{ 'RDP color quality'| translate }}
-      </nz-form-label>
-      <nz-form-control>
+      <nz-descriptions-item [nzTitle]="'RDP color quality' | translate">
         <nz-select
           name="rdp_color_quality"
           [(ngModel)]="setting.graphics.rdp_color_quality"
         >
           <nz-option *ngFor="let s of colorQualityOptions" [nzLabel]="s.label" [nzValue]="s.value"></nz-option>
         </nz-select>
-      </nz-form-control>
-    </nz-form-item>
+      </nz-descriptions-item>
 
-    <nz-form-item>
-      <nz-form-label>
-        {{ 'Keyboard layout'| translate }}
-      </nz-form-label>
-      <nz-form-control>
+      <nz-descriptions-item [nzTitle]="'Keyboard layout' | translate">
         <nz-select
           [(ngModel)]="setting.graphics.keyboard_layout">
           <nz-option *ngFor="let item of keyboardLayoutOptions" [nzLabel]="item.label"
                      [nzValue]="item.value"
           ></nz-option>
         </nz-select>
-      </nz-form-control>
-    </nz-form-item>
+      </nz-descriptions-item>
 
-    <div *ngIf="hasLicense()">
-      <nz-form-item>
-        <nz-form-label>{{ 'RDP client options' | translate }}</nz-form-label>
-        <nz-form-control>
+      <div *ngIf="hasLicense()">
+        <nz-descriptions-item [nzTitle]="'RDP client options' | translate">
           <label [(ngModel)]="rdpClientConfig.full_screen" nz-checkbox>
             {{ 'Full screen'| translate }}
           </label>
@@ -75,11 +51,8 @@
           <label [(ngModel)]="rdpClientConfig.drives_redirect" nz-checkbox>
             {{ 'Driver redirect'| translate }}
           </label>
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item>
-        <nz-form-label>{{ 'Applet connect method' | translate }}</nz-form-label>
-        <nz-form-control>
+        </nz-descriptions-item>
+        <nz-descriptions-item [nzTitle]="'Applet connect method' | translate">
           <nz-radio-group
             name="applet_connection_method"
             [(ngModel)]="setting.graphics.applet_connection_method"
@@ -87,29 +60,21 @@
             <label nz-radio nzValue="web">Web</label>
             <label nz-radio nzValue="client">{{ 'Client' | translate }}</label>
           </nz-radio-group>
-        </nz-form-control>
-      </nz-form-item>
-    </div>
+        </nz-descriptions-item>
+      </div>
+    </nz-descriptions>
   </div>
-
   <div *ngIf="type === 'cli'">
-    <nz-form-item>
-      <nz-form-label>
-        {{ 'CLI font size'| translate }}
-      </nz-form-label>
-      <nz-form-control>
+    <nz-descriptions [nzColumn]="1" nzBordered>
+      <nz-descriptions-item [nzTitle]="'CLI font size' | translate">
         <nz-input-number
           [(ngModel)]="setting.command_line.character_terminal_font_size"
           [nzMax]="60" [nzMin]="5" [nzPlaceHolder]="'CLI font size'| translate"
+          style="width: 100%"
         ></nz-input-number>
-      </nz-form-control>
-    </nz-form-item>
+      </nz-descriptions-item>
 
-    <nz-form-item>
-      <nz-form-label>
-        {{ 'Backspace as Ctrl+H'| translate }}
-      </nz-form-label>
-      <nz-form-control>
+      <nz-descriptions-item [nzTitle]="'Backspace as Ctrl+H' | translate">
         <nz-select
           name="is_backspace_as_ctrl_h"
           [(ngModel)]="setting.command_line.is_backspace_as_ctrl_h"
@@ -117,14 +82,9 @@
         >
           <nz-option *ngFor="let s of boolChoices" [nzLabel]="s.name| translate" [nzValue]="s.value"></nz-option>
         </nz-select>
-      </nz-form-control>
-    </nz-form-item>
+      </nz-descriptions-item>
 
-    <nz-form-item>
-      <nz-form-label>
-        {{ 'Right mouse quick paste'| translate }}
-      </nz-form-label>
-      <nz-form-control>
+      <nz-descriptions-item [nzTitle]="'Right mouse quick paste' | translate">
         <nz-select
           name="is_right_click_quickly_paste"
           [(ngModel)]="setting.command_line.is_right_click_quickly_paste"
@@ -132,10 +92,22 @@
         >
           <nz-option *ngFor="let s of boolChoices" [nzLabel]="s.name| translate" [nzValue]="s.value"></nz-option>
         </nz-select>
-      </nz-form-control>
-    </nz-form-item>
-  </div>
+      </nz-descriptions-item>
 
+      <nz-descriptions-item nzTitle="主题">
+        <nz-select
+          [ngModelOptions]="{ standalone: true }"
+          [(ngModel)]="currentTheme"
+          (ngModelChange)="onThemeChange($event)"
+          nzDropdownClassName="elements-drawer-dropdown"
+        >
+          @for (theme of terminalThemeMap; track theme.value) {
+            <nz-option [nzValue]="theme.value" [nzLabel]="theme.label"></nz-option>
+          }
+        </nz-select>
+      </nz-descriptions-item>
+    </nz-descriptions>
+  </div>
 </div>
 <!--<div style="float: right; padding-top: 20px">-->
 <!--  <button (click)="onNoClick()" nz-button>{{ 'Cancel'| translate }}</button>-->
