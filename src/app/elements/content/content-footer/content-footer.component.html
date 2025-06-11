@@ -7,10 +7,6 @@
         <i nz-icon nzTheme="outline" nzType="read"></i>
         脚本库
       </button>
-      <button nz-button style="padding: 4px" nzType="link" (click)="onSaveCommand()">
-        <i nz-icon nzTheme="outline" nzType="save"></i>
-        {{ "Save command" | translate }}
-      </button>
       <nz-dropdown-menu #menu="nzDropdownMenu">
         <ul nz-menu class="title">
           <li nz-menu-item>{{ "SelectCommand" | translate }}</li>
@@ -39,9 +35,21 @@
                    setup='minimal'
                    theme='dark'
       ></code-editor>
-      <button (click)="sendBatchCommand()" class='send-btn' nz-button>
-        {{ "Send" | translate }}
-      </button>
+      <div class='send-group'>
+        <nz-button-group>
+          <button class="sent-btn" nz-button (click)="sendBatchCommand()">
+            {{ "Send" | translate }}
+          </button>
+          <button nzTrigger="click" nz-button nz-dropdown [nzDropdownMenu]="send" nzPlacement="topRight">
+            <nz-icon nzType="ellipsis"/>
+          </button>
+        </nz-button-group>
+        <nz-dropdown-menu #send="nzDropdownMenu">
+          <button class="save-btn" nz-button (click)="onSaveCommand()">
+            {{ "Save command" | translate }}
+          </button>
+        </nz-dropdown-menu>
+      </div>
     </div>
   </div>
   <div class="footer-bar">

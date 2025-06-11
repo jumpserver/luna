@@ -34,12 +34,15 @@
       overflow: auto;
       position: relative;
 
-      .send-btn {
+      .send-group {
         position: absolute;
         right: 5px;
         bottom: 5px;
         z-index: 1;
-        background-color: var(--el-editor-bg-color);
+
+        button {
+          background-color: #423838;
+        }
       }
 
       ::ng-deep {
@@ -263,4 +266,12 @@
   .ant-tag-orange {
     background: #2b1d11;
   }
+}
+
+.save-btn {
+  color: #ffffff;
+  font-size: 12px;
+  height: 25px;
+
+  background-color: #423838;
 }
