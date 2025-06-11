@@ -13,11 +13,6 @@
         <nz-tab nzTitle="文件管理">
           @if (hasConnected()) {
             <div #iframeContainer></div>
-            <iframe
-              [src]="iframeURL | safeUrl"
-              frameborder="0"
-              style="width: 100%; height: calc(100vh - 170px)"
-            ></iframe>
             @if (iframeLoading()) {
               <div
                 style="

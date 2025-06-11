@@ -127,6 +127,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.preserveCurrentIframe();
     this.messageSubscription?.unsubscribe();
   }
 
@@ -136,6 +137,9 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     this.initializeShareLinkForm();
     this.subscribeToIframeMessages();
     this.resetDrawerState();
+
+    // 清理过期的保存iframe
+    this.cleanupExpiredIframes();
   }
 
   private resetDrawerState(): void {
@@ -160,9 +164,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   private checkConnectionStatus(): void {
     const isConnected = Boolean(this.view?.iframeElement);
     this.hasConnected.set(isConnected);
-    console.log(
-      `iframe 元素${isConnected ? '存在' : '不存在'}，${isConnected ? '已连接' : '未连接'}`
-    );
   }
 
   private initializeShareOptions(): void {
@@ -311,11 +312,12 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   private hideAllIframes(): void {
-    this.iframeCache.forEach(iframe => {
-      if (iframe.parentNode) {
+    if (this.iframeContainer?.nativeElement) {
+      const iframe = this.iframeContainer.nativeElement.querySelector('iframe');
+      if (iframe) {
         this.renderer.setStyle(iframe, 'display', 'none');
       }
-    });
+    }
   }
 
   private async handleFileManagerTab(): Promise<void> {
@@ -326,28 +328,138 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     const viewId = this.view.id;
     this.currentViewId = viewId;
 
+    const existingIframe = this.iframeContainer?.nativeElement?.querySelector('iframe');
+    if (existingIframe) {
+      this.renderer.setStyle(existingIframe, 'display', 'block');
+      return;
+    }
+
+    const restoredIframe = this.restorePreservedIframe(viewId);
+
+    if (restoredIframe) {
+      return;
+    }
+
     try {
       const url = await this.getIframeURL();
-      this.iframeURL = url;
+      this.createNewIframe(url, viewId);
     } catch (error) {
       this._logger.error(`Failed to get iframe URL for ${viewId}`, error);
     }
   }
 
-  private resetShareLinkModal(): void {
-    this.showLinkResult = false;
-    this.showCreateShareLinkForm = true;
-    this.showCreateShareLinkModal = false;
-    this.shareLink = '';
-    this.shareCode = '';
-    this.searchedUserList = [];
-    this.loading = false;
+  /**
+   * 保存当前iframe到body中，移出视窗但保持存活
+   */
+  private preserveCurrentIframe(): void {
+    if (this.currentViewId && this.iframeContainer?.nativeElement) {
+      const iframe = this.iframeContainer.nativeElement.querySelector(
+        'iframe'
+      ) as HTMLIFrameElement;
 
-    this.shareLinkForm.reset();
-    this.shareLinkForm.patchValue({
-      expired_time: this.DEFAULT_SHARE_REQUEST.expired_time,
-      action_permission: this.DEFAULT_SHARE_REQUEST.action_permission,
-      users: []
+      if (iframe) {
+        // 检查是否已经被保存过，避免重复保存
+        const existingPreserved = document.body.querySelector(
+          `iframe[data-preserved-view-id="${this.currentViewId}"]`
+        );
+        if (existingPreserved) {
+          return;
+        }
+
+        this.preserveIframe(iframe, this.currentViewId);
+      }
+    }
+  }
+
+  /**
+   * 将iframe移动到body中保存，与viewId关联
+   */
+  private preserveIframe(iframe: HTMLIFrameElement, viewId: string): void {
+    this.renderer.setStyle(iframe, 'position', 'fixed');
+    this.renderer.setStyle(iframe, 'top', '-9999px');
+    this.renderer.setStyle(iframe, 'left', '-9999px');
+    this.renderer.setStyle(iframe, 'visibility', 'hidden');
+    this.renderer.setStyle(iframe, 'pointer-events', 'none');
+
+    // 设置属性标识，与viewId关联
+    this.renderer.setAttribute(iframe, 'data-preserved-view-id', viewId);
+    this.renderer.setAttribute(iframe, 'data-preserved-timestamp', Date.now().toString());
+
+    // 移动到body中保存
+    this.renderer.appendChild(document.body, iframe);
+  }
+
+  /**
+   * 从body中恢复指定viewId的iframe
+   */
+  restorePreservedIframe(viewId: string): HTMLIFrameElement | null {
+    if (!this.iframeContainer?.nativeElement) {
+      return null;
+    }
+
+    // 查找保存的iframe
+    const iframe = document.body.querySelector(
+      `iframe[data-preserved-view-id="${viewId}"]`
+    ) as HTMLIFrameElement;
+
+    if (iframe) {
+      const timestamp = iframe.getAttribute('data-preserved-timestamp');
+      if (timestamp) {
+        // 30分钟过期时间
+        const age = Date.now() - parseInt(timestamp);
+        const maxAge = 30 * 60 * 1000;
+
+        if (age > maxAge) {
+          this.renderer.removeChild(document.body, iframe);
+          return null;
+        }
+      }
+
+      this.renderer.setStyle(iframe, 'position', 'static');
+      this.renderer.setStyle(iframe, 'top', 'auto');
+      this.renderer.setStyle(iframe, 'left', 'auto');
+      this.renderer.setStyle(iframe, 'visibility', 'visible');
+      this.renderer.setStyle(iframe, 'pointer-events', 'auto');
+
+      this.renderer.removeAttribute(iframe, 'data-preserved-view-id');
+      this.renderer.removeAttribute(iframe, 'data-preserved-timestamp');
+
+      this.renderer.appendChild(this.iframeContainer.nativeElement, iframe);
+
+      return iframe;
+    }
+
+    return null;
+  }
+
+  createNewIframe(url: string, viewId: string): void {
+    if (!this.iframeContainer?.nativeElement) {
+      return;
+    }
+
+    const iframe = this.renderer.createElement('iframe');
+    this.renderer.setAttribute(iframe, 'src', url);
+    this.renderer.setAttribute(iframe, 'frameborder', '0');
+    this.renderer.setAttribute(iframe, 'data-view-id', viewId);
+    this.renderer.setStyle(iframe, 'width', '100%');
+    this.renderer.setStyle(iframe, 'height', 'calc(100vh - 170px)');
+
+    this.renderer.appendChild(this.iframeContainer.nativeElement, iframe);
+  }
+
+  cleanupExpiredIframes(): void {
+    const preservedIframes = document.body.querySelectorAll('iframe[data-preserved-view-id]');
+    const maxAge = 30 * 60 * 1000; // 30分钟
+
+    preservedIframes.forEach(iframe => {
+      const timestamp = iframe.getAttribute('data-preserved-timestamp');
+      if (timestamp) {
+        const age = Date.now() - parseInt(timestamp);
+        if (age > maxAge) {
+          const viewId = iframe.getAttribute('data-preserved-view-id');
+          this.renderer.removeChild(document.body, iframe);
+        }
+      }
     });
   }
 
@@ -357,11 +469,16 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   close(): void {
+    this.preserveCurrentIframe();
     this.resetDrawerState();
     this.saveCurrentViewState();
   }
 
   async onTabChange(event: { index: number; tab: any }): Promise<void> {
+    if (this.currentTabIndex === 0 && event.index !== 0) {
+      this.preserveCurrentIframe();
+    }
+
     this.currentTabIndex = event.index;
 
     if (event.index === 0) {
@@ -459,8 +576,24 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     this.drawerStateMap.set(viewId, defaultState);
   }
 
-  // Debounced search method
-  readonly debounceSearch = _.debounce((value: string) => {
+  debounceSearch = _.debounce((value: string) => {
     this.onShareUserSearch(value);
   }, 500);
+
+  resetShareLinkModal(): void {
+    this.showLinkResult = false;
+    this.showCreateShareLinkForm = true;
+    this.showCreateShareLinkModal = false;
+    this.shareLink = '';
+    this.shareCode = '';
+    this.searchedUserList = [];
+    this.loading = false;
+
+    this.shareLinkForm.reset();
+    this.shareLinkForm.patchValue({
+      expired_time: this.DEFAULT_SHARE_REQUEST.expired_time,
+      action_permission: this.DEFAULT_SHARE_REQUEST.action_permission,
+      users: []
+    });
+  }
 }
