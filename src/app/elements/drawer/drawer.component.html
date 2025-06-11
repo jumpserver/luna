@@ -7,7 +7,7 @@
   nzWrapClassName="elements-drawer-wrapper"
 >
   <ng-container *nzDrawerContent>
-    <nz-tabset (nzSelectChange)="onTabChange($event)">
+    <nz-tabset [nzSelectedIndex]="currentTabIndex" (nzSelectChange)="onTabChange($event)">
       <nz-tab nzTitle="设置">
         <form nz-form nzLayout="vertical" class="setting-form">
           <nz-form-item>
@@ -29,7 +29,18 @@
       </nz-tab>
       <nz-tab nzTitle="文件管理">
         @if (hasConnected()) {
-          <iframe [src]="iframeURL | safeUrl" frameborder="0"></iframe>
+          @if (iframeURL) {
+            <iframe
+              [src]="iframeURL | safeUrl"
+              frameborder="0"
+              style="width: 100%; height: calc(100vh - 120px);">
+            </iframe>
+          } @else {
+            <div style="display: flex; align-items: center; justify-content: center; height: 400px; color: #666;">
+              <nz-spin nzSimple></nz-spin>
+              <span style="margin-left: 8px;">正在加载文件管理器...</span>
+            </div>
+          }
         } @else {
           <nz-empty nzNotFoundImage="simple" nzNotFoundContent="请先连接到资产"></nz-empty>
         }
@@ -54,7 +65,13 @@
                   >
                     <div style="display: flex; align-items: center; justify-content: space-between">
                       <div>
-                        <div style="font-weight: 500; margin-bottom: 4px; color: var(--el-text-color-light)">
+                        <div
+                          style="
+                            font-weight: 500;
+                            margin-bottom: 4px;
+                            color: var(--el-text-color-light);
+                          "
+                        >
                           {{ item.user }}
                         </div>
                         <div style="display: flex; gap: 4px">
@@ -85,7 +102,10 @@
                         </div>
                       </div>
 
-                      <div style="margin-left: 12px" [style.display]="item.primary ? 'none' : 'block'">
+                      <div
+                        style="margin-left: 12px"
+                        [style.display]="item.primary ? 'none' : 'block'"
+                      >
                         <button
                           nz-button
                           nzType="text"
@@ -237,5 +257,5 @@
     @if (showLinkResult) {
       <button nz-button nzType="primary" (click)="copyLink()">复制</button>
     }
-  </ng-template>
+    </ng-template>
 </nz-modal>

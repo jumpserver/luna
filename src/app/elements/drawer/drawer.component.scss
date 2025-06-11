@@ -38,7 +38,6 @@
               color: var(--el-text-color-light);
             }
           }
-
         }
 
         .share-button {
@@ -49,9 +48,18 @@
           height: calc(100vh - 152px);
         }
 
-        iframe {
+        .file-manager-container {
           width: 100%;
-          height: calc(100vh - 120px);
+          height: calc(100vh - 145px);
+          position: relative;
+
+          .file-manager-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--el-text-color-light);
+          }
         }
 
         .ant-empty {
@@ -92,7 +100,6 @@
             align-items: center;
 
             .ant-list-item-meta-content {
-
               .ant-list-item-meta-description,
               .ant-list-item-meta-title {
                 margin-bottom: unset;
@@ -120,7 +127,6 @@
 }
 
 ::ng-deep .elements-drawer-dropdown {
-
   .ant-select-dropdown {
     background-color: var(--el-dropdown-hover-bg-color);
 

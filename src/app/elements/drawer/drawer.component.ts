@@ -6,7 +6,7 @@ import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { IframeCommunicationService } from '@app/services';
 import { DrawerStateService } from '@src/app/services/drawer';
-import { LogService, SettingService, HttpService, I18nService, ViewService } from '@app/services';
+import { LogService, SettingService, HttpService, I18nService } from '@app/services';
 import { Component, OnInit, input, output, Input, effect, signal, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
 
@@ -53,6 +53,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   currentTheme = '';
   currentRdpScreenOptions = '';
   avatarUrl = '/static/img/avatar/admin.png';
+  currentTabIndex = 0;
+  lastActiveTabIndex = 0;
   rdpScreenOptions = [];
   searchedUserList = [];
   shareExpiredOptions = [];
@@ -71,19 +73,18 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   terminalThemeMap: terminalThemeMap[] = [];
 
   drawerStateMap = new Map<string, any>();
-  private messageSubscription: Subscription;
-  private currentViewId: string | null = null;
+  messageSubscription: Subscription;
+  currentViewId: string | null = null;
 
   constructor(
     private _fb: FormBuilder,
     private _http: HttpService,
     private _i18n: I18nService,
     private _logger: LogService,
-    private _viewSrv: ViewService,
     private _message: NzMessageService,
     private _settingSrv: SettingService,
-    private _iframeCommunicationService: IframeCommunicationService,
-    private _drawerStateService: DrawerStateService
+    private _drawerStateService: DrawerStateService,
+    private _iframeCommunicationService: IframeCommunicationService
   ) {
     this.sideEffect();
     this.initShareOptions();
@@ -91,28 +92,14 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     this.subscriptonIframaMessage();
     this.loadSavedState();
   }
+
   ngOnDestroy(): void {
     this.saveCurrentState();
     this.messageSubscription.unsubscribe();
   }
 
-  loadSavedState(): void {
-    const savedState = this._drawerStateService.getState();
-
-    this.onLineUsers = savedState.onLineUsers;
-    this.iframeURL = savedState.iframeURL;
-  }
-
-  saveCurrentState(): void {
-    this._drawerStateService.updateState({
-      onLineUsers: this.onLineUsers,
-      iframeURL: this.iframeURL
-    });
-  }
-
   async ngOnInit(): Promise<void> {
     this.generateTerminalThemeMap();
-
     this.setting = this._settingSrv.setting;
   }
 
@@ -122,6 +109,10 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
       if (isVisible) {
         this.checkIframeElement();
+
+        setTimeout(() => {
+          this.currentTabIndex = this.lastActiveTabIndex;
+        }, 100);
       }
     });
   }
@@ -418,6 +409,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   async onTabChange(event: { index: number; tab: any }) {
     const index = event.index;
+    this.currentTabIndex = index;
+    this.lastActiveTabIndex = index;
 
     try {
       if (!this.view) {
@@ -426,17 +419,13 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
       const { smartEndpoint, iframeElement } = this.view;
 
-      if (index === 1 && iframeElement && !this.iframeURL) {
+      if (index === 1 && iframeElement) {
         if (!smartEndpoint) {
           console.warn('Smart endpoint is not available');
           return;
         }
 
-        const url = smartEndpoint.getUrl();
-        const token = await this.getSFTPToken();
-
-        this.iframeURL = `${url}/koko/sftp?token=${token}`;
-        console.log('iframe URL:', this.iframeURL);
+        this.iframeURL = await this.getIframeURL();
       }
     } catch (e) {
       this._logger.error('Failed to initialize SFTP iframe', e);
@@ -446,4 +435,24 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   debounceSearch = _.debounce((value: string) => {
     this.onShareUserSearch(value);
   }, 500);
+
+  async getIframeURL(): Promise<string> {
+    const token = await this.getSFTPToken();
+    const url = `${this.view.smartEndpoint.getUrl()}/koko/sftp?token=${token}`;
+    return url;
+  }
+
+  loadSavedState(): void {
+    const savedState = this._drawerStateService.getState();
+
+    this.onLineUsers = savedState.onLineUsers;
+    this.iframeURL = savedState.iframeURL;
+  }
+
+  saveCurrentState(): void {
+    this._drawerStateService.updateState({
+      onLineUsers: this.onLineUsers,
+      iframeURL: this.iframeURL
+    });
+  }
 }
