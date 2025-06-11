@@ -8,18 +8,12 @@
   nzWrapClassName="elements-drawer-wrapper"
 >
   <ng-container *nzDrawerContent>
-    @if (showSetting()) {
+    <div [style.display]="showSetting() ? 'block' : 'none'">
       <nz-tabset [nzSelectedIndex]="currentTabIndex" (nzSelectChange)="onTabChange($event)">
         <nz-tab nzTitle="文件管理">
           @if (hasConnected()) {
-            @if (iframeURL) {
-              <iframe
-                [src]="iframeURL | safeUrl"
-                frameborder="0"
-                style="width: 100%; height: calc(100vh - 170px)"
-              >
-              </iframe>
-            } @else {
+            <div #iframeContainer></div>
+            @if (iframeLoading()) {
               <div
                 style="
                   display: flex;
@@ -141,9 +135,9 @@
           }
         </nz-tab>
       </nz-tabset>
-    }
+    </div>
 
-    @if (showChat()) {
+    <div [style.display]="showChat() ? 'block' : 'none'">
       <iframe
         [src]="chatIframeURL | safeUrl"
         frameborder="0"
@@ -199,7 +193,7 @@
       <ng-template #chatStatus>
         <nz-badge nzStatus="success" nzText="在线"></nz-badge>
       </ng-template> -->
-    }
+    </div>
   </ng-container>
 </nz-drawer>
 

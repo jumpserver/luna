@@ -48,6 +48,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   showChat = signal(false);
   showDrawer = signal(false);
   showSetting = signal(false);
+  iframeLoading = signal(false);
 
   loading = false;
   showLinkResult = false;
@@ -74,6 +75,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   shareLinkForm: FormGroup;
 
   iframeURL = '';
+  private iframeCache = new Map<string, HTMLIFrameElement>();
 
   drawerStateMap = new Map<string, any>();
   messageSubscription: Subscription;
@@ -86,12 +88,15 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     private _logger: LogService,
     private _message: NzMessageService,
     private _settingSrv: SettingService,
-    private _iframeCommunicationService: IframeCommunicationService
+    private _iframeCommunicationService: IframeCommunicationService,
+    private renderer: Renderer2
   ) {
     this.sideEffect();
     this.initShareOptions();
     this.initShareLinkForm();
     this.subscriptonIframaMessage();
+    this.showDrawer.set(false);
+    this.showSetting.set(false);
   }
 
   ngOnDestroy(): void {
@@ -106,16 +111,14 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   sideEffect() {
-    effect(async () => {
+    effect(() => {
       if (this.showDrawer()) {
         this.checkIframeElement();
-        if (this.hasConnected() && !this.iframeURL) {
-          try {
-            this.iframeURL = await this.getIframeURL();
-          } catch (e) {
-            this._logger.error('Failed to get Iframe URL on first load', e);
-          }
+        if (this.showSetting() && this.currentTabIndex === 0) {
+          setTimeout(() => this.handleFileManagerTab(), 0);
         }
+      } else {
+        this.hideAllIframes();
       }
     });
   }
@@ -182,10 +185,29 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
             writable: messageData.writable
           });
 
-          // 保存当前状态到对应的 viewId
           this.saveCurrentViewState();
         } catch (error) {
           console.error('Failed to parse SHARE_USER_ADD:', error);
+        }
+      }
+
+      if (message.name === 'TAB_VIEW_CHANGE') {
+        const viewId = message.data;
+        if (viewId === this.currentViewId) return;
+
+        this.saveCurrentViewState();
+
+        if (this.drawerStateMap.has(viewId)) {
+          const savedState = this.drawerStateMap.get(viewId);
+          this.onLineUsers = [...(savedState.onLineUsers || [])];
+        } else {
+          this.initializeNewTabState(viewId);
+        }
+
+        this.currentViewId = viewId;
+
+        if (this.showDrawer() && this.currentTabIndex === 0) {
+          this.handleFileManagerTab();
         }
       }
 
@@ -371,6 +393,56 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   async onTabChange(event: { index: number; tab: any }) {
     const index = event.index;
     this.currentTabIndex = index;
+
+    if (index === 0) {
+      this.handleFileManagerTab();
+    } else {
+      this.hideAllIframes();
+    }
+  }
+
+  private hideAllIframes() {
+    this.iframeCache.forEach(iframe => {
+      if (iframe.parentNode) {
+        this.renderer.setStyle(iframe, 'display', 'none');
+      }
+    });
+  }
+
+  private async handleFileManagerTab() {
+    if (!this.view || !this.hasConnected()) {
+      return;
+    }
+    const viewId = this.view.id;
+    this.currentViewId = viewId;
+
+    this.hideAllIframes();
+
+    if (this.iframeCache.has(viewId)) {
+      const iframe = this.iframeCache.get(viewId);
+      this.renderer.setStyle(iframe, 'display', 'block');
+      if (!iframe.parentNode) {
+        this.renderer.appendChild(this.iframeContainer.nativeElement, iframe);
+      }
+    } else {
+      this.iframeLoading.set(true);
+      try {
+        const url = await this.getIframeURL();
+        if (this.iframeContainer?.nativeElement) {
+          const iframe = this.renderer.createElement('iframe');
+          this.renderer.setAttribute(iframe, 'src', url);
+          this.renderer.setAttribute(iframe, 'frameborder', '0');
+          this.renderer.setStyle(iframe, 'width', '100%');
+          this.renderer.setStyle(iframe, 'height', 'calc(100vh - 170px)');
+          this.iframeCache.set(viewId, iframe);
+          this.renderer.appendChild(this.iframeContainer.nativeElement, iframe);
+        }
+      } catch (e) {
+        this._logger.error(`Failed to create iframe for ${viewId}`, e);
+      } finally {
+        this.iframeLoading.set(false);
+      }
+    }
   }
 
   debounceSearch = _.debounce((value: string) => {
