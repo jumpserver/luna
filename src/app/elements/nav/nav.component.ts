@@ -214,7 +214,7 @@ export class ElementNavComponent implements OnInit {
 
   openChat() {
     this._iframeCommunicationService.sendMessage({
-      name: 'OPEN_CHAT'
+      name: 'SEND_CHAT_IFRAME'
     });
   }
 }

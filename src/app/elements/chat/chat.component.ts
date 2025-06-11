@@ -117,6 +117,15 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
         console.log('Received message from iframe:', event.data);
       }
     });
+
+    this._iframeCommunicationService.message$.subscribe(message => {
+      if (message.name === 'SEND_CHAT_IFRAME') {
+        this._iframeCommunicationService.sendMessage({
+          name: 'OPEN_CHAT',
+          data: this.iframeURL
+        })
+      }
+    })
   }
 
   ngOnDestroy() {

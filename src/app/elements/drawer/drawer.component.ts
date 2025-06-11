@@ -6,7 +6,17 @@ import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { IframeCommunicationService } from '@app/services';
 import { LogService, SettingService, HttpService, I18nService } from '@app/services';
-import { Component, OnInit, Input, effect, signal, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  Input,
+  effect,
+  signal,
+  OnDestroy,
+  ViewChild,
+  ElementRef,
+  Renderer2
+} from '@angular/core';
 import { Subscription } from 'rxjs';
 
 interface OnlineUsers {
@@ -31,6 +41,7 @@ interface ShareUserOptions {
 })
 export class ElementDrawerComponent implements OnInit, OnDestroy {
   @Input() view: View;
+  @ViewChild('iframeContainer') iframeContainer: ElementRef;
 
   setting: Setting = new Setting();
 
@@ -45,10 +56,10 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   hasConnected = signal(false);
   shareLink = '';
   shareCode = '';
+  chatIframeURL = '';
   currentRdpScreenOptions = '';
   avatarUrl = '/static/img/avatar/admin.png';
   currentTabIndex = 0;
-  lastActiveTabIndex = 0;
   rdpScreenOptions = [];
   searchedUserList = [];
   shareExpiredOptions = [];
@@ -95,14 +106,15 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   sideEffect() {
-    effect(() => {
+    effect(async () => {
       if (this.showDrawer()) {
         this.checkIframeElement();
-
-        if (this.showSetting()) {
-          setTimeout(() => {
-            this.currentTabIndex = this.lastActiveTabIndex;
-          }, 100);
+        if (this.hasConnected() && !this.iframeURL) {
+          try {
+            this.iframeURL = await this.getIframeURL();
+          } catch (e) {
+            this._logger.error('Failed to get Iframe URL on first load', e);
+          }
         }
       }
     });
@@ -114,6 +126,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   close() {
     this.showDrawer.set(false);
+    this.showSetting.set(false);
+    this.showChat.set(false);
   }
 
   initShareOptions() {
@@ -181,6 +195,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       }
 
       if (message.name === 'OPEN_CHAT') {
+        this.chatIframeURL = message.data;
         this.showChat.set(true);
         this.showDrawer.set(true);
       }
@@ -356,30 +371,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   async onTabChange(event: { index: number; tab: any }) {
     const index = event.index;
     this.currentTabIndex = index;
-    this.lastActiveTabIndex = index;
-
-    try {
-      if (!this.view) {
-        return;
-      }
-
-      const { smartEndpoint, iframeElement } = this.view;
-
-      console.log('iframeElement', iframeElement);
-
-      if (index === 1 && iframeElement) {
-        if (!smartEndpoint) {
-          console.warn('Smart endpoint is not available');
-          return;
-        }
-
-        this.iframeURL = await this.getIframeURL();
-
-        console.log('iframeURL', this.iframeURL);
-      }
-    } catch (e) {
-      this._logger.error('Failed to initialize SFTP iframe', e);
-    }
   }
 
   debounceSearch = _.debounce((value: string) => {

@@ -17,6 +17,7 @@ import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzDrawerModule } from 'ng-zorro-antd/drawer';
+import { NzCommentModule } from 'ng-zorro-antd/comment';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
@@ -50,6 +51,7 @@ import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
     NzDrawerModule,
     NzSwitchModule,
     NzToolTipModule,
+    NzCommentModule,
     NzDividerModule,
     NzDropDownModule,
     NzCheckboxModule,
