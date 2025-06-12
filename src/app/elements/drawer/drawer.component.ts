@@ -188,6 +188,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   private handleIframeMessage(message: any): void {
+    console.log('message', message);
     const messageHandlers = {
       SHARE_CODE_RESPONSE: this.handleShareCodeResponse.bind(this),
       SHARE_USER_ADD: this.handleShareUserAdd.bind(this),
@@ -234,8 +235,11 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   private handleShareUserAdd(data: string): void {
     try {
       const messageData: OnlineUsers = JSON.parse(data);
-      this.onLineUsers.push(messageData);
-      this.saveCurrentViewState();
+
+      if (this.currentViewId && this.view?.id === this.currentViewId) {
+        this.onLineUsers.push(messageData);
+        this.saveCurrentViewState();
+      }
     } catch (error) {
       console.error('Failed to parse SHARE_USER_ADD:', error);
     }
@@ -387,11 +391,13 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       data: item
     });
 
-    this.onLineUsers = this.onLineUsers.filter(
-      user => !(user.terminal_id === item.terminal_id && user.primary === item.primary)
-    );
-
-    this.saveCurrentViewState();
+    // 只从当前 view 的用户列表中移除
+    if (this.currentViewId && this.view?.id === this.currentViewId) {
+      this.onLineUsers = this.onLineUsers.filter(
+        user => !(user.terminal_id === item.terminal_id && user.primary === item.primary)
+      );
+      this.saveCurrentViewState();
+    }
   }
 
   onShareUserSearch(value: string): void {
@@ -452,15 +458,16 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   initializeNewTabState(viewId: string): void {
     const defaultState = this.createDefaultViewState();
-    Object.assign(this, {
-      onLineUsers: defaultState.onLineUsers,
-      iframeURL: defaultState.iframeURL
-    });
+
+    // 重置当前组件的状态
+    this.onLineUsers = [...defaultState.onLineUsers];
+    this.iframeURL = defaultState.iframeURL;
 
     this.showDrawer.set(defaultState.isDrawerOpen);
     this.showSetting.set(defaultState.isSettingOpen);
     this.showChat.set(defaultState.isChatOpen);
 
+    // 保存到状态映射中
     this.drawerStateMap.set(viewId, defaultState);
   }
 
