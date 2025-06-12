@@ -133,9 +133,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           break;
         case 'SHARE_CODE_RESPONSE':
           this._iframeSvc.sendMessage({ name: 'SHARE_CODE_RESPONSE', data: msg.data });
-          break
+          break;
         case 'TERMINAL_CONTENT_RESPONSE':
-          this._iframeSvc.sendMessage({ name: 'TERMINAL_CONTENT_RESPONSE', data: msg.data });
+          this.view.terminalContentData = msg.data;
           break;
       }
     }.bind(this);

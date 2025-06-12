@@ -207,7 +207,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
       TAB_VIEW_CHANGE: this.handleTabViewChange.bind(this),
       ALL_VIEWS_CLOSED: this.handleAllViewsClosed.bind(this),
-      TERMINAL_CONTENT_RESPONSE:this.handleTerminalContentResponse.bind(this)
+      TERMINAL_CONTENT_RESPONSE: this.handleTerminalContentResponse.bind(this)
     };
 
     const handler = messageHandlers[message.name];
@@ -291,7 +291,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   private handleTerminalContentResponse(data: string): void {
     // {content: string, sessionId: string, terminalId: string}
-    console.log('Received terminal content:', data);
     this.terminalContent = data;
     this.saveCurrentViewState();
   }
