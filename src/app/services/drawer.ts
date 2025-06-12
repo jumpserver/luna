@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 
 interface DrawerState {
   onLineUsers: any[];
@@ -12,11 +12,13 @@ interface DrawerState {
 export class DrawerStateService {
   private initialState: DrawerState = {
     onLineUsers: [],
-    iframeURL: '',
+    iframeURL: ''
   };
-
+  private messageSource = new Subject<any>();
   private stateSubject = new BehaviorSubject<DrawerState>(this.initialState);
   public state$ = this.stateSubject.asObservable();
+
+  message$ = this.messageSource.asObservable();
 
   getState(): DrawerState {
     return this.stateSubject.value;
@@ -30,5 +32,9 @@ export class DrawerStateService {
 
   resetState(): void {
     this.stateSubject.next(this.initialState);
+  }
+
+  sendComponentMessage(message: any): void {
+    this.messageSource.next(message);
   }
 }

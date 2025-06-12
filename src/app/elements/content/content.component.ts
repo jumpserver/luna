@@ -6,8 +6,9 @@ import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import {
   ViewService,
   SettingService,
+  DrawerStateService,
   ConnectTokenService,
-  IframeCommunicationService
+  IframeCommunicationService,
 } from '@app/services';
 import {
   OnInit,
@@ -61,7 +62,8 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     public viewSrv: ViewService,
     private _connectTokenSvc: ConnectTokenService,
     private _settingSvc: SettingService,
-    private _iframeSvc: IframeCommunicationService
+    private _iframeSvc: IframeCommunicationService,
+    private _drawerStateService: DrawerStateService
   ) {}
 
   get showBatchCommand() {
@@ -76,7 +78,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     return this.viewList.length * 201;
   }
 
-  onToggleMobileLayout() {}
+  onToggleMobileLayout() {
+
+  }
 
   async ngOnInit() {
     this.viewList = this.viewSrv.viewList;
@@ -137,7 +141,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   setViewActive(view) {
     this.viewSrv.activeView(view);
 
-    this._iframeSvc.sendMessage({
+    this._drawerStateService.sendComponentMessage({
       name: 'TAB_VIEW_CHANGE',
       data: view.id
     });
@@ -192,6 +196,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
 
     if (this.viewList.length === 0) {
       this._iframeSvc.sendMessage({
+      this._drawerStateService.sendComponentMessage({
         name: 'ALL_VIEWS_CLOSED'
       });
     }

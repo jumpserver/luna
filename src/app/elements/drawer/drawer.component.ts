@@ -1,10 +1,10 @@
 import _ from 'lodash-es';
 
-import { Setting, View } from '@app/model';
+import { View } from '@app/model';
 import { writeText } from 'clipboard-polyfill';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { IframeCommunicationService } from '@app/services';
+import { IframeCommunicationService, DrawerStateService } from '@app/services';
 import {
   LogService,
   SettingService,
@@ -104,7 +104,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   };
 
   private readonly drawerStateMap = new Map<string, DrawerViewState>();
-  private messageSubscription: Subscription;
+  private iframeMessageSubscription: Subscription;
+  private componentsMessageSubscription: Subscription;
   private shareLinkRequest: ShareLinkRequest = { ...this.DEFAULT_SHARE_REQUEST };
 
   constructor(
@@ -116,6 +117,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     private readonly _message: NzMessageService,
     private readonly _settingSrv: SettingService,
     private readonly _connectTokenSvc: ConnectTokenService,
+    private readonly _drawerStateService: DrawerStateService,
     private readonly _iframeSvc: IframeCommunicationService
   ) {
     this.initializeComponent();
@@ -126,14 +128,15 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.messageSubscription?.unsubscribe();
+    this.iframeMessageSubscription?.unsubscribe();
+    this.componentsMessageSubscription?.unsubscribe();
   }
 
   private initializeComponent(): void {
     this.setupSideEffects();
     this.initializeShareOptions();
     this.initializeShareLinkForm();
-    this.subscribeToIframeMessages();
+    this.subscribeMessages();
     this.resetDrawerState();
   }
 
@@ -181,20 +184,25 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     });
   }
 
-  private subscribeToIframeMessages(): void {
-    this.messageSubscription = this._iframeSvc.message$.subscribe(message => {
+  private subscribeMessages(): void {
+    this.iframeMessageSubscription = this._iframeSvc.message$.subscribe(message => {
+      this.handleIframeMessage(message);
+    });
+    this.componentsMessageSubscription = this._drawerStateService.message$.subscribe(message => {
       this.handleIframeMessage(message);
     });
   }
 
   private handleIframeMessage(message: any): void {
-    console.log('message', message);
     const messageHandlers = {
-      SHARE_CODE_RESPONSE: this.handleShareCodeResponse.bind(this),
+      // 从 iframe 中传递的
       SHARE_USER_ADD: this.handleShareUserAdd.bind(this),
-      TAB_VIEW_CHANGE: this.handleTabViewChange.bind(this),
-      OPEN_SETTING: this.handleOpenSetting.bind(this),
+      SHARE_CODE_RESPONSE: this.handleShareCodeResponse.bind(this),
+
+      // 从组件中传递的
       OPEN_CHAT: this.handleOpenChat.bind(this),
+      OPEN_SETTING: this.handleOpenSetting.bind(this),
+      TAB_VIEW_CHANGE: this.handleTabViewChange.bind(this),
       ALL_VIEWS_CLOSED: this.handleAllViewsClosed.bind(this)
     };
 
