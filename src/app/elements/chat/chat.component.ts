@@ -1,5 +1,5 @@
 import { View } from '@app/model';
-import { SettingService, ViewService, IframeCommunicationService } from '@app/services';
+import { SettingService, ViewService, IframeCommunicationService, DrawerStateService } from '@app/services';
 import {
   Component,
   ElementRef,
@@ -34,6 +34,7 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     public viewSrv: ViewService,
     public _settingSvc: SettingService,
     private el: ElementRef,
+    private _drawerStateService: DrawerStateService,
     private _iframeCommunicationService: IframeCommunicationService
   ) {}
 
@@ -120,12 +121,9 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this._iframeCommunicationService.message$.subscribe(message => {
       if (message.name === 'SEND_CHAT_IFRAME') {
-        this._iframeCommunicationService.sendMessage({
-          name: 'OPEN_CHAT',
-          data: this.iframeURL
-        })
+        this._drawerStateService.sendComponentMessage({ name: 'OPEN_CHAT', data: this.iframeURL });
       }
-    })
+    });
   }
 
   ngOnDestroy() {
@@ -166,9 +164,7 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.currentView.iframeElement) {
       switch (this.currentView.connectMethod.component) {
         case 'koko':
-          this._iframeCommunicationService.sendMessage({
-            name: 'OPEN_SETTING'
-          });
+          this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
           break;
         case 'lion':
           this.currentView.iframeElement.postMessage({ name: 'OPEN' }, '*');
