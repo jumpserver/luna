@@ -47,7 +47,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   ping: number;
   debug = false;
   trustedUrl: SafeResourceUrl;
-  termComp: any = {};
 
   constructor(
     private _i18n: I18nService,
@@ -75,6 +74,13 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     });
 
     this.id = 'window-' + Math.random().toString(36).substr(2);
+
+    this.trustedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.src);
+  }
+
+  ngAfterViewInit() {
+    this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
+    this.view.iframeElement = this.iframeWindow;
 
     this.eventHandler = function (e: any) {
       const msg = e.data;
@@ -113,6 +119,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           }
           break;
         case 'CLICK':
+          console.log('CLICK', msg);
           document.body.click();
           break;
         case 'KEYEVENT':
@@ -140,20 +147,12 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       }
     }.bind(this);
 
-    this.trustedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.src);
-
-    window.addEventListener('message', this.messageHandler);
-  }
-
-  ngAfterViewInit() {
-    this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
-    this.view.iframeElement = this.iframeWindow;
     this.handleIframeEvent();
   }
 
   ngOnDestroy() {
     window.removeEventListener('message', this.eventHandler);
-    window.removeEventListener('message', this.messageHandler);
+    this.subscription.unsubscribe();
   }
 
   setActive() {
@@ -171,12 +170,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       );
     }, 500);
 
-    this.subscription = this._iframeSvc.message$.subscribe(message => {
-      this.iframeWindow.postMessage(message, '*');
-    });
-
-    window.addEventListener('message', this.eventHandler);
-
     // 30s 内未PING通, 则主动关闭
     setTimeout(
       function () {
@@ -185,6 +178,13 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       }.bind(this),
       1000 * 30
     );
+
+    this.subscription = this._iframeSvc.message$.subscribe(message => {
+      this._logger.info('[Luna] Send msg to iframe: ', message);
+      this.iframeWindow.postMessage(message, '*');
+    });
+
+    window.addEventListener('message', this.eventHandler);
   }
 
   sendCommand(data) {
@@ -192,11 +192,12 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     this.iframeWindow.postMessage({ name: 'CMD', data: data.data }, '*');
   }
 
-  messageHandler = (event: MessageEvent) => {
-    if (event.data && typeof event.data === 'object') {
-      this.termComp = event.data;
-    }
-  };
+  // 没有位置用啊
+  // messageHandler = (event: MessageEvent) => {
+  //   if (event.data && typeof event.data === 'object') {
+  //     this.termComp = event.data;
+  //   }
+  // };
 
   async reconnect() {
     const oldConnectToken = this.view.connectToken;
