@@ -51,6 +51,7 @@ interface DrawerViewState {
   isDrawerOpen: boolean;
   isSettingOpen: boolean;
   isChatOpen: boolean;
+  terminalContent: {} | null;
 }
 
 interface ExpiredOption {
@@ -96,6 +97,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   onLineUsers: OnlineUsers[] = [];
   iframeURL = '';
   chatIframeURL = '';
+  terminalContent: {} |null = null;
 
   private readonly DEFAULT_SHARE_REQUEST: ShareLinkRequest = {
     expired_time: 10,
@@ -202,8 +204,10 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       // 从组件中传递的
       OPEN_CHAT: this.handleOpenChat.bind(this),
       OPEN_SETTING: this.handleOpenSetting.bind(this),
+
       TAB_VIEW_CHANGE: this.handleTabViewChange.bind(this),
-      ALL_VIEWS_CLOSED: this.handleAllViewsClosed.bind(this)
+      ALL_VIEWS_CLOSED: this.handleAllViewsClosed.bind(this),
+      TERMINAL_CONTENT_RESPONSE:this.handleTerminalContentResponse.bind(this)
     };
 
     const handler = messageHandlers[message.name];
@@ -285,6 +289,13 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     this.saveCurrentViewState();
   }
 
+  private handleTerminalContentResponse(data: string): void {
+    // {content: string, sessionId: string, terminalId: string}
+    console.log('Received terminal content:', data);
+    this.terminalContent = data;
+    this.saveCurrentViewState();
+  }
+
   private restoreViewState(viewId: string): void {
     if (this.drawerStateMap.has(viewId)) {
       const savedState = this.drawerStateMap.get(viewId)!;
@@ -304,7 +315,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       iframeURL: '',
       isDrawerOpen: false,
       isSettingOpen: false,
-      isChatOpen: false
+      isChatOpen: false,
+      terminalContent: null
     };
   }
 
@@ -321,7 +333,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   private async getIframeURL(): Promise<string> {
     const token = await this.getSFTPToken();
-    return `${this.view.smartEndpoint.getUrl()}/koko/sftp?token=${token}`;
+    return `${this.view.smartEndpoint.getUrl()}/koko/sftp/?token=${token}`;
   }
 
   private hideAllIframes(): void {
@@ -466,7 +478,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
         iframeURL: this.iframeURL,
         isDrawerOpen: this.showDrawer(),
         isSettingOpen: this.showSetting(),
-        isChatOpen: this.showChat()
+        isChatOpen: this.showChat(),
+        terminalContent: this.terminalContent || null
       });
     }
   }
