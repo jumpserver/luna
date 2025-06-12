@@ -1,6 +1,6 @@
 <div id="chatContainer" class="chat-container">
   <nz-float-button-group [hidden]="chatAIShown">
-    @if (isShowSetting) {
+    @if (isShowSetting && subViews.length === 1) {
       <nz-float-button (click)="handleShowDrawer()" [nzIcon]="setting"></nz-float-button>
     }
 
