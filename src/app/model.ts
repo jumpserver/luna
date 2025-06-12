@@ -550,3 +550,11 @@ export class TerminalContentData {
   sessionId: string;
   terminalId: string;
 }
+
+export interface OnlineUsers {
+  user: string;
+  user_id: string;
+  terminal_id: string;
+  primary: boolean;
+  writable: boolean;
+}

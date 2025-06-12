@@ -42,6 +42,8 @@ import {ElementACLDialogComponent} from '@app/services/connect-token/acl-dialog/
 import {ElementDialogAlertComponent} from '@app/services/dialog/alert.service';
 import {ElementTermComponent} from '@app/elements/replay/term/term.component';
 import {ElementDrawerComponent} from '@app/elements/drawer/drawer.component';
+import {ElementSessionShareComponent} from '@app/elements/drawer/session-share/session-share.component';
+import {ElementFileManagerComponent} from '@app/elements/drawer/filemanager/filemanager.component';
 
 export const ElementComponents = [
   ElementLeftBarComponent,
@@ -82,5 +84,7 @@ export const ElementComponents = [
   ElementACLDialogComponent,
   ElementDialogAlertComponent,
   ElementTermComponent,
-  ElementDrawerComponent
+  ElementDrawerComponent,
+  ElementSessionShareComponent,
+  ElementFileManagerComponent
 ];

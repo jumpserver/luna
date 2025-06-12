@@ -1,67 +1,19 @@
 import _ from 'lodash-es';
 
 import { View } from '@app/model';
-import { writeText } from 'clipboard-polyfill';
-import { FormBuilder, FormGroup } from '@angular/forms';
-import { NzMessageService } from 'ng-zorro-antd/message';
-import { IframeCommunicationService, DrawerStateService } from '@app/services';
-import {
-  LogService,
-  SettingService,
-  HttpService,
-  I18nService,
-  ConnectTokenService
-} from '@app/services';
-import {
-  Component,
-  OnInit,
-  Input,
-  effect,
-  signal,
-  OnDestroy,
-  ViewChild,
-  ElementRef,
-  Renderer2
-} from '@angular/core';
 import { Subscription } from 'rxjs';
+import { IframeCommunicationService, DrawerStateService } from '@app/services';
+import { Component, OnInit, Input, effect, signal, OnDestroy } from '@angular/core';
 
-interface OnlineUsers {
-  user: string;
-  user_id: string;
-  terminal_id: string;
-  primary: boolean;
-  writable: boolean;
-}
-
-interface ShareUserOptions {
-  id: string;
-  name: string;
-  username: string;
-}
-
-interface ShareLinkRequest {
-  expired_time: number;
-  action_permission: 'writable' | 'readonly';
-  users: ShareUserOptions[];
-}
+import type { OnlineUsers } from '@app/model';
 
 interface DrawerViewState {
   onLineUsers: OnlineUsers[];
-  iframeURL: string;
   isDrawerOpen: boolean;
   isSettingOpen: boolean;
   isChatOpen: boolean;
   terminalContent: {} | null;
-}
-
-interface ExpiredOption {
-  label: string;
-  value: number;
-}
-
-interface PermissionOption {
-  label: string;
-  value: 'writable' | 'readonly';
+  currentTabIndex: number;
 }
 
 @Component({
@@ -72,58 +24,26 @@ interface PermissionOption {
 })
 export class ElementDrawerComponent implements OnInit, OnDestroy {
   @Input() view: View;
-  @ViewChild('iframeContainer') iframeContainer: ElementRef;
 
   readonly showChat = signal(false);
   readonly showDrawer = signal(false);
   readonly showSetting = signal(false);
-  readonly iframeLoading = signal(false);
   readonly hasConnected = signal(false);
 
-  showLinkResult = false;
-  showCreateShareLinkForm = true;
-  showCreateShareLinkModal = false;
-  loading = false;
-  showIframe = false;
   drawerInited = false;
   visible = false;
-
-  shareLink = '';
-  shareCode = '';
-  shareLinkForm: FormGroup;
-  searchedUserList: ShareUserOptions[] = [];
-  shareExpiredOptions: ExpiredOption[] = [];
-  shareUserPermissions: PermissionOption[] = [];
 
   currentTabIndex = 0;
   currentViewId: string | null = null;
   onLineUsers: OnlineUsers[] = [];
-  iframeURL = '';
   chatIframeURL = '';
   terminalContent: {} | null = null;
-
-  hidden = false;
-
-  private readonly DEFAULT_SHARE_REQUEST: ShareLinkRequest = {
-    expired_time: 10,
-    action_permission: 'writable',
-    users: []
-  };
 
   private readonly drawerStateMap = new Map<string, DrawerViewState>();
   private iframeMessageSubscription: Subscription;
   private componentsMessageSubscription: Subscription;
-  private shareLinkRequest: ShareLinkRequest = { ...this.DEFAULT_SHARE_REQUEST };
 
   constructor(
-    private readonly _fb: FormBuilder,
-    private readonly _http: HttpService,
-    private readonly _i18n: I18nService,
-    private readonly renderer: Renderer2,
-    private readonly _logger: LogService,
-    private readonly _message: NzMessageService,
-    private readonly _settingSrv: SettingService,
-    private readonly _connectTokenSvc: ConnectTokenService,
     private readonly _drawerStateService: DrawerStateService,
     private readonly _iframeSvc: IframeCommunicationService
   ) {
@@ -131,23 +51,18 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    console.log('Drawer init');
     this.drawerInited = true;
     this.resetDrawerState();
   }
 
   ngOnDestroy(): void {
-    console.log('Drawer destroy');
     this.iframeMessageSubscription?.unsubscribe();
     this.componentsMessageSubscription?.unsubscribe();
   }
 
   private initializeComponent(): void {
     this.setupSideEffects();
-    this.initializeShareOptions();
-    this.initializeShareLinkForm();
     this.subscribeMessages();
-    this.resetDrawerState();
   }
 
   private resetDrawerState(): void {
@@ -158,13 +73,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   private setupSideEffects(): void {
     effect(() => {
-      if (this.showDrawer()) {
+      if (this.visible) {
         this.checkConnectionStatus();
-        if (this.showSetting() && this.currentTabIndex === 0) {
-          setTimeout(() => this.handleFileManagerTab(), 0);
-        }
-      } else {
-        this.hideAllIframes();
       }
     });
   }
@@ -172,26 +82,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   private checkConnectionStatus(): void {
     const isConnected = Boolean(this.view?.iframeElement);
     this.hasConnected.set(isConnected);
-  }
-
-  private initializeShareOptions(): void {
-    this.shareUserPermissions = [
-      { label: this._i18n.instant('Writable'), value: 'writable' },
-      { label: this._i18n.instant('ReadOnly'), value: 'readonly' }
-    ];
-
-    this.shareExpiredOptions = [1, 5, 10, 20, 60].map(minutes => ({
-      label: this.getMinuteLabel(minutes),
-      value: minutes
-    }));
-  }
-
-  private initializeShareLinkForm(): void {
-    this.shareLinkForm = this._fb.group({
-      expired_time: [this.shareLinkRequest.expired_time],
-      action_permission: [this.shareLinkRequest.action_permission],
-      users: [this.shareLinkRequest.users]
-    });
   }
 
   private subscribeMessages(): void {
@@ -205,10 +95,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   private handleIframeMessage(message: any): void {
     const messageHandlers = {
-      // 从 iframe 中传递的
-      SHARE_USER_ADD: this.handleShareUserAdd.bind(this),
-      SHARE_CODE_RESPONSE: this.handleShareCodeResponse.bind(this),
-
       // 从组件中传递的
       OPEN_CHAT: this.handleOpenChat.bind(this),
       OPEN_SETTING: this.handleOpenSetting.bind(this),
@@ -224,72 +110,36 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     }
   }
 
-  private handleShareCodeResponse(data: string): void {
-    try {
-      const messageData = JSON.parse(data);
-      this.shareCode = messageData.code;
-      this.generateShareLink(messageData.share_id);
-      this.showCreateShareLinkForm = false;
-      this.showLinkResult = true;
-    } catch (error) {
-      console.error('Failed to parse SHARE_CODE_RESPONSE:', error);
-    }
-  }
-
   private handleAllViewsClosed(): void {
-    this.showDrawer.set(false);
-    this.showSetting.set(false);
-    this.showChat.set(false);
-  }
-
-  private generateShareLink(shareId: string): void {
-    const baseUrl = this.view.smartEndpoint.getUrl();
-    const componentType = this.view.connectMethod.component;
-
-    switch (componentType) {
-      case 'koko':
-        this.shareLink = `${baseUrl}/luna/share/${shareId}`;
-        break;
-      case 'lion':
-        this.shareLink = `${baseUrl}/luna/share/${shareId}?type=lion`;
-        break;
-      default:
-        this.shareLink = `${baseUrl}/luna/share/${shareId}`;
-        break;
-    }
-  }
-
-  private handleShareUserAdd(data: string): void {
-    try {
-      const messageData: OnlineUsers = JSON.parse(data);
-
-      if (this.currentViewId && this.view?.id === this.currentViewId) {
-        this.onLineUsers.push(messageData);
-        this.saveCurrentViewState();
-      }
-    } catch (error) {
-      console.error('Failed to parse SHARE_USER_ADD:', error);
-    }
+    this.resetDrawerState();
   }
 
   private handleTabViewChange(viewId: string): void {
     if (viewId === this.currentViewId) return;
 
+    // 保存当前视图的状态（包括当前的 tab 索引）
     this.saveCurrentViewState();
-    this.restoreViewState(viewId);
-    this.currentViewId = viewId;
 
-    if (this.showDrawer() && this.currentTabIndex === 0) {
-      this.handleFileManagerTab();
-    }
+    // 恢复新视图的状态（包括它最后激活时的 tab 索引）
+    this.restoreViewState(viewId);
+
+    this.currentViewId = viewId;
   }
 
   private handleOpenSetting(): void {
-    console.log('handleOpenSetting');
     this.drawerInited = true;
-    this.visible = true;
     this.showSetting.set(true);
-    this.saveCurrentViewState();
+
+    const viewId = this.view?.id || null;
+
+    if (viewId) {
+      this.currentViewId = viewId;
+      this.restoreViewState(viewId);
+    } else {
+      this.currentTabIndex = 0;
+    }
+
+    this.visible = true;
   }
 
   private handleOpenChat(chatIframeURL: string): void {
@@ -312,8 +162,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       this.showDrawer.set(savedState.isDrawerOpen);
       this.showSetting.set(savedState.isSettingOpen);
       this.showChat.set(savedState.isChatOpen);
-      this.iframeURL = savedState.iframeURL;
       this.terminalContent = savedState.terminalContent || null;
+      this.currentTabIndex = savedState.currentTabIndex;
     } else {
       this.initializeNewTabState(viewId);
     }
@@ -322,105 +172,60 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   private createDefaultViewState(): DrawerViewState {
     return {
       onLineUsers: [],
-      iframeURL: '',
       isDrawerOpen: false,
       isSettingOpen: false,
       isChatOpen: false,
-      terminalContent: null
+      terminalContent: null,
+      currentTabIndex: 0
     };
   }
 
-  private getMinuteLabel(minute: number): string {
-    const minuteLabel = minute > 1 ? this._i18n.instant('Minutes') : this._i18n.instant('Minute');
-    return `${minute} ${minuteLabel}`;
-  }
-
-  private async getSFTPToken(): Promise<string | undefined> {
-    const oldToken = this.view.connectToken;
-    const newToken = await this._connectTokenSvc.exchange(oldToken);
-    return newToken?.id;
-  }
-
-  private async getIframeURL(): Promise<string> {
-    const token = await this.getSFTPToken();
-    return `${this.view.smartEndpoint.getUrl()}/koko/sftp/?token=${token}`;
-  }
-
-  private hideAllIframes(): void {
-    if (this.iframeContainer?.nativeElement) {
-      const iframe = this.iframeContainer.nativeElement.querySelector('iframe');
-      if (iframe) {
-        this.renderer.setStyle(iframe, 'display', 'none');
-      }
-    }
-  }
-
-  private async handleFileManagerTab(): Promise<void> {
-    if (!this.view || !this.hasConnected()) {
-      return;
-    }
-
-    const viewId = this.view.id;
-    this.currentViewId = viewId;
-
-    // 检查当前容器中是否已经有iframe（tab切换场景）
-    const existingIframe = this.iframeContainer?.nativeElement?.querySelector('iframe');
-
-    if (existingIframe) {
-      return;
-    }
-
-    try {
-      const url = await this.getIframeURL();
-      this.createNewIframe(url, viewId);
-    } catch (error) {
-      this._logger.error(`Failed to get iframe URL for ${viewId}`, error);
-    }
-  }
-
-  /**
-   * 创建新的iframe
-   */
-  private createNewIframe(url: string, viewId: string): void {
-    if (!this.iframeContainer?.nativeElement) {
-      return;
-    }
-
-    const iframe = this.renderer.createElement('iframe');
-    this.renderer.setAttribute(iframe, 'src', url);
-    this.renderer.setAttribute(iframe, 'frameborder', '0');
-    this.renderer.setAttribute(iframe, 'data-view-id', viewId);
-    this.renderer.setStyle(iframe, 'width', '100%');
-    this.renderer.setStyle(iframe, 'height', 'calc(100vh - 170px)');
-
-    this.renderer.appendChild(this.iframeContainer.nativeElement, iframe);
-  }
-
-  // Public methods
-  hasLicense(): boolean {
-    return this._settingSrv.globalSetting.XPACK_LICENSE_IS_VALID;
-  }
-
   close(): void {
-    // this.resetDrawerState();
-    // this.saveCurrentViewState();
     this.visible = false;
   }
 
-  async onTabChange(event: { index: number; tab: any }): Promise<void> {
+  onTabChange(event: { index: number; tab: any }): void {
+    // 在切换 tab 之前保存当前状态
+    this.saveCurrentViewState();
+
     this.currentTabIndex = event.index;
 
     if (event.index === 0) {
-      await this.handleFileManagerTab();
-      this.showFileManagerIframe();
-    } else {
-      this.hideFileManagerIframe();
+      this.currentViewId = this.view?.id || null;
+    }
+
+    // 切换后再次保存状态
+    this.saveCurrentViewState();
+  }
+
+  saveCurrentViewState(): void {
+    if (this.currentViewId) {
+      this.drawerStateMap.set(this.currentViewId, {
+        onLineUsers: [...this.onLineUsers],
+        isDrawerOpen: this.showDrawer(),
+        isSettingOpen: this.showSetting(),
+        isChatOpen: this.showChat(),
+        terminalContent: this.terminalContent || null,
+        currentTabIndex: this.currentTabIndex
+      });
     }
   }
 
-  onCreateShareLink(): void {
-    this.resetShareLinkModal();
-    this.showCreateShareLinkModal = true;
+  initializeNewTabState(viewId: string): void {
+    const defaultState = this.createDefaultViewState();
+
+    this.onLineUsers = [];
+    this.currentTabIndex = 0;
+    this.showDrawer.set(false);
+    this.showSetting.set(false);
+    this.showChat.set(false);
+
+    this.drawerStateMap.set(viewId, defaultState);
+  }
+
+  onLineUsersAdd(data: OnlineUsers[]): void {
+    this.onLineUsers = [...this.onLineUsers, ...data];
+    this.saveCurrentViewState();
   }
 
   onDeleteShareUser(item: OnlineUsers): void {
@@ -429,127 +234,11 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       data: item
     });
 
-    // 只从当前 view 的用户列表中移除
     if (this.currentViewId && this.view?.id === this.currentViewId) {
       this.onLineUsers = this.onLineUsers.filter(
         user => !(user.terminal_id === item.terminal_id && user.primary === item.primary)
       );
       this.saveCurrentViewState();
     }
-  }
-
-  onShareUserSearch(value: string): void {
-    this.loading = true;
-    this._http.getShareUserList(value).subscribe({
-      next: res => {
-        this.searchedUserList = res || [];
-        this.loading = false;
-      },
-      error: error => {
-        console.error('Failed to search users:', error);
-        this.loading = false;
-        this.searchedUserList = [];
-      }
-    });
-  }
-
-  copyLink(event?: Event): void {
-    event?.preventDefault();
-    event?.stopPropagation();
-
-    const linkTitle = this._i18n.instant('LinkAddr');
-    const codeTitle = this._i18n.instant('VerifyCode');
-    const text = `${linkTitle}: ${this.shareLink}\n${codeTitle}: ${this.shareCode}`;
-
-    writeText(text);
-    this._message.success(this._i18n.instant('Copied'));
-    this.resetShareLinkModal();
-  }
-
-  handleCancel(): void {
-    this.resetShareLinkModal();
-  }
-
-  handleOk(): void {
-    this.shareLinkRequest = { ...this.shareLinkRequest, ...this.shareLinkForm.value };
-    this.showCreateShareLinkForm = false;
-
-    this._iframeSvc.sendMessage({
-      name: 'SHARE_CODE_REQUEST',
-      data: this.shareLinkRequest
-    });
-
-    this.showLinkResult = true;
-  }
-
-  saveCurrentViewState(): void {
-    if (this.currentViewId) {
-      this.drawerStateMap.set(this.currentViewId, {
-        onLineUsers: [...this.onLineUsers],
-        iframeURL: this.iframeURL,
-        isDrawerOpen: this.showDrawer(),
-        isSettingOpen: this.showSetting(),
-        isChatOpen: this.showChat(),
-        terminalContent: this.terminalContent || null
-      });
-    }
-  }
-
-  initializeNewTabState(viewId: string): void {
-    const defaultState = this.createDefaultViewState();
-
-    // 重置当前组件的状态
-    this.onLineUsers = [...defaultState.onLineUsers];
-    this.iframeURL = defaultState.iframeURL;
-
-    this.showDrawer.set(defaultState.isDrawerOpen);
-    this.showSetting.set(defaultState.isSettingOpen);
-    this.showChat.set(defaultState.isChatOpen);
-
-    // 保存到状态映射中
-    this.drawerStateMap.set(viewId, defaultState);
-  }
-
-  // Debounced search method
-  readonly debounceSearch = _.debounce((value: string) => {
-    this.onShareUserSearch(value);
-  }, 500);
-
-  // Private methods
-  private showFileManagerIframe(): void {
-    if (this.iframeContainer?.nativeElement) {
-      const iframe = this.iframeContainer.nativeElement.querySelector('iframe');
-      if (iframe) {
-        this.renderer.setStyle(iframe, 'display', 'block');
-        this.renderer.setStyle(iframe, 'visibility', 'visible');
-      }
-    }
-  }
-
-  private hideFileManagerIframe(): void {
-    if (this.iframeContainer?.nativeElement) {
-      const iframe = this.iframeContainer.nativeElement.querySelector('iframe');
-      if (iframe) {
-        this.renderer.setStyle(iframe, 'display', 'none');
-        this.renderer.setStyle(iframe, 'visibility', 'hidden');
-      }
-    }
-  }
-
-  private resetShareLinkModal(): void {
-    this.showLinkResult = false;
-    this.showCreateShareLinkForm = true;
-    this.showCreateShareLinkModal = false;
-    this.shareLink = '';
-    this.shareCode = '';
-    this.searchedUserList = [];
-    this.loading = false;
-
-    this.shareLinkForm.reset();
-    this.shareLinkForm.patchValue({
-      expired_time: this.DEFAULT_SHARE_REQUEST.expired_time,
-      action_permission: this.DEFAULT_SHARE_REQUEST.action_permission,
-      users: []
-    });
   }
 }
