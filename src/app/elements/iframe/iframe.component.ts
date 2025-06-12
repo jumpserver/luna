@@ -58,7 +58,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private sanitizer: DomSanitizer,
     private faceService: FaceService,
     private _iframeSvc: IframeCommunicationService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this._logger.info(`IFrame URL: ${this.src}`);
@@ -132,8 +132,11 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           this._iframeSvc.sendMessage({ name: 'SHARE_USER_ADD', data: msg.data });
           break;
         case 'SHARE_CODE_RESPONSE':
-          this._iframeSvc.sendMessage({name: 'SHARE_CODE_RESPONSE', data: msg.data});
+          this._iframeSvc.sendMessage({ name: 'SHARE_CODE_RESPONSE', data: msg.data });
           break
+        case 'TERMINAL_CONTENT_RESPONSE':
+          this._iframeSvc.sendMessage({ name: 'TERMINAL_CONTENT_RESPONSE', data: msg.data });
+          break;
       }
     }.bind(this);
 

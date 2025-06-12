@@ -304,6 +304,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       this.showSetting.set(savedState.isSettingOpen);
       this.showChat.set(savedState.isChatOpen);
       this.iframeURL = savedState.iframeURL;
+      this.terminalContent = savedState.terminalContent || null;
     } else {
       this.initializeNewTabState(viewId);
     }
