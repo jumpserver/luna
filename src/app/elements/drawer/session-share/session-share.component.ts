@@ -41,7 +41,7 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
   hasConnected = input<boolean>(false);
   onLineUsers = input<OnlineUsers[]>([]);
 
-  @Output() onLineUsersAdd = new EventEmitter<OnlineUsers[]>();
+  @Output() onLineUsersAdd = new EventEmitter<OnlineUsers>();
   @Output() onShareUserRemove = new EventEmitter<OnlineUsers>();
 
   private readonly DEFAULT_SHARE_REQUEST: ShareLinkRequest = {
@@ -212,9 +212,9 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
     try {
       const messageData: OnlineUsers = JSON.parse(data);
 
-      if (this.currentViewId() && this._viewSvc.currentView?.id === this.currentViewId()) {
-        this.onLineUsersAdd.emit([messageData]);
-      }
+      console.log(messageData);
+
+      this.onLineUsersAdd.emit(messageData);
     } catch (error) {
       console.error('Failed to parse SHARE_USER_ADD:', error);
     }

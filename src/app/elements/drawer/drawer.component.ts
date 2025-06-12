@@ -112,6 +112,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   private handleAllViewsClosed(): void {
     this.resetDrawerState();
+    this.visible = false;
   }
 
   private handleTabViewChange(viewId: string): void {
@@ -223,8 +224,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     this.drawerStateMap.set(viewId, defaultState);
   }
 
-  onLineUsersAdd(data: OnlineUsers[]): void {
-    this.onLineUsers = [...this.onLineUsers, ...data];
+  onLineUsersAdd(data: OnlineUsers): void {
+    this.onLineUsers = [...this.onLineUsers, data];
     this.saveCurrentViewState();
   }
 
