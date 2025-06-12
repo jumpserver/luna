@@ -112,7 +112,6 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     this.viewSrv.currentView$.subscribe((state: View) => {
       this.currentView = state;
     });
-
     this.iframeURL = '/ui/#/chat/chat-ai?from=luna';
 
     window.addEventListener('message', event => {
@@ -147,6 +146,12 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     this.chatAIShown = true;
     this.showBtn = false;
+    const data = this.currentView.terminalContentData;
+    if (!data || !data.content) {
+      console.log('No terminal content data available to send to chat AI.');
+      return;
+    }
+    this.iframeRef.nativeElement.contentWindow.postMessage({name:'current_terminal_content', data});
   }
 
   isDescendant(element: Element, ancestor: Element) {

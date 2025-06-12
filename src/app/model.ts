@@ -139,6 +139,8 @@ export class View {
   smartEndpoint: Endpoint;
   iframeElement: Window;
 
+  terminalContentData: TerminalContentData;
+
   constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node') {
     this.closed = false;
     this.editable = false;
@@ -153,6 +155,7 @@ export class View {
     this.connectOption = connectInfo.connectOption;
     this.protocol = connectInfo.protocol.name;
     this.connectData = connectInfo;
+    this.terminalContentData = null;
   }
 
   getConnectOption(field: string) {
@@ -537,4 +540,11 @@ export class Ticket {
     value: string,
     label: string,
   };
+}
+
+
+export class TerminalContentData {
+  content: string;
+  sessionId: string;
+  terminalId: string;
 }

@@ -7,7 +7,7 @@ import { Component, OnInit } from '@angular/core';
 import { CookieService } from 'ngx-cookie-service';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { ElementSettingComponent } from '@app/elements/nav/setting/setting.component';
-import { IframeCommunicationService, SettingService, ViewService } from '@app/services';
+import { DrawerStateService, SettingService, ViewService } from '@app/services';
 
 @Component({
   standalone: false,
@@ -28,7 +28,7 @@ export class ElementNavComponent implements OnInit {
     public _viewSrv: ViewService,
     private _dialog: NzModalService,
     private _settingSvc: SettingService,
-    private _iframeSvc: IframeCommunicationService
+    private _drawerStateService: DrawerStateService
   ) {}
 
   get viewListSorted() {
@@ -213,7 +213,7 @@ export class ElementNavComponent implements OnInit {
   }
 
   openChat() {
-    this._iframeSvc.sendMessage({
+    this._drawerStateService.sendComponentMessage({
       name: 'SEND_CHAT_IFRAME'
     });
   }
