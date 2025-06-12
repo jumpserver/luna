@@ -34,7 +34,7 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     public viewSrv: ViewService,
     public _settingSvc: SettingService,
     private el: ElementRef,
-    private _iframeCommunicationService: IframeCommunicationService
+    private _iframeSvc: IframeCommunicationService
   ) {}
 
   ngAfterViewInit() {
@@ -118,14 +118,14 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     });
 
-    this._iframeCommunicationService.message$.subscribe(message => {
+    this._iframeSvc.message$.subscribe(message => {
       if (message.name === 'SEND_CHAT_IFRAME') {
-        this._iframeCommunicationService.sendMessage({
+        this._iframeSvc.sendMessage({
           name: 'OPEN_CHAT',
           data: this.iframeURL
-        })
+        });
       }
-    })
+    });
   }
 
   ngOnDestroy() {
@@ -166,7 +166,7 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.currentView.iframeElement) {
       switch (this.currentView.connectMethod.component) {
         case 'koko':
-          this._iframeCommunicationService.sendMessage({
+          this._iframeSvc.sendMessage({
             name: 'OPEN_SETTING'
           });
           break;

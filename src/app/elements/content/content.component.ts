@@ -61,7 +61,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     public viewSrv: ViewService,
     private _connectTokenSvc: ConnectTokenService,
     private _settingSvc: SettingService,
-    private _iframeCommunicationService: IframeCommunicationService
+    private _iframeSvc: IframeCommunicationService
   ) {}
 
   get showBatchCommand() {
@@ -137,7 +137,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   setViewActive(view) {
     this.viewSrv.activeView(view);
 
-    this._iframeCommunicationService.sendMessage({
+    this._iframeSvc.sendMessage({
       name: 'TAB_VIEW_CHANGE',
       data: view.id
     });
@@ -191,7 +191,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     }
 
     if (this.viewList.length === 0) {
-      this._iframeCommunicationService.sendMessage({
+      this._iframeSvc.sendMessage({
         name: 'ALL_VIEWS_CLOSED'
       });
     }

@@ -116,7 +116,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     private readonly _message: NzMessageService,
     private readonly _settingSrv: SettingService,
     private readonly _connectTokenSvc: ConnectTokenService,
-    private readonly _iframeCommunicationService: IframeCommunicationService
+    private readonly _iframeSvc: IframeCommunicationService
   ) {
     this.initializeComponent();
   }
@@ -182,7 +182,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   private subscribeToIframeMessages(): void {
-    this.messageSubscription = this._iframeCommunicationService.message$.subscribe(message => {
+    this.messageSubscription = this._iframeSvc.message$.subscribe(message => {
       this.handleIframeMessage(message);
     });
   }
@@ -393,7 +393,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   onDeleteShareUser(item: OnlineUsers): void {
-    this._iframeCommunicationService.sendMessage({
+    this._iframeSvc.sendMessage({
       name: 'SHARE_USER_REMOVE',
       data: item
     });
@@ -443,7 +443,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     this.shareLinkRequest = { ...this.shareLinkRequest, ...this.shareLinkForm.value };
     this.showCreateShareLinkForm = false;
 
-    this._iframeCommunicationService.sendMessage({
+    this._iframeSvc.sendMessage({
       name: 'SHARE_CODE_REQUEST',
       data: this.shareLinkRequest
     });

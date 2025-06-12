@@ -1,11 +1,28 @@
-import {AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
-import {View} from '@app/model';
-import {ConnectTokenService, HttpService, I18nService, IframeCommunicationService, LogService, ViewService} from '@app/services';
-import {Subject, Subscription} from 'rxjs';
-import {debounceTime} from 'rxjs/operators';
-import {environment} from '@src/environments/environment';
-import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
-import {FaceService} from '@app/services/face';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnDestroy,
+  OnInit,
+  Output,
+  ViewChild
+} from '@angular/core';
+import { View } from '@app/model';
+import {
+  ConnectTokenService,
+  HttpService,
+  I18nService,
+  LogService,
+  ViewService,
+  IframeCommunicationService
+} from '@app/services';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
+import { environment } from '@src/environments/environment';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { FaceService } from '@app/services/face';
 
 @Component({
   standalone: false,
@@ -18,7 +35,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   @Input() id: string;
   @Input() view: View;
   @Input() origin: string;
-  @ViewChild('iFrame', {static: false}) iframeRef: ElementRef;
+  @ViewChild('iFrame', { static: false }) iframeRef: ElementRef;
   @Output() onLoad: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   @Output() createFileConnectToken: EventEmitter<Boolean> = new EventEmitter<Boolean>();
   eventHandler: EventListenerOrEventListenerObject;
@@ -40,9 +57,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     public viewSrv: ViewService,
     private sanitizer: DomSanitizer,
     private faceService: FaceService,
-    private iframeCommunicationService: IframeCommunicationService
-  ) {
-  }
+    private _iframeSvc: IframeCommunicationService
+  ) {}
 
   ngOnInit() {
     this._logger.info(`IFrame URL: ${this.src}`);
@@ -54,9 +70,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       }, 5000);
     }
 
-    this.renewalTrigger.pipe(
-      debounceTime(2000)
-    ).subscribe(() => {
+    this.renewalTrigger.pipe(debounceTime(2000)).subscribe(() => {
       this._http.get(`/api/v1/health/`).subscribe();
     });
 
@@ -71,7 +85,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
       switch (msg.name) {
         case 'PING': {
-          this.iframeWindow.postMessage({name: 'PONG', id: this.id}, '*');
+          this.iframeWindow.postMessage({ name: 'PONG', id: this.id }, '*');
           break;
         }
         case 'PONG':
@@ -90,7 +104,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           if (this.view && this.view.connectToken && this.view.connectToken.face_monitor_token) {
             this.faceService.removeMonitoringTab(this.view.id);
           }
-          this.iframeCommunicationService.sendMessage({name: 'CLOSE'});
+          this._iframeSvc.sendMessage({ name: 'CLOSE' });
           break;
         case 'CONNECTED':
           this.view.connected = true;
@@ -115,11 +129,11 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           this.createFileConnectToken.emit(true);
           break;
         case 'SHARE_USER_ADD':
-          this.iframeCommunicationService.sendMessage({name: 'SHARE_USER_ADD', data: msg.data});
+          this._iframeSvc.sendMessage({ name: 'SHARE_USER_ADD', data: msg.data });
           break;
         case 'SHARE_CODE_RESPONSE':
-          this.iframeCommunicationService.sendMessage({name: 'SHARE_CODE_RESPONSE', data: msg.data});
-          break
+          this._iframeSvc.sendMessage({ name: 'SHARE_CODE_RESPONSE', data: msg.data });
+          break;
       }
     }.bind(this);
 
@@ -141,32 +155,38 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
   setActive() {
     this._logger.debug(`[Luna] Send FOCUS to: ${this.id}`);
-    this.iframeWindow.postMessage({name: 'FOCUS'}, '*');
+    this.iframeWindow.postMessage({ name: 'FOCUS' }, '*');
   }
 
   handleIframeEvent() {
     // @ts-ignore
     this.ping = setInterval(() => {
       this._logger.info(`[Luna] Send PING to: ${this.id}`);
-      this.iframeWindow.postMessage({name: 'PING', id: this.id, protocol: this.view.protocol}, '*');
+      this.iframeWindow.postMessage(
+        { name: 'PING', id: this.id, protocol: this.view.protocol },
+        '*'
+      );
     }, 500);
 
-    this.subscription = this.iframeCommunicationService.message$.subscribe((message) => {
+    this.subscription = this._iframeSvc.message$.subscribe(message => {
       this.iframeWindow.postMessage(message, '*');
     });
 
     window.addEventListener('message', this.eventHandler);
 
     // 30s 内未PING通, 则主动关闭
-    setTimeout(function () {
-      clearInterval(this.ping);
-      this.showIframe = this.showValue;
-    }.bind(this), 1000 * 30);
+    setTimeout(
+      function () {
+        clearInterval(this.ping);
+        this.showIframe = this.showValue;
+      }.bind(this),
+      1000 * 30
+    );
   }
 
   sendCommand(data) {
     this._logger.info(`[Luna] Send CMD to: ${this.id}`);
-    this.iframeWindow.postMessage({name: 'CMD', data: data.data}, '*');
+    this.iframeWindow.postMessage({ name: 'CMD', data: data.data }, '*');
   }
 
   messageHandler = (event: MessageEvent) => {

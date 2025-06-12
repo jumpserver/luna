@@ -5,7 +5,7 @@ import { I18nService } from '@app/services/i18n';
 import { GlobalSetting, Setting } from '@app/model';
 import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { HttpService, SettingService } from '@app/services';
+import { HttpService, IframeCommunicationService, SettingService } from '@app/services';
 import { Component, Inject, OnInit, OnDestroy } from '@angular/core';
 
 interface terminalThemeMap {
@@ -45,6 +45,7 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
     private _http: HttpService,
     private settingSrv: SettingService,
     private _message: NzMessageService,
+    private _iframeSvc: IframeCommunicationService
   ) {
     this.boolChoices = [
       { name: _i18n.instant('Yes'), value: true },
@@ -127,7 +128,7 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
   }
 
   onThemeChange(theme: string) {
-    this._iframeCommunicationService.sendMessage({ name: 'TERMINAL_THEME_CHANGE', theme });
+    this._iframeSvc.sendMessage({ name: 'TERMINAL_THEME_CHANGE', theme });
     this._http.setTerminalPreference({ basic: { terminal_theme_name: theme } }).subscribe({
       next: _res => {
         this._message.success(this._i18n.instant('主题同步成功'));

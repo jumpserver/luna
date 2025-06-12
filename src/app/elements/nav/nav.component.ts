@@ -28,7 +28,7 @@ export class ElementNavComponent implements OnInit {
     public _viewSrv: ViewService,
     private _dialog: NzModalService,
     private _settingSvc: SettingService,
-    private _iframeCommunicationService: IframeCommunicationService
+    private _iframeSvc: IframeCommunicationService
   ) {}
 
   get viewListSorted() {
@@ -213,7 +213,7 @@ export class ElementNavComponent implements OnInit {
   }
 
   openChat() {
-    this._iframeCommunicationService.sendMessage({
+    this._iframeSvc.sendMessage({
       name: 'SEND_CHAT_IFRAME'
     });
   }

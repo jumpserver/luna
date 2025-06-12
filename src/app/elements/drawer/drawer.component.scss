@@ -1,4 +1,4 @@
-::ng-deep .elements-drawer-wrapper {
+.elements-drawer-wrapper {
   .ant-card {
     margin-top: 12px;
     background-color: var(--el-drawer-bg-color);
@@ -14,7 +14,6 @@
   }
 
   .ant-input-group-wrapper {
-
     textarea,
     .ant-input-group-addon {
       background-color: var(--el-drawer-bg-color);
