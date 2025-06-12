@@ -193,7 +193,6 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     }
 
     if (this.viewList.length === 0) {
-      this._iframeSvc.sendMessage({ name: 'ALL_VIEWS_CLOSED' });
       this._drawerStateService.sendComponentMessage({
         name: 'ALL_VIEWS_CLOSED'
       });
