@@ -1,4 +1,4 @@
-.elements-drawer-wrapper {
+::ng-deep .elements-drawer-wrapper {
   .ant-card {
     margin-top: 12px;
     background-color: var(--el-drawer-bg-color);
@@ -79,7 +79,7 @@
         }
 
         .share-button {
-          border-radius: 8px;
+          border-radius: 4px;
         }
 
         .share-user-list {
@@ -160,7 +160,7 @@
 
 ::ng-deep .create-share-link-modal {
   .ant-modal-content {
-    border-radius: 8px;
+    border-radius: 4px;
     overflow: hidden;
 
     .ant-modal-header {
