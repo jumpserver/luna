@@ -1,4 +1,21 @@
 ::ng-deep .elements-drawer-wrapper {
+  background-color: white;
+  width: 600px;
+  height: calc(100vh - 60px);
+  overflow: auto;
+  position: absolute;
+  top: 60px;
+  right: 0;
+  z-index: 1000;
+  padding: 10px 30px;
+
+  .close-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+  }
+
   .ant-card {
     margin-top: 12px;
     background-color: var(--el-drawer-bg-color);

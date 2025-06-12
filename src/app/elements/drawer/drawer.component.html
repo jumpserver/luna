@@ -1,201 +1,137 @@
-<nz-drawer
-  nzPlacement="right"
-  nzWidth="720px"
-  [nzMask]="false"
-  [nzClosable]="true"
-  [nzVisible]="showDrawer()"
-  (nzOnClose)="close()"
-  nzWrapClassName="elements-drawer-wrapper"
+<div
+  class="elements-drawer-wrapper"
+  *ngIf="drawerInited"
+  [ngStyle]="{ display: visible ? 'block' : 'none' }"
 >
-  <ng-container *nzDrawerContent>
-    <div [style.display]="showSetting() ? 'block' : 'none'">
-      <nz-tabset [nzSelectedIndex]="currentTabIndex" (nzSelectChange)="onTabChange($event)">
-        <nz-tab nzTitle="文件管理">
-          @if (hasConnected()) {
-            <div #iframeContainer></div>
-            @if (iframeLoading()) {
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  height: 400px;
-                  color: #666;
-                "
-              >
-                <nz-spin nzSimple></nz-spin>
-                <span style="margin-left: 8px">正在加载文件管理器...</span>
-              </div>
-            }
+  <div class="close-button">
+    <button nz-button nzType="text" nzSize="small" (click)="close()">
+      <nz-icon nzType="close" nzTheme="outline"></nz-icon>
+    </button>
+  </div>
+
+  <div>
+    <nz-tabset [nzSelectedIndex]="currentTabIndex" (nzSelectChange)="onTabChange($event)">
+      <nz-tab nzTitle="文件管理">
+        @if (hasConnected()) {
+          <div #iframeContainer></div>
+          @if (iframeLoading()) {
+            <div class="loading-container">
+              <nz-spin nzSimple></nz-spin>
+              <span style="margin-left: 8px">正在加载文件管理器...</span>
+            </div>
+          } @else {
+            <div>Not loading</div>
           }
-        </nz-tab>
-        <nz-tab nzTitle="会话分享">
-          @if (hasConnected()) {
-            <div class="share-user-list">
-              <nz-divider nzDashed [nzText]="text" nzOrientation="left">
-                <ng-template #text>
-                  <nz-icon nzType="team" nzTheme="outline" />
-                  在线用户 ({{ onLineUsers.length }})
-                </ng-template>
-              </nz-divider>
+        } @else {
+          <div>Not connected</div>
+        }
+      </nz-tab>
+      <nz-tab nzTitle="会话分享">
+        @if (hasConnected()) {
+          <div class="share-user-list">
+            <nz-divider nzDashed [nzText]="text" nzOrientation="left">
+              <ng-template #text>
+                <nz-icon nzType="team" nzTheme="outline" />
+                在线用户 ({{ onLineUsers.length }})
+              </ng-template>
+            </nz-divider>
 
-              @if (onLineUsers.length > 0) {
-                <div style="margin-bottom: 16px">
-                  @for (item of onLineUsers; track item.terminal_id + item.primary) {
-                    <nz-card
-                      nzSize="small"
-                      style="margin-bottom: 8px; border-radius: 8px"
-                      [nzBodyStyle]="{ padding: '12px 16px' }"
-                    >
-                      <div
-                        style="display: flex; align-items: center; justify-content: space-between"
-                      >
-                        <div>
-                          <div
-                            style="
-                              font-weight: 500;
-                              margin-bottom: 4px;
-                              color: var(--el-text-color-light);
-                            "
-                          >
-                            {{ item.user }}
-                          </div>
-                          <div style="display: flex; gap: 4px">
-                            <nz-tag *ngIf="item.primary" nzColor="blue">
-                              <nz-icon
-                                nzType="crown"
-                                nzTheme="outline"
-                                style="margin-right: 2px"
-                              ></nz-icon>
-                              主用户
-                            </nz-tag>
-                            <nz-tag *ngIf="item.writable" nzColor="green">
-                              <nz-icon
-                                nzType="edit"
-                                nzTheme="outline"
-                                style="margin-right: 2px"
-                              ></nz-icon>
-                              可写
-                            </nz-tag>
-                            <nz-tag *ngIf="!item.writable" nzColor="orange">
-                              <nz-icon
-                                nzType="eye"
-                                nzTheme="outline"
-                                style="margin-right: 2px"
-                              ></nz-icon>
-                              只读
-                            </nz-tag>
-                          </div>
-                        </div>
-
+            @if (onLineUsers.length > 0) {
+              <div style="margin-bottom: 16px">
+                @for (item of onLineUsers; track item.terminal_id + item.primary) {
+                  <nz-card
+                    nzSize="small"
+                    style="margin-bottom: 8px; border-radius: 8px"
+                    [nzBodyStyle]="{ padding: '12px 16px' }"
+                  >
+                    <div style="display: flex; align-items: center; justify-content: space-between">
+                      <div>
                         <div
-                          style="margin-left: 12px"
-                          [style.display]="item.primary ? 'none' : 'block'"
+                          style="
+                            font-weight: 500;
+                            margin-bottom: 4px;
+                            color: var(--el-text-color-light);
+                          "
                         >
-                          <button
-                            nz-button
-                            nzType="text"
-                            nzSize="small"
-                            nzDanger
-                            nz-popconfirm
-                            nzPopconfirmTitle="确定要移除该用户吗？"
-                            nzPopconfirmPlacement="topRight"
-                            (nzOnConfirm)="onDeleteShareUser(item)"
-                            [disabled]="item.primary"
-                            nzPopconfirmOverlayClassName="share-user-delete-button"
-                            style="border: none; box-shadow: none"
-                          >
-                            <nz-icon nzType="close" nzTheme="outline"></nz-icon>
-                          </button>
+                          {{ item.user }}
+                        </div>
+                        <div style="display: flex; gap: 4px">
+                          <nz-tag *ngIf="item.primary" nzColor="blue">
+                            <nz-icon
+                              nzType="crown"
+                              nzTheme="outline"
+                              style="margin-right: 2px"
+                            ></nz-icon>
+                            主用户
+                          </nz-tag>
+                          <nz-tag *ngIf="item.writable" nzColor="green">
+                            <nz-icon
+                              nzType="edit"
+                              nzTheme="outline"
+                              style="margin-right: 2px"
+                            ></nz-icon>
+                            可写
+                          </nz-tag>
+                          <nz-tag *ngIf="!item.writable" nzColor="orange">
+                            <nz-icon
+                              nzType="eye"
+                              nzTheme="outline"
+                              style="margin-right: 2px"
+                            ></nz-icon>
+                            只读
+                          </nz-tag>
                         </div>
                       </div>
-                    </nz-card>
-                  }
-                </div>
-              } @else {
-                <nz-empty
-                  nzNotFoundImage="simple"
-                  nzNotFoundContent="暂无在线用户"
-                  style="margin: 20px 0"
-                ></nz-empty>
-              }
-            </div>
 
-            <button
-              nz-button
-              nzBlock
-              nzType="primary"
-              class="share-button"
-              (click)="onCreateShareLink()"
-              style="border-radius: 4px; height: 40px"
-            >
-              <nz-icon nzType="usergroup-add" nzTheme="outline"></nz-icon>
-              创建分享链接
-            </button>
-          }
-        </nz-tab>
-      </nz-tabset>
-    </div>
+                      <div
+                        style="margin-left: 12px"
+                        [style.display]="item.primary ? 'none' : 'block'"
+                      >
+                        <button
+                          nz-button
+                          nzType="text"
+                          nzSize="small"
+                          nzDanger
+                          nz-popconfirm
+                          nzPopconfirmTitle="确定要移除该用户吗？"
+                          nzPopconfirmPlacement="topRight"
+                          (nzOnConfirm)="onDeleteShareUser(item)"
+                          [disabled]="item.primary"
+                          nzPopconfirmOverlayClassName="share-user-delete-button"
+                          style="border: none; box-shadow: none"
+                        >
+                          <nz-icon nzType="close" nzTheme="outline"></nz-icon>
+                        </button>
+                      </div>
+                    </div>
+                  </nz-card>
+                }
+              </div>
+            } @else {
+              <nz-empty
+                nzNotFoundImage="simple"
+                nzNotFoundContent="暂无在线用户"
+                style="margin: 20px 0"
+              ></nz-empty>
+            }
+          </div>
 
-    <div [style.display]="showChat() ? 'block' : 'none'">
-      <iframe
-        [src]="chatIframeURL | safeUrl"
-        frameborder="0"
-        style="width: 100%; height: calc(100vh - 170px)"
-      ></iframe>
-      <!-- <nz-card nzTitle="在线聊天" [nzExtra]="chatStatus" nzSize="small" class="chat-card">
-        <div class="chat-messages-container">
-          <nz-comment nzAuthor="张三" nzDatetime="11:32">
-            <nz-avatar
-              nz-comment-avatar
-              nzIcon="user"
-              nzSrc="https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png"
-            ></nz-avatar>
-            <nz-comment-content>
-              <nz-card class="message-bubble received">
-                <p>你好，文件传输出错了，能帮忙看下吗？</p>
-              </nz-card>
-            </nz-comment-content>
-          </nz-comment>
-          <nz-comment nzAuthor="我" nzDatetime="11:33">
-            <nz-avatar
-              nz-comment-avatar
-              nzText="我"
-              style="background-color: #1890ff"
-            ></nz-avatar>
-            <nz-comment-content>
-              <nz-card class="message-bubble sent">
-                <p>好的，我正在检查，请稍等。</p>
-              </nz-card>
-            </nz-comment-content>
-          </nz-comment>
-        </div>
-
-        <div class="chat-input-container">
-          <nz-divider></nz-divider>
-          <nz-input-group [nzAddOnAfter]="sendButton">
-            <textarea
-              rows="2"
-              nz-input
-              placeholder="在此输入消息..."
-              [nzAutosize]="{ minRows: 2, maxRows: 6 }"
-            ></textarea>
-          </nz-input-group>
-          <ng-template #sendButton>
-            <button nz-button nzType="primary">
-              <span nz-icon nzType="send"></span>
-              发送
-            </button>
-          </ng-template>
-        </div>
-      </nz-card>
-
-      <ng-template #chatStatus>
-        <nz-badge nzStatus="success" nzText="在线"></nz-badge>
-      </ng-template> -->
-    </div>
-  </ng-container>
-</nz-drawer>
+          <button
+            nz-button
+            nzBlock
+            nzType="primary"
+            class="share-button"
+            (click)="onCreateShareLink()"
+            style="border-radius: 4px; height: 40px"
+          >
+            <nz-icon nzType="usergroup-add" nzTheme="outline"></nz-icon>
+            创建分享链接
+          </button>
+        }
+      </nz-tab>
+    </nz-tabset>
+  </div>
+</div>
 
 <nz-modal
   nzCentered

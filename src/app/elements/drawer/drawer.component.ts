@@ -84,6 +84,9 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   showCreateShareLinkForm = true;
   showCreateShareLinkModal = false;
   loading = false;
+  showIframe = false;
+  drawerInited = false;
+  visible = false;
 
   shareLink = '';
   shareCode = '';
@@ -97,7 +100,9 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   onLineUsers: OnlineUsers[] = [];
   iframeURL = '';
   chatIframeURL = '';
-  terminalContent: {} |null = null;
+  terminalContent: {} | null = null;
+
+  hidden = false;
 
   private readonly DEFAULT_SHARE_REQUEST: ShareLinkRequest = {
     expired_time: 10,
@@ -126,10 +131,13 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    console.log('Drawer init');
+    this.drawerInited = true;
     this.resetDrawerState();
   }
 
   ngOnDestroy(): void {
+    console.log('Drawer destroy');
     this.iframeMessageSubscription?.unsubscribe();
     this.componentsMessageSubscription?.unsubscribe();
   }
@@ -277,7 +285,9 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   private handleOpenSetting(): void {
-    this.showDrawer.set(true);
+    console.log('handleOpenSetting');
+    this.drawerInited = true;
+    this.visible = true;
     this.showSetting.set(true);
     this.saveCurrentViewState();
   }
@@ -392,8 +402,9 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   close(): void {
-    this.resetDrawerState();
-    this.saveCurrentViewState();
+    // this.resetDrawerState();
+    // this.saveCurrentViewState();
+    this.visible = false;
   }
 
   async onTabChange(event: { index: number; tab: any }): Promise<void> {

@@ -151,7 +151,10 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
       console.log('No terminal content data available to send to chat AI.');
       return;
     }
-    this.iframeRef.nativeElement.contentWindow.postMessage({name:'current_terminal_content', data});
+    this.iframeRef.nativeElement.contentWindow.postMessage({
+      name: 'current_terminal_content',
+      data
+    });
   }
 
   isDescendant(element: Element, ancestor: Element) {
@@ -171,18 +174,19 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   handleShowDrawer() {
-    if (this.currentView.iframeElement) {
-      switch (this.currentView.connectMethod.component) {
-        case 'koko':
-          this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
-          break;
-        case 'lion':
-          this.currentView.iframeElement.postMessage({ name: 'OPEN' }, '*');
-          break;
-        default:
-          break;
-      }
-    }
+    this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
+    // if (this.currentView.iframeElement) {
+    //   switch (this.currentView.connectMethod.component) {
+    //     case 'koko':
+    //       this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
+    //       break;
+    //     case 'lion':
+    //       this.currentView.iframeElement.postMessage({ name: 'OPEN' }, '*');
+    //       break;
+    //     default:
+    //       break;
+    //   }
+    // }
   }
 
   isDifferenceWithinThreshold(num1, num2, threshold = 5) {

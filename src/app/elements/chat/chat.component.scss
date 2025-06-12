@@ -1,7 +1,7 @@
 nz-float-button-group,
 nz-float-button {
   position: absolute;
-  right: 0;
+  right: 5px;
   top: 0;
 }
 
@@ -29,7 +29,8 @@ nz-float-button {
       margin-bottom: 5px;
     }
 
-    .ant-float-btn-default, .ant-float-btn-default .ant-float-btn-body {
+    .ant-float-btn-default,
+    .ant-float-btn-default .ant-float-btn-body {
       background: rgba(255, 255, 255, 0.05);
 
       &:hover {
@@ -59,24 +60,24 @@ nz-float-button {
 
 //
 .drawer-panel {
-   background-color: transparent;
-   position: fixed;
-   top: 0;
-   right: 440px;
-   width: 440px;
-   min-width: 260px;
-   height: 100vh;
-   user-select: none;
-   border-radius: 10px 0 0 10px;
-   transition: transform .25s cubic-bezier(.7, .3, .1, 1);
-   box-shadow: 0 0 8px 4px #00000014;
-   transform: translate(100%);
-   z-index: 1000;
-   opacity: 0.95;
+  background-color: transparent;
+  position: fixed;
+  top: 0;
+  right: 440px;
+  width: 440px;
+  min-width: 260px;
+  height: 100vh;
+  user-select: none;
+  border-radius: 10px 0 0 10px;
+  transition: transform 0.25s cubic-bezier(0.7, 0.3, 0.1, 1);
+  box-shadow: 0 0 8px 4px #00000014;
+  transform: translate(100%);
+  z-index: 1000;
+  opacity: 0.95;
 }
 
 .show {
-  transition: all .3s cubic-bezier(.7, .3, .1, 1);
+  transition: all 0.3s cubic-bezier(0.7, 0.3, 0.1, 1);
 }
 
 .show .modal {
