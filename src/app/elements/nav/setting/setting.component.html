@@ -99,7 +99,6 @@
           [ngModelOptions]="{ standalone: true }"
           [(ngModel)]="currentTheme"
           (ngModelChange)="onThemeChange($event)"
-          nzDropdownClassName="elements-drawer-dropdown"
         >
           @for (theme of terminalThemeMap; track theme.value) {
             <nz-option [nzValue]="theme.value" [nzLabel]="theme.label"></nz-option>
