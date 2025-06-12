@@ -13,8 +13,18 @@
 }
 
 .setting {
+  padding-right: 10px;
+
   ::ng-deep {
     font-size: 12px;
+
+    .ant-form-item-label > label {
+      display: inline-block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 30px;
+    }
 
     .ant-select {
       width: 100%;
@@ -32,10 +42,15 @@
     .ant-form-item-label {
       line-height: 1.5;
     }
-
   }
 
   ::ng-deep .ant-descriptions-view {
     border-radius: 4px;
   }
+}
+
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
