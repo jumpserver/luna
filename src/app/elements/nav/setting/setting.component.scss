@@ -16,14 +16,13 @@
   padding-right: 10px;
 
   ::ng-deep {
-    font-size: 12px;
-
     .ant-form-item-label > label {
       display: inline-block;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       line-height: 30px;
+      font-size: 13px;
     }
 
     .ant-select {

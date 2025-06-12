@@ -1,7 +1,7 @@
 <div class="setting">
   <div *ngIf="type === 'general'">
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24" nzOverflowTooltip>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
         {{ 'Load tree async' | translate }}
       </nz-form-label>
       <nz-form-control>
@@ -15,11 +15,10 @@
       </nz-form-control>
     </nz-form-item>
   </div>
+
   <div *ngIf="type === 'gui'">
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24" nzOverflowTooltip>{{
-        'RDP resolution' | translate
-      }}</nz-form-label>
+      <nz-form-label [nzSm]="8" [nzXs]="24">{{ 'RDP resolution' | translate }}</nz-form-label>
       <nz-form-control>
         <nz-select name="rdp_resolution" [(ngModel)]="setting.graphics.rdp_resolution">
           <nz-option
@@ -32,7 +31,7 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24" nzOverflowTooltip>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
         {{ 'RDP smart size' | translate }}
       </nz-form-label>
       <nz-form-control>
@@ -47,7 +46,7 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24" nzOverflowTooltip>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
         {{ 'RDP color quality' | translate }}
       </nz-form-label>
       <nz-form-control>
@@ -62,7 +61,7 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24" nzOverflowTooltip>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
         {{ 'Keyboard layout' | translate }}
       </nz-form-label>
       <nz-form-control>
@@ -78,7 +77,7 @@
 
     <div *ngIf="hasLicense()">
       <nz-form-item>
-        <nz-form-label [nzSm]="8" [nzXs]="24" nzOverflowTooltip>
+        <nz-form-label [nzSm]="8" [nzXs]="24">
           {{ 'RDP client options' | translate }}
         </nz-form-label>
         <nz-form-control>
@@ -95,7 +94,7 @@
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label [nzSm]="8" [nzXs]="24" nzOverflowTooltip>
+        <nz-form-label [nzSm]="8" [nzXs]="24">
           {{ 'Applet connect method' | translate }}
         </nz-form-label>
         <nz-form-control>
@@ -112,7 +111,7 @@
   </div>
   <div *ngIf="type === 'cli'">
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24" nzOverflowTooltip>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
         {{ 'CLI font size' | translate }}
       </nz-form-label>
       <nz-form-control>
@@ -127,7 +126,7 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24" nzOverflowTooltip>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
         {{ 'Backspace as Ctrl+H' | translate }}
       </nz-form-label>
       <nz-form-control>
@@ -146,7 +145,7 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24" nzOverflowTooltip>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
         {{ 'Right mouse quick paste' | translate }}
       </nz-form-label>
       <nz-form-control>
@@ -165,7 +164,7 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24" nzOverflowTooltip>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
         {{ 'Theme' | translate }}
       </nz-form-label>
       <nz-form-control>
