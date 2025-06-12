@@ -6,7 +6,8 @@ import { GlobalSetting, Setting } from '@app/model';
 import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { HttpService, IframeCommunicationService, SettingService } from '@app/services';
-import { Component, Inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, Inject, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { NzSelectComponent } from 'ng-zorro-antd/select';
 
 interface terminalThemeMap {
   label: string;
@@ -20,6 +21,7 @@ interface terminalThemeMap {
   styleUrls: ['setting.component.scss']
 })
 export class ElementSettingComponent implements OnInit, OnDestroy {
+  @ViewChild('nzSel', { static: false }) nzSel!: NzSelectComponent;
   public boolChoices: any[];
   public name: string;
   public type: string = 'general';
@@ -38,6 +40,8 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
   currentTheme = '';
   terminalThemeMap: terminalThemeMap[] = [];
   messageSubscription: Subscription;
+  private isSelectOpen = false;
+  highlightedValue = '';
 
   constructor(
     @Inject(NZ_MODAL_DATA) public data: any,
@@ -127,6 +131,16 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
     this.settingSrv.save();
   }
 
+  onThemePreview(event: KeyboardEvent) {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      // 延迟一个 tick，等待内部 overlay 弹出并高亮变更
+      setTimeout(() => {
+        const activatedValue = (this.nzSel as any).activatedValue;
+        this._iframeSvc.sendMessage({ name: 'TERMINAL_THEME_CHANGE', theme: activatedValue });
+      }, 100);
+    }
+  }
+
   onThemeChange(theme: string) {
     this._iframeSvc.sendMessage({ name: 'TERMINAL_THEME_CHANGE', theme });
     this._http.setTerminalPreference({ basic: { terminal_theme_name: theme } }).subscribe({
@@ -137,6 +151,13 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
         console.error('Failed to set theme preference:', error);
         this._message.error(this._i18n.instant('主题同步失败'));
       }
+    });
+  }
+
+  onThemeOpenChange(open: boolean) {
+    this._iframeSvc.sendMessage({
+      name: 'TERMINAL_THEME_CHANGE',
+      theme: this.setting.command_line.terminal_theme_name
     });
   }
 }
