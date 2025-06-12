@@ -65,6 +65,16 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
       },
       {
         type: 'select',
+        field: 'token_reusable',
+        hidden: () => {
+          return !(this.connectMethod.component === 'magnus' && this.connectMethod.value === 'db_client' && this.globalSetting.CONNECTION_TOKEN_REUSABLE);
+        },
+        label: 'Set reusable',
+        value: false,
+        options: this.boolChoices
+      },
+      {
+        type: 'select',
         field: 'resolution',
         hidden: () => {
           const protocolsCanResolution: Array<string> = ['rdp'];
