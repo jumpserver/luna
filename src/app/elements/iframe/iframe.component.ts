@@ -54,7 +54,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private _logger: LogService,
     private _connectTokenSvc: ConnectTokenService,
     private _http: HttpService,
-    public viewSrv: ViewService,
+    public _viewSvc: ViewService,
     private sanitizer: DomSanitizer,
     private faceService: FaceService,
     private _iframeSvc: IframeCommunicationService
@@ -118,7 +118,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
         case 'KEYEVENT':
           window.focus();
           setTimeout(() => {
-            this.viewSrv.keyboardSwitchTab(msg.data);
+            this._viewSvc.keyboardSwitchTab(msg.data);
           }, 200);
           break;
         case 'KEYBOARDEVENT':
@@ -132,8 +132,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           this._iframeSvc.sendMessage({ name: 'SHARE_USER_ADD', data: msg.data });
           break;
         case 'SHARE_CODE_RESPONSE':
-          this._iframeSvc.sendMessage({name: 'SHARE_CODE_RESPONSE', data: msg.data});
-          break
+          this._iframeSvc.sendMessage({ name: 'SHARE_CODE_RESPONSE', data: msg.data });
+          break;
       }
     }.bind(this);
 

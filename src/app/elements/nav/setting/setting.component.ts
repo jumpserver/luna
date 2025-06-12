@@ -136,13 +136,13 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
       // 延迟一个 tick，等待内部 overlay 弹出并高亮变更
       setTimeout(() => {
         const activatedValue = (this.nzSel as any).activatedValue;
-        this._iframeSvc.sendMessage({ name: 'TERMINAL_THEME_CHANGE', theme: activatedValue });
+        this.onThemeChange(activatedValue);
       }, 100);
     }
   }
 
   onThemeChange(theme: string) {
-    this._iframeSvc.sendMessage({ name: 'TERMINAL_THEME_CHANGE', theme });
+    this.changeTheme(theme);
     this._http.setTerminalPreference({ basic: { terminal_theme_name: theme } }).subscribe({
       next: _res => {
         this._message.success(this._i18n.instant('主题同步成功'));
@@ -154,10 +154,13 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
     });
   }
 
+  changeTheme(theme: string) {
+    this._iframeSvc.sendMessage({ name: 'TERMINAL_THEME_CHANGE', theme });
+  }
+
   onThemeOpenChange(open: boolean) {
-    this._iframeSvc.sendMessage({
-      name: 'TERMINAL_THEME_CHANGE',
-      theme: this.setting.command_line.terminal_theme_name
-    });
+    if (!open) {
+      this.changeTheme(this.setting.command_line.terminal_theme_name);
+    }
   }
 }

@@ -11,9 +11,10 @@ export class ViewService {
   viewIds: Array<string> = [];
   public currentView$ = new BehaviorSubject<Object>({});
   private connectViewCount = new BehaviorSubject<number>(0);
-  connectViewCount$ = this.connectViewCount.asObservable();
+  public connectViewCount$ = this.connectViewCount.asObservable();
+  public state$ = new BehaviorSubject<any>({});
 
-  constructor(private faceService: FaceService) {}
+  constructor(private _faceSvc: FaceService) {}
 
   addView(view: View) {
     this.num += 1;
@@ -22,8 +23,9 @@ export class ViewService {
     this.viewIds.push(view.id);
 
     if (view.connectToken.face_monitor_token) {
-      this.faceService.addMonitoringTab(view.id);
+      this._faceSvc.addMonitoringTab(view.id);
     }
+    this.state$.next({ action: 'add', view: view });
   }
 
   activeView(view: View) {
@@ -58,8 +60,9 @@ export class ViewService {
       this.setCurrentView({});
     }
     if (view.connectToken.face_monitor_token) {
-      this.faceService.removeMonitoringTab(view.id);
+      this._faceSvc.removeMonitoringTab(view.id);
     }
+    this.state$.next({ action: 'close', view: view });
   }
 
   addSubViewToCurrentView(view: View) {
@@ -67,6 +70,7 @@ export class ViewService {
     const index = this.currentView.subViews.length;
     this.setCurrentViewTitle(view, index + 1, 'concat');
     this.setCurrentView();
+    this.state$.next({ action: 'addSub', view: view, currentView: this.currentView });
   }
 
   clearSubViewOfCurrentView(view: View) {
@@ -74,6 +78,7 @@ export class ViewService {
     this.currentView.subViews.splice(index, 1);
     this.setCurrentViewTitle(view, index + 1, 'delete');
     this.setCurrentView();
+    this.state$.next({ action: 'clearSub', view: view, currentView: this.currentView });
   }
 
   setCurrentViewTitle(view, index, status) {
@@ -122,5 +127,6 @@ export class ViewService {
   setCurrentView(view: Object = this.currentView) {
     this.currentView$.next(view);
     this.connectViewCount.next(this.viewList.filter(view => view.connected === true).length);
+    this.state$.next({ action: 'active', view: view });
   }
 }

@@ -7,8 +7,7 @@ import {
   ViewService,
   SettingService,
   DrawerStateService,
-  ConnectTokenService,
-  IframeCommunicationService
+  ConnectTokenService
 } from '@app/services';
 import {
   OnInit,
@@ -57,20 +56,20 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   ];
   viewIds: Array<string> = [];
   keyboardSubscription: Subscription;
+  rTabMenuList: any[] = [];
 
   constructor(
-    public viewSrv: ViewService,
+    public _viewSvc: ViewService,
     private _connectTokenSvc: ConnectTokenService,
     private _settingSvc: SettingService,
-    private _iframeSvc: IframeCommunicationService,
     private _drawerStateService: DrawerStateService
   ) {}
 
   get showBatchCommand() {
     return (
       this._settingSvc.setting.commandExecution &&
-      this.viewSrv.currentView &&
-      this.viewSrv.currentView.protocol === 'ssh'
+      this._viewSvc.currentView &&
+      this._viewSvc.currentView.protocol === 'ssh'
     );
   }
 
@@ -81,8 +80,8 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   onToggleMobileLayout() {}
 
   async ngOnInit() {
-    this.viewList = this.viewSrv.viewList;
-    this.viewIds = this.viewSrv.viewIds;
+    this.viewList = this._viewSvc.viewList;
+    this.viewIds = this._viewSvc.viewIds;
     this.handleKeyDownTabChange();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
@@ -118,7 +117,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     this.scrollEnd();
     this.toggleMenu.emit();
     setTimeout(() => {
-      this.viewSrv.addView(view);
+      this._viewSvc.addView(view);
       this.setViewActive(view);
     }, 100);
   }
@@ -137,12 +136,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   }
 
   setViewActive(view) {
-    this.viewSrv.activeView(view);
-
-    this._drawerStateService.sendComponentMessage({
-      name: 'TAB_VIEW_CHANGE',
-      data: view.id
-    });
+    this._viewSvc.activeView(view);
   }
 
   keyboardSwitchTab(key) {
@@ -150,7 +144,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     let nextActiveView = null;
 
     const viewIds = this.viewIds;
-    const currentViewIndex = viewIds.findIndex(i => i === this.viewSrv.currentView.id);
+    const currentViewIndex = viewIds.findIndex(i => i === this._viewSvc.currentView.id);
 
     if (key === 'alt+shift+right') {
       if (currentViewIndex === viewIds.length - 1 && currentViewIndex !== 0) {
@@ -187,15 +181,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
         nextActiveView = this.viewList[index + 1];
       }
     }
-    this.viewSrv.removeView(view);
+    this._viewSvc.removeView(view);
     if (nextActiveView) {
       this.setViewActive(nextActiveView);
-    }
-
-    if (this.viewList.length === 0) {
-      this._drawerStateService.sendComponentMessage({
-        name: 'ALL_VIEWS_CLOSED'
-      });
     }
   }
 
@@ -227,7 +215,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
           const oldConnectToken = oldView.connectToken;
           this._connectTokenSvc.exchange(oldConnectToken).then(newConnectToken => {
             const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
-            this.viewSrv.addView(newView);
+            this._viewSvc.addView(newView);
             this.setViewActive(newView);
           });
         }
@@ -248,10 +236,10 @@ export class ElementContentComponent implements OnInit, OnDestroy {
           const oldView = this.viewList[this.rIdx];
           this._connectTokenSvc.exchange(oldView.connectToken).then(newConnectToken => {
             const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
-            this.viewSrv.addSubViewToCurrentView(newView);
+            this._viewSvc.addSubViewToCurrentView(newView);
           });
         },
-        disabled: this.viewList[this.rIdx].subViews.length > 0
+        disabled: this.viewList[this.rIdx]?.subViews.length > 0
       },
       {
         title: 'Close Current Tab',
@@ -312,6 +300,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   showRMenu(left, top) {
     this.pos.left = left + 'px';
     this.pos.top = top + 'px';
+    this.rTabMenuList = this.rTabMenuItems();
     this.isShowRMenu = true;
   }
 
@@ -326,9 +315,8 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   }
 
   onRightClick(event, tabIdx) {
-    const sideX = jQuery('#left-side').width();
-    const x = event.pageX - sideX;
-    const y = event.pageY - 30;
+    const x = event.pageX;
+    const y = event.pageY;
     this.showRMenu(x, y);
     this.rIdx = tabIdx;
     event.preventDefault();

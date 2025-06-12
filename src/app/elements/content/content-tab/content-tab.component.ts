@@ -1,16 +1,24 @@
-import {Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild,} from '@angular/core';
-import {View, ViewAction} from '@app/model';
+import {
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  ViewChild
+} from '@angular/core';
+import { View, ViewAction } from '@app/model';
 
 @Component({
   standalone: false,
   selector: 'elements-content-tab',
   templateUrl: 'content-tab.component.html',
-  styleUrls: ['content-tab.component.scss'],
+  styleUrls: ['content-tab.component.scss']
 })
 export class ElementContentTabComponent implements OnInit {
   @Input() view: View;
   @Output() onAction: EventEmitter<ViewAction> = new EventEmitter<ViewAction>();
-  @ViewChild('inputElement', {static: false}) inputElement: ElementRef;
+  @ViewChild('inputElement', { static: false }) inputElement: ElementRef;
 
   public iconCls: string;
   private shouldFocusInput = false;
@@ -45,7 +53,7 @@ export class ElementContentTabComponent implements OnInit {
       const action = new ViewAction(this.view, 'active');
       this.onAction.emit(action);
       this.clickTimeout = null;
-    }, 300);
+    }, 100);
   }
 
   onDoubleClick() {
