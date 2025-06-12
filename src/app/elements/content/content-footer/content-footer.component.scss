@@ -45,6 +45,11 @@
         }
       }
 
+      .command-editor {
+        height: 150px;
+        overflow: auto;
+      }
+
       ::ng-deep {
         .cm-editor,
         .cm-content {
