@@ -170,9 +170,8 @@
       <nz-form-control>
         <nz-select
           [ngModelOptions]="{ standalone: true }"
-          [(ngModel)]="currentTheme"
+          [(ngModel)]="setting.command_line.terminal_theme_name"
           (ngModelChange)="onThemeChange($event)"
-          nzDropdownClassName="elements-drawer-dropdown"
         >
           @for (theme of terminalThemeMap; track theme.value) {
             <nz-option [nzValue]="theme.value" [nzLabel]="theme.label"></nz-option>

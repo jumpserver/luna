@@ -159,30 +159,6 @@
   }
 }
 
-::ng-deep .elements-drawer-dropdown {
-  .ant-select-dropdown {
-    background-color: var(--el-dropdown-hover-bg-color);
-
-    .ant-select-item {
-      color: var(--el-text-color-light);
-
-      &:hover {
-        background-color: var(--el-drawer-bg-color);
-      }
-
-      &.ant-select-item-option-active:not(.ant-select-item-option-disabled) {
-        background-color: var(--el-dropdown-active-bg-color);
-      }
-
-      &.ant-select-item-option-selected {
-        background-color: var(--el-drawer-bg-color);
-        color: var(--el-text-color-light);
-        font-weight: 500;
-      }
-    }
-  }
-}
-
 ::ng-deep .create-share-link-modal {
   .ant-modal-content {
     border-radius: 8px;
