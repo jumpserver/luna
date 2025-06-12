@@ -189,6 +189,12 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     if (nextActiveView) {
       this.setViewActive(nextActiveView);
     }
+
+    if (this.viewList.length === 0) {
+      this._iframeCommunicationService.sendMessage({
+        name: 'ALL_VIEWS_CLOSED'
+      });
+    }
   }
 
   scrollLeft() {

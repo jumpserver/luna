@@ -5,8 +5,8 @@ import { I18nService } from '@app/services/i18n';
 import { GlobalSetting, Setting } from '@app/model';
 import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { HttpService, SettingService } from '@app/services';
 import { Component, Inject, OnInit, OnDestroy } from '@angular/core';
-import { HttpService, SettingService, IframeCommunicationService } from '@app/services';
 
 interface terminalThemeMap {
   label: string;
@@ -45,7 +45,6 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
     private _http: HttpService,
     private settingSrv: SettingService,
     private _message: NzMessageService,
-    private _iframeCommunicationService: IframeCommunicationService
   ) {
     this.boolChoices = [
       { name: _i18n.instant('Yes'), value: true },
@@ -65,7 +64,6 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
     this.setting = this.settingSrv.setting;
     this.getRdpClientConfig();
     this.globalSetting = this.settingSrv.globalSetting;
-    this.subscriptonIframaMessage();
   }
 
   ngOnDestroy() {
@@ -82,22 +80,14 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
     this._http.getTerminalPreference().subscribe({
       next: res => {
         if (res && res.basic && res.basic.terminal_theme_name) {
-          this.currentTheme = res.basic.terminal_theme_name;
+          this.setting.command_line.terminal_theme_name = res.basic.terminal_theme_name;
         } else {
-          this.currentTheme = 'Default';
+          this.setting.command_line.terminal_theme_name = 'Default';
         }
       },
       error: error => {
         console.error('Failed to get terminal preference:', error);
-        this.currentTheme = 'Default';
-      }
-    });
-  }
-
-  subscriptonIframaMessage() {
-    this.messageSubscription = this._iframeCommunicationService.message$.subscribe(message => {
-      if (message.name === 'TAB_VIEW_CHANGE') {
-        this.currentTheme = message.data;
+        this.setting.command_line.terminal_theme_name = 'Default';
       }
     });
   }

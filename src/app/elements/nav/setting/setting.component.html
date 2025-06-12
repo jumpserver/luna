@@ -97,7 +97,7 @@
       <nz-descriptions-item nzTitle="主题">
         <nz-select
           [ngModelOptions]="{ standalone: true }"
-          [(ngModel)]="currentTheme"
+          [(ngModel)]="setting.command_line.terminal_theme_name"
           (ngModelChange)="onThemeChange($event)"
         >
           @for (theme of terminalThemeMap; track theme.value) {

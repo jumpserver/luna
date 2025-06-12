@@ -194,7 +194,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       SHARE_USER_ADD: this.handleShareUserAdd.bind(this),
       TAB_VIEW_CHANGE: this.handleTabViewChange.bind(this),
       OPEN_SETTING: this.handleOpenSetting.bind(this),
-      OPEN_CHAT: this.handleOpenChat.bind(this)
+      OPEN_CHAT: this.handleOpenChat.bind(this),
+      ALL_VIEWS_CLOSED: this.handleAllViewsClosed.bind(this)
     };
 
     const handler = messageHandlers[message.name];
@@ -213,6 +214,12 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to parse SHARE_CODE_RESPONSE:', error);
     }
+  }
+
+  private handleAllViewsClosed(): void {
+    this.showDrawer.set(false);
+    this.showSetting.set(false);
+    this.showChat.set(false);
   }
 
   private generateShareLink(shareId: string): void {

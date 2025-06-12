@@ -296,6 +296,7 @@ export class Setting {
     character_terminal_font_size: number;
     is_backspace_as_ctrl_h: boolean;
     is_right_click_quickly_paste: boolean;
+    terminal_theme_name: string;
   };
 
   constructor() {
@@ -317,7 +318,8 @@ export class Setting {
     this.command_line = {
       character_terminal_font_size: 14,
       is_backspace_as_ctrl_h: false,
-      is_right_click_quickly_paste: false
+      is_right_click_quickly_paste: false,
+      terminal_theme_name: 'Default'
     };
   }
 }
