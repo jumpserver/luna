@@ -8,7 +8,7 @@ import {
   SettingService,
   DrawerStateService,
   ConnectTokenService,
-  IframeCommunicationService,
+  IframeCommunicationService
 } from '@app/services';
 import {
   OnInit,
@@ -78,9 +78,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     return this.viewList.length * 201;
   }
 
-  onToggleMobileLayout() {
-
-  }
+  onToggleMobileLayout() {}
 
   async ngOnInit() {
     this.viewList = this.viewSrv.viewList;
@@ -195,7 +193,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     }
 
     if (this.viewList.length === 0) {
-      this._iframeSvc.sendMessage({
+      this._iframeSvc.sendMessage({ name: 'ALL_VIEWS_CLOSED' });
       this._drawerStateService.sendComponentMessage({
         name: 'ALL_VIEWS_CLOSED'
       });
