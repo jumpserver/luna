@@ -151,9 +151,15 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
       console.log('No terminal content data available to send to chat AI.');
       return;
     }
+    const content = {
+      viewId: this.currentView.id,
+      viewName: this.currentView.name,
+      ...data,
+    }
+    console.log('Sending terminal content to chat AI:', content);
     this.iframeRef.nativeElement.contentWindow.postMessage({
       name: 'current_terminal_content',
-      data
+      data: content
     });
   }
 
