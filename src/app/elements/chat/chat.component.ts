@@ -174,19 +174,18 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   handleShowDrawer() {
-    this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
-    // if (this.currentView.iframeElement) {
-    //   switch (this.currentView.connectMethod.component) {
-    //     case 'koko':
-    //       this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
-    //       break;
-    //     case 'lion':
-    //       this.currentView.iframeElement.postMessage({ name: 'OPEN' }, '*');
-    //       break;
-    //     default:
-    //       break;
-    //   }
-    // }
+    if (this.currentView.iframeElement) {
+      switch (this.currentView.connectMethod.component) {
+        case 'koko':
+          this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
+          break;
+        case 'lion':
+          this.currentView.iframeElement.postMessage({ name: 'OPEN' }, '*');
+          break;
+        default:
+          break;
+      }
+    }
   }
 
   isDifferenceWithinThreshold(num1, num2, threshold = 5) {
