@@ -1,7 +1,8 @@
 <div class="content-footer">
   <div *ngIf="showCommandZone" class="batch-command-zone">
     <div class="command-header">
-      <button nzTrigger="click" [nzDropdownMenu]="menu" nz-button nz-dropdown nzOverlayClassName="dark-dropdown"
+      <button nzTrigger="click" [nzDropdownMenu]="menu" nz-button nz-dropdown
+              nzOverlayClassName="command-dropdown dark-dropdown"
               nzPlacement="topLeft"
               nzType="link">
         <i nz-icon nzTheme="outline" nzType="read"></i>
@@ -9,11 +10,19 @@
       </button>
       <nz-dropdown-menu #menu="nzDropdownMenu">
         <ul nz-menu class="title">
-          <li nz-menu-item>{{ "SelectCommand" | translate }}</li>
+          <div class="search-input">
+            <nz-input-group [nzSuffix]="suffixIconSearch" [nzSize]="'small'">
+              <input (ngModelChange)="searchCommand($event)" [(ngModel)]="searchText" type="text" nz-input
+                     [placeholder]="this._i18n.instant('SelectCommand')"/>
+            </nz-input-group>
+            <ng-template #suffixIconSearch>
+              <nz-icon nzType="search"/>
+            </ng-template>
+          </div>
           <li nz-menu-divider></li>
         </ul>
         <ul [nzSelectable]='true' nz-menu>
-          <li *ngFor="let item of quickCommands" nz-menu-item (click)="sendQuickCommand(item)">
+          <li *ngFor="let item of filterCommands" nz-menu-item (click)="sendQuickCommand(item)">
             <div class="command-item">
               <div class="command-name"> {{ item.name }}</div>
               <div class="command-args"> {{ item.args }}</div>

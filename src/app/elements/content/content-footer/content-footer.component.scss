@@ -1,5 +1,4 @@
 .content-footer {
-  // border-top: solid 1px var(--el-border-color-y);
   background: var(--el-asset-tree-bg-color);
   color: #ffffff;
   font-size: 12px;
@@ -67,208 +66,67 @@
       margin-left: 5px;
     }
   }
-
-  .command-item {
-    border: none;
-    padding: 10px 12px;
-
-    .command-name {
-      font-size: 12px;
-      line-height: 20px;
-    }
-
-    .command-args {
-      margin-top: 0;
-      font-size: 12px;
-      line-height: 20px;
-      color: rgb(0, 0, 0, 0.4);
-    }
-  }
 }
 
-#batchCommandDiv {
-  display: flex;
-  height: 29px;
-  width: 100%;
-  padding: 0 2px 0 0;
-  background: var(--el-main-bg-color);
-  border-top: solid 1px rgba(255, 255, 255, 0.2);
-
-  &:focus-visible {
-    outline: none;
-  }
-
-  i {
-    margin: auto 7px;
-    color: #ffffff;
-    cursor: pointer;
-
-    &:hover {
-      color: #d6cbcb;
-    }
-  }
-
-  .view_icon {
-    width: 12px;
-    height: 12px;
-    margin: 0 !important;
-    margin-right: 3px !important;
-    vertical-align: middle;
-    display: inline-block;
-  }
-
-  .view_icon::before {
-    font-family: FontAwesome;
-    color: #ffffff;
-    display: inline-block;
-  }
-}
-
-#batchCommandDiv input {
-  flex: 1;
-  height: 29px;
-  width: 100%;
-  line-height: 29px;
-  border: none;
-  background: var(--el-main-bg-color);
-  color: #ffffff;
-
-  &:focus-visible {
-    outline: none;
-  }
-}
-
-#batchCommandDiv {
-  .send-range {
-    width: auto;
-    margin-left: 5px;
-
-    &::ng-deep .mat-select-trigger {
-      min-width: 70px;
-      line-height: 29px;
-
-      .mat-select-value {
-        max-width: none;
-        color: #ffffff;
-      }
-
-      .mat-select-arrow {
-        color: #ffffff;
-      }
-    }
-  }
-
-  .command-list {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 3px 0;
-    overflow: hidden;
-    white-space: nowrap;
-    transition: all 0.3s;
-
-    .command-box {
-      display: inline-block;
-      max-width: 260px;
-      height: 100%;
-      line-height: 15px;
-      padding: 4px;
-      margin-right: 5px;
-      border-radius: 4px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      cursor: pointer;
-      user-select: none;
-      color: #d6cbcb;
-      background-color: #463e3e;
-
-      &:hover {
-        color: #ffffff;
-      }
-
-      &:active {
-        color: #ccc8c8;
-      }
-    }
-
-    .command-box-variable {
-      @extend .command-box;
-      background-color: #6f4f3a;
-    }
-  }
-
-  .not-command {
-    flex: 1;
-    line-height: 29px;
-    padding-left: 6px;
-    color: #717171;
-  }
-
-  .action-left,
-  .action-right {
-    line-height: 29px;
-  }
-
-  .action-right {
-    display: flex;
-  }
-}
-
-::ng-deep .command-panel.mat-select-panel {
-  margin-top: 27px;
-  min-width: 100% !important;
-  border-radius: initial !important;
-  background: black;
-  padding: 10px 0 !important;
-}
-
-::ng-deep .command-panel .mat-option {
-  color: #f0f0f1;
-
-  &:hover {
-    background-color: rgba(53, 54, 51, 0.7) !important;
-  }
-}
-
-::ng-deep .command-panel .mat-option.mat-active {
-  color: #f0f0f1;
-  font-weight: bold;
-  background-color: rgba(53, 54, 51, 0.8) !important;
-}
-
-.command-option {
-  line-height: 2.2em !important;
-  height: 2.2em !important;
-}
-
-.input-box {
-  display: flex;
-  width: 100%;
-  height: 100%;
-}
 
 .rotate-icon {
   transform: rotate(-90deg);
   transition: transform 0.3s ease;
 }
 
-::ng-deep {
+::ng-deep .command-dropdown {
+  max-width: 350px;
+
   .ant-dropdown-menu:not(.title) {
-    min-width: 300px;
+    min-width: 100px;
     height: 200px;
     overflow-y: auto;
+    overflow-x: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
-  ul {
+  .ant-dropdown-menu-root {
     .ant-dropdown-menu-item-selected {
       background-color: #000000;
+    }
+  }
+
+  nz-input-group {
+    background-color: #0F0F0F;
+    color: #FFFFFF;
+
+    .ant-input {
+      background-color: #0F0F0F;
+      color: #FFFFFF;
+      font-size: 12px;
     }
   }
 
   .ant-tag-orange {
     background: #2b1d11;
   }
+
+  .command-item {
+
+    .command-name {
+      font-size: 13px;
+      font-weight: 400;
+    }
+
+    .command-args {
+      margin-top: 0;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.71);
+    }
+  }
+}
+
+.batch-command-zone {
+  .ant-tag-orange {
+    background: #2b1d11;
+  }
+
 }
 
 .save-btn {
@@ -277,4 +135,8 @@
   height: 25px;
 
   background-color: #423838;
+}
+
+.search-input {
+  padding: 8px 12px;
 }
