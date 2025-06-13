@@ -126,6 +126,9 @@ export class ElementConnectorMagnusComponent implements OnInit {
           ` -P ${passwordHolder}` +
           ` -d ${database}`;
         break;
+      case 'mongodb':
+        cli = `mongosh mongodb://${this.token.id}:${passwordHolder}@${host}:${port}/${database}`;
+        break;
       default:
         cli = `Protocol '${protocol}' Not support now`;
     }

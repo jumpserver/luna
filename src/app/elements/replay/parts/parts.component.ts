@@ -99,7 +99,7 @@ export class ElementsPartsComponent implements OnInit {
    */
   formatDuration(duration: number): string {
     const currentLang = this.getUserLang();
-    const isZhCN = currentLang === 'zh-CN';
+    const isZhCN = currentLang === 'zh-hans';
 
     if (!duration) {
       return isZhCN ? '0 秒' : '0 s';
@@ -254,11 +254,12 @@ export class ElementsPartsComponent implements OnInit {
   }
 
   getUserLang() {
-    const userLangEN = document.cookie.indexOf('django_language=en');
-    if (userLangEN === -1) {
-      return 'zh-CN';
+    const userLangZh = document.cookie.indexOf('django_language=zh-hans');
+
+    if (userLangZh) {
+      return 'zh-hans'
     } else {
-      return 'en-US';
+      return 'en';
     }
   }
 
