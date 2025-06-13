@@ -1,7 +1,7 @@
 <div
   class="elements-drawer-wrapper"
   *ngIf="drawerInited"
-  [ngStyle]="{ display: visible ? 'block' : 'none' }"
+  [ngStyle]="{ display: visible() ? 'block' : 'none' }"
 >
   <!--  -->
   <div class="close-button">
@@ -12,7 +12,7 @@
 
   <div>
     <nz-tabset [nzSelectedIndex]="currentTabIndex" (nzSelectChange)="onTabChange($event)">
-      <nz-tab [nzTitle]="'FileManagement' | translate">
+      <nz-tab [nzTitle]="'FileManagement' | translate" [nzDisabled]="disabledFileManager">
         <elements-filemanager
           [view]="view"
           [currentViewId]="currentViewId"

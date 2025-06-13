@@ -29,15 +29,18 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   readonly showDrawer = signal(false);
   readonly showSetting = signal(false);
   readonly hasConnected = signal(false);
+  readonly visible = signal(false);
 
   drawerInited = false;
-  visible = false;
+  disabledFileManager = false;
 
   currentTabIndex = 0;
   currentViewId: string | null = null;
   onLineUsers: OnlineUsers[] = [];
   chatIframeURL = '';
   terminalContent: {} | null = null;
+
+  DISABLED_CATEGORY = ['database', 'web'];
 
   private readonly drawerStateMap = new Map<string, DrawerViewState>();
   private iframeMessageSubscription: Subscription;
@@ -73,15 +76,27 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   private setupSideEffects(): void {
     effect(() => {
-      if (this.visible) {
+      if (this.visible()) {
         this.checkConnectionStatus();
+      }
+
+      if (this.hasConnected()) {
+        if (this.DISABLED_CATEGORY.includes(this.view.asset.category.value)) {
+          this.disabledFileManager = true;
+          this.currentTabIndex = 1;
+        }
       }
     });
   }
 
   private checkConnectionStatus(): void {
     const isConnected = Boolean(this.view?.iframeElement);
-    this.hasConnected.set(isConnected);
+
+    if (isConnected) {
+      this.hasConnected.set(true);
+
+      return;
+    }
   }
 
   private subscribeMessages(): void {
@@ -112,7 +127,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   private handleAllViewsClosed(): void {
     this.resetDrawerState();
-    this.visible = false;
+    this.visible.set(false);
   }
 
   private handleTabViewChange(viewId: string): void {
@@ -140,7 +155,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       this.currentTabIndex = 0;
     }
 
-    this.visible = true;
+    this.visible.set(true);
   }
 
   private handleOpenChat(chatIframeURL: string): void {
@@ -182,7 +197,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   close(): void {
-    this.visible = false;
+    this.visible.set(false);
   }
 
   onTabChange(event: { index: number; tab: any }): void {

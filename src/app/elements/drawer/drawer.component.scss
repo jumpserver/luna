@@ -6,7 +6,7 @@
   position: absolute;
   top: 60px;
   right: 0;
-  z-index: 1000;
+  z-index: 100000000;
   padding: 10px 30px;
 
   .close-button {
@@ -28,6 +28,14 @@
         width: 50%;
         justify-content: center;
         color: var(--el-text-color-light);
+
+        &.ant-tabs-tab-disabled {
+          color: gray;
+
+          .ant-tabs-tab-btn {
+            cursor: not-allowed !important;
+          }
+        }
       }
     }
 
