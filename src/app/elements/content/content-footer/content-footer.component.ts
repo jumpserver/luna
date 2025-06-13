@@ -20,7 +20,7 @@ export class ElementContentFooterComponent implements OnInit, OnDestroy {
   isShowInputCommand = true;
   batchCommand: string = '';
   quickCommands = [];
-  sendCommandRange = 'current';
+  filterCommands = [];
   sendCommandToAll = false;
   showCommandZone = false;
   editorOption = {
@@ -31,6 +31,7 @@ export class ElementContentFooterComponent implements OnInit, OnDestroy {
     setup: 'minimal',
     autoFocus: true
   };
+  searchText: string = '';
   connectViewCount = 0;
   private viewListSub: Subscription;
 
@@ -123,10 +124,19 @@ export class ElementContentFooterComponent implements OnInit, OnDestroy {
     );
   }
 
+  searchCommand(event: string) {
+    const value = event.toLowerCase();
+    this.filterCommands = this.quickCommands.filter(item => {
+        return item.name.toLowerCase().includes(value) || item.args.toLowerCase().includes(value);
+      }
+    );
+  }
+
   async quickCommandsFilter() {
     let list = await this._http.getQuickCommand();
     list = list.filter(i => i.module.value === 'shell');
     this.quickCommands = list;
+    this.filterCommands = list;
   }
 
   async switchCommand() {
