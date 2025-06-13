@@ -27,7 +27,7 @@ interface PermissionOption {
 interface ShareLinkRequest {
   expired_time: number;
   action_permission: 'writable' | 'readonly';
-  users: ShareUserOptions[];
+  users: string[];
 }
 
 @Component({
@@ -104,15 +104,20 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
   }
 
   onCreateShareLink() {
-    this.shareLinkRequest = { ...this.shareLinkRequest, ...this.shareLinkForm.value };
+    const formValue = this.shareLinkForm.value;
+
+    this.shareLinkRequest = {
+      ...this.shareLinkRequest,
+      expired_time: formValue.expired_time,
+      action_permission: formValue.action_permission
+    };
+
     this.showCreateShareLinkForm = false;
 
     this._iframeSvc.sendMessage({
       name: 'SHARE_CODE_REQUEST',
       data: this.shareLinkRequest
     });
-
-    this.showLinkResult = true;
   }
 
   onDeleteShareUser(item: OnlineUsers) {
@@ -186,13 +191,17 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
       action_permission: [this.shareLinkRequest.action_permission],
       users: [this.shareLinkRequest.users]
     });
+
+    // 监听 users 控件值的变化
+    this.shareLinkForm.get('users')?.valueChanges.subscribe(value => {
+      this.handleUsersChange(value);
+    });
   }
 
   private handleIframeMessage(message) {
     const messageHandlers = {
       SHARE_USER_ADD: this.handleShareUserAdd.bind(this),
 
-      // TODO 主动离开的
       SHARE_USER_LEAVE: this.handleShareUserLeave.bind(this),
       SHARE_CODE_RESPONSE: this.handleShareCodeResponse.bind(this)
     };
@@ -211,8 +220,6 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
   private handleShareUserAdd(data: string) {
     try {
       const messageData: OnlineUsers = JSON.parse(data);
-
-      console.log(messageData);
 
       this.onLineUsersAdd.emit(messageData);
     } catch (error) {
@@ -249,8 +256,6 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
     try {
       const messageData = JSON.parse(data);
 
-      console.log('handleShareCodeResponse', messageData);
-
       this.shareCode = messageData.code;
       this.generateShareLink(messageData.share_id);
 
@@ -259,6 +264,10 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to parse SHARE_CODE_RESPONSE:', error);
     }
+  }
+
+  private handleUsersChange(users: ShareUserOptions[]) {
+    this.shareLinkRequest.users = (users || []).map(user => user.id);
   }
 
   readonly debounceSearch = _.debounce((value: string) => {
