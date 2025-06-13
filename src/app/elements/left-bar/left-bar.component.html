@@ -1,18 +1,45 @@
-<div class="sidebar" fxLayout="column">
-  <div class="organization" [style.display]="this._settingSvc.hasXPack() ? '' : 'none'">
-    <elements-organization></elements-organization>
-  </div>
+<div class="sidebar" [ngClass]="{ collapsed: collapsed }" fxLayout="column">
+  <div class="tree">
+    <div class="organization" [style.display]="hasXPack ? '' : 'none'">
+      <elements-organization></elements-organization>
+    </div>
 
-  <div *ngIf="showTree" class="my-assets" [ngClass]="{'has-org': this._settingSvc.hasXPack()}">
-    <div class="overflow ngx-scroll-overlay">
-      <elements-asset-tree style="width: 100%" #assetTree></elements-asset-tree>
+    <div
+      *ngIf="showTree"
+      class="my-assets"
+      [ngClass]="{ 'has-org': this._settingSvc.hasXPack() }"
+    >
+      <div class="overflow ngx-scroll-overlay">
+        <elements-asset-tree
+          style="width: 100%"
+          #assetTree
+        ></elements-asset-tree>
+      </div>
+    </div>
+  </div>
+  <div class="menu-icon">
+    <div (click)="menuClick()" *ngIf="true" class="menu-organization">
+      <span style="font-size: 13px">
+        <i class="fa fa-sitemap"></i>
+      </span>
+    </div>
+    <div
+      (click)="item.click(item.name)"
+      *ngFor="let item of menus"
+      class="menu-item"
+    >
+      <span>
+        <i [ngClass]="item.icon" class="fa"></i>
+      </span>
     </div>
   </div>
 
   <div style="height: 30px" class="footer-version">
     <span class="menu-active" (click)="toggle()">
-      <i class="fa fa-outdent" [ngClass]="{'icon-active': iconActive}"></i>
+      <i class="fa fa-outdent" [ngClass]="{ 'icon-active': collapsed }"></i>
     </span>
-    <p> Version <strong>{{version}}</strong></p>
+    <p *ngIf="!collapsed">
+      Version <strong>{{ version }}</strong>
+    </p>
   </div>
 </div>

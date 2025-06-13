@@ -1,0 +1,21 @@
+<div *ngIf="this._settingSvc.hasXPack()" class="organization">
+  <i class="fa fa-sitemap"></i>
+  <nz-select
+    (ngModelChange)="changeOrg($event)"
+    [(ngModel)]="currentOrg"
+    [nzSuffixIcon]="customIcon"
+    nzDropdownClassName="dark-dropdown"
+    class="org-select"
+    nzShowSearch
+  >
+    <ng-template #customIcon>
+      <i nz-icon nzTheme="outline" nzType="caret-down"></i>
+    </ng-template>
+    <nz-option
+      *ngFor="let i of organizations"
+      [nzLabel]="i.name"
+      [nzValue]="i"
+      class="org-option"
+    ></nz-option>
+  </nz-select>
+</div>

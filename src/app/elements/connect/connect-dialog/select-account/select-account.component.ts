@@ -1,15 +1,15 @@
 import {ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
 import {Account, AccountGroup, Asset, AuthInfo, Protocol} from '@app/model';
 import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
-import {FormControl, Validators} from '@angular/forms';
+import {FormControl} from '@angular/forms';
 import {AppService, I18nService, LogService} from '@app/services';
-import {takeUntil} from 'rxjs/operators';
 import {User} from '@app/globals';
 
 @Component({
+  standalone: false,
   selector: 'elements-select-account',
   templateUrl: 'select-account.component.html',
-  styleUrls: ['./select-account.component.scss'],
+  styleUrls: ['select-account.component.scss'],
 })
 export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @Input() asset: Asset;
@@ -59,6 +59,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         return a.name.localeCompare(b.name);
       });
   }
+
   get hasSecretAccounts() {
     return this.accounts
       .filter((item) => item.has_secret)
@@ -107,30 +108,18 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       if (username === '@USER') {
         this.manualAuthInfo.username = User.username;
       }
+      this.accountSelectedChange.emit(this.accountSelected);
     }
-
-    this.accountFilterCtl.valueChanges
-      .pipe(takeUntil(this._onDestroy))
-      .subscribe(() => {
-        this.filterAccounts();
-      });
-
-    this.accountCtl.valueChanges
-      .pipe(takeUntil(this._onDestroy))
-      .subscribe(() => {
-        this.accountSelectedChange.emit(this.accountSelected);
-        this.onAccountChanged();
-      });
-
-    setTimeout(() => {
-      this.accountCtl.setValue(this.accountSelected);
-      this.accountCtl.setValidators([Validators.required]);
-    }, 100);
   }
 
   ngOnDestroy() {
     this._onDestroy.next();
     this._onDestroy.complete();
+  }
+
+  handleAccountChanged() {
+    this.accountSelectedChange.emit(this.accountSelected);
+    this.onAccountChanged();
   }
 
   getPreAccountSelected() {

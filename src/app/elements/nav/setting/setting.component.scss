@@ -1,0 +1,55 @@
+.field-label {
+  display: block;
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+.mat-form-field {
+  width: 100%;
+}
+
+.space {
+  padding-top: 15px;
+}
+
+.setting {
+  padding-right: 10px;
+
+  ::ng-deep {
+    .ant-form-item-label > label {
+      display: inline-block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 30px;
+      font-size: 13px;
+    }
+
+    .ant-select {
+      width: 100%;
+    }
+
+    .ant-checkbox-wrapper + .ant-checkbox-wrapper {
+      margin-left: 0;
+      line-height: 1.5;
+    }
+
+    .ant-form-item {
+      margin-bottom: 5px;
+    }
+
+    .ant-form-item-label {
+      line-height: 1.5;
+    }
+  }
+
+  ::ng-deep .ant-descriptions-view {
+    border-radius: 4px;
+  }
+}
+
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

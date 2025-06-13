@@ -1,12 +1,13 @@
 import {Component, Input, OnChanges, OnInit} from '@angular/core';
-import {ConnectMethod, ConnectOption, Protocol, Setting, GlobalSetting} from '@app/model';
+import {ConnectMethod, ConnectOption, GlobalSetting, Protocol, Setting} from '@app/model';
 import {resolutionsChoices} from '@app/globals';
 import {SettingService} from '@app/services';
 
 @Component({
+  standalone: false,
   selector: 'elements-advanced-option',
-  templateUrl: './advanced-option.component.html',
-  styleUrls: ['./advanced-option.component.scss'],
+  templateUrl: 'advanced-option.component.html',
+  styleUrls: ['advanced-option.component.scss'],
 })
 export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
   @Input() protocol: Protocol;
@@ -168,6 +169,9 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
   }
 
   checkOptions() {
+    if (!this.protocol) {
+      return;
+    }
     const onlyUsingDefaultFields = ['reusable'];
     this.allOptions.forEach(i => {
       if (this.connectOption[i.field] === undefined) {

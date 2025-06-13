@@ -1,42 +1,71 @@
-<div class="controls">
-  <button type="button" class="btn">
-    <i class="fa fa-backward" aria-hidden="true" (click)="speedDown()"></i>
-  </button>
-  <button type="button" class="btn" (click)="speedUp()">
-    <i class="fa fa-forward" aria-hidden="true"></i>
-  </button>
-  <button type="button" class="btn" (click)="restart()">
-    <i class="fa fa-repeat" aria-hidden="true"></i>
-  </button>
+<div class="header">
+  <div class="controls">
+    <button nz-button nzType="default" nzSize="small" (click)="speedDown()">
+      <nz-icon nzType="fast-backward" nzTheme="outline" />
+    </button>
+    <button nz-button nzType="default" nzSize="small" (click)="restart()">
+      <nz-icon nzType="redo" nzTheme="outline" />
+    </button>
+    <button nz-button nzType="default" nzSize="small" (click)="speedUp()">
+      <nz-icon nzType="fast-forward" nzTheme="outline" />
+    </button>
+  </div>
 
-  {{"Speed"| translate}}: {{speed}}
-  <span id="user" style="padding-left: 20px" *ngIf="replay.user">{{"user"| translate}} : {{replay.user}}</span>
-  <span id="asset" style="padding-left: 20px" *ngIf="replay.asset">{{"asset"| translate}} : {{replay.asset}}</span>
-  <span id="system_user" style="padding-left: 20px" *ngIf="replay.system_user">{{"system user"| translate}} : {{replay.system_user}}</span>
-  <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{"start time"| translate}} : {{startTime}} </span>
-  <span id="download" style="padding-left: 30px" *ngIf="replay.download_url"><a type="button" [href]="replay.download_url">{{"download"| translate}}</a></span>
+  <div class="info">
+    <span>
+      <span class="label">{{ "Speed" | translate }}</span> : {{ speed }}
+    </span>
+    <span id="user" style="padding-left: 20px" *ngIf="replay.user">
+      <span class="label">{{ "user" | translate }}</span> : {{ replay.user }}
+    </span>
+    <span id="asset" style="padding-left: 20px" *ngIf="replay.asset">
+      <span class="label">{{ "asset" | translate }}</span> : {{ replay.asset }}
+    </span>
+    <span id="account" style="padding-left: 20px" *ngIf="replay.account">
+      <span class="label">{{ "account" | translate }}</span> :
+      {{ replay.account }}
+    </span>
+    <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">
+      <span class="label">{{ "start time" | translate }}</span> :
+      {{ startTime }}
+    </span>
+    <span id="download" style="padding-left: 30px" *ngIf="replay.download_url">
+      <a type="button" [href]="replay.download_url">
+        {{ "download" | translate }}
+      </a>
+    </span>
+  </div>
 </div>
 <div id="player">
-  <as-split direction="horizontal" gutterSize="0">
-    <as-split-area *ngIf="commands.length" [size]="15" [maxSize]="15" [minSize]="0" order="0">
-      <div class="command-results" 
-            infiniteScroll
-            [infiniteScrollDistance]="2"
-            [infiniteScrollThrottle]="50"
-            (scrolled)="onScroll()"
-            [scrollWindow]="false">
-          <div class="item" *ngFor="let item of commands" (click)="commandClick(item)"> 
-            <div class="command" [title]="item.input">{{ item.input }}</div>
-            <div class="timestamp">{{ item.atime }}</div>
-          </div>
+  <nz-splitter nzGutterSize="0">
+    <nz-splitter-panel
+      *ngIf="commands.length"
+      nzDefaultSize="15%"
+      nzMin="5%"
+      nzMax="35%"
+      order="0"
+    >
+      <div
+        class="command-results"
+        infiniteScroll
+        [infiniteScrollDistance]="2"
+        [infiniteScrollThrottle]="50"
+        (scrolled)="onScroll()"
+        [scrollWindow]="false"
+      >
+        <h3>Commands</h3>
+        <div
+          class="item"
+          *ngFor="let item of commands"
+          (click)="commandClick(item)"
+        >
+          <div class="command" [title]="item.input">{{ item.input }}</div>
+          <div class="timestamp">{{ item.atime }}</div>
+        </div>
       </div>
-    </as-split-area>
-    <as-split-area [size]="85" [maxSize]="100" [minSize]="85" order="1">
-        <div id="screen"></div>
-    </as-split-area>
-  </as-split>
+    </nz-splitter-panel>
+    <nz-splitter-panel>
+      <div id="screen"></div>
+    </nz-splitter-panel>
+  </nz-splitter>
 </div>
-
-
-
-

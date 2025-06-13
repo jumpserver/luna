@@ -1,20 +1,27 @@
-<h1 mat-dialog-title>
-  {{"Save command"| translate}}
-</h1>
+<form nz-form>
+  <nz-form-item>
+    <nz-form-control>
+      <nz-form-label>
+        {{ 'Name'| translate }}
+      </nz-form-label>
+      <nz-input-group>
+        <input nz-input [(ngModel)]="name" required name="fontSize" max="60">
+      </nz-input-group>
+    </nz-form-control>
+  </nz-form-item>
 
-<div>
-  <mat-form-field style="width: 100%;">
-    <input [(ngModel)]="name" matInput required placeholder='{{"Name"| translate}}' name="fontSize" max="60" >
-  </mat-form-field>
-  <mat-form-field style="width: 100%;">
-    <mat-select [(value)]="module"
-                placeholder="{{'Module'| translate }}">
-      <mat-option *ngFor="let type of commandModules" [value]="type.value">{{type.label}}</mat-option>
-    </mat-select>
-  </mat-form-field>
-</div>
+  <nz-form-item>
+    <nz-form-control>
+      <nz-form-label>
+        {{ 'Module'| translate }}
+      </nz-form-label>
+      <nz-select [(ngModel)]="module" name="module" style="width: 100%;">
+        <nz-option *ngFor="let type of commandModules" [nzValue]="type.value" [nzLabel]="type.label"></nz-option>
+      </nz-select>
+    </nz-form-control>
+  </nz-form-item>
+</form>
 
-
-<div style="float: right; padding-top: 20px">
-  <button mat-raised-button color="primary" (click)="onSubmit()">{{"Confirm"| translate}}</button>
+<div style="text-align: right; padding-top: 20px">
+  <button nz-button nzType="primary" (click)="onSubmit()">{{ 'Confirm'| translate }}</button>
 </div>

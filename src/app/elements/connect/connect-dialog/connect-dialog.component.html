@@ -1,85 +1,77 @@
 <div>
-  <div mat-dialog-title>
-    <h3>{{ "Connect" | translate }} - {{ asset.name | truncatechars:30 }}</h3>
-    <button aria-label="close dialog" mat-dialog-close="" mat-icon-button>
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
+  <h3 *nzModalTitle>{{ 'Connect' | translate }} - {{ asset.name }}</h3>
 
-  <div *ngIf="protocols.length === 0">
-    <div class="el-alert el-alert--error is-light" role="alert">
-      <div class="el-alert__content">
-        <p class="el-alert__description">{{ "No protocol available" | translate }}</p>
-      </div>
-    </div>
+  <div *ngIf="!protocols || protocols.length === 0;">
+    <nz-alert [nzMessage]="'No protocol available' | translate" nzType="error"></nz-alert>
   </div>
   <div *ngIf="protocols && protocols.length > 0">
-    <nav class="protocol-tab" mat-tab-nav-bar style="margin-bottom: 10px">
-      <a (click)="onProtocolChange(p)"
-         *ngFor="let p of protocols"
-         [active]="protocol.name === p.name"
-         [title]="p.name"
-         mat-tab-link
+    <nz-tabset class="protocol-tab">
+      <nz-tab
+              (nzSelect)="onProtocolChange(p)"
+              *ngFor="let p of protocols"
+              [nzTitle]="titleTpl"
       >
-        {{ p.name | uppercase }}
-      </a>
-    </nav>
+        <ng-template #titleTpl>
+          {{ p.name | uppercase }}
+        </ng-template>
+      </nz-tab>
+    </nz-tabset>
 
-    <div (keyup.enter)="onConfirm()" class="dialog-body" mat-dialog-content>
+    <div (keyup.enter)="onConfirm()" class="dialog-body" nz-modal-content>
       <elements-select-account
-        (accountSelectedChange)="onSelectAccount($event)"
-        (manualUsernameChanged)="onManualUsernameChanged($event)"
-        [accounts]="accounts"
-        [asset]="asset"
-        [manualAuthInfo]="manualAuthInfo"
-        [onSubmit]="onSubmit$"
-        [protocol]="protocol"
+              (accountSelectedChange)="onSelectAccount($event)"
+              (manualUsernameChanged)="onManualUsernameChanged($event)"
+              [accounts]="accounts"
+              [asset]="asset"
+              [manualAuthInfo]="manualAuthInfo"
+              [onSubmit]="onSubmit$"
+              [protocol]="protocol"
       >
       </elements-select-account>
 
       <elements-connect-method
-        (onDownloadRDPFile)="onConfirm(true)"
-        (onGuidePage)="onConfirm()"
-        [(connectMethod)]="connectMethod"
-        [account]="accountSelected"
-        [connectOption]="connectOption"
-        [manualAuthInfo]="manualAuthInfo"
-        [protocol]="protocol"
-        class="connect-method-zone"
+              (onDownloadRDPFile)="onConfirm(true)"
+              (onGuidePage)="onConfirm()"
+              [(connectMethod)]="connectMethod"
+              [account]="accountSelected"
+              [connectOption]="connectOption"
+              [manualAuthInfo]="manualAuthInfo"
+              [protocol]="protocol"
+              class="connect-method-zone"
       >
       </elements-connect-method>
 
       <elements-advanced-option
-        [connectMethod]="connectMethod"
-        [connectOption]="connectOption"
-        [protocol]="protocol"
+              [connectMethod]="connectMethod"
+              [connectOption]="connectOption"
+              [protocol]="protocol"
       >
       </elements-advanced-option>
 
-      <div class="auto-connect">
-        <label class="zone-label" style="display: block">{{ "Remember select" | translate }}</label>
-        <mat-checkbox [(ngModel)]="autoLogin" name="auto-login">
-          {{ "Automatic login next" | translate }}
-        </mat-checkbox>
-      </div>
+      <nz-form-item class="auto-connect">
+        <nz-form-control>
+          <label [(ngModel)]="autoLogin" name="auto-login" nz-checkbox>
+             {{ "Automatic login next" | translate }}
+          </label>
+        </nz-form-control>
+      </nz-form-item>
 
-      <mat-dialog-actions style="float: right; margin: 8px 0 0 0; width: 100%">
+      <div class="connect-btn-wrap" style="margin: 10px 0 0 0; width: 100%">
         <button
-          (click)="onConfirm()"
-          [disabled]="connectButtonInfo().disabled"
-          [mat-dialog-close]="outputData"
-          class="confirm-btn"
-          color="primary"
-          mat-raised-button
-          type="submit"
+                (click)="onConfirm()"
+                [disabled]="disabled"
+                [nzLoading]="false"
+                nz-button
+                nzType="primary"
+                type="submit"
         >
           {{ "CONNECT"| translate }}
-          <span *ngIf="protocol && protocol.name === 'rdp' && viewAssetOnlineSessionInfo" class="online-num">
-          ({{ 'Current online' | translate }}: {{ onlineNum === null ? '- ' : onlineNum }})
-        </span>
+            <span *ngIf="protocol && protocol.name === 'rdp' && viewAssetOnlineSessionInfo" class="online-num">
+            ({{ 'Current online' | translate }}: {{ onlineNum === null ? '- ' : onlineNum }})
+          </span>
         </button>
-        <label class="zone-label" style="display: block">{{ connectButtonInfo().reason }}</label>
-      </mat-dialog-actions>
+        <nz-alert *ngIf="disabledReason" [nzMessage]="disabledReason" [nzShowIcon]='true' nzType="error"></nz-alert>
+      </div>
     </div>
   </div>
 </div>

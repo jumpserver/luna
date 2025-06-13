@@ -4,7 +4,7 @@
   white-space: nowrap;
 }
 
-@mixin flex($align: null, $justify: null)  {
+@mixin flex($align: null, $justify: null) {
   display: flex;
   justify-content: $justify;
   align-items: $align;
@@ -15,10 +15,10 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--el-assets-bg-color);
+  background-color: var(--el-asset-tree-bg-color);
 
   .tree-type {
-    transition: all .3s;
+    transition: all 0.3s;
 
     .tree-type-banner {
       position: relative;
@@ -29,10 +29,9 @@
       padding-left: 15px;
       overflow: hidden;
       text-overflow: ellipsis;
-      color: var(--el-menu-text-color);
-      border-bottom: 1px solid var(--el-assets-border-bottom-color);
-      border-right: 1px solid var(--el-assets-border-right-color);
-      background-color: var(--el-assets-fold-item-bg-color);
+      color: var(--el-text-color-light);
+      border-bottom: 1px solid var(--el-border-color-x);
+      background-color: var(--el-banner-bg-color);
 
       .tree-banner-left {
         cursor: pointer;
@@ -46,7 +45,7 @@
           padding-top: 3px;
           padding-right: 3px;
           font-size: 16px;
-          color: var(--el-menu-text-color);
+          color: var(--el-text-color-light);
         }
 
         .tree-type-banner-label {
@@ -88,7 +87,7 @@
           height: 100%;
           padding: 0 5px;
           cursor: pointer;
-          color: var(--el-assets-icon-color);
+          color: var(--el-banner-icon-color);
 
           &:hover {
             cursor: pointer;
@@ -100,19 +99,19 @@
         .tree-search {
           @include flex(center);
           position: relative;
-          transition: .25s;
+          transition: 0.25s;
           overflow: hidden;
 
           .tree-input {
             opacity: 0;
             width: 0;
             line-height: 20px;
-            background-color: var(--el-assets-bg-color);
+            background-color: var(--el-asset-tree-bg-color);
             border: none;
             outline: none;
             border-radius: 10px;
-            color: var(--el-menu-text-color);
-            transition: all .4s ease-in-out;
+            color: var(--el-text-color-light);
+            transition: all 0.4s ease-in-out;
           }
 
           &.active {
@@ -131,7 +130,6 @@
         }
       }
 
-
       .rotate {
         transform: rotate(-90deg);
       }
@@ -147,7 +145,7 @@
       min-height: 40px;
       overflow-x: auto;
       height: calc(100% - 31px);
-      background-color: var(--el-assets-extend-bg-color);
+      background-color: var(--el-asset-tree-bg-color);
 
       .tree-type-loading {
         position: absolute;
@@ -156,14 +154,13 @@
         width: 100%;
         height: 100%;
         min-height: 100%;
-        background: rgba(0, 0, 0, .1);
+        background: rgba(0, 0, 0, 0.1);
         @include flex(center, center);
       }
 
-
       .ztree {
         height: 100%;
-        background-color: var(--el-assets-extend-bg-color);
+        background-color: var(--el-asset-tree-bg-color);
       }
     }
 
@@ -195,12 +192,12 @@
   user-select: none;
   border: none;
   border-radius: 2px;
+  background-color: var(--el-dropdown-bg-color);
   -webkit-border-radius: 2px;
   -webkit-user-select: none;
   -moz-border-radius: 2px;
   -moz-user-select: none;
   -ms-user-select: none;
-  background-color: var(--el-rMenu-bg-color);
   box-shadow: 0 3px 6px 0 rgba(0, 0, 0, 0.16);
   z-index: 1000;
 
@@ -225,7 +222,8 @@
   }
 }
 
-.view-menu, .view-menu * {
+.view-menu,
+.view-menu * {
   box-sizing: border-box;
 }
 
@@ -240,8 +238,12 @@
 .view-menu__item {
   cursor: pointer;
   padding: 0 6px;
-}
+  font-size: 12px;
 
+  &:hover {
+    background-color: var(--el-dropdown-hover-bg-color);
+  }
+}
 
 .view-menu__icon {
   padding-right: 5px;
@@ -271,7 +273,7 @@ tr {
 }
 
 tr:hover {
-  background-color: var(--el-rMenu-hover-bg-color);
+  background-color: var(--el-menu-hover-bg-color);
 }
 
 .view-menu table {
@@ -285,4 +287,3 @@ tr:hover {
 .open-tree {
   flex: 1;
 }
-

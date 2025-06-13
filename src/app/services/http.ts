@@ -1,10 +1,10 @@
 import {Injectable} from '@angular/core';
 import {HttpClient, HttpErrorResponse, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Browser, User} from '@app/globals';
-import {catchError, delay, map, retryWhen, scan} from 'rxjs/operators';
-import {Asset, ConnectData, AdminConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
+import {catchError, map, retry} from 'rxjs/operators';
+import {AdminConnectData, Asset, ConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
 import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
-import {Observable, of} from 'rxjs';
+import {Observable} from 'rxjs';
 import {I18nService} from '@app/services/i18n';
 import {CookieService} from 'ngx-cookie-service';
 import {encryptPassword} from '@app/utils/crypto';
@@ -157,18 +157,10 @@ export class HttpService {
   }
 
   withRetry() {
-    return retryWhen(err => err.pipe(
-      scan(
-        (retryCount, _err) => {
-          if (retryCount > 10) {
-            throw _err;
-          } else {
-            return retryCount + 1;
-          }
-        }, 0
-      ),
-      delay(10000)
-    ));
+    return retry({
+      count: 10,
+      delay: 10000  // 每次重试间隔 10 秒（单位毫秒）
+    });
   }
 
   getMyGrantedNodes(async: boolean) {
@@ -291,6 +283,7 @@ export class HttpService {
     params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/connection-token/' + params;
     const {account, protocol, manualAuthInfo, connectMethod} = connectData;
+    console.log('>>>>>>>>>>', account, protocol, manualAuthInfo, connectMethod);
     const isVirtual = account.username.startsWith('@');
     const username = isVirtual ? manualAuthInfo.username : account.username;
     const secret = encryptPassword(manualAuthInfo.secret);
@@ -327,7 +320,7 @@ export class HttpService {
       account: account.id,
       protocol: protocol.name,
       input_username: connectData.input_username,
-      connect_method: connectData.method
+      connect_method: connectData.method || connectData.connectMethod.value
     };
     return this.post<ConnectionToken>(url, data).pipe(
       catchError(this.handleConnectMethodExpiredError.bind(this))
@@ -460,5 +453,20 @@ export class HttpService {
   getUserDetail(uid: string): Promise<_User> {
     const url = `/api/v1/users/users/${uid}/`;
     return this.get<_User>(url).toPromise();
+  }
+
+  getShareUserList(keyword: string) {
+    const url = `/api/v1/users/users/?search=${keyword}`;
+    return this.get<Array<_User>>(url);
+  }
+
+  getTerminalPreference() {
+    const url = '/api/v1/users/preference/?category=koko'
+    return this.get(url);
+  }
+
+  setTerminalPreference(data) {
+    const url = '/api/v1/users/preference/?category=koko'
+    return this.patch(url, data);
   }
 }

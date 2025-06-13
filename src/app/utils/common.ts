@@ -1,6 +1,7 @@
-import {Terminal} from 'xterm';
-import {User, Asset, TreeNode} from '@app/model';
+import {Terminal} from '@xterm/xterm';
+import {Asset, TreeNode, User} from '@app/model';
 import {SettingService} from '@app/services';
+import {FitAddon} from '@xterm/addon-fit';
 
 export function groupBy(array, f) {
   const groups = {};
@@ -23,7 +24,7 @@ export function newTerminal(fontSize?: number) {
   if (ua.indexOf('windows') !== -1) {
     lineHeight = 1.2;
   }
-  return new Terminal({
+  const term = new Terminal({
     fontFamily: 'monaco, Consolas, "Lucida Console", monospace',
     lineHeight: lineHeight,
     fontSize: fontSize,
@@ -32,6 +33,9 @@ export function newTerminal(fontSize?: number) {
       background: '#1f1b1b'
     }
   });
+  const fitAddon = new FitAddon();
+  term.loadAddon(fitAddon);
+  return term;
 }
 
 export function setCookie(name, value, seconds) {
@@ -88,7 +92,7 @@ export function getWaterMarkContent(user: User, asset: Asset, settingService: Se
   const fields = getWaterMarkFields(user, asset);
   const template = settingService.globalSetting.SECURITY_WATERMARK_SESSION_CONTENT || '';
   // 找出模板中所有的变量占位符 ${xxx}
-  const placeholders = template.match(/\${([^}]+)}/g) || [];
+  const placeholders: string[] = template.match(/\${([^}]+)}/g) || [];
   const allVariables = {};
   // 为模板中的每个变量准备值
   placeholders.forEach(placeholder => {

@@ -1,13 +1,83 @@
-.connect-method-zone ::ng-deep .zone-label,
-.zone-label {
-  color: rgba(0, 0, 0, 0.54);
-  cursor: pointer;
-  margin-bottom: 5px;
+::ng-deep .ant-modal.connect-dialog {
+  @media screen and (max-width: 768px) and (orientation: portrait) {
+    width: 95vw !important;
+
+    .ant-modal-body {
+      max-height: calc(100vh - 110px);
+      overflow-y: auto;
+    }
+  }
+
+  @media screen and (max-width: 1024px) and (orientation: landscape) {
+    width: 85vw !important;
+    margin: 8px auto;
+    top: 10px;
+    transform: scale(0.8); /* 缩放整个 div，包括文字、图片等 */
+    transform-origin: center center; /* 从左上角缩放（可选） */
+
+    .ant-modal-body {
+      max-height: calc(100vh - 30px);
+      overflow-y: auto;
+    }
+  }
+
+  .ant-modal-body {
+    padding-top: 0;
+  }
+
+  .ant-modal-header {
+    padding: 16px 24px 8px 24px;
+    border-bottom: none;
+  }
+
+  .ant-form-item-label {
+    color: rgba(0, 0, 0, 0.54);
+    line-height: 2;
+  }
+
+  .ant-form-item {
+    margin-bottom: 5px;
+    display: block;
+  }
+
+  .ant-tabs-nav {
+    margin-bottom: 8px;
+  }
+
+  .ant-tabs-nav-list .ant-tabs-tab {
+    padding: 2px 25px;
+
+    &.ant-tabs-tab-active {
+      color: inherit;
+    }
+  }
 }
 
-.mat-form-field-infix {
-  border-top-width: 0 !important;
+.auto-connect {
+  display: block;
 }
+
+.connect-btn-wrap {
+  button {
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    height: 36px;
+  }
+}
+
+.dialog-body {
+  padding: 0 10px;
+}
+
+.connect-method-zone ::ng-deep .zone-label,
+.zone-label {
+  cursor: pointer;
+}
+
+//.nz-form-field-infix {
+//  border-top-width: 0 !important;
+//}
 
 .auto-connect {
   padding-top: 10px;
@@ -17,64 +87,39 @@
   font-size: 14px;
 }
 
-.dialog-body {
-  padding: 0 20px;
-  margin: 0 -10px;
-  overflow: auto;
-}
+//.protocol-tab ::ng-deep .nz-tab-links {
+//  .nz-tab-link, .nz-tab-label-active {
+//    height: 35px !important;
+//    width: 100px;
+//    //padding: 0 20px !important;
+//    min-width: 20px !important;
+//  }
+//
+//  .nz-tab-link:focus {
+//    background-color: white;
+//  }
+//}
 
-.protocol-tab ::ng-deep .mat-tab-links {
-  .mat-tab-link, .mat-tab-label-active {
-    height: 35px !important;
-    width: 100px;
-    //padding: 0 20px !important;
-    min-width: 20px !important;
-  }
+//.dialog-body ::ng-deep .nz-form-field-infix {
+//  border-top: 1px;
+//}
 
-  .mat-tab-link:focus {
-    background-color: white;
-  }
-}
+//.nz-button-toggle-group {
+//  height: 32px;
+//  align-items: center;
+//}
+//
+//.nz-button-toggle:hover {
+//  background-color: transparent;
+//}
+//
+//button.nz-raised-button {
+//  margin-left: 0;
+//}
 
-.dialog-body ::ng-deep .mat-form-field-infix {
-  border-top: 1px;
-}
-
-.mat-dialog-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1px;
-  line-height: 20px;
-  font-size: 18px;
-}
-
-.mat-dialog-title h3 {
-  margin: 0;
-}
-
-.mat-button-toggle-group {
-  height: 32px;
-  align-items: center;
-}
-
-.mat-button-toggle:hover {
-  background-color: transparent;
-}
-
-.mat-button-toggle-checked {
-}
-
-button.mat-raised-button {
-  margin-left: 0;
-}
-
-::ng-deep .mat-dialog-container {
-  padding-top: 15px !important;
-}
-
-.auto-overflow {
-}
+//::ng-deep .nz-dialog-container {
+//  padding-top: 15px !important;
+//}
 
 .confirm-btn {
   width: 100%;
@@ -93,6 +138,14 @@ button.mat-raised-button {
   margin-top: 20px;
 }
 
-::ng-deep .mat-dialog-container {
-  min-height: 200px;
+.footer-connect {
+  margin-top: 10px;
+
+  .ant-btn {
+    width: 100%;
+  }
 }
+
+//::ng-deep .nz-dialog-container {
+//  min-height: 200px;
+//}

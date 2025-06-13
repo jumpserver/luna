@@ -10,7 +10,7 @@
     <div #tabs class="tabs">
       <ul
         (cdkDropListDropped)="onItemDropped($event)"
-        [ngStyle]="{'width':tabsWidth+'px'}"
+        [ngStyle]="{ width: tabsWidth + 'px' }"
         cdkDropList
         cdkDropListOrientation="horizontal"
         class="drag-list"
@@ -18,7 +18,7 @@
         <elements-content-tab
           (contextmenu)="onRightClick($event, i)"
           (onAction)="onViewAction($event)"
-          *ngFor="let id of viewIds;let i = index; trackBy: trackByFn"
+          *ngFor="let id of viewIds; let i = index; trackBy: trackByFn"
           [view]="getViewById(id)"
           cdkDrag
           cdkDragLockAxis="x"
@@ -28,8 +28,12 @@
       </ul>
     </div>
   </div>
-  <div [ngClass]="{'batch-input': showBatchCommand  }" id="winContainer">
-    <div #contentPlaceholder [style.display]="viewList.length < 1 ? 'flex' : 'none'" class="content-placeholder">
+  <div [ngClass]="{ 'batch-input': showBatchCommand }" id="winContainer">
+    <div
+      #contentPlaceholder
+      [style.display]="viewList.length < 1 ? 'flex' : 'none'"
+      class="content-placeholder"
+    >
       <div class="system-tips">
         <div class="tips">
           <ul>
@@ -45,80 +49,35 @@
         </div>
       </div>
     </div>
-    <elements-content-window *ngFor="let view of viewList" [view]="view"></elements-content-window>
-  </div>
-  <div *ngIf="showBatchCommand" id="batchCommandDiv">
-    <mat-select [(ngModel)]="sendCommandRange" class="send-range" panelClass="command-panel">
-      <mat-option *ngFor="let option of sendCommandOptions" [value]="option.value" class="command-option">
-        {{ option.label | translate }}
-      </mat-option>
-    </mat-select>
-    <i
-      (click)="switchCommand()"
-      class="fa fa-exchange"
-      matTooltip="{{ (isShowInputCommand ? 'Switch to quick command' : 'Switch to input command') | translate }}"
-    ></i>
-    <div *ngIf="isShowInputCommand; else quickCommand" class="input-box">
-      <input
-        (keydown.enter)="sendBatchCommand()"
-        [(ngModel)]="batchCommand"
-        maxlength="2048"
-        placeholder="{{ sendCommandRange=='all' ? ('Send text to all ssh terminals' | translate) : ('Send text to current ssh terminals' | translate) }}..."
-        spellcheck="false" tabindex="2"
-        title="{{ sendCommandRange=='all' ? ('Send text to all ssh terminals' | translate) : ('Send text to current ssh terminals' | translate) }} ..."
-        type="text"
-      >
-      <i
-        (click)="onSendCommand()"
-        class="fa fa-save"
-        matTooltip="{{ 'Save command' | translate }}"
-      ></i>
+    <div class="content-windows">
+      <elements-content-window
+        *ngFor="let view of viewList"
+        [view]="view"
+      ></elements-content-window>
     </div>
-    <ng-template #quickCommand>
-      <span class="action-left">
-        <i
-          (click)="onScrollLeft()"
-          *ngIf="quickCommands.length > 0"
-          class="fa fa-angle-double-left"
-        ></i>
-      </span>
-      <ul *ngIf="quickCommands.length > 0; else empty" class="command-list">
-        <li
-          (click)="sendQuickCommand(command)"
-          *ngFor="let command of quickCommands"
-          [matTooltip]="command.args"
-          class="command-box"
-          [ngClass]="{'command-box-variable': command.variable.length !== 0}"
-          matTooltipPosition="above"
-        >
-          <i [ngClass]="command.module.value + '_ico_docu'" class="view_icon"></i>
-          <span style="vertical-align: middle;">{{ command.name }}</span>
-        </li>
-      </ul>
-      <span class="action-right">
-        <i (click)="onScrollRight()" *ngIf="quickCommands.length > 0" class="fa fa-angle-double-right"></i>
-        <i (click)="quickCommandsFilter()" class="fa fa-refresh"></i>
-      </span>
-      <ng-template #empty>
-        <div class="not-command">{{ 'Not quick command'| translate }}</div>
-      </ng-template>
-    </ng-template>
+    <elements-content-footer></elements-content-footer>
   </div>
 </div>
 
-<elements-connect (onNewView)="onNewView($event)" [ngStyle]="{'display': 'none'}"></elements-connect>
+<elements-connect (onNewView)="onNewView($event)" style="display: none"></elements-connect>
 
-<div #rMenu *ngIf="isShowRMenu" [style.left]="pos.left" [style.top]="pos.top" class="view-menu">
+<div
+  #rMenu
+  *ngIf="isShowRMenu"
+  [style.left]="pos.left"
+  [style.top]="pos.top"
+  class="view-menu tab-r-menu"
+>
   <table>
     <tbody>
-    <tr *ngFor="let item of rMenuItems()" class="view-menu__item view-menu__item--separator">
-      <ng-template [ngIf]="!item.disabled">
-        <td (click)="item.callback()" class="view-menu__data">
-          <span [ngClass]="item.icon" class="view-menu__icon fa"></span>
-          {{ item.title | translate }}
-        </td>
-      </ng-template>
-    </tr>
+      <tr *ngFor="let item of rTabMenuList" class="view-menu__item view-menu__item--separator">
+        <ng-template [ngIf]="!item.disabled">
+          <td (click)="item.callback()" class="view-menu__data">
+            <span [ngClass]="item.icon" class="view-menu__icon fa"></span>
+            {{ item.title | translate }}
+          </td>
+        </ng-template>
+      </tr>
     </tbody>
   </table>
 </div>

@@ -1,11 +1,9 @@
 import {Component, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
-import 'rxjs/add/operator/toPromise';
 import {connectEvt} from '@app/globals';
-import {MatDialog} from '@angular/material';
 import {
+  AlertService,
   AppService,
   ConnectTokenService,
-  DialogService,
   HttpService,
   I18nService,
   LogService,
@@ -13,26 +11,31 @@ import {
   ViewService
 } from '@app/services';
 import {Account, Asset, ConnectData, ConnectionToken, View} from '@app/model';
-import {ElementConnectDialogComponent} from './connect-dialog/connect-dialog.component';
-import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
 import {launchLocalApp} from '@app/utils/common';
-import {ActivatedRoute} from '@angular/router';
+import {ElementConnectDialogComponent} from '@app/elements/connect/connect-dialog/connect-dialog.component';
+import {NzModalService} from 'ng-zorro-antd/modal';
+import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
+import {firstValueFrom} from 'rxjs';
 
 
 @Component({
+  standalone: false,
   selector: 'elements-connect',
-  templateUrl: './connect.component.html',
+  templateUrl: 'connect.component.html',
 })
 export class ElementConnectComponent implements OnInit, OnDestroy {
   @Output() onNewView: EventEmitter<View> = new EventEmitter<View>();
   @Input() direct: boolean = false;
   hasLoginTo = false;
+  isVisible = false;
+  asset: Asset;
+  accounts: Array<Account>;
+  preConnectData: ConnectData;
 
   constructor(private _appSvc: AppService,
-              private _dialogAlert: DialogService,
-              private _dialog: MatDialog,
+              private _alert: AlertService,
+              private _dialog: NzModalService,
               private _logger: LogService,
-              private _route: ActivatedRoute,
               private _http: HttpService,
               private _connectTokenSvc: ConnectTokenService,
               private _i18n: I18nService,
@@ -118,10 +121,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
    * @param asset
    * @param splitConnect 是否分屏连接
    */
-  async connectAsset(asset, splitConnect = false) {
+  async connectAsset(asset: Asset, splitConnect = false) {
     if (!asset) {
-      const msg = await this._i18n.t('Asset not found or You have no permission to access it, please refresh asset tree');
-      await this._dialogAlert.alert(msg);
+      const msg = this._i18n.instant('Asset not found or You have no permission to access it, please refresh asset tree');
+      const title = await this._i18n.instant('Permission expired');
+      await this._alert.error(msg, title);
       return;
     }
 
@@ -185,15 +189,16 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (connToken.connect_options.token_reusable) {
       await this._connectTokenSvc.setReusable(connToken, true).toPromise();
     }
-    const response = await this._http.getLocalClientUrl(connToken, this._settingSvc.setting).toPromise();
+    const response = await firstValueFrom(this._http.getLocalClientUrl(connToken, this._settingSvc.setting));
     const url = response['url'];
     launchLocalApp(url, () => {
       const downLoadStatus = localStorage.getItem('hasDownLoadApp');
       if (downLoadStatus !== '1') {
-        this._dialog.open(ElementDownloadDialogComponent, {
-          height: 'auto',
-          width: '800px',
-          disableClose: true
+        this._dialog.create({
+          nzTitle: this._i18n.instant('Download client'),
+          nzContent: ElementDownloadDialogComponent,
+          nzOnOk: (cmp => cmp.onConfirm()),
+          nzOnCancel: (cmp => cmp.onCancel()),
         });
       }
     });
@@ -256,7 +261,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   getConnectData(accounts: Account[], asset: Asset): Promise<ConnectData> {
-    let dialogWidth = '600px';
     const preConnectData = this._appSvc.getPreConnectData(asset);
     const isValid = this.checkPreConnectDataForAuto(asset, accounts, preConnectData);
 
@@ -264,21 +268,25 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return Promise.resolve(preConnectData);
     }
 
-    if (this._i18n.getLangCode() === 'pt-br') {
-      dialogWidth = '730px';
-    }
-
     this._appSvc.connectDialogShown = true;
 
-    const dialogRef = this._dialog.open(ElementConnectDialogComponent, {
-      minHeight: '300px',
-      height: 'auto',
-      width: dialogWidth,
-      data: {accounts, asset, preConnectData}
+    const dialogRef = this._dialog.create({
+      nzTitle: this._i18n.instant('Connect') + ' - ' + asset.name,
+      nzContent: ElementConnectDialogComponent,
+      nzWidth: '730px',
+      nzData: {
+        accounts,
+        asset,
+        preConnectData
+      },
+      nzCentered: true,
+      nzClassName: 'connect-dialog',
+      nzWrapClassName: 'connect-dialog-wrap',
+      nzFooter: null,
     });
 
     return new Promise<ConnectData>(resolve => {
-      dialogRef.afterClosed().subscribe(outputData => {
+      dialogRef.afterClose.subscribe(outputData => {
         this._appSvc.connectDialogShown = false;
 
         resolve(outputData);

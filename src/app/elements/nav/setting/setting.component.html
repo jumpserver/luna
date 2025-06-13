@@ -1,0 +1,187 @@
+<div class="setting">
+  <div *ngIf="type === 'general'">
+    <nz-form-item>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
+        {{ 'Load tree async' | translate }}
+      </nz-form-label>
+      <nz-form-control>
+        <nz-select [(ngModel)]="setting.basic.is_async_asset_tree">
+          <nz-option
+            *ngFor="let s of boolChoices"
+            [nzLabel]="s.name | translate"
+            [nzValue]="s.value"
+          ></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+  </div>
+
+  <div *ngIf="type === 'gui'">
+    <nz-form-item>
+      <nz-form-label [nzSm]="8" [nzXs]="24">{{ 'RDP resolution' | translate }}</nz-form-label>
+      <nz-form-control>
+        <nz-select name="rdp_resolution" [(ngModel)]="setting.graphics.rdp_resolution">
+          <nz-option
+            *ngFor="let s of resolutionsOptions"
+            [nzLabel]="s.label"
+            [nzValue]="s.value"
+          ></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
+        {{ 'RDP smart size' | translate }}
+      </nz-form-label>
+      <nz-form-control>
+        <nz-select name="rdp_smart_size" [(ngModel)]="setting.graphics.rdp_smart_size">
+          <nz-option
+            *ngFor="let s of rdpSmartSizeOptions"
+            [nzLabel]="s.label"
+            [nzValue]="s.value"
+          ></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
+        {{ 'RDP color quality' | translate }}
+      </nz-form-label>
+      <nz-form-control>
+        <nz-select name="rdp_color_quality" [(ngModel)]="setting.graphics.rdp_color_quality">
+          <nz-option
+            *ngFor="let s of colorQualityOptions"
+            [nzLabel]="s.label"
+            [nzValue]="s.value"
+          ></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
+        {{ 'Keyboard layout' | translate }}
+      </nz-form-label>
+      <nz-form-control>
+        <nz-select [(ngModel)]="setting.graphics.keyboard_layout">
+          <nz-option
+            *ngFor="let item of keyboardLayoutOptions"
+            [nzLabel]="item.label"
+            [nzValue]="item.value"
+          ></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <div *ngIf="hasLicense()">
+      <nz-form-item>
+        <nz-form-label [nzSm]="8" [nzXs]="24">
+          {{ 'RDP client options' | translate }}
+        </nz-form-label>
+        <nz-form-control>
+          <label [(ngModel)]="rdpClientConfig.full_screen" nz-checkbox>
+            {{ 'Full screen' | translate }}
+          </label>
+          <label [(ngModel)]="rdpClientConfig.multi_screen" nz-checkbox>
+            {{ 'Multi Screen' | translate }}
+          </label>
+          <label [(ngModel)]="rdpClientConfig.drives_redirect" nz-checkbox>
+            {{ 'Driver redirect' | translate }}
+          </label>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSm]="8" [nzXs]="24">
+          {{ 'Applet connect method' | translate }}
+        </nz-form-label>
+        <nz-form-control>
+          <nz-radio-group
+            name="applet_connection_method"
+            [(ngModel)]="setting.graphics.applet_connection_method"
+          >
+            <label nz-radio nzValue="web">Web</label>
+            <label nz-radio nzValue="client">{{ 'Client' | translate }}</label>
+          </nz-radio-group>
+        </nz-form-control>
+      </nz-form-item>
+    </div>
+  </div>
+  <div *ngIf="type === 'cli'">
+    <nz-form-item>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
+        {{ 'CLI font size' | translate }}
+      </nz-form-label>
+      <nz-form-control>
+        <nz-input-number
+          [(ngModel)]="setting.command_line.character_terminal_font_size"
+          [nzMax]="60"
+          [nzMin]="5"
+          [nzPlaceHolder]="'CLI font size' | translate"
+          style="width: 100%"
+        ></nz-input-number>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
+        {{ 'Backspace as Ctrl+H' | translate }}
+      </nz-form-label>
+      <nz-form-control>
+        <nz-select
+          name="is_backspace_as_ctrl_h"
+          [(ngModel)]="setting.command_line.is_backspace_as_ctrl_h"
+          nzPlaceHolder="{{ 'Backspace as Ctrl+H' | translate }}"
+        >
+          <nz-option
+            *ngFor="let s of boolChoices"
+            [nzLabel]="s.name | translate"
+            [nzValue]="s.value"
+          ></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
+        {{ 'Right mouse quick paste' | translate }}
+      </nz-form-label>
+      <nz-form-control>
+        <nz-select
+          name="is_right_click_quickly_paste"
+          [(ngModel)]="setting.command_line.is_right_click_quickly_paste"
+          nzPlaceHolder="{{ 'Right mouse quick paste' | translate }}"
+        >
+          <nz-option
+            *ngFor="let s of boolChoices"
+            [nzLabel]="s.name | translate"
+            [nzValue]="s.value"
+          ></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label [nzSm]="8" [nzXs]="24">
+        {{ 'Theme' | translate }}
+      </nz-form-label>
+      <nz-form-control>
+        <nz-select
+          #nzSel
+          [ngModelOptions]="{ standalone: true }"
+          [(ngModel)]="setting.command_line.terminal_theme_name"
+          (ngModelChange)="onThemeChange($event)"
+          (keydown)="onThemePreview($event)"
+          (nzOpenChange)="onThemeOpenChange($event)"
+          [nzShowSearch]="true"
+        >
+          @for (theme of terminalThemeMap; track theme.value) {
+            <nz-option [nzValue]="theme.value" [nzLabel]="theme.label"></nz-option>
+          }
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+  </div>
+</div>

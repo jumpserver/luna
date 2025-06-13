@@ -3,9 +3,10 @@ import {View} from '@app/model';
 import {ViewService} from '@app/services';
 
 @Component({
+  standalone: false,
   selector: 'elements-content-view',
-  templateUrl: './content-view.component.html',
-  styleUrls: ['./content-view.component.css']
+  templateUrl: 'content-view.component.html',
+  styleUrls: ['content-view.component.css']
 })
 export class ElementContentViewComponent implements OnInit {
   @Input() view: View;
@@ -16,6 +17,7 @@ export class ElementContentViewComponent implements OnInit {
   constructor(public viewSrv: ViewService,
   ) {
   }
+
   async ngOnInit() {
     this.connector = this.computeConnector(this.view);
   }
@@ -26,14 +28,14 @@ export class ElementContentViewComponent implements OnInit {
     switch (connectData.connectMethod.component) {
       case 'panda':
         if (connectData.connectOption.virtualappConnectMethod === 'client') {
-          connector = 'nec'
+          connector = 'nec';
           break;
         }
       case 'tinker':
         connector = 'lion';
         break;
       default:
-      connector = connectData.connectMethod.component;
+        connector = connectData.connectMethod.component;
     }
     return connector;
   }

@@ -1,10 +1,8 @@
-import { Replay } from '@app/model';
-import { HttpService, I18nService, LogService } from '@app/services';
-import { TranslateService } from '@ngx-translate/core';
-import { Component, Input, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { MatDialog } from '@angular/material/dialog';
-import { ChangeDetectorRef } from '@angular/core';
+import {Replay} from '@app/model';
+import {HttpService, I18nService, LogService} from '@app/services';
+import {TranslateService} from '@ngx-translate/core';
+import {ChangeDetectorRef, Component, Input, OnInit} from '@angular/core';
+import {ActivatedRoute} from '@angular/router';
 
 export interface Section extends Replay {
   name: string;
@@ -21,9 +19,10 @@ export interface IFile {
 }
 
 @Component({
+  standalone: false,
   selector: 'elements-replay-parts',
-  templateUrl: './parts.component.html',
-  styleUrls: ['./parts.component.scss'],
+  templateUrl: 'parts.component.html',
+  styleUrls: ['parts.component.scss'],
 })
 export class ElementsPartsComponent implements OnInit {
   @Input() replay: Replay;
@@ -43,12 +42,12 @@ export class ElementsPartsComponent implements OnInit {
   constructor(
     public _i18n: I18nService,
     private _http: HttpService,
-    private _dialog: MatDialog,
     private _logger: LogService,
     private route: ActivatedRoute,
     private _translate: TranslateService,
     private cdRef: ChangeDetectorRef
-  ) {}
+  ) {
+  }
 
   async ngOnInit(): Promise<void> {
     try {
@@ -112,9 +111,9 @@ export class ElementsPartsComponent implements OnInit {
     const remainingSeconds = seconds % 60;
 
     const timeUnits = [
-      { value: hours, zhLabel: '小时', enLabel: 'hour' },
-      { value: minutes, zhLabel: '分', enLabel: 'min' },
-      { value: remainingSeconds, zhLabel: '秒', enLabel: 's' },
+      {value: hours, zhLabel: '小时', enLabel: 'hour'},
+      {value: minutes, zhLabel: '分', enLabel: 'min'},
+      {value: remainingSeconds, zhLabel: '秒', enLabel: 's'},
     ];
 
     let result = timeUnits
@@ -127,7 +126,7 @@ export class ElementsPartsComponent implements OnInit {
             minutes === 0)
       )
       .map((unit) => `${unit.value} ${isZhCN ? unit.zhLabel : unit.enLabel}`)
-      .join(" ");
+      .join(' ');
 
     return result;
   }
@@ -139,7 +138,7 @@ export class ElementsPartsComponent implements OnInit {
    * @param sessionId
    * @param isFirstPush
    */
-  async fetchSection (item: IFile, sessionId: string, isFirstPush: boolean): Promise<boolean> {
+  async fetchSection(item: IFile, sessionId: string, isFirstPush: boolean): Promise<boolean> {
     let section: Section;
     try {
       const res: Replay = await this._http.getPartFileReplay(sessionId, item.name).toPromise();
@@ -179,7 +178,7 @@ export class ElementsPartsComponent implements OnInit {
             return false;
           }
 
-      } else if (res && res.status === 'running') {
+        } else if (res && res.status === 'running') {
           this.alertShown = true;
           await this.delay(3000);
           return await this.fetchSection(item, sessionId, isFirstPush);
@@ -265,7 +264,7 @@ export class ElementsPartsComponent implements OnInit {
   }
 
   toSafeLocalDateStr(d) {
-    const date_s = d.toLocaleString(this.getUserLang(), { hour12: false });
+    const date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
     return date_s.split('/').join('-');
   }
 }

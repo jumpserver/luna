@@ -1,0 +1,41 @@
+.user-file {
+  display: flex;
+  margin-right: 10px;
+  font-size: 13px;
+  font-weight: 300;
+
+  a {
+    color: white;
+  }
+
+  .dropdown {
+    .head-portrait {
+      display: flex;
+      align-items: center;
+      height: 30px;
+      padding: 0 10px;
+
+      .fa.fa-user-circle-o.icon {
+        margin-right: 10px;
+      }
+
+      .fa.fa-sort-desc {
+        width: 13px;
+        height: 13px;
+        line-height: 8px;
+        margin-left: 10px;
+      }
+    }
+  }
+}
+
+::ng-deep .profile-dropdown {
+  .ant-dropdown-menu-item {
+    min-width: 146px;
+  }
+}
+
+ul li.disconnected {
+  background-color: darkgray;
+}
+

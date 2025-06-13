@@ -1,10 +1,11 @@
-import {Component, OnInit, Input, ElementRef, ViewChild} from '@angular/core';
+import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {DomSanitizer} from '@angular/platform-browser';
 
 @Component({
+  standalone: false,
   selector: 'pages-sftp',
-  templateUrl: './sftp.component.html',
-  styleUrls: ['./sftp.component.scss']
+  templateUrl: 'sftp.component.html',
+  styleUrls: ['sftp.component.scss']
 })
 export class PageSftpComponent implements OnInit {
   @Input() host: any;

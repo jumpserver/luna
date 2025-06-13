@@ -1,0 +1,31 @@
+<div
+  class="elements-drawer-wrapper"
+  *ngIf="drawerInited"
+  [ngStyle]="{ display: visible ? 'block' : 'none' }"
+>
+  <!--  -->
+  <div class="close-button">
+    <button nz-button nzType="text" nzSize="small" (click)="close()">
+      <nz-icon nzType="close" nzTheme="outline"></nz-icon>
+    </button>
+  </div>
+
+  <div>
+    <nz-tabset [nzSelectedIndex]="currentTabIndex" (nzSelectChange)="onTabChange($event)">
+      <nz-tab [nzTitle]="'FileManagement' | translate">
+        <elements-filemanager
+          [view]="view"
+          [currentViewId]="currentViewId"
+        ></elements-filemanager>
+      </nz-tab>
+      <nz-tab [nzTitle]="'SessionShare' | translate">
+        <elements-session-share
+          [onLineUsers]="onLineUsers"
+          [currentViewId]="currentViewId"
+          (onLineUsersAdd)="onLineUsersAdd($event)"
+          (onShareUserRemove)="onDeleteShareUser($event)"
+        ></elements-session-share>
+      </nz-tab>
+    </nz-tabset>
+  </div>
+</div>

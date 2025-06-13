@@ -1,11 +1,14 @@
 
 .connect-type-group {
   border: solid #cbc9c9 1px;
-  padding: 0 5px 3px 5px;
 }
 
 .connect-grouped-methods {
   margin-left: 10px;
+}
+
+.connect-method {
+  padding: 5px 10px 10px;
 }
 
 .connect-method-item {
@@ -16,22 +19,29 @@
   width: 70px;
 }
 
-.connect-type-group ::ng-deep .mat-tab-group {
-  .mat-tab-label {
-    height: 32px !important;
-    min-width: 20px !important;
-    padding: 0 0 !important;
+.connect-type-group ::ng-deep {
+  .ant-tabs-nav-list {
+    width: 100%;
+
+    & > div {
+      display: flex;
+    }
+
+    .ant-tabs-tab {
+      min-width: 20px;
+      padding-top: 6px;
+      padding-bottom: 8px;
+      flex: 1;
+      justify-content: center; /* 水平居中标题文字 */
+      text-align: center;
+
+      i {
+        margin-right: 10px;
+      }
+    }
   }
 
-  .mat-tab-label:focus {
-    background-color: white;
+  .question {
+    color: #5d5d5d;
   }
-
-  .mat-tab-label-active {
-    background-color: white;
-  }
-}
-
-.question {
-  color: #5d5d5d;
 }

@@ -1,0 +1,30 @@
+<form *ngIf="dynamicForm && formConfig" [formGroup]="dynamicForm" (ngSubmit)="onSubmit()">
+  <div *ngFor="let fieldKey of fieldKeys" [ngSwitch]="formConfig[fieldKey].type">
+    <nz-form-item *ngSwitchCase="'string'" class="full-width">
+      <nz-form-label>{{ formConfig[fieldKey].label }}</nz-form-label>
+      <nz-form-control [nzExtra]="formConfig[fieldKey].help_text">
+        <input nz-input [formControlName]="'jms_'+fieldKey" />
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item *ngSwitchCase="'labeled_choice'" class="full-width">
+      <nz-form-label>{{ formConfig[fieldKey].label }}</nz-form-label>
+      <nz-form-control [nzExtra]="formConfig[fieldKey].help_text">
+        <nz-radio-group [formControlName]="'jms_'+fieldKey">
+          <label nz-radio *ngFor="let choice of formConfig[fieldKey].choices"
+                 [nzValue]="choice.value">
+            {{ choice.label }}
+          </label>
+        </nz-radio-group>
+      </nz-form-control>
+    </nz-form-item>
+  </div>
+  <nz-form-item *ngIf="command" class="full-width">
+    <nz-form-label>{{ 'Command'| translate }}</nz-form-label>
+    <nz-form-control>
+      <textarea rows="5" nz-input [formControlName]="'sendCommand'" [value]="command.args"></textarea>
+    </nz-form-control>
+  </nz-form-item>
+  <div style="text-align: right; padding-top: 20px">
+    <button nz-button nzType="primary" type="submit" [disabled]="dynamicForm.invalid">{{'Confirm'| translate}}</button>
+  </div>
+</form>

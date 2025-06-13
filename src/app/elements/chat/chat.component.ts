@@ -1,15 +1,28 @@
-import {Component, ElementRef, OnDestroy, OnInit, ViewChild} from '@angular/core';
-import {SettingService, ViewService} from '@app/services';
-import {View} from '@app/model';
+import { View } from '@app/model';
+import {
+  SettingService,
+  ViewService,
+  IframeCommunicationService,
+  DrawerStateService
+} from '@app/services';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  HostListener,
+  AfterViewInit
+} from '@angular/core';
 
 @Component({
+  standalone: false,
   selector: 'elements-chat',
-  templateUrl: './chat.component.html',
-  styleUrls: ['./chat.component.scss'],
+  templateUrl: 'chat.component.html',
+  styleUrls: ['chat.component.scss']
 })
-
-export class ElementChatComponent implements OnInit, OnDestroy {
-  @ViewChild('contentWindow', {static: false}) iframeRef: ElementRef;
+export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('contentWindow', { static: false }) iframeRef: ElementRef;
   showBtn = true;
   element: any;
   iframeURL: string;
@@ -17,18 +30,28 @@ export class ElementChatComponent implements OnInit, OnDestroy {
   chatAIShown = false;
   chatAIInited = false;
   isDragging = false;
+  showSettingDrawer = false;
+  private startY = 0;
+  private startTop = 0;
+  private containerElement: HTMLElement;
 
   constructor(
     public viewSrv: ViewService,
-    public _settingSvc: SettingService
-  ) {
+    public _settingSvc: SettingService,
+    private el: ElementRef,
+    private _drawerStateService: DrawerStateService,
+    private _iframeSvc: IframeCommunicationService
+  ) {}
+
+  ngAfterViewInit() {
+    this.containerElement = this.el.nativeElement.querySelector('.chat-container');
   }
 
   get isShowSetting() {
     const connectMethods = ['koko', 'lion', 'tinker', 'panda'];
     return (
-      this.currentView.hasOwnProperty('connectMethod')
-      && connectMethods.includes(this.currentView.connectMethod.component)
+      this.currentView.hasOwnProperty('connectMethod') &&
+      connectMethods.includes(this.currentView.connectMethod.component)
     );
   }
 
@@ -44,15 +67,54 @@ export class ElementChatComponent implements OnInit, OnDestroy {
     return this._settingSvc.globalSetting.CHAT_AI_ENABLED;
   }
 
+  @HostListener('mousedown', ['$event'])
+  onMouseDown(event: MouseEvent) {
+    if (!this.containerElement) return;
+
+    // 如果点击的是按钮，不启动拖动
+    if (
+      event.target instanceof HTMLElement &&
+      (event.target.closest('nz-float-button') || event.target.closest('.ant-float-btn'))
+    ) {
+      return;
+    }
+
+    this.isDragging = true;
+    this.startY = event.clientY;
+    const rect = this.containerElement.getBoundingClientRect();
+    this.startTop = rect.top;
+
+    event.preventDefault();
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  onMouseMove(event: MouseEvent) {
+    if (!this.isDragging || !this.containerElement) return;
+
+    const deltaY = event.clientY - this.startY;
+    const newTop = this.startTop + deltaY;
+
+    // 限制拖动范围
+    const minTop = 40; // 距离顶部最小距离
+    const containerHeight = 100; // 组件实际高度
+    const maxTop = window.innerHeight - containerHeight - 20; // 距离底部最小距离
+    const boundedTop = Math.max(minTop, Math.min(newTop, maxTop));
+
+    this.containerElement.style.top = `${boundedTop}px`;
+  }
+
+  @HostListener('document:mouseup')
+  onMouseUp() {
+    this.isDragging = false;
+  }
 
   ngOnInit() {
     this.viewSrv.currentView$.subscribe((state: View) => {
       this.currentView = state;
     });
     this.iframeURL = '/ui/#/chat/chat-ai?from=luna';
-    this.addDragBtn();
-    this.insertToBody();
-    window.addEventListener('message', (event) => {
+
+    window.addEventListener('message', event => {
       // 确认消息的来源是你信任的域
       if (event.data === 'close-chat-panel') {
         this.chatAIShown = false;
@@ -60,17 +122,23 @@ export class ElementChatComponent implements OnInit, OnDestroy {
         console.log('Received message from iframe:', event.data);
       }
     });
+
+    this._iframeSvc.message$.subscribe(message => {
+      if (message.name === 'SEND_CHAT_IFRAME') {
+        this._drawerStateService.sendComponentMessage({ name: 'OPEN_CHAT', data: this.iframeURL });
+      }
+    });
   }
 
   ngOnDestroy() {
-    this.element.remove();
+    // this.element.remove();
     this.viewSrv.currentView$.unsubscribe();
   }
 
   showChatAI() {
-    if (this.isDragging) {
-      return;
-    }
+    // if (this.isDragging) {
+    //   return;
+    // }
     if (!this.chatAIInited) {
       this.chatAIInited = true;
     } else {
@@ -78,84 +146,14 @@ export class ElementChatComponent implements OnInit, OnDestroy {
     }
     this.chatAIShown = true;
     this.showBtn = false;
-  }
-
-  addDragBtn() {
-    const clientOffset: any = {};
-    const dragBox = document.getElementById('dragBox');
-    const dragButton = document.querySelector('.robot-button');
-    const initialHeight = dragBox.style.height;
-    let longPressTimeout: any;
-    let isLongPress = false;
-
-    const startDrag = (event: MouseEvent) => {
-      event.stopPropagation();
-      const offsetY = dragBox.getBoundingClientRect().top;
-      const innerY = event.clientY - offsetY;
-
-      clientOffset.clientY = event.clientY;
-      const vm = this;
-
-      longPressTimeout = setTimeout(() => {
-        isLongPress = true;
-        vm.isDragging = true;
-
-        document.onmousemove = function (ev: MouseEvent) {
-          if (!vm.isDragging) { return; }
-
-          dragBox.style.top = ev.clientY - innerY + 'px';
-          dragBox.style.height = initialHeight;
-
-          const dragDivTop = window.innerHeight - dragBox.getBoundingClientRect().height;
-          if (dragBox.getBoundingClientRect().top <= 10) {
-            dragBox.style.top = '10px';
-          }
-          if (dragBox.getBoundingClientRect().top >= dragDivTop) {
-            dragBox.style.top = dragDivTop - 100 + 'px';
-          }
-
-          ev.preventDefault();
-          ev.stopPropagation();
-        };
-      }, 300); // 300ms 作为长按检测时间
-
-      document.onmouseup = function () {
-        document.onmousemove = null;
-        document.onmouseup = null;
-
-        if (!isLongPress) {
-          clearTimeout(longPressTimeout);
-          vm.showBtn = !vm.showBtn;
-        }
-
-        setTimeout(() => {
-          vm.isDragging = false;
-          isLongPress = false;
-        }, 300);
-      };
-    };
-
-    const elements = [dragButton, dragButton.querySelector('.chat-img')];
-
-    elements.forEach(element => {
-      element.addEventListener('mousedown', (event: MouseEvent) => {
-        if (event.button !== 0) { return; }
-        event.preventDefault();
-        startDrag(event);
-      }, false);
-    });
-
-    dragBox.addEventListener('mouseup', (event: MouseEvent) => {
-      const clientY = event.clientY;
-      if (
-        this.isDifferenceWithinThreshold(clientY, clientOffset.clientY)
-        && (event.target === dragButton || this.isDescendant(event.target as Element, dragButton))
-      ) {
-        this.showBtn = !this.showBtn;
-      }
-      setTimeout(() => {
-        this.isDragging = false;
-      }, 500);
+    const data = this.currentView.terminalContentData;
+    if (!data || !data.content) {
+      console.log('No terminal content data available to send to chat AI.');
+      return;
+    }
+    this.iframeRef.nativeElement.contentWindow.postMessage({
+      name: 'current_terminal_content',
+      data
     });
   }
 
@@ -175,10 +173,20 @@ export class ElementChatComponent implements OnInit, OnDestroy {
     body.insertBefore(this.element, body.firstChild);
   }
 
-  onSettingOpenDrawer() {
-    if (this.currentView.iframeElement) {
-      this.currentView.iframeElement.postMessage({name: 'OPEN'}, '*');
-    }
+  handleShowDrawer() {
+    this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
+    // if (this.currentView.iframeElement) {
+    //   switch (this.currentView.connectMethod.component) {
+    //     case 'koko':
+    //       this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
+    //       break;
+    //     case 'lion':
+    //       this.currentView.iframeElement.postMessage({ name: 'OPEN' }, '*');
+    //       break;
+    //     default:
+    //       break;
+    //   }
+    // }
   }
 
   isDifferenceWithinThreshold(num1, num2, threshold = 5) {

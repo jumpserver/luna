@@ -2,9 +2,10 @@ import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {Asset, Endpoint, View} from '@app/model';
 
 @Component({
+  standalone: false,
   selector: 'elements-connector-default',
-  templateUrl: './default.component.html',
-  styleUrls: ['./default.component.scss']
+  templateUrl: 'default.component.html',
+  styleUrls: ['default.component.scss']
 })
 export class ElementConnectorDefaultComponent implements OnInit {
   @Input() view: View;

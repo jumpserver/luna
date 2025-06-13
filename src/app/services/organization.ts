@@ -1,6 +1,6 @@
-import {EventEmitter, Injectable} from '@angular/core';
-import {CookieService} from 'ngx-cookie-service';
-import {Organization} from '@app/model';
+import { EventEmitter, Injectable } from "@angular/core";
+import { CookieService } from "ngx-cookie-service";
+import { Organization } from "@app/model";
 
 @Injectable()
 export class OrganizationService {
@@ -11,7 +11,7 @@ export class OrganizationService {
   constructor(private _cookie: CookieService) {}
 
   public switchOrg(org): void {
-    this._cookie.set('X-JMS-LUNA-ORG', org.id, 30, '/');
+    this._cookie.set("X-JMS-LUNA-ORG", org.id, 30, "/");
     this.currentOrgChange$.emit();
   }
 

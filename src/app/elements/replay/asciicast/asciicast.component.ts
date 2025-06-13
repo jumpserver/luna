@@ -1,18 +1,19 @@
-import {Component, OnInit, Input} from '@angular/core';
+import {AfterViewInit, Component, HostListener, Input, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-import 'rxjs/add/operator/filter';
-import {Replay, Command} from '@app/model';
+import {Command, Replay} from '@app/model';
 import {formatTime} from '@app/utils/common';
 import {HttpService} from '@app/services';
+import {filter} from 'rxjs';
 
-declare var asciinema: any;
+declare const AsciinemaPlayer: any;
 
 @Component({
+  standalone: false,
   selector: 'elements-replay-asciicast',
-  templateUrl: './asciicast.component.html',
-  styleUrls: ['./asciicast.component.scss']
+  templateUrl: 'asciicast.component.html',
+  styleUrls: ['asciicast.component.scss'],
 })
-export class ElementReplayAsciicastComponent implements OnInit {
+export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
 
   @Input() replay: Replay;
   player: any;
@@ -42,26 +43,39 @@ export class ElementReplayAsciicastComponent implements OnInit {
     const date = new Date(Date.parse(this.replay.date_start));
     this.startTimeStamp = Date.parse(this.replay.date_start);
     this.startTime = this.toSafeLocalDateStr(date);
-    this.route.queryParams.filter(params => params.timestamp).subscribe(params => {
-        // 计算开始时间时，减去 5 秒误差
-        this.startAt = (end.getTime() / 1000) - parseInt(params.timestamp, 10) - 5;
-        if (this.startAt <= 0) {
-          this.startAt = 0;
-        }
-        if (this.startAt >= duration) {
-          this.startAt = duration;
-        }
-      }
-    );
-    this.cols = window.innerWidth;
-    this.rows = window.innerHeight - 50;
+    this.route.queryParams
+      .pipe(
+        filter(params => params.timestamp)
+      )
+      .subscribe(params => {
+          // 计算开始时间时，减去 5 秒误差
+          this.startAt = (end.getTime() / 1000) - parseInt(params.timestamp, 10) - 5;
+          if (this.startAt <= 0) {
+            this.startAt = 0;
+          }
+          if (this.startAt >= duration) {
+            this.startAt = duration;
+          }
+        /*  */}
+      );
+    this.rows = Math.floor((window.innerHeight - 35 - 22 - 32) / 19.8); // info header 35, padding: 22, controler 32px
     this.position = '00:00';
     this.duration = formatTime(duration);
-    this.player = this.createPlayer();
-    this.isPlaying = true;
-    this.player.play();
-    this.createTimer();
     this.getCommands(this.page);
+  }
+
+  ngAfterViewInit() {
+    this.player = this.createPlayer();
+    this.player.play();
+    this.isPlaying = true;
+    this.createTimer();
+  }
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event: Event) {
+    this.rows = Math.floor((window.innerHeight - 35 - 22 - 32) / 19.8);
+    this.currentTime = this.player.getCurrentTime();
+    this.resetPlayer();
   }
 
   speedDown() {
@@ -71,20 +85,14 @@ export class ElementReplayAsciicastComponent implements OnInit {
     this.speed--;
     this.currentTime = this.player.getCurrentTime();
     this.resetPlayer();
-    this.player.setCurrentTime(this.currentTime);
-    this.isPlaying = true;
-    this.player.play();
-    this.createTimer();
+    this.player.seek(this.currentTime);
   }
 
   speedUp() {
     this.speed++;
     this.currentTime = this.player.getCurrentTime();
     this.resetPlayer();
-    this.player.setCurrentTime(this.currentTime);
-    this.isPlaying = true;
-    this.player.play();
-    this.createTimer();
+    this.player.seek(this.currentTime);
   }
 
   toggle() {
@@ -100,15 +108,15 @@ export class ElementReplayAsciicastComponent implements OnInit {
   }
 
   createTimer() {
-    this.timer = setInterval(() => {
-      const currentTime = this.player.getCurrentTime();
-      const currentPosition = formatTime(currentTime * 1000);
-      if (this.position === currentPosition && this.position !== '00:00') {
-        clearInterval(this.timer);
-        this.isPlaying = false;
-      }
-      this.position = currentPosition;
-    }, 500);
+    // this.timer = setInterval(() => {
+    //   const currentTime = this.player.getCurrentTime();
+    //   const currentPosition = formatTime(currentTime * 1000);
+    //   if (this.position === currentPosition && this.position !== '00:00') {
+    //     clearInterval(this.timer);
+    //     this.isPlaying = false;
+    //   }
+    //   this.position = currentPosition;
+    // }, 500);
   }
 
   restart() {
@@ -120,36 +128,36 @@ export class ElementReplayAsciicastComponent implements OnInit {
 
   resetPlayer() {
     clearInterval(this.timer);
-    if (this.player) {
-      this.player.pause();
+    if (!this.player) {
+      return;
     }
-    const el = document.getElementById('screen');
-    asciinema.player.js.UnmountPlayer(el);
+    this.player.pause();
+    this.player.dispose()
     this.player = this.createPlayer();
   }
 
   getPlayerOptions() {
     return {
-      width: this.cols,
       startAt: this.startAt,
       speed: this.speed,
       preload: true,
       autoPlay: this.isPlaying ? 1 : 0,
+      rows: this.rows,
     };
   }
 
   createPlayer() {
     const el = document.getElementById('screen');
     const opt = this.getPlayerOptions();
-    return asciinema.player.js.CreatePlayer(el, this.replay.src, opt);
+    return AsciinemaPlayer.create(this.replay.src, el, opt);
   }
 
   getUserLang() {
     const userLangEN = document.cookie.indexOf('django_language=en');
     if (userLangEN === -1) {
-    return 'zh-CN';
+      return 'zh-CN';
     } else {
-    return 'en-US';
+      return 'en-US';
     }
   }
 
@@ -163,19 +171,19 @@ export class ElementReplayAsciicastComponent implements OnInit {
       return;
     }
     this._http.getCommandsData(this.replay.id, page)
-    .subscribe(
-      data => {
-        const results = data.results;
-        const startPlayTime = new Date(this.replay.date_start).getTime();
-        results.forEach(element => {
-          element.atime = formatTime(element.timestamp * 1000 - startPlayTime);
-        });
-        this.commands = this.commands.concat(results);
-      },
-      err => {
-        alert('没找到命令记录');
-      }
-    );
+      .subscribe(
+        data => {
+          const results = data.results;
+          const startPlayTime = new Date(this.replay.date_start).getTime();
+          results.forEach(element => {
+            element.atime = formatTime(element.timestamp * 1000 - startPlayTime);
+          });
+          this.commands = this.commands.concat(results);
+        },
+        err => {
+          alert('没找到命令记录');
+        }
+      );
   }
 
   onScroll() {
@@ -186,7 +194,6 @@ export class ElementReplayAsciicastComponent implements OnInit {
     const startPlayTime = new Date(this.replay.date_start).getTime() / 1000;
     const instructStartTime = (item.timestamp - 5) - startPlayTime;
     const time = instructStartTime > 0 ? instructStartTime : 0;
-    this.startAt = time;
-    this.resetPlayer();
+    this.player.seek(time);
   }
 }
