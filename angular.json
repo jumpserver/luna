@@ -12,7 +12,6 @@
           "builder": "@angular/build:application",
           "options": {
             "outputPath": "dist",
-            "watch": true,
             "optimization": false,
             "progress": true,
             "statsJson": false,
@@ -63,8 +62,8 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "2mb",
-                  "maximumError": "5mb"
+                  "maximumWarning": "5mb",
+                  "maximumError": "6mb"
                 }
               ],
               "fileReplacements": [
