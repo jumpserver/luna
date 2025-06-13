@@ -59,7 +59,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private faceService: FaceService,
     private _iframeSvc: IframeCommunicationService,
     private _drawerStateService: DrawerStateService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this._logger.info(`IFrame URL: ${this.src}`);
@@ -146,7 +146,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           break;
         case 'TERMINAL_CONTENT_RESPONSE':
           this.view.terminalContentData = msg.data;
+          this._iframeSvc.sendMessage({ name: 'TERMINAL_CONTENT_RESPONSE', data: msg.data });
           break;
+
       }
     }.bind(this);
 
