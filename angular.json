@@ -27,7 +27,8 @@
               "buffer",
               "@xterm/xterm",
               "@xterm/addon-fit",
-              "jquery"
+              "jquery",
+              "xterm-theme"
             ],
             "tsConfig": "src/tsconfig.app.json",
             "stylePreprocessorOptions": {
@@ -56,6 +57,11 @@
             "production": {
               "optimization": true,
               "outputHashing": "all",
+              "baseHref": "/luna/",
+              "outputPath": {
+                "base": "dist",
+                "browser": "luna"
+              },
               "sourceMap": false,
               "namedChunks": false,
               "extractLicenses": true,

@@ -6,7 +6,7 @@
     "ng": "ng",
     "dev": "ng serve --proxy-config proxy.conf.json --hmr --host 0.0.0.0",
     "start": "ng serve --proxy-config proxy.conf.json --host 0.0.0.0",
-    "build": "ng build --configuration production  --output-path 'luna'",
+    "build": "ng build --configuration production",
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e",
