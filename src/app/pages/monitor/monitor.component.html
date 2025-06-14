@@ -1,34 +1,45 @@
 <div class="nav">
   <ul class="nav-main">
     <li style="padding-right: 10px">
-      <img id="left-logo" height="26px"/>
+      <img id="left-logo" height="26px" />
     </li>
     <ng-container *ngIf="sessionDetail">
       <li>
-        <p>{{ 'User: ' | translate:{value: sessionDetail.user} }}</p>
+        <p>{{ 'User: ' | translate: { value: sessionDetail.user } }}</p>
       </li>
       <li>
-        <p>{{ 'Asset: ' | translate:{value: sessionDetail.asset} }}</p>
+        <p>{{ 'Asset: ' | translate: { value: sessionDetail.asset } }}</p>
       </li>
       <li>
-        <p>{{ 'Account: ' | translate:{value: sessionDetail.account} }}</p>
+        <p>{{ 'Account: ' | translate: { value: sessionDetail.account } }}</p>
       </li>
       <li>
-        <p>{{ 'Protocol: ' | translate:{value: sessionDetail.protocol} }}</p>
+        <p>{{ 'Protocol: ' | translate: { value: sessionDetail.protocol } }}</p>
       </li>
       <li *ngIf="supportedLock">
-       <p> {{ 'Action: ' | translate  }}
-         <button (click)="togglePause($event)">
+        <p>
+          {{ 'Action: ' | translate }}
+          <button
+            nz-button
+            nzSize="small"
+            nzType="primary"
+            (click)="togglePause($event)"
+            style="border-radius: 4px"
+          >
             <span *ngIf="!isPaused">{{ 'Pause' | translate }}</span>
             <span *ngIf="isPaused">{{ 'Resume' | translate }}</span>
-         </button>
-       </p>
+          </button>
+        </p>
       </li>
     </ng-container>
   </ul>
 </div>
 <div #contentWindow style="width: 100%; height: calc(100% - 30px)">
-  <iframe #terminal [src]="iframeURL | safeUrl" *ngIf="iframeURL" width="100%" height="100%"></iframe>
+  <iframe
+    #terminal
+    [src]="iframeURL | safeUrl"
+    *ngIf="iframeURL"
+    width="100%"
+    height="100%"
+  ></iframe>
 </div>
-
-

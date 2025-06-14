@@ -10,11 +10,12 @@ import type { OnlineUsers } from '@app/model';
 
 interface DrawerViewState {
   onLineUsers: OnlineUsers[];
+  isVisible: boolean;
+  isChatOpen: boolean;
   isDrawerOpen: boolean;
   isSettingOpen: boolean;
-  isChatOpen: boolean;
-  terminalContent: {} | null;
   currentTabIndex: number;
+  terminalContent: {} | null;
 }
 
 @Component({
@@ -112,7 +113,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   private handleIframeMessage(message: any): void {
     const messageHandlers = {
-      // 从组件中传递的
       SSH_CLOSE: this.handleSshClose.bind(this),
       OPEN_CHAT: this.handleOpenChat.bind(this),
       OPEN_SETTING: this.handleOpenSetting.bind(this),
@@ -134,6 +134,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     if (this.drawerStateMap.has(currentViewId)) {
       if (this.currentViewId === currentViewId) {
         this.onLineUsers = [];
+        this.visible.set(false);
       }
 
       if (this.fileManagerComponent) {
@@ -143,10 +144,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       this.drawerStateMap.delete(currentViewId);
 
       console.log(`SSH 连接已关闭，视图 ${currentViewId} 的状态已清理`);
-
-      setTimeout(() => {
-        this.visible.set(false);
-      }, 100);
     }
 
     if (this.currentViewId === currentViewId) {
@@ -203,10 +200,12 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   private restoreViewState(viewId: string): void {
     if (this.drawerStateMap.has(viewId)) {
       const savedState = this.drawerStateMap.get(viewId)!;
-      this.onLineUsers = [...savedState.onLineUsers];
+
+      this.visible.set(savedState.isVisible);
+      this.showChat.set(savedState.isChatOpen);
       this.showDrawer.set(savedState.isDrawerOpen);
       this.showSetting.set(savedState.isSettingOpen);
-      this.showChat.set(savedState.isChatOpen);
+      this.onLineUsers = [...savedState.onLineUsers];
       this.terminalContent = savedState.terminalContent || null;
       this.currentTabIndex = savedState.currentTabIndex;
     } else {
@@ -216,12 +215,13 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   private createDefaultViewState(): DrawerViewState {
     return {
-      onLineUsers: [],
+      isVisible: false,
+      isChatOpen: false,
       isDrawerOpen: false,
       isSettingOpen: false,
-      isChatOpen: false,
+      currentTabIndex: 0,
       terminalContent: null,
-      currentTabIndex: 0
+      onLineUsers: []
     };
   }
 
@@ -251,7 +251,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
         isSettingOpen: this.showSetting(),
         isChatOpen: this.showChat(),
         terminalContent: this.terminalContent || null,
-        currentTabIndex: this.currentTabIndex
+        currentTabIndex: this.currentTabIndex,
+        isVisible: this.visible()
       });
     }
   }
@@ -264,6 +265,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     this.showDrawer.set(false);
     this.showSetting.set(false);
     this.showChat.set(false);
+    this.visible.set(false);
 
     this.drawerStateMap.set(viewId, defaultState);
   }
