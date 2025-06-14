@@ -23,6 +23,7 @@ import { debounceTime } from 'rxjs/operators';
 import { environment } from '@src/environments/environment';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FaceService } from '@app/services/face';
+import { DrawerStateService } from '@app/services/drawer';
 
 @Component({
   standalone: false,
@@ -56,7 +57,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     public _viewSvc: ViewService,
     private sanitizer: DomSanitizer,
     private faceService: FaceService,
-    private _iframeSvc: IframeCommunicationService
+    private _iframeSvc: IframeCommunicationService,
+    private _drawerStateService: DrawerStateService
   ) {}
 
   ngOnInit() {
@@ -106,6 +108,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
         case 'CLOSE':
           if (this.view && this.view.connected) {
             this.view.connected = false;
+            this._drawerStateService.sendComponentMessage({ name: 'SSH_CLOSE', data: this.view });
           }
           if (this.view && this.view.connectToken && this.view.connectToken.face_monitor_token) {
             this.faceService.removeMonitoringTab(this.view.id);

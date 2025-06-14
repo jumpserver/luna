@@ -53,6 +53,10 @@
   }
 }
 
+.share-user-empty.ant-empty {
+  color: var(--el-text-color-light);
+}
+
 ::ng-deep .create-share-link-modal {
   .ant-modal-content {
     border-radius: 4px;

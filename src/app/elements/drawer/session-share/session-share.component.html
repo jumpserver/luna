@@ -1,74 +1,84 @@
 <section>
-  <div class="share-user-list">
-    <nz-divider nzDashed [nzText]="text" nzOrientation="left">
-      <ng-template #text>
-        <nz-icon nzType="team" nzTheme="outline" />
-        {{ 'OnlineUser' | translate }} ({{ onLineUsers().length }})
-      </ng-template>
-    </nz-divider>
+  @if (onLineUsers().length > 0) {
+    <div class="share-user-list">
+      <nz-divider nzDashed [nzText]="text" nzOrientation="left">
+        <ng-template #text>
+          <nz-icon nzType="team" nzTheme="outline" />
+          {{ 'OnlineUser' | translate }} ({{ onLineUsers().length }})
+        </ng-template>
+      </nz-divider>
 
-    <div style="margin-bottom: 16px">
-      @for (item of onLineUsers(); track item.terminal_id + item.user + item.primary) {
-        <nz-card
-          nzSize="small"
-          style="margin-bottom: 8px; border-radius: 8px"
-          [nzBodyStyle]="{ padding: '12px 16px' }"
-        >
-          <div style="display: flex; align-items: center; justify-content: space-between">
-            <div>
-              <div style="font-weight: 500; margin-bottom: 4px; color: var(--el-text-color-light)">
-                {{ item.user }}
+      <div style="margin-bottom: 16px">
+        @for (item of onLineUsers(); track item.terminal_id + item.user + item.primary) {
+          <nz-card
+            nzSize="small"
+            style="margin-bottom: 8px; border-radius: 8px"
+            [nzBodyStyle]="{ padding: '12px 16px' }"
+          >
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <div>
+                <div
+                  style="font-weight: 500; margin-bottom: 4px; color: var(--el-text-color-light)"
+                >
+                  {{ item.user }}
+                </div>
+                <div style="display: flex; gap: 4px">
+                  <nz-tag *ngIf="item.primary" nzColor="blue">
+                    <nz-icon nzType="crown" nzTheme="outline" style="margin-right: 2px"></nz-icon>
+                    {{ 'PrimaryUser' | translate }}
+                  </nz-tag>
+                  <nz-tag *ngIf="item.writable" nzColor="green">
+                    <nz-icon nzType="edit" nzTheme="outline" style="margin-right: 2px"></nz-icon>
+                    {{ 'Writable' | translate }}
+                  </nz-tag>
+                  <nz-tag *ngIf="!item.writable" nzColor="orange">
+                    <nz-icon nzType="eye" nzTheme="outline" style="margin-right: 2px"></nz-icon>
+                    {{ 'ReadOnly' | translate }}
+                  </nz-tag>
+                </div>
               </div>
-              <div style="display: flex; gap: 4px">
-                <nz-tag *ngIf="item.primary" nzColor="blue">
-                  <nz-icon nzType="crown" nzTheme="outline" style="margin-right: 2px"></nz-icon>
-                  {{ 'PrimaryUser' | translate }}
-                </nz-tag>
-                <nz-tag *ngIf="item.writable" nzColor="green">
-                  <nz-icon nzType="edit" nzTheme="outline" style="margin-right: 2px"></nz-icon>
-                  {{ 'Writable' | translate }}
-                </nz-tag>
-                <nz-tag *ngIf="!item.writable" nzColor="orange">
-                  <nz-icon nzType="eye" nzTheme="outline" style="margin-right: 2px"></nz-icon>
-                  {{ 'ReadOnly' | translate }}
-                </nz-tag>
+
+              <div style="margin-left: 12px" [style.display]="item.primary ? 'none' : 'block'">
+                <button
+                  nz-button
+                  nzDanger
+                  nz-popconfirm
+                  nzType="text"
+                  nzSize="small"
+                  nzPopconfirmPlacement="topRight"
+                  nzPopconfirmOverlayClassName="share-user-delete-button"
+                  [disabled]="item.primary"
+                  [nzPopconfirmTitle]="'RemoveShareUserConfirm' | translate"
+                  (nzOnConfirm)="onDeleteShareUser(item)"
+                  style="border: none; box-shadow: none"
+                >
+                  <nz-icon nzType="close" nzTheme="outline"></nz-icon>
+                </button>
               </div>
             </div>
-
-            <div style="margin-left: 12px" [style.display]="item.primary ? 'none' : 'block'">
-              <button
-                nz-button
-                nzDanger
-                nz-popconfirm
-                nzType="text"
-                nzSize="small"
-                nzPopconfirmPlacement="topRight"
-                nzPopconfirmOverlayClassName="share-user-delete-button"
-                [disabled]="item.primary"
-                [nzPopconfirmTitle]="'RemoveShareUserConfirm' | translate"
-                (nzOnConfirm)="onDeleteShareUser(item)"
-                style="border: none; box-shadow: none"
-              >
-                <nz-icon nzType="close" nzTheme="outline"></nz-icon>
-              </button>
-            </div>
-          </div>
-        </nz-card>
-      }
+          </nz-card>
+        }
+      </div>
     </div>
-  </div>
 
-  <button
-    nz-button
-    nzBlock
-    nzType="primary"
-    class="share-button"
-    (click)="onShowCreateShareLinkModal()"
-    style="border-radius: 4px; height: 35px"
-  >
-    <nz-icon nzType="usergroup-add" nzTheme="outline"></nz-icon>
-    {{ 'CreateLink' | translate }}
-  </button>
+    <button
+      nz-button
+      nzBlock
+      nzType="primary"
+      class="share-button"
+      (click)="onShowCreateShareLinkModal()"
+      style="border-radius: 4px; height: 35px"
+    >
+      <nz-icon nzType="usergroup-add" nzTheme="outline"></nz-icon>
+      {{ 'CreateLink' | translate }}
+    </button>
+  } @else {
+    <nz-empty
+      class="share-user-empty"
+      nzNotFoundImage="simple"
+      [nzNotFoundContent]="'NoOnlineUser' | translate"
+    ></nz-empty>
+  }
 </section>
 
 <nz-modal
