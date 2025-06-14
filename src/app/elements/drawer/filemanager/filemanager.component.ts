@@ -60,6 +60,22 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
     this.iframes.clear();
   }
 
+  public destroyIframeByViewId(viewId: string): void {
+    const iframe = this.iframes.get(viewId);
+
+    if (iframe && this.iframeContainer?.nativeElement) {
+      this.renderer.removeChild(this.iframeContainer.nativeElement, iframe);
+
+      this.iframes.delete(viewId);
+
+      console.log('Destroyed iframe for viewId:', viewId);
+
+      if (this.currentDisplayedViewId === viewId) {
+        this.currentDisplayedViewId = null;
+      }
+    }
+  }
+
   private async createNewIframe(viewId: string, view: View): Promise<void> {
     if (!this.iframeContainer?.nativeElement) {
       return;

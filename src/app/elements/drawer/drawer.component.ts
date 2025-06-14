@@ -3,7 +3,8 @@ import _ from 'lodash-es';
 import { View } from '@app/model';
 import { Subscription } from 'rxjs';
 import { IframeCommunicationService, DrawerStateService } from '@app/services';
-import { Component, OnInit, Input, effect, signal, OnDestroy } from '@angular/core';
+import { Component, OnInit, Input, effect, signal, OnDestroy, ViewChild } from '@angular/core';
+import { ElementFileManagerComponent } from './filemanager/filemanager.component';
 
 import type { OnlineUsers } from '@app/model';
 
@@ -24,6 +25,7 @@ interface DrawerViewState {
 })
 export class ElementDrawerComponent implements OnInit, OnDestroy {
   @Input() view: View;
+  @ViewChild('fileManagerComponent') fileManagerComponent: ElementFileManagerComponent;
 
   readonly showChat = signal(false);
   readonly showDrawer = signal(false);
@@ -111,6 +113,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   private handleIframeMessage(message: any): void {
     const messageHandlers = {
       // 从组件中传递的
+      SSH_CLOSE: this.handleSshClose.bind(this),
       OPEN_CHAT: this.handleOpenChat.bind(this),
       OPEN_SETTING: this.handleOpenSetting.bind(this),
 
@@ -122,6 +125,32 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     const handler = messageHandlers[message.name];
     if (handler) {
       handler(message.data);
+    }
+  }
+
+  private handleSshClose(currentView: View): void {
+    const currentViewId = currentView.id;
+
+    if (this.drawerStateMap.has(currentViewId)) {
+      if (this.currentViewId === currentViewId) {
+        this.onLineUsers = [];
+      }
+
+      if (this.fileManagerComponent) {
+        this.fileManagerComponent.destroyIframeByViewId(currentViewId);
+      }
+
+      this.drawerStateMap.delete(currentViewId);
+
+      console.log(`SSH 连接已关闭，视图 ${currentViewId} 的状态已清理`);
+
+      setTimeout(() => {
+        this.visible.set(false);
+      }, 100);
+    }
+
+    if (this.currentViewId === currentViewId) {
+      this.saveCurrentViewState();
     }
   }
 

@@ -9,6 +9,20 @@
   z-index: 100000000;
   padding: 10px 30px;
 
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+
+  &.drawer-hidden {
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &.drawer-visible {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   .close-button {
     position: absolute;
     top: 20px;
