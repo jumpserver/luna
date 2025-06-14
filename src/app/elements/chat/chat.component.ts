@@ -179,10 +179,8 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
         case 'koko':
           this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
           break;
-        case 'lion':
-          this.currentView.iframeElement.postMessage({ name: 'OPEN' }, '*');
-          break;
         default:
+          this.currentView.iframeElement.postMessage({ name: 'OPEN' }, '*');
           break;
       }
     }
