@@ -90,15 +90,23 @@
   width: 100vw;
 
   .terminal-card {
-    box-shadow: unset;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     padding: unset;
-    height: calc(100% - 60px);
+    height: calc(100% - 3.75rem);
     border-radius: 4px;
     overflow: hidden;
     background-color: rgb(243, 243, 244);
 
     ::ng-deep .ant-card-body {
+      width: 100%;
       height: 100%;
+      padding: unset;
+
+      .elements-drawer-wrapper {
+        top: unset !important;
+      }
     }
   }
 
