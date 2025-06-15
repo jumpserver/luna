@@ -175,6 +175,10 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     const viewId = this.view?.id || null;
 
     if (viewId) {
+      if (this.currentViewId && this.currentViewId !== viewId) {
+        this.saveCurrentViewState();
+      }
+
       this.currentViewId = viewId;
       this.restoreViewState(viewId);
     } else {
@@ -271,8 +275,11 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   onLineUsersAdd(data: OnlineUsers): void {
-    this.onLineUsers = [...this.onLineUsers, data];
-    this.saveCurrentViewState();
+    // 只有在有 currentViewId 的情况下才添加用户
+    if (this.currentViewId) {
+      this.onLineUsers = [...this.onLineUsers, data];
+      this.saveCurrentViewState();
+    }
   }
 
   onDeleteShareUser(item: OnlineUsers): void {

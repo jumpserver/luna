@@ -193,6 +193,13 @@ export class PageDirectComponent implements OnInit, OnDestroy {
 
     this.viewSrv.addView(this.view);
     this.viewSrv.activeView(this.view);
+
+    setTimeout(() => {
+      this._drawerStateService.sendComponentMessage({
+        name: 'TAB_VIEW_CHANGE',
+        data: this.view.id
+      });
+    }, 100);
   }
 
   /**
@@ -231,7 +238,6 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    */
   public async handleOpenDrawer(type: string) {
     if (type === 'setting') {
-      console.log('type', type);
       this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
       return;
     }
