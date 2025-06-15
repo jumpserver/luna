@@ -61,6 +61,7 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
 
   shareLink = '';
   shareCode = '';
+  currentSessionIds = new Map<string, string>();
 
   searchedUserList: ShareUserOptions[] = [];
 
@@ -116,7 +117,10 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
 
     this._iframeSvc.sendMessage({
       name: 'SHARE_CODE_REQUEST',
-      data: this.shareLinkRequest
+      data: {
+        requestData: this.shareLinkRequest,
+        sessionId: this.currentSessionIds.get(this.currentViewId())
+      }
     });
   }
 
@@ -221,6 +225,7 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
     try {
       const messageData: OnlineUsers = JSON.parse(data);
 
+      this.currentSessionIds.set(this.currentViewId(), messageData.sessionId);
       this.onLineUsersAdd.emit(messageData);
     } catch (error) {
       console.error('Failed to parse SHARE_USER_ADD:', error);
