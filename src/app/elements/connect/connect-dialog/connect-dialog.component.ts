@@ -1,14 +1,9 @@
-import {ChangeDetectorRef, Component, Inject, OnInit} from '@angular/core';
-import {AppService, HttpService, I18nService, LogService, SettingService} from '@app/services';
-import {Account, Asset, AuthInfo, ConnectData, ConnectMethod, Protocol} from '@app/model';
-import {BehaviorSubject} from 'rxjs';
-import {debounceTime} from 'rxjs/operators';
-import {NZ_MODAL_DATA, NzModalRef} from 'ng-zorro-antd/modal';
-
-class ConnectButtonInfo {
-  disabled: boolean = false;
-  reason: string = '';
-}
+import { BehaviorSubject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
+import { Component, Inject, OnInit } from '@angular/core';
+import { NZ_MODAL_DATA, NzModalRef } from 'ng-zorro-antd/modal';
+import { Account, Asset, AuthInfo, ConnectData, ConnectMethod, Protocol } from '@app/model';
+import { AppService, HttpService, I18nService, LogService, SettingService } from '@app/services';
 
 @Component({
   standalone: false,
@@ -18,32 +13,34 @@ class ConnectButtonInfo {
 })
 export class ElementConnectDialogComponent implements OnInit {
   public asset: Asset;
-  public accounts: Array<Account>;
-  public preConnectData: ConnectData = null;
-  public autoLogin = false;
   public protocol: Protocol;
-  public protocols: Array<Protocol>;
-  public accountSelected: Account = null;
   public connectOption: Object;
-  public outputData: ConnectData = new ConnectData();
-  public viewAssetOnlineSessionInfo: boolean = true;
+  public accounts: Array<Account>;
+  public protocols: Array<Protocol>;
+
   public manualAuthInfo: AuthInfo = new AuthInfo();
-  public connectMethod: ConnectMethod = new ConnectMethod('Null', '', 'null', 'null');
-  public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
+  public outputData: ConnectData = new ConnectData();
   public accountOrUsernameChanged = new BehaviorSubject(false);
+  public onSubmit$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(true);
+  public connectMethod: ConnectMethod = new ConnectMethod('Null', '', 'null', 'null');
+
+  public accountSelected: Account = null;
+  public preConnectData: ConnectData = null;
+
   public onlineNum: number = null;
+  public autoLogin: boolean = false;
   public disabled: boolean = false;
+  public viewAssetOnlineSessionInfo: boolean = true;
+
   public disabledReason: string = '';
 
   constructor(
     @Inject(NZ_MODAL_DATA) public data: any,
-    private _settingSvc: SettingService,
-    private _cdRef: ChangeDetectorRef,
-    private _modalRef: NzModalRef,
+    private _i18n: I18nService,
     private _http: HttpService,
-    private _logger: LogService,
     private _appSvc: AppService,
-    private _i18n: I18nService
+    private _modalRef: NzModalRef,
+    private _settingSvc: SettingService
   ) {
     this.asset = this.data.asset;
     this.preConnectData = this.data.preConnectData || null;
@@ -87,7 +84,7 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   getProtocols() {
-    console.log('Asset: ', this.asset)
+    console.log('Asset: ', this.asset);
     return this.asset.permed_protocols.filter(item => item.public);
   }
 
@@ -97,8 +94,13 @@ export class ElementConnectDialogComponent implements OnInit {
 
       this.protocol = this.protocols.find(p => p.name === preProtocol.name) || this.protocols[0];
 
-      this.accountSelected =
-        this.accounts.find(a => a.alias === this.preConnectData.account.alias) || new Account();
+      // 找到预选择的账号，但不直接设置，让 select-account 组件处理
+      const preSelectedAccount = this.accounts.find(
+        a => a.alias === this.preConnectData.account.alias
+      );
+      if (preSelectedAccount) {
+        this.accountSelected = preSelectedAccount;
+      }
 
       const connectMethod = this._appSvc
         .getProtocolConnectMethods(this.protocol.name)
@@ -118,9 +120,7 @@ export class ElementConnectDialogComponent implements OnInit {
     if (!this.protocol) {
       this.protocol = this.protocols[0];
     }
-    if (!this.accountSelected) {
-      this.accountSelected = this.accounts[0];
-    }
+
     if (!this.connectMethod) {
       const connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
       if (connectMethods.length > 0) {

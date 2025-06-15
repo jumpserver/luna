@@ -1,16 +1,12 @@
 <div>
   <h3 *nzModalTitle>{{ 'Connect' | translate }} - {{ asset.name }}</h3>
 
-  <div *ngIf="!protocols || protocols.length === 0;">
+  <div *ngIf="!protocols || protocols.length === 0">
     <nz-alert [nzMessage]="'No protocol available' | translate" nzType="error"></nz-alert>
   </div>
   <div *ngIf="protocols && protocols.length > 0">
     <nz-tabset class="protocol-tab">
-      <nz-tab
-              (nzSelect)="onProtocolChange(p)"
-              *ngFor="let p of protocols"
-              [nzTitle]="titleTpl"
-      >
+      <nz-tab (nzSelect)="onProtocolChange(p)" *ngFor="let p of protocols" [nzTitle]="titleTpl">
         <ng-template #titleTpl>
           {{ p.name | uppercase }}
         </ng-template>
@@ -19,58 +15,67 @@
 
     <div (keyup.enter)="onConfirm()" class="dialog-body" nz-modal-content>
       <elements-select-account
-              (accountSelectedChange)="onSelectAccount($event)"
-              (manualUsernameChanged)="onManualUsernameChanged($event)"
-              [accounts]="accounts"
-              [asset]="asset"
-              [manualAuthInfo]="manualAuthInfo"
-              [onSubmit]="onSubmit$"
-              [protocol]="protocol"
+        (accountSelectedChange)="onSelectAccount($event)"
+        (manualUsernameChanged)="onManualUsernameChanged($event)"
+        [accounts]="accounts"
+        [asset]="asset"
+        [manualAuthInfo]="manualAuthInfo"
+        [onSubmit]="onSubmit$"
+        [protocol]="protocol"
+        [preSelectedAccount]="accountSelected"
       >
       </elements-select-account>
 
       <elements-connect-method
-              (onDownloadRDPFile)="onConfirm(true)"
-              (onGuidePage)="onConfirm()"
-              [(connectMethod)]="connectMethod"
-              [account]="accountSelected"
-              [connectOption]="connectOption"
-              [manualAuthInfo]="manualAuthInfo"
-              [protocol]="protocol"
-              class="connect-method-zone"
+        (onDownloadRDPFile)="onConfirm(true)"
+        (onGuidePage)="onConfirm()"
+        [(connectMethod)]="connectMethod"
+        [account]="accountSelected"
+        [connectOption]="connectOption"
+        [manualAuthInfo]="manualAuthInfo"
+        [protocol]="protocol"
+        class="connect-method-zone"
       >
       </elements-connect-method>
 
       <elements-advanced-option
-              [connectMethod]="connectMethod"
-              [connectOption]="connectOption"
-              [protocol]="protocol"
+        [connectMethod]="connectMethod"
+        [connectOption]="connectOption"
+        [protocol]="protocol"
       >
       </elements-advanced-option>
 
       <nz-form-item class="auto-connect">
         <nz-form-control>
           <label [(ngModel)]="autoLogin" name="auto-login" nz-checkbox>
-             {{ "Automatic login next" | translate }}
+            {{ 'Automatic login next' | translate }}
           </label>
         </nz-form-control>
       </nz-form-item>
 
       <div class="connect-btn-wrap" style="margin: 10px 0 0 0; width: 100%">
         <button
-                (click)="onConfirm()"
-                [disabled]="disabled"
-                [nzLoading]="false"
-                nz-button
-                nzType="primary"
-                type="submit"
+          (click)="onConfirm()"
+          [disabled]="disabled"
+          [nzLoading]="false"
+          nz-button
+          nzType="primary"
+          type="submit"
         >
-          {{ "CONNECT"| translate }}
-            <span *ngIf="protocol && protocol.name === 'rdp' && viewAssetOnlineSessionInfo" class="online-num">
+          {{ 'CONNECT' | translate }}
+          <span
+            *ngIf="protocol && protocol.name === 'rdp' && viewAssetOnlineSessionInfo"
+            class="online-num"
+          >
             ({{ 'Current online' | translate }}: {{ onlineNum === null ? '- ' : onlineNum }})
           </span>
         </button>
-        <nz-alert *ngIf="disabledReason" [nzMessage]="disabledReason" [nzShowIcon]='true' nzType="error"></nz-alert>
+        <nz-alert
+          *ngIf="disabledReason"
+          [nzMessage]="disabledReason"
+          [nzShowIcon]="true"
+          nzType="error"
+        ></nz-alert>
       </div>
     </div>
   </div>
