@@ -557,4 +557,5 @@ export interface OnlineUsers {
   terminal_id: string;
   primary: boolean;
   writable: boolean;
+  sessionId: string;
 }
