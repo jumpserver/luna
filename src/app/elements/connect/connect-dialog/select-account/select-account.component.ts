@@ -1,15 +1,26 @@
-import {ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
-import {Account, AccountGroup, Asset, AuthInfo, Protocol} from '@app/model';
-import {BehaviorSubject, ReplaySubject, Subject} from 'rxjs';
-import {FormControl} from '@angular/forms';
-import {AppService, I18nService, LogService} from '@app/services';
-import {User} from '@app/globals';
+import { User } from '@app/globals';
+import { FormControl } from '@angular/forms';
+import { AppService, I18nService } from '@app/services';
+import { BehaviorSubject, ReplaySubject, Subject } from 'rxjs';
+import { Account, AccountGroup, Asset, AuthInfo, Protocol } from '@app/model';
+
+import {
+  Input,
+  OnInit,
+  Output,
+  OnDestroy,
+  Component,
+  ViewChild,
+  ElementRef,
+  EventEmitter,
+  ChangeDetectorRef
+} from '@angular/core';
 
 @Component({
   standalone: false,
   selector: 'elements-select-account',
   templateUrl: 'select-account.component.html',
-  styleUrls: ['select-account.component.scss'],
+  styleUrls: ['select-account.component.scss']
 })
 export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @Input() asset: Asset;
@@ -18,10 +29,11 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @Input() onSubmit$: BehaviorSubject<boolean>;
   @Input() manualAuthInfo: AuthInfo;
   @Input() protocol: Protocol;
+  @Input() preSelectedAccount: Account; // 接收父组件传入的预选择账号
   @Output() accountSelectedChange: EventEmitter<Account> = new EventEmitter<Account>();
   @Output() manualUsernameChanged: EventEmitter<string> = new EventEmitter<string>();
-  @ViewChild('username', {static: false}) usernameRef: ElementRef;
-  @ViewChild('password', {static: false}) passwordRef: ElementRef;
+  @ViewChild('username', { static: false }) usernameRef: ElementRef;
+  @ViewChild('password', { static: false }) passwordRef: ElementRef;
 
   public hidePassword = true;
   public rememberAuthDisabled = false;
@@ -30,24 +42,24 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   filteredOptions: AuthInfo[];
   accountManualAuthInit = false;
   usernamePlaceholder: string = 'Username';
-  public accountSelected: Account;
+  public accountSelected: Account; // 内部状态
   public groupedAccounts: AccountGroup[];
   public accountCtl: FormControl = new FormControl();
   public accountFilterCtl: FormControl = new FormControl();
   public filteredUsersGroups: ReplaySubject<AccountGroup[]> = new ReplaySubject<AccountGroup[]>(1);
   protected _onDestroy = new Subject<void>();
+  private userManuallySelected = false; // 标记用户是否手动选择了账号
 
-  constructor(private _logger: LogService,
-              private _appSvc: AppService,
-              private _i18n: I18nService,
-              private _cdRef: ChangeDetectorRef,
-  ) {
-  }
+  constructor(
+    private _appSvc: AppService,
+    private _i18n: I18nService,
+    private _cdRef: ChangeDetectorRef
+  ) {}
 
   get noSecretAccounts() {
     return this.accounts
-      .filter((item) => !item.has_secret)
-      .filter((item) => item.username !== '@ANON')
+      .filter(item => !item.has_secret)
+      .filter(item => item.username !== '@ANON')
       .sort((a, b) => {
         const eq = +a.username.startsWith('@') - +b.username.startsWith('@');
         if (eq !== 0) {
@@ -62,7 +74,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
 
   get hasSecretAccounts() {
     return this.accounts
-      .filter((item) => item.has_secret)
+      .filter(item => item.has_secret)
       .sort((a, b) => {
         return a.name.localeCompare(b.name);
       });
@@ -71,7 +83,9 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   get anonymousAccounts() {
     const allowAnonymousCategory = ['custom', 'web'];
     return this.accounts.filter(item => {
-      return item.username === '@ANON' && allowAnonymousCategory.indexOf(this.asset.category.value) >= 0;
+      return (
+        item.username === '@ANON' && allowAnonymousCategory.indexOf(this.asset.category.value) >= 0
+      );
     });
   }
 
@@ -93,14 +107,29 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     return this.accountSelected.username === '@INPUT' || this.accountSelected.username === '@USER';
   }
 
-  public compareFn = (f1, f2) => f1 && f2 && f1.alias === f2.alias;
+  public compareFn = (f1: Account, f2: Account) => {
+    if (!f1 || !f2) return false;
+    return f1.alias === f2.alias && f1.id === f2.id;
+  };
 
   ngOnInit() {
+    // 重置用户手动选择标志
+    this.userManuallySelected = false;
+
+    // 如果父组件传入了预选择账号，使用父组件传入的
+    if (this.preSelectedAccount) {
+      this.accountSelected = this.preSelectedAccount;
+    }
+
+    // 先检查URL参数，这个优先级最高
+    this.checkUrlForLoginAccountParam();
+
+    // 然后分组账号（如果URL没有指定账号，会设置默认账号）
     this.groupedAccounts = this.groupAccounts();
     this.filteredUsersGroups.next(this.groupedAccounts.slice());
 
-    // 检查url中是否有 login_account 参数
-    this.checkUrlForLoginAccountParam();
+    // 确保账号对象引用一致
+    this.ensureAccountReference();
 
     if (this.accountSelected) {
       const username = this.accountSelected.username;
@@ -117,8 +146,15 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this._onDestroy.complete();
   }
 
-  handleAccountChanged() {
+  handleAccountChanged(newAccount?: Account) {
+    // 如果传入了新账号，使用新账号；否则使用当前账号
+    const selectedAccount = newAccount || this.accountSelected;
+
+    this.accountSelected = selectedAccount;
+    this.userManuallySelected = true;
+
     this.accountSelectedChange.emit(this.accountSelected);
+
     this.onAccountChanged();
   }
 
@@ -153,6 +189,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   groupAccounts() {
     let groups = [];
     const preAccountSelected = this.getPreAccountSelected();
+
     if (preAccountSelected) {
       groups.push({
         name: this._i18n.instant('Last login'),
@@ -175,10 +212,25 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
 
     groups = groups.filter(group => group.accounts.length > 0);
 
-    for (const group of groups) {
-      if (group.accounts.length > 0) {
-        this.accountSelected = group.accounts[0];
-        break;
+    // 优先级：
+    // 1. 如果用户已经手动选择了账号，保持不变
+    // 2. 如果已经有选中的账号但不是用户手动选择的，可以被覆盖
+    // 3. 如果父组件传入了预选择账号，使用它
+    // 4. 否则使用第一个可用账号作为默认
+    if (this.userManuallySelected && this.accountSelected) {
+      // 用户手动选择的账号，保持不变
+    } else if (!this.accountSelected) {
+      if (this.preSelectedAccount) {
+        // 使用父组件传入的预选择账号
+        this.accountSelected = this.preSelectedAccount;
+      } else {
+        // 使用第一个可用账号作为默认
+        for (const group of groups) {
+          if (group.accounts.length > 0) {
+            this.accountSelected = group.accounts[0];
+            break;
+          }
+        }
       }
     }
 
@@ -188,6 +240,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         accounts: []
       });
     }
+
     return groups;
   }
 
@@ -253,7 +306,9 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this.manualAuthInfo.secret = '';
     this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id);
     if (this.manualAuthInfo.username) {
-      this.localAuthItems = this.localAuthItems.filter(item => item.username === this.manualAuthInfo.username);
+      this.localAuthItems = this.localAuthItems.filter(
+        item => item.username === this.manualAuthInfo.username
+      );
     }
     if (this.localAuthItems && this.localAuthItems.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
@@ -301,5 +356,25 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       });
     });
     return accountsCopy;
+  }
+
+  private ensureAccountReference() {
+    if (!this.accountSelected || !this.groupedAccounts) {
+      return;
+    }
+
+    // 在分组中查找匹配的账号对象
+    for (const group of this.groupedAccounts) {
+      const foundAccount = group.accounts.find(
+        account => account.alias === this.accountSelected.alias
+      );
+      if (foundAccount) {
+        if (foundAccount !== this.accountSelected) {
+          this.accountSelected = foundAccount;
+          this.accountSelectedChange.emit(this.accountSelected);
+        }
+        break;
+      }
+    }
   }
 }

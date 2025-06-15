@@ -2,8 +2,9 @@
   <nz-form-label class="zone-label" nzFor='account' nzNoColon>{{ "Select account" | translate }}</nz-form-label>
   <nz-form-control style="width: 100%; " *ngIf="accounts.length > 0; else empty">
     <nz-select
-      (ngModelChange)="handleAccountChanged()"
+      (ngModelChange)="handleAccountChanged($event)"
       [(ngModel)]="accountSelected"
+      [compareWith]="compareFn"
       id="selectAccount"
       name='account'
       nzShowSearch
