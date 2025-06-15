@@ -1,6 +1,6 @@
 @mixin time-container {
   position: fixed;
-  bottom: 30px;
+  bottom: 40px;
   right: 30px;
   z-index: 999999;
 
@@ -103,11 +103,11 @@
   }
 
   .card-header {
-    height: 3.75rem;
-    padding: 20px;
-    box-shadow: unset;
     display: flex;
     justify-content: space-between;
+    height: 3.75rem;
+    padding: 20px;
+    border-bottom: 1px solid #e5e5e5;
 
     .divider {
       height: 1.5em;

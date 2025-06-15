@@ -1,5 +1,5 @@
-import {ActivatedRoute} from '@angular/router';
-import {Account, AuthInfo, ConnectionToken, ConnectMethod, Endpoint, View} from '@app/model';
+import { ActivatedRoute } from '@angular/router';
+import { Account, AuthInfo, ConnectionToken, ConnectMethod, Endpoint, View } from '@app/model';
 import {
   AppService,
   HttpService,
@@ -7,18 +7,19 @@ import {
   IframeCommunicationService,
   LocalStorageService,
   LogService,
-  ViewService
+  ViewService,
+  DrawerStateService
 } from '@app/services';
-import {Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChildren,} from '@angular/core';
-import {Subscription} from 'rxjs';
-import {NzModalService} from 'ng-zorro-antd/modal';
-import {ElementACLDialogComponent} from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
+import { Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { ElementACLDialogComponent } from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
 
 @Component({
   standalone: false,
   selector: 'pages-direct',
   templateUrl: 'direct.component.html',
-  styleUrls: ['direct.component.scss'],
+  styleUrls: ['direct.component.scss']
 })
 export class PageDirectComponent implements OnInit, OnDestroy {
   @ViewChildren('contentWindow') contentWindows: QueryList<ElementRef>;
@@ -61,6 +62,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     private _logger: LogService,
     private _localStorage: LocalStorageService,
     private _route: ActivatedRoute,
+    private _drawerStateService: DrawerStateService,
     private iframeCommunicationService: IframeCommunicationService
   ) {
     this.startTime = new Date();
@@ -73,7 +75,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     await this.getConnectData();
     this._logger.info('DirectComponent getConnectData', this.asset);
 
-    this.subscription = this.iframeCommunicationService.message$.subscribe((message) => {
+    this.subscription = this.iframeCommunicationService.message$.subscribe(message => {
       if (message.name === 'CLOSE') {
         this.stopTimer();
       }
@@ -136,19 +138,19 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       category: asset.category,
       permed_protocols: asset.protocols,
       permed_accounts: asset.accounts,
-      spec_info: asset.spec_info,
+      spec_info: asset.spec_info
     };
 
     this.connectData = {
       method: this.method,
-      protocol: {name: this.protocol},
+      protocol: { name: this.protocol },
       asset: this.permedAsset,
       account: this.account,
       autoLogin: true,
       input_username: this.account.username,
       connectMethod: this.connectMethod,
       manualAuthInfo: new AuthInfo(),
-      direct: true,
+      direct: true
     };
 
     this._appSvc.setPreConnectData(this.asset, this.connectData);
@@ -181,8 +183,8 @@ export class PageDirectComponent implements OnInit, OnDestroy {
         this.asset,
         {
           ...this.connectData,
-          protocol: {name: this.protocol},
-          connectMethod: this.connectMethod,
+          protocol: { name: this.protocol },
+          connectMethod: this.connectMethod
         },
         this.connectToken,
         'node'
@@ -219,7 +221,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
       'clickhouse',
       'k8s',
       'http',
-      'https',
+      'https'
     ];
     return protocols.includes(this.protocol);
   }
@@ -229,20 +231,22 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    */
   public async handleOpenDrawer(type: string) {
     if (type === 'setting') {
-      this.iframeCommunicationService.sendMessage({name: 'OPEN', noFileTab: true});
-      return this._logger.info(`[Luna] Send OPEN SETTING`);
+      console.log('type', type);
+      this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
+      return;
     }
 
     // TODO 当前版本前端实现，用户打开文件管理时，需要重新去校验 ACL 权限
     if (type === 'file') {
       const res = this._http
         .adminConnectToken(this.permedAsset, this.connectData, false, false, '')
-        .subscribe((resp) => {
+        .subscribe(
+          resp => {
             const SFTP_Token = resp ? resp.id : '';
-            this.iframeCommunicationService.sendMessage({name: 'FILE', SFTP_Token});
+            this.iframeCommunicationService.sendMessage({ name: 'FILE', SFTP_Token });
             return this._logger.info(`[Luna] Send OPEN FILE`);
           },
-          (error) => {
+          error => {
             const dialogRef = this._dialog.create({
               nzContent: ElementACLDialogComponent,
               nzData: {
@@ -250,13 +254,13 @@ export class PageDirectComponent implements OnInit, OnDestroy {
                 connectData: this.connectData,
                 code: error.error.code,
                 tokenAction: 'create',
-                error: error,
+                error: error
               }
             });
 
-            dialogRef.afterClose.subscribe((token) => {
+            dialogRef.afterClose.subscribe(token => {
               if (token) {
-                this.iframeCommunicationService.sendMessage({name: 'FILE', SFTP_Token: token.id});
+                this.iframeCommunicationService.sendMessage({ name: 'FILE', SFTP_Token: token.id });
                 return;
               }
 
@@ -314,8 +318,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     }
 
     const currentTime = new Date();
-    const elapsed =
-      currentTime.getTime() - this.startTime.getTime() + this.pausedElapsedTime;
+    const elapsed = currentTime.getTime() - this.startTime.getTime() + this.pausedElapsedTime;
 
     const hours = Math.floor((elapsed / (1000 * 60 * 60)) % 24);
     const minutes = Math.floor((elapsed / (1000 * 60)) % 60);
@@ -334,37 +337,36 @@ export class PageDirectComponent implements OnInit, OnDestroy {
   private getConnectToken(assetMessage: any, connectData: any) {
     return new Promise(async (resolve, reject) => {
       try {
-        this._http
-          .adminConnectToken(assetMessage, connectData, false, false, '')
-          .subscribe(res => {
-              this.connectToken = res;
-              resolve(true);
-            },
-            error => {
-              const dialogRef = this._dialog.create({
-                nzContent: ElementACLDialogComponent,
-                nzData: {
-                  asset: assetMessage,
-                  connectData: connectData,
-                  code: error.error.code,
-                  tokenAction: 'create',
-                  error: error,
-                },
-              });
+        this._http.adminConnectToken(assetMessage, connectData, false, false, '').subscribe(
+          res => {
+            this.connectToken = res;
+            resolve(true);
+          },
+          error => {
+            const dialogRef = this._dialog.create({
+              nzContent: ElementACLDialogComponent,
+              nzData: {
+                asset: assetMessage,
+                connectData: connectData,
+                code: error.error.code,
+                tokenAction: 'create',
+                error: error
+              }
+            });
 
-              dialogRef.afterClose.subscribe(token => {
-                if (token) {
-                  this.connectToken = token;
-                  this.onNewView();
-                  this.startTimer();
+            dialogRef.afterClose.subscribe(token => {
+              if (token) {
+                this.connectToken = token;
+                this.onNewView();
+                this.startTimer();
 
-                  return;
-                }
+                return;
+              }
 
-                window.close();
-              });
-            }
-          );
+              window.close();
+            });
+          }
+        );
       } catch (error) {
         this._logger.error('Failed to get connect token:', error);
         reject(error);
@@ -400,7 +402,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
           value: 'web_cli',
           label: 'Web CLI',
           endpoint_protocol: endpointProtocol,
-          disabled: false,
+          disabled: false
         };
         return 'web_cli';
       case 'rdp':
@@ -411,7 +413,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
           value: 'web_gui',
           label: 'Web GUI',
           endpoint_protocol: endpointProtocol,
-          disabled: false,
+          disabled: false
         };
         return 'web_gui';
       case 'sftp':
@@ -421,7 +423,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
           value: 'web_sftp',
           label: 'Web SFTP',
           endpoint_protocol: endpointProtocol,
-          disabled: false,
+          disabled: false
         };
         return 'web_sftp';
       default:
@@ -431,7 +433,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
           value: 'web_cli',
           label: 'Web CLI',
           endpoint_protocol: endpointProtocol,
-          disabled: false,
+          disabled: false
         };
         return 'web_cli';
     }
