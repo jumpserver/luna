@@ -1,13 +1,12 @@
-import {Component, Inject, OnInit} from '@angular/core';
-import {Asset, ConnectData, ConnectionToken} from '@app/model';
-import {I18nService} from '@app/services/i18n';
-import {HttpService} from '@app/services/http';
-import {HttpErrorResponse} from '@angular/common/http';
-import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
-import {FaceService} from '@app/services/face';
-import {NZ_MODAL_DATA, NzModalRef, NzModalService} from 'ng-zorro-antd/modal';
-import {NzNotificationService} from 'ng-zorro-antd/notification';
-
+import { I18nService } from '@app/services/i18n';
+import { HttpService } from '@app/services/http';
+import { FaceService } from '@app/services/face';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, Inject, OnInit } from '@angular/core';
+import { Asset, ConnectData, ConnectionToken } from '@app/model';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { NZ_MODAL_DATA, NzModalRef, NzModalService } from 'ng-zorro-antd/modal';
 
 interface DialogAction {
   text: string;
@@ -27,7 +26,7 @@ interface DialogContent {
   standalone: false,
   selector: 'elements-acl-dialog',
   templateUrl: 'acl-dialog.component.html',
-  styleUrls: ['acl-dialog.component.scss'],
+  styleUrls: ['acl-dialog.component.scss']
 })
 export class ElementACLDialogComponent implements OnInit {
   public asset: Asset;
@@ -45,14 +44,14 @@ export class ElementACLDialogComponent implements OnInit {
   private timerCheckTicket: number;
 
   constructor(
-    public dialogRef: NzModalRef<ElementACLDialogComponent>,
-    public _dialog: NzModalService,
-    private _i18n: I18nService,
-    private _toastr: NzNotificationService,
-    private _http: HttpService,
-    private sanitizer: DomSanitizer,
     @Inject(NZ_MODAL_DATA) public data: any,
+    private _i18n: I18nService,
+    private _http: HttpService,
+    public _dialog: NzModalService,
+    private _toastr: NzNotificationService,
+    private sanitizer: DomSanitizer,
     private faceService: FaceService,
+    public dialogRef: NzModalRef<ElementACLDialogComponent>
   ) {
     this.data = data;
   }
@@ -97,21 +96,23 @@ export class ElementACLDialogComponent implements OnInit {
   }
 
   onConfirmFaceOnline() {
-
     const faceMonitorToken = this.faceService.getToken();
 
     const successCallback = (connToken: ConnectionToken) => {
       if (connToken && connToken.face_token) {
-        this.faceVerifyUrl = this.sanitizer.bypassSecurityTrustResourceUrl('/facelive/capture?token=' + connToken.face_token);
+        this.faceVerifyUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+          '/facelive/capture?token=' + connToken.face_token
+        );
         this.code = 'face_verify_capture';
 
         const timer = setInterval(() => {
-          this._http.getFaceVerifyState(connToken.face_token).subscribe(async (data) => {
+          this._http.getFaceVerifyState(connToken.face_token).subscribe(async data => {
             if (data.is_finished) {
               clearInterval(timer);
               if (!data.success) {
                 this.code = 'other';
                 this.otherError = data.error_message;
+                this.content = this.getDialogContent(this.code);
               } else {
                 const msg = await this._i18n.t('Face verify success');
                 this._toastr.success(msg, '');
@@ -123,39 +124,49 @@ export class ElementACLDialogComponent implements OnInit {
         }, 1000);
       }
     };
-    const errorCallback = (error) => {
+    const errorCallback = error => {
       if (error.error.code === 'no_face_feature') {
         this.code = error.error.code;
       } else {
         this.code = 'other';
         this.otherError = error.error.detail;
       }
+      this.content = this.getDialogContent(this.code);
     };
 
     if (this.tokenAction === 'exchange') {
-      this._http.exchangeConnectToken(this.tokenID, false, true, faceMonitorToken).subscribe(successCallback, errorCallback);
+      this._http
+        .exchangeConnectToken(this.tokenID, false, true, faceMonitorToken)
+        .subscribe(successCallback, errorCallback);
     } else {
       if (this.data.connectData && this.data.connectData.direct) {
-        this._http.adminConnectToken(this.asset, this.data.connectData, false, true, faceMonitorToken).subscribe(successCallback, errorCallback);
+        this._http
+          .adminConnectToken(this.asset, this.data.connectData, false, true, faceMonitorToken)
+          .subscribe(successCallback, errorCallback);
         return;
       }
-      this._http.createConnectToken(this.asset, this.connectInfo, false, true, faceMonitorToken).subscribe(successCallback, errorCallback);
+      this._http
+        .createConnectToken(this.asset, this.connectInfo, false, true, faceMonitorToken)
+        .subscribe(successCallback, errorCallback);
     }
   }
 
   onConfirmFaceVerify() {
     const successCallback = (connToken: ConnectionToken) => {
       if (connToken && connToken.face_token) {
-        this.faceVerifyUrl = this.sanitizer.bypassSecurityTrustResourceUrl('/facelive/capture?token=' + connToken.face_token);
+        this.faceVerifyUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+          '/facelive/capture?token=' + connToken.face_token
+        );
         this.code = 'face_verify_capture';
 
         const timer = setInterval(() => {
-          this._http.getFaceVerifyState(connToken.face_token).subscribe(async (data) => {
+          this._http.getFaceVerifyState(connToken.face_token).subscribe(async data => {
             if (data.is_finished) {
               clearInterval(timer);
               if (!data.success) {
                 this.code = 'other';
                 this.otherError = data.error_message;
+                this.content = this.getDialogContent(this.code);
               } else {
                 const msg = await this._i18n.t('Face verify success');
                 this._toastr.success(msg, '');
@@ -166,23 +177,30 @@ export class ElementACLDialogComponent implements OnInit {
         }, 1000);
       }
     };
-    const errorCallback = (error) => {
+    const errorCallback = error => {
       if (error.error.code === 'no_face_feature') {
         this.code = error.error.code;
       } else {
         this.code = 'other';
         this.otherError = error.error.detail;
       }
+      this.content = this.getDialogContent(this.code);
     };
 
     if (this.tokenAction === 'exchange') {
-      this._http.exchangeConnectToken(this.tokenID, false, true).subscribe(successCallback, errorCallback);
+      this._http
+        .exchangeConnectToken(this.tokenID, false, true)
+        .subscribe(successCallback, errorCallback);
     } else {
       if (this.data.connectData && this.data.connectData.direct) {
-        this._http.adminConnectToken(this.asset, this.data.connectData, false, true).subscribe(successCallback, errorCallback);
+        this._http
+          .adminConnectToken(this.asset, this.data.connectData, false, true)
+          .subscribe(successCallback, errorCallback);
         return;
       }
-      this._http.createConnectToken(this.asset, this.connectInfo, false, true).subscribe(successCallback, errorCallback);
+      this._http
+        .createConnectToken(this.asset, this.connectInfo, false, true)
+        .subscribe(successCallback, errorCallback);
     }
   }
 
@@ -195,25 +213,32 @@ export class ElementACLDialogComponent implements OnInit {
       if (connToken && connToken.from_ticket) {
         this.connectionToken = connToken;
         this.code = 'ticket_review_pending';
+        this.content = this.getDialogContent(this.code); // 重新生成 content
         this.checkTicket();
       }
     };
-    const errorCallback = (error) => {
+    const errorCallback = error => {
       if (error.error.code.startsWith('acl_')) {
         this.code = error.error.code;
       } else {
         this.code = 'other';
         this.otherError = error.error.detail;
       }
+      this.content = this.getDialogContent(this.code);
     };
+
     if (this.tokenAction === 'exchange') {
       this._http.exchangeConnectToken(this.tokenID, true).subscribe(successCallback, errorCallback);
     } else {
       if (this.data.connectData && this.data.connectData.direct) {
-        this._http.adminConnectToken(this.asset, this.data.connectData, true).subscribe(successCallback, errorCallback);
+        this._http
+          .adminConnectToken(this.asset, this.data.connectData, true)
+          .subscribe(successCallback, errorCallback);
         return;
       }
-      this._http.createConnectToken(this.asset, this.connectInfo, true).subscribe(successCallback, errorCallback);
+      this._http
+        .createConnectToken(this.asset, this.connectInfo, true)
+        .subscribe(successCallback, errorCallback);
     }
   }
 
@@ -251,14 +276,17 @@ export class ElementACLDialogComponent implements OnInit {
             this.dialogRef.close(this.connectionToken);
           } else if (state === 'rejected') {
             this.code = 'ticket_review_rejected';
+            this.content = this.getDialogContent(this.code);
           } else if (state === 'closed') {
             this.code = 'ticket_review_closed';
+            this.content = this.getDialogContent(this.code);
           }
           clearInterval(this.timerCheckTicket);
         },
         error => {
           this.code = 'other';
           this.otherError = error.error.detail + `(${checkURL})`;
+          this.content = this.getDialogContent(this.code);
           clearInterval(this.timerCheckTicket);
         }
       );
@@ -268,17 +296,19 @@ export class ElementACLDialogComponent implements OnInit {
   private getDialogContent(code: string): DialogContent {
     const vm = this;
     const contentMap: { [key: string]: DialogContent } = {
-      'acl_reject': {
+      acl_reject: {
         title: 'Login reminder',
         message: 'ACL reject login asset',
         isError: true,
-        actions: [{
-          text: 'Close',
-          type: 'primary',
-          callback: () => vm.closeDialog()
-        }]
+        actions: [
+          {
+            text: 'Close',
+            type: 'primary',
+            callback: () => vm.closeDialog()
+          }
+        ]
       },
-      'acl_review': {
+      acl_review: {
         title: 'Login reminder',
         message: 'Need review for login asset',
         actions: [
@@ -293,7 +323,7 @@ export class ElementACLDialogComponent implements OnInit {
           }
         ]
       },
-      'acl_face_online': {
+      acl_face_online: {
         title: 'Login reminder',
         message: 'Face online required',
         actions: [
@@ -308,7 +338,7 @@ export class ElementACLDialogComponent implements OnInit {
           }
         ]
       },
-      'acl_face_verify': {
+      acl_face_verify: {
         title: 'Login reminder',
         message: 'Face verify required',
         actions: [
@@ -323,16 +353,18 @@ export class ElementACLDialogComponent implements OnInit {
           }
         ]
       },
-      'acl_face_online_not_supported': {
+      acl_face_online_not_supported: {
         title: 'Login reminder',
         message: this.data.errorDetail,
         isError: true,
-        actions: [{
-          text: 'Close',
-          callback: () => vm.closeDialog()
-        }]
+        actions: [
+          {
+            text: 'Close',
+            callback: () => vm.closeDialog()
+          }
+        ]
       },
-      'no_face_feature': {
+      no_face_feature: {
         title: 'Login reminder',
         message: 'No facial features',
         isError: true,
@@ -341,18 +373,23 @@ export class ElementACLDialogComponent implements OnInit {
           link: '/ui/#/profile/index',
           linkText: 'Go to profile'
         },
-        actions: [{
-          text: 'Close',
-          callback: () => vm.closeDialog()
-        }]
+        actions: [
+          {
+            text: 'Close',
+            callback: () => vm.closeDialog()
+          }
+        ]
       },
-      'ticket_review_pending': {
+      ticket_review_pending: {
         title: 'Login reminder',
         message: 'Ticket review pending for login asset',
         customContent: {
           type: 'ticket',
-          assignees: this.data.ticketAssignees,
-          ticketUrl: this.data.ticketDetailPageURL
+          assignees:
+            this.connectionToken?.from_ticket_info?.assignees?.join(', ') ||
+            this.ticketAssignees ||
+            '-',
+          ticketUrl: this.connectionToken?.from_ticket_info?.ticket_detail_page_url
         },
         actions: [
           {
@@ -362,56 +399,69 @@ export class ElementACLDialogComponent implements OnInit {
           {
             text: 'Copy link',
             type: 'primary',
-            callback: () => vm.onCopySuccess(this.data.ticketDetailPageURL)
+            callback: () =>
+              vm.onCopySuccess(this.connectionToken?.from_ticket_info?.ticket_detail_page_url)
           }
         ]
       },
-      'ticket_review_rejected': {
+      ticket_review_rejected: {
         title: 'Login reminder',
         message: 'Ticket review rejected for login asset',
         isError: true,
-        actions: [{
-          text: 'Close',
-          callback: () => vm.closeDialog()
-        }]
+        actions: [
+          {
+            text: 'Close',
+            callback: () => vm.closeDialog()
+          }
+        ]
       },
-      'ticket_review_closed': {
+      ticket_review_closed: {
         title: 'Login reminder',
         message: 'Ticket review closed for login asset',
         isError: true,
-        actions: [{
-          text: 'Close',
-          callback: () => vm.closeDialog()
-        }]
+        actions: [
+          {
+            text: 'Close',
+            callback: () => vm.closeDialog()
+          }
+        ]
       },
-      'perm_account_invalid': {
+      perm_account_invalid: {
         title: 'Login reminder',
         message: 'Account not found',
         isError: true,
-        actions: [{
-          text: 'Close',
-          callback: () => vm.closeDialog()
-        }]
+        actions: [
+          {
+            text: 'Close',
+            callback: () => vm.closeDialog()
+          }
+        ]
       },
-      'other': {
+      other: {
         title: 'Login reminder',
         message: this.data.otherError,
         isError: true,
-        actions: [{
-          text: 'Close',
-          callback: () => vm.closeDialog()
-        }]
+        actions: [
+          {
+            text: 'Close',
+            callback: () => vm.closeDialog()
+          }
+        ]
       }
     };
 
-    return contentMap[code] || {
-      title: 'Login reminder',
-      message: this.data.errorDetail,
-      isError: true,
-      actions: [{
-        text: 'Close',
-        callback: () => vm.closeDialog()
-      }]
-    };
+    return (
+      contentMap[code] || {
+        title: 'Login reminder',
+        message: this.data.errorDetail,
+        isError: true,
+        actions: [
+          {
+            text: 'Close',
+            callback: () => vm.closeDialog()
+          }
+        ]
+      }
+    );
   }
 }

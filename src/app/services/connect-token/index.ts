@@ -15,9 +15,10 @@ export class ConnectTokenService {
     const dialogRef = this._dialog.create({
       nzContent: ElementACLDialogComponent,
       nzWidth: '450px',
+      nzCentered: true,
       nzData: {
         ...data
-      },
+      }
     });
     dialogRef.afterClose.subscribe((token) => {
       resolve(token);
