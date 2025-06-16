@@ -24,6 +24,7 @@ import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzSplitterModule } from 'ng-zorro-antd/splitter';
+import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzSegmentedModule } from 'ng-zorro-antd/segmented';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzFloatButtonModule } from 'ng-zorro-antd/float-button';
@@ -57,6 +58,7 @@ import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
     NzCheckboxModule,
     NzCollapseModule,
     NzSplitterModule,
+    NzProgressModule,
     NzSegmentedModule,
     NzPopconfirmModule,
     NzFloatButtonModule,

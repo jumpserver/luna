@@ -172,6 +172,11 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     this.drawerInited = true;
     this.showSetting.set(true);
 
+    // 启用 filemanager 的逻辑执行
+    if (this.fileManagerComponent) {
+      this.fileManagerComponent.enableFileManagerLogic();
+    }
+
     const viewId = this.view?.id || null;
 
     if (viewId) {

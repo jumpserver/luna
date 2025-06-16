@@ -25,6 +25,7 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
   currentViewId = input<string>('');
 
   private viewInitialized = false;
+  private viewIdOpenSettingStatus = new Map<string, boolean>();
   private iframes = new Map<string, HTMLIFrameElement>();
   private currentDisplayedViewId: string | null = null;
 
@@ -40,13 +41,25 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
         return;
       }
 
-      if (!this.iframes.has(currentViewId)) {
-        this.createNewIframe(currentViewId, view);
+      // 如果已经有 iframe，直接切换
+      if (this.iframes.has(currentViewId)) {
+        this.switchToView(currentViewId);
+        return;
       }
 
-      setTimeout(() => {
-        this.switchToView(currentViewId);
-      }, 100);
+      // 如果没有 iframe 且已经收到 OpenSetting 信号，则创建
+      const hasReceivedOpenSetting = this.viewIdOpenSettingStatus.get(currentViewId) || false;
+      if (hasReceivedOpenSetting) {
+        this.createNewIframe(currentViewId, view);
+        setTimeout(() => {
+          this.switchToView(currentViewId);
+        }, 100);
+      } else {
+        console.log(
+          'Waiting for OpenSetting signal before creating iframe for viewId:',
+          currentViewId
+        );
+      }
     });
   }
 
@@ -58,6 +71,25 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
 
   ngOnDestroy(): void {
     this.iframes.clear();
+    this.viewIdOpenSettingStatus.clear();
+  }
+
+  public enableFileManagerLogic(): void {
+    const currentViewId = this.currentViewId();
+    if (currentViewId) {
+      // 为当前 viewId 标记已收到 OpenSetting 信号
+      this.viewIdOpenSettingStatus.set(currentViewId, true);
+    }
+
+    // 手动触发逻辑执行
+    const view = this.view();
+
+    if (this.viewInitialized && currentViewId && view && !this.iframes.has(currentViewId)) {
+      this.createNewIframe(currentViewId, view);
+      setTimeout(() => {
+        this.switchToView(currentViewId);
+      }, 100);
+    }
   }
 
   public destroyIframeByViewId(viewId: string): void {
@@ -67,8 +99,8 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
       this.renderer.removeChild(this.iframeContainer.nativeElement, iframe);
 
       this.iframes.delete(viewId);
-
-      console.log('Destroyed iframe for viewId:', viewId);
+      // 同时清理对应的 OpenSetting 状态
+      this.viewIdOpenSettingStatus.delete(viewId);
 
       if (this.currentDisplayedViewId === viewId) {
         this.currentDisplayedViewId = null;
@@ -102,7 +134,6 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
   private switchToView(viewId: string): void {
     this.iframes.forEach((iframe, id) => {
       this.renderer.setStyle(iframe, 'display', 'none');
-      console.log('Hidden iframe:', id);
     });
 
     const currentIframe = this.iframes.get(viewId);

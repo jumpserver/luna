@@ -4,7 +4,7 @@
   <div class="nz-modal-content">
     <div [class.error-message]="content.isError">
       {{ content.message | translate }}
-      
+
       <!-- Custom content for no_face_feature -->
       <ng-container *ngIf="content.customContent?.type === 'link'">
         <a [href]="content.customContent.link">{{ content.customContent.linkText | translate }}</a>
@@ -17,7 +17,9 @@
         <br><br>
         {{ 'Do not close this page' | translate }}
         <br><br>
-        <nz-progress nzStatus="active"></nz-progress>
+        <div class="loading-bar">
+          <div class="loading-bar-progress"></div>
+        </div>
       </ng-container>
     </div>
   </div>
@@ -34,7 +36,7 @@
 
   <div *nzModalFooter class="nz-modal-footer">
     <ng-container *ngFor="let action of content.actions">
-      <button nz-button 
+      <button nz-button
               [nzType]="action.type || 'default'"
               (click)="action.callback()">
         {{ action.text | translate }}
