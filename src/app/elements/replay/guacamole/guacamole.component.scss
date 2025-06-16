@@ -376,7 +376,7 @@ input[type="range"]:focus::-ms-fill-upper {
 .player-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 100vh; // 使用全屏高度
   background: var(--el-editor-bg-color);
 
   &.seeking {
@@ -389,6 +389,7 @@ input[type="range"]:focus::-ms-fill-upper {
     flex: 1;
     position: relative;
     background: var(--el-main-bg-color);
+    min-height: 0; // 重要：允许flex收缩
 
     .seek-overlay {
       position: absolute;
@@ -436,7 +437,9 @@ input[type="range"]:focus::-ms-fill-upper {
 
     .content {
       display: flex;
+      flex-direction: row; // 水平布局：命令列表 + 屏幕
       height: 100%;
+      min-height: 0; // 重要：允许flex收缩
 
       .commands {
         width: 250px;
@@ -444,6 +447,7 @@ input[type="range"]:focus::-ms-fill-upper {
         border-right: 1px solid var(--el-border-color-x);
         display: flex;
         flex-direction: column;
+        flex-shrink: 0; // 不允许收缩
 
         .commands-header {
           padding: 12px 16px;
@@ -501,8 +505,13 @@ input[type="range"]:focus::-ms-fill-upper {
 
       // 屏幕区域
       .screen-wrapper {
-        flex: 1;
+        flex: 1; // 占用剩余空间
         background: var(--el-main-bg-color);
+        position: relative;
+        overflow: hidden; // 防止内容溢出
+        display: flex;
+        flex-direction: column;
+        min-width: 0; // 重要：允许flex收缩
 
         &.full {
           width: 100%;
@@ -513,6 +522,20 @@ input[type="range"]:focus::-ms-fill-upper {
           height: 100%;
           cursor: pointer;
           background: var(--el-main-bg-color);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          box-sizing: border-box;
+          flex: 1;
+          min-height: 0; // 重要：允许flex子元素收缩
+
+          // 确保guacamole内容不会超出容器
+          > * {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain; // 保持宽高比
+          }
         }
       }
     }
@@ -522,11 +545,11 @@ input[type="range"]:focus::-ms-fill-upper {
   .controls {
     display: flex;
     align-items: center;
-    height: 50px;
+    height: 60px; // 增加高度确保足够空间
     padding: 0 16px;
     background: var(--el-nav-bg-color);
     border-top: 1px solid var(--el-border-color-x);
-    flex-shrink: 0;
+    flex-shrink: 0; // 不允许收缩
 
     .controls-left {
       display: flex;
