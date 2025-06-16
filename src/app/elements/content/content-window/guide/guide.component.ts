@@ -1,9 +1,8 @@
-import {Component, Input, OnInit} from '@angular/core';
-import {ConnectionToken} from '@app/model';
-import {ConnectTokenService, HttpService, I18nService} from '@app/services';
-import {NzNotificationService} from 'ng-zorro-antd/notification';
-import {Command, InfoItem} from './model';
-
+import { ConnectionToken } from '@app/model';
+import { Command, InfoItem } from './model';
+import { Component, Input, OnInit } from '@angular/core';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
+import { ConnectTokenService, HttpService, I18nService } from '@app/services';
 
 @Component({
   standalone: false,
@@ -11,56 +10,64 @@ import {Command, InfoItem} from './model';
   templateUrl: 'guide.component.html',
   styleUrls: ['guide.component.scss']
 })
-
 export class ElementConnectorGuideComponent implements OnInit {
   @Input() assetType: string;
   @Input() canReuse: boolean;
   @Input() token: ConnectionToken;
   @Input() infoItems: Array<InfoItem>;
   @Input() commands: Array<Command>;
+
+  hoverClipTip = '';
   passwordMask = '******';
   passwordShow = '******';
-  hoverClipTip: string = '';
+
   showClient = false;
   reusable = false;
 
-  constructor(private _http: HttpService,
-              private _i18n: I18nService,
-              private _toastr: NzNotificationService,
-              private _connectTokenSvc: ConnectTokenService,
-  ) {
-  }
+  constructor(
+    private _http: HttpService,
+    private _i18n: I18nService,
+    private _toastr: NzNotificationService,
+    private _connectTokenSvc: ConnectTokenService
+  ) {}
 
   ngOnInit() {
     this.hoverClipTip = this._i18n.instant('Click to copy');
+
+    if (this.token && this.token.is_reusable !== undefined) {
+      this.reusable = this.token.is_reusable;
+    }
   }
 
-  setReusable() {
-    this._connectTokenSvc.setReusable(this.token, this.reusable).subscribe(
+  setReusable(newValue: boolean) {
+    this._connectTokenSvc.setReusable(this.token, newValue).subscribe(
       res => {
         this.token = Object.assign(this.token, res);
         const tokenItem = this.infoItems.find(item => item.name === 'date_expired');
+
         tokenItem.value = `${this.token.date_expired}`;
+        this.reusable = newValue;
       },
       error => {
-        this.token.is_reusable = !this.reusable;
+        this.reusable = !newValue;
+        this.token.is_reusable = !newValue;
 
         let msg = '';
+
         if (error.status === 404) {
           msg = this._i18n.instant('Token expired');
         } else {
           msg = error.error.msg || error.error.is_reusable || error.message;
         }
-        this._toastr.error(msg, '', {nzDuration: 2000});
+        this._toastr.error(msg, '', { nzDuration: 2000 });
       }
     );
   }
 
   startClient(cmd) {
-    this._http.getLocalClientUrlAndSetCommand(this.token, cmd.value)
-      .then((res: any) => {
-        window.open(res.url);
-      });
+    this._http.getLocalClientUrlAndSetCommand(this.token, cmd.value).then((res: any) => {
+      window.open(res.url);
+    });
   }
 
   showPassword($event) {
