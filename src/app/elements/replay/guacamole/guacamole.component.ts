@@ -3,6 +3,7 @@ import {
   Input,
   OnChanges,
   OnInit,
+  AfterViewInit,
   SimpleChanges,
   ViewEncapsulation
 } from '@angular/core';
@@ -21,7 +22,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
   styleUrls: ['guacamole.component.scss'],
   encapsulation: ViewEncapsulation.None
 })
-export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
+export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, AfterViewInit {
   isPlaying = false;
   isSeeking = false;
   recording: any;
@@ -63,6 +64,10 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     }
   }
 
+  ngAfterViewInit() {
+    this.applyScaleWithRetry(500);
+  }
+
   initialize() {
     if (!this.replay || !this.replay.src) {
       return alert('Not found replay');
@@ -102,7 +107,9 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       distinctUntilChanged()
     );
     this.winSizeSub = this.winSizeChange$.subscribe(() => {
-      this.recordingDisplay.scale(this.getPropScale());
+      if (this.recordingDisplay && this.screenRef) {
+        this.applyScaleWithRetry(300);
+      }
     });
 
     if (this.isMobile()) {
@@ -112,8 +119,14 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
 
   initRecording() {
     this.recording.connect('');
+
+    this.recording.onload = () => {
+      this.applyScaleWithRetry(200);
+    };
+
     this.recording.onplay = () => {
       this.isPlaying = true;
+      this.applyScaleWithRetry();
     };
 
     this.recording.onseek = millis => {
@@ -129,6 +142,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       if (this.firstLoad) {
         this.recording.play();
         this.firstLoad = false;
+        this.applyScaleWithRetry(300);
       }
     };
 
@@ -142,7 +156,8 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       if (!height) {
         return;
       }
-      this.recordingDisplay.scale(this.getPropScale());
+      // 延迟应用缩放，确保尺寸变化已完成
+      this.applyScaleWithRetry(100);
     };
 
     clearInterval(this.interval);
@@ -156,6 +171,32 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
         this.lastDuration = this.max;
       }
     }, 1000);
+  }
+
+  private applyScaleWithRetry(delay: number = 100, maxRetries: number = 5) {
+    let retryCount = 0;
+
+    const tryApplyScale = () => {
+      if (this.recordingDisplay && this.screenRef) {
+        const width = this.recordingDisplay.getWidth();
+        const height = this.recordingDisplay.getHeight();
+
+        if (width > 0 && height > 0) {
+          const scale = this.getPropScale();
+          this.recordingDisplay.scale(scale);
+          return true;
+        } else if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(tryApplyScale, delay);
+          return false;
+        } else {
+          return false;
+        }
+      }
+      return false;
+    };
+
+    setTimeout(tryApplyScale, delay);
   }
 
   destroy() {
@@ -207,15 +248,25 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
 
   getPropScale() {
     let scale = 1;
-    if (this.recordingDisplay) {
+    if (this.recordingDisplay && this.screenRef) {
       const width = this.recordingDisplay.getWidth();
       const height = this.recordingDisplay.getHeight();
+
       if (!width || !height) {
         return scale;
       }
-      const widthScale = this.screenRef.offsetWidth / width;
-      const heightScale = this.screenRef.offsetHeight / height;
-      scale = Math.min(widthScale, heightScale);
+
+      const containerRect = this.screenRef.getBoundingClientRect();
+      const availableWidth = containerRect.width - 32; // 减去padding
+      const availableHeight = containerRect.height - 32;
+
+      if (availableWidth <= 0 || availableHeight <= 0) {
+        return scale;
+      }
+
+      const widthScale = availableWidth / width;
+      const heightScale = availableHeight / height;
+      scale = Math.min(widthScale, heightScale, 1);
     }
     return scale;
   }
@@ -270,6 +321,8 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     if (!this.recording.isPlaying()) {
       this.recording.play();
       this.isPlaying = true;
+      // 延迟应用缩放，确保播放状态已更新
+      this.applyScaleWithRetry(100);
     }
   }
 
