@@ -35,7 +35,7 @@
             *ngIf="item.name == 'set_reusable' && canReuse"
             class="reusable-button"
           >
-            <nz-switch (ngModelChange)="setReusable()" [(ngModel)]="reusable">
+            <nz-switch (ngModelChange)="setReusable($event)" [(ngModel)]="reusable">
             </nz-switch>
             {{ "Re-use for a long time after opening" | translate }}
           </span>
