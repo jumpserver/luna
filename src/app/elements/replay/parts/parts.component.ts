@@ -1,8 +1,8 @@
-import {Replay} from '@app/model';
-import {HttpService, I18nService, LogService} from '@app/services';
-import {TranslateService} from '@ngx-translate/core';
-import {ChangeDetectorRef, Component, Input, OnInit} from '@angular/core';
-import {ActivatedRoute} from '@angular/router';
+import { Replay } from '@app/model';
+import { HttpService, I18nService, LogService } from '@app/services';
+import { TranslateService } from '@ngx-translate/core';
+import { ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 
 export interface Section extends Replay {
   name: string;
@@ -22,7 +22,7 @@ export interface IFile {
   standalone: false,
   selector: 'elements-replay-parts',
   templateUrl: 'parts.component.html',
-  styleUrls: ['parts.component.scss'],
+  styleUrls: ['parts.component.scss']
 })
 export class ElementsPartsComponent implements OnInit {
   @Input() replay: Replay;
@@ -46,21 +46,16 @@ export class ElementsPartsComponent implements OnInit {
     private route: ActivatedRoute,
     private _translate: TranslateService,
     private cdRef: ChangeDetectorRef
-  ) {
-  }
+  ) {}
 
   async ngOnInit(): Promise<void> {
     try {
-      const replayData = await this._http
-        .getReplayData(this.replay.src)
-        .toPromise();
+      const replayData = await this._http.getReplayData(this.replay.src).toPromise();
 
       if (replayData) {
         this.replayData = replayData;
         this.replayType = replayData.type;
-        this.startTime = this.toSafeLocalDateStr(
-          new Date(Date.parse(replayData.date_start))
-        );
+        this.startTime = this.toSafeLocalDateStr(new Date(Date.parse(replayData.date_start)));
         this.files = replayData.files;
         this.id = replayData.id;
 
@@ -111,21 +106,18 @@ export class ElementsPartsComponent implements OnInit {
     const remainingSeconds = seconds % 60;
 
     const timeUnits = [
-      {value: hours, zhLabel: '小时', enLabel: 'hour'},
-      {value: minutes, zhLabel: '分', enLabel: 'min'},
-      {value: remainingSeconds, zhLabel: '秒', enLabel: 's'},
+      { value: hours, zhLabel: '小时', enLabel: 'hour' },
+      { value: minutes, zhLabel: '分', enLabel: 'min' },
+      { value: remainingSeconds, zhLabel: '秒', enLabel: 's' }
     ];
 
     let result = timeUnits
       .filter(
-        (unit) =>
+        unit =>
           unit.value > 0 ||
-          (unit.value === 0 &&
-            unit === timeUnits[2] &&
-            hours === 0 &&
-            minutes === 0)
+          (unit.value === 0 && unit === timeUnits[2] && hours === 0 && minutes === 0)
       )
-      .map((unit) => `${unit.value} ${isZhCN ? unit.zhLabel : unit.enLabel}`)
+      .map(unit => `${unit.value} ${isZhCN ? unit.zhLabel : unit.enLabel}`)
       .join(' ');
 
     return result;
@@ -146,7 +138,7 @@ export class ElementsPartsComponent implements OnInit {
       if (res) {
         // 3.5 的 TS 版本无法使用 ?.
         // @ts-ignore
-        const data = res.type ? res : (res.resp ? res.resp.data : undefined);
+        const data = res.type ? res : res.resp ? res.resp.data : undefined;
 
         if (data && data.src && res.status !== 'running') {
           section = {
@@ -161,7 +153,7 @@ export class ElementsPartsComponent implements OnInit {
             user: data.user,
             size: this.formatFileSize(item.size),
             name: `Part ${this.folders.length + 1}`,
-            updated: this.formatDuration(item.duration),
+            updated: this.formatDuration(item.duration)
           };
 
           this.folders.push(section);
@@ -177,7 +169,6 @@ export class ElementsPartsComponent implements OnInit {
 
             return false;
           }
-
         } else if (res && res.status === 'running') {
           this.alertShown = true;
           await this.delay(3000);
@@ -240,7 +231,7 @@ export class ElementsPartsComponent implements OnInit {
     switch (folder.type) {
       case 'guacamole': {
         this.videoLoading = true;
-        this.currentVideo = {...folder};
+        this.currentVideo = { ...folder };
 
         this.cdRef.detectChanges();
 
@@ -257,14 +248,14 @@ export class ElementsPartsComponent implements OnInit {
     const userLangZh = document.cookie.indexOf('django_language=zh-hans');
 
     if (userLangZh) {
-      return 'zh-hans'
+      return 'zh-hans';
     } else {
       return 'en';
     }
   }
 
   toSafeLocalDateStr(d) {
-    const date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
+    const date_s = d.toLocaleString(this.getUserLang(), { hour12: false });
     return date_s.split('/').join('-');
   }
 }
