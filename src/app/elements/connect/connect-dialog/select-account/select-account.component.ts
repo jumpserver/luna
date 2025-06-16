@@ -41,7 +41,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   localAuthItems: AuthInfo[];
   filteredOptions: AuthInfo[];
   accountManualAuthInit = false;
-  usernamePlaceholder: string = 'Username';
+  usernamePlaceholder: string = '';
   public accountSelected: Account; // 内部状态
   public groupedAccounts: AccountGroup[];
   public accountCtl: FormControl = new FormControl();
@@ -54,7 +54,9 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     private _appSvc: AppService,
     private _i18n: I18nService,
     private _cdRef: ChangeDetectorRef
-  ) {}
+  ) {
+    this.usernamePlaceholder = this._i18n.instant('Username');
+  }
 
   get noSecretAccounts() {
     return this.accounts
