@@ -217,7 +217,7 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
   }
 
   private getMinuteLabel(minute: number) {
-    const minuteLabel = minute > 1 ? this._i18n.instant('Minutes') : this._i18n.instant('Minute');
+    const minuteLabel = this._i18n.instant('Minute')
     return `${minute} ${minuteLabel}`;
   }
 

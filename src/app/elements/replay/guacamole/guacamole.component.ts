@@ -1,11 +1,18 @@
-import {Component, Input, OnChanges, OnInit, SimpleChanges, ViewEncapsulation} from '@angular/core';
+import {
+  Component,
+  Input,
+  OnChanges,
+  OnInit,
+  SimpleChanges,
+  ViewEncapsulation
+} from '@angular/core';
 import Guacamole from 'guacamole-common-js';
-import {Command, Replay} from '@app/model';
-import {HttpService} from '@app/services';
-import {formatTime} from '@app/utils/common';
-import {TranslateService} from '@ngx-translate/core';
-import {fromEvent, Observable, Subscription} from 'rxjs';
-import {debounceTime, distinctUntilChanged} from 'rxjs/operators';
+import { Command, Replay } from '@app/model';
+import { HttpService } from '@app/services';
+import { formatTime } from '@app/utils/common';
+import { TranslateService } from '@ngx-translate/core';
+import { fromEvent, Observable, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   standalone: false,
@@ -16,6 +23,7 @@ import {debounceTime, distinctUntilChanged} from 'rxjs/operators';
 })
 export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
   isPlaying = false;
+  isSeeking = false;
   recording: any;
   playerRef: any;
   displayRef: any;
@@ -39,8 +47,10 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
   interval: number;
   initializedCommand: boolean = false;
 
-  constructor(private _http: HttpService, private _translate: TranslateService) {
-  }
+  constructor(
+    private _http: HttpService,
+    private _translate: TranslateService
+  ) {}
 
   ngOnInit() {
     this.initialize();
@@ -59,7 +69,6 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     }
 
     this.commands = [];
-
 
     const date = new Date(Date.parse(this.replay.date_start));
     this.startTime = this.toSafeLocalDateStr(date);
@@ -90,12 +99,11 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     });
     this.winSizeChange$ = fromEvent(window, 'resize').pipe(
       debounceTime(300),
-      distinctUntilChanged(),
+      distinctUntilChanged()
     );
-    this.winSizeSub = this.winSizeChange$
-      .subscribe(() => {
-        this.recordingDisplay.scale(this.getPropScale());
-      });
+    this.winSizeSub = this.winSizeChange$.subscribe(() => {
+      this.recordingDisplay.scale(this.getPropScale());
+    });
 
     if (this.isMobile()) {
       this.initTouchEvents();
@@ -108,12 +116,12 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       this.isPlaying = true;
     };
 
-    this.recording.onseek = (millis) => {
+    this.recording.onseek = millis => {
       this.position = formatTime(millis);
       this.percent = millis;
     };
 
-    this.recording.onprogress = (millis) => {
+    this.recording.onprogress = millis => {
       if (millis >= this.max) {
         this.duration = formatTime(millis);
         this.max = millis;
@@ -182,6 +190,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     this.displayRef = null;
     this.screenRef = null;
     this.isPlaying = false;
+    this.isSeeking = false;
     this.max = 100;
     this.percent = 0;
     this.duration = '00:00';
@@ -226,7 +235,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
   }
 
   toSafeLocalDateStr(d) {
-    const date_s = d.toLocaleString(this.getUserLang(), {hour12: false});
+    const date_s = d.toLocaleString(this.getUserLang(), { hour12: false });
     return date_s.split('/').join('-');
   }
 
@@ -237,20 +246,22 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
 
   runFrom() {
     this.setDisableStatusSiderElement(true);
+    this.isSeeking = true;
 
     this.recording.seek(this.percent, () => {
-        this.playerRef.className = '';
-        this.setDisableStatusSiderElement(false);
-      }
-    );
+      this.playerRef.classList.remove('seeking');
+      this.isSeeking = false;
+      this.setDisableStatusSiderElement(false);
+    });
 
     // Seek is in progress
-    this.playerRef.className = 'seeking';
+    this.playerRef.classList.add('seeking');
   }
 
   cancelSeek(e) {
     this.recording.play();
-    this.playerRef.className = '';
+    this.playerRef.classList.remove('seeking');
+    this.isSeeking = false;
     e.stopPropagation();
     this.setDisableStatusSiderElement(false);
   }
@@ -282,21 +293,20 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       return;
     }
 
-    this._http.getCommandsData(this.replay.id, page)
-      .subscribe(
-        data => {
-          const results = data.results;
+    this._http.getCommandsData(this.replay.id, page).subscribe(
+      data => {
+        const results = data.results;
 
-          results.forEach((element: any) => {
-            element.atime = formatTime(element.timestamp * 1000 - this.startTimeStamp);
-          });
+        results.forEach((element: any) => {
+          element.atime = formatTime(element.timestamp * 1000 - this.startTimeStamp);
+        });
 
-          this.commands = this.commands.concat(results);
-        },
-        err => {
-          alert('没找到命令记录');
-        }
-      );
+        this.commands = this.commands.concat(results);
+      },
+      err => {
+        alert('没找到命令记录');
+      }
+    );
   }
 
   onScroll() {
@@ -307,6 +317,10 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     const time = (item.timestamp - 10) * 1000 - this.startTimeStamp;
     this.percent = time <= 0 ? 0 : time;
     this.runFrom();
+  }
+
+  trackByCommand(index: number, item: Command): any {
+    return item.timestamp || index;
   }
 
   private isMobile(): boolean {

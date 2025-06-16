@@ -1,77 +1,72 @@
-<div class="wrapper">
-  <div style='display: flex; flex-direction: column; justify-content: center; width: 100%; height: 100%'>
-    <nz-card class="control-part">
-      <span *ngIf="replay?.user" id="user" style="padding-left: 20px">
-          {{ "user" | translate }} : {{ currentVideo?.user }}
-        </span>
-      <span *ngIf="replay?.asset" id="asset" style="padding-left: 20px">
-          {{ "asset" | translate }} : {{ currentVideo?.asset }}
-        </span>
-      <span
-        *ngIf="currentVideo?.system_user"
-        id="system_user"
-        style="padding-left: 20px"
-      >
-          {{ "system user" | translate }} : {{ currentVideo?.system_user }}
-        </span>
-      <span
-        *ngIf="currentVideo?.date_start"
-        id="date_start"
-        style="padding-left: 20px"
-      >
-          {{ "start time" | translate }} : {{ startTime }}
-        </span>
-      <span
-        *ngIf="currentVideo?.download_url"
-        id="download"
-        style="padding-left: 30px"
-      >
-          <a [href]="currentVideo?.download_url" type="button">
-            {{ "download" | translate }}
-          </a>
-        </span>
-    </nz-card>
-    <div class="video-part">
-      <div style='display: flex; align-items: center; justify-content: center; flex-grow: 2'>
-        <nz-card class="video-main">
-          <div class="loading-spinner">
-            <nz-spin *ngIf="videoLoading" nzSize="large"></nz-spin>
-          </div>
-          <elements-replay-guacamole *ngIf="currentVideo && currentVideo.src" [replay]="currentVideo"
-                                     class='guacamole-video'></elements-replay-guacamole>
-        </nz-card>
+<div class="replay-container">
+  <!-- 信息栏 -->
+  <div class="info-header" *ngIf="currentVideo">
+    <div class="info-item" *ngIf="replay?.user">
+      <span class="label">{{ 'user' | translate }}:</span>
+      <span class="value">{{ currentVideo?.user }}</span>
+    </div>
+    <div class="info-item" *ngIf="replay?.asset">
+      <span class="label">{{ 'asset' | translate }}:</span>
+      <span class="value">{{ currentVideo?.asset }}</span>
+    </div>
+    <div class="info-item" *ngIf="currentVideo?.system_user">
+      <span class="label">{{ 'system user' | translate }}:</span>
+      <span class="value">{{ currentVideo?.system_user }}</span>
+    </div>
+    <div class="info-item" *ngIf="currentVideo?.date_start">
+      <span class="label">{{ 'start time' | translate }}:</span>
+      <span class="value">{{ startTime }}</span>
+    </div>
+    <div class="info-actions">
+      <a *ngIf="currentVideo?.download_url" [href]="currentVideo?.download_url" class="download-link">
+        {{ 'Download' | translate }}
+      </a>
+    </div>
+  </div>
+
+  <!-- 主体内容 -->
+  <div class="main-content">
+    <!-- 视频播放区 -->
+    <div class="video-area">
+      <div class="loading-overlay" *ngIf="videoLoading">
+        <nz-spin nzSize="large"></nz-spin>
       </div>
-      <nz-card class="video-list">
-        <div *ngIf='alertShown' class="loading-spinner">
-          <nz-spin nzSize="large"></nz-spin>
+      <elements-replay-guacamole
+        *ngIf="currentVideo && currentVideo.src"
+        [replay]="currentVideo"
+        class="video-player">
+      </elements-replay-guacamole>
+    </div>
+
+    <!-- 播放列表 -->
+    <div class="playlist-area">
+      <div class="playlist-header">
+        <h3>{{ 'Play List' | translate }}</h3>
+        <span class="count">({{ folders?.length || 0 }})</span>
+      </div>
+      <div class="playlist-content">
+        <div class="loading-overlay" *ngIf="alertShown">
+          <nz-spin nzSize="default"></nz-spin>
         </div>
-        <nz-list *ngIf='!alertShown' [nzHeader]=' _i18n.instant("Play List")'>
-          <nz-list-item
-            (click)="selectPart(folder)"
-            *ngFor="let folder of folders"
-            [ngClass]="{ 'selected': currentVideo?.name === folder?.name }"
-            [nzTooltipTitle]="folder.name"
-            nz-tooltip
-            nzTooltipPlacement="top"
-          >
-<!--             <span nz-list-item-actions> -->
-              <i nz-icon nzTheme="outline" nzType="play-circle"></i>
-            <!--             </span> -->
-            <!--             <nz-list-item-meta -->
-            <!--               [ngStyle]="{ 'flex-grow': 1 }" -->
-            <!--             > -->
-            <!--               <nz-list-item-meta-title style='display: flex; align-items: center; font-size: 16px; flex: 1'> -->
-            <!--                 {{ folder.name }} -->
-            <!--               </nz-list-item-meta-title> -->
-            <!--               <nz-list-item-meta-description -->
-            <!--                 style='display: flex; flex: 1; justify-content: space-between; align-items: center'> -->
-            <!--                 <span>{{ folder.updated }}</span> -->
-            <!--                 <span>{{ folder.size }}</span> -->
-            <!--               </nz-list-item-meta-description> -->
-            <!--             </nz-list-item-meta> -->
-          </nz-list-item>
-        </nz-list>
-      </nz-card>
+        <div class="playlist-items" *ngIf="!alertShown">
+          <div class="playlist-item"
+               *ngFor="let folder of folders"
+               [class.active]="currentVideo?.name === folder?.name"
+               (click)="selectPart(folder)"
+               [title]="folder.name">
+            <div class="item-icon">
+              <i nz-icon [nzType]="currentVideo?.name === folder?.name ? 'pause-circle' : 'play-circle'"></i>
+            </div>
+            <div class="item-info">
+              <div class="item-name">{{ folder.name }}</div>
+              <div class="item-meta" *ngIf="folder.updated || folder.size">
+                <span *ngIf="folder.updated">{{ folder.updated }}</span>
+                <span *ngIf="folder.size" class="size">{{ folder.size }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
