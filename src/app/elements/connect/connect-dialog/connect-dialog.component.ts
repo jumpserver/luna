@@ -84,8 +84,13 @@ export class ElementConnectDialogComponent implements OnInit {
   }
 
   getProtocols() {
-    console.log('Asset: ', this.asset);
-    return this.asset.permed_protocols.filter(item => item.public);
+    return this.asset.permed_protocols
+      .filter(item => item.public)
+      .sort((a, b) => {
+        if (a.name === 'ssh' && b.name !== 'ssh') return -1;
+        if (a.name !== 'ssh' && b.name === 'ssh') return 1;
+        return 0;
+      });
   }
 
   setDefaults() {
