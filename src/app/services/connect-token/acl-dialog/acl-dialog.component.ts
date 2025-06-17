@@ -402,7 +402,6 @@ export class ElementACLDialogComponent implements OnInit {
             text: 'Copy link',
             type: 'primary',
             callback: () => {
-              console.log(this.connectionToken?.from_ticket_info?.ticket_detail_page_url);
               vm.onCopySuccess(this.connectionToken?.from_ticket_info?.ticket_detail_page_url)
             }
           }
