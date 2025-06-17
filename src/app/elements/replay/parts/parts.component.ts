@@ -159,7 +159,6 @@ export class ElementsPartsComponent implements OnInit {
           this.folders.push(section);
 
           if (isFirstPush && section.src) {
-            console.log('设置第一个播放项目:', section.name, section.src);
             this.currentVideo = section;
             this.videoLoading = true;
             this.cdRef.detectChanges();
@@ -167,7 +166,6 @@ export class ElementsPartsComponent implements OnInit {
             setTimeout(() => {
               this.videoLoading = false;
               this.cdRef.detectChanges();
-              console.log('第一个播放项目加载完成，应该自动播放');
             }, 200);
 
             return false;
@@ -232,30 +230,21 @@ export class ElementsPartsComponent implements OnInit {
    */
   selectPart(folder: Section) {
     if (!folder || !folder.src) {
-      console.warn('无效的播放项目:', folder);
       return;
     }
 
-    console.log('选择播放项目:', folder.name, folder.src);
-
-    // 清除当前视频以确保重新初始化
     this.currentVideo = null;
     this.videoLoading = true;
 
-    // 强制变更检测
     this.cdRef.detectChanges();
 
-    // 设置新视频，确保组件能够正确重新初始化并自动播放
     setTimeout(() => {
       this.currentVideo = { ...folder };
       this.cdRef.detectChanges();
-      console.log('设置新的播放项目:', this.currentVideo.name);
 
-      // 关闭加载状态
       setTimeout(() => {
         this.videoLoading = false;
         this.cdRef.detectChanges();
-        console.log('播放项目切换完成');
       }, 100);
     }, 50);
   }

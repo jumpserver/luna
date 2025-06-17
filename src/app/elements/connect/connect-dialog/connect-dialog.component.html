@@ -5,8 +5,8 @@
     <nz-alert [nzMessage]="'No protocol available' | translate" nzType="error"></nz-alert>
   </div>
   <div *ngIf="protocols && protocols.length > 0">
-    <nz-tabset class="protocol-tab">
-      <nz-tab (nzSelect)="onProtocolChange(p)" *ngFor="let p of protocols" [nzTitle]="titleTpl">
+    <nz-tabset class="protocol-tab" [(nzSelectedIndex)]="selectedTabIndex">
+      <nz-tab (nzSelect)="onProtocolChange(p)" *ngFor="let p of protocols; let i = index" [nzTitle]="titleTpl">
         <ng-template #titleTpl>
           {{ p.name | uppercase }}
         </ng-template>

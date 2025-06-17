@@ -1,3 +1,4 @@
+import { writeText } from 'clipboard-polyfill';
 import { I18nService } from '@app/services/i18n';
 import { HttpService } from '@app/services/http';
 import { FaceService } from '@app/services/face';
@@ -89,6 +90,7 @@ export class ElementACLDialogComponent implements OnInit {
   async onCopySuccess(evt) {
     const msg = await this._i18n.t('Copied');
     this._toastr.success(msg, '');
+    writeText(evt);
   }
 
   onCancelReview() {
@@ -399,8 +401,9 @@ export class ElementACLDialogComponent implements OnInit {
           {
             text: 'Copy link',
             type: 'primary',
-            callback: () =>
+            callback: () => {
               vm.onCopySuccess(this.connectionToken?.from_ticket_info?.ticket_detail_page_url)
+            }
           }
         ]
       },
