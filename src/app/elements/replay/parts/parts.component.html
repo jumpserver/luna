@@ -13,6 +13,10 @@
       <span class="label">{{ 'system user' | translate }}:</span>
       <span class="value">{{ currentVideo?.system_user }}</span>
     </div>
+    <div class="info-item" *ngIf="replay.account">
+      <span class="label">{{ "account" | translate }}:</span>
+      <span class="value">{{ replay.account }}</span>
+    </div>
     <div class="info-item" *ngIf="currentVideo?.date_start">
       <span class="label">{{ 'start time' | translate }}:</span>
       <span class="value">{{ startTime }}</span>
@@ -55,7 +59,7 @@
                (click)="selectPart(folder)"
                [title]="folder.name">
             <div class="item-icon">
-              <i nz-icon [nzType]="currentVideo?.name === folder?.name ? 'pause-circle' : 'play-circle'"></i>
+              <nz-icon nzType="play-circle" nzTheme="outline" />
             </div>
             <div class="item-info">
               <div class="item-name">{{ folder.name }}</div>
