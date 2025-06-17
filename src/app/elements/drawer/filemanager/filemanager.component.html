@@ -2,8 +2,8 @@
   <div *ngIf="showReconnectButton" class="reconnect-container">
     <div class="reconnect-content">
       <i nz-icon nzType="disconnect" class="disconnect-icon"></i>
-      <div class="error-title">文件管理器连接失败</div>
-      <div class="error-description">Token 验证失败，请重新连接</div>
+      <div class="error-title">{{ 'FileManagerConnectionFailed' | translate }}</div>
+      <div class="error-description">{{ 'TokenVerificationFailedLeaseReconnect' | translate }}</div>
     </div>
     <button
       nz-button
