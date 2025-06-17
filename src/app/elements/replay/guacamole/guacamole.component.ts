@@ -60,7 +60,10 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['replay'] && changes['replay'].currentValue) {
       this.destroy();
-      this.initialize();
+
+      setTimeout(() => {
+        this.initialize();
+      }, 50);
     }
   }
 
@@ -78,42 +81,52 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
     const date = new Date(Date.parse(this.replay.date_start));
     this.startTime = this.toSafeLocalDateStr(date);
     this.startTimeStamp = Date.parse(this.replay.date_start);
+
     this.playerRef = document.getElementById('player');
     this.displayRef = document.getElementById('display');
     this.screenRef = document.getElementById('screen');
 
-    const tunnel = new Guacamole.StaticHTTPTunnel(this.replay.src);
-    this.recording = new Guacamole.SessionRecording(tunnel);
-    this.recordingDisplay = this.recording.getDisplay();
-    const recordingElement = this.recordingDisplay.getElement();
-
-    recordingElement.style.margin = '0 auto';
-
-    this.screenRef.appendChild(recordingElement);
-
-    this.initRecording();
-
-    if (!this.initializedCommand) {
-      this.getCommands(this.page);
-
-      this.initializedCommand = true;
+    if (!this.screenRef) {
+      return;
     }
 
-    this._translate.get('LeftInfo').subscribe((res: string) => {
-      this.leftInfo = res;
-    });
-    this.winSizeChange$ = fromEvent(window, 'resize').pipe(
-      debounceTime(300),
-      distinctUntilChanged()
-    );
-    this.winSizeSub = this.winSizeChange$.subscribe(() => {
-      if (this.recordingDisplay && this.screenRef) {
-        this.applyScaleWithRetry(300);
-      }
-    });
+    try {
+      const tunnel = new Guacamole.StaticHTTPTunnel(this.replay.src);
+      this.recording = new Guacamole.SessionRecording(tunnel);
+      this.recordingDisplay = this.recording.getDisplay();
+      const recordingElement = this.recordingDisplay.getElement();
 
-    if (this.isMobile()) {
-      this.initTouchEvents();
+      recordingElement.style.margin = '0 auto';
+
+      this.screenRef.appendChild(recordingElement);
+
+      this.initRecording();
+
+      if (!this.initializedCommand) {
+        this.getCommands(this.page);
+        this.initializedCommand = true;
+      }
+
+      this._translate.get('LeftInfo').subscribe((res: string) => {
+        this.leftInfo = res;
+      });
+
+      this.winSizeChange$ = fromEvent(window, 'resize').pipe(
+        debounceTime(300),
+        distinctUntilChanged()
+      );
+      this.winSizeSub = this.winSizeChange$.subscribe(() => {
+        if (this.recordingDisplay && this.screenRef) {
+          this.applyScaleWithRetry(300);
+        }
+      });
+
+      if (this.isMobile()) {
+        this.initTouchEvents();
+      }
+
+    } catch (error) {
+      throw new Error(error);
     }
   }
 
@@ -122,11 +135,12 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
 
     this.recording.onload = () => {
       this.applyScaleWithRetry(200);
+      this.recording.play();
     };
 
     this.recording.onplay = () => {
       this.isPlaying = true;
-      this.applyScaleWithRetry();
+      this.applyScaleWithRetry(100);
     };
 
     this.recording.onseek = millis => {
@@ -156,7 +170,6 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
       if (!height) {
         return;
       }
-      // 延迟应用缩放，确保尺寸变化已完成
       this.applyScaleWithRetry(100);
     };
 
@@ -244,6 +257,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
     this.firstLoad = true;
     this.rangeHideClass = 'hideCursor';
     this.lastDuration = 0;
+    this.initializedCommand = false;
   }
 
   getPropScale() {

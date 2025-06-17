@@ -4,7 +4,6 @@
   height: 100vh;
   background: var(--el-main-bg-color);
 
-  // 信息头部
   .info-header {
     display: flex;
     align-items: center;
@@ -45,13 +44,11 @@
     }
   }
 
-  // 主内容区
   .main-content {
     display: flex;
     flex: 1;
     min-height: 0;
 
-    // 视频区域
     .video-area {
       flex: 1;
       position: relative;
@@ -71,7 +68,6 @@
       }
     }
 
-    // 播放列表区域
     .playlist-area {
       width: 300px;
       background: var(--el-asset-tree-bg-color);
@@ -104,6 +100,7 @@
         flex: 1;
         position: relative;
         overflow: hidden;
+        background-color: var(--el-asset-tree-bg-color);
 
         .loading-overlay {
           position: absolute;
@@ -186,7 +183,6 @@
     }
   }
 
-  // 响应式
   @media (max-width: 768px) {
     .info-header {
       flex-wrap: wrap;
@@ -209,5 +205,3 @@
     }
   }
 }
-
-
