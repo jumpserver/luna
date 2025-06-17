@@ -26,6 +26,7 @@ export class ElementConnectDialogComponent implements OnInit {
 
   public accountSelected: Account = null;
   public preConnectData: ConnectData = null;
+  public selectedTabIndex: number = 0;
 
   public onlineNum: number = null;
   public autoLogin: boolean = false;
@@ -133,10 +134,25 @@ export class ElementConnectDialogComponent implements OnInit {
       }
     }
     this.viewAssetOnlineSessionInfo = this._settingSvc.globalSetting.VIEW_ASSET_ONLINE_SESSION_INFO;
+    this.selectedTabIndex = this.protocols.findIndex(p => p.name === this.protocol.name);
+
+    if (this.selectedTabIndex === -1) {
+      this.selectedTabIndex = 0;
+      this.protocol = this.protocols[0];
+    }
   }
 
   onProtocolChange(protocol) {
     this.protocol = protocol;
+    this.selectedTabIndex = this.protocols.findIndex(p => p.name === protocol.name);
+
+    const connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
+
+    if (connectMethods.length > 0) {
+      this.connectMethod = connectMethods[0];
+    }
+
+    this.validate();
     this.getOnlineNum();
   }
 
