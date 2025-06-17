@@ -5,6 +5,7 @@ import {
   IframeCommunicationService,
   DrawerStateService
 } from '@app/services';
+import { Subscription } from 'rxjs';
 import {
   Component,
   ElementRef,
@@ -33,6 +34,7 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   private startY = 0;
   private startTop = 0;
   private containerElement: HTMLElement;
+  private iframeMessageSubscription: Subscription;
 
   constructor(
     public viewSrv: ViewService,
@@ -40,7 +42,12 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     private el: ElementRef,
     private _drawerStateService: DrawerStateService,
     private _iframeSvc: IframeCommunicationService
-  ) {}
+  ) {
+    this.iframeMessageSubscription = this._iframeSvc.message$.subscribe(message => {
+      this.handleIframeMessage(message);
+    });
+
+  }
 
   ngAfterViewInit() {
     this.containerElement = this.el.nativeElement.querySelector('.chat-container');
@@ -118,7 +125,15 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
       if (event.data === 'close-chat-panel') {
         this.chatAIShown = false;
         this.showBtn = !this.showBtn;
-        console.log('Received message from iframe:', event.data);
+      }
+      const data = event.data;
+      switch (data.name) {
+        case 'INSERT_TERMINAL_CODE':
+          this.currentView.iframeElement.postMessage({
+            name: 'CMD',
+            data: data.data
+          });
+          break;
       }
     });
 
@@ -129,26 +144,50 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+  private handleIframeMessage(message: any): void {
+    const messageHandlers = {
+      TERMINAL_CONTENT_RESPONSE: this.handleTerminalContentResponse.bind(this)
+    };
+
+    const handler = messageHandlers[message.name];
+    if (handler) {
+      handler(message.data);
+    }
+  }
+
+  private handleTerminalContentResponse(data: any) {
+    this.postCurrentTerminalContextToChatAI();
+  }
+
   ngOnDestroy() {
     // this.element.remove();
     this.viewSrv.currentView$.unsubscribe();
+    this.iframeMessageSubscription.unsubscribe();
   }
 
   showChatAI() {
     // if (this.isDragging) {
     //   return;
     // }
+    const data = this.currentView.terminalContentData;
+    if (data && data.content) {
+      this.postCurrentTerminalContextToChatAI();
+    }
     this.iframeRef.nativeElement.contentWindow.postMessage('show-chat-panel');
     this.chatAIShown = true;
     this.showBtn = false;
+  }
+
+  postCurrentTerminalContextToChatAI() {
     const data = this.currentView.terminalContentData;
-    if (!data || !data.content) {
-      console.log('No terminal content data available to send to chat AI.');
-      return;
+    const content = {
+      viewId: this.currentView.id,
+      viewName: this.currentView.name,
+      ...data,
     }
     this.iframeRef.nativeElement.contentWindow.postMessage({
       name: 'current_terminal_content',
-      data
+      data: content
     });
   }
 
