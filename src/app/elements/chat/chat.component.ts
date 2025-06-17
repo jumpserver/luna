@@ -28,7 +28,6 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   iframeURL: string;
   currentView: View;
   chatAIShown = false;
-  chatAIInited = false;
   isDragging = false;
   showSettingDrawer = false;
   private startY = 0;
@@ -139,11 +138,7 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     // if (this.isDragging) {
     //   return;
     // }
-    if (!this.chatAIInited) {
-      this.chatAIInited = true;
-    } else {
-      this.iframeRef.nativeElement.contentWindow.postMessage('show-chat-panel');
-    }
+    this.iframeRef.nativeElement.contentWindow.postMessage('show-chat-panel');
     this.chatAIShown = true;
     this.showBtn = false;
     const data = this.currentView.terminalContentData;
