@@ -1,26 +1,29 @@
-<div>
+<div class="acl-dialog">
   <h3 nz-typography nzTitle>{{ content.title | translate }}</h3>
 
   <div class="nz-modal-content">
     <div [class.error-message]="content.isError">
-      {{ content.message | translate }}
+      <nz-alert nzType="info" class="content-message" [nzDescription]="alertContent">
+        <ng-template #alertContent>
+          <div>{{ content.message | translate }}</div>
 
-      <!-- Custom content for no_face_feature -->
-      <ng-container *ngIf="content.customContent?.type === 'link'">
-        <a [href]="content.customContent.link">{{ content.customContent.linkText | translate }}</a>
-      </ng-container>
+          <ng-container *ngIf="content.customContent?.type === 'link'">
+            <br>
+            <a [href]="content.customContent.link">{{ content.customContent.linkText | translate }}</a>
+          </ng-container>
 
-      <!-- Custom content for ticket_review_pending -->
-      <ng-container *ngIf="content.customContent?.type === 'ticket'">
-        <br><br>
-        {{ 'Assignees' | translate }}: <b>{{ content.customContent.assignees }}</b>
-        <br><br>
-        {{ 'Do not close this page' | translate }}
-        <br><br>
-        <div class="loading-bar">
-          <div class="loading-bar-progress"></div>
-        </div>
-      </ng-container>
+          <ng-container *ngIf="content.customContent?.type === 'ticket'">
+            <br><br>
+            {{ 'Assignees' | translate }}: <b>{{ content.customContent.assignees }}</b>
+            <br><br>
+            {{ 'Do not close this page' | translate }}
+            <br><br>
+            <div class="loading-bar">
+              <div class="loading-bar-progress"></div>
+            </div>
+          </ng-container>
+        </ng-template>
+      </nz-alert>
     </div>
   </div>
 
