@@ -106,6 +106,8 @@ export class ElementACLDialogComponent implements OnInit {
           '/facelive/capture?token=' + connToken.face_token
         );
         this.code = 'face_verify_capture';
+        this.content = this.getDialogContent(this.code);
+
 
         const timer = setInterval(() => {
           this._http.getFaceVerifyState(connToken.face_token).subscribe(async data => {
@@ -160,6 +162,7 @@ export class ElementACLDialogComponent implements OnInit {
           '/facelive/capture?token=' + connToken.face_token
         );
         this.code = 'face_verify_capture';
+        this.content = this.getDialogContent(this.code);
 
         const timer = setInterval(() => {
           this._http.getFaceVerifyState(connToken.face_token).subscribe(async data => {
