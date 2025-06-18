@@ -29,9 +29,7 @@
     [nzSize]="settingLayoutSize.rightWidth"
   >
     <div>
-      <elements-content
-        (toggleMenu)="onToggleMobileLayout()"
-      ></elements-content>
+      <elements-content (toggleMenu)="onToggleMobileLayout()"></elements-content>
       <div [hidden]="showIframeHider === false" class="hack-iframe-hider"></div>
     </div>
   </nz-splitter-panel>

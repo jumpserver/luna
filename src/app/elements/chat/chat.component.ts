@@ -46,7 +46,6 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     this.iframeMessageSubscription = this._iframeSvc.message$.subscribe(message => {
       this.handleIframeMessage(message);
     });
-
   }
 
   ngAfterViewInit() {
@@ -56,7 +55,8 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   get isShowSetting() {
     const connectMethods = ['koko', 'lion', 'tinker', 'panda'];
     return (
-      this.currentView.hasOwnProperty('connectMethod') && this.currentView.connected &&
+      this.currentView.hasOwnProperty('connectMethod') &&
+      this.currentView.connected &&
       connectMethods.includes(this.currentView.connectMethod.component)
     );
   }
@@ -183,8 +183,8 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     const content = {
       viewId: this.currentView.id,
       viewName: this.currentView.name,
-      ...data,
-    }
+      ...data
+    };
     this.iframeRef.nativeElement.contentWindow.postMessage({
       name: 'current_terminal_content',
       data: content
