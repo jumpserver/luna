@@ -170,11 +170,10 @@
       <nz-form-control>
         <nz-select
           #nzSel
+          [(ngModel)]="currentTheme"
           [ngModelOptions]="{ standalone: true }"
-          [(ngModel)]="setting.command_line.terminal_theme_name"
           (ngModelChange)="onThemeChange($event)"
           (keydown)="onThemePreview($event)"
-          (nzOpenChange)="onThemeOpenChange($event)"
           [nzShowSearch]="true"
         >
           @for (theme of terminalThemeMap; track theme.value) {

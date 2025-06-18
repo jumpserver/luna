@@ -40,8 +40,6 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
   currentTheme = '';
   terminalThemeMap: terminalThemeMap[] = [];
   messageSubscription: Subscription;
-  private isSelectOpen = false;
-  highlightedValue = '';
 
   constructor(
     @Inject(NZ_MODAL_DATA) public data: any,
@@ -69,6 +67,7 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
     this.setting = this.settingSrv.setting;
     this.getRdpClientConfig();
     this.globalSetting = this.settingSrv.globalSetting;
+    this.currentTheme = this.setting.command_line.terminal_theme_name;
   }
 
   ngOnDestroy() {
@@ -82,19 +81,6 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
       { label: 'Default', value: 'Default' },
       ...Object.keys(xtermTheme).map(item => ({ label: item, value: item }))
     ];
-    this._http.getTerminalPreference().subscribe({
-      next: res => {
-        if (res && res.basic && res.basic.terminal_theme_name) {
-          this.setting.command_line.terminal_theme_name = res.basic.terminal_theme_name;
-        } else {
-          this.setting.command_line.terminal_theme_name = 'Default';
-        }
-      },
-      error: error => {
-        console.error('Failed to get terminal preference:', error);
-        this.setting.command_line.terminal_theme_name = 'Default';
-      }
-    });
   }
 
   async getSettingOptions() {
@@ -142,25 +128,20 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
   }
 
   onThemeChange(theme: string) {
+    this.currentTheme = theme;
+    this.setting.command_line.terminal_theme_name = theme;
     this.changeTheme(theme);
     this._http.setTerminalPreference({ basic: { terminal_theme_name: theme } }).subscribe({
       next: _res => {
-        this._message.success(this._i18n.instant('主题同步成功'));
+        console.log('Theme saved successfully:', theme);
       },
       error: error => {
         console.error('Failed to set theme preference:', error);
-        this._message.error(this._i18n.instant('主题同步失败'));
       }
     });
   }
 
   changeTheme(theme: string) {
     this._iframeSvc.sendMessage({ name: 'TERMINAL_THEME_CHANGE', theme });
-  }
-
-  onThemeOpenChange(open: boolean) {
-    if (!open) {
-      this.changeTheme(this.setting.command_line.terminal_theme_name);
-    }
   }
 }

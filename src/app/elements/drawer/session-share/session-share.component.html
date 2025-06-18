@@ -106,7 +106,8 @@
           <nz-form-control>
             <nz-select formControlName="expired_time">
               @for (option of shareExpiredOptions; track option.value) {
-                <nz-option [nzValue]="option.value" [nzLabel]="option.label"></nz-option>
+                <nz-option [nzValue]="option.value" [nzLabel]="`${option.value} ${option.labelKey | translate}`">
+                </nz-option>
               }
             </nz-select>
           </nz-form-control>
@@ -117,7 +118,7 @@
           <nz-form-control>
             <nz-select formControlName="action_permission">
               @for (permission of shareUserPermissions; track permission.value) {
-                <nz-option [nzValue]="permission.value" [nzLabel]="permission.label"></nz-option>
+                <nz-option [nzValue]="permission.value" [nzLabel]="permission.labelKey | translate"></nz-option>
               }
             </nz-select>
           </nz-form-control>
