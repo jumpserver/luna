@@ -1,0 +1,209 @@
+.shortcut-keys-container {
+  background-color: var(--el-drawer-bg-color);
+  min-height: 100%;
+
+  .ant-divider {
+    margin: 0 0 12px 0;
+    border-top-color: var(--el-divider-border-color);
+
+    ::ng-deep .ant-divider-inner-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--el-text-color-light);
+    }
+  }
+
+  .shortcut-keys-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+
+    .shortcut-key-card {
+      background-color: var(--el-drawer-collapse-bg-color);
+      border: 1px solid var(--el-border-color-x);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover:not(.disabled) {
+        background-color: var(--el-dropdown-hover-bg-color);
+        border-color: var(--el-form-hover-border-color);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      &.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+
+        .shortcut-key-content {
+          .shortcut-key-icon {
+            background-color: var(--el-disabled-bg-color);
+
+            nz-icon {
+              color: var(--el-disabled-text-color);
+            }
+          }
+
+          .shortcut-key-info {
+            .shortcut-key-label {
+              color: var(--el-disabled-text-color);
+            }
+
+            .shortcut-key-combination {
+              .key-tag {
+                background-color: var(--el-disabled-bg-color);
+                border-color: var(--el-disabled-border-color);
+                color: var(--el-disabled-text-color);
+              }
+            }
+          }
+        }
+      }
+
+      ::ng-deep .ant-card-body {
+        padding: 12px;
+      }
+
+      .shortcut-key-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .shortcut-key-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          background-color: var(--el-segmented-bg-color);
+          border-radius: 6px;
+          flex-shrink: 0;
+
+          nz-icon {
+            font-size: 18px;
+            color: var(--el-icon-color);
+          }
+        }
+
+        .shortcut-key-info {
+          flex: 1;
+          min-width: 0;
+
+          .shortcut-key-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--el-text-color-light);
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .shortcut-key-combination {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            flex-wrap: wrap;
+
+            .key-tag {
+              background-color: var(--el-segmented-hover-bg-color);
+              border: 1px solid var(--el-form-hover-border-color);
+              color: var(--el-text-color-light);
+              font-family: 'Courier New', monospace;
+              font-weight: 600;
+              font-size: 11px;
+              padding: 1px 6px;
+              border-radius: 3px;
+              min-width: 20px;
+              text-align: center;
+              line-height: 1.2;
+
+              &.ant-tag {
+                margin: 0;
+              }
+            }
+
+            .plus {
+              color: var(--el-text-color-light);
+              opacity: 0.6;
+              font-size: 11px;
+              margin: 0 1px;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  ::ng-deep nz-divider {
+    .ant-divider {
+      border-color: var(--el-divider-border-color);
+      margin: 16px 0;
+
+      .ant-divider-inner-text {
+        color: var(--el-text-color-light);
+        font-size: 13px;
+
+        nz-icon {
+          margin-right: 6px;
+          color: var(--el-banner-icon-color);
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .shortcut-keys-container {
+    padding: 12px;
+
+    .shortcut-keys-grid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .shortcut-key-card {
+      .shortcut-key-content {
+        gap: 10px;
+
+        .shortcut-key-icon {
+          width: 32px;
+          height: 32px;
+
+          nz-icon {
+            font-size: 16px;
+          }
+        }
+
+        .shortcut-key-info {
+          .shortcut-key-label {
+            font-size: 13px;
+          }
+
+          .shortcut-key-combination {
+            .key-tag {
+              font-size: 10px;
+              padding: 1px 4px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .shortcut-keys-container {
+    .shortcut-key-card {
+      &:hover:not(.disabled) {
+        box-shadow: 0 2px 8px rgba(255, 255, 255, 0.05);
+      }
+    }
+  }
+}

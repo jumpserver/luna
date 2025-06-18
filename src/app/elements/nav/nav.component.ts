@@ -110,7 +110,9 @@ export class ElementNavComponent implements OnInit {
                 nzContent: ElementSettingComponent,
                 nzTitle: this._i18n.instant('General'),
                 nzData: {type: 'general', name: 'General'},
-                nzOnOk: cmp => cmp.onSubmit()
+                nzOnOk: cmp => cmp.onSubmit(),
+                nzCancelText: this._i18n.instant('Cancel'),
+                nzOkText: this._i18n.instant('Confirm')
               });
             }
           },
@@ -124,7 +126,9 @@ export class ElementNavComponent implements OnInit {
                 nzWidth: '600px',
                 nzCentered: true,
                 nzData: {type: 'gui', name: 'GUI'},
-                nzOnOk: cmp => cmp.onSubmit()
+                nzOnOk: cmp => cmp.onSubmit(),
+                nzCancelText: this._i18n.instant('Cancel'),
+                nzOkText: this._i18n.instant('Confirm')
               });
             }
           },
@@ -138,7 +142,9 @@ export class ElementNavComponent implements OnInit {
                 nzWidth: '600px',
                 nzCentered: true,
                 nzData: {type: 'cli', name: 'CLI'},
-                nzOnOk: cmp => cmp.onSubmit()
+                nzOnOk: cmp => cmp.onSubmit(),
+                nzCancelText: this._i18n.instant('Cancel'),
+                nzOkText: this._i18n.instant('Confirm')
               });
             }
           }

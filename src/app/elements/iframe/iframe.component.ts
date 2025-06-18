@@ -194,6 +194,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
   sendCommand(data) {
     this._logger.info(`[Luna] Send CMD to: ${this.id}`);
+    console.log('cmd', data);
     this.iframeWindow.postMessage({ name: 'CMD', data: data.data }, '*');
   }
 

@@ -44,6 +44,7 @@ import {ElementTermComponent} from '@app/elements/replay/term/term.component';
 import {ElementDrawerComponent} from '@app/elements/drawer/drawer.component';
 import {ElementSessionShareComponent} from '@app/elements/drawer/session-share/session-share.component';
 import {ElementFileManagerComponent} from '@app/elements/drawer/filemanager/filemanager.component';
+import {ElementShortcutKeysComponent} from '@app/elements/drawer/shortcut-keys/shortcut-keys.component';
 
 export const ElementComponents = [
   ElementLeftBarComponent,
@@ -86,5 +87,6 @@ export const ElementComponents = [
   ElementTermComponent,
   ElementDrawerComponent,
   ElementSessionShareComponent,
-  ElementFileManagerComponent
+  ElementFileManagerComponent,
+  ElementShortcutKeysComponent
 ];
