@@ -1,13 +1,13 @@
-import { writeText } from 'clipboard-polyfill';
-import { I18nService } from '@app/services/i18n';
-import { HttpService } from '@app/services/http';
-import { FaceService } from '@app/services/face';
-import { HttpErrorResponse } from '@angular/common/http';
-import { Component, Inject, OnInit } from '@angular/core';
-import { Asset, ConnectData, ConnectionToken } from '@app/model';
-import { NzNotificationService } from 'ng-zorro-antd/notification';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { NZ_MODAL_DATA, NzModalRef, NzModalService } from 'ng-zorro-antd/modal';
+import {writeText} from 'clipboard-polyfill';
+import {I18nService} from '@app/services/i18n';
+import {HttpService} from '@app/services/http';
+import {FaceService} from '@app/services/face';
+import {HttpErrorResponse} from '@angular/common/http';
+import {Component, Inject, OnInit} from '@angular/core';
+import {Asset, ConnectData, ConnectionToken} from '@app/model';
+import {NzNotificationService} from 'ng-zorro-antd/notification';
+import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
+import {NZ_MODAL_DATA, NzModalRef, NzModalService} from 'ng-zorro-antd/modal';
 
 interface DialogAction {
   text: string;
@@ -172,6 +172,7 @@ export class ElementACLDialogComponent implements OnInit {
                 this.code = 'other';
                 this.otherError = data.error_message;
                 this.content = this.getDialogContent(this.code);
+                console.log(this.content)
               } else {
                 const msg = await this._i18n.t('Face verify success');
                 this._toastr.success(msg, '');
@@ -405,7 +406,7 @@ export class ElementACLDialogComponent implements OnInit {
             text: 'Copy link',
             type: 'primary',
             callback: () => {
-              vm.onCopySuccess(this.connectionToken?.from_ticket_info?.ticket_detail_page_url)
+              vm.onCopySuccess(this.connectionToken?.from_ticket_info?.ticket_detail_page_url);
             }
           }
         ]
@@ -445,7 +446,7 @@ export class ElementACLDialogComponent implements OnInit {
       },
       other: {
         title: 'Login reminder',
-        message: this.data.otherError,
+        message: this.otherError,
         isError: true,
         actions: [
           {
