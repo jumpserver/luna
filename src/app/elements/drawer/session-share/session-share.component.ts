@@ -9,7 +9,6 @@ import { I18nService, IframeCommunicationService, ViewService, HttpService } fro
 import type { OnlineUsers } from '@app/model';
 
 interface ExpiredOption {
-  label: string;
   value: number;
 }
 
@@ -20,8 +19,8 @@ interface ShareUserOptions {
 }
 
 interface PermissionOption {
-  label: string;
-  value: 'writable' | 'readonly';
+  labelKey: string;
+  value: string;
 }
 
 interface ShareLinkRequest {
@@ -76,16 +75,16 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
     private readonly _viewSvc: ViewService,
     private readonly _message: NzMessageService,
     private readonly _iframeSvc: IframeCommunicationService
-  ) {}
+  ) {
+    // 在构造函数中初始化翻译选项
+    this.initializeShareOptions();
+  }
 
   ngOnInit(): void {
     this.subscribeMessages();
-    this.initializeShareOptions();
     this.initializeShareLinkForm();
   }
-  ngOnDestroy(): void {
-    console.log('FileManager destroy');
-  }
+  ngOnDestroy(): void {}
 
   copyLink(event?: Event) {
     event?.preventDefault();
@@ -179,13 +178,13 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
 
   private initializeShareOptions() {
     this.shareUserPermissions = [
-      { label: this._i18n.instant('Writable'), value: 'writable' },
-      { label: this._i18n.instant('ReadOnly'), value: 'readonly' }
+      { labelKey: 'Writable', value: 'writable' },
+      { labelKey: 'ReadOnly', value: 'readonly' }
     ];
 
     this.shareExpiredOptions = [1, 5, 10, 20, 60].map(minutes => ({
-      label: this.getMinuteLabel(minutes),
-      value: minutes
+      value: minutes,
+      labelKey: `${minutes === 1 ? 'Minute' : 'Minutes'}`
     }));
   }
 
@@ -196,7 +195,6 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
       users: [this.shareLinkRequest.users]
     });
 
-    // 监听 users 控件值的变化
     this.shareLinkForm.get('users')?.valueChanges.subscribe(value => {
       this.handleUsersChange(value);
     });
@@ -214,11 +212,6 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
     if (handler) {
       handler(message.data);
     }
-  }
-
-  private getMinuteLabel(minute: number) {
-    const minuteLabel = this._i18n.instant('Minute')
-    return `${minute} ${minuteLabel}`;
   }
 
   private handleShareUserAdd(data: string) {
