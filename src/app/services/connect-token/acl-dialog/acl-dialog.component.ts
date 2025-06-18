@@ -445,7 +445,7 @@ export class ElementACLDialogComponent implements OnInit {
       },
       other: {
         title: 'Login reminder',
-        message: this.data.otherError,
+        message: this.otherError,
         isError: true,
         actions: [
           {
