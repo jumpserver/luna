@@ -3,7 +3,6 @@
     <div class="share-user-list">
       <nz-divider nzDashed [nzText]="text" nzOrientation="left">
         <ng-template #text>
-          <nz-icon nzType="team" nzTheme="outline" />
           {{ 'OnlineUser' | translate }} ({{ onLineUsers().length }})
         </ng-template>
       </nz-divider>

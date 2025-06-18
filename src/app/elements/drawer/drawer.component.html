@@ -27,6 +27,12 @@
           (onShareUserRemove)="onDeleteShareUser($event)"
         ></elements-session-share>
       </nz-tab>
+      <nz-tab [nzTitle]="'ShortcutKeys' | translate">
+        <elements-shortcut-keys
+          [currentViewId]="currentViewId"
+          [terminalContent]="terminalContent"
+        ></elements-shortcut-keys>
+      </nz-tab>
     </nz-tabset>
   </div>
 </div>
