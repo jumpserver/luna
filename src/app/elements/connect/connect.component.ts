@@ -207,6 +207,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   createWebView(asset: Asset, connectInfo: any, connToken: ConnectionToken) {
     const view = new View(asset, connectInfo, connToken, 'node');
+    console.log('createWebView', view);
     this.onNewView.emit(view);
   }
 

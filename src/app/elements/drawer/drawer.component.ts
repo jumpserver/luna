@@ -112,11 +112,13 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   private handleIframeMessage(message: any): void {
+    console.log('listen message1', message);
     const messageHandlers = {
       SSH_CLOSE: this.handleSshClose.bind(this),
       OPEN_CHAT: this.handleOpenChat.bind(this),
       OPEN_SETTING: this.handleOpenSetting.bind(this),
 
+      DRAWER_RECONNECT: this.handleDrawerReconnect.bind(this),
       TAB_VIEW_CHANGE: this.handleTabViewChange.bind(this),
       ALL_VIEWS_CLOSED: this.handleAllViewsClosed.bind(this),
       TERMINAL_CONTENT_RESPONSE: this.handleTerminalContentResponse.bind(this)
@@ -126,6 +128,15 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     if (handler) {
       handler(message.data);
     }
+  }
+
+  private handleDrawerReconnect(): void {
+    // 通知 filemanager 重新创建
+    this.fileManagerComponent.reconnect();
+
+    // 清理当前 viewId 下对应的 onlineUsers
+    this.onLineUsers = [];
+    this.saveCurrentViewState();
   }
 
   private handleSshClose(currentView: View): void {
@@ -201,7 +212,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   private handleTerminalContentResponse(data: string): void {
-    // {content: string, sessionId: string, terminalId: string}
     this.terminalContent = data;
     this.saveCurrentViewState();
   }

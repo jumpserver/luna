@@ -11,6 +11,7 @@ import {
   Renderer2,
   effect
 } from '@angular/core';
+import { DrawerStateService } from '@app/services';
 
 @Component({
   standalone: false,
@@ -108,7 +109,8 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
 
   constructor(
     private readonly renderer: Renderer2,
-    private readonly _connectTokenSvc: ConnectTokenService
+    private readonly _connectTokenSvc: ConnectTokenService,
+    private readonly _drawerStateService: DrawerStateService
   ) {
     effect(() => {
       const currentViewId = this.currentViewId();
@@ -278,6 +280,13 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
 
       setTimeout(() => {
         this.switchToView(actualViewId);
+
+        // 通知抽屉组件文件管理器已重连，需要刷新状态
+        // 发送 TAB_VIEW_CHANGE 消息来触发抽屉状态刷新
+        this._drawerStateService.sendComponentMessage({
+          name: 'TAB_VIEW_CHANGE',
+          data: actualViewId
+        });
       }, 100);
     } catch (error) {
       console.error('重连失败:', error);
