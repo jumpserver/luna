@@ -29,7 +29,8 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
   private iframes = new Map<string, HTMLIFrameElement>();
   private currentDisplayedViewId: string | null = null;
 
-  // 添加重连相关状态 - 按 viewId 分别管理
+  private readonly DISABLED_CATEGORY = ['database', 'web'];
+
   private viewReconnectStates = new Map<
     string,
     {
@@ -65,7 +66,14 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
     return !this.showReconnectButton && !this.showLoadingState && (state?.hasValidIframe || false);
   }
 
-  // 状态管理辅助方法
+  private isDisabledCategory(): boolean {
+    const view = this.view();
+    if (!view || !view.asset || !view.asset.category) {
+      return false;
+    }
+    return this.DISABLED_CATEGORY.includes(view.asset.category.value);
+  }
+
   private setReconnectState(
     viewId: string,
     state: Partial<{
@@ -107,6 +115,11 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
       const view = this.view();
 
       if (!this.viewInitialized || !currentViewId || !view) {
+        return;
+      }
+
+      // 检查是否为禁用的资产类型
+      if (this.isDisabledCategory()) {
         return;
       }
 
@@ -166,10 +179,16 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
 
   public enableFileManagerLogic(): void {
     const currentViewId = this.currentViewId();
-    if (currentViewId) {
-      // 为当前 viewId 标记已收到 OpenSetting 信号
-      this.viewIdOpenSettingStatus.set(currentViewId, true);
+    if (!currentViewId) {
+      return;
     }
+
+    if (this.isDisabledCategory()) {
+      return;
+    }
+
+    // 为当前 viewId 标记已收到 OpenSetting 信号
+    this.viewIdOpenSettingStatus.set(currentViewId, true);
 
     const view = this.view();
 
@@ -220,6 +239,11 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
     const view = this.view();
 
     if (!currentViewId || !view || this.reconnectLoading) {
+      return;
+    }
+
+    // 检查是否为禁用的资产类型
+    if (this.isDisabledCategory()) {
       return;
     }
 
@@ -282,6 +306,10 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
 
   private async createNewIframe(viewId: string, view: View): Promise<void> {
     if (!this.iframeContainer?.nativeElement) {
+      return;
+    }
+
+    if (this.isDisabledCategory()) {
       return;
     }
 
