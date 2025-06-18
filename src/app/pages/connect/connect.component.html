@@ -1,5 +1,8 @@
 <div class="windows" id="winContainer">
   <elements-content-window *ngIf="view" [view]="view"></elements-content-window>
-  <elements-connect (onNewView)="onNewView($event)" [ngStyle]="{'display': 'none'}"></elements-connect>
+  <elements-connect
+    (onNewView)="onNewView($event)"
+    [ngStyle]="{ display: 'none' }"
+  ></elements-connect>
+  <elements-chat></elements-chat>
 </div>
-

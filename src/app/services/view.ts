@@ -48,7 +48,7 @@ export class ViewService {
       }
     }, 100);
     this.currentView = view;
-    this.setCurrentView();
+    this.setCurrentView(view);
   }
 
   removeView(view: View) {
