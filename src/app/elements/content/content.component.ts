@@ -226,6 +226,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
         callback: () => {
           const viewId = this.viewIds[this.rIdx];
           const currentView = this.viewList.find(i => i.id === viewId);
+          this._drawerStateService.sendComponentMessage({
+            name: 'DRAWER_RECONNECT',
+          });
           currentView.termComp.reconnect();
         }
       },

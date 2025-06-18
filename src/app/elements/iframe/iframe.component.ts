@@ -59,7 +59,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private faceService: FaceService,
     private _iframeSvc: IframeCommunicationService,
     private _drawerStateService: DrawerStateService
-  ) { }
+  ) {}
 
   ngOnInit() {
     this._logger.info(`IFrame URL: ${this.src}`);
@@ -138,8 +138,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
         case 'CREATE_FILE_CONNECT_TOKEN':
           this.createFileConnectToken.emit(true);
           break;
+        // TODO 事件转接一下
         case 'SHARE_USER_ADD':
-          this._iframeSvc.sendMessage({ name: 'SHARE_USER_ADD', data: msg.data });
+          this._drawerStateService.sendComponentMessage({ name: 'SHARE_USER_ADD', data: msg.data });
           break;
         case 'SHARE_CODE_RESPONSE':
           this._iframeSvc.sendMessage({ name: 'SHARE_CODE_RESPONSE', data: msg.data });
@@ -148,7 +149,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           this.view.terminalContentData = msg.data;
           this._iframeSvc.sendMessage({ name: 'TERMINAL_CONTENT_RESPONSE', data: msg.data });
           break;
-
       }
     }.bind(this);
 
@@ -219,10 +219,20 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     const url = this.src.replace(oldConnectToken.id, newConnectToken.id);
     this.src = 'about:blank';
 
+    // 清理旧的事件监听器
+    window.removeEventListener('message', this.eventHandler);
+    if (this.ping) {
+      clearInterval(this.ping);
+    }
+
     setTimeout(() => {
       this.src = url;
       this.view.connected = true;
       this.view.active = true;
+
+      this.iframeWindow = this.iframeRef.nativeElement.contentWindow;
+      this.view.iframeElement = this.iframeWindow;
+      this.handleIframeEvent();
     }, 100);
   }
 }

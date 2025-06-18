@@ -4,7 +4,8 @@ import { writeText } from 'clipboard-polyfill';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Component, OnDestroy, OnInit, input, Output, EventEmitter } from '@angular/core';
-import { I18nService, IframeCommunicationService, ViewService, HttpService } from '@app/services';
+import { I18nService, IframeCommunicationService, ViewService, HttpService, DrawerStateService } from '@app/services';
+import { effect } from '@angular/core';
 
 import type { OnlineUsers } from '@app/model';
 
@@ -39,6 +40,7 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
   currentViewId = input<string>('');
   hasConnected = input<boolean>(false);
   onLineUsers = input<OnlineUsers[]>([]);
+  currentSessionId = input<string | null>(null);
 
   @Output() onLineUsersAdd = new EventEmitter<OnlineUsers>();
   @Output() onShareUserRemove = new EventEmitter<OnlineUsers>();
@@ -50,6 +52,7 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
   };
 
   private iframeMessageSubscription: Subscription;
+  private drawerMessageSubscription: Subscription;
 
   shareLinkForm: FormGroup;
   shareExpiredOptions: ExpiredOption[] = [];
@@ -74,10 +77,26 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
     private readonly _http: HttpService,
     private readonly _viewSvc: ViewService,
     private readonly _message: NzMessageService,
-    private readonly _iframeSvc: IframeCommunicationService
+    private readonly _iframeSvc: IframeCommunicationService,
+    private readonly _drawerStateService: DrawerStateService
   ) {
     // 在构造函数中初始化翻译选项
     this.initializeShareOptions();
+
+    // 监听 currentSessionId 的变化
+    effect(() => {
+      const viewId = this.currentViewId();
+      const sessionId = this.currentSessionId();
+
+      console.log('SessionShare effect triggered:', { viewId, sessionId });
+
+      if (viewId && sessionId) {
+        const oldSessionId = this.currentSessionIds.get(viewId);
+        this.currentSessionIds.set(viewId, sessionId);
+        console.log(`Updated sessionId for viewId ${viewId}: ${oldSessionId} -> ${sessionId}`);
+        console.log('Current sessionIds map:', Array.from(this.currentSessionIds.entries()));
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -114,11 +133,20 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
 
     this.showCreateShareLinkForm = false;
 
+    const currentViewId = this.currentViewId();
+    const sessionId = this.currentSessionIds.get(currentViewId);
+
+    console.log('Creating share link with:', {
+      currentViewId,
+      sessionId,
+      allSessionIds: Array.from(this.currentSessionIds.entries())
+    });
+
     this._iframeSvc.sendMessage({
       name: 'SHARE_CODE_REQUEST',
       data: {
         requestData: this.shareLinkRequest,
-        sessionId: this.currentSessionIds.get(this.currentViewId())
+        sessionId: sessionId
       }
     });
   }
@@ -141,6 +169,9 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
 
   private subscribeMessages() {
     this.iframeMessageSubscription = this._iframeSvc.message$.subscribe(message => {
+      this.handleIframeMessage(message);
+    });
+    this.drawerMessageSubscription = this._drawerStateService.message$.subscribe(message => {
       this.handleIframeMessage(message);
     });
   }
@@ -217,6 +248,8 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
   private handleShareUserAdd(data: string) {
     try {
       const messageData: OnlineUsers = JSON.parse(data);
+
+      console.log('handleShareUserAdd', messageData);
 
       this.currentSessionIds.set(this.currentViewId(), messageData.sessionId);
       this.onLineUsersAdd.emit(messageData);

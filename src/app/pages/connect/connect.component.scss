@@ -4,4 +4,9 @@
   padding: 0;
   margin: 0;
   background-color: var(--el-main-bg-color);
+
+  ::ng-deep .elements-drawer-wrapper {
+    top: 0 !important;
+    height: 100vh;
+  }
 }

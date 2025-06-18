@@ -20,6 +20,8 @@ export class PagesConnectComponent implements OnInit {
       this.view = view;
     }, 200);
     this.viewSrv.activeView(view);
+
+    console.log('view', this.view);
   }
 
   ngOnInit() {
