@@ -59,7 +59,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     private faceService: FaceService,
     private _iframeSvc: IframeCommunicationService,
     private _drawerStateService: DrawerStateService
-  ) { }
+  ) {}
 
   ngOnInit() {
     this._logger.info(`IFrame URL: ${this.src}`);
@@ -122,8 +122,13 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           }
           break;
         case 'CLICK':
-          console.log('CLICK', msg);
           document.body.click();
+          document.dispatchEvent(
+            new MouseEvent('mouseup', {
+              bubbles: true,
+              cancelable: true
+            })
+          );
           break;
         case 'KEYEVENT':
           window.focus();
@@ -148,7 +153,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           this.view.terminalContentData = msg.data;
           this._iframeSvc.sendMessage({ name: 'TERMINAL_CONTENT_RESPONSE', data: msg.data });
           break;
-
       }
     }.bind(this);
 
@@ -194,7 +198,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
   sendCommand(data) {
     this._logger.info(`[Luna] Send CMD to: ${this.id}`);
-    console.log('cmd', data);
     this.iframeWindow.postMessage({ name: 'CMD', data: data.data }, '*');
   }
 
