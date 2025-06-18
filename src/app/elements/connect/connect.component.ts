@@ -195,7 +195,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       const downLoadStatus = localStorage.getItem('hasDownLoadApp');
       if (downLoadStatus !== '1') {
         this._dialog.create({
-          nzTitle: this._i18n.instant('Download client'),
+          nzTitle: this._i18n.instant('DownloadClient'),
           nzContent: ElementDownloadDialogComponent,
           nzOnOk: (cmp => cmp.onConfirm()),
           nzOnCancel: (cmp => cmp.onCancel()),
