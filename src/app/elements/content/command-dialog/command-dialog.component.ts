@@ -44,7 +44,7 @@ export class ElementCommandDialogComponent implements OnInit {
       async () => {
         const msg = await this._i18n.t('Save success');
         this._toastr.success('' + msg, '', {nzDuration: 2000});
-        this.dialogRef.close();
+        this.dialogRef.close(this.command);
       },
       (error) => {
         const msg = 'name:' + error.error.name;

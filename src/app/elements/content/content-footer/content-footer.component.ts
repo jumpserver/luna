@@ -112,7 +112,7 @@ export class ElementContentFooterComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this._dialog.create(
+    const dialogRef = this._dialog.create(
       {
         nzTitle: this._i18n.instant('Save command'),
         nzContent: ElementCommandDialogComponent,
@@ -122,6 +122,11 @@ export class ElementContentFooterComponent implements OnInit, OnDestroy {
         nzFooter: null,
       }
     );
+    dialogRef.afterClose.subscribe(async result => {
+      if (result) {
+        await this.quickCommandsFilter();
+      }
+    });
   }
 
   searchCommand(event: string) {
