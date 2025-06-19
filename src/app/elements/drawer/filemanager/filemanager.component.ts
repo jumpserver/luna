@@ -32,7 +32,9 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
   private currentDisplayedViewId: string | null = null;
   private directTokens = new Map<string, string>();
 
-  private readonly DISABLED_CATEGORY = ['database', 'web'];
+  private readonly DISABLED_CATEGORIES = ['database', 'web'];
+  private readonly DISABLED_ASSET_TYPES = ['windows', 'website'];
+  private readonly DISABLED_PROTOCOLS = ['telnet'];
 
   private iframeMessageSubscription: Subscription;
   private drawerMessageSubscription: Subscription;
@@ -75,10 +77,26 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
 
   private isDisabledCategory(): boolean {
     const view = this.view();
-    if (!view || !view.asset || !view.asset.category) {
+    if (!view || !view.asset) {
       return false;
     }
-    return this.DISABLED_CATEGORY.includes(view.asset.category.value);
+
+    // 检查资产类别是否被禁用
+    if (view.asset.category && this.DISABLED_CATEGORIES.includes(view.asset.category.value)) {
+      return true;
+    }
+
+    // 检查资产类型是否被禁用
+    if (view.asset.type && this.DISABLED_ASSET_TYPES.includes(view.asset.type.value)) {
+      return true;
+    }
+
+    // 检查协议是否被禁用
+    if (view.protocol && this.DISABLED_PROTOCOLS.includes(view.protocol)) {
+      return true;
+    }
+
+    return false;
   }
 
   private setReconnectState(
@@ -422,7 +440,7 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
         this.currentDisplayedViewId = viewId;
       }
     } else {
-      // 如果没有有效iframe或处于失败/loading状态，不显示任何iframe
+      // 如果没有有效 iframe 或处于失败 loading 状态，不显示任何 iframe
       this.currentDisplayedViewId = null;
     }
   }
@@ -434,7 +452,7 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
 
       let tokenId: string;
 
-      // 如果是direct模式且有直接token，使用直接token
+      // 如果是direct模式且有直接 token，使用直接 token
       if (directToken) {
         tokenId = directToken;
       } else {
