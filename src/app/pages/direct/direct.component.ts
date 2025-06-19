@@ -311,6 +311,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
     if (this.timerInterval) {
       this.stopTimer();
     }
+    this.isTimerStopped = false;
     this.timerInterval = setInterval(() => this.updateConnectTime(), 1000);
   }
 
