@@ -16,6 +16,8 @@ interface DrawerViewState {
   isSettingOpen: boolean;
   currentTabIndex: number;
   terminalContent: {} | null;
+  disabledFileManager: boolean;
+  disabledShortcutKeys: boolean;
 }
 
 @Component({
@@ -36,6 +38,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   drawerInited = false;
   disabledFileManager = false;
+  disabledShortcutKeys = false;
 
   currentTabIndex = 0;
   currentViewId: string | null = null;
@@ -86,6 +89,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       if (this.hasConnected()) {
         if (this.DISABLED_CATEGORY.includes(this.view.asset.category.value)) {
           this.disabledFileManager = true;
+          this.disabledShortcutKeys = true;
           this.currentTabIndex = 1;
         }
       }
@@ -112,7 +116,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   }
 
   private handleIframeMessage(message: any): void {
-    console.log('listen message1', message);
     const messageHandlers = {
       SSH_CLOSE: this.handleSshClose.bind(this),
       OPEN_CHAT: this.handleOpenChat.bind(this),
@@ -227,6 +230,8 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       this.onLineUsers = [...savedState.onLineUsers];
       this.terminalContent = savedState.terminalContent || null;
       this.currentTabIndex = savedState.currentTabIndex;
+      this.disabledFileManager = savedState.disabledFileManager;
+      this.disabledShortcutKeys = savedState.disabledShortcutKeys;
     } else {
       this.initializeNewTabState(viewId);
     }
@@ -240,7 +245,9 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       isSettingOpen: false,
       currentTabIndex: 0,
       terminalContent: null,
-      onLineUsers: []
+      onLineUsers: [],
+      disabledFileManager: false,
+      disabledShortcutKeys: false
     };
   }
 
@@ -271,7 +278,9 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
         isChatOpen: this.showChat(),
         terminalContent: this.terminalContent || null,
         currentTabIndex: this.currentTabIndex,
-        isVisible: this.visible()
+        isVisible: this.visible(),
+        disabledFileManager: this.disabledFileManager,
+        disabledShortcutKeys: this.disabledShortcutKeys
       });
     }
   }
@@ -279,12 +288,21 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   initializeNewTabState(viewId: string): void {
     const defaultState = this.createDefaultViewState();
 
+    // 根据资产类型设置禁用状态
+    if (this.view && this.DISABLED_CATEGORY.includes(this.view.asset.category.value)) {
+      defaultState.disabledFileManager = true;
+      defaultState.disabledShortcutKeys = true;
+      defaultState.currentTabIndex = 1;
+    }
+
     this.onLineUsers = [];
-    this.currentTabIndex = 0;
+    this.currentTabIndex = defaultState.currentTabIndex;
     this.showDrawer.set(false);
     this.showSetting.set(false);
     this.showChat.set(false);
     this.visible.set(false);
+    this.disabledFileManager = defaultState.disabledFileManager;
+    this.disabledShortcutKeys = defaultState.disabledShortcutKeys;
 
     this.drawerStateMap.set(viewId, defaultState);
   }
