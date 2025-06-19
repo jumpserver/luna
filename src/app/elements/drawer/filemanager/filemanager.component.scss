@@ -1,0 +1,63 @@
+.file-manager-empty.ant-empty {
+  color: var(--el-text-color-light);
+}
+
+.loading-container {
+  width: 100%;
+  height: calc(100vh - 170px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .loading-content {
+    text-align: center;
+  }
+}
+
+.reconnect-container {
+  width: 100%;
+  height: calc(100vh - 170px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+
+  .reconnect-content {
+    text-align: center;
+    color: #666;
+    margin-bottom: 20px;
+
+    .disconnect-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      color: #ff4d4f;
+    }
+
+    .error-title {
+      font-size: 16px;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .error-description {
+      font-size: 14px;
+      color: #999;
+    }
+  }
+
+  .reconnect-button {
+    width: 120px;
+    height: 36px;
+
+    .reload-icon {
+      margin-right: 6px;
+    }
+  }
+}
+
+// iframe容器样式
+.iframe-container {
+  width: 100%;
+  height: calc(100vh - 170px);
+  position: relative;
+}

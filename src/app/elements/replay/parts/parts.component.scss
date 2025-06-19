@@ -1,161 +1,207 @@
-@mixin commonSpin{
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 9999;
-
-  ::ng-deep .mat-spinner {
-    width: 30px !important;
-    height: 30px !important;
-
-    svg {
-      width: 30px !important;
-      height: 30px !important;
-    }
-  }
-}
-
-.wrapper {
+.replay-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: 100vw;
   height: 100vh;
-  background-color: #0F0F10;
-  padding: 0 25px;
+  background: var(--el-main-bg-color);
 
-  .control-part {
+  .info-header {
     display: flex;
-    width: 100%;
-    flex-wrap: nowrap;
-    min-width: 540px;
-    height: auto;
-    max-height: 150px;
-    background-color: #272727;
-    color: #F1F1F1;
-  }
+    align-items: center;
+    gap: 24px;
+    padding: 12px 20px;
+    background: var(--el-nav-bg-color);
+    border-bottom: 1px solid var(--el-border-color-x);
+    flex-shrink: 0;
 
-  .video-part {
-    display: flex;
-    width: 100%;
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
 
-    .video-main {
-      height: 100%;
-      width: 100%;
-      max-height: calc(100vh - 165px);;
-      min-height: calc(100vh - 250px);
-      min-width: 540px;
-      padding: unset;
-      margin-top: 15px;
-      background-color: #0F0F10;
-      overflow: hidden;
-
-      .loading-spinner {
-        @include commonSpin
+      .label {
+        color: rgba(255, 255, 255, 0.7);
       }
 
-      .guacamole-video {
-        display: flex;
-        height: 100%;
+      .value {
+        color: #ffffff;
+        font-weight: 500;
+      }
+    }
+
+    .info-actions {
+      margin-left: auto;
+
+      .download-link {
+        color: #1890ff;
+        text-decoration: none;
+        font-size: 13px;
+
+        &:hover {
+          color: #40a9ff;
+        }
+      }
+    }
+  }
+
+  .main-content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+
+    .video-area {
+      flex: 1;
+      position: relative;
+      background: var(--el-editor-bg-color);
+
+      .loading-overlay {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+      }
+
+      .video-player {
         width: 100%;
+        height: 100%;
+      }
+    }
 
-        ::ng-deep #player {
-          display: flex;
-          flex-direction: column-reverse;
-          justify-content: space-evenly;
-          align-items: center;
-          background-color: #0F0F10;
+    .playlist-area {
+      width: 300px;
+      background: var(--el-asset-tree-bg-color);
+      border-left: 1px solid var(--el-border-color-x);
+      display: flex;
+      flex-direction: column;
 
-          .controls {
-            color: #fff;
-            height: 50px;
-            flex-wrap: wrap;
-            padding-right: unset;
-            margin-top: 15px;
+      .playlist-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: var(--el-org-bg-color);
+        border-bottom: 1px solid var(--el-border-color-x);
 
+        h3 {
+          margin: 0;
+          font-size: 14px;
+          font-weight: 500;
+          color: #ffffff;
+        }
 
-            #user,
-            #asset,
-            #date_start,
-            #download {
-              display: none;
-            }
+        .count {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.6);
+        }
+      }
+
+      .playlist-content {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        background-color: var(--el-asset-tree-bg-color);
+
+        .loading-overlay {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          z-index: 10;
+        }
+
+        .playlist-items {
+          height: 100%;
+          overflow-y: auto;
+
+          &::-webkit-scrollbar {
+            width: 6px;
           }
 
-          ::ng-deep #display {
-            width: calc(100vw - 350px);
-            //height: calc(100% - 50px);
-            //height: auto;
-            height: calc(100vh - 350px);
-            box-sizing: content-box;
-            background-color: #0F0F10;
-            padding: unset;
+          &::-webkit-scrollbar-track {
+            background: var(--el-scroll-bar-track-bg-color);
+          }
 
-            .as-split-area {
-              background-color: #272727;
-              width: 100%;
-              height: 100%;
+          &::-webkit-scrollbar-thumb {
+            background: var(--el-scroll-bar-thumb-bg-color);
+            border-radius: 3px;
+          }
 
-              #screen {
-                //display: flex;
-                //justify-content: center;
-                //align-items: center;
-                width: 100%;
-                height: 100%;
-                background-color: #0F0F10;
+          .playlist-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border-bottom: 1px solid var(--el-border-color-x);
+
+            &:hover {
+              background: var(--el-dropdown-hover-bg-color);
+            }
+
+            &.active {
+              background: var(--el-dropdown-active-bg-color);
+
+              .item-icon {
+                color: #1890ff;
+              }
+            }
+
+            .item-icon {
+              color: rgba(255, 255, 255, 0.6);
+              font-size: 16px;
+            }
+
+            .item-info {
+              flex: 1;
+              min-width: 0;
+
+              .item-name {
+                font-size: 13px;
+                color: #ffffff;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                margin-bottom: 4px;
+              }
+
+              .item-meta {
+                display: flex;
+                justify-content: space-between;
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.5);
+
+                .size {
+                  color: rgba(255, 255, 255, 0.4);
+                }
               }
             }
           }
         }
       }
     }
+  }
 
-    .video-list {
-      display: flex;
-      align-items: flex-start;
-      justify-content: flex-start;
-      flex-grow: 0;
-      width: 300px;
-      height: calc(100vh - 100px);
-      min-width: 300px;;
-      background-color: #0F0F0F;
+  @media (max-width: 768px) {
+    .info-header {
+      flex-wrap: wrap;
+      gap: 12px;
+    }
 
-      .loading-spinner {
-        @include commonSpin
+    .main-content {
+      flex-direction: column;
+
+      .video-area {
+        height: 60vh;
       }
 
-      .mat-list {
+      .playlist-area {
         width: 100%;
-      }
-
-      .mat-subheader,
-      .mat-list-item {
-        font-size: 14px;
-        color: #cccccc;
-      }
-
-      .mat-list-item {
-        transition: all 0.5s;
-        cursor: pointer;
-        border-radius: 5px;
-
-        ::ng-deep .mat-list-text {
-          height: 100% !important;
-        }
-
-        &.selected {
-          background-color: #212121 !important;
-          color: #fff !important;
-        }
-
-        &:hover {
-          background-color: #363737;
-        }
+        height: 40vh;
+        border-left: none;
+        border-top: 1px solid var(--el-border-color-x);
       }
     }
   }
 }
-
-

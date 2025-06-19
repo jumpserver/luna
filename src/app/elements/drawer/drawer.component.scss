@@ -1,0 +1,116 @@
+::ng-deep .elements-drawer-wrapper {
+  background-color: var(--el-drawer-bg-color);
+  width: 600px;
+  height: calc(100vh - 60px);
+  overflow: auto;
+  position: absolute;
+  top: 60px;
+  right: 0;
+  z-index: 999;
+  padding: 10px 30px;
+
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+
+  &.drawer-hidden {
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &.drawer-visible {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .close-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+
+    svg {
+      color: var(--el-text-color-light);
+    }
+  }
+
+  .ant-tabs {
+    .ant-tabs-nav .ant-tabs-nav-list {
+      .ant-tabs-tab {
+        justify-content: center;
+        color: var(--el-text-color-light);
+
+        &.ant-tabs-tab-disabled {
+          color: gray;
+
+          .ant-tabs-tab-btn {
+            cursor: not-allowed !important;
+          }
+        }
+      }
+    }
+
+    .ant-tabs-content-holder {
+      .ant-select {
+        .ant-select-selector {
+          background-color: var(--el-drawer-collapse-bg-color);
+          border: 1px solid var(--el-divider-border-color);
+          border-radius: 6px;
+          color: var(--el-text-color-light);
+
+          &:hover {
+            border-color: var(--el-form-hover-border-color);
+            background-color: var(--el-drawer-bg-color);
+          }
+        }
+
+        .ant-select-arrow {
+          color: var(--el-text-color-light);
+        }
+      }
+    }
+  }
+
+  .ant-card {
+    margin-top: 12px;
+    background-color: var(--el-drawer-bg-color);
+    border-color: var(--el-divider-border-color);
+
+    .ant-card-head-title {
+      color: var(--el-text-color-light);
+    }
+
+    .ant-card-body {
+      color: var(--el-text-color-light);
+    }
+  }
+
+  .ant-input-group-wrapper {
+    textarea,
+    .ant-input-group-addon {
+      background-color: var(--el-drawer-bg-color);
+    }
+  }
+
+  .ant-drawer-body {
+    padding: 0 24px;
+  }
+
+  .ant-drawer-wrapper-body {
+    background-color: var(--el-drawer-bg-color);
+
+    .ant-drawer-header {
+      padding: 16px 0 0 24px;
+      border-bottom: unset;
+
+      .ant-drawer-header-title {
+        justify-content: flex-end;
+
+        svg {
+          color: var(--el-text-color-light);
+        }
+      }
+    }
+
+  }
+}

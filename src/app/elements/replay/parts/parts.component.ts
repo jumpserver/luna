@@ -1,10 +1,8 @@
 import { Replay } from '@app/model';
 import { HttpService, I18nService, LogService } from '@app/services';
 import { TranslateService } from '@ngx-translate/core';
-import { Component, Input, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { MatDialog } from '@angular/material/dialog';
-import { ChangeDetectorRef } from '@angular/core';
 
 export interface Section extends Replay {
   name: string;
@@ -21,9 +19,10 @@ export interface IFile {
 }
 
 @Component({
+  standalone: false,
   selector: 'elements-replay-parts',
-  templateUrl: './parts.component.html',
-  styleUrls: ['./parts.component.scss'],
+  templateUrl: 'parts.component.html',
+  styleUrls: ['parts.component.scss']
 })
 export class ElementsPartsComponent implements OnInit {
   @Input() replay: Replay;
@@ -43,7 +42,6 @@ export class ElementsPartsComponent implements OnInit {
   constructor(
     public _i18n: I18nService,
     private _http: HttpService,
-    private _dialog: MatDialog,
     private _logger: LogService,
     private route: ActivatedRoute,
     private _translate: TranslateService,
@@ -52,16 +50,12 @@ export class ElementsPartsComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const replayData = await this._http
-        .getReplayData(this.replay.src)
-        .toPromise();
+      const replayData = await this._http.getReplayData(this.replay.src).toPromise();
 
       if (replayData) {
         this.replayData = replayData;
         this.replayType = replayData.type;
-        this.startTime = this.toSafeLocalDateStr(
-          new Date(Date.parse(replayData.date_start))
-        );
+        this.startTime = this.toSafeLocalDateStr(new Date(Date.parse(replayData.date_start)));
         this.files = replayData.files;
         this.id = replayData.id;
 
@@ -100,7 +94,7 @@ export class ElementsPartsComponent implements OnInit {
    */
   formatDuration(duration: number): string {
     const currentLang = this.getUserLang();
-    const isZhCN = currentLang === 'zh-CN';
+    const isZhCN = currentLang === 'zh-hans';
 
     if (!duration) {
       return isZhCN ? '0 秒' : '0 s';
@@ -114,20 +108,17 @@ export class ElementsPartsComponent implements OnInit {
     const timeUnits = [
       { value: hours, zhLabel: '小时', enLabel: 'hour' },
       { value: minutes, zhLabel: '分', enLabel: 'min' },
-      { value: remainingSeconds, zhLabel: '秒', enLabel: 's' },
+      { value: remainingSeconds, zhLabel: '秒', enLabel: 's' }
     ];
 
     let result = timeUnits
       .filter(
-        (unit) =>
+        unit =>
           unit.value > 0 ||
-          (unit.value === 0 &&
-            unit === timeUnits[2] &&
-            hours === 0 &&
-            minutes === 0)
+          (unit.value === 0 && unit === timeUnits[2] && hours === 0 && minutes === 0)
       )
-      .map((unit) => `${unit.value} ${isZhCN ? unit.zhLabel : unit.enLabel}`)
-      .join(" ");
+      .map(unit => `${unit.value} ${isZhCN ? unit.zhLabel : unit.enLabel}`)
+      .join(' ');
 
     return result;
   }
@@ -139,7 +130,7 @@ export class ElementsPartsComponent implements OnInit {
    * @param sessionId
    * @param isFirstPush
    */
-  async fetchSection (item: IFile, sessionId: string, isFirstPush: boolean): Promise<boolean> {
+  async fetchSection(item: IFile, sessionId: string, isFirstPush: boolean): Promise<boolean> {
     let section: Section;
     try {
       const res: Replay = await this._http.getPartFileReplay(sessionId, item.name).toPromise();
@@ -147,7 +138,7 @@ export class ElementsPartsComponent implements OnInit {
       if (res) {
         // 3.5 的 TS 版本无法使用 ?.
         // @ts-ignore
-        const data = res.type ? res : (res.resp ? res.resp.data : undefined);
+        const data = res.type ? res : res.resp ? res.resp.data : undefined;
 
         if (data && data.src && res.status !== 'running') {
           section = {
@@ -162,7 +153,7 @@ export class ElementsPartsComponent implements OnInit {
             user: data.user,
             size: this.formatFileSize(item.size),
             name: `Part ${this.folders.length + 1}`,
-            updated: this.formatDuration(item.duration),
+            updated: this.formatDuration(item.duration)
           };
 
           this.folders.push(section);
@@ -174,12 +165,12 @@ export class ElementsPartsComponent implements OnInit {
 
             setTimeout(() => {
               this.videoLoading = false;
-            }, 300);
+              this.cdRef.detectChanges();
+            }, 200);
 
             return false;
           }
-
-      } else if (res && res.status === 'running') {
+        } else if (res && res.status === 'running') {
           this.alertShown = true;
           await this.delay(3000);
           return await this.fetchSection(item, sessionId, isFirstPush);
@@ -238,28 +229,33 @@ export class ElementsPartsComponent implements OnInit {
    * @description点击列表的回调
    */
   selectPart(folder: Section) {
-    switch (folder.type) {
-      case 'guacamole': {
-        this.videoLoading = true;
-        this.currentVideo = {...folder};
-
-        this.cdRef.detectChanges();
-
-        setTimeout(() => {
-          this.videoLoading = false;
-        }, 500);
-
-        break;
-      }
+    if (!folder || !folder.src) {
+      return;
     }
+
+    this.currentVideo = null;
+    this.videoLoading = true;
+
+    this.cdRef.detectChanges();
+
+    setTimeout(() => {
+      this.currentVideo = { ...folder };
+      this.cdRef.detectChanges();
+
+      setTimeout(() => {
+        this.videoLoading = false;
+        this.cdRef.detectChanges();
+      }, 100);
+    }, 50);
   }
 
   getUserLang() {
-    const userLangEN = document.cookie.indexOf('django_language=en');
-    if (userLangEN === -1) {
-      return 'zh-CN';
+    const userLangZh = document.cookie.indexOf('django_language=zh-hans');
+
+    if (userLangZh) {
+      return 'zh-hans';
     } else {
-      return 'en-US';
+      return 'en';
     }
   }
 

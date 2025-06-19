@@ -2,10 +2,11 @@ import {UtcDatePipe} from './date.pipe';
 import {TruncatecharsPipe} from './truncatechars.pipe';
 import {SearchFilter} from './search.pipe';
 import {SafeUrl} from './urlsafe';
+import {NgModule} from '@angular/core';
 
-export const Pipes = [
-  UtcDatePipe,
-  TruncatecharsPipe,
-  SearchFilter,
-  SafeUrl
-];
+@NgModule({
+  declarations: [SafeUrl, UtcDatePipe, TruncatecharsPipe, SearchFilter],
+  exports: [SafeUrl, UtcDatePipe, TruncatecharsPipe, SearchFilter]
+})
+export class SharedPipeModule {
+}

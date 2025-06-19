@@ -1,64 +1,73 @@
-import {Component, Input, OnInit, ViewChild} from '@angular/core';
-import {ConnectionToken} from '@app/model';
-import {ConnectTokenService, HttpService, I18nService, SettingService} from '@app/services';
-import {ToastrService} from 'ngx-toastr';
-import {MatTooltip} from '@angular/material/tooltip';
-import {Command, InfoItem} from './model';
-
+import { ConnectionToken } from '@app/model';
+import { Command, InfoItem } from './model';
+import { Component, Input, OnInit } from '@angular/core';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
+import { ConnectTokenService, HttpService, I18nService } from '@app/services';
 
 @Component({
+  standalone: false,
   selector: 'elements-connector-guide',
-  templateUrl: './guide.component.html',
-  styleUrls: ['./guide.component.scss']
+  templateUrl: 'guide.component.html',
+  styleUrls: ['guide.component.scss']
 })
-
 export class ElementConnectorGuideComponent implements OnInit {
   @Input() assetType: string;
   @Input() canReuse: boolean;
   @Input() token: ConnectionToken;
   @Input() infoItems: Array<InfoItem>;
   @Input() commands: Array<Command>;
-  @ViewChild(MatTooltip, {static: false}) tooltip: MatTooltip;
+
+  hoverClipTip = '';
   passwordMask = '******';
   passwordShow = '******';
-  hoverClipTip: string = this._i18n.instant('Click to copy');
+
   showClient = false;
+  reusable = false;
 
-  constructor(private _http: HttpService,
-              private _i18n: I18nService,
-              private _toastr: ToastrService,
-              private _connectTokenSvc: ConnectTokenService,
-              private _settingSvc: SettingService
-  ) {
+  constructor(
+    private _http: HttpService,
+    private _i18n: I18nService,
+    private _toastr: NzNotificationService,
+    private _connectTokenSvc: ConnectTokenService
+  ) {}
+
+  ngOnInit() {
+    this.hoverClipTip = this._i18n.instant('Click to copy');
+
+    if (this.token && this.token.is_reusable !== undefined) {
+      this.reusable = this.token.is_reusable;
+    }
   }
 
-  async ngOnInit() {
-  }
-
-  setReusable(event) {
-    this._connectTokenSvc.setReusable(this.token, event.checked).subscribe(
+  setReusable(newValue: boolean) {
+    this._connectTokenSvc.setReusable(this.token, newValue).subscribe(
       res => {
         this.token = Object.assign(this.token, res);
         const tokenItem = this.infoItems.find(item => item.name === 'date_expired');
+
         tokenItem.value = `${this.token.date_expired}`;
+        this.reusable = newValue;
       },
       error => {
-        this.token.is_reusable = false;
-        if (error.status === 404) {
-          this._toastr.error(this._i18n.instant('Token expired'));
-          return;
-        }
+        this.reusable = !newValue;
+        this.token.is_reusable = !newValue;
 
-        this._toastr.error(error.error.msg || error.error.is_reusable || error.message);
+        let msg = '';
+
+        if (error.status === 404) {
+          msg = this._i18n.instant('Token expired');
+        } else {
+          msg = error.error.msg || error.error.is_reusable || error.message;
+        }
+        this._toastr.error(msg, '', { nzDuration: 2000 });
       }
     );
   }
 
   startClient(cmd) {
-    this._http.getLocalClientUrlAndSetCommand(this.token, cmd.value)
-      .then((res: any) => {
-        window.open(res.url);
-      });
+    this._http.getLocalClientUrlAndSetCommand(this.token, cmd.value).then((res: any) => {
+      window.open(res.url);
+    });
   }
 
   showPassword($event) {
@@ -72,7 +81,8 @@ export class ElementConnectorGuideComponent implements OnInit {
   }
 
   async onCopySuccess(evt) {
-    this.hoverClipTip = this._i18n.instant('Copied');
+    const msg = await this._i18n.t('Copied');
+    this._toastr.success(msg, '');
   }
 
   onHoverClipRef(evt) {

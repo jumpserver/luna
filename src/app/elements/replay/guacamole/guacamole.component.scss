@@ -1,3 +1,4 @@
+// 保持原有的 player ID 选择器以保证兼容性
 #player {
   width: 100%;
   height: 100%;
@@ -295,21 +296,18 @@ input[type="range"]:focus::-ms-fill-upper {
       padding: 8px;
       flex-wrap: wrap;
 
-      // 进度条容器
       span[class*="range"] {
         order: -1;
         width: 100%;
         padding: 4px 0;
       }
 
-      // 基础控制按钮和时间信息保持在同一行
       #play-pause,
       #position,
       #duration {
         margin: 4px;
       }
 
-      // 资产信息换行显示
       #user,
       #asset,
       #system_user,
@@ -342,12 +340,11 @@ input[type="range"]:focus::-ms-fill-upper {
 
       #screen {
         width: 100%;
-        height: calc(100vh - 200px); // 减去控制栏和其他元素的高度
+        height: calc(100vh - 200px);
         display: flex;
         align-items: center;
         justify-content: center;
 
-        // 确保视频内容居中显示
         > * {
           max-width: 100%;
           max-height: 100%;
@@ -355,7 +352,6 @@ input[type="range"]:focus::-ms-fill-upper {
         }
       }
 
-      // 优化 seeking 提示
       .seek-notification {
         display: flex;
         align-items: center;
@@ -367,6 +363,347 @@ input[type="range"]:focus::-ms-fill-upper {
           gap: 10px;
           align-items: center;
         }
+      }
+    }
+  }
+}
+
+.player-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--el-editor-bg-color);
+
+  &.seeking {
+    // 跳转状态下保持原有样式，不做额外改动
+    // 主要依靠 seek-overlay 来显示跳转提示
+  }
+
+  .display {
+    flex: 1;
+    position: relative;
+    background: var(--el-main-bg-color);
+    min-height: 0;
+
+    .seek-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+
+      .seek-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 24px;
+        background: var(--el-drawer-bg-color);
+        border-radius: 8px;
+        border: 1px solid var(--el-border-color-x);
+
+        p {
+          margin: 0;
+          color: #ffffff;
+          font-size: 14px;
+        }
+
+        .cancel-btn {
+          padding: 6px 12px;
+          background: var(--el-tab-bg-color);
+          color: #ffffff;
+          border: 1px solid var(--el-border-color-x);
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+
+          &:hover {
+            background: var(--el-dropdown-hover-bg-color);
+          }
+        }
+      }
+    }
+
+    .content {
+      display: flex;
+      flex-direction: row;
+      height: 100%;
+      min-height: 0;
+
+      .commands {
+        width: 250px;
+        background: var(--el-asset-tree-bg-color);
+        border-right: 1px solid var(--el-border-color-x);
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0; // 不允许收缩
+
+        .commands-header {
+          padding: 12px 16px;
+          background: var(--el-org-bg-color);
+          border-bottom: 1px solid var(--el-border-color-x);
+          font-size: 13px;
+          font-weight: 500;
+          color: #ffffff;
+        }
+
+        .commands-list {
+          flex: 1;
+          overflow-y: auto;
+
+          &::-webkit-scrollbar {
+            width: 6px;
+          }
+
+          &::-webkit-scrollbar-track {
+            background: var(--el-scroll-bar-track-bg-color);
+          }
+
+          &::-webkit-scrollbar-thumb {
+            background: var(--el-scroll-bar-thumb-bg-color);
+            border-radius: 3px;
+          }
+
+          .command-item {
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--el-border-color-x);
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+
+            &:hover {
+              background: var(--el-dropdown-hover-bg-color);
+            }
+
+            .command-text {
+              font-size: 11px;
+              color: var(--el-text-color-light);
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              margin-bottom: 4px;
+            }
+
+            .command-time {
+              font-size: 10px;
+              color: var(--el-text-color-light);
+              text-align: right;
+            }
+          }
+        }
+      }
+
+      .screen-wrapper {
+        flex: 1;
+        background: var(--el-main-bg-color);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+
+        &.full {
+          width: 100%;
+        }
+
+        .screen {
+          width: 100%;
+          height: 100%;
+          cursor: pointer;
+          background: var(--el-main-bg-color);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          box-sizing: border-box;
+          flex: 1;
+          min-height: 0;
+
+          > * {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+          }
+        }
+      }
+    }
+  }
+
+  // 控制栏 - 现在在底部
+  .controls {
+    display: flex;
+    align-items: center;
+    height: 60px; // 增加高度确保足够空间
+    padding: 0 16px;
+    background: var(--el-nav-bg-color);
+    border-top: 1px solid var(--el-border-color-x);
+    flex-shrink: 0;
+
+    .controls-left {
+      display: flex;
+      gap: 8px;
+      width: 80px;
+      flex-shrink: 0;
+
+      .control-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: transparent;
+        border: none;
+        color: var(--el-text-color-light);
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: var(--el-dropdown-hover-bg-color);
+          color: #40a9ff;
+        }
+
+        i {
+          font-size: 16px;
+        }
+      }
+    }
+
+    .controls-center {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      margin: 0 16px;
+      gap: 16px;
+
+      .time {
+        font-size: 13px;
+        color: var(--el-text-color-light);
+        white-space: nowrap;
+        min-width: 120px;
+        flex-shrink: 0;
+      }
+
+      .progress {
+        flex: 1;
+        display: flex;
+        align-items: center;
+
+        .progress-slider {
+          width: 100%;
+          height: 6px;
+          background: var(--el-scroll-bar-track-bg-color);
+          border-radius: 3px;
+          outline: none;
+          appearance: none;
+          cursor: pointer;
+          margin: 0;
+          padding: 0;
+
+          &::-webkit-slider-thumb {
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #1890ff;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: -4px;
+
+            &:hover {
+              background: #40a9ff;
+              transform: scale(1.1);
+            }
+          }
+
+          &::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: #1890ff;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            margin-top: -4px;
+          }
+
+          &::-moz-range-track {
+            background: var(--el-scroll-bar-track-bg-color);
+            height: 6px;
+            border-radius: 3px;
+            border: none;
+          }
+
+          &::-ms-thumb {
+            width: 14px;
+            height: 14px;
+            background: #1890ff;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+          }
+
+          &::-ms-track {
+            background: var(--el-scroll-bar-track-bg-color);
+            height: 6px;
+            border-radius: 3px;
+            border: none;
+            color: transparent;
+          }
+        }
+      }
+
+      &.hideCursor .progress-slider::-webkit-slider-thumb {
+        opacity: 0;
+      }
+    }
+
+    .controls-right {
+      width: 80px;
+      flex-shrink: 0;
+    }
+  }
+}
+
+// 响应式
+@media (max-width: 768px) {
+  .player-container {
+    .controls {
+      height: auto;
+      min-height: 50px;
+      flex-wrap: wrap;
+      padding: 12px;
+
+      .controls-left {
+        width: auto;
+      }
+
+      .controls-center {
+        order: 1;
+        width: 100%;
+        margin: 12px 0 0 0;
+
+        .time {
+          min-width: auto;
+          text-align: center;
+        }
+      }
+
+      .controls-right {
+        width: auto;
+      }
+    }
+
+    .display .content {
+      .commands {
+        display: none;
+      }
+
+      .screen-wrapper {
+        width: 100%;
       }
     }
   }

@@ -1,7 +1,7 @@
 import {Pipe, PipeTransform} from '@angular/core';
 
 
-@Pipe({name: 'SearchFilter'})
+@Pipe({name: 'SearchFilter', standalone: false})
 export class SearchFilter implements PipeTransform {
   transform(value: any, input: string) {
     if (input) {

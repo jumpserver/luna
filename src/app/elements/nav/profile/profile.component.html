@@ -1,0 +1,16 @@
+<div class="user-file">
+  <a [nzDropdownMenu]="menu" class="dropdown" nz-dropdown nzOverlayClassName="dark-dropdown profile-dropdown">
+    <span class="head-portrait">
+      <i class="fa fa-user-circle-o icon"></i>
+      <span class="username">{{ user.name }} </span>
+      <i class="fa fa-sort-desc" style="vertical-align: text-top;"></i>
+    </span>
+  </a>
+  <nz-dropdown-menu #menu="nzDropdownMenu">
+    <ul [nzSelectable]='true' nz-menu>
+      <li *ngFor="let item of menus" nz-menu-item (click)="item.click()">
+        {{ item.name | translate }}
+      </li>
+    </ul>
+  </nz-dropdown-menu>
+</div>

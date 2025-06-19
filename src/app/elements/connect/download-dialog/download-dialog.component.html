@@ -1,13 +1,8 @@
-<h1 mat-dialog-title>{{ "Info" | translate }}</h1>
-
-<div style="margin-bottom: 24px;">{{"InstallClientMsg"| translate}}</div>
-<div class="auto-connect">
-  <mat-checkbox name="auto-login" [(ngModel)]="hasDownLoad">
+<div class="content">
+  <p>
+    {{ "DownloadClientMsg" | translate }}
+  </p>
+  <label nz-checkbox name="auto-login" [(ngModel)]="ignoreRemind">
     {{ "Don't prompt again" | translate }}
-  </mat-checkbox>
+  </label>
 </div>
-
-<mat-dialog-actions style="float: right; margin: 6px 0 0 0;">
-  <button mat-raised-button (click)="onCancel()">{{"Cancel"| translate}}</button>
-  <button mat-raised-button color="primary"  [mat-dialog-close]="true" (click)="onConfirm()">{{"Confirm"| translate}}</button>
-</mat-dialog-actions>

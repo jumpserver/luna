@@ -11,7 +11,7 @@
             "runtimeExecutable": "bash",
             "runtimeArgs": [
                 "-c",
-                "source ~/.zshrc && nvm use v16.20.2 && npm start"
+                "source ~/.zshrc && npm run dev"
             ],
         }
     ]

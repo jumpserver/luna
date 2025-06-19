@@ -139,6 +139,8 @@ export class View {
   smartEndpoint: Endpoint;
   iframeElement: Window;
 
+  terminalContentData: TerminalContentData;
+
   constructor(asset: Asset, connectInfo: ConnectData, connToken?: ConnectionToken, connectFrom: string = 'node') {
     this.closed = false;
     this.editable = false;
@@ -153,6 +155,8 @@ export class View {
     this.connectOption = connectInfo.connectOption;
     this.protocol = connectInfo.protocol.name;
     this.connectData = connectInfo;
+    this.terminalContentData = null;
+    this.id = Math.random().toString(36).substring(2, 15);
   }
 
   getConnectOption(field: string) {
@@ -277,27 +281,51 @@ export class GlobalSetting {
 }
 
 export class Setting {
-  commandExecution: boolean = true;
-  isSkipAllManualPassword: string = '0';
-  sqlClient = '1';
+  commandExecution: boolean;
+  isSkipAllManualPassword: string;
+  sqlClient: string;
+  basic: {
+    is_async_asset_tree: boolean;
+    connect_default_open_method: string;
+  };
+  graphics: {
+    rdp_resolution: string;
+    keyboard_layout: string;
+    rdp_client_option: any[];
+    applet_connection_method: string;
+    rdp_smart_size: string;
+    rdp_color_quality: string;
+  };
+  command_line: {
+    character_terminal_font_size: number;
+    is_backspace_as_ctrl_h: boolean;
+    is_right_click_quickly_paste: boolean;
+    terminal_theme_name: string;
+  };
 
-  basic = {
-    is_async_asset_tree: false,
-    connect_default_open_method: 'new'
-  };
-  graphics = {
-    rdp_resolution: 'Auto',
-    keyboard_layout: 'en-us-qwerty',
-    rdp_client_option: [],
-    applet_connection_method: 'web',
-    rdp_smart_size: '0',
-    rdp_color_quality: '32'
-  };
-  command_line = {
-    character_terminal_font_size: 14,
-    is_backspace_as_ctrl_h: false,
-    is_right_click_quickly_paste: false
-  };
+  constructor() {
+    this.commandExecution = true;
+    this.isSkipAllManualPassword = '0';
+    this.sqlClient = '1';
+    this.basic = {
+      is_async_asset_tree: false,
+      connect_default_open_method: 'new'
+    };
+    this.graphics = {
+      rdp_resolution: 'Auto',
+      keyboard_layout: 'en-us-qwerty',
+      rdp_client_option: [],
+      applet_connection_method: 'web',
+      rdp_smart_size: '0',
+      rdp_color_quality: '32'
+    };
+    this.command_line = {
+      character_terminal_font_size: 14,
+      is_backspace_as_ctrl_h: false,
+      is_right_click_quickly_paste: false,
+      terminal_theme_name: 'Default'
+    };
+  }
 }
 
 
@@ -381,14 +409,6 @@ export class ConnectOption {
   options?: any[];
 }
 
-export class AdminConnectData {
-  asset: Asset;
-  account: Account;
-  protocol: Protocol;
-  input_username: string;
-  method: string;
-}
-
 export class ConnectData {
   asset: Asset;
   account: Account;
@@ -399,6 +419,11 @@ export class ConnectData {
   downloadRDP: boolean;
   autoLogin: boolean;
   direct?: boolean;
+}
+
+export class AdminConnectData extends ConnectData {
+  input_username?: string;
+  method?: string;
 }
 
 class FromTicket {
@@ -423,7 +448,10 @@ export class ConnectionToken {
   value: string;
   protocol: string;
   asset: string;
-  user?: string;
+  user?: {
+    id: string;
+    name: string;
+  };
   account: string;
   expire_time: number;
   is_active: boolean;
@@ -435,7 +463,9 @@ export class ConnectionToken {
   };
   from_ticket_info: FromTicketInfo;
   face_monitor_token: string;
-  connect_options: {};
+  connect_options: {
+    token_reusable: boolean;
+  };
 }
 
 export class Protocol {
@@ -513,4 +543,20 @@ export class Ticket {
     value: string,
     label: string,
   };
+}
+
+
+export class TerminalContentData {
+  content: string;
+  sessionId: string;
+  terminalId: string;
+}
+
+export interface OnlineUsers {
+  user: string;
+  user_id: string;
+  terminal_id: string;
+  primary: boolean;
+  writable: boolean;
+  sessionId: string;
 }

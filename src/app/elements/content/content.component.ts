@@ -1,38 +1,37 @@
-import {Component, ElementRef, EventEmitter, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
-import {View, ViewAction} from '@app/model';
-import {ConnectTokenService, HttpService, I18nService, LogService, SettingService, ViewService} from '@app/services';
-import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
-import {MatDialog} from '@angular/material';
-import {ElementCommandDialogComponent} from '@app/elements/content/command-dialog/command-dialog.component';
-import {ElementSendCommandWithVariableDialogComponent} from '@app/elements/content/send-command-with-variable-dialog/send-command-with-variable-dialog.component';
-import {fromEvent, Subscription} from 'rxjs';
-import * as jQuery from 'jquery/dist/jquery.min.js';
-import * as _ from 'lodash';
+import _ from 'lodash-es';
+import jQuery from 'jquery';
+import { View, ViewAction } from '@app/model';
+import { fromEvent, Subscription } from 'rxjs';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import {
+  ViewService,
+  SettingService,
+  DrawerStateService,
+  ConnectTokenService
+} from '@app/services';
+import {
+  OnInit,
+  Output,
+  Component,
+  ViewChild,
+  OnDestroy,
+  ElementRef,
+  EventEmitter
+} from '@angular/core';
 
 @Component({
+  standalone: false,
   selector: 'elements-content',
-  templateUrl: './content.component.html',
-  styleUrls: ['./content.component.scss']
+  templateUrl: 'content.component.html',
+  styleUrls: ['content.component.scss']
 })
 export class ElementContentComponent implements OnInit, OnDestroy {
-  @ViewChild('tabs', {static: false}) tabsRef: ElementRef;
+  @ViewChild('tabs', { static: false }) tabsRef: ElementRef;
   @Output() toggleMenu: EventEmitter<any> = new EventEmitter<any>();
   viewList: Array<View>;
-  batchCommand: string;
-  pos = {left: '100px', top: '100px'};
+  pos = { left: '100px', top: '100px' };
   isShowRMenu = false;
   rIdx = -1;
-  sendCommandRange = 'current';
-  sendCommandOptions = [
-    {
-      value: 'all',
-      label: 'All sessions'
-    },
-    {
-      value: 'current',
-      label: 'Current session'
-    }
-  ];
   systemTips = [
     {
       content: 'Reselect connection method',
@@ -56,34 +55,33 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     }
   ];
   viewIds: Array<string> = [];
-  isShowInputCommand = true;
-  quickCommands = [];
   keyboardSubscription: Subscription;
+  rTabMenuList: any[] = [];
 
-  constructor(public viewSrv: ViewService,
-              public settingSvc: SettingService,
-              private _i18n: I18nService,
-              private _logger: LogService,
-              private _http: HttpService,
-              private _dialog: MatDialog,
-              private _connectTokenSvc: ConnectTokenService,
-  ) {
+  constructor(
+    public _viewSvc: ViewService,
+    private _connectTokenSvc: ConnectTokenService,
+    private _settingSvc: SettingService,
+    private _drawerStateService: DrawerStateService
+  ) {}
+
+  get showBatchCommand() {
+    return (
+      this._settingSvc.setting.commandExecution &&
+      this._viewSvc.currentView &&
+      this._viewSvc.currentView.protocol === 'ssh'
+    );
   }
 
   get tabsWidth() {
     return this.viewList.length * 201;
   }
 
-  get showBatchCommand() {
-    return this.settingSvc.setting.commandExecution
-      && this.viewSrv.currentView
-      && this.viewSrv.currentView.protocol === 'ssh';
-  }
+  onToggleMobileLayout() {}
 
   async ngOnInit() {
-    this.viewList = this.viewSrv.viewList;
-    this.viewIds = this.viewSrv.viewIds;
-    await this.quickCommandsFilter();
+    this.viewList = this._viewSvc.viewList;
+    this.viewIds = this._viewSvc.viewIds;
     this.handleKeyDownTabChange();
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
@@ -94,11 +92,16 @@ export class ElementContentComponent implements OnInit, OnDestroy {
 
   handleKeyDownTabChange() {
     const debouncedSwitch = _.debounce((key: string) => {
-      this.viewSrv.keyboardSwitchTab(key);
+      this.keyboardSwitchTab(key);
     }, 500);
 
     this.keyboardSubscription = fromEvent(window, 'keydown').subscribe((event: any) => {
-      if (event.altKey && event.shiftKey && (event.key === 'ArrowRight' || event.key === 'ArrowLeft') && this.viewList.length > 1) {
+      if (
+        event.altKey &&
+        event.shiftKey &&
+        (event.key === 'ArrowRight' || event.key === 'ArrowLeft') &&
+        this.viewList.length > 1
+      ) {
         let key = '';
         if (event.key === 'ArrowRight') {
           key = 'alt+shift+right';
@@ -114,7 +117,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     this.scrollEnd();
     this.toggleMenu.emit();
     setTimeout(() => {
-      this.viewSrv.addView(view);
+      this._viewSvc.addView(view);
       this.setViewActive(view);
     }, 100);
   }
@@ -133,11 +136,42 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   }
 
   setViewActive(view) {
-    this.viewSrv.activeView(view);
+    this._viewSvc.activeView(view);
+  }
+
+  keyboardSwitchTab(key) {
+    let nextViewId: any = 0;
+    let nextActiveView = null;
+
+    const viewIds = this.viewIds;
+    const currentViewIndex = viewIds.findIndex(i => i === this._viewSvc.currentView.id);
+
+    if (key === 'alt+shift+right') {
+      if (currentViewIndex === viewIds.length - 1 && currentViewIndex !== 0) {
+        nextActiveView = this.viewList.find(i => i.id === viewIds[0]);
+      } else {
+        nextViewId = viewIds[currentViewIndex + 1];
+        nextActiveView = this.viewList.find(i => i.id === nextViewId);
+      }
+    }
+
+    if (key === 'alt+shift+left') {
+      if (currentViewIndex === 0) {
+        nextActiveView = this.viewList.find(i => i.id === viewIds[viewIds.length - 1]);
+      } else {
+        nextViewId = viewIds[currentViewIndex - 1];
+        nextActiveView = this.viewList.find(i => i.id === nextViewId);
+      }
+    }
+
+    if (nextActiveView) {
+      this.setViewActive(nextActiveView);
+    }
   }
 
   closeView(view) {
     let nextActiveView = null;
+
     const index = this.viewList.indexOf(view);
     if (view.active) {
       // 如果关掉的是最后一个, 存在上一个
@@ -147,7 +181,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
         nextActiveView = this.viewList[index + 1];
       }
     }
-    this.viewSrv.removeView(view);
+    this._viewSvc.removeView(view);
     if (nextActiveView) {
       this.setViewActive(nextActiveView);
     }
@@ -169,62 +203,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     return item.id;
   }
 
-  sendBatchCommand() {
-    let list = this.viewList;
-    this.batchCommand = this.batchCommand.trim();
-    if (this.batchCommand === '') {
-      return;
-    }
-
-    const cmd = this.batchCommand + '\r';
-    if (this.sendCommandRange === 'current') {
-      const view = this.viewList.filter(i => i.id === this.viewSrv.currentView.id);
-      list = view;
-    }
-    for (let i = 0; i < list.length; i++) {
-      if (list[i].protocol !== 'ssh' || list[i].connected !== true) {
-        continue;
-      }
-      const subViews = list[i].subViews;
-      if (subViews.length > 1) {
-        for (let j = 0; j < subViews.length; j++) {
-          if (subViews[j].protocol !== 'ssh' || subViews[j].connected !== true) {
-            continue;
-          }
-          subViews[j].termComp.sendCommand({'data': cmd});
-        }
-      } else {
-        list[i].termComp.sendCommand({'data': cmd});
-      }
-    }
-
-    this.batchCommand = '';
-  }
-
-  sendQuickCommand(command) {
-    this.batchCommand = command.args;
-    if (command.variable.length > 0) {
-      const dialogRef = this._dialog.open(
-        ElementSendCommandWithVariableDialogComponent,
-      {
-        height: 'auto',
-        width: '500px',
-        data: { command: command }
-      }
-    );
-      dialogRef.afterClosed().subscribe(result => {
-        if (result) {
-          this.batchCommand = result;
-          this.sendBatchCommand();
-        }
-      });
-    } else {
-      this.sendBatchCommand();
-    }
-
-  }
-
-  rMenuItems() {
+  rTabMenuItems() {
     return [
       {
         title: 'Clone Connect',
@@ -234,9 +213,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
           const oldId = this.viewIds[this.rIdx];
           const oldView = this.viewList.find(i => i.id === oldId);
           const oldConnectToken = oldView.connectToken;
-          this._connectTokenSvc.exchange(oldConnectToken).then((newConnectToken) => {
+          this._connectTokenSvc.exchange(oldConnectToken).then(newConnectToken => {
             const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
-            this.viewSrv.addView(newView);
+            this._viewSvc.addView(newView);
             this.setViewActive(newView);
           });
         }
@@ -247,6 +226,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
         callback: () => {
           const viewId = this.viewIds[this.rIdx];
           const currentView = this.viewList.find(i => i.id === viewId);
+          this._drawerStateService.sendComponentMessage({
+            name: 'DRAWER_RECONNECT',
+          });
           currentView.termComp.reconnect();
         }
       },
@@ -255,12 +237,12 @@ export class ElementContentComponent implements OnInit, OnDestroy {
         icon: 'fa-columns',
         callback: () => {
           const oldView = this.viewList[this.rIdx];
-          this._connectTokenSvc.exchange(oldView.connectToken).then((newConnectToken) => {
+          this._connectTokenSvc.exchange(oldView.connectToken).then(newConnectToken => {
             const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
-            this.viewSrv.addSubViewToCurrentView(newView);
+            this._viewSvc.addSubViewToCurrentView(newView);
           });
         },
-        disabled: this.viewList[this.rIdx].subViews.length > 0
+        disabled: this.viewList[this.rIdx]?.subViews.length > 0
       },
       {
         title: 'Close Current Tab',
@@ -279,7 +261,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
           while (this.viewList.length > 0) {
             this.closeView(this.viewList[0]);
           }
-        },
+        }
       },
       {
         title: 'Close Other Tabs',
@@ -292,7 +274,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
           while (this.viewList.length > 1) {
             this.closeView(this.viewList[0]);
           }
-        },
+        }
       },
       {
         title: 'Close Left Tabs',
@@ -321,6 +303,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   showRMenu(left, top) {
     this.pos.left = left + 'px';
     this.pos.top = top + 'px';
+    this.rTabMenuList = this.rTabMenuItems();
     this.isShowRMenu = true;
   }
 
@@ -329,15 +312,14 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   }
 
   getViewById(id) {
-    return this.viewList.find((view) => {
+    return this.viewList.find(view => {
       return view.id === id;
     });
   }
 
   onRightClick(event, tabIdx) {
-    const sideX = jQuery('#left-side').width();
-    const x = event.pageX - sideX;
-    const y = event.pageY - 30;
+    const x = event.pageX;
+    const y = event.pageY;
     this.showRMenu(x, y);
     this.rIdx = tabIdx;
     event.preventDefault();
@@ -345,48 +327,5 @@ export class ElementContentComponent implements OnInit, OnDestroy {
 
   onItemDropped(event: CdkDragDrop<string[]>) {
     moveItemInArray(this.viewIds, event.previousIndex, event.currentIndex);
-  }
-
-  async quickCommandsFilter() {
-    let list = await this._http.getQuickCommand();
-    list = list.filter(i => i.module.value === 'shell');
-    this.quickCommands = list;
-  }
-
-  async switchCommand() {
-    this.batchCommand = '';
-    this.isShowInputCommand = !this.isShowInputCommand;
-    if (!this.isShowInputCommand) {
-      await this.quickCommandsFilter();
-    }
-  }
-
-  onSendCommand() {
-    if (!this.batchCommand) {
-      return;
-    }
-
-    this._dialog.open(
-      ElementCommandDialogComponent,
-      {
-        height: 'auto',
-        width: '500px',
-        data: {command: this.batchCommand}
-      }
-    );
-  }
-
-  onScrollLeft() {
-    const container: any = document.querySelector('.command-list');
-    if (container) {
-      container.scrollBy(-container.offsetWidth, 0);
-    }
-  }
-
-  onScrollRight() {
-    const container: any = document.querySelector('.command-list');
-    if (container) {
-      container.scrollBy(container.offsetWidth, 0);
-    }
   }
 }

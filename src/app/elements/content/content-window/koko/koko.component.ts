@@ -1,18 +1,24 @@
-import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
-import {Account, Asset, ConnectionToken, Endpoint, View} from '@app/model';
-import {ConnectTokenService, HttpService, I18nService, LogService, SettingService} from '@app/services';
-import {User} from '@app/globals';
-import {Command, InfoItem} from '../guide/model';
-
+import { Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
+import { Account, Asset, ConnectionToken, Endpoint, View } from '@app/model';
+import {
+  ConnectTokenService,
+  HttpService,
+  I18nService,
+  LogService,
+  SettingService
+} from '@app/services';
+import { User } from '@app/globals';
+import { Command, InfoItem } from '../guide/model';
 
 @Component({
+  standalone: false,
   selector: 'elements-connector-koko',
-  templateUrl: './koko.component.html',
-  styleUrls: ['./koko.component.scss']
+  templateUrl: 'koko.component.html',
+  styleUrls: ['koko.component.scss']
 })
 export class ElementConnectorKokoComponent implements OnInit {
   @Input() view: View;
-  @ViewChild('terminal', {static: false}) iframe: ElementRef;
+  @ViewChild('terminal', { static: false }) iframe: ElementRef;
   @ViewChild('iFrame', { static: false }) iframeRef: ElementRef;
 
   iframeURL: any;
@@ -30,17 +36,18 @@ export class ElementConnectorKokoComponent implements OnInit {
   loading = false;
   showSetReusable = false;
 
-  constructor(private _logger: LogService,
-              private _i18n: I18nService,
-              private _http: HttpService,
-              private _connectTokenSvc: ConnectTokenService,
-              private _settingSvc: SettingService
+  constructor(
+    private _logger: LogService,
+    private _i18n: I18nService,
+    private _http: HttpService,
+    private _connectTokenSvc: ConnectTokenService,
+    private _settingSvc: SettingService
   ) {
     this.showSetReusable = this._settingSvc.globalSetting.CONNECTION_TOKEN_REUSABLE;
   }
 
   ngOnInit() {
-    const {asset, account, protocol, smartEndpoint, connectToken} = this.view;
+    const { asset, account, protocol, smartEndpoint, connectToken } = this.view;
     this.asset = asset;
     this.protocol = protocol;
     this.endpoint = smartEndpoint;
@@ -58,9 +65,8 @@ export class ElementConnectorKokoComponent implements OnInit {
     this.view.termComp = this;
   }
 
-  async createFileConnectToken() {
-    const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window })
-      .iframeWindow;
+  async createFileConnectToken(evt) {
+    const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window }).iframeWindow;
     const oldConnectToken = this.view.connectToken;
     const newConnectToken = await this._connectTokenSvc.exchange(oldConnectToken);
 
@@ -68,21 +74,32 @@ export class ElementConnectorKokoComponent implements OnInit {
       return;
     }
 
-    iframeWindow.postMessage({ name: 'CREATE_FILE_CONNECT_TOKEN', SFTP_Token: newConnectToken.id }, '*');
+    iframeWindow.postMessage(
+      { name: 'CREATE_FILE_CONNECT_TOKEN', SFTP_Token: newConnectToken.id },
+      '*'
+    );
   }
 
   setInfoItems() {
     this.infoItems = [
-      {name: 'name', value: `${this.asset.name}(${this.asset.address})`, label: this._i18n.t('Name')},
-      {name: 'host', value: this.endpoint.host, label: this._i18n.t('Host')},
-      {name: 'port', value: this.endpoint.getPort('ssh'), label: this._i18n.t('Port')},
-      {name: 'username', value: `JMS-${this.token.id}`, label: this._i18n.t('Username')},
-      {name: 'password', value: this.token.value, label: this._i18n.t('Password')},
-      {name: 'protocol', value: this.protocol, label: this._i18n.t('Protocol')},
-      {name: 'date_expired', value: `${this.token.date_expired}`, label: this._i18n.t('Expire time')},
+      {
+        name: 'name',
+        value: `${this.asset.name}(${this.asset.address})`,
+        label: this._i18n.t('Name')
+      },
+      { name: 'host', value: this.endpoint.host, label: this._i18n.t('Host') },
+      { name: 'port', value: this.endpoint.getPort('ssh'), label: this._i18n.t('Port') },
+      { name: 'username', value: `JMS-${this.token.id}`, label: this._i18n.t('Username') },
+      { name: 'password', value: this.token.value, label: this._i18n.t('Password') },
+      { name: 'protocol', value: this.protocol, label: this._i18n.t('Protocol') },
+      {
+        name: 'date_expired',
+        value: `${this.token.date_expired}`,
+        label: this._i18n.t('Expire time')
+      }
     ];
     if (this.showSetReusable) {
-      this.infoItems.push({name: 'set_reusable', value: '', label: this._i18n.t('Set reusable')});
+      this.infoItems.push({ name: 'set_reusable', value: '', label: this._i18n.t('Set reusable') });
     }
     this.info = this.infoItems.reduce((pre, current) => {
       pre[current.name] = current.value;
@@ -101,14 +118,19 @@ export class ElementConnectorKokoComponent implements OnInit {
 
     this.commands = [
       {
-        title: this._i18n.instant('Connect command line') + ' (' + this._i18n.instant('Using token') + ')',
+        title:
+          this._i18n.instant('Connect command line') +
+          ' (' +
+          this._i18n.instant('Using token') +
+          ')',
         value: cli,
         safeValue: cli,
         helpText: this._i18n.instant('Password is token password on the table'),
         callClient: true
       },
       {
-        title: this._i18n.instant('Connect command line') + ' (' + this._i18n.instant('Directly') + ')',
+        title:
+          this._i18n.instant('Connect command line') + ' (' + this._i18n.instant('Directly') + ')',
         value: cliDirect,
         safeValue: cliDirect,
         helpText: this._i18n.instant('Password is your password login to system'),
@@ -143,7 +165,7 @@ export class ElementConnectorKokoComponent implements OnInit {
       });
 
     if (this.protocol === 'k8s') {
-      return this.iframeURL = `${this.baseUrl}/k8s/?` + query;
+      return (this.iframeURL = `${this.baseUrl}/k8s/?` + query);
     }
 
     this.iframeURL = `${this.baseUrl}/connect/?` + query;

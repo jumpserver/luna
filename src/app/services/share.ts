@@ -1,6 +1,5 @@
 import {Injectable} from '@angular/core';
 import {NGXLogger} from 'ngx-logger';
-import * as UUID from 'uuid-js/lib/uuid';
 
 @Injectable()
 export class LogService {
@@ -80,15 +79,4 @@ export class LocalStorageService {
   }
 }
 
-
-
-@Injectable()
-export class UUIDService {
-  constructor() {
-  }
-
-  gen() {
-    return UUID.create()['hex'];
-  }
-}
 

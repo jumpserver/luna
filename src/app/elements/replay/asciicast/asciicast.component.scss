@@ -1,80 +1,194 @@
-.controls {
-  width: 100%;
-  height: 35px;
-
-  /* IE10 */
-  display: -ms-flexbox;
-  -ms-flex-align: center;
-  -ms-flex-direction: row;
-
-  /* Ancient Mozilla */
-  display: -moz-box;
-  -moz-box-align: center;
-  -moz-box-orient: horizontal;
-
-  /* Ancient WebKit */
-  display: -webkit-box;
-  -webkit-box-align: center;
-  -webkit-box-orient: horizontal;
-
-  /* Old WebKit */
-  display: -webkit-flex;
-  -webkit-align-items: center;
-  -webkit-flex-direction: row;
-
-  /* W3C */
+.replay-container {
   display: flex;
-  align-items: center;
-  flex-direction: row;
-}
+  flex-direction: column;
+  height: 100vh;
+  background: var(--el-main-bg-color);
 
-.controls > * {
-  margin: 0.25em;
-}
+  .info-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 12px 20px;
+    background: var(--el-nav-bg-color);
+    border-bottom: 1px solid var(--el-border-color-x);
+    flex-shrink: 0;
 
-#player {
-  position: relative;
-  background: #1f1b1b;
-  padding: 0 5px;
-  height: calc(100vh - 35px);
-}
+    .info-controls {
+      display: flex;
+      gap: 8px;
+      margin-right: 16px;
 
-#player .command-results {
-  height: 100%;
-  overflow-y: auto;
-}
+      .control-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        background: transparent;
+        border: none;
+        color: var(--el-text-color-light);
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.2s ease;
 
-#player .item{
-  height: 80px;
-  border-bottom: #000 solid 1px;
-  color: #f0f0f0;
-  padding: 10px 5px;
-}
+        &:hover {
+          background: var(--el-dropdown-hover-bg-color);
+          color: #40a9ff;
+        }
 
-#player .command {
-  padding: 5px 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  cursor: pointer;
-}
+        i {
+          font-size: 14px;
+        }
+      }
+    }
 
-#player .timestamp {
-  overflow: hidden;
-  float: right;
-  padding: 5px 10px;
-}
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
 
-.command-results::-webkit-scrollbar-track {
-  -webkit-box-shadow: inset 0 0 2px rgba(0, 0, 0, 0);
-  background-color: #00000000;
-}
+      .label {
+        color: rgba(255, 255, 255, 0.7);
+      }
 
-.command-results::-webkit-scrollbar-thumb {
-  background-color: #000000;
-}
+      .value {
+        color: var(--el-text-color-light);
+        font-weight: 500;
+      }
+    }
 
-.command-results::-webkit-scrollbar {
-  height: 3px;
-  width: 3px;
+    .info-actions {
+      margin-left: auto;
+
+      .download-link {
+        color: #1890ff;
+        text-decoration: none;
+        font-size: 13px;
+
+        &:hover {
+          color: #40a9ff;
+        }
+      }
+    }
+  }
+
+  .main-content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+
+    .terminal-area {
+      flex: 1;
+      background: var(--el-editor-bg-color);
+      position: relative;
+      overflow: hidden;
+
+      #screen {
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        padding: 8px;
+        box-sizing: border-box;
+
+        ::ng-deep {
+          .ap-player  {
+            width: 100%;
+          }
+        }
+      }
+    }
+
+    // 命令列表区域
+    .commands-area {
+      width: 300px;
+      min-width: 300px;
+      background: var(--el-asset-tree-bg-color);
+      border-left: 1px solid var(--el-border-color-x);
+      display: flex;
+      flex-direction: column;
+
+      .commands-header {
+        padding: 12px 16px;
+        background: var(--el-org-bg-color);
+        border-bottom: 1px solid var(--el-border-color-x);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--el-text-color-light);
+      }
+
+      .commands-list {
+        flex: 1;
+        overflow-y: auto;
+
+        &::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        &::-webkit-scrollbar-track {
+          background: var(--el-scroll-bar-track-bg-color);
+        }
+
+        &::-webkit-scrollbar-thumb {
+          background: var(--el-scroll-bar-thumb-bg-color);
+          border-radius: 3px;
+        }
+
+        .command-item {
+          padding: 12px 16px;
+          border-bottom: 1px solid var(--el-border-color-x);
+          cursor: pointer;
+          transition: background-color 0.15s ease;
+
+          &:hover {
+            background: var(--el-dropdown-hover-bg-color);
+          }
+
+          .command-text {
+            font-size: 11px;
+            color: var(--el-text-color-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+          }
+
+          .command-time {
+            font-size: 10px;
+            color: var(--el-text-color-light);
+            text-align: right;
+          }
+        }
+      }
+    }
+  }
+
+  // 响应式
+  @media (max-width: 768px) {
+    .info-header {
+      flex-wrap: wrap;
+      gap: 12px;
+
+      .info-controls {
+        margin-right: 0;
+      }
+    }
+
+    .main-content {
+      flex-direction: column;
+
+      .terminal-area {
+        height: 60vh;
+      }
+
+      .commands-area {
+        width: 100%;
+        height: 40vh;
+        border-left: none;
+        border-top: 1px solid var(--el-border-color-x);
+      }
+    }
+  }
 }

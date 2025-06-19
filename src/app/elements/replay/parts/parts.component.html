@@ -1,72 +1,76 @@
-<div class="wrapper">
-  <div style='display: flex; flex-direction: column; justify-content: center; width: 100%; height: 100%'>
-    <mat-card class="control-part">
-      <span id="user" style="padding-left: 20px" *ngIf="replay?.user">
-          {{ "user" | translate }} : {{ currentVideo?.user }}
-        </span>
-      <span id="asset" style="padding-left: 20px" *ngIf="replay?.asset">
-          {{ "asset" | translate }} : {{ currentVideo?.asset }}
-        </span>
-      <span
-        id="system_user"
-        style="padding-left: 20px"
-        *ngIf="currentVideo?.system_user"
-      >
-          {{ "system user" | translate }} : {{ currentVideo?.system_user }}
-        </span>
-      <span
-        id="date_start"
-        style="padding-left: 20px"
-        *ngIf="currentVideo?.date_start"
-      >
-          {{ "start time" | translate }} : {{ startTime }}
-        </span>
-      <span
-        id="download"
-        style="padding-left: 30px"
-        *ngIf="currentVideo?.download_url"
-      >
-          <a type="button" [href]="currentVideo?.download_url">
-            {{ "download" | translate }}
-          </a>
-        </span>
-    </mat-card>
-    <div class="video-part">
-      <div style='display: flex; align-items: center; justify-content: center; flex-grow: 2'>
-        <mat-card class="video-main">
-          <div class="loading-spinner">
-            <mat-spinner *ngIf="videoLoading"></mat-spinner>
-          </div>
-          <elements-replay-guacamole class='guacamole-video' [replay]="currentVideo" *ngIf="currentVideo && currentVideo.src"></elements-replay-guacamole>
-        </mat-card>
+<div class="replay-container">
+  <!-- 信息栏 -->
+  <div class="info-header" *ngIf="currentVideo">
+    <div class="info-item" *ngIf="replay?.user">
+      <span class="label">{{ 'user' | translate }}:</span>
+      <span class="value">{{ currentVideo?.user }}</span>
+    </div>
+    <div class="info-item" *ngIf="replay?.asset">
+      <span class="label">{{ 'asset' | translate }}:</span>
+      <span class="value">{{ currentVideo?.asset }}</span>
+    </div>
+    <div class="info-item" *ngIf="currentVideo?.system_user">
+      <span class="label">{{ 'system user' | translate }}:</span>
+      <span class="value">{{ currentVideo?.system_user }}</span>
+    </div>
+    <div class="info-item" *ngIf="replay.account">
+      <span class="label">{{ "account" | translate }}:</span>
+      <span class="value">{{ replay.account }}</span>
+    </div>
+    <div class="info-item" *ngIf="currentVideo?.date_start">
+      <span class="label">{{ 'start time' | translate }}:</span>
+      <span class="value">{{ startTime }}</span>
+    </div>
+    <div class="info-actions">
+      <a *ngIf="currentVideo?.download_url" [href]="currentVideo?.download_url" class="download-link">
+        {{ 'Download' | translate }}
+      </a>
+    </div>
+  </div>
+
+  <!-- 主体内容 -->
+  <div class="main-content">
+    <!-- 视频播放区 -->
+    <div class="video-area">
+      <div class="loading-overlay" *ngIf="videoLoading">
+        <nz-spin nzSize="large"></nz-spin>
       </div>
-      <mat-card  class="video-list">
-        <div *ngIf='alertShown' class="loading-spinner">
-          <mat-spinner></mat-spinner>
+      <elements-replay-guacamole
+        *ngIf="currentVideo && currentVideo.src"
+        [replay]="currentVideo"
+        class="video-player">
+      </elements-replay-guacamole>
+    </div>
+
+    <!-- 播放列表 -->
+    <div class="playlist-area">
+      <div class="playlist-header">
+        <h3>{{ 'Play List' | translate }}</h3>
+        <span class="count">({{ folders?.length || 0 }})</span>
+      </div>
+      <div class="playlist-content">
+        <div class="loading-overlay" *ngIf="alertShown">
+          <nz-spin nzSize="default"></nz-spin>
         </div>
-        <mat-list *ngIf='!alertShown'>
-          <h3 mat-subheader>{{ _i18n.instant('Play List') }}</h3>
-          <mat-list-item
-            *ngFor="let folder of folders"
-            matTooltip="{{ folder.name }}"
-            matTooltipPosition="above"
-            matTooltipShowDelay="1000"
-            [ngClass]="{ 'selected': currentVideo?.name === folder?.name }"
-            (click)="selectPart(folder)"
-          >
-            <mat-icon mat-list-icon>play_arrow</mat-icon>
-            <h4 mat-line style='display: flex; align-items: center; font-size: 16px; flex: 1'>{{ folder.name }}</h4>
-            <div mat-line style='display: flex; flex: 1; justify-content: space-between; align-items: center'>
-              <p>
-                {{ folder.updated }}
-              </p>
-              <p>
-                {{ folder.size }}
-              </p>
+        <div class="playlist-items" *ngIf="!alertShown">
+          <div class="playlist-item"
+               *ngFor="let folder of folders"
+               [class.active]="currentVideo?.name === folder?.name"
+               (click)="selectPart(folder)"
+               [title]="folder.name">
+            <div class="item-icon">
+              <nz-icon nzType="play-circle" nzTheme="outline" />
             </div>
-          </mat-list-item>
-        </mat-list>
-      </mat-card>
+            <div class="item-info">
+              <div class="item-name">{{ folder.name }}</div>
+              <div class="item-meta" *ngIf="folder.updated || folder.size">
+                <span *ngIf="folder.updated">{{ folder.updated }}</span>
+                <span *ngIf="folder.size" class="size">{{ folder.size }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

@@ -1,0 +1,142 @@
+.content-footer {
+  background: var(--el-asset-tree-bg-color);
+  color: #ffffff;
+  font-size: 12px;
+  // border-left: 1px solid var(--el-border-color-y);
+
+  button.ant-btn {
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    // border: solid 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .batch-command-zone {
+    height: 200px;
+    padding: 10px 15px;
+
+    button.ant-btn {
+      height: 25px;
+    }
+
+    .command-header {
+      height: 25px;
+      display: flex;
+      gap: 5px;
+      margin-bottom: 5px;
+      line-height: 24px;
+    }
+
+    .command-input {
+      height: 150px;
+      background-color: var(--el-editor-bg-color);
+      overflow: auto;
+      position: relative;
+
+      .send-group {
+        position: absolute;
+        right: 5px;
+        bottom: 5px;
+        z-index: 1;
+
+        button {
+          background-color: #423838;
+        }
+      }
+
+      .command-editor {
+        height: 150px;
+        overflow: auto;
+      }
+
+      ::ng-deep {
+        .cm-editor,
+        .cm-content {
+          background-color: var(--el-editor-bg-color);
+        }
+      }
+    }
+  }
+
+  .footer-bar {
+    height: 30px;
+    background: var(--el-tab-bg-color);
+
+    .footer-bar__left {
+      margin-left: 5px;
+    }
+  }
+}
+
+
+.rotate-icon {
+  transform: rotate(-90deg);
+  transition: transform 0.3s ease;
+}
+
+::ng-deep .command-dropdown {
+  max-width: 350px;
+
+  .ant-dropdown-menu:not(.title) {
+    min-width: 100px;
+    height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .ant-dropdown-menu-root {
+    .ant-dropdown-menu-item-selected {
+      background-color: #000000;
+    }
+  }
+
+  nz-input-group {
+    background-color: #0F0F0F;
+    color: #FFFFFF;
+
+    .ant-input {
+      background-color: #0F0F0F;
+      color: #FFFFFF;
+      font-size: 12px;
+    }
+  }
+
+  .ant-tag-orange {
+    background: #2b1d11;
+  }
+
+  .command-item {
+
+    .command-name {
+      font-size: 13px;
+      font-weight: 400;
+    }
+
+    .command-args {
+      margin-top: 0;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.71);
+    }
+  }
+}
+
+.batch-command-zone {
+  .ant-tag-orange {
+    background: #2b1d11;
+  }
+
+}
+
+.save-btn {
+  color: #ffffff;
+  font-size: 12px;
+  height: 25px;
+
+  background-color: #423838;
+}
+
+.search-input {
+  padding: 8px 12px;
+}

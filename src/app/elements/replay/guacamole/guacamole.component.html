@@ -1,47 +1,64 @@
-<div id="player">
-  <div class="controls">
-    <button id="play-pause" class="btn" (click)="toggle()">
-      <i class="fa" [ngClass]="{'fa-play':!isPlaying,'fa-pause': isPlaying}"></i>
-    </button>
-    <button type="button" class="btn" (click)="restart()">
-      <i class="fa fa-repeat" aria-hidden="true"></i>
-    </button>
-    <span [ngClass]="rangeHideClass" style="width: 100%"><input id="position-slider" type="range" [(ngModel)]="percent" [attr.max]="max" (mouseup)="runFrom()"></span>
-    <span id="position">{{ position }}</span>
-    <span>/</span>
-    <span id="duration">{{ duration }}</span>
-    <span id="user" style="padding-left: 20px" *ngIf="replay.user">{{"user"| translate}} : {{replay.user}}</span>
-    <span id="asset" style="padding-left: 20px" *ngIf="replay.asset">{{"asset"| translate}} : {{replay.asset}}</span>
-    <span id="system_user" style="padding-left: 20px" *ngIf="replay.system_user">{{"system user"| translate}} : {{replay.system_user}}</span>
-    <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{"start time"| translate}} : {{startTime}} </span>
-    <span id="download" style="padding-left: 30px" *ngIf="replay.download_url"><a type="button" [href]="replay.download_url">{{"download"| translate}}</a></span>
-  </div>
-  <div id="display">
-    <div class="notification-container">
-      <div class="seek-notification">
-        <p>
-          Seek in progress...
-          <button id="cancel-seek" class="btn" (click)="cancelSeek($event)">Cancel</button>
-        </p>
+<div class="player-container" id="player">
+  <div class="display">
+    <div class="seek-overlay" *ngIf="isSeeking">
+      <div class="seek-content">
+        <nz-spin nzSize="default"></nz-spin>
+        <p>正在跳转...</p>
+        <button class="cancel-btn" (click)="cancelSeek($event)">取消</button>
       </div>
     </div>
-    <as-split direction="horizontal" gutterSize="0">
-      <as-split-area *ngIf="commands.length" [size]="15" [maxSize]="15" [minSize]="0" order="0">
-        <div class="command-results"
-              infiniteScroll
-              [infiniteScrollDistance]="2"
-              [infiniteScrollThrottle]="50"
-              (scrolled)="onScroll()"
-              [scrollWindow]="false">
-            <div class="item" [title]="leftInfo" *ngFor="let item of commands" (click)="commandClick(item)">
-              <div class="command" [title]="item.input">{{ item.input }}</div>
-              <div class="timestamp">{{ item.atime }}</div>
-            </div>
+
+    <div class="content">
+      <div class="commands" *ngIf="commands.length > 0">
+        <div class="commands-header">
+          <span>命令历史 ({{ commands.length }})</span>
         </div>
-      </as-split-area>
-      <as-split-area [size]="85" [maxSize]="100" [minSize]="85" order="1">
-          <div id="screen" (click)="toggle()"></div>
-      </as-split-area>
-    </as-split>
+        <div class="commands-list"
+             infiniteScroll
+             [infiniteScrollDistance]="2"
+             [infiniteScrollThrottle]="50"
+             (scrolled)="onScroll()"
+             [scrollWindow]="false">
+          <div class="command-item"
+               *ngFor="let item of commands; trackBy: trackByCommand"
+               (click)="commandClick(item)"
+               [title]="item.input">
+            <div class="command-text">{{ item.input }}</div>
+            <div class="command-time">{{ item.atime }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 屏幕 -->
+      <div class="screen-wrapper" [class.full]="commands.length === 0">
+        <div id="screen" class="screen" (click)="toggle()"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="controls-left">
+      <button class="control-btn" (click)="toggle()">
+        <i nz-icon [nzType]="isPlaying ? 'pause-circle' : 'play-circle'" nzTheme="fill"></i>
+      </button>
+      <button class="control-btn" (click)="restart()">
+        <i nz-icon nzType="reload" nzTheme="outline"></i>
+      </button>
+    </div>
+
+    <div class="controls-center" [ngClass]="rangeHideClass">
+      <span class="time">{{ position }} / {{ duration }}</span>
+      <div class="progress">
+        <input type="range"
+               id="position-slider"
+               [(ngModel)]="percent"
+               [max]="max"
+               (mouseup)="runFrom()"
+               class="progress-slider">
+      </div>
+    </div>
+
+    <div class="controls-right">
+    </div>
   </div>
 </div>

@@ -1,42 +1,71 @@
-<div class="controls">
-  <button type="button" class="btn">
-    <i class="fa fa-backward" aria-hidden="true" (click)="speedDown()"></i>
-  </button>
-  <button type="button" class="btn" (click)="speedUp()">
-    <i class="fa fa-forward" aria-hidden="true"></i>
-  </button>
-  <button type="button" class="btn" (click)="restart()">
-    <i class="fa fa-repeat" aria-hidden="true"></i>
-  </button>
+<div class="replay-container">
+  <!-- 信息头部 -->
+  <div class="info-header">
+    <div class="info-controls">
+      <button class="control-btn" (click)="speedDown()">
+        <i nz-icon nzType="fast-backward" nzTheme="outline"></i>
+      </button>
+      <button class="control-btn" (click)="restart()">
+        <i nz-icon nzType="redo" nzTheme="outline"></i>
+      </button>
+      <button class="control-btn" (click)="speedUp()">
+        <i nz-icon nzType="fast-forward" nzTheme="outline"></i>
+      </button>
+    </div>
 
-  {{"Speed"| translate}}: {{speed}}
-  <span id="user" style="padding-left: 20px" *ngIf="replay.user">{{"user"| translate}} : {{replay.user}}</span>
-  <span id="asset" style="padding-left: 20px" *ngIf="replay.asset">{{"asset"| translate}} : {{replay.asset}}</span>
-  <span id="system_user" style="padding-left: 20px" *ngIf="replay.system_user">{{"system user"| translate}} : {{replay.system_user}}</span>
-  <span id="date_start" style="padding-left: 20px" *ngIf="replay.date_start">{{"start time"| translate}} : {{startTime}} </span>
-  <span id="download" style="padding-left: 30px" *ngIf="replay.download_url"><a type="button" [href]="replay.download_url">{{"download"| translate}}</a></span>
-</div>
-<div id="player">
-  <as-split direction="horizontal" gutterSize="0">
-    <as-split-area *ngIf="commands.length" [size]="15" [maxSize]="15" [minSize]="0" order="0">
-      <div class="command-results" 
-            infiniteScroll
-            [infiniteScrollDistance]="2"
-            [infiniteScrollThrottle]="50"
-            (scrolled)="onScroll()"
-            [scrollWindow]="false">
-          <div class="item" *ngFor="let item of commands" (click)="commandClick(item)"> 
-            <div class="command" [title]="item.input">{{ item.input }}</div>
-            <div class="timestamp">{{ item.atime }}</div>
-          </div>
+    <div class="info-item">
+      <span class="label">{{ "Speed" | translate }}:</span>
+      <span class="value">{{ speed }}</span>
+    </div>
+    <div class="info-item" *ngIf="replay.user">
+      <span class="label">{{ "user" | translate }}:</span>
+      <span class="value">{{ replay.user }}</span>
+    </div>
+    <div class="info-item" *ngIf="replay.asset">
+      <span class="label">{{ "asset" | translate }}:</span>
+      <span class="value">{{ replay.asset }}</span>
+    </div>
+    <div class="info-item" *ngIf="replay.account">
+      <span class="label">{{ "account" | translate }}:</span>
+      <span class="value">{{ replay.account }}</span>
+    </div>
+    <div class="info-item" *ngIf="replay.date_start">
+      <span class="label">{{ "start time" | translate }}:</span>
+      <span class="value">{{ startTime }}</span>
+    </div>
+    <div class="info-actions">
+      <a *ngIf="replay.download_url" [href]="replay.download_url" class="download-link">
+        {{ "download" | translate }}
+      </a>
+    </div>
+  </div>
+
+  <!-- 主体内容 -->
+  <div class="main-content">
+    <!-- 终端显示区 -->
+    <div class="terminal-area">
+      <div id="screen"></div>
+    </div>
+
+    <!-- 命令列表 -->
+    <div class="commands-area" *ngIf="commands.length > 0">
+      <div class="commands-header">
+        <span>{{ "Commands" | translate }} ({{ commands.length }})</span>
       </div>
-    </as-split-area>
-    <as-split-area [size]="85" [maxSize]="100" [minSize]="85" order="1">
-        <div id="screen"></div>
-    </as-split-area>
-  </as-split>
+      <div class="commands-list"
+           infiniteScroll
+           [infiniteScrollDistance]="2"
+           [infiniteScrollThrottle]="50"
+           (scrolled)="onScroll()"
+           [scrollWindow]="false">
+        <div class="command-item"
+             *ngFor="let item of commands"
+             (click)="commandClick(item)"
+             [title]="item.input">
+          <div class="command-text">{{ item.input }}</div>
+          <div class="command-time">{{ item.atime }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-
-
-
-

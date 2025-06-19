@@ -1,13 +1,14 @@
-import { Component, OnInit, Input } from '@angular/core';
-import {Replay, Command} from '@app/model';
+import {Component, Input, OnInit} from '@angular/core';
+import {Command, Replay} from '@app/model';
 import {HttpService} from '@app/services';
 import {TranslateService} from '@ngx-translate/core';
 import {formatTime} from '@app/utils/common';
 
 @Component({
+  standalone: false,
   selector: 'elements-replay-mp4',
-  templateUrl: './mp4.component.html',
-  styleUrls: ['./mp4.component.scss']
+  templateUrl: 'mp4.component.html',
+  styleUrls: ['mp4.component.scss']
 })
 export class ElementsReplayMp4Component implements OnInit {
   @Input() replay: Replay;
@@ -18,7 +19,8 @@ export class ElementsReplayMp4Component implements OnInit {
   height = 0;
   width = 0;
 
-  constructor(private _http: HttpService, private _translate: TranslateService) { }
+  constructor(private _http: HttpService, private _translate: TranslateService) {
+  }
 
   ngOnInit() {
     this.commands = new Array<Command>();
@@ -38,9 +40,9 @@ export class ElementsReplayMp4Component implements OnInit {
   getUserLang() {
     const userLangEN = document.cookie.indexOf('django_language=en');
     if (userLangEN === -1) {
-    return 'zh-CN';
+      return 'zh-CN';
     } else {
-    return 'en-US';
+      return 'en-US';
     }
   }
 
@@ -49,18 +51,18 @@ export class ElementsReplayMp4Component implements OnInit {
       return;
     }
     this._http.getCommandsData(this.replay.id, page)
-    .subscribe(
-      data => {
-        const results = data.results;
-        results.forEach(element => {
-          element.atime = formatTime(element.timestamp * 1000 - this.startTimeStamp);
-        });
-        this.commands = this.commands.concat(results);
-      },
-      err => {
-        alert('没找到命令记录');
-      }
-    );
+      .subscribe(
+        data => {
+          const results = data.results;
+          results.forEach(element => {
+            element.atime = formatTime(element.timestamp * 1000 - this.startTimeStamp);
+          });
+          this.commands = this.commands.concat(results);
+        },
+        err => {
+          alert('没找到命令记录');
+        }
+      );
   }
 
   onScroll() {

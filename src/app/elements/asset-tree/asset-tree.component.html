@@ -1,36 +1,18 @@
 <div class="tree-container">
-  <div
-    *ngFor="let tree of trees"
-    [ngClass]="{'expand-tree': tree.open}"
-    class="tree-type"
-  >
+  <div *ngFor="let tree of trees" [ngClass]="{ 'expand-tree': tree.open }" class="tree-type">
     <span class="tree-type-banner">
-      <div
-        (click)="foldTree(tree)"
-        class="tree-banner-left"
-      >
-        <i
-          [ngClass]="{'rotate': !tree.open}"
-          class="fa fa-caret-down tree-icon-rotate"
-        ></i>
-        <span
-          class="tree-type-banner-label"
-        >
+      <div (click)="foldTree(tree)" class="tree-banner-left">
+        <i [ngClass]="{ rotate: !tree.open }" class="fa fa-caret-down tree-icon-rotate"></i>
+        <span class="tree-type-banner-label">
           {{ tree.label | translate }}
         </span>
       </div>
-      <span
-        *ngIf="tree.open"
-        class="tree-banner-icon-zone"
-      >
-        <a
-          *ngIf="tree.search"
-          [id]="tree.name + 'SearchIcon'"
-          class="tree-search"
-        >
+      <span *ngIf="tree.open" class="tree-banner-icon-zone">
+        <a *ngIf="tree.search" [id]="tree.name + 'SearchIcon'" class="tree-search">
           <i
             (click)="treeSearch($event, tree)"
-            [matTooltip]="('Search' | translate)"
+            [nzTooltipTitle]="'Search' | translate"
+            nz-tooltip
             class="fa fa-search tree-banner-icon"
           ></i>
           <input
@@ -42,50 +24,56 @@
         </a>
         <i
           (click)="toggleTreeCheckable($event, tree)"
-          [matTooltip]="('Batch actions(select and right click)' | translate)"
+          [nzTooltipTitle]="'Batch actions(select and right click)' | translate"
+          nz-tooltip
           [ngClass]="isTreeCheckEnabled(tree) ? 'fa-check-square' : 'fa-square-o'"
           class="fa tree-banner-icon"
         ></i>
         <i
           (click)="refreshTree($event, tree)"
           *ngIf="tree.complete"
-          [matTooltip]="('Refresh' | translate)"
+          [nzTooltipTitle]="'Refresh' | translate"
+          nz-tooltip
           class="fa fa-refresh tree-banner-icon"
         ></i>
         <i
           (click)="stopOffsetTree(tree)"
           *ngIf="!tree.complete"
-          [matTooltip]="('Stop' | translate)"
+          [nzTooltipTitle]="'Stop' | translate"
+          nz-tooltip
           class="fa fa-square tree-banner-icon"
         ></i>
       </span>
     </span>
-    <div
-      [hidden]="!tree.open"
-      class="tree-type-content"
-    >
+    <div [hidden]="!tree.open" class="tree-type-content">
       <div *ngIf="tree.loading" class="tree-type-loading">
-        <mat-spinner diameter="20"></mat-spinner>
+        <nz-spin nzSimple></nz-spin>
       </div>
-      <ul [id]="tree.name" class="ztree">
-      </ul>
+      <ul [id]="tree.name" class="ztree"></ul>
     </div>
   </div>
 </div>
 
-<div #rMenu *ngIf="isShowRMenu" [style.left]="pos.left" [style.top]="pos.top" class="view-menu" style="position: fixed">
+<div
+  #rMenu
+  *ngIf="isShowRMenu"
+  [style.left]="pos.left"
+  [style.top]="pos.top"
+  class="view-menu"
+  style="position: fixed"
+>
   <table>
     <tbody>
-    <tr *ngFor="let menu of RMenuList; let i = index" class="view-menu__item ">
-      <td (click)="menu.click()"
+      <tr *ngFor="let menu of rMenuList; let i = index" class="view-menu__item">
+        <td
+          (click)="handleMenuClick(menu)"
           [attr.data-num]="i"
-          [attr.disabled]="true"
-          [ngStyle]="{'display': menu.hide ? 'none': ''}"
+          [ngStyle]="{ display: menu.hide ? 'none' : '' }"
           class="view-menu__data"
-      >
-        <span [ngClass]="menu.fa" class="view-menu__icon fa"></span> {{ menu.name| translate }}
-      </td>
-    </tr>
+        >
+          <span [ngClass]="menu.fa" class="view-menu__icon fa"></span> {{ menu.name | translate }}
+        </td>
+      </tr>
     </tbody>
   </table>
 </div>

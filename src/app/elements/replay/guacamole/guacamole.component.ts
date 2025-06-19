@@ -1,12 +1,13 @@
 import {
   Component,
   Input,
-  OnInit,
   OnChanges,
+  OnInit,
+  AfterViewInit,
   SimpleChanges,
   ViewEncapsulation
 } from '@angular/core';
-import * as Guacamole from 'guacamole-common-js/dist/guacamole-common';
+import Guacamole from 'guacamole-common-js';
 import { Command, Replay } from '@app/model';
 import { HttpService } from '@app/services';
 import { formatTime } from '@app/utils/common';
@@ -15,13 +16,15 @@ import { fromEvent, Observable, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
+  standalone: false,
   selector: 'elements-replay-guacamole',
-  templateUrl: './guacamole.component.html',
-  styleUrls: ['./guacamole.component.scss'],
+  templateUrl: 'guacamole.component.html',
+  styleUrls: ['guacamole.component.scss'],
   encapsulation: ViewEncapsulation.None
 })
-export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
+export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, AfterViewInit {
   isPlaying = false;
+  isSeeking = false;
   recording: any;
   playerRef: any;
   displayRef: any;
@@ -45,7 +48,10 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
   interval: number;
   initializedCommand: boolean = false;
 
-  constructor(private _http: HttpService, private _translate: TranslateService) {}
+  constructor(
+    private _http: HttpService,
+    private _translate: TranslateService
+  ) {}
 
   ngOnInit() {
     this.initialize();
@@ -54,8 +60,15 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['replay'] && changes['replay'].currentValue) {
       this.destroy();
-      this.initialize();
+
+      setTimeout(() => {
+        this.initialize();
+      }, 50);
     }
+  }
+
+  ngAfterViewInit() {
+    this.applyScaleWithRetry(500);
   }
 
   initialize() {
@@ -65,60 +78,77 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
 
     this.commands = [];
 
-
     const date = new Date(Date.parse(this.replay.date_start));
     this.startTime = this.toSafeLocalDateStr(date);
     this.startTimeStamp = Date.parse(this.replay.date_start);
+
     this.playerRef = document.getElementById('player');
     this.displayRef = document.getElementById('display');
     this.screenRef = document.getElementById('screen');
 
-    const tunnel = new Guacamole.StaticHTTPTunnel(this.replay.src);
-    this.recording = new Guacamole.SessionRecording(tunnel);
-    this.recordingDisplay = this.recording.getDisplay();
-    const recordingElement = this.recordingDisplay.getElement();
-
-    recordingElement.style.margin = '0 auto';
-
-    this.screenRef.appendChild(recordingElement);
-
-    this.initRecording();
-
-    if (!this.initializedCommand) {
-      this.getCommands(this.page);
-
-      this.initializedCommand = true;
+    if (!this.screenRef) {
+      return;
     }
 
-    this._translate.get('LeftInfo').subscribe((res: string) => {
-      this.leftInfo = res;
-    });
-    this.winSizeChange$ = fromEvent(window, 'resize').pipe(
-      debounceTime(300),
-      distinctUntilChanged(),
-    );
-    this.winSizeSub = this.winSizeChange$
-      .subscribe(() => {
-        this.recordingDisplay.scale(this.getPropScale());
+    try {
+      const tunnel = new Guacamole.StaticHTTPTunnel(this.replay.src);
+      this.recording = new Guacamole.SessionRecording(tunnel);
+      this.recordingDisplay = this.recording.getDisplay();
+      const recordingElement = this.recordingDisplay.getElement();
+
+      recordingElement.style.margin = '0 auto';
+
+      this.screenRef.appendChild(recordingElement);
+
+      this.initRecording();
+
+      if (!this.initializedCommand) {
+        this.getCommands(this.page);
+        this.initializedCommand = true;
+      }
+
+      this._translate.get('LeftInfo').subscribe((res: string) => {
+        this.leftInfo = res;
       });
 
-    if (this.isMobile()) {
-      this.initTouchEvents();
+      this.winSizeChange$ = fromEvent(window, 'resize').pipe(
+        debounceTime(300),
+        distinctUntilChanged()
+      );
+      this.winSizeSub = this.winSizeChange$.subscribe(() => {
+        if (this.recordingDisplay && this.screenRef) {
+          this.applyScaleWithRetry(300);
+        }
+      });
+
+      if (this.isMobile()) {
+        this.initTouchEvents();
+      }
+
+    } catch (error) {
+      throw new Error(error);
     }
   }
 
   initRecording() {
     this.recording.connect('');
-    this.recording.onplay = () => {
-      this.isPlaying = true;
+
+    this.recording.onload = () => {
+      this.applyScaleWithRetry(200);
+      this.recording.play();
     };
 
-    this.recording.onseek = (millis) => {
+    this.recording.onplay = () => {
+      this.isPlaying = true;
+      this.applyScaleWithRetry(100);
+    };
+
+    this.recording.onseek = millis => {
       this.position = formatTime(millis);
       this.percent = millis;
     };
 
-    this.recording.onprogress = (millis) => {
+    this.recording.onprogress = millis => {
       if (millis >= this.max) {
         this.duration = formatTime(millis);
         this.max = millis;
@@ -126,6 +156,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       if (this.firstLoad) {
         this.recording.play();
         this.firstLoad = false;
+        this.applyScaleWithRetry(300);
       }
     };
 
@@ -139,7 +170,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       if (!height) {
         return;
       }
-      this.recordingDisplay.scale(this.getPropScale());
+      this.applyScaleWithRetry(100);
     };
 
     clearInterval(this.interval);
@@ -153,6 +184,32 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
         this.lastDuration = this.max;
       }
     }, 1000);
+  }
+
+  private applyScaleWithRetry(delay: number = 100, maxRetries: number = 5) {
+    let retryCount = 0;
+
+    const tryApplyScale = () => {
+      if (this.recordingDisplay && this.screenRef) {
+        const width = this.recordingDisplay.getWidth();
+        const height = this.recordingDisplay.getHeight();
+
+        if (width > 0 && height > 0) {
+          const scale = this.getPropScale();
+          this.recordingDisplay.scale(scale);
+          return true;
+        } else if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(tryApplyScale, delay);
+          return false;
+        } else {
+          return false;
+        }
+      }
+      return false;
+    };
+
+    setTimeout(tryApplyScale, delay);
   }
 
   destroy() {
@@ -187,6 +244,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     this.displayRef = null;
     this.screenRef = null;
     this.isPlaying = false;
+    this.isSeeking = false;
     this.max = 100;
     this.percent = 0;
     this.duration = '00:00';
@@ -199,19 +257,30 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     this.firstLoad = true;
     this.rangeHideClass = 'hideCursor';
     this.lastDuration = 0;
+    this.initializedCommand = false;
   }
 
   getPropScale() {
     let scale = 1;
-    if (this.recordingDisplay) {
+    if (this.recordingDisplay && this.screenRef) {
       const width = this.recordingDisplay.getWidth();
       const height = this.recordingDisplay.getHeight();
+
       if (!width || !height) {
         return scale;
       }
-      const widthScale = this.screenRef.offsetWidth / width;
-      const heightScale = this.screenRef.offsetHeight / height;
-      scale = Math.min(widthScale, heightScale);
+
+      const containerRect = this.screenRef.getBoundingClientRect();
+      const availableWidth = containerRect.width - 32; // 减去padding
+      const availableHeight = containerRect.height - 32;
+
+      if (availableWidth <= 0 || availableHeight <= 0) {
+        return scale;
+      }
+
+      const widthScale = availableWidth / width;
+      const heightScale = availableHeight / height;
+      scale = Math.min(widthScale, heightScale, 1);
     }
     return scale;
   }
@@ -242,20 +311,22 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
 
   runFrom() {
     this.setDisableStatusSiderElement(true);
+    this.isSeeking = true;
 
     this.recording.seek(this.percent, () => {
-        this.playerRef.className = '';
-        this.setDisableStatusSiderElement(false);
-      }
-    );
+      this.playerRef.classList.remove('seeking');
+      this.isSeeking = false;
+      this.setDisableStatusSiderElement(false);
+    });
 
     // Seek is in progress
-    this.playerRef.className = 'seeking';
+    this.playerRef.classList.add('seeking');
   }
 
   cancelSeek(e) {
     this.recording.play();
-    this.playerRef.className = '';
+    this.playerRef.classList.remove('seeking');
+    this.isSeeking = false;
     e.stopPropagation();
     this.setDisableStatusSiderElement(false);
   }
@@ -264,6 +335,8 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     if (!this.recording.isPlaying()) {
       this.recording.play();
       this.isPlaying = true;
+      // 延迟应用缩放，确保播放状态已更新
+      this.applyScaleWithRetry(100);
     }
   }
 
@@ -287,21 +360,20 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
       return;
     }
 
-    this._http.getCommandsData(this.replay.id, page)
-      .subscribe(
-        data => {
-          const results = data.results;
+    this._http.getCommandsData(this.replay.id, page).subscribe(
+      data => {
+        const results = data.results;
 
-          results.forEach((element: any) => {
-            element.atime = formatTime(element.timestamp * 1000 - this.startTimeStamp);
-          });
+        results.forEach((element: any) => {
+          element.atime = formatTime(element.timestamp * 1000 - this.startTimeStamp);
+        });
 
-          this.commands = this.commands.concat(results);
-        },
-        err => {
-          alert('没找到命令记录');
-        }
-      );
+        this.commands = this.commands.concat(results);
+      },
+      err => {
+        alert('没找到命令记录');
+      }
+    );
   }
 
   onScroll() {
@@ -314,13 +386,19 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges {
     this.runFrom();
   }
 
+  trackByCommand(index: number, item: Command): any {
+    return item.timestamp || index;
+  }
+
   private isMobile(): boolean {
     return window.innerWidth < 768;
   }
 
   private initTouchEvents() {
     const screen = document.getElementById('screen');
-    if (!screen) { return; }
+    if (!screen) {
+      return;
+    }
 
     let touchStartX = 0;
     let touchStartY = 0;

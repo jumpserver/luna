@@ -1,8 +1,11 @@
-<iframe
-  #iFrame
-  *ngIf="iframeURL"
-  [src]="iframeURL | safeUrl"
-  frameborder="0"
-  style="width: 100%; height: 100%;"
->
-</iframe>
+<app-face-monitor></app-face-monitor>
+<section style="height: 100%">
+  <iframe
+    #iFrame
+    *ngIf="iframeURL"
+    [src]="iframeURL | safeUrl"
+    frameborder="0"
+    style="width: 100%; height: 100%"
+  >
+  </iframe>
+</section>

@@ -1,63 +1,37 @@
 <app-face-monitor></app-face-monitor>
 <elements-nav></elements-nav>
-<as-split
-  (dragEnd)="dragEndHandler($event)"
-  (dragStart)="dragStartHandler($event)"
-  (gutterClick)="splitGutterClick($event)"
-  direction="horizontal"
-  gutterSize="0"
+<nz-splitter
   id="container"
+  (nzResize)="dragResize($event)"
+  (nzResizeEnd)="dragEndHandler($event)"
+  (nzResizeStart)="dragStartHandler($event)"
 >
-  <as-split-area
+  <nz-splitter-panel
     #leftArea
-    *ngIf="store.showLeftBar"
-    [size]="settingLayoutSize.leftWidth"
-    class="left-side"
+    nzMin="60"
+    nzMax="50%"
+    [nzSize]="settingLayoutSize.leftWidth"
+    [ngClass]="{ 'left-side': true }"
     id="left-side"
-    order="0"
   >
     <div class="layout">
-      <div [ngClass]="{'menu-active':showSubMenu}" class="menu-icon">
-        <div
-          (click)="menuClick()"
-          *ngIf="true"
-          class="menu-organization"
-        >
-          <span style="font-size: 13px;">
-            <i class="fa fa-sitemap"></i>
-          </span>
-        </div>
-        <div
-          (click)="item.click(item.name)"
-          *ngFor="let item of menus"
-          class="menu-item"
-        >
-          <span>
-            <i [ngClass]="item.icon" class="fa"></i>
-          </span>
-        </div>
-      </div>
       <elements-left-bar
         #leftBar
-        (menuActive)="menuActive()"
+        [collapsed]="collapsed"
+        (menuCollapsedToggle)="handleLayoutSettingChange($event)"
       ></elements-left-bar>
     </div>
-  </as-split-area>
-  <as-split-area
+  </nz-splitter-panel>
+  <nz-splitter-panel
     #rightArea
-    [size]="settingLayoutSize.rightWidth"
     class="content"
     id="right-side"
-    order="1"
+    [nzSize]="settingLayoutSize.rightWidth"
   >
     <div>
       <elements-content (toggleMenu)="onToggleMobileLayout()"></elements-content>
-      <div
-        [hidden]="showIframeHider === false"
-        class="hack-iframe-hider"
-      >
-      </div>
+      <div [hidden]="showIframeHider === false" class="hack-iframe-hider"></div>
     </div>
-  </as-split-area>
-</as-split>
+  </nz-splitter-panel>
+</nz-splitter>
 <elements-chat></elements-chat>

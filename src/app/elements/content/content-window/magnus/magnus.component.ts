@@ -1,14 +1,14 @@
 import {Component, Input, OnInit} from '@angular/core';
 import {Account, Asset, ConnectionToken, Endpoint, View} from '@app/model';
 import {ConnectTokenService, HttpService, I18nService, SettingService} from '@app/services';
-import {ToastrService} from 'ngx-toastr';
 
 import {Command, InfoItem} from '../guide/model';
 
 @Component({
+  standalone: false,
   selector: 'elements-connector-magnus',
-  templateUrl: './magnus.component.html',
-  styleUrls: ['./magnus.component.scss']
+  templateUrl: 'magnus.component.html',
+  styleUrls: ['magnus.component.scss']
 })
 
 export class ElementConnectorMagnusComponent implements OnInit {
@@ -32,7 +32,6 @@ export class ElementConnectorMagnusComponent implements OnInit {
 
   constructor(private _http: HttpService,
               private _i18n: I18nService,
-              private _toastr: ToastrService,
               private _connectTokenSvc: ConnectTokenService,
               private _settingSvc: SettingService
   ) {
@@ -126,6 +125,9 @@ export class ElementConnectorMagnusComponent implements OnInit {
           ` -U ${this.token.id}` +
           ` -P ${passwordHolder}` +
           ` -d ${database}`;
+        break;
+      case 'mongodb':
+        cli = `mongosh mongodb://${this.token.id}:${passwordHolder}@${host}:${port}/${database}`;
         break;
       default:
         cli = `Protocol '${protocol}' Not support now`;

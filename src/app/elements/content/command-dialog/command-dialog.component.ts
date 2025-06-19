@@ -1,15 +1,17 @@
-import {Component, Inject, OnInit} from '@angular/core';
-import {MatDialogRef, MatSnackBar} from '@angular/material';
+import {Component, Inject, Input, OnInit} from '@angular/core';
 import {HttpService, I18nService} from '@app/services';
-import {MAT_DIALOG_DATA} from '@angular/material/dialog';
+import {NZ_MODAL_DATA, NzModalRef} from 'ng-zorro-antd/modal';
+import {NzNotificationService} from 'ng-zorro-antd/notification';
 
 @Component({
+  standalone: false,
   selector: 'elements-command-dialog',
-  templateUrl: './command-dialog.component.html',
+  templateUrl: 'command-dialog.component.html',
 })
 export class ElementCommandDialogComponent implements OnInit {
   public name = '';
   public module = 'shell';
+  public command = '';
   public commandModules = [
     {
       label: 'Shell',
@@ -17,37 +19,36 @@ export class ElementCommandDialogComponent implements OnInit {
     }
   ];
 
-  constructor(public dialogRef: MatDialogRef<ElementCommandDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public data: any,
-              private snackBar: MatSnackBar,
+  constructor(public dialogRef: NzModalRef<ElementCommandDialogComponent>,
               private _http: HttpService,
-              private _i18n: I18nService,
-  ) {}
+              public _i18n: I18nService,
+              private _toastr: NzNotificationService,
+              @Inject(NZ_MODAL_DATA) public data: any,
+  ) {
+    this.command = data.command || '';
+  }
 
-  ngOnInit() {}
+  ngOnInit() {
+  }
 
   async onSubmit() {
-    if (!this.name) { return; }
+    if (!this.name) {
+      return;
+    }
     const data = {
       name: this.name,
-      args: this.data.command,
+      args: this.command,
       module: this.module,
     };
     this._http.addQuickCommand(data).subscribe(
       async () => {
         const msg = await this._i18n.t('Save success');
-        this.snackBar.open(msg, '', {
-          verticalPosition: 'top',
-          duration: 1600
-        });
-        this.dialogRef.close();
+        this._toastr.success('' + msg, '', {nzDuration: 2000});
+        this.dialogRef.close(this.command);
       },
       (error) => {
         const msg = 'name:' + error.error.name;
-        this.snackBar.open(msg, '', {
-          verticalPosition: 'top',
-          duration: 1600
-        });
+        this._toastr.error(msg, '');
       }
     );
   }

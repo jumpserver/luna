@@ -5,14 +5,15 @@ import {
   Input,
   OnInit,
   Output,
-  ViewChild,
+  ViewChild
 } from '@angular/core';
 import { View, ViewAction } from '@app/model';
 
 @Component({
+  standalone: false,
   selector: 'elements-content-tab',
-  templateUrl: './content-tab.component.html',
-  styleUrls: ['./content-tab.component.scss'],
+  templateUrl: 'content-tab.component.html',
+  styleUrls: ['content-tab.component.scss']
 })
 export class ElementContentTabComponent implements OnInit {
   @Input() view: View;
@@ -52,7 +53,7 @@ export class ElementContentTabComponent implements OnInit {
       const action = new ViewAction(this.view, 'active');
       this.onAction.emit(action);
       this.clickTimeout = null;
-    }, 300);
+    }, 100);
   }
 
   onDoubleClick() {

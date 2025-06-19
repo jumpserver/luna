@@ -1,0 +1,11 @@
+<div>
+  <nz-radio-group [(ngModel)]="value" aria-label="Select an option">
+    <label nz-radio *ngFor="let item of options" [nzValue]="item.value">
+      {{ item.label | translate }}
+    </label>
+  </nz-radio-group>
+</div>
+
+<div style="text-align: right; padding-top: 20px">
+  <button nz-button nzType="primary" (click)="onSubmit()">{{"Confirm"| translate}}</button>
+</div>

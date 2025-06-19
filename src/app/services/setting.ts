@@ -1,23 +1,22 @@
-import {Injectable} from '@angular/core';
-import {GlobalSetting, Setting} from '@app/model';
-import {LocalStorageService} from './share';
-import {I18nService} from '@app/services/i18n';
-import {HttpService} from '@app/services/http';
-import {canvasWaterMark, getQueryParamFromURL} from '@app/utils/common';
-import {BehaviorSubject} from 'rxjs';
+import { Injectable } from "@angular/core";
+import { GlobalSetting, Setting } from "@app/model";
+import { LocalStorageService } from "./share";
+import { I18nService } from "@app/services/i18n";
+import { HttpService } from "@app/services/http";
+import { canvasWaterMark, getQueryParamFromURL } from "@app/utils/common";
+import { BehaviorSubject } from "rxjs";
 
 @Injectable()
 export class SettingService {
   setting: Setting = new Setting();
   public globalSetting: GlobalSetting = new GlobalSetting();
-  settingKey = 'LunaSetting';
+  settingKey = "LunaSetting";
   public initialized$ = new BehaviorSubject<boolean>(false);
   public isLoadTreeAsync$ = new BehaviorSubject<boolean>(true);
   public isOpenNewWindow$ = new BehaviorSubject<boolean>(false);
-  public appletConnectMethod$ = new BehaviorSubject<string>('');
-  public keyboardLayout$ = new BehaviorSubject<string>('');
+  public appletConnectMethod$ = new BehaviorSubject<string>("");
+  public keyboardLayout$ = new BehaviorSubject<string>("");
   public isDirectNavigation$ = new BehaviorSubject<boolean>(false);
-
 
   constructor(
     private _localStorage: LocalStorageService,
@@ -28,14 +27,15 @@ export class SettingService {
   }
 
   async getPublicSettings() {
-    let url = '/api/v1/settings/public/';
-    const connectionToken = getQueryParamFromURL('token');
+    let url = "/api/v1/settings/public/";
+    const connectionToken = getQueryParamFromURL("token");
     if (connectionToken) {
       // 解决 /luna/connect?connectToken= 直接方式权限认证问题
       url += `?token=${connectionToken}`;
     }
     this.globalSetting = await this._http.get<any>(url).toPromise();
-    this.setting.commandExecution = this.globalSetting.SECURITY_COMMAND_EXECUTION;
+    this.setting.commandExecution =
+      this.globalSetting.SECURITY_COMMAND_EXECUTION;
     this.setLogo();
     this.setTitle();
     this.setFavicon();
@@ -47,7 +47,7 @@ export class SettingService {
 
   getSystemSetting() {
     return new Promise<void>(async (resolve) => {
-      const url = '/api/v1/users/preference/?category=luna';
+      const url = "/api/v1/users/preference/?category=luna";
       const serverSetting = await this._http.get<any>(url).toPromise();
       const localSetting = this._localStorage.get(this.settingKey);
       this.setting = Object.assign(this.setting, localSetting, serverSetting);
@@ -59,11 +59,13 @@ export class SettingService {
   }
 
   setTitle() {
-    document.title = this._i18n.instant('Web Terminal') + ` - ${this.globalSetting.INTERFACE.login_title}`;
+    document.title =
+      this._i18n.instant("Web Terminal") +
+      ` - ${this.globalSetting.INTERFACE.login_title}`;
   }
 
   setLogo() {
-    const logoRef: any = document.getElementById('left-logo');
+    const logoRef: any = document.getElementById("left-logo");
     const logoLogout = this.globalSetting.INTERFACE.logo_logout;
     if (logoLogout && logoRef) {
       logoRef.src = logoLogout;
@@ -72,25 +74,27 @@ export class SettingService {
 
   setFavicon() {
     // 更改favicon
-    const link: any = document.querySelector('link[rel*=\'icon\']') ||
-      document.createElement('link');
-    document.getElementsByTagName('head')[0].appendChild(link);
-    link.type = 'image/x-icon';
-    link.rel = 'shortcut icon';
+    const link: any =
+      document.querySelector("link[rel*='icon']") ||
+      document.createElement("link");
+    document.getElementsByTagName("head")[0].appendChild(link);
+    link.type = "image/x-icon";
+    link.rel = "shortcut icon";
     link.href = this.globalSetting.INTERFACE.favicon;
   }
 
   setRDPResolution() {
     const value = this._localStorage.get(this.settingKey);
     if (!value || (value.graphics && !value.graphics.rdp_resolution)) {
-      this.setting.graphics.rdp_resolution = this.globalSetting.TERMINAL_GRAPHICAL_RESOLUTION;
+      this.setting.graphics.rdp_resolution =
+        this.globalSetting.TERMINAL_GRAPHICAL_RESOLUTION;
     }
   }
 
   setPrimaryColor() {
-    const primaryColor = this.globalSetting.INTERFACE['primary_color'];
+    const primaryColor = this.globalSetting.INTERFACE["primary_color"];
     if (primaryColor) {
-      document.body.style.setProperty('--primary-color', primaryColor);
+      document.body.style.setProperty("--primary-color", primaryColor);
     }
   }
 
@@ -117,7 +121,7 @@ export class SettingService {
   }
 
   save() {
-    const url = '/api/v1/users/preference/?category=luna';
+    const url = "/api/v1/users/preference/?category=luna";
     this._http.patch(url, this.setting).toPromise();
     this._localStorage.set(this.settingKey, this.setting);
     this.setAppletConnectMethod();
@@ -129,12 +133,13 @@ export class SettingService {
   }
 
   isOpenNewWindow() {
-    return this.setting.basic.connect_default_open_method === 'new';
+    return this.setting.basic.connect_default_open_method === "new";
   }
 
-
   setAppletConnectMethod() {
-    this.appletConnectMethod$.next(this.setting.graphics.applet_connection_method);
+    this.appletConnectMethod$.next(
+      this.setting.graphics.applet_connection_method
+    );
   }
 
   setKeyboardLayout() {
@@ -150,29 +155,32 @@ export class SettingService {
     if (this.globalSkipAllManualPassword()) {
       return true;
     }
-    return this.setting.isSkipAllManualPassword === '1';
+    return this.setting.isSkipAllManualPassword === "1";
   }
 
   createWaterMarkIfNeed(element, content) {
     this.init().then(() => {
-      if (this.globalSetting.SECURITY_WATERMARK_ENABLED && this.hasXPack()) {
+      if (this.globalSetting.SECURITY_WATERMARK_ENABLED) {
         canvasWaterMark({
           container: element,
           content: content,
           settings: {
             width: this.globalSetting.SECURITY_WATERMARK_WIDTH,
             height: this.globalSetting.SECURITY_WATERMARK_HEIGHT,
-            font: this.globalSetting.SECURITY_WATERMARK_FONT_SIZE + 'px monaco, microsoft yahei',
+            font:
+              this.globalSetting.SECURITY_WATERMARK_FONT_SIZE +
+              "px monaco, microsoft yahei",
             fillStyle: this.globalSetting.SECURITY_WATERMARK_COLOR,
             rotate: this.globalSetting.SECURITY_WATERMARK_ROTATE,
-            lineHeight: this.globalSetting.SECURITY_WATERMARK_FONT_SIZE
-          }
+            lineHeight: this.globalSetting.SECURITY_WATERMARK_FONT_SIZE,
+          },
         });
       }
     });
   }
 
   hasXPack() {
-    return this.globalSetting.XPACK_LICENSE_IS_VALID;
+    const hasXpack = this.globalSetting.XPACK_LICENSE_IS_VALID;
+    return hasXpack;
   }
 }

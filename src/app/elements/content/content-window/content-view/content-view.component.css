@@ -9,9 +9,11 @@
 .head {
   height: 31px;
   line-height: 31px;
-  padding: 0 10px 0 8px;
+  padding: 0 10px 0 15px;
   color: #ffffff;
-  background-color: #2f2a2a;
+  background-color: var(--el-tab-sub-bg-color);
+  border-right: 1px solid var(--el-border-color-y);
+  border-top: solid 1px var(--el-border-color-x);
 }
 
 .close {
