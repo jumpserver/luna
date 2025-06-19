@@ -290,3 +290,7 @@ body {
 .view-menu__item {
   font-size: 12px;
 }
+
+.cdk-global-scrollblock {
+  overflow-y: auto !important;
+}
