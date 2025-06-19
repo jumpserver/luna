@@ -64,11 +64,11 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
     // Windows资产的特殊处理
     if (view.asset.type && view.asset.type.value === 'windows') {
-      // Windows下的SSH应该禁用文件管理器
+      // Windows下的SSH不禁用文件管理器
       if (view.protocol === 'ssh') {
-        return true;
+        return false;
       }
-      // Windows下的其他协议（如RDP）也禁用文件管理器
+      // Windows下的其他协议（如RDP）禁用文件管理器
       return true;
     }
 
@@ -109,9 +109,6 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     if (view.asset.type && view.asset.type.value === 'website') {
       return true;
     }
-
-    // telnet协议的快捷键不需要被禁用
-    // 其他协议根据需要添加到禁用列表中
 
     return false;
   }

@@ -88,11 +88,11 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
 
     // Windows资产的特殊处理
     if (view.asset.type && view.asset.type.value === 'windows') {
-      // Windows下的SSH应该禁用文件管理器
+      // Windows下的SSH不禁用文件管理器
       if (view.protocol === 'ssh') {
-        return true;
+        return false;
       }
-      // Windows下的其他协议（如RDP）也禁用文件管理器
+      // Windows下的其他协议（如RDP）禁用文件管理器
       return true;
     }
 
