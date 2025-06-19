@@ -4,7 +4,13 @@ import { writeText } from 'clipboard-polyfill';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Component, OnDestroy, OnInit, input, Output, EventEmitter } from '@angular/core';
-import { I18nService, IframeCommunicationService, ViewService, HttpService, DrawerStateService } from '@app/services';
+import {
+  I18nService,
+  IframeCommunicationService,
+  ViewService,
+  HttpService,
+  DrawerStateService
+} from '@app/services';
 import { effect } from '@angular/core';
 
 import type { OnlineUsers } from '@app/model';
@@ -88,13 +94,8 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
       const viewId = this.currentViewId();
       const sessionId = this.currentSessionId();
 
-      console.log('SessionShare effect triggered:', { viewId, sessionId });
-
       if (viewId && sessionId) {
-        const oldSessionId = this.currentSessionIds.get(viewId);
         this.currentSessionIds.set(viewId, sessionId);
-        console.log(`Updated sessionId for viewId ${viewId}: ${oldSessionId} -> ${sessionId}`);
-        console.log('Current sessionIds map:', Array.from(this.currentSessionIds.entries()));
       }
     });
   }
@@ -135,12 +136,6 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
 
     const currentViewId = this.currentViewId();
     const sessionId = this.currentSessionIds.get(currentViewId);
-
-    console.log('Creating share link with:', {
-      currentViewId,
-      sessionId,
-      allSessionIds: Array.from(this.currentSessionIds.entries())
-    });
 
     this._iframeSvc.sendMessage({
       name: 'SHARE_CODE_REQUEST',
@@ -248,8 +243,6 @@ export class ElementSessionShareComponent implements OnInit, OnDestroy {
   private handleShareUserAdd(data: string) {
     try {
       const messageData: OnlineUsers = JSON.parse(data);
-
-      console.log('handleShareUserAdd', messageData);
 
       this.currentSessionIds.set(this.currentViewId(), messageData.sessionId);
       this.onLineUsersAdd.emit(messageData);
