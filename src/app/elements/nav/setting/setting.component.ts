@@ -131,7 +131,7 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
     this.currentTheme = theme;
     this.setting.command_line.terminal_theme_name = theme;
     this.changeTheme(theme);
-    this._http.setTerminalPreference({ basic: { terminal_theme_name: theme } }).subscribe({
+    this._http.setTerminalPreference({ command_line: { terminal_theme_name: theme } }).subscribe({
       next: _res => {
         console.log('Theme saved successfully:', theme);
       },
