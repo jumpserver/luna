@@ -86,12 +86,22 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
       return true;
     }
 
-    // 检查资产类型是否被禁用
-    if (view.asset.type && this.DISABLED_ASSET_TYPES.includes(view.asset.type.value)) {
+    // Windows资产的特殊处理
+    if (view.asset.type && view.asset.type.value === 'windows') {
+      // Windows下的SSH应该禁用文件管理器
+      if (view.protocol === 'ssh') {
+        return true;
+      }
+      // Windows下的其他协议（如RDP）也禁用文件管理器
       return true;
     }
 
-    // 检查协议是否被禁用
+    // 检查其他资产类型是否被禁用
+    if (view.asset.type && view.asset.type.value === 'website') {
+      return true;
+    }
+
+    // 检查协议是否被禁用（文件管理器需要禁用telnet）
     if (view.protocol && this.DISABLED_PROTOCOLS.includes(view.protocol)) {
       return true;
     }

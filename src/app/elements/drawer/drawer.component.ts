@@ -52,7 +52,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
   private readonly drawerStateMap = new Map<string, DrawerViewState>();
 
-  private isDisabledCategory(view: View): boolean {
+  private isFileManagerDisabled(view: View): boolean {
     if (!view || !view.asset) {
       return false;
     }
@@ -62,18 +62,60 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       return true;
     }
 
-    // 检查资产类型是否被禁用
-    if (view.asset.type && this.DISABLED_ASSET_TYPES.includes(view.asset.type.value)) {
+    // Windows资产的特殊处理
+    if (view.asset.type && view.asset.type.value === 'windows') {
+      // Windows下的SSH应该禁用文件管理器
+      if (view.protocol === 'ssh') {
+        return true;
+      }
+      // Windows下的其他协议（如RDP）也禁用文件管理器
       return true;
     }
 
-    // 检查协议是否被禁用
+    // 检查其他资产类型是否被禁用
+    if (view.asset.type && view.asset.type.value === 'website') {
+      return true;
+    }
+
+    // 检查协议是否被禁用（文件管理器需要禁用telnet）
     if (view.protocol && this.DISABLED_PROTOCOLS.includes(view.protocol)) {
       return true;
     }
 
     return false;
   }
+
+  private isShortcutKeysDisabled(view: View): boolean {
+    if (!view || !view.asset) {
+      return false;
+    }
+
+    // 检查资产类别是否被禁用
+    if (view.asset.category && this.DISABLED_CATEGORIES.includes(view.asset.category.value)) {
+      return true;
+    }
+
+    // Windows资产的特殊处理
+    if (view.asset.type && view.asset.type.value === 'windows') {
+      // Windows下的SSH应该启用快捷键
+      if (view.protocol === 'ssh') {
+        return false;
+      }
+      // Windows下的其他协议（如RDP）禁用快捷键
+      return true;
+    }
+
+    // 检查其他资产类型是否被禁用
+    if (view.asset.type && view.asset.type.value === 'website') {
+      return true;
+    }
+
+    // telnet协议的快捷键不需要被禁用
+    // 其他协议根据需要添加到禁用列表中
+
+    return false;
+  }
+
   private iframeMessageSubscription: Subscription;
   private componentsMessageSubscription: Subscription;
 
@@ -112,10 +154,14 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       }
 
       if (this.hasConnected()) {
-        if (this.view && this.isDisabledCategory(this.view)) {
-          this.disabledFileManager = true;
-          this.disabledShortcutKeys = true;
-          this.currentTabIndex = 1;
+        if (this.view) {
+          this.disabledFileManager = this.isFileManagerDisabled(this.view);
+          this.disabledShortcutKeys = this.isShortcutKeysDisabled(this.view);
+
+          // 如果文件管理器被禁用，默认切换到第二个tab（会话共享）
+          if (this.disabledFileManager && this.currentTabIndex === 0) {
+            this.currentTabIndex = 1;
+          }
         }
       }
     });
@@ -323,11 +369,15 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   initializeNewTabState(viewId: string): void {
     const defaultState = this.createDefaultViewState();
 
-    // 根据资产类型设置禁用状态
-    if (this.view && this.isDisabledCategory(this.view)) {
-      defaultState.disabledFileManager = true;
-      defaultState.disabledShortcutKeys = true;
-      defaultState.currentTabIndex = 1;
+    // 根据资产类型分别设置禁用状态
+    if (this.view) {
+      defaultState.disabledFileManager = this.isFileManagerDisabled(this.view);
+      defaultState.disabledShortcutKeys = this.isShortcutKeysDisabled(this.view);
+
+      // 如果文件管理器被禁用，默认切换到第二个tab
+      if (defaultState.disabledFileManager) {
+        defaultState.currentTabIndex = 1;
+      }
     }
 
     this.onLineUsers = [];
