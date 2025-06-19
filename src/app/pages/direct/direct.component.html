@@ -59,20 +59,16 @@
           <span>{{ totalConnectTime }}</span>
         </div>
       </div>
-      <nz-card class="terminal-card">
-        <div class="card-content" style="height: 100%; border-radius: 8px; overflow: hidden;">
+      <nz-card class="terminal-card" [nzBordered]="false">
+        <div class="card-content" style="height: 100%; overflow: hidden">
           <elements-drawer [view]="view"></elements-drawer>
           <elements-connect
             [direct]="true"
             (onNewView)="onNewView($event)"
             [ngStyle]="{ display: 'none' }"
           ></elements-connect>
-          <elements-content-window
-            #contentWindow
-            *ngIf="view"
-            [view]="view"
-          >
-        </elements-content-window>
+          <elements-content-window #contentWindow *ngIf="view" [view]="view">
+          </elements-content-window>
         </div>
       </nz-card>
     </div>

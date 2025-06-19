@@ -11,7 +11,7 @@
         @for (item of onLineUsers(); track item.terminal_id + item.user + item.primary) {
           <nz-card
             nzSize="small"
-            style="margin-bottom: 8px; border-radius: 8px"
+            style="margin-bottom: 8px"
             [nzBodyStyle]="{ padding: '12px 16px' }"
           >
             <div style="display: flex; align-items: center; justify-content: space-between">
@@ -105,7 +105,10 @@
           <nz-form-control>
             <nz-select formControlName="expired_time">
               @for (option of shareExpiredOptions; track option.value) {
-                <nz-option [nzValue]="option.value" [nzLabel]="`${option.value} ${option.labelKey | translate}`">
+                <nz-option
+                  [nzValue]="option.value"
+                  [nzLabel]="`${option.value} ${option.labelKey | translate}`"
+                >
                 </nz-option>
               }
             </nz-select>
@@ -117,7 +120,10 @@
           <nz-form-control>
             <nz-select formControlName="action_permission">
               @for (permission of shareUserPermissions; track permission.value) {
-                <nz-option [nzValue]="permission.value" [nzLabel]="permission.labelKey | translate"></nz-option>
+                <nz-option
+                  [nzValue]="permission.value"
+                  [nzLabel]="permission.labelKey | translate"
+                ></nz-option>
               }
             </nz-select>
           </nz-form-control>
