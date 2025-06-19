@@ -238,42 +238,61 @@ export class PageDirectComponent implements OnInit, OnDestroy {
    */
   public async handleOpenDrawer(type: string) {
     if (type === 'setting') {
-      this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
-      return;
-    }
+      // 在direct模式下，为filemanager生成token
+      this._http.adminConnectToken(this.permedAsset, this.connectData, false, false, '').subscribe(
+        resp => {
+          const fileManagerToken = resp ? resp.id : '';
+          this._drawerStateService.sendComponentMessage({
+            name: 'OPEN_SETTING',
+            data: {
+              direct: true,
+              fileManagerToken: fileManagerToken
+            }
+          });
+          return this._logger.info(`[Luna] Send OPEN_SETTING with fileManagerToken`);
+        },
+        error => {
+          const dialogRef = this._dialog.create({
+            nzContent: ElementACLDialogComponent,
+            nzData: {
+              asset: this.permedAsset,
+              connectData: { ...this.connectData, direct: true },
+              code: error.error.code,
+              tokenAction: 'create',
+              error: error
+            }
+          });
 
-    // TODO 当前版本前端实现，用户打开文件管理时，需要重新去校验 ACL 权限
-    if (type === 'file') {
-      const res = this._http
-        .adminConnectToken(this.permedAsset, this.connectData, false, false, '')
-        .subscribe(
-          resp => {
-            const SFTP_Token = resp ? resp.id : '';
-            this.iframeCommunicationService.sendMessage({ name: 'FILE', SFTP_Token });
-            return this._logger.info(`[Luna] Send OPEN FILE`);
-          },
-          error => {
-            const dialogRef = this._dialog.create({
-              nzContent: ElementACLDialogComponent,
-              nzData: {
-                asset: this.permedAsset,
-                connectData: this.connectData,
-                code: error.error.code,
-                tokenAction: 'create',
-                error: error
-              }
-            });
+          dialogRef.afterClose.subscribe(token => {
+            if (token) {
+              const fileManagerToken = token.id;
+              console.log('ACL审核通过，获得新token对象:', token);
+              console.log('提取的fileManagerToken:', fileManagerToken);
 
-            dialogRef.afterClose.subscribe(token => {
-              if (token) {
-                this.iframeCommunicationService.sendMessage({ name: 'FILE', SFTP_Token: token.id });
+              if (!fileManagerToken) {
+                console.error('Token ID为空，token对象:', token);
+                alert(this._i18n.instant('VerificationFailed'));
                 return;
               }
 
-              alert(this._i18n.instant('VerificationFailed'));
-            });
-          }
-        );
+              this._drawerStateService.sendComponentMessage({
+                name: 'OPEN_SETTING',
+                data: {
+                  direct: true,
+                  fileManagerToken: fileManagerToken
+                }
+              });
+              this._logger.info(
+                `[Luna] ACL审核通过，发送OPEN_SETTING with token: ${fileManagerToken}`
+              );
+              return;
+            }
+
+            alert(this._i18n.instant('VerificationFailed'));
+          });
+        }
+      );
+      return;
     }
   }
 
@@ -349,6 +368,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
             resolve(true);
           },
           error => {
+            console.log('data', error);
             const dialogRef = this._dialog.create({
               nzContent: ElementACLDialogComponent,
               nzData: {
@@ -361,6 +381,7 @@ export class PageDirectComponent implements OnInit, OnDestroy {
             });
 
             dialogRef.afterClose.subscribe(token => {
+              console.log('token', token);
               if (token) {
                 this.connectToken = token;
                 this.onNewView();

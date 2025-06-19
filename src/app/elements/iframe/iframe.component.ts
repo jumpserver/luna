@@ -143,7 +143,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
         case 'CREATE_FILE_CONNECT_TOKEN':
           this.createFileConnectToken.emit(true);
           break;
-        // TODO 事件转接一下
         case 'SHARE_USER_ADD':
           this._drawerStateService.sendComponentMessage({ name: 'SHARE_USER_ADD', data: msg.data });
           break;

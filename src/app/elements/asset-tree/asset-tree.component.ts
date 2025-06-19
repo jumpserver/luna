@@ -233,7 +233,7 @@ export class ElementAssetTreeComponent implements OnInit {
       return;
     }
     if (treeNode.chkDisabled) {
-      this._message.warning(this._i18n.instant('Disabled asset'));
+      this._message.warning(this._i18n.instant('DisabledAsset'));
       return;
     }
     if (this.isOpenNewWindow) {
