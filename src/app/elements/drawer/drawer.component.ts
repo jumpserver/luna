@@ -46,9 +46,34 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
   chatIframeURL = '';
   terminalContent: {} | null = null;
 
-  DISABLED_CATEGORY = ['database', 'web'];
+  private readonly DISABLED_CATEGORIES = ['database', 'web'];
+  private readonly DISABLED_ASSET_TYPES = ['windows', 'website'];
+  private readonly DISABLED_PROTOCOLS = ['telnet'];
 
   private readonly drawerStateMap = new Map<string, DrawerViewState>();
+
+  private isDisabledCategory(view: View): boolean {
+    if (!view || !view.asset) {
+      return false;
+    }
+
+    // 检查资产类别是否被禁用
+    if (view.asset.category && this.DISABLED_CATEGORIES.includes(view.asset.category.value)) {
+      return true;
+    }
+
+    // 检查资产类型是否被禁用
+    if (view.asset.type && this.DISABLED_ASSET_TYPES.includes(view.asset.type.value)) {
+      return true;
+    }
+
+    // 检查协议是否被禁用
+    if (view.protocol && this.DISABLED_PROTOCOLS.includes(view.protocol)) {
+      return true;
+    }
+
+    return false;
+  }
   private iframeMessageSubscription: Subscription;
   private componentsMessageSubscription: Subscription;
 
@@ -87,12 +112,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       }
 
       if (this.hasConnected()) {
-        if (
-          this.view &&
-          this.view.asset &&
-          this.view.asset.category &&
-          this.DISABLED_CATEGORY.includes(this.view.asset.category.value)
-        ) {
+        if (this.view && this.isDisabledCategory(this.view)) {
           this.disabledFileManager = true;
           this.disabledShortcutKeys = true;
           this.currentTabIndex = 1;
@@ -304,12 +324,7 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     const defaultState = this.createDefaultViewState();
 
     // 根据资产类型设置禁用状态
-    if (
-      this.view &&
-      this.view.asset &&
-      this.view.asset.category &&
-      this.DISABLED_CATEGORY.includes(this.view.asset.category.value)
-    ) {
+    if (this.view && this.isDisabledCategory(this.view)) {
       defaultState.disabledFileManager = true;
       defaultState.disabledShortcutKeys = true;
       defaultState.currentTabIndex = 1;

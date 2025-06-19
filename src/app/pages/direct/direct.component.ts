@@ -369,7 +369,6 @@ export class PageDirectComponent implements OnInit, OnDestroy {
             resolve(true);
           },
           error => {
-            console.log('data', error);
             const dialogRef = this._dialog.create({
               nzContent: ElementACLDialogComponent,
               nzData: {
@@ -382,7 +381,6 @@ export class PageDirectComponent implements OnInit, OnDestroy {
             });
 
             dialogRef.afterClose.subscribe(token => {
-              console.log('token', token);
               if (token) {
                 this.connectToken = token;
                 this.onNewView();
