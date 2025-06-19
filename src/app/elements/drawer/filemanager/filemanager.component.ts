@@ -12,6 +12,7 @@ import {
   effect
 } from '@angular/core';
 import { DrawerStateService } from '@app/services';
+import { Subscription } from 'rxjs';
 
 @Component({
   standalone: false,
@@ -29,8 +30,13 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
   private viewIdOpenSettingStatus = new Map<string, boolean>();
   private iframes = new Map<string, HTMLIFrameElement>();
   private currentDisplayedViewId: string | null = null;
+  private directTokens = new Map<string, string>();
 
   private readonly DISABLED_CATEGORY = ['database', 'web'];
+
+  private iframeMessageSubscription: Subscription;
+  private drawerMessageSubscription: Subscription;
+  private windowMessageListener: (event: MessageEvent) => void;
 
   private viewReconnectStates = new Map<
     string,
@@ -166,7 +172,13 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
     });
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    window.addEventListener('message', (event: MessageEvent) => {
+      if (event.data && event.data.name === 'FILE_MANAGE_EXPIRED') {
+        this.handleFileManageExpired(event.data.data || {});
+      }
+    });
+  }
 
   ngAfterViewInit(): void {
     this.viewInitialized = true;
@@ -176,9 +188,33 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
     this.iframes.clear();
     this.viewIdOpenSettingStatus.clear();
     this.viewReconnectStates.clear();
+    this.directTokens.clear();
+    this.iframeMessageSubscription?.unsubscribe();
+    this.drawerMessageSubscription?.unsubscribe();
   }
 
-  public enableFileManagerLogic(): void {
+  private handleFileManageExpired(data: any): void {
+    // 获取当前 viewId，如果消息中有特定的 viewId 则使用消息中的，否则使用当前的
+    const targetViewId = data?.viewId || this.currentViewId();
+
+    if (targetViewId) {
+      // 清理失败的 iframe
+      this.cleanupFailedView(targetViewId);
+
+      // 设置重连状态，显示重连按钮
+      this.setReconnectState(targetViewId, {
+        showReconnectButton: true,
+        failed: true,
+        reconnectLoading: false,
+        loading: false,
+        hasValidIframe: false
+      });
+    } else {
+      console.warn('无法确定 targetViewId，无法处理 FILE_MANAGE_EXPIRED 消息');
+    }
+  }
+
+  public enableFileManagerLogic(directToken?: string, isDirect?: boolean): void {
     const currentViewId = this.currentViewId();
     if (!currentViewId) {
       return;
@@ -190,6 +226,11 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
 
     // 为当前 viewId 标记已收到 OpenSetting 信号
     this.viewIdOpenSettingStatus.set(currentViewId, true);
+
+    // 如果是direct模式且有token，存储token以供后续使用
+    if (isDirect && directToken) {
+      this.directTokens.set(currentViewId, directToken);
+    }
 
     const view = this.view();
 
@@ -230,8 +271,9 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
       }
     }
 
-    // 清理重连状态
+    // 清理重连状态和direct token
     this.viewReconnectStates.delete(viewId);
+    this.directTokens.delete(viewId);
   }
 
   // 添加重连方法
@@ -387,14 +429,26 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
 
   private async generateIframeURL(view: View): Promise<string> {
     try {
-      const oldToken = view.connectToken;
-      const newToken = await this._connectTokenSvc.exchange(oldToken);
+      const currentViewId = this.currentViewId();
+      const directToken = this.directTokens.get(currentViewId);
 
-      if (!newToken || !newToken.id) {
-        throw new Error('Token exchange failed or returned invalid token');
+      let tokenId: string;
+
+      // 如果是direct模式且有直接token，使用直接token
+      if (directToken) {
+        tokenId = directToken;
+      } else {
+        const oldToken = view.connectToken;
+        const newToken = await this._connectTokenSvc.exchange(oldToken);
+
+        if (!newToken || !newToken.id) {
+          throw new Error('Token exchange failed or returned invalid token');
+        }
+
+        tokenId = newToken.id;
       }
 
-      const url = `${view.smartEndpoint.getUrl()}/koko/sftp/?token=${newToken.id}`;
+      const url = `${view.smartEndpoint.getUrl()}/koko/sftp/?token=${tokenId}`;
 
       return url;
     } catch (error) {

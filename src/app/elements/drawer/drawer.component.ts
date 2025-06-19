@@ -134,7 +134,12 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
 
     const handler = messageHandlers[message.name];
     if (handler) {
-      handler(message.data);
+      // 对于OPEN_SETTING消息，需要传递完整的data对象
+      if (message.name === 'OPEN_SETTING') {
+        handler(message.data);
+      } else {
+        handler(message.data);
+      }
     }
   }
 
@@ -187,13 +192,18 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     this.currentViewId = viewId;
   }
 
-  private handleOpenSetting(): void {
+  private handleOpenSetting(data?: any): void {
     this.drawerInited = true;
     this.showSetting.set(true);
 
     // 启用 filemanager 的逻辑执行
     if (this.fileManagerComponent) {
-      this.fileManagerComponent.enableFileManagerLogic();
+      // 如果有direct模式的数据，传递给filemanager
+      if (data && data.direct && data.fileManagerToken) {
+        this.fileManagerComponent.enableFileManagerLogic(data.fileManagerToken, true);
+      } else {
+        this.fileManagerComponent.enableFileManagerLogic();
+      }
     }
 
     const viewId = this.view?.id || null;
