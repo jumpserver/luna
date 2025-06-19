@@ -87,7 +87,12 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
       }
 
       if (this.hasConnected()) {
-        if (this.DISABLED_CATEGORY.includes(this.view.asset.category.value)) {
+        if (
+          this.view &&
+          this.view.asset &&
+          this.view.asset.category &&
+          this.DISABLED_CATEGORY.includes(this.view.asset.category.value)
+        ) {
           this.disabledFileManager = true;
           this.disabledShortcutKeys = true;
           this.currentTabIndex = 1;
@@ -289,7 +294,12 @@ export class ElementDrawerComponent implements OnInit, OnDestroy {
     const defaultState = this.createDefaultViewState();
 
     // 根据资产类型设置禁用状态
-    if (this.view && this.DISABLED_CATEGORY.includes(this.view.asset.category.value)) {
+    if (
+      this.view &&
+      this.view.asset &&
+      this.view.asset.category &&
+      this.DISABLED_CATEGORY.includes(this.view.asset.category.value)
+    ) {
       defaultState.disabledFileManager = true;
       defaultState.disabledShortcutKeys = true;
       defaultState.currentTabIndex = 1;

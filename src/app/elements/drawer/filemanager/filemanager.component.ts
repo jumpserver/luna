@@ -138,7 +138,6 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
 
       // 如果已经处于失败状态，不要自动重试，让用户手动点击重连
       if (currentState.failed && currentState.showReconnectButton) {
-        console.log(`ViewId ${currentViewId} 已处于失败状态，跳过自动重试`);
         return;
       }
 
