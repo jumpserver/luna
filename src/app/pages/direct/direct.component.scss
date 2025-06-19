@@ -95,17 +95,18 @@
     align-items: center;
     padding: unset;
     height: calc(100% - 3.75rem);
-    border-radius: 4px;
     overflow: hidden;
     background-color: rgb(243, 243, 244);
 
-    ::ng-deep .ant-card-body {
-      width: 100%;
-      height: 100%;
-      padding: unset;
+    ::ng-deep {
+      .ant-card-body {
+        width: 100%;
+        height: 100%;
+        padding: unset;
 
-      .elements-drawer-wrapper {
-        top: unset !important;
+        .elements-drawer-wrapper {
+          top: unset !important;
+        }
       }
     }
   }
@@ -132,7 +133,7 @@
         font-weight: 500;
 
         ::ng-deep .anticon {
-          color: #646A73;
+          color: #646a73;
           cursor: pointer;
         }
 
@@ -149,7 +150,7 @@
         align-items: center;
         height: 100%;
         font-size: 14px;
-        gap: 1rem;
+        gap: 20px;
 
         label {
           font-weight: 500;
@@ -179,7 +180,7 @@
 
       ::ng-deep {
         .ant-btn-link {
-          color: #0F0F0F;
+          color: #0f0f0f;
 
           &:hover {
             color: var(--primary-color);
@@ -187,7 +188,6 @@
         }
       }
     }
-
   }
 
   .timer-container {
