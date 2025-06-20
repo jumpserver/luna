@@ -42,8 +42,8 @@ jobs:
         run: |
           mkdir -p build
           rm -rf build/*
-          cp -R src/assets/i18n luna/
-          mv luna luna-${{ steps.get_version.outputs.TAG }}
+          cp -R src/assets/i18n dist/luna/
+          mv dist/luna luna-${{ steps.get_version.outputs.TAG }}
           tar -czf luna-${{ steps.get_version.outputs.TAG }}.tar.gz luna-${{ steps.get_version.outputs.TAG }}
           echo $(md5sum luna-${{ steps.get_version.outputs.TAG }}.tar.gz | awk '{print $1}') > build/luna-${{ steps.get_version.outputs.TAG }}.tar.gz.md5
           mv luna-${{ steps.get_version.outputs.TAG }}.tar.gz build/
@@ -57,5 +57,3 @@ jobs:
             build/luna-${{ steps.get_version.outputs.TAG }}.tar.gz.md5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
