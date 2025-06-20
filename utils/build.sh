@@ -34,7 +34,7 @@ build() {
   rm -rf "${release_dir:?}"/*
   to_dir="${release_dir}"
   mkdir -p "${to_dir}"
-  mv luna "${to_dir}"
+  mv dist/luna "${to_dir}"
   cp -R src/assets/i18n "${to_dir}/luna"
 }
 
