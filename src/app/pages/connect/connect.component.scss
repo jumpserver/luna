@@ -1,3 +1,220 @@
+@mixin time-container {
+  position: fixed;
+  bottom: 40px;
+  right: 30px;
+  z-index: 999999;
+
+  .timer {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 6px 12px;
+    border-radius: 100px;
+    color: white;
+    font-family: monospace;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+    span {
+      margin-left: 4px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #dc3545;
+      margin-right: 6px;
+      transition: opacity 0.3s ease;
+
+      &.active {
+        animation: blink 1s infinite;
+      }
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+    right: 50%;
+    transform: translateX(50%);
+  }
+}
+
+@mixin time-icons {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 999999;
+  display: flex;
+  gap: 10px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+  transition-delay: 0s, 0.3s;
+
+  &.show {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .close-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.8);
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.9);
+      transform: scale(1.05);
+    }
+
+    mat-icon {
+      color: white;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+.terminal-connect {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+
+  .terminal-card {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: unset;
+    height: calc(100% - 3.75rem);
+    overflow: hidden;
+    background-color: rgb(243, 243, 244);
+
+    ::ng-deep {
+      .ant-card-body {
+        width: 100%;
+        height: 100%;
+        padding: unset;
+
+        .elements-drawer-wrapper {
+          top: unset !important;
+        }
+      }
+    }
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    height: 3.75rem;
+    padding: 20px;
+    border-bottom: 1px solid #e5e5e5;
+
+    .divider {
+      height: 1.5em;
+      width: 2px;
+    }
+
+    .card-header-left {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+
+      .card-title {
+        font-size: 16px;
+        font-weight: 500;
+
+        ::ng-deep .anticon {
+          color: #646a73;
+          cursor: pointer;
+        }
+
+        .card-title-text {
+          margin-left: 10px;
+          color: black;
+        }
+      }
+
+      .info-section {
+        display: flex;
+        flex: 2;
+        justify-content: flex-start;
+        align-items: center;
+        height: 100%;
+        font-size: 14px;
+        gap: 20px;
+
+        label {
+          font-weight: 500;
+        }
+
+        .value {
+          font-weight: 400;
+          margin-left: 3px;
+        }
+
+        @media screen and (max-width: 768px) {
+          margin: 15px 0;
+          padding: 0 10px;
+
+          flex: none;
+          width: 100%;
+          height: auto;
+        }
+      }
+    }
+
+    .card-header-right {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+
+      ::ng-deep {
+        .ant-btn-link {
+          color: #0f0f0f;
+
+          &:hover {
+            color: var(--primary-color);
+          }
+        }
+      }
+    }
+  }
+
+  .timer-container {
+    @include time-container;
+  }
+}
+
+.gui {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+
+  .timer-container {
+    @include time-container;
+  }
+
+  .action-icons {
+    @include time-icons;
+  }
+
+  elements-iframe {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+}
+
 .windows {
   height: 100%;
   width: 100%;
@@ -8,5 +225,17 @@
   ::ng-deep .elements-drawer-wrapper {
     top: 0 !important;
     height: 100vh;
+  }
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
   }
 }

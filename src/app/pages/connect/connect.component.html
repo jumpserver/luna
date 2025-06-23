@@ -1,8 +1,189 @@
-<div class="windows" id="winContainer">
-  <elements-content-window *ngIf="view" [view]="view"></elements-content-window>
-  <elements-connect
-    (onNewView)="onNewView($event)"
-    [ngStyle]="{ display: 'none' }"
-  ></elements-connect>
-  <elements-chat></elements-chat>
+<div #contentWindow *ngIf="isDirect">
+  <app-face-monitor></app-face-monitor>
+
+  <div class="terminal-connect" *ngIf="view && view.connectMethod?.component === 'koko'">
+    <div *ngIf="view.connectMethod?.value === 'web_sftp'" style="height: 100%; width: 100%">
+      <elements-content-window *ngIf="view" [view]="view"></elements-content-window>
+    </div>
+
+    <div *ngIf="view.connectMethod?.value === 'web_cli'" style="height: 100%; width: 100%">
+      <div class="card-header">
+        <div class="card-header-left">
+          <div class="card-title">
+            <span nz-icon nzType="close" nzTheme="outline" (click)="handleCloseConnect()"></span>
+            <span class="card-title-text">
+              {{ getAssetInfo().protocol.toUpperCase() }} {{ _i18n.instant('Session') }}
+            </span>
+          </div>
+          <nz-divider class="divider" nzType="vertical"></nz-divider>
+          <div class="info-section">
+            <span class="top-part">
+              <label> {{ _i18n.instant('asset') }}: </label>
+              <span class="value">
+                {{ getAssetInfo().name }}
+              </span>
+            </span>
+
+            <span class="bottom-part">
+              <div class="desc">
+                <label> {{ _i18n.instant('ConnectionTime') }}: </label>
+                <span class="value">
+                  {{ startTime.toLocaleString() }}
+                </span>
+              </div>
+            </span>
+          </div>
+        </div>
+
+        <div class="card-header-right">
+          <div class="action-item">
+            <button
+              nz-button
+              nzType="link"
+              (click)="handleOpenDrawer('setting')"
+              *ngIf="!isNoneProtocol()"
+            >
+              <span nz-icon nzType="setting" nzTheme="fill"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="timer-container">
+        <div class="timer">
+          <div [class.active]="isActive" class="status-dot"></div>
+          <span>{{ totalConnectTime }}</span>
+        </div>
+      </div>
+      <nz-card class="terminal-card" [nzBordered]="false">
+        <div class="card-content" style="height: 100%; overflow: hidden">
+          <elements-drawer [view]="view"></elements-drawer>
+          <elements-content-window #contentWindow *ngIf="view" [view]="view">
+          </elements-content-window>
+        </div>
+      </nz-card>
+    </div>
+  </div>
+
+  <div class="gui" *ngIf="view && view.connectMethod?.component === 'lion'">
+    <div class="timer-container">
+      <div class="timer">
+        <div [class.active]="isActive" class="status-dot"></div>
+        <span>{{ totalConnectTime }}</span>
+      </div>
+    </div>
+
+    <div class="action-icons" [class.show]="showActionIcons">
+      <div class="close-icon" (click)="handleCloseConnect()">
+        <span nz-icon nzType="close" nzTheme="outline"></span>
+      </div>
+    </div>
+
+    <elements-content-window
+      *ngIf="view"
+      [view]="view"
+      style="height: 100%; width: 100%"
+    ></elements-content-window>
+  </div>
+</div>
+
+<div *ngIf="!isDirect">
+  <div class="windows" *ngIf="!view">
+    <elements-connect
+      (onNewView)="onNewView($event)"
+      [ngStyle]="{ display: 'block' }"
+    ></elements-connect>
+    <elements-chat></elements-chat>
+  </div>
+
+  <div #contentWindow *ngIf="view">
+    <app-face-monitor></app-face-monitor>
+
+    <div class="terminal-connect" *ngIf="view && view.connectMethod?.component === 'koko'">
+      <div *ngIf="view.connectMethod?.value === 'web_sftp'" style="height: 100%; width: 100%">
+        <elements-content-window *ngIf="view" [view]="view"></elements-content-window>
+      </div>
+
+      <div *ngIf="view.connectMethod?.value === 'web_cli'" style="height: 100%; width: 100%">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="card-title">
+              <span nz-icon nzType="close" nzTheme="outline" (click)="handleCloseConnect()"></span>
+              <span class="card-title-text">
+                {{ getAssetInfo().protocol.toUpperCase() }} {{ _i18n.instant('Session') }}
+              </span>
+            </div>
+            <nz-divider class="divider" nzType="vertical"></nz-divider>
+            <div class="info-section">
+              <span class="top-part">
+                <label> {{ _i18n.instant('asset') }}: </label>
+                <span class="value">
+                  {{ getAssetInfo().name }}
+                </span>
+              </span>
+
+              <span class="bottom-part">
+                <div class="desc">
+                  <label> {{ _i18n.instant('ConnectionTime') }}: </label>
+                  <span class="value">
+                    {{ startTime.toLocaleString() }}
+                  </span>
+                </div>
+              </span>
+            </div>
+          </div>
+
+          <div class="card-header-right">
+            <div class="action-item">
+              <button
+                nz-button
+                nzType="link"
+                (click)="handleOpenDrawer()"
+                *ngIf="!isNoneProtocol()"
+              >
+                <span nz-icon nzType="setting" nzTheme="fill"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="timer-container">
+          <div class="timer">
+            <div [class.active]="isActive" class="status-dot"></div>
+            <span>{{ totalConnectTime }}</span>
+          </div>
+        </div>
+        <nz-card class="terminal-card" [nzBordered]="false">
+          <div class="card-content" style="height: 100%; overflow: hidden">
+            <elements-drawer [view]="view"></elements-drawer>
+            <elements-connect
+              (onNewView)="onNewView($event)"
+              [ngStyle]="{ display: 'none' }"
+            ></elements-connect>
+            <elements-content-window #contentWindow *ngIf="view" [view]="view">
+            </elements-content-window>
+          </div>
+        </nz-card>
+      </div>
+    </div>
+
+    <div class="gui" *ngIf="view && view.connectMethod?.component === 'lion'">
+      <div class="timer-container">
+        <div class="timer">
+          <div [class.active]="isActive" class="status-dot"></div>
+          <span>{{ totalConnectTime }}</span>
+        </div>
+      </div>
+
+      <div class="action-icons" [class.show]="showActionIcons">
+        <div class="close-icon" (click)="handleCloseConnect()">
+          <span nz-icon nzType="close" nzTheme="outline"></span>
+        </div>
+      </div>
+
+      <elements-content-window
+        *ngIf="view"
+        [view]="view"
+        style="height: 100%; width: 100%"
+      ></elements-content-window>
+    </div>
+  </div>
 </div>
