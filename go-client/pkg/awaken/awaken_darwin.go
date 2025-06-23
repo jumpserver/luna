@@ -24,6 +24,23 @@ func awakenRDPCommand(filePath string, cfg *config.AppConfig) *exec.Cmd {
 	return cmd
 }
 
+func awakenVNCCommand(filePath string, cfg *config.AppConfig) *exec.Cmd {
+	var appItem *config.AppItem
+	appLst := cfg.MacOS.RemoteDesktop
+	for _, app := range appLst {
+		if app.IsSet && app.IsMatchProtocol("vnc") {
+			appItem = &app
+			break
+		}
+	}
+	if appItem == nil {
+		return nil
+	}
+	args := strings.Replace(appItem.ArgFormat, "{file}", filePath, 1)
+	cmd := exec.Command(appItem.Name, strings.Split(args, " ")...)
+	return cmd
+}
+
 func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	var appLst []config.AppItem

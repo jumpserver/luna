@@ -98,6 +98,40 @@
         "is_internal": true,
         "is_default": true,
         "is_set": true
+      },
+      {
+        "name": "tigervnc",
+        "display_name": "TigerVNC",
+        "protocol": ["vnc"],
+        "comment": {
+          "zh": "Microsoft Remote Desktop是一款强大的微软远程连接工具，可以从几乎任何地方连接到远程PC和您的工作资源。",
+          "en": "Microsoft Remote Desktop is a powerful Microsoft remote connection tool that can connect to remote PCs and your work resources from almost anywhere."
+        },
+        "download_url": "https://jaist.dl.sourceforge.net/project/tigervnc/stable/1.15.0/",
+        "type": "remotedesktop",
+        "path": "",
+        "arg_format": "-passwd {file} {host}::{port}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "ultravnc",
+        "display_name": "UltraVNC",
+        "protocol": ["vnc"],
+        "comment": {
+          "zh": "Microsoft Remote Desktop是一款强大的微软远程连接工具，可以从几乎任何地方连接到远程PC和您的工作资源。",
+          "en": "Microsoft Remote Desktop is a powerful Microsoft remote connection tool that can connect to remote PCs and your work resources from almost anywhere."
+        },
+        "download_url": "https://uvnc.com/component/jdownloads/summary/487-ultravnc-1640-x64-setup.html",
+        "type": "remotedesktop",
+        "path": "",
+        "arg_format": "--password {password} {host}::{port}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
       }
     ],
     "filetransfer": [
@@ -442,6 +476,23 @@
         "is_internal": true,
         "is_default": true,
         "is_set": true
+      },
+      {
+        "name": "tigervnc",
+        "display_name": "TigerVNC",
+        "protocol": ["vnc"],
+        "comment": {
+          "zh": "Microsoft Remote Desktop是一款强大的微软远程连接工具，可以从几乎任何地方连接到远程PC和您的工作资源。",
+          "en": "Microsoft Remote Desktop is a powerful Microsoft remote connection tool that can connect to remote PCs and your work resources from almost anywhere."
+        },
+        "download_url": "https://jaist.dl.sourceforge.net/project/tigervnc/stable/1.15.0/TigerVNC-1.15.0.dmg",
+        "type": "remotedesktop",
+        "path": "",
+        "arg_format": "-passwd {file} {host}::{port}",
+        "match_first": ["vnc"],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
       }
     ],
     "filetransfer": [
@@ -618,6 +669,23 @@
         "path": "xfreerdp",
         "arg_format": "{file} /cert-ignore /d: /p:",
         "match_first": [],
+        "is_internal": true,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "tigervnc",
+        "display_name": "TigerVNC",
+        "protocol": ["vnc"],
+        "comment": {
+          "zh": "Microsoft Remote Desktop是一款强大的微软远程连接工具，可以从几乎任何地方连接到远程PC和您的工作资源。",
+          "en": "Microsoft Remote Desktop is a powerful Microsoft remote connection tool that can connect to remote PCs and your work resources from almost anywhere."
+        },
+        "download_url": "https://jaist.dl.sourceforge.net/project/tigervnc/stable/1.15.0/",
+        "type": "remotedesktop",
+        "path": "vncviewer",
+        "arg_format": "-passwd {file} {host}::{port}",
+        "match_first": ["vnc"],
         "is_internal": true,
         "is_default": false,
         "is_set": false

@@ -13,6 +13,11 @@ func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
 	return cmd
 }
 
+func handleVNC(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
+	cmd := awakenVNCCommand(filePath, cfg)
+	return cmd
+}
+
 func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	cmd := awakenSSHCommand(r, cfg)
 	return cmd
