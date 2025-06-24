@@ -206,6 +206,20 @@ export class ElementFileManagerComponent implements OnInit, AfterViewInit, OnDes
         this.handleFileManageExpired(event.data.data || {});
       }
     });
+
+    this.drawerMessageSubscription = this._drawerStateService.message$.subscribe(message => {
+      if (message.name === 'CHANGE_MAIN_THEME') {
+        this.iframes.forEach(iframe => {
+          iframe.contentWindow.postMessage(
+            {
+              name: 'CHANGE_MAIN_THEME',
+              data: message.data
+            },
+            '*'
+          );
+        });
+      }
+    });
   }
 
   ngAfterViewInit(): void {
