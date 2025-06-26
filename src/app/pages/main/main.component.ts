@@ -1,18 +1,13 @@
-import { Component, HostListener, OnInit } from "@angular/core";
-import { DataStore, User } from "@app/globals";
-import {
-  HttpService,
-  LogService,
-  SettingService,
-  ViewService,
-} from "@app/services";
-import { environment } from "@src/environments/environment";
+import { Component, HostListener, OnInit } from '@angular/core';
+import { DataStore, User } from '@app/globals';
+import { HttpService, LogService, SettingService, ViewService } from '@app/services';
+import { environment } from '@src/environments/environment';
 
 @Component({
   standalone: false,
-  selector: "pages-main",
-  templateUrl: "main.component.html",
-  styleUrls: ["main.component.scss"],
+  selector: 'pages-main',
+  templateUrl: 'main.component.html',
+  styleUrls: ['main.component.scss']
 })
 export class PageMainComponent implements OnInit {
   User = User;
@@ -21,8 +16,8 @@ export class PageMainComponent implements OnInit {
   showSubMenu: any = false;
   isDirectNavigation: boolean;
   settingLayoutSize = {
-    leftWidth: "20%",
-    rightWidth: "80%",
+    leftWidth: '20%',
+    rightWidth: '80%'
   };
   collapsed = false;
 
@@ -38,7 +33,7 @@ export class PageMainComponent implements OnInit {
   }
 
   get showSplitter() {
-    if (this.currentView && this.currentView.type === "rdp") {
+    if (this.currentView && this.currentView.type === 'rdp') {
       return false;
     }
     return this.store.showLeftBar;
@@ -46,7 +41,7 @@ export class PageMainComponent implements OnInit {
 
   ngOnInit(): void {
     this._http.getUserSession().subscribe();
-    this._settingSvc.isDirectNavigation$.subscribe((state) => {
+    this._settingSvc.isDirectNavigation$.subscribe(state => {
       this.isDirectNavigation = state;
     });
 
@@ -54,35 +49,36 @@ export class PageMainComponent implements OnInit {
   }
 
   handleLayoutSettingChange(collapsed: boolean) {
-    this.settingLayoutSize.leftWidth = collapsed ? "60" : "20%";
+    this.settingLayoutSize.leftWidth = collapsed ? '60' : '20%';
+    this.settingLayoutSize.rightWidth = collapsed ? (window.innerWidth - 60).toString() : '80%';
   }
 
   onToggleMobileLayout() {}
 
   connectWebsocket() {
-    const scheme = document.location.protocol === "https:" ? "wss" : "ws";
-    const port = document.location.port ? ":" + document.location.port : "";
-    const url = "/ws/notifications/site-msg/";
-    const wsURL = scheme + "://" + document.location.hostname + port + url;
+    const scheme = document.location.protocol === 'https:' ? 'wss' : 'ws';
+    const port = document.location.port ? ':' + document.location.port : '';
+    const url = '/ws/notifications/site-msg/';
+    const wsURL = scheme + '://' + document.location.hostname + port + url;
 
     const ws = new WebSocket(wsURL);
-    ws.onopen = (event) => {
-      this._logger.debug("Websocket connected: ", event);
+    ws.onopen = event => {
+      this._logger.debug('Websocket connected: ', event);
     };
-    ws.onmessage = (event) => {
+    ws.onmessage = event => {
       try {
         const data = JSON.parse(event.data);
-        this._logger.debug("Data: ", data);
+        this._logger.debug('Data: ', data);
       } catch (e) {
-        this._logger.debug("Recv site message error");
+        this._logger.debug('Recv site message error');
       }
     };
-    ws.onerror = (error) => {
-      this._logger.debug("site message ws error: ", error);
+    ws.onerror = error => {
+      this._logger.debug('site message ws error: ', error);
     };
   }
 
-  @HostListener("window:beforeunload", ["$event"])
+  @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any) {
     this._http.deleteUserSession().subscribe();
     if (!environment.production || this.isDirectNavigation) {
@@ -90,7 +86,7 @@ export class PageMainComponent implements OnInit {
     }
 
     const notInIframe = window.self === window.top;
-    const notInReplay = location.pathname.indexOf("/luna/replay") === -1;
+    const notInReplay = location.pathname.indexOf('/luna/replay') === -1;
     const returnValue = !(notInIframe && notInReplay);
     if (returnValue) {
       $event.returnValue = true;
@@ -107,8 +103,8 @@ export class PageMainComponent implements OnInit {
       rightWidth = window.innerWidth - leftWidth;
       this.collapsed = true;
     } else if (leftWidth > 100 && this.collapsed) {
-      leftWidth = "20%";
-      rightWidth = "80%";
+      leftWidth = '20%';
+      rightWidth = '80%';
       this.collapsed = false;
     }
     this.settingLayoutSize.leftWidth = leftWidth;

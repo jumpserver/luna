@@ -140,6 +140,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
         this.manualAuthInfo.username = User.username;
       }
       this.accountSelectedChange.emit(this.accountSelected);
+      this.onAccountChanged();
     }
   }
 
