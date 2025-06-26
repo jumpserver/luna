@@ -50,16 +50,16 @@ export const mainTheme = () => {
     // 编辑器背景
     '--el-editor-bg-color': darken(2),
     // 头部 tab item 背景
-    '--el-tab-bg-color': darken(5),
+    '--el-tab-bg-color': darken(4),
     '--el-tab-sub-bg-color': darken(3),
 
     // 侧边栏
     // 侧边栏组织模块背景
-    '--el-org-bg-color': darken(5),
+    '--el-org-bg-color': darken(6),
     // 资产区域背景
-    '--el-asset-tree-bg-color': darken(7),
+    '--el-asset-tree-bg-color': darken(8),
     // 折叠面板项
-    '--el-banner-bg-color': darken(3),
+    '--el-banner-bg-color': darken(4),
     // icon 颜色
     '--el-banner-icon-color': '#CCCCCC',
 

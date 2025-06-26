@@ -1,7 +1,7 @@
-import {Injectable} from '@angular/core';
-import {TranslateService} from '@ngx-translate/core';
-import {LogService} from '@app/services/share';
-import {CookieService} from 'ngx-cookie-service';
+import { Injectable } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
+import { LogService } from '@app/services/share';
+import { CookieService } from 'ngx-cookie-service';
 
 @Injectable()
 export class I18nService {
