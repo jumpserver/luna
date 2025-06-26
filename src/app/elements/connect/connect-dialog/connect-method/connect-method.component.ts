@@ -1,12 +1,12 @@
-import { Component, EventEmitter, Input, OnInit, Output } from "@angular/core";
-import { Account, AuthInfo, ConnectMethod, Protocol } from "@app/model";
-import { AppService, I18nService, SettingService } from "@app/services";
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Account, AuthInfo, ConnectMethod, Protocol } from '@app/model';
+import { AppService, I18nService, SettingService } from '@app/services';
 
 @Component({
   standalone: false,
-  selector: "elements-connect-method",
-  templateUrl: "connect-method.component.html",
-  styleUrls: ["connect-method.component.scss"],
+  selector: 'elements-connect-method',
+  templateUrl: 'connect-method.component.html',
+  styleUrls: ['connect-method.component.scss']
 })
 export class ElementConnectMethodComponent implements OnInit {
   @Output() connectMethodChange = new EventEmitter<ConnectMethod>();
@@ -25,17 +25,11 @@ export class ElementConnectMethodComponent implements OnInit {
   ) {}
 
   get isAppletClientMethod() {
-    return (
-      this.connectOption &&
-      this.connectOption["appletConnectMethod"] === "client"
-    );
+    return this.connectOption && this.connectOption['appletConnectMethod'] === 'client';
   }
 
   get isVirtualAppClientMethod() {
-    return (
-      this.connectOption &&
-      this.connectOption["virtualappConnectMethod"] === "client"
-    );
+    return this.connectOption && this.connectOption['virtualappConnectMethod'] === 'client';
   }
 
   private _protocol: Protocol;
@@ -47,7 +41,6 @@ export class ElementConnectMethodComponent implements OnInit {
   @Input() set protocol(protocol: Protocol) {
     this._protocol = protocol;
     this.setConnectMethods();
-    this.connectMethod = this.connectMethods[0];
   }
 
   private _connectMethod: ConnectMethod;
@@ -67,7 +60,7 @@ export class ElementConnectMethodComponent implements OnInit {
 
   currentConnectMethodTypeIndex() {
     const i = this.connectMethodTypes
-      .map((item) => item.value)
+      .map(item => item.value)
       .indexOf(this.connectMethod && this.connectMethod.type);
     if (i === -1) {
       return 0;
@@ -83,45 +76,43 @@ export class ElementConnectMethodComponent implements OnInit {
     if (!this.protocol) {
       return;
     }
-    this.connectMethods = this._appSvc.getProtocolConnectMethods(
-      this.protocol.name
-    );
+    this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
     this.groupConnectMethods();
-    if (!this.connectMethod || !this.connectMethod.value) {
+
+    const isValid = this.connectMethods.find(item => item.value === this.connectMethod.value);
+    if (!this.connectMethod || !isValid) {
       this.connectMethod = this.connectMethods[0];
     }
   }
 
   groupConnectMethods() {
     const connectMethodTypes = [
-      { value: "web", label: "Web", fa: "fa-globe", methods: [] },
+      { value: 'web', label: 'Web', fa: 'fa-globe', methods: [] },
       {
-        value: "native",
-        label: this._i18n.instant("Native"),
-        fa: "fa-desktop",
-        methods: [],
+        value: 'native',
+        label: this._i18n.instant('Native'),
+        fa: 'fa-desktop',
+        methods: []
       },
       {
-        value: "applet",
-        label: this._i18n.instant("Applet"),
-        fa: "fa-windows",
-        methods: [],
+        value: 'applet',
+        label: this._i18n.instant('Applet'),
+        fa: 'fa-windows',
+        methods: []
       },
       {
-        value: "virtual_app",
-        label: this._i18n.instant("VirtualApp"),
-        fa: "fa-desktop",
-        methods: [],
-      },
+        value: 'virtual_app',
+        label: this._i18n.instant('VirtualApp'),
+        fa: 'fa-desktop',
+        methods: []
+      }
     ];
 
     for (const type of connectMethodTypes) {
-      type["methods"] = this.connectMethods.filter(
-        (item) => item.type === type.value
-      );
+      type['methods'] = this.connectMethods.filter(item => item.type === type.value);
     }
-    this.connectMethodTypes = connectMethodTypes.filter((item) => {
-      return item["methods"].length > 0;
+    this.connectMethodTypes = connectMethodTypes.filter(item => {
+      return item['methods'].length > 0;
     });
     // return connectMethodTypes;
   }
@@ -131,16 +122,16 @@ export class ElementConnectMethodComponent implements OnInit {
       return false;
     }
     if (this.account && !this.account.has_secret) {
-      const aliases = ["@USER", "@INPUT", "@ANON"];
+      const aliases = ['@USER', '@INPUT', '@ANON'];
       // 同名账号、手动输入可以下载RDP文件
-      if (!aliases.includes(this.account.alias) || (!this.manualAuthInfo.username)) {
+      if (!aliases.includes(this.account.alias) || !this.manualAuthInfo.username) {
         return false;
       }
     }
-    if (method.component === "razor") {
+    if (method.component === 'razor') {
       return true;
     }
-    if (method.type === "applet" && this.isAppletClientMethod) {
+    if (method.type === 'applet' && this.isAppletClientMethod) {
       return true;
     }
     return false;
@@ -155,7 +146,7 @@ export class ElementConnectMethodComponent implements OnInit {
   }
 
   CanGuide(method) {
-    if (method.type === "virtual_app" && this.isVirtualAppClientMethod) {
+    if (method.type === 'virtual_app' && this.isVirtualAppClientMethod) {
       return true;
     }
     return false;
