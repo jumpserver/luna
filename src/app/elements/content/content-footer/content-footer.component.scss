@@ -64,10 +64,15 @@
 
     .footer-bar__left {
       margin-left: 5px;
+
+      ::ng-deep {
+        .ant-btn {
+          height: 30px;
+        }
+      }
     }
   }
 }
-
 
 .rotate-icon {
   transform: rotate(-90deg);
@@ -93,12 +98,12 @@
   }
 
   nz-input-group {
-    background-color: #0F0F0F;
-    color: #FFFFFF;
+    background-color: #0f0f0f;
+    color: #ffffff;
 
     .ant-input {
-      background-color: #0F0F0F;
-      color: #FFFFFF;
+      background-color: #0f0f0f;
+      color: #ffffff;
       font-size: 12px;
     }
   }
@@ -108,7 +113,6 @@
   }
 
   .command-item {
-
     .command-name {
       font-size: 13px;
       font-weight: 400;
@@ -126,7 +130,6 @@
   .ant-tag-orange {
     background: #2b1d11;
   }
-
 }
 
 .save-btn {
