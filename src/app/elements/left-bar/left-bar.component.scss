@@ -42,11 +42,11 @@
   }
 
   .my-assets {
-    height: calc(100vh - 60px);
+    height: calc(100vh - 61px);
     color: var(--el-text-color-light);
 
     &.has-org {
-      height: calc(100vh - 92px);
+      height: calc(100vh - 91px);
     }
 
     .overflow {
@@ -108,13 +108,13 @@ label {
 }
 
 .fa.fa-undefined:before {
-  content: "\f26c";
+  content: '\f26c';
 }
 
 .menu-icon {
   display: none;
   width: 100%;
-  height: calc(100% - 32px);
+  height: calc(100% - 31px);
   text-align: center;
   color: var(--el-text-color-light);
   transition: all 0.2s;
