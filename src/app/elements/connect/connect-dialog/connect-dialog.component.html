@@ -6,7 +6,11 @@
   </div>
   <div *ngIf="protocols && protocols.length > 0">
     <nz-tabset class="protocol-tab" [(nzSelectedIndex)]="selectedTabIndex">
-      <nz-tab (nzSelect)="onProtocolChange(p)" *ngFor="let p of protocols; let i = index" [nzTitle]="titleTpl">
+      <nz-tab
+        (nzSelect)="onProtocolChange(p)"
+        *ngFor="let p of protocols; let i = index"
+        [nzTitle]="titleTpl"
+      >
         <ng-template #titleTpl>
           {{ p.name | uppercase }}
         </ng-template>
@@ -62,7 +66,7 @@
           nzType="primary"
           type="submit"
         >
-          {{ 'CONNECT' | translate }}
+          {{ 'Connect' | translate | uppercase }}
           <span
             *ngIf="protocol && protocol.name === 'rdp' && viewAssetOnlineSessionInfo"
             class="online-num"
