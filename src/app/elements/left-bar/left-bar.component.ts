@@ -7,29 +7,27 @@ import {
   OnChanges,
   OnDestroy,
   OnInit,
-  Output,
-} from "@angular/core";
-import { DataStore } from "@app/globals";
-import { version } from "@src/environments/environment";
-import { OrganizationService, SettingService } from "@app/services";
-import _ from "lodash-es";
+  Output
+} from '@angular/core';
+import { DataStore } from '@app/globals';
+import { version } from '@src/environments/environment';
+import { OrganizationService, SettingService } from '@app/services';
+import _ from 'lodash-es';
 
 @Component({
   standalone: false,
-  selector: "elements-left-bar",
-  templateUrl: "left-bar.component.html",
-  styleUrls: ["left-bar.component.scss"],
+  selector: 'elements-left-bar',
+  templateUrl: 'left-bar.component.html',
+  styleUrls: ['left-bar.component.scss']
 })
-export class ElementLeftBarComponent
-  implements OnInit, AfterViewInit, OnDestroy
-{
+export class ElementLeftBarComponent implements OnInit, AfterViewInit, OnDestroy {
   @Output() menuCollapsedToggle: EventEmitter<boolean> = new EventEmitter();
   @Input() collapsed: boolean = false;
   private resizeObserver!: ResizeObserver;
   showTree = true;
   version = version;
   menus: any[] = [];
-  hasXPack: boolean = localStorage.getItem("hasXPack") === "1";
+  hasXPack: boolean = localStorage.getItem('hasXPack') === '1';
 
   constructor(
     public _settingSvc: SettingService,
@@ -39,36 +37,29 @@ export class ElementLeftBarComponent
     this.onOrgChangeReloadTree();
   }
 
-  ngOnChanges(): void {
-    console.log("collapsed", this.collapsed);
-  }
-
   ngOnInit() {
     this.menus = [
       {
-        name: "assets",
-        icon: "fa-inbox",
-        click: () => this.menuClick(),
+        name: 'assets',
+        icon: 'fa-inbox',
+        click: () => this.menuClick()
       },
       {
-        name: "applications",
-        icon: "fa-th",
-        click: () => this.menuClick(),
-      },
+        name: 'applications',
+        icon: 'fa-th',
+        click: () => this.menuClick()
+      }
     ];
     this.onResize(window);
-    window.addEventListener("resize", _.debounce(this.onResize, 300));
+    window.addEventListener('resize', _.debounce(this.onResize, 300));
     this._settingSvc.afterInited().then(() => {
       this.hasXPack = this._settingSvc.hasXPack();
-      localStorage.setItem("hasXPack", this.hasXPack ? "1" : "0");
-      console.log("hasXPack", this.hasXPack);
+      localStorage.setItem('hasXPack', this.hasXPack ? '1' : '0');
     });
   }
 
   onResize(event) {
-    const width = event.currentTarget
-      ? event.currentTarget.innerWidth
-      : event.innerWidth;
+    const width = event.currentTarget ? event.currentTarget.innerWidth : event.innerWidth;
     if (width < 768) {
       this.isMobile = true;
       // this.overlayMenu = true;
@@ -88,10 +79,10 @@ export class ElementLeftBarComponent
   }
 
   ngAfterViewInit() {
-    this.resizeObserver = new ResizeObserver((entries) => {
+    this.resizeObserver = new ResizeObserver(entries => {
       for (const entry of entries) {
         const width = entry.contentRect.width;
-        console.log("Sidebar width changed:", width);
+        console.log('Sidebar width changed:', width);
         // 这里你可以触发你需要的逻辑
       }
     });
@@ -115,12 +106,12 @@ export class ElementLeftBarComponent
 
   static Hide() {
     DataStore.showLeftBar = false;
-    window.dispatchEvent(new Event("resize"));
+    window.dispatchEvent(new Event('resize'));
   }
 
   static Show() {
     DataStore.showLeftBar = true;
-    window.dispatchEvent(new Event("resize"));
+    window.dispatchEvent(new Event('resize'));
   }
 
   onOrgChangeReloadTree() {
