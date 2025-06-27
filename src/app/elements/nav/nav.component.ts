@@ -7,7 +7,7 @@ import { Component, OnInit } from '@angular/core';
 import { CookieService } from 'ngx-cookie-service';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { ElementSettingComponent } from '@app/elements/nav/setting/setting.component';
-import { DrawerStateService, HttpService, SettingService, ViewService } from '@app/services';
+import { IframeCommunicationService, HttpService, SettingService, ViewService } from '@app/services';
 
 @Component({
   standalone: false,
@@ -29,7 +29,7 @@ export class ElementNavComponent implements OnInit {
     private _dialog: NzModalService,
     private _settingSvc: SettingService,
     private _http: HttpService,
-    private _drawerStateService: DrawerStateService,
+    private _iframeSvc: IframeCommunicationService,
   ) {}
 
   get viewListSorted() {
@@ -161,7 +161,7 @@ export class ElementNavComponent implements OnInit {
           id: theme.name,
           click: () => {
             useTheme().switchTheme(theme.name);
-            this._drawerStateService.sendComponentMessage({
+            this._iframeSvc.sendMessage({
               name: 'CHANGE_MAIN_THEME',
               data: theme.name
             });
@@ -225,11 +225,5 @@ export class ElementNavComponent implements OnInit {
 
   onJumpUi() {
     window.open('/ui/', '_blank');
-  }
-
-  openChat() {
-    this._drawerStateService.sendComponentMessage({
-      name: 'SEND_CHAT_IFRAME'
-    });
   }
 }
