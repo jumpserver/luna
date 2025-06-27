@@ -30,6 +30,8 @@ import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzFloatButtonModule } from 'ng-zorro-antd/float-button';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
+import { NzMessageModule } from 'ng-zorro-antd/message';
+import { NzNotificationModule } from 'ng-zorro-antd/notification';
 
 @NgModule({
   exports: [
@@ -63,7 +65,9 @@ import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
     NzPopconfirmModule,
     NzFloatButtonModule,
     NzInputNumberModule,
-    NzDescriptionsModule
+    NzDescriptionsModule,
+    NzMessageModule,
+    NzNotificationModule
   ]
 })
 export class NgZorroAntdModule {}

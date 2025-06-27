@@ -5,8 +5,6 @@ import { formatTime } from '@app/utils/common';
 import { HttpService } from '@app/services';
 import { filter } from 'rxjs';
 
-declare const AsciinemaPlayer: any;
-
 @Component({
   standalone: false,
   selector: 'elements-replay-asciicast',
@@ -29,6 +27,7 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
   startTimeStamp = null;
   commands: Command[];
   page = 0;
+  private AsciinemaPlayer: any;
 
   constructor(
     private route: ActivatedRoute,
@@ -37,7 +36,10 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
     this.startAt = 0;
   }
 
-  ngOnInit() {
+  async ngOnInit() {
+    // 动态加载 asciinema-player
+    await this.loadAsciinemaPlayer();
+
     this.commands = new Array<Command>();
     const start = new Date(this.replay.date_start);
     const end = new Date(this.replay.date_end);
@@ -62,18 +64,34 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
     this.getCommands(this.page);
   }
 
+  private async loadAsciinemaPlayer() {
+    try {
+      // 动态导入 asciinema-player
+      const module = await import('asciinema-player');
+      this.AsciinemaPlayer = module.default || module;
+    } catch (error) {
+      console.error('Failed to load asciinema-player:', error);
+      // 如果动态导入失败，尝试从全局变量获取（兼容性）
+      this.AsciinemaPlayer = (window as any).AsciinemaPlayer;
+    }
+  }
+
   ngAfterViewInit() {
-    this.player = this.createPlayer();
-    this.player.play();
-    this.isPlaying = true;
-    this.createTimer();
+    if (this.AsciinemaPlayer) {
+      this.player = this.createPlayer();
+      this.player.play();
+      this.isPlaying = true;
+      this.createTimer();
+    }
   }
 
   @HostListener('window:resize', ['$event'])
   onResize(event: Event) {
     this.rows = Math.min(25, Math.floor((window.innerHeight - 120) / 16));
-    this.currentTime = this.player.getCurrentTime();
-    this.resetPlayer();
+    if (this.player) {
+      this.currentTime = this.player.getCurrentTime();
+      this.resetPlayer();
+    }
   }
 
   speedDown() {
@@ -81,19 +99,25 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
       return;
     }
     this.speed--;
-    this.currentTime = this.player.getCurrentTime();
-    this.resetPlayer();
-    this.player.seek(this.currentTime);
+    if (this.player) {
+      this.currentTime = this.player.getCurrentTime();
+      this.resetPlayer();
+      this.player.seek(this.currentTime);
+    }
   }
 
   speedUp() {
     this.speed++;
-    this.currentTime = this.player.getCurrentTime();
-    this.resetPlayer();
-    this.player.seek(this.currentTime);
+    if (this.player) {
+      this.currentTime = this.player.getCurrentTime();
+      this.resetPlayer();
+      this.player.seek(this.currentTime);
+    }
   }
 
   toggle() {
+    if (!this.player) return;
+
     clearInterval(this.timer);
     if (this.isPlaying) {
       this.player.pause();
@@ -126,7 +150,7 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
 
   resetPlayer() {
     clearInterval(this.timer);
-    if (!this.player) {
+    if (!this.player || !this.AsciinemaPlayer) {
       return;
     }
     this.player.pause();
@@ -148,9 +172,13 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
   }
 
   createPlayer() {
+    if (!this.AsciinemaPlayer) {
+      console.error('AsciinemaPlayer not loaded');
+      return null;
+    }
     const el = document.getElementById('screen');
     const opt = this.getPlayerOptions();
-    return AsciinemaPlayer.create(this.replay.src, el, opt);
+    return this.AsciinemaPlayer.create(this.replay.src, el, opt);
   }
 
   getUserLang() {
@@ -191,6 +219,8 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
   }
 
   commandClick(item: Command) {
+    if (!this.player) return;
+
     const startPlayTime = new Date(this.replay.date_start).getTime() / 1000;
     const instructStartTime = item.timestamp - 5 - startPlayTime;
     const time = instructStartTime > 0 ? instructStartTime : 0;

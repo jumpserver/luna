@@ -49,13 +49,19 @@
             "scripts": [
               "jquery/dist/jquery.min.js",
               "@ztree/ztree_v3/js/jquery.ztree.all.min.js",
-              "@ztree/ztree_v3/js/jquery.ztree.exhide.min.js",
-              "asciinema-player/dist/bundle/asciinema-player.min.js"
+              "@ztree/ztree_v3/js/jquery.ztree.exhide.min.js"
             ]
           },
           "configurations": {
             "production": {
-              "optimization": true,
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": true
+              },
               "outputHashing": "all",
               "baseHref": "/luna/",
               "outputPath": {
@@ -68,8 +74,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "5mb",
+                  "maximumWarning": "4mb",
                   "maximumError": "6mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "200kb",
+                  "maximumError": "300kb"
                 }
               ],
               "fileReplacements": [
