@@ -27,6 +27,7 @@
     class="content"
     id="right-side"
     [nzSize]="settingLayoutSize.rightWidth"
+    [style.flex-grow]="settingLayoutSize.rightWidth === undefined ? 1 : null"
   >
     <div>
       <elements-content (toggleMenu)="onToggleMobileLayout()"></elements-content>

@@ -15,7 +15,10 @@ export class PageMainComponent implements OnInit {
   showIframeHider = false;
   showSubMenu: any = false;
   isDirectNavigation: boolean;
-  settingLayoutSize = {
+  settingLayoutSize: {
+    leftWidth: string | number;
+    rightWidth: string | number | undefined;
+  } = {
     leftWidth: '20%',
     rightWidth: '80%'
   };
@@ -49,8 +52,14 @@ export class PageMainComponent implements OnInit {
   }
 
   handleLayoutSettingChange(collapsed: boolean) {
-    this.settingLayoutSize.leftWidth = collapsed ? '60' : '20%';
-    this.settingLayoutSize.rightWidth = collapsed ? (window.innerWidth - 60).toString() : '80%';
+    this.collapsed = collapsed;
+    if (collapsed) {
+      this.settingLayoutSize.leftWidth = 60;
+      this.settingLayoutSize.rightWidth = undefined;
+    } else {
+      this.settingLayoutSize.leftWidth = '20%';
+      this.settingLayoutSize.rightWidth = '80%';
+    }
   }
 
   onToggleMobileLayout() {}
@@ -100,7 +109,7 @@ export class PageMainComponent implements OnInit {
 
     if (leftWidth < 100 && !this.collapsed) {
       leftWidth = 60;
-      rightWidth = window.innerWidth - leftWidth;
+      rightWidth = undefined;
       this.collapsed = true;
     } else if (leftWidth > 100 && this.collapsed) {
       leftWidth = '20%';
