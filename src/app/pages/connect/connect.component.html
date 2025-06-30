@@ -56,7 +56,6 @@
       </div>
       <nz-card class="terminal-card" [nzBordered]="false">
         <div class="card-content" style="height: 100%; overflow: hidden">
-          <elements-drawer [view]="view"></elements-drawer>
           <elements-content-window #contentWindow *ngIf="view" [view]="view">
           </elements-content-window>
         </div>
@@ -153,7 +152,6 @@
         </div>
         <nz-card class="terminal-card" [nzBordered]="false">
           <div class="card-content" style="height: 100%; overflow: hidden">
-            <elements-drawer [view]="view"></elements-drawer>
             <elements-connect
               (onNewView)="onNewView($event)"
               [ngStyle]="{ display: 'none' }"
