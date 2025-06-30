@@ -238,9 +238,9 @@ export class ElementAssetTreeComponent implements OnInit {
       return;
     }
 
-    // if (treeNode.meta.data.platform_type === 'k8s') {
-    //   return connectOnNewPage(treeNode, 'auto');
-    // }
+    if (treeNode.meta.data.platform_type === 'k8s') {
+      return connectOnNewPage(treeNode, 'auto');
+    }
 
     if (this.isOpenNewWindow) {
       connectOnNewPage(treeNode, 'auto');

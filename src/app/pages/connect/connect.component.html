@@ -1,6 +1,7 @@
-<div #contentWindow *ngIf="isDirect">
-  <app-face-monitor></app-face-monitor>
+<app-face-monitor></app-face-monitor>
+<elements-chat></elements-chat>
 
+<div #contentWindow *ngIf="isDirect">
   <div class="terminal-connect" *ngIf="view && view.connectMethod?.component === 'koko'">
     <div *ngIf="view.connectMethod?.value === 'web_sftp'" style="height: 100%; width: 100%">
       <elements-content-window *ngIf="view" [view]="view"></elements-content-window>

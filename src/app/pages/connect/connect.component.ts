@@ -328,7 +328,6 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
         'node'
       );
     } else if (view) {
-      // 普通模式接收视图
       this.view = view;
       this.view.active = true;
     }
