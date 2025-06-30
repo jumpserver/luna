@@ -143,9 +143,14 @@
       position: relative;
       padding: 5px 10px;
       min-height: 40px;
-      overflow-x: auto;
       height: calc(100% - 31px);
       background-color: var(--el-asset-tree-bg-color);
+      overflow: hidden;
+      scrollbar-gutter: stable both-edges;
+
+      &:hover {
+        overflow: auto;
+      }
 
       .tree-type-loading {
         position: absolute;
