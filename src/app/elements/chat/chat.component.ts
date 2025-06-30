@@ -54,6 +54,12 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
 
   get isShowSetting() {
     const connectMethods = ['koko', 'lion', 'tinker', 'panda'];
+
+    // sftp 不展示设置按钮
+    if (this.currentView.protocol === 'sftp') {
+      return false;
+    }
+
     return (
       this.currentView.hasOwnProperty('connectMethod') &&
       this.currentView.connected &&
