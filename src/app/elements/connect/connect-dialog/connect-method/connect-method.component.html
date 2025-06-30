@@ -14,7 +14,6 @@
         </ng-template>
 
         <nz-radio-group [(ngModel)]="connectMethod" class="connect-method" name="connect-method">
-          <!--          <nz-radio-button *ngFor="let method of item['methods']" [disabled]="method.disabled" [value]="method">-->
           <label *ngFor="let method of item['methods']" [nzValue]="method" nz-radio>
             {{ method.label }}
 
