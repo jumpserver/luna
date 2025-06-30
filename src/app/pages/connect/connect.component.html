@@ -63,7 +63,7 @@
     </div>
   </div>
 
-  <div class="gui" *ngIf="view && view.connectMethod?.component === 'lion'">
+  <div class="gui" *ngIf="view && (view.connectMethod?.component === 'lion')">
     <div class="timer-container">
       <div class="timer">
         <div [class.active]="isActive" class="status-dot"></div>

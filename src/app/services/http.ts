@@ -1,22 +1,33 @@
-import {Injectable} from '@angular/core';
-import {HttpClient, HttpErrorResponse, HttpHeaders, HttpParams} from '@angular/common/http';
-import {Browser, User} from '@app/globals';
-import {catchError, map, retry} from 'rxjs/operators';
-import {AdminConnectData, Asset, ConnectData, ConnectionToken, Endpoint, Session, Ticket, TreeNode, User as _User} from '@app/model';
-import {getCsrfTokenFromCookie, getQueryParamFromURL} from '@app/utils/common';
-import {Observable} from 'rxjs';
-import {I18nService} from '@app/services/i18n';
-import {CookieService} from 'ngx-cookie-service';
-import {encryptPassword} from '@app/utils/crypto';
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
+import { Browser, User } from '@app/globals';
+import { catchError, map, retry } from 'rxjs/operators';
+import {
+  AdminConnectData,
+  Asset,
+  ConnectData,
+  ConnectionToken,
+  Endpoint,
+  Session,
+  Ticket,
+  TreeNode,
+  User as _User
+} from '@app/model';
+import { getCsrfTokenFromCookie, getQueryParamFromURL } from '@app/utils/common';
+import { Observable } from 'rxjs';
+import { I18nService } from '@app/services/i18n';
+import { CookieService } from 'ngx-cookie-service';
+import { encryptPassword } from '@app/utils/crypto';
 
 @Injectable()
 export class HttpService {
   headers = new HttpHeaders();
 
-  constructor(private http: HttpClient,
-              private _i18n: I18nService,
-              private _cookie: CookieService) {
-  }
+  constructor(
+    private http: HttpClient,
+    private _i18n: I18nService,
+    private _cookie: CookieService
+  ) {}
 
   setOptionsCSRFToken(options) {
     const csrfToken = getCsrfTokenFromCookie();
@@ -47,9 +58,7 @@ export class HttpService {
 
   get<T>(url: string, options?: any): Observable<any> {
     options = this.setOrgIDToRequestHeader(url, options);
-    return this.http.get(url, options).pipe(
-      catchError(this.handleError.bind(this))
-    );
+    return this.http.get(url, options).pipe(catchError(this.handleError.bind(this)));
   }
 
   async handleError(error: HttpErrorResponse) {
@@ -72,30 +81,22 @@ export class HttpService {
 
   post<T>(url: string, body: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.post(url, body, options).pipe(
-      catchError(this.handleError.bind(this))
-    );
+    return this.http.post(url, body, options).pipe(catchError(this.handleError.bind(this)));
   }
 
   put<T>(url: string, body?: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.put(url, body, options).pipe(
-      catchError(this.handleError.bind(this))
-    );
+    return this.http.put(url, body, options).pipe(catchError(this.handleError.bind(this)));
   }
 
   delete<T>(url: string, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.delete(url, options).pipe(
-      catchError(this.handleError.bind(this))
-    );
+    return this.http.delete(url, options).pipe(catchError(this.handleError.bind(this)));
   }
 
   patch<T>(url: string, body?: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.patch(url, body, options).pipe(
-      catchError(this.handleError.bind(this))
-    );
+    return this.http.patch(url, body, options).pipe(catchError(this.handleError.bind(this)));
   }
 
   head<T>(url: string, options?: any) {
@@ -159,7 +160,7 @@ export class HttpService {
   withRetry() {
     return retry({
       count: 10,
-      delay: 10000  // 每次重试间隔 10 秒（单位毫秒）
+      delay: 10000 // 每次重试间隔 10 秒（单位毫秒）
     });
   }
 
@@ -167,13 +168,13 @@ export class HttpService {
     const syncUrl = '/api/v1/perms/users/self/nodes/all-with-assets/tree/';
     const asyncUrl = '/api/v1/perms/users/self/nodes/children-with-assets/tree/';
     const url = async ? asyncUrl : syncUrl;
-    return this.get(url, {observe: 'response'}).pipe(this.withRetry());
+    return this.get(url, { observe: 'response' }).pipe(this.withRetry());
   }
 
   getAssetTypeTree(async: boolean) {
     const isSync = !async ? 1 : 0;
     const url = `/api/v1/perms/users/self/nodes/children-with-assets/category/tree/?sync=${isSync}`;
-    return this.get<Array<TreeNode>>(url, {observe: 'response'}).pipe(this.withRetry());
+    return this.get<Array<TreeNode>>(url, { observe: 'response' }).pipe(this.withRetry());
   }
 
   getPermedAssetDetail(id) {
@@ -211,26 +212,27 @@ export class HttpService {
 
   search(q: string) {
     const params = new HttpParams().set('q', q);
-    return this.get('/api/search', {params: params});
+    return this.get('/api/search', { params: params });
   }
 
   getReplay(sessionId: string) {
-    return this.get(
-      `/api/v1/terminal/sessions/${sessionId}/replay/`, {headers: this.getJMSOrg()}
-    );
+    return this.get(`/api/v1/terminal/sessions/${sessionId}/replay/`, {
+      headers: this.getJMSOrg()
+    });
   }
 
   getPartFileReplay(sessionId: string, filename: string) {
     const params = new HttpParams().set('part_filename', filename);
-    return this.get(
-      `/api/v1/terminal/sessions/${sessionId}/replay/`, {headers: this.getJMSOrg(), params: params}
-    );
+    return this.get(`/api/v1/terminal/sessions/${sessionId}/replay/`, {
+      headers: this.getJMSOrg(),
+      params: params
+    });
   }
 
   getSessionDetail(sid: string): Promise<Session> {
-    return this.get<Session>(
-      `/api/v1/terminal/sessions/${sid}/`, {headers: this.getJMSOrg()}
-    ).toPromise();
+    return this.get<Session>(`/api/v1/terminal/sessions/${sid}/`, {
+      headers: this.getJMSOrg()
+    }).toPromise();
   }
 
   getReplayData(src: string) {
@@ -243,14 +245,13 @@ export class HttpService {
       .set('limit', '30')
       .set('offset', String(30 * page))
       .set('order', 'timestamp');
-    return this.get(
-      '/api/v1/terminal/commands/', {params: params, headers: this.getJMSOrg()}
-    );
+    return this.get('/api/v1/terminal/commands/', { params: params, headers: this.getJMSOrg() });
   }
 
   cleanRDPParams(params) {
     const cleanedParams = {};
-    const {rdp_resolution, rdp_client_option, rdp_smart_size, rdp_color_quality} = params.graphics;
+    const { rdp_resolution, rdp_client_option, rdp_smart_size, rdp_color_quality } =
+      params.graphics;
 
     if (rdp_resolution && rdp_resolution.indexOf('x') > -1) {
       const [width, height] = rdp_resolution.split('x');
@@ -277,12 +278,18 @@ export class HttpService {
     return this.get(url);
   }
 
-  createConnectToken(asset: Asset, connectData: ConnectData, createTicket = false, face_verify = false, face_monitor_token?: string) {
+  createConnectToken(
+    asset: Asset,
+    connectData: ConnectData,
+    createTicket = false,
+    face_verify = false,
+    face_monitor_token?: string
+  ) {
     let params = createTicket ? '?create_ticket=1' : '';
     params += face_verify ? '?face_verify=1' : '';
     params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/connection-token/' + params;
-    const {account, protocol, manualAuthInfo, connectMethod} = connectData;
+    const { account, protocol, manualAuthInfo, connectMethod } = connectData;
     const isVirtual = account.username.startsWith('@');
     const username = isVirtual ? manualAuthInfo.username : account.username;
     const secret = encryptPassword(manualAuthInfo.secret);
@@ -306,42 +313,58 @@ export class HttpService {
     return this.get(url);
   }
 
-  adminConnectToken(asset: Asset, connectData: AdminConnectData, createTicket = false,
-                    face_verify = false, face_monitor_token?: string) {
+  adminConnectToken(
+    asset: Asset,
+    connectData: AdminConnectData,
+    createTicket = false,
+    face_verify = false,
+    face_monitor_token?: string
+  ) {
     let params = '';
     params += createTicket ? '?create_ticket=1' : '';
     params += face_verify ? '?face_verify=1' : '';
     params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/admin-connection-token/' + params;
-    const {account, protocol} = connectData;
+    const { account, protocol } = connectData;
     const data = {
       asset: asset.id,
       account: account.id,
       protocol: protocol.name,
       input_username: connectData.input_username,
-      connect_method: connectData.method || connectData.connectMethod.value
+      connect_method: connectData.method || connectData.connectMethod.value,
     };
     return this.post<ConnectionToken>(url, data).pipe(
       catchError(this.handleConnectMethodExpiredError.bind(this))
     );
   }
 
-  exchangeConnectToken(tokenID: string, createTicket = false, face_verify = false, face_monitor_token?: string) {
+  exchangeConnectToken(
+    tokenID: string,
+    createTicket = false,
+    face_verify = false,
+    face_monitor_token?: string
+  ) {
     let params = createTicket ? '?create_ticket=1' : '';
     params += face_verify ? '?face_verify=1' : '';
     params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/connection-token/exchange/' + params;
-    const data = {'id': tokenID};
+    const data = { id: tokenID };
     return this.post<ConnectionToken>(url, data);
   }
 
   getConnectToken(token) {
-    const url = new URL(`/api/v1/authentication/connection-token/${token}/`, window.location.origin);
+    const url = new URL(
+      `/api/v1/authentication/connection-token/${token}/`,
+      window.location.origin
+    );
     return this.get(url.href);
   }
 
   downloadRDPFile(token, params: Object, connectOption: any) {
-    const url = new URL(`/api/v1/authentication/connection-token/${token.id}/rdp-file/`, window.location.origin);
+    const url = new URL(
+      `/api/v1/authentication/connection-token/${token.id}/rdp-file/`,
+      window.location.origin
+    );
     params = this.cleanRDPParams(params);
     if (params) {
       for (const [k, v] of Object.entries(params)) {
@@ -355,20 +378,21 @@ export class HttpService {
   }
 
   getLocalClientUrl(token, params: Object = {}) {
-    const url = new URL(`/api/v1/authentication/connection-token/${token.id}/client-url/`, window.location.origin);
+    const url = new URL(
+      `/api/v1/authentication/connection-token/${token.id}/client-url/`,
+      window.location.origin
+    );
     params = this.cleanRDPParams(params);
     if (params) {
       for (const [k, v] of Object.entries(params)) {
         url.searchParams.append(k, v);
       }
     }
-    return this.get(url.href).pipe(
-      catchError(this.handleConnectMethodExpiredError.bind(this))
-    );
+    return this.get(url.href).pipe(catchError(this.handleConnectMethodExpiredError.bind(this)));
   }
 
   getLocalClientUrlAndSetCommand(token, command: string, params: Object = {}) {
-    const setCommand = (res) => {
+    const setCommand = res => {
       const protocol = 'jms://';
       const buf = res.url.replace(protocol, '');
       const bufObj = JSON.parse(window.atob(buf));
@@ -388,14 +412,16 @@ export class HttpService {
   async handleConnectMethodExpiredError(error) {
     if (error.status === 400) {
       if (error.error && error.error.error && error.error.error.startsWith('Connect method')) {
-        const errMsg = await this._i18n.t('The connection method is invalid, please refresh the page');
+        const errMsg = await this._i18n.t(
+          'The connection method is invalid, please refresh the page'
+        );
         alert(errMsg);
       }
     }
     throw error;
   }
 
-  getSmartEndpoint({assetId, sessionId, token}, protocol): Promise<Endpoint> {
+  getSmartEndpoint({ assetId, sessionId, token }, protocol): Promise<Endpoint> {
     const url = new URL('/api/v1/terminal/endpoints/smart/', window.location.origin);
 
     url.searchParams.append('protocol', protocol);
@@ -406,7 +432,9 @@ export class HttpService {
     } else if (token) {
       url.searchParams.append('token', token);
     }
-    return this.get(url.href).pipe(map(res => Object.assign(new Endpoint(), res))).toPromise();
+    return this.get(url.href)
+      .pipe(map(res => Object.assign(new Endpoint(), res)))
+      .toPromise();
   }
 
   getTicketDetail(ticketId: string): Promise<Ticket> {
@@ -460,7 +488,7 @@ export class HttpService {
   }
 
   setTerminalPreference(data) {
-    const url = '/api/v1/users/preference/?category=luna'
+    const url = '/api/v1/users/preference/?category=luna';
     return this.patch(url, data);
   }
 }

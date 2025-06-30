@@ -221,21 +221,27 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   handleMenuClick(menu: any) {
-    console.log('menu', menu);
     menu.click();
     this.hideRMenu();
   }
 
   onNodeClick(event, treeId, treeNode, clickFlag) {
     const ztree = this.trees.find(t => t.name === treeId).ztree;
+
     if (treeNode.isParent) {
       ztree.expandNode(treeNode);
       return;
     }
+
     if (treeNode.chkDisabled) {
       this._message.warning(this._i18n.instant('DisabledAsset'));
       return;
     }
+
+    // if (treeNode.meta.data.platform_type === 'k8s') {
+    //   return connectOnNewPage(treeNode, 'auto');
+    // }
+
     if (this.isOpenNewWindow) {
       connectOnNewPage(treeNode, 'auto');
     } else {

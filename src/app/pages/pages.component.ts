@@ -19,5 +19,5 @@ export const PagesComponents = [
   PagesConnectComponent,
   PagesMonitorComponent,
   PagesNotFoundComponent,
-  PagesKubernetesComponent,
+  PagesKubernetesComponent
 ];
