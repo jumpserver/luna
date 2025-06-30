@@ -11,7 +11,7 @@ import {
   I18nService,
   HttpService,
   DrawerStateService,
-  IframeCommunicationService,
+  IframeCommunicationService
 } from '@app/services';
 
 @Component({
@@ -50,7 +50,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   private connectData: any;
   private account: Account;
   private connectToken: ConnectionToken;
-  private connectMethod: ConnectMethod;
+  private connectMethod: ConnectMethod | string;
   private asset: any;
   private method: string;
 
@@ -63,7 +63,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
     private _route: ActivatedRoute,
     private _dialog: NzModalService,
     private _drawerStateService: DrawerStateService,
-    private _iframeCommunicationService: IframeCommunicationService,
+    private _iframeCommunicationService: IframeCommunicationService
   ) {
     this.startTime = new Date();
   }
@@ -72,10 +72,8 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
     this.view = null;
     this.isTimerStopped = false;
 
-    // 检查是否为直连模式
     this.checkDirectMode();
 
-    // 监听 iframe 通信消息
     this.subscription = this._iframeCommunicationService.message$.subscribe(message => {
       if (message.name === 'CLOSE') {
         this.stopTimer();
@@ -83,10 +81,9 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
     });
 
     if (this.isDirect) {
-      // 直连模式初始化：需要获取资产数据和创建连接令牌
       await this.initDirectMode();
+
     } else {
-      // 普通连接模式初始化：等待 elements-connect 组件触发连接
       this.handleEventChangeTime();
     }
   }
@@ -263,8 +260,6 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
       case 'mongodb':
       case 'clickhouse':
       case 'k8s':
-      case 'http':
-      case 'https':
         this.connectMethod = {
           component: 'koko',
           type: 'web',
@@ -274,6 +269,17 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
           disabled: false
         };
         return 'web_cli';
+      case 'http':
+      case 'https':
+        this.connectMethod = {
+          component: 'lion',
+          type: 'web',
+          value: 'chrome',
+          label: 'Chrome',
+          endpoint_protocol: endpointProtocol,
+          disabled: false
+        };
+        return 'chrome';
       case 'rdp':
       case 'vnc':
         this.connectMethod = {
