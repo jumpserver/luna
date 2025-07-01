@@ -118,6 +118,8 @@ export class ElementAssetTreeComponent implements OnInit {
     const treeChecked = tree.setting && tree.setting.check && tree.setting.check.enable;
     const viewList = this._viewSrv.viewList;
 
+    const isK8s = cnode.meta.data.platform_type === 'k8s';
+
     return [
       {
         id: 'batch-connect',
@@ -130,7 +132,7 @@ export class ElementAssetTreeComponent implements OnInit {
         id: 'connect',
         name: 'Connect',
         fa: 'fa-terminal',
-        hide: cnode.isParent,
+        hide: cnode.isParent || isK8s,
         click: this.onMenuConnect.bind(this)
       },
       {
@@ -144,7 +146,7 @@ export class ElementAssetTreeComponent implements OnInit {
         id: 'split-connect',
         name: 'Split connect',
         fa: 'fa-columns',
-        hide: viewList.length <= 0 || cnode.isParent,
+        hide: viewList.length <= 0 || cnode.isParent || isK8s,
         click: this.onMenuConnect.bind(this, true)
       },
       {
