@@ -19,11 +19,9 @@ win:
     - target: nsis
       arch:
         - x64
-        - ia32
     - target: msiWrapped
       arch:
         - x64
-        - ia32
 afterSign: build/sign/notarize.cjs
 nsis:
   shortcutName: ${productName}
@@ -65,4 +63,4 @@ electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
 protocols:
   - name: 'JumpServerClient Protocol'
-    schemes: [ 'jms' ]
+    schemes: ['jms']
