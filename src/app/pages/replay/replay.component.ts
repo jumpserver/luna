@@ -1,8 +1,8 @@
-import {Component, OnInit} from '@angular/core';
-import {ActivatedRoute} from '@angular/router';
-import {HttpService, I18nService, LogService, SettingService} from '@app/services';
-import {Asset, Replay, Session, User} from '@app/model';
-import {getWaterMarkContent} from '@app/utils/common';
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { HttpService, I18nService, LogService, SettingService } from '@app/services';
+import { Asset, Replay, Session, User } from '@app/model';
+import { getWaterMarkContent } from '@app/utils/common';
 
 @Component({
   standalone: false,
@@ -18,11 +18,13 @@ export class PagesReplayComponent implements OnInit {
   sessionUser: User;
   loading: boolean = true;
 
-  constructor(private route: ActivatedRoute,
-              private _http: HttpService,
-              private _settingSvc: SettingService,
-              private _i18n: I18nService,
-              private _logger: LogService) {
+  constructor(
+    private route: ActivatedRoute,
+    private _http: HttpService,
+    private _settingSvc: SettingService,
+    private _i18n: I18nService,
+    private _logger: LogService
+  ) {
     this.getCurrentUser();
   }
 
@@ -34,12 +36,21 @@ export class PagesReplayComponent implements OnInit {
 
   async ngOnInit() {
     let sid = '';
+
     this.route.params.subscribe(params => {
       sid = params['sid'];
     });
+
     this.session = await this._http.getSessionDetail(sid);
-    this.asset = await this._http.getAssetDetail(this.session.asset_id).toPromise();
+
+    try {
+      this.asset = await this._http.getAssetDetail(this.session.asset_id).toPromise();
+    } catch (error) {
+      this.asset = new Asset();
+    }
+
     this.sessionUser = await this._http.getUserDetail(this.session.user_id);
+
     const interval = setInterval(() => {
       this._http.getReplay(sid).subscribe(
         data => {
@@ -55,11 +66,13 @@ export class PagesReplayComponent implements OnInit {
             clearInterval(interval);
             this.loading = false;
             const auditorUser = `${this._i18n.instant('Viewer')}: ${this.user.name}(${this.user.username})`;
-            const sessionContent = getWaterMarkContent(this.sessionUser, this.asset, this._settingSvc);
-            const content = `${auditorUser}\n${sessionContent}`;
-            this._settingSvc.createWaterMarkIfNeed(
-              document.body, `${content}`
+            const sessionContent = getWaterMarkContent(
+              this.sessionUser,
+              this.asset,
+              this._settingSvc
             );
+            const content = `${auditorUser}\n${sessionContent}`;
+            this._settingSvc.createWaterMarkIfNeed(document.body, `${content}`);
           }
         },
         err => {
@@ -78,11 +91,11 @@ export class PagesReplayComponent implements OnInit {
 
     const tp = this.replay.type;
     const supportedType = {
-      'json': true,
-      'guacamole': true,
-      'asciicast': true,
-      'mp4': true,
-      'parts': true
+      json: true,
+      guacamole: true,
+      asciicast: true,
+      mp4: true,
+      parts: true
     };
     return !supportedType[tp];
   }
