@@ -1,8 +1,16 @@
-<div class="content">
-  <p>
-    {{ "DownloadClientMsg" | translate }}
-  </p>
-  <label nz-checkbox name="auto-login" [(ngModel)]="ignoreRemind">
-    {{ "Don't prompt again" | translate }}
-  </label>
+<div class="download-dialog-content">
+  <div class="message-section">
+    <div class="icon-container">
+      <i nz-icon nzType="download" nzTheme="outline"></i>
+    </div>
+    <div class="message-text">
+      {{ "DownloadClientMsg" | translate }}
+    </div>
+  </div>
+
+  <div class="options-section">
+    <label nz-checkbox name="auto-login" [(ngModel)]="ignoreRemind" class="reminder-checkbox">
+      {{ "Don't prompt again" | translate }}
+    </label>
+  </div>
 </div>

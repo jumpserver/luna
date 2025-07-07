@@ -1,10 +1,26 @@
 
-.content {
-  padding: 24px;
+.download-dialog-content {
+  .message-section {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+
+    .icon-container {
+      cursor: pointer;
+    }
+
+    .message-text {
+      flex: 1;
+      font-size: 15px;
+      color: #262626;
+    }
+  }
+
+  .options-section {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 12px;
+  }
 }
 
-
-.connect-type-group {
-  border: solid #cbc9c9 1px;
-  padding: 5px
-}

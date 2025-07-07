@@ -108,7 +108,7 @@ export class PagesMonitorComponent implements OnInit {
     const resumeTaskMsg = await this._i18n.t('Resume task has been send');
     const session_ids = res['ok'];
     const msg = this.isPaused ? resumeTaskMsg : pauseTaskMsg;
-    this._toastr.success(msg, '');
+    this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
     if (session_ids.indexOf(this.sessionID) !== -1) {
 
     }
