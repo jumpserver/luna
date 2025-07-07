@@ -43,12 +43,12 @@ export class ElementCommandDialogComponent implements OnInit {
     this._http.addQuickCommand(data).subscribe(
       async () => {
         const msg = await this._i18n.t('Save success');
-        this._toastr.success('' + msg, '', {nzDuration: 2000});
+        this._toastr.success('' + msg, '', {nzDuration: 2000, nzClass: 'custom-success-notification'});
         this.dialogRef.close(this.command);
       },
       (error) => {
         const msg = 'name:' + error.error.name;
-        this._toastr.error(msg, '');
+        this._toastr.error(msg, '', { nzClass: 'custom-error-notification' });
       }
     );
   }

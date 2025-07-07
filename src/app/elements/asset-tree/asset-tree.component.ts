@@ -582,13 +582,13 @@ export class ElementAssetTreeComponent implements OnInit {
         const i = this.favoriteAssets.indexOf(assetId);
         this.favoriteAssets.splice(i, 1);
         const msg = this._i18n.instant('Disfavor') + ' ' + this._i18n.instant('success');
-        this._toastr.success(msg, '');
+        this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
       });
     } else {
       this._http.favoriteAsset(assetId, true).subscribe(() => {
         this.favoriteAssets.push(assetId);
         const msg = this._i18n.instant('Favorite') + ' ' + this._i18n.instant('success');
-        this._toastr.success(msg, '');
+        this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
       });
     }
   }

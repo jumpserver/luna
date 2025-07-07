@@ -3,7 +3,7 @@
 
   <div class="nz-modal-content">
     <div [class.error-message]="content.isError">
-      <nz-alert nzType="info" class="content-message" [nzDescription]="alertContent">
+      <nz-alert [nzType]="content.isError ? 'error' : 'info'" class="content-message" [nzDescription]="alertContent">
         <ng-template #alertContent>
           <div>{{ content.message | translate }}</div>
 
