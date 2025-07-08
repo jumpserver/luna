@@ -371,19 +371,21 @@ input[type="range"]:focus::-ms-fill-upper {
 .player-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
+  width: 100%;
   background: var(--el-editor-bg-color);
-
-  &.seeking {
-    // 跳转状态下保持原有样式，不做额外改动
-    // 主要依靠 seek-overlay 来显示跳转提示
-  }
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
 
   .display {
     flex: 1;
     position: relative;
     background: var(--el-main-bg-color);
     min-height: 0;
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
 
     .seek-overlay {
       position: absolute;
@@ -434,14 +436,19 @@ input[type="range"]:focus::-ms-fill-upper {
       flex-direction: row;
       height: 100%;
       min-height: 0;
+      max-width: 100%;
+      max-height: 100%;
+      overflow: hidden;
 
       .commands {
         width: 250px;
+        min-width: 250px;
+        max-width: 250px;
         background: var(--el-asset-tree-bg-color);
         border-right: 1px solid var(--el-border-color-x);
         display: flex;
         flex-direction: column;
-        flex-shrink: 0; // 不允许收缩
+        flex-shrink: 0;
 
         .commands-header {
           padding: 12px 16px;
@@ -505,6 +512,8 @@ input[type="range"]:focus::-ms-fill-upper {
         display: flex;
         flex-direction: column;
         min-width: 0;
+        max-width: 100%;
+        max-height: 100%;
 
         &.full {
           width: 100%;
@@ -522,22 +531,25 @@ input[type="range"]:focus::-ms-fill-upper {
           box-sizing: border-box;
           flex: 1;
           min-height: 0;
+          max-width: 100%;
+          max-height: 100%;
 
           > * {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
+            width: auto;
+            height: auto;
           }
         }
       }
     }
   }
 
-  // 控制栏 - 现在在底部
   .controls {
     display: flex;
     align-items: center;
-    height: 60px; // 增加高度确保足够空间
+    height: 60px;
     padding: 0 16px;
     background: var(--el-nav-bg-color);
     border-top: 1px solid var(--el-border-color-x);
@@ -668,7 +680,6 @@ input[type="range"]:focus::-ms-fill-upper {
   }
 }
 
-// 响应式
 @media (max-width: 768px) {
   .player-container {
     .controls {
@@ -704,6 +715,20 @@ input[type="range"]:focus::-ms-fill-upper {
 
       .screen-wrapper {
         width: 100%;
+        max-width: 100%;
+        min-width: 0;
+      }
+    }
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .player-container {
+    .display .content {
+      .commands {
+        width: 200px;
+        min-width: 200px;
+        max-width: 200px;
       }
     }
   }

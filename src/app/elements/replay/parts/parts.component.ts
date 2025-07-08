@@ -1,8 +1,8 @@
 import { Replay } from '@app/model';
-import { HttpService, I18nService, LogService } from '@app/services';
-import { TranslateService } from '@ngx-translate/core';
-import { ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
+import { HttpService, I18nService, LogService } from '@app/services';
+import { ChangeDetectorRef, Component, Input, OnInit, HostListener } from '@angular/core';
 
 export interface Section extends Replay {
   name: string;
@@ -38,6 +38,11 @@ export class ElementsPartsComponent implements OnInit {
 
   alertShown = true;
   videoLoading = false;
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event) {
+    this.cdRef.detectChanges();
+  }
 
   constructor(
     public _i18n: I18nService,
