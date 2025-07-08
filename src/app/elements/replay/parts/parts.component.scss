@@ -3,6 +3,11 @@
   flex-direction: column;
   height: 100vh;
   background: var(--el-main-bg-color);
+  max-height: 100vh;
+  overflow: hidden;
+
+  --playlist-width: 300px;
+  --playlist-min-width: 300px;
 
   .info-header {
     display: flex;
@@ -53,6 +58,8 @@
       flex: 1;
       position: relative;
       background: var(--el-editor-bg-color);
+      min-width: 0;
+      overflow: hidden;
 
       .loading-overlay {
         position: absolute;
@@ -65,15 +72,21 @@
       .video-player {
         width: 100%;
         height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        overflow: hidden;
       }
     }
 
     .playlist-area {
-      width: 300px;
+      width: var(--playlist-width);
+      min-width: var(--playlist-min-width);
+      max-width: var(--playlist-width);
       background: var(--el-asset-tree-bg-color);
       border-left: 1px solid var(--el-border-color-x);
       display: flex;
       flex-direction: column;
+      flex-shrink: 0;
 
       .playlist-header {
         display: flex;
@@ -194,13 +207,43 @@
 
       .video-area {
         height: 60vh;
+        min-height: 300px;
+        flex: none;
       }
 
       .playlist-area {
         width: 100%;
+        min-width: 100%;
+        max-width: 100%;
         height: 40vh;
+        min-height: 200px;
         border-left: none;
         border-top: 1px solid var(--el-border-color-x);
+        flex: none;
+      }
+    }
+  }
+
+  @media (max-width: 1024px) and (min-width: 769px) {
+    --playlist-width: 250px;
+    --playlist-min-width: 250px;
+  }
+
+  @media (min-width: 1200px) {
+    --playlist-width: 350px;
+    --playlist-min-width: 350px;
+  }
+
+  @media (max-width: 480px) {
+    .main-content {
+      .video-area {
+        height: 50vh;
+        min-height: 250px;
+      }
+
+      .playlist-area {
+        height: 50vh;
+        min-height: 150px;
       }
     }
   }
