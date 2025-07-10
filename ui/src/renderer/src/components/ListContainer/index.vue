@@ -178,20 +178,34 @@ const getAssetProtocol = (assetId: string) => {
   return assetInfo?.protocol?.label;
 };
 
-const handleConnectionError = (error: Error | { response?: { data?: { code?: string } } }) => {
+const handleConnectionError = (
+  error: Error | { response?: { data?: { code?: string; error?: string; message?: string } } }
+) => {
+  console.log('Connection error:', error);
+
   const errorData = error['response']?.data;
 
   if (errorData) {
-    // 除开通知和允许，其余情况一率弹窗
+    const serverError = errorData.error || errorData.message || errorData.code;
+
+    // 检查是否是 mstsc 不支持的错误
+    if (serverError === 'Connect method not support: mstsc') {
+      message.error(`${t('Message.ClientNotSupport')}`);
+      return;
+    }
+
     if (errorData?.code !== 'notice') {
-      message.error(`${t('Message.AssetNotice')}`);
+      message.error(serverError || `${t('Message.AssetNotice')}`);
       return;
     }
 
     if (errorData?.code !== 'reject') {
-      message.error(`${t('Message.AssetDeny')}`);
+      message.error(serverError || `${t('Message.AssetDeny')}`);
       return;
     }
+  } else {
+    const errorMessage = error.message || 'Unknown error';
+    message.error(errorMessage);
   }
 };
 
@@ -254,20 +268,22 @@ const connectionDispatch = async (
               method = 'db_client';
           }
 
-          // 在用户输入完成后创建连接
-          const token = await createConnectToken(connectionData.value, method);
+          try {
+            const token = await createConnectToken(connectionData.value, method);
+            if (token) {
+              historyStore.setHistorySession({ ...detailMessage.value });
 
-          if (token) {
-            mittBus.emit('checkMatch', connectionData.value.protocol as string);
-            historyStore.setHistorySession({ ...detailMessage.value });
-
-            getLocalClientUrl(token).then(res => {
+              const res = await getLocalClientUrl(token);
               if (res) {
+                mittBus.emit('checkMatch', connectionData.value.protocol as string);
                 window.electron.ipcRenderer.send('open-client', res.url);
               }
               resolve(true);
-            });
-          } else {
+            } else {
+              resolve(false);
+            }
+          } catch (error) {
+            handleConnectionError(error as Error | { response?: { data?: { code?: string } } });
             resolve(false);
           }
         } else {
@@ -297,21 +313,26 @@ const connectionDispatch = async (
       method = 'db_client';
   }
 
-  const token = await createConnectToken(connectionData.value, method);
+  try {
+    const token = await createConnectToken(connectionData.value, method);
 
-  if (token) {
-    mittBus.emit('checkMatch', connectionData.value.protocol as string);
-    historyStore.setHistorySession({ ...detailMessage.value });
+    if (token) {
+      historyStore.setHistorySession({ ...detailMessage.value });
 
-    getLocalClientUrl(token).then(res => {
+      const res = await getLocalClientUrl(token);
       if (res) {
+        mittBus.emit('checkMatch', connectionData.value.protocol as string);
         window.electron.ipcRenderer.send('open-client', res.url);
       }
-    });
-    return true;
+    } else {
+      return false;
+    }
+  } catch (error) {
+    handleConnectionError(error as Error | { response?: { data?: { code?: string } } });
+    return false;
   }
 
-  return false;
+  return true;
 };
 
 const handleConnect = async (item: IListItem, event: MouseEvent) => {

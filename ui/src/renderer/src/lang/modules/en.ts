@@ -131,6 +131,7 @@ export default {
     HistoryRequireAuth: 'Authentication required to view history',
     LoginAuthenticationExpired: 'Login authentication has expired',
     RemoveAccountConfirm: 'Are you sure you want to delete the current account?',
-    RemoveAccount: 'Remove Account'
+    RemoveAccount: 'Remove Account',
+    ClientNotSupport: 'Client connection to Windows assets is an enterprise feature.'
   }
 };
