@@ -19,9 +19,11 @@ win:
     - target: nsis
       arch:
         - x64
+        - ia32
     - target: msiWrapped
       arch:
         - x64
+        - ia32
 afterSign: build/sign/notarize.cjs
 nsis:
   shortcutName: ${productName}
