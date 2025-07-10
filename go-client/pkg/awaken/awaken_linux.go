@@ -36,20 +36,8 @@ func awakenRDPCommand(filePath string, cfg *config.AppConfig) *exec.Cmd {
 	return cmd
 }
 
-func awakenVNCCommand(filePath string, cfg *config.AppConfig) *exec.Cmd {
-	var appItem *config.AppItem
-	appLst := cfg.Linux.RemoteDesktop
-	for _, app := range appLst {
-		if app.IsSet && app.IsMatchProtocol("vnc") {
-			appItem = &app
-			break
-		}
-	}
-	if appItem == nil {
-		return nil
-	}
-	args := strings.Replace(appItem.ArgFormat, "{file}", filePath, 1)
-	cmd := exec.Command(appItem.Name, strings.Split(args, " ")...)
+func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
+	cmd := exec.Command("")
 	return cmd
 }
 

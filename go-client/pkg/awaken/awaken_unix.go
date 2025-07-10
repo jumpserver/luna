@@ -13,8 +13,8 @@ func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
 	return cmd
 }
 
-func handleVNC(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
-	cmd := awakenVNCCommand(filePath, cfg)
+func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
+	cmd := awakenVNCCommand(r, cfg)
 	return cmd
 }
 

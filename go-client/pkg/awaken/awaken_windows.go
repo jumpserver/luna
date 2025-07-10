@@ -65,7 +65,7 @@ func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
 	return cmd
 }
 
-func handleVNC(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
+func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	appLst := cfg.Windows.RemoteDesktop
 	for _, app := range appLst {
@@ -77,9 +77,80 @@ func handleVNC(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
 	if appItem == nil {
 		return nil
 	}
-	args := strings.Replace(appItem.ArgFormat, "{file}", filePath, 1)
-	cmd := exec.Command(appItem.Name, strings.Split(args, " ")...)
-	return cmd
+	connectMap := map[string]string{
+		"name":     r.getName(),
+		"protocol": r.Protocol,
+		"username": r.getUserName(),
+		"value":    r.Value,
+		"host":     r.Host,
+		"port":     strconv.Itoa(r.Port),
+	}
+	if len(appItem.AutoIt) == 0 {
+		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
+		if strings.Contains(commands, "*") {
+			commands := strings.Split(commands, "*")
+			return exec.Command(appItem.Path, commands...)
+		} else {
+			commands := strings.Split(commands, " ")
+			return exec.Command(appItem.Path, commands...)
+		}
+	} else {
+		autoit.LoadAuto()
+		autoit.Run(appItem.Path)
+		for _, item := range appItem.AutoIt {
+			time.Sleep(300 * time.Millisecond)
+			switch item.Cmd {
+			case "Wait":
+				sleepTime, _ := strconv.Atoi(item.Type)
+				winTitle := item.Element
+				maxRetry := 0
+				for {
+					ret := autoit.WinWaitActive(winTitle, "", sleepTime)
+					time.Sleep(time.Duration(sleepTime) * 100 * time.Millisecond)
+					if ret != 0 || maxRetry > 30 {
+						break
+					}
+					maxRetry++
+				}
+			case "ControlSend":
+				maxRetry := 0
+				for {
+					ret := autoit.ControlSend("", "", item.Element, getCommandFromArgs(connectMap, item.Type))
+					time.Sleep(300 * time.Millisecond)
+					if ret != 0 || maxRetry > 10 {
+						break
+					}
+					maxRetry++
+				}
+			case "ControlSetText":
+				maxRetry := 0
+				for {
+					ret := autoit.ControlSetText("", "", item.Element, getCommandFromArgs(connectMap, item.Type))
+					time.Sleep(300 * time.Millisecond)
+					if ret != 0 || maxRetry > 10 {
+						break
+					}
+					maxRetry++
+				}
+			case "ControlClick":
+				pos := strings.Split(item.Type, ",")
+				x, _ := strconv.Atoi(pos[0])
+				y, _ := strconv.Atoi(pos[1])
+				maxRetry := 0
+				for {
+					ret := autoit.ControlClick("", "", item.Element, "left", 1, x, y)
+					time.Sleep(300 * time.Millisecond)
+					if ret != 0 || maxRetry > 10 {
+						break
+					}
+					maxRetry++
+				}
+			case "SendKey":
+				autoit.Send(item.Element)
+			}
+		}
+		return exec.Command("")
+	}
 }
 
 func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {

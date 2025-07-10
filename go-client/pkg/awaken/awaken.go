@@ -3,7 +3,6 @@ package awaken
 import (
 	"go-client/global"
 	"go-client/pkg/config"
-	vncpass "go-client/pkg/utils"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -109,13 +108,7 @@ func (r *Rouse) HandleRDP(appConfig *config.AppConfig) {
 }
 
 func (r *Rouse) HandleVNC(appConfig *config.AppConfig) {
-	removeCurRdpVncFile()
-	filePath, err := vncpass.GenerateVNCPasswordFile(r.Value)
-	if err != nil {
-		global.LOG.Error(err.Error())
-		return
-	}
-	cmd := handleVNC(r, filePath, appConfig)
+	cmd := handleVNC(r, appConfig)
 	cmd.Run()
 }
 

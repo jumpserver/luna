@@ -1,6 +1,6 @@
 {
   "filename": "Jumpserve Clients Config",
-  "version": 2,
+  "version": 3,
   "windowBounds": {
     "width": 1280,
     "height": 800
@@ -100,35 +100,40 @@
         "is_set": true
       },
       {
-        "name": "tigervnc",
-        "display_name": "TigerVNC",
+        "name": "vncviewer",
+        "display_name": "RealVNC Viewer",
         "protocol": ["vnc"],
         "comment": {
-          "zh": "Microsoft Remote Desktop是一款强大的微软远程连接工具，可以从几乎任何地方连接到远程PC和您的工作资源。",
-          "en": "Microsoft Remote Desktop is a powerful Microsoft remote connection tool that can connect to remote PCs and your work resources from almost anywhere."
+          "zh": "RealVNC Viewer 是一款用于远程控制计算机的软件，它使用VNC（Virtual Network Computing）协议，允许用户从一台计算机（客户端）访问和控制另一台计算机（服务器）的桌面。",
+          "en": "RealVNC Viewer is a software used for remote computer control. It utilizes the VNC (Virtual Network Computing) protocol, allowing users to access and control the desktop of another computer (the server) from their own computer"
         },
-        "download_url": "https://jaist.dl.sourceforge.net/project/tigervnc/stable/1.15.0/",
+        "download_url": "https://www.realvnc.com/en/connect/download/viewer/",
         "type": "remotedesktop",
         "path": "",
-        "arg_format": "-passwd {file} {host}::{port}",
-        "match_first": [],
-        "is_internal": false,
-        "is_default": false,
-        "is_set": false
-      },
-      {
-        "name": "ultravnc",
-        "display_name": "UltraVNC",
-        "protocol": ["vnc"],
-        "comment": {
-          "zh": "Microsoft Remote Desktop是一款强大的微软远程连接工具，可以从几乎任何地方连接到远程PC和您的工作资源。",
-          "en": "Microsoft Remote Desktop is a powerful Microsoft remote connection tool that can connect to remote PCs and your work resources from almost anywhere."
-        },
-        "download_url": "https://uvnc.com/component/jdownloads/summary/487-ultravnc-1640-x64-setup.html",
-        "type": "remotedesktop",
-        "path": "",
-        "arg_format": "--password {password} {host}::{port}",
-        "match_first": [],
+        "arg_format": "-WarnUnencrypted=0 -VerifyId=0 -UserName={username} {host}:{port}",
+        "match_first": ["vnc"],
+        "autoit": [
+          {
+            "cmd": "Wait",
+            "type": "15",
+            "element": "[CLASS:TNavicatMainForm]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "50,12",
+            "element": "[CLASS:TButtonedEdit; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlSetText",
+            "type": "{value}",
+            "element": "[CLASS:TButtonedEdit; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "36,13",
+            "element": "[CLASS:TButton; INSTANCE:2]"
+          }
+        ],
         "is_internal": false,
         "is_default": false,
         "is_set": false
@@ -478,17 +483,17 @@
         "is_set": true
       },
       {
-        "name": "tigervnc",
-        "display_name": "TigerVNC",
+        "name": "vncviewer",
+        "display_name": "RealVNC Viewer",
         "protocol": ["vnc"],
         "comment": {
-          "zh": "Microsoft Remote Desktop是一款强大的微软远程连接工具，可以从几乎任何地方连接到远程PC和您的工作资源。",
-          "en": "Microsoft Remote Desktop is a powerful Microsoft remote connection tool that can connect to remote PCs and your work resources from almost anywhere."
+          "zh": "RealVNC Viewer 是一款用于远程控制计算机的软件，它使用VNC（Virtual Network Computing）协议，允许用户从一台计算机（客户端）访问和控制另一台计算机（服务器）的桌面。",
+          "en": "RealVNC Viewer is a software used for remote computer control. It utilizes the VNC (Virtual Network Computing) protocol, allowing users to access and control the desktop of another computer (the server) from their own computer"
         },
-        "download_url": "https://jaist.dl.sourceforge.net/project/tigervnc/stable/1.15.0/TigerVNC-1.15.0.dmg",
+        "download_url": "https://www.realvnc.com/en/connect/download/viewer/",
         "type": "remotedesktop",
-        "path": "",
-        "arg_format": "-passwd {file} {host}::{port}",
+        "path": "/Applications/VNC Viewer.app/Contents/MacOS/vncviewer",
+        "arg_format": "-WarnUnencrypted=0 -VerifyId=0 -UserName={username} {host}:{port}",
         "match_first": ["vnc"],
         "is_internal": false,
         "is_default": false,
@@ -669,23 +674,6 @@
         "path": "xfreerdp",
         "arg_format": "{file} /cert-ignore /d: /p:",
         "match_first": [],
-        "is_internal": true,
-        "is_default": false,
-        "is_set": false
-      },
-      {
-        "name": "tigervnc",
-        "display_name": "TigerVNC",
-        "protocol": ["vnc"],
-        "comment": {
-          "zh": "Microsoft Remote Desktop是一款强大的微软远程连接工具，可以从几乎任何地方连接到远程PC和您的工作资源。",
-          "en": "Microsoft Remote Desktop is a powerful Microsoft remote connection tool that can connect to remote PCs and your work resources from almost anywhere."
-        },
-        "download_url": "https://jaist.dl.sourceforge.net/project/tigervnc/stable/1.15.0/",
-        "type": "remotedesktop",
-        "path": "vncviewer",
-        "arg_format": "-passwd {file} {host}::{port}",
-        "match_first": ["vnc"],
         "is_internal": true,
         "is_default": false,
         "is_set": false
