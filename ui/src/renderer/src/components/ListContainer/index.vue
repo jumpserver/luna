@@ -60,14 +60,14 @@
                 </n-popover>
 
                 <n-tag size="small" :bordered="false" type="success">
-                  可连接
+                  {{ t('Common.Connectable') }}
                   <template #icon>
                     <n-icon :component="CheckmarkCircle" />
                   </template>
                 </n-tag>
 
                 <n-tag size="small" :bordered="false" :type="item.is_active ? 'success' : 'error'">
-                  {{ item.is_active ? '已激活' : '未激活' }}
+                  {{ item.is_active ? t('Common.Active') : t('Common.Inactive') }}
                   <template #icon>
                     <n-icon v-if="item.is_active" :component="CheckmarkCircle" />
                     <n-icon v-else :component="CloseCircle" />
