@@ -130,6 +130,7 @@ export default {
     HistoryRequireAuth: '查看历史记录需要先登录认证',
     LoginAuthenticationExpired: '登录认证已失效',
     RemoveAccountConfirm: '确定要删除当前账号吗?',
-    RemoveAccount: '移除账号'
+    RemoveAccount: '移除账号',
+    ClientNotSupport: 'Client 连接 Windows 资产是企业版功能。'
   }
 };
