@@ -1,7 +1,7 @@
-import { Injectable } from '@angular/core';
-import { View } from '@app/model';
-import { BehaviorSubject } from 'rxjs';
-import { FaceService } from '@app/services/face';
+import {Injectable} from '@angular/core';
+import {View} from '@app/model';
+import {BehaviorSubject} from 'rxjs';
+import {FaceService} from '@app/services/face';
 
 @Injectable()
 export class ViewService {
@@ -14,7 +14,8 @@ export class ViewService {
   public connectViewCount$ = this.connectViewCount.asObservable();
   public state$ = new BehaviorSubject<any>({});
 
-  constructor(private _faceSvc: FaceService) {}
+  constructor(private _faceSvc: FaceService) {
+  }
 
   addView(view: View) {
     this.num += 1;
@@ -25,7 +26,7 @@ export class ViewService {
     if (view.connectToken.face_monitor_token) {
       this._faceSvc.addMonitoringTab(view.id);
     }
-    this.state$.next({ action: 'add', view: view });
+    this.state$.next({action: 'add', view: view});
   }
 
   activeView(view: View) {
@@ -62,7 +63,7 @@ export class ViewService {
     if (view.connectToken.face_monitor_token) {
       this._faceSvc.removeMonitoringTab(view.id);
     }
-    this.state$.next({ action: 'close', view: view });
+    this.state$.next({action: 'close', view: view});
   }
 
   addSubViewToCurrentView(view: View) {
@@ -70,7 +71,7 @@ export class ViewService {
     const index = this.currentView.subViews.length;
     this.setCurrentViewTitle(view, index + 1, 'concat');
     this.setCurrentView();
-    this.state$.next({ action: 'addSub', view: view, currentView: this.currentView });
+    this.state$.next({action: 'addSub', view: view, currentView: this.currentView});
   }
 
   clearSubViewOfCurrentView(view: View) {
@@ -78,11 +79,11 @@ export class ViewService {
     this.currentView.subViews.splice(index, 1);
     this.setCurrentViewTitle(view, index + 1, 'delete');
     this.setCurrentView();
-    this.state$.next({ action: 'clearSub', view: view, currentView: this.currentView });
+    this.state$.next({action: 'clearSub', view: view, currentView: this.currentView});
   }
 
   setCurrentViewTitle(view, index, status) {
-    const { name } = this.currentView;
+    const {name} = this.currentView;
     switch (status) {
       case 'concat':
         this.currentView.name = name + '|' + view.name;
@@ -126,7 +127,7 @@ export class ViewService {
 
   setCurrentView(view: Object = this.currentView) {
     this.currentView$.next(view);
-    this.connectViewCount.next(this.viewList.filter(view => view.connected === true).length);
-    this.state$.next({ action: 'active', view: view });
+    this.connectViewCount.next(this.viewList.filter(view => view.connected === true && view.connectMethod.component === 'koko').length);
+    this.state$.next({action: 'active', view: view});
   }
 }
