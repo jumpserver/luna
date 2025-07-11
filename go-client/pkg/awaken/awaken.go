@@ -81,8 +81,8 @@ func (r *Rouse) getName() string {
 	return replacer.Replace(name)
 }
 
-func removeCurRdpFile() {
-	re := regexp.MustCompile(".*\\.rdp$")
+func removeCurRdpVncFile() {
+	re := regexp.MustCompile(`(?i)\.(rdp|vncpaxx)$`)
 	dir, _ := os.UserConfigDir()
 	rd, _ := ioutil.ReadDir(filepath.Join(dir, "jumpserver-client"))
 	for _, v := range rd {
@@ -93,7 +93,7 @@ func removeCurRdpFile() {
 }
 
 func (r *Rouse) HandleRDP(appConfig *config.AppConfig) {
-	removeCurRdpFile()
+	removeCurRdpVncFile()
 	fileName, _ := url.QueryUnescape(r.File.Name)
 	replacer := strings.NewReplacer(" ", "", ":", "_", "-", "_")
 	dir, _ := os.UserConfigDir()
@@ -104,6 +104,11 @@ func (r *Rouse) HandleRDP(appConfig *config.AppConfig) {
 		return
 	}
 	cmd := handleRDP(r, filePath, appConfig)
+	cmd.Run()
+}
+
+func (r *Rouse) HandleVNC(appConfig *config.AppConfig) {
+	cmd := handleVNC(r, appConfig)
 	cmd.Run()
 }
 
@@ -129,6 +134,8 @@ func (r *Rouse) Run() {
 		switch protocol {
 		case "rdp":
 			r.HandleRDP(&appConfig)
+		case "vnc":
+			r.HandleVNC(&appConfig)
 		case "ssh", "sftp", "telnet":
 			r.HandleSSH(&appConfig)
 		case "mysql", "mariadb", "postgresql", "redis", "oracle", "sqlserver", "mongodb":

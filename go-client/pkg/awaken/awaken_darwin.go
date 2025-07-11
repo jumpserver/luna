@@ -24,6 +24,37 @@ func awakenRDPCommand(filePath string, cfg *config.AppConfig) *exec.Cmd {
 	return cmd
 }
 
+func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
+	var appItem *config.AppItem
+	appLst := cfg.MacOS.RemoteDesktop
+	for _, app := range appLst {
+		if app.IsSet && app.IsMatchProtocol("vnc") {
+			appItem = &app
+			break
+		}
+	}
+	if appItem == nil {
+		return nil
+	}
+	connectMap := map[string]string{
+		"name":     r.getName(),
+		"protocol": r.Protocol,
+		"username": r.getUserName(),
+		"value":    r.Value,
+		"host":     r.Host,
+		"port":     strconv.Itoa(r.Port),
+	}
+	commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
+	appPath := appItem.Path
+	_cmd := exec.Command(appPath, strings.Split(commands, " ")...)
+	_cmd.Start()
+
+	currentPath := filepath.Dir(os.Args[0])
+	scriptPath := filepath.Join(currentPath, "Scripts", "vnc.scpt")
+	cmd := exec.Command("osascript", "-s", "h", scriptPath, r.Value, "0")
+	return cmd
+}
+
 func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	var appLst []config.AppItem
