@@ -60,7 +60,6 @@ class RequestHttp {
           config.headers['X-JMS-ORG'] = userStore.currentOrganization;
           config.headers['X-TZ'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-          // 添加 CSRF token 到请求头（Django 应用通常需要这个）
           if (userStore.csrfToken) {
             config.headers['X-CSRFToken'] = userStore.csrfToken;
           }

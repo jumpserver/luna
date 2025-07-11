@@ -132,6 +132,9 @@ export default {
     LoginAuthenticationExpired: 'Login authentication has expired',
     RemoveAccountConfirm: 'Are you sure you want to delete the current account?',
     RemoveAccount: 'Remove Account',
-    ClientNotSupport: 'Client connection to Windows assets is an enterprise feature.'
+    ClientNotSupport: 'Client connection to Windows assets is an enterprise feature.',
+    AlreadyLoggedIn: 'You are already logged in to this site',
+    SwitchedToExistingAccount: 'Switched to existing account',
+    LoginAuthenticationFailed: 'Login authentication has expired. Please log in again'
   }
 };

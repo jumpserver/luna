@@ -131,6 +131,9 @@ export default {
     LoginAuthenticationExpired: '登录认证已失效',
     RemoveAccountConfirm: '确定要删除当前账号吗?',
     RemoveAccount: '移除账号',
-    ClientNotSupport: 'Client 连接 Windows 资产是企业版功能。'
+    ClientNotSupport: 'Client 连接 Windows 资产是企业版功能。',
+    AlreadyLoggedIn: '您已经登录了该站点',
+    SwitchedToExistingAccount: '已切换到现有账户',
+    LoginAuthenticationFailed: '登录认证已失效，请重新登录'
   }
 };

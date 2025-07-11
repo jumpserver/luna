@@ -10,4 +10,4 @@ export const getOrganization = () => {
 
 export const getCurrent = () => {
   return request.get('/api/v1/orgs/orgs/current/');
-}
+};

@@ -39,16 +39,22 @@ export const useUserAccount = () => {
   /**
    * @description 移除账号
    */
-  const removeAccount = () => {
+  const removeAccount = async () => {
     const currentUser = userStore.currentUser as IUserInfo;
-
-    if (currentUser && currentUser.currentSite) {
-      window.electron.ipcRenderer.send('clear-site-cookies', currentUser.currentSite);
-    }
 
     userStore.removeCurrentUser();
 
+    // 只有当没有其他用户时才清理cookies
     if (userStore.userInfo && userStore.userInfo.length === 0) {
+      // 清理当前站点的cookies，因为没有其他用户了
+      if (currentUser && currentUser.currentSite && currentUser.session) {
+        window.electron.ipcRenderer.send(
+          'clear-site-cookies',
+          currentUser.currentSite,
+          currentUser.session
+        );
+      }
+
       showLoginModal.value = true;
       return userStore.reset();
     }
@@ -64,13 +70,24 @@ export const useUserAccount = () => {
         userStore.setCsrfToken(firstUser.csrfToken);
       }
 
-      // 恢复第一个用户的 cookie
-      if (firstUser.currentSite) {
-        window.electron.ipcRenderer.send('restore-cookies', {
-          site: firstUser.currentSite,
-          sessionId: firstUser.session,
-          csrfToken: firstUser.csrfToken || ''
-        });
+      // 恢复第一个用户的cookies
+      if (firstUser.currentSite && firstUser.session) {
+        try {
+          const allCookies = await window.electron.ipcRenderer.invoke(
+            'get-site-cookies',
+            firstUser.currentSite,
+            firstUser.session
+          );
+
+          await window.electron.ipcRenderer.invoke('restore-cookies', {
+            site: firstUser.currentSite,
+            sessionId: firstUser.session,
+            csrfToken: firstUser.csrfToken || '',
+            allCookies: allCookies
+          });
+        } catch (error) {
+          console.error('恢复cookies失败:', error);
+        }
       }
     }
   };
@@ -84,19 +101,10 @@ export const useUserAccount = () => {
     }
 
     if (userStore.userInfo) {
-      const currentUser = userStore.currentUser as IUserInfo;
-
       const user = userStore.userInfo.find((item: IUserInfo) => item.session === session);
 
       if (user) {
-        if (
-          currentUser &&
-          currentUser.currentSite &&
-          currentUser.currentSite !== user.currentSite
-        ) {
-          window.electron.ipcRenderer.send('clear-site-cookies', currentUser.currentSite);
-        }
-
+        // 更新用户状态
         userStore.setSession(user.session);
         userStore.setCurrentUser({ ...user });
         userStore.setCurrentSit(user.currentSite as string);
@@ -105,25 +113,45 @@ export const useUserAccount = () => {
           userStore.setCsrfToken(user.csrfToken);
         }
 
-        // 切换账号时恢复对应的 cookie
-        if (user.currentSite) {
-          window.electron.ipcRenderer.send('restore-cookies', {
-            site: user.currentSite,
-            jms_sessionid: user.session,
-            jms_csrftoken: user.csrfToken || '',
-            // 为了兼容性，也保留旧的字段名
-            sessionId: user.session,
-            csrfToken: user.csrfToken || ''
-          });
-        }
-      }
-      const setting = await getSystemSetting();
+        // 切换账号时恢复对应的 cookie（直接覆盖，不清理）
+        if (user.currentSite && user.session) {
+          try {
+            const allCookies = await window.electron.ipcRenderer.invoke(
+              'get-site-cookies',
+              user.currentSite,
+              user.session
+            );
 
-      if (setting) {
-        settingStore.setRdpClientOption(setting.graphics.rdp_client_option);
-        settingStore.setKeyboardLayout(setting.graphics.keyboard_layout);
-        settingStore.setRdpSmartSize(setting.graphics.rdp_smart_size);
-        settingStore.setRdpColorQuality(setting.graphics.rdp_color_quality);
+            const result = await window.electron.ipcRenderer.invoke('restore-cookies', {
+              site: user.currentSite,
+              sessionId: user.session,
+              csrfToken: user.csrfToken || '',
+              allCookies: allCookies
+            });
+
+            if (!result.success) {
+              console.error('恢复cookies失败:', result.error);
+              return;
+            }
+          } catch (error) {
+            console.error('恢复cookies失败:', error);
+            return;
+          }
+        }
+
+        // 获取系统设置（只有在cookies恢复成功后才执行）
+        try {
+          const setting = await getSystemSetting();
+
+          if (setting) {
+            settingStore.setRdpClientOption(setting.graphics.rdp_client_option);
+            settingStore.setKeyboardLayout(setting.graphics.keyboard_layout);
+            settingStore.setRdpSmartSize(setting.graphics.rdp_smart_size);
+            settingStore.setRdpColorQuality(setting.graphics.rdp_color_quality);
+          }
+        } catch (error) {
+          console.error('获取系统设置失败:', error);
+        }
       }
     }
   };
@@ -142,74 +170,13 @@ export const useUserAccount = () => {
     site: string;
   }) => {
     if (!credentials.session || !credentials.csrfToken) {
-      useMessage.error('登录凭据不完整');
       return;
     }
 
-    console.log('🔐 收到完整登录凭据:', {
-      session: credentials.session.substring(0, 10) + '...',
-      csrfToken: credentials.csrfToken.substring(0, 10) + '...',
-      site: credentials.site
-    });
-
-    // 设置用户状态
     userStore.setSession(credentials.session);
     userStore.setCsrfToken(credentials.csrfToken);
+    userStore.setCurrentSit(credentials.site);
     userStore.resetOrganization();
-
-    // 立即设置 cookie 到 Electron session 中
-    console.log('🍪 正在设置 cookie 到 Electron session...');
-
-    // 等待 cookie 设置完成的 Promise
-    const cookieSetupPromise = new Promise((resolve, reject) => {
-      const handleCookiesRestored = (
-        event: any,
-        data: { success: boolean; error?: string; site: string }
-      ) => {
-        if (data.site === credentials.site) {
-          window.electron.ipcRenderer.removeListener('cookies-restored', handleCookiesRestored);
-          if (data.success) {
-            console.log('✅ Cookie 设置成功，可以开始 API 请求');
-            resolve(true);
-          } else {
-            console.error('❌ Cookie 设置失败:', data.error);
-            reject(new Error(data.error || 'Cookie 设置失败'));
-          }
-        }
-      };
-
-      window.electron.ipcRenderer.on('cookies-restored', handleCookiesRestored);
-
-      // 设置超时
-      setTimeout(() => {
-        window.electron.ipcRenderer.removeListener('cookies-restored', handleCookiesRestored);
-        reject(new Error('Cookie 设置超时'));
-      }, 5000);
-    });
-
-    // 发送设置 cookie 的请求 - 使用动态的 cookie 名称
-    const cookieData: any = {
-      site: credentials.site,
-      // 为了兼容性，保留旧的字段名
-      sessionId: credentials.session,
-      csrfToken: credentials.csrfToken
-    };
-
-    // 动态添加 cookie 字段（从 userStore 中获取当前站点的认证信息）
-    // 这里暂时使用默认名称，实际应该从解析的数据中获取
-    cookieData['sessionid'] = credentials.session;
-    cookieData['csrftoken'] = credentials.csrfToken;
-
-    window.electron.ipcRenderer.send('restore-cookies', cookieData);
-
-    // 等待 cookie 设置完成
-    try {
-      await cookieSetupPromise;
-    } catch (error) {
-      console.error('Cookie 设置失败:', error);
-      useMessage.error('Cookie 设置失败，可能影响登录状态');
-      // 继续执行，但可能会失败
-    }
 
     try {
       const res = await getProfile();
@@ -312,31 +279,30 @@ export const useUserAccount = () => {
     theme: defaultTheme.value === 'light' ? lightTheme : darkTheme
   }));
 
-  const { message: useMessage, notification } = createDiscreteApi(['message', 'notification'], {
+  const { notification } = createDiscreteApi(['message', 'notification'], {
     configProviderProps: configProviderPropsRef
   });
 
-  // 监听主进程的 cookie 设置通知
-  const setupCookiesForSite = () => {
-    if (userStore.currentSite) {
-      window.electron.ipcRenderer.send('get-current-site', userStore.currentSite);
-    }
-  };
-
-  const restoreSavedCookies = () => {
+  const restoreSavedCookies = async () => {
     const currentUser = userStore.currentUser as IUserInfo;
 
     if (currentUser && currentUser.session && currentUser.csrfToken && currentUser.currentSite) {
-      window.electron.ipcRenderer.send('restore-cookies', {
-        site: currentUser.currentSite,
-        jms_sessionid: currentUser.session,
-        jms_csrftoken: currentUser.csrfToken,
-        // 为了兼容性，也保留旧的字段名
-        sessionId: currentUser.session,
-        csrfToken: currentUser.csrfToken
-      });
-    } else {
-      console.log('没有找到保存的认证信息，无法恢复 cookie');
+      try {
+        const allCookies = await window.electron.ipcRenderer.invoke(
+          'get-site-cookies',
+          currentUser.currentSite,
+          currentUser.session
+        );
+
+        await window.electron.ipcRenderer.invoke('restore-cookies', {
+          site: currentUser.currentSite,
+          sessionId: currentUser.session,
+          csrfToken: currentUser.csrfToken,
+          allCookies: allCookies
+        });
+      } catch (error) {
+        console.error('恢复cookies失败:', error);
+      }
     }
   };
 
@@ -349,7 +315,6 @@ export const useUserAccount = () => {
     handleModalOpacity,
     handleCredentialsReceived,
     handleCsrfTokenReceived,
-    setupCookiesForSite,
     restoreSavedCookies
   };
 };

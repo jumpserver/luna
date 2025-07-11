@@ -275,8 +275,10 @@ const handleAddAccount = () => {
 /**
  * @description 移除账号
  */
-const handleRemoveAccount = () => {
-  removeAccount ? removeAccount() : null;
+const handleRemoveAccount = async () => {
+  if (removeAccount) {
+    await removeAccount();
+  }
   showModal.value = false;
 };
 

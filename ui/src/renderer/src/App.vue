@@ -45,7 +45,6 @@ const {
   switchAccount,
   handleModalOpacity,
   handleCredentialsReceived,
-  setupCookiesForSite,
   restoreSavedCookies
 } = useUserAccount();
 
@@ -140,7 +139,7 @@ onMounted(async () => {
   }
 
   // 恢复保存的 cookie（在检查登录状态之前）
-  restoreSavedCookies();
+  await restoreSavedCookies();
 
   // 检查是否需要显示登录框
   if (!userStore.session || (userStore.userInfo && userStore.userInfo.length <= 0)) {
@@ -156,7 +155,6 @@ onMounted(async () => {
     (_e, credentials: { session: string; csrfToken: string; site: string }) =>
       handleCredentialsReceived(credentials)
   );
-  window.electron.ipcRenderer.on('setup-cookies-for-site', () => setupCookiesForSite());
 
   mittBus.on('changeLang', handleLangChange);
   mittBus.on('changeTheme', handleThemeChange);

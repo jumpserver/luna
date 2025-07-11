@@ -101,8 +101,18 @@ const jumpToLogin = () => {
     : [];
 
   if (sameSiteUser.length !== 0) {
-    message.error(t('Message.EnterDiffSite'), { closable: true });
-    inputStatus.value = 'error';
+    // 如果用户已经登录了该站点，直接切换到该用户
+    const existingUser = sameSiteUser[0];
+
+    // 检查是否是当前用户
+    if (existingUser.session === userStore.session) {
+      message.info(t('Message.AlreadyLoggedIn'), { closable: true });
+      inputStatus.value = 'warning';
+      return;
+    }
+
+    message.success(t('Message.SwitchedToExistingAccount'), { closable: true });
+    emits('close-mask');
     return;
   }
 
@@ -113,9 +123,9 @@ const jumpToLogin = () => {
   }
 
   userStore.setCurrentSit(sanitizedUrl);
-  window.electron.ipcRenderer.send('get-current-site', sanitizedUrl);
+  window.electron.ipcRenderer.send('user-login', sanitizedUrl);
+
   inputStatus.value = 'success';
-  window.open(`${sanitizedUrl}/core/auth/login/?next=client`);
 };
 
 /**
