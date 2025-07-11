@@ -127,7 +127,10 @@ export class ViewService {
 
   setCurrentView(view: Object = this.currentView) {
     this.currentView$.next(view);
-    this.connectViewCount.next(this.viewList.filter(view => view.connected === true && view.connectMethod.component === 'koko').length);
+    const connectedCount = this.viewList.filter(
+      v => v.connected === true && v.connectMethod.component === 'koko' && v.connectMethod.value === 'web_cli'
+    ).length;
+    this.connectViewCount.next(connectedCount);
     this.state$.next({action: 'active', view: view});
   }
 }
