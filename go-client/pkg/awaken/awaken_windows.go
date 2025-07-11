@@ -86,17 +86,12 @@ func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		"port":     strconv.Itoa(r.Port),
 	}
 	if len(appItem.AutoIt) == 0 {
-		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
-		if strings.Contains(commands, "*") {
-			commands := strings.Split(commands, "*")
-			return exec.Command(appItem.Path, commands...)
-		} else {
-			commands := strings.Split(commands, " ")
-			return exec.Command(appItem.Path, commands...)
-		}
+		return nil
 	} else {
+		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
+		global.LOG.Error(appItem.Path + " " + commands)
 		autoit.LoadAuto()
-		autoit.Run(appItem.Path)
+		autoit.Run(appItem.Path + " " + commands)
 		for _, item := range appItem.AutoIt {
 			time.Sleep(300 * time.Millisecond)
 			switch item.Cmd {

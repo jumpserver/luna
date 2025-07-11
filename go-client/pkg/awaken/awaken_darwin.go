@@ -47,7 +47,7 @@ func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 	appPath := appItem.Path
 	_cmd := exec.Command(appPath, strings.Split(commands, " ")...)
-	_cmd.Run()
+	_cmd.Start()
 
 	currentPath := filepath.Dir(os.Args[0])
 	scriptPath := filepath.Join(currentPath, "Scripts", "vnc.scpt")

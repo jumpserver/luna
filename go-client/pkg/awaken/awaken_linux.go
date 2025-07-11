@@ -37,7 +37,33 @@ func awakenRDPCommand(filePath string, cfg *config.AppConfig) *exec.Cmd {
 }
 
 func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
-	cmd := exec.Command("")
+	var appItem *config.AppItem
+	appLst := cfg.Linux.RemoteDesktop
+	for _, app := range appLst {
+		if app.IsSet && app.IsMatchProtocol("vnc") {
+			appItem = &app
+			break
+		}
+	}
+	if appItem == nil {
+		return nil
+	}
+	connectMap := map[string]string{
+		"name":     r.getName(),
+		"protocol": r.Protocol,
+		"username": r.getUserName(),
+		"value":    r.Value,
+		"host":     r.Host,
+		"port":     strconv.Itoa(r.Port),
+	}
+
+	commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
+	cmd := exec.Command(appItem.Path, strings.Split(commands, " ")...)
+	// 设置环境变量（只对这个子进程有效）
+	cmd.Env = append(os.Environ(),
+		"VNC_USERNAME="+r.getUserName(),
+		"VNC_PASSWORD="+r.Value,
+	)
 	return cmd
 }
 
