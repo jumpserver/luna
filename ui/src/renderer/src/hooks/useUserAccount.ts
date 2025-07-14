@@ -9,7 +9,6 @@ import { getSystemSetting } from '@renderer/api/modals/setting';
 import { createDiscreteApi, lightTheme, darkTheme } from 'naive-ui';
 import { useSettingStore } from '@renderer/store/module/settingStore';
 import { getProfile, getOrganization } from '@renderer/api/modals/user';
-import { updateUserSwitchTime } from '@renderer/api/index';
 
 import type { ConfigProviderProps } from 'naive-ui';
 import type { IUserInfo, IOrganization } from '@renderer/store/interface';
@@ -49,12 +48,20 @@ export const useUserAccount = () => {
       return;
     }
 
-    // 使用removeUserBySession方法删除指定账号（包含清理操作）
     const result = await userStore.removeUserBySession(targetSession);
 
     // 如果没有其他用户了，显示登录模态框
     if (result?.shouldShowLoginModal) {
       showLoginModal.value = true;
+      return;
+    }
+
+    // 如果删除的是当前用户，且还有其他用户，则切换到第一个可用用户
+    if (result?.removedCurrentUser && userStore.userInfo && userStore.userInfo.length > 0) {
+      const firstUser = userStore.userInfo[0];
+
+      // 调用统一的切换账号方法
+      await userStore.switchAccount(firstUser.session);
     }
   };
 
@@ -62,66 +69,25 @@ export const useUserAccount = () => {
    * @description 切换账号
    */
   const switchAccount = async (session: string) => {
-    if (session === userStore.session) {
-      return;
-    }
+    try {
+      // 调用userStore的switchAccount方法
+      await userStore.switchAccount(session);
 
-    if (userStore.userInfo) {
-      const user = userStore.userInfo.find((item: IUserInfo) => item.session === session);
+      // 获取系统设置（只有在cookies恢复成功后才执行）
+      try {
+        const setting = await getSystemSetting();
 
-      if (user) {
-        // 更新用户状态
-        userStore.setSession(user.session);
-        userStore.setCurrentUser({ ...user });
-        userStore.setCurrentSit(user.currentSite as string);
-
-        if (user.csrfToken) {
-          userStore.setCsrfToken(user.csrfToken);
+        if (setting) {
+          settingStore.setRdpClientOption(setting.graphics.rdp_client_option);
+          settingStore.setKeyboardLayout(setting.graphics.keyboard_layout);
+          settingStore.setRdpSmartSize(setting.graphics.rdp_smart_size);
+          settingStore.setRdpColorQuality(setting.graphics.rdp_color_quality);
         }
-
-        // 更新用户切换时间
-        updateUserSwitchTime();
-
-        // 切换账号时恢复对应的 cookie（直接覆盖，不清理）
-        if (user.currentSite && user.session) {
-          try {
-            const allCookies = await window.electron.ipcRenderer.invoke(
-              'get-site-cookies',
-              user.currentSite,
-              user.session
-            );
-
-            const result = await window.electron.ipcRenderer.invoke('restore-cookies', {
-              site: user.currentSite,
-              sessionId: user.session,
-              csrfToken: user.csrfToken || '',
-              allCookies: allCookies
-            });
-
-            if (!result.success) {
-              console.error('恢复cookies失败:', result.error);
-              return;
-            }
-          } catch (error) {
-            console.error('恢复cookies失败:', error);
-            return;
-          }
-        }
-
-        // 获取系统设置（只有在cookies恢复成功后才执行）
-        try {
-          const setting = await getSystemSetting();
-
-          if (setting) {
-            settingStore.setRdpClientOption(setting.graphics.rdp_client_option);
-            settingStore.setKeyboardLayout(setting.graphics.keyboard_layout);
-            settingStore.setRdpSmartSize(setting.graphics.rdp_smart_size);
-            settingStore.setRdpColorQuality(setting.graphics.rdp_color_quality);
-          }
-        } catch (error) {
-          console.error('获取系统设置失败:', error);
-        }
+      } catch (error) {
+        console.error('获取系统设置失败:', error);
       }
+    } catch (error) {
+      console.error('切换账号失败:', error);
     }
   };
 

@@ -58,6 +58,33 @@ export const useUserStore = defineStore('client-user', {
         (item: IUserInfo) => item.session !== this.currentUser!.session
       );
     },
+    async switchAccount(targetSession: string) {
+      if (targetSession === this.session) {
+        return; // 已经是当前用户，无需切换
+      }
+
+      if (this.userInfo) {
+        const user = this.userInfo.find((item: IUserInfo) => item.session === targetSession);
+
+        if (user) {
+          // 更新用户状态
+          this.setCurrentUser(user);
+          this.setSession(user.session);
+          this.setCurrentSit(user.currentSite as string);
+          if (user.csrfToken) {
+            this.setCsrfToken(user.csrfToken);
+          }
+
+          // 更新用户切换时间
+          updateUserSwitchTime();
+
+          // 恢复cookies和拦截器
+          await this.restoreUserCookies(user);
+        } else {
+          console.error('找不到要切换的用户:', targetSession);
+        }
+      }
+    },
     async removeUserBySession(sessionToRemove: string) {
       const userToRemove = this.userInfo!.find(
         (item: IUserInfo) => item.session === sessionToRemove
@@ -65,47 +92,15 @@ export const useUserStore = defineStore('client-user', {
 
       if (!userToRemove) {
         console.error('要删除的用户不存在:', sessionToRemove);
-        return { shouldShowLoginModal: false };
+        return { shouldShowLoginModal: false, removedCurrentUser: false };
       }
+
+      // 记录是否删除的是当前用户
+      const removedCurrentUser = this.currentUser?.session === sessionToRemove;
 
       // 从用户列表中移除指定用户
       this.userInfo = this.userInfo!.filter((item: IUserInfo) => item.session !== sessionToRemove);
 
-      let shouldShowLoginModal = false;
-
-      // 如果移除的是当前用户，需要切换到其他用户或清空当前用户
-      if (this.currentUser?.session === sessionToRemove) {
-        if (this.userInfo && this.userInfo.length > 0) {
-          // 切换到第一个可用用户
-          const firstUser = this.userInfo[0];
-
-          this.setCurrentUser(firstUser);
-          this.setSession(firstUser.session);
-          this.setCurrentSit(firstUser.currentSite as string);
-          if (firstUser.csrfToken) {
-            this.setCsrfToken(firstUser.csrfToken);
-          }
-
-          // 更新用户切换时间
-          updateUserSwitchTime();
-
-          // 等待恢复切换后用户的cookies
-          try {
-            await this.restoreUserCookies(firstUser);
-
-            // 等待一小段时间让cookie和拦截器生效
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          } catch (error) {
-            console.error('恢复用户cookies失败:', error);
-            // 如果cookie恢复失败，记录错误但继续执行
-            // 这样至少用户状态是一致的
-          }
-        } else {
-          // 没有其他用户了，重置状态
-          this.reset();
-          shouldShowLoginModal = true;
-        }
-      }
       // 清理该用户的cookie和相关数据
       try {
         await window.electron.ipcRenderer.invoke(
@@ -122,7 +117,13 @@ export const useUserStore = defineStore('client-user', {
         console.error('清理用户数据失败:', error);
       }
 
-      return { shouldShowLoginModal };
+      // 如果删除的是当前用户且没有其他用户，需要重置状态
+      if (removedCurrentUser && (!this.userInfo || this.userInfo.length === 0)) {
+        this.reset();
+        return { shouldShowLoginModal: true, removedCurrentUser };
+      }
+
+      return { shouldShowLoginModal: false, removedCurrentUser };
     },
     async restoreUserCookies(user: IUserInfo) {
       try {
