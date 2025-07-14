@@ -15,7 +15,14 @@ const config = {
 
 const defaultTheme = ref('');
 
-let hasShown401Message = false; // 放在模块最顶层，作用域全局共享
+let hasShown401Message = false;
+let isProcessing401 = false; // 防止401错误连锁处理
+let lastUserSwitchTime = 0; // 记录最后一次用户切换时间
+
+// 导出更新用户切换时间的函数
+export const updateUserSwitchTime = () => {
+  lastUserSwitchTime = Date.now();
+}; // 放在模块最顶层，作用域全局共享
 
 try {
   const { getDefaultSetting } = useElectronConfig();
@@ -59,6 +66,10 @@ class RequestHttp {
         if (config.headers) {
           config.headers['X-JMS-ORG'] = userStore.currentOrganization;
           config.headers['X-TZ'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+          if (userStore.csrfToken) {
+            config.headers['X-CSRFToken'] = userStore.csrfToken;
+          }
         }
 
         return config;
@@ -89,13 +100,37 @@ class RequestHttp {
         if (error.message.indexOf('timeout') !== -1) message.error('请求超时！请您稍后重试');
         if (error.message.indexOf('Network Error') !== -1) message.error('网络错误！请您稍后重试');
         if (error.message.indexOf('401') !== -1) {
-          if (!hasShown401Message) {
-            hasShown401Message = true;
+          const currentTime = Date.now();
+          const timeSinceLastSwitch = currentTime - lastUserSwitchTime;
+
+          if (!hasShown401Message && !isProcessing401) {
             const userStore = useUserStore();
+
+            if (timeSinceLastSwitch < 10000) {
+              return Promise.reject(error);
+            }
+
+            hasShown401Message = true;
+            isProcessing401 = true;
 
             // 只移除有问题的用户（当前用户），而不是所有用户
             if (userStore.currentUser?.session) {
-              userStore.removeUserBySession(userStore.currentUser.session);
+              userStore
+                .removeUserBySession(userStore.currentUser.session)
+                .catch(error => {
+                  console.error('删除过期用户失败:', error);
+                })
+                .finally(() => {
+                  // 重置处理状态，但延迟一段时间避免连锁反应
+                  setTimeout(() => {
+                    isProcessing401 = false;
+                    hasShown401Message = false;
+                  }, 3000);
+                });
+            } else {
+              // 如果没有当前用户，立即重置状态
+              isProcessing401 = false;
+              hasShown401Message = false;
             }
 
             message.error('Login authentication has expired. Please log in again.', {

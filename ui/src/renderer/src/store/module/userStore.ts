@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { IUserInfo } from '@renderer/store/interface';
 import { piniaPersistConfig } from '@renderer/store/helper';
+import { updateUserSwitchTime } from '@renderer/api/index';
 
 import type { IUser, IOrganization } from '@renderer/store/interface';
 
@@ -57,45 +58,71 @@ export const useUserStore = defineStore('client-user', {
         (item: IUserInfo) => item.session !== this.currentUser!.session
       );
     },
-    removeUserBySession(session: string) {
-      const userToRemove = this.userInfo!.find((item: IUserInfo) => item.session === session);
+    async removeUserBySession(sessionToRemove: string) {
+      const userToRemove = this.userInfo!.find(
+        (item: IUserInfo) => item.session === sessionToRemove
+      );
 
-      if (userToRemove) {
-        // 从用户列表中移除指定用户
-        this.userInfo = this.userInfo!.filter((item: IUserInfo) => item.session !== session);
-
-        // 如果移除的是当前用户，需要切换到其他用户或清空当前用户
-        if (this.currentUser?.session === session) {
-          if (this.userInfo && this.userInfo.length > 0) {
-            // 切换到第一个可用用户
-            const firstUser = this.userInfo[0];
-            this.setCurrentUser(firstUser);
-            this.setSession(firstUser.session);
-            this.setCurrentSit(firstUser.currentSite as string);
-            if (firstUser.csrfToken) {
-              this.setCsrfToken(firstUser.csrfToken);
-            }
-
-            // 恢复切换后用户的cookies
-            this.restoreUserCookies(firstUser);
-          } else {
-            // 没有其他用户了，重置状态
-            this.reset();
-            return { shouldShowLoginModal: true }; // 返回标记，表示需要显示登录模态框
-          }
-        } else {
-          // 删除的不是当前用户，检查是否还有其他用户
-          if (this.userInfo.length === 0) {
-            this.reset();
-            return { shouldShowLoginModal: true };
-          }
-        }
-
-        // 清理该用户的cookie
-        window.electron.ipcRenderer.send('clear-site-cookies', userToRemove.currentSite, session);
+      if (!userToRemove) {
+        console.error('要删除的用户不存在:', sessionToRemove);
+        return { shouldShowLoginModal: false };
       }
 
-      return { shouldShowLoginModal: false };
+      // 从用户列表中移除指定用户
+      this.userInfo = this.userInfo!.filter((item: IUserInfo) => item.session !== sessionToRemove);
+
+      let shouldShowLoginModal = false;
+
+      // 如果移除的是当前用户，需要切换到其他用户或清空当前用户
+      if (this.currentUser?.session === sessionToRemove) {
+        if (this.userInfo && this.userInfo.length > 0) {
+          // 切换到第一个可用用户
+          const firstUser = this.userInfo[0];
+
+          this.setCurrentUser(firstUser);
+          this.setSession(firstUser.session);
+          this.setCurrentSit(firstUser.currentSite as string);
+          if (firstUser.csrfToken) {
+            this.setCsrfToken(firstUser.csrfToken);
+          }
+
+          // 更新用户切换时间
+          updateUserSwitchTime();
+
+          // 等待恢复切换后用户的cookies
+          try {
+            await this.restoreUserCookies(firstUser);
+
+            // 等待一小段时间让cookie和拦截器生效
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } catch (error) {
+            console.error('恢复用户cookies失败:', error);
+            // 如果cookie恢复失败，记录错误但继续执行
+            // 这样至少用户状态是一致的
+          }
+        } else {
+          // 没有其他用户了，重置状态
+          this.reset();
+          shouldShowLoginModal = true;
+        }
+      }
+      // 清理该用户的cookie和相关数据
+      try {
+        await window.electron.ipcRenderer.invoke(
+          'clear-site-cookies',
+          userToRemove.currentSite,
+          sessionToRemove
+        );
+        await window.electron.ipcRenderer.invoke(
+          'clear-user-interceptor',
+          userToRemove.currentSite,
+          sessionToRemove
+        );
+      } catch (error) {
+        console.error('清理用户数据失败:', error);
+      }
+
+      return { shouldShowLoginModal };
     },
     async restoreUserCookies(user: IUserInfo) {
       try {
@@ -105,14 +132,20 @@ export const useUserStore = defineStore('client-user', {
           user.session
         );
 
-        await window.electron.ipcRenderer.invoke('restore-cookies', {
+        const result = await window.electron.ipcRenderer.invoke('restore-cookies', {
           site: user.currentSite,
           sessionId: user.session,
           csrfToken: user.csrfToken || '',
           allCookies: allCookies
         });
+
+        if (!result.success) {
+          console.error('恢复cookies失败:', result.error);
+          throw new Error(result.error);
+        }
       } catch (error) {
         console.error('恢复用户cookies失败:', error);
+        throw error;
       }
     },
     setCurrentListSort(type) {

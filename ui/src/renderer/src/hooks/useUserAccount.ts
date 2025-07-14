@@ -9,6 +9,7 @@ import { getSystemSetting } from '@renderer/api/modals/setting';
 import { createDiscreteApi, lightTheme, darkTheme } from 'naive-ui';
 import { useSettingStore } from '@renderer/store/module/settingStore';
 import { getProfile, getOrganization } from '@renderer/api/modals/user';
+import { updateUserSwitchTime } from '@renderer/api/index';
 
 import type { ConfigProviderProps } from 'naive-ui';
 import type { IUserInfo, IOrganization } from '@renderer/store/interface';
@@ -48,8 +49,8 @@ export const useUserAccount = () => {
       return;
     }
 
-    // 使用新的removeUserBySession方法删除指定账号
-    const result = userStore.removeUserBySession(targetSession);
+    // 使用removeUserBySession方法删除指定账号（包含清理操作）
+    const result = await userStore.removeUserBySession(targetSession);
 
     // 如果没有其他用户了，显示登录模态框
     if (result?.shouldShowLoginModal) {
@@ -77,6 +78,9 @@ export const useUserAccount = () => {
         if (user.csrfToken) {
           userStore.setCsrfToken(user.csrfToken);
         }
+
+        // 更新用户切换时间
+        updateUserSwitchTime();
 
         // 切换账号时恢复对应的 cookie（直接覆盖，不清理）
         if (user.currentSite && user.session) {

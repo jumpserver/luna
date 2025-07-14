@@ -93,6 +93,7 @@
             <n-flex vertical align="center" justify="start" class="w-full !gap-y-[5px]">
               <!-- 切换账号  -->
               <n-popselect
+                :key="userOptions.length + '-' + userOptions.map(o => o.value).join(',')"
                 v-model:value="currentAccount"
                 trigger="click"
                 placement="right"
@@ -167,7 +168,11 @@
               </n-flex>
 
               <n-flex justify="space-between" align="center" class="w-full !flex-nowrap">
-                <n-button text class="flex-1 justify-start w-full" @click="showModal = true">
+                <n-button
+                  text
+                  class="flex-1 justify-start w-full"
+                  @click="handleRemoveCurrentAccount"
+                >
                   <template #icon>
                     <LogOut />
                   </template>
@@ -230,17 +235,19 @@ const currentUser = computed(() => {
 });
 
 const userOptions = computed(() => {
-  return (
-    userStore.userInfo?.map((item: IUserInfo) => {
-      return {
-        label: item.username,
-        value: item.session,
-        avatar_url: item.avatar_url,
-        display_name: item.display_name,
-        currentSite: item.currentSite
-      };
-    }) || []
-  );
+  // 确保使用最新的用户数据，避免缓存问题
+  const currentUserInfo = userStore.userInfo || [];
+  const options = currentUserInfo.map((item: IUserInfo) => {
+    return {
+      label: item.username,
+      value: item.session,
+      avatar_url: item.avatar_url,
+      display_name: item.display_name,
+      currentSite: item.currentSite
+    };
+  });
+
+  return options;
 });
 
 const active = ref(false);
@@ -250,7 +257,7 @@ const currentLang = ref('');
 const versionMessage = ref('');
 const selectedKey = ref('linux-page');
 const currentAccount = ref(userStore.currentUser?.session);
-const accountToRemove = ref(''); // 记录要删除的账号session
+const accountToRemove = ref('');
 
 const setNewAccount = inject<() => void>('setNewAccount');
 const removeAccount = inject<(session?: string) => void>('removeAccount');
@@ -275,9 +282,27 @@ const handleAddAccount = () => {
 };
 
 /**
+ * @description 移除当前账号
+ */
+const handleRemoveCurrentAccount = () => {
+  if (userStore.currentUser?.session) {
+    accountToRemove.value = userStore.currentUser.session;
+    showModal.value = true;
+  } else {
+    console.error('没有当前用户，无法删除');
+  }
+};
+
+/**
  * @description 移除账号
  */
 const handleRemoveAccount = async () => {
+  const targetUser = userStore.userInfo?.find(user => user.session === accountToRemove.value);
+  if (!targetUser) {
+    showModal.value = false;
+    return;
+  }
+
   if (removeAccount) {
     await removeAccount(accountToRemove.value);
   }

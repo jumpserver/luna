@@ -574,7 +574,7 @@ ipcMain.handle('restore-cookies', async (_, { site, sessionId, csrfToken, allCoo
   }
 });
 
-ipcMain.on('clear-site-cookies', async (_, site, sessionId) => {
+ipcMain.handle('clear-site-cookies', async (_, site, sessionId) => {
   if (site && sessionId) {
     try {
       const mainWindowUrl = mainWindow?.webContents.getURL();
@@ -588,12 +588,44 @@ ipcMain.on('clear-site-cookies', async (_, site, sessionId) => {
         }
       }
 
+      // 清理指定站点的所有cookies
+      if (site) {
+        try {
+          const siteCookies = await session.defaultSession.cookies.get({ url: site });
+          for (const cookie of siteCookies) {
+            await session.defaultSession.cookies.remove(site, cookie.name);
+          }
+        } catch (error) {
+          console.error('清理站点cookies失败:', error);
+        }
+      }
+
       const userKey = `${site}:${sessionId}`;
       sitesCookies.delete(userKey);
-    } catch (error) {
+
+      return { success: true };
+    } catch (error: any) {
       console.error('清理站点 cookie 失败:', error);
+      return { success: false, error: error.message };
     }
   }
+  return { success: false, error: '参数缺失' };
+});
+
+// 清理用户拦截器
+ipcMain.handle('clear-user-interceptor', async (_, site, sessionId) => {
+  if (site && sessionId) {
+    try {
+      // 清理webRequest拦截器
+      session.defaultSession.webRequest.onBeforeSendHeaders(null);
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('清理用户拦截器失败:', error);
+      return { success: false, error: error.message };
+    }
+  }
+  return { success: false, error: '参数缺失' };
 });
 
 const setTitleBar = (theme: string) => {

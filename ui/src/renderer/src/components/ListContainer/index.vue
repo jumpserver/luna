@@ -181,8 +181,6 @@ const getAssetProtocol = (assetId: string) => {
 const handleConnectionError = (
   error: Error | { response?: { data?: { code?: string; error?: string; message?: string } } }
 ) => {
-  console.log('Connection error:', error);
-
   const errorData = error['response']?.data;
 
   if (errorData) {
