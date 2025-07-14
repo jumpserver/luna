@@ -3,7 +3,7 @@
     <div class="seek-overlay" *ngIf="isSeeking">
       <div class="seek-content">
         <nz-spin nzSize="default"></nz-spin>
-        <p>正在跳转...</p>
+        <p>{{ 'Redirecting' | translate }}...</p>
         <button class="cancel-btn" (click)="cancelSeek($event)">{{ 'Cancel' | translate }}</button>
       </div>
     </div>

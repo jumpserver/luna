@@ -257,7 +257,7 @@ export class ElementsPartsComponent implements OnInit {
   getUserLang() {
     const userLangZh = document.cookie.indexOf('django_language=zh-hans');
 
-    if (userLangZh) {
+    if (userLangZh >= 0) {
       return 'zh-hans';
     } else {
       return 'en';
