@@ -283,23 +283,51 @@ export const useUserAccount = () => {
     configProviderProps: configProviderPropsRef
   });
 
-  const restoreSavedCookies = async () => {
+    const restoreSavedCookies = async () => {
     const currentUser = userStore.currentUser as IUserInfo;
 
     if (currentUser && currentUser.session && currentUser.csrfToken && currentUser.currentSite) {
+      if (!userStore.userInfo || userStore.userInfo.length === 0) {
+        userStore.setUserInfo(currentUser);
+      } else {
+        const existingUser = userStore.userInfo.find(user => user.session === currentUser.session);
+        if (!existingUser) {
+          userStore.setUserInfo(currentUser);
+        }
+      }
+
       try {
-        const allCookies = await window.electron.ipcRenderer.invoke(
+        let allCookies = await window.electron.ipcRenderer.invoke(
           'get-site-cookies',
           currentUser.currentSite,
           currentUser.session
         );
 
-        await window.electron.ipcRenderer.invoke('restore-cookies', {
-          site: currentUser.currentSite,
-          sessionId: currentUser.session,
-          csrfToken: currentUser.csrfToken,
-          allCookies: allCookies
-        });
+        // 如果内存中没有cookies（比如应用重启后），尝试从session中重新获取
+        if (!allCookies || allCookies.length === 0) {
+          allCookies = await window.electron.ipcRenderer.invoke(
+            'get-cookies-from-session',
+            currentUser.currentSite
+          );
+
+          // 如果成功获取到cookies，重新存储到内存中
+          if (allCookies && allCookies.length > 0) {
+            await window.electron.ipcRenderer.invoke('save-site-cookies', {
+              site: currentUser.currentSite,
+              sessionId: currentUser.session,
+              cookies: allCookies
+            });
+          }
+        }
+
+        if (allCookies && allCookies.length > 0) {
+          await window.electron.ipcRenderer.invoke('restore-cookies', {
+            site: currentUser.currentSite,
+            sessionId: currentUser.session,
+            csrfToken: currentUser.csrfToken,
+            allCookies: allCookies
+          });
+        }
       } catch (error) {
         console.error('恢复cookies失败:', error);
       }

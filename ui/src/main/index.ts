@@ -420,6 +420,29 @@ ipcMain.handle('get-site-cookies', async (_, site, sessionId) => {
   return sitesCookies.get(userKey) || [];
 });
 
+// 从session中获取cookies（用于应用重启后恢复）
+ipcMain.handle('get-cookies-from-session', async (_, site) => {
+  try {
+    const cookies = await session.defaultSession.cookies.get({ url: site });
+    return cookies;
+  } catch (error) {
+    console.error('从session获取cookies失败:', error);
+    return [];
+  }
+});
+
+// 保存cookies到内存中
+ipcMain.handle('save-site-cookies', async (_, { site, sessionId, cookies }) => {
+  try {
+    const userKey = `${site}:${sessionId}`;
+    sitesCookies.set(userKey, cookies);
+    return { success: true };
+  } catch (error) {
+    console.error('保存cookies失败:', error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
+
 ipcMain.handle('restore-cookies', async (_, { site, sessionId, csrfToken, allCookies }) => {
   if (sessionId && csrfToken && site) {
     try {

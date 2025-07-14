@@ -91,15 +91,18 @@ export function useAssetList(type: string) {
 
         hasMore.value = listData.value.length < total;
         loadingStatus.value = false;
+      } else {
+        hasMore.value = false;
+        loadingStatus.value = false;
+
+        message.error(`${t('Message.FailedRetrieveAssetDataList')}`, {
+          closable: true,
+          duration: 5000
+        });
       }
     } catch (e) {
       hasMore.value = false;
       loadingStatus.value = false;
-
-      message.error(`${t('Message.FailedRetrieveAssetDataList')}`, {
-        closable: true,
-        duration: 5000
-      });
     } finally {
       loadingBar.finish();
     }

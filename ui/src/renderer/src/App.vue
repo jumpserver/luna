@@ -141,11 +141,11 @@ onMounted(async () => {
   // 恢复保存的 cookie（在检查登录状态之前）
   await restoreSavedCookies();
 
-  // 检查是否需要显示登录框
-  if (!userStore.session || (userStore.userInfo && userStore.userInfo.length <= 0)) {
+  // 检查是否需要显示登录框（在 restoreSavedCookies 完成后重新检查）
+  if (!userStore.session || !userStore.userInfo || userStore.userInfo.length <= 0) {
     handleModalOpacity();
-  }
-  if (userStore.userInfo && userStore.userInfo.length > 0) {
+  } else {
+    // 如果有用户信息，导航到主页面
     router.push({ name: 'Linux' });
   }
 
