@@ -197,6 +197,7 @@ export const RemoveAccountConfirm = defineComponent({
         positiveText={t('Common.Confirm')}
         negativeText={t('Common.Cancel')}
         class="rounded-lg"
+        closable={false}
         showIcon={false}
         show={props.showModal}
         onPositiveClick={props.onConfirm}
