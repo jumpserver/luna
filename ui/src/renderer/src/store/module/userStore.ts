@@ -57,6 +57,64 @@ export const useUserStore = defineStore('client-user', {
         (item: IUserInfo) => item.session !== this.currentUser!.session
       );
     },
+    removeUserBySession(session: string) {
+      const userToRemove = this.userInfo!.find((item: IUserInfo) => item.session === session);
+
+      if (userToRemove) {
+        // 从用户列表中移除指定用户
+        this.userInfo = this.userInfo!.filter((item: IUserInfo) => item.session !== session);
+
+        // 如果移除的是当前用户，需要切换到其他用户或清空当前用户
+        if (this.currentUser?.session === session) {
+          if (this.userInfo && this.userInfo.length > 0) {
+            // 切换到第一个可用用户
+            const firstUser = this.userInfo[0];
+            this.setCurrentUser(firstUser);
+            this.setSession(firstUser.session);
+            this.setCurrentSit(firstUser.currentSite as string);
+            if (firstUser.csrfToken) {
+              this.setCsrfToken(firstUser.csrfToken);
+            }
+
+            // 恢复切换后用户的cookies
+            this.restoreUserCookies(firstUser);
+          } else {
+            // 没有其他用户了，重置状态
+            this.reset();
+            return { shouldShowLoginModal: true }; // 返回标记，表示需要显示登录模态框
+          }
+        } else {
+          // 删除的不是当前用户，检查是否还有其他用户
+          if (this.userInfo.length === 0) {
+            this.reset();
+            return { shouldShowLoginModal: true };
+          }
+        }
+
+        // 清理该用户的cookie
+        window.electron.ipcRenderer.send('clear-site-cookies', userToRemove.currentSite, session);
+      }
+
+      return { shouldShowLoginModal: false };
+    },
+    async restoreUserCookies(user: IUserInfo) {
+      try {
+        const allCookies = await window.electron.ipcRenderer.invoke(
+          'get-site-cookies',
+          user.currentSite,
+          user.session
+        );
+
+        await window.electron.ipcRenderer.invoke('restore-cookies', {
+          site: user.currentSite,
+          sessionId: user.session,
+          csrfToken: user.csrfToken || '',
+          allCookies: allCookies
+        });
+      } catch (error) {
+        console.error('恢复用户cookies失败:', error);
+      }
+    },
     setCurrentListSort(type) {
       this.sort = type;
     },

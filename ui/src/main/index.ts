@@ -348,53 +348,77 @@ ipcMain.on('user-login', async (_, site) => {
         jms_csrftoken = csrfTokenCookie?.value || '';
         jms_sessionid = sessionIdCookie?.value || '';
 
-        // cookies 设置到主窗口域名，以便跨域请求时使用
+        // cookies 只设置到主窗口域名，避免第三方cookie警告
         const currentUrl = mainWindow?.webContents.getURL();
         const urlObj = new URL(currentUrl || '');
         const siteUrl = `${urlObj.protocol}//${urlObj.host}`;
-
         const isMainWindowSecure = siteUrl.startsWith('https');
-        const isTargetSiteSecure = site.startsWith('https');
 
-        for (const cookie of targetCookies) {
-          try {
-            // 设置到主窗口域名（用于存储和管理）
-            const mainWindowCookieOptions: any = {
-              url: siteUrl,
-              name: cookie.name,
-              value: cookie.value,
-              path: cookie.path || '/',
-              httpOnly: false,
-              secure: isMainWindowSecure,
-              sameSite: 'lax' as const
-            };
+        // 检查是否为file协议，file协议不支持cookie
+        const isFileProtocol = urlObj.protocol === 'file:';
 
-            if (cookie.expirationDate) {
-              mainWindowCookieOptions.expirationDate = cookie.expirationDate;
+        if (!isFileProtocol) {
+          // 只有在非file协议下才设置cookie到本地
+          for (const cookie of targetCookies) {
+            try {
+              // 只设置到主窗口域名（用于存储和管理）
+              const mainWindowCookieOptions: any = {
+                url: siteUrl,
+                name: cookie.name,
+                value: cookie.value,
+                path: cookie.path || '/',
+                httpOnly: false, // 确保不是HttpOnly，避免覆盖错误
+                secure: isMainWindowSecure,
+                sameSite: 'lax' as const
+              };
+
+              if (cookie.expirationDate) {
+                mainWindowCookieOptions.expirationDate = cookie.expirationDate;
+              }
+
+              await session.defaultSession.cookies.set(mainWindowCookieOptions);
+            } catch (error) {
+              console.error(`设置 cookie 失败: ${cookie.name}`, error);
             }
-
-            await session.defaultSession.cookies.set(mainWindowCookieOptions);
-
-            // 同时设置到目标站点域名（用于API请求）
-            const targetSiteCookieOptions: any = {
-              url: site,
-              name: cookie.name,
-              value: cookie.value,
-              path: cookie.path || '/',
-              httpOnly: cookie.httpOnly || false,
-              secure: isTargetSiteSecure,
-              sameSite: isTargetSiteSecure ? 'no_restriction' : 'lax'
-            };
-
-            if (cookie.expirationDate) {
-              targetSiteCookieOptions.expirationDate = cookie.expirationDate;
-            }
-
-            await session.defaultSession.cookies.set(targetSiteCookieOptions);
-          } catch (error) {
-            console.error(`设置 cookie 失败: ${cookie.name}`, error);
           }
         }
+
+        // 设置webRequest拦截器，自动为目标站点请求添加cookie
+        // 移除activeInterceptors限制，每次都重新设置以确保使用最新的sessionId
+        session.defaultSession.webRequest.onBeforeSendHeaders(
+          { urls: [site + '/*'] },
+          (details, callback) => {
+            if (isFileProtocol) {
+              // 在file协议下，使用当前的sessionId获取cookie
+              const userKey = `${site}:${jms_sessionid}`;
+              const cookies = sitesCookies.get(userKey) || [];
+              if (cookies.length > 0) {
+                const cookieString = cookies
+                  .map(cookie => `${cookie.name}=${cookie.value}`)
+                  .join('; ');
+                details.requestHeaders['Cookie'] = cookieString;
+              }
+              callback({ requestHeaders: details.requestHeaders });
+            } else {
+              // 在http协议下，从localhost获取cookie
+              session.defaultSession.cookies
+                .get({ url: siteUrl })
+                .then(cookies => {
+                  if (cookies.length > 0) {
+                    const cookieString = cookies
+                      .map(cookie => `${cookie.name}=${cookie.value}`)
+                      .join('; ');
+                    details.requestHeaders['Cookie'] = cookieString;
+                  }
+                  callback({ requestHeaders: details.requestHeaders });
+                })
+                .catch(error => {
+                  console.error('获取cookie失败:', error);
+                  callback({ requestHeaders: details.requestHeaders });
+                });
+            }
+          }
+        );
 
         // 存储cookie集合到内存中，使用site+sessionId作为复合key
         const userKey = `${site}:${jms_sessionid}`;
@@ -462,53 +486,80 @@ ipcMain.handle('restore-cookies', async (_, { site, sessionId, csrfToken, allCoo
       jms_csrftoken = csrfToken;
 
       if (allCookies && allCookies.length > 0) {
+        // 将cookie存储到内存中，无论什么协议都需要存储
+        const userKey = `${site}:${sessionId}`;
+        sitesCookies.set(userKey, allCookies);
+
         const mainWindowUrl = mainWindow?.webContents.getURL();
 
         if (mainWindowUrl) {
           const urlObj = new URL(mainWindowUrl);
           const mainSiteUrl = `${urlObj.protocol}//${urlObj.host}`;
           const isMainWindowSecure = mainSiteUrl.startsWith('https');
-          const isTargetSiteSecure = site.startsWith('https');
+          const isFileProtocol = urlObj.protocol === 'file:';
 
-          for (const cookie of allCookies) {
-            try {
-              // 设置到主窗口域名（用于存储和管理）
-              const mainWindowCookieOptions: any = {
-                url: mainSiteUrl,
-                name: cookie.name,
-                value: cookie.value,
-                path: cookie.path || '/',
-                httpOnly: false,
-                secure: isMainWindowSecure,
-                sameSite: 'lax' as const
-              };
+          if (!isFileProtocol) {
+            // 只有在非file协议下才设置cookie到本地
+            for (const cookie of allCookies) {
+              try {
+                // 只设置到主窗口域名（用于存储和管理）
+                const mainWindowCookieOptions: any = {
+                  url: mainSiteUrl,
+                  name: cookie.name,
+                  value: cookie.value,
+                  path: cookie.path || '/',
+                  httpOnly: false, // 确保不是HttpOnly，避免覆盖错误
+                  secure: isMainWindowSecure,
+                  sameSite: 'lax' as const
+                };
 
-              if (cookie.expirationDate) {
-                mainWindowCookieOptions.expirationDate = cookie.expirationDate;
+                if (cookie.expirationDate) {
+                  mainWindowCookieOptions.expirationDate = cookie.expirationDate;
+                }
+
+                await session.defaultSession.cookies.set(mainWindowCookieOptions);
+              } catch (error) {
+                console.error(`设置 cookie 失败: ${cookie.name}`, error);
               }
-
-              await session.defaultSession.cookies.set(mainWindowCookieOptions);
-
-              // 设置到目标站点域名（用于API请求），直接覆盖
-              const targetSiteCookieOptions: any = {
-                url: site,
-                name: cookie.name,
-                value: cookie.value,
-                path: cookie.path || '/',
-                httpOnly: cookie.httpOnly || false,
-                secure: isTargetSiteSecure,
-                sameSite: isTargetSiteSecure ? 'no_restriction' : 'lax'
-              };
-
-              if (cookie.expirationDate) {
-                targetSiteCookieOptions.expirationDate = cookie.expirationDate;
-              }
-
-              await session.defaultSession.cookies.set(targetSiteCookieOptions);
-            } catch (error) {
-              console.error(`设置 cookie 失败: ${cookie.name}`, error);
             }
           }
+
+          // 设置webRequest拦截器，自动为目标站点请求添加cookie
+          // 移除activeInterceptors限制，每次都重新设置以确保使用最新的sessionId
+          session.defaultSession.webRequest.onBeforeSendHeaders(
+            { urls: [site + '/*'] },
+            (details, callback) => {
+              if (isFileProtocol) {
+                // 在file协议下，使用当前的sessionId获取cookie
+                const userKey = `${site}:${jms_sessionid}`;
+                const cookies = sitesCookies.get(userKey) || [];
+                if (cookies.length > 0) {
+                  const cookieString = cookies
+                    .map(cookie => `${cookie.name}=${cookie.value}`)
+                    .join('; ');
+                  details.requestHeaders['Cookie'] = cookieString;
+                }
+                callback({ requestHeaders: details.requestHeaders });
+              } else {
+                // 在http协议下，从localhost获取cookie
+                session.defaultSession.cookies
+                  .get({ url: mainSiteUrl })
+                  .then(cookies => {
+                    if (cookies.length > 0) {
+                      const cookieString = cookies
+                        .map(cookie => `${cookie.name}=${cookie.value}`)
+                        .join('; ');
+                      details.requestHeaders['Cookie'] = cookieString;
+                    }
+                    callback({ requestHeaders: details.requestHeaders });
+                  })
+                  .catch(error => {
+                    console.error('获取cookie失败:', error);
+                    callback({ requestHeaders: details.requestHeaders });
+                  });
+              }
+            }
+          );
         }
       }
 

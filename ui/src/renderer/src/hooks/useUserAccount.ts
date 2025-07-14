@@ -39,56 +39,21 @@ export const useUserAccount = () => {
   /**
    * @description 移除账号
    */
-  const removeAccount = async () => {
-    const currentUser = userStore.currentUser as IUserInfo;
+  const removeAccount = async (sessionToRemove?: string) => {
+    // 如果指定了要删除的session，就删除指定的账号；否则删除当前账号
+    const targetSession = sessionToRemove || userStore.currentUser?.session;
 
-    userStore.removeCurrentUser();
-
-    // 只有当没有其他用户时才清理cookies
-    if (userStore.userInfo && userStore.userInfo.length === 0) {
-      // 清理当前站点的cookies，因为没有其他用户了
-      if (currentUser && currentUser.currentSite && currentUser.session) {
-        window.electron.ipcRenderer.send(
-          'clear-site-cookies',
-          currentUser.currentSite,
-          currentUser.session
-        );
-      }
-
-      showLoginModal.value = true;
-      return userStore.reset();
+    if (!targetSession) {
+      console.error('没有指定要删除的账号');
+      return;
     }
 
-    if (userStore.userInfo && userStore.userInfo.length > 0) {
-      const firstUser = userStore.userInfo[0];
+    // 使用新的removeUserBySession方法删除指定账号
+    const result = userStore.removeUserBySession(targetSession);
 
-      userStore.setSession(firstUser.session);
-      userStore.setCurrentUser({ ...firstUser });
-      userStore.setCurrentSit(firstUser.currentSite as string);
-
-      if (firstUser.csrfToken) {
-        userStore.setCsrfToken(firstUser.csrfToken);
-      }
-
-      // 恢复第一个用户的cookies
-      if (firstUser.currentSite && firstUser.session) {
-        try {
-          const allCookies = await window.electron.ipcRenderer.invoke(
-            'get-site-cookies',
-            firstUser.currentSite,
-            firstUser.session
-          );
-
-          await window.electron.ipcRenderer.invoke('restore-cookies', {
-            site: firstUser.currentSite,
-            sessionId: firstUser.session,
-            csrfToken: firstUser.csrfToken || '',
-            allCookies: allCookies
-          });
-        } catch (error) {
-          console.error('恢复cookies失败:', error);
-        }
-      }
+    // 如果没有其他用户了，显示登录模态框
+    if (result?.shouldShowLoginModal) {
+      showLoginModal.value = true;
     }
   };
 
@@ -283,7 +248,7 @@ export const useUserAccount = () => {
     configProviderProps: configProviderPropsRef
   });
 
-    const restoreSavedCookies = async () => {
+  const restoreSavedCookies = async () => {
     const currentUser = userStore.currentUser as IUserInfo;
 
     if (currentUser && currentUser.session && currentUser.csrfToken && currentUser.currentSite) {

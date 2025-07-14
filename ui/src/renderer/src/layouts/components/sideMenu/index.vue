@@ -250,9 +250,10 @@ const currentLang = ref('');
 const versionMessage = ref('');
 const selectedKey = ref('linux-page');
 const currentAccount = ref(userStore.currentUser?.session);
+const accountToRemove = ref(''); // 记录要删除的账号session
 
 const setNewAccount = inject<() => void>('setNewAccount');
-const removeAccount = inject<() => void>('removeAccount');
+const removeAccount = inject<(session?: string) => void>('removeAccount');
 const switchAccount = inject<(session: string) => void>('switchAccount');
 
 const handlePopSelectShow = (show: boolean) => {
@@ -260,8 +261,9 @@ const handlePopSelectShow = (show: boolean) => {
 };
 
 const renderLabel = (option: SelectOption) => {
-  return getAccountOptionsRender(option, () => {
+  return getAccountOptionsRender(option, (session: string) => {
     showModal.value = true;
+    accountToRemove.value = session;
   });
 };
 
@@ -277,7 +279,7 @@ const handleAddAccount = () => {
  */
 const handleRemoveAccount = async () => {
   if (removeAccount) {
-    await removeAccount();
+    await removeAccount(accountToRemove.value);
   }
   showModal.value = false;
 };
@@ -337,6 +339,8 @@ watch(
   newUser => {
     if (newUser && Reflect.ownKeys(newUser).length > 0) {
       debouncedSearch();
+      // 更新currentAccount以保持与当前用户同步
+      currentAccount.value = newUser.session;
     }
   }
 );

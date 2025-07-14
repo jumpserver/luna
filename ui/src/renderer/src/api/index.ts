@@ -59,18 +59,6 @@ class RequestHttp {
         if (config.headers) {
           config.headers['X-JMS-ORG'] = userStore.currentOrganization;
           config.headers['X-TZ'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-          if (userStore.csrfToken) {
-            config.headers['X-CSRFToken'] = userStore.csrfToken;
-          }
-
-          // 调试：检查请求配置
-          console.log('发送请求:', {
-            url: config.baseURL + config.url,
-            method: config.method,
-            withCredentials: config.withCredentials,
-            headers: config.headers
-          });
         }
 
         return config;
@@ -105,7 +93,10 @@ class RequestHttp {
             hasShown401Message = true;
             const userStore = useUserStore();
 
-            userStore.removeCurrentUser();
+            // 只移除有问题的用户（当前用户），而不是所有用户
+            if (userStore.currentUser?.session) {
+              userStore.removeUserBySession(userStore.currentUser.session);
+            }
 
             message.error('Login authentication has expired. Please log in again.', {
               closable: true,

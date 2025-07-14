@@ -3,7 +3,7 @@ import { useI18n } from 'vue-i18n';
 import { h } from 'vue';
 import { defineComponent, PropType } from 'vue';
 
-import { BrandWindows, Database, Terminal2, Star, History } from '@vicons/tabler';
+import { BrandWindows, Database, Terminal2, Star } from '@vicons/tabler';
 import { NFlex, NAvatar, NText, NButton, NModal } from 'naive-ui';
 import { Trash2 } from 'lucide-vue-next';
 import { Devices } from '@vicons/carbon';
@@ -107,7 +107,10 @@ export const menuOptions = () => {
  * @param option
  * @returns
  */
-export const getAccountOptionsRender = (option: SelectOption, callback?: () => void) => {
+export const getAccountOptionsRender = (
+  option: SelectOption,
+  callback?: (session: string) => void
+) => {
   return h(
     NFlex,
     {
@@ -127,7 +130,7 @@ export const getAccountOptionsRender = (option: SelectOption, callback?: () => v
           NText,
           {
             depth: 1,
-            class: 'font-medium text-sm'
+            class: 'font-medium text-sm flex-1'
           },
           { default: () => option.label }
         ),
@@ -148,7 +151,7 @@ export const getAccountOptionsRender = (option: SelectOption, callback?: () => v
                   quaternary: true,
                   onClick: e => {
                     e.stopPropagation();
-                    callback?.();
+                    callback?.(option.value as string);
                   }
                 },
                 {
