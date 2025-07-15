@@ -13,6 +13,7 @@ import {
   DrawerStateService,
   IframeCommunicationService
 } from '@app/services';
+import { CookieService } from 'ngx-cookie-service';
 
 @Component({
   standalone: false,
@@ -34,6 +35,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   // Direct 模式相关属性
   public endpoint: Endpoint;
   public assetId: string = '';
+  public org_id: string = '';
   public username: string = '';
   public protocol: string = '';
   public accountId: string = '';
@@ -61,6 +63,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
     private _logger: LogService,
     private _viewSrv: ViewService,
     private _route: ActivatedRoute,
+    private _cookie: CookieService,
     private _dialog: NzModalService,
     private _drawerStateService: DrawerStateService,
     private _iframeCommunicationService: IframeCommunicationService
@@ -82,7 +85,6 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
 
     if (this.isDirect) {
       await this.initDirectMode();
-
     } else {
       this.handleEventChangeTime();
     }
@@ -109,6 +111,10 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
       this.accountId = params['account'];
       this.assetId = params['asset'];
       this.protocol = params['protocol'];
+      this.org_id = params['org_id'];
+
+      this._cookie.set('X-JMS-LUNA-ORG', this.org_id, 30, '/');
+
       this._logger.info('Direct mode detected', {
         accountId: this.accountId,
         assetId: this.assetId,
