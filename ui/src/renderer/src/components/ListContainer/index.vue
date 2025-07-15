@@ -184,13 +184,7 @@ const handleConnectionError = (
   const errorData = error['response']?.data;
 
   if (errorData) {
-    const serverError = errorData.error || errorData.message || errorData.code;
-
-    // 检查是否是 mstsc 不支持的错误
-    if (serverError === 'Connect method not support: mstsc') {
-      message.error(`${t('Message.ClientNotSupport')}`);
-      return;
-    }
+    const serverError = errorData.error || errorData.message || errorData.detail || errorData.code;
 
     if (errorData?.code !== 'notice') {
       message.error(serverError || `${t('Message.AssetNotice')}`);
@@ -199,6 +193,16 @@ const handleConnectionError = (
 
     if (errorData?.code !== 'reject') {
       message.error(serverError || `${t('Message.AssetDeny')}`);
+      return;
+    }
+
+    if (serverError === 'No asset or inactive asset') {
+      message.error(t('Message.NoAssetOrInactiveAsset'));
+      return;
+    }
+
+    if (serverError.includes('Connect method not support')) {
+      message.error(`${t('Message.ClientNotSupport')}: ${serverError.split(':')[1].trim()}`);
       return;
     }
   } else {

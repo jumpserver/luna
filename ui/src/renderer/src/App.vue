@@ -139,13 +139,24 @@ onMounted(async () => {
   }
 
   // 恢复保存的 cookie（在检查登录状态之前）
-  await restoreSavedCookies();
+  const cookiesRestored = await restoreSavedCookies();
 
-  // 检查是否需要显示登录框（在 restoreSavedCookies 完成后重新检查）
-  if (!userStore.session || !userStore.userInfo || userStore.userInfo.length <= 0) {
+  // 检查是否需要显示登录框
+  if (
+    !userStore.session ||
+    !userStore.userInfo ||
+    userStore.userInfo.length <= 0 ||
+    !cookiesRestored
+  ) {
+    // 如果cookies恢复失败，清理可能的残留状态
+    if (!cookiesRestored && userStore.userInfo && userStore.userInfo.length > 0) {
+      console.warn('Cookies恢复失败，清理用户状态');
+      userStore.reset();
+    }
+
     handleModalOpacity();
   } else {
-    // 如果有用户信息，导航到主页面
+    // 如果有用户信息且cookies恢复成功，导航到主页面
     router.push({ name: 'Linux' });
   }
 

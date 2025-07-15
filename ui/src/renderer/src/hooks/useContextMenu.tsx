@@ -135,7 +135,7 @@ export const useContextMenu = () => {
                 return <div key={protocol.name}>{`${protocol.name} (Port: ${protocol.port})`}</div>;
               })}
             </NDescriptionsItem>
-            <NDescriptionsItem label={t('Common.Protocols')}>
+            <NDescriptionsItem label={t('Common.PermedProtocols')}>
               {detailMessage.value.permed_accounts.map(account => {
                 return (
                   <div

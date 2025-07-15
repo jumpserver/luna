@@ -1,5 +1,5 @@
 import { useI18n } from 'vue-i18n';
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDebounceFn } from '@vueuse/core';
 import { useElectronConfig } from './useElectronConfig';
@@ -10,6 +10,7 @@ import { createDiscreteApi, lightTheme, darkTheme } from 'naive-ui';
 import { useSettingStore } from '@renderer/store/module/settingStore';
 import { getProfile, getOrganization } from '@renderer/api/modals/user';
 import { setUserRemoving } from '@renderer/api/index';
+import mittBus from '@renderer/eventBus';
 
 import type { ConfigProviderProps } from 'naive-ui';
 import type { IUserInfo, IOrganization } from '@renderer/store/interface';
@@ -68,14 +69,16 @@ export const useUserAccount = () => {
         userStore.resetOrganization();
         await userStore.switchAccount(firstUser.session);
 
-        // 获取用户信息时增加错误处理，避免触发401处理逻辑
         try {
           const res = await getProfile();
           const orgRes = await getOrganization();
-          setUserOrganization(res.system_roles, orgRes);
+          await setUserOrganization(res.system_roles, orgRes);
+
+          nextTick(() => {
+            mittBus.emit('search', 'reset');
+          });
         } catch (error) {
           console.error('获取用户信息失败，但不影响用户切换:', error);
-          // 不重新抛出错误，避免触发401处理逻辑
         }
       } else {
         // userStore.currentUser = {};
@@ -84,10 +87,9 @@ export const useUserAccount = () => {
         }
       }
     } finally {
-      // 无论成功还是失败，都要重置用户删除状态
       setTimeout(() => {
         setUserRemoving(false);
-      }, 1000); // 延迟1秒重置，确保删除操作完全完成
+      }, 1000);
     }
   };
 
@@ -106,7 +108,12 @@ export const useUserAccount = () => {
         const res = await getProfile();
         const orgRes = await getOrganization();
 
-        setUserOrganization(res.system_roles, orgRes);
+        await setUserOrganization(res.system_roles, orgRes);
+
+        // 在组织设置完成后，触发数据刷新
+        nextTick(() => {
+          mittBus.emit('search', 'reset');
+        });
 
         if (setting) {
           settingStore.setRdpClientOption(setting.graphics.rdp_client_option);
@@ -125,7 +132,7 @@ export const useUserAccount = () => {
   /**
    * @description 设置用户组织信息
    */
-  const setUserOrganization = (userRoles: any[], orgRes: any) => {
+  const setUserOrganization = (userRoles: any[], orgRes: any): Promise<void> => {
     const roleId = userRoles[0]?.id;
 
     switch (roleId) {
@@ -137,7 +144,7 @@ export const useUserAccount = () => {
             userStore.setOrganization(org);
           });
         }
-        break;
+        return Promise.resolve();
 
       // 审计用户
       case '00000000-0000-0000-0000-000000000002':
@@ -147,21 +154,26 @@ export const useUserAccount = () => {
             userStore.setOrganization(org);
           });
         }
-        break;
+        return Promise.resolve();
 
       // 系统管理员
       case '00000000-0000-0000-0000-000000000001':
         if (orgRes.console_orgs?.length > 0) {
-          userStore.setCurrentOrganization(orgRes.console_orgs[0]?.id);
           orgRes.console_orgs.forEach((org: IOrganization) => {
             userStore.setOrganization(org);
           });
+
+          return new Promise<void>(resolve => {
+            nextTick(() => {
+              userStore.setCurrentOrganization(orgRes.console_orgs[0]?.id);
+              resolve();
+            });
+          });
         }
-        break;
+        return Promise.resolve();
 
       default:
-        console.warn('未知的用户角色:', roleId);
-        break;
+        return Promise.resolve();
     }
   };
 
@@ -214,7 +226,12 @@ export const useUserAccount = () => {
         const setting = await getSystemSetting();
 
         // 设置用户组织信息
-        setUserOrganization(res.system_roles, orgRes);
+        await setUserOrganization(res.system_roles, orgRes);
+
+        // 在组织设置完成后，触发数据刷新
+        nextTick(() => {
+          mittBus.emit('search', 'reset');
+        });
 
         if (setting) {
           settingStore.setRdpClientOption(setting.graphics.rdp_client_option);
@@ -267,7 +284,7 @@ export const useUserAccount = () => {
     configProviderProps: configProviderPropsRef
   });
 
-  const restoreSavedCookies = async () => {
+  const restoreSavedCookies = async (): Promise<boolean> => {
     const currentUser = userStore.currentUser as IUserInfo;
 
     if (currentUser && currentUser.session && currentUser.csrfToken && currentUser.currentSite) {
@@ -305,17 +322,30 @@ export const useUserAccount = () => {
         }
 
         if (allCookies && allCookies.length > 0) {
-          await window.electron.ipcRenderer.invoke('restore-cookies', {
+          const result = await window.electron.ipcRenderer.invoke('restore-cookies', {
             site: currentUser.currentSite,
             sessionId: currentUser.session,
             csrfToken: currentUser.csrfToken,
             allCookies: allCookies
           });
+
+          if (result && result.success) {
+            return true;
+          } else {
+            console.error('恢复cookies失败:', result?.error);
+            return false;
+          }
+        } else {
+          console.warn('没有可用的cookies，用户可能需要重新登录');
+          return false;
         }
       } catch (error) {
         console.error('恢复cookies失败:', error);
+        return false;
       }
     }
+
+    return false;
   };
 
   return {

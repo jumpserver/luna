@@ -8,6 +8,7 @@ import { NFlex, NAvatar, NText, NButton, NModal } from 'naive-ui';
 import { Trash2 } from 'lucide-vue-next';
 import { Devices } from '@vicons/carbon';
 import { RouterLink } from 'vue-router';
+import { setUserRemoving } from '@renderer/api/index';
 
 import type { MenuOption, SelectOption } from 'naive-ui';
 
@@ -151,6 +152,8 @@ export const getAccountOptionsRender = (
                   quaternary: true,
                   onClick: e => {
                     e.stopPropagation();
+                    // 在删除前设置用户删除状态，防止401错误干扰删除流程
+                    setUserRemoving(true);
                     callback?.(option.value as string);
                   }
                 },

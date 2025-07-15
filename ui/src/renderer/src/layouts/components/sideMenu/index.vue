@@ -208,6 +208,7 @@ import { useDebounceFn } from '@vueuse/core';
 import { ArrowSync20Regular } from '@vicons/fluent';
 import { useUserStore } from '@renderer/store/module/userStore';
 import { useElectronConfig } from '@renderer/hooks/useElectronConfig';
+import { setUserRemoving } from '@renderer/api/index';
 
 import { menuOptions, getAccountOptionsRender, RemoveAccountConfirm } from './config';
 
@@ -286,6 +287,9 @@ const handleAddAccount = () => {
  */
 const handleRemoveCurrentAccount = () => {
   if (userStore.currentUser?.session) {
+    // 在删除前设置用户删除状态，防止401错误干扰删除流程
+    setUserRemoving(true);
+
     accountToRemove.value = userStore.currentUser.session;
     showModal.value = true;
   } else {
@@ -300,13 +304,24 @@ const handleRemoveAccount = async () => {
   const targetUser = userStore.userInfo?.find(user => user.session === accountToRemove.value);
   if (!targetUser) {
     showModal.value = false;
+    // 重置用户删除状态
+    setUserRemoving(false);
     return;
   }
 
-  if (removeAccount) {
-    await removeAccount(accountToRemove.value);
+  try {
+    if (removeAccount) {
+      await removeAccount(accountToRemove.value);
+    }
+  } catch (error) {
+    console.error('删除账号失败:', error);
+  } finally {
+    showModal.value = false;
+    // 延迟重置用户删除状态，确保删除操作完全完成
+    setTimeout(() => {
+      setUserRemoving(false);
+    }, 1000);
   }
-  showModal.value = false;
 };
 
 const debouncedSearch = useDebounceFn(() => {
