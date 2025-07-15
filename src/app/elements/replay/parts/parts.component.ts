@@ -265,7 +265,13 @@ export class ElementsPartsComponent implements OnInit {
   }
 
   toSafeLocalDateStr(d) {
-    const date_s = d.toLocaleString(this.getUserLang(), { hour12: false });
+    let lang = this.getUserLang();
+
+    if (lang === 'zh-hans') {
+      lang = 'zh-CN'
+    }
+
+    const date_s = d.toLocaleString(lang, { hour12: false });
     return date_s.split('/').join('-');
   }
 }

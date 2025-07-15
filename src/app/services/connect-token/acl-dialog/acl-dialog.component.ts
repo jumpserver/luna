@@ -362,7 +362,7 @@ export class ElementACLDialogComponent implements OnInit {
       },
       acl_face_online_not_supported: {
         title: 'Login reminder',
-        message: this.data.errorDetail,
+        message: 'FaceOnlineNotSupported',
         isError: true,
         actions: [
           {
