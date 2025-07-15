@@ -18,11 +18,17 @@ const defaultTheme = ref('');
 let hasShown401Message = false;
 let isProcessing401 = false; // 防止401错误连锁处理
 let lastUserSwitchTime = 0; // 记录最后一次用户切换时间
+let isRemovingUser = false; // 防止在删除用户过程中触发401处理
 
 // 导出更新用户切换时间的函数
 export const updateUserSwitchTime = () => {
   lastUserSwitchTime = Date.now();
 }; // 放在模块最顶层，作用域全局共享
+
+// 导出设置用户删除状态的函数
+export const setUserRemoving = (removing: boolean) => {
+  isRemovingUser = removing;
+};
 
 try {
   const { getDefaultSetting } = useElectronConfig();
@@ -106,7 +112,11 @@ class RequestHttp {
           if (!hasShown401Message && !isProcessing401) {
             const userStore = useUserStore();
 
-            if (timeSinceLastSwitch < 10000) {
+            // 增加多重保护条件：
+            // 1. 用户切换后10秒内不处理401
+            // 2. 正在删除用户时不处理401
+            // 3. 确保有当前用户才处理401
+            if (timeSinceLastSwitch < 10000 || isRemovingUser || !userStore.currentUser?.session) {
               return Promise.reject(error);
             }
 

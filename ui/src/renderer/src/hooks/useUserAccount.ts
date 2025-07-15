@@ -9,6 +9,7 @@ import { getSystemSetting } from '@renderer/api/modals/setting';
 import { createDiscreteApi, lightTheme, darkTheme } from 'naive-ui';
 import { useSettingStore } from '@renderer/store/module/settingStore';
 import { getProfile, getOrganization } from '@renderer/api/modals/user';
+import { setUserRemoving } from '@renderer/api/index';
 
 import type { ConfigProviderProps } from 'naive-ui';
 import type { IUserInfo, IOrganization } from '@renderer/store/interface';
@@ -48,20 +49,45 @@ export const useUserAccount = () => {
       return;
     }
 
-    const result = await userStore.removeUserBySession(targetSession);
+    // 设置用户删除状态，防止在删除过程中触发401处理
+    setUserRemoving(true);
 
-    // 如果没有其他用户了，显示登录模态框
-    if (result?.shouldShowLoginModal) {
-      showLoginModal.value = true;
-      return;
-    }
+    try {
+      const result = await userStore.removeUserBySession(targetSession);
 
-    // 如果删除的是当前用户，且还有其他用户，则切换到第一个可用用户
-    if (result?.removedCurrentUser && userStore.userInfo && userStore.userInfo.length > 0) {
-      const firstUser = userStore.userInfo[0];
+      // 如果没有其他用户了，显示登录模态框
+      if (result?.shouldShowLoginModal) {
+        showLoginModal.value = true;
+        return;
+      }
 
-      // 调用统一的切换账号方法
-      await userStore.switchAccount(firstUser.session);
+      // 如果删除的是当前用户，且还有其他用户，则切换到第一个可用用户
+      if (result?.removedCurrentUser && userStore.userInfo && userStore.userInfo.length > 0) {
+        const firstUser = userStore.userInfo[0];
+
+        userStore.resetOrganization();
+        await userStore.switchAccount(firstUser.session);
+
+        // 获取用户信息时增加错误处理，避免触发401处理逻辑
+        try {
+          const res = await getProfile();
+          const orgRes = await getOrganization();
+          setUserOrganization(res.system_roles, orgRes);
+        } catch (error) {
+          console.error('获取用户信息失败，但不影响用户切换:', error);
+          // 不重新抛出错误，避免触发401处理逻辑
+        }
+      } else {
+        // userStore.currentUser = {};
+        if (userStore.currentUser?.session) {
+          await userStore.switchAccount(userStore.currentUser.session);
+        }
+      }
+    } finally {
+      // 无论成功还是失败，都要重置用户删除状态
+      setTimeout(() => {
+        setUserRemoving(false);
+      }, 1000); // 延迟1秒重置，确保删除操作完全完成
     }
   };
 
@@ -70,12 +96,17 @@ export const useUserAccount = () => {
    */
   const switchAccount = async (session: string) => {
     try {
+      userStore.resetOrganization();
       // 调用userStore的switchAccount方法
       await userStore.switchAccount(session);
 
       // 获取系统设置（只有在cookies恢复成功后才执行）
       try {
         const setting = await getSystemSetting();
+        const res = await getProfile();
+        const orgRes = await getOrganization();
+
+        setUserOrganization(res.system_roles, orgRes);
 
         if (setting) {
           settingStore.setRdpClientOption(setting.graphics.rdp_client_option);
@@ -92,9 +123,47 @@ export const useUserAccount = () => {
   };
 
   /**
-   * @description 获取账号信息
+   * @description 设置用户组织信息
    */
-  const getAccountInfo = () => {};
+  const setUserOrganization = (userRoles: any[], orgRes: any) => {
+    const roleId = userRoles[0]?.id;
+
+    switch (roleId) {
+      // 普通用户
+      case '00000000-0000-0000-0000-000000000003':
+        if (orgRes.workbench_orgs?.length > 0) {
+          userStore.setCurrentOrganization(orgRes.workbench_orgs[0]?.id);
+          orgRes.workbench_orgs.forEach((org: IOrganization) => {
+            userStore.setOrganization(org);
+          });
+        }
+        break;
+
+      // 审计用户
+      case '00000000-0000-0000-0000-000000000002':
+        if (orgRes.audit_orgs?.length > 0) {
+          userStore.setCurrentOrganization(orgRes.audit_orgs[0]?.id);
+          orgRes.audit_orgs.forEach((org: IOrganization) => {
+            userStore.setOrganization(org);
+          });
+        }
+        break;
+
+      // 系统管理员
+      case '00000000-0000-0000-0000-000000000001':
+        if (orgRes.console_orgs?.length > 0) {
+          userStore.setCurrentOrganization(orgRes.console_orgs[0]?.id);
+          orgRes.console_orgs.forEach((org: IOrganization) => {
+            userStore.setOrganization(org);
+          });
+        }
+        break;
+
+      default:
+        console.warn('未知的用户角色:', roleId);
+        break;
+    }
+  };
 
   /**
    * @description 处理登录凭据接收（session + csrfToken + site）
@@ -115,7 +184,6 @@ export const useUserAccount = () => {
 
     try {
       const res = await getProfile();
-
       const orgRes = await getOrganization();
 
       if (res) {
@@ -145,27 +213,8 @@ export const useUserAccount = () => {
 
         const setting = await getSystemSetting();
 
-        // 普通用户
-        if (res.system_roles[0]?.id === '00000000-0000-0000-0000-000000000003') {
-          userStore.setCurrentOrganization(orgRes.workbench_orgs[0]?.id);
-          orgRes.workbench_orgs.forEach((org: IOrganization) => {
-            userStore.setOrganization(org);
-          });
-        }
-
-        if (res.system_roles[0]?.id === '00000000-0000-0000-0000-000000000002') {
-          userStore.setCurrentOrganization(orgRes.audit_orgs[0]?.id);
-          orgRes.audit_orgs.forEach((org: IOrganization) => {
-            userStore.setOrganization(org);
-          });
-        }
-
-        if (res.system_roles[0]?.id === '00000000-0000-0000-0000-000000000001') {
-          userStore.setCurrentOrganization(orgRes.console_orgs[0]?.id);
-          orgRes.console_orgs.forEach((org: IOrganization) => {
-            userStore.setOrganization(org);
-          });
-        }
+        // 设置用户组织信息
+        setUserOrganization(res.system_roles, orgRes);
 
         if (setting) {
           settingStore.setRdpClientOption(setting.graphics.rdp_client_option);
@@ -274,7 +323,7 @@ export const useUserAccount = () => {
     setNewAccount,
     switchAccount,
     removeAccount,
-    getAccountInfo,
+    setUserOrganization,
     handleModalOpacity,
     handleCredentialsReceived,
     handleCsrfTokenReceived,

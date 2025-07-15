@@ -577,31 +577,38 @@ ipcMain.handle('restore-cookies', async (_, { site, sessionId, csrfToken, allCoo
 ipcMain.handle('clear-site-cookies', async (_, site, sessionId) => {
   if (site && sessionId) {
     try {
-      const mainWindowUrl = mainWindow?.webContents.getURL();
-      if (mainWindowUrl) {
-        const existingCookies = await session.defaultSession.cookies.get({
-          url: mainWindowUrl
-        });
+      // 1. 从内存中获取要删除的用户的cookies
+      const userKey = `${site}:${sessionId}`;
+      const userCookies = sitesCookies.get(userKey) || [];
 
-        for (const cookie of existingCookies) {
-          await session.defaultSession.cookies.remove(mainWindowUrl, cookie.name);
-        }
-      }
+      // 2. 从内存中删除该用户的cookies数据
+      sitesCookies.delete(userKey);
 
-      // 清理指定站点的所有cookies
-      if (site) {
+      // 3. 如果该用户有cookies，需要从浏览器session中删除这些cookies
+      if (userCookies.length > 0) {
         try {
-          const siteCookies = await session.defaultSession.cookies.get({ url: site });
-          for (const cookie of siteCookies) {
-            await session.defaultSession.cookies.remove(site, cookie.name);
+          // 获取当前浏览器session中的所有cookies
+          const sessionCookies = await session.defaultSession.cookies.get({ url: site });
+
+          // 比较用户cookies和session cookies，找出需要删除的cookies
+          for (const userCookie of userCookies) {
+            // 查找session中是否有相同的cookie
+            const matchedCookie = sessionCookies.find(
+              sessionCookie =>
+                sessionCookie.name === userCookie.name &&
+                sessionCookie.domain === userCookie.domain &&
+                sessionCookie.path === userCookie.path
+            );
+
+            if (matchedCookie) {
+              // 只删除匹配的cookie
+              await session.defaultSession.cookies.remove(site, matchedCookie.name);
+            }
           }
         } catch (error) {
-          console.error('清理站点cookies失败:', error);
+          console.error('删除session cookies失败:', error);
         }
       }
-
-      const userKey = `${site}:${sessionId}`;
-      sitesCookies.delete(userKey);
 
       return { success: true };
     } catch (error: any) {
