@@ -136,6 +136,7 @@ export default {
     AlreadyLoggedIn: 'You are already logged in to this site',
     SwitchedToExistingAccount: 'Switched to existing account',
     LoginAuthenticationFailed: 'Login authentication has expired. Please log in again',
-    NoAssetOrInactiveAsset: 'The current asset is not active or does not exist'
+    NoAssetOrInactiveAsset: 'The current asset is not active or does not exist',
+    ConnectMethodNotSupport: 'Connect method not support'
   }
 };

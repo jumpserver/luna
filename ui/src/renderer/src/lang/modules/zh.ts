@@ -135,6 +135,7 @@ export default {
     AlreadyLoggedIn: '您已经登录了该站点',
     SwitchedToExistingAccount: '已切换到现有账户',
     LoginAuthenticationFailed: '登录认证已失效，请重新登录',
-    NoAssetOrInactiveAsset: '当前资产不存在或未激活'
+    NoAssetOrInactiveAsset: '当前资产不存在或未激活',
+    ConnectMethodNotSupport: '连接方法不支持'
   }
 };

@@ -181,10 +181,16 @@ const getAssetProtocol = (assetId: string) => {
 const handleConnectionError = (
   error: Error | { response?: { data?: { code?: string; error?: string; message?: string } } }
 ) => {
+  console.log(error);
   const errorData = error['response']?.data;
 
   if (errorData) {
     const serverError = errorData.error || errorData.message || errorData.detail || errorData.code;
+
+    if (serverError.includes('Connect method not support')) {
+      message.error(`${t('Message.ConnectMethodNotSupport')}: ${serverError.split(':')[1].trim()}`);
+      return;
+    }
 
     if (errorData?.code !== 'notice') {
       message.error(serverError || `${t('Message.AssetNotice')}`);
@@ -198,11 +204,6 @@ const handleConnectionError = (
 
     if (serverError === 'No asset or inactive asset') {
       message.error(t('Message.NoAssetOrInactiveAsset'));
-      return;
-    }
-
-    if (serverError.includes('Connect method not support')) {
-      message.error(`${t('Message.ClientNotSupport')}: ${serverError.split(':')[1].trim()}`);
       return;
     }
   } else {

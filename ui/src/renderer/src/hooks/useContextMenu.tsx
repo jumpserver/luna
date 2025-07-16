@@ -103,48 +103,52 @@ export const useContextMenu = () => {
       title: t('Common.AssetDetails'),
       preset: 'card',
       bordered: false,
-      segmented: true,
       style: {
         width: '40rem',
+        maxHeight: '80vh',
         borderRadius: '10px'
       },
       content: () => {
         return (
-          <NDescriptions label-placement="left" column={1} bordered>
-            <NDescriptionsItem label={t('Common.PlatformInfo')}>
-              {t('Common.PlatformID')}: ${detailMessage?.value?.platform.id || ''}
-              <br />
-              {t('Common.PlatformName')}: ${detailMessage?.value?.platform.name || ''}
-            </NDescriptionsItem>
-            <NDescriptionsItem label={t('Common.PlatformID')}>
-              {detailMessage?.value?.platform.id || ''}
-            </NDescriptionsItem>
-            <NDescriptionsItem label={t('Common.PlatformName')}>
-              {detailMessage.value.category.label}
-            </NDescriptionsItem>
-            <NDescriptionsItem label={t('Common.Connectivity')}>
-              {detailMessage.value.connectivity.label}
-            </NDescriptionsItem>
-            <NDescriptionsItem label={t('Common.Category')}>
-              {detailMessage.value.nodes.map(node => {
-                return <div key={node.id}>{`${node.name} (ID: ${node.id})`}</div>;
-              })}
-            </NDescriptionsItem>
-            <NDescriptionsItem label={t('Common.Nodes')}>
-              {detailMessage.value.permed_protocols.map(protocol => {
-                return <div key={protocol.name}>{`${protocol.name} (Port: ${protocol.port})`}</div>;
-              })}
-            </NDescriptionsItem>
-            <NDescriptionsItem label={t('Common.PermedProtocols')}>
-              {detailMessage.value.permed_accounts.map(account => {
-                return (
-                  <div
-                    key={account.id}
-                  >{`${account.alias} (${account.username || t('Common.NoUsername')})`}</div>
-                );
-              })}
-            </NDescriptionsItem>
-          </NDescriptions>
+          <NScrollbar style="max-height: 60vh; overflow-y: auto;">
+            <NDescriptions label-placement="left" column={1} bordered>
+              <NDescriptionsItem label={t('Common.PlatformInfo')}>
+                {t('Common.PlatformID')}: {detailMessage?.value?.platform.id || ''}
+                <br />
+                {t('Common.PlatformName')}: {detailMessage?.value?.platform.name || ''}
+              </NDescriptionsItem>
+              <NDescriptionsItem label={t('Common.PlatformID')}>
+                {detailMessage?.value?.platform.id || ''}
+              </NDescriptionsItem>
+              <NDescriptionsItem label={t('Common.PlatformName')}>
+                {detailMessage.value.category.label}
+              </NDescriptionsItem>
+              <NDescriptionsItem label={t('Common.Connectivity')}>
+                {detailMessage.value.connectivity.label}
+              </NDescriptionsItem>
+              <NDescriptionsItem label={t('Common.Category')}>
+                {detailMessage.value.nodes.map(node => {
+                  return <div key={node.id}>{`${node.name} (ID: ${node.id})`}</div>;
+                })}
+              </NDescriptionsItem>
+              <NDescriptionsItem label={t('Common.Nodes')}>
+                {detailMessage.value.permed_protocols.map(protocol => {
+                  return (
+                    <div key={protocol.name}>{`${protocol.name} (Port: ${protocol.port})`}</div>
+                  );
+                })}
+              </NDescriptionsItem>
+              <NDescriptionsItem label={t('Common.PermedProtocols')}>
+                {detailMessage.value.permed_accounts.map(account => {
+                  return (
+                    <div
+                      key={account.id}
+                    >{`${account.name} (${account.username || t('Common.NoUsername')})`}</div>
+                  );
+                })}
+              </NDescriptionsItem>
+            </NDescriptions>
+          </NScrollbar>
         );
       }
     });
