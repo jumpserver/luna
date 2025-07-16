@@ -138,7 +138,7 @@ export const useContextMenu = () => {
                   );
                 })}
               </NDescriptionsItem>
-              <NDescriptionsItem label={t('Common.PermedProtocols')}>
+              <NDescriptionsItem label={t('Common.PermedAccounts')}>
                 {detailMessage.value.permed_accounts.map(account => {
                   return (
                     <div
