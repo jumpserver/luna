@@ -13,7 +13,13 @@
           <div class="card-title">
             <span nz-icon nzType="close" nzTheme="outline" (click)="handleCloseConnect()"></span>
             <span class="card-title-text">
-              {{ getAssetInfo().protocol.toUpperCase() }} {{ _i18n.instant('Session') }}
+              @if (getAssetInfo().protocol === 'k8s') {
+                <!-- 只给 K 进行大写 -->
+                {{ getAssetInfo().protocol.slice(0, 1).toUpperCase() + getAssetInfo().protocol.slice(1) }}
+                {{ _i18n.instant('Session') }}
+              } @else {
+                {{ getAssetInfo().protocol.toUpperCase() }} {{ _i18n.instant('Session') }}
+              }
             </span>
           </div>
           <nz-divider class="divider" nzType="vertical"></nz-divider>
@@ -109,7 +115,13 @@
             <div class="card-title">
               <span nz-icon nzType="close" nzTheme="outline" (click)="handleCloseConnect()"></span>
               <span class="card-title-text">
-                {{ getAssetInfo().protocol.toUpperCase() }} {{ _i18n.instant('Session') }}
+                @if (getAssetInfo().protocol === 'k8s') {
+                  <!-- 只给 K 进行大写 -->
+                  {{ getAssetInfo().protocol.slice(0, 1).toUpperCase() + getAssetInfo().protocol.slice(1) }}
+                  {{ _i18n.instant('Session') }}
+                } @else {
+                  {{ getAssetInfo().protocol.toUpperCase() }} {{ _i18n.instant('Session') }}
+                }
               </span>
             </div>
             <nz-divider class="divider" nzType="vertical"></nz-divider>
