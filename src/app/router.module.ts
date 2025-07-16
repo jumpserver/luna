@@ -4,7 +4,6 @@ import { RouterModule, Routes } from '@angular/router';
 import { PageMainComponent } from './pages/main/main.component';
 import { PagesBlankComponent } from './pages/blank/blank.component';
 import { PagesShareComponent } from './pages/share/share.component';
-import { PagesReplayComponent } from './pages/replay/replay.component';
 
 const appRoutes: Routes = [
   { path: '', component: PageMainComponent },
@@ -21,7 +20,7 @@ const appRoutes: Routes = [
   { path: 'share/:id', component: PagesShareComponent },
   {
     path: 'replay/:sid',
-    component: PagesReplayComponent
+    loadComponent: () => import('./pages/replay/replay.component').then(m => m.PagesReplayComponent)
   },
   {
     path: 'admin-connect',
