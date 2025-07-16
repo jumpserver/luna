@@ -58,7 +58,7 @@
     "@vue/eslint-config-typescript": "^13.0.0",
     "autoprefixer": "^10.4.20",
     "crypto-js": "^4.2.0",
-    "electron": "^22.3.27",
+    "electron": "^31.0.2",
     "electron-builder": "^24.13.3",
     "electron-vite": "^2.3.0",
     "eslint": "^8.57.0",

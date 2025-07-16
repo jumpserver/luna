@@ -123,10 +123,27 @@ class RequestHttp {
             hasShown401Message = true;
             isProcessing401 = true;
 
-            // 只移除有问题的用户（当前用户），而不是所有用户
-            if (userStore.currentUser?.session) {
+            // 使用新的401错误处理接口
+            if (userStore.currentUser?.session && userStore.currentUser?.currentSite) {
+              const currentSession = userStore.currentUser.session;
+              const currentSite = userStore.currentUser.currentSite;
+
+              // 调用主进程的401错误处理接口
+              window.electron.ipcRenderer.invoke('handle-401-error', currentSite, currentSession)
+                .then(result => {
+                  if (result.success) {
+                    console.log('401错误处理成功:', result.message);
+                  } else {
+                    console.error('401错误处理失败:', result.error);
+                  }
+                })
+                .catch(error => {
+                  console.error('调用401错误处理接口失败:', error);
+                });
+
+              // 继续执行原有的用户删除逻辑
               userStore
-                .removeUserBySession(userStore.currentUser.session)
+                .removeUserBySession(currentSession)
                 .catch(error => {
                   console.error('删除过期用户失败:', error);
                 })

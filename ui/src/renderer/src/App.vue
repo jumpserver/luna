@@ -138,6 +138,51 @@ onMounted(async () => {
     });
   }
 
+  // 首先尝试从文件系统加载已保存的cookies信息
+  try {
+    const savedCookiesResult = await window.electron.ipcRenderer.invoke('get-all-saved-cookies');
+
+    if (
+      savedCookiesResult.success &&
+      savedCookiesResult.data &&
+      savedCookiesResult.data.length > 0
+    ) {
+      // 如果存在已保存的cookies，但userStore中没有用户信息，则尝试从最新的cookies恢复
+      if (
+        (!userStore.userInfo || userStore.userInfo.length === 0) &&
+        savedCookiesResult.data.length > 0
+      ) {
+        // 按时间戳排序，使用最新的cookies
+        const latestCookieInfo = savedCookiesResult.data.sort(
+          (a, b) => b.timestamp - a.timestamp
+        )[0];
+
+        // 尝试恢复最新的用户会话
+        const cookies = await window.electron.ipcRenderer.invoke(
+          'get-site-cookies',
+          latestCookieInfo.site,
+          latestCookieInfo.sessionId
+        );
+
+        if (cookies && cookies.length > 0) {
+          // 模拟用户信息，仅用于恢复cookies
+          const mockUser = {
+            session: latestCookieInfo.sessionId,
+            currentSite: latestCookieInfo.site,
+            csrfToken: '', // 将从cookies中获取
+            username: 'Restored User',
+            display_name: ['Restored User'],
+            avatar_url: null
+          };
+
+          userStore.setCurrentUser(mockUser);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('加载已保存的cookies失败:', error);
+  }
+
   // 恢复保存的 cookie（在检查登录状态之前）
   const cookiesRestored = await restoreSavedCookies();
 

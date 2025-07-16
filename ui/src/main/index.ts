@@ -22,7 +22,219 @@ const defaults = {
     language: 'en'
   }
 };
+
+// 文件系统存储相关
+const COOKIES_DIR = path.join(app.getPath('userData'), 'cookies');
 const sitesCookies = new Map<string, Electron.Cookie[]>();
+
+// 确保cookies目录存在
+const ensureCookiesDir = () => {
+  try {
+    if (fs.existsSync(COOKIES_DIR)) {
+      const stats = fs.statSync(COOKIES_DIR);
+      if (!stats.isDirectory()) {
+        // 如果存在同名文件，先删除
+        fs.unlinkSync(COOKIES_DIR);
+        log.info(`Removed existing file at cookies path: ${COOKIES_DIR}`);
+      }
+    }
+
+    if (!fs.existsSync(COOKIES_DIR)) {
+      fs.mkdirSync(COOKIES_DIR, { recursive: true });
+      log.info(`Created cookies directory: ${COOKIES_DIR}`);
+    }
+  } catch (error) {
+    log.error('Failed to ensure cookies directory:', error);
+    throw error;
+  }
+};
+
+// 获取cookies文件路径
+const getCookiesFilePath = (site: string, sessionId: string): string => {
+  const sanitizedSite = site.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const fileName = `${sanitizedSite}_${sessionId}.json`;
+  return path.join(COOKIES_DIR, fileName);
+};
+
+// 保存cookies到文件
+const saveCookiesToFile = (
+  site: string,
+  sessionId: string,
+  cookies: Electron.Cookie[]
+): boolean => {
+  try {
+    ensureCookiesDir();
+
+    // 确认目录正确创建
+    if (!fs.existsSync(COOKIES_DIR) || !fs.statSync(COOKIES_DIR).isDirectory()) {
+      log.error('Cookies directory is not available for saving');
+      return false;
+    }
+
+    const filePath = getCookiesFilePath(site, sessionId);
+    const cookieData = {
+      site,
+      sessionId,
+      cookies,
+      timestamp: Date.now(),
+      version: 1
+    };
+    fs.writeFileSync(filePath, JSON.stringify(cookieData, null, 2), 'utf8');
+    log.info(`Cookies saved to file: ${filePath}`);
+    return true;
+  } catch (error) {
+    log.error('Failed to save cookies to file:', error);
+    return false;
+  }
+};
+
+// 从文件加载cookies
+const loadCookiesFromFile = (site: string, sessionId: string): Electron.Cookie[] | null => {
+  try {
+    const filePath = getCookiesFilePath(site, sessionId);
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    const cookieData = JSON.parse(fileContent);
+
+    // 验证数据结构
+    if (cookieData.site === site && cookieData.sessionId === sessionId && cookieData.cookies) {
+      log.info(`Cookies loaded from file: ${filePath}`);
+      return cookieData.cookies;
+    }
+
+    return null;
+  } catch (error) {
+    log.error('Failed to load cookies from file:', error);
+    return null;
+  }
+};
+
+// 删除cookies文件
+const deleteCookiesFile = (site: string, sessionId: string): boolean => {
+  try {
+    const filePath = getCookiesFilePath(site, sessionId);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      log.info(`Cookies file deleted: ${filePath}`);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    log.error('Failed to delete cookies file:', error);
+    return false;
+  }
+};
+
+// 获取所有保存的cookies文件信息
+const getAllSavedCookies = (): Array<{ site: string; sessionId: string; timestamp: number }> => {
+  try {
+    ensureCookiesDir();
+
+    // 再次确认目录存在且是目录
+    if (!fs.existsSync(COOKIES_DIR)) {
+      log.warn('Cookies directory does not exist after ensuring');
+      return [];
+    }
+
+    const stats = fs.statSync(COOKIES_DIR);
+    if (!stats.isDirectory()) {
+      log.error('Cookies path exists but is not a directory');
+      return [];
+    }
+
+    const files = fs.readdirSync(COOKIES_DIR);
+    const cookieFiles: Array<{ site: string; sessionId: string; timestamp: number }> = [];
+
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        try {
+          const filePath = path.join(COOKIES_DIR, file);
+          const fileContent = fs.readFileSync(filePath, 'utf8');
+          const cookieData = JSON.parse(fileContent);
+
+          if (cookieData.site && cookieData.sessionId) {
+            cookieFiles.push({
+              site: cookieData.site,
+              sessionId: cookieData.sessionId,
+              timestamp: cookieData.timestamp || 0
+            });
+          }
+        } catch (error) {
+          log.error(`Failed to parse cookies file ${file}:`, error);
+        }
+      }
+    }
+
+    return cookieFiles;
+  } catch (error) {
+    log.error('Failed to get all saved cookies:', error);
+    return [];
+  }
+};
+
+// 清理cookies目录（如果存在问题）
+const cleanupCookiesDir = () => {
+  try {
+    if (fs.existsSync(COOKIES_DIR)) {
+      const stats = fs.statSync(COOKIES_DIR);
+      if (!stats.isDirectory()) {
+        // 如果是文件，删除它
+        fs.unlinkSync(COOKIES_DIR);
+        log.info('Removed invalid cookies file');
+      } else {
+        // 如果是目录，检查是否为空或包含无效文件
+        const files = fs.readdirSync(COOKIES_DIR);
+        for (const file of files) {
+          const filePath = path.join(COOKIES_DIR, file);
+          try {
+            if (file.endsWith('.json')) {
+              // 尝试解析JSON文件
+              const content = fs.readFileSync(filePath, 'utf8');
+              JSON.parse(content);
+            }
+          } catch (error) {
+            // 删除无效的JSON文件
+            fs.unlinkSync(filePath);
+            log.info(`Removed invalid cookies file: ${file}`);
+          }
+        }
+      }
+    }
+
+    // 确保目录存在
+    ensureCookiesDir();
+    return true;
+  } catch (error) {
+    log.error('Failed to cleanup cookies directory:', error);
+    return false;
+  }
+};
+
+// 在应用启动时加载所有保存的cookies
+const loadAllSavedCookies = () => {
+  try {
+    // 首先清理并确保目录正确创建
+    cleanupCookiesDir();
+
+    const savedCookies = getAllSavedCookies();
+
+    for (const { site, sessionId } of savedCookies) {
+      const cookies = loadCookiesFromFile(site, sessionId);
+      if (cookies) {
+        const userKey = `${site}:${sessionId}`;
+        sitesCookies.set(userKey, cookies);
+        log.info(`Loaded cookies for ${userKey} from file`);
+      }
+    }
+
+    log.info(`Loaded ${savedCookies.length} saved cookie sessions`);
+  } catch (error) {
+    log.error('Failed to load saved cookies:', error);
+  }
+};
 
 let mainWindow: BrowserWindow | null = null;
 let jms_sessionid = '';
@@ -248,6 +460,7 @@ app.on('open-url', (_, url: string) => {
 });
 app.once('ready', () => {
   updateUserConfigIfNeeded();
+  loadAllSavedCookies(); // 在应用启动时加载所有保存的cookies
 });
 
 app.whenReady().then(async () => {
@@ -424,6 +637,9 @@ ipcMain.on('user-login', async (_, site) => {
         const userKey = `${site}:${jms_sessionid}`;
         sitesCookies.set(userKey, targetCookies);
 
+        // 同时保存到文件系统
+        saveCookiesToFile(site, jms_sessionid, targetCookies);
+
         mainWindow?.webContents.send('set-login-credentials', {
           session: jms_sessionid,
           csrfToken: jms_csrftoken,
@@ -441,7 +657,20 @@ ipcMain.on('user-login', async (_, site) => {
 
 ipcMain.handle('get-site-cookies', async (_, site, sessionId) => {
   const userKey = `${site}:${sessionId}`;
-  return sitesCookies.get(userKey) || [];
+
+  // 先从内存中获取
+  let cookies = sitesCookies.get(userKey);
+
+  // 如果内存中没有，尝试从文件加载
+  if (!cookies) {
+    const filesCookies = loadCookiesFromFile(site, sessionId);
+    if (filesCookies) {
+      cookies = filesCookies;
+      sitesCookies.set(userKey, cookies);
+    }
+  }
+
+  return cookies || [];
 });
 
 // 从session中获取cookies（用于应用重启后恢复）
@@ -455,12 +684,19 @@ ipcMain.handle('get-cookies-from-session', async (_, site) => {
   }
 });
 
-// 保存cookies到内存中
+// 保存cookies到内存中和文件系统
 ipcMain.handle('save-site-cookies', async (_, { site, sessionId, cookies }) => {
   try {
     const userKey = `${site}:${sessionId}`;
     sitesCookies.set(userKey, cookies);
-    return { success: true };
+
+    // 同时保存到文件系统
+    const fileSaveResult = saveCookiesToFile(site, sessionId, cookies);
+
+    return {
+      success: true,
+      fileSaved: fileSaveResult
+    };
   } catch (error) {
     console.error('保存cookies失败:', error);
     return { success: false, error: error instanceof Error ? error.message : String(error) };
@@ -489,6 +725,9 @@ ipcMain.handle('restore-cookies', async (_, { site, sessionId, csrfToken, allCoo
         // 将cookie存储到内存中，无论什么协议都需要存储
         const userKey = `${site}:${sessionId}`;
         sitesCookies.set(userKey, allCookies);
+
+        // 同时保存到文件系统
+        saveCookiesToFile(site, sessionId, allCookies);
 
         const mainWindowUrl = mainWindow?.webContents.getURL();
 
@@ -584,7 +823,10 @@ ipcMain.handle('clear-site-cookies', async (_, site, sessionId) => {
       // 2. 从内存中删除该用户的cookies数据
       sitesCookies.delete(userKey);
 
-      // 3. 如果该用户有cookies，需要从浏览器session中删除这些cookies
+      // 3. 从文件系统中删除该用户的cookies文件
+      const fileDeleteResult = deleteCookiesFile(site, sessionId);
+
+      // 4. 如果该用户有cookies，需要从浏览器session中删除这些cookies
       if (userCookies.length > 0) {
         try {
           // 获取当前浏览器session中的所有cookies
@@ -610,7 +852,10 @@ ipcMain.handle('clear-site-cookies', async (_, site, sessionId) => {
         }
       }
 
-      return { success: true };
+      return {
+        success: true,
+        fileDeleted: fileDeleteResult
+      };
     } catch (error: any) {
       console.error('清理站点 cookie 失败:', error);
       return { success: false, error: error.message };
@@ -633,6 +878,103 @@ ipcMain.handle('clear-user-interceptor', async (_, site, sessionId) => {
     }
   }
   return { success: false, error: '参数缺失' };
+});
+
+// 获取所有已保存的cookies信息
+ipcMain.handle('get-all-saved-cookies', async () => {
+  try {
+    const allCookies = getAllSavedCookies();
+    return { success: true, data: allCookies };
+  } catch (error: any) {
+    console.error('获取所有已保存cookies失败:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// 处理401错误，删除过期账户
+ipcMain.handle('handle-401-error', async (_, site, sessionId) => {
+  if (site && sessionId) {
+    try {
+      log.info(`Handling 401 error for ${site}:${sessionId}, removing expired account`);
+
+      // 1. 从内存中删除
+      const userKey = `${site}:${sessionId}`;
+      sitesCookies.delete(userKey);
+
+      // 2. 从文件系统中删除
+      const fileDeleteResult = deleteCookiesFile(site, sessionId);
+
+      // 3. 从浏览器session中清理cookies
+      try {
+        const sessionCookies = await session.defaultSession.cookies.get({ url: site });
+        for (const cookie of sessionCookies) {
+          await session.defaultSession.cookies.remove(site, cookie.name);
+        }
+      } catch (error) {
+        console.error('清理session cookies失败:', error);
+      }
+
+      return {
+        success: true,
+        fileDeleted: fileDeleteResult,
+        message: '过期账户已删除'
+      };
+    } catch (error: any) {
+      console.error('处理401错误失败:', error);
+      return { success: false, error: error.message };
+    }
+  }
+  return { success: false, error: '参数缺失' };
+});
+
+// 验证cookies是否有效
+ipcMain.handle('validate-cookies', async (_, site, sessionId) => {
+  if (site && sessionId) {
+    try {
+      const userKey = `${site}:${sessionId}`;
+      const cookies = sitesCookies.get(userKey) || loadCookiesFromFile(site, sessionId);
+
+      if (!cookies || cookies.length === 0) {
+        return { valid: false, reason: 'No cookies found' };
+      }
+
+      // 检查cookies是否过期
+      const now = Date.now() / 1000;
+      const expiredCookies = cookies.filter(
+        cookie => cookie.expirationDate && cookie.expirationDate < now
+      );
+
+      if (expiredCookies.length > 0) {
+        log.info(`Found ${expiredCookies.length} expired cookies for ${site}:${sessionId}`);
+        return { valid: false, reason: 'Cookies expired' };
+      }
+
+      return { valid: true, cookiesCount: cookies.length };
+    } catch (error: any) {
+      console.error('验证cookies失败:', error);
+      return { valid: false, reason: error.message };
+    }
+  }
+  return { valid: false, reason: '参数缺失' };
+});
+
+// 清理cookies目录
+ipcMain.handle('cleanup-cookies-directory', async () => {
+  try {
+    const result = cleanupCookiesDir();
+    if (result) {
+      // 清理内存中的cookies
+      sitesCookies.clear();
+      log.info('Cleared all cookies from memory');
+
+      return { success: true, message: 'Cookies directory cleaned successfully' };
+    } else {
+      return { success: false, error: 'Failed to cleanup cookies directory' };
+    }
+  } catch (error: any) {
+    console.error('清理cookies目录失败:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 const setTitleBar = (theme: string) => {

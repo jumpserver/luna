@@ -223,6 +223,25 @@ export const useUserAccount = () => {
           csrfToken: userStore.csrfToken
         });
 
+        // 确保新登录的用户cookies被保存到文件系统
+        try {
+          const allCookies = await window.electron.ipcRenderer.invoke(
+            'get-site-cookies',
+            userStore.currentSite,
+            credentials.session
+          );
+
+          if (allCookies && allCookies.length > 0) {
+            await window.electron.ipcRenderer.invoke('save-site-cookies', {
+              site: userStore.currentSite,
+              sessionId: credentials.session,
+              cookies: allCookies
+            });
+          }
+        } catch (error) {
+          console.error('保存新登录用户的cookies失败:', error);
+        }
+
         const setting = await getSystemSetting();
 
         // 设置用户组织信息
@@ -298,6 +317,28 @@ export const useUserAccount = () => {
       }
 
       try {
+        // 先验证cookies是否有效
+        const validationResult = await window.electron.ipcRenderer.invoke(
+          'validate-cookies',
+          currentUser.currentSite,
+          currentUser.session
+        );
+
+        if (!validationResult.valid) {
+          console.warn('Cookies无效或过期:', validationResult.reason);
+
+          // 如果cookies过期，清理过期账户
+          if (validationResult.reason === 'Cookies expired') {
+            await window.electron.ipcRenderer.invoke(
+              'handle-401-error',
+              currentUser.currentSite,
+              currentUser.session
+            );
+          }
+
+          return false;
+        }
+
         let allCookies = await window.electron.ipcRenderer.invoke(
           'get-site-cookies',
           currentUser.currentSite,
@@ -330,6 +371,7 @@ export const useUserAccount = () => {
           });
 
           if (result && result.success) {
+            console.log('Cookies恢复成功');
             return true;
           } else {
             console.error('恢复cookies失败:', result?.error);
