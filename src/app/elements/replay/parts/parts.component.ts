@@ -38,6 +38,7 @@ export class ElementsPartsComponent implements OnInit {
 
   alertShown = true;
   videoLoading = false;
+  playlistCollapsed = false;
 
   @HostListener('window:resize', ['$event'])
   onResize(event) {
@@ -268,10 +269,14 @@ export class ElementsPartsComponent implements OnInit {
     let lang = this.getUserLang();
 
     if (lang === 'zh-hans') {
-      lang = 'zh-CN'
+      lang = 'zh-CN';
     }
 
     const date_s = d.toLocaleString(lang, { hour12: false });
     return date_s.split('/').join('-');
+  }
+
+  togglePlaylist() {
+    this.playlistCollapsed = !this.playlistCollapsed;
   }
 }

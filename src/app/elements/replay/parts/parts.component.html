@@ -31,10 +31,14 @@
   <!-- 主体内容 -->
   <div class="main-content">
     <!-- 视频播放区 -->
-    <div class="video-area">
+    <div class="video-area" [class.playlist-hidden]="playlistCollapsed">
       <div class="loading-overlay" *ngIf="videoLoading">
         <nz-spin nzSize="large"></nz-spin>
       </div>
+      <button class="show-playlist-btn" (click)="togglePlaylist()" [title]="'Show Playlist' | translate">
+        <i nz-icon nzType="menu" nzTheme="outline"></i>
+        {{ 'Playlist' | translate }}
+      </button>
       <elements-replay-guacamole
         *ngIf="currentVideo && currentVideo.src"
         [replay]="currentVideo"
@@ -43,10 +47,17 @@
     </div>
 
     <!-- 播放列表 -->
-    <div class="playlist-area">
+    <div class="playlist-area" [class.collapsed]="playlistCollapsed">
       <div class="playlist-header">
-        <h3>{{ 'Play List' | translate }}</h3>
-        <span class="count">({{ folders?.length || 0 }})</span>
+        <div class="playlist-title">
+          <h3>{{ 'Play List' | translate }}</h3>
+          <span class="count">({{ folders?.length || 0 }})</span>
+        </div>
+        <div class="playlist-actions">
+          <button class="toggle-btn" (click)="togglePlaylist()" [title]="'Hide' | translate">
+            <i nz-icon nzType="right" nzTheme="outline"></i>
+          </button>
+        </div>
       </div>
       <div class="playlist-content">
         <div class="loading-overlay" *ngIf="alertShown">
