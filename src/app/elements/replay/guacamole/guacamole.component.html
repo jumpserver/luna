@@ -9,9 +9,12 @@
     </div>
 
     <div class="content">
-      <div class="commands" *ngIf="commands.length > 0">
+      <div class="commands" *ngIf="commands.length > 0" [class.collapsed]="commandsCollapsed">
         <div class="commands-header">
           <span>{{ 'HistoryCommands' | translate }} ({{ commands.length }})</span>
+          <button class="toggle-btn" (click)="toggleCommands()" [title]="'Hide' | translate">
+            <i nz-icon nzType="left" nzTheme="outline"></i>
+          </button>
         </div>
         <div class="commands-list"
              infiniteScroll
@@ -30,7 +33,11 @@
       </div>
 
       <!-- 屏幕 -->
-      <div class="screen-wrapper" [class.full]="commands.length === 0">
+      <div class="screen-wrapper" [class.full]="commands.length === 0" [class.commands-hidden]="commandsCollapsed">
+        <button class="show-commands-btn" (click)="toggleCommands()" [title]="'Show Commands' | translate">
+          <i nz-icon nzType="right" nzTheme="outline"></i>
+          {{ 'Commands' | translate }}
+        </button>
         <div id="screen" class="screen" (click)="toggle()"></div>
       </div>
     </div>

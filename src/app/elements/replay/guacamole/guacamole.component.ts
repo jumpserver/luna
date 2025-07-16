@@ -47,6 +47,7 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
   lastDuration: number = 0;
   interval: number;
   initializedCommand: boolean = false;
+  commandsCollapsed: boolean = false;
 
   constructor(
     private _http: HttpService,
@@ -444,5 +445,9 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
         this.runFrom();
       }
     });
+  }
+
+  toggleCommands() {
+    this.commandsCollapsed = !this.commandsCollapsed;
   }
 }
