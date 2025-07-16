@@ -14,6 +14,7 @@ import {
   IframeCommunicationService
 } from '@app/services';
 import { CookieService } from 'ngx-cookie-service';
+import { Protocol } from '@app/model';
 
 @Component({
   standalone: false,
@@ -55,6 +56,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   private connectMethod: ConnectMethod | string;
   private asset: any;
   private method: string;
+  private permedProtocol: Protocol;
 
   constructor(
     private _i18n: I18nService,
@@ -149,6 +151,9 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
     this.asset = await this._http.getAssetDetail(this.assetId).toPromise();
     this.account = await this._http.getAccountDetail(this.accountId).toPromise();
 
+    const permed = await this._http.getPermedAssetDetail(this.assetId).toPromise();
+    this.permedProtocol = permed.permed_protocols;
+
     if (!this.asset) {
       alert(this._i18n.instant('NoAsset'));
       return;
@@ -171,7 +176,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
       comment: asset.comment,
       type: asset.type,
       category: asset.category,
-      permed_protocols: asset.protocols,
+      permed_protocols: this.permedProtocol,
       permed_accounts: asset.accounts,
       spec_info: asset.spec_info
     };
@@ -324,10 +329,10 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
     if (this.isDirect && !view) {
       // 直连模式创建视图
       this.view = new View(
-        this.asset,
+        this.permedAsset,
         {
           ...this.connectData,
-          protocol: { name: this.protocol },
+          permed_protocol: { name: this.protocol },
           connectMethod: this.connectMethod
         },
         this.connectToken,
@@ -356,8 +361,6 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
         },
         this.isDirect ? 100 : 500
       );
-
-      console.log('view', this.view);
     }
   }
 
