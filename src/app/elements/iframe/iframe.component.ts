@@ -24,6 +24,7 @@ import { environment } from '@src/environments/environment';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FaceService } from '@app/services/face';
 import { DrawerStateService } from '@app/services/drawer';
+import { Protocol } from '@app/model';
 
 @Component({
   standalone: false,
@@ -170,13 +171,17 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   handleIframeEvent() {
+    let disbaleFileManager: boolean = false;
+
+    // 对于没有授权 sftp 协议的资产，不会在 koko 中展示文件管理
+    if (!this.view.asset.permed_protocols.some((protocol: Protocol) => protocol.name === 'sftp')) {
+      disbaleFileManager = true;
+    }
+
     // @ts-ignore
     this.ping = setInterval(() => {
       this._logger.info(`[Luna] Send PING to: ${this.id}`);
-      this.iframeWindow.postMessage(
-        { name: 'PING', id: this.id, category: this.view.asset.category.value },
-        '*'
-      );
+      this.iframeWindow.postMessage({ name: 'PING', id: this.id, disbaleFileManager }, '*');
     }, 500);
 
     // 30s 内未PING通, 则主动关闭
