@@ -54,6 +54,12 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
 
   get isShowSetting() {
     const connectMethods = ['koko', 'lion', 'tinker', 'panda'];
+
+    // sftp 或 k8s 不展示设置按钮
+    if (this.currentView.protocol === 'sftp' || this.currentView.protocol === 'k8s') {
+      return false;
+    }
+
     return (
       this.currentView.hasOwnProperty('connectMethod') &&
       this.currentView.connected &&
@@ -209,14 +215,7 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
 
   handleShowDrawer() {
     if (this.currentView.iframeElement) {
-      switch (this.currentView.connectMethod.component) {
-        case 'koko':
-          this._drawerStateService.sendComponentMessage({ name: 'OPEN_SETTING' });
-          break;
-        default:
-          this.currentView.iframeElement.postMessage({ name: 'OPEN' }, '*');
-          break;
-      }
+      this.currentView.iframeElement.postMessage({ name: 'OPEN' }, '*');
     }
   }
 

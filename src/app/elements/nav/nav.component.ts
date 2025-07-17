@@ -1,13 +1,13 @@
-import {Nav, View} from '@app/model';
-import {DataStore} from '@app/globals';
-import {themes} from '@src/sass/theme/main';
-import {useTheme} from '@src/sass/theme/util';
-import {I18nService} from '@app/services/i18n';
-import {Component, OnInit} from '@angular/core';
-import {CookieService} from 'ngx-cookie-service';
-import {NzModalService} from 'ng-zorro-antd/modal';
-import {ElementSettingComponent} from '@app/elements/nav/setting/setting.component';
-import {DrawerStateService, HttpService, SettingService, ViewService} from '@app/services';
+import { Nav, View } from '@app/model';
+import { DataStore } from '@app/globals';
+import { themes } from '@src/sass/theme/main';
+import { useTheme } from '@src/sass/theme/util';
+import { I18nService } from '@app/services/i18n';
+import { Component, OnInit } from '@angular/core';
+import { CookieService } from 'ngx-cookie-service';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { ElementSettingComponent } from '@app/elements/nav/setting/setting.component';
+import { IframeCommunicationService, HttpService, SettingService, ViewService } from '@app/services';
 
 @Component({
   standalone: false,
@@ -29,9 +29,8 @@ export class ElementNavComponent implements OnInit {
     private _dialog: NzModalService,
     private _settingSvc: SettingService,
     private _http: HttpService,
-    private _drawerStateService: DrawerStateService
-  ) {
-  }
+    private _iframeSvc: IframeCommunicationService,
+  ) {}
 
   get viewListSorted() {
     const viewList = [];
@@ -109,7 +108,7 @@ export class ElementNavComponent implements OnInit {
                 nzCentered: true,
                 nzContent: ElementSettingComponent,
                 nzTitle: this._i18n.instant('General'),
-                nzData: {type: 'general', name: 'General'},
+                nzData: { type: 'general', name: 'General' },
                 nzOnOk: cmp => cmp.onSubmit(),
                 nzCancelText: this._i18n.instant('Cancel'),
                 nzOkText: this._i18n.instant('Confirm')
@@ -125,7 +124,7 @@ export class ElementNavComponent implements OnInit {
                 nzContent: ElementSettingComponent,
                 nzWidth: '600px',
                 nzCentered: true,
-                nzData: {type: 'gui', name: 'GUI'},
+                nzData: { type: 'gui', name: 'GUI' },
                 nzOnOk: cmp => cmp.onSubmit(),
                 nzCancelText: this._i18n.instant('Cancel'),
                 nzOkText: this._i18n.instant('Confirm')
@@ -141,7 +140,7 @@ export class ElementNavComponent implements OnInit {
                 nzContent: ElementSettingComponent,
                 nzWidth: '600px',
                 nzCentered: true,
-                nzData: {type: 'cli', name: 'CLI'},
+                nzData: { type: 'cli', name: 'CLI' },
                 nzOnOk: cmp => cmp.onSubmit(),
                 nzCancelText: this._i18n.instant('Cancel'),
                 nzOkText: this._i18n.instant('Confirm')
@@ -162,6 +161,10 @@ export class ElementNavComponent implements OnInit {
           id: theme.name,
           click: () => {
             useTheme().switchTheme(theme.name);
+            this._iframeSvc.sendMessage({
+              name: 'CHANGE_MAIN_THEME',
+              data: theme.name
+            });
           },
           name: this._i18n.instant(theme.label)
         }))
@@ -207,9 +210,11 @@ export class ElementNavComponent implements OnInit {
           id: langObj.code,
           click: () => {
             this._i18n.use(langObj.code);
-            this._http.get(`/core/i18n/${langObj.code}/`, {responseType: 'text'}).subscribe((resp) => {
-              window.location.reload();
-            });
+            this._http
+              .get(`/core/i18n/${langObj.code}/`, { responseType: 'text' })
+              .subscribe(resp => {
+                window.location.reload();
+              });
           },
           name: langObj.name
         });
@@ -220,11 +225,5 @@ export class ElementNavComponent implements OnInit {
 
   onJumpUi() {
     window.open('/ui/', '_blank');
-  }
-
-  openChat() {
-    this._drawerStateService.sendComponentMessage({
-      name: 'SEND_CHAT_IFRAME'
-    });
   }
 }

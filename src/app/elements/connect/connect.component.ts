@@ -153,11 +153,12 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (connToken.protocol === 'k8s') {
-      const url = `${window.location.protocol}//${window.location.host}/luna/k8s/${connToken.id}?asset=${asset.id}`;
-      window.open(url);
-      return;
-    }
+    // if (connToken.protocol === 'k8s') {
+      // const url = `${window.location.protocol}//${window.location.host}/luna/k8s/${connToken.id}?asset=${asset.id}`;
+      // window.open(url);
+      // return;
+      // console.log('k8s', this.viewSrv)
+    // }
 
     // 分屏连接
     if (splitConnect) {
@@ -168,7 +169,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (connectMethod.value.endsWith('_guide')) {
       return this.createWebView(asset, connectInfo, connToken);
     }
+
     let appletConnectMethod = connectOption ? connectOption['appletConnectMethod'] : 'web';
+
     if (!this._settingSvc.hasXPack()) {
       appletConnectMethod = 'web';
     }

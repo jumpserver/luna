@@ -1,8 +1,8 @@
 import { Replay } from '@app/model';
-import { HttpService, I18nService, LogService } from '@app/services';
-import { TranslateService } from '@ngx-translate/core';
-import { ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
+import { HttpService, I18nService, LogService } from '@app/services';
+import { ChangeDetectorRef, Component, Input, OnInit, HostListener } from '@angular/core';
 
 export interface Section extends Replay {
   name: string;
@@ -38,6 +38,12 @@ export class ElementsPartsComponent implements OnInit {
 
   alertShown = true;
   videoLoading = false;
+  playlistCollapsed = false;
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event) {
+    this.cdRef.detectChanges();
+  }
 
   constructor(
     public _i18n: I18nService,
@@ -252,7 +258,7 @@ export class ElementsPartsComponent implements OnInit {
   getUserLang() {
     const userLangZh = document.cookie.indexOf('django_language=zh-hans');
 
-    if (userLangZh) {
+    if (userLangZh >= 0) {
       return 'zh-hans';
     } else {
       return 'en';
@@ -260,7 +266,17 @@ export class ElementsPartsComponent implements OnInit {
   }
 
   toSafeLocalDateStr(d) {
-    const date_s = d.toLocaleString(this.getUserLang(), { hour12: false });
+    let lang = this.getUserLang();
+
+    if (lang === 'zh-hans') {
+      lang = 'zh-CN';
+    }
+
+    const date_s = d.toLocaleString(lang, { hour12: false });
     return date_s.split('/').join('-');
+  }
+
+  togglePlaylist() {
+    this.playlistCollapsed = !this.playlistCollapsed;
   }
 }

@@ -1,39 +1,34 @@
 <div class="connect-type form-field">
-  <nz-form-label [nzNoColon]='true' class="zone-label">
-    {{ "Connect method" | translate }}
+  <nz-form-label [nzNoColon]="true" class="zone-label">
+    {{ 'Connect method' | translate }}
   </nz-form-label>
   <div *ngIf="connectMethodTypes.length > 0; else empty" class="connect-type-group">
     <nz-tabset
-            (nzSelectedIndexChange)="onConnectMethodTypeChange($event)"
-            [nzSelectedIndex]="currentConnectMethodTypeIndex()"
-            class="full-width-tabs"
+      (nzSelectedIndexChange)="onConnectMethodTypeChange($event)"
+      [nzSelectedIndex]="categoryIndex"
+      class="full-width-tabs"
     >
-      <nz-tab
-              *ngFor="let item of connectMethodTypes" [nzTitle]="titleTemplate"
-      >
+      <nz-tab *ngFor="let item of connectMethodTypes" [nzTitle]="titleTemplate">
         <ng-template #titleTemplate>
           <i [class]="'fa ' + item.fa"></i> {{ item.label }}
         </ng-template>
 
-        <nz-radio-group
-                [(ngModel)]="connectMethod"
-                class="connect-method"
-                name="connect-method"
-        >
-          <!--          <nz-radio-button *ngFor="let method of item['methods']" [disabled]="method.disabled" [value]="method">-->
+        <nz-radio-group [(ngModel)]="connectMethod" class="connect-method" name="connect-method">
           <label *ngFor="let method of item['methods']" [nzValue]="method" nz-radio>
             {{ method.label }}
 
-              <span nz-tooltip nzTooltipTitle="{{'Click to download rdp file'| translate}}">
-              <i (click)="downloadRDPFile(method)"
-                 *ngIf="canDownloadRDPFile(method)"
-                 class="fa fa-arrow-circle-down question"
+            <span nz-tooltip nzTooltipTitle="{{ 'Click to download rdp file' | translate }}">
+              <i
+                (click)="downloadRDPFile(method)"
+                *ngIf="canDownloadRDPFile(method)"
+                class="fa fa-arrow-circle-down question"
               ></i>
             </span>
-            <span nz-tooltip nzTooltipTitle="{{'Client Guide'| translate}}">
-              <i (click)="ChangeToGuidePage(method)"
-                 *ngIf="CanGuide(method)"
-                 class="fa fa-book question"
+            <span nz-tooltip nzTooltipTitle="{{ 'Client Guide' | translate }}">
+              <i
+                (click)="ChangeToGuidePage(method)"
+                *ngIf="CanGuide(method)"
+                class="fa fa-book question"
               ></i>
             </span>
           </label>
@@ -42,6 +37,9 @@
     </nz-tabset>
   </div>
   <ng-template #empty>
-    <nz-alert [nzMessage]="this._i18n.instant('No available connect method')" nzType="error"></nz-alert>
+    <nz-alert
+      [nzMessage]="this._i18n.instant('No available connect method')"
+      nzType="error"
+    ></nz-alert>
   </ng-template>
 </div>

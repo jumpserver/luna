@@ -89,7 +89,7 @@ export class ElementACLDialogComponent implements OnInit {
 
   async onCopySuccess(evt) {
     const msg = await this._i18n.t('Copied');
-    this._toastr.success(msg, '');
+    this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
     writeText(evt);
   }
 
@@ -119,7 +119,7 @@ export class ElementACLDialogComponent implements OnInit {
                 this.content = this.getDialogContent(this.code);
               } else {
                 const msg = await this._i18n.t('Face verify success');
-                this._toastr.success(msg, '');
+                this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
                 this.dialogRef.close(connToken);
                 this.faceService.openFaceMonitor();
               }
@@ -174,7 +174,7 @@ export class ElementACLDialogComponent implements OnInit {
                 this.content = this.getDialogContent(this.code);
               } else {
                 const msg = await this._i18n.t('Face verify success');
-                this._toastr.success(msg, '');
+                this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
                 this.dialogRef.close(connToken);
               }
             }
@@ -274,10 +274,12 @@ export class ElementACLDialogComponent implements OnInit {
             this.code = 'ticket_review_pending';
             return;
           }
+
           const state = ticket.state.value;
+
           if (state === 'approved') {
             const msg = await this._i18n.t('Login review approved');
-            this._toastr.success(msg, '');
+            this._toastr.success(msg, '', { nzClass: 'custom-success-notification' }  );
             this.dialogRef.close(this.connectionToken);
           } else if (state === 'rejected') {
             this.code = 'ticket_review_rejected';
@@ -360,7 +362,7 @@ export class ElementACLDialogComponent implements OnInit {
       },
       acl_face_online_not_supported: {
         title: 'Login reminder',
-        message: this.data.errorDetail,
+        message: 'FaceOnlineNotSupported',
         isError: true,
         actions: [
           {

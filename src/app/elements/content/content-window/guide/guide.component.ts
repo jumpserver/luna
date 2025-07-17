@@ -59,7 +59,7 @@ export class ElementConnectorGuideComponent implements OnInit {
         } else {
           msg = error.error.msg || error.error.is_reusable || error.message;
         }
-        this._toastr.error(msg, '', { nzDuration: 2000 });
+        this._toastr.error(msg, '', { nzDuration: 2000, nzClass: 'custom-error-notification' });
       }
     );
   }
@@ -82,7 +82,7 @@ export class ElementConnectorGuideComponent implements OnInit {
 
   async onCopySuccess(evt) {
     const msg = await this._i18n.t('Copied');
-    this._toastr.success(msg, '');
+    this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
   }
 
   onHoverClipRef(evt) {

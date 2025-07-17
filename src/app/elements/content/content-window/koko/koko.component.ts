@@ -75,7 +75,7 @@ export class ElementConnectorKokoComponent implements OnInit {
     }
 
     iframeWindow.postMessage(
-      { name: 'CREATE_FILE_CONNECT_TOKEN', SFTP_Token: newConnectToken.id },
+      { name: 'GET_FILE_CONNECT_TOKEN', token: newConnectToken.id },
       '*'
     );
   }

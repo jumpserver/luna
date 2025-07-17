@@ -4,16 +4,9 @@
       <elements-organization></elements-organization>
     </div>
 
-    <div
-      *ngIf="showTree"
-      class="my-assets"
-      [ngClass]="{ 'has-org': this._settingSvc.hasXPack() }"
-    >
+    <div *ngIf="showTree" class="my-assets" [ngClass]="{ 'has-org': hasXPack }">
       <div class="overflow ngx-scroll-overlay">
-        <elements-asset-tree
-          style="width: 100%"
-          #assetTree
-        ></elements-asset-tree>
+        <elements-asset-tree style="width: 100%" #assetTree></elements-asset-tree>
       </div>
     </div>
   </div>
@@ -23,11 +16,7 @@
         <i class="fa fa-sitemap"></i>
       </span>
     </div>
-    <div
-      (click)="item.click(item.name)"
-      *ngFor="let item of menus"
-      class="menu-item"
-    >
+    <div (click)="item.click(item.name)" *ngFor="let item of menus" class="menu-item">
       <span>
         <i [ngClass]="item.icon" class="fa"></i>
       </span>

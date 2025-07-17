@@ -48,24 +48,26 @@
     </div>
 
     <!-- 命令列表 -->
-    <div class="commands-area" *ngIf="commands.length > 0">
-      <div class="commands-header">
-        <span>{{ "Commands" | translate }} ({{ commands.length }})</span>
-      </div>
-      <div class="commands-list"
-           infiniteScroll
-           [infiniteScrollDistance]="2"
-           [infiniteScrollThrottle]="50"
-           (scrolled)="onScroll()"
-           [scrollWindow]="false">
-        <div class="command-item"
-             *ngFor="let item of commands"
-             (click)="commandClick(item)"
-             [title]="item.input">
-          <div class="command-text">{{ item.input }}</div>
-          <div class="command-time">{{ item.atime }}</div>
+    @if (commands && commands.length > 0) {
+      <div class="commands-area">
+        <div class="commands-header">
+          <span>{{ "Commands" | translate }} ({{ commands.length }})</span>
+        </div>
+        <div class="commands-list"
+             infiniteScroll
+             [infiniteScrollDistance]="2"
+             [infiniteScrollThrottle]="50"
+             (scrolled)="onScroll()"
+             [scrollWindow]="false">
+          <div class="command-item"
+               *ngFor="let item of commands"
+               (click)="commandClick(item)"
+               [title]="item.input">
+            <div class="command-text">{{ item.input }}</div>
+            <div class="command-time">{{ item.atime }}</div>
+          </div>
         </div>
       </div>
-    </div>
+    }
   </div>
 </div>

@@ -118,6 +118,8 @@ export class ElementAssetTreeComponent implements OnInit {
     const treeChecked = tree.setting && tree.setting.check && tree.setting.check.enable;
     const viewList = this._viewSrv.viewList;
 
+    const isK8s = cnode.meta.data.platform_type === 'k8s';
+
     return [
       {
         id: 'batch-connect',
@@ -130,7 +132,7 @@ export class ElementAssetTreeComponent implements OnInit {
         id: 'connect',
         name: 'Connect',
         fa: 'fa-terminal',
-        hide: cnode.isParent,
+        hide: cnode.isParent || isK8s,
         click: this.onMenuConnect.bind(this)
       },
       {
@@ -144,7 +146,7 @@ export class ElementAssetTreeComponent implements OnInit {
         id: 'split-connect',
         name: 'Split connect',
         fa: 'fa-columns',
-        hide: viewList.length <= 0 || cnode.isParent,
+        hide: viewList.length <= 0 || cnode.isParent || isK8s,
         click: this.onMenuConnect.bind(this, true)
       },
       {
@@ -221,21 +223,27 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   handleMenuClick(menu: any) {
-    console.log('menu', menu);
     menu.click();
     this.hideRMenu();
   }
 
   onNodeClick(event, treeId, treeNode, clickFlag) {
     const ztree = this.trees.find(t => t.name === treeId).ztree;
+
     if (treeNode.isParent) {
       ztree.expandNode(treeNode);
       return;
     }
+
     if (treeNode.chkDisabled) {
       this._message.warning(this._i18n.instant('DisabledAsset'));
       return;
     }
+
+    if (treeNode.meta.data.platform_type === 'k8s') {
+      return connectOnNewPage(treeNode, 'auto');
+    }
+
     if (this.isOpenNewWindow) {
       connectOnNewPage(treeNode, 'auto');
     } else {
@@ -574,13 +582,13 @@ export class ElementAssetTreeComponent implements OnInit {
         const i = this.favoriteAssets.indexOf(assetId);
         this.favoriteAssets.splice(i, 1);
         const msg = this._i18n.instant('Disfavor') + ' ' + this._i18n.instant('success');
-        this._toastr.success(msg, '');
+        this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
       });
     } else {
       this._http.favoriteAsset(assetId, true).subscribe(() => {
         this.favoriteAssets.push(assetId);
         const msg = this._i18n.instant('Favorite') + ' ' + this._i18n.instant('success');
-        this._toastr.success(msg, '');
+        this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
       });
     }
   }

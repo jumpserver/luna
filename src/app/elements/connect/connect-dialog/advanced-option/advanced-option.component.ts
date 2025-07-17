@@ -1,13 +1,13 @@
-import {Component, Input, OnChanges, OnInit} from '@angular/core';
-import {ConnectMethod, ConnectOption, GlobalSetting, Protocol, Setting} from '@app/model';
-import {resolutionsChoices} from '@app/globals';
-import {SettingService} from '@app/services';
+import { Component, Input, OnChanges, OnInit } from '@angular/core';
+import { ConnectMethod, ConnectOption, GlobalSetting, Protocol, Setting } from '@app/model';
+import { resolutionsChoices } from '@app/globals';
+import { SettingService } from '@app/services';
 
 @Component({
   standalone: false,
   selector: 'elements-advanced-option',
   templateUrl: 'advanced-option.component.html',
-  styleUrls: ['advanced-option.component.scss'],
+  styleUrls: ['advanced-option.component.scss']
 })
 export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
   @Input() protocol: Protocol;
@@ -19,8 +19,8 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
   public globalSetting: GlobalSetting;
   private allOptions: ConnectOption[] = [];
   private boolChoices = [
-    {label: 'Yes', value: true},
-    {label: 'No', value: false},
+    { label: 'Yes', value: true },
+    { label: 'No', value: false }
   ];
 
   constructor(public _settingSvc: SettingService) {
@@ -33,15 +33,18 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         label: 'Charset',
         hidden: () => {
           const protocolsCanCharset: Array<string> = ['ssh', 'telnet'];
-          return this.connectMethod && this.connectMethod.component !== 'koko' || !protocolsCanCharset.includes(this.protocol.name);
+          return (
+            (this.connectMethod && this.connectMethod.component !== 'koko') ||
+            !protocolsCanCharset.includes(this.protocol.name)
+          );
         },
         value: 'default',
         options: [
-          {label: 'Default', value: 'default'},
-          {label: 'UTF-8', value: 'utf8'},
-          {label: 'GBK', value: 'gbk'},
-          {label: 'GB2312', value: 'gb2312'},
-          {label: 'IOS-8859-1', value: 'ios-8859-1'},
+          { label: 'Default', value: 'default' },
+          { label: 'UTF-8', value: 'utf8' },
+          { label: 'GBK', value: 'gbk' },
+          { label: 'GB2312', value: 'gb2312' },
+          { label: 'IOS-8859-1', value: 'ios-8859-1' }
         ]
       },
       {
@@ -51,7 +54,10 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
           const protocolsCanAutoHash: Array<string> = ['mysql', 'mariadb'];
           if (this.connectMethod) {
             if (this.connectMethod.component === 'koko') {
-              return this.connectMethod.component !== 'koko' || !protocolsCanAutoHash.includes(this.protocol.name);
+              return (
+                this.connectMethod.component !== 'koko' ||
+                !protocolsCanAutoHash.includes(this.protocol.name)
+              );
             }
             if (this.connectMethod.component === 'chen') {
               return false;
@@ -67,7 +73,11 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         type: 'select',
         field: 'token_reusable',
         hidden: () => {
-          return !(this.connectMethod.component === 'magnus' && this.connectMethod.value === 'db_client' && this.globalSetting.CONNECTION_TOKEN_REUSABLE);
+          return !(
+            this.connectMethod.component === 'magnus' &&
+            this.connectMethod.value === 'db_client' &&
+            this.globalSetting.CONNECTION_TOKEN_REUSABLE
+          );
         },
         label: 'Set reusable',
         value: false,
@@ -80,7 +90,7 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
           const protocolsCanResolution: Array<string> = ['rdp'];
           return !protocolsCanResolution.includes(this.protocol.name);
         },
-        options: resolutionsChoices.map(i => ({label: i, value: i.toLowerCase()})),
+        options: resolutionsChoices.map(i => ({ label: i, value: i.toLowerCase() })),
         label: 'RDP resolution',
         value: this.setting.graphics.rdp_resolution || 'auto'
       },
@@ -98,8 +108,10 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         type: 'select',
         field: 'appletConnectMethod',
         options: [
-          {label: 'Web', value: 'web'},
-          ...(this.globalSetting.TERMINAL_RAZOR_ENABLED ? [{label: 'Client', value: 'client'}] : [])
+          { label: 'Web', value: 'web' },
+          ...(this.globalSetting.TERMINAL_RAZOR_ENABLED
+            ? [{ label: 'Client', value: 'client' }]
+            : [])
         ],
         label: 'Applet connect method',
         value: this.setting.graphics.applet_connection_method,
@@ -114,8 +126,8 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         type: 'select',
         field: 'virtualappConnectMethod',
         options: [
-          {label: 'Web', value: 'web'},
-          ...(true ? [{label: 'Client', value: 'client'}] : [])
+          { label: 'Web', value: 'web' },
+          ...(true ? [{ label: 'Client', value: 'client' }] : [])
         ],
         label: 'Virtualapp connect method',
         value: this.setting.graphics.applet_connection_method,
@@ -157,15 +169,16 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         },
         value: 'auto',
         options: [
-          {label: 'Auto', value: 'auto'},
-          {label: 'Low Speed Broadband (256 Kbps - 2 Mbps)', value: 'low_speed_broadband'},
-          {label: 'High-speed broadband (2 Mbps – 10 Mbps )', value: 'high_speed_broadband'},
+          { label: 'Auto', value: 'auto' },
+          { label: 'Low Speed Broadband (256 Kbps - 2 Mbps)', value: 'low_speed_broadband' },
+          { label: 'High-speed broadband (2 Mbps – 10 Mbps )', value: 'high_speed_broadband' }
         ]
       }
     ];
   }
 
   ngOnInit() {
+    this.checkOptions();
   }
 
   checkOptions() {
