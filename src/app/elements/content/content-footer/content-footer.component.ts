@@ -44,6 +44,12 @@ export class ElementContentFooterComponent implements OnInit, OnDestroy {
   ) {
   }
 
+  get showBatchCommand() {
+    return (
+      this.settingSvc.setting.commandExecution
+    );
+  }
+
   async ngOnInit() {
     this.viewList = this.viewSrv.viewList;
     this.viewListSub = this.viewSrv.connectViewCount$.subscribe(count => {
