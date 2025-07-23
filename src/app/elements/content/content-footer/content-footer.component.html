@@ -1,4 +1,4 @@
-<div class="content-footer">
+<div *ngIf="showBatchCommand" class="content-footer">
   <div *ngIf="showCommandZone" class="batch-command-zone">
     <div class="command-header">
       <button nzTrigger="click" [nzDropdownMenu]="menu" nz-button nz-dropdown
