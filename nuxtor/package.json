@@ -1,11 +1,11 @@
 {
-	"name": "nuxtor",
+	"name": "jump-server-client",
 	"type": "module",
 	"version": "1.4.0",
 	"private": true,
 	"packageManager": "pnpm@10.13.1",
-	"description": "Starter template for Nuxt 3 and Tauri 2",
-	"author": "Nicola Spadari",
+	"description": "JumpServer client tool",
+	"author": "ZhaoJiSen",
 	"license": "MIT",
 	"engines": {
 		"node": ">=23"

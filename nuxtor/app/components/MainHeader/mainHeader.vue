@@ -55,7 +55,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
     class="flex items-center justify-end w-full cursor-pointer"
     @mousedown="handleWindowDrag"
   >
-    <section class="flex items-center gap-3">
+    <section class="flex items-center gap-3 mr-6">
       <USelect
         v-model="currentLocale"
         :items="supportLanguages"
@@ -82,7 +82,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
         </template>
       </UPopover>
 
-      <UAvatar size="sm" src="https://github.com/benjamincanac.png" />
+      <!-- <UAvatar size="sm" src="https://github.com/benjamincanac.png" /> -->
     </section>
   </div>
 </template>
