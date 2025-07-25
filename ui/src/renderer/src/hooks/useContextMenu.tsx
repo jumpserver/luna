@@ -1,30 +1,28 @@
 import type { Ref } from 'vue';
-import type { DropdownOption, ConfigProviderProps } from 'naive-ui';
-import type { IListItem, IItemDetail } from '@renderer/components/MainSection/interface';
-import type { Permed_protocols, Permed_accounts } from '@renderer/components/MainSection/interface';
+import type { ConfigProviderProps, DropdownOption } from 'naive-ui';
+import type { IItemDetail, IListItem, Permed_accounts, Permed_protocols } from '@renderer/components/MainSection/interface';
 
+import { useI18n } from 'vue-i18n';
 import mittBus from '@renderer/eventBus';
-
+import { computed, nextTick, ref, watch } from 'vue';
+import { useAssetStore } from '@renderer/store/module/assetStore';
+import { useHistoryStore } from '@renderer/store/module/historyStore';
+import { useAccountModal } from '@renderer/components/MainSection/helper';
+import { Check, Eye, FileText, UserRoundCheck, UsersRound } from 'lucide-vue-next';
+import { createConnectToken, getAssetDetail, getLocalClientUrl } from '@renderer/api/modals/asset';
 import {
-  NFlex,
-  NText,
-  NScrollbar,
-  useLoadingBar,
+  createDiscreteApi,
+  darkTheme,
+  lightTheme,
   NDescriptions,
   NDescriptionsItem,
-  lightTheme,
-  darkTheme,
-  createDiscreteApi
+  NFlex,
+  NScrollbar,
+  NText,
+  useLoadingBar,
 } from 'naive-ui';
-import { useI18n } from 'vue-i18n';
-import { ref, computed, watch, nextTick } from 'vue';
-import { useElectronConfig } from './useElectronConfig';
-import { useAccountModal } from '@renderer/components/MainSection/helper';
-import { useAssetStore } from '@renderer/store/module/assetStore';
-import { createConnectToken, getAssetDetail, getLocalClientUrl } from '@renderer/api/modals/asset';
-import { useHistoryStore } from '@renderer/store/module/historyStore';
 
-import { Eye, FileText, UsersRound, UserRoundCheck, Check } from 'lucide-vue-next';
+import { useElectronConfig } from './useElectronConfig';
 
 export interface IConnectionData {
   asset: string;
@@ -64,38 +62,38 @@ export const useContextMenu = () => {
     {
       label: t('Common.AssetDetails'),
       icon: () => <Eye size={16} />,
-      key: 'asset-details'
+      key: 'asset-details',
     },
     {
       type: 'divider',
-      key: 'd1'
+      key: 'd1',
     },
     {
       label: t('Common.ConnectionProtocol'),
       key: 'optional-protocol',
       icon: () => <FileText size={16} />,
-      children: []
+      children: [],
     },
     {
       label: t('Common.AccountList'),
       key: 'available-account',
       icon: () => <UsersRound size={16} />,
-      children: []
-    }
+      children: [],
+    },
   ]);
 
-  getDefaultSetting().then(res => {
+  getDefaultSetting().then((res) => {
     if (res) {
       defaultTheme.value = res.theme;
     }
   });
 
   const configProviderPropsRef = computed<ConfigProviderProps>(() => ({
-    theme: defaultTheme.value === 'light' ? lightTheme : darkTheme
+    theme: defaultTheme.value === 'light' ? lightTheme : darkTheme,
   }));
 
   const { modal } = createDiscreteApi(['modal'], {
-    configProviderProps: configProviderPropsRef
+    configProviderProps: configProviderPropsRef,
   });
 
   const createModal = () => {
@@ -106,16 +104,20 @@ export const useContextMenu = () => {
       style: {
         width: '40rem',
         maxHeight: '80vh',
-        borderRadius: '10px'
+        borderRadius: '10px',
       },
       content: () => {
         return (
           <NScrollbar style="max-height: 60vh; overflow-y: auto;">
             <NDescriptions label-placement="left" column={1} bordered>
               <NDescriptionsItem label={t('Common.PlatformInfo')}>
-                {t('Common.PlatformID')}: {detailMessage?.value?.platform.id || ''}
+                {t('Common.PlatformID')}
+                :
+                {detailMessage?.value?.platform.id || ''}
                 <br />
-                {t('Common.PlatformName')}: {detailMessage?.value?.platform.name || ''}
+                {t('Common.PlatformName')}
+                :
+                {detailMessage?.value?.platform.name || ''}
               </NDescriptionsItem>
               <NDescriptionsItem label={t('Common.PlatformID')}>
                 {detailMessage?.value?.platform.id || ''}
@@ -127,30 +129,32 @@ export const useContextMenu = () => {
                 {detailMessage.value.connectivity.label}
               </NDescriptionsItem>
               <NDescriptionsItem label={t('Common.Category')}>
-                {detailMessage.value.nodes.map(node => {
+                {detailMessage.value.nodes.map((node) => {
                   return <div key={node.id}>{`${node.name} (ID: ${node.id})`}</div>;
                 })}
               </NDescriptionsItem>
               <NDescriptionsItem label={t('Common.Nodes')}>
-                {detailMessage.value.permed_protocols.map(protocol => {
+                {detailMessage.value.permed_protocols.map((protocol) => {
                   return (
                     <div key={protocol.name}>{`${protocol.name} (Port: ${protocol.port})`}</div>
                   );
                 })}
               </NDescriptionsItem>
               <NDescriptionsItem label={t('Common.PermedAccounts')}>
-                {detailMessage.value.permed_accounts.map(account => {
+                {detailMessage.value.permed_accounts.map((account) => {
                   return (
                     <div
                       key={account.id}
-                    >{`${account.name} (${account.username || t('Common.NoUsername')})`}</div>
+                    >
+                      {`${account.name} (${account.username || t('Common.NoUsername')})`}
+                    </div>
                   );
                 })}
               </NDescriptionsItem>
             </NDescriptions>
           </NScrollbar>
         );
-      }
+      },
     });
   };
 
@@ -179,7 +183,7 @@ export const useContextMenu = () => {
     if (token) {
       mittBus.emit('checkMatch', connectionData.value.protocol as string);
       historyStore.setHistorySession({ ...detailMessage.value });
-      getLocalClientUrl(token).then(res => {
+      getLocalClientUrl(token).then((res) => {
         if (res) {
           window.electron.ipcRenderer.send('open-client', res.url);
         }
@@ -206,14 +210,14 @@ export const useContextMenu = () => {
         if (!originalMessage?.account?.has_secret) {
           const { inputPassword, confirmed } = useAccountModal('@USER', t);
 
-          watch(confirmed, async newValue => {
+          watch(confirmed, async (newValue) => {
             if (newValue && inputPassword.value) {
               connectionData.value = {
                 asset: detailMessage.value.id,
                 account: '@USER',
                 protocol: assetStore.getAssetMap(detailMessage.value.id!)?.protocol?.key as string,
                 input_username: '',
-                input_secret: inputPassword.value
+                input_secret: inputPassword.value,
               };
 
               await handleConnection();
@@ -227,14 +231,14 @@ export const useContextMenu = () => {
 
         const { inputPassword, inputUsername, confirmed } = useAccountModal('@INPUT', t);
 
-        watch(confirmed, async newValue => {
+        watch(confirmed, async (newValue) => {
           if (newValue && inputUsername.value && inputPassword.value) {
             connectionData.value = {
               asset: detailMessage.value.id,
               account: '@INPUT',
               protocol: assetStore.getAssetMap(detailMessage.value.id!)?.protocol?.key as string,
               input_username: inputUsername.value,
-              input_secret: inputPassword.value
+              input_secret: inputPassword.value,
             };
 
             await handleConnection();
@@ -252,17 +256,17 @@ export const useContextMenu = () => {
           id: account ? account?.id : originalMessage?.account?.id,
           name: account ? account?.name : originalMessage?.account?.name,
           username: account ? account?.username : originalMessage?.account?.username,
-          secret_type: account ? account?.secret_type : originalMessage?.account?.secret_type
+          secret_type: account ? account?.secret_type : originalMessage?.account?.secret_type,
         },
         protocol: {
           type: 'render',
           key: protocol ? protocol.name : originalMessage?.protocol?.key,
-          label: protocol ? protocol.name : originalMessage?.protocol?.label
+          label: protocol ? protocol.name : originalMessage?.protocol?.label,
 
           // name: protocol ? protocol.name : originalMessage?.protocol?.name,
           // port: protocol ? protocol.port : originalMessage?.protocol?.port,
           // public: protocol ? protocol.public : originalMessage?.protocol?.public,
-        }
+        },
       };
 
       assetStore.setAssetMap(detailMessage.value.id!, newAssetMap);
@@ -272,7 +276,7 @@ export const useContextMenu = () => {
   const getAssetDetailMessage = async (
     item: IListItem,
     event: MouseEvent,
-    isQuickConnect: boolean = false
+    isQuickConnect: boolean = false,
   ): Promise<boolean | IAssetDetailMessageReturn> => {
     loadingBar.start();
     event.stopPropagation();
@@ -283,7 +287,7 @@ export const useContextMenu = () => {
 
       if (assetDetail) {
         // prettier-ignore
-        const accountMenuItem: DropdownOption = rightOptions.value.find( option => option.key === 'available-account')!;
+        const accountMenuItem: DropdownOption = rightOptions.value.find(option => option.key === 'available-account')!;
         // prettier-ignore
         const protocolMenuItem: DropdownOption = rightOptions.value.find(option => option.key === 'optional-protocol')!;
 
@@ -317,7 +321,7 @@ export const useContextMenu = () => {
               );
             },
             key: protocol.name,
-            label: protocol.name
+            label: protocol.name,
           })) as DropdownOption[];
 
         accountMenuItem!.children = [
@@ -343,10 +347,10 @@ export const useContextMenu = () => {
                           onClick={() => handleManualSelect(account, '')}
                         >
                           <NText class="min-w-40">
-                            {account.name +
-                              (account.alias === account.username || account.alias.startsWith('@')
+                            {account.name
+                              + (account.alias === account.username || account.alias.startsWith('@')
                                 ? ''
-                                : '(' + account.username + ')')}
+                                : `(${account.username})`)}
                           </NText>
                           {selectedAccount.value === account.id && (
                             <UserRoundCheck
@@ -359,8 +363,8 @@ export const useContextMenu = () => {
                   </NFlex>
                 </NScrollbar>
               );
-            }
-          }
+            },
+          },
         ] as DropdownOption[];
 
         if (!assetStore.getAssetMap(assetDetail.id!)) {
@@ -368,12 +372,12 @@ export const useContextMenu = () => {
           // 直接从 assetDetail.permed_accounts 中获取第一个符合条件的账号
           const firstNormalAccount = assetDetail.permed_accounts.find(
             (account: Permed_accounts) =>
-              account.alias !== '@USER' && account.alias !== '@INPUT' && account.alias !== '@ANON'
+              account.alias !== '@USER' && account.alias !== '@INPUT' && account.alias !== '@ANON',
           );
 
           // 获取第一个协议
           const firstProtocol = assetDetail.permed_protocols.find(
-            (protocol: Permed_protocols) => protocol.public
+            (protocol: Permed_protocols) => protocol.public,
           );
 
           if (firstNormalAccount && firstProtocol) {
@@ -386,18 +390,18 @@ export const useContextMenu = () => {
               id: firstNormalAccount.id,
               name: firstNormalAccount.name,
               username: firstNormalAccount.username,
-              secret_type: firstNormalAccount.secret_type
+              secret_type: firstNormalAccount.secret_type,
             };
 
             const protocolObject = {
               type: 'render',
               key: firstProtocol.name,
-              label: firstProtocol.name
+              label: firstProtocol.name,
             };
 
             assetStore.setAssetMap(detailMessage.value.id!, {
               account: accountObject,
-              protocol: protocolObject
+              protocol: protocolObject,
             });
 
             // 更新连接数据
@@ -406,54 +410,58 @@ export const useContextMenu = () => {
               account: firstNormalAccount.id,
               protocol: firstProtocol.name,
               input_username: firstNormalAccount.username || '',
-              input_secret: ''
+              input_secret: '',
             };
-          } else {
+          }
+          else {
             console.error('No suitable account or protocol found');
           }
-        } else {
+        }
+        else {
           const originalMessage = assetStore.getAssetMap(detailMessage.value.id!);
           // 只在快速连接时处理特殊账号类型
           if (
-            isQuickConnect &&
-            ['@USER', '@INPUT'].includes(originalMessage.account.alias as string)
+            isQuickConnect
+            && ['@USER', '@INPUT'].includes(originalMessage.account.alias as string)
           ) {
             if (originalMessage.account.alias === '@USER') {
               const { inputPassword, confirmed } = useAccountModal('@USER', t);
-              watch(confirmed, async newValue => {
+              watch(confirmed, async (newValue) => {
                 if (newValue && inputPassword.value) {
                   connectionData.value = {
                     asset: detailMessage.value.id,
                     account: '@USER',
                     protocol: originalMessage.protocol.key as string,
                     input_username: '',
-                    input_secret: inputPassword.value
+                    input_secret: inputPassword.value,
                   };
                   await handleConnection();
                 }
               });
-            } else {
+            }
+            else {
               const { inputPassword, inputUsername, confirmed } = useAccountModal('@INPUT', t);
-              watch(confirmed, async newValue => {
+              watch(confirmed, async (newValue) => {
                 if (newValue && inputUsername.value && inputPassword.value) {
                   connectionData.value = {
                     asset: detailMessage.value.id,
                     account: '@INPUT',
                     protocol: originalMessage.protocol.key as string,
                     input_username: inputUsername.value,
-                    input_secret: inputPassword.value
+                    input_secret: inputPassword.value,
                   };
                   await handleConnection();
                 }
               });
             }
-          } else {
+          }
+          else {
             connectionData.value = {
               asset: assetDetail.id,
               account: originalMessage.account.id as string,
               protocol: originalMessage.protocol.key as string,
               input_username: originalMessage.account.username as string,
-              input_secret: ''
+              input_secret: '',
             };
           }
         }
@@ -461,12 +469,14 @@ export const useContextMenu = () => {
 
       return Promise.resolve({
         id: detailMessage.value.id!,
-        detailMessage: detailMessage,
-        connectionData: connectionData
+        detailMessage,
+        connectionData,
       } as IAssetDetailMessageReturn);
-    } catch (e) {
+    }
+    catch (_e) {
       return Promise.resolve(false);
-    } finally {
+    }
+    finally {
       loadingBar.finish();
     }
   };
@@ -499,6 +509,6 @@ export const useContextMenu = () => {
   return {
     rightOptions,
     handleOptionSelect,
-    getAssetDetailMessage
+    getAssetDetailMessage,
   };
 };

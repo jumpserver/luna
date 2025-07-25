@@ -1,19 +1,20 @@
+import type { ConfigProviderProps } from 'naive-ui';
+import type { IOrganization, IUserInfo } from '@renderer/store/interface';
+
 import { useI18n } from 'vue-i18n';
-import { ref, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
+import mittBus from '@renderer/eventBus';
 import { useDebounceFn } from '@vueuse/core';
-import { useElectronConfig } from './useElectronConfig';
+import { computed, nextTick, ref } from 'vue';
+import { setUserRemoving } from '@renderer/api/index';
 import { getAvatarImage } from '@renderer/utils/common';
 import { useUserStore } from '@renderer/store/module/userStore';
 import { getSystemSetting } from '@renderer/api/modals/setting';
-import { createDiscreteApi, lightTheme, darkTheme } from 'naive-ui';
+import { createDiscreteApi, darkTheme, lightTheme } from 'naive-ui';
 import { useSettingStore } from '@renderer/store/module/settingStore';
-import { getProfile, getOrganization } from '@renderer/api/modals/user';
-import { setUserRemoving } from '@renderer/api/index';
-import mittBus from '@renderer/eventBus';
+import { getOrganization, getProfile } from '@renderer/api/modals/user';
 
-import type { ConfigProviderProps } from 'naive-ui';
-import type { IUserInfo, IOrganization } from '@renderer/store/interface';
+import { useElectronConfig } from './useElectronConfig';
 
 export const useUserAccount = () => {
   const { t } = useI18n();
@@ -263,7 +264,7 @@ export const useUserAccount = () => {
 
         router.push({ name: 'Linux' });
       }
-    } catch (e) {
+    } catch (_e) {
       showLoginModal.value = false;
     }
 
@@ -367,11 +368,11 @@ export const useUserAccount = () => {
             site: currentUser.currentSite,
             sessionId: currentUser.session,
             csrfToken: currentUser.csrfToken,
-            allCookies: allCookies
+            allCookies
           });
 
           if (result && result.success) {
-            console.log('Cookies恢复成功');
+            console.info('Cookies恢复成功');
             return true;
           } else {
             console.error('恢复cookies失败:', result?.error);
@@ -391,7 +392,7 @@ export const useUserAccount = () => {
   };
 
   return {
-    showLoginModal: showLoginModal,
+    showLoginModal,
     setNewAccount,
     switchAccount,
     removeAccount,

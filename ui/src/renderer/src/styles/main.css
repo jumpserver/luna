@@ -1,7 +1,4 @@
-@import '../../../../node_modules/normalize.css/normalize.css';
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
 .icon-hover {
   @apply cursor-pointer hover:text-[#1AB394] duration-300 transition-all ease-in-out;

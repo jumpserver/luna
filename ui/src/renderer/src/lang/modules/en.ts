@@ -66,12 +66,12 @@ export default {
     UnConnectable: 'UnConnectable',
     ConnectionTip:
       'Asset information is not directly linked to any account. To view the account list and related information, please right-click to retrieve them first.',
-    SearchPlaceholder: 'Search assets'
+    SearchPlaceholder: 'Search assets',
   },
   Dialog: {
     'Save&Default': 'Save And Default',
-    Cancel: 'Cancel',
-    Save: 'Save'
+    'Cancel': 'Cancel',
+    'Save': 'Save',
   },
   Router: {
     Terminal: 'Terminal',
@@ -83,10 +83,10 @@ export default {
     Back: 'Back',
     Favorite: 'Favorite',
     History: 'History',
-    Device: 'Device'
+    Device: 'Device',
   },
   Language: {
-    ChooseLanguage: 'Choose Language'
+    ChooseLanguage: 'Choose Language',
   },
   Setting: {
     Default: 'Default Configuration',
@@ -100,7 +100,7 @@ export default {
     Advanced: 'Advanced options',
     Charset: 'Charset:',
     BackspaceAsCtrlH: 'Terminal Backspace As Ctrl + H',
-    Resolution: 'Resolution:'
+    Resolution: 'Resolution:',
   },
   Message: {
     FailedRetrieveAssetDataList: 'Failed to Retrieve Asset Data List!',
@@ -137,6 +137,6 @@ export default {
     SwitchedToExistingAccount: 'Switched to existing account',
     LoginAuthenticationFailed: 'Login authentication has expired. Please log in again',
     NoAssetOrInactiveAsset: 'The current asset is not active or does not exist',
-    ConnectMethodNotSupport: 'Connect method not support'
-  }
+    ConnectMethodNotSupport: 'Connect method not support',
+  },
 };

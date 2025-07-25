@@ -4,17 +4,17 @@ const { notarize } = require('@electron/notarize');
 const {
   XCODE_APP_LOADER_EMAIL, // Apple ID
   XCODE_APP_LOADER_PASSWORD, // App 专用密码
-  XCODE_APP_TEAM_ID // Team ID
+  XCODE_APP_TEAM_ID, // Team ID
 } = process.env;
 
 async function main(context) {
   const { electronPlatformName, appOutDir } = context;
 
   if (
-    electronPlatformName !== 'darwin' ||
-    !XCODE_APP_LOADER_EMAIL ||
-    !XCODE_APP_LOADER_PASSWORD ||
-    !XCODE_APP_TEAM_ID
+    electronPlatformName !== 'darwin'
+    || !XCODE_APP_LOADER_EMAIL
+    || !XCODE_APP_LOADER_PASSWORD
+    || !XCODE_APP_TEAM_ID
   ) {
     console.log('Skipping Apple notarization.');
     return;
@@ -28,7 +28,7 @@ async function main(context) {
     teamId: XCODE_APP_TEAM_ID,
     appleId: XCODE_APP_LOADER_EMAIL,
     appleIdPassword: XCODE_APP_LOADER_PASSWORD,
-    tool: 'notarytool'
+    tool: 'notarytool',
   });
 
   console.log('Finished Apple notarization.');

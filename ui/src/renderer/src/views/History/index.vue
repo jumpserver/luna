@@ -1,13 +1,7 @@
-<template>
-  <n-spin :show="loadingStatus" class="w-full h-[80%]">
-    <MainSection v-if="isAuthenticated" :list-data="listData" :class="''" />
-  </n-spin>
-</template>
-
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, computed } from 'vue';
-import { useUserStore } from '@renderer/store/module/userStore';
 import mittBus from '@renderer/eventBus';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useUserStore } from '@renderer/store/module/userStore';
 import MainSection from '@renderer/components/MainSection/index.vue';
 import { useHistoryStore } from '@renderer/store/module/historyStore';
 
@@ -36,7 +30,6 @@ const getHistoriesFromCache = async (searchInput?: string) => {
     listData.value = [];
   }
   loadingStatus.value = true;
-  // @ts-ignore
   listData.value = historyStore.getHistorySession(searchInput);
   loadingStatus.value = false;
 };
@@ -50,6 +43,12 @@ onBeforeUnmount(() => {
   mittBus.off('search', getHistoriesFromCache);
 });
 </script>
+
+<template>
+  <n-spin :show="loadingStatus" class="w-full h-[80%]">
+    <MainSection v-if="isAuthenticated" :list-data="listData" class="" />
+  </n-spin>
+</template>
 
 <style scoped lang="scss">
 :deep(.n-dropdown-option) {

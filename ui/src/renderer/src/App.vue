@@ -1,40 +1,18 @@
-<template>
-  <n-config-provider
-    :locale="defaultLang === 'zh' ? zhCN : enUS"
-    :theme="defaultTheme === 'dark' ? darkTheme : lightTheme"
-    :class="defaultTheme === 'dark' ? 'theme-dark' : 'theme-light'"
-    :theme-overrides="defaultTheme === 'dark' ? darkThemeOverrides : lightThemeOverrides"
-  >
-    <n-modal-provider>
-      <n-message-provider>
-        <div class="custom-header ele_drag bg-primary border-b-primary border-b">
-          <div class="logo">
-            <img :src="iconImage" alt="" />
-            <span class="title text-primary">JumpServer Client</span>
-          </div>
-        </div>
-        <LoginModal :show-modal="showLoginModal" @close-mask="handleModalOpacity" />
-        <router-view />
-      </n-message-provider>
-    </n-modal-provider>
-  </n-config-provider>
-</template>
-
 <script setup lang="ts">
-import mittBus from './eventBus';
-import LoginModal from './components/LoginModal/index.vue';
+import type { ConfigProviderProps } from 'naive-ui';
 
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
+import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
+import { createDiscreteApi, darkTheme, enUS, lightTheme, zhCN } from 'naive-ui';
+
+import mittBus from './eventBus';
 import { useUserStore } from './store/module/userStore';
 import { useUserAccount } from './hooks/useUserAccount';
+import LoginModal from './components/LoginModal/index.vue';
 import { useElectronConfig } from './hooks/useElectronConfig';
-import { getIconImage, getAvatarImage } from './utils/common';
+import { getAvatarImage, getIconImage } from './utils/common';
 import { darkThemeOverrides, lightThemeOverrides } from './overrides';
-import { computed, watch, onBeforeUnmount, onMounted, ref, provide } from 'vue';
-import { darkTheme, enUS, zhCN, lightTheme, createDiscreteApi } from 'naive-ui';
-
-import type { ConfigProviderProps } from 'naive-ui';
 
 const { t, locale } = useI18n();
 const { getDefaultSetting, setDefaultSetting } = useElectronConfig();
@@ -45,7 +23,7 @@ const {
   switchAccount,
   handleModalOpacity,
   handleCredentialsReceived,
-  restoreSavedCookies
+  restoreSavedCookies,
 } = useUserAccount();
 
 const router = useRouter();
@@ -57,7 +35,7 @@ const iconImage = ref<string>('');
 const avatarImage = ref<string | null>(null);
 
 const configProviderPropsRef = computed<ConfigProviderProps>(() => ({
-  theme: defaultTheme.value === 'light' ? lightTheme : darkTheme
+  theme: defaultTheme.value === 'light' ? lightTheme : darkTheme,
 }));
 
 provide('setNewAccount', setNewAccount);
@@ -66,15 +44,15 @@ provide('switchAccount', switchAccount);
 
 watch(
   () => defaultLang.value,
-  nv => {
+  (nv) => {
     if (nv) {
       locale.value = nv;
     }
-  }
+  },
 );
 
 const { notification } = createDiscreteApi(['notification'], {
-  configProviderProps: configProviderPropsRef
+  configProviderProps: configProviderPropsRef,
 });
 
 /**
@@ -130,11 +108,12 @@ onMounted(async () => {
 
     defaultTheme.value = theme;
     defaultLang.value = language;
-  } catch (e) {
+  }
+  catch (e) {
     notification.create({
       type: 'info',
       content: t('Message.GetDefaultSettingFailed'),
-      duration: 2000
+      duration: 2000,
     });
   }
 
@@ -143,25 +122,25 @@ onMounted(async () => {
     const savedCookiesResult = await window.electron.ipcRenderer.invoke('get-all-saved-cookies');
 
     if (
-      savedCookiesResult.success &&
-      savedCookiesResult.data &&
-      savedCookiesResult.data.length > 0
+      savedCookiesResult.success
+      && savedCookiesResult.data
+      && savedCookiesResult.data.length > 0
     ) {
       // 如果存在已保存的cookies，但userStore中没有用户信息，则尝试从最新的cookies恢复
       if (
-        (!userStore.userInfo || userStore.userInfo.length === 0) &&
-        savedCookiesResult.data.length > 0
+        (!userStore.userInfo || userStore.userInfo.length === 0)
+        && savedCookiesResult.data.length > 0
       ) {
         // 按时间戳排序，使用最新的cookies
         const latestCookieInfo = savedCookiesResult.data.sort(
-          (a, b) => b.timestamp - a.timestamp
+          (a, b) => b.timestamp - a.timestamp,
         )[0];
 
         // 尝试恢复最新的用户会话
         const cookies = await window.electron.ipcRenderer.invoke(
           'get-site-cookies',
           latestCookieInfo.site,
-          latestCookieInfo.sessionId
+          latestCookieInfo.sessionId,
         );
 
         if (cookies && cookies.length > 0) {
@@ -172,14 +151,15 @@ onMounted(async () => {
             csrfToken: '', // 将从cookies中获取
             username: 'Restored User',
             display_name: ['Restored User'],
-            avatar_url: null
+            avatar_url: null,
           };
 
           userStore.setCurrentUser(mockUser);
         }
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('加载已保存的cookies失败:', error);
   }
 
@@ -188,10 +168,10 @@ onMounted(async () => {
 
   // 检查是否需要显示登录框
   if (
-    !userStore.session ||
-    !userStore.userInfo ||
-    userStore.userInfo.length <= 0 ||
-    !cookiesRestored
+    !userStore.session
+    || !userStore.userInfo
+    || userStore.userInfo.length <= 0
+    || !cookiesRestored
   ) {
     // 如果cookies恢复失败，清理可能的残留状态
     if (!cookiesRestored && userStore.userInfo && userStore.userInfo.length > 0) {
@@ -200,7 +180,8 @@ onMounted(async () => {
     }
 
     handleModalOpacity();
-  } else {
+  }
+  else {
     // 如果有用户信息且cookies恢复成功，导航到主页面
     router.push({ name: 'Linux' });
   }
@@ -209,7 +190,7 @@ onMounted(async () => {
   window.electron.ipcRenderer.on(
     'set-login-credentials',
     (_e, credentials: { session: string; csrfToken: string; site: string }) =>
-      handleCredentialsReceived(credentials)
+      handleCredentialsReceived(credentials),
   );
 
   mittBus.on('changeLang', handleLangChange);
@@ -221,6 +202,29 @@ onBeforeUnmount(() => {
   mittBus.off('changeTheme', handleThemeChange);
 });
 </script>
+
+<template>
+  <n-config-provider
+    :locale="defaultLang === 'zh' ? zhCN : enUS"
+    :theme="defaultTheme === 'dark' ? darkTheme : lightTheme"
+    :class="defaultTheme === 'dark' ? 'theme-dark' : 'theme-light'"
+    :theme-overrides="defaultTheme === 'dark' ? darkThemeOverrides : lightThemeOverrides"
+  >
+    <n-modal-provider>
+      <n-message-provider>
+        <!-- <div class="custom-header ele_drag bg-primary border-b-primary border-b">
+          <div class="logo">
+            <img :src="iconImage" alt="" />
+            <span class="title text-primary">JumpServer Client</span>
+          </div>
+        </div> -->
+        <!-- <CustomHeader /> -->
+        <LoginModal :show-modal="showLoginModal" @close-mask="handleModalOpacity" />
+        <router-view />
+      </n-message-provider>
+    </n-modal-provider>
+  </n-config-provider>
+</template>
 
 <style scoped lang="scss">
 .n-config-provider {

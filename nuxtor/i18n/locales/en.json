@@ -1,0 +1,22 @@
+{
+	"ToolTips": {
+		"LightMode": "Light Mode",
+		"DarkMode": "Dark Mode",
+		"SwitchLanguage": "Switch Language",
+		"Sort": "Sort",
+		"Refresh": "Refresh"
+	},
+	"Menu": {
+		"Linux": "Linux",
+		"Other": "Other",
+		"Device": "Device",
+		"Player": "Player",
+		"Windows": "Windows",
+		"Resource": "Resource",
+		"Database": "Database",
+		"Favorite": "Favorite"
+	},
+	"Operation": {
+		"Search": "Asset Search"
+	}
+}

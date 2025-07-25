@@ -1,9 +1,8 @@
-import { defineStore } from 'pinia';
-import { IUserInfo } from '@renderer/store/interface';
-import { piniaPersistConfig } from '@renderer/store/helper';
-import { updateUserSwitchTime } from '@renderer/api/index';
+import type { IOrganization, IUser, IUserInfo } from '@renderer/store/interface';
 
-import type { IUser, IOrganization } from '@renderer/store/interface';
+import { defineStore } from 'pinia';
+import { updateUserSwitchTime } from '@renderer/api/index';
+import { piniaPersistConfig } from '@renderer/store/helper';
 
 export const useUserStore = defineStore('client-user', {
   state: (): Partial<IUser> => ({
@@ -17,7 +16,7 @@ export const useUserStore = defineStore('client-user', {
 
     userInfo: [],
     organization: [],
-    currentUser: {}
+    currentUser: {},
   }),
   actions: {
     setSession(session: string) {
@@ -31,12 +30,13 @@ export const useUserStore = defineStore('client-user', {
     },
     setUserInfo(userInfo: IUserInfo) {
       const existingUserIndex = this.userInfo!.findIndex(
-        (item: IUserInfo) => item.session === userInfo.session
+        (item: IUserInfo) => item.session === userInfo.session,
       );
 
       if (existingUserIndex !== -1) {
         this.userInfo![existingUserIndex] = { ...this.userInfo![existingUserIndex], ...userInfo };
-      } else {
+      }
+      else {
         this.userInfo!.push(userInfo);
       }
     },
@@ -55,7 +55,7 @@ export const useUserStore = defineStore('client-user', {
     },
     removeCurrentUser() {
       this.userInfo = this.userInfo!.filter(
-        (item: IUserInfo) => item.session !== this.currentUser!.session
+        (item: IUserInfo) => item.session !== this.currentUser!.session,
       );
     },
     async switchAccount(targetSession: string) {
@@ -80,14 +80,15 @@ export const useUserStore = defineStore('client-user', {
 
           // 恢复cookies和拦截器
           await this.restoreUserCookies(user);
-        } else {
+        }
+        else {
           console.error('找不到要切换的用户:', targetSession);
         }
       }
     },
     async removeUserBySession(sessionToRemove: string) {
       const userToRemove = this.userInfo!.find(
-        (item: IUserInfo) => item.session === sessionToRemove
+        (item: IUserInfo) => item.session === sessionToRemove,
       );
 
       if (!userToRemove) {
@@ -106,14 +107,15 @@ export const useUserStore = defineStore('client-user', {
         await window.electron.ipcRenderer.invoke(
           'clear-site-cookies',
           userToRemove.currentSite,
-          sessionToRemove
+          sessionToRemove,
         );
         await window.electron.ipcRenderer.invoke(
           'clear-user-interceptor',
           userToRemove.currentSite,
-          sessionToRemove
+          sessionToRemove,
         );
-      } catch (error) {
+      }
+      catch (error) {
         console.error('清理用户数据失败:', error);
       }
 
@@ -130,21 +132,22 @@ export const useUserStore = defineStore('client-user', {
         const allCookies = await window.electron.ipcRenderer.invoke(
           'get-site-cookies',
           user.currentSite,
-          user.session
+          user.session,
         );
 
         const result = await window.electron.ipcRenderer.invoke('restore-cookies', {
           site: user.currentSite,
           sessionId: user.session,
           csrfToken: user.csrfToken || '',
-          allCookies: allCookies
+          allCookies,
         });
 
         if (!result.success) {
           console.error('恢复cookies失败:', result.error);
           throw new Error(result.error);
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.error('恢复用户cookies失败:', error);
         throw error;
       }
@@ -158,7 +161,7 @@ export const useUserStore = defineStore('client-user', {
         is_default: orgInfo.is_default,
         is_root: orgInfo.is_root,
         is_system: orgInfo.is_system,
-        name: orgInfo.name
+        name: orgInfo.name,
       });
     },
     setCurrentOrganization(orgId: string) {
@@ -176,7 +179,7 @@ export const useUserStore = defineStore('client-user', {
     resetOrganization() {
       this.currentOrganization = '';
       this.organization = [];
-    }
+    },
   },
-  persist: piniaPersistConfig('client-user')
+  persist: piniaPersistConfig('client-user'),
 });

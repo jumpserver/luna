@@ -1,0 +1,59 @@
+{
+	"name": "nuxtor",
+	"type": "module",
+	"version": "1.4.0",
+	"private": true,
+	"packageManager": "pnpm@10.13.1",
+	"description": "Starter template for Nuxt 3 and Tauri 2",
+	"author": "Nicola Spadari",
+	"license": "MIT",
+	"engines": {
+		"node": ">=23"
+	},
+	"scripts": {
+		"dev": "nuxt dev",
+		"generate": "nuxt generate",
+		"preinstall": "npx only-allow pnpm",
+		"postinstall": "nuxt prepare",
+		"lint": "eslint . --fix",
+		"bump": "bumpp",
+		"tauri": "tauri",
+		"tauri:dev": "tauri dev",
+		"tauri:build": "tauri build",
+		"tauri:build:debug": "tauri build --debug"
+	},
+	"dependencies": {
+		"@fortawesome/free-brands-svg-icons": "^7.0.0",
+		"@fortawesome/free-regular-svg-icons": "^7.0.0",
+		"@fortawesome/free-solid-svg-icons": "^7.0.0",
+		"@nuxt/ui": "^3.2.0",
+		"@nuxtjs/i18n": "10.0.2",
+		"@pinia/nuxt": "^0.11.2",
+		"@tauri-apps/api": "^2.6.0",
+		"@tauri-apps/plugin-fs": "^2.4.0",
+		"@tauri-apps/plugin-notification": "^2.3.0",
+		"@tauri-apps/plugin-os": "^2.3.0",
+		"@tauri-apps/plugin-shell": "^2.3.0",
+		"@tauri-apps/plugin-store": "^2.3.0",
+		"@vesp/nuxt-fontawesome": "2.0.0-rc.2",
+		"nuxt": "^4.0.0",
+		"pinia": "^3.0.3",
+		"vue": "^3.5.17",
+		"vue-router": "^4.5.1",
+		"zod": "^4.0.5"
+	},
+	"devDependencies": {
+		"@antfu/eslint-config": "^4.17.0",
+		"@nuxt/eslint": "^1.5.2",
+		"@tauri-apps/cli": "^2.6.2",
+		"@vueuse/core": "^13.5.0",
+		"@vueuse/nuxt": "^13.5.0",
+		"bumpp": "^10.2.0",
+		"eslint": "^9.31.0",
+		"nuxt-svgo": "^4.2.4",
+		"typescript": "^5.8.3"
+	},
+	"resolutions": {
+		"typescript": "npm:tslite@latest"
+	}
+}

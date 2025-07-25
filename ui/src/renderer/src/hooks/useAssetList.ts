@@ -1,11 +1,11 @@
+import type { Ref } from 'vue';
+import type { IListItem, ITypeObject } from '@renderer/components/MainSection/interface';
+
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useLoadingBar, useMessage } from 'naive-ui';
 import { useUserStore } from '@renderer/store/module/userStore';
 import { getAssets, getFavoriteAssets } from '@renderer/api/modals/asset';
-
-import type { Ref } from 'vue';
-import type { IListItem, ITypeObject } from '@renderer/components/MainSection/interface';
 
 export function useAssetList(type: string) {
   const { t } = useI18n();
@@ -39,18 +39,20 @@ export function useAssetList(type: string) {
     offset: 0,
     limit: 20,
     search: '',
-    order: userStore.sort
+    order: userStore.sort,
   });
 
   const handleScroll = async () => {
-    if (!hasMore.value || loadingStatus.value) return;
+    if (!hasMore.value || loadingStatus.value)
+      return;
 
     params.value.offset += 20;
     params.value.order = userStore.sort;
 
     try {
       await getAssetsFromServer();
-    } catch (e) {
+    }
+    catch (e) {
       message.error(`${t('Message.ListErrorOccurred')}`, { closable: true });
     }
   };
@@ -85,25 +87,29 @@ export function useAssetList(type: string) {
 
         if (params.value.offset === 0) {
           listData.value = results;
-        } else {
+        }
+        else {
           listData.value = [...listData.value, ...results];
         }
 
         hasMore.value = listData.value.length < total;
         loadingStatus.value = false;
-      } else {
+      }
+      else {
         hasMore.value = false;
         loadingStatus.value = false;
 
         message.error(`${t('Message.FailedRetrieveAssetDataList')}`, {
           closable: true,
-          duration: 5000
+          duration: 5000,
         });
       }
-    } catch (e) {
+    }
+    catch (e) {
       hasMore.value = false;
       loadingStatus.value = false;
-    } finally {
+    }
+    finally {
       loadingBar.finish();
     }
   };
@@ -115,26 +121,27 @@ export function useAssetList(type: string) {
       params.value = {
         ...params.value,
         offset: 0,
-        order: userStore.sort
+        order: userStore.sort,
       };
       listData.value = [];
       hasMore.value = true;
       getAssetsFromServer('reset');
-    }
+    },
   );
 
   // 监听用户信息变化
   watch(
     () => userStore.userInfo,
-    userInfo => {
+    (userInfo) => {
       if (userInfo && userInfo.length === 0) {
         listData.value = [];
         userStore.setSession('');
-      } else {
+      }
+      else {
         getAssetsFromServer('reset');
       }
     },
-    { immediate: true }
+    { immediate: true },
   );
 
   return {
@@ -142,6 +149,6 @@ export function useAssetList(type: string) {
     loadingStatus,
     listData,
     handleScroll,
-    getAssetsFromServer
+    getAssetsFromServer,
   };
 }

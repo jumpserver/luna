@@ -1,7 +1,9 @@
+import { Buffer } from 'node:buffer';
+
 import * as CryptoJS from 'crypto-js';
-import { getCsrfTokenFromCookie, getCookie } from './common';
-import { Buffer } from 'buffer';
 import { JSEncrypt } from 'jsencrypt';
+
+import { getCookie, getCsrfTokenFromCookie } from './common';
 
 export function fillKey(key: string): Buffer | string {
   const KeyLength = 16;
@@ -20,7 +22,7 @@ export function aesEncrypt(text: string, originKey: string): string {
   const key = CryptoJS.enc.Utf8.parse(fillKey(originKey));
   return CryptoJS.AES.encrypt(text, key, {
     mode: CryptoJS.mode.ECB,
-    padding: CryptoJS.pad.ZeroPadding
+    padding: CryptoJS.pad.ZeroPadding,
   }).toString();
 }
 
@@ -28,7 +30,7 @@ export function aesDecrypt(cipherText: string, originKey: string): string {
   const key = CryptoJS.enc.Utf8.parse(fillKey(originKey));
   const bytes = CryptoJS.AES.decrypt(cipherText, key, {
     mode: CryptoJS.mode.ECB,
-    padding: CryptoJS.pad.ZeroPadding
+    padding: CryptoJS.pad.ZeroPadding,
   });
   return CryptoJS.enc.Utf8.stringify(bytes);
 }
@@ -36,7 +38,7 @@ export function aesDecrypt(cipherText: string, originKey: string): string {
 export function aesEncryptByCsrf(text: string): string {
   const key = getCsrfTokenFromCookie();
   if (!key) {
-    console.log('Not found csrf connectToken');
+    console.error('Not found csrf connectToken');
   }
   return aesEncrypt(text, key);
 }
@@ -44,7 +46,7 @@ export function aesEncryptByCsrf(text: string): string {
 export function aesDecryptByCsrf(cipherText: string): string {
   const key = getCsrfTokenFromCookie();
   if (!key) {
-    console.log('Not found csrf connectToken');
+    console.error('Not found csrf connectToken');
   }
   return aesDecrypt(cipherText, key);
 }

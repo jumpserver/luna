@@ -1,16 +1,8 @@
-<template>
-  <MainSection
-    :list-data="listData"
-    :class="active ? 'show-drawer' : ''"
-    @load-more="handleScroll"
-  />
-</template>
-
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue';
 import mittBus from '@renderer/eventBus';
-import MainSection from '@renderer/components/MainSection/index.vue';
+import { onBeforeUnmount, onMounted } from 'vue';
 import { useAssetList } from '@renderer/hooks/useAssetList';
+import MainSection from '@renderer/components/MainSection/index.vue';
 
 defineProps<{
   active: boolean;
@@ -26,6 +18,14 @@ onBeforeUnmount(() => {
   mittBus.off('search', getAssetsFromServer);
 });
 </script>
+
+<template>
+  <MainSection
+    :list-data="listData"
+    :class="active ? 'show-drawer' : ''"
+    @load-more="handleScroll"
+  />
+</template>
 
 <style scoped>
 :deep(.n-dropdown-option) {

@@ -1,24 +1,23 @@
-import mittBus from '@renderer/eventBus';
+import type { VNodeChild } from 'vue';
+import type { SelectOption } from 'naive-ui';
 
 import { useI18n } from 'vue-i18n';
-import { NPopselect, NIcon, NFlex, useMessage } from 'naive-ui';
-import { ref, VNodeChild, watch, onMounted, defineComponent } from 'vue';
-
+import mittBus from '@renderer/eventBus';
+import { Layout2 } from '@vicons/tabler';
 import { MdSettings } from '@vicons/ionicons4';
 import { DownloadOutlined } from '@vicons/antd';
 import { CicsSystemGroup } from '@vicons/carbon';
-import { Layout2, Moon, Sun } from '@vicons/tabler';
+import { RefreshSharp } from '@vicons/ionicons5';
+import { defineComponent, onMounted, ref, watch } from 'vue';
 import { GridViewRound, SortOutlined } from '@vicons/material';
+import { NFlex, NIcon, NPopselect, useMessage } from 'naive-ui';
+import { useUserStore } from '@renderer/store/module/userStore';
 import { ListUl, SortAlphaUp, SortAlphaUpAlt } from '@vicons/fa';
-import { RefreshSharp, LanguageOutline } from '@vicons/ionicons5';
-import { CalendarRtl48Filled, CalendarLtr48Filled } from '@vicons/fluent';
+import { useElectronConfig } from '@renderer/hooks/useElectronConfig';
+import { CalendarLtr48Filled, CalendarRtl48Filled } from '@vicons/fluent';
 
 import { createLabel } from './index';
 import { layoutOption, sortOption } from '../config';
-import { useUserStore } from '@renderer/store/module/userStore';
-import { useElectronConfig } from '@renderer/hooks/useElectronConfig';
-
-import type { SelectOption } from 'naive-ui';
 
 export const RightIconZone = defineComponent({
   name: 'RightIconZone',
@@ -37,7 +36,8 @@ export const RightIconZone = defineComponent({
         const { layout, theme } = await getDefaultSetting();
         currentTheme.value = theme;
         popLayoutSelectValue.value = layout;
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Failed to initialize settings:', error);
       }
     };
@@ -48,7 +48,7 @@ export const RightIconZone = defineComponent({
 
     watch(
       () => userStore.sort,
-      type => {
+      (type) => {
         switch (type) {
           case 'name': {
             popSortSelectValue.value = 'name';
@@ -68,7 +68,7 @@ export const RightIconZone = defineComponent({
           }
         }
       },
-      { immediate: true }
+      { immediate: true },
     );
 
     const handleUpdateValue = (value: string) => {
@@ -195,5 +195,5 @@ export const RightIconZone = defineComponent({
         <NIcon size="20" component={MdSettings} class="icon-hover" onClick={handleGlobalSetting} />
       </NFlex>
     );
-  }
+  },
 });

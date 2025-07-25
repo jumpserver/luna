@@ -1,105 +1,77 @@
-import { renderIcon } from '@renderer/layouts/components/HeaderSection/helper';
-import { useI18n } from 'vue-i18n';
-import { h } from 'vue';
-import { defineComponent, PropType } from 'vue';
-
-import { BrandWindows, Database, Terminal2, Star } from '@vicons/tabler';
-import { NFlex, NAvatar, NText, NButton, NModal } from 'naive-ui';
-import { Trash2 } from 'lucide-vue-next';
-import { Devices } from '@vicons/carbon';
-import { RouterLink } from 'vue-router';
-import { setUserRemoving } from '@renderer/api/index';
-
+import type { PropType } from 'vue';
 import type { MenuOption, SelectOption } from 'naive-ui';
+
+import { useI18n } from 'vue-i18n';
+import { RouterLink } from 'vue-router';
+import { defineComponent, h } from 'vue';
+import { setUserRemoving } from '@renderer/api/index';
+import SvgIcon from '@renderer/components/SvgIcon/index.vue';
+import { Ellipsis, Layers, Star, Trash2 } from 'lucide-vue-next';
+import { NAvatar, NButton, NFlex, NModal, NText } from 'naive-ui';
 
 export const menuOptions = () => {
   const { t } = useI18n();
 
   return [
     {
-      label: () =>
-        h(
-          RouterLink,
-          {
-            to: {
-              name: 'Linux'
-            }
-          },
-          { default: () => 'Linux' }
-        ),
-      key: 'linux-page',
-      icon: renderIcon(Terminal2)
+      label: '资源目录',
+      key: 'resource-directory',
+      icon: () => <Layers size={16} />,
+      children: [
+        {
+          label: () => (
+            <RouterLink to={{ name: 'Linux' }}>
+              <span>Linux</span>
+            </RouterLink>
+          ),
+          key: 'linux-page',
+          icon: () => <SvgIcon iconName="icon-linux" />
+        },
+        {
+          label: () => (
+            <RouterLink to={{ name: 'Windows' }}>
+              <span>Windows</span>
+            </RouterLink>
+          ),
+          key: 'windows-page',
+          icon: () => <SvgIcon iconName="icon-windows" />
+        },
+        {
+          label: () => (
+            <RouterLink to={{ name: 'Database' }}>
+              <span>Database</span>
+            </RouterLink>
+          ),
+          key: 'database-page',
+          icon: () => <SvgIcon iconName="icon-database" />
+        },
+        {
+          label: () => (
+            <RouterLink to={{ name: 'Device' }}>
+              <span>Device</span>
+            </RouterLink>
+          ),
+          key: 'device-page',
+          icon: () => <SvgIcon iconName="icon-devices" />
+        }
+      ]
     },
     {
-      label: () =>
-        h(
-          RouterLink,
-          {
-            to: {
-              name: 'Windows'
-            }
-          },
-          { default: () => 'Windows' }
-        ),
-      key: 'windows-page',
-      icon: renderIcon(BrandWindows)
-    },
-    {
-      label: () =>
-        h(
-          RouterLink,
-          {
-            to: {
-              name: 'Database'
-            }
-          },
-          { default: () => t('Router.Database') }
-        ),
-      key: 'database-page',
-      icon: renderIcon(Database)
-    },
-    {
-      label: () =>
-        h(
-          RouterLink,
-          {
-            to: {
-              name: 'Device'
-            }
-          },
-          { default: () => t('Router.Device') }
-        ),
-      key: 'device-page',
-      icon: renderIcon(Devices)
-    },
-    {
-      label: () =>
-        h(
-          RouterLink,
-          {
-            to: {
-              name: 'Favorite'
-            }
-          },
-          { default: () => t('Router.Favorite') }
-        ),
-      key: 'favorite-page',
-      icon: renderIcon(Star)
+      label: t('Common.Other'),
+      key: 'other',
+      icon: () => <Ellipsis size={16} />,
+      children: [
+        {
+          label: () => (
+            <RouterLink to={{ name: 'Favorite' }}>
+              <span>Favorite</span>
+            </RouterLink>
+          ),
+          key: 'favorite-page',
+          icon: () => <Star size={16} />
+        }
+      ]
     }
-    // {
-    //   label: () =>
-    //     h(
-    //       RouterLink,
-    //       {
-    //         to: {
-    //           name: 'History'
-    //         }
-    //       },
-    //       { default: () => t('Router.History') }
-    //     ),
-    //   key: 'history-page',
-    //   icon: renderIcon(History)
-    // }
   ] as MenuOption[];
 };
 

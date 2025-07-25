@@ -1,3 +1,51 @@
+<script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+import { Search } from 'lucide-vue-next';
+import mittBus from '@renderer/eventBus';
+import { computed, nextTick, ref } from 'vue';
+import { useUserStore } from '@renderer/store/module/userStore';
+
+import { RightIconZone } from './helper/renderer';
+
+defineProps<{
+  active: boolean;
+}>();
+
+const { t } = useI18n();
+const userStore = useUserStore();
+
+const searchInput = ref('');
+
+const organizationList = computed(() => {
+  return userStore.organization?.map(item => ({
+    label: item.name,
+    value: item.id,
+  }));
+});
+
+const handleChangeOrganization = (value: string) => {
+  userStore.setCurrentOrganization(value);
+
+  nextTick(() => {
+    mittBus.emit('search', '');
+  });
+};
+
+/**
+ * @description 搜索
+ */
+const handleSearch = () => {
+  mittBus.emit('search', searchInput.value);
+};
+
+const onKeyEnter = (event: KeyboardEvent) => {
+  if (!event.shiftKey || event.ctrlKey) {
+    event.preventDefault();
+    mittBus.emit('search', searchInput.value);
+  }
+};
+</script>
+
 <template>
   <n-grid
     :cols="3"
@@ -38,54 +86,6 @@
     </n-grid-item>
   </n-grid>
 </template>
-
-<script setup lang="ts">
-import { useI18n } from 'vue-i18n';
-import { Search } from 'lucide-vue-next';
-import { ref, computed, nextTick } from 'vue';
-import { RightIconZone } from './helper/renderer';
-import { useUserStore } from '@renderer/store/module/userStore';
-
-import mittBus from '@renderer/eventBus';
-
-defineProps<{
-  active: boolean;
-}>();
-
-const { t } = useI18n();
-const userStore = useUserStore();
-
-const searchInput = ref('');
-
-const organizationList = computed(() => {
-  return userStore.organization?.map(item => ({
-    label: item.name,
-    value: item.id
-  }));
-});
-
-const handleChangeOrganization = (value: string) => {
-  userStore.setCurrentOrganization(value);
-
-  nextTick(() => {
-    mittBus.emit('search', '');
-  });
-};
-
-/**
- * @description 搜索
- */
-const handleSearch = () => {
-  mittBus.emit('search', searchInput.value);
-};
-
-const onKeyEnter = (event: KeyboardEvent) => {
-  if (!event.shiftKey || event.ctrlKey) {
-    event.preventDefault();
-    mittBus.emit('search', searchInput.value);
-  }
-};
-</script>
 
 <style scoped lang="scss">
 @use './index.scss';

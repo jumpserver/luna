@@ -66,12 +66,12 @@ export default {
     UnConnectable: '不可连接',
     ConnectionTip:
       '由于每条资产信息并未直接与账号相关联因此需要先手动右击获取账号列表之后才能获得账号列表以及相关信息',
-    SearchPlaceholder: '搜索资产'
+    SearchPlaceholder: '搜索资产',
   },
   Dialog: {
     'Save&Default': '保存且默认',
-    Cancel: '关闭',
-    Save: '保存'
+    'Cancel': '关闭',
+    'Save': '保存',
   },
   Router: {
     Terminal: '远程终端',
@@ -83,10 +83,10 @@ export default {
     Back: '返回',
     Favorite: '收藏',
     History: '历史记录',
-    Device: '网络设备'
+    Device: '网络设备',
   },
   Language: {
-    ChooseLanguage: '选择语言'
+    ChooseLanguage: '选择语言',
   },
   Setting: {
     Default: '默认配置',
@@ -100,7 +100,7 @@ export default {
     Advanced: '高级选项',
     Charset: '字符集:',
     BackspaceAsCtrlH: '字符终端 Backspace As Ctrl + H',
-    Resolution: '分辨率:'
+    Resolution: '分辨率:',
   },
   Message: {
     FailedRetrieveAssetDataList: '获取资产数据列表失败!',
@@ -136,6 +136,6 @@ export default {
     SwitchedToExistingAccount: '已切换到现有账户',
     LoginAuthenticationFailed: '登录认证已失效，请重新登录',
     NoAssetOrInactiveAsset: '当前资产不存在或未激活',
-    ConnectMethodNotSupport: '连接方法不支持'
-  }
+    ConnectMethodNotSupport: '连接方法不支持',
+  },
 };

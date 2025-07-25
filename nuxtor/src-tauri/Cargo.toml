@@ -1,0 +1,44 @@
+[package]
+name = "nuxtor"
+version = "1.4.0"
+description = "Starter template for Nuxt 3 and Tauri 2"
+authors = [ "NicolaSpadari" ]
+license = "MIT"
+repository = "https://github.com/NicolaSpadari/nuxtor"
+edition = "2021"
+
+[lib]
+name = "nuxtor_lib"
+crate-type = [
+  "staticlib",
+  "cdylib",
+  "rlib"
+]
+
+[build-dependencies.tauri-build]
+version = "2.3.0"
+features = [ ]
+
+[dependencies]
+tauri-plugin-shell = "2.3.0"
+tauri-plugin-notification = "2.3.0"
+tauri-plugin-os = "2.3.0"
+tauri-plugin-fs = "2.4.0"
+tauri-plugin-store = "2.3.0"
+serde_json = "1"
+window-vibrancy = "0.6.0"
+
+[dependencies.tauri]
+version = "2.6.2"
+features = [
+  "macos-private-api",
+  "tray-icon",
+  "unstable",
+]
+
+[dependencies.serde]
+version = "1"
+features = [ "derive" ]
+
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-window-state = "2.4.0"

@@ -1,4 +1,5 @@
 import type { Ref } from 'vue';
+
 import { ref } from 'vue';
 
 export interface IClient {
@@ -30,7 +31,7 @@ export const charsetOptions = [
   { label: 'UTF-8', value: 'utf8' },
   { label: 'GBK', value: 'gbk' },
   { label: 'GB2312', value: 'gb2312' },
-  { label: 'IOS-8859-1', value: 'ios-8859-1' }
+  { label: 'IOS-8859-1', value: 'ios-8859-1' },
 ];
 
 export const resolutionsOptions = [
@@ -38,10 +39,10 @@ export const resolutionsOptions = [
   { label: '1024x768', value: '1024x768' },
   { label: '1366x768', value: '1366x768' },
   { label: '1600x900', value: '1600x900' },
-  { label: '1920x1080', value: '1920x1080' }
+  { label: '1920x1080', value: '1920x1080' },
 ];
 
 export const boolOptions = [
   { label: 'Yes', value: true },
-  { label: 'No', value: false }
+  { label: 'No', value: false },
 ];

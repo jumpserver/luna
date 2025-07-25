@@ -1,0 +1,22 @@
+{
+	"ToolTips": {
+		"LightMode": "亮色模式",
+		"DarkMode": "暗色模式",
+		"SwitchLanguage": "切换语言",
+		"Sort": "排序",
+		"Refresh": "刷新"
+	},
+	"Menu": {
+		"Resource": "资源目录",
+		"Linux": "Linux",
+		"Windows": "Windows",
+		"Database": "数据库",
+		"Device": "设备",
+		"Other": "其他",
+		"Favorite": "收藏",
+		"Player": "播放器"
+	},
+	"Operation": {
+		"Search": "资产搜索"
+	}
+}

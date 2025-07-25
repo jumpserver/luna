@@ -1,5 +1,6 @@
-import { defineStore } from 'pinia';
 import type { ISetting } from '@renderer/store/interface';
+
+import { defineStore } from 'pinia';
 import { piniaPersistConfig } from '@renderer/store/helper';
 
 export const useSettingStore = defineStore('setting', {
@@ -10,7 +11,7 @@ export const useSettingStore = defineStore('setting', {
     keyboard_layout: 'en-us-qwerty',
     rdp_client_option: [],
     rdp_color_quality: '32',
-    rdp_smart_size: '0'
+    rdp_smart_size: '0',
   }),
   actions: {
     setCharset(charset: string) {
@@ -33,7 +34,7 @@ export const useSettingStore = defineStore('setting', {
     },
     setRdpSmartSize(size: string) {
       this.rdp_smart_size = size;
-    }
+    },
   },
-  persist: piniaPersistConfig('setting')
+  persist: piniaPersistConfig('setting'),
 });

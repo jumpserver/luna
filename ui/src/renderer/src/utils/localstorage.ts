@@ -7,7 +7,7 @@ export class LocalStorageService {
     try {
       data = JSON.parse(data);
       return data;
-    } catch (e) {
+    } catch (_e) {
       return null;
     }
   }
@@ -16,8 +16,8 @@ export class LocalStorageService {
     try {
       const data = JSON.stringify(value);
       return localStorage.setItem(key, data);
-    } catch (e) {
-      console.log('Error set localstorage: ', e);
+    } catch (_e) {
+      console.error('Error set localstorage: ', _e);
     }
   }
 

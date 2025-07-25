@@ -1,5 +1,5 @@
 appId: com.jumpserver.client
-productName: 'JumpServerClient'
+productName: JumpServerClient
 directories:
   buildResources: build
 files:
@@ -10,7 +10,7 @@ files:
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 extraResources:
-  - from: 'bin'
+  - from: bin
 win:
   artifactName: JumpServer-Client-Installer-${os}-v${version}-${arch}.${ext}
   executableName: JumpServerClient
@@ -64,5 +64,5 @@ npmRebuild: false
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
 protocols:
-  - name: 'JumpServerClient Protocol'
-    schemes: ['jms']
+  - name: JumpServerClient Protocol
+    schemes: [jms]

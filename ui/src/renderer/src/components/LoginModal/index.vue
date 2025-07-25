@@ -1,45 +1,3 @@
-<template>
-  <n-modal
-    :show="showModal"
-    :show-icon="false"
-    :closable="true"
-    preset="dialog"
-    class="rounded-lg"
-    style="width: 31rem"
-    @close="handleMaskClick"
-    @mask-click="handleMaskClick"
-  >
-    <template #header>
-      <n-flex align="center">
-        <n-text depth="1">{{ t('Common.Tip') }}</n-text>
-      </n-flex>
-    </template>
-
-    <template #default>
-      <n-flex vertical justify="space-evenly" align="flex-start" class="w-full h-20">
-        <n-input
-          v-model:value="siteLocation"
-          clearable
-          size="medium"
-          class="w-20"
-          :status="inputStatus"
-          :placeholder="t('Common.LoginModalPlaceholder')"
-        >
-          <template #prefix>
-            <n-icon :component="Location" />
-          </template>
-        </n-input>
-      </n-flex>
-    </template>
-
-    <template #action>
-      <n-button round :disabled="!siteLocation" size="small" type="primary" @click="jumpToLogin">
-        {{ t('Common.SignIn') }}
-      </n-button>
-    </template>
-  </n-modal>
-</template>
-
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -54,7 +12,7 @@ const props = withDefaults(
   defineProps<{
     showModal: boolean;
   }>(),
-  { showModal: false }
+  { showModal: false },
 );
 
 const emits = defineEmits<{
@@ -147,12 +105,14 @@ const handleContextMenu = async () => {
 
       if (URL_REGEXP.test(text)) {
         siteLocation.value = text;
-      } else {
+      }
+      else {
         siteLocation.value = text;
         message.error(`${text} ${t('Message.ErrorSiteInput')}`, { closable: true });
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Failed to read clipboard:', error);
   }
 };
@@ -170,15 +130,60 @@ const debounceHandleEnterKeyDown = useDebounceFn(handleEnterKeyDown, 500);
 
 watch(
   () => props.showModal,
-  newValue => {
+  (newValue) => {
     if (!newValue) {
       window.removeEventListener('contextmenu', handleContextMenu, false);
       window.removeEventListener('keydown', debounceHandleEnterKeyDown, false);
-    } else {
+    }
+    else {
       window.addEventListener('contextmenu', handleContextMenu, false);
       window.addEventListener('keydown', debounceHandleEnterKeyDown, false);
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 </script>
+
+<template>
+  <n-modal
+    :show="showModal"
+    :show-icon="false"
+    :closable="true"
+    preset="dialog"
+    class="rounded-lg"
+    style="width: 31rem"
+    @close="handleMaskClick"
+    @mask-click="handleMaskClick"
+  >
+    <template #header>
+      <n-flex align="center">
+        <n-text depth="1">
+          {{ t('Common.Tip') }}
+        </n-text>
+      </n-flex>
+    </template>
+
+    <template #default>
+      <n-flex vertical justify="space-evenly" align="flex-start" class="w-full h-20">
+        <n-input
+          v-model:value="siteLocation"
+          clearable
+          size="medium"
+          class="w-20"
+          :status="inputStatus"
+          :placeholder="t('Common.LoginModalPlaceholder')"
+        >
+          <template #prefix>
+            <n-icon :component="Location" />
+          </template>
+        </n-input>
+      </n-flex>
+    </template>
+
+    <template #action>
+      <n-button round :disabled="!siteLocation" size="small" type="primary" @click="jumpToLogin">
+        {{ t('Common.SignIn') }}
+      </n-button>
+    </template>
+  </n-modal>
+</template>

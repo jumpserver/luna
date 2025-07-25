@@ -21,14 +21,14 @@ export const useElectronConfig = () => {
       return {
         theme: res?.theme,
         layout: res?.layout,
-        language: res?.language
+        language: res?.language,
       };
     }
 
     return {
       theme: 'light',
       layout: 'list',
-      language: 'zh'
+      language: 'zh',
     };
   };
 
@@ -40,12 +40,12 @@ export const useElectronConfig = () => {
 
     await conf.set('defaultSetting', {
       ...currentSettings,
-      ...setting
+      ...setting,
     });
   };
 
   return {
     getDefaultSetting,
-    setDefaultSetting
+    setDefaultSetting,
   };
 };

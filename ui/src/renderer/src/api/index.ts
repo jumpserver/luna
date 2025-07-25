@@ -1,16 +1,17 @@
+import type { ConfigProviderProps } from 'naive-ui';
+import type { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+
 import axios from 'axios';
 import { computed, ref } from 'vue';
 import { useUserStore } from '@renderer/store/module/userStore';
-import { createDiscreteApi, lightTheme, darkTheme } from 'naive-ui';
+import { createDiscreteApi, darkTheme, lightTheme } from 'naive-ui';
 import { useElectronConfig } from '@renderer/hooks/useElectronConfig';
 
-import type { ConfigProviderProps } from 'naive-ui';
 import type { CustomAxiosRequestConfig, ResultData } from './interface/index';
-import type { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 const config = {
   timeout: 5000,
-  withCredentials: true
+  withCredentials: true,
 };
 
 const defaultTheme = ref('');
@@ -35,16 +36,17 @@ try {
   const { theme } = await getDefaultSetting();
 
   defaultTheme.value = theme;
-} catch (e) {
+}
+catch (e) {
   console.log(e);
 }
 
 const configProviderPropsRef = computed<ConfigProviderProps>(() => ({
-  theme: defaultTheme.value === 'light' ? lightTheme : darkTheme
+  theme: defaultTheme.value === 'light' ? lightTheme : darkTheme,
 }));
 
 const { message } = createDiscreteApi(['message'], {
-  configProviderProps: configProviderPropsRef
+  configProviderProps: configProviderPropsRef,
 });
 
 class RequestHttp {
@@ -84,7 +86,7 @@ class RequestHttp {
         message.error(error);
 
         return Promise.reject(error);
-      }
+      },
     );
 
     /**
@@ -103,9 +105,11 @@ class RequestHttp {
         return data;
       },
       (error: AxiosError) => {
-        if (error.message.indexOf('timeout') !== -1) message.error('请求超时！请您稍后重试');
-        if (error.message.indexOf('Network Error') !== -1) message.error('网络错误！请您稍后重试');
-        if (error.message.indexOf('401') !== -1) {
+        if (error.message.includes('timeout'))
+          message.error('请求超时！请您稍后重试');
+        if (error.message.includes('Network Error'))
+          message.error('网络错误！请您稍后重试');
+        if (error.message.includes('401')) {
           const currentTime = Date.now();
           const timeSinceLastSwitch = currentTime - lastUserSwitchTime;
 
@@ -130,21 +134,22 @@ class RequestHttp {
 
               // 调用主进程的401错误处理接口
               window.electron.ipcRenderer.invoke('handle-401-error', currentSite, currentSession)
-                .then(result => {
+                .then((result) => {
                   if (result.success) {
                     console.log('401错误处理成功:', result.message);
-                  } else {
+                  }
+                  else {
                     console.error('401错误处理失败:', result.error);
                   }
                 })
-                .catch(error => {
+                .catch((error) => {
                   console.error('调用401错误处理接口失败:', error);
                 });
 
               // 继续执行原有的用户删除逻辑
               userStore
                 .removeUserBySession(currentSession)
-                .catch(error => {
+                .catch((error) => {
                   console.error('删除过期用户失败:', error);
                 })
                 .finally(() => {
@@ -154,7 +159,8 @@ class RequestHttp {
                     hasShown401Message = false;
                   }, 3000);
                 });
-            } else {
+            }
+            else {
               // 如果没有当前用户，立即重置状态
               isProcessing401 = false;
               hasShown401Message = false;
@@ -162,13 +168,13 @@ class RequestHttp {
 
             message.error('Login authentication has expired. Please log in again.', {
               closable: true,
-              duration: 5000
+              duration: 5000,
             });
           }
         }
 
         return Promise.reject(error);
-      }
+      },
     );
   }
 

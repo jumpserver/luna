@@ -1,17 +1,16 @@
+import type { ConfigProviderProps } from 'naive-ui';
+
+import { computed, h, ref } from 'vue';
 import { Conf } from 'electron-conf/renderer';
-import { h, ref } from 'vue';
-import { computed } from 'vue';
 import {
   createDiscreteApi,
+  darkTheme,
+  lightTheme,
   NButton,
   NForm,
   NFormItem,
   NInput,
-  lightTheme,
-  darkTheme
 } from 'naive-ui';
-
-import type { ConfigProviderProps } from 'naive-ui';
 
 export const useAccountModal = (type: string, t: any) => {
   const conf = new Conf();
@@ -20,7 +19,7 @@ export const useAccountModal = (type: string, t: any) => {
   const inputUsername = ref('');
   const confirmed = ref(false);
 
-  conf.get('defaultSetting').then(res => {
+  conf.get('defaultSetting').then((res) => {
     if (res) {
       // @ts-ignore
       defaultTheme.value = res?.theme;
@@ -28,15 +27,15 @@ export const useAccountModal = (type: string, t: any) => {
   });
 
   const configProviderPropsRef = computed<ConfigProviderProps>(() => ({
-    theme: defaultTheme.value === 'light' ? lightTheme : darkTheme
+    theme: defaultTheme.value === 'light' ? lightTheme : darkTheme,
   }));
 
   const { modal } = createDiscreteApi(['modal'], {
-    configProviderProps: configProviderPropsRef
+    configProviderProps: configProviderPropsRef,
   });
 
-  const modalTitle =
-    type !== '@INPUT' ? t('Common.InputPassword') : t('Common.InputAccountPassword');
+  const modalTitle
+    = type !== '@INPUT' ? t('Common.InputPassword') : t('Common.InputAccountPassword');
 
   const m = modal.create({
     title: modalTitle,
@@ -45,7 +44,7 @@ export const useAccountModal = (type: string, t: any) => {
     segmented: true,
     style: {
       width: '30rem',
-      borderRadius: '10px'
+      borderRadius: '10px',
     },
     content: () =>
       h(
@@ -53,7 +52,7 @@ export const useAccountModal = (type: string, t: any) => {
         {
           labelPlacement: 'top',
           labelWidth: 80,
-          size: 'small'
+          size: 'small',
         },
         {
           default: () => [
@@ -62,7 +61,7 @@ export const useAccountModal = (type: string, t: any) => {
               {
                 label: t('Common.Username'),
                 path: 'username',
-                style: { display: type !== '@INPUT' ? 'none' : '' }
+                style: { display: type !== '@INPUT' ? 'none' : '' },
               },
               {
                 default: () =>
@@ -70,17 +69,17 @@ export const useAccountModal = (type: string, t: any) => {
                     value: inputUsername.value,
                     clearable: true,
                     placeholder: t('Common.UsernamePlaceholder'),
-                    onUpdateValue: value => {
+                    onUpdateValue: (value) => {
                       inputUsername.value = value;
-                    }
-                  })
-              }
+                    },
+                  }),
+              },
             ),
             h(
               NFormItem,
               {
                 label: t('Common.Password'),
-                path: 'password'
+                path: 'password',
               },
               {
                 default: () =>
@@ -90,19 +89,19 @@ export const useAccountModal = (type: string, t: any) => {
                     clearable: true,
                     showPasswordOn: 'click',
                     placeholder: t('Common.InputPassword'),
-                    onUpdateValue: value => {
+                    onUpdateValue: (value) => {
                       inputPassword.value = value;
-                    }
-                  })
-              }
+                    },
+                  }),
+              },
             ),
             h(
               NFormItem,
               {
                 style: {
                   display: 'flex',
-                  justifyContent: 'flex-end'
-                }
+                  justifyContent: 'flex-end',
+                },
               },
               {
                 default: () =>
@@ -114,22 +113,22 @@ export const useAccountModal = (type: string, t: any) => {
                       onClick: () => {
                         confirmed.value = true;
                         m.destroy();
-                      }
+                      },
                     },
                     {
-                      default: () => t('Common.Confirm')
-                    }
-                  )
-              }
-            )
-          ]
-        }
-      )
+                      default: () => t('Common.Confirm'),
+                    },
+                  ),
+              },
+            ),
+          ],
+        },
+      ),
   });
 
   return {
     inputPassword,
     inputUsername,
-    confirmed
+    confirmed,
   };
 };

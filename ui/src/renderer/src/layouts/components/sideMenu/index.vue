@@ -1,19 +1,238 @@
+<script setup lang="ts">
+import type { SelectOption } from 'naive-ui';
+import type { IUserInfo } from '@renderer/store/interface';
+
+import { useI18n } from 'vue-i18n';
+import { storeToRefs } from 'pinia';
+import { NFlex, NText } from 'naive-ui';
+import mittBus from '@renderer/eventBus';
+import { useDebounceFn } from '@vueuse/core';
+import { useColor } from '@renderer/hooks/useColor';
+import { setUserRemoving } from '@renderer/api/index';
+import { computed, inject, onMounted, ref, watch } from 'vue';
+import { useUserStore } from '@renderer/store/module/userStore';
+import { useElectronConfig } from '@renderer/hooks/useElectronConfig';
+
+import { getAccountOptionsRender, menuOptions, RemoveAccountConfirm } from './config';
+
+withDefaults(defineProps<{ collapsed: boolean }>(), {
+  collapsed: false,
+});
+
+const options = menuOptions();
+const userStore = useUserStore();
+const { lighten } = useColor();
+
+const { t, locale } = useI18n();
+const { getDefaultSetting } = useElectronConfig();
+const { currentUser: storeCurrentUser } = storeToRefs(userStore);
+
+const currentUser = computed(() => {
+  return {
+    label: storeCurrentUser?.value?.username,
+    value: storeCurrentUser?.value?.session,
+    avatar_url: storeCurrentUser?.value?.avatar_url,
+    currentSite: storeCurrentUser?.value?.currentSite,
+  };
+});
+
+const userOptions = computed(() => {
+  // 确保使用最新的用户数据，避免缓存问题
+  const currentUserInfo = userStore.userInfo || [];
+  const options = currentUserInfo.map((item: IUserInfo) => {
+    return {
+      label: item.username,
+      value: item.session,
+      avatar_url: item.avatar_url,
+      display_name: item.display_name,
+      currentSite: item.currentSite,
+    };
+  });
+
+  return options;
+});
+
+const active = ref(false);
+const showModal = ref(false);
+const indicatorArrow = ref(false);
+const currentLang = ref('');
+const versionMessage = ref('');
+const selectedKey = ref('linux-page');
+const currentAccount = ref(userStore.currentUser?.session);
+const accountToRemove = ref('');
+
+const setNewAccount = inject<() => void>('setNewAccount');
+const removeAccount = inject<(session?: string) => void>('removeAccount');
+const switchAccount = inject<(session: string) => void>('switchAccount');
+
+const handlePopSelectShow = (show: boolean) => {
+  indicatorArrow.value = show;
+};
+
+const renderLabel = (option: SelectOption) => {
+  return getAccountOptionsRender(option, (session: string) => {
+    showModal.value = true;
+    accountToRemove.value = session;
+  });
+};
+
+/**
+ * @description 添加账号
+ */
+const handleAddAccount = () => {
+  setNewAccount ? setNewAccount() : null;
+};
+
+/**
+ * @description 移除当前账号
+ */
+const handleRemoveCurrentAccount = () => {
+  if (userStore.currentUser?.session) {
+    // 在删除前设置用户删除状态，防止401错误干扰删除流程
+    setUserRemoving(true);
+
+    accountToRemove.value = userStore.currentUser.session;
+    showModal.value = true;
+  }
+  else {
+    console.error('没有当前用户，无法删除');
+  }
+};
+
+/**
+ * @description 移除账号
+ */
+const handleRemoveAccount = async () => {
+  const targetUser = userStore.userInfo?.find(user => user.session === accountToRemove.value);
+  if (!targetUser) {
+    showModal.value = false;
+    // 重置用户删除状态
+    setUserRemoving(false);
+    return;
+  }
+
+  try {
+    if (removeAccount) {
+      await removeAccount(accountToRemove.value);
+    }
+  }
+  catch (error) {
+    console.error('删除账号失败:', error);
+  }
+  finally {
+    showModal.value = false;
+    // 延迟重置用户删除状态，确保删除操作完全完成
+    setTimeout(() => {
+      setUserRemoving(false);
+    }, 1000);
+  }
+};
+
+const debouncedSearch = useDebounceFn(() => {
+  mittBus.emit('search', 'reset');
+}, 300);
+
+/**
+ * @description 切换外观
+ * @param value
+ */
+const handleChangeTheme = async (value: boolean) => {
+  try {
+    const { theme } = await getDefaultSetting();
+
+    mittBus.emit('changeTheme', theme as string);
+
+    value ? (active.value = true) : (active.value = false);
+  }
+  catch (e) {
+    console.error(e);
+  }
+};
+
+/**
+ * @description 切换语言
+ */
+const handleChangeLang = async () => {
+  const { language } = await getDefaultSetting();
+
+  mittBus.emit('changeLang', language as string);
+
+  switch (currentLang.value) {
+    case 'zh': {
+      locale.value = 'en';
+      break;
+    }
+    case 'en': {
+      locale.value = 'zh';
+      break;
+    }
+  }
+
+  currentLang.value = language === 'zh' ? 'English' : '中文';
+};
+
+/**
+ * @description 切换账号
+ * @param token
+ */
+const handleUpdateCurrentAccount = (token: string) => {
+  switchAccount ? switchAccount(token) : null;
+};
+
+watch(
+  () => userStore.currentUser,
+  (newUser) => {
+    if (newUser && Reflect.ownKeys(newUser).length > 0) {
+      debouncedSearch();
+      // 更新currentAccount以保持与当前用户同步
+      currentAccount.value = newUser.session;
+    }
+  },
+);
+
+onMounted(async () => {
+  const { theme, language } = await getDefaultSetting();
+
+  try {
+    window.electron.ipcRenderer.send('get-app-version');
+    window.electron.ipcRenderer.on('app-version-response', (_event, version) => {
+      versionMessage.value = version;
+    });
+  }
+  catch (error) {
+    console.error('获取版本信息失败:', error);
+  }
+
+  active.value = theme === 'light';
+  currentLang.value = language === 'zh' ? '中文' : 'English';
+});
+</script>
+
 <template>
-  <n-flex vertical justify="space-between" class="py-4" style="height: calc(100% - 30px)">
+  <NFlex
+    vertical
+    justify="space-between"
+    :style="{ height: 'calc(100% - 45px)', backgroundColor: lighten(5) }"
+  >
     <div>
       <n-menu
         v-model:value="selectedKey"
+        :root-indent="12"
         :options="options"
         :collapsed="collapsed"
         :collapsed-width="64"
         :collapsed-icon-size="22"
-        class="w-full flex flex-col items-center"
       />
       <n-divider class="!my-3" />
     </div>
 
+    <!-- 当前版本信息 -->
+    <NText depth="3" class="text-center mb-2.5 text-xs">
+      {{ t('Common.Version') }} {{ versionMessage }}
+    </NText>
+
     <!-- 未登录状态 -->
-    <div>
+    <!-- <div>
       <n-flex v-if="userOptions.length === 0" align="center" justify="center">
         <n-button text strong @click="handleAddAccount"> {{ t('Common.UnLogged') }} </n-button>
       </n-flex>
@@ -32,7 +251,6 @@
           :options="[]"
           @update:show="handlePopSelectShow"
         >
-          <!-- trigger  -->
           <n-flex
             align="center"
             :justify="collapsed ? 'center' : 'space-between'"
@@ -91,7 +309,6 @@
 
           <template #action>
             <n-flex vertical align="center" justify="start" class="w-full !gap-y-[5px]">
-              <!-- 切换账号  -->
               <n-popselect
                 :key="userOptions.length + '-' + userOptions.map(o => o.value).join(',')"
                 v-model:value="currentAccount"
@@ -120,7 +337,6 @@
                 </template>
               </n-popselect>
 
-              <!-- 切换语言 -->
               <n-flex justify="space-between" align="center" class="w-full !flex-nowrap">
                 <n-button text class="flex-1 justify-start w-full" @click="handleChangeLang">
                   <template #icon>
@@ -132,7 +348,6 @@
                 <n-text class="vertical-middle flex-shrink-0" depth="3"> {{ currentLang }} </n-text>
               </n-flex>
 
-              <!-- 切换外观 -->
               <n-flex justify="space-between" align="center" class="w-full !flex-nowrap">
                 <n-button text class="flex-1 justify-start w-full">
                   <template #icon>
@@ -183,8 +398,8 @@
           </template>
         </n-popselect>
       </template>
-    </div>
-  </n-flex>
+    </div> -->
+  </NFlex>
 
   <RemoveAccountConfirm
     :show-modal="showModal"
@@ -192,215 +407,6 @@
     :on-cancel="() => (showModal = false)"
   />
 </template>
-
-<script setup lang="ts">
-import mittBus from '@renderer/eventBus';
-import AccountList from '../AccountList/index.vue';
-
-import { useI18n } from 'vue-i18n';
-import { storeToRefs } from 'pinia';
-import { NAvatar, NText, NFlex } from 'naive-ui';
-import { computed, watch, ref, inject, onMounted } from 'vue';
-import { Earth, LogOut, Palette, ChevronUp, ChevronLeft, Rocket } from 'lucide-vue-next';
-
-import { Moon, Sun } from '@vicons/tabler';
-import { useDebounceFn } from '@vueuse/core';
-import { ArrowSync20Regular } from '@vicons/fluent';
-import { useUserStore } from '@renderer/store/module/userStore';
-import { useElectronConfig } from '@renderer/hooks/useElectronConfig';
-import { setUserRemoving } from '@renderer/api/index';
-
-import { menuOptions, getAccountOptionsRender, RemoveAccountConfirm } from './config';
-
-import type { SelectOption } from 'naive-ui';
-import type { IUserInfo } from '@renderer/store/interface';
-
-withDefaults(defineProps<{ collapsed: boolean }>(), {
-  collapsed: false
-});
-
-const options = menuOptions();
-const userStore = useUserStore();
-
-const { t, locale } = useI18n();
-const { getDefaultSetting } = useElectronConfig();
-const { currentUser: storeCurrentUser } = storeToRefs(userStore);
-
-const currentUser = computed(() => {
-  return {
-    label: storeCurrentUser?.value?.username,
-    value: storeCurrentUser?.value?.session,
-    avatar_url: storeCurrentUser?.value?.avatar_url,
-    currentSite: storeCurrentUser?.value?.currentSite
-  };
-});
-
-const userOptions = computed(() => {
-  // 确保使用最新的用户数据，避免缓存问题
-  const currentUserInfo = userStore.userInfo || [];
-  const options = currentUserInfo.map((item: IUserInfo) => {
-    return {
-      label: item.username,
-      value: item.session,
-      avatar_url: item.avatar_url,
-      display_name: item.display_name,
-      currentSite: item.currentSite
-    };
-  });
-
-  return options;
-});
-
-const active = ref(false);
-const showModal = ref(false);
-const indicatorArrow = ref(false);
-const currentLang = ref('');
-const versionMessage = ref('');
-const selectedKey = ref('linux-page');
-const currentAccount = ref(userStore.currentUser?.session);
-const accountToRemove = ref('');
-
-const setNewAccount = inject<() => void>('setNewAccount');
-const removeAccount = inject<(session?: string) => void>('removeAccount');
-const switchAccount = inject<(session: string) => void>('switchAccount');
-
-const handlePopSelectShow = (show: boolean) => {
-  indicatorArrow.value = show;
-};
-
-const renderLabel = (option: SelectOption) => {
-  return getAccountOptionsRender(option, (session: string) => {
-    showModal.value = true;
-    accountToRemove.value = session;
-  });
-};
-
-/**
- * @description 添加账号
- */
-const handleAddAccount = () => {
-  setNewAccount ? setNewAccount() : null;
-};
-
-/**
- * @description 移除当前账号
- */
-const handleRemoveCurrentAccount = () => {
-  if (userStore.currentUser?.session) {
-    // 在删除前设置用户删除状态，防止401错误干扰删除流程
-    setUserRemoving(true);
-
-    accountToRemove.value = userStore.currentUser.session;
-    showModal.value = true;
-  } else {
-    console.error('没有当前用户，无法删除');
-  }
-};
-
-/**
- * @description 移除账号
- */
-const handleRemoveAccount = async () => {
-  const targetUser = userStore.userInfo?.find(user => user.session === accountToRemove.value);
-  if (!targetUser) {
-    showModal.value = false;
-    // 重置用户删除状态
-    setUserRemoving(false);
-    return;
-  }
-
-  try {
-    if (removeAccount) {
-      await removeAccount(accountToRemove.value);
-    }
-  } catch (error) {
-    console.error('删除账号失败:', error);
-  } finally {
-    showModal.value = false;
-    // 延迟重置用户删除状态，确保删除操作完全完成
-    setTimeout(() => {
-      setUserRemoving(false);
-    }, 1000);
-  }
-};
-
-const debouncedSearch = useDebounceFn(() => {
-  mittBus.emit('search', 'reset');
-}, 300);
-
-/**
- * @description 切换外观
- * @param value
- */
-const handleChangeTheme = async (value: boolean) => {
-  try {
-    const { theme } = await getDefaultSetting();
-
-    mittBus.emit('changeTheme', theme as string);
-
-    value ? (active.value = true) : (active.value = false);
-  } catch (e) {
-    console.error(e);
-  }
-};
-
-/**
- * @description 切换语言
- */
-const handleChangeLang = async () => {
-  const { language } = await getDefaultSetting();
-
-  mittBus.emit('changeLang', language as string);
-
-  switch (currentLang.value) {
-    case 'zh': {
-      locale.value = 'en';
-      break;
-    }
-    case 'en': {
-      locale.value = 'zh';
-      break;
-    }
-  }
-
-  currentLang.value = language === 'zh' ? 'English' : '中文';
-};
-
-/**
- * @description 切换账号
- * @param token
- */
-const handleUpdateCurrentAccount = (token: string) => {
-  switchAccount ? switchAccount(token) : null;
-};
-
-watch(
-  () => userStore.currentUser,
-  newUser => {
-    if (newUser && Reflect.ownKeys(newUser).length > 0) {
-      debouncedSearch();
-      // 更新currentAccount以保持与当前用户同步
-      currentAccount.value = newUser.session;
-    }
-  }
-);
-
-onMounted(async () => {
-  const { theme, language } = await getDefaultSetting();
-
-  try {
-    window.electron.ipcRenderer.send('get-app-version');
-    window.electron.ipcRenderer.on('app-version-response', (_event, version) => {
-      versionMessage.value = version;
-    });
-  } catch (error) {
-    console.error('获取版本信息失败:', error);
-  }
-
-  active.value = theme === 'light';
-  currentLang.value = language === 'zh' ? '中文' : 'English';
-});
-</script>
 
 <style scoped lang="scss">
 @use './index.scss';

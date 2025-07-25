@@ -1,11 +1,12 @@
 import './styles/main.css';
+import 'virtual:svg-icons-register';
 import '@renderer/styles/reset.scss';
-
-import App from './App.vue';
 import { createApp } from 'vue';
 import { i18n } from '@renderer/lang';
 import { pinia } from '@renderer/store';
 import { router } from '@renderer/router';
+
+import App from './App.vue';
 
 const app = createApp(App);
 

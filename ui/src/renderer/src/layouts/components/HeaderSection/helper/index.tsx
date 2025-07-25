@@ -1,8 +1,10 @@
-import { Component, h } from 'vue';
-import { NIcon, NInput, NFlex, NText, NEmpty } from 'naive-ui';
-import { Edit16Filled, TagError24Filled } from '@vicons/fluent';
-import { RadioButtonUncheckedRound, CheckCircleRound, DeleteRound } from '@vicons/material';
+import type { Component } from 'vue';
+
+import { h } from 'vue';
 import { Search } from '@vicons/tabler';
+import { NEmpty, NFlex, NIcon, NInput, NText } from 'naive-ui';
+import { Edit16Filled, TagError24Filled } from '@vicons/fluent';
+import { CheckCircleRound, DeleteRound, RadioButtonUncheckedRound } from '@vicons/material';
 
 export interface ICustomBody {
   id: string;
@@ -15,7 +17,7 @@ export interface ICustomBody {
 export const renderIcon = (icon: Component) => {
   return () =>
     h(NIcon, null, {
-      default: () => h(icon)
+      default: () => h(icon),
     });
 };
 
@@ -27,7 +29,7 @@ export const renderCustomInput = (items: Array<ICustomBody>) => {
     return h(
       'div',
       {
-        style: 'display: flex; align-items: center; padding: 8px 12px;'
+        style: 'display: flex; align-items: center; padding: 8px 12px;',
       },
       [
         h(
@@ -37,16 +39,16 @@ export const renderCustomInput = (items: Array<ICustomBody>) => {
             clearable: true,
             size: 'small',
             placeholder: 'Search Tags',
-            style: 'border-radius: 10px; font-size: 12px'
+            style: 'border-radius: 10px; font-size: 12px',
           },
           {
             prefix: () =>
               h(NIcon, null, {
-                default: () => h(Search)
-              })
-          }
-        )
-      ]
+                default: () => h(Search),
+              }),
+          },
+        ),
+      ],
     );
   }
 
@@ -59,12 +61,12 @@ export const renderCustomInput = (items: Array<ICustomBody>) => {
  */
 export const renderCustomBody = (items: Array<ICustomBody>) => {
   if (items.length > 0) {
-    return items.map(item => {
+    return items.map((item) => {
       return h(
         NFlex,
         {
           key: item?.id,
-          style: 'flex-wrap: wrap; padding: 8px 12px;'
+          style: 'flex-wrap: wrap; padding: 8px 12px;',
         },
         {
           default: () => [
@@ -72,7 +74,7 @@ export const renderCustomBody = (items: Array<ICustomBody>) => {
               NFlex,
               {
                 justify: 'space-between',
-                style: 'width: 100%'
+                style: 'width: 100%',
               },
               {
                 default: () => [
@@ -81,7 +83,7 @@ export const renderCustomBody = (items: Array<ICustomBody>) => {
                     NFlex,
                     {
                       align: 'center',
-                      style: 'cursor: pointer'
+                      style: 'cursor: pointer',
                     },
                     {
                       default: () => [
@@ -90,23 +92,23 @@ export const renderCustomBody = (items: Array<ICustomBody>) => {
                           {
                             size: 20,
                             color: item?.isChecked ? '#4C917D' : '#fff',
-                            style: 'cursor: pointer'
+                            style: 'cursor: pointer',
                           },
                           {
                             default: () =>
-                              h(item?.isChecked ? CheckCircleRound : RadioButtonUncheckedRound)
-                          }
+                              h(item?.isChecked ? CheckCircleRound : RadioButtonUncheckedRound),
+                          },
                         ),
-                        h(NText, { depth: 3 }, { default: () => item?.label }) // 保持不变
-                      ]
-                    }
+                        h(NText, { depth: 3 }, { default: () => item?.label }), // 保持不变
+                      ],
+                    },
                   ),
                   // suffix 部分
                   h(
                     NFlex,
                     {
                       align: 'center',
-                      style: 'cursor: pointer'
+                      style: 'cursor: pointer',
                     },
                     {
                       default: () => [
@@ -114,30 +116,30 @@ export const renderCustomBody = (items: Array<ICustomBody>) => {
                           NIcon,
                           {
                             size: 16,
-                            color: '#fff'
+                            color: '#fff',
                           },
                           {
-                            default: () => h(Edit16Filled)
-                          }
+                            default: () => h(Edit16Filled),
+                          },
                         ),
                         h(
                           NIcon,
                           {
                             size: 16,
-                            color: '#fff'
+                            color: '#fff',
                           },
                           {
-                            default: () => h(DeleteRound)
-                          }
-                        )
-                      ]
-                    }
-                  )
-                ]
-              }
-            )
-          ]
-        }
+                            default: () => h(DeleteRound),
+                          },
+                        ),
+                      ],
+                    },
+                  ),
+                ],
+              },
+            ),
+          ],
+        },
       );
     });
   }
@@ -146,11 +148,11 @@ export const renderCustomBody = (items: Array<ICustomBody>) => {
     NEmpty,
     {
       style: 'padding: 12px 12px',
-      description: "You don't have any tags yet"
+      description: 'You don\'t have any tags yet',
     },
     {
-      icon: renderIcon(TagError24Filled)
-    }
+      icon: renderIcon(TagError24Filled),
+    },
   );
 };
 
@@ -162,22 +164,22 @@ export const createLabel = (iconComponent: Component, label: string) => {
     NFlex,
     {
       align: 'center',
-      style: { flexwrap: 'nowrap' }
+      style: { flexwrap: 'nowrap' },
     },
     {
       default: () => [
         h(NIcon, {
           size: '16',
-          component: iconComponent
+          component: iconComponent,
         }),
         h(
           NText,
           { depth: 1, tag: 'div', style: { color: 'inherit' } },
           {
-            default: () => label
-          }
-        )
-      ]
-    }
+            default: () => label,
+          },
+        ),
+      ],
+    },
   );
 };
