@@ -17,6 +17,7 @@ export class SettingService {
   public appletConnectMethod$ = new BehaviorSubject<string>("");
   public keyboardLayout$ = new BehaviorSubject<string>("");
   public isDirectNavigation$ = new BehaviorSubject<boolean>(false);
+  public globalSetting$ = new BehaviorSubject<GlobalSetting>(new GlobalSetting());
 
   constructor(
     private _localStorage: LocalStorageService,
@@ -34,6 +35,7 @@ export class SettingService {
       url += `?token=${connectionToken}`;
     }
     this.globalSetting = await this._http.get<any>(url).toPromise();
+    this.globalSetting$.next(this.globalSetting);
     this.setting.commandExecution =
       this.globalSetting.SECURITY_COMMAND_EXECUTION;
     this.setLogo();
