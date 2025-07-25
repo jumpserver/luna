@@ -7,7 +7,7 @@ const page = ref(1);
     <div
       class="grid grid-cols-2 gap-x-2 gap-y-2 h-[calc(100vh-240px)] overflow-y-auto p-2"
     >
-      <template v-for="i in 10" :key="i">
+      <template v-for="i in 2" :key="i">
         <UCard class="h-36" variant="outline" />
       </template>
     </div>
