@@ -5,9 +5,10 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@vueuse/nuxt',
     '@nuxtjs/i18n',
+    '@vesp/nuxt-fontawesome',
     'nuxt-svgo',
     'reka-ui/nuxt',
-    '@vesp/nuxt-fontawesome',
+    'pinia-plugin-persistedstate/nuxt',
   ],
   i18n: {
     locales: [
