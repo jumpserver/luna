@@ -3,7 +3,7 @@
     @if(isShowSetting && subViews.length === 1) {
       <nz-float-button (click)="handleShowDrawer()" [nzIcon]="setting"></nz-float-button>
     }
-    <nz-float-button (click)="showChatAI()" [nzIcon]="customer"> </nz-float-button>
+    <nz-float-button (click)="showChatAI()" [hidden]="!chatAiApiEnabled" [nzIcon]="customer"> </nz-float-button>
   </nz-float-button-group>
   <ng-template #setting>
     <nz-icon nzTheme="outline" nzType="setting" />
@@ -12,7 +12,7 @@
     <img alt="" class="chat-img" src="assets/icons/chat-ai.png" />
   </ng-template>
 
-  <div *ngIf="chatAiEnabled" [style.display]="chatAIShown ? 'block' : 'none'" class="drawer-panel">
+  <div *ngIf="chatAiApiEnabled" [style.display]="chatAIShown ? 'block' : 'none'" class="drawer-panel">
     <div class="content">
       <iframe
         #contentWindow

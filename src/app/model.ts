@@ -276,6 +276,8 @@ export class GlobalSetting {
   TERMINAL_GRAPHICAL_RESOLUTION: string;
   CONNECTION_TOKEN_REUSABLE: boolean;
   CHAT_AI_ENABLED: boolean;
+  CHAT_AI_METHOD: string;
+  CHAT_AI_EMBED_URL: string;
   VIEW_ASSET_ONLINE_SESSION_INFO: boolean;
   LANGUAGES: any;
 }
