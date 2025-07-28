@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from '@nuxt/ui';
-import type { ActionItem } from '~/types';
-
 type LocaleCode = (typeof locales.value)[number]['code'];
 
 const emits = defineEmits<{

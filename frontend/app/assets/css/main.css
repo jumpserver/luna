@@ -3,7 +3,7 @@
 
 @theme {
 	--font-heading: "Montserrat", sans-serif;
-	--font-sans: "Inter", sans-serif;
+	--font-sans: "Open Sans", sans-serif;
 
 	--color-primary: var(--ui-color-primary-500);
 	--color-secondary: var(--ui-color-secondary-500);
