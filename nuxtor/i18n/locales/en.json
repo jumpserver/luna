@@ -4,7 +4,8 @@
 		"DarkMode": "Dark Mode",
 		"SwitchLanguage": "Switch Language",
 		"Sort": "Sort",
-		"Refresh": "Refresh"
+		"Refresh": "Refresh",
+		"Layout": "Switch Layout"
 	},
 	"Menu": {
 		"Linux": "Linux",

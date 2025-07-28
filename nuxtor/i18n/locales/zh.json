@@ -4,7 +4,8 @@
 		"DarkMode": "暗色模式",
 		"SwitchLanguage": "切换语言",
 		"Sort": "排序",
-		"Refresh": "刷新"
+		"Refresh": "刷新",
+		"Layout": "切换布局"
 	},
 	"Menu": {
 		"Resource": "资源目录",

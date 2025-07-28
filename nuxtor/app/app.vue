@@ -2,7 +2,6 @@
 const colorMode = useColorMode();
 
 const backgroundColor = computed(() => {
-  console.log('colorMode', colorMode.value);
   return colorMode.value === 'dark'
     ? 'rgba(0, 0, 0, 0.4)'
     : 'rgba(255, 255, 255, 0.4)';

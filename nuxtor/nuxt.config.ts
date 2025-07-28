@@ -102,7 +102,7 @@ export default defineNuxtConfig({
   fontawesome: {
     icons: {
       brands: ['linux', 'windows'],
-      solid: ['database', 'laptop', 'star'],
+      solid: ['database', 'laptop', 'star', 'time-sitemap'],
     },
   },
 });
