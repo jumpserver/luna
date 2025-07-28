@@ -596,11 +596,14 @@ ipcMain.on('user-login', async (_, site) => {
           }
         }
 
-        // 设置webRequest拦截器，自动为目标站点请求添加cookie
+        // 设置webRequest拦截器，自动为目标站点请求添加cookie和Referer
         // 移除activeInterceptors限制，每次都重新设置以确保使用最新的sessionId
         session.defaultSession.webRequest.onBeforeSendHeaders(
           { urls: [site + '/*'] },
           (details, callback) => {
+            // 设置Referer为目标站点
+            details.requestHeaders['Referer'] = site;
+
             if (isFileProtocol) {
               // 在file协议下，使用当前的sessionId获取cookie
               const userKey = `${site}:${jms_sessionid}`;
@@ -763,11 +766,14 @@ ipcMain.handle('restore-cookies', async (_, { site, sessionId, csrfToken, allCoo
             }
           }
 
-          // 设置webRequest拦截器，自动为目标站点请求添加cookie
+          // 设置webRequest拦截器，自动为目标站点请求添加cookie和Referer
           // 移除activeInterceptors限制，每次都重新设置以确保使用最新的sessionId
           session.defaultSession.webRequest.onBeforeSendHeaders(
             { urls: [site + '/*'] },
             (details, callback) => {
+              // 设置Referer为目标站点
+              details.requestHeaders['Referer'] = site;
+
               if (isFileProtocol) {
                 // 在file协议下，使用当前的sessionId获取cookie
                 const userKey = `${site}:${jms_sessionid}`;
