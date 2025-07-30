@@ -49,13 +49,15 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
     this.startTimeStamp = Date.parse(this.replay.date_start);
     this.startTime = this.toSafeLocalDateStr(date);
     this.route.queryParams.pipe(filter(params => params.timestamp)).subscribe(params => {
-      // 计算开始时间时，减去 5 秒误差
-      this.startAt = end.getTime() / 1000 - parseInt(params.timestamp, 10) - 5;
+      // 从指定的时间戳开始播放，减去 5 秒误差提前开始
+      this.startAt = parseInt(params.timestamp, 10) - 5;
       if (this.startAt <= 0) {
         this.startAt = 0;
       }
-      if (this.startAt >= duration) {
-        this.startAt = duration;
+      // duration 应该是毫秒，需要转换为秒进行比较
+      const durationInSeconds = duration / 1000;
+      if (this.startAt >= durationInSeconds) {
+        this.startAt = durationInSeconds;
       }
     });
     this.rows = Math.min(25, Math.floor((window.innerHeight - 120) / 16)); // 限制最大25行，调整计算方式
@@ -106,10 +108,7 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
   @HostListener('window:resize', ['$event'])
   onResize(event: Event) {
     this.rows = Math.min(25, Math.floor((window.innerHeight - 120) / 16));
-    if (this.player) {
-      this.currentTime = this.player.getCurrentTime();
-      this.resetPlayer();
-    }
+    this.resetPlayerWithCurrentTime();
   }
 
   speedDown() {
@@ -117,20 +116,12 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
       return;
     }
     this.speed--;
-    if (this.player) {
-      this.currentTime = this.player.getCurrentTime();
-      this.resetPlayer();
-      this.player.seek(this.currentTime);
-    }
+    this.resetPlayerWithCurrentTime();
   }
 
   speedUp() {
     this.speed++;
-    if (this.player) {
-      this.currentTime = this.player.getCurrentTime();
-      this.resetPlayer();
-      this.player.seek(this.currentTime);
-    }
+    this.resetPlayerWithCurrentTime();
   }
 
   toggle() {
@@ -174,6 +165,37 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
     this.player.pause();
     this.player.dispose();
     this.player = this.createPlayer();
+  }
+
+  /**
+   * 重置播放器并保持当前播放位置和状态
+   */
+  private resetPlayerWithCurrentTime() {
+    if (!this.player) return;
+
+    this.currentTime = this.player.getCurrentTime();
+
+    if (isNaN(this.currentTime) || this.currentTime < 0) {
+      this.currentTime = 0;
+    }
+
+    this.startAt = this.currentTime;
+    const wasPlaying = this.isPlaying;
+    this.isPlaying = false;
+
+    this.resetPlayer();
+
+    if (this.player) {
+      setTimeout(() => {
+        if (this.player) {
+          this.player.seek(this.currentTime);
+          if (wasPlaying) {
+            this.player.play();
+            this.isPlaying = true;
+          }
+        }
+      }, 100);
+    }
   }
 
   getPlayerOptions() {
