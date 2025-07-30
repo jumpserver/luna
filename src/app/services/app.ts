@@ -1,15 +1,15 @@
-import {Injectable} from '@angular/core';
-import {Router} from '@angular/router';
-import {CookieService} from 'ngx-cookie-service';
-import {environment} from '@src/environments/environment';
-import {DataStore, User} from '@app/globals';
-import {HttpService} from './http';
-import {LocalStorageService, LogService} from './share';
-import {SettingService} from '@app/services/setting';
-import {Account, Asset, AuthInfo, ConnectData, Endpoint, Organization, View} from '@app/model';
+import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
+import { CookieService } from 'ngx-cookie-service';
+import { environment } from '@src/environments/environment';
+import { DataStore, User } from '@app/globals';
+import { HttpService } from './http';
+import { LocalStorageService, LogService } from './share';
+import { SettingService } from '@app/services/setting';
+import { Account, Asset, AuthInfo, ConnectData, Endpoint, Organization, View } from '@app/model';
 import * as CryptoJS from 'crypto-js';
-import {OrganizationService} from './organization';
-import {I18nService} from '@app/services/i18n';
+import { OrganizationService } from './organization';
+import { I18nService } from '@app/services/i18n';
 
 declare function unescape(s: string): string;
 
@@ -34,14 +34,16 @@ export class AppService {
   private newLoginHasOpen = false; // 避免多次打开新登录页
   private checkSecond = 120;
 
-  constructor(private _http: HttpService,
-              private _router: Router,
-              private _cookie: CookieService,
-              private _i18n: I18nService,
-              private _logger: LogService,
-              private _settingSvc: SettingService,
-              private _localStorage: LocalStorageService,
-              private _orgSvc: OrganizationService) {
+  constructor(
+    private _http: HttpService,
+    private _router: Router,
+    private _cookie: CookieService,
+    private _i18n: I18nService,
+    private _logger: LogService,
+    private _settingSvc: SettingService,
+    private _localStorage: LocalStorageService,
+    private _orgSvc: OrganizationService
+  ) {
     this.setLogLevel();
     this.setOrgFromQueryString();
     this.checkLogin();
@@ -62,7 +64,7 @@ export class AppService {
   setOrgFromQueryString() {
     const oid = this.getQueryString('oid');
     if (oid) {
-      const currentOrg: Organization = {id: oid, name: ''};
+      const currentOrg: Organization = { id: oid, name: '' };
       this._orgSvc.switchOrg(currentOrg);
     }
   }
@@ -127,9 +129,9 @@ export class AppService {
 
   getErrorMsg(status: string) {
     const messages = {
-      'unauthorized': 'LoginExpireMsg',
-      'badrequest': 'Bad request. The server does not understand the syntax of the request',
-      'error': 'The server encountered an error while trying to process the request'
+      unauthorized: 'LoginExpireMsg',
+      badrequest: 'Bad request. The server does not understand the syntax of the request',
+      error: 'The server encountered an error while trying to process the request'
     };
     return messages[status];
   }
@@ -168,7 +170,6 @@ export class AppService {
 
     this._http.getUserProfile().then(
       user => {
-        console.log('User is: ', user);
         this._orgSvc.setWorkbenchOrgs(user['workbench_orgs']);
         Object.assign(User, user);
         User.logined = true;
@@ -182,7 +183,7 @@ export class AppService {
           gotoLogin();
         }
         // this._router.navigate(['login']);
-      },
+      }
     );
   }
 
@@ -237,17 +238,17 @@ export class AppService {
   }
 
   setPreConnectData(asset: Asset, connectData: ConnectData) {
-    const {account, protocol, connectMethod, manualAuthInfo, connectOption} = connectData;
+    const { account, protocol, connectMethod, manualAuthInfo, connectOption } = connectData;
     const key = `JMS_PRE_${asset.id}`;
 
     const saveData = {
-      account: {alias: account.alias, username: account.username, has_secret: account.has_secret},
-      connectMethod: {value: connectMethod.value},
-      protocol: {name: protocol.name},
+      account: { alias: account.alias, username: account.username, has_secret: account.has_secret },
+      connectMethod: { value: connectMethod.value },
+      protocol: { name: protocol.name },
       downloadRDP: connectData.downloadRDP,
       autoLogin: connectData.autoLogin,
       connectOption,
-      direct: connectData.direct,
+      direct: connectData.direct
     };
     this.setAccountLocalAuth(asset, account, manualAuthInfo);
     this._localStorage.set(key, saveData);
@@ -330,7 +331,13 @@ export class AppService {
 
   setAccountLocalAuth(asset: Asset, account: Account, auth: AuthInfo) {
     const assetId = asset.id;
-    const newAuth = Object.assign({alias: account.alias, username: account.username}, auth);
+    const newAuth = Object.assign({ alias: account.alias, username: account.username }, auth);
+
+    // 如果 auth.alias 是 undefined，保持使用 account.alias
+    if (auth.alias === undefined && account.alias !== undefined) {
+      newAuth.alias = account.alias;
+    }
+
     if (!auth.secret || !auth.rememberAuth) {
       newAuth.secret = '';
     } else {
@@ -340,7 +347,7 @@ export class AppService {
     let auths = this.getAccountLocalAuth(assetId, false);
     const localKey = `JMS_MA_${assetId}`;
 
-    auths = auths.filter((item) => item.username !== newAuth.username);
+    auths = auths.filter(item => item.username !== newAuth.username);
     auths.splice(0, 0, newAuth);
     this._localStorage.set(localKey, auths);
   }
@@ -355,7 +362,7 @@ export class AppService {
     if (protocol === 'http') {
       protocol = window.location.protocol.replace(':', '');
     }
-    const data = {'assetId': '', 'sessionId': '', 'token': ''};
+    const data = { assetId: '', sessionId: '', token: '' };
     if (view.connectToken) {
       data['token'] = view.connectToken.id;
     } else {
@@ -369,7 +376,7 @@ export class AppService {
       }
     }
     const res = this._http.getSmartEndpoint(data, protocol);
-    res.catch((err) => {
+    res.catch(err => {
       alert(err.error.detail);
     });
     return res;
