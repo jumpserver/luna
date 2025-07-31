@@ -28,7 +28,7 @@ const actionItems = computed<ActionItem[]>(() => [
     </section>
 
     <!-- 右侧区域：包括搜素、排序、刷新 -->
-    <section class="flex item-center flex-nowrap gap-4">
+    <section class="flex item-center flex-nowrap gap-3 h-7">
       <UInput
         clearable
         icon="i-lucide-search"
@@ -48,7 +48,7 @@ const actionItems = computed<ActionItem[]>(() => [
           />
 
           <template #content>
-            <span class="m-4 inline-flex text-sm">
+            <span class="m-2 inline-flex text-xs-plus">
               {{ action.tooltipLabel }}
             </span>
           </template>

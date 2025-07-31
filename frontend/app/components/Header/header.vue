@@ -158,10 +158,13 @@ const dropItems = ref<DropdownMenuItem[][]>([
 
 <template>
   <div
+    :style="{
+      backgroundColor: colorMode.value === 'dark' ? '#18181b' : '#F5F5F5',
+    }"
     class="flex items-center justify-between h-12 px-4 cursor-pointer"
     @mousedown="handleWindowDrag"
   >
-    <section class="flex items-center h-full">
+    <section class="flex items-center h-full ml-20">
       <UIcon
         :name="
           collapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'
@@ -172,10 +175,10 @@ const dropItems = ref<DropdownMenuItem[][]>([
 
       <USelect
         v-model="value"
-        size="sm"
         :items="items"
+        size="sm"
         placeholder="Default"
-        class="w-36 ml-8"
+        class="w-36 ml-6"
       />
     </section>
 
@@ -202,7 +205,7 @@ const dropItems = ref<DropdownMenuItem[][]>([
         />
 
         <template #content>
-          <span class="m-4 inline-flex text-sm">
+          <span class="m-2 inline-flex text-xs-plus">
             {{ computedSwitchMode.tooltipLabel }}
           </span>
         </template>

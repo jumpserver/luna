@@ -104,6 +104,7 @@ export default defineNuxtConfig({
     icons: {
       brands: ['linux', 'windows'],
       solid: ['database', 'laptop', 'star'],
+      regular: ['pen-to-square'],
     },
   },
 });

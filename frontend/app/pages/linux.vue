@@ -3,18 +3,17 @@ const page = ref(1);
 </script>
 
 <template>
-  <!-- <UCard variant="subtle" class="w-full h-fit mt-4 space-y-4">
-    <div
-      class="grid grid-cols-2 gap-x-2 gap-y-2 h-[calc(100vh-240px)] overflow-y-auto p-2"
-    >
-      <template v-for="i in 2" :key="i">
-        <UCard class="h-36" variant="outline" />
+  <!-- <UCard variant="subtle" class="w-full h-fit space-y-4">
+    <div class="grid grid-cols-2 gap-x-2 gap-y-2 overflow-y-auto p-2">
+      <template v-for="i in 10" :key="i">
+        <GridCard />
       </template>
     </div>
-
-    <div class="flex justify-end mt-4">
-      <UPagination v-model:page="page" :total="100" :page-count="10" />
-    </div>
   </UCard> -->
-  <div class="h-screen">123</div>
+
+  <div class="grid grid-cols-2 gap-x-2 gap-y-2 overflow-y-auto p-2">
+    <template v-for="i in 10" :key="i">
+      <GridCard />
+    </template>
+  </div>
 </template>

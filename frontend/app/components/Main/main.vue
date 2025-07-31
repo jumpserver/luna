@@ -1,4 +1,6 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+const colorMode = useColorMode();
+</script>
 
 <template>
   <UCard
@@ -7,6 +9,7 @@
     :style="{
       borderTopRightRadius: '0px',
       borderTopLeftRadius: '0px',
+      backgroundColor: colorMode.value === 'dark' ? '#201f22' : '#FAFAFA',
     }"
     :ui="{
       header: 'p-2',

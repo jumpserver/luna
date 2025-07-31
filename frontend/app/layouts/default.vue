@@ -14,8 +14,8 @@ const handleCollapse = () => {
       body: 'p-0 sm:p-0',
       footer: 'p-0 sm:p-0',
     }"
+    style="background-color: transparent"
   >
-    <!--  style="background-color: transparent" -->
     <template #header>
       <Header @collapse="handleCollapse" />
     </template>

@@ -13,6 +13,7 @@ defineProps<{
 }>();
 
 const { t } = useI18n();
+const colorMode = useColorMode();
 
 const iconMap: Record<string, any> = {
   'icon-linux': IconLinux,
@@ -90,6 +91,7 @@ const items = ref<NavigationMenuItem[][]>([
         <div
           class="flex items-center py-1/2"
           :style="{
+            color: colorMode.value === 'light' ? '#000' : '#fff',
             gap: collapsed ? '0px' : '0.5rem',
             marginLeft: collapsed ? '0.2rem' : '0px',
           }"
@@ -97,11 +99,12 @@ const items = ref<NavigationMenuItem[][]>([
           <component
             :is="getIconComponent(item.icon as string)"
             :font-controlled="false"
-            class="w-4 h-4"
+            class="size-4"
           />
 
           <span
             v-if="!collapsed"
+            class="font-light"
             :class="item.type === 'label' ? 'text-xs' : 'text-xs-plus'"
             >{{ item.label }}</span
           >
