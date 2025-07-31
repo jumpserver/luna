@@ -15,6 +15,7 @@
 		"Windows": "Windows",
 		"Resource": "Resource",
 		"Database": "Database",
+		"OfflinePlayer": "Offline Player",
 		"Favorite": "Favorite"
 	},
 	"Operation": {

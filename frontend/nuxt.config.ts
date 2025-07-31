@@ -2,6 +2,7 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/ui',
     '@pinia/nuxt',
+    '@nuxt/fonts',
     '@nuxt/eslint',
     '@vueuse/nuxt',
     '@nuxtjs/i18n',
@@ -102,7 +103,7 @@ export default defineNuxtConfig({
   fontawesome: {
     icons: {
       brands: ['linux', 'windows'],
-      solid: ['database', 'laptop', 'star', 'time-sitemap'],
+      solid: ['database', 'laptop', 'star'],
     },
   },
 });

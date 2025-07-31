@@ -12,3 +12,7 @@
 	--color-warning: var(--ui-color-warning-500);
 	--color-error: var(--ui-color-error-500)
 }
+
+.text-xs-plus {
+  @apply text-[14px];
+}

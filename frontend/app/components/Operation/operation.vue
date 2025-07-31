@@ -21,10 +21,10 @@ const actionItems = computed<ActionItem[]>(() => [
 </script>
 
 <template>
-  <div class="flex w-full items-center justify-between">
+  <div class="flex w-full items-center justify-between py-1">
     <!-- 左侧区域：主要为 title  -->
     <section>
-      <span class="text-2xl font-bold"> 资产管理 </span>
+      <span class="text-xl font-bold"> 资产管理 </span>
     </section>
 
     <!-- 右侧区域：包括搜素、排序、刷新 -->

@@ -1,4 +1,3 @@
-import { Version } from '../../.nuxt/components';
 <script lang="ts" setup>
 const collapsed = ref(false);
 
@@ -21,16 +20,12 @@ const handleCollapse = () => {
       <Header @collapse="handleCollapse" />
     </template>
 
-    <div class="flex gap-0 w-full">
+    <div class="flex gap-0 w-full h-screen">
       <SideBar :collapsed="collapsed" />
 
       <Main class="flex-1 min-w-0">
         <slot />
       </Main>
     </div>
-
-    <template #footer>
-      <Version />
-    </template>
   </UCard>
 </template>

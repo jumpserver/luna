@@ -8,8 +8,13 @@
       borderTopRightRadius: '0px',
       borderTopLeftRadius: '0px',
     }"
+    :ui="{
+      header: 'p-2',
+    }"
   >
-    <Operation />
+    <template #header>
+      <Operation />
+    </template>
 
     <slot />
   </UCard>
