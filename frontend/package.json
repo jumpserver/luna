@@ -24,6 +24,7 @@
 	},
 	"dependencies": {
 		"@nuxt/fonts": "0.11.4",
+		"@nuxt/icon": "1.15.0",
 		"@nuxt/ui": "^3.2.0",
 		"@nuxtjs/i18n": "10.0.2",
 		"@pinia/nuxt": "^0.11.2",
@@ -33,7 +34,6 @@
 		"@tauri-apps/plugin-os": "^2.3.0",
 		"@tauri-apps/plugin-shell": "^2.3.0",
 		"@tauri-apps/plugin-store": "^2.3.0",
-		"@vesp/nuxt-fontawesome": "2.0.0-rc.2",
 		"nuxt": "^4.0.1",
 		"pinia": "^3.0.3",
 		"pinia-plugin-persistedstate": "^4.4.1",
@@ -46,13 +46,13 @@
 		"@fortawesome/free-brands-svg-icons": "^7.0.0",
 		"@fortawesome/free-regular-svg-icons": "^7.0.0",
 		"@fortawesome/free-solid-svg-icons": "^7.0.0",
+		"@iconify-json/mingcute": "^1.2.3",
 		"@nuxt/eslint": "^1.5.2",
 		"@tauri-apps/cli": "^2.6.2",
 		"@vueuse/core": "^13.5.0",
 		"@vueuse/nuxt": "^13.5.0",
 		"bumpp": "^10.2.0",
 		"eslint": "^9.31.0",
-		"nuxt-svgo": "^4.2.4",
 		"typescript": "^5.8.3"
 	},
 	"resolutions": {

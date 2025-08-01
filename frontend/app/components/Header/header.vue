@@ -38,7 +38,7 @@ watch(
       onUpdateChecked: (checked: boolean) => {
         if (checked) {
           changeLocale(locale.code);
-          currentLocale.value = locale.code; // 触发 watch
+          currentLocale.value = locale.code;
         }
       },
     }));
@@ -164,7 +164,12 @@ const dropItems = ref<DropdownMenuItem[][]>([
     class="flex items-center justify-between h-12 px-4 cursor-pointer"
     @mousedown="handleWindowDrag"
   >
-    <section class="flex items-center h-full ml-20">
+    <section
+      :style="{
+        marginLeft: collapsed ? '0.625rem' : '5rem',
+      }"
+      class="flex items-center h-full"
+    >
       <UIcon
         :name="
           collapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'

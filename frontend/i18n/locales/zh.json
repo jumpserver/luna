@@ -1,4 +1,8 @@
 {
+	"Common": {
+		"Cancel": "取消",
+		"Confirm": "确认"
+	},
 	"ToolTips": {
 		"LightMode": "亮色模式",
 		"DarkMode": "暗色模式",
@@ -20,5 +24,18 @@
 	},
 	"Operation": {
 		"Search": "资产搜索"
+	},
+	"AssetCard": {
+		"Activated": "已激活",
+		"Deactivated": "未激活"
+	},
+	"ContextMenu": {
+		"QuickConnect": "快速连接",
+		"Connect": "连接",
+		"Rename": "重命名",
+		"Use": "使用"
+	},
+	"EditModal": {
+		"Description": "默认连接信息将在保存后生效，并用于后续所有连接操作"
 	}
 }

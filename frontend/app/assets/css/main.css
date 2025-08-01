@@ -16,3 +16,7 @@
 .text-xs-plus {
   @apply text-[14px];
 }
+
+.text-overflow-ellipsis {
+  @apply text-ellipsis overflow-hidden whitespace-nowrap;
+}

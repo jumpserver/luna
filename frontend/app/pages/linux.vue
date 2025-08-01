@@ -1,19 +1,74 @@
 <script setup lang="ts">
-const page = ref(1);
+const editModalOpen = ref(false);
+const selectedCardIndex = ref<number | null>(null);
+
+const providerClearSelection = inject<(callback: () => void) => void>(
+  'providerClearSelection'
+);
+
+const handleCardClick = (index: number, event: MouseEvent) => {
+  event.stopPropagation();
+  selectedCardIndex.value = index;
+};
+
+const clearSelectedCard = () => {
+  selectedCardIndex.value = null;
+};
+
+const mockData = [
+  {
+    assetName: 'y4',
+    address: 'https://y4.cmdb.cc',
+    os: 'Ubuntu 22.04',
+    user: 'root',
+    protocol: 'ssh',
+  },
+  {
+    assetName: 'yy',
+    address: 'https://yy.cmdb.cc',
+    os: 'CentOS 7.9',
+    user: 'root',
+    protocol: 'sftp',
+  },
+  {
+    assetName: 'test',
+    address: 'https://jumpserver-test.cmdb.cc/',
+    os: 'RedHat 8.6',
+    user: 'jym',
+    protocol: 'sftp',
+  },
+];
+
+onMounted(() => {
+  if (providerClearSelection) {
+    providerClearSelection(clearSelectedCard);
+  }
+});
 </script>
 
 <template>
-  <!-- <UCard variant="subtle" class="w-full h-fit space-y-4">
-    <div class="grid grid-cols-2 gap-x-2 gap-y-2 overflow-y-auto p-2">
-      <template v-for="i in 10" :key="i">
-        <GridCard />
+  <div>
+    <div
+      class="grid grid-cols-[repeat(auto-fit,minmax(504px,1fr))] gap-2 overflow-y-auto p-2"
+    >
+      <template v-for="(item, index) in mockData" :key="index">
+        <GridCard
+          :os="item.os"
+          :user="item.user"
+          :address="item.address"
+          :asset-name="item.assetName"
+          :protocol="item.protocol"
+          :style="{
+            borderColor:
+              selectedCardIndex === index ? '#55B787' : 'transparent',
+          }"
+          class="border border-solid"
+          @open-edit-modal="editModalOpen = true"
+          @click="handleCardClick(index, $event)"
+        />
       </template>
     </div>
-  </UCard> -->
 
-  <div class="grid grid-cols-2 gap-x-2 gap-y-2 overflow-y-auto p-2">
-    <template v-for="i in 10" :key="i">
-      <GridCard />
-    </template>
+    <EditModal :open="editModalOpen" @update:open="editModalOpen = $event" />
   </div>
 </template>

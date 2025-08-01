@@ -2,12 +2,11 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/ui',
     '@pinia/nuxt',
+    '@nuxt/icon',
     '@nuxt/fonts',
     '@nuxt/eslint',
     '@vueuse/nuxt',
     '@nuxtjs/i18n',
-    '@vesp/nuxt-fontawesome',
-    'nuxt-svgo',
     'reka-ui/nuxt',
     'pinia-plugin-persistedstate/nuxt',
   ],
@@ -36,15 +35,11 @@ export default defineNuxtConfig({
   },
   css: ['@/assets/css/main.css'],
   icon: {
-    customCollections: [
-      {
-        prefix: 'local',
-        dir: './app/assets/icons',
-      },
-    ],
-  },
-  svgo: {
-    autoImportPath: './app/assets/icons',
+    mode: 'css',
+    cssLayer: 'base',
+    serverBundle: {
+      collections: ['mingcute'],
+    },
   },
   ssr: false,
   dir: {
@@ -100,11 +95,4 @@ export default defineNuxtConfig({
     typedPages: true,
   },
   compatibilityDate: '2025-07-01',
-  fontawesome: {
-    icons: {
-      brands: ['linux', 'windows'],
-      solid: ['database', 'laptop', 'star'],
-      regular: ['pen-to-square'],
-    },
-  },
 });

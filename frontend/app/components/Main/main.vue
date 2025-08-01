@@ -1,5 +1,18 @@
 <script setup lang="ts">
 const colorMode = useColorMode();
+const clearSelectionCallback = ref<(() => void) | null>(null);
+
+const providerClearSelection = (callback: () => void) => {
+  clearSelectionCallback.value = callback;
+};
+
+const clearSelection = () => {
+  if (clearSelectionCallback.value) {
+    clearSelectionCallback.value();
+  }
+};
+
+provide('providerClearSelection', providerClearSelection);
 </script>
 
 <template>
@@ -14,6 +27,7 @@ const colorMode = useColorMode();
     :ui="{
       header: 'p-2',
     }"
+    @click="clearSelection"
   >
     <template #header>
       <Operation />

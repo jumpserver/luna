@@ -1,13 +1,6 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui';
 
-import IconDatabase from '~/assets/icon-database.svg';
-import IconDevices from '~/assets/icon-devices.svg';
-import IconFavorite from '~/assets/icon-favorite.svg';
-import IconLinux from '~/assets/icon-linux.svg';
-import IconVideo from '~/assets/icon-video.svg';
-import IconWindows from '~/assets/icon-windows.svg';
-
 defineProps<{
   collapsed: boolean;
 }>();
@@ -15,19 +8,7 @@ defineProps<{
 const { t } = useI18n();
 const colorMode = useColorMode();
 
-const iconMap: Record<string, any> = {
-  'icon-linux': IconLinux,
-  'icon-windows': IconWindows,
-  'icon-database': IconDatabase,
-  'icon-devices': IconDevices,
-  'icon-favorite': IconFavorite,
-  'icon-video': IconVideo,
-};
-
-const getIconComponent = (iconName: string) => {
-  return iconMap[iconName] || null;
-};
-
+// 能用 lucide 的就用 lucide，不能用 lucide 的就用 mingcute
 const items = ref<NavigationMenuItem[][]>([
   [
     {
@@ -36,27 +17,27 @@ const items = ref<NavigationMenuItem[][]>([
     },
     {
       label: t('Menu.Linux'),
-      icon: 'icon-linux',
+      icon: 'mingcute:linux-line',
       to: '/linux',
     },
     {
       label: t('Menu.Windows'),
-      icon: 'icon-windows',
+      icon: 'mingcute:windows-line',
       to: '/windows',
     },
     {
       label: t('Menu.Database'),
-      icon: 'icon-database',
+      icon: 'i-lucide-database',
       to: '/database',
     },
     {
       label: t('Menu.Device'),
-      icon: 'icon-devices',
+      icon: 'mingcute:device-line',
       to: '/device',
     },
     {
       label: t('Menu.Favorite'),
-      icon: 'icon-favorite',
+      icon: 'i-lucide-star',
       to: '/favorite',
     },
     {
@@ -65,7 +46,7 @@ const items = ref<NavigationMenuItem[][]>([
     },
     {
       label: t('Menu.Player'),
-      icon: 'icon-video',
+      icon: 'i-lucide-video',
     },
   ],
 ]);
@@ -96,11 +77,7 @@ const items = ref<NavigationMenuItem[][]>([
             marginLeft: collapsed ? '0.2rem' : '0px',
           }"
         >
-          <component
-            :is="getIconComponent(item.icon as string)"
-            :font-controlled="false"
-            class="size-4"
-          />
+          <Icon v-if="item.icon" :name="item.icon as string" class="size-4" />
 
           <span
             v-if="!collapsed"

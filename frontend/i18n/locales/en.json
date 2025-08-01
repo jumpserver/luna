@@ -1,4 +1,8 @@
 {
+	"Common": {
+		"Cancel": "Cancel",
+		"Confirm": "Confirm"
+	},
 	"ToolTips": {
 		"LightMode": "Light Mode",
 		"DarkMode": "Dark Mode",
@@ -20,5 +24,18 @@
 	},
 	"Operation": {
 		"Search": "Asset Search"
+	},
+	"AssetCard": {
+		"Activated": "Activated",
+		"Deactivated": "Deactivated"
+	},
+	"ContextMenu": {
+		"QuickConnect": "Quick Connect",
+		"Connect": "Connect",
+		"Rename": "Rename",
+		"Use": "Use"
+	},
+	"EditModal": {
+		"Description": "Default connection settings will be applied after saving and used for future connections."
 	}
 }
