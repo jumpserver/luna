@@ -10,7 +10,8 @@
 		"SwitchLanguage": "Switch Language",
 		"Sort": "Sort",
 		"Refresh": "Refresh",
-		"Layout": "Switch Layout"
+		"Layout": "Switch Layout",
+		"Settings": "Connection Settings"
 	},
 	"Menu": {
 		"Linux": "Linux",

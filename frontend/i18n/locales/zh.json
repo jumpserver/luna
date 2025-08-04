@@ -10,7 +10,8 @@
 		"SwitchLanguage": "切换语言",
 		"Sort": "排序",
 		"Refresh": "刷新",
-		"Layout": "切换布局"
+		"Layout": "切换布局",
+		"Settings": "连接设置"
 	},
 	"Menu": {
 		"Resource": "资源目录",

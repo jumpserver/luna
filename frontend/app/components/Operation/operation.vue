@@ -3,19 +3,31 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import type { ActionItem } from '~/types';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
+type openDropdownKey = 'sort' | 'layout';
+
 const { t } = useI18n();
 const userSettingStore = useUserSettingStore();
 
+// 为每个下拉菜单创建独立的打开状态
+const sortDropdownOpen = ref(false);
+const layoutDropdownOpen = ref(false);
 const { layouts, sort } = storeToRefs(userSettingStore);
+
+const dropdownOpenMap = {
+  sort: sortDropdownOpen,
+  layout: layoutDropdownOpen,
+} as const;
 
 // 刷新、排序、切换布局
 const actionItems = computed<ActionItem[]>(() => [
   {
+    key: 'refresh',
     type: 'action',
     iconName: 'i-lucide-refresh-ccw',
     tooltipLabel: t('ToolTips.Refresh'),
   },
   {
+    key: 'sort',
     type: 'select',
     iconName: 'i-lucide-arrow-down-wide-narrow',
     tooltipLabel: t('ToolTips.Sort'),
@@ -72,8 +84,12 @@ const actionItems = computed<ActionItem[]>(() => [
         },
       },
     ] as DropdownMenuItem[],
+    onClick: () => {
+      sortDropdownOpen.value = !sortDropdownOpen.value;
+    },
   },
   {
+    key: 'layout',
     type: 'select',
     iconName: 'i-lucide-layout-grid',
     tooltipLabel: t('ToolTips.Layout'),
@@ -103,12 +119,24 @@ const actionItems = computed<ActionItem[]>(() => [
         },
       },
     ] as DropdownMenuItem[],
+    onClick: () => {
+      layoutDropdownOpen.value = !layoutDropdownOpen.value;
+    },
+  },
+  {
+    key: 'settings',
+    type: 'action',
+    iconName: 'i-lucide-settings',
+    tooltipLabel: t('ToolTips.Settings'),
+    onClick: () => {
+      console.log('settings');
+    },
   },
 ]);
 </script>
 
 <template>
-  <div class="flex w-full items-center justify-between py-1">
+  <div class="flex w-full items-center justify-between py-2">
     <!-- 左侧区域：主要为 title  -->
     <section>
       <span class="text-xl font-bold"> 资产管理 </span>
@@ -126,13 +154,14 @@ const actionItems = computed<ActionItem[]>(() => [
 
       <template v-for="action of actionItems" :key="action.iconName">
         <template v-if="action.type === 'action'">
-          <UPopover mode="hover" arrow>
+          <UPopover mode="hover" arrow :open-delay="500">
             <UButton
               :icon="action.iconName"
               size="sm"
               color="neutral"
               variant="outline"
               class="rounded-lg"
+              @click="action.onClick"
             />
 
             <template #content>
@@ -144,23 +173,28 @@ const actionItems = computed<ActionItem[]>(() => [
         </template>
 
         <template v-else>
-          <UPopover mode="hover">
-            <UDropdownMenu arrow size="sm" :items="action.selectItems">
+          <UDropdownMenu
+            v-model:open="dropdownOpenMap[action.key as openDropdownKey].value"
+            :items="action.selectItems"
+            size="sm"
+            arrow
+          >
+            <UPopover mode="hover" arrow :open-delay="500">
               <UButton
                 :icon="action.iconName"
                 size="sm"
                 color="neutral"
                 variant="outline"
                 class="rounded-lg"
+                @click="action.onClick"
               />
-            </UDropdownMenu>
-
-            <template #content>
-              <span class="m-2 inline-flex text-xs-plus">
-                {{ action.tooltipLabel }}
-              </span>
-            </template>
-          </UPopover>
+              <template #content>
+                <span class="m-2 inline-flex text-xs-plus">
+                  {{ action.tooltipLabel }}
+                </span>
+              </template>
+            </UPopover>
+          </UDropdownMenu>
         </template>
       </template>
     </section>

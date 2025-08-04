@@ -26,6 +26,7 @@ provide('providerClearSelection', providerClearSelection);
     }"
     :ui="{
       header: 'p-2',
+      body: 'p-2 sm:p-4 px-4 py-2',
     }"
     @click="clearSelection"
   >
