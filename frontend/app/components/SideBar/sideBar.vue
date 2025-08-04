@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui';
-
-defineProps<{
-  collapsed: boolean;
-}>();
+import { useUserSettingStore } from '~/store/modules/userSetting';
 
 const { t } = useI18n();
 const colorMode = useColorMode();
+const useSettingStore = useUserSettingStore();
+
+const { collapse } = storeToRefs(useSettingStore)
 
 // 能用 lucide 的就用 lucide，不能用 lucide 的就用 mingcute
 const items = ref<NavigationMenuItem[][]>([
@@ -56,12 +56,12 @@ const items = ref<NavigationMenuItem[][]>([
   <div
     class="flex flex-col justify-between"
     :style="{
-      width: collapsed ? '64px' : '185px',
+      width: collapse ? '64px' : '185px',
     }"
   >
     <UNavigationMenu
       :items="items"
-      :collapsed="collapsed"
+      :collapsed="collapse"
       :ui="{
         label: 'text-gray-500 font-medium px-0 ',
       }"
@@ -73,14 +73,14 @@ const items = ref<NavigationMenuItem[][]>([
           class="flex items-center py-1/2"
           :style="{
             color: colorMode.value === 'light' ? '#000' : '#fff',
-            gap: collapsed ? '0px' : '0.5rem',
-            marginLeft: collapsed ? '0.2rem' : '0px',
+            gap: collapse ? '0px' : '0.5rem',
+            marginLeft: collapse ? '0.2rem' : '0px',
           }"
         >
           <Icon v-if="item.icon" :name="item.icon as string" class="size-4" />
 
           <span
-            v-if="!collapsed"
+            v-if="!collapse"
             class="font-light"
             :class="item.type === 'label' ? 'text-xs' : 'text-xs-plus'"
             >{{ item.label }}</span

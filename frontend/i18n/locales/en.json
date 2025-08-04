@@ -1,7 +1,8 @@
 {
 	"Common": {
 		"Cancel": "Cancel",
-		"Confirm": "Confirm"
+		"Confirm": "Confirm",
+		"Version": "Version"
 	},
 	"ToolTips": {
 		"LightMode": "Light Mode",
@@ -37,5 +38,15 @@
 	},
 	"EditModal": {
 		"Description": "Default connection settings will be applied after saving and used for future connections."
+	},
+	"Layout": {
+		"Grid": "Grid View",
+		"Table": "Table View"
+	},
+	"Sort": {
+		"A-z": "A-z",
+		"Z-A": "Z-A",
+		"NewestToOldest": "Newest to oldest",
+		"OldestToNewest": "Oldest to newest"
 	}
 }

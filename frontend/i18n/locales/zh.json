@@ -1,7 +1,8 @@
 {
 	"Common": {
 		"Cancel": "取消",
-		"Confirm": "确认"
+		"Confirm": "确认",
+		"Version": "当前版本"
 	},
 	"ToolTips": {
 		"LightMode": "亮色模式",
@@ -37,5 +38,15 @@
 	},
 	"EditModal": {
 		"Description": "默认连接信息将在保存后生效，并用于后续所有连接操作"
+	},
+	"Layout": {
+		"Grid": "卡片视图",
+		"Table": "表格视图"
+	},
+	"Sort": {
+		"A-z": "A-z",
+		"Z-A": "Z-A",
+		"NewestToOldest": "按时间降序（最新优先）",
+		"OldestToNewest": "按时间升序（最早优先）"
 	}
 }

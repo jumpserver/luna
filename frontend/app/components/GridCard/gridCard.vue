@@ -66,18 +66,19 @@ const handleMouseLeave = () => {
     @mouseover="handleMouseOver"
     @mouseleave="handleMouseLeave"
   >
-    <!-- <template #header>
-      
-    </template> -->
-
     <UContextMenu
+      size="sm"
       :items="items"
       :ui="{
         content: 'w-48',
       }"
     >
       <section class="flex gap-4 items-center w-full">
-        <UIcon name="mingcute:linux-line" class="size-6" />
+        <UAvatar
+          icon="mingcute:linux-line"
+          size="lg"
+          :ui="{ root: 'rounded-md', icon: 'size-6' }"
+        />
 
         <div class="flex flex-col flex-1 gap-1 text-xs-plus">
           <div class="flex justify-between">
@@ -112,13 +113,19 @@ const handleMouseLeave = () => {
             </UBadge>
             <USeparator orientation="vertical" size="sm" class="h-3" />
 
-            <UBadge color="info" variant="soft">{{ os }}</UBadge>
+            <UBadge color="info" variant="soft">
+              {{ os }}
+            </UBadge>
             <USeparator orientation="vertical" size="sm" class="h-3" />
 
-            <UBadge color="neutral" variant="soft">{{ user }}</UBadge>
+            <UBadge color="neutral" variant="soft">
+              {{ user }}
+            </UBadge>
             <USeparator orientation="vertical" size="sm" class="h-3" />
 
-            <UBadge color="error" variant="soft">{{ protocol }}</UBadge>
+            <UBadge color="error" variant="soft">
+              {{ protocol }}
+            </UBadge>
           </div>
         </div>
 

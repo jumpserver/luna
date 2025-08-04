@@ -5,6 +5,12 @@ export default defineAppConfig({
     version: '3.1.0',
     repo: 'https://github.com/jumpserver/clients',
   },
+  componentsConfig: {
+    header: {
+      darkColor: '#18181b',
+      lightColor: '#F5F5F5',
+    },
+  },
   pageCategories: {
     system: {
       label: 'System',

@@ -1,10 +1,16 @@
 <script setup lang="ts">
+import { useUserSettingStore } from '~/store/modules/userSetting';
+
 const editModalOpen = ref(false);
 const selectedCardIndex = ref<number | null>(null);
 
 const providerClearSelection = inject<(callback: () => void) => void>(
   'providerClearSelection'
 );
+
+const userSettingStore = useUserSettingStore();
+
+const { layouts } = storeToRefs(userSettingStore);
 
 const handleCardClick = (index: number, event: MouseEvent) => {
   event.stopPropagation();
@@ -51,7 +57,11 @@ onMounted(() => {
     <div
       class="grid grid-cols-[repeat(auto-fit,minmax(504px,1fr))] gap-2 overflow-y-auto p-2"
     >
-      <template v-for="(item, index) in mockData" :key="index">
+      <template
+        v-if="layouts === 'grid'"
+        v-for="(item, index) in mockData"
+        :key="index"
+      >
         <GridCard
           :os="item.os"
           :user="item.user"
@@ -66,6 +76,10 @@ onMounted(() => {
           @open-edit-modal="editModalOpen = true"
           @click="handleCardClick(index, $event)"
         />
+      </template>
+
+      <template v-else>
+        <TableCard />
       </template>
     </div>
 

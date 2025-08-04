@@ -1,21 +1,40 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
 import type { ActionItem } from '~/types/index';
+import { useUserSettingStore } from '~/store/modules/userSetting';
 
 type LocaleCode = (typeof locales.value)[number]['code'];
 
-const emits = defineEmits<{
-  (e: 'collapse'): void;
-}>();
-
+const { t, setLocale, locales } = useI18n();
 const colorMode = useColorMode();
-const { t, setLocale, locales, locale } = useI18n();
+const appConfig = useAppConfig();
+const userSettingStore = useUserSettingStore();
 
-const collapsed = ref(false);
-const currentLocale = ref(locale.value);
-const supportLanguages = ref<DropdownMenuItem[]>([]);
+const darkColor = appConfig.componentsConfig.header.darkColor;
+const lightColor = appConfig.componentsConfig.header.lightColor;
 
-const isDarkMode = computed(() => colorMode.value === 'dark');
+const { setTheme, setLang, setCollapse } = userSettingStore;
+const { theme, language, collapse } = storeToRefs(userSettingStore);
+
+const isDarkMode = computed(() => theme.value === 'dark');
+
+const supportLanguages = computed(() => {
+  return locales.value.map((locale) => ({
+    label: locale.name,
+    value: locale.code,
+    type: 'checkbox' as const,
+    checked: locale.code === language.value,
+    onUpdateChecked: (checked: boolean) => {
+      if (checked) {
+        changeLocale(locale.code);
+
+        nextTick(() => {
+          setLang(locale.code);
+        });
+      }
+    },
+  })) as DropdownMenuItem[];
+});
 
 const computedSwitchMode = computed<ActionItem>(() => {
   return {
@@ -24,41 +43,44 @@ const computedSwitchMode = computed<ActionItem>(() => {
       ? t('ToolTips.LightMode')
       : t('ToolTips.DarkMode'),
     onClick: toggleDarkMode,
+    type: 'action',
   };
 });
 
-watch(
-  currentLocale,
-  (newLocale) => {
-    supportLanguages.value = locales.value.map((locale) => ({
-      label: locale.name,
-      value: locale.code,
-      type: 'checkbox' as const,
-      checked: locale.code === newLocale,
-      onUpdateChecked: (checked: boolean) => {
-        if (checked) {
-          changeLocale(locale.code);
-          currentLocale.value = locale.code;
-        }
-      },
-    }));
-  },
-  { immediate: true }
-);
-
+/**
+ * @description 切换颜色 mode
+ */
 function toggleDarkMode() {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
+
+  nextTick(() => {
+    setTheme(colorMode.value === 'dark' ? 'dark' : 'light');
+  });
 }
 
+/**
+ * @description 切换语言
+ * @param payload 语言代码
+ */
 function changeLocale(payload: LocaleCode) {
   setLocale(payload);
+
+  nextTick(() => {
+    setLang(payload);
+  });
 }
 
+/**
+ * @description 切换折叠状态
+ */
 const handleCollapse = () => {
-  collapsed.value = !collapsed.value;
-  emits('collapse');
+  setCollapse(!collapse.value);
 };
 
+/**
+ * @description 窗口拖拽
+ * @param event 鼠标事件
+ */
 const handleWindowDrag = async (event: MouseEvent) => {
   if (event.button !== 0) return;
 
@@ -154,25 +176,29 @@ const dropItems = ref<DropdownMenuItem[][]>([
     },
   ],
 ]);
+
+onMounted(() => {
+  setLocale(language.value as LocaleCode);
+});
 </script>
 
 <template>
   <div
     :style="{
-      backgroundColor: colorMode.value === 'dark' ? '#18181b' : '#F5F5F5',
+      backgroundColor: colorMode.value === 'dark' ? darkColor : lightColor,
     }"
     class="flex items-center justify-between h-12 px-4 cursor-pointer"
     @mousedown="handleWindowDrag"
   >
     <section
       :style="{
-        marginLeft: collapsed ? '0.625rem' : '5rem',
+        marginLeft: collapse ? '0.625rem' : '5rem',
       }"
       class="flex items-center h-full"
     >
       <UIcon
         :name="
-          collapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'
+          collapse ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'
         "
         class="size-5 ml-16 cursor-pointer"
         @click="handleCollapse"
@@ -193,9 +219,8 @@ const dropItems = ref<DropdownMenuItem[][]>([
           icon="i-lucide-globe"
           size="sm"
           color="neutral"
-          variant="soft"
+          variant="outline"
           class="rounded-lg"
-          :title="t('ToolTips.SwitchLanguage')"
         />
       </UDropdownMenu>
 
@@ -204,7 +229,7 @@ const dropItems = ref<DropdownMenuItem[][]>([
           :icon="computedSwitchMode.iconName"
           size="sm"
           color="neutral"
-          variant="soft"
+          variant="outline"
           class="rounded-lg"
           @click.prevent="computedSwitchMode.onClick"
         />

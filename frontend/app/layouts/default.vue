@@ -1,10 +1,4 @@
-<script lang="ts" setup>
-const collapsed = ref(false);
-
-const handleCollapse = () => {
-  collapsed.value = !collapsed.value;
-};
-</script>
+<script lang="ts" setup></script>
 
 <template>
   <UCard
@@ -17,11 +11,11 @@ const handleCollapse = () => {
     style="background-color: transparent"
   >
     <template #header>
-      <Header @collapse="handleCollapse" />
+      <Header />
     </template>
 
     <div class="flex gap-0 w-full h-screen">
-      <SideBar :collapsed="collapsed" />
+      <SideBar />
 
       <Main class="flex-1 min-w-0">
         <slot />
