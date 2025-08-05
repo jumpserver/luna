@@ -63,6 +63,9 @@ export class ElementACLDialogComponent implements OnInit {
 
   get errorDetail() {
     let error = this.data.error.error;
+    if (this.data.error.status === 500) {
+      error = this.data.error.message;
+    }
     if (Array.isArray(error)) {
       error = error.join(' ');
     } else if (typeof error === 'object') {
@@ -107,7 +110,6 @@ export class ElementACLDialogComponent implements OnInit {
         );
         this.code = 'face_verify_capture';
         this.content = this.getDialogContent(this.code);
-
 
         const timer = setInterval(() => {
           this._http.getFaceVerifyState(connToken.face_token).subscribe(async data => {
@@ -279,7 +281,7 @@ export class ElementACLDialogComponent implements OnInit {
 
           if (state === 'approved') {
             const msg = await this._i18n.t('Login review approved');
-            this._toastr.success(msg, '', { nzClass: 'custom-success-notification' }  );
+            this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
             this.dialogRef.close(this.connectionToken);
           } else if (state === 'rejected') {
             this.code = 'ticket_review_rejected';
@@ -362,7 +364,7 @@ export class ElementACLDialogComponent implements OnInit {
       },
       acl_face_online_not_supported: {
         title: 'Login reminder',
-        message: 'FaceOnlineNotSupported',
+        message: this.errorDetail,
         isError: true,
         actions: [
           {
@@ -407,7 +409,7 @@ export class ElementACLDialogComponent implements OnInit {
             text: 'Copy link',
             type: 'primary',
             callback: () => {
-              vm.onCopySuccess(this.connectionToken?.from_ticket_info?.ticket_detail_page_url)
+              vm.onCopySuccess(this.connectionToken?.from_ticket_info?.ticket_detail_page_url);
             }
           }
         ]
@@ -455,13 +457,10 @@ export class ElementACLDialogComponent implements OnInit {
             callback: () => vm.closeDialog()
           }
         ]
-      }
-    };
-
-    return (
-      contentMap[code] || {
-        title: 'Login reminder',
-        message: this.data.errorDetail,
+      },
+      unknown: {
+        title: 'Unknown error',
+        message: this.errorDetail,
         isError: true,
         actions: [
           {
@@ -470,6 +469,8 @@ export class ElementACLDialogComponent implements OnInit {
           }
         ]
       }
-    );
+    };
+
+    return contentMap[code] || contentMap.unknown;
   }
 }

@@ -37,8 +37,10 @@ export const mainTheme = () => {
     '--el-icon-color': '#ffffff',
     // icon hover 时的颜色
     '--el-icon-hover-color': '#d6cbcb',
-    '--el-border-color-x': '#202020',
-    '--el-border-color-y': '#202020',
+    // '--el-border-color-x': darken(30, '#000000', 0.4),
+    // '--el-border-color-y': darken(30, '#000000', 0.4),
+    '--el-border-color-x': 'rgba(0, 0, 0, 0.3)',
+    '--el-border-color-y': 'rgba(0, 0, 0, 0.3)',
 
     // 头部导航背景
     '--el-nav-bg-color': lighten(0),
