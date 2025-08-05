@@ -10,6 +10,11 @@ export default defineAppConfig({
       darkColor: '#18181b',
       lightColor: '#F5F5F5',
     },
+    pages: {
+      focusColor: '#55B787',
+      mainCardLightBackgroundColor: '#FAFAFA',
+      mainCardDarkBackgroundColor: '#201f22',
+    },
   },
   pageCategories: {
     system: {

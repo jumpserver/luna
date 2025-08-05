@@ -1,4 +1,5 @@
 import * as tauriApp from '@tauri-apps/api/app';
+import * as tauriPath from '@tauri-apps/api/path';
 import * as tauriWebviewWindow from '@tauri-apps/api/webviewWindow';
 import * as tauriWindow from '@tauri-apps/api/window';
 import * as tauriFs from '@tauri-apps/plugin-fs';
@@ -41,6 +42,7 @@ const tauriModules = [
     prefix: 'Store',
     importPath: '@tauri-apps/plugin-store',
   },
+  { module: tauriPath, prefix: 'Path', importPath: '@tauri-apps/api/path' },
 ];
 
 export default defineNuxtModule<ModuleOptions>({

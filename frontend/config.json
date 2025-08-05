@@ -1,0 +1,215 @@
+{
+	"macos": {
+		"terminal": [
+			{
+				"name": "terminal",
+				"display_name": "Terminal",
+				"protocol": ["ssh", "telnet"],
+				"comment": {
+					"zh": "Terminal是MacOS操作系统上的虚拟终端应用软件，位于“实用工具”文件夹内。",
+					"en": "Terminal is a virtual terminal application software on the MacOS operating system, located in the \"Utilities\" folder."
+				},
+				"download_url": "",
+				"type": "terminal",
+				"path": "Terminal",
+				"arg_format": "{protocol} {username}@{host} -p {port} -P {value}",
+				"match_first": ["ssh", "telnet"],
+				"is_internal": true,
+				"is_default": true,
+				"is_set": true
+			},
+			{
+				"name": "iterm",
+				"display_name": "iTerm2",
+				"protocol": ["ssh", "telnet"],
+				"comment": {
+					"zh": "iTerm2是MacOS操作系统上的虚拟终端应用软件。\n\n!!!手动下载安装，点击保存启用!!!",
+					"en": "iTerm2 is a virtual terminal application software on the MacOS operating system.\n\n\n!!!Manually download and install, click Save to activate!!!"
+				},
+				"download_url": "https://iterm2.com/downloads.html",
+				"type": "terminal",
+				"path": "iTerm2",
+				"arg_format": "{protocol} {username}@{host} -p {port} -P {value}",
+				"match_first": [],
+				"is_internal": true,
+				"is_default": false,
+				"is_set": false
+			},
+			{
+				"name": "securecrt",
+				"display_name": "SecureCRT",
+				"protocol": ["ssh", "telnet"],
+				"comment": {
+					"zh": "SecureCRT是VanDyke Software所开发销售的一个SSH、Telnet客户端和虚拟终端软件。\n\n!!!手动下载安装，点击保存启用!!!",
+					"en": "SecureCRT is an SSH, Telnet client and virtual terminal software developed and sold by VanDyke Software.\n\n!!!Manually download and install, click Save to activate!!!"
+				},
+				"download_url": "https://www.vandyke.com/cgi-bin/releases.php?product=securecrt",
+				"type": "terminal",
+				"path": "/Applications/SecureCRT.app/Contents/MacOS/SecureCRT",
+				"arg_format": "/N {name} /T /SSH2 /ACCEPTHOSTKEYS /p {port} /password {value} /L {username} {host}",
+				"match_first": [],
+				"is_internal": false,
+				"is_default": false,
+				"is_set": false
+			}
+		],
+		"remotedesktop": [
+			{
+				"name": "mstsc",
+				"display_name": "Windows App",
+				"protocol": ["rdp"],
+				"comment": {
+					"zh": "Windows App是一款强大的微软远程连接工具，可以从几乎任何地方连接到远程PC和您的工作资源。\n\n!!!手动下载安装，点击保存启用!!!",
+					"en": "Windows App is a powerful Microsoft remote connection tool that can connect to remote PCs and your work resources from almost anywhere.\n\n!!!Manually download and install, click Save to activate!!!"
+				},
+				"download_url": "",
+				"type": "remotedesktop",
+				"path": "/Applications/Windows App.app",
+				"arg_format": "{file}",
+				"match_first": ["rdp"],
+				"is_internal": true,
+				"is_default": true,
+				"is_set": true
+			},
+			{
+				"name": "vncviewer",
+				"display_name": "RealVNC Viewer",
+				"protocol": ["vnc"],
+				"comment": {
+					"zh": "RealVNC Viewer 是一款用于远程控制计算机的软件，它使用VNC（Virtual Network Computing）协议，允许用户从一台计算机（客户端）访问和控制另一台计算机（服务器）的桌面。",
+					"en": "RealVNC Viewer is a software used for remote computer control. It utilizes the VNC (Virtual Network Computing) protocol, allowing users to access and control the desktop of another computer (the server) from their own computer"
+				},
+				"download_url": "https://www.realvnc.com/en/connect/download/viewer/",
+				"type": "remotedesktop",
+				"path": "/Applications/VNC Viewer.app/Contents/MacOS/vncviewer",
+				"arg_format": "-WarnUnencrypted=0 -VerifyId=0 -UserName={username} {host}:{port}",
+				"match_first": ["vnc"],
+				"is_internal": false,
+				"is_default": false,
+				"is_set": false
+			}
+		],
+		"filetransfer": [
+			{
+				"name": "iterm",
+				"display_name": "iTerm2",
+				"protocol": ["sftp"],
+				"comment": {
+					"zh": "iTerm2是MacOS操作系统上的虚拟终端应用软件。\n\n!!!手动下载安装，点击保存启用!!!",
+					"en": "iTerm2 is a virtual terminal application software on the MacOS operating system.\n\n\n!!!Manually download and install, click Save to activate!!!"
+				},
+				"download_url": "https://iterm2.com/downloads.html",
+				"type": "filetransfer",
+				"path": "iTerm2",
+				"arg_format": "{protocol} {username}@{host} -p {port} -P {value}",
+				"match_first": ["sftp"],
+				"is_internal": true,
+				"is_default": false,
+				"is_set": false
+			},
+			{
+				"name": "securefx",
+				"display_name": "SecureFX",
+				"protocol": ["sftp"],
+				"comment": {
+					"zh": "SecureFX 是一款安全的文件传输应用， 拥有一个简单易学的可视化界面。\n\n!!!手动下载安装，点击保存启用!!!",
+					"en": "SecureFX is a secure file transfer application with an easy-to-learn visual interface.\n\n!!!Manually download and install, click Save to activate!!!"
+				},
+				"download_url": "https://www.vandyke.com/cgi-bin/releases.php?product=securefx",
+				"type": "filetransfer",
+				"path": "/Applications/SecureFX.app/Contents/MacOS/SecureFX",
+				"arg_format": "{protocol}://{username}:{value}@{host}:{port}",
+				"match_first": [],
+				"is_internal": false,
+				"is_default": false,
+				"is_set": false
+			}
+		],
+		"databases": [
+			{
+				"name": "terminal",
+				"display_name": "Terminal",
+				"protocol": [
+					"oracle",
+					"mysql",
+					"postgresql",
+					"mariadb",
+					"redis",
+					"sqlserver",
+					"mongodb"
+				],
+				"comment": {
+					"zh": "Terminal是MacOS操作系统上的虚拟终端应用软件，位于“实用工具”文件夹内。",
+					"en": "Terminal is a virtual terminal application software on the MacOS operating system, located in the \"Utilities\" folder."
+				},
+				"download_url": "",
+				"type": "databases",
+				"path": "Terminal",
+				"arg_format": "",
+				"match_first": [
+					"oracle",
+					"mysql",
+					"postgresql",
+					"mariadb",
+					"redis",
+					"sqlserver",
+					"mongodb"
+				],
+				"is_internal": true,
+				"is_default": false,
+				"is_set": true
+			},
+			{
+				"name": "dbeaver",
+				"display_name": "DBeaver Community",
+				"protocol": ["oracle", "mysql", "postgresql", "mariadb", "sqlserver"],
+				"comment": {
+					"zh": "DBeaver Community是一个通用的数据库管理工具和SQL客户端，支持MySQL、PostgreSQL、Oracle以及其他兼容JDBC的数据库。\n\n!!!手动下载安装，点击保存启用!!!",
+					"en": "DBeaver Community is a general database management tool and SQL client that supports MySQL, PostgreSQL, Oracle and other JDBC-compatible databases.\n\n!!!Manually download and install, click Save to activate!!!"
+				},
+				"download_url": "https://dbeaver.io/download/",
+				"type": "databases",
+				"path": "/Applications/DBeaver.app/Contents/MacOS/dbeaver",
+				"arg_format": "-con name={name}|driver={protocol}|user={username}|password={value}|database={dbname}|host={host}|port={port}|save=false|connect=true",
+				"match_first": [],
+				"is_internal": false,
+				"is_default": false,
+				"is_set": false
+			},
+			{
+				"name": "another_redis",
+				"display_name": "Another Redis Desktop Manager",
+				"protocol": ["redis"],
+				"comment": {
+					"zh": "更快、更好、更稳定的Redis桌面(GUI)管理客户端。",
+					"en": "A faster, better and more stable redis desktop manager."
+				},
+				"download_url": "https://github.com/qishibo/AnotherRedisDesktopManager",
+				"type": "databases",
+				"path": "/Applications/Another Redis Desktop Manager.app/Contents/MacOS/Another Redis Desktop Manager",
+				"arg_format": "--host {host} --port {port} --auth {username}@{value}",
+				"match_first": [],
+				"is_internal": false,
+				"is_default": false,
+				"is_set": false
+			},
+			{
+				"name": "mongo_compass",
+				"display_name": "MongoDB Compass",
+				"protocol": ["mongodb"],
+				"comment": {
+					"zh": "使用 MongoDB 的 GUI Compass，轻松探索和操作您的数据库。Compass 直观灵活，提供详细的架构可视化、实时性能指标、复杂的查询功能。",
+					"en": "asily explore and manipulate your database with Compass, the GUI for MongoDB. Intuitive and flexible, Compass provides detailed schema visualizations, real-time performance metrics, sophisticated querying abilities, and much more."
+				},
+				"download_url": "https://www.mongodb.com/try/download/compass",
+				"type": "databases",
+				"path": "/Applications/MongoDB Compass.app/Contents/MacOS/MongoDB Compass",
+				"arg_format": "mongodb://{username}:{value}@{host}:{port}/{dbname}",
+				"match_first": [],
+				"is_internal": false,
+				"is_default": false,
+				"is_set": false
+			}
+		]
+	}
+}

@@ -10,6 +10,7 @@ const providerClearSelection = inject<(callback: () => void) => void>(
 
 const userSettingStore = useUserSettingStore();
 
+const { componentsConfig } = useAppConfig();
 const { layouts } = storeToRefs(userSettingStore);
 
 const handleCardClick = (index: number, event: MouseEvent) => {
@@ -57,12 +58,10 @@ onMounted(() => {
     <div
       class="grid grid-cols-[repeat(auto-fit,minmax(504px,1fr))] gap-2 overflow-y-auto p-2"
     >
-      <template
-        v-if="layouts === 'grid'"
-        v-for="(item, index) in mockData"
-        :key="index"
-      >
+      <template v-if="layouts === 'grid'">
         <GridCard
+          v-for="(item, index) in mockData"
+          :key="index"
           :os="item.os"
           :user="item.user"
           :address="item.address"
@@ -70,7 +69,9 @@ onMounted(() => {
           :protocol="item.protocol"
           :style="{
             borderColor:
-              selectedCardIndex === index ? '#55B787' : 'transparent',
+              selectedCardIndex === index
+                ? componentsConfig.pages.focusColor
+                : 'transparent',
           }"
           class="border border-solid"
           @open-edit-modal="editModalOpen = true"

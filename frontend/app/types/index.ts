@@ -10,3 +10,21 @@ export interface ActionItem {
   selectItems?: DropdownMenuItem[];
   onClick?: () => void;
 }
+
+export interface ConfigItem {
+  name: string;
+  display_name: string;
+  protocol: string[];
+  comment: {
+    zh: string;
+    en: string;
+  };
+  download_url: string;
+  type: string;
+  path: string;
+  arg_format: string;
+  match_first: string[];
+  is_internal: boolean;
+  is_default: boolean;
+  is_set: boolean;
+}

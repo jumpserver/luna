@@ -1,15 +1,21 @@
 <script setup lang="ts">
-const colorMode = useColorMode();
-const clearSelectionCallback = ref<(() => void) | null>(null);
+import { useUserSettingStore } from '~/store/modules/userSetting';
 
-const providerClearSelection = (callback: () => void) => {
-  clearSelectionCallback.value = callback;
-};
+const userSettingStore = useUserSettingStore();
+
+const { componentsConfig } = useAppConfig();
+const { theme } = storeToRefs(userSettingStore);
+
+const clearSelectionCallback = ref<(() => void) | null>(null);
 
 const clearSelection = () => {
   if (clearSelectionCallback.value) {
     clearSelectionCallback.value();
   }
+};
+
+const providerClearSelection = (callback: () => void) => {
+  clearSelectionCallback.value = callback;
 };
 
 provide('providerClearSelection', providerClearSelection);
@@ -22,7 +28,10 @@ provide('providerClearSelection', providerClearSelection);
     :style="{
       borderTopRightRadius: '0px',
       borderTopLeftRadius: '0px',
-      backgroundColor: colorMode.value === 'dark' ? '#201f22' : '#FAFAFA',
+      backgroundColor:
+        theme === 'dark'
+          ? componentsConfig.pages.mainCardDarkBackgroundColor
+          : componentsConfig.pages.mainCardLightBackgroundColor,
     }"
     :ui="{
       header: 'p-2',

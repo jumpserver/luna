@@ -40,6 +40,9 @@
 	"EditModal": {
 		"Description": "默认连接信息将在保存后生效，并用于后续所有连接操作"
 	},
+	"SettingModal":{
+		"Description": "连接设置用于配置后续连接中默认启动的应用程序"
+	},
 	"Layout": {
 		"Grid": "卡片视图",
 		"Table": "表格视图"

@@ -38,6 +38,7 @@ const supportLanguages = computed(() => {
 
 const computedSwitchMode = computed<ActionItem>(() => {
   return {
+    key: 'switchMode',
     iconName: isDarkMode.value ? 'i-lucide-sun' : 'i-lucide-moon',
     tooltipLabel: isDarkMode.value
       ? t('ToolTips.LightMode')
@@ -224,22 +225,14 @@ onMounted(() => {
         />
       </UDropdownMenu>
 
-      <UPopover mode="hover" arrow>
-        <UButton
-          :icon="computedSwitchMode.iconName"
-          size="sm"
-          color="neutral"
-          variant="outline"
-          class="rounded-lg"
-          @click.prevent="computedSwitchMode.onClick"
-        />
-
-        <template #content>
-          <span class="m-2 inline-flex text-xs-plus">
-            {{ computedSwitchMode.tooltipLabel }}
-          </span>
-        </template>
-      </UPopover>
+      <UButton
+        :icon="computedSwitchMode.iconName"
+        size="sm"
+        color="neutral"
+        variant="outline"
+        class="rounded-lg"
+        @click.prevent="computedSwitchMode.onClick"
+      />
 
       <UDropdownMenu
         :items="dropItems"
