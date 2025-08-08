@@ -38,20 +38,17 @@ pub fn run() {
                 .expect("Failed to apply blur");
 
             // 获取主窗口并设置透明属性
-            if let Some(window) = app.get_webview_window("main") {
-                #[cfg(target_os = "macos")]
-                {
-                    // 保持阴影以获得更好的视觉效果
-                    let _ = window.set_shadow(true);
-                }
-            }
+            // if let Some(window) = app.get_webview_window("main") {
+            //     #[cfg(target_os = "macos")]
+            //     {
+            //         // 保持阴影以获得更好的视觉效果
+            //         let _ = window.set_shadow(true);
+            //     }
+            // }
 
             let current_dir = std::env::current_dir().unwrap();
             let project_root = current_dir.parent().unwrap();
             let project_root_canonical = project_root.canonicalize().unwrap();
-
-            println!("Tauri 当前工作目录: {:?}", current_dir);
-            println!("项目根目录: {:?}", project_root_canonical);
 
             let scope = app.fs_scope();
             scope.allow_directory(&project_root_canonical, true)?;
@@ -59,9 +56,6 @@ pub fn run() {
             // 直接允许访问项目根目录下的 config.json 文件
             let config_file_path = project_root_canonical.join("config.json");
             scope.allow_file(&config_file_path)?;
-
-            println!("已允许访问项目根目录: {:?} (递归)", project_root_canonical);
-            println!("已允许访问配置文件: {:?}", config_file_path);
 
             Ok(())
         })

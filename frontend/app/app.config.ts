@@ -7,13 +7,17 @@ export default defineAppConfig({
   },
   componentsConfig: {
     header: {
-      darkColor: '#18181b',
-      lightColor: '#F5F5F5',
+      darkColor: '#3B3D3D',
+      lightColor: '#F5F6F7',
     },
     pages: {
       focusColor: '#55B787',
       mainCardLightBackgroundColor: '#FAFAFA',
       mainCardDarkBackgroundColor: '#201f22',
+    },
+    operation: {
+      lightColor: '#F5F6F7',
+      darkColor: '#323232',
     },
   },
   pageCategories: {

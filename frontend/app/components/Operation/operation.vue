@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
 import type { ActionItem } from '~/types';
+import { LogicalPosition } from '@tauri-apps/api/dpi';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
 const { t } = useI18n();
 const userSettingStore = useUserSettingStore();
 
-const { layouts, sort } = storeToRefs(userSettingStore);
+const { componentsConfig } = useAppConfig();
+const { layouts, sort, theme } = storeToRefs(userSettingStore);
 
-const settingModalOpen = ref(false);
+const darkColor = componentsConfig.operation.darkColor;
+const lightColor = componentsConfig.operation.lightColor;
 
 // 刷新、排序、切换布局
 const actionItems = computed<ActionItem[]>(() => [
@@ -115,23 +118,33 @@ const actionItems = computed<ActionItem[]>(() => [
     iconName: 'i-lucide-settings',
     tooltipLabel: t('ToolTips.Settings'),
     onClick: () => {
-      settingModalOpen.value = true;
+      const webview = new useTauriWebviewWindowWebviewWindow('secondary', {
+        title: '',
+        url: '/setting',
+        width: 810,
+        height: 725,
+        minWidth: 810,
+        minHeight: 725,
+        titleBarStyle: 'overlay',
+        trafficLightPosition: new LogicalPosition(10, 22),
+      });
     },
   },
 ]);
-
-const updateSettingModalOpen = (open: boolean) => {
-  settingModalOpen.value = open;
-};
 </script>
 
 <template>
-  <div class="flex w-full items-center justify-between py-2">
-    <section>
+  <div
+    class="flex w-full items-center justify-end px-4 h-12"
+    :style="{
+      backgroundColor: theme === 'dark' ? darkColor : lightColor,
+    }"
+  >
+    <!-- <section>
       <span class="text-xl font-bold"> 资产管理 </span>
-    </section>
+    </section> -->
 
-    <section class="flex item-center flex-nowrap gap-3 h-7">
+    <section class="flex item-center flex-nowrap gap-3 h-7 mr-2">
       <UInput
         clearable
         icon="i-lucide-search"
@@ -165,10 +178,5 @@ const updateSettingModalOpen = (open: boolean) => {
         </template>
       </template>
     </section>
-
-    <SettingModal
-      :open="settingModalOpen"
-      @update:open="updateSettingModalOpen"
-    />
   </div>
 </template>

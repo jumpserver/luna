@@ -34,12 +34,14 @@ provide('providerClearSelection', providerClearSelection);
           : componentsConfig.pages.mainCardLightBackgroundColor,
     }"
     :ui="{
-      header: 'p-2',
+      header: 'p-0 sm:p-0',
       body: 'p-2 sm:p-4 px-4 py-2',
     }"
     @click="clearSelection"
   >
     <template #header>
+      <Header />
+
       <Operation />
     </template>
 

@@ -47,8 +47,8 @@ const dispatchTab = () => {
           label: 'VNC',
         },
         {
-          label: 'WinRM'
-        }
+          label: 'WinRM',
+        },
       ];
       break;
     }
@@ -77,6 +77,13 @@ const getConfigList = async () => {
   return [];
 };
 
+watch(
+  () => route.fullPath,
+  () => {
+    dispatchTab();
+  }
+);
+
 // TODO 对于一种协议需要有它一一对应的一个应用
 onMounted(async () => {
   try {
@@ -104,14 +111,15 @@ onMounted(async () => {
   >
     <template #body>
       <UTabs
-        orientation="vertical"
-        variant="link"
         :items="tabItems"
+        :ui="{ trigger: 'grow' }"
+        size="lg"
+        variant="pill"
         class="w-full"
       >
-        <template #content="{ item }">
-          <p>This is the {{ item.label }} tab.</p>
-        </template>
+        
+
+        
       </UTabs>
     </template>
 

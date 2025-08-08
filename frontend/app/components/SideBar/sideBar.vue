@@ -3,10 +3,10 @@ import type { NavigationMenuItem } from '@nuxt/ui';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
 const { t } = useI18n();
-const colorMode = useColorMode();
 const useSettingStore = useUserSettingStore();
 
-const { collapse } = storeToRefs(useSettingStore)
+const { setCollapse } = useSettingStore;
+const { collapse } = storeToRefs(useSettingStore);
 
 // 能用 lucide 的就用 lucide，不能用 lucide 的就用 mingcute
 const items = ref<NavigationMenuItem[][]>([
@@ -50,43 +50,46 @@ const items = ref<NavigationMenuItem[][]>([
     },
   ],
 ]);
+
+const handleCollapse = () => {
+  setCollapse(!collapse.value);
+};
 </script>
 
 <template>
-  <div
-    class="flex flex-col justify-between"
-    :style="{
-      width: collapse ? '64px' : '185px',
-    }"
-  >
+  <div class="flex flex-col">
+    <section
+      class="flex items-center justify-end w-full px-4 h-12"
+      :style="{
+        width: collapse ? '72px' : '256px',
+      }"
+    >
+      <UIcon
+        :name="collapse ? '' : 'i-lucide-panel-left-close'"
+        class="size-5 cursor-pointer hover:text-[#55B787]"
+        @click="handleCollapse"
+      />
+    </section>
+
     <UNavigationMenu
       :items="items"
       :collapsed="collapse"
-      :ui="{
-        label: 'text-gray-500 font-medium px-0 ',
-      }"
-      class="px-4 py-2"
+      :ui="
+        collapse
+          ? {
+              link: 'justify-center px-0 w-10 h-10 rounded-lg',
+              linkLabel: 'sr-only',
+              linkTrailing: 'hidden',
+              linkLeadingIcon: 'size-5',
+            }
+          : {
+              link: 'px-2',
+            }
+      "
+      :class="collapse ? 'px-0' : 'px-4'"
+      color="neutral"
       orientation="vertical"
-    >
-      <template #item="{ item }">
-        <div
-          class="flex items-center py-1/2"
-          :style="{
-            color: colorMode.value === 'light' ? '#000' : '#fff',
-            gap: collapse ? '0px' : '0.5rem',
-            marginLeft: collapse ? '0.2rem' : '0px',
-          }"
-        >
-          <Icon v-if="item.icon" :name="item.icon as string" class="size-4" />
-
-          <span
-            v-if="!collapse"
-            class="font-light"
-            :class="item.type === 'label' ? 'text-xs' : 'text-xs-plus'"
-            >{{ item.label }}</span
-          >
-        </div>
-      </template>
-    </UNavigationMenu>
+      class="px-4 py-0"
+    />
   </div>
 </template>

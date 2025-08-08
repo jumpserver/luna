@@ -188,29 +188,27 @@ onMounted(() => {
     :style="{
       backgroundColor: colorMode.value === 'dark' ? darkColor : lightColor,
     }"
-    class="flex items-center justify-between h-12 px-4 cursor-pointer"
+    class="flex items-center justify-between px-4 h-12 cursor-pointer"
     @mousedown="handleWindowDrag"
   >
-    <section
-      :style="{
-        marginLeft: collapse ? '0.625rem' : '5rem',
-      }"
-      class="flex items-center h-full"
-    >
+    <section class="flex items-center h-full">
       <UIcon
-        :name="
-          collapse ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'
-        "
-        class="size-5 ml-16 cursor-pointer"
+        v-show="collapse"
+        name="i-lucide-panel-left-open"
+        class="size-5 cursor-pointer hover:text-[#55B787]"
         @click="handleCollapse"
       />
 
       <USelect
         v-model="value"
         :items="items"
+        :style="{
+          marginLeft: collapse ? '0.625rem' : '',
+        }"
         size="sm"
+        class="w-42"
         placeholder="Default"
-        class="w-36 ml-6"
+        icon="i-lucide-network"
       />
     </section>
 
