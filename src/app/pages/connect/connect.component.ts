@@ -106,8 +106,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   private checkDirectMode() {
     const params = this._route.snapshot.queryParams;
     // 检查是否有 direct: true 参数，或者同时有 account, asset, protocol 参数
-    this.isDirect =
-      params['direct'] === 'true' || !!(params['account'] && params['asset'] && params['protocol']);
+    this.isDirect = params['direct'] === 'true' || !!(params['account'] && params['asset'] && params['protocol']);
 
     if (this.isDirect) {
       this.accountId = params['account'];
@@ -151,8 +150,8 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
     this.asset = await this._http.getAssetDetail(this.assetId).toPromise();
     this.account = await this._http.getAccountDetail(this.accountId).toPromise();
 
-    const permed = await this._http.getPermedAssetDetail(this.assetId).toPromise();
-    this.permedProtocol = permed.permed_protocols;
+    // const permed = await this._http.getPermedAssetDetail(this.assetId).toPromise();
+    this.permedProtocol = this.asset.protocols;
 
     if (!this.asset) {
       alert(this._i18n.instant('NoAsset'));
