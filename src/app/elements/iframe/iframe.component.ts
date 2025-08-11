@@ -194,7 +194,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     );
 
     this.subscription = this._iframeSvc.message$.subscribe(message => {
-      this._logger.info('[Luna] Send msg to iframe: ', message);
+      // this._logger.info('[Luna] Send msg to iframe: ', message);
       this.iframeWindow.postMessage(message, '*');
     });
 
