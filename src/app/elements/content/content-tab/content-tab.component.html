@@ -7,7 +7,7 @@
 >
   <span *ngIf="view.name && !view.editable" [title]="view.name" class="tab-title">
     <i [ngClass]="iconCls" class="view_icon"></i>
-    <span class="tab-text">{{ view.name | truncatechars:16 }}</span>
+    <span class="tab-text">{{ view.name }}</span>
   </span>
   <input #inputElement
          (blur)="onBlur()"

@@ -44,18 +44,18 @@ li {
     gap:4px;
     color: #cacaca;
     font-size: 13px;
+    max-width: 164px;
     cursor: pointer;
+
+    .tab-text{
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
 
     .view_icon {
       margin-right: 5px;
       font-style: normal;
-
-      .tab-text{
-        min-width: 0;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-      }
 
       &::before {
         display: inline-block;

@@ -165,12 +165,10 @@ export class ElementConnectorKokoComponent implements OnInit {
       });
 
     if (this.protocol === 'k8s') {
-      // return (this.iframeURL = `${this.baseUrl}/k8s/?` + query);
-      return (this.iframeURL = `http://localhost:9530/koko/k8s/?` + query);
+      return (this.iframeURL = `${this.baseUrl}/k8s/?` + query);
     }
 
-    // this.iframeURL = `${this.baseUrl}/connect/?` + query;
-    this.iframeURL = `http://localhost:9530/koko/connect/?` + query;
+    this.iframeURL = `${this.baseUrl}/connect/?` + query;
   }
 
   generateFileManagerURL() {
