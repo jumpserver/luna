@@ -4,6 +4,9 @@ import { RouterModule, Routes } from '@angular/router';
 import { PageMainComponent } from './pages/main/main.component';
 import { PagesBlankComponent } from './pages/blank/blank.component';
 import { PagesShareComponent } from './pages/share/share.component';
+import { PagesConnectComponent } from './pages/connect/connect.component';
+import { PageDirectComponent } from './pages/direct/direct.component';
+import { PagesReplayComponent } from './pages/replay/replay.component';
 
 const appRoutes: Routes = [
   { path: '', component: PageMainComponent },
@@ -13,18 +16,21 @@ const appRoutes: Routes = [
   },
   {
     path: 'connect',
-    loadComponent: () =>
-      import('./pages/connect/connect.component').then(m => m.PagesConnectComponent)
+    component: PagesConnectComponent
+    // loadComponent: () =>
+    //   import('./pages/connect/connect.component').then(m => m.PagesConnectComponent)
   },
   { path: 'undefined', component: PagesBlankComponent },
   { path: 'share/:id', component: PagesShareComponent },
   {
     path: 'replay/:sid',
-    loadComponent: () => import('./pages/replay/replay.component').then(m => m.PagesReplayComponent)
+    component: PagesReplayComponent
+    // loadComponent: () => import('./pages/replay/replay.component').then(m => m.PagesReplayComponent)
   },
   {
     path: 'admin-connect',
-    loadComponent: () => import('./pages/direct/direct.component').then(m => m.PageDirectComponent)
+    component: PageDirectComponent
+    // loadComponent: () => import('./pages/direct/direct.component').then(m => m.PageDirectComponent)
   },
   {
     path: 'monitor/:sid',

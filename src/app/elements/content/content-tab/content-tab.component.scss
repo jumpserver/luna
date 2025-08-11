@@ -6,20 +6,22 @@
 li {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
   max-width: 200px;
-  //min-width: 90px;
+  min-width: 90px;
   height: 30px;
-  padding-left: 15px;
+  gap: 8px;
   position: relative;
   box-sizing: border-box;
   background-color: var(--el-tab-bg-color);
   border-right: 1px solid var(--el-border-color-y);
-  border-bottom: 2px solid transparent;
-  border-radius: 2px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 
   &.active {
-    box-sizing: border-box;
-    border-bottom: 2px solid var(--primary-color);
+    box-shadow: inset 0 -2px var(--primary-color);
 
     span {
       color: var(--el-icon-color);
@@ -39,17 +41,21 @@ li {
   & > span {
     display: flex;
     align-items: center;
-    height: 30px;
-    overflow: hidden;
-    white-space: nowrap;
+    gap:4px;
+    color: #cacaca;
     font-size: 13px;
     cursor: pointer;
-    color: #cacaca;
 
     .view_icon {
       margin-right: 5px;
-      line-height: 30px;
       font-style: normal;
+
+      .tab-text{
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
 
       &::before {
         display: inline-block;
@@ -62,7 +68,6 @@ li {
   & a.close {
     display: flex;
     align-items: center;
-    padding: 0 10px;
     line-height: 30px;
     font-family: "Roboto", sans-serif;
     font-size: 13px;
