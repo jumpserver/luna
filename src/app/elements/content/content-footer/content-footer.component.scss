@@ -79,9 +79,14 @@
   transition: transform 0.3s ease;
 }
 
+button[nz-button][nzType="link"]:hover {
+  color: #FFFFFF;
+  background-color: var(--el-dropdown-hover-bg-color)
+}
+
 ::ng-deep .command-dropdown {
   max-width: 350px;
-
+  
   .ant-dropdown-menu:not(.title) {
     min-width: 100px;
     height: 200px;
