@@ -5,9 +5,9 @@
   [ngClass]="{'active': view.active,'disconnected': !view.connected, 'hidden': view.closed != false}"
   [title]="view.name"
 >
-  <span *ngIf="view.name && !view.editable" [title]="view.name">
+  <span *ngIf="view.name && !view.editable" [title]="view.name" class="tab-title">
     <i [ngClass]="iconCls" class="view_icon"></i>
-    {{ view.name | truncatechars:100 }}
+    <span class="tab-text">{{ view.name | truncatechars:16:'…' }}</span>
   </span>
   <input #inputElement
          (blur)="onBlur()"
