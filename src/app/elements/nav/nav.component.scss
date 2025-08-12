@@ -11,11 +11,29 @@
   }
 
   .logo-item {
-    height: 29px;
+    height: 30px;
     width: 60px;
+    padding: 0 8px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     a {
-      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      height: 100%;
+      padding: 0;
+    }
+
+    img {
+      display: block;
+      max-height: 100%;
+      max-width: 100%;
+      height: 100%;
+      width: auto;
+      object-fit: contain;
+      object-position: left center;
     }
   }
 
@@ -82,19 +100,3 @@
   }
 }
 
-//
-//.flag {
-//  display: none;
-//  color: var(--primary-color);
-//  padding-right: 5px;
-//
-//}
-//
-//.active .flag {
-//  display: inline;
-//}
-//
-//.elements-organization {
-//  flex: 1;
-//  text-align: right;
-//}
