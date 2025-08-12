@@ -1,3 +1,8 @@
+::ng-deep .setting-dialog {
+  .ant-modal-footer {
+    padding: 1px 30px 20px 30px;
+  }
+}
 
 .nav {
   display: flex;
@@ -7,7 +12,7 @@
   padding-bottom: 1px;
 
   .ant-menu-horizontal > .ant-menu-submenu {
-    top: 0
+    top: 0;
   }
 
   .logo-item {
@@ -37,17 +42,18 @@
         }
       }
 
-      .ant-menu-submenu-active, .ant-menu-submenu-open {
+      .ant-menu-submenu-active,
+      .ant-menu-submenu-open {
         background: rgba(0, 0, 0, 0.6);
       }
 
       .ant-menu-submenu-horizontal.ant-menu-submenu {
         padding: 0;
       }
-
     }
 
-    li, .dropdown {
+    li,
+    .dropdown {
       height: 30px;
       line-height: 30px;
       padding: 0;
@@ -82,17 +88,17 @@
   }
 }
 
-//
-//.flag {
-//  display: none;
-//  color: var(--primary-color);
-//  padding-right: 5px;
-//
+.flag {
+  display: none;
+  color: var(--primary-color);
+  padding-right: 5px;
+}
+
 //}
 //
-//.active .flag {
-//  display: inline;
-//}
+.active .flag {
+  display: inline;
+}
 //
 //.elements-organization {
 //  flex: 1;

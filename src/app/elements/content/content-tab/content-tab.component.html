@@ -2,18 +2,20 @@
   (click)="setActive()"
   (dblclick)="onDoubleClick()"
   [id]="view.id"
-  [ngClass]="{'active': view.active,'disconnected': !view.connected, 'hidden': view.closed != false}"
+  [ngClass]="{ active: view.active, disconnected: !view.connected, hidden: view.closed != false }"
   [title]="view.name"
 >
   <span *ngIf="view.name && !view.editable" [title]="view.name" class="tab-title">
     <i [ngClass]="iconCls" class="view_icon"></i>
     <span class="tab-text">{{ view.name }}</span>
   </span>
-  <input #inputElement
-         (blur)="onBlur()"
-         (keyup.enter)="view.editable=false"
-         *ngIf="view.editable"
-         [(ngModel)]="view.name"
-         autofocus="autofocus"/>
+  <input
+    #inputElement
+    (blur)="onBlur()"
+    (keyup.enter)="view.editable = false"
+    *ngIf="view.editable"
+    [(ngModel)]="view.name"
+    autofocus="autofocus"
+  />
   <a (click)="close()" class="close">&times;</a>
 </li>
