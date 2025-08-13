@@ -19,9 +19,28 @@ li {
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease;
 
   &.active {
-    box-shadow: inset 0 -2px var(--primary-color);
+    /* Subtle raised feel */
+    // background: linear-gradient(
+    //   180deg,
+    //   rgba(255, 255, 255, 0.03) 0%,
+    //   rgba(255, 255, 255, 0.01) 55%,
+    //   rgba(0, 0, 0, 0.06) 100%
+    // );
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+    /* Accent at bottom */
+    box-shadow:
+      inset 0 -1px 0 0 var(--primary-color),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
 
     span {
       color: var(--el-icon-color);
@@ -41,13 +60,13 @@ li {
   & > span {
     display: flex;
     align-items: center;
-    gap:4px;
+    gap: 4px;
     color: #cacaca;
     font-size: 13px;
     max-width: 164px;
     cursor: pointer;
 
-    .tab-text{
+    .tab-text {
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
@@ -69,7 +88,7 @@ li {
     display: flex;
     align-items: center;
     line-height: 30px;
-    font-family: "Roboto", sans-serif;
+    font-family: 'Roboto', sans-serif;
     font-size: 13px;
     color: var(--el-icon-color);
     cursor: pointer;

@@ -1,21 +1,30 @@
 <div class="nav">
-  <ul nz-menu nzMode="horizontal" nzTheme='dark' class='nav-main'>
+  <ul nz-menu nzMode="horizontal" nzTheme="dark" class="nav-main">
     <li class="logo-item">
       <a>
-        <img (click)="onJumpUi()" alt="" height="30px" id="left-logo" src=""/>
+        <img (click)="onJumpUi()" alt="" height="30px" id="left-logo" src="" />
       </a>
     </li>
     <ng-container *ngFor="let v of navs">
-      <li nz-submenu nzMenuClassName="dark-dropdown" *ngIf="v.children" [nzTitle]="v.name | translate" [ngClass]="{'dropdown': v.children}">
-        <ul [ngClass]="{'dropdown-content': true}">
+      <li
+        nz-submenu
+        nzMenuClassName="dark-dropdown"
+        *ngIf="v.children"
+        [nzTitle]="v.name | translate"
+        [ngClass]="{ dropdown: v.children }"
+      >
+        <ul [ngClass]="{ 'dropdown-content': true }">
           <ng-container *ngIf="v.id === 'Tabs'">
             <li nz-menu-item *ngIf="viewListSorted.length === 0">
               <span>{{ 'NoTabs' | translate }}</span>
             </li>
             <ng-container *ngIf="viewListSorted.length > 0">
-              <li nz-menu-item *ngFor="let view of viewListSorted"
-                  [ngClass]="{'disconnected':!view.connected, 'hidden': view.closed != false}"
-                  [style.display]="view.name ? 'block' : 'none'">
+              <li
+                *ngFor="let view of viewListSorted"
+                nz-menu-item
+                [ngClass]="{ disconnected: !view.connected, hidden: view.closed != false }"
+                [style.display]="view.name ? 'block' : 'none'"
+              >
                 <span [class.active]="view.active">
                   <a (click)="_viewSrv.activeView(view)" id="{{ 'tab' + view.id }}">
                     <i class="fa fa-circle flag"></i> {{ view.name }}
@@ -25,9 +34,9 @@
             </ng-container>
           </ng-container>
           <ng-container *ngIf="v.id !== 'Tabs'">
-            <li nz-menu-item *ngFor="let vv of v.children" [ngClass]="{'disabled': vv.disable}">
+            <li nz-menu-item *ngFor="let vv of v.children" [ngClass]="{ disabled: vv.disable }">
               <a *ngIf="vv.href" [routerLink]="[vv.href]">{{ vv.name | translate }}</a>
-              <a (click)="vv.click && vv.click()" *ngIf="vv.click && !vv.hide" id="{{vv.id}}">
+              <a (click)="vv.click && vv.click()" *ngIf="vv.click && !vv.hide" id="{{ vv.id }}">
                 {{ vv.name | translate }}
               </a>
             </li>
