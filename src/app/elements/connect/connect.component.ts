@@ -201,7 +201,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
           nzTitle: this._i18n.instant('DownloadClient'),
           nzContent: ElementDownloadDialogComponent,
           nzOnOk: cmp => cmp.onConfirm(),
-          nzOnCancel: cmp => cmp.onCancel()
+          nzOnCancel: cmp => cmp.onCancel(),
+          nzCancelText: this._i18n.instant('Cancel'),
+          nzOkText: this._i18n.instant('Confirm')
         });
       }
     });
