@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { HttpService, I18nService, LogService, SettingService } from '@app/services';
-import { Asset, Replay, Session, User } from '@app/model';
-import { getWaterMarkContent } from '@app/utils/common';
+import {Component, OnInit} from '@angular/core';
+import {ActivatedRoute} from '@angular/router';
+import {HttpService, I18nService, LogService, SettingService} from '@app/services';
+import {Asset, Replay, Session, User} from '@app/model';
+import {getWaterMarkContent} from '@app/utils/common';
 
 @Component({
   standalone: false,
@@ -48,8 +48,11 @@ export class PagesReplayComponent implements OnInit {
     } catch (error) {
       this.asset = new Asset();
     }
-
-    this.sessionUser = await this._http.getUserDetail(this.session.user_id);
+    try {
+      this.sessionUser = await this._http.getUserDetail(this.session.user_id);
+    } catch (error) {
+      this.sessionUser = new User();
+    }
 
     const interval = setInterval(() => {
       this._http.getReplay(sid).subscribe(
