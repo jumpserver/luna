@@ -145,12 +145,8 @@ export class ElementsPartsComponent implements OnInit {
         // 3.5 的 TS 版本无法使用 ?.
         // @ts-ignore
         const data = res.type ? res : res.resp ? res.resp.data : undefined;
-        // 某些后端会把状态放在 data 中，兜底读取
-        // @ts-ignore
-        const status = (res && res.status) || (data && data.status);
 
-        // 只要拿到 src 就先构建分片并播放，后续是否 still running 由后台继续处理
-        if (data && data.src) {
+        if (data && data.src && res.status !== 'running') {
           section = {
             id: this.id,
             account: data.account,
@@ -180,7 +176,7 @@ export class ElementsPartsComponent implements OnInit {
 
             return false;
           }
-        } else if (status === 'running') {
+        } else if (res && res.status === 'running') {
           this.alertShown = true;
           await this.delay(3000);
           return await this.fetchSection(item, sessionId, isFirstPush);
@@ -202,19 +198,19 @@ export class ElementsPartsComponent implements OnInit {
   async handlePartFileReplay(file: IFile[], sessionId: string) {
     let isFirstPush = true;
 
-    if (!file || file.length === 0) {
-      return;
+    for (const item of file) {
+      // 先拿第一个保证有东西可以播出来
+      isFirstPush = await this.fetchSection(file[0], sessionId, isFirstPush);
+
+      // 其他的放到异步任务中
+      Promise.resolve().then(async() => {
+        for(const item of file.slice(1)) {
+          await this.fetchSection(item, sessionId, isFirstPush);
+        }
+      })
+
+      isFirstPush = await this.fetchSection(item, sessionId, isFirstPush);
     }
-
-    // 先请求第一个，保证尽快有可播放的内容
-    isFirstPush = await this.fetchSection(file[0], sessionId, isFirstPush);
-
-    // 其余分片放到后台依次请求，避免与首个分片并发拥塞
-    Promise.resolve().then(async () => {
-      for (const rest of file.slice(1)) {
-        await this.fetchSection(rest, sessionId, false);
-      }
-    });
   }
 
   /**

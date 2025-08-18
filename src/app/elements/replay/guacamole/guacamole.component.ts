@@ -125,18 +125,15 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
       if (this.isMobile()) {
         this.initTouchEvents();
       }
-
     } catch (error) {
       throw new Error(error);
     }
   }
 
   initRecording() {
-    this.recording.connect('');
-
+    // 先注册事件，避免在 connect 之后事件被瞬间触发而丢失
     this.recording.onload = () => {
       this.applyScaleWithRetry(200);
-      this.recording.play();
     };
 
     this.recording.onplay = () => {
@@ -161,7 +158,6 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
       }
     };
 
-    // If paused, the play/pause button should read "Play"
     this.recording.onpause = () => {
       this.isPlaying = false;
     };
@@ -185,6 +181,34 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
         this.lastDuration = this.max;
       }
     }, 1000);
+
+    // 连接录制流
+    this.recording.connect('');
+
+    // 立即尝试播放，不等待 onload，增强大文件/慢速网络下的起播速度
+    this.safeAutoplayWithRetry();
+  }
+
+  private safeAutoplayWithRetry(maxRetry: number = 5, delayMs: number = 500) {
+    let attempts = 0;
+    const tryPlay = () => {
+      if (!this.recording) {
+        return;
+      }
+      try {
+        if (!this.recording.isPlaying()) {
+          this.recording.play();
+        }
+      } catch (e) {
+        console.error(e)
+      }
+
+      if (this.recording && !this.recording.isPlaying() && attempts < maxRetry) {
+        attempts++;
+        setTimeout(tryPlay, delayMs);
+      }
+    };
+    tryPlay();
   }
 
   private applyScaleWithRetry(delay: number = 100, maxRetries: number = 5) {
