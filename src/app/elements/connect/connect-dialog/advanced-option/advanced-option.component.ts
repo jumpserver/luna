@@ -1,7 +1,7 @@
+import { SettingService } from '@app/services';
+import { resolutionsChoices } from '@app/globals';
 import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { ConnectMethod, ConnectOption, GlobalSetting, Protocol, Setting } from '@app/model';
-import { resolutionsChoices } from '@app/globals';
-import { SettingService } from '@app/services';
 
 @Component({
   standalone: false,
@@ -13,20 +13,33 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
   @Input() protocol: Protocol;
   @Input() connectMethod: ConnectMethod;
   @Input() connectOption: any = {};
-  public advancedOptions: ConnectOption[] = [];
+
   public isShowAdvancedOption = false;
-  public setting: Setting;
-  public globalSetting: GlobalSetting;
-  private allOptions: ConnectOption[] = [];
   private boolChoices = [
     { label: 'Yes', value: true },
     { label: 'No', value: false }
   ];
 
+  public setting: Setting;
+  public globalSetting: GlobalSetting;
+  private allOptions: ConnectOption[] = [];
+  public advancedOptions: ConnectOption[] = [];
+
   constructor(public _settingSvc: SettingService) {
     this.setting = _settingSvc.setting;
     this.globalSetting = _settingSvc.globalSetting;
-    this.allOptions = [
+  }
+
+  ngOnInit() {
+    this.allOptions = this.buildAllOptions();
+    this.checkOptions();
+  }
+
+  buildAllOptions(): ConnectOption[] {
+    const gs = this._settingSvc.globalSetting;
+    const hasX = this._settingSvc.hasXPack?.() ?? false;
+
+    return [
       {
         type: 'select',
         field: 'charset',
@@ -109,9 +122,7 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         field: 'appletConnectMethod',
         options: [
           { label: 'Web', value: 'web' },
-          ...(this.globalSetting.TERMINAL_RAZOR_ENABLED
-            ? [{ label: 'Client', value: 'client' }]
-            : [])
+          ...(gs.TERMINAL_RAZOR_ENABLED ? [{ label: 'Client', value: 'client' }] : [])
         ],
         label: 'Applet connect method',
         value: this.setting.graphics.applet_connection_method,
@@ -132,9 +143,7 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         label: 'Virtualapp connect method',
         value: this.setting.graphics.applet_connection_method,
         hidden: () => {
-          if (!this._settingSvc.hasXPack()) {
-            return true;
-          }
+          if (!hasX) return true;
           return !this.connectMethod || this.connectMethod.component !== 'panda';
         }
       },
@@ -142,21 +151,28 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         type: 'select',
         field: 'reusable',
         options: this.boolChoices,
-        label: 'RDP file reusable',
+        label: ' RDP file reusable',
         value: false,
         hidden: () => {
-          if (!this.connectMethod) {
-            return true;
-          }
-          if (!this._settingSvc.globalSetting.CONNECTION_TOKEN_REUSABLE) {
-            return true;
-          }
-          if (this.connectMethod.component === 'razor') {
-            return false;
-          }
+          if (!this.connectMethod) return true;
+          if (!gs.CONNECTION_TOKEN_REUSABLE) return true;
+
+          // razor 直接显示
+          if (this.connectMethod.component === 'razor') return false;
+
           if (this.connectMethod.component === 'tinker') {
-            return this.connectOption.appletConnectMethod !== 'client';
+            const method = (
+              this.connectOption.appletConnectMethod ??
+              this.connectOption.virtualappConnectMethod ??
+              this.setting.graphics.applet_connection_method ??
+              ''
+            )
+              .toString()
+              .toLowerCase();
+
+            return method !== 'client';
           }
+
           return true;
         }
       },
@@ -177,32 +193,37 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
     ];
   }
 
-  ngOnInit() {
-    this.checkOptions();
-  }
-
   checkOptions() {
     if (!this.protocol) {
       return;
     }
+
     const onlyUsingDefaultFields = ['reusable'];
+
     this.allOptions.forEach(i => {
       if (this.connectOption[i.field] === undefined) {
         this.connectOption[i.field] = i.value;
       }
+
       if (onlyUsingDefaultFields.includes(i.field)) {
         i.value = this.connectOption[i.field];
       }
     });
+
     this.advancedOptions = this.allOptions.filter(i => !i.hidden());
     this.isShowAdvancedOption = this.advancedOptions.length > 0;
+
+    console.log('advancedOptions', this.advancedOptions);
+    console.log('isShowAdvancedOption', this.isShowAdvancedOption);
   }
 
   onChange() {
+    this.allOptions = this.buildAllOptions();
     this.checkOptions();
   }
 
   ngOnChanges() {
+    this.allOptions = this.buildAllOptions();
     this.checkOptions();
   }
 }
