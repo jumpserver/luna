@@ -345,8 +345,6 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
       this.view.active = true;
     }
 
-    console.log('view', this.view);
-
     if (this.view) {
       this._viewSrv.addView(this.view);
       this._viewSrv.activeView(this.view);
@@ -597,7 +595,10 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   public isWebCliOrGui(): boolean {
     const value = this.view?.connectMethod?.value as string | undefined;
     return (
-      value === 'web_cli' || value === 'web_gui' || value === 'db_guide' || value === 'vnc_guide'
+      value === 'web_cli' ||
+      value === 'web_gui' ||
+      value === 'db_guide' ||
+      value === 'vnc_guide || ssh_guide'
     );
   }
 }
