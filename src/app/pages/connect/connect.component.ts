@@ -598,7 +598,8 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
       value === 'web_cli' ||
       value === 'web_gui' ||
       value === 'db_guide' ||
-      value === 'vnc_guide || ssh_guide'
+      value === 'vnc_guide'||
+      value === 'ssh_guide'
     );
   }
 }
