@@ -32,6 +32,8 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   public isActive: boolean = true;
   public isTimerStopped: boolean = false;
   public showActionIcons: boolean = false;
+  private readonly guiComponents: Set<string> = new Set(['lion', 'tinker', 'razor', 'panda']);
+  private readonly terminalComponents: Set<string> = new Set(['koko', 'chen', 'magnus', 'nec']);
 
   // Direct 模式相关属性
   public endpoint: Endpoint;
@@ -106,7 +108,8 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   private checkDirectMode() {
     const params = this._route.snapshot.queryParams;
     // 检查是否有 direct: true 参数，或者同时有 account, asset, protocol 参数
-    this.isDirect = params['direct'] === 'true' || !!(params['account'] && params['asset'] && params['protocol']);
+    this.isDirect =
+      params['direct'] === 'true' || !!(params['account'] && params['asset'] && params['protocol']);
 
     if (this.isDirect) {
       this.accountId = params['account'];
@@ -342,6 +345,8 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
       this.view.active = true;
     }
 
+    console.log('view', this.view);
+
     if (this.view) {
       this._viewSrv.addView(this.view);
       this._viewSrv.activeView(this.view);
@@ -561,5 +566,38 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
       const assetInfo = this.getAssetInfo();
       return ['k8s', 'website'].includes(assetInfo.protocol);
     }
+  }
+
+  /**
+   * 判断当前视图是否为 GUI 组件
+   */
+  public isGuiComponent(): boolean {
+    const componentName = this.view?.connectMethod?.component as string | undefined;
+    return !!componentName && this.guiComponents.has(componentName);
+  }
+
+  /**
+   * 判断当前视图是否为终端类组件
+   */
+  public isTerminalComponent(): boolean {
+    const componentName = this.view?.connectMethod?.component as string | undefined;
+    return !!componentName && this.terminalComponents.has(componentName);
+  }
+
+  /**
+   * 是否为 Web SFTP
+   */
+  public isWebSftp(): boolean {
+    return this.view?.connectMethod?.value === 'web_sftp';
+  }
+
+  /**
+   * 是否为 Web CLI 或 Web GUI
+   */
+  public isWebCliOrGui(): boolean {
+    const value = this.view?.connectMethod?.value as string | undefined;
+    return (
+      value === 'web_cli' || value === 'web_gui' || value === 'db_guide' || value === 'vnc_guide'
+    );
   }
 }
