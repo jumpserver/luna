@@ -1,6 +1,5 @@
 import { Replay } from '@app/model';
 import { ActivatedRoute } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
 import { HttpService, I18nService, LogService } from '@app/services';
 import { ChangeDetectorRef, Component, Input, OnInit, HostListener } from '@angular/core';
 
@@ -50,7 +49,6 @@ export class ElementsPartsComponent implements OnInit {
     private _http: HttpService,
     private _logger: LogService,
     private route: ActivatedRoute,
-    private _translate: TranslateService,
     private cdRef: ChangeDetectorRef
   ) {}
 
@@ -199,16 +197,6 @@ export class ElementsPartsComponent implements OnInit {
     let isFirstPush = true;
 
     for (const item of file) {
-      // 先拿第一个保证有东西可以播出来
-      isFirstPush = await this.fetchSection(file[0], sessionId, isFirstPush);
-
-      // 其他的放到异步任务中
-      Promise.resolve().then(async() => {
-        for(const item of file.slice(1)) {
-          await this.fetchSection(item, sessionId, isFirstPush);
-        }
-      })
-
       isFirstPush = await this.fetchSection(item, sessionId, isFirstPush);
     }
   }
