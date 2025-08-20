@@ -151,7 +151,7 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         type: 'select',
         field: 'reusable',
         options: this.boolChoices,
-        label: ' RDP file reusable',
+        label: 'RDP file reusable',
         value: false,
         hidden: () => {
           if (!this.connectMethod) return true;
