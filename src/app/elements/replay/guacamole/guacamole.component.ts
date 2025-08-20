@@ -5,7 +5,10 @@ import {
   OnInit,
   AfterViewInit,
   SimpleChanges,
-  ViewEncapsulation
+  ViewEncapsulation,
+  OnDestroy,
+  Output,
+  EventEmitter
 } from '@angular/core';
 import Guacamole from 'guacamole-common-js';
 import { Command, Replay } from '@app/model';
@@ -22,10 +25,11 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
   styleUrls: ['guacamole.component.scss'],
   encapsulation: ViewEncapsulation.None
 })
-export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, AfterViewInit {
+export class ElementReplayGuacamoleComponent
+  implements OnInit, OnChanges, AfterViewInit, OnDestroy
+{
   isPlaying = false;
   isSeeking = false;
-  isLoading = false;
   recording: any;
   playerRef: any;
   displayRef: any;
@@ -51,6 +55,8 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
   initializedCommand: boolean = false;
   commandsCollapsed: boolean = false;
 
+  @Output() ready = new EventEmitter<void>();
+
   constructor(
     private _http: HttpService,
     private _translate: TranslateService
@@ -72,6 +78,10 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
 
   ngAfterViewInit() {
     this.applyScaleWithRetry(500);
+  }
+
+  ngOnDestroy() {
+    this.destroy();
   }
 
   initialize() {
@@ -151,7 +161,9 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
 
     this.recording.onplay = () => {
       this.isPlaying = true;
-      this.isLoading = false;
+      try {
+        this.ready.emit();
+      } catch (e) {}
       this.applyScaleWithRetry(100);
     };
 
@@ -202,7 +214,6 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
 
   private safeAutoplayWithRetry(maxRetry: number = 5, delayMs: number = 500) {
     let attempts = 0;
-    this.isLoading = true;
 
     const tryPlay = () => {
       if (!this.recording) return;
@@ -219,10 +230,6 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
         attempts++;
         setTimeout(tryPlay, delayMs);
       } else if (this.recording && this.recording.isPlaying()) {
-        this.isLoading = false;
-      } else if (attempts >= maxRetry) {
-        // 超过最大重试次数后，允许用户交互
-        this.isLoading = false;
       }
     };
 
@@ -295,7 +302,6 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
     this.screenRef = null;
     this.isPlaying = false;
     this.isSeeking = false;
-    this.isLoading = false;
     this.max = 100;
     this.percent = 0;
     this.duration = '00:00';
@@ -501,7 +507,6 @@ export class ElementReplayGuacamoleComponent implements OnInit, OnChanges, After
 
   toggleCommands() {
     this.commandsCollapsed = !this.commandsCollapsed;
-    // 面板展开/收起后强制尝试缩放
     this.applyScaleWithRetry(100);
   }
 }

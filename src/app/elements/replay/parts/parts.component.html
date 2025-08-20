@@ -33,7 +33,7 @@
     <!-- 视频播放区 -->
     <div class="video-area" [class.playlist-hidden]="playlistCollapsed">
       <div class="loading-overlay" *ngIf="videoLoading">
-        <nz-spin nzSize="large"></nz-spin>
+        <nz-spin></nz-spin>
       </div>
       <button class="show-playlist-btn" (click)="togglePlaylist()" [title]="'Show Playlist' | translate">
         <i nz-icon nzType="menu" nzTheme="outline"></i>
@@ -42,6 +42,7 @@
       <elements-replay-guacamole
         *ngIf="currentVideo && currentVideo.src"
         [replay]="currentVideo"
+        (ready)="videoLoading = false"
         class="video-player">
       </elements-replay-guacamole>
     </div>
