@@ -156,21 +156,10 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
         hidden: () => {
           if (!this.connectMethod) return true;
           if (!gs.CONNECTION_TOKEN_REUSABLE) return true;
-
-          // razor 直接显示
           if (this.connectMethod.component === 'razor') return false;
 
           if (this.connectMethod.component === 'tinker') {
-            const method = (
-              this.connectOption.appletConnectMethod ??
-              this.connectOption.virtualappConnectMethod ??
-              this.setting.graphics.applet_connection_method ??
-              ''
-            )
-              .toString()
-              .toLowerCase();
-
-            return method !== 'client';
+            return this.connectOption.appletConnectMethod !== 'client';
           }
 
           return true;
@@ -212,6 +201,26 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
 
     this.advancedOptions = this.allOptions.filter(i => !i.hidden());
     this.isShowAdvancedOption = this.advancedOptions.length > 0;
+
+    // 如果记住的 select 值已不在可选项中，回退到 web 或默认值
+    this.advancedOptions
+      .filter(i => i.type === 'select')
+      .forEach(i => {
+        const options = i.options || [];
+        const values = new Set(options.map(opt => opt.value));
+        const current = this.connectOption[i.field];
+
+        if (!values.has(current)) {
+          let fallback: any = 'web';
+
+          if (!values.has(fallback)) {
+            fallback = i.value !== undefined ? i.value : options[0] ? options[0].value : undefined;
+          }
+          if (fallback !== undefined) {
+            this.connectOption[i.field] = fallback;
+          }
+        }
+      });
   }
 
   onChange() {
