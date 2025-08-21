@@ -80,20 +80,6 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
-
-    this.faceMonitorToken = Math.random().toString(36).substring(7);
-    const currentParams = this._route.snapshot.queryParams;
-    // 添加新的参数
-    await this._router.navigate([], {
-      relativeTo: this._route,
-      queryParams: {
-        ...currentParams,   // 保留现有的参数
-        face_monitor_token: this.faceMonitorToken     // 新增参数
-      },
-      queryParamsHandling: 'merge'  // 可选，自动合并
-    });
-
-
     this.view = null;
     this.isTimerStopped = false;
 
