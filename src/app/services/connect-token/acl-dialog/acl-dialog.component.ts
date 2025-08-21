@@ -8,6 +8,7 @@ import {Asset, ConnectData, ConnectionToken} from '@app/model';
 import {NzNotificationService} from 'ng-zorro-antd/notification';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {NZ_MODAL_DATA, NzModalRef, NzModalService} from 'ng-zorro-antd/modal';
+import {ActivatedRoute} from '@angular/router';
 
 interface DialogAction {
   text: string;
@@ -52,7 +53,8 @@ export class ElementACLDialogComponent implements OnInit {
     private _toastr: NzNotificationService,
     private sanitizer: DomSanitizer,
     private faceService: FaceService,
-    public dialogRef: NzModalRef<ElementACLDialogComponent>
+    public dialogRef: NzModalRef<ElementACLDialogComponent>,
+    private _route: ActivatedRoute
   ) {
     this.data = data;
   }
@@ -101,7 +103,14 @@ export class ElementACLDialogComponent implements OnInit {
   }
 
   onConfirmFaceOnline() {
-    const faceMonitorToken = this.faceService.getToken();
+    let faceMonitorToken = this._route.snapshot.queryParamMap.get('face_monitor_token');
+
+    console.log('get token from queryParamMap:', faceMonitorToken);
+    if (!faceMonitorToken) {
+      faceMonitorToken = this.faceService.getToken();
+      console.log('get token from faceService:', faceMonitorToken);
+    }
+
 
     const successCallback = (connToken: ConnectionToken) => {
       if (connToken && connToken.face_token) {

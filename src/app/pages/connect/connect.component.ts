@@ -1,9 +1,9 @@
-import { Subscription } from 'rxjs';
-import { ActivatedRoute } from '@angular/router';
-import { NzModalService } from 'ng-zorro-antd/modal';
-import { View, Account, AuthInfo, ConnectionToken, ConnectMethod, Endpoint } from '@app/model';
-import { Component, OnInit, OnDestroy, ElementRef, ViewChildren, QueryList } from '@angular/core';
-import { ElementACLDialogComponent } from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
+import {Subscription} from 'rxjs';
+import {ActivatedRoute, Router} from '@angular/router';
+import {NzModalService} from 'ng-zorro-antd/modal';
+import {View, Account, AuthInfo, ConnectionToken, ConnectMethod, Endpoint} from '@app/model';
+import {Component, OnInit, OnDestroy, ElementRef, ViewChildren, QueryList} from '@angular/core';
+import {ElementACLDialogComponent} from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
 import {
   LogService,
   AppService,
@@ -13,8 +13,8 @@ import {
   DrawerStateService,
   IframeCommunicationService
 } from '@app/services';
-import { CookieService } from 'ngx-cookie-service';
-import { Protocol } from '@app/model';
+import {CookieService} from 'ngx-cookie-service';
+import {Protocol} from '@app/model';
 
 @Component({
   standalone: false,
@@ -34,6 +34,9 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   public showActionIcons: boolean = false;
   private readonly guiComponents: Set<string> = new Set(['lion', 'tinker', 'razor', 'panda']);
   private readonly terminalComponents: Set<string> = new Set(['koko', 'chen', 'magnus', 'nec']);
+
+  // 人脸在线相关
+  private faceMonitorToken: string;
 
   // Direct 模式相关属性
   public endpoint: Endpoint;
@@ -67,6 +70,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
     private _logger: LogService,
     private _viewSrv: ViewService,
     private _route: ActivatedRoute,
+    private _router: Router,
     private _cookie: CookieService,
     private _dialog: NzModalService,
     private _drawerStateService: DrawerStateService,
@@ -76,6 +80,20 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
+
+    this.faceMonitorToken = Math.random().toString(36).substring(7);
+    const currentParams = this._route.snapshot.queryParams;
+    // 添加新的参数
+    await this._router.navigate([], {
+      relativeTo: this._route,
+      queryParams: {
+        ...currentParams,   // 保留现有的参数
+        face_monitor_token: this.faceMonitorToken     // 新增参数
+      },
+      queryParamsHandling: 'merge'  // 可选，自动合并
+    });
+
+
     this.view = null;
     this.isTimerStopped = false;
 
@@ -185,7 +203,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
 
     this.connectData = {
       method: this.method,
-      protocol: { name: this.protocol },
+      protocol: {name: this.protocol},
       asset: this.permedAsset,
       account: this.account,
       autoLogin: true,
@@ -334,7 +352,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
         this.permedAsset,
         {
           ...this.connectData,
-          permed_protocol: { name: this.protocol },
+          permed_protocol: {name: this.protocol},
           connectMethod: this.connectMethod
         },
         this.connectToken,
@@ -403,7 +421,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
             nzContent: ElementACLDialogComponent,
             nzData: {
               asset: this.permedAsset,
-              connectData: { ...this.connectData, direct: true },
+              connectData: {...this.connectData, direct: true},
               code: error.error.code,
               tokenAction: 'create',
               error: error
@@ -598,7 +616,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
       value === 'web_cli' ||
       value === 'web_gui' ||
       value === 'db_guide' ||
-      value === 'vnc_guide'||
+      value === 'vnc_guide' ||
       value === 'ssh_guide'
     );
   }
