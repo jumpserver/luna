@@ -1,5 +1,5 @@
-import {Component, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
-import {connectEvt} from '@app/globals';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { connectEvt } from '@app/globals';
 import {
   AlertService,
   AppService,
@@ -10,18 +10,17 @@ import {
   SettingService,
   ViewService
 } from '@app/services';
-import {Account, Asset, ConnectData, ConnectionToken, View} from '@app/model';
-import {launchLocalApp} from '@app/utils/common';
-import {ElementConnectDialogComponent} from '@app/elements/connect/connect-dialog/connect-dialog.component';
-import {NzModalService} from 'ng-zorro-antd/modal';
-import {ElementDownloadDialogComponent} from './download-dialog/download-dialog.component';
-import {firstValueFrom} from 'rxjs';
-
+import { Account, Asset, ConnectData, ConnectionToken, View } from '@app/model';
+import { launchLocalApp } from '@app/utils/common';
+import { ElementConnectDialogComponent } from '@app/elements/connect/connect-dialog/connect-dialog.component';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { ElementDownloadDialogComponent } from './download-dialog/download-dialog.component';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   standalone: false,
   selector: 'elements-connect',
-  templateUrl: 'connect.component.html',
+  templateUrl: 'connect.component.html'
 })
 export class ElementConnectComponent implements OnInit, OnDestroy {
   @Output() onNewView: EventEmitter<View> = new EventEmitter<View>();
@@ -32,17 +31,17 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   accounts: Array<Account>;
   preConnectData: ConnectData;
 
-  constructor(private _appSvc: AppService,
-              private _alert: AlertService,
-              private _dialog: NzModalService,
-              private _logger: LogService,
-              private _http: HttpService,
-              private _connectTokenSvc: ConnectTokenService,
-              private _i18n: I18nService,
-              private _settingSvc: SettingService,
-              public viewSrv: ViewService,
-  ) {
-  }
+  constructor(
+    private _appSvc: AppService,
+    private _alert: AlertService,
+    private _dialog: NzModalService,
+    private _logger: LogService,
+    private _http: HttpService,
+    private _connectTokenSvc: ConnectTokenService,
+    private _i18n: I18nService,
+    private _settingSvc: SettingService,
+    public viewSrv: ViewService
+  ) {}
 
   ngOnInit(): void {
     this.subscribeConnectEvent();
@@ -87,7 +86,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const idObject = {};
     const idList = id.split('&');
     for (const element of idList) {
-      idObject[element.split('=')[0]] = (element.split('=')[1]);
+      idObject[element.split('=')[0]] = element.split('=')[1];
     }
     return idObject;
   }
@@ -123,7 +122,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
    */
   async connectAsset(asset: Asset, splitConnect = false) {
     if (!asset) {
-      const msg = this._i18n.instant('Asset not found or You have no permission to access it, please refresh asset tree');
+      const msg = this._i18n.instant(
+        'Asset not found or You have no permission to access it, please refresh asset tree'
+      );
       const title = await this._i18n.instant('Permission expired');
       await this._alert.error(msg, title);
       return;
@@ -153,13 +154,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // if (connToken.protocol === 'k8s') {
-      // const url = `${window.location.protocol}//${window.location.host}/luna/k8s/${connToken.id}?asset=${asset.id}`;
-      // window.open(url);
-      // return;
-      // console.log('k8s', this.viewSrv)
-    // }
-
     // 分屏连接
     if (splitConnect) {
       return this.currentWebSubView(asset, connectInfo, connToken);
@@ -177,7 +171,11 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     }
 
     if (connectInfo.downloadRDP) {
-      return this._http.downloadRDPFile(connToken, this._settingSvc.setting, connectInfo.connectOption);
+      return this._http.downloadRDPFile(
+        connToken,
+        this._settingSvc.setting,
+        connectInfo.connectOption
+      );
     } else if (connectMethod.type === 'native') {
       this.callLocalClient(connToken).then();
     } else if (connectMethod.type === 'applet' && appletConnectMethod === 'client') {
@@ -192,7 +190,9 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (connToken.connect_options.token_reusable) {
       await this._connectTokenSvc.setReusable(connToken, true).toPromise();
     }
-    const response = await firstValueFrom(this._http.getLocalClientUrl(connToken, this._settingSvc.setting));
+    const response = await firstValueFrom(
+      this._http.getLocalClientUrl(connToken, this._settingSvc.setting)
+    );
     const url = response['url'];
     launchLocalApp(url, () => {
       const downLoadStatus = localStorage.getItem('hasDownLoadApp');
@@ -200,17 +200,17 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         this._dialog.create({
           nzTitle: this._i18n.instant('DownloadClient'),
           nzContent: ElementDownloadDialogComponent,
-          nzOnOk: (cmp => cmp.onConfirm()),
-          nzOnCancel: (cmp => cmp.onCancel()),
+          nzOnOk: cmp => cmp.onConfirm(),
+          nzOnCancel: cmp => cmp.onCancel(),
+          nzCancelText: this._i18n.instant('Cancel'),
+          nzOkText: this._i18n.instant('Confirm')
         });
       }
     });
   }
 
-
   createWebView(asset: Asset, connectInfo: any, connToken: ConnectionToken) {
     const view = new View(asset, connectInfo, connToken, 'node');
-    console.log('createWebView', view);
     this.onNewView.emit(view);
   }
 
@@ -224,6 +224,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       this._logger.debug('No account or node');
       return false;
     }
+
     if (!preData.autoLogin) {
       this._logger.debug('Not auto login');
       return false;
@@ -237,16 +238,20 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const account = accounts.find(item => {
       return item.alias === preAccount.alias;
     });
+
     if (!account) {
       this._logger.debug('Account may be not valid');
       return false;
     }
+
     // 验证登录信息
     const preAuth = preData.manualAuthInfo;
+
     if (!account.has_secret && (!preAuth || !preAuth.secret)) {
       this._logger.debug('Account no manual auth');
       return false;
     }
+
     // 验证连接方式
     const connectMethods = this._appSvc.getProtocolConnectMethods(preData.protocol.name);
     if (!connectMethods) {
@@ -286,7 +291,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       nzCentered: true,
       nzClassName: 'connect-dialog',
       nzWrapClassName: 'connect-dialog-wrap',
-      nzFooter: null,
+      nzFooter: null
     });
 
     return new Promise<ConnectData>(resolve => {

@@ -2,12 +2,12 @@
 <elements-chat></elements-chat>
 
 <div #contentWindow *ngIf="isDirect">
-  <div class="terminal-connect" *ngIf="view && view.connectMethod?.component === 'koko'">
-    <div *ngIf="view.connectMethod?.value === 'web_sftp'" style="height: 100%; width: 100%">
+  <div class="terminal-connect" *ngIf="view && isTerminalComponent()">
+    <div *ngIf="isWebSftp()" style="height: 100%; width: 100%">
       <elements-content-window *ngIf="view" [view]="view"></elements-content-window>
     </div>
 
-    <div *ngIf="view.connectMethod?.value === 'web_cli'" style="height: 100%; width: 100%">
+    <div *ngIf="isWebCliOrGui()" style="height: 100%; width: 100%">
       <div class="card-header">
         <div class="card-header-left">
           <div class="card-title">
@@ -70,7 +70,7 @@
     </div>
   </div>
 
-  <div class="gui" *ngIf="view && (view.connectMethod?.component === 'lion')">
+  <div class="gui" *ngIf="view && isGuiComponent()">
     <div class="timer-container">
       <div class="timer">
         <div [class.active]="isActive" class="status-dot"></div>
@@ -103,12 +103,12 @@
   <div #contentWindow *ngIf="view">
     <app-face-monitor></app-face-monitor>
 
-    <div class="terminal-connect" *ngIf="view && view.connectMethod?.component === 'koko'">
-      <div *ngIf="view.connectMethod?.value === 'web_sftp'" style="height: 100%; width: 100%">
+    <div class="terminal-connect" *ngIf="view && isTerminalComponent()">
+      <div *ngIf="isWebSftp()" style="height: 100%; width: 100%">
         <elements-content-window *ngIf="view" [view]="view"></elements-content-window>
       </div>
 
-      <div *ngIf="view.connectMethod?.value === 'web_cli'" style="height: 100%; width: 100%">
+      <div *ngIf="isWebCliOrGui()" style="height: 100%; width: 100%">
         <div class="card-header">
           <div class="card-header-left">
             <div class="card-title">
@@ -175,7 +175,7 @@
       </div>
     </div>
 
-    <div class="gui" *ngIf="view && view.connectMethod?.component === 'lion'">
+    <div class="gui" *ngIf="view && isGuiComponent()">
       <div class="timer-container">
         <div class="timer">
           <div [class.active]="isActive" class="status-dot"></div>

@@ -10,6 +10,6 @@ export class TruncatecharsPipe implements PipeTransform {
     if (value.length < length) {
       return value;
     }
-    return value.slice(0, length) + '..';
+    return value.slice(0, length) + '...';
   }
 }

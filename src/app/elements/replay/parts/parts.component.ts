@@ -1,8 +1,8 @@
 import { Replay } from '@app/model';
 import { ActivatedRoute } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
 import { HttpService, I18nService, LogService } from '@app/services';
 import { ChangeDetectorRef, Component, Input, OnInit, HostListener } from '@angular/core';
+import { Subscription } from 'rxjs';
 
 export interface Section extends Replay {
   name: string;
@@ -40,6 +40,8 @@ export class ElementsPartsComponent implements OnInit {
   videoLoading = false;
   playlistCollapsed = false;
 
+  private partReplaySub: Subscription;
+
   @HostListener('window:resize', ['$event'])
   onResize(event) {
     this.cdRef.detectChanges();
@@ -50,7 +52,6 @@ export class ElementsPartsComponent implements OnInit {
     private _http: HttpService,
     private _logger: LogService,
     private route: ActivatedRoute,
-    private _translate: TranslateService,
     private cdRef: ChangeDetectorRef
   ) {}
 
@@ -139,7 +140,15 @@ export class ElementsPartsComponent implements OnInit {
   async fetchSection(item: IFile, sessionId: string, isFirstPush: boolean): Promise<boolean> {
     let section: Section;
     try {
-      const res: Replay = await this._http.getPartFileReplay(sessionId, item.name).toPromise();
+      // 取消上一次未完成的请求
+      if (this.partReplaySub) {
+        this.partReplaySub.unsubscribe();
+      }
+
+      const req$ = this._http.getPartFileReplay(sessionId, item.name);
+      const res: Replay = await new Promise((resolve, reject) => {
+        this.partReplaySub = req$.subscribe(resolve, reject);
+      });
 
       if (res) {
         // 3.5 的 TS 版本无法使用 ?.
@@ -168,12 +177,6 @@ export class ElementsPartsComponent implements OnInit {
             this.currentVideo = section;
             this.videoLoading = true;
             this.cdRef.detectChanges();
-
-            setTimeout(() => {
-              this.videoLoading = false;
-              this.cdRef.detectChanges();
-            }, 200);
-
             return false;
           }
         } else if (res && res.status === 'running') {
@@ -186,6 +189,10 @@ export class ElementsPartsComponent implements OnInit {
       this._logger.error(e);
     } finally {
       this.alertShown = false;
+      if (this.partReplaySub) {
+        this.partReplaySub.unsubscribe();
+        this.partReplaySub = null;
+      }
     }
     return isFirstPush;
   }
@@ -239,6 +246,14 @@ export class ElementsPartsComponent implements OnInit {
       return;
     }
 
+    // 终止未完成的分段请求
+    if (this.partReplaySub) {
+      this.partReplaySub.unsubscribe();
+      this.partReplaySub = null;
+    }
+    // 停止列表区域的加载提示
+    this.alertShown = false;
+
     this.currentVideo = null;
     this.videoLoading = true;
 
@@ -247,11 +262,6 @@ export class ElementsPartsComponent implements OnInit {
     setTimeout(() => {
       this.currentVideo = { ...folder };
       this.cdRef.detectChanges();
-
-      setTimeout(() => {
-        this.videoLoading = false;
-        this.cdRef.detectChanges();
-      }, 100);
     }, 50);
   }
 

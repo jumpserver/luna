@@ -61,8 +61,12 @@ export class ElementConnectorMagnusComponent implements OnInit {
       {name: 'name', value: this.name, label: this._i18n.t('Name')},
       {name: 'host', value: this.endpoint.getHost(), label: this._i18n.t('Host')},
       {name: 'port', value: this.endpoint.getPort(this.protocol), label: this._i18n.t('Port')},
-      {name: 'username', value: this.token.id, label: this._i18n.t('Username')},
-      {name: 'password', value: this.token.value, label: this._i18n.t('Password')},
+      {name: 'username', value: this.protocol == 'redis' ? '' : this.token.id, label: this._i18n.t('Username')},
+      {
+        name: 'password',
+        value: this.protocol == 'redis' ? `${this.token.id}@${this.token.value}` : this.token.value,
+        label: this._i18n.t('Password')
+      },
       {name: 'database', value: this.protocol === 'oracle' ? this.token.id : database, label: this._i18n.t('Database')},
       {name: 'protocol', value: this.protocol, label: this._i18n.t('Protocol')},
       {name: 'date_expired', value: `${this.token.date_expired}`, label: this._i18n.t('Expire time')},

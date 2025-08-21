@@ -1,4 +1,4 @@
-<div *ngIf='advancedOptions && advancedOptions.length' class="advanced-option">
+<div *ngIf="advancedOptions && advancedOptions.length" class="advanced-option">
   <nz-collapse>
     <nz-collapse-panel
       *ngIf="isShowAdvancedOption"
@@ -8,42 +8,49 @@
         <nz-form-item *ngFor="let item of advancedOptions">
           <nz-form-label nzNoColon>{{ item.label | translate }}</nz-form-label>
           <span>
+            <!-- checkbox -->
             <ng-container *ngIf="item.type === 'checkbox'">
               <label
-                (ngModelChange)="onChange()"
-                [(ngModel)]="connectOption[item.field]"
-                [name]="item.field"
                 nz-checkbox
+                [name]="item.field"
+                [ngModel]="connectOption[item.field]"
+                (ngModelChange)="connectOption[item.field]=$event; onChange()"
               >
                 {{ item.label | translate }}
               </label>
             </ng-container>
+
+            <!-- select -->
             <ng-container *ngIf="item.type === 'select'">
-                <nz-select
-                  (ngModelChange)="onChange()"
-                  [(ngModel)]="connectOption[item.field]"
-                  [name]="item.field"
-                  style="width: 100%"
-                >
-                  <nz-option
-                    *ngFor="let option of item.options"
-                    [nzLabel]="option.label | translate"
-                    [nzValue]="option.value"
-                  ></nz-option>
-                </nz-select>
+              <nz-select
+                style="width: 100%"
+                [name]="item.field"
+                [ngModel]="connectOption[item.field]"
+                (ngModelChange)="connectOption[item.field]=$event; onChange()"
+              >
+                <nz-option
+                  *ngFor="let option of item.options"
+                  [nzLabel]="option.label | translate"
+                  [nzValue]="option.value"
+                ></nz-option>
+              </nz-select>
             </ng-container>
+
+            <!-- radio -->
             <ng-container *ngIf="item.type === 'radio'">
-                <nz-radio-group
-                  (ngModelChange)="onChange()"
-                  [(ngModel)]="connectOption[item.field]"
-                  [name]="item.field"
+              <nz-radio-group
+                [name]="item.field"
+                [ngModel]="connectOption[item.field]"
+                (ngModelChange)="connectOption[item.field]=$event; onChange()"
+              >
+                <label
+                  *ngFor="let option of item.options"
+                  nz-radio
+                  [nzValue]="option.value"
                 >
-                  <label
-                    *ngFor="let option of item.options"
-                    [nzValue]="option.value"
-                    nz-radio
-                  >{{ option.label | translate }}</label>
-                </nz-radio-group>
+                  {{ option.label | translate }}
+                </label>
+              </nz-radio-group>
             </ng-container>
           </span>
         </nz-form-item>

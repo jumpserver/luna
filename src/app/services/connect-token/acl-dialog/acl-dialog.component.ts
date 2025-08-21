@@ -1,13 +1,14 @@
-import { writeText } from 'clipboard-polyfill';
-import { I18nService } from '@app/services/i18n';
-import { HttpService } from '@app/services/http';
-import { FaceService } from '@app/services/face';
-import { HttpErrorResponse } from '@angular/common/http';
-import { Component, Inject, OnInit } from '@angular/core';
-import { Asset, ConnectData, ConnectionToken } from '@app/model';
-import { NzNotificationService } from 'ng-zorro-antd/notification';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { NZ_MODAL_DATA, NzModalRef, NzModalService } from 'ng-zorro-antd/modal';
+import {writeText} from 'clipboard-polyfill';
+import {I18nService} from '@app/services/i18n';
+import {HttpService} from '@app/services/http';
+import {FaceService} from '@app/services/face';
+import {HttpErrorResponse} from '@angular/common/http';
+import {Component, Inject, OnInit} from '@angular/core';
+import {Asset, ConnectData, ConnectionToken} from '@app/model';
+import {NzNotificationService} from 'ng-zorro-antd/notification';
+import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
+import {NZ_MODAL_DATA, NzModalRef, NzModalService} from 'ng-zorro-antd/modal';
+import {ActivatedRoute} from '@angular/router';
 
 interface DialogAction {
   text: string;
@@ -52,7 +53,8 @@ export class ElementACLDialogComponent implements OnInit {
     private _toastr: NzNotificationService,
     private sanitizer: DomSanitizer,
     private faceService: FaceService,
-    public dialogRef: NzModalRef<ElementACLDialogComponent>
+    public dialogRef: NzModalRef<ElementACLDialogComponent>,
+    private _route: ActivatedRoute
   ) {
     this.data = data;
   }
@@ -63,6 +65,9 @@ export class ElementACLDialogComponent implements OnInit {
 
   get errorDetail() {
     let error = this.data.error.error;
+    if (this.data.error.status === 500) {
+      error = this.data.error.message;
+    }
     if (Array.isArray(error)) {
       error = error.join(' ');
     } else if (typeof error === 'object') {
@@ -89,7 +94,7 @@ export class ElementACLDialogComponent implements OnInit {
 
   async onCopySuccess(evt) {
     const msg = await this._i18n.t('Copied');
-    this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+    this._toastr.success(msg, '', {nzClass: 'custom-success-notification'});
     writeText(evt);
   }
 
@@ -98,7 +103,14 @@ export class ElementACLDialogComponent implements OnInit {
   }
 
   onConfirmFaceOnline() {
-    const faceMonitorToken = this.faceService.getToken();
+    let faceMonitorToken = this._route.snapshot.queryParamMap.get('face_monitor_token');
+
+    console.log('get token from queryParamMap:', faceMonitorToken);
+    if (!faceMonitorToken) {
+      faceMonitorToken = this.faceService.getToken();
+      console.log('get token from faceService:', faceMonitorToken);
+    }
+
 
     const successCallback = (connToken: ConnectionToken) => {
       if (connToken && connToken.face_token) {
@@ -107,7 +119,6 @@ export class ElementACLDialogComponent implements OnInit {
         );
         this.code = 'face_verify_capture';
         this.content = this.getDialogContent(this.code);
-
 
         const timer = setInterval(() => {
           this._http.getFaceVerifyState(connToken.face_token).subscribe(async data => {
@@ -119,7 +130,7 @@ export class ElementACLDialogComponent implements OnInit {
                 this.content = this.getDialogContent(this.code);
               } else {
                 const msg = await this._i18n.t('Face verify success');
-                this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+                this._toastr.success(msg, '', {nzClass: 'custom-success-notification'});
                 this.dialogRef.close(connToken);
                 this.faceService.openFaceMonitor();
               }
@@ -174,7 +185,7 @@ export class ElementACLDialogComponent implements OnInit {
                 this.content = this.getDialogContent(this.code);
               } else {
                 const msg = await this._i18n.t('Face verify success');
-                this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+                this._toastr.success(msg, '', {nzClass: 'custom-success-notification'});
                 this.dialogRef.close(connToken);
               }
             }
@@ -191,6 +202,7 @@ export class ElementACLDialogComponent implements OnInit {
       }
       this.content = this.getDialogContent(this.code);
     };
+
 
     if (this.tokenAction === 'exchange') {
       this._http
@@ -279,7 +291,7 @@ export class ElementACLDialogComponent implements OnInit {
 
           if (state === 'approved') {
             const msg = await this._i18n.t('Login review approved');
-            this._toastr.success(msg, '', { nzClass: 'custom-success-notification' }  );
+            this._toastr.success(msg, '', {nzClass: 'custom-success-notification'});
             this.dialogRef.close(this.connectionToken);
           } else if (state === 'rejected') {
             this.code = 'ticket_review_rejected';
@@ -362,7 +374,7 @@ export class ElementACLDialogComponent implements OnInit {
       },
       acl_face_online_not_supported: {
         title: 'Login reminder',
-        message: 'FaceOnlineNotSupported',
+        message: this.errorDetail,
         isError: true,
         actions: [
           {
@@ -370,6 +382,11 @@ export class ElementACLDialogComponent implements OnInit {
             callback: () => vm.closeDialog()
           }
         ]
+      },
+      face_verify_capture: {
+        title: 'Face Verify',
+        message: 'Please complete the face verification',
+        actions: [],
       },
       no_face_feature: {
         title: 'Login reminder',
@@ -407,7 +424,7 @@ export class ElementACLDialogComponent implements OnInit {
             text: 'Copy link',
             type: 'primary',
             callback: () => {
-              vm.onCopySuccess(this.connectionToken?.from_ticket_info?.ticket_detail_page_url)
+              vm.onCopySuccess(this.connectionToken?.from_ticket_info?.ticket_detail_page_url);
             }
           }
         ]
@@ -455,13 +472,10 @@ export class ElementACLDialogComponent implements OnInit {
             callback: () => vm.closeDialog()
           }
         ]
-      }
-    };
-
-    return (
-      contentMap[code] || {
-        title: 'Login reminder',
-        message: this.data.errorDetail,
+      },
+      unknown: {
+        title: 'Unknown error',
+        message: this.errorDetail,
         isError: true,
         actions: [
           {
@@ -470,6 +484,8 @@ export class ElementACLDialogComponent implements OnInit {
           }
         ]
       }
-    );
+    };
+
+    return contentMap[code] || contentMap.unknown;
   }
 }

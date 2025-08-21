@@ -41,8 +41,4 @@ export class ElementFaceMonitorComponent implements OnInit {
   minimizeBox() {
     this.isMinimized = !this.isMinimized;
   }
-
-  closeBox() {
-    this.isVisible = false;
-  }
 }

@@ -22,20 +22,17 @@
 .full-width-tabs ::ng-deep {
   .ant-tabs-nav {
     .ant-tabs-nav-wrap {
-      /* 允许溢出，但设置合理的阈值 */
       overflow: hidden;
     }
 
     .ant-tabs-nav-list {
       display: flex;
-      width: 100%;
+      width: 99%;
 
       .ant-tabs-tab {
-        /* 设置合理的最小宽度，避免过度压缩 */
         min-width: 100px;
         flex: 1;
-        padding-top: 6px;
-        padding-bottom: 8px;
+        padding: 8px 0;
 
         .ant-tabs-tab-btn {
           width: 100%;

@@ -1,7 +1,7 @@
 import {Component, ElementRef, OnInit, ViewChild} from '@angular/core';
 import {HttpService, I18nService, SettingService} from '@app/services';
 import {ActivatedRoute} from '@angular/router';
-import {Session, Ticket, User} from '@app/model';
+import {Asset, Session, Ticket, User} from '@app/model';
 import {NzNotificationService} from 'ng-zorro-antd/notification';
 import {getWaterMarkContent} from '@app/utils/common';
 
@@ -41,8 +41,18 @@ export class PagesMonitorComponent implements OnInit {
       this.sessionID = params['sid'];
       this.generateMonitorURL().then(async () => {
         const sessionObj = this.sessionDetail;
-        const asset = await this._http.getAssetDetail(sessionObj.asset_id).toPromise();
-        const sessionUser = await this._http.getUserDetail(sessionObj.user_id);
+        let asset: any = null;
+        try {
+          asset = await this._http.getAssetDetail(sessionObj.asset_id).toPromise();
+        } catch (error) {
+          asset = new Asset();
+        }
+        let sessionUser: User = null;
+        try {
+          sessionUser = await this._http.getUserDetail(sessionObj.user_id);
+        } catch (error) {
+          sessionUser = new User();
+        }
         const auditorUser = `${this._i18n.instant('Viewer')}: ${this.user.name}(${this.user.username})`;
         const sessionContent = getWaterMarkContent(sessionUser, asset, this._settingSvc);
         const content = `${auditorUser}\n${sessionContent}`;
@@ -108,7 +118,7 @@ export class PagesMonitorComponent implements OnInit {
     const resumeTaskMsg = await this._i18n.t('Resume task has been send');
     const session_ids = res['ok'];
     const msg = this.isPaused ? resumeTaskMsg : pauseTaskMsg;
-    this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+    this._toastr.success(msg, '', {nzClass: 'custom-success-notification'});
     if (session_ids.indexOf(this.sessionID) !== -1) {
 
     }

@@ -13,8 +13,13 @@
           <i [class]="'fa ' + item.fa"></i> {{ item.label }}
         </ng-template>
 
-        <nz-radio-group [(ngModel)]="connectMethod" class="connect-method" name="connect-method">
-          <label *ngFor="let method of item['methods']" [nzValue]="method" nz-radio>
+        <nz-radio-group
+          [(ngModel)]="connectMethodValue"
+          (ngModelChange)="onConnectMethodValueChange($event)"
+          class="connect-method"
+          [name]="'connect-method-' + protocol?.name + '-' + item.value"
+        >
+          <label *ngFor="let method of item['methods']" [nzValue]="method.value" nz-radio>
             {{ method.label }}
 
             <span nz-tooltip nzTooltipTitle="{{ 'Click to download rdp file' | translate }}">

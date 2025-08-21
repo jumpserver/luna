@@ -1,4 +1,4 @@
-<div class="content-footer">
+<div *ngIf="showBatchCommand" class="content-footer">
   <div *ngIf="showCommandZone" class="batch-command-zone">
     <div class="command-header">
       <button nzTrigger="click" [nzDropdownMenu]="menu" nz-button nz-dropdown
@@ -6,7 +6,7 @@
               nzPlacement="topLeft"
               nzType="link">
         <i nz-icon nzTheme="outline" nzType="read"></i>
-        脚本库
+        {{ "scriptLibrary"| translate }}
       </button>
       <nz-dropdown-menu #menu="nzDropdownMenu">
         <ul nz-menu class="title">

@@ -75,8 +75,9 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.currentView.hasOwnProperty('subViews') ? this.currentView.subViews : [];
   }
 
-  get chatAiEnabled() {
-    return this._settingSvc.globalSetting.CHAT_AI_ENABLED;
+  get chatAiApiEnabled() {
+    const setting = this._settingSvc.globalSetting
+    return setting.CHAT_AI_ENABLED && setting.CHAT_AI_METHOD === 'api';
   }
 
   @HostListener('mousedown', ['$event'])
@@ -124,6 +125,38 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     this.viewSrv.currentView$.subscribe((state: View) => {
       this.currentView = state;
     });
+
+    this._settingSvc.globalSetting$.subscribe(setting => {
+      if (!setting.CHAT_AI_ENABLED) {
+        return
+      }
+
+      if (setting.CHAT_AI_METHOD === 'embed') {
+        this.insertEmbedScript()
+      } else if (setting.CHAT_AI_METHOD === 'api') {
+        this.listenChatAI()
+      }
+    })
+  }
+
+  private insertEmbedScript(): void {
+    const embedScriptId = 'chat-ai-embed-id';
+    if (document.getElementById(embedScriptId)) {
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.id = embedScriptId
+    script.src = this._settingSvc.globalSetting.CHAT_AI_EMBED_URL;
+    script.async = true;
+    script.onload = () => {
+      const loadEvent = new Event('load', { bubbles: false, cancelable: false });
+      window.dispatchEvent(loadEvent);
+    };
+    document.body.appendChild(script);
+  }
+
+  private listenChatAI(): void {
     this.iframeURL = '/ui/#/chat/chat-ai?from=luna';
 
     window.addEventListener('message', event => {

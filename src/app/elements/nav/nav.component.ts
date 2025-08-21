@@ -4,10 +4,14 @@ import { themes } from '@src/sass/theme/main';
 import { useTheme } from '@src/sass/theme/util';
 import { I18nService } from '@app/services/i18n';
 import { Component, OnInit } from '@angular/core';
-import { CookieService } from 'ngx-cookie-service';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { ElementSettingComponent } from '@app/elements/nav/setting/setting.component';
-import { IframeCommunicationService, HttpService, SettingService, ViewService } from '@app/services';
+import {
+  IframeCommunicationService,
+  HttpService,
+  SettingService,
+  ViewService
+} from '@app/services';
 
 @Component({
   standalone: false,
@@ -29,7 +33,7 @@ export class ElementNavComponent implements OnInit {
     private _dialog: NzModalService,
     private _settingSvc: SettingService,
     private _http: HttpService,
-    private _iframeSvc: IframeCommunicationService,
+    private _iframeSvc: IframeCommunicationService
   ) {}
 
   get viewListSorted() {
@@ -103,48 +107,21 @@ export class ElementNavComponent implements OnInit {
             id: 'General',
             name: this._i18n.instant('General'),
             click: () => {
-              this._dialog.create({
-                nzWidth: '600px',
-                nzCentered: true,
-                nzContent: ElementSettingComponent,
-                nzTitle: this._i18n.instant('General'),
-                nzData: { type: 'general', name: 'General' },
-                nzOnOk: cmp => cmp.onSubmit(),
-                nzCancelText: this._i18n.instant('Cancel'),
-                nzOkText: this._i18n.instant('Confirm')
-              });
+              this.showSettingDialog('general', 'General');
             }
           },
           {
             id: 'GUI',
             name: this._i18n.instant('GUI'),
             click: () => {
-              this._dialog.create({
-                nzTitle: this._i18n.instant('GUI'),
-                nzContent: ElementSettingComponent,
-                nzWidth: '600px',
-                nzCentered: true,
-                nzData: { type: 'gui', name: 'GUI' },
-                nzOnOk: cmp => cmp.onSubmit(),
-                nzCancelText: this._i18n.instant('Cancel'),
-                nzOkText: this._i18n.instant('Confirm')
-              });
+              this.showSettingDialog('gui', 'GUI');
             }
           },
           {
             id: 'CLI',
             name: this._i18n.instant('CLI'),
             click: () => {
-              this._dialog.create({
-                nzTitle: this._i18n.instant('CLI'),
-                nzContent: ElementSettingComponent,
-                nzWidth: '600px',
-                nzCentered: true,
-                nzData: { type: 'cli', name: 'CLI' },
-                nzOnOk: cmp => cmp.onSubmit(),
-                nzCancelText: this._i18n.instant('Cancel'),
-                nzOkText: this._i18n.instant('Confirm')
-              });
+              this.showSettingDialog('cli', 'CLI');
             }
           }
         ]
@@ -199,6 +176,20 @@ export class ElementNavComponent implements OnInit {
         ]
       }
     ];
+  }
+
+  showSettingDialog(type: string, name: string) {
+    this._dialog.create({
+      nzTitle: this._i18n.instant(name),
+      nzContent: ElementSettingComponent,
+      nzClassName: 'setting-dialog',
+      nzWidth: '600px',
+      nzCentered: true,
+      nzData: { type, name },
+      nzOnOk: cmp => cmp.onSubmit(),
+      nzCancelText: this._i18n.instant('Cancel'),
+      nzOkText: this._i18n.instant('Confirm')
+    });
   }
 
   getLanguageOptions() {

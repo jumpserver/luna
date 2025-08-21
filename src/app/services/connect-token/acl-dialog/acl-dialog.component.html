@@ -1,23 +1,30 @@
 <div class="acl-dialog">
-  <h3 nz-typography nzTitle>{{ content.title | translate }}</h3>
+  <div *nzModalTitle>
+    {{ content?.title | translate }}
+  </div>
 
-  <div class="nz-modal-content">
+  <ng-container>
     <div [class.error-message]="content.isError">
-      <nz-alert [nzType]="content.isError ? 'error' : 'info'" class="content-message" [nzDescription]="alertContent">
+      <nz-alert
+        [nzType]="content.isError ? 'error' : 'info'"
+        class="content-message"
+        [nzDescription]="alertContent"
+      >
         <ng-template #alertContent>
           <div>{{ content.message | translate }}</div>
 
           <ng-container *ngIf="content.customContent?.type === 'link'">
-            <br>
-            <a [href]="content.customContent.link">{{ content.customContent.linkText | translate }}</a>
+            <br />
+            <a [href]="content.customContent.link">{{
+              content.customContent.linkText | translate
+            }}</a>
           </ng-container>
 
           <ng-container *ngIf="content.customContent?.type === 'ticket'">
-            <br><br>
-            {{ 'Assignees' | translate }}: <b>{{ content.customContent.assignees }}</b>
-            <br><br>
+            <br /><br />
+            {{ 'Assignees' | translate }}: <b>{{ content.customContent.assignees }}</b> <br /><br />
             {{ 'Do not close this page' | translate }}
-            <br><br>
+            <br /><br />
             <div class="loading-bar">
               <div class="loading-bar-progress"></div>
             </div>
@@ -25,7 +32,7 @@
         </ng-template>
       </nz-alert>
     </div>
-  </div>
+  </ng-container>
 
   <!-- Face verify capture iframe -->
   <ng-container *ngIf="code === 'face_verify_capture' && faceVerifyUrl">
@@ -33,15 +40,14 @@
       [src]="faceVerifyUrl"
       allow="camera"
       sandbox="allow-scripts allow-same-origin"
-      style="width: 100%; height: 540px;border: none;">
+      style="width: 100%; height: 540px; border: none"
+    >
     </iframe>
   </ng-container>
 
   <div *nzModalFooter class="nz-modal-footer">
     <ng-container *ngFor="let action of content.actions">
-      <button nz-button
-              [nzType]="action.type || 'default'"
-              (click)="action.callback()">
+      <button nz-button [nzType]="action.type || 'default'" (click)="action.callback()">
         {{ action.text | translate }}
       </button>
     </ng-container>
