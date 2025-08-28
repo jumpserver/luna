@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { NavigationMenuItem } from '@nuxt/ui';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
 const userSettingStore = useUserSettingStore();
@@ -20,6 +21,78 @@ const handleWindowDrag = async (event: MouseEvent) => {
     console.error(error);
   }
 };
+
+const items = ref<NavigationMenuItem[][]>([
+  [
+    {
+      label: '命令行终端',
+      active: true,
+      defaultOpen: true,
+      icon: 'proicons:terminal',
+      children: [
+        {
+          label: 'SSH',
+          to: '/setting/ssh',
+        },
+        {
+          label: 'Telnet',
+          to: '/setting/telnet'
+        },
+      ],
+    },
+    {
+      label: '文件传输',
+      defaultOpen: true,
+      icon: 'proicons:document',
+      children: [
+        {
+          label: 'SFTP',
+        },
+      ],
+    },
+    {
+      label: '远程桌面',
+      defaultOpen: true,
+      icon: 'proicons:laptop',
+      children: [
+        {
+          label: 'RDP',
+        },
+        {
+          label: 'VNC',
+        },
+      ],
+    },
+    {
+      label: '数据库',
+      defaultOpen: true,
+      icon: 'proicons:database',
+      children: [
+        {
+          label: 'MySQL',
+        },
+        {
+          label: 'MongoDB',
+        },
+        {
+          label: 'Redis',
+        },
+        {
+          label: 'PostgreSQL',
+        },
+        {
+          label: 'Oracle',
+        },
+        {
+          label: 'SQL Server',
+        },
+        {
+          label: 'DB2',
+        },
+      ],
+    },
+  ],
+]);
 </script>
 
 <template>
@@ -41,10 +114,23 @@ const handleWindowDrag = async (event: MouseEvent) => {
         class="flex items-center justify-center h-12"
         @mousedown="handleWindowDrag"
       >
-        <span class="text-base font-bold"> 连接设置 </span>
+        <span class="text-sm font-bold"> 连接设置 </span>
       </div>
     </template>
 
-    <slot />
+    <template #default>
+      <div class="flex gap-1 w-full">
+        <UNavigationMenu
+          :items="items"
+          :highlight="false"
+          orientation="vertical"
+          class="data-[orientation=vertical]:w-48"
+        />
+
+        <UCard class="flex-1" variant="soft">
+          <slot />
+        </UCard>
+      </div>
+    </template>
   </UCard>
 </template>

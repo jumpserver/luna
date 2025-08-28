@@ -72,9 +72,15 @@ const handleCollapse = () => {
     </section>
 
     <UNavigationMenu
+      :highlight="false"
       :items="items"
       :collapsed="collapse"
-      :ui="
+      orientation="vertical"
+      class="px-4 py-0"
+    />
+
+    <!--
+          :ui="
         collapse
           ? {
               link: 'justify-center px-0 w-10 h-10 rounded-lg',
@@ -88,8 +94,6 @@ const handleCollapse = () => {
       "
       :class="collapse ? 'px-0' : 'px-4'"
       color="neutral"
-      orientation="vertical"
-      class="px-4 py-0"
-    />
+    -->
   </div>
 </template>
