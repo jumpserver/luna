@@ -991,9 +991,9 @@ checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 
 [[package]]
 name = "form_urlencoded"
-version = "1.2.1"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
+checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
 dependencies = [
  "percent-encoding",
 ]
@@ -1668,9 +1668,9 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 
 [[package]]
 name = "idna"
-version = "1.0.3"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "686f825264d630750a544639377bae737628043f20d38bbc029e8f29ea968a7e"
+checksum = "3b0875f23caa03898994f6ddc501886a45c7d3d62d04d2d90788d47be1b1e4de"
 dependencies = [
  "idna_adapter",
  "smallvec",
@@ -1861,6 +1861,8 @@ dependencies = [
  "tauri-plugin-shell",
  "tauri-plugin-store",
  "tauri-plugin-window-state",
+ "tokio",
+ "url",
  "window-vibrancy",
 ]
 
@@ -2530,9 +2532,9 @@ checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
 
 [[package]]
 name = "percent-encoding"
-version = "2.3.1"
+version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
+checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
 name = "phf"
@@ -3723,9 +3725,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-build"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12f025c389d3adb83114bec704da973142e82fc6ec799c7c750c5e21cefaec83"
+checksum = "67945dbaf8920dbe3a1e56721a419a0c3d085254ab24cff5b9ad55e2b0016e0b"
 dependencies = [
  "anyhow",
  "cargo_toml",
@@ -3739,7 +3741,7 @@ dependencies = [
  "serde_json",
  "tauri-utils",
  "tauri-winres",
- "toml 0.8.23",
+ "toml 0.9.2",
  "walkdir",
 ]
 
@@ -3963,9 +3965,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-utils"
-version = "2.5.0"
+version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41743bbbeb96c3a100d234e5a0b60a46d5aa068f266160862c7afdbf828ca02e"
+checksum = "41a3852fdf9a4f8fbeaa63dc3e9a85284dd6ef7200751f0bd66ceee30c93f212"
 dependencies = [
  "anyhow",
  "brotli",
@@ -3992,7 +3994,7 @@ dependencies = [
  "serde_with",
  "swift-rs",
  "thiserror 2.0.12",
- "toml 0.8.23",
+ "toml 0.9.2",
  "url",
  "urlpattern",
  "uuid",
@@ -4453,9 +4455,9 @@ checksum = "f6ccf251212114b54433ec949fd6a7841275f9ada20dddd2f29e9ceea4501493"
 
 [[package]]
 name = "url"
-version = "2.5.4"
+version = "2.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32f8b686cadd1473f4bd0117a5d28d36b1ade384ea9b5069a1c40aefed7fda60"
+checksum = "08bc136a29a3d1758e07a9cca267be308aeebf5cfd5a10f3f67ab2097683ef5b"
 dependencies = [
  "form_urlencoded",
  "idna",

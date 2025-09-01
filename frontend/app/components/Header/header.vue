@@ -1,20 +1,28 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
 import type { ActionItem } from '~/types/index';
+import { listen } from '@tauri-apps/api/event';
+import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
 type LocaleCode = (typeof locales.value)[number]['code'];
 
+// TODO 系统主题默认第一次使用时将适配
+
 const { t, setLocale, locales } = useI18n();
 const colorMode = useColorMode();
 const appConfig = useAppConfig();
+const userInfoStore = useUserInfoStore();
 const userSettingStore = useUserSettingStore();
 
 const darkColor = appConfig.componentsConfig.header.darkColor;
 const lightColor = appConfig.componentsConfig.header.lightColor;
 
+const { setUserLoggedIn } = userInfoStore;
 const { setTheme, setLang, setCollapse } = userSettingStore;
 const { theme, language, collapse } = storeToRefs(userSettingStore);
+
+const { loggedIn } = storeToRefs(userInfoStore);
 
 const isDarkMode = computed(() => theme.value === 'dark');
 
@@ -92,6 +100,159 @@ const handleWindowDrag = async (event: MouseEvent) => {
     });
   } catch (error) {
     console.error(error);
+  }
+};
+
+/**
+ * @description 处理登录成功后的逻辑
+ * @param cookies 获取到的 cookies 数据
+ */
+const handleLoginSuccess = (cookies: any[]) => {
+  console.log('🎉 登录成功，处理 cookies:', cookies);
+
+  // 提取关键的认证信息
+  const authCookies = {
+    sessionId: '',
+    csrfToken: '',
+    orgId: '',
+    publicKey: '',
+    allCookies: cookies,
+  };
+
+  cookies.forEach((cookie) => {
+    switch (cookie.name) {
+      case 'jms_sessionid':
+        authCookies.sessionId = cookie.value;
+        break;
+      case 'jms_csrftoken':
+        authCookies.csrfToken = cookie.value;
+        break;
+      case 'X-JMS-ORG':
+        authCookies.orgId = cookie.value;
+        break;
+      case 'jms_public_key':
+        authCookies.publicKey = cookie.value;
+        break;
+    }
+  });
+
+  console.log('🔐 提取的认证信息:', {
+    sessionId: authCookies.sessionId ? '✅ 已获取' : '❌ 缺失',
+    csrfToken: authCookies.csrfToken ? '✅ 已获取' : '❌ 缺失',
+    orgId: authCookies.orgId ? '✅ 已获取' : '❌ 缺失',
+    publicKey: authCookies.publicKey ? '✅ 已获取' : '❌ 缺失',
+  });
+
+  // 保存认证信息到本地存储
+  try {
+    localStorage.setItem('jumpserver_auth', JSON.stringify(authCookies));
+    console.log('💾 认证信息已保存到本地存储');
+  } catch (error) {
+    console.error('❌ 保存认证信息失败:', error);
+  }
+
+  // 更新用户登录状态
+  userInfoStore.setUserLoggedIn(true);
+
+  // 显示登录成功提示
+  console.log('✅ 用户登录状态已更新');
+
+  // 这里可以触发其他需要认证信息的操作
+  // 例如：刷新用户信息、获取权限列表等
+
+  // 可以发送通知
+  // useNotification().success('登录成功！');
+};
+
+/**
+ * @description 清除认证信息
+ */
+const clearAuthInfo = () => {
+  try {
+    localStorage.removeItem('jumpserver_auth');
+    userInfoStore.setUserLoggedIn(false);
+    console.log('🧹 认证信息已清除');
+  } catch (error) {
+    console.error('❌ 清除认证信息失败:', error);
+  }
+};
+
+/**
+ * @description 打开登录窗口
+ */
+const openLoginPage = async () => {
+  console.log('🚀 开始打开登录窗口...');
+
+  const loginPage = new useTauriWebviewWindowWebviewWindow('loginPage', {
+    title: '',
+    url: 'https://y4.cmdb.cc',
+    width: 600,
+    height: 800,
+    minWidth: 600,
+    minHeight: 800,
+  });
+
+  console.log('✅ 登录窗口已创建');
+
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    const { listen } = await import('@tauri-apps/api/event');
+
+    // 启动 Rust 后端的 cookies 监听器
+    console.log('🔄 启动 cookies 监听器...');
+    await invoke('start_cookie_watcher', {
+      windowLabel: 'loginPage',
+      siteOrigin: 'https://y4.cmdb.cc',
+    });
+    console.log('✅ cookies 监听器已启动');
+
+    // 监听 Rust 后端发送的登录成功事件
+    const unlistenLoginDetected = await listen(
+      'login-cookies-detected',
+      async (event) => {
+        console.log('🎉 收到登录成功事件！', event.payload);
+
+        try {
+          // 关闭登录窗口
+          console.log('🔒 关闭登录窗口...');
+          await loginPage.close();
+
+          // 处理获取到的 cookies
+          handleLoginSuccess(event.payload as any[]);
+
+          // 清理事件监听器
+          unlistenLoginDetected();
+        } catch (error) {
+          console.error('❌ 处理登录成功事件失败:', error);
+        }
+      }
+    );
+
+    // 监听窗口关闭事件，清理监听器
+    const unlistenClose = await loginPage.listen(
+      'tauri://close-requested',
+      async () => {
+        console.log('🔒 登录窗口关闭，清理监听器...');
+
+        try {
+          // 停止 cookies 监听器
+          await invoke('stop_cookie_watcher', {
+            windowLabel: 'loginPage',
+          });
+          console.log('🛑 cookies 监听器已停止');
+        } catch (error) {
+          console.error('❌ 停止 cookies 监听器失败:', error);
+        }
+
+        // 清理事件监听器
+        unlistenLoginDetected();
+        unlistenClose();
+      }
+    );
+
+    console.log('✅ 所有监听器已设置完成');
+  } catch (error) {
+    console.error('❌ 设置登录监听失败:', error);
   }
 };
 
@@ -174,12 +335,26 @@ const dropItems = ref<DropdownMenuItem[][]>([
       label: 'Logout',
       icon: 'i-lucide-log-out',
       kbds: ['shift', 'meta', 'q'],
+      onClick: clearAuthInfo,
     },
   ],
 ]);
 
-onMounted(() => {
+onMounted(async () => {
   setLocale(language.value as LocaleCode);
+
+  const message = await listen('cookies-fetched', (event) => {
+    console.log('🎉 收到 cookies-fetched 事件:', event.payload);
+  });
+
+  console.log('message', message);
+
+  // 检查是否已有保存的认证信息
+  const hasUser = userInfoStore.getUserData();
+
+  if (hasUser.length > 0) {
+    setUserLoggedIn(true);
+  }
 });
 </script>
 
@@ -205,10 +380,14 @@ onMounted(() => {
         :style="{
           marginLeft: collapse ? '0.625rem' : '',
         }"
-        size="sm"
-        class="w-42"
+        :ui="{
+          trailingIcon:
+            'group-data-[state=open]:rotate-180 transition-transform duration-200',
+        }"
+        size="md"
+        class="w-56"
         placeholder="Default"
-        icon="i-lucide-network"
+        icon="eos-icons:organization-outlined"
       />
     </section>
 
@@ -233,6 +412,7 @@ onMounted(() => {
       />
 
       <UDropdownMenu
+        v-if="loggedIn"
         :items="dropItems"
         :ui="{
           content: 'w-48',
@@ -240,6 +420,16 @@ onMounted(() => {
       >
         <UAvatar size="sm" src="https://github.com/benjamincanac.png" />
       </UDropdownMenu>
+
+      <UButton
+        v-else
+        size="sm"
+        variant="subtle"
+        icon="line-md:log-in"
+        @click="openLoginPage"
+      >
+        {{ t('Common.UnSigned') }}
+      </UButton>
     </section>
   </div>
 </template>

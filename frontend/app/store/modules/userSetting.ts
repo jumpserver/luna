@@ -7,7 +7,7 @@ export const useUserSettingStore = defineStore(
   () => {
     const language = ref('zh');
     const collapse = ref(false);
-    
+
     const sort = ref<sortType>('az');
     const theme = ref<themeType>('light');
     const layouts = ref<layoutsType>('grid');
