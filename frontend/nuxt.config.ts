@@ -11,6 +11,7 @@ export default defineNuxtConfig({
     '@nuxtjs/i18n',
     'reka-ui/nuxt',
     'pinia-plugin-persistedstate/nuxt',
+    './app/modules/tauri.ts',
   ],
   i18n: {
     locales: [

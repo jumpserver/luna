@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
 import type { ActionItem } from '~/types/index';
-import { listen } from '@tauri-apps/api/event';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
@@ -107,7 +106,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
  * @description 处理登录成功后的逻辑
  * @param cookies 获取到的 cookies 数据
  */
-const handleLoginSuccess = (cookies: any[]) => {
+const _handleLoginSuccess = (cookies: any[]) => {
   console.log('🎉 登录成功，处理 cookies:', cookies);
 
   // 提取关键的认证信息
@@ -181,78 +180,40 @@ const clearAuthInfo = () => {
  * @description 打开登录窗口
  */
 const openLoginPage = async () => {
-  console.log('🚀 开始打开登录窗口...');
-
-  const loginPage = new useTauriWebviewWindowWebviewWindow('loginPage', {
-    title: '',
-    url: 'https://y4.cmdb.cc',
-    width: 600,
-    height: 800,
-    minWidth: 600,
-    minHeight: 800,
-  });
-
-  console.log('✅ 登录窗口已创建');
-
   try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    const { listen } = await import('@tauri-apps/api/event');
-
-    // 启动 Rust 后端的 cookies 监听器
-    console.log('🔄 启动 cookies 监听器...');
-    await invoke('start_cookie_watcher', {
-      windowLabel: 'loginPage',
-      siteOrigin: 'https://y4.cmdb.cc',
+    const loginPage = new useTauriWebviewWindowWebviewWindow('loginPage', {
+      title: '',
+      url: 'https://y4.cmdb.cc',
+      width: 600,
+      height: 800,
+      minWidth: 600,
+      minHeight: 800,
     });
-    console.log('✅ cookies 监听器已启动');
 
-    // 监听 Rust 后端发送的登录成功事件
-    const unlistenLoginDetected = await listen(
+    console.log('✅ 登录窗口已创建:', loginPage);
+
+    const unsubscribe = await useTauriEventListen(
       'login-cookies-detected',
-      async (event) => {
-        console.log('🎉 收到登录成功事件！', event.payload);
+      (event) => {
+        console.log('🍪 收到 cookies 变化通知:', event.payload);
+        _handleLoginSuccess(event.payload as any[]);
 
-        try {
-          // 关闭登录窗口
-          console.log('🔒 关闭登录窗口...');
-          await loginPage.close();
+        // 关闭登录窗口
+        loginPage.close().catch((err) => {
+          console.warn('关闭登录窗口失败:', err);
+        });
 
-          // 处理获取到的 cookies
-          handleLoginSuccess(event.payload as any[]);
-
-          // 清理事件监听器
-          unlistenLoginDetected();
-        } catch (error) {
-          console.error('❌ 处理登录成功事件失败:', error);
-        }
+        // 取消事件监听
+        unsubscribe();
       }
     );
 
-    // 监听窗口关闭事件，清理监听器
-    const unlistenClose = await loginPage.listen(
-      'tauri://close-requested',
-      async () => {
-        console.log('🔒 登录窗口关闭，清理监听器...');
-
-        try {
-          // 停止 cookies 监听器
-          await invoke('stop_cookie_watcher', {
-            windowLabel: 'loginPage',
-          });
-          console.log('🛑 cookies 监听器已停止');
-        } catch (error) {
-          console.error('❌ 停止 cookies 监听器失败:', error);
-        }
-
-        // 清理事件监听器
-        unlistenLoginDetected();
-        unlistenClose();
-      }
-    );
-
-    console.log('✅ 所有监听器已设置完成');
+    await useTauriCoreInvoke('start_cookie_watcher', {
+      windowLabel: 'loginPage',
+      origin: 'https://y4.cmdb.cc',
+    });
   } catch (error) {
-    console.error('❌ 设置登录监听失败:', error);
+    console.error('❌ 创建登录窗口失败:', error);
   }
 };
 
@@ -342,12 +303,6 @@ const dropItems = ref<DropdownMenuItem[][]>([
 
 onMounted(async () => {
   setLocale(language.value as LocaleCode);
-
-  const message = await listen('cookies-fetched', (event) => {
-    console.log('🎉 收到 cookies-fetched 事件:', event.payload);
-  });
-
-  console.log('message', message);
 
   // 检查是否已有保存的认证信息
   const hasUser = userInfoStore.getUserData();

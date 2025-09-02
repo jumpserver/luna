@@ -1,4 +1,6 @@
 import * as tauriApp from '@tauri-apps/api/app';
+import * as tauriCore from '@tauri-apps/api/core';
+import * as tauriEvent from '@tauri-apps/api/event';
 import * as tauriPath from '@tauri-apps/api/path';
 import * as tauriWebviewWindow from '@tauri-apps/api/webviewWindow';
 import * as tauriWindow from '@tauri-apps/api/window';
@@ -28,6 +30,16 @@ const tauriModules = [
     module: tauriWebviewWindow,
     prefix: 'WebviewWindow',
     importPath: '@tauri-apps/api/webviewWindow',
+  },
+  {
+    module: tauriEvent,
+    prefix: 'Event',
+    importPath: '@tauri-apps/api/event',
+  },
+  {
+    module: tauriCore,
+    prefix: 'Core',
+    importPath: '@tauri-apps/api/core',
   },
   {
     module: tauriShell,
