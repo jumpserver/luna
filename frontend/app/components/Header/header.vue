@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
-import type { ActionItem } from '~/types/index';
+import type { UnlistenFn } from '@tauri-apps/api/event';
+import type { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import type { ActionItem, Cookies } from '~/types/index';
+
+import { getProfile } from '~/api/modules/user';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
@@ -17,11 +21,14 @@ const userSettingStore = useUserSettingStore();
 const darkColor = appConfig.componentsConfig.header.darkColor;
 const lightColor = appConfig.componentsConfig.header.lightColor;
 
-const { setUserLoggedIn } = userInfoStore;
+const { setUserLoggedIn, setUserData } = userInfoStore;
 const { setTheme, setLang, setCollapse } = userSettingStore;
 const { theme, language, collapse } = storeToRefs(userSettingStore);
 
 const { loggedIn } = storeToRefs(userInfoStore);
+
+const loginPage = ref<WebviewWindow | null>(null);
+const subscribeEvent = ref<UnlistenFn | null>(null);
 
 const isDarkMode = computed(() => theme.value === 'dark');
 
@@ -103,85 +110,18 @@ const handleWindowDrag = async (event: MouseEvent) => {
 };
 
 /**
- * @description 处理登录成功后的逻辑
- * @param cookies 获取到的 cookies 数据
- */
-const _handleLoginSuccess = (cookies: any[]) => {
-  console.log('🎉 登录成功，处理 cookies:', cookies);
-
-  // 提取关键的认证信息
-  const authCookies = {
-    sessionId: '',
-    csrfToken: '',
-    orgId: '',
-    publicKey: '',
-    allCookies: cookies,
-  };
-
-  cookies.forEach((cookie) => {
-    switch (cookie.name) {
-      case 'jms_sessionid':
-        authCookies.sessionId = cookie.value;
-        break;
-      case 'jms_csrftoken':
-        authCookies.csrfToken = cookie.value;
-        break;
-      case 'X-JMS-ORG':
-        authCookies.orgId = cookie.value;
-        break;
-      case 'jms_public_key':
-        authCookies.publicKey = cookie.value;
-        break;
-    }
-  });
-
-  console.log('🔐 提取的认证信息:', {
-    sessionId: authCookies.sessionId ? '✅ 已获取' : '❌ 缺失',
-    csrfToken: authCookies.csrfToken ? '✅ 已获取' : '❌ 缺失',
-    orgId: authCookies.orgId ? '✅ 已获取' : '❌ 缺失',
-    publicKey: authCookies.publicKey ? '✅ 已获取' : '❌ 缺失',
-  });
-
-  // 保存认证信息到本地存储
-  try {
-    localStorage.setItem('jumpserver_auth', JSON.stringify(authCookies));
-    console.log('💾 认证信息已保存到本地存储');
-  } catch (error) {
-    console.error('❌ 保存认证信息失败:', error);
-  }
-
-  // 更新用户登录状态
-  userInfoStore.setUserLoggedIn(true);
-
-  // 显示登录成功提示
-  console.log('✅ 用户登录状态已更新');
-
-  // 这里可以触发其他需要认证信息的操作
-  // 例如：刷新用户信息、获取权限列表等
-
-  // 可以发送通知
-  // useNotification().success('登录成功！');
-};
-
-/**
  * @description 清除认证信息
  */
 const clearAuthInfo = () => {
-  try {
-    localStorage.removeItem('jumpserver_auth');
-    userInfoStore.setUserLoggedIn(false);
-    console.log('🧹 认证信息已清除');
-  } catch (error) {
-    console.error('❌ 清除认证信息失败:', error);
-  }
+  userInfoStore.setUserLoggedIn(false);
 };
 
 /**
  * @description 打开登录窗口
  */
-const openLoginPage = async () => {
+const openLoginPage = () => {
   try {
-    const loginPage = new useTauriWebviewWindowWebviewWindow('loginPage', {
+    loginPage.value = new useTauriWebviewWindowWebviewWindow('loginPage', {
       title: '',
       url: 'https://y4.cmdb.cc',
       width: 600,
@@ -190,27 +130,12 @@ const openLoginPage = async () => {
       minHeight: 800,
     });
 
-    console.log('✅ 登录窗口已创建:', loginPage);
-
-    const unsubscribe = await useTauriEventListen(
-      'login-cookies-detected',
-      (event) => {
-        console.log('🍪 收到 cookies 变化通知:', event.payload);
-        _handleLoginSuccess(event.payload as any[]);
-
-        // 关闭登录窗口
-        loginPage.close().catch((err) => {
-          console.warn('关闭登录窗口失败:', err);
-        });
-
-        // 取消事件监听
-        unsubscribe();
-      }
-    );
-
-    await useTauriCoreInvoke('start_cookie_watcher', {
-      windowLabel: 'loginPage',
-      origin: 'https://y4.cmdb.cc',
+    nextTick(async () => {
+      // 启动URL监听器，监听重定向到 /ui/ 的情况（登录成功后会跳转到 /ui/#/pam/dashboard）
+      await useTauriCoreInvoke('start_url_watcher', {
+        windowLabel: 'loginPage',
+        targetUrlPattern: '/ui/#/',
+      });
     });
   } catch (error) {
     console.error('❌ 创建登录窗口失败:', error);
@@ -304,11 +229,82 @@ const dropItems = ref<DropdownMenuItem[][]>([
 onMounted(async () => {
   setLocale(language.value as LocaleCode);
 
-  // 检查是否已有保存的认证信息
-  const hasUser = userInfoStore.getUserData();
+  subscribeEvent.value = await useTauriEventListen(
+    'login-success-detected',
+    (event) => {
+      const cookies: Cookies[] = event.payload as Cookies[];
 
-  if (hasUser.length > 0) {
-    setUserLoggedIn(true);
+      console.log('🎉 检测到登录成功，获取到cookies:', cookies);
+
+      if (cookies.length === 0) {
+        console.warn('⚠️ 登录成功但未获取到cookies');
+        return;
+      }
+
+      const csrfToken = cookies.find((c) => {
+        return c.name.includes('csrf') || c.name.includes('CSRF');
+      })?.value;
+
+      const cookieHeader = cookies
+        .map((c) => `${c.name}=${c.value}`)
+        .join('; ');
+
+      console.log('🍪 Cookie Header:', cookieHeader);
+      console.log('🔐 CSRF Token:', csrfToken);
+
+      if (!csrfToken) {
+        console.warn('⚠️ 未找到CSRF Token，但仍然尝试设置用户数据');
+      }
+
+      // 关闭登录窗口
+      // if (loginPage.value) {
+      //   loginPage.value.close();
+      //   loginPage.value = null;
+      // }
+
+      const siteUrl = 'https://y4.cmdb.cc';
+
+      // 设置当前站点
+      userInfoStore.setCurrentSite(siteUrl);
+
+      // 设置用户数据
+      setUserData(siteUrl, {
+        avatar_url: '',
+        name: '',
+        headerJson: cookieHeader,
+        csrf_token: csrfToken || '',
+      });
+
+      console.log('🔧 用户数据设置完成:');
+      console.log('  - 站点:', siteUrl);
+      console.log('  - CSRF Token:', csrfToken);
+      console.log('  - Cookie Header:', cookieHeader);
+
+      nextTick(async () => {
+        try {
+          const res = await getProfile();
+          console.log('✅ 获取用户信息成功:', res);
+
+          // 设置登录状态
+          // setUserLoggedIn(true);
+        } catch (error) {
+          console.error('❌ 获取用户信息失败:', error);
+        }
+      });
+    }
+  );
+
+  // 检查是否已有保存的认证信息
+  // const hasUser = userInfoStore.getUserData();
+
+  // if (hasUser.length > 0) {
+  //   setUserLoggedIn(true);
+  // }
+});
+
+onBeforeUnmount(() => {
+  if (subscribeEvent.value) {
+    subscribeEvent.value();
   }
 });
 </script>

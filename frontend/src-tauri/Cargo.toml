@@ -28,9 +28,12 @@ tauri-plugin-notification = "2.3.0"
 tauri-plugin-os = "2.3.0"
 tauri-plugin-fs = "2.4.0"
 tauri-plugin-store = "2.3.0"
+tauri-plugin-http = { version = "2.4.0", features = [ "unsafe-headers" ] }
 window-vibrancy = "0.6.0"
 tauri-build = "2.4.0"
 tokio = "1.46.1"
+reqwest = { version = "0.12", features = [ "json" ] }
+serde_json = "1.0"
 
 [dependencies.tauri]
 version = "2.6.2"

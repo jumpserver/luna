@@ -2,7 +2,7 @@ mod commands;
 mod models;
 mod utils;
 
-use crate::commands::start_cookie_watcher;
+use crate::commands::{custom_http_request, start_cookie_watcher, start_url_watcher};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
@@ -50,9 +50,14 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![start_cookie_watcher])
+        .invoke_handler(tauri::generate_handler![
+            start_cookie_watcher,
+            start_url_watcher,
+            custom_http_request
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

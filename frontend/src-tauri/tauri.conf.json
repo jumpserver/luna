@@ -52,7 +52,9 @@
 			}
 		],
 		"security": {
-			"csp": null
-		}
+			"csp": null,
+			"dangerousDisableAssetCspModification": true
+		},
+		"withGlobalTauri": false
 	}
 }

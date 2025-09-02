@@ -28,3 +28,22 @@ export interface ConfigItem {
   is_default: boolean;
   is_set: boolean;
 }
+
+export interface Cookies {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  secure: boolean;
+  httpOnly: boolean;
+}
+
+export interface UserData {
+  avatar_url: string;
+
+  name: string;
+
+  headerJson: string;
+
+  csrf_token: string;
+}
