@@ -1,18 +1,15 @@
-mod commands;
 mod models;
 mod setup;
-
 mod utils;
+mod commands;
 
-use crate::commands::{
-    custom_http_request, debug_get_cookies, start_cookie_watcher, start_url_watcher,
-};
 use crate::setup::apply_window_effects;
 use crate::setup::setup_tray;
 
 use log::error;
 use tauri::menu::{Menu, MenuItem};
 use tauri::Manager;
+use crate::commands::get_cookies::get_cookies;
 
 pub fn run() {
     tauri::Builder::default()
@@ -38,10 +35,7 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
-            start_cookie_watcher,
-            start_url_watcher,
-            custom_http_request,
-            debug_get_cookies
+            get_cookies
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

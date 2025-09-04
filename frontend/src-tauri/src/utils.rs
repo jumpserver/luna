@@ -10,8 +10,17 @@ pub async fn get_window_cookies(app: &AppHandle, window_label: &str, origin: &st
     let win = get_window_with_retry(app, window_label, 10).await
         .ok_or_else(|| format!("window '{}' not found after retries", window_label))?;
     let url = Url::parse(origin).map_err(|e| e.to_string())?;
+    let target_domain = url.host_str().unwrap_or("");
 
-    let cookies = win.cookies_for_url(url).map_err(|e| e.to_string())?;
+    sleep(Duration::from_millis(1000)).await;
+
+    let all_cookies = win.cookies().map_err(|e| e.to_string())?;
+    let cookies: Vec<_> = all_cookies.into_iter()
+        .filter(|cookie| {
+            let domain = cookie.domain().unwrap_or("");
+            domain == target_domain || domain == format!(".{}", target_domain)
+        })
+        .collect();
 
     let mut cookie_list: Vec<CookieMessage> = cookies.into_iter().map(
         |cookie| CookieMessage {
@@ -28,58 +37,6 @@ pub async fn get_window_cookies(app: &AppHandle, window_label: &str, origin: &st
     dedupe_cookies(&mut cookie_list);
 
     Ok(cookie_list)
-}
-
-/// 比较两次抓到的 cookies 是否有任何变化：
-/// - 数量不同 → 变化
-/// - 逐项(按 domain/path/name 排序后) 有任意字段不同 → 变化
-pub fn cookies_changed(prev: &[CookieMessage], curr: &[CookieMessage]) -> bool {
-    if prev.len() != curr.len() {
-        return true;
-    }
-
-    // 为了稳定比较，按 (domain, path, name) 排序后逐项对比
-    let mut a = prev.to_vec();   // 需要 CookieMessage: Clone（常见 derive：Clone, Debug, PartialEq, Serialize）
-    let mut b = curr.to_vec();
-
-    a.sort_by(|x, y| {
-        (
-            x.domain.as_str(),
-            x.path.as_str(),
-            x.name.as_str(),
-        )
-            .cmp(&(
-                y.domain.as_str(),
-                y.path.as_str(),
-                y.name.as_str(),
-            ))
-    });
-    b.sort_by(|x, y| {
-        (
-            x.domain.as_str(),
-            x.path.as_str(),
-            x.name.as_str(),
-        )
-            .cmp(&(
-                y.domain.as_str(),
-                y.path.as_str(),
-                y.name.as_str(),
-            ))
-    });
-
-    // 字段逐项比较（不依赖具体 cookie 名称）
-    for (x, y) in a.iter().zip(b.iter()) {
-        if x.name != y.name
-            || x.value != y.value
-            || x.domain != y.domain
-            || x.path != y.path
-            || x.secure != y.secure
-            || x.http_only != y.http_only
-        {
-            return true;
-        }
-    }
-    false
 }
 
 /// 去重并排序cookies，保留最新的值
