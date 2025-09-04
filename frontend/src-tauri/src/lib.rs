@@ -1,15 +1,18 @@
 mod commands;
 mod models;
+mod setup;
+
 mod utils;
 
-use crate::commands::{custom_http_request, start_cookie_watcher, start_url_watcher};
-use tauri::{
-    menu::{Menu, MenuItem},
-    tray::TrayIconBuilder,
-    Manager,
+use crate::commands::{
+    custom_http_request, debug_get_cookies, start_cookie_watcher, start_url_watcher,
 };
-use tauri_plugin_fs::FsExt;
-use window_vibrancy::{self, NSVisualEffectMaterial};
+use crate::setup::apply_window_effects;
+use crate::setup::setup_tray;
+
+use log::error;
+use tauri::menu::{Menu, MenuItem};
+use tauri::Manager;
 
 pub fn run() {
     tauri::Builder::default()
@@ -18,31 +21,12 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&quit_i])?;
             let win = app.get_webview_window("main").unwrap();
 
-            let _tray = TrayIconBuilder::new()
-                .menu(&menu)
-                .show_menu_on_left_click(true)
-                .icon(app.default_window_icon().unwrap().clone())
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "quit" => app.exit(0),
-                    other => println!("menu item {} not handled", other),
-                })
-                .build(app)?;
+            // 创建系统托盘
+            setup_tray(&menu, &app)?;
 
-            #[cfg(target_os = "macos")]
-            window_vibrancy::apply_vibrancy(&win, NSVisualEffectMaterial::FullScreenUI, None, None)
-                .expect("Failed to apply vibrancy");
-            #[cfg(target_os = "windows")]
-            window_vibrancy::apply_blur(&win, Some((18, 18, 18, 125)))
-                .expect("Failed to apply blur");
-
-            let current_dir = std::env::current_dir().unwrap();
-            let project_root = current_dir.parent().unwrap();
-            let project_root_canonical = project_root.canonicalize().unwrap();
-
-            let scope = app.fs_scope();
-            scope.allow_directory(&project_root_canonical, true)?;
-            let config_file_path = project_root_canonical.join("config.json");
-            scope.allow_file(&config_file_path)?;
+            if let Err(e) = apply_window_effects(&win) {
+                error!("Failed to apply window effects: {}", e);
+            }
 
             Ok(())
         })
@@ -56,7 +40,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             start_cookie_watcher,
             start_url_watcher,
-            custom_http_request
+            custom_http_request,
+            debug_get_cookies
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

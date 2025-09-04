@@ -5,7 +5,7 @@ use tokio::time::interval;
 use std::collections::HashMap;
 use serde_json;
 
-use crate::models::CookieMessage;
+use crate::models::{CookieMessage, cookies_to_header};
 use crate::utils::{cookies_changed, get_window_cookies};
 
 #[tauri::command]
@@ -62,6 +62,17 @@ pub async fn start_cookie_watcher(
                     
                     if cookies_changed(&last, &now) {
                         info!("检测到 cookies 变化，发送通知");
+                        
+                        // 详细记录变化的cookie信息
+                        for (i, cookie) in now.iter().enumerate() {
+                            info!("Changed Cookie {}: {}={} (domain: {}, path: {})", 
+                                i + 1, 
+                                cookie.name, 
+                                if cookie.is_auth_cookie() { "[REDACTED]" } else { &cookie.value },
+                                cookie.domain,
+                                cookie.path
+                            );
+                        }
 
                         if let Err(e) = app_handle.emit("login-cookies-detected", &now) {
                             warn!("发送事件失败: {e}");
@@ -146,6 +157,27 @@ pub async fn start_url_watcher(
                             Ok(cookies) => {
                                 info!("登录成功，获取到 {} 个cookies", cookies.len());
                                 
+                                // 详细记录cookie信息
+                                for (i, cookie) in cookies.iter().enumerate() {
+                                    info!("Cookie {}: {}={} (domain: {}, path: {}, secure: {}, httpOnly: {})", 
+                                        i + 1, 
+                                        cookie.name, 
+                                        if cookie.is_auth_cookie() { "[REDACTED]" } else { &cookie.value },
+                                        cookie.domain,
+                                        cookie.path,
+                                        cookie.secure,
+                                        cookie.http_only
+                                    );
+                                }
+                                
+                                // 生成cookie头字符串并记录
+                                let cookie_header = cookies_to_header(&cookies);
+                                info!("生成的Cookie头: {}", if cookie_header.len() > 200 { 
+                                    format!("{}...[truncated, total length: {}]", &cookie_header[..200], cookie_header.len())
+                                } else { 
+                                    cookie_header 
+                                });
+                                
                                 if let Err(e) = app_handle.emit("login-success-detected", &cookies) {
                                     warn!("发送登录成功事件失败: {e}");
                                 } else {
@@ -223,6 +255,46 @@ pub async fn custom_http_request(
         Err(e) => {
             warn!("HTTP request failed: {}", e);
             Err(format!("HTTP request failed: {}", e))
+        }
+    }
+}
+
+/// 调试用：获取指定窗口的当前cookies并返回详细信息
+#[tauri::command]
+pub async fn debug_get_cookies(
+    app: AppHandle,
+    window_label: String,
+    origin: String,
+) -> Result<serde_json::Value, String> {
+    info!("Debug: 获取窗口 {} 在 {} 上的cookies", window_label, origin);
+    
+    match get_window_cookies(&app, &window_label, &origin).await {
+        Ok(cookies) => {
+            info!("Debug: 成功获取到 {} 个cookies", cookies.len());
+            
+            let cookie_header = cookies_to_header(&cookies);
+            let auth_cookies: Vec<&CookieMessage> = cookies.iter()
+                .filter(|c| c.is_auth_cookie())
+                .collect();
+            
+            let debug_info = serde_json::json!({
+                "total_cookies": cookies.len(),
+                "auth_cookies_count": auth_cookies.len(),
+                "cookie_header": cookie_header,
+                "cookie_header_length": cookie_header.len(),
+                "cookies": cookies,
+                "auth_cookie_names": auth_cookies.iter()
+                    .map(|c| &c.name)
+                    .collect::<Vec<_>>(),
+                "origin": origin,
+                "window_label": window_label
+            });
+            
+            Ok(debug_info)
+        }
+        Err(e) => {
+            warn!("Debug: 获取cookies失败: {}", e);
+            Err(e)
         }
     }
 }

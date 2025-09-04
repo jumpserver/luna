@@ -13,7 +13,7 @@ pub async fn get_window_cookies(app: &AppHandle, window_label: &str, origin: &st
 
     let cookies = win.cookies_for_url(url).map_err(|e| e.to_string())?;
 
-    let cookie_list = cookies.into_iter().map(
+    let mut cookie_list: Vec<CookieMessage> = cookies.into_iter().map(
         |cookie| CookieMessage {
             name: cookie.name().to_string(),
             value: cookie.value().to_string(),
@@ -23,6 +23,9 @@ pub async fn get_window_cookies(app: &AppHandle, window_label: &str, origin: &st
             http_only: cookie.http_only().unwrap_or(false),
         }
     ).collect();
+
+    // 去重并排序cookies，确保一致性
+    dedupe_cookies(&mut cookie_list);
 
     Ok(cookie_list)
 }
@@ -77,6 +80,38 @@ pub fn cookies_changed(prev: &[CookieMessage], curr: &[CookieMessage]) -> bool {
         }
     }
     false
+}
+
+/// 去重并排序cookies，保留最新的值
+pub fn dedupe_cookies(cookies: &mut Vec<CookieMessage>) {
+    // 使用HashMap根据(domain, path, name)进行去重，保留最后一个
+    let mut unique_cookies = std::collections::HashMap::new();
+    
+    for cookie in cookies.iter() {
+        let key = (
+            cookie.domain.clone(),
+            cookie.path.clone(),
+            cookie.name.clone(),
+        );
+        unique_cookies.insert(key, cookie.clone());
+    }
+    
+    // 转换回Vec并排序
+    let mut result: Vec<CookieMessage> = unique_cookies.into_values().collect();
+    result.sort_by(|a, b| {
+        (
+            a.domain.as_str(),
+            a.path.as_str(),
+            a.name.as_str(),
+        )
+            .cmp(&(
+                b.domain.as_str(),
+                b.path.as_str(),
+                b.name.as_str(),
+            ))
+    });
+    
+    *cookies = result;
 }
 
 /// 重试获取窗口

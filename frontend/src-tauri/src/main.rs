@@ -5,6 +5,5 @@ fn main() {
         env_logger::Env::default().default_filter_or("info")
     ).init();
 
-    jump_server_client_lib::run()
-    ;
+    jump_server_client_lib::run();
 }
