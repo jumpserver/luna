@@ -5,6 +5,7 @@ export const useUserInfoStore = defineStore(
   () => {
     const currentSite = ref('');
     const loggedIn = ref(false);
+    const currentUser = ref<UserData | null>(null);
     const userMap = ref<Map<string, UserData>>(new Map());
 
     const setUserLoggedIn = (l: boolean) => {
@@ -20,6 +21,11 @@ export const useUserInfoStore = defineStore(
     };
 
     const setUserData = (site: string, userData: UserData) => {
+      if (userMap.value.has(site)) {
+        return;
+      }
+
+      currentUser.value = userData;
       userMap.value.set(site, userData);
     };
 

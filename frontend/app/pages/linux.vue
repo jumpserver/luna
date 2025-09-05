@@ -84,6 +84,6 @@ onMounted(() => {
       </template>
     </div>
 
-    <EditModal :open="editModalOpen" @update:open="editModalOpen = $event" />
+    <Modal :open="editModalOpen" @update:open="editModalOpen = $event" />
   </div>
 </template>

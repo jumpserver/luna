@@ -53,5 +53,13 @@
 		"Z-A": "Z-A",
 		"NewestToOldest": "按时间降序（最新优先）",
 		"OldestToNewest": "按时间升序（最早优先）"
+	},
+	"Login": {
+		"Title": "输入登录站点",
+		"Description": "请输入要登录的站点地址 (例如: https://example.com) 或 IP 地址",
+		"LoginSuccess": "登录成功",
+		"LoginSuccessDescription": "欢迎回来，您已成功登录",
+		"EmptyUrlError": "请输入站点地址",
+		"InvalidUrlError": "请输入有效的站点地址或IP地址"
 	}
 }

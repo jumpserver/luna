@@ -1,10 +1,14 @@
-use std::time::Duration;
-use log::{info, warn};
-use tauri::{AppHandle, Emitter, Manager};
-use tokio::time::{self, sleep, MissedTickBehavior};
 use crate::commands::requests::get;
+use crate::utils::{format_cookies, get_window_cookies};
 
-pub async fn url_watcher(app: AppHandle, name: String, cookie_header: String) {
+use log::{info, warn};
+use std::time::Duration;
+use tauri::{AppHandle, Emitter, Manager};
+use tokio::time::{self, MissedTickBehavior};
+use serde_json::json;
+
+#[tauri::command]
+pub async fn url_watcher(app: AppHandle, name: String, origin: String) {
     tokio::spawn(async move {
         info!("开始监听 url 变化");
 
@@ -31,16 +35,43 @@ pub async fn url_watcher(app: AppHandle, name: String, cookie_header: String) {
 
                     if url_str.contains("/ui/#/") {
                         info!("检测到登录成功，停止监听");
-                        let _ = app.emit("login-success-detected", "success");
 
-                        window.close().expect("关闭异常");
+                        // 获取全部 cookie
+                        let cookies = get_window_cookies(&app, &name, &url_str).await;
 
-                        sleep(Duration::from_millis(1000)).await;
+                        match cookies {
+                            Ok(cookies) => {
+                                let cookie_header = format_cookies(&cookies);
+                                let profile_url = format!("{}/api/v1/users/profile/", origin);
 
-                        // 发送 profile 请求
-                        let response = get("https://y4.cmdb.cc/api/v1/users/profile/", &cookie_header).await.expect("TODO: panic message");
+                                info!("获取到的 cookie: {}", cookie_header);
 
-                        println!("{}", response.as_str());
+                                match get(&profile_url, &cookie_header).await {
+                                    Ok(resp) => {
+                                        let status = resp.status();
+                                        let data = resp.text().await.unwrap_or_default();
+
+                                        info!("响应状态: {}", status);
+                                        println!("响应体: {}", data);
+
+                                        if status == 200 {
+                                            let _ = app.emit("login-success-detected", json!({
+                                                "status": "success",
+                                                "data": data,
+                                            }));
+
+                                            window.close().expect("关闭异常");
+                                        }
+                                    }
+                                    Err(e) => {
+                                        warn!("请求失败: {}", e);
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                warn!("获取 cookie 失败: {}", e)
+                            }
+                        }
                         break;
                     }
                 }

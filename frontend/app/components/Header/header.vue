@@ -10,9 +10,13 @@ import { useUserSettingStore } from '~/store/modules/userSetting';
 
 type LocaleCode = (typeof locales.value)[number]['code'];
 
+const REG_EXP =
+  /^(?:https?:\/\/(?:localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(?::\d{1,5})?(?:[/?#]\S*)?|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\])$/;
+
 // TODO 系统主题默认第一次使用时将适配
 
 const { t, setLocale, locales } = useI18n();
+const toast = useToast();
 const colorMode = useColorMode();
 const appConfig = useAppConfig();
 const userInfoStore = useUserInfoStore();
@@ -25,15 +29,20 @@ const { setUserLoggedIn, setUserData } = userInfoStore;
 const { setTheme, setLang, setCollapse } = userSettingStore;
 const { theme, language, collapse } = storeToRefs(userSettingStore);
 
-const { loggedIn } = storeToRefs(userInfoStore);
+const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 
+const openModal = ref(false);
+const inputSite = ref('');
 const loginPage = ref<WebviewWindow | null>(null);
 const subscribeEvent = ref<UnlistenFn | null>(null);
+const hasValidationError = ref(false);
+const errorMessage = ref('');
+const inputRef = ref<any>(null);
 
 const isDarkMode = computed(() => theme.value === 'dark');
 
 const supportLanguages = computed(() => {
-  return locales.value.map((locale) => ({
+  return locales.value.map((locale: any) => ({
     label: locale.name,
     value: locale.code,
     type: 'checkbox' as const,
@@ -53,7 +62,9 @@ const supportLanguages = computed(() => {
 const computedSwitchMode = computed<ActionItem>(() => {
   return {
     key: 'switchMode',
-    iconName: isDarkMode.value ? 'i-lucide-sun' : 'i-lucide-moon',
+    iconName: isDarkMode.value
+      ? 'line-md:moon-alt-to-sunny-outline-loop-transition'
+      : 'line-md:moon-alt-loop',
     tooltipLabel: isDarkMode.value
       ? t('ToolTips.LightMode')
       : t('ToolTips.DarkMode'),
@@ -120,26 +131,70 @@ const clearAuthInfo = () => {
  * @description 打开登录窗口
  */
 const openLoginPage = () => {
-  try {
-    loginPage.value = new useTauriWebviewWindowWebviewWindow('loginPage', {
-      title: '',
-      url: 'https://y4.cmdb.cc',
-      width: 600,
-      height: 800,
-      minWidth: 600,
-      minHeight: 800,
+  openModal.value = true;
+  hasValidationError.value = false;
+  errorMessage.value = '';
+
+  nextTick(() => {
+    inputRef.value?.$el?.querySelector('input')?.focus();
+  });
+};
+
+const handleConfirm = () => {
+  hasValidationError.value = false;
+  errorMessage.value = '';
+
+  if (!inputSite.value) {
+    hasValidationError.value = true;
+    errorMessage.value = t('Login.EmptyUrlError');
+
+    nextTick(() => {
+      inputRef.value?.$el?.querySelector('input')?.focus();
+    });
+    return;
+  }
+
+  if (!REG_EXP.test(inputSite.value)) {
+    hasValidationError.value = true;
+    errorMessage.value = t('Login.InvalidUrlError');
+
+    nextTick(() => {
+      inputRef.value?.$el?.querySelector('input')?.focus();
+    });
+    return;
+  }
+
+  loginPage.value = new useTauriWebviewWindowWebviewWindow('loginPage', {
+    title: '',
+    url: inputSite.value,
+    width: 600,
+    height: 800,
+    minWidth: 600,
+    minHeight: 800,
+  });
+
+  nextTick(async () => {
+    await useTauriCoreInvoke('url_watcher', {
+      name: 'loginPage',
+      origin: inputSite.value,
     });
 
-    nextTick(async () => {
-      // 启动URL监听器，监听重定向到 /ui/ 的情况（登录成功后会跳转到 /ui/#/pam/dashboard）
-      await useTauriCoreInvoke('start_url_watcher', {
-        windowLabel: 'loginPage',
-        targetUrlPattern: '/ui/#/',
-      });
-    });
-  } catch (error) {
-    console.error('❌ 创建登录窗口失败:', error);
+    openModal.value = false;
+  });
+};
+
+/**
+ * @description 清除验证错误
+ */
+const clearValidationError = () => {
+  if (hasValidationError.value) {
+    hasValidationError.value = false;
+    errorMessage.value = '';
   }
+};
+
+const handleClipboard = (value: string) => {
+  inputSite.value = value;
 };
 
 const items = ref(['Backlog', 'Todo', 'In Progress', 'Done']);
@@ -232,74 +287,32 @@ onMounted(async () => {
   subscribeEvent.value = await useTauriEventListen(
     'login-success-detected',
     (event) => {
-      const cookies: Cookies[] = event.payload as Cookies[];
+      const { status, data } = event.payload as {
+        status: string;
+        data: string;
+      };
 
-      console.log('🎉 检测到登录成功，获取到cookies:', cookies);
+      const profileData = JSON.parse(data);
 
-      if (cookies.length === 0) {
-        console.warn('⚠️ 登录成功但未获取到cookies');
-        return;
+      console.log(status, JSON.parse(data));
+
+      if (status === 'success' && profileData) {
+        toast.add({
+          title: t('Login.LoginSuccess'),
+          description: t('Login.LoginSuccessDescription'),
+          color: 'success',
+          icon: 'line-md:check-all',
+        });
+
+        setUserData(inputSite.value, {
+          avatar_url: profileData.avatar_url,
+          name: profileData.name,
+        });
+
+        setUserLoggedIn(true);
       }
-
-      const csrfToken = cookies.find((c) => {
-        return c.name.includes('csrf') || c.name.includes('CSRF');
-      })?.value;
-
-      const cookieHeader = cookies
-        .map((c) => `${c.name}=${c.value}`)
-        .join('; ');
-
-      console.log('🍪 Cookie Header:', cookieHeader);
-      console.log('🔐 CSRF Token:', csrfToken);
-
-      if (!csrfToken) {
-        console.warn('⚠️ 未找到CSRF Token，但仍然尝试设置用户数据');
-      }
-
-      // 关闭登录窗口
-      // if (loginPage.value) {
-      //   loginPage.value.close();
-      //   loginPage.value = null;
-      // }
-
-      const siteUrl = 'https://y4.cmdb.cc';
-
-      // 设置当前站点
-      userInfoStore.setCurrentSite(siteUrl);
-
-      // 设置用户数据
-      setUserData(siteUrl, {
-        avatar_url: '',
-        name: '',
-        headerJson: cookieHeader,
-        csrf_token: csrfToken || '',
-      });
-
-      console.log('🔧 用户数据设置完成:');
-      console.log('  - 站点:', siteUrl);
-      console.log('  - CSRF Token:', csrfToken);
-      console.log('  - Cookie Header:', cookieHeader);
-
-      nextTick(async () => {
-        try {
-          const res = await getProfile();
-          console.log('✅ 获取用户信息成功:', res);
-
-          // 设置登录状态
-          // setUserLoggedIn(true);
-        } catch (error) {
-          console.error('❌ 获取用户信息失败:', error);
-        }
-      });
     }
   );
-
-  // 检查是否已有保存的认证信息
-  // const hasUser = userInfoStore.getUserData();
-
-  // if (hasUser.length > 0) {
-  //   setUserLoggedIn(true);
-  // }
 });
 
 onBeforeUnmount(() => {
@@ -369,7 +382,7 @@ onBeforeUnmount(() => {
           content: 'w-48',
         }"
       >
-        <UAvatar size="sm" src="https://github.com/benjamincanac.png" />
+        <UAvatar size="sm" :src="`${inputSite}/${currentUser?.avatar_url}`" />
       </UDropdownMenu>
 
       <UButton
@@ -382,5 +395,52 @@ onBeforeUnmount(() => {
         {{ t('Common.UnSigned') }}
       </UButton>
     </section>
+
+    <Modal
+      v-model:open="openModal"
+      :title="t('Login.Title')"
+      @update:open="openModal = $event"
+      @confirm="handleConfirm"
+      @clipboard="handleClipboard"
+    >
+      <div class="space-y-1">
+        <UInput
+          ref="inputRef"
+          v-model="inputSite"
+          :color="hasValidationError ? 'error' : 'primary'"
+          :ui="{
+            base: 'peer',
+          }"
+          placeholder=" "
+          @input="clearValidationError"
+        >
+          <label
+            class="pointer-events-none absolute left-0 -top-2.5 text-xs font-medium px-1.5 transition-all peer-focus:-top-2.5 peer-focus:text-xs peer-focus:font-medium peer-placeholder-shown:text-sm peer-placeholder-shown:top-1.5 peer-placeholder-shown:font-normal"
+          >
+            <span class="inline-flex bg-default px-1">
+              {{ t('Login.Description') }}
+            </span>
+          </label>
+
+          <template v-if="inputSite?.length" #trailing>
+            <UButton
+              color="neutral"
+              variant="link"
+              size="sm"
+              icon="i-lucide-circle-x"
+              aria-label="Clear input"
+              @click="
+                inputSite = '';
+                clearValidationError();
+              "
+            />
+          </template>
+        </UInput>
+
+        <div v-if="hasValidationError" class="text-red-500 text-xs px-1">
+          {{ errorMessage }}
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>

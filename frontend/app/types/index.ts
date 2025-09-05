@@ -43,7 +43,7 @@ export interface UserData {
 
   name: string;
 
-  headerJson: string;
+  // headerJson: string;
 
-  csrf_token: string;
+  // csrf_token: string;
 }

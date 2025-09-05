@@ -50,5 +50,13 @@
 		"Z-A": "Z-A",
 		"NewestToOldest": "Newest to oldest",
 		"OldestToNewest": "Oldest to newest"
+	},
+	"Login": {
+		"Title": "Input Login Site",
+		"Description": "Please enter the site address (e.g. https://example.com) or IP address",
+		"LoginSuccess": "Login Success",
+		"LoginSuccessDescription": "Your operation has been completed successfully",
+		"EmptyUrlError": "Please enter a site address",
+		"InvalidUrlError": "Please enter a valid site address or IP address"
 	}
 }

@@ -20,15 +20,19 @@
 		"tauri": "tauri",
 		"tauri:dev": "tauri dev",
 		"tauri:build": "tauri build",
-		"tauri:build:debug": "tauri build --debug"
+		"tauri:build:debug": "tauri build --debug",
+		"cleanup": "./cleanup.sh",
+		"fresh-start": "./cleanup.sh && pnpm install && pnpm run tauri:dev",
+		"reset": "rm -rf node_modules .nuxt dist && cd src-tauri && cargo clean"
 	},
 	"dependencies": {
 		"@nuxt/fonts": "0.11.4",
-		"@nuxt/icon": "1.15.0",
+		"@nuxt/icon": "2.0.0",
 		"@nuxt/ui": "^3.2.0",
 		"@nuxtjs/i18n": "10.0.2",
 		"@pinia/nuxt": "^0.11.2",
 		"@tauri-apps/api": "^2.6.0",
+		"@tauri-apps/plugin-clipboard-manager": "~2.3.0",
 		"@tauri-apps/plugin-fs": "^2.4.0",
 		"@tauri-apps/plugin-http": "^2.4.0",
 		"@tauri-apps/plugin-notification": "^2.3.0",
@@ -36,7 +40,7 @@
 		"@tauri-apps/plugin-shell": "^2.3.0",
 		"@tauri-apps/plugin-store": "^2.3.0",
 		"axios": "^1.11.0",
-		"nuxt": "^4.0.1",
+		"nuxt": "^4.1.0",
 		"pinia": "^3.0.3",
 		"pinia-plugin-persistedstate": "^4.4.1",
 		"vue": "^3.5.17",
@@ -44,7 +48,7 @@
 		"zod": "^4.0.5"
 	},
 	"devDependencies": {
-		"@antfu/eslint-config": "^4.17.0",
+		"@antfu/eslint-config": "^5.2.2",
 		"@fortawesome/free-brands-svg-icons": "^7.0.0",
 		"@fortawesome/free-regular-svg-icons": "^7.0.0",
 		"@fortawesome/free-solid-svg-icons": "^7.0.0",
