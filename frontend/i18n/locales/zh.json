@@ -59,7 +59,11 @@
 		"Description": "请输入要登录的站点地址 (例如: https://example.com) 或 IP 地址",
 		"LoginSuccess": "登录成功",
 		"LoginSuccessDescription": "欢迎回来，您已成功登录",
+		"LoginFailed": "登录失败",
+		"LoginFailedDescription": "登录失败,请重试",
 		"EmptyUrlError": "请输入站点地址",
-		"InvalidUrlError": "请输入有效的站点地址或IP地址"
+		"InvalidUrlError": "请输入有效的站点地址或IP地址",
+		"AddAccount": "新增账号",
+		"SwitchAccount": "切换账号"
 	}
 }

@@ -2,6 +2,7 @@ mod commands;
 mod models;
 mod setup;
 mod utils;
+mod service;
 
 use crate::setup::apply_window_effects;
 use crate::setup::setup_tray;

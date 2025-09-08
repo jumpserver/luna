@@ -30,20 +30,54 @@ export interface ConfigItem {
 }
 
 export interface Cookies {
+  path: string;
   name: string;
   value: string;
   domain: string;
-  path: string;
   secure: boolean;
   httpOnly: boolean;
 }
 
-export interface UserData {
-  avatar_url: string;
-
+export interface PermOrgItem {
+  id: string;
   name: string;
+  is_root: boolean;
+  is_default: boolean;
+  is_system: boolean;
+}
 
-  // headerJson: string;
+export interface CurrentOrg extends PermOrgItem {
+  comment: string;
+}
 
-  // csrf_token: string;
+export interface PermissionOrgs {
+  pam_orgs?: PermOrgItem[];
+  audit_orgs?: PermOrgItem[];
+  console_orgs?: PermOrgItem[];
+  workbench_orgs?: PermOrgItem[];
+  id: string;
+  username: string;
+}
+
+export interface UserData {
+  site: string;
+  name: string;
+  headerJson: string;
+  system_roles: string[];
+  org: CurrentOrg;
+  availableOrgs: PermOrgItem[];
+}
+
+export interface UserIntiInfo {
+  status: string;
+  cookies: string;
+  profile: {
+    data: string;
+  };
+  current_org: {
+    data: string;
+  };
+  permission_orgs: {
+    data: string;
+  };
 }

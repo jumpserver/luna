@@ -2,9 +2,9 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import type { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import type { ActionItem, Cookies } from '~/types/index';
+import type { ComponentPublicInstance } from 'vue';
+import type { ActionItem, PermissionOrgs, UserIntiInfo } from '~/types/index';
 
-import { getProfile } from '~/api/modules/user';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
@@ -25,19 +25,60 @@ const userSettingStore = useUserSettingStore();
 const darkColor = appConfig.componentsConfig.header.darkColor;
 const lightColor = appConfig.componentsConfig.header.lightColor;
 
-const { setUserLoggedIn, setUserData } = userInfoStore;
 const { setTheme, setLang, setCollapse } = userSettingStore;
 const { theme, language, collapse } = storeToRefs(userSettingStore);
+const { setUserLoggedIn, setUserData, setOrganizations, deleteUserData } =
+  userInfoStore;
 
-const { loggedIn, currentUser } = storeToRefs(userInfoStore);
+const { loggedIn, currentOrganizations, currentSite } =
+  storeToRefs(userInfoStore);
 
-const openModal = ref(false);
 const inputSite = ref('');
-const loginPage = ref<WebviewWindow | null>(null);
-const subscribeEvent = ref<UnlistenFn | null>(null);
-const hasValidationError = ref(false);
 const errorMessage = ref('');
-const inputRef = ref<any>(null);
+const currentOrg = ref<string>('');
+const openModal = ref(false);
+const hasValidationError = ref(false);
+const loginPage = ref<WebviewWindow | null>(null);
+const subscribeLoginSuccessEvent = ref<UnlistenFn | null>(null);
+const subscribeLoginFailedEvent = ref<UnlistenFn | null>(null);
+const inputRef = ref<ComponentPublicInstance | null>(null);
+const dropItems = ref<DropdownMenuItem[][]>([
+  [
+    {
+      label: 'Profile',
+      icon: 'i-lucide-user',
+    },
+    {
+      label: t('Login.AddAccount'),
+      icon: 'i-lucide-user-round-plus',
+    },
+  ],
+  [
+    {
+      label: t('Login.SwitchAccount'),
+      icon: 'i-lucide-arrow-down-up',
+      children: [
+        [
+          {
+            label: 'Email',
+            icon: 'i-lucide-mail',
+          },
+          {
+            label: 'Message',
+            icon: 'i-lucide-message-square',
+          },
+        ],
+      ],
+    },
+  ],
+  [
+    {
+      label: 'Logout',
+      icon: 'i-lucide-log-out',
+      onClick: clearAuthInfo,
+    },
+  ],
+]);
 
 const isDarkMode = computed(() => theme.value === 'dark');
 
@@ -58,6 +99,13 @@ const supportLanguages = computed(() => {
     },
   })) as DropdownMenuItem[];
 });
+
+const organizationItems = computed(
+  () =>
+    currentOrganizations.value.map(
+      (org) => org.name
+    ) as unknown as DropdownMenuItem[]
+);
 
 const computedSwitchMode = computed<ActionItem>(() => {
   return {
@@ -97,6 +145,13 @@ function changeLocale(payload: LocaleCode) {
 }
 
 /**
+ * @description 清除认证信息
+ */
+function clearAuthInfo() {
+  deleteUserData(currentSite.value);
+}
+
+/**
  * @description 切换折叠状态
  */
 const handleCollapse = () => {
@@ -121,13 +176,6 @@ const handleWindowDrag = async (event: MouseEvent) => {
 };
 
 /**
- * @description 清除认证信息
- */
-const clearAuthInfo = () => {
-  userInfoStore.setUserLoggedIn(false);
-};
-
-/**
  * @description 打开登录窗口
  */
 const openLoginPage = () => {
@@ -136,10 +184,13 @@ const openLoginPage = () => {
   errorMessage.value = '';
 
   nextTick(() => {
-    inputRef.value?.$el?.querySelector('input')?.focus();
+    inputRef.value?.$el.querySelector('input')?.focus();
   });
 };
 
+/**
+ * @description 确认登录
+ */
 const handleConfirm = () => {
   hasValidationError.value = false;
   errorMessage.value = '';
@@ -193,108 +244,51 @@ const clearValidationError = () => {
   }
 };
 
+/**
+ * @description 粘贴输入
+ * @param value
+ */
 const handleClipboard = (value: string) => {
   inputSite.value = value;
 };
 
-const items = ref(['Backlog', 'Todo', 'In Progress', 'Done']);
-const value = ref('Backlog');
+/**
+ * @description 初始化可选组织
+ * @param permissionOrgData
+ * @returns 返回去重后的组织列表
+ */
+const initSelectOrganization = (permissionOrgData: PermissionOrgs) => {
+  // permissionOrgData 中 pam_orgs, audit_orgs, console_orgs, workbench_orgs 都有可能存在,所以只需要获取他们的并集即可
+  const orgs = [
+    ...(permissionOrgData.pam_orgs || []),
+    ...(permissionOrgData.audit_orgs || []),
+    ...(permissionOrgData.console_orgs || []),
+    ...(permissionOrgData.workbench_orgs || []),
+  ];
 
-const dropItems = ref<DropdownMenuItem[][]>([
-  [
-    {
-      label: 'Profile',
-      icon: 'i-lucide-user',
-    },
-    {
-      label: 'Billing',
-      icon: 'i-lucide-credit-card',
-    },
-    {
-      label: 'Settings',
-      icon: 'i-lucide-cog',
-      kbds: [','],
-    },
-    {
-      label: 'Keyboard shortcuts',
-      icon: 'i-lucide-monitor',
-    },
-  ],
-  [
-    {
-      label: 'Team',
-      icon: 'i-lucide-users',
-    },
-    {
-      label: 'Invite users',
-      icon: 'i-lucide-user-plus',
-      children: [
-        [
-          {
-            label: 'Email',
-            icon: 'i-lucide-mail',
-          },
-          {
-            label: 'Message',
-            icon: 'i-lucide-message-square',
-          },
-        ],
-        [
-          {
-            label: 'More',
-            icon: 'i-lucide-circle-plus',
-          },
-        ],
-      ],
-    },
-    {
-      label: 'New team',
-      icon: 'i-lucide-plus',
-      kbds: ['meta', 'n'],
-    },
-  ],
-  [
-    {
-      label: 'GitHub',
-      icon: 'i-simple-icons-github',
-      to: 'https://github.com/nuxt/ui',
-      target: '_blank',
-    },
-    {
-      label: 'Support',
-      icon: 'i-lucide-life-buoy',
-      to: '/components/dropdown-menu',
-    },
-    {
-      label: 'API',
-      icon: 'i-lucide-cloud',
-      disabled: true,
-    },
-  ],
-  [
-    {
-      label: 'Logout',
-      icon: 'i-lucide-log-out',
-      kbds: ['shift', 'meta', 'q'],
-      onClick: clearAuthInfo,
-    },
-  ],
-]);
+  // 去除重复项
+  const uniqueOrgs = orgs.filter(
+    (org, index, self) => index === self.findIndex((t) => t.id === org.id)
+  );
 
-onMounted(async () => {
-  setLocale(language.value as LocaleCode);
+  console.log('uniqueOrgs', uniqueOrgs);
 
-  subscribeEvent.value = await useTauriEventListen(
+  return uniqueOrgs;
+};
+
+/**
+ * @description 监听登录成功事件
+ */
+const listenTauriEvent = async () => {
+  subscribeLoginSuccessEvent.value = await useTauriEventListen(
     'login-success-detected',
     (event) => {
-      const { status, data } = event.payload as {
-        status: string;
-        data: string;
-      };
+      const { status, profile, permission_orgs, current_org, cookies } =
+        event.payload as UserIntiInfo;
 
-      const profileData = JSON.parse(data);
-
-      console.log(status, JSON.parse(data));
+      const profileData = JSON.parse(profile.data);
+      const permissionOrgData = JSON.parse(permission_orgs.data);
+      const currentOrgData = JSON.parse(current_org.data);
 
       if (status === 'success' && profileData) {
         toast.add({
@@ -304,21 +298,62 @@ onMounted(async () => {
           icon: 'line-md:check-all',
         });
 
+        const availableOrgs = initSelectOrganization(permissionOrgData);
+
         setUserData(inputSite.value, {
-          avatar_url: profileData.avatar_url,
           name: profileData.name,
+          headerJson: cookies,
+          site: inputSite.value,
+          org: currentOrgData,
+          system_roles: profileData.system_roles,
+          availableOrgs,
         });
+
+        currentOrg.value = currentOrgData.name;
+        setOrganizations(availableOrgs);
 
         setUserLoggedIn(true);
       }
     }
   );
+
+  subscribeLoginFailedEvent.value = await useTauriEventListen(
+    'login-failed-detected',
+    () => {
+      toast.add({
+        title: t('Login.LoginFailed'),
+        description: t('Login.LoginFailedDescription'),
+        color: 'error',
+        icon: 'line-md:close-circle',
+      });
+
+      setUserLoggedIn(false);
+    }
+  );
+};
+
+const unListenTauriEvent = () => {
+  if (subscribeLoginSuccessEvent.value) {
+    subscribeLoginSuccessEvent.value();
+  }
+
+  if (subscribeLoginFailedEvent.value) {
+    subscribeLoginFailedEvent.value();
+  }
+};
+
+onMounted(async () => {
+  setLocale(language.value as LocaleCode);
+
+  if (loggedIn.value && userInfoStore.currentUser) {
+    currentOrg.value = userInfoStore.currentUser.org.name;
+  }
+
+  await listenTauriEvent();
 });
 
 onBeforeUnmount(() => {
-  if (subscribeEvent.value) {
-    subscribeEvent.value();
-  }
+  unListenTauriEvent();
 });
 </script>
 
@@ -338,21 +373,23 @@ onBeforeUnmount(() => {
         @click="handleCollapse"
       />
 
-      <USelect
-        v-model="value"
-        :items="items"
-        :style="{
-          marginLeft: collapse ? '0.625rem' : '',
-        }"
-        :ui="{
-          trailingIcon:
-            'group-data-[state=open]:rotate-180 transition-transform duration-200',
-        }"
-        size="md"
-        class="w-56"
-        placeholder="Default"
-        icon="eos-icons:organization-outlined"
-      />
+      <div v-show="loggedIn">
+        <USelect
+          v-model="currentOrg"
+          :items="organizationItems"
+          :style="{
+            marginLeft: collapse ? '0.625rem' : '',
+          }"
+          :ui="{
+            trailingIcon:
+              'group-data-[state=open]:rotate-180 transition-transform duration-200',
+          }"
+          variant="subtle"
+          size="md"
+          class="w-56"
+          icon="fluent:organization-16-regular"
+        />
+      </div>
     </section>
 
     <section class="flex items-center h-full gap-3 mr-2">
@@ -382,7 +419,7 @@ onBeforeUnmount(() => {
           content: 'w-48',
         }"
       >
-        <UAvatar size="sm" :src="`${inputSite}/${currentUser?.avatar_url}`" />
+        <UAvatar size="sm" src="/user_avatar.png" />
       </UDropdownMenu>
 
       <UButton

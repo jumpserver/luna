@@ -1,6 +1,14 @@
 use chrono::{Local, Offset};
 use log::info;
 use reqwest::header::COOKIE;
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
+pub struct ApiResponse {
+    pub status: u16,
+    pub data: String,
+    pub success: bool,
+}
 
 pub async fn get(url: &str, header_cookie: &str) -> Result<reqwest::Response, reqwest::Error> {
     info!("GET {}", url);
@@ -32,4 +40,28 @@ pub async fn get(url: &str, header_cookie: &str) -> Result<reqwest::Response, re
         .build()?;
 
     client.execute(request).await
+}
+
+pub async fn get_with_response(url: &str, header_cookie: &str) -> ApiResponse {
+    match get(url, header_cookie).await {
+        Ok(resp) => {
+            let status = resp.status().as_u16();
+            let data = resp.text().await.unwrap_or_default();
+            let success = status == 200;
+
+            ApiResponse {
+                status,
+                data,
+                success,
+            }
+        }
+        Err(e) => {
+            log::warn!("请求 {} 失败: {}", url, e);
+            ApiResponse {
+                status: 0,
+                data: format!("请求失败: {}", e),
+                success: false,
+            }
+        }
+    }
 }

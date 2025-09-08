@@ -57,6 +57,8 @@
 		"LoginSuccess": "Login Success",
 		"LoginSuccessDescription": "Your operation has been completed successfully",
 		"EmptyUrlError": "Please enter a site address",
-		"InvalidUrlError": "Please enter a valid site address or IP address"
+		"InvalidUrlError": "Please enter a valid site address or IP address",
+		"AddAccount": "Add Account",
+		"SwitchAccount": "Switch Account"
 	}
 }

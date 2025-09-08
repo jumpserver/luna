@@ -39,7 +39,6 @@
 		"@tauri-apps/plugin-os": "^2.3.0",
 		"@tauri-apps/plugin-shell": "^2.3.0",
 		"@tauri-apps/plugin-store": "^2.3.0",
-		"axios": "^1.11.0",
 		"nuxt": "^4.1.0",
 		"pinia": "^3.0.3",
 		"pinia-plugin-persistedstate": "^4.4.1",

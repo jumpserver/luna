@@ -1,11 +1,11 @@
-use crate::commands::requests::get;
 use crate::utils::{format_cookies, get_window_cookies};
+use crate::service::user::{UserService};
 
 use log::{info, warn};
+use serde_json::json;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::time::{self, MissedTickBehavior};
-use serde_json::json;
 
 #[tauri::command]
 pub async fn url_watcher(app: AppHandle, name: String, origin: String) {
@@ -42,30 +42,27 @@ pub async fn url_watcher(app: AppHandle, name: String, origin: String) {
                         match cookies {
                             Ok(cookies) => {
                                 let cookie_header = format_cookies(&cookies);
-                                let profile_url = format!("{}/api/v1/users/profile/", origin);
-
                                 info!("获取到的 cookie: {}", cookie_header);
 
-                                match get(&profile_url, &cookie_header).await {
-                                    Ok(resp) => {
-                                        let status = resp.status();
-                                        let data = resp.text().await.unwrap_or_default();
+                                let user_service = UserService::new(origin.clone(), cookie_header.clone());
+                                let user_data = user_service.init().await;
 
-                                        info!("响应状态: {}", status);
-                                        println!("响应体: {}", data);
+                                window.close().expect("关闭异常");
 
-                                        if status == 200 {
-                                            let _ = app.emit("login-success-detected", json!({
-                                                "status": "success",
-                                                "data": data,
-                                            }));
-
-                                            window.close().expect("关闭异常");
-                                        }
-                                    }
-                                    Err(e) => {
-                                        warn!("请求失败: {}", e);
-                                    }
+                                if user_data.profile.success && user_data.permission_orgs.success && user_data.current_org.success {
+                                    let _ = app.emit(
+                                        "login-success-detected",
+                                        json!({
+                                            "status": "success",
+                                            "profile": user_data.profile,
+                                            "permission_orgs": user_data.permission_orgs,
+                                            "current_org": user_data.current_org,
+                                            "cookies": cookie_header,
+                                        }),
+                                    );
+                                } else {
+                                    let _ = app.emit("login-failed-detected", json!({"status": "failure"}));
+                                    warn!("获取用户初始信息失败!")
                                 }
                             }
                             Err(e) => {
