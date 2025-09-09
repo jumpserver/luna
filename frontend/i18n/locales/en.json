@@ -51,6 +51,11 @@
 		"NewestToOldest": "Newest to oldest",
 		"OldestToNewest": "Oldest to newest"
 	},
+	"Loading": {
+		"Loading": "Loading",
+		"NoMore": "No more",
+		"ScrollToLoadMore": "Scroll to load more"
+	},
 	"Login": {
 		"Title": "Input Login Site",
 		"Description": "Please enter the site address (e.g. https://example.com) or IP address",
@@ -60,5 +65,8 @@
 		"InvalidUrlError": "Please enter a valid site address or IP address",
 		"AddAccount": "Add Account",
 		"SwitchAccount": "Switch Account"
+	},
+	"Asset": {
+		"GetAssetFailed": "Get asset failed, please refresh and try again"
 	}
 }

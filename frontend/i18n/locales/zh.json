@@ -65,5 +65,13 @@
 		"InvalidUrlError": "请输入有效的站点地址或IP地址",
 		"AddAccount": "新增账号",
 		"SwitchAccount": "切换账号"
+	},
+	"Loading": {
+		"Loading": "加载中",
+		"NoMore": "没有更多了",
+		"ScrollToLoadMore": "向下滚动加载更多"
+	},
+	"Asset": {
+		"GetAssetFailed": "获取资产失败,请刷新重试"
 	}
 }

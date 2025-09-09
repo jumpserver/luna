@@ -2,7 +2,7 @@
 import type { ContextMenuItem } from '@nuxt/ui';
 
 defineProps<{
-  os: string;
+  os?: string;
   user: string;
   address: string;
   assetName: string;
@@ -113,15 +113,19 @@ const handleMouseLeave = () => {
             </UBadge>
             <USeparator orientation="vertical" size="sm" class="h-3" />
 
-            <UBadge color="info" variant="soft">
-              {{ os }}
-            </UBadge>
-            <USeparator orientation="vertical" size="sm" class="h-3" />
+            <template v-if="os">
+              <UBadge color="info" variant="soft">
+                {{ os }}
+              </UBadge>
+              <USeparator orientation="vertical" size="sm" class="h-3" />
+            </template>
 
-            <UBadge color="neutral" variant="soft">
-              {{ user }}
-            </UBadge>
-            <USeparator orientation="vertical" size="sm" class="h-3" />
+            <template v-if="user">
+              <UBadge color="neutral" variant="soft">
+                {{ user }}
+              </UBadge>
+              <USeparator orientation="vertical" size="sm" class="h-3" />
+            </template>
 
             <UBadge color="error" variant="soft">
               {{ protocol }}

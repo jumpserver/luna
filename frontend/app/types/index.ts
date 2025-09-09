@@ -81,3 +81,72 @@ export interface UserIntiInfo {
     data: string;
   };
 }
+
+export interface AssetCategory {
+  value: string;
+  label: string;
+}
+
+export interface AssetConnectivity {
+  value: string;
+  label: string;
+}
+
+export interface AssetNode {
+  id: string;
+  name: string;
+}
+
+export interface AssetPlatform {
+  id: number;
+  name: string;
+}
+
+export interface AssetType {
+  value: string;
+  label: string;
+}
+
+export interface AssetZone {
+  id: string;
+  name: string;
+}
+
+export interface RawAssetData {
+  id: string;
+  name?: string;
+  address?: string;
+  category?: AssetCategory;
+  comment?: string;
+  connectivity?: AssetConnectivity;
+  created_by?: string;
+  date_created?: string;
+  date_verified?: string | null;
+  is_active?: boolean;
+  labels?: string[];
+  nodes?: AssetNode[];
+  org_id?: string;
+  org_name?: string;
+  platform?: AssetPlatform;
+  type?: AssetType;
+  zone?: AssetZone;
+}
+
+export interface AssetItem {
+  id: string;
+  assetName: string;
+  address: string;
+  user?: string;
+  protocol: string;
+  platform: string;
+  zone: string;
+  isActive: boolean;
+  comment?: string;
+}
+
+export interface AssetsResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: RawAssetData[];
+}

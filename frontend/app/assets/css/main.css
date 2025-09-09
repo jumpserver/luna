@@ -20,3 +20,5 @@
 .text-overflow-ellipsis {
   @apply text-ellipsis overflow-hidden whitespace-nowrap;
 }
+
+html, body, #__nuxt, #app { height: 100%; }

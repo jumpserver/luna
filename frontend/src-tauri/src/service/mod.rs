@@ -1,3 +1,3 @@
 pub(crate) mod user;
-mod asset;
+pub(crate) mod asset;
 mod setting;

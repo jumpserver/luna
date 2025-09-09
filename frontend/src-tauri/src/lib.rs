@@ -8,6 +8,8 @@ use crate::setup::apply_window_effects;
 use crate::setup::setup_tray;
 
 use crate::commands::url_watcher::url_watcher;
+use crate::commands::get_assets::get_assets;
+
 use log::error;
 use tauri::menu::{Menu, MenuItem};
 use tauri::Manager;
@@ -36,7 +38,7 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![url_watcher])
+        .invoke_handler(tauri::generate_handler![url_watcher, get_assets])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
