@@ -1,15 +1,15 @@
 <script setup lang="ts">
+import type { UnlistenFn } from '@tauri-apps/api/event';
+
+import type { AssetItem, AssetsResponse, RawAssetData } from '~/types';
 import {
+  useInfiniteScroll,
   useIntersectionObserver,
   useResizeObserver,
-  useInfiniteScroll,
 } from '@vueuse/core';
-
 import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 import { transformAssetsData } from '~/utils';
-import type { UnlistenFn } from '@tauri-apps/api/event';
-import type { AssetItem, RawAssetData, AssetsResponse } from '~/types';
 
 const LIMIT = 20;
 const offset = ref(0);
@@ -59,6 +59,7 @@ const fetchNextPage = async () => {
   if (!currentSite.value || !currentUser.value?.headerJson) return;
 
   isLoading.value = true;
+
   try {
     await useTauriCoreInvoke('get_assets', {
       site: currentSite.value,
@@ -87,8 +88,8 @@ watch(
     rawAssetsList.value = [];
     offset.value = 0;
     hasMore.value = true;
-    await fetchNextPage();
-    await fillIfNotScrollable();
+    // await fetchNextPage();
+    // await fillIfNotScrollable();
   },
   { immediate: true }
 );
@@ -186,7 +187,7 @@ onBeforeUnmount(unListenTauriEvent);
       :style="scrollbarStyles"
     >
       <div
-        class="mx-auto max-w-[1200px] grid gap-2 [grid-template-columns:repeat(3,minmax(360px,1fr))]"
+        class="grid gap-2 p-2 grid-cols-[repeat(auto-fit,minmax(360px,_1fr))]"
       >
         <template v-if="layouts === 'grid'">
           <GridCard
@@ -220,7 +221,7 @@ onBeforeUnmount(unListenTauriEvent);
         <span v-else>{{ t('Loading.ScrollToLoadMore') }}</span>
       </div>
 
-      <div ref="sentinelRef" style="height: 1px"></div>
+      <div ref="sentinelRef" style="height: 1px" />
     </div>
 
     <Modal :open="editModalOpen" @update:open="editModalOpen = $event" />

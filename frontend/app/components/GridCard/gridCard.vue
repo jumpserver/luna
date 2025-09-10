@@ -3,7 +3,7 @@ import type { ContextMenuItem } from '@nuxt/ui';
 
 defineProps<{
   os?: string;
-  user: string;
+  user: string | undefined;
   address: string;
   assetName: string;
   protocol: string;
