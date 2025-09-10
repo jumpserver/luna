@@ -1,7 +1,7 @@
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import type { AssetsResponse, RawAssetData } from '~/types';
-import { useResizeObserver } from '@vueuse/core';
 
+import { useResizeObserver } from '@vueuse/core';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 
 const LIMIT = 20;
@@ -17,7 +17,7 @@ export const useAssetManager = (
   const colorMode = useColorMode();
   const userInfoStore = useUserInfoStore();
 
-  const { currentSite, currentUser } = storeToRefs(userInfoStore);
+  const { currentSite, currentUser, orgId } = storeToRefs(userInfoStore);
 
   const offset = ref(0);
   const hasMore = ref(true);
@@ -45,10 +45,26 @@ export const useAssetManager = (
 
   /**
    * @description 获取下一页资产数据
+   * @param search
+   * @param order
+   * @returns
    */
-  const fetchNextPage = async (search?: string, order?: string) => {
+  async function fetchNextPage(search?: string, order?: string) {
     if (isLoading.value || !hasMore.value) return;
     if (!currentSite.value || !currentUser.value?.headerJson) return;
+    if (!orgId.value) {
+      console.error('No organization ID available for asset request', {
+        orgId: orgId.value,
+        currentUser: currentUser.value,
+      });
+      toast.add({
+        title: t('Asset.GetAssetFailed'),
+        description: 'Organization information is missing',
+        color: 'error',
+        icon: 'line-md:close-circle',
+      });
+      return;
+    }
 
     const searchParam = search !== undefined ? search : currentSearch.value;
     const orderParam = order !== undefined ? order : currentOrder.value;
@@ -68,17 +84,20 @@ export const useAssetManager = (
           limit: LIMIT,
           search: searchParam,
           order: orderParam,
+          org: orgId.value,
         },
       });
     } finally {
       isLoading.value = false;
     }
-  };
+  }
 
   /**
    * @description 刷新资产数据（重置状态并重新获取）
+   * @param search
+   * @param order
    */
-  const refreshAssets = async (search?: string, order?: string) => {
+  async function refreshAssets(search?: string, order?: string) {
     const searchParam = search !== undefined ? search : currentSearch.value;
     const orderParam = order !== undefined ? order : currentOrder.value;
 
@@ -86,12 +105,12 @@ export const useAssetManager = (
     offset.value = 0;
     hasMore.value = true;
     await fetchNextPage(searchParam, orderParam);
-  };
+  }
 
   /**
    * @description 如果内容不够滚动就自动补页（多次）
    */
-  const fillIfNotScrollable = async () => {
+  const _fillIfNotScrollable = async () => {
     if (!scrollRef?.value) return;
 
     await nextTick();
@@ -104,13 +123,13 @@ export const useAssetManager = (
     if (el.scrollHeight <= el.clientHeight && hasMore.value) {
       await fetchNextPage();
 
-      await new Promise((resolve) => {
+      await new Promise<void>((resolve) => {
         const unwatch = watch(
           () => rawAssetsList.value.length,
-          (newLength) => {
+          (newLength: number) => {
             if (newLength > currentLength || !hasMore.value) {
               unwatch();
-              resolve(undefined);
+              resolve();
             }
           },
           { immediate: true }
@@ -118,14 +137,14 @@ export const useAssetManager = (
 
         setTimeout(() => {
           unwatch();
-          resolve(undefined);
+          resolve();
         }, 3000);
       });
 
       await nextTick();
 
       if (el.scrollHeight <= el.clientHeight && hasMore.value) {
-        fillIfNotScrollable();
+        // fillIfNotScrollable();
       }
     }
   };
@@ -139,6 +158,8 @@ export const useAssetManager = (
       (event) => {
         const resp = JSON.parse(event.payload as string) as AssetsResponse;
         const pageData = resp.results ?? [];
+
+        console.log('resp', resp);
 
         // 追加到列表
         rawAssetsList.value.push(...pageData);
@@ -173,15 +194,17 @@ export const useAssetManager = (
   let unsubscribeSearch: (() => void) | null = null;
 
   const listenEventBusEvent = () => {
-    unsubscribeSetSort = useEventBus().on(
+    const { on } = useEventBus();
+
+    unsubscribeSetSort = on(
       'setSort',
       (sortOrder) => {
-        refreshAssets(currentSearch.value, sortOrder);
+        refreshAssets(currentSearch.value, sortOrder as string);
       },
       false
     );
 
-    unsubscribeRefresh = useEventBus().on(
+    unsubscribeRefresh = on(
       'refresh',
       () => {
         refreshAssets();
@@ -189,7 +212,7 @@ export const useAssetManager = (
       false
     );
 
-    unsubscribeSearch = useEventBus().on(
+    unsubscribeSearch = on(
       'search',
       (search) => {
         refreshAssets(search, currentOrder.value);
@@ -204,9 +227,9 @@ export const useAssetManager = (
     unsubscribeSearch?.();
   };
 
-  if (scrollRef) {
-    useResizeObserver(scrollRef, fillIfNotScrollable);
-  }
+  // if (scrollRef) {
+  //   useResizeObserver(scrollRef, fillIfNotScrollable);
+  // }
 
   onMounted(async () => {
     listenEventBusEvent();
@@ -227,6 +250,5 @@ export const useAssetManager = (
 
     fetchNextPage,
     refreshAssets,
-    fillIfNotScrollable,
   };
 };

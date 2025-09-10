@@ -1,5 +1,4 @@
 import type { SortType } from '~/types';
-import { useEventBus } from '~/composables/useEventBus';
 
 type themeType = 'light' | 'dark';
 type layoutsType = 'grid' | 'table';
@@ -7,6 +6,8 @@ type layoutsType = 'grid' | 'table';
 export const useUserSettingStore = defineStore(
   'userSetting',
   () => {
+    const { emit } = useEventBus();
+
     const language = ref('zh');
     const collapse = ref(false);
 
@@ -32,7 +33,7 @@ export const useUserSettingStore = defineStore(
 
     const setSort = (s: SortType) => {
       sort.value = s;
-      useEventBus().emit('setSort', s);
+      emit('setSort', s);
     };
 
     return {

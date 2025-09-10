@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { useInfiniteScroll } from '@vueuse/core';
 import { useAssetManager } from '~/composables/useAssetManager';
-import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
 const { t } = useI18n();
 
-const showEmpty = ref(false);
 const editModalOpen = ref(false);
 const selectedCardIndex = ref<number | null>(null);
 
@@ -18,36 +16,13 @@ const providerClearSelection = inject<(cb: () => void) => void>(
 );
 
 const { componentsConfig } = useAppConfig();
-const userInfoStore = useUserInfoStore();
 const userSettingStore = useUserSettingStore();
 
 const { layouts } = storeToRefs(userSettingStore);
-const { loggedIn } = storeToRefs(userInfoStore);
 
 const assetManager = useAssetManager('linux', scrollRef);
-const {
-  isLoading,
-  hasMore,
-  assetsData,
-  scrollbarStyles,
-  fetchNextPage,
-  refreshAssets,
-  fillIfNotScrollable,
-} = assetManager;
-
-watch(
-  () => loggedIn.value,
-  async (login: boolean) => {
-    if (!login) {
-      showEmpty.value = true;
-      return;
-    }
-
-    await refreshAssets();
-    await fillIfNotScrollable();
-  },
-  { immediate: true }
-);
+const { isLoading, hasMore, assetsData, scrollbarStyles, fetchNextPage } =
+  assetManager;
 
 const handleCardClick = (index: number, e: MouseEvent) => {
   e.stopPropagation();
@@ -99,6 +74,7 @@ onMounted(() => {
             :address="item.address"
             :asset-name="item.assetName"
             :protocol="item.protocol"
+            icon-name="si:terminal-alt-fill"
             class="border border-solid"
             :style="{
               borderColor:

@@ -2,8 +2,12 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import type { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import type { ComponentPublicInstance } from 'vue';
-import type { ActionItem, PermissionOrgs, UserIntiInfo } from '~/types/index';
+import type {
+  ActionItem,
+  PermissionOrgs,
+  PermOrgItem,
+  UserIntiInfo,
+} from '~/types/index';
 
 import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
@@ -27,8 +31,13 @@ const lightColor = appConfig.componentsConfig.header.lightColor;
 
 const { setTheme, setLang, setCollapse } = userSettingStore;
 const { theme, language, collapse } = storeToRefs(userSettingStore);
-const { setUserLoggedIn, setUserData, setOrganizations, deleteUserData } =
-  userInfoStore;
+const {
+  setUserLoggedIn,
+  setUserData,
+  setOrganizations,
+  deleteUserData,
+  setCurrentOrg,
+} = userInfoStore;
 
 const { loggedIn, currentOrganizations, currentSite } =
   storeToRefs(userInfoStore);
@@ -103,7 +112,7 @@ const supportLanguages = computed(() => {
 const organizationItems = computed(
   () =>
     currentOrganizations.value.map(
-      (org) => org.name
+      (org: PermOrgItem) => org.name
     ) as unknown as DropdownMenuItem[]
 );
 
@@ -276,6 +285,20 @@ const initSelectOrganization = (permissionOrgData: PermissionOrgs) => {
   return uniqueOrgs;
 };
 
+const handleOrgChange = (org: string) => {
+  const orgData = currentOrganizations.value.find(
+    (o: PermOrgItem) => o.name === org
+  );
+
+  if (orgData) {
+    setCurrentOrg(orgData);
+
+    nextTick(() => {
+      useEventBus().emit('refresh', undefined);
+    });
+  }
+};
+
 /**
  * @description 监听登录成功事件
  */
@@ -347,6 +370,10 @@ onMounted(async () => {
 
   if (loggedIn.value && userInfoStore.currentUser) {
     currentOrg.value = userInfoStore.currentUser.org.name;
+    // 确保 orgId 也被正确设置
+    if (userInfoStore.currentUser.org?.id) {
+      userInfoStore.orgId = userInfoStore.currentUser.org.id;
+    }
   }
 
   await listenTauriEvent();
@@ -388,6 +415,7 @@ onBeforeUnmount(() => {
           size="md"
           class="w-56"
           icon="fluent:organization-16-regular"
+          @update:model-value="handleOrgChange"
         />
       </div>
     </section>

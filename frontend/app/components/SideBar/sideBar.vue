@@ -57,13 +57,13 @@ const handleCollapse = () => {
 </script>
 
 <template>
-  <div class="flex flex-col">
-    <section
-      class="flex items-center justify-end w-full px-4 h-12"
-      :style="{
-        width: collapse ? '72px' : '256px',
-      }"
-    >
+  <div
+    class="flex flex-col"
+    :style="{
+      width: collapse ? '72px' : '256px',
+    }"
+  >
+    <section class="flex items-center justify-end w-full px-4 h-12">
       <UIcon
         :name="collapse ? '' : 'i-lucide-panel-left-close'"
         class="size-5 cursor-pointer hover:text-[#55B787]"
@@ -71,29 +71,26 @@ const handleCollapse = () => {
       />
     </section>
 
-    <UNavigationMenu
-      :highlight="false"
-      :items="items"
-      :collapsed="collapse"
-      orientation="vertical"
-      class="px-4 py-0"
-    />
-
-    <!--
-          :ui="
-        collapse
-          ? {
-              link: 'justify-center px-0 w-10 h-10 rounded-lg',
-              linkLabel: 'sr-only',
-              linkTrailing: 'hidden',
-              linkLeadingIcon: 'size-5',
-            }
-          : {
-              link: 'px-2',
-            }
-      "
-      :class="collapse ? 'px-0' : 'px-4'"
-      color="neutral"
-    -->
+    <div class="px-4 py-0">
+      <UNavigationMenu
+        color="primary"
+        orientation="vertical"
+        :highlight="false"
+        :items="items"
+        :collapsed="collapse"
+        :ui="
+          collapse
+            ? {
+                link: 'justify-center px-0 w-10 h-10 rounded-lg',
+                linkLabel: 'sr-only',
+                linkTrailing: 'hidden',
+                linkLeadingIcon: 'size-5',
+              }
+            : {
+                link: 'px-2',
+              }
+        "
+      />
+    </div>
   </div>
 </template>

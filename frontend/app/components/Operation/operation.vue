@@ -3,10 +3,10 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import type { ActionItem } from '~/types';
 import { LogicalPosition } from '@tauri-apps/api/dpi';
 import { useDebounceFn } from '@vueuse/core';
-import { useEventBus } from '~/composables/useEventBus';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
 const { t } = useI18n();
+const { emit } = useEventBus();
 const userSettingStore = useUserSettingStore();
 
 const { componentsConfig } = useAppConfig();
@@ -25,7 +25,7 @@ const actionItems = computed<ActionItem[]>(() => [
     iconName: 'i-lucide-refresh-ccw',
     tooltipLabel: t('ToolTips.Refresh'),
     onClick: () => {
-      useEventBus().emit('refresh', undefined);
+      emit('refresh', undefined);
     },
   },
   {

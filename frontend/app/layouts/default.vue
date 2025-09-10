@@ -10,10 +10,6 @@
     }"
     style="background-color: transparent"
   >
-    <!-- <template #header>
-      <Header />
-    </template> -->
-
     <div class="flex gap-0 w-full h-screen">
       <SideBar />
 

@@ -3,10 +3,11 @@ import type { ContextMenuItem } from '@nuxt/ui';
 
 defineProps<{
   os?: string;
-  user: string | undefined;
   address: string;
-  assetName: string;
+  iconName: string;
   protocol: string;
+  assetName: string;
+  user: string | undefined;
 }>();
 
 const emits = defineEmits<{
@@ -75,8 +76,8 @@ const handleMouseLeave = () => {
     >
       <section class="flex gap-4 items-center w-full">
         <UAvatar
-          icon="mingcute:linux-line"
           size="lg"
+          :icon="iconName"
           :ui="{ root: 'rounded-md', icon: 'size-6' }"
         />
 

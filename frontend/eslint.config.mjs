@@ -30,7 +30,8 @@ export default eslintConfig(
 			"antfu/top-level-function": "off",
 			"antfu/if-newline": "off",
 			"new-cap": "off",
-			"node/prefer-global/process": ["off"]
+			"node/prefer-global/process": ["off"],
+			"@typescript-eslint/prefer-ts-expect-error": "off"
 		}
 	},
 

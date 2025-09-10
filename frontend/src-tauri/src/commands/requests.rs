@@ -1,3 +1,4 @@
+use crate::service::asset::HasOrg;
 use chrono::{Local, Offset};
 use log::info;
 use reqwest::header::COOKIE;
@@ -42,11 +43,14 @@ pub async fn get(url: &str, header_cookie: &str) -> Result<reqwest::Response, re
 }
 
 // TODO 合并到一个里面
-pub async fn get_with_query<Q: Serialize + ?Sized>(
+pub async fn get_with_query<Q>(
     url: &str,
     header_cookie: &str,
     query: &Q,
-) -> Result<reqwest::Response, reqwest::Error> {
+) -> Result<reqwest::Response, reqwest::Error>
+where
+    Q: Serialize + HasOrg + ?Sized,
+{
     info!("GET {} (with query)", url);
 
     let csrf_token = header_cookie
@@ -66,6 +70,8 @@ pub async fn get_with_query<Q: Serialize + ?Sized>(
     let minutes = (local_offset % 3600) / 60;
     let tz_string = format!("{:+03}:{:02}", hours, minutes);
 
+    let org = query.org();
+
     let client = reqwest::Client::new();
     let request = client
         .get(url)
@@ -73,6 +79,7 @@ pub async fn get_with_query<Q: Serialize + ?Sized>(
         .header(COOKIE, header_cookie)
         .header("X-TZ", &tz_string)
         .header("X-Csrftoken", &csrf_token)
+        .header("X-JMS-ORG", org)
         .build()?;
 
     client.execute(request).await
@@ -102,20 +109,31 @@ pub async fn get_with_response(url: &str, header_cookie: &str) -> ApiResponse {
     }
 }
 
-pub async fn get_with_response_and_query<Q: Serialize + ?Sized>(
+pub async fn get_with_response_and_query<Q>(
     url: &str,
     header_cookie: &str,
     query: &Q,
-) -> ApiResponse {
+) -> ApiResponse
+where
+    Q: Serialize + HasOrg + ?Sized,
+{
     match get_with_query(url, header_cookie, query).await {
         Ok(resp) => {
             let status = resp.status().as_u16();
             let data = resp.text().await.unwrap_or_default();
-            ApiResponse { status, data, success: status == 200 }
+            ApiResponse {
+                status,
+                data,
+                success: status == 200,
+            }
         }
         Err(e) => {
             log::warn!("请求 {} 失败: {}", url, e);
-            ApiResponse { status: 0, data: format!("请求失败: {}", e), success: false }
+            ApiResponse {
+                status: 0,
+                data: format!("请求失败: {}", e),
+                success: false,
+            }
         }
     }
 }
