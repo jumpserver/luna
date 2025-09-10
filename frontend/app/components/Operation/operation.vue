@@ -2,6 +2,8 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 import type { ActionItem } from '~/types';
 import { LogicalPosition } from '@tauri-apps/api/dpi';
+import { useDebounceFn } from '@vueuse/core';
+import { useEventBus } from '~/composables/useEventBus';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
 const { t } = useI18n();
@@ -13,6 +15,8 @@ const { layouts, sort, theme } = storeToRefs(userSettingStore);
 const darkColor = componentsConfig.operation.darkColor;
 const lightColor = componentsConfig.operation.lightColor;
 
+const inputValue = ref('');
+
 // 刷新、排序、切换布局
 const actionItems = computed<ActionItem[]>(() => [
   {
@@ -20,6 +24,9 @@ const actionItems = computed<ActionItem[]>(() => [
     type: 'action',
     iconName: 'i-lucide-refresh-ccw',
     tooltipLabel: t('ToolTips.Refresh'),
+    onClick: () => {
+      useEventBus().emit('refresh', undefined);
+    },
   },
   {
     key: 'sort',
@@ -30,24 +37,24 @@ const actionItems = computed<ActionItem[]>(() => [
       {
         icon: 'i-lucide-arrow-down-a-z',
         label: t('Sort.A-z'),
-        value: 'az',
+        value: 'name',
         type: 'checkbox' as const,
-        checked: sort.value === 'az',
+        checked: sort.value === 'name',
         onUpdateChecked: (checked: boolean) => {
           if (checked) {
-            userSettingStore.setSort('az');
+            userSettingStore.setSort('name');
           }
         },
       },
       {
         icon: 'i-lucide-arrow-up-z-a',
         label: t('Sort.Z-A'),
-        value: 'za',
+        value: '-name',
         type: 'checkbox' as const,
-        checked: sort.value === 'za',
+        checked: sort.value === '-name',
         onUpdateChecked: (checked: boolean) => {
           if (checked) {
-            userSettingStore.setSort('za');
+            userSettingStore.setSort('-name');
           }
         },
       },
@@ -57,24 +64,24 @@ const actionItems = computed<ActionItem[]>(() => [
       {
         icon: 'i-lucide-calendar-arrow-down',
         label: t('Sort.NewestToOldest'),
-        value: 'newest-to-oldest',
+        value: '-date_updated',
         type: 'checkbox' as const,
-        checked: sort.value === 'newest-to-oldest',
+        checked: sort.value === '-date_updated',
         onUpdateChecked: (checked: boolean) => {
           if (checked) {
-            userSettingStore.setSort('newest-to-oldest');
+            userSettingStore.setSort('-date_updated');
           }
         },
       },
       {
         icon: 'i-lucide-calendar-arrow-up',
         label: t('Sort.OldestToNewest'),
-        value: 'oldest-to-newest',
+        value: 'date_updated',
         type: 'checkbox' as const,
-        checked: sort.value === 'oldest-to-newest',
+        checked: sort.value === 'date_updated',
         onUpdateChecked: (checked: boolean) => {
           if (checked) {
-            userSettingStore.setSort('oldest-to-newest');
+            userSettingStore.setSort('date_updated');
           }
         },
       },
@@ -130,6 +137,12 @@ const actionItems = computed<ActionItem[]>(() => [
     },
   },
 ]);
+
+const handleSearch = (value: string) => {
+  useEventBus().emit('search', value);
+};
+
+const useDebouncedSearch = useDebounceFn(handleSearch, 200);
 </script>
 
 <template>
@@ -145,12 +158,30 @@ const actionItems = computed<ActionItem[]>(() => [
 
     <section class="flex item-center flex-nowrap gap-3 h-7 mr-2">
       <UInput
+        v-model="inputValue"
         clearable
         icon="i-lucide-search"
         variant="outline"
         :placeholder="t('Operation.Search')"
         :style="{ with: '18rem', borderRadius: '8px' }"
-      />
+        @update:model-value="useDebouncedSearch"
+      >
+        <template v-if="inputValue?.length" #trailing>
+          <UButton
+            color="neutral"
+            variant="link"
+            size="sm"
+            icon="i-lucide-circle-x"
+            aria-label="Clear input"
+            @click="
+              () => {
+                inputValue = '';
+                handleSearch('');
+              }
+            "
+          />
+        </template>
+      </UInput>
 
       <template v-for="action of actionItems" :key="action.iconName">
         <template v-if="action.type === 'action'">

@@ -1,6 +1,8 @@
+import type { SortType } from '~/types';
+import { useEventBus } from '~/composables/useEventBus';
+
 type themeType = 'light' | 'dark';
 type layoutsType = 'grid' | 'table';
-type sortType = 'az' | 'za' | 'newest-to-oldest' | 'oldest-to-newest';
 
 export const useUserSettingStore = defineStore(
   'userSetting',
@@ -8,7 +10,7 @@ export const useUserSettingStore = defineStore(
     const language = ref('zh');
     const collapse = ref(false);
 
-    const sort = ref<sortType>('az');
+    const sort = ref<SortType>('name');
     const theme = ref<themeType>('light');
     const layouts = ref<layoutsType>('grid');
 
@@ -28,8 +30,9 @@ export const useUserSettingStore = defineStore(
       collapse.value = c;
     };
 
-    const setSort = (s: sortType) => {
+    const setSort = (s: SortType) => {
       sort.value = s;
+      useEventBus().emit('setSort', s);
     };
 
     return {
@@ -49,6 +52,7 @@ export const useUserSettingStore = defineStore(
   {
     persist: {
       storage: localStorage,
+      pick: ['sort', 'theme', 'layouts', 'language', 'collapse'],
     },
   }
 );

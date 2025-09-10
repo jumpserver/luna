@@ -1,20 +1,10 @@
 <script setup lang="ts">
-import type { UnlistenFn } from '@tauri-apps/api/event';
-
-import type { AssetItem, AssetsResponse, RawAssetData } from '~/types';
-import {
-  useInfiniteScroll,
-  useIntersectionObserver,
-  useResizeObserver,
-} from '@vueuse/core';
+import { useInfiniteScroll } from '@vueuse/core';
+import { useAssetManager } from '~/composables/useAssetManager';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
-import { transformAssetsData } from '~/utils';
 
-const LIMIT = 20;
-const offset = ref(0);
-const hasMore = ref(true);
-const isLoading = ref(false);
+const { t } = useI18n();
 
 const showEmpty = ref(false);
 const editModalOpen = ref(false);
@@ -22,60 +12,28 @@ const selectedCardIndex = ref<number | null>(null);
 
 const scrollRef = ref<HTMLElement | null>(null);
 const sentinelRef = ref<HTMLElement | null>(null);
-const subscribeGetAssetsEvent = ref<UnlistenFn | null>(null);
-const subscribeGetAssetFailedEvent = ref<UnlistenFn | null>(null);
 
-const rawAssetsList = ref<RawAssetData[]>([]);
 const providerClearSelection = inject<(cb: () => void) => void>(
   'providerClearSelection'
 );
 
-const { t } = useI18n();
-const toast = useToast();
-const colorMode = useColorMode();
 const { componentsConfig } = useAppConfig();
-
 const userInfoStore = useUserInfoStore();
 const userSettingStore = useUserSettingStore();
+
 const { layouts } = storeToRefs(userSettingStore);
-const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
+const { loggedIn } = storeToRefs(userInfoStore);
 
-const transformedAssets = computed<AssetItem[]>(() =>
-  transformAssetsData(rawAssetsList.value)
-);
-
-const scrollbarStyles = computed(() => {
-  const isDark = colorMode.value === 'dark';
-  return {
-    '--scrollbar-width': '8px',
-    '--scrollbar-track-color': isDark ? '#333' : '#f1f1f1',
-    '--scrollbar-thumb-color': isDark ? '#555' : '#ccc',
-    '--scrollbar-thumb-hover-color': componentsConfig.pages.focusColor,
-  };
-});
-
-const fetchNextPage = async () => {
-  if (isLoading.value || !hasMore.value) return;
-  if (!currentSite.value || !currentUser.value?.headerJson) return;
-
-  isLoading.value = true;
-
-  try {
-    await useTauriCoreInvoke('get_assets', {
-      site: currentSite.value,
-      cookieHeader: currentUser.value.headerJson,
-      query: {
-        type: 'linux',
-        offset: offset.value,
-        limit: LIMIT,
-        search: '',
-        order: '',
-      },
-    });
-  } finally {
-    isLoading.value = false;
-  }
-};
+const assetManager = useAssetManager('linux', scrollRef);
+const {
+  isLoading,
+  hasMore,
+  assetsData,
+  scrollbarStyles,
+  fetchNextPage,
+  refreshAssets,
+  fillIfNotScrollable,
+} = assetManager;
 
 watch(
   () => loggedIn.value,
@@ -85,47 +43,11 @@ watch(
       return;
     }
 
-    rawAssetsList.value = [];
-    offset.value = 0;
-    hasMore.value = true;
-    // await fetchNextPage();
-    // await fillIfNotScrollable();
+    await refreshAssets();
+    await fillIfNotScrollable();
   },
   { immediate: true }
 );
-
-const listenTauriEvent = async () => {
-  subscribeGetAssetsEvent.value = await useTauriEventListen(
-    'get-asset-success',
-    (event) => {
-      const resp = JSON.parse(event.payload as string) as AssetsResponse;
-      const pageData = resp.results ?? [];
-
-      // 追加到列表
-      rawAssetsList.value.push(...pageData);
-
-      // 推进 offset
-      offset.value += LIMIT;
-      hasMore.value = pageData.length === LIMIT;
-    }
-  );
-
-  subscribeGetAssetFailedEvent.value = await useTauriEventListen(
-    'get-asset-failure',
-    () => {
-      toast.add({
-        title: t('Asset.GetAssetFailed'),
-        color: 'error',
-        icon: 'line-md:close-circle',
-      });
-    }
-  );
-};
-
-const unListenTauriEvent = () => {
-  subscribeGetAssetsEvent.value?.();
-  subscribeGetAssetFailedEvent.value?.();
-};
 
 const handleCardClick = (index: number, e: MouseEvent) => {
   e.stopPropagation();
@@ -149,34 +71,14 @@ useIntersectionObserver(
   { root: scrollRef, rootMargin: '200px', threshold: 0 }
 );
 
-/**
- * @description 如果内容不够滚动就自动补页（多次）
- */
-const fillIfNotScrollable = async () => {
-  await nextTick();
-
-  const el = scrollRef.value;
-  if (!el || !hasMore.value || isLoading.value) return;
-
-  while (el.scrollHeight <= el.clientHeight && hasMore.value) {
-    await fetchNextPage();
-    await nextTick();
-  }
-};
-
-useResizeObserver(scrollRef, fillIfNotScrollable);
-
 useInfiniteScroll(scrollRef, () => fetchNextPage(), {
   distance: 200,
   canLoadMore: () => hasMore.value && !isLoading.value,
 });
 
-onMounted(async () => {
-  await listenTauriEvent();
+onMounted(() => {
   providerClearSelection?.(clearSelectedCard);
 });
-
-onBeforeUnmount(unListenTauriEvent);
 </script>
 
 <template>
@@ -191,7 +93,7 @@ onBeforeUnmount(unListenTauriEvent);
       >
         <template v-if="layouts === 'grid'">
           <GridCard
-            v-for="(item, index) in transformedAssets"
+            v-for="(item, index) in assetsData"
             :key="item.id"
             :user="item.user"
             :address="item.address"

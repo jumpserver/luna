@@ -98,7 +98,7 @@ const handleMouseLeave = () => {
           </div>
 
           <div class="flex items-center gap-2">
-            <UBadge color="primary" variant="soft" class="max-w-36">
+            <UBadge color="primary" variant="soft" class="max-w-26">
               <UPopover arrow mode="hover" :open-delay="500">
                 <span class="text-overflow-ellipsis">
                   {{ address }}
@@ -111,6 +111,7 @@ const handleMouseLeave = () => {
                 </template>
               </UPopover>
             </UBadge>
+
             <USeparator orientation="vertical" size="sm" class="h-3" />
 
             <template v-if="os">
@@ -127,7 +128,7 @@ const handleMouseLeave = () => {
               <USeparator orientation="vertical" size="sm" class="h-3" />
             </template>
 
-            <UBadge color="error" variant="soft">
+            <UBadge color="info" variant="soft">
               {{ protocol }}
             </UBadge>
           </div>

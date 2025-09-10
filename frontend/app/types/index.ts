@@ -1,6 +1,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 
 type ActionType = 'action' | 'select';
+export type SortType = 'name' | '-name' | '-date_updated' | 'date_updated';
 
 export interface ActionItem {
   key: string;
