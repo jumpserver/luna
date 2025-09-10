@@ -45,13 +45,12 @@ func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		"port":     strconv.Itoa(r.Port),
 	}
 	commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
-	appPath := appItem.Path
-	_cmd := exec.Command(appPath, strings.Split(commands, " ")...)
-	_cmd.Start()
-
-	currentPath := filepath.Dir(os.Args[0])
-	scriptPath := filepath.Join(currentPath, "Scripts", "vnc.scpt")
-	cmd := exec.Command("osascript", "-s", "h", scriptPath, r.Value, "0")
+	cmd := exec.Command(appItem.Path, strings.Split(commands, " ")...)
+	// 设置环境变量（只对这个子进程有效）
+	cmd.Env = append(os.Environ(),
+		"VNC_USERNAME="+r.getUserName(),
+		"VNC_PASSWORD="+r.Value,
+	)
 	return cmd
 }
 

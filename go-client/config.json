@@ -478,17 +478,17 @@
         "is_set": true
       },
       {
-        "name": "vncviewer",
-        "display_name": "RealVNC Viewer",
+        "name": "tigervnc",
+        "display_name": "TigerVNC",
         "protocol": ["vnc"],
         "comment": {
-          "zh": "RealVNC Viewer 是一款用于远程控制计算机的软件，它使用VNC（Virtual Network Computing）协议，允许用户从一台计算机（客户端）访问和控制另一台计算机（服务器）的桌面。",
-          "en": "RealVNC Viewer is a software used for remote computer control. It utilizes the VNC (Virtual Network Computing) protocol, allowing users to access and control the desktop of another computer (the server) from their own computer"
+          "zh": "TigerVNC是一个高效且安全的远程桌面控制工具，适用于跨平台操作，并有强大的安全性能保障。",
+          "en": "TigerVNC is an efficient and secure remote desktop control tool that is suitable for cross platform operations and has strong security performance guarantees."
         },
-        "download_url": "https://www.realvnc.com/en/connect/download/viewer/",
+        "download_url": "https://sourceforge.net/projects/tigervnc/files/stable/1.15.0/tigervnc-1.15.0.x86_64.tar.gz",
         "type": "remotedesktop",
-        "path": "/Applications/VNC Viewer.app/Contents/MacOS/vncviewer",
-        "arg_format": "-WarnUnencrypted=0 -VerifyId=0 -UserName={username} {host}:{port}",
+        "path": "/Applications/TigerVNC viewer 1.15.0.app/Contents/MacOS/TigerVNC viewer",
+        "arg_format": "{host}:{port}",
         "match_first": ["vnc"],
         "is_internal": false,
         "is_default": false,
