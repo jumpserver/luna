@@ -1,6 +1,6 @@
 {
   "filename": "Jumpserve Clients Config",
-  "version": 3,
+  "version": 4,
   "windowBounds": {
     "width": 1280,
     "height": 800
@@ -488,7 +488,7 @@
         "download_url": "https://sourceforge.net/projects/tigervnc/files/stable/1.15.0/tigervnc-1.15.0.x86_64.tar.gz",
         "type": "remotedesktop",
         "path": "/Applications/TigerVNC viewer 1.15.0.app/Contents/MacOS/TigerVNC viewer",
-        "arg_format": "{host}:{port}",
+        "arg_format": "{host}::{port}",
         "match_first": ["vnc"],
         "is_internal": false,
         "is_default": false,
@@ -684,7 +684,7 @@
         "download_url": "https://sourceforge.net/projects/tigervnc/files/stable/1.15.0/tigervnc-1.15.0.x86_64.tar.gz",
         "type": "remotedesktop",
         "path": "vncviewer",
-        "arg_format": "{host}:{port}",
+        "arg_format": "{host}::{port}",
         "match_first": ["vnc"],
         "is_internal": true,
         "is_default": false,
