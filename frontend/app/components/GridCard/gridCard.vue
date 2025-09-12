@@ -74,7 +74,7 @@ const handleMouseLeave = () => {
         content: 'w-48',
       }"
     >
-      <section class="flex gap-4 items-center w-full">
+      <section class="flex gap-4 flex-nowrap items-center w-full">
         <UAvatar
           size="lg"
           :icon="iconName"
@@ -94,7 +94,9 @@ const handleMouseLeave = () => {
                 </template>
               </UPopover>
 
-              <span class="text-sm font-semibold"> {{ assetName }} </span>
+              <span class="text-sm font-semibold line-clamp-1">
+                {{ assetName }}
+              </span>
             </section>
           </div>
 

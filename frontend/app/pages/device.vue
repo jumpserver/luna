@@ -106,28 +106,4 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped>
-.container-scrollbar {
-  scrollbar-width: var(--scrollbar-width);
-  scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
-}
-.container-scrollbar::-webkit-scrollbar {
-  width: var(--scrollbar-width);
-  height: var(--scrollbar-width);
-}
-.container-scrollbar::-webkit-scrollbar-track {
-  background: var(--scrollbar-track-color);
-  border-radius: 4px;
-}
-.container-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb-color);
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-.container-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover-color);
-}
-.container-scrollbar::-webkit-scrollbar-corner {
-  background: var(--scrollbar-track-color);
-}
-</style>
+

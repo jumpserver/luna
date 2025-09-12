@@ -43,6 +43,9 @@ export default defineAppConfig({
       primary: 'green',
       neutral: 'zinc',
     },
+    container: {
+      base: 'mx-0 w-full',
+    },
     button: {
       slots: {
         base: 'cursor-pointer',

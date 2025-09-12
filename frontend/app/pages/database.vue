@@ -1,9 +1,15 @@
 <script setup lang="ts">
+import type { TabsItem } from '@nuxt/ui';
+import type { AssetItem } from '~/types/index';
+
 import { useInfiniteScroll } from '@vueuse/core';
 import { useAssetManager } from '~/composables/useAssetManager';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
 const { t } = useI18n();
+const { componentsConfig } = useAppConfig();
+const userSettingStore = useUserSettingStore();
+const { layouts } = storeToRefs(userSettingStore);
 
 const editModalOpen = ref(false);
 const selectedCardIndex = ref<number | null>(null);
@@ -15,14 +21,62 @@ const providerClearSelection = inject<(cb: () => void) => void>(
   'providerClearSelection'
 );
 
-const { componentsConfig } = useAppConfig();
-const userSettingStore = useUserSettingStore();
-
-const { layouts } = storeToRefs(userSettingStore);
-
 const assetManager = useAssetManager('database', scrollRef);
-const { isLoading, hasMore, assetsData, scrollbarStyles, fetchNextPage } =
+const { isLoading, hasMore, assetsData, fetchNextPage, scrollbarStyles } =
   assetManager;
+
+const tabItems = computed(() => {
+  if (!assetsData.value || assetsData.value.length === 0) {
+    return [
+      {
+        label: '全部',
+        value: 'all',
+      },
+    ];
+  }
+
+  const uniquePlatforms = new Set<string>();
+  assetsData.value.forEach((item: AssetItem) => {
+    const platformName = item.platform;
+    if (platformName) {
+      uniquePlatforms.add(platformName);
+    }
+  });
+
+  // 转换为 tab 项目格式，添加"全部"选项
+  const tabs = [
+    {
+      label: '全部',
+      value: 'all',
+    },
+  ];
+
+  Array.from(uniquePlatforms).forEach((platformName) => {
+    tabs.push({
+      label: platformName,
+      value: platformName,
+    });
+  });
+
+  return tabs;
+});
+
+// 调试信息
+console.log('数据库页面 - tabItems:', tabItems.value);
+
+const currentTab = ref('all');
+
+const filteredAssetsData = computed(() => {
+  if (currentTab.value === 'all' || !currentTab.value) {
+    return assetsData.value;
+  }
+
+  return assetsData.value.filter((item: AssetItem) => {
+    return item.platform === currentTab.value;
+  });
+});
+
+console.log('筛选后的数据:', filteredAssetsData.value);
 
 const handleCardClick = (index: number, e: MouseEvent) => {
   e.stopPropagation();
@@ -51,56 +105,66 @@ useInfiniteScroll(scrollRef, () => fetchNextPage(), {
   canLoadMore: () => hasMore.value && !isLoading.value,
 });
 
-onMounted(() => {
+onMounted(async () => {
+  fetchNextPage();
   providerClearSelection?.(clearSelectedCard);
 });
 </script>
 
 <template>
-  <div class="relative h-full min-h-0 flex flex-col">
-    <div
-      ref="scrollRef"
-      class="flex-1 min-h-0 overflow-auto p-2 container-scrollbar"
-      :style="scrollbarStyles"
+  <div class="relative h-full flex min-h-0">
+    <UTabs
+      v-model="currentTab"
+      orientation="vertical"
+      variant="link"
+      :items="tabItems"
+      class="w-full h-full items-start"
     >
-      <div
-        class="grid gap-2 p-2 grid-cols-[repeat(auto-fit,minmax(360px,_1fr))]"
-      >
-        <template v-if="layouts === 'grid'">
-          <GridCard
-            v-for="(item, index) in assetsData"
-            :key="item.id"
-            :user="item.user"
-            :address="item.address"
-            :asset-name="item.assetName"
-            :protocol="item.protocol"
-            icon-name="lets-icons:database-fill"
-            class="border border-solid"
-            :style="{
-              borderColor:
-                selectedCardIndex === index
-                  ? componentsConfig.pages.focusColor
-                  : 'transparent',
-            }"
-            @open-edit-modal="editModalOpen = true"
-            @click="handleCardClick(index, $event)"
-          />
-        </template>
-        <template v-else>
-          <TableCard />
-        </template>
-      </div>
+      <template #content>
+        <div
+          class="overflow-y-auto container-scrollbar h-[calc(100vh-7.5rem)]"
+          :style="scrollbarStyles"
+        >
+          <div
+            class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-2 p-2"
+          >
+            <template v-if="layouts === 'grid'">
+              <GridCard
+                v-for="(item, index) in filteredAssetsData"
+                :key="item.id"
+                :user="item.user"
+                :address="item.address"
+                :asset-name="item.assetName"
+                :protocol="item.protocol"
+                icon-name="lets-icons:database-fill"
+                class="border border-solid"
+                :style="{
+                  borderColor:
+                    selectedCardIndex === index
+                      ? componentsConfig.pages.focusColor
+                      : 'transparent',
+                }"
+                @open-edit-modal="editModalOpen = true"
+                @click="handleCardClick(index, $event)"
+              />
+            </template>
+            <template v-else>
+              <TableCard />
+            </template>
+          </div>
+        </div>
+      </template>
+    </UTabs>
 
-      <div
-        class="absolute bottom-8 left-0 flex py-3 w-full justify-center text-xs text-zinc-400 select-none"
-      >
-        <span v-if="isLoading">{{ t('Loading.Loading') }}</span>
-        <span v-else-if="!hasMore">{{ t('Loading.NoMore') }}</span>
-        <span v-else>{{ t('Loading.ScrollToLoadMore') }}</span>
-      </div>
+    <!-- <div
+      class="absolute bottom-0 left-0 flex py-3 w-full justify-center text-xs text-zinc-400 select-none"
+    >
+      <span v-if="isLoading">{{ t('Loading.Loading') }}</span>
+      <span v-else-if="!hasMore">{{ t('Loading.NoMore') }}</span>
+      <span v-else>{{ t('Loading.ScrollToLoadMore') }}</span>
+    </div> -->
 
-      <div ref="sentinelRef" style="height: 1px" />
-    </div>
+    <div ref="sentinelRef" style="height: 1px" />
 
     <Modal :open="editModalOpen" @update:open="editModalOpen = $event" />
   </div>
