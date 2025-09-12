@@ -543,7 +543,7 @@ ipcMain.on('user-login', async (_, site) => {
     }
   });
 
-  const loginUrl = `${site}/core/auth/login/?next=%2Fui%2F`;
+  const loginUrl = `${site}/core/auth/login/?admin=1&next=%2Fui%2F`;
 
   loginWindow.loadURL(loginUrl);
 
