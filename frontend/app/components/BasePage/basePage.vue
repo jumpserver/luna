@@ -23,7 +23,8 @@ const assetManager = useAssetManager(props.type, scrollRef);
 const userSettingStore = useUserSettingStore();
 
 const { layouts } = storeToRefs(userSettingStore);
-const { assetsData, isLoading, hasMore, fetchNextPage } = assetManager;
+const { assetsData, isLoading, hasMore, fetchNextPage, scrollbarStyles } =
+  assetManager;
 
 const handleCardClick = (index: number, e: MouseEvent) => {
   e.stopPropagation();
@@ -42,40 +43,57 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="relative h-full flex min-h-0">
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-2 p-2">
-      <template v-if="layouts === 'grid'">
-        <GridCard
-          v-for="(item, index) in assetsData"
-          :key="item.id"
-          :user="item.user"
-          :address="item.address"
-          :asset-name="item.assetName"
-          :protocol="item.protocol"
-          icon-name="si:terminal-alt-fill"
-          class="border border-solid"
-          :style="{
-            borderColor:
-              selectedCardIndex === index
-                ? componentsConfig.pages.focusColor
-                : 'transparent',
-          }"
-          @open-edit-modal="editModalOpen = true"
-          @click="handleCardClick(index, $event)"
-        />
-      </template>
-      <template v-else>
-        <TableCard />
-      </template>
-    </div>
+  <div class="relative h-full w-full flex min-h-0">
+    <section
+      class="w-full overflow-y-auto container-scrollbar h-[calc(100vh-7.5rem)]"
+      :style="scrollbarStyles"
+    >
+      <div
+        v-if="assetsData && assetsData.length > 0"
+        class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-2 p-2"
+      >
+        <template v-if="layouts === 'grid'">
+          <GridCard
+            v-for="(item, index) in assetsData"
+            :key="item.id"
+            :user="item.user"
+            :address="item.address"
+            :asset-name="item.assetName"
+            :protocol="item.protocol"
+            icon-name="si:terminal-alt-fill"
+            class="border border-solid"
+            :style="{
+              borderColor:
+                selectedCardIndex === index
+                  ? componentsConfig.pages.focusColor
+                  : 'transparent',
+            }"
+            @open-edit-modal="editModalOpen = true"
+            @click="handleCardClick(index, $event)"
+          />
+        </template>
+        <template v-else>
+          <TableCard />
+        </template>
+      </div>
 
-    <div
+      <div
+        v-else
+        class="w-full h-full flex flex-col items-center justify-center text-gray-500"
+      >
+        <UIcon name="mingcute:inbox-line" class="size-10" />
+
+        <span class="text-sm"> No Data </span>
+      </div>
+    </section>
+
+    <!-- <div
       class="absolute bottom-0 left-0 flex py-3 w-full justify-center text-xs text-zinc-400 select-none"
     >
       <span v-if="isLoading">{{ t('Loading.Loading') }}</span>
       <span v-else-if="!hasMore">{{ t('Loading.NoMore') }}</span>
       <span v-else>{{ t('Loading.ScrollToLoadMore') }}</span>
-    </div>
+    </div> -->
 
     <div ref="sentinelRef" style="height: 1px" />
 

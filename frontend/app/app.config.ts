@@ -16,7 +16,7 @@ export default defineAppConfig({
       mainCardDarkBackgroundColor: '#201f22',
     },
     operation: {
-      lightColor: '#F5F6F7',
+      lightColor: '#EBECED',
       darkColor: '#323232',
     },
   },
