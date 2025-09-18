@@ -49,6 +49,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
   ping: number;
   debug = false;
   trustedUrl: SafeResourceUrl;
+  private lastSendInputActiveTime = 0;
 
   constructor(
     private _i18n: I18nService,
@@ -140,6 +141,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
         case 'KEYBOARDEVENT':
         case 'MOUSEEVENT':
           this.renewalTrigger.next();
+          // Lion 组件 默认会发送的 KEYBOARDEVENT 和 MOUSEEVENT
+          this.sendInputActiveToOtherViews();
           break;
         case 'CREATE_FILE_CONNECT_TOKEN':
           this.createFileConnectToken.emit(true);
@@ -154,6 +157,9 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           this.view.terminalContentData = msg.data;
           this._iframeSvc.sendMessage({ name: 'TERMINAL_CONTENT_RESPONSE', data: msg.data });
           break;
+        case 'INPUT_ACTIVE':
+          // KOKO 新定义的 input 事件，给所有其他 view 发送 sendInputActive 函数续期
+          this.sendInputActiveToOtherViews();
       }
     }.bind(this);
 
@@ -243,4 +249,30 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
       this.handleIframeEvent();
     }, 100);
   }
+
+  sendInputActive() {
+    this._logger.info(`[Luna] Send Input_ACTIVE to: ${this.id}`);
+    this.iframeWindow.postMessage({ name: 'INPUT_ACTIVE', data: "" }, '*');
+  }
+
+  sendInputActiveToOtherViews() {
+    const currentTime = Date.now();
+    const minInterval = 10000; // 10秒间隔
+
+    // 检查是否已经过了最少10秒间隔
+    if (currentTime - this.lastSendInputActiveTime < minInterval) {
+      return; // 如果间隔不足10秒，直接返回
+    }
+
+    // 更新最后发送时间
+    this.lastSendInputActiveTime = currentTime;
+
+    // 遍历所有 view，给除了当前 view 之外的其他 view 发送 sendInputActive
+    this._viewSvc.viewList.forEach(view => {
+      if (view.id !== this.view.id && view.termComp && typeof view.termComp.sendInputActive === 'function') {
+        view.termComp.sendInputActive();
+      }
+    });
+  }
+
 }
