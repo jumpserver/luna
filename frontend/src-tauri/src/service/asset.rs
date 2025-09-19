@@ -1,4 +1,4 @@
-use crate::commands::requests::{get_with_response_and_query, ApiResponse};
+use crate::commands::requests::{get_with_response, get_with_response_and_query, ApiResponse};
 use log::info;
 use serde::{Deserialize, Serialize};
 
@@ -119,10 +119,12 @@ impl AssetService {
         get_with_response_and_query(&url, &self.cookie_header, &query).await
     }
 
-    pub async fn get_asset_details(&self, asset_id: String) {
-        let _url = format!(
+    pub async fn get_asset_details(&self, asset_id: String) -> ApiResponse {
+        let url = format!(
             "{}/api/v1/perms/users/self/assets/{}",
             self.origin, &asset_id
         );
+
+        get_with_response(&url, &self.cookie_header).await
     }
 }
