@@ -17,6 +17,7 @@ export const useAssetManager = (
   const colorMode = useColorMode();
   const userInfoStore = useUserInfoStore();
 
+  const { setUserLoggedIn, deleteUserData } = userInfoStore;
   const { currentSite, currentUser, orgId } = storeToRefs(userInfoStore);
 
   const offset = ref(0);
@@ -171,12 +172,26 @@ export const useAssetManager = (
 
     subscribeGetAssetFailedEvent.value = await useTauriEventListen(
       'get-asset-failure',
-      () => {
-        toast.add({
-          title: t('Asset.GetAssetFailed'),
-          color: 'error',
-          icon: 'line-md:close-circle',
-        });
+      (event) => {
+        interface eventPayload {
+          status: number;
+        }
+
+        const payload = event.payload as eventPayload;
+        const status = payload.status;
+
+        if (status === 401) {
+          toast.add({
+            title: t('Login.LoginAuthenticationExpired'),
+            color: 'error',
+            icon: 'line-md:close-circle',
+          });
+
+          nextTick(() => {
+            deleteUserData(currentSite.value);
+            setUserLoggedIn(false);
+          });
+        }
       }
     );
   };

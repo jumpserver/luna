@@ -28,17 +28,19 @@ export function transformAssetData(rawData: RawAssetData): AssetItem {
   };
 
   return {
-    id: rawData.id || 'unknown',
-    assetName: rawData.name || 'Unknown Asset',
-    address: rawData.address || '',
-    protocol: getProtocolFromPlatform(rawData.platform?.name),
-    platform: rawData.platform?.name || 'Unknown Platform',
-    zone: rawData.zone?.name || 'Default Zone',
-    isActive: rawData.is_active ?? true,
-    comment: rawData.comment || undefined,
+    id: rawData.id,
+    assetName: rawData.name || '-',
+    address: rawData.address || '-',
+    zone: rawData.zone?.name || '-',
+    comment: rawData.comment || '-',
+    isActive: rawData.is_active ?? false,
+    platform: rawData.platform?.name || '-',
+    permed_accounts: rawData.permed_accounts || [],
+    permed_protocols: rawData.permed_protocols || [],
   };
 }
 
 export function transformAssetsData(rawDataArray: RawAssetData[]): AssetItem[] {
+  console.log('rawDataArray', rawDataArray);
   return rawDataArray.map(transformAssetData);
 }

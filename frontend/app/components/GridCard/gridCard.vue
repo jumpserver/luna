@@ -1,23 +1,35 @@
 <script setup lang="ts">
 import type { ContextMenuItem } from '@nuxt/ui';
+import { useUserInfoStore } from '~/store/modules/userInfo';
 
-defineProps<{
-  os?: string;
+interface BadgeItemList {
+  key: string;
+  content: string;
+  popover?: boolean;
+  class?: string;
+}
+
+const props = defineProps<{
+  assetId: string;
+  zone: string;
   address: string;
   iconName: string;
   protocol: string;
   assetName: string;
-  user: string | undefined;
+  user: string;
 }>();
 
 const emits = defineEmits<{
   (e: 'openEditModal'): void;
 }>();
 
+const cycleColors = ['primary', 'info', 'neutral', 'warning'] as const;
+
 const { t } = useI18n();
+const userInfoStore = useUserInfoStore();
+const { connectionInfoMap } = storeToRefs(userInfoStore);
 
 const showEdit = ref(false);
-
 const items = ref<ContextMenuItem[][]>([
   [
     {
@@ -54,6 +66,29 @@ const handleMouseOver = () => {
 const handleMouseLeave = () => {
   showEdit.value = false;
 };
+
+const displayProtocol = computed(() => {
+  const saved = connectionInfoMap.value[props.assetId];
+  return saved?.protocol ?? props.protocol;
+});
+
+const displayUser = computed(() => {
+  const saved = connectionInfoMap.value[props.assetId];
+  return saved?.username ?? props.user;
+});
+
+const badgeItems = computed(() => {
+  const list: Array<BadgeItemList> = [];
+
+  // prettier-ignore
+  list.push({ key: "address", content: props.address, popover: true, class: "max-w-24" });
+  // prettier-ignore
+  // list.push({ key: "zone", content: props.zone, popover: true, class: "max-w-24" });
+  list.push({ key: "user", content: displayUser.value });
+  list.push({ key: 'protocol', content: displayProtocol.value });
+
+  return list;
+});
 </script>
 
 <template>
@@ -81,11 +116,11 @@ const handleMouseLeave = () => {
           :ui="{ root: 'rounded-md', icon: 'size-6' }"
         />
 
-        <div class="flex flex-col flex-1 gap-1 text-xs-plus">
+        <div class="flex flex-col flex-1 gap-2 text-xs-plus min-w-0">
           <div class="flex justify-between">
             <section class="flex items-center gap-2">
               <UPopover arrow mode="hover">
-                <div class="w-2 h-2 bg-[#55B787] rounded-full" />
+                <div class="w-2 h-2 bg-primary rounded-full" />
 
                 <template #content>
                   <div class="text-xs-plus text-center p-2">
@@ -100,40 +135,41 @@ const handleMouseLeave = () => {
             </section>
           </div>
 
+          <USeparator orientation="horizontal" size="sm" class="h-1" />
+
           <div class="flex items-center gap-2">
-            <UBadge color="primary" variant="soft" class="max-w-26">
-              <UPopover arrow mode="hover" :open-delay="500">
-                <span class="text-overflow-ellipsis">
-                  {{ address }}
-                </span>
-
-                <template #content>
-                  <p class="p-2 text-xs-plus">
-                    {{ address }}
-                  </p>
+            <template
+              v-for="(badge, idx) in badgeItems"
+              :key="`${badge.key}-${idx}`"
+            >
+              <UBadge
+                :color="cycleColors[idx % cycleColors.length]"
+                variant="soft"
+                :class="badge.class"
+              >
+                <template v-if="badge.popover">
+                  <UPopover arrow mode="hover" :open-delay="500">
+                    <span class="text-overflow-ellipsis">
+                      {{ badge.content }}
+                    </span>
+                    <template #content>
+                      <p class="p-2 text-xs-plus">
+                        {{ badge.content }}
+                      </p>
+                    </template>
+                  </UPopover>
                 </template>
-              </UPopover>
-            </UBadge>
-
-            <USeparator orientation="vertical" size="sm" class="h-3" />
-
-            <template v-if="os">
-              <UBadge color="info" variant="soft">
-                {{ os }}
+                <template v-else>
+                  {{ badge.content }}
+                </template>
               </UBadge>
-              <USeparator orientation="vertical" size="sm" class="h-3" />
+              <USeparator
+                v-if="idx < badgeItems.length - 1"
+                orientation="vertical"
+                size="sm"
+                class="h-4"
+              />
             </template>
-
-            <template v-if="user">
-              <UBadge color="neutral" variant="soft">
-                {{ user }}
-              </UBadge>
-              <USeparator orientation="vertical" size="sm" class="h-3" />
-            </template>
-
-            <UBadge color="info" variant="soft">
-              {{ protocol }}
-            </UBadge>
           </div>
         </div>
 
@@ -142,7 +178,7 @@ const handleMouseLeave = () => {
           size="sm"
           variant="ghost"
           color="neutral"
-          class="rounded-lg"
+          class="rounded-lg shrink-0"
           icon="i-lucide-square-pen"
           @click="openEditModal"
         />

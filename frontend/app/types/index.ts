@@ -67,6 +67,7 @@ export interface UserData {
   system_roles: string[];
   org: CurrentOrg;
   availableOrgs: PermOrgItem[];
+  connectionInfo: ConnectionInfo;
 }
 
 export interface UserIntiInfo {
@@ -113,6 +114,30 @@ export interface AssetZone {
   name: string;
 }
 
+export interface PermedProtocol {
+  name: string;
+  port: number;
+  public: boolean;
+  setting?: any;
+}
+
+export interface Actions {
+  label: string;
+  value: string;
+}
+
+export interface PermedAccount {
+  alias: string;
+  date_expired: string;
+  has_secret: boolean;
+  has_username: boolean;
+  id: string;
+  name: string;
+  secret_type: string;
+  username: string;
+  actions: Actions[];
+}
+
 export interface RawAssetData {
   id: string;
   name?: string;
@@ -131,6 +156,8 @@ export interface RawAssetData {
   platform?: AssetPlatform;
   type?: AssetType;
   zone?: AssetZone;
+  permed_protocols?: PermedProtocol[];
+  permed_accounts?: PermedAccount[];
 }
 
 export interface AssetItem {
@@ -138,11 +165,12 @@ export interface AssetItem {
   assetName: string;
   address: string;
   user?: string;
-  protocol: string;
   platform: string;
   zone: string;
   isActive: boolean;
   comment?: string;
+  permed_protocols?: PermedProtocol[];
+  permed_accounts?: PermedAccount[];
 }
 
 export interface AssetsResponse {
@@ -150,4 +178,9 @@ export interface AssetsResponse {
   next: string | null;
   previous: string | null;
   results: RawAssetData[];
+}
+
+export interface ConnectionInfo {
+  protocol: string;
+  username: string
 }

@@ -1,4 +1,4 @@
-import type { PermOrgItem, UserData } from '~/types/index';
+import type { ConnectionInfo, PermOrgItem, UserData } from '~/types/index';
 
 export const useUserInfoStore = defineStore(
   'userInfo',
@@ -9,13 +9,24 @@ export const useUserInfoStore = defineStore(
     const currentUser = ref<UserData | null>(null);
     const userMap = ref<Record<string, UserData>>({});
     const currentOrganizations = ref<PermOrgItem[]>([]);
+    // 保存每个资产的连接信息 { [assetId]: { protocol, username } }
+    const connectionInfoMap = ref<Record<string, ConnectionInfo>>({});
 
     const hasUser = () => computed(() => Object.keys(userMap.value).length > 0);
 
+    /**
+     * @description 设置用户登录状态
+     * @param l
+     */
     const setUserLoggedIn = (l: boolean) => {
       loggedIn.value = l;
     };
 
+    /**
+     * @description 获取用户数据
+     * @param site
+     * @returns
+     */
     const getUserData = (site: string) => {
       if (!(site in userMap.value)) {
         return null;
@@ -24,6 +35,11 @@ export const useUserInfoStore = defineStore(
       return userMap.value[site];
     };
 
+    /**
+     * @description 设置用户数据
+     * @param site
+     * @param userData
+     */
     const setUserData = (site: string, userData: UserData) => {
       if (site in userMap.value) {
         return;
@@ -39,6 +55,10 @@ export const useUserInfoStore = defineStore(
       }
     };
 
+    /**
+     * @description 删除用户数据
+     * @param site
+     */
     const deleteUserData = (site: string) => {
       if (!(site in userMap.value)) {
         return;
@@ -70,6 +90,10 @@ export const useUserInfoStore = defineStore(
       }
     };
 
+    /**
+     * @description 设置当前站点
+     * @param site
+     */
     const setCurrentSite = (site: string) => {
       currentSite.value = site;
 
@@ -86,6 +110,10 @@ export const useUserInfoStore = defineStore(
       }
     };
 
+    /**
+     * @description 设置当前组织列表
+     * @param orgs
+     */
     const setOrganizations = (orgs: PermOrgItem[]) => {
       currentOrganizations.value = orgs;
 
@@ -99,6 +127,10 @@ export const useUserInfoStore = defineStore(
       }
     };
 
+    /**
+     * @description 设置当前组织
+     * @param org
+     */
     const setCurrentOrg = (org: PermOrgItem) => {
       if (!currentUser.value || !currentSite.value) {
         console.error('No current user or site when setting organization');
@@ -110,9 +142,43 @@ export const useUserInfoStore = defineStore(
         org,
       };
 
-      currentUser.value = updatedUserData;
+      currentUser.value = updatedUserData as UserData;
       orgId.value = org.id;
-      userMap.value[currentSite.value] = updatedUserData;
+      userMap.value[currentSite.value] = updatedUserData as UserData;
+    };
+
+    /**
+     * @description 设置用户连接信息
+     * @param connectionInfo
+     * @returns
+     */
+    const setConnectionInfoToUser = (connectionInfo: ConnectionInfo) => {
+      if (!currentUser.value) {
+        return;
+      }
+
+      currentUser.value.connectionInfo = connectionInfo;
+    };
+
+    /**
+     * @description 获取资产连接信息
+     * @param assetId 资产 ID
+     * @returns
+     */
+    const getConnectionInfoForAsset = (assetId: string) => {
+      return connectionInfoMap.value[assetId] || null;
+    };
+
+    /**
+     * @description 设置资产连接信息
+     * @param assetId 
+     * @param connectionInfo 
+     */
+    const setConnectionInfoForAsset = (
+      assetId: string,
+      connectionInfo: ConnectionInfo
+    ) => {
+      connectionInfoMap.value[assetId] = connectionInfo;
     };
 
     return {
@@ -121,6 +187,7 @@ export const useUserInfoStore = defineStore(
       loggedIn,
       currentSite,
       currentUser,
+      connectionInfoMap,
       currentOrganizations,
 
       hasUser,
@@ -131,10 +198,12 @@ export const useUserInfoStore = defineStore(
       deleteUserData,
       setUserLoggedIn,
       setOrganizations,
+      setConnectionInfoToUser,
+      getConnectionInfoForAsset,
+      setConnectionInfoForAsset,
     };
   },
   {
-    // @ts-ignore
     persist: {
       key: 'userInfo',
       storage: localStorage,
@@ -145,6 +214,7 @@ export const useUserInfoStore = defineStore(
         'orgId',
         'currentUser',
         'currentOrganizations',
+        'connectionInfoMap',
       ],
     },
   }

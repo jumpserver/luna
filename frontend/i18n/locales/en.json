@@ -3,7 +3,8 @@
 		"Cancel": "Cancel",
 		"Confirm": "Confirm",
 		"UnSigned": "UnSigned",
-		"Version": "Version"
+		"Version": "Version",
+		"NoData": "No Data"
 	},
 	"ToolTips": {
 		"LightMode": "Light Mode",
@@ -39,7 +40,10 @@
 		"Use": "Use"
 	},
 	"EditModal": {
-		"Description": "Default connection settings will be applied after saving and used for future connections."
+		"ModifyConnectionInfo": "Modify Connection Info",
+		"Description": "Default connection settings will be applied after saving and used for future connections.",
+		"OptionalProtocol": "Optional Protocol",
+		"OptionalAccount": "Optional Account"
 	},
 	"Layout": {
 		"Grid": "Grid View",
@@ -64,7 +68,8 @@
 		"EmptyUrlError": "Please enter a site address",
 		"InvalidUrlError": "Please enter a valid site address or IP address",
 		"AddAccount": "Add Account",
-		"SwitchAccount": "Switch Account"
+		"SwitchAccount": "Switch Account",
+		"LoginAuthenticationExpired": "Login authentication has expired. Please log in again"
 	},
 	"Asset": {
 		"GetAssetFailed": "Get asset failed, please refresh and try again"

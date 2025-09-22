@@ -3,7 +3,8 @@
 		"Cancel": "取消",
 		"Confirm": "确认",
 		"UnSigned": "未登录",
-		"Version": "当前版本"
+		"Version": "当前版本",
+		"NoData": "暂无数据"
 	},
 	"ToolTips": {
 		"LightMode": "亮色模式",
@@ -39,7 +40,10 @@
 		"Use": "使用"
 	},
 	"EditModal": {
-		"Description": "默认连接信息将在保存后生效，并用于后续所有连接操作"
+		"ModifyConnectionInfo": "修改连接信息",
+		"Description": "默认连接信息将在保存后生效，并用于后续所有连接操作",
+		"OptionalProtocol": "可选协议",
+		"OptionalAccount": "可选账号"
 	},
 	"SettingModal": {
 		"Description": "连接设置用于配置后续连接中默认启动的应用程序"
@@ -64,7 +68,8 @@
 		"EmptyUrlError": "请输入站点地址",
 		"InvalidUrlError": "请输入有效的站点地址或IP地址",
 		"AddAccount": "新增账号",
-		"SwitchAccount": "切换账号"
+		"SwitchAccount": "切换账号",
+		"LoginAuthenticationExpired": "登录认证已失效，请重新登录"
 	},
 	"Loading": {
 		"Loading": "加载中",
