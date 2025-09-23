@@ -32,38 +32,29 @@ const userSettingStore = useUserSettingStore();
 const userInfoStore = useUserInfoStore();
 
 const { layouts } = storeToRefs(userSettingStore);
-const { currentUser } = storeToRefs(userInfoStore);
+const { loggedIn } = storeToRefs(userInfoStore);
 const { assetsData, scrollbarStyles, isLoading, fetchNextPage } = assetManager;
 
-watch(
-  [editModalOpen, currentSelectedCardInfo],
-  ([open, info]) => {
-    if (open && info) initDraft();
-  }
-);
+watch([editModalOpen, currentSelectedCardInfo], ([open, info]) => {
+  if (open && info) initDraft();
+});
 
 function initDraft() {
   const asset = currentSelectedCardInfo.value;
   if (!asset) return;
 
   const saved = userInfoStore.getConnectionInfoForAsset(asset.id);
-  
-  draftProtocol.value = saved?.protocol
-    ?? asset.permed_protocols?.[0]?.name
-    ?? '';
-  draftAccount.value = saved?.username
-    ?? asset.permed_accounts?.[0]?.username
-    ?? '';
 
-  console.log(draftProtocol.value, draftAccount.value);
-};
+  draftProtocol.value =
+    saved?.protocol ?? asset.permed_protocols?.[0]?.name ?? '';
+  draftAccount.value =
+    saved?.username ?? asset.permed_accounts?.[0]?.username ?? '';
+}
 
 const handleCardClick = (index: number, e: MouseEvent) => {
   e.stopPropagation();
   selectedCardIndex.value = index;
   currentSelectedCardInfo.value = assetsData.value[index]!;
-
-  console.log('currentSelectedCardInfo', currentSelectedCardInfo.value);
 };
 
 const clearSelectedCard = () => {
@@ -143,11 +134,19 @@ onMounted(() => {
 
       <div
         v-else-if="assetsData && assetsData.length === 0"
-        class="w-full h-full flex flex-col items-center justify-center text-gray-500"
+        class="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-500"
       >
-        <UIcon name="mingcute:inbox-line" class="size-10" />
+        <template v-if="loggedIn">
+          <UIcon name="mingcute:inbox-line" class="size-10" />
 
-        <span class="text-sm"> {{ t('Common.NoData') }} </span>
+          <span class="text-sm"> {{ t('Common.NoData') }} </span>
+        </template>
+
+        <template v-else>
+          <UIcon name="cuida:login-outline" class="size-10" />
+
+          <span class="text-sm"> {{ t('Common.NoDataDescription') }} </span>
+        </template>
       </div>
 
       <div

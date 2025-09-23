@@ -1,6 +1,6 @@
 import type { SortType } from '~/types';
 
-type themeType = 'light' | 'dark';
+type themeType = 'light' | 'dark' | '';
 type layoutsType = 'grid' | 'table';
 
 export const useUserSettingStore = defineStore(
@@ -12,7 +12,7 @@ export const useUserSettingStore = defineStore(
     const collapse = ref(false);
 
     const sort = ref<SortType>('name');
-    const theme = ref<themeType>('light');
+    const theme = ref<themeType>('');
     const layouts = ref<layoutsType>('grid');
 
     const setLang = (lang: string) => {

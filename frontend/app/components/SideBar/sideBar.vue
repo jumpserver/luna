@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui';
+import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
 const { t } = useI18n();
+const userInfoStore = useUserInfoStore();
 const useSettingStore = useUserSettingStore();
 
 const { setCollapse } = useSettingStore;
+const { loggedIn } = storeToRefs(userInfoStore);
 const { collapse, theme } = storeToRefs(useSettingStore);
 
-// 能用 lucide 的就用 lucide，不能用 lucide 的就用 mingcute
 const items = ref<NavigationMenuItem[][]>([
   [
     {
@@ -19,34 +21,41 @@ const items = ref<NavigationMenuItem[][]>([
       label: t('Menu.Linux'),
       icon: 'si:terminal-alt-line',
       to: '/linux',
+      disabled: !loggedIn.value,
     },
     {
       label: t('Menu.Windows'),
       icon: 'gravity-ui:logo-windows',
       to: '/windows',
+      disabled: !loggedIn.value,
     },
     {
       label: t('Menu.Database'),
       icon: 'i-lucide-database',
       to: '/database',
+      disabled: !loggedIn.value,
     },
     {
       label: t('Menu.Device'),
       icon: 'mingcute:device-line',
       to: '/device',
+      disabled: !loggedIn.value,
     },
     {
       label: t('Menu.Favorite'),
       icon: 'i-lucide-star',
       to: '/favorite',
+      disabled: !loggedIn.value,
     },
     {
       label: t('Menu.OfflinePlayer'),
       type: 'label',
+      disabled: !loggedIn.value,
     },
     {
       label: t('Menu.Player'),
       icon: 'i-lucide-video',
+      disabled: !loggedIn.value,
     },
   ],
 ]);
@@ -96,3 +105,4 @@ const handleCollapse = () => {
     </div>
   </div>
 </template>
+  

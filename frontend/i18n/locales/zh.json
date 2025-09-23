@@ -4,7 +4,8 @@
 		"Confirm": "确认",
 		"UnSigned": "未登录",
 		"Version": "当前版本",
-		"NoData": "暂无数据"
+		"NoData": "暂无数据",
+		"NoDataDescription": "请先登录"
 	},
 	"ToolTips": {
 		"LightMode": "亮色模式",
@@ -31,7 +32,10 @@
 	},
 	"AssetCard": {
 		"Activated": "已激活",
-		"Deactivated": "未激活"
+		"Deactivated": "未激活",
+		"Address": "地址",
+		"User": "用户",
+		"Protocol": "协议"
 	},
 	"ContextMenu": {
 		"QuickConnect": "快速连接",
@@ -78,5 +82,11 @@
 	},
 	"Asset": {
 		"GetAssetFailed": "获取资产失败,请刷新重试"
+	},
+	"Account": {
+		"Hosted": "托管账号",
+		"Manual": "手动账号",
+		"Username": "用户名",
+		"Password": "密码"
 	}
 }

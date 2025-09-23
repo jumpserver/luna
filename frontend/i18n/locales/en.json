@@ -4,7 +4,8 @@
 		"Confirm": "Confirm",
 		"UnSigned": "UnSigned",
 		"Version": "Version",
-		"NoData": "No Data"
+		"NoData": "No Data",
+		"NoDataDescription": "Please login first"
 	},
 	"ToolTips": {
 		"LightMode": "Light Mode",
@@ -31,7 +32,10 @@
 	},
 	"AssetCard": {
 		"Activated": "Activated",
-		"Deactivated": "Deactivated"
+		"Deactivated": "Deactivated",
+		"Address": "Address",
+		"User": "User",
+		"Protocol": "Protocol"
 	},
 	"ContextMenu": {
 		"QuickConnect": "Quick Connect",
@@ -73,5 +77,11 @@
 	},
 	"Asset": {
 		"GetAssetFailed": "Get asset failed, please refresh and try again"
+	},
+	"Account": {
+		"Hosted": "With secret accounts",
+		"Manual": "Manual accounts",
+		"Username": "Username",
+		"Password": "Password"
 	}
 }

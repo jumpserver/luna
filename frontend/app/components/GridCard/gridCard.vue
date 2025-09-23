@@ -2,8 +2,9 @@
 import type { ContextMenuItem } from '@nuxt/ui';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 
-interface BadgeItemList {
+interface DetailRow {
   key: string;
+  title: string;
   content: string;
   popover?: boolean;
   class?: string;
@@ -23,7 +24,7 @@ const emits = defineEmits<{
   (e: 'openEditModal'): void;
 }>();
 
-const cycleColors = ['primary', 'info', 'neutral', 'warning'] as const;
+// stacked details below the header
 
 const { t } = useI18n();
 const userInfoStore = useUserInfoStore();
@@ -77,15 +78,18 @@ const displayUser = computed(() => {
   return saved?.username ?? props.user;
 });
 
-const badgeItems = computed(() => {
-  const list: Array<BadgeItemList> = [];
+const detailRows = computed(() => {
+  const list: Array<DetailRow> = [];
 
   // prettier-ignore
-  list.push({ key: "address", content: props.address, popover: true, class: "max-w-24" });
+  list.push({ key: 'address', title: t('AssetCard.Address'), content: props.address, popover: true, class: 'max-w-40 font-mono' });
   // prettier-ignore
-  // list.push({ key: "zone", content: props.zone, popover: true, class: "max-w-24" });
-  list.push({ key: "user", content: displayUser.value });
-  list.push({ key: 'protocol', content: displayProtocol.value });
+  list.push({ key: 'user', title: t('AssetCard.User'), content: displayUser.value });
+  list.push({
+    key: 'protocol',
+    title: t('AssetCard.Protocol'),
+    content: displayProtocol.value,
+  });
 
   return list;
 });
@@ -110,78 +114,81 @@ const badgeItems = computed(() => {
       }"
     >
       <section class="flex gap-4 flex-nowrap items-center w-full">
-        <UAvatar
-          size="lg"
-          :icon="iconName"
-          :ui="{ root: 'rounded-md', icon: 'size-6' }"
-        />
+        <div class="flex items-center w-full gap-1">
+          <div class="flex flex-col flex-1 gap-2 text-xs-plus min-w-0">
+            <div class="flex justify-between">
+              <section class="flex">
+                <div class="flex items-center gap-2">
+                  <UChip>
+                    <UAvatar
+                      size="lg"
+                      :icon="iconName"
+                      :ui="{ root: 'rounded-md', icon: 'size-6' }"
+                    />
+                  </UChip>
 
-        <div class="flex flex-col flex-1 gap-2 text-xs-plus min-w-0">
-          <div class="flex justify-between">
-            <section class="flex items-center gap-2">
-              <UPopover arrow mode="hover">
-                <div class="w-2 h-2 bg-primary rounded-full" />
+                  <span class="text-sm font-bold line-clamp-1">
+                    {{ assetName }}
+                  </span>
+                </div>
+              </section>
 
-                <template #content>
-                  <div class="text-xs-plus text-center p-2">
-                    {{ t('AssetCard.Activated') }}
-                  </div>
-                </template>
-              </UPopover>
+              <section class="flex items-center gap-2">
+                <UButton
+                  icon="i-lucide-rocket"
+                  size="xs"
+                  color="primary"
+                  variant="outline"
+                >
+                  {{ t('ContextMenu.Connect') }}
+                </UButton>
 
-              <span class="text-sm font-semibold line-clamp-1">
-                {{ assetName }}
-              </span>
-            </section>
-          </div>
+                <UButton
+                  icon="i-lucide-square-pen"
+                  size="xs"
+                  color="primary"
+                  variant="outline"
+                  @click="openEditModal"
+                />
+              </section>
+            </div>
 
-          <USeparator orientation="horizontal" size="sm" class="h-1" />
+            <USeparator orientation="horizontal" size="sm" class="h-1" />
 
-          <div class="flex items-center gap-2">
-            <template
-              v-for="(badge, idx) in badgeItems"
-              :key="`${badge.key}-${idx}`"
-            >
-              <UBadge
-                :color="cycleColors[idx % cycleColors.length]"
-                variant="soft"
-                :class="badge.class"
+            <div class="flex flex-col gap-1 text-xs-plus">
+              <div
+                v-for="row in detailRows"
+                :key="row.key"
+                class="grid grid-cols-[minmax(64px,max-content)_1fr] items-center gap-x-3 gap-y-1"
               >
-                <template v-if="badge.popover">
-                  <UPopover arrow mode="hover" :open-delay="500">
-                    <span class="text-overflow-ellipsis">
-                      {{ badge.content }}
+                <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                  {{ row.title }}
+                </span>
+
+                <div class="min-w-0">
+                  <template v-if="row.popover">
+                    <UPopover arrow mode="hover" :open-delay="500">
+                      <span class="truncate" :class="row.class">
+                        {{ row.content }}
+                      </span>
+                      <template #content>
+                        <p class="p-2 text-xs-plus font-mono">
+                          {{ row.content }}
+                        </p>
+                      </template>
+                    </UPopover>
+                  </template>
+
+                  <template v-else>
+                    <span class="truncate" :class="row.class">
+                      {{ row.content }}
                     </span>
-                    <template #content>
-                      <p class="p-2 text-xs-plus">
-                        {{ badge.content }}
-                      </p>
-                    </template>
-                  </UPopover>
-                </template>
-                <template v-else>
-                  {{ badge.content }}
-                </template>
-              </UBadge>
-              <USeparator
-                v-if="idx < badgeItems.length - 1"
-                orientation="vertical"
-                size="sm"
-                class="h-4"
-              />
-            </template>
+                  </template>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <UButton
-          v-if="showEdit"
-          size="sm"
-          variant="ghost"
-          color="neutral"
-          class="rounded-lg shrink-0"
-          icon="i-lucide-square-pen"
-          @click="openEditModal"
-        />
       </section>
     </UContextMenu>
   </UCard>

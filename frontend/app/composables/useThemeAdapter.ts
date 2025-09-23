@@ -16,6 +16,10 @@ export const useThemeAdapter = () => {
    * @description 应用首次加载默认使用 OS Theme
    */
   const initialTheme = async () => {
+    if (userTheme.value) {
+      return;
+    }
+
     const theme = await currentWindow.theme();
 
     if (!theme) return;
