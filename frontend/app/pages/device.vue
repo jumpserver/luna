@@ -2,6 +2,6 @@
 
 <template>
   <div>
-    <BasePage type="device" />
+    <BasePage type="device" icon-name="akar-icons:devices" />
   </div>
 </template>

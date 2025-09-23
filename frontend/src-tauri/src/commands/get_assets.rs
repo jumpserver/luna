@@ -153,7 +153,6 @@ pub async fn get_assets(app: AppHandle, site: String, cookie_header: String, que
 
             // 写回字符串数据
             assets_data.data = json_message.to_string();
-            info!("更新后的数据: {}", assets_data.data);
         }
         Err(_) => {
             error!("解析资产列表 JSON 失败，返回数据不是合法 JSON 字符串");

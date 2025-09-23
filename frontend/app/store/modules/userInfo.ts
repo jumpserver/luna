@@ -171,8 +171,8 @@ export const useUserInfoStore = defineStore(
 
     /**
      * @description 设置资产连接信息
-     * @param assetId 
-     * @param connectionInfo 
+     * @param assetId
+     * @param connectionInfo
      */
     const setConnectionInfoForAsset = (
       assetId: string,
@@ -208,13 +208,13 @@ export const useUserInfoStore = defineStore(
       key: 'userInfo',
       storage: localStorage,
       pick: [
+        'orgId',
         'userMap',
         'loggedIn',
-        'currentSite',
-        'orgId',
         'currentUser',
-        'currentOrganizations',
+        'currentSite',
         'connectionInfoMap',
+        'currentOrganizations',
       ],
     },
   }

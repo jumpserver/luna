@@ -3,6 +3,6 @@
 
 <template>
   <div>
-    <BasePage type="linux" />
+    <BasePage type="linux" icon-name="si:terminal-alt-fill" />
   </div>
 </template>

@@ -1,5 +1,3 @@
-import { includes } from 'zod';
-
 export default defineNuxtConfig({
   modules: [
     '@nuxt/ui',
@@ -11,7 +9,6 @@ export default defineNuxtConfig({
     '@nuxtjs/i18n',
     'reka-ui/nuxt',
     'pinia-plugin-persistedstate/nuxt',
-    './app/modules/tauri.ts',
   ],
   i18n: {
     locales: [
@@ -41,8 +38,26 @@ export default defineNuxtConfig({
     mode: 'css',
     cssLayer: 'base',
     serverBundle: {
-      collections: ['mingcute'],
+      // Prebundle all iconify collections used in the app to avoid
+      // any network fetches (including Material Symbols fallbacks)
+      collections: [
+        'mingcute',
+        'lucide',
+        'line-md',
+        'proicons',
+        'lets-icons',
+        // `si:` prefix maps to the `simple-icons` collection
+        'simple-icons',
+        // Include Material Symbols explicitly to avoid Google fetches
+        'material-symbols',
+      ],
     },
+  },
+  fonts: {
+    providers: {
+      google: false,
+    },
+    priority: ['bunny'],
   },
   ssr: false,
   dir: {

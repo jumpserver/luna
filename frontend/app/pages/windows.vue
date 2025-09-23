@@ -1,8 +1,7 @@
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>
 
 <template>
   <div>
-    <BasePage type="windows" />
+    <BasePage type="windows" icon-name="gravity-ui:logo-windows" />
   </div>
 </template>

@@ -14,18 +14,24 @@ const emits = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const trailingIcon =
+  'group-data-[state=open]:rotate-180 transition-transform duration-200';
 
-const protocolItems = computed(() => props.protocols.map(p => p.name));
-const accountItems = computed(() => props.accounts.map(a => a.username));
+const protocolItems = computed(() =>
+  props.protocols.map((p: PermedProtocol) => p.name)
+);
+const accountItems = computed(() =>
+  props.accounts.map((a: PermedAccount) => a.username)
+);
 
 const selectedProtocol = computed<string>({
   get: () => props.protocol,
-  set: (v) => emits('update:protocol', v ?? ''),
+  set: (v: string) => emits('update:protocol', v ?? ''),
 });
 
 const selectedAccount = computed<string>({
   get: () => props.account,
-  set: (v) => emits('update:account', v ?? ''),
+  set: (v: string) => emits('update:account', v ?? ''),
 });
 </script>
 
@@ -35,14 +41,24 @@ const selectedAccount = computed<string>({
       <USelect
         v-model="selectedProtocol"
         :items="protocolItems"
+        :ui="{
+          trailingIcon,
+        }"
+        icon="mingcute:plugin-line"
+        variant="subtle"
         class="w-full"
       />
     </UFormField>
 
     <UFormField :label="t('EditModal.OptionalAccount')" size="md">
-      <USelect
+      <USelectMenu
         v-model="selectedAccount"
         :items="accountItems"
+        :ui="{
+          trailingIcon,
+        }"
+        icon="lucide:user-round"
+        variant="subtle"
         class="w-full"
       />
     </UFormField>

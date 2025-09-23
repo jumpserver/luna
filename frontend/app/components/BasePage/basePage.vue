@@ -7,6 +7,7 @@ type AssetType = 'linux' | 'windows' | 'database' | 'device';
 
 const props = defineProps<{
   type: AssetType;
+  iconName: string;
 }>();
 
 const skeletonCount = 12;
@@ -157,13 +158,13 @@ onMounted(() => {
           <GridCard
             v-for="(item, index) in assetsData"
             :key="item.id"
-            :asset-id="item.id"
             :zone="item.zone"
+            :asset-id="item.id"
+            :icon-name="iconName"
             :address="item.address"
             :asset-name="item.assetName"
             :protocol="item.permed_protocols?.[0]?.name"
             :user="item.permed_accounts?.[0]?.username"
-            icon-name="si:terminal-alt-fill"
             class="border border-solid"
             :style="{
               borderColor:

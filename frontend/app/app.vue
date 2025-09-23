@@ -1,10 +1,16 @@
 <script lang="ts" setup>
-const colorMode = useColorMode();
+const { currentOSTheme, userTheme } = useThemeAdapter();
 
 const backgroundColor = computed(() => {
-  return colorMode.value === 'dark'
-    ? 'rgba(49, 49, 49, 0.25)'
-    : 'rgba(234, 234, 234, 0.4)';
+  if (currentOSTheme.value === 'light') {
+    return userTheme.value === 'dark'
+      ? 'rgba(35, 35, 35, 0.8)'
+      : 'rgba(234, 234, 234, 0.8)';
+  } else {
+    return userTheme.value === 'light'
+      ? 'rgba(255, 255, 255, 0.8)'
+      : 'rgba(35, 35, 35, 0.8)';
+  }
 });
 
 // 因为 <Body> 是一个虚拟组件，底层并不会响应 Vue 的 :style 绑定。它的作用是把插槽内容插入到真正的 <body> 中，但自身不是一个响应式桥梁。

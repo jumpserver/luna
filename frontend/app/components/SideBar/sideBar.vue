@@ -6,7 +6,7 @@ const { t } = useI18n();
 const useSettingStore = useUserSettingStore();
 
 const { setCollapse } = useSettingStore;
-const { collapse } = storeToRefs(useSettingStore);
+const { collapse, theme } = storeToRefs(useSettingStore);
 
 // 能用 lucide 的就用 lucide，不能用 lucide 的就用 mingcute
 const items = ref<NavigationMenuItem[][]>([
@@ -17,12 +17,12 @@ const items = ref<NavigationMenuItem[][]>([
     },
     {
       label: t('Menu.Linux'),
-      icon: 'mingcute:linux-line',
+      icon: 'si:terminal-alt-line',
       to: '/linux',
     },
     {
       label: t('Menu.Windows'),
-      icon: 'mingcute:windows-line',
+      icon: 'gravity-ui:logo-windows',
       to: '/windows',
     },
     {
@@ -75,8 +75,8 @@ const handleCollapse = () => {
       <UNavigationMenu
         color="primary"
         orientation="vertical"
-        :highlight="false"
         :items="items"
+        :highlight="false"
         :collapsed="collapse"
         :ui="
           collapse
@@ -88,6 +88,8 @@ const handleCollapse = () => {
               }
             : {
                 link: 'px-2',
+                linkLabel: theme === 'dark' ? 'text-white' : 'text-black',
+                linkLeadingIcon: theme === 'dark' ? 'text-white' : 'text-black',
               }
         "
       />

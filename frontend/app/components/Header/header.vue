@@ -20,8 +20,8 @@ const REG_EXP =
 // TODO 系统主题默认第一次使用时将适配
 
 const { t, setLocale, locales } = useI18n();
+const { manualSetTheme } = useThemeAdapter();
 const toast = useToast();
-const colorMode = useColorMode();
 const appConfig = useAppConfig();
 const userInfoStore = useUserInfoStore();
 const userSettingStore = useUserSettingStore();
@@ -134,11 +134,7 @@ const computedSwitchMode = computed<ActionItem>(() => {
  * @description 切换颜色 mode
  */
 function toggleDarkMode() {
-  colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
-
-  nextTick(() => {
-    setTheme(colorMode.value === 'dark' ? 'dark' : 'light');
-  });
+  manualSetTheme(isDarkMode.value ? 'light' : 'dark');
 }
 
 /**
@@ -387,7 +383,7 @@ onBeforeUnmount(() => {
 <template>
   <div
     :style="{
-      backgroundColor: colorMode.value === 'dark' ? darkColor : lightColor,
+      backgroundColor: theme === 'dark' ? darkColor : lightColor,
     }"
     class="flex items-center justify-between px-4 h-12 cursor-pointer"
     @mousedown="handleWindowDrag"
