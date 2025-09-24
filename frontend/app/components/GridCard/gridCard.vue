@@ -24,13 +24,14 @@ const emits = defineEmits<{
   (e: 'openEditModal'): void;
 }>();
 
-// stacked details below the header
-
 const { t, locale } = useI18n();
 const userInfoStore = useUserInfoStore();
-const { connectionInfoMap } = storeToRefs(userInfoStore);
+const { getConnectToken } = useAssetConnect();
+const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
 
 const showEdit = ref(false);
+
+// TODO 右键需要与 edit 中的保持一致
 const items = ref<ContextMenuItem[][]>([
   [
     {
@@ -69,12 +70,12 @@ const handleMouseLeave = () => {
 };
 
 const displayProtocol = computed(() => {
-  const saved = connectionInfoMap.value[props.assetId];
+  const saved = currentConnectionInfoMap.value[props.assetId];
   return saved?.protocol ?? props.protocol;
 });
 
 const displayUser = computed(() => {
-  const saved = connectionInfoMap.value[props.assetId];
+  const saved = currentConnectionInfoMap.value[props.assetId];
   return saved?.username ?? props.user;
 });
 
@@ -109,6 +110,11 @@ const detailRows = computed(() => {
 
   return list;
 });
+
+const handleConnect = () => {
+  console.log('props', props);
+  getConnectToken();
+};
 </script>
 
 <template>
@@ -156,6 +162,7 @@ const detailRows = computed(() => {
                   color="primary"
                   variant="outline"
                   class="group !gap-0"
+                  @click="handleConnect"
                 >
                   <!-- prettier-ignore -->
                   <span

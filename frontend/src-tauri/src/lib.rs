@@ -10,6 +10,7 @@ use crate::setup::setup_tray;
 use crate::commands::url_watcher::url_watcher;
 use crate::commands::get_assets::get_assets;
 use crate::commands::get_setting::get_setting;
+use crate::commands::get_token::get_connect_token;
 
 use log::error;
 use tauri::menu::{Menu, MenuItem};
@@ -39,7 +40,12 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![url_watcher, get_assets, get_setting])
+        .invoke_handler(tauri::generate_handler![
+            url_watcher,
+            get_assets,
+            get_setting,
+            get_connect_token
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

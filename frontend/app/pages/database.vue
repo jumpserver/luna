@@ -3,7 +3,6 @@ import type { TabsItem } from '@nuxt/ui';
 import type { AssetItem } from '~/types/index';
 
 import { useInfiniteScroll } from '@vueuse/core';
-import { useAssetManager } from '~/composables/useAssetManager';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
 const { t } = useI18n();
@@ -21,7 +20,7 @@ const providerClearSelection = inject<(cb: () => void) => void>(
   'providerClearSelection'
 );
 
-const assetManager = useAssetManager('database', scrollRef);
+const assetManager = useAssetFetcher('database', scrollRef);
 const { isLoading, hasMore, assetsData, fetchNextPage, scrollbarStyles } =
   assetManager;
 
@@ -60,10 +59,6 @@ const tabItems = computed(() => {
 
   return tabs;
 });
-
-// 调试信息
-console.log('数据库页面 - tabItems:', tabItems.value);
-
 const currentTab = ref('all');
 
 const filteredAssetsData = computed(() => {

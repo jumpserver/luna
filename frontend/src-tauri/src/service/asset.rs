@@ -1,4 +1,5 @@
-use crate::commands::requests::{get_with_response, get_with_response_and_query, ApiResponse};
+use crate::commands::requests::{get_unified, get_with_response, ApiResponse};
+use crate::utils::to_api_response;
 use log::info;
 use serde::{Deserialize, Serialize};
 
@@ -118,7 +119,7 @@ impl AssetService {
             },
         };
 
-        get_with_response_and_query(&url, &self.cookie_header, &query).await
+        to_api_response(&url, get_unified(&url, &self.cookie_header, &query).await).await
     }
 
     pub async fn get_asset_details(&self, asset_id: String) -> ApiResponse {

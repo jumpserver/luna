@@ -185,20 +185,22 @@ export interface ConnectionInfo {
   username: string;
 }
 
+export interface RdpGraphics {
+  rdp_resolution?: string;
+  keyboard_layout?: string;
+  rdp_client_option?: string[];
+  rdp_color_quality?: string;
+  rdp_smart_size?: string;
+  applet_connection_method?: string;
+  file_name_conflict_resolution?: string;
+}
+
 export interface SettingResponse {
   basic: {
     is_async_asset_tree: boolean;
     connect_default_open_method: string;
   };
-  graphics: {
-    rdp_resolution: string;
-    keyboard_layout: string;
-    rdp_client_option: string[];
-    rdp_color_quality: string;
-    rdp_smart_size: string;
-    applet_connection_method: string;
-    file_name_conflict_resolution: string;
-  };
+  graphics: RdpGraphics;
   command_line: {
     character_terminal_font_size: number;
     is_backspace_as_ctrl_h: boolean;

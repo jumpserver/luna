@@ -30,9 +30,9 @@ const selectedCardIndex = ref<number | null>(null);
 const currentSelectedCardInfo = ref<AssetItem | null>(null);
 const subscribeSettingEvent = ref<UnlistenFn | null>(null);
 
-const assetManager = useAssetManager(props.type, scrollRef);
-const userSettingStore = useUserSettingStore();
 const userInfoStore = useUserInfoStore();
+const userSettingStore = useUserSettingStore();
+const assetManager = useAssetFetcher(props.type, scrollRef);
 
 const { layouts } = storeToRefs(userSettingStore);
 const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
@@ -84,10 +84,18 @@ const getSettings = async () => {
 };
 
 const listenTauriEvent = async () => {
+  interface eventPayloadType {
+    data: string;
+    status: number;
+  }
+
   subscribeSettingEvent.value = await useTauriEventListen(
     'get-setting-success',
     (event) => {
-      console.log('get-setting-success', event);
+      const payload = event.payload as eventPayloadType;
+      const settingConfig = JSON.parse(payload.data) as SettingResponse;
+
+      userInfoStore.setRdpClientOption(settingConfig.graphics);
     }
   );
 };
@@ -123,6 +131,7 @@ onBeforeUnmount(() => {
         class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-2 p-2"
         aria-busy="true"
       >
+        <!-- TODO 骨架屏的样式需要与实际展示的保持一致 -->
         <UCard
           v-for="i in skeletonCount"
           :key="i"

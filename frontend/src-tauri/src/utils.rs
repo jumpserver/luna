@@ -1,8 +1,42 @@
+use crate::commands::requests::ApiResponse;
 use crate::models::CookieMessage;
+use chrono::{Local, Offset};
 use log::{info, warn};
 use tauri::{AppHandle, Manager, WebviewWindow};
 use tokio::time::{sleep, Duration};
 use url::Url;
+
+/// 重试获取窗口
+async fn get_window_with_retry(
+    app: &AppHandle,
+    window_label: &str,
+    max_retries: u32,
+) -> Option<WebviewWindow> {
+    for i in 0..max_retries {
+        if let Some(window) = app.get_webview_window(window_label) {
+            if i > 0 {
+                info!("窗口 '{}' 在第 {} 次重试后找到", window_label, i + 1);
+            }
+            return Some(window);
+        }
+
+        if i == 0 {
+            info!("窗口 '{}' 未就绪，开始重试", window_label);
+        } else {
+            info!("窗口 '{}' 第 {} 次重试", window_label, i + 1);
+        }
+
+        // 第一次立即重试，之后每次等待 100ms
+        if i > 0 {
+            sleep(Duration::from_millis(100)).await;
+        }
+    }
+    warn!(
+        "窗口 '{}' 在 {} 次重试后仍未找到",
+        window_label, max_retries
+    );
+    None
+}
 
 /// 获取窗口 cookies
 pub async fn get_window_cookies(
@@ -73,42 +107,68 @@ pub fn dedupe_cookies(cookies: &mut Vec<CookieMessage>) {
     *cookies = result;
 }
 
-/// 重试获取窗口
-async fn get_window_with_retry(
-    app: &AppHandle,
-    window_label: &str,
-    max_retries: u32,
-) -> Option<WebviewWindow> {
-    for i in 0..max_retries {
-        if let Some(window) = app.get_webview_window(window_label) {
-            if i > 0 {
-                info!("窗口 '{}' 在第 {} 次重试后找到", window_label, i + 1);
-            }
-            return Some(window);
-        }
-
-        if i == 0 {
-            info!("窗口 '{}' 未就绪，开始重试", window_label);
-        } else {
-            info!("窗口 '{}' 第 {} 次重试", window_label, i + 1);
-        }
-
-        // 第一次立即重试，之后每次等待 100ms
-        if i > 0 {
-            sleep(Duration::from_millis(100)).await;
-        }
-    }
-    warn!(
-        "窗口 '{}' 在 {} 次重试后仍未找到",
-        window_label, max_retries
-    );
-    None
-}
-
+/// 格式化 cookies
 pub fn format_cookies(cookie_list: &Vec<CookieMessage>) -> String {
     cookie_list
         .iter()
         .map(|c| format!("{}={}", c.name, c.value))
         .collect::<Vec<_>>()
         .join("; ")
+}
+
+pub fn extract_csrf_token(header_cookie: &str) -> String {
+    let pairs: Vec<(String, String)> = header_cookie
+        .split(';')
+        .filter_map(|kv| {
+            let kv = kv.trim();
+            kv.split_once('=')
+                .map(|(k, v)| (k.trim().to_ascii_lowercase(), v.trim().to_string()))
+        })
+        .collect();
+
+    if let Some((_, v)) = pairs.iter().find(|(k, _)| k == "jms_csrftoken") {
+        return v.clone();
+    }
+
+    if let Some((_, v)) = pairs.iter().find(|(k, _)| k == "csrftoken") {
+        return v.clone();
+    }
+
+    String::new()
+}
+
+/// 获取本地时区偏移字符串
+pub fn tz_offset_string() -> String {
+    let local_offset = Local::now().offset().fix().local_minus_utc();
+    let hours = local_offset / 3600;
+    let minutes = (local_offset % 3600) / 60;
+
+    format!("{:+03}:{:02}", hours, minutes)
+}
+
+/// 将请求结果转换为 ApiResponse
+pub async fn to_api_response(
+    url: &str,
+    result: Result<reqwest::Response, reqwest::Error>,
+) -> ApiResponse {
+    match result {
+        Ok(resp) => {
+            let status = resp.status().as_u16();
+            let data = resp.text().await.unwrap_or_default();
+
+            ApiResponse {
+                status,
+                data,
+                success: status == 200,
+            }
+        }
+        Err(e) => {
+            log::warn!("请求 {} 失败: {}", url, e);
+            ApiResponse {
+                status: 0,
+                data: format!("请求失败: {}", e),
+                success: false,
+            }
+        }
+    }
 }

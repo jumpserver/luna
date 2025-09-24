@@ -1,10 +1,10 @@
-use log::{error, info};
-use serde::Deserialize;
-use tauri::{AppHandle, Emitter};
-use serde_json::{from_str, json, Value};
 use crate::service::asset::{AssetQuery, AssetService};
+use log::error;
+use serde::Deserialize;
+use serde_json::{from_str, json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
+use tauri::{AppHandle, Emitter};
 use tokio::task::JoinSet;
 
 #[allow(dead_code)]
@@ -75,7 +75,7 @@ pub struct Zone {
 #[tauri::command]
 pub async fn get_assets(app: AppHandle, site: String, cookie_header: String, query: AssetQuery) {
     let asset_service = Arc::new(AssetService::new(site, cookie_header, query));
-    let mut assets_data = asset_service.get_category_assets().await;
+    let assets_data = asset_service.get_category_assets().await;
 
     // 请求失败则直接返回失败事件
     if !assets_data.success {
@@ -84,19 +84,28 @@ pub async fn get_assets(app: AppHandle, site: String, cookie_header: String, que
         return;
     }
 
+    // 解析服务返回的 JSON 字符串
     match from_str::<Value>(&assets_data.data) {
         Ok(mut json_message) => {
-            if let Some(results) = json_message.get_mut("results").and_then(|r| r.as_array_mut()) {
+            if let Some(results) = json_message
+                .get_mut("results")
+                .and_then(|r| r.as_array_mut())
+            {
                 // 收集需要查询详情的 ID
                 let ids: Vec<String> = results
                     .iter()
-                    .filter_map(|item| item.get("id").and_then(|v| v.as_str()).map(|s| s.to_string()))
+                    .filter_map(|item| {
+                        item.get("id")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string())
+                    })
                     .collect();
 
                 // 控制并发数量，避免过多同时请求
                 let concurrency = 8usize;
                 let mut ids_iter = ids.into_iter();
-                let mut set: JoinSet<(String, crate::commands::requests::ApiResponse)> = JoinSet::new();
+                let mut set: JoinSet<(String, crate::commands::requests::ApiResponse)> =
+                    JoinSet::new();
 
                 // 预热并发窗口
                 for _ in 0..concurrency {
@@ -133,7 +142,9 @@ pub async fn get_assets(app: AppHandle, site: String, cookie_header: String, que
 
                     if let Some(next_id) = ids_iter.next() {
                         let svc = Arc::clone(&asset_service);
-                        set.spawn(async move { (next_id.clone(), svc.get_asset_details(next_id).await) });
+                        set.spawn(async move {
+                            (next_id.clone(), svc.get_asset_details(next_id).await)
+                        });
                     }
                 }
 
@@ -141,7 +152,9 @@ pub async fn get_assets(app: AppHandle, site: String, cookie_header: String, que
                 for item in results.iter_mut() {
                     if let Some(id) = item.get("id").and_then(|v| v.as_str()) {
                         if let Some(extras) = extras_map.get(id) {
-                            if let (Some(obj), Value::Object(extra_obj)) = (item.as_object_mut(), extras) {
+                            if let (Some(obj), Value::Object(extra_obj)) =
+                                (item.as_object_mut(), extras)
+                            {
                                 for (k, v) in extra_obj {
                                     obj.insert(k.clone(), v.clone());
                                 }
@@ -151,14 +164,19 @@ pub async fn get_assets(app: AppHandle, site: String, cookie_header: String, que
                 }
             }
 
-            // 写回字符串数据
-            assets_data.data = json_message.to_string();
+            let _ = app.emit(
+                "get-asset-success",
+                json!({
+                    "status": assets_data.status,
+                    "data": json_message,
+                }),
+            );
+            return;
         }
         Err(_) => {
             error!("解析资产列表 JSON 失败，返回数据不是合法 JSON 字符串");
+            let _ = app.emit("get-asset-failure", json!({ "status": assets_data.status }));
+            return;
         }
     }
-
-    info!("获取 Asset 数据成功");
-    let _ = app.emit("get-asset-success", json!(assets_data.data));
 }

@@ -1,16 +1,29 @@
-import type { ConnectionInfo, PermOrgItem, UserData } from '~/types/index';
+import type {
+  ConnectionInfo,
+  PermOrgItem,
+  RdpGraphics,
+  UserData,
+} from '~/types/index';
 
+type SiteUserData = UserData & {
+  rdpClientOption?: RdpGraphics;
+  connectionInfoMap?: Record<string, ConnectionInfo>;
+};
+
+// 其实应该叫做 accountInfoStore 比较好
 export const useUserInfoStore = defineStore(
   'userInfo',
   () => {
     const orgId = ref('');
     const currentSite = ref('');
     const loggedIn = ref(false);
+
+    const userMap = ref<Record<string, SiteUserData>>({});
+
     const currentUser = ref<UserData | null>(null);
-    const userMap = ref<Record<string, UserData>>({});
+    const currentRdpClientOption = ref<RdpGraphics>({});
     const currentOrganizations = ref<PermOrgItem[]>([]);
-    // 保存每个资产的连接信息 { [assetId]: { protocol, username } }
-    const connectionInfoMap = ref<Record<string, ConnectionInfo>>({});
+    const currentConnectionInfoMap = ref<Record<string, ConnectionInfo>>({});
 
     const hasUser = () => computed(() => Object.keys(userMap.value).length > 0);
 
@@ -47,12 +60,18 @@ export const useUserInfoStore = defineStore(
 
       currentUser.value = userData;
       currentSite.value = site;
-      userMap.value[site] = userData;
+      userMap.value[site] = userData as SiteUserData;
 
       // 设置组织 ID
       if (userData.org?.id) {
         orgId.value = userData.org.id;
       }
+
+      // 初始化当前站点连接信息映射以及 RDP 客户端选项
+      // prettier-ignore
+      currentConnectionInfoMap.value = userMap.value[site].connectionInfoMap || {};
+      // prettier-ignore
+      currentRdpClientOption.value = (userMap.value[site] as SiteUserData).rdpClientOption || {};
     };
 
     /**
@@ -69,24 +88,31 @@ export const useUserInfoStore = defineStore(
       // 如果还有用户，则切换到下一个用户
       if (hasUser().value) {
         const nextUser = Object.values(userMap.value)[0] as
-          | UserData
+          | SiteUserData
           | undefined;
 
         if (nextUser) {
           currentUser.value = nextUser;
           currentSite.value = nextUser.site;
+
           // 更新组织 ID
           if (nextUser.org?.id) {
             orgId.value = nextUser.org.id;
           }
+
+          // 同步连接信息映射以及 RDP 客户端选项
+          currentConnectionInfoMap.value = nextUser.connectionInfoMap || {};
+          currentRdpClientOption.value = nextUser.rdpClientOption || {};
         }
       } else {
-        currentUser.value = null;
-        currentSite.value = '';
         orgId.value = '';
-        currentOrganizations.value = [];
+        currentSite.value = '';
         loggedIn.value = false;
+        currentUser.value = null;
+        currentOrganizations.value = [];
         userMap.value = {};
+        currentConnectionInfoMap.value = {};
+        currentRdpClientOption.value = {};
       }
     };
 
@@ -107,6 +133,16 @@ export const useUserInfoStore = defineStore(
         if (userData.org?.id) {
           orgId.value = userData.org.id;
         }
+
+        // 同步当前站点的连接信息映射以及 RDP 客户端选项
+        const siteConn = (userData as SiteUserData).connectionInfoMap || {};
+
+        currentConnectionInfoMap.value = siteConn;
+        currentRdpClientOption.value =
+          (userData as SiteUserData).rdpClientOption || {};
+      } else {
+        currentConnectionInfoMap.value = {};
+        currentRdpClientOption.value = {};
       }
     };
 
@@ -122,7 +158,8 @@ export const useUserInfoStore = defineStore(
           ...currentUser.value,
           availableOrgs: orgs,
         };
-        userMap.value[currentSite.value] = updatedUserData;
+
+        userMap.value[currentSite.value] = updatedUserData as SiteUserData;
         currentUser.value = updatedUserData;
       }
     };
@@ -144,7 +181,7 @@ export const useUserInfoStore = defineStore(
 
       currentUser.value = updatedUserData as UserData;
       orgId.value = org.id;
-      userMap.value[currentSite.value] = updatedUserData as UserData;
+      userMap.value[currentSite.value] = updatedUserData as SiteUserData;
     };
 
     /**
@@ -166,7 +203,10 @@ export const useUserInfoStore = defineStore(
      * @returns
      */
     const getConnectionInfoForAsset = (assetId: string) => {
-      return connectionInfoMap.value[assetId] || null;
+      if (!currentSite.value) return null;
+
+      const siteData = userMap.value[currentSite.value];
+      return siteData?.connectionInfoMap?.[assetId] || null;
     };
 
     /**
@@ -178,7 +218,37 @@ export const useUserInfoStore = defineStore(
       assetId: string,
       connectionInfo: ConnectionInfo
     ) => {
-      connectionInfoMap.value[assetId] = connectionInfo;
+      if (!currentSite.value) return;
+      const site = currentSite.value;
+      const siteData = userMap.value[site];
+
+      if (!siteData) return;
+
+      if (!siteData.connectionInfoMap) {
+        siteData.connectionInfoMap = {};
+      }
+
+      siteData.connectionInfoMap[assetId] = connectionInfo;
+      currentConnectionInfoMap.value = siteData.connectionInfoMap;
+    };
+
+    /**
+     * @description 设置 RDP 客户端选项
+     * @param rdpClientOption
+     */
+    const setRdpClientOption = (rdpClientOption: RdpGraphics) => {
+      currentRdpClientOption.value = rdpClientOption;
+
+      // 同步到当前站点的用户数据中，便于持久化/切换站点后恢复
+      if (currentSite.value && userMap.value[currentSite.value]) {
+        const site = currentSite.value;
+        const siteData = userMap.value[site] as SiteUserData;
+
+        userMap.value[site] = {
+          ...siteData,
+          rdpClientOption,
+        } as SiteUserData;
+      }
     };
 
     return {
@@ -187,8 +257,9 @@ export const useUserInfoStore = defineStore(
       loggedIn,
       currentSite,
       currentUser,
-      connectionInfoMap,
       currentOrganizations,
+      currentRdpClientOption,
+      currentConnectionInfoMap,
 
       hasUser,
       setUserData,
@@ -198,6 +269,7 @@ export const useUserInfoStore = defineStore(
       deleteUserData,
       setUserLoggedIn,
       setOrganizations,
+      setRdpClientOption,
       setConnectionInfoToUser,
       getConnectionInfoForAsset,
       setConnectionInfoForAsset,
@@ -213,8 +285,9 @@ export const useUserInfoStore = defineStore(
         'loggedIn',
         'currentUser',
         'currentSite',
-        'connectionInfoMap',
         'currentOrganizations',
+        'currentRdpClientOption',
+        'currentConnectionInfoMap',
       ],
     },
   }

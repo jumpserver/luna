@@ -6,7 +6,7 @@ import { useUserInfoStore } from '~/store/modules/userInfo';
 
 const LIMIT = 20;
 
-export const useAssetManager = (
+export const useAssetFetcher = (
   assetType: string,
   scrollRef?: Ref<HTMLElement | null>
 ) => {
@@ -157,10 +157,13 @@ export const useAssetManager = (
     subscribeGetAssetsEvent.value = await useTauriEventListen(
       'get-asset-success',
       (event) => {
-        const resp = JSON.parse(event.payload as string) as AssetsResponse;
-        const pageData = resp.results ?? [];
+        interface eventPayload {
+          status: number;
+          data: AssetsResponse;
+        }
 
-        console.log('resp', resp);
+        const resp = event.payload as eventPayload;
+        const pageData = resp.data.results ?? [];
 
         // 追加到列表
         rawAssetsList.value.push(...pageData);
