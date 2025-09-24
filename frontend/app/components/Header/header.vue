@@ -17,8 +17,6 @@ type LocaleCode = (typeof locales.value)[number]['code'];
 const REG_EXP =
   /^(?:https?:\/\/(?:localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(?::\d{1,5})?(?:[/?#]\S*)?|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\])$/;
 
-// TODO 系统主题默认第一次使用时将适配
-
 const { t, setLocale, locales } = useI18n();
 const { manualSetTheme } = useThemeAdapter();
 const toast = useToast();
@@ -29,7 +27,7 @@ const userSettingStore = useUserSettingStore();
 const darkColor = appConfig.componentsConfig.header.darkColor;
 const lightColor = appConfig.componentsConfig.header.lightColor;
 
-const { setTheme, setLang, setCollapse } = userSettingStore;
+const { setLang, setCollapse } = userSettingStore;
 const { theme, language, collapse } = storeToRefs(userSettingStore);
 const {
   setUserLoggedIn,
@@ -275,8 +273,6 @@ const initSelectOrganization = (permissionOrgData: PermissionOrgs) => {
   const uniqueOrgs = orgs.filter(
     (org, index, self) => index === self.findIndex((t) => t.id === org.id)
   );
-
-  console.log('uniqueOrgs', uniqueOrgs);
 
   return uniqueOrgs;
 };

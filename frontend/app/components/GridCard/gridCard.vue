@@ -26,7 +26,7 @@ const emits = defineEmits<{
 
 // stacked details below the header
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const userInfoStore = useUserInfoStore();
 const { connectionInfoMap } = storeToRefs(userInfoStore);
 
@@ -78,18 +78,34 @@ const displayUser = computed(() => {
   return saved?.username ?? props.user;
 });
 
-const detailRows = computed(() => {
-  const list: Array<DetailRow> = [];
+const labelMinWidth = computed(() =>
+  locale.value.startsWith('zh') ? '24px' : '72px'
+);
 
-  // prettier-ignore
-  list.push({ key: 'address', title: t('AssetCard.Address'), content: props.address, popover: true, class: 'max-w-40 font-mono' });
-  // prettier-ignore
-  list.push({ key: 'user', title: t('AssetCard.User'), content: displayUser.value });
-  list.push({
-    key: 'protocol',
-    title: t('AssetCard.Protocol'),
-    content: displayProtocol.value,
-  });
+const labelColumnTemplate = computed(
+  () => `minmax(${labelMinWidth.value}, max-content) 1fr`
+);
+
+const detailRows = computed(() => {
+  const list: Array<DetailRow> = [
+    {
+      key: 'address',
+      title: t('AssetCard.Address'),
+      content: props.address,
+      popover: true,
+      class: 'max-w-40 font-mono',
+    },
+    {
+      key: 'user',
+      title: t('AssetCard.User'),
+      content: displayUser.value,
+    },
+    {
+      key: 'protocol',
+      title: t('AssetCard.Protocol'),
+      content: displayProtocol.value,
+    },
+  ];
 
   return list;
 });
@@ -139,8 +155,16 @@ const detailRows = computed(() => {
                   size="xs"
                   color="primary"
                   variant="outline"
+                  class="group !gap-0"
                 >
-                  {{ t('ContextMenu.Connect') }}
+                  <!-- prettier-ignore -->
+                  <span
+										class="inline-block overflow-hidden whitespace-nowrap max-w-0 opacity-0 ml-0
+                           transition-all duration-400 ease-in-out group-hover:max-w-[12rem] group-hover:opacity-100 group-hover:ml-1
+                           group-focus:max-w-[12rem] group-focus:opacity-100 group-focus:ml-1"
+									>
+										{{ t('ContextMenu.Connect') }}
+									</span>
                 </UButton>
 
                 <UButton
@@ -159,9 +183,12 @@ const detailRows = computed(() => {
               <div
                 v-for="row in detailRows"
                 :key="row.key"
-                class="grid grid-cols-[minmax(64px,max-content)_1fr] items-center gap-x-3 gap-y-1"
+                class="grid items-center gap-x-3 gap-y-1"
+                :style="{ gridTemplateColumns: labelColumnTemplate }"
               >
-                <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                <span
+                  class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
+                >
                   {{ row.title }}
                 </span>
 

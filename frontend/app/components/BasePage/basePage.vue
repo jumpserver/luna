@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import type { AssetItem } from '~/types/index';
+import type { UnlistenFn } from '@tauri-apps/api/event';
+import type { AssetItem, SettingResponse } from '~/types/index';
+
 import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
@@ -26,13 +28,14 @@ const scrollRef = ref<HTMLElement | null>(null);
 const sentinelRef = ref<HTMLElement | null>(null);
 const selectedCardIndex = ref<number | null>(null);
 const currentSelectedCardInfo = ref<AssetItem | null>(null);
+const subscribeSettingEvent = ref<UnlistenFn | null>(null);
 
 const assetManager = useAssetManager(props.type, scrollRef);
 const userSettingStore = useUserSettingStore();
 const userInfoStore = useUserInfoStore();
 
 const { layouts } = storeToRefs(userSettingStore);
-const { loggedIn } = storeToRefs(userInfoStore);
+const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
 const { assetsData, scrollbarStyles, isLoading, fetchNextPage } = assetManager;
 
 watch([editModalOpen, currentSelectedCardInfo], ([open, info]) => {
@@ -73,6 +76,22 @@ const handleConfirm = () => {
   editModalOpen.value = false;
 };
 
+const getSettings = async () => {
+  await useTauriCoreInvoke('get_setting', {
+    site: currentSite.value,
+    cookieHeader: currentUser.value!.headerJson,
+  });
+};
+
+const listenTauriEvent = async () => {
+  subscribeSettingEvent.value = await useTauriEventListen(
+    'get-setting-success',
+    (event) => {
+      console.log('get-setting-success', event);
+    }
+  );
+};
+
 const modalTitle = computed(() => {
   return `${t('EditModal.ModifyConnectionInfo')} - ${
     currentSelectedCardInfo.value?.assetName
@@ -80,8 +99,16 @@ const modalTitle = computed(() => {
 });
 
 onMounted(() => {
+  getSettings();
   fetchNextPage();
+  listenTauriEvent();
   providerClearSelection?.(clearSelectedCard);
+});
+
+onBeforeUnmount(() => {
+  if (subscribeSettingEvent.value) {
+    subscribeSettingEvent.value();
+  }
 });
 </script>
 
@@ -162,8 +189,8 @@ onMounted(() => {
             :icon-name="iconName"
             :address="item.address"
             :asset-name="item.assetName"
-            :protocol="item.permed_protocols?.[0]?.name"
-            :user="item.permed_accounts?.[0]?.username"
+            :protocol="item.permed_protocols![0]!.name"
+            :user="item.permed_accounts![0]!.username"
             class="border border-solid"
             :style="{
               borderColor:
@@ -194,8 +221,8 @@ onMounted(() => {
         v-if="currentSelectedCardInfo"
         v-model:protocol="draftProtocol"
         v-model:account="draftAccount"
-        :accounts="currentSelectedCardInfo?.permed_accounts"
-        :protocols="currentSelectedCardInfo?.permed_protocols"
+        :accounts="currentSelectedCardInfo.permed_accounts!"
+        :protocols="currentSelectedCardInfo.permed_protocols!"
       />
     </Modal>
   </div>
