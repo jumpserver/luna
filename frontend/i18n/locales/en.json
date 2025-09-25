@@ -5,7 +5,9 @@
 		"UnSigned": "UnSigned",
 		"Version": "Version",
 		"NoData": "No Data",
-		"NoDataDescription": "Please login first"
+		"LoginSite": "Login Site",
+		"NoDataDescription": "Please login first",
+		"ConnectionSettings": "Connection Settings"
 	},
 	"ToolTips": {
 		"LightMode": "Light Mode",

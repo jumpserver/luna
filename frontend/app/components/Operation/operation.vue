@@ -17,7 +17,6 @@ const lightColor = componentsConfig.operation.lightColor;
 
 const inputValue = ref('');
 
-// 刷新、排序、切换布局
 const actionItems = computed<ActionItem[]>(() => [
   {
     key: 'refresh',
@@ -127,10 +126,11 @@ const actionItems = computed<ActionItem[]>(() => [
     onClick: () => {
       // eslint-disable-next-line no-new
       new useTauriWebviewWindowWebviewWindow('secondary', {
-        title: '',
+        title: t('Common.ConnectionSettings'),
         url: '/setting',
         minWidth: 760,
         minHeight: 520,
+        hiddenTitle: true,
         titleBarStyle: 'overlay',
         trafficLightPosition: new LogicalPosition(10, 22),
       });
@@ -152,10 +152,6 @@ const useDebouncedSearch = useDebounceFn(handleSearch, 200);
       backgroundColor: theme === 'dark' ? darkColor : lightColor,
     }"
   >
-    <!-- <section>
-      <span class="text-xl font-bold"> 资产管理 </span>
-    </section> -->
-
     <section class="flex item-center flex-nowrap gap-3 h-7 mr-2">
       <UInput
         v-model="inputValue"

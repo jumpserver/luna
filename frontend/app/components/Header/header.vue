@@ -9,6 +9,7 @@ import type {
   UserIntiInfo,
 } from '~/types/index';
 
+import { LogicalPosition } from '@tauri-apps/api/dpi';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
@@ -219,12 +220,15 @@ const handleConfirm = () => {
   }
 
   loginPage.value = new useTauriWebviewWindowWebviewWindow('loginPage', {
-    title: '',
+    title: `${t('Common.LoginSite')} - ${inputSite.value}`,
     url: inputSite.value,
     width: 600,
     height: 800,
     minWidth: 600,
     minHeight: 800,
+    hiddenTitle: true,
+    titleBarStyle: 'overlay',
+    trafficLightPosition: new LogicalPosition(10, 22),
   });
 
   nextTick(async () => {

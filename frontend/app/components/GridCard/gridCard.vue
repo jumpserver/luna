@@ -49,7 +49,7 @@ const showEdit = ref(false);
 const items = ref<ContextMenuItem[][]>([
   [
     {
-      label: t('ContextMenu.QuickConnect'),
+      label: t('ContextMenu.Connect'),
       icon: 'i-lucide-unplug',
     },
     {
@@ -126,6 +126,7 @@ const detailRows = computed(() => {
 });
 
 const handleConnect = () => {
+  // TODO
   getConnectToken({
     asset: props.assetId,
     protocol: displayProtocol.value,
@@ -179,7 +180,7 @@ const handleConnect = () => {
 
               <section class="flex items-center gap-2">
                 <UButton
-                  icon="i-lucide-rocket"
+                  icon="heroicons:rocket-launch"
                   size="xs"
                   color="primary"
                   variant="outline"
@@ -189,7 +190,7 @@ const handleConnect = () => {
                   <!-- prettier-ignore -->
                   <span
 										class="inline-block overflow-hidden whitespace-nowrap max-w-0 opacity-0 ml-0
-                           transition-all duration-400 ease-in-out group-hover:max-w-[12rem] group-hover:opacity-100 group-hover:ml-1
+                           transition-all duration-300 ease-in-out group-hover:max-w-[12rem] group-hover:opacity-100 group-hover:ml-1
                            group-focus:max-w-[12rem] group-focus:opacity-100 group-focus:ml-1"
 									>
 										{{ t('ContextMenu.Connect') }}
@@ -197,7 +198,7 @@ const handleConnect = () => {
                 </UButton>
 
                 <UButton
-                  icon="i-lucide-square-pen"
+                  icon="material-symbols:edit-document-outline"
                   size="xs"
                   color="primary"
                   variant="outline"

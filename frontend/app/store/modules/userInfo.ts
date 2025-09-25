@@ -113,6 +113,10 @@ export const useUserInfoStore = defineStore(
         userMap.value = {};
         currentConnectionInfoMap.value = {};
         currentRdpClientOption.value = {};
+
+        nextTick(() => {
+          useEventBus().emit('clearAssets', undefined);
+        });
       }
     };
 

@@ -41,6 +41,16 @@ watch([editModalOpen, currentSelectedCardInfo], ([open, info]) => {
   if (open && info) initDraft();
 });
 
+watch(
+  () => loggedIn.value,
+  (nv) => {
+    if (nv) {
+      getSettings();
+      fetchNextPage();
+    }
+  }
+);
+
 function initDraft() {
   const asset = currentSelectedCardInfo.value;
   if (!asset) return;
@@ -106,8 +116,6 @@ const modalTitle = computed(() => {
 });
 
 onMounted(() => {
-  getSettings();
-  fetchNextPage();
   listenTauriEvent();
   providerClearSelection?.(clearSelectedCard);
 });
@@ -170,7 +178,9 @@ const labelColumnTemplate = computed(
                     class="grid items-center gap-x-3 gap-y-1"
                     :style="{ gridTemplateColumns: labelColumnTemplate }"
                   >
-                    <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                    <span
+                      class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
+                    >
                       <USkeleton class="h-4 w-16" />
                     </span>
                     <div class="min-w-0">
@@ -182,7 +192,9 @@ const labelColumnTemplate = computed(
                     class="grid items-center gap-x-3 gap-y-1"
                     :style="{ gridTemplateColumns: labelColumnTemplate }"
                   >
-                    <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                    <span
+                      class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
+                    >
                       <USkeleton class="h-4 w-16" />
                     </span>
                     <div class="min-w-0">
@@ -194,7 +206,9 @@ const labelColumnTemplate = computed(
                     class="grid items-center gap-x-3 gap-y-1"
                     :style="{ gridTemplateColumns: labelColumnTemplate }"
                   >
-                    <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                    <span
+                      class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
+                    >
                       <USkeleton class="h-4 w-16" />
                     </span>
                     <div class="min-w-0">

@@ -2,6 +2,7 @@
 import type { NavigationMenuItem } from '@nuxt/ui';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
+const { t } = useI18n();
 const userSettingStore = useUserSettingStore();
 
 const { theme } = storeToRefs(userSettingStore);
@@ -36,7 +37,7 @@ const items = ref<NavigationMenuItem[][]>([
         },
         {
           label: 'Telnet',
-          to: '/setting/telnet'
+          to: '/setting/telnet',
         },
       ],
     },
@@ -111,10 +112,12 @@ const items = ref<NavigationMenuItem[][]>([
   >
     <template #header>
       <div
-        class="flex items-center justify-center h-12"
+        class="flex items-center justify-center h-10"
         @mousedown="handleWindowDrag"
       >
-        <span class="text-sm font-bold"> 连接设置 </span>
+        <span class="text-sm font-bold">
+          {{ t('Common.ConnectionSettings') }}
+        </span>
       </div>
     </template>
 
@@ -123,8 +126,10 @@ const items = ref<NavigationMenuItem[][]>([
         <UNavigationMenu
           :items="items"
           :highlight="false"
+          color="primary"
+          variant="link"
           orientation="vertical"
-          class="data-[orientation=vertical]:w-48"
+          class="w-48"
         />
 
         <UCard class="flex-1" variant="soft">

@@ -5,7 +5,9 @@
 		"UnSigned": "未登录",
 		"Version": "当前版本",
 		"NoData": "暂无数据",
-		"NoDataDescription": "请先登录"
+		"NoDataDescription": "请先登录",
+		"ConnectionSettings": "连接设置",
+		"LoginSite": "登录站点"
 	},
 	"ToolTips": {
 		"LightMode": "亮色模式",

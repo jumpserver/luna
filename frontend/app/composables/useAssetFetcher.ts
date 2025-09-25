@@ -165,8 +165,6 @@ export const useAssetFetcher = (
         const resp = event.payload as eventPayload;
         const pageData = resp.data.results ?? [];
 
-        console.log('response data', resp.data);
-
         // 追加到列表
         rawAssetsList.value.push(...pageData);
 
@@ -209,9 +207,10 @@ export const useAssetFetcher = (
     subscribeGetAssetFailedEvent.value?.();
   };
 
+  let unsubscribeSearch: (() => void) | null = null;
   let unsubscribeSetSort: (() => void) | null = null;
   let unsubscribeRefresh: (() => void) | null = null;
-  let unsubscribeSearch: (() => void) | null = null;
+  let unsubscribeClearAssets: (() => void) | null = null;
 
   const listenEventBusEvent = () => {
     const { on } = useEventBus();
@@ -239,12 +238,22 @@ export const useAssetFetcher = (
       },
       false
     );
+
+    unsubscribeClearAssets = on(
+      'clearAssets',
+      () => {
+        rawAssetsList.value = [];
+        offset.value = 0;
+        hasMore.value = true;
+      },
+    );
   };
 
   const unListenEventBusEvent = () => {
+    unsubscribeSearch?.();
     unsubscribeSetSort?.();
     unsubscribeRefresh?.();
-    unsubscribeSearch?.();
+    unsubscribeClearAssets?.();
   };
 
   // if (scrollRef) {
@@ -262,11 +271,11 @@ export const useAssetFetcher = (
   });
 
   return {
-    isLoading,
     hasMore,
+    isLoading,
     assetsData,
-    scrollbarStyles,
     rawAssetsList,
+    scrollbarStyles,
 
     fetchNextPage,
     refreshAssets,
