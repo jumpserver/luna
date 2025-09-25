@@ -7,8 +7,9 @@ mod service;
 use crate::setup::apply_window_effects;
 use crate::setup::setup_tray;
 
-use crate::commands::url_watcher::url_watcher;
+use crate::commands::pull_up::pull_up;
 use crate::commands::get_assets::get_assets;
+use crate::commands::url_watcher::url_watcher;
 use crate::commands::get_setting::get_setting;
 use crate::commands::get_token::get_connect_token;
 
@@ -41,8 +42,9 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
-            url_watcher,
+            pull_up,
             get_assets,
+            url_watcher,
             get_setting,
             get_connect_token
         ])

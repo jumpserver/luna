@@ -9,6 +9,7 @@ pub struct TokenRequestBody {
     pub protocol: String,
     pub input_username: String,
     pub input_secret: String,
+    pub connect_method: String,
 }
 
 pub struct TokenService {

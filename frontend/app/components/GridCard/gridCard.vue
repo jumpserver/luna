@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ContextMenuItem } from '@nuxt/ui';
+import type { PermedAccount, PermedProtocol } from '~/types/index';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 
 interface DetailRow {
@@ -10,15 +11,24 @@ interface DetailRow {
   class?: string;
 }
 
-const props = defineProps<{
-  assetId: string;
-  zone: string;
-  address: string;
-  iconName: string;
-  protocol: string;
-  assetName: string;
-  user: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    zone: string;
+    user: string;
+    assetId: string;
+    address: string;
+    iconName: string;
+    protocol: string;
+    assetName: string;
+    highlight: boolean;
+    accounts?: PermedAccount[];
+    protocols?: PermedProtocol[];
+  }>(),
+  {
+    accounts: () => [],
+    protocols: () => [],
+  }
+);
 
 const emits = defineEmits<{
   (e: 'openEditModal'): void;
@@ -26,12 +36,17 @@ const emits = defineEmits<{
 
 const { t, locale } = useI18n();
 const userInfoStore = useUserInfoStore();
-const { getConnectToken } = useAssetConnect();
+const {
+  getConnectToken,
+  dispatchConnectMethod,
+  getUserId,
+  generateConnectOptions,
+} = useAssetConnect();
+
+// prettier-ignore
 const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
 
 const showEdit = ref(false);
-
-// TODO 右键需要与 edit 中的保持一致
 const items = ref<ContextMenuItem[][]>([
   [
     {
@@ -112,19 +127,27 @@ const detailRows = computed(() => {
 });
 
 const handleConnect = () => {
-  console.log('props', props);
-  getConnectToken();
+  getConnectToken({
+    asset: props.assetId,
+    protocol: displayProtocol.value,
+    input_username: displayUser.value,
+    input_secret: '',
+    account: getUserId(props.accounts, props.assetId, props.user),
+    connect_method: dispatchConnectMethod(displayProtocol.value),
+    connect_options: generateConnectOptions(),
+  });
 };
 </script>
 
 <template>
-  <UCard
-    variant="outline"
+  <UPageCard
+    class="w-full"
+    variant="subtle"
+    highlight-color="primary"
+    :highlight="highlight"
     :ui="{
-      header: 'p-2',
-      body: 'sm:px-4 sm:py-4',
+      body: 'sm:p-2',
     }"
-    class="hover:cursor-pointer w-full"
     @mouseover="handleMouseOver"
     @mouseleave="handleMouseLeave"
   >
@@ -137,7 +160,7 @@ const handleConnect = () => {
     >
       <section class="flex gap-4 flex-nowrap items-center w-full">
         <div class="flex items-center w-full gap-1">
-          <div class="flex flex-col flex-1 gap-2 text-xs-plus min-w-0">
+          <div class="flex flex-col flex-1 gap-1 text-xs-plus min-w-0">
             <div class="flex justify-between">
               <section class="flex">
                 <div class="flex items-center gap-2">
@@ -184,7 +207,7 @@ const handleConnect = () => {
               </section>
             </div>
 
-            <USeparator orientation="horizontal" size="sm" class="h-1" />
+            <USeparator orientation="horizontal" size="md" class="h-2" />
 
             <div class="flex flex-col gap-1 text-xs-plus">
               <div
@@ -201,20 +224,15 @@ const handleConnect = () => {
 
                 <div class="min-w-0">
                   <template v-if="row.popover">
-                    <UPopover arrow mode="hover" :open-delay="500">
-                      <span class="truncate" :class="row.class">
+                    <UTooltip arrow :text="row.content">
+                      <span :class="row.class">
                         {{ row.content }}
                       </span>
-                      <template #content>
-                        <p class="p-2 text-xs-plus font-mono">
-                          {{ row.content }}
-                        </p>
-                      </template>
-                    </UPopover>
+                    </UTooltip>
                   </template>
 
                   <template v-else>
-                    <span class="truncate" :class="row.class">
+                    <span :class="row.class">
                       {{ row.content }}
                     </span>
                   </template>
@@ -225,5 +243,5 @@ const handleConnect = () => {
         </div>
       </section>
     </UContextMenu>
-  </UCard>
+  </UPageCard>
 </template>

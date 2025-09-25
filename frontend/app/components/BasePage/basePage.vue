@@ -187,7 +187,7 @@ onBeforeUnmount(() => {
 
       <div
         v-else
-        class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-2 p-2"
+        class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-4 p-2"
       >
         <template v-if="layouts === 'grid'">
           <GridCard
@@ -198,15 +198,11 @@ onBeforeUnmount(() => {
             :icon-name="iconName"
             :address="item.address"
             :asset-name="item.assetName"
-            :protocol="item.permed_protocols![0]!.name"
-            :user="item.permed_accounts![0]!.username"
-            class="border border-solid"
-            :style="{
-              borderColor:
-                selectedCardIndex === index
-                  ? componentsConfig.pages.focusColor
-                  : 'transparent',
-            }"
+            :accounts="item.permed_accounts || []"
+            :protocols="item.permed_protocols || []"
+            :protocol="item.permed_protocols?.[0]?.name || ''"
+            :user="item.permed_accounts?.[0]?.username || ''"
+            :highlight="selectedCardIndex === index"
             @open-edit-modal="editModalOpen = true"
             @click="handleCardClick(index, $event)"
           />

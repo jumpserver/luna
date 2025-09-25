@@ -114,6 +114,11 @@ export interface AssetZone {
   name: string;
 }
 
+export interface UserItem {
+  id: string;
+  name: string;
+}
+
 export interface PermedProtocol {
   name: string;
   port: number;
@@ -207,4 +212,44 @@ export interface SettingResponse {
     is_right_click_quickly_paste: boolean;
     terminal_theme_name: string;
   };
+}
+
+export interface ConnectionBody {
+  asset: string;
+  account: string;
+  protocol: string;
+  input_username: string;
+  input_secret: string;
+  connect_method: string;
+  connect_options: RdpGraphics;
+}
+
+export interface TokenResponse {
+  account: string;
+  actions: [];
+  asset: AssetNode;
+  asset_display: string;
+  connect_method: string;
+  connect_options: RdpGraphics;
+  created_by: string;
+  date_created: string;
+  date_expired: string;
+  date_updated: string;
+  expire_time: number;
+  face_monitor_token: string;
+  from_ticket: any;
+  from_ticket_info: any;
+  id: string;
+  input_username: string;
+  is_active: boolean;
+  is_expired: boolean;
+  is_reusable: boolean;
+  org_id: string;
+  org_name: string;
+  protocol: string;
+  remote_addr: string;
+  updated_by: string;
+  user: UserItem;
+  user_display: string;
+  value: string;
 }

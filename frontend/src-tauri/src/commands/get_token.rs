@@ -1,11 +1,25 @@
-use log::info;
+use serde_json::Value;
+use serde_json::{from_str, json};
+use tauri::{AppHandle, Emitter};
 
 use crate::service::token::{TokenRequestBody, TokenService};
 
 #[tauri::command]
-pub async fn get_connect_token(site: String, cookie_header: String, body: TokenRequestBody) {
+pub async fn get_connect_token(
+    app: AppHandle,
+    site: String,
+    cookie_header: String,
+    body: TokenRequestBody,
+) {
     let token_service = TokenService::new(site, cookie_header, body);
     let token_data = token_service.get_connect_token().await;
 
-    info!("获取连接 token 数据成功: {}", token_data.data);
+    if token_data.status == 201 {
+        let _ = app.emit(
+            "get-token-success",
+            json!({ "status": token_data.status, "data": from_str::<Value>(&token_data.data).unwrap() }),
+        );
+    } else {
+        let _ = app.emit("get-token-failure", json!({ "status": token_data.status }));
+    }
 }

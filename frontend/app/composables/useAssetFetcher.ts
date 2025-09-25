@@ -165,6 +165,8 @@ export const useAssetFetcher = (
         const resp = event.payload as eventPayload;
         const pageData = resp.data.results ?? [];
 
+        console.log('response data', resp.data);
+
         // 追加到列表
         rawAssetsList.value.push(...pageData);
 

@@ -34,6 +34,9 @@ where
 
 pub trait MaybeJson {
     fn apply(self, rb: reqwest::RequestBuilder) -> reqwest::RequestBuilder;
+    fn debug_body(&self) -> Option<String> {
+        None
+    }
 }
 
 impl<Q> MaybeJson for &Q
@@ -43,11 +46,19 @@ where
     fn apply(self, rb: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
         rb.json(self).header("X-JMS-ORG", self.org())
     }
+
+    fn debug_body(&self) -> Option<String> {
+        serde_json::to_string(*self).ok()
+    }
 }
 
 impl MaybeJson for &serde_json::Value {
     fn apply(self, rb: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
         rb.json(self)
+    }
+
+    fn debug_body(&self) -> Option<String> {
+        Some(self.to_string())
     }
 }
 
@@ -131,6 +142,10 @@ where
     M: MaybeJson,
 {
     info!("POST {}", url);
+
+    if let Some(body) = maybe_json.debug_body() {
+        info!("body: {}", body);
+    }
 
     let client = reqwest::Client::new();
     let request = maybe_json

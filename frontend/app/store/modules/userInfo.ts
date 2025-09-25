@@ -21,8 +21,8 @@ export const useUserInfoStore = defineStore(
     const userMap = ref<Record<string, SiteUserData>>({});
 
     const currentUser = ref<UserData | null>(null);
-    const currentRdpClientOption = ref<RdpGraphics>({});
     const currentOrganizations = ref<PermOrgItem[]>([]);
+    const currentRdpClientOption = ref<RdpGraphics>({});
     const currentConnectionInfoMap = ref<Record<string, ConnectionInfo>>({});
 
     const hasUser = () => computed(() => Object.keys(userMap.value).length > 0);
