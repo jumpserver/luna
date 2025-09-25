@@ -322,6 +322,10 @@ const listenTauriEvent = async () => {
           org: currentOrgData,
           system_roles: profileData.system_roles,
           availableOrgs,
+          connectionInfo: {
+            protocol: '',
+            username: '',
+          },
         });
 
         currentOrg.value = currentOrgData.name;

@@ -43,7 +43,6 @@ const {
   generateConnectOptions,
 } = useAssetConnect();
 
-// prettier-ignore
 const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
 
 const showEdit = ref(false);

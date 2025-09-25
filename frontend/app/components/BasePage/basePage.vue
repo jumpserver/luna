@@ -18,8 +18,7 @@ const providerClearSelection = inject<(cb: () => void) => void>(
   'providerClearSelection'
 );
 
-const { t } = useI18n();
-const { componentsConfig } = useAppConfig();
+const { t, locale } = useI18n();
 
 const editModalOpen = ref(false);
 const draftAccount = ref<string>('');
@@ -118,6 +117,15 @@ onBeforeUnmount(() => {
     subscribeSettingEvent.value();
   }
 });
+
+// Keep skeleton label width aligned with GridCard
+const labelMinWidth = computed(() =>
+  locale.value.startsWith('zh') ? '24px' : '72px'
+);
+
+const labelColumnTemplate = computed(
+  () => `minmax(${labelMinWidth.value}, max-content) 1fr`
+);
 </script>
 
 <template>
@@ -128,44 +136,76 @@ onBeforeUnmount(() => {
     >
       <div
         v-if="isLoading"
-        class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-2 p-2"
+        class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-4 p-2"
         aria-busy="true"
       >
-        <!-- TODO 骨架屏的样式需要与实际展示的保持一致 -->
-        <UCard
+        <UPageCard
           v-for="i in skeletonCount"
           :key="i"
-          variant="outline"
-          :ui="{ header: 'p-2', body: 'sm:px-4 sm:py-4' }"
-          class="hover:cursor-pointer w-full"
+          variant="subtle"
+          :ui="{ body: 'sm:p-2' }"
+          class="w-full"
         >
           <section class="flex gap-4 flex-nowrap items-center w-full">
-            <USkeleton class="h-10 w-10 rounded-md" />
+            <div class="flex items-center w-full gap-1">
+              <div class="flex flex-col flex-1 gap-1 text-xs-plus min-w-0">
+                <div class="flex justify-between">
+                  <section class="flex">
+                    <div class="flex items-center gap-2">
+                      <USkeleton class="h-10 w-10 rounded-md" />
+                      <USkeleton class="h-5 w-2/3" />
+                    </div>
+                  </section>
 
-            <div class="flex flex-col flex-1 gap-2 text-xs-plus">
-              <div class="flex justify-between">
-                <section class="flex items-center gap-2">
-                  <USkeleton class="size-2 rounded-full" />
-                  <USkeleton class="h-5 w-2/3" />
-                </section>
-              </div>
+                  <section class="flex items-center gap-2">
+                    <USkeleton class="h-8 w-8 rounded-lg" />
+                    <USkeleton class="h-8 w-8 rounded-lg" />
+                  </section>
+                </div>
 
-              <USeparator orientation="horizontal" size="sm" class="h-1" />
+                <USeparator orientation="horizontal" size="md" class="h-2" />
 
-              <div class="flex items-center gap-2">
-                <USkeleton class="h-6 w-28 rounded-md" />
-                <USeparator orientation="vertical" size="sm" class="h-4" />
-                <USkeleton class="h-6 w-16 rounded-md" />
-                <USeparator orientation="vertical" size="sm" class="h-4" />
-                <USkeleton class="h-6 w-16 rounded-md" />
-                <USeparator orientation="vertical" size="sm" class="h-4" />
-                <USkeleton class="h-6 w-14 rounded-md" />
+                <div class="flex flex-col gap-1 text-xs-plus">
+                  <div
+                    class="grid items-center gap-x-3 gap-y-1"
+                    :style="{ gridTemplateColumns: labelColumnTemplate }"
+                  >
+                    <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                      <USkeleton class="h-4 w-16" />
+                    </span>
+                    <div class="min-w-0">
+                      <USkeleton class="h-4 w-3/4" />
+                    </div>
+                  </div>
+
+                  <div
+                    class="grid items-center gap-x-3 gap-y-1"
+                    :style="{ gridTemplateColumns: labelColumnTemplate }"
+                  >
+                    <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                      <USkeleton class="h-4 w-16" />
+                    </span>
+                    <div class="min-w-0">
+                      <USkeleton class="h-4 w-2/3" />
+                    </div>
+                  </div>
+
+                  <div
+                    class="grid items-center gap-x-3 gap-y-1"
+                    :style="{ gridTemplateColumns: labelColumnTemplate }"
+                  >
+                    <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                      <USkeleton class="h-4 w-16" />
+                    </span>
+                    <div class="min-w-0">
+                      <USkeleton class="h-4 w-1/2" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            <USkeleton class="h-8 w-8 rounded-lg" />
           </section>
-        </UCard>
+        </UPageCard>
       </div>
 
       <div
