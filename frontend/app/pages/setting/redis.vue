@@ -11,11 +11,11 @@ const userSettingStore = useUserSettingStore();
 const { appConfig } = storeToRefs(userSettingStore);
 const { selectClient } = useApplicationConfig();
 
-const protocol = 'ssh';
-const category = 'terminal' as const;
+const protocol = 'redis';
+const category = 'databases' as const;
 
-const sshItems = computed<ConfigItem[]>(() => {
-  const list = appConfig.value?.terminal ?? [];
+const items = computed<ConfigItem[]>(() => {
+  const list = appConfig.value?.databases ?? [];
   return list.filter((i) => i.protocol?.includes(protocol));
 });
 
@@ -27,9 +27,9 @@ const handleToggle = async (item: ConfigItem) => {
 
 <template>
   <div class="flex flex-col gap-2">
-    <template v-if="sshItems.length">
+    <template v-if="items.length">
       <SettingItems
-        v-for="item in sshItems"
+        v-for="item in items"
         :key="item.name"
         :item="item"
         :protocol="protocol"
@@ -37,7 +37,6 @@ const handleToggle = async (item: ConfigItem) => {
         @toggle="() => handleToggle(item)"
       />
     </template>
-
     <div v-else class="text-center text-sm text-gray-500 py-10">
       {{ t('Common.NoData') }}
     </div>

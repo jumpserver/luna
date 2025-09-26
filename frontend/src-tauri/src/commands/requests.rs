@@ -3,7 +3,6 @@ use crate::utils::{extract_csrf_token, to_api_response, tz_offset_string};
 
 use log::info;
 use reqwest::header::COOKIE;
-use serde::ser::Serializer;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -59,28 +58,6 @@ impl MaybeJson for &serde_json::Value {
 
     fn debug_body(&self) -> Option<String> {
         Some(self.to_string())
-    }
-}
-
-// 一个通用包装器：不改变 JSON 序列化（仅序列化内部 body），
-// 但实现 HasOrg 以便沿用 GET 同款自动添加 X-JMS-ORG 的逻辑。
-pub struct WithOrg<'a, T: Serialize + ?Sized> {
-    pub body: &'a T,
-    pub org: &'a str,
-}
-
-impl<'a, T: Serialize + ?Sized> Serialize for WithOrg<'a, T> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.body.serialize(serializer)
-    }
-}
-
-impl<'a, T: Serialize + ?Sized> HasOrg for WithOrg<'a, T> {
-    fn org(&self) -> &str {
-        self.org
     }
 }
 

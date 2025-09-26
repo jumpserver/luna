@@ -26,7 +26,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
 const items = ref<NavigationMenuItem[][]>([
   [
     {
-      label: '命令行终端',
+      label: t('Setting.CommandTerminal'),
       active: true,
       defaultOpen: true,
       icon: 'proicons:terminal',
@@ -42,53 +42,63 @@ const items = ref<NavigationMenuItem[][]>([
       ],
     },
     {
-      label: '文件传输',
+      label: t('Setting.FileTransfer'),
       defaultOpen: true,
       icon: 'proicons:document',
       children: [
         {
           label: 'SFTP',
+          to: '/setting/sftp',
         },
       ],
     },
     {
-      label: '远程桌面',
+      label: t('Setting.RemoteDesktop'),
       defaultOpen: true,
       icon: 'proicons:laptop',
       children: [
         {
           label: 'RDP',
+          to: '/setting/rdp',
         },
         {
           label: 'VNC',
+          to: '/setting/vnc',
         },
       ],
     },
     {
-      label: '数据库',
+      label: t('Setting.Database'),
       defaultOpen: true,
       icon: 'proicons:database',
       children: [
         {
           label: 'MySQL',
+          to: '/setting/mysql',
         },
         {
           label: 'MongoDB',
+          to: '/setting/mongodb',
         },
         {
           label: 'Redis',
+          to: '/setting/redis',
         },
         {
           label: 'PostgreSQL',
+          to: '/setting/pg',
         },
         {
           label: 'Oracle',
+          to: '/setting/oracle',
         },
         {
           label: 'SQL Server',
+          to: '/setting/sqlserver',
         },
         {
           label: 'DB2',
+          to: '/setting/db2',
         },
       ],
     },

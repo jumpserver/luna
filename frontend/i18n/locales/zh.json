@@ -90,5 +90,12 @@
 		"Manual": "手动账号",
 		"Username": "用户名",
 		"Password": "密码"
+	},
+	"Setting": {
+		"CommandTerminal": "命令行终端",
+		"FileTransfer": "文件传输",
+		"RemoteDesktop": "远程桌面",
+		"Database": "数据库",
+		"DownloadApplication": "下载应用"
 	}
 }

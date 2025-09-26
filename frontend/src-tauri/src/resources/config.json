@@ -1,0 +1,736 @@
+{
+	"macos": {
+		"terminal": [
+			{
+				"name": "terminal",
+				"display_name": "Terminal",
+				"protocol": ["ssh", "telnet"],
+				"comment": {
+					"zh": "Terminal 是 macOS 系统自带的终端应用，位于“实用工具”文件夹。",
+					"en": "Terminal is the built-in terminal app on macOS, located in the Utilities folder."
+				},
+				"download_url": "",
+				"type": "terminal",
+				"path": "Terminal",
+				"arg_format": "{protocol} {username}@{host} -p {port} -P {value}",
+				"match_first": ["ssh", "telnet"],
+				"is_internal": true,
+				"is_default": true,
+				"is_set": true
+			},
+			{
+				"name": "iterm",
+				"display_name": "iTerm2",
+				"protocol": ["ssh", "telnet"],
+				"comment": {
+					"zh": "iTerm2 是 macOS 上功能强大的终端模拟器。\n\n需要手动下载安装，保存后生效。",
+					"en": "iTerm2 is a powerful terminal emulator for macOS.\n\nInstall manually and click Save to enable."
+				},
+				"download_url": "https://iterm2.com/downloads.html",
+				"type": "terminal",
+				"path": "iTerm2",
+				"arg_format": "{protocol} {username}@{host} -p {port} -P {value}",
+				"match_first": [],
+				"is_internal": true,
+				"is_default": false,
+				"is_set": false
+			},
+			{
+				"name": "securecrt",
+				"display_name": "SecureCRT",
+				"protocol": ["ssh", "telnet"],
+				"comment": {
+					"zh": "SecureCRT 是 VanDyke Software 开发的 SSH/Telnet 客户端与终端软件。\n\n需要手动下载安装，保存后生效。",
+					"en": "SecureCRT is an SSH and Telnet client and terminal from VanDyke Software.\n\nInstall manually and click Save to enable."
+				},
+				"download_url": "https://www.vandyke.com/cgi-bin/releases.php?product=securecrt",
+				"type": "terminal",
+				"path": "/Applications/SecureCRT.app/Contents/MacOS/SecureCRT",
+				"arg_format": "/N {name} /T /SSH2 /ACCEPTHOSTKEYS /p {port} /password {value} /L {username} {host}",
+				"match_first": [],
+				"is_internal": false,
+				"is_default": false,
+				"is_set": false
+			}
+		],
+		"remotedesktop": [
+			{
+				"name": "mstsc",
+				"display_name": "Windows App",
+				"protocol": ["rdp"],
+				"comment": {
+					"zh": "Windows App 是微软的远程连接工具，可从几乎任何位置连接到远程 PC 和工作资源。\n\n如未预装，请手动下载安装，保存后生效。",
+					"en": "Windows App is Microsoft’s remote connectivity tool to access remote PCs and work resources from almost anywhere.\n\nIf not preinstalled, install manually and click Save to enable."
+				},
+				"download_url": "",
+				"type": "remotedesktop",
+				"path": "/Applications/Windows App.app",
+				"arg_format": "{file}",
+				"match_first": ["rdp"],
+				"is_internal": true,
+				"is_default": true,
+				"is_set": true
+			},
+			{
+				"name": "vncviewer",
+				"display_name": "RealVNC Viewer",
+				"protocol": ["vnc"],
+				"comment": {
+					"zh": "RealVNC Viewer 是基于 VNC 协议的远程桌面客户端，允许从本机访问并控制远程计算机的桌面。\n\n需要手动下载安装，保存后生效。",
+					"en": "RealVNC Viewer is a VNC-based remote desktop client that lets you access and control a remote computer’s desktop from your own machine.\n\nInstall manually and click Save to enable."
+				},
+				"download_url": "https://www.realvnc.com/en/connect/download/viewer/",
+				"type": "remotedesktop",
+				"path": "/Applications/VNC Viewer.app/Contents/MacOS/vncviewer",
+				"arg_format": "-WarnUnencrypted=0 -VerifyId=0 -UserName={username} {host}:{port}",
+				"match_first": ["vnc"],
+				"is_internal": false,
+				"is_default": false,
+				"is_set": false
+			}
+		],
+		"filetransfer": [
+			{
+				"name": "iterm",
+				"display_name": "iTerm2",
+				"protocol": ["sftp"],
+				"comment": {
+					"zh": "iTerm2 是 macOS 上的终端模拟器，可用于 SFTP 文件传输。\n\n需要手动下载安装，保存后生效。",
+					"en": "iTerm2 is a terminal emulator for macOS that can be used for SFTP file transfers.\n\nInstall manually and click Save to enable."
+				},
+				"download_url": "https://iterm2.com/downloads.html",
+				"type": "filetransfer",
+				"path": "iTerm2",
+				"arg_format": "{protocol} {username}@{host} -p {port} -P {value}",
+				"match_first": ["sftp"],
+				"is_internal": true,
+				"is_default": false,
+				"is_set": false
+			},
+			{
+				"name": "securefx",
+				"display_name": "SecureFX",
+				"protocol": ["sftp"],
+				"comment": {
+					"zh": "SecureFX 是一款安全的文件传输客户端，提供直观易用的图形界面。\n\n需要手动下载安装，保存后生效。",
+					"en": "SecureFX is a secure file transfer client with an intuitive, easy-to-learn UI.\n\nInstall manually and click Save to enable."
+				},
+				"download_url": "https://www.vandyke.com/cgi-bin/releases.php?product=securefx",
+				"type": "filetransfer",
+				"path": "/Applications/SecureFX.app/Contents/MacOS/SecureFX",
+				"arg_format": "{protocol}://{username}:{value}@{host}:{port}",
+				"match_first": [],
+				"is_internal": false,
+				"is_default": false,
+				"is_set": false
+			}
+		],
+		"databases": [
+			{
+				"name": "terminal",
+				"display_name": "Terminal",
+				"protocol": [
+					"oracle",
+					"mysql",
+					"postgresql",
+					"mariadb",
+					"redis",
+					"sqlserver",
+					"mongodb"
+				],
+				"comment": {
+					"zh": "Terminal 是 macOS 系统自带的终端应用，可用于连接常见数据库的命令行客户端。",
+					"en": "Terminal is the built-in macOS terminal, suitable for command-line database clients."
+				},
+				"download_url": "",
+				"type": "databases",
+				"path": "Terminal",
+				"arg_format": "",
+				"match_first": [
+					"oracle",
+					"mysql",
+					"postgresql",
+					"mariadb",
+					"redis",
+					"sqlserver",
+					"mongodb"
+				],
+				"is_internal": true,
+				"is_default": false,
+				"is_set": true
+			},
+			{
+				"name": "dbeaver",
+				"display_name": "DBeaver Community",
+				"protocol": ["oracle", "mysql", "postgresql", "mariadb", "sqlserver"],
+				"comment": {
+					"zh": "DBeaver Community 是通用的数据库管理与 SQL 客户端，支持 MySQL、PostgreSQL、Oracle、SQL Server 等基于 JDBC 的数据库。\n\n需要手动下载安装，保存后生效。",
+					"en": "DBeaver Community is a universal database manager and SQL client supporting MySQL, PostgreSQL, Oracle, SQL Server, and other JDBC-compatible databases.\n\nInstall manually and click Save to enable."
+				},
+				"download_url": "https://dbeaver.io/download/",
+				"type": "databases",
+				"path": "/Applications/DBeaver.app/Contents/MacOS/dbeaver",
+				"arg_format": "-con name={name}|driver={protocol}|user={username}|password={value}|database={dbname}|host={host}|port={port}|save=false|connect=true",
+				"match_first": [],
+				"is_internal": false,
+				"is_default": false,
+				"is_set": false
+			},
+			{
+				"name": "another_redis",
+				"display_name": "Another Redis Desktop Manager",
+				"protocol": ["redis"],
+				"comment": {
+					"zh": "Another Redis Desktop Manager 是一款更快、稳定且易用的 Redis 图形化管理客户端。\n\n需要手动下载安装，保存后生效。",
+					"en": "Another Redis Desktop Manager is a fast, stable, and easy-to-use GUI client for Redis.\n\nInstall manually and click Save to enable."
+				},
+				"download_url": "https://github.com/qishibo/AnotherRedisDesktopManager",
+				"type": "databases",
+				"path": "/Applications/Another Redis Desktop Manager.app/Contents/MacOS/Another Redis Desktop Manager",
+				"arg_format": "--host {host} --port {port} --auth {username}@{value}",
+				"match_first": [],
+				"is_internal": false,
+				"is_default": false,
+				"is_set": false
+			},
+			{
+				"name": "mongo_compass",
+				"display_name": "MongoDB Compass",
+				"protocol": ["mongodb"],
+				"comment": {
+					"zh": "MongoDB Compass 是官方 GUI，便于探索与操作 MongoDB，提供模式可视化、实时性能指标与强大的查询能力。\n\n需要手动下载安装，保存后生效。",
+					"en": "MongoDB Compass is the official GUI for MongoDB, offering schema visualization, real-time performance metrics, and powerful querying.\n\nInstall manually and click Save to enable."
+				},
+				"download_url": "https://www.mongodb.com/try/download/compass",
+				"type": "databases",
+				"path": "/Applications/MongoDB Compass.app/Contents/MacOS/MongoDB Compass",
+				"arg_format": "mongodb://{username}:{value}@{host}:{port}/{dbname}",
+				"match_first": [],
+				"is_internal": false,
+				"is_default": false,
+				"is_set": false
+			}
+		]
+	},
+	"windows": {
+    "terminal": [
+      {
+        "name": "putty",
+        "display_name": "PuTTY",
+        "protocol": ["ssh", "telnet"],
+        "comment": {
+          "zh": "PuTTY是一个Telnet、SSH、rlogin、纯TCP以及串行接口连接软件。",
+          "en": "PuTTY is a Telnet, SSH, rlogin, pure TCP and serial interface connection software."
+        },
+        "download_url": "",
+        "type": "terminal",
+        "path": "putty.exe",
+        "arg_format": "-{protocol} {username}@{host} -P {port} -pw {value}",
+        "match_first": ["ssh", "telnet"],
+        "is_internal": true,
+        "is_default": true,
+        "is_set": true
+      },
+      {
+        "name": "xshell",
+        "display_name": "XShell",
+        "protocol": ["ssh", "telnet"],
+        "comment": {
+          "zh": "XShell是一个强大的安全终端模拟软件，它支持SSH、TELNET协议。",
+          "en": "XShell is a powerful secure terminal simulation software that supports SSH and TELNET protocols."
+        },
+        "download_url": "https://www.xshell.com/zh/xshell-download/",
+        "type": "terminal",
+        "path": "",
+        "arg_format": "-newtab {name} -url {protocol}://{username}:{value}@{host}:{port}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "securecrt",
+        "display_name": "SecureCRT",
+        "protocol": ["ssh", "telnet"],
+        "comment": {
+          "zh": "SecureCRT是VanDyke Software所开发销售的一个SSH、Telnet客户端和虚拟终端软件。",
+          "en": "SecureCRT is an SSH, Telnet client and virtual terminal software developed and sold by VanDyke Software."
+        },
+        "download_url": "https://www.vandyke.com/cgi-bin/releases.php?product=securecrt",
+        "type": "terminal",
+        "path": "",
+        "arg_format": "/N {name} /T /SSH2 /ACCEPTHOSTKEYS /p {port} /password {value} /L {username} {host}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "mobaxterm",
+        "display_name": "MobaXterm",
+        "protocol": ["ssh", "telnet"],
+        "comment": {
+          "zh": "MobaXterm是一款功能丰富的远程计算机管理工具，其包括了SSH客户端、FTP客户端、远程桌面等。",
+          "en": "MobaXterm is a feature-rich remote computer management tool, including SSH client, FTP client, remote desktop, etc."
+        },
+        "download_url": "https://mobaxterm.mobatek.net/download-home-edition.html",
+        "type": "terminal",
+        "path": "",
+        "arg_format": "-newtab*sshpass -p{value} ssh -o StrictHostKeyChecking=no {username}@{host} -p{port}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      }
+    ],
+    "remotedesktop": [
+      {
+        "name": "mstsc",
+        "display_name": "Microsoft Remote Desktop",
+        "protocol": ["rdp"],
+        "comment": {
+          "zh": "Microsoft Remote Desktop是一款强大的微软远程连接工具，可以从几乎任何地方连接到远程PC和您的工作资源。",
+          "en": "Microsoft Remote Desktop is a powerful Microsoft remote connection tool that can connect to remote PCs and your work resources from almost anywhere."
+        },
+        "download_url": "",
+        "type": "remotedesktop",
+        "path": "mstsc.exe",
+        "arg_format": "{file}",
+        "match_first": ["rdp"],
+        "is_internal": true,
+        "is_default": true,
+        "is_set": true
+      },
+      {
+        "name": "vncviewer",
+        "display_name": "RealVNC Viewer",
+        "protocol": ["vnc"],
+        "comment": {
+          "zh": "RealVNC Viewer 是一款用于远程控制计算机的软件，它使用VNC（Virtual Network Computing）协议，允许用户从一台计算机（客户端）访问和控制另一台计算机（服务器）的桌面。",
+          "en": "RealVNC Viewer is a software used for remote computer control. It utilizes the VNC (Virtual Network Computing) protocol, allowing users to access and control the desktop of another computer (the server) from their own computer"
+        },
+        "download_url": "https://www.realvnc.com/en/connect/download/viewer/",
+        "type": "remotedesktop",
+        "path": "",
+        "arg_format": " -WarnUnencrypted=0 -VerifyId=0 -UserName={username} {host}:{port}",
+        "match_first": ["vnc"],
+        "autoit": [
+          {
+            "cmd": "Wait",
+            "type": "10",
+            "element": "[CLASS:os::Window::Dialog]"
+          },
+          {
+            "cmd": "ControlSend",
+            "type": "{value}",
+            "element": "[CLASS:Edit; INSTANCE:2]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "25,10",
+            "element": "[CLASS:Button; INSTANCE:3]"
+          }
+        ],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      }
+    ],
+    "filetransfer": [
+      {
+        "name": "winscp",
+        "display_name": "WinSCP",
+        "protocol": ["sftp"],
+        "comment": {
+          "zh": "WinSCP是一个Windows环境下使用SSH的开源图形化SFTP客户端，同时支持SCP协议。",
+          "en": "WinSCP is an open source graphical SFTP client that uses SSH in a Windows environment and supports the SCP protocol."
+        },
+        "download_url": "https://winscp.net/eng/index.php",
+        "type": "filetransfer",
+        "path": "",
+        "arg_format": "{protocol}://{username}:{value}@{host}:{port}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "securefx",
+        "display_name": "SecureFX",
+        "protocol": ["sftp"],
+        "comment": {
+          "zh": "SecureFX 是一款安全的文件传输应用， 拥有一个简单易学的可视化界面。",
+          "en": "SecureFX is a secure file transfer application with an easy-to-learn visual interface."
+        },
+        "download_url": "https://www.vandyke.com/cgi-bin/releases.php?product=securefx",
+        "type": "filetransfer",
+        "path": "",
+        "arg_format": "{protocol}://{username}:{value}@{host}:{port}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "xftp",
+        "display_name": "Xftp",
+        "protocol": ["sftp"],
+        "comment": {
+          "zh": "Xftp是一个功能强大的SFTP、FTP 文件传输软件。",
+          "en": "Xftp is a powerful SFTP and FTP file transfer software."
+        },
+        "download_url": "https://www.xshell.com/zh/xftp-download/",
+        "type": "filetransfer",
+        "path": "",
+        "arg_format": "-newwin {protocol}://{username}:{value}@{host}:{port}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      }
+    ],
+    "databases": [
+      {
+        "name": "navicat17",
+        "display_name": "Navicat premium Lite 17",
+        "protocol": ["oracle", "mysql", "postgresql", "mariadb", "sqlserver"],
+        "comment": {
+          "zh": "数据库管理软件",
+          "en": "Database management software."
+        },
+        "download_url": "https://www.navicat.com.cn/products",
+        "type": "databases",
+        "path": "",
+        "arg_format": "",
+        "autoit": [
+          {
+            "cmd": "Wait",
+            "type": "15",
+            "element": "[CLASS:TNavicatMainForm]"
+          },
+          {
+            "cmd": "SendKey",
+            "type": "",
+            "element": "^u"
+          },
+          {
+            "cmd": "ControlSend",
+            "type": "{url}",
+            "element": "[CLASS:TTextHintMemo; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "35,15",
+            "element": "[CLASS:TButton; INSTANCE:2]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "50,7",
+            "element": "[CLASS:TRadioButton; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "1OO,10",
+            "element": "[CLASS:TButton; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "50,12",
+            "element": "[CLASS:TButtonedEdit; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlSetText",
+            "type": "{value}",
+            "element": "[CLASS:TButtonedEdit; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "30,12",
+            "element": "[CLASS:TButton; INSTANCE:3]"
+          }
+        ],
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "plsql",
+        "display_name": "PL/SQL Developer",
+        "protocol": ["oracle"],
+        "comment": {
+          "zh": "PL/SQL Developer是一个集成开发环境，由Allround Automations公司开发，专门面向Oracle数据库存储的程序单元的开发。",
+          "en": "PL/SQL Developer is an integrated development environment developed by Allround Automations, specifically for the development of program units stored in Oracle databases."
+        },
+        "download_url": "https://www.allroundautomations.com/registered-plsqldev/",
+        "type": "databases",
+        "path": "",
+        "arg_format": "userid={username}/{value}@{host}:{port}/{dbname}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "dbeaver",
+        "display_name": "DBeaver Community",
+        "protocol": ["oracle", "mysql", "postgresql", "mariadb", "sqlserver"],
+        "comment": {
+          "zh": "DBeaver Community是一个通用的数据库管理工具和SQL客户端，支持MySQL、PostgreSQL、Oracle以及其他兼容JDBC的数据库。",
+          "en": "DBeaver Community is a general database management tool and SQL client that supports MySQL, PostgreSQL, Oracle and other JDBC-compatible databases."
+        },
+        "download_url": "https://dbeaver.io/download/",
+        "type": "databases",
+        "path": "",
+        "arg_format": "-con name={name}|driver={protocol}|user={username}|password={value}|database={dbname}|host={host}|port={port}|save=false|connect=true",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "resp",
+        "display_name": "Redis Desktop Manager",
+        "protocol": ["redis"],
+        "comment": {
+          "zh": "Redis Desktop Manager 是一款能够跨平台使用的开源 Redis 可视化工具，主要针对 Redis 开发设计。",
+          "en": "Redis Desktop Manager is an open source Redis visualization tool that can be used across platforms and is mainly designed for Redis development."
+        },
+        "download_url": "https://github.com/FuckDoctors/rdm-builder/releases/download/2022.5.1/resp-2022.5.1.exe",
+        "type": "databases",
+        "path": "",
+        "arg_format": "--settings-dir*{config_file}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "ssms17",
+        "display_name": "SQL Server Management Studio",
+        "protocol": ["sqlserver"],
+        "comment": {
+          "zh": "SQL Server Management Studio (SSMS) 是一种集成环境，用于管理从 SQL Server 到 Azure SQL 数据库的任何 SQL 基础结构。",
+          "en": "SQL Server Management Studio (SSMS) is an integrated environment for managing any SQL infrastructure, from SQL Server to Azure SQL Database."
+        },
+        "download_url": "https://download.microsoft.com/download/9/f/8/9f8197f4-0f71-42a3-8717-b2817c77b820/SSMS-Setup-CHS.exe",
+        "type": "databases",
+        "path": "",
+        "arg_format": "",
+        "autoit": [
+          {
+            "cmd": "Wait",
+            "type": "15",
+            "element": "[REGEXPTITLE:连接到服务器|Connect]"
+          },
+          {
+            "cmd": "ControlSend",
+            "type": "{host},{port}",
+            "element": "[CLASS:Edit; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlSend",
+            "type": "SQL Server",
+            "element": "[NAME:comboBoxAuthentication]"
+          },
+          {
+            "cmd": "ControlSetText",
+            "type": "{username}",
+            "element": "[CLASS:Edit; INSTANCE:2]"
+          },
+          {
+            "cmd": "ControlSend",
+            "type": "{value}",
+            "element": "[NAME:password]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "40,10",
+            "element": "[NAME:connect]"
+          }
+        ],
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "another_redis",
+        "display_name": "Another Redis Desktop Manager",
+        "protocol": ["redis"],
+        "comment": {
+          "zh": "更快、更好、更稳定的Redis桌面(GUI)管理客户端。",
+          "en": "A faster, better and more stable redis desktop manager."
+        },
+        "download_url": "https://github.com/qishibo/AnotherRedisDesktopManager",
+        "type": "databases",
+        "path": "",
+        "arg_format": "--host {host} --port {port} --auth {username}@{value}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "toad",
+        "display_name": "Toad for Oracle",
+        "protocol": ["oracle"],
+        "comment": {
+          "zh": "Toad for Oracle是业界领先的数据库开发和管理工具。",
+          "en": "Toad for Oracle is an industry-leading database development and management tool."
+        },
+        "download_url": "https://www.quest.com/products/toad-for-oracle/",
+        "type": "databases",
+        "path": "",
+        "arg_format": "-c {username}/{value}@{host}:{port}/{dbname}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "mongo_compass",
+        "display_name": "MongoDB Compass",
+        "protocol": ["mongodb"],
+        "comment": {
+          "zh": "使用 MongoDB 的 GUI Compass，轻松探索和操作您的数据库。Compass 直观灵活，提供详细的架构可视化、实时性能指标、复杂的查询功能。",
+          "en": "asily explore and manipulate your database with Compass, the GUI for MongoDB. Intuitive and flexible, Compass provides detailed schema visualizations, real-time performance metrics, sophisticated querying abilities, and much more."
+        },
+        "download_url": "https://www.mongodb.com/try/download/compass",
+        "type": "databases",
+        "path": "",
+        "arg_format": "mongodb://{username}:{value}@{host}:{port}/{dbname}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      }
+    ]
+  },
+	"linux": {
+    "terminal": [
+      {
+        "name": "terminal",
+        "display_name": "Terminal",
+        "protocol": ["ssh", "telnet"],
+        "comment": {
+          "zh": "Terminal是Linux操作系统上的虚拟终端应用软件。",
+          "en": "Terminal is a virtual terminal application software on the Linux operating system."
+        },
+        "download_url": "",
+        "type": "terminal",
+        "path": "Terminal",
+        "arg_format": "{protocol} {username}@{host} -p {port} -P {value}",
+        "match_first": ["ssh", "telnet"],
+        "is_internal": true,
+        "is_default": true,
+        "is_set": true
+      }
+    ],
+    "remotedesktop": [
+      {
+        "name": "remmina",
+        "display_name": "Remmina",
+        "protocol": ["rdp"],
+        "comment": {
+          "zh": "Remmina 是一个使用 GTK+ 开发的远程桌面客户端，提供了 RDP、VNC、XDMCP、SSH 等远程连接协议的支持。",
+          "en": "Remmina is a remote desktop client developed using GTK+, providing support for remote connection protocols such as RDP, VNC, XDMCP, and SSH."
+        },
+        "download_url": "https://remmina.org/how-to-install-remmina/",
+        "type": "remotedesktop",
+        "path": "remmina",
+        "arg_format": "{file}",
+        "match_first": [],
+        "is_internal": true,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "xfreerdp",
+        "display_name": "xFreeRDP",
+        "protocol": ["rdp"],
+        "comment": {
+          "zh": "FreeRDP 是远程桌面协议 (RDP) 的免费实现，在 Apache 许可证下发布。\n安装命令\nsudo apt-get install freerdp\nsudo yum install freerdp",
+          "en": "FreeRDP is a free implementation of the Remote Desktop Protocol (RDP), released under the Apache License.\nInstallation command\nsudo apt-get install freerdp\nsudo yum install freerdp"
+        },
+        "download_url": "https://github.com/FreeRDP/FreeRDP",
+        "type": "remotedesktop",
+        "path": "xfreerdp",
+        "arg_format": "{file} /cert-ignore /d: /p:",
+        "match_first": [],
+        "is_internal": true,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "tigervnc",
+        "display_name": "TigerVNC",
+        "protocol": ["vnc"],
+        "comment": {
+          "zh": "TigerVNC是一个高效且安全的远程桌面控制工具，适用于跨平台操作，并有强大的安全性能保障。",
+          "en": "TigerVNC is an efficient and secure remote desktop control tool that is suitable for cross platform operations and has strong security performance guarantees."
+        },
+        "download_url": "https://sourceforge.net/projects/tigervnc/files/stable/1.15.0/tigervnc-1.15.0.x86_64.tar.gz",
+        "type": "remotedesktop",
+        "path": "vncviewer",
+        "arg_format": "{host}:{port}",
+        "match_first": ["vnc"],
+        "is_internal": true,
+        "is_default": false,
+        "is_set": false
+      }
+    ],
+    "filetransfer": [],
+    "databases": [
+      {
+        "name": "terminal",
+        "display_name": "Terminal",
+        "protocol": [
+          "oracle",
+          "mysql",
+          "postgresql",
+          "mariadb",
+          "redis",
+          "sqlserver",
+          "mongodb"
+        ],
+        "comment": {
+          "zh": "Terminal是Linux操作系统上的虚拟终端应用软件。",
+          "en": "Terminal is a virtual terminal application software on the Linux operating system."
+        },
+        "download_url": "",
+        "type": "databases",
+        "path": "Terminal",
+        "arg_format": "",
+        "match_first": [
+          "oracle",
+          "mysql",
+          "postgresql",
+          "mariadb",
+          "redis",
+          "mongodb"
+        ],
+        "is_internal": true,
+        "is_default": false,
+        "is_set": true
+      },
+      {
+        "name": "dbeaver",
+        "display_name": "DBeaver Community",
+        "protocol": ["oracle", "mysql", "postgresql", "mariadb", "sqlserver"],
+        "comment": {
+          "zh": "DBeaver Community是一个通用的数据库管理工具和SQL客户端，支持MySQL、PostgreSQL、Oracle以及其他兼容JDBC的数据库。\n\n!!!手动下载安装，点击保存启用!!!",
+          "en": "DBeaver Community is a general database management tool and SQL client that supports MySQL, PostgreSQL, Oracle and other JDBC-compatible databases.\n\n!!!Manually download and install, click Save to activate!!!"
+        },
+        "download_url": "https://dbeaver.io/download/",
+        "type": "databases",
+        "path": "",
+        "arg_format": "-con name={name}|driver={protocol}|user={username}|password={value}|database={dbname}|host={host}|port={port}|save=false|connect=true",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      }
+    ]
+  }
+}

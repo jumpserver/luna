@@ -30,6 +30,13 @@ export interface ConfigItem {
   is_set: boolean;
 }
 
+export interface AppConfigType {
+  terminal: ConfigItem[];
+  remotedesktop: ConfigItem[];
+  filetransfer: ConfigItem[];
+  databases: ConfigItem[];
+}
+
 export interface Cookies {
   path: string;
   name: string;

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+useApplicationConfig();
 const { currentOSTheme, userTheme } = useThemeAdapter();
 
 const backgroundColor = computed(() => {

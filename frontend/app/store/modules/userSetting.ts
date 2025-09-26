@@ -1,4 +1,4 @@
-import type { SortType } from '~/types';
+import type { AppConfigType, SortType } from '~/types';
 
 type themeType = 'light' | 'dark' | '';
 type layoutsType = 'grid' | 'table';
@@ -11,6 +11,7 @@ export const useUserSettingStore = defineStore(
     const language = ref('zh');
     const collapse = ref(false);
 
+    const appConfig = ref<AppConfigType>();
     const sort = ref<SortType>('name');
     const theme = ref<themeType>('');
     const layouts = ref<layoutsType>('grid');
@@ -36,24 +37,30 @@ export const useUserSettingStore = defineStore(
       emit('setSort', s);
     };
 
+    const setAppConfig = (c: AppConfigType) => {
+      appConfig.value = c;
+    };
+
     return {
       sort,
       theme,
       layouts,
       language,
       collapse,
+      appConfig,
 
       setSort,
       setLang,
       setTheme,
       setLayouts,
       setCollapse,
+      setAppConfig,
     };
   },
   {
     persist: {
       storage: localStorage,
-      pick: ['sort', 'theme', 'layouts', 'language', 'collapse'],
+      pick: ['sort', 'theme', 'layouts', 'language', 'collapse', 'appConfig'],
     },
   }
 );

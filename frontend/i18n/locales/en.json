@@ -85,5 +85,12 @@
 		"Manual": "Manual accounts",
 		"Username": "Username",
 		"Password": "Password"
+	},
+	"Setting": {
+		"CommandTerminal": "Command Terminal",
+		"FileTransfer": "File Transfer",
+		"RemoteDesktop": "Remote Desktop",
+		"Database": "Database",
+		"DownloadApplication": "Download Application"
 	}
 }

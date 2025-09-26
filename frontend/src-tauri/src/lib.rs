@@ -1,17 +1,19 @@
 mod commands;
 mod models;
+mod service;
 mod setup;
 mod utils;
-mod service;
 
 use crate::setup::apply_window_effects;
 use crate::setup::setup_tray;
 
-use crate::commands::pull_up::pull_up;
 use crate::commands::get_assets::get_assets;
-use crate::commands::url_watcher::url_watcher;
+use crate::commands::get_config::get_config;
 use crate::commands::get_setting::get_setting;
 use crate::commands::get_token::get_connect_token;
+use crate::commands::pull_up::pull_up;
+use crate::commands::url_watcher::url_watcher;
+use crate::commands::update_config::update_config_selection;
 
 use log::error;
 use tauri::menu::{Menu, MenuItem};
@@ -44,9 +46,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             pull_up,
             get_assets,
+            get_config,
             url_watcher,
             get_setting,
-            get_connect_token
+            get_connect_token,
+            update_config_selection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

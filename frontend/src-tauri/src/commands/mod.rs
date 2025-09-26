@@ -4,3 +4,5 @@ pub mod pull_up;
 pub mod get_token;
 pub mod get_assets;
 pub mod get_setting;
+pub mod get_config;
+pub mod update_config;
