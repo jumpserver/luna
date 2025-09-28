@@ -75,7 +75,7 @@ const openEditModal = () => {
   emits('openEditModal');
 };
 
-const handleMouseOver = () => {
+const handleMouseEnter = () => {
   showEdit.value = true;
 };
 
@@ -148,8 +148,6 @@ const handleConnect = () => {
     :ui="{
       body: 'sm:p-2',
     }"
-    @mouseover="handleMouseOver"
-    @mouseleave="handleMouseLeave"
   >
     <UContextMenu
       size="sm"
@@ -158,7 +156,11 @@ const handleConnect = () => {
         content: 'w-48',
       }"
     >
-      <section class="flex gap-4 flex-nowrap items-center w-full">
+      <section
+        class="flex gap-4 flex-nowrap items-center w-full"
+        @mouseenter="handleMouseEnter"
+        @mouseleave="handleMouseLeave"
+      >
         <div class="flex items-center w-full gap-1">
           <div class="flex flex-col flex-1 gap-1 text-xs-plus min-w-0">
             <div class="flex justify-between">
@@ -178,33 +180,42 @@ const handleConnect = () => {
                 </div>
               </section>
 
-              <section class="flex items-center gap-2">
-                <UButton
-                  icon="heroicons:rocket-launch"
-                  size="xs"
-                  color="primary"
-                  variant="outline"
-                  class="group !gap-0"
-                  @click="handleConnect"
-                >
-                  <!-- prettier-ignore -->
-                  <span
-										class="inline-block overflow-hidden whitespace-nowrap max-w-0 opacity-0 ml-0
-                           transition-all duration-300 ease-in-out group-hover:max-w-[12rem] group-hover:opacity-100 group-hover:ml-1
-                           group-focus:max-w-[12rem] group-focus:opacity-100 group-focus:ml-1"
-									>
-										{{ t('ContextMenu.Connect') }}
-									</span>
-                </UButton>
+              <Transition
+                enter-active-class="transition ease-out duration-200"
+                enter-from-class="opacity-0 -translate-y-1 scale-95"
+                enter-to-class="opacity-100 translate-y-0 scale-100"
+                leave-active-class="transition ease-in duration-150"
+                leave-from-class="opacity-100 translate-y-0 scale-100"
+                leave-to-class="opacity-0 -translate-y-1 scale-95"
+              >
+                <section v-if="showEdit" class="flex items-center gap-2">
+                  <UButton
+                    icon="heroicons:rocket-launch"
+                    size="xs"
+                    color="primary"
+                    variant="outline"
+                    class="group !gap-0"
+                    @click="handleConnect"
+                  >
+                    <!-- prettier-ignore -->
+                    <span
+											class="inline-block overflow-hidden whitespace-nowrap max-w-0 opacity-0 ml-0
+                             transition-all duration-300 ease-in-out group-hover:max-w-[12rem] group-hover:opacity-100 group-hover:ml-1
+                             group-focus:max-w-[12rem] group-focus:opacity-100 group-focus:ml-1"
+										>
+											{{ t('ContextMenu.Connect') }}
+										</span>
+                  </UButton>
 
-                <UButton
-                  icon="material-symbols:edit-document-outline"
-                  size="xs"
-                  color="primary"
-                  variant="outline"
-                  @click="openEditModal"
-                />
-              </section>
+                  <UButton
+                    icon="material-symbols:edit-document-outline"
+                    size="xs"
+                    color="primary"
+                    variant="outline"
+                    @click="openEditModal"
+                  />
+                </section>
+              </Transition>
             </div>
 
             <USeparator orientation="horizontal" size="md" class="h-2" />
