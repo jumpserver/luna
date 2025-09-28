@@ -108,7 +108,7 @@ const detailRows = computed(() => {
       title: t('AssetCard.Address'),
       content: props.address,
       popover: true,
-      class: 'max-w-40 font-mono',
+      class: 'max-w-40',
     },
     {
       key: 'user',
@@ -208,7 +208,7 @@ const handleConnect = () => {
                   </UButton>
 
                   <UButton
-                    icon="material-symbols:edit-document-outline"
+                    icon="solar:pen-new-square-linear"
                     size="xs"
                     color="primary"
                     variant="outline"

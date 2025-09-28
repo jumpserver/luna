@@ -34,49 +34,30 @@ export default defineNuxtConfig({
     },
   },
   css: ['@/assets/css/main.css'],
+  fonts: {
+    providers: {
+      google: false,
+      googleicons: false,
+    },
+    priority: ['bunny']
+  },
   icon: {
     mode: 'css',
     cssLayer: 'base',
     serverBundle: {
-      // Prebundle all iconify collections used in the app to avoid
-      // any network fetches (including Material Symbols fallbacks)
       collections: [
         'mingcute',
         'lucide',
         'line-md',
         'proicons',
         'lets-icons',
-        // `si:` prefix maps to the `simple-icons` collection
         'simple-icons',
-        // Include Material Symbols explicitly to avoid Google fetches
-        'material-symbols',
       ],
     },
-  },
-  fonts: {
-    providers: {
-      google: false,
-    },
-    priority: ['bunny'],
   },
   ssr: false,
   dir: {
     modules: 'app/modules',
-  },
-  imports: {
-    presets: [
-      {
-        from: 'zod',
-        imports: [
-          'z',
-          {
-            name: 'infer',
-            as: 'zInfer',
-            type: true,
-          },
-        ],
-      },
-    ],
   },
   vite: {
     clearScreen: false,
