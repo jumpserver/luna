@@ -12,6 +12,10 @@ export default defineAppConfig({
     },
     pages: {
       focusColor: '#55B787',
+      scrollBarLightThumbColor: '#D0D1D2',
+      scrollBarDarkThumbColor: '#4A4A4A',
+      scrollBarLightHoverColor: '#B8B9BA',
+      scrollBarDarkHoverColor: '#6B6B6B',
       mainCardLightBackgroundColor: '#FAFAFA',
       mainCardDarkBackgroundColor: '#201f22',
     },

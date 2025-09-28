@@ -35,7 +35,14 @@ const assetManager = useAssetFetcher(props.type, scrollRef);
 
 const { layouts } = storeToRefs(userSettingStore);
 const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
-const { assetsData, scrollbarStyles, isLoading, fetchNextPage } = assetManager;
+const {
+  assetsData,
+  isAppending,
+  fetchNextPage,
+  scrollbarStyles,
+  isInitialLoading,
+  appendSkeletonCount,
+} = assetManager;
 
 watch([editModalOpen, currentSelectedCardInfo], ([open, info]) => {
   if (open && info) initDraft();
@@ -48,7 +55,8 @@ watch(
       getSettings();
       fetchNextPage();
     }
-  }
+  },
+  { immediate: true }
 );
 
 function initDraft() {
@@ -61,6 +69,13 @@ function initDraft() {
     saved?.protocol ?? asset.permed_protocols?.[0]?.name ?? '';
   draftAccount.value =
     saved?.username ?? asset.permed_accounts?.[0]?.username ?? '';
+}
+
+async function getSettings() {
+  await useTauriCoreInvoke('get_setting', {
+    site: currentSite.value,
+    cookieHeader: currentUser.value!.headerJson,
+  });
 }
 
 const handleCardClick = (index: number, e: MouseEvent) => {
@@ -83,13 +98,6 @@ const handleConfirm = () => {
   });
 
   editModalOpen.value = false;
-};
-
-const getSettings = async () => {
-  await useTauriCoreInvoke('get_setting', {
-    site: currentSite.value,
-    cookieHeader: currentUser.value!.headerJson,
-  });
 };
 
 const listenTauriEvent = async () => {
@@ -126,7 +134,6 @@ onBeforeUnmount(() => {
   }
 });
 
-// Keep skeleton label width aligned with GridCard
 const labelMinWidth = computed(() =>
   locale.value.startsWith('zh') ? '24px' : '72px'
 );
@@ -139,11 +146,12 @@ const labelColumnTemplate = computed(
 <template>
   <div class="relative h-full w-full flex min-h-0">
     <section
+      ref="scrollRef"
       class="w-full overflow-y-auto container-scrollbar h-[calc(100vh-7.5rem)]"
       :style="scrollbarStyles"
     >
       <div
-        v-if="isLoading"
+        v-if="isInitialLoading"
         class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-4 p-2"
         aria-busy="true"
       >
@@ -260,6 +268,88 @@ const labelColumnTemplate = computed(
             @open-edit-modal="editModalOpen = true"
             @click="handleCardClick(index, $event)"
           />
+
+          <!-- Append skeletons while fetching next page -->
+          <template v-if="isAppending">
+            <UPageCard
+              v-for="i in appendSkeletonCount"
+              :key="`append-skel-${i}`"
+              variant="subtle"
+              :ui="{ body: 'sm:p-2' }"
+              class="w-full"
+              aria-busy="true"
+            >
+              <section class="flex gap-4 flex-nowrap items-center w-full">
+                <div class="flex items-center w-full gap-1">
+                  <div class="flex flex-col flex-1 gap-1 text-xs-plus min-w-0">
+                    <div class="flex justify-between">
+                      <section class="flex">
+                        <div class="flex items-center gap-2">
+                          <USkeleton class="h-10 w-10 rounded-md" />
+                          <USkeleton class="h-5 w-2/3" />
+                        </div>
+                      </section>
+
+                      <section class="flex items-center gap-2">
+                        <USkeleton class="h-8 w-8 rounded-lg" />
+                        <USkeleton class="h-8 w-8 rounded-lg" />
+                      </section>
+                    </div>
+
+                    <USeparator
+                      orientation="horizontal"
+                      size="md"
+                      class="h-2"
+                    />
+
+                    <div class="flex flex-col gap-1 text-xs-plus">
+                      <div
+                        class="grid items-center gap-x-3 gap-y-1"
+                        :style="{ gridTemplateColumns: labelColumnTemplate }"
+                      >
+                        <span
+                          class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
+                        >
+                          <USkeleton class="h-4 w-16" />
+                        </span>
+                        <div class="min-w-0">
+                          <USkeleton class="h-4 w-3/4" />
+                        </div>
+                      </div>
+
+                      <div
+                        class="grid items-center gap-x-3 gap-y-1"
+                        :style="{ gridTemplateColumns: labelColumnTemplate }"
+                      >
+                        <span
+                          class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
+                        >
+                          <USkeleton class="h-4 w-16" />
+                        </span>
+                        <div class="min-w-0">
+                          <USkeleton class="h-4 w-2/3" />
+                        </div>
+                      </div>
+
+                      <div
+                        class="grid items-center gap-x-3 gap-y-1"
+                        :style="{ gridTemplateColumns: labelColumnTemplate }"
+                      >
+                        <span
+                          class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
+                        >
+                          <USkeleton class="h-4 w-16" />
+                        </span>
+                        <div class="min-w-0">
+                          <USkeleton class="h-4 w-1/2" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </UPageCard>
+          </template>
         </template>
         <template v-else>
           <TableCard />

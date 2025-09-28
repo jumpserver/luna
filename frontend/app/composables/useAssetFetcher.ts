@@ -1,7 +1,6 @@
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import type { AssetsResponse, RawAssetData } from '~/types';
 
-import { useResizeObserver } from '@vueuse/core';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 
 const LIMIT = 20;
@@ -27,11 +26,34 @@ export const useAssetFetcher = (
   const subscribeGetAssetsEvent = ref<UnlistenFn | null>(null);
   const subscribeGetAssetFailedEvent = ref<UnlistenFn | null>(null);
 
-  const currentSearch = ref('');
+  const totalCount = ref(0);
   const currentOrder = ref('');
+  const currentSearch = ref('');
+
+  let stopScrollListener: (() => void) | null = null;
 
   const assetsData = computed(() => {
     return transformAssetsData(rawAssetsList.value);
+  });
+
+  const isAppending = computed(
+    () => isLoading.value && rawAssetsList.value.length > 0
+  );
+
+  const isInitialLoading = computed(
+    () => isLoading.value && rawAssetsList.value.length === 0
+  );
+
+  const appendSkeletonCount = computed(() => {
+    if (!(isLoading.value && rawAssetsList.value.length > 0)) return 0;
+
+    const remaining = Math.max(
+      0,
+      (totalCount.value || 0) - rawAssetsList.value.length
+    );
+
+    const expected = totalCount.value ? Math.min(LIMIT, remaining) : LIMIT;
+    return expected || LIMIT;
   });
 
   const scrollbarStyles = computed(() => {
@@ -39,10 +61,51 @@ export const useAssetFetcher = (
     return {
       '--scrollbar-width': '8px',
       '--scrollbar-track-color': isDark ? '#333' : '#f1f1f1',
-      '--scrollbar-thumb-color': isDark ? '#555' : '#ccc',
-      '--scrollbar-thumb-hover-color': componentsConfig.pages.focusColor,
+      '--scrollbar-thumb-color': isDark
+        ? componentsConfig.pages.scrollBarDarkThumbColor
+        : componentsConfig.pages.scrollBarLightThumbColor,
+      '--scrollbar-thumb-hover-color': isDark
+        ? componentsConfig.pages.scrollBarDarkHoverColor
+        : componentsConfig.pages.scrollBarLightHoverColor,
     };
   });
+
+  watchEffect((onCleanup) => {
+    if (hasMore.value && scrollRef?.value) {
+      ensureScrollListener();
+    } else {
+      stopScrollListener?.();
+      stopScrollListener = null;
+    }
+
+    onCleanup(() => {
+      stopScrollListener?.();
+      stopScrollListener = null;
+    });
+  });
+
+  function ensureScrollListener() {
+    if (!scrollRef?.value) return;
+    if (stopScrollListener) return;
+
+    const el = scrollRef.value!;
+    const onScroll = () => {
+      if (!hasMore.value || isLoading.value) return;
+
+      const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+
+      if (distanceToBottom <= 50) {
+        fetchNextPage();
+      }
+    };
+
+    el.addEventListener('scroll', onScroll, { passive: true });
+
+    stopScrollListener = () => {
+      el.removeEventListener('scroll', onScroll);
+      stopScrollListener = null;
+    };
+  }
 
   /**
    * @description 获取下一页资产数据
@@ -99,56 +162,18 @@ export const useAssetFetcher = (
    * @param order
    */
   async function refreshAssets(search?: string, order?: string) {
+    stopScrollListener?.();
+    stopScrollListener = null;
+
     const searchParam = search !== undefined ? search : currentSearch.value;
     const orderParam = order !== undefined ? order : currentOrder.value;
 
     rawAssetsList.value = [];
     offset.value = 0;
     hasMore.value = true;
+    totalCount.value = 0;
     await fetchNextPage(searchParam, orderParam);
   }
-
-  /**
-   * @description 如果内容不够滚动就自动补页（多次）
-   */
-  const _fillIfNotScrollable = async () => {
-    if (!scrollRef?.value) return;
-
-    await nextTick();
-
-    const el = scrollRef.value;
-    if (!el || !hasMore.value || isLoading.value) return;
-
-    const currentLength = rawAssetsList.value.length;
-
-    if (el.scrollHeight <= el.clientHeight && hasMore.value) {
-      await fetchNextPage();
-
-      await new Promise<void>((resolve) => {
-        const unwatch = watch(
-          () => rawAssetsList.value.length,
-          (newLength: number) => {
-            if (newLength > currentLength || !hasMore.value) {
-              unwatch();
-              resolve();
-            }
-          },
-          { immediate: true }
-        );
-
-        setTimeout(() => {
-          unwatch();
-          resolve();
-        }, 3000);
-      });
-
-      await nextTick();
-
-      if (el.scrollHeight <= el.clientHeight && hasMore.value) {
-        // fillIfNotScrollable();
-      }
-    }
-  };
 
   /**
    * @description 监听 Tauri 事件
@@ -163,13 +188,21 @@ export const useAssetFetcher = (
         }
 
         const resp = event.payload as eventPayload;
-        const pageData = resp.data.results ?? [];
+        let pageData = resp.data.results ?? [];
+
+        // 若返回超过 LIMIT，仅取前 LIMIT 条
+        if (pageData.length > LIMIT) pageData = pageData.slice(0, LIMIT);
 
         // 追加到列表
         rawAssetsList.value.push(...pageData);
 
+        // 更新偏移量
         offset.value += pageData.length;
-        hasMore.value = pageData.length === LIMIT;
+
+        // 根据返回的总数更新 hasMore（若没有提供 count，则退化为当前长度）
+        // prettier-ignore
+        totalCount.value = (resp.data.count ?? rawAssetsList.value.length) as number;
+        hasMore.value = rawAssetsList.value.length < totalCount.value;
       }
     );
 
@@ -239,14 +272,16 @@ export const useAssetFetcher = (
       false
     );
 
-    unsubscribeClearAssets = on(
-      'clearAssets',
-      () => {
-        rawAssetsList.value = [];
-        offset.value = 0;
-        hasMore.value = true;
-      },
-    );
+    unsubscribeClearAssets = on('clearAssets', () => {
+      hasMore.value = true;
+
+      offset.value = 0;
+      totalCount.value = 0;
+      rawAssetsList.value = [];
+
+      stopScrollListener?.();
+      stopScrollListener = null;
+    });
   };
 
   const unListenEventBusEvent = () => {
@@ -256,10 +291,6 @@ export const useAssetFetcher = (
     unsubscribeClearAssets?.();
   };
 
-  // if (scrollRef) {
-  //   useResizeObserver(scrollRef, fillIfNotScrollable);
-  // }
-
   onMounted(async () => {
     listenEventBusEvent();
     await listenTauriEvent();
@@ -268,14 +299,20 @@ export const useAssetFetcher = (
   onBeforeUnmount(() => {
     unListenTauriEvent();
     unListenEventBusEvent();
+    stopScrollListener?.();
+    stopScrollListener = null;
   });
 
   return {
     hasMore,
     isLoading,
+
     assetsData,
+    isAppending,
     rawAssetsList,
     scrollbarStyles,
+    isInitialLoading,
+    appendSkeletonCount,
 
     fetchNextPage,
     refreshAssets,

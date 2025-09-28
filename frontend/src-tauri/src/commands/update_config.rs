@@ -1,4 +1,4 @@
-use serde_json::{json, Value};
+use serde_json::{Value};
 use tauri::AppHandle;
 
 use crate::service::config::ConfigService;
