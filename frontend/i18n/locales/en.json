@@ -74,8 +74,9 @@
 		"EmptyUrlError": "Please enter a site address",
 		"InvalidUrlError": "Please enter a valid site address or IP address",
 		"AddAccount": "Add Account",
-		"SwitchAccount": "Switch Account",
-		"LoginAuthenticationExpired": "Login authentication has expired. Please log in again"
+		"SwitchSite": "Switch Site",
+		"LoginAuthenticationExpired": "Login authentication has expired. Please log in again",
+		"Logout": "Logout"
 	},
 	"Asset": {
 		"GetAssetFailed": "Get asset failed, please refresh and try again"

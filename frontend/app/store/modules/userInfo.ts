@@ -5,7 +5,7 @@ import type {
   UserData,
 } from '~/types/index';
 
-type SiteUserData = UserData & {
+export type SiteUserData = UserData & {
   rdpClientOption?: RdpGraphics;
   connectionInfoMap?: Record<string, ConnectionInfo>;
 };
@@ -54,10 +54,6 @@ export const useUserInfoStore = defineStore(
      * @param userData
      */
     const setUserData = (site: string, userData: UserData) => {
-      if (site in userMap.value) {
-        return;
-      }
-
       currentUser.value = userData;
       currentSite.value = site;
       userMap.value[site] = userData as SiteUserData;
@@ -103,6 +99,11 @@ export const useUserInfoStore = defineStore(
           // 同步连接信息映射以及 RDP 客户端选项
           currentConnectionInfoMap.value = nextUser.connectionInfoMap || {};
           currentRdpClientOption.value = nextUser.rdpClientOption || {};
+          currentOrganizations.value = nextUser.availableOrgs || [];
+
+          nextTick(() => {
+            useEventBus().emit('refresh', undefined);
+          });
         }
       } else {
         orgId.value = '';

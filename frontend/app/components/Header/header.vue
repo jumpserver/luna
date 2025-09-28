@@ -6,6 +6,7 @@ import type {
   ActionItem,
   PermissionOrgs,
   PermOrgItem,
+  UserData,
   UserIntiInfo,
 } from '~/types/index';
 
@@ -38,7 +39,7 @@ const {
   setCurrentOrg,
 } = userInfoStore;
 
-const { loggedIn, currentOrganizations, currentSite } =
+const { loggedIn, currentOrganizations, currentSite, userMap, currentUser } =
   storeToRefs(userInfoStore);
 
 const inputSite = ref('');
@@ -50,39 +51,60 @@ const loginPage = ref<WebviewWindow | null>(null);
 const subscribeLoginSuccessEvent = ref<UnlistenFn | null>(null);
 const subscribeLoginFailedEvent = ref<UnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
-const dropItems = ref<DropdownMenuItem[][]>([
+
+const switchAccountChildren = computed<DropdownMenuItem[][]>(() => {
+  const items: DropdownMenuItem[] = Object.values(userMap.value || {}).map(
+    (u: UserData) => {
+      let host = u.site;
+
+      try {
+        host = new URL(u.site).host;
+      } catch {}
+
+      const label = `${host}`;
+      const isCurrent = u.site === currentSite.value;
+
+      return {
+        label,
+        icon: isCurrent ? 'i-lucide-check' : 'i-lucide-user',
+        onClick: () => handleSwitchAccount(u.site),
+      } as DropdownMenuItem;
+    }
+  );
+  return [items];
+});
+
+const dropItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
-      label: 'Profile',
-      icon: 'i-lucide-user',
+      label: currentUser.value?.name,
+      avatar: {
+        size: 'sm',
+        text: currentUser.value?.name.slice(0, 2),
+        chip: {
+          inset: true,
+        },
+      },
+      type: 'label',
     },
+  ],
+  [
     {
       label: t('Login.AddAccount'),
       icon: 'i-lucide-user-round-plus',
+      onClick: openLoginPage,
     },
-  ],
-  [
     {
-      label: t('Login.SwitchAccount'),
+      label: t('Login.SwitchSite'),
       icon: 'i-lucide-arrow-down-up',
-      children: [
-        [
-          {
-            label: 'Email',
-            icon: 'i-lucide-mail',
-          },
-          {
-            label: 'Message',
-            icon: 'i-lucide-message-square',
-          },
-        ],
-      ],
+      children: switchAccountChildren.value,
     },
   ],
   [
     {
-      label: 'Logout',
-      icon: 'i-lucide-log-out',
+      label: t('Login.Logout'),
+      icon: 'solar:login-outline',
+      color: 'error',
       onClick: clearAuthInfo,
     },
   ],
@@ -108,11 +130,8 @@ const supportLanguages = computed(() => {
   })) as DropdownMenuItem[];
 });
 
-const organizationItems = computed(
-  () =>
-    currentOrganizations.value.map(
-      (org: PermOrgItem) => org.name
-    ) as unknown as DropdownMenuItem[]
+const organizationItems = computed(() =>
+  currentOrganizations.value.map((org: PermOrgItem) => org.name)
 );
 
 const computedSwitchMode = computed<ActionItem>(() => {
@@ -134,6 +153,35 @@ const computedSwitchMode = computed<ActionItem>(() => {
  */
 function toggleDarkMode() {
   manualSetTheme(isDarkMode.value ? 'light' : 'dark');
+}
+
+/**
+ * @description 打开登录窗口
+ */
+function openLoginPage() {
+  openModal.value = true;
+  hasValidationError.value = false;
+  errorMessage.value = '';
+
+  nextTick(() => {
+    inputRef.value?.$el.querySelector('input')?.focus();
+  });
+}
+
+/**
+ * @description 切换账户
+ * @param site
+ */
+function handleSwitchAccount(site: string) {
+  if (site === currentSite.value) return;
+
+  userInfoStore.setCurrentSite(site);
+  const nextOrg = userInfoStore.currentUser?.org?.name;
+
+  if (nextOrg) currentOrg.value = nextOrg;
+  nextTick(() => {
+    useEventBus().emit('refresh', undefined);
+  });
 }
 
 /**
@@ -177,19 +225,6 @@ const handleWindowDrag = async (event: MouseEvent) => {
   } catch (error) {
     console.error(error);
   }
-};
-
-/**
- * @description 打开登录窗口
- */
-const openLoginPage = () => {
-  openModal.value = true;
-  hasValidationError.value = false;
-  errorMessage.value = '';
-
-  nextTick(() => {
-    inputRef.value?.$el.querySelector('input')?.focus();
-  });
 };
 
 /**
@@ -281,6 +316,10 @@ const initSelectOrganization = (permissionOrgData: PermissionOrgs) => {
   return uniqueOrgs;
 };
 
+/**
+ * @description 切换组织
+ * @param org
+ */
 const handleOrgChange = (org: string) => {
   const orgData = currentOrganizations.value.find(
     (o: PermOrgItem) => o.name === org
@@ -334,7 +373,6 @@ const listenTauriEvent = async () => {
 
         currentOrg.value = currentOrgData.name;
         setOrganizations(availableOrgs);
-
         setUserLoggedIn(true);
       }
     }
@@ -378,6 +416,13 @@ onMounted(async () => {
 
   await listenTauriEvent();
 });
+
+watch(
+  () => currentUser.value?.org?.name,
+  (name) => {
+    if (name) currentOrg.value = name;
+  }
+);
 
 onBeforeUnmount(() => {
   unListenTauriEvent();

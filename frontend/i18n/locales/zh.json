@@ -74,8 +74,9 @@
 		"EmptyUrlError": "请输入站点地址",
 		"InvalidUrlError": "请输入有效的站点地址或IP地址",
 		"AddAccount": "新增账号",
-		"SwitchAccount": "切换账号",
-		"LoginAuthenticationExpired": "登录认证已失效，请重新登录"
+		"SwitchSite": "切换站点",
+		"LoginAuthenticationExpired": "登录认证已失效，请重新登录",
+		"Logout": "退出登录"
 	},
 	"Loading": {
 		"Loading": "加载中",
