@@ -77,7 +77,8 @@
 		"AddAccount": "新增账号",
 		"SwitchSite": "切换站点",
 		"LoginAuthenticationExpired": "登录认证已失效，请重新登录",
-		"Logout": "退出登录"
+		"Logout": "退出登录",
+		"AlreadyLoggedInError": "您已经登录了该站点"
 	},
 	"Loading": {
 		"Loading": "加载中",

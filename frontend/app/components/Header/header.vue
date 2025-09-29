@@ -244,6 +244,14 @@ const handleConfirm = () => {
     return;
   }
 
+  if (
+    Object.values(userMap.value).some((user) => user.site === inputSite.value)
+  ) {
+    hasValidationError.value = true;
+    errorMessage.value = t('Login.AlreadyLoggedInError');
+    return;
+  }
+
   if (!REG_EXP.test(inputSite.value)) {
     hasValidationError.value = true;
     errorMessage.value = t('Login.InvalidUrlError');

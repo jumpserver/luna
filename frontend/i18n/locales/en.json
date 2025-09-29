@@ -77,7 +77,8 @@
 		"AddAccount": "Add Account",
 		"SwitchSite": "Switch Site",
 		"LoginAuthenticationExpired": "Login authentication has expired. Please log in again",
-		"Logout": "Logout"
+		"Logout": "Logout",
+		"AlreadyLoggedInError": "You have already logged in to this site"
 	},
 	"Asset": {
 		"GetAssetFailed": "Get asset failed, please refresh and try again"
