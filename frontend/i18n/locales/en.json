@@ -7,7 +7,8 @@
 		"NoData": "No Data",
 		"LoginSite": "Login Site",
 		"NoDataDescription": "Please login first",
-		"ConnectionSettings": "Connection Settings"
+		"ConnectionSettings": "Connection Settings",
+		"All": "All"
 	},
 	"ToolTips": {
 		"LightMode": "Light Mode",

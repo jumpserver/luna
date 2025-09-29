@@ -41,5 +41,6 @@ export function transformAssetData(rawData: RawAssetData): AssetItem {
 }
 
 export function transformAssetsData(rawDataArray: RawAssetData[]): AssetItem[] {
+  console.log('rawDataArray', rawDataArray);
   return rawDataArray.map(transformAssetData);
 }

@@ -73,11 +73,18 @@ pub struct Zone {
 }
 
 #[tauri::command]
-pub async fn get_assets(app: AppHandle, site: String, cookie_header: String, query: AssetQuery) {
+pub async fn get_assets(
+    app: AppHandle,
+    site: String,
+    cookie_header: String,
+    query: AssetQuery,
+    favorite: Option<bool>,
+) {
     let asset_service = Arc::new(AssetService::new(site, cookie_header, query));
-    let assets_data = asset_service.get_category_assets().await;
+    let assets_data = asset_service
+        .get_category_assets(favorite.unwrap_or(false))
+        .await;
 
-    // 请求失败则直接返回失败事件
     if !assets_data.success {
         error!("获取 Asset 数据失败");
         error!("返回的 status 为 {}", assets_data.status);

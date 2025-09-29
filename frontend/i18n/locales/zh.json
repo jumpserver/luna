@@ -7,7 +7,8 @@
 		"NoData": "暂无数据",
 		"NoDataDescription": "请先登录",
 		"ConnectionSettings": "连接设置",
-		"LoginSite": "登录站点"
+		"LoginSite": "登录站点",
+		"All": "全部"
 	},
 	"ToolTips": {
 		"LightMode": "亮色模式",
