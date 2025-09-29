@@ -71,7 +71,7 @@
 		"LoginSuccess": "登录成功",
 		"LoginSuccessDescription": "欢迎回来，您已成功登录",
 		"LoginFailed": "登录失败",
-		"LoginFailedDescription": "登录失败,请重试",
+		"LoginFailedDescription": "登录失败, 当前账号登录已失效，请重新登录",
 		"EmptyUrlError": "请输入站点地址",
 		"InvalidUrlError": "请输入有效的站点地址或IP地址",
 		"AddAccount": "新增账号",

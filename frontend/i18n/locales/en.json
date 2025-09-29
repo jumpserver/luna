@@ -73,6 +73,7 @@
 		"LoginSuccess": "Login Success",
 		"LoginSuccessDescription": "Your operation has been completed successfully",
 		"EmptyUrlError": "Please enter a site address",
+		"LoginFailedDescription": "Login failed, the current account has expired, please log in again",
 		"InvalidUrlError": "Please enter a valid site address or IP address",
 		"AddAccount": "Add Account",
 		"SwitchSite": "Switch Site",
