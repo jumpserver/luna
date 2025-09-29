@@ -103,7 +103,7 @@ where
 {
     info!("GET {}", url);
 
-    let client = reqwest::Client::new();
+    let client = insecure_client()?;
     let request = maybe_query
         .apply(base_get_request(&client, url, header_cookie))
         .build()?;
@@ -124,7 +124,7 @@ where
         info!("body: {}", body);
     }
 
-    let client = reqwest::Client::new();
+    let client = insecure_client()?;
     let request = maybe_json
         .apply(base_post_request(&client, url, header_cookie))
         .build()?;
@@ -144,4 +144,12 @@ where
     M: MaybeJson,
 {
     to_api_response(url, post_unified(url, header_cookie, body).await).await
+}
+
+fn insecure_client() -> Result<reqwest::Client, reqwest::Error> {
+    let mut builder = reqwest::Client::builder();
+
+    // 忽略无效证书（自签名、过期等）
+    builder = builder.danger_accept_invalid_certs(true);
+    builder.build()
 }

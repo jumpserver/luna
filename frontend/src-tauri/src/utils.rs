@@ -48,7 +48,10 @@ pub async fn get_window_cookies(
     let win = get_window_with_retry(app, window_label, 10)
         .await
         .ok_or_else(|| format!("window '{}' not found after retries", window_label))?;
-    let url = Url::parse(origin).map_err(|e| e.to_string())?;
+    // 允许传入裸域名/IP，失败时默认补全 https:// 再解析
+    let url = Url::parse(origin)
+        .or_else(|_| Url::parse(&format!("https://{}", origin)))
+        .map_err(|e| e.to_string())?;
     let target_domain = url.host_str().unwrap_or("");
 
     sleep(Duration::from_millis(1000)).await;
@@ -58,7 +61,10 @@ pub async fn get_window_cookies(
         .into_iter()
         .filter(|cookie| {
             let domain = cookie.domain().unwrap_or("");
-            domain == target_domain || domain == format!(".{}", target_domain)
+            // 更宽松的域名匹配：支持父子域
+            let cd = domain.trim_start_matches('.') ;
+            let td = target_domain.trim_start_matches('.');
+            cd == td || cd.ends_with(&format!(".{}", td)) || td.ends_with(&format!(".{}", cd))
         })
         .collect();
 

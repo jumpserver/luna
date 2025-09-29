@@ -1,18 +1,15 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui';
-import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
 const { t } = useI18n();
-const userInfoStore = useUserInfoStore();
 const useSettingStore = useUserSettingStore();
 
 const { setCollapse } = useSettingStore;
-const { loggedIn } = storeToRefs(userInfoStore);
 const { collapse, theme } = storeToRefs(useSettingStore);
 
-const items = ref<NavigationMenuItem[][]>([
-  [
+const sideBarItems = computed<NavigationMenuItem[]>(() => {
+  return [
     {
       label: t('Menu.Resource'),
       type: 'label',
@@ -21,44 +18,37 @@ const items = ref<NavigationMenuItem[][]>([
       label: t('Menu.Linux'),
       icon: 'si:terminal-alt-line',
       to: '/linux',
-      disabled: !loggedIn.value,
     },
     {
       label: t('Menu.Windows'),
       icon: 'gravity-ui:logo-windows',
       to: '/windows',
-      disabled: !loggedIn.value,
     },
     {
       label: t('Menu.Database'),
       icon: 'i-lucide-database',
       to: '/database',
-      disabled: !loggedIn.value,
     },
     {
       label: t('Menu.Device'),
       icon: 'mingcute:device-line',
       to: '/device',
-      disabled: !loggedIn.value,
     },
     {
       label: t('Menu.Favorite'),
       icon: 'i-lucide-star',
       to: '/favorite',
-      disabled: !loggedIn.value,
     },
     {
       label: t('Menu.OfflinePlayer'),
       type: 'label',
-      disabled: !loggedIn.value,
     },
     {
       label: t('Menu.Player'),
       icon: 'i-lucide-video',
-      disabled: !loggedIn.value,
     },
-  ],
-]);
+  ];
+});
 
 const handleCollapse = () => {
   setCollapse(!collapse.value);
@@ -84,7 +74,7 @@ const handleCollapse = () => {
       <UNavigationMenu
         color="primary"
         orientation="vertical"
-        :items="items"
+        :items="sideBarItems"
         :highlight="false"
         :collapsed="collapse"
         :ui="
@@ -105,4 +95,3 @@ const handleCollapse = () => {
     </div>
   </div>
 </template>
-  

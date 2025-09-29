@@ -16,6 +16,10 @@ pub async fn url_watcher(app: AppHandle, name: String, origin: String) {
 
         ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
+        let mut consecutive_cookie_errors: u32 = 0;
+        let mut attempts: u32 = 0;
+        let max_attempts: u32 = 60;
+
         loop {
             ticker.tick().await;
 
@@ -27,53 +31,87 @@ pub async fn url_watcher(app: AppHandle, name: String, origin: String) {
                 }
             };
 
-            match window.url() {
-                Ok(url) => {
-                    let url_str = url.as_str();
+            // 通过周期性读取 cookies 并调用后端接口来判断是否登录
+            let cookies = get_window_cookies(&app, &name, &origin).await;
 
-                    info!("当前 url 为: {}", url_str);
-
-                    if url_str.contains("/ui/#/") {
-                        info!("检测到登录成功，停止监听");
-
-                        // 获取全部 cookie
-                        let cookies = get_window_cookies(&app, &name, &url_str).await;
-
-                        match cookies {
-                            Ok(cookies) => {
-                                let cookie_header = format_cookies(&cookies);
-                                info!("获取到的 cookie: {}", cookie_header);
-
-                                let user_service = UserService::new(origin.clone(), cookie_header.clone());
-                                let user_data = user_service.init().await;
-
-                                window.close().expect("关闭异常");
-
-                                if user_data.profile.success && user_data.permission_orgs.success && user_data.current_org.success {
-                                    let _ = app.emit(
-                                        "login-success-detected",
-                                        json!({
-                                            "status": "success",
-                                            "profile": user_data.profile,
-                                            "permission_orgs": user_data.permission_orgs,
-                                            "current_org": user_data.current_org,
-                                            "cookies": cookie_header,
-                                        }),
-                                    );
-                                } else {
-                                    let _ = app.emit("login-failed-detected", json!({"status": "failure"}));
-                                    warn!("获取用户初始信息失败!")
-                                }
-                            }
-                            Err(e) => {
-                                warn!("获取 cookie 失败: {}", e)
-                            }
-                        }
+            match cookies {
+                Err(e) => {
+                    consecutive_cookie_errors += 1;
+                    warn!(
+                        "获取 cookie 失败（第 {} 次）：{}",
+                        consecutive_cookie_errors, e
+                    );
+                    if consecutive_cookie_errors >= 3 {
+                        let _ = app.emit(
+                            "login-failed-detected",
+                            json!({
+                                "status": "failure",
+                                "reason": "cookie-query-failed",
+                                "message": format!("连续 {} 次获取 Cookie 失败，已中止登录", consecutive_cookie_errors),
+                            }),
+                        );
+                        let _ = window.close();
                         break;
                     }
                 }
-                Err(e) => {
-                    warn!("获取 url 失败：{}", e);
+                Ok(cookies) => {
+                    consecutive_cookie_errors = 0;
+                    attempts += 1;
+
+                    // 组装请求头 cookies
+                    let cookie_header = format_cookies(&cookies);
+
+                    // 还没拿到任何 cookies，继续等待
+                    if cookie_header.is_empty() {
+                        if attempts >= max_attempts {
+                            let _ = app.emit(
+                                "login-failed-detected",
+                                json!({
+                                    "status": "failure",
+                                    "reason": "no-cookies",
+                                    "message": "长时间未获取到登录 Cookies，已中止登录",
+                                }),
+                            );
+                            let _ = window.close();
+                            break;
+                        }
+                        continue;
+                    }
+
+                    // 轮询调用 get_user_profile，用于判断是否已登录（非 401 视为成功）
+                    let user_service = UserService::new(origin.clone(), cookie_header.clone());
+                    let profile = user_service.get_user_profile().await;
+
+                    if profile.status != 401 && profile.success {
+                        let user_data = user_service.init().await;
+
+                        let _ = app.emit(
+                            "login-success-detected",
+                            json!({
+                                "status": "success",
+                                "profile": user_data.profile,
+                                "permission_orgs": user_data.permission_orgs,
+                                "current_org": user_data.current_org,
+                                "cookies": cookie_header,
+                            }),
+                        );
+                        let _ = window.close();
+                        break;
+                    }
+
+                    // 达到最大尝试次数，判为失败
+                    if attempts >= max_attempts {
+                        let _ = app.emit(
+                            "login-failed-detected",
+                            json!({
+                                "status": "failure",
+                                "reason": "timeout-or-unauthorized",
+                                "message": "长时间未检测到登录成功（Profile 一直未授权），已中止登录",
+                            }),
+                        );
+                        let _ = window.close();
+                        break;
+                    }
                 }
             }
         }
