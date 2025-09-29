@@ -39,14 +39,14 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
       icon: 'i-lucide-star',
       to: '/favorite',
     },
-    {
-      label: t('Menu.OfflinePlayer'),
-      type: 'label',
-    },
-    {
-      label: t('Menu.Player'),
-      icon: 'i-lucide-video',
-    },
+    // {
+    //   label: t('Menu.OfflinePlayer'),
+    //   type: 'label',
+    // },
+    // {
+    //   label: t('Menu.Player'),
+    //   icon: 'i-lucide-video',
+    // },
   ];
 });
 

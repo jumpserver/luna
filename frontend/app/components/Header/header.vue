@@ -48,6 +48,7 @@ const currentOrg = ref<string>('');
 const openModal = ref(false);
 const hasValidationError = ref(false);
 const loginPage = ref<WebviewWindow | null>(null);
+const subscribeErrorPageEvent = ref<UnlistenFn | null>(null);
 const subscribeLoginSuccessEvent = ref<UnlistenFn | null>(null);
 const subscribeLoginFailedEvent = ref<UnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
@@ -244,6 +245,14 @@ const handleConfirm = () => {
     return;
   }
 
+  if (
+    Object.values(userMap.value).some((user) => user.site === inputSite.value)
+  ) {
+    hasValidationError.value = true;
+    errorMessage.value = t('Login.AlreadyLoggedInError');
+    return;
+  }
+
   if (!REG_EXP.test(inputSite.value)) {
     hasValidationError.value = true;
     errorMessage.value = t('Login.InvalidUrlError');
@@ -391,6 +400,29 @@ const listenTauriEvent = async () => {
       setUserLoggedIn(false);
     }
   );
+
+  subscribeErrorPageEvent.value = await useTauriEventListen(
+    'error-page',
+    (event) => {
+      const { status, reason } = event.payload as {
+        status: string;
+        reason: string;
+      };
+
+      if (status === 'failure' && reason === 'cookies-not-found') {
+        toast.add({
+          title: t('Login.LoginFailed'),
+          description: t('Login.LoginFailedErrorPage'),
+          color: 'error',
+          icon: 'line-md:close-circle',
+        });
+
+        nextTick(() => {
+          setUserLoggedIn(false);
+        });
+      }
+    }
+  );
 };
 
 const unListenTauriEvent = () => {
@@ -400,6 +432,10 @@ const unListenTauriEvent = () => {
 
   if (subscribeLoginFailedEvent.value) {
     subscribeLoginFailedEvent.value();
+  }
+
+  if (subscribeErrorPageEvent.value) {
+    subscribeErrorPageEvent.value();
   }
 };
 
@@ -415,6 +451,8 @@ onMounted(async () => {
   }
 
   await listenTauriEvent();
+
+  useEventBus().on('login', openLoginPage);
 });
 
 watch(
@@ -426,6 +464,8 @@ watch(
 
 onBeforeUnmount(() => {
   unListenTauriEvent();
+
+  useEventBus().off('login');
 });
 </script>
 

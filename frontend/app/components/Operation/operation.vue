@@ -147,19 +147,21 @@ const useDebouncedSearch = useDebounceFn(handleSearch, 200);
 
 <template>
   <div
-    class="flex w-full items-center justify-end px-4 h-12"
+    class="flex w-full items-center px-4 h-12"
     :style="{
       backgroundColor: theme === 'dark' ? darkColor : lightColor,
     }"
   >
-    <section class="flex item-center flex-nowrap gap-3 h-7 mr-2">
+    <section
+      class="flex items-center justify-between flex-nowrap gap-3 h-7 mr-2 w-full"
+    >
       <UInput
         v-model="inputValue"
         clearable
         icon="i-lucide-search"
         variant="outline"
         :placeholder="t('Operation.Search')"
-        :style="{ with: '18rem', borderRadius: '8px' }"
+        :style="{ width: '18rem', borderRadius: '8px' }"
         @update:model-value="useDebouncedSearch"
       >
         <template v-if="inputValue?.length" #trailing>
@@ -179,30 +181,32 @@ const useDebouncedSearch = useDebounceFn(handleSearch, 200);
         </template>
       </UInput>
 
-      <template v-for="action of actionItems" :key="action.iconName">
-        <template v-if="action.type === 'action'">
-          <UButton
-            :icon="action.iconName"
-            size="sm"
-            color="neutral"
-            variant="outline"
-            class="rounded-lg"
-            @click="action.onClick"
-          />
-        </template>
-
-        <template v-else>
-          <UDropdownMenu arrow :items="action.selectItems" size="sm">
+      <div class="flex-1 flex items-center gap-3">
+        <template v-for="action of actionItems" :key="action.iconName">
+          <template v-if="action.type === 'action'">
             <UButton
               :icon="action.iconName"
               size="sm"
               color="neutral"
               variant="outline"
               class="rounded-lg"
+              @click="action.onClick"
             />
-          </UDropdownMenu>
+          </template>
+
+          <template v-else>
+            <UDropdownMenu arrow :items="action.selectItems" size="sm">
+              <UButton
+                :icon="action.iconName"
+                size="sm"
+                color="neutral"
+                variant="outline"
+                class="rounded-lg"
+              />
+            </UDropdownMenu>
+          </template>
         </template>
-      </template>
+      </div>
     </section>
   </div>
 </template>

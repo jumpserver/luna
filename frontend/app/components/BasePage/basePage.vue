@@ -5,11 +5,12 @@ import type { AssetItem, SettingResponse } from '~/types/index';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
-type AssetType = 'linux' | 'windows' | 'database' | 'device';
+type AssetType = 'linux' | 'windows' | 'database' | 'device' | 'favorite';
 
 const props = defineProps<{
   type: AssetType;
   iconName: string;
+  platform?: string;
 }>();
 
 const skeletonCount = 12;
@@ -43,6 +44,13 @@ const {
   isInitialLoading,
   appendSkeletonCount,
 } = assetManager;
+
+const visibleAssets = computed(() => {
+  if (!props.platform || props.platform === 'all') return assetsData.value;
+  return assetsData.value.filter(
+    (item) => (item as AssetItem).platform === props.platform
+  );
+});
 
 watch([editModalOpen, currentSelectedCardInfo], ([open, info]) => {
   if (open && info) initDraft();
@@ -81,7 +89,7 @@ async function getSettings() {
 const handleCardClick = (index: number, e: MouseEvent) => {
   e.stopPropagation();
   selectedCardIndex.value = index;
-  currentSelectedCardInfo.value = assetsData.value[index]!;
+  currentSelectedCardInfo.value = visibleAssets.value[index]!;
 };
 
 const clearSelectedCard = () => {
@@ -231,7 +239,7 @@ const labelColumnTemplate = computed(
       </div>
 
       <div
-        v-else-if="assetsData && assetsData.length === 0"
+        v-else-if="visibleAssets && visibleAssets.length === 0"
         class="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-500"
       >
         <template v-if="loggedIn">
@@ -241,9 +249,20 @@ const labelColumnTemplate = computed(
         </template>
 
         <template v-else>
-          <UIcon name="cuida:login-outline" class="size-10" />
-
-          <span class="text-sm"> {{ t('Common.NoDataDescription') }} </span>
+          <UPageCard
+            spotlight
+            variant="soft"
+            orientation="horizontal"
+            spotlight-color="primary"
+            :description="t('Common.NoDataDescription')"
+            class="cursor-pointer"
+            :ui="{
+              container: 'gap-x-2',
+            }"
+            @click="useEventBus().emit('login')"
+          >
+            <UIcon name="cuida:login-outline" class="size-10" />
+          </UPageCard>
         </template>
       </div>
 
@@ -253,12 +272,13 @@ const labelColumnTemplate = computed(
       >
         <template v-if="layouts === 'grid'">
           <GridCard
-            v-for="(item, index) in assetsData"
+            v-for="(item, index) in visibleAssets"
             :key="item.id"
             :zone="item.zone"
             :asset-id="item.id"
             :icon-name="iconName"
             :address="item.address"
+            :is-active="item.isActive"
             :asset-name="item.assetName"
             :accounts="item.permed_accounts || []"
             :protocols="item.permed_protocols || []"

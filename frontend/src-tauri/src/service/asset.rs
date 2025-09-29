@@ -92,7 +92,29 @@ impl AssetService {
         }
     }
 
-    pub async fn get_category_assets(&self) -> ApiResponse {
+    pub async fn get_category_assets(&self, favorite: bool) -> ApiResponse {
+        if favorite {
+            let url = format!(
+                "{}/api/v1/perms/users/self/nodes/favorite/assets/",
+                self.origin
+            );
+
+            info!("获取 Favorite 的资产信息，请求 url: {}", url);
+
+            let query = AssetQuery {
+                r#type: None,
+                category: None,
+                offset: Some(self.query.offset.unwrap_or(0)),
+                limit: Some(self.query.limit.unwrap_or(20)),
+                search: Some(self.query.search.clone().unwrap_or_default()),
+                order: Some(self.query.order.clone().unwrap_or_default()),
+                org: self.query.org.clone(),
+            };
+
+            return to_api_response(&url, get_unified(&url, &self.cookie_header, &query).await)
+                .await;
+        }
+
         let url = format!("{}/api/v1/perms/users/self/assets/", self.origin);
         let category = self.query.get_category();
 

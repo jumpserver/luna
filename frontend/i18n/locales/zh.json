@@ -7,7 +7,8 @@
 		"NoData": "暂无数据",
 		"NoDataDescription": "请先登录",
 		"ConnectionSettings": "连接设置",
-		"LoginSite": "登录站点"
+		"LoginSite": "登录站点",
+		"All": "全部"
 	},
 	"ToolTips": {
 		"LightMode": "亮色模式",
@@ -42,8 +43,10 @@
 	"ContextMenu": {
 		"QuickConnect": "快速连接",
 		"Connect": "连接",
+		"MoreConnect": "更多连接",
 		"Rename": "重命名",
-		"Use": "使用"
+		"Use": "使用",
+		"Favorite": "收藏"
 	},
 	"EditModal": {
 		"ModifyConnectionInfo": "修改连接信息",
@@ -70,13 +73,15 @@
 		"LoginSuccess": "登录成功",
 		"LoginSuccessDescription": "欢迎回来，您已成功登录",
 		"LoginFailed": "登录失败",
-		"LoginFailedDescription": "登录失败,请重试",
+		"LoginFailedDescription": "登录失败, 当前账号登录已失效，请重新登录",
 		"EmptyUrlError": "请输入站点地址",
 		"InvalidUrlError": "请输入有效的站点地址或IP地址",
 		"AddAccount": "新增账号",
 		"SwitchSite": "切换站点",
 		"LoginAuthenticationExpired": "登录认证已失效，请重新登录",
-		"Logout": "退出登录"
+		"Logout": "退出登录",
+		"AlreadyLoggedInError": "您已经登录了该站点",
+		"LoginFailedErrorPage": "登录失败, 当前页面不是登录页面，请重新输入"
 	},
 	"Loading": {
 		"Loading": "加载中",
