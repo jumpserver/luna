@@ -36,7 +36,7 @@ reqwest = { version = "0.12", default-features = false, features = [ "json", "na
 serde_json = "1.0"
 time = "0.3.43"
 chrono = "0.4.41"
-tauri-plugin-clipboard-manager = "2"
+tauri-plugin-clipboard-manager = "2.0.0"
 
 [dependencies.tauri]
 version = "2.6.2"

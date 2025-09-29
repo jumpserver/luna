@@ -15,7 +15,11 @@ fn platform_subdir() -> Option<&'static str> {
             "arm" | "aarch64" => Some("linux-arm64"),
             _ => None,
         },
-        "macos" => Some("darwin"),
+        "macos" => match arch {
+            "x86_64" => Some("darwin-amd64"),
+            "arm" | "aarch64" => Some("darwin-arm64"),
+            _ => None,
+        },
         "windows" => Some("windows"),
         _ => None,
     }

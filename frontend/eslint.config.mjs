@@ -12,6 +12,7 @@ export default eslintConfig(
 		},
 		rules: {
 			curly: "off",
+			"jsonc/indent": "off",
 			"no-console": "off",
 			"no-new-func": "off",
 			"style/semi": ["error", "always"],
