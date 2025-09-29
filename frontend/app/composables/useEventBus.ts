@@ -6,6 +6,7 @@ type BusEvents = {
   refresh: undefined;
   setSort: SortType;
   search: string;
+  login: undefined;
 } & Record<EventType, unknown>;
 
 const emitter: Emitter<BusEvents> = mitt<BusEvents>();

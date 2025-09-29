@@ -43,8 +43,10 @@
 	"ContextMenu": {
 		"QuickConnect": "快速连接",
 		"Connect": "连接",
+		"MoreConnect": "更多连接",
 		"Rename": "重命名",
-		"Use": "使用"
+		"Use": "使用",
+		"Favorite": "收藏"
 	},
 	"EditModal": {
 		"ModifyConnectionInfo": "修改连接信息",
@@ -78,7 +80,8 @@
 		"SwitchSite": "切换站点",
 		"LoginAuthenticationExpired": "登录认证已失效，请重新登录",
 		"Logout": "退出登录",
-		"AlreadyLoggedInError": "您已经登录了该站点"
+		"AlreadyLoggedInError": "您已经登录了该站点",
+		"LoginFailedErrorPage": "登录失败, 当前页面不是登录页面，请重新输入"
 	},
 	"Loading": {
 		"Loading": "加载中",

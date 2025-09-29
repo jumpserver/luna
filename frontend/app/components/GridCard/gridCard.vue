@@ -53,7 +53,7 @@ const items = ref<ContextMenuItem[][]>([
       icon: 'i-lucide-unplug',
     },
     {
-      label: t('ContextMenu.Connect'),
+      label: t('ContextMenu.MoreConnect'),
       icon: 'i-lucide-plug',
       children: [
         {
@@ -67,6 +67,10 @@ const items = ref<ContextMenuItem[][]>([
     {
       label: t('ContextMenu.Rename'),
       icon: 'i-lucide-pencil',
+    },
+    {
+      label: t('ContextMenu.Favorite'),
+      icon: 'i-lucide-star',
     },
   ],
 ]);

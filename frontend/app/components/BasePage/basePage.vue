@@ -249,9 +249,20 @@ const labelColumnTemplate = computed(
         </template>
 
         <template v-else>
-          <UIcon name="cuida:login-outline" class="size-10" />
-
-          <span class="text-sm"> {{ t('Common.NoDataDescription') }} </span>
+          <UPageCard
+            spotlight
+            variant="soft"
+            orientation="horizontal"
+            spotlight-color="primary"
+            :description="t('Common.NoDataDescription')"
+            class="cursor-pointer"
+            :ui="{
+              container: 'gap-x-2',
+            }"
+            @click="useEventBus().emit('login')"
+          >
+            <UIcon name="cuida:login-outline" class="size-10" />
+          </UPageCard>
         </template>
       </div>
 
