@@ -21,6 +21,7 @@ const props = withDefaults(
     protocol: string;
     assetName: string;
     highlight: boolean;
+    isActive: boolean;
     accounts?: PermedAccount[];
     protocols?: PermedProtocol[];
   }>(),
@@ -170,7 +171,7 @@ const handleConnect = () => {
             <div class="flex justify-between">
               <section class="flex">
                 <div class="flex items-center gap-2">
-                  <UChip>
+                  <UChip :color="isActive === true ? 'success' : 'error'">
                     <UAvatar
                       size="lg"
                       :icon="iconName"

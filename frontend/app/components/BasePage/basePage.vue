@@ -278,6 +278,7 @@ const labelColumnTemplate = computed(
             :asset-id="item.id"
             :icon-name="iconName"
             :address="item.address"
+            :is-active="item.isActive"
             :asset-name="item.assetName"
             :accounts="item.permed_accounts || []"
             :protocols="item.permed_protocols || []"
