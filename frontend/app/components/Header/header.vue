@@ -31,6 +31,7 @@ const lightColor = appConfig.componentsConfig.header.lightColor;
 
 const { setLang, setCollapse } = userSettingStore;
 const { theme, language, collapse } = storeToRefs(userSettingStore);
+
 const {
   setUserLoggedIn,
   setUserData,
@@ -52,6 +53,8 @@ const subscribeErrorPageEvent = ref<UnlistenFn | null>(null);
 const subscribeLoginSuccessEvent = ref<UnlistenFn | null>(null);
 const subscribeLoginFailedEvent = ref<UnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
+
+useEventBus().on('login', openLoginPage);
 
 const switchAccountChildren = computed<DropdownMenuItem[][]>(() => {
   const items: DropdownMenuItem[] = Object.values(userMap.value || {}).map(
@@ -122,10 +125,6 @@ const supportLanguages = computed(() => {
     onUpdateChecked: (checked: boolean) => {
       if (checked) {
         changeLocale(locale.code);
-
-        nextTick(() => {
-          setLang(locale.code);
-        });
       }
     },
   })) as DropdownMenuItem[];
@@ -148,6 +147,14 @@ const computedSwitchMode = computed<ActionItem>(() => {
     type: 'action',
   };
 });
+
+watch(
+  language,
+  (lang) => {
+    setLocale(lang as LocaleCode);
+  },
+  { immediate: true }
+);
 
 /**
  * @description 切换颜色 mode
@@ -190,11 +197,7 @@ function handleSwitchAccount(site: string) {
  * @param payload 语言代码
  */
 function changeLocale(payload: LocaleCode) {
-  setLocale(payload);
-
-  nextTick(() => {
-    setLang(payload);
-  });
+  setLang(payload);
 }
 
 /**
@@ -440,7 +443,7 @@ const unListenTauriEvent = () => {
 };
 
 onMounted(async () => {
-  setLocale(language.value as LocaleCode);
+  // setLocale(language.value as LocaleCode);
 
   if (loggedIn.value && userInfoStore.currentUser) {
     currentOrg.value = userInfoStore.currentUser.org.name;
@@ -451,8 +454,6 @@ onMounted(async () => {
   }
 
   await listenTauriEvent();
-
-  useEventBus().on('login', openLoginPage);
 });
 
 watch(
@@ -464,8 +465,6 @@ watch(
 
 onBeforeUnmount(() => {
   unListenTauriEvent();
-
-  useEventBus().off('login');
 });
 </script>
 

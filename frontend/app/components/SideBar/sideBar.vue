@@ -3,6 +3,7 @@ import type { NavigationMenuItem } from '@nuxt/ui';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
 const { t } = useI18n();
+const localePath = useLocalePath();
 const useSettingStore = useUserSettingStore();
 
 const { setCollapse } = useSettingStore;
@@ -17,27 +18,27 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
     {
       label: t('Menu.Linux'),
       icon: 'si:terminal-alt-line',
-      to: '/linux',
+      to: localePath('/linux'),
     },
     {
       label: t('Menu.Windows'),
       icon: 'gravity-ui:logo-windows',
-      to: '/windows',
+      to: localePath('/windows'),
     },
     {
       label: t('Menu.Database'),
       icon: 'i-lucide-database',
-      to: '/database',
+      to: localePath('/database'),
     },
     {
       label: t('Menu.Device'),
       icon: 'mingcute:device-line',
-      to: '/device',
+      to: localePath('/device'),
     },
     {
       label: t('Menu.Favorite'),
       icon: 'i-lucide-star',
-      to: '/favorite',
+      to: localePath('/favorite'),
     },
     // {
     //   label: t('Menu.OfflinePlayer'),
@@ -72,10 +73,8 @@ const handleCollapse = () => {
 
     <div class="px-4 py-0">
       <UNavigationMenu
-        color="primary"
         orientation="vertical"
         :items="sideBarItems"
-        :highlight="false"
         :collapsed="collapse"
         :ui="
           collapse
@@ -86,12 +85,12 @@ const handleCollapse = () => {
                 linkLeadingIcon: 'size-5',
               }
             : {
-                link: 'px-2',
-                linkLabel: theme === 'dark' ? 'text-white' : 'text-black',
-                linkLeadingIcon: theme === 'dark' ? 'text-white' : 'text-black',
+                link: 'px-2 gap-2.5',
               }
         "
       />
+
+      <!--  linkLabel: theme === 'dark' ? 'text-white' : 'text-black', linkLeadingIcon: theme === 'dark' ? 'text-white' : 'text-black', -->
     </div>
   </div>
 </template>

@@ -37,26 +37,27 @@
 // onMounted(() => {
 //   fetchNextPage();
 // });
+
+//  <div class="relative h-full flex min-h-0">
+//     <UTabs
+//       v-model="currentTab"
+//       orientation="vertical"
+//       variant="link"
+//       :items="tabItems"
+//       class="w-full h-full items-start"
+//     >
+//       <template #content>
+//         <BasePage
+//           type="database"
+//           icon-name="lets-icons:database-fill"
+//           :platform="currentTab"
+//         />
+//       </template>
+//     </UTabs>
+//   </div>
 </script>
 
 <template>
-  <!-- <div class="relative h-full flex min-h-0">
-    <UTabs
-      v-model="currentTab"
-      orientation="vertical"
-      variant="link"
-      :items="tabItems"
-      class="w-full h-full items-start"
-    >
-      <template #content>
-        <BasePage
-          type="database"
-          icon-name="lets-icons:database-fill"
-          :platform="currentTab"
-        />
-      </template>
-    </UTabs>
-  </div> -->
   <div>
     <BasePage type="database" icon-name="lets-icons:database-fill" />
   </div>
