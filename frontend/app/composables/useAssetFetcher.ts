@@ -142,7 +142,7 @@ export const useAssetFetcher = (
       await useTauriCoreInvoke('get_assets', {
         site: currentSite.value,
         cookieHeader: currentUser.value.headerJson,
-        favorite: assetType === 'favorite' ? true : false,
+        favorite: assetType === 'favorite',
         query: {
           type: assetType === 'favorite' ? undefined : assetType,
           offset: offset.value,
