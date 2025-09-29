@@ -12,47 +12,9 @@ pub async fn url_watcher(app: AppHandle, name: String, origin: String) {
     tokio::spawn(async move {
         info!("开始监听 url 变化");
 
-        // 仅在启动时读取一次 Cookies；如果读不到则视为非目标页面
-        let initial_cookies_result = get_window_cookies(&app, &name, &origin).await;
-
-        let cookie_header = match initial_cookies_result {
-            Ok(cookies) => {
-                let header = format_cookies(&cookies);
-
-                if header.is_empty() {
-                    info!("未获取到 Cookies");
-
-                    let _ = app.emit(
-                        "error-page",
-                        json!({
-                            "status": "failure",
-                            "reason": "cookies-not-found",
-                        }),
-                    );
-
-                    let _ = app.get_webview_window(&name).unwrap().close();
-                    return;
-                }
-
-                header
-            }
-            Err(e) => {
-                info!("获取 Cookies 失败，可能不是正确的登录页面：{}", e);
-
-                let _ = app.emit(
-                    "error-page",
-                    json!({
-                        "status": "failure",
-                        "reason": "cookies-not-found",
-                    }),
-                );
-
-                let _ = app.get_webview_window(&name).unwrap().close();
-                return;
-            }
-        };
-
+        let mut cookie_header: String = String::new();
         let mut ticker = time::interval(Duration::from_secs(2));
+
         ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
         let mut attempts: u32 = 0;
@@ -69,11 +31,26 @@ pub async fn url_watcher(app: AppHandle, name: String, origin: String) {
                 }
             };
 
+            // 轮询获取 Cookies，确保拾取到登录后的有效会话
+            if let Ok(cookies) = get_window_cookies(&app, &name, &origin).await {
+                let new_header = format_cookies(&cookies);
+                if !new_header.is_empty() && new_header != cookie_header {
+                    info!("检测到 Cookies 已更新");
+                    cookie_header = new_header;
+                }
+            }
+
+            if cookie_header.is_empty() {
+                continue;
+            }
+
             attempts += 1;
 
-            // 仅使用启动时的 Cookies，轮询调用 get_user_profile 判断是否已登录（非 401 视为成功）
+            // 轮询调用 get_user_profile 直到 status 为 200 表明登录成功
             let user_service = UserService::new(origin.clone(), cookie_header.clone());
             let profile = user_service.get_user_profile().await;
+
+            info!("profile: {:?}", profile);
 
             if profile.status != 401 && profile.success {
                 let user_data = user_service.init().await;
