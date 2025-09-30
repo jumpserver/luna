@@ -2,11 +2,6 @@
 	"bundle": {
 		"active": true,
 		"targets": "all",
-		"windows": {
-			"certificateThumbprint": null,
-			"digestAlgorithm": "sha256",
-			"timestampUrl": ""
-		},
 		"icon": [
 			"icons/JumpServerClient.icns"
 		],
@@ -17,8 +12,20 @@
 		"shortDescription": "",
 		"longDescription": "",
 		"macOS": {},
+		"windows": {
+			"certificateThumbprint": null,
+			"digestAlgorithm": "sha256",
+			"timestampUrl": "",
+			"webviewInstallMode": {
+				"type": "embedBootstrapper"
+			},
+			"nsis": {
+				"installMode": "both"
+			}
+		},
 		"linux": {
-			"deb": {}
+			"deb": {},
+			"rpm": {}
 		}
 	},
 	"build": {
