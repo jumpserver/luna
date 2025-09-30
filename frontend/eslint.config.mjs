@@ -11,7 +11,8 @@ export default eslintConfig(
 			quotes: "double"
 		},
 		rules: {
-			curly: "off",
+			"curly": "off",
+			"eol-last": "off",
 			"jsonc/indent": "off",
 			"no-console": "off",
 			"no-new-func": "off",
