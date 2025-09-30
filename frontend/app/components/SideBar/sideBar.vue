@@ -58,7 +58,9 @@ const handleCollapse = () => {
 
 <template>
   <div
-    class="flex flex-col"
+    class="flex flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-blur-lg backdrop-saturate-150 
+    supports-[backdrop-filter]:bg-white/20 supports-[backdrop-filter]:dark:bg-zinc-900/15 border-r
+     border-white/30 dark:border-white/10 shadow-sm"
     :style="{
       width: collapse ? '72px' : '256px',
     }"
@@ -66,7 +68,7 @@ const handleCollapse = () => {
     <section class="flex items-center justify-end w-full px-4 h-12">
       <UIcon
         :name="collapse ? '' : 'i-lucide-panel-left-close'"
-        class="size-5 cursor-pointer hover:text-[#55B787]"
+        class="size-5 cursor-pointer hover:text-[#55B787] mt-2"
         @click="handleCollapse"
       />
     </section>
@@ -90,7 +92,7 @@ const handleCollapse = () => {
         "
       />
 
-      <!--  linkLabel: theme === 'dark' ? 'text-white' : 'text-black', linkLeadingIcon: theme === 'dark' ? 'text-white' : 'text-black', -->
+      <!-- linkLabel: theme === 'dark' ? 'text-white' : 'text-black', linkLeadingIcon: theme === 'dark' ? 'text-white' : 'text-black', -->
     </div>
   </div>
 </template>
