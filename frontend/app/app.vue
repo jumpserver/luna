@@ -3,15 +3,9 @@ useApplicationConfig();
 const { currentOSTheme, userTheme } = useThemeAdapter();
 
 const backgroundColor = computed(() => {
-  if (currentOSTheme.value === 'light') {
     return userTheme.value === 'dark'
-      ? 'rgba(35, 35, 35, 0.4)'
-      : 'rgba(234, 234, 234, 0.4)';
-  } else {
-    return userTheme.value === 'light'
-      ? 'rgba(255, 255, 255, 0.4)'
-      : 'rgba(35, 35, 35, 0.4)';
-  }
+      ? 'rgba(35, 35, 35, 0.5)'
+      : 'rgba(230, 230, 230, 0.5)';
 });
 
 // 因为 <Body> 是一个虚拟组件，底层并不会响应 Vue 的 :style 绑定。它的作用是把插槽内容插入到真正的 <body> 中，但自身不是一个响应式桥梁。

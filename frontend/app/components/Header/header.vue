@@ -30,7 +30,7 @@ const darkColor = appConfig.componentsConfig.header.darkColor;
 const lightColor = appConfig.componentsConfig.header.lightColor;
 
 const { setLang, setCollapse } = userSettingStore;
-const { theme, language, collapse } = storeToRefs(userSettingStore);
+const { theme, language, collapse, layouts, sort } = storeToRefs(userSettingStore);
 
 const {
   setUserLoggedIn,
@@ -116,7 +116,7 @@ const dropItems = computed<DropdownMenuItem[][]>(() => [
   ],
 ]);
 
-// const isDarkMode = computed(() => theme.value === 'dark');
+const isDarkMode = computed(() => theme.value === 'dark');
 
 const supportLanguages = computed(() => {
   return locales.value.map((locale: any) => ({
@@ -136,19 +136,141 @@ const organizationItems = computed(() =>
   currentOrganizations.value.map((org: PermOrgItem) => org.name)
 );
 
-// const computedSwitchMode = computed<ActionItem>(() => {
-//   return {
-//     key: 'switchMode',
-//     iconName: isDarkMode.value
-//       ? 'line-md:moon-alt-to-sunny-outline-loop-transition'
-//       : 'line-md:moon-alt-loop',
-//     tooltipLabel: isDarkMode.value
-//       ? t('ToolTips.LightMode')
-//       : t('ToolTips.DarkMode'),
-//     onClick: toggleDarkMode,
-//     type: 'action',
-//   };
-// });
+const computedSwitchMode = computed<ActionItem>(() => {
+  return {
+    key: 'switchMode',
+    iconName: isDarkMode.value
+      ? 'i-lucide-rocket'
+      : 'i-lucide-globe',
+    tooltipLabel: isDarkMode.value
+      ? t('ToolTips.LightMode')
+      : t('ToolTips.DarkMode'),
+    onClick: toggleDarkMode,
+    type: 'action',
+  };
+});
+
+// 从 Operation 组件移动过来的按钮操作逻辑
+const actionItems = computed<ActionItem[]>(() => [
+  {
+    key: 'refresh',
+    type: 'action',
+    iconName: 'i-lucide-refresh-ccw',
+    tooltipLabel: t('ToolTips.Refresh'),
+    onClick: () => {
+      useEventBus().emit('refresh', undefined);
+    },
+  },
+  {
+    key: 'sort',
+    type: 'select',
+    iconName: 'i-lucide-arrow-down-wide-narrow',
+    tooltipLabel: t('ToolTips.Sort'),
+    selectItems: [
+      {
+        icon: 'i-lucide-arrow-down-a-z',
+        label: t('Sort.A-z'),
+        value: 'name',
+        type: 'checkbox' as const,
+        checked: sort.value === 'name',
+        onUpdateChecked: (checked: boolean) => {
+          if (checked) {
+            userSettingStore.setSort('name');
+          }
+        },
+      },
+      {
+        icon: 'i-lucide-arrow-up-z-a',
+        label: t('Sort.Z-A'),
+        value: '-name',
+        type: 'checkbox' as const,
+        checked: sort.value === '-name',
+        onUpdateChecked: (checked: boolean) => {
+          if (checked) {
+            userSettingStore.setSort('-name');
+          }
+        },
+      },
+      {
+        type: 'separator' as const,
+      },
+      {
+        icon: 'i-lucide-calendar-arrow-down',
+        label: t('Sort.NewestToOldest'),
+        value: '-date_updated',
+        type: 'checkbox' as const,
+        checked: sort.value === '-date_updated',
+        onUpdateChecked: (checked: boolean) => {
+          if (checked) {
+            userSettingStore.setSort('-date_updated');
+          }
+        },
+      },
+      {
+        icon: 'i-lucide-calendar-arrow-up',
+        label: t('Sort.OldestToNewest'),
+        value: 'date_updated',
+        type: 'checkbox' as const,
+        checked: sort.value === 'date_updated',
+        onUpdateChecked: (checked: boolean) => {
+          if (checked) {
+            userSettingStore.setSort('date_updated');
+          }
+        },
+      },
+    ] as DropdownMenuItem[],
+  },
+  {
+    key: 'layout',
+    type: 'select',
+    iconName: 'i-lucide-layout-grid',
+    tooltipLabel: t('ToolTips.Layout'),
+    selectItems: [
+      {
+        icon: 'i-lucide-grid-2x2',
+        label: t('Layout.Grid'),
+        value: 'grid',
+        type: 'checkbox' as const,
+        checked: layouts.value === 'grid',
+        onUpdateChecked: (checked: boolean) => {
+          if (checked) {
+            userSettingStore.setLayouts('grid');
+          }
+        },
+      },
+      {
+        icon: 'i-lucide-table-of-contents',
+        label: t('Layout.Table'),
+        value: 'table',
+        type: 'checkbox' as const,
+        checked: layouts.value === 'table',
+        onUpdateChecked: (checked: boolean) => {
+          if (checked) {
+            userSettingStore.setLayouts('table');
+          }
+        },
+      },
+    ] as DropdownMenuItem[],
+  },
+  {
+    key: 'settings',
+    type: 'action',
+    iconName: 'i-lucide-settings',
+    tooltipLabel: t('ToolTips.Settings'),
+    onClick: () => {
+      // eslint-disable-next-line no-new
+      new useTauriWebviewWindowWebviewWindow('secondary', {
+        title: t('Common.ConnectionSettings'),
+        url: '/setting',
+        minWidth: 760,
+        minHeight: 520,
+        hiddenTitle: true,
+        titleBarStyle: 'overlay',
+        trafficLightPosition: new LogicalPosition(10, 22),
+      });
+    },
+  },
+]);
 
 watch(
   language,
@@ -178,9 +300,9 @@ function normalizeSite(value: string): string {
 /**
  * @description 切换颜色 mode
  */
-// function toggleDarkMode() {
-//   manualSetTheme(isDarkMode.value ? 'light' : 'dark');
-// }
+function toggleDarkMode() {
+  manualSetTheme(isDarkMode.value ? 'light' : 'dark');
+}
 
 /**
  * @description 打开登录窗口
@@ -527,91 +649,29 @@ onBeforeUnmount(() => {
     </section>
 
     <section class="flex items-center h-full gap-3 mr-2">
-      <UDropdownMenu arrow size="sm" :items="supportLanguages">
-        <UButton
-          icon="i-lucide-globe"
-          size="sm"
-          color="neutral"
-          variant="outline"
-          class="rounded-lg"
-        />
-      </UDropdownMenu>
+      <template v-for="action of actionItems" :key="action.iconName">
+        <template v-if="action.type === 'action'">
+          <UButton
+            :icon="action.iconName"
+            size="sm"
+            color="white"
+            class="rounded-lg hover:bg-[#e5e5e5] transition-colors duration-200"
+            @click="action.onClick"
+          />
+        </template>
 
-      <!-- <UButton
-        :icon="computedSwitchMode.iconName"
-        size="sm"
-        color="neutral"
-        variant="outline"
-        class="rounded-lg"
-        @click.prevent="computedSwitchMode.onClick"
-      /> -->
-
-      <UDropdownMenu
-        v-if="loggedIn"
-        :items="dropItems"
-        :ui="{
-          content: 'w-48',
-        }"
-      >
-        <UAvatar size="sm" src="/user_avatar.png" />
-      </UDropdownMenu>
-
-      <UButton
-        v-else
-        size="sm"
-        variant="subtle"
-        icon="line-md:log-in"
-        @click="openLoginPage"
-      >
-        {{ t('Common.UnSigned') }}
-      </UButton>
-    </section>
-
-    <Modal
-      v-model:open="openModal"
-      :title="t('Login.Title')"
-      @update:open="openModal = $event"
-      @confirm="handleConfirm"
-      @clipboard="handleClipboard"
-    >
-      <div class="space-y-1">
-        <UInput
-          ref="inputRef"
-          v-model="inputSite"
-          :color="hasValidationError ? 'error' : 'primary'"
-          :ui="{
-            base: 'peer',
-          }"
-          placeholder=" "
-          @input="clearValidationError"
-        >
-          <label
-            class="pointer-events-none absolute left-0 -top-2.5 text-xs font-medium px-1.5 transition-all peer-focus:-top-2.5 peer-focus:text-xs peer-focus:font-medium peer-placeholder-shown:text-sm peer-placeholder-shown:top-1.5 peer-placeholder-shown:font-normal"
-          >
-            <span class="inline-flex bg-default px-1">
-              {{ t('Login.Description') }}
-            </span>
-          </label>
-
-          <template v-if="normalizedInputSite?.length" #trailing>
+        <template v-else>
+          <UDropdownMenu arrow :items="action.selectItems" size="sm">
             <UButton
-              color="neutral"
-              variant="link"
+              :icon="action.iconName"
               size="sm"
-              icon="i-lucide-circle-x"
-              aria-label="Clear input"
-              @click="
-                inputSite = '';
-                clearValidationError();
-              "
+              color="white"
+              variant="ghost"
+              class="rounded-lg hover:bg-[#e5e5e5] transition-colors duration-200"
             />
-          </template>
-        </UInput>
-
-        <div v-if="hasValidationError" class="text-red-500 text-xs px-1">
-          {{ errorMessage }}
-        </div>
-      </div>
-    </Modal>
+          </UDropdownMenu>
+        </template>
+      </template>
+    </section>
   </div>
 </template>
