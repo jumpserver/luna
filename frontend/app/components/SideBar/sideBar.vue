@@ -18,27 +18,27 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
     {
       label: t('Menu.Linux'),
       icon: 'si:terminal-alt-line',
-      to: localePath('/linux'),
+      to: localePath('linux'),
     },
     {
       label: t('Menu.Windows'),
       icon: 'gravity-ui:logo-windows',
-      to: localePath('/windows'),
+      to: localePath('windows'),
     },
     {
       label: t('Menu.Database'),
       icon: 'i-lucide-database',
-      to: localePath('/database'),
+      to: localePath('database'),
     },
     {
       label: t('Menu.Device'),
       icon: 'mingcute:device-line',
-      to: localePath('/device'),
+      to: localePath('device'),
     },
     {
       label: t('Menu.Favorite'),
       icon: 'i-lucide-star',
-      to: localePath('/favorite'),
+      to: localePath('favorite'),
     },
     // {
     //   label: t('Menu.OfflinePlayer'),

@@ -56,8 +56,10 @@ const inputRef = ref<ComponentPublicInstance | null>(null);
 
 useEventBus().on('login', openLoginPage);
 
+const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
+
 const switchAccountChildren = computed<DropdownMenuItem[][]>(() => {
-  const items: DropdownMenuItem[] = Object.values(userMap.value || {}).map(
+  const items: DropdownMenuItem[] = (Object.values(userMap.value || {}) as UserData[]).map(
     (u: UserData) => {
       let host = u.site;
 
@@ -134,19 +136,19 @@ const organizationItems = computed(() =>
   currentOrganizations.value.map((org: PermOrgItem) => org.name)
 );
 
-const computedSwitchMode = computed<ActionItem>(() => {
-  return {
-    key: 'switchMode',
-    iconName: isDarkMode.value
-      ? 'line-md:moon-alt-to-sunny-outline-loop-transition'
-      : 'line-md:moon-alt-loop',
-    tooltipLabel: isDarkMode.value
-      ? t('ToolTips.LightMode')
-      : t('ToolTips.DarkMode'),
-    onClick: toggleDarkMode,
-    type: 'action',
-  };
-});
+// const computedSwitchMode = computed<ActionItem>(() => {
+//   return {
+//     key: 'switchMode',
+//     iconName: isDarkMode.value
+//       ? 'line-md:moon-alt-to-sunny-outline-loop-transition'
+//       : 'line-md:moon-alt-loop',
+//     tooltipLabel: isDarkMode.value
+//       ? t('ToolTips.LightMode')
+//       : t('ToolTips.DarkMode'),
+//     onClick: toggleDarkMode,
+//     type: 'action',
+//   };
+// });
 
 watch(
   language,
@@ -155,6 +157,16 @@ watch(
   },
   { immediate: true }
 );
+
+/**
+ * @description 标准化站点输入：去除首尾空格 + 去除末尾斜杠
+ * @param value
+ */
+function normalizeSite(value: string): string {
+  const s = (value || '').trim();
+  if (!s) return '';
+  return s.replace(/\/+$/, '');
+}
 
 /**
  * @description 切换颜色 mode
@@ -238,7 +250,9 @@ const handleConfirm = () => {
   hasValidationError.value = false;
   errorMessage.value = '';
 
-  if (!inputSite.value) {
+  const normalizedSite = normalizedInputSite.value;
+
+  if (!normalizedSite) {
     hasValidationError.value = true;
     errorMessage.value = t('Login.EmptyUrlError');
 
@@ -249,14 +263,16 @@ const handleConfirm = () => {
   }
 
   if (
-    Object.values(userMap.value).some((user) => user.site === inputSite.value)
+    Object.values(userMap.value || {}).some(
+      (user) => normalizeSite(user.site) === normalizedSite
+    )
   ) {
     hasValidationError.value = true;
     errorMessage.value = t('Login.AlreadyLoggedInError');
     return;
   }
 
-  if (!REG_EXP.test(inputSite.value)) {
+  if (!REG_EXP.test(normalizedSite)) {
     hasValidationError.value = true;
     errorMessage.value = t('Login.InvalidUrlError');
 
@@ -267,8 +283,8 @@ const handleConfirm = () => {
   }
 
   loginPage.value = new useTauriWebviewWindowWebviewWindow('loginPage', {
-    title: `${t('Common.LoginSite')} - ${inputSite.value}`,
-    url: inputSite.value,
+    title: `${t('Common.LoginSite')} - ${normalizedSite}`,
+    url: normalizedSite,
     width: 600,
     height: 800,
     minWidth: 600,
@@ -281,7 +297,7 @@ const handleConfirm = () => {
   nextTick(async () => {
     await useTauriCoreInvoke('url_watcher', {
       name: 'loginPage',
-      origin: inputSite.value,
+      origin: normalizedSite,
     });
 
     openModal.value = false;
@@ -303,7 +319,7 @@ const clearValidationError = () => {
  * @param value
  */
 const handleClipboard = (value: string) => {
-  inputSite.value = value;
+  inputSite.value = normalizeSite(value);
 };
 
 /**
@@ -359,6 +375,7 @@ const listenTauriEvent = async () => {
       const profileData = JSON.parse(profile.data);
       const permissionOrgData = JSON.parse(permission_orgs.data);
       const currentOrgData = JSON.parse(current_org.data);
+      const normalizedSite = normalizedInputSite.value;
 
       if (status === 'success' && profileData) {
         toast.add({
@@ -370,10 +387,10 @@ const listenTauriEvent = async () => {
 
         const availableOrgs = initSelectOrganization(permissionOrgData);
 
-        setUserData(inputSite.value, {
+        setUserData(normalizedSite, {
           name: profileData.name,
           headerJson: cookies,
-          site: inputSite.value,
+          site: normalizedSite,
           org: currentOrgData,
           system_roles: profileData.system_roles,
           availableOrgs,
@@ -443,8 +460,6 @@ const unListenTauriEvent = () => {
 };
 
 onMounted(async () => {
-  // setLocale(language.value as LocaleCode);
-
   if (loggedIn.value && userInfoStore.currentUser) {
     currentOrg.value = userInfoStore.currentUser.org.name;
     // 确保 orgId 也被正确设置
@@ -458,7 +473,7 @@ onMounted(async () => {
 
 watch(
   () => currentUser.value?.org?.name,
-  (name) => {
+  (name: string) => {
     if (name) currentOrg.value = name;
   }
 );
@@ -515,14 +530,14 @@ onBeforeUnmount(() => {
         />
       </UDropdownMenu>
 
-      <UButton
+      <!-- <UButton
         :icon="computedSwitchMode.iconName"
         size="sm"
         color="neutral"
         variant="outline"
         class="rounded-lg"
         @click.prevent="computedSwitchMode.onClick"
-      />
+      /> -->
 
       <UDropdownMenu
         v-if="loggedIn"
@@ -571,7 +586,7 @@ onBeforeUnmount(() => {
             </span>
           </label>
 
-          <template v-if="inputSite?.length" #trailing>
+          <template v-if="normalizedInputSite?.length" #trailing>
             <UButton
               color="neutral"
               variant="link"

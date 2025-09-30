@@ -7,8 +7,8 @@ export default defineAppConfig({
   },
   componentsConfig: {
     header: {
-      darkColor: '#3B3D3D',
-      lightColor: '#F5F6F7',
+      darkColor: '#333334',
+      lightColor: '#E4E4E5',
     },
     pages: {
       focusColor: '#55B787',
@@ -17,11 +17,11 @@ export default defineAppConfig({
       scrollBarLightHoverColor: '#B8B9BA',
       scrollBarDarkHoverColor: '#6B6B6B',
       mainCardLightBackgroundColor: '#FAFAFA',
-      mainCardDarkBackgroundColor: '#201f22',
+      mainCardDarkBackgroundColor: '#2C2C2C',
     },
     operation: {
-      lightColor: '#EBECED',
-      darkColor: '#323232',
+      lightColor: '#F2F2F3',
+      darkColor: '#3D3D3E',
     },
   },
   pageCategories: {
