@@ -13,6 +13,7 @@ use crate::commands::get_setting::get_setting;
 use crate::commands::get_token::get_connect_token;
 use crate::commands::pull_up::pull_up;
 use crate::commands::url_watcher::url_watcher;
+use crate::commands::logout::logout;
 use crate::commands::update_config::update_config_selection;
 
 use log::error;
@@ -51,6 +52,7 @@ pub fn run() {
             get_setting,
             get_connect_token,
             update_config_selection,
+            logout,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -75,6 +75,12 @@ export const useUserInfoStore = defineStore(
      * @param site
      */
     const deleteUserData = (site: string) => {
+      // 退出当前站点时立即请求清理其 Cookie
+      useTauriCoreInvoke('logout', {
+        name: 'main',
+        origin: site,
+      });
+
       if (!(site in userMap.value)) {
         return;
       }

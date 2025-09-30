@@ -8,8 +8,8 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::time::{self, MissedTickBehavior};
 
 #[tauri::command]
-pub async fn url_watcher(app: AppHandle, name: String, origin: String) {
-    tokio::spawn(async move {
+pub fn url_watcher(app: AppHandle, name: String, origin: String) {
+    tauri::async_runtime::spawn(async move {
         info!("开始监听 url 变化");
 
         let mut cookie_header: String = String::new();
@@ -35,7 +35,7 @@ pub async fn url_watcher(app: AppHandle, name: String, origin: String) {
             if let Ok(cookies) = get_window_cookies(&app, &name, &origin).await {
                 let new_header = format_cookies(&cookies);
                 if !new_header.is_empty() && new_header != cookie_header {
-                    info!("检测到 Cookies 已更新");
+                    // 检测到 Cookies 更新后仅更新本地 header，不再输出日志
                     cookie_header = new_header;
                 }
             }
