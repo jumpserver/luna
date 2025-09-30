@@ -59,24 +59,24 @@ useEventBus().on('login', openLoginPage);
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
 
 const switchAccountChildren = computed<DropdownMenuItem[][]>(() => {
-  const items: DropdownMenuItem[] = (Object.values(userMap.value || {}) as UserData[]).map(
-    (u: UserData) => {
-      let host = u.site;
+  const items: DropdownMenuItem[] = (
+    Object.values(userMap.value || {}) as UserData[]
+  ).map((u: UserData) => {
+    let host = u.site;
 
-      try {
-        host = new URL(u.site).host;
-      } catch {}
+    try {
+      host = new URL(u.site).host;
+    } catch {}
 
-      const label = `${host}`;
-      const isCurrent = u.site === currentSite.value;
+    const label = `${host}`;
+    const isCurrent = u.site === currentSite.value;
 
-      return {
-        label,
-        icon: isCurrent ? 'i-lucide-check' : 'i-lucide-user',
-        onClick: () => handleSwitchAccount(u.site),
-      } as DropdownMenuItem;
-    }
-  );
+    return {
+      label,
+      icon: isCurrent ? 'i-lucide-check' : 'i-lucide-user',
+      onClick: () => handleSwitchAccount(u.site),
+    } as DropdownMenuItem;
+  });
   return [items];
 });
 
@@ -116,7 +116,7 @@ const dropItems = computed<DropdownMenuItem[][]>(() => [
   ],
 ]);
 
-const isDarkMode = computed(() => theme.value === 'dark');
+// const isDarkMode = computed(() => theme.value === 'dark');
 
 const supportLanguages = computed(() => {
   return locales.value.map((locale: any) => ({
@@ -158,6 +158,13 @@ watch(
   { immediate: true }
 );
 
+// watch(() => openModal.value, (open) => {
+//   // 如果关闭,清空搜索框的内容
+//   if (!open) {
+//     inputSite.value = '';
+//   }
+// });
+
 /**
  * @description 标准化站点输入：去除首尾空格 + 去除末尾斜杠
  * @param value
@@ -171,9 +178,9 @@ function normalizeSite(value: string): string {
 /**
  * @description 切换颜色 mode
  */
-function toggleDarkMode() {
-  manualSetTheme(isDarkMode.value ? 'light' : 'dark');
-}
+// function toggleDarkMode() {
+//   manualSetTheme(isDarkMode.value ? 'light' : 'dark');
+// }
 
 /**
  * @description 打开登录窗口
@@ -473,7 +480,7 @@ onMounted(async () => {
 
 watch(
   () => currentUser.value?.org?.name,
-  (name: string) => {
+  (name: string | undefined) => {
     if (name) currentOrg.value = name;
   }
 );

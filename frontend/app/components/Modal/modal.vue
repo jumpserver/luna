@@ -27,12 +27,6 @@ const handleConfirm = () => {
   emits('confirm');
 };
 
-const handleKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 'Enter') {
-    handleConfirm();
-  }
-};
-
 const handleContextMenu = async (e: Event) => {
   e.stopPropagation();
   e.preventDefault();
