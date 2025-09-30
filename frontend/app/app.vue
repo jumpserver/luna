@@ -5,12 +5,12 @@ const { currentOSTheme, userTheme } = useThemeAdapter();
 const backgroundColor = computed(() => {
   if (currentOSTheme.value === 'light') {
     return userTheme.value === 'dark'
-      ? 'rgba(35, 35, 35, 0.8)'
-      : 'rgba(234, 234, 234, 0.8)';
+      ? 'rgba(35, 35, 35, 0.4)'
+      : 'rgba(234, 234, 234, 0.4)';
   } else {
     return userTheme.value === 'light'
-      ? 'rgba(255, 255, 255, 0.8)'
-      : 'rgba(35, 35, 35, 0.8)';
+      ? 'rgba(255, 255, 255, 0.4)'
+      : 'rgba(35, 35, 35, 0.4)';
   }
 });
 
@@ -20,8 +20,6 @@ useHead({
     style: computed(
       () => `
       background-color: ${backgroundColor.value};
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
     `
     ),
   },
