@@ -1,7 +1,6 @@
 use crate::utils::get_window_cookies;
 use log::{info, warn};
-use serde_json::json;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager};
 
 /// 清除站点 Cookies 信息
 #[tauri::command]
