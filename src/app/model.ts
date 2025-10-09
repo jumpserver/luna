@@ -289,6 +289,7 @@ export class Setting {
   basic: {
     is_async_asset_tree: boolean;
     connect_default_open_method: string;
+    themes?: string;
   };
   graphics: {
     rdp_resolution: string;
@@ -311,7 +312,8 @@ export class Setting {
     this.sqlClient = '1';
     this.basic = {
       is_async_asset_tree: false,
-      connect_default_open_method: 'new'
+      connect_default_open_method: 'new',
+      themes: 'default'
     };
     this.graphics = {
       rdp_resolution: 'Auto',

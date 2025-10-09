@@ -1,12 +1,17 @@
-import { mainTheme, themeColors } from "./main";
+import { mainTheme, themeColors } from './main';
 
 export namespace Theme {
-  export type ThemeType = "default" | "darkBlue" | "deepBlue" | "chinaRed";
+  export type ThemeType = 'default' | 'darkBlue' | 'deepBlue' | 'chinaRed';
 }
 
-// 获取当前主题的主色
+let themeTypeGetter: (() => string | null) | null = null;
+
+export function setThemeTypeGetter(fn: () => string | null) {
+  themeTypeGetter = fn;
+}
+
 function getCurrentThemeColor(): string {
-  const themeType = localStorage.getItem("themeType") || "default";
+  const themeType = (themeTypeGetter && themeTypeGetter()) || 'default';
   return themeColors[themeType] || themeColors.default;
 }
 
@@ -16,12 +21,12 @@ export function lighten(amount: number, color?: string, alphaValue?: number): st
   const actualColor = color || getCurrentThemeColor();
   const hsl = hexToHSL(actualColor);
   const hexColor = hslToHex(hsl.h, hsl.s, Math.min(100, hsl.l + amount));
-  
+
   // 如果提供了透明度参数，应用透明度
   if (alphaValue !== undefined) {
     return alpha(alphaValue, hexColor);
   }
-  
+
   return hexColor;
 }
 
@@ -31,12 +36,12 @@ export function darken(amount: number, color?: string, alphaValue?: number): str
   const actualColor = color || getCurrentThemeColor();
   const hsl = hexToHSL(actualColor);
   const hexColor = hslToHex(hsl.h, hsl.s, Math.max(0, hsl.l - amount));
-  
+
   // 如果提供了透明度参数，应用透明度
   if (alphaValue !== undefined) {
     return alpha(alphaValue, hexColor);
   }
-  
+
   return hexColor;
 }
 
@@ -64,12 +69,12 @@ export function alpha(alphaValue: number, color?: string): string {
   const alpha = Math.max(0, Math.min(1, alphaValue));
 
   // 移除#号并处理缩写形式
-  let hex = actualColor.replace(/^#/, "");
+  let hex = actualColor.replace(/^#/, '');
   if (hex.length === 3) {
     hex = hex
-      .split("")
-      .map((char) => char + char)
-      .join("");
+      .split('')
+      .map(char => char + char)
+      .join('');
   }
 
   // 解析RGB值
@@ -90,12 +95,12 @@ interface HSL {
 
 export function hexToHSL(hex: string): HSL {
   // 移除#号并处理缩写形式
-  let hexValue = hex.replace(/^#/, "");
+  let hexValue = hex.replace(/^#/, '');
   if (hexValue.length === 3) {
     hexValue = hexValue
-      .split("")
-      .map((char) => char + char)
-      .join("");
+      .split('')
+      .map(char => char + char)
+      .join('');
   }
 
   // 解析RGB值
@@ -133,7 +138,7 @@ export function hexToHSL(hex: string): HSL {
   return {
     h: Math.round(h * 360),
     s: Math.round(s * 100),
-    l: Math.round(l * 100),
+    l: Math.round(l * 100)
   };
 }
 
@@ -170,7 +175,7 @@ export function hslToHex(h: number, s: number, l: number): string {
   // 转换为十六进制
   const toHex = (x: number): string => {
     const hex = Math.round(x * 255).toString(16);
-    return hex.length === 1 ? "0" + hex : hex;
+    return hex.length === 1 ? '0' + hex : hex;
   };
 
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
@@ -178,7 +183,7 @@ export function hslToHex(h: number, s: number, l: number): string {
 
 export const useTheme = () => {
   // 获取主题类型
-  const getThemeType = () => localStorage.getItem("themeType") || "default";
+  const getThemeType = () => localStorage.getItem('themeType') || 'default';
   const html = document.documentElement as HTMLElement;
 
   // 通用设置主题的方法
@@ -190,13 +195,13 @@ export const useTheme = () => {
 
   // 切换主题方法
   const switchTheme = (theme: string) => {
-    localStorage.setItem("themeType", theme);
-    if (theme === "darkBlue") {
-      html.setAttribute("class", "darkBlue");
-    } else if (theme === "deepBlue") {
-      html.setAttribute("class", "deepBlue");
+    localStorage.setItem('themeType', theme);
+    if (theme === 'darkBlue') {
+      html.setAttribute('class', 'darkBlue');
+    } else if (theme === 'deepBlue') {
+      html.setAttribute('class', 'deepBlue');
     } else {
-      html.setAttribute("class", "");
+      html.setAttribute('class', '');
     }
 
     // 应用所有主题
@@ -213,6 +218,6 @@ export const useTheme = () => {
   return {
     initTheme,
     setMainTheme,
-    switchTheme,
+    switchTheme
   };
 };
