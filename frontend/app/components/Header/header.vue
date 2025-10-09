@@ -22,7 +22,7 @@ const darkColor = appConfig.componentsConfig.header.darkColor;
 const lightColor = appConfig.componentsConfig.header.lightColor;
 
 const { setCollapse } = userSettingStore;
-const { theme, language, collapse, layouts, sort } = storeToRefs(userSettingStore);
+const { theme, collapse, layouts, sort } = storeToRefs(userSettingStore);
 
 const {
   setUserLoggedIn,

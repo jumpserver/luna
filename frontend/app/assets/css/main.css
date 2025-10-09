@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-@theme {
+:root {
 	--font-heading: "Montserrat", sans-serif;
 	--font-sans: "Open Sans", sans-serif;
 	--color-primary: var(--ui-color-primary-500);
@@ -9,7 +9,7 @@
 	--color-success: var(--ui-color-success-500);
 	--color-info: var(--ui-color-info-500);
 	--color-warning: var(--ui-color-warning-500);
-	--color-error: var(--ui-color-error-500)
+	--color-error: var(--ui-color-error-500);
 }
 
 .text-xs-plus {

@@ -112,15 +112,32 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
         :items="sideBarItems"
         :collapsed="collapse"
         :ui="{
-          link: 'px-2 py-1.5 my-1 rounded-sm cursor-pointer'
+          link: 'px-2 my-1 rounded-sm menu-item'
         }"
-        class="[&_[data-active]]:light:bg-red"
       />
     </div>
 
     <!-- Bottom profile area extracted component -->
-    <div class="px-3 py-3 mt-auto">
+    <div class="px-3 py-2 mt-auto">
       <Profile :collapse="collapse" />
     </div>
   </div>
 </template>
+
+<style lang="scss">
+.light .menu .menu-item {
+  &[data-active] {
+    background-color: #c3c3c3;
+    color: rgb(88, 85, 85);
+  
+    &.iconify {
+      color: black;
+    }
+  }
+
+  &:hover {
+    background-color: #d1d1d1;
+  }
+}
+
+</style>

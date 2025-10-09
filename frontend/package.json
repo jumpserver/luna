@@ -63,6 +63,7 @@
 		"@vueuse/nuxt": "^13.9.0",
 		"bumpp": "^10.2.0",
 		"eslint": "^9.31.0",
+		"sass-embedded": "^1.93.2",
 		"typescript": "^5.8.3"
 	},
 	"resolutions": {
