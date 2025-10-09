@@ -8,7 +8,9 @@
 		"LoginSite": "Login Site",
 		"NoDataDescription": "Please login first",
 		"ConnectionSettings": "Connection Settings",
-		"All": "All"
+		"All": "All",
+		"Active": "Active",
+		"Inactive": "Inactive"
 	},
 	"ToolTips": {
 		"LightMode": "Light Mode",
@@ -38,7 +40,10 @@
 		"Deactivated": "Deactivated",
 		"Address": "Address",
 		"User": "User",
-		"Protocol": "Protocol"
+		"Protocol": "Protocol",
+		"AssetName": "Asset Name",
+		"Actions": "Actions",
+		"Status": "Status"
 	},
 	"ContextMenu": {
 		"QuickConnect": "Quick Connect",

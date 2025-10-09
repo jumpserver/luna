@@ -39,7 +39,7 @@ export default defineNuxtConfig({
       google: false,
       googleicons: false,
     },
-    priority: ['bunny']
+    priority: ['bunny'],
   },
   icon: {
     mode: 'css',

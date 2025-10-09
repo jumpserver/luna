@@ -1,7 +1,7 @@
 import type { AppConfigType, SortType } from '~/types';
 
 type themeType = 'light' | 'dark' | '';
-type layoutsType = 'grid' | 'table';
+export type layoutsType = 'grid' | 'table';
 
 export const useUserSettingStore = defineStore(
   'userSetting',
