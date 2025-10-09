@@ -8,7 +8,8 @@
 		"NoDataDescription": "请先登录",
 		"ConnectionSettings": "连接设置",
 		"LoginSite": "登录站点",
-		"All": "全部"
+		"All": "全部",
+		"Language": "语言"
 	},
 	"ToolTips": {
 		"LightMode": "亮色模式",

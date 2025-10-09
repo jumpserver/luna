@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui';
 import type { UnlistenFn } from '@tauri-apps/api/event';
-import type { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import type {
   ActionItem,
   PermissionOrgs,
   PermOrgItem,
-  UserData,
   UserIntiInfo,
 } from '~/types/index';
 
@@ -14,13 +12,7 @@ import { LogicalPosition } from '@tauri-apps/api/dpi';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
-type LocaleCode = (typeof locales.value)[number]['code'];
-
-const REG_EXP =
-  /^(?:https?:\/\/(?:localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(?::\d{1,5})?(?:[/?#]\S*)?|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\])$/;
-
-const { t, setLocale, locales } = useI18n();
-const { manualSetTheme } = useThemeAdapter();
+const { t } = useI18n();
 const toast = useToast();
 const appConfig = useAppConfig();
 const userInfoStore = useUserInfoStore();
@@ -29,128 +21,29 @@ const userSettingStore = useUserSettingStore();
 const darkColor = appConfig.componentsConfig.header.darkColor;
 const lightColor = appConfig.componentsConfig.header.lightColor;
 
-const { setLang, setCollapse } = userSettingStore;
+const { setCollapse } = userSettingStore;
 const { theme, language, collapse, layouts, sort } = storeToRefs(userSettingStore);
 
 const {
   setUserLoggedIn,
   setUserData,
   setOrganizations,
-  deleteUserData,
   setCurrentOrg,
 } = userInfoStore;
 
-const { loggedIn, currentOrganizations, currentSite, userMap, currentUser } =
+const { loggedIn, currentOrganizations, currentUser } =
   storeToRefs(userInfoStore);
 
 const inputSite = ref('');
-const errorMessage = ref('');
 const currentOrg = ref<string>('');
-const openModal = ref(false);
-const hasValidationError = ref(false);
-const loginPage = ref<WebviewWindow | null>(null);
 const subscribeErrorPageEvent = ref<UnlistenFn | null>(null);
 const subscribeLoginSuccessEvent = ref<UnlistenFn | null>(null);
 const subscribeLoginFailedEvent = ref<UnlistenFn | null>(null);
 const subscribeLoginFailedTimeoutEvent = ref<UnlistenFn | null>(null);
-
-const inputRef = ref<ComponentPublicInstance | null>(null);
-
-useEventBus().on('login', openLoginPage);
-
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
-
-const switchAccountChildren = computed<DropdownMenuItem[][]>(() => {
-  const items: DropdownMenuItem[] = (
-    Object.values(userMap.value || {}) as UserData[]
-  ).map((u: UserData) => {
-    let host = u.site;
-
-    try {
-      host = new URL(u.site).host;
-    } catch {}
-
-    const label = `${host}`;
-    const isCurrent = u.site === currentSite.value;
-
-    return {
-      label,
-      icon: isCurrent ? 'i-lucide-check' : 'i-lucide-user',
-      onClick: () => handleSwitchAccount(u.site),
-    } as DropdownMenuItem;
-  });
-  return [items];
-});
-
-const dropItems = computed<DropdownMenuItem[][]>(() => [
-  [
-    {
-      label: currentUser.value?.name,
-      avatar: {
-        size: 'sm',
-        text: currentUser.value?.name.slice(0, 2),
-        chip: {
-          inset: true,
-        },
-      },
-      type: 'label',
-    },
-  ],
-  [
-    {
-      label: t('Login.AddAccount'),
-      icon: 'i-lucide-user-round-plus',
-      onClick: openLoginPage,
-    },
-    {
-      label: t('Login.SwitchSite'),
-      icon: 'i-lucide-arrow-down-up',
-      children: switchAccountChildren.value,
-    },
-  ],
-  [
-    {
-      label: t('Login.Logout'),
-      icon: 'solar:login-outline',
-      color: 'error',
-      onClick: clearAuthInfo,
-    },
-  ],
-]);
-
-const isDarkMode = computed(() => theme.value === 'dark');
-
-const supportLanguages = computed(() => {
-  return locales.value.map((locale: any) => ({
-    label: locale.name,
-    value: locale.code,
-    type: 'checkbox' as const,
-    checked: locale.code === language.value,
-    onUpdateChecked: (checked: boolean) => {
-      if (checked) {
-        changeLocale(locale.code);
-      }
-    },
-  })) as DropdownMenuItem[];
-});
-
 const organizationItems = computed(() =>
   currentOrganizations.value.map((org: PermOrgItem) => org.name)
 );
-
-const computedSwitchMode = computed<ActionItem>(() => {
-  return {
-    key: 'switchMode',
-    iconName: isDarkMode.value
-      ? 'i-lucide-rocket'
-      : 'i-lucide-globe',
-    tooltipLabel: isDarkMode.value
-      ? t('ToolTips.LightMode')
-      : t('ToolTips.DarkMode'),
-    onClick: toggleDarkMode,
-    type: 'action',
-  };
-});
 
 // 从 Operation 组件移动过来的按钮操作逻辑
 const actionItems = computed<ActionItem[]>(() => [
@@ -274,14 +167,6 @@ const actionItems = computed<ActionItem[]>(() => [
   },
 ]);
 
-watch(
-  language,
-  (lang) => {
-    setLocale(lang as LocaleCode);
-  },
-  { immediate: true }
-);
-
 // watch(() => openModal.value, (open) => {
 //   // 如果关闭,清空搜索框的内容
 //   if (!open) {
@@ -297,57 +182,6 @@ function normalizeSite(value: string): string {
   const s = (value || '').trim();
   if (!s) return '';
   return s.replace(/\/+$/, '');
-}
-
-/**
- * @description 切换颜色 mode
- */
-function toggleDarkMode() {
-  manualSetTheme(isDarkMode.value ? 'light' : 'dark');
-}
-
-/**
- * @description 打开登录窗口
- */
-function openLoginPage() {
-  openModal.value = true;
-  hasValidationError.value = false;
-  errorMessage.value = '';
-
-  nextTick(() => {
-    inputRef.value?.$el.querySelector('input')?.focus();
-  });
-}
-
-/**
- * @description 切换账户
- * @param site
- */
-function handleSwitchAccount(site: string) {
-  if (site === currentSite.value) return;
-
-  userInfoStore.setCurrentSite(site);
-  const nextOrg = userInfoStore.currentUser?.org?.name;
-
-  if (nextOrg) currentOrg.value = nextOrg;
-  nextTick(() => {
-    useEventBus().emit('refresh', undefined);
-  });
-}
-
-/**
- * @description 切换语言
- * @param payload 语言代码
- */
-function changeLocale(payload: LocaleCode) {
-  setLang(payload);
-}
-
-/**
- * @description 清除认证信息
- */
-function clearAuthInfo() {
-  deleteUserData(currentSite.value);
 }
 
 /**
@@ -372,83 +206,6 @@ const handleWindowDrag = async (event: MouseEvent) => {
   } catch (error) {
     console.error(error);
   }
-};
-
-/**
- * @description 确认登录
- */
-const handleConfirm = () => {
-  hasValidationError.value = false;
-  errorMessage.value = '';
-
-  const normalizedSite = normalizedInputSite.value;
-
-  if (!normalizedSite) {
-    hasValidationError.value = true;
-    errorMessage.value = t('Login.EmptyUrlError');
-
-    nextTick(() => {
-      inputRef.value?.$el?.querySelector('input')?.focus();
-    });
-    return;
-  }
-
-  if (
-    (Object.values(userMap.value) as UserData[]).some(
-      (user) => normalizeSite(user.site) === normalizedSite
-    )
-  ) {
-    hasValidationError.value = true;
-    errorMessage.value = t('Login.AlreadyLoggedInError');
-    return;
-  }
-
-  if (!REG_EXP.test(normalizedSite)) {
-    hasValidationError.value = true;
-    errorMessage.value = t('Login.InvalidUrlError');
-
-    nextTick(() => {
-      inputRef.value?.$el?.querySelector('input')?.focus();
-    });
-    return;
-  }
-
-  loginPage.value = new useTauriWebviewWindowWebviewWindow('loginPage', {
-    title: `${t('Common.LoginSite')} - ${normalizedSite}`,
-    url: normalizedSite,
-    width: 600,
-    height: 800,
-    minWidth: 600,
-    minHeight: 800,
-    hiddenTitle: true,
-  });
-
-  nextTick(async () => {
-    await useTauriCoreInvoke('url_watcher', {
-      name: 'loginPage',
-      origin: normalizedSite,
-    });
-
-    openModal.value = false;
-  });
-};
-
-/**
- * @description 清除验证错误
- */
-const clearValidationError = () => {
-  if (hasValidationError.value) {
-    hasValidationError.value = false;
-    errorMessage.value = '';
-  }
-};
-
-/**
- * @description 粘贴输入
- * @param value
- */
-const handleClipboard = (value: string) => {
-  inputSite.value = normalizeSite(value);
 };
 
 /**

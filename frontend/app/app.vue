@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 useApplicationConfig();
-const { currentOSTheme, userTheme } = useThemeAdapter();
+const {  userTheme } = useThemeAdapter();
 
 const backgroundColor = computed(() => {
     return userTheme.value === 'dark'
