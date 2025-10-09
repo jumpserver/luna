@@ -41,8 +41,6 @@ provide('providerClearSelection', providerClearSelection);
   >
     <template #header>
       <Header />
-
-      <Operation />
     </template>
 
     <slot />
