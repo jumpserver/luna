@@ -248,20 +248,23 @@ watch(
           <UButton
             :icon="action.iconName"
             size="sm"
-            color="white"
-            class="rounded-lg hover:bg-[#e5e5e5] transition-colors duration-200"
+            color="neutral"
+            variant="subtle"
+            class="rounded-lg"
             @click="action.onClick"
           />
         </template>
+
+        <!-- #e5e5e5 -->
 
         <template v-else>
           <UDropdownMenu arrow :items="action.selectItems" size="sm">
             <UButton
               :icon="action.iconName"
               size="sm"
-              color="white"
-              variant="ghost"
-              class="rounded-lg hover:bg-[#e5e5e5] transition-colors duration-200"
+              color="neutral"
+              variant="subtle"
+              class="rounded-lg"
             />
           </UDropdownMenu>
         </template>

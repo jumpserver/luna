@@ -81,7 +81,6 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
       />
     </section>
 
-    <!-- Search at top of sidebar -->
     <div class="px-4 py-2" v-if="!collapse">
         <UInput
           v-model="sidebarSearch"
@@ -117,7 +116,6 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
       />
     </div>
 
-    <!-- Bottom profile area extracted component -->
     <div class="px-3 py-2 mt-auto">
       <Profile :collapse="collapse" />
     </div>
