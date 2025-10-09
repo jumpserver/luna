@@ -83,8 +83,6 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
                 let _ = window.close();
                 break;
             }
-
-            // 其他情况继续轮询，整体由全局 60s 超时兜底
         }
     });
 }

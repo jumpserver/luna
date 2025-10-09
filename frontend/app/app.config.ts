@@ -18,6 +18,8 @@ export default defineAppConfig({
       scrollBarDarkHoverColor: '#6B6B6B',
       mainCardLightBackgroundColor: '#FAFAFA',
       mainCardDarkBackgroundColor: '#2C2C2C',
+      mainLoginCardLightBackgroundColor: '#1AFAFA',
+      mainLoginCardDarkBackgroundColor: '#172721',
     },
     operation: {
       lightColor: '#F2F2F3',

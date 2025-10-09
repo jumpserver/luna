@@ -411,6 +411,10 @@ const listenTauriEvent = async () => {
         currentOrg.value = currentOrgData.name;
         setOrganizations(availableOrgs);
         setUserLoggedIn(true);
+
+        nextTick(() => {
+          useEventBus().emit('refresh', undefined);
+        });
       }
     }
   );
@@ -454,7 +458,7 @@ const listenTauriEvent = async () => {
 
   subscribeLoginFailedTimeoutEvent.value = await useTauriEventListen(
     'login-failed-timeout',
-    (event) => {
+    (_event) => {
       toast.add({
         title: t('Login.LoginFailed'),
         description: t('Login.LoginFailedTimeout'),
