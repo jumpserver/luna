@@ -10,7 +10,8 @@
 		"ConnectionSettings": "Connection Settings",
 		"All": "All",
 		"Active": "Active",
-		"Inactive": "Inactive"
+		"Inactive": "Inactive",
+		"Login": "Login"
 	},
 	"ToolTips": {
 		"LightMode": "Light Mode",

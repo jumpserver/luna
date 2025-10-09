@@ -14,8 +14,6 @@ const props = defineProps<{
   platform?: string;
 }>();
 
-const skeletonCount = 12;
-
 const providerClearSelection = inject<(cb: () => void) => void>(
   'providerClearSelection'
 );
@@ -161,7 +159,14 @@ onBeforeUnmount(() => {
       :style="scrollbarStyles"
     >
       <div
-        v-if="isInitialLoading"
+        v-if="!loggedIn"
+        class="w-full h-full flex flex-col items-center justify-center gap-2 p-2"
+      >
+        <CardLoginCard />
+      </div>
+
+      <div
+        v-else-if="isInitialLoading"
         class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-4 p-2"
         aria-busy="true"
       >
@@ -172,18 +177,12 @@ onBeforeUnmount(() => {
         v-else-if="visibleAssets && visibleAssets.length === 0"
         class="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-500"
       >
-        <template v-if="loggedIn">
-          <UIcon name="mingcute:inbox-line" class="size-10" />
-
-          <span class="text-sm"> {{ t('Common.NoData') }} </span>
-        </template>
-
-        <template v-else>
-          <LoginCard />
-        </template>
+        <UIcon name="mingcute:inbox-line" class="size-10" />
+        <span class="text-sm"> {{ t('Common.NoData') }} </span>
       </div>
 
       <div
+        v-else
         class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-4 p-2"
       >
         <CardGridCard
@@ -215,7 +214,14 @@ onBeforeUnmount(() => {
       class="w-full overflow-y-auto container-scrollbar h-[calc(100vh-7.5rem)]"
       :style="scrollbarStyles"
     >
-      <div class="p-2">
+      <div
+        v-if="!loggedIn"
+        class="w-full h-full flex flex-col items-center justify-center gap-2 p-2"
+      >
+        <CardLoginCard />
+      </div>
+
+      <div v-else class="p-2">
         <CardTableCard
           :items="visibleAssets"
           @open-edit-modal="(asset: AssetItem) => { currentSelectedCardInfo.value = asset; editModalOpen.value = true }"

@@ -2,25 +2,48 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import type { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import type { UserData, UserIntiInfo } from '~/types/index';
+import type {
+  PermissionOrgs,
+  PermOrgItem,
+  UserData,
+  UserIntiInfo,
+} from '~/types/index';
+
 import { LogicalPosition } from '@tauri-apps/api/dpi';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
+type LocaleCode = (typeof locales.value)[number]['code'];
+
 const props = defineProps<{ collapse: boolean }>();
 
-const { t, setLocale, locales } = useI18n();
-const toast = useToast();
+const REG_EXP =
+  /^(?:https?:\/\/(?:localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(?::\d{1,5})?(?:[/?#]\S*)?|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\])$/;
 
+const toast = useToast();
 const userInfoStore = useUserInfoStore();
 const useSettingStore = useUserSettingStore();
+
+const { t, setLocale, locales } = useI18n();
 const { manualSetTheme } = useThemeAdapter();
 
-const { language, theme } = storeToRefs(useSettingStore);
 const { setLang } = useSettingStore;
+const { language, theme } = storeToRefs(useSettingStore);
+// prettier-ignore
 const { loggedIn, currentSite, userMap, currentUser } = storeToRefs(userInfoStore);
 
-type LocaleCode = (typeof locales.value)[number]['code'];
+const inputSite = ref('');
+const errorMessage = ref('');
+const openModal = ref(false);
+const hasValidationError = ref(false);
+const loginPage = ref<WebviewWindow | null>(null);
+const unlistenErrorPageRef = ref<UnlistenFn | null>(null);
+const unlistenLoginSuccessRef = ref<UnlistenFn | null>(null);
+const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
+const unlistenLoginFailedTimeoutRef = ref<UnlistenFn | null>(null);
+const inputRef = ref<ComponentPublicInstance | null>(null);
+
+const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
 
 const isDarkMode = computed(() => theme.value === 'dark');
 
@@ -36,71 +59,6 @@ const supportLanguages = computed<DropdownMenuItem[]>(() => {
   }));
 });
 
-function changeLocale(payload: LocaleCode) {
-  setLang(payload);
-  setLocale(payload as any);
-}
-
-const inputSite = ref('');
-const errorMessage = ref('');
-const openModal = ref(false);
-const hasValidationError = ref(false);
-const loginPage = ref<WebviewWindow | null>(null);
-const unlistenErrorPageRef = ref<UnlistenFn | null>(null);
-const unlistenLoginSuccessRef = ref<UnlistenFn | null>(null);
-const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
-const inputRef = ref<ComponentPublicInstance | null>(null);
-
-const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
-
-const REG_EXP =
-  /^(?:https?:\/\/(?:localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(?::\d{1,5})?(?:[\/?#]\S*)?|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\])$/;
-
-function normalizeSite(value: string): string {
-  const s = (value || '').trim();
-  if (!s) return '';
-  return s.replace(/\/+$/, '');
-}
-
-function openLoginPage() {
-  openModal.value = true;
-  hasValidationError.value = false;
-  errorMessage.value = '';
-  nextTick(() => {
-    inputRef.value?.$el.querySelector('input')?.focus();
-  });
-}
-
-function clearValidationError() {
-  if (hasValidationError.value) {
-    hasValidationError.value = false;
-    errorMessage.value = '';
-  }
-}
-
-const handleClipboard = (value: string) => {
-  inputSite.value = normalizeSite(value);
-};
-
-const switchAccountChildren = computed<DropdownMenuItem[][]>(() => {
-  const items: DropdownMenuItem[] = (
-    Object.values(userMap.value || {}) as UserData[]
-  ).map((u: UserData) => {
-    let host = u.site;
-    try {
-      host = new URL(u.site).host;
-    } catch {}
-    const label = `${host}`;
-    const isCurrent = u.site === currentSite.value;
-    return {
-      label,
-      icon: isCurrent ? 'i-lucide-check' : 'i-lucide-user',
-      onClick: () => handleSwitchAccount(u.site),
-    } as DropdownMenuItem;
-  });
-  return [items];
-});
-
 const themeToggleMenuItem = computed<DropdownMenuItem>(() => ({
   label: isDarkMode.value ? t('ToolTips.LightMode') : t('ToolTips.DarkMode'),
   icon: isDarkMode.value ? 'i-lucide-sun' : 'i-lucide-moon',
@@ -110,17 +68,128 @@ const themeToggleMenuItem = computed<DropdownMenuItem>(() => ({
 const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
   [
     themeToggleMenuItem.value,
-    { label: t('Common.Language'), icon: 'i-lucide-globe', children: [supportLanguages.value] },
+    {
+      label: t('Common.Language'),
+      icon: 'i-lucide-globe',
+      children: [supportLanguages.value],
+    },
   ],
   [
-    { label: t('Login.AddAccount'), icon: 'i-lucide-user-round-plus', onClick: openLoginPage },
-    { label: t('Login.SwitchSite'), icon: 'i-lucide-arrow-down-up', children: switchAccountChildren.value },
+    {
+      label: t('Login.AddAccount'),
+      icon: 'i-lucide-user-round-plus',
+      onClick: openLoginPage,
+    },
+    {
+      label: t('Login.SwitchSite'),
+      icon: 'i-lucide-arrow-down-up',
+      children: switchAccountChildren(),
+    },
   ],
   [
-    { label: t('Login.Logout'), icon: 'solar:login-outline', color: 'error', onClick: clearAuthInfo },
+    {
+      label: t('Login.Logout'),
+      icon: 'solar:login-outline',
+      color: 'error',
+      onClick: clearAuthInfo,
+    },
   ],
 ]);
 
+/**
+ * @description 切换语言
+ * @param payload 语言代码
+ */
+function changeLocale(payload: LocaleCode) {
+  setLang(payload);
+  setLocale(payload as any);
+}
+
+/**
+ * @description 标准化站点输入：去除首尾空格 + 去除末尾斜杠
+ * @param value 站点输入
+ * @returns 标准化后的站点
+ */
+function normalizeSite(value: string): string {
+  const s = (value || '').trim();
+  if (!s) return '';
+  return s.replace(/\/+$/, '');
+}
+
+/**
+ * @description 初始化可选组织（去重）
+ */
+function initSelectOrganization(permissionOrgData: PermissionOrgs) {
+  const orgs = [
+    ...(permissionOrgData.pam_orgs || []),
+    ...(permissionOrgData.audit_orgs || []),
+    ...(permissionOrgData.console_orgs || []),
+    ...(permissionOrgData.workbench_orgs || []),
+  ];
+
+  const uniqueOrgs = orgs.filter(
+    (org, index, self) =>
+      index === self.findIndex((t: PermOrgItem) => t.id === org.id)
+  );
+
+  return uniqueOrgs;
+}
+
+/**
+ * @description 打开登录页面
+ */
+function openLoginPage() {
+  openModal.value = true;
+  hasValidationError.value = false;
+  errorMessage.value = '';
+  nextTick(() => {
+    inputRef.value?.$el.querySelector('input')?.focus();
+  });
+}
+
+/**
+ * @description 清除验证错误
+ */
+function clearValidationError() {
+  if (hasValidationError.value) {
+    hasValidationError.value = false;
+    errorMessage.value = '';
+  }
+}
+
+/**
+ * @description 切换账户子菜单
+ * @returns 切换账户子菜单
+ */
+function switchAccountChildren() {
+  const items: DropdownMenuItem[] = (
+    Object.values(userMap.value) as UserData[]
+  ).map((u: UserData) => {
+    let host = u.site;
+
+    try {
+      host = new URL(u.site).host;
+    } catch (e) {
+      console.log('e', e);
+    }
+
+    const label = `${host}`;
+    const isCurrent = u.site === currentSite.value;
+
+    return {
+      label,
+      icon: isCurrent ? 'i-lucide-check' : 'i-lucide-user',
+      onClick: () => handleSwitchAccount(u.site),
+    } as DropdownMenuItem;
+  });
+
+  return [items];
+}
+
+/**
+ * @description 切换账户
+ * @param site 站点
+ */
 function handleSwitchAccount(site: string) {
   if (site === currentSite.value) return;
   userInfoStore.setCurrentSite(site);
@@ -129,37 +198,58 @@ function handleSwitchAccount(site: string) {
   });
 }
 
+/**
+ * @description 清除认证信息
+ */
 function clearAuthInfo() {
   userInfoStore.deleteUserData(currentSite.value);
 }
 
+/**
+ * @description 处理剪贴板输入
+ * @param value 剪贴板输入
+ */
+const handleClipboard = (value: string) => {
+  inputSite.value = normalizeSite(value);
+};
+
+/**
+ * @description 处理确认输入
+ */
 const handleConfirm = () => {
   hasValidationError.value = false;
   errorMessage.value = '';
+
   const normalizedSite = normalizedInputSite.value;
+
   if (!normalizedSite) {
     hasValidationError.value = true;
     errorMessage.value = t('Login.EmptyUrlError');
+
     nextTick(() => {
       inputRef.value?.$el?.querySelector('input')?.focus();
     });
+
     return;
   }
-  if (
-    Object.values(userMap.value || {}).some(
-      (user) => normalizeSite(user.site) === normalizedSite
-    )
-  ) {
+
+  const users = Object.values(userMap.value) as UserData[];
+  
+  if (users.some((user) => normalizeSite(user.site) === normalizedSite)) {
     hasValidationError.value = true;
     errorMessage.value = t('Login.AlreadyLoggedInError');
+
     return;
   }
+
   if (!REG_EXP.test(normalizedSite)) {
     hasValidationError.value = true;
     errorMessage.value = t('Login.InvalidUrlError');
+
     nextTick(() => {
       inputRef.value?.$el?.querySelector('input')?.focus();
     });
+
     return;
   }
 
@@ -185,36 +275,111 @@ const handleConfirm = () => {
 };
 
 onMounted(async () => {
-  unlistenErrorPageRef.value = await useTauriEventListen('error-page', (event) => {
-    const { status, reason } = event.payload as { status: string; reason: string };
-    if (status === 'failure' && reason === 'cookies-not-found') {
+  unlistenErrorPageRef.value = await useTauriEventListen(
+    'error-page',
+    (event) => {
+      const { status, reason } = event.payload as {
+        status: string;
+        reason: string;
+      };
+
+      if (status === 'failure' && reason === 'cookies-not-found') {
+        toast.add({
+          title: t('Login.LoginFailed'),
+          description: t('Login.LoginFailedErrorPage'),
+          color: 'error',
+          icon: 'line-md:close-circle',
+        });
+
+        nextTick(() => userInfoStore.setUserLoggedIn(false));
+      }
+    }
+  );
+
+  unlistenLoginSuccessRef.value = await useTauriEventListen(
+    'login-success-detected',
+    (event) => {
+      const { status, profile, permission_orgs, current_org, cookies } =
+        event.payload as UserIntiInfo;
+
+      const profileData = JSON.parse((profile as any).data);
+      const permissionOrgData = JSON.parse(
+        (permission_orgs as any).data
+      ) as PermissionOrgs;
+      const currentOrgData = JSON.parse((current_org as any).data);
+      const normalizedSite = normalizedInputSite.value;
+
+      if (status === 'success' && profileData) {
+        toast.add({
+          title: t('Login.LoginSuccess'),
+          description: t('Login.LoginSuccessDescription'),
+          color: 'success',
+          icon: 'line-md:check-all',
+        });
+
+        const availableOrgs = initSelectOrganization(permissionOrgData);
+
+        userInfoStore.setUserData(normalizedSite, {
+          name: profileData.name,
+          headerJson: cookies,
+          site: normalizedSite,
+          org: currentOrgData,
+          system_roles: profileData.system_roles,
+          availableOrgs,
+          connectionInfo: {
+            protocol: '',
+            username: '',
+          },
+        });
+
+        userInfoStore.setOrganizations(availableOrgs);
+        userInfoStore.setCurrentOrg(currentOrgData);
+        userInfoStore.setUserLoggedIn(true);
+
+        nextTick(() => {
+          useEventBus().emit('refresh', undefined);
+        });
+      }
+    }
+  );
+
+  unlistenLoginFailedRef.value = await useTauriEventListen(
+    'login-failed-detected',
+    () => {
       toast.add({
         title: t('Login.LoginFailed'),
-        description: t('Login.LoginFailedErrorPage'),
+        description: t('Login.LoginFailedDescription'),
+        color: 'error',
+        icon: 'line-md:close-circle',
+      });
+      userInfoStore.setUserLoggedIn(false);
+    }
+  );
+
+  unlistenLoginFailedTimeoutRef.value = await useTauriEventListen(
+    'login-failed-timeout',
+    () => {
+      toast.add({
+        title: t('Login.LoginFailed'),
+        description: t('Login.LoginFailedTimeout'),
         color: 'error',
         icon: 'line-md:close-circle',
       });
       nextTick(() => userInfoStore.setUserLoggedIn(false));
     }
-  });
+  );
 
-  unlistenLoginSuccessRef.value = await useTauriEventListen('login-success-detected', (event) => {
-    const { status } = event.payload as UserIntiInfo;
-    if (status === 'success') {
-      toast.add({
-        title: t('Login.LoginSuccess'),
-        description: t('Login.LoginSuccessDescription'),
-        color: 'success',
-        icon: 'line-md:check-all',
-      });
-    }
-  });
+  useEventBus().on('login', openLoginPage);
 });
 
 onBeforeUnmount(() => {
   if (unlistenErrorPageRef.value) unlistenErrorPageRef.value();
   if (unlistenLoginSuccessRef.value) unlistenLoginSuccessRef.value();
   if (unlistenLoginFailedRef.value) unlistenLoginFailedRef.value();
+  if (unlistenLoginFailedTimeoutRef.value)
+    unlistenLoginFailedTimeoutRef.value();
+
+  useEventBus().off('login', openLoginPage);
 });
 </script>
 
@@ -226,12 +391,17 @@ onBeforeUnmount(() => {
     align="start"
     :ui="{ content: 'w-56' }"
   >
-    <div class="w-full rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-      <div v-if="!props.collapse" class="flex items-center gap-3 px-2 py-2 text-left">
+    <div
+      class="w-full rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+    >
+      <div
+        v-if="!props.collapse"
+        class="flex items-center gap-3 px-2 py-2 text-left"
+      >
         <UAvatar size="sm" src="/user_avatar.png" />
         <div class="flex-1 leading-tight">
           <div class="text-sm font-medium truncate">
-            {{ currentUser?.value?.name ?? currentUser?.name }}
+            {{ currentUser?.name }}
           </div>
         </div>
       </div>
@@ -243,7 +413,6 @@ onBeforeUnmount(() => {
 
   <UButton
     v-else
-    size="sm"
     variant="subtle"
     icon="line-md:log-in"
     class="w-full"
@@ -271,7 +440,9 @@ onBeforeUnmount(() => {
         <label
           class="pointer-events-none absolute left-0 -top-2.5 text-xs font-medium px-1.5 transition-all peer-focus:-top-2.5 peer-focus:text-xs peer-focus:font-medium peer-placeholder-shown:text-sm peer-placeholder-shown:top-1.5 peer-placeholder-shown:font-normal"
         >
-          <span class="inline-flex bg-default px-1">{{ t('Login.Description') }}</span>
+          <span class="inline-flex bg-default px-1">
+            {{ t('Login.Description') }}
+          </span>
         </label>
 
         <template v-if="normalizedInputSite?.length" #trailing>
@@ -281,7 +452,10 @@ onBeforeUnmount(() => {
             size="sm"
             icon="i-lucide-circle-x"
             aria-label="Clear input"
-            @click="inputSite = ''; clearValidationError();"
+            @click="
+              inputSite = '';
+              clearValidationError();
+            "
           />
         </template>
       </UInput>
@@ -292,5 +466,3 @@ onBeforeUnmount(() => {
     </div>
   </Modal>
 </template>
-
-

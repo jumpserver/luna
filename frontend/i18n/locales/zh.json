@@ -11,7 +11,8 @@
 		"All": "全部",
 		"Language": "语言",
 		"Active": "激活",
-		"Inactive": "未激活"
+		"Inactive": "未激活",
+		"Login": "登录"
 	},
 	"ToolTips": {
 		"LightMode": "亮色模式",
