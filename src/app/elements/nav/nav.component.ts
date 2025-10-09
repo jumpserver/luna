@@ -137,11 +137,13 @@ export class ElementNavComponent implements OnInit {
         children: themes.map(theme => ({
           id: theme.name,
           click: () => {
+            (this._settingSvc.setting.basic as any).themes = theme.name;
             useTheme().switchTheme(theme.name);
             this._iframeSvc.sendMessage({
               name: 'CHANGE_MAIN_THEME',
               data: theme.name
             });
+            this._settingSvc.save();
           },
           name: this._i18n.instant(theme.label)
         }))
