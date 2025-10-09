@@ -3,7 +3,7 @@ use crate::utils::{format_cookies, get_window_cookies};
 
 use log::{info, warn};
 use serde_json::json;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::time::{self, MissedTickBehavior};
 
@@ -15,13 +15,31 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
         let mut cookie_header: String = String::new();
         let mut ticker = time::interval(Duration::from_secs(2));
 
-        ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
+        let start = Instant::now();
+        let timeout = Duration::from_secs(60);
 
-        let mut attempts: u32 = 0;
-        let max_attempts: u32 = 60;
+        ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
         loop {
             ticker.tick().await;
+
+            // 超时直接判定失败
+            if start.elapsed() >= timeout {
+                let window = match app.get_webview_window(&name) {
+                    Some(w) => w,
+                    None => break,
+                };
+                let _ = app.emit(
+                    "login-failed-timeout",
+                    json!({
+                        "status": "failure",
+                        "reason": "timeout",
+                        "message": "超过 60 秒未检测到有效登录状态，已中止登录",
+                    }),
+                );
+                let _ = window.close();
+                break;
+            }
 
             let window = match app.get_webview_window(&name) {
                 Some(w) => w,
@@ -31,11 +49,10 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
                 }
             };
 
-            // 轮询获取 Cookies，确保拾取到登录后的有效会话
+            // 轮询获取 Cookies(第三方认证)
             if let Ok(cookies) = get_window_cookies(&app, &name, &origin).await {
                 let new_header = format_cookies(&cookies);
                 if !new_header.is_empty() && new_header != cookie_header {
-                    // 检测到 Cookies 更新后仅更新本地 header，不再输出日志
                     cookie_header = new_header;
                 }
             }
@@ -44,9 +61,7 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
                 continue;
             }
 
-            attempts += 1;
-
-            // 轮询调用 get_user_profile 直到 status 为 200 表明登录成功
+            // 轮询调用直到 status 为 200
             let user_service = UserService::new(origin.clone(), cookie_header.clone());
             let profile = user_service.get_user_profile().await;
 
@@ -63,20 +78,6 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
                         "permission_orgs": user_data.permission_orgs,
                         "current_org": user_data.current_org,
                         "cookies": cookie_header,
-                    }),
-                );
-                let _ = window.close();
-                break;
-            }
-
-            // 达到最大尝试次数，判为失败
-            if attempts >= max_attempts {
-                let _ = app.emit(
-                    "login-failed-detected",
-                    json!({
-                        "status": "failure",
-                        "reason": "timeout-or-unauthorized",
-                        "message": "长时间未检测到登录成功（Profile 一直未授权），已中止登录",
                     }),
                 );
                 let _ = window.close();

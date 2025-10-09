@@ -20,6 +20,7 @@ const providerClearSelection = inject<(cb: () => void) => void>(
 );
 
 const { t, locale } = useI18n();
+const { componentsConfig } = useAppConfig();
 
 const editModalOpen = ref(false);
 const draftAccount = ref<string>('');
@@ -34,6 +35,7 @@ const userInfoStore = useUserInfoStore();
 const userSettingStore = useUserSettingStore();
 const assetManager = useAssetFetcher(props.type, scrollRef);
 
+const { theme } = storeToRefs(userSettingStore);
 const { layouts } = storeToRefs(userSettingStore);
 const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
 const {
@@ -249,20 +251,7 @@ const labelColumnTemplate = computed(
         </template>
 
         <template v-else>
-          <UPageCard
-            spotlight
-            variant="soft"
-            orientation="horizontal"
-            spotlight-color="primary"
-            :description="t('Common.NoDataDescription')"
-            class="cursor-pointer"
-            :ui="{
-              container: 'gap-x-2',
-            }"
-            @click="useEventBus().emit('login')"
-          >
-            <UIcon name="cuida:login-outline" class="size-10" />
-          </UPageCard>
+          <LoginCard />
         </template>
       </div>
 
@@ -289,7 +278,6 @@ const labelColumnTemplate = computed(
             @click="handleCardClick(index, $event)"
           />
 
-          <!-- Append skeletons while fetching next page -->
           <template v-if="isAppending">
             <UPageCard
               v-for="i in appendSkeletonCount"

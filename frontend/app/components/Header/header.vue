@@ -52,6 +52,8 @@ const loginPage = ref<WebviewWindow | null>(null);
 const subscribeErrorPageEvent = ref<UnlistenFn | null>(null);
 const subscribeLoginSuccessEvent = ref<UnlistenFn | null>(null);
 const subscribeLoginFailedEvent = ref<UnlistenFn | null>(null);
+const subscribeLoginFailedTimeoutEvent = ref<UnlistenFn | null>(null);
+
 const inputRef = ref<ComponentPublicInstance | null>(null);
 
 useEventBus().on('login', openLoginPage);
@@ -270,7 +272,7 @@ const handleConfirm = () => {
   }
 
   if (
-    Object.values(userMap.value || {}).some(
+    (Object.values(userMap.value) as UserData[]).some(
       (user) => normalizeSite(user.site) === normalizedSite
     )
   ) {
@@ -297,8 +299,6 @@ const handleConfirm = () => {
     minWidth: 600,
     minHeight: 800,
     hiddenTitle: true,
-    titleBarStyle: 'overlay',
-    trafficLightPosition: new LogicalPosition(10, 22),
   });
 
   nextTick(async () => {
@@ -373,6 +373,7 @@ const handleOrgChange = (org: string) => {
  * @description 监听登录成功事件
  */
 const listenTauriEvent = async () => {
+  // TODO 放到一个 composable 中
   subscribeLoginSuccessEvent.value = await useTauriEventListen(
     'login-success-detected',
     (event) => {
@@ -410,6 +411,10 @@ const listenTauriEvent = async () => {
         currentOrg.value = currentOrgData.name;
         setOrganizations(availableOrgs);
         setUserLoggedIn(true);
+
+        nextTick(() => {
+          useEventBus().emit('refresh', undefined);
+        });
       }
     }
   );
@@ -450,6 +455,22 @@ const listenTauriEvent = async () => {
       }
     }
   );
+
+  subscribeLoginFailedTimeoutEvent.value = await useTauriEventListen(
+    'login-failed-timeout',
+    (_event) => {
+      toast.add({
+        title: t('Login.LoginFailed'),
+        description: t('Login.LoginFailedTimeout'),
+        color: 'error',
+        icon: 'line-md:close-circle',
+      });
+
+      nextTick(() => {
+        setUserLoggedIn(false);
+      });
+    }
+  );
 };
 
 const unListenTauriEvent = () => {
@@ -463,6 +484,10 @@ const unListenTauriEvent = () => {
 
   if (subscribeErrorPageEvent.value) {
     subscribeErrorPageEvent.value();
+  }
+
+  if (subscribeLoginFailedTimeoutEvent.value) {
+    subscribeLoginFailedTimeoutEvent.value();
   }
 };
 

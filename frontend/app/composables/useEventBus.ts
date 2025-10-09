@@ -3,10 +3,12 @@ import type { SortType } from '~/types';
 import mitt from 'mitt';
 
 type BusEvents = {
-  refresh: undefined;
   setSort: SortType;
   search: string;
   login: undefined;
+  loading: undefined;
+  loaded: undefined;
+  refresh: undefined;
 } & Record<EventType, unknown>;
 
 const emitter: Emitter<BusEvents> = mitt<BusEvents>();

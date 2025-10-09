@@ -81,7 +81,8 @@
 		"LoginAuthenticationExpired": "登录认证已失效，请重新登录",
 		"Logout": "退出登录",
 		"AlreadyLoggedInError": "您已经登录了该站点",
-		"LoginFailedErrorPage": "登录失败, 当前页面不是登录页面，请重新输入"
+		"LoginFailedErrorPage": "登录失败, 当前页面不是登录页面，请重新输入",
+		"LoginFailedTimeout": "登录失败, 登录超时，请重新登录"
 	},
 	"Loading": {
 		"Loading": "加载中",

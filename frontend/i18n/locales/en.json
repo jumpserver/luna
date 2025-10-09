@@ -82,7 +82,8 @@
 		"LoginAuthenticationExpired": "Login authentication has expired. Please log in again",
 		"Logout": "Logout",
 		"AlreadyLoggedInError": "You have already logged in to this site",
-		"LoginFailedErrorPage": "Login failed. The current page is not a login page. Please re-enter"
+		"LoginFailedErrorPage": "Login failed. The current page is not a login page. Please re-enter",
+		"LoginFailedTimeout": "Login failed. Login timeout. Please log in again"
 	},
 	"Asset": {
 		"GetAssetFailed": "Get asset failed, please refresh and try again"
