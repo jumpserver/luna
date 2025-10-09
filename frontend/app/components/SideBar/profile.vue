@@ -43,6 +43,8 @@ const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
 const unlistenLoginFailedTimeoutRef = ref<UnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
 
+useEventBus().on('login', openLoginPage);
+
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
 
 const isDarkMode = computed(() => theme.value === 'dark');
@@ -102,7 +104,7 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
  */
 function changeLocale(payload: LocaleCode) {
   setLang(payload);
-  setLocale(payload as any);
+  setLocale(payload);
 }
 
 /**
@@ -234,7 +236,7 @@ const handleConfirm = () => {
   }
 
   const users = Object.values(userMap.value) as UserData[];
-  
+
   if (users.some((user) => normalizeSite(user.site) === normalizedSite)) {
     hasValidationError.value = true;
     errorMessage.value = t('Login.AlreadyLoggedInError');
@@ -368,8 +370,6 @@ onMounted(async () => {
       nextTick(() => userInfoStore.setUserLoggedIn(false));
     }
   );
-
-  useEventBus().on('login', openLoginPage);
 });
 
 onBeforeUnmount(() => {
@@ -378,8 +378,6 @@ onBeforeUnmount(() => {
   if (unlistenLoginFailedRef.value) unlistenLoginFailedRef.value();
   if (unlistenLoginFailedTimeoutRef.value)
     unlistenLoginFailedTimeoutRef.value();
-
-  useEventBus().off('login', openLoginPage);
 });
 </script>
 

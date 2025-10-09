@@ -46,17 +46,17 @@ const {
 const visibleAssets = computed(() => {
   if (!props.platform || props.platform === 'all') return assetsData.value;
   return assetsData.value.filter(
-    (item) => (item as AssetItem).platform === props.platform
+    (item: AssetItem) => item.platform === props.platform
   );
 });
 
-watch([editModalOpen, currentSelectedCardInfo], ([open, info]) => {
+watch([editModalOpen, currentSelectedCardInfo], ([open, info]: [boolean, AssetItem | null]) => {
   if (open && info) initDraft();
 });
 
 watch(
   () => loggedIn.value,
-  (nv) => {
+  (nv: boolean) => {
     if (nv) {
       getSettings();
       fetchNextPage();
