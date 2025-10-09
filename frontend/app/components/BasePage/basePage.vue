@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { UnlistenFn } from '@tauri-apps/api/event';
-import type { AssetItem, SettingResponse } from '~/types/index';
+import type { layoutsType } from '~/store/modules/userSetting';
 
+import type { AssetItem, SettingResponse } from '~/types/index';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 import { useUserSettingStore } from '~/store/modules/userSetting';
 
@@ -19,14 +20,12 @@ const providerClearSelection = inject<(cb: () => void) => void>(
   'providerClearSelection'
 );
 
-const { t, locale } = useI18n();
-const { componentsConfig } = useAppConfig();
+const { t } = useI18n();
 
 const editModalOpen = ref(false);
 const draftAccount = ref<string>('');
 const draftProtocol = ref<string>('');
 const scrollRef = ref<HTMLElement | null>(null);
-const sentinelRef = ref<HTMLElement | null>(null);
 const selectedCardIndex = ref<number | null>(null);
 const currentSelectedCardInfo = ref<AssetItem | null>(null);
 const subscribeSettingEvent = ref<UnlistenFn | null>(null);
@@ -35,7 +34,6 @@ const userInfoStore = useUserInfoStore();
 const userSettingStore = useUserSettingStore();
 const assetManager = useAssetFetcher(props.type, scrollRef);
 
-const { theme } = storeToRefs(userSettingStore);
 const { layouts } = storeToRefs(userSettingStore);
 const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
 const {
@@ -67,6 +65,15 @@ watch(
     }
   },
   { immediate: true }
+);
+
+watch(
+  () => layouts.value,
+  (nv: layoutsType) => {
+    if (nv) {
+      useEventBus().emit('loaded', undefined);
+    }
+  }
 );
 
 function initDraft() {
@@ -143,19 +150,12 @@ onBeforeUnmount(() => {
     subscribeSettingEvent.value();
   }
 });
-
-const labelMinWidth = computed(() =>
-  locale.value.startsWith('zh') ? '24px' : '72px'
-);
-
-const labelColumnTemplate = computed(
-  () => `minmax(${labelMinWidth.value}, max-content) 1fr`
-);
 </script>
 
 <template>
   <div class="relative h-full w-full flex min-h-0">
     <section
+      v-if="layouts === 'grid'"
       ref="scrollRef"
       class="w-full overflow-y-auto container-scrollbar h-[calc(100vh-7.5rem)]"
       :style="scrollbarStyles"
@@ -165,79 +165,7 @@ const labelColumnTemplate = computed(
         class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-4 p-2"
         aria-busy="true"
       >
-        <UPageCard
-          v-for="i in skeletonCount"
-          :key="i"
-          variant="subtle"
-          :ui="{ body: 'sm:p-2' }"
-          class="w-full"
-        >
-          <section class="flex gap-4 flex-nowrap items-center w-full">
-            <div class="flex items-center w-full gap-1">
-              <div class="flex flex-col flex-1 gap-1 text-xs-plus min-w-0">
-                <div class="flex justify-between">
-                  <section class="flex">
-                    <div class="flex items-center gap-2">
-                      <USkeleton class="h-10 w-10 rounded-md" />
-                      <USkeleton class="h-5 w-2/3" />
-                    </div>
-                  </section>
-
-                  <section class="flex items-center gap-2">
-                    <USkeleton class="h-8 w-8 rounded-lg" />
-                    <USkeleton class="h-8 w-8 rounded-lg" />
-                  </section>
-                </div>
-
-                <USeparator orientation="horizontal" size="md" class="h-2" />
-
-                <div class="flex flex-col gap-1 text-xs-plus">
-                  <div
-                    class="grid items-center gap-x-3 gap-y-1"
-                    :style="{ gridTemplateColumns: labelColumnTemplate }"
-                  >
-                    <span
-                      class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
-                    >
-                      <USkeleton class="h-4 w-16" />
-                    </span>
-                    <div class="min-w-0">
-                      <USkeleton class="h-4 w-3/4" />
-                    </div>
-                  </div>
-
-                  <div
-                    class="grid items-center gap-x-3 gap-y-1"
-                    :style="{ gridTemplateColumns: labelColumnTemplate }"
-                  >
-                    <span
-                      class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
-                    >
-                      <USkeleton class="h-4 w-16" />
-                    </span>
-                    <div class="min-w-0">
-                      <USkeleton class="h-4 w-2/3" />
-                    </div>
-                  </div>
-
-                  <div
-                    class="grid items-center gap-x-3 gap-y-1"
-                    :style="{ gridTemplateColumns: labelColumnTemplate }"
-                  >
-                    <span
-                      class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
-                    >
-                      <USkeleton class="h-4 w-16" />
-                    </span>
-                    <div class="min-w-0">
-                      <USkeleton class="h-4 w-1/2" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </UPageCard>
+        <CardSkeletonCard />
       </div>
 
       <div
@@ -256,116 +184,44 @@ const labelColumnTemplate = computed(
       </div>
 
       <div
-        v-else
         class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-4 p-2"
       >
-        <template v-if="layouts === 'grid'">
-          <GridCard
-            v-for="(item, index) in visibleAssets"
-            :key="item.id"
-            :zone="item.zone"
-            :asset-id="item.id"
-            :icon-name="iconName"
-            :address="item.address"
-            :is-active="item.isActive"
-            :asset-name="item.assetName"
-            :accounts="item.permed_accounts || []"
-            :protocols="item.permed_protocols || []"
-            :protocol="item.permed_protocols?.[0]?.name || ''"
-            :user="item.permed_accounts?.[0]?.username || ''"
-            :highlight="selectedCardIndex === index"
-            @open-edit-modal="editModalOpen = true"
-            @click="handleCardClick(index, $event)"
-          />
+        <CardGridCard
+          v-for="(item, index) in visibleAssets"
+          :key="item.id"
+          :zone="item.zone"
+          :asset-id="item.id"
+          :icon-name="iconName"
+          :address="item.address"
+          :is-active="item.isActive"
+          :asset-name="item.assetName"
+          :accounts="item.permed_accounts || []"
+          :protocols="item.permed_protocols || []"
+          :protocol="item.permed_protocols?.[0]?.name || ''"
+          :user="item.permed_accounts?.[0]?.username || ''"
+          :highlight="selectedCardIndex === index"
+          @open-edit-modal="editModalOpen = true"
+          @click="handleCardClick(index, $event)"
+        />
 
-          <template v-if="isAppending">
-            <UPageCard
-              v-for="i in appendSkeletonCount"
-              :key="`append-skel-${i}`"
-              variant="subtle"
-              :ui="{ body: 'sm:p-2' }"
-              class="w-full"
-              aria-busy="true"
-            >
-              <section class="flex gap-4 flex-nowrap items-center w-full">
-                <div class="flex items-center w-full gap-1">
-                  <div class="flex flex-col flex-1 gap-1 text-xs-plus min-w-0">
-                    <div class="flex justify-between">
-                      <section class="flex">
-                        <div class="flex items-center gap-2">
-                          <USkeleton class="h-10 w-10 rounded-md" />
-                          <USkeleton class="h-5 w-2/3" />
-                        </div>
-                      </section>
-
-                      <section class="flex items-center gap-2">
-                        <USkeleton class="h-8 w-8 rounded-lg" />
-                        <USkeleton class="h-8 w-8 rounded-lg" />
-                      </section>
-                    </div>
-
-                    <USeparator
-                      orientation="horizontal"
-                      size="md"
-                      class="h-2"
-                    />
-
-                    <div class="flex flex-col gap-1 text-xs-plus">
-                      <div
-                        class="grid items-center gap-x-3 gap-y-1"
-                        :style="{ gridTemplateColumns: labelColumnTemplate }"
-                      >
-                        <span
-                          class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
-                        >
-                          <USkeleton class="h-4 w-16" />
-                        </span>
-                        <div class="min-w-0">
-                          <USkeleton class="h-4 w-3/4" />
-                        </div>
-                      </div>
-
-                      <div
-                        class="grid items-center gap-x-3 gap-y-1"
-                        :style="{ gridTemplateColumns: labelColumnTemplate }"
-                      >
-                        <span
-                          class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
-                        >
-                          <USkeleton class="h-4 w-16" />
-                        </span>
-                        <div class="min-w-0">
-                          <USkeleton class="h-4 w-2/3" />
-                        </div>
-                      </div>
-
-                      <div
-                        class="grid items-center gap-x-3 gap-y-1"
-                        :style="{ gridTemplateColumns: labelColumnTemplate }"
-                      >
-                        <span
-                          class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
-                        >
-                          <USkeleton class="h-4 w-16" />
-                        </span>
-                        <div class="min-w-0">
-                          <USkeleton class="h-4 w-1/2" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </UPageCard>
-          </template>
-        </template>
-        <template v-else>
-          <TableCard />
+        <template v-if="isAppending">
+          <CardSkeletonCard :skeleton-count="appendSkeletonCount" />
         </template>
       </div>
     </section>
 
-    <div ref="sentinelRef" style="height: 1px" />
+    <section
+      v-else-if="layouts === 'table'"
+      class="w-full overflow-y-auto container-scrollbar h-[calc(100vh-7.5rem)]"
+      :style="scrollbarStyles"
+    >
+      <div class="p-2">
+        <CardTableCard
+          :items="visibleAssets"
+          @open-edit-modal="(asset: AssetItem) => { currentSelectedCardInfo.value = asset; editModalOpen.value = true }"
+        />
+      </div>
+    </section>
 
     <Modal
       :open="editModalOpen"

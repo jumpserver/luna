@@ -8,7 +8,9 @@
 		"NoDataDescription": "请先登录",
 		"ConnectionSettings": "连接设置",
 		"LoginSite": "登录站点",
-		"All": "全部"
+		"All": "全部",
+		"Active": "激活",
+		"Inactive": "未激活"
 	},
 	"ToolTips": {
 		"LightMode": "亮色模式",
@@ -38,7 +40,10 @@
 		"Deactivated": "未激活",
 		"Address": "地址",
 		"User": "用户",
-		"Protocol": "协议"
+		"Protocol": "协议",
+		"AssetName": "资产名称",
+		"Actions": "操作",
+		"Status": "状态"
 	},
 	"ContextMenu": {
 		"QuickConnect": "快速连接",
