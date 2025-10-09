@@ -7,7 +7,9 @@ const localePath = useLocalePath();
 const useSettingStore = useUserSettingStore();
 
 const { setCollapse } = useSettingStore;
-const { collapse, theme } = storeToRefs(useSettingStore);
+const { collapse } = storeToRefs(useSettingStore);
+
+const isLoading = ref(false);
 
 const sideBarItems = computed<NavigationMenuItem[]>(() => {
   return [
@@ -19,26 +21,31 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
       label: t('Menu.Linux'),
       icon: 'si:terminal-alt-line',
       to: localePath('linux'),
+      disabled: isLoading,
     },
     {
       label: t('Menu.Windows'),
       icon: 'gravity-ui:logo-windows',
       to: localePath('windows'),
+      disabled: isLoading,
     },
     {
       label: t('Menu.Database'),
       icon: 'i-lucide-database',
       to: localePath('database'),
+      disabled: isLoading,
     },
     {
       label: t('Menu.Device'),
       icon: 'mingcute:device-line',
       to: localePath('device'),
+      disabled: isLoading,
     },
     {
       label: t('Menu.Favorite'),
       icon: 'i-lucide-star',
       to: localePath('favorite'),
+      disabled: isLoading,
     },
     // {
     //   label: t('Menu.OfflinePlayer'),
@@ -48,12 +55,21 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
     //   label: t('Menu.Player'),
     //   icon: 'i-lucide-video',
     // },
-  ];
+  ] as NavigationMenuItem[];
 });
 
 const handleCollapse = () => {
   setCollapse(!collapse.value);
 };
+
+onMounted(() => {
+  useEventBus().on('loading', () => {
+    isLoading.value = true;
+  });
+  useEventBus().on('loaded', () => {
+    isLoading.value = false;
+  });
+});
 </script>
 
 <template>

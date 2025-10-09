@@ -13,6 +13,7 @@ export const useAssetFetcher = (
   const { componentsConfig } = useAppConfig();
 
   const toast = useToast();
+  const route = useRoute();
   const colorMode = useColorMode();
   const userInfoStore = useUserInfoStore();
 
@@ -108,6 +109,100 @@ export const useAssetFetcher = (
   }
 
   /**
+   * @description 开始加载
+   */
+  const beginLoading = () => {
+    isLoading.value = true;
+
+    try {
+      useEventBus().emit('loading', undefined);
+    } catch {}
+  };
+
+  /**
+   * @description 结束加载
+   */
+  const endLoading = () => {
+    isLoading.value = false;
+    nextTick(() => {
+      try {
+        useEventBus().emit('loaded', undefined);
+      } catch {}
+    });
+  };
+
+  /**
+   * @description 判断是否为当前路由
+   * @returns
+   */
+  const isActiveForCurrentRoute = () => {
+    const pathLower = route.path.toLowerCase();
+
+    switch (assetType) {
+      case 'favorite':
+        return /\/favorite(?:\/|$)/.test(pathLower);
+      case 'linux':
+        return /\/linux(?:\/|$)/.test(pathLower);
+      case 'windows':
+        return /\/windows(?:\/|$)/.test(pathLower);
+      case 'database':
+        return /\/database(?:\/|$)/.test(pathLower);
+      case 'device':
+        return /\/device(?:\/|$)/.test(pathLower);
+      default:
+        return true;
+    }
+  };
+
+  /**
+   * @description 根据资产类型过滤结果
+   * @param items
+   * @returns
+   */
+  const filterResultsByAssetType = (items: RawAssetData[]) => {
+    switch (assetType) {
+      case 'favorite':
+        return items;
+      case 'linux':
+        return items.filter((it) => {
+          const typeValue = it.type?.value?.toLowerCase();
+          return typeValue === 'linux';
+        });
+      case 'windows':
+        return items.filter((it) => {
+          const typeValue = it.type?.value?.toLowerCase();
+          return typeValue === 'windows';
+        });
+      case 'database':
+        return items.filter((it) => {
+          const typeValue = it.type?.value?.toLowerCase();
+          return typeValue === 'database';
+        });
+      case 'device':
+        return items.filter((it) => {
+          const typeValue = it.type?.value?.toLowerCase();
+          return typeValue === 'device';
+        });
+      default:
+        return items;
+    }
+  };
+
+  /**
+   * @description 追加页码数据
+   * @param pageData
+   * @param count
+   */
+  const appendPageData = (pageData: RawAssetData[], count?: number | null) => {
+    if (pageData.length > LIMIT) pageData = pageData.slice(0, LIMIT);
+
+    rawAssetsList.value.push(...pageData);
+    offset.value += pageData.length;
+    totalCount.value = (count ?? rawAssetsList.value.length) as number;
+    hasMore.value = rawAssetsList.value.length < totalCount.value;
+  };
+
+  /**
    * @description 获取下一页资产数据
    * @param search
    * @param order
@@ -136,7 +231,7 @@ export const useAssetFetcher = (
     currentSearch.value = searchParam;
     currentOrder.value = orderParam;
 
-    isLoading.value = true;
+    beginLoading();
 
     try {
       await useTauriCoreInvoke('get_assets', {
@@ -152,8 +247,8 @@ export const useAssetFetcher = (
           org: orgId.value,
         },
       });
-    } finally {
-      isLoading.value = false;
+    } catch {
+      endLoading();
     }
   }
 
@@ -188,22 +283,17 @@ export const useAssetFetcher = (
           data: AssetsResponse;
         }
 
+        if (!isLoading.value) return;
+        if (!isActiveForCurrentRoute()) return;
+
         const resp = event.payload as eventPayload;
-        let pageData = resp.data.results ?? [];
+        const filtered = filterResultsByAssetType(resp.data.results ?? []);
 
-        // 若返回超过 LIMIT，仅取前 LIMIT 条
-        if (pageData.length > LIMIT) pageData = pageData.slice(0, LIMIT);
+        appendPageData(filtered, resp.data.count);
 
-        // 追加到列表
-        rawAssetsList.value.push(...pageData);
-
-        // 更新偏移量
-        offset.value += pageData.length;
-
-        // 根据返回的总数更新 hasMore（若没有提供 count，则退化为当前长度）
-        // prettier-ignore
-        totalCount.value = (resp.data.count ?? rawAssetsList.value.length) as number;
-        hasMore.value = rawAssetsList.value.length < totalCount.value;
+        nextTick(() => {
+          endLoading();
+        });
       }
     );
 
@@ -229,6 +319,10 @@ export const useAssetFetcher = (
             setUserLoggedIn(false);
           });
         }
+
+        nextTick(() => {
+          endLoading();
+        });
       }
     );
   };
