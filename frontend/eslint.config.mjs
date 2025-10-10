@@ -11,13 +11,13 @@ export default eslintConfig(
 			quotes: "double"
 		},
 		rules: {
-			"curly": "off",
+			curly: "off",
 			"eol-last": "off",
 			"jsonc/indent": "off",
 			"no-console": "off",
 			"no-new-func": "off",
 			"style/semi": ["error", "always"],
-			"style/indent": ["error", "tab"],
+			"style/indent": ["error", "2"],
 			"style/quote-props": ["warn", "as-needed"],
 			"style/comma-dangle": ["warn", "never"],
 			"style/brace-style": ["warn", "1tbs"],
@@ -25,8 +25,13 @@ export default eslintConfig(
 			"vue/block-order": ["error", {
 				order: ["script", "template", "style"]
 			}],
-			"vue/script-indent": ["error", "tab", {
+			"vue/script-indent": ["error", "2", {
 				baseIndent: 1
+			}],
+			"vue/html-indent": ["error", 2, {  // 2 表示使用 2 个空格缩进
+				attribute: 1,
+				baseIndent: 1,
+				closeBracket: 0,
 			}],
 			"vue/comma-dangle": ["warn", "never"],
 			"antfu/top-level-function": "off",

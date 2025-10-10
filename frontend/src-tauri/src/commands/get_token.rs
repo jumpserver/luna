@@ -15,9 +15,19 @@ pub async fn get_connect_token(
     let token_data = token_service.get_connect_token().await;
 
     if token_data.status == 201 {
+        // Parse token_data.data as JSON to extract the "id" field
+        let data_json: Value =
+            from_str(&token_data.data).expect("Failed to parse token_data.data as JSON");
+        let id = data_json
+            .get("id")
+            .expect("No 'id' field in token_data.data")
+            .as_str()
+            .expect("'id' field is not a string");
+        let url_data = token_service.get_local_client_url(id.to_string()).await;
+        log::info!("get_connect_token success: {:?}", url_data);
         let _ = app.emit(
             "get-token-success",
-            json!({ "status": token_data.status, "data": from_str::<Value>(&token_data.data).unwrap() }),
+            json!({ "status": url_data.status, "data": from_str::<Value>(&url_data.data).unwrap() }),
         );
     } else {
         let _ = app.emit("get-token-failure", json!({ "status": token_data.status }));
