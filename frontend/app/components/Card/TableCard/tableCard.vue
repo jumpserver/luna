@@ -39,15 +39,29 @@ const displayUser = (asset: AssetItem) => {
 
 const handleConnect = (asset: AssetItem) => {
   const protocol = displayProtocol(asset);
-  const username = displayUser(asset);
+  const selected = displayUser(asset);
   const accounts = (asset.permed_accounts || []) as PermedAccount[];
+
+  const saved = currentConnectionInfoMap.value[asset.id];
+  let input_username = '';
+  let input_secret = '';
+
+  const mode = saved?.accountMode;
+
+  if (mode === 'manual' || selected === '手动输入' || selected === 'Manual input') {
+    input_username = saved?.manualUsername || '';
+    input_secret = saved?.manualPassword || '';
+  } else if (mode === 'dynamic' || selected?.includes('同名账号') || selected?.includes('Dynamic user')) {
+    input_username = '';
+    input_secret = saved?.dynamicPassword || '';
+  }
 
   getConnectToken({
     asset: asset.id,
     protocol,
-    input_username: username,
-    input_secret: '',
-    account: getUserId(accounts, asset.id, username),
+    input_username,
+    input_secret,
+    account: getUserId(accounts, asset.id, selected),
     connect_method: dispatchConnectMethod(protocol),
     connect_options: generateConnectOptions(),
   });

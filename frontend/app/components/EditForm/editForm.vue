@@ -6,11 +6,19 @@ const props = defineProps<{
   protocol: string;
   accounts: PermedAccount[];
   protocols: PermedProtocol[];
+  manualUsername?: string;
+  manualPassword?: string;
+  dynamicPassword?: string;
+  rememberSecret?: boolean;
 }>();
 
 const emits = defineEmits<{
   (e: 'update:protocol', v: string): void;
   (e: 'update:account', v: string): void;
+  (e: 'update:manualUsername', v: string): void;
+  (e: 'update:manualPassword', v: string): void;
+  (e: 'update:dynamicPassword', v: string): void;
+  (e: 'update:rememberSecret', v: boolean): void;
 }>();
 
 const { t, locale } = useI18n();
@@ -19,6 +27,26 @@ const trailingIcon = "group-data-[state=open]:rotate-180 transition-transform du
 
 const showManualInputArea = ref(false);
 const showDynamicUserArea = ref(false);
+
+const localManualUsername = computed<string>({
+  get: () => props.manualUsername || '',
+  set: (v: string) => emits('update:manualUsername', v ?? ''),
+});
+
+const localManualPassword = computed<string>({
+  get: () => props.manualPassword || '',
+  set: (v: string) => emits('update:manualPassword', v ?? ''),
+});
+
+const localDynamicPassword = computed<string>({
+  get: () => props.dynamicPassword || '',
+  set: (v: string) => emits('update:dynamicPassword', v ?? ''),
+});
+
+const localRememberSecret = computed<boolean>({
+  get: () => props.rememberSecret || false,
+  set: (v: boolean) => emits('update:rememberSecret', !!v),
+});
 
 watch(
   () => props.account,
@@ -45,6 +73,7 @@ const accountItems = computed(() => {
     .map((acc: PermedAccount) => {
       return acc.name;
     });
+
   const manual = filteredAnonymous
     .filter((acc: PermedAccount) => acc.alias.includes('@'))
     .map((acc: PermedAccount) => {
@@ -53,6 +82,7 @@ const accountItems = computed(() => {
           ? `${acc.name}(${acc.username})`
           : `Dynamic user(${acc.username})`;
       }
+
       if (acc.alias === '@INPUT') {
         return locale.value === 'zh' ? acc.name : 'Manual input';
       }
@@ -124,17 +154,35 @@ function handleSpecialAccount(v: string) {
 
     <template v-if="showManualInputArea">
       <UFormField :label="t('Account.Username')" size="md">
-        <UInput placeholder="Enter your email" />
+        <UInput
+          v-model="localManualUsername"
+          :placeholder="t('Account.Username')"
+        />
       </UFormField>
 
       <UFormField :label="t('Account.Password')" size="md">
-        <UInput placeholder="Enter your email" />
+        <UInput
+          v-model="localManualPassword"
+          type="password"
+          :placeholder="t('Account.Password')"
+        />
       </UFormField>
+
+      <div class="flex justify-end items-center w-full">
+        <USwitch
+          v-model="localRememberSecret"
+          :label="t('Account.RememberPassword')"
+        />
+      </div>
     </template>
 
     <template v-if="showDynamicUserArea">
       <UFormField :label="t('Account.Password')" size="md">
-        <UInput placeholder="Enter your email" />
+        <UInput
+          v-model="localDynamicPassword"
+          type="password"
+          :placeholder="t('Account.Password')"
+        />
       </UFormField>
     </template>
   </div>

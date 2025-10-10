@@ -103,7 +103,8 @@
 		"Hosted": "托管账号",
 		"Manual": "手动账号",
 		"Username": "用户名",
-		"Password": "密码"
+		"Password": "密码",
+		"RememberPassword": "记住密码"
 	},
 	"Setting": {
 		"CommandTerminal": "命令行终端",
