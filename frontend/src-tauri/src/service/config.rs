@@ -7,20 +7,27 @@ pub struct ConfigService;
 impl ConfigService {
     fn resolve_resource_path(app: &tauri::AppHandle) -> Option<PathBuf> {
         app.path()
-            .resolve("config.json", tauri::path::BaseDirectory::Resource)
+            .resolve(
+                "resources/bin/config.json",
+                tauri::path::BaseDirectory::Resource,
+            )
             .ok()
             .filter(|p| p.is_file())
     }
 
     fn resolve_dev_path() -> Option<PathBuf> {
         let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        log::info!("Current working directory: {:?}", cwd);
+
         let candidates = [
-            cwd.join("config.json"),
+            cwd.join("resources/bin/config.json"),
             cwd.join("../config.json"),
             cwd.join("../../config.json"),
             cwd.join("../../../config.json"),
         ];
-        candidates.into_iter().find(|p| p.is_file())
+        let result = candidates.into_iter().find(|p| p.is_file());
+        log::info!("Selected config path: {:?}", result);
+        result
     }
 
     fn resolve_write_path(app: &tauri::AppHandle) -> Option<PathBuf> {
