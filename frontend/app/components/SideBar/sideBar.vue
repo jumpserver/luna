@@ -1,67 +1,67 @@
 <script setup lang="ts">
-	import type { NavigationMenuItem } from "@nuxt/ui";
-	import { useUserSettingStore } from "~/store/modules/userSetting";
-	import Profile from "./profile.vue";
+import type { NavigationMenuItem } from "@nuxt/ui";
+import { useUserSettingStore } from "~/store/modules/userSetting";
+import Profile from "./profile.vue";
 
-	const { t } = useI18n();
-	const { emit } = useEventBus();
-	const localePath = useLocalePath();
+const { t } = useI18n();
+const { emit } = useEventBus();
+const localePath = useLocalePath();
 
-	const useSettingStore = useUserSettingStore();
+const useSettingStore = useUserSettingStore();
 
-	const { setCollapse } = useSettingStore;
-	const { collapse, theme } = storeToRefs(useSettingStore);
+const { setCollapse } = useSettingStore;
+const { collapse, theme } = storeToRefs(useSettingStore);
 
-	const isLoading = ref(false);
+const isLoading = ref(false);
 
-	const sideBarItems = computed<NavigationMenuItem[]>(() => {
-		return [
-			{
-				label: t("Menu.Resource"),
-				type: "label"
-			},
-			{
-				label: t("Menu.Linux"),
-				icon: "si:terminal-alt-line",
-				to: localePath("linux"),
-				disabled: isLoading.value
-			},
-			{
-				label: t("Menu.Windows"),
-				icon: "gravity-ui:logo-windows",
-				to: localePath("windows"),
-				disabled: isLoading.value
-			},
-			{
-				label: t("Menu.Database"),
-				icon: "i-lucide-database",
-				to: localePath("database"),
-				disabled: isLoading.value
-			},
-			{
-				label: t("Menu.Device"),
-				icon: "mingcute:device-line",
-				to: localePath("device"),
-				disabled: isLoading.value
-			},
-			{
-				label: t("Menu.Favorite"),
-				icon: "i-lucide-star",
-				to: localePath("favorite"),
-				disabled: isLoading.value
-			}
-		];
-	});
+const sideBarItems = computed<NavigationMenuItem[]>(() => {
+  return [
+    {
+      label: t("Menu.Resource"),
+      type: "label"
+    },
+    {
+      label: t("Menu.Linux"),
+      icon: "si:terminal-alt-line",
+      to: localePath("linux"),
+      disabled: isLoading.value
+    },
+    {
+      label: t("Menu.Windows"),
+      icon: "gravity-ui:logo-windows",
+      to: localePath("windows"),
+      disabled: isLoading.value
+    },
+    {
+      label: t("Menu.Database"),
+      icon: "i-lucide-database",
+      to: localePath("database"),
+      disabled: isLoading.value
+    },
+    {
+      label: t("Menu.Device"),
+      icon: "mingcute:device-line",
+      to: localePath("device"),
+      disabled: isLoading.value
+    },
+    {
+      label: t("Menu.Favorite"),
+      icon: "i-lucide-star",
+      to: localePath("favorite"),
+      disabled: isLoading.value
+    }
+  ];
+});
 
-	const handleCollapse = () => {
-		setCollapse(!collapse.value);
-	};
+const handleCollapse = () => {
+  setCollapse(!collapse.value);
+};
 
-	const isDarkMode = computed(() => theme.value === "dark");
+const isDarkMode = computed(() => theme.value === "dark");
 
-	const sidebarSearch = ref("");
-	const emitSearch = (value: string) => emit("search", value);
-	const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
+const sidebarSearch = ref("");
+const emitSearch = (value: string) => emit("search", value);
+const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 </script>
 
 <template>
