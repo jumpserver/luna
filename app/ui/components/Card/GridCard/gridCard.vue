@@ -4,35 +4,35 @@ import type { PermedAccount, PermedProtocol } from '~/types/index';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 
 interface DetailRow {
-  key: string;
-  title: string;
-  content: string;
-  popover?: boolean;
-  class?: string;
+  key: string
+  title: string
+  content: string
+  popover?: boolean
+  class?: string
 }
 
 const props = withDefaults(
   defineProps<{
-    zone: string;
-    user: string;
-    assetId: string;
-    address: string;
-    iconName: string;
-    protocol: string;
-    assetName: string;
-    highlight: boolean;
-    isActive: boolean;
-    accounts?: PermedAccount[];
-    protocols?: PermedProtocol[];
+    zone: string
+    user: string
+    assetId: string
+    address: string
+    iconName: string
+    protocol: string
+    assetName: string
+    highlight: boolean
+    isActive: boolean
+    accounts?: PermedAccount[]
+    protocols?: PermedProtocol[]
   }>(),
   {
     accounts: () => [],
-    protocols: () => [],
+    protocols: () => []
   }
 );
 
 const emits = defineEmits<{
-  (e: 'openEditModal'): void;
+  (e: 'openEditModal'): void
 }>();
 
 const { t, locale } = useI18n();
@@ -41,7 +41,7 @@ const {
   getConnectToken,
   dispatchConnectMethod,
   getUserId,
-  generateConnectOptions,
+  generateConnectOptions
 } = useAssetConnect();
 
 const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
@@ -51,29 +51,29 @@ const items = ref<ContextMenuItem[][]>([
   [
     {
       label: t('ContextMenu.Connect'),
-      icon: 'i-lucide-unplug',
+      icon: 'i-lucide-unplug'
     },
     {
       label: t('ContextMenu.MoreConnect'),
       icon: 'i-lucide-plug',
       children: [
         {
-          label: `${t('ContextMenu.Use')} SSH`,
+          label: `${t('ContextMenu.Use')} SSH`
         },
         {
-          label: `${t('ContextMenu.Use')} SFTP`,
-        },
-      ],
+          label: `${t('ContextMenu.Use')} SFTP`
+        }
+      ]
     },
     {
       label: t('ContextMenu.Rename'),
-      icon: 'i-lucide-pencil',
+      icon: 'i-lucide-pencil'
     },
     {
       label: t('ContextMenu.Favorite'),
-      icon: 'i-lucide-star',
-    },
-  ],
+      icon: 'i-lucide-star'
+    }
+  ]
 ]);
 
 const openEditModal = () => {
@@ -113,18 +113,18 @@ const detailRows = computed(() => {
       title: t('AssetCard.Address'),
       content: props.address,
       popover: true,
-      class: 'max-w-40',
+      class: 'max-w-40'
     },
     {
       key: 'user',
       title: t('AssetCard.User'),
-      content: displayUser.value,
+      content: displayUser.value
     },
     {
       key: 'protocol',
       title: t('AssetCard.Protocol'),
-      content: displayProtocol.value,
-    },
+      content: displayProtocol.value
+    }
   ];
 
   return list;
@@ -132,7 +132,7 @@ const detailRows = computed(() => {
 
 const handleConnect = () => {
   const saved = currentConnectionInfoMap.value[props.assetId];
-  
+
   let input_username = '';
   let input_secret = '';
 
@@ -159,35 +159,36 @@ const handleConnect = () => {
     input_secret,
     account: getUserId(props.accounts, props.assetId, props.user),
     connect_method: dispatchConnectMethod(displayProtocol.value),
-    connect_options: generateConnectOptions(),
+    connect_options: generateConnectOptions()
   });
 };
 </script>
 
 <template>
   <UPageCard
-    class="w-full"
+    class="w-full page-card"
     variant="subtle"
     highlight-color="primary"
     :highlight="highlight"
     :ui="{
-      body: 'sm:p-2',
+      body: 'p-1',
+      container: 'p-2 sm:p-2'
     }"
   >
     <UContextMenu
       size="sm"
       :items="items"
       :ui="{
-        content: 'w-48',
+        content: 'w-48'
       }"
     >
       <section
-        class="flex gap-4 flex-nowrap items-center w-full"
+        class="flex gap-3 flex-nowrap items-center w-full"
         @mouseenter="handleMouseEnter"
         @mouseleave="handleMouseLeave"
       >
         <div class="flex items-center w-full gap-1">
-          <div class="flex flex-col flex-1 gap-1 text-xs-plus min-w-0">
+          <div class="flex flex-col flex-1 gap-1 text-xs-plus min-w-0 p-3">
             <div class="flex justify-between">
               <section class="flex">
                 <div class="flex items-center gap-2">
@@ -224,12 +225,12 @@ const handleConnect = () => {
                   >
                     <!-- prettier-ignore -->
                     <span
-											class="inline-block overflow-hidden whitespace-nowrap max-w-0 opacity-0 ml-0
+                      class="inline-block overflow-hidden whitespace-nowrap max-w-0 opacity-0 ml-0
                              transition-all duration-300 ease-in-out group-hover:max-w-[12rem] group-hover:opacity-100 group-hover:ml-1
                              group-focus:max-w-[12rem] group-focus:opacity-100 group-focus:ml-1"
-										>
-											{{ t('ContextMenu.Connect') }}
-										</span>
+                    >
+                      {{ t('ContextMenu.Connect') }}
+                    </span>
                   </UButton>
 
                   <UButton

@@ -169,7 +169,8 @@ const listenTauriEvent = async () => {
 };
 
 const handleOpenEditModal = (asset: AssetItem) => {
-  currentSelectedCardInfo.value = asset; editModalOpen.value = true;
+  currentSelectedCardInfo.value = asset;
+  editModalOpen.value = true;
 };
 
 onMounted(() => {
@@ -217,7 +218,7 @@ onBeforeUnmount(() => {
 
       <div
         v-else
-        class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-4 p-2"
+        class="grid grid-cols-[repeat(auto-fit,minmax(260px,_1fr))] gap-4 p-2"
       >
         <CardGridCard
           v-for="(item, index) in visibleAssets"
