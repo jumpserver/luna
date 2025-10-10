@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-:root {
+@theme {
 	--font-heading: "Montserrat", sans-serif;
 	--font-sans: "Open Sans", sans-serif;
 	--color-primary: var(--ui-color-primary-500);
@@ -11,6 +11,20 @@
 	--color-warning: var(--ui-color-warning-500);
 	--color-error: var(--ui-color-error-500);
 }
+
+:root {
+  --bg-hover-light: #d1d1d1;
+  --bg-hover-dark: rgba(0, 0, 0, 0.5);
+}
+
+.hover-bg-light:hover {
+  background-color: var(--bg-hover-light);
+}
+
+.hover-bg-dark:hover {
+  background-color: var(--bg-hover-dark);
+}
+
 
 .text-xs-plus {
   @apply text-[14px];

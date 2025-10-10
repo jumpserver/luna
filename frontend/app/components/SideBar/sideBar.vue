@@ -111,8 +111,10 @@
 				orientation="vertical"
 				:items="sideBarItems"
 				:collapsed="collapse"
+				color="neutral"
 				:ui="{
-					link: 'px-2 my-1 rounded-sm menu-item'
+					link: 'px-2 my-1 rounded-sm menu-item light:text-gray-800 dark:text-gray-200',
+					linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200'
 				}"
 			/>
 		</div>
@@ -127,11 +129,11 @@
 <style lang="scss">
 .light .menu .menu-item {
   &[data-active] {
-    background-color: #d1d1d1;
+    background-color: var(--bg-hover-light);
   }
 
   &:hover {
-    background-color: #d1d1d1;
+    background-color: var(--bg-hover-light);
   }
 }
 </style>

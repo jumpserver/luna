@@ -399,7 +399,7 @@
 		:style="{
 			backgroundColor: theme === 'dark' ? darkColor : lightColor
 		}"
-		class="flex items-center justify-between px-4 h-12"
+		class="flex items-center justify-between px-4 h-14"
 		@mousedown="handleWindowDrag"
 	>
 		<section class="flex items-center h-full">
@@ -436,7 +436,8 @@
 					<UButton
 						:icon="action.iconName"
 						size="sm"
-						class="rounded-lg hover:bg-[#e5e5e5] transition-colors duration-200"
+						variant="ghost"
+						class="rounded-lg light:hover:bg-[var(--bg-hover-light)] dark:hover:bg-[var(--bg-hover-dark)] transition-colors duration-200"
 						@click="action.onClick"
 					/>
 				</template>
@@ -447,7 +448,7 @@
 							:icon="action.iconName"
 							size="sm"
 							variant="ghost"
-							class="rounded-lg hover:bg-[#e5e5e5] transition-colors duration-200"
+							class="rounded-lg light:hover:bg-[var(--bg-hover-light)] dark:hover:bg-[var(--bg-hover-dark)] transition-colors duration-200"
 						/>
 					</UDropdownMenu>
 				</template>
