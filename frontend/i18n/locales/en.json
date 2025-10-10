@@ -6,11 +6,13 @@
 		"Version": "Version",
 		"NoData": "No Data",
 		"LoginSite": "Login Site",
-		"NoDataDescription": "Please login first",
+		"LoginFirst": "Please login first",
 		"ConnectionSettings": "Connection Settings",
 		"All": "All",
 		"Active": "Active",
-		"Inactive": "Inactive"
+		"Inactive": "Inactive",
+		"Language": "Switch Language",
+		"Login": "Login"
 	},
 	"ToolTips": {
 		"LightMode": "Light Mode",

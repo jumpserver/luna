@@ -5,13 +5,14 @@
 		"UnSigned": "未登录",
 		"Version": "当前版本",
 		"NoData": "暂无数据",
-		"NoDataDescription": "请先登录",
+		"LoginFirst": "请先登录",
 		"ConnectionSettings": "连接设置",
 		"LoginSite": "登录站点",
 		"All": "全部",
 		"Language": "语言",
 		"Active": "激活",
-		"Inactive": "未激活"
+		"Inactive": "未激活",
+		"Login": "登录"
 	},
 	"ToolTips": {
 		"LightMode": "亮色模式",

@@ -5,8 +5,8 @@
 		"icon": [
 			"icons/JumpServerClient.icns"
 		],
-		"resources": [],
-		"externalBin": [],
+		"resources": [
+		],
 		"copyright": "",
 		"category": "DeveloperTool",
 		"shortDescription": "",

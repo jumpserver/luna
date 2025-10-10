@@ -8,7 +8,7 @@ export default eslintConfig(
 		vue: true,
 		stylistic: {
 			indent: "tab",
-			quotes: "single"
+			quotes: "double"
 		},
 		rules: {
 			curly: "off",
@@ -28,6 +28,11 @@ export default eslintConfig(
 			}],
 			"vue/script-indent": ["error", "tab", {
 				baseIndent: 0
+			}],
+			"vue/html-indent": ["error", 2, {
+				attribute: 1,
+				baseIndent: 1,
+				closeBracket: 0
 			}],
 			"vue/comma-dangle": ["warn", "never"],
 			"antfu/top-level-function": "off",

@@ -6,7 +6,7 @@ use tauri::AppHandle;
 
 // 映射平台/架构到二进制所在子目录
 fn platform_subdir() -> Option<&'static str> {
-    let os = env::consts::OS;    // "linux" | "macos" | "windows"
+    let os = env::consts::OS; // "linux" | "macos" | "windows"
     let arch = env::consts::ARCH; // "x86_64" | "aarch64" | "arm" | ...
 
     match os {
@@ -51,7 +51,11 @@ fn candidate_paths(is_dev: bool) -> Vec<PathBuf> {
         let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
         let bases = [cwd.clone(), cwd.join(".."), cwd.join("../..")];
         for base in bases {
-            let p = base.join("bin").join(subdir).join(exe_name);
+            let p = base
+                .join("resources")
+                .join("bin")
+                .join(subdir)
+                .join(exe_name);
             candidates.push(p);
         }
     } else {
@@ -62,7 +66,7 @@ fn candidate_paths(is_dev: bool) -> Vec<PathBuf> {
                 // 资源常在 App.app/Contents/Resources/
                 if cfg!(target_os = "macos") {
                     if let Some(contents) = base.parent() {
-                        let resources = contents.join("Resources");
+                        let resources = contents.join("Resources").join("resources").join("bin");
                         candidates.push(resources.join(subdir).join(exe_name));
                     }
                 }
@@ -111,7 +115,7 @@ pub fn pull_up(_app: AppHandle, url: String) {
         .arg(url)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stderr(Stdio::inherit())
         .spawn()
     {
         error!("Failed to launch client: {}", e);

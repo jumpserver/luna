@@ -81,30 +81,29 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 			/>
 		</section>
 
-		<!-- Search at top of sidebar -->
-		<div v-if="!collapse" class="px-4 py-2">
-			<UInput
-				v-model="sidebarSearch"
-				clearable
-				icon="i-lucide-search"
-				variant="outline"
-				:placeholder="t('Operation.Search')"
-				class="dark:bg-transparent rounded-sm w-full"
-				:style="isDarkMode ? '' : 'background-color: rgb(198,198,197, 0.5);'"
-				@update:model-value="debouncedSidebarSearch"
-			>
-				<template v-if="sidebarSearch?.length" #trailing>
-					<UButton
-						color="neutral"
-						variant="link"
-						size="sm"
-						icon="i-lucide-circle-x"
-						aria-label="Clear input"
-						@click="() => { sidebarSearch = ''; emitSearch(''); }"
-					/>
-				</template>
-			</UInput>
-		</div>
+    <div class="px-4 py-2" v-if="!collapse">
+        <UInput
+          v-model="sidebarSearch"
+          clearable
+          icon="i-lucide-search"
+          variant="outline"
+          :placeholder="t('Operation.Search')"
+          class="dark:bg-transparent rounded-sm w-full"
+          :style="isDarkMode ? '' : 'background-color: rgb(198,198,197, 0.5);'"
+          @update:model-value="debouncedSidebarSearch"
+        >
+        <template v-if="sidebarSearch?.length" #trailing>
+          <UButton
+            color="neutral"
+            variant="link"
+            size="sm"
+            icon="i-lucide-circle-x"
+            aria-label="Clear input"
+            @click="() => { sidebarSearch = ''; emitSearch(''); }"
+          />
+        </template>
+      </UInput>
+    </div>
 
 		<div class="px-4 py-0 flex-1 overflow-auto menu">
 			<UNavigationMenu
@@ -119,11 +118,10 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 			/>
 		</div>
 
-		<!-- Bottom profile area extracted component -->
-		<div class="px-3 py-2 mt-auto">
-			<Profile :collapse="collapse" />
-		</div>
-	</div>
+    <div class="px-3 py-2 mt-auto">
+      <Profile :collapse="collapse" />
+    </div>
+  </div>
 </template>
 
 <style lang="scss">

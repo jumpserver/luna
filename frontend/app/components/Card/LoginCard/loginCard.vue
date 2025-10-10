@@ -17,10 +17,10 @@ const { t } = useI18n();
     <div class="px-6 py-4">
       <div class="flex items-center justify-between gap-6">
         <p
-          class="text-[15px] font-medium text-gray-200 dark:text-gray-100 leading-none whitespace-nowrap overflow-hidden text-ellipsis"
-          :title="t('Common.NoDataDescription')"
+          class="text-[15px] font-medium text-gray-500 dark:text-gray-100 leading-none whitespace-nowrap overflow-hidden text-ellipsis"
+          :title="t('Common.LoginFirst')"
         >
-          {{ t('Common.NoDataDescription') }}
+          {{ t('Common.LoginFirst') }}
         </p>
 
         <div class="flex items-center gap-4">

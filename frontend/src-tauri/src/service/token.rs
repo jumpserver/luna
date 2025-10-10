@@ -1,4 +1,4 @@
-use crate::commands::requests::{post_with_response, ApiResponse};
+use crate::commands::requests::{get_with_response, post_with_response, ApiResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::to_value;
 
@@ -31,5 +31,13 @@ impl TokenService {
         let url = format!("{}/api/v1/authentication/connection-token/", self.site);
         let body_value = to_value(&self.request_body).unwrap_or_default();
         post_with_response(&url, &self.cookie_header, &body_value).await
+    }
+
+    pub async fn get_local_client_url(&self, token_id: String) -> ApiResponse {
+        let url = format!(
+            "{}/api/v1/authentication/connection-token/{}/client-url/",
+            self.site, &token_id
+        );
+        get_with_response(&url, &self.cookie_header).await
     }
 }
