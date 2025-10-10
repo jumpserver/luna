@@ -131,12 +131,32 @@ const detailRows = computed(() => {
 });
 
 const handleConnect = () => {
-  // TODO
+  const saved = currentConnectionInfoMap.value[props.assetId];
+  
+  let input_username = '';
+  let input_secret = '';
+
+  // 优先根据保存的账户模式判断
+  const mode = saved?.accountMode;
+  const selected = saved?.username ?? props.user;
+
+  if (mode === 'manual' || selected === '手动输入' || selected === 'Manual input') {
+    input_username = saved?.manualUsername || '';
+    input_secret = saved?.manualPassword || '';
+  } else if (mode === 'dynamic' || selected?.includes('同名账号') || selected?.includes('Dynamic user')) {
+    // 同名账号仅需传递密码
+    input_username = '';
+    input_secret = saved?.dynamicPassword || '';
+  } else {
+    input_username = '';
+    input_secret = '';
+  }
+
   getConnectToken({
     asset: props.assetId,
     protocol: displayProtocol.value,
-    input_username: displayUser.value,
-    input_secret: '',
+    input_username,
+    input_secret,
     account: getUserId(props.accounts, props.assetId, props.user),
     connect_method: dispatchConnectMethod(displayProtocol.value),
     connect_options: generateConnectOptions(),

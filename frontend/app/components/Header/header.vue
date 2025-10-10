@@ -181,7 +181,7 @@ const handleOrgChange = (org: string) => {
   const orgData = currentOrganizations.value.find((o: PermOrgItem) => o.name === org);
 
   if (orgData) {
-    setCurrentOrg(orgData);
+    userInfoStore.setCurrentOrg(orgData);
 
     nextTick(() => {
       useEventBus().emit("refresh", undefined);

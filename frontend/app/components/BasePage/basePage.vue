@@ -21,8 +21,12 @@ const providerClearSelection = inject<(cb: () => void) => void>(
 const { t } = useI18n();
 
 const editModalOpen = ref(false);
+const draftRememberSecret = ref<boolean>(false);
 const draftAccount = ref<string>('');
 const draftProtocol = ref<string>('');
+const draftManualUsername = ref<string>('');
+const draftManualPassword = ref<string>('');
+const draftDynamicPassword = ref<string>('');
 const scrollRef = ref<HTMLElement | null>(null);
 const selectedCardIndex = ref<number | null>(null);
 const currentSelectedCardInfo = ref<AssetItem | null>(null);
@@ -90,6 +94,11 @@ function initDraft() {
     saved?.protocol ?? asset.permed_protocols?.[0]?.name ?? '';
   draftAccount.value =
     saved?.username ?? asset.permed_accounts?.[0]?.username ?? '';
+
+  draftManualUsername.value = saved?.manualUsername || '';
+  draftManualPassword.value = saved?.manualPassword || '';
+  draftDynamicPassword.value = saved?.dynamicPassword || '';
+  draftRememberSecret.value = saved?.rememberSecret || false;
 }
 
 async function getSettings() {
@@ -113,9 +122,30 @@ const handleConfirm = () => {
   const asset = currentSelectedCardInfo.value;
   if (!asset) return;
 
+  let accountMode: 'hosted' | 'dynamic' | 'manual' = 'hosted';
+  let normalizedAccount = draftAccount.value || '';
+
+  const v = draftAccount.value || '';
+
+  if (v === '手动输入' || v === 'Manual input') accountMode = 'manual';
+  if (v.includes('同名账号') || v.includes('Dynamic user')) {
+    accountMode = 'dynamic';
+    
+    const accs = currentSelectedCardInfo.value?.permed_accounts || [];
+    const dynamicAcc = accs.find((a) => a.alias === '@USER');
+
+    if (dynamicAcc) normalizedAccount = dynamicAcc.name;
+    else normalizedAccount = v.replace(/\(.+\)/, '');
+  }
+
   userInfoStore.setConnectionInfoForAsset(asset.id, {
     protocol: draftProtocol.value || '',
-    username: draftAccount.value || '',
+    username: normalizedAccount,
+    accountMode,
+    manualUsername: draftManualUsername.value || '',
+    manualPassword: draftManualPassword.value || '',
+    dynamicPassword: draftDynamicPassword.value || '',
+    rememberSecret: !!draftRememberSecret.value,
   });
 
   editModalOpen.value = false;
@@ -245,6 +275,10 @@ onBeforeUnmount(() => {
         v-if="currentSelectedCardInfo"
         v-model:protocol="draftProtocol"
         v-model:account="draftAccount"
+        v-model:manual-username="draftManualUsername"
+        v-model:manual-password="draftManualPassword"
+        v-model:dynamic-password="draftDynamicPassword"
+        v-model:remember-secret="draftRememberSecret"
         :accounts="currentSelectedCardInfo.permed_accounts!"
         :protocols="currentSelectedCardInfo.permed_protocols!"
       />

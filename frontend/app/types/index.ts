@@ -195,6 +195,11 @@ export interface AssetsResponse {
 export interface ConnectionInfo {
   protocol: string;
   username: string;
+  accountMode?: 'hosted' | 'dynamic' | 'manual';
+  manualUsername?: string;
+  manualPassword?: string;
+  rememberSecret?: boolean;
+  dynamicPassword?: string;
 }
 
 export interface RdpGraphics {

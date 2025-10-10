@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 useApplicationConfig();
 
-const route = useRoute()
+const route = useRoute();
 const { userTheme } = useThemeAdapter();
 
 const backgroundColor = computed(() => {

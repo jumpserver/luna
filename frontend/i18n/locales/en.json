@@ -99,7 +99,8 @@
 		"Hosted": "With secret accounts",
 		"Manual": "Manual accounts",
 		"Username": "Username",
-		"Password": "Password"
+		"Password": "Password",
+		"RememberPassword": "Remember password"
 	},
 	"Setting": {
 		"CommandTerminal": "Command Terminal",
