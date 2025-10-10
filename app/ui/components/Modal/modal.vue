@@ -1,20 +1,20 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    open: boolean;
-    title?: string;
-    description?: string;
+    open: boolean
+    title?: string
+    description?: string
   }>(),
   {
     title: '',
-    description: '',
+    description: ''
   }
 );
 
 const emits = defineEmits<{
-  (e: 'update:open', value: boolean): void;
-  (e: 'clipboard', value: string): void;
-  (e: 'confirm'): void;
+  (e: 'update:open', value: boolean): void
+  (e: 'clipboard', value: string): void
+  (e: 'confirm'): void
 }>();
 
 const { t } = useI18n();

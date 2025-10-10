@@ -107,45 +107,45 @@ const items = ref<NavigationMenuItem[][]>([
 </script>
 
 <template>
-	<UCard
-		variant="soft"
-		class="w-screen h-screen"
-		:style="{
-			borderTopRightRadius: '0px',
-			borderTopLeftRadius: '0px',
-			backgroundColor: theme === 'dark' ? '#201F22' : '#F5F5F5'
-		}"
-		:ui="{
-			header: 'p-0',
-			body: 'p-0 sm:p-2 '
-		}"
-	>
-		<template #header>
-			<div
-				class="flex items-center justify-center h-10"
-				@mousedown="handleWindowDrag"
-			>
-				<span class="text-sm font-bold">
-					{{ t('Common.ConnectionSettings') }}
-				</span>
-			</div>
-		</template>
+  <UCard
+    variant="soft"
+    class="w-screen h-screen"
+    :style="{
+      borderTopRightRadius: '0px',
+      borderTopLeftRadius: '0px',
+      backgroundColor: theme === 'dark' ? '#201F22' : '#F5F5F5'
+    }"
+    :ui="{
+      header: 'p-0',
+      body: 'p-0 sm:p-2 '
+    }"
+  >
+    <template #header>
+      <div
+        class="flex items-center justify-center h-10"
+        @mousedown="handleWindowDrag"
+      >
+        <span class="text-sm font-bold">
+          {{ t('Common.ConnectionSettings') }}
+        </span>
+      </div>
+    </template>
 
-		<template #default>
-			<div class="flex gap-1 w-full">
-				<UNavigationMenu
-					:items="items"
-					:highlight="false"
-					color="primary"
-					variant="link"
-					orientation="vertical"
-					class="w-48"
-				/>
+    <template #default>
+      <div class="flex gap-1 w-full">
+        <UNavigationMenu
+          :items="items"
+          :highlight="false"
+          color="primary"
+          variant="link"
+          orientation="vertical"
+          class="w-48"
+        />
 
-				<UCard class="flex-1" variant="soft">
-					<slot />
-				</UCard>
-			</div>
-		</template>
-	</UCard>
+        <UCard class="flex-1" variant="soft">
+          <slot />
+        </UCard>
+      </div>
+    </template>
+  </UCard>
 </template>
