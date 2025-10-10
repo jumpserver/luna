@@ -157,7 +157,7 @@ onBeforeUnmount(() => {
     <section
       v-if="layouts === 'grid'"
       ref="scrollRef"
-      class="w-full overflow-y-auto container-scrollbar h-[calc(100vh-7.5rem)]"
+      class="w-full overflow-y-auto container-scrollbar"
       :style="scrollbarStyles"
     >
       <div
@@ -175,7 +175,7 @@ onBeforeUnmount(() => {
         <template v-if="loggedIn">
           <UIcon name="mingcute:inbox-line" class="size-10" />
 
-          <span class="text-sm"> {{ t('Common.NoData') }} </span>
+          <span class="text-sm"> {{ t('Common.NoData') }} ....</span>
         </template>
 
         <template v-else>

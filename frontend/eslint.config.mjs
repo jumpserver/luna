@@ -8,16 +8,17 @@ export default eslintConfig(
 		vue: true,
 		stylistic: {
 			indent: "tab",
-			quotes: "double"
+			quotes: "single"
 		},
 		rules: {
-			"curly": "off",
+			curly: "off",
 			"eol-last": "off",
 			"jsonc/indent": "off",
 			"no-console": "off",
 			"no-new-func": "off",
 			"style/semi": ["error", "always"],
 			"style/indent": ["error", "tab"],
+			"style/quotes": "off",
 			"style/quote-props": ["warn", "as-needed"],
 			"style/comma-dangle": ["warn", "never"],
 			"style/brace-style": ["warn", "1tbs"],
@@ -26,7 +27,7 @@ export default eslintConfig(
 				order: ["script", "template", "style"]
 			}],
 			"vue/script-indent": ["error", "tab", {
-				baseIndent: 1
+				baseIndent: 0
 			}],
 			"vue/comma-dangle": ["warn", "never"],
 			"antfu/top-level-function": "off",
@@ -41,7 +42,8 @@ export default eslintConfig(
 	{
 		files: ["**/*.vue"],
 		rules: {
-			"style/indent": "off"
+			"style/indent": "off",
+			"vue/script-indent": "off"
 		}
 	},
 
