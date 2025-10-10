@@ -9,9 +9,9 @@ import { useUserSettingStore } from '~/store/modules/userSetting';
 type AssetType = 'linux' | 'windows' | 'database' | 'device' | 'favorite';
 
 const props = defineProps<{
-  type: AssetType;
-  iconName: string;
-  platform?: string;
+  type: AssetType
+  iconName: string
+  platform?: string
 }>();
 
 const providerClearSelection = inject<(cb: () => void) => void>(
@@ -44,7 +44,7 @@ const {
   fetchNextPage,
   scrollbarStyles,
   isInitialLoading,
-  appendSkeletonCount,
+  appendSkeletonCount
 } = assetManager;
 
 const visibleAssets = computed(() => {
@@ -90,10 +90,10 @@ function initDraft() {
 
   const saved = userInfoStore.getConnectionInfoForAsset(asset.id);
 
-  draftProtocol.value =
-    saved?.protocol ?? asset.permed_protocols?.[0]?.name ?? '';
-  draftAccount.value =
-    saved?.username ?? asset.permed_accounts?.[0]?.username ?? '';
+  draftProtocol.value
+    = saved?.protocol ?? asset.permed_protocols?.[0]?.name ?? '';
+  draftAccount.value
+    = saved?.username ?? asset.permed_accounts?.[0]?.username ?? '';
 
   draftManualUsername.value = saved?.manualUsername || '';
   draftManualPassword.value = saved?.manualPassword || '';
@@ -104,7 +104,7 @@ function initDraft() {
 async function getSettings() {
   await useTauriCoreInvoke('get_setting', {
     site: currentSite.value,
-    cookieHeader: currentUser.value!.headerJson,
+    cookieHeader: currentUser.value!.headerJson
   });
 }
 
@@ -130,7 +130,7 @@ const handleConfirm = () => {
   if (v === '手动输入' || v === 'Manual input') accountMode = 'manual';
   if (v.includes('同名账号') || v.includes('Dynamic user')) {
     accountMode = 'dynamic';
-    
+
     const accs = currentSelectedCardInfo.value?.permed_accounts || [];
     const dynamicAcc = accs.find((a) => a.alias === '@USER');
 
@@ -145,7 +145,7 @@ const handleConfirm = () => {
     manualUsername: draftManualUsername.value || '',
     manualPassword: draftManualPassword.value || '',
     dynamicPassword: draftDynamicPassword.value || '',
-    rememberSecret: !!draftRememberSecret.value,
+    rememberSecret: !!draftRememberSecret.value
   });
 
   editModalOpen.value = false;
@@ -153,8 +153,8 @@ const handleConfirm = () => {
 
 const listenTauriEvent = async () => {
   interface eventPayloadType {
-    data: string;
-    status: number;
+    data: string
+    status: number
   }
 
   subscribeSettingEvent.value = await useTauriEventListen(
@@ -169,9 +169,8 @@ const listenTauriEvent = async () => {
 };
 
 const handleOpenEditModal = (asset: AssetItem) => {
-  currentSelectedCardInfo.value = asset; editModalOpen.value = true
-}
-
+  currentSelectedCardInfo.value = asset; editModalOpen.value = true;
+};
 
 onMounted(() => {
   listenTauriEvent();

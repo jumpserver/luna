@@ -1,7 +1,5 @@
 <script setup lang="ts"></script>
 
 <template>
-  <div>
-    <BasePage type="device" icon-name="akar-icons:devices" />
-  </div>
+  <BasePage type="device" icon-name="akar-icons:devices" />
 </template>
