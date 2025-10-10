@@ -24,6 +24,21 @@ export const useAssetConnect = () => {
     const saved = currentConnectionInfoMap.value[assetId];
     const username = saved?.username ?? user;
 
+    // 同名账号 account 使用 @USER
+    // 手动输入 account 使用 @INPUT
+    const isManual =
+      saved?.accountMode === 'manual' ||
+      username === '手动输入' ||
+      username === 'Manual input';
+
+    const isDynamic =
+      saved?.accountMode === 'dynamic' ||
+      username.includes('同名账号') ||
+      username.includes('Dynamic user');
+
+    if (isManual) return '@INPUT';
+    if (isDynamic) return '@USER';
+
     if (username) {
       const matched = _accounts.find(
         (a) =>
@@ -104,9 +119,9 @@ export const useAssetConnect = () => {
 
   const checkPlateformAdapter = (protocol: string) => {
     // check 逻辑
-    
+
     // check 成功直接 invoke
-    useTauriCoreInvoke('pull_up')
+    useTauriCoreInvoke('pull_up');
   };
 
   /**
