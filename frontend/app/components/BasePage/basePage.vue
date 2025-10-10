@@ -50,6 +50,12 @@ const visibleAssets = computed(() => {
   );
 });
 
+const modalTitle = computed(() => {
+  return `${t('EditModal.ModifyConnectionInfo')} - ${
+    currentSelectedCardInfo.value?.assetName
+  }`;
+});
+
 watch([editModalOpen, currentSelectedCardInfo], ([open, info]: [boolean, AssetItem | null]) => {
   if (open && info) initDraft();
 });
@@ -132,11 +138,10 @@ const listenTauriEvent = async () => {
   );
 };
 
-const modalTitle = computed(() => {
-  return `${t('EditModal.ModifyConnectionInfo')} - ${
-    currentSelectedCardInfo.value?.assetName
-  }`;
-});
+const handleOpenEditModal = (asset: AssetItem) => {
+  currentSelectedCardInfo.value = asset; editModalOpen.value = true
+}
+
 
 onMounted(() => {
   listenTauriEvent();
@@ -224,7 +229,7 @@ onBeforeUnmount(() => {
       <div v-else class="p-2">
         <CardTableCard
           :items="visibleAssets"
-          @open-edit-modal="(asset: AssetItem) => { currentSelectedCardInfo.value = asset; editModalOpen.value = true }"
+          @open-edit-modal="handleOpenEditModal"
         />
       </div>
     </section>

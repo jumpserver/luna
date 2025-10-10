@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui';
 import type { AssetItem, PermedAccount } from '~/types';
+
 import { h, resolveComponent } from 'vue';
 import { useUserInfoStore } from '~/store/modules/userInfo';
 
@@ -15,10 +16,10 @@ const props = defineProps<{
   items: AssetItem[];
 }>();
 
-const { t } = useI18n();
 const userInfoStore = useUserInfoStore();
-const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
 
+const { t } = useI18n();
+const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
 const {
   getConnectToken,
   dispatchConnectMethod,
@@ -112,6 +113,12 @@ const columns: TableColumn<AssetItem>[] = [
 
 <template>
   <UCard variant="outline" class="w-full">
-    <UTable sticky :data="props.items" :columns="columns" class="flex-1" />
+    <UTable
+      sticky
+      :data="props.items"
+      :columns="columns"
+      class="flex-1"
+      :ui="{ tr: 'hover:bg-muted/50' }"
+    />
   </UCard>
 </template>
