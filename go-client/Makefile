@@ -25,11 +25,11 @@ build-client:
 	GOARCH=arm64 GOOS=linux $(CLIENTBUILD) -ldflags "$(LDFLAGS)" -o $(BUILDDIR)/linux-arm64/JumpServerClient $(CLIENTSRCFILE)
 	GOARCH=arm64 GOOS=linux $(CLIENTBUILD) -ldflags "$(LDFLAGS)" -o $(BUILDDIR)/linux-arm64/client $(SSHCSRCFILE)
 
-	mkdir -p $(BASEPATH)/../app/src-tauri/resources/bin/
+	mkdir -p $(BASEPATH)/../src-tauri/resources/bin/
 
 	cp -R $(BASEPATH)/Scripts $(BUILDDIR)/darwin-amd64/
 	cp -R $(BASEPATH)/Scripts $(BUILDDIR)/darwin-arm64/
-	cp -R $(BUILDDIR)/* $(BASEPATH)/../app/src-tauri/resources/bin/
-	cp $(BASEPATH)/config.json $(BASEPATH)/../app/src-tauri/resources/bin/
-	cp $(BASEPATH)/putty.exe $(BASEPATH)/../app/src-tauri/resources/bin/windows/
-	cp $(BASEPATH)/pkg/autoit/*.dll $(BASEPATH)/../app/src-tauri/resources/bin/windows/
+	cp -R $(BUILDDIR)/* $(BASEPATH)/../src-tauri/resources/bin/
+	cp $(BASEPATH)/config.json $(BASEPATH)/../src-tauri/resources/bin/
+	cp $(BASEPATH)/putty.exe $(BASEPATH)/../src-tauri/resources/bin/windows/
+	cp $(BASEPATH)/pkg/autoit/*.dll $(BASEPATH)/../src-tauri/resources/bin/windows/

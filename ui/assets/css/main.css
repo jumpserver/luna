@@ -10,6 +10,7 @@
   --color-info: var(--ui-color-info-500);
   --color-warning: var(--ui-color-warning-500);
   --color-error: var(--ui-color-error-500);
+  --ui-color-primary-500: #1ab394;
 }
 
 :root {

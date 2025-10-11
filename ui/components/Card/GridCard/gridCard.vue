@@ -37,8 +37,7 @@ const emits = defineEmits<{
 
 const { t, locale } = useI18n();
 const userInfoStore = useUserInfoStore();
-const { getConnectToken, dispatchConnectMethod, getUserId, generateConnectOptions } =
-  useAssetConnect();
+const { handleAssetConnection } = useAssetAction();
 
 const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
 
@@ -101,9 +100,9 @@ const displayUser = computed(() => {
 
 const labelMinWidth = computed(() => (locale.value.startsWith("zh") ? "24px" : "72px"));
 
-const labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-content) 1fr`);
+const _labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-content) 1fr`);
 
-const detailRows = computed(() => {
+const _detailRows = computed(() => {
   const list: Array<DetailRow> = [
     {
       key: "address",
@@ -128,40 +127,7 @@ const detailRows = computed(() => {
 });
 
 const handleConnect = () => {
-  const saved = currentConnectionInfoMap.value[props.assetId];
-
-  let inputUsername = "";
-  let inputSecret = "";
-
-  // 优先根据保存的账户模式判断
-  const mode = saved?.accountMode;
-  const selected = saved?.username ?? props.user;
-
-  if (mode === "manual" || selected === "手动输入" || selected === "Manual input") {
-    inputUsername = saved?.manualUsername || "";
-    inputSecret = saved?.manualPassword || "";
-  } else if (
-    mode === "dynamic" ||
-    selected?.includes("同名账号") ||
-    selected?.includes("Dynamic user")
-  ) {
-    // 同名账号仅需传递密码
-    inputUsername = "";
-    inputSecret = saved?.dynamicPassword || "";
-  } else {
-    inputUsername = "";
-    inputSecret = "";
-  }
-
-  getConnectToken({
-    asset: props.assetId,
-    protocol: displayProtocol.value,
-    inputUsername,
-    inputSecret,
-    account: getUserId(props.accounts, props.assetId, props.user),
-    connect_method: dispatchConnectMethod(displayProtocol.value),
-    connect_options: generateConnectOptions()
-  });
+  handleAssetConnection(props.user, props.assetId, displayProtocol.value, props.accounts || []);
 };
 </script>
 
