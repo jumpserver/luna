@@ -1,9 +1,10 @@
-pub(crate) mod requests;
-pub(crate) mod url_watcher;
-pub mod pull_up;
-pub mod get_token;
 pub mod get_assets;
-pub mod get_setting;
 pub mod get_config;
-pub mod update_config;
+pub mod get_setting;
+pub mod get_token;
 pub mod logout;
+pub mod pull_up;
+pub(crate) mod requests;
+pub mod set_favorite;
+pub mod update_config;
+pub(crate) mod url_watcher;

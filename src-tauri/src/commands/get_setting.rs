@@ -14,7 +14,7 @@ pub async fn get_setting(app: AppHandle, site: String, cookie_header: String)  {
     return;
   }
 
-  info!("获取 Setting 数据成功 {}", setting_data.data);
+  info!("获取 Setting 数据成功");
 
   let _ = app.emit("get-setting-success", json!({ "status": setting_data.status, "data": setting_data.data }));
 }

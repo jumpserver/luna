@@ -1,7 +1,6 @@
 use crate::commands::requests::{get_with_response, post_with_response, ApiResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::to_value;
-use log::info;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TokenRequestBody {
@@ -32,7 +31,6 @@ impl TokenService {
         let url = format!("{}/api/v1/authentication/connection-token/", self.site);
         let body_value = to_value(&self.request_body).unwrap_or_default();
 
-        info!("get_connect_token body: {:?}", body_value);
         post_with_response(&url, &self.cookie_header, &body_value).await
     }
 

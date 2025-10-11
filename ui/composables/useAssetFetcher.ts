@@ -277,6 +277,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
       const resp = event.payload as eventPayload;
       const filtered = filterResultsByAssetType(resp.data.results ?? []);
 
+      console.log('data', resp.data.results);
       appendPageData(filtered, resp.data.count);
 
       nextTick(() => {
