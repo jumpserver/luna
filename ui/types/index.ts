@@ -1,7 +1,7 @@
-import type { DropdownMenuItem } from '@nuxt/ui';
+import type { DropdownMenuItem } from "@nuxt/ui";
 
-type ActionType = 'action' | 'select';
-export type SortType = 'name' | '-name' | '-date_updated' | 'date_updated';
+type ActionType = "action" | "select";
+export type SortType = "name" | "-name" | "-date_updated" | "date_updated";
 
 export interface ActionItem {
   key: string;
@@ -181,6 +181,8 @@ export interface AssetItem {
   zone: string;
   isActive: boolean;
   comment?: string;
+  category: string;
+  type: string;
   permed_protocols?: PermedProtocol[];
   permed_accounts?: PermedAccount[];
 }
@@ -195,7 +197,7 @@ export interface AssetsResponse {
 export interface ConnectionInfo {
   protocol: string;
   username: string;
-  accountMode?: 'hosted' | 'dynamic' | 'manual';
+  accountMode?: "hosted" | "dynamic" | "manual";
   manualUsername?: string;
   manualPassword?: string;
   rememberSecret?: boolean;

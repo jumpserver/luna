@@ -114,7 +114,8 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
         color="neutral"
         :ui="{
           link: 'px-2 my-1 rounded-sm menu-item light:text-gray-800 dark:text-gray-200',
-          linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200'
+          linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200',
+          label: 'light:text-gray-500 dark:text-gray-400 pb-0'
         }"
       />
     </div>

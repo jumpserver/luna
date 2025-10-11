@@ -47,15 +47,15 @@
 }
 
 /* App Store 风格按钮 */
-.btn-appstore {
-  @apply bg-gray-200 text-green-500 rounded-lg text-xs transition-all duration-200;
+.btn-connect {
+  @apply bg-gray-100 text-green-500 font-bold rounded-lg text-xs transition-all duration-200;
 }
 
-.light .btn-appstore:hover {
+.btn-connect:hover {
   @apply bg-green-500 text-white;
 }
 
-.dark .btn-appstore {
+.dark .btn-connect {
   @apply bg-gray-600 hover:bg-gray-700;
 }
 

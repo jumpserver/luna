@@ -29,14 +29,14 @@ const labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-c
           <div class="flex justify-between">
             <section class="flex">
               <div class="flex items-center gap-2">
-                <USkeleton class="h-10 w-10 rounded-md" />
+                <USkeleton class="h-5 w-10 rounded-md" />
                 <USkeleton class="h-5 w-2/3" />
               </div>
             </section>
 
             <section class="flex items-center gap-2">
-              <USkeleton class="h-8 w-8 rounded-lg" />
-              <USkeleton class="h-8 w-8 rounded-lg" />
+              <USkeleton class="h-2 w-8 rounded-lg" />
+              <USkeleton class="h-2 w-8 rounded-lg" />
             </section>
           </div>
 
@@ -46,22 +46,10 @@ const labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-c
               :style="{ gridTemplateColumns: labelColumnTemplate }"
             >
               <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-                <USkeleton class="h-4 w-16" />
+                <USkeleton class="h-2 w-16" />
               </span>
               <div class="min-w-0">
-                <USkeleton class="h-4 w-3/4" />
-              </div>
-            </div>
-
-            <div
-              class="grid items-center gap-x-3 gap-y-1"
-              :style="{ gridTemplateColumns: labelColumnTemplate }"
-            >
-              <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-                <USkeleton class="h-4 w-16" />
-              </span>
-              <div class="min-w-0">
-                <USkeleton class="h-4 w-2/3" />
+                <USkeleton class="h-2 w-3/4" />
               </div>
             </div>
 

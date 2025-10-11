@@ -8,7 +8,7 @@ export default defineAppConfig({
   componentsConfig: {
     header: {
       darkColor: "#333334",
-      lightColor: "#E4E4E5"
+      lightColor: "rgb(231, 231, 231)"
     },
     pages: {
       focusColor: "#55B787",

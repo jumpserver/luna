@@ -14,6 +14,8 @@ const props = withDefaults(
   defineProps<{
     zone: string;
     user: string;
+    category: string;
+    type: string;
     assetId: string;
     address: string;
     iconName: string;
@@ -37,7 +39,6 @@ const emits = defineEmits<{
 const { t, locale } = useI18n();
 const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite } =
   useAssetAction();
-
 const showEdit = ref(false);
 
 const contextMenuItems = computed<ContextMenuItem[][]>(() => {
@@ -123,14 +124,17 @@ const handleMouseEnter = () => {
 const handleMouseLeave = () => {
   showEdit.value = false;
 };
+
+const iconPath = computed(() => {
+  console.log(props.category, props.type);
+  return props.type === "windows" ? "/icons/windows.png" : "/icons/linux.png";
+});
 </script>
 
 <template>
   <UPageCard
     class="w-full page-card"
-    variant="subtle"
-    highlight-color="primary"
-    :highlight="highlight"
+    :highlight="false"
     :ui="{
       body: 'p-1 ',
       container: 'p-2 sm:p-2 '
@@ -147,18 +151,18 @@ const handleMouseLeave = () => {
         <div class="flex items-center justify-between w-full">
           <div class="flex items-center gap-3 flex-1 min-w-0">
             <UAvatar
-              size="lg"
-              :icon="iconName"
+              size="md"
+              :src="iconPath"
               :ui="{ root: 'rounded-md', icon: 'size-8' }"
               class="flex-shrink-0"
             />
 
             <div class="flex-1 min-w-0 overflow-hidden w-[120px]">
-              <div class="text-sm font-bold truncate whitespace-nowrap">
+              <div class="text-[14px] font-bold truncate whitespace-nowrap">
                 {{ assetName }}
               </div>
               <div
-                class="text-sm text-neutral-500 dark:text-neutral-400 truncate whitespace-nowrap"
+                class="text-[13px] text-neutral-500 dark:text-neutral-400 truncate whitespace-nowrap"
               >
                 {{ address }}
               </div>
@@ -170,7 +174,7 @@ const handleMouseLeave = () => {
               size="xs"
               color="primary"
               variant="solid"
-              class="group btn-appstore px-3"
+              class="group btn-connect px-3"
               :disabled="!isActive"
               @click="handleConnect"
             >

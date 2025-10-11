@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useUserSettingStore } from '~/store/modules/userSetting';
+import { useUserSettingStore } from "~/store/modules/userSetting";
 
 const userSettingStore = useUserSettingStore();
 const { componentsConfig } = useAppConfig();
@@ -14,7 +14,7 @@ const providerClearSelection = (callback: () => void) => {
   clearSelectionCallback.value = callback;
 };
 
-provide('providerClearSelection', providerClearSelection);
+provide("providerClearSelection", providerClearSelection);
 </script>
 
 <template>
@@ -31,7 +31,7 @@ provide('providerClearSelection', providerClearSelection);
     }"
     :ui="{
       header: 'p-0 sm:p-0',
-      body: 'p-2 sm:p-4 px-4 py-2 h-[calc(100vh-58px)]'
+      body: 'p-2 pr-1 sm:p-4 px-4 !pr-[3px] h-[calc(100vh-58px)]'
     }"
     @click="clearSelection"
   >

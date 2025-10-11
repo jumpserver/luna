@@ -40,7 +40,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
     :style="{
       backgroundColor: theme === 'dark' ? darkColor : lightColor
     }"
-    class="flex items-center justify-between px-4 h-14"
+    class="flex items-center justify-between px-4 h-13"
     @mousedown="handleWindowDrag"
   >
     <section class="flex items-center h-full">

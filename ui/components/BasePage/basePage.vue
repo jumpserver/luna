@@ -179,7 +179,7 @@ onBeforeUnmount(() => {
     <section
       v-if="layouts === 'grid'"
       ref="scrollRef"
-      class="w-full overflow-y-auto container-scrollbar"
+      class="w-full overflow-y-auto container-scrollbar pr-2"
       :style="scrollbarStyles"
     >
       <div
@@ -219,6 +219,8 @@ onBeforeUnmount(() => {
           :protocols="item.permed_protocols || []"
           :protocol="item.permed_protocols?.[0]?.name || ''"
           :user="item.permed_accounts?.[0]?.username || ''"
+          :category="item.category"
+          :type="item.type"
           :highlight="selectedCardIndex === index"
           @open-edit-modal="editModalOpen = true"
           @click="handleCardClick(index, $event)"
