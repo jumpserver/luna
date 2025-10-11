@@ -56,42 +56,38 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
 const handleCollapse = () => {
   setCollapse(!collapse.value);
 };
-
 const isDarkMode = computed(() => theme.value === "dark");
-
 const sidebarSearch = ref("");
 const emitSearch = (value: string) => emit("search", value);
 const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 </script>
 
 <template>
-	<div
-		class="flex flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-blur-lg backdrop-saturate-150
-    supports-[backdrop-filter]:bg-white/20 supports-[backdrop-filter]:dark:bg-zinc-900/15 border-r
-     border-white/30 dark:border-white/10 shadow-sm"
-		:style="{
-			width: collapse ? '72px' : '256px'
-		}"
-	>
-		<section class="flex items-center justify-end w-full px-4 h-12">
-			<UIcon
-				:name="collapse ? '' : 'i-lucide-panel-left-close'"
-				class="size-5 cursor-pointer hover:text-[#55B787] mt-2"
-				@click="handleCollapse"
-			/>
-		</section>
+  <div
+    class="flex flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-blur-lg backdrop-saturate-150 supports-[backdrop-filter]:bg-white/20 supports-[backdrop-filter]:dark:bg-zinc-900/15 border-r border-white/30 dark:border-white/10 shadow-sm"
+    :style="{
+      width: collapse ? '72px' : '256px'
+    }"
+  >
+    <section class="flex items-center justify-end w-full px-4 h-12">
+      <UIcon
+        :name="collapse ? '' : 'i-lucide-panel-left'"
+        class="size-5 cursor-pointer hover:text-[#55B787] mt-2"
+        @click="handleCollapse"
+      />
+    </section>
 
-    <div class="px-4 py-2" v-if="!collapse">
-        <UInput
-          v-model="sidebarSearch"
-          clearable
-          icon="i-lucide-search"
-          variant="outline"
-          :placeholder="t('Operation.Search')"
-          class="dark:bg-transparent rounded-sm w-full"
-          :style="isDarkMode ? '' : 'background-color: rgb(198,198,197, 0.5);'"
-          @update:model-value="debouncedSidebarSearch"
-        >
+    <div v-if="!collapse" class="px-4 py-2">
+      <UInput
+        v-model="sidebarSearch"
+        clearable
+        icon="i-lucide-search"
+        variant="outline"
+        :placeholder="t('Operation.Search')"
+        class="dark:bg-transparent rounded-sm w-full"
+        :style="isDarkMode ? '' : 'background-color: rgb(198,198,197, 0.5);'"
+        @update:model-value="debouncedSidebarSearch"
+      >
         <template v-if="sidebarSearch?.length" #trailing>
           <UButton
             color="neutral"
@@ -99,24 +95,29 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
             size="sm"
             icon="i-lucide-circle-x"
             aria-label="Clear input"
-            @click="() => { sidebarSearch = ''; emitSearch(''); }"
+            @click="
+              () => {
+                sidebarSearch = '';
+                emitSearch('');
+              }
+            "
           />
         </template>
       </UInput>
     </div>
 
-		<div class="px-4 py-0 flex-1 overflow-auto menu">
-			<UNavigationMenu
-				orientation="vertical"
-				:items="sideBarItems"
-				:collapsed="collapse"
-				color="neutral"
-				:ui="{
-					link: 'px-2 my-1 rounded-sm menu-item light:text-gray-800 dark:text-gray-200',
-					linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200'
-				}"
-			/>
-		</div>
+    <div class="px-4 py-0 flex-1 overflow-auto menu">
+      <UNavigationMenu
+        orientation="vertical"
+        :items="sideBarItems"
+        :collapsed="collapse"
+        color="neutral"
+        :ui="{
+          link: 'px-2 my-1 rounded-sm menu-item light:text-gray-800 dark:text-gray-200',
+          linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200'
+        }"
+      />
+    </div>
 
     <div class="px-3 py-2 mt-auto">
       <Profile :collapse="collapse" />

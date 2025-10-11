@@ -46,7 +46,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
     <section class="flex items-center h-full">
       <UIcon
         v-show="collapse"
-        name="i-lucide-panel-left-open"
+        name="i-lucide-panel-left"
         class="size-5 cursor-pointer hover:text-[#55B787]"
         @click="handleCollapse"
       />
