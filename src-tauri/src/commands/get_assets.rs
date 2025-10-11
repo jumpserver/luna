@@ -1,9 +1,12 @@
 use crate::service::asset::{AssetQuery, AssetService};
-use log::{error};
+use log::error;
+use log::info;
 use serde::Deserialize;
 use serde_json::{from_str, json, Value};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
+use tokio::task::JoinSet;
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
@@ -82,6 +85,8 @@ pub async fn get_assets(
     let assets_data = asset_service
         .get_category_assets(favorite.unwrap_or(false))
         .await;
+
+    info!("get_assets assets_data: {:?}", assets_data);
 
     if !assets_data.success {
         error!("获取 Asset 数据失败");

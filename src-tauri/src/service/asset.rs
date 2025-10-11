@@ -36,7 +36,6 @@ pub struct AssetQuery {
     pub org: String,
 }
 
-
 impl AssetQuery {
     #[allow(dead_code)]
     pub fn new(asset_type: Category, org: String) -> Self {

@@ -3,13 +3,33 @@ import type { ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } fro
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
+let tauriListenersInitialized = false;
+let tauriListenersRegistering = false;
+let tauriListenersRefCount = 0;
+let unlistenGetTokenSuccess: UnlistenFn | null = null;
+let unlistenFavoriteSuccess: UnlistenFn | null = null;
+let unlistenFavoriteFailed: UnlistenFn | null = null;
+
+function releaseTauriEventListeners() {
+  tauriListenersRefCount = Math.max(tauriListenersRefCount - 1, 0);
+  if (!tauriListenersInitialized || tauriListenersRegistering) return;
+  if (tauriListenersRefCount === 0) {
+    unlistenGetTokenSuccess?.();
+    unlistenFavoriteSuccess?.();
+    unlistenFavoriteFailed?.();
+    unlistenGetTokenSuccess = null;
+    unlistenFavoriteSuccess = null;
+    unlistenFavoriteFailed = null;
+    tauriListenersInitialized = false;
+  }
+}
+
 export const useAssetAction = () => {
   const connectToken = ref<string | null>(null);
-  const listenSuccessEvent = ref<UnlistenFn | null>(null);
 
   const userInfoStore = useUserInfoStore();
-  const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption } =
-    storeToRefs(userInfoStore);
+  // prettier-ignore
+  const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption } = storeToRefs(userInfoStore);
 
   /**
    * @description 展示 user 信息,默认展示非 @ 开头的 user
@@ -21,8 +41,6 @@ export const useAssetAction = () => {
     if (saved?.username) return saved.username;
 
     const acc = accounts.find((a) => a && a.alias && !a.alias.startsWith("@"));
-
-    console.log("acc", acc);
 
     return acc?.username || "";
   };
@@ -192,24 +210,64 @@ export const useAssetAction = () => {
 
   const handleAssetRename = () => {};
 
-  const handleAssetFavorite = () => {};
+  const handleAssetFavorite = (assetId: string) => {
+    console.log("assetId", assetId);
+    useTauriCoreInvoke("set_favorite", {
+      site: currentSite.value,
+      cookieHeader: currentUser.value!.headerJson,
+      assetId
+    });
+  };
 
   /**
    * @description 监听 tauri 事件
    */
   const listenTauriEvent = async () => {
-    listenSuccessEvent.value = await useTauriEventListen("get-token-success", (event) => {
-      interface eventPayload {
-        status: number;
-        data: TokenResponse;
-      }
+    if (tauriListenersInitialized || tauriListenersRegistering) {
+      tauriListenersRefCount++;
+      return;
+    }
 
-      const payload = event.payload as eventPayload;
+    tauriListenersRegistering = true;
+    
+    try {
+      unlistenGetTokenSuccess = await useTauriEventListen("get-token-success", (event) => {
+        interface eventPayload {
+          status: number;
+          data: TokenResponse;
+        }
 
-      if (payload.status === 201) {
-        connectToken.value = payload.data.id;
-      }
-    });
+        const payload = event.payload as eventPayload;
+
+        if (payload.status === 201) {
+          connectToken.value = payload.data.id;
+        }
+      });
+
+      unlistenFavoriteSuccess = await useTauriEventListen("set-favorite-success", (event) => {
+        interface eventPayload {
+          status: string;
+        }
+
+        const payload = event.payload as eventPayload;
+
+        console.log("listenFavoriteSuccessEvent", payload);
+      });
+
+      unlistenFavoriteFailed = await useTauriEventListen("set-favorite-failure", (event) => {
+        interface eventPayload {
+          status: string;
+        }
+
+        const payload = event.payload as eventPayload;
+        console.log("listenFavoriteFailedEvent", payload);
+      });
+
+      tauriListenersInitialized = true;
+      tauriListenersRefCount++;
+    } finally {
+      tauriListenersRegistering = false;
+    }
   };
 
   onMounted(() => {
@@ -217,7 +275,7 @@ export const useAssetAction = () => {
   });
 
   onBeforeUnmount(() => {
-    listenSuccessEvent.value?.();
+    releaseTauriEventListeners();
   });
 
   return {

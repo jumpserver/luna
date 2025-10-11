@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { ContextMenuItem } from "@nuxt/ui";
 import type { PermedAccount, PermedProtocol } from "~/types/index";
-import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface DetailRow {
   key: string;
@@ -36,73 +35,46 @@ const emits = defineEmits<{
 }>();
 
 const { t, locale } = useI18n();
-const userInfoStore = useUserInfoStore();
-const { handleAssetConnection } = useAssetAction();
-
-const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
-
-const openEditModal = () => {
-  emits("openEditModal");
-};
+const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite } =
+  useAssetAction();
 
 const showEdit = ref(false);
-const items = ref<ContextMenuItem[][]>([
-  [
-    {
-      label: t("ContextMenu.Connect"),
-      icon: "i-lucide-unplug"
-    },
-    {
-      label: t("ContextMenu.Edit"),
-      icon: "i-lucide-pencil",
-      onSelect: openEditModal
-    },
-    {
-      label: t("ContextMenu.MoreConnect"),
-      icon: "i-lucide-plug",
-      children: [
-        {
-          label: `${t("ContextMenu.Use")} SSH`
-        },
-        {
-          label: `${t("ContextMenu.Use")} SFTP`
-        }
-      ]
-    },
-    {
-      label: t("ContextMenu.Rename"),
-      icon: "i-lucide-pencil"
-    },
-    {
-      label: t("ContextMenu.Favorite"),
-      icon: "i-lucide-star"
-    }
-  ]
-]);
 
-const handleMouseEnter = () => {
-  showEdit.value = true;
-};
+const contextMenuItems = computed<ContextMenuItem[][]>(() => {
+  const protocols = (props.protocols || []).map((p: PermedProtocol) => p.name);
+  const uniqueProtocols = Array.from(new Set(protocols));
 
-const handleMouseLeave = () => {
-  showEdit.value = false;
-};
+  const moreConnectChildren: ContextMenuItem[] = uniqueProtocols.map((name: string) => ({
+    label: `${t("ContextMenu.Use")} ${name.toUpperCase()}`,
+    onClick: () => handleConnect(name)
+  }));
 
-const displayProtocol = computed(() => {
-  const saved = currentConnectionInfoMap.value[props.assetId];
-  return saved?.protocol ?? props.protocol;
+  return [
+    [
+      {
+        label: t("ContextMenu.QuickConnect"),
+        icon: "i-lucide-unplug",
+        onClick: () => handleConnect()
+      },
+      {
+        label: t("ContextMenu.MoreConnect"),
+        icon: "i-lucide-plug",
+        children: [moreConnectChildren]
+      },
+      {
+        label: t("ContextMenu.Rename"),
+        icon: "i-lucide-pencil"
+      },
+      {
+        label: t("ContextMenu.Favorite"),
+        icon: "i-lucide-star",
+        onClick: () => handleAssetFavorite(props.assetId)
+      }
+    ]
+  ];
 });
 
-const displayUser = computed(() => {
-  const saved = currentConnectionInfoMap.value[props.assetId];
-  return saved?.username ?? props.user;
-});
-
-const labelMinWidth = computed(() => (locale.value.startsWith("zh") ? "24px" : "72px"));
-
-const _labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-content) 1fr`);
-
-const _detailRows = computed(() => {
+const detailRows = computed(() => {
   const list: Array<DetailRow> = [
     {
       key: "address",
@@ -114,26 +86,48 @@ const _detailRows = computed(() => {
     {
       key: "user",
       title: t("AssetCard.User"),
-      content: displayUser.value
+      content: displayUser(props.assetId, props.accounts)
     },
     {
       key: "protocol",
       title: t("AssetCard.Protocol"),
-      content: displayProtocol.value
+      content: displayProtocol(props.assetId, props.protocols!)
     }
   ];
 
   return list;
 });
 
-const handleConnect = () => {
-  handleAssetConnection(props.user, props.assetId, displayProtocol.value, props.accounts || []);
+const labelMinWidth = computed(() => (locale.value.startsWith("zh") ? "24px" : "72px"));
+
+const labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-content) 1fr`);
+
+function handleConnect(protocolOverride?: string) {
+  handleAssetConnection(
+    props.user,
+    props.assetId,
+    displayProtocol(props.assetId, props.protocols!),
+    props.accounts || [],
+    protocolOverride
+  );
+}
+
+const openEditModal = () => {
+  emits("openEditModal");
+};
+
+const handleMouseEnter = () => {
+  showEdit.value = true;
+};
+
+const handleMouseLeave = () => {
+  showEdit.value = false;
 };
 </script>
 
 <template>
   <UPageCard
-    class="w-full page-card border-solid border-red-500"
+    class="w-full page-card"
     variant="subtle"
     highlight-color="primary"
     :highlight="highlight"
@@ -144,7 +138,7 @@ const handleConnect = () => {
   >
     <UContextMenu
       size="sm"
-      :items="items"
+      :items="contextMenuItems"
       :ui="{
         content: 'w-48'
       }"

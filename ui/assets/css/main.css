@@ -51,12 +51,12 @@
   @apply bg-gray-200 text-green-500 rounded-lg text-xs transition-all duration-200;
 }
 
-.btn-appstore:hover {
+.light .btn-appstore:hover {
   @apply bg-green-500 text-white;
 }
 
 .dark .btn-appstore {
-  @apply bg-blue-600 hover:bg-blue-700;
+  @apply bg-gray-600 hover:bg-gray-700;
 }
 
 html,
