@@ -1,29 +1,28 @@
 <script setup lang="ts">
-import type { ContextMenuItem } from '@nuxt/ui';
-import type { PermedAccount, PermedProtocol } from '~/types/index';
-import { useUserInfoStore } from '~/store/modules/userInfo';
+import type { ContextMenuItem } from "@nuxt/ui";
+import type { PermedAccount, PermedProtocol } from "~/types/index";
 
 interface DetailRow {
-  key: string
-  title: string
-  content: string
-  popover?: boolean
-  class?: string
+  key: string;
+  title: string;
+  content: string;
+  popover?: boolean;
+  class?: string;
 }
 
 const props = withDefaults(
   defineProps<{
-    zone: string
-    user: string
-    assetId: string
-    address: string
-    iconName: string
-    protocol: string
-    assetName: string
-    highlight: boolean
-    isActive: boolean
-    accounts?: PermedAccount[]
-    protocols?: PermedProtocol[]
+    zone: string;
+    user: string;
+    assetId: string;
+    address: string;
+    iconName: string;
+    protocol: string;
+    assetName: string;
+    highlight: boolean;
+    isActive: boolean;
+    accounts?: PermedAccount[];
+    protocols?: PermedProtocol[];
   }>(),
   {
     accounts: () => [],
@@ -32,52 +31,87 @@ const props = withDefaults(
 );
 
 const emits = defineEmits<{
-  (e: 'openEditModal'): void
+  (e: "openEditModal"): void;
 }>();
 
 const { t, locale } = useI18n();
-const userInfoStore = useUserInfoStore();
-const {
-  getConnectToken,
-  dispatchConnectMethod,
-  getUserId,
-  generateConnectOptions
-} = useAssetConnect();
-
-const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
+const { handleAssetConnection, displayUser, displayProtocol } = useAssetAction();
 
 const showEdit = ref(false);
-const items = ref<ContextMenuItem[][]>([
-  [
+
+const contextMenuItems = computed<ContextMenuItem[][]>(() => {
+  const protocols = (props.protocols || []).map((p: PermedProtocol) => p.name);
+  const uniqueProtocols = Array.from(new Set(protocols));
+
+  const moreConnectChildren: ContextMenuItem[] = uniqueProtocols.map((name: string) => ({
+    label: `${t("ContextMenu.Use")} ${name.toUpperCase()}`,
+    onClick: () => handleConnect(name)
+  }));
+
+  return [
+    [
+      {
+        label: t("ContextMenu.QuickConnect"),
+        icon: "i-lucide-unplug",
+        onClick: () => handleConnect()
+      },
+      {
+        label: t("ContextMenu.MoreConnect"),
+        icon: "i-lucide-plug",
+        children: [moreConnectChildren]
+      },
+      {
+        label: t("ContextMenu.Rename"),
+        icon: "i-lucide-pencil"
+      },
+      {
+        label: t("ContextMenu.Favorite"),
+        icon: "i-lucide-star"
+      }
+    ]
+  ];
+});
+
+const detailRows = computed(() => {
+  const list: Array<DetailRow> = [
     {
-      label: t('ContextMenu.Connect'),
-      icon: 'i-lucide-unplug'
+      key: "address",
+      title: t("AssetCard.Address"),
+      content: props.address,
+      popover: true,
+      class: "max-w-40"
     },
     {
-      label: t('ContextMenu.MoreConnect'),
-      icon: 'i-lucide-plug',
-      children: [
-        {
-          label: `${t('ContextMenu.Use')} SSH`
-        },
-        {
-          label: `${t('ContextMenu.Use')} SFTP`
-        }
-      ]
+      key: "user",
+      title: t("AssetCard.User"),
+      content: displayUser(props.assetId, props.accounts)
     },
     {
-      label: t('ContextMenu.Rename'),
-      icon: 'i-lucide-pencil'
-    },
-    {
-      label: t('ContextMenu.Favorite'),
-      icon: 'i-lucide-star'
+      key: "protocol",
+      title: t("AssetCard.Protocol"),
+      content: displayProtocol(props.assetId, props.protocols!)
     }
-  ]
-]);
+  ];
+
+  return list;
+});
+
+const labelMinWidth = computed(() => (locale.value.startsWith("zh") ? "24px" : "72px"));
+
+const labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-content) 1fr`);
+
+function handleConnect(protocolOverride?: string) {
+  handleAssetConnection(
+    props.user,
+    props.assetId,
+    displayProtocol(props.assetId, props.protocols!),
+    props.accounts || [],
+    protocolOverride
+  );
+}
 
 const openEditModal = () => {
-  emits('openEditModal');
+  emits("openEditModal");
 };
 
 const handleMouseEnter = () => {
@@ -86,81 +120,6 @@ const handleMouseEnter = () => {
 
 const handleMouseLeave = () => {
   showEdit.value = false;
-};
-
-const displayProtocol = computed(() => {
-  const saved = currentConnectionInfoMap.value[props.assetId];
-  return saved?.protocol ?? props.protocol;
-});
-
-const displayUser = computed(() => {
-  const saved = currentConnectionInfoMap.value[props.assetId];
-  return saved?.username ?? props.user;
-});
-
-const labelMinWidth = computed(() =>
-  locale.value.startsWith('zh') ? '24px' : '72px'
-);
-
-const labelColumnTemplate = computed(
-  () => `minmax(${labelMinWidth.value}, max-content) 1fr`
-);
-
-const detailRows = computed(() => {
-  const list: Array<DetailRow> = [
-    {
-      key: 'address',
-      title: t('AssetCard.Address'),
-      content: props.address,
-      popover: true,
-      class: 'max-w-40'
-    },
-    {
-      key: 'user',
-      title: t('AssetCard.User'),
-      content: displayUser.value
-    },
-    {
-      key: 'protocol',
-      title: t('AssetCard.Protocol'),
-      content: displayProtocol.value
-    }
-  ];
-
-  return list;
-});
-
-const handleConnect = () => {
-  const saved = currentConnectionInfoMap.value[props.assetId];
-
-  let input_username = '';
-  let input_secret = '';
-
-  // 优先根据保存的账户模式判断
-  const mode = saved?.accountMode;
-  const selected = saved?.username ?? props.user;
-
-  if (mode === 'manual' || selected === '手动输入' || selected === 'Manual input') {
-    input_username = saved?.manualUsername || '';
-    input_secret = saved?.manualPassword || '';
-  } else if (mode === 'dynamic' || selected?.includes('同名账号') || selected?.includes('Dynamic user')) {
-    // 同名账号仅需传递密码
-    input_username = '';
-    input_secret = saved?.dynamicPassword || '';
-  } else {
-    input_username = '';
-    input_secret = '';
-  }
-
-  getConnectToken({
-    asset: props.assetId,
-    protocol: displayProtocol.value,
-    input_username,
-    input_secret,
-    account: getUserId(props.accounts, props.assetId, props.user),
-    connect_method: dispatchConnectMethod(displayProtocol.value),
-    connect_options: generateConnectOptions()
-  });
 };
 </script>
 
@@ -177,7 +136,7 @@ const handleConnect = () => {
   >
     <UContextMenu
       size="sm"
-      :items="items"
+      :items="contextMenuItems"
       :ui="{
         content: 'w-48'
       }"
@@ -221,7 +180,7 @@ const handleConnect = () => {
                     color="primary"
                     variant="outline"
                     class="group !gap-0"
-                    @click="handleConnect"
+                    @click="handleConnect()"
                   >
                     <!-- prettier-ignore -->
                     <span
@@ -253,9 +212,7 @@ const handleConnect = () => {
                 class="grid items-center gap-x-3 gap-y-1"
                 :style="{ gridTemplateColumns: labelColumnTemplate }"
               >
-                <span
-                  class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
-                >
+                <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
                   {{ row.title }}
                 </span>
 
