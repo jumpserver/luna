@@ -10,7 +10,6 @@
   --color-info: var(--ui-color-info-500);
   --color-warning: var(--ui-color-warning-500);
   --color-error: var(--ui-color-error-500);
-  --ui-color-primary-500: #1ab394;
 }
 
 :root {
@@ -49,7 +48,7 @@
 
 /* App Store 风格按钮 */
 .btn-appstore {
-  @apply bg-gray-200 text-green-500 px-2 rounded-lg text-xs transition-all duration-200 shadow-sm;
+  @apply bg-gray-200 text-green-500 rounded-lg text-xs transition-all duration-200;
 }
 
 .btn-appstore:hover {

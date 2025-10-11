@@ -149,48 +149,40 @@ const handleConnect = () => {
         content: 'w-48'
       }"
     >
-      <section
-        class="flex items-center w-full p-3"
-        @mouseenter="handleMouseEnter"
-        @mouseleave="handleMouseLeave"
-      >
-        <div class="flex items-center gap-3 flex-1 min-w-0">
-          <UAvatar
-            size="lg"
-            :icon="iconName"
-            :ui="{ root: 'rounded-md', icon: 'size-7' }"
-            class="flex-shrink-0"
-          />
+      <section class="w-full p-2" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave">
+        <div class="flex items-center justify-between w-full">
+          <div class="flex items-center gap-3 flex-1 min-w-0">
+            <UAvatar
+              size="lg"
+              :icon="iconName"
+              :ui="{ root: 'rounded-md', icon: 'size-8' }"
+              class="flex-shrink-0"
+            />
 
-          <div class="flex-1 min-w-0 overflow-hidden w-[120px]">
-            <div class="text-sm font-bold truncate whitespace-nowrap">
-              {{ assetName }}
-            </div>
-            <div class="text-xs text-neutral-500 dark:text-neutral-400 truncate whitespace-nowrap">
-              {{ address }}
+            <div class="flex-1 min-w-0 overflow-hidden w-[120px]">
+              <div class="text-sm font-bold truncate whitespace-nowrap">
+                {{ assetName }}
+              </div>
+              <div
+                class="text-sm text-neutral-500 dark:text-neutral-400 truncate whitespace-nowrap"
+              >
+                {{ address }}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="flex-shrink-0 ml-2">
-          <UButton
-            size="xs"
-            color="primary"
-            variant="solid"
-            class="group gap-0 btn-appstore px-2"
-            :disabled="!isActive"
-            @click="handleConnect"
-          >
-            Connect
-          </UButton>
-
-          <!-- <UButton
-            icon="solar:pen-new-square-linear"
-            size="xs"
-            color="primary"
-            variant="outline"
-            @click="openEditModal"
-          /> -->
+          <div class="flex-shrink-0 ml-2">
+            <UButton
+              size="xs"
+              color="primary"
+              variant="solid"
+              class="group btn-appstore px-3"
+              :disabled="!isActive"
+              @click="handleConnect"
+            >
+              {{ t("ContextMenu.Connect") }}
+            </UButton>
+          </div>
         </div>
       </section>
     </UContextMenu>
