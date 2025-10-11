@@ -1,11 +1,9 @@
 use crate::service::asset::{AssetQuery, AssetService};
-use log::error;
+use log::{error};
 use serde::Deserialize;
 use serde_json::{from_str, json, Value};
-use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
-use tokio::task::JoinSet;
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
@@ -95,82 +93,22 @@ pub async fn get_assets(
     // 解析服务返回的 JSON 字符串
     match from_str::<Value>(&assets_data.data) {
         Ok(mut json_message) => {
+            // 为每个资产项添加默认的 permed_accounts 和 permed_protocols 字段
             if let Some(results) = json_message
                 .get_mut("results")
                 .and_then(|r| r.as_array_mut())
             {
-                // 收集需要查询详情的 ID
-                let ids: Vec<String> = results
-                    .iter()
-                    .filter_map(|item| {
-                        item.get("id")
-                            .and_then(|v| v.as_str())
-                            .map(|s| s.to_string())
-                    })
-                    .collect();
-
-                // 控制并发数量，避免过多同时请求
-                let concurrency = 8usize;
-                let mut ids_iter = ids.into_iter();
-                let mut set: JoinSet<(String, crate::commands::requests::ApiResponse)> =
-                    JoinSet::new();
-
-                // 预热并发窗口
-                for _ in 0..concurrency {
-                    if let Some(id) = ids_iter.next() {
-                        let svc = Arc::clone(&asset_service);
-                        set.spawn(async move { (id.clone(), svc.get_asset_details(id).await) });
-                    } else {
-                        break;
-                    }
-                }
-
-                let mut extras_map: HashMap<String, Value> = HashMap::new();
-
-                // 消费已完成的任务，并持续补位新的任务
-                while let Some(joined) = set.join_next().await {
-                    if let Ok((id, detail)) = joined {
-                        if detail.success {
-                            if let Ok(detail_json) = serde_json::from_str::<Value>(&detail.data) {
-                                let mut map = serde_json::Map::new();
-                                if let Some(protocols) = detail_json.get("permed_protocols") {
-                                    map.insert("permed_protocols".to_string(), protocols.clone());
-                                }
-                                if let Some(accounts) = detail_json.get("permed_accounts") {
-                                    map.insert("permed_accounts".to_string(), accounts.clone());
-                                }
-                                if !map.is_empty() {
-                                    extras_map.insert(id, Value::Object(map));
-                                }
-                            }
-                        } else {
-                            error!("获取资产详情失败: {} (status: {})", id, detail.status);
-                        }
-                    }
-
-                    if let Some(next_id) = ids_iter.next() {
-                        let svc = Arc::clone(&asset_service);
-                        set.spawn(async move {
-                            (next_id.clone(), svc.get_asset_details(next_id).await)
-                        });
-                    }
-                }
-
-                // 合并详情字段到 results
                 for item in results.iter_mut() {
-                    if let Some(id) = item.get("id").and_then(|v| v.as_str()) {
-                        if let Some(extras) = extras_map.get(id) {
-                            if let (Some(obj), Value::Object(extra_obj)) =
-                                (item.as_object_mut(), extras)
-                            {
-                                for (k, v) in extra_obj {
-                                    obj.insert(k.clone(), v.clone());
-                                }
-                            }
-                        }
+                    if let Some(obj) = item.as_object_mut() {
+                        // 添加默认的空数组字段
+                        obj.insert("permed_accounts".to_string(), json!([]));
+                        obj.insert("permed_protocols".to_string(), json!([]));
                     }
                 }
             }
+
+            // 添加调试信息
+            // info!("处理后的 JSON 数据结构: {}", serde_json::to_string_pretty(&json_message).unwrap_or_default());
 
             let _ = app.emit(
                 "get-asset-success",
@@ -181,8 +119,8 @@ pub async fn get_assets(
             );
             return;
         }
-        Err(_) => {
-            error!("解析资产列表 JSON 失败，返回数据不是合法 JSON 字符串");
+        Err(e) => {
+            error!("解析资产列表 JSON 失败，返回数据不是合法 JSON 字符串: {}", e);
             let _ = app.emit("get-asset-failure", json!({ "status": assets_data.status }));
             return;
         }

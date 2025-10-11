@@ -77,7 +77,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
       />
     </section>
 
-    <div v-if="!collapse" class="px-4 py-2">
+    <div v-show="!collapse" class="px-4 py-2">
       <UInput
         v-model="sidebarSearch"
         clearable

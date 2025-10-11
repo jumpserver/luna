@@ -46,7 +46,7 @@ export default defineAppConfig({
   },
   ui: {
     colors: {
-      primary: "#0ea5e9",
+      primary: "primary",
       neutral: "zinc"
     },
     container: {
@@ -81,7 +81,7 @@ export default defineAppConfig({
     },
     dropdownMenu: {
       slots: {
-        content: 'w-(--reka-dropdown-menu-trigger-width)'
+        content: "w-(--reka-dropdown-menu-trigger-width)"
       }
     },
     navigationMenu: {

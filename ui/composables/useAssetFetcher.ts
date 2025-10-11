@@ -1,14 +1,11 @@
-import type { UnlistenFn } from '@tauri-apps/api/event';
-import type { AssetsResponse, RawAssetData } from '~/types';
+import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { AssetsResponse, RawAssetData } from "~/types";
 
-import { useUserInfoStore } from '~/store/modules/userInfo';
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const LIMIT = 20;
 
-export const useAssetFetcher = (
-  assetType: string,
-  scrollRef?: Ref<HTMLElement | null>
-) => {
+export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement | null>) => {
   const { t } = useI18n();
   const { componentsConfig } = useAppConfig();
 
@@ -28,8 +25,8 @@ export const useAssetFetcher = (
   const subscribeGetAssetFailedEvent = ref<UnlistenFn | null>(null);
 
   const totalCount = ref(0);
-  const currentOrder = ref('');
-  const currentSearch = ref('');
+  const currentOrder = ref("");
+  const currentSearch = ref("");
 
   let stopScrollListener: (() => void) | null = null;
 
@@ -37,37 +34,30 @@ export const useAssetFetcher = (
     return transformAssetsData(rawAssetsList.value);
   });
 
-  const isAppending = computed(
-    () => isLoading.value && rawAssetsList.value.length > 0
-  );
+  const isAppending = computed(() => isLoading.value && rawAssetsList.value.length > 0);
 
-  const isInitialLoading = computed(
-    () => isLoading.value && rawAssetsList.value.length === 0
-  );
+  const isInitialLoading = computed(() => isLoading.value && rawAssetsList.value.length === 0);
 
   const appendSkeletonCount = computed(() => {
     if (!(isLoading.value && rawAssetsList.value.length > 0)) return 0;
 
-    const remaining = Math.max(
-      0,
-      (totalCount.value || 0) - rawAssetsList.value.length
-    );
+    const remaining = Math.max(0, (totalCount.value || 0) - rawAssetsList.value.length);
 
     const expected = totalCount.value ? Math.min(LIMIT, remaining) : LIMIT;
     return expected || LIMIT;
   });
 
   const scrollbarStyles = computed(() => {
-    const isDark = colorMode.value === 'dark';
+    const isDark = colorMode.value === "dark";
     return {
-      '--scrollbar-width': '8px',
-      '--scrollbar-track-color': isDark ? '#333' : '#f1f1f1',
-      '--scrollbar-thumb-color': isDark
+      "--scrollbar-width": "8px",
+      "--scrollbar-track-color": isDark ? "#333" : "#f1f1f1",
+      "--scrollbar-thumb-color": isDark
         ? componentsConfig.pages.scrollBarDarkThumbColor
         : componentsConfig.pages.scrollBarLightThumbColor,
-      '--scrollbar-thumb-hover-color': isDark
+      "--scrollbar-thumb-hover-color": isDark
         ? componentsConfig.pages.scrollBarDarkHoverColor
-        : componentsConfig.pages.scrollBarLightHoverColor,
+        : componentsConfig.pages.scrollBarLightHoverColor
     };
   });
 
@@ -100,10 +90,10 @@ export const useAssetFetcher = (
       }
     };
 
-    el.addEventListener('scroll', onScroll, { passive: true });
+    el.addEventListener("scroll", onScroll, { passive: true });
 
     stopScrollListener = () => {
-      el.removeEventListener('scroll', onScroll);
+      el.removeEventListener("scroll", onScroll);
       stopScrollListener = null;
     };
   }
@@ -115,7 +105,7 @@ export const useAssetFetcher = (
     isLoading.value = true;
 
     try {
-      useEventBus().emit('loading', undefined);
+      useEventBus().emit("loading", undefined);
     } catch {}
   };
 
@@ -126,7 +116,7 @@ export const useAssetFetcher = (
     isLoading.value = false;
     nextTick(() => {
       try {
-        useEventBus().emit('loaded', undefined);
+        useEventBus().emit("loaded", undefined);
       } catch {}
     });
   };
@@ -139,15 +129,15 @@ export const useAssetFetcher = (
     const pathLower = route.path.toLowerCase();
 
     switch (assetType) {
-      case 'favorite':
+      case "favorite":
         return /\/favorite(?:\/|$)/.test(pathLower);
-      case 'linux':
+      case "linux":
         return /\/linux(?:\/|$)/.test(pathLower);
-      case 'windows':
+      case "windows":
         return /\/windows(?:\/|$)/.test(pathLower);
-      case 'database':
+      case "database":
         return /\/database(?:\/|$)/.test(pathLower);
-      case 'device':
+      case "device":
         return /\/device(?:\/|$)/.test(pathLower);
       default:
         return true;
@@ -161,27 +151,27 @@ export const useAssetFetcher = (
    */
   const filterResultsByAssetType = (items: RawAssetData[]) => {
     switch (assetType) {
-      case 'favorite':
+      case "favorite":
         return items;
-      case 'linux':
+      case "linux":
         return items.filter((it) => {
           const typeValue = it.type?.value?.toLowerCase();
-          return typeValue === 'linux';
+          return typeValue === "linux";
         });
-      case 'windows':
+      case "windows":
         return items.filter((it) => {
           const typeValue = it.type?.value?.toLowerCase();
-          return typeValue === 'windows';
+          return typeValue === "windows";
         });
-      case 'database':
+      case "database":
         return items.filter((it) => {
           const typeValue = it.type?.value?.toLowerCase();
-          return typeValue === 'database';
+          return typeValue === "database";
         });
-      case 'device':
+      case "device":
         return items.filter((it) => {
           const typeValue = it.type?.value?.toLowerCase();
-          return typeValue === 'device';
+          return typeValue === "device";
         });
       default:
         return items;
@@ -212,15 +202,15 @@ export const useAssetFetcher = (
     if (isLoading.value || !hasMore.value) return;
     if (!currentSite.value || !currentUser.value?.headerJson) return;
     if (!orgId.value) {
-      console.error('No organization ID available for asset request', {
+      console.error("No organization ID available for asset request", {
         orgId: orgId.value,
-        currentUser: currentUser.value,
+        currentUser: currentUser.value
       });
       toast.add({
-        title: t('Asset.GetAssetFailed'),
-        description: 'Organization information is missing',
-        color: 'error',
-        icon: 'line-md:close-circle',
+        title: t("Asset.GetAssetFailed"),
+        description: "Organization information is missing",
+        color: "error",
+        icon: "line-md:close-circle"
       });
       return;
     }
@@ -234,18 +224,18 @@ export const useAssetFetcher = (
     beginLoading();
 
     try {
-      await useTauriCoreInvoke('get_assets', {
+      await useTauriCoreInvoke("get_assets", {
         site: currentSite.value,
         cookieHeader: currentUser.value.headerJson,
-        favorite: assetType === 'favorite',
+        favorite: assetType === "favorite",
         query: {
-          type: assetType === 'favorite' ? undefined : assetType,
+          type: assetType === "favorite" ? undefined : assetType,
           offset: offset.value,
           limit: LIMIT,
           search: searchParam,
           order: orderParam,
-          org: orgId.value,
-        },
+          org: orgId.value
+        }
       });
     } catch {
       endLoading();
@@ -275,56 +265,50 @@ export const useAssetFetcher = (
    * @description 监听 Tauri 事件
    */
   const listenTauriEvent = async () => {
-    subscribeGetAssetsEvent.value = await useTauriEventListen(
-      'get-asset-success',
-      (event) => {
-        interface eventPayload {
-          status: number;
-          data: AssetsResponse;
-        }
+    subscribeGetAssetsEvent.value = await useTauriEventListen("get-asset-success", (event) => {
+      interface eventPayload {
+        status: number;
+        data: AssetsResponse;
+      }
 
-        if (!isLoading.value) return;
-        if (!isActiveForCurrentRoute()) return;
+      if (!isLoading.value) return;
+      if (!isActiveForCurrentRoute()) return;
 
-        const resp = event.payload as eventPayload;
-        const filtered = filterResultsByAssetType(resp.data.results ?? []);
+      const resp = event.payload as eventPayload;
+      const filtered = filterResultsByAssetType(resp.data.results ?? []);
 
-        appendPageData(filtered, resp.data.count);
+      appendPageData(filtered, resp.data.count);
+
+      nextTick(() => {
+        endLoading();
+      });
+    });
+
+    subscribeGetAssetFailedEvent.value = await useTauriEventListen("get-asset-failure", (event) => {
+      interface eventPayload {
+        status: number;
+      }
+
+      const payload = event.payload as eventPayload;
+      const status = payload.status;
+
+      if (status === 401) {
+        toast.add({
+          title: t("Login.LoginAuthenticationExpired"),
+          color: "error",
+          icon: "line-md:close-circle"
+        });
 
         nextTick(() => {
-          endLoading();
+          deleteUserData(currentSite.value);
+          setUserLoggedIn(false);
         });
       }
-    );
 
-    subscribeGetAssetFailedEvent.value = await useTauriEventListen(
-      'get-asset-failure',
-      (event) => {
-        interface eventPayload {
-          status: number;
-        }
-
-        const payload = event.payload as eventPayload;
-        const status = payload.status;
-
-        if (status === 401) {
-          toast.add({
-            title: t('Login.LoginAuthenticationExpired'),
-            color: 'error',
-            icon: 'line-md:close-circle',
-          });
-
-          nextTick(() => {
-            deleteUserData(currentSite.value);
-            setUserLoggedIn(false);
-          });
-        }
-
-        nextTick(() => {
-          endLoading();
-        });
-      }
-    );
+      nextTick(() => {
+        endLoading();
+      });
+    });
   };
 
   /**
@@ -344,7 +328,7 @@ export const useAssetFetcher = (
     const { on } = useEventBus();
 
     unsubscribeSetSort = on(
-      'setSort',
+      "setSort",
       (sortOrder) => {
         refreshAssets(currentSearch.value, sortOrder as string);
       },
@@ -352,7 +336,7 @@ export const useAssetFetcher = (
     );
 
     unsubscribeRefresh = on(
-      'refresh',
+      "refresh",
       () => {
         refreshAssets();
       },
@@ -360,14 +344,14 @@ export const useAssetFetcher = (
     );
 
     unsubscribeSearch = on(
-      'search',
+      "search",
       (search) => {
         refreshAssets(search, currentOrder.value);
       },
       false
     );
 
-    unsubscribeClearAssets = on('clearAssets', () => {
+    unsubscribeClearAssets = on("clearAssets", () => {
       hasMore.value = true;
 
       offset.value = 0;
@@ -410,6 +394,6 @@ export const useAssetFetcher = (
     appendSkeletonCount,
 
     fetchNextPage,
-    refreshAssets,
+    refreshAssets
   };
 };

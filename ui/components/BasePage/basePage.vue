@@ -1,32 +1,30 @@
 <script setup lang="ts">
-import type { UnlistenFn } from '@tauri-apps/api/event';
-import type { layoutsType } from '~/store/modules/userSetting';
+import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { layoutsType } from "~/store/modules/userSetting";
 
-import type { AssetItem, SettingResponse } from '~/types/index';
-import { useUserInfoStore } from '~/store/modules/userInfo';
-import { useUserSettingStore } from '~/store/modules/userSetting';
+import type { AssetItem, SettingResponse } from "~/types/index";
+import { useUserInfoStore } from "~/store/modules/userInfo";
+import { useUserSettingStore } from "~/store/modules/userSetting";
 
-type AssetType = 'linux' | 'windows' | 'database' | 'device' | 'favorite';
+type AssetType = "linux" | "windows" | "database" | "device" | "favorite";
 
 const props = defineProps<{
-  type: AssetType
-  iconName: string
-  platform?: string
+  type: AssetType;
+  iconName: string;
+  platform?: string;
 }>();
 
-const providerClearSelection = inject<(cb: () => void) => void>(
-  'providerClearSelection'
-);
+const providerClearSelection = inject<(cb: () => void) => void>("providerClearSelection");
 
 const { t } = useI18n();
 
 const editModalOpen = ref(false);
 const draftRememberSecret = ref<boolean>(false);
-const draftAccount = ref<string>('');
-const draftProtocol = ref<string>('');
-const draftManualUsername = ref<string>('');
-const draftManualPassword = ref<string>('');
-const draftDynamicPassword = ref<string>('');
+const draftAccount = ref<string>("");
+const draftProtocol = ref<string>("");
+const draftManualUsername = ref<string>("");
+const draftManualPassword = ref<string>("");
+const draftDynamicPassword = ref<string>("");
 const scrollRef = ref<HTMLElement | null>(null);
 const selectedCardIndex = ref<number | null>(null);
 const currentSelectedCardInfo = ref<AssetItem | null>(null);
@@ -48,16 +46,12 @@ const {
 } = assetManager;
 
 const visibleAssets = computed(() => {
-  if (!props.platform || props.platform === 'all') return assetsData.value;
-  return assetsData.value.filter(
-    (item: AssetItem) => item.platform === props.platform
-  );
+  if (!props.platform || props.platform === "all") return assetsData.value;
+  return assetsData.value.filter((item: AssetItem) => item.platform === props.platform);
 });
 
 const modalTitle = computed(() => {
-  return `${t('EditModal.ModifyConnectionInfo')} - ${
-    currentSelectedCardInfo.value?.assetName
-  }`;
+  return `${t("EditModal.ModifyConnectionInfo")} - ${currentSelectedCardInfo.value?.assetName}`;
 });
 
 watch([editModalOpen, currentSelectedCardInfo], ([open, info]: [boolean, AssetItem | null]) => {
@@ -79,7 +73,7 @@ watch(
   () => layouts.value,
   (nv: layoutsType) => {
     if (nv) {
-      useEventBus().emit('loaded', undefined);
+      useEventBus().emit("loaded", undefined);
     }
   }
 );
@@ -90,19 +84,17 @@ function initDraft() {
 
   const saved = userInfoStore.getConnectionInfoForAsset(asset.id);
 
-  draftProtocol.value
-    = saved?.protocol ?? asset.permed_protocols?.[0]?.name ?? '';
-  draftAccount.value
-    = saved?.username ?? asset.permed_accounts?.[0]?.username ?? '';
+  draftProtocol.value = saved?.protocol ?? asset.permed_protocols?.[0]?.name ?? "";
+  draftAccount.value = saved?.username ?? asset.permed_accounts?.[0]?.username ?? "";
 
-  draftManualUsername.value = saved?.manualUsername || '';
-  draftManualPassword.value = saved?.manualPassword || '';
-  draftDynamicPassword.value = saved?.dynamicPassword || '';
+  draftManualUsername.value = saved?.manualUsername || "";
+  draftManualPassword.value = saved?.manualPassword || "";
+  draftDynamicPassword.value = saved?.dynamicPassword || "";
   draftRememberSecret.value = saved?.rememberSecret || false;
 }
 
 async function getSettings() {
-  await useTauriCoreInvoke('get_setting', {
+  await useTauriCoreInvoke("get_setting", {
     site: currentSite.value,
     cookieHeader: currentUser.value!.headerJson
   });
@@ -122,29 +114,29 @@ const handleConfirm = () => {
   const asset = currentSelectedCardInfo.value;
   if (!asset) return;
 
-  let accountMode: 'hosted' | 'dynamic' | 'manual' = 'hosted';
-  let normalizedAccount = draftAccount.value || '';
+  let accountMode: "hosted" | "dynamic" | "manual" = "hosted";
+  let normalizedAccount = draftAccount.value || "";
 
-  const v = draftAccount.value || '';
+  const v = draftAccount.value || "";
 
-  if (v === '手动输入' || v === 'Manual input') accountMode = 'manual';
-  if (v.includes('同名账号') || v.includes('Dynamic user')) {
-    accountMode = 'dynamic';
+  if (v === "手动输入" || v === "Manual input") accountMode = "manual";
+  if (v.includes("同名账号") || v.includes("Dynamic user")) {
+    accountMode = "dynamic";
 
     const accs = currentSelectedCardInfo.value?.permed_accounts || [];
-    const dynamicAcc = accs.find((a) => a.alias === '@USER');
+    const dynamicAcc = accs.find((a) => a.alias === "@USER");
 
     if (dynamicAcc) normalizedAccount = dynamicAcc.name;
-    else normalizedAccount = v.replace(/\(.+\)/, '');
+    else normalizedAccount = v.replace(/\(.+\)/, "");
   }
 
   userInfoStore.setConnectionInfoForAsset(asset.id, {
-    protocol: draftProtocol.value || '',
+    protocol: draftProtocol.value || "",
     username: normalizedAccount,
     accountMode,
-    manualUsername: draftManualUsername.value || '',
-    manualPassword: draftManualPassword.value || '',
-    dynamicPassword: draftDynamicPassword.value || '',
+    manualUsername: draftManualUsername.value || "",
+    manualPassword: draftManualPassword.value || "",
+    dynamicPassword: draftDynamicPassword.value || "",
     rememberSecret: !!draftRememberSecret.value
   });
 
@@ -153,19 +145,16 @@ const handleConfirm = () => {
 
 const listenTauriEvent = async () => {
   interface eventPayloadType {
-    data: string
-    status: number
+    data: string;
+    status: number;
   }
 
-  subscribeSettingEvent.value = await useTauriEventListen(
-    'get-setting-success',
-    (event) => {
-      const payload = event.payload as eventPayloadType;
-      const settingConfig = JSON.parse(payload.data) as SettingResponse;
+  subscribeSettingEvent.value = await useTauriEventListen("get-setting-success", (event) => {
+    const payload = event.payload as eventPayloadType;
+    const settingConfig = JSON.parse(payload.data) as SettingResponse;
 
-      userInfoStore.setRdpClientOption(settingConfig.graphics);
-    }
-  );
+    userInfoStore.setRdpClientOption(settingConfig.graphics);
+  });
 };
 
 const handleOpenEditModal = (asset: AssetItem) => {
@@ -213,13 +202,10 @@ onBeforeUnmount(() => {
         class="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-500"
       >
         <UIcon name="mingcute:inbox-line" class="size-10" />
-        <span class="text-sm"> {{ t('Common.NoData') }} </span>
+        <span class="text-sm">{{ t("Common.NoData") }}</span>
       </div>
 
-      <div
-        v-else
-        class="grid grid-cols-[repeat(auto-fit,minmax(260px,_1fr))] gap-4 p-2"
-      >
+      <div v-else class="grid grid-cols-[repeat(auto-fit,minmax(280px,_1fr))] gap-3 p-1">
         <CardGridCard
           v-for="(item, index) in visibleAssets"
           :key="item.id"
@@ -257,10 +243,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div v-else class="p-2">
-        <CardTableCard
-          :items="visibleAssets"
-          @open-edit-modal="handleOpenEditModal"
-        />
+        <CardTableCard :items="visibleAssets" @open-edit-modal="handleOpenEditModal" />
       </div>
     </section>
 

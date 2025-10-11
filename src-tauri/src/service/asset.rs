@@ -1,4 +1,4 @@
-use crate::commands::requests::{get_unified, get_with_response, ApiResponse};
+use crate::commands::requests::{get_unified, ApiResponse};
 use crate::utils::to_api_response;
 use log::info;
 use serde::{Deserialize, Serialize};
@@ -144,12 +144,12 @@ impl AssetService {
         to_api_response(&url, get_unified(&url, &self.cookie_header, &query).await).await
     }
 
-    pub async fn get_asset_details(&self, asset_id: String) -> ApiResponse {
-        let url = format!(
-            "{}/api/v1/perms/users/self/assets/{}",
-            self.origin, &asset_id
-        );
+    // pub async fn get_asset_details(&self, asset_id: String) -> ApiResponse {
+    //     let url = format!(
+    //         "{}/api/v1/perms/users/self/assets/{}",
+    //         self.origin, &asset_id
+    //     );
 
-        get_with_response(&url, &self.cookie_header).await
-    }
+    //     get_with_response(&url, &self.cookie_header).await
+    // }
 }

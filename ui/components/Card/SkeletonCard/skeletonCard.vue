@@ -4,19 +4,15 @@ withDefaults(
     skeletonCount?: number;
   }>(),
   {
-    skeletonCount: 12,
+    skeletonCount: 12
   }
 );
 
 const { locale } = useI18n();
 
-const labelMinWidth = computed(() =>
-  locale.value.startsWith('zh') ? '24px' : '72px'
-);
+const labelMinWidth = computed(() => (locale.value.startsWith("zh") ? "24px" : "72px"));
 
-const labelColumnTemplate = computed(
-  () => `minmax(${labelMinWidth.value}, max-content) 1fr`
-);
+const labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-content) 1fr`);
 </script>
 
 <template>
@@ -44,16 +40,12 @@ const labelColumnTemplate = computed(
             </section>
           </div>
 
-          <USeparator orientation="horizontal" size="md" class="h-2" />
-
           <div class="flex flex-col gap-1 text-xs-plus">
             <div
               class="grid items-center gap-x-3 gap-y-1"
               :style="{ gridTemplateColumns: labelColumnTemplate }"
             >
-              <span
-                class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
-              >
+              <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
                 <USkeleton class="h-4 w-16" />
               </span>
               <div class="min-w-0">
@@ -65,9 +57,7 @@ const labelColumnTemplate = computed(
               class="grid items-center gap-x-3 gap-y-1"
               :style="{ gridTemplateColumns: labelColumnTemplate }"
             >
-              <span
-                class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
-              >
+              <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
                 <USkeleton class="h-4 w-16" />
               </span>
               <div class="min-w-0">
@@ -79,9 +69,7 @@ const labelColumnTemplate = computed(
               class="grid items-center gap-x-3 gap-y-1"
               :style="{ gridTemplateColumns: labelColumnTemplate }"
             >
-              <span
-                class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
-              >
+              <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
                 <USkeleton class="h-4 w-16" />
               </span>
               <div class="min-w-0">

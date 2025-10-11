@@ -1,116 +1,117 @@
 {
-	"Common": {
-		"Cancel": "取消",
-		"Confirm": "确认",
-		"UnSigned": "未登录",
-		"Version": "当前版本",
-		"NoData": "暂无数据",
-		"LoginFirst": "请先登录",
-		"ConnectionSettings": "连接设置",
-		"LoginSite": "登录站点",
-		"All": "全部",
-		"Language": "语言",
-		"Active": "激活",
-		"Inactive": "未激活",
-		"Login": "登录"
-	},
-	"ToolTips": {
-		"LightMode": "亮色模式",
-		"DarkMode": "暗色模式",
-		"SwitchLanguage": "切换语言",
-		"Sort": "排序",
-		"Refresh": "刷新",
-		"Layout": "切换布局",
-		"Settings": "连接设置"
-	},
-	"Menu": {
-		"Resource": "资源目录",
-		"Linux": "Linux",
-		"Windows": "Windows",
-		"Database": "数据库",
-		"Device": "设备",
-		"Other": "其他",
-		"Favorite": "收藏",
-		"OfflinePlayer": "离线播放器",
-		"Player": "播放器"
-	},
-	"Operation": {
-		"Search": "搜索"
-	},
-	"AssetCard": {
-		"Activated": "已激活",
-		"Deactivated": "未激活",
-		"Address": "地址",
-		"User": "用户",
-		"Protocol": "协议",
-		"AssetName": "资产名称",
-		"Actions": "操作",
-		"Status": "状态"
-	},
-	"ContextMenu": {
-		"QuickConnect": "快速连接",
-		"Connect": "连接",
-		"MoreConnect": "更多连接",
-		"Rename": "重命名",
-		"Use": "使用",
-		"Favorite": "收藏"
-	},
-	"EditModal": {
-		"ModifyConnectionInfo": "修改连接信息",
-		"Description": "默认连接信息将在保存后生效，并用于后续所有连接操作",
-		"OptionalProtocol": "可选协议",
-		"OptionalAccount": "可选账号"
-	},
-	"SettingModal": {
-		"Description": "连接设置用于配置后续连接中默认启动的应用程序"
-	},
-	"Layout": {
-		"Grid": "卡片视图",
-		"Table": "表格视图"
-	},
-	"Sort": {
-		"A-z": "A-z",
-		"Z-A": "Z-A",
-		"NewestToOldest": "按时间降序（最新优先）",
-		"OldestToNewest": "按时间升序（最早优先）"
-	},
-	"Login": {
-		"Title": "输入登录站点",
-		"Description": "请输入要登录的站点地址 (例如: https://example.com) 或 IP 地址",
-		"LoginSuccess": "登录成功",
-		"LoginSuccessDescription": "欢迎回来，您已成功登录",
-		"LoginFailed": "登录失败",
-		"LoginFailedDescription": "登录失败, 当前账号登录已失效，请重新登录",
-		"EmptyUrlError": "请输入站点地址",
-		"InvalidUrlError": "请输入有效的站点地址或IP地址",
-		"AddAccount": "新增账号",
-		"SwitchSite": "切换站点",
-		"LoginAuthenticationExpired": "登录认证已失效，请重新登录",
-		"Logout": "退出登录",
-		"AlreadyLoggedInError": "您已经登录了该站点",
-		"LoginFailedErrorPage": "登录失败, 当前页面不是登录页面，请重新输入",
-		"LoginFailedTimeout": "登录失败, 登录超时，请重新登录"
-	},
-	"Loading": {
-		"Loading": "加载中",
-		"NoMore": "没有更多了",
-		"ScrollToLoadMore": "向下滚动加载更多"
-	},
-	"Asset": {
-		"GetAssetFailed": "获取资产失败,请刷新重试"
-	},
-	"Account": {
-		"Hosted": "托管账号",
-		"Manual": "手动账号",
-		"Username": "用户名",
-		"Password": "密码",
-		"RememberPassword": "记住密码"
-	},
-	"Setting": {
-		"CommandTerminal": "命令行终端",
-		"FileTransfer": "文件传输",
-		"RemoteDesktop": "远程桌面",
-		"Database": "数据库",
-		"DownloadApplication": "下载应用"
-	}
+  "Common": {
+    "Cancel": "取消",
+    "Confirm": "确认",
+    "UnSigned": "未登录",
+    "Version": "当前版本",
+    "NoData": "暂无数据",
+    "LoginFirst": "请先登录",
+    "ConnectionSettings": "连接设置",
+    "LoginSite": "登录站点",
+    "All": "全部",
+    "Language": "语言",
+    "Active": "激活",
+    "Inactive": "未激活",
+    "Login": "登录"
+  },
+  "ToolTips": {
+    "LightMode": "亮色模式",
+    "DarkMode": "暗色模式",
+    "SwitchLanguage": "切换语言",
+    "Sort": "排序",
+    "Refresh": "刷新",
+    "Layout": "切换布局",
+    "Settings": "连接设置"
+  },
+  "Menu": {
+    "Resource": "资源目录",
+    "Linux": "Linux",
+    "Windows": "Windows",
+    "Database": "数据库",
+    "Device": "设备",
+    "Other": "其他",
+    "Favorite": "收藏",
+    "OfflinePlayer": "离线播放器",
+    "Player": "播放器"
+  },
+  "Operation": {
+    "Search": "搜索"
+  },
+  "AssetCard": {
+    "Activated": "已激活",
+    "Deactivated": "未激活",
+    "Address": "地址",
+    "User": "用户",
+    "Protocol": "协议",
+    "AssetName": "资产名称",
+    "Actions": "操作",
+    "Status": "状态"
+  },
+  "ContextMenu": {
+    "QuickConnect": "快速连接",
+    "Connect": "连接",
+    "MoreConnect": "更多连接",
+    "Rename": "重命名",
+    "Use": "使用",
+    "Favorite": "收藏",
+    "Edit": "编辑"
+  },
+  "EditModal": {
+    "ModifyConnectionInfo": "修改连接信息",
+    "Description": "默认连接信息将在保存后生效，并用于后续所有连接操作",
+    "OptionalProtocol": "可选协议",
+    "OptionalAccount": "可选账号"
+  },
+  "SettingModal": {
+    "Description": "连接设置用于配置后续连接中默认启动的应用程序"
+  },
+  "Layout": {
+    "Grid": "卡片视图",
+    "Table": "表格视图"
+  },
+  "Sort": {
+    "A-z": "A-z",
+    "Z-A": "Z-A",
+    "NewestToOldest": "按时间降序（最新优先）",
+    "OldestToNewest": "按时间升序（最早优先）"
+  },
+  "Login": {
+    "Title": "输入登录站点",
+    "Description": "请输入要登录的站点地址 (例如: https://example.com) 或 IP 地址",
+    "LoginSuccess": "登录成功",
+    "LoginSuccessDescription": "欢迎回来，您已成功登录",
+    "LoginFailed": "登录失败",
+    "LoginFailedDescription": "登录失败, 当前账号登录已失效，请重新登录",
+    "EmptyUrlError": "请输入站点地址",
+    "InvalidUrlError": "请输入有效的站点地址或IP地址",
+    "AddAccount": "新增账号",
+    "SwitchSite": "切换站点",
+    "LoginAuthenticationExpired": "登录认证已失效，请重新登录",
+    "Logout": "退出登录",
+    "AlreadyLoggedInError": "您已经登录了该站点",
+    "LoginFailedErrorPage": "登录失败, 当前页面不是登录页面，请重新输入",
+    "LoginFailedTimeout": "登录失败, 登录超时，请重新登录"
+  },
+  "Loading": {
+    "Loading": "加载中",
+    "NoMore": "没有更多了",
+    "ScrollToLoadMore": "向下滚动加载更多"
+  },
+  "Asset": {
+    "GetAssetFailed": "获取资产失败,请刷新重试"
+  },
+  "Account": {
+    "Hosted": "托管账号",
+    "Manual": "手动账号",
+    "Username": "用户名",
+    "Password": "密码",
+    "RememberPassword": "记住密码"
+  },
+  "Setting": {
+    "CommandTerminal": "命令行终端",
+    "FileTransfer": "文件传输",
+    "RemoteDesktop": "远程桌面",
+    "Database": "数据库",
+    "DownloadApplication": "下载应用"
+  }
 }

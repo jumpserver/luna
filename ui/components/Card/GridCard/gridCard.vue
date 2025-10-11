@@ -1,29 +1,29 @@
 <script setup lang="ts">
-import type { ContextMenuItem } from '@nuxt/ui';
-import type { PermedAccount, PermedProtocol } from '~/types/index';
-import { useUserInfoStore } from '~/store/modules/userInfo';
+import type { ContextMenuItem } from "@nuxt/ui";
+import type { PermedAccount, PermedProtocol } from "~/types/index";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface DetailRow {
-  key: string
-  title: string
-  content: string
-  popover?: boolean
-  class?: string
+  key: string;
+  title: string;
+  content: string;
+  popover?: boolean;
+  class?: string;
 }
 
 const props = withDefaults(
   defineProps<{
-    zone: string
-    user: string
-    assetId: string
-    address: string
-    iconName: string
-    protocol: string
-    assetName: string
-    highlight: boolean
-    isActive: boolean
-    accounts?: PermedAccount[]
-    protocols?: PermedProtocol[]
+    zone: string;
+    user: string;
+    assetId: string;
+    address: string;
+    iconName: string;
+    protocol: string;
+    assetName: string;
+    highlight: boolean;
+    isActive: boolean;
+    accounts?: PermedAccount[];
+    protocols?: PermedProtocol[];
   }>(),
   {
     accounts: () => [],
@@ -32,53 +32,54 @@ const props = withDefaults(
 );
 
 const emits = defineEmits<{
-  (e: 'openEditModal'): void
+  (e: "openEditModal"): void;
 }>();
 
 const { t, locale } = useI18n();
 const userInfoStore = useUserInfoStore();
-const {
-  getConnectToken,
-  dispatchConnectMethod,
-  getUserId,
-  generateConnectOptions
-} = useAssetConnect();
+const { getConnectToken, dispatchConnectMethod, getUserId, generateConnectOptions } =
+  useAssetConnect();
 
 const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
+
+const openEditModal = () => {
+  emits("openEditModal");
+};
 
 const showEdit = ref(false);
 const items = ref<ContextMenuItem[][]>([
   [
     {
-      label: t('ContextMenu.Connect'),
-      icon: 'i-lucide-unplug'
+      label: t("ContextMenu.Connect"),
+      icon: "i-lucide-unplug"
     },
     {
-      label: t('ContextMenu.MoreConnect'),
-      icon: 'i-lucide-plug',
+      label: t("ContextMenu.Edit"),
+      icon: "i-lucide-pencil",
+      onSelect: openEditModal
+    },
+    {
+      label: t("ContextMenu.MoreConnect"),
+      icon: "i-lucide-plug",
       children: [
         {
-          label: `${t('ContextMenu.Use')} SSH`
+          label: `${t("ContextMenu.Use")} SSH`
         },
         {
-          label: `${t('ContextMenu.Use')} SFTP`
+          label: `${t("ContextMenu.Use")} SFTP`
         }
       ]
     },
     {
-      label: t('ContextMenu.Rename'),
-      icon: 'i-lucide-pencil'
+      label: t("ContextMenu.Rename"),
+      icon: "i-lucide-pencil"
     },
     {
-      label: t('ContextMenu.Favorite'),
-      icon: 'i-lucide-star'
+      label: t("ContextMenu.Favorite"),
+      icon: "i-lucide-star"
     }
   ]
 ]);
-
-const openEditModal = () => {
-  emits('openEditModal');
-};
 
 const handleMouseEnter = () => {
   showEdit.value = true;
@@ -98,31 +99,27 @@ const displayUser = computed(() => {
   return saved?.username ?? props.user;
 });
 
-const labelMinWidth = computed(() =>
-  locale.value.startsWith('zh') ? '24px' : '72px'
-);
+const labelMinWidth = computed(() => (locale.value.startsWith("zh") ? "24px" : "72px"));
 
-const labelColumnTemplate = computed(
-  () => `minmax(${labelMinWidth.value}, max-content) 1fr`
-);
+const labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-content) 1fr`);
 
 const detailRows = computed(() => {
   const list: Array<DetailRow> = [
     {
-      key: 'address',
-      title: t('AssetCard.Address'),
+      key: "address",
+      title: t("AssetCard.Address"),
       content: props.address,
       popover: true,
-      class: 'max-w-40'
+      class: "max-w-40"
     },
     {
-      key: 'user',
-      title: t('AssetCard.User'),
+      key: "user",
+      title: t("AssetCard.User"),
       content: displayUser.value
     },
     {
-      key: 'protocol',
-      title: t('AssetCard.Protocol'),
+      key: "protocol",
+      title: t("AssetCard.Protocol"),
       content: displayProtocol.value
     }
   ];
@@ -133,30 +130,34 @@ const detailRows = computed(() => {
 const handleConnect = () => {
   const saved = currentConnectionInfoMap.value[props.assetId];
 
-  let input_username = '';
-  let input_secret = '';
+  let inputUsername = "";
+  let inputSecret = "";
 
   // 优先根据保存的账户模式判断
   const mode = saved?.accountMode;
   const selected = saved?.username ?? props.user;
 
-  if (mode === 'manual' || selected === '手动输入' || selected === 'Manual input') {
-    input_username = saved?.manualUsername || '';
-    input_secret = saved?.manualPassword || '';
-  } else if (mode === 'dynamic' || selected?.includes('同名账号') || selected?.includes('Dynamic user')) {
+  if (mode === "manual" || selected === "手动输入" || selected === "Manual input") {
+    inputUsername = saved?.manualUsername || "";
+    inputSecret = saved?.manualPassword || "";
+  } else if (
+    mode === "dynamic" ||
+    selected?.includes("同名账号") ||
+    selected?.includes("Dynamic user")
+  ) {
     // 同名账号仅需传递密码
-    input_username = '';
-    input_secret = saved?.dynamicPassword || '';
+    inputUsername = "";
+    inputSecret = saved?.dynamicPassword || "";
   } else {
-    input_username = '';
-    input_secret = '';
+    inputUsername = "";
+    inputSecret = "";
   }
 
   getConnectToken({
     asset: props.assetId,
     protocol: displayProtocol.value,
-    input_username,
-    input_secret,
+    inputUsername,
+    inputSecret,
     account: getUserId(props.accounts, props.assetId, props.user),
     connect_method: dispatchConnectMethod(displayProtocol.value),
     connect_options: generateConnectOptions()
@@ -166,13 +167,13 @@ const handleConnect = () => {
 
 <template>
   <UPageCard
-    class="w-full page-card"
+    class="w-full page-card border-solid border-red-500"
     variant="subtle"
     highlight-color="primary"
     :highlight="highlight"
     :ui="{
-      body: 'p-1',
-      container: 'p-2 sm:p-2'
+      body: 'p-1 ',
+      container: 'p-2 sm:p-2 '
     }"
   >
     <UContextMenu
@@ -183,100 +184,47 @@ const handleConnect = () => {
       }"
     >
       <section
-        class="flex gap-3 flex-nowrap items-center w-full"
+        class="flex items-center w-full p-3"
         @mouseenter="handleMouseEnter"
         @mouseleave="handleMouseLeave"
       >
-        <div class="flex items-center w-full gap-1">
-          <div class="flex flex-col flex-1 gap-1 text-xs-plus min-w-0 p-3">
-            <div class="flex justify-between">
-              <section class="flex">
-                <div class="flex items-center gap-2">
-                  <UChip :color="isActive === true ? 'success' : 'error'">
-                    <UAvatar
-                      size="lg"
-                      :icon="iconName"
-                      :ui="{ root: 'rounded-md', icon: 'size-6' }"
-                    />
-                  </UChip>
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+          <UAvatar
+            size="lg"
+            :icon="iconName"
+            :ui="{ root: 'rounded-md', icon: 'size-7' }"
+            class="flex-shrink-0"
+          />
 
-                  <span class="text-sm font-bold line-clamp-1">
-                    {{ assetName }}
-                  </span>
-                </div>
-              </section>
-
-              <Transition
-                enter-active-class="transition ease-out duration-200"
-                enter-from-class="opacity-0 -translate-y-1 scale-95"
-                enter-to-class="opacity-100 translate-y-0 scale-100"
-                leave-active-class="transition ease-in duration-150"
-                leave-from-class="opacity-100 translate-y-0 scale-100"
-                leave-to-class="opacity-0 -translate-y-1 scale-95"
-              >
-                <section v-if="showEdit" class="flex items-center gap-2">
-                  <UButton
-                    icon="heroicons:rocket-launch"
-                    size="xs"
-                    color="primary"
-                    variant="outline"
-                    class="group !gap-0"
-                    @click="handleConnect"
-                  >
-                    <!-- prettier-ignore -->
-                    <span
-                      class="inline-block overflow-hidden whitespace-nowrap max-w-0 opacity-0 ml-0
-                             transition-all duration-300 ease-in-out group-hover:max-w-[12rem] group-hover:opacity-100 group-hover:ml-1
-                             group-focus:max-w-[12rem] group-focus:opacity-100 group-focus:ml-1"
-                    >
-                      {{ t('ContextMenu.Connect') }}
-                    </span>
-                  </UButton>
-
-                  <UButton
-                    icon="solar:pen-new-square-linear"
-                    size="xs"
-                    color="primary"
-                    variant="outline"
-                    @click="openEditModal"
-                  />
-                </section>
-              </Transition>
+          <div class="flex-1 min-w-0 overflow-hidden w-[120px]">
+            <div class="text-sm font-bold truncate whitespace-nowrap">
+              {{ assetName }}
             </div>
-
-            <USeparator orientation="horizontal" size="md" class="h-2" />
-
-            <div class="flex flex-col gap-1 text-xs-plus">
-              <div
-                v-for="row in detailRows"
-                :key="row.key"
-                class="grid items-center gap-x-3 gap-y-1"
-                :style="{ gridTemplateColumns: labelColumnTemplate }"
-              >
-                <span
-                  class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap"
-                >
-                  {{ row.title }}
-                </span>
-
-                <div class="min-w-0">
-                  <template v-if="row.popover">
-                    <UTooltip arrow :text="row.content">
-                      <span :class="row.class">
-                        {{ row.content }}
-                      </span>
-                    </UTooltip>
-                  </template>
-
-                  <template v-else>
-                    <span :class="row.class">
-                      {{ row.content }}
-                    </span>
-                  </template>
-                </div>
-              </div>
+            <div class="text-xs text-neutral-500 dark:text-neutral-400 truncate whitespace-nowrap">
+              {{ address }}
             </div>
           </div>
+        </div>
+
+        <div class="flex-shrink-0 ml-2">
+          <UButton
+            size="xs"
+            color="primary"
+            variant="solid"
+            class="group gap-0 btn-appstore px-2"
+            :disabled="!isActive"
+            @click="handleConnect"
+          >
+            Connect
+          </UButton>
+
+          <!-- <UButton
+            icon="solar:pen-new-square-linear"
+            size="xs"
+            color="primary"
+            variant="outline"
+            @click="openEditModal"
+          /> -->
         </div>
       </section>
     </UContextMenu>
