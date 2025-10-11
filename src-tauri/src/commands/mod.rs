@@ -1,3 +1,4 @@
+pub mod get_asset_detail;
 pub mod get_assets;
 pub mod get_config;
 pub mod get_setting;

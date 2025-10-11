@@ -35,7 +35,7 @@ const emits = defineEmits<{
 }>();
 
 const { t, locale } = useI18n();
-const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite } =
+const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite, getAssetDetail } =
   useAssetAction();
 
 const showEdit = ref(false);
@@ -57,7 +57,7 @@ const contextMenuItems = computed<ContextMenuItem[][]>(() => {
         onClick: () => handleConnect()
       },
       {
-        label: t("ContextMenu.MoreConnect"),
+        label: t("ContextMenu.Connect"),
         icon: "i-lucide-plug",
         children: [moreConnectChildren]
       },
@@ -164,19 +164,27 @@ const handleMouseLeave = () => {
               </div>
             </div>
           </div>
+        </div>
 
-          <div class="flex-shrink-0 ml-2">
-            <UButton
-              size="xs"
-              color="primary"
-              variant="solid"
-              class="group btn-appstore px-3"
-              :disabled="!isActive"
-              @click="handleConnect"
-            >
-              {{ t("ContextMenu.Connect") }}
-            </UButton>
-          </div>
+        <div class="flex-shrink-0 ml-2">
+          <UButton
+            size="xs"
+            color="primary"
+            variant="solid"
+            class="group btn-appstore px-3"
+            :disabled="!isActive"
+            @click="getAssetDetail(assetId)"
+          >
+            {{ t("ContextMenu.Connect") }}
+          </UButton>
+
+          <!-- <UButton
+            icon="solar:pen-new-square-linear"
+            size="xs"
+            color="primary"
+            variant="outline"
+            @click="openEditModal"
+          /> -->
         </div>
       </section>
     </UContextMenu>

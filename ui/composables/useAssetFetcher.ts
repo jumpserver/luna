@@ -1,5 +1,5 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { AssetsResponse, RawAssetData } from "~/types";
+import type { AssetsResponse, PermedAccount, PermedProtocol, RawAssetData } from "~/types";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -19,6 +19,9 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
   const offset = ref(0);
   const hasMore = ref(true);
+  const getDetail = ref(false);
+  // 最近一次详情更新对应的资产 ID，用于上层在无选中项时确定当前资产
+  const lastDetailAssetId = ref<string | null>(null);
   const isLoading = ref(false);
   const rawAssetsList = ref<RawAssetData[]>([]);
   const subscribeGetAssetsEvent = ref<UnlistenFn | null>(null);
@@ -277,7 +280,6 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
       const resp = event.payload as eventPayload;
       const filtered = filterResultsByAssetType(resp.data.results ?? []);
 
-      console.log('data', resp.data.results);
       appendPageData(filtered, resp.data.count);
 
       nextTick(() => {
@@ -324,6 +326,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   let unsubscribeSetSort: (() => void) | null = null;
   let unsubscribeRefresh: (() => void) | null = null;
   let unsubscribeClearAssets: (() => void) | null = null;
+  let unsubscribeAssetDetailUpdated: (() => void) | null = null;
 
   const listenEventBusEvent = () => {
     const { on } = useEventBus();
@@ -362,6 +365,30 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
       stopScrollListener?.();
       stopScrollListener = null;
     });
+
+    unsubscribeAssetDetailUpdated = on(
+      "assetDetailUpdated",
+      (payload: { assetId: string; permed_accounts: PermedAccount[]; permed_protocols: PermedProtocol[] }) => {
+        const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
+
+        if (idx !== -1) {
+          rawAssetsList.value[idx] = {
+            ...rawAssetsList.value[idx],
+            permed_accounts: payload.permed_accounts || [],
+            permed_protocols: payload.permed_protocols || []
+          } as RawAssetData;
+        }
+
+        // 记录此次详情更新的资产 ID，供上层确定当前资产
+        lastDetailAssetId.value = payload.assetId;
+
+        nextTick(() => {
+          getDetail.value = true;
+        });
+
+      },
+      false
+    );
   };
 
   const unListenEventBusEvent = () => {
@@ -369,6 +396,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
     unsubscribeSetSort?.();
     unsubscribeRefresh?.();
     unsubscribeClearAssets?.();
+    unsubscribeAssetDetailUpdated?.();
   };
 
   onMounted(async () => {
@@ -385,6 +413,8 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
   return {
     hasMore,
+    getDetail,
+    lastDetailAssetId,
     isLoading,
 
     assetsData,

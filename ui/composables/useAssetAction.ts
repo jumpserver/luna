@@ -9,6 +9,8 @@ let tauriListenersRefCount = 0;
 let unlistenGetTokenSuccess: UnlistenFn | null = null;
 let unlistenFavoriteSuccess: UnlistenFn | null = null;
 let unlistenFavoriteFailed: UnlistenFn | null = null;
+let unlistenGetAssetDetailSuccess: UnlistenFn | null = null;
+let unlistenGetAssetDetailFailed: UnlistenFn | null = null;
 
 function releaseTauriEventListeners() {
   tauriListenersRefCount = Math.max(tauriListenersRefCount - 1, 0);
@@ -17,9 +19,13 @@ function releaseTauriEventListeners() {
     unlistenGetTokenSuccess?.();
     unlistenFavoriteSuccess?.();
     unlistenFavoriteFailed?.();
+    unlistenGetAssetDetailSuccess?.();
+    unlistenGetAssetDetailFailed?.();
     unlistenGetTokenSuccess = null;
     unlistenFavoriteSuccess = null;
     unlistenFavoriteFailed = null;
+    unlistenGetAssetDetailSuccess = null;
+    unlistenGetAssetDetailFailed = null;
     tauriListenersInitialized = false;
   }
 }
@@ -30,6 +36,7 @@ export const useAssetAction = () => {
   const userInfoStore = useUserInfoStore();
   // prettier-ignore
   const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption } = storeToRefs(userInfoStore);
+  const { setConnectionInfoForAsset, getConnectionInfoForAsset } = userInfoStore;
 
   /**
    * @description 展示 user 信息,默认展示非 @ 开头的 user
@@ -42,7 +49,7 @@ export const useAssetAction = () => {
 
     const acc = accounts.find((a) => a && a.alias && !a.alias.startsWith("@"));
 
-    return acc?.username || "";
+    return acc?.username || "-";
   };
 
   /**
@@ -52,7 +59,7 @@ export const useAssetAction = () => {
    */
   const displayProtocol = (assetId: string, protocols: PermedProtocol[]) => {
     const saved = currentConnectionInfoMap.value[assetId];
-    return saved?.protocol || protocols?.[0]?.name || "";
+    return saved?.protocol || protocols?.[0]?.name || "-";
   };
 
   /**
@@ -167,27 +174,34 @@ export const useAssetAction = () => {
     assetId: string,
     displayProtocol: string,
     accounts: PermedAccount[],
-    protocolOverride?: string
+    protocolOverride?: string,
+    ephemeral?: {
+      accountMode?: "hosted" | "dynamic" | "manual";
+      manualUsername?: string;
+      manualPassword?: string;
+      dynamicPassword?: string;
+    }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
+
+    // 优先使用临时凭据（未勾选“记住密码”的一次性输入），否则回退到已保存的
+    const effectiveMode = ephemeral?.accountMode ?? saved?.accountMode;
+    const selected = saved?.username ?? user;
 
     let input_username = "";
     let input_secret = "";
 
-    const mode = saved?.accountMode;
-    const selected = saved?.username ?? user;
-
-    if (mode === "manual" || selected === "手动输入" || selected === "Manual input") {
-      input_username = saved?.manualUsername || "";
-      input_secret = saved?.manualPassword || "";
+    if (effectiveMode === "manual" || selected === "手动输入" || selected === "Manual input") {
+      input_username = ephemeral?.manualUsername ?? saved?.manualUsername ?? "";
+      input_secret = ephemeral?.manualPassword ?? saved?.manualPassword ?? "";
     } else if (
-      mode === "dynamic" ||
+      effectiveMode === "dynamic" ||
       selected?.includes("同名账号") ||
       selected?.includes("Dynamic user")
     ) {
       // 同名账号仅需传递密码
       input_username = "";
-      input_secret = saved?.dynamicPassword || "";
+      input_secret = ephemeral?.dynamicPassword ?? saved?.dynamicPassword ?? "";
     } else {
       input_username = "";
       input_secret = "";
@@ -195,13 +209,27 @@ export const useAssetAction = () => {
 
     const protocol = protocolOverride || displayProtocol;
 
+    const accountForToken = (() => {
+      if (effectiveMode === "manual" || selected === "手动输入" || selected === "Manual input") {
+        return "@INPUT";
+      }
+      if (
+        effectiveMode === "dynamic" ||
+        selected?.includes("同名账号") ||
+        selected?.includes("Dynamic user")
+      ) {
+        return "@USER";
+      }
+      return getUserId(accounts, assetId, user);
+    })();
+
     nextTick(() => {
       getConnectToken({
         asset: assetId,
         protocol,
         input_username,
         input_secret,
-        account: getUserId(accounts, assetId, user),
+        account: accountForToken,
         connect_method: dispatchConnectMethod(protocol),
         connect_options: generateConnectOptions()
       });
@@ -210,9 +238,20 @@ export const useAssetAction = () => {
 
   const handleAssetRename = () => {};
 
+  /**
+   * @description 处理资产收藏
+   * @param assetId
+   */
   const handleAssetFavorite = (assetId: string) => {
-    console.log("assetId", assetId);
     useTauriCoreInvoke("set_favorite", {
+      site: currentSite.value,
+      cookieHeader: currentUser.value!.headerJson,
+      assetId
+    });
+  };
+
+  const getAssetDetail = (assetId: string) => {
+    useTauriCoreInvoke("get_asset_detail", {
       site: currentSite.value,
       cookieHeader: currentUser.value!.headerJson,
       assetId
@@ -229,7 +268,7 @@ export const useAssetAction = () => {
     }
 
     tauriListenersRegistering = true;
-    
+
     try {
       unlistenGetTokenSuccess = await useTauriEventListen("get-token-success", (event) => {
         interface eventPayload {
@@ -263,6 +302,41 @@ export const useAssetAction = () => {
         console.log("listenFavoriteFailedEvent", payload);
       });
 
+      unlistenGetAssetDetailSuccess = await useTauriEventListen(
+        "get-asset-detail-success",
+        (event) => {
+          interface eventPayload {
+            status: string;
+            data: string;
+            asset_id: string;
+          }
+
+          const payload = event.payload as eventPayload;
+
+          if (payload.status === "success") {
+            const assetDetail = JSON.parse(payload.data);
+            const permedAccounts = assetDetail.permed_accounts;
+            const permedProtocols = assetDetail.permed_protocols;
+
+            useEventBus().emit("assetDetailUpdated", {
+              assetId: payload.asset_id,
+              permed_accounts: permedAccounts,
+              permed_protocols: permedProtocols
+            });
+          }
+        }
+      );
+
+      // TODO 提示
+      unlistenGetAssetDetailFailed = await useTauriEventListen(
+        "get-asset-detail-failure",
+        (event) => {
+          interface eventPayload {
+            status: string;
+          }
+        }
+      );
+
       tauriListenersInitialized = true;
       tauriListenersRefCount++;
     } finally {
@@ -280,6 +354,7 @@ export const useAssetAction = () => {
 
   return {
     displayUser,
+    getAssetDetail,
     displayProtocol,
 
     handleAssetRename,

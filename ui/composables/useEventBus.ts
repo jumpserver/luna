@@ -1,6 +1,6 @@
-import type { Emitter, EventType } from 'mitt';
-import type { SortType } from '~/types';
-import mitt from 'mitt';
+import type { Emitter, EventType } from "mitt";
+import type { PermedAccount, PermedProtocol, SortType } from "~/types";
+import mitt from "mitt";
 
 type BusEvents = {
   setSort: SortType;
@@ -9,6 +9,11 @@ type BusEvents = {
   loading: undefined;
   loaded: undefined;
   refresh: undefined;
+  assetDetailUpdated: {
+    assetId: string;
+    permed_accounts: PermedAccount[];
+    permed_protocols: PermedProtocol[];
+  };
 } & Record<EventType, unknown>;
 
 const emitter: Emitter<BusEvents> = mitt<BusEvents>();
@@ -33,10 +38,7 @@ export const useEventBus = () => {
     return () => emitter.off(event, handler as any);
   };
 
-  const off = <K extends keyof BusEvents>(
-    event: K,
-    handler?: (payload: BusEvents[K]) => void
-  ) => {
+  const off = <K extends keyof BusEvents>(event: K, handler?: (payload: BusEvents[K]) => void) => {
     if (handler) {
       emitter.off(event, handler as any);
     } else {
@@ -44,10 +46,7 @@ export const useEventBus = () => {
     }
   };
 
-  const once = <K extends keyof BusEvents>(
-    event: K,
-    handler: (payload: BusEvents[K]) => void
-  ) => {
+  const once = <K extends keyof BusEvents>(event: K, handler: (payload: BusEvents[K]) => void) => {
     const wrapper = (payload: BusEvents[K]) => {
       handler(payload);
       off(event, wrapper as any);

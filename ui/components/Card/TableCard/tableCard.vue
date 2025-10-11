@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
-import type { AssetItem, PermedAccount } from "~/types";
+import type { AssetItem } from "~/types";
 
 import { h, resolveComponent } from "vue";
 
@@ -16,14 +16,10 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
-const { handleAssetConnection, displayUser, displayProtocol } = useAssetAction();
+const { getAssetDetail, displayUser, displayProtocol } = useAssetAction();
 
 const handleConnect = (asset: AssetItem) => {
-  const protocol = displayProtocol(asset.id, asset.permed_protocols!);
-  const selected = displayUser(asset.id, asset.permed_accounts!);
-  const accounts = (asset.permed_accounts || []) as PermedAccount[];
-
-  handleAssetConnection(selected, asset.id, protocol, accounts);
+  getAssetDetail(asset.id);
 };
 
 const columns: TableColumn<AssetItem>[] = [
@@ -71,13 +67,13 @@ const columns: TableColumn<AssetItem>[] = [
           variant: "outline",
           onClick: () => handleConnect(row.original)
         }),
-        h(UButton, {
-          icon: "solar:pen-new-square-linear",
-          size: "xs",
-          color: "primary",
-          variant: "outline",
-          onClick: () => emits("openEditModal", row.original)
-        })
+        // h(UButton, {
+        //   icon: "solar:pen-new-square-linear",
+        //   size: "xs",
+        //   color: "primary",
+        //   variant: "outline",
+        //   onClick: () => emits("openEditModal", row.original)
+        // })
       ])
   }
 ];

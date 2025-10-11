@@ -1,12 +1,9 @@
 use crate::service::asset::{AssetQuery, AssetService};
 use log::error;
-use log::info;
 use serde::Deserialize;
 use serde_json::{from_str, json, Value};
-use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
-use tokio::task::JoinSet;
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
@@ -86,8 +83,6 @@ pub async fn get_assets(
         .get_category_assets(favorite.unwrap_or(false))
         .await;
 
-    info!("get_assets assets_data: {:?}", assets_data);
-
     if !assets_data.success {
         error!("获取 Asset 数据失败");
         error!("返回的 status 为 {}", assets_data.status);
@@ -125,7 +120,10 @@ pub async fn get_assets(
             return;
         }
         Err(e) => {
-            error!("解析资产列表 JSON 失败，返回数据不是合法 JSON 字符串: {}", e);
+            error!(
+                "解析资产列表 JSON 失败，返回数据不是合法 JSON 字符串: {}",
+                e
+            );
             let _ = app.emit("get-asset-failure", json!({ "status": assets_data.status }));
             return;
         }

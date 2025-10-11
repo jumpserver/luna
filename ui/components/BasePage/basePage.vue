@@ -17,6 +17,8 @@ const props = defineProps<{
 const providerClearSelection = inject<(cb: () => void) => void>("providerClearSelection");
 
 const { t } = useI18n();
+const { handleAssetConnection } = useAssetAction();
+const { getAssetDetail } = useAssetAction();
 
 const editModalOpen = ref(false);
 const draftRememberSecret = ref<boolean>(false);
@@ -37,12 +39,14 @@ const assetManager = useAssetFetcher(props.type, scrollRef);
 const { layouts } = storeToRefs(userSettingStore);
 const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
 const {
+  getDetail,
   assetsData,
   isAppending,
   fetchNextPage,
   scrollbarStyles,
   isInitialLoading,
-  appendSkeletonCount
+  appendSkeletonCount,
+  lastDetailAssetId
 } = assetManager;
 
 const visibleAssets = computed(() => {
@@ -75,6 +79,31 @@ watch(
     if (nv) {
       useEventBus().emit("loaded", undefined);
     }
+  }
+);
+
+watch(
+  () => getDetail.value,
+  (nv: boolean) => {
+    if (!nv) return;
+
+    if (selectedCardIndex.value !== null) {
+      const idx = selectedCardIndex.value;
+
+      if (visibleAssets.value[idx]) {
+        currentSelectedCardInfo.value = visibleAssets.value[idx]!;
+      }
+    } else if (currentSelectedCardInfo.value) {
+      const updated = visibleAssets.value.find((a) => a.id === currentSelectedCardInfo.value!.id);
+      if (updated) currentSelectedCardInfo.value = updated;
+    } else if (lastDetailAssetId?.value) {
+      const target = visibleAssets.value.find((a) => a.id === lastDetailAssetId.value);
+      if (target) currentSelectedCardInfo.value = target;
+    }
+
+    initDraft();
+    editModalOpen.value = true;
+    getDetail.value = false;
   }
 );
 
@@ -134,13 +163,29 @@ const handleConfirm = () => {
     protocol: draftProtocol.value || "",
     username: normalizedAccount,
     accountMode,
-    manualUsername: draftManualUsername.value || "",
-    manualPassword: draftManualPassword.value || "",
-    dynamicPassword: draftDynamicPassword.value || "",
+    manualUsername: draftRememberSecret.value ? draftManualUsername.value || "" : "",
+    manualPassword: draftRememberSecret.value ? draftManualPassword.value || "" : "",
+    dynamicPassword: draftRememberSecret.value ? draftDynamicPassword.value || "" : "",
     rememberSecret: !!draftRememberSecret.value
   });
 
-  editModalOpen.value = false;
+  handleAssetConnection(
+    normalizedAccount,
+    asset.id,
+    draftProtocol.value,
+    asset.permed_accounts!,
+    undefined,
+    {
+      accountMode,
+      manualUsername: draftManualUsername.value || "",
+      manualPassword: draftManualPassword.value || "",
+      dynamicPassword: draftDynamicPassword.value || ""
+    }
+  );
+
+  nextTick(() => {
+    editModalOpen.value = false;
+  });
 };
 
 const listenTauriEvent = async () => {
@@ -159,6 +204,18 @@ const listenTauriEvent = async () => {
 
 const handleOpenEditModal = (asset: AssetItem) => {
   currentSelectedCardInfo.value = asset;
+  const idx = visibleAssets.value.findIndex((a) => a.id === asset.id);
+  if (idx !== -1) selectedCardIndex.value = idx;
+
+  const noAccounts = !asset.permed_accounts || asset.permed_accounts.length === 0;
+  const noProtocols = !asset.permed_protocols || asset.permed_protocols.length === 0;
+
+  if (noAccounts || noProtocols) {
+    getDetail.value = false;
+    getAssetDetail(asset.id);
+    return;
+  }
+
   editModalOpen.value = true;
 };
 
