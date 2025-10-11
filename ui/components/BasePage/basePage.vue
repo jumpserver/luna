@@ -107,6 +107,9 @@ watch(
   }
 );
 
+/**
+ * @description 初始化展示信息
+ */
 function initDraft() {
   const asset = currentSelectedCardInfo.value;
   if (!asset) return;
@@ -122,6 +125,9 @@ function initDraft() {
   draftRememberSecret.value = saved?.rememberSecret || false;
 }
 
+/**
+ * 获取 Setting 信息
+ */
 async function getSettings() {
   await useTauriCoreInvoke("get_setting", {
     site: currentSite.value,
@@ -129,16 +135,27 @@ async function getSettings() {
   });
 }
 
+/**
+ * @description 处理卡片点击
+ * @param index
+ * @param e
+ */
 const handleCardClick = (index: number, e: MouseEvent) => {
   e.stopPropagation();
   selectedCardIndex.value = index;
   currentSelectedCardInfo.value = visibleAssets.value[index]!;
 };
 
+/**
+ * @description 清除选中卡片
+ */
 const clearSelectedCard = () => {
   selectedCardIndex.value = null;
 };
 
+/**
+ * @description Modal 确认处理,现在点击确认后,会触发连接操作
+ */
 const handleConfirm = () => {
   const asset = currentSelectedCardInfo.value;
   if (!asset) return;
@@ -159,6 +176,7 @@ const handleConfirm = () => {
     else normalizedAccount = v.replace(/\(.+\)/, "");
   }
 
+  // 保存连接信息
   userInfoStore.setConnectionInfoForAsset(asset.id, {
     protocol: draftProtocol.value || "",
     username: normalizedAccount,
@@ -169,6 +187,7 @@ const handleConfirm = () => {
     rememberSecret: !!draftRememberSecret.value
   });
 
+  // 获取 ConnectToken
   handleAssetConnection(
     normalizedAccount,
     asset.id,
@@ -202,6 +221,7 @@ const listenTauriEvent = async () => {
   });
 };
 
+// todo 可以移除
 const handleOpenEditModal = (asset: AssetItem) => {
   currentSelectedCardInfo.value = asset;
   const idx = visibleAssets.value.findIndex((a) => a.id === asset.id);

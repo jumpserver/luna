@@ -20,10 +20,9 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   const offset = ref(0);
   const hasMore = ref(true);
   const getDetail = ref(false);
-  // 最近一次详情更新对应的资产 ID，用于上层在无选中项时确定当前资产
-  const lastDetailAssetId = ref<string | null>(null);
   const isLoading = ref(false);
   const rawAssetsList = ref<RawAssetData[]>([]);
+  const lastDetailAssetId = ref<string | null>(null);
   const subscribeGetAssetsEvent = ref<UnlistenFn | null>(null);
   const subscribeGetAssetFailedEvent = ref<UnlistenFn | null>(null);
 
@@ -368,7 +367,11 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
     unsubscribeAssetDetailUpdated = on(
       "assetDetailUpdated",
-      (payload: { assetId: string; permed_accounts: PermedAccount[]; permed_protocols: PermedProtocol[] }) => {
+      (payload: {
+        assetId: string;
+        permed_accounts: PermedAccount[];
+        permed_protocols: PermedProtocol[];
+      }) => {
         const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
 
         if (idx !== -1) {
@@ -379,13 +382,12 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
           } as RawAssetData;
         }
 
-        // 记录此次详情更新的资产 ID，供上层确定当前资产
+        // 记录 assetID
         lastDetailAssetId.value = payload.assetId;
 
         nextTick(() => {
           getDetail.value = true;
         });
-
       },
       false
     );
@@ -414,8 +416,8 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   return {
     hasMore,
     getDetail,
-    lastDetailAssetId,
     isLoading,
+    lastDetailAssetId,
 
     assetsData,
     isAppending,
