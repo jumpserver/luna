@@ -315,13 +315,13 @@ export const useAssetAction = () => {
 
           if (payload.status === "success") {
             const assetDetail = JSON.parse(payload.data);
-            const permedAccounts = assetDetail.permed_accounts;
-            const permedProtocols = assetDetail.permed_protocols;
+            const permedAccounts = assetDetail.permedAccounts;
+            const permedProtocols = assetDetail.permedProtocols;
 
             useEventBus().emit("assetDetailUpdated", {
               assetId: payload.asset_id,
-              permed_accounts: permedAccounts,
-              permed_protocols: permedProtocols
+              permedAccounts: permedAccounts,
+              permedProtocols: permedProtocols
             });
           }
         }

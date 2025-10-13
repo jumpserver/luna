@@ -55,7 +55,7 @@ const visibleAssets = computed(() => {
 });
 
 const modalTitle = computed(() => {
-  return `${t("EditModal.ModifyConnectionInfo")} - ${currentSelectedCardInfo.value?.assetName}`;
+  return `${t("EditModal.ModifyConnectionInfo")} - ${currentSelectedCardInfo.value?.name}`;
 });
 
 watch([editModalOpen, currentSelectedCardInfo], ([open, info]: [boolean, AssetItem | null]) => {
@@ -116,8 +116,8 @@ function initDraft() {
 
   const saved = userInfoStore.getConnectionInfoForAsset(asset.id);
 
-  draftProtocol.value = saved?.protocol ?? asset.permed_protocols?.[0]?.name ?? "";
-  draftAccount.value = saved?.username ?? asset.permed_accounts?.[0]?.username ?? "";
+  draftProtocol.value = saved?.protocol ?? asset.permedProtocols?.[0]?.name ?? "";
+  draftAccount.value = saved?.username ?? asset.permedAccounts?.[0]?.username ?? "";
 
   draftManualUsername.value = saved?.manualUsername || "";
   draftManualPassword.value = saved?.manualPassword || "";
@@ -169,7 +169,7 @@ const handleConfirm = () => {
   if (v.includes("同名账号") || v.includes("Dynamic user")) {
     accountMode = "dynamic";
 
-    const accs = currentSelectedCardInfo.value?.permed_accounts || [];
+    const accs = currentSelectedCardInfo.value?.permedAccounts || [];
     const dynamicAcc = accs.find((a) => a.alias === "@USER");
 
     if (dynamicAcc) normalizedAccount = dynamicAcc.name;
@@ -192,7 +192,7 @@ const handleConfirm = () => {
     normalizedAccount,
     asset.id,
     draftProtocol.value,
-    asset.permed_accounts!,
+    asset.permedAccounts!,
     undefined,
     {
       accountMode,
@@ -227,8 +227,8 @@ const handleOpenEditModal = (asset: AssetItem) => {
   const idx = visibleAssets.value.findIndex((a) => a.id === asset.id);
   if (idx !== -1) selectedCardIndex.value = idx;
 
-  const noAccounts = !asset.permed_accounts || asset.permed_accounts.length === 0;
-  const noProtocols = !asset.permed_protocols || asset.permed_protocols.length === 0;
+  const noAccounts = !asset.permedAccounts || asset.permedAccounts.length === 0;
+  const noProtocols = !asset.permedProtocols || asset.permedProtocols.length === 0;
 
   if (noAccounts || noProtocols) {
     getDetail.value = false;
@@ -291,11 +291,11 @@ onBeforeUnmount(() => {
           :icon-name="iconName"
           :address="item.address"
           :is-active="item.isActive"
-          :asset-name="item.assetName"
-          :accounts="item.permed_accounts || []"
-          :protocols="item.permed_protocols || []"
-          :protocol="item.permed_protocols?.[0]?.name || ''"
-          :user="item.permed_accounts?.[0]?.username || ''"
+          :asset-name="item.name"
+          :accounts="item.permedAccounts || []"
+          :protocols="item.permedProtocols || []"
+          :protocol="item.permedProtocols?.[0]?.name || ''"
+          :user="item.permedAccounts?.[0]?.username || ''"
           :category="item.category"
           :type="item.type"
           :highlight="selectedCardIndex === index"
@@ -341,8 +341,8 @@ onBeforeUnmount(() => {
         v-model:manual-password="draftManualPassword"
         v-model:dynamic-password="draftDynamicPassword"
         v-model:remember-secret="draftRememberSecret"
-        :accounts="currentSelectedCardInfo.permed_accounts!"
-        :protocols="currentSelectedCardInfo.permed_protocols!"
+        :accounts="currentSelectedCardInfo.permedAccounts!"
+        :protocols="currentSelectedCardInfo.permedProtocols!"
       />
     </Modal>
   </div>

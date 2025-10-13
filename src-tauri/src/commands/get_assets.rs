@@ -93,7 +93,7 @@ pub async fn get_assets(
     // 解析服务返回的 JSON 字符串
     match from_str::<Value>(&assets_data.data) {
         Ok(mut json_message) => {
-            // 为每个资产项添加默认的 permed_accounts 和 permed_protocols 字段
+            // 为每个资产项添加默认的 permedAccounts 和 permedProtocols 字段
             if let Some(results) = json_message
                 .get_mut("results")
                 .and_then(|r| r.as_array_mut())
@@ -101,8 +101,8 @@ pub async fn get_assets(
                 for item in results.iter_mut() {
                     if let Some(obj) = item.as_object_mut() {
                         // 添加默认的空数组字段
-                        obj.insert("permed_accounts".to_string(), json!([]));
-                        obj.insert("permed_protocols".to_string(), json!([]));
+                        obj.insert("permedAccounts".to_string(), json!([]));
+                        obj.insert("permedProtocols".to_string(), json!([]));
                     }
                 }
             }

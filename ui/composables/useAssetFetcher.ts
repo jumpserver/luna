@@ -369,16 +369,16 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
       "assetDetailUpdated",
       (payload: {
         assetId: string;
-        permed_accounts: PermedAccount[];
-        permed_protocols: PermedProtocol[];
+        permedAccounts: PermedAccount[];
+        permedProtocols: PermedProtocol[];
       }) => {
         const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
 
         if (idx !== -1) {
           rawAssetsList.value[idx] = {
             ...rawAssetsList.value[idx],
-            permed_accounts: payload.permed_accounts || [],
-            permed_protocols: payload.permed_protocols || []
+            permedAccounts: payload.permedAccounts || [],
+            permedProtocols: payload.permedProtocols || []
           } as RawAssetData;
         }
 

@@ -1,46 +1,35 @@
-import type { AssetItem, RawAssetData } from '~/types/index';
+import type { AssetItem, RawAssetData } from "~/types/index";
 
 export function transformAssetData(rawData: RawAssetData): AssetItem {
-  const getProtocolFromPlatform = (platformName?: string): string => {
-    if (!platformName) return 'ssh';
-
-    const platform = platformName.toLowerCase();
-    if (
-      platform.includes('ssh') ||
-      platform.includes('linux') ||
-      platform.includes('unix')
-    ) {
-      return 'ssh';
-    }
-    if (platform.includes('rdp') || platform.includes('windows')) {
-      return 'rdp';
-    }
-    if (platform.includes('telnet')) {
-      return 'telnet';
-    }
-    if (platform.includes('vnc')) {
-      return 'vnc';
-    }
-    if (platform.includes('ftp') || platform.includes('sftp')) {
-      return 'sftp';
-    }
-    return 'ssh';
-  };
-
-  return {
+  const item: AssetItem = {
     id: rawData.id,
-    assetName: rawData.name || '-',
-    address: rawData.address || '-',
-    zone: rawData.zone?.name || '-',
-    comment: rawData.comment || '-',
+    name: rawData.name || "-",
+    address: rawData.address || "-",
+    zone: rawData.zone?.name || "-",
+    comment: rawData.comment || "-",
     isActive: rawData.is_active ?? false,
-    platform: rawData.platform?.name || '-',
-    permed_accounts: rawData.permed_accounts || [],
-    permed_protocols: rawData.permed_protocols || [],
+    platform: rawData.platform?.name || "-",
+    permedAccounts: [],
+    permedProtocols: [],
+    category: rawData.category?.value || "-",
+    type: rawData.type?.value || "-"
   };
+
+  console.log("item: ", item);
+  return item;
 }
 
 export function transformAssetsData(rawDataArray: RawAssetData[]): AssetItem[] {
-  console.log('rawDataArray', rawDataArray);
-  return rawDataArray.map(transformAssetData);
+  const data: AssetItem[] = [];
+  console.log("rawDataArray: ", rawDataArray);
+
+  for (let i = 0; i < rawDataArray.length; i++) {
+    const item = rawDataArray[i];
+    if (item) {
+      const transformedItem = transformAssetData(item);
+      data.push(transformedItem);
+    }
+  }
+
+  return data;
 }

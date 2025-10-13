@@ -11,8 +11,8 @@ type BusEvents = {
   refresh: undefined;
   assetDetailUpdated: {
     assetId: string;
-    permed_accounts: PermedAccount[];
-    permed_protocols: PermedProtocol[];
+    permedAccounts: PermedAccount[];
+    permedProtocols: PermedProtocol[];
   };
 } & Record<EventType, unknown>;
 

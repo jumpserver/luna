@@ -55,7 +55,12 @@ const contextMenuItems = computed<ContextMenuItem[][]>(() => {
       {
         label: t("ContextMenu.QuickConnect"),
         icon: "i-lucide-unplug",
-        onClick: () => handleConnect()
+        onClick: () => handleConnect(props.assetId)
+      },
+      {
+        label: t("ContextMenu.Edit"),
+        icon: "i-lucide-pencil",
+        onClick: () => openEditModal()
       },
       {
         label: t("ContextMenu.Connect"),
@@ -168,7 +173,6 @@ const iconPath = computed(() => {
               </div>
             </div>
           </div>
-        </div>
 
           <div class="flex-shrink-0 ml-2">
             <UButton
@@ -177,7 +181,7 @@ const iconPath = computed(() => {
               variant="solid"
               class="group btn-connect px-3"
               :disabled="!isActive"
-              @click="handleConnect"
+              @click="handleConnect()"
             >
               {{ t("ContextMenu.Connect") }}
             </UButton>

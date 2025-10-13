@@ -168,13 +168,13 @@ export interface RawAssetData {
   platform?: AssetPlatform;
   type?: AssetType;
   zone?: AssetZone;
-  permed_protocols?: PermedProtocol[];
-  permed_accounts?: PermedAccount[];
+  permedProtocols?: PermedProtocol[];
+  permedAccounts?: PermedAccount[];
 }
 
 export interface AssetItem {
   id: string;
-  assetName: string;
+  name: string;
   address: string;
   user?: string;
   platform: string;
@@ -183,8 +183,8 @@ export interface AssetItem {
   comment?: string;
   category: string;
   type: string;
-  permed_protocols?: PermedProtocol[];
-  permed_accounts?: PermedAccount[];
+  permedProtocols?: PermedProtocol[];
+  permedAccounts?: PermedAccount[];
 }
 
 export interface AssetsResponse {

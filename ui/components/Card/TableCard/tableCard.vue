@@ -26,7 +26,7 @@ const columns: TableColumn<AssetItem>[] = [
   {
     accessorKey: "assetName",
     header: () => t("AssetCard.AssetName"),
-    cell: ({ row }) => row.original.assetName
+    cell: ({ row }) => row.original.name
   },
   {
     accessorKey: "address",
@@ -35,12 +35,12 @@ const columns: TableColumn<AssetItem>[] = [
   {
     id: "user",
     header: () => t("AssetCard.User"),
-    cell: ({ row }) => displayUser(row.original.id, row.original.permed_accounts!)
+    cell: ({ row }) => displayUser(row.original.id, row.original.permedAccounts!)
   },
   {
     id: "protocol",
     header: () => t("AssetCard.Protocol"),
-    cell: ({ row }) => displayProtocol(row.original.id, row.original.permed_protocols!)
+    cell: ({ row }) => displayProtocol(row.original.id, row.original.permedProtocols!)
   },
   {
     id: "status",
@@ -66,7 +66,7 @@ const columns: TableColumn<AssetItem>[] = [
           color: "primary",
           variant: "outline",
           onClick: () => handleConnect(row.original)
-        }),
+        })
         // h(UButton, {
         //   icon: "solar:pen-new-square-linear",
         //   size: "xs",
