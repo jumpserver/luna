@@ -7,21 +7,19 @@ export function transformAssetData(rawData: RawAssetData): AssetItem {
     address: rawData.address || "-",
     zone: rawData.zone?.name || "-",
     comment: rawData.comment || "-",
-    isActive: rawData.is_active ?? false,
+    type: rawData.type?.value || "-",
     platform: rawData.platform?.name || "-",
-    permedAccounts: [],
-    permedProtocols: [],
     category: rawData.category?.value || "-",
-    type: rawData.type?.value || "-"
+    isActive: rawData.is_active ?? false,
+    permedAccounts: rawData.permedAccounts || [],
+    permedProtocols: rawData.permedProtocols || []
   };
 
-  console.log("item: ", item);
   return item;
 }
 
 export function transformAssetsData(rawDataArray: RawAssetData[]): AssetItem[] {
   const data: AssetItem[] = [];
-  console.log("rawDataArray: ", rawDataArray);
 
   for (let i = 0; i < rawDataArray.length; i++) {
     const item = rawDataArray[i];
@@ -32,4 +30,25 @@ export function transformAssetsData(rawDataArray: RawAssetData[]): AssetItem[] {
   }
 
   return data;
+}
+
+export function processConnectionFailure(data: string) {
+  // const errorData = JSON.parse(data);
+  // const code = errorData.code;
+  // console.log(errorData);
+
+  // const { t } = useI18n();
+  // const toast = useToast();
+
+  // toast.add({
+    // title: t("ConnectError.ConnectFailed"),
+    // description: errorData.detail,
+    // color: "error",
+    // icon: "line-md:close-circle"
+  // });
+
+  // switch (code) {
+  //   case "perm_account_invalid": {
+  //   }
+  // }
 }

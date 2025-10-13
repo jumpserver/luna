@@ -37,6 +37,9 @@ pub async fn get_connect_token(
             url_json.get("url").unwrap().as_str().unwrap().to_string(),
         );
     } else {
-        let _ = app.emit("get-token-failure", json!({ "status": token_data.status }));
+        let _ = app.emit(
+            "get-token-failure",
+            json!({ "status": token_data.status, "data": token_data.data }),
+        );
     }
 }

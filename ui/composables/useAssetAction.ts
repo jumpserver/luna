@@ -6,6 +6,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 let tauriListenersInitialized = false;
 let tauriListenersRegistering = false;
 let tauriListenersRefCount = 0;
+let unlistenGetTokenFailure: UnlistenFn | null = null;
 let unlistenGetTokenSuccess: UnlistenFn | null = null;
 let unlistenFavoriteSuccess: UnlistenFn | null = null;
 let unlistenFavoriteFailed: UnlistenFn | null = null;
@@ -19,8 +20,10 @@ function releaseTauriEventListeners() {
     unlistenGetTokenSuccess?.();
     unlistenFavoriteSuccess?.();
     unlistenFavoriteFailed?.();
+    unlistenGetTokenFailure?.();
     unlistenGetAssetDetailSuccess?.();
     unlistenGetAssetDetailFailed?.();
+    unlistenGetTokenFailure = null;
     unlistenGetTokenSuccess = null;
     unlistenFavoriteSuccess = null;
     unlistenFavoriteFailed = null;
@@ -33,6 +36,8 @@ function releaseTauriEventListeners() {
 export const useAssetAction = () => {
   const connectToken = ref<string | null>(null);
 
+  const { t } = useI18n();
+  const toast = useToast();
   const userInfoStore = useUserInfoStore();
   // prettier-ignore
   const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption } = storeToRefs(userInfoStore);
@@ -283,6 +288,23 @@ export const useAssetAction = () => {
         }
       });
 
+      unlistenGetTokenFailure = await useTauriEventListen("get-token-failure", (event) => {
+        interface eventPayload {
+          status: number;
+          data: string;
+        }
+
+        const payload = event.payload as eventPayload;
+        const errorData = JSON.parse(payload.data);
+
+        toast.add({
+          title: t("ConnectError.ConnectFailed"),
+          description: errorData.detail,
+          color: "error",
+          icon: "line-md:close-circle"
+        });
+      });
+
       unlistenFavoriteSuccess = await useTauriEventListen("set-favorite-success", (event) => {
         interface eventPayload {
           status: string;
@@ -314,9 +336,10 @@ export const useAssetAction = () => {
           const payload = event.payload as eventPayload;
 
           if (payload.status === "success") {
-            const assetDetail = JSON.parse(payload.data);
-            const permedAccounts = assetDetail.permedAccounts;
-            const permedProtocols = assetDetail.permedProtocols;
+            const assetDetail = JSON.parse(payload.data) as any;
+            console.log("assetDetail", assetDetail);
+            const permedAccounts = assetDetail.permed_accounts ?? [];
+            const permedProtocols = assetDetail.permed_protocols ?? [];
 
             useEventBus().emit("assetDetailUpdated", {
               assetId: payload.asset_id,
