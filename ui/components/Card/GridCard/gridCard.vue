@@ -34,11 +34,11 @@ const props = withDefaults(
 
 const emits = defineEmits<{
   (e: "openEditModal"): void;
-  (e: "contextTrigger"): void;
+  (e: "contextTrigger", assetId: string): void;
 }>();
 
 const { t, locale } = useI18n();
-const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite, getAssetDetail } =
+const { handleAssetConnection, displayProtocol, handleAssetFavorite, getAssetDetail } =
   useAssetAction();
 const showEdit = ref(false);
 
@@ -120,7 +120,7 @@ const openEditModal = () => {
 const handleContextOpen = (payload: boolean) => {
   if (payload) {
     getAssetDetail(props.assetId);
-    emits("contextTrigger");
+    emits("contextTrigger", props.assetId);
   }
 };
 
