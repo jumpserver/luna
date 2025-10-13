@@ -111,8 +111,6 @@ watch(
 
     suppressNextEditModal.value = false;
     getDetail.value = false;
-
-    console.log("currentSelectedCardInfo", currentSelectedCardInfo);
   }
 );
 
@@ -217,10 +215,17 @@ const handleConfirm = () => {
 };
 
 /**
- * @description 右键出现 context 也需要获取 detail 此时不需要出现 editModal
+ * @description 右键出现 context 时，记录当前卡片并抑制弹窗
  */
-const handleContextTrigger = () => {
+const handleContextTrigger = (assetId: string) => {
   suppressNextEditModal.value = true;
+
+  const idx = visibleAssets.value.findIndex((a) => a.id === assetId);
+
+  if (idx !== -1) {
+    selectedCardIndex.value = idx;
+    currentSelectedCardInfo.value = visibleAssets.value[idx]!;
+  }
 };
 
 const listenTauriEvent = async () => {
@@ -310,7 +315,7 @@ onBeforeUnmount(() => {
           :accounts="item.permedAccounts || []"
           :protocols="item.permedProtocols || []"
           :protocol="item.permedProtocols?.[0]?.name || ''"
-          :user="item.permedAccounts?.[0]?.username || ''"
+          :user="item.permedAccounts?.[0]?.name || ''"
           :category="item.category"
           :type="item.type"
           :highlight="selectedCardIndex === index"
