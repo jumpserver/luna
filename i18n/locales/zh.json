@@ -113,5 +113,8 @@
     "RemoteDesktop": "远程桌面",
     "Database": "数据库",
     "DownloadApplication": "下载应用"
+  },
+  "ConnectError": {
+    "ConnectFailed": "连接失败"
   }
 }

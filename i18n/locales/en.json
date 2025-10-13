@@ -108,5 +108,8 @@
 		"RemoteDesktop": "Remote Desktop",
 		"Database": "Database",
 		"DownloadApplication": "Download Application"
-	}
+	},
+	 "ConnectError": {
+    "ConnectFailed": "Connection failed"
+  }
 }
