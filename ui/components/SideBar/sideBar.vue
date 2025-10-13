@@ -75,7 +75,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
         color="neutral"
         variant="ghost"
         size="md"
-        class="mt-1"
+        class="mt-1 p-2"
         icon="i-lucide-panel-left"
         @click="handleCollapse"
       />
@@ -133,10 +133,11 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 <style lang="scss">
 .light .menu .menu-item {
   &[data-active] {
-    background-color: var(--bg-hover-light);
+    background-color: #ccccccdd;
+    font-weight: 500;
   }
 
-  &:hover {
+  &:hover:not([data-active]) {
     background-color: var(--bg-hover-light);
   }
 }

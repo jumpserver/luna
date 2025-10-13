@@ -2,6 +2,8 @@
 import type { ContextMenuItem } from "@nuxt/ui";
 import type { PermedAccount, PermedProtocol } from "~/types/index";
 
+import AssetIcon from "../AssetIcon/assetIcon.vue";
+
 interface DetailRow {
   key: string;
   title: string;
@@ -93,10 +95,6 @@ const labelMinWidth = computed(() => (locale.value.startsWith("zh") ? "24px" : "
 
 const labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-content) 1fr`);
 
-const iconPath = computed(() => {
-  return props.type === "windows" ? "/icons/windows.png" : "/icons/linux.png";
-});
-
 function handleConnect(protocolOverride?: string) {
   handleAssetConnection(
     props.user,
@@ -153,12 +151,7 @@ const handleMouseLeave = () => {
       <section class="w-full p-2" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave">
         <div class="flex items-center justify-between w-full">
           <div class="flex items-center gap-3 flex-1 min-w-0">
-            <UAvatar
-              size="lg"
-              :src="iconPath"
-              :ui="{ root: 'rounded-md', image: 'size-8 p-1' }"
-              class="flex-shrink-0"
-            />
+            <AssetIcon :type="type" size="lg" />
 
             <div class="flex-1 min-w-0 overflow-hidden w-[120px]">
               <div class="text-xs-plus font-bold truncate whitespace-nowrap">
