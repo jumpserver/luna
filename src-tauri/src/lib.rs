@@ -7,6 +7,7 @@ mod utils;
 use crate::setup::apply_window_effects;
 use crate::setup::setup_tray;
 
+use crate::commands::get_asset_detail::get_asset_detail;
 use crate::commands::get_assets::get_assets;
 use crate::commands::get_config::get_config;
 use crate::commands::get_setting::get_setting;
@@ -46,15 +47,16 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
+            logout,
             pull_up,
             get_assets,
             get_config,
             url_watcher,
             get_setting,
             set_favorite,
+            get_asset_detail,
             get_connect_token,
             update_config_selection,
-            logout,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

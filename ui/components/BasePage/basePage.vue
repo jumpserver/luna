@@ -17,6 +17,8 @@ const props = defineProps<{
 const providerClearSelection = inject<(cb: () => void) => void>("providerClearSelection");
 
 const { t } = useI18n();
+const { handleAssetConnection } = useAssetAction();
+const { getAssetDetail } = useAssetAction();
 
 const editModalOpen = ref(false);
 const draftRememberSecret = ref<boolean>(false);
@@ -37,12 +39,14 @@ const assetManager = useAssetFetcher(props.type, scrollRef);
 const { layouts } = storeToRefs(userSettingStore);
 const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
 const {
+  getDetail,
   assetsData,
   isAppending,
   fetchNextPage,
   scrollbarStyles,
   isInitialLoading,
-  appendSkeletonCount
+  appendSkeletonCount,
+  lastDetailAssetId
 } = assetManager;
 
 const visibleAssets = computed(() => {
@@ -78,6 +82,34 @@ watch(
   }
 );
 
+watch(
+  () => getDetail.value,
+  (nv: boolean) => {
+    if (!nv) return;
+
+    if (selectedCardIndex.value !== null) {
+      const idx = selectedCardIndex.value;
+
+      if (visibleAssets.value[idx]) {
+        currentSelectedCardInfo.value = visibleAssets.value[idx]!;
+      }
+    } else if (currentSelectedCardInfo.value) {
+      const updated = visibleAssets.value.find((a) => a.id === currentSelectedCardInfo.value!.id);
+      if (updated) currentSelectedCardInfo.value = updated;
+    } else if (lastDetailAssetId?.value) {
+      const target = visibleAssets.value.find((a) => a.id === lastDetailAssetId.value);
+      if (target) currentSelectedCardInfo.value = target;
+    }
+
+    initDraft();
+    editModalOpen.value = true;
+    getDetail.value = false;
+  }
+);
+
+/**
+ * @description 初始化展示信息
+ */
 function initDraft() {
   const asset = currentSelectedCardInfo.value;
   if (!asset) return;
@@ -93,6 +125,9 @@ function initDraft() {
   draftRememberSecret.value = saved?.rememberSecret || false;
 }
 
+/**
+ * 获取 Setting 信息
+ */
 async function getSettings() {
   await useTauriCoreInvoke("get_setting", {
     site: currentSite.value,
@@ -100,16 +135,27 @@ async function getSettings() {
   });
 }
 
+/**
+ * @description 处理卡片点击
+ * @param index
+ * @param e
+ */
 const handleCardClick = (index: number, e: MouseEvent) => {
   e.stopPropagation();
   selectedCardIndex.value = index;
   currentSelectedCardInfo.value = visibleAssets.value[index]!;
 };
 
+/**
+ * @description 清除选中卡片
+ */
 const clearSelectedCard = () => {
   selectedCardIndex.value = null;
 };
 
+/**
+ * @description Modal 确认处理,现在点击确认后,会触发连接操作
+ */
 const handleConfirm = () => {
   const asset = currentSelectedCardInfo.value;
   if (!asset) return;
@@ -130,17 +176,35 @@ const handleConfirm = () => {
     else normalizedAccount = v.replace(/\(.+\)/, "");
   }
 
+  // 保存连接信息
   userInfoStore.setConnectionInfoForAsset(asset.id, {
     protocol: draftProtocol.value || "",
     username: normalizedAccount,
     accountMode,
-    manualUsername: draftManualUsername.value || "",
-    manualPassword: draftManualPassword.value || "",
-    dynamicPassword: draftDynamicPassword.value || "",
+    manualUsername: draftRememberSecret.value ? draftManualUsername.value || "" : "",
+    manualPassword: draftRememberSecret.value ? draftManualPassword.value || "" : "",
+    dynamicPassword: draftRememberSecret.value ? draftDynamicPassword.value || "" : "",
     rememberSecret: !!draftRememberSecret.value
   });
 
-  editModalOpen.value = false;
+  // 获取 ConnectToken
+  handleAssetConnection(
+    normalizedAccount,
+    asset.id,
+    draftProtocol.value,
+    asset.permed_accounts!,
+    undefined,
+    {
+      accountMode,
+      manualUsername: draftManualUsername.value || "",
+      manualPassword: draftManualPassword.value || "",
+      dynamicPassword: draftDynamicPassword.value || ""
+    }
+  );
+
+  nextTick(() => {
+    editModalOpen.value = false;
+  });
 };
 
 const listenTauriEvent = async () => {
@@ -157,8 +221,21 @@ const listenTauriEvent = async () => {
   });
 };
 
+// todo 可以移除
 const handleOpenEditModal = (asset: AssetItem) => {
   currentSelectedCardInfo.value = asset;
+  const idx = visibleAssets.value.findIndex((a) => a.id === asset.id);
+  if (idx !== -1) selectedCardIndex.value = idx;
+
+  const noAccounts = !asset.permed_accounts || asset.permed_accounts.length === 0;
+  const noProtocols = !asset.permed_protocols || asset.permed_protocols.length === 0;
+
+  if (noAccounts || noProtocols) {
+    getDetail.value = false;
+    getAssetDetail(asset.id);
+    return;
+  }
+
   editModalOpen.value = true;
 };
 
