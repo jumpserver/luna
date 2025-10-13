@@ -18,9 +18,10 @@ const providerClearSelection = inject<(cb: () => void) => void>("providerClearSe
 
 const { t } = useI18n();
 const { handleAssetConnection } = useAssetAction();
-const { getAssetDetail } = useAssetAction();
+const { getAssetDetail, displayUser, displayProtocol } = useAssetAction();
 
 const editModalOpen = ref(false);
+const suppressNextEditModal = ref(false);
 const draftRememberSecret = ref<boolean>(false);
 const draftAccount = ref<string>("");
 const draftProtocol = ref<string>("");
@@ -102,8 +103,16 @@ watch(
     }
 
     initDraft();
-    editModalOpen.value = true;
+
+    // 若为右键菜单触发的详情更新，则不弹出编辑弹窗
+    if (!suppressNextEditModal.value) {
+      editModalOpen.value = true;
+    }
+
+    suppressNextEditModal.value = false;
     getDetail.value = false;
+
+    console.log("currentSelectedCardInfo", currentSelectedCardInfo);
   }
 );
 
@@ -116,8 +125,8 @@ function initDraft() {
 
   const saved = userInfoStore.getConnectionInfoForAsset(asset.id);
 
-  draftProtocol.value = saved?.protocol ?? asset.permedProtocols?.[0]?.name ?? "";
-  draftAccount.value = saved?.username ?? asset.permedAccounts?.[0]?.username ?? "";
+  draftProtocol.value = displayProtocol(asset.id, asset.permedProtocols!);
+  draftAccount.value = displayUser(asset.id, asset.permedAccounts!);
 
   draftManualUsername.value = saved?.manualUsername || "";
   draftManualPassword.value = saved?.manualPassword || "";
@@ -207,6 +216,13 @@ const handleConfirm = () => {
   });
 };
 
+/**
+ * @description 右键出现 context 也需要获取 detail 此时不需要出现 editModal
+ */
+const handleContextTrigger = () => {
+  suppressNextEditModal.value = true;
+};
+
 const listenTauriEvent = async () => {
   interface eventPayloadType {
     data: string;
@@ -221,7 +237,6 @@ const listenTauriEvent = async () => {
   });
 };
 
-// todo 可以移除
 const handleOpenEditModal = (asset: AssetItem) => {
   currentSelectedCardInfo.value = asset;
   const idx = visibleAssets.value.findIndex((a) => a.id === asset.id);
@@ -299,6 +314,7 @@ onBeforeUnmount(() => {
           :category="item.category"
           :type="item.type"
           :highlight="selectedCardIndex === index"
+          @context-trigger="handleContextTrigger"
           @open-edit-modal="editModalOpen = true"
           @click="handleCardClick(index, $event)"
         />

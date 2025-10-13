@@ -34,6 +34,7 @@ const props = withDefaults(
 
 const emits = defineEmits<{
   (e: "openEditModal"): void;
+  (e: "contextTrigger"): void;
 }>();
 
 const { t, locale } = useI18n();
@@ -50,22 +51,30 @@ const contextMenuItems = computed<ContextMenuItem[][]>(() => {
     onClick: () => handleConnect(name)
   }));
 
+  // 避免处理空数组
+  if (moreConnectChildren.length === 0) {
+    moreConnectChildren.push({
+      label: t("Common.NoData"),
+      disabled: true
+    } as ContextMenuItem);
+  }
+
   return [
     [
+      // {
+      //   label: t("ContextMenu.QuickConnect"),
+      //   icon: "i-lucide-unplug",
+      //   onClick: () => handleConnect(props.assetId)
+      // },
       {
-        label: t("ContextMenu.QuickConnect"),
-        icon: "i-lucide-unplug",
-        onClick: () => handleConnect(props.assetId)
+        label: t("ContextMenu.Connect"),
+        icon: "i-lucide-plug",
+        children: [moreConnectChildren]
       },
       {
         label: t("ContextMenu.Edit"),
         icon: "i-lucide-pencil",
         onClick: () => openEditModal()
-      },
-      {
-        label: t("ContextMenu.Connect"),
-        icon: "i-lucide-plug",
-        children: [moreConnectChildren]
       },
       {
         label: t("ContextMenu.Rename"),
@@ -80,33 +89,13 @@ const contextMenuItems = computed<ContextMenuItem[][]>(() => {
   ];
 });
 
-const detailRows = computed(() => {
-  const list: Array<DetailRow> = [
-    {
-      key: "address",
-      title: t("AssetCard.Address"),
-      content: props.address,
-      popover: true,
-      class: "max-w-40"
-    },
-    {
-      key: "user",
-      title: t("AssetCard.User"),
-      content: displayUser(props.assetId, props.accounts)
-    },
-    {
-      key: "protocol",
-      title: t("AssetCard.Protocol"),
-      content: displayProtocol(props.assetId, props.protocols!)
-    }
-  ];
-
-  return list;
-});
-
 const labelMinWidth = computed(() => (locale.value.startsWith("zh") ? "24px" : "72px"));
 
 const labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-content) 1fr`);
+
+const iconPath = computed(() => {
+  return props.type === "windows" ? "/icons/windows.png" : "/icons/linux.png";
+});
 
 function handleConnect(protocolOverride?: string) {
   handleAssetConnection(
@@ -118,8 +107,21 @@ function handleConnect(protocolOverride?: string) {
   );
 }
 
+/**
+ * @description 打开 Edit 弹窗
+ */
 const openEditModal = () => {
   emits("openEditModal");
+};
+
+/**
+ * @description 唤起右键菜单
+ */
+const handleContextOpen = (payload: boolean) => {
+  if (payload) {
+    getAssetDetail(props.assetId);
+    emits("contextTrigger");
+  }
 };
 
 const handleMouseEnter = () => {
@@ -129,11 +131,6 @@ const handleMouseEnter = () => {
 const handleMouseLeave = () => {
   showEdit.value = false;
 };
-
-const iconPath = computed(() => {
-  console.log(props.category, props.type);
-  return props.type === "windows" ? "/icons/windows.png" : "/icons/linux.png";
-});
 </script>
 
 <template>
@@ -151,6 +148,7 @@ const iconPath = computed(() => {
       :ui="{
         content: 'w-48'
       }"
+      @update:open="handleContextOpen"
     >
       <section class="w-full p-2" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave">
         <div class="flex items-center justify-between w-full">
@@ -181,7 +179,7 @@ const iconPath = computed(() => {
               variant="solid"
               class="group btn-connect px-3"
               :disabled="!isActive"
-              @click="handleConnect()"
+              @click="getAssetDetail(props.assetId)"
             >
               {{ t("ContextMenu.Connect") }}
             </UButton>
