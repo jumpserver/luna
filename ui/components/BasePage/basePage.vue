@@ -111,8 +111,6 @@ watch(
 
     suppressNextEditModal.value = false;
     getDetail.value = false;
-
-    console.log("currentSelectedCardInfo", currentSelectedCardInfo);
   }
 );
 
@@ -310,7 +308,7 @@ onBeforeUnmount(() => {
           :accounts="item.permedAccounts || []"
           :protocols="item.permedProtocols || []"
           :protocol="item.permedProtocols?.[0]?.name || ''"
-          :user="item.permedAccounts?.[0]?.username || ''"
+          :user="item.permedAccounts?.[0]?.name || ''"
           :category="item.category"
           :type="item.type"
           :highlight="selectedCardIndex === index"

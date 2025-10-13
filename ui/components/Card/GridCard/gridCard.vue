@@ -73,7 +73,7 @@ const contextMenuItems = computed<ContextMenuItem[][]>(() => {
       },
       {
         label: t("ContextMenu.Edit"),
-        icon: "i-lucide-pencil",
+        icon: "solar:pen-new-square-linear",
         onClick: () => openEditModal()
       },
       {

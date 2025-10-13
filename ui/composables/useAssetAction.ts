@@ -54,7 +54,7 @@ export const useAssetAction = () => {
 
     const acc = accounts.find((a) => a && a.alias && !a.alias.startsWith("@"));
 
-    return acc?.username || "-";
+    return acc?.name || "-";
   };
 
   /**
@@ -196,8 +196,14 @@ export const useAssetAction = () => {
     let input_username = "";
     let input_secret = "";
 
+    // 根据展示选择反查账号对象（name/username/alias 任意匹配）
+    const matchedAccount = accounts.find(
+      (a) => a.username === selected || a.alias === selected || a.name === selected
+    );
+
     if (effectiveMode === "manual" || selected === "手动输入" || selected === "Manual input") {
-      input_username = ephemeral?.manualUsername ?? saved?.manualUsername ?? "";
+      // prettier-ignore
+      input_username = ephemeral?.manualUsername ?? saved?.manualUsername ?? matchedAccount?.username ?? "";
       input_secret = ephemeral?.manualPassword ?? saved?.manualPassword ?? "";
     } else if (
       effectiveMode === "dynamic" ||
