@@ -163,7 +163,7 @@ const iconPath = computed(() => {
             />
 
             <div class="flex-1 min-w-0 overflow-hidden w-[120px]">
-              <div class="text-[14px] font-bold truncate whitespace-nowrap">
+              <div class="text-xs-plus font-bold truncate whitespace-nowrap">
                 {{ assetName }}
               </div>
               <div
