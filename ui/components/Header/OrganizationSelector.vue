@@ -29,7 +29,7 @@ const handleOrgChange = (org: string) => {
 const organizationDropdownItems = computed<DropdownMenuItem[]>(() =>
   currentOrganizations.value.map((org: PermOrgItem) => ({
     label: org.name,
-    type: 'checkbox' as const,
+    type: "checkbox" as const,
     checked: org.name === currentOrg.value,
     onSelect: () => handleOrgChange(org.name)
   }))
@@ -66,13 +66,9 @@ watch(
         item: 'px-4 py-2'
       }"
     >
-      <UButton
-        variant="ghost"
-        size="md"
-        class="btn-common px-3"
-      >
+      <UButton variant="ghost" size="md" color="neutral" class="btn-common px-3">
         <UIcon name="fluent:organization-16-regular" />
-        <span class="truncate max-w-32">{{ currentOrg }}</span>
+        <span class="truncate max-w-32 font-medium">{{ currentOrg }}</span>
         <UIcon name="i-lucide-chevron-down" class="ml-1 size-3" />
       </UButton>
     </UDropdownMenu>

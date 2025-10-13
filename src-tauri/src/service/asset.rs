@@ -33,31 +33,25 @@ pub struct AssetQuery {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub order: Option<String>,
 
-    pub org: String,
+    pub oid: String,
 }
 
 impl AssetQuery {
     #[allow(dead_code)]
     pub fn new(asset_type: Category, org: String) -> Self {
-        match asset_type {
-            Category::Database | Category::Device => Self {
-                r#type: None,
-                category: Some(asset_type),
-                offset: None,
-                limit: None,
-                search: None,
-                order: None,
-                org,
-            },
-            Category::Linux | Category::Windows => Self {
-                r#type: Some(asset_type),
-                category: None,
-                offset: None,
-                limit: None,
-                search: None,
-                order: None,
-                org,
-            },
+        let (r#type, category) = match asset_type {
+            Category::Database | Category::Device => (None, Some(asset_type)),
+            Category::Linux | Category::Windows => (Some(asset_type), None),
+        };
+
+        Self {
+            r#type,
+            category,
+            offset: None,
+            limit: None,
+            search: None,
+            order: None,
+            oid: org,
         }
     }
 
@@ -72,7 +66,7 @@ pub trait HasOrg {
 
 impl HasOrg for AssetQuery {
     fn org(&self) -> &str {
-        &self.org
+        &self.oid
     }
 }
 
@@ -92,52 +86,34 @@ impl AssetService {
     }
 
     pub async fn get_category_assets(&self, favorite: bool) -> ApiResponse {
-        if favorite {
-            let url = format!(
+        let url = if favorite {
+            format!(
                 "{}/api/v1/perms/users/self/nodes/favorite/assets/",
                 self.origin
-            );
+            )
+        } else {
+            format!("{}/api/v1/perms/users/self/assets/", self.origin)
+        };
 
-            info!("获取 Favorite 的资产信息，请求 url: {}", url);
+        info!("获取类型为：{:?} 的资产信息，请求 url: {}, oid: {}", self.query.get_category(), url, self.query.oid);
+        info!("Cookie: {}", self.cookie_header);
+        info!("query: {:?}", self.query);
 
-            let query = AssetQuery {
-                r#type: None,
-                category: None,
-                offset: Some(self.query.offset.unwrap_or(0)),
-                limit: Some(self.query.limit.unwrap_or(20)),
-                search: Some(self.query.search.clone().unwrap_or_default()),
-                order: Some(self.query.order.clone().unwrap_or_default()),
-                org: self.query.org.clone(),
-            };
+        let (r#type, category) = match self.query.get_category() {
+            Category::Linux => (Some(Category::Linux), None),
+            Category::Windows => (Some(Category::Windows), None),
+            Category::Database => (None, Some(Category::Database)),
+            Category::Device => (None, Some(Category::Device)),
+        };
 
-            return to_api_response(&url, get_unified(&url, &self.cookie_header, &query).await)
-                .await;
-        }
-
-        let url = format!("{}/api/v1/perms/users/self/assets/", self.origin);
-        let category = self.query.get_category();
-
-        info!("获取类型为：{:?} 的资产信息，请求 url: {}", category, url);
-
-        let query = match category {
-            Category::Database | Category::Device => AssetQuery {
-                r#type: None,
-                category: Some(category),
-                offset: Some(self.query.offset.unwrap_or(0)),
-                limit: Some(self.query.limit.unwrap_or(20)),
-                search: Some(self.query.search.clone().unwrap_or_default()),
-                order: Some(self.query.order.clone().unwrap_or_default()),
-                org: self.query.org.clone(),
-            },
-            Category::Linux | Category::Windows => AssetQuery {
-                r#type: Some(category),
-                category: None,
-                offset: Some(self.query.offset.unwrap_or(0)),
-                limit: Some(self.query.limit.unwrap_or(20)),
-                search: Some(self.query.search.clone().unwrap_or_default()),
-                order: Some(self.query.order.clone().unwrap_or_default()),
-                org: self.query.org.clone(),
-            },
+        let query = AssetQuery {
+            r#type,
+            category,
+            offset: Some(self.query.offset.unwrap_or(0)),
+            limit: Some(self.query.limit.unwrap_or(20)),
+            search: Some(self.query.search.clone().unwrap_or_default()),
+            order: Some(self.query.order.clone().unwrap_or_default()),
+            oid: self.query.oid.clone(),
         };
 
         to_api_response(&url, get_unified(&url, &self.cookie_header, &query).await).await

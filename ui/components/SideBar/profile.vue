@@ -1,19 +1,14 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from '@nuxt/ui';
-import type { UnlistenFn } from '@tauri-apps/api/event';
-import type { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import type {
-  PermissionOrgs,
-  PermOrgItem,
-  UserData,
-  UserIntiInfo,
-} from '~/types/index';
+import type { DropdownMenuItem } from "@nuxt/ui";
+import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import type { PermissionOrgs, PermOrgItem, UserData, UserIntiInfo } from "~/types/index";
 
-import { LogicalPosition } from '@tauri-apps/api/dpi';
-import { useUserInfoStore } from '~/store/modules/userInfo';
-import { useUserSettingStore } from '~/store/modules/userSetting';
+import { LogicalPosition } from "@tauri-apps/api/dpi";
+import { useUserInfoStore } from "~/store/modules/userInfo";
+import { useUserSettingStore } from "~/store/modules/userSetting";
 
-type LocaleCode = (typeof locales.value)[number]['code'];
+type LocaleCode = (typeof locales.value)[number]["code"];
 
 const props = defineProps<{ collapse: boolean }>();
 
@@ -32,8 +27,8 @@ const { language, theme } = storeToRefs(useSettingStore);
 // prettier-ignore
 const { loggedIn, currentSite, userMap, currentUser } = storeToRefs(userInfoStore);
 
-const inputSite = ref('');
-const errorMessage = ref('');
+const inputSite = ref("");
+const errorMessage = ref("");
 const openModal = ref(false);
 const hasValidationError = ref(false);
 const loginPage = ref<WebviewWindow | null>(null);
@@ -43,59 +38,59 @@ const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
 const unlistenLoginFailedTimeoutRef = ref<UnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
 
-useEventBus().on('login', openLoginPage);
+useEventBus().on("login", openLoginPage);
 
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
 
-const isDarkMode = computed(() => theme.value === 'dark');
+const isDarkMode = computed(() => theme.value === "dark");
 
 const supportLanguages = computed<DropdownMenuItem[]>(() => {
   return locales.value.map((locale: any) => ({
     label: locale.name,
     value: locale.code,
-    type: 'checkbox' as const,
+    type: "checkbox" as const,
     checked: locale.code === language.value,
     onUpdateChecked: (checked: boolean) => {
       if (checked) changeLocale(locale.code);
-    },
+    }
   }));
 });
 
 const themeToggleMenuItem = computed<DropdownMenuItem>(() => ({
-  label: isDarkMode.value ? t('ToolTips.LightMode') : t('ToolTips.DarkMode'),
-  icon: isDarkMode.value ? 'i-lucide-sun' : 'i-lucide-moon',
-  onClick: () => manualSetTheme(isDarkMode.value ? 'light' : 'dark'),
+  label: isDarkMode.value ? t("ToolTips.LightMode") : t("ToolTips.DarkMode"),
+  icon: isDarkMode.value ? "i-lucide-sun" : "i-lucide-moon",
+  onClick: () => manualSetTheme(isDarkMode.value ? "light" : "dark")
 }));
 
 const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
   [
     themeToggleMenuItem.value,
     {
-      label: t('Common.Language'),
-      icon: 'i-lucide-globe',
-      children: [supportLanguages.value],
-    },
+      label: t("Common.Language"),
+      icon: "i-lucide-globe",
+      children: [supportLanguages.value]
+    }
   ],
   [
     {
-      label: t('Login.AddAccount'),
-      icon: 'i-lucide-user-round-plus',
-      onClick: openLoginPage,
+      label: t("Login.AddAccount"),
+      icon: "i-lucide-user-round-plus",
+      onClick: openLoginPage
     },
     {
-      label: t('Login.SwitchSite'),
-      icon: 'i-lucide-arrow-down-up',
-      children: switchAccountChildren(),
-    },
+      label: t("Login.SwitchSite"),
+      icon: "i-lucide-arrow-down-up",
+      children: switchAccountChildren()
+    }
   ],
   [
     {
-      label: t('Login.Logout'),
-      icon: 'solar:login-outline',
-      color: 'error',
-      onClick: clearAuthInfo,
-    },
-  ],
+      label: t("Login.Logout"),
+      icon: "solar:login-outline",
+      color: "error",
+      onClick: clearAuthInfo
+    }
+  ]
 ]);
 
 /**
@@ -113,9 +108,9 @@ function changeLocale(payload: LocaleCode) {
  * @returns 标准化后的站点
  */
 function normalizeSite(value: string): string {
-  const s = (value || '').trim();
-  if (!s) return '';
-  return s.replace(/\/+$/, '');
+  const s = (value || "").trim();
+  if (!s) return "";
+  return s.replace(/\/+$/, "");
 }
 
 /**
@@ -126,12 +121,11 @@ function initSelectOrganization(permissionOrgData: PermissionOrgs) {
     ...(permissionOrgData.pam_orgs || []),
     ...(permissionOrgData.audit_orgs || []),
     ...(permissionOrgData.console_orgs || []),
-    ...(permissionOrgData.workbench_orgs || []),
+    ...(permissionOrgData.workbench_orgs || [])
   ];
 
   const uniqueOrgs = orgs.filter(
-    (org, index, self) =>
-      index === self.findIndex((t: PermOrgItem) => t.id === org.id)
+    (org, index, self) => index === self.findIndex((t: PermOrgItem) => t.id === org.id)
   );
 
   return uniqueOrgs;
@@ -143,9 +137,9 @@ function initSelectOrganization(permissionOrgData: PermissionOrgs) {
 function openLoginPage() {
   openModal.value = true;
   hasValidationError.value = false;
-  errorMessage.value = '';
+  errorMessage.value = "";
   nextTick(() => {
-    inputRef.value?.$el.querySelector('input')?.focus();
+    inputRef.value?.$el.querySelector("input")?.focus();
   });
 }
 
@@ -155,7 +149,7 @@ function openLoginPage() {
 function clearValidationError() {
   if (hasValidationError.value) {
     hasValidationError.value = false;
-    errorMessage.value = '';
+    errorMessage.value = "";
   }
 }
 
@@ -164,26 +158,26 @@ function clearValidationError() {
  * @returns 切换账户子菜单
  */
 function switchAccountChildren() {
-  const items: DropdownMenuItem[] = (
-    Object.values(userMap.value) as UserData[]
-  ).map((u: UserData) => {
-    let host = u.site;
+  const items: DropdownMenuItem[] = (Object.values(userMap.value) as UserData[]).map(
+    (u: UserData) => {
+      let host = u.site;
 
-    try {
-      host = new URL(u.site).host;
-    } catch (e) {
-      console.log('e', e);
+      try {
+        host = new URL(u.site).host;
+      } catch (e) {
+        console.log("e", e);
+      }
+
+      const label = `${host}`;
+      const isCurrent = u.site === currentSite.value;
+
+      return {
+        label,
+        icon: isCurrent ? "i-lucide-check" : "i-lucide-user",
+        onClick: () => handleSwitchAccount(u.site)
+      } as DropdownMenuItem;
     }
-
-    const label = `${host}`;
-    const isCurrent = u.site === currentSite.value;
-
-    return {
-      label,
-      icon: isCurrent ? 'i-lucide-check' : 'i-lucide-user',
-      onClick: () => handleSwitchAccount(u.site),
-    } as DropdownMenuItem;
-  });
+  );
 
   return [items];
 }
@@ -196,7 +190,7 @@ function handleSwitchAccount(site: string) {
   if (site === currentSite.value) return;
   userInfoStore.setCurrentSite(site);
   nextTick(() => {
-    useEventBus().emit('refresh', undefined);
+    useEventBus().emit("refresh", undefined);
   });
 }
 
@@ -220,16 +214,16 @@ const handleClipboard = (value: string) => {
  */
 const handleConfirm = () => {
   hasValidationError.value = false;
-  errorMessage.value = '';
+  errorMessage.value = "";
 
   const normalizedSite = normalizedInputSite.value;
 
   if (!normalizedSite) {
     hasValidationError.value = true;
-    errorMessage.value = t('Login.EmptyUrlError');
+    errorMessage.value = t("Login.EmptyUrlError");
 
     nextTick(() => {
-      inputRef.value?.$el?.querySelector('input')?.focus();
+      inputRef.value?.$el?.querySelector("input")?.focus();
     });
 
     return;
@@ -239,145 +233,130 @@ const handleConfirm = () => {
 
   if (users.some((user) => normalizeSite(user.site) === normalizedSite)) {
     hasValidationError.value = true;
-    errorMessage.value = t('Login.AlreadyLoggedInError');
+    errorMessage.value = t("Login.AlreadyLoggedInError");
 
     return;
   }
 
   if (!REG_EXP.test(normalizedSite)) {
     hasValidationError.value = true;
-    errorMessage.value = t('Login.InvalidUrlError');
+    errorMessage.value = t("Login.InvalidUrlError");
 
     nextTick(() => {
-      inputRef.value?.$el?.querySelector('input')?.focus();
+      inputRef.value?.$el?.querySelector("input")?.focus();
     });
 
     return;
   }
 
-  loginPage.value = new useTauriWebviewWindowWebviewWindow('loginPage', {
-    title: `${t('Common.LoginSite')} - ${normalizedSite}`,
+  loginPage.value = new useTauriWebviewWindowWebviewWindow("loginPage", {
+    title: `${t("Common.LoginSite")} - ${normalizedSite}`,
     url: normalizedSite,
     width: 600,
     height: 800,
     minWidth: 600,
     minHeight: 800,
     hiddenTitle: true,
-    titleBarStyle: 'overlay',
-    trafficLightPosition: new LogicalPosition(10, 22),
+    titleBarStyle: "overlay",
+    trafficLightPosition: new LogicalPosition(10, 22)
   });
 
   nextTick(async () => {
-    await useTauriCoreInvoke('url_watcher', {
-      name: 'loginPage',
-      origin: normalizedSite,
+    await useTauriCoreInvoke("url_watcher", {
+      name: "loginPage",
+      origin: normalizedSite
     });
     openModal.value = false;
   });
 };
 
 onMounted(async () => {
-  unlistenErrorPageRef.value = await useTauriEventListen(
-    'error-page',
-    (event) => {
-      const { status, reason } = event.payload as {
-        status: string;
-        reason: string;
-      };
+  unlistenErrorPageRef.value = await useTauriEventListen("error-page", (event) => {
+    const { status, reason } = event.payload as {
+      status: string;
+      reason: string;
+    };
 
-      if (status === 'failure' && reason === 'cookies-not-found') {
-        toast.add({
-          title: t('Login.LoginFailed'),
-          description: t('Login.LoginFailedErrorPage'),
-          color: 'error',
-          icon: 'line-md:close-circle',
-        });
-
-        nextTick(() => userInfoStore.setUserLoggedIn(false));
-      }
-    }
-  );
-
-  unlistenLoginSuccessRef.value = await useTauriEventListen(
-    'login-success-detected',
-    (event) => {
-      const { status, profile, permission_orgs, current_org, cookies } =
-        event.payload as UserIntiInfo;
-
-      const profileData = JSON.parse((profile as any).data);
-      const permissionOrgData = JSON.parse(
-        (permission_orgs as any).data
-      ) as PermissionOrgs;
-      const currentOrgData = JSON.parse((current_org as any).data);
-      const normalizedSite = normalizedInputSite.value;
-
-      if (status === 'success' && profileData) {
-        toast.add({
-          title: t('Login.LoginSuccess'),
-          description: t('Login.LoginSuccessDescription'),
-          color: 'success',
-          icon: 'line-md:check-all',
-        });
-
-        const availableOrgs = initSelectOrganization(permissionOrgData);
-
-        userInfoStore.setUserData(normalizedSite, {
-          name: profileData.name,
-          headerJson: cookies,
-          site: normalizedSite,
-          org: currentOrgData,
-          system_roles: profileData.system_roles,
-          availableOrgs,
-          connectionInfo: {
-            protocol: '',
-            username: '',
-          },
-        });
-
-        userInfoStore.setOrganizations(availableOrgs);
-        userInfoStore.setCurrentOrg(currentOrgData);
-        userInfoStore.setUserLoggedIn(true);
-
-        nextTick(() => {
-          useEventBus().emit('refresh', undefined);
-        });
-      }
-    }
-  );
-
-  unlistenLoginFailedRef.value = await useTauriEventListen(
-    'login-failed-detected',
-    () => {
+    if (status === "failure" && reason === "cookies-not-found") {
       toast.add({
-        title: t('Login.LoginFailed'),
-        description: t('Login.LoginFailedDescription'),
-        color: 'error',
-        icon: 'line-md:close-circle',
+        title: t("Login.LoginFailed"),
+        description: t("Login.LoginFailedErrorPage"),
+        color: "error",
+        icon: "line-md:close-circle"
       });
-      userInfoStore.setUserLoggedIn(false);
-    }
-  );
 
-  unlistenLoginFailedTimeoutRef.value = await useTauriEventListen(
-    'login-failed-timeout',
-    () => {
-      toast.add({
-        title: t('Login.LoginFailed'),
-        description: t('Login.LoginFailedTimeout'),
-        color: 'error',
-        icon: 'line-md:close-circle',
-      });
       nextTick(() => userInfoStore.setUserLoggedIn(false));
     }
-  );
+  });
+
+  unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", (event) => {
+    const { status, profile, permission_orgs, current_org, cookies } =
+      event.payload as UserIntiInfo;
+
+    const profileData = JSON.parse((profile as any).data);
+    const permissionOrgData = JSON.parse((permission_orgs as any).data) as PermissionOrgs;
+    const currentOrgData = JSON.parse((current_org as any).data);
+    const normalizedSite = normalizedInputSite.value;
+
+    if (status === "success" && profileData) {
+      toast.add({
+        title: t("Login.LoginSuccess"),
+        description: t("Login.LoginSuccessDescription"),
+        color: "success",
+        icon: "line-md:check-all"
+      });
+
+      const availableOrgs = initSelectOrganization(permissionOrgData);
+
+      userInfoStore.setUserData(normalizedSite, {
+        name: profileData.name,
+        headerJson: cookies,
+        site: normalizedSite,
+        org: currentOrgData,
+        system_roles: profileData.system_roles,
+        availableOrgs,
+        connectionInfo: {
+          protocol: "",
+          username: ""
+        }
+      });
+
+      userInfoStore.setOrganizations(availableOrgs);
+      userInfoStore.setCurrentOrg(currentOrgData);
+      userInfoStore.setUserLoggedIn(true);
+
+      nextTick(() => {
+        useEventBus().emit("refresh", undefined);
+      });
+    }
+  });
+
+  unlistenLoginFailedRef.value = await useTauriEventListen("login-failed-detected", () => {
+    toast.add({
+      title: t("Login.LoginFailed"),
+      description: t("Login.LoginFailedDescription"),
+      color: "error",
+      icon: "line-md:close-circle"
+    });
+    userInfoStore.setUserLoggedIn(false);
+  });
+
+  unlistenLoginFailedTimeoutRef.value = await useTauriEventListen("login-failed-timeout", () => {
+    toast.add({
+      title: t("Login.LoginFailed"),
+      description: t("Login.LoginFailedTimeout"),
+      color: "error",
+      icon: "line-md:close-circle"
+    });
+    nextTick(() => userInfoStore.setUserLoggedIn(false));
+  });
 });
 
 onBeforeUnmount(() => {
   if (unlistenErrorPageRef.value) unlistenErrorPageRef.value();
   if (unlistenLoginSuccessRef.value) unlistenLoginSuccessRef.value();
   if (unlistenLoginFailedRef.value) unlistenLoginFailedRef.value();
-  if (unlistenLoginFailedTimeoutRef.value)
-    unlistenLoginFailedTimeoutRef.value();
+  if (unlistenLoginFailedTimeoutRef.value) unlistenLoginFailedTimeoutRef.value();
 });
 </script>
 
@@ -385,17 +364,13 @@ onBeforeUnmount(() => {
   <UDropdownMenu
     v-if="loggedIn"
     :items="profileMenuItems"
+    size="sm"
     side="top"
     align="start"
-    :ui="{ content: 'w-56' }"
+    :ui="{ content: 'w-56 p-1' }"
   >
-    <div
-      class="w-full rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-    >
-      <div
-        v-if="!props.collapse"
-        class="flex items-center gap-3 px-2 py-2 text-left"
-      >
+    <div class="w-full rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+      <div v-if="!props.collapse" class="flex items-center gap-3 px-2 py-2 text-left">
         <UAvatar size="sm" src="/user_avatar.png" />
         <div class="flex-1 leading-tight">
           <div class="text-sm font-medium truncate">
@@ -409,14 +384,8 @@ onBeforeUnmount(() => {
     </div>
   </UDropdownMenu>
 
-  <UButton
-    v-else
-    variant="subtle"
-    icon="line-md:log-in"
-    class="w-full"
-    @click="openLoginPage"
-  >
-    {{ t('Common.Login') }}
+  <UButton v-else variant="subtle" icon="line-md:log-in" class="w-full" @click="openLoginPage">
+    {{ t("Common.Login") }}
   </UButton>
 
   <Modal
@@ -439,7 +408,7 @@ onBeforeUnmount(() => {
           class="pointer-events-none absolute left-0 -top-2.5 text-xs font-medium px-1.5 transition-all peer-focus:-top-2.5 peer-focus:text-xs peer-focus:font-medium peer-placeholder-shown:text-sm peer-placeholder-shown:top-1.5 peer-placeholder-shown:font-normal"
         >
           <span class="inline-flex bg-default px-1">
-            {{ t('Login.Description') }}
+            {{ t("Login.Description") }}
           </span>
         </label>
 

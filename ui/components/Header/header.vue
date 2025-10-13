@@ -44,10 +44,12 @@ const handleWindowDrag = async (event: MouseEvent) => {
     @mousedown="handleWindowDrag"
   >
     <section class="flex items-center h-full">
-      <UIcon
-        v-show="collapse"
-        name="i-lucide-panel-left"
-        class="size-5 cursor-pointer hover:text-[#55B787]"
+      <UButton
+        v-if="collapse"
+        color="neutral"
+        variant="ghost"
+        size="md"
+        icon="i-lucide-panel-left"
         @click="handleCollapse"
       />
 

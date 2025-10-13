@@ -55,6 +55,13 @@ export default defineAppConfig({
     button: {
       slots: {
         base: "cursor-pointer"
+      },
+      variants: {
+        ghost: {
+          neutral: {
+            base: "bg-transparent hover:bg-gray-50"
+          }
+        }
       }
     },
     formField: {

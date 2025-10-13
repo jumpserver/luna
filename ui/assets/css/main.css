@@ -4,25 +4,21 @@
 @theme {
   --font-heading: "Montserrat", sans-serif;
   --font-sans: "Open Sans", sans-serif;
-  --color-primary: var(--ui-color-primary-500);
   --color-secondary: var(--ui-color-secondary-500);
-  --color-success: var(--ui-color-success-500);
-  --color-info: var(--ui-color-info-500);
-  --color-warning: var(--ui-color-warning-500);
-  --color-error: var(--ui-color-error-500);
+  --color-elevated: #1e1e20;
+}
+
+@theme .dark {
+  --color-elevated: #141419;
 }
 
 :root {
+  --ui-color-primary-500: #1ab394;
+  --ui-color-elevated-500: #303237;
+  --ui-color-secondary-500: #141419;
+  --ui-color-neutral-100: #d1d1d1;
   --bg-hover-light: #d1d1d1;
   --bg-hover-dark: rgba(0, 0, 0, 0.5);
-}
-
-.hover-bg-light:hover {
-  background-color: var(--bg-hover-light);
-}
-
-.hover-bg-dark:hover {
-  background-color: var(--bg-hover-dark);
 }
 
 .text-xs-plus {
@@ -39,11 +35,9 @@
 }
 
 .btn-common:hover {
-  background-color: var(--bg-hover-light);
 }
 
 .dark .btn-common:hover {
-  background-color: var(--bg-hover-dark);
 }
 
 /* App Store 风格按钮 */
@@ -51,7 +45,7 @@
   @apply bg-gray-100 text-green-500 font-bold rounded-lg text-xs transition-all duration-200;
 }
 
-.btn-connect:hover {
+.light .btn-connect:hover {
   @apply bg-green-500 text-white;
 }
 

@@ -9,6 +9,13 @@ const { t } = useI18n();
 const userSettingStore = useUserSettingStore();
 const { theme, layouts, sort } = storeToRefs(userSettingStore);
 
+// 公共按钮配置
+const commonButtonProps = {
+  size: "sm" as const,
+  variant: "ghost" as const,
+  color: "neutral" as const
+};
+
 // 从 Operation 组件移动过来的按钮操作逻辑
 const actionItems = computed<ActionItem[]>(() => [
   {
@@ -136,23 +143,12 @@ const actionItems = computed<ActionItem[]>(() => [
   <section class="flex items-center h-full gap-3 mr-2">
     <template v-for="action of actionItems" :key="action.iconName">
       <template v-if="action.type === 'action'">
-        <UButton
-          :icon="action.iconName"
-          size="sm"
-          variant="ghost"
-          class="btn-common"
-          @click="action.onClick"
-        />
+        <UButton :icon="action.iconName" v-bind="commonButtonProps" @click="action.onClick" />
       </template>
 
       <template v-else>
         <UDropdownMenu arrow :items="action.selectItems" size="sm">
-          <UButton
-            :icon="action.iconName"
-            size="sm"
-            variant="ghost"
-            class="btn-common"
-          />
+          <UButton :icon="action.iconName" v-bind="commonButtonProps" />
         </UDropdownMenu>
       </template>
     </template>

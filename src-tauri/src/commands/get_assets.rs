@@ -1,5 +1,5 @@
 use crate::service::asset::{AssetQuery, AssetService};
-use log::error;
+use log::{error, info};
 use serde::Deserialize;
 use serde_json::{from_str, json, Value};
 use std::sync::Arc;
@@ -82,6 +82,8 @@ pub async fn get_assets(
     let assets_data = asset_service
         .get_category_assets(favorite.unwrap_or(false))
         .await;
+
+    info!("获取 Asset 数据成功，返回数据: {}", assets_data.data.len());
 
     if !assets_data.success {
         error!("获取 Asset 数据失败");

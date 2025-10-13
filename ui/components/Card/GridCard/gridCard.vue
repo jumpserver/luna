@@ -138,7 +138,7 @@ const iconPath = computed(() => {
 
 <template>
   <UPageCard
-    class="w-full page-card"
+    class="w-full page-card shadow-sm"
     :highlight="false"
     :ui="{
       body: 'p-1 ',
@@ -149,16 +149,16 @@ const iconPath = computed(() => {
       size="sm"
       :items="contextMenuItems"
       :ui="{
-        content: 'w-48'
+        content: 'w-48 p-1'
       }"
     >
       <section class="w-full p-2" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave">
         <div class="flex items-center justify-between w-full">
           <div class="flex items-center gap-3 flex-1 min-w-0">
             <UAvatar
-              size="md"
+              size="lg"
               :src="iconPath"
-              :ui="{ root: 'rounded-md', icon: 'size-8' }"
+              :ui="{ root: 'rounded-md', image: 'size-8 p-1' }"
               class="flex-shrink-0"
             />
 

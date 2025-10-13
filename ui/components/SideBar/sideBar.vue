@@ -70,9 +70,13 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
     }"
   >
     <section class="flex items-center justify-end w-full px-4 h-12">
-      <UIcon
-        :name="collapse ? '' : 'i-lucide-panel-left'"
-        class="size-5 cursor-pointer hover:text-[#55B787] mt-2"
+      <UButton
+        v-if="!collapse"
+        color="neutral"
+        variant="ghost"
+        size="md"
+        class="mt-1"
+        icon="i-lucide-panel-left"
         @click="handleCollapse"
       />
     </section>

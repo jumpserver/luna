@@ -167,12 +167,12 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
         });
       case "database":
         return items.filter((it) => {
-          const typeValue = it.type?.value?.toLowerCase();
+          const typeValue = it.category?.value?.toLowerCase();
           return typeValue === "database";
         });
       case "device":
         return items.filter((it) => {
-          const typeValue = it.type?.value?.toLowerCase();
+          const typeValue = it.category?.value?.toLowerCase();
           return typeValue === "device";
         });
       default:
@@ -236,7 +236,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
           limit: LIMIT,
           search: searchParam,
           order: orderParam,
-          org: orgId.value
+          oid: orgId.value
         }
       });
     } catch {
