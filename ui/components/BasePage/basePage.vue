@@ -5,6 +5,7 @@ import type { layoutsType } from "~/store/modules/userSetting";
 import type { AssetItem, SettingResponse } from "~/types/index";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { useUserSettingStore } from "~/store/modules/userSetting";
+import CardGridCard from "../Card/GridCard/gridCard.vue";
 
 type AssetType = "linux" | "windows" | "database" | "device" | "favorite";
 
@@ -15,10 +16,8 @@ const props = defineProps<{
 }>();
 
 const providerClearSelection = inject<(cb: () => void) => void>("providerClearSelection");
-
 const { t } = useI18n();
-const { handleAssetConnection, handleAssetFavorite } = useAssetAction();
-const { getAssetDetail, displayUser, displayProtocol } = useAssetAction();
+const { handleAssetConnection, getAssetDetail, displayUser, displayProtocol } = useAssetAction();
 
 const editModalOpen = ref(false);
 const suppressNextEditModal = ref(false);
@@ -146,17 +145,6 @@ async function getSettings() {
     cookieHeader: currentUser.value!.headerJson
   });
 }
-
-/**
- * @description 处理卡片点击
- * @param index
- * @param e
- */
-const handleCardClick = (index: number, e: MouseEvent) => {
-  e.stopPropagation();
-  selectedCardIndex.value = index;
-  currentSelectedCardInfo.value = visibleAssets.value[index]!;
-};
 
 /**
  * @description 清除选中卡片
@@ -309,53 +297,6 @@ const handleOpenEditModal = (asset: AssetItem) => {
   editModalOpen.value = true;
 };
 
-// const contextMenuItems = computed<ContextMenuItem[][]>(() => {
-//   const protocols = (props.asset.protocols || []).map((p: PermedProtocol) => p.name);
-//   const uniqueProtocols = Array.from(new Set(protocols));
-
-//   const moreConnectChildren: ContextMenuItem[] = uniqueProtocols.map((name: string) => ({
-//     label: `${t("ContextMenu.Use")} ${name.toUpperCase()}`,
-//     onClick: () => handleConnect(name)
-//   }));
-
-//   // 避免处理空数组
-//   if (moreConnectChildren.length === 0) {
-//     moreConnectChildren.push({
-//       label: t("Common.NoData"),
-//       disabled: true
-//     } as ContextMenuItem);
-//   }
-
-//   return [
-//     [
-//       // {
-//       //   label: t("ContextMenu.QuickConnect"),
-//       //   icon: "i-lucide-unplug",
-//       //   onClick: () => handleConnect(props.assetId)
-//       // },
-//       {
-//         label: t("ContextMenu.Connect"),
-//         icon: "i-lucide-plug",
-//         children: [moreConnectChildren]
-//       },
-//       {
-//         label: t("ContextMenu.Edit"),
-//         icon: "solar:pen-new-square-linear",
-//         onClick: () => openEditModal()
-//       },
-//       {
-//         label: t("ContextMenu.Rename"),
-//         icon: "i-lucide-pencil"
-//       },
-//       {
-//         label: t("ContextMenu.Favorite"),
-//         icon: "i-lucide-star",
-//         onClick: () => handleAssetFavorite(props.assetId)
-//       }
-//     ]
-//   ];
-// });
-
 
 onMounted(() => {
   listenTauriEvent();
@@ -372,46 +313,10 @@ const handleConnectAsset = (asset: AssetItem) => {
   handleOpenEditModal(asset);
 };
 
-// 处理上下文菜单的连接操作
-const handleContextConnect = (asset: AssetItem, protocol?: string) => {
-  if (protocol) {
-    // 如果有指定协议，直接连接
-    handleAssetConnection(
-      displayUser(asset.id, asset.permedAccounts!),
-      asset.id,
-      protocol,
-      asset.permedAccounts!,
-      undefined,
-      {
-        accountMode: "hosted",
-        manualUsername: "",
-        manualPassword: "",
-        dynamicPassword: ""
-      }
-    );
-  } else {
-    // 否则打开编辑模态框
-    handleOpenEditModal(asset);
-  }
-};
-
 // 处理上下文菜单的编辑操作
 const handleContextEdit = (asset: AssetItem) => {
   handleOpenEditModal(asset);
 };
-
-// 处理上下文菜单的重命名操作
-const handleContextRename = (asset: AssetItem) => {
-  // TODO: 实现重命名功能
-  console.log("Rename asset:", asset);
-};
-
-// 处理上下文菜单的收藏操作
-const handleContextFavorite = (asset: AssetItem) => {
-  handleAssetFavorite(asset.id);
-};
-
-
 </script>
 
 
@@ -446,20 +351,13 @@ const handleContextFavorite = (asset: AssetItem) => {
         <span class="text-sm">{{ t("Common.NoData") }}</span>
       </div>
 
-      <div v-else class="grid grid-cols-[repeat(auto-fit,minmax(280px,_1fr))] gap-3 p-1">
-        <CardGridCard
-          v-for="(item, index) in visibleAssets"
-          :key="item.id"
-          :asset="item"
-          @context-trigger="(asset, event) => handleContextTrigger(asset, event)"
-          @connect-asset="handleConnectAsset(item)"
-          @click="handleCardClick(index, $event)"
-        />
-
-        <template v-if="isAppending">
-          <CardSkeletonCard :skeleton-count="appendSkeletonCount" />
-        </template>
-      </div>
+      <CardGridCard v-else
+        :visible-assets="visibleAssets"
+        :is-appending="isAppending"
+        :append-skeleton-count="appendSkeletonCount"
+        @context-trigger="handleContextTrigger"
+        @connect-asset="handleConnectAsset"
+      />
     </section>
 
     <section
@@ -511,10 +409,7 @@ const handleContextFavorite = (asset: AssetItem) => {
       :x="contextMenuPosition.x"
       :y="contextMenuPosition.y"
       @update:visible="contextMenuVisible = $event"
-      @connect="handleContextConnect"
       @edit="handleContextEdit"
-      @rename="handleContextRename"
-      @favorite="handleContextFavorite"
     />
   </div>
 </template>

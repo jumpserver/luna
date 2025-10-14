@@ -20,7 +20,7 @@ const emits = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { handleAssetFavorite } = useAssetAction();
+const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite } = useAssetAction();
 
 const contextMenuRef = ref<HTMLElement | null>(null);
 
@@ -56,6 +56,7 @@ const contextMenuItems = computed(() => {
   if (uniqueProtocols.length > 1) {
     const protocolItems = uniqueProtocols.map((name: string) => ({
       label: `${t("ContextMenu.Use")} ${name.toUpperCase()}`,
+      icon: "i-lucide-plug",
       onClick: () => handleConnect(name)
     }));
 
@@ -71,7 +72,25 @@ const contextMenuItems = computed(() => {
 
 // 处理连接
 const handleConnect = (protocol?: string) => {
-  emits("connect", props.asset, protocol);
+  if (protocol) {
+    // 如果有指定协议，直接连接
+    handleAssetConnection(
+      displayUser(props.asset.id, props.asset.permedAccounts!),
+      props.asset.id,
+      protocol,
+      props.asset.permedAccounts!,
+      undefined,
+      {
+        accountMode: "hosted",
+        manualUsername: "",
+        manualPassword: "",
+        dynamicPassword: ""
+      }
+    );
+  } else {
+    // 否则触发编辑事件
+    emits("edit", props.asset);
+  }
   emits("update:visible", false);
 };
 
@@ -83,13 +102,14 @@ const handleEdit = () => {
 
 // 处理重命名
 const handleRename = () => {
-  emits("rename", props.asset);
+  // TODO: 实现重命名功能
+  console.log("Rename asset:", props.asset);
   emits("update:visible", false);
 };
 
 // 处理收藏
 const handleFavorite = () => {
-  emits("favorite", props.asset);
+  handleAssetFavorite(props.asset.id);
   emits("update:visible", false);
 };
 
@@ -140,11 +160,7 @@ onBeforeUnmount(() => {
     <!-- 菜单项 -->
     <div class="py-1">
       <template v-for="item in contextMenuItems" :key="item.label">
-        <div v-if="item.disabled" class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">
-          {{ item.label }}
-        </div>
         <button
-          v-else
           class="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
           @click="item.onClick"
         >
