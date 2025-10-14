@@ -45,10 +45,10 @@ const handleContextTrigger = (asset: AssetItem) => {
     class="w-full page-card shadow-sm hover:shadow-md dark:hover:shadow-gray-700"
     :ui="{
       body: 'p-1 ',
-      container: 'p-2 sm:p-2 '
+      container: 'p-0 sm:p-0 '
     }"
   >
-    <section class="w-full p-2" @dblclick="emits('connectAsset', props.asset)" @contextmenu="handleContextMenu">
+    <section class="w-full p-4" @dblclick="emits('connectAsset', props.asset)" @contextmenu="handleContextMenu">
       <div class="flex items-center justify-between w-full">
         <div class="flex items-center gap-3 flex-1 min-w-0">
           <AssetIcon :type="props.asset.type" size="lg" />
