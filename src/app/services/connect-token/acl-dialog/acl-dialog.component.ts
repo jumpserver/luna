@@ -384,7 +384,7 @@ export class ElementACLDialogComponent implements OnInit {
         ]
       },
       face_verify_capture: {
-        title: 'Face Verify',
+        title: this._i18n.instant('Face Verify'),
         message: 'Please complete the face verification',
         actions: [],
       },
@@ -395,7 +395,7 @@ export class ElementACLDialogComponent implements OnInit {
         customContent: {
           type: 'link',
           link: '/ui/#/profile/index',
-          linkText: 'Go to profile'
+          linkText: this._i18n.instant('Go to profile')
         },
         actions: [
           {
