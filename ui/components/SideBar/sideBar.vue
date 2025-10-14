@@ -2,6 +2,7 @@
 import type { NavigationMenuItem } from "@nuxt/ui";
 import { useUserSettingStore } from "~/store/modules/userSetting";
 import Profile from "./profile.vue";
+import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
 
 const { t } = useI18n();
 const { emit } = useEventBus();
@@ -76,7 +77,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
         variant="ghost"
         size="md"
         class="mt-1 p-1"
-        icon="i-lucide-panel-left"
+        :icon="SidebarFlipIcon"
         @click="handleCollapse"
       />
     </section>

@@ -116,20 +116,37 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 };
 
+// 键盘事件处理
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    emits("update:visible", false);
+  }
+};
+
 // 监听可见性变化
 watch(() => props.visible, (visible) => {
   if (visible) {
     nextTick(() => {
-      document.addEventListener("click", handleClickOutside);
+      // 延迟添加事件监听器，避免立即触发
+      setTimeout(() => {
+        document.addEventListener("click", handleClickOutside);
+      }, 100);
     });
   } else {
     document.removeEventListener("click", handleClickOutside);
   }
 });
 
+// 组件挂载时添加事件监听器
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside);
+  document.addEventListener("keydown", handleKeyDown);
+});
+
 // 组件卸载时清理事件监听
-onBeforeUnmount(() => {
+onUnmounted(() => {
   document.removeEventListener("click", handleClickOutside);
+  document.removeEventListener("keydown", handleKeyDown);
 });
 </script>
 
@@ -145,11 +162,8 @@ onBeforeUnmount(() => {
   >
     <!-- 资产信息头部 -->
     <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-      <div class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+      <div class="text-sm font-small text-gray-900 dark:text-gray-100 truncate">
         {{ asset.name }}
-      </div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
-        {{ asset.address }}
       </div>
     </div>
 

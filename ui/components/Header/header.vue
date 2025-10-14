@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useUserSettingStore } from "~/store/modules/userSetting";
+import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
 
 const appConfig = useAppConfig();
 const userSettingStore = useUserSettingStore();
@@ -50,7 +51,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
         variant="ghost"
         size="md"
         class="p-1"
-        icon="i-lucide-panel-left"
+        :icon="SidebarFlipIcon"
         @click="handleCollapse"
       />
 

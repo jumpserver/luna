@@ -70,7 +70,7 @@ const sizeClasses = computed(() => {
   <UAvatar
     :size="size"
     v-bind="imageProps"
-    :ui="{ root: 'rounded-md', image: `${sizeClasses} p-1 bg-neutral-200 dark:bg-neutral-600` }"
-    :class="['flex-shrink-0', props.class]"
+    :ui="{ root: 'rounded-md', image: `${sizeClasses} p-1` }"
+    :class="['flex-shrink-0', props.class, 'bg-neutral-200 dark:bg-neutral-600']"
   />
 </template>
