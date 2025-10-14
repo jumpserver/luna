@@ -154,12 +154,6 @@ const handleConnectAsset = (asset: AssetItem) => {
   }
 };
 
-/**
- * @description 处理上下文菜单的编辑操作
- */
-const handleContextEdit = (asset: AssetItem) => {
-  editModal.openEditModal(asset);
-};
 
 /**
  * @description 处理模态框确认
@@ -220,8 +214,8 @@ onBeforeUnmount(() => {
         :visible-assets="visibleAssets"
         :is-appending="isAppending"
         :append-skeleton-count="appendSkeletonCount"
-        @context-trigger="handleContextTrigger"
         @connect-asset="handleConnectAsset"
+        @context-trigger="handleContextTrigger"
       />
     </section>
 
@@ -241,7 +235,7 @@ onBeforeUnmount(() => {
         <CardTableCard 
           :items="visibleAssets" 
           @connect-asset="handleConnectAsset" 
-          @context-trigger="(asset, event) => handleContextTrigger(asset, event)" 
+          @context-trigger="handleContextTrigger"
         />
       </div>
     </section>
@@ -266,16 +260,7 @@ onBeforeUnmount(() => {
       />
     </Modal>
 
-    <!-- 上下文菜单 -->
-    <AssetContextMenu
-      v-if="contextMenu.contextMenuAsset.value"
-      :asset="contextMenu.contextMenuAsset.value"
-      :visible="contextMenu.contextMenuVisible.value"
-      :x="contextMenu.contextMenuPosition.value.x"
-      :y="contextMenu.contextMenuPosition.value.y"
-      @update:visible="contextMenu.contextMenuVisible.value = $event"
-      @edit="handleContextEdit"
-    />
+    <!-- Context menu 现在集成到各个组件中 -->
   </div>
 </template>
 

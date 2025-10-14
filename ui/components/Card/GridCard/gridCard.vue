@@ -4,8 +4,8 @@
           v-for="(item, index) in props.visibleAssets"
           :key="item.id"
           :asset="item"
-          @context-trigger="(asset, event) => emits('contextTrigger', asset, event)"
           @connect-asset="emits('connectAsset', item)"
+          @context-trigger="emits('contextTrigger', $event)"
         />
 
         <template v-if="isAppending">
@@ -20,8 +20,8 @@ import CardSkeletonCard from "./skeletonCard.vue";
 import type { AssetItem } from "~/types";
 
 const emits = defineEmits<{
-  (e: "contextTrigger", asset: AssetItem, event: MouseEvent): void;
   (e: "connectAsset", asset: AssetItem): void;
+  (e: "contextTrigger", asset: AssetItem): void;
 }>();
 
 const props = defineProps<{

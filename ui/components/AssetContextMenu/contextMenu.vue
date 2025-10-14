@@ -12,16 +12,14 @@ const props = defineProps<Props>();
 
 const emits = defineEmits<{
   (e: "update:visible", visible: boolean): void;
-  (e: "edit", asset: AssetItem): void;
+  (e: "contextTrigger", asset: AssetItem): void;
 }>();
 
 const { t } = useI18n();
 const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite } = useAssetAction();
 
-const contextMenuRef = ref<HTMLElement | null>(null);
-
-// 计算上下文菜单项
-const contextMenuItems = computed(() => {
+// 计算菜单项
+const menuItems = computed(() => {
   const protocols = (props.asset.permedProtocols || []).map((p: PermedProtocol) => p.name);
   const uniqueProtocols = Array.from(new Set(protocols));
 
@@ -84,15 +82,15 @@ const handleConnect = (protocol?: string) => {
       }
     );
   } else {
-    // 否则触发编辑事件
-    emits("edit", props.asset);
+    // 否则触发上下文事件
+    emits("contextTrigger", props.asset);
   }
   emits("update:visible", false);
 };
 
 // 处理编辑
 const handleEdit = () => {
-  emits("edit", props.asset);
+  emits("contextTrigger", props.asset);
   emits("update:visible", false);
 };
 
@@ -108,76 +106,27 @@ const handleFavorite = () => {
   handleAssetFavorite(props.asset.id);
   emits("update:visible", false);
 };
-
-// 点击外部关闭菜单
-const handleClickOutside = (event: MouseEvent) => {
-  if (contextMenuRef.value && !contextMenuRef.value.contains(event.target as Node)) {
-    emits("update:visible", false);
-  }
-};
-
-// 键盘事件处理
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape') {
-    emits("update:visible", false);
-  }
-};
-
-// 监听可见性变化
-watch(() => props.visible, (visible) => {
-  if (visible) {
-    nextTick(() => {
-      // 延迟添加事件监听器，避免立即触发
-      setTimeout(() => {
-        document.addEventListener("click", handleClickOutside);
-      }, 100);
-    });
-  } else {
-    document.removeEventListener("click", handleClickOutside);
-  }
-});
-
-// 组件挂载时添加事件监听器
-onMounted(() => {
-  document.addEventListener("click", handleClickOutside);
-  document.addEventListener("keydown", handleKeyDown);
-});
-
-// 组件卸载时清理事件监听
-onUnmounted(() => {
-  document.removeEventListener("click", handleClickOutside);
-  document.removeEventListener("keydown", handleKeyDown);
-});
 </script>
 
 <template>
-  <div
-    v-if="visible"
-    ref="contextMenuRef"
-    class="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-48"
-    :style="{
-      left: `${x || 0}px`,
-      top: `${y || 0}px`
+  <UDropdownMenu
+    :open="visible"
+    :items="menuItems"
+    size="sm"
+    :ui="{
+      content: 'w-48 p-1'
     }"
+    @update:open="emits('update:visible', $event)"
   >
-    <!-- 资产信息头部 -->
-    <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-      <div class="text-sm font-small text-gray-900 dark:text-gray-100 truncate">
-        {{ asset.name }}
-      </div>
-    </div>
-
-    <!-- 菜单项 -->
-    <div class="py-1">
-      <template v-for="item in contextMenuItems" :key="item.label">
-        <button
-          class="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-          @click="item.onClick"
-        >
-          <UIcon v-if="item.icon" :name="item.icon" class="w-4 h-4" />
-          {{ item.label }}
-        </button>
-      </template>
-    </div>
-  </div>
+    <!-- 使用一个隐藏的触发器 -->
+    <div
+      class="fixed pointer-events-none"
+      :style="{
+        left: `${x || 0}px`,
+        top: `${y || 0}px`,
+        width: '1px',
+        height: '1px'
+      }"
+    />
+  </UDropdownMenu>
 </template>

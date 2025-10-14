@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
-import type { AssetItem } from "~/types";
+import type { AssetItem, PermedProtocol } from "~/types";
 import { h, resolveComponent } from "vue";
+import ContextMenu from "../../AssetContextMenu/contextMenu.vue";
 
 const UButton = resolveComponent("UButton");
 const UBadge = resolveComponent("UBadge");
 
 const emits = defineEmits<{
   (e: "connectAsset", asset: AssetItem): void;
-  (e: "contextTrigger", asset: AssetItem, event: MouseEvent): void;
+  (e: "contextTrigger", asset: AssetItem): void;
 }>();
 
 const props = defineProps<{
@@ -17,6 +18,28 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const { displayUser, displayProtocol } = useAssetAction();
+
+// Context menu 状态
+const contextMenuVisible = ref(false);
+const contextMenuAsset = ref<AssetItem | null>(null);
+const contextMenuPosition = ref({ x: 0, y: 0 });
+
+/**
+ * @description 处理上下文事件
+ */
+const handleContextTrigger = (asset: AssetItem) => {
+  emits("contextTrigger", asset);
+};
+
+/**
+ * @description 显示下拉菜单
+ */
+const showDropdown = (asset: AssetItem, event: MouseEvent) => {
+  event.preventDefault();
+  contextMenuAsset.value = asset;
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY };
+  contextMenuVisible.value = true;
+};
 
 
 const columns: TableColumn<AssetItem>[] = [
@@ -70,7 +93,7 @@ const columns: TableColumn<AssetItem>[] = [
           color: "primary",
           variant: "outline",
           "data-table-context-button": true,
-          onClick: (event: MouseEvent) => emits("contextTrigger", row.original, event)
+          onClick: (event: MouseEvent) => showDropdown(row.original, event)
         })
       ])
   }
@@ -87,4 +110,15 @@ const columns: TableColumn<AssetItem>[] = [
       :ui="{ tr: 'hover:bg-muted/50' }"
     />
   </UCard>
+
+  <!-- Context Menu -->
+  <ContextMenu
+    v-if="contextMenuAsset"
+    :asset="contextMenuAsset"
+    :visible="contextMenuVisible"
+    :x="contextMenuPosition.x"
+    :y="contextMenuPosition.y"
+    @update:visible="contextMenuVisible = $event"
+    @context-trigger="handleContextTrigger"
+  />
 </template>
