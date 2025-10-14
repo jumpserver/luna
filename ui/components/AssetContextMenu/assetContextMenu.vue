@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { ContextMenuItem } from "@nuxt/ui";
 import type { AssetItem, PermedProtocol } from "~/types/index";
 
 interface Props {
@@ -13,10 +12,7 @@ const props = defineProps<Props>();
 
 const emits = defineEmits<{
   (e: "update:visible", visible: boolean): void;
-  (e: "connect", asset: AssetItem, protocol?: string): void;
   (e: "edit", asset: AssetItem): void;
-  (e: "rename", asset: AssetItem): void;
-  (e: "favorite", asset: AssetItem): void;
 }>();
 
 const { t } = useI18n();

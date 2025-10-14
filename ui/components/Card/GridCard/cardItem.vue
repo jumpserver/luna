@@ -26,8 +26,6 @@ const emits = defineEmits<{
 }>();
 
 const { t, locale } = useI18n();
-const { handleAssetConnection, displayProtocol, handleAssetFavorite, getAssetDetail } =
-  useAssetAction();
 
 /**
  * @description 处理右击事件

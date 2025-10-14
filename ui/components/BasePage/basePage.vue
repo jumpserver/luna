@@ -16,26 +16,14 @@ const props = defineProps<{
 
 const providerClearSelection = inject<(cb: () => void) => void>("providerClearSelection");
 const { t } = useI18n();
-const { handleAssetConnection, getAssetDetail, displayUser, displayProtocol } = useAssetAction();
 
-const editModalOpen = ref(false);
-const suppressNextEditModal = ref(false);
-const draftRememberSecret = ref<boolean>(false);
-const draftAccount = ref<string>("");
-const draftProtocol = ref<string>("");
-const draftManualUsername = ref<string>("");
-const draftManualPassword = ref<string>("");
-const draftDynamicPassword = ref<string>("");
+// 使用 composables
+const { connectAsset, confirmConnection } = useAssetConnection();
+const editModal = useEditModal();
+const contextMenu = useContextMenu();
+const assetManagement = useAssetManagement();
 const scrollRef = ref<HTMLElement | null>(null);
-const selectedCardIndex = ref<number | null>(null);
-const currentSelectedCardInfo = ref<AssetItem | null>(null);
 const subscribeSettingEvent = ref<UnlistenFn | null>(null);
-
-// 上下文菜单相关状态
-const contextMenuVisible = ref(false);
-const contextMenuPosition = ref({ x: 0, y: 0 });
-const contextMenuAsset = ref<AssetItem | null>(null);
-
 const userInfoStore = useUserInfoStore();
 const userSettingStore = useUserSettingStore();
 const assetManager = useAssetFetcher(props.type, scrollRef);
@@ -58,12 +46,9 @@ const visibleAssets = computed(() => {
   return assetsData.value.filter((item: AssetItem) => item.platform === props.platform);
 });
 
-const modalTitle = computed(() => {
-  return `${t("EditModal.ModifyConnectionInfo")} - ${currentSelectedCardInfo.value?.name}`;
-});
-
-watch([editModalOpen, currentSelectedCardInfo], ([open, info]: [boolean, AssetItem | null]) => {
-  if (open && info) initDraft();
+// 监听模态框状态变化
+watch([editModal.editModalOpen, editModal.currentSelectedCardInfo], ([open, info]: [boolean, AssetItem | null]) => {
+  if (open && info) editModal.initDraft(info);
 });
 
 watch(
@@ -91,49 +76,33 @@ watch(
   (nv: boolean) => {
     if (!nv) return;
 
-    if (selectedCardIndex.value !== null) {
-      const idx = selectedCardIndex.value;
+    if (assetManagement.selectedCardIndex.value !== null) {
+      const idx = assetManagement.selectedCardIndex.value;
 
       if (visibleAssets.value[idx]) {
-        currentSelectedCardInfo.value = visibleAssets.value[idx]!;
+        editModal.currentSelectedCardInfo.value = visibleAssets.value[idx]!;
       }
-    } else if (currentSelectedCardInfo.value) {
-      const updated = visibleAssets.value.find((a) => a.id === currentSelectedCardInfo.value!.id);
-      if (updated) currentSelectedCardInfo.value = updated;
+    } else if (editModal.currentSelectedCardInfo.value) {
+      const updated = visibleAssets.value.find((a) => a.id === editModal.currentSelectedCardInfo.value!.id);
+      if (updated) editModal.currentSelectedCardInfo.value = updated;
     } else if (lastDetailAssetId?.value) {
       const target = visibleAssets.value.find((a) => a.id === lastDetailAssetId.value);
-      if (target) currentSelectedCardInfo.value = target;
+      if (target) editModal.currentSelectedCardInfo.value = target;
     }
 
-    initDraft();
+    if (editModal.currentSelectedCardInfo.value) {
+      editModal.initDraft(editModal.currentSelectedCardInfo.value);
+    }
 
     // 若为右键菜单触发的详情更新，则不弹出编辑弹窗
-    if (!suppressNextEditModal.value) {
-      editModalOpen.value = true;
+    if (!editModal.shouldSuppressModal()) {
+      editModal.editModalOpen.value = true;
     }
 
-    suppressNextEditModal.value = false;
+    editModal.resetSuppressModal();
     getDetail.value = false;
   }
 );
-
-/**
- * @description 初始化展示信息
- */
-function initDraft() {
-  const asset = currentSelectedCardInfo.value;
-  if (!asset) return;
-
-  const saved = userInfoStore.getConnectionInfoForAsset(asset.id);
-
-  draftProtocol.value = displayProtocol(asset.id, asset.permedProtocols!);
-  draftAccount.value = displayUser(asset.id, asset.permedAccounts!);
-
-  draftManualUsername.value = saved?.manualUsername || "";
-  draftManualPassword.value = saved?.manualPassword || "";
-  draftDynamicPassword.value = saved?.dynamicPassword || "";
-  draftRememberSecret.value = saved?.rememberSecret || false;
-}
 
 /**
  * 获取 Setting 信息
@@ -146,123 +115,19 @@ async function getSettings() {
 }
 
 /**
- * @description 清除选中卡片
- */
-const clearSelectedCard = () => {
-  selectedCardIndex.value = null;
-};
-
-/**
- * @description Modal 确认处理,现在点击确认后,会触发连接操作
- */
-const handleConfirm = () => {
-  const asset = currentSelectedCardInfo.value;
-  if (!asset) return;
-
-  let accountMode: "hosted" | "dynamic" | "manual" = "hosted";
-  let normalizedAccount = draftAccount.value || "";
-
-  const v = draftAccount.value || "";
-
-  if (v === "手动输入" || v === "Manual input") accountMode = "manual";
-  if (v.includes("同名账号") || v.includes("Dynamic user")) {
-    accountMode = "dynamic";
-
-    const accs = currentSelectedCardInfo.value?.permedAccounts || [];
-    const dynamicAcc = accs.find((a) => a.alias === "@USER");
-
-    if (dynamicAcc) normalizedAccount = dynamicAcc.name;
-    else normalizedAccount = v.replace(/\(.+\)/, "");
-  }
-
-  // 保存连接信息
-  userInfoStore.setConnectionInfoForAsset(asset.id, {
-    protocol: draftProtocol.value || "",
-    username: normalizedAccount,
-    accountMode,
-    manualUsername: draftRememberSecret.value ? draftManualUsername.value || "" : "",
-    manualPassword: draftRememberSecret.value ? draftManualPassword.value || "" : "",
-    dynamicPassword: draftRememberSecret.value ? draftDynamicPassword.value || "" : "",
-    rememberSecret: !!draftRememberSecret.value
-  });
-
-  // 获取 ConnectToken
-  handleAssetConnection(
-    normalizedAccount,
-    asset.id,
-    draftProtocol.value,
-    asset.permedAccounts!,
-    undefined,
-    {
-      accountMode,
-      manualUsername: draftManualUsername.value || "",
-      manualPassword: draftManualPassword.value || "",
-      dynamicPassword: draftDynamicPassword.value || ""
-    }
-  );
-
-  nextTick(() => {
-    editModalOpen.value = false;
-  });
-};
-
-/**
- * @description 右键出现 context 时，记录当前卡片并抑制弹窗
+ * @description 处理上下文菜单触发
  */
 const handleContextTrigger = (asset: AssetItem, event?: MouseEvent) => {
-  suppressNextEditModal.value = true;
-  currentSelectedCardInfo.value = asset;
-  contextMenuAsset.value = asset;
+  editModal.setSuppressNextModal(true);
+  editModal.currentSelectedCardInfo.value = asset;
+  assetManagement.setCurrentAsset(asset);
 
   const idx = visibleAssets.value.findIndex((a) => a.id === asset.id);
-
   if (idx !== -1) {
-    selectedCardIndex.value = idx;
+    assetManagement.selectedCardIndex.value = idx;
   }
 
-  // 如果有事件对象，设置菜单位置
-  if (event) {
-    const menuWidth = 200; // 菜单宽度
-    const menuHeight = 200; // 菜单高度
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    let x = event.clientX;
-    let y = event.clientY;
-    
-    // 检查是否来自表格按钮（通过检查目标元素）
-    const target = event.target as HTMLElement;
-    const isTableButton = target?.hasAttribute('data-table-context-button') || 
-                         target?.closest('[data-table-context-button]') ||
-                         target?.closest('.UTable');
-    
-    // 如果是表格按钮，优先显示在左侧
-    if (isTableButton) {
-      x = event.clientX - menuWidth;
-      // 如果左侧空间不够，则显示在右侧
-      if (x < 10) {
-        x = event.clientX;
-      }
-    } else {
-      // 对于其他情况（如右键菜单），如果菜单会超出右边界，则显示在左侧
-      if (x + menuWidth > viewportWidth) {
-        x = event.clientX - menuWidth;
-      }
-    }
-    
-    // 如果菜单会超出下边界，则向上调整
-    if (y + menuHeight > viewportHeight) {
-      y = event.clientY - menuHeight;
-    }
-    
-    // 确保不超出左边界和上边界
-    x = Math.max(10, x);
-    y = Math.max(10, y);
-    
-    contextMenuPosition.value = { x, y };
-  }
-
-  contextMenuVisible.value = true;
+  contextMenu.showContextMenu(asset, event);
 };
 
 const listenTauriEvent = async () => {
@@ -279,27 +144,37 @@ const listenTauriEvent = async () => {
   });
 };
 
-const handleOpenEditModal = (asset: AssetItem) => {
-  currentSelectedCardInfo.value = asset;
-  const idx = visibleAssets.value.findIndex((a) => a.id === asset.id);
-  if (idx !== -1) selectedCardIndex.value = idx;
-
-  const noAccounts = !asset.permedAccounts || asset.permedAccounts.length === 0;
-  const noProtocols = !asset.permedProtocols || asset.permedProtocols.length === 0;
-
-  if (noAccounts || noProtocols) {
-    getDetail.value = false;
-    getAssetDetail(asset.id);
-    return;
+/**
+ * @description 处理资产连接
+ */
+const handleConnectAsset = (asset: AssetItem) => {
+  const result = connectAsset(asset);
+  if (result?.needsModal) {
+    editModal.openEditModal(asset);
   }
-
-  editModalOpen.value = true;
 };
 
+/**
+ * @description 处理上下文菜单的编辑操作
+ */
+const handleContextEdit = (asset: AssetItem) => {
+  editModal.openEditModal(asset);
+};
+
+/**
+ * @description 处理模态框确认
+ */
+const handleModalConfirm = () => {
+  if (editModal.currentSelectedCardInfo.value) {
+    editModal.handleConfirm((connectionInfo) => {
+      confirmConnection(editModal.currentSelectedCardInfo.value!, connectionInfo);
+    });
+  }
+};
 
 onMounted(() => {
   listenTauriEvent();
-  providerClearSelection?.(clearSelectedCard);
+  providerClearSelection?.(assetManagement.clearSelectedCard);
 });
 
 onBeforeUnmount(() => {
@@ -307,15 +182,6 @@ onBeforeUnmount(() => {
     subscribeSettingEvent.value();
   }
 });
-
-const handleConnectAsset = (asset: AssetItem) => {
-  handleOpenEditModal(asset);
-};
-
-// 处理上下文菜单的编辑操作
-const handleContextEdit = (asset: AssetItem) => {
-  handleOpenEditModal(asset);
-};
 </script>
 
 
@@ -381,33 +247,33 @@ const handleContextEdit = (asset: AssetItem) => {
     </section>
 
     <Modal
-      :open="editModalOpen"
-      :title="modalTitle"
+      :open="editModal.editModalOpen.value"
+      :title="editModal.modalTitle.value"
       :description="t('EditModal.Description')"
-      @confirm="handleConfirm"
-      @update:open="editModalOpen = $event"
+      @confirm="handleModalConfirm"
+      @update:open="editModal.editModalOpen.value = $event"
     >
       <EditForm
-        v-if="currentSelectedCardInfo"
-        v-model:protocol="draftProtocol"
-        v-model:account="draftAccount"
-        v-model:manual-username="draftManualUsername"
-        v-model:manual-password="draftManualPassword"
-        v-model:dynamic-password="draftDynamicPassword"
-        v-model:remember-secret="draftRememberSecret"
-        :accounts="currentSelectedCardInfo.permedAccounts!"
-        :protocols="currentSelectedCardInfo.permedProtocols!"
+        v-if="editModal.currentSelectedCardInfo.value"
+        v-model:protocol="editModal.draftProtocol.value"
+        v-model:account="editModal.draftAccount.value"
+        v-model:manual-username="editModal.draftManualUsername.value"
+        v-model:manual-password="editModal.draftManualPassword.value"
+        v-model:dynamic-password="editModal.draftDynamicPassword.value"
+        v-model:remember-secret="editModal.draftRememberSecret.value"
+        :accounts="editModal.currentSelectedCardInfo.value.permedAccounts!"
+        :protocols="editModal.currentSelectedCardInfo.value.permedProtocols!"
       />
     </Modal>
 
     <!-- 上下文菜单 -->
     <AssetContextMenu
-      v-if="contextMenuAsset"
-      :asset="contextMenuAsset"
-      :visible="contextMenuVisible"
-      :x="contextMenuPosition.x"
-      :y="contextMenuPosition.y"
-      @update:visible="contextMenuVisible = $event"
+      v-if="contextMenu.contextMenuAsset.value"
+      :asset="contextMenu.contextMenuAsset.value"
+      :visible="contextMenu.contextMenuVisible.value"
+      :x="contextMenu.contextMenuPosition.value.x"
+      :y="contextMenu.contextMenuPosition.value.y"
+      @update:visible="contextMenu.contextMenuVisible.value = $event"
       @edit="handleContextEdit"
     />
   </div>

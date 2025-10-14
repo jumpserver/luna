@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import Card from "./Card.vue";
+import Card from "./cardItem.vue";
 import CardSkeletonCard from "./skeletonCard.vue";
 import type { AssetItem } from "~/types";
 
