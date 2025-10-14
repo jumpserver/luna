@@ -75,7 +75,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
         color="neutral"
         variant="ghost"
         size="md"
-        class="mt-1 p-2"
+        class="mt-1 p-1"
         icon="i-lucide-panel-left"
         @click="handleCollapse"
       />

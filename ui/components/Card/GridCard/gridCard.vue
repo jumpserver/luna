@@ -42,7 +42,6 @@ const emits = defineEmits<{
 const { t, locale } = useI18n();
 const { handleAssetConnection, displayProtocol, handleAssetFavorite, getAssetDetail } =
   useAssetAction();
-const showEdit = ref(false);
 
 const contextMenuItems = computed<ContextMenuItem[][]>(() => {
   const protocols = (props.protocols || []).map((p: PermedProtocol) => p.name);
@@ -91,9 +90,6 @@ const contextMenuItems = computed<ContextMenuItem[][]>(() => {
   ];
 });
 
-const labelMinWidth = computed(() => (locale.value.startsWith("zh") ? "24px" : "72px"));
-
-const labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-content) 1fr`);
 
 function handleConnect(protocolOverride?: string) {
   handleAssetConnection(
@@ -121,14 +117,6 @@ const handleContextOpen = (payload: boolean) => {
     emits("contextTrigger", props.assetId);
   }
 };
-
-const handleMouseEnter = () => {
-  showEdit.value = true;
-};
-
-const handleMouseLeave = () => {
-  showEdit.value = false;
-};
 </script>
 
 <template>
@@ -148,7 +136,7 @@ const handleMouseLeave = () => {
       }"
       @update:open="handleContextOpen"
     >
-      <section class="w-full p-2" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave">
+      <section class="w-full p-2" @dblclick="getAssetDetail(props.assetId)">
         <div class="flex items-center justify-between w-full">
           <div class="flex items-center gap-3 flex-1 min-w-0">
             <AssetIcon :type="type" size="lg" />

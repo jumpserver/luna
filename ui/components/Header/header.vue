@@ -49,6 +49,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
         color="neutral"
         variant="ghost"
         size="md"
+        class="p-1"
         icon="i-lucide-panel-left"
         @click="handleCollapse"
       />
