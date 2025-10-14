@@ -18,16 +18,26 @@ const emits = defineEmits<{
 const { t } = useI18n();
 const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite } = useAssetAction();
 
+// 定义菜单项类型
+interface MenuItem {
+  value?: string;
+  label: string;
+  icon: string;
+  onClick: () => void;
+  children?: MenuItem[];
+}
+
 // 计算菜单项
-const menuItems = computed(() => {
+const menuItems = computed((): MenuItem[] => {
   const protocols = (props.asset.permedProtocols || []).map((p: PermedProtocol) => p.name);
   const uniqueProtocols = Array.from(new Set(protocols));
 
-  const items = [
+  const baseItems: MenuItem[] = [
     {
+      value: "connect",
       label: t("ContextMenu.Connect"),
       icon: "i-lucide-plug",
-      onClick: () => handleConnect()
+      onClick: () => handleConnect(),
     },
     {
       label: t("ContextMenu.Edit"),
@@ -46,22 +56,25 @@ const menuItems = computed(() => {
     }
   ];
 
-  // 如果有多个协议，添加协议子菜单
+  // 如果有多个协议，为连接项添加子菜单
   if (uniqueProtocols.length > 1) {
-    const protocolItems = uniqueProtocols.map((name: string) => ({
+    const protocolItems: MenuItem[] = uniqueProtocols.map((name: string) => ({
       label: `${t("ContextMenu.Use")} ${name.toUpperCase()}`,
       icon: "i-lucide-plug",
       onClick: () => handleConnect(name)
     }));
 
-    // 在连接项后插入协议子菜单
-    const connectIndex = items.findIndex(item => item.label === t("ContextMenu.Connect"));
-    if (connectIndex !== -1) {
-      items.splice(connectIndex + 1, 0, ...protocolItems);
-    }
+    const item = {
+      value: "moreConnect",
+      label: t("ContextMenu.MoreConnect"),
+      icon: "i-lucide-ellipsis",
+      onClick: () => (void 0),
+      children: protocolItems
+    };
+    baseItems.splice(1, 0, item);
   }
 
-  return items;
+  return baseItems;
 });
 
 // 处理连接
