@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
 import type { AssetItem } from "~/types";
-
 import { h, resolveComponent } from "vue";
 
 const UButton = resolveComponent("UButton");
 const UBadge = resolveComponent("UBadge");
 
 const emits = defineEmits<{
-  (e: "openEditModal", asset: AssetItem): void;
+  (e: "connectAsset", asset: AssetItem): void;
+  (e: "contextTrigger", asset: AssetItem, event: MouseEvent): void;
 }>();
 
 const props = defineProps<{
@@ -16,11 +16,8 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
-const { getAssetDetail, displayUser, displayProtocol } = useAssetAction();
+const { displayUser, displayProtocol } = useAssetAction();
 
-const handleConnect = (asset: AssetItem) => {
-  getAssetDetail(asset.id);
-};
 
 const columns: TableColumn<AssetItem>[] = [
   {
@@ -59,21 +56,22 @@ const columns: TableColumn<AssetItem>[] = [
     id: "actions",
     header: () => t("AssetCard.Actions"),
     cell: ({ row }) =>
-      h("div", { class: "flex  gap-2" }, [
+      h("div", { class: "flex gap-2" }, [
         h(UButton, {
-          icon: "heroicons:rocket-launch",
           size: "xs",
           color: "primary",
           variant: "outline",
-          onClick: () => handleConnect(row.original)
+          label: t("Common.Connect"),
+          onClick: () => emits("connectAsset", row.original)
+        }),
+        h(UButton, {
+          icon: "i-lucide-ellipsis",
+          size: "xs",
+          color: "primary",
+          variant: "outline",
+          "data-table-context-button": true,
+          onClick: (event: MouseEvent) => emits("contextTrigger", row.original, event)
         })
-        // h(UButton, {
-        //   icon: "solar:pen-new-square-linear",
-        //   size: "xs",
-        //   color: "primary",
-        //   variant: "outline",
-        //   onClick: () => emits("openEditModal", row.original)
-        // })
       ])
   }
 ];

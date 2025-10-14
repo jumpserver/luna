@@ -12,7 +12,8 @@
 		"Active": "Active",
 		"Inactive": "Inactive",
 		"Language": "Switch Language",
-		"Login": "Login"
+		"Login": "Login",
+		"Connect": "Connect"
 	},
 	"ToolTips": {
 		"LightMode": "Light Mode",

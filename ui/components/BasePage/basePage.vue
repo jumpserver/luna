@@ -17,7 +17,7 @@ const props = defineProps<{
 const providerClearSelection = inject<(cb: () => void) => void>("providerClearSelection");
 
 const { t } = useI18n();
-const { handleAssetConnection } = useAssetAction();
+const { handleAssetConnection, handleAssetFavorite } = useAssetAction();
 const { getAssetDetail, displayUser, displayProtocol } = useAssetAction();
 
 const editModalOpen = ref(false);
@@ -32,6 +32,11 @@ const scrollRef = ref<HTMLElement | null>(null);
 const selectedCardIndex = ref<number | null>(null);
 const currentSelectedCardInfo = ref<AssetItem | null>(null);
 const subscribeSettingEvent = ref<UnlistenFn | null>(null);
+
+// 上下文菜单相关状态
+const contextMenuVisible = ref(false);
+const contextMenuPosition = ref({ x: 0, y: 0 });
+const contextMenuAsset = ref<AssetItem | null>(null);
 
 const userInfoStore = useUserInfoStore();
 const userSettingStore = useUserSettingStore();
@@ -217,15 +222,60 @@ const handleConfirm = () => {
 /**
  * @description 右键出现 context 时，记录当前卡片并抑制弹窗
  */
-const handleContextTrigger = (assetId: string) => {
+const handleContextTrigger = (asset: AssetItem, event?: MouseEvent) => {
   suppressNextEditModal.value = true;
+  currentSelectedCardInfo.value = asset;
+  contextMenuAsset.value = asset;
 
-  const idx = visibleAssets.value.findIndex((a) => a.id === assetId);
+  const idx = visibleAssets.value.findIndex((a) => a.id === asset.id);
 
   if (idx !== -1) {
     selectedCardIndex.value = idx;
-    currentSelectedCardInfo.value = visibleAssets.value[idx]!;
   }
+
+  // 如果有事件对象，设置菜单位置
+  if (event) {
+    const menuWidth = 200; // 菜单宽度
+    const menuHeight = 200; // 菜单高度
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    let x = event.clientX;
+    let y = event.clientY;
+    
+    // 检查是否来自表格按钮（通过检查目标元素）
+    const target = event.target as HTMLElement;
+    const isTableButton = target?.hasAttribute('data-table-context-button') || 
+                         target?.closest('[data-table-context-button]') ||
+                         target?.closest('.UTable');
+    
+    // 如果是表格按钮，优先显示在左侧
+    if (isTableButton) {
+      x = event.clientX - menuWidth;
+      // 如果左侧空间不够，则显示在右侧
+      if (x < 10) {
+        x = event.clientX;
+      }
+    } else {
+      // 对于其他情况（如右键菜单），如果菜单会超出右边界，则显示在左侧
+      if (x + menuWidth > viewportWidth) {
+        x = event.clientX - menuWidth;
+      }
+    }
+    
+    // 如果菜单会超出下边界，则向上调整
+    if (y + menuHeight > viewportHeight) {
+      y = event.clientY - menuHeight;
+    }
+    
+    // 确保不超出左边界和上边界
+    x = Math.max(10, x);
+    y = Math.max(10, y);
+    
+    contextMenuPosition.value = { x, y };
+  }
+
+  contextMenuVisible.value = true;
 };
 
 const listenTauriEvent = async () => {
@@ -259,6 +309,54 @@ const handleOpenEditModal = (asset: AssetItem) => {
   editModalOpen.value = true;
 };
 
+// const contextMenuItems = computed<ContextMenuItem[][]>(() => {
+//   const protocols = (props.asset.protocols || []).map((p: PermedProtocol) => p.name);
+//   const uniqueProtocols = Array.from(new Set(protocols));
+
+//   const moreConnectChildren: ContextMenuItem[] = uniqueProtocols.map((name: string) => ({
+//     label: `${t("ContextMenu.Use")} ${name.toUpperCase()}`,
+//     onClick: () => handleConnect(name)
+//   }));
+
+//   // 避免处理空数组
+//   if (moreConnectChildren.length === 0) {
+//     moreConnectChildren.push({
+//       label: t("Common.NoData"),
+//       disabled: true
+//     } as ContextMenuItem);
+//   }
+
+//   return [
+//     [
+//       // {
+//       //   label: t("ContextMenu.QuickConnect"),
+//       //   icon: "i-lucide-unplug",
+//       //   onClick: () => handleConnect(props.assetId)
+//       // },
+//       {
+//         label: t("ContextMenu.Connect"),
+//         icon: "i-lucide-plug",
+//         children: [moreConnectChildren]
+//       },
+//       {
+//         label: t("ContextMenu.Edit"),
+//         icon: "solar:pen-new-square-linear",
+//         onClick: () => openEditModal()
+//       },
+//       {
+//         label: t("ContextMenu.Rename"),
+//         icon: "i-lucide-pencil"
+//       },
+//       {
+//         label: t("ContextMenu.Favorite"),
+//         icon: "i-lucide-star",
+//         onClick: () => handleAssetFavorite(props.assetId)
+//       }
+//     ]
+//   ];
+// });
+
+
 onMounted(() => {
   listenTauriEvent();
   providerClearSelection?.(clearSelectedCard);
@@ -269,7 +367,53 @@ onBeforeUnmount(() => {
     subscribeSettingEvent.value();
   }
 });
+
+const handleConnectAsset = (asset: AssetItem) => {
+  handleOpenEditModal(asset);
+};
+
+// 处理上下文菜单的连接操作
+const handleContextConnect = (asset: AssetItem, protocol?: string) => {
+  if (protocol) {
+    // 如果有指定协议，直接连接
+    handleAssetConnection(
+      displayUser(asset.id, asset.permedAccounts!),
+      asset.id,
+      protocol,
+      asset.permedAccounts!,
+      undefined,
+      {
+        accountMode: "hosted",
+        manualUsername: "",
+        manualPassword: "",
+        dynamicPassword: ""
+      }
+    );
+  } else {
+    // 否则打开编辑模态框
+    handleOpenEditModal(asset);
+  }
+};
+
+// 处理上下文菜单的编辑操作
+const handleContextEdit = (asset: AssetItem) => {
+  handleOpenEditModal(asset);
+};
+
+// 处理上下文菜单的重命名操作
+const handleContextRename = (asset: AssetItem) => {
+  // TODO: 实现重命名功能
+  console.log("Rename asset:", asset);
+};
+
+// 处理上下文菜单的收藏操作
+const handleContextFavorite = (asset: AssetItem) => {
+  handleAssetFavorite(asset.id);
+};
+
+
 </script>
+
 
 <template>
   <div class="relative h-full w-full flex min-h-0">
@@ -306,21 +450,9 @@ onBeforeUnmount(() => {
         <CardGridCard
           v-for="(item, index) in visibleAssets"
           :key="item.id"
-          :zone="item.zone"
-          :asset-id="item.id"
-          :icon-name="iconName"
-          :address="item.address"
-          :is-active="item.isActive"
-          :asset-name="item.name"
-          :accounts="item.permedAccounts || []"
-          :protocols="item.permedProtocols || []"
-          :protocol="item.permedProtocols?.[0]?.name || ''"
-          :user="item.permedAccounts?.[0]?.name || ''"
-          :category="item.category"
-          :type="item.type"
-          :highlight="selectedCardIndex === index"
-          @context-trigger="handleContextTrigger"
-          @open-edit-modal="editModalOpen = true"
+          :asset="item"
+          @context-trigger="(asset, event) => handleContextTrigger(asset, event)"
+          @connect-asset="handleConnectAsset(item)"
           @click="handleCardClick(index, $event)"
         />
 
@@ -343,7 +475,11 @@ onBeforeUnmount(() => {
       </div>
 
       <div v-else class="p-2">
-        <CardTableCard :items="visibleAssets" @open-edit-modal="handleOpenEditModal" />
+        <CardTableCard 
+          :items="visibleAssets" 
+          @connect-asset="handleConnectAsset" 
+          @context-trigger="(asset, event) => handleContextTrigger(asset, event)" 
+        />
       </div>
     </section>
 
@@ -366,6 +502,20 @@ onBeforeUnmount(() => {
         :protocols="currentSelectedCardInfo.permedProtocols!"
       />
     </Modal>
+
+    <!-- 上下文菜单 -->
+    <AssetContextMenu
+      v-if="contextMenuAsset"
+      :asset="contextMenuAsset"
+      :visible="contextMenuVisible"
+      :x="contextMenuPosition.x"
+      :y="contextMenuPosition.y"
+      @update:visible="contextMenuVisible = $event"
+      @connect="handleContextConnect"
+      @edit="handleContextEdit"
+      @rename="handleContextRename"
+      @favorite="handleContextFavorite"
+    />
   </div>
 </template>
 
