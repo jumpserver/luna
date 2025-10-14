@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { layoutsType } from "~/store/modules/userSetting";
-
 import type { AssetItem, SettingResponse } from "~/types/index";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { useUserSettingStore } from "~/store/modules/userSetting";
