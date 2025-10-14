@@ -1,16 +1,7 @@
 <script setup lang="ts">
-import type { ContextMenuItem } from "@nuxt/ui";
-import type { PermedAccount, PermedProtocol } from "~/types/index";
 import type { AssetItem } from "~/types";
 import AssetIcon from "../AssetIcon/assetIcon.vue";
 
-interface DetailRow {
-  key: string;
-  title: string;
-  content: string;
-  popover?: boolean;
-  class?: string;
-}
 
 const props = withDefaults(
   defineProps<{
@@ -58,7 +49,7 @@ const handleContextMenu = (event: MouseEvent) => {
               <div
                 class="text-[13px] text-neutral-500 dark:text-neutral-400 truncate whitespace-nowrap"
               >
-                {{ props.asset.address }}
+                {{ props.asset.address }} {{ props.asset.type }}
               </div>
             </div>
           </div>

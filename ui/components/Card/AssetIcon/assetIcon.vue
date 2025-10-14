@@ -18,13 +18,41 @@ const iconPath = computed(() => {
     linux: "/icons/linux.png",
     mysql: "/icons/mysql.png",
     oracle: "/icons/oracle.png",
-    postgre: "/icons/postgre.png",
+    postgresql: "/icons/postgre.png",
     sqlserver: "/icons/sqlserver.png"
   };
 
-  console.log(props.type);
+  return iconMap[props.type.toLowerCase()] || ""; // 默认使用 linux 图标
+});
 
-  return iconMap[props.type] || "/icons/linux.png"; // 默认使用 linux 图标
+
+const imageProps = computed(() => {
+   const prop: { src?: string, alt?: string } = {};
+   const iconMap: Record<string, string> = {
+    windows: "/icons/windows.png",
+    linux: "/icons/linux.png",
+    mysql: "/icons/mysql.png",
+    mariadb: "/icons/mariadb.png",
+    oracle: "/icons/oracle.png",
+    postgresql: "/icons/postgre.png",
+    sqlserver: "/icons/sqlserver.png",
+    db2: "/icons/db2.png",
+    redis: "/icons/redis.png",
+    mongodb: "/icons/mongodb.png",
+    dameng: "/icons/dameng.png",
+    clickhouse: "/icons/clickhouse.png",
+  };
+
+  const src = iconMap[props.type] || "";
+  const alt = props.type;
+
+  if (src) {
+    prop.src = src;
+  } else {
+    prop.alt = alt;
+  }
+
+  return prop
 });
 
 const sizeClasses = computed(() => {
@@ -41,8 +69,8 @@ const sizeClasses = computed(() => {
 <template>
   <UAvatar
     :size="size"
-    :src="iconPath"
-    :ui="{ root: 'rounded-md', image: `${sizeClasses} p-1` }"
+    v-bind="imageProps"
+    :ui="{ root: 'rounded-md', image: `${sizeClasses} p-1 bg-neutral-200 dark:bg-neutral-600` }"
     :class="['flex-shrink-0', props.class]"
   />
 </template>
