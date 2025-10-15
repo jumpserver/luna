@@ -8,63 +8,38 @@ withDefaults(
   }
 );
 
-const { locale } = useI18n();
-
-const labelMinWidth = computed(() => (locale.value.startsWith("zh") ? "24px" : "72px"));
-
-const labelColumnTemplate = computed(() => `minmax(${labelMinWidth.value}, max-content) 1fr`);
 </script>
 
 <template>
   <UPageCard
     v-for="i in skeletonCount"
     :key="i"
-    variant="subtle"
-    :ui="{ body: 'sm:p-2' }"
-    class="w-full"
+    class="w-full page-card shadow-sm"
+    :ui="{
+      body: 'p-1 ',
+      container: 'p-0 sm:p-0 '
+    }"
   >
-    <section class="flex gap-4 flex-nowrap items-center w-full">
-      <div class="flex items-center w-full gap-1">
-        <div class="flex flex-col flex-1 gap-1 text-xs-plus min-w-0">
-          <div class="flex justify-between">
-            <section class="flex">
-              <div class="flex items-center gap-2">
-                <USkeleton class="h-5 w-10 rounded-md" />
-                <USkeleton class="h-5 w-2/3" />
-              </div>
-            </section>
-
-            <section class="flex items-center gap-2">
-              <USkeleton class="h-2 w-8 rounded-lg" />
-              <USkeleton class="h-2 w-8 rounded-lg" />
-            </section>
-          </div>
-
-          <div class="flex flex-col gap-1 text-xs-plus">
-            <div
-              class="grid items-center gap-x-3 gap-y-1"
-              :style="{ gridTemplateColumns: labelColumnTemplate }"
-            >
-              <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-                <USkeleton class="h-2 w-16" />
-              </span>
-              <div class="min-w-0">
-                <USkeleton class="h-2 w-3/4" />
-              </div>
+    <section class="w-full p-4">
+      <div class="flex items-center justify-between w-full">
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+          <!-- 图标骨架 -->
+          <USkeleton class="h-8 w-8 rounded-md" />
+          
+          <!-- 文本信息骨架 -->
+          <div class="flex-1 min-w-0 overflow-hidden w-[120px]">
+            <div class="text-xs-plus font-bold">
+              <USkeleton class="h-4 w-20" />
             </div>
-
-            <div
-              class="grid items-center gap-x-3 gap-y-1"
-              :style="{ gridTemplateColumns: labelColumnTemplate }"
-            >
-              <span class="text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-                <USkeleton class="h-4 w-16" />
-              </span>
-              <div class="min-w-0">
-                <USkeleton class="h-4 w-1/2" />
-              </div>
+            <div class="text-[13px] text-neutral-500 dark:text-neutral-400">
+              <USkeleton class="h-3 w-24 mt-1" />
             </div>
           </div>
+        </div>
+
+        <!-- 按钮骨架 -->
+        <div class="flex-shrink-0 ml-2">
+          <USkeleton class="h-6 w-16 rounded-md" />
         </div>
       </div>
     </section>

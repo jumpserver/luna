@@ -221,7 +221,7 @@ onBeforeUnmount(() => {
 
     <section
       v-else-if="layouts === 'table'"
-      class="w-full overflow-y-auto container-scrollbar h-[calc(100vh-7.5rem)]"
+      class="w-full overflow-y-auto container-scrollbar h-[calc(100vh-5rem)]"
       :style="scrollbarStyles"
     >
       <div

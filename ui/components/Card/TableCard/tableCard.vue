@@ -47,23 +47,23 @@ const columns: TableColumn<AssetItem>[] = [
     accessorKey: "assetName",
     header: () => t("AssetCard.AssetName"),
     cell: ({ row }) => h("div", { 
-      class: "max-w-[200px] truncate", 
+      class: "truncate", 
       title: row.original.name 
     }, row.original.name),
-    size: 200,
-    minSize: 150,
-    maxSize: 300
+    size: 100,
+    minSize: 80,
+    maxSize: 200
   },
   {
     accessorKey: "address",
     header: () => t("AssetCard.Address"),
     cell: ({ row }) => h("div", { 
-      class: "max-w-[150px] truncate", 
+      class: "truncate", 
       title: row.original.address 
     }, row.original.address),
-    size: 150,
-    minSize: 120,
-    maxSize: 200
+    size: 100,
+    minSize: 80,
+    maxSize: 250
   },
   {
     id: "user",
@@ -71,13 +71,13 @@ const columns: TableColumn<AssetItem>[] = [
     cell: ({ row }) => {
       const userText = displayUser(row.original.id, row.original.permedAccounts!);
       return h("div", { 
-        class: "max-w-[120px] truncate", 
+        class: "truncate", 
         title: userText 
       }, userText);
     },
     size: 120,
-    minSize: 100,
-    maxSize: 150
+    minSize: 80,
+    maxSize: 180
   },
   {
     id: "protocol",
@@ -85,13 +85,13 @@ const columns: TableColumn<AssetItem>[] = [
     cell: ({ row }) => {
       const protocolText = displayProtocol(row.original.id, row.original.permedProtocols!);
       return h("div", { 
-        class: "max-w-[100px] truncate", 
+        class: "truncate", 
         title: protocolText 
       }, protocolText);
     },
     size: 100,
-    minSize: 80,
-    maxSize: 120
+    minSize: 70,
+    maxSize: 150
   },
   {
     id: "status",
@@ -106,8 +106,8 @@ const columns: TableColumn<AssetItem>[] = [
         () => (row.original.isActive ? t("Common.Active") : t("Common.Inactive"))
       ),
     size: 100,
-    minSize: 80,
-    maxSize: 120
+    minSize: 70,
+    maxSize: 150
   },
   {
     id: "actions",
@@ -135,24 +135,26 @@ const columns: TableColumn<AssetItem>[] = [
         })
       ]),
     size: 180,
-    minSize: 160,
-    maxSize: 200
+    minSize: 140,
+    maxSize: 220
   }
 ];
 </script>
 
 <template>
-  <UCard variant="outline" class="w-full overflow-hidden">
+  <UCard variant="outline" class="w-full overflow-hidden" :ui="{
+    body: 'p-1 sm:p-1'
+  }">
     <div class="overflow-x-auto">
       <UTable
         sticky
         :data="props.items"
         :columns="columns"
-        class="w-full min-w-[800px] table-fixed"
+        class="w-full table-auto  overflow-y-auto h-[calc(100vh-7rem)]"
         :ui="{ 
           tr: 'hover:bg-muted/50',
-          th: 'whitespace-nowrap',
-          td: 'whitespace-nowrap'
+          th: 'whitespace-nowrap text-xs sm:text-sm',
+          td: 'whitespace-nowrap text-xs sm:text-sm'
         }"
       />
     </div>
