@@ -67,7 +67,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
   <div
     class="flex flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-blur-lg backdrop-saturate-150 supports-[backdrop-filter]:bg-white/20 supports-[backdrop-filter]:dark:bg-zinc-900/15 border-r border-white/30 dark:border-white/10 shadow-sm"
     :style="{
-      width: collapse ? '72px' : '256px'
+      width: collapse ? '72px' : '220px'
     }"
   >
     <section class="flex items-center justify-end w-full px-4 h-12">
