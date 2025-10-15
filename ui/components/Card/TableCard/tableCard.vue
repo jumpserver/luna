@@ -94,34 +94,18 @@ const columns: TableColumn<AssetItem>[] = [
     maxSize: 150
   },
   {
-    id: "status",
-    header: () => t("AssetCard.Status"),
-    cell: ({ row }) =>
-      h(
-        UBadge,
-        {
-          variant: "subtle",
-          color: row.original.isActive ? "success" : "error"
-        },
-        () => (row.original.isActive ? t("Common.Active") : t("Common.Inactive"))
-      ),
-    size: 100,
-    minSize: 70,
-    maxSize: 150
-  },
-  {
     id: "actions",
     header: () => t("AssetCard.Actions"),
     cell: ({ row }) =>
       h("div", { 
-        class: "inline-flex rounded-md shadow-sm" 
+        class: "inline-flex gap-0 rounded-md shadow-sm" 
       }, [
         h(UButton, {
           size: "xs",
           color: "primary",
           variant: "outline",
           label: t("Common.Connect"),
-          class: "rounded-r-none border-r-0 rounded-none",
+          class: "rounded-none ring-0 border-1",
           onClick: () => emits("connectAsset", row.original)
         }),
         h(UButton, {
@@ -129,7 +113,7 @@ const columns: TableColumn<AssetItem>[] = [
           size: "xs",
           color: "primary",
           variant: "outline",
-          class: "rounded-l-none rounded-none border-l-0",
+          class: "rounded-none ring-0 border-1 border-l-0",
           "data-table-context-button": true,
           onClick: (event: MouseEvent) => showDropdown(row.original, event)
         })
