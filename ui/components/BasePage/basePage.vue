@@ -5,6 +5,7 @@ import type { AssetItem, SettingResponse } from "~/types/index";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { useUserSettingStore } from "~/store/modules/userSetting";
 import CardGridCard from "../Card/GridCard/gridCard.vue";
+import CardSkeletonCard from "../Card/GridCard/skeletonCard.vue";
 
 type AssetType = "linux" | "windows" | "database" | "device" | "favorite";
 

@@ -1,5 +1,5 @@
 [package]
-name = "jump-server-client"
+name = "jumpserver-client"
 version = "1.4.0"
 description = "JumpServer client tool"
 authors = [ "ZhaoJiSen" ]
@@ -37,6 +37,7 @@ serde_json = "1.0"
 time = "0.3.43"
 chrono = "0.4.41"
 tauri-plugin-clipboard-manager = "2.0.0"
+tauri-plugin-updater = "2.0.0"
 
 [dependencies.tauri]
 version = "2.6.2"

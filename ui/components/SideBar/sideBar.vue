@@ -15,6 +15,30 @@ const { collapse, theme } = storeToRefs(useSettingStore);
 
 const isLoading = ref(false);
 
+// 检测当前平台
+const platform = ref<string>('');
+
+onMounted(async () => {
+  try {
+    const currentPlatform = await useTauriOsPlatform();
+    platform.value = currentPlatform;
+  } catch (error) {
+    // 如果无法获取平台信息，默认为 windows
+    platform.value = 'win32';
+  }
+});
+
+// 判断是否应该显示logo（Windows和Linux显示，macOS不显示）
+const shouldShowLogo = computed(() => {
+  return platform.value === 'win32' || platform.value === 'linux';
+});
+
+// 判断是否使用新的布局（Windows和Linux使用新布局，macOS保持原布局）
+const useNewLayout = computed(() => {
+  return true;
+  return platform.value === 'win32' || platform.value === 'linux';
+});
+
 const sideBarItems = computed<NavigationMenuItem[]>(() => {
   return [
     {
@@ -55,7 +79,9 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
 });
 
 const handleCollapse = () => {
+  console.log('Sidebar collapse button clicked, current state:', collapse.value);
   setCollapse(!collapse.value);
+  console.log('Sidebar collapse state after toggle:', !collapse.value);
 };
 const isDarkMode = computed(() => theme.value === "dark");
 const sidebarSearch = ref("");
@@ -67,52 +93,62 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
   <div
     class="flex flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-blur-lg backdrop-saturate-150 supports-[backdrop-filter]:bg-white/20 supports-[backdrop-filter]:dark:bg-zinc-900/15 border-r border-white/30 dark:border-white/10 shadow-sm"
     :style="{
-      width: collapse ? '72px' : '220px'
+      width: collapse ? '63px' : '220px'
     }"
   >
-    <section class="flex items-center justify-end w-full px-4 h-12">
-      <UButton
-        v-if="!collapse"
-        color="neutral"
-        variant="ghost"
-        size="md"
-        class="mt-1 p-1"
-        :icon="SidebarFlipIcon"
-        @click="handleCollapse"
-      />
-    </section>
-
-    <div v-show="!collapse" class="px-4 py-2">
-      <UInput
-        v-model="sidebarSearch"
-        clearable
-        icon="i-lucide-search"
-        variant="outline"
-        size="sm"
-        :placeholder="t('Operation.Search')"
-        class="dark:bg-transparent rounded-sm w-full"
-        :style="isDarkMode ? '' : 'background-color: rgb(198,198,197, 0.5);'"
-        @update:model-value="debouncedSidebarSearch"
-      >
-        <template v-if="sidebarSearch?.length" #trailing>
-          <UButton
-            color="neutral"
-            variant="link"
-            size="sm"
-            icon="i-lucide-circle-x"
-            aria-label="Clear input"
-            @click="
-              () => {
-                sidebarSearch = '';
-                emitSearch('');
-              }
-            "
-          />
-        </template>
-      </UInput>
+    <!-- 搜索和折叠按钮区域 -->
+    <div v-show="!collapse" class="px-3 py-2">
+      <div :class="[
+        'search-container',
+        useNewLayout ? 'search-container--inline' : 'search-container--stacked'
+      ]">
+        <UInput
+          v-model="sidebarSearch"
+          clearable
+          icon="i-lucide-search"
+          variant="outline"
+          size="sm"
+          :placeholder="t('Operation.Search')"
+          :class="[
+            'search-input',
+            useNewLayout ? 'search-input--inline' : 'search-input--full'
+          ]"
+          :style="isDarkMode ? '' : 'background-color: rgb(198,198,197, 0.5);'"
+          @update:model-value="debouncedSidebarSearch"
+        >
+          <template v-if="sidebarSearch?.length" #trailing>
+            <UButton
+              color="neutral"
+              variant="link"
+              size="sm"
+              icon="i-lucide-circle-x"
+              aria-label="Clear input"
+              @click="
+                () => {
+                  sidebarSearch = '';
+                  emitSearch('');
+                }
+              "
+            />
+          </template>
+        </UInput>
+        
+        <!-- 折叠按钮 -->
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="md"
+          :class="[
+            'collapse-button',
+            useNewLayout ? 'collapse-button--inline' : 'collapse-button--stacked'
+          ]"
+          :icon="SidebarFlipIcon"
+          @click="handleCollapse"
+        />
+      </div>
     </div>
 
-    <div class="px-4 py-0 flex-1 overflow-auto menu">
+    <div class="px-3 py-0 flex-1 overflow-auto menu">
       <UNavigationMenu
         orientation="vertical"
         :items="sideBarItems"
@@ -141,6 +177,50 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 
   &:hover:not([data-active]) {
     background-color: var(--bg-hover-light);
+  }
+}
+
+// 搜索容器布局
+.search-container {
+  &--inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  &--stacked {
+    display: block;
+  }
+}
+
+// 搜索输入框样式
+.search-input {
+  background-color: transparent;
+  border-radius: 0.125rem;
+  
+  &--inline {
+    flex: 1;
+  }
+  
+  &--full {
+    width: 100%;
+  }
+}
+
+// 折叠按钮样式
+.collapse-button {
+  &--inline {
+    padding: 0.25rem;
+    flex-shrink: 0;
+  }
+  
+  &--stacked {
+    margin-top: 0.25rem;
+    padding: 0.25rem;
+    display: block;
+    margin-left: auto;
+    margin-right: 0;
+    width: fit-content;
   }
 }
 </style>

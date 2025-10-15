@@ -55,6 +55,40 @@
   @apply bg-gray-600 hover:bg-gray-700;
 }
 
+/* Header 平台特定颜色 */
+.header-bg {
+  /* 默认颜色 */
+  --header-bg-light: rgb(231, 231, 231);
+  --header-bg-dark: #333334;
+}
+
+/* Windows 平台 */
+.platform-windows .header-bg {
+  --header-bg-light: rgb(248, 248, 248);
+  --header-bg-dark: #2C2C2E;
+}
+
+/* macOS 平台 */
+.platform-darwin .header-bg {
+  --header-bg-light: rgba(255, 255, 255, 0.8);
+  --header-bg-dark: #1E1E1E;
+}
+
+/* Linux 平台 */
+.platform-linux .header-bg {
+  --header-bg-light: rgb(240, 240, 240);
+  --header-bg-dark: #2D2D30;
+}
+
+/* 主题颜色应用 */
+.light .header-bg {
+  background-color: var(--header-bg-light);
+}
+
+.dark .header-bg {
+  background-color: var(--header-bg-dark);
+}
+
 html,
 body,
 #__nuxt,

@@ -7,10 +7,10 @@ echo "🧹 开始清理项目缓存..."
 
 # 1. 停止可能运行的进程
 echo "⏹️  停止开发服务器进程..."
-pkill -f "tauri dev" || true
+#pkill -f "tauri dev" || true
 pkill -f "nuxt dev" || true  
 pkill -f "vite" || true
-pkill -f "node" || true
+3pkill -f "node" || true
 
 # 等待进程完全退出
 sleep 2

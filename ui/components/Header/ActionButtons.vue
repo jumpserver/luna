@@ -148,7 +148,11 @@ const actionItems = computed<ActionItem[]>(() => [
 
       <template v-else>
         <UDropdownMenu arrow :items="action.selectItems" size="sm">
-          <UButton :icon="action.iconName" v-bind="commonButtonProps" />
+          <UButton 
+            :icon="action.iconName" 
+            v-bind="commonButtonProps"
+            @click="() => console.log('Dropdown button clicked:', action.key)"
+          />
         </UDropdownMenu>
       </template>
     </template>

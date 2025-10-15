@@ -1,11 +1,12 @@
 use log::{error, info};
 use std::error::Error;
 use tauri::WebviewWindow;
-use window_vibrancy::{self, NSVisualEffectMaterial};
+use window_vibrancy;
 
 /// 为 macOS 窗口应用毛玻璃效果
 #[cfg(target_os = "macos")]
 pub fn apply_mac_vibrancy(win: &WebviewWindow) -> Result<(), Box<dyn Error>> {
+    use window_vibrancy::NSVisualEffectMaterial;
     let show_vibrancy =
         window_vibrancy::apply_vibrancy(&win, NSVisualEffectMaterial::FullScreenUI, None, None);
 
@@ -24,16 +25,9 @@ pub fn apply_mac_vibrancy(win: &WebviewWindow) -> Result<(), Box<dyn Error>> {
 /// 为 Windows 窗口应用模糊效果
 #[cfg(target_os = "windows")]
 pub fn apply_windows_blur(win: &WebviewWindow) -> Result<(), Box<dyn std::error::Error>> {
-    match window_vibrancy::apply_blur(&win, Some((18, 18, 18, 125))) {
-        Ok(_) => {
-            info!("Window blur applied successfully!");
-            Ok(())
-        }
-        Err(e) => {
-            error!("Failed to apply window blur: {}", e);
-            Err(Box::new(e))
-        }
-    }
+    // Windows 下禁用模糊效果以避免边框问题
+    info!("Windows blur effect disabled to avoid border issues");
+    Ok(())
 }
 
 /// 根据操作系统应用相应的窗口效果

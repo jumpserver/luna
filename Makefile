@@ -10,7 +10,7 @@ BLUE=\033[0;34m
 NC=\033[0m # No Color
 
 # 项目信息
-PROJECT_NAME=jump-server-client
+PROJECT_NAME=jumpserver-client
 VERSION=1.4.0
 NODE_VERSION=23
 PNPM_VERSION=10.17.0

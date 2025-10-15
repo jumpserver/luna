@@ -7,8 +7,8 @@ export default defineAppConfig({
   },
   componentsConfig: {
     header: {
-      darkColor: "#333334",
-      lightColor: "rgb(231, 231, 231)"
+      // 颜色现在通过 CSS 变量管理，在 main.css 中定义
+      // 这里保留用于其他可能的配置
     },
     pages: {
       focusColor: "#55B787",

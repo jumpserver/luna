@@ -2,20 +2,17 @@
 import { useUserSettingStore } from "~/store/modules/userSetting";
 import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
 
-const appConfig = useAppConfig();
 const userSettingStore = useUserSettingStore();
-
-const darkColor = appConfig.componentsConfig.header.darkColor;
-const lightColor = appConfig.componentsConfig.header.lightColor;
-
 const { setCollapse } = userSettingStore;
-const { theme, collapse } = storeToRefs(userSettingStore);
+const { collapse } = storeToRefs(userSettingStore);
 
 /**
  * @description 切换折叠状态
  */
 const handleCollapse = () => {
+  console.log('Header collapse button clicked, current state:', collapse.value);
   setCollapse(!collapse.value);
+  console.log('Header collapse state after toggle:', !collapse.value);
 };
 
 /**
@@ -23,6 +20,12 @@ const handleCollapse = () => {
  * @param event 鼠标事件
  */
 const handleWindowDrag = async (event: MouseEvent) => {
+  // 如果点击的是按钮或其他交互元素，不触发拖拽
+  const target = event.target as HTMLElement;
+  if (target.closest('button') || target.closest('[role="button"]') || target.closest('input') || target.closest('select')) {
+    return;
+  }
+  
   if (event.button !== 0) return;
 
   try {
@@ -38,10 +41,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
 
 <template>
   <div
-    :style="{
-      backgroundColor: theme === 'dark' ? darkColor : lightColor
-    }"
-    class="flex items-center justify-between px-4 h-13"
+    class="header-bg flex items-center justify-between px-4 h-13"
     @mousedown="handleWindowDrag"
   >
     <section class="flex items-center h-full">
