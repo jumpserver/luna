@@ -5,6 +5,7 @@ import { I18nService } from "@app/services/i18n";
 import { HttpService } from "@app/services/http";
 import { canvasWaterMark, getQueryParamFromURL } from "@app/utils/common";
 import { BehaviorSubject } from "rxjs";
+import { setThemeTypeGetter, useTheme } from "@src/sass/theme/util";
 
 @Injectable()
 export class SettingService {
@@ -106,6 +107,16 @@ export class SettingService {
     }
     await this.getSystemSetting();
     await this.getPublicSettings();
+
+    setThemeTypeGetter(() => this.setting?.basic?.themes || null);
+
+    try {
+      const theme = this.setting?.basic?.themes;
+
+      if (theme) {
+        useTheme().switchTheme(theme);
+      }
+    } catch (e) {}
     this.initialized$.next(true);
   }
 
