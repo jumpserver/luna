@@ -240,48 +240,23 @@ export class ElementReplayGuacamoleComponent
     let retryCount = 0;
 
     const tryApplyScale = () => {
-      if (!this.recordingDisplay || !this.screenRef) {
-        if (retryCount < maxRetries) {
+      if (this.recordingDisplay && this.screenRef) {
+        const width = this.recordingDisplay.getWidth();
+        const height = this.recordingDisplay.getHeight();
+
+        if (width > 0 && height > 0) {
+          const scale = this.getPropScale();
+          this.recordingDisplay.scale(scale);
+          return true;
+        } else if (retryCount < maxRetries) {
           retryCount++;
           setTimeout(tryApplyScale, delay);
+          return false;
+        } else {
+          return false;
         }
-        return false;
       }
-
-      const width = this.recordingDisplay.getWidth();
-      const height = this.recordingDisplay.getHeight();
-      const { width: containerWidth, height: containerHeight } =
-        this.screenRef.getBoundingClientRect();
-
-      if (width <= 0 || height <= 0 || containerWidth <= 0 || containerHeight <= 0) {
-        if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(tryApplyScale, delay);
-        }
-        return false;
-      }
-
-      const scale = this.getPropScale();
-
-      if (!Number.isFinite(scale) || scale <= 0) {
-        if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(tryApplyScale, delay);
-        }
-        return false;
-      }
-
-      try {
-        this.recordingDisplay.scale(scale);
-      } catch (error) {
-        if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(tryApplyScale, delay);
-        }
-        return false;
-      }
-
-      return true;
+      return false;
     };
 
     setTimeout(tryApplyScale, delay);
