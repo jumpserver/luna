@@ -62,6 +62,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   private asset: any;
   private method: string;
   private permedProtocol: Protocol;
+  public isAdminConnect: boolean = false;
 
   constructor(
     private _i18n: I18nService,
@@ -110,6 +111,11 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
    * 检查是否为直连模式
    */
   private checkDirectMode() {
+
+    if (this._route.snapshot.routeConfig?.path === 'admin-connect') {
+      this.isAdminConnect = true;
+    }
+
     const params = this._route.snapshot.queryParams;
     // 检查是否有 direct: true 参数，或者同时有 account, asset, protocol 参数
     this.isDirect =
