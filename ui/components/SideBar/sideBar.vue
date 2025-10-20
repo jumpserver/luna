@@ -76,9 +76,9 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
     }"
   >
     <!-- 搜索和折叠按钮区域 -->
-    <section class="flex items-center justify-end w-full px-4 h-12">
+    <section v-if="isMacOS" class="flex items-center justify-end w-full px-3 h-12">
       <UButton
-        v-if="!collapse && isMacOS"
+        v-if="!collapse"
         color="neutral"
         variant="ghost"
         size="md"
@@ -88,7 +88,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
       />
     </section>
 
-    <div v-show="!collapse" class="px-4 py-2">
+    <div v-show="!collapse" class="px- py-2">
       <UInput
         v-model="sidebarSearch"
         clearable
