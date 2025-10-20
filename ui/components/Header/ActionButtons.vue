@@ -24,7 +24,7 @@ const windowControlButtons = computed(() => {
       {
         key: "minimize",
         iconName: "i-lucide-minus",
-        tooltipLabel: erf"最小化",
+        tooltipLabel: "最小化",
         onClick: async () => {
           await useTauriCoreInvoke('minimize_window');
         }
@@ -98,18 +98,18 @@ const actionItems = computed<ActionItem[]>(() => [
   {
     key: "refresh",
     type: "action",
-    icon_name: "i-lucide-refresh-ccw",
-    tooltip_label: t("ToolTips.Refresh"),
-    on_click: () => {
+    iconName: "i-lucide-refresh-ccw",
+    tooltipLabel: t("ToolTips.Refresh"),
+    onClick: () => {
       useEventBus().emit("refresh", undefined);
     }
   },
   {
     key: "sort",
     type: "select",
-    icon_name: "i-lucide-arrow-down-wide-narrow",
-    tooltip_label: t("ToolTips.Sort"),
-    select_items: [
+    iconName: "i-lucide-arrow-down-wide-narrow",
+    tooltipLabel: t("ToolTips.Sort"),
+    selectItems: [
       {
         icon: "i-lucide-arrow-down-a-z",
         label: t("Sort.A-z"),
@@ -166,9 +166,9 @@ const actionItems = computed<ActionItem[]>(() => [
   {
     key: "layout",
     type: "select",
-    icon_name: "i-lucide-layout-grid",
-    tooltip_label: t("ToolTips.Layout"),
-    select_items: [
+    iconName: "i-lucide-layout-grid",
+    tooltipLabel: t("ToolTips.Layout"),
+    selectItems: [
       {
         icon: "i-lucide-grid-2x2",
         label: t("Layout.Grid"),
@@ -198,9 +198,9 @@ const actionItems = computed<ActionItem[]>(() => [
   {
     key: "settings",
     type: "action",
-    icon_name: "i-lucide-settings",
-    tooltip_label: t("ToolTips.Settings"),
-    on_click: () => {
+    iconName: "i-lucide-settings",
+    tooltipLabel: t("ToolTips.Settings"),
+    onClick: () => {
       // eslint-disable-next-line no-new
       new useTauriWebviewWindowWebviewWindow("secondary", {
         title: t("Common.ConnectionSettings"),
@@ -217,16 +217,16 @@ const actionItems = computed<ActionItem[]>(() => [
 </script>
 
 <template>
-  <section class="flex items-center h-full gap-3 ">
-    <template v-for="action of actionItems" :key="action.icon_name">
+  <section class="flex items-center h-full gap-3 mr-2">
+    <template v-for="action of actionItems" :key="action.iconName">
       <template v-if="action.type === 'action'">
-        <UButton :icon="action.icon_name" v-bind="commonButtonProps" @click="action.on_click" />
+        <UButton :icon="action.iconName" v-bind="commonButtonProps" @click="action.onClick" />
       </template>
 
       <template v-else>
-        <UDropdownMenu arrow :items="action.select_items" size="sm">
+        <UDropdownMenu arrow :items="action.selectItems" size="sm">
           <UButton 
-            :icon="action.icon_name" 
+            :icon="action.iconName" 
             v-bind="commonButtonProps"
             @click="() => console.log('Dropdown button clicked:', action.key)"
           />

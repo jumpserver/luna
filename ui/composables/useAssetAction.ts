@@ -88,10 +88,10 @@ export const useAssetAction = () => {
     // 同名账号 account 使用 @USER
     // 手动输入 account 使用 @INPUT
     const isManual =
-      saved?.account_mode === "manual" || username === "手动输入" || username === "Manual input";
+      saved?.accountMode === "manual" || username === "手动输入" || username === "Manual input";
 
     const isDynamic =
-      saved?.account_mode === "dynamic" ||
+      saved?.accountMode === "dynamic" ||
       username.includes("同名账号") ||
       username.includes("Dynamic user");
 
@@ -114,7 +114,7 @@ export const useAssetAction = () => {
   const getConnectToken = (body: ConnectionBody) => {
     useTauriCoreInvoke("get_connect_token", {
       site: currentSite.value,
-      cookieHeader: currentUser.value!.header_json,
+      cookieHeader: currentUser.value!.headerJson,
       body: {
         asset: body.asset,
         account: body.account,
@@ -187,16 +187,16 @@ export const useAssetAction = () => {
     accounts: PermedAccount[],
     protocolOverride?: string,
     ephemeral?: {
-      account_mode?: "hosted" | "dynamic" | "manual";
-      manual_username?: string;
-      manual_password?: string;
-      dynamic_password?: string;
+      accountMode?: "hosted" | "dynamic" | "manual";
+      manualUsername?: string;
+      manualPassword?: string;
+      dynamicPassword?: string;
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
 
     // 优先使用临时凭据（未勾选“记住密码”的一次性输入），否则回退到已保存的
-    const effectiveMode = ephemeral?.account_mode ?? saved?.account_mode;
+    const effectiveMode = ephemeral?.accountMode ?? saved?.accountMode;
     const selected = saved?.username ?? user;
 
     let input_username = "";
@@ -209,8 +209,8 @@ export const useAssetAction = () => {
 
     if (effectiveMode === "manual" || selected === "手动输入" || selected === "Manual input") {
       // prettier-ignore
-      input_username = ephemeral?.manual_username ?? saved?.manual_username ?? matchedAccount?.username ?? "";
-      input_secret = ephemeral?.manual_password ?? saved?.manual_password ?? "";
+      input_username = ephemeral?.manualUsername ?? saved?.manualUsername ?? matchedAccount?.username ?? "";
+      input_secret = ephemeral?.manualPassword ?? saved?.manualPassword ?? "";
     } else if (
       effectiveMode === "dynamic" ||
       selected?.includes("同名账号") ||
@@ -218,7 +218,7 @@ export const useAssetAction = () => {
     ) {
       // 同名账号仅需传递密码
       input_username = "";
-      input_secret = ephemeral?.dynamic_password ?? saved?.dynamic_password ?? "";
+      input_secret = ephemeral?.dynamicPassword ?? saved?.dynamicPassword ?? "";
     } else {
       input_username = "";
       input_secret = "";
@@ -260,11 +260,11 @@ export const useAssetAction = () => {
    * @returns
    */
   const handleAssetRename = (assetId: string, name: string) => {
-    if (!currentSite.value || !currentUser.value?.header_json) return;
+    if (!currentSite.value || !currentUser.value?.headerJson) return;
 
     useTauriCoreInvoke("rename", {
       site: currentSite.value,
-      cookieHeader: currentUser.value.header_json,
+      cookieHeader: currentUser.value.headerJson,
       assetId,
       orgId: orgId.value,
       name
@@ -278,7 +278,7 @@ export const useAssetAction = () => {
   const handleAssetFavorite = (assetId: string) => {
     useTauriCoreInvoke("set_favorite", {
       site: currentSite.value,
-      cookieHeader: currentUser.value!.header_json,
+      cookieHeader: currentUser.value!.headerJson,
       assetId
     });
   };
@@ -290,7 +290,7 @@ export const useAssetAction = () => {
   const getAssetDetail = (assetId: string) => {
     useTauriCoreInvoke("get_asset_detail", {
       site: currentSite.value,
-      cookieHeader: currentUser.value!.header_json,
+      cookieHeader: currentUser.value!.headerJson,
       assetId
     });
   };

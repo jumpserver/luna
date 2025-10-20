@@ -35,7 +35,7 @@ interface MenuItem {
 
 // 计算菜单项
 const menuItems = computed((): MenuItem[] => {
-  const protocols = (props.asset.permed_protocols || []).map((p: PermedProtocol) => p.name);
+  const protocols = (props.asset.permedProtocols || []).map((p: PermedProtocol) => p.name);
   const uniqueProtocols = Array.from(new Set(protocols));
 
   const baseItems: MenuItem[] = [
@@ -88,16 +88,16 @@ const handleConnect = (protocol?: string) => {
   if (protocol) {
     // 如果有指定协议，直接连接
     handleAssetConnection(
-      displayUser(props.asset.id, props.asset.permed_accounts!),
+      displayUser(props.asset.id, props.asset.permedAccounts!),
       props.asset.id,
       protocol,
-      props.asset.permed_accounts!,
+      props.asset.permedAccounts!,
       undefined,
       {
-        account_mode: "hosted",
-        manual_username: "",
-        manual_password: "",
-        dynamic_password: ""
+        accountMode: "hosted",
+        manualUsername: "",
+        manualPassword: "",
+        dynamicPassword: ""
       }
     );
   } else {
