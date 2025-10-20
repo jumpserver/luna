@@ -50,15 +50,15 @@ const windowControlButtons = computed(() => {
 
 // 获取窗口控制按钮的样式类
 const getWindowControlButtonClass = (buttonKey: string) => {
-  const baseClass = "!w-12 !h-8 !p-0 !flex !items-center !justify-center";
+  const baseClass = "rounded-none w-12 h-10 p-0 flex items-center justify-center";
   
   switch (buttonKey) {
     case 'minimize':
-      return `${baseClass} hover:!bg-gray-200 active:!bg-gray-300`;
+      return `${baseClass} hover:bg-gray-200 active:bg-gray-300`;
     case 'maximize':
-      return `${baseClass} hover:!bg-gray-200 active:!bg-gray-300`;
+      return `${baseClass} hover:bg-gray-200 active:bg-gray-300`;
     case 'close':
-      return `${baseClass} hover:!bg-red-500 hover:!text-white active:!bg-red-600`;
+      return `${baseClass} hover:bg-red-500 hover:text-white active:bg-red-600`;
     default:
       return baseClass;
   }
@@ -208,7 +208,7 @@ const actionItems = computed<ActionItem[]>(() => [
     </div>
 
     <!-- 窗口控制按钮 -->
-    <div class="flex items-center ml-2" v-if="!isMacOS">
+    <div class="flex items-center" v-if="!isMacOS">
       <template v-for="button of windowControlButtons" :key="button.key">
         <UButton 
           :icon="button.iconName"

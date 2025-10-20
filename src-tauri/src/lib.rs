@@ -14,7 +14,6 @@ use crate::commands::get_setting::get_setting;
 use crate::commands::get_token::get_connect_token;
 use crate::commands::logout::logout;
 use crate::commands::pull_up::pull_up;
-use crate::commands::rename_asset::rename;
 use crate::commands::set_favorite::set_favorite;
 use crate::commands::update_config::update_config_selection;
 use crate::commands::url_watcher::url_watcher;
@@ -31,21 +30,15 @@ pub fn run() {
         .setup(|app| {
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&quit_i])?;
-            
-            // 安全地获取主窗口
-            let win = match app.get_webview_window("main") {
-                Some(window) => window,
-                None => {
-                    error!("Failed to get main window");
-                    return Err(Box::new(std::io::Error::new(
-                        std::io::ErrorKind::NotFound,
-                        "Main window not found"
-                    )));
-                }
-            };
+            let win = app.get_webview_window("main").unwrap();
 
             // 创建系统托盘
             setup_tray(&menu, &app)?;
+
+            // 动态设置窗口装饰为 false，确保标题栏被隐藏
+            if let Err(e) = win.set_decorations(false) {
+                error!("Failed to set window decorations: {}", e);
+            }
 
             if let Err(e) = apply_window_effects(&win) {
                 error!("Failed to apply window effects: {}", e);
@@ -64,7 +57,6 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             logout,
-            rename,
             pull_up,
             get_assets,
             get_config,

@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+222222222<script lang="ts" setup>
 useApplicationConfig();
 
 const route = useRoute();
