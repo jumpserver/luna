@@ -19,34 +19,7 @@ const commonButtonProps = {
 
 // 窗口控制按钮配置
 const windowControlButtons = computed(() => {
-  if (isMacOS) {
-    return [
-      {
-        key: "minimize",
-        iconName: "i-lucide-minus",
-        tooltipLabel: "最小化",
-        onClick: async () => {
-          await useTauriCoreInvoke('minimize_window');
-        }
-      },
-      {
-        key: "maximize",
-        iconName: "i-lucide-square",
-        tooltipLabel: "最大化",
-        onClick: async () => {
-          await useTauriCoreInvoke('toggle_maximize_window');
-        }
-      },
-      {
-        key: "close",
-        iconName: "i-lucide-x",
-        tooltipLabel: "关闭",
-        onClick: async () => {
-          await useTauriCoreInvoke('close_window');
-        }
-      }
-    ];
-  } else {
+ 
     // Windows 下显示窗口控制按钮
     return [
       {
@@ -74,7 +47,6 @@ const windowControlButtons = computed(() => {
         }
       }
     ];
-  }
 });
 
 // 获取窗口控制按钮的样式类

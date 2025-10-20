@@ -43,5 +43,10 @@ pub fn apply_window_effects(win: &WebviewWindow) -> Result<(), Box<dyn Error>> {
     {
         apply_windows_blur(win)
     }
-   
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        info!("Window effects not supported on this platform");
+        Ok(())
+    }
 }

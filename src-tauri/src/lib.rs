@@ -31,15 +31,21 @@ pub fn run() {
         .setup(|app| {
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&quit_i])?;
-            let win = app.get_webview_window("main").unwrap();
+            
+            // 安全地获取主窗口
+            let win = match app.get_webview_window("main") {
+                Some(window) => window,
+                None => {
+                    error!("Failed to get main window");
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::NotFound,
+                        "Main window not found"
+                    )));
+                }
+            };
 
             // 创建系统托盘
             setup_tray(&menu, &app)?;
-
-            // 动态设置窗口装饰为 false，确保标题栏被隐藏
-            if let Err(e) = win.set_decorations(false) {
-                error!("Failed to set window decorations: {}", e);
-            }
 
             if let Err(e) = apply_window_effects(&win) {
                 error!("Failed to apply window effects: {}", e);
