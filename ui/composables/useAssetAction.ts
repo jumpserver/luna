@@ -12,6 +12,8 @@ let unlistenFavoriteSuccess: UnlistenFn | null = null;
 let unlistenFavoriteFailed: UnlistenFn | null = null;
 let unlistenGetAssetDetailSuccess: UnlistenFn | null = null;
 let unlistenGetAssetDetailFailed: UnlistenFn | null = null;
+let unlistenRenameSuccess: UnlistenFn | null = null;
+let unlistenRenameError: UnlistenFn | null = null;
 
 function releaseTauriEventListeners() {
   tauriListenersRefCount = Math.max(tauriListenersRefCount - 1, 0);
@@ -23,12 +25,16 @@ function releaseTauriEventListeners() {
     unlistenGetTokenFailure?.();
     unlistenGetAssetDetailSuccess?.();
     unlistenGetAssetDetailFailed?.();
+    unlistenRenameSuccess?.();
+    unlistenRenameError?.();
     unlistenGetTokenFailure = null;
     unlistenGetTokenSuccess = null;
     unlistenFavoriteSuccess = null;
     unlistenFavoriteFailed = null;
     unlistenGetAssetDetailSuccess = null;
     unlistenGetAssetDetailFailed = null;
+    unlistenRenameSuccess = null;
+    unlistenRenameError = null;
     tauriListenersInitialized = false;
   }
 }
@@ -40,7 +46,7 @@ export const useAssetAction = () => {
   const toast = useToast();
   const userInfoStore = useUserInfoStore();
   // prettier-ignore
-  const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption } = storeToRefs(userInfoStore);
+  const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption, orgId } = storeToRefs(userInfoStore);
   const { setConnectionInfoForAsset, getConnectionInfoForAsset } = userInfoStore;
 
   /**
@@ -82,10 +88,10 @@ export const useAssetAction = () => {
     // 同名账号 account 使用 @USER
     // 手动输入 account 使用 @INPUT
     const isManual =
-      saved?.accountMode === "manual" || username === "手动输入" || username === "Manual input";
+      saved?.account_mode === "manual" || username === "手动输入" || username === "Manual input";
 
     const isDynamic =
-      saved?.accountMode === "dynamic" ||
+      saved?.account_mode === "dynamic" ||
       username.includes("同名账号") ||
       username.includes("Dynamic user");
 
@@ -108,7 +114,7 @@ export const useAssetAction = () => {
   const getConnectToken = (body: ConnectionBody) => {
     useTauriCoreInvoke("get_connect_token", {
       site: currentSite.value,
-      cookieHeader: currentUser.value!.headerJson,
+      cookieHeader: currentUser.value!.header_json,
       body: {
         asset: body.asset,
         account: body.account,
@@ -181,16 +187,16 @@ export const useAssetAction = () => {
     accounts: PermedAccount[],
     protocolOverride?: string,
     ephemeral?: {
-      accountMode?: "hosted" | "dynamic" | "manual";
-      manualUsername?: string;
-      manualPassword?: string;
-      dynamicPassword?: string;
+      account_mode?: "hosted" | "dynamic" | "manual";
+      manual_username?: string;
+      manual_password?: string;
+      dynamic_password?: string;
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
 
     // 优先使用临时凭据（未勾选“记住密码”的一次性输入），否则回退到已保存的
-    const effectiveMode = ephemeral?.accountMode ?? saved?.accountMode;
+    const effectiveMode = ephemeral?.account_mode ?? saved?.account_mode;
     const selected = saved?.username ?? user;
 
     let input_username = "";
@@ -203,8 +209,8 @@ export const useAssetAction = () => {
 
     if (effectiveMode === "manual" || selected === "手动输入" || selected === "Manual input") {
       // prettier-ignore
-      input_username = ephemeral?.manualUsername ?? saved?.manualUsername ?? matchedAccount?.username ?? "";
-      input_secret = ephemeral?.manualPassword ?? saved?.manualPassword ?? "";
+      input_username = ephemeral?.manual_username ?? saved?.manual_username ?? matchedAccount?.username ?? "";
+      input_secret = ephemeral?.manual_password ?? saved?.manual_password ?? "";
     } else if (
       effectiveMode === "dynamic" ||
       selected?.includes("同名账号") ||
@@ -212,7 +218,7 @@ export const useAssetAction = () => {
     ) {
       // 同名账号仅需传递密码
       input_username = "";
-      input_secret = ephemeral?.dynamicPassword ?? saved?.dynamicPassword ?? "";
+      input_secret = ephemeral?.dynamic_password ?? saved?.dynamic_password ?? "";
     } else {
       input_username = "";
       input_secret = "";
@@ -247,7 +253,23 @@ export const useAssetAction = () => {
     });
   };
 
-  const handleAssetRename = () => {};
+  /**
+   * @description 处理重命名
+   * @param assetId
+   * @param name
+   * @returns
+   */
+  const handleAssetRename = (assetId: string, name: string) => {
+    if (!currentSite.value || !currentUser.value?.header_json) return;
+
+    useTauriCoreInvoke("rename", {
+      site: currentSite.value,
+      cookieHeader: currentUser.value.header_json,
+      assetId,
+      orgId: orgId.value,
+      name
+    });
+  };
 
   /**
    * @description 处理资产收藏
@@ -256,15 +278,19 @@ export const useAssetAction = () => {
   const handleAssetFavorite = (assetId: string) => {
     useTauriCoreInvoke("set_favorite", {
       site: currentSite.value,
-      cookieHeader: currentUser.value!.headerJson,
+      cookieHeader: currentUser.value!.header_json,
       assetId
     });
   };
 
+  /**
+   * @description 获取详情
+   * @param assetId
+   */
   const getAssetDetail = (assetId: string) => {
     useTauriCoreInvoke("get_asset_detail", {
       site: currentSite.value,
-      cookieHeader: currentUser.value!.headerJson,
+      cookieHeader: currentUser.value!.header_json,
       assetId
     });
   };
@@ -365,6 +391,63 @@ export const useAssetAction = () => {
           }
         }
       );
+
+      unlistenRenameSuccess = await useTauriEventListen("rename-success", (event) => {
+        interface eventPayload {
+          success: boolean;
+          status?: number;
+          data?: string;
+        }
+
+        const payload = event.payload as eventPayload;
+        let assetId = "";
+        let name = "";
+
+        try {
+          if (payload.data) {
+            const info = JSON.parse(payload.data) as any;
+            assetId = info?.asset || info?.asset_id || info?.id || "";
+            name = info?.name || "";
+          }
+        } catch {}
+
+        // 成功提示
+        toast.add({
+          title: t("Common.Success"),
+          description: t("AssetCard.RenameSuccess"),
+          color: "success",
+          icon: "line-md:check-circle"
+        });
+
+        // 更新资产名称
+        if (assetId && name) {
+          try {
+            useEventBus().emit("assetRenamed", { assetId, name });
+          } catch {}
+        }
+      });
+
+      unlistenRenameError = await useTauriEventListen("rename-error", (event) => {
+        interface eventPayload {
+          success: boolean;
+          status?: number;
+          data?: string;
+        }
+
+        const payload = event.payload as eventPayload;
+        let message = "";
+        try {
+          const err = payload.data ? JSON.parse(payload.data) : {};
+          message = err?.detail || (Array.isArray(err?.asset) ? err.asset[0] : "");
+        } catch {}
+
+        toast.add({
+          title: t("AssetCard.RenameFail"),
+          description: message || t("Common.OperationFailed"),
+          color: "error",
+          icon: "line-md:close-circle"
+        });
+      });
 
       tauriListenersInitialized = true;
       tauriListenersRefCount++;

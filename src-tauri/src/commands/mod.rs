@@ -5,6 +5,7 @@ pub mod get_setting;
 pub mod get_token;
 pub mod logout;
 pub mod pull_up;
+pub mod rename_asset;
 pub(crate) mod requests;
 pub mod set_favorite;
 pub mod update_config;

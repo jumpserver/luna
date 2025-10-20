@@ -14,6 +14,10 @@ type BusEvents = {
     permedAccounts: PermedAccount[];
     permedProtocols: PermedProtocol[];
   };
+  assetRenamed: {
+    assetId: string;
+    name: string;
+  };
 } & Record<EventType, unknown>;
 
 const emitter: Emitter<BusEvents> = mitt<BusEvents>();

@@ -46,7 +46,9 @@
 		"Protocol": "Protocol",
 		"AssetName": "Asset Name",
 		"Actions": "Actions",
-		"Status": "Status"
+		"Status": "Status",
+		"RenameSuccess": "Rename successful",
+    "RenameFail": "Rename failed"
 	},
 	"ContextMenu": {
 		"QuickConnect": "Quick Connect",

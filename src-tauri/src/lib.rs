@@ -14,6 +14,7 @@ use crate::commands::get_setting::get_setting;
 use crate::commands::get_token::get_connect_token;
 use crate::commands::logout::logout;
 use crate::commands::pull_up::pull_up;
+use crate::commands::rename_asset::rename;
 use crate::commands::set_favorite::set_favorite;
 use crate::commands::update_config::update_config_selection;
 use crate::commands::url_watcher::url_watcher;
@@ -57,6 +58,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             logout,
+            rename,
             pull_up,
             get_assets,
             get_config,

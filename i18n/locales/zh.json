@@ -46,7 +46,9 @@
     "Protocol": "协议",
     "AssetName": "资产名称",
     "Actions": "操作",
-    "Status": "状态"
+    "Status": "状态",
+    "RenameSuccess": "重命名成功",
+    "RenameFail": "重命名失败"
   },
   "ContextMenu": {
     "QuickConnect": "快速连接",

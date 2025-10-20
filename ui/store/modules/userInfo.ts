@@ -105,7 +105,7 @@ export const useUserInfoStore = defineStore(
           // 同步连接信息映射以及 RDP 客户端选项
           currentConnectionInfoMap.value = nextUser.connectionInfoMap || {};
           currentRdpClientOption.value = nextUser.rdpClientOption || {};
-          currentOrganizations.value = nextUser.availableOrgs || [];
+          currentOrganizations.value = nextUser.available_orgs || [];
 
           nextTick(() => {
             useEventBus().emit('refresh', undefined);
@@ -139,7 +139,7 @@ export const useUserInfoStore = defineStore(
 
       if (userData) {
         currentUser.value = userData;
-        currentOrganizations.value = userData.availableOrgs || [];
+        currentOrganizations.value = userData.available_orgs || [];
 
         if (userData.org?.id) {
           orgId.value = userData.org.id;
@@ -167,7 +167,7 @@ export const useUserInfoStore = defineStore(
       if (currentUser.value && currentSite.value) {
         const updatedUserData = {
           ...currentUser.value,
-          availableOrgs: orgs,
+          available_orgs: orgs,
         };
 
         userMap.value[currentSite.value] = updatedUserData as SiteUserData;
@@ -205,7 +205,7 @@ export const useUserInfoStore = defineStore(
         return;
       }
 
-      currentUser.value.connectionInfo = connectionInfo;
+      currentUser.value.connection_info = connectionInfo;
     };
 
     /**

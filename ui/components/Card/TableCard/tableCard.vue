@@ -69,7 +69,7 @@ const columns: TableColumn<AssetItem>[] = [
     id: "user",
     header: () => t("AssetCard.User"),
     cell: ({ row }) => {
-      const userText = displayUser(row.original.id, row.original.permedAccounts!);
+      const userText = displayUser(row.original.id, row.original.permed_accounts!);
       return h("div", { 
         class: "truncate", 
         title: userText 
@@ -83,7 +83,7 @@ const columns: TableColumn<AssetItem>[] = [
     id: "protocol",
     header: () => t("AssetCard.Protocol"),
     cell: ({ row }) => {
-      const protocolText = displayProtocol(row.original.id, row.original.permedProtocols!);
+      const protocolText = displayProtocol(row.original.id, row.original.permed_protocols!);
       return h("div", { 
         class: "truncate", 
         title: protocolText 

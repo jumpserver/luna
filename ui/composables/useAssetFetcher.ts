@@ -202,7 +202,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
    */
   async function fetchNextPage(search?: string, order?: string) {
     if (isLoading.value || !hasMore.value) return;
-    if (!currentSite.value || !currentUser.value?.headerJson) return;
+    if (!currentSite.value || !currentUser.value?.header_json) return;
     if (!orgId.value) {
       console.error("No organization ID available for asset request", {
         orgId: orgId.value,
@@ -228,7 +228,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
     try {
       await useTauriCoreInvoke("get_assets", {
         site: currentSite.value,
-        cookieHeader: currentUser.value.headerJson,
+        cookieHeader: currentUser.value.header_json,
         favorite: assetType === "favorite",
         query: {
           type: assetType === "favorite" ? undefined : assetType,
@@ -326,6 +326,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   let unsubscribeRefresh: (() => void) | null = null;
   let unsubscribeClearAssets: (() => void) | null = null;
   let unsubscribeAssetDetailUpdated: (() => void) | null = null;
+  let unsubscribeAssetRenamed: (() => void) | null = null;
 
   const listenEventBusEvent = () => {
     const { on } = useEventBus();
@@ -377,8 +378,8 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
         if (idx !== -1) {
           rawAssetsList.value[idx] = {
             ...rawAssetsList.value[idx],
-            permedAccounts: payload.permedAccounts || [],
-            permedProtocols: payload.permedProtocols || []
+            permed_accounts: payload.permedAccounts || [],
+            permed_protocols: payload.permedProtocols || []
           } as RawAssetData;
         }
 
@@ -391,6 +392,21 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
       },
       false
     );
+
+    // 重命名后的 UI 更新（无需刷新）
+    unsubscribeAssetRenamed = on(
+      "assetRenamed",
+      (payload: { assetId: string; name: string }) => {
+        const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
+        if (idx !== -1) {
+          rawAssetsList.value[idx] = {
+            ...rawAssetsList.value[idx],
+            name: payload.name
+          } as RawAssetData;
+        }
+      },
+      false
+    );
   };
 
   const unListenEventBusEvent = () => {
@@ -399,6 +415,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
     unsubscribeRefresh?.();
     unsubscribeClearAssets?.();
     unsubscribeAssetDetailUpdated?.();
+    unsubscribeAssetRenamed?.();
   };
 
   onMounted(async () => {

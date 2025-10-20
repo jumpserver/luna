@@ -5,11 +5,11 @@ export type SortType = "name" | "-name" | "-date_updated" | "date_updated";
 
 export interface ActionItem {
   key: string;
-  iconName: string;
-  tooltipLabel: string;
+  icon_name: string;
+  tooltip_label: string;
   type: ActionType;
-  selectItems?: DropdownMenuItem[];
-  onClick?: () => void;
+  select_items?: DropdownMenuItem[];
+  on_click?: () => void;
 }
 
 export interface ConfigItem {
@@ -43,7 +43,7 @@ export interface Cookies {
   value: string;
   domain: string;
   secure: boolean;
-  httpOnly: boolean;
+  http_only: boolean;
 }
 
 export interface PermOrgItem {
@@ -70,11 +70,11 @@ export interface PermissionOrgs {
 export interface UserData {
   site: string;
   name: string;
-  headerJson: string;
+  header_json: string;
   system_roles: string[];
   org: CurrentOrg;
-  availableOrgs: PermOrgItem[];
-  connectionInfo: ConnectionInfo;
+  available_orgs: PermOrgItem[];
+  connection_info: ConnectionInfo;
 }
 
 export interface UserIntiInfo {
@@ -168,8 +168,8 @@ export interface RawAssetData {
   platform?: AssetPlatform;
   type?: AssetType;
   zone?: AssetZone;
-  permedProtocols?: PermedProtocol[];
-  permedAccounts?: PermedAccount[];
+  permed_protocols?: PermedProtocol[];
+  permed_accounts?: PermedAccount[];
 }
 
 export interface AssetItem {
@@ -179,12 +179,12 @@ export interface AssetItem {
   user?: string;
   platform: string;
   zone: string;
-  isActive: boolean;
+  is_active: boolean;
   comment?: string;
   category: string;
   type: string;
-  permedProtocols?: PermedProtocol[];
-  permedAccounts?: PermedAccount[];
+  permed_protocols?: PermedProtocol[];
+  permed_accounts?: PermedAccount[];
 }
 
 export interface AssetsResponse {
@@ -197,11 +197,11 @@ export interface AssetsResponse {
 export interface ConnectionInfo {
   protocol: string;
   username: string;
-  accountMode?: "hosted" | "dynamic" | "manual";
-  manualUsername?: string;
-  manualPassword?: string;
-  rememberSecret?: boolean;
-  dynamicPassword?: string;
+  account_mode?: "hosted" | "dynamic" | "manual";
+  manual_username?: string;
+  manual_password?: string;
+  remember_secret?: boolean;
+  dynamic_password?: string;
 }
 
 export interface RdpGraphics {
