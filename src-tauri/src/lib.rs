@@ -31,6 +31,14 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&quit_i])?;
             let win = app.get_webview_window("main").unwrap();
 
+            // 根据平台设置窗口标题：Windows 和 Linux 设置标题，macOS 保持无标题栏
+            #[cfg(not(target_os = "macos"))]
+            {
+                if let Err(e) = win.set_title("JumpServer") {
+                    error!("Failed to set window title: {}", e);
+                }
+            }
+
             // 创建系统托盘
             setup_tray(&menu, &app)?;
 
