@@ -48,20 +48,15 @@
     "windows": [
       {
         "label": "main",
-        "title": "JumpServer",
+        "title": "",
         "width": 1000,
         "height": 600,
         "minWidth": 800,
         "minHeight": 480,
         "resizable": true,
         "fullscreen": false,
-				"transparent": true,
-				"decorations": true,
-				"titleBarStyle": "Overlay",
-				"trafficLightPosition": {
-					"x": 10,
-					"y": 27
-				}
+        "transparent": true,
+        "decorations": false
       }
     ],
     "security": {

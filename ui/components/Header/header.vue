@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useUserSettingStore } from "~/store/modules/userSetting";
-import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
 
 const userSettingStore = useUserSettingStore();
 const { setCollapse } = userSettingStore;
@@ -41,12 +40,12 @@ const handleWindowDrag = async (event: MouseEvent) => {
 
 <template>
   <div
-    class="header-bg flex items-center justify-between px-4 h-13"
+    class="header-bg flex items-center justify-between px-4"
+    :class="isMacOS ? 'h-13' : 'h-10'"
     @mousedown="handleWindowDrag"
   >
     <section class="flex items-center h-full">
-
-      <div >
+      <div>
         <HeaderOrganizationSelector />
       </div>
     </section>

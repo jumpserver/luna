@@ -8,6 +8,7 @@ import { useUserSettingStore } from "~/store/modules/userSetting";
 const { t } = useI18n();
 const userSettingStore = useUserSettingStore();
 const { theme, layouts, sort } = storeToRefs(userSettingStore);
+const { isMacOS } = usePlatform();
 
 // 公共按钮配置
 const commonButtonProps = {
@@ -15,6 +16,66 @@ const commonButtonProps = {
   variant: "ghost" as const,
   color: "neutral" as const
 };
+
+// 窗口控制按钮配置
+const windowControlButtons = computed(() => {
+  if (isMacOS) {
+    return [
+      {
+        key: "minimize",
+        iconName: "i-lucide-minus",
+        tooltipLabel: "最小化",
+        onClick: async () => {
+          await useTauriCoreInvoke('minimize_window');
+        }
+      },
+      {
+        key: "maximize",
+        iconName: "i-lucide-square",
+        tooltipLabel: "最大化",
+        onClick: async () => {
+          await useTauriCoreInvoke('toggle_maximize_window');
+        }
+      },
+      {
+        key: "close",
+        iconName: "i-lucide-x",
+        tooltipLabel: "关闭",
+        onClick: async () => {
+          await useTauriCoreInvoke('close_window');
+        }
+      }
+    ];
+  } else {
+    // Windows 下显示窗口控制按钮
+    return [
+      {
+        key: "minimize",
+        iconName: "i-lucide-minus",
+        tooltipLabel: "最小化",
+        onClick: async () => {
+          await useTauriCoreInvoke('minimize_window');
+        }
+      },
+      {
+        key: "maximize",
+        iconName: "i-lucide-square",
+        tooltipLabel: "最大化",
+        onClick: async () => {
+          await useTauriCoreInvoke('toggle_maximize_window');
+        }
+      },
+      {
+        key: "close",
+        iconName: "i-lucide-x",
+        tooltipLabel: "关闭",
+        onClick: async () => {
+          await useTauriCoreInvoke('close_window');
+        }
+      }
+    ];
+  }
+});
 
 // 从 Operation 组件移动过来的按钮操作逻辑
 const actionItems = computed<ActionItem[]>(() => [
@@ -81,7 +142,7 @@ const actionItems = computed<ActionItem[]>(() => [
         onUpdateChecked: (checked: boolean) => {
           if (checked) {
             userSettingStore.setSort("date_updated");
-          }
+}
         }
       }
     ] as DropdownMenuItem[]
@@ -141,6 +202,7 @@ const actionItems = computed<ActionItem[]>(() => [
 
 <template>
   <section class="flex items-center h-full gap-3 mr-2">
+    <!-- 应用功能按钮 -->
     <template v-for="action of actionItems" :key="action.iconName">
       <template v-if="action.type === 'action'">
         <UButton :icon="action.iconName" v-bind="commonButtonProps" @click="action.onClick" />
@@ -156,5 +218,17 @@ const actionItems = computed<ActionItem[]>(() => [
         </UDropdownMenu>
       </template>
     </template>
+
+    <!-- 窗口控制按钮 -->
+    <div class="flex items-center gap-1 ml-2">
+      <template v-for="button of windowControlButtons" :key="button.key">
+        <UButton 
+          :icon="button.iconName" 
+          v-bind="commonButtonProps"
+          :class="button.key === 'close' ? 'hover:bg-red-500 hover:text-white' : ''"
+          @click="button.onClick"
+        />
+      </template>
+    </div>
   </section>
 </template>
