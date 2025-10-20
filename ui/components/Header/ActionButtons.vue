@@ -24,7 +24,7 @@ const windowControlButtons = computed(() => {
       {
         key: "minimize",
         iconName: "i-lucide-minus",
-        tooltipLabel: "最小化",
+        tooltipLabel: erf"最小化",
         onClick: async () => {
           await useTauriCoreInvoke('minimize_window');
         }
@@ -76,6 +76,22 @@ const windowControlButtons = computed(() => {
     ];
   }
 });
+
+// 获取窗口控制按钮的样式类
+const getWindowControlButtonClass = (buttonKey: string) => {
+  const baseClass = "!w-12 !h-8 !p-0 !flex !items-center !justify-center";
+  
+  switch (buttonKey) {
+    case 'minimize':
+      return `${baseClass} hover:!bg-gray-200 active:!bg-gray-300`;
+    case 'maximize':
+      return `${baseClass} hover:!bg-gray-200 active:!bg-gray-300`;
+    case 'close':
+      return `${baseClass} hover:!bg-red-500 hover:!text-white active:!bg-red-600`;
+    default:
+      return baseClass;
+  }
+};
 
 // 从 Operation 组件移动过来的按钮操作逻辑
 const actionItems = computed<ActionItem[]>(() => [
@@ -201,7 +217,7 @@ const actionItems = computed<ActionItem[]>(() => [
 </script>
 
 <template>
-  <section class="flex items-center h-full gap-3 mr-2">
+  <section class="flex items-center h-full gap-3 ">
     <template v-for="action of actionItems" :key="action.icon_name">
       <template v-if="action.type === 'action'">
         <UButton :icon="action.icon_name" v-bind="commonButtonProps" @click="action.on_click" />
@@ -219,13 +235,16 @@ const actionItems = computed<ActionItem[]>(() => [
     </template>
 
     <!-- 窗口控制按钮 -->
-    <div class="flex items-center gap-1 ml-2">
+    <div class="flex items-center ml-2">
       <template v-for="button of windowControlButtons" :key="button.key">
         <UButton 
-          :icon="button.iconName" 
-          v-bind="commonButtonProps"
-          :class="button.key === 'close' ? 'hover:bg-red-500 hover:text-white' : ''"
+          :icon="button.iconName"
+          :class="getWindowControlButtonClass(button.key)"
           @click="button.onClick"
+          :title="button.tooltipLabel"
+          size="sm"
+          variant="ghost"
+          color="neutral"
         />
       </template>
     </div>

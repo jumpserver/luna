@@ -40,7 +40,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
 
 <template>
   <div
-    class="header-bg flex items-center justify-between px-4"
+    class="header-bg flex items-center justify-between pl-4"
     :class="isMacOS ? 'h-13' : 'h-10'"
     @mousedown="handleWindowDrag"
   >
