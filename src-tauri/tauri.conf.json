@@ -48,7 +48,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "",
+        "title": "JumpServer Client",
         "width": 1000,
         "height": 600,
         "minWidth": 800,
