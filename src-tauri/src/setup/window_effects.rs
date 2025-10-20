@@ -29,6 +29,10 @@ pub fn apply_mac_vibrancy(win: &WebviewWindow) -> Result<(), Box<dyn Error>> {
 pub fn apply_windows_blur(_win: &WebviewWindow) -> Result<(), Box<dyn std::error::Error>> {
     // Windows 下禁用模糊效果以避免边框问题
     info!("Windows blur effect disabled to avoid border issues");
+
+    if let Err(e) = _win.set_decorations(false) {
+        error!("Failed to set window decorations: {}", e);
+    }
     Ok(())
 }
 
