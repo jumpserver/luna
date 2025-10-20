@@ -19,7 +19,6 @@ const commonButtonProps = {
 
 // 窗口控制按钮配置
 const windowControlButtons = computed(() => {
- 
     // Windows 下显示窗口控制按钮
     return [
       {
@@ -189,25 +188,27 @@ const actionItems = computed<ActionItem[]>(() => [
 </script>
 
 <template>
-  <section class="flex items-center h-full gap-3">
-    <template v-for="action of actionItems" :key="action.iconName">
-      <template v-if="action.type === 'action'">
-        <UButton :icon="action.iconName" v-bind="commonButtonProps" @click="action.onClick" />
-      </template>
+  <section class="flex items-center h-full">
+    <div class="flex items-center mr-3 gap-2"> 
+      <template v-for="action of actionItems" :key="action.iconName">
+        <template v-if="action.type === 'action'">
+          <UButton :icon="action.iconName" v-bind="commonButtonProps" @click="action.onClick" />
+        </template>
 
-      <template v-else>
-        <UDropdownMenu arrow :items="action.selectItems" size="sm">
-          <UButton 
-            :icon="action.iconName" 
-            v-bind="commonButtonProps"
-            @click="() => console.log('Dropdown button clicked:', action.key)"
-          />
-        </UDropdownMenu>
+        <template v-else>
+          <UDropdownMenu arrow :items="action.selectItems" size="sm">
+            <UButton 
+              :icon="action.iconName" 
+              v-bind="commonButtonProps"
+              @click="() => console.log('Dropdown button clicked:', action.key)"
+            />
+          </UDropdownMenu>
+        </template>
       </template>
-    </template>
+    </div>
 
     <!-- 窗口控制按钮 -->
-    <div class="flex items-center ml-2">
+    <div class="flex items-center ml-2" v-if="!isMacOS">
       <template v-for="button of windowControlButtons" :key="button.key">
         <UButton 
           :icon="button.iconName"
