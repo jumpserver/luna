@@ -3,29 +3,16 @@ useApplicationConfig();
 
 const route = useRoute();
 const { userTheme } = useThemeAdapter();
-
-// 检测当前平台
-const platform = ref<string>('');
-
-onMounted(async () => {
-  try {
-    const currentPlatform = await useTauriOsPlatform();
-    platform.value = currentPlatform;
-  } catch (error) {
-    // 如果无法获取平台信息，默认为 windows
-    platform.value = 'win32';
-  }
-});
+const { isMacOS } = usePlatform();
 
 const backgroundColor = computed(() => {
   const isDark = userTheme.value === "dark";
-  const isMacOS = platform.value === 'darwin';
-  
+
   // 只在 macOS 下设置透明度
-  if (isMacOS) {
+  if (isMacOS.value) {
     return isDark
       ? "rgba(30, 30, 30, 0.6)"
-      : "rgba(240, 240, 240, 0.5)";
+      : "rgba(240, 240, 240, 0.4)";
   } else {
     // Windows 和其他平台使用不透明的背景色
     return isDark
@@ -39,9 +26,7 @@ const pageKey = computed(() => route.path.replace(LOCALE_PREFIX_RE, ''));
 
 // 平台 class 名称
 const platformClass = computed(() => {
-  const platformKey = platform.value === 'win32' ? 'windows' : 
-                     platform.value === 'darwin' ? 'darwin' : 
-                     platform.value === 'linux' ? 'linux' : 'windows';
+  const platformKey = isMacOS.value ? 'darwin' : 'windows';
   return `platform-${platformKey}`;
 });
 
@@ -55,7 +40,7 @@ useHead({
   `
     )
   }
-});
+})
 </script>
 
 <template>

@@ -8,7 +8,7 @@ repository = "https://github.com/jumpserver/clients"
 edition = "2021"
 
 [lib]
-name = "jump_server_client_lib"
+name = "jumpserver_client_lib"
 crate-type = [
   "staticlib",
   "cdylib",

@@ -5,7 +5,7 @@ import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
 const userSettingStore = useUserSettingStore();
 const { setCollapse } = userSettingStore;
 const { collapse } = storeToRefs(userSettingStore);
-
+const { isMacOS } = usePlatform();
 /**
  * @description 切换折叠状态
  */
@@ -46,7 +46,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
   >
     <section class="flex items-center h-full">
       <UButton
-        v-if="collapse"
+        v-if="collapse || !isMacOS"
         color="neutral"
         variant="ghost"
         size="md"

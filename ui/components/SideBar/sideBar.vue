@@ -15,29 +15,8 @@ const { collapse, theme } = storeToRefs(useSettingStore);
 
 const isLoading = ref(false);
 
-// 检测当前平台
-const platform = ref<string>('');
-
-onMounted(async () => {
-  try {
-    const currentPlatform = await useTauriOsPlatform();
-    platform.value = currentPlatform;
-  } catch (error) {
-    // 如果无法获取平台信息，默认为 windows
-    platform.value = 'win32';
-  }
-});
-
-// 判断是否应该显示logo（Windows和Linux显示，macOS不显示）
-const shouldShowLogo = computed(() => {
-  return platform.value === 'win32' || platform.value === 'linux';
-});
-
-// 判断是否使用新的布局（Windows和Linux使用新布局，macOS保持原布局）
-const useNewLayout = computed(() => {
-  return true;
-  return platform.value === 'win32' || platform.value === 'linux';
-});
+// 使用平台检测 composable
+const { isMacOS } = usePlatform();
 
 const sideBarItems = computed<NavigationMenuItem[]>(() => {
   return [
@@ -97,55 +76,45 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
     }"
   >
     <!-- 搜索和折叠按钮区域 -->
-    <div v-show="!collapse" class="px-3 py-2">
-      <div :class="[
-        'search-container',
-        useNewLayout ? 'search-container--inline' : 'search-container--stacked'
-      ]">
-        <UInput
-          v-model="sidebarSearch"
-          clearable
-          icon="i-lucide-search"
-          variant="outline"
-          size="sm"
-          :placeholder="t('Operation.Search')"
-          :class="[
-            'search-input',
-            useNewLayout ? 'search-input--inline' : 'search-input--full'
-          ]"
-          :style="isDarkMode ? '' : 'background-color: rgb(198,198,197, 0.5);'"
-          @update:model-value="debouncedSidebarSearch"
-        >
-          <template v-if="sidebarSearch?.length" #trailing>
-            <UButton
-              color="neutral"
-              variant="link"
-              size="sm"
-              icon="i-lucide-circle-x"
-              aria-label="Clear input"
-              @click="
-                () => {
-                  sidebarSearch = '';
-                  emitSearch('');
-                }
-              "
-            />
-          </template>
-        </UInput>
-        
-        <!-- 折叠按钮 -->
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="md"
-          :class="[
-            'collapse-button',
-            useNewLayout ? 'collapse-button--inline' : 'collapse-button--stacked'
-          ]"
-          :icon="SidebarFlipIcon"
-          @click="handleCollapse"
-        />
-      </div>
+    <section class="flex items-center justify-end w-full px-4 h-12">
+      <UButton
+        v-if="!collapse && isMacOS"
+        color="neutral"
+        variant="ghost"
+        size="md"
+        class="mt-1 p-1"
+        :icon="SidebarFlipIcon"
+        @click="handleCollapse"
+      />
+    </section>
+
+    <div v-show="!collapse" class="px-4 py-2">
+      <UInput
+        v-model="sidebarSearch"
+        clearable
+        icon="i-lucide-search"
+        variant="outline"
+        :placeholder="t('Operation.Search')"
+        class="dark:bg-transparent rounded-sm w-full"
+        :style="isDarkMode ? '' : 'background-color: rgb(198,198,197, 0.5);'"
+        @update:model-value="debouncedSidebarSearch"
+      >
+        <template v-if="sidebarSearch?.length" #trailing>
+          <UButton
+            color="neutral"
+            variant="link"
+            size="sm"
+            icon="i-lucide-circle-x"
+            aria-label="Clear input"
+            @click="
+              () => {
+                sidebarSearch = '';
+                emitSearch('');
+              }
+            "
+          />
+        </template>
+      </UInput>
     </div>
 
     <div class="px-3 py-0 flex-1 overflow-auto menu">

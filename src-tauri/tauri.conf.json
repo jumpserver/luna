@@ -47,6 +47,7 @@
     "macOSPrivateApi": true,
     "windows": [
       {
+        "label": "main",
         "title": "",
         "width": 1000,
         "height": 600,
@@ -54,13 +55,13 @@
         "minHeight": 480,
         "resizable": true,
         "fullscreen": false,
-        "transparent": false,
-        "decorations": false,
-        "titleBarStyle": "Overlay",
-        "trafficLightPosition": {
-          "x": 10,
-          "y": 27
-        }
+				"transparent": true,
+				"decorations": true,
+				"titleBarStyle": "Overlay",
+				"trafficLightPosition": {
+					"x": 10,
+					"y": 27
+				}
       }
     ],
     "security": {
