@@ -54,9 +54,9 @@ const getWindowControlButtonClass = (buttonKey: string) => {
   
   switch (buttonKey) {
     case 'minimize':
-      return `${baseClass} hover:bg-gray-200 active:bg-gray-300`;
+      return `${baseClass} `;
     case 'maximize':
-      return `${baseClass} hover:bg-gray-200 active:bg-gray-300`;
+      return `${baseClass} `;
     case 'close':
       return `${baseClass} hover:bg-red-500 hover:text-white active:bg-red-600`;
     default:
