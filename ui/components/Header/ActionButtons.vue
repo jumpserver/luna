@@ -50,7 +50,7 @@ const windowControlButtons = computed(() => {
 
 // 获取窗口控制按钮的样式类
 const getWindowControlButtonClass = (buttonKey: string) => {
-  const baseClass = "rounded-none w-12 h-10 p-0 flex items-center justify-center";
+  const baseClass = "rounded-none w-12 h-13 p-1 flex items-center justify-center";
   
   switch (buttonKey) {
     case 'minimize':
