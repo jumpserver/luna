@@ -102,9 +102,9 @@ pub async fn get_assets(
             {
                 for item in results.iter_mut() {
                     if let Some(obj) = item.as_object_mut() {
-                        // 添加默认的空数组字段（蛇形命名）
-                        obj.insert("permed_accounts".to_string(), json!([]));
-                        obj.insert("permed_protocols".to_string(), json!([]));
+                        // 添加默认的空数组字段
+                        obj.insert("permedAccounts".to_string(), json!([]));
+                        obj.insert("permedProtocols".to_string(), json!([]));
                     }
                 }
             }

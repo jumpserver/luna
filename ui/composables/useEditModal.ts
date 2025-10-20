@@ -29,13 +29,13 @@ export function useEditModal() {
   const initDraft = (asset: AssetItem) => {
     const saved = userInfoStore.getConnectionInfoForAsset(asset.id);
 
-    draftProtocol.value = displayProtocol(asset.id, asset.permed_protocols!);
-    draftAccount.value = displayUser(asset.id, asset.permed_accounts!);
+    draftProtocol.value = displayProtocol(asset.id, asset.permedProtocols!);
+    draftAccount.value = displayUser(asset.id, asset.permedAccounts!);
 
-    draftManualUsername.value = saved?.manual_username || "";
-    draftManualPassword.value = saved?.manual_password || "";
-    draftDynamicPassword.value = saved?.dynamic_password || "";
-    draftRememberSecret.value = saved?.remember_secret || false;
+    draftManualUsername.value = saved?.manualUsername || "";
+    draftManualPassword.value = saved?.manualPassword || "";
+    draftDynamicPassword.value = saved?.dynamicPassword || "";
+    draftRememberSecret.value = saved?.rememberSecret || false;
   };
 
   /**
@@ -44,8 +44,8 @@ export function useEditModal() {
   const openEditModal = (asset: AssetItem) => {
     currentSelectedCardInfo.value = asset;
 
-    const noAccounts = !asset.permed_accounts || asset.permed_accounts.length === 0;
-    const noProtocols = !asset.permed_protocols || asset.permed_protocols.length === 0;
+    const noAccounts = !asset.permedAccounts || asset.permedAccounts.length === 0;
+    const noProtocols = !asset.permedProtocols || asset.permedProtocols.length === 0;
 
     if (noAccounts || noProtocols) {
       getAssetDetail(asset.id);
@@ -80,7 +80,7 @@ export function useEditModal() {
     if (v.includes("同名账号") || v.includes("Dynamic user")) {
       accountMode = "dynamic";
 
-      const accs = currentSelectedCardInfo.value?.permed_accounts || [];
+      const accs = currentSelectedCardInfo.value?.permedAccounts || [];
       const dynamicAcc = accs.find((a) => a.alias === "@USER");
 
       if (dynamicAcc) normalizedAccount = dynamicAcc.name;

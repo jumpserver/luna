@@ -125,7 +125,7 @@ const cancelRename = () => {
             color="primary"
             variant="solid"
             class="group btn-connect px-3"
-            :disabled="!props.asset.is_active"
+            :disabled="!props.asset.isActive"
             @click="emits('connectAsset', props.asset)"
           >
             {{ t("ContextMenu.Connect") }}

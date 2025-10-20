@@ -202,7 +202,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
    */
   async function fetchNextPage(search?: string, order?: string) {
     if (isLoading.value || !hasMore.value) return;
-    if (!currentSite.value || !currentUser.value?.header_json) return;
+    if (!currentSite.value || !currentUser.value?.headerJson) return;
     if (!orgId.value) {
       console.error("No organization ID available for asset request", {
         orgId: orgId.value,
@@ -228,7 +228,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
     try {
       await useTauriCoreInvoke("get_assets", {
         site: currentSite.value,
-        cookieHeader: currentUser.value.header_json,
+        cookieHeader: currentUser.value.headerJson,
         favorite: assetType === "favorite",
         query: {
           type: assetType === "favorite" ? undefined : assetType,
@@ -378,8 +378,8 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
         if (idx !== -1) {
           rawAssetsList.value[idx] = {
             ...rawAssetsList.value[idx],
-            permed_accounts: payload.permedAccounts || [],
-            permed_protocols: payload.permedProtocols || []
+            permedAccounts: payload.permedAccounts || [],
+            permedProtocols: payload.permedProtocols || []
           } as RawAssetData;
         }
 

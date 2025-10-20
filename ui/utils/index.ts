@@ -10,9 +10,9 @@ export function transformAssetData(rawData: RawAssetData): AssetItem {
     type: rawData.type?.value || "-",
     platform: rawData.platform?.name || "-",
     category: rawData.category?.value || "-",
-    is_active: rawData.is_active ?? false,
-    permed_accounts: rawData.permed_accounts || [],
-    permed_protocols: rawData.permed_protocols || []
+    isActive: rawData.is_active ?? false,
+    permedAccounts: rawData.permedAccounts || [],
+    permedProtocols: rawData.permedProtocols || []
   };
 
   return item;

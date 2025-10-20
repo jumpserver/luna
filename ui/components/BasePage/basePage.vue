@@ -117,7 +117,7 @@ watch(
 async function getSettings() {
   await useTauriCoreInvoke("get_setting", {
     site: currentSite.value,
-    cookieHeader: currentUser.value!.header_json
+    cookieHeader: currentUser.value!.headerJson
   });
 }
 
@@ -261,8 +261,8 @@ onBeforeUnmount(() => {
         v-model:manual-password="editModal.draftManualPassword.value"
         v-model:dynamic-password="editModal.draftDynamicPassword.value"
         v-model:remember-secret="editModal.draftRememberSecret.value"
-        :accounts="editModal.currentSelectedCardInfo.value.permed_accounts!"
-        :protocols="editModal.currentSelectedCardInfo.value.permed_protocols!"
+        :accounts="editModal.currentSelectedCardInfo.value.permedAccounts!"
+        :protocols="editModal.currentSelectedCardInfo.value.permedProtocols!"
       />
     </Modal>
 

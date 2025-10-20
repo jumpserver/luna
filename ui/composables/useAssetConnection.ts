@@ -12,16 +12,16 @@ export function useAssetConnection() {
     if (protocol) {
       // 如果有指定协议，直接连接
       handleAssetConnection(
-        displayUser(asset.id, asset.permed_accounts!),
+        displayUser(asset.id, asset.permedAccounts!),
         asset.id,
         protocol,
-        asset.permed_accounts!,
+        asset.permedAccounts!,
         undefined,
         {
-          account_mode: "hosted",
-          manual_username: "",
-          manual_password: "",
-          dynamic_password: ""
+          accountMode: "hosted",
+          manualUsername: "",
+          manualPassword: "",
+          dynamicPassword: ""
         }
       );
     } else {
@@ -49,11 +49,11 @@ export function useAssetConnection() {
     userInfoStore.setConnectionInfoForAsset(asset.id, {
       protocol: connectionInfo.protocol,
       username: connectionInfo.account,
-      account_mode: connectionInfo.accountMode,
-      manual_username: connectionInfo.rememberSecret ? connectionInfo.manualUsername : "",
-      manual_password: connectionInfo.rememberSecret ? connectionInfo.manualPassword : "",
-      dynamic_password: connectionInfo.rememberSecret ? connectionInfo.dynamicPassword : "",
-      remember_secret: connectionInfo.rememberSecret
+      accountMode: connectionInfo.accountMode,
+      manualUsername: connectionInfo.rememberSecret ? connectionInfo.manualUsername : "",
+      manualPassword: connectionInfo.rememberSecret ? connectionInfo.manualPassword : "",
+      dynamicPassword: connectionInfo.rememberSecret ? connectionInfo.dynamicPassword : "",
+      rememberSecret: connectionInfo.rememberSecret
     });
 
     // 执行连接
@@ -61,13 +61,13 @@ export function useAssetConnection() {
       connectionInfo.account,
       asset.id,
       connectionInfo.protocol,
-      asset.permed_accounts!,
+      asset.permedAccounts!,
       undefined,
       {
-        account_mode: connectionInfo.accountMode,
-        manual_username: connectionInfo.manualUsername,
-        manual_password: connectionInfo.manualPassword,
-        dynamic_password: connectionInfo.dynamicPassword
+        accountMode: connectionInfo.accountMode,
+        manualUsername: connectionInfo.manualUsername,
+        manualPassword: connectionInfo.manualPassword,
+        dynamicPassword: connectionInfo.dynamicPassword
       }
     );
   };
