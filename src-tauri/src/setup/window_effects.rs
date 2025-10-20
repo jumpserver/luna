@@ -1,4 +1,4 @@
-use log::info;
+use log::{info, error};
 use std::error::Error;
 use tauri::WebviewWindow;
 
@@ -9,6 +9,9 @@ pub fn apply_mac_vibrancy(win: &WebviewWindow) -> Result<(), Box<dyn Error>> {
     let show_vibrancy =
         window_vibrancy::apply_vibrancy(&win, NSVisualEffectMaterial::FullScreenUI, None, None);
 
+    if let Err(e) = win.set_title("") {
+        error!("Failed to set window title: {}", e);
+    }
     match show_vibrancy {
         Ok(_) => {
             info!("Vibrancy applied successfully!");
