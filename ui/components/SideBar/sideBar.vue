@@ -79,9 +79,13 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
       <!-- 折叠按钮 -->
       <div 
         class="flex items-center px-3 h-12" 
-        :class="isMacOS ? (collapse ? 'mt-9' : 'justify-end') : (collapse ? 'px-3 py-2' : 'px-3 py-2')"
-        v-if="isMacOS || collapse"
+        :class="isMacOS ? (collapse ? 'mt-9' : 'justify-end') : (collapse ? 'px-3 py-2' : 'px-3 py-2 justify-between')"
       >
+        <div class="flex items-center gap-1" v-if="!isMacOS && !collapse"> 
+          <UAvatar size="sm" src="/logo.png" />
+          <span class="text-sm font-medium">JumpServer</span>
+        </div>
+
         <UButton
           color="neutral"
           variant="ghost"
@@ -94,7 +98,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 
       <!-- 搜索框区域 -->
       <div v-show="!collapse" class="px-3 py-2">
-        <div :class="isMacOS ? '' : 'flex items-center gap-2 mt-2'">
+        <div :class="isMacOS ? '' : 'flex items-center gap-2'">
           <UInput
             v-model="sidebarSearch"
             size="sm"
@@ -122,17 +126,6 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
               />
             </template>
           </UInput>
-          
-          <!-- 非 macOS 时折叠按钮在搜索框右侧 -->
-          <UButton
-            v-if="!isMacOS"
-            color="neutral"
-            variant="ghost"
-            size="md"
-            class="p-1"
-            :icon="SidebarFlipIcon"
-            @click="handleCollapse"
-          />
         </div>
       </div>
     </div>
