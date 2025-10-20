@@ -88,9 +88,10 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
       />
     </section>
 
-    <div v-show="!collapse" class="px- py-2">
+    <div v-show="!collapse" class="px-3 py-2">
       <UInput
         v-model="sidebarSearch"
+        size="sm"
         clearable
         icon="i-lucide-search"
         variant="outline"
