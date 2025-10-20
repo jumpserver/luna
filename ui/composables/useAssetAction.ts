@@ -12,6 +12,8 @@ let unlistenFavoriteSuccess: UnlistenFn | null = null;
 let unlistenFavoriteFailed: UnlistenFn | null = null;
 let unlistenGetAssetDetailSuccess: UnlistenFn | null = null;
 let unlistenGetAssetDetailFailed: UnlistenFn | null = null;
+let unlistenRenameSuccess: UnlistenFn | null = null;
+let unlistenRenameError: UnlistenFn | null = null;
 
 function releaseTauriEventListeners() {
   tauriListenersRefCount = Math.max(tauriListenersRefCount - 1, 0);
@@ -23,12 +25,16 @@ function releaseTauriEventListeners() {
     unlistenGetTokenFailure?.();
     unlistenGetAssetDetailSuccess?.();
     unlistenGetAssetDetailFailed?.();
+    unlistenRenameSuccess?.();
+    unlistenRenameError?.();
     unlistenGetTokenFailure = null;
     unlistenGetTokenSuccess = null;
     unlistenFavoriteSuccess = null;
     unlistenFavoriteFailed = null;
     unlistenGetAssetDetailSuccess = null;
     unlistenGetAssetDetailFailed = null;
+    unlistenRenameSuccess = null;
+    unlistenRenameError = null;
     tauriListenersInitialized = false;
   }
 }
@@ -40,7 +46,7 @@ export const useAssetAction = () => {
   const toast = useToast();
   const userInfoStore = useUserInfoStore();
   // prettier-ignore
-  const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption } = storeToRefs(userInfoStore);
+  const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption, orgId } = storeToRefs(userInfoStore);
   const { setConnectionInfoForAsset, getConnectionInfoForAsset } = userInfoStore;
 
   /**
@@ -247,7 +253,23 @@ export const useAssetAction = () => {
     });
   };
 
-  const handleAssetRename = () => {};
+  /**
+   * @description 处理重命名
+   * @param assetId
+   * @param name
+   * @returns
+   */
+  const handleAssetRename = (assetId: string, name: string) => {
+    if (!currentSite.value || !currentUser.value?.headerJson) return;
+
+    useTauriCoreInvoke("rename", {
+      site: currentSite.value,
+      cookieHeader: currentUser.value.headerJson,
+      assetId,
+      orgId: orgId.value,
+      name
+    });
+  };
 
   /**
    * @description 处理资产收藏
@@ -261,6 +283,10 @@ export const useAssetAction = () => {
     });
   };
 
+  /**
+   * @description 获取详情
+   * @param assetId
+   */
   const getAssetDetail = (assetId: string) => {
     useTauriCoreInvoke("get_asset_detail", {
       site: currentSite.value,
@@ -365,6 +391,55 @@ export const useAssetAction = () => {
           }
         }
       );
+
+      unlistenRenameSuccess = await useTauriEventListen("rename-success", (event) => {
+        interface eventPayload {
+          success: boolean;
+          status?: number;
+          data?: string;
+        }
+
+        const payload = event.payload as eventPayload;
+        let assetId = "";
+        let name = "";
+
+        try {
+          if (payload.data) {
+            const info = JSON.parse(payload.data) as any;
+            assetId = info?.asset || info?.asset_id || info?.id || "";
+            name = info?.name || "";
+          }
+        } catch {}
+
+        // 更新资产名称
+        if (assetId && name) {
+          try {
+            useEventBus().emit("assetRenamed", { assetId, name });
+          } catch {}
+        }
+      });
+
+      unlistenRenameError = await useTauriEventListen("rename-error", (event) => {
+        interface eventPayload {
+          success: boolean;
+          status?: number;
+          data?: string;
+        }
+
+        const payload = event.payload as eventPayload;
+        let message = "";
+        try {
+          const err = payload.data ? JSON.parse(payload.data) : {};
+          message = err?.detail || (Array.isArray(err?.asset) ? err.asset[0] : "");
+        } catch {}
+
+        toast.add({
+          title: t("AssetCard.RenameFail"),
+          description: message || t("Common.OperationFailed"),
+          color: "error",
+          icon: "line-md:close-circle"
+        });
+      });
 
       tauriListenersInitialized = true;
       tauriListenersRefCount++;

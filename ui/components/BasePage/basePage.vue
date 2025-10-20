@@ -2,10 +2,11 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { layoutsType } from "~/store/modules/userSetting";
 import type { AssetItem, SettingResponse } from "~/types/index";
+
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { useUserSettingStore } from "~/store/modules/userSetting";
-import CardGridCard from "../Card/GridCard/gridCard.vue";
-import CardSkeletonCard from "../Card/GridCard/skeletonCard.vue";
+
+import SkeletonCard from "~/components/Card/GridCard/skeletonCard.vue";
 
 type AssetType = "linux" | "windows" | "database" | "device" | "favorite";
 
@@ -18,14 +19,14 @@ const props = defineProps<{
 const providerClearSelection = inject<(cb: () => void) => void>("providerClearSelection");
 const { t } = useI18n();
 
-// 使用 composables
+const scrollRef = ref<HTMLElement | null>(null);
+const subscribeSettingEvent = ref<UnlistenFn | null>(null);
+
 const { connectAsset, confirmConnection } = useAssetConnection();
 const editModal = useEditModal();
 const contextMenu = useContextMenu();
-const assetManagement = useAssetManagement();
-const scrollRef = ref<HTMLElement | null>(null);
-const subscribeSettingEvent = ref<UnlistenFn | null>(null);
 const userInfoStore = useUserInfoStore();
+const assetManagement = useAssetManagement();
 const userSettingStore = useUserSettingStore();
 const assetManager = useAssetFetcher(props.type, scrollRef);
 
@@ -48,9 +49,12 @@ const visibleAssets = computed(() => {
 });
 
 // 监听模态框状态变化
-watch([editModal.editModalOpen, editModal.currentSelectedCardInfo], ([open, info]: [boolean, AssetItem | null]) => {
-  if (open && info) editModal.initDraft(info);
-});
+watch(
+  [editModal.editModalOpen, editModal.currentSelectedCardInfo],
+  ([open, info]: [boolean, AssetItem | null]) => {
+    if (open && info) editModal.initDraft(info);
+  }
+);
 
 watch(
   () => loggedIn.value,
@@ -84,7 +88,9 @@ watch(
         editModal.currentSelectedCardInfo.value = visibleAssets.value[idx]!;
       }
     } else if (editModal.currentSelectedCardInfo.value) {
-      const updated = visibleAssets.value.find((a) => a.id === editModal.currentSelectedCardInfo.value!.id);
+      const updated = visibleAssets.value.find(
+        (a) => a.id === editModal.currentSelectedCardInfo.value!.id
+      );
       if (updated) editModal.currentSelectedCardInfo.value = updated;
     } else if (lastDetailAssetId?.value) {
       const target = visibleAssets.value.find((a) => a.id === lastDetailAssetId.value);
@@ -155,7 +161,6 @@ const handleConnectAsset = (asset: AssetItem) => {
   }
 };
 
-
 /**
  * @description 处理模态框确认
  */
@@ -179,7 +184,6 @@ onBeforeUnmount(() => {
 });
 </script>
 
-
 <template>
   <div class="relative h-full w-full flex min-h-0">
     <section
@@ -200,7 +204,7 @@ onBeforeUnmount(() => {
         class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-4 p-2"
         aria-busy="true"
       >
-        <CardSkeletonCard />
+        <SkeletonCard />
       </div>
 
       <div
@@ -211,7 +215,8 @@ onBeforeUnmount(() => {
         <span class="text-sm">{{ t("Common.NoData") }}</span>
       </div>
 
-      <CardGridCard v-else
+      <CardGridCard
+        v-else
         :visible-assets="visibleAssets"
         :is-appending="isAppending"
         :append-skeleton-count="appendSkeletonCount"
@@ -233,9 +238,9 @@ onBeforeUnmount(() => {
       </div>
 
       <div v-else class="p-2">
-        <CardTableCard 
-          :items="visibleAssets" 
-          @connect-asset="handleConnectAsset" 
+        <CardTableCard
+          :items="visibleAssets"
+          @connect-asset="handleConnectAsset"
           @context-trigger="handleContextTrigger"
         />
       </div>

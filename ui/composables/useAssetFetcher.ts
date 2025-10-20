@@ -326,6 +326,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   let unsubscribeRefresh: (() => void) | null = null;
   let unsubscribeClearAssets: (() => void) | null = null;
   let unsubscribeAssetDetailUpdated: (() => void) | null = null;
+  let unsubscribeAssetRenamed: (() => void) | null = null;
 
   const listenEventBusEvent = () => {
     const { on } = useEventBus();
@@ -391,6 +392,21 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
       },
       false
     );
+
+    // 重命名后的 UI 更新（无需刷新）
+    unsubscribeAssetRenamed = on(
+      "assetRenamed",
+      (payload: { assetId: string; name: string }) => {
+        const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
+        if (idx !== -1) {
+          rawAssetsList.value[idx] = {
+            ...rawAssetsList.value[idx],
+            name: payload.name
+          } as RawAssetData;
+        }
+      },
+      false
+    );
   };
 
   const unListenEventBusEvent = () => {
@@ -399,6 +415,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
     unsubscribeRefresh?.();
     unsubscribeClearAssets?.();
     unsubscribeAssetDetailUpdated?.();
+    unsubscribeAssetRenamed?.();
   };
 
   onMounted(async () => {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AssetItem, PermedProtocol } from "~/types/index";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface Props {
   asset: AssetItem;
@@ -13,10 +14,15 @@ const props = defineProps<Props>();
 const emits = defineEmits<{
   (e: "update:visible", visible: boolean): void;
   (e: "contextTrigger", asset: AssetItem): void;
+  (e: "renameTrigger", asset: AssetItem): void;
 }>();
 
+const userInfoStore = useUserInfoStore();
+
 const { t } = useI18n();
-const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite } = useAssetAction();
+const { currentSite, currentUser } = storeToRefs(userInfoStore);
+const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite } =
+  useAssetAction();
 
 // 定义菜单项类型
 interface MenuItem {
@@ -37,7 +43,7 @@ const menuItems = computed((): MenuItem[] => {
       value: "connect",
       label: t("ContextMenu.Connect"),
       icon: "i-lucide-plug",
-      onClick: () => handleConnect(),
+      onClick: () => handleConnect()
     },
     {
       label: t("ContextMenu.Edit"),
@@ -68,7 +74,7 @@ const menuItems = computed((): MenuItem[] => {
       value: "moreConnect",
       label: t("ContextMenu.MoreConnect"),
       icon: "i-lucide-ellipsis",
-      onClick: () => (void 0),
+      onClick: () => void 0,
       children: protocolItems
     };
     baseItems.splice(1, 0, item);
@@ -109,9 +115,11 @@ const handleEdit = () => {
 
 // 处理重命名
 const handleRename = () => {
-  // TODO: 实现重命名功能
-  console.log("Rename asset:", props.asset);
-  emits("update:visible", false);
+  emits("renameTrigger", props.asset);
+
+  nextTick(() => {
+    emits("update:visible", false);
+  });
 };
 
 // 处理收藏
