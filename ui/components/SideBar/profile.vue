@@ -385,7 +385,9 @@ onBeforeUnmount(() => {
   </UDropdownMenu>
 
   <UButton v-else variant="subtle" icon="line-md:log-in" class="w-full" @click="openLoginPage">
-    {{ t("Common.Login") }}
+    <span v-if="!props.collapse">
+      {{ t("Common.Login") }}
+    </span>
   </UButton>
 
   <Modal

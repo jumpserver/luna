@@ -72,7 +72,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
   <div
     class="flex flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-blur-lg backdrop-saturate-150 supports-[backdrop-filter]:bg-white/20 supports-[backdrop-filter]:dark:bg-zinc-900/15 border-r border-white/30 dark:border-white/10 shadow-sm"
     :style="{
-      width: collapse ? '63px' : '220px'
+      width: collapse ? '75px' : '220px'
     }"
   >
     <!-- 搜索和折叠按钮区域 -->
@@ -150,47 +150,9 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
   }
 }
 
-// 搜索容器布局
-.search-container {
-  &--inline {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  &--stacked {
-    display: block;
-  }
+
+.menu nav[data-collapsed="true"] {
+  width: 38px;
 }
 
-// 搜索输入框样式
-.search-input {
-  background-color: transparent;
-  border-radius: 0.125rem;
-  
-  &--inline {
-    flex: 1;
-  }
-  
-  &--full {
-    width: 100%;
-  }
-}
-
-// 折叠按钮样式
-.collapse-button {
-  &--inline {
-    padding: 0.25rem;
-    flex-shrink: 0;
-  }
-  
-  &--stacked {
-    margin-top: 0.25rem;
-    padding: 0.25rem;
-    display: block;
-    margin-left: auto;
-    margin-right: 0;
-    width: fit-content;
-  }
-}
 </style>
