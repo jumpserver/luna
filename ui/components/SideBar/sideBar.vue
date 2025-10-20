@@ -94,7 +94,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 
       <!-- 搜索框区域 -->
       <div v-show="!collapse" class="px-3 py-2">
-        <div :class="isMacOS ? '' : 'flex items-center gap-2'">
+        <div :class="isMacOS ? '' : 'flex items-center gap-2 mt-2'">
           <UInput
             v-model="sidebarSearch"
             size="sm"

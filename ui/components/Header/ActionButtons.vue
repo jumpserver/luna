@@ -189,7 +189,7 @@ const actionItems = computed<ActionItem[]>(() => [
 </script>
 
 <template>
-  <section class="flex items-center h-full gap-3 mr-2">
+  <section class="flex items-center h-full gap-3">
     <template v-for="action of actionItems" :key="action.iconName">
       <template v-if="action.type === 'action'">
         <UButton :icon="action.iconName" v-bind="commonButtonProps" @click="action.onClick" />
