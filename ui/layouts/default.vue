@@ -3,6 +3,7 @@
 <template>
   <UCard
     variant="outline"
+    class="rounded-none overflow-visible"
     :ui="{
       header: 'p-0 sm:px-0',
       body: 'p-0 sm:p-0',
