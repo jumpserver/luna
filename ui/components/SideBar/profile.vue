@@ -310,12 +310,12 @@ onMounted(async () => {
 
       userInfoStore.setUserData(normalizedSite, {
         name: profileData.name,
-        headerJson: cookies,
+        header_json: cookies,
         site: normalizedSite,
         org: currentOrgData,
         system_roles: profileData.system_roles,
-        availableOrgs,
-        connectionInfo: {
+        available_orgs: availableOrgs,
+        connection_info: {
           protocol: "",
           username: ""
         }
