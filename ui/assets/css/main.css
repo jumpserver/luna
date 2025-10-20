@@ -21,6 +21,7 @@
   --bg-hover-dark: rgba(0, 0, 0, 0.3);
   --bg-selected-light: rgba(209, 209, 209, 0.8);
   --bg-selected-dark: rgba(0, 0, 0, 0.5);
+  
 }
 
 .text-xs-plus {
@@ -94,4 +95,14 @@ body,
 #__nuxt,
 #app {
   height: 100%;
+  text-autospace: normal;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -o-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }

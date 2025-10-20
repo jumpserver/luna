@@ -90,7 +90,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
           color="neutral"
           variant="ghost"
           size="md"
-          :class="isMacOS ? (collapse ? 'p-2' : 'p-1') : 'p-2'"
+          :class="collapse ? 'p-2' : 'p-1'"
           :icon="SidebarFlipIcon"
           @click="handleCollapse"
         />
