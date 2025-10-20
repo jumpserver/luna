@@ -35,11 +35,6 @@ pub fn run() {
             // 创建系统托盘
             setup_tray(&menu, &app)?;
 
-            // 动态设置窗口装饰为 false，确保标题栏被隐藏
-            if let Err(e) = win.set_decorations(false) {
-                error!("Failed to set window decorations: {}", e);
-            }
-
             if let Err(e) = apply_window_effects(&win) {
                 error!("Failed to apply window effects: {}", e);
             }
