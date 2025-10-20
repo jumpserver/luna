@@ -411,14 +411,6 @@ export const useAssetAction = () => {
           }
         } catch {}
 
-        // 成功提示
-        toast.add({
-          title: t("Common.Success"),
-          description: t("AssetCard.RenameSuccess"),
-          color: "success",
-          icon: "line-md:check-circle"
-        });
-
         // 更新资产名称
         if (assetId && name) {
           try {
