@@ -370,7 +370,7 @@ onBeforeUnmount(() => {
     :ui="{ content: 'w-56 p-1' }"
   >
     <div class="w-full rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-      <div v-if="!props.collapse" class="flex items-center gap-3 px-2 py-2 text-left">
+      <div v-if="!props.collapse" class="flex items-center gap-3 px-2 py-1 text-left">
         <UAvatar size="sm" src="/user_avatar.png" />
         <div class="flex-1 leading-tight">
           <div class="text-sm font-medium truncate">

@@ -45,17 +45,8 @@ const handleWindowDrag = async (event: MouseEvent) => {
     @mousedown="handleWindowDrag"
   >
     <section class="flex items-center h-full">
-      <UButton
-        v-if="collapse || !isMacOS"
-        color="neutral"
-        variant="ghost"
-        size="md"
-        class="p-1"
-        :icon="SidebarFlipIcon"
-        @click="handleCollapse"
-      />
 
-      <div :style="{ marginLeft: collapse ? '0.625rem' : '' }">
+      <div >
         <HeaderOrganizationSelector />
       </div>
     </section>

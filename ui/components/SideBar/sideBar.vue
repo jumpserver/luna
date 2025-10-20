@@ -7,9 +7,7 @@ import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
 const { t } = useI18n();
 const { emit } = useEventBus();
 const localePath = useLocalePath();
-
 const useSettingStore = useUserSettingStore();
-
 const { setCollapse } = useSettingStore;
 const { collapse, theme } = storeToRefs(useSettingStore);
 
@@ -17,6 +15,7 @@ const isLoading = ref(false);
 
 // 使用平台检测 composable
 const { isMacOS } = usePlatform();
+// const isMacOS = false;
 
 const sideBarItems = computed<NavigationMenuItem[]>(() => {
   return [
@@ -75,47 +74,67 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
       width: collapse ? '75px' : '220px'
     }"
   >
-    <!-- 搜索和折叠按钮区域 -->
-    <section v-if="isMacOS" class="flex items-center justify-end w-full px-3 h-12">
-      <UButton
-        v-if="!collapse"
-        color="neutral"
-        variant="ghost"
-        size="md"
-        class="mt-1 p-1"
-        :icon="SidebarFlipIcon"
-        @click="handleCollapse"
-      />
-    </section>
-
-    <div v-show="!collapse" class="px-3 py-2">
-      <UInput
-        v-model="sidebarSearch"
-        size="sm"
-        clearable
-        icon="i-lucide-search"
-        variant="outline"
-        :placeholder="t('Operation.Search')"
-        class="dark:bg-transparent rounded-sm w-full"
-        :style="isDarkMode ? '' : 'background-color: rgb(198,198,197, 0.5);'"
-        @update:model-value="debouncedSidebarSearch"
+    <!-- 顶部区域：折叠按钮和搜索框 -->
+    <div class="flex flex-col w-full">
+      <!-- 折叠按钮 -->
+      <div 
+        class="flex items-center px-3 h-12" 
+        :class="isMacOS ? (collapse ? 'mt-9' : 'justify-end') : (collapse ? 'px-3 py-2' : 'px-3 py-2')"
+        v-if="isMacOS || collapse"
       >
-        <template v-if="sidebarSearch?.length" #trailing>
-          <UButton
-            color="neutral"
-            variant="link"
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="md"
+          :class="isMacOS ? (collapse ? 'p-2' : 'p-1') : 'p-2'"
+          :icon="SidebarFlipIcon"
+          @click="handleCollapse"
+        />
+      </div>
+
+      <!-- 搜索框区域 -->
+      <div v-show="!collapse" class="px-3 py-2">
+        <div :class="isMacOS ? '' : 'flex items-center gap-2'">
+          <UInput
+            v-model="sidebarSearch"
             size="sm"
-            icon="i-lucide-circle-x"
-            aria-label="Clear input"
-            @click="
-              () => {
-                sidebarSearch = '';
-                emitSearch('');
-              }
-            "
+            clearable
+            icon="i-lucide-search"
+            variant="outline"
+            :placeholder="t('Operation.Search')"
+            :class="isMacOS ? 'dark:bg-transparent rounded-sm w-full' : 'dark:bg-transparent rounded-sm flex-1'"
+            :style="isDarkMode ? '' : 'background-color: rgb(198,198,197, 0.5);'"
+            @update:model-value="debouncedSidebarSearch"
+          >
+            <template v-if="sidebarSearch?.length" #trailing>
+              <UButton
+                color="neutral"
+                variant="link"
+                size="sm"
+                icon="i-lucide-circle-x"
+                aria-label="Clear input"
+                @click="
+                  () => {
+                    sidebarSearch = '';
+                    emitSearch('');
+                  }
+                "
+              />
+            </template>
+          </UInput>
+          
+          <!-- 非 macOS 时折叠按钮在搜索框右侧 -->
+          <UButton
+            v-if="!isMacOS"
+            color="neutral"
+            variant="ghost"
+            size="md"
+            class="p-1"
+            :icon="SidebarFlipIcon"
+            @click="handleCollapse"
           />
-        </template>
-      </UInput>
+        </div>
+      </div>
     </div>
 
     <div class="px-3 py-0 flex-1 overflow-auto menu">
@@ -150,9 +169,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
   }
 }
 
-
 .menu nav[data-collapsed="true"] {
   width: 38px;
 }
-
 </style>
