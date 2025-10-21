@@ -170,7 +170,7 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	}
 	var appPath string
 	if appItem.IsInternal {
-		currentPath := filepath.Dir(os.Args[0])
+		currentPath, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 		appPath = filepath.Join(currentPath, appItem.Path)
 	} else {
 		appPath = appItem.Path

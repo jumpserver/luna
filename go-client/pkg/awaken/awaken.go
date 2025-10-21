@@ -1,6 +1,7 @@
 package awaken
 
 import (
+	"fmt"
 	"go-client/global"
 	"go-client/pkg/config"
 	"io/ioutil"
@@ -100,31 +101,63 @@ func (r *Rouse) HandleRDP(appConfig *config.AppConfig) {
 	filePath := filepath.Join(dir, "jumpserver-client", replacer.Replace(fileName)+".rdp")
 	err := ioutil.WriteFile(filePath, []byte(r.Content), os.ModePerm)
 	if err != nil {
-		global.LOG.Error(err.Error())
+		errorMsg := err.Error()
+		global.LOG.Error(errorMsg)
+		fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
 		return
 	}
 	cmd := handleRDP(r, filePath, appConfig)
-	cmd.Run()
+	if cmd != nil {
+		cmd.Run()
+	} else {
+		errorMsg := "No RDP application configured or found"
+		global.LOG.Error(errorMsg)
+		fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+	}
 }
 
 func (r *Rouse) HandleVNC(appConfig *config.AppConfig) {
 	cmd := handleVNC(r, appConfig)
-	cmd.Run()
+	if cmd != nil {
+		cmd.Run()
+	} else {
+		errorMsg := "No VNC application configured or found"
+		global.LOG.Error(errorMsg)
+		fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+	}
 }
 
 func (r *Rouse) HandleSSH(appConfig *config.AppConfig) {
 	cmd := handleSSH(r, appConfig)
-	cmd.Run()
+	if cmd != nil {
+		cmd.Run()
+	} else {
+		errorMsg := "No SSH application configured or found"
+		global.LOG.Error(errorMsg)
+		fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+	}
 }
 
 func (r *Rouse) HandleDB(appConfig *config.AppConfig) {
 	cmd := handleDB(r, appConfig)
-	cmd.Run()
+	if cmd != nil {
+		cmd.Run()
+	} else {
+		errorMsg := "No database application configured or found"
+		global.LOG.Error(errorMsg)
+		fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+	}
 }
 
 func (r *Rouse) HandleCommand(appConfig *config.AppConfig) {
 	cmd := handleCommand(r, appConfig)
-	cmd.Run()
+	if cmd != nil {
+		cmd.Run()
+	} else {
+		errorMsg := "No command application configured or found"
+		global.LOG.Error(errorMsg)
+		fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+	}
 }
 
 func (r *Rouse) Run() {
@@ -140,6 +173,10 @@ func (r *Rouse) Run() {
 			r.HandleSSH(&appConfig)
 		case "mysql", "mariadb", "postgresql", "redis", "oracle", "sqlserver", "mongodb":
 			r.HandleDB(&appConfig)
+		default:
+			errorMsg := fmt.Sprintf("Unsupported protocol: %s", protocol)
+			global.LOG.Error(errorMsg)
+			fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
 		}
 	} else {
 		r.HandleCommand(&appConfig)

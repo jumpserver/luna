@@ -85,7 +85,7 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	}
 
 	if appItem.IsInternal {
-		currentPath := filepath.Dir(os.Args[0])
+		currentPath, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 		clientPath := filepath.Join(currentPath, "client")
 		if appItem.Name == "iterm" {

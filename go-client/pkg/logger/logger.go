@@ -45,7 +45,17 @@ func getEncoder() zapcore.Encoder {
 
 func getLogWriter() zapcore.WriteSyncer {
 	dir, _ := os.UserConfigDir()
-	filePath := filepath.Join(dir, "jumpserver-client", "client.log")
-	file, _ := os.Create(filePath)
+	logDir := filepath.Join(dir, "jumpserver-client")
+	// 确保日志目录存在
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		// 如果创建目录失败，使用标准输出
+		return zapcore.AddSync(os.Stdout)
+	}
+	filePath := filepath.Join(logDir, "client.log")
+	file, err := os.Create(filePath)
+	if err != nil {
+		// 如果创建文件失败，使用标准输出
+		return zapcore.AddSync(os.Stdout)
+	}
 	return zapcore.AddSync(file)
 }
