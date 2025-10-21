@@ -12,6 +12,8 @@ const props = withDefaults(
 const emits = defineEmits<{
   (e: "connectAsset", asset: AssetItem): void;
   (e: "contextTrigger", asset: AssetItem): void;
+  (e: "editTrigger", asset: AssetItem): void;
+  (e: "connectTrigger", asset: AssetItem): void;
 }>();
 
 const { t } = useI18n();
@@ -142,6 +144,8 @@ const cancelRename = () => {
     :y="contextMenuPosition.y"
     @update:visible="contextMenuVisible = $event"
     @context-trigger="handleContextTrigger"
+    @edit-trigger="emits('editTrigger', props.asset)"
+    @connect-trigger="emits('connectTrigger', props.asset)"
     @rename-trigger="handleRenameTrigger"
   />
 </template>

@@ -2195,7 +2195,6 @@ dependencies = [
  "tauri-plugin-store",
  "tauri-plugin-updater",
  "tauri-plugin-window-state",
- "time",
  "tokio",
  "url",
  "window-vibrancy",

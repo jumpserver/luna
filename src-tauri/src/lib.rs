@@ -28,20 +28,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .setup(|app| {
-            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&quit_i])?;
-            let win = app.get_webview_window("main").unwrap();
-
-            // 创建系统托盘
-            setup_tray(&menu, &app)?;
-
-            if let Err(e) = apply_window_effects(&win) {
-                error!("Failed to apply window effects: {}", e);
-            }
-
-            Ok(())
-        })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())
@@ -56,6 +42,21 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_store::Builder::new().build())
+        .setup(|app| {
+            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&quit_i])?;
+            let win = app.get_webview_window("main").unwrap();
+
+            // 创建系统托盘
+            setup_tray(&menu, &app)?;
+
+            if let Err(e) = apply_window_effects(&win) {
+                error!("Failed to apply window effects: {}", e);
+            }
+
+            Ok(())
+        })
+
         .invoke_handler(tauri::generate_handler![
             logout,
             rename,

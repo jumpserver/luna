@@ -10,6 +10,8 @@ const UBadge = resolveComponent("UBadge");
 const emits = defineEmits<{
   (e: "connectAsset", asset: AssetItem): void;
   (e: "contextTrigger", asset: AssetItem): void;
+  (e: "editTrigger", asset: AssetItem): void;
+  (e: "connectTrigger", asset: AssetItem): void;
 }>();
 
 const props = defineProps<{
@@ -233,6 +235,8 @@ function cancelRename() {
     :y="contextMenuPosition.y"
     @update:visible="contextMenuVisible = $event"
     @context-trigger="handleContextTrigger"
+    @edit-trigger="emits('editTrigger', contextMenuAsset as AssetItem)"
+    @connect-trigger="emits('connectTrigger', contextMenuAsset as AssetItem)"
     @rename-trigger="handleRenameTrigger"
   />
 </template>

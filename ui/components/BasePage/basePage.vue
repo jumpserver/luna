@@ -122,7 +122,7 @@ async function getSettings() {
 }
 
 /**
- * @description 处理上下文菜单触发
+ * @description 打开 contextMenu
  */
 const handleContextTrigger = (asset: AssetItem, event?: MouseEvent) => {
   editModal.setSuppressNextModal(true);
@@ -135,6 +135,14 @@ const handleContextTrigger = (asset: AssetItem, event?: MouseEvent) => {
   }
 
   contextMenu.showContextMenu(asset, event);
+};
+
+/**
+ * @description 打开编辑弹窗
+ */
+const handleEditTrigger = (asset: AssetItem) => {
+  editModal.setSuppressNextModal(false);
+  editModal.openEditModal(asset);
 };
 
 const listenTauriEvent = async () => {
@@ -153,12 +161,54 @@ const listenTauriEvent = async () => {
 
 /**
  * @description 处理资产连接
+ * 如果该资产存在上次保存的连接信息且可用，则直接使用上次的协议与账号连接；否则弹出编辑模态框。
  */
 const handleConnectAsset = (asset: AssetItem) => {
+  const saved = userInfoStore.getConnectionInfoForAsset(asset.id);
+
+  const canDirectConnect = (() => {
+    if (!saved || !saved.protocol || !saved.username) return false;
+
+    const mode = saved.accountMode || "hosted";
+
+    // 手动账号需要用户名和密码，且需被记住
+    if (mode === "manual") {
+      return !!(saved.rememberSecret && saved.manualUsername && saved.manualPassword);
+    }
+
+    // 同名账号至少需要保存过一次动态密码
+    if (mode === "dynamic") {
+      return !!(saved.rememberSecret && saved.dynamicPassword);
+    }
+
+    // 托管账号可直接连接
+    return true;
+  })();
+
+  if (canDirectConnect) {
+    return confirmConnection(asset, {
+      protocol: saved!.protocol,
+      account: saved!.username,
+      accountMode: (saved!.accountMode as any) || "hosted",
+      manualUsername: saved!.manualUsername || "",
+      manualPassword: saved!.manualPassword || "",
+      dynamicPassword: saved!.dynamicPassword || "",
+      rememberSecret: !!saved!.rememberSecret
+    });
+  }
+
   const result = connectAsset(asset);
+
   if (result?.needsModal) {
     editModal.openEditModal(asset);
   }
+};
+
+/**
+ * @description 右键菜单的连接操作
+ */
+const handleConnectTrigger = (asset: AssetItem) => {
+  handleConnectAsset(asset);
 };
 
 /**
@@ -222,6 +272,8 @@ onBeforeUnmount(() => {
         :append-skeleton-count="appendSkeletonCount"
         @connect-asset="handleConnectAsset"
         @context-trigger="handleContextTrigger"
+        @edit-trigger="handleEditTrigger"
+        @connect-trigger="handleConnectTrigger"
       />
     </section>
 
@@ -242,6 +294,8 @@ onBeforeUnmount(() => {
           :items="visibleAssets"
           @connect-asset="handleConnectAsset"
           @context-trigger="handleContextTrigger"
+          @edit-trigger="handleEditTrigger"
+          @connect-trigger="handleConnectTrigger"
         />
       </div>
     </section>
