@@ -149,7 +149,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
   </div>
 </template>
 
-<style lang="scss">
+<style>
 .light .menu .menu-item {
   &[data-active] {
     background-color: var(--bg-hover-light);
