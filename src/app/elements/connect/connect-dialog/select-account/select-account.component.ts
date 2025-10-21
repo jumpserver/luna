@@ -1,6 +1,6 @@
 import { User } from '@app/globals';
 import { FormControl } from '@angular/forms';
-import { AppService, I18nService } from '@app/services';
+import { AppService, I18nService, SettingService } from '@app/services';
 import { BehaviorSubject, ReplaySubject, Subject } from 'rxjs';
 import { Account, AccountGroup, Asset, AuthInfo, Protocol } from '@app/model';
 
@@ -36,7 +36,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @ViewChild('password', { static: false }) passwordRef: ElementRef;
 
   public hidePassword = true;
-  public rememberAuthDisabled = false;
+  public rememberAuthDisabled = !this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH;
   usernameControl = new FormControl();
   localAuthItems: AuthInfo[];
   filteredOptions: AuthInfo[];
@@ -51,6 +51,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   private userManuallySelected = false; // 标记用户是否手动选择了账号
 
   constructor(
+    private _settingSvc: SettingService,
     private _appSvc: AppService,
     private _i18n: I18nService,
     private _cdRef: ChangeDetectorRef
