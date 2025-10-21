@@ -338,7 +338,7 @@ export class AppService {
       newAuth.alias = account.alias;
     }
 
-    if (!auth.secret || !auth.rememberAuth) {
+    if (!auth.secret || !auth.rememberAuth || !this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH) {
       newAuth.secret = '';
     } else {
       newAuth.secret = this.encrypt(auth.secret);
