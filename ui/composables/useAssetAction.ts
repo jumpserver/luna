@@ -54,11 +54,12 @@ export const useAssetAction = () => {
    * @param assetId
    * @returns
    */
-  const displayUser = (assetId: string, accounts: PermedAccount[]) => {
+  const displayUser = (assetId: string, accounts?: PermedAccount[]) => {
     const saved = currentConnectionInfoMap.value[assetId];
     if (saved?.username) return saved.username;
 
-    const acc = accounts.find((a) => a && a.alias && !a.alias.startsWith("@"));
+    const list = accounts || [];
+    const acc = list.find((a) => a && a.alias && !a.alias.startsWith("@"));
 
     return acc?.name || "-";
   };
@@ -184,7 +185,7 @@ export const useAssetAction = () => {
     user: string,
     assetId: string,
     displayProtocol: string,
-    accounts: PermedAccount[],
+    accounts?: PermedAccount[],
     protocolOverride?: string,
     ephemeral?: {
       accountMode?: "hosted" | "dynamic" | "manual";
@@ -203,7 +204,8 @@ export const useAssetAction = () => {
     let input_secret = "";
 
     // 根据展示选择反查账号对象（name/username/alias 任意匹配）
-    const matchedAccount = accounts.find(
+    const _accounts = accounts || [];
+    const matchedAccount = _accounts.find(
       (a) => a.username === selected || a.alias === selected || a.name === selected
     );
 
@@ -237,7 +239,8 @@ export const useAssetAction = () => {
       ) {
         return "@USER";
       }
-      return getUserId(accounts, assetId, user);
+
+      return getUserId(accounts!, assetId, user);
     })();
 
     nextTick(() => {

@@ -393,11 +393,11 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
       false
     );
 
-    // 重命名后的 UI 更新（无需刷新）
     unsubscribeAssetRenamed = on(
       "assetRenamed",
       (payload: { assetId: string; name: string }) => {
         const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
+        
         if (idx !== -1) {
           rawAssetsList.value[idx] = {
             ...rawAssetsList.value[idx],

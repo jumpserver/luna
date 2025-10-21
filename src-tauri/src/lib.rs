@@ -14,10 +14,11 @@ use crate::commands::get_setting::get_setting;
 use crate::commands::get_token::get_connect_token;
 use crate::commands::logout::logout;
 use crate::commands::pull_up::pull_up;
+use crate::commands::rename_asset::rename;
 use crate::commands::set_favorite::set_favorite;
 use crate::commands::update_config::update_config_selection;
 use crate::commands::url_watcher::url_watcher;
-use crate::commands::window_controls::{minimize_window, toggle_maximize_window, close_window};
+use crate::commands::window_controls::{close_window, minimize_window, toggle_maximize_window};
 
 use log::error;
 use tauri::menu::{Menu, MenuItem};
@@ -46,12 +47,18 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_window_state::Builder::default()
-            .with_state_flags(tauri_plugin_window_state::StateFlags::all().difference(tauri_plugin_window_state::StateFlags::DECORATIONS))
-            .build())
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::all()
+                        .difference(tauri_plugin_window_state::StateFlags::DECORATIONS),
+                )
+                .build(),
+        )
         .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             logout,
+            rename,
             pull_up,
             get_assets,
             get_config,
