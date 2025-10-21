@@ -197,6 +197,7 @@ export interface AssetsResponse {
 export interface ConnectionInfo {
   protocol: string;
   username: string;
+  accountId?: string;
   accountMode?: "hosted" | "dynamic" | "manual";
   manualUsername?: string;
   manualPassword?: string;

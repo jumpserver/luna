@@ -38,6 +38,7 @@ export function useAssetConnection() {
     connectionInfo: {
       protocol: string;
       account: string;
+      accountId?: string;
       accountMode: "hosted" | "dynamic" | "manual";
       manualUsername: string;
       manualPassword: string;
@@ -45,10 +46,21 @@ export function useAssetConnection() {
       rememberSecret: boolean;
     }
   ) => {
+    // 解析托管账号的 ID（若未传入）
+    let resolvedAccountId: string | undefined = connectionInfo.accountId;
+    if (connectionInfo.accountMode === "hosted" && !resolvedAccountId) {
+      const accs = asset.permedAccounts || [];
+      const matched = accs.find(
+        (a) => a.name === connectionInfo.account || a.username === connectionInfo.account || a.alias === connectionInfo.account
+      );
+      resolvedAccountId = matched?.id;
+    }
+
     // 保存连接信息
     userInfoStore.setConnectionInfoForAsset(asset.id, {
       protocol: connectionInfo.protocol,
       username: connectionInfo.account,
+      accountId: resolvedAccountId,
       accountMode: connectionInfo.accountMode,
       manualUsername: connectionInfo.rememberSecret ? connectionInfo.manualUsername : "",
       manualPassword: connectionInfo.rememberSecret ? connectionInfo.manualPassword : "",
