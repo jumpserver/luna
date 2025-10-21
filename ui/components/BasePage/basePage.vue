@@ -5,6 +5,7 @@ import type { AssetItem, SettingResponse } from "~/types/index";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { useUserSettingStore } from "~/store/modules/userSetting";
+import { useDisplayAssets } from "~/composables/useDisplayAssets";
 
 import SkeletonCard from "~/components/Card/GridCard/skeletonCard.vue";
 import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
@@ -18,11 +19,11 @@ const props = defineProps<{
 }>();
 
 const providerClearSelection = inject<(cb: () => void) => void>("providerClearSelection");
-const { t } = useI18n();
 
 const scrollRef = ref<HTMLElement | null>(null);
 const subscribeSettingEvent = ref<UnlistenFn | null>(null);
 
+const { t } = useI18n();
 const { confirmConnection } = useAssetConnection();
 
 const contextMenu = useContextMenu();
@@ -35,18 +36,18 @@ const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
 const { layouts } = storeToRefs(userSettingStore);
 const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
 const {
+  fetchNextPage,
   assetsData,
   isAppending,
-  fetchNextPage,
   scrollbarStyles,
   isInitialLoading,
   appendSkeletonCount
 } = assetManager;
 
-const visibleAssets = computed(() => {
-  if (!props.platform || props.platform === "all") return assetsData.value;
-  return assetsData.value.filter((item: AssetItem) => item.platform === props.platform);
-});
+const { visibleAssets } = useDisplayAssets(
+  assetsData,
+  computed(() => props.platform)
+);
 
 watch(
   () => loggedIn.value,
@@ -106,8 +107,7 @@ const handleEditTrigger = async (asset: AssetItem) => {
  * @description 处理资产连接
  */
 const handleConnectAsset = async (asset: AssetItem) => {
-  // TODO 这个保存的逻辑需要优化，不要每次都去获取 getConnectionInfoForAsset
-  const saved = userInfoStore.getConnectionInfoForAsset(asset.id);
+  const saved = asset.savedConnection;
 
   const canDirectConnect = (() => {
     if (!saved || !saved.protocol || !saved.username) return false;

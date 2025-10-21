@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { AssetItem } from "~/types";
 import { useAssetAction } from "~/composables/useAssetAction";
-import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = withDefaults(
   defineProps<{
@@ -27,39 +26,8 @@ const renameInputRef = ref<HTMLInputElement | null>(null);
 
 const { handleAssetRename } = useAssetAction();
 
-const userInfoStore = useUserInfoStore();
-const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
-
 const displayAddressLine = computed(() => {
-  const saved = currentConnectionInfoMap.value?.[props.asset.id];
-  const protocol = saved?.protocol;
-
-  if (protocol) {
-    const permed = (props.asset.permedProtocols || []).find((p) => p?.name === protocol);
-    const port = permed?.port;
-    const addr = props.asset.address || "";
-    const selected = (saved?.username || "").trim();
-    const mode = saved?.accountMode;
-
-    let username = "";
-
-    if (mode === "manual" || selected === "手动输入" || selected === "Manual input") {
-      username = (saved?.manualUsername || "").trim();
-    } else if (
-      mode === "dynamic" ||
-      selected.includes("同名账号") ||
-      selected.includes("Dynamic user")
-    ) {
-      username = "";
-    } else if (selected) {
-      username = selected;
-    }
-
-    const userPart = username ? `${username}@` : "";
-    return `${protocol}://${userPart}${addr}${port ? `:${port}` : ""}`;
-  }
-
-  return `${props.asset.address} ${props.asset.type}`;
+  return props.asset.displayAddressLine || `${props.asset.address} ${props.asset.type}`;
 });
 
 /**

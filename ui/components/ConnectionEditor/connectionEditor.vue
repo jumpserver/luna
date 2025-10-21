@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import type { AssetItem, PermedAccount, PermedProtocol } from "~/types/index";
-import { useUserInfoStore } from "~/store/modules/userInfo";
+import type { AssetItem, PermedAccount, PermedProtocol, ConnectionInfo } from "~/types/index";
 import EditForm from "~/components/EditForm/editForm.vue";
 
-const { t } = useI18n();
-const userInfoStore = useUserInfoStore();
-const { getAssetDetail, displayUser, displayProtocol } = useAssetAction();
+const { t, locale } = useI18n();
+const { getAssetDetail } = useAssetAction();
 
 const open = ref(false);
 const currentAsset = ref<AssetItem | null>(null);
@@ -30,22 +28,48 @@ const modalTitle = computed(() => {
  * @param asset
  */
 const initDraft = (asset: AssetItem) => {
-  const saved = userInfoStore.getConnectionInfoForAsset(asset.id);
+  const saved: ConnectionInfo | undefined = asset.savedConnection;
 
-  draftProtocol.value = displayProtocol(
-    asset.id,
-    asset.permedProtocols || ([] as PermedProtocol[])
-  );
-  draftAccount.value = displayUser(asset.id, asset.permedAccounts || ([] as PermedAccount[]));
+  const protocols = asset.permedProtocols || ([] as PermedProtocol[]);
+  const accounts = asset.permedAccounts || ([] as PermedAccount[]);
+
+  // 协议默认：保存的协议 -> 第一个协议 -> 空
+  draftProtocol.value = saved?.protocol || protocols[0]?.name || "";
+
+  // 账号默认：保存的用户名 -> 第一条托管账号 -> 动态账号(@USER) -> 手动输入(@INPUT) -> 空
+  if (saved?.username) {
+    draftAccount.value = saved!.username;
+  } else {
+    const hosted = accounts.find((a) => a?.alias && !a.alias.startsWith("@"));
+
+    if (hosted) {
+      draftAccount.value = hosted.name;
+    } else {
+      const dynamic = accounts.find((a) => a.alias === "@USER");
+      const manual = accounts.find((a) => a.alias === "@INPUT");
+
+      if (dynamic) {
+        draftAccount.value =
+          locale.value === "zh"
+            ? `${dynamic.name}(${dynamic.username})`
+            : `Dynamic user(${dynamic.username})`;
+      } else if (manual) {
+        draftAccount.value = locale.value === "zh" ? manual.name : "Manual input";
+      } else {
+        draftAccount.value = "";
+      }
+    }
+  }
 
   draftManualUsername.value = saved?.manualUsername || "";
   draftManualPassword.value = saved?.manualPassword || "";
   draftDynamicPassword.value = saved?.dynamicPassword || "";
   draftRememberSecret.value = saved?.rememberSecret || false;
-
-  console.log("draftAccount", draftAccount.value);
 };
 
+/**
+ * @description 拼凑连接信息
+ */
 const buildConnectionInfo = () => {
   let accountMode: "hosted" | "dynamic" | "manual" = "hosted";
   let normalizedAccount = draftAccount.value || "";

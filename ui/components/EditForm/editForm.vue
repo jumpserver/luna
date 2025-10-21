@@ -51,8 +51,7 @@ const localRememberSecret = computed<boolean>({
 watch(
   () => props.account,
   (newVal) => {
-    console.log(newVal);
-    handleSpecialAccount(newVal);
+    handleSpecialAccount(newVal || '');
   },
   { immediate: true }
 );

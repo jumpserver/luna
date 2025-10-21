@@ -185,6 +185,8 @@ export interface AssetItem {
   type: string;
   permedProtocols?: PermedProtocol[];
   permedAccounts?: PermedAccount[];
+  displayAddressLine?: string;
+  savedConnection?: ConnectionInfo;
 }
 
 export interface AssetsResponse {
