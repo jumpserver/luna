@@ -6,6 +6,8 @@
           :asset="item"
           @connect-asset="emits('connectAsset', item)"
           @context-trigger="emits('contextTrigger', $event)"
+          @edit-trigger="emits('editTrigger', item)"
+          @connect-trigger="emits('connectTrigger', item)"
         />
 
         <template v-if="isAppending">
@@ -22,6 +24,8 @@ import type { AssetItem } from "~/types";
 const emits = defineEmits<{
   (e: "connectAsset", asset: AssetItem): void;
   (e: "contextTrigger", asset: AssetItem): void;
+  (e: "editTrigger", asset: AssetItem): void;
+  (e: "connectTrigger", asset: AssetItem): void;
 }>();
 
 const props = defineProps<{

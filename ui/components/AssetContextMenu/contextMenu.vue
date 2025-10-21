@@ -14,6 +14,8 @@ const props = defineProps<Props>();
 const emits = defineEmits<{
   (e: "update:visible", visible: boolean): void;
   (e: "contextTrigger", asset: AssetItem): void;
+  (e: "editTrigger", asset: AssetItem): void;
+  (e: "connectTrigger", asset: AssetItem): void;
   (e: "renameTrigger", asset: AssetItem): void;
 }>();
 
@@ -101,16 +103,18 @@ const handleConnect = (protocol?: string) => {
       }
     );
   } else {
-    // 否则触发上下文事件
-    emits("contextTrigger", props.asset);
+    emits("connectTrigger", props.asset);
   }
   emits("update:visible", false);
 };
 
 // 处理编辑
 const handleEdit = () => {
-  emits("contextTrigger", props.asset);
-  emits("update:visible", false);
+  emits("editTrigger", props.asset);
+
+  nextTick(() => {
+    emits("update:visible", false);
+  });
 };
 
 // 处理重命名
