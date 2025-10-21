@@ -57,9 +57,9 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
 });
 
 const handleCollapse = () => {
-  console.log('Sidebar collapse button clicked, current state:', collapse.value);
+  console.log("Sidebar collapse button clicked, current state:", collapse.value);
   setCollapse(!collapse.value);
-  console.log('Sidebar collapse state after toggle:', !collapse.value);
+  console.log("Sidebar collapse state after toggle:", !collapse.value);
 };
 const isDarkMode = computed(() => theme.value === "dark");
 const sidebarSearch = ref("");
@@ -77,11 +77,13 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
     <!-- 顶部区域：折叠按钮和搜索框 -->
     <div class="flex flex-col w-full">
       <!-- 折叠按钮 -->
-      <div 
-        class="flex items-center px-3 h-12" 
-        :class="isMacOS ? (collapse ? 'mt-9' : 'justify-end') : (collapse ? 'px-3 py-2' : 'px-3 py-2 justify-between')"
+      <div
+        class="flex items-center px-3 h-10"
+        :class="
+          isMacOS ? (collapse ? 'mt-9' : 'justify-end') : collapse ? 'py-2' : 'py-2 justify-between'
+        "
       >
-        <div class="flex items-center gap-1" v-if="!isMacOS && !collapse"> 
+        <div class="flex items-center gap-1" v-if="!isMacOS && !collapse">
           <UAvatar size="sm" src="/logo.png" />
           <span class="text-sm font-medium">JumpServer</span>
         </div>
@@ -98,35 +100,32 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 
       <!-- 搜索框区域 -->
       <div v-show="!collapse" class="px-3 py-2">
-        <div :class="isMacOS ? '' : 'flex items-center gap-2'">
-          <UInput
-            v-model="sidebarSearch"
-            size="sm"
-            clearable
-            icon="i-lucide-search"
-            variant="outline"
-            :placeholder="t('Operation.Search')"
-            :class="isMacOS ? 'dark:bg-transparent rounded-sm w-full' : 'dark:bg-transparent rounded-sm flex-1'"
-            :style="isDarkMode ? '' : 'background-color: rgb(198,198,197, 0.5);'"
-            @update:model-value="debouncedSidebarSearch"
-          >
-            <template v-if="sidebarSearch?.length" #trailing>
-              <UButton
-                color="neutral"
-                variant="link"
-                size="sm"
-                icon="i-lucide-circle-x"
-                aria-label="Clear input"
-                @click="
-                  () => {
-                    sidebarSearch = '';
-                    emitSearch('');
-                  }
-                "
-              />
-            </template>
-          </UInput>
-        </div>
+        <UInput
+          v-model="sidebarSearch"
+          size="sm"
+          clearable
+          icon="i-lucide-search"
+          variant="outline"
+          :placeholder="t('Operation.Search')"
+          class="dark:bg-transparent rounded-sm w-full search-input"
+          @update:model-value="debouncedSidebarSearch"
+        >
+          <template v-if="sidebarSearch?.length" #trailing>
+            <UButton
+              color="neutral"
+              variant="link"
+              size="sm"
+              icon="i-lucide-circle-x"
+              aria-label="Clear input"
+              @click="
+                () => {
+                  sidebarSearch = '';
+                  emitSearch('');
+                }
+              "
+            />
+          </template>
+        </UInput>
       </div>
     </div>
 
@@ -153,13 +152,17 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 <style lang="scss">
 .light .menu .menu-item {
   &[data-active] {
-    background-color: #ccccccdd;
+    background-color: var(--bg-hover-light);
     font-weight: 500;
   }
 
   &:hover:not([data-active]) {
     background-color: var(--bg-hover-light);
   }
+}
+
+.light .search-input input {
+  background-color: var(--bg-hover-light);
 }
 
 .menu nav[data-collapsed="true"] {
