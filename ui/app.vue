@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { useWarmupSetting } from "@/composables/useWarmupSetting";
+
 useApplicationConfig();
 
 const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
@@ -44,6 +46,8 @@ useHead({
 
 onMounted(async () => {
   try {
+    await useWarmupSetting();
+
     const upd = await useTauriUpdaterCheck();
 
     if (upd) {
