@@ -442,6 +442,10 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
           set.add(payload.assetId);
         } else {
           set.delete(payload.assetId);
+
+          if (assetType === "favorite" && isActiveForCurrentRoute()) {
+            refreshAssets();
+          }
         }
 
         favoriteSet.value = set;
