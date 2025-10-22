@@ -4,7 +4,7 @@ withDefaults(
     skeletonCount?: number;
   }>(),
   {
-    skeletonCount: 12
+    skeletonCount: 1
   }
 );
 

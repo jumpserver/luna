@@ -45,12 +45,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   const isInitialLoading = computed(() => isLoading.value && rawAssetsList.value.length === 0);
 
   const appendSkeletonCount = computed(() => {
-    if (!(isLoading.value && rawAssetsList.value.length > 0)) return 0;
-
-    const remaining = Math.max(0, (totalCount.value || 0) - rawAssetsList.value.length);
-
-    const expected = totalCount.value ? Math.min(LIMIT, remaining) : LIMIT;
-    return expected || LIMIT;
+    return 1;
   });
 
   const scrollbarStyles = computed(() => {

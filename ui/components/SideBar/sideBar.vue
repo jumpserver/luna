@@ -80,7 +80,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
       <div
         class="flex items-center px-3 h-10"
         :class="
-          isMacOS ? (collapse ? 'mt-9' : 'justify-end') : collapse ? 'py-2' : 'py-2 justify-between'
+          isMacOS ? (collapse ? 'mt-9' : 'justify-end') : collapse ? 'py-2' : 'py-2 mt-1 justify-between'
         "
       >
         <div class="flex items-center gap-2" v-if="!isMacOS && !collapse">
@@ -138,7 +138,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
         :ui="{
           link: 'px-2 my-1 rounded-sm menu-item light:text-gray-800 dark:text-gray-200',
           linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200',
-          label: 'light:text-gray-500 dark:text-gray-400 pb-0'
+          label: 'light:text-gray-500 dark:text-gray-400 pb-0 text-xs font-light'
         }"
       />
     </div>

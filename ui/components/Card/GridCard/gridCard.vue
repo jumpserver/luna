@@ -10,9 +10,6 @@
           @connect-trigger="emits('connectTrigger', item)"
         />
 
-        <template v-if="isAppending">
-          <CardSkeletonCard :skeleton-count="appendSkeletonCount" />
-        </template>
     </div>
 </template>
 
