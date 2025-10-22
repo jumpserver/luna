@@ -83,9 +83,9 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
           isMacOS ? (collapse ? 'mt-9' : 'justify-end') : collapse ? 'py-2' : 'py-2 justify-between'
         "
       >
-        <div class="flex items-center gap-1" v-if="!isMacOS && !collapse">
-          <UAvatar size="sm" src="/logo.png" />
-          <span class="text-sm font-medium">JumpServer</span>
+        <div class="flex items-center gap-2" v-if="!isMacOS && !collapse">
+          <UAvatar size="sm" src="/logo.png" class="bg-transparent" :ui="{ root: 'bg-transparent',  }" />
+          <span class="text-sm">JumpServer</span>
         </div>
 
         <UButton
