@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { AssetItem, PermedProtocol } from "~/types/index";
+
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { useFavoriteStore } from "~/store/modules/favorite";
 
 interface Props {
   asset: AssetItem;
@@ -19,14 +21,12 @@ const emits = defineEmits<{
   (e: "renameTrigger", asset: AssetItem): void;
 }>();
 
-const userInfoStore = useUserInfoStore();
+const favoriteStore = useFavoriteStore();
 
 const { t } = useI18n();
-const { currentSite, currentUser } = storeToRefs(userInfoStore);
 const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite } =
   useAssetAction();
 
-// 定义菜单项类型
 interface MenuItem {
   value?: string;
   label: string;
@@ -35,7 +35,8 @@ interface MenuItem {
   children?: MenuItem[];
 }
 
-// 计算菜单项
+const isFavorited = computed(() => favoriteStore.isFavorite(props.asset.id));
+
 const menuItems = computed((): MenuItem[] => {
   const protocols = (props.asset.permedProtocols || []).map((p: PermedProtocol) => p.name);
   const uniqueProtocols = Array.from(new Set(protocols));
@@ -58,9 +59,9 @@ const menuItems = computed((): MenuItem[] => {
       onClick: () => handleRename()
     },
     {
-      label: t("ContextMenu.Favorite"),
+      label: isFavorited.value ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
       icon: "i-lucide-star",
-      onClick: () => handleFavorite()
+      onClick: () => (isFavorited.value ? void 0 : handleFavorite())
     }
   ];
 

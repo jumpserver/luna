@@ -1,4 +1,4 @@
-use crate::commands::requests::{get_unified, ApiResponse};
+use crate::commands::requests::{get_unified, get_with_response, ApiResponse};
 use crate::utils::to_api_response;
 use log::info;
 use serde::{Deserialize, Serialize};
@@ -95,7 +95,12 @@ impl AssetService {
             format!("{}/api/v1/perms/users/self/assets/", self.origin)
         };
 
-        info!("获取类型为：{:?} 的资产信息，请求 url: {}, oid: {}", self.query.get_category(), url, self.query.oid);
+        info!(
+            "获取类型为：{:?} 的资产信息，请求 url: {}, oid: {}",
+            self.query.get_category(),
+            url,
+            self.query.oid
+        );
         info!("Cookie: {}", self.cookie_header);
         info!("query: {:?}", self.query);
 
@@ -117,5 +122,11 @@ impl AssetService {
         };
 
         to_api_response(&url, get_unified(&url, &self.cookie_header, &query).await).await
+    }
+
+    pub async fn get_favorite_assets(&self) -> ApiResponse {
+        let url = format!("{}/api/v1/assets/favorite-assets/", &self.origin);
+
+        get_with_response(&url, &self.cookie_header).await
     }
 }

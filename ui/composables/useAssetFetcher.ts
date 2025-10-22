@@ -1,6 +1,7 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { AssetsResponse, PermedAccount, PermedProtocol, RawAssetData } from "~/types";
 
+import { useFavoriteStore } from "~/store/modules/favorite";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const LIMIT = 20;
@@ -12,6 +13,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   const toast = useToast();
   const route = useRoute();
   const colorMode = useColorMode();
+  const favoriteStore = useFavoriteStore();
   const userInfoStore = useUserInfoStore();
 
   const { setUserLoggedIn, deleteUserData } = userInfoStore;
@@ -25,6 +27,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   const lastDetailAssetId = ref<string | null>(null);
   const subscribeGetAssetsEvent = ref<UnlistenFn | null>(null);
   const subscribeGetAssetFailedEvent = ref<UnlistenFn | null>(null);
+  const subscribeGetFavoriteAssetsEvent = ref<UnlistenFn | null>(null);
 
   const totalCount = ref(0);
   const currentOrder = ref("");
@@ -311,6 +314,26 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
         endLoading();
       });
     });
+
+    subscribeGetFavoriteAssetsEvent.value = await useTauriEventListen(
+      "get-favorite-assets-success",
+      async (event) => {
+        interface payLoadType {
+          status: number;
+          data: string;
+        }
+
+        const payload = event.payload as payLoadType;
+        const favoriteAssets = JSON.parse(payload.data as string) as Array<{ asset: string }>;
+
+        try {
+          const ids = (favoriteAssets || []).map((x) => x?.asset).filter(Boolean);
+          favoriteStore.setFavorites(ids as string[]);
+        } catch (e) {
+          console.warn("Failed to update favorite store", e);
+        }
+      }
+    );
   };
 
   /**
@@ -397,7 +420,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
       "assetRenamed",
       (payload: { assetId: string; name: string }) => {
         const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
-        
+
         if (idx !== -1) {
           rawAssetsList.value[idx] = {
             ...rawAssetsList.value[idx],
