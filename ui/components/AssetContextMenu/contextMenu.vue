@@ -2,7 +2,6 @@
 import type { AssetItem, PermedProtocol } from "~/types/index";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { useFavoriteStore } from "~/store/modules/favorite";
 
 interface Props {
   asset: AssetItem;
@@ -21,10 +20,9 @@ const emits = defineEmits<{
   (e: "renameTrigger", asset: AssetItem): void;
 }>();
 
-const favoriteStore = useFavoriteStore();
 
 const { t } = useI18n();
-const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite } =
+const { handleAssetConnection, displayUser, handleAssetFavorite, handleAssetUnfavorite } =
   useAssetAction();
 
 interface MenuItem {
@@ -35,7 +33,7 @@ interface MenuItem {
   children?: MenuItem[];
 }
 
-const isFavorited = computed(() => favoriteStore.isFavorite(props.asset.id));
+const isFavorited = computed(() => !!props.asset.isFavorite);
 
 const menuItems = computed((): MenuItem[] => {
   const protocols = (props.asset.permedProtocols || []).map((p: PermedProtocol) => p.name);
@@ -61,7 +59,7 @@ const menuItems = computed((): MenuItem[] => {
     {
       label: isFavorited.value ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
       icon: "i-lucide-star",
-      onClick: () => (isFavorited.value ? void 0 : handleFavorite())
+      onClick: () => (isFavorited.value ? handleUnfavorite() : handleFavorite())
     }
   ];
 
@@ -130,6 +128,13 @@ const handleRename = () => {
 // 处理收藏
 const handleFavorite = () => {
   handleAssetFavorite(props.asset.id);
+  try { useEventBus().emit('favoriteChanged', { assetId: props.asset.id, favorite: true }); } catch {}
+  emits("update:visible", false);
+};
+
+const handleUnfavorite = () => {
+  handleAssetUnfavorite(props.asset.id);
+  try { useEventBus().emit('favoriteChanged', { assetId: props.asset.id, favorite: false }); } catch {}
   emits("update:visible", false);
 };
 </script>

@@ -292,6 +292,18 @@ export const useAssetAction = () => {
   };
 
   /**
+   * @description 处理取消收藏
+   * @param assetId
+   */
+  const handleAssetUnfavorite = (assetId: string) => {
+    useTauriCoreInvoke("unfavorite", {
+      site: currentSite.value,
+      cookieHeader: currentUser.value!.headerJson,
+      assetId
+    });
+  };
+
+  /**
    * @description 获取详情
    * @param assetId
    */
@@ -471,6 +483,7 @@ export const useAssetAction = () => {
 
     handleAssetRename,
     handleAssetFavorite,
+    handleAssetUnfavorite,
     handleAssetConnection
   };
 };

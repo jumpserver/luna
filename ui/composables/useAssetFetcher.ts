@@ -1,7 +1,6 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { AssetsResponse, PermedAccount, PermedProtocol, RawAssetData } from "~/types";
 
-import { useFavoriteStore } from "~/store/modules/favorite";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const LIMIT = 20;
@@ -13,7 +12,6 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   const toast = useToast();
   const route = useRoute();
   const colorMode = useColorMode();
-  const favoriteStore = useFavoriteStore();
   const userInfoStore = useUserInfoStore();
 
   const { setUserLoggedIn, deleteUserData } = userInfoStore;
@@ -35,8 +33,11 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
   let stopScrollListener: (() => void) | null = null;
 
+  const favoriteSet = ref<Set<string>>(new Set());
+
   const assetsData = computed(() => {
-    return transformAssetsData(rawAssetsList.value);
+    const list = transformAssetsData(rawAssetsList.value);
+    return list.map((a) => ({ ...a, isFavorite: favoriteSet.value.has(a.id) }));
   });
 
   const isAppending = computed(() => isLoading.value && rawAssetsList.value.length > 0);
@@ -327,10 +328,10 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
         const favoriteAssets = JSON.parse(payload.data as string) as Array<{ asset: string }>;
 
         try {
-          const ids = (favoriteAssets || []).map((x) => x?.asset).filter(Boolean);
-          favoriteStore.setFavorites(ids as string[]);
+          const ids = (favoriteAssets || []).map((x) => x?.asset).filter(Boolean) as string[];
+          favoriteSet.value = new Set(ids);
         } catch (e) {
-          console.warn("Failed to update favorite store", e);
+          console.warn("Failed to update favorites", e);
         }
       }
     );
@@ -350,6 +351,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   let unsubscribeClearAssets: (() => void) | null = null;
   let unsubscribeAssetDetailUpdated: (() => void) | null = null;
   let unsubscribeAssetRenamed: (() => void) | null = null;
+  let unsubscribeFavoriteChanged: (() => void) | null = null;
 
   const listenEventBusEvent = () => {
     const { on } = useEventBus();
@@ -430,6 +432,22 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
       },
       false
     );
+
+    unsubscribeFavoriteChanged = on(
+      "favoriteChanged",
+      (payload: { assetId: string; favorite: boolean }) => {
+        const set = new Set(favoriteSet.value);
+
+        if (payload.favorite) {
+          set.add(payload.assetId);
+        } else {
+          set.delete(payload.assetId);
+        }
+
+        favoriteSet.value = set;
+      },
+      false
+    );
   };
 
   const unListenEventBusEvent = () => {
@@ -439,6 +457,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
     unsubscribeClearAssets?.();
     unsubscribeAssetDetailUpdated?.();
     unsubscribeAssetRenamed?.();
+    unsubscribeFavoriteChanged?.();
   };
 
   onMounted(async () => {

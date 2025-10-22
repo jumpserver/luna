@@ -18,6 +18,10 @@ type BusEvents = {
     assetId: string;
     name: string;
   };
+  favoriteChanged: {
+    assetId: string;
+    favorite: boolean;
+  };
 } & Record<EventType, unknown>;
 
 const emitter: Emitter<BusEvents> = mitt<BusEvents>();

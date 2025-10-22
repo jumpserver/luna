@@ -38,6 +38,12 @@ pub trait MaybeJson {
     }
 }
 
+impl MaybeJson for () {
+    fn apply(self, rb: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        rb
+    }
+}
+
 impl<Q> MaybeJson for &Q
 where
     Q: Serialize + HasOrg + ?Sized,
@@ -93,6 +99,22 @@ fn base_post_request(
         .header("X-Csrftoken", csrf_token)
 }
 
+// 构造带通用头的 DELETE 请求
+fn base_delete_request(
+    client: &reqwest::Client,
+    url: &str,
+    header_cookie: &str,
+) -> reqwest::RequestBuilder {
+    let csrf_token = extract_csrf_token(header_cookie);
+    let tz_string = tz_offset_string();
+
+    client
+        .delete(url)
+        .header(COOKIE, header_cookie)
+        .header("X-TZ", tz_string)
+        .header("X-Csrftoken", csrf_token)
+}
+
 pub async fn get_unified<M>(
     url: &str,
     header_cookie: &str,
@@ -131,6 +153,27 @@ where
     client.execute(request).await
 }
 
+pub async fn delete_unified<M>(
+    url: &str,
+    header_cookie: &str,
+    maybe_json: M,
+) -> Result<reqwest::Response, reqwest::Error>
+where
+    M: MaybeJson,
+{
+    info!("DELETE {}", url);
+
+    if let Some(body) = maybe_json.debug_body() {
+        info!("body: {}", body);
+    }
+
+    let client = insecure_client()?;
+    let request = maybe_json
+        .apply(base_delete_request(&client, url, header_cookie))
+        .build()?;
+    client.execute(request).await
+}
+
 pub async fn get(url: &str, header_cookie: &str) -> Result<reqwest::Response, reqwest::Error> {
     get_unified(url, header_cookie, ()).await
 }
@@ -144,6 +187,13 @@ where
     M: MaybeJson,
 {
     to_api_response(url, post_unified(url, header_cookie, body).await).await
+}
+
+pub async fn delete_with_response<M>(url: &str, header_cookie: &str, body: M) -> ApiResponse
+where
+    M: MaybeJson,
+{
+    to_api_response(url, delete_unified(url, header_cookie, body).await).await
 }
 
 fn insecure_client() -> Result<reqwest::Client, reqwest::Error> {

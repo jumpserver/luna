@@ -187,6 +187,7 @@ export interface AssetItem {
   permedAccounts?: PermedAccount[];
   displayAddressLine?: string;
   savedConnection?: ConnectionInfo;
+  isFavorite?: boolean;
 }
 
 export interface AssetsResponse {
