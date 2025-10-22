@@ -22,7 +22,10 @@
     "Sort": "排序",
     "Refresh": "刷新",
     "Layout": "切换布局",
-    "Settings": "连接设置"
+    "Settings": "连接设置",
+    "Minimize": "最小化",
+    "Maximize": "最大化",
+    "Close": "关闭"
   },
   "Menu": {
     "Resource": "资源目录",

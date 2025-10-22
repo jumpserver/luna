@@ -22,7 +22,10 @@
 		"Sort": "Sort",
 		"Refresh": "Refresh",
 		"Layout": "Switch Layout",
-		"Settings": "Connection Settings"
+		"Settings": "Connection Settings",
+		"Minimize": "Minimize",
+		"Maximize": "Maximize",
+		"Close": "Close"
 	},
 	"Menu": {
 		"Linux": "Linux",

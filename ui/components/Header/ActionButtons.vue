@@ -24,7 +24,7 @@ const windowControlButtons = computed(() => {
       {
         key: "minimize",
         iconName: "i-lucide-minus",
-        tooltipLabel: "最小化",
+        tooltipLabel: t("ToolTips.Minimize"),
         onClick: async () => {
           await useTauriCoreInvoke('minimize_window');
         }
@@ -32,7 +32,7 @@ const windowControlButtons = computed(() => {
       {
         key: "maximize",
         iconName: "i-lucide-square",
-        tooltipLabel: "最大化",
+        tooltipLabel: t("ToolTips.Maximize"),
         onClick: async () => {
           await useTauriCoreInvoke('toggle_maximize_window');
         }
@@ -40,7 +40,7 @@ const windowControlButtons = computed(() => {
       {
         key: "close",
         iconName: "i-lucide-x",
-        tooltipLabel: "关闭",
+        tooltipLabel: t("ToolTips.Close"),
         onClick: async () => {
           await useTauriCoreInvoke('close_window');
         }
