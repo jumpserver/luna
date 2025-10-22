@@ -50,7 +50,6 @@ const onSwitch = (v: boolean) => {
 };
 
 const openDownloadPage = async (url: string) => {
-  console.log("url", url);
   await useTauriShellOpen(url);
 };
 </script>

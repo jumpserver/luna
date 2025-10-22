@@ -117,12 +117,13 @@ const cancelRename = () => {
               @keyup.esc.stop="cancelRename"
               @blur="submitRename"
             />
-            <UTooltip :text="displayAddressLine">
-              <div
+
+            <UTooltip arrow :text="displayAddressLine">
+              <span
                 class="text-[13px] text-neutral-500 dark:text-neutral-400 truncate whitespace-nowrap cursor-pointer"
               >
                 {{ displayAddressLine }}
-              </div>
+              </span>
             </UTooltip>
           </div>
         </div>
