@@ -6,15 +6,17 @@ import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
 
 const { t } = useI18n();
 const { emit } = useEventBus();
+const { isMacOS } = usePlatform();
+
 const localePath = useLocalePath();
 const useSettingStore = useUserSettingStore();
+
 const { setCollapse } = useSettingStore;
-const { collapse, theme } = storeToRefs(useSettingStore);
+const { collapse } = storeToRefs(useSettingStore);
 
 const isLoading = ref(false);
+const sidebarSearch = ref("");
 
-// 使用平台检测 composable
-const { isMacOS } = usePlatform();
 // const isMacOS = false;
 
 const sideBarItems = computed<NavigationMenuItem[]>(() => {
@@ -57,19 +59,16 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
 });
 
 const handleCollapse = () => {
-  console.log("Sidebar collapse button clicked, current state:", collapse.value);
   setCollapse(!collapse.value);
-  console.log("Sidebar collapse state after toggle:", !collapse.value);
 };
-const isDarkMode = computed(() => theme.value === "dark");
-const sidebarSearch = ref("");
 const emitSearch = (value: string) => emit("search", value);
 const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 </script>
 
 <template>
+  <!-- backdrop-blur-lg 如果加上这个属性会导致在拖动窗口的时候，左侧背景一直在变化 -->
   <div
-    class="flex flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-blur-lg backdrop-saturate-150 supports-[backdrop-filter]:bg-white/20 supports-[backdrop-filter]:dark:bg-zinc-900/15 border-r border-white/30 dark:border-white/10 shadow-sm"
+    class="flex flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-saturate-150 supports-backdrop-filter:dark:bg-zinc-900/15 border-r border-white/30 dark:border-white/10 shadow-sm"
     :style="{
       width: collapse ? '75px' : '220px'
     }"
