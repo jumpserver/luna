@@ -378,10 +378,9 @@ onBeforeUnmount(() => {
   >
     <div class="w-full rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors mb-1">
       <div
-        class="flex items-center py-1"
+        class="flex items-center py-1 px-2"
         :style="{
-          justifyContent: collapse ? 'center' : '',
-          paddingLeft: collapse ? '' : '10px'
+          justifyContent: collapse ? 'center' : ''
         }"
       >
         <UUser
