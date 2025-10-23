@@ -20,7 +20,6 @@ const emits = defineEmits<{
   (e: "renameTrigger", asset: AssetItem): void;
 }>();
 
-
 const { t } = useI18n();
 const { handleAssetConnection, displayUser, handleAssetFavorite, handleAssetUnfavorite } =
   useAssetAction();
@@ -58,7 +57,7 @@ const menuItems = computed((): MenuItem[] => {
     },
     {
       label: isFavorited.value ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
-      icon: "i-lucide-star",
+      icon: isFavorited.value ? "lucide:star-off" : "i-lucide-star",
       onClick: () => (isFavorited.value ? handleUnfavorite() : handleFavorite())
     }
   ];
@@ -128,13 +127,17 @@ const handleRename = () => {
 // 处理收藏
 const handleFavorite = () => {
   handleAssetFavorite(props.asset.id);
-  try { useEventBus().emit('favoriteChanged', { assetId: props.asset.id, favorite: true }); } catch {}
+  try {
+    useEventBus().emit("favoriteChanged", { assetId: props.asset.id, favorite: true });
+  } catch {}
   emits("update:visible", false);
 };
 
 const handleUnfavorite = () => {
   handleAssetUnfavorite(props.asset.id);
-  try { useEventBus().emit('favoriteChanged', { assetId: props.asset.id, favorite: false }); } catch {}
+  try {
+    useEventBus().emit("favoriteChanged", { assetId: props.asset.id, favorite: false });
+  } catch {}
   emits("update:visible", false);
 };
 </script>
