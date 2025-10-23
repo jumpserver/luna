@@ -5,10 +5,10 @@
   "private": true,
   "packageManager": "pnpm@10.18.3",
   "description": "JumpServer client tool",
-  "author": "ZhaoJiSen",
+  "author": "JumpServer",
   "license": "MIT",
   "engines": {
-    "node": ">=23"
+    "node": ">=20"
   },
   "scripts": {
     "dev": "nuxt dev",
