@@ -5,8 +5,10 @@ import type { AssetItem, SettingResponse } from "~/types/index";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { useUserSettingStore } from "~/store/modules/userSetting";
+import { useDisplayAssets } from "~/composables/useDisplayAssets";
 
 import SkeletonCard from "~/components/Card/GridCard/skeletonCard.vue";
+import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
 
 type AssetType = "linux" | "windows" | "database" | "device" | "favorite";
 
@@ -17,43 +19,34 @@ const props = defineProps<{
 }>();
 
 const providerClearSelection = inject<(cb: () => void) => void>("providerClearSelection");
-const { t } = useI18n();
 
 const scrollRef = ref<HTMLElement | null>(null);
 const subscribeSettingEvent = ref<UnlistenFn | null>(null);
 
-const { connectAsset, confirmConnection } = useAssetConnection();
-const editModal = useEditModal();
+const { t } = useI18n();
+const { confirmConnection } = useAssetConnection();
+
 const contextMenu = useContextMenu();
 const userInfoStore = useUserInfoStore();
 const assetManagement = useAssetManagement();
 const userSettingStore = useUserSettingStore();
 const assetManager = useAssetFetcher(props.type, scrollRef);
+const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
 
 const { layouts } = storeToRefs(userSettingStore);
 const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
 const {
-  getDetail,
+  fetchNextPage,
   assetsData,
   isAppending,
-  fetchNextPage,
   scrollbarStyles,
   isInitialLoading,
-  appendSkeletonCount,
-  lastDetailAssetId
+  appendSkeletonCount
 } = assetManager;
 
-const visibleAssets = computed(() => {
-  if (!props.platform || props.platform === "all") return assetsData.value;
-  return assetsData.value.filter((item: AssetItem) => item.platform === props.platform);
-});
-
-// 监听模态框状态变化
-watch(
-  [editModal.editModalOpen, editModal.currentSelectedCardInfo],
-  ([open, info]: [boolean, AssetItem | null]) => {
-    if (open && info) editModal.initDraft(info);
-  }
+const { visibleAssets } = useDisplayAssets(
+  assetsData,
+  computed(() => props.platform)
 );
 
 watch(
@@ -76,41 +69,6 @@ watch(
   }
 );
 
-watch(
-  () => getDetail.value,
-  (nv: boolean) => {
-    if (!nv) return;
-
-    if (assetManagement.selectedCardIndex.value !== null) {
-      const idx = assetManagement.selectedCardIndex.value;
-
-      if (visibleAssets.value[idx]) {
-        editModal.currentSelectedCardInfo.value = visibleAssets.value[idx]!;
-      }
-    } else if (editModal.currentSelectedCardInfo.value) {
-      const updated = visibleAssets.value.find(
-        (a) => a.id === editModal.currentSelectedCardInfo.value!.id
-      );
-      if (updated) editModal.currentSelectedCardInfo.value = updated;
-    } else if (lastDetailAssetId?.value) {
-      const target = visibleAssets.value.find((a) => a.id === lastDetailAssetId.value);
-      if (target) editModal.currentSelectedCardInfo.value = target;
-    }
-
-    if (editModal.currentSelectedCardInfo.value) {
-      editModal.initDraft(editModal.currentSelectedCardInfo.value);
-    }
-
-    // 若为右键菜单触发的详情更新，则不弹出编辑弹窗
-    if (!editModal.shouldSuppressModal()) {
-      editModal.editModalOpen.value = true;
-    }
-
-    editModal.resetSuppressModal();
-    getDetail.value = false;
-  }
-);
-
 /**
  * 获取 Setting 信息
  */
@@ -125,8 +83,6 @@ async function getSettings() {
  * @description 打开 contextMenu
  */
 const handleContextTrigger = (asset: AssetItem, event?: MouseEvent) => {
-  editModal.setSuppressNextModal(true);
-  editModal.currentSelectedCardInfo.value = asset;
   assetManagement.setCurrentAsset(asset);
 
   const idx = visibleAssets.value.findIndex((a) => a.id === asset.id);
@@ -140,11 +96,64 @@ const handleContextTrigger = (asset: AssetItem, event?: MouseEvent) => {
 /**
  * @description 打开编辑弹窗
  */
-const handleEditTrigger = (asset: AssetItem) => {
-  editModal.setSuppressNextModal(false);
-  editModal.openEditModal(asset);
+const handleEditTrigger = async (asset: AssetItem) => {
+  try {
+    const info = await connEditorRef.value!.open(asset);
+    confirmConnection(asset, info);
+  } catch {}
 };
 
+/**
+ * @description 处理资产连接
+ */
+const handleConnectAsset = async (asset: AssetItem) => {
+  const saved = asset.savedConnection;
+
+  const canDirectConnect = (() => {
+    if (!saved || !saved.protocol || !saved.username) return false;
+
+    const mode = saved.accountMode || "hosted";
+    if (mode === "manual") {
+      return !!(saved.rememberSecret && saved.manualUsername && saved.manualPassword);
+    }
+    if (mode === "dynamic") {
+      return !!(saved.rememberSecret && saved.dynamicPassword);
+    }
+
+    return true;
+  })();
+
+  if (canDirectConnect) {
+    return confirmConnection(asset, {
+      protocol: saved!.protocol,
+      account: saved!.username,
+      accountId: (saved as any).accountId,
+      accountMode: (saved!.accountMode as any) || "hosted",
+      manualUsername: saved!.manualUsername || "",
+      manualPassword: saved!.manualPassword || "",
+      dynamicPassword: saved!.dynamicPassword || "",
+      rememberSecret: !!saved!.rememberSecret
+    });
+  }
+
+  try {
+    const info = await connEditorRef.value!.open(asset);
+    confirmConnection(asset, info);
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+/**
+ * @description 右键菜单的连接操作
+ */
+const handleConnectTrigger = (asset: AssetItem) => {
+  handleConnectAsset(asset);
+};
+
+/**
+ * @description 监听 Tauri 事件
+ */
 const listenTauriEvent = async () => {
   interface eventPayloadType {
     data: string;
@@ -157,69 +166,6 @@ const listenTauriEvent = async () => {
 
     userInfoStore.setRdpClientOption(settingConfig.graphics);
   });
-};
-
-/**
- * @description 处理资产连接
- * 如果该资产存在上次保存的连接信息且可用，则直接使用上次的协议与账号连接；否则弹出编辑模态框。
- */
-const handleConnectAsset = (asset: AssetItem) => {
-  const saved = userInfoStore.getConnectionInfoForAsset(asset.id);
-
-  const canDirectConnect = (() => {
-    if (!saved || !saved.protocol || !saved.username) return false;
-
-    const mode = saved.accountMode || "hosted";
-
-    // 手动账号需要用户名和密码，且需被记住
-    if (mode === "manual") {
-      return !!(saved.rememberSecret && saved.manualUsername && saved.manualPassword);
-    }
-
-    // 同名账号至少需要保存过一次动态密码
-    if (mode === "dynamic") {
-      return !!(saved.rememberSecret && saved.dynamicPassword);
-    }
-
-    // 托管账号可直接连接
-    return true;
-  })();
-
-  if (canDirectConnect) {
-    return confirmConnection(asset, {
-      protocol: saved!.protocol,
-      account: saved!.username,
-      accountMode: (saved!.accountMode as any) || "hosted",
-      manualUsername: saved!.manualUsername || "",
-      manualPassword: saved!.manualPassword || "",
-      dynamicPassword: saved!.dynamicPassword || "",
-      rememberSecret: !!saved!.rememberSecret
-    });
-  }
-
-  const result = connectAsset(asset);
-
-  if (result?.needsModal) {
-    editModal.openEditModal(asset);
-  }
-};
-
-/**
- * @description 右键菜单的连接操作
- */
-const handleConnectTrigger = (asset: AssetItem) => {
-  handleConnectAsset(asset);
-};
-
-/**
- * @description 处理模态框确认
- */
-const handleModalConfirm = () => {
-  if (editModal.currentSelectedCardInfo.value) {
-    editModal.handleConfirm((connectionInfo) => {
-      confirmConnection(editModal.currentSelectedCardInfo.value!, connectionInfo);
-    });
-  }
 };
 
 onMounted(() => {
@@ -251,7 +197,7 @@ onBeforeUnmount(() => {
 
       <div
         v-else-if="isInitialLoading"
-        class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-4 p-2"
+        class="grid grid-cols-[repeat(auto-fit,minmax(360px,1fr))] gap-4 p-2"
         aria-busy="true"
       >
         <SkeletonCard />
@@ -300,25 +246,7 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <Modal
-      :open="editModal.editModalOpen.value"
-      :title="editModal.modalTitle.value"
-      :description="t('EditModal.Description')"
-      @confirm="handleModalConfirm"
-      @update:open="editModal.editModalOpen.value = $event"
-    >
-      <EditForm
-        v-if="editModal.currentSelectedCardInfo.value"
-        v-model:protocol="editModal.draftProtocol.value"
-        v-model:account="editModal.draftAccount.value"
-        v-model:manual-username="editModal.draftManualUsername.value"
-        v-model:manual-password="editModal.draftManualPassword.value"
-        v-model:dynamic-password="editModal.draftDynamicPassword.value"
-        v-model:remember-secret="editModal.draftRememberSecret.value"
-        :accounts="editModal.currentSelectedCardInfo.value.permedAccounts!"
-        :protocols="editModal.currentSelectedCardInfo.value.permedProtocols!"
-      />
-    </Modal>
+    <ConnectionEditor ref="connEditorRef" />
 
     <!-- Context menu 现在集成到各个组件中 -->
   </div>

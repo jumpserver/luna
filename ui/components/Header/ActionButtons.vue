@@ -24,7 +24,7 @@ const windowControlButtons = computed(() => {
       {
         key: "minimize",
         iconName: "i-lucide-minus",
-        tooltipLabel: "最小化",
+        tooltipLabel: t("ToolTips.Minimize"),
         onClick: async () => {
           await useTauriCoreInvoke('minimize_window');
         }
@@ -32,7 +32,7 @@ const windowControlButtons = computed(() => {
       {
         key: "maximize",
         iconName: "i-lucide-square",
-        tooltipLabel: "最大化",
+        tooltipLabel: t("ToolTips.Maximize"),
         onClick: async () => {
           await useTauriCoreInvoke('toggle_maximize_window');
         }
@@ -40,7 +40,7 @@ const windowControlButtons = computed(() => {
       {
         key: "close",
         iconName: "i-lucide-x",
-        tooltipLabel: "关闭",
+        tooltipLabel: t("ToolTips.Close"),
         onClick: async () => {
           await useTauriCoreInvoke('close_window');
         }
@@ -51,13 +51,13 @@ const windowControlButtons = computed(() => {
 // 获取窗口控制按钮的样式类
 const getWindowControlButtonClass = (buttonKey: string) => {
   const baseClass = "rounded-none w-12 h-13 p-1 flex items-center justify-center";
-  
+
   switch (buttonKey) {
-    case 'minimize':
+    case "minimize":
       return `${baseClass} `;
-    case 'maximize':
+    case "maximize":
       return `${baseClass} `;
-    case 'close':
+    case "close":
       return `${baseClass} hover:bg-red-500 hover:text-white active:bg-red-600`;
     default:
       return baseClass;
@@ -129,7 +129,7 @@ const actionItems = computed<ActionItem[]>(() => [
         onUpdateChecked: (checked: boolean) => {
           if (checked) {
             userSettingStore.setSort("date_updated");
-}
+          }
         }
       }
     ] as DropdownMenuItem[]
@@ -178,6 +178,7 @@ const actionItems = computed<ActionItem[]>(() => [
         url: "/setting",
         minWidth: 760,
         minHeight: 520,
+        maxHeight: 675,
         hiddenTitle: true,
         titleBarStyle: "overlay",
         trafficLightPosition: new LogicalPosition(10, 22)
@@ -189,7 +190,7 @@ const actionItems = computed<ActionItem[]>(() => [
 
 <template>
   <section class="flex items-center h-full">
-    <div class="flex items-center mr-3 gap-2"> 
+    <div class="flex items-center mr-3 gap-2">
       <template v-for="action of actionItems" :key="action.iconName">
         <template v-if="action.type === 'action'">
           <UButton :icon="action.iconName" v-bind="commonButtonProps" @click="action.onClick" />
@@ -197,8 +198,8 @@ const actionItems = computed<ActionItem[]>(() => [
 
         <template v-else>
           <UDropdownMenu arrow :items="action.selectItems" size="sm">
-            <UButton 
-              :icon="action.iconName" 
+            <UButton
+              :icon="action.iconName"
               v-bind="commonButtonProps"
               @click="() => console.log('Dropdown button clicked:', action.key)"
             />
@@ -210,7 +211,7 @@ const actionItems = computed<ActionItem[]>(() => [
     <!-- 窗口控制按钮 -->
     <div class="flex items-center" v-if="!isMacOS">
       <template v-for="button of windowControlButtons" :key="button.key">
-        <UButton 
+        <UButton
           :icon="button.iconName"
           :class="getWindowControlButtonClass(button.key)"
           @click="button.onClick"

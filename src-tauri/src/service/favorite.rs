@@ -1,16 +1,16 @@
-use crate::commands::requests::{post_with_response, ApiResponse};
+use crate::commands::requests::{delete_with_response, post_with_response, ApiResponse};
 use serde::Serialize;
 use serde_json::to_value;
-
-#[derive(Serialize)]
-pub struct FavoriteAssetBody {
-    asset: String,
-}
 
 pub struct FavoriteService {
     origin: String,
     asset_id: String,
     cookie_header: String,
+}
+
+#[derive(Serialize)]
+pub struct FavoriteAssetBody {
+    asset: String,
 }
 
 impl FavoriteService {
@@ -30,5 +30,14 @@ impl FavoriteService {
         .unwrap_or_default();
 
         post_with_response(&url, &self.cookie_header, &body_value).await
+    }
+
+    pub async fn unfavorite(&self) -> ApiResponse {
+        let url = format!(
+            "{}/api/v1/assets/favorite-assets/?asset={}",
+            self.origin, self.asset_id
+        );
+
+        delete_with_response(&url, &self.cookie_header, ()).await
     }
 }

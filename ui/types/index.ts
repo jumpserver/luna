@@ -185,6 +185,9 @@ export interface AssetItem {
   type: string;
   permedProtocols?: PermedProtocol[];
   permedAccounts?: PermedAccount[];
+  displayAddressLine?: string;
+  savedConnection?: ConnectionInfo;
+  isFavorite?: boolean;
 }
 
 export interface AssetsResponse {
@@ -197,6 +200,7 @@ export interface AssetsResponse {
 export interface ConnectionInfo {
   protocol: string;
   username: string;
+  accountId?: string;
   accountMode?: "hosted" | "dynamic" | "manual";
   manualUsername?: string;
   manualPassword?: string;

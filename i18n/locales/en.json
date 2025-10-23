@@ -22,7 +22,10 @@
 		"Sort": "Sort",
 		"Refresh": "Refresh",
 		"Layout": "Switch Layout",
-		"Settings": "Connection Settings"
+		"Settings": "Connection Settings",
+		"Minimize": "Minimize",
+		"Maximize": "Maximize",
+		"Close": "Close"
 	},
 	"Menu": {
 		"Linux": "Linux",
@@ -56,7 +59,9 @@
 		"MoreConnect": "More Connect",
 		"Rename": "Rename",
 		"Use": "Use",
-		"Favorite": "Favorite"
+		"Favorite": "Favorite",
+		"Edit": "Edit",
+		"Unfavorite": "Remove from Favorites"
 	},
 	"EditModal": {
 		"ModifyConnectionInfo": "Modify Connection Info",
@@ -116,19 +121,6 @@
     "ConnectFailed": "Connection failed"
   },
   "Update": {
-    "FoundNewVersion": "New version available",
-    "CurrentVersion": "Current version",
-    "ConfirmInstall": "Download and install now?",
-    "Start": "Starting update",
-    "Downloading": "Downloading",
-    "Installing": "Installing update, the app may restart",
-    "Completed": "Update completed",
-    "CompletedDesc": "Installation finished. The app will restart automatically or please restart manually",
-    "Failed": "Update failed",
-    "FailedDesc": "Error downloading or installing the update. Please try again later",
-    "UpToDate": "Up to date"
-  },
-  "update": {
     "FoundNewVersion": "New version available",
     "CurrentVersion": "Current version",
     "ConfirmInstall": "Download and install now?",

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AssetItem, PermedProtocol } from "~/types/index";
+
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface Props {
@@ -19,14 +20,10 @@ const emits = defineEmits<{
   (e: "renameTrigger", asset: AssetItem): void;
 }>();
 
-const userInfoStore = useUserInfoStore();
-
 const { t } = useI18n();
-const { currentSite, currentUser } = storeToRefs(userInfoStore);
-const { handleAssetConnection, displayUser, displayProtocol, handleAssetFavorite } =
+const { handleAssetConnection, displayUser, handleAssetFavorite, handleAssetUnfavorite } =
   useAssetAction();
 
-// 定义菜单项类型
 interface MenuItem {
   value?: string;
   label: string;
@@ -35,7 +32,8 @@ interface MenuItem {
   children?: MenuItem[];
 }
 
-// 计算菜单项
+const isFavorited = computed(() => !!props.asset.isFavorite);
+
 const menuItems = computed((): MenuItem[] => {
   const protocols = (props.asset.permedProtocols || []).map((p: PermedProtocol) => p.name);
   const uniqueProtocols = Array.from(new Set(protocols));
@@ -58,9 +56,9 @@ const menuItems = computed((): MenuItem[] => {
       onClick: () => handleRename()
     },
     {
-      label: t("ContextMenu.Favorite"),
-      icon: "i-lucide-star",
-      onClick: () => handleFavorite()
+      label: isFavorited.value ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
+      icon: isFavorited.value ? "lucide:star-off" : "i-lucide-star",
+      onClick: () => (isFavorited.value ? handleUnfavorite() : handleFavorite())
     }
   ];
 
@@ -129,6 +127,17 @@ const handleRename = () => {
 // 处理收藏
 const handleFavorite = () => {
   handleAssetFavorite(props.asset.id);
+  try {
+    useEventBus().emit("favoriteChanged", { assetId: props.asset.id, favorite: true });
+  } catch {}
+  emits("update:visible", false);
+};
+
+const handleUnfavorite = () => {
+  handleAssetUnfavorite(props.asset.id);
+  try {
+    useEventBus().emit("favoriteChanged", { assetId: props.asset.id, favorite: false });
+  } catch {}
   emits("update:visible", false);
 };
 </script>

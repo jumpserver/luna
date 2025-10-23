@@ -8,6 +8,7 @@ pub mod pull_up;
 pub mod rename_asset;
 pub(crate) mod requests;
 pub mod set_favorite;
+pub mod unfavorite;
 pub mod update_config;
 pub(crate) mod url_watcher;
 pub mod window_controls;

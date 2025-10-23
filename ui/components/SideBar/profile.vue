@@ -87,7 +87,14 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
     {
       label: t("Login.Logout"),
       icon: "solar:login-outline",
-      color: "error",
+      class: "logout-menu-item",
+      ui: {
+        itemLabel: "text-error",
+        itemLeadingIcon:
+          "text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error",
+        itemTrailingIcon: "text-error",
+        item: "data-highlighted:before:bg-error/15 data-[state=open]:before:bg-error/15 data-highlighted:before:bg-red-500/15 data-[state=open]:before:bg-red-500/15"
+      },
       onClick: clearAuthInfo
     }
   ]
@@ -369,14 +376,27 @@ onBeforeUnmount(() => {
     align="start"
     :ui="{ content: 'w-56 p-1' }"
   >
-    <div class="w-full rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors mb-2">
-      <div class="flex items-center gap-3 px-2 py-1 text-left">
-        <UAvatar size="sm" src="/user_avatar.png" />
-        <div class="flex-1 leading-tight" v-if="!props.collapse" >
-          <div class="text-sm font-medium truncate">
-            {{ currentUser?.name }}
-          </div>
-        </div>
+    <div class="w-full rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors mb-1">
+      <div
+        class="flex items-center py-1"
+        :style="{
+          justifyContent: collapse ? 'center' : '',
+          paddingLeft: collapse ? '' : '10px'
+        }"
+      >
+        <UUser
+          size="sm"
+          :avatar="{
+            src: '/user_avatar.png'
+          }"
+          :ui="props.collapse ? { root: 'justify-center gap-0' } : undefined"
+        >
+          <template #name>
+            <span v-if="!props.collapse" class="leading-tight text-sm font-medium truncate">
+              {{ currentUser?.name }}
+            </span>
+          </template>
+        </UUser>
       </div>
     </div>
   </UDropdownMenu>
@@ -432,3 +452,10 @@ onBeforeUnmount(() => {
     </div>
   </Modal>
 </template>
+
+<style scoped>
+.logout-menu-item[data-highlighted]::before,
+.logout-menu-item[data-state="open"]::before {
+  background-color: rgb(239 68 68 / 0.15) !important;
+}
+</style>

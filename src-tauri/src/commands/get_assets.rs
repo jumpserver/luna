@@ -92,7 +92,7 @@ pub async fn get_assets(
         return;
     }
 
-    // 解析服务返回的 JSON 字符串
+    // 获取 Assets 数据
     match from_str::<Value>(&assets_data.data) {
         Ok(mut json_message) => {
             // 为每个资产项添加默认的 permedAccounts 和 permedProtocols 字段
@@ -119,7 +119,6 @@ pub async fn get_assets(
                     "data": json_message,
                 }),
             );
-            return;
         }
         Err(e) => {
             error!(
@@ -127,7 +126,27 @@ pub async fn get_assets(
                 e
             );
             let _ = app.emit("get-asset-failure", json!({ "status": assets_data.status }));
-            return;
         }
     }
+
+    // 获取 Favorite Assets
+    let favorite_assets_data = asset_service.get_favorite_assets().await;
+
+    if !favorite_assets_data.success {
+        error!("获取 Favorite Assets 数据失败");
+        return;
+    }
+
+    info!(
+        "获取 Favorite Assets 数据成功，返回数据: {}",
+        favorite_assets_data.data
+    );
+
+    let _ = app.emit(
+        "get-favorite-assets-success",
+        json!({
+            "status": favorite_assets_data.status,
+            "data": favorite_assets_data.data,
+        }),
+    );
 }

@@ -24,6 +24,8 @@ provide("providerClearSelection", providerClearSelection);
     :style="{
       borderTopRightRadius: '0px',
       borderTopLeftRadius: '0px',
+      borderBottomLeftRadius: '0px',
+      borderBottomRightRadius: '0px',
       backgroundColor:
         theme === 'dark'
           ? componentsConfig.pages.mainCardDarkBackgroundColor

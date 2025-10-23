@@ -3,6 +3,8 @@ use std::error::Error;
 use tauri::{menu::Menu, tray::TrayIconBuilder, App, Runtime, image::Image};
 
 /// 从字节数据创建 Tauri Image（直接使用原始图像）
+/// 仅在 macOS 平台下使用
+#[cfg(target_os = "macos")]
 fn create_image_from_bytes(icon_bytes: &[u8], platform: &str) -> Option<Image<'static>> {
     match image::load_from_memory(icon_bytes) {
         Ok(img) => {

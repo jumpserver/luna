@@ -16,6 +16,7 @@ use crate::commands::logout::logout;
 use crate::commands::pull_up::pull_up;
 use crate::commands::rename_asset::rename;
 use crate::commands::set_favorite::set_favorite;
+use crate::commands::unfavorite::unfavorite;
 use crate::commands::update_config::update_config_selection;
 use crate::commands::url_watcher::url_watcher;
 use crate::commands::window_controls::{close_window, minimize_window, toggle_maximize_window};
@@ -56,11 +57,11 @@ pub fn run() {
 
             Ok(())
         })
-
         .invoke_handler(tauri::generate_handler![
             logout,
             rename,
             pull_up,
+            unfavorite,
             get_assets,
             get_config,
             url_watcher,

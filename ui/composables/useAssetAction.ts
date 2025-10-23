@@ -47,7 +47,6 @@ export const useAssetAction = () => {
   const userInfoStore = useUserInfoStore();
   // prettier-ignore
   const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption, orgId } = storeToRefs(userInfoStore);
-  const { setConnectionInfoForAsset, getConnectionInfoForAsset } = userInfoStore;
 
   /**
    * @description 展示 user 信息,默认展示非 @ 开头的 user
@@ -56,6 +55,7 @@ export const useAssetAction = () => {
    */
   const displayUser = (assetId: string, accounts?: PermedAccount[]) => {
     const saved = currentConnectionInfoMap.value[assetId];
+
     if (saved?.username) return saved.username;
 
     const list = accounts || [];
@@ -88,14 +88,18 @@ export const useAssetAction = () => {
 
     // 同名账号 account 使用 @USER
     // 手动输入 account 使用 @INPUT
-    const isManual =
-      saved?.accountMode === "manual" || username === "手动输入" || username === "Manual input";
+    // prettier-ignore
+    const isManual = saved?.accountMode === "manual" || username === "手动输入" || username === "Manual input";
 
     const isDynamic =
       saved?.accountMode === "dynamic" ||
       username.includes("同名账号") ||
       username.includes("Dynamic user");
 
+    // 已保存过托管账号的 ID 则优先使用
+    if (!isManual && !isDynamic && saved?.accountId) {
+      return saved.accountId as any;
+    }
     if (isManual) return "@INPUT";
     if (isDynamic) return "@USER";
 
@@ -196,8 +200,8 @@ export const useAssetAction = () => {
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
 
-    // 优先使用临时凭据（未勾选“记住密码”的一次性输入），否则回退到已保存的
-    const effectiveMode = ephemeral?.accountMode ?? saved?.accountMode;
+    // 以已保存的账号模式为准；未保存时回退临时模式
+    const effectiveMode = saved?.accountMode ?? ephemeral?.accountMode;
     const selected = saved?.username ?? user;
 
     let input_username = "";
@@ -222,7 +226,8 @@ export const useAssetAction = () => {
       input_username = "";
       input_secret = ephemeral?.dynamicPassword ?? saved?.dynamicPassword ?? "";
     } else {
-      input_username = "";
+      // 托管账号：account 用 ID，input_username 用展示账号名
+      input_username = selected || matchedAccount?.username || "";
       input_secret = "";
     }
 
@@ -280,6 +285,18 @@ export const useAssetAction = () => {
    */
   const handleAssetFavorite = (assetId: string) => {
     useTauriCoreInvoke("set_favorite", {
+      site: currentSite.value,
+      cookieHeader: currentUser.value!.headerJson,
+      assetId
+    });
+  };
+
+  /**
+   * @description 处理取消收藏
+   * @param assetId
+   */
+  const handleAssetUnfavorite = (assetId: string) => {
+    useTauriCoreInvoke("unfavorite", {
       site: currentSite.value,
       cookieHeader: currentUser.value!.headerJson,
       assetId
@@ -466,6 +483,7 @@ export const useAssetAction = () => {
 
     handleAssetRename,
     handleAssetFavorite,
+    handleAssetUnfavorite,
     handleAssetConnection
   };
 };

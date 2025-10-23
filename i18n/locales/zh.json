@@ -22,7 +22,10 @@
     "Sort": "排序",
     "Refresh": "刷新",
     "Layout": "切换布局",
-    "Settings": "连接设置"
+    "Settings": "连接设置",
+    "Minimize": "最小化",
+    "Maximize": "最大化",
+    "Close": "关闭"
   },
   "Menu": {
     "Resource": "资源目录",
@@ -57,7 +60,8 @@
     "Rename": "重命名",
     "Use": "使用",
     "Favorite": "收藏",
-    "Edit": "编辑"
+    "Edit": "编辑",
+    "Unfavorite": "取消收藏"
   },
   "EditModal": {
     "ModifyConnectionInfo": "修改连接信息",
@@ -121,19 +125,6 @@
     "ConnectFailed": "连接失败"
   },
   "Update": {
-    "FoundNewVersion": "发现新版本",
-    "CurrentVersion": "当前版本",
-    "ConfirmInstall": "是否立即下载并安装？",
-    "Start": "开始更新",
-    "Downloading": "正在下载",
-    "Installing": "正在安装更新，应用可能会重启",
-    "Completed": "更新完成",
-    "CompletedDesc": "安装完成，应用将自动重启或请手动重启",
-    "Failed": "更新失败",
-    "FailedDesc": "下载或安装更新时出错，请稍后重试",
-    "UpToDate": "当前已是最新版本"
-  },
-  "update": {
     "FoundNewVersion": "发现新版本",
     "CurrentVersion": "当前版本",
     "ConfirmInstall": "是否立即下载并安装？",

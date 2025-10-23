@@ -95,7 +95,6 @@ body,
 #__nuxt,
 #app {
   height: 100%;
-  text-autospace: normal;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

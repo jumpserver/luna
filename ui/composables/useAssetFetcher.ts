@@ -25,6 +25,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   const lastDetailAssetId = ref<string | null>(null);
   const subscribeGetAssetsEvent = ref<UnlistenFn | null>(null);
   const subscribeGetAssetFailedEvent = ref<UnlistenFn | null>(null);
+  const subscribeGetFavoriteAssetsEvent = ref<UnlistenFn | null>(null);
 
   const totalCount = ref(0);
   const currentOrder = ref("");
@@ -32,8 +33,11 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
   let stopScrollListener: (() => void) | null = null;
 
+  const favoriteSet = ref<Set<string>>(new Set());
+
   const assetsData = computed(() => {
-    return transformAssetsData(rawAssetsList.value);
+    const list = transformAssetsData(rawAssetsList.value);
+    return list.map((a) => ({ ...a, isFavorite: favoriteSet.value.has(a.id) }));
   });
 
   const isAppending = computed(() => isLoading.value && rawAssetsList.value.length > 0);
@@ -41,12 +45,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   const isInitialLoading = computed(() => isLoading.value && rawAssetsList.value.length === 0);
 
   const appendSkeletonCount = computed(() => {
-    if (!(isLoading.value && rawAssetsList.value.length > 0)) return 0;
-
-    const remaining = Math.max(0, (totalCount.value || 0) - rawAssetsList.value.length);
-
-    const expected = totalCount.value ? Math.min(LIMIT, remaining) : LIMIT;
-    return expected || LIMIT;
+    return 1;
   });
 
   const scrollbarStyles = computed(() => {
@@ -311,6 +310,26 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
         endLoading();
       });
     });
+
+    subscribeGetFavoriteAssetsEvent.value = await useTauriEventListen(
+      "get-favorite-assets-success",
+      async (event) => {
+        interface payLoadType {
+          status: number;
+          data: string;
+        }
+
+        const payload = event.payload as payLoadType;
+        const favoriteAssets = JSON.parse(payload.data as string) as Array<{ asset: string }>;
+
+        try {
+          const ids = (favoriteAssets || []).map((x) => x?.asset).filter(Boolean) as string[];
+          favoriteSet.value = new Set(ids);
+        } catch (e) {
+          console.warn("Failed to update favorites", e);
+        }
+      }
+    );
   };
 
   /**
@@ -327,6 +346,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   let unsubscribeClearAssets: (() => void) | null = null;
   let unsubscribeAssetDetailUpdated: (() => void) | null = null;
   let unsubscribeAssetRenamed: (() => void) | null = null;
+  let unsubscribeFavoriteChanged: (() => void) | null = null;
 
   const listenEventBusEvent = () => {
     const { on } = useEventBus();
@@ -397,13 +417,33 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
       "assetRenamed",
       (payload: { assetId: string; name: string }) => {
         const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
-        
+
         if (idx !== -1) {
           rawAssetsList.value[idx] = {
             ...rawAssetsList.value[idx],
             name: payload.name
           } as RawAssetData;
         }
+      },
+      false
+    );
+
+    unsubscribeFavoriteChanged = on(
+      "favoriteChanged",
+      (payload: { assetId: string; favorite: boolean }) => {
+        const set = new Set(favoriteSet.value);
+
+        if (payload.favorite) {
+          set.add(payload.assetId);
+        } else {
+          set.delete(payload.assetId);
+
+          if (assetType === "favorite" && isActiveForCurrentRoute()) {
+            refreshAssets();
+          }
+        }
+
+        favoriteSet.value = set;
       },
       false
     );
@@ -416,6 +456,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
     unsubscribeClearAssets?.();
     unsubscribeAssetDetailUpdated?.();
     unsubscribeAssetRenamed?.();
+    unsubscribeFavoriteChanged?.();
   };
 
   onMounted(async () => {

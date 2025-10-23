@@ -6,15 +6,17 @@ import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
 
 const { t } = useI18n();
 const { emit } = useEventBus();
+const { isMacOS } = usePlatform();
+
 const localePath = useLocalePath();
 const useSettingStore = useUserSettingStore();
+
 const { setCollapse } = useSettingStore;
-const { collapse, theme } = storeToRefs(useSettingStore);
+const { collapse } = storeToRefs(useSettingStore);
 
 const isLoading = ref(false);
+const sidebarSearch = ref("");
 
-// 使用平台检测 composable
-const { isMacOS } = usePlatform();
 // const isMacOS = false;
 
 const sideBarItems = computed<NavigationMenuItem[]>(() => {
@@ -57,19 +59,16 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
 });
 
 const handleCollapse = () => {
-  console.log("Sidebar collapse button clicked, current state:", collapse.value);
   setCollapse(!collapse.value);
-  console.log("Sidebar collapse state after toggle:", !collapse.value);
 };
-const isDarkMode = computed(() => theme.value === "dark");
-const sidebarSearch = ref("");
 const emitSearch = (value: string) => emit("search", value);
 const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 </script>
 
 <template>
+  <!-- backdrop-blur-lg 如果加上这个属性会导致在拖动窗口的时候，左侧背景一直在变化 -->
   <div
-    class="flex flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-blur-lg backdrop-saturate-150 supports-[backdrop-filter]:bg-white/20 supports-[backdrop-filter]:dark:bg-zinc-900/15 border-r border-white/30 dark:border-white/10 shadow-sm"
+    class="flex flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-saturate-150 supports-backdrop-filter:dark:bg-zinc-900/15 border-r border-white/30 dark:border-white/10 shadow-sm"
     :style="{
       width: collapse ? '75px' : '220px'
     }"
@@ -78,14 +77,14 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
     <div class="flex flex-col w-full">
       <!-- 折叠按钮 -->
       <div
-        class="flex items-center px-3 h-10"
+        class="flex justify-center items-center px-3 h-10"
         :class="
-          isMacOS ? (collapse ? 'mt-9' : 'justify-end') : collapse ? 'py-2' : 'py-2 justify-between'
+          isMacOS ? (collapse ? 'mt-9' : 'justify-end') : collapse ? 'py-2' : 'py-2 mt-1 justify-between'
         "
       >
-        <div class="flex items-center gap-1" v-if="!isMacOS && !collapse">
-          <UAvatar size="sm" src="/logo.png" />
-          <span class="text-sm font-medium">JumpServer</span>
+        <div class="flex items-center gap-2" v-if="!isMacOS && !collapse">
+          <UAvatar size="sm" src="/logo.png" class="bg-transparent" :ui="{ root: 'bg-transparent',  }" />
+          <span class="text-sm">JumpServer</span>
         </div>
 
         <UButton
@@ -129,7 +128,12 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
       </div>
     </div>
 
-    <div class="px-3 py-0 flex-1 overflow-auto menu">
+    <div class="px-3 py-0 flex-1 overflow-auto menu" 
+      :style="{
+        display: collapse ? 'inline-flex' : '',
+        justifyContent: collapse ? 'center' : ''
+      }"
+    >
       <UNavigationMenu
         orientation="vertical"
         :items="sideBarItems"
@@ -138,7 +142,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
         :ui="{
           link: 'px-2 my-1 rounded-sm menu-item light:text-gray-800 dark:text-gray-200',
           linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200',
-          label: 'light:text-gray-500 dark:text-gray-400 pb-0'
+          label: 'light:text-gray-500 dark:text-gray-400 pb-0 text-xs font-light'
         }"
       />
     </div>

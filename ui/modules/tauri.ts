@@ -5,7 +5,6 @@ import * as tauriPath from "@tauri-apps/api/path";
 import * as tauriWebviewWindow from "@tauri-apps/api/webviewWindow";
 import * as tauriWindow from "@tauri-apps/api/window";
 import * as tauriClipboardManager from "@tauri-apps/plugin-clipboard-manager";
-import * as tauriFs from "@tauri-apps/plugin-fs";
 import * as tauriNotification from "@tauri-apps/plugin-notification";
 import * as tauriOs from "@tauri-apps/plugin-os";
 import * as tauriShell from "@tauri-apps/plugin-shell";
@@ -70,7 +69,6 @@ const tauriModules = [
     prefix: "Notification",
     importPath: "@tauri-apps/plugin-notification"
   },
-  { module: tauriFs, prefix: "Fs", importPath: "@tauri-apps/plugin-fs" },
   {
     module: tauriStore,
     prefix: "Store",

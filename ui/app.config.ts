@@ -1,7 +1,7 @@
 export default defineAppConfig({
   app: {
     name: "JumpServer Client",
-    author: "ZhaoJiSen",
+    author: "JumpServer",
     version: "3.1.0",
     repo: "https://github.com/jumpserver/clients"
   },

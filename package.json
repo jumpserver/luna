@@ -5,10 +5,10 @@
   "private": true,
   "packageManager": "pnpm@10.18.3",
   "description": "JumpServer client tool",
-  "author": "ZhaoJiSen",
+  "author": "JumpServer",
   "license": "MIT",
   "engines": {
-    "node": ">=23"
+    "node": ">=20"
   },
   "scripts": {
     "dev": "nuxt dev",
@@ -28,7 +28,7 @@
   "dependencies": {
     "@nuxt/fonts": "0.11.4",
     "@nuxt/icon": "2.0.0",
-    "@nuxt/ui": "^4.0.0",
+    "@nuxt/ui": "^4.0.1",
     "@nuxtjs/i18n": "10.0.2",
     "@pinia/nuxt": "^0.11.2",
     "@tauri-apps/api": "^2.8.0",
