@@ -128,7 +128,7 @@ const cancelRename = () => {
           </div>
         </div>
 
-        <div class="flex-shrink-0 ml-2">
+        <div class="shrink-0 ml-2">
           <UButton
             size="xs"
             color="primary"

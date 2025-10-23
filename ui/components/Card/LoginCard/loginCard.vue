@@ -1,41 +1,29 @@
 <script setup lang="ts">
 const { t } = useI18n();
+
+const handleLogin = () => {
+  useEventBus().emit("login", undefined);
+};
 </script>
 
-<template v-else>
-  <UPageCard
-    spotlight
-    variant="subtle"
-    spotlight-color="primary"
-    orientation="horizontal"
-    class="cursor-pointer"
-    :ui="{
-      container: 'lg:flex sm:p-2',
-    }"
-    @click="useEventBus().emit('login', undefined)"
-  >
-    <div class="px-6 py-4">
-      <div class="flex items-center justify-between gap-6">
-        <p
-          class="text-[15px] font-medium text-gray-500 dark:text-gray-100 leading-none whitespace-nowrap overflow-hidden text-ellipsis"
-          :title="t('Common.LoginFirst')"
-        >
-          {{ t('Common.LoginFirst') }}
-        </p>
-
-        <div class="flex items-center gap-4">
-          <button
-            type="button"
-            aria-label="Login"
-            class="grid size-11 place-items-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/25 transition-transform duration-200 hover:scale-[1.03] active:scale-95"
-          >
-            <UIcon
-              name="cuida:login-outline"
-              class="size-5 text-emerald-400/90"
-            />
-          </button>
-        </div>
+<template>
+  <div class="flex w-full py-10 sm:py-16">
+    <div
+      class="mx-auto w-full max-w-md rounded-2xl border border-neutral-200/70 bg-white/80 p-6 text-center shadow-sm backdrop-blur-sm dark:border-neutral-700/60 dark:bg-neutral-900/60 cursor-pointer"
+      @click="handleLogin"
+    >
+      <div
+        class="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-primary-500/10 text-emerald-400 ring-1 ring-emerald-400/25"
+      >
+        <UIcon name="cuida:login-outline" class="size-6" />
       </div>
+
+      <h3
+        class="text-base font-semibold text-neutral-800 dark:text-neutral-100"
+        :title="t('Common.LoginFirst')"
+      >
+        {{ t("Common.LoginFirst") }}
+      </h3>
     </div>
-  </UPageCard>
+  </div>
 </template>

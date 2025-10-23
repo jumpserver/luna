@@ -197,7 +197,7 @@ onBeforeUnmount(() => {
 
       <div
         v-else-if="isInitialLoading"
-        class="grid grid-cols-[repeat(auto-fit,minmax(360px,_1fr))] gap-4 p-2"
+        class="grid grid-cols-[repeat(auto-fit,minmax(360px,1fr))] gap-4 p-2"
         aria-busy="true"
       >
         <SkeletonCard />
