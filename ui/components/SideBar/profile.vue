@@ -377,12 +377,19 @@ onBeforeUnmount(() => {
     :ui="{ content: 'w-56 p-1' }"
   >
     <div class="w-full rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors mb-1">
-      <div class="flex items-center gap-3 px-2 py-1 text-left">
+      <div
+        class="flex items-center py-1"
+        :style="{
+          justifyContent: collapse ? 'center' : '',
+          paddingLeft: collapse ? '' : '10px'
+        }"
+      >
         <UUser
           size="sm"
           :avatar="{
             src: '/user_avatar.png'
           }"
+          :ui="props.collapse ? { root: 'justify-center gap-0' } : undefined"
         >
           <template #name>
             <span v-if="!props.collapse" class="leading-tight text-sm font-medium truncate">

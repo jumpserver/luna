@@ -77,7 +77,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
     <div class="flex flex-col w-full">
       <!-- 折叠按钮 -->
       <div
-        class="flex items-center px-3 h-10"
+        class="flex justify-center items-center px-3 h-10"
         :class="
           isMacOS ? (collapse ? 'mt-9' : 'justify-end') : collapse ? 'py-2' : 'py-2 mt-1 justify-between'
         "
@@ -128,7 +128,12 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
       </div>
     </div>
 
-    <div class="px-3 py-0 flex-1 overflow-auto menu">
+    <div class="px-3 py-0 flex-1 overflow-auto menu" 
+      :style="{
+        display: collapse ? 'inline-flex' : '',
+        justifyContent: collapse ? 'center' : ''
+      }"
+    >
       <UNavigationMenu
         orientation="vertical"
         :items="sideBarItems"
