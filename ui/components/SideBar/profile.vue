@@ -219,7 +219,7 @@ const handleClipboard = (value: string) => {
 /**
  * @description 处理确认输入
  */
-const handleConfirm = () => {
+const handleConfirm = async () => {
   hasValidationError.value = false;
   errorMessage.value = "";
 
@@ -268,11 +268,12 @@ const handleConfirm = () => {
     trafficLightPosition: new LogicalPosition(10, 22)
   });
 
-  nextTick(async () => {
+  setTimeout(async () => {
     await useTauriCoreInvoke("url_watcher", {
       name: "loginPage",
       origin: normalizedSite
     });
+
     openModal.value = false;
   });
 };
