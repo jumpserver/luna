@@ -95,10 +95,6 @@ const items = ref<NavigationMenuItem[][]>([
         {
           label: "SQL Server",
           to: "/setting/sqlserver"
-        },
-        {
-          label: "DB2",
-          to: "/setting/db2"
         }
       ]
     }

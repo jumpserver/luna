@@ -25,10 +25,9 @@ const iconPath = computed(() => {
   return iconMap[props.type.toLowerCase()] || ""; // 默认使用 linux 图标
 });
 
-
 const imageProps = computed(() => {
-   const prop: { src?: string, alt?: string } = {};
-   const iconMap: Record<string, string> = {
+  const prop: { src?: string; alt?: string } = {};
+  const iconMap: Record<string, string> = {
     windows: "/icons/windows.png",
     linux: "/icons/linux.png",
     mysql: "/icons/mysql.png",
@@ -36,11 +35,10 @@ const imageProps = computed(() => {
     oracle: "/icons/oracle.png",
     postgresql: "/icons/postgre.png",
     sqlserver: "/icons/sqlserver.png",
-    db2: "/icons/db2.png",
     redis: "/icons/redis.png",
     mongodb: "/icons/mongodb.png",
     dameng: "/icons/dameng.png",
-    clickhouse: "/icons/clickhouse.png",
+    clickhouse: "/icons/clickhouse.png"
   };
 
   const src = iconMap[props.type] || "";
@@ -52,7 +50,7 @@ const imageProps = computed(() => {
     prop.alt = alt;
   }
 
-  return prop
+  return prop;
 });
 
 const sizeClasses = computed(() => {
