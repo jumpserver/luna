@@ -31,6 +31,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   const currentOrder = ref("");
   const currentSearch = ref("");
 
+  let stopResizeObserver: (() => void) | null = null;
   let stopScrollListener: (() => void) | null = null;
 
   const favoriteSet = ref<Set<string>>(new Set());
@@ -65,16 +66,35 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   watchEffect((onCleanup) => {
     if (hasMore.value && scrollRef?.value) {
       ensureScrollListener();
+      clientResizeObserver();
     } else {
       stopScrollListener?.();
+      stopResizeObserver?.();
+
+      stopResizeObserver = null;
       stopScrollListener = null;
     }
 
     onCleanup(() => {
       stopScrollListener?.();
+      stopResizeObserver?.();
+
+      stopResizeObserver = null;
       stopScrollListener = null;
     });
   });
+
+  function prefetchToFill() {
+    if (!scrollRef?.value) return;
+
+    const el = scrollRef.value;
+    const notScrollable = el.scrollHeight <= el.clientHeight + 1;
+
+    // 如果不可滚动,且还有数据,继续请求下一页
+    if (notScrollable && hasMore.value && !isLoading.value) {
+      fetchNextPage(currentSearch.value, currentOrder.value);
+    }
+  }
 
   function ensureScrollListener() {
     if (!scrollRef?.value) return;
@@ -99,6 +119,22 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
     };
   }
 
+  function clientResizeObserver() {
+    if (!scrollRef?.value || stopResizeObserver) return;
+
+    const el = scrollRef.value;
+    const resizeObserver = new ResizeObserver(() => {
+      if (!isLoading.value) prefetchToFill();
+    });
+
+    resizeObserver.observe(el);
+
+    stopResizeObserver = () => {
+      resizeObserver.disconnect();
+      stopResizeObserver = null;
+    };
+  }
+
   /**
    * @description 开始加载
    */
@@ -118,6 +154,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
     nextTick(() => {
       try {
         useEventBus().emit("loaded", undefined);
+        prefetchToFill();
       } catch {}
     });
   };
@@ -185,6 +222,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
    * @param count
    */
   const appendPageData = (pageData: RawAssetData[], count?: number | null) => {
+    // 如果大于 20 条那么只显示 20 条
     if (pageData.length > LIMIT) pageData = pageData.slice(0, LIMIT);
 
     rawAssetsList.value.push(...pageData);
