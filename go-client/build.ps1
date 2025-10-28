@@ -7,7 +7,7 @@ set GOARCH=386
 go build -trimpath -ldflags "-w -s -H windowsgui" -o build/windows/JumpServerClient32.exe ./cmd/awaken/
 
 
-Copy-Item -Path "build/*" -Destination "../ui/bin/" -Recurse -Force
-Copy-Item -Path config.json -Destination "../ui/bin/" -Force
-Copy-Item -Path putty.exe -Destination "../ui/bin/windows/" -Force
-Copy-Item -Path "pkg/autoit/*.dll" -Destination "../ui/bin/windows/" -Force
+Copy-Item -Path "build/*" -Destination "../src-tauri/resources/bin/" -Recurse -Force
+Copy-Item -Path config.json -Destination "../src-tauri/resources/bin/" -Force
+Copy-Item -Path putty.exe -Destination "../src-tauri/resources/bin/windows/" -Force
+Copy-Item -Path "pkg/autoit/*.dll" -Destination "../src-tauri/resources/bin/windows/" -Force
