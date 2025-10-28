@@ -13,7 +13,8 @@
 		"Inactive": "Inactive",
 		"Language": "Switch Language",
 		"Login": "Login",
-		"Connect": "Connect"
+		"Connect": "Connect",
+		"EmptyDescription": "No authorized assets are available for the current type"
 	},
 	"ToolTips": {
 		"LightMode": "Light Mode",

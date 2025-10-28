@@ -13,7 +13,8 @@
     "Active": "激活",
     "Inactive": "未激活",
     "Login": "登录",
-    "Connect": "连接"
+    "Connect": "连接",
+    "EmptyDescription": "当前类型下暂无可用的授权资产"
   },
   "ToolTips": {
     "LightMode": "亮色模式",

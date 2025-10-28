@@ -207,8 +207,12 @@ onBeforeUnmount(() => {
         v-else-if="visibleAssets && visibleAssets.length === 0"
         class="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-500"
       >
-        <UIcon name="mingcute:inbox-line" class="size-10" />
-        <span class="text-sm">{{ t("Common.NoData") }}</span>
+        <UEmpty
+          icon="mingcute:inbox-line"
+          variant="subtle"
+          :title="t('Common.NoData')"
+          :description="t('Common.EmptyDescription')"
+        />
       </div>
 
       <CardGridCard
