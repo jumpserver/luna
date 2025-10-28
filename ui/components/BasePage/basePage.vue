@@ -24,7 +24,7 @@ const scrollRef = ref<HTMLElement | null>(null);
 const subscribeSettingEvent = ref<UnlistenFn | null>(null);
 
 const { t } = useI18n();
-const { confirmConnection } = useAssetConnection();
+const { confirmConnection, saveConnectionInfo } = useAssetConnection();
 
 const contextMenu = useContextMenu();
 const userInfoStore = useUserInfoStore();
@@ -99,7 +99,8 @@ const handleContextTrigger = (asset: AssetItem, event?: MouseEvent) => {
 const handleEditTrigger = async (asset: AssetItem) => {
   try {
     const info = await connEditorRef.value!.open(asset);
-    confirmConnection(asset, info);
+    // 仅保存连接配置，不触发连接
+    saveConnectionInfo(asset, info);
   } catch {}
 };
 

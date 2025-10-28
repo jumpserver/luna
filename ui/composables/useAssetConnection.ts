@@ -1,6 +1,17 @@
 import type { AssetItem } from "~/types/index";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
+type ConnectionInfo = {
+  protocol: string;
+  account: string;
+  accountId?: string;
+  accountMode: "hosted" | "dynamic" | "manual";
+  manualUsername: string;
+  manualPassword: string;
+  dynamicPassword: string;
+  rememberSecret: boolean;
+};
+
 export function useAssetConnection() {
   const { handleAssetConnection, displayUser, displayProtocol } = useAssetAction();
   const userInfoStore = useUserInfoStore();
@@ -31,32 +42,23 @@ export function useAssetConnection() {
   };
 
   /**
-   * 处理连接确认（从模态框）
+   * 仅保存连接信息（不触发连接）
    */
-  const confirmConnection = (
-    asset: AssetItem,
-    connectionInfo: {
-      protocol: string;
-      account: string;
-      accountId?: string;
-      accountMode: "hosted" | "dynamic" | "manual";
-      manualUsername: string;
-      manualPassword: string;
-      dynamicPassword: string;
-      rememberSecret: boolean;
-    }
-  ) => {
-    // 解析托管账号的 ID（若未传入）
+  const saveConnectionInfo = (asset: AssetItem, connectionInfo: ConnectionInfo) => {
     let resolvedAccountId: string | undefined = connectionInfo.accountId;
+
     if (connectionInfo.accountMode === "hosted" && !resolvedAccountId) {
       const accs = asset.permedAccounts || [];
       const matched = accs.find(
-        (a) => a.name === connectionInfo.account || a.username === connectionInfo.account || a.alias === connectionInfo.account
+        (a) =>
+          a.name === connectionInfo.account ||
+          a.username === connectionInfo.account ||
+          a.alias === connectionInfo.account
       );
+
       resolvedAccountId = matched?.id;
     }
 
-    // 保存连接信息
     userInfoStore.setConnectionInfoForAsset(asset.id, {
       protocol: connectionInfo.protocol,
       username: connectionInfo.account,
@@ -67,8 +69,14 @@ export function useAssetConnection() {
       dynamicPassword: connectionInfo.rememberSecret ? connectionInfo.dynamicPassword : "",
       rememberSecret: connectionInfo.rememberSecret
     });
+  };
 
-    // 执行连接
+  /**
+   * 处理连接确认（从模态框）
+   */
+  const confirmConnection = (asset: AssetItem, connectionInfo: ConnectionInfo) => {
+    saveConnectionInfo(asset, connectionInfo);
+
     handleAssetConnection(
       connectionInfo.account,
       asset.id,
@@ -86,6 +94,7 @@ export function useAssetConnection() {
 
   return {
     connectAsset,
-    confirmConnection
+    confirmConnection,
+    saveConnectionInfo
   };
 }
