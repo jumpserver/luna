@@ -85,7 +85,7 @@
 		"NoMore": "No more",
 		"ScrollToLoadMore": "Scroll to load more"
 	},
-	"Login": {
+  "Login": {
 		"Title": "Input Login Site",
 		"Description": "Please enter the site address (e.g. https://example.com) or IP address",
 		"LoginSuccess": "Login Success",
@@ -99,8 +99,11 @@
 		"Logout": "Logout",
 		"AlreadyLoggedInError": "You have already logged in to this site",
 		"LoginFailedErrorPage": "Login failed. The current page is not a login page. Please re-enter",
-		"LoginFailedTimeout": "Login failed. Login timeout. Please log in again"
-	},
+    "LoginFailedTimeout": "Login failed. Login timeout. Please log in again",
+    "InvalidCertificateMac": "Login failed: certificate invalid or blocked by system security (macOS WebView). Install a valid certificate or open in system browser.",
+    "InvalidCertificateGeneric": "Login failed: certificate or secure connection issue.",
+    "NetworkError": "Login failed: network error. Please check connectivity."
+  },
 	"Asset": {
 		"GetAssetFailed": "Get asset failed, please refresh and try again"
 	},

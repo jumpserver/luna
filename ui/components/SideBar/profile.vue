@@ -19,6 +19,7 @@ const toast = useToast();
 const userInfoStore = useUserInfoStore();
 const useSettingStore = useUserSettingStore();
 
+const { isMacOS } = usePlatform();
 const { t, setLocale, locales } = useI18n();
 const { manualSetTheme } = useThemeAdapter();
 
@@ -253,6 +254,56 @@ const handleConfirm = async () => {
       inputRef.value?.$el?.querySelector("input")?.focus();
     });
 
+    return;
+  }
+
+  // 预检 TLS/证书
+  const target = normalizedSite.startsWith("http") ? normalizedSite : `https://${normalizedSite}`;
+  try {
+    const ac = new AbortController();
+    const to = setTimeout(() => ac.abort(), 5000);
+    // no-cors 能发起请求（即使拿不到具体响应），若 TLS/证书错误会直接抛出
+    await fetch(target, { mode: "no-cors", cache: "no-store", method: "GET", signal: ac.signal });
+
+    clearTimeout(to);
+  } catch (e: any) {
+    const msg = String(e?.message || e || "Network error");
+    const low = msg.toLowerCase();
+    const isAbort = e?.name === "AbortError";
+    const online = typeof navigator !== "undefined" ? navigator.onLine : true;
+
+    let isHttps = false;
+
+    const u = new URL(target);
+    isHttps = u.protocol === "https:";
+
+    // 关键词匹配 + 平台/协议启发：在 macOS + https 的失败优先视作证书/ATS问题（除非明确超时/离线）
+    const keywordCert =
+      low.includes("certificate") ||
+      low.includes("ssl") ||
+      low.includes("x509") ||
+      low.includes("handshake") ||
+      low.includes("app transport security") ||
+      low.includes("secure connection") ||
+      low.includes("ats") ||
+      low.includes("hostname") ||
+      low.includes("mismatch");
+
+    const heuristicCert = isMacOS.value && isHttps && !isAbort && online;
+    const isCertLike = keywordCert || heuristicCert;
+
+    const desc = isCertLike
+      ? isMacOS.value
+        ? t("Login.InvalidCertificateMac")
+        : t("Login.InvalidCertificateGeneric")
+      : t("Login.NetworkError");
+
+    toast.add({
+      title: t("Login.LoginFailed"),
+      description: `${desc}`,
+      color: "error",
+      icon: "line-md:close-circle"
+    });
     return;
   }
 

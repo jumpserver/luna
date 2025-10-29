@@ -98,7 +98,10 @@
     "Logout": "退出登录",
     "AlreadyLoggedInError": "您已经登录了该站点",
     "LoginFailedErrorPage": "登录失败, 当前页面不是登录页面，请重新输入",
-    "LoginFailedTimeout": "登录失败, 登录超时，请重新登录"
+    "LoginFailedTimeout": "登录失败, 登录超时，请重新登录",
+    "InvalidCertificateMac": "登录失败：证书无效或被系统安全策略拦截（macOS WebView）。请安装有效证书",
+    "InvalidCertificateGeneric": "登录失败：证书或安全连接异常。",
+    "NetworkError": "登录失败：网络异常，请检查连接"
   },
   "Loading": {
     "Loading": "加载中",
