@@ -263,9 +263,9 @@ const handleConfirm = async () => {
     height: 800,
     minWidth: 600,
     minHeight: 800,
-    hiddenTitle: true,
-    titleBarStyle: "overlay",
-    trafficLightPosition: new LogicalPosition(10, 22)
+    // hiddenTitle: true,
+    // titleBarStyle: "overlay",
+    trafficLightPosition: new LogicalPosition(10, 19)
   });
 
   setTimeout(async () => {

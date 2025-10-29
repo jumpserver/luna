@@ -1,8 +1,9 @@
 use crate::commands::requests::ApiResponse;
 use crate::models::CookieMessage;
 use chrono::{Local, Offset};
-use log::{info, warn};
-use tauri::{AppHandle, Manager, WebviewWindow};
+use log::{error, info, warn};
+use tauri::{AppHandle, LogicalSize, Manager, WebviewWindow};
+use tauri_plugin_store::StoreExt;
 use tokio::time::{sleep, Duration};
 use url::Url;
 
@@ -62,7 +63,7 @@ pub async fn get_window_cookies(
         .filter(|cookie| {
             let domain = cookie.domain().unwrap_or("");
             // 更宽松的域名匹配：支持父子域
-            let cd = domain.trim_start_matches('.') ;
+            let cd = domain.trim_start_matches('.');
             let td = target_domain.trim_start_matches('.');
             cd == td || cd.ends_with(&format!(".{}", td)) || td.ends_with(&format!(".{}", cd))
         })
@@ -177,4 +178,90 @@ pub async fn to_api_response(
             }
         }
     }
+}
+
+/// 初始化并持久化窗口尺寸，避免跨显示器缩放导致的视觉尺寸变化。
+/// - 存储：物理像素宽高（px）
+/// - 恢复：按当前缩放系数换算为逻辑尺寸后 set_size
+/// - 原理: 窗口尺寸变化时记录物理像素(px)，重启后从 store 读出 px，按当前缩放比换算为逻辑尺寸并应用为窗口大小
+pub fn setup_window_size_persistence(win: WebviewWindow) {
+    // 恢复上次保存的尺寸
+    if let Err(e) = restore_window_size(&win) {
+        warn!("restore_window_size failed: {}", e);
+    }
+
+    // 监听窗口变化,记录尺寸
+    let h = win.app_handle().clone();
+
+    win.on_window_event(move |event| match event {
+        tauri::WindowEvent::Resized(size) => {
+            let width_px = size.width as f64;
+            let height_px = size.height as f64;
+
+            if let Err(e) = save_window_size(&h, width_px, height_px) {
+                error!("save_window_size failed: {}", e);
+            }
+        }
+        _ => {}
+    });
+}
+
+fn save_window_size(app: &AppHandle, width_px: f64, height_px: f64) -> Result<(), String> {
+    let store = app
+        .store("app_data.json")
+        .map_err(|e| format!("open store failed: {}", e))?;
+    store.set(
+        "window_size",
+        serde_json::json!({
+            "width_px": width_px,
+            "height_px": height_px,
+        }),
+    );
+    store
+        .save()
+        .map_err(|e| format!("store save failed: {}", e))
+}
+
+fn restore_window_size(win: &WebviewWindow) -> Result<(), String> {
+    let app = win.app_handle();
+    let store = app
+        .store("app_data.json")
+        .map_err(|e| format!("open store failed: {}", e))?;
+
+    let saved: Option<serde_json::Value> = store.get("window_size");
+
+    if saved.is_none() {
+        return Ok(());
+    }
+
+    let v = saved.unwrap();
+
+    // 获取缩放比,缩放比 = 物理像素 / 逻辑像素
+    let factor = win
+        .scale_factor()
+        .map_err(|e| format!("scale_factor failed: {}", e))? as f64;
+
+    // 优先使用物理像素
+    let (width_logical, height_logical) = if let (Some(wpx), Some(hpx)) = (
+        v.get("width_px").and_then(|x| x.as_f64()),
+        v.get("height_px").and_then(|x| x.as_f64()),
+    ) {
+        // 物理值换回逻辑值
+        (wpx / factor, hpx / factor)
+    } else if let (Some(wl), Some(hl)) = (
+        v.get("width").and_then(|x| x.as_f64()),
+        v.get("height").and_then(|x| x.as_f64()),
+    ) {
+        (wl, hl)
+    } else {
+        return Ok(());
+    };
+
+    // 避免设置到 0 或负数
+    let w = width_logical.max(1.0);
+    let h = height_logical.max(1.0);
+
+    // set_size 存储的是 逻辑尺寸(DPI)
+    win.set_size(tauri::Size::Logical(LogicalSize::new(w, h)))
+        .map_err(|e| format!("set_size failed: {}", e))
 }

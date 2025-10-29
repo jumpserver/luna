@@ -175,7 +175,7 @@ const actionItems = computed<ActionItem[]>(() => [
       // eslint-disable-next-line no-new
       new useTauriWebviewWindowWebviewWindow("secondary", {
         title: t("Common.ConnectionSettings"),
-        url: "/setting",
+        url: "/setting/ssh",
         minWidth: 760,
         minHeight: 520,
         maxHeight: 675,

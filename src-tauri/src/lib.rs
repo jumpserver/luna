@@ -36,10 +36,11 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
-                .with_state_flags(
-                    tauri_plugin_window_state::StateFlags::all()
-                        .difference(tauri_plugin_window_state::StateFlags::DECORATIONS),
-                )
+                .with_state_flags(tauri_plugin_window_state::StateFlags::all().difference(
+                    tauri_plugin_window_state::StateFlags::DECORATIONS
+                        | tauri_plugin_window_state::StateFlags::POSITION
+                        | tauri_plugin_window_state::StateFlags::SIZE,
+                ))
                 .build(),
         )
         .plugin(tauri_plugin_store::Builder::new().build())

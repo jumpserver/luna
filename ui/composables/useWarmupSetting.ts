@@ -1,5 +1,4 @@
 export async function useWarmupSetting() {
-  if (import.meta.env.PROD) return;
   try {
     // 预编译与 /setting 相关的布局与页面，降低首次打开白屏
     await Promise.all([

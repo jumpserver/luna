@@ -1,6 +1,7 @@
 use log::{info, error};
 use std::error::Error;
 use tauri::WebviewWindow;
+use crate::utils::setup_window_size_persistence;
 
 /// 为 macOS 窗口应用毛玻璃效果
 #[cfg(target_os = "macos")]
@@ -38,19 +39,25 @@ pub fn apply_windows_blur(_win: &WebviewWindow) -> Result<(), Box<dyn std::error
 
 /// 根据操作系统应用相应的窗口效果
 pub fn apply_window_effects(win: &WebviewWindow) -> Result<(), Box<dyn Error>> {
-    #[cfg(target_os = "macos")]
-    {
-        apply_mac_vibrancy(win)
-    }
+    // 平台特定特效
+    let result: Result<(), Box<dyn Error>> = {
+        #[cfg(target_os = "macos")]
+        {
+            apply_mac_vibrancy(win)
+        }
+        #[cfg(target_os = "windows")]
+        {
+            apply_windows_blur(win)
+        }
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        {
+            info!("Window effects not supported on this platform");
+            Ok(())
+        }
+    };
 
-    #[cfg(target_os = "windows")]
-    {
-        apply_windows_blur(win)
-    }
+    // 窗口尺寸持久化逻辑
+    setup_window_size_persistence(win.clone());
 
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    {
-        info!("Window effects not supported on this platform");
-        Ok(())
-    }
+    result
 }
