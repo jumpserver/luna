@@ -221,15 +221,16 @@ onBeforeUnmount(() => {
         :visible-assets="visibleAssets"
         :is-appending="isAppending"
         :append-skeleton-count="appendSkeletonCount"
+        @edit-trigger="handleEditTrigger"
         @connect-asset="handleConnectAsset"
         @context-trigger="handleContextTrigger"
-        @edit-trigger="handleEditTrigger"
         @connect-trigger="handleConnectTrigger"
       />
     </section>
 
     <section
       v-else-if="layouts === 'table'"
+      ref="scrollRef"
       class="w-full overflow-y-auto container-scrollbar h-[calc(100vh-5rem)]"
       :style="scrollbarStyles"
     >
@@ -240,20 +241,18 @@ onBeforeUnmount(() => {
         <CardLoginCard />
       </div>
 
-      <div v-else class="p-2">
+      <div v-else class="h-full p-2">
         <CardTableCard
           :items="visibleAssets"
+          @edit-trigger="handleEditTrigger"
           @connect-asset="handleConnectAsset"
           @context-trigger="handleContextTrigger"
-          @edit-trigger="handleEditTrigger"
           @connect-trigger="handleConnectTrigger"
         />
       </div>
     </section>
 
     <ConnectionEditor ref="connEditorRef" />
-
-    <!-- Context menu 现在集成到各个组件中 -->
   </div>
 </template>
 

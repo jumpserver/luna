@@ -4,9 +4,9 @@ import type { TableColumn } from "@nuxt/ui";
 import { h, resolveComponent } from "vue";
 
 interface MenuItem {
-  value?: string;
-  label: string;
   icon: string;
+  label: string;
+  value?: string;
   onClick: () => void;
   children?: MenuItem[];
 }
@@ -16,9 +16,9 @@ const UFieldGroup = resolveComponent("UFieldGroup");
 const UDropdownMenu = resolveComponent("UDropdownMenu");
 
 const emits = defineEmits<{
+  (e: "editTrigger", asset: AssetItem): void;
   (e: "connectAsset", asset: AssetItem): void;
   (e: "contextTrigger", asset: AssetItem): void;
-  (e: "editTrigger", asset: AssetItem): void;
   (e: "connectTrigger", asset: AssetItem): void;
 }>();
 
@@ -31,9 +31,9 @@ const {
   displayUser,
   displayProtocol,
   handleAssetRename,
-  handleAssetConnection,
   handleAssetFavorite,
-  handleAssetUnfavorite
+  handleAssetUnfavorite,
+  handleAssetConnection
 } = useAssetAction();
 
 const renameValue = ref("");
@@ -121,7 +121,6 @@ const handleRenameTrigger = (asset: AssetItem) => {
   contextMenuVisible.value = false;
   actionMenuOpen[asset.id] = false;
 
-  // 等待 DOM 更新并在菜单关闭后的焦点还原阶段之后再聚焦
   nextTick(() => {
     renameInputEl.value?.focus();
   });
@@ -181,9 +180,7 @@ const columns: TableColumn<AssetItem>[] = [
         row.original.name
       );
     },
-    size: 100,
-    minSize: 80,
-    maxSize: 200
+    meta: { class: { th: "w-1/5", td: "w-1/5" } }
   },
   {
     accessorKey: "address",
@@ -196,7 +193,8 @@ const columns: TableColumn<AssetItem>[] = [
           title: row.original.address
         },
         row.original.address
-      )
+      ),
+    meta: { class: { th: "w-1/5", td: "w-1/5" } }
   },
   {
     id: "user",
@@ -211,7 +209,8 @@ const columns: TableColumn<AssetItem>[] = [
         },
         userText
       );
-    }
+    },
+    meta: { class: { th: "w-1/5", td: "w-1/5" } }
   },
   {
     id: "protocol",
@@ -226,7 +225,8 @@ const columns: TableColumn<AssetItem>[] = [
         },
         protocolText
       );
-    }
+    },
+    meta: { class: { th: "w-1/5", td: "w-1/5" } }
   },
   {
     id: "actions",
@@ -272,9 +272,7 @@ const columns: TableColumn<AssetItem>[] = [
         }
       );
     },
-    size: 200,
-    minSize: 160,
-    maxSize: 240
+    meta: { class: { th: "w-1/5", td: "w-1/5" } }
   }
 ];
 </script>
@@ -282,27 +280,27 @@ const columns: TableColumn<AssetItem>[] = [
 <template>
   <UCard
     variant="outline"
-    class="w-full overflow-hidden"
+    class="w-full overflow-hidden min-h-full flex flex-col"
     :ui="{
-      body: 'p-1 sm:p-1'
+      body: 'p-1 sm:p-1 flex-1 min-h-0'
     }"
   >
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto flex-1 min-h-0">
       <UTable
         sticky
         :data="props.items"
         :columns="columns"
-        class="w-full table-auto overflow-y-auto h-[calc(100vh-7rem)]"
+        :empty="t('Common.NoData')"
+        class="w-full table-fixed"
         :ui="{
           tr: 'hover:bg-muted/50',
           th: 'whitespace-nowrap text-xs sm:text-sm',
           td: 'whitespace-nowrap text-xs sm:text-sm'
         }"
-      />
+      ></UTable>
     </div>
   </UCard>
 
-  <!-- Context Menu -->
   <AssetContextMenu
     v-if="contextMenuAsset"
     :asset="contextMenuAsset"
