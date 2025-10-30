@@ -116,6 +116,8 @@
     "Manual": "手动账号",
     "Username": "用户名",
     "Password": "密码",
+    "DynamicUser": "同名账号",
+    "ManualInput": "手动输入",
     "RememberPassword": "记住密码"
   },
   "Setting": {

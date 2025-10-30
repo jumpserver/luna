@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PermedAccount, PermedProtocol } from "~/types/index";
+import type { SelectMenuItem } from "@nuxt/ui";
 
 const props = defineProps<{
   account: string;
@@ -73,13 +74,13 @@ const accountItems = computed(() => {
     .filter((acc: PermedAccount) => acc.alias.includes("@"))
     .map((acc: PermedAccount) => {
       if (acc.alias === "@USER") {
-        return locale.value === "zh"
-          ? `${acc.name}(${acc.username})`
-          : `Dynamic user(${acc.username})`;
+        const base = t("Account.DynamicUser");
+        const username = acc.username || "";
+        return username ? `${base}(${username})` : base;
       }
 
       if (acc.alias === "@INPUT") {
-        return locale.value === "zh" ? acc.name : "Manual input";
+        return t("Account.ManualInput");
       }
 
       return acc.name;
@@ -91,7 +92,7 @@ const accountItems = computed(() => {
     { type: "separator" },
     { type: "label", label: t("Account.Manual") },
     ...manual
-  ];
+  ] as SelectMenuItem[];
 });
 
 const selectedProtocol = computed<string>({
@@ -143,7 +144,6 @@ function handleSpecialAccount(v: string) {
         icon="lucide:user-round"
         variant="subtle"
         class="w-full"
-        @update:model-value="handleSpecialAccount"
       />
     </UFormField>
 

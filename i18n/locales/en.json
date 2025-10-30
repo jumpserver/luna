@@ -112,6 +112,8 @@
 		"Manual": "Manual accounts",
 		"Username": "Username",
 		"Password": "Password",
+		"DynamicUser": "Dynamic user",
+    "ManualInput": "Manual input",
 		"RememberPassword": "Remember password"
 	},
   "Setting": {
