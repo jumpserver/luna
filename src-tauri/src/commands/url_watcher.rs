@@ -25,10 +25,6 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
 
             // 超时直接判定失败
             if start.elapsed() >= timeout {
-                let window = match app.get_webview_window(&name) {
-                    Some(w) => w,
-                    None => break,
-                };
                 let _ = app.emit(
                     "login-failed-timeout",
                     json!({
@@ -37,17 +33,18 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
                         "message": "超过 60 秒未检测到有效登录状态，已中止登录",
                     }),
                 );
-                let _ = window.close();
+
+                if let Some(window) = app.get_webview_window(&name) {
+                    let _ = window.close();
+                }
                 break;
             }
 
-            let window = match app.get_webview_window(&name) {
-                Some(w) => w,
-                None => {
-                    warn!("未检测到任何窗口，停止监听");
-                    break;
-                }
-            };
+            // 窗口可能尚未创建或被用户瞬时关闭，此时不应中断监听，继续等待直到超时
+            if app.get_webview_window(&name).is_none() {
+                warn!("窗口未就绪，继续等待...");
+                continue;
+            }
 
             // 轮询获取 Cookies(第三方认证)
             if let Ok(cookies) = get_window_cookies(&app, &name, &origin).await {
@@ -80,7 +77,10 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
                         "cookies": cookie_header,
                     }),
                 );
-                let _ = window.close();
+
+                if let Some(window) = app.get_webview_window(&name) {
+                    let _ = window.close();
+                }
                 break;
             }
         }
