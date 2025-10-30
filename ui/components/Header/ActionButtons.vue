@@ -19,33 +19,33 @@ const commonButtonProps = {
 
 // 窗口控制按钮配置
 const windowControlButtons = computed(() => {
-    // Windows 下显示窗口控制按钮
-    return [
-      {
-        key: "minimize",
-        iconName: "i-lucide-minus",
-        tooltipLabel: t("ToolTips.Minimize"),
-        onClick: async () => {
-          await useTauriCoreInvoke('minimize_window');
-        }
-      },
-      {
-        key: "maximize",
-        iconName: "i-lucide-square",
-        tooltipLabel: t("ToolTips.Maximize"),
-        onClick: async () => {
-          await useTauriCoreInvoke('toggle_maximize_window');
-        }
-      },
-      {
-        key: "close",
-        iconName: "i-lucide-x",
-        tooltipLabel: t("ToolTips.Close"),
-        onClick: async () => {
-          await useTauriCoreInvoke('close_window');
-        }
+  // Windows 下显示窗口控制按钮
+  return [
+    {
+      key: "minimize",
+      iconName: "i-lucide-minus",
+      tooltipLabel: t("ToolTips.Minimize"),
+      onClick: async () => {
+        await useTauriCoreInvoke("minimize_window");
       }
-    ];
+    },
+    {
+      key: "maximize",
+      iconName: "i-lucide-square",
+      tooltipLabel: t("ToolTips.Maximize"),
+      onClick: async () => {
+        await useTauriCoreInvoke("toggle_maximize_window");
+      }
+    },
+    {
+      key: "close",
+      iconName: "i-lucide-x",
+      tooltipLabel: t("ToolTips.Close"),
+      onClick: async () => {
+        await useTauriCoreInvoke("close_window");
+      }
+    }
+  ];
 });
 
 // 获取窗口控制按钮的样式类
@@ -171,9 +171,31 @@ const actionItems = computed<ActionItem[]>(() => [
     type: "action",
     iconName: "i-lucide-settings",
     tooltipLabel: t("ToolTips.Settings"),
-    onClick: () => {
+    onClick: async () => {
+      const label = "secondary";
+      try {
+        // 如果已经打开过,直接置顶
+        const existing = await useTauriWebviewWindowWebviewWindow.getByLabel(label);
+        if (existing) {
+          try {
+            if (await existing.isMinimized()) {
+              await existing.unminimize();
+            }
+
+            if (!(await existing.isVisible())) {
+              await existing.show();
+            }
+
+            await existing.setFocus();
+          } catch (e) {
+            console.error("focus settings window failed", e);
+          }
+          return;
+        }
+      } catch {}
+
       // eslint-disable-next-line no-new
-      new useTauriWebviewWindowWebviewWindow("secondary", {
+      new useTauriWebviewWindowWebviewWindow(label, {
         title: t("Common.ConnectionSettings"),
         url: "/setting/ssh",
         minWidth: 760,
