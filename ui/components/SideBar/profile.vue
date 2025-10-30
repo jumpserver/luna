@@ -472,6 +472,8 @@ onBeforeUnmount(() => {
         :color="hasValidationError ? 'error' : 'primary'"
         :ui="{ base: 'peer' }"
         placeholder=" "
+        autocapitalize="none"
+        autocorrect="off"
         @input="clearValidationError"
       >
         <label

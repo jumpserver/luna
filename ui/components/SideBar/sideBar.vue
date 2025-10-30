@@ -114,6 +114,8 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
           v-model="sidebarSearch"
           size="sm"
           clearable
+          autocapitalize="none"
+          autocorrect="off"
           icon="i-lucide-search"
           variant="outline"
           :placeholder="t('Operation.Search')"
