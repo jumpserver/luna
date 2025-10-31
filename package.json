@@ -26,6 +26,8 @@
     "reset": "rm -rf node_modules .nuxt dist && cd src-tauri && cargo clean"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "@element-plus/nuxt": "1.1.4",
     "@nuxt/fonts": "0.11.4",
     "@nuxt/icon": "2.0.0",
     "@nuxt/ui": "^4.1.0",
@@ -41,6 +43,7 @@
     "@tauri-apps/plugin-shell": "^2.3.1",
     "@tauri-apps/plugin-store": "^2.4.0",
     "@tauri-apps/plugin-updater": "^2.9.0",
+    "element-plus": "^2.11.5",
     "mitt": "^3.0.1",
     "nuxt": "^4.2.0",
     "pinia": "^3.0.3",

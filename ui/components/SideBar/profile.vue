@@ -21,8 +21,6 @@ const useSettingStore = useUserSettingStore();
 
 const { isMacOS } = usePlatform();
 const { t, setLocale, locales } = useI18n();
-const { manualSetTheme } = useThemeAdapter();
-
 const { setLang } = useSettingStore;
 const { language, theme } = storeToRefs(useSettingStore);
 // prettier-ignore
@@ -43,7 +41,7 @@ useEventBus().on("login", openLoginPage);
 
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
 
-const isDarkMode = computed(() => theme.value === "dark");
+// Theme selection has been moved to Settings > Appearance
 
 const supportLanguages = computed<DropdownMenuItem[]>(() => {
   return locales.value.map((locale: any) => ({
@@ -57,15 +55,8 @@ const supportLanguages = computed<DropdownMenuItem[]>(() => {
   }));
 });
 
-const themeToggleMenuItem = computed<DropdownMenuItem>(() => ({
-  label: isDarkMode.value ? t("ToolTips.LightMode") : t("ToolTips.DarkMode"),
-  icon: isDarkMode.value ? "i-lucide-sun" : "i-lucide-moon",
-  onClick: () => manualSetTheme(isDarkMode.value ? "light" : "dark")
-}));
-
 const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
   [
-    themeToggleMenuItem.value,
     {
       label: t("Common.Language"),
       icon: "i-lucide-globe",

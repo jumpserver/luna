@@ -72,6 +72,7 @@
     "clipboard-manager:allow-write-text",
     "updater:allow-check",
     "updater:allow-download",
-    "updater:allow-install"
+    "updater:allow-install",
+    "deep-link:default"
   ]
 }

@@ -1,45 +1,62 @@
-import type { Event } from '@tauri-apps/api/event';
-import type { Theme } from '@tauri-apps/api/window';
-import { useUserSettingStore } from '~/store/modules/userSetting';
+import type { Event } from "@tauri-apps/api/event";
+import type { Theme } from "@tauri-apps/api/window";
+import { useUserSettingStore } from "~/store/modules/userSetting";
 
 export const useThemeAdapter = () => {
-  const currentOSTheme = ref<Theme>('light');
+  const currentOSTheme = ref<Theme>("light");
 
   const uiColorMode = useColorMode();
   const userSettingStore = useUserSettingStore();
   const currentWindow = useTauriWindowGetCurrentWindow();
 
-  const { setTheme } = userSettingStore;
-  const { theme: userTheme } = storeToRefs(userSettingStore);
+  const { setTheme, setFollowSystem } = userSettingStore;
+  const { theme: userTheme, followSystem } = storeToRefs(userSettingStore);
 
   /**
    * @description 应用首次加载默认使用 OS Theme
    */
   const initialTheme = async () => {
-    if (userTheme.value) {
-      return;
+    const osTheme = await currentWindow.theme();
+    
+    if (!osTheme) return;
+
+    currentOSTheme.value = osTheme;
+
+    if (followSystem.value || !userTheme.value) {
+      uiColorMode.preference = osTheme;
+      setTheme(osTheme);
+    } else {
+      uiColorMode.preference = userTheme.value as Theme;
     }
-
-    const theme = await currentWindow.theme();
-
-    if (!theme) return;
-
-    setTheme(theme);
-    currentOSTheme.value = theme;
-    uiColorMode.preference = theme;
   };
 
   const manualSetTheme = (theme: Theme) => {
+    setFollowSystem(false);
     uiColorMode.preference = theme;
     setTheme(theme);
+  };
+
+  const enableFollowSystem = async () => {
+    setFollowSystem(true);
+
+    const osTheme = (await currentWindow.theme()) || currentOSTheme.value;
+
+    if (osTheme) {
+      currentOSTheme.value = osTheme;
+      uiColorMode.preference = osTheme;
+      setTheme(osTheme);
+    }
   };
 
   const listenOSThemeChange = () => {
     // 监听 OS 主题变化
     currentWindow.onThemeChanged((event: Event<Theme>) => {
       currentOSTheme.value = event.payload;
-      uiColorMode.preference = event.payload;
-      setTheme(event.payload);
+
+      if (followSystem.value) {
+        uiColorMode.preference = event.payload;
+        setTheme(event.payload);
+      }
     });
   };
 
@@ -50,8 +67,10 @@ export const useThemeAdapter = () => {
 
   return {
     userTheme,
+    followSystem,
     currentOSTheme,
 
     manualSetTheme,
+    enableFollowSystem
   };
 };

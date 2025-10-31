@@ -7,6 +7,6 @@
 <script setup lang="ts">
 definePageMeta({
   layout: 'setting',
-  redirect: '/setting/ssh',
+  redirect: '/setting/general',
 });
 </script>

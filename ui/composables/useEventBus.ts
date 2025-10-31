@@ -6,8 +6,8 @@ type BusEvents = {
   setSort: SortType;
   search: string;
   login: undefined;
-  loading: undefined;
   loaded: undefined;
+  loading: undefined;
   refresh: undefined;
   assetDetailUpdated: {
     assetId: string;

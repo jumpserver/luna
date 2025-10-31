@@ -9,7 +9,8 @@ export default defineNuxtConfig({
     "@vueuse/nuxt",
     "@nuxtjs/i18n",
     "reka-ui/nuxt",
-    "pinia-plugin-persistedstate/nuxt"
+    "pinia-plugin-persistedstate/nuxt",
+    "@element-plus/nuxt"
   ],
   i18n: {
     locales: [

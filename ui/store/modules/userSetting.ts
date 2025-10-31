@@ -1,6 +1,6 @@
 import type { AppConfigType, SortType } from '~/types';
 
-type themeType = 'light' | 'dark' | '';
+export type themeType = 'light' | 'dark' | 'withSystem' | '';
 export type layoutsType = 'grid' | 'table';
 
 export const useUserSettingStore = defineStore(
@@ -14,7 +14,10 @@ export const useUserSettingStore = defineStore(
     const appConfig = ref<AppConfigType>();
     const sort = ref<SortType>('name');
     const theme = ref<themeType>('');
+    const followSystem = ref<boolean>(false);
     const layouts = ref<layoutsType>('grid');
+    const fontFamily = ref<string>('System UI');
+    const primaryColor = ref<string>('#1ab394');
 
     const setLang = (lang: string) => {
       language.value = lang;
@@ -22,6 +25,18 @@ export const useUserSettingStore = defineStore(
 
     const setTheme = (t: themeType) => {
       theme.value = t;
+    };
+
+    const setFollowSystem = (v: boolean) => {
+      followSystem.value = !!v;
+    };
+
+    const setFontFamily = (f: string) => {
+      fontFamily.value = f;
+    };
+
+    const setPrimaryColor = (c: string) => {
+      primaryColor.value = c;
     };
 
     const setLayouts = (l: layoutsType) => {
@@ -48,10 +63,16 @@ export const useUserSettingStore = defineStore(
       language,
       collapse,
       appConfig,
+      followSystem,
+      fontFamily,
+      primaryColor,
 
       setSort,
       setLang,
       setTheme,
+      setFollowSystem,
+      setFontFamily,
+      setPrimaryColor,
       setLayouts,
       setCollapse,
       setAppConfig,
@@ -60,7 +81,7 @@ export const useUserSettingStore = defineStore(
   {
     persist: {
       storage: localStorage,
-      pick: ['sort', 'theme', 'layouts', 'language', 'collapse', 'appConfig'],
+      pick: ['sort', 'theme', 'layouts', 'language', 'collapse', 'appConfig', 'fontFamily', 'primaryColor', 'followSystem'],
     },
   }
 );

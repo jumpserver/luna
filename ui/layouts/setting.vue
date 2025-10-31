@@ -7,108 +7,106 @@ const userSettingStore = useUserSettingStore();
 
 const { theme } = storeToRefs(userSettingStore);
 
-const handleWindowDrag = async (event: MouseEvent) => {
-  if (event.button !== 0) return;
+const items = ref<NavigationMenuItem[][]>([[]]);
 
-  try {
-    const windows = await useTauriWindowGetAllWindows();
-
-    windows.forEach((window) => {
-      if (window.label === "secondary") {
-        window.startDragging();
+const settingMenu = ref<NavigationMenuItem[]>([
+  {
+    label: "通用",
+    icon: "solar:settings-linear",
+    to: "/setting/general"
+  },
+  {
+    label: "外观",
+    icon: "solar:palette-linear",
+    to: "/setting/appearance"
+  },
+  {
+    label: "应用配置",
+    defaultOpen: true,
+    icon: "tabler:toggle-right",
+    children: [
+      {
+        label: t("Setting.CommandTerminal"),
+        active: false,
+        defaultOpen: false,
+        icon: "proicons:terminal",
+        children: [
+          {
+            label: "SSH",
+            to: "/setting/ssh"
+          },
+          {
+            label: "Telnet",
+            to: "/setting/telnet"
+          }
+        ]
+      },
+      {
+        label: t("Setting.FileTransfer"),
+        defaultOpen: false,
+        icon: "proicons:document",
+        children: [
+          {
+            label: "SFTP",
+            to: "/setting/sftp"
+          }
+        ]
+      },
+      {
+        label: t("Setting.RemoteDesktop"),
+        defaultOpen: false,
+        icon: "proicons:laptop",
+        children: [
+          {
+            label: "RDP",
+            to: "/setting/rdp"
+          },
+          {
+            label: "VNC",
+            to: "/setting/vnc"
+          }
+        ]
+      },
+      {
+        label: t("Setting.Database"),
+        defaultOpen: false,
+        icon: "proicons:database",
+        children: [
+          {
+            label: "MySQL",
+            to: "/setting/mysql"
+          },
+          {
+            label: "MongoDB",
+            to: "/setting/mongodb"
+          },
+          {
+            label: "Redis",
+            to: "/setting/redis"
+          },
+          {
+            label: "PostgreSQL",
+            to: "/setting/pg"
+          },
+          {
+            label: "Oracle",
+            to: "/setting/oracle"
+          },
+          {
+            label: "SQL Server",
+            to: "/setting/sqlserver"
+          }
+        ]
       }
-    });
-  } catch (error) {
-    console.error(error);
+    ]
   }
-};
-
-const items = ref<NavigationMenuItem[][]>([
-  [
-    {
-      label: t("Setting.CommandTerminal"),
-      active: true,
-      defaultOpen: true,
-      icon: "proicons:terminal",
-      children: [
-        {
-          label: "SSH",
-          to: "/setting/ssh"
-        },
-        {
-          label: "Telnet",
-          to: "/setting/telnet"
-        }
-      ]
-    },
-    {
-      label: t("Setting.FileTransfer"),
-      defaultOpen: true,
-      icon: "proicons:document",
-      children: [
-        {
-          label: "SFTP",
-          to: "/setting/sftp"
-        }
-      ]
-    },
-    {
-      label: t("Setting.RemoteDesktop"),
-      defaultOpen: true,
-      icon: "proicons:laptop",
-      children: [
-        {
-          label: "RDP",
-          to: "/setting/rdp"
-        },
-        {
-          label: "VNC",
-          to: "/setting/vnc"
-        }
-      ]
-    },
-    {
-      label: t("Setting.Database"),
-      defaultOpen: true,
-      icon: "proicons:database",
-      children: [
-        {
-          label: "MySQL",
-          to: "/setting/mysql"
-        },
-        {
-          label: "MongoDB",
-          to: "/setting/mongodb"
-        },
-        {
-          label: "Redis",
-          to: "/setting/redis"
-        },
-        {
-          label: "PostgreSQL",
-          to: "/setting/pg"
-        },
-        {
-          label: "Oracle",
-          to: "/setting/oracle"
-        },
-        {
-          label: "SQL Server",
-          to: "/setting/sqlserver"
-        }
-      ]
-    }
-  ]
 ]);
 </script>
 
 <template>
-  <UCard
+  <!-- <UCard
     variant="soft"
-    class="w-screen h-screen"
     :style="{
-      borderTopRightRadius: '0px',
-      borderTopLeftRadius: '0px',
       backgroundColor: theme === 'dark' ? '#201F22' : '#F5F5F5'
     }"
     :ui="{
@@ -117,12 +115,9 @@ const items = ref<NavigationMenuItem[][]>([
     }"
   >
     <template #header>
-      <div
-        class="flex items-center justify-center h-10"
-        @mousedown="handleWindowDrag"
-      >
+      <div class="flex items-center justify-center h-10" @mousedown="handleWindowDrag">
         <span class="text-sm font-bold">
-          {{ t('Common.ConnectionSettings') }}
+          {{ t("Common.ConnectionSettings") }}
         </span>
       </div>
     </template>
@@ -143,5 +138,48 @@ const items = ref<NavigationMenuItem[][]>([
         </UCard>
       </div>
     </template>
-  </UCard>
+  </UCard> -->
+
+  <UPage
+    class="h-screen"
+    :style="{
+      backgroundColor: theme === 'dark' ? '#201F22' : '#F5F5F5'
+    }"
+  >
+    <UPageHeader
+      :ui="{
+        root: 'py-2.5'
+      }"
+    >
+      <template #default>
+        <div
+          data-tauri-drag-region
+          class="flex items-center justify-center select-none cursor-default"
+        >
+          <p class="text-sm font-bold pointer-events-none">
+            {{ t("Common.ConnectionSettings") }}
+          </p>
+        </div>
+      </template>
+    </UPageHeader>
+
+    <UPageBody class="mt-2 mx-2">
+      <div class="flex gap-1 w-full">
+        <UNavigationMenu
+          :items="settingMenu"
+          :highlight="true"
+          color="primary"
+          variant="link"
+          orientation="vertical"
+          class="w-48"
+        />
+
+        <USeparator orientation="vertical" class="h-48" />
+
+        <UCard class="flex-1" variant="subtle">
+          <slot />
+        </UCard>
+      </div>
+    </UPageBody>
+  </UPage>
 </template>

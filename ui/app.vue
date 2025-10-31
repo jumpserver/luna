@@ -1,17 +1,27 @@
 <script lang="ts" setup>
+import en from "element-plus/es/locale/lang/en";
+import zhCn from "element-plus/es/locale/lang/zh-cn";
+
+import { h, ref, resolveComponent, computed } from "vue";
 import { useWarmupSetting } from "@/composables/useWarmupSetting";
+import { useUserSettingStore } from "~/store/modules/userSetting";
 
 useApplicationConfig();
 
 const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 
-import { h, ref, resolveComponent } from "vue";
-
 const route = useRoute();
 const toast = useToast();
-const { t } = useI18n();
-const { userTheme } = useThemeAdapter();
+
+const { t, locale } = useI18n();
 const { isMacOS } = usePlatform();
+const { userTheme, manualSetTheme, enableFollowSystem } = useThemeAdapter();
+
+const elLocale = computed(() => (locale.value?.startsWith("zh") ? zhCn : en));
+
+const userSettingStore = useUserSettingStore();
+const { primaryColor } = storeToRefs(userSettingStore);
+const { applyPrimaryColor } = useColor();
 
 const backgroundColor = computed(() => {
   const isDark = userTheme.value === "dark";
@@ -46,13 +56,36 @@ useHead({
 
 onMounted(async () => {
   try {
+    applyPrimaryColor(primaryColor.value || "#1ab394");
+
+    await useTauriEventListen("primary-color-changed", (event: any) => {
+      const hex = (event?.payload?.hex || event?.payload || "").toString();
+
+      if (hex) {
+        applyPrimaryColor(hex);
+        userSettingStore.setPrimaryColor(hex);
+      }
+    });
+
+    // Sync theme changes from secondary windows
+    await useTauriEventListen("theme-changed", async (event: any) => {
+      const mode = (event?.payload?.mode || event?.payload || "").toString();
+      if (mode === "withSystem") {
+        await enableFollowSystem();
+      } else if (mode === "light" || mode === "dark") {
+        manualSetTheme(mode as any);
+      }
+    });
+
     await useWarmupSetting();
 
     const upd = await useTauriUpdaterCheck();
 
     if (upd) {
       const confirmed = window.confirm(
-        `${t("Update.FoundNewVersion")} ${upd.version}, ${t("Update.CurrentVersion")} ${upd.currentVersion}。\n${t("Update.ConfirmInstall")}`
+        `${t("Update.FoundNewVersion")} ${upd.version}, ${t("Update.CurrentVersion")} ${
+          upd.currentVersion
+        }。\n${t("Update.ConfirmInstall")}`
       );
 
       if (!confirmed) {
@@ -143,9 +176,11 @@ onMounted(async () => {
   <Html class="overflow-x-hidden overflow-y-hidden">
     <Body class="font-sans antialiased h-screen w-screen">
       <UApp>
-        <NuxtLayout>
-          <NuxtPage :page-key="pageKey" />
-        </NuxtLayout>
+        <ElConfigProvider :locale="elLocale">
+          <NuxtLayout>
+            <NuxtPage :page-key="pageKey" />
+          </NuxtLayout>
+        </ElConfigProvider>
       </UApp>
     </Body>
   </Html>

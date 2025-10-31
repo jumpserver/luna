@@ -14,6 +14,13 @@
     "Inactive": "未激活",
     "Login": "登录",
     "Connect": "连接",
+    "Light": "浅色",
+    "Dark": "深色",
+    "Fonts": "字体",
+    "WithSystem": "跟随系统",
+    "Appearance": "外观",
+    "PrimaryColor": "主色",
+    "SystemDefault":"系统默认",
     "EmptyDescription": "当前类型下暂无可用的授权资产"
   },
   "ToolTips": {
