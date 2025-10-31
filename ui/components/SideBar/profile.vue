@@ -41,28 +41,7 @@ useEventBus().on("login", openLoginPage);
 
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
 
-// Theme selection has been moved to Settings > Appearance
-
-const supportLanguages = computed<DropdownMenuItem[]>(() => {
-  return locales.value.map((locale: any) => ({
-    label: locale.name,
-    value: locale.code,
-    type: "checkbox" as const,
-    checked: locale.code === language.value,
-    onUpdateChecked: (checked: boolean) => {
-      if (checked) changeLocale(locale.code);
-    }
-  }));
-});
-
 const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
-  [
-    {
-      label: t("Common.Language"),
-      icon: "i-lucide-globe",
-      children: [supportLanguages.value]
-    }
-  ],
   [
     {
       label: t("Login.AddAccount"),

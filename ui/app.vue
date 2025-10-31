@@ -13,7 +13,7 @@ const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 const route = useRoute();
 const toast = useToast();
 
-const { t, locale } = useI18n();
+const { t, locale, setLocale } = useI18n();
 const { isMacOS } = usePlatform();
 const { userTheme, manualSetTheme, enableFollowSystem } = useThemeAdapter();
 
@@ -48,8 +48,8 @@ useHead({
     class: computed(() => platformClass.value),
     style: computed(
       () => `
-    background-color: ${backgroundColor.value};
-  `
+        background-color: ${backgroundColor.value};
+      `
     )
   }
 });
@@ -85,11 +85,23 @@ onMounted(async () => {
 
     await useTauriEventListen("theme-changed", async (event: any) => {
       const mode = (event?.payload?.mode || event?.payload || "").toString();
+
       if (mode === "withSystem") {
         await enableFollowSystem();
       } else if (mode === "light" || mode === "dark") {
         manualSetTheme(mode as any);
       }
+    });
+
+    await useTauriEventListen("language-changed", async (event: any) => {
+      const code = (event?.payload?.code || event?.payload || "").toString();
+
+      if (!code) return;
+
+      try {
+        setLocale(code as any);
+        useUserSettingStore().setLang(code);
+      } catch {}
     });
 
     await useWarmupSetting();
