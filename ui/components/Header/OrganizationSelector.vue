@@ -10,6 +10,15 @@ const { loggedIn, currentOrganizations, currentUser } = storeToRefs(userInfoStor
 
 const currentOrg = ref<string>("");
 
+const organizationDropdownItems = computed<DropdownMenuItem[]>(() =>
+  currentOrganizations.value.map((org: PermOrgItem) => ({
+    label: org.name,
+    type: "checkbox" as const,
+    checked: org.name === currentOrg.value,
+    onSelect: () => handleOrgChange(org.name)
+  }))
+);
+
 /**
  * @description 切换组织
  * @param org
@@ -25,15 +34,6 @@ const handleOrgChange = (org: string) => {
     });
   }
 };
-
-const organizationDropdownItems = computed<DropdownMenuItem[]>(() =>
-  currentOrganizations.value.map((org: PermOrgItem) => ({
-    label: org.name,
-    type: "checkbox" as const,
-    checked: org.name === currentOrg.value,
-    onSelect: () => handleOrgChange(org.name)
-  }))
-);
 
 onMounted(async () => {
   if (loggedIn.value && userInfoStore.currentUser) {
@@ -57,16 +57,10 @@ watch(
   <div v-show="loggedIn" class="flex items-center">
     <UDropdownMenu
       :items="organizationDropdownItems"
-      :content="{
-        align: 'start',
-        side: 'bottom'
-      }"
-      :ui="{
-        content: 'w-48 max-h-64 overflow-y-auto',
-        item: 'px-4 py-2'
-      }"
+      :content="{ align: 'start', side: 'bottom' }"
+      :ui="{ content: 'w-48 max-h-64 overflow-y-auto' }"
     >
-      <UButton variant="ghost" size="md" color="neutral" class="btn-common px-3">
+      <UButton variant="ghost" size="md" color="primary" class="btn-common px-3">
         <UIcon name="fluent:organization-16-regular" />
         <span class="truncate max-w-32 font-medium">{{ currentOrg }}</span>
         <UIcon name="i-lucide-chevron-down" class="ml-1 size-3" />

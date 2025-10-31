@@ -1,23 +1,25 @@
-import type { AppConfigType, SortType } from '~/types';
+import type { AppConfigType, SortType } from "~/types";
 
-export type themeType = 'light' | 'dark' | 'withSystem' | '';
-export type layoutsType = 'grid' | 'table';
+export type themeType = "light" | "dark" | "withSystem" | "";
+export type layoutsType = "grid" | "table";
 
 export const useUserSettingStore = defineStore(
-  'userSetting',
+  "userSetting",
   () => {
     const { emit } = useEventBus();
 
-    const language = ref('zh');
+    const language = ref("zh");
     const collapse = ref(false);
 
     const appConfig = ref<AppConfigType>();
-    const sort = ref<SortType>('name');
-    const theme = ref<themeType>('');
+    const sort = ref<SortType>("name");
+    const theme = ref<themeType>("");
     const followSystem = ref<boolean>(false);
-    const layouts = ref<layoutsType>('grid');
-    const fontFamily = ref<string>('System UI');
-    const primaryColor = ref<string>('#1ab394');
+    const layouts = ref<layoutsType>("grid");
+    const fontFamily = ref<string>("System UI");
+    const primaryColor = ref<string>("#1ab394");
+    const primaryColorLight = ref<string>("#1ab394");
+    const primaryColorDark = ref<string>("#34d399");
 
     const setLang = (lang: string) => {
       language.value = lang;
@@ -39,6 +41,14 @@ export const useUserSettingStore = defineStore(
       primaryColor.value = c;
     };
 
+    const setPrimaryColorLight = (c: string) => {
+      primaryColorLight.value = c;
+    };
+
+    const setPrimaryColorDark = (c: string) => {
+      primaryColorDark.value = c;
+    };
+
     const setLayouts = (l: layoutsType) => {
       layouts.value = l;
     };
@@ -49,7 +59,7 @@ export const useUserSettingStore = defineStore(
 
     const setSort = (s: SortType) => {
       sort.value = s;
-      emit('setSort', s);
+      emit("setSort", s);
     };
 
     const setAppConfig = (c: AppConfigType) => {
@@ -66,22 +76,38 @@ export const useUserSettingStore = defineStore(
       followSystem,
       fontFamily,
       primaryColor,
+      primaryColorLight,
+      primaryColorDark,
 
       setSort,
       setLang,
       setTheme,
-      setFollowSystem,
-      setFontFamily,
-      setPrimaryColor,
       setLayouts,
       setCollapse,
       setAppConfig,
+      setFontFamily,
+      setFollowSystem,
+      setPrimaryColor,
+      setPrimaryColorLight,
+      setPrimaryColorDark
     };
   },
   {
     persist: {
       storage: localStorage,
-      pick: ['sort', 'theme', 'layouts', 'language', 'collapse', 'appConfig', 'fontFamily', 'primaryColor', 'followSystem'],
-    },
+      pick: [
+        "sort",
+        "theme",
+        "layouts",
+        "language",
+        "collapse",
+        "appConfig",
+        "fontFamily",
+        "primaryColor",
+        "primaryColorLight",
+        "primaryColorDark",
+        "followSystem"
+      ]
+    }
   }
 );

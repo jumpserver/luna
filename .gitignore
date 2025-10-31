@@ -26,6 +26,7 @@ node_modules
 .output
 .env
 .cargo
+target
 dist
 src-tauri/target
 src-tauri/Cargo.lock

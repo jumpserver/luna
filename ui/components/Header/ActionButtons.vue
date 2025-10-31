@@ -13,8 +13,8 @@ const { isMacOS } = usePlatform();
 // 公共按钮配置
 const commonButtonProps = {
   size: "sm" as const,
-  variant: "ghost" as const,
-  color: "neutral" as const
+  variant: "soft" as const,
+  color: "primary" as const
 };
 
 // 窗口控制按钮配置
@@ -219,7 +219,15 @@ const actionItems = computed<ActionItem[]>(() => [
         </template>
 
         <template v-else>
-          <UDropdownMenu arrow :items="action.selectItems" size="sm">
+          <UDropdownMenu
+            arrow
+            size="sm"
+            :items="action.selectItems"
+            :ui="{
+              itemTrailingIcon:
+                'group-data-[state=checked]:text-primary group-data-highlighted:!text-primary group-data-[state=open]:!text-primary'
+            }"
+          >
             <UButton
               :icon="action.iconName"
               v-bind="commonButtonProps"
@@ -234,13 +242,13 @@ const actionItems = computed<ActionItem[]>(() => [
     <div class="flex items-center" v-if="!isMacOS">
       <template v-for="button of windowControlButtons" :key="button.key">
         <UButton
-          :icon="button.iconName"
-          :class="getWindowControlButtonClass(button.key)"
-          @click="button.onClick"
-          :title="button.tooltipLabel"
           size="sm"
           variant="ghost"
           color="neutral"
+          :icon="button.iconName"
+          :class="getWindowControlButtonClass(button.key)"
+          :title="button.tooltipLabel"
+          @click="button.onClick"
         />
       </template>
     </div>

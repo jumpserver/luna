@@ -84,7 +84,7 @@ const cancelRename = () => {
 
 <template>
   <UPageCard
-    class="w-full page-card shadow-sm hover:shadow-md dark:hover:shadow-gray-700"
+    class="w-full page-card hover:shadow-lg/30 hover:shadow-primary-500/50 transition-shadow duration-300 ease-out"
     :ui="{
       body: 'p-1 ',
       container: 'p-0 sm:p-0 '
@@ -132,7 +132,7 @@ const cancelRename = () => {
           <UButton
             size="xs"
             color="primary"
-            variant="solid"
+            variant="soft"
             class="group btn-connect px-3"
             :disabled="!props.asset.isActive"
             @click="emits('connectAsset', props.asset)"

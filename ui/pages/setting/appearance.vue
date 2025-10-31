@@ -16,26 +16,72 @@ definePageMeta({
 
 const { t } = useI18n();
 const userSettingStore = useUserSettingStore();
-const { theme, fontFamily, primaryColor } = storeToRefs(userSettingStore);
-const { setFontFamily, setPrimaryColor } = userSettingStore;
+const { theme, fontFamily, primaryColorLight, primaryColorDark } = storeToRefs(userSettingStore);
+const { setFontFamily, setPrimaryColorLight, setPrimaryColorDark } = userSettingStore;
 
 const { applyPrimaryColor } = useColor();
-const { manualSetTheme, enableFollowSystem, followSystem } = useThemeAdapter();
+const { manualSetTheme, enableFollowSystem, followSystem, userTheme } = useThemeAdapter();
 
-const mainColor = ref<string>(primaryColor.value || "#1ab394");
 const selectedFont = ref<string>("");
 const selectedAppearance = ref<themeType>(
   followSystem.value ? "withSystem" : theme.value || "light"
 );
 
-const predefineColors = ref<string[]>([
-  "#1ab394",
-  "#3b82f6",
-  "#8b5cf6",
-  "#f59e0b",
-  "#ec4899",
-  "#06b6d4"
-]);
+const mainColor = computed<string>({
+  get: () =>
+    userTheme.value === "dark"
+      ? primaryColorDark.value || "#34d399"
+      : primaryColorLight.value || "#1ab394",
+  set: (color: string) => {
+    if (!color) return;
+
+    const hex = applyPrimaryColor(color);
+
+    if (userTheme.value === "dark") {
+      setPrimaryColorDark(hex);
+    } else {
+      setPrimaryColorLight(hex);
+    }
+
+    try {
+      useTauriEventEmit("primary-color-changed", { hex });
+    } catch {}
+  }
+});
+
+const predefineColors = computed<string[]>(() => {
+  if (theme.value === "light") {
+    return [
+      "#1ab394",
+      "#3b82f6",
+      "#8b5cf6",
+      "#f59e0b",
+      "#ec4899",
+      "#06b6d4",
+      "#64748b",
+      "#f43f5e",
+      "#84cc16",
+      "#6366f1",
+      "#fbbf24",
+      "#14b8a6"
+    ];
+  } else {
+    return [
+      "#34d399",
+      "#60a5fa",
+      "#a78bfa",
+      "#fbbf24",
+      "#f472b6",
+      "#67e8f9",
+      "#94a3b8",
+      "#fb7185",
+      "#a3e635",
+      "#818cf8",
+      "#fcd34d",
+      "#2dd4bf"
+    ];
+  }
+});
 
 const appearanceItems = computed<SelectItem[]>(() => [
   { label: t("Common.WithSystem"), id: "withSystem" },
@@ -77,30 +123,25 @@ watch(
   async (id) => {
     if (id === "withSystem") {
       await enableFollowSystem();
-      try {
-        useTauriEventEmit("theme-changed", { mode: "withSystem" });
-      } catch {}
+      useTauriEventEmit("theme-changed", { mode: "withSystem" });
     } else {
       manualSetTheme(id as any);
-      try {
-        useTauriEventEmit("theme-changed", { mode: id });
-      } catch {}
+      useTauriEventEmit("theme-changed", { mode: id });
     }
   },
   { immediate: true }
 );
 
 watch(
-  () => mainColor.value,
-  (color) => {
-    if (!color) return;
+  () => userTheme.value,
+  () => {
+    const hex =
+      userTheme.value === "dark"
+        ? primaryColorDark.value || "#34d399"
+        : primaryColorLight.value || "#1ab394";
 
-    const hex = applyPrimaryColor(color);
-    setPrimaryColor(hex);
-
-    try {
-      useTauriEventEmit("primary-color-changed", { hex });
-    } catch {}
+    applyPrimaryColor(hex);
+    useTauriEventEmit("primary-color-changed", { hex });
   },
   { immediate: true }
 );

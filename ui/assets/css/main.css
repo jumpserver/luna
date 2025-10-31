@@ -46,16 +46,16 @@
 
 /* App Store 风格按钮 */
 .btn-connect {
-  @apply bg-gray-100 text-green-500 font-bold rounded-lg text-xs transition-all duration-200;
+  @apply font-bold rounded-lg text-xs transition-all duration-200;
 }
 
-.light .btn-connect:hover {
+/* .light .btn-connect:hover {
   @apply bg-green-500 text-white;
 }
 
 .dark .btn-connect {
   @apply bg-gray-600 hover:bg-gray-700;
-}
+} */
 
 /* Header 平台特定颜色 */
 .header-bg {

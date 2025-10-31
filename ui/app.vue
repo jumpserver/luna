@@ -20,7 +20,7 @@ const { userTheme, manualSetTheme, enableFollowSystem } = useThemeAdapter();
 const elLocale = computed(() => (locale.value?.startsWith("zh") ? zhCn : en));
 
 const userSettingStore = useUserSettingStore();
-const { primaryColor } = storeToRefs(userSettingStore);
+const { primaryColorLight, primaryColorDark } = storeToRefs(userSettingStore);
 const { applyPrimaryColor } = useColor();
 
 const backgroundColor = computed(() => {
@@ -54,20 +54,35 @@ useHead({
   }
 });
 
+watch(
+  () => userTheme.value,
+  () => {
+    const hex =
+      userTheme.value === "dark"
+        ? primaryColorDark.value || "#34d399"
+        : primaryColorLight.value || "#1ab394";
+
+    applyPrimaryColor(hex);
+  },
+  { immediate: true }
+);
+
 onMounted(async () => {
   try {
-    applyPrimaryColor(primaryColor.value || "#1ab394");
-
     await useTauriEventListen("primary-color-changed", (event: any) => {
       const hex = (event?.payload?.hex || event?.payload || "").toString();
 
       if (hex) {
         applyPrimaryColor(hex);
-        userSettingStore.setPrimaryColor(hex);
+
+        if (userTheme.value === "dark") {
+          userSettingStore.setPrimaryColorDark(hex);
+        } else {
+          userSettingStore.setPrimaryColorLight(hex);
+        }
       }
     });
 
-    // Sync theme changes from secondary windows
     await useTauriEventListen("theme-changed", async (event: any) => {
       const mode = (event?.payload?.mode || event?.payload || "").toString();
       if (mode === "withSystem") {
