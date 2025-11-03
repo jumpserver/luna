@@ -211,6 +211,7 @@ onBeforeUnmount(() => {
         <UEmpty
           icon="mingcute:inbox-line"
           variant="subtle"
+          color="primary"
           :title="t('Common.NoData')"
           :description="t('Common.EmptyDescription')"
         />

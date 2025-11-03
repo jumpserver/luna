@@ -21,13 +21,13 @@ const handleLogin = () => {
     <div class="px-16 py-3">
       <div class="flex flex-col items-center justify-between gap-4">
         <div class="flex items-center">
-          <button
-            type="button"
+          <UButton
+            icon="cuida:login-outline"
+            size="sm"
+            variant="ghost"
             aria-label="Login"
-            class="grid size-11 rounded-full place-items-center bg-emerald-400/10 ring-1 ring-emerald-400/25 transition-transform duration-200 hover:scale-[1.03] active:scale-95"
-          >
-            <UIcon name="cuida:login-outline" class="size-6 text-emerald-400/90" />
-          </button>
+            class="size-11 rounded-full flex items-center justify-center ring-1 ring-primary-400/25 text-primary-400/90 transition-transform duration-200 hover:scale-[1.03] active:scale-95"
+          />
         </div>
 
         <p

@@ -22,7 +22,7 @@ const { setFontFamily, setPrimaryColorLight, setPrimaryColorDark } = userSetting
 const { applyPrimaryColor } = useColor();
 const { manualSetTheme, enableFollowSystem, followSystem, userTheme } = useThemeAdapter();
 
-const selectedFont = ref<string>("");
+const selectedFont = ref<string>("system");
 const selectedAppearance = ref<themeType>(
   followSystem.value ? "withSystem" : theme.value || "light"
 );
@@ -89,34 +89,63 @@ const appearanceItems = computed<SelectItem[]>(() => [
   { label: t("Common.Dark"), id: "dark" }
 ]);
 
-const fontsItems = computed<FontItem[]>(() => [
+// 统一的回退字体族串
+const FALLBACK_FONTS = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial';
+
+const fontsItems = ref<FontItem[]>([
   {
     label: t("Common.SystemDefault"),
     id: "system",
-    value:
-      'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"'
-  },
-  {
-    label: "Open Sans",
-    id: "openSans",
-    value:
-      '"Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", "Liberation Sans"'
-  },
-  {
-    label: "Noto Sans SC",
-    id: "notoSansSC",
-    value:
-      '"Noto Sans SC", "Noto Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial'
-  },
-  {
-    label: "Inter",
-    id: "inter",
-    value: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans"'
+    value: FALLBACK_FONTS
   }
 ]);
 
-// prettier-ignore
-selectedFont.value = (fontsItems.value.find(i => i.value === fontFamily.value)?.id as string) || 'system';
+const loadSystemFonts = async () => {
+  const fallback = FALLBACK_FONTS;
+
+  try {
+    const families = await useTauriCoreInvoke<string[]>("list_system_fonts");
+
+    const dynamicItems: FontItem[] = (families || []).map((name) => ({
+      id: name,
+      label: name,
+      value: `"${name}", ${fallback}`
+    }));
+
+    const systemDefault = fontsItems.value[0];
+
+    if (!systemDefault) return;
+
+    fontsItems.value = [systemDefault, ...dynamicItems];
+  } catch (e) {
+    fontsItems.value = [
+      fontsItems.value[0]!,
+      { label: "Open Sans", id: "openSans", value: '"Open Sans", ' + fallback },
+      {
+        label: "Noto Sans SC",
+        id: "notoSansSC",
+        value: '"Noto Sans SC", "Noto Sans", ' + fallback
+      },
+      { label: "Inter", id: "inter", value: '"Inter", ' + fallback }
+    ];
+  } finally {
+    const savedRaw = fontFamily.value;
+    const normalizedSaved = !savedRaw || savedRaw === "System UI" ? FALLBACK_FONTS : savedRaw;
+
+    if (normalizedSaved !== savedRaw) {
+      setFontFamily(normalizedSaved);
+    }
+
+    const matched = fontsItems.value.find((i) => i.value === normalizedSaved);
+
+    selectedFont.value = matched?.id || "system";
+    applyFont(normalizedSaved);
+  }
+};
+
+onMounted(() => {
+  loadSystemFonts();
+});
 
 watch(
   () => selectedAppearance.value,
@@ -156,8 +185,10 @@ watch(
 
     applyFont(value);
     setFontFamily(value);
-  },
-  { immediate: true }
+    try {
+      useTauriEventEmit("font-changed", { value });
+    } catch {}
+  }
 );
 
 function applyFont(font: string) {
@@ -185,9 +216,9 @@ function applyFont(font: string) {
 
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Common.Fonts") }}</span>
-      <USelect
+      <USelectMenu
         v-model="selectedFont"
-        :items="(fontsItems as unknown as SelectItem[])"
+        :items="fontsItems"
         value-key="id"
         option-attribute="label"
         class="w-56"

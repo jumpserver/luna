@@ -2,7 +2,7 @@
 import en from "element-plus/es/locale/lang/en";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 
-import { h, ref, resolveComponent, computed } from "vue";
+import { h, ref, resolveComponent, computed, watch } from "vue";
 import { useWarmupSetting } from "@/composables/useWarmupSetting";
 import { useUserSettingStore } from "~/store/modules/userSetting";
 
@@ -20,7 +20,7 @@ const { userTheme, manualSetTheme, enableFollowSystem } = useThemeAdapter();
 const elLocale = computed(() => (locale.value?.startsWith("zh") ? zhCn : en));
 
 const userSettingStore = useUserSettingStore();
-const { primaryColorLight, primaryColorDark } = storeToRefs(userSettingStore);
+const { primaryColorLight, primaryColorDark, fontFamily } = storeToRefs(userSettingStore);
 const { applyPrimaryColor } = useColor();
 
 const backgroundColor = computed(() => {
@@ -91,6 +91,19 @@ onMounted(async () => {
       } else if (mode === "light" || mode === "dark") {
         manualSetTheme(mode as any);
       }
+    });
+
+    await useTauriEventListen("font-changed", async (event: any) => {
+      const value = (event?.payload?.value || event?.payload || "").toString();
+
+      if (!value) return;
+
+      try {
+        document.documentElement.style.setProperty("--font-sans", value);
+        document.documentElement.style.setProperty("--font-heading", value);
+
+        userSettingStore.setFontFamily(value);
+      } catch {}
     });
 
     await useTauriEventListen("language-changed", async (event: any) => {
@@ -197,6 +210,19 @@ onMounted(async () => {
     console.error(error);
   }
 });
+
+// 启动时根据存储的字体家族应用一次（并在变更时同步）
+function applyFont(font: string) {
+  if (!font) return;
+  document.documentElement.style.setProperty("--font-sans", font);
+  document.documentElement.style.setProperty("--font-heading", font);
+}
+
+watch(
+  () => fontFamily.value,
+  (val) => applyFont(val),
+  { immediate: true }
+);
 </script>
 
 <template>

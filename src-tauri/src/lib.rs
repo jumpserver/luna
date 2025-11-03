@@ -7,18 +7,19 @@ mod utils;
 use crate::setup::apply_window_effects;
 use crate::setup::setup_tray;
 
-use crate::commands::get_asset_detail::get_asset_detail;
-use crate::commands::get_assets::get_assets;
-use crate::commands::get_config::get_config;
-use crate::commands::get_setting::get_setting;
-use crate::commands::get_token::get_connect_token;
 use crate::commands::logout::logout;
 use crate::commands::pull_up::pull_up;
 use crate::commands::rename_asset::rename;
-use crate::commands::set_favorite::set_favorite;
+use crate::commands::get_assets::get_assets;
+use crate::commands::get_config::get_config;
 use crate::commands::unfavorite::unfavorite;
-use crate::commands::update_config::update_config_selection;
+use crate::commands::get_setting::get_setting;
 use crate::commands::url_watcher::url_watcher;
+use crate::commands::set_favorite::set_favorite;
+use crate::commands::get_token::get_connect_token;
+use crate::commands::get_asset_detail::get_asset_detail;
+use crate::commands::list_system_fonts::list_system_fonts;
+use crate::commands::update_config::update_config_selection;
 use crate::commands::window_controls::{close_window, minimize_window, toggle_maximize_window};
 
 use log::error;
@@ -69,12 +70,13 @@ pub fn run() {
             url_watcher,
             get_setting,
             set_favorite,
+            close_window,
+            minimize_window,
             get_asset_detail,
             get_connect_token,
-            update_config_selection,
-            minimize_window,
+            list_system_fonts,
             toggle_maximize_window,
-            close_window,
+            update_config_selection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

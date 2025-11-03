@@ -331,7 +331,7 @@ onMounted(async () => {
       toast.add({
         title: t("Login.LoginSuccess"),
         description: t("Login.LoginSuccessDescription"),
-        color: "success",
+        color: "primary",
         icon: "line-md:check-all"
       });
 

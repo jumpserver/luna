@@ -13,7 +13,7 @@ const { isMacOS } = usePlatform();
 // 公共按钮配置
 const commonButtonProps = {
   size: "sm" as const,
-  variant: "soft" as const,
+  variant: "ghost" as const,
   color: "primary" as const
 };
 
