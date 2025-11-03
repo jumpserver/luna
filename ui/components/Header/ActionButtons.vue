@@ -5,9 +5,9 @@ import type { ActionItem } from "~/types/index";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { useUserSettingStore } from "~/store/modules/userSetting";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const userSettingStore = useUserSettingStore();
-const { theme, layouts, sort } = storeToRefs(userSettingStore);
+const { layouts, sort } = storeToRefs(userSettingStore);
 const { isMacOS } = usePlatform();
 
 // 公共按钮配置
@@ -224,8 +224,7 @@ const actionItems = computed<ActionItem[]>(() => [
             size="sm"
             :items="action.selectItems"
             :ui="{
-              itemTrailingIcon:
-                'group-data-[state=checked]:text-primary group-data-highlighted:!text-primary group-data-[state=open]:!text-primary'
+              content: locale === 'en' ? 'w-42' : 'w-48'
             }"
           >
             <UButton

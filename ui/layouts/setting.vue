@@ -106,42 +106,6 @@ const settingMenu = computed<NavigationMenuItem[]>(() => {
 </script>
 
 <template>
-  <!-- <UCard
-    variant="soft"
-    :style="{
-      backgroundColor: theme === 'dark' ? '#201F22' : '#F5F5F5'
-    }"
-    :ui="{
-      header: 'p-0',
-      body: 'p-0 sm:p-2 '
-    }"
-  >
-    <template #header>
-      <div class="flex items-center justify-center h-10" @mousedown="handleWindowDrag">
-        <span class="text-sm font-bold">
-          {{ t("Common.ConnectionSettings") }}
-        </span>
-      </div>
-    </template>
-
-    <template #default>
-      <div class="flex gap-1 w-full">
-        <UNavigationMenu
-          :items="items"
-          :highlight="false"
-          color="primary"
-          variant="link"
-          orientation="vertical"
-          class="w-48"
-        />
-
-        <UCard class="flex-1" variant="soft">
-          <slot />
-        </UCard>
-      </div>
-    </template>
-  </UCard> -->
-
   <UPage
     class="h-screen"
     :style="{
@@ -173,7 +137,7 @@ const settingMenu = computed<NavigationMenuItem[]>(() => {
           color="primary"
           variant="link"
           orientation="vertical"
-          class="w-48"
+          :class="locale === 'en' ? 'w-64' : 'w-48'"
         />
 
         <USeparator orientation="vertical" class="h-48" />
