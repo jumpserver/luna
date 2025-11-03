@@ -14,7 +14,7 @@ const { isMacOS } = usePlatform();
 const commonButtonProps = {
   size: "sm" as const,
   variant: "ghost" as const,
-  color: "primary" as const
+  color: "neutral" as const
 };
 
 // 窗口控制按钮配置

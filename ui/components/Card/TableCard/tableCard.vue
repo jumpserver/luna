@@ -243,8 +243,8 @@ const columns: TableColumn<AssetItem>[] = [
         {
           default: () => [
             h(UButton, {
-              color: "neutral",
-              variant: "subtle",
+              color: "primary",
+              variant: "outline",
               label: t("Common.Connect"),
               onClick: () => emits("connectAsset", row.original)
             }),
@@ -262,7 +262,7 @@ const columns: TableColumn<AssetItem>[] = [
                 default: () =>
                   h(UButton, {
                     icon: "i-lucide-ellipsis",
-                    color: "neutral",
+                    color: "primary",
                     variant: "outline",
                     "data-table-context-button": true
                   })

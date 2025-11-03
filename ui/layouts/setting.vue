@@ -2,105 +2,107 @@
 import type { NavigationMenuItem } from "@nuxt/ui";
 import { useUserSettingStore } from "~/store/modules/userSetting";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const localePath = useLocalePath();
 const userSettingStore = useUserSettingStore();
 
 const { theme } = storeToRefs(userSettingStore);
 
-const items = ref<NavigationMenuItem[][]>([[]]);
-
-const settingMenu = ref<NavigationMenuItem[]>([
-  {
-    label: "通用",
-    icon: "solar:settings-linear",
-    to: "/setting/general"
-  },
-  {
-    label: "外观",
-    icon: "solar:palette-linear",
-    to: "/setting/appearance"
-  },
-  {
-    label: "应用配置",
-    defaultOpen: true,
-    icon: "tabler:toggle-right",
-    children: [
-      {
-        label: t("Setting.CommandTerminal"),
-        active: false,
-        defaultOpen: false,
-        icon: "proicons:terminal",
-        children: [
-          {
-            label: "SSH",
-            to: "/setting/ssh"
-          },
-          {
-            label: "Telnet",
-            to: "/setting/telnet"
-          }
-        ]
-      },
-      {
-        label: t("Setting.FileTransfer"),
-        defaultOpen: false,
-        icon: "proicons:document",
-        children: [
-          {
-            label: "SFTP",
-            to: "/setting/sftp"
-          }
-        ]
-      },
-      {
-        label: t("Setting.RemoteDesktop"),
-        defaultOpen: false,
-        icon: "proicons:laptop",
-        children: [
-          {
-            label: "RDP",
-            to: "/setting/rdp"
-          },
-          {
-            label: "VNC",
-            to: "/setting/vnc"
-          }
-        ]
-      },
-      {
-        label: t("Setting.Database"),
-        defaultOpen: false,
-        icon: "proicons:database",
-        children: [
-          {
-            label: "MySQL",
-            to: "/setting/mysql"
-          },
-          {
-            label: "MongoDB",
-            to: "/setting/mongodb"
-          },
-          {
-            label: "Redis",
-            to: "/setting/redis"
-          },
-          {
-            label: "PostgreSQL",
-            to: "/setting/pg"
-          },
-          {
-            label: "Oracle",
-            to: "/setting/oracle"
-          },
-          {
-            label: "SQL Server",
-            to: "/setting/sqlserver"
-          }
-        ]
-      }
-    ]
-  }
-]);
+const settingMenu = computed<NavigationMenuItem[]>(() => {
+  void locale.value;
+  return [
+    {
+      label: t("Common.General"),
+      icon: "solar:settings-linear",
+      to: localePath({ path: "/setting/general" })
+    },
+    {
+      label: t("Common.Appearance"),
+      icon: "solar:palette-linear",
+      to: localePath({ path: "/setting/appearance" })
+    },
+    {
+      label: t("Common.ApplicationConfig"),
+      defaultOpen: true,
+      icon: "tabler:toggle-right",
+      children: [
+        {
+          label: t("Setting.CommandTerminal"),
+          active: false,
+          defaultOpen: false,
+          icon: "proicons:terminal",
+          children: [
+            {
+              label: "SSH",
+              to: localePath({ path: "/setting/ssh" })
+            },
+            {
+              label: "Telnet",
+              to: localePath({ path: "/setting/telnet" })
+            }
+          ]
+        },
+        {
+          label: t("Setting.FileTransfer"),
+          defaultOpen: false,
+          icon: "proicons:document",
+          children: [
+            {
+              label: "SFTP",
+              to: localePath({ path: "/setting/sftp" })
+            }
+          ]
+        },
+        {
+          label: t("Setting.RemoteDesktop"),
+          defaultOpen: false,
+          icon: "proicons:laptop",
+          children: [
+            {
+              label: "RDP",
+              to: localePath({ path: "/setting/rdp" })
+            },
+            {
+              label: "VNC",
+              to: localePath({ path: "/setting/vnc" })
+            }
+          ]
+        },
+        {
+          label: t("Setting.Database"),
+          defaultOpen: false,
+          icon: "proicons:database",
+          children: [
+            {
+              label: "MySQL",
+              to: localePath({ path: "/setting/mysql" })
+            },
+            {
+              label: "MongoDB",
+              to: localePath({ path: "/setting/mongodb" })
+            },
+            {
+              label: "Redis",
+              to: localePath({ path: "/setting/redis" })
+            },
+            {
+              label: "PostgreSQL",
+              to: localePath({ path: "/setting/pg" })
+            },
+            {
+              label: "Oracle",
+              to: localePath({ path: "/setting/oracle" })
+            },
+            {
+              label: "SQL Server",
+              to: localePath({ path: "/setting/sqlserver" })
+            }
+          ]
+        }
+      ]
+    }
+  ];
+});
 </script>
 
 <template>

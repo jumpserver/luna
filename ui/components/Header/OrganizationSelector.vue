@@ -60,7 +60,7 @@ watch(
       :content="{ align: 'start', side: 'bottom' }"
       :ui="{ content: 'w-48 max-h-64 overflow-y-auto' }"
     >
-      <UButton variant="ghost" size="md" color="primary" class="btn-common px-3">
+      <UButton variant="ghost" size="md" color="neutral" class="btn-common px-3">
         <UIcon name="fluent:organization-16-regular" />
         <span class="truncate max-w-32 font-medium">{{ currentOrg }}</span>
         <UIcon name="i-lucide-chevron-down" class="ml-1 size-3" />

@@ -6,9 +6,6 @@ import type { PermissionOrgs, PermOrgItem, UserData, UserIntiInfo } from "~/type
 
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { useUserSettingStore } from "~/store/modules/userSetting";
-
-type LocaleCode = (typeof locales.value)[number]["code"];
 
 const props = defineProps<{ collapse: boolean }>();
 
@@ -17,12 +14,9 @@ const REG_EXP =
 
 const toast = useToast();
 const userInfoStore = useUserInfoStore();
-const useSettingStore = useUserSettingStore();
 
 const { isMacOS } = usePlatform();
-const { t, setLocale, locales } = useI18n();
-const { setLang } = useSettingStore;
-const { language, theme } = storeToRefs(useSettingStore);
+const { t } = useI18n();
 // prettier-ignore
 const { loggedIn, currentSite, userMap, currentUser } = storeToRefs(userInfoStore);
 
@@ -70,15 +64,6 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
     }
   ]
 ]);
-
-/**
- * @description 切换语言
- * @param payload 语言代码
- */
-function changeLocale(payload: LocaleCode) {
-  setLang(payload);
-  setLocale(payload);
-}
 
 /**
  * @description 标准化站点输入：去除首尾空格 + 去除末尾斜杠
