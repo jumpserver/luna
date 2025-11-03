@@ -61,8 +61,46 @@ func getCommandFromArgs(connectInfo map[string]string, argFormat string) string 
 }
 
 func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
-	cmd := exec.Command("C:\\WINDOWS\\system32\\mstsc.exe", filePath)
-	return cmd
+    if cfg != nil {
+        appLst := cfg.Windows.RemoteDesktop
+        for _, app := range appLst {
+            if !app.IsSet || !app.IsMatchProtocol("rdp") {
+                continue
+            }
+            appPath := app.Path
+            if app.IsInternal {
+                currentPath := filepath.Dir(os.Args[0])
+                candidate := filepath.Join(currentPath, app.Path)
+                if _, err := os.Stat(candidate); err == nil {
+                    appPath = candidate
+                }
+            }
+            if appPath == "" {
+                break
+            }
+            connectMap := map[string]string{
+                "file":     filePath,
+                "name":     r.getName(),
+                "protocol": r.Protocol,
+                "username": r.getUserName(),
+                "value":    r.Value,
+                "host":     r.Host,
+                "port":     strconv.Itoa(r.Port),
+            }
+            commands := strings.TrimSpace(getCommandFromArgs(connectMap, app.ArgFormat))
+            if commands == "" {
+                return exec.Command(appPath)
+            }
+            if strings.Contains(commands, "*") {
+                parts := strings.Split(commands, "*")
+                return exec.Command(appPath, parts...)
+            }
+            args := strings.Split(commands, " ")
+            return exec.Command(appPath, args...)
+        }
+    }
+    cmd := exec.Command("C:\\WINDOWS\\system32\\mstsc.exe", filePath)
+    return cmd
 }
 
 func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {

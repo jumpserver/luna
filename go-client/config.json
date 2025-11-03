@@ -100,6 +100,57 @@
         "is_set": true
       },
       {
+        "name": "royalts",
+        "display_name": "Royal TS",
+        "protocol": ["rdp"],
+        "comment": {
+          "zh": "Royal TS 是一款强大的远程连接管理工具。",
+          "en": "Royal TS is a powerful remote connection manager."
+        },
+        "download_url": "https://www.royalapps.com/ts/windows",
+        "type": "remotedesktop",
+        "path": "",
+        "arg_format": "{file}",
+        "match_first": ["rdp"],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "windows_rdm",
+        "display_name": "Remote Desktop Manager",
+        "protocol": ["rdp"],
+        "comment": {
+          "zh": "Remote Desktop Manager (Devolutions) 集中管理所有远程连接。",
+          "en": "Remote Desktop Manager (Devolutions) centralizes all remote connections."
+        },
+        "download_url": "https://remotedesktopmanager.com/",
+        "type": "remotedesktop",
+        "path": "",
+        "arg_format": "{file}",
+        "match_first": ["rdp"],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "moba_rdp",
+        "display_name": "MobaXterm (RDP)",
+        "protocol": ["rdp"],
+        "comment": {
+          "zh": "MobaXterm 支持 RDP/VNC/SSH 等多种协议。",
+          "en": "MobaXterm supports RDP/VNC/SSH and more."
+        },
+        "download_url": "https://mobaxterm.mobatek.net/download.html",
+        "type": "remotedesktop",
+        "path": "",
+        "arg_format": "{file}",
+        "match_first": ["rdp"],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
         "name": "vncviewer",
         "display_name": "RealVNC Viewer",
         "protocol": ["vnc"],
