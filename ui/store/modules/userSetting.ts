@@ -16,7 +16,8 @@ export const useUserSettingStore = defineStore(
     const theme = ref<themeType>("");
     const followSystem = ref<boolean>(false);
     const layouts = ref<layoutsType>("grid");
-    const fontFamily = ref<string>("System UI");
+    
+    const fontFamily = ref<string>('"Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial');
     const primaryColor = ref<string>("#1ab394");
     const primaryColorLight = ref<string>("#1ab394");
     const primaryColorDark = ref<string>("#34d399");

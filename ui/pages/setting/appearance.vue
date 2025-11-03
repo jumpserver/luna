@@ -89,8 +89,8 @@ const appearanceItems = computed<SelectItem[]>(() => [
   { label: t("Common.Dark"), id: "dark" }
 ]);
 
-// 统一的回退字体族串
 const FALLBACK_FONTS = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial';
+const OPEN_SANS_VALUE = '"Open Sans", ' + FALLBACK_FONTS;
 
 const fontsItems = ref<FontItem[]>([
   {
@@ -116,7 +116,14 @@ const loadSystemFonts = async () => {
 
     if (!systemDefault) return;
 
-    fontsItems.value = [systemDefault, ...dynamicItems];
+    const hasOpenSans = dynamicItems.some((i) => i.label.toLowerCase() === "open sans");
+    const openSansItem: FontItem | null = hasOpenSans
+      ? null
+      : { id: "openSans", label: "Open Sans", value: OPEN_SANS_VALUE };
+
+    fontsItems.value = openSansItem
+      ? [systemDefault, openSansItem, ...dynamicItems]
+      : [systemDefault, ...dynamicItems];
   } catch (e) {
     fontsItems.value = [
       fontsItems.value[0]!,
@@ -130,7 +137,8 @@ const loadSystemFonts = async () => {
     ];
   } finally {
     const savedRaw = fontFamily.value;
-    const normalizedSaved = !savedRaw || savedRaw === "System UI" ? FALLBACK_FONTS : savedRaw;
+    // 默认值：Open Sans
+    const normalizedSaved = !savedRaw || savedRaw === "System UI" ? OPEN_SANS_VALUE : savedRaw;
 
     if (normalizedSaved !== savedRaw) {
       setFontFamily(normalizedSaved);
