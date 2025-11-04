@@ -89,6 +89,19 @@ export const useThemeAdapter = () => {
     }
   };
 
+  const applyThemePreference = (theme: Theme) => {
+    uiColorMode.preference = theme;
+  };
+
+  const applySystemThemePreference = async () => {
+    const osTheme = (await currentWindow.theme()) || currentOSTheme.value;
+
+    if (osTheme) {
+      currentOSTheme.value = osTheme;
+      uiColorMode.preference = osTheme;
+    }
+  };
+
   const listenOSThemeChange = () => {
     // 监听 OS 主题变化
     currentWindow.onThemeChanged((event: Event<Theme>) => {
@@ -108,6 +121,8 @@ export const useThemeAdapter = () => {
     initialTheme,
     manualSetTheme,
     enableFollowSystem,
-    listenOSThemeChange
+    listenOSThemeChange,
+    applyThemePreference,
+    applySystemThemePreference
   };
 };

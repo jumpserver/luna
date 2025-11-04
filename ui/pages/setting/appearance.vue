@@ -30,9 +30,32 @@ const { applyPrimaryColor } = useColor();
 const { manualSetTheme, enableFollowSystem, followSystem, userTheme } = useThemeAdapter();
 
 const selectedFont = ref<string>("system");
-const selectedAppearance = ref<ThemeType>(
-  followSystem.value ? "withSystem" : theme.value || "light"
-);
+const selectedAppearance = computed<ThemeType>({
+  get: () => {
+    if (followSystem.value) return "withSystem";
+
+    const saved = (theme.value || "") as ThemeType;
+    if (saved === "dark" || saved === "light") return saved;
+
+    const current = (userTheme.value || "") as ThemeType;
+    if (current === "dark" || current === "light") return current;
+
+    return "light";
+  },
+  set: (id: ThemeType) => {
+    if (id === "withSystem") {
+      void enableFollowSystem().then(() => {
+        useTauriEventEmit("theme-changed", { mode: "withSystem" });
+        nextTick().then(() => applyCurrentThemeColor(true));
+      });
+      return;
+    }
+
+    manualSetTheme(id as any);
+    useTauriEventEmit("theme-changed", { mode: id });
+    nextTick().then(() => applyCurrentThemeColor(true));
+  }
+});
 
 const mainColor = computed<string>({
   get: () =>
@@ -172,21 +195,6 @@ onMounted(async () => {
   applyCurrentThemeColor();
   loadSystemFonts();
 });
-
-watch(
-  () => selectedAppearance.value,
-  async (id) => {
-    if (id === "withSystem") {
-      await enableFollowSystem();
-      useTauriEventEmit("theme-changed", { mode: "withSystem" });
-    } else {
-      manualSetTheme(id as any);
-      useTauriEventEmit("theme-changed", { mode: id });
-    }
-
-    nextTick().then(() => applyCurrentThemeColor(true));
-  }
-);
 
 watch(
   () => userTheme.value,

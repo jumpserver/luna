@@ -13,21 +13,13 @@ const toast = useToast();
 
 const { t, locale, setLocale } = useI18n();
 const { isMacOS } = usePlatform();
-const { userTheme, manualSetTheme, enableFollowSystem } = useThemeAdapter();
+const { userTheme, applyThemePreference, applySystemThemePreference } = useThemeAdapter();
 
 const elLocale = computed(() => (locale.value?.startsWith("zh") ? zhCn : en));
 
 const { applyPrimaryColor } = useColor();
 const settingManager = useSettingManager();
-const {
-  fontFamily,
-  primaryColorLight,
-  primaryColorDark,
-  setLang,
-  setPrimaryColorDark,
-  setPrimaryColorLight,
-  setFontFamily
-} = settingManager;
+const { fontFamily, primaryColorLight, primaryColorDark, setLang } = settingManager;
 
 const backgroundColor = computed(() => {
   const isDark = userTheme.value === "dark";
@@ -62,7 +54,8 @@ useHead({
 
 const applyCurrentThemeColor = () => {
   const mode = userTheme.value === "dark" ? "dark" : "light";
-  const hex = mode === "dark" ? (primaryColorDark.value as string) : (primaryColorLight.value as string);
+  const hex =
+    mode === "dark" ? (primaryColorDark.value as string) : (primaryColorLight.value as string);
   if (hex) {
     applyPrimaryColor(hex);
   }
@@ -84,18 +77,6 @@ onMounted(async () => {
         if (!mode || mode === (userTheme.value as string)) {
           applyPrimaryColor(hex);
         }
-
-        if (mode === "dark") {
-          setPrimaryColorDark(hex);
-        } else if (mode === "light") {
-          setPrimaryColorLight(hex);
-        } else {
-          if (userTheme.value === "dark") {
-            setPrimaryColorDark(hex);
-          } else {
-            setPrimaryColorLight(hex);
-          }
-        }
       }
     });
 
@@ -103,9 +84,9 @@ onMounted(async () => {
       const mode = (event?.payload?.mode || event?.payload || "").toString();
 
       if (mode === "withSystem") {
-        await enableFollowSystem();
+        await applySystemThemePreference();
       } else if (mode === "light" || mode === "dark") {
-        manualSetTheme(mode as any);
+        applyThemePreference(mode as any);
       }
 
       // 应用当前主题对应的主色
@@ -117,12 +98,8 @@ onMounted(async () => {
 
       if (!value) return;
 
-      try {
-        document.documentElement.style.setProperty("--font-sans", value);
-        document.documentElement.style.setProperty("--font-heading", value);
-
-        setFontFamily(value);
-      } catch {}
+      document.documentElement.style.setProperty("--font-sans", value);
+      document.documentElement.style.setProperty("--font-heading", value);
     });
 
     await useTauriEventListen("language-changed", async (event: any) => {

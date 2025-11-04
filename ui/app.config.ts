@@ -89,7 +89,7 @@ export default defineAppConfig({
     dropdownMenu: {
       slots: {
         content: "w-(--reka-dropdown-menu-trigger-width) p-1",
-        item: "mx-0.5 px-3 py-2 rounded-md transition-colors duration-150 data-highlighted:!bg-primary/10 data-[state=open]:!bg-primary/10 data-[state=checked]:!bg-primary/10",
+        item: "mx-0.5 px-3 py-2 rounded-md transition-colors duration-150 data-[state=open]:!bg-primary/10 data-[state=checked]:!bg-primary/10",
         itemLabel:
           "group-data-[state=checked]:!text-primary group-data-highlighted:!text-primary group-data-[state=open]:!text-primary",
         itemLeadingIcon:
