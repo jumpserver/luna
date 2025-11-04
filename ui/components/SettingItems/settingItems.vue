@@ -11,8 +11,6 @@ import windowsApp from "@/assets/images/windowsApp.png";
 import anotherRedis from "@/assets/images/anotherRedis.png";
 import mongodbCompass from "@/assets/images/mongodb.png";
 
-import { useUserSettingStore } from "~/store/modules/userSetting";
-
 const props = defineProps<{
   item: ConfigItem;
   protocol?: string;
@@ -35,8 +33,7 @@ const imagesMap: Record<string, string> = {
 const emit = defineEmits<{ (e: "toggle", value: boolean): void }>();
 
 const { t, locale } = useI18n();
-const userSettingStore = useUserSettingStore();
-const { language } = storeToRefs(userSettingStore);
+const { language } = useSettingManager();
 
 const commentText = computed(() => {
   const lang = language.value || (locale?.value as string) || "en";

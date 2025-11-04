@@ -1,33 +1,74 @@
+import { nextTick } from "vue";
 import type { Event } from "@tauri-apps/api/event";
 import type { Theme } from "@tauri-apps/api/window";
-import { useUserSettingStore } from "~/store/modules/userSetting";
 
 export const useThemeAdapter = () => {
   const currentOSTheme = ref<Theme>("light");
 
   const uiColorMode = useColorMode();
-  const userSettingStore = useUserSettingStore();
+  const {
+    theme: userTheme,
+    followSystem,
+    hydrationPromise,
+    isHydrated,
+    setTheme,
+    setFollowSystem
+  } = useSettingManager();
+
   const currentWindow = useTauriWindowGetCurrentWindow();
 
-  const { setTheme, setFollowSystem } = userSettingStore;
-  const { theme: userTheme, followSystem } = storeToRefs(userSettingStore);
+  const waitHydration = async () => {
+    if (isHydrated.value) return;
+
+    // 等待 useSettingManager 完成初始化
+    if (!hydrationPromise.value) {
+      await nextTick();
+    }
+
+    const promise = hydrationPromise.value;
+
+    if (promise) {
+      try {
+        await promise;
+      } catch (err) {
+        console.error("wait hydration failed", err);
+      }
+    }
+  };
 
   /**
    * @description 应用首次加载默认使用 OS Theme
    */
   const initialTheme = async () => {
+    await waitHydration();
+
+    const savedTheme = userTheme.value as Theme | "";
+    const follow = followSystem.value;
+
     const osTheme = await currentWindow.theme();
-    
-    if (!osTheme) return;
+
+    if (!osTheme) {
+      if (savedTheme) {
+        uiColorMode.preference = savedTheme;
+      }
+      return;
+    }
 
     currentOSTheme.value = osTheme;
 
-    if (followSystem.value || !userTheme.value) {
+    if (follow) {
       uiColorMode.preference = osTheme;
       setTheme(osTheme);
-    } else {
-      uiColorMode.preference = userTheme.value as Theme;
+      return;
     }
+
+    if (savedTheme) {
+      uiColorMode.preference = savedTheme;
+      return;
+    }
+
+    uiColorMode.preference = osTheme;
+    setTheme(osTheme);
   };
 
   const manualSetTheme = (theme: Theme) => {
@@ -60,17 +101,13 @@ export const useThemeAdapter = () => {
     });
   };
 
-  onMounted(() => {
-    initialTheme();
-    listenOSThemeChange();
-  });
-
   return {
     userTheme,
     followSystem,
-    currentOSTheme,
 
+    initialTheme,
     manualSetTheme,
-    enableFollowSystem
+    enableFollowSystem,
+    listenOSThemeChange
   };
 };

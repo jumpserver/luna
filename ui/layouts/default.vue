@@ -1,4 +1,11 @@
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+const { initialTheme, listenOSThemeChange } = useThemeAdapter();
+
+onMounted(() => {
+  initialTheme();
+  listenOSThemeChange();
+});
+</script>
 
 <template>
   <UCard
@@ -7,7 +14,7 @@
     :ui="{
       header: 'p-0 sm:px-0',
       body: 'p-0 sm:p-0',
-      footer: 'p-0 sm:p-0',
+      footer: 'p-0 sm:p-0'
     }"
     style="background-color: transparent"
   >

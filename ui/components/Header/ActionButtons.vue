@@ -3,12 +3,10 @@ import type { DropdownMenuItem } from "@nuxt/ui";
 import type { ActionItem } from "~/types/index";
 
 import { LogicalPosition } from "@tauri-apps/api/dpi";
-import { useUserSettingStore } from "~/store/modules/userSetting";
 
 const { t, locale } = useI18n();
-const userSettingStore = useUserSettingStore();
-const { layouts, sort } = storeToRefs(userSettingStore);
 const { isMacOS } = usePlatform();
+const { layouts, sort, setSort, setLayouts } = useSettingManager();
 
 // 公共按钮配置
 const commonButtonProps = {
@@ -89,7 +87,7 @@ const actionItems = computed<ActionItem[]>(() => [
         checked: sort.value === "name",
         onUpdateChecked: (checked: boolean) => {
           if (checked) {
-            userSettingStore.setSort("name");
+            setSort("name");
           }
         }
       },
@@ -101,7 +99,7 @@ const actionItems = computed<ActionItem[]>(() => [
         checked: sort.value === "-name",
         onUpdateChecked: (checked: boolean) => {
           if (checked) {
-            userSettingStore.setSort("-name");
+            setSort("-name");
           }
         }
       },
@@ -116,7 +114,7 @@ const actionItems = computed<ActionItem[]>(() => [
         checked: sort.value === "-date_updated",
         onUpdateChecked: (checked: boolean) => {
           if (checked) {
-            userSettingStore.setSort("-date_updated");
+            setSort("-date_updated");
           }
         }
       },
@@ -128,7 +126,7 @@ const actionItems = computed<ActionItem[]>(() => [
         checked: sort.value === "date_updated",
         onUpdateChecked: (checked: boolean) => {
           if (checked) {
-            userSettingStore.setSort("date_updated");
+            setSort("date_updated");
           }
         }
       }
@@ -148,7 +146,7 @@ const actionItems = computed<ActionItem[]>(() => [
         checked: layouts.value === "grid",
         onUpdateChecked: (checked: boolean) => {
           if (checked) {
-            userSettingStore.setLayouts("grid");
+            setLayouts("grid");
           }
         }
       },
@@ -160,7 +158,7 @@ const actionItems = computed<ActionItem[]>(() => [
         checked: layouts.value === "table",
         onUpdateChecked: (checked: boolean) => {
           if (checked) {
-            userSettingStore.setLayouts("table");
+            setLayouts("table");
           }
         }
       }
@@ -173,31 +171,31 @@ const actionItems = computed<ActionItem[]>(() => [
     tooltipLabel: t("ToolTips.Settings"),
     onClick: async () => {
       const label = "secondary";
-      try {
-        // 如果已经打开过,直接置顶
-        const existing = await useTauriWebviewWindowWebviewWindow.getByLabel(label);
-        if (existing) {
-          try {
-            if (await existing.isMinimized()) {
-              await existing.unminimize();
-            }
+      const existing = await useTauriWebviewWindowWebviewWindow.getByLabel(label);
 
-            if (!(await existing.isVisible())) {
-              await existing.show();
-            }
-
-            await existing.setFocus();
-          } catch (e) {
-            console.error("focus settings window failed", e);
+      // 如果已经打开过,直接置顶
+      if (existing) {
+        try {
+          if (await existing.isMinimized()) {
+            await existing.unminimize();
           }
-          return;
-        }
-      } catch {}
 
+          if (!(await existing.isVisible())) {
+            await existing.show();
+          }
+
+          await existing.setFocus();
+        } catch (e) {
+          console.error("focus settings window failed", e);
+        }
+        return;
+      }
+
+      // 直接创建窗口
       // eslint-disable-next-line no-new
       new useTauriWebviewWindowWebviewWindow(label, {
         title: t("Common.ConnectionSettings"),
-        url: "/setting/general",
+        url: "/setting",
         minWidth: 760,
         minHeight: 520,
         maxHeight: 675,

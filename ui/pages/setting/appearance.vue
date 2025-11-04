@@ -1,8 +1,7 @@
 <script setup lang="ts">
+import type { ThemeType } from "~/types";
 import type { SelectItem } from "@nuxt/ui";
-import type { themeType } from "~/store/modules/userSetting";
-
-import { useUserSettingStore } from "~/store/modules/userSetting";
+import { useSettingManager } from "~/composables/useSettingManager";
 
 interface FontItem {
   id: string;
@@ -15,15 +14,23 @@ definePageMeta({
 });
 
 const { t } = useI18n();
-const userSettingStore = useUserSettingStore();
-const { theme, fontFamily, primaryColorLight, primaryColorDark } = storeToRefs(userSettingStore);
-const { setFontFamily, setPrimaryColorLight, setPrimaryColorDark } = userSettingStore;
+const {
+  theme,
+  fontFamily,
+  primaryColorLight,
+  primaryColorDark,
+  hydrationPromise,
+  isHydrated,
+  setFontFamily,
+  setPrimaryColorLight,
+  setPrimaryColorDark
+} = useSettingManager();
 
 const { applyPrimaryColor } = useColor();
 const { manualSetTheme, enableFollowSystem, followSystem, userTheme } = useThemeAdapter();
 
 const selectedFont = ref<string>("system");
-const selectedAppearance = ref<themeType>(
+const selectedAppearance = ref<ThemeType>(
   followSystem.value ? "withSystem" : theme.value || "light"
 );
 
@@ -43,9 +50,7 @@ const mainColor = computed<string>({
       setPrimaryColorLight(hex);
     }
 
-    try {
-      useTauriEventEmit("primary-color-changed", { hex });
-    } catch {}
+    useTauriEventEmit("primary-color-changed", { hex, mode: userTheme.value });
   }
 });
 
@@ -90,7 +95,6 @@ const appearanceItems = computed<SelectItem[]>(() => [
 ]);
 
 const FALLBACK_FONTS = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial';
-const OPEN_SANS_VALUE = '"Open Sans", ' + FALLBACK_FONTS;
 
 const fontsItems = ref<FontItem[]>([
   {
@@ -116,18 +120,11 @@ const loadSystemFonts = async () => {
 
     if (!systemDefault) return;
 
-    const hasOpenSans = dynamicItems.some((i) => i.label.toLowerCase() === "open sans");
-    const openSansItem: FontItem | null = hasOpenSans
-      ? null
-      : { id: "openSans", label: "Open Sans", value: OPEN_SANS_VALUE };
-
-    fontsItems.value = openSansItem
-      ? [systemDefault, openSansItem, ...dynamicItems]
-      : [systemDefault, ...dynamicItems];
+    fontsItems.value = [systemDefault, ...dynamicItems];
   } catch (e) {
     fontsItems.value = [
       fontsItems.value[0]!,
-      { label: "Open Sans", id: "openSans", value: '"Open Sans", ' + fallback },
+      { label: "System UI", id: "systemUI", value: fallback },
       {
         label: "Noto Sans SC",
         id: "notoSansSC",
@@ -137,8 +134,7 @@ const loadSystemFonts = async () => {
     ];
   } finally {
     const savedRaw = fontFamily.value;
-    // 默认值：Open Sans
-    const normalizedSaved = !savedRaw || savedRaw === "System UI" ? OPEN_SANS_VALUE : savedRaw;
+    const normalizedSaved = !savedRaw || savedRaw === "System UI" ? FALLBACK_FONTS : savedRaw;
 
     if (normalizedSaved !== savedRaw) {
       setFontFamily(normalizedSaved);
@@ -151,7 +147,29 @@ const loadSystemFonts = async () => {
   }
 };
 
-onMounted(() => {
+const applyCurrentThemeColor = (broadcast = false) => {
+  const modeNow = (userTheme.value as string) || (selectedAppearance.value as string);
+  const hexNow = modeNow === "dark" ? primaryColorDark.value : primaryColorLight.value;
+
+  if (hexNow) {
+    applyPrimaryColor(hexNow);
+    if (broadcast) {
+      useTauriEventEmit("primary-color-changed", { hex: hexNow, mode: modeNow });
+    }
+  }
+};
+
+onMounted(async () => {
+  const promise = hydrationPromise.value;
+  if (promise) {
+    try {
+      await promise;
+    } catch {}
+  } else if (!isHydrated.value) {
+    await nextTick();
+  }
+
+  applyCurrentThemeColor();
   loadSystemFonts();
 });
 
@@ -165,22 +183,16 @@ watch(
       manualSetTheme(id as any);
       useTauriEventEmit("theme-changed", { mode: id });
     }
-  },
-  { immediate: true }
+
+    nextTick().then(() => applyCurrentThemeColor(true));
+  }
 );
 
 watch(
   () => userTheme.value,
   () => {
-    const hex =
-      userTheme.value === "dark"
-        ? primaryColorDark.value || "#34d399"
-        : primaryColorLight.value || "#1ab394";
-
-    applyPrimaryColor(hex);
-    useTauriEventEmit("primary-color-changed", { hex });
-  },
-  { immediate: true }
+    applyCurrentThemeColor();
+  }
 );
 
 watch(

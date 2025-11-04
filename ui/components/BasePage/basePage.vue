@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { layoutsType } from "~/store/modules/userSetting";
-import type { AssetItem, SettingResponse } from "~/types/index";
+import type { AssetItem, SettingResponse, LayoutsType } from "~/types/index";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { useUserSettingStore } from "~/store/modules/userSetting";
-import { useDisplayAssets } from "~/composables/useDisplayAssets";
 
 import SkeletonCard from "~/components/Card/GridCard/skeletonCard.vue";
 import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
@@ -29,11 +26,10 @@ const { confirmConnection, saveConnectionInfo } = useAssetConnection();
 const contextMenu = useContextMenu();
 const userInfoStore = useUserInfoStore();
 const assetManagement = useAssetManagement();
-const userSettingStore = useUserSettingStore();
+const { layouts } = useSettingManager();
 const assetManager = useAssetFetcher(props.type, scrollRef);
 const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
 
-const { layouts } = storeToRefs(userSettingStore);
 const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
 const {
   fetchNextPage,
@@ -62,7 +58,7 @@ watch(
 
 watch(
   () => layouts.value,
-  (nv: layoutsType) => {
+  (nv: LayoutsType) => {
     if (nv) {
       useEventBus().emit("loaded", undefined);
     }
@@ -210,8 +206,7 @@ onBeforeUnmount(() => {
       >
         <UEmpty
           icon="mingcute:inbox-line"
-          variant="subtle"
-          color="primary"
+          variant="naked"
           :title="t('Common.NoData')"
           :description="t('Common.EmptyDescription')"
         />

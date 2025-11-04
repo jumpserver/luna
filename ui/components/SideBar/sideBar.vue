@@ -1,18 +1,15 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
-import { useUserSettingStore } from "~/store/modules/userSetting";
+
 import Profile from "./profile.vue";
 import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
+
+const localePath = useLocalePath();
 
 const { t } = useI18n();
 const { emit } = useEventBus();
 const { isMacOS } = usePlatform();
-
-const localePath = useLocalePath();
-const useSettingStore = useUserSettingStore();
-
-const { setCollapse } = useSettingStore;
-const { collapse } = storeToRefs(useSettingStore);
+const { collapse, setCollapse } = useSettingManager();
 
 const isLoading = ref(false);
 const sidebarSearch = ref("");

@@ -1,21 +1,19 @@
 <script setup lang="ts">
-import type { ConfigItem } from '~/types/index';
-import { useUserSettingStore } from '~/store/modules/userSetting';
+import type { ConfigItem } from "~/types/index";
 
 definePageMeta({
-  layout: 'setting',
+  layout: "setting"
 });
 
 const { t } = useI18n();
-const userSettingStore = useUserSettingStore();
-const { appConfig } = storeToRefs(userSettingStore);
+const { appConfig } = useSettingManager();
 const { selectClient } = useApplicationConfig();
 
-const protocol = 'mysql';
-const category = 'databases' as const;
+const protocol = "mysql";
+const category = "databases" as const;
 
 const items = computed<ConfigItem[]>(() => {
-  const list = appConfig.value?.databases ?? [];
+  const list = appConfig!.value?.databases ?? [];
   return list.filter((i) => i.protocol?.includes(protocol));
 });
 
@@ -38,7 +36,7 @@ const handleToggle = async (item: ConfigItem) => {
       />
     </template>
     <div v-else class="text-center text-sm text-gray-500 py-10">
-      {{ t('Common.NoData') }}
+      {{ t("Common.NoData") }}
     </div>
   </div>
 </template>

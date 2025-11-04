@@ -1,7 +1,9 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 
-type ActionType = "action" | "select";
+export type ActionType = "action" | "select";
 export type SortType = "name" | "-name" | "-date_updated" | "date_updated";
+export type ThemeType = "light" | "dark" | "withSystem" | "";
+export type LayoutsType = "grid" | "table";
 
 export interface ActionItem {
   key: string;
@@ -271,3 +273,17 @@ export interface TokenResponse {
   user_display: string;
   value: string;
 }
+
+export interface UserSettingPersistedState {
+  language: string;
+  collapse: boolean;
+  sort: SortType;
+  theme: ThemeType;
+  followSystem: boolean;
+  layouts: LayoutsType;
+  fontFamily: string;
+  primaryColor: string;
+  primaryColorLight: string;
+  primaryColorDark: string;
+  appConfig?: AppConfigType | null;
+};

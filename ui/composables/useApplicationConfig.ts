@@ -1,11 +1,7 @@
 import type { AppConfigType } from "~/types";
-import { useUserSettingStore } from "~/store/modules/userSetting";
 
 export const useApplicationConfig = () => {
-  const userSettingStore = useUserSettingStore();
-
-  const { setAppConfig } = userSettingStore;
-  const { appConfig } = storeToRefs(userSettingStore);
+  const { setAppConfig, appConfig } = useSettingManager();
 
   const getConfig = async () => {
     const config = await useTauriCoreInvoke("get_config");

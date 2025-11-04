@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { useUserSettingStore } from "~/store/modules/userSetting";
-
-const userSettingStore = useUserSettingStore();
+const { theme } = useSettingManager();
 const { componentsConfig } = useAppConfig();
-const { theme } = storeToRefs(userSettingStore);
 const clearSelectionCallback = ref<(() => void) | null>(null);
+
 const clearSelection = () => {
   if (clearSelectionCallback.value) {
     clearSelectionCallback.value();
   }
 };
+
 const providerClearSelection = (callback: () => void) => {
   clearSelectionCallback.value = callback;
 };

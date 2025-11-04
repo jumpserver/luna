@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import type { SelectItem } from "@nuxt/ui";
-import { useUserSettingStore } from "~/store/modules/userSetting";
 
 definePageMeta({
   layout: "setting"
 });
 
 const { t, locales, locale, setLocale } = useI18n();
-const { setLang } = useUserSettingStore();
+const { setLang } = useSettingManager();
 
 type LangItem = SelectItem & { id: string };
 
@@ -29,9 +28,8 @@ watch(
     if (!code) return;
     setLang(code);
     setLocale(code as any);
-    // Notify other windows (main) to switch language
     try {
-      useTauriEventEmit('language-changed', { code });
+      useTauriEventEmit("language-changed", { code });
     } catch {}
   },
   { immediate: false }

@@ -3,8 +3,6 @@ import en from "element-plus/es/locale/lang/en";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 
 import { h, ref, resolveComponent, computed, watch } from "vue";
-import { useWarmupSetting } from "@/composables/useWarmupSetting";
-import { useUserSettingStore } from "~/store/modules/userSetting";
 
 useApplicationConfig();
 
@@ -19,9 +17,17 @@ const { userTheme, manualSetTheme, enableFollowSystem } = useThemeAdapter();
 
 const elLocale = computed(() => (locale.value?.startsWith("zh") ? zhCn : en));
 
-const userSettingStore = useUserSettingStore();
-const { primaryColorLight, primaryColorDark, fontFamily } = storeToRefs(userSettingStore);
 const { applyPrimaryColor } = useColor();
+const settingManager = useSettingManager();
+const {
+  fontFamily,
+  primaryColorLight,
+  primaryColorDark,
+  setLang,
+  setPrimaryColorDark,
+  setPrimaryColorLight,
+  setFontFamily
+} = settingManager;
 
 const backgroundColor = computed(() => {
   const isDark = userTheme.value === "dark";
@@ -54,16 +60,17 @@ useHead({
   }
 });
 
-watch(
-  () => userTheme.value,
-  () => {
-    const hex =
-      userTheme.value === "dark"
-        ? primaryColorDark.value || "#34d399"
-        : primaryColorLight.value || "#1ab394";
-
+const applyCurrentThemeColor = () => {
+  const mode = userTheme.value === "dark" ? "dark" : "light";
+  const hex = mode === "dark" ? (primaryColorDark.value as string) : (primaryColorLight.value as string);
+  if (hex) {
     applyPrimaryColor(hex);
-  },
+  }
+};
+
+watch(
+  () => [userTheme.value, primaryColorLight.value, primaryColorDark.value],
+  applyCurrentThemeColor,
   { immediate: true }
 );
 
@@ -71,14 +78,23 @@ onMounted(async () => {
   try {
     await useTauriEventListen("primary-color-changed", (event: any) => {
       const hex = (event?.payload?.hex || event?.payload || "").toString();
+      const mode = (event?.payload?.mode || "").toString();
 
       if (hex) {
-        applyPrimaryColor(hex);
+        if (!mode || mode === (userTheme.value as string)) {
+          applyPrimaryColor(hex);
+        }
 
-        if (userTheme.value === "dark") {
-          userSettingStore.setPrimaryColorDark(hex);
+        if (mode === "dark") {
+          setPrimaryColorDark(hex);
+        } else if (mode === "light") {
+          setPrimaryColorLight(hex);
         } else {
-          userSettingStore.setPrimaryColorLight(hex);
+          if (userTheme.value === "dark") {
+            setPrimaryColorDark(hex);
+          } else {
+            setPrimaryColorLight(hex);
+          }
         }
       }
     });
@@ -91,6 +107,9 @@ onMounted(async () => {
       } else if (mode === "light" || mode === "dark") {
         manualSetTheme(mode as any);
       }
+
+      // 应用当前主题对应的主色
+      applyCurrentThemeColor();
     });
 
     await useTauriEventListen("font-changed", async (event: any) => {
@@ -102,7 +121,7 @@ onMounted(async () => {
         document.documentElement.style.setProperty("--font-sans", value);
         document.documentElement.style.setProperty("--font-heading", value);
 
-        userSettingStore.setFontFamily(value);
+        setFontFamily(value);
       } catch {}
     });
 
@@ -113,7 +132,7 @@ onMounted(async () => {
 
       try {
         setLocale(code as any);
-        useUserSettingStore().setLang(code);
+        setLang(code);
       } catch {}
     });
 

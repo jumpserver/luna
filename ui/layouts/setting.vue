@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
-import { useUserSettingStore } from "~/store/modules/userSetting";
+
+definePageMeta({
+  layout: "setting",
+  redirect: "/setting/general"
+});
+
+const localePath = useLocalePath();
 
 const { t, locale } = useI18n();
-const localePath = useLocalePath();
-const userSettingStore = useUserSettingStore();
+const { theme } = useSettingManager();
 
-const { theme } = storeToRefs(userSettingStore);
+const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 
 const settingMenu = computed<NavigationMenuItem[]>(() => {
   void locale.value;
@@ -102,6 +107,11 @@ const settingMenu = computed<NavigationMenuItem[]>(() => {
       ]
     }
   ];
+});
+
+onMounted(() => {
+  initialTheme();
+  listenOSThemeChange();
 });
 </script>
 
