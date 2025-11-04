@@ -105,6 +105,7 @@
 		"AddAccount": "Add Account",
 		"SwitchSite": "Switch Site",
 		"LoginAuthenticationExpired": "Login authentication has expired. Please log in again",
+		"LoginAuthenticationExpiredDescription": "If there are multiple sites, you will be automatically switched to the next site",
 		"Logout": "Logout",
 		"AlreadyLoggedInError": "You have already logged in to this site",
 		"LoginFailedErrorPage": "Login failed. The current page is not a login page. Please re-enter",

@@ -1,9 +1,4 @@
-import type {
-  ConnectionInfo,
-  PermOrgItem,
-  RdpGraphics,
-  UserData,
-} from '~/types/index';
+import type { ConnectionInfo, PermOrgItem, RdpGraphics, UserData } from "~/types/index";
 
 export type SiteUserData = UserData & {
   rdpClientOption?: RdpGraphics;
@@ -12,10 +7,10 @@ export type SiteUserData = UserData & {
 
 // 其实应该叫做 accountInfoStore 比较好
 export const useUserInfoStore = defineStore(
-  'userInfo',
+  "userInfo",
   () => {
-    const orgId = ref('');
-    const currentSite = ref('');
+    const orgId = ref("");
+    const currentSite = ref("");
     const loggedIn = ref(false);
 
     const userMap = ref<Record<string, SiteUserData>>({});
@@ -25,7 +20,7 @@ export const useUserInfoStore = defineStore(
     const currentRdpClientOption = ref<RdpGraphics>({});
     const currentConnectionInfoMap = ref<Record<string, ConnectionInfo>>({});
 
-    const hasUser = () => computed(() => Object.keys(userMap.value).length > 0);
+    const hasUser = computed(() => Object.keys(userMap.value).length > 0);
 
     /**
      * @description 设置用户登录状态
@@ -76,9 +71,9 @@ export const useUserInfoStore = defineStore(
      */
     const deleteUserData = (site: string) => {
       // 退出当前站点时立即请求清理其 Cookie
-      useTauriCoreInvoke('logout', {
-        name: 'main',
-        origin: site,
+      useTauriCoreInvoke("logout", {
+        name: "main",
+        origin: site
       });
 
       if (!(site in userMap.value)) {
@@ -88,10 +83,8 @@ export const useUserInfoStore = defineStore(
       delete userMap.value[site];
 
       // 如果还有用户，则切换到下一个用户
-      if (hasUser().value) {
-        const nextUser = Object.values(userMap.value)[0] as
-          | SiteUserData
-          | undefined;
+      if (hasUser.value) {
+        const nextUser = Object.values(userMap.value)[0] as SiteUserData | undefined;
 
         if (nextUser) {
           currentUser.value = nextUser;
@@ -107,13 +100,15 @@ export const useUserInfoStore = defineStore(
           currentRdpClientOption.value = nextUser.rdpClientOption || {};
           currentOrganizations.value = nextUser.availableOrgs || [];
 
+          loggedIn.value = true;
+
           nextTick(() => {
-            useEventBus().emit('refresh', undefined);
+            useEventBus().emit("refresh", undefined);
           });
         }
       } else {
-        orgId.value = '';
-        currentSite.value = '';
+        orgId.value = "";
+        currentSite.value = "";
         loggedIn.value = false;
         currentUser.value = null;
         currentOrganizations.value = [];
@@ -122,7 +117,7 @@ export const useUserInfoStore = defineStore(
         currentRdpClientOption.value = {};
 
         nextTick(() => {
-          useEventBus().emit('clearAssets', undefined);
+          useEventBus().emit("clearAssets", undefined);
         });
       }
     };
@@ -149,8 +144,7 @@ export const useUserInfoStore = defineStore(
         const siteConn = (userData as SiteUserData).connectionInfoMap || {};
 
         currentConnectionInfoMap.value = siteConn;
-        currentRdpClientOption.value =
-          (userData as SiteUserData).rdpClientOption || {};
+        currentRdpClientOption.value = (userData as SiteUserData).rdpClientOption || {};
       } else {
         currentConnectionInfoMap.value = {};
         currentRdpClientOption.value = {};
@@ -167,7 +161,7 @@ export const useUserInfoStore = defineStore(
       if (currentUser.value && currentSite.value) {
         const updatedUserData = {
           ...currentUser.value,
-          availableOrgs: orgs,
+          availableOrgs: orgs
         };
 
         userMap.value[currentSite.value] = updatedUserData as SiteUserData;
@@ -181,13 +175,13 @@ export const useUserInfoStore = defineStore(
      */
     const setCurrentOrg = (org: PermOrgItem) => {
       if (!currentUser.value || !currentSite.value) {
-        console.error('No current user or site when setting organization');
+        console.error("No current user or site when setting organization");
         return;
       }
 
       const updatedUserData = {
         ...currentUser.value,
-        org,
+        org
       };
 
       currentUser.value = updatedUserData as UserData;
@@ -225,10 +219,7 @@ export const useUserInfoStore = defineStore(
      * @param assetId
      * @param connectionInfo
      */
-    const setConnectionInfoForAsset = (
-      assetId: string,
-      connectionInfo: ConnectionInfo
-    ) => {
+    const setConnectionInfoForAsset = (assetId: string, connectionInfo: ConnectionInfo) => {
       if (!currentSite.value) return;
       const site = currentSite.value;
       const siteData = userMap.value[site];
@@ -257,7 +248,7 @@ export const useUserInfoStore = defineStore(
 
         userMap.value[site] = {
           ...siteData,
-          rdpClientOption,
+          rdpClientOption
         } as SiteUserData;
       }
     };
@@ -272,7 +263,6 @@ export const useUserInfoStore = defineStore(
       currentRdpClientOption,
       currentConnectionInfoMap,
 
-      hasUser,
       setUserData,
       getUserData,
       setCurrentOrg,
@@ -283,23 +273,23 @@ export const useUserInfoStore = defineStore(
       setRdpClientOption,
       setConnectionInfoToUser,
       getConnectionInfoForAsset,
-      setConnectionInfoForAsset,
+      setConnectionInfoForAsset
     };
   },
   {
     persist: {
-      key: 'userInfo',
+      key: "userInfo",
       storage: localStorage,
       pick: [
-        'orgId',
-        'userMap',
-        'loggedIn',
-        'currentUser',
-        'currentSite',
-        'currentOrganizations',
-        'currentRdpClientOption',
-        'currentConnectionInfoMap',
-      ],
-    },
+        "orgId",
+        "userMap",
+        "loggedIn",
+        "currentUser",
+        "currentSite",
+        "currentOrganizations",
+        "currentRdpClientOption",
+        "currentConnectionInfoMap"
+      ]
+    }
   }
 );

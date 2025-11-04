@@ -14,7 +14,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   const colorMode = useColorMode();
   const userInfoStore = useUserInfoStore();
 
-  const { setUserLoggedIn, deleteUserData } = userInfoStore;
+  const { deleteUserData } = userInfoStore;
   const { currentSite, currentUser, orgId } = storeToRefs(userInfoStore);
 
   const offset = ref(0);
@@ -334,13 +334,13 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
       if (status === 401) {
         toast.add({
           title: t("Login.LoginAuthenticationExpired"),
+          description: t("Login.LoginAuthenticationExpiredDescription"),
           color: "error",
           icon: "line-md:close-circle"
         });
 
         nextTick(() => {
           deleteUserData(currentSite.value);
-          setUserLoggedIn(false);
         });
       }
 
