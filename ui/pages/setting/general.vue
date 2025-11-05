@@ -34,6 +34,18 @@ watch(
   },
   { immediate: false }
 );
+
+watch(
+  () => locale.value,
+  (code) => {
+    const val = (code as string) || "";
+    if (!val) return;
+    if (val !== selectedLanguage.value) {
+      selectedLanguage.value = val;
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <template>

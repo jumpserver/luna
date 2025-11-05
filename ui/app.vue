@@ -5,6 +5,7 @@ import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { h, ref, resolveComponent, computed, watch } from "vue";
 
 useApplicationConfig();
+useLocaleBroadcaster();
 
 const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 
@@ -19,6 +20,7 @@ const elLocale = computed(() => (locale.value?.startsWith("zh") ? zhCn : en));
 
 const { applyPrimaryColor } = useColor();
 const settingManager = useSettingManager();
+
 const { fontFamily, primaryColorLight, primaryColorDark, setLang } = settingManager;
 
 const backgroundColor = computed(() => {

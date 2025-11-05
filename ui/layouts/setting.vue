@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 definePageMeta({
   layout: "setting",
@@ -8,9 +9,12 @@ definePageMeta({
 
 const localePath = useLocalePath();
 
-const { t, locale } = useI18n();
+const { t, locale, setLocale } = useI18n();
 const { theme } = useSettingManager();
+const userInfoStore = useUserInfoStore();
+const { currentLanguage } = storeToRefs(userInfoStore);
 
+useLocaleBroadcaster();
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 
 const settingMenu = computed<NavigationMenuItem[]>(() => {
@@ -113,6 +117,15 @@ onMounted(() => {
   initialTheme();
   listenOSThemeChange();
 });
+
+watch(
+  () => currentLanguage.value,
+  (lang) => {
+    const code = lang === "zh" ? "zh" : "en";
+    setLocale(code as any);
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
