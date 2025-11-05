@@ -16,9 +16,9 @@ const toast = useToast();
 const userInfoStore = useUserInfoStore();
 
 const { isMacOS } = usePlatform();
-const { t } = useI18n();
+const { t, setLocale } = useI18n();
 // prettier-ignore
-const { loggedIn, currentSite, userMap, currentUser } = storeToRefs(userInfoStore);
+const { loggedIn, currentSite, userMap, currentUser, currentLanguage } = storeToRefs(userInfoStore);
 
 const inputSite = ref("");
 const errorMessage = ref("");
@@ -65,6 +65,15 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
   ]
 ]);
 
+watch(
+  () => currentLanguage.value,
+  (lang) => {
+    const target = lang === "zh" ? "zh" : "en";
+    setLocale(target as any);
+  },
+  { immediate: true }
+);
+
 /**
  * @description 标准化站点输入：去除首尾空格 + 去除末尾斜杠
  * @param value 站点输入
@@ -92,6 +101,27 @@ function initSelectOrganization(permissionOrgData: PermissionOrgs) {
   );
 
   return uniqueOrgs;
+}
+
+/**
+ * @description 处理 cooklies 中的 django_language
+ * @param cookies
+ */
+function resolveLanguageFromCookies(cookies: string | undefined | null): "zh" | "en" {
+  if (!cookies) return "en";
+
+  const langEntry = cookies
+    .split(";")
+    .map((chunk) => chunk.trim())
+    .find((chunk) => chunk.toLowerCase().startsWith("django_language="));
+
+  if (!langEntry) return "en";
+
+  const value = langEntry.split("=")[1]?.trim().toLowerCase();
+
+  if (!value) return "en";
+
+  return value === "zh-hans" || value.startsWith("zh") ? "zh" : "en";
 }
 
 /**
@@ -303,47 +333,54 @@ onMounted(async () => {
     }
   });
 
-  unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", (event) => {
-    const { status, profile, permission_orgs, current_org, cookies } =
-      event.payload as UserIntiInfo;
+  unlistenLoginSuccessRef.value = await useTauriEventListen(
+    "login-success-detected",
+    async (event) => {
+      const { status, profile, permission_orgs, current_org, cookies } =
+        event.payload as UserIntiInfo;
 
-    const profileData = JSON.parse((profile as any).data);
-    const permissionOrgData = JSON.parse((permission_orgs as any).data) as PermissionOrgs;
-    const currentOrgData = JSON.parse((current_org as any).data);
-    const normalizedSite = normalizedInputSite.value;
+      const profileData = JSON.parse((profile as any).data);
+      const permissionOrgData = JSON.parse((permission_orgs as any).data) as PermissionOrgs;
+      const currentOrgData = JSON.parse((current_org as any).data);
+      const normalizedSite = normalizedInputSite.value;
 
-    if (status === "success" && profileData) {
-      toast.add({
-        title: t("Login.LoginSuccess"),
-        description: t("Login.LoginSuccessDescription"),
-        color: "primary",
-        icon: "line-md:check-all"
-      });
+      if (status === "success" && profileData) {
+        const language = resolveLanguageFromCookies(cookies);
+        await setLocale(language as any);
 
-      const availableOrgs = initSelectOrganization(permissionOrgData);
+        toast.add({
+          title: t("Login.LoginSuccess"),
+          description: t("Login.LoginSuccessDescription"),
+          color: "primary",
+          icon: "line-md:check-all"
+        });
 
-      userInfoStore.setUserData(normalizedSite, {
-        name: profileData.name,
-        headerJson: cookies,
-        site: normalizedSite,
-        org: currentOrgData,
-        system_roles: profileData.system_roles,
-        availableOrgs,
-        connectionInfo: {
-          protocol: "",
-          username: ""
-        }
-      });
+        const availableOrgs = initSelectOrganization(permissionOrgData);
 
-      userInfoStore.setOrganizations(availableOrgs);
-      userInfoStore.setCurrentOrg(currentOrgData);
-      userInfoStore.setUserLoggedIn(true);
+        userInfoStore.setUserData(normalizedSite, {
+          name: profileData.name,
+          headerJson: cookies,
+          site: normalizedSite,
+          org: currentOrgData,
+          system_roles: profileData.system_roles,
+          availableOrgs,
+          language,
+          connectionInfo: {
+            protocol: "",
+            username: ""
+          }
+        });
 
-      nextTick(() => {
-        useEventBus().emit("refresh", undefined);
-      });
+        userInfoStore.setOrganizations(availableOrgs);
+        userInfoStore.setCurrentOrg(currentOrgData);
+        userInfoStore.setUserLoggedIn(true);
+
+        nextTick(() => {
+          useEventBus().emit("refresh", undefined);
+        });
+      }
     }
-  });
+  );
 
   unlistenLoginFailedRef.value = await useTauriEventListen("login-failed-detected", () => {
     toast.add({

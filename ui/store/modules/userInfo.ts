@@ -1,6 +1,7 @@
 import type { ConnectionInfo, PermOrgItem, RdpGraphics, UserData } from "~/types/index";
 
 export type SiteUserData = UserData & {
+  language?: string;
   rdpClientOption?: RdpGraphics;
   connectionInfoMap?: Record<string, ConnectionInfo>;
 };
@@ -19,6 +20,7 @@ export const useUserInfoStore = defineStore(
     const currentOrganizations = ref<PermOrgItem[]>([]);
     const currentRdpClientOption = ref<RdpGraphics>({});
     const currentConnectionInfoMap = ref<Record<string, ConnectionInfo>>({});
+    const currentLanguage = ref<string>("zh");
 
     const hasUser = computed(() => Object.keys(userMap.value).length > 0);
 
@@ -48,10 +50,13 @@ export const useUserInfoStore = defineStore(
      * @param site
      * @param userData
      */
-    const setUserData = (site: string, userData: UserData) => {
+    const setUserData = (site: string, userData: UserData & { language?: string }) => {
       currentUser.value = userData;
       currentSite.value = site;
-      userMap.value[site] = userData as SiteUserData;
+      const withLanguage = userData as SiteUserData;
+      withLanguage.language = userData.language || withLanguage.language || "en";
+      currentLanguage.value = withLanguage.language || "en";
+      userMap.value[site] = withLanguage;
 
       // 设置组织 ID
       if (userData.org?.id) {
@@ -89,6 +94,7 @@ export const useUserInfoStore = defineStore(
         if (nextUser) {
           currentUser.value = nextUser;
           currentSite.value = nextUser.site;
+          currentLanguage.value = nextUser.language || "en";
 
           // 更新组织 ID
           if (nextUser.org?.id) {
@@ -111,6 +117,7 @@ export const useUserInfoStore = defineStore(
         currentSite.value = "";
         loggedIn.value = false;
         currentUser.value = null;
+        currentLanguage.value = "zh";
         currentOrganizations.value = [];
         userMap.value = {};
         currentConnectionInfoMap.value = {};
@@ -135,6 +142,7 @@ export const useUserInfoStore = defineStore(
       if (userData) {
         currentUser.value = userData;
         currentOrganizations.value = userData.availableOrgs || [];
+        currentLanguage.value = (userData as SiteUserData).language || "en";
 
         if (userData.org?.id) {
           orgId.value = userData.org.id;
@@ -148,6 +156,7 @@ export const useUserInfoStore = defineStore(
       } else {
         currentConnectionInfoMap.value = {};
         currentRdpClientOption.value = {};
+        currentLanguage.value = "zh";
       }
     };
 
@@ -259,6 +268,7 @@ export const useUserInfoStore = defineStore(
       loggedIn,
       currentSite,
       currentUser,
+      currentLanguage,
       currentOrganizations,
       currentRdpClientOption,
       currentConnectionInfoMap,
@@ -286,6 +296,7 @@ export const useUserInfoStore = defineStore(
         "loggedIn",
         "currentUser",
         "currentSite",
+        "currentLanguage",
         "currentOrganizations",
         "currentRdpClientOption",
         "currentConnectionInfoMap"
