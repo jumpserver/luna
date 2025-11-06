@@ -7,24 +7,25 @@ mod utils;
 use crate::setup::apply_window_effects;
 use crate::setup::setup_tray;
 
+use crate::commands::get_asset_detail::get_asset_detail;
+use crate::commands::get_assets::get_assets;
+use crate::commands::get_config::get_config;
+use crate::commands::get_setting::get_setting;
+use crate::commands::get_token::get_connect_token;
+use crate::commands::list_system_fonts::list_system_fonts;
 use crate::commands::logout::logout;
 use crate::commands::pull_up::pull_up;
 use crate::commands::rename_asset::rename;
-use crate::commands::get_assets::get_assets;
-use crate::commands::get_config::get_config;
-use crate::commands::unfavorite::unfavorite;
-use crate::commands::get_setting::get_setting;
-use crate::commands::url_watcher::url_watcher;
 use crate::commands::set_favorite::set_favorite;
-use crate::commands::get_token::get_connect_token;
-use crate::commands::get_asset_detail::get_asset_detail;
-use crate::commands::list_system_fonts::list_system_fonts;
+use crate::commands::unfavorite::unfavorite;
 use crate::commands::update_config::update_config_selection;
+use crate::commands::url_watcher::url_watcher;
 use crate::commands::window_controls::{close_window, minimize_window, toggle_maximize_window};
 
 use log::error;
 use tauri::menu::{Menu, MenuItem};
 use tauri::Manager;
+use tauri_plugin_deep_link::DeepLinkExt;
 
 pub fn run() {
     tauri::Builder::default()
@@ -50,9 +51,29 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&quit_i])?;
             let win = app.get_webview_window("main").unwrap();
 
+            // 检查是否通过深度链接启动
+            let start_urls = app.deep_link().get_current()?;
+            if let Some(urls) = start_urls {
+                // 处理启动时的深度链接
+                for url in &urls {
+                    error!("deep link original URL string: {}", url.as_str());
+                    pull_up(app.app_handle().clone(), url.as_str().to_string());
+                }
+                // 深度链接启动时，调用完 pull_up 后直接退出
+                std::process::exit(0);
+            }
+
+            let app_handle = app.app_handle().clone();
+            app.deep_link().on_open_url(move |event| {
+                let urls = event.urls();
+                for url in &urls {
+                    error!("deep link original URL string: {}", url.as_str());
+                    pull_up(app_handle.clone(), url.as_str().to_string());
+                }
+            });
+
             // 创建系统托盘
             setup_tray(&menu, &app)?;
-
             if let Err(e) = apply_window_effects(&win) {
                 error!("Failed to apply window effects: {}", e);
             }
