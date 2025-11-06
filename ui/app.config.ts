@@ -11,38 +11,15 @@ export default defineAppConfig({
       // 这里保留用于其他可能的配置
     },
     pages: {
-      focusColor: "#55B787",
       scrollBarLightThumbColor: "#D0D1D2",
       scrollBarDarkThumbColor: "#4A4A4A",
       scrollBarLightHoverColor: "#B8B9BA",
       scrollBarDarkHoverColor: "#6B6B6B",
       mainCardLightBackgroundColor: "#FAFAFA",
-      mainCardDarkBackgroundColor: "#2C2C2C",
-      mainLoginCardLightBackgroundColor: "#1AFAFA",
-      mainLoginCardDarkBackgroundColor: "#172721"
+      mainCardDarkBackgroundColor: "#2C2C2C"
     },
-    operation: {
-      lightColor: "#F2F2F3",
-      darkColor: "#3D3D3E"
-    }
-  },
-  pageCategories: {
-    system: {
-      label: "System",
-      icon: "lucide:square-terminal"
-    },
-    storage: {
-      label: "Storage",
-      icon: "lucide:archive"
-    },
-    interface: {
-      label: "Interface",
-      icon: "lucide:app-window-mac"
-    },
-    other: {
-      label: "Other",
-      icon: "lucide:folder"
-    }
+    urlRegExp:
+      /^(?:https?:\/\/(?:localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(?::\d{1,5})?(?:[/?#]\S*)?|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\])$/
   },
   ui: {
     colors: {
@@ -89,13 +66,13 @@ export default defineAppConfig({
     dropdownMenu: {
       slots: {
         content: "w-(--reka-dropdown-menu-trigger-width) p-1",
-        item: "mx-0.5 px-3 py-2 rounded-md transition-colors duration-150 data-[state=open]:!bg-primary/10 data-[state=checked]:!bg-primary/10",
+        item: "mx-0.5 px-3 py-2 rounded-md transition-colors duration-150 data-[state=open]:bg-primary/10 data-[state=checked]:bg-primary/10",
         itemLabel:
-          "group-data-[state=checked]:!text-primary group-data-highlighted:!text-primary group-data-[state=open]:!text-primary",
+          "group-data-[state=checked]:text-primary group-data-highlighted:text-primary group-data-[state=open]:text-primary",
         itemLeadingIcon:
-          "group-data-[state=checked]:!text-primary group-data-highlighted:!text-primary group-data-[state=open]:!text-primary",
+          "group-data-[state=checked]:text-primary group-data-highlighted:!text-primary group-data-[state=open]:!text-primary",
         itemTrailingIcon:
-          "group-data-[state=checked]:!text-primary group-data-highlighted:!text-primary group-data-[state=open]:!text-primary"
+          "group-data-[state=checked]:text-primary group-data-highlighted:text-primary group-data-[state=open]:text-primary"
       }
     },
     navigationMenu: {

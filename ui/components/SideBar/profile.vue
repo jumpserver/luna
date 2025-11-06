@@ -2,17 +2,15 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import type { PermissionOrgs, PermOrgItem, UserData, UserIntiInfo } from "~/types/index";
+import type { PermissionOrgs, PermOrgItem, UserData, UserIntiInfo, RoleType } from "~/types/index";
 
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{ collapse: boolean }>();
 
-const REG_EXP =
-  /^(?:https?:\/\/(?:localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(?::\d{1,5})?(?:[/?#]\S*)?|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\])$/;
-
 const toast = useToast();
+const appConfig = useAppConfig();
 const userInfoStore = useUserInfoStore();
 
 const { isMacOS } = usePlatform();
@@ -52,18 +50,21 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
     {
       label: t("Login.Logout"),
       icon: "solar:login-outline",
-      class: "logout-menu-item",
+      color: "error",
       ui: {
-        itemLabel: "text-error",
+        itemLabel:
+          "!text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error group-data-[state=checked]:!text-error",
         itemLeadingIcon:
-          "text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error",
-        itemTrailingIcon: "text-error",
-        item: "data-highlighted:before:bg-error/15 data-[state=open]:before:bg-error/15 data-highlighted:before:bg-red-500/15 data-[state=open]:before:bg-red-500/15"
+          "group-data-[state=checked]:text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error"
       },
       onClick: clearAuthInfo
     }
   ]
 ]);
+
+const userDescription = computed(() => {
+  return currentUser.value?.system_roles.map((role: RoleType) => role.display_name).join(";");
+});
 
 watch(
   () => currentLanguage.value,
@@ -181,7 +182,7 @@ function switchAccountChildren() {
  */
 function handleSwitchAccount(site: string) {
   if (site === currentSite.value) return;
-  
+
   userInfoStore.setCurrentSite(site);
 
   nextTick(() => {
@@ -212,6 +213,7 @@ const handleConfirm = async () => {
   errorMessage.value = "";
 
   const normalizedSite = normalizedInputSite.value;
+  const urlRegExp = appConfig.componentsConfig.urlRegExp;
 
   if (!normalizedSite) {
     hasValidationError.value = true;
@@ -233,7 +235,7 @@ const handleConfirm = async () => {
     return;
   }
 
-  if (!REG_EXP.test(normalizedSite)) {
+  if (!urlRegExp.test(normalizedSite)) {
     hasValidationError.value = true;
     errorMessage.value = t("Login.InvalidUrlError");
 
@@ -246,6 +248,7 @@ const handleConfirm = async () => {
 
   // 预检 TLS/证书
   const target = normalizedSite.startsWith("http") ? normalizedSite : `https://${normalizedSite}`;
+
   try {
     const ac = new AbortController();
     const to = setTimeout(() => ac.abort(), 5000);
@@ -422,27 +425,30 @@ onBeforeUnmount(() => {
     align="start"
     :ui="{ content: 'w-56 p-1' }"
   >
-    <div class="w-full rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors mb-1">
-      <div
-        class="flex items-center py-1 px-2"
-        :style="{
-          justifyContent: collapse ? 'center' : ''
+    <div
+      class="flex items-center py-2 px-2 w-full min-w-0 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors mb-1"
+      :style="{
+        justifyContent: collapse ? 'center' : ''
+      }"
+    >
+      <UUser
+        size="sm"
+        :avatar="{
+          src: '/user_avatar.png'
         }"
+        :description="userDescription"
+        :ui="props.collapse ? { root: 'justify-center gap-0' } : undefined"
       >
-        <UUser
-          size="sm"
-          :avatar="{
-            src: '/user_avatar.png'
-          }"
-          :ui="props.collapse ? { root: 'justify-center gap-0' } : undefined"
-        >
-          <template #name>
-            <span v-if="!props.collapse" class="leading-tight text-sm font-medium truncate">
+        <template #name>
+          <UTooltip v-if="!props.collapse" arrow :text="currentUser?.name">
+            <span
+              class="block md:max-w-[150px] truncate leading-tight text-sm font-medium cursor-pointer"
+            >
               {{ currentUser?.name }}
             </span>
-          </template>
-        </UUser>
-      </div>
+          </UTooltip>
+        </template>
+      </UUser>
     </div>
   </UDropdownMenu>
 
@@ -500,9 +506,4 @@ onBeforeUnmount(() => {
   </Modal>
 </template>
 
-<style scoped>
-.logout-menu-item[data-highlighted]::before,
-.logout-menu-item[data-state="open"]::before {
-  background-color: rgb(239 68 68 / 0.15) !important;
-}
-</style>
+<style scoped></style>

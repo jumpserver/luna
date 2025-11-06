@@ -69,11 +69,16 @@ export interface PermissionOrgs {
   username: string;
 }
 
+export interface RoleType {
+  display_name: string;
+  id: string;
+}
+
 export interface UserData {
   site: string;
   name: string;
   headerJson: string;
-  system_roles: string[];
+  system_roles: RoleType[];
   org: CurrentOrg;
   availableOrgs: PermOrgItem[];
   connectionInfo: ConnectionInfo;
@@ -286,4 +291,4 @@ export interface UserSettingPersistedState {
   primaryColorLight: string;
   primaryColorDark: string;
   appConfig?: AppConfigType | null;
-};
+}
