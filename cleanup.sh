@@ -10,7 +10,7 @@ echo "⏹️  停止开发服务器进程..."
 #pkill -f "tauri dev" || true
 pkill -f "nuxt dev" || true  
 pkill -f "vite" || true
-3pkill -f "node" || true
+pkill -f "node" || true
 
 # 等待进程完全退出
 sleep 2
