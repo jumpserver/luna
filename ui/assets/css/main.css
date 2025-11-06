@@ -1,0 +1,109 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+@import "element-plus/theme-chalk/dark/css-vars.css";
+
+@theme {
+  --font-heading: "Montserrat", sans-serif;
+  --font-sans: "Open Sans", sans-serif;
+  --color-secondary: var(--ui-color-secondary-500);
+  --color-elevated: #1e1e20;
+}
+
+@theme .dark {
+  --color-elevated: #141419;
+}
+
+:root {
+  --ui-color-primary-500: #1ab394;
+  --ui-color-elevated-500: #303237;
+  --ui-color-secondary-500: #141419;
+  --ui-color-neutral-100: #d1d1d1;
+  --el-font-family: var(--font-sans);
+  --bg-hover-light: rgba(209, 209, 209, 0.6);
+  --bg-hover-dark: rgba(0, 0, 0, 0.3);
+  --bg-selected-light: rgba(209, 209, 209, 0.8);
+  --bg-selected-dark: rgba(0, 0, 0, 0.5);
+  
+}
+
+.text-xs-plus {
+  @apply text-[14px];
+}
+
+.text-overflow-ellipsis {
+  @apply text-ellipsis overflow-hidden whitespace-nowrap;
+}
+
+/* 全局按钮样式 */
+.btn-common {
+  @apply rounded-lg transition-colors duration-200;
+}
+
+.btn-common:hover {
+}
+
+.dark .btn-common:hover {
+}
+
+/* App Store 风格按钮 */
+.btn-connect {
+  @apply font-bold rounded-lg text-xs transition-all duration-200;
+}
+
+/* .light .btn-connect:hover {
+  @apply bg-green-500 text-white;
+}
+
+.dark .btn-connect {
+  @apply bg-gray-600 hover:bg-gray-700;
+} */
+
+/* Header 平台特定颜色 */
+.header-bg {
+  /* 默认颜色 */
+  --header-bg-light: rgb(231, 231, 231);
+  --header-bg-dark: #333334;
+}
+
+/* Windows 平台 */
+.platform-windows .header-bg {
+  --header-bg-light: rgb(248, 248, 248);
+  --header-bg-dark: #2C2C2E;
+}
+
+/* macOS 平台 */
+.platform-darwin .header-bg {
+  --header-bg-light: rgba(255, 255, 255, 0.8);
+  --header-bg-dark: #1E1E1E;
+}
+
+/* Linux 平台 */
+.platform-linux .header-bg {
+  --header-bg-light: rgb(240, 240, 240);
+  --header-bg-dark: #2D2D30;
+}
+
+/* 主题颜色应用 */
+.light .header-bg {
+  background-color: var(--header-bg-light);
+}
+
+.dark .header-bg {
+  background-color: var(--header-bg-dark);
+}
+
+html,
+body,
+#__nuxt,
+#app {
+  height: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -o-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}

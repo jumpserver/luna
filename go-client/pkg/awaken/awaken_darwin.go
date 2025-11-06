@@ -28,7 +28,7 @@ func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	appLst := cfg.MacOS.RemoteDesktop
 	for _, app := range appLst {
-		if app.IsSet && app.IsMatchProtocol("vnc") {
+		if app.IsMatchProtocol("vnc") {
 			appItem = &app
 			break
 		}
@@ -66,7 +66,7 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	}
 
 	for _, app := range appLst {
-		if app.IsSet && app.IsMatchProtocol(r.Protocol) {
+		if app.IsMatchProtocol(r.Protocol) {
 			appItem = &app
 			break
 		}
@@ -85,7 +85,7 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	}
 
 	if appItem.IsInternal {
-		currentPath := filepath.Dir(os.Args[0])
+		currentPath, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 		clientPath := filepath.Join(currentPath, "client")
 		if appItem.Name == "iterm" {
@@ -115,7 +115,7 @@ func awakenDBCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	appLst := cfg.MacOS.Databases
 	for _, app := range appLst {
-		if app.IsSet && app.IsMatchProtocol(r.Protocol) {
+		if app.IsMatchProtocol(r.Protocol) {
 			appItem = &app
 			break
 		}
@@ -162,7 +162,6 @@ func awakenDBCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		if r.Protocol == "sqlserver" {
 			connectMap["protocol"] = "mssql_jdbc_ms_new"
 		}
-		appPath = appItem.Path
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 		return exec.Command(appPath, strings.Split(commands, " ")...)
 	}

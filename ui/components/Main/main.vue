@@ -1,0 +1,45 @@
+<script setup lang="ts">
+const { theme } = useSettingManager();
+const { componentsConfig } = useAppConfig();
+const clearSelectionCallback = ref<(() => void) | null>(null);
+
+const clearSelection = () => {
+  if (clearSelectionCallback.value) {
+    clearSelectionCallback.value();
+  }
+};
+
+const providerClearSelection = (callback: () => void) => {
+  clearSelectionCallback.value = callback;
+};
+
+provide("providerClearSelection", providerClearSelection);
+</script>
+
+<template>
+  <UCard
+    variant="soft"
+    class="w-full"
+    :style="{
+      borderTopRightRadius: '0px',
+      borderTopLeftRadius: '0px',
+      borderBottomLeftRadius: '0px',
+      borderBottomRightRadius: '0px',
+      backgroundColor:
+        theme === 'dark'
+          ? componentsConfig.pages.mainCardDarkBackgroundColor
+          : componentsConfig.pages.mainCardLightBackgroundColor
+    }"
+    :ui="{
+      header: 'p-0 sm:p-0',
+      body: 'p-2 pr-1 sm:p-4 px-4 !pr-[3px] h-[calc(100vh-58px)]'
+    }"
+    @click="clearSelection"
+  >
+    <template #header>
+      <Header />
+    </template>
+
+    <slot />
+  </UCard>
+</template>

@@ -23,7 +23,7 @@ func awakenRDPCommand(filePath string, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	appLst := cfg.Linux.RemoteDesktop
 	for _, app := range appLst {
-		if app.IsSet && app.IsMatchProtocol("rdp") {
+		if app.IsMatchProtocol("rdp") {
 			appItem = &app
 			break
 		}
@@ -40,7 +40,7 @@ func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	appLst := cfg.Linux.RemoteDesktop
 	for _, app := range appLst {
-		if app.IsSet && app.IsMatchProtocol("vnc") {
+		if app.IsMatchProtocol("vnc") {
 			appItem = &app
 			break
 		}
@@ -79,7 +79,7 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	}
 
 	for _, app := range appLst {
-		if app.IsSet && app.IsMatchProtocol(r.Protocol) {
+		if app.IsMatchProtocol(r.Protocol) {
 			appItem = &app
 			break
 		}
@@ -98,7 +98,7 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	}
 
 	if appItem.IsInternal {
-		currentPath := filepath.Dir(os.Args[0])
+		currentPath, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 		clientPath := filepath.Join(currentPath, "client")
 		out, err := exec.Command("bash", "-c", "echo $XDG_CURRENT_DESKTOP").CombinedOutput()
@@ -145,7 +145,7 @@ func awakenDBCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	appLst := cfg.Linux.Databases
 	for _, app := range appLst {
-		if app.IsSet && app.IsMatchProtocol(r.Protocol) {
+		if app.IsMatchProtocol(r.Protocol) {
 			appItem = &app
 			break
 		}

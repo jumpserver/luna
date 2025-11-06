@@ -1,0 +1,152 @@
+{
+  "Common": {
+		"Cancel": "Cancel",
+		"Confirm": "Confirm",
+		"UnSigned": "UnSigned",
+		"Version": "Version",
+		"NoData": "No Data",
+		"LoginSite": "Login Site",
+		"LoginFirst": "Please login first",
+		"ConnectionSettings": "Connection Settings",
+		"All": "All",
+		"Active": "Active",
+		"Inactive": "Inactive",
+		"Language": "Switch Language",
+		"Login": "Login",
+    "Connect": "Connect",
+    "Light": "Light",
+    "Dark": "Dark",
+		"Fonts": "Fonts",
+    "WithSystem": "Follow system",
+    "Appearance": "Appearance",
+    "PrimaryColor": "Primary color",
+		"SystemDefault": "System default",
+		"General": "General",
+		"ApplicationConfig": "Application Config",
+		"EmptyDescription": "No authorized assets are available for the current type"
+	},
+	"ToolTips": {
+		"LightMode": "Light Mode",
+		"DarkMode": "Dark Mode",
+		"SwitchLanguage": "Switch Language",
+		"Sort": "Sort",
+		"Refresh": "Refresh",
+		"Layout": "Switch Layout",
+		"Settings": "Connection Settings",
+		"Minimize": "Minimize",
+		"Maximize": "Maximize",
+		"Close": "Close"
+	},
+	"Menu": {
+		"Linux": "Linux",
+		"Other": "Other",
+		"Device": "Device",
+		"Player": "Player",
+		"Windows": "Windows",
+		"Resource": "Resource",
+		"Database": "Database",
+		"OfflinePlayer": "Offline Player",
+		"Favorite": "Favorite"
+	},
+	"Operation": {
+		"Search": "Asset Search"
+	},
+	"AssetCard": {
+		"Activated": "Activated",
+		"Deactivated": "Deactivated",
+		"Address": "Address",
+		"User": "User",
+		"Protocol": "Protocol",
+		"AssetName": "Asset Name",
+		"Actions": "Actions",
+		"Status": "Status",
+		"RenameSuccess": "Rename successful",
+    "RenameFail": "Rename failed"
+	},
+	"ContextMenu": {
+		"QuickConnect": "Quick Connect",
+		"Connect": "Connect",
+		"MoreConnect": "More Connect",
+		"Rename": "Rename",
+		"Use": "Use",
+		"Favorite": "Favorite",
+		"Edit": "Edit",
+		"Unfavorite": "Remove from Favorites"
+	},
+	"EditModal": {
+		"ModifyConnectionInfo": "Modify Connection Info",
+		"Description": "Default connection settings will be applied after saving and used for future connections.",
+		"OptionalProtocol": "Optional Protocol",
+		"OptionalAccount": "Optional Account"
+	},
+	"Layout": {
+		"Grid": "Grid View",
+		"Table": "Table View"
+	},
+	"Sort": {
+		"A-z": "A-z",
+		"Z-A": "Z-A",
+		"NewestToOldest": "Newest to oldest",
+		"OldestToNewest": "Oldest to newest"
+	},
+	"Loading": {
+		"Loading": "Loading",
+		"NoMore": "No more",
+		"ScrollToLoadMore": "Scroll to load more"
+	},
+  "Login": {
+		"Title": "Input Login Site",
+		"Description": "Please enter the site address (e.g. https://example.com) or IP address",
+		"LoginSuccess": "Login Success",
+		"LoginSuccessDescription": "Your operation has been completed successfully",
+		"EmptyUrlError": "Please enter a site address",
+		"LoginFailedDescription": "Login failed, the current account has expired, please log in again",
+		"InvalidUrlError": "Please enter a valid site address or IP address",
+		"AddAccount": "Add Account",
+		"SwitchSite": "Switch Site",
+		"LoginAuthenticationExpired": "Login authentication has expired. Please log in again",
+		"LoginAuthenticationExpiredDescription": "If there are multiple sites, you will be automatically switched to the next site",
+		"Logout": "Logout",
+		"AlreadyLoggedInError": "You have already logged in to this site",
+		"LoginFailedErrorPage": "Login failed. The current page is not a login page. Please re-enter",
+    "LoginFailedTimeout": "Login failed. Login timeout. Please log in again",
+    "InvalidCertificateMac": "Login failed: certificate invalid or blocked by system security (macOS WebView). Install a valid certificate or open in system browser.",
+    "InvalidCertificateGeneric": "Login failed: certificate or secure connection issue.",
+    "NetworkError": "Login failed: network error. Please check connectivity."
+  },
+	"Asset": {
+		"GetAssetFailed": "Get asset failed, please refresh and try again"
+	},
+	"Account": {
+		"Hosted": "With secret accounts",
+		"Manual": "Manual accounts",
+		"Username": "Username",
+		"Password": "Password",
+		"DynamicUser": "Dynamic user",
+    "ManualInput": "Manual input",
+		"RememberPassword": "Remember password"
+	},
+  "Setting": {
+		"CommandTerminal": "Command Terminal",
+		"FileTransfer": "File Transfer",
+		"RemoteDesktop": "Remote Desktop",
+		"Database": "Database",
+    "DownloadApplication": "Download Application"
+  },
+  "ConnectError": {
+    "ConnectFailed": "Connection failed"
+  },
+  "Update": {
+    "FoundNewVersion": "New version available",
+    "CurrentVersion": "Current version",
+    "ConfirmInstall": "Download and install now?",
+    "Start": "Starting update",
+    "Downloading": "Downloading",
+    "Installing": "Installing update, the app may restart",
+    "Completed": "Update completed",
+    "CompletedDesc": "Installation finished. The app will restart automatically or please restart manually",
+    "Failed": "Update failed",
+    "FailedDesc": "Error downloading or installing the update. Please try again later",
+    "UpToDate": "Up to date"
+  }
+}

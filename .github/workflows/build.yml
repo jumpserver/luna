@@ -7,63 +7,170 @@ on:
   push:
     branches:
       - master
-      - release-test
     tags:
-      - 'v*'  # 添加对标签的监听，所有以v开头的标签都会触发构建
-
-
+      - "v*" # 只有正式版本标签才触发构建
 
 env:
-  ELECTRON_OUTPUT_PATH: interface/dist_electron
+  # Tauri 自动更新签名密钥
+  TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+  TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+  # macOS 代码签名 (保留原有的 Xcode 参数)
+  XCODE_APP_TEAM_ID: ${{ secrets.XCODE_APP_TEAM_ID }}
+  XCODE_APP_LOADER_EMAIL: ${{ secrets.XCODE_APP_LOADER_EMAIL }}
+  XCODE_APP_LOADER_PASSWORD: ${{ secrets.XCODE_APP_LOADER_PASSWORD }}
+  BUILD_CERTIFICATE_BASE64: ${{ secrets.CSC_LINK }}
+  P12_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+  # Windows 代码签名
   CSC_LINK: ${{ secrets.CSC_LINK }}
   CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
 
-
 jobs:
-  release:
-    name: build and release electron app
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-11, windows-latest]
+  pre-build:
+    name: pre-build go client
+    runs-on: ubuntu-latest
+    outputs:
+      go-client-artifacts: ${{ steps.upload-go-client.outputs.artifact-name }}
 
     steps:
       - name: Check out git repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.18
+          go-version: "1.21"
 
-      - name: build go client
-        run: make build-client
+      - name: Build Go client for all platforms
+        run: make build-all
         working-directory: go-client
 
-      - name: Install Node.js
-        uses: actions/setup-node@v3
+      - name: Upload Go client artifacts
+        id: upload-go-client
+        uses: actions/upload-artifact@v4
         with:
-            node-version: '16.x'
+          name: go-client-binaries
+          path: go-client/build/
+          retention-days: 1
 
-      - name: Install system deps
+  build:
+    name: build tauri app
+    needs: pre-build
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest" # for Arm based macs (M1 and above).
+            args: "--target aarch64-apple-darwin"
+          - platform: "macos-latest" # for Intel based macs.
+            args: "--target x86_64-apple-darwin"
+          - platform: "ubuntu-22.04" # for Tauri v1 you could replace this with ubuntu-20.04.
+            args: ""
+          - platform: "windows-latest"
+            args: ""
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out git repository
+        uses: actions/checkout@v4
+
+      - name: Download Go client artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: go-client-binaries
+          path: go-client/build/
+
+      - name: Install Go client for current platform
+        run: make install
+        working-directory: go-client
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "23"
+          cache: "pnpm"
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install system dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
-            sudo apt-get install --no-install-recommends -y icnsutils graphicsmagick xz-utils
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 
-      - name: Yarn install
-        run: |
-          yarn
-          yarn global add xvfb-maybe
+      - name: Install frontend dependencies
+        run: pnpm install
 
-      - name: Build  & release app
-        run: |
-          yarn build
-
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           XCODE_APP_TEAM_ID: ${{ secrets.XCODE_APP_TEAM_ID }}
           XCODE_APP_LOADER_EMAIL: ${{ secrets.XCODE_APP_LOADER_EMAIL }}
           XCODE_APP_LOADER_PASSWORD: ${{ secrets.XCODE_APP_LOADER_PASSWORD }}
           BUILD_CERTIFICATE_BASE64: ${{ secrets.CSC_LINK }}
           P12_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "JumpServer Client v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
+          releaseDraft: true
+          prerelease: false
+
+  release:
+    name: create latest.json
+    runs-on: ubuntu-latest
+    needs: [pre-build, build]
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Check out git repository
+        uses: actions/checkout@v4
+
+      - name: Generate latest.json
+        run: |
+          echo '{
+            "version": "${{ github.ref_name }}",
+            "notes": "Release ${{ github.ref_name }}",
+            "pub_date": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+            "platforms": {
+              "darwin-x86_64": {
+                "signature": "",
+                "url": "https://github.com/jumpserver/clients/releases/download/${{ github.ref_name }}/JumpServerClient_${{ github.ref_name }}_x86_64.dmg"
+              },
+              "darwin-aarch64": {
+                "signature": "",
+                "url": "https://github.com/jumpserver/clients/releases/download/${{ github.ref_name }}/JumpServerClient_${{ github.ref_name }}_aarch64.dmg"
+              },
+              "windows-x86_64": {
+                "signature": "",
+                "url": "https://github.com/jumpserver/clients/releases/download/${{ github.ref_name }}/JumpServerClient_${{ github.ref_name }}_x64.exe"
+              },
+              "windows-x86_64-msi": {
+                "signature": "",
+                "url": "https://github.com/jumpserver/clients/releases/download/${{ github.ref_name }}/JumpServerClient_${{ github.ref_name }}_x64.msi"
+              }
+            }
+          }' > latest.json
+
+      - name: Upload latest.json to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

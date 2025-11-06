@@ -107,7 +107,7 @@ func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	appLst := cfg.Windows.RemoteDesktop
 	for _, app := range appLst {
-		if app.IsSet && app.IsMatchProtocol("vnc") {
+		if app.IsMatchProtocol("vnc") {
 			appItem = &app
 			break
 		}
@@ -198,7 +198,7 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	}
 
 	for _, app := range appLst {
-		if app.IsSet && app.IsMatchProtocol(r.Protocol) {
+		if app.IsMatchProtocol(r.Protocol) {
 			appItem = &app
 			break
 		}
@@ -208,7 +208,7 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	}
 	var appPath string
 	if appItem.IsInternal {
-		currentPath := filepath.Dir(os.Args[0])
+		currentPath, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 		appPath = filepath.Join(currentPath, appItem.Path)
 	} else {
 		appPath = appItem.Path
@@ -236,7 +236,7 @@ func handleDB(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	appLst := cfg.Windows.Databases
 	for _, app := range appLst {
-		if app.IsSet && app.IsMatchProtocol(r.Protocol) {
+		if app.IsMatchProtocol(r.Protocol) {
 			appItem = &app
 			break
 		}

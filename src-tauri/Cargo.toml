@@ -1,0 +1,65 @@
+[package]
+name = "jumpserver-client"
+version = "1.4.0"
+description = "JumpServer client tool"
+authors = [ "JumpServer" ]
+license = "MIT"
+repository = "https://github.com/jumpserver/clients"
+edition = "2021"
+
+[lib]
+name = "jumpserver_client_lib"
+crate-type = [
+  "staticlib",
+  "cdylib",
+  "rlib"
+]
+
+[build-dependencies.tauri-build]
+version = "2.5.0"
+features = [ ]
+
+[dependencies]
+url = "2.5.7"
+log = "0.4.27"
+image = "0.25.8"
+tokio = "1.46.1"
+chrono = "0.4.41"
+serde_json = "1.0"
+env_logger = "0.11.8"
+tauri-build = "2.5.0"
+tauri-plugin-os = "2.3.1"
+tauri-plugin-fs = "2.4.2"
+window-vibrancy = "0.6.0"
+tauri-plugin-shell = "2.3.1"
+tauri-plugin-store = "2.4.0"
+tauri-plugin-notification = "2.3.1"
+tauri-plugin-clipboard-manager = "2.3.0"
+tauri-plugin-deep-link = "2.4.5"
+font-kit = "0.14"
+
+
+[dependencies.tauri]
+version = "2.9.0"
+features = [
+  "macos-private-api",
+  "tray-icon",
+  "unstable",
+]
+
+[dependencies.serde]
+version = "1"
+features = [ "derive" ]
+
+[dependencies.tauri-plugin-http]
+version = "2.5.2"
+features = ["unsafe-headers"]
+
+[dependencies.reqwest]
+version = "0.12.23"
+default-features = false
+features = ["json", "native-tls"]
+
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-updater = "2.9.0"
+tauri-plugin-window-state = "2.4.0"
