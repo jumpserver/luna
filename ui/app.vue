@@ -2,17 +2,19 @@
 import en from "element-plus/es/locale/lang/en";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 
-import { h, ref, resolveComponent, computed, watch } from "vue";
+import { useUserInfoStore } from "~/store/modules/userInfo";
+import { storeToRefs } from "pinia";
 
 useApplicationConfig();
-useLocaleBroadcaster();
+const userInfoStore = useUserInfoStore();
 
 const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 
 const route = useRoute();
-const toast = useToast();
 
-const { t, locale, setLocale } = useI18n();
+const { locale, setLocale } = useI18n();
+
+const { currentSite } = storeToRefs(userInfoStore);
 const { isMacOS } = usePlatform();
 const { userTheme, applyThemePreference, applySystemThemePreference } = useThemeAdapter();
 
@@ -54,20 +56,33 @@ useHead({
   }
 });
 
-const applyCurrentThemeColor = () => {
+watch(
+  () => [userTheme.value, primaryColorLight.value, primaryColorDark.value],
+  applyCurrentThemeColor,
+  { immediate: true }
+);
+
+watch(
+  () => fontFamily.value,
+  (val) => applyFont(val),
+  { immediate: true }
+);
+
+function applyCurrentThemeColor() {
   const mode = userTheme.value === "dark" ? "dark" : "light";
   const hex =
     mode === "dark" ? (primaryColorDark.value as string) : (primaryColorLight.value as string);
   if (hex) {
     applyPrimaryColor(hex);
   }
-};
+}
 
-watch(
-  () => [userTheme.value, primaryColorLight.value, primaryColorDark.value],
-  applyCurrentThemeColor,
-  { immediate: true }
-);
+// 启动时根据存储的字体家族应用一次（并在变更时同步）
+function applyFont(font: string) {
+  if (!font) return;
+  document.documentElement.style.setProperty("--font-sans", font);
+  document.documentElement.style.setProperty("--font-heading", font);
+}
 
 onMounted(async () => {
   try {
@@ -110,115 +125,34 @@ onMounted(async () => {
       if (!code) return;
 
       try {
-        setLocale(code as any);
+        // 全局覆盖：主窗口也执行一次 applyLanguageToAll，
+        // 确保本窗口的站点映射与内存状态即时同步
+        await setLocale(code as any);
         setLang(code);
+        userInfoStore.applyLanguageToAll(code);
       } catch {}
     });
 
     await useWarmupSetting();
-
-    const upd = await useTauriUpdaterCheck();
-
-    if (upd) {
-      const confirmed = window.confirm(
-        `${t("Update.FoundNewVersion")} ${upd.version}, ${t("Update.CurrentVersion")} ${
-          upd.currentVersion
-        }。\n${t("Update.ConfirmInstall")}`
-      );
-
-      if (!confirmed) {
-        await upd.close();
-        return;
-      }
-
-      try {
-        let total = 0;
-        let received = 0;
-        const progress = ref(0);
-
-        const progressToastId = "tauri-update-progress";
-        const UProgressComp = resolveComponent("UProgress") as any;
-        let lastPercent = -1;
-        let lastTime = 0;
-
-        toast.add({
-          id: progressToastId,
-          title: t("Update.Downloading"),
-          description: () =>
-            h("div", { class: "flex flex-col gap-1 w-56" }, [
-              h("div", { class: "text-xs opacity-70" }, () => `${progress.value}%`),
-              h(UProgressComp, { modelValue: progress.value, value: progress.value, max: 100 })
-            ]),
-          color: "primary",
-          icon: "i-lucide-download"
-        });
-
-        await upd.downloadAndInstall((ev) => {
-          if (ev.event === "Started") {
-            total = ev.data?.contentLength || 0;
-          } else if (ev.event === "Progress") {
-            received += ev.data?.chunkLength || 0;
-            const percent = total ? Math.min(100, Math.round((received / total) * 100)) : 0;
-            progress.value = percent;
-
-            // 仅在增量 >=5% 或 500ms 间隔 或 100% 时更新一次
-            const now = Date.now();
-            if (percent === 100 || percent - lastPercent >= 5 || now - lastTime >= 500) {
-              lastPercent = percent;
-              lastTime = now;
-              toast.add({
-                id: progressToastId,
-                title: t("Update.Downloading"),
-                description: () =>
-                  h("div", { class: "flex flex-col gap-1 w-56" }, [
-                    h("div", { class: "text-xs opacity-70" }, () => `${progress.value}%`),
-                    h(UProgressComp, {
-                      modelValue: progress.value,
-                      value: progress.value,
-                      max: 100
-                    })
-                  ]),
-                color: "primary",
-                icon: "i-lucide-download"
-              });
-            }
-          }
-        });
-
-        toast.add({
-          id: progressToastId,
-          title: t("Update.Completed"),
-          description: t("Update.CompletedDesc"),
-          color: "success",
-          icon: "line-md:check-all"
-        });
-      } catch (e) {
-        toast.add({
-          id: "tauri-update-progress",
-          title: t("Update.Failed"),
-          description: t("Update.FailedDesc"),
-          color: "error",
-          icon: "line-md:close-circle"
-        });
-      } finally {
-        await upd.close();
-      }
-    }
   } catch (error) {
     console.error(error);
   }
 });
 
-// 启动时根据存储的字体家族应用一次（并在变更时同步）
-function applyFont(font: string) {
-  if (!font) return;
-  document.documentElement.style.setProperty("--font-sans", font);
-  document.documentElement.style.setProperty("--font-heading", font);
-}
-
+// 切换账号时，按站点映射立即应用语言
 watch(
-  () => fontFamily.value,
-  (val) => applyFont(val),
+  () => currentSite.value,
+  (site) => {
+    const s = (site || "").toString();
+    if (!s) return;
+    try {
+      const lang = settingManager.getSiteLanguage(s) as string;
+      if (lang && lang !== (locale.value as string)) {
+        setLocale(lang as any);
+        setLang(lang);
+      }
+    } catch {}
+  },
   { immediate: true }
 );
 </script>

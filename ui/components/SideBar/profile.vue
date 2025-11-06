@@ -181,7 +181,9 @@ function switchAccountChildren() {
  */
 function handleSwitchAccount(site: string) {
   if (site === currentSite.value) return;
+  
   userInfoStore.setCurrentSite(site);
+
   nextTick(() => {
     useEventBus().emit("refresh", undefined);
   });

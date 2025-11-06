@@ -1,5 +1,7 @@
 import type { ConnectionInfo, PermOrgItem, RdpGraphics, UserData } from "~/types/index";
 
+import { useSettingManager } from "~/composables/useSettingManager";
+
 export type SiteUserData = UserData & {
   language?: string;
   rdpClientOption?: RdpGraphics;
@@ -10,17 +12,27 @@ export type SiteUserData = UserData & {
 export const useUserInfoStore = defineStore(
   "userInfo",
   () => {
+    const { setLocale } = useI18n();
+    const settingManager = useSettingManager();
+    const {
+      setLang,
+      setLangGlobal,
+      setSiteLanguage,
+      removeSiteLanguage,
+      getSiteLanguage,
+      getDefaultLanguage
+    } = settingManager;
+
     const orgId = ref("");
     const currentSite = ref("");
+    const currentLanguage = ref("zh");
     const loggedIn = ref(false);
-
-    const userMap = ref<Record<string, SiteUserData>>({});
 
     const currentUser = ref<UserData | null>(null);
     const currentOrganizations = ref<PermOrgItem[]>([]);
+    const userMap = ref<Record<string, SiteUserData>>({});
     const currentRdpClientOption = ref<RdpGraphics>({});
     const currentConnectionInfoMap = ref<Record<string, ConnectionInfo>>({});
-    const currentLanguage = ref<string>("zh");
 
     const hasUser = computed(() => Object.keys(userMap.value).length > 0);
 
@@ -51,12 +63,22 @@ export const useUserInfoStore = defineStore(
      * @param userData
      */
     const setUserData = (site: string, userData: UserData & { language?: string }) => {
-      currentUser.value = userData;
-      currentSite.value = site;
-      const withLanguage = userData as SiteUserData;
-      withLanguage.language = userData.language || withLanguage.language || "en";
-      currentLanguage.value = withLanguage.language || "en";
+      const baseLang = (userData.language as string) || (getDefaultLanguage() as string);
+      const effectiveLanguage = (getSiteLanguage(site) as string) || baseLang;
+      
+      setSiteLanguage(site, baseLang);
+
+      const withLanguage = {
+        ...(userData as SiteUserData),
+        language: effectiveLanguage
+      } as SiteUserData;
+
       userMap.value[site] = withLanguage;
+      currentUser.value = withLanguage;
+      currentSite.value = site;
+      currentLanguage.value = effectiveLanguage;
+
+      setLocale(effectiveLanguage as any);
 
       // 设置组织 ID
       if (userData.org?.id) {
@@ -64,10 +86,8 @@ export const useUserInfoStore = defineStore(
       }
 
       // 初始化当前站点连接信息映射以及 RDP 客户端选项
-      // prettier-ignore
-      currentConnectionInfoMap.value = userMap.value[site].connectionInfoMap || {};
-      // prettier-ignore
-      currentRdpClientOption.value = (userMap.value[site] as SiteUserData).rdpClientOption || {};
+      currentConnectionInfoMap.value = withLanguage.connectionInfoMap || {};
+      currentRdpClientOption.value = withLanguage.rdpClientOption || {};
     };
 
     /**
@@ -85,26 +105,41 @@ export const useUserInfoStore = defineStore(
         return;
       }
 
+      const removedLang = (userMap.value[site]?.language as string) || getDefaultLanguage();
+
       delete userMap.value[site];
+
+      removeSiteLanguage(site);
+      // removedLang 仅用于可能的日志/调试需要
 
       // 如果还有用户，则切换到下一个用户
       if (hasUser.value) {
         const nextUser = Object.values(userMap.value)[0] as SiteUserData | undefined;
 
         if (nextUser) {
-          currentUser.value = nextUser;
+          const siteLang = (getSiteLanguage(nextUser.site) as string) || getDefaultLanguage();
+
+          const nextWithLang = {
+            ...nextUser,
+            language: siteLang
+          } as SiteUserData;
+
+          userMap.value[nextUser.site] = nextWithLang;
+          currentUser.value = nextWithLang;
           currentSite.value = nextUser.site;
-          currentLanguage.value = nextUser.language || "en";
+          currentLanguage.value = siteLang;
+
+          setLocale(siteLang as any);
 
           // 更新组织 ID
-          if (nextUser.org?.id) {
-            orgId.value = nextUser.org.id;
+          if (nextWithLang.org?.id) {
+            orgId.value = nextWithLang.org.id;
           }
 
           // 同步连接信息映射以及 RDP 客户端选项
-          currentConnectionInfoMap.value = nextUser.connectionInfoMap || {};
-          currentRdpClientOption.value = nextUser.rdpClientOption || {};
-          currentOrganizations.value = nextUser.availableOrgs || [];
+          currentConnectionInfoMap.value = nextWithLang.connectionInfoMap || {};
+          currentRdpClientOption.value = nextWithLang.rdpClientOption || {};
+          currentOrganizations.value = nextWithLang.availableOrgs || [];
 
           loggedIn.value = true;
 
@@ -117,11 +152,17 @@ export const useUserInfoStore = defineStore(
         currentSite.value = "";
         loggedIn.value = false;
         currentUser.value = null;
-        currentLanguage.value = "zh";
+
+        const fallbackLang = removedLang as string;
+        // 将最后一个登出用户的语言持久化为默认语言，供下次启动或无用户时使用
+        setLang(fallbackLang);
+        currentLanguage.value = fallbackLang;
+
         currentOrganizations.value = [];
         userMap.value = {};
-        currentConnectionInfoMap.value = {};
         currentRdpClientOption.value = {};
+        currentConnectionInfoMap.value = {};
+        setLocale(fallbackLang as any);
 
         nextTick(() => {
           useEventBus().emit("clearAssets", undefined);
@@ -140,23 +181,35 @@ export const useUserInfoStore = defineStore(
       const userData = getUserData(site);
 
       if (userData) {
-        currentUser.value = userData;
-        currentOrganizations.value = userData.availableOrgs || [];
-        currentLanguage.value = (userData as SiteUserData).language || "en";
+        const siteLang = getSiteLanguage(site);
+
+        const withLang = {
+          ...(userData as SiteUserData),
+          language: siteLang
+        } as SiteUserData;
+
+        userMap.value[site] = withLang;
+        currentUser.value = withLang;
+        currentOrganizations.value = withLang.availableOrgs || [];
+        currentLanguage.value = siteLang;
+
+        setLocale(siteLang as any);
 
         if (userData.org?.id) {
           orgId.value = userData.org.id;
         }
 
         // 同步当前站点的连接信息映射以及 RDP 客户端选项
-        const siteConn = (userData as SiteUserData).connectionInfoMap || {};
-
-        currentConnectionInfoMap.value = siteConn;
-        currentRdpClientOption.value = (userData as SiteUserData).rdpClientOption || {};
+        currentConnectionInfoMap.value = withLang.connectionInfoMap || {};
+        currentRdpClientOption.value = withLang.rdpClientOption || {};
       } else {
+        const fallbackLang = (getDefaultLanguage() as string) || currentLanguage.value;
+
         currentConnectionInfoMap.value = {};
         currentRdpClientOption.value = {};
-        currentLanguage.value = "zh";
+        currentLanguage.value = fallbackLang;
+
+        setLocale(fallbackLang as any);
       }
     };
 
@@ -243,6 +296,30 @@ export const useUserInfoStore = defineStore(
       currentConnectionInfoMap.value = siteData.connectionInfoMap;
     };
 
+    const applyLanguageToAll = (lang: string) => {
+      const target = (lang as string) || getDefaultLanguage();
+      // 更新 Setting Manager 的默认值与站点映射
+      setLangGlobal(target);
+      Object.keys(userMap.value).forEach((site) => setSiteLanguage(site, target));
+
+      // 同步当前内存中的每个用户对象
+      Object.keys(userMap.value).forEach((site) => {
+        const user = userMap.value[site];
+        if (!user) return;
+        userMap.value[site] = {
+          ...(user as SiteUserData),
+          language: target
+        } as SiteUserData;
+      });
+
+      if (currentSite.value && userMap.value[currentSite.value]) {
+        currentUser.value = userMap.value[currentSite.value] as SiteUserData;
+      }
+
+      currentLanguage.value = target;
+      setLocale(target as any);
+    };
+
     /**
      * @description 设置 RDP 客户端选项
      * @param rdpClientOption
@@ -281,6 +358,7 @@ export const useUserInfoStore = defineStore(
       setUserLoggedIn,
       setOrganizations,
       setRdpClientOption,
+      applyLanguageToAll,
       setConnectionInfoToUser,
       getConnectionInfoForAsset,
       setConnectionInfoForAsset

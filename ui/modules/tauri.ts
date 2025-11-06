@@ -9,7 +9,6 @@ import * as tauriNotification from "@tauri-apps/plugin-notification";
 import * as tauriOs from "@tauri-apps/plugin-os";
 import * as tauriShell from "@tauri-apps/plugin-shell";
 import * as tauriStore from "@tauri-apps/plugin-store";
-import * as tauriUpdater from "@tauri-apps/plugin-updater";
 import * as tauriProgress from "@tauri-apps/plugin-process";
 import { addImports, defineNuxtModule } from "nuxt/kit";
 
@@ -52,11 +51,6 @@ const tauriModules = [
     module: tauriShell,
     prefix: "Shell",
     importPath: "@tauri-apps/plugin-shell"
-  },
-  {
-    module: tauriUpdater,
-    prefix: "Updater",
-    importPath: "@tauri-apps/plugin-updater"
   },
   {
     module: tauriProgress,

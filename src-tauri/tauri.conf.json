@@ -38,9 +38,10 @@
   "version": "3.1.0",
   "identifier": "com.jumpserver.client",
   "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ0NDhCRUVCN0Y5M0UwMTcKUldRWDRKTi82NzVJUkh2cW5xeUtKYTRZYkErU1ZPZkNramNXMjlRQWVmdnVtVEY0dk5RcDIvZ2IK",
-      "endpoints": ["https://github.com/jumpserver/clients/releases/latest/download/latest.json"]
+    "deep-link": {
+      "desktop": {
+        "schemes": ["jms"]
+      }
     }
   },
   "app": {

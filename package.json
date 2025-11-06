@@ -22,6 +22,7 @@
     "tauri:build": "tauri build",
     "tauri:build:debug": "tauri build --debug",
     "cleanup": "./cleanup.sh",
+    "prettier": "prettier --write \"src/**/*.{js,ts,json,tsx,css,less,scss,vue,html,md}\"",
     "fresh-start": "./cleanup.sh && pnpm install && pnpm run tauri:dev",
     "reset": "rm -rf node_modules .nuxt dist && cd src-tauri && cargo clean"
   },
@@ -42,7 +43,6 @@
     "@tauri-apps/plugin-process": "^2.3.0",
     "@tauri-apps/plugin-shell": "^2.3.1",
     "@tauri-apps/plugin-store": "^2.4.0",
-    "@tauri-apps/plugin-updater": "^2.9.0",
     "element-plus": "^2.11.5",
     "mitt": "^3.0.1",
     "nuxt": "^4.2.0",

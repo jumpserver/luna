@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import type { SelectItem } from "@nuxt/ui";
+import { useUserInfoStore } from "~/store/modules/userInfo";
+
+type LangItem = SelectItem & { id: string };
 
 definePageMeta({
   layout: "setting"
 });
 
-const { t, locales, locale, setLocale } = useI18n();
 const { setLang } = useSettingManager();
+const { t, locales } = useI18n();
 
-type LangItem = SelectItem & { id: string };
+const userInfoStore = useUserInfoStore();
+const { currentLanguage } = storeToRefs(userInfoStore);
+
+const syncingFromLocale = ref(false);
 
 const languageItems = computed<LangItem[]>(() => {
   const arr = (locales.value as any[]) || [];
@@ -18,16 +24,18 @@ const languageItems = computed<LangItem[]>(() => {
   }));
 });
 
-const selectedLanguage = ref<string>(
-  (locale.value as string) || languageItems.value?.[0]?.id || "zh"
-);
+const selectedLanguage = ref(currentLanguage.value);
 
 watch(
   () => selectedLanguage.value,
   (code) => {
     if (!code) return;
+    if (syncingFromLocale.value) {
+      syncingFromLocale.value = false;
+      return;
+    }
     setLang(code);
-    setLocale(code as any);
+    userInfoStore.applyLanguageToAll(code);
     try {
       useTauriEventEmit("language-changed", { code });
     } catch {}
@@ -36,15 +44,14 @@ watch(
 );
 
 watch(
-  () => locale.value,
+  () => currentLanguage.value,
   (code) => {
     const val = (code as string) || "";
     if (!val) return;
-    if (val !== selectedLanguage.value) {
-      selectedLanguage.value = val;
-    }
-  },
-  { immediate: true }
+    if (val === selectedLanguage.value) return;
+    syncingFromLocale.value = true;
+    selectedLanguage.value = val;
+  }
 );
 </script>
 

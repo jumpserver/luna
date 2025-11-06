@@ -14,7 +14,6 @@ const { theme } = useSettingManager();
 const userInfoStore = useUserInfoStore();
 const { currentLanguage } = storeToRefs(userInfoStore);
 
-useLocaleBroadcaster();
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 
 const settingMenu = computed<NavigationMenuItem[]>(() => {

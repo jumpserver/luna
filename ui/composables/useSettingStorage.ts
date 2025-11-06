@@ -8,6 +8,7 @@ export type LayoutsType = "grid" | "table";
 
 export type UserSettingPersistedState = {
   language: string;
+  siteLanguages: Record<string, string>;
   collapse: boolean;
   sort: SortType;
   theme: ThemeType;
@@ -25,6 +26,7 @@ const STORE_KEY = "state";
 
 const DEFAULT_STATE: UserSettingPersistedState = {
   language: "zh",
+  siteLanguages: {},
   collapse: false,
   sort: "name",
   theme: "" as ThemeType,

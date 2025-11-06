@@ -31,24 +31,3 @@ export function transformAssetsData(rawDataArray: RawAssetData[]): AssetItem[] {
 
   return data;
 }
-
-export function processConnectionFailure(data: string) {
-  // const errorData = JSON.parse(data);
-  // const code = errorData.code;
-  // console.log(errorData);
-
-  // const { t } = useI18n();
-  // const toast = useToast();
-
-  // toast.add({
-    // title: t("ConnectError.ConnectFailed"),
-    // description: errorData.detail,
-    // color: "error",
-    // icon: "line-md:close-circle"
-  // });
-
-  // switch (code) {
-  //   case "perm_account_invalid": {
-  //   }
-  // }
-}
