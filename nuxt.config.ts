@@ -47,7 +47,17 @@ export default defineNuxtConfig({
     mode: "css",
     cssLayer: "base",
     serverBundle: {
-      collections: ["mingcute", "lucide", "line-md", "proicons", "lets-icons", "simple-icons"]
+      collections: [
+        "mingcute",
+        "lucide",
+        "line-md",
+        "proicons",
+        "lets-icons",
+        "fluent",
+        "gravity-ui",
+        "solar",
+        "akar-icons"
+      ]
     }
   },
   ssr: false,

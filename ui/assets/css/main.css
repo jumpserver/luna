@@ -3,8 +3,6 @@
 @import "element-plus/theme-chalk/dark/css-vars.css";
 
 @theme {
-  --font-heading: "Montserrat", sans-serif;
-  --font-sans: "Open Sans", sans-serif;
   --color-secondary: var(--ui-color-secondary-500);
   --color-elevated: #1e1e20;
 }
