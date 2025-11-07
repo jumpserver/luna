@@ -1,6 +1,4 @@
-import type { ConnectionInfo, PermOrgItem, RdpGraphics, UserData } from "~/types/index";
-
-import { useSettingManager } from "~/composables/useSettingManager";
+import type { ConnectionInfo, PermOrgItem, RdpGraphics, UserData, LangType } from "~/types/index";
 
 export type SiteUserData = UserData & {
   language?: string;
@@ -20,14 +18,15 @@ export const useUserInfoStore = defineStore(
       setSiteLanguage,
       removeSiteLanguage,
       getSiteLanguage,
-      getDefaultLanguage
+      getDefaultLanguage,
+      hasSiteLanguage
     } = settingManager;
 
     const orgId = ref("");
     const currentSite = ref("");
-    const currentLanguage = ref("zh");
     const loggedIn = ref(false);
 
+    const currentLanguage = ref<LangType>("zh");
     const currentUser = ref<UserData | null>(null);
     const currentOrganizations = ref<PermOrgItem[]>([]);
     const userMap = ref<Record<string, SiteUserData>>({});
@@ -62,23 +61,22 @@ export const useUserInfoStore = defineStore(
      * @param site
      * @param userData
      */
-    const setUserData = (site: string, userData: UserData & { language?: string }) => {
-      const baseLang = (userData.language as string) || (getDefaultLanguage() as string);
-      const effectiveLanguage = (getSiteLanguage(site) as string) || baseLang;
-      
+    const setUserData = (site: string, userData: UserData & { language?: LangType }) => {
+      const baseLang = userData.language;
+
       setSiteLanguage(site, baseLang);
 
       const withLanguage = {
         ...(userData as SiteUserData),
-        language: effectiveLanguage
+        language: baseLang
       } as SiteUserData;
 
       userMap.value[site] = withLanguage;
       currentUser.value = withLanguage;
       currentSite.value = site;
-      currentLanguage.value = effectiveLanguage;
+      currentLanguage.value = baseLang;
 
-      setLocale(effectiveLanguage as any);
+      setLocale(baseLang);
 
       // 设置组织 ID
       if (userData.org?.id) {
@@ -105,19 +103,18 @@ export const useUserInfoStore = defineStore(
         return;
       }
 
-      const removedLang = (userMap.value[site]?.language as string) || getDefaultLanguage();
+      const removedLang = userMap.value[site]?.language as LangType;
 
       delete userMap.value[site];
 
       removeSiteLanguage(site);
-      // removedLang 仅用于可能的日志/调试需要
 
       // 如果还有用户，则切换到下一个用户
       if (hasUser.value) {
         const nextUser = Object.values(userMap.value)[0] as SiteUserData | undefined;
 
         if (nextUser) {
-          const siteLang = (getSiteLanguage(nextUser.site) as string) || getDefaultLanguage();
+          const siteLang = getSiteLanguage(nextUser.site) as string;
 
           const nextWithLang = {
             ...nextUser,
@@ -153,16 +150,15 @@ export const useUserInfoStore = defineStore(
         loggedIn.value = false;
         currentUser.value = null;
 
-        const fallbackLang = removedLang as string;
-        // 将最后一个登出用户的语言持久化为默认语言，供下次启动或无用户时使用
-        setLang(fallbackLang);
-        currentLanguage.value = fallbackLang;
+        // 将最后一个登出用户的语言持久化为默认语言
+        setLang(removedLang);
+        setLocale(removedLang);
+        currentLanguage.value = removedLang;
 
-        currentOrganizations.value = [];
         userMap.value = {};
         currentRdpClientOption.value = {};
         currentConnectionInfoMap.value = {};
-        setLocale(fallbackLang as any);
+        currentOrganizations.value = [];
 
         nextTick(() => {
           useEventBus().emit("clearAssets", undefined);
@@ -203,7 +199,7 @@ export const useUserInfoStore = defineStore(
         currentConnectionInfoMap.value = withLang.connectionInfoMap || {};
         currentRdpClientOption.value = withLang.rdpClientOption || {};
       } else {
-        const fallbackLang = (getDefaultLanguage() as string) || currentLanguage.value;
+        const fallbackLang = currentLanguage.value;
 
         currentConnectionInfoMap.value = {};
         currentRdpClientOption.value = {};
@@ -296,16 +292,35 @@ export const useUserInfoStore = defineStore(
       currentConnectionInfoMap.value = siteData.connectionInfoMap;
     };
 
-    const applyLanguageToAll = (lang: string) => {
-      const target = (lang as string) || getDefaultLanguage();
-      // 更新 Setting Manager 的默认值与站点映射
-      setLangGlobal(target);
-      Object.keys(userMap.value).forEach((site) => setSiteLanguage(site, target));
+    const applyLanguageToAll = (lang: LangType) => {
+      const target = lang;
 
-      // 同步当前内存中的每个用户对象
-      Object.keys(userMap.value).forEach((site) => {
+      // 判断是否真的需要变更
+      const sites = Object.keys(userMap.value);
+      const hasDiffInUsers = sites.some(
+        (site) => (userMap.value[site]?.language as LangType) !== target
+      );
+      const hasDiffInManager =
+        getDefaultLanguage() !== target || sites.some((site) => getSiteLanguage(site) !== target);
+
+      if (!hasDiffInUsers && !hasDiffInManager && currentLanguage.value === target) {
+        return;
+      }
+
+      // 更新 Setting Manager
+      setLangGlobal(target);
+
+      // 仅对有差异的站点进行修改
+      const sitesToUpdate = sites.filter((site) =>
+        hasSiteLanguage(site) ? getSiteLanguage(site) !== target : true
+      );
+      sitesToUpdate.forEach((site) => setSiteLanguage(site, target));
+
+      // 4) 同步当前内存中的每个用户对象
+      sites.forEach((site) => {
         const user = userMap.value[site];
         if (!user) return;
+        if ((user.language as LangType) === target) return;
         userMap.value[site] = {
           ...(user as SiteUserData),
           language: target
@@ -317,7 +332,7 @@ export const useUserInfoStore = defineStore(
       }
 
       currentLanguage.value = target;
-      setLocale(target as any);
+      setLocale(target);
     };
 
     /**

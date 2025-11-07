@@ -1,30 +1,30 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    open: boolean
-    title?: string
-    description?: string
+    open: boolean;
+    title?: string;
+    description?: string;
   }>(),
   {
-    title: '',
-    description: ''
+    title: "",
+    description: ""
   }
 );
 
 const emits = defineEmits<{
-  (e: 'update:open', value: boolean): void
-  (e: 'clipboard', value: string): void
-  (e: 'confirm'): void
+  (e: "update:open", value: boolean): void;
+  (e: "clipboard", value: string): void;
+  (e: "confirm"): void;
 }>();
 
 const { t } = useI18n();
 
 const updateOpen = () => {
-  emits('update:open', false);
+  emits("update:open", false);
 };
 
 const handleConfirm = () => {
-  emits('confirm');
+  emits("confirm");
 };
 
 const handleContextMenu = async (e: Event) => {
@@ -33,12 +33,11 @@ const handleContextMenu = async (e: Event) => {
 
   try {
     const clipboardText = await useTauriClipboardManagerReadText();
-    console.log(clipboardText);
 
     if (clipboardText) {
-      emits('clipboard', clipboardText);
+      emits("clipboard", clipboardText);
     } else {
-      emits('clipboard', '');
+      emits("clipboard", "");
     }
   } catch (error) {
     console.error(error);
@@ -56,26 +55,14 @@ const handleContextMenu = async (e: Event) => {
       @update:open="updateOpen"
     >
       <template #body>
-        <div
-          @contextmenu.stop.prevent="handleContextMenu"
-          @keydown.enter="handleConfirm"
-        >
+        <div @contextmenu.stop.prevent="handleContextMenu" @keydown.enter="handleConfirm">
           <slot />
         </div>
       </template>
 
       <template #footer="{ close }">
-        <UButton
-          :label="t('Common.Cancel')"
-          color="neutral"
-          variant="outline"
-          @click="close"
-        />
-        <UButton
-          :label="t('Common.Confirm')"
-          color="neutral"
-          @click="handleConfirm"
-        />
+        <UButton :label="t('Common.Cancel')" color="neutral" variant="outline" @click="close" />
+        <UButton :label="t('Common.Confirm')" color="neutral" @click="handleConfirm" />
       </template>
     </UModal>
   </template>

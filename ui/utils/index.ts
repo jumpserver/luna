@@ -31,3 +31,24 @@ export function transformAssetsData(rawDataArray: RawAssetData[]): AssetItem[] {
 
   return data;
 }
+
+/**
+ * @description 处理 cooklies 中的 django_language
+ * @param cookies
+ */
+export function resolveLanguageFromCookies(cookies: string | undefined | null): "zh" | "en" {
+  if (!cookies) return "en";
+
+  const langEntry = cookies
+    .split(";")
+    .map((chunk) => chunk.trim())
+    .find((chunk) => chunk.toLowerCase().startsWith("django_language="));
+
+  if (!langEntry) return "en";
+
+  const value = langEntry.split("=")[1]?.trim().toLowerCase();
+
+  if (!value) return "en";
+
+  return value === "zh-hans" || value.startsWith("zh") ? "zh" : "en";
+}

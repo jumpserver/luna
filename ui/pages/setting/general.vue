@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import type { LangType } from "~/types";
 import type { SelectItem } from "@nuxt/ui";
+
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 type LangItem = SelectItem & { id: string };
@@ -8,13 +10,11 @@ definePageMeta({
   layout: "setting"
 });
 
-const { setLang } = useSettingManager();
 const { t, locales } = useI18n();
+const { setLang } = useSettingManager();
 
 const userInfoStore = useUserInfoStore();
 const { currentLanguage } = storeToRefs(userInfoStore);
-
-const syncingFromLocale = ref(false);
 
 const languageItems = computed<LangItem[]>(() => {
   const arr = (locales.value as any[]) || [];
@@ -24,33 +24,27 @@ const languageItems = computed<LangItem[]>(() => {
   }));
 });
 
-const selectedLanguage = ref(currentLanguage.value);
+const selectedLanguage = ref<LangType>(currentLanguage.value);
 
 watch(
   () => selectedLanguage.value,
-  (code) => {
+  (code: LangType) => {
     if (!code) return;
-    if (syncingFromLocale.value) {
-      syncingFromLocale.value = false;
-      return;
-    }
+
     setLang(code);
     userInfoStore.applyLanguageToAll(code);
-    try {
-      useTauriEventEmit("language-changed", { code });
-    } catch {}
+    useTauriEventEmit("language-changed", { code });
   },
   { immediate: false }
 );
 
 watch(
   () => currentLanguage.value,
-  (code) => {
-    const val = (code as string) || "";
-    if (!val) return;
-    if (val === selectedLanguage.value) return;
-    syncingFromLocale.value = true;
-    selectedLanguage.value = val;
+  (code: LangType) => {
+    if (!code) return;
+    if (code === selectedLanguage.value) return;
+
+    selectedLanguage.value = code;
   }
 );
 </script>
@@ -59,9 +53,10 @@ watch(
   <div class="space-y-4">
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Common.Language") }}</span>
+
       <USelect
         v-model="selectedLanguage"
-        :items="(languageItems as unknown as SelectItem[])"
+        :items="languageItems"
         value-key="id"
         option-attribute="label"
         class="w-56"

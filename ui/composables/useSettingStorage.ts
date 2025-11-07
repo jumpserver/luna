@@ -1,14 +1,14 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { Store } from "@tauri-apps/plugin-store";
 
-import type { AppConfigType, SortType } from "~/types";
+import type { AppConfigType, SortType, LangType } from "~/types";
 
 export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
 
 export type UserSettingPersistedState = {
-  language: string;
-  siteLanguages: Record<string, string>;
+  language: LangType;
+  siteLanguages: Record<string, LangType>;
   collapse: boolean;
   sort: SortType;
   theme: ThemeType;

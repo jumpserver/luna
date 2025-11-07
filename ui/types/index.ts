@@ -4,6 +4,7 @@ export type ActionType = "action" | "select";
 export type SortType = "name" | "-name" | "-date_updated" | "date_updated";
 export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
+export type LangType = "zh" | "en";
 
 export interface ActionItem {
   key: string;
@@ -77,6 +78,7 @@ export interface RoleType {
 export interface UserData {
   site: string;
   name: string;
+  language: string;
   headerJson: string;
   system_roles: RoleType[];
   org: CurrentOrg;

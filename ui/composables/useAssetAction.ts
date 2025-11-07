@@ -363,8 +363,6 @@ export const useAssetAction = () => {
         }
 
         const payload = event.payload as eventPayload;
-
-        console.log("listenFavoriteSuccessEvent", payload);
       });
 
       unlistenFavoriteFailed = await useTauriEventListen("set-favorite-failure", (event) => {
@@ -373,7 +371,6 @@ export const useAssetAction = () => {
         }
 
         const payload = event.payload as eventPayload;
-        console.log("listenFavoriteFailedEvent", payload);
       });
 
       unlistenGetAssetDetailSuccess = await useTauriEventListen(
@@ -389,7 +386,6 @@ export const useAssetAction = () => {
 
           if (payload.status === "success") {
             const assetDetail = JSON.parse(payload.data) as any;
-            console.log("assetDetail", assetDetail);
             const permedAccounts = assetDetail.permed_accounts ?? [];
             const permedProtocols = assetDetail.permed_protocols ?? [];
 

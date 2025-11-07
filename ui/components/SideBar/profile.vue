@@ -4,6 +4,7 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { PermissionOrgs, PermOrgItem, UserData, UserIntiInfo, RoleType } from "~/types/index";
 
+import { resolveLanguageFromCookies } from "~/utils";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -62,14 +63,11 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
   ]
 ]);
 
-const userDescription = computed(() => {
-  return currentUser.value?.system_roles.map((role: RoleType) => role.display_name).join(";");
-});
-
 watch(
   () => currentLanguage.value,
   (lang) => {
     const target = lang === "zh" ? "zh" : "en";
+
     setLocale(target as any);
   },
   { immediate: true }
@@ -102,27 +100,6 @@ function initSelectOrganization(permissionOrgData: PermissionOrgs) {
   );
 
   return uniqueOrgs;
-}
-
-/**
- * @description 处理 cooklies 中的 django_language
- * @param cookies
- */
-function resolveLanguageFromCookies(cookies: string | undefined | null): "zh" | "en" {
-  if (!cookies) return "en";
-
-  const langEntry = cookies
-    .split(";")
-    .map((chunk) => chunk.trim())
-    .find((chunk) => chunk.toLowerCase().startsWith("django_language="));
-
-  if (!langEntry) return "en";
-
-  const value = langEntry.split("=")[1]?.trim().toLowerCase();
-
-  if (!value) return "en";
-
-  return value === "zh-hans" || value.startsWith("zh") ? "zh" : "en";
 }
 
 /**
@@ -351,7 +328,6 @@ onMounted(async () => {
 
       if (status === "success" && profileData) {
         const language = resolveLanguageFromCookies(cookies);
-        await setLocale(language as any);
 
         toast.add({
           title: t("Login.LoginSuccess"),
@@ -436,7 +412,6 @@ onBeforeUnmount(() => {
         :avatar="{
           src: '/user_avatar.png'
         }"
-        :description="userDescription"
         :ui="props.collapse ? { root: 'justify-center gap-0' } : undefined"
       >
         <template #name>
