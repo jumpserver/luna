@@ -18,9 +18,7 @@ export const useDisplayAssets = (assets: Ref<AssetItem[]>, platform?: Ref<string
       const protocol = saved?.protocol;
 
       if (protocol) {
-        const permed = (asset.permedProtocols || []).find(
-          (p: PermedProtocol | undefined) => p?.name === protocol
-        );
+        const permed = (asset.permedProtocols || []).find((p: PermedProtocol | undefined) => p?.name === protocol);
         const port = permed?.port;
         const addr = asset.address || "";
         const selected = (saved?.username || "").trim();
@@ -29,11 +27,7 @@ export const useDisplayAssets = (assets: Ref<AssetItem[]>, platform?: Ref<string
         let username = "";
         if (mode === "manual" || selected === "手动输入" || selected === "Manual input") {
           username = (saved?.manualUsername || "").trim();
-        } else if (
-          mode === "dynamic" ||
-          selected.includes("同名账号") ||
-          selected.includes("Dynamic user")
-        ) {
+        } else if (mode === "dynamic" || selected.includes("同名账号") || selected.includes("Dynamic user")) {
           username = ""; // dynamic has no fixed username in URI
         } else if (selected) {
           username = selected;

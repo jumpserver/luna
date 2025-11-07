@@ -92,9 +92,7 @@ export const useAssetAction = () => {
     const isManual = saved?.accountMode === "manual" || username === "手动输入" || username === "Manual input";
 
     const isDynamic =
-      saved?.accountMode === "dynamic" ||
-      username.includes("同名账号") ||
-      username.includes("Dynamic user");
+      saved?.accountMode === "dynamic" || username.includes("同名账号") || username.includes("Dynamic user");
 
     // 已保存过托管账号的 ID 则优先使用
     if (!isManual && !isDynamic && saved?.accountId) {
@@ -104,9 +102,7 @@ export const useAssetAction = () => {
     if (isDynamic) return "@USER";
 
     if (username) {
-      const matched = _accounts.find(
-        (a) => a.username === username || a.alias === username || a.name === username
-      );
+      const matched = _accounts.find((a) => a.username === username || a.alias === username || a.name === username);
       if (matched) return matched.id;
     }
 
@@ -217,11 +213,7 @@ export const useAssetAction = () => {
       // prettier-ignore
       input_username = ephemeral?.manualUsername ?? saved?.manualUsername ?? matchedAccount?.username ?? "";
       input_secret = ephemeral?.manualPassword ?? saved?.manualPassword ?? "";
-    } else if (
-      effectiveMode === "dynamic" ||
-      selected?.includes("同名账号") ||
-      selected?.includes("Dynamic user")
-    ) {
+    } else if (effectiveMode === "dynamic" || selected?.includes("同名账号") || selected?.includes("Dynamic user")) {
       // 同名账号仅需传递密码
       input_username = "";
       input_secret = ephemeral?.dynamicPassword ?? saved?.dynamicPassword ?? "";
@@ -237,11 +229,7 @@ export const useAssetAction = () => {
       if (effectiveMode === "manual" || selected === "手动输入" || selected === "Manual input") {
         return "@INPUT";
       }
-      if (
-        effectiveMode === "dynamic" ||
-        selected?.includes("同名账号") ||
-        selected?.includes("Dynamic user")
-      ) {
+      if (effectiveMode === "dynamic" || selected?.includes("同名账号") || selected?.includes("Dynamic user")) {
         return "@USER";
       }
 
@@ -373,40 +361,34 @@ export const useAssetAction = () => {
         const payload = event.payload as eventPayload;
       });
 
-      unlistenGetAssetDetailSuccess = await useTauriEventListen(
-        "get-asset-detail-success",
-        (event) => {
-          interface eventPayload {
-            status: string;
-            data: string;
-            asset_id: string;
-          }
-
-          const payload = event.payload as eventPayload;
-
-          if (payload.status === "success") {
-            const assetDetail = JSON.parse(payload.data) as any;
-            const permedAccounts = assetDetail.permed_accounts ?? [];
-            const permedProtocols = assetDetail.permed_protocols ?? [];
-
-            useEventBus().emit("assetDetailUpdated", {
-              assetId: payload.asset_id,
-              permedAccounts: permedAccounts,
-              permedProtocols: permedProtocols
-            });
-          }
+      unlistenGetAssetDetailSuccess = await useTauriEventListen("get-asset-detail-success", (event) => {
+        interface eventPayload {
+          status: string;
+          data: string;
+          asset_id: string;
         }
-      );
+
+        const payload = event.payload as eventPayload;
+
+        if (payload.status === "success") {
+          const assetDetail = JSON.parse(payload.data) as any;
+          const permedAccounts = assetDetail.permed_accounts ?? [];
+          const permedProtocols = assetDetail.permed_protocols ?? [];
+
+          useEventBus().emit("assetDetailUpdated", {
+            assetId: payload.asset_id,
+            permedAccounts: permedAccounts,
+            permedProtocols: permedProtocols
+          });
+        }
+      });
 
       // TODO 提示
-      unlistenGetAssetDetailFailed = await useTauriEventListen(
-        "get-asset-detail-failure",
-        (event) => {
-          interface eventPayload {
-            status: string;
-          }
+      unlistenGetAssetDetailFailed = await useTauriEventListen("get-asset-detail-failure", (event) => {
+        interface eventPayload {
+          status: string;
         }
-      );
+      });
 
       unlistenRenameSuccess = await useTauriEventListen("rename-success", (event) => {
         interface eventPayload {

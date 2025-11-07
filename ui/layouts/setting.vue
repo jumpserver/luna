@@ -140,10 +140,7 @@ watch(
       }"
     >
       <template #default>
-        <div
-          data-tauri-drag-region
-          class="flex items-center justify-center select-none cursor-default"
-        >
+        <div data-tauri-drag-region class="flex items-center justify-center select-none cursor-default">
           <p class="text-sm font-bold pointer-events-none">
             {{ t("Common.ConnectionSettings") }}
           </p>

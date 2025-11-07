@@ -2,7 +2,7 @@ import type { AssetItem } from "~/types/index";
 
 export function useAssetManagement() {
   const { getAssetDetail } = useAssetAction();
-  
+
   // 选中的卡片状态
   const selectedCardIndex = ref<number | null>(null);
   const currentSelectedCardInfo = ref<AssetItem | null>(null);
@@ -40,7 +40,7 @@ export function useAssetManagement() {
     // 状态
     selectedCardIndex,
     currentSelectedCardInfo,
-    
+
     // 方法
     handleCardClick,
     clearSelectedCard,

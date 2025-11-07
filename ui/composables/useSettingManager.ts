@@ -74,10 +74,7 @@ export const useSettingManager = () => {
           const saved = await storage.load();
           const savedSites = Object.keys(saved.siteLanguages || {});
 
-          const unionSites = new Set<string>([
-            ...savedSites,
-            ...Object.keys(state.siteLanguages || {})
-          ]);
+          const unionSites = new Set<string>([...savedSites, ...Object.keys(state.siteLanguages || {})]);
 
           // 如果持久化与内存的联合集合中全部已是目标语言，则直接跳过，避免重复应用与重复日志
           const allAlreadyTarget = [...unionSites].every((site) => {

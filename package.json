@@ -22,7 +22,7 @@
     "tauri:build": "tauri build",
     "tauri:build:debug": "tauri build --debug",
     "cleanup": "./cleanup.sh",
-    "prettier": "prettier --write \"src/**/*.{js,ts,json,tsx,css,less,scss,vue,html,md}\"",
+    "prettier": "prettier --write \"ui/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
     "fresh-start": "./cleanup.sh && pnpm install && pnpm run tauri:dev",
     "reset": "rm -rf node_modules .nuxt dist && cd src-tauri && cargo clean"
   },
@@ -65,6 +65,7 @@
     "@vueuse/nuxt": "^13.9.0",
     "bumpp": "^10.2.0",
     "eslint": "^9.31.0",
+    "prettier": "^3.6.2",
     "typescript": "^5.8.3"
   },
   "resolutions": {

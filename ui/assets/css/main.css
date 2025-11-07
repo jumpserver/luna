@@ -21,7 +21,6 @@
   --bg-hover-dark: rgba(0, 0, 0, 0.3);
   --bg-selected-light: rgba(209, 209, 209, 0.8);
   --bg-selected-dark: rgba(0, 0, 0, 0.5);
-  
 }
 
 .text-xs-plus {
@@ -66,19 +65,19 @@
 /* Windows 平台 */
 .platform-windows .header-bg {
   --header-bg-light: rgb(248, 248, 248);
-  --header-bg-dark: #2C2C2E;
+  --header-bg-dark: #2c2c2e;
 }
 
 /* macOS 平台 */
 .platform-darwin .header-bg {
   --header-bg-light: rgba(255, 255, 255, 0.8);
-  --header-bg-dark: #1E1E1E;
+  --header-bg-dark: #1e1e1e;
 }
 
 /* Linux 平台 */
 .platform-linux .header-bg {
   --header-bg-light: rgb(240, 240, 240);
-  --header-bg-dark: #2D2D30;
+  --header-bg-dark: #2d2d30;
 }
 
 /* 主题颜色应用 */

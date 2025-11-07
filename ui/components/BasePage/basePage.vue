@@ -31,14 +31,7 @@ const assetManager = useAssetFetcher(props.type, scrollRef);
 const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
 
 const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
-const {
-  fetchNextPage,
-  assetsData,
-  isAppending,
-  scrollbarStyles,
-  isInitialLoading,
-  appendSkeletonCount
-} = assetManager;
+const { fetchNextPage, assetsData, isAppending, scrollbarStyles, isInitialLoading, appendSkeletonCount } = assetManager;
 
 const { visibleAssets } = useDisplayAssets(
   assetsData,
@@ -185,10 +178,7 @@ onBeforeUnmount(() => {
       class="w-full overflow-y-auto container-scrollbar pr-2"
       :style="scrollbarStyles"
     >
-      <div
-        v-if="!loggedIn"
-        class="w-full h-full flex flex-col items-center justify-center gap-2 p-2"
-      >
+      <div v-if="!loggedIn" class="w-full h-full flex flex-col items-center justify-center gap-2 p-2">
         <CardLoginCard />
       </div>
 
@@ -230,10 +220,7 @@ onBeforeUnmount(() => {
       class="w-full overflow-y-auto container-scrollbar h-[calc(100vh-5rem)]"
       :style="scrollbarStyles"
     >
-      <div
-        v-if="!loggedIn"
-        class="w-full h-full flex flex-col items-center justify-center gap-2 p-2"
-      >
+      <div v-if="!loggedIn" class="w-full h-full flex flex-col items-center justify-center gap-2 p-2">
         <CardLoginCard />
       </div>
 

@@ -72,8 +72,7 @@ const buildMenuItems = (asset: AssetItem): MenuItem[] => {
     {
       label: asset.isFavorite ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
       icon: "i-lucide-star",
-      onClick: () =>
-        asset.isFavorite ? handleAssetUnfavorite(asset.id) : handleAssetFavorite(asset.id)
+      onClick: () => (asset.isFavorite ? handleAssetUnfavorite(asset.id) : handleAssetFavorite(asset.id))
     }
   ];
 
@@ -155,14 +154,12 @@ const columns: TableColumn<AssetItem>[] = [
         return h("input", {
           ref: (el: any) => (renameInputEl.value = el as HTMLInputElement),
           value: renameValue.value,
-          class:
-            "sm:text-sm font-medium truncate whitespace-nowrap  border-b border-primary focus:outline-none w-full",
+          class: "sm:text-sm font-medium truncate whitespace-nowrap  border-b border-primary focus:outline-none w-full",
           autocapitalize: "off",
           autocorrect: "off",
           spellcheck: false,
           style: { textTransform: "none" },
-          onInput: (e: InputEvent) =>
-            (renameValue.value = (e.target as HTMLInputElement).value || ""),
+          onInput: (e: InputEvent) => (renameValue.value = (e.target as HTMLInputElement).value || ""),
           onKeyup: (e: KeyboardEvent) => {
             if (e.key === "Enter") submitRename(row.original.id);
             if (e.key === "Escape") cancelRename();

@@ -114,7 +114,7 @@ export const useUserInfoStore = defineStore(
         const nextUser = Object.values(userMap.value)[0] as SiteUserData | undefined;
 
         if (nextUser) {
-          const siteLang = getSiteLanguage(nextUser.site) as string;
+          const siteLang = getSiteLanguage(nextUser.site);
 
           const nextWithLang = {
             ...nextUser,
@@ -297,9 +297,7 @@ export const useUserInfoStore = defineStore(
 
       // 判断是否真的需要变更
       const sites = Object.keys(userMap.value);
-      const hasDiffInUsers = sites.some(
-        (site) => (userMap.value[site]?.language as LangType) !== target
-      );
+      const hasDiffInUsers = sites.some((site) => (userMap.value[site]?.language as LangType) !== target);
       const hasDiffInManager =
         getDefaultLanguage() !== target || sites.some((site) => getSiteLanguage(site) !== target);
 
@@ -311,9 +309,7 @@ export const useUserInfoStore = defineStore(
       setLangGlobal(target);
 
       // 仅对有差异的站点进行修改
-      const sitesToUpdate = sites.filter((site) =>
-        hasSiteLanguage(site) ? getSiteLanguage(site) !== target : true
-      );
+      const sitesToUpdate = sites.filter((site) => (hasSiteLanguage(site) ? getSiteLanguage(site) !== target : true));
       sitesToUpdate.forEach((site) => setSiteLanguage(site, target));
 
       // 4) 同步当前内存中的每个用户对象

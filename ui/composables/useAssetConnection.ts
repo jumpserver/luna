@@ -77,19 +77,12 @@ export function useAssetConnection() {
   const confirmConnection = (asset: AssetItem, connectionInfo: ConnectionInfo) => {
     saveConnectionInfo(asset, connectionInfo);
 
-    handleAssetConnection(
-      connectionInfo.account,
-      asset.id,
-      connectionInfo.protocol,
-      asset.permedAccounts!,
-      undefined,
-      {
-        accountMode: connectionInfo.accountMode,
-        manualUsername: connectionInfo.manualUsername,
-        manualPassword: connectionInfo.manualPassword,
-        dynamicPassword: connectionInfo.dynamicPassword
-      }
-    );
+    handleAssetConnection(connectionInfo.account, asset.id, connectionInfo.protocol, asset.permedAccounts!, undefined, {
+      accountMode: connectionInfo.accountMode,
+      manualUsername: connectionInfo.manualUsername,
+      manualPassword: connectionInfo.manualPassword,
+      dynamicPassword: connectionInfo.dynamicPassword
+    });
   };
 
   return {

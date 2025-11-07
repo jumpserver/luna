@@ -17,16 +17,17 @@ export function useContextMenu() {
       const menuHeight = 200; // 菜单高度
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      
+
       let x = event.clientX;
       let y = event.clientY;
-      
+
       // 检查是否来自表格按钮（通过检查目标元素）
       const target = event.target as HTMLElement;
-      const isTableButton = target?.hasAttribute('data-table-context-button') || 
-                           target?.closest('[data-table-context-button]') ||
-                           target?.closest('.UTable');
-      
+      const isTableButton =
+        target?.hasAttribute("data-table-context-button") ||
+        target?.closest("[data-table-context-button]") ||
+        target?.closest(".UTable");
+
       // 如果是表格按钮，优先显示在左侧
       if (isTableButton) {
         x = event.clientX - menuWidth;
@@ -40,16 +41,16 @@ export function useContextMenu() {
           x = event.clientX - menuWidth;
         }
       }
-      
+
       // 如果菜单会超出下边界，则向上调整
       if (y + menuHeight > viewportHeight) {
         y = event.clientY - menuHeight;
       }
-      
+
       // 确保不超出左边界和上边界
       x = Math.max(10, x);
       y = Math.max(10, y);
-      
+
       contextMenuPosition.value = { x, y };
     }
 
@@ -69,7 +70,7 @@ export function useContextMenu() {
     contextMenuVisible,
     contextMenuPosition,
     contextMenuAsset,
-    
+
     // 方法
     showContextMenu,
     hideContextMenu

@@ -8,7 +8,7 @@
 
 ```vue
 <script setup lang="ts">
-import SidebarFlipIcon from '~/icons/SidebarFlipIcon.vue';
+import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
 </script>
 ```
 
@@ -18,13 +18,13 @@ import SidebarFlipIcon from '~/icons/SidebarFlipIcon.vue';
 <template>
   <!-- 基本使用 -->
   <SidebarFlipIcon />
-  
+
   <!-- 自定义尺寸 -->
   <SidebarFlipIcon size="32" />
-  
+
   <!-- 自定义样式 -->
   <SidebarFlipIcon size="24" class="text-blue-500" />
-  
+
   <!-- 不同尺寸示例 -->
   <SidebarFlipIcon size="16" class="text-gray-500" />
   <SidebarFlipIcon size="24" class="text-blue-500" />
@@ -35,10 +35,10 @@ import SidebarFlipIcon from '~/icons/SidebarFlipIcon.vue';
 
 ## Props
 
-| 属性 | 类型 | 默认值 | 描述 |
-|------|------|--------|------|
-| size | string \| number | '24' | 图标尺寸 |
-| class | string | '' | 自定义 CSS 类名 |
+| 属性  | 类型             | 默认值 | 描述            |
+| ----- | ---------------- | ------ | --------------- |
+| size  | string \| number | '24'   | 图标尺寸        |
+| class | string           | ''     | 自定义 CSS 类名 |
 
 ## 特性
 

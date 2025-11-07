@@ -50,9 +50,7 @@ const initDraft = (asset: AssetItem) => {
 
       if (dynamic) {
         draftAccount.value =
-          locale.value === "zh"
-            ? `${dynamic.name}(${dynamic.username})`
-            : `Dynamic user(${dynamic.username})`;
+          locale.value === "zh" ? `${dynamic.name}(${dynamic.username})` : `Dynamic user(${dynamic.username})`;
       } else if (manual) {
         draftAccount.value = locale.value === "zh" ? manual.name : "Manual input";
       } else {
@@ -91,10 +89,7 @@ const buildConnectionInfo = () => {
   if (accountMode === "hosted") {
     const accs = currentAsset.value?.permedAccounts || [];
     const matched = accs.find(
-      (a) =>
-        a.name === normalizedAccount ||
-        a.username === normalizedAccount ||
-        a.alias === normalizedAccount
+      (a) => a.name === normalizedAccount || a.username === normalizedAccount || a.alias === normalizedAccount
     );
     accountId = matched?.id;
   }
@@ -150,11 +145,7 @@ async function ensureDetails(asset: AssetItem) {
   const detailsReady = new Promise<AssetItem>((resolve) => {
     const unsubscribe = useEventBus().once(
       "assetDetailUpdated",
-      (payload: {
-        assetId: string;
-        permedAccounts: PermedAccount[];
-        permedProtocols: PermedProtocol[];
-      }) => {
+      (payload: { assetId: string; permedAccounts: PermedAccount[]; permedProtocols: PermedProtocol[] }) => {
         if (payload.assetId !== asset.id) return;
 
         currentAsset.value = {

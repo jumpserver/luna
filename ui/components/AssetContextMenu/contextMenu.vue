@@ -21,8 +21,7 @@ const emits = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { handleAssetConnection, displayUser, handleAssetFavorite, handleAssetUnfavorite } =
-  useAssetAction();
+const { handleAssetConnection, displayUser, handleAssetFavorite, handleAssetUnfavorite } = useAssetAction();
 
 interface MenuItem {
   value?: string;

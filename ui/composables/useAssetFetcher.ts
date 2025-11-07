@@ -349,25 +349,22 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
       });
     });
 
-    subscribeGetFavoriteAssetsEvent.value = await useTauriEventListen(
-      "get-favorite-assets-success",
-      async (event) => {
-        interface payLoadType {
-          status: number;
-          data: string;
-        }
-
-        const payload = event.payload as payLoadType;
-        const favoriteAssets = JSON.parse(payload.data as string) as Array<{ asset: string }>;
-
-        try {
-          const ids = (favoriteAssets || []).map((x) => x?.asset).filter(Boolean) as string[];
-          favoriteSet.value = new Set(ids);
-        } catch (e) {
-          console.warn("Failed to update favorites", e);
-        }
+    subscribeGetFavoriteAssetsEvent.value = await useTauriEventListen("get-favorite-assets-success", async (event) => {
+      interface payLoadType {
+        status: number;
+        data: string;
       }
-    );
+
+      const payload = event.payload as payLoadType;
+      const favoriteAssets = JSON.parse(payload.data as string) as Array<{ asset: string }>;
+
+      try {
+        const ids = (favoriteAssets || []).map((x) => x?.asset).filter(Boolean) as string[];
+        favoriteSet.value = new Set(ids);
+      } catch (e) {
+        console.warn("Failed to update favorites", e);
+      }
+    });
   };
 
   /**
@@ -426,11 +423,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
     unsubscribeAssetDetailUpdated = on(
       "assetDetailUpdated",
-      (payload: {
-        assetId: string;
-        permedAccounts: PermedAccount[];
-        permedProtocols: PermedProtocol[];
-      }) => {
+      (payload: { assetId: string; permedAccounts: PermedAccount[]; permedProtocols: PermedProtocol[] }) => {
         const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
 
         if (idx !== -1) {

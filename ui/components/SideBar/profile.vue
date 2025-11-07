@@ -95,9 +95,7 @@ function initSelectOrganization(permissionOrgData: PermissionOrgs) {
     ...(permissionOrgData.workbench_orgs || [])
   ];
 
-  const uniqueOrgs = orgs.filter(
-    (org, index, self) => index === self.findIndex((t: PermOrgItem) => t.id === org.id)
-  );
+  const uniqueOrgs = orgs.filter((org, index, self) => index === self.findIndex((t: PermOrgItem) => t.id === org.id));
 
   return uniqueOrgs;
 }
@@ -129,26 +127,24 @@ function clearValidationError() {
  * @returns 切换账户子菜单
  */
 function switchAccountChildren() {
-  const items: DropdownMenuItem[] = (Object.values(userMap.value) as UserData[]).map(
-    (u: UserData) => {
-      let host = u.site;
+  const items: DropdownMenuItem[] = (Object.values(userMap.value) as UserData[]).map((u: UserData) => {
+    let host = u.site;
 
-      try {
-        host = new URL(u.site).host;
-      } catch (e) {
-        console.log("e", e);
-      }
-
-      const label = `${host}`;
-      const isCurrent = u.site === currentSite.value;
-
-      return {
-        label,
-        icon: isCurrent ? "i-lucide-check" : "i-lucide-user",
-        onClick: () => handleSwitchAccount(u.site)
-      } as DropdownMenuItem;
+    try {
+      host = new URL(u.site).host;
+    } catch (e) {
+      console.log("e", e);
     }
-  );
+
+    const label = `${host}`;
+    const isCurrent = u.site === currentSite.value;
+
+    return {
+      label,
+      icon: isCurrent ? "i-lucide-check" : "i-lucide-user",
+      onClick: () => handleSwitchAccount(u.site)
+    } as DropdownMenuItem;
+  });
 
   return [items];
 }
@@ -315,53 +311,49 @@ onMounted(async () => {
     }
   });
 
-  unlistenLoginSuccessRef.value = await useTauriEventListen(
-    "login-success-detected",
-    async (event) => {
-      const { status, profile, permission_orgs, current_org, cookies } =
-        event.payload as UserIntiInfo;
+  unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", async (event) => {
+    const { status, profile, permission_orgs, current_org, cookies } = event.payload as UserIntiInfo;
 
-      const profileData = JSON.parse((profile as any).data);
-      const permissionOrgData = JSON.parse((permission_orgs as any).data) as PermissionOrgs;
-      const currentOrgData = JSON.parse((current_org as any).data);
-      const normalizedSite = normalizedInputSite.value;
+    const profileData = JSON.parse((profile as any).data);
+    const permissionOrgData = JSON.parse((permission_orgs as any).data) as PermissionOrgs;
+    const currentOrgData = JSON.parse((current_org as any).data);
+    const normalizedSite = normalizedInputSite.value;
 
-      if (status === "success" && profileData) {
-        const language = resolveLanguageFromCookies(cookies);
+    if (status === "success" && profileData) {
+      const language = resolveLanguageFromCookies(cookies);
 
-        toast.add({
-          title: t("Login.LoginSuccess"),
-          description: t("Login.LoginSuccessDescription"),
-          color: "primary",
-          icon: "line-md:check-all"
-        });
+      toast.add({
+        title: t("Login.LoginSuccess"),
+        description: t("Login.LoginSuccessDescription"),
+        color: "primary",
+        icon: "line-md:check-all"
+      });
 
-        const availableOrgs = initSelectOrganization(permissionOrgData);
+      const availableOrgs = initSelectOrganization(permissionOrgData);
 
-        userInfoStore.setUserData(normalizedSite, {
-          name: profileData.name,
-          headerJson: cookies,
-          site: normalizedSite,
-          org: currentOrgData,
-          system_roles: profileData.system_roles,
-          availableOrgs,
-          language,
-          connectionInfo: {
-            protocol: "",
-            username: ""
-          }
-        });
+      userInfoStore.setUserData(normalizedSite, {
+        name: profileData.name,
+        headerJson: cookies,
+        site: normalizedSite,
+        org: currentOrgData,
+        system_roles: profileData.system_roles,
+        availableOrgs,
+        language,
+        connectionInfo: {
+          protocol: "",
+          username: ""
+        }
+      });
 
-        userInfoStore.setOrganizations(availableOrgs);
-        userInfoStore.setCurrentOrg(currentOrgData);
-        userInfoStore.setUserLoggedIn(true);
+      userInfoStore.setOrganizations(availableOrgs);
+      userInfoStore.setCurrentOrg(currentOrgData);
+      userInfoStore.setUserLoggedIn(true);
 
-        nextTick(() => {
-          useEventBus().emit("refresh", undefined);
-        });
-      }
+      nextTick(() => {
+        useEventBus().emit("refresh", undefined);
+      });
     }
-  );
+  });
 
   unlistenLoginFailedRef.value = await useTauriEventListen("login-failed-detected", () => {
     toast.add({
@@ -416,9 +408,7 @@ onBeforeUnmount(() => {
       >
         <template #name>
           <UTooltip v-if="!props.collapse" arrow :text="currentUser?.name">
-            <span
-              class="block md:max-w-[150px] truncate leading-tight text-sm font-medium cursor-pointer"
-            >
+            <span class="block md:max-w-[150px] truncate leading-tight text-sm font-medium cursor-pointer">
               {{ currentUser?.name }}
             </span>
           </UTooltip>

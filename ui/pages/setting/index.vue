@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-  layout: 'setting',
-  redirect: '/setting/general',
+  layout: "setting",
+  redirect: "/setting/general"
 });
 </script>

@@ -58,10 +58,7 @@ const selectedAppearance = computed<ThemeType>({
 });
 
 const mainColor = computed<string>({
-  get: () =>
-    userTheme.value === "dark"
-      ? primaryColorDark.value || "#34d399"
-      : primaryColorLight.value || "#1ab394",
+  get: () => (userTheme.value === "dark" ? primaryColorDark.value || "#34d399" : primaryColorLight.value || "#1ab394"),
   set: (color: string) => {
     if (!color) return;
 
@@ -244,13 +241,7 @@ function applyFont(font: string) {
 
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Common.Fonts") }}</span>
-      <USelectMenu
-        v-model="selectedFont"
-        :items="fontsItems"
-        value-key="id"
-        option-attribute="label"
-        class="w-56"
-      />
+      <USelectMenu v-model="selectedFont" :items="fontsItems" value-key="id" option-attribute="label" class="w-56" />
     </div>
   </div>
 </template>

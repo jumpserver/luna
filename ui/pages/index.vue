@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 definePageMeta({
-  redirect: '/linux',
-  layout: 'default'
+  redirect: "/linux",
+  layout: "default"
 });
 </script>
 

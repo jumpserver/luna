@@ -90,11 +90,7 @@ const cancelRename = () => {
       container: 'p-0 sm:p-0 '
     }"
   >
-    <section
-      class="w-full p-4"
-      @dblclick="emits('connectAsset', props.asset)"
-      @contextmenu="handleContextMenu"
-    >
+    <section class="w-full p-4" @dblclick="emits('connectAsset', props.asset)" @contextmenu="handleContextMenu">
       <div class="flex items-center justify-between w-full">
         <div class="flex items-center gap-3 flex-1 min-w-0">
           <CardAssetIcon :type="props.asset.type" size="lg" />

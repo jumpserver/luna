@@ -54,13 +54,7 @@ watch(
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Common.Language") }}</span>
 
-      <USelect
-        v-model="selectedLanguage"
-        :items="languageItems"
-        value-key="id"
-        option-attribute="label"
-        class="w-56"
-      />
+      <USelect v-model="selectedLanguage" :items="languageItems" value-key="id" option-attribute="label" class="w-56" />
     </div>
   </div>
 </template>

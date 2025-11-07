@@ -56,11 +56,9 @@ useHead({
   }
 });
 
-watch(
-  () => [userTheme.value, primaryColorLight.value, primaryColorDark.value],
-  applyCurrentThemeColor,
-  { immediate: true }
-);
+watch(() => [userTheme.value, primaryColorLight.value, primaryColorDark.value], applyCurrentThemeColor, {
+  immediate: true
+});
 
 watch(
   () => fontFamily.value,
@@ -70,8 +68,7 @@ watch(
 
 function applyCurrentThemeColor() {
   const mode = userTheme.value === "dark" ? "dark" : "light";
-  const hex =
-    mode === "dark" ? (primaryColorDark.value as string) : (primaryColorLight.value as string);
+  const hex = mode === "dark" ? (primaryColorDark.value as string) : (primaryColorLight.value as string);
   if (hex) {
     applyPrimaryColor(hex);
   }
