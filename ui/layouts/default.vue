@@ -1,5 +1,21 @@
 <script lang="ts" setup>
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
+const { isWindows } = usePlatform();
+
+const cardUi = computed(() => {
+  const base = ["rounded-none", "overflow-visible"];
+
+  if (isWindows.value) {
+    base.push("border-0", "ring-0", "shadow-none", "bg-transparent");
+  }
+
+  return {
+    header: "p-0 sm:px-0",
+    body: "p-0 sm:p-0",
+    footer: "p-0 sm:p-0",
+    base: base.join(" ")
+  };
+});
 
 onMounted(() => {
   initialTheme();
@@ -8,16 +24,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <UCard
-    variant="outline"
-    class="rounded-none overflow-visible"
-    :ui="{
-      header: 'p-0 sm:px-0',
-      body: 'p-0 sm:p-0',
-      footer: 'p-0 sm:p-0'
-    }"
-    style="background-color: transparent"
-  >
+  <UCard variant="outline" :ui="cardUi" style="background-color: transparent">
     <div class="flex gap-0 w-full h-screen">
       <SideBar />
 
