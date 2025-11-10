@@ -9,9 +9,8 @@ LDFLAGS=-w -s
 
 CLIENTBUILD=CGO_ENABLED=0 go build -trimpath
 
-# 自动检测当前平台
-CURRENT_OS := $(shell go env GOOS)
-CURRENT_ARCH := $(shell go env GOARCH)
+CURRENT_OS := $(shell uname -s 2>/dev/null | tr '[:upper:]' '[:lower:]' | sed 's/.*mingw.*/windows/; s/.*cygwin.*/windows/; s/.*msys.*/windows/' || echo "unknown")
+CURRENT_ARCH := $(shell uname -m 2>/dev/null | sed 's/x86_64/amd64/; s/aarch64/arm64/; s/arm64/arm64/; s/i686/386/' || echo "amd64")
 
 # 默认目标：构建并安装当前平台
 .PHONY: default
