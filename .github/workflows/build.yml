@@ -10,19 +10,9 @@ on:
     tags:
       - "v*" # 只有正式版本标签才触发构建
 
-env:
-  # Tauri 自动更新签名密钥
-  TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-  TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-  # macOS 代码签名 (保留原有的 Xcode 参数)
-  XCODE_APP_TEAM_ID: ${{ secrets.XCODE_APP_TEAM_ID }}
-  XCODE_APP_LOADER_EMAIL: ${{ secrets.XCODE_APP_LOADER_EMAIL }}
-  XCODE_APP_LOADER_PASSWORD: ${{ secrets.XCODE_APP_LOADER_PASSWORD }}
-  BUILD_CERTIFICATE_BASE64: ${{ secrets.CSC_LINK }}
-  P12_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-  # Windows 代码签名
-  CSC_LINK: ${{ secrets.CSC_LINK }}
-  CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+permissions:
+  contents: write
+
 
 jobs:
   pre-build:
@@ -114,7 +104,7 @@ jobs:
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PRIVATE_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           XCODE_APP_TEAM_ID: ${{ secrets.XCODE_APP_TEAM_ID }}
