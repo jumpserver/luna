@@ -341,24 +341,34 @@ export function launchLocalApp(url, fail) {
 export function connectOnNewPage(node: TreeNode, newWindowMode?: string) {
   const url = `/luna/connect?login_to=${node.id}&type=${node.meta.type}`;
   let params = 'toolbar=yes,scrollbars=yes,resizable=yes';
+
+  // auto 模式:尺寸为屏幕的三分之一并根据会话内的计数在屏幕上“级联/平铺”位置
   if (newWindowMode === 'auto') {
     let count: number;
     let top = 50;
+
     count = parseInt(window.sessionStorage.getItem('newWindowCount'), 10);
+
     if (isNaN(count)) {
       count = 0;
     }
+
     let left = 100 + count * 100;
     top = 50 + count * 50;
+
     if (left + screen.width / 3 > screen.width) {
       // 支持两排足以
       top = screen.height / 3;
       count = 1;
       left = 100;
     }
+
     params = params + `,top=${top},left=${left},width=${screen.width / 3},height=${screen.height / 3}`;
     window.sessionStorage.setItem('newWindowCount', `${count + 1}`);
+
     window.open(url, '_blank', params);
+
+    // auto 模式:尺寸为当前窗口的 innerWidth x innerHeight;位置固定在 top=50,left=100
   } else if (newWindowMode === 'new') {
     params = params + `,top=50,left=100,width=${window.innerWidth},height=${window.innerHeight}`;
     window.open(url, '_blank', params);
