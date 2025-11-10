@@ -2,7 +2,7 @@
   "bundle": {
     "active": true,
     "targets": ["dmg", "msi", "nsis", "appimage", "deb", "rpm"],
-    "icon": ["icons/icon.ico", "icons/icon.icns", "icons/icon-appimage.png"],
+    "icon": ["icons/icon.ico", "icons/icon.icns", "icons/icon.png"],
     "resources": ["resources/bin/"],
     "externalBin": [],
     "copyright": "",
