@@ -9,6 +9,7 @@ const localePath = useLocalePath();
 const { t } = useI18n();
 const { emit } = useEventBus();
 const { isMacOS } = usePlatform();
+// const isMacOS = false;
 const { collapse, setCollapse } = useSettingManager();
 
 const isLoading = ref(false);
@@ -74,8 +75,8 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
     <div class="flex flex-col w-full">
       <!-- 折叠按钮 -->
       <div
-        class="flex justify-center items-center px-3 h-10"
-        :class="isMacOS ? (collapse ? 'mt-9' : 'justify-end') : collapse ? 'py-2' : 'py-2 mt-1 justify-between'"
+        class="flex  items-center px-3 h-10"
+        :class="isMacOS ? (collapse ? 'mt-9 justify-center' : 'justify-end') : collapse ? 'py-2 justify-center' : 'py-2 mt-1 justify-between'"
       >
         <div class="flex items-center gap-2" v-if="!isMacOS && !collapse">
           <UAvatar size="sm" src="/logo.png" class="bg-transparent" :ui="{ root: 'bg-transparent' }" />

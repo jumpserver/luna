@@ -17,6 +17,7 @@ new-Client/dist
 ui/node_modules
 ui/dist/r
 node_modules
+.venv
 .DS_Store
 *.log*
 .data
