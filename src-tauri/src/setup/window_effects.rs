@@ -37,6 +37,16 @@ pub fn apply_windows_blur(_win: &WebviewWindow) -> Result<(), Box<dyn std::error
     Ok(())
 }
 
+/// 为 Linux 窗口隐藏原生标题栏
+#[cfg(target_os = "linux")]
+pub fn apply_linux_window(win: &WebviewWindow) -> Result<(), Box<dyn std::error::Error>> {
+    info!("Disabling Linux window decorations for custom header");
+    if let Err(e) = win.set_decorations(false) {
+        error!("Failed to set window decorations: {}", e);
+    }
+    Ok(())
+}
+
 /// 根据操作系统应用相应的窗口效果
 pub fn apply_window_effects(win: &WebviewWindow) -> Result<(), Box<dyn Error>> {
     // 平台特定特效
@@ -49,7 +59,11 @@ pub fn apply_window_effects(win: &WebviewWindow) -> Result<(), Box<dyn Error>> {
         {
             apply_windows_blur(win)
         }
-        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        #[cfg(target_os = "linux")]
+        {
+            apply_linux_window(win)
+        }
+        #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
         {
             info!("Window effects not supported on this platform");
             Ok(())
