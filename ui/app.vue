@@ -1,4 +1,7 @@
 <script lang="ts" setup>
+import en from "element-plus/es/locale/lang/en";
+import zhCn from "element-plus/es/locale/lang/zh-cn";
+
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { storeToRefs } from "pinia";
 
@@ -14,6 +17,8 @@ const { locale, setLocale } = useI18n();
 const { currentSite } = storeToRefs(userInfoStore);
 const { isMacOS } = usePlatform();
 const { userTheme, applyThemePreference, applySystemThemePreference } = useThemeAdapter();
+
+const elLocale = computed(() => (locale.value?.startsWith("zh") ? zhCn : en));
 
 const { applyPrimaryColor } = useColor();
 const settingManager = useSettingManager();
@@ -153,9 +158,11 @@ watch(
   <Html class="overflow-x-hidden overflow-y-hidden">
     <Body class="font-sans antialiased h-screen w-screen">
       <UApp>
-        <NuxtLayout>
-          <NuxtPage :page-key="pageKey" />
-        </NuxtLayout>
+        <ElConfigProvider :locale="elLocale">
+          <NuxtLayout>
+            <NuxtPage :page-key="pageKey" />
+          </NuxtLayout>
+        </ElConfigProvider>
       </UApp>
     </Body>
   </Html>

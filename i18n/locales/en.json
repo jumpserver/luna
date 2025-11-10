@@ -22,7 +22,6 @@
     "PrimaryColor": "Primary color",
 		"SystemDefault": "System default",
 		"General": "General",
-		"ChooseColor":"Choose color",
 		"ApplicationConfig": "Application Config",
 		"EmptyDescription": "No authorized assets are available for the current type"
 	},
