@@ -40,7 +40,6 @@
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-shell": "^2.3.3",
     "@tauri-apps/plugin-store": "^2.4.1",
-    "element-plus": "^2.11.5",
     "mitt": "^3.0.1",
     "nuxt": "^4.2.0",
     "pinia": "^3.0.3",

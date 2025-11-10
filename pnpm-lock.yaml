@@ -50,9 +50,6 @@ importers:
       '@tauri-apps/plugin-store':
         specifier: ^2.4.1
         version: 2.4.1
-      element-plus:
-        specifier: ^2.11.5
-        version: 2.11.5(vue@3.5.18(tslite@5.7.3))
       mitt:
         specifier: ^3.0.1
         version: 3.0.1

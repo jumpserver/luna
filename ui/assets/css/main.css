@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
-@import "element-plus/theme-chalk/dark/css-vars.css";
 
 @theme {
   --color-secondary: var(--ui-color-secondary-500);
