@@ -60,6 +60,8 @@
     "@iconify-json/proicons": "^1.2.17",
     "@iconify-json/solar": "^1.2.5",
     "@nuxt/eslint": "^1.5.2",
+    "@oxc-minify/binding-darwin-arm64": "0.96.0",
+    "@oxc-transform/binding-darwin-arm64": "0.96.0",
     "@tauri-apps/cli": "^2.8.4",
     "@vueuse/core": "^13.9.0",
     "@vueuse/nuxt": "^13.9.0",
