@@ -181,10 +181,9 @@ const applyCurrentThemeColor = (broadcast = false) => {
 
 onMounted(async () => {
   const promise = hydrationPromise.value;
+
   if (promise) {
-    try {
-      await promise;
-    } catch {}
+    await promise;
   } else if (!isHydrated.value) {
     await nextTick();
   }
@@ -234,7 +233,7 @@ function applyFont(font: string) {
 
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Common.PrimaryColor") }}</span>
-      <el-color-picker v-model="mainColor" show-alpha :predefine="predefineColors" class="w-40" />
+      <ColorPicker v-model="mainColor" :colors="predefineColors" class="w-40" />
     </div>
 
     <USeparator />

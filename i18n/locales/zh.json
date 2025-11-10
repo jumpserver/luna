@@ -22,6 +22,7 @@
     "PrimaryColor": "主色",
     "SystemDefault":"系统默认",
     "General": "通用",
+    "ChooseColor": "选择颜色",
     "ApplicationConfig": "应用配置",
     "EmptyDescription": "当前类型下暂无可用的授权资产"
   },
