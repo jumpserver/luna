@@ -12,7 +12,7 @@ type BusEvents = {
   refresh: undefined;
   versionAlert: {
     type: string;
-    link?: string;
+    version?: string;
   };
   assetRenamed: {
     assetId: string;

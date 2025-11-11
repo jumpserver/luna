@@ -1,14 +1,17 @@
 <script setup lang="ts">
+type alertType = "incompatible" | "noMatch";
+
 const { theme } = useSettingManager();
 const { componentsConfig } = useAppConfig();
 const clearSelectionCallback = ref<(() => void) | null>(null);
 
-const { t, locale } = useI18n();
-const alertType = ref<"" | "incompatible" | "noMatch">("");
+const { t } = useI18n();
+const latestVersion = ref("");
+const alertType = ref<"" | alertType>("");
 
 const description = computed(() => {
-  if (alertType.value === "incompatible") return t("Login.VersionOld");
-  if (alertType.value === "noMatch") return t("Login.VersionIncompatible");
+  if (alertType.value === "incompatible") return t("Login.VersionIncompatible");
+  if (alertType.value === "noMatch") return t("Login.VersionNoMatch", { version: latestVersion.value });
   return "";
 });
 
@@ -22,8 +25,12 @@ const providerClearSelection = (callback: () => void) => {
   clearSelectionCallback.value = callback;
 };
 
-useEventBus().on("versionAlert", ({ type }: { type: string }) => {
-  alertType.value = (type as any) ?? "";
+useEventBus().on("versionAlert", ({ type, version }: { type: string; version?: string }) => {
+  alertType.value = type as alertType;
+
+  if (version) {
+    latestVersion.value = version;
+  }
 });
 
 provide("providerClearSelection", providerClearSelection);

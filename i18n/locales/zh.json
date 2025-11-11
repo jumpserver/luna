@@ -113,8 +113,8 @@
     "InvalidCertificateMac": "登录失败：证书无效或被系统安全策略拦截（macOS WebView）。请安装有效证书",
     "InvalidCertificateGeneric": "登录失败：证书或安全连接异常。",
     "NetworkError": "登录失败：网络异常，请检查连接",
-    "VersionOld": "当前客户端版本过高，部分功能可能异常，建议使用旧版客户端",
-    "VersionIncompatible": "检测到客户端版本与服务器版本不一致，部分功能可能不可用。你可以继续使用当前版本，或更新至最新版本以避免问题。"
+    "VersionIncompatible": "客户端与JumpServer 版本（< v4.10.12-lts）不匹配，请下载使用 v3.0.7 的客户端",
+    "VersionNoMatch": "客户端与 JumpServer 版本不匹配，请下载使用 v{version} 版本的客户端"
   },
   "Loading": {
     "Loading": "加载中",

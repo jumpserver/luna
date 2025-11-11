@@ -360,7 +360,7 @@ onMounted(async () => {
       });
 
       if (vStatus !== "incompatible" && !vMatch) {
-        useEventBus().emit("versionAlert", { type: "noMatch" });
+        useEventBus().emit("versionAlert", { type: "noMatch", version: versionMessage[versionMessage.length - 1] });
       }
 
       // 对于旧的 jms 获取 versions 的接口会返回 404

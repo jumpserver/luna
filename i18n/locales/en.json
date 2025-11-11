@@ -114,8 +114,8 @@
     "InvalidCertificateMac": "Login failed: certificate invalid or blocked by system security (macOS WebView). Install a valid certificate or open in system browser.",
     "InvalidCertificateGeneric": "Login failed: certificate or secure connection issue.",
     "NetworkError": "Login failed: network error. Please check connectivity.",
-		"VersionOld": "Your client version is too high. Some features may be unstable. Please use the previous version.",
-		"VersionIncompatible": "Your client version does not match the server version.Some features may be unavailable. You can continue with the current version or update now to avoid potential issues."
+		"VersionIncompatible": "The client version is incompatible with JumpServer versions earlier than v4.10.12-lts. Please download and use the v3.0.7 client.",
+		"VersionNoMatch": "The client version does not match the JumpServer version. Please download and use the v{version} client."
   },
 	"Asset": {
 		"GetAssetFailed": "Get asset failed, please refresh and try again"
