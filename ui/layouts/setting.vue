@@ -8,9 +8,9 @@ definePageMeta({
 });
 
 const localePath = useLocalePath();
-
-const { t, locale, setLocale } = useI18n();
 const { theme } = useSettingManager();
+const { t, locale, setLocale } = useI18n();
+
 const userInfoStore = useUserInfoStore();
 const { currentLanguage } = storeToRefs(userInfoStore);
 
@@ -129,9 +129,12 @@ watch(
 
 <template>
   <UPage
-    class="h-screen"
+    class="h-screen flex flex-col"
+    :ui="{
+      center: 'flex flex-col h-full min-h-0'
+    }"
     :style="{
-      backgroundColor: theme === 'dark' ? '#201F22' : '#F5F5F5'
+      backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5'
     }"
   >
     <UPageHeader
@@ -148,8 +151,8 @@ watch(
       </template>
     </UPageHeader>
 
-    <UPageBody class="mt-2 mx-2">
-      <div class="flex gap-1 w-full">
+    <UPageBody class="mt-2 mx-2 flex-1 min-h-0 h-full overflow-y-auto">
+      <div class="flex gap-1 w-full min-h-0">
         <UNavigationMenu
           :items="settingMenu"
           :highlight="true"
@@ -159,9 +162,7 @@ watch(
           :class="locale === 'en' ? 'w-64' : 'w-48'"
         />
 
-        <USeparator orientation="vertical" class="h-48" />
-
-        <UCard class="flex-1" variant="subtle">
+        <UCard class="flex-1 min-w-0 h-full overflow-y-auto" variant="subtle">
           <slot />
         </UCard>
       </div>
