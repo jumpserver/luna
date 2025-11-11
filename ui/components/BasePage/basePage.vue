@@ -175,7 +175,7 @@ onBeforeUnmount(() => {
     <section
       v-if="layouts === 'grid'"
       ref="scrollRef"
-      class="w-full overflow-y-auto container-scrollbar pr-2"
+      class="w-full overflow-y-auto container-scrollbar"
       :style="scrollbarStyles"
     >
       <div v-if="!loggedIn" class="w-full h-full flex flex-col items-center justify-center gap-2 p-2">

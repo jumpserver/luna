@@ -3,6 +3,15 @@ const { theme } = useSettingManager();
 const { componentsConfig } = useAppConfig();
 const clearSelectionCallback = ref<(() => void) | null>(null);
 
+const { t, locale } = useI18n();
+const alertType = ref<"" | "incompatible" | "noMatch">("");
+
+const description = computed(() => {
+  if (alertType.value === "incompatible") return t("Login.VersionOld");
+  if (alertType.value === "noMatch") return t("Login.VersionIncompatible");
+  return "";
+});
+
 const clearSelection = () => {
   if (clearSelectionCallback.value) {
     clearSelectionCallback.value();
@@ -12,6 +21,10 @@ const clearSelection = () => {
 const providerClearSelection = (callback: () => void) => {
   clearSelectionCallback.value = callback;
 };
+
+useEventBus().on("versionAlert", ({ type }: { type: string }) => {
+  alertType.value = (type as any) ?? "";
+});
 
 provide("providerClearSelection", providerClearSelection);
 </script>
@@ -32,13 +45,23 @@ provide("providerClearSelection", providerClearSelection);
     }"
     :ui="{
       header: 'p-0 sm:p-0',
-      body: 'p-2 pr-1 sm:p-4 px-4 !pr-[3px] h-[calc(100vh-58px)]'
+      body: 'p-2 pr-1 sm:p-4 px-4 h-[calc(100vh-58px)]'
     }"
     @click="clearSelection"
   >
     <template #header>
       <Header />
     </template>
+
+    <UAlert
+      v-if="description"
+      close
+      color="primary"
+      variant="soft"
+      :description="description"
+      icon="solar:shield-warning-linear"
+      class="mb-4 mr-4"
+    />
 
     <slot />
   </UCard>

@@ -97,7 +97,7 @@
 	},
   "Login": {
 		"Title": "Input Login Site",
-		"Description": "Please enter the site address (e.g. https://example.com) or IP address",
+		"Description": "Please enter the site address (e.g. https://example.com) or IP",
 		"LoginSuccess": "Login Success",
 		"LoginSuccessDescription": "Your operation has been completed successfully",
 		"EmptyUrlError": "Please enter a site address",
@@ -113,7 +113,9 @@
     "LoginFailedTimeout": "Login failed. Login timeout. Please log in again",
     "InvalidCertificateMac": "Login failed: certificate invalid or blocked by system security (macOS WebView). Install a valid certificate or open in system browser.",
     "InvalidCertificateGeneric": "Login failed: certificate or secure connection issue.",
-    "NetworkError": "Login failed: network error. Please check connectivity."
+    "NetworkError": "Login failed: network error. Please check connectivity.",
+		"VersionOld": "Your client version is too high. Some features may be unstable. Please use the previous version.",
+		"VersionIncompatible": "Your client version does not match the server version.Some features may be unavailable. You can continue with the current version or update now to avoid potential issues."
   },
 	"Asset": {
 		"GetAssetFailed": "Get asset failed, please refresh and try again"

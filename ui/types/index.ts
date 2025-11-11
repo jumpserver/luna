@@ -89,6 +89,7 @@ export interface UserData {
 export interface UserIntiInfo {
   status: string;
   cookies: string;
+  version?: string;
   profile: {
     data: string;
   };

@@ -104,6 +104,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
     const onScroll = () => {
       if (!hasMore.value || isLoading.value) return;
 
+      // 元素内容的总高度 - 元素可视区域的高度 - 元素内容被卷起（向上滚动）的距离
       const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
 
       if (distanceToBottom <= 50) {
