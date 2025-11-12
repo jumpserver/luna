@@ -61,7 +61,7 @@ fn candidate_paths(is_dev: bool) -> Vec<PathBuf> {
     } else {
         if let Ok(current_exe) = env::current_exe() {
             if let Some(base) = current_exe.parent() {
-                candidates.push(base.join(subdir).join(exe_name));
+                candidates.push(base.join("resources").join("bin").join(subdir).join(exe_name));
                 // macOS 打包：App.app/Contents/MacOS/ 下为运行目录
                 // 资源常在 App.app/Contents/Resources/
                 if cfg!(target_os = "macos") {
