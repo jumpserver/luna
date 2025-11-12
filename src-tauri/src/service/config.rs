@@ -288,13 +288,14 @@ impl ConfigService {
         category: &str,
         protocol: &str,
         name: &str,
+        new_path: Option<String>,
     ) -> Result<Value, String> {
         // 确保用户配置文件存在，并写入到用户配置目录
-        let path = Self::ensure_user_config(app)?;
+        let config_path = Self::ensure_user_config(app)?;
 
-        log::info!("Updating config at: {:?}", path);
+        log::info!("Updating config at: {:?}", config_path);
 
-        let content = std::fs::read_to_string(&path)
+        let content = std::fs::read_to_string(&config_path)
             .map_err(|e| format!("read config.json failed: {}", e))?;
         let mut json: Value = serde_json::from_str(&content)
             .map_err(|e| format!("parse config.json failed: {}", e))?;
@@ -311,6 +312,48 @@ impl ConfigService {
             .and_then(|os| os.get_mut(category))
             .and_then(|v| v.as_array_mut())
             .ok_or_else(|| format!("invalid config path: {}.{}", os_key, category))?;
+
+        // 如果传入了路径，则只更新对应项的 path 与 is_set，不改变 match_first
+        if let Some(p) = new_path.clone() {
+            let trimmed = p.trim().to_string();
+            if !trimmed.is_empty() {
+                let mut found = false;
+                for item in arr.iter_mut() {
+                    let item_name = item.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                    if item_name == name {
+                        found = true;
+                        // 更新 path
+                        item.as_object_mut()
+                            .unwrap()
+                            .insert("path".into(), Value::String(trimmed.clone()));
+                        // 标记为已设置
+                        item.as_object_mut()
+                            .unwrap()
+                            .insert("is_set".into(), Value::Bool(true));
+                        break;
+                    }
+                }
+
+                if !found {
+                    return Err(format!(
+                        "selected item '{}' not found under {}.{}",
+                        name, os_key, category
+                    ));
+                }
+
+                let pretty = serde_json::to_string_pretty(&json)
+                    .map_err(|e| format!("serialize config.json failed: {}", e))?;
+                std::fs::write(&config_path, pretty)
+                    .map_err(|e| format!("write config.json failed: {}", e))?;
+
+                log::info!("Config path updated successfully at: {:?}", config_path);
+
+                return Ok(json
+                    .get(os_key)
+                    .cloned()
+                    .ok_or_else(|| format!("config.json missing key for current OS: {}", os_key))?);
+            }
+        }
 
         let mut found = false;
 
@@ -347,9 +390,10 @@ impl ConfigService {
 
         let pretty = serde_json::to_string_pretty(&json)
             .map_err(|e| format!("serialize config.json failed: {}", e))?;
-        std::fs::write(&path, pretty).map_err(|e| format!("write config.json failed: {}", e))?;
+        std::fs::write(&config_path, pretty)
+            .map_err(|e| format!("write config.json failed: {}", e))?;
 
-        log::info!("Config updated successfully at: {:?}", path);
+        log::info!("Config updated successfully at: {:?}", config_path);
 
         Ok(json
             .get(os_key)

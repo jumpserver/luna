@@ -33,7 +33,9 @@ const imagesMap: Record<string, string> = {
 const emit = defineEmits<{ (e: "toggle", value: boolean): void }>();
 
 const { t, locale } = useI18n();
+const { isWindows } = usePlatform();
 const { language } = useSettingManager();
+const { setAppConfig } = useSettingManager();
 
 const commentText = computed(() => {
   const lang = language.value || (locale?.value as string) || "en";
@@ -42,12 +44,46 @@ const commentText = computed(() => {
 
 const iconSrc = computed(() => imagesMap[props.item?.name?.toLowerCase?.()]);
 
+// Windows 下，除 putty 与 mstsc 外，提供可选择 exe 路径的入口
+const isWindowsPathPickTarget = computed(() => {
+  const name = props.item?.name?.toLowerCase?.() || "";
+  return isWindows.value && name !== "putty" && name !== "mstsc";
+});
+
+const canToggle = computed(() => !!(props.item?.path && props.item.path.trim()))
+
+
 const onSwitch = (v: boolean) => {
+  if (!canToggle.value) return;
   if (v) emit("toggle", true);
 };
 
 const openDownloadPage = async (url: string) => {
   await useTauriShellOpen(url);
+};
+
+const selectExecutablePath = async () => {
+  try {
+    const selected = (await useTauriDialogOpen({
+      multiple: false,
+      filters: [{ name: "Executable", extensions: ["exe"] }]
+    })) as string | null;
+
+    if (selected) {
+      const updated = await useTauriCoreInvoke("update_config_selection", {
+        category: props.item.type,
+        protocol: props.protocol || "",
+        name: props.item.name,
+        path: selected
+      });
+
+      if (updated) {
+        setAppConfig(updated as any);
+      }
+    }
+  } catch (e) {
+    console.error("select executable failed", e);
+  }
 };
 </script>
 
@@ -66,12 +102,18 @@ const openDownloadPage = async (url: string) => {
           <div class="flex flex-col gap-1">
             <p class="text-sm font-medium">{{ props.item.display_name }}</p>
 
-            <div
-              class="inline-flex items-center text-xs text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-white/10 rounded px-2 py-1 max-w-[22rem] md:max-w-[28rem] truncate"
-              :title="props.item.path || '-'"
-            >
-              <span class="truncate">{{ props.item.path || "-" }}</span>
-            </div>
+            <!-- Windows 下特定项显示路径选择，否则展示已有路径 -->
+            <template v-if="isWindowsPathPickTarget && !props.item.path">
+              <UButton label="Select path" color="neutral" variant="outline" @click="selectExecutablePath()" />
+            </template>
+            <template v-else>
+              <div
+                class="inline-flex items-center text-xs text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-white/10 rounded px-2 py-1 max-w-[22rem] md:max-w-[28rem] truncate"
+                :title="props.item.path || '-'"
+              >
+                <span class="truncate">{{ props.item.path || "-" }}</span>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -79,6 +121,7 @@ const openDownloadPage = async (url: string) => {
           unchecked-icon="i-lucide-x"
           checked-icon="i-lucide-check"
           :model-value="props.selected ?? false"
+          :disabled="!canToggle"
           @update:model-value="onSwitch"
         />
       </div>

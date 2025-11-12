@@ -9,6 +9,7 @@ pub async fn update_config_selection(
     category: String,
     protocol: String,
     name: String,
+    path: Option<String>,
 ) -> Result<Value, String> {
-    ConfigService::update_selection(&app, &category, &protocol, &name)
+    ConfigService::update_selection(&app, &category, &protocol, &name, path)
 }

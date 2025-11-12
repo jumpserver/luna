@@ -38,6 +38,7 @@ tauri-plugin-clipboard-manager = "2.3.0"
 tauri-plugin-deep-link = "2.4.5"
 font-kit = "0.14"
 tauri-plugin-log = "2"
+tauri-plugin-dialog = "2.3.1"
 
 
 [dependencies.tauri]

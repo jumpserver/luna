@@ -74,6 +74,7 @@
     "updater:allow-download",
     "updater:allow-install",
     "deep-link:default",
-    "log:default"
+    "log:default",
+    "dialog:allow-open"
   ]
 }
