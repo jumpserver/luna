@@ -1,6 +1,6 @@
 [package]
-name = "jumpserver-client"
-version = "1.4.0"
+name = "JumpServerClient"
+version = "3.1.0"
 description = "JumpServer client tool"
 authors = [ "JumpServer" ]
 license = "MIT"

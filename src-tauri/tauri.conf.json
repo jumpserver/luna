@@ -1,9 +1,22 @@
 {
   "bundle": {
     "active": true,
-    "targets": ["dmg", "msi", "nsis", "appimage", "deb", "rpm"],
-    "icon": ["icons/icon.ico", "icons/icon.icns", "icons/icon.png"],
-    "resources": ["resources/bin/"],
+    "targets": [
+      "dmg",
+      "msi",
+      "nsis",
+      "appimage",
+      "deb",
+      "rpm"
+    ],
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.icns",
+      "icons/icon.png"
+    ],
+    "resources": [
+      "resources/bin/"
+    ],
     "externalBin": [],
     "copyright": "",
     "category": "DeveloperTool",
@@ -40,7 +53,9 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["jms"]
+        "schemes": [
+          "jms"
+        ]
       }
     }
   },
