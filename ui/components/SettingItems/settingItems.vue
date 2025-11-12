@@ -1,15 +1,18 @@
 <script lang="ts" setup>
 import type { ConfigItem } from "~/types/index";
 
-import item2 from "@/assets/images/item2.png";
-import realvnc from "@/assets/images/realvnc.png";
-import dbeaver from "@/assets/images/dbeaver.png";
-import terminal from "@/assets/images/terminal.png";
-import tigerVnc from "@/assets/images/tigerVnc.png";
-import securecrt from "@/assets/images/securecrt.png";
-import windowsApp from "@/assets/images/windowsApp.png";
-import anotherRedis from "@/assets/images/anotherRedis.png";
-import mongodbCompass from "@/assets/images/mongodb.png";
+// 批量导入所有图片资源
+const imageModules = import.meta.glob<{ default: string }>('@/assets/images/*.png', { eager: true });
+
+// 辅助函数：从路径中获取文件名（不含扩展名）
+const getImageByName = (filename: string): string | undefined => {
+  for (const path in imageModules) {
+    if (path.includes(`/${filename}.png`)) {
+      return imageModules[path]?.default;
+    }
+  }
+  return undefined;
+};
 
 const props = defineProps<{
   item: ConfigItem;
@@ -17,17 +20,27 @@ const props = defineProps<{
   selected?: boolean;
 }>();
 
-const imagesMap: Record<string, string> = {
-  iterm: item2,
-  dbeaver: dbeaver,
-  mstsc: windowsApp,
-  terminal: terminal,
-  vncviewer: realvnc,
-  tigervnc: tigerVnc,
-  securefx: securecrt,
-  securecrt: securecrt,
-  another_redis: anotherRedis,
-  mongo_compass: mongodbCompass
+// 创建图片映射表 - 映射应用名称到图片文件名
+const imagesMap: Record<string, string | undefined> = {
+  iterm: getImageByName('item2'),
+  dbeaver: getImageByName('dbeaver'),
+  mstsc: getImageByName('mstsc'),
+  terminal: getImageByName('terminal'),
+  vncviewer: getImageByName('realvnc'),
+  tigervnc: getImageByName('tigerVnc'),
+  securefx: getImageByName('securecrt'),
+  securecrt: getImageByName('securecrt'),
+  another_redis: getImageByName('another_redis'),
+  mongo_compass: getImageByName('mongodb'),
+  xshell: getImageByName('xshell'),
+  mobaxterm: getImageByName('mobaxterm'),
+  putty: getImageByName('putty'),
+  winscp: getImageByName('winscp'),
+  xftp: getImageByName('xftp'),
+  xfreerdp: getImageByName('xfreerdp'),
+  remmina: getImageByName('remmina'),
+  plsql: getImageByName('plsql'),
+  ssms17: getImageByName('ssms17'),
 };
 
 const emit = defineEmits<{ (e: "toggle", value: boolean): void }>();
@@ -46,8 +59,7 @@ const iconSrc = computed(() => imagesMap[props.item?.name?.toLowerCase?.()]);
 
 // Windows 下，除 putty 与 mstsc 外，提供可选择 exe 路径的入口
 const isWindowsPathPickTarget = computed(() => {
-  const name = props.item?.name?.toLowerCase?.() || "";
-  return isWindows.value && name !== "putty" && name !== "mstsc";
+  return props.item?.is_internal === false && isWindows.value;
 });
 
 const canToggle = computed(() => !!(props.item?.path && props.item.path.trim()))
