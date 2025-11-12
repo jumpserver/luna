@@ -72,7 +72,11 @@
     "Use": "使用",
     "Favorite": "收藏",
     "Edit": "编辑",
-    "Unfavorite": "取消收藏"
+    "Unfavorite": "取消收藏",
+    "FavoriteSuccess": "收藏成功",
+    "FavoriteFailed": "收藏失败",
+    "UnfavoriteSuccess": "取消收藏成功",
+    "UnfavoriteFailed": "取消收藏失败"
   },
   "EditModal": {
     "ModifyConnectionInfo": "修改连接信息",

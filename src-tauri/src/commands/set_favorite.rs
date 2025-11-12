@@ -10,7 +10,7 @@ pub async fn set_favorite(app: AppHandle, site: String, cookie_header: String, a
     if !favorite_data.success {
         let _ = app.emit(
             "set-favorite-failure",
-            json!({ "status": favorite_data.status }),
+            json!({ "status": "failed" }),
         );
         return;
     }

@@ -11,7 +11,7 @@ pub async fn unfavorite(app: AppHandle, site: String, cookie_header: String, ass
     info!("result {:?}", result);
 
     if !result.success {
-        let _ = app.emit("unfavorite-failure", json!({ "status": result.status }));
+        let _ = app.emit("unfavorite-failure", json!({ "status": "failed" }));
         return;
     }
 

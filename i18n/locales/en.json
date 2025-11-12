@@ -72,7 +72,11 @@
 		"Use": "Use",
 		"Favorite": "Favorite",
 		"Edit": "Edit",
-		"Unfavorite": "Remove from Favorites"
+		"Unfavorite": "Remove from Favorites",
+		"FavoriteSuccess": "Added to favorites successfully",
+    "FavoriteFailed": "Failed to save to favorites",
+    "UnfavoriteSuccess": "Removed from favorites successfully",
+    "UnfavoriteFailed": "Failed to remove from favorites"
 	},
 	"EditModal": {
 		"ModifyConnectionInfo": "Modify Connection Info",

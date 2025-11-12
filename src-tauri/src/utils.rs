@@ -166,7 +166,7 @@ pub async fn to_api_response(
             ApiResponse {
                 status,
                 data,
-                success: status == 200 || status == 201,
+                success: status == 200 || status == 201 || status == 204,
             }
         }
         Err(e) => {
