@@ -292,6 +292,19 @@ const handleConfirm = async () => {
   });
 };
 
+/**
+ * @description 处理版本兼容
+ */
+const handleVersions = (version: string[] | string, appVersion: string) => {
+  if (version === "incompatible") {
+    return { status: "incompatible" as const, match: false, versions: [] as string[] };
+  }
+
+  const versions = Array.isArray(version) ? version : [];
+  const match = versions.length > 0 ? versions.includes(appVersion) : true;
+  return { status: "list" as const, match, versions };
+};
+
 onMounted(async () => {
   unlistenErrorPageRef.value = await useTauriEventListen("error-page", (event) => {
     const { status, reason } = event.payload as {
@@ -312,11 +325,28 @@ onMounted(async () => {
   });
 
   unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", async (event) => {
-    const { status, profile, permission_orgs, current_org, cookies } = event.payload as UserIntiInfo;
+    const { status, profile, permission_orgs, current_org, cookies, version } = event.payload as UserIntiInfo;
+    const appVersion = await useTauriAppGetVersion().catch(() => "");
+
+    let versionMessage: string | string[] = version ?? "";
+
+    if (version === "incompatible") {
+    } else if (typeof version === "string" && version.length > 0) {
+      try {
+        versionMessage = JSON.parse(version);
+      } catch (_) {
+        versionMessage = [];
+      }
+    } else {
+      versionMessage = [];
+    }
+
+    const { status: vStatus, match: vMatch } = handleVersions(versionMessage, appVersion);
 
     const profileData = JSON.parse((profile as any).data);
-    const permissionOrgData = JSON.parse((permission_orgs as any).data) as PermissionOrgs;
     const currentOrgData = JSON.parse((current_org as any).data);
+    const permissionOrgData = JSON.parse((permission_orgs as any).data) as PermissionOrgs;
+
     const normalizedSite = normalizedInputSite.value;
 
     if (status === "success" && profileData) {
@@ -328,6 +358,15 @@ onMounted(async () => {
         color: "primary",
         icon: "line-md:check-all"
       });
+
+      if (vStatus !== "incompatible" && !vMatch) {
+        useEventBus().emit("versionAlert", { type: "noMatch", version: versionMessage[versionMessage.length - 1] });
+      }
+
+      // 对于旧的 jms 获取 versions 的接口会返回 404
+      if (vStatus === "incompatible") {
+        useEventBus().emit("versionAlert", { type: "incompatible" });
+      }
 
       const availableOrgs = initSelectOrganization(permissionOrgData);
 

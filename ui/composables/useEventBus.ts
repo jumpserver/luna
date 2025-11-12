@@ -1,5 +1,6 @@
 import type { Emitter, EventType } from "mitt";
 import type { PermedAccount, PermedProtocol, SortType } from "~/types";
+
 import mitt from "mitt";
 
 type BusEvents = {
@@ -9,10 +10,9 @@ type BusEvents = {
   loaded: undefined;
   loading: undefined;
   refresh: undefined;
-  assetDetailUpdated: {
-    assetId: string;
-    permedAccounts: PermedAccount[];
-    permedProtocols: PermedProtocol[];
+  versionAlert: {
+    type: string;
+    version?: string;
   };
   assetRenamed: {
     assetId: string;
@@ -21,6 +21,11 @@ type BusEvents = {
   favoriteChanged: {
     assetId: string;
     favorite: boolean;
+  };
+  assetDetailUpdated: {
+    assetId: string;
+    permedAccounts: PermedAccount[];
+    permedProtocols: PermedProtocol[];
   };
 } & Record<EventType, unknown>;
 

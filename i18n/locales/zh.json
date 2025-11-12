@@ -22,6 +22,7 @@
     "PrimaryColor": "主色",
     "SystemDefault":"系统默认",
     "General": "通用",
+    "ChooseColor": "选择颜色",
     "ApplicationConfig": "应用配置",
     "EmptyDescription": "当前类型下暂无可用的授权资产"
   },
@@ -111,7 +112,9 @@
     "LoginFailedTimeout": "登录失败, 登录超时，请重新登录",
     "InvalidCertificateMac": "登录失败：证书无效或被系统安全策略拦截（macOS WebView）。请安装有效证书",
     "InvalidCertificateGeneric": "登录失败：证书或安全连接异常。",
-    "NetworkError": "登录失败：网络异常，请检查连接"
+    "NetworkError": "登录失败：网络异常，请检查连接",
+    "VersionIncompatible": "客户端与JumpServer 版本（< v4.10.12-lts）不匹配，请下载使用 v3.0.7 的客户端",
+    "VersionNoMatch": "客户端与 JumpServer 版本不匹配，请下载使用 v{version} 版本的客户端"
   },
   "Loading": {
     "Loading": "加载中",

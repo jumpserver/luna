@@ -22,6 +22,7 @@
     "PrimaryColor": "Primary color",
 		"SystemDefault": "System default",
 		"General": "General",
+		"ChooseColor":"Choose color",
 		"ApplicationConfig": "Application Config",
 		"EmptyDescription": "No authorized assets are available for the current type"
 	},
@@ -96,7 +97,7 @@
 	},
   "Login": {
 		"Title": "Input Login Site",
-		"Description": "Please enter the site address (e.g. https://example.com) or IP address",
+		"Description": "Please enter the site address (e.g. https://example.com) or IP",
 		"LoginSuccess": "Login Success",
 		"LoginSuccessDescription": "Your operation has been completed successfully",
 		"EmptyUrlError": "Please enter a site address",
@@ -112,7 +113,9 @@
     "LoginFailedTimeout": "Login failed. Login timeout. Please log in again",
     "InvalidCertificateMac": "Login failed: certificate invalid or blocked by system security (macOS WebView). Install a valid certificate or open in system browser.",
     "InvalidCertificateGeneric": "Login failed: certificate or secure connection issue.",
-    "NetworkError": "Login failed: network error. Please check connectivity."
+    "NetworkError": "Login failed: network error. Please check connectivity.",
+		"VersionIncompatible": "The client version is incompatible with JumpServer versions earlier than v4.10.12-lts. Please download and use the v3.0.7 client.",
+		"VersionNoMatch": "The client version does not match the JumpServer version. Please download and use the v{version} client."
   },
 	"Asset": {
 		"GetAssetFailed": "Get asset failed, please refresh and try again"

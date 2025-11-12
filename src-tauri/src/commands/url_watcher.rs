@@ -92,6 +92,18 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
 
             if profile.status != 401 && profile.success {
                 let user_data = user_service.init().await;
+                let version_message = user_service.get_version_message().await;
+
+                info!("version_message: {:?}", version_message);
+
+                let version = 
+                    if version_message.status == 200 && version_message.success {
+                        version_message.data
+                    } else if version_message.status == 404 {
+                        "incompatible".to_string()
+                    } else {
+                        "".to_string()
+                    };
 
                 let _ = app.emit(
                     "login-success-detected",
@@ -101,6 +113,7 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
                         "permission_orgs": user_data.permission_orgs,
                         "current_org": user_data.current_org,
                         "cookies": cookie_header,
+                        "version": version,
                     }),
                 );
 

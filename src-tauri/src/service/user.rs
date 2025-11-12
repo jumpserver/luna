@@ -1,6 +1,6 @@
+use crate::commands::requests::{get_with_response, ApiResponse};
 use log::info;
 use serde::Serialize;
-use crate::commands::requests::{get_with_response, ApiResponse};
 
 #[derive(Debug, Serialize)]
 pub struct UserProfileData {
@@ -10,14 +10,14 @@ pub struct UserProfileData {
 }
 pub struct UserService {
     origin: String,
-    cookie_header: String
+    cookie_header: String,
 }
 
 impl UserService {
-    pub fn new(origin:String, cookie_header:String) -> Self {
+    pub fn new(origin: String, cookie_header: String) -> Self {
         Self {
             origin,
-            cookie_header
+            cookie_header,
         }
     }
 
@@ -36,6 +36,12 @@ impl UserService {
     pub async fn get_current_org(&self) -> ApiResponse {
         let url = format!("{}/api/v1/orgs/orgs/current/", self.origin);
         info!("获取当前组织信息: {}", url);
+        get_with_response(&url, &self.cookie_header).await
+    }
+
+    pub async fn get_version_message(&self) -> ApiResponse {
+        let url = format!("{}/api/v1/settings/client/versions/", self.origin);
+        info!("获取当前版本信息: {}", url);
         get_with_response(&url, &self.cookie_header).await
     }
 
