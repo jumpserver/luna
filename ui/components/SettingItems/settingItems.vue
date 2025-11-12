@@ -46,8 +46,7 @@ const iconSrc = computed(() => imagesMap[props.item?.name?.toLowerCase?.()]);
 
 // Windows 下，除 putty 与 mstsc 外，提供可选择 exe 路径的入口
 const isWindowsPathPickTarget = computed(() => {
-  const name = props.item?.name?.toLowerCase?.() || "";
-  return isWindows.value && name !== "putty" && name !== "mstsc";
+  return props.item?.is_internal === false;
 });
 
 const canToggle = computed(() => !!(props.item?.path && props.item.path.trim()))

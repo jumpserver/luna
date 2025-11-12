@@ -61,46 +61,36 @@ func getCommandFromArgs(connectInfo map[string]string, argFormat string) string 
 }
 
 func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
-    if cfg != nil {
-        appLst := cfg.Windows.RemoteDesktop
-        for _, app := range appLst {
-            if !app.IsSet || !app.IsMatchProtocol("rdp") {
-                continue
-            }
-            appPath := app.Path
-            if app.IsInternal {
-                currentPath := filepath.Dir(os.Args[0])
-                candidate := filepath.Join(currentPath, app.Path)
-                if _, err := os.Stat(candidate); err == nil {
-                    appPath = candidate
-                }
-            }
-            if appPath == "" {
-                break
-            }
-            connectMap := map[string]string{
-                "file":     filePath,
-                "name":     r.getName(),
-                "protocol": r.Protocol,
-                "username": r.getUserName(),
-                "value":    r.Value,
-                "host":     r.Host,
-                "port":     strconv.Itoa(r.Port),
-            }
-            commands := strings.TrimSpace(getCommandFromArgs(connectMap, app.ArgFormat))
-            if commands == "" {
-                return exec.Command(appPath)
-            }
-            if strings.Contains(commands, "*") {
-                parts := strings.Split(commands, "*")
-                return exec.Command(appPath, parts...)
-            }
-            args := strings.Split(commands, " ")
-            return exec.Command(appPath, args...)
-        }
-    }
-    cmd := exec.Command("C:\\WINDOWS\\system32\\mstsc.exe", filePath)
-    return cmd
+	var appItem *config.AppItem
+	appLst := cfg.Windows.RemoteDesktop
+	for _, app := range appLst {
+		if app.IsMatchProtocol("rdp") {
+			appItem = &app
+			break
+		}
+	}
+	if appItem == nil {
+		return nil
+	}
+	appPath := appItem.Path
+	connectMap := map[string]string{
+		"file":     filePath,
+		"name":     r.getName(),
+		"protocol": r.Protocol,
+		"username": r.getUserName(),
+		"value":    r.Value,
+		"host":     r.Host,
+		"port":     strconv.Itoa(r.Port),
+	}
+	commands := strings.TrimSpace(getCommandFromArgs(connectMap, appItem.ArgFormat))
+
+	if strings.Contains(commands, "*") {
+		commands := strings.Split(commands, "*")
+		return exec.Command(appPath, commands...)
+	} else {
+		commands := strings.Split(commands, " ")
+		return exec.Command(appPath, commands...)
+	}
 }
 
 func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
@@ -124,7 +114,14 @@ func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		"port":     strconv.Itoa(r.Port),
 	}
 	if len(appItem.AutoIt) == 0 {
-		return nil
+		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
+		cmd := exec.Command(appItem.Path, strings.Split(commands, " ")...)
+		// 设置环境变量（只对这个子进程有效）
+		cmd.Env = append(os.Environ(),
+			"VNC_USERNAME="+r.getUserName(),
+			"VNC_PASSWORD="+r.Value,
+		)
+		return cmd
 	} else {
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 		global.LOG.Error(appItem.Path + " " + commands)
