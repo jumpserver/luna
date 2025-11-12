@@ -1,4 +1,4 @@
-use serde_json::{Value};
+use serde_json::Value;
 use tauri::AppHandle;
 
 use crate::service::config::ConfigService;
@@ -12,4 +12,3 @@ pub async fn update_config_selection(
 ) -> Result<Value, String> {
     ConfigService::update_selection(&app, &category, &protocol, &name)
 }
-

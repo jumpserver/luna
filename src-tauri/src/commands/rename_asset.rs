@@ -20,18 +20,24 @@ pub async fn rename(
     info!("result: {:?}", result);
 
     if !result.success {
-        let _ = app.emit("rename-error", json!({
-          "success": false,
-          "status": result.status,
-          "data": result.data,
-        }));
+        let _ = app.emit(
+            "rename-error",
+            json!({
+              "success": false,
+              "status": result.status,
+              "data": result.data,
+            }),
+        );
 
         return;
     }
 
-    let _ = app.emit("rename-success", json!({
-      "success": true,
-      "status": result.status,
-      "data": result.data,
-    }));
+    let _ = app.emit(
+        "rename-success",
+        json!({
+          "success": true,
+          "status": result.status,
+          "data": result.data,
+        }),
+    );
 }

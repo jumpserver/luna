@@ -7,7 +7,10 @@ pub struct SettingService {
 
 impl SettingService {
     pub fn new(origin: String, cookie_header: String) -> Self {
-        Self { origin, cookie_header }
+        Self {
+            origin,
+            cookie_header,
+        }
     }
 
     pub async fn get_setting(&self) -> ApiResponse {
