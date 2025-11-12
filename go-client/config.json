@@ -161,7 +161,7 @@
         "is_set": false
       },
       {
-        "name": "moba_rdp",
+        "name": "mobaxterm",
         "display_name": "MobaXterm (RDP)",
         "protocol": [
           "rdp"
