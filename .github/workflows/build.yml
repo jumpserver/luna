@@ -4,11 +4,26 @@ name: Auto Build
 
 on:
   workflow_dispatch:
+    inputs:
+      build_debug:
+        description: "Build debug version"
+        required: false
+        default: true
+        type: boolean
   push:
     branches:
       - master
     tags:
       - "v*" # 只有正式版本标签才触发构建
+
+env:
+  XCODE_APP_TEAM_ID: ${{ secrets.XCODE_APP_TEAM_ID }}
+  XCODE_APP_LOADER_EMAIL: ${{ secrets.XCODE_APP_LOADER_EMAIL }}
+  XCODE_APP_LOADER_PASSWORD: ${{ secrets.XCODE_APP_LOADER_PASSWORD }}
+  BUILD_CERTIFICATE_BASE64: ${{ secrets.CSC_LINK }}
+  P12_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+  CSC_LINK: ${{ secrets.CSC_LINK }}
+  CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
 
 permissions:
   contents: write
@@ -154,16 +169,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-          XCODE_APP_TEAM_ID: ${{ secrets.XCODE_APP_TEAM_ID }}
-          XCODE_APP_LOADER_EMAIL: ${{ secrets.XCODE_APP_LOADER_EMAIL }}
-          XCODE_APP_LOADER_PASSWORD: ${{ secrets.XCODE_APP_LOADER_PASSWORD }}
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.CSC_LINK }}
-          P12_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "JumpServer Client v__VERSION__"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
+          includeDebug: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_debug || false }}
+          includeRelease: ${{ github.event_name == 'workflow_dispatch' && !github.event.inputs.build_debug || github.event_name == 'push' }}
