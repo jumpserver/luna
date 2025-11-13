@@ -15,7 +15,7 @@ const emit = defineEmits<{ (e: "toggle", value: boolean): void }>();
 const { t, locale } = useI18n();
 const { isWindows } = usePlatform();
 const { language } = useSettingManager();
-const { setAppConfig } = useSettingManager();\
+const { setAppConfig } = useSettingManager();
 
 const imagesMap: Record<string, string | undefined> = {
   iterm: getImageByName("item2"),
