@@ -32,6 +32,7 @@
       },
       "nsis": {
         "installMode": "both",
+        "installerIcon": "icons/icon.ico",
         "displayLanguageSelector": true,
         "minimumWebview2Version": "110.0.1531.0"
       }
