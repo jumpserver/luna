@@ -5,6 +5,10 @@ name: Auto Build
 on:
   workflow_dispatch:
     inputs:
+      version:
+        description: "Version number (e.g., v1.0.0)"
+        required: true
+        type: string
       build_debug:
         description: "Build debug version"
         required: false
@@ -59,7 +63,7 @@ jobs:
   create-release-draft:
     name: create latest.json
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     outputs:
       release-draft-created: ${{ steps.create-release-draft.outputs.release-draft-created }}
 
@@ -67,28 +71,37 @@ jobs:
       - name: Check out git repository
         uses: actions/checkout@v4
 
+      - name: Set version
+        id: set-version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Generate latest.json
         run: |
           echo '{
-            "version": "${{ github.ref_name }}",
-            "notes": "Release ${{ github.ref_name }}",
+            "version": "${{ steps.set-version.outputs.version }}",
+            "notes": "Release ${{ steps.set-version.outputs.version }}",
             "pub_date": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
             "platforms": {
               "darwin-x86_64": {
                 "signature": "",
-                "url": "https://github.com/jumpserver/clients/releases/download/${{ github.ref_name }}/JumpServerClient_${{ github.ref_name }}_x86_64.dmg"
+                "url": "https://github.com/jumpserver/clients/releases/download/${{ steps.set-version.outputs.version }}/JumpServerClient_${{ steps.set-version.outputs.version }}_x86_64.dmg"
               },
               "darwin-aarch64": {
                 "signature": "",
-                "url": "https://github.com/jumpserver/clients/releases/download/${{ github.ref_name }}/JumpServerClient_${{ github.ref_name }}_aarch64.dmg"
+                "url": "https://github.com/jumpserver/clients/releases/download/${{ steps.set-version.outputs.version }}/JumpServerClient_${{ steps.set-version.outputs.version }}_aarch64.dmg"
               },
               "windows-x86_64": {
                 "signature": "",
-                "url": "https://github.com/jumpserver/clients/releases/download/${{ github.ref_name }}/JumpServerClient_${{ github.ref_name }}_x64.exe"
+                "url": "https://github.com/jumpserver/clients/releases/download/${{ steps.set-version.outputs.version }}/JumpServerClient_${{ steps.set-version.outputs.version }}_x64.exe"
               },
               "windows-x86_64-msi": {
                 "signature": "",
-                "url": "https://github.com/jumpserver/clients/releases/download/${{ github.ref_name }}/JumpServerClient_${{ github.ref_name }}_x64.msi"
+                "url": "https://github.com/jumpserver/clients/releases/download/${{ steps.set-version.outputs.version }}/JumpServerClient_${{ steps.set-version.outputs.version }}_x64.msi"
               }
             }
           }' > latest.json
@@ -96,7 +109,7 @@ jobs:
       - name: Upload latest.json to release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ steps.set-version.outputs.version }}
           files: latest.json
           fail_on_unmatched_files: true
           draft: true
@@ -163,6 +176,15 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
+      - name: Set version
+        id: set-version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -171,7 +193,7 @@ jobs:
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
         with:
-          tagName: ${{ github.ref_name }}
+          tagName: ${{ steps.set-version.outputs.version }}
           releaseName: "JumpServer Client v__VERSION__"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
