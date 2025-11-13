@@ -36,7 +36,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @ViewChild('password', { static: false }) passwordRef: ElementRef;
 
   public hidePassword = true;
-  public rememberAuthDisabled = !this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH;
+  public rememberAuthDisabled = null;
   usernameControl = new FormControl();
   localAuthItems: AuthInfo[];
   filteredOptions: AuthInfo[];
@@ -57,6 +57,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     private _cdRef: ChangeDetectorRef
   ) {
     this.usernamePlaceholder = this._i18n.instant('Username');
+    this.rememberAuthDisabled = !this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH;
   }
 
   get noSecretAccounts() {
