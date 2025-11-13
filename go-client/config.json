@@ -132,9 +132,7 @@
         "type": "remotedesktop",
         "path": "",
         "arg_format": "{file}",
-        "match_first": [
-          "rdp"
-        ],
+        "match_first": [],
         "is_internal": false,
         "is_default": false,
         "is_set": false
@@ -153,9 +151,7 @@
         "type": "remotedesktop",
         "path": "",
         "arg_format": "{file}",
-        "match_first": [
-          "rdp"
-        ],
+        "match_first": [],
         "is_internal": false,
         "is_default": false,
         "is_set": false
@@ -174,9 +170,7 @@
         "type": "remotedesktop",
         "path": "",
         "arg_format": "{file}",
-        "match_first": [
-          "rdp"
-        ],
+        "match_first": [],
         "is_internal": false,
         "is_default": false,
         "is_set": false
