@@ -41,6 +41,10 @@ const imagesMap: Record<string, string | undefined> = {
   remmina: getImageByName('remmina'),
   plsql: getImageByName('plsql'),
   ssms17: getImageByName('ssms17'),
+  resp: getImageByName('resp'),
+  navicat17: getImageByName('navicat17'),
+  royalts: getImageByName('royalts'),
+  windows_rdm: getImageByName('windows_rdm'),
 };
 
 const emit = defineEmits<{ (e: "toggle", value: boolean): void }>();
