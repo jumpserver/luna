@@ -88,6 +88,7 @@ pub async fn get_assets(
     if !assets_data.success {
         error!("获取 Asset 数据失败");
         error!("返回的 status 为 {}", assets_data.status);
+        
         let _ = app.emit("get-asset-failure", json!({ "status": assets_data.status }));
         return;
     }
