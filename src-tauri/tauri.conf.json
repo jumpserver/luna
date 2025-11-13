@@ -60,6 +60,7 @@
         "transparent": true,
         "decorations": true,
         "titleBarStyle": "Overlay",
+        "devtools": true,
         "trafficLightPosition": {
           "x": 10,
           "y": 18

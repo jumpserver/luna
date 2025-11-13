@@ -15,8 +15,6 @@ const { collapse, setCollapse } = useSettingManager();
 const isLoading = ref(false);
 const sidebarSearch = ref("");
 
-// const isMacOS = false;
-
 const sideBarItems = computed<NavigationMenuItem[]>(() => {
   return [
     {
@@ -25,7 +23,7 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
     },
     {
       label: t("Menu.Linux"),
-      icon: "si:terminal-alt-line",
+      icon: "gravity-ui:terminal",
       to: localePath("linux"),
       disabled: isLoading.value
     },
@@ -37,7 +35,7 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
     },
     {
       label: t("Menu.Database"),
-      icon: "i-lucide-database",
+      icon: "gravity-ui:database",
       to: localePath("database"),
       disabled: isLoading.value
     },
@@ -49,7 +47,7 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
     },
     {
       label: t("Menu.Favorite"),
-      icon: "i-lucide-star",
+      icon: "gravity-ui:star",
       to: localePath("favorite"),
       disabled: isLoading.value
     }
@@ -75,8 +73,16 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
     <div class="flex flex-col w-full">
       <!-- 折叠按钮 -->
       <div
-        class="flex  items-center px-3 h-10"
-        :class="isMacOS ? (collapse ? 'mt-9 justify-center' : 'justify-end') : collapse ? 'py-2 justify-center' : 'py-2 mt-1 justify-between'"
+        class="flex items-center px-3 h-10"
+        :class="
+          isMacOS
+            ? collapse
+              ? 'mt-9 justify-center'
+              : 'justify-end'
+            : collapse
+              ? 'py-2 justify-center mt-2'
+              : 'py-2 mt-2 justify-between'
+        "
       >
         <div class="flex items-center gap-2" v-if="!isMacOS && !collapse">
           <UAvatar size="sm" src="/logo.png" class="bg-transparent" :ui="{ root: 'bg-transparent' }" />
@@ -139,7 +145,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
         :collapsed="collapse"
         color="neutral"
         :ui="{
-          link: 'px-2 my-1 rounded-sm menu-item light:text-gray-800 dark:text-gray-200',
+          link: 'px-2 my-1 rounded-sm menu-item flex items-center light:text-gray-800 dark:text-gray-200',
           linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200',
           label: 'light:text-gray-500 dark:text-gray-400 pb-0 text-xs font-light'
         }"
@@ -156,6 +162,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 .light .menu .menu-item {
   &[data-active] {
     background-color: var(--bg-hover-light);
+    opacity: 0.8;
     font-weight: 500;
   }
 
