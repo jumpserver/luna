@@ -21,6 +21,7 @@ on:
       - "v*" # 只有正式版本标签才触发构建
 
 env:
+  VERSION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}
   XCODE_APP_TEAM_ID: ${{ secrets.XCODE_APP_TEAM_ID }}
   XCODE_APP_LOADER_EMAIL: ${{ secrets.XCODE_APP_LOADER_EMAIL }}
   XCODE_APP_LOADER_PASSWORD: ${{ secrets.XCODE_APP_LOADER_PASSWORD }}
@@ -71,37 +72,29 @@ jobs:
       - name: Check out git repository
         uses: actions/checkout@v4
 
-      - name: Set version
-        id: set-version
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          fi
-
       - name: Generate latest.json
+        shell: bash
         run: |
           echo '{
-            "version": "${{ steps.set-version.outputs.version }}",
-            "notes": "Release ${{ steps.set-version.outputs.version }}",
+            "version": "${{ env.VERSION }}",
+            "notes": "Release ${{ env.VERSION }}",
             "pub_date": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
             "platforms": {
               "darwin-x86_64": {
                 "signature": "",
-                "url": "https://github.com/jumpserver/clients/releases/download/${{ steps.set-version.outputs.version }}/JumpServerClient_${{ steps.set-version.outputs.version }}_x86_64.dmg"
+                "url": "https://github.com/jumpserver/clients/releases/download/${{ env.VERSION }}/JumpServerClient_${{ env.VERSION }}_x86_64.dmg"
               },
               "darwin-aarch64": {
                 "signature": "",
-                "url": "https://github.com/jumpserver/clients/releases/download/${{ steps.set-version.outputs.version }}/JumpServerClient_${{ steps.set-version.outputs.version }}_aarch64.dmg"
+                "url": "https://github.com/jumpserver/clients/releases/download/${{ env.VERSION }}/JumpServerClient_${{ env.VERSION }}_aarch64.dmg"
               },
               "windows-x86_64": {
                 "signature": "",
-                "url": "https://github.com/jumpserver/clients/releases/download/${{ steps.set-version.outputs.version }}/JumpServerClient_${{ steps.set-version.outputs.version }}_x64.exe"
+                "url": "https://github.com/jumpserver/clients/releases/download/${{ env.VERSION }}/JumpServerClient_${{ env.VERSION }}_x64.exe"
               },
               "windows-x86_64-msi": {
                 "signature": "",
-                "url": "https://github.com/jumpserver/clients/releases/download/${{ steps.set-version.outputs.version }}/JumpServerClient_${{ steps.set-version.outputs.version }}_x64.msi"
+                "url": "https://github.com/jumpserver/clients/releases/download/${{ env.VERSION }}/JumpServerClient_${{ env.VERSION }}_x64.msi"
               }
             }
           }' > latest.json
@@ -109,7 +102,7 @@ jobs:
       - name: Upload latest.json to release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.set-version.outputs.version }}
+          tag_name: ${{ env.VERSION }}
           files: latest.json
           fail_on_unmatched_files: true
           draft: true
@@ -176,15 +169,6 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
-      - name: Set version
-        id: set-version
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          fi
-
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -193,7 +177,7 @@ jobs:
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
         with:
-          tagName: ${{ steps.set-version.outputs.version }}
+          tagName: ${{ env.VERSION }}
           releaseName: "JumpServer Client v__VERSION__"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
