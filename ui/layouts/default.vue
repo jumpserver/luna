@@ -3,15 +3,17 @@ const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { isWindows } = usePlatform();
 
 const cardUi = computed(() => {
+  const root = ["rounded-none", "overflow-visible"]
+
   if (isWindows.value) {
-    base.push("border-0", "ring-0", "shadow-none", "bg-transparent");
+    root.push("border-0", "ring-0", "shadow-none", "bg-transparent");
   }
 
   return {
     header: "p-0 sm:px-0",
     body: "p-0 sm:p-0",
     footer: "p-0 sm:p-0",
-    root: "rounded-none overflow-visible"
+    root: root.join(" ")
   };
 });
 
