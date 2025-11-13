@@ -2,17 +2,7 @@
 import type { ConfigItem } from "~/types/index";
 
 // 批量导入所有图片资源
-const imageModules = import.meta.glob<{ default: string }>('@/assets/images/*.png', { eager: true });
-
-// 辅助函数：从路径中获取文件名（不含扩展名）
-const getImageByName = (filename: string): string | undefined => {
-  for (const path in imageModules) {
-    if (path.includes(`/${filename}.png`)) {
-      return imageModules[path]?.default;
-    }
-  }
-  return undefined;
-};
+const imageModules = import.meta.glob<{ default: string }>("@/assets/images/*.png", { eager: true });
 
 const props = defineProps<{
   item: ConfigItem;
@@ -20,39 +10,40 @@ const props = defineProps<{
   selected?: boolean;
 }>();
 
-// 创建图片映射表 - 映射应用名称到图片文件名
-const imagesMap: Record<string, string | undefined> = {
-  iterm: getImageByName('item2'),
-  dbeaver: getImageByName('dbeaver'),
-  mstsc: getImageByName('mstsc'),
-  terminal: getImageByName('terminal'),
-  vncviewer: getImageByName('realvnc'),
-  tigervnc: getImageByName('tigerVnc'),
-  securefx: getImageByName('securecrt'),
-  securecrt: getImageByName('securecrt'),
-  another_redis: getImageByName('another_redis'),
-  mongo_compass: getImageByName('mongodb'),
-  xshell: getImageByName('xshell'),
-  mobaxterm: getImageByName('mobaxterm'),
-  putty: getImageByName('putty'),
-  winscp: getImageByName('winscp'),
-  xftp: getImageByName('xftp'),
-  xfreerdp: getImageByName('xfreerdp'),
-  remmina: getImageByName('remmina'),
-  plsql: getImageByName('plsql'),
-  ssms17: getImageByName('ssms17'),
-  resp: getImageByName('resp'),
-  navicat17: getImageByName('navicat17'),
-  royalts: getImageByName('royalts'),
-  windows_rdm: getImageByName('windows_rdm'),
-};
-
 const emit = defineEmits<{ (e: "toggle", value: boolean): void }>();
 
 const { t, locale } = useI18n();
 const { isWindows } = usePlatform();
 const { language } = useSettingManager();
-const { setAppConfig } = useSettingManager();
+const { setAppConfig } = useSettingManager();\
+
+const imagesMap: Record<string, string | undefined> = {
+  iterm: getImageByName("item2"),
+  dbeaver: getImageByName("dbeaver"),
+  mstsc: getImageByName("mstsc"),
+  terminal: getImageByName("terminal"),
+  vncviewer: getImageByName("realvnc"),
+  tigervnc: getImageByName("tigerVnc"),
+  securefx: getImageByName("securecrt"),
+  securecrt: getImageByName("securecrt"),
+  another_redis: getImageByName("another_redis"),
+  mongo_compass: getImageByName("mongodb"),
+  xshell: getImageByName("xshell"),
+  mobaxterm: getImageByName("mobaxterm"),
+  putty: getImageByName("putty"),
+  winscp: getImageByName("winscp"),
+  xftp: getImageByName("xftp"),
+  xfreerdp: getImageByName("xfreerdp"),
+  remmina: getImageByName("remmina"),
+  plsql: getImageByName("plsql"),
+  ssms17: getImageByName("ssms17"),
+  resp: getImageByName("resp"),
+  navicat17: getImageByName("navicat17"),
+  royalts: getImageByName("royalts"),
+  windows_rdm: getImageByName("windows_rdm"),
+  toad: getImageByName("toadOracle")
+};
+
 
 const commentText = computed(() => {
   const lang = language.value || (locale?.value as string) || "en";
@@ -66,8 +57,16 @@ const isWindowsPathPickTarget = computed(() => {
   return props.item?.is_internal === false && isWindows.value;
 });
 
-const canToggle = computed(() => !!(props.item?.path && props.item.path.trim()))
+const canToggle = computed(() => !!(props.item?.path && props.item.path.trim()));
 
+function getImageByName (filename: string): string | undefined {
+  for (const path in imageModules) {
+    if (path.includes(`/${filename}.png`)) {
+      return imageModules[path]?.default;
+    }
+  }
+  return undefined;
+};
 
 const onSwitch = (v: boolean) => {
   if (!canToggle.value) return;
@@ -101,6 +100,13 @@ const selectExecutablePath = async () => {
     console.error("select executable failed", e);
   }
 };
+
+// 在 Windows 下，已选择路径后仍允许点击展示区域以重新选择
+const onPathClick = () => {
+  if (isWindowsPathPickTarget.value) {
+    selectExecutablePath();
+  }
+};
 </script>
 
 <template>
@@ -124,8 +130,10 @@ const selectExecutablePath = async () => {
             </template>
             <template v-else>
               <div
-                class="inline-flex items-center text-xs text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-white/10 rounded px-2 py-1 max-w-[22rem] md:max-w-[28rem] truncate"
+                class="inline-flex items-center text-xs text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-white/10 rounded px-2 py-1 max-w-88 md:max-w-md truncate"
+                :class="{ 'cursor-pointer hover:bg-gray-200/60 dark:hover:bg-white/15': isWindowsPathPickTarget }"
                 :title="props.item.path || '-'"
+                @click="onPathClick"
               >
                 <span class="truncate">{{ props.item.path || "-" }}</span>
               </div>

@@ -28,11 +28,13 @@ pub async fn logout(app: AppHandle, name: String, origin: String) -> Result<(), 
         .join("\n");
 
     if script.is_empty() {
-        warn!("未找到可清除的非 httpOnly Cookies，站点: {}", origin);
+        warn!("未找到可清除的非 httpOnly Cookies 站点: {}", origin);
     } else {
+        // eval 注入脚本清除 cookie
         window.eval(&script).map_err(|e| e.to_string())?;
+
         info!(
-            "已清除 {} 个可见 Cookies（共匹配 {} 个），站点: {}",
+            "已清除 {} 个可见 Cookies(共匹配 {} 个)，站点: {}",
             cleared, total, origin
         );
     }

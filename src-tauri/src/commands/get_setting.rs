@@ -10,6 +10,7 @@ pub async fn get_setting(app: AppHandle, site: String, cookie_header: String) {
 
     if !setting_data.success {
         error!("获取 Setting 数据失败");
+        
         let _ = app.emit(
             "get-setting-failure",
             json!({ "status": setting_data.status }),
