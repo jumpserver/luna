@@ -154,24 +154,44 @@ jobs:
           # List all code signing identities
           security find-identity -v -p codesigning build.keychain
           
-          # Try to find Apple Distribution certificate first (for DMG signing)
-          CERT_INFO=$(security find-identity -v -p codesigning build.keychain | grep -E "Apple Distribution|Apple Development" | head -n 1)
+          # Try to find valid code signing certificate (Developer ID, Apple Distribution, or Apple Development)
+          # Priority: Developer ID Application > Apple Distribution > Apple Development
+          CERT_INFO=$(security find-identity -v -p codesigning build.keychain | grep -E "Developer ID Application|Apple Distribution|Apple Development" | head -n 1)
           
           if [ -z "$CERT_INFO" ]; then
-            echo "Error: No Apple certificate found in keychain"
+            echo "Error: No valid Apple certificate found in keychain"
+            echo "Available certificates:"
             security find-identity -v -p codesigning build.keychain
             exit 1
           fi
           
-          CERT_ID=$(echo "$CERT_INFO" | awk -F'"' '{print $2}')
+          CERT_ID=$(echo "$CERT_INFO" | awk '{print $2}')
           
           if [ -z "$CERT_ID" ]; then
-            echo "Error: Failed to extract certificate ID"
+            echo "Error: Failed to extract certificate ID from: $CERT_INFO"
             exit 1
           fi
           
+          # Extract Team ID from certificate name (format: "Developer ID Application: Name (TEAM_ID)")
+          # Use sed to extract content between parentheses
+          TEAM_ID=$(echo "$CERT_INFO" | sed -n 's/.*(\([A-Z0-9]*\)).*/\1/p' | head -n 1)
+          
+          if [ -z "$TEAM_ID" ]; then
+            echo "Warning: Failed to extract Team ID from certificate name, trying alternative method"
+            # Alternative: try to get from certificate directly using openssl
+            CERT_SUBJECT=$(security find-certificate -c "$CERT_ID" -p build.keychain 2>/dev/null | openssl x509 -noout -subject 2>/dev/null || echo "")
+            if [ -n "$CERT_SUBJECT" ]; then
+              TEAM_ID=$(echo "$CERT_SUBJECT" | sed -n 's/.*OU=\([^/]*\).*/\1/p' | head -n 1)
+            fi
+          fi
+          
           echo "CERT_ID=$CERT_ID" >> $GITHUB_ENV
+          if [ -n "$TEAM_ID" ]; then
+            echo "APPLE_TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
+            echo "Team ID: $TEAM_ID"
+          fi
           echo "Certificate ID: $CERT_ID"
+          echo "Certificate info: $CERT_INFO"
           echo "Certificate imported and verified."
 
       - name: Install Go client for current platform
@@ -215,6 +235,7 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ env.CERT_ID }}
+          APPLE_TEAM_ID: ${{ env.APPLE_TEAM_ID }}
 
         with:
           tagName: ${{ env.VERSION }}
