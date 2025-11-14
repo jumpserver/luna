@@ -49,6 +49,7 @@ pub async fn get_window_cookies(
     let win = get_window_with_retry(app, window_label, 10)
         .await
         .ok_or_else(|| format!("window '{}' not found after retries", window_label))?;
+    
     // 允许传入裸域名/IP，失败时默认补全 https:// 再解析
     let url = Url::parse(origin)
         .or_else(|_| Url::parse(&format!("https://{}", origin)))
@@ -166,7 +167,7 @@ pub async fn to_api_response(
             ApiResponse {
                 status,
                 data,
-                success: status == 200 || status == 201,
+                success: status == 200 || status == 201 || status == 204,
             }
         }
         Err(e) => {
@@ -182,8 +183,12 @@ pub async fn to_api_response(
 
 /// 初始化并持久化窗口尺寸（存逻辑尺寸 DIP），避免跨显示器缩放导致的视觉尺寸变化。
 /// - 存储：逻辑像素宽高（width/height，DIP）
-/// - 恢复：直接按逻辑尺寸 set_size；若仅有旧的物理像素存档（width_px/height_px），则按当前缩放换算为逻辑尺寸后再设置。
-/// - 原理：始终以设备无关像素（DIP）为基准持久化，跨不同 DPI 显示器打开时视觉大小保持一致。
+///
+/// - 恢复：
+///         直接按逻辑尺寸 set_size；若仅有旧的物理像素存档（width_px/height_px），则按当前缩放换算为逻辑尺寸后再设置。
+///         Tauri/底层窗口系统会根据 当前屏幕的 scale factor，自动把逻辑尺寸换算成物理像素
+///
+/// - 原理：逻辑像素 × 缩放比 = 物理像素; 只在 “尺寸变化/应用打开” 时关心缩放比，中间存的永远是逻辑尺寸
 pub fn setup_window_size_persistence(win: WebviewWindow) {
     // 恢复上次保存的尺寸
     if let Err(e) = restore_window_size(&win) {
@@ -212,6 +217,7 @@ fn save_window_logical_size(app: &AppHandle, width: f64, height: f64) -> Result<
     let store = app
         .store("app_data.json")
         .map_err(|e| format!("open store failed: {}", e))?;
+
     store.set(
         "window_size",
         serde_json::json!({
@@ -219,13 +225,14 @@ fn save_window_logical_size(app: &AppHandle, width: f64, height: f64) -> Result<
             "height": height,
         }),
     );
+
     store
         .save()
         .map_err(|e| format!("store save failed: {}", e))
 }
 
 fn restore_window_size(win: &WebviewWindow) -> Result<(), String> {
-    let app = win.app_handle();
+    let app: &AppHandle = win.app_handle();
     let store = app
         .store("app_data.json")
         .map_err(|e| format!("open store failed: {}", e))?;
@@ -261,10 +268,10 @@ fn restore_window_size(win: &WebviewWindow) -> Result<(), String> {
     let w = width_logical.max(1.0);
     let h = height_logical.max(1.0);
 
-    // set_size 存储 DPI
     win.set_size(tauri::Size::Logical(LogicalSize::new(w, h)))
         .map_err(|e| format!("set_size failed: {}", e))?;
 
     let _ = save_window_logical_size(&app, w, h);
+
     Ok(())
 }

@@ -1,7 +1,7 @@
-use log::{info, error};
+use crate::utils::setup_window_size_persistence;
+use log::{error, info};
 use std::error::Error;
 use tauri::WebviewWindow;
-use crate::utils::setup_window_size_persistence;
 
 /// 为 macOS 窗口应用毛玻璃效果
 #[cfg(target_os = "macos")]

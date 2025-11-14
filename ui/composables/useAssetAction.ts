@@ -10,6 +10,8 @@ let unlistenGetTokenFailure: UnlistenFn | null = null;
 let unlistenGetTokenSuccess: UnlistenFn | null = null;
 let unlistenFavoriteSuccess: UnlistenFn | null = null;
 let unlistenFavoriteFailed: UnlistenFn | null = null;
+let unlistenUnfavoriteSuccess: UnlistenFn | null = null;
+let unlistenUnfavoriteFailed: UnlistenFn | null = null;
 let unlistenGetAssetDetailSuccess: UnlistenFn | null = null;
 let unlistenGetAssetDetailFailed: UnlistenFn | null = null;
 let unlistenRenameSuccess: UnlistenFn | null = null;
@@ -23,6 +25,8 @@ function releaseTauriEventListeners() {
     unlistenFavoriteSuccess?.();
     unlistenFavoriteFailed?.();
     unlistenGetTokenFailure?.();
+    unlistenUnfavoriteSuccess?.();
+    unlistenUnfavoriteFailed?.();
     unlistenGetAssetDetailSuccess?.();
     unlistenGetAssetDetailFailed?.();
     unlistenRenameSuccess?.();
@@ -30,6 +34,8 @@ function releaseTauriEventListeners() {
     unlistenGetTokenFailure = null;
     unlistenGetTokenSuccess = null;
     unlistenFavoriteSuccess = null;
+    unlistenUnfavoriteFailed = null;
+    unlistenUnfavoriteSuccess = null;
     unlistenFavoriteFailed = null;
     unlistenGetAssetDetailSuccess = null;
     unlistenGetAssetDetailFailed = null;
@@ -351,6 +357,13 @@ export const useAssetAction = () => {
         }
 
         const payload = event.payload as eventPayload;
+        if (payload.status === "success") {
+          toast.add({
+            title: t("ContextMenu.FavoriteSuccess"),
+            color: "primary",
+            icon: "line-md:check-all"
+          });
+        }
       });
 
       unlistenFavoriteFailed = await useTauriEventListen("set-favorite-failure", (event) => {
@@ -359,6 +372,43 @@ export const useAssetAction = () => {
         }
 
         const payload = event.payload as eventPayload;
+        if (payload.status === "failed") {
+          toast.add({
+            title: t("ContextMenu.FavoriteFailed"),
+            color: "error",
+            icon: "line-md:close-circle"
+          });
+        }
+      });
+
+      unlistenUnfavoriteSuccess = await useTauriEventListen("unfavorite-success", (event) => {
+        interface eventPayload {
+          status: string;
+        }
+
+        const payload = event.payload as eventPayload;
+        if (payload.status === "success") {
+          toast.add({
+            title: t("ContextMenu.UnfavoriteSuccess"),
+            color: "primary",
+            icon: "line-md:check-all"
+          });
+        }
+      });
+
+      unlistenUnfavoriteFailed = await useTauriEventListen("unfavorite-failure", (event) => {
+        interface eventPayload {
+          status: string;
+        }
+
+        const payload = event.payload as eventPayload;
+        if (payload.status === "failed") {
+          toast.add({
+            title: t("ContextMenu.UnfavoriteFailed"),
+            color: "error",
+            icon: "line-md:close-circle"
+          });
+        }
       });
 
       unlistenGetAssetDetailSuccess = await useTauriEventListen("get-asset-detail-success", (event) => {

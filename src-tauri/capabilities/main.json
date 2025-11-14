@@ -73,6 +73,8 @@
     "updater:allow-check",
     "updater:allow-download",
     "updater:allow-install",
-    "deep-link:default"
+    "deep-link:default",
+    "log:default",
+    "dialog:allow-open"
   ]
 }

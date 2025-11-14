@@ -52,7 +52,8 @@ provide("providerClearSelection", providerClearSelection);
     }"
     :ui="{
       header: 'p-0 sm:p-0',
-      body: 'p-2 pr-1 sm:p-4 px-4 h-[calc(100vh-58px)]'
+      body: 'p-2 pr-1 sm:p-4 px-4 h-[calc(100vh-58px)]',
+      root: 'rounded-none'
     }"
     @click="clearSelection"
   >

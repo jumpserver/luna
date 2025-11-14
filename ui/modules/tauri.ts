@@ -10,6 +10,7 @@ import * as tauriOs from "@tauri-apps/plugin-os";
 import * as tauriShell from "@tauri-apps/plugin-shell";
 import * as tauriStore from "@tauri-apps/plugin-store";
 import * as tauriProgress from "@tauri-apps/plugin-process";
+import * as tauriDialog from "@tauri-apps/plugin-dialog";
 import { addImports, defineNuxtModule } from "nuxt/kit";
 
 declare interface ModuleOptions {
@@ -62,6 +63,11 @@ const tauriModules = [
     module: tauriNotification,
     prefix: "Notification",
     importPath: "@tauri-apps/plugin-notification"
+  },
+  {
+    module: tauriDialog,
+    prefix: "Dialog",
+    importPath: "@tauri-apps/plugin-dialog"
   },
   {
     module: tauriStore,

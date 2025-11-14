@@ -96,14 +96,13 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
 
                 info!("version_message: {:?}", version_message);
 
-                let version = 
-                    if version_message.status == 200 && version_message.success {
-                        version_message.data
-                    } else if version_message.status == 404 {
-                        "incompatible".to_string()
-                    } else {
-                        "".to_string()
-                    };
+                let version = if version_message.status == 200 && version_message.success {
+                    version_message.data
+                } else if version_message.status == 404 {
+                    "incompatible".to_string()
+                } else {
+                    "".to_string()
+                };
 
                 let _ = app.emit(
                     "login-success-detected",

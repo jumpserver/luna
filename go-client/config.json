@@ -1,6 +1,6 @@
 {
   "filename": "Jumpserve Clients Config",
-  "version": 4,
+  "version": 5,
   "windowBounds": {
     "width": 1280,
     "height": 800
@@ -109,7 +109,7 @@
         },
         "download_url": "",
         "type": "remotedesktop",
-        "path": "mstsc.exe",
+        "path": "C:\\WINDOWS\\system32\\mstsc.exe",
         "arg_format": "{file}",
         "match_first": [
           "rdp"
@@ -119,26 +119,11 @@
         "is_set": true
       },
       {
-        "name": "royalts",
-        "display_name": "Royal TS",
-        "protocol": ["rdp"],
-        "comment": {
-          "zh": "Royal TS 是一款强大的远程连接管理工具。",
-          "en": "Royal TS is a powerful remote connection manager."
-        },
-        "download_url": "https://www.royalapps.com/ts/windows",
-        "type": "remotedesktop",
-        "path": "",
-        "arg_format": "{file}",
-        "match_first": ["rdp"],
-        "is_internal": false,
-        "is_default": false,
-        "is_set": false
-      },
-      {
         "name": "windows_rdm",
         "display_name": "Remote Desktop Manager",
-        "protocol": ["rdp"],
+        "protocol": [
+          "rdp"
+        ],
         "comment": {
           "zh": "Remote Desktop Manager (Devolutions) 集中管理所有远程连接。",
           "en": "Remote Desktop Manager (Devolutions) centralizes all remote connections."
@@ -147,62 +132,26 @@
         "type": "remotedesktop",
         "path": "",
         "arg_format": "{file}",
-        "match_first": ["rdp"],
+        "match_first": [],
         "is_internal": false,
         "is_default": false,
         "is_set": false
       },
       {
-        "name": "moba_rdp",
-        "display_name": "MobaXterm (RDP)",
-        "protocol": ["rdp"],
-        "comment": {
-          "zh": "MobaXterm 支持 RDP/VNC/SSH 等多种协议。",
-          "en": "MobaXterm supports RDP/VNC/SSH and more."
-        },
-        "download_url": "https://mobaxterm.mobatek.net/download.html",
-        "type": "remotedesktop",
-        "path": "",
-        "arg_format": "{file}",
-        "match_first": ["rdp"],
-        "is_internal": false,
-        "is_default": false,
-        "is_set": false
-      },
-      {
-        "name": "vncviewer",
-        "display_name": "RealVNC Viewer",
+        "name": "tigervnc",
+        "display_name": "TigerVNC",
         "protocol": [
           "vnc"
         ],
         "comment": {
-          "zh": "RealVNC Viewer 是一款用于远程控制计算机的软件，它使用VNC（Virtual Network Computing）协议，允许用户从一台计算机（客户端）访问和控制另一台计算机（服务器）的桌面。",
-          "en": "RealVNC Viewer is a software used for remote computer control. It utilizes the VNC (Virtual Network Computing) protocol, allowing users to access and control the desktop of another computer (the server) from their own computer"
+          "zh": "TigerVNC是一个高效且安全的远程桌面控制工具，适用于跨平台操作，并有强大的安全性能保障。",
+          "en": "TigerVNC is an efficient and secure remote desktop control tool that is suitable for cross platform operations and has strong security performance guarantees."
         },
-        "download_url": "https://www.realvnc.com/en/connect/download/viewer/",
+        "download_url": "https://sourceforge.net/projects/tigervnc/files/stable/1.15.0/tigervnc-1.15.0.x86_64.tar.gz",
         "type": "remotedesktop",
         "path": "",
-        "arg_format": " -WarnUnencrypted=0 -VerifyId=0 -UserName={username} {host}:{port}",
-        "match_first": [
-          "vnc"
-        ],
-        "autoit": [
-          {
-            "cmd": "Wait",
-            "type": "10",
-            "element": "[CLASS:os::Window::Dialog]"
-          },
-          {
-            "cmd": "ControlSend",
-            "type": "{value}",
-            "element": "[CLASS:Edit; INSTANCE:2]"
-          },
-          {
-            "cmd": "ControlClick",
-            "type": "25,10",
-            "element": "[CLASS:Button; INSTANCE:3]"
-          }
-        ],
+        "arg_format": "{host}::{port}",
+        "match_first": [],
         "is_internal": false,
         "is_default": false,
         "is_set": false
@@ -250,7 +199,9 @@
       {
         "name": "xftp",
         "display_name": "Xftp",
-        "protocol": ["sftp"],
+        "protocol": [
+          "sftp"
+        ],
         "comment": {
           "zh": "Xftp是一个功能强大的SFTP、FTP 文件传输软件。",
           "en": "Xftp is a powerful SFTP and FTP file transfer software."

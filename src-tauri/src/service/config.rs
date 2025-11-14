@@ -53,9 +53,7 @@ impl ConfigService {
 
     /// 获取配置版本号
     fn get_config_version(config: &Value) -> i64 {
-        config.get("version")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(1)
+        config.get("version").and_then(|v| v.as_i64()).unwrap_or(1)
     }
 
     /// 合并用户配置项中的自定义设置（如 match_first）
@@ -78,7 +76,9 @@ impl ConfigService {
                         if result_name == user_name {
                             // 保留用户的 match_first 设置
                             if let Some(match_first) = user_item.get("match_first") {
-                                result_item.as_object_mut().unwrap()
+                                result_item
+                                    .as_object_mut()
+                                    .unwrap()
                                     .insert("match_first".to_string(), match_first.clone());
                             }
                             // 保留用户的 path 设置（如果用户自定义了路径）
@@ -86,12 +86,15 @@ impl ConfigService {
                                 if let Some(user_path_str) = user_path.as_str() {
                                     if !user_path_str.is_empty() {
                                         // 检查默认配置的 path 是否不同
-                                        let default_path = result_item.get("path")
+                                        let default_path = result_item
+                                            .get("path")
                                             .and_then(|v| v.as_str())
                                             .unwrap_or("");
                                         // 如果用户设置了不同的路径，则保留
                                         if user_path_str != default_path {
-                                            result_item.as_object_mut().unwrap()
+                                            result_item
+                                                .as_object_mut()
+                                                .unwrap()
                                                 .insert("path".to_string(), user_path.clone());
                                         }
                                     }
@@ -99,7 +102,9 @@ impl ConfigService {
                             }
                             // 保留用户的 is_set 状态
                             if let Some(is_set) = user_item.get("is_set") {
-                                result_item.as_object_mut().unwrap()
+                                result_item
+                                    .as_object_mut()
+                                    .unwrap()
                                     .insert("is_set".to_string(), is_set.clone());
                             }
                             break;
@@ -123,10 +128,9 @@ impl ConfigService {
 
         // 合并每个类别（terminal, remotedesktop, filetransfer, databases）
         for category in ["terminal", "remotedesktop", "filetransfer", "databases"] {
-            if let (Some(user_items), Some(default_items)) = (
-                user_os.get(category),
-                default_os.get(category)
-            ) {
+            if let (Some(user_items), Some(default_items)) =
+                (user_os.get(category), default_os.get(category))
+            {
                 let merged = Self::merge_app_items(user_items, default_items);
                 result_obj.insert(category.to_string(), merged);
             }
@@ -154,10 +158,9 @@ impl ConfigService {
 
         // 合并每个操作系统的配置
         for os_key in ["windows", "macos", "linux"] {
-            if let (Some(user_os), Some(default_os)) = (
-                user_config.get(os_key),
-                default_config.get(os_key)
-            ) {
+            if let (Some(user_os), Some(default_os)) =
+                (user_config.get(os_key), default_config.get(os_key))
+            {
                 let merged_os = Self::merge_os_config(user_os, default_os);
                 merged_obj.insert(os_key.to_string(), merged_os);
             } else if let Some(default_os) = default_config.get(os_key) {
@@ -172,7 +175,7 @@ impl ConfigService {
     /// 更新用户配置（如果默认配置版本更高）
     fn update_user_config_if_needed(
         user_config_path: &PathBuf,
-        default_config_path: &PathBuf
+        default_config_path: &PathBuf,
     ) -> Result<(), String> {
         // 读取默认配置
         let default_content = std::fs::read_to_string(default_config_path)
@@ -211,7 +214,10 @@ impl ConfigService {
             std::fs::write(user_config_path, pretty)
                 .map_err(|e| format!("Failed to write merged config: {}", e))?;
 
-            log::info!("Config upgraded successfully to version {}", default_version);
+            log::info!(
+                "Config upgraded successfully to version {}",
+                default_version
+            );
         } else {
             log::info!("User config is up to date, no upgrade needed");
         }
@@ -228,13 +234,20 @@ impl ConfigService {
 
         // 如果用户配置文件不存在，从模板复制
         if !user_config_path.exists() {
-            log::info!("Copying config template from {:?} to {:?}", template_path, user_config_path);
+            log::info!(
+                "Copying config template from {:?} to {:?}",
+                template_path,
+                user_config_path
+            );
             std::fs::copy(&template_path, &user_config_path)
                 .map_err(|e| format!("Failed to copy config template: {}", e))?;
             log::info!("Initial config created successfully");
         } else {
             // 如果用户配置已存在，检查是否需要更新
-            log::info!("User config exists at {:?}, checking for updates", user_config_path);
+            log::info!(
+                "User config exists at {:?}, checking for updates",
+                user_config_path
+            );
             if let Err(e) = Self::update_user_config_if_needed(&user_config_path, &template_path) {
                 log::warn!("Failed to update user config: {}", e);
                 // 不阻断流程，即使更新失败也继续使用现有配置
@@ -275,13 +288,14 @@ impl ConfigService {
         category: &str,
         protocol: &str,
         name: &str,
+        new_path: Option<String>,
     ) -> Result<Value, String> {
         // 确保用户配置文件存在，并写入到用户配置目录
-        let path = Self::ensure_user_config(app)?;
+        let config_path = Self::ensure_user_config(app)?;
 
-        log::info!("Updating config at: {:?}", path);
+        log::info!("Updating config at: {:?}", config_path);
 
-        let content = std::fs::read_to_string(&path)
+        let content = std::fs::read_to_string(&config_path)
             .map_err(|e| format!("read config.json failed: {}", e))?;
         let mut json: Value = serde_json::from_str(&content)
             .map_err(|e| format!("parse config.json failed: {}", e))?;
@@ -298,6 +312,48 @@ impl ConfigService {
             .and_then(|os| os.get_mut(category))
             .and_then(|v| v.as_array_mut())
             .ok_or_else(|| format!("invalid config path: {}.{}", os_key, category))?;
+
+        // 如果传入了路径，则只更新对应项的 path 与 is_set，不改变 match_first
+        if let Some(p) = new_path.clone() {
+            let trimmed = p.trim().to_string();
+            if !trimmed.is_empty() {
+                let mut found = false;
+                for item in arr.iter_mut() {
+                    let item_name = item.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                    if item_name == name {
+                        found = true;
+                        // 更新 path
+                        item.as_object_mut()
+                            .unwrap()
+                            .insert("path".into(), Value::String(trimmed.clone()));
+                        // 标记为已设置
+                        item.as_object_mut()
+                            .unwrap()
+                            .insert("is_set".into(), Value::Bool(true));
+                        break;
+                    }
+                }
+
+                if !found {
+                    return Err(format!(
+                        "selected item '{}' not found under {}.{}",
+                        name, os_key, category
+                    ));
+                }
+
+                let pretty = serde_json::to_string_pretty(&json)
+                    .map_err(|e| format!("serialize config.json failed: {}", e))?;
+                std::fs::write(&config_path, pretty)
+                    .map_err(|e| format!("write config.json failed: {}", e))?;
+
+                log::info!("Config path updated successfully at: {:?}", config_path);
+
+                return Ok(json
+                    .get(os_key)
+                    .cloned()
+                    .ok_or_else(|| format!("config.json missing key for current OS: {}", os_key))?);
+            }
+        }
 
         let mut found = false;
 
@@ -334,9 +390,10 @@ impl ConfigService {
 
         let pretty = serde_json::to_string_pretty(&json)
             .map_err(|e| format!("serialize config.json failed: {}", e))?;
-        std::fs::write(&path, pretty).map_err(|e| format!("write config.json failed: {}", e))?;
+        std::fs::write(&config_path, pretty)
+            .map_err(|e| format!("write config.json failed: {}", e))?;
 
-        log::info!("Config updated successfully at: {:?}", path);
+        log::info!("Config updated successfully at: {:?}", config_path);
 
         Ok(json
             .get(os_key)

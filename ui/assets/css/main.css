@@ -16,7 +16,7 @@
   --ui-color-secondary-500: #141419;
   --ui-color-neutral-100: #d1d1d1;
   --el-font-family: var(--font-sans);
-  --bg-hover-light: rgba(209, 209, 209, 0.6);
+  --bg-hover-light: rgba(0, 0, 0, 0.1);
   --bg-hover-dark: rgba(0, 0, 0, 0.3);
   --bg-selected-light: rgba(209, 209, 209, 0.8);
   --bg-selected-dark: rgba(0, 0, 0, 0.5);

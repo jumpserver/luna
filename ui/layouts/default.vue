@@ -13,7 +13,7 @@ const cardUi = computed(() => {
     header: "p-0 sm:px-0",
     body: "p-0 sm:p-0",
     footer: "p-0 sm:p-0",
-    base: base.join(" ")
+    root: base.join(" ")
   };
 });
 
@@ -24,8 +24,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <UCard variant="outline" :ui="cardUi" style="background-color: transparent">
-    <div class="flex gap-0 w-full h-screen">
+  <UCard
+    variant="outline"
+    :ui="cardUi"
+    style="background-color: transparent"
+  >
+    <div class="flex gap-0 w-full h-screen border-none">
       <SideBar />
 
       <Main class="flex-1 min-w-0">

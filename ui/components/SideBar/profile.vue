@@ -2,7 +2,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import type { PermissionOrgs, PermOrgItem, UserData, UserIntiInfo, RoleType } from "~/types/index";
+import type { PermissionOrgs, PermOrgItem, UserData, UserIntiInfo, LangType } from "~/types/index";
 
 import { resolveLanguageFromCookies } from "~/utils";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
@@ -65,10 +65,9 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
 
 watch(
   () => currentLanguage.value,
-  (lang) => {
+  async (lang: LangType) => {
     const target = lang === "zh" ? "zh" : "en";
-
-    setLocale(target as any);
+    await setLocale(target);
   },
   { immediate: true }
 );
@@ -352,13 +351,6 @@ onMounted(async () => {
     if (status === "success" && profileData) {
       const language = resolveLanguageFromCookies(cookies);
 
-      toast.add({
-        title: t("Login.LoginSuccess"),
-        description: t("Login.LoginSuccessDescription"),
-        color: "primary",
-        icon: "line-md:check-all"
-      });
-
       if (vStatus !== "incompatible" && !vMatch) {
         useEventBus().emit("versionAlert", { type: "noMatch", version: versionMessage[versionMessage.length - 1] });
       }
@@ -388,7 +380,16 @@ onMounted(async () => {
       userInfoStore.setCurrentOrg(currentOrgData);
       userInfoStore.setUserLoggedIn(true);
 
+      await setLocale(language)
+
       nextTick(() => {
+        toast.add({
+          title: t("Login.LoginSuccess"),
+          description: t("Login.LoginSuccessDescription"),
+          color: "primary",
+          icon: "line-md:check-all"
+        });
+
         useEventBus().emit("refresh", undefined);
       });
     }
