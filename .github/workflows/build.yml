@@ -181,12 +181,22 @@ jobs:
             exit 1
           fi
           
-          # Mask certificate ID in logs
+          # Extract certificate name (content between quotes)
+          # Format: 1) CERT_ID "Certificate Name"
+          CERT_NAME=$(echo "$CERT_INFO" | sed -n 's/.*"\(.*\)".*/\1/p')
+          
+          if [ -z "$CERT_NAME" ]; then
+            echo "Error: Failed to extract certificate name"
+            exit 1
+          fi
+          
+          # Mask certificate ID and name in logs
           echo "::add-mask::$CERT_ID"
+          echo "::add-mask::$CERT_NAME"
           
           # Extract Team ID from certificate name (format: "Developer ID Application: Name (TEAM_ID)")
           # Use sed to extract content between parentheses
-          TEAM_ID=$(echo "$CERT_INFO" | sed -n 's/.*(\([A-Z0-9]*\)).*/\1/p' | head -n 1)
+          TEAM_ID=$(echo "$CERT_NAME" | sed -n 's/.*(\([A-Z0-9]*\)).*/\1/p' | head -n 1)
           
           if [ -z "$TEAM_ID" ]; then
             echo "Warning: Failed to extract Team ID from certificate name, trying alternative method"
@@ -203,7 +213,8 @@ jobs:
           fi
           
           # Set environment variables
-          echo "CERT_ID=$CERT_ID" >> $GITHUB_ENV
+          # Use certificate name (not ID) for APPLE_SIGNING_IDENTITY as required by tauri-action
+          echo "APPLE_SIGNING_IDENTITY=$CERT_NAME" >> $GITHUB_ENV
           if [ -n "$TEAM_ID" ]; then
             echo "APPLE_TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
           fi
@@ -251,7 +262,7 @@ jobs:
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ env.CERT_ID }}
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
           APPLE_TEAM_ID: ${{ env.APPLE_TEAM_ID }}
 
         with:
