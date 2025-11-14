@@ -1,6 +1,6 @@
 # build.yml
 
-name: Auto Build
+name: Build and Release Client
 
 on:
   workflow_dispatch:
@@ -139,38 +139,50 @@ jobs:
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
+          # Mask sensitive values in logs
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          echo "::add-mask::$APPLE_CERTIFICATE_PASSWORD"
+          
+          # Decode certificate without echoing it
+          echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
           security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
           security set-keychain-settings -t 3600 -u build.keychain
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
-          security find-identity -v -p codesigning build.keychain
+          
+          # Clean up certificate file
+          rm -f certificate.p12
+          
+          # List identities (only show count, not full details)
+          IDENTITY_COUNT=$(security find-identity -v -p codesigning build.keychain | grep -c "valid identities found" || echo "0")
+          echo "Found $IDENTITY_COUNT valid code signing identity/identities"
 
       - name: Verify Certificate
         if: matrix.platform == 'macos-latest'
         run: |
-          # List all code signing identities
-          security find-identity -v -p codesigning build.keychain
-          
           # Try to find valid code signing certificate (Developer ID, Apple Distribution, or Apple Development)
           # Priority: Developer ID Application > Apple Distribution > Apple Development
-          CERT_INFO=$(security find-identity -v -p codesigning build.keychain | grep -E "Developer ID Application|Apple Distribution|Apple Development" | head -n 1)
+          CERT_INFO=$(security find-identity -v -p codesigning build.keychain 2>/dev/null | grep -E "Developer ID Application|Apple Distribution|Apple Development" | head -n 1)
           
           if [ -z "$CERT_INFO" ]; then
             echo "Error: No valid Apple certificate found in keychain"
-            echo "Available certificates:"
-            security find-identity -v -p codesigning build.keychain
+            # Only show certificate count, not full details
+            CERT_COUNT=$(security find-identity -v -p codesigning build.keychain 2>/dev/null | grep -c "valid identities found" || echo "0")
+            echo "Found $CERT_COUNT certificate(s) in keychain"
             exit 1
           fi
           
           CERT_ID=$(echo "$CERT_INFO" | awk '{print $2}')
           
           if [ -z "$CERT_ID" ]; then
-            echo "Error: Failed to extract certificate ID from: $CERT_INFO"
+            echo "Error: Failed to extract certificate ID"
             exit 1
           fi
+          
+          # Mask certificate ID in logs
+          echo "::add-mask::$CERT_ID"
           
           # Extract Team ID from certificate name (format: "Developer ID Application: Name (TEAM_ID)")
           # Use sed to extract content between parentheses
@@ -178,21 +190,28 @@ jobs:
           
           if [ -z "$TEAM_ID" ]; then
             echo "Warning: Failed to extract Team ID from certificate name, trying alternative method"
-            # Alternative: try to get from certificate directly using openssl
+            # Alternative: try to get from certificate directly using openssl (without outputting full subject)
             CERT_SUBJECT=$(security find-certificate -c "$CERT_ID" -p build.keychain 2>/dev/null | openssl x509 -noout -subject 2>/dev/null || echo "")
             if [ -n "$CERT_SUBJECT" ]; then
               TEAM_ID=$(echo "$CERT_SUBJECT" | sed -n 's/.*OU=\([^/]*\).*/\1/p' | head -n 1)
             fi
           fi
           
+          # Mask Team ID in logs
+          if [ -n "$TEAM_ID" ]; then
+            echo "::add-mask::$TEAM_ID"
+          fi
+          
+          # Set environment variables
           echo "CERT_ID=$CERT_ID" >> $GITHUB_ENV
           if [ -n "$TEAM_ID" ]; then
             echo "APPLE_TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
-            echo "Team ID: $TEAM_ID"
           fi
-          echo "Certificate ID: $CERT_ID"
-          echo "Certificate info: $CERT_INFO"
-          echo "Certificate imported and verified."
+          
+          # Show sanitized info (only certificate type, not full details)
+          CERT_TYPE=$(echo "$CERT_INFO" | sed -n 's/.*"\(Developer ID Application\|Apple Distribution\|Apple Development\).*/\1/p')
+          echo "✓ Certificate verified: $CERT_TYPE"
+          echo "✓ Certificate imported and verified successfully."
 
       - name: Install Go client for current platform
         run: make install
@@ -220,8 +239,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
-
-
 
       - name: Install frontend dependencies
         run: pnpm install
