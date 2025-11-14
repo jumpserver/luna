@@ -178,10 +178,28 @@ jobs:
       - name: Verify Certificate
         if: matrix.platform == 'macos-latest'
         run: |
-          CERT_INFO=$(security find-identity -v -p codesigning build.keychain | grep "Apple Development")
+          # List all code signing identities
+          security find-identity -v -p codesigning build.keychain
+          
+          # Try to find Apple Distribution certificate first (for DMG signing)
+          CERT_INFO=$(security find-identity -v -p codesigning build.keychain | grep -E "Apple Distribution|Apple Development" | head -n 1)
+          
+          if [ -z "$CERT_INFO" ]; then
+            echo "Error: No Apple certificate found in keychain"
+            security find-identity -v -p codesigning build.keychain
+            exit 1
+          fi
+          
           CERT_ID=$(echo "$CERT_INFO" | awk -F'"' '{print $2}')
+          
+          if [ -z "$CERT_ID" ]; then
+            echo "Error: Failed to extract certificate ID"
+            exit 1
+          fi
+          
           echo "CERT_ID=$CERT_ID" >> $GITHUB_ENV
-          echo "Certificate imported."
+          echo "Certificate ID: $CERT_ID"
+          echo "Certificate imported and verified."
 
       - name: Install frontend dependencies
         run: pnpm install
