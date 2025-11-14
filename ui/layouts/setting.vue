@@ -86,6 +86,10 @@ const settingMenu = computed<NavigationMenuItem[]>(() => {
               to: localePath({ path: "/setting/mysql" })
             },
             {
+              label: "MariaDB",
+              to: localePath({ path: "/setting/mariadb" })
+            },
+            {
               label: "MongoDB",
               to: localePath({ path: "/setting/mongodb" })
             },

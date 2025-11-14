@@ -188,7 +188,6 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	var appLst []config.AppItem
 	switch r.Protocol {
 	case "ssh", "telnet":
-		r.Protocol = "ssh"
 		appLst = cfg.Windows.Terminal
 	case "sftp":
 		appLst = cfg.Windows.FileTransfer
@@ -210,7 +209,7 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	} else {
 		appPath = appItem.Path
 	}
-
+	r.Protocol = "ssh"
 	connectMap := map[string]string{
 		"name":     r.getName(),
 		"protocol": r.Protocol,
