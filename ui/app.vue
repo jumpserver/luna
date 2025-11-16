@@ -27,8 +27,7 @@ const backgroundColor = computed(() => {
   if (isMacOS.value) {
     return isDark ? "rgba(30, 30, 30, 0.6)" : "rgba(240, 240, 240, 0.4)";
   } else {
-    // Windows 和其他平台使用不透明的背景色
-    return isDark ? "rgb(30, 30, 30)" : "rgb(240, 240, 240)";
+    return isDark ? "rgba(30, 30, 30, 0.8)" : "rgba(240, 240, 240, 0.9)";
   }
 });
 
