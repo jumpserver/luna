@@ -85,9 +85,11 @@ install:
 	@if [ -d "$(BUILDDIR)/$(CURRENT_OS)-$(CURRENT_ARCH)" ]; then \
 		echo "Copying $(CURRENT_OS)-$(CURRENT_ARCH) files..."; \
 		cp -R $(BUILDDIR)/$(CURRENT_OS)-$(CURRENT_ARCH) $(BASEPATH)/../src-tauri/resources/bin/; \
+		chmod +x $(BASEPATH)/../src-tauri/resources/bin/$(CURRENT_OS)-$(CURRENT_ARCH)/*; \
 	elif [ "$(CURRENT_OS)" = "windows" ] && [ -d "$(BUILDDIR)/windows" ]; then \
 		echo "Copying Windows files..."; \
 		cp -R $(BUILDDIR)/windows $(BASEPATH)/../src-tauri/resources/bin/; \
+		chmod +x $(BASEPATH)/../src-tauri/resources/bin/windows/*.exe; \
 	else \
 		echo "Error: No build files found for $(CURRENT_OS)/$(CURRENT_ARCH)"; \
 		echo "Available platforms:"; \
