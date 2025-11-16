@@ -27,7 +27,7 @@ const backgroundColor = computed(() => {
   if (isMacOS.value) {
     return isDark ? "rgba(30, 30, 30, 0.6)" : "rgba(240, 240, 240, 0.4)";
   } else {
-    return isDark ? "rgba(30, 30, 30, 0.8)" : "rgba(240, 240, 240, 0.9)";
+    return isDark ? "rgba(30, 30, 30, 0.8)" : "rgba(240, 240, 240, 0.83)";
   }
 });
 

@@ -161,8 +161,13 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 <style>
 .light .menu .menu-item {
   &[data-active] {
-    background-color: var(--bg-hover-light);
-    opacity: 0.8;
+    background-color: transparent; 
+    
+    &::before {
+      background-color: var(--bg-hover-light);
+    }
+    
+    /* opacity: 0.8; */
     font-weight: 500;
   }
 
@@ -172,7 +177,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 }
 
 .light .search-input input {
-  background-color: var(--bg-hover-light);
+    background-color: var(--bg-hover-light);
 }
 
 .menu nav[data-collapsed="true"] {
