@@ -204,8 +204,6 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
       speed: this.speed,
       preload: true,
       autoPlay: this.isPlaying ? 1 : 0,
-      rows: this.rows,
-      cols: 100,
       fit: false,
       terminalFontSize: '12px'
     };
