@@ -192,11 +192,15 @@ onBeforeUnmount(() => {
 
       <div
         v-else-if="visibleAssets && visibleAssets.length === 0"
-        class="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-500"
+        class="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-500"
       >
         <UEmpty
           icon="mingcute:inbox-line"
+          size="xl"
           variant="naked"
+          :ui="{
+            avatar: 'bg-transparent size-10'
+          }"
           :title="t('Common.NoData')"
           :description="t('Common.EmptyDescription')"
         />

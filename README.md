@@ -37,6 +37,7 @@
 <div align="center">
 
 ![Main Interface](public/screenshot.png)
+![Windows](public/screenshot-windows.png)
 
 *Main interface showing asset management*
 
