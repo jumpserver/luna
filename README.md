@@ -36,10 +36,15 @@
 
 <div align="center">
 
-![Main Interface](public/screenshot.png)
-![Windows](public/screenshot-windows.png)
 
-*Main interface showing asset management*
+![Main Interface](public/screenshot.png)
+*MacOS*
+
+<br/>
+
+![Windows](public/screenshot-windows.png)
+*Windows*
+
 
 </div>
 

@@ -56,7 +56,7 @@ const menuItems = computed((): MenuItem[] => {
     },
     {
       label: isFavorited.value ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
-      icon: isFavorited.value ? "lucide:star-off" : "i-lucide-star",
+      icon: isFavorited.value ? "lucide:star-off" : "lucide:star",
       onClick: () => (isFavorited.value ? handleUnfavorite() : handleFavorite())
     }
   ];
