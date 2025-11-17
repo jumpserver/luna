@@ -44,71 +44,85 @@ const contextMenuAsset = ref<AssetItem | null>(null);
 const renameInputEl = ref<HTMLInputElement | null>(null);
 const actionMenuOpen = reactive<Record<string, boolean>>({});
 
-/**
- * @description 下拉菜单选项
- * @param asset
- */
-const buildMenuItems = (asset: AssetItem): MenuItem[] => {
-  const protocols = (asset.permedProtocols || []).map((p: any) => p.name);
-  const uniqueProtocols = Array.from(new Set(protocols));
+const buildMenuItems = computed(() => {
+  return (asset: AssetItem): MenuItem[] => {
+    const protocols = (asset.permedProtocols || []).map((p: any) => p.name);
+    const uniqueProtocols = Array.from(new Set(protocols));
 
-  const items: MenuItem[] = [
-    {
-      value: "connect",
-      label: t("ContextMenu.Connect"),
-      icon: "i-lucide-plug",
-      onClick: () => emits("connectTrigger", asset)
-    },
-    {
-      label: t("ContextMenu.Edit"),
-      icon: "solar:pen-new-square-linear",
-      onClick: () => emits("editTrigger", asset)
-    },
-    {
-      label: t("ContextMenu.Rename"),
-      icon: "i-lucide-pencil",
-      onClick: () => handleRenameTrigger(asset)
-    },
-    {
-      label: asset.isFavorite ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
-      icon: "i-lucide-star",
-      onClick: () => (asset.isFavorite ? handleAssetUnfavorite(asset.id) : handleAssetFavorite(asset.id))
+    const items: MenuItem[] = [
+      {
+        value: "connect",
+        label: t("ContextMenu.Connect"),
+        icon: "i-lucide-plug",
+        onClick: () => emits("connectTrigger", asset)
+      },
+      {
+        label: t("ContextMenu.Edit"),
+        icon: "solar:pen-new-square-linear",
+        onClick: () => emits("editTrigger", asset)
+      },
+      {
+        label: t("ContextMenu.Rename"),
+        icon: "i-lucide-pencil",
+        onClick: () => handleRenameTrigger(asset)
+      },
+      {
+        label: asset.isFavorite ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
+        icon: asset.isFavorite ? "lucide:star-off" : "lucide:star",
+        onClick: () => (asset.isFavorite ? handleUnfavorite(asset) : handleFavorite(asset))
+      }
+    ];
+
+    if (uniqueProtocols.length > 1) {
+      const protocolItems: MenuItem[] = uniqueProtocols.map((name: string) => ({
+        label: `${t("ContextMenu.Use")} ${name.toUpperCase()}`,
+        icon: "i-lucide-plug",
+        onClick: () =>
+          handleAssetConnection(
+            displayUser(asset.id, asset.permedAccounts!),
+            asset.id,
+            displayProtocol(asset.id, asset.permedProtocols!),
+            asset.permedAccounts!,
+            name
+          )
+      }));
+
+      const moreConnect: MenuItem = {
+        value: "moreConnect",
+        label: t("ContextMenu.MoreConnect"),
+        icon: "i-lucide-ellipsis",
+        onClick: () => void 0,
+        children: protocolItems
+      };
+
+      items.splice(1, 0, moreConnect);
     }
-  ];
 
-  if (uniqueProtocols.length > 1) {
-    const protocolItems: MenuItem[] = uniqueProtocols.map((name: string) => ({
-      label: `${t("ContextMenu.Use")} ${name.toUpperCase()}`,
-      icon: "i-lucide-plug",
-      onClick: () =>
-        handleAssetConnection(
-          displayUser(asset.id, asset.permedAccounts!),
-          asset.id,
-          displayProtocol(asset.id, asset.permedProtocols!),
-          asset.permedAccounts!,
-          name
-        )
-    }));
-
-    const moreConnect: MenuItem = {
-      value: "moreConnect",
-      label: t("ContextMenu.MoreConnect"),
-      icon: "i-lucide-ellipsis",
-      onClick: () => void 0,
-      children: protocolItems
-    };
-
-    items.splice(1, 0, moreConnect);
-  }
-
-  return items;
-};
+    return items;
+  };
+});
 
 /**
  * @description 处理上下文事件
  */
 const handleContextTrigger = (asset: AssetItem) => {
   emits("contextTrigger", asset);
+};
+
+const emitFavoriteChanged = (assetId: string, favorite: boolean) => {
+  try {
+    useEventBus().emit("favoriteChanged", { assetId, favorite });
+  } catch {}
+};
+
+const handleFavorite = (asset: AssetItem) => {
+  handleAssetFavorite(asset.id);
+  emitFavoriteChanged(asset.id, true);
+};
+
+const handleUnfavorite = (asset: AssetItem) => {
+  handleAssetUnfavorite(asset.id);
+  emitFavoriteChanged(asset.id, false);
 };
 
 /**
@@ -229,7 +243,7 @@ const columns: TableColumn<AssetItem>[] = [
     id: "actions",
     header: () => t("AssetCard.Actions"),
     cell: ({ row }) => {
-      const menuItems = buildMenuItems(row.original);
+      const menuItems = buildMenuItems.value(row.original);
 
       return h(
         UFieldGroup,

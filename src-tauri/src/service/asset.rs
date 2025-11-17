@@ -104,11 +104,15 @@ impl AssetService {
         info!("Cookie: {}", self.cookie_header);
         info!("query: {:?}", self.query);
 
-        let (r#type, category) = match self.query.get_category() {
-            Category::Linux => (Some(Category::Linux), None),
-            Category::Windows => (Some(Category::Windows), None),
-            Category::Database => (None, Some(Category::Database)),
-            Category::Device => (None, Some(Category::Device)),
+        let (r#type, category) = if favorite {
+            (None, None)
+        } else {
+            match self.query.get_category() {
+                Category::Linux => (Some(Category::Linux), None),
+                Category::Windows => (Some(Category::Windows), None),
+                Category::Database => (None, Some(Category::Database)),
+                Category::Device => (None, Some(Category::Device)),
+            }
         };
 
         let query = AssetQuery {
