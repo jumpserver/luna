@@ -2,11 +2,12 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import type { PermissionOrgs, PermOrgItem, UserData, UserIntiInfo, LangType } from "~/types/index";
+import type { PermissionOrgs, PermOrgItem, UserData, UserIntiInfo, LangType, ThemeType } from "~/types/index";
 
 import { resolveLanguageFromCookies } from "~/utils";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { useSettingManager } from "~/composables/useSettingManager";
 
 const props = defineProps<{ collapse: boolean }>();
 
@@ -15,9 +16,13 @@ const appConfig = useAppConfig();
 const userInfoStore = useUserInfoStore();
 
 const { isMacOS } = usePlatform();
-const { t, setLocale } = useI18n();
+const { t, setLocale, locales } = useI18n();
 // prettier-ignore
 const { loggedIn, currentSite, userMap, currentUser, currentLanguage } = storeToRefs(userInfoStore);
+
+const { setLang, theme, primaryColorLight, primaryColorDark } = useSettingManager();
+const { manualSetTheme, enableFollowSystem, followSystem, userTheme } = useThemeAdapter();
+const { applyPrimaryColor } = useColor();
 
 const inputSite = ref("");
 const errorMessage = ref("");
@@ -33,8 +38,89 @@ const inputRef = ref<ComponentPublicInstance | null>(null);
 useEventBus().on("login", openLoginPage);
 
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
+const selectedLanguage = ref<LangType>(currentLanguage.value);
+
+// TODO 后续逻辑统一到一个位置
+const languageItems = computed(() => {
+  const arr = (locales.value as any[]) || [];
+  return arr.map((l: any) => ({
+    id: l.code || l,
+    label: l.name || l
+  }));
+});
+
+const languageChildren = computed(() => [
+  languageItems.value.map((item) => ({
+    label: item.label,
+    type: "checkbox",
+    checked: selectedLanguage.value === (item.id as LangType),
+    onUpdateChecked: (checked: boolean) => {
+      if (!checked) return;
+      handleLanguageChange(item.id as LangType);
+    }
+  }))
+]);
+
+const appearanceOptions = computed(() => [
+  { id: "withSystem", label: t("Common.WithSystem") },
+  { id: "light", label: t("Common.Light") },
+  { id: "dark", label: t("Common.Dark") }
+]);
+
+const selectedAppearance = computed<ThemeType>({
+  get: () => {
+    if (followSystem.value) return "withSystem";
+
+    const saved = (theme.value || "") as ThemeType;
+    if (saved === "dark" || saved === "light") return saved;
+
+    const current = (userTheme.value || "") as ThemeType;
+    if (current === "dark" || current === "light") return current;
+
+    return "light";
+  },
+  set: (id: ThemeType) => {
+    if (id === "withSystem") {
+      void enableFollowSystem().then(() => {
+        useTauriEventEmit("theme-changed", { mode: "withSystem" });
+        nextTick().then(() => applyCurrentThemeColor(true));
+      });
+      return;
+    }
+
+    manualSetTheme(id as any);
+    useTauriEventEmit("theme-changed", { mode: id });
+    nextTick().then(() => applyCurrentThemeColor(true));
+  }
+});
+
+const appearanceChildren = computed(() => [
+  appearanceOptions.value.map((opt) => ({
+    label: opt.label,
+    type: "checkbox",
+    checked: selectedAppearance.value === (opt.id as ThemeType),
+    onUpdateChecked: (checked: boolean) => {
+      if (!checked) return;
+      if (selectedAppearance.value !== (opt.id as ThemeType)) {
+        selectedAppearance.value = opt.id as ThemeType;
+      }
+    }
+  }))
+]);
 
 const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
+  [
+    {
+      label: t("Common.Appearance"),
+      icon: "solar:palette-linear",
+      children: appearanceChildren.value
+    },
+    {
+      label: t("Common.Language"),
+      icon: "solar:global-outline",
+      children: languageChildren.value
+    }
+  ],
   [
     {
       label: t("Login.AddAccount"),
@@ -68,9 +154,40 @@ watch(
   async (lang: LangType) => {
     const target = lang === "zh" ? "zh" : "en";
     await setLocale(target);
+    if (lang && lang !== selectedLanguage.value) {
+      selectedLanguage.value = lang;
+    }
   },
   { immediate: true }
 );
+
+watch(
+  () => userTheme.value,
+  () => {
+    applyCurrentThemeColor();
+  }
+);
+
+const applyCurrentThemeColor = (broadcast = false) => {
+  const modeNow = (userTheme.value as string) || (selectedAppearance.value as string);
+  const hexNow = modeNow === "dark" ? primaryColorDark.value : primaryColorLight.value;
+
+  if (hexNow) {
+    applyPrimaryColor(hexNow);
+    if (broadcast) {
+      useTauriEventEmit("primary-color-changed", { hex: hexNow, mode: modeNow });
+    }
+  }
+};
+
+const handleLanguageChange = (code: LangType) => {
+  if (!code || code === selectedLanguage.value) return;
+
+  selectedLanguage.value = code;
+  setLang(code);
+  userInfoStore.applyLanguageToAll(code);
+  useTauriEventEmit("language-changed", { code });
+};
 
 /**
  * @description 标准化站点输入：去除首尾空格 + 去除末尾斜杠
@@ -140,8 +257,12 @@ function switchAccountChildren() {
 
     return {
       label,
-      icon: isCurrent ? "i-lucide-check" : "i-lucide-user",
-      onClick: () => handleSwitchAccount(u.site)
+      type: "checkbox",
+      checked: isCurrent,
+      onUpdateChecked: (checked: boolean) => {
+        if (!checked || isCurrent) return;
+        handleSwitchAccount(u.site);
+      }
     } as DropdownMenuItem;
   });
 
@@ -305,6 +426,8 @@ const handleVersions = (version: string[] | string, appVersion: string) => {
 };
 
 onMounted(async () => {
+  applyCurrentThemeColor();
+
   unlistenErrorPageRef.value = await useTauriEventListen("error-page", (event) => {
     const { status, reason } = event.payload as {
       status: string;
@@ -380,7 +503,7 @@ onMounted(async () => {
       userInfoStore.setCurrentOrg(currentOrgData);
       userInfoStore.setUserLoggedIn(true);
 
-      await setLocale(language)
+      await setLocale(language);
 
       nextTick(() => {
         toast.add({
