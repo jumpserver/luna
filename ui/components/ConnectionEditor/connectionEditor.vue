@@ -68,6 +68,12 @@ const initDraft = (asset: AssetItem) => {
 /**
  * @description 拼凑连接信息
  */
+const normalizeProtocols = () => {
+  return (currentAsset.value?.permedProtocols || [])
+    .map((p) => (p?.name ? p.name.trim() : ""))
+    .filter((name) => name.length > 0);
+};
+
 const buildConnectionInfo = () => {
   let accountMode: "hosted" | "dynamic" | "manual" = "hosted";
   let normalizedAccount = draftAccount.value || "";
@@ -102,7 +108,8 @@ const buildConnectionInfo = () => {
     manualUsername: draftManualUsername.value || "",
     manualPassword: draftManualPassword.value || "",
     dynamicPassword: draftDynamicPassword.value || "",
-    rememberSecret: !!draftRememberSecret.value
+    rememberSecret: !!draftRememberSecret.value,
+    availableProtocols: normalizeProtocols()
   };
 };
 

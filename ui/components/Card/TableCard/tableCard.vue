@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import type { AssetItem } from "~/types";
+import type { AssetItem, PermedProtocol } from "~/types";
 import type { TableColumn } from "@nuxt/ui";
-import { UCheckbox, UButton } from "#components";
+
 import { h, resolveComponent } from "vue";
+import { storeToRefs } from "pinia";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface MenuItem {
   icon: string;
@@ -13,6 +15,7 @@ interface MenuItem {
 }
 
 const UButton = resolveComponent("UButton");
+const UCheckbox = resolveComponent("UCheckbox");
 const UFieldGroup = resolveComponent("UFieldGroup");
 const UDropdownMenu = resolveComponent("UDropdownMenu");
 
@@ -36,6 +39,8 @@ const {
   handleAssetUnfavorite,
   handleAssetConnection
 } = useAssetAction();
+const userInfoStore = useUserInfoStore();
+const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
 
 const renameValue = ref("");
 const contextMenuVisible = ref(false);
@@ -45,10 +50,28 @@ const contextMenuAsset = ref<AssetItem | null>(null);
 const renameInputEl = ref<HTMLInputElement | null>(null);
 const actionMenuOpen = reactive<Record<string, boolean>>({});
 
+const resolveProtocols = (asset: AssetItem) => {
+  const candidates: string[] = [];
+
+  (asset.permedProtocols || []).forEach((p: PermedProtocol | undefined) => {
+    if (p?.name) candidates.push(p.name);
+  });
+
+  const saved = currentConnectionInfoMap.value[asset.id];
+  (saved?.availableProtocols || []).forEach((name) => {
+    if (name) candidates.push(name);
+  });
+
+  if (saved?.protocol) {
+    candidates.push(saved.protocol);
+  }
+
+  return Array.from(new Set(candidates.filter((name) => typeof name === "string" && name.length > 0)));
+};
+
 const buildMenuItems = computed(() => {
   return (asset: AssetItem): MenuItem[] => {
-    const protocols = (asset.permedProtocols || []).map((p: any) => p.name);
-    const uniqueProtocols = Array.from(new Set(protocols));
+    const uniqueProtocols = resolveProtocols(asset);
 
     const items: MenuItem[] = [
       {
@@ -162,21 +185,18 @@ function cancelRename() {
 
 const columns: TableColumn<AssetItem>[] = [
   {
-    id: 'select',
+    id: "select",
     header: ({ table }) =>
       h(UCheckbox, {
-        modelValue: table.getIsSomePageRowsSelected()
-          ? 'indeterminate'
-          : table.getIsAllPageRowsSelected(),
-        'onUpdate:modelValue': (value: boolean | 'indeterminate') =>
-          table.toggleAllPageRowsSelected(!!value),
-        'aria-label': 'Select all'
+        modelValue: table.getIsSomePageRowsSelected() ? "indeterminate" : table.getIsAllPageRowsSelected(),
+        "onUpdate:modelValue": (value: boolean | "indeterminate") => table.toggleAllPageRowsSelected(!!value),
+        "aria-label": "Select all"
       }),
     cell: ({ row }) =>
       h(UCheckbox, {
         modelValue: row.getIsSelected(),
-        'onUpdate:modelValue': (value: boolean | 'indeterminate') => row.toggleSelected(!!value),
-        'aria-label': 'Select row'
+        "onUpdate:modelValue": (value: boolean | "indeterminate") => row.toggleSelected(!!value),
+        "aria-label": "Select row"
       }),
     meta: { class: { th: "w-[50px]", td: "w-[50px]" } }
   },
@@ -251,15 +271,13 @@ const columns: TableColumn<AssetItem>[] = [
       if (!protocolText || protocolText === "-") {
         return h("div", { class: "truncate" }, "-");
       }
-       const color = {
-        paid: 'success' as const,
-        failed: 'error' as const,
-        refunded: 'neutral' as const
-      }[row.getValue('status') as string]
+      const color = {
+        paid: "success" as const,
+        failed: "error" as const,
+        refunded: "neutral" as const
+      }[row.getValue("status") as string];
 
-      return h(UButton, { size: 'xs', class: 'rounded-sm', variant: 'subtle', color: 'primary' }, () =>
-        protocolText
-      )
+      return h(UButton, { size: "xs", class: "rounded-sm", variant: "subtle", color: "primary" }, () => protocolText);
     },
     meta: { class: { th: "w-[150px]", td: "w-[150px]" } }
   },

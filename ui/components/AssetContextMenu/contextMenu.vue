@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AssetItem, PermedProtocol } from "~/types/index";
-
+import { storeToRefs } from "pinia";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface Props {
@@ -22,6 +22,8 @@ const emits = defineEmits<{
 
 const { t } = useI18n();
 const { handleAssetConnection, displayUser, handleAssetFavorite, handleAssetUnfavorite } = useAssetAction();
+const userInfoStore = useUserInfoStore();
+const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
 
 interface MenuItem {
   value?: string;
@@ -33,9 +35,28 @@ interface MenuItem {
 
 const isFavorited = computed(() => !!props.asset.isFavorite);
 
+const resolveProtocols = (asset: AssetItem) => {
+  const candidateProtocols: string[] = [];
+
+  (asset.permedProtocols || []).forEach((p: PermedProtocol | undefined) => {
+    if (p?.name) candidateProtocols.push(p.name);
+  });
+
+  const saved = currentConnectionInfoMap.value[asset.id];
+
+  (saved?.availableProtocols || []).forEach((name) => {
+    if (name) candidateProtocols.push(name);
+  });
+
+  if (saved?.protocol) {
+    candidateProtocols.push(saved.protocol);
+  }
+
+  return Array.from(new Set(candidateProtocols.filter((name) => typeof name === "string" && name.length > 0)));
+};
+
 const menuItems = computed((): MenuItem[] => {
-  const protocols = (props.asset.permedProtocols || []).map((p: PermedProtocol) => p.name);
-  const uniqueProtocols = Array.from(new Set(protocols));
+  const uniqueProtocols = resolveProtocols(props.asset);
 
   const baseItems: MenuItem[] = [
     {

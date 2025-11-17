@@ -122,7 +122,8 @@ const handleConnectAsset = async (asset: AssetItem) => {
       manualUsername: saved!.manualUsername || "",
       manualPassword: saved!.manualPassword || "",
       dynamicPassword: saved!.dynamicPassword || "",
-      rememberSecret: !!saved!.rememberSecret
+      rememberSecret: !!saved!.rememberSecret,
+      availableProtocols: saved!.availableProtocols || []
     });
   }
 

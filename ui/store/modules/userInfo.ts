@@ -288,8 +288,23 @@ export const useUserInfoStore = defineStore(
         siteData.connectionInfoMap = {};
       }
 
-      siteData.connectionInfoMap[assetId] = connectionInfo;
-      currentConnectionInfoMap.value = siteData.connectionInfoMap;
+      const existing = siteData.connectionInfoMap[assetId];
+      const incomingProtocols = (connectionInfo.availableProtocols || [])
+        .map((p) => (typeof p === "string" ? p.trim() : ""))
+        .filter((p) => p.length > 0);
+        
+      const mergedProtocols =
+        incomingProtocols.length > 0
+          ? Array.from(new Set(incomingProtocols))
+          : existing?.availableProtocols;
+
+      siteData.connectionInfoMap[assetId] = {
+        ...(existing || {}),
+        ...connectionInfo,
+        ...(mergedProtocols && mergedProtocols.length > 0 ? { availableProtocols: mergedProtocols } : {})
+      };
+
+      currentConnectionInfoMap.value = { ...siteData.connectionInfoMap };
     };
 
     const applyLanguageToAll = (lang: LangType) => {

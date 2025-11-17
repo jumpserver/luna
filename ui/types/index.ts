@@ -216,6 +216,7 @@ export interface ConnectionInfo {
   manualPassword?: string;
   rememberSecret?: boolean;
   dynamicPassword?: string;
+  availableProtocols?: string[];
 }
 
 export interface RdpGraphics {
