@@ -13,8 +13,8 @@
 :root {
   --ui-color-primary-500: #1ab394;
   --ui-color-elevated-500: #303237;
-  --ui-color-secondary-500: #141419;
-  --ui-color-neutral-100: #d1d1d1;
+  --ui-color-secondary-500: #7e7e7e;
+  --ui-color-neutral-100: #d8d8d8;
   --el-font-family: var(--font-sans);
   --bg-hover-light: rgba(60, 60, 60, 0.1);
   --bg-hover-dark: rgba(0, 0, 0, 0.3);

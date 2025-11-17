@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AssetItem } from "~/types";
 import type { TableColumn } from "@nuxt/ui";
+import { UCheckbox, UButton } from "#components";
 import { h, resolveComponent } from "vue";
 
 interface MenuItem {
@@ -161,6 +162,25 @@ function cancelRename() {
 
 const columns: TableColumn<AssetItem>[] = [
   {
+    id: 'select',
+    header: ({ table }) =>
+      h(UCheckbox, {
+        modelValue: table.getIsSomePageRowsSelected()
+          ? 'indeterminate'
+          : table.getIsAllPageRowsSelected(),
+        'onUpdate:modelValue': (value: boolean | 'indeterminate') =>
+          table.toggleAllPageRowsSelected(!!value),
+        'aria-label': 'Select all'
+      }),
+    cell: ({ row }) =>
+      h(UCheckbox, {
+        modelValue: row.getIsSelected(),
+        'onUpdate:modelValue': (value: boolean | 'indeterminate') => row.toggleSelected(!!value),
+        'aria-label': 'Select row'
+      }),
+    meta: { class: { th: "w-[50px]", td: "w-[50px]" } }
+  },
+  {
     accessorKey: "assetName",
     header: () => t("AssetCard.AssetName"),
     cell: ({ row }) => {
@@ -191,7 +211,7 @@ const columns: TableColumn<AssetItem>[] = [
         row.original.name
       );
     },
-    meta: { class: { th: "w-1/5", td: "w-1/5" } }
+    meta: { class: { th: "max-w-[300px]", td: "max-w-[300px]" } }
   },
   {
     accessorKey: "address",
@@ -205,7 +225,7 @@ const columns: TableColumn<AssetItem>[] = [
         },
         row.original.address
       ),
-    meta: { class: { th: "w-1/5", td: "w-1/5" } }
+    meta: { class: { th: "max-w-[300px]", td: "max-w-[300px]" } }
   },
   {
     id: "user",
@@ -221,23 +241,27 @@ const columns: TableColumn<AssetItem>[] = [
         userText
       );
     },
-    meta: { class: { th: "w-1/5", td: "w-1/5" } }
+    meta: { class: { th: "w-[250px]", td: "w-[250px]" } }
   },
   {
     id: "protocol",
     header: () => t("AssetCard.Protocol"),
     cell: ({ row }) => {
       const protocolText = displayProtocol(row.original.id, row.original.permedProtocols!);
-      return h(
-        "div",
-        {
-          class: "truncate",
-          title: protocolText
-        },
+      if (!protocolText || protocolText === "-") {
+        return h("div", { class: "truncate" }, "-");
+      }
+       const color = {
+        paid: 'success' as const,
+        failed: 'error' as const,
+        refunded: 'neutral' as const
+      }[row.getValue('status') as string]
+
+      return h(UButton, { size: 'xs', class: 'rounded-sm', variant: 'subtle', color: 'primary' }, () =>
         protocolText
-      );
+      )
     },
-    meta: { class: { th: "w-1/5", td: "w-1/5" } }
+    meta: { class: { th: "w-[150px]", td: "w-[150px]" } }
   },
   {
     id: "actions",
@@ -248,14 +272,15 @@ const columns: TableColumn<AssetItem>[] = [
       return h(
         UFieldGroup,
         {
-          size: "sm",
-          class: "inline-flex rounded-md shadow-sm"
+          size: "xs",
+          class: "inline-flex rounded-sm text-right"
         },
         {
           default: () => [
             h(UButton, {
               color: "primary",
               variant: "outline",
+              class: "rounded-sm",
               label: t("Common.Connect"),
               onClick: () => emits("connectAsset", row.original)
             }),
@@ -275,6 +300,7 @@ const columns: TableColumn<AssetItem>[] = [
                     icon: "i-lucide-ellipsis",
                     color: "primary",
                     variant: "outline",
+                    class: "rounded-sm",
                     "data-table-context-button": true
                   })
               }
@@ -283,7 +309,7 @@ const columns: TableColumn<AssetItem>[] = [
         }
       );
     },
-    meta: { class: { th: "w-1/5", td: "w-1/5" } }
+    meta: { class: { th: "w-[260px] text-center", td: "w-[260px] text-center" } }
   }
 ];
 </script>
@@ -302,11 +328,11 @@ const columns: TableColumn<AssetItem>[] = [
         :data="props.items"
         :columns="columns"
         :empty="t('Common.NoData')"
-        class="w-full table-fixed"
+        class="w-full table-auto"
         :ui="{
-          tr: 'hover:bg-muted/50',
+          tr: 'hover:bg-muted/50 ',
           th: 'whitespace-nowrap text-xs sm:text-sm',
-          td: 'whitespace-nowrap text-xs sm:text-sm'
+          td: 'whitespace-nowrap text-xs sm:text-sm py-2'
         }"
       ></UTable>
     </div>

@@ -4,10 +4,12 @@ withDefaults(
     open: boolean;
     title?: string;
     description?: string;
+    overlay?: boolean;
   }>(),
   {
     title: "",
-    description: ""
+    description: "",
+    overlay: false
   }
 );
 
@@ -52,6 +54,7 @@ const handleContextMenu = async (e: Event) => {
       :ui="{ footer: 'justify-end', description: 'text-xs-plus' }"
       :description="description"
       :title="title"
+      :overlay="overlay"
       @update:open="updateOpen"
     >
       <template #body>

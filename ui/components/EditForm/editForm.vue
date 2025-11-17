@@ -129,7 +129,6 @@ function handleSpecialAccount(v: string) {
           trailingIcon
         }"
         icon="mingcute:plugin-line"
-        variant="subtle"
         class="w-full"
       />
     </UFormField>
@@ -142,7 +141,6 @@ function handleSpecialAccount(v: string) {
           trailingIcon
         }"
         icon="lucide:user-round"
-        variant="subtle"
         class="w-full"
       />
     </UFormField>
