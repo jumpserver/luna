@@ -37,7 +37,7 @@ export const useDisplayAssets = (assets: Ref<AssetItem[]>, platform?: Ref<string
         return `${protocol}://${userPart}${addr}${port ? `:${port}` : ""}`;
       }
 
-      return `${asset.address} ${asset.type}`;
+      return `${asset.address}`;
     };
 
     return list.map((a) => {
