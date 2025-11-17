@@ -79,10 +79,10 @@
     "UnfavoriteFailed": "Failed to remove from favorites"
 	},
 	"EditModal": {
-		"ModifyConnectionInfo": "Modify Connection Info",
-		"Description": "Default connection settings will be applied after saving and used for future connections.",
-		"OptionalProtocol": "Optional Protocol",
-		"OptionalAccount": "Optional Account"
+		"ModifyConnectionInfo": "Connect",
+		"Description": "Next connections will use these settings by default, right-click to edit",
+		"OptionalProtocol": "Protocol",
+		"OptionalAccount": "Account"
 	},
 	"Layout": {
 		"Grid": "Grid View",

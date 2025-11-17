@@ -79,10 +79,10 @@
     "UnfavoriteFailed": "取消收藏失败"
   },
   "EditModal": {
-    "ModifyConnectionInfo": "修改连接信息",
-    "Description": "默认连接信息将在保存后生效，并用于后续所有连接操作",
-    "OptionalProtocol": "可选协议",
-    "OptionalAccount": "可选账号"
+    "ModifyConnectionInfo": "连接",
+    "Description": "保存后，下次连接将默认使用这些设置，右击重新设置",
+    "OptionalProtocol": "协议",
+    "OptionalAccount": "账号"
   },
   "SettingModal": {
     "Description": "连接设置用于配置后续连接中默认启动的应用程序"
