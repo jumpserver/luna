@@ -111,18 +111,6 @@ const appearanceChildren = computed(() => [
 const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
-      label: t("Common.Appearance"),
-      icon: "solar:palette-linear",
-      children: appearanceChildren.value
-    },
-    {
-      label: t("Common.Language"),
-      icon: "solar:global-outline",
-      children: languageChildren.value
-    }
-  ],
-  [
-    {
       label: t("Login.AddAccount"),
       icon: "i-lucide-user-round-plus",
       onClick: openLoginPage
@@ -131,6 +119,16 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
       label: t("Login.SwitchSite"),
       icon: "i-lucide-arrow-down-up",
       children: switchAccountChildren()
+    },
+     {
+      label: t("Common.Appearance"),
+      icon: "solar:palette-linear",
+      children: appearanceChildren.value
+    },
+    {
+      label: t("Common.Language"),
+      icon: "solar:global-outline",
+      children: languageChildren.value
     }
   ],
   [
