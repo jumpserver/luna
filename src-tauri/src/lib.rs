@@ -31,6 +31,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
                 .max_file_size(500_000 /* bytes */)
                 .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
                 .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(5))

@@ -90,6 +90,7 @@ export interface UserIntiInfo {
   status: string;
   cookies: string;
   version?: string;
+  resolved_site?: string;
   profile: {
     data: string;
   };

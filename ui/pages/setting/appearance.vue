@@ -240,7 +240,14 @@ function applyFont(font: string) {
 
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Common.Fonts") }}</span>
-      <USelectMenu v-model="selectedFont" :items="fontsItems" value-key="id" option-attribute="label" class="w-56" />
+      <USelectMenu
+        v-model="selectedFont"
+        :items="fontsItems"
+        :search-input="{ placeholder: t('Operation.Search') }"
+        value-key="id"
+        option-attribute="label"
+        class="w-56"
+      />
     </div>
   </div>
 </template>

@@ -54,7 +54,8 @@ pub async fn get_window_cookies(
     let url = Url::parse(origin)
         .or_else(|_| Url::parse(&format!("https://{}", origin)))
         .map_err(|e| e.to_string())?;
-    let target_domain = url.host_str().unwrap_or("");
+    let target_domain = url.host_str().unwrap_or("").trim_start_matches('.').to_string();
+    let target_is_ip = target_domain.parse::<std::net::IpAddr>().is_ok();
 
     sleep(Duration::from_millis(1000)).await;
 
@@ -62,11 +63,19 @@ pub async fn get_window_cookies(
     let cookies: Vec<_> = all_cookies
         .into_iter()
         .filter(|cookie| {
+            if target_is_ip {
+                return true;
+            }
             let domain = cookie.domain().unwrap_or("");
-            // 更宽松的域名匹配：支持父子域
             let cd = domain.trim_start_matches('.');
-            let td = target_domain.trim_start_matches('.');
-            cd == td || cd.ends_with(&format!(".{}", td)) || td.ends_with(&format!(".{}", cd))
+            let td = target_domain.as_str();
+
+            let exact_or_subdomain =
+                !cd.is_empty() && (cd == td || cd.ends_with(&format!(".{}", td)) || td.ends_with(&format!(".{}", cd)));
+
+            let ip_cookie_without_domain = cd.is_empty() && target_is_ip;
+
+            exact_or_subdomain || ip_cookie_without_domain
         })
         .collect();
 

@@ -445,7 +445,8 @@ onMounted(async () => {
   });
 
   unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", async (event) => {
-    const { status, profile, permission_orgs, current_org, cookies, version } = event.payload as UserIntiInfo;
+    const { status, profile, permission_orgs, current_org, cookies, version, resolved_site } =
+      event.payload as UserIntiInfo;
     const appVersion = await useTauriAppGetVersion().catch(() => "");
 
     let versionMessage: string | string[] = version ?? "";
@@ -468,6 +469,7 @@ onMounted(async () => {
     const permissionOrgData = JSON.parse((permission_orgs as any).data) as PermissionOrgs;
 
     const normalizedSite = normalizedInputSite.value;
+    const resolvedSite = resolved_site || normalizedSite;
 
     if (status === "success" && profileData) {
       const language = resolveLanguageFromCookies(cookies);
@@ -483,10 +485,10 @@ onMounted(async () => {
 
       const availableOrgs = initSelectOrganization(permissionOrgData);
 
-      userInfoStore.setUserData(normalizedSite, {
+      userInfoStore.setUserData(resolvedSite, {
         name: profileData.name,
         headerJson: cookies,
-        site: normalizedSite,
+        site: resolvedSite,
         org: currentOrgData,
         system_roles: profileData.system_roles,
         availableOrgs,
