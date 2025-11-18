@@ -202,6 +202,12 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	if appItem == nil {
 		return nil
 	}
+	// telnet 协议使用 ssh 的配置参数格式
+	protocol := r.Protocol
+	if protocol == "telnet" {
+		protocol = "ssh"
+	}
+
 	var appPath string
 	if appItem.IsInternal {
 		currentPath, _ := filepath.Abs(filepath.Dir(os.Args[0]))
@@ -209,10 +215,9 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	} else {
 		appPath = appItem.Path
 	}
-	r.Protocol = "ssh"
 	connectMap := map[string]string{
 		"name":     r.getName(),
-		"protocol": r.Protocol,
+		"protocol": protocol,
 		"username": r.getUserName(),
 		"value":    r.Value,
 		"host":     r.Host,
