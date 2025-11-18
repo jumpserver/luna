@@ -224,6 +224,7 @@ export interface ConnectionInfo {
 
 export interface RdpGraphics {
   rdp_resolution?: string;
+  resolution?: string;
   keyboard_layout?: string;
   rdp_client_option?: string[];
   rdp_color_quality?: string;

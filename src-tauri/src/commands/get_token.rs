@@ -1,5 +1,6 @@
 use serde_json::Value;
 use serde_json::{from_str, json};
+use std::collections::HashMap;
 use tauri::{AppHandle, Emitter};
 
 use crate::commands::pull_up::pull_up;
@@ -11,6 +12,7 @@ pub async fn get_connect_token(
     site: String,
     cookie_header: String,
     body: TokenRequestBody,
+    rdp_params: Option<HashMap<String, String>>,
 ) {
     let token_service = TokenService::new(site, cookie_header, body);
     let token_data = token_service.get_connect_token().await;
@@ -24,7 +26,9 @@ pub async fn get_connect_token(
             .expect("No 'id' field in token_data.data")
             .as_str()
             .expect("'id' field is not a string");
-        let url_data = token_service.get_local_client_url(id.to_string()).await;
+        let url_data = token_service
+            .get_local_client_url(id.to_string(), rdp_params.as_ref())
+            .await;
         log::info!("get_connect_token success: {:?}", url_data);
         let url_json: Value =
             from_str(&url_data.data).expect("Failed to parse url_data.data as JSON");

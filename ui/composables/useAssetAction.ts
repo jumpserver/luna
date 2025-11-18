@@ -130,6 +130,7 @@ export const useAssetAction = () => {
    * @description 获取连接令牌
    */
   const getConnectToken = (body: ConnectionBody) => {
+    const rdpParams = buildLocalRdpParams();
     useTauriCoreInvoke("get_connect_token", {
       site: currentSite.value,
       cookieHeader: currentUser.value!.headerJson,
@@ -141,7 +142,8 @@ export const useAssetAction = () => {
         input_secret: body.input_secret,
         connect_method: body.connect_method,
         connect_options: body.connect_options
-      }
+      },
+      rdpParams
     });
   };
 
@@ -178,27 +180,69 @@ export const useAssetAction = () => {
    * @description 生成连接选项
    * @returns
    */
-  const generateConnectOptions = () => {
+  const resolveGraphicsPreferences = () => {
     const resolvedKeyboardLayout =
       keyboardLayout.value || currentRdpClientOption.value.keyboard_layout || "en-us-qwerty";
     const resolvedClientOptions =
       (Array.isArray(rdpClientOption.value) && rdpClientOption.value.length > 0
-        ? rdpClientOption.value
-        : currentRdpClientOption.value.rdp_client_option) || [];
+        ? [...rdpClientOption.value]
+        : [...(currentRdpClientOption.value.rdp_client_option || [])]);
     const resolvedColorQuality =
       rdpColorQuality.value || currentRdpClientOption.value.rdp_color_quality || "32";
     const resolvedSmartSize =
       rdpSmartSize.value || currentRdpClientOption.value.rdp_smart_size || "0";
 
     return {
-      charset: charset.value || "default",
-      is_backspace_as_ctrl_h: backspaceAsCtrlH.value ?? false,
-      rdp_resolution: rdpResolution.value || "auto",
-      keyboard_layout: resolvedKeyboardLayout,
-      rdp_client_option: resolvedClientOptions,
-      rdp_color_quality: resolvedColorQuality,
-      rdp_smart_size: resolvedSmartSize
+      resolvedCharset: (charset.value || "default") as string,
+      resolvedBackspace: backspaceAsCtrlH.value ?? false,
+      resolvedResolution: (rdpResolution.value || "auto") as string,
+      resolvedKeyboardLayout,
+      resolvedClientOptions,
+      resolvedColorQuality,
+      resolvedSmartSize
     };
+  };
+
+  const generateConnectOptions = () => {
+    const prefs = resolveGraphicsPreferences();
+
+    return {
+      charset: prefs.resolvedCharset,
+      is_backspace_as_ctrl_h: prefs.resolvedBackspace,
+      resolution: prefs.resolvedResolution,
+      rdp_resolution: prefs.resolvedResolution,
+      keyboard_layout: prefs.resolvedKeyboardLayout,
+      rdp_client_option: prefs.resolvedClientOptions,
+      rdp_color_quality: prefs.resolvedColorQuality,
+      rdp_smart_size: prefs.resolvedSmartSize
+    };
+  };
+
+  const buildLocalRdpParams = () => {
+    const prefs = resolveGraphicsPreferences();
+    const params: Record<string, string> = {};
+
+    if (prefs.resolvedResolution && prefs.resolvedResolution.includes("x")) {
+      const [width, height] = prefs.resolvedResolution.split("x");
+      if (width) params.width = width;
+      if (height) params.height = height;
+    }
+
+    const options = prefs.resolvedClientOptions || [];
+    if (options.includes("full_screen")) {
+      params.full_screen = "1";
+    }
+    if (options.includes("multi_screen")) {
+      params.multi_mon = "1";
+    }
+    if (options.includes("drives_redirect")) {
+      params.drives_redirect = "1";
+    }
+
+    params.rdp_smart_size = prefs.resolvedSmartSize;
+    params.rdp_color_quality = prefs.resolvedColorQuality;
+
+    return params;
   };
 
   /**
