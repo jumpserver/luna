@@ -410,7 +410,7 @@ export const useAssetAction = () => {
         const errorData = JSON.parse(payload.data);
         const errorCode = errorData?.code as string;
         
-        if (errorCode.includes('acl')) {
+        if (errorCode && errorCode.includes('acl')) {
           return toast.add({
             title: t("ConnectError.ConnectFailed"),
             description: t("ConnectError.AclFailed"),

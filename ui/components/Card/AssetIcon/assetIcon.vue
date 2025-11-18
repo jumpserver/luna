@@ -19,7 +19,8 @@ const iconPath = computed(() => {
     mysql: "/icons/mysql.png",
     oracle: "/icons/oracle.png",
     postgresql: "/icons/postgre.png",
-    sqlserver: "/icons/sqlserver.png"
+    sqlserver: "/icons/sqlserver.png",
+    mariadb: "/icons/mariadb.png"
   };
 
   return iconMap[props.type.toLowerCase()] || ""; // 默认使用 linux 图标
@@ -69,6 +70,6 @@ const sizeClasses = computed(() => {
     :size="size"
     v-bind="imageProps"
     :ui="{ root: 'rounded-md', image: `${sizeClasses} p-1` }"
-    :class="['flex-shrink-0', props.class, 'bg-neutral-200 dark:bg-neutral-600']"
+    :class="['shrink-0', props.class, 'bg-neutral-200 dark:bg-neutral-600']"
   />
 </template>
