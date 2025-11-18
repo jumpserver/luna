@@ -148,7 +148,8 @@
     "DownloadApplication": "Download Application"
   },
   "ConnectError": {
-    "ConnectFailed": "Connection failed"
+    "ConnectFailed": "Connection failed",
+		"AclFailed": "The current asset is restricted by ACL policies and cannot be accessed via the client. Please use the Web console to connect."
   },
   "Update": {
     "FoundNewVersion": "New version available",

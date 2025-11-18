@@ -152,7 +152,8 @@
     "DownloadApplication": "下载应用"
   },
   "ConnectError": {
-    "ConnectFailed": "连接失败"
+    "ConnectFailed": "连接失败",
+    "AclFailed": "当前资产受到 ACL 访问限制，无法通过客户端连接，请前往 Web 端进行访问"
   },
   "Update": {
     "FoundNewVersion": "发现新版本",

@@ -408,6 +408,16 @@ export const useAssetAction = () => {
 
         const payload = event.payload as eventPayload;
         const errorData = JSON.parse(payload.data);
+        const errorCode = errorData?.code as string;
+        
+        if (errorCode.includes('acl')) {
+          return toast.add({
+            title: t("ConnectError.ConnectFailed"),
+            description: t("ConnectError.AclFailed"),
+            color: "error",
+            icon: "line-md:close-circle"
+          });
+        }
 
         toast.add({
           title: t("ConnectError.ConnectFailed"),
