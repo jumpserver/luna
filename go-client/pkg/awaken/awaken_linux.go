@@ -86,11 +86,17 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	if appItem == nil {
 		return nil
 	}
+
+	// telnet 协议使用 ssh 的配置参数格式
+	protocol := r.Protocol
+	if protocol == "telnet" {
+		protocol = "ssh"
+	}
+
 	var cmd *exec.Cmd
-	r.Protocol = "ssh"
 	connectMap := map[string]string{
 		"name":     r.getName(),
-		"protocol": r.Protocol,
+		"protocol": protocol,
 		"username": r.getUserName(),
 		"value":    r.Value,
 		"host":     r.Host,
