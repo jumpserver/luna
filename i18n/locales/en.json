@@ -138,6 +138,13 @@
 		"FileTransfer": "File Transfer",
 		"RemoteDesktop": "Remote Desktop",
 		"Database": "Database",
+		"Charset": "Charset",
+    "TerminalBackspace": "Terminal Backspace As Ctrl + H",
+    "Resolution": "Resolution",
+		"Default": "Default",
+    "Auto": "Auto",
+    "Enable": "Enable",
+    "Disable": "Disable",
     "DownloadApplication": "Download Application"
   },
   "ConnectError": {

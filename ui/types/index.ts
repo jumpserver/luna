@@ -5,6 +5,8 @@ export type SortType = "name" | "-name" | "-date_updated" | "date_updated";
 export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
 export type LangType = "zh" | "en";
+export type CharsetType = "default" | "utf8" | "gbk" | "gb2312" | "ios-8859-1";
+export type ResolutionType = "auto" | "1024x768" | "1366x768" | "1600x900" | "1920x1080";
 
 export interface ActionItem {
   key: string;
@@ -241,6 +243,7 @@ export interface SettingResponse {
     is_backspace_as_ctrl_h: boolean;
     is_right_click_quickly_paste: boolean;
     terminal_theme_name: string;
+    charset?: CharsetType;
   };
 }
 
@@ -285,7 +288,8 @@ export interface TokenResponse {
 }
 
 export interface UserSettingPersistedState {
-  language: string;
+  language: LangType;
+  siteLanguages: Record<string, LangType>;
   collapse: boolean;
   sort: SortType;
   theme: ThemeType;
@@ -296,4 +300,11 @@ export interface UserSettingPersistedState {
   primaryColorLight: string;
   primaryColorDark: string;
   appConfig?: AppConfigType | null;
+  charset: CharsetType;
+  rdpResolution: ResolutionType;
+  backspaceAsCtrlH: boolean;
+  keyboardLayout: string;
+  rdpClientOption: string[];
+  rdpColorQuality: string;
+  rdpSmartSize: string;
 }

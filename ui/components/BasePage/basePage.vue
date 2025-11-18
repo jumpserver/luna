@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { AssetItem, SettingResponse, LayoutsType } from "~/types/index";
+import type { AssetItem, SettingResponse, LayoutsType, CharsetType, ResolutionType } from "~/types/index";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -26,7 +26,17 @@ const { confirmConnection, saveConnectionInfo } = useAssetConnection();
 const contextMenu = useContextMenu();
 const userInfoStore = useUserInfoStore();
 const assetManagement = useAssetManagement();
-const { layouts } = useSettingManager();
+const settingManager = useSettingManager();
+const { layouts } = settingManager;
+const {
+  setCharsetPreference,
+  setRdpResolutionPreference,
+  setBackspacePreference,
+  setKeyboardLayoutPreference,
+  setRdpClientOptionPreference,
+  setRdpColorQualityPreference,
+  setRdpSmartSizePreference
+} = settingManager;
 const assetManager = useAssetFetcher(props.type, scrollRef);
 const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
 
@@ -156,6 +166,16 @@ const listenTauriEvent = async () => {
     const settingConfig = JSON.parse(payload.data) as SettingResponse;
 
     userInfoStore.setRdpClientOption(settingConfig.graphics);
+
+    setCharsetPreference(
+      (settingConfig.command_line?.charset as CharsetType) || "default"
+    );
+    setBackspacePreference(!!settingConfig.command_line?.is_backspace_as_ctrl_h);
+    setRdpResolutionPreference((settingConfig.graphics?.rdp_resolution as ResolutionType) || "auto");
+    setKeyboardLayoutPreference(settingConfig.graphics?.keyboard_layout || "en-us-qwerty");
+    setRdpClientOptionPreference(settingConfig.graphics?.rdp_client_option || []);
+    setRdpColorQualityPreference(settingConfig.graphics?.rdp_color_quality || "32");
+    setRdpSmartSizePreference(settingConfig.graphics?.rdp_smart_size || "0");
   });
 };
 

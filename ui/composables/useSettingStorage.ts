@@ -1,7 +1,7 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { Store } from "@tauri-apps/plugin-store";
 
-import type { AppConfigType, SortType, LangType } from "~/types";
+import type { AppConfigType, SortType, LangType, CharsetType, ResolutionType } from "~/types";
 
 export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
@@ -19,6 +19,13 @@ export type UserSettingPersistedState = {
   primaryColorLight: string;
   primaryColorDark: string;
   appConfig?: AppConfigType | null;
+  charset: CharsetType;
+  rdpResolution: ResolutionType;
+  backspaceAsCtrlH: boolean;
+  keyboardLayout: string;
+  rdpClientOption: string[];
+  rdpColorQuality: string;
+  rdpSmartSize: string;
 };
 
 const STORE_PATH = "user-setting.json";
@@ -36,7 +43,14 @@ const DEFAULT_STATE: UserSettingPersistedState = {
   primaryColor: "#1ab394",
   primaryColorLight: "#1ab394",
   primaryColorDark: "#34d399",
-  appConfig: null
+  appConfig: null,
+  charset: "default",
+  rdpResolution: "auto",
+  backspaceAsCtrlH: false,
+  keyboardLayout: "en-us-qwerty",
+  rdpClientOption: [],
+  rdpColorQuality: "32",
+  rdpSmartSize: "0"
 };
 
 let storeInstance: Store | null = null;

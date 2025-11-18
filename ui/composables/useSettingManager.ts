@@ -1,4 +1,12 @@
-import type { SortType, ThemeType, LayoutsType, AppConfigType, LangType } from "~/types";
+import type {
+  SortType,
+  ThemeType,
+  LayoutsType,
+  AppConfigType,
+  LangType,
+  CharsetType,
+  ResolutionType
+} from "~/types";
 import { useSettingStorage, type UserSettingPersistedState } from "~/composables/useSettingStorage";
 
 export const useSettingManager = () => {
@@ -157,6 +165,41 @@ export const useSettingManager = () => {
     persist({ appConfig: state.appConfig });
   };
 
+  const setCharsetPreference = (charset: CharsetType) => {
+    state.charset = charset;
+    persist({ charset });
+  };
+
+  const setRdpResolutionPreference = (resolution: ResolutionType) => {
+    state.rdpResolution = resolution;
+    persist({ rdpResolution: resolution });
+  };
+
+  const setBackspacePreference = (enabled: boolean) => {
+    state.backspaceAsCtrlH = !!enabled;
+    persist({ backspaceAsCtrlH: state.backspaceAsCtrlH });
+  };
+
+  const setKeyboardLayoutPreference = (layout: string) => {
+    state.keyboardLayout = layout || "en-us-qwerty";
+    persist({ keyboardLayout: state.keyboardLayout });
+  };
+
+  const setRdpClientOptionPreference = (options: string[]) => {
+    state.rdpClientOption = Array.isArray(options) ? [...options] : [];
+    persist({ rdpClientOption: state.rdpClientOption });
+  };
+
+  const setRdpColorQualityPreference = (quality: string) => {
+    state.rdpColorQuality = quality || "32";
+    persist({ rdpColorQuality: state.rdpColorQuality });
+  };
+
+  const setRdpSmartSizePreference = (value: string) => {
+    state.rdpSmartSize = value || "0";
+    persist({ rdpSmartSize: state.rdpSmartSize });
+  };
+
   ensureHydration();
 
   const hasSiteLanguage = (site: string) => site in state.siteLanguages;
@@ -201,6 +244,13 @@ export const useSettingManager = () => {
     getDefaultLanguage,
     removeSiteLanguage,
     setPrimaryColorDark,
-    setPrimaryColorLight
+    setPrimaryColorLight,
+    setCharsetPreference,
+    setRdpResolutionPreference,
+    setBackspacePreference,
+    setKeyboardLayoutPreference,
+    setRdpClientOptionPreference,
+    setRdpColorQualityPreference,
+    setRdpSmartSizePreference
   };
 };

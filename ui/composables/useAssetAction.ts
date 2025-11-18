@@ -2,6 +2,7 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { useSettingManager } from "~/composables/useSettingManager";
 
 let tauriListenersInitialized = false;
 let tauriListenersRegistering = false;
@@ -51,8 +52,18 @@ export const useAssetAction = () => {
   const { t } = useI18n();
   const toast = useToast();
   const userInfoStore = useUserInfoStore();
+  const settingManager = useSettingManager();
   // prettier-ignore
   const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption, orgId } = storeToRefs(userInfoStore);
+  const {
+    charset,
+    rdpResolution,
+    backspaceAsCtrlH,
+    keyboardLayout,
+    rdpClientOption,
+    rdpColorQuality,
+    rdpSmartSize
+  } = settingManager;
 
   /**
    * @description 展示 user 信息,默认展示非 @ 开头的 user
@@ -168,14 +179,25 @@ export const useAssetAction = () => {
    * @returns
    */
   const generateConnectOptions = () => {
+    const resolvedKeyboardLayout =
+      keyboardLayout.value || currentRdpClientOption.value.keyboard_layout || "en-us-qwerty";
+    const resolvedClientOptions =
+      (Array.isArray(rdpClientOption.value) && rdpClientOption.value.length > 0
+        ? rdpClientOption.value
+        : currentRdpClientOption.value.rdp_client_option) || [];
+    const resolvedColorQuality =
+      rdpColorQuality.value || currentRdpClientOption.value.rdp_color_quality || "32";
+    const resolvedSmartSize =
+      rdpSmartSize.value || currentRdpClientOption.value.rdp_smart_size || "0";
+
     return {
-      charset: "default",
-      is_backspace_as_ctrl_h: false,
-      rdp_resolution: "auto",
-      keyboard_layout: currentRdpClientOption.value.keyboard_layout || "en-us-qwerty",
-      rdp_client_option: currentRdpClientOption.value.rdp_client_option || [],
-      rdp_color_quality: currentRdpClientOption.value.rdp_color_quality || "32",
-      rdp_smart_size: currentRdpClientOption.value.rdp_smart_size || "0"
+      charset: charset.value || "default",
+      is_backspace_as_ctrl_h: backspaceAsCtrlH.value ?? false,
+      rdp_resolution: rdpResolution.value || "auto",
+      keyboard_layout: resolvedKeyboardLayout,
+      rdp_client_option: resolvedClientOptions,
+      rdp_color_quality: resolvedColorQuality,
+      rdp_smart_size: resolvedSmartSize
     };
   };
 

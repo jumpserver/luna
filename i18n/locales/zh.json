@@ -142,6 +142,13 @@
     "FileTransfer": "文件传输",
     "RemoteDesktop": "远程桌面",
     "Database": "数据库",
+    "Charset": "字符集",
+    "TerminalBackspace": "字符终端 Backspace As Ctrl + H",
+    "Resolution": "分辨率",
+    "Default": "默认",
+    "Auto": "自动",
+    "Enable": "启用",
+    "Disable": "禁用",
     "DownloadApplication": "下载应用"
   },
   "ConnectError": {
