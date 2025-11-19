@@ -66,16 +66,17 @@ pub async fn get_window_cookies(
             if target_is_ip {
                 return true;
             }
-            let domain = cookie.domain().unwrap_or("");
+
+            let domain_opt = cookie.domain();
+            let domain = domain_opt.unwrap_or("");
             let cd = domain.trim_start_matches('.');
             let td = target_domain.as_str();
 
             let exact_or_subdomain =
                 !cd.is_empty() && (cd == td || cd.ends_with(&format!(".{}", td)) || td.ends_with(&format!(".{}", cd)));
+            let host_only_cookie = domain_opt.is_none() && !td.is_empty();
 
-            let ip_cookie_without_domain = cd.is_empty() && target_is_ip;
-
-            exact_or_subdomain || ip_cookie_without_domain
+            exact_or_subdomain || host_only_cookie
         })
         .collect();
 
