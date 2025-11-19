@@ -12,6 +12,8 @@ import {formatTime} from '@app/utils/common';
 })
 export class ElementsReplayMp4Component implements OnInit {
   @Input() replay: Replay;
+  @Input() type: string | undefined;
+
   startTime = null;
   startTimeStamp = null;
   commands: Command[];
