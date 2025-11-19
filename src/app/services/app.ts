@@ -200,11 +200,19 @@ export class AppService {
     return null;
   }
 
-  getConnectMethods() {
+  getConnectMethods(): Promise<void> {
     const url = '/api/v1/terminal/components/connect-methods/';
-    this._http.get(url).subscribe(response => {
-      this.protocolConnectTypesMap = response;
-    });
+
+    // 当用户先打开 luna 并进行操作时如果后在 lina 中去设置连接方式的 ACL 此时并不生效，因此修改为在 toPromise 后直接赋值
+    return this._http
+      .get(url)
+      .toPromise()
+      .then(response => {
+        this.protocolConnectTypesMap = response;
+      })
+      .catch(error => {
+        this._logger.error('Get connect methods error:', error);
+      });
   }
 
   getProtocolConnectMethods(protocol: string) {

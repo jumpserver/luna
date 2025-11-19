@@ -465,6 +465,7 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   async connectAsset(node: TreeNode) {
+    await this._appSvc.getConnectMethods();
     const action = 'asset';
     const evt = new ConnectEvt(node, action);
     connectEvt.next(evt);
@@ -565,6 +566,7 @@ export class ElementAssetTreeComponent implements OnInit {
       return;
     }
     const node = this.rightClickSelectNode;
+    await this._appSvc.getConnectMethods();
     const action = 'connect';
     const evt = splitConnect ? new ConnectEvt(node, action, true) : new ConnectEvt(node, action);
     connectEvt.next(evt);
