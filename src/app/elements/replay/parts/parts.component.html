@@ -40,7 +40,8 @@
       </button>
 
       @if(this.replayType === 'mp4') {
-        <elements-replay-mp4 [replay]="currentVideo" type="parts" class="video-player"></elements-replay-mp4>
+        <elements-replay-mp4 *ngIf="currentVideo && currentVideo.src" (ready)="videoLoading = false" 
+        [replay]="currentVideo" type="parts" class="video-player"></elements-replay-mp4>
       } @else {
         <elements-replay-guacamole
         *ngIf="currentVideo && currentVideo.src"
