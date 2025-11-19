@@ -1,52 +1,58 @@
 <div class="replay-container">
   <!-- 信息头部 -->
-  <div class="info-header">
-    <div class="info-item" *ngIf="replay.user">
-      <span class="label">{{ "user" | translate }}:</span>
-      <span class="value">{{ replay.user }}</span>
+  @if (!type) {
+    <div class="info-header">
+      <div class="info-item" *ngIf="replay.user">
+        <span class="label">{{ 'user' | translate }}:</span>
+        <span class="value">{{ replay.user }}</span>
+      </div>
+      <div class="info-item" *ngIf="replay.asset">
+        <span class="label">{{ 'asset' | translate }}:</span>
+        <span class="value">{{ replay.asset }}</span>
+      </div>
+      <div class="info-item" *ngIf="replay.system_user">
+        <span class="label">{{ 'system user' | translate }}:</span>
+        <span class="value">{{ replay.system_user }}</span>
+      </div>
+      <div class="info-item" *ngIf="replay.date_start">
+        <span class="label">{{ 'start time' | translate }}:</span>
+        <span class="value">{{ startTime }}</span>
+      </div>
+      <div class="info-actions">
+        <a *ngIf="replay.download_url" [href]="replay.download_url" class="download-link">
+          {{ 'download' | translate }}
+        </a>
+      </div>
     </div>
-    <div class="info-item" *ngIf="replay.asset">
-      <span class="label">{{ "asset" | translate }}:</span>
-      <span class="value">{{ replay.asset }}</span>
-    </div>
-    <div class="info-item" *ngIf="replay.system_user">
-      <span class="label">{{ "system user" | translate }}:</span>
-      <span class="value">{{ replay.system_user }}</span>
-    </div>
-    <div class="info-item" *ngIf="replay.date_start">
-      <span class="label">{{ "start time" | translate }}:</span>
-      <span class="value">{{ startTime }}</span>
-    </div>
-    <div class="info-actions">
-      <a *ngIf="replay.download_url" [href]="replay.download_url" class="download-link">
-        {{ "download" | translate }}
-      </a>
-    </div>
-  </div>
+  }
 
   <div class="main-content">
     <!-- 视频播放区 -->
     <div class="video-area">
       <video controls>
-        <source [src]="replay.src" type="video/mp4">
+        <source [src]="replay.src" type="video/mp4" />
       </video>
     </div>
 
     <!-- 命令列表 -->
     <div class="commands-area" *ngIf="commands.length > 0">
       <div class="commands-header">
-        <span>{{ "Commands" | translate }} ({{ commands.length }})</span>
+        <span>{{ 'Commands' | translate }} ({{ commands.length }})</span>
       </div>
-      <div class="commands-list"
-           infiniteScroll
-           [infiniteScrollDistance]="2"
-           [infiniteScrollThrottle]="50"
-           (scrolled)="onScroll()"
-           [scrollWindow]="false">
-        <div class="command-item"
-             *ngFor="let item of commands"
-             (click)="commandClick(item)"
-             [title]="item.input">
+      <div
+        class="commands-list"
+        infiniteScroll
+        [infiniteScrollDistance]="2"
+        [infiniteScrollThrottle]="50"
+        (scrolled)="onScroll()"
+        [scrollWindow]="false"
+      >
+        <div
+          class="command-item"
+          *ngFor="let item of commands"
+          (click)="commandClick(item)"
+          [title]="item.input"
+        >
           <div class="command-text">{{ item.input }}</div>
           <div class="command-time">{{ item.atime }}</div>
         </div>
