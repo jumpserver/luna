@@ -8,6 +8,7 @@ const clearSelectionCallback = ref<(() => void) | null>(null);
 const { t } = useI18n();
 const latestVersion = ref("");
 const alertType = ref<"" | alertType>("");
+const isAlertOpen = ref(false);
 
 const description = computed(() => {
   if (alertType.value === "incompatible") return t("Login.VersionIncompatible");
@@ -27,6 +28,7 @@ const providerClearSelection = (callback: () => void) => {
 
 useEventBus().on("versionAlert", ({ type, version }: { type: string; version?: string }) => {
   alertType.value = type as alertType;
+  isAlertOpen.value = true;
 
   if (version) {
     latestVersion.value = version;
@@ -62,7 +64,8 @@ provide("providerClearSelection", providerClearSelection);
     </template>
 
     <UAlert
-      v-if="description"
+      v-if="description && isAlertOpen"
+      v-model:open="isAlertOpen"
       close
       color="primary"
       variant="soft"
