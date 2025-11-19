@@ -500,7 +500,7 @@ onMounted(async () => {
         org: currentOrgData,
         system_roles: profileData.system_roles,
         availableOrgs,
-        xpackLicenseValid: xpack_license_valid ?? true,
+        xpackLicenseValid: xpack_license_valid ?? false,
         language,
         connectionInfo: {
           protocol: "",
