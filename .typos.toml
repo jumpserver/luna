@@ -1,0 +1,9 @@
+[default.extend-words]
+iterm = "iterm"
+devlop = "devlop"
+reqest = "reqest"
+[files]
+extend-exclude = [
+  "frontend/public",
+  "go-client/go.mod"
+]
