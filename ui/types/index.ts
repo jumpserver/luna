@@ -86,12 +86,14 @@ export interface UserData {
   org: CurrentOrg;
   availableOrgs: PermOrgItem[];
   connectionInfo: ConnectionInfo;
+  xpackLicenseValid?: boolean;
 }
 
 export interface UserIntiInfo {
   status: string;
   cookies: string;
   version?: string;
+  xpack_license_valid?: boolean;
   resolved_site?: string;
   profile: {
     data: string;

@@ -1,7 +1,7 @@
 use crate::service::user::UserService;
 use crate::utils::{format_cookies, get_window_cookies};
 
-use serde_json::json;
+use serde_json::{json, Value};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::time::{self, MissedTickBehavior};
@@ -105,9 +105,10 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
             log::info!("profile: {:?}", profile);
 
             if profile.status != 401 && profile.success {
-                let user_data = user_service.init().await;
+                let xpack_message = user_service.get_xpack_message().await;
                 let version_message = user_service.get_version_message().await;
 
+                log::info!("public_message: {:?}", xpack_message);
                 log::info!("version_message: {:?}", version_message);
 
                 let version = if version_message.status == 200 && version_message.success {
@@ -118,16 +119,28 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
                     "".to_string()
                 };
 
+                let license_valid = if xpack_message.status == 200 && xpack_message.success {
+                    serde_json::from_str::<Value>(&xpack_message.data)
+                        .ok()
+                        .and_then(|value| value.get("XPACK_LICENSE_IS_VALID").and_then(|v| v.as_bool()))
+                        .unwrap_or(true)
+                } else {
+                    true
+                };
+
+                let user_data = user_service.init(profile, license_valid).await;
+
                 let _ = app.emit(
                     "login-success-detected",
                     json!({
                         "status": "success",
-                        "profile": user_data.profile,
-                        "permission_orgs": user_data.permission_orgs,
-                        "current_org": user_data.current_org,
-                        "cookies": cookie_header,
                         "version": version,
+                        "cookies": cookie_header,
+                        "profile": user_data.profile,
                         "resolved_site": effective_origin,
+                        "current_org": user_data.current_org,
+                        "xpack_license_valid": license_valid,
+                        "permission_orgs": user_data.permission_orgs,
                     }),
                 );
 

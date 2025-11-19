@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { useUserInfoStore } from "~/store/modules/userInfo";
+
+const userInfoStore = useUserInfoStore();
+const { loggedIn, currentUser } = storeToRefs(userInfoStore);
+
 /**
  * @description 窗口拖拽
  * @param event 鼠标事件
@@ -29,12 +34,20 @@ const handleWindowDrag = async (event: MouseEvent) => {
     console.error(error);
   }
 };
+
+const shouldShowOrganizationSelector = computed(() => {
+  if (!loggedIn.value) {
+    return false;
+  }
+
+  return currentUser.value?.xpackLicenseValid !== false;
+});
 </script>
 
 <template>
   <div class="header-bg flex items-center justify-between pl-4 h-13" @mousedown="handleWindowDrag">
     <section class="flex items-center h-full">
-      <div>
+      <div v-if="shouldShowOrganizationSelector">
         <HeaderOrganizationSelector />
       </div>
     </section>

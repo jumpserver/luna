@@ -445,8 +445,16 @@ onMounted(async () => {
   });
 
   unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", async (event) => {
-    const { status, profile, permission_orgs, current_org, cookies, version, resolved_site } =
-      event.payload as UserIntiInfo;
+    const {
+      status,
+      profile,
+      cookies,
+      version,
+      current_org,
+      resolved_site,
+      permission_orgs,
+      xpack_license_valid
+    } = event.payload as UserIntiInfo;
     const appVersion = await useTauriAppGetVersion().catch(() => "");
 
     let versionMessage: string | string[] = version ?? "";
@@ -483,7 +491,7 @@ onMounted(async () => {
         useEventBus().emit("versionAlert", { type: "incompatible" });
       }
 
-      const availableOrgs = initSelectOrganization(permissionOrgData);
+      const availableOrgs = xpack_license_valid === false ? [] : initSelectOrganization(permissionOrgData);
 
       userInfoStore.setUserData(resolvedSite, {
         name: profileData.name,
@@ -492,6 +500,7 @@ onMounted(async () => {
         org: currentOrgData,
         system_roles: profileData.system_roles,
         availableOrgs,
+        xpackLicenseValid: xpack_license_valid ?? true,
         language,
         connectionInfo: {
           protocol: "",
