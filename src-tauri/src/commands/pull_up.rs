@@ -1,7 +1,10 @@
 use log::{error, info};
 use std::env;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::thread;
+use std::time::Duration;
 use tauri::AppHandle;
 
 // 映射平台/架构到二进制所在子目录
@@ -89,10 +92,11 @@ fn resolve_executable(is_dev: bool) -> Option<PathBuf> {
 #[tauri::command]
 /// 启动本地 JumpServerClient 可执行文件，并传入 URL 参数
 /// 前端：invoke('pull_up', { url })
-pub fn pull_up(_app: AppHandle, url: String) {
+pub fn pull_up(_app: AppHandle, url: String) -> Result<(), String> {
     if url.trim().is_empty() {
-        error!("pull_up called with empty url");
-        return;
+        let err_msg = "pull_up called with empty url";
+        error!("{}", err_msg);
+        return Err(err_msg.to_string());
     }
 
     // 对应 JS: is.dev && !process.env.IS_TEST
@@ -102,22 +106,111 @@ pub fn pull_up(_app: AppHandle, url: String) {
     let is_dev = cfg!(debug_assertions) && !is_test;
 
     let Some(exe_path) = resolve_executable(is_dev) else {
-        error!(
+        let err_msg = format!(
             "JumpServerClient executable not found. Searched: {:?}",
             candidate_paths(is_dev)
         );
-        return;
+        error!("{}", err_msg);
+        return Err(err_msg);
     };
 
     info!("Launching client: {:?} {}", exe_path, url);
 
-    if let Err(e) = Command::new(&exe_path)
+    // 使用管道捕获 stderr，以便检测子进程的错误输出
+    let mut child = Command::new(&exe_path)
         .arg(url)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::inherit())
+        .stderr(Stdio::piped())
         .spawn()
-    {
-        error!("Failed to launch client: {}", e);
+        .map_err(|e| {
+            let err_msg = format!("Failed to launch client: {}", e);
+            error!("{}", err_msg);
+            err_msg
+        })?;
+
+    // 获取 stderr 的读取器
+    let stderr = child.stderr.take().ok_or_else(|| {
+        let err_msg = "Failed to capture stderr from client process";
+        error!("{}", err_msg);
+        err_msg.to_string()
+    })?;
+
+    // 使用通道来在后台线程和主线程之间通信
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+    
+    // 在后台线程中读取 stderr，检查是否有错误输出
+    thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        
+        for line in reader.lines() {
+            match line {
+                Ok(line) => {
+                    // 检查是否是错误行（Go 客户端错误通常以 "Error:" 开头）
+                    if line.starts_with("Error:") || line.contains("Error:") {
+                        error!("Client stderr: {}", line);
+                        // 立即发送错误信号
+                        let _ = tx.send(line.clone());
+                    } else if !line.trim().is_empty() {
+                        // 记录所有非空输出，可能是警告或错误
+                        error!("Client stderr: {}", line);
+                        // 如果包含常见错误关键词，也收集起来
+                        if line.contains("not found") 
+                            || line.contains("not configured") 
+                            || line.contains("Failed")
+                            || line.contains("failed") {
+                            let _ = tx.send(line);
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to read stderr line: {}", e);
+                    break;
+                }
+            }
+        }
+    });
+
+    // 等待并循环检查错误输出，最多等待2秒
+    for _ in 0..20 {
+        thread::sleep(Duration::from_millis(100));
+        
+        // 检查是否有错误消息
+        if let Ok(error_msg) = rx.try_recv() {
+            let err_msg = format!("Client error: {}", error_msg);
+            error!("{}", err_msg);
+            return Err(err_msg);
+        }
+        
+        // 检查进程是否已经退出（可能因为错误而退出）
+        if let Ok(Some(status)) = child.try_wait() {
+            if !status.success() {
+                // 进程已退出且状态不成功，尝试再读取一次错误
+                thread::sleep(Duration::from_millis(200));
+                if let Ok(error_msg) = rx.try_recv() {
+                    let err_msg = format!("Client error: {}", error_msg);
+                    error!("{}", err_msg);
+                    return Err(err_msg);
+                }
+                // 如果没有错误消息，返回退出状态错误
+                let err_msg = format!("Client process exited with status: {:?}", status);
+                error!("{}", err_msg);
+                return Err(err_msg);
+            }
+            // 进程成功退出，这是正常的（某些客户端可能立即退出）
+            break;
+        }
     }
+    
+    // 最后再检查一次是否有错误消息（防止在循环结束后才收到错误）
+    if let Ok(error_msg) = rx.try_recv() {
+        let err_msg = format!("Client error: {}", error_msg);
+        error!("{}", err_msg);
+        return Err(err_msg);
+    }
+    
+    // 如果进程仍在运行，这是正常的，让它在后台继续运行
+    // 后续的错误会通过事件发送给前端
+
+    Ok(())
 }

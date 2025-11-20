@@ -17,6 +17,7 @@ let unlistenGetAssetDetailSuccess: UnlistenFn | null = null;
 let unlistenGetAssetDetailFailed: UnlistenFn | null = null;
 let unlistenRenameSuccess: UnlistenFn | null = null;
 let unlistenRenameError: UnlistenFn | null = null;
+let unlistenPullUpFailure: UnlistenFn | null = null;
 
 function releaseTauriEventListeners() {
   tauriListenersRefCount = Math.max(tauriListenersRefCount - 1, 0);
@@ -32,6 +33,7 @@ function releaseTauriEventListeners() {
     unlistenGetAssetDetailFailed?.();
     unlistenRenameSuccess?.();
     unlistenRenameError?.();
+    unlistenPullUpFailure?.();
     unlistenGetTokenFailure = null;
     unlistenGetTokenSuccess = null;
     unlistenFavoriteSuccess = null;
@@ -42,6 +44,7 @@ function releaseTauriEventListeners() {
     unlistenGetAssetDetailFailed = null;
     unlistenRenameSuccess = null;
     unlistenRenameError = null;
+    unlistenPullUpFailure = null;
     tauriListenersInitialized = false;
   }
 }
@@ -560,6 +563,22 @@ export const useAssetAction = () => {
         toast.add({
           title: t("AssetCard.RenameFail"),
           description: message || t("Common.OperationFailed"),
+          color: "error",
+          icon: "line-md:close-circle"
+        });
+      });
+
+      unlistenPullUpFailure = await useTauriEventListen("pull-up-failure", (event) => {
+        interface eventPayload {
+          error: string;
+        }
+
+        const payload = event.payload as eventPayload;
+        const errorMessage = payload.error || t("ConnectError.ConnectFailed");
+
+        toast.add({
+          title: t("ConnectError.ConnectFailed"),
+          description: errorMessage,
           color: "error",
           icon: "line-md:close-circle"
         });

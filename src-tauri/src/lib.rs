@@ -74,7 +74,9 @@ pub fn run() {
                 // 处理启动时的深度链接
                 for url in &urls {
                     error!("deep link original URL start_urls : {}", url.as_str());
-                    pull_up(app.app_handle().clone(), url.as_str().to_string());
+                    if let Err(e) = pull_up(app.app_handle().clone(), url.as_str().to_string()) {
+                        error!("Failed to pull up client: {}", e);
+                    }
                 }
                 // 深度链接启动时，调用完 pull_up 后直接退出
                 std::process::exit(0);
@@ -85,7 +87,9 @@ pub fn run() {
                 let urls = event.urls();
                 for url in &urls {
                     error!("deep link original URL on_open_url: {}", url.as_str());
-                    pull_up(app_handle.clone(), url.as_str().to_string());
+                    if let Err(e) = pull_up(app_handle.clone(), url.as_str().to_string()) {
+                        error!("Failed to pull up client: {}", e);
+                    }
                 }
             });
 

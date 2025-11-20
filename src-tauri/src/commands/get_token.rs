@@ -36,10 +36,15 @@ pub async fn get_connect_token(
         //     "get-token-success",
         //     json!({ "status": url_data.status, "data": from_str::<Value>(&url_data.data).unwrap() }),
         // );
-        pull_up(
-            app,
+        if let Err(e) = pull_up(
+            app.clone(),
             url_json.get("url").unwrap().as_str().unwrap().to_string(),
-        );
+        ) {
+            let _ = app.emit(
+                "pull-up-failure",
+                json!({ "error": e }),
+            );
+        }
     } else {
         let _ = app.emit(
             "get-token-failure",

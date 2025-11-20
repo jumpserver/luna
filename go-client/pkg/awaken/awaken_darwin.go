@@ -18,6 +18,18 @@ func getCommandFromArgs(connectInfo map[string]string, argFormat string) string 
 	return argFormat
 }
 
+// validateAppPath checks if the application path exists
+func validateAppPath(appPath string) error {
+	if appPath == "" {
+		return fmt.Errorf("application path is empty")
+	}
+	// Check if path exists
+	if _, err := os.Stat(appPath); os.IsNotExist(err) {
+		return fmt.Errorf("application path does not exist: %s", appPath)
+	}
+	return nil
+}
+
 func awakenRDPCommand(filePath string, cfg *config.AppConfig) *exec.Cmd {
 	global.LOG.Debug(filePath)
 	cmd := exec.Command("open", filePath)
@@ -43,6 +55,10 @@ func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		"value":    r.Value,
 		"host":     r.Host,
 		"port":     strconv.Itoa(r.Port),
+	}
+	if err := validateAppPath(appItem.Path); err != nil {
+		global.LOG.Error(err.Error())
+		return nil
 	}
 	commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 	cmd := exec.Command(appItem.Path, strings.Split(commands, " ")...)
@@ -108,10 +124,12 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		}
 
 	} else {
-		var appPath string
-		appPath = appItem.Path
+		appPath := appItem.Path
+		if err := validateAppPath(appPath); err != nil {
+			global.LOG.Error(err.Error())
+			return nil
+		}
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
-		appPath = appItem.Path
 		cmd = exec.Command(appPath, strings.Split(commands, " ")...)
 	}
 	return cmd
@@ -165,6 +183,10 @@ func awakenDBCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		)
 		return cmd
 	} else {
+		if err := validateAppPath(appPath); err != nil {
+			global.LOG.Error(err.Error())
+			return nil
+		}
 		if r.Protocol == "sqlserver" {
 			connectMap["protocol"] = "mssql_jdbc_ms_new"
 		}

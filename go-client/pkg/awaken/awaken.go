@@ -108,7 +108,11 @@ func (r *Rouse) HandleRDP(appConfig *config.AppConfig) {
 	}
 	cmd := handleRDP(r, filePath, appConfig)
 	if cmd != nil {
-		cmd.Run()
+		if err := cmd.Run(); err != nil {
+			errorMsg := fmt.Sprintf("Failed to execute RDP application: %v", err)
+			global.LOG.Error(errorMsg)
+			fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+		}
 	} else {
 		errorMsg := "No RDP application configured or found"
 		global.LOG.Error(errorMsg)
@@ -119,7 +123,11 @@ func (r *Rouse) HandleRDP(appConfig *config.AppConfig) {
 func (r *Rouse) HandleVNC(appConfig *config.AppConfig) {
 	cmd := handleVNC(r, appConfig)
 	if cmd != nil {
-		cmd.Run()
+		if err := cmd.Run(); err != nil {
+			errorMsg := fmt.Sprintf("Failed to execute VNC application: %v", err)
+			global.LOG.Error(errorMsg)
+			fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+		}
 	} else {
 		errorMsg := "No VNC application configured or found"
 		global.LOG.Error(errorMsg)
@@ -130,7 +138,11 @@ func (r *Rouse) HandleVNC(appConfig *config.AppConfig) {
 func (r *Rouse) HandleSSH(appConfig *config.AppConfig) {
 	cmd := handleSSH(r, appConfig)
 	if cmd != nil {
-		cmd.Run()
+		if err := cmd.Run(); err != nil {
+			errorMsg := fmt.Sprintf("Failed to execute SSH application: %v", err)
+			global.LOG.Error(errorMsg)
+			fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+		}
 	} else {
 		errorMsg := "No SSH application configured or found"
 		global.LOG.Error(errorMsg)
@@ -141,7 +153,11 @@ func (r *Rouse) HandleSSH(appConfig *config.AppConfig) {
 func (r *Rouse) HandleDB(appConfig *config.AppConfig) {
 	cmd := handleDB(r, appConfig)
 	if cmd != nil {
-		cmd.Run()
+		if err := cmd.Run(); err != nil {
+			errorMsg := fmt.Sprintf("Failed to execute database application: %v", err)
+			global.LOG.Error(errorMsg)
+			fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+		}
 	} else {
 		errorMsg := "No database application configured or found"
 		global.LOG.Error(errorMsg)
@@ -152,7 +168,11 @@ func (r *Rouse) HandleDB(appConfig *config.AppConfig) {
 func (r *Rouse) HandleCommand(appConfig *config.AppConfig) {
 	cmd := handleCommand(r, appConfig)
 	if cmd != nil {
-		cmd.Run()
+		if err := cmd.Run(); err != nil {
+			errorMsg := fmt.Sprintf("Failed to execute command: %v", err)
+			global.LOG.Error(errorMsg)
+			fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+		}
 	} else {
 		errorMsg := "No command application configured or found"
 		global.LOG.Error(errorMsg)

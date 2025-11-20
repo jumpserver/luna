@@ -60,6 +60,18 @@ func getCommandFromArgs(connectInfo map[string]string, argFormat string) string 
 	return argFormat
 }
 
+// validateAppPath checks if the application path exists
+func validateAppPath(appPath string) error {
+	if appPath == "" {
+		return fmt.Errorf("application path is empty")
+	}
+	// Check if path exists
+	if _, err := os.Stat(appPath); os.IsNotExist(err) {
+		return fmt.Errorf("application path does not exist: %s", appPath)
+	}
+	return nil
+}
+
 func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	appLst := cfg.Windows.RemoteDesktop
@@ -73,6 +85,10 @@ func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
 		return nil
 	}
 	appPath := appItem.Path
+	if err := validateAppPath(appPath); err != nil {
+		global.LOG.Error(err.Error())
+		return nil
+	}
 	connectMap := map[string]string{
 		"file":     filePath,
 		"name":     r.getName(),
@@ -103,6 +119,10 @@ func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		}
 	}
 	if appItem == nil {
+		return nil
+	}
+	if err := validateAppPath(appItem.Path); err != nil {
+		global.LOG.Error(err.Error())
 		return nil
 	}
 	connectMap := map[string]string{
@@ -215,6 +235,10 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	} else {
 		appPath = appItem.Path
 	}
+	if err := validateAppPath(appPath); err != nil {
+		global.LOG.Error(err.Error())
+		return nil
+	}
 	connectMap := map[string]string{
 		"name":     r.getName(),
 		"protocol": protocol,
@@ -246,6 +270,10 @@ func handleDB(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		return nil
 	}
 	appPath := appItem.Path
+	if err := validateAppPath(appPath); err != nil {
+		global.LOG.Error(err.Error())
+		return nil
+	}
 
 	connectMap := map[string]string{
 		"name":     r.getName(),
