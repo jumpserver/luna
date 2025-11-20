@@ -120,7 +120,7 @@ onMounted(async () => {
         // 确保本窗口的站点映射与内存状态即时同步
         await setLocale(code as any);
         setLang(code);
-        userInfoStore.applyLanguageToAll(code);
+        userInfoStore.applyLanguageToSite(code);
       } catch {}
     });
 

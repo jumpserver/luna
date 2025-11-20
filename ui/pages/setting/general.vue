@@ -114,7 +114,7 @@ watch(
     if (!code) return;
 
     setLang(code);
-    userInfoStore.applyLanguageToAll(code);
+    userInfoStore.applyLanguageToSite(code);
     useTauriEventEmit("language-changed", { code });
   },
   { immediate: false }

@@ -177,7 +177,7 @@ export const useUserInfoStore = defineStore(
       const userData = getUserData(site);
 
       if (userData) {
-        const siteLang = getSiteLanguage(site);
+        const siteLang = (userData.language as LangType) || getSiteLanguage(site);
 
         const withLang = {
           ...(userData as SiteUserData),
@@ -307,43 +307,42 @@ export const useUserInfoStore = defineStore(
       currentConnectionInfoMap.value = { ...siteData.connectionInfoMap };
     };
 
-    const applyLanguageToAll = (lang: LangType) => {
+    const applyLanguageToSite = (lang: LangType, site?: string) => {
       const target = lang;
+      const targetSite = site || currentSite.value;
 
-      // 判断是否真的需要变更
-      const sites = Object.keys(userMap.value);
-      const hasDiffInUsers = sites.some((site) => (userMap.value[site]?.language as LangType) !== target);
-      const hasDiffInManager =
-        getDefaultLanguage() !== target || sites.some((site) => getSiteLanguage(site) !== target);
-
-      if (!hasDiffInUsers && !hasDiffInManager && currentLanguage.value === target) {
+      if (!targetSite) {
+        // 没有站点时仅更新默认语言与当前语言
+        currentLanguage.value = target;
+        
+        setLang(target);
+        setLocale(target);
         return;
       }
 
-      // 更新 Setting Manager
-      setLangGlobal(target);
+      // 更新 Setting Manager 的站点语言映射
+      setSiteLanguage(targetSite, target);
 
-      // 仅对有差异的站点进行修改
-      const sitesToUpdate = sites.filter((site) => (hasSiteLanguage(site) ? getSiteLanguage(site) !== target : true));
-      sitesToUpdate.forEach((site) => setSiteLanguage(site, target));
-
-      // 4) 同步当前内存中的每个用户对象
-      sites.forEach((site) => {
-        const user = userMap.value[site];
-        if (!user) return;
-        if ((user.language as LangType) === target) return;
-        userMap.value[site] = {
+      // 更新对应站点的用户信息
+      const user = userMap.value[targetSite];
+      if (user && user.language !== target) {
+        userMap.value[targetSite] = {
           ...(user as SiteUserData),
           language: target
         } as SiteUserData;
-      });
-
-      if (currentSite.value && userMap.value[currentSite.value]) {
-        currentUser.value = userMap.value[currentSite.value] as SiteUserData;
       }
 
-      currentLanguage.value = target;
-      setLocale(target);
+      // 如果是当前站点，同步当前语言与当前用户
+      if (currentSite.value === targetSite) {
+        if (userMap.value[targetSite]) {
+          currentUser.value = userMap.value[targetSite] as SiteUserData;
+        }
+        currentLanguage.value = target;
+        setLocale(target);
+      }
+
+      // 同步默认语言为最近选择值（仅记录，不强制覆盖其他站点）
+      setLang(target);
     };
 
     /**
@@ -384,7 +383,7 @@ export const useUserInfoStore = defineStore(
       setUserLoggedIn,
       setOrganizations,
       setRdpClientOption,
-      applyLanguageToAll,
+      applyLanguageToSite,
       setConnectionInfoToUser,
       getConnectionInfoForAsset,
       setConnectionInfoForAsset

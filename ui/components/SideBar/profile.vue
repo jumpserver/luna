@@ -183,7 +183,7 @@ const handleLanguageChange = (code: LangType) => {
 
   selectedLanguage.value = code;
   setLang(code);
-  userInfoStore.applyLanguageToAll(code);
+  userInfoStore.applyLanguageToSite(code);
   useTauriEventEmit("language-changed", { code });
 };
 
