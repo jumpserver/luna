@@ -178,7 +178,6 @@ func awakenDBCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		return nil
 	}
 	var cmd *exec.Cmd
-	appPath := appItem.Path
 	connectMap := map[string]string{
 		"name":     r.getName(),
 		"protocol": r.Protocol,
