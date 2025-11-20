@@ -149,7 +149,14 @@
   },
   "ConnectError": {
     "ConnectFailed": "Connection failed",
-		"AclFailed": "The current asset is restricted by ACL policies and cannot be accessed via the client. Please use the Web console to connect."
+		"AclFailed": "The current asset is restricted by ACL policies and cannot be accessed via the client. Please use the Web console to connect.",
+    "ClientNotFound": "Desktop client not found. Please install or configure the client path.",
+    "ClientLaunchFailed": "Failed to launch desktop client. Please check installation or permissions.",
+    "ClientExited": "Desktop client exited unexpectedly.",
+    "RdpAppMissing": "No RDP application configured or found. Please set the executable path in Settings.",
+    "VncAppMissing": "No VNC application configured or found. Please set the executable path in Settings.",
+    "RdpAppFailed": "Failed to start the RDP application.",
+    "VncAppFailed": "Failed to start the VNC application."
   },
   "Update": {
     "FoundNewVersion": "New version available",

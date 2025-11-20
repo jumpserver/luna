@@ -153,7 +153,14 @@
   },
   "ConnectError": {
     "ConnectFailed": "连接失败",
-    "AclFailed": "当前资产受到 ACL 访问限制，无法通过客户端连接，请前往 Web 端进行访问"
+    "AclFailed": "当前资产受到 ACL 访问限制，无法通过客户端连接，请前往 Web 端进行访问",
+    "ClientNotFound": "未找到桌面客户端，请安装或在设置中配置路径",
+    "ClientLaunchFailed": "启动桌面客户端失败，请检查安装或权限",
+    "ClientExited": "桌面客户端异常退出",
+    "RdpAppMissing": "未配置或未找到 RDP 客户端，请在设置中选择路径",
+    "VncAppMissing": "未配置或未找到 VNC 客户端，请在设置中选择路径",
+    "RdpAppFailed": "启动 RDP 客户端失败",
+    "VncAppFailed": "启动 VNC 客户端失败"
   },
   "Update": {
     "FoundNewVersion": "发现新版本",
