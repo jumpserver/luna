@@ -51,50 +51,14 @@ impl UserService {
         get_with_response(&url, &self.cookie_header).await
     }
 
-    pub async fn init(&self, profile: ApiResponse, fetch_orgs: bool) -> UserProfileData {
-        if fetch_orgs {
-            let (permission_orgs, current_org) =
-                tokio::join!(self.get_permission_orgs(), self.get_current_org());
+    pub async fn init(&self, profile: ApiResponse) -> UserProfileData {
+        let (permission_orgs, current_org) =
+            tokio::join!(self.get_permission_orgs(), self.get_current_org());
 
-            UserProfileData {
-                profile,
-                current_org,
-                permission_orgs,
-            }
-        } else {
-            let permission_orgs = ApiResponse {
-                status: 200,
-                data: json!({
-                    "pam_orgs": [],
-                    "audit_orgs": [],
-                    "console_orgs": [],
-                    "workbench_orgs": [],
-                    "id": "",
-                    "username": "",
-                })
-                .to_string(),
-                success: true,
-            };
-
-            let current_org = ApiResponse {
-                status: 200,
-                data: json!({
-                    "id": "",
-                    "name": "",
-                    "is_root": false,
-                    "is_default": false,
-                    "is_system": false,
-                    "comment": "",
-                })
-                .to_string(),
-                success: true,
-            };
-
-            UserProfileData {
-                profile,
-                current_org,
-                permission_orgs,
-            }
+        UserProfileData {
+            profile,
+            current_org,
+            permission_orgs,
         }
     }
 }

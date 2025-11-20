@@ -122,13 +122,17 @@ pub fn url_watcher(app: AppHandle, name: String, origin: String) {
                 let license_valid = if xpack_message.status == 200 && xpack_message.success {
                     serde_json::from_str::<Value>(&xpack_message.data)
                         .ok()
-                        .and_then(|value| value.get("XPACK_LICENSE_IS_VALID").and_then(|v| v.as_bool()))
+                        .and_then(|value| {
+                            value
+                                .get("XPACK_LICENSE_IS_VALID")
+                                .and_then(|v| v.as_bool())
+                        })
                         .unwrap_or(false)
                 } else {
                     false
                 };
 
-                let user_data = user_service.init(profile, license_valid).await;
+                let user_data = user_service.init(profile).await;
 
                 let _ = app.emit(
                     "login-success-detected",

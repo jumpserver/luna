@@ -33,22 +33,23 @@ export function transformAssetsData(rawDataArray: RawAssetData[]): AssetItem[] {
 }
 
 /**
- * @description 处理 cooklies 中的 django_language
- * @param cookies
+ * @description 获取操作系统的语言
  */
-export function resolveLanguageFromCookies(cookies: string | undefined | null): "zh" | "en" {
-  if (!cookies) return "en";
+export async function resolveLanguageFromCookies(): Promise<"zh" | "en"> {
+  const normalize = (lang: string | null | undefined) => {
+    if (!lang) return "en" as const;
 
-  const langEntry = cookies
-    .split(";")
-    .map((chunk) => chunk.trim())
-    .find((chunk) => chunk.toLowerCase().startsWith("django_language="));
+    const normalized = lang.toLowerCase();
+    if (normalized.includes("zh")) return "zh" as const;
+    return "en" as const;
+  };
 
-  if (!langEntry) return "en";
+  const locale = await useTauriOsLocale();
+  if (locale) {
+    return normalize(locale);
+  }
 
-  const value = langEntry.split("=")[1]?.trim().toLowerCase();
+  const fallback = (typeof navigator !== "undefined" && (navigator.language || navigator.languages?.[0])) || "";
 
-  if (!value) return "en";
-
-  return value === "zh-hans" || value.startsWith("zh") ? "zh" : "en";
+  return normalize(fallback);
 }

@@ -480,7 +480,7 @@ onMounted(async () => {
     const resolvedSite = resolved_site || normalizedSite;
 
     if (status === "success" && profileData) {
-      const language = resolveLanguageFromCookies(cookies);
+      const language = await resolveLanguageFromCookies();
 
       if (vStatus !== "incompatible" && !vMatch) {
         useEventBus().emit("versionAlert", { type: "noMatch", version: versionMessage[versionMessage.length - 1] });
@@ -500,7 +500,7 @@ onMounted(async () => {
         org: currentOrgData,
         system_roles: profileData.system_roles,
         availableOrgs,
-        xpackLicenseValid: xpack_license_valid ?? false,
+        xpackLicenseValid: xpack_license_valid ?? true,
         language,
         connectionInfo: {
           protocol: "",

@@ -14,7 +14,10 @@ interface MenuItem {
   children?: MenuItem[];
 }
 
+const ASSET_NAME_TOOLTIP_THRESHOLD = 20;
+
 const UButton = resolveComponent("UButton");
+const UTooltip = resolveComponent("UTooltip");
 const UCheckbox = resolveComponent("UCheckbox");
 const UFieldGroup = resolveComponent("UFieldGroup");
 const UDropdownMenu = resolveComponent("UDropdownMenu");
@@ -183,6 +186,11 @@ function cancelRename() {
   renamingId.value = null;
 }
 
+const shouldShowTooltip = (text: string | undefined | null) => {
+  if (!text) return false;
+  return text.length > ASSET_NAME_TOOLTIP_THRESHOLD;
+};
+
 const columns: TableColumn<AssetItem>[] = [
   {
     id: "select",
@@ -222,13 +230,29 @@ const columns: TableColumn<AssetItem>[] = [
         });
       }
 
-      return h(
+      const assetName = row.original.name || "-";
+
+      const textNode = h(
         "div",
         {
-          class: "truncate",
-          title: row.original.name
+          class: "truncate"
         },
-        row.original.name
+        assetName
+      );
+
+      if (!shouldShowTooltip(assetName) || assetName === "-") {
+        return textNode;
+      }
+
+      return h(
+        UTooltip,
+        {
+          arrow: true,
+          text: assetName
+        },
+        {
+          default: () => textNode
+        }
       );
     },
     meta: { class: { th: "max-w-[300px]", td: "max-w-[300px]" } }
