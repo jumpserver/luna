@@ -18,7 +18,7 @@ const { userTheme, applyThemePreference, applySystemThemePreference } = useTheme
 const { applyPrimaryColor } = useColor();
 const settingManager = useSettingManager();
 
-const { fontFamily, primaryColorLight, primaryColorDark, setLang } = settingManager;
+const { fontFamily, primaryColorLight, primaryColorDark, setLang, hydrationPromise, isHydrated } = settingManager;
 
 const backgroundColor = computed(() => {
   const isDark = userTheme.value === "dark";
@@ -75,6 +75,17 @@ function applyFont(font: string) {
   document.documentElement.style.setProperty("--font-heading", font);
 }
 
+const applyAfterHydration = async () => {
+  if (hydrationPromise.value) {
+    try {
+      await hydrationPromise.value;
+    } catch (err) {
+      console.error("wait hydration failed", err);
+    }
+  }
+  applyCurrentThemeColor();
+};
+
 onMounted(async () => {
   try {
     await useTauriEventListen("primary-color-changed", (event: any) => {
@@ -125,10 +136,20 @@ onMounted(async () => {
     });
 
     await useWarmupSetting();
+    await applyAfterHydration();
   } catch (error) {
     console.error(error);
   }
 });
+
+watch(
+  () => isHydrated.value,
+  (ready) => {
+    if (ready) {
+      applyAfterHydration();
+    }
+  }
+);
 
 // 切换账号时，按站点映射立即应用语言
 watch(
