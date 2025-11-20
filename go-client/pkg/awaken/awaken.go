@@ -82,6 +82,18 @@ func (r *Rouse) getName() string {
 	return replacer.Replace(name)
 }
 
+// reportError 统一处理错误输出：记录日志并输出到 stderr
+func reportError(msg string) {
+	global.LOG.Error(msg)
+	fmt.Fprintf(os.Stderr, "Error: %s\n", msg)
+}
+
+// reportErrorf 格式化错误消息并统一处理
+func reportErrorf(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	reportError(msg)
+}
+
 func removeCurRdpVncFile() {
 	re := regexp.MustCompile(`(?i)\.(rdp|vncpaxx)$`)
 	dir, _ := os.UserConfigDir()
@@ -101,22 +113,16 @@ func (r *Rouse) HandleRDP(appConfig *config.AppConfig) {
 	filePath := filepath.Join(dir, "jumpserver-client", replacer.Replace(fileName)+".rdp")
 	err := ioutil.WriteFile(filePath, []byte(r.Content), os.ModePerm)
 	if err != nil {
-		errorMsg := err.Error()
-		global.LOG.Error(errorMsg)
-		fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+		reportError(err.Error())
 		return
 	}
 	cmd := handleRDP(r, filePath, appConfig)
 	if cmd != nil {
 		if err := cmd.Run(); err != nil {
-			errorMsg := fmt.Sprintf("Failed to execute RDP application: %v", err)
-			global.LOG.Error(errorMsg)
-			fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+			reportErrorf("Failed to execute RDP application: %v", err)
 		}
 	} else {
-		errorMsg := "No RDP application configured or found"
-		global.LOG.Error(errorMsg)
-		fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+		reportError("No RDP application configured or found")
 	}
 }
 
@@ -124,14 +130,10 @@ func (r *Rouse) HandleVNC(appConfig *config.AppConfig) {
 	cmd := handleVNC(r, appConfig)
 	if cmd != nil {
 		if err := cmd.Run(); err != nil {
-			errorMsg := fmt.Sprintf("Failed to execute VNC application: %v", err)
-			global.LOG.Error(errorMsg)
-			fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+			reportErrorf("Failed to execute VNC application: %v", err)
 		}
 	} else {
-		errorMsg := "No VNC application configured or found"
-		global.LOG.Error(errorMsg)
-		fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+		reportError("No VNC application configured or found")
 	}
 }
 
@@ -139,14 +141,10 @@ func (r *Rouse) HandleSSH(appConfig *config.AppConfig) {
 	cmd := handleSSH(r, appConfig)
 	if cmd != nil {
 		if err := cmd.Run(); err != nil {
-			errorMsg := fmt.Sprintf("Failed to execute SSH application: %v", err)
-			global.LOG.Error(errorMsg)
-			fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+			reportErrorf("Failed to execute SSH application: %v", err)
 		}
 	} else {
-		errorMsg := "No SSH application configured or found"
-		global.LOG.Error(errorMsg)
-		fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+		reportError("No SSH application configured or found")
 	}
 }
 
@@ -154,14 +152,10 @@ func (r *Rouse) HandleDB(appConfig *config.AppConfig) {
 	cmd := handleDB(r, appConfig)
 	if cmd != nil {
 		if err := cmd.Run(); err != nil {
-			errorMsg := fmt.Sprintf("Failed to execute database application: %v", err)
-			global.LOG.Error(errorMsg)
-			fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+			reportErrorf("Failed to execute database application: %v", err)
 		}
 	} else {
-		errorMsg := "No database application configured or found"
-		global.LOG.Error(errorMsg)
-		fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+		reportError("No database application configured or found")
 	}
 }
 
@@ -169,14 +163,10 @@ func (r *Rouse) HandleCommand(appConfig *config.AppConfig) {
 	cmd := handleCommand(r, appConfig)
 	if cmd != nil {
 		if err := cmd.Run(); err != nil {
-			errorMsg := fmt.Sprintf("Failed to execute command: %v", err)
-			global.LOG.Error(errorMsg)
-			fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+			reportErrorf("Failed to execute command: %v", err)
 		}
 	} else {
-		errorMsg := "No command application configured or found"
-		global.LOG.Error(errorMsg)
-		fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+		reportError("No command application configured or found")
 	}
 }
 
@@ -194,9 +184,7 @@ func (r *Rouse) Run() {
 		case "mysql", "mariadb", "postgresql", "redis", "oracle", "sqlserver", "mongodb":
 			r.HandleDB(&appConfig)
 		default:
-			errorMsg := fmt.Sprintf("Unsupported protocol: %s", protocol)
-			global.LOG.Error(errorMsg)
-			fmt.Fprintf(os.Stderr, "Error: %s\n", errorMsg)
+			reportErrorf("Unsupported protocol: %s", protocol)
 		}
 	} else {
 		r.HandleCommand(&appConfig)
