@@ -274,9 +274,9 @@ fn restore_window_size(win: &WebviewWindow) -> Result<(), String> {
         return Ok(());
     };
 
-    // 避免设置到 0 或负数
-    let w = width_logical.max(1.0);
-    let h = height_logical.max(1.0);
+    // 限制窗口尺寸：宽度 600-1800，高度 400-1000
+    let w = width_logical.max(600.0).min(1800.0);
+    let h = height_logical.max(400.0).min(1000.0);
 
     win.set_size(tauri::Size::Logical(LogicalSize::new(w, h)))
         .map_err(|e| format!("set_size failed: {}", e))?;
