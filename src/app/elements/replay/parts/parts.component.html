@@ -28,7 +28,6 @@
     </div>
   </div>
 
-  <!-- 主体内容 -->
   <div class="main-content">
     <!-- 视频播放区 -->
     <div class="video-area" [class.playlist-hidden]="playlistCollapsed">
@@ -39,12 +38,18 @@
         <i nz-icon nzType="menu" nzTheme="outline"></i>
         {{ 'Playlist' | translate }}
       </button>
-      <elements-replay-guacamole
+
+      @if(this.replayType === 'mp4') {
+        <elements-replay-mp4 *ngIf="currentVideo && currentVideo.src" (ready)="videoLoading = false" 
+        [replay]="currentVideo" type="parts" class="video-player"></elements-replay-mp4>
+      } @else {
+        <elements-replay-guacamole
         *ngIf="currentVideo && currentVideo.src"
         [replay]="currentVideo"
         (ready)="videoLoading = false"
         class="video-player">
       </elements-replay-guacamole>
+      }
     </div>
 
     <!-- 播放列表 -->

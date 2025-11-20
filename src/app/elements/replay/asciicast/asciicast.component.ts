@@ -170,10 +170,10 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
   /**
    * 重置播放器并保持当前播放位置和状态
    */
-  private resetPlayerWithCurrentTime() {
+  private async resetPlayerWithCurrentTime() {
     if (!this.player) return;
 
-    this.currentTime = this.player.getCurrentTime();
+    this.currentTime = await this.player.getCurrentTime();
 
     if (isNaN(this.currentTime) || this.currentTime < 0) {
       this.currentTime = 0;
@@ -204,8 +204,6 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
       speed: this.speed,
       preload: true,
       autoPlay: this.isPlaying ? 1 : 0,
-      rows: this.rows,
-      cols: 100,
       fit: false,
       terminalFontSize: '12px'
     };
