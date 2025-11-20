@@ -1,7 +1,7 @@
 {
   "name": "jumpserver-client",
   "type": "module",
-  "version": "1.4.0",
+  "version": "4.0.0",
   "private": true,
   "packageManager": "pnpm@10.20.0",
   "description": "JumpServer client tool",

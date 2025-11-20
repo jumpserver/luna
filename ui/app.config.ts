@@ -2,7 +2,7 @@ export default defineAppConfig({
   app: {
     name: "JumpServer Client",
     author: "JumpServer",
-    version: "3.1.0",
+    version: "4.0.0",
     repo: "https://github.com/jumpserver/clients"
   },
   componentsConfig: {
@@ -66,7 +66,7 @@ export default defineAppConfig({
     dropdownMenu: {
       slots: {
         content: "w-(--reka-dropdown-menu-trigger-width) p-1",
-        item: "mx-0.5 px-3 py-2 rounded-md transition-colors duration-150",
+        item: "mx-0.5 px-3 py-2 rounded-md transition-colors duration-150"
       }
     },
     navigationMenu: {
