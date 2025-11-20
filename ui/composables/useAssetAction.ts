@@ -574,11 +574,30 @@ export const useAssetAction = () => {
         }
 
         const payload = event.payload as eventPayload;
-        const errorMessage = payload.error || t("ConnectError.ConnectFailed");
+        const raw = payload.error || "";
+        const lower = raw.toLowerCase();
+
+        let description = raw || t("ConnectError.ConnectFailed");
+
+        if (lower.includes("executable not found")) {
+          description = t("ConnectError.ClientNotFound");
+        } else if (lower.includes("failed to launch client")) {
+          description = t("ConnectError.ClientLaunchFailed");
+        } else if (lower.includes("client process exited")) {
+          description = t("ConnectError.ClientExited");
+        } else if (lower.includes("no rdp application")) {
+          description = t("ConnectError.RdpAppMissing");
+        } else if (lower.includes("no vnc application")) {
+          description = t("ConnectError.VncAppMissing");
+        } else if (lower.includes("failed to execute rdp application")) {
+          description = t("ConnectError.RdpAppFailed");
+        } else if (lower.includes("failed to execute vnc application")) {
+          description = t("ConnectError.VncAppFailed");
+        }
 
         toast.add({
           title: t("ConnectError.ConnectFailed"),
-          description: errorMessage,
+          description,
           color: "error",
           icon: "line-md:close-circle"
         });
