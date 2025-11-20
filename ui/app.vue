@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { storeToRefs } from "pinia";
+import { resolveLanguageFromSystem } from "~/utils";
 
 useApplicationConfig();
 const userInfoStore = useUserInfoStore();
@@ -11,7 +12,7 @@ const route = useRoute();
 
 const { locale, setLocale } = useI18n();
 
-const { currentSite } = storeToRefs(userInfoStore);
+const { currentSite, loggedIn } = storeToRefs(userInfoStore);
 const { isMacOS } = usePlatform();
 const { userTheme, applyThemePreference, applySystemThemePreference } = useThemeAdapter();
 
@@ -86,6 +87,20 @@ const applyAfterHydration = async () => {
   applyCurrentThemeColor();
 };
 
+const applyOsLanguageWhenNoUser = async () => {
+  if (loggedIn.value) return;
+
+  try {
+    const osLang = await resolveLanguageFromSystem();
+    if (osLang) {
+      await setLocale(osLang as any);
+      setLang(osLang as any);
+    }
+  } catch (err) {
+    console.error("apply OS language failed", err);
+  }
+};
+
 onMounted(async () => {
   try {
     await useTauriEventListen("primary-color-changed", (event: any) => {
@@ -137,6 +152,7 @@ onMounted(async () => {
 
     await useWarmupSetting();
     await applyAfterHydration();
+    await applyOsLanguageWhenNoUser();
   } catch (error) {
     console.error(error);
   }
@@ -147,6 +163,7 @@ watch(
   (ready) => {
     if (ready) {
       applyAfterHydration();
+      applyOsLanguageWhenNoUser();
     }
   }
 );

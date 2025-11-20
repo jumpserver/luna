@@ -35,7 +35,7 @@ export function transformAssetsData(rawDataArray: RawAssetData[]): AssetItem[] {
 /**
  * @description 获取操作系统的语言
  */
-export async function resolveLanguageFromCookies(): Promise<"zh" | "en"> {
+export async function resolveLanguageFromSystem(): Promise<"zh" | "en"> {
   const normalize = (lang: string | null | undefined) => {
     if (!lang) return "en" as const;
 

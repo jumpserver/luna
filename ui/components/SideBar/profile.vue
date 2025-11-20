@@ -4,7 +4,7 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { PermissionOrgs, PermOrgItem, UserData, UserIntiInfo, LangType, ThemeType } from "~/types/index";
 
-import { resolveLanguageFromCookies } from "~/utils";
+import { resolveLanguageFromSystem } from "~/utils";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { useSettingManager } from "~/composables/useSettingManager";
@@ -480,7 +480,7 @@ onMounted(async () => {
     const resolvedSite = resolved_site || normalizedSite;
 
     if (status === "success" && profileData) {
-      const language = await resolveLanguageFromCookies();
+      const language = await resolveLanguageFromSystem();
 
       if (vStatus !== "incompatible" && !vMatch) {
         useEventBus().emit("versionAlert", { type: "noMatch", version: versionMessage[versionMessage.length - 1] });

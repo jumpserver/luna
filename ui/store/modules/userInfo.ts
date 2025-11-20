@@ -62,21 +62,24 @@ export const useUserInfoStore = defineStore(
      * @param userData
      */
     const setUserData = (site: string, userData: UserData & { language?: LangType }) => {
-      const baseLang = userData.language;
+      const preferredLang = getSiteLanguage(site);
+      const effectiveLang = (preferredLang || userData.language || getDefaultLanguage()) as LangType;
 
-      setSiteLanguage(site, baseLang);
+      if (!preferredLang) {
+        setSiteLanguage(site, effectiveLang);
+      }
 
       const withLanguage = {
         ...(userData as SiteUserData),
-        language: baseLang
+        language: effectiveLang
       } as SiteUserData;
 
       userMap.value[site] = withLanguage;
       currentUser.value = withLanguage;
       currentSite.value = site;
-      currentLanguage.value = baseLang;
+      currentLanguage.value = effectiveLang;
 
-      setLocale(baseLang);
+      setLocale(effectiveLang);
 
       // 设置组织 ID
       if (userData.org?.id) {
