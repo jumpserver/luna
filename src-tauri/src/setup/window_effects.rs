@@ -34,6 +34,9 @@ pub fn apply_windows_blur(_win: &WebviewWindow) -> Result<(), Box<dyn std::error
     if let Err(e) = _win.set_decorations(false) {
         error!("Failed to set window decorations: {}", e);
     }
+    if let Err(e) = _win.set_shadow(false) {
+        error!("Failed to set window shadow: {}", e);
+    }
     Ok(())
 }
 
@@ -69,9 +72,7 @@ pub fn apply_window_effects(win: &WebviewWindow) -> Result<(), Box<dyn Error>> {
             Ok(())
         }
     };
-
     // 窗口尺寸持久化逻辑
     setup_window_size_persistence(win.clone());
-
     result
 }
