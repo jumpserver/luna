@@ -63,17 +63,17 @@ pub async fn get_window_cookies(
     let cookies: Vec<_> = all_cookies
         .into_iter()
         .filter(|cookie| {
-            if target_is_ip {
-                return true;
-            }
-
             let domain_opt = cookie.domain();
-            let domain = domain_opt.unwrap_or("");
-            let cd = domain.trim_start_matches('.');
+            let domain = domain_opt.unwrap_or("").trim_start_matches('.').to_string();
             let td = target_domain.as_str();
 
+            if target_is_ip {
+                // IP 站点只接受 host-only cookie 或者域名与 IP 完全一致的 cookie，避免捞到其他站点的凭据
+                return domain_opt.is_none() || (!domain.is_empty() && domain == td);
+            }
+
             let exact_or_subdomain =
-                !cd.is_empty() && (cd == td || cd.ends_with(&format!(".{}", td)) || td.ends_with(&format!(".{}", cd)));
+                !domain.is_empty() && (domain == td || domain.ends_with(&format!(".{}", td)) || td.ends_with(&format!(".{}", domain)));
             let host_only_cookie = domain_opt.is_none() && !td.is_empty();
 
             exact_or_subdomain || host_only_cookie
