@@ -34,9 +34,6 @@ pub fn apply_windows_blur(_win: &WebviewWindow) -> Result<(), Box<dyn std::error
     if let Err(e) = _win.set_decorations(false) {
         error!("Failed to set window decorations: {}", e);
     }
-    if let Err(e) = _win.set_shadow(false) {
-        error!("Failed to set window shadow: {}", e);
-    }
     Ok(())
 }
 
