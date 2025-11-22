@@ -262,6 +262,43 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
+      - name: Sign embedded Go client binary (macOS only)
+        if: matrix.platform == 'macos-latest'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+        run: |
+          echo "Signing embedded Go client binary..."
+
+          CLIENT_BIN="src-tauri/resources/bin/darwin-${{ matrix.target == 'aarch64-apple-darwin' && 'arm64' || 'amd64' }}/client"
+
+          if [ ! -f "$CLIENT_BIN" ]; then
+            echo "❌ Embedded binary not found: $CLIENT_BIN"
+            ls -R src-tauri/resources/bin || true
+            exit 1
+          fi
+
+          echo "Found client binary: $CLIENT_BIN"
+
+          codesign --force --options runtime --timestamp \
+            --sign "$APPLE_SIGNING_IDENTITY" \
+            "$CLIENT_BIN"
+
+          JUMPSERVERCLIENT_BIN="src-tauri/resources/bin/darwin-${{ matrix.target == 'aarch64-apple-darwin' && 'arm64' || 'amd64' }}/JumpServerClient"
+
+          if [ ! -f "$JUMPSERVERCLIENT_BIN" ]; then
+            echo "❌ Embedded binary not found: $JUMPSERVERCLIENT_BIN"
+            ls -R src-tauri/resources/bin || true
+            exit 1
+          fi
+
+          echo "Found JumpServerClient binary: $JUMPSERVERCLIENT_BIN"
+
+          codesign --force --options runtime --timestamp \
+            --sign "$APPLE_SIGNING_IDENTITY" \
+            "$JUMPSERVERCLIENT_BIN"
+
+          echo "✓ Embedded Go client binary signed successfully."
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
