@@ -229,7 +229,7 @@ jobs:
           echo "✓ Certificate imported and verified successfully."
 
       - name: Install Go client for current platform
-        run: make install TARGET=${{ matrix.target }}
+        run: make install TARGET="${{ matrix.target }}"
         working-directory: go-client
 
       - uses: pnpm/action-setup@v4
@@ -298,7 +298,7 @@ jobs:
 
         with:
           tagName: ${{ env.VERSION }}
-          args: "--target ${{ matrix.target }}"
+          args: ${{ matrix.target != '' && '--target ' || '' }}${{ matrix.target }}
           releaseName: "JumpServer Client v__VERSION__"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
