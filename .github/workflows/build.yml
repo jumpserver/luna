@@ -114,12 +114,12 @@ jobs:
         include:
           - platform: "macos-latest" # for Arm based macs (M1 and above).
             target: "aarch64-apple-darwin"
-          - platform: "macos-15-intel" # for Intel based macs.
-            target: "x86_64-apple-darwin"
+          - platform: 'macos-latest' # for Intel based macs.
+            target: 'x86_64-apple-darwin'
           - platform: "ubuntu-22.04" # for Tauri v1 you could replace this with ubuntu-20.04.
-            target: "linux-amd64"
+            target: ""
           - platform: "windows-latest"
-            target: "windows-amd64"
+            target: ""
 
     runs-on: ${{ matrix.platform }}
     env:
@@ -229,7 +229,7 @@ jobs:
           echo "✓ Certificate imported and verified successfully."
 
       - name: Install Go client for current platform
-        run: make install
+        run: make install TARGET=${{ matrix.target }}
         working-directory: go-client
 
       - uses: pnpm/action-setup@v4
@@ -298,6 +298,7 @@ jobs:
 
         with:
           tagName: ${{ env.VERSION }}
+          args: "--target ${{ matrix.target }}"
           releaseName: "JumpServer Client v__VERSION__"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
