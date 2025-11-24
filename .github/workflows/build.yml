@@ -265,33 +265,24 @@ jobs:
         run: |
           echo "Signing embedded Go client binary..."
 
-          CLIENT_BIN="src-tauri/resources/bin/darwin-${{ matrix.target == 'aarch64-apple-darwin' && 'arm64' || 'amd64' }}/client"
+          BIN_DIR="src-tauri/resources/bin/darwin-${{ matrix.target == 'aarch64-apple-darwin' && 'arm64' || 'amd64' }}"
+          BINARIES=("client" "JumpServerClient")
 
-          if [ ! -f "$CLIENT_BIN" ]; then
-            echo "❌ Embedded binary not found: $CLIENT_BIN"
-            ls -R src-tauri/resources/bin || true
-            exit 1
-          fi
+          for BIN_NAME in "${BINARIES[@]}"; do
+            BIN_PATH="$BIN_DIR/$BIN_NAME"
 
-          echo "Found client binary: $CLIENT_BIN"
+            if [ ! -f "$BIN_PATH" ]; then
+              echo "❌ Embedded binary not found: $BIN_PATH"
+              ls -R src-tauri/resources/bin || true
+              exit 1
+            fi
 
-          codesign --force --options runtime --timestamp \
-            --sign "$APPLE_SIGNING_IDENTITY" \
-            "$CLIENT_BIN"
+            echo "Found $BIN_NAME binary: $BIN_PATH"
 
-          JUMPSERVERCLIENT_BIN="src-tauri/resources/bin/darwin-${{ matrix.target == 'aarch64-apple-darwin' && 'arm64' || 'amd64' }}/JumpServerClient"
-
-          if [ ! -f "$JUMPSERVERCLIENT_BIN" ]; then
-            echo "❌ Embedded binary not found: $JUMPSERVERCLIENT_BIN"
-            ls -R src-tauri/resources/bin || true
-            exit 1
-          fi
-
-          echo "Found JumpServerClient binary: $JUMPSERVERCLIENT_BIN"
-
-          codesign --force --options runtime --timestamp \
-            --sign "$APPLE_SIGNING_IDENTITY" \
-            "$JUMPSERVERCLIENT_BIN"
+            codesign --force --options runtime --timestamp \
+              --sign "$APPLE_SIGNING_IDENTITY" \
+              "$BIN_PATH"
+          done
 
           echo "✓ Embedded Go client binary signed successfully."
 
