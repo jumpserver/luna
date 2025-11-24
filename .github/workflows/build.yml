@@ -114,16 +114,12 @@ jobs:
         include:
           - platform: "macos-latest" # for Arm based macs (M1 and above).
             target: "aarch64-apple-darwin"
-            args: "--target aarch64-apple-darwin"
-          - platform: "macos-latest" # for Intel based macs.
+          - platform: "macos-15-intel" # for Intel based macs.
             target: "x86_64-apple-darwin"
-            args: "--target x86_64-apple-darwin"
           - platform: "ubuntu-22.04" # for Tauri v1 you could replace this with ubuntu-20.04.
             target: "linux-amd64"
-            args: ""
           - platform: "windows-latest"
             target: "windows-amd64"
-            args: ""
 
     runs-on: ${{ matrix.platform }}
     env:
@@ -141,7 +137,7 @@ jobs:
           path: go-client/build/
 
       - name: Import Apple Developer Certificate
-        if: matrix.platform == 'macos-latest'
+        if: startsWith(matrix.platform, 'macos')
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -168,7 +164,7 @@ jobs:
           echo "Found $IDENTITY_COUNT valid code signing identity/identities"
 
       - name: Verify Certificate
-        if: matrix.platform == 'macos-latest'
+        if: startsWith(matrix.platform, 'macos')
         run: |
           # Try to find valid code signing certificate (Developer ID, Apple Distribution, or Apple Development)
           # Priority: Developer ID Application > Apple Distribution > Apple Development
@@ -251,10 +247,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ startsWith(matrix.platform, 'macos') && matrix.target || '' }}
 
       - name: Install system dependencies (Ubuntu)
-        if: matrix.platform == 'ubuntu-22.04'
+        if: startsWith(matrix.platform, 'ubuntu')
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
@@ -263,7 +259,7 @@ jobs:
         run: pnpm install
 
       - name: Sign embedded Go client binary (macOS only)
-        if: matrix.platform == 'macos-latest'
+        if: startsWith(matrix.platform, 'macos')
         env:
           APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
         run: |
