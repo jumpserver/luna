@@ -136,14 +136,6 @@ jobs:
           name: go-client-binaries
           path: go-client/build/
 
-      - name: Setup Apple Certificate
-        if: startsWith(matrix.platform, 'macos')
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: pnpm run setup_apple_cert
-
       - name: Install Go client for current platform
         run: make install TARGET="${{ matrix.target }}"
         working-directory: go-client
@@ -162,7 +154,22 @@ jobs:
       - name: Update version numbers
         env:
           VERSION: ${{ env.VERSION }}
-        run: pnpm run set_version
+        run: npm run set_version
+
+      - name: Setup Apple Certificate
+        if: startsWith(matrix.platform, 'macos')
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: npm run setup_apple_cert
+
+      - name: Sign embedded Go client binary (macOS only)
+        if: startsWith(matrix.platform, 'macos')
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+          TARGET_ARCH: ${{ matrix.target == 'aarch64-apple-darwin' && 'arm64' || 'amd64' }}
+        run: pnpm run sign_go_binary
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -178,13 +185,6 @@ jobs:
 
       - name: Install frontend dependencies
         run: pnpm install
-
-      - name: Sign embedded Go client binary (macOS only)
-        if: startsWith(matrix.platform, 'macos')
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
-          TARGET_ARCH: ${{ matrix.target == 'aarch64-apple-darwin' && 'arm64' || 'amd64' }}
-        run: pnpm run sign_go_binary
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
