@@ -15,8 +15,9 @@ if (!versionInput) {
   process.exit(1);
 }
 
-// Remove 'v' prefix if present
-const version = versionInput.replace(/^v/, "");
+// Remove 'v' prefix if present, then remove '-rcN' suffix
+let version = versionInput.replace(/^v/, "");
+version = version.replace(/-rc\d+$/, "");
 console.log(`Updating version to: ${version}`);
 
 // Update package.json
