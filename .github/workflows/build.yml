@@ -243,6 +243,36 @@ jobs:
           node-version: "23"
           cache: "pnpm"
 
+      - name: Update version numbers
+        run: |
+          node -e "
+          const fs = require('fs');
+          const version = '${{ env.VERSION }}'.replace(/^v/, '');
+          console.log('Updating version to:', version);
+
+          // Update package.json
+          const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          packageJson.version = version;
+          fs.writeFileSync('package.json', JSON.stringify(packageJson, null, 2) + '\n');
+
+          // Update tauri.conf.json
+          const tauriConf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+          tauriConf.version = version;
+          fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(tauriConf, null, 2) + '\n');
+
+          // Update Cargo.toml
+          let cargoToml = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
+          cargoToml = cargoToml.replace(/^version = \"[^\"]*\"/m, 'version = \"' + version + '\"');
+          fs.writeFileSync('src-tauri/Cargo.toml', cargoToml);
+
+          // Update app.config.ts
+          let appConfig = fs.readFileSync('ui/app.config.ts', 'utf8');
+          appConfig = appConfig.replace(/version: \"[^\"]*\"/, 'version: \"' + version + '\"');
+          fs.writeFileSync('ui/app.config.ts', appConfig);
+
+          console.log('✓ Version updated successfully');
+          "
+
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
