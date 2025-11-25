@@ -1,5 +1,5 @@
 <script setup lang="ts">
-type alertType = "incompatible" | "noMatch";
+type alertTypes = "incompatible" | "noMatch";
 
 const { theme } = useSettingManager();
 const { componentsConfig } = useAppConfig();
@@ -7,7 +7,7 @@ const clearSelectionCallback = ref<(() => void) | null>(null);
 
 const { t } = useI18n();
 const latestVersion = ref("");
-const alertType = ref<"" | alertType>("");
+const alertType = ref<"" | alertTypes>("");
 const isAlertOpen = ref(false);
 
 const description = computed(() => {
@@ -26,7 +26,7 @@ const providerClearSelection = (callback: () => void) => {
   clearSelectionCallback.value = callback;
 };
 
-useEventBus().on("versionAlert", ({ type, version }: { type: string; version?: string }) => {
+useEventBus().on("versionAlert", ({ type, version }: { type: string, version?: string }) => {
   alertType.value = type as alertType;
   isAlertOpen.value = true;
 

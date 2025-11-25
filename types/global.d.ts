@@ -1,3 +1,3 @@
 declare interface ModuleOptions {
-  prefix: false | string;
+  prefix: false | string
 }

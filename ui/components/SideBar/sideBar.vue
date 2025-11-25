@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
 
-import Profile from "./profile.vue";
 import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
+import Profile from "./profile.vue";
 
 const localePath = useLocalePath();
 
@@ -84,7 +84,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
               : 'py-2 mt-2 justify-between'
         "
       >
-        <div class="flex items-center gap-2" v-if="!isMacOS && !collapse">
+        <div v-if="!isMacOS && !collapse" class="flex items-center gap-2">
           <UAvatar size="sm" src="/logo.png" class="bg-transparent" :ui="{ root: 'bg-transparent' }" />
           <span class="text-sm">JumpServer</span>
         </div>
@@ -161,12 +161,12 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 <style>
 .light .menu .menu-item {
   &[data-active] {
-    background-color: transparent; 
-    
+    background-color: transparent;
+
     &::before {
       background-color: var(--bg-hover-light);
     }
-    
+
     /* opacity: 0.8; */
     font-weight: 500;
   }

@@ -1,18 +1,29 @@
 <script setup lang="ts">
-import type { AssetItem, PermedProtocol } from "~/types";
 import type { TableColumn } from "@nuxt/ui";
+import type { AssetItem, PermedProtocol } from "~/types";
 
-import { h, resolveComponent } from "vue";
 import { storeToRefs } from "pinia";
+import { h, resolveComponent } from "vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface MenuItem {
-  icon: string;
-  label: string;
-  value?: string;
-  onClick: () => void;
-  children?: MenuItem[];
+  icon: string
+  label: string
+  value?: string
+  onClick: () => void
+  children?: MenuItem[]
 }
+
+const props = defineProps<{
+  items: AssetItem[]
+}>();
+
+const emits = defineEmits<{
+  (e: "editTrigger", asset: AssetItem): void
+  (e: "connectAsset", asset: AssetItem): void
+  (e: "contextTrigger", asset: AssetItem): void
+  (e: "connectTrigger", asset: AssetItem): void
+}>();
 
 const ASSET_NAME_TOOLTIP_THRESHOLD = 20;
 
@@ -21,17 +32,6 @@ const UTooltip = resolveComponent("UTooltip");
 const UCheckbox = resolveComponent("UCheckbox");
 const UFieldGroup = resolveComponent("UFieldGroup");
 const UDropdownMenu = resolveComponent("UDropdownMenu");
-
-const emits = defineEmits<{
-  (e: "editTrigger", asset: AssetItem): void;
-  (e: "connectAsset", asset: AssetItem): void;
-  (e: "contextTrigger", asset: AssetItem): void;
-  (e: "connectTrigger", asset: AssetItem): void;
-}>();
-
-const props = defineProps<{
-  items: AssetItem[];
-}>();
 
 const { t } = useI18n();
 const {
@@ -129,42 +129,28 @@ const buildMenuItems = computed(() => {
   };
 });
 
+function handleFavorite(asset: AssetItem) {
+  handleAssetFavorite(asset.id);
+  emitFavoriteChanged(asset.id, true);
+}
+
+function handleUnfavorite(asset: AssetItem) {
+  handleAssetUnfavorite(asset.id);
+  emitFavoriteChanged(asset.id, false);
+}
+
 /**
  * @description 处理上下文事件
  */
-const handleContextTrigger = (asset: AssetItem) => {
+function handleContextTrigger(asset: AssetItem) {
   emits("contextTrigger", asset);
-};
+}
 
-const emitFavoriteChanged = (assetId: string, favorite: boolean) => {
+function emitFavoriteChanged(assetId: string, favorite: boolean) {
   try {
     useEventBus().emit("favoriteChanged", { assetId, favorite });
   } catch {}
-};
-
-const handleFavorite = (asset: AssetItem) => {
-  handleAssetFavorite(asset.id);
-  emitFavoriteChanged(asset.id, true);
-};
-
-const handleUnfavorite = (asset: AssetItem) => {
-  handleAssetUnfavorite(asset.id);
-  emitFavoriteChanged(asset.id, false);
-};
-
-/**
- * @description 触发重命名
- */
-const handleRenameTrigger = (asset: AssetItem) => {
-  renamingId.value = asset.id;
-  renameValue.value = asset.name || "";
-  contextMenuVisible.value = false;
-  actionMenuOpen[asset.id] = false;
-
-  nextTick(() => {
-    renameInputEl.value?.focus();
-  });
-};
+}
 
 function submitRename(id: string) {
   const name = (renameValue.value || "").trim();
@@ -185,6 +171,20 @@ function submitRename(id: string) {
 function cancelRename() {
   renamingId.value = null;
 }
+
+/**
+ * @description 触发重命名
+ */
+function handleRenameTrigger(asset: AssetItem) {
+  renamingId.value = asset.id;
+  renameValue.value = asset.name || "";
+  contextMenuVisible.value = false;
+  actionMenuOpen[asset.id] = false;
+
+  nextTick(() => {
+    renameInputEl.value?.focus();
+  });
+};
 
 const shouldShowTooltip = (text: string | undefined | null) => {
   if (!text) return false;
@@ -295,11 +295,11 @@ const columns: TableColumn<AssetItem>[] = [
       if (!protocolText || protocolText === "-") {
         return h("div", { class: "truncate" }, "-");
       }
-      const color = {
-        paid: "success" as const,
-        failed: "error" as const,
-        refunded: "neutral" as const
-      }[row.getValue("status") as string];
+      // const color = {
+      //   paid: "success" as const,
+      //   failed: "error" as const,
+      //   refunded: "neutral" as const
+      // }[row.getValue("status") as string];
 
       return h(UButton, { size: "xs", class: "rounded-sm", variant: "subtle", color: "primary" }, () => protocolText);
     },
@@ -376,7 +376,7 @@ const columns: TableColumn<AssetItem>[] = [
           th: 'whitespace-nowrap text-xs sm:text-sm',
           td: 'whitespace-nowrap text-xs sm:text-sm py-2'
         }"
-      ></UTable>
+      />
     </div>
   </UCard>
 

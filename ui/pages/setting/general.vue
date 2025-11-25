@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { LangType, CharsetType, ResolutionType } from "~/types";
 import type { SelectItem } from "@nuxt/ui";
+import type { CharsetType, LangType, ResolutionType } from "~/types";
 
-import { useUserInfoStore } from "~/store/modules/userInfo";
 import { useSettingManager } from "~/composables/useSettingManager";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 type LangItem = SelectItem & { id: string };
 

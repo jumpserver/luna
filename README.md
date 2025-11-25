@@ -36,7 +36,6 @@
 
 <div align="center">
 
-
 ![Main Interface](public/screenshot.png)
 *MacOS*
 
@@ -44,7 +43,6 @@
 
 ![Windows](public/screenshot-windows.png)
 *Windows*
-
 
 </div>
 

@@ -1,21 +1,21 @@
 import type { AssetItem, ConnectionInfo as StoredConnectionInfo } from "~/types/index";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
-type ConnectionFormInfo = {
-  protocol: string;
-  account: string;
-  manualUsername: string;
-  manualPassword: string;
-  dynamicPassword: string;
-  rememberSecret: boolean;
+interface ConnectionFormInfo {
+  protocol: string
+  account: string
+  manualUsername: string
+  manualPassword: string
+  dynamicPassword: string
+  rememberSecret: boolean
 
-  accountId?: string;
-  availableProtocols?: string[];
-  accountMode: "hosted" | "dynamic" | "manual";
-};
+  accountId?: string
+  availableProtocols?: string[]
+  accountMode: "hosted" | "dynamic" | "manual"
+}
 
 export function useAssetConnection() {
-  const { handleAssetConnection, displayUser, displayProtocol } = useAssetAction();
+  const { handleAssetConnection, displayUser } = useAssetAction();
   const userInfoStore = useUserInfoStore();
 
   /**
@@ -63,9 +63,9 @@ export function useAssetConnection() {
       const accs = asset.permedAccounts || [];
       const matched = accs.find(
         (a) =>
-          a.name === connectionInfo.account ||
-          a.username === connectionInfo.account ||
-          a.alias === connectionInfo.account
+          a.name === connectionInfo.account
+          || a.username === connectionInfo.account
+          || a.alias === connectionInfo.account
       );
 
       resolvedAccountId = matched?.id;

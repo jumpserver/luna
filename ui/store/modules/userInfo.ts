@@ -1,9 +1,9 @@
-import type { ConnectionInfo, PermOrgItem, RdpGraphics, UserData, LangType } from "~/types/index";
+import type { ConnectionInfo, LangType, PermOrgItem, RdpGraphics, UserData } from "~/types/index";
 
 export type SiteUserData = UserData & {
-  language?: string;
-  rdpClientOption?: RdpGraphics;
-  connectionInfoMap?: Record<string, ConnectionInfo>;
+  language?: string
+  rdpClientOption?: RdpGraphics
+  connectionInfoMap?: Record<string, ConnectionInfo>
 };
 
 // 其实应该叫做 accountInfoStore 比较好
@@ -12,15 +12,7 @@ export const useUserInfoStore = defineStore(
   () => {
     const { setLocale } = useI18n();
     const settingManager = useSettingManager();
-    const {
-      setLang,
-      setLangGlobal,
-      setSiteLanguage,
-      removeSiteLanguage,
-      getSiteLanguage,
-      getDefaultLanguage,
-      hasSiteLanguage
-    } = settingManager;
+    const { setLang, setSiteLanguage, removeSiteLanguage, getSiteLanguage, getDefaultLanguage } = settingManager;
 
     const orgId = ref("");
     const currentSite = ref("");
@@ -46,7 +38,6 @@ export const useUserInfoStore = defineStore(
     /**
      * @description 获取用户数据
      * @param site
-     * @returns
      */
     const getUserData = (site: string) => {
       if (!(site in userMap.value)) {
@@ -253,7 +244,6 @@ export const useUserInfoStore = defineStore(
     /**
      * @description 设置用户连接信息
      * @param connectionInfo
-     * @returns
      */
     const setConnectionInfoToUser = (connectionInfo: ConnectionInfo) => {
       if (!currentUser.value) {
@@ -266,7 +256,6 @@ export const useUserInfoStore = defineStore(
     /**
      * @description 获取资产连接信息
      * @param assetId 资产 ID
-     * @returns
      */
     const getConnectionInfoForAsset = (assetId: string) => {
       if (!currentSite.value) return null;
@@ -295,11 +284,9 @@ export const useUserInfoStore = defineStore(
       const incomingProtocols = (connectionInfo.availableProtocols || [])
         .map((p) => (typeof p === "string" ? p.trim() : ""))
         .filter((p) => p.length > 0);
-        
-      const mergedProtocols =
-        incomingProtocols.length > 0
-          ? Array.from(new Set(incomingProtocols))
-          : existing?.availableProtocols;
+
+      const mergedProtocols
+        = incomingProtocols.length > 0 ? Array.from(new Set(incomingProtocols)) : existing?.availableProtocols;
 
       siteData.connectionInfoMap[assetId] = {
         ...(existing || {}),
@@ -317,7 +304,7 @@ export const useUserInfoStore = defineStore(
       if (!targetSite) {
         // 没有站点时仅更新默认语言与当前语言
         currentLanguage.value = target;
-        
+
         setLang(target);
         setLocale(target);
         return;

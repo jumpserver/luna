@@ -4,20 +4,20 @@ import { storeToRefs } from "pinia";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface Props {
-  asset: AssetItem;
-  visible: boolean;
-  x?: number;
-  y?: number;
+  asset: AssetItem
+  visible: boolean
+  x?: number
+  y?: number
 }
 
 const props = defineProps<Props>();
 
 const emits = defineEmits<{
-  (e: "update:visible", visible: boolean): void;
-  (e: "contextTrigger", asset: AssetItem): void;
-  (e: "editTrigger", asset: AssetItem): void;
-  (e: "connectTrigger", asset: AssetItem): void;
-  (e: "renameTrigger", asset: AssetItem): void;
+  (e: "update:visible", visible: boolean): void
+  (e: "contextTrigger", asset: AssetItem): void
+  (e: "editTrigger", asset: AssetItem): void
+  (e: "connectTrigger", asset: AssetItem): void
+  (e: "renameTrigger", asset: AssetItem): void
 }>();
 
 const { t } = useI18n();
@@ -26,34 +26,14 @@ const userInfoStore = useUserInfoStore();
 const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
 
 interface MenuItem {
-  value?: string;
-  label: string;
-  icon: string;
-  onClick: () => void;
-  children?: MenuItem[];
+  value?: string
+  label: string
+  icon: string
+  onClick: () => void
+  children?: MenuItem[]
 }
 
 const isFavorited = computed(() => !!props.asset.isFavorite);
-
-const resolveProtocols = (asset: AssetItem) => {
-  const candidateProtocols: string[] = [];
-
-  (asset.permedProtocols || []).forEach((p: PermedProtocol | undefined) => {
-    if (p?.name) candidateProtocols.push(p.name);
-  });
-
-  const saved = currentConnectionInfoMap.value[asset.id];
-
-  (saved?.availableProtocols || []).forEach((name) => {
-    if (name) candidateProtocols.push(name);
-  });
-
-  if (saved?.protocol) {
-    candidateProtocols.push(saved.protocol);
-  }
-
-  return Array.from(new Set(candidateProtocols.filter((name) => typeof name === "string" && name.length > 0)));
-};
 
 const menuItems = computed((): MenuItem[] => {
   const uniqueProtocols = resolveProtocols(props.asset);
@@ -103,8 +83,11 @@ const menuItems = computed((): MenuItem[] => {
   return baseItems;
 });
 
-// 处理连接
-const handleConnect = (protocol?: string) => {
+/**
+ * @description 连接
+ * @param protocol
+ */
+function handleConnect(protocol?: string) {
   if (protocol) {
     // 如果有指定协议，直接连接
     handleAssetConnection(
@@ -124,41 +107,70 @@ const handleConnect = (protocol?: string) => {
     emits("connectTrigger", props.asset);
   }
   emits("update:visible", false);
-};
+}
 
-// 处理编辑
-const handleEdit = () => {
+/**
+ * @description 编辑
+ */
+function handleEdit() {
   emits("editTrigger", props.asset);
 
   nextTick(() => {
     emits("update:visible", false);
   });
-};
+}
 
-// 处理重命名
-const handleRename = () => {
+/**
+ * @description 重命名
+ */
+function handleRename() {
   emits("renameTrigger", props.asset);
 
   nextTick(() => {
     emits("update:visible", false);
   });
-};
+}
 
-// 处理收藏
-const handleFavorite = () => {
+/**
+ * @description 搜藏
+ */
+function handleFavorite() {
   handleAssetFavorite(props.asset.id);
   try {
     useEventBus().emit("favoriteChanged", { assetId: props.asset.id, favorite: true });
   } catch {}
   emits("update:visible", false);
-};
+}
 
-const handleUnfavorite = () => {
+/**
+ * @description 取消搜藏
+ */
+function handleUnfavorite() {
   handleAssetUnfavorite(props.asset.id);
   try {
     useEventBus().emit("favoriteChanged", { assetId: props.asset.id, favorite: false });
   } catch {}
   emits("update:visible", false);
+}
+
+function resolveProtocols(asset: AssetItem) {
+  const candidateProtocols: string[] = [];
+
+  (asset.permedProtocols || []).forEach((p: PermedProtocol | undefined) => {
+    if (p?.name) candidateProtocols.push(p.name);
+  });
+
+  const saved = currentConnectionInfoMap.value[asset.id];
+
+  (saved?.availableProtocols || []).forEach((name) => {
+    if (name) candidateProtocols.push(name);
+  });
+
+  if (saved?.protocol) {
+    candidateProtocols.push(saved.protocol);
+  }
+
+  return Array.from(new Set(candidateProtocols.filter((name) => typeof name === "string" && name.length > 0)));
 };
 </script>
 

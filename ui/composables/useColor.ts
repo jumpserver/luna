@@ -1,15 +1,15 @@
 import { ref } from "vue";
 
 interface HSL {
-  h: number;
-  s: number;
-  l: number;
+  h: number
+  s: number
+  l: number
 }
 
 interface RGB {
-  r: number;
-  g: number;
-  b: number;
+  r: number
+  g: number
+  b: number
 }
 
 const mainThemeColorMap = new Map(
@@ -48,7 +48,7 @@ export const useColor = () => {
     } else if (v.length !== 6) {
       return null;
     }
-    if (!/^[0-9a-fA-F]{6}$/.test(v)) return null;
+    if (!/^[0-9a-f]{6}$/i.test(v)) return null;
     return `#${v.toLowerCase()}`;
   };
 
@@ -231,7 +231,6 @@ export const useColor = () => {
    * @param amount
    * @param color
    * @param alphaValue
-   * @returns
    */
   const lighten = (amount: number, color?: string, alphaValue?: number) => {
     const actualColor = color || currentMainColoc.value;
@@ -250,7 +249,6 @@ export const useColor = () => {
    * @param amount
    * @param color
    * @param alphaValue
-   * @returns
    */
   const darken = (amount: number, color?: string, alphaValue?: number) => {
     const actualColor = color || currentMainColoc.value;

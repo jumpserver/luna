@@ -1,6 +1,6 @@
 import type { Ref } from "vue";
+import type { AssetItem, ConnectionInfo, PermedProtocol } from "~/types/index";
 import { computed } from "vue";
-import type { AssetItem, PermedProtocol, ConnectionInfo } from "~/types/index";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export const useDisplayAssets = (assets: Ref<AssetItem[]>, platform?: Ref<string | undefined>) => {
@@ -9,8 +9,8 @@ export const useDisplayAssets = (assets: Ref<AssetItem[]>, platform?: Ref<string
   const visibleAssets = computed<AssetItem[]>(() => {
     const platformVal = platform?.value;
 
-    const list =
-      !platformVal || platformVal === "all"
+    const list
+      = !platformVal || platformVal === "all"
         ? assets.value
         : assets.value.filter((item: AssetItem) => item.platform === platformVal);
 

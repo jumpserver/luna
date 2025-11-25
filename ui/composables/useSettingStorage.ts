@@ -1,32 +1,32 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import { Store } from "@tauri-apps/plugin-store";
+import type { AppConfigType, CharsetType, LangType, ResolutionType, SortType } from "~/types";
 
-import type { AppConfigType, SortType, LangType, CharsetType, ResolutionType } from "~/types";
+import { Store } from "@tauri-apps/plugin-store";
 
 export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
 
-export type UserSettingPersistedState = {
-  language: LangType;
-  siteLanguages: Record<string, LangType>;
-  collapse: boolean;
-  sort: SortType;
-  theme: ThemeType;
-  followSystem: boolean;
-  layouts: LayoutsType;
-  fontFamily: string;
-  primaryColor: string;
-  primaryColorLight: string;
-  primaryColorDark: string;
-  appConfig?: AppConfigType | null;
-  charset: CharsetType;
-  rdpResolution: ResolutionType;
-  backspaceAsCtrlH: boolean;
-  keyboardLayout: string;
-  rdpClientOption: string[];
-  rdpColorQuality: string;
-  rdpSmartSize: string;
-};
+export interface UserSettingPersistedState {
+  language: LangType
+  siteLanguages: Record<string, LangType>
+  collapse: boolean
+  sort: SortType
+  theme: ThemeType
+  followSystem: boolean
+  layouts: LayoutsType
+  fontFamily: string
+  primaryColor: string
+  primaryColorLight: string
+  primaryColorDark: string
+  appConfig?: AppConfigType | null
+  charset: CharsetType
+  rdpResolution: ResolutionType
+  backspaceAsCtrlH: boolean
+  keyboardLayout: string
+  rdpClientOption: string[]
+  rdpColorQuality: string
+  rdpSmartSize: string
+}
 
 const STORE_PATH = "user-setting.json";
 const STORE_KEY = "state";

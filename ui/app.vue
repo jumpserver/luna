@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { useUserInfoStore } from "~/store/modules/userInfo";
 import { storeToRefs } from "pinia";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 import { resolveLanguageFromSystem } from "~/utils";
 
 useApplicationConfig();

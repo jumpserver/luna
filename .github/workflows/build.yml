@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       build_debug:
-        description: "Build debug version"
+        description: Build debug version
         required: false
         default: false
         type: boolean
@@ -112,13 +112,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest" # for Arm based macs (M1 and above).
-            target: "aarch64-apple-darwin"
-          - platform: "macos-latest" # for Intel based macs.
-            target: "x86_64-apple-darwin"
-          - platform: "ubuntu-22.04" # for Tauri v1 you could replace this with ubuntu-20.04.
+          - platform: macos-latest # for Arm based macs (M1 and above).
+            target: aarch64-apple-darwin
+          - platform: macos-latest # for Intel based macs.
+            target: x86_64-apple-darwin
+          - platform: ubuntu-22.04 # for Tauri v1 you could replace this with ubuntu-20.04.
             target: ""
-          - platform: "windows-latest"
+          - platform: windows-latest
             target: ""
 
     runs-on: ${{ matrix.platform }}
@@ -149,7 +149,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "23"
-          cache: "pnpm"
+          cache: pnpm
 
       - name: Update version numbers
         env:
@@ -199,8 +199,8 @@ jobs:
         with:
           tagName: ${{ env.VERSION }}
           args: ${{ matrix.target != '' && '--target ' || '' }}${{ matrix.target }}
-          releaseName: "JumpServer Client v__VERSION__"
-          releaseBody: "See the assets to download this version and install."
+          releaseName: JumpServer Client v__VERSION__
+          releaseBody: See the assets to download this version and install.
           releaseDraft: true
           prerelease: false
           includeDebug: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_debug || false }}

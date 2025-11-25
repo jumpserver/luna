@@ -1,3 +1,19 @@
+<script setup lang="ts">
+interface Props {
+  size?: string | number
+  class?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  size: "24",
+  class: ""
+});
+
+const iconClass = computed(() => {
+  return props.class || "";
+});
+</script>
+
 <template>
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -13,22 +29,6 @@
     />
   </svg>
 </template>
-
-<script setup lang="ts">
-interface Props {
-  size?: string | number;
-  class?: string;
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  size: "24",
-  class: ""
-});
-
-const iconClass = computed(() => {
-  return props.class || "";
-});
-</script>
 
 <style>
 .flip-icon {

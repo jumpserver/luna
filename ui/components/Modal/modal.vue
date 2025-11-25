@@ -1,10 +1,10 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    open: boolean;
-    title?: string;
-    description?: string;
-    overlay?: boolean;
+    open: boolean
+    title?: string
+    description?: string
+    overlay?: boolean
   }>(),
   {
     title: "",
@@ -14,9 +14,9 @@ withDefaults(
 );
 
 const emits = defineEmits<{
-  (e: "update:open", value: boolean): void;
-  (e: "clipboard", value: string): void;
-  (e: "confirm"): void;
+  (e: "update:open", value: boolean): void
+  (e: "clipboard", value: string): void
+  (e: "confirm"): void
 }>();
 
 const { t } = useI18n();
@@ -48,25 +48,23 @@ const handleContextMenu = async (e: Event) => {
 </script>
 
 <template>
-  <template>
-    <UModal
-      :open="open"
-      :ui="{ footer: 'justify-end', description: 'text-xs-plus' }"
-      :description="description"
-      :title="title"
-      :overlay="overlay"
-      @update:open="updateOpen"
-    >
-      <template #body>
-        <div @contextmenu.stop.prevent="handleContextMenu" @keydown.enter="handleConfirm">
-          <slot />
-        </div>
-      </template>
+  <UModal
+    :open="open"
+    :ui="{ footer: 'justify-end', description: 'text-xs-plus' }"
+    :description="description"
+    :title="title"
+    :overlay="overlay"
+    @update:open="updateOpen"
+  >
+    <template #body>
+      <div @contextmenu.stop.prevent="handleContextMenu" @keydown.enter="handleConfirm">
+        <slot />
+      </div>
+    </template>
 
-      <template #footer="{ close }">
-        <UButton :label="t('Common.Cancel')" color="neutral" variant="outline" @click="close" />
-        <UButton :label="t('Common.Confirm')" color="neutral" @click="handleConfirm" />
-      </template>
-    </UModal>
-  </template>
+    <template #footer="{ close }">
+      <UButton :label="t('Common.Cancel')" color="neutral" variant="outline" @click="close" />
+      <UButton :label="t('Common.Confirm')" color="neutral" @click="handleConfirm" />
+    </template>
+  </UModal>
 </template>

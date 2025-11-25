@@ -2,12 +2,12 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import type { PermissionOrgs, PermOrgItem, UserData, UserIntiInfo, LangType, ThemeType } from "~/types/index";
+import type { LangType, PermissionOrgs, PermOrgItem, ThemeType, UserData, UserIntiInfo } from "~/types/index";
 
-import { resolveLanguageFromSystem } from "~/utils";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
-import { useUserInfoStore } from "~/store/modules/userInfo";
 import { useSettingManager } from "~/composables/useSettingManager";
+import { useUserInfoStore } from "~/store/modules/userInfo";
+import { resolveLanguageFromSystem } from "~/utils";
 
 const props = defineProps<{ collapse: boolean }>();
 
@@ -166,7 +166,7 @@ watch(
   }
 );
 
-const applyCurrentThemeColor = (broadcast = false) => {
+function applyCurrentThemeColor(broadcast = false) {
   const modeNow = (userTheme.value as string) || (selectedAppearance.value as string);
   const hexNow = modeNow === "dark" ? primaryColorDark.value : primaryColorLight.value;
 
@@ -176,16 +176,16 @@ const applyCurrentThemeColor = (broadcast = false) => {
       useTauriEventEmit("primary-color-changed", { hex: hexNow, mode: modeNow });
     }
   }
-};
+}
 
-const handleLanguageChange = (code: LangType) => {
+function handleLanguageChange(code: LangType) {
   if (!code || code === selectedLanguage.value) return;
 
   selectedLanguage.value = code;
   setLang(code);
   userInfoStore.applyLanguageToSite(code);
   useTauriEventEmit("language-changed", { code });
-};
+}
 
 /**
  * @description 标准化站点输入：去除首尾空格 + 去除末尾斜杠
@@ -291,6 +291,7 @@ function clearAuthInfo() {
 /**
  * @description 过滤输入中的控制字符
  */
+// eslint-disable-next-line no-control-regex
 const sanitizeInput = (value: string) => value.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
 
 /**
@@ -393,16 +394,16 @@ const handleConfirm = async () => {
     isHttps = u.protocol === "https:";
 
     // 关键词匹配 + 平台/协议启发：在 macOS + https 的失败优先视作证书/ATS问题（除非明确超时/离线）
-    const keywordCert =
-      low.includes("certificate") ||
-      low.includes("ssl") ||
-      low.includes("x509") ||
-      low.includes("handshake") ||
-      low.includes("app transport security") ||
-      low.includes("secure connection") ||
-      low.includes("ats") ||
-      low.includes("hostname") ||
-      low.includes("mismatch");
+    const keywordCert
+      = low.includes("certificate")
+        || low.includes("ssl")
+        || low.includes("x509")
+        || low.includes("handshake")
+        || low.includes("app transport security")
+        || low.includes("secure connection")
+        || low.includes("ats")
+        || low.includes("hostname")
+        || low.includes("mismatch");
 
     const heuristicCert = isMacOS.value && isHttps && !isAbort && online;
     const isCertLike = keywordCert || heuristicCert;
@@ -462,8 +463,8 @@ onMounted(async () => {
 
   unlistenErrorPageRef.value = await useTauriEventListen("error-page", (event) => {
     const { status, reason } = event.payload as {
-      status: string;
-      reason: string;
+      status: string
+      reason: string
     };
 
     if (status === "failure" && reason === "cookies-not-found") {
@@ -479,20 +480,19 @@ onMounted(async () => {
   });
 
   unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", async (event) => {
-    const { status, profile, cookies, version, current_org, resolved_site, permission_orgs, xpack_license_valid } =
-      event.payload as UserIntiInfo;
+    const { status, profile, cookies, version, current_org, resolved_site, permission_orgs, xpack_license_valid }
+      = event.payload as UserIntiInfo;
     const appVersion = await useTauriAppGetVersion().catch(() => "");
 
     let versionMessage: string | string[] = version ?? "";
 
-    if (version === "incompatible") {
-    } else if (typeof version === "string" && version.length > 0) {
+    if (typeof version === "string" && version !== "incompatible" && version.length > 0) {
       try {
         versionMessage = JSON.parse(version);
-      } catch (_) {
+      } catch {
         versionMessage = [];
       }
-    } else {
+    } else if (version !== "incompatible") {
       versionMessage = [];
     }
 

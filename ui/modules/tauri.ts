@@ -5,16 +5,16 @@ import * as tauriPath from "@tauri-apps/api/path";
 import * as tauriWebviewWindow from "@tauri-apps/api/webviewWindow";
 import * as tauriWindow from "@tauri-apps/api/window";
 import * as tauriClipboardManager from "@tauri-apps/plugin-clipboard-manager";
+import * as tauriDialog from "@tauri-apps/plugin-dialog";
 import * as tauriNotification from "@tauri-apps/plugin-notification";
 import * as tauriOs from "@tauri-apps/plugin-os";
+import * as tauriProgress from "@tauri-apps/plugin-process";
 import * as tauriShell from "@tauri-apps/plugin-shell";
 import * as tauriStore from "@tauri-apps/plugin-store";
-import * as tauriProgress from "@tauri-apps/plugin-process";
-import * as tauriDialog from "@tauri-apps/plugin-dialog";
 import { addImports, defineNuxtModule } from "nuxt/kit";
 
 declare interface ModuleOptions {
-  prefix: false | string;
+  prefix: false | string
 }
 
 const capitalize = (name: string) => {

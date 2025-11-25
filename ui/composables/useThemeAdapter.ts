@@ -1,6 +1,6 @@
-import { nextTick } from "vue";
 import type { Event } from "@tauri-apps/api/event";
 import type { Theme } from "@tauri-apps/api/window";
+import { nextTick } from "vue";
 
 export const useThemeAdapter = () => {
   const currentOSTheme = ref<Theme>("light");

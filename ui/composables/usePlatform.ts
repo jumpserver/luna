@@ -21,7 +21,7 @@ export const usePlatform = () => {
       isLoading.value = true;
       const currentPlatform = await useTauriOsPlatform();
       platform.value = currentPlatform;
-    } catch (error) {
+    } catch {
       platform.value = "win32";
     } finally {
       isLoading.value = false;

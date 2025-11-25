@@ -4,16 +4,16 @@ import { useAssetAction } from "~/composables/useAssetAction";
 
 const props = withDefaults(
   defineProps<{
-    asset: AssetItem;
+    asset: AssetItem
   }>(),
   {}
 );
 
 const emits = defineEmits<{
-  (e: "connectAsset", asset: AssetItem): void;
-  (e: "contextTrigger", asset: AssetItem): void;
-  (e: "editTrigger", asset: AssetItem): void;
-  (e: "connectTrigger", asset: AssetItem): void;
+  (e: "connectAsset", asset: AssetItem): void
+  (e: "contextTrigger", asset: AssetItem): void
+  (e: "editTrigger", asset: AssetItem): void
+  (e: "connectTrigger", asset: AssetItem): void
 }>();
 
 const { t } = useI18n();
@@ -112,7 +112,7 @@ const cancelRename = () => {
               @keyup.enter.stop="submitRename"
               @keyup.esc.stop="cancelRename"
               @blur="submitRename"
-            />
+            >
 
             <UTooltip arrow :text="displayAddressLine">
               <span

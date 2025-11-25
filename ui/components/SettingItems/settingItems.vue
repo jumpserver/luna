@@ -1,16 +1,16 @@
 <script lang="ts" setup>
 import type { ConfigItem } from "~/types/index";
 
-// 批量导入所有图片资源
-const imageModules = import.meta.glob<{ default: string }>("@/assets/images/*.png", { eager: true });
-
 const props = defineProps<{
-  item: ConfigItem;
-  protocol?: string;
-  selected?: boolean;
+  item: ConfigItem
+  protocol?: string
+  selected?: boolean
 }>();
 
 const emit = defineEmits<{ (e: "toggle", value: boolean): void }>();
+
+// 批量导入所有图片资源
+const imageModules = import.meta.glob<{ default: string }>("@/assets/images/*.png", { eager: true });
 
 const { t, locale } = useI18n();
 const { isWindows } = usePlatform();
@@ -44,7 +44,6 @@ const imagesMap: Record<string, string | undefined> = {
   toad: getImageByName("toad")
 };
 
-
 const commentText = computed(() => {
   const lang = language.value || (locale?.value as string) || "en";
   return props.item?.comment?.[lang as "zh" | "en"] || props.item?.comment?.en || "";
@@ -59,7 +58,7 @@ const isWindowsPathPickTarget = computed(() => {
 
 const canToggle = computed(() => !!(props.item?.path && props.item.path.trim()));
 
-function getImageByName (filename: string): string | undefined {
+function getImageByName(filename: string): string | undefined {
   for (const path in imageModules) {
     if (path.includes(`/${filename}.png`)) {
       return imageModules[path]?.default;
@@ -119,10 +118,12 @@ const onPathClick = () => {
             :alt="props.item.display_name"
             loading="lazy"
             class="w-10 h-10 p-1 object-contain rounded-md border border-black/5 dark:border-white/10 bg-gray-50 dark:bg-gray-800/60"
-          />
+          >
 
           <div class="flex flex-col gap-1">
-            <p class="text-sm font-medium">{{ props.item.display_name }}</p>
+            <p class="text-sm font-medium">
+              {{ props.item.display_name }}
+            </p>
 
             <!-- Windows 下特定项显示路径选择，否则展示已有路径 -->
             <template v-if="isWindowsPathPickTarget && !props.item.path">

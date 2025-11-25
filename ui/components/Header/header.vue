@@ -12,10 +12,10 @@ const handleWindowDrag = async (event: MouseEvent) => {
   // 如果点击的是按钮或其他交互元素，不触发拖拽
   const target = event.target as HTMLElement;
   if (
-    target.closest("button") ||
-    target.closest('[role="button"]') ||
-    target.closest("input") ||
-    target.closest("select")
+    target.closest("button")
+    || target.closest('[role="button"]')
+    || target.closest("input")
+    || target.closest("select")
   ) {
     return;
   }

@@ -20,11 +20,40 @@ export default eslintConfig(
       "style/indent": ["error", 2],
       "style/quotes": "off",
       "@typescript-eslint/semi": "off",
-      "@typescript-eslint/member-delimiter-style": "error",
+      "style/member-delimiter-style": "error",
+      "unused-imports/no-unused-vars": [
+        "error",
+        {
+          vars: "all",
+          varsIgnorePattern: "^_",
+          args: "after-used",
+          argsIgnorePattern: "^_",
+          ignoreRestSiblings: true
+        }
+      ],
       "style/quote-props": ["warn", "as-needed"],
       "style/comma-dangle": ["warn", "never"],
       "style/brace-style": ["warn", "1tbs"],
       "style/arrow-parens": ["error", "always"],
+      "vue/attributes-order": [
+        "error",
+        {
+          order: [
+            "DEFINITION",
+            "LIST_RENDERING",
+            "CONDITIONALS",
+            "RENDER_MODIFIERS",
+            "GLOBAL",
+            "UNIQUE",
+            "TWO_WAY_BINDING",
+            "OTHER_DIRECTIVES",
+            "OTHER_ATTR",
+            "EVENTS",
+            "CONTENT"
+          ],
+          alphabetical: false
+        }
+      ],
       "vue/block-order": [
         "error",
         {

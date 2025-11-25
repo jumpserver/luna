@@ -1,8 +1,8 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 
-import { useUserInfoStore } from "~/store/modules/userInfo";
 import { useSettingManager } from "~/composables/useSettingManager";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 let tauriListenersInitialized = false;
 let tauriListenersRegistering = false;
@@ -58,20 +58,63 @@ export const useAssetAction = () => {
   const settingManager = useSettingManager();
   // prettier-ignore
   const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption, orgId } = storeToRefs(userInfoStore);
-  const {
-    charset,
-    rdpResolution,
-    backspaceAsCtrlH,
-    keyboardLayout,
-    rdpClientOption,
-    rdpColorQuality,
-    rdpSmartSize
-  } = settingManager;
+  const { charset, rdpResolution, backspaceAsCtrlH, keyboardLayout, rdpClientOption, rdpColorQuality, rdpSmartSize }
+    = settingManager;
+
+  function buildLocalRdpParams() {
+    const prefs = resolveGraphicsPreferences();
+    const params: Record<string, string> = {};
+
+    if (prefs.resolvedResolution && prefs.resolvedResolution.includes("x")) {
+      const [width, height] = prefs.resolvedResolution.split("x");
+      if (width) params.width = width;
+      if (height) params.height = height;
+    }
+
+    const options = prefs.resolvedClientOptions || [];
+    if (options.includes("full_screen")) {
+      params.full_screen = "1";
+    }
+    if (options.includes("multi_screen")) {
+      params.multi_mon = "1";
+    }
+    if (options.includes("drives_redirect")) {
+      params.drives_redirect = "1";
+    }
+
+    params.rdp_smart_size = prefs.resolvedSmartSize;
+    params.rdp_color_quality = prefs.resolvedColorQuality;
+
+    return params;
+  }
+
+  /**
+   * @description 生成连接选项
+   */
+  function resolveGraphicsPreferences() {
+    const resolvedKeyboardLayout
+      = keyboardLayout.value || currentRdpClientOption.value.keyboard_layout || "en-us-qwerty";
+    const resolvedClientOptions
+      = Array.isArray(rdpClientOption.value) && rdpClientOption.value.length > 0
+        ? [...rdpClientOption.value]
+        : [...(currentRdpClientOption.value.rdp_client_option || [])];
+    const resolvedColorQuality = rdpColorQuality.value || currentRdpClientOption.value.rdp_color_quality || "32";
+    const resolvedSmartSize = rdpSmartSize.value || currentRdpClientOption.value.rdp_smart_size || "0";
+
+    return {
+      resolvedCharset: (charset.value || "default") as string,
+      resolvedBackspace: backspaceAsCtrlH.value ?? false,
+      resolvedResolution: (rdpResolution.value || "auto") as string,
+      resolvedKeyboardLayout,
+      resolvedClientOptions,
+      resolvedColorQuality,
+      resolvedSmartSize
+    };
+  }
 
   /**
    * @description 展示 user 信息,默认展示非 @ 开头的 user
    * @param assetId
-   * @returns
    */
   const displayUser = (assetId: string, accounts?: PermedAccount[]) => {
     const saved = currentConnectionInfoMap.value[assetId];
@@ -87,7 +130,6 @@ export const useAssetAction = () => {
   /**
    * @description 展示 protocol 信息
    * @param assetId
-   * @returns
    */
   const displayProtocol = (assetId: string, protocols: PermedProtocol[]) => {
     const saved = currentConnectionInfoMap.value[assetId];
@@ -99,7 +141,6 @@ export const useAssetAction = () => {
    * @param accounts
    * @param assetId
    * @param user
-   * @returns
    */
   const getUserId = (accounts: PermedAccount[], assetId: string, user: string) => {
     const _accounts = accounts || [];
@@ -111,8 +152,8 @@ export const useAssetAction = () => {
     // prettier-ignore
     const isManual = saved?.accountMode === "manual" || username === "手动输入" || username === "Manual input";
 
-    const isDynamic =
-      saved?.accountMode === "dynamic" || username.includes("同名账号") || username.includes("Dynamic user");
+    const isDynamic
+      = saved?.accountMode === "dynamic" || username.includes("同名账号") || username.includes("Dynamic user");
 
     // 已保存过托管账号的 ID 则优先使用
     if (!isManual && !isDynamic && saved?.accountId) {
@@ -153,7 +194,6 @@ export const useAssetAction = () => {
   /**
    * @description 根据协议分发连接方法
    * @param protocol
-   * @returns
    */
   const dispatchConnectMethod = (protocol: string) => {
     let method = "";
@@ -179,33 +219,6 @@ export const useAssetAction = () => {
     return method;
   };
 
-  /**
-   * @description 生成连接选项
-   * @returns
-   */
-  const resolveGraphicsPreferences = () => {
-    const resolvedKeyboardLayout =
-      keyboardLayout.value || currentRdpClientOption.value.keyboard_layout || "en-us-qwerty";
-    const resolvedClientOptions =
-      (Array.isArray(rdpClientOption.value) && rdpClientOption.value.length > 0
-        ? [...rdpClientOption.value]
-        : [...(currentRdpClientOption.value.rdp_client_option || [])]);
-    const resolvedColorQuality =
-      rdpColorQuality.value || currentRdpClientOption.value.rdp_color_quality || "32";
-    const resolvedSmartSize =
-      rdpSmartSize.value || currentRdpClientOption.value.rdp_smart_size || "0";
-
-    return {
-      resolvedCharset: (charset.value || "default") as string,
-      resolvedBackspace: backspaceAsCtrlH.value ?? false,
-      resolvedResolution: (rdpResolution.value || "auto") as string,
-      resolvedKeyboardLayout,
-      resolvedClientOptions,
-      resolvedColorQuality,
-      resolvedSmartSize
-    };
-  };
-
   const generateConnectOptions = () => {
     const prefs = resolveGraphicsPreferences();
 
@@ -219,33 +232,6 @@ export const useAssetAction = () => {
       rdp_color_quality: prefs.resolvedColorQuality,
       rdp_smart_size: prefs.resolvedSmartSize
     };
-  };
-
-  const buildLocalRdpParams = () => {
-    const prefs = resolveGraphicsPreferences();
-    const params: Record<string, string> = {};
-
-    if (prefs.resolvedResolution && prefs.resolvedResolution.includes("x")) {
-      const [width, height] = prefs.resolvedResolution.split("x");
-      if (width) params.width = width;
-      if (height) params.height = height;
-    }
-
-    const options = prefs.resolvedClientOptions || [];
-    if (options.includes("full_screen")) {
-      params.full_screen = "1";
-    }
-    if (options.includes("multi_screen")) {
-      params.multi_mon = "1";
-    }
-    if (options.includes("drives_redirect")) {
-      params.drives_redirect = "1";
-    }
-
-    params.rdp_smart_size = prefs.resolvedSmartSize;
-    params.rdp_color_quality = prefs.resolvedColorQuality;
-
-    return params;
   };
 
   /**
@@ -263,10 +249,10 @@ export const useAssetAction = () => {
     accounts?: PermedAccount[],
     protocolOverride?: string,
     ephemeral?: {
-      accountMode?: "hosted" | "dynamic" | "manual";
-      manualUsername?: string;
-      manualPassword?: string;
-      dynamicPassword?: string;
+      accountMode?: "hosted" | "dynamic" | "manual"
+      manualUsername?: string
+      manualPassword?: string
+      dynamicPassword?: string
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
@@ -328,7 +314,6 @@ export const useAssetAction = () => {
    * @description 处理重命名
    * @param assetId
    * @param name
-   * @returns
    */
   const handleAssetRename = (assetId: string, name: string) => {
     if (!currentSite.value || !currentUser.value?.headerJson) return;
@@ -392,8 +377,8 @@ export const useAssetAction = () => {
     try {
       unlistenGetTokenSuccess = await useTauriEventListen("get-token-success", (event) => {
         interface eventPayload {
-          status: number;
-          data: TokenResponse;
+          status: number
+          data: TokenResponse
         }
 
         const payload = event.payload as eventPayload;
@@ -405,15 +390,15 @@ export const useAssetAction = () => {
 
       unlistenGetTokenFailure = await useTauriEventListen("get-token-failure", (event) => {
         interface eventPayload {
-          status: number;
-          data: string;
+          status: number
+          data: string
         }
 
         const payload = event.payload as eventPayload;
         const errorData = JSON.parse(payload.data);
         const errorCode = errorData?.code as string;
-        
-        if (errorCode && errorCode.includes('acl')) {
+
+        if (errorCode && errorCode.includes("acl")) {
           return toast.add({
             title: t("ConnectError.ConnectFailed"),
             description: t("ConnectError.AclFailed"),
@@ -432,7 +417,7 @@ export const useAssetAction = () => {
 
       unlistenFavoriteSuccess = await useTauriEventListen("set-favorite-success", (event) => {
         interface eventPayload {
-          status: string;
+          status: string
         }
 
         const payload = event.payload as eventPayload;
@@ -447,7 +432,7 @@ export const useAssetAction = () => {
 
       unlistenFavoriteFailed = await useTauriEventListen("set-favorite-failure", (event) => {
         interface eventPayload {
-          status: string;
+          status: string
         }
 
         const payload = event.payload as eventPayload;
@@ -462,7 +447,7 @@ export const useAssetAction = () => {
 
       unlistenUnfavoriteSuccess = await useTauriEventListen("unfavorite-success", (event) => {
         interface eventPayload {
-          status: string;
+          status: string
         }
 
         const payload = event.payload as eventPayload;
@@ -477,7 +462,7 @@ export const useAssetAction = () => {
 
       unlistenUnfavoriteFailed = await useTauriEventListen("unfavorite-failure", (event) => {
         interface eventPayload {
-          status: string;
+          status: string
         }
 
         const payload = event.payload as eventPayload;
@@ -492,9 +477,9 @@ export const useAssetAction = () => {
 
       unlistenGetAssetDetailSuccess = await useTauriEventListen("get-asset-detail-success", (event) => {
         interface eventPayload {
-          status: string;
-          data: string;
-          asset_id: string;
+          status: string
+          data: string
+          asset_id: string
         }
 
         const payload = event.payload as eventPayload;
@@ -506,24 +491,24 @@ export const useAssetAction = () => {
 
           useEventBus().emit("assetDetailUpdated", {
             assetId: payload.asset_id,
-            permedAccounts: permedAccounts,
-            permedProtocols: permedProtocols
+            permedAccounts,
+            permedProtocols
           });
         }
       });
 
       // TODO 提示
-      unlistenGetAssetDetailFailed = await useTauriEventListen("get-asset-detail-failure", (event) => {
-        interface eventPayload {
-          status: string;
-        }
+      unlistenGetAssetDetailFailed = await useTauriEventListen("get-asset-detail-failure", () => {
+        // interface eventPayload {
+        //   status: string
+        // }
       });
 
       unlistenRenameSuccess = await useTauriEventListen("rename-success", (event) => {
         interface eventPayload {
-          success: boolean;
-          status?: number;
-          data?: string;
+          success: boolean
+          status?: number
+          data?: string
         }
 
         const payload = event.payload as eventPayload;
@@ -548,9 +533,9 @@ export const useAssetAction = () => {
 
       unlistenRenameError = await useTauriEventListen("rename-error", (event) => {
         interface eventPayload {
-          success: boolean;
-          status?: number;
-          data?: string;
+          success: boolean
+          status?: number
+          data?: string
         }
 
         const payload = event.payload as eventPayload;
@@ -570,7 +555,7 @@ export const useAssetAction = () => {
 
       unlistenPullUpFailure = await useTauriEventListen("pull-up-failure", (event) => {
         interface eventPayload {
-          error: string;
+          error: string
         }
 
         const payload = event.payload as eventPayload;

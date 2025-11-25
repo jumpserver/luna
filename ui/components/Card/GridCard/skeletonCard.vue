@@ -1,7 +1,7 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    skeletonCount?: number;
+    skeletonCount?: number
   }>(),
   {
     skeletonCount: 1

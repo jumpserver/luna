@@ -1,11 +1,11 @@
 <script setup lang="ts">
 const props = defineProps<{
-  modelValue: string;
-  colors?: string[];
+  modelValue: string
+  colors?: string[]
 }>();
 
 const emit = defineEmits<{
-  (e: "update:modelValue", value: string): void;
+  (e: "update:modelValue", value: string): void
 }>();
 
 const { t } = useI18n();
@@ -69,8 +69,12 @@ function onConfirm() {
         </section>
 
         <div class="flex w-full justify-end gap-2 pt-1">
-          <UButton size="sm" variant="soft" color="neutral" @click="onCancel">{{ t("Common.Cancel") }}</UButton>
-          <UButton size="sm" variant="soft" color="primary" @click="onConfirm">{{ t("Common.Confirm") }}</UButton>
+          <UButton size="sm" variant="soft" color="neutral" @click="onCancel">
+            {{ t("Common.Cancel") }}
+          </UButton>
+          <UButton size="sm" variant="soft" color="primary" @click="onConfirm">
+            {{ t("Common.Confirm") }}
+          </UButton>
         </div>
       </div>
     </template>

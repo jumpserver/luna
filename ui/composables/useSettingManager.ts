@@ -1,13 +1,14 @@
+import type { UserSettingPersistedState } from "~/composables/useSettingStorage";
 import type {
-  SortType,
-  ThemeType,
-  LayoutsType,
   AppConfigType,
-  LangType,
   CharsetType,
-  ResolutionType
+  LangType,
+  LayoutsType,
+  ResolutionType,
+  SortType,
+  ThemeType
 } from "~/types";
-import { useSettingStorage, type UserSettingPersistedState } from "~/composables/useSettingStorage";
+import { useSettingStorage } from "~/composables/useSettingStorage";
 
 export const useSettingManager = () => {
   const storage = useSettingStorage();
@@ -86,11 +87,11 @@ export const useSettingManager = () => {
 
           // 如果持久化与内存的联合集合中全部已是目标语言，则直接跳过，避免重复应用与重复日志
           const allAlreadyTarget = [...unionSites].every((site) => {
-            const current =
-              (state.siteLanguages && state.siteLanguages[site]) ??
-              (saved.siteLanguages && saved.siteLanguages[site]) ??
-              saved.language ??
-              state.language;
+            const current
+              = (state.siteLanguages && state.siteLanguages[site])
+                ?? (saved.siteLanguages && saved.siteLanguages[site])
+                ?? saved.language
+                ?? state.language;
             return current === lang;
           });
 
@@ -199,6 +200,13 @@ export const useSettingManager = () => {
     state.rdpSmartSize = value || "0";
     persist({ rdpSmartSize: state.rdpSmartSize });
   };
+
+  onBeforeUnmount(() => {
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
+    }
+  });
 
   ensureHydration();
 

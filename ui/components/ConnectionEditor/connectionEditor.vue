@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AssetItem, PermedAccount, PermedProtocol, ConnectionInfo } from "~/types/index";
+import type { AssetItem, ConnectionInfo, PermedAccount, PermedProtocol } from "~/types/index";
 import EditForm from "~/components/EditForm/editForm.vue";
 
 const { t, locale } = useI18n();
@@ -49,8 +49,8 @@ const initDraft = (asset: AssetItem) => {
       const manual = accounts.find((a) => a.alias === "@INPUT");
 
       if (dynamic) {
-        draftAccount.value =
-          locale.value === "zh" ? `${dynamic.name}(${dynamic.username})` : `Dynamic user(${dynamic.username})`;
+        draftAccount.value
+          = locale.value === "zh" ? `${dynamic.name}(${dynamic.username})` : `Dynamic user(${dynamic.username})`;
       } else if (manual) {
         draftAccount.value = locale.value === "zh" ? manual.name : "Manual input";
       } else {
@@ -77,7 +77,7 @@ const normalizeProtocols = () => {
 const buildConnectionInfo = () => {
   let accountMode: "hosted" | "dynamic" | "manual" = "hosted";
   let normalizedAccount = draftAccount.value || "";
-  let accountId: string | undefined = undefined;
+  let accountId: string | undefined;
 
   const v = draftAccount.value || "";
 
@@ -152,7 +152,7 @@ async function ensureDetails(asset: AssetItem) {
   const detailsReady = new Promise<AssetItem>((resolve) => {
     const unsubscribe = useEventBus().once(
       "assetDetailUpdated",
-      (payload: { assetId: string; permedAccounts: PermedAccount[]; permedProtocols: PermedProtocol[] }) => {
+      (payload: { assetId: string, permedAccounts: PermedAccount[], permedProtocols: PermedProtocol[] }) => {
         if (payload.assetId !== asset.id) return;
 
         currentAsset.value = {

@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import type { ThemeType } from "~/types";
 import type { SelectItem } from "@nuxt/ui";
+import type { ThemeType } from "~/types";
 import { useSettingManager } from "~/composables/useSettingManager";
 
 interface FontItem {
-  id: string;
-  value: string;
-  label: string;
+  id: string
+  value: string
+  label: string
 }
 
 definePageMeta({
   layout: "setting"
 });
+
+const FALLBACK_FONTS = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial';
 
 const { t } = useI18n();
 const {
@@ -30,6 +32,14 @@ const { applyPrimaryColor } = useColor();
 const { manualSetTheme, enableFollowSystem, followSystem, userTheme } = useThemeAdapter();
 
 const selectedFont = ref<string>("system");
+const fontsItems = ref<FontItem[]>([
+  {
+    label: t("Common.SystemDefault"),
+    id: "system",
+    value: FALLBACK_FONTS
+  }
+]);
+
 const selectedAppearance = computed<ThemeType>({
   get: () => {
     if (followSystem.value) return "withSystem";
@@ -114,15 +124,23 @@ const appearanceItems = computed<SelectItem[]>(() => [
   { label: t("Common.Dark"), id: "dark" }
 ]);
 
-const FALLBACK_FONTS = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial';
+function applyFont(font: string) {
+  const root = document.documentElement;
+  root.style.setProperty("--font-sans", font);
+  root.style.setProperty("--font-heading", font);
+}
 
-const fontsItems = ref<FontItem[]>([
-  {
-    label: t("Common.SystemDefault"),
-    id: "system",
-    value: FALLBACK_FONTS
+function applyCurrentThemeColor(broadcast = false) {
+  const modeNow = (userTheme.value as string) || (selectedAppearance.value as string);
+  const hexNow = modeNow === "dark" ? primaryColorDark.value : primaryColorLight.value;
+
+  if (hexNow) {
+    applyPrimaryColor(hexNow);
+    if (broadcast) {
+      useTauriEventEmit("primary-color-changed", { hex: hexNow, mode: modeNow });
+    }
   }
-]);
+}
 
 const loadSystemFonts = async () => {
   const fallback = FALLBACK_FONTS;
@@ -141,16 +159,16 @@ const loadSystemFonts = async () => {
     if (!systemDefault) return;
 
     fontsItems.value = [systemDefault, ...dynamicItems];
-  } catch (e) {
+  } catch {
     fontsItems.value = [
       fontsItems.value[0]!,
       { label: "System UI", id: "systemUI", value: fallback },
       {
         label: "Noto Sans SC",
         id: "notoSansSC",
-        value: '"Noto Sans SC", "Noto Sans", ' + fallback
+        value: `"Noto Sans SC", "Noto Sans", ${fallback}`
       },
-      { label: "Inter", id: "inter", value: '"Inter", ' + fallback }
+      { label: "Inter", id: "inter", value: `"Inter", ${fallback}` }
     ];
   } finally {
     const savedRaw = fontFamily.value;
@@ -164,18 +182,6 @@ const loadSystemFonts = async () => {
 
     selectedFont.value = matched?.id || "system";
     applyFont(normalizedSaved);
-  }
-};
-
-const applyCurrentThemeColor = (broadcast = false) => {
-  const modeNow = (userTheme.value as string) || (selectedAppearance.value as string);
-  const hexNow = modeNow === "dark" ? primaryColorDark.value : primaryColorLight.value;
-
-  if (hexNow) {
-    applyPrimaryColor(hexNow);
-    if (broadcast) {
-      useTauriEventEmit("primary-color-changed", { hex: hexNow, mode: modeNow });
-    }
   }
 };
 
@@ -214,12 +220,6 @@ watch(
     } catch {}
   }
 );
-
-function applyFont(font: string) {
-  const root = document.documentElement;
-  root.style.setProperty("--font-sans", font);
-  root.style.setProperty("--font-heading", font);
-}
 </script>
 
 <template>

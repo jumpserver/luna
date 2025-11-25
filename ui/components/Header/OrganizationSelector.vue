@@ -23,7 +23,7 @@ const organizationDropdownItems = computed<DropdownMenuItem[]>(() =>
  * @description 切换组织
  * @param org
  */
-const handleOrgChange = (org: string) => {
+function handleOrgChange(org: string) {
   const orgData = currentOrganizations.value.find((o: PermOrgItem) => o.name === org);
 
   if (orgData) {
@@ -33,7 +33,7 @@ const handleOrgChange = (org: string) => {
       useEventBus().emit("refresh", undefined);
     });
   }
-};
+}
 
 onMounted(async () => {
   if (loggedIn.value && userInfoStore.currentUser) {

@@ -23,10 +23,10 @@ export function useContextMenu() {
 
       // 检查是否来自表格按钮（通过检查目标元素）
       const target = event.target as HTMLElement;
-      const isTableButton =
-        target?.hasAttribute("data-table-context-button") ||
-        target?.closest("[data-table-context-button]") ||
-        target?.closest(".UTable");
+      const isTableButton
+        = target?.hasAttribute("data-table-context-button")
+          || target?.closest("[data-table-context-button]")
+          || target?.closest(".UTable");
 
       // 如果是表格按钮，优先显示在左侧
       if (isTableButton) {

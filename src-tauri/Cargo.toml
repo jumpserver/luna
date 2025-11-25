@@ -40,7 +40,6 @@ font-kit = "0.14"
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2.3.1"
 
-
 [dependencies.tauri]
 version = "2.9.0"
 features = [
@@ -55,12 +54,15 @@ features = [ "derive" ]
 
 [dependencies.tauri-plugin-http]
 version = "2.5.2"
-features = ["unsafe-headers"]
+features = [ "unsafe-headers" ]
 
 [dependencies.reqwest]
 version = "0.12.23"
 default-features = false
-features = ["json", "native-tls"]
+features = [
+  "json",
+  "native-tls"
+]
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-updater = "2.9.0"

@@ -1,28 +1,28 @@
 <script setup lang="ts">
-import type { PermedAccount, PermedProtocol } from "~/types/index";
 import type { SelectMenuItem } from "@nuxt/ui";
+import type { PermedAccount, PermedProtocol } from "~/types/index";
 
 const props = defineProps<{
-  account: string;
-  protocol: string;
-  accounts: PermedAccount[];
-  protocols: PermedProtocol[];
-  manualUsername?: string;
-  manualPassword?: string;
-  dynamicPassword?: string;
-  rememberSecret?: boolean;
+  account: string
+  protocol: string
+  accounts: PermedAccount[]
+  protocols: PermedProtocol[]
+  manualUsername?: string
+  manualPassword?: string
+  dynamicPassword?: string
+  rememberSecret?: boolean
 }>();
 
 const emits = defineEmits<{
-  (e: "update:protocol", v: string): void;
-  (e: "update:account", v: string): void;
-  (e: "update:manualUsername", v: string): void;
-  (e: "update:manualPassword", v: string): void;
-  (e: "update:dynamicPassword", v: string): void;
-  (e: "update:rememberSecret", v: boolean): void;
+  (e: "update:protocol", v: string): void
+  (e: "update:account", v: string): void
+  (e: "update:manualUsername", v: string): void
+  (e: "update:manualPassword", v: string): void
+  (e: "update:dynamicPassword", v: string): void
+  (e: "update:rememberSecret", v: boolean): void
 }>();
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 // prettier-ignore
 const trailingIcon = "group-data-[state=open]:rotate-180 transition-transform duration-200";
 

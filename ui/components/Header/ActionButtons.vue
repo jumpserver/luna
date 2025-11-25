@@ -236,7 +236,7 @@ const actionItems = computed<ActionItem[]>(() => [
     </div>
 
     <!-- 窗口控制按钮 -->
-    <div class="flex items-center" v-if="!isMacOS">
+    <div v-if="!isMacOS" class="flex items-center">
       <template v-for="button of windowControlButtons" :key="button.key">
         <UButton
           size="sm"
