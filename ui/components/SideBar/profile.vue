@@ -120,7 +120,7 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
       icon: "i-lucide-arrow-down-up",
       children: switchAccountChildren()
     },
-     {
+    {
       label: t("Common.Appearance"),
       icon: "solar:palette-linear",
       children: appearanceChildren.value
@@ -289,6 +289,40 @@ function clearAuthInfo() {
 }
 
 /**
+ * @description 过滤输入中的控制字符
+ */
+const sanitizeInput = (value: string) => value.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+
+/**
+ * @description 输入事件处理：移除控制字符，并保持光标位置
+ * 移除控制字符后，用“移除前的长度差”修正光标，保证左右键仍可正常移动
+ */
+const handleInputSanitize = (event: Event) => {
+  const target = event.target as HTMLInputElement | null;
+
+  if (!target) return;
+
+  const raw = target.value;
+  const caret = target.selectionStart ?? raw.length;
+
+  const sanitized = sanitizeInput(raw);
+
+  if (sanitized !== raw) {
+    const beforeCaretRaw = raw.slice(0, caret);
+    const beforeCaretSanitized = sanitizeInput(beforeCaretRaw);
+    const removedBeforeCaret = beforeCaretRaw.length - beforeCaretSanitized.length;
+
+    target.value = sanitized;
+
+    const newCaret = Math.max(0, caret - removedBeforeCaret);
+    target.setSelectionRange(newCaret, newCaret);
+  }
+
+  inputSite.value = sanitized;
+  clearValidationError();
+};
+
+/**
  * @description 处理剪贴板输入
  * @param value 剪贴板输入
  */
@@ -445,16 +479,8 @@ onMounted(async () => {
   });
 
   unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", async (event) => {
-    const {
-      status,
-      profile,
-      cookies,
-      version,
-      current_org,
-      resolved_site,
-      permission_orgs,
-      xpack_license_valid
-    } = event.payload as UserIntiInfo;
+    const { status, profile, cookies, version, current_org, resolved_site, permission_orgs, xpack_license_valid } =
+      event.payload as UserIntiInfo;
     const appVersion = await useTauriAppGetVersion().catch(() => "");
 
     let versionMessage: string | string[] = version ?? "";
@@ -611,7 +637,7 @@ onBeforeUnmount(() => {
         placeholder=" "
         autocapitalize="none"
         autocorrect="off"
-        @input="clearValidationError"
+        @input="handleInputSanitize"
       >
         <label
           class="pointer-events-none absolute left-0 -top-2.5 text-xs font-medium px-1.5 transition-all peer-focus:-top-2.5 peer-focus:text-xs peer-focus:font-medium peer-placeholder-shown:text-sm peer-placeholder-shown:top-1.5 peer-placeholder-shown:font-normal"
