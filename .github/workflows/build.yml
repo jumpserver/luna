@@ -247,7 +247,7 @@ jobs:
         run: |
           node -e "
           const fs = require('fs');
-          const version = '${{ env.VERSION }}'.replace(/^v/, '');
+          const version = '${{ env.VERSION }}'.replace(new RegExp('^v'), '');
           console.log('Updating version to:', version);
 
           // Update package.json
@@ -262,12 +262,12 @@ jobs:
 
           // Update Cargo.toml
           let cargoToml = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
-          cargoToml = cargoToml.replace(/^version = \"[^\"]*\"/m, 'version = \"' + version + '\"');
+          cargoToml = cargoToml.replace(new RegExp('^version = \"[^\"]*\"', 'm'), 'version = \"' + version + '\"');
           fs.writeFileSync('src-tauri/Cargo.toml', cargoToml);
 
           // Update app.config.ts
           let appConfig = fs.readFileSync('ui/app.config.ts', 'utf8');
-          appConfig = appConfig.replace(/version: \"[^\"]*\"/, 'version: \"' + version + '\"');
+          appConfig = appConfig.replace(new RegExp('version: \"[^\"]*\"'), 'version: \"' + version + '\"');
           fs.writeFileSync('ui/app.config.ts', appConfig);
 
           console.log('✓ Version updated successfully');
