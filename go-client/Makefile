@@ -9,8 +9,23 @@ LDFLAGS=-w -s
 
 CLIENTBUILD=CGO_ENABLED=0 go build -trimpath
 
-CURRENT_OS := $(shell uname -s 2>/dev/null | tr '[:upper:]' '[:lower:]' | sed 's/.*mingw.*/windows/; s/.*cygwin.*/windows/; s/.*msys.*/windows/' || echo "unknown")
-CURRENT_ARCH := $(shell uname -m 2>/dev/null | sed 's/x86_64/amd64/; s/aarch64/arm64/; s/arm64/arm64/; s/i686/386/' || echo "amd64")
+# Default OS detection
+DEFAULT_OS := $(shell uname -s 2>/dev/null | tr '[:upper:]' '[:lower:]' | sed 's/.*mingw.*/windows/; s/.*cygwin.*/windows/; s/.*msys.*/windows/' || echo "unknown")
+# Default ARCH detection
+DEFAULT_ARCH := $(shell uname -m 2>/dev/null | sed 's/x86_64/amd64/; s/aarch64/arm64/; s/arm64/arm64/; s/i686/386/' || echo "amd64")
+
+# Parse TARGET if provided, otherwise use defaults
+# TARGET format: aarch64-apple-darwin, x86_64-apple-darwin, etc.
+# Use shell to parse TARGET and set CURRENT_OS and CURRENT_ARCH
+ifeq ($(TARGET),)
+  # TARGET is empty or not set, use defaults
+  CURRENT_OS := $(DEFAULT_OS)
+  CURRENT_ARCH := $(DEFAULT_ARCH)
+else
+  # Parse TARGET using shell
+  CURRENT_OS := $(shell if echo "$(TARGET)" | grep -q "apple-darwin"; then echo "darwin"; elif echo "$(TARGET)" | grep -q "linux"; then echo "linux"; elif echo "$(TARGET)" | grep -q "windows"; then echo "windows"; else echo "$(DEFAULT_OS)"; fi)
+  CURRENT_ARCH := $(shell if echo "$(TARGET)" | grep -q "aarch64"; then echo "arm64"; elif echo "$(TARGET)" | grep -q "x86_64"; then echo "amd64"; else echo "$(DEFAULT_ARCH)"; fi)
+endif
 
 # 默认目标：构建并安装当前平台
 .PHONY: default
@@ -78,9 +93,11 @@ build-all:
 	@echo "Build completed for all platforms!"
 
 # 安装到 Tauri resources 目录 - 只复制当前平台
+# 支持通过 TARGET 参数传入，例如: make install TARGET=aarch64-apple-darwin
+# 如果不传 TARGET 或 TARGET 为空，则使用默认的自动检测
 .PHONY: install
 install:
-	@echo "Installing Go client for current platform: $(CURRENT_OS)/$(CURRENT_ARCH)"
+	@echo "Installing Go client for platform: $(CURRENT_OS)/$(CURRENT_ARCH)"
 	@mkdir -p $(BASEPATH)/../src-tauri/resources/bin/
 	@if [ -d "$(BUILDDIR)/$(CURRENT_OS)-$(CURRENT_ARCH)" ]; then \
 		echo "Copying $(CURRENT_OS)-$(CURRENT_ARCH) files..."; \

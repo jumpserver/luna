@@ -4,6 +4,7 @@ use crate::utils::{extract_csrf_token, to_api_response, tz_offset_string};
 use log::info;
 use reqwest::header::COOKIE;
 use serde::Serialize;
+use url::Url;
 
 #[derive(Debug, Serialize)]
 pub struct ApiResponse {
@@ -75,12 +76,19 @@ fn base_get_request(
 ) -> reqwest::RequestBuilder {
     let csrf_token = extract_csrf_token(header_cookie);
     let tz_string = tz_offset_string();
+    let referer = referer_from(url);
 
-    client
+    let mut rb = client
         .get(url)
         .header(COOKIE, header_cookie)
         .header("X-TZ", tz_string)
-        .header("X-Csrftoken", csrf_token)
+        .header("X-Csrftoken", csrf_token);
+
+    if let Some(r) = referer {
+        rb = rb.header("Referer", r);
+    }
+
+    rb
 }
 
 // 构造带通用头的 POST 请求
@@ -91,12 +99,19 @@ fn base_post_request(
 ) -> reqwest::RequestBuilder {
     let csrf_token = extract_csrf_token(header_cookie);
     let tz_string = tz_offset_string();
+    let referer = referer_from(url);
 
-    client
+    let mut rb = client
         .post(url)
         .header(COOKIE, header_cookie)
         .header("X-TZ", tz_string)
-        .header("X-Csrftoken", csrf_token)
+        .header("X-Csrftoken", csrf_token);
+
+    if let Some(r) = referer {
+        rb = rb.header("Referer", r);
+    }
+
+    rb
 }
 
 // 构造带通用头的 DELETE 请求
@@ -107,12 +122,19 @@ fn base_delete_request(
 ) -> reqwest::RequestBuilder {
     let csrf_token = extract_csrf_token(header_cookie);
     let tz_string = tz_offset_string();
+    let referer = referer_from(url);
 
-    client
+    let mut rb = client
         .delete(url)
         .header(COOKIE, header_cookie)
         .header("X-TZ", tz_string)
-        .header("X-Csrftoken", csrf_token)
+        .header("X-Csrftoken", csrf_token);
+
+    if let Some(r) = referer {
+        rb = rb.header("Referer", r);
+    }
+
+    rb
 }
 
 pub async fn get_unified<M>(
@@ -202,4 +224,23 @@ fn insecure_client() -> Result<reqwest::Client, reqwest::Error> {
     // 忽略无效证书（自签名、过期等）
     builder = builder.danger_accept_invalid_certs(true);
     builder.build()
+}
+
+fn referer_from(url: &str) -> Option<String> {
+    Url::parse(url)
+        .ok()
+        .and_then(|u| match u.scheme() {
+            "http" | "https" => {
+                let host = u.host_str()?;
+                let mut origin = format!("{}://{}", u.scheme(), host);
+
+                if let Some(port) = u.port() {
+                    origin.push(':');
+                    origin.push_str(&port.to_string());
+                }
+
+                Some(origin)
+            }
+            _ => None,
+        })
 }

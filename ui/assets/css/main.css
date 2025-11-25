@@ -67,6 +67,10 @@
   --header-bg-dark: #2c2c2e;
 }
 
+.platform-windows {
+  @apply border-gray-300 border-1 overflow-hidden shadow-xl shadow-gray-500;
+}
+
 /* macOS 平台 */
 .platform-darwin .header-bg {
   --header-bg-light: rgba(255, 255, 255, 0.8);
