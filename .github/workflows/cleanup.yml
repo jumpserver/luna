@@ -1,0 +1,16 @@
+name: Cleanup branches
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  delete-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete branch
+        if: github.event.pull_request.merged == true || github.event.pull_request.state == 'closed'
+        uses: peter-evans/delete-branch@v2
+        with:
+          branch: ${{ github.event.pull_request.head.ref }}
+          force: true
