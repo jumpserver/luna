@@ -1,7 +1,6 @@
 use oauth2::{
     basic::BasicClient, reqwest, AuthUrl, AuthorizationCode, ClientId, CsrfToken,
-    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RequestTokenError, Scope,
-    StandardErrorResponse, TokenResponse, TokenUrl,
+    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope, TokenResponse, TokenUrl,
 };
 use serde_json::Value;
 use std::sync::Mutex;
@@ -11,8 +10,6 @@ use tokio::sync::oneshot;
 use url::Url;
 
 use crate::service::user::UserService;
-use oauth2::basic::BasicErrorResponseType;
-use oauth2::HttpClientError;
 
 /// 记录一次登录发起时的上下文（PKCE/CSRF 和回调通道）。
 pub struct PendingAuth {
