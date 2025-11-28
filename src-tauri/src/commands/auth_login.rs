@@ -1,6 +1,7 @@
+use chrono::{Duration, Utc};
 use oauth2::{
     basic::BasicClient, reqwest, AuthUrl, AuthorizationCode, ClientId, CsrfToken,
-    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope, TokenResponse, TokenUrl,
+    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenResponse, TokenUrl,
 };
 use serde_json::Value;
 use std::sync::Mutex;
@@ -10,6 +11,7 @@ use tokio::sync::oneshot;
 use url::Url;
 
 use crate::service::user::UserService;
+use crate::utils::{persist_tokens, token_store_path};
 
 /// 记录一次登录发起时的上下文（PKCE/CSRF 和回调通道）。
 pub struct PendingAuth {
@@ -97,6 +99,28 @@ pub async fn auth_login(
             .await?;
 
         let access_token = token_result.access_token().secret().to_owned();
+        let refresh_token = token_result.refresh_token().map(|t| t.secret().to_owned());
+        let expires_at = token_result
+            .expires_in()
+            .map(|dur| {
+                Utc::now() + Duration::from_std(dur).unwrap_or_else(|_| Duration::seconds(0))
+            })
+            .map(|dt| dt.timestamp());
+
+        log::info!("token = {:?}", token_result);
+
+        // 保存 refresh token
+        if let Err(e) = persist_tokens(
+            &app,
+            &site,
+            &access_token,
+            refresh_token.as_deref(),
+            expires_at,
+        )
+        .await
+        {
+            log::warn!("persist tokens failed: {}", e);
+        }
 
         // 发起请求
         let user_service = UserService::new(site.clone(), access_token.clone());
@@ -149,6 +173,75 @@ pub async fn auth_login(
     fut.await.map_err(|e| e.to_string())
 }
 
+/// 确保 access_token 新鲜；如过期则用 refresh_token 刷新并更新存储
+pub async fn ensure_fresh_token(
+    app: &AppHandle,
+    site: &str,
+    provided: Option<&str>,
+) -> anyhow::Result<String> {
+    let path = token_store_path(app);
+    let store = tauri_plugin_store::StoreBuilder::new(app, path).build()?;
+    let entry = store.get(site);
+
+    let stored_access = entry
+        .as_ref()
+        .and_then(|v| v.get("access_token"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let stored_refresh = entry
+        .as_ref()
+        .and_then(|v| v.get("refresh_token"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let expires_at = entry
+        .as_ref()
+        .and_then(|v| v.get("expires_at"))
+        .and_then(|v| v.as_i64());
+
+    // 选择候选 access_token
+    let mut access = stored_access.or_else(|| provided.map(|p| p.to_string()));
+
+    // 若存在 expires_at 且即将过期，则提前 60s 刷新
+    let need_refresh = expires_at
+        .map(|ts| ts <= Utc::now().timestamp() + 60)
+        .unwrap_or(false);
+
+    if need_refresh {
+        let refresh = stored_refresh
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("refresh_token missing for site {}", site))?;
+        
+        let client = BasicClient::new(ClientId::new(String::from(
+            "FkkXFf0wPelYPIbvf0VElkZtyrw8TWIcyqakDgni",
+        )))
+        .set_token_uri(TokenUrl::new(format!("{}/core/o/token/", site))?);
+
+        let http_client = reqwest::Client::new();
+        let token_result = client
+            .exchange_refresh_token(&RefreshToken::new(refresh.to_string()))
+            .request_async(&http_client)
+            .await?;
+
+        let new_access = token_result.access_token().secret().to_owned();
+        let new_refresh = token_result
+            .refresh_token()
+            .map(|t| t.secret().to_owned())
+            .unwrap_or_else(|| refresh.to_string());
+        let new_expires = token_result
+            .expires_in()
+            .map(|dur| {
+                Utc::now() + Duration::from_std(dur).unwrap_or_else(|_| Duration::seconds(0))
+            })
+            .map(|dt| dt.timestamp());
+
+        persist_tokens(app, site, &new_access, Some(&new_refresh), new_expires).await?;
+
+        access = Some(new_access);
+    }
+
+    access.ok_or_else(|| anyhow::anyhow!("no access token available for site {}", site))
+}
+
 /// deep link on_open_url 解析到 code/state 后调用，把数据喂回正在等待的 auth_login。
 pub fn handle_oauth_callback(flow_state: &State<'_, AuthFlowState>, raw_url: &str) {
     if let Ok(url) = Url::parse(raw_url) {
@@ -162,7 +255,7 @@ pub fn handle_oauth_callback(flow_state: &State<'_, AuthFlowState>, raw_url: &st
             }
         }
         if let Some(code) = code {
-            log::info!("Deep link received code, state={:?}", state);
+            log::info!("Deep link received code={:?}, state={:?}", code, state);
             if let Ok(mut guard) = flow_state.pending.lock() {
                 if let Some(pending) = guard.take() {
                     let _ = pending.tx.send(CallbackParams {

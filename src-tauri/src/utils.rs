@@ -1,11 +1,11 @@
 use crate::commands::requests::ApiResponse;
-use crate::models::CookieMessage;
 use chrono::{Local, Offset};
-use log::{error, info, warn};
+use log::{error, warn};
+use std::path::PathBuf;
 use tauri::{AppHandle, LogicalSize, Manager, WebviewWindow};
-use tauri_plugin_store::StoreExt;
-use tokio::time::{sleep, Duration};
+use tauri_plugin_store::{StoreBuilder, StoreExt};
 use url::Url;
+use anyhow::Result;
 
 /// 判断是否为 OAuth 回调 deeplink
 pub fn is_oauth_callback(raw_url: &str) -> bool {
@@ -20,128 +20,45 @@ pub fn is_oauth_callback(raw_url: &str) -> bool {
     false
 }
 
-/// 重试获取窗口
-async fn get_window_with_retry(
+/// 返回存储 token 的文件路径
+pub fn token_store_path(app: &AppHandle) -> PathBuf {
+    let base = app
+        .path()
+        .app_config_dir()
+        .unwrap_or_else(|_| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+
+    base.join("auth_tokens.json")
+}
+
+/// 持久化 access/refresh token
+pub async fn persist_tokens(
     app: &AppHandle,
-    window_label: &str,
-    max_retries: u32,
-) -> Option<WebviewWindow> {
-    for i in 0..max_retries {
-        if let Some(window) = app.get_webview_window(window_label) {
-            if i > 0 {
-                info!("窗口 '{}' 在第 {} 次重试后找到", window_label, i + 1);
-            }
-            return Some(window);
-        }
+    site: &str,
+    access: &str,
+    refresh: Option<&str>,
+    expires_at: Option<i64>,
+) -> Result<()> {
+    let path = token_store_path(app);
+    let store = StoreBuilder::new(app, path).build()?;
 
-        if i == 0 {
-            info!("窗口 '{}' 未就绪，开始重试", window_label);
-        } else {
-            info!("窗口 '{}' 第 {} 次重试", window_label, i + 1);
-        }
-
-        // 第一次立即重试，之后每次等待 100ms
-        if i > 0 {
-            sleep(Duration::from_millis(100)).await;
-        }
-    }
-    warn!(
-        "窗口 '{}' 在 {} 次重试后仍未找到",
-        window_label, max_retries
+    let mut obj = serde_json::Map::new();
+    obj.insert(
+        "access_token".into(),
+        serde_json::Value::String(access.to_string()),
     );
-    None
-}
-
-/// 获取窗口 cookies
-pub async fn get_window_cookies(
-    app: &AppHandle,
-    window_label: &str,
-    origin: &str,
-) -> Result<Vec<CookieMessage>, String> {
-    // 等待窗口可用，最多重试 10 次
-    let win = get_window_with_retry(app, window_label, 10)
-        .await
-        .ok_or_else(|| format!("window '{}' not found after retries", window_label))?;
-
-    // 允许传入裸域名/IP，失败时默认补全 https:// 再解析
-    let url = Url::parse(origin)
-        .or_else(|_| Url::parse(&format!("https://{}", origin)))
-        .map_err(|e| e.to_string())?;
-    let target_domain = url
-        .host_str()
-        .unwrap_or("")
-        .trim_start_matches('.')
-        .to_string();
-    let target_is_ip = target_domain.parse::<std::net::IpAddr>().is_ok();
-
-    sleep(Duration::from_millis(1000)).await;
-
-    let all_cookies = win.cookies().map_err(|e| e.to_string())?;
-    let cookies: Vec<_> = all_cookies
-        .into_iter()
-        .filter(|cookie| {
-            let domain_opt = cookie.domain();
-            let domain = domain_opt.unwrap_or("").trim_start_matches('.').to_string();
-            let td = target_domain.as_str();
-
-            if target_is_ip {
-                // IP 站点只接受 host-only cookie 或者域名与 IP 完全一致的 cookie，避免捞到其他站点的凭据
-                return domain_opt.is_none() || (!domain.is_empty() && domain == td);
-            }
-
-            let exact_or_subdomain = !domain.is_empty()
-                && (domain == td
-                    || domain.ends_with(&format!(".{}", td))
-                    || td.ends_with(&format!(".{}", domain)));
-            let host_only_cookie = domain_opt.is_none() && !td.is_empty();
-
-            exact_or_subdomain || host_only_cookie
-        })
-        .collect();
-
-    let mut cookie_list: Vec<CookieMessage> = cookies
-        .into_iter()
-        .map(|cookie| CookieMessage {
-            name: cookie.name().to_string(),
-            value: cookie.value().to_string(),
-            domain: cookie.domain().unwrap_or_default().to_string(),
-            path: cookie.path().unwrap_or("/").to_string(),
-            secure: cookie.secure().unwrap_or(false),
-            http_only: cookie.http_only().unwrap_or(false),
-        })
-        .collect();
-
-    // 去重并排序cookies，确保一致性
-    dedupe_cookies(&mut cookie_list);
-
-    Ok(cookie_list)
-}
-
-/// 去重并排序cookies，保留最新的值
-pub fn dedupe_cookies(cookies: &mut Vec<CookieMessage>) {
-    // 使用HashMap根据(domain, path, name)进行去重，保留最后一个
-    let mut unique_cookies = std::collections::HashMap::new();
-
-    for cookie in cookies.iter() {
-        let key = (
-            cookie.domain.clone(),
-            cookie.path.clone(),
-            cookie.name.clone(),
+    if let Some(r) = refresh {
+        obj.insert(
+            "refresh_token".into(),
+            serde_json::Value::String(r.to_string()),
         );
-        unique_cookies.insert(key, cookie.clone());
+    }
+    if let Some(ts) = expires_at {
+        obj.insert("expires_at".into(), serde_json::Value::Number(ts.into()));
     }
 
-    // 转换回Vec并排序
-    let mut result: Vec<CookieMessage> = unique_cookies.into_values().collect();
-    result.sort_by(|a, b| {
-        (a.domain.as_str(), a.path.as_str(), a.name.as_str()).cmp(&(
-            b.domain.as_str(),
-            b.path.as_str(),
-            b.name.as_str(),
-        ))
-    });
-
-    *cookies = result;
+    store.set(site.to_string(), serde_json::Value::Object(obj));
+    store.save()?;
+    Ok(())
 }
 
 /// 获取本地时区偏移字符串

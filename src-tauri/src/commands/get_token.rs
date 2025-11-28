@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use tauri::{AppHandle, Emitter};
 
 use crate::commands::pull_up::pull_up;
+use crate::commands::auth_login::ensure_fresh_token;
 use crate::service::token::{TokenRequestBody, TokenService};
 
 #[tauri::command]
@@ -14,7 +15,18 @@ pub async fn get_connect_token(
     body: TokenRequestBody,
     rdp_params: Option<HashMap<String, String>>,
 ) {
-    let token_service = TokenService::new(site, bearer_token, body);
+    let bearer = match ensure_fresh_token(&app, &site, Some(&bearer_token)).await {
+        Ok(b) => b,
+        Err(e) => {
+            let _ = app.emit(
+                "get-token-failure",
+                json!({ "status": 401, "data": e.to_string() }),
+            );
+            return;
+        }
+    };
+
+    let token_service = TokenService::new(site, bearer, body);
     let token_data = token_service.get_connect_token().await;
 
     if token_data.status == 201 {
