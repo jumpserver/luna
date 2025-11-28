@@ -1,9 +1,9 @@
 import type { ConnectionInfo, LangType, PermOrgItem, RdpGraphics, UserData } from "~/types/index";
 
 export type SiteUserData = UserData & {
-  language?: string
-  rdpClientOption?: RdpGraphics
-  connectionInfoMap?: Record<string, ConnectionInfo>
+  language?: string;
+  rdpClientOption?: RdpGraphics;
+  connectionInfoMap?: Record<string, ConnectionInfo>;
 };
 
 // 其实应该叫做 accountInfoStore 比较好
@@ -90,7 +90,7 @@ export const useUserInfoStore = defineStore(
       // 退出当前站点时立即请求清理其 Cookie
       useTauriCoreInvoke("logout", {
         name: "main",
-        origin: site
+        site
       });
 
       if (!(site in userMap.value)) {
@@ -285,8 +285,8 @@ export const useUserInfoStore = defineStore(
         .map((p) => (typeof p === "string" ? p.trim() : ""))
         .filter((p) => p.length > 0);
 
-      const mergedProtocols
-        = incomingProtocols.length > 0 ? Array.from(new Set(incomingProtocols)) : existing?.availableProtocols;
+      const mergedProtocols =
+        incomingProtocols.length > 0 ? Array.from(new Set(incomingProtocols)) : existing?.availableProtocols;
 
       siteData.connectionInfoMap[assetId] = {
         ...(existing || {}),
