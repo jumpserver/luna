@@ -58,7 +58,16 @@ pub fn setup_tray<R: Runtime>(menu: &Menu<R>, app: &App<R>) -> Result<(), Box<dy
         .build(app);
 
     match tray_result {
-        Ok(_) => {
+        Ok(tray) => {
+            // 在 macOS 上将图标设置为模板图像，以便系统可以根据菜单栏背景自动调整颜色
+            #[cfg(target_os = "macos")]
+            {
+                if let Err(e) = tray.set_icon_as_template(true) {
+                    error!("Failed to set tray icon as template: {}", e);
+                } else {
+                    info!("Tray icon set as template for macOS");
+                }
+            }
             info!("System tray created successfully!");
             Ok(())
         }
