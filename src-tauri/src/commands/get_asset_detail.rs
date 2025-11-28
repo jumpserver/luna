@@ -6,10 +6,10 @@ use tauri::{AppHandle, Emitter};
 pub async fn get_asset_detail(
     app: AppHandle,
     site: String,
-    cookie_header: String,
+    bearer_token: String,
     asset_id: String,
 ) {
-    let asset_service = DetailService::new(site, cookie_header, asset_id.clone());
+    let asset_service = DetailService::new(site, bearer_token, asset_id.clone());
     let asset_detail = asset_service.get_asset_detail().await;
 
     if !asset_detail.success {

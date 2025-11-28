@@ -177,7 +177,7 @@ export const useAssetAction = () => {
     const rdpParams = buildLocalRdpParams();
     useTauriCoreInvoke("get_connect_token", {
       site: currentSite.value,
-      cookieHeader: currentUser.value!.headerJson,
+      bearerToken: currentUser.value!.bearerToken,
       body: {
         asset: body.asset,
         account: body.account,
@@ -316,11 +316,11 @@ export const useAssetAction = () => {
    * @param name
    */
   const handleAssetRename = (assetId: string, name: string) => {
-    if (!currentSite.value || !currentUser.value?.headerJson) return;
+    if (!currentSite.value || !currentUser.value?.bearerToken) return;
 
     useTauriCoreInvoke("rename", {
       site: currentSite.value,
-      cookieHeader: currentUser.value.headerJson,
+      bearerToken: currentUser.value.bearerToken,
       assetId,
       orgId: orgId.value,
       name
@@ -334,7 +334,7 @@ export const useAssetAction = () => {
   const handleAssetFavorite = (assetId: string) => {
     useTauriCoreInvoke("set_favorite", {
       site: currentSite.value,
-      cookieHeader: currentUser.value!.headerJson,
+      bearerToken: currentUser.value!.bearerToken,
       assetId
     });
   };
@@ -346,7 +346,7 @@ export const useAssetAction = () => {
   const handleAssetUnfavorite = (assetId: string) => {
     useTauriCoreInvoke("unfavorite", {
       site: currentSite.value,
-      cookieHeader: currentUser.value!.headerJson,
+      bearerToken: currentUser.value!.bearerToken,
       assetId
     });
   };
@@ -358,7 +358,7 @@ export const useAssetAction = () => {
   const getAssetDetail = (assetId: string) => {
     useTauriCoreInvoke("get_asset_detail", {
       site: currentSite.value,
-      cookieHeader: currentUser.value!.headerJson,
+      bearerToken: currentUser.value!.bearerToken,
       assetId
     });
   };

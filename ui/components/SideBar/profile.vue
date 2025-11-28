@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { LangType, PermissionOrgs, PermOrgItem, ThemeType, UserData, UserIntiInfo } from "~/types/index";
 
-import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { resolveLanguageFromSystem } from "~/utils";
@@ -28,7 +26,6 @@ const inputSite = ref("");
 const errorMessage = ref("");
 const openModal = ref(false);
 const hasValidationError = ref(false);
-const loginPage = ref<WebviewWindow | null>(null);
 const unlistenErrorPageRef = ref<UnlistenFn | null>(null);
 const unlistenLoginSuccessRef = ref<UnlistenFn | null>(null);
 const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
@@ -40,7 +37,6 @@ useEventBus().on("login", openLoginPage);
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
 const selectedLanguage = ref<LangType>(currentLanguage.value);
 
-// TODO 后续逻辑统一到一个位置
 const languageItems = computed(() => {
   const arr = (locales.value as any[]) || [];
   return arr.map((l: any) => ({
@@ -394,16 +390,16 @@ const handleConfirm = async () => {
     isHttps = u.protocol === "https:";
 
     // 关键词匹配 + 平台/协议启发：在 macOS + https 的失败优先视作证书/ATS问题（除非明确超时/离线）
-    const keywordCert
-      = low.includes("certificate")
-        || low.includes("ssl")
-        || low.includes("x509")
-        || low.includes("handshake")
-        || low.includes("app transport security")
-        || low.includes("secure connection")
-        || low.includes("ats")
-        || low.includes("hostname")
-        || low.includes("mismatch");
+    const keywordCert =
+      low.includes("certificate") ||
+      low.includes("ssl") ||
+      low.includes("x509") ||
+      low.includes("handshake") ||
+      low.includes("app transport security") ||
+      low.includes("secure connection") ||
+      low.includes("ats") ||
+      low.includes("hostname") ||
+      low.includes("mismatch");
 
     const heuristicCert = isMacOS.value && isHttps && !isAbort && online;
     const isCertLike = keywordCert || heuristicCert;
@@ -423,25 +419,9 @@ const handleConfirm = async () => {
     return;
   }
 
-  loginPage.value = new useTauriWebviewWindowWebviewWindow("loginPage", {
-    title: `${t("Common.LoginSite")} - ${normalizedSite}`,
-    url: normalizedSite,
-    width: 600,
-    height: 800,
-    minWidth: 600,
-    minHeight: 800,
-    // hiddenTitle: true,
-    // titleBarStyle: "overlay",
-    trafficLightPosition: new LogicalPosition(10, 19)
-  });
-
-  setTimeout(async () => {
-    await useTauriCoreInvoke("url_watcher", {
-      name: "loginPage",
-      origin: normalizedSite
-    });
-
-    openModal.value = false;
+  //
+  await useTauriCoreInvoke("auth_login", {
+    site: normalizedSite
   });
 };
 
@@ -463,8 +443,8 @@ onMounted(async () => {
 
   unlistenErrorPageRef.value = await useTauriEventListen("error-page", (event) => {
     const { status, reason } = event.payload as {
-      status: string
-      reason: string
+      status: string;
+      reason: string;
     };
 
     if (status === "failure" && reason === "cookies-not-found") {
@@ -480,8 +460,8 @@ onMounted(async () => {
   });
 
   unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", async (event) => {
-    const { status, profile, cookies, version, current_org, resolved_site, permission_orgs, xpack_license_valid }
-      = event.payload as UserIntiInfo;
+    const { status, profile, bearer, version, current_org, resolved_site, permission_orgs, xpack_license_valid } =
+      event.payload as UserIntiInfo & { bearer: string };
     const appVersion = await useTauriAppGetVersion().catch(() => "");
 
     let versionMessage: string | string[] = version ?? "";
@@ -521,7 +501,7 @@ onMounted(async () => {
 
       userInfoStore.setUserData(resolvedSite, {
         name: profileData.name,
-        headerJson: cookies,
+        bearerToken: bearer,
         site: resolvedSite,
         org: currentOrgData,
         system_roles: profileData.system_roles,
@@ -539,6 +519,9 @@ onMounted(async () => {
       userInfoStore.setUserLoggedIn(true);
 
       await setLocale(language);
+
+      openModal.value = false;
+      inputSite.value = "";
 
       nextTick(() => {
         toast.add({

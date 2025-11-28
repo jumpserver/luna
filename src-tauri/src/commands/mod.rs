@@ -1,3 +1,4 @@
+pub mod auth_login;
 pub mod get_asset_detail;
 pub mod get_assets;
 pub mod get_config;
@@ -11,5 +12,4 @@ pub(crate) mod requests;
 pub mod set_favorite;
 pub mod unfavorite;
 pub mod update_config;
-pub(crate) mod url_watcher;
 pub mod window_controls;

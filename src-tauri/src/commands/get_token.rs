@@ -10,11 +10,11 @@ use crate::service::token::{TokenRequestBody, TokenService};
 pub async fn get_connect_token(
     app: AppHandle,
     site: String,
-    cookie_header: String,
+    bearer_token: String,
     body: TokenRequestBody,
     rdp_params: Option<HashMap<String, String>>,
 ) {
-    let token_service = TokenService::new(site, cookie_header, body);
+    let token_service = TokenService::new(site, bearer_token, body);
     let token_data = token_service.get_connect_token().await;
 
     if token_data.status == 201 {

@@ -7,6 +7,19 @@ use tauri_plugin_store::StoreExt;
 use tokio::time::{sleep, Duration};
 use url::Url;
 
+/// 判断是否为 OAuth 回调 deeplink
+pub fn is_oauth_callback(raw_url: &str) -> bool {
+    if let Ok(url) = Url::parse(raw_url) {
+        return url.scheme() == "jms"
+            && url
+                .host_str()
+                .map(|h| h.eq_ignore_ascii_case("oauth2"))
+                .unwrap_or(false)
+            && url.path().starts_with("/callback");
+    }
+    false
+}
+
 /// 重试获取窗口
 async fn get_window_with_retry(
     app: &AppHandle,
@@ -49,12 +62,16 @@ pub async fn get_window_cookies(
     let win = get_window_with_retry(app, window_label, 10)
         .await
         .ok_or_else(|| format!("window '{}' not found after retries", window_label))?;
-    
+
     // 允许传入裸域名/IP，失败时默认补全 https:// 再解析
     let url = Url::parse(origin)
         .or_else(|_| Url::parse(&format!("https://{}", origin)))
         .map_err(|e| e.to_string())?;
-    let target_domain = url.host_str().unwrap_or("").trim_start_matches('.').to_string();
+    let target_domain = url
+        .host_str()
+        .unwrap_or("")
+        .trim_start_matches('.')
+        .to_string();
     let target_is_ip = target_domain.parse::<std::net::IpAddr>().is_ok();
 
     sleep(Duration::from_millis(1000)).await;
@@ -72,8 +89,10 @@ pub async fn get_window_cookies(
                 return domain_opt.is_none() || (!domain.is_empty() && domain == td);
             }
 
-            let exact_or_subdomain =
-                !domain.is_empty() && (domain == td || domain.ends_with(&format!(".{}", td)) || td.ends_with(&format!(".{}", domain)));
+            let exact_or_subdomain = !domain.is_empty()
+                && (domain == td
+                    || domain.ends_with(&format!(".{}", td))
+                    || td.ends_with(&format!(".{}", domain)));
             let host_only_cookie = domain_opt.is_none() && !td.is_empty();
 
             exact_or_subdomain || host_only_cookie
@@ -123,36 +142,6 @@ pub fn dedupe_cookies(cookies: &mut Vec<CookieMessage>) {
     });
 
     *cookies = result;
-}
-
-/// 格式化 cookies
-pub fn format_cookies(cookie_list: &Vec<CookieMessage>) -> String {
-    cookie_list
-        .iter()
-        .map(|c| format!("{}={}", c.name, c.value))
-        .collect::<Vec<_>>()
-        .join("; ")
-}
-
-pub fn extract_csrf_token(header_cookie: &str) -> String {
-    let pairs: Vec<(String, String)> = header_cookie
-        .split(';')
-        .filter_map(|kv| {
-            let kv = kv.trim();
-            kv.split_once('=')
-                .map(|(k, v)| (k.trim().to_ascii_lowercase(), v.trim().to_string()))
-        })
-        .collect();
-
-    if let Some((_, v)) = pairs.iter().find(|(k, _)| k == "jms_csrftoken") {
-        return v.clone();
-    }
-
-    if let Some((_, v)) = pairs.iter().find(|(k, _)| k == "csrftoken") {
-        return v.clone();
-    }
-
-    String::new()
 }
 
 /// 获取本地时区偏移字符串

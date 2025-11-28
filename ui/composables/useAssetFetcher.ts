@@ -237,7 +237,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
    */
   async function fetchNextPage(search?: string, order?: string) {
     if (isLoading.value || !hasMore.value) return;
-    if (!currentSite.value || !currentUser.value?.headerJson) return;
+    if (!currentSite.value || !currentUser.value?.bearerToken) return;
     if (!orgId.value) {
       console.error("No organization ID available for asset request", {
         orgId: orgId.value,
@@ -263,7 +263,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
     try {
       await useTauriCoreInvoke("get_assets", {
         site: currentSite.value,
-        cookieHeader: currentUser.value.headerJson,
+        bearerToken: currentUser.value.bearerToken,
         favorite: assetType === "favorite",
         query: {
           type: assetType === "favorite" ? undefined : assetType,
@@ -274,8 +274,15 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
           oid: orgId.value
         }
       });
-    } catch {
+    } catch (e: any) {
+      hasMore.value = false;
       endLoading();
+      toast.add({
+        title: t("Asset.GetAssetFailed"),
+        description: e?.message || "invoke get_assets failed",
+        color: "error",
+        icon: "line-md:close-circle"
+      });
     }
   }
 
@@ -304,8 +311,8 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   const listenTauriEvent = async () => {
     subscribeGetAssetsEvent.value = await useTauriEventListen("get-asset-success", (event) => {
       interface eventPayload {
-        status: number
-        data: AssetsResponse
+        status: number;
+        data: AssetsResponse;
       }
 
       if (!isLoading.value) return;
@@ -323,7 +330,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
     subscribeGetAssetFailedEvent.value = await useTauriEventListen("get-asset-failure", (event) => {
       interface eventPayload {
-        status: number
+        status: number;
       }
 
       const payload = event.payload as eventPayload;
@@ -349,8 +356,8 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
     subscribeGetFavoriteAssetsEvent.value = await useTauriEventListen("get-favorite-assets-success", async (event) => {
       interface payLoadType {
-        status: number
-        data: string
+        status: number;
+        data: string;
       }
 
       const payload = event.payload as payLoadType;
@@ -421,7 +428,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
     unsubscribeAssetDetailUpdated = on(
       "assetDetailUpdated",
-      (payload: { assetId: string, permedAccounts: PermedAccount[], permedProtocols: PermedProtocol[] }) => {
+      (payload: { assetId: string; permedAccounts: PermedAccount[]; permedProtocols: PermedProtocol[] }) => {
         const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
 
         if (idx !== -1) {
@@ -444,7 +451,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
     unsubscribeAssetRenamed = on(
       "assetRenamed",
-      (payload: { assetId: string, name: string }) => {
+      (payload: { assetId: string; name: string }) => {
         const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
 
         if (idx !== -1) {
@@ -459,7 +466,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
     unsubscribeFavoriteChanged = on(
       "favoriteChanged",
-      (payload: { assetId: string, favorite: boolean }) => {
+      (payload: { assetId: string; favorite: boolean }) => {
         const set = new Set(favoriteSet.value);
 
         if (payload.favorite) {

@@ -74,21 +74,18 @@ pub struct Zone {
 pub async fn get_assets(
     app: AppHandle,
     site: String,
-    cookie_header: String,
+    bearer_token: String,
     query: AssetQuery,
     favorite: Option<bool>,
 ) {
-    let asset_service = Arc::new(AssetService::new(site, cookie_header, query));
+    let asset_service = Arc::new(AssetService::new(site, bearer_token, query));
     let assets_data = asset_service
         .get_category_assets(favorite.unwrap_or(false))
         .await;
 
-    info!("获取 Asset 数据成功，返回数据: {}", assets_data.data.len());
-
     if !assets_data.success {
         error!("获取 Asset 数据失败");
-        error!("返回的 status 为 {}", assets_data.status);
-        
+
         let _ = app.emit("get-asset-failure", json!({ "status": assets_data.status }));
         return;
     }

@@ -1,8 +1,8 @@
 use crate::service::asset::HasOrg;
-use crate::utils::{extract_csrf_token, to_api_response, tz_offset_string};
+use crate::utils::{to_api_response, tz_offset_string};
 
 use log::info;
-use reqwest::header::COOKIE;
+use reqwest::header::AUTHORIZATION;
 use serde::Serialize;
 use url::Url;
 
@@ -72,17 +72,18 @@ impl MaybeJson for &serde_json::Value {
 fn base_get_request(
     client: &reqwest::Client,
     url: &str,
-    header_cookie: &str,
+    bearer_token: &str,
 ) -> reqwest::RequestBuilder {
-    let csrf_token = extract_csrf_token(header_cookie);
     let tz_string = tz_offset_string();
     let referer = referer_from(url);
 
     let mut rb = client
         .get(url)
-        .header(COOKIE, header_cookie)
-        .header("X-TZ", tz_string)
-        .header("X-Csrftoken", csrf_token);
+        .header("X-TZ", tz_string);
+
+    if !bearer_token.is_empty() {
+        rb = rb.header(AUTHORIZATION, format!("Bearer {}", bearer_token));
+    }
 
     if let Some(r) = referer {
         rb = rb.header("Referer", r);
@@ -95,17 +96,18 @@ fn base_get_request(
 fn base_post_request(
     client: &reqwest::Client,
     url: &str,
-    header_cookie: &str,
+    bearer_token: &str,
 ) -> reqwest::RequestBuilder {
-    let csrf_token = extract_csrf_token(header_cookie);
     let tz_string = tz_offset_string();
     let referer = referer_from(url);
 
     let mut rb = client
         .post(url)
-        .header(COOKIE, header_cookie)
-        .header("X-TZ", tz_string)
-        .header("X-Csrftoken", csrf_token);
+        .header("X-TZ", tz_string);
+
+    if !bearer_token.is_empty() {
+        rb = rb.header(AUTHORIZATION, format!("Bearer {}", bearer_token));
+    }
 
     if let Some(r) = referer {
         rb = rb.header("Referer", r);
@@ -118,17 +120,18 @@ fn base_post_request(
 fn base_delete_request(
     client: &reqwest::Client,
     url: &str,
-    header_cookie: &str,
+    bearer_token: &str,
 ) -> reqwest::RequestBuilder {
-    let csrf_token = extract_csrf_token(header_cookie);
     let tz_string = tz_offset_string();
     let referer = referer_from(url);
 
     let mut rb = client
         .delete(url)
-        .header(COOKIE, header_cookie)
-        .header("X-TZ", tz_string)
-        .header("X-Csrftoken", csrf_token);
+        .header("X-TZ", tz_string);
+
+    if !bearer_token.is_empty() {
+        rb = rb.header(AUTHORIZATION, format!("Bearer {}", bearer_token));
+    }
 
     if let Some(r) = referer {
         rb = rb.header("Referer", r);
@@ -139,7 +142,7 @@ fn base_delete_request(
 
 pub async fn get_unified<M>(
     url: &str,
-    header_cookie: &str,
+    bearer_token: &str,
     maybe_query: M,
 ) -> Result<reqwest::Response, reqwest::Error>
 where
@@ -149,14 +152,14 @@ where
 
     let client = insecure_client()?;
     let request = maybe_query
-        .apply(base_get_request(&client, url, header_cookie))
+        .apply(base_get_request(&client, url, bearer_token))
         .build()?;
     client.execute(request).await
 }
 
 pub async fn post_unified<M>(
     url: &str,
-    header_cookie: &str,
+    bearer_token: &str,
     maybe_json: M,
 ) -> Result<reqwest::Response, reqwest::Error>
 where
@@ -170,14 +173,14 @@ where
 
     let client = insecure_client()?;
     let request = maybe_json
-        .apply(base_post_request(&client, url, header_cookie))
+        .apply(base_post_request(&client, url, bearer_token))
         .build()?;
     client.execute(request).await
 }
 
 pub async fn delete_unified<M>(
     url: &str,
-    header_cookie: &str,
+    bearer_token: &str,
     maybe_json: M,
 ) -> Result<reqwest::Response, reqwest::Error>
 where
@@ -191,31 +194,31 @@ where
 
     let client = insecure_client()?;
     let request = maybe_json
-        .apply(base_delete_request(&client, url, header_cookie))
+        .apply(base_delete_request(&client, url, bearer_token))
         .build()?;
     client.execute(request).await
 }
 
-pub async fn get(url: &str, header_cookie: &str) -> Result<reqwest::Response, reqwest::Error> {
-    get_unified(url, header_cookie, ()).await
+pub async fn get(url: &str, bearer_token: &str) -> Result<reqwest::Response, reqwest::Error> {
+    get_unified(url, bearer_token, ()).await
 }
 
-pub async fn get_with_response(url: &str, header_cookie: &str) -> ApiResponse {
-    to_api_response(url, get(url, header_cookie).await).await
+pub async fn get_with_response(url: &str, bearer_token: &str) -> ApiResponse {
+    to_api_response(url, get(url, bearer_token).await).await
 }
 
-pub async fn post_with_response<M>(url: &str, header_cookie: &str, body: M) -> ApiResponse
+pub async fn post_with_response<M>(url: &str, bearer_token: &str, body: M) -> ApiResponse
 where
     M: MaybeJson,
 {
-    to_api_response(url, post_unified(url, header_cookie, body).await).await
+    to_api_response(url, post_unified(url, bearer_token, body).await).await
 }
 
-pub async fn delete_with_response<M>(url: &str, header_cookie: &str, body: M) -> ApiResponse
+pub async fn delete_with_response<M>(url: &str, bearer_token: &str, body: M) -> ApiResponse
 where
     M: MaybeJson,
 {
-    to_api_response(url, delete_unified(url, header_cookie, body).await).await
+    to_api_response(url, delete_unified(url, bearer_token, body).await).await
 }
 
 fn insecure_client() -> Result<reqwest::Client, reqwest::Error> {

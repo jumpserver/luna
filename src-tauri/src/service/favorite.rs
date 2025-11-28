@@ -5,7 +5,7 @@ use serde_json::to_value;
 pub struct FavoriteService {
     origin: String,
     asset_id: String,
-    cookie_header: String,
+    bearer_token: String,
 }
 
 #[derive(Serialize)]
@@ -14,10 +14,10 @@ pub struct FavoriteAssetBody {
 }
 
 impl FavoriteService {
-    pub fn new(origin: String, cookie_header: String, asset_id: String) -> Self {
+    pub fn new(origin: String, bearer_token: String, asset_id: String) -> Self {
         Self {
             origin,
-            cookie_header,
+            bearer_token,
             asset_id,
         }
     }
@@ -29,7 +29,7 @@ impl FavoriteService {
         })
         .unwrap_or_default();
 
-        post_with_response(&url, &self.cookie_header, &body_value).await
+        post_with_response(&url, &self.bearer_token, &body_value).await
     }
 
     pub async fn unfavorite(&self) -> ApiResponse {
@@ -38,6 +38,6 @@ impl FavoriteService {
             self.origin, self.asset_id
         );
 
-        delete_with_response(&url, &self.cookie_header, ()).await
+        delete_with_response(&url, &self.bearer_token, ()).await
     }
 }

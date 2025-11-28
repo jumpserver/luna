@@ -81,7 +81,7 @@ export interface UserData {
   site: string
   name: string
   language: string
-  headerJson: string
+  bearerToken: string
   system_roles: RoleType[]
   org: CurrentOrg
   availableOrgs: PermOrgItem[]
@@ -91,7 +91,7 @@ export interface UserData {
 
 export interface UserIntiInfo {
   status: string
-  cookies: string
+  bearer: string
   version?: string
   xpack_license_valid?: boolean
   resolved_site?: string

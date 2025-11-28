@@ -72,15 +72,15 @@ impl HasOrg for AssetQuery {
 
 pub struct AssetService {
     origin: String,
-    cookie_header: String,
+    bearer_token: String,
     query: AssetQuery,
 }
 
 impl AssetService {
-    pub fn new(origin: String, cookie_header: String, query: AssetQuery) -> Self {
+    pub fn new(origin: String, bearer_token: String, query: AssetQuery) -> Self {
         Self {
             origin,
-            cookie_header,
+            bearer_token,
             query,
         }
     }
@@ -101,7 +101,7 @@ impl AssetService {
             url,
             self.query.oid
         );
-        info!("Cookie: {}", self.cookie_header);
+        info!("Bearer: {}", self.bearer_token);
         info!("query: {:?}", self.query);
 
         let (r#type, category) = if favorite {
@@ -125,12 +125,12 @@ impl AssetService {
             oid: self.query.oid.clone(),
         };
 
-        to_api_response(&url, get_unified(&url, &self.cookie_header, &query).await).await
+        to_api_response(&url, get_unified(&url, &self.bearer_token, &query).await).await
     }
 
     pub async fn get_favorite_assets(&self) -> ApiResponse {
         let url = format!("{}/api/v1/assets/favorite-assets/", &self.origin);
 
-        get_with_response(&url, &self.cookie_header).await
+        get_with_response(&url, &self.bearer_token).await
     }
 }

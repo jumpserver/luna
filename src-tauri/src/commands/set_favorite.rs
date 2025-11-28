@@ -3,8 +3,8 @@ use serde_json::json;
 use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
-pub async fn set_favorite(app: AppHandle, site: String, cookie_header: String, asset_id: String) {
-    let favorite_service = FavoriteService::new(site, cookie_header, asset_id);
+pub async fn set_favorite(app: AppHandle, site: String, bearer_token: String, asset_id: String) {
+    let favorite_service = FavoriteService::new(site, bearer_token, asset_id);
     let favorite_data = favorite_service.favorite().await;
 
     if !favorite_data.success {

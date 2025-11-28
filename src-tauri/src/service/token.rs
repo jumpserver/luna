@@ -16,15 +16,15 @@ pub struct TokenRequestBody {
 
 pub struct TokenService {
     pub site: String,
-    pub cookie_header: String,
+    pub bearer_token: String,
     pub request_body: TokenRequestBody,
 }
 
 impl TokenService {
-    pub fn new(site: String, cookie_header: String, request_body: TokenRequestBody) -> Self {
+    pub fn new(site: String, bearer_token: String, request_body: TokenRequestBody) -> Self {
         Self {
             site,
-            cookie_header,
+            bearer_token,
             request_body,
         }
     }
@@ -33,7 +33,7 @@ impl TokenService {
         let url = format!("{}/api/v1/authentication/connection-token/", self.site);
         let body_value = to_value(&self.request_body).unwrap_or_default();
 
-        post_with_response(&url, &self.cookie_header, &body_value).await
+        post_with_response(&url, &self.bearer_token, &body_value).await
     }
 
     pub async fn get_local_client_url(
@@ -56,6 +56,6 @@ impl TokenService {
                 url = parsed.to_string();
             }
         }
-        get_with_response(&url, &self.cookie_header).await
+        get_with_response(&url, &self.bearer_token).await
     }
 }

@@ -74,7 +74,7 @@ watch(
 async function getSettings() {
   await useTauriCoreInvoke("get_setting", {
     site: currentSite.value,
-    cookieHeader: currentUser.value!.headerJson
+    bearerToken: currentUser.value!.bearerToken
   });
 }
 

@@ -4,8 +4,8 @@ use serde_json::json;
 use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
-pub async fn get_setting(app: AppHandle, site: String, cookie_header: String) {
-    let setting_service = SettingService::new(site, cookie_header);
+pub async fn get_setting(app: AppHandle, site: String, bearer_token: String) {
+    let setting_service = SettingService::new(site, bearer_token);
     let setting_data = setting_service.get_setting().await;
 
     if !setting_data.success {

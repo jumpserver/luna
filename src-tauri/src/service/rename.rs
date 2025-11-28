@@ -14,21 +14,21 @@ pub struct RenameService {
     origin: String,
     asset_id: String,
     name: String,
-    cookie_header: String,
+    bearer_token: String,
     oid: String,
 }
 
 impl RenameService {
     pub fn new(
         origin: String,
-        cookie_header: String,
+        bearer_token: String,
         asset_id: String,
         name: String,
         oid: String,
     ) -> Self {
         Self {
             origin,
-            cookie_header,
+            bearer_token,
             asset_id,
             name,
             oid,
@@ -44,7 +44,7 @@ impl RenameService {
             oid: self.oid.clone(),
         };
 
-        post_with_response(&url, &self.cookie_header, &body).await
+        post_with_response(&url, &self.bearer_token, &body).await
     }
 }
 

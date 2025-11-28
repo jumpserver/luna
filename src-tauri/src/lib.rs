@@ -7,6 +7,7 @@ mod utils;
 use crate::setup::apply_window_effects;
 use crate::setup::setup_tray;
 
+use crate::commands::auth_login::{auth_login, handle_oauth_callback, AuthFlowState};
 use crate::commands::get_asset_detail::get_asset_detail;
 use crate::commands::get_assets::get_assets;
 use crate::commands::get_config::get_config;
@@ -19,16 +20,17 @@ use crate::commands::rename_asset::rename;
 use crate::commands::set_favorite::set_favorite;
 use crate::commands::unfavorite::unfavorite;
 use crate::commands::update_config::update_config_selection;
-use crate::commands::url_watcher::url_watcher;
 use crate::commands::window_controls::{close_window, minimize_window, toggle_maximize_window};
+use crate::utils::is_oauth_callback;
 
-use log::error;
+use log::{error, info};
 use tauri::menu::{Menu, MenuItem};
 use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
 
 pub fn run() {
     tauri::Builder::default()
+        .manage(AuthFlowState::default())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
@@ -47,6 +49,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_os::init())
@@ -68,7 +71,6 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&quit_i])?;
             let win = app.get_webview_window("main").unwrap();
 
-            // 检查是否通过深度链接启动
             let start_urls = app.deep_link().get_current()?;
             if let Some(urls) = start_urls {
                 // 处理启动时的深度链接
@@ -84,11 +86,20 @@ pub fn run() {
 
             let app_handle = app.app_handle().clone();
             app.deep_link().on_open_url(move |event| {
+                info!("deep link event opened");
                 let urls = event.urls();
+
                 for url in &urls {
                     error!("deep link original URL on_open_url: {}", url.as_str());
-                    if let Err(e) = pull_up(app_handle.clone(), url.as_str().to_string()) {
-                        error!("Failed to pull up client: {}", e);
+
+                    let flow_state = app_handle.state::<AuthFlowState>();
+                    handle_oauth_callback(&flow_state, url.as_str());
+
+                    // 如果不是 OAuth 回调正常去 pull up
+                    if !is_oauth_callback(url.as_str()) {
+                        if let Err(e) = pull_up(app_handle.clone(), url.as_str().to_string()) {
+                            error!("Failed to pull up client: {}", e);
+                        }
                     }
                 }
             });
@@ -106,9 +117,9 @@ pub fn run() {
             rename,
             pull_up,
             unfavorite,
+            auth_login,
             get_assets,
             get_config,
-            url_watcher,
             get_setting,
             set_favorite,
             close_window,
