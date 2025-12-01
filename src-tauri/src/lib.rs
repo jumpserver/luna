@@ -4,6 +4,7 @@ mod setup;
 mod utils;
 
 use crate::setup::apply_window_effects;
+use crate::setup::menu::{build_menu, handle_menu_event};
 use crate::setup::setup_tray;
 
 use crate::commands::auth_login::{auth_login, handle_auth_callback, AuthFlowState};
@@ -23,7 +24,6 @@ use crate::commands::window_controls::{close_window, minimize_window, toggle_max
 use crate::utils::is_auth_callback;
 
 use log::{error, info};
-use tauri::menu::{Menu, MenuItem};
 use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
 
@@ -66,8 +66,10 @@ pub fn run() {
         )
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
-            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&quit_i])?;
+            let menu = build_menu(app)?;
+            app.set_menu(menu.clone())?;
+            app.on_menu_event(|app_handle, event| handle_menu_event(&app_handle, &event));
+
             let win = app.get_webview_window("main").unwrap();
 
             let start_urls = app.deep_link().get_current()?;
