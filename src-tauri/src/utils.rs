@@ -8,12 +8,12 @@ use url::Url;
 use anyhow::Result;
 
 /// 判断是否为 OAuth 回调 deeplink
-pub fn is_oauth_callback(raw_url: &str) -> bool {
+pub fn is_auth_callback(raw_url: &str) -> bool {
     if let Ok(url) = Url::parse(raw_url) {
         return url.scheme() == "jms"
             && url
                 .host_str()
-                .map(|h| h.eq_ignore_ascii_case("oauth2"))
+                .map(|h| h.eq_ignore_ascii_case("auth"))
                 .unwrap_or(false)
             && url.path().starts_with("/callback");
     }

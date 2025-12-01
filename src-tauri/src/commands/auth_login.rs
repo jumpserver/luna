@@ -50,7 +50,7 @@ pub async fn auth_login(
         // 指定令牌端点：将 code + pkce_verifier 或者 refresh_token
         // 向这个 URL 发 POST 来换取/刷新 access_token、id_token 等
         .set_token_uri(TokenUrl::new(format!("{}/core/oauth2-provider/token/", site))?)
-        .set_redirect_uri(RedirectUrl::new(String::from("jms://oauth2/callback"))?);
+        .set_redirect_uri(RedirectUrl::new(String::from("jms://auth/callback"))?);
 
         // 生成 PKCE + 授权 URL
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -243,7 +243,7 @@ pub async fn ensure_fresh_token(
 }
 
 /// deep link on_open_url 解析到 code/state 后调用，把数据喂回正在等待的 auth_login。
-pub fn handle_oauth_callback(flow_state: &State<'_, AuthFlowState>, raw_url: &str) {
+pub fn handle_auth_callback(flow_state: &State<'_, AuthFlowState>, raw_url: &str) {
     if let Ok(url) = Url::parse(raw_url) {
         let mut code = None;
         let mut state = None;

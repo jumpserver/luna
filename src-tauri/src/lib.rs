@@ -6,7 +6,7 @@ mod utils;
 use crate::setup::apply_window_effects;
 use crate::setup::setup_tray;
 
-use crate::commands::auth_login::{auth_login, handle_oauth_callback, AuthFlowState};
+use crate::commands::auth_login::{auth_login, handle_auth_callback, AuthFlowState};
 use crate::commands::get_asset_detail::get_asset_detail;
 use crate::commands::get_assets::get_assets;
 use crate::commands::get_config::get_config;
@@ -20,7 +20,7 @@ use crate::commands::set_favorite::set_favorite;
 use crate::commands::unfavorite::unfavorite;
 use crate::commands::update_config::update_config_selection;
 use crate::commands::window_controls::{close_window, minimize_window, toggle_maximize_window};
-use crate::utils::is_oauth_callback;
+use crate::utils::is_auth_callback;
 
 use log::{error, info};
 use tauri::menu::{Menu, MenuItem};
@@ -92,10 +92,10 @@ pub fn run() {
                     error!("deep link original URL on_open_url: {}", url.as_str());
 
                     let flow_state = app_handle.state::<AuthFlowState>();
-                    handle_oauth_callback(&flow_state, url.as_str());
+                    handle_auth_callback(&flow_state, url.as_str());
 
                     // 如果不是 OAuth 回调正常去 pull up
-                    if !is_oauth_callback(url.as_str()) {
+                    if !is_auth_callback(url.as_str()) {
                         if let Err(e) = pull_up(app_handle.clone(), url.as_str().to_string()) {
                             error!("Failed to pull up client: {}", e);
                         }
