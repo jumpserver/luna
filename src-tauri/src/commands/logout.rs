@@ -29,7 +29,7 @@ async fn revoke_and_clear_tokens(app: &AppHandle, site: &str) -> anyhow::Result<
                 "FkkXFf0wPelYPIbvf0VElkZtyrw8TWIcyqakDgni",
             )))
             .set_revocation_url(RevocationUrl::new(format!(
-                "{}/core/o/revoke_token/",
+                "{}/core/oauth2-provider/revoke_token/",
                 site
             ))?);
 
