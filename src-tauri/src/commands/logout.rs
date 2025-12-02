@@ -1,10 +1,9 @@
-use crate::utils::token_store_path;
+use crate::service::token_store::TokenService;
 use log::{error, warn};
 use oauth2::{
     basic::BasicClient, reqwest, ClientId, RefreshToken, RevocationUrl, StandardRevocableToken,
 };
 use tauri::AppHandle;
-use tauri_plugin_store::StoreBuilder;
 
 #[tauri::command]
 pub async fn logout(app: AppHandle, _name: String, site: String) -> Result<(), String> {
@@ -15,16 +14,11 @@ pub async fn logout(app: AppHandle, _name: String, site: String) -> Result<(), S
     Ok(())
 }
 
-async fn revoke_and_clear_tokens(app: &AppHandle, site: &str) -> anyhow::Result<()> {
-    let path = token_store_path(app);
-    let store = StoreBuilder::new(app, path.clone()).build()?;
-
-    if let Some(entry) = store.get(site) {
-        if let Some(refresh) = entry
-            .get("refresh_token")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
-        {
+async fn revoke_and_clear_tokens(_app: &AppHandle, site: &str) -> anyhow::Result<()> {
+    let token_service = TokenService::new(site.to_string());
+    
+    if let Some(entry) = token_service.load().await? {
+        if let Some(refresh) = entry.refresh_token {
             let client = BasicClient::new(ClientId::new(String::from(
                 "FkkXFf0wPelYPIbvf0VElkZtyrw8TWIcyqakDgni",
             )))
@@ -44,8 +38,7 @@ async fn revoke_and_clear_tokens(app: &AppHandle, site: &str) -> anyhow::Result<
                 error!("revocation request failed: {}", e);
             }
         }
-        store.delete(site);
-        store.save()?;
+        token_service.delete().await?;
     }
 
     Ok(())

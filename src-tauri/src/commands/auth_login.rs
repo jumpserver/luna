@@ -10,8 +10,8 @@ use tauri_plugin_opener::OpenerExt;
 use tokio::sync::oneshot;
 use url::Url;
 
+use crate::service::token_store::TokenService;
 use crate::service::user::UserService;
-use crate::utils::{persist_tokens, token_store_path};
 
 /// 记录一次登录发起时的上下文（PKCE/CSRF 和回调通道）。
 pub struct PendingAuth {
@@ -46,10 +46,16 @@ pub async fn auth_login(
         )))
         // 指定授权端点：用户会被重定向到这个 URL 登录/授权
         // 会自动拼上 response_type、client_id、redirect_uri、scope、state、code_challenge 等参数
-        .set_auth_uri(AuthUrl::new(format!("{}/core/oauth2-provider/authorize/", site))?)
+        .set_auth_uri(AuthUrl::new(format!(
+            "{}/core/oauth2-provider/authorize/",
+            site
+        ))?)
         // 指定令牌端点：将 code + pkce_verifier 或者 refresh_token
         // 向这个 URL 发 POST 来换取/刷新 access_token、id_token 等
-        .set_token_uri(TokenUrl::new(format!("{}/core/oauth2-provider/token/", site))?)
+        .set_token_uri(TokenUrl::new(format!(
+            "{}/core/oauth2-provider/token/",
+            site
+        ))?)
         .set_redirect_uri(RedirectUrl::new(String::from("jms://auth/callback"))?);
 
         // 生成 PKCE + 授权 URL
@@ -72,7 +78,6 @@ pub async fn auth_login(
             });
         }
 
-        log::info!("Browse to: {}", auth_url);
         let _ = app.opener().open_url(auth_url, None::<&str>);
 
         let http_client = reqwest::ClientBuilder::new()
@@ -107,17 +112,11 @@ pub async fn auth_login(
             })
             .map(|dt| dt.timestamp());
 
-        log::info!("token = {:?}", token_result);
-
         // 保存 refresh token
-        if let Err(e) = persist_tokens(
-            &app,
-            &site,
-            &access_token,
-            refresh_token.as_deref(),
-            expires_at,
-        )
-        .await
+        let token_service = TokenService::new(site.clone());
+        if let Err(e) = token_service
+            .persist(&access_token, refresh_token.as_deref(), expires_at)
+            .await
         {
             log::warn!("persist tokens failed: {}", e);
         }
@@ -175,33 +174,20 @@ pub async fn auth_login(
 
 /// 确保 access_token 新鲜；如过期则用 refresh_token 刷新并更新存储
 pub async fn ensure_fresh_token(
-    app: &AppHandle,
+    _app: &AppHandle,
     site: &str,
     provided: Option<&str>,
 ) -> anyhow::Result<String> {
-    let path = token_store_path(app);
-    let store = tauri_plugin_store::StoreBuilder::new(app, path).build()?;
-    let entry = store.get(site);
+    let token_service = TokenService::new(site.to_string());
+    let entry = token_service.load().await?;
 
-    let stored_access = entry
-        .as_ref()
-        .and_then(|v| v.get("access_token"))
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    let stored_refresh = entry
-        .as_ref()
-        .and_then(|v| v.get("refresh_token"))
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    let expires_at = entry
-        .as_ref()
-        .and_then(|v| v.get("expires_at"))
-        .and_then(|v| v.as_i64());
+    let stored_access = entry.as_ref().map(|t| t.access_token.clone());
+    let stored_refresh = entry.as_ref().and_then(|t| t.refresh_token.clone());
+    let expires_at = entry.as_ref().and_then(|t| t.expires_at);
 
-    // 选择候选 access_token
     let mut access = stored_access.or_else(|| provided.map(|p| p.to_string()));
 
-    // 若存在 expires_at 且即将过期，则提前 60s 刷新
+    // 则提前 60s 刷新
     let need_refresh = expires_at
         .map(|ts| ts <= Utc::now().timestamp() + 60)
         .unwrap_or(false);
@@ -210,11 +196,14 @@ pub async fn ensure_fresh_token(
         let refresh = stored_refresh
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("refresh_token missing for site {}", site))?;
-        
+
         let client = BasicClient::new(ClientId::new(String::from(
             "FkkXFf0wPelYPIbvf0VElkZtyrw8TWIcyqakDgni",
         )))
-        .set_token_uri(TokenUrl::new(format!("{}/core/oauth2-provider/token/", site))?);
+        .set_token_uri(TokenUrl::new(format!(
+            "{}/core/oauth2-provider/token/",
+            site
+        ))?);
 
         let http_client = reqwest::Client::new();
         let token_result = client
@@ -234,7 +223,9 @@ pub async fn ensure_fresh_token(
             })
             .map(|dt| dt.timestamp());
 
-        persist_tokens(app, site, &new_access, Some(&new_refresh), new_expires).await?;
+        token_service
+            .persist(&new_access, Some(&new_refresh), new_expires)
+            .await?;
 
         access = Some(new_access);
     }
@@ -255,7 +246,6 @@ pub fn handle_auth_callback(flow_state: &State<'_, AuthFlowState>, raw_url: &str
             }
         }
         if let Some(code) = code {
-            log::info!("Deep link received code={:?}, state={:?}", code, state);
             if let Ok(mut guard) = flow_state.pending.lock() {
                 if let Some(pending) = guard.take() {
                     let _ = pending.tx.send(CallbackParams {

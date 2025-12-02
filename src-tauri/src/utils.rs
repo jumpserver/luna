@@ -1,11 +1,10 @@
 use crate::commands::requests::ApiResponse;
+use anyhow::Result;
 use chrono::{Local, Offset};
 use log::{error, warn};
-use std::path::PathBuf;
 use tauri::{AppHandle, LogicalSize, Manager, WebviewWindow};
-use tauri_plugin_store::{StoreBuilder, StoreExt};
+use tauri_plugin_store::StoreExt;
 use url::Url;
-use anyhow::Result;
 
 /// 判断是否为 OAuth 回调 deeplink
 pub fn is_auth_callback(raw_url: &str) -> bool {
@@ -18,47 +17,6 @@ pub fn is_auth_callback(raw_url: &str) -> bool {
             && url.path().starts_with("/callback");
     }
     false
-}
-
-/// 返回存储 token 的文件路径
-pub fn token_store_path(app: &AppHandle) -> PathBuf {
-    let base = app
-        .path()
-        .app_config_dir()
-        .unwrap_or_else(|_| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
-
-    base.join("auth_tokens.json")
-}
-
-/// 持久化 access/refresh token
-pub async fn persist_tokens(
-    app: &AppHandle,
-    site: &str,
-    access: &str,
-    refresh: Option<&str>,
-    expires_at: Option<i64>,
-) -> Result<()> {
-    let path = token_store_path(app);
-    let store = StoreBuilder::new(app, path).build()?;
-
-    let mut obj = serde_json::Map::new();
-    obj.insert(
-        "access_token".into(),
-        serde_json::Value::String(access.to_string()),
-    );
-    if let Some(r) = refresh {
-        obj.insert(
-            "refresh_token".into(),
-            serde_json::Value::String(r.to_string()),
-        );
-    }
-    if let Some(ts) = expires_at {
-        obj.insert("expires_at".into(), serde_json::Value::Number(ts.into()));
-    }
-
-    store.set(site.to_string(), serde_json::Value::Object(obj));
-    store.save()?;
-    Ok(())
 }
 
 /// 获取本地时区偏移字符串
