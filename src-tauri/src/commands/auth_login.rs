@@ -72,8 +72,6 @@ pub async fn auth_login(
     .await
     .map_err(|e| e.to_string())?;
 
-    log::info!("OAuth config: {:#?}", oauth_config);
-
     let client_id = oauth_config.client_id;
 
     let fut = async {
@@ -146,7 +144,7 @@ pub async fn auth_login(
             })
             .map(|dt| dt.timestamp());
 
-        // 保存 refresh token 等等信息
+        // 保存 refresh token 等信息
         let token_service = TokenService::new(site.clone());
         if let Err(e) = token_service
             .persist(
