@@ -13,8 +13,6 @@ use url::Url;
 use crate::service::token_oauth::TokenService;
 use crate::service::user::UserService;
 
-pub(crate) const DEFAULT_CLIENT_ID: &str = "FkkXFf0wPelYPIbvf0VElkZtyrw8TWIcyqakDgni";
-
 /// 记录一次登录发起时的上下文（PKCE/CSRF 和回调通道）。
 pub struct PendingAuth {
     pub pkce_verifier: PkceCodeVerifier,
@@ -224,7 +222,7 @@ pub async fn ensure_fresh_token(
     let client_id = entry
         .as_ref()
         .and_then(|t| t.client_id.clone())
-        .unwrap_or_else(|| DEFAULT_CLIENT_ID.to_string());
+        .unwrap_or_else(|| "".to_string());
 
     let mut access = stored_access.or_else(|| provided.map(|p| p.to_string()));
 

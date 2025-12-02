@@ -21,7 +21,7 @@ async fn revoke_and_clear_tokens(_app: &AppHandle, site: &str) -> anyhow::Result
         if let Some(refresh) = entry.refresh_token {
             let client_id = entry
                 .client_id
-                .unwrap_or_else(|| super::auth_login::DEFAULT_CLIENT_ID.to_string());
+                .unwrap_or_else(|| "".to_string());
 
             let client = BasicClient::new(ClientId::new(client_id))
             .set_revocation_url(RevocationUrl::new(format!(
