@@ -9,6 +9,7 @@ pub struct TokenRecord {
     pub access_token: String,
     pub refresh_token: Option<String>,
     pub expires_at: Option<i64>,
+    pub client_id: Option<String>,
 }
 
 pub struct TokenService {
@@ -25,11 +26,13 @@ impl TokenService {
         access: &str,
         refresh: Option<&str>,
         expires_at: Option<i64>,
+        client_id: Option<&str>,
     ) -> Result<()> {
         let record = TokenRecord {
             access_token: access.to_string(),
             refresh_token: refresh.map(|r| r.to_string()),
             expires_at,
+            client_id: client_id.map(|c| c.to_string()),
         };
         let payload = serde_json::to_string(&record)?;
         let site = self.site.clone();

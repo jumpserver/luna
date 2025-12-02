@@ -10,8 +10,10 @@ use tauri_plugin_opener::OpenerExt;
 use tokio::sync::oneshot;
 use url::Url;
 
-use crate::service::token_store::TokenService;
+use crate::service::token_oauth::TokenService;
 use crate::service::user::UserService;
+
+pub(crate) const DEFAULT_CLIENT_ID: &str = "FkkXFf0wPelYPIbvf0VElkZtyrw8TWIcyqakDgni";
 
 /// 记录一次登录发起时的上下文（PKCE/CSRF 和回调通道）。
 pub struct PendingAuth {
@@ -34,29 +36,61 @@ pub struct CallbackParams {
     pub csrf: CsrfToken,
 }
 
+#[derive(serde::Deserialize, Debug)]
+#[allow(dead_code)]
+struct OAuthConfig {
+    issuer: String,
+    client_id: String,
+    authorization_endpoint: String,
+    token_endpoint: String,
+    revocation_endpoint: String,
+    response_types_supported: Vec<String>,
+    grant_types_supported: Vec<String>,
+    scopes_supported: Vec<String>,
+    token_endpoint_auth_methods_supported: Vec<String>,
+    revocation_endpoint_auth_methods_supported: Vec<String>,
+    code_challenge_methods_supported: Vec<String>,
+    response_modes_supported: Vec<String>,
+    token_expires_in: i64,
+    refresh_token_expires_in: i64,
+}
+
 #[tauri::command]
 pub async fn auth_login(
     app: AppHandle,
     flow_state: State<'_, AuthFlowState>,
     site: String,
 ) -> Result<(), String> {
+    // 获取 OAuth 配置
+    let oauth_config: OAuthConfig = reqwest::get(format!(
+        "{}/core/auth/oauth2-provider/.well-known/oauth-authorization-server",
+        site
+    ))
+    .await
+    .map_err(|e| e.to_string())?
+    .json()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    log::info!("OAuth config: {:#?}", oauth_config);
+
+    let client_id = oauth_config.client_id;
+
     let fut = async {
-        let client = BasicClient::new(ClientId::new(String::from(
-            "FkkXFf0wPelYPIbvf0VElkZtyrw8TWIcyqakDgni",
-        )))
-        // 指定授权端点：用户会被重定向到这个 URL 登录/授权
-        // 会自动拼上 response_type、client_id、redirect_uri、scope、state、code_challenge 等参数
-        .set_auth_uri(AuthUrl::new(format!(
-            "{}/core/oauth2-provider/authorize/",
-            site
-        ))?)
-        // 指定令牌端点：将 code + pkce_verifier 或者 refresh_token
-        // 向这个 URL 发 POST 来换取/刷新 access_token、id_token 等
-        .set_token_uri(TokenUrl::new(format!(
-            "{}/core/oauth2-provider/token/",
-            site
-        ))?)
-        .set_redirect_uri(RedirectUrl::new(String::from("jms://auth/callback"))?);
+        let client = BasicClient::new(ClientId::new(client_id.clone()))
+            // 指定授权端点：用户会被重定向到这个 URL 登录/授权
+            // 会自动拼上 response_type、client_id、redirect_uri、scope、state、code_challenge 等参数
+            .set_auth_uri(AuthUrl::new(format!(
+                "{}/core/oauth2-provider/authorize/",
+                site
+            ))?)
+            // 指定令牌端点：将 code + pkce_verifier 或者 refresh_token
+            // 向这个 URL 发 POST 来换取/刷新 access_token、id_token 等
+            .set_token_uri(TokenUrl::new(format!(
+                "{}/core/oauth2-provider/token/",
+                site
+            ))?)
+            .set_redirect_uri(RedirectUrl::new(String::from("jms://auth/callback"))?);
 
         // 生成 PKCE + 授权 URL
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -112,10 +146,15 @@ pub async fn auth_login(
             })
             .map(|dt| dt.timestamp());
 
-        // 保存 refresh token
+        // 保存 refresh token 等等信息
         let token_service = TokenService::new(site.clone());
         if let Err(e) = token_service
-            .persist(&access_token, refresh_token.as_deref(), expires_at)
+            .persist(
+                &access_token,
+                refresh_token.as_deref(),
+                expires_at,
+                Some(&client_id),
+            )
             .await
         {
             log::warn!("persist tokens failed: {}", e);
@@ -184,6 +223,10 @@ pub async fn ensure_fresh_token(
     let stored_access = entry.as_ref().map(|t| t.access_token.clone());
     let stored_refresh = entry.as_ref().and_then(|t| t.refresh_token.clone());
     let expires_at = entry.as_ref().and_then(|t| t.expires_at);
+    let client_id = entry
+        .as_ref()
+        .and_then(|t| t.client_id.clone())
+        .unwrap_or_else(|| DEFAULT_CLIENT_ID.to_string());
 
     let mut access = stored_access.or_else(|| provided.map(|p| p.to_string()));
 
@@ -197,13 +240,9 @@ pub async fn ensure_fresh_token(
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("refresh_token missing for site {}", site))?;
 
-        let client = BasicClient::new(ClientId::new(String::from(
-            "FkkXFf0wPelYPIbvf0VElkZtyrw8TWIcyqakDgni",
-        )))
-        .set_token_uri(TokenUrl::new(format!(
-            "{}/core/oauth2-provider/token/",
-            site
-        ))?);
+        let client = BasicClient::new(ClientId::new(client_id.clone())).set_token_uri(
+            TokenUrl::new(format!("{}/core/oauth2-provider/token/", site))?,
+        );
 
         let http_client = reqwest::Client::new();
         let token_result = client
@@ -224,7 +263,12 @@ pub async fn ensure_fresh_token(
             .map(|dt| dt.timestamp());
 
         token_service
-            .persist(&new_access, Some(&new_refresh), new_expires)
+            .persist(
+                &new_access,
+                Some(&new_refresh),
+                new_expires,
+                Some(&client_id),
+            )
             .await?;
 
         access = Some(new_access);

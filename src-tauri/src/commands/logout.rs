@@ -1,4 +1,4 @@
-use crate::service::token_store::TokenService;
+use crate::service::token_oauth::TokenService;
 use log::{error, warn};
 use oauth2::{
     basic::BasicClient, reqwest, ClientId, RefreshToken, RevocationUrl, StandardRevocableToken,
@@ -19,9 +19,11 @@ async fn revoke_and_clear_tokens(_app: &AppHandle, site: &str) -> anyhow::Result
     
     if let Some(entry) = token_service.load().await? {
         if let Some(refresh) = entry.refresh_token {
-            let client = BasicClient::new(ClientId::new(String::from(
-                "FkkXFf0wPelYPIbvf0VElkZtyrw8TWIcyqakDgni",
-            )))
+            let client_id = entry
+                .client_id
+                .unwrap_or_else(|| super::auth_login::DEFAULT_CLIENT_ID.to_string());
+
+            let client = BasicClient::new(ClientId::new(client_id))
             .set_revocation_url(RevocationUrl::new(format!(
                 "{}/core/oauth2-provider/revoke_token/",
                 site

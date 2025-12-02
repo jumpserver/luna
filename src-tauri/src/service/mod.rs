@@ -5,5 +5,5 @@ pub(crate) mod favorite;
 pub(crate) mod rename;
 pub(crate) mod setting;
 pub(crate) mod token;
-pub(crate) mod token_store;
+pub(crate) mod token_oauth;
 pub(crate) mod user;
