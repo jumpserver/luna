@@ -77,13 +77,13 @@ pub async fn auth_login(
             // 指定授权端点：用户会被重定向到这个 URL 登录/授权
             // 会自动拼上 response_type、client_id、redirect_uri、scope、state、code_challenge 等参数
             .set_auth_uri(AuthUrl::new(format!(
-                "{}/core/oauth2-provider/authorize/",
+                "{}/core/auth/oauth2-provider/authorize/",
                 site
             ))?)
             // 指定令牌端点：将 code + pkce_verifier 或者 refresh_token
             // 向这个 URL 发 POST 来换取/刷新 access_token、id_token 等
             .set_token_uri(TokenUrl::new(format!(
-                "{}/core/oauth2-provider/token/",
+                "{}/core/auth/oauth2-provider/token/",
                 site
             ))?)
             .set_redirect_uri(RedirectUrl::new(String::from("jms://auth/callback"))?);
@@ -237,7 +237,7 @@ pub async fn ensure_fresh_token(
             .ok_or_else(|| anyhow::anyhow!("refresh_token missing for site {}", site))?;
 
         let client = BasicClient::new(ClientId::new(client_id.clone())).set_token_uri(
-            TokenUrl::new(format!("{}/core/oauth2-provider/token/", site))?,
+            TokenUrl::new(format!("{}/core/auth/oauth2-provider/token/", site))?,
         );
 
         let http_client = reqwest::Client::new();

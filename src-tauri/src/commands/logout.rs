@@ -25,7 +25,7 @@ async fn revoke_and_clear_tokens(_app: &AppHandle, site: &str) -> anyhow::Result
 
             let client = BasicClient::new(ClientId::new(client_id))
             .set_revocation_url(RevocationUrl::new(format!(
-                "{}/core/oauth2-provider/revoke_token/",
+                "{}/core/auth/oauth2-provider/revoke_token/",
                 site
             ))?);
 
