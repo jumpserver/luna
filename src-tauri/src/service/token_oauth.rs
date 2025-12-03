@@ -2,7 +2,7 @@ use anyhow::Result;
 use keyring::Entry;
 use serde::{Deserialize, Serialize};
 
-const SERVICE_NAME: &str = "JumpServerClient Safe Storage";
+const SERVICE_NAME: &str = "com.jumpserver.client.auth";
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TokenRecord {
