@@ -4,9 +4,9 @@ import type { ThemeType } from "~/types";
 import { useSettingManager } from "~/composables/useSettingManager";
 
 interface FontItem {
-  id: string
-  value: string
-  label: string
+  id: string;
+  value: string;
+  label: string;
 }
 
 definePageMeta({
@@ -223,7 +223,7 @@ watch(
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="flex flex-col gap-3 p-4">
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Common.Appearance") }}</span>
       <USelect v-model="selectedAppearance" value-key="id" :items="appearanceItems" class="w-40" />

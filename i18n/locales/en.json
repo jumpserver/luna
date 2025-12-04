@@ -1,6 +1,7 @@
 {
   "Common": {
     "Cancel": "Cancel",
+    "About": "About",
     "Confirm": "Confirm",
     "UnSigned": "UnSigned",
     "Version": "Version",
@@ -23,8 +24,9 @@
     "SystemDefault": "System default",
     "General": "General",
     "ChooseColor": "Choose color",
-    "ApplicationConfig": "Application Config",
-    "EmptyDescription": "No authorized assets are available for the current type"
+    "OpenWith": "Open with",
+    "EmptyDescription": "No authorized assets are available for the current type",
+    "SelectFromMenu": "Select an item on the left"
   },
   "ToolTips": {
     "LightMode": "Light Mode",

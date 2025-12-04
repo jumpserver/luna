@@ -30,88 +30,92 @@ const settingMenu = computed<NavigationMenuItem[]>(() => {
       to: localePath({ path: "/setting/appearance" })
     },
     {
-      label: t("Common.ApplicationConfig"),
-      defaultOpen: true,
+      label: t("Common.OpenWith"),
       icon: "tabler:toggle-right",
-      children: [
-        {
-          label: t("Setting.CommandTerminal"),
-          active: false,
-          defaultOpen: false,
-          icon: "proicons:terminal",
-          children: [
-            {
-              label: "SSH",
-              to: localePath({ path: "/setting/ssh" })
-            },
-            {
-              label: "Telnet",
-              to: localePath({ path: "/setting/telnet" })
-            }
-          ]
-        },
-        {
-          label: t("Setting.FileTransfer"),
-          defaultOpen: false,
-          icon: "proicons:document",
-          children: [
-            {
-              label: "SFTP",
-              to: localePath({ path: "/setting/sftp" })
-            }
-          ]
-        },
-        {
-          label: t("Setting.RemoteDesktop"),
-          defaultOpen: false,
-          icon: "proicons:laptop",
-          children: [
-            {
-              label: "RDP",
-              to: localePath({ path: "/setting/rdp" })
-            },
-            {
-              label: "VNC",
-              to: localePath({ path: "/setting/vnc" })
-            }
-          ]
-        },
-        {
-          label: t("Setting.Database"),
-          defaultOpen: false,
-          icon: "proicons:database",
-          children: [
-            {
-              label: "MySQL",
-              to: localePath({ path: "/setting/mysql" })
-            },
-            {
-              label: "MariaDB",
-              to: localePath({ path: "/setting/mariadb" })
-            },
-            {
-              label: "MongoDB",
-              to: localePath({ path: "/setting/mongodb" })
-            },
-            {
-              label: "Redis",
-              to: localePath({ path: "/setting/redis" })
-            },
-            {
-              label: "PostgreSQL",
-              to: localePath({ path: "/setting/pg" })
-            },
-            {
-              label: "Oracle",
-              to: localePath({ path: "/setting/oracle" })
-            },
-            {
-              label: "SQL Server",
-              to: localePath({ path: "/setting/sqlserver" })
-            }
-          ]
-        }
-      ]
+      to: localePath({ path: "/setting/application" })
+      // children: [
+      //   {
+      //     label: t("Setting.CommandTerminal"),
+      //     active: false,
+      //     defaultOpen: false,
+      //     icon: "proicons:terminal",
+      //     children: [
+      //       {
+      //         label: "SSH",
+      //         to: localePath({ path: "/setting/ssh" })
+      //       },
+      //       {
+      //         label: "Telnet",
+      //         to: localePath({ path: "/setting/telnet" })
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     label: t("Setting.FileTransfer"),
+      //     defaultOpen: false,
+      //     icon: "proicons:document",
+      //     children: [
+      //       {
+      //         label: "SFTP",
+      //         to: localePath({ path: "/setting/sftp" })
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     label: t("Setting.RemoteDesktop"),
+      //     defaultOpen: false,
+      //     icon: "proicons:laptop",
+      //     children: [
+      //       {
+      //         label: "RDP",
+      //         to: localePath({ path: "/setting/rdp" })
+      //       },
+      //       {
+      //         label: "VNC",
+      //         to: localePath({ path: "/setting/vnc" })
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     label: t("Setting.Database"),
+      //     defaultOpen: false,
+      //     icon: "proicons:database",
+      //     children: [
+      //       {
+      //         label: "MySQL",
+      //         to: localePath({ path: "/setting/mysql" })
+      //       },
+      //       {
+      //         label: "MariaDB",
+      //         to: localePath({ path: "/setting/mariadb" })
+      //       },
+      //       {
+      //         label: "MongoDB",
+      //         to: localePath({ path: "/setting/mongodb" })
+      //       },
+      //       {
+      //         label: "Redis",
+      //         to: localePath({ path: "/setting/redis" })
+      //       },
+      //       {
+      //         label: "PostgreSQL",
+      //         to: localePath({ path: "/setting/pg" })
+      //       },
+      //       {
+      //         label: "Oracle",
+      //         to: localePath({ path: "/setting/oracle" })
+      //       },
+      //       {
+      //         label: "SQL Server",
+      //         to: localePath({ path: "/setting/sqlserver" })
+      //       }
+      //     ]
+      //   }
+      // ]
+    },
+    {
+      label: t("Common.About"),
+      icon: "ix:about"
     }
   ];
 });
@@ -155,18 +159,28 @@ watch(
       </template>
     </UPageHeader>
 
-    <UPageBody class="mt-2 mx-2 flex-1 min-h-0 h-full overflow-y-auto">
-      <div class="flex gap-1 w-full min-h-0">
+    <UPageBody class="mt-0 pb-0 flex-1 min-h-0 h-full overflow-y-auto">
+      <div class="flex gap-0 w-full h-full min-h-0">
         <UNavigationMenu
           :items="settingMenu"
-          :highlight="true"
+          :highlight="false"
+          :ui="{
+            list: 'p-2'
+          }"
+          :style="{
+            backgroundColor: theme === 'dark' ? '#222' : '#F5F5F7'
+          }"
           color="primary"
-          variant="link"
+          variant="pill"
           orientation="vertical"
-          :class="locale === 'en' ? 'w-64' : 'w-48'"
+          class="w-40"
         />
 
-        <UCard class="flex-1 min-w-0 h-full overflow-y-auto" variant="subtle">
+        <UCard
+          class="flex-1 min-w-0 h-full rounded-none overflow-y-auto"
+          variant="outline"
+          :ui="{ body: 'sm:p-0 h-full p-0' }"
+        >
           <slot />
         </UCard>
       </div>

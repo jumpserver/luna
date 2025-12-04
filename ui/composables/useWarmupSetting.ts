@@ -4,17 +4,17 @@ export async function useWarmupSetting() {
     await Promise.all([
       import("@/layouts/setting.vue"),
       import("@/pages/setting/index.vue"),
-      import("@/pages/setting/ssh.vue"),
-      import("@/pages/setting/telnet.vue"),
-      import("@/pages/setting/sftp.vue"),
-      import("@/pages/setting/rdp.vue"),
-      import("@/pages/setting/vnc.vue"),
-      import("@/pages/setting/mysql.vue"),
-      import("@/pages/setting/mongodb.vue"),
-      import("@/pages/setting/redis.vue"),
-      import("@/pages/setting/pg.vue"),
-      import("@/pages/setting/oracle.vue"),
-      import("@/pages/setting/sqlserver.vue")
+      import("@/pages/setting/application/ssh.vue"),
+      import("@/pages/setting/application/telnet.vue"),
+      import("@/pages/setting/application/sftp.vue"),
+      import("@/pages/setting/application/rdp.vue"),
+      import("@/pages/setting/application/vnc.vue"),
+      import("@/pages/setting/application/mysql.vue"),
+      import("@/pages/setting/application/mongodb.vue"),
+      import("@/pages/setting/application/redis.vue"),
+      import("@/pages/setting/application/pg.vue"),
+      import("@/pages/setting/application/oracle.vue"),
+      import("@/pages/setting/application/sqlserver.vue")
     ]);
   } catch {}
 }

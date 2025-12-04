@@ -196,8 +196,9 @@ const actionItems = computed<ActionItem[]>(() => [
       new useTauriWebviewWindowWebviewWindow(label, {
         title: t("Common.ConnectionSettings"),
         url: "/setting",
+        height: 675,
         minWidth: 930,
-        minHeight: 520,
+        minHeight: 675,
         maxHeight: 675,
         hiddenTitle: true,
         titleBarStyle: "overlay",

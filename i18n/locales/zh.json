@@ -1,6 +1,7 @@
 {
   "Common": {
     "Cancel": "取消",
+    "About": "关于",
     "Confirm": "确认",
     "UnSigned": "未登录",
     "Version": "当前版本",
@@ -23,8 +24,9 @@
     "SystemDefault": "系统默认",
     "General": "通用",
     "ChooseColor": "选择颜色",
-    "ApplicationConfig": "应用配置",
-    "EmptyDescription": "当前类型下暂无可用的授权资产"
+    "OpenWith": "应用配置",
+    "EmptyDescription": "当前类型下暂无可用的授权资产",
+    "SelectFromMenu": "请从左侧选择一个配置项"
   },
   "ToolTips": {
     "LightMode": "亮色模式",
