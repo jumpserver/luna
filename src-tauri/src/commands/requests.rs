@@ -6,15 +6,25 @@ use reqwest::header::AUTHORIZATION;
 use serde::Serialize;
 use url::Url;
 
+/// 处理带有 query 参数的 trait
+pub trait MaybeQuery {
+    fn apply(self, rb: reqwest::RequestBuilder) -> reqwest::RequestBuilder;
+}
+
+/// 处理带有 json 参数的 trait
+pub trait MaybeJson {
+    fn apply(self, rb: reqwest::RequestBuilder) -> reqwest::RequestBuilder;
+    fn debug_body(&self) -> Option<String> {
+        None
+    }
+}
+
+
 #[derive(Debug, Serialize)]
 pub struct ApiResponse {
     pub status: u16,
     pub data: String,
     pub success: bool,
-}
-
-pub trait MaybeQuery {
-    fn apply(self, rb: reqwest::RequestBuilder) -> reqwest::RequestBuilder;
 }
 
 impl MaybeQuery for () {
@@ -32,12 +42,6 @@ where
     }
 }
 
-pub trait MaybeJson {
-    fn apply(self, rb: reqwest::RequestBuilder) -> reqwest::RequestBuilder;
-    fn debug_body(&self) -> Option<String> {
-        None
-    }
-}
 
 impl MaybeJson for () {
     fn apply(self, rb: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
@@ -77,9 +81,7 @@ fn base_get_request(
     let tz_string = tz_offset_string();
     let referer = referer_from(url);
 
-    let mut rb = client
-        .get(url)
-        .header("X-TZ", tz_string);
+    let mut rb = client.get(url).header("X-TZ", tz_string);
 
     if !bearer_token.is_empty() {
         rb = rb.header(AUTHORIZATION, format!("Bearer {}", bearer_token));
@@ -101,9 +103,7 @@ fn base_post_request(
     let tz_string = tz_offset_string();
     let referer = referer_from(url);
 
-    let mut rb = client
-        .post(url)
-        .header("X-TZ", tz_string);
+    let mut rb = client.post(url).header("X-TZ", tz_string);
 
     if !bearer_token.is_empty() {
         rb = rb.header(AUTHORIZATION, format!("Bearer {}", bearer_token));
@@ -125,9 +125,7 @@ fn base_delete_request(
     let tz_string = tz_offset_string();
     let referer = referer_from(url);
 
-    let mut rb = client
-        .delete(url)
-        .header("X-TZ", tz_string);
+    let mut rb = client.delete(url).header("X-TZ", tz_string);
 
     if !bearer_token.is_empty() {
         rb = rb.header(AUTHORIZATION, format!("Bearer {}", bearer_token));
@@ -230,20 +228,18 @@ fn insecure_client() -> Result<reqwest::Client, reqwest::Error> {
 }
 
 fn referer_from(url: &str) -> Option<String> {
-    Url::parse(url)
-        .ok()
-        .and_then(|u| match u.scheme() {
-            "http" | "https" => {
-                let host = u.host_str()?;
-                let mut origin = format!("{}://{}", u.scheme(), host);
+    Url::parse(url).ok().and_then(|u| match u.scheme() {
+        "http" | "https" => {
+            let host = u.host_str()?;
+            let mut origin = format!("{}://{}", u.scheme(), host);
 
-                if let Some(port) = u.port() {
-                    origin.push(':');
-                    origin.push_str(&port.to_string());
-                }
-
-                Some(origin)
+            if let Some(port) = u.port() {
+                origin.push(':');
+                origin.push_str(&port.to_string());
             }
-            _ => None,
-        })
+
+            Some(origin)
+        }
+        _ => None,
+    })
 }

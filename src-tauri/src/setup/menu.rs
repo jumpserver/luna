@@ -2,48 +2,48 @@ use log::warn;
 use tauri::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{LogicalPosition, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 
+use super::consts::menu_labels;
+
 /// 创建应用菜单
 pub fn build_menu<R: Runtime>(app: &impl Manager<R>) -> tauri::Result<Menu<R>> {
     let use_zh = prefers_zh();
-    let about_label = if use_zh { "关于 JumpServerClient" } else { "About JumpServerClient" };
-    let settings_label = if use_zh { "设置" } else { "Settings" };
-    let close_label = if use_zh { "关闭窗口" } else { "Close Window" };
-    let minimize_label = if use_zh { "最小化窗口" } else { "Minimize Window" };
-    let hide_label = if use_zh { "隐藏 JumpServerClient" } else { "Hide JumpServerClient" };
-    let hide_others_label = if use_zh { "隐藏 其他窗口" } else { "Hide Others" };
-    let show_all_label = if use_zh { "显示所有窗口" } else { "Show All" };
-    let quit_label = if use_zh { "退出" } else { "Quit" };
-
-    let about_i = MenuItem::with_id(app, "about", about_label, true, None::<&str>)?;
+    let labels = menu_labels(use_zh);
+    let about_i = MenuItem::with_id(app, "about", labels.about_label, true, None::<&str>)?;
 
     // 设置项
     let settings_i = MenuItem::with_id(
         app,
         "open-settings",
-        settings_label,
+        labels.settings_label,
         true,
         Some("CmdOrCtrl+,"),
     )?;
-    let close_window_i =
-        MenuItem::with_id(app, "close-window", close_label, true, Some("CmdOrCtrl+W"))?;
+    let close_window_i = MenuItem::with_id(
+        app,
+        "close-window",
+        labels.close_label,
+        true,
+        Some("CmdOrCtrl+W"),
+    )?;
     let minimize_window_i: MenuItem<R> = MenuItem::with_id(
         app,
         "minimize-window",
-        minimize_label,
+        labels.minimize_label,
         true,
         Some("CmdOrCtrl+M"),
     )?;
 
-    let hide_i = MenuItem::with_id(app, "hide", hide_label, true, Some("CmdOrCtrl+H"))?;
+    let hide_i = MenuItem::with_id(app, "hide", labels.hide_label, true, Some("CmdOrCtrl+H"))?;
     let hide_others_i = MenuItem::with_id(
         app,
         "hide-others",
-        hide_others_label,
+        labels.hide_others_label,
         true,
         Some("CmdOrCtrl+Alt+H"),
     )?;
-    let show_all_i = MenuItem::with_id(app, "show-all", show_all_label, true, None::<&str>)?;
-    let quit_i = MenuItem::with_id(app, "quit", quit_label, true, Some("CmdOrCtrl+Q"))?;
+    let show_all_i = MenuItem::with_id(app, "show-all", labels.show_all_label, true, None::<&str>)?;
+    let quit_i = MenuItem::with_id(app, "quit", labels.quit_label, true, Some("CmdOrCtrl+Q"))?;
+
     let app_menu = Submenu::with_items(
         app,
         "JumpServerClient",
@@ -63,7 +63,22 @@ pub fn build_menu<R: Runtime>(app: &impl Manager<R>) -> tauri::Result<Menu<R>> {
         ],
     )?;
 
-    Menu::with_items(app, &[&app_menu])
+    let edit_menu = Submenu::with_items(
+        app,
+        labels.edit_label,
+        true,
+        &[
+            &PredefinedMenuItem::undo(app, Some(labels.undo_label))?,
+            &PredefinedMenuItem::redo(app, Some(labels.redo_label))?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::cut(app, Some(labels.cut_label))?,
+            &PredefinedMenuItem::copy(app, Some(labels.copy_label))?,
+            &PredefinedMenuItem::paste(app, Some(labels.paste_label))?,
+            &PredefinedMenuItem::select_all(app, Some(labels.select_all_label))?,
+        ],
+    )?;
+
+    Menu::with_items(app, &[&app_menu, &edit_menu])
 }
 
 /// 菜单事件处理

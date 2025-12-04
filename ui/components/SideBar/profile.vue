@@ -651,5 +651,3 @@ onBeforeUnmount(() => {
     </div>
   </Modal>
 </template>
-
-<style scoped></style>
