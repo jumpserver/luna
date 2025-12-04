@@ -1,13 +1,5 @@
 import type { UserSettingPersistedState } from "~/composables/useSettingStorage";
-import type {
-  AppConfigType,
-  CharsetType,
-  LangType,
-  LayoutsType,
-  ResolutionType,
-  SortType,
-  ThemeType
-} from "~/types";
+import type { AppConfigType, CharsetType, LangType, LayoutsType, ResolutionType, SortType, ThemeType } from "~/types";
 import { useSettingStorage } from "~/composables/useSettingStorage";
 
 export const useSettingManager = () => {
@@ -87,11 +79,11 @@ export const useSettingManager = () => {
 
           // 如果持久化与内存的联合集合中全部已是目标语言，则直接跳过，避免重复应用与重复日志
           const allAlreadyTarget = [...unionSites].every((site) => {
-            const current
-              = (state.siteLanguages && state.siteLanguages[site])
-                ?? (saved.siteLanguages && saved.siteLanguages[site])
-                ?? saved.language
-                ?? state.language;
+            const current =
+              (state.siteLanguages && state.siteLanguages[site]) ??
+              (saved.siteLanguages && saved.siteLanguages[site]) ??
+              saved.language ??
+              state.language;
             return current === lang;
           });
 
@@ -162,8 +154,17 @@ export const useSettingManager = () => {
   };
 
   const setAppConfig = (config: AppConfigType | undefined) => {
-    state.appConfig = config ?? null;
-    persist({ appConfig: state.appConfig });
+    // 确保从 store 加载完成，避免默认值覆盖刚写入的配置
+    const ready = ensureHydration();
+
+    void ready
+      .then(() => {
+        state.appConfig = config ?? null;
+        persist({ appConfig: state.appConfig });
+      })
+      .catch((err) => {
+        console.error("setAppConfig hydration failed", err);
+      });
   };
 
   const setCharsetPreference = (charset: CharsetType) => {
