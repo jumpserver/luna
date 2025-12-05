@@ -33,89 +33,11 @@ const settingMenu = computed<NavigationMenuItem[]>(() => {
       label: t("Common.OpenWith"),
       icon: "tabler:toggle-right",
       to: localePath({ path: "/setting/application" })
-      // children: [
-      //   {
-      //     label: t("Setting.CommandTerminal"),
-      //     active: false,
-      //     defaultOpen: false,
-      //     icon: "proicons:terminal",
-      //     children: [
-      //       {
-      //         label: "SSH",
-      //         to: localePath({ path: "/setting/ssh" })
-      //       },
-      //       {
-      //         label: "Telnet",
-      //         to: localePath({ path: "/setting/telnet" })
-      //       }
-      //     ]
-      //   },
-      //   {
-      //     label: t("Setting.FileTransfer"),
-      //     defaultOpen: false,
-      //     icon: "proicons:document",
-      //     children: [
-      //       {
-      //         label: "SFTP",
-      //         to: localePath({ path: "/setting/sftp" })
-      //       }
-      //     ]
-      //   },
-      //   {
-      //     label: t("Setting.RemoteDesktop"),
-      //     defaultOpen: false,
-      //     icon: "proicons:laptop",
-      //     children: [
-      //       {
-      //         label: "RDP",
-      //         to: localePath({ path: "/setting/rdp" })
-      //       },
-      //       {
-      //         label: "VNC",
-      //         to: localePath({ path: "/setting/vnc" })
-      //       }
-      //     ]
-      //   },
-      //   {
-      //     label: t("Setting.Database"),
-      //     defaultOpen: false,
-      //     icon: "proicons:database",
-      //     children: [
-      //       {
-      //         label: "MySQL",
-      //         to: localePath({ path: "/setting/mysql" })
-      //       },
-      //       {
-      //         label: "MariaDB",
-      //         to: localePath({ path: "/setting/mariadb" })
-      //       },
-      //       {
-      //         label: "MongoDB",
-      //         to: localePath({ path: "/setting/mongodb" })
-      //       },
-      //       {
-      //         label: "Redis",
-      //         to: localePath({ path: "/setting/redis" })
-      //       },
-      //       {
-      //         label: "PostgreSQL",
-      //         to: localePath({ path: "/setting/pg" })
-      //       },
-      //       {
-      //         label: "Oracle",
-      //         to: localePath({ path: "/setting/oracle" })
-      //       },
-      //       {
-      //         label: "SQL Server",
-      //         to: localePath({ path: "/setting/sqlserver" })
-      //       }
-      //     ]
-      //   }
-      // ]
     },
     {
       label: t("Common.About"),
-      icon: "ix:about"
+      icon: "ix:about",
+      to: localePath({ path: "/setting/about" })
     }
   ];
 });
