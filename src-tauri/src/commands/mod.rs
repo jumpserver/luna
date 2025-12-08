@@ -13,3 +13,4 @@ pub mod set_favorite;
 pub mod unfavorite;
 pub mod update_config;
 pub mod window_controls;
+pub mod http_callback;

@@ -21,6 +21,7 @@ use crate::commands::set_favorite::set_favorite;
 use crate::commands::unfavorite::unfavorite;
 use crate::commands::update_config::update_config_selection;
 use crate::commands::window_controls::{close_window, minimize_window, toggle_maximize_window};
+use crate::commands::http_callback::init_http_callback_server;
 use crate::utils::is_auth_callback;
 
 use log::{error, info};
@@ -130,6 +131,7 @@ pub fn run() {
             list_system_fonts,
             toggle_maximize_window,
             update_config_selection,
+            init_http_callback_server,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

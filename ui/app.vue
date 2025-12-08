@@ -103,6 +103,14 @@ const applyOsLanguageWhenNoUser = async () => {
 
 onMounted(async () => {
   try {
+    // 初始化 HTTP 回调服务器 (开发环境)
+    try {
+      await useTauriCoreInvoke("init_http_callback_server", {});
+    } catch (error) {
+      // 忽略错误，生产环境不需要此服务
+      console.debug("HTTP callback server initialization:", error);
+    }
+
     await useTauriEventListen("primary-color-changed", (event: any) => {
       const hex = (event?.payload?.hex || event?.payload || "").toString();
       const mode = (event?.payload?.mode || "").toString();

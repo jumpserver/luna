@@ -60,15 +60,32 @@ pub async fn auth_login(
     site: String,
 ) -> Result<(), String> {
     // 获取 OAuth 配置
-    let oauth_config: OAuthConfig = reqwest::get(format!(
+    log::debug!("OAuth Config: {:?}", site);
+
+    let response = reqwest::get(format!(
         "{}/core/auth/oauth2-provider/.well-known/oauth-authorization-server",
         site
     ))
     .await
-    .map_err(|e| e.to_string())?
-    .json()
-    .await
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| format!("Failed to fetch OAuth config: {}", e))?;
+
+    let status = response.status();
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response body: {}", e))?;
+
+    if !status.is_success() {
+        return Err(format!(
+            "OAuth config endpoint returned {}: {}",
+            status, text
+        ));
+    }
+
+    let oauth_config: OAuthConfig = serde_json::from_str(&text).map_err(|e| {
+        format!("Failed to parse OAuth config JSON: {}. Response: {}", e, text)
+    })?;
+
 
     let client_id = oauth_config.client_id;
 
@@ -86,7 +103,15 @@ pub async fn auth_login(
                 "{}/core/auth/oauth2-provider/token/",
                 site
             ))?)
-            .set_redirect_uri(RedirectUrl::new(String::from("jms://auth/callback"))?);
+            .set_redirect_uri(RedirectUrl::new({
+                // Debug 模式使用 HTTP 本地回调，Release 使用 Deep Link
+                if cfg!(debug_assertions) {
+                    "http://127.0.0.1:14876/auth/callback"
+                } else {
+                    "jms://auth/callback"
+                }
+                .to_string()
+            })?);
 
         // 生成 PKCE + 授权 URL
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
