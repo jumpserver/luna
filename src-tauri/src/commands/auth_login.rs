@@ -60,8 +60,6 @@ pub async fn auth_login(
     site: String,
 ) -> Result<(), String> {
     // 获取 OAuth 配置
-    log::debug!("OAuth Config: {:?}", site);
-
     let response = reqwest::get(format!(
         "{}/core/auth/oauth2-provider/.well-known/oauth-authorization-server",
         site
