@@ -28,6 +28,15 @@
     "EmptyDescription": "No authorized assets are available for the current type",
     "SelectFromMenu": "Select an item on the left"
   },
+  "Auth": {
+    "SignInTitle": "Sign in from your browser to continue",
+    "BrowserHintPrefix": "If your browser hasn't opened JumpServer for you to sign in,",
+    "OpenManually": "open it manually",
+    "CopyUrl": "copy the URL",
+    "Or": "or",
+    "Back": "Back",
+    "CopySuccess": "Copy success"
+  },
   "ToolTips": {
     "LightMode": "Light Mode",
     "DarkMode": "Dark Mode",

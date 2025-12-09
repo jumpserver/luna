@@ -10,9 +10,9 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 type AssetType = "linux" | "windows" | "database" | "device" | "favorite";
 
 const props = defineProps<{
-  type: AssetType
-  iconName: string
-  platform?: string
+  type: AssetType;
+  iconName: string;
+  platform?: string;
 }>();
 
 const providerClearSelection = inject<(cb: () => void) => void>("providerClearSelection");
@@ -41,7 +41,7 @@ const assetManager = useAssetFetcher(props.type, scrollRef);
 const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
 
 const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
-const { fetchNextPage, assetsData, isAppending, scrollbarStyles, isInitialLoading, appendSkeletonCount } = assetManager;
+const { refreshAssets, assetsData, isAppending, scrollbarStyles, isInitialLoading, appendSkeletonCount } = assetManager;
 
 const { visibleAssets } = useDisplayAssets(
   assetsData,
@@ -50,13 +50,13 @@ const { visibleAssets } = useDisplayAssets(
 
 watch(
   () => loggedIn.value,
-  (nv: boolean) => {
+  async (nv: boolean) => {
     if (nv) {
       getSettings();
-      fetchNextPage();
+      await nextTick();
+      refreshAssets();
     }
-  },
-  { immediate: true }
+  }
 );
 
 watch(
@@ -157,8 +157,8 @@ const handleConnectTrigger = (asset: AssetItem) => {
  */
 const listenTauriEvent = async () => {
   interface eventPayloadType {
-    data: string
-    status: number
+    data: string;
+    status: number;
   }
 
   subscribeSettingEvent.value = await useTauriEventListen("get-setting-success", (event) => {
@@ -167,9 +167,7 @@ const listenTauriEvent = async () => {
 
     userInfoStore.setRdpClientOption(settingConfig.graphics);
 
-    setCharsetPreference(
-      (settingConfig.command_line?.charset as CharsetType) || "default"
-    );
+    setCharsetPreference((settingConfig.command_line?.charset as CharsetType) || "default");
     setBackspacePreference(!!settingConfig.command_line?.is_backspace_as_ctrl_h);
     setRdpResolutionPreference((settingConfig.graphics?.rdp_resolution as ResolutionType) || "auto");
     setKeyboardLayoutPreference(settingConfig.graphics?.keyboard_layout || "en-us-qwerty");
@@ -179,9 +177,15 @@ const listenTauriEvent = async () => {
   });
 };
 
-onMounted(() => {
-  listenTauriEvent();
+onMounted(async () => {
+  await listenTauriEvent();
   providerClearSelection?.(assetManagement.clearSelectedCard);
+
+  if (loggedIn.value) {
+    getSettings();
+    await nextTick();
+    refreshAssets();
+  }
 });
 
 onBeforeUnmount(() => {

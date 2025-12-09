@@ -28,6 +28,15 @@
     "EmptyDescription": "当前类型下暂无可用的授权资产",
     "SelectFromMenu": "请从左侧选择一个配置项"
   },
+  "Auth": {
+    "SignInTitle": "请在浏览器中完成登录",
+    "BrowserHintPrefix": "如果浏览器没有自动为你打开 JumpServer 登录页面，",
+    "OpenManually": "手动打开",
+    "CopyUrl": "复制登录地址",
+    "Or": "或",
+    "Back": "返回",
+    "CopySuccess": "复制成功"
+  },
   "ToolTips": {
     "LightMode": "亮色模式",
     "DarkMode": "暗色模式",

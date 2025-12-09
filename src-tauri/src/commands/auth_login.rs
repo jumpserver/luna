@@ -6,7 +6,6 @@ use oauth2::{
 use serde_json::Value;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, State};
-use tauri_plugin_opener::OpenerExt;
 use tokio::sync::oneshot;
 use url::Url;
 
@@ -81,9 +80,11 @@ pub async fn auth_login(
     }
 
     let oauth_config: OAuthConfig = serde_json::from_str(&text).map_err(|e| {
-        format!("Failed to parse OAuth config JSON: {}. Response: {}", e, text)
+        format!(
+            "Failed to parse OAuth config JSON: {}. Response: {}",
+            e, text
+        )
     })?;
-
 
     let client_id = oauth_config.client_id;
 
@@ -131,7 +132,9 @@ pub async fn auth_login(
             });
         }
 
-        let _ = app.opener().open_url(auth_url, None::<&str>);
+        if let Err(e) = app.emit("auth_url", auth_url.to_string()) {
+            log::warn!("emit auth_url failed: {}", e);
+        }
 
         let http_client = reqwest::ClientBuilder::new()
             .redirect(reqwest::redirect::Policy::none())

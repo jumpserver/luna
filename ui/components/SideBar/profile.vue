@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { LangType, PermissionOrgs, PermOrgItem, ThemeType, UserData, UserIntiInfo } from "~/types/index";
+import type { LangType, ThemeType, UserData } from "~/types/index";
 
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { resolveLanguageFromSystem } from "~/utils";
 
 const props = defineProps<{ collapse: boolean }>();
 
@@ -13,7 +12,6 @@ const toast = useToast();
 const appConfig = useAppConfig();
 const userInfoStore = useUserInfoStore();
 
-const { isMacOS } = usePlatform();
 const { t, setLocale, locales } = useI18n();
 // prettier-ignore
 const { loggedIn, currentSite, userMap, currentUser, currentLanguage } = storeToRefs(userInfoStore);
@@ -27,7 +25,6 @@ const errorMessage = ref("");
 const openModal = ref(false);
 const hasValidationError = ref(false);
 const unlistenErrorPageRef = ref<UnlistenFn | null>(null);
-const unlistenLoginSuccessRef = ref<UnlistenFn | null>(null);
 const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
 const unlistenLoginFailedTimeoutRef = ref<UnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
@@ -195,22 +192,6 @@ function normalizeSite(value: string): string {
 }
 
 /**
- * @description 初始化可选组织（去重）
- */
-function initSelectOrganization(permissionOrgData: PermissionOrgs) {
-  const orgs = [
-    ...(permissionOrgData.pam_orgs || []),
-    ...(permissionOrgData.audit_orgs || []),
-    ...(permissionOrgData.console_orgs || []),
-    ...(permissionOrgData.workbench_orgs || [])
-  ];
-
-  const uniqueOrgs = orgs.filter((org, index, self) => index === self.findIndex((t: PermOrgItem) => t.id === org.id));
-
-  return uniqueOrgs;
-}
-
-/**
  * @description 打开登录页面
  */
 function openLoginPage() {
@@ -368,78 +349,21 @@ const handleConfirm = async () => {
     return;
   }
 
-  // 预检 TLS/证书
-  const target = normalizedSite.startsWith("http") ? normalizedSite : `https://${normalizedSite}`;
-
-  try {
-    const ac = new AbortController();
-    const to = setTimeout(() => ac.abort(), 5000);
-    // no-cors 能发起请求（即使拿不到具体响应），若 TLS/证书错误会直接抛出
-    await fetch(target, { mode: "no-cors", cache: "no-store", method: "GET", signal: ac.signal });
-
-    clearTimeout(to);
-  } catch (e: any) {
-    const msg = String(e?.message || e || "Network error");
-    const low = msg.toLowerCase();
-    const isAbort = e?.name === "AbortError";
-    const online = typeof navigator !== "undefined" ? navigator.onLine : true;
-
-    let isHttps = false;
-
-    const u = new URL(target);
-    isHttps = u.protocol === "https:";
-
-    // 关键词匹配 + 平台/协议启发：在 macOS + https 的失败优先视作证书/ATS问题（除非明确超时/离线）
-    const keywordCert =
-      low.includes("certificate") ||
-      low.includes("ssl") ||
-      low.includes("x509") ||
-      low.includes("handshake") ||
-      low.includes("app transport security") ||
-      low.includes("secure connection") ||
-      low.includes("ats") ||
-      low.includes("hostname") ||
-      low.includes("mismatch");
-
-    const heuristicCert = isMacOS.value && isHttps && !isAbort && online;
-    const isCertLike = keywordCert || heuristicCert;
-
-    const desc = isCertLike
-      ? isMacOS.value
-        ? t("Login.InvalidCertificateMac")
-        : t("Login.InvalidCertificateGeneric")
-      : t("Login.NetworkError");
-
-    toast.add({
-      title: t("Login.LoginFailed"),
-      description: `${desc}`,
-      color: "error",
-      icon: "line-md:close-circle"
-    });
-    return;
-  }
-
-  //
   await useTauriCoreInvoke("auth_login", {
     site: normalizedSite
   });
 };
 
-/**
- * @description 处理版本兼容
- */
-const handleVersions = (version: string[] | string, appVersion: string) => {
-  if (version === "incompatible") {
-    return { status: "incompatible" as const, match: false, versions: [] as string[] };
-  }
-
-  const versions = Array.isArray(version) ? version : [];
-  const match = versions.length > 0 ? versions.includes(appVersion) : true;
-  return { status: "list" as const, match, versions };
-};
-
 onMounted(async () => {
   applyCurrentThemeColor();
+
+  const unlisten = await useTauriEventListen("auth_url", (event) => {
+    const url = (event?.payload || "").toString();
+    if (!url) return;
+
+    navigateTo({ path: "/auth/browser", query: { auth_url: url } });
+    unlisten?.();
+  });
 
   unlistenErrorPageRef.value = await useTauriEventListen("error-page", (event) => {
     const { status, reason } = event.payload as {
@@ -456,83 +380,6 @@ onMounted(async () => {
       });
 
       nextTick(() => userInfoStore.setUserLoggedIn(false));
-    }
-  });
-
-  unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", async (event) => {
-    const { status, profile, bearer, version, current_org, resolved_site, permission_orgs, xpack_license_valid } =
-      event.payload as UserIntiInfo & { bearer: string };
-    const appVersion = await useTauriAppGetVersion().catch(() => "");
-
-    let versionMessage: string | string[] = version ?? "";
-
-    if (typeof version === "string" && version !== "incompatible" && version.length > 0) {
-      try {
-        versionMessage = JSON.parse(version);
-      } catch {
-        versionMessage = [];
-      }
-    } else if (version !== "incompatible") {
-      versionMessage = [];
-    }
-
-    const { status: vStatus, match: vMatch } = handleVersions(versionMessage, appVersion);
-
-    const profileData = JSON.parse((profile as any).data);
-    const currentOrgData = JSON.parse((current_org as any).data);
-    const permissionOrgData = JSON.parse((permission_orgs as any).data) as PermissionOrgs;
-
-    const normalizedSite = normalizedInputSite.value;
-    const resolvedSite = resolved_site || normalizedSite;
-
-    if (status === "success" && profileData) {
-      const language = await resolveLanguageFromSystem();
-
-      if (vStatus !== "incompatible" && !vMatch) {
-        useEventBus().emit("versionAlert", { type: "noMatch", version: versionMessage[versionMessage.length - 1] });
-      }
-
-      // 对于旧的 jms 获取 versions 的接口会返回 404
-      if (vStatus === "incompatible") {
-        useEventBus().emit("versionAlert", { type: "incompatible" });
-      }
-
-      const availableOrgs = xpack_license_valid === false ? [] : initSelectOrganization(permissionOrgData);
-
-      userInfoStore.setUserData(resolvedSite, {
-        name: profileData.name,
-        bearerToken: bearer,
-        site: resolvedSite,
-        org: currentOrgData,
-        system_roles: profileData.system_roles,
-        availableOrgs,
-        xpackLicenseValid: xpack_license_valid ?? false,
-        language,
-        connectionInfo: {
-          protocol: "",
-          username: ""
-        }
-      });
-
-      userInfoStore.setOrganizations(availableOrgs);
-      userInfoStore.setCurrentOrg(currentOrgData);
-      userInfoStore.setUserLoggedIn(true);
-
-      await setLocale(language);
-
-      openModal.value = false;
-      inputSite.value = "";
-
-      nextTick(() => {
-        toast.add({
-          title: t("Login.LoginSuccess"),
-          description: t("Login.LoginSuccessDescription"),
-          color: "primary",
-          icon: "line-md:check-all"
-        });
-
-        useEventBus().emit("refresh", undefined);
-      });
     }
   });
 
@@ -559,7 +406,6 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (unlistenErrorPageRef.value) unlistenErrorPageRef.value();
-  if (unlistenLoginSuccessRef.value) unlistenLoginSuccessRef.value();
   if (unlistenLoginFailedRef.value) unlistenLoginFailedRef.value();
   if (unlistenLoginFailedTimeoutRef.value) unlistenLoginFailedTimeoutRef.value();
 });
