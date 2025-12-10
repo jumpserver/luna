@@ -1,9 +1,9 @@
-import {Subscription} from 'rxjs';
-import {ActivatedRoute, Router} from '@angular/router';
-import {NzModalService} from 'ng-zorro-antd/modal';
-import {View, Account, AuthInfo, ConnectionToken, ConnectMethod, Endpoint} from '@app/model';
-import {Component, OnInit, OnDestroy, ElementRef, ViewChildren, QueryList} from '@angular/core';
-import {ElementACLDialogComponent} from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
+import { Subscription } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { View, Account, AuthInfo, ConnectionToken, ConnectMethod, Endpoint } from '@app/model';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChildren, QueryList } from '@angular/core';
+import { ElementACLDialogComponent } from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
 import {
   LogService,
   AppService,
@@ -13,8 +13,8 @@ import {
   DrawerStateService,
   IframeCommunicationService
 } from '@app/services';
-import {CookieService} from 'ngx-cookie-service';
-import {Protocol} from '@app/model';
+import { CookieService } from 'ngx-cookie-service';
+import { Protocol } from '@app/model';
 
 @Component({
   standalone: false,
@@ -111,7 +111,6 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
    * 检查是否为直连模式
    */
   private checkDirectMode() {
-
     if (this._route.snapshot.routeConfig?.path === 'admin-connect') {
       this.isAdminConnect = true;
     }
@@ -195,7 +194,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
 
     this.connectData = {
       method: this.method,
-      protocol: {name: this.protocol},
+      protocol: { name: this.protocol },
       asset: this.permedAsset,
       account: this.account,
       autoLogin: true,
@@ -204,6 +203,9 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
       manualAuthInfo: new AuthInfo(),
       direct: true
     };
+
+    console.log('permedAsset', this.permedAsset);
+    console.log('connectData', this.connectData);
 
     this._appSvc.setPreConnectData(this.asset, this.connectData);
 
@@ -293,7 +295,23 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
         };
         return 'web_cli';
       case 'http':
-      case 'https':
+      case 'https': {
+        const connectMethods = this._appSvc.getProtocolConnectMethods(protocol) || [];
+        const preferredMethod =
+          connectMethods.find(item => item.type === 'web') || connectMethods[0];
+
+        if (preferredMethod) {
+          this.connectMethod = {
+            component: preferredMethod.component || 'lion',
+            type: preferredMethod.type || 'web',
+            value: preferredMethod.value || 'chrome',
+            label: preferredMethod.label || 'Chrome',
+            endpoint_protocol: preferredMethod.endpoint_protocol || endpointProtocol,
+            disabled: preferredMethod.disabled ?? false
+          };
+          return this.connectMethod.value;
+        }
+
         this.connectMethod = {
           component: 'lion',
           type: 'web',
@@ -303,6 +321,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
           disabled: false
         };
         return 'chrome';
+      }
       case 'rdp':
       case 'vnc':
         this.connectMethod = {
@@ -344,7 +363,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
         this.permedAsset,
         {
           ...this.connectData,
-          permed_protocol: {name: this.protocol},
+          permed_protocol: { name: this.protocol },
           connectMethod: this.connectMethod
         },
         this.connectToken,
@@ -413,7 +432,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
             nzContent: ElementACLDialogComponent,
             nzData: {
               asset: this.permedAsset,
-              connectData: {...this.connectData, direct: true},
+              connectData: { ...this.connectData, direct: true },
               code: error.error.code,
               tokenAction: 'create',
               error: error
