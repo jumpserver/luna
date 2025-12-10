@@ -293,7 +293,23 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
         };
         return 'web_cli';
       case 'http':
-      case 'https':
+      case 'https': {
+        const connectMethods = this._appSvc.getProtocolConnectMethods(protocol) || [];
+
+        const preferredMethod = connectMethods[0];
+
+        if (preferredMethod) {
+          this.connectMethod = {
+            component: preferredMethod.component || 'lion',
+            type: preferredMethod.type || 'web',
+            value: preferredMethod.value || 'chrome',
+            label: preferredMethod.label || 'Chrome',
+            endpoint_protocol: preferredMethod.endpoint_protocol || endpointProtocol,
+            disabled: preferredMethod.disabled ?? false
+          };
+          return this.connectMethod.value;
+        }
+
         this.connectMethod = {
           component: 'lion',
           type: 'web',
@@ -303,6 +319,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
           disabled: false
         };
         return 'chrome';
+      }
       case 'rdp':
       case 'vnc':
         this.connectMethod = {
