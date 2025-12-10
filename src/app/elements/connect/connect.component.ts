@@ -169,6 +169,10 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (!this._settingSvc.hasXPack()) {
       appletConnectMethod = 'web';
     }
+    let virtualappConnectMethod = connectOption ? connectOption['virtualappConnectMethod'] : 'web';
+    if (!this._settingSvc.hasXPack()) {
+      virtualappConnectMethod = 'web';
+    }
 
     if (connectInfo.downloadRDP) {
       return this._http.downloadRDPFile(
@@ -179,6 +183,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     } else if (connectMethod.type === 'native') {
       this.callLocalClient(connToken).then();
     } else if (connectMethod.type === 'applet' && appletConnectMethod === 'client') {
+      this.callLocalClient(connToken).then();
+    } else if (connectMethod.type === 'virtual_app' && virtualappConnectMethod === 'client') {
       this.callLocalClient(connToken).then();
     } else {
       this.createWebView(asset, connectInfo, connToken);
