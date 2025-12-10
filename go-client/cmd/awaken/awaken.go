@@ -6,9 +6,10 @@ import (
 	"go-client/global"
 	"go-client/pkg/awaken"
 	"go-client/pkg/logger"
-	"go.uber.org/zap"
-	"net/url"
 	"os"
+	"strings"
+
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -16,8 +17,7 @@ func main() {
 	if len(os.Args) != 1 {
 		global.LOG = logger.InitLogger()
 		zap.ReplaceGlobals(global.LOG)
-		u, _ := url.Parse(os.Args[1])
-		base64String := u.Hostname()
+		base64String := strings.TrimPrefix(os.Args[1], "jms://")
 		decoded, _ := base64.StdEncoding.DecodeString(base64String)
 		infoJson := string(decoded)
 		json.Unmarshal([]byte(infoJson), p)
