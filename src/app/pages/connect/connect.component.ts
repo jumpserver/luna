@@ -1,20 +1,21 @@
-import {Subscription} from 'rxjs';
-import {ActivatedRoute, Router} from '@angular/router';
-import {NzModalService} from 'ng-zorro-antd/modal';
-import {View, Account, AuthInfo, ConnectionToken, ConnectMethod, Endpoint} from '@app/model';
-import {Component, OnInit, OnDestroy, ElementRef, ViewChildren, QueryList} from '@angular/core';
-import {ElementACLDialogComponent} from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
+import { Subscription } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { View, Account, AuthInfo, ConnectionToken, ConnectMethod, Endpoint } from '@app/model';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChildren, QueryList } from '@angular/core';
+import { ElementACLDialogComponent } from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
 import {
   LogService,
   AppService,
   ViewService,
   I18nService,
   HttpService,
+  SettingService,
   DrawerStateService,
   IframeCommunicationService
 } from '@app/services';
-import {CookieService} from 'ngx-cookie-service';
-import {Protocol} from '@app/model';
+import { CookieService } from 'ngx-cookie-service';
+import { Protocol } from '@app/model';
 
 @Component({
   standalone: false,
@@ -73,6 +74,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
     private _route: ActivatedRoute,
     private _router: Router,
     private _cookie: CookieService,
+    private _settingSvc: SettingService,
     private _dialog: NzModalService,
     private _drawerStateService: DrawerStateService,
     private _iframeCommunicationService: IframeCommunicationService
@@ -111,7 +113,6 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
    * 检查是否为直连模式
    */
   private checkDirectMode() {
-
     if (this._route.snapshot.routeConfig?.path === 'admin-connect') {
       this.isAdminConnect = true;
     }
@@ -175,6 +176,24 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
     this.method = this.getMethodByProtocol(this.protocol);
   }
 
+  private buildDefaultConnectOption() {
+    const setting = this._settingSvc.setting || ({} as any);
+    const graphics = setting.graphics || {};
+    const commandLine = setting.command_line || {};
+
+    return {
+      resolution: (graphics.rdp_resolution || 'auto').toLowerCase(),
+      rdp_connection_speed: 'auto',
+      reusable: false,
+      token_reusable: false,
+      appletConnectMethod: graphics.applet_connection_method || 'web',
+      virtualappConnectMethod: graphics.applet_connection_method || 'web',
+      backspaceAsCtrlH: commandLine.is_backspace_as_ctrl_h ?? false,
+      charset: 'default',
+      disableautohash: false
+    };
+  }
+
   /**
    * 创建连接令牌（直连模式）
    */
@@ -195,13 +214,14 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
 
     this.connectData = {
       method: this.method,
-      protocol: {name: this.protocol},
+      protocol: { name: this.protocol },
       asset: this.permedAsset,
       account: this.account,
       autoLogin: true,
       input_username: this.account.username,
       connectMethod: this.connectMethod,
       manualAuthInfo: new AuthInfo(),
+      connectOption: this.buildDefaultConnectOption(),
       direct: true
     };
 
@@ -295,7 +315,6 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
       case 'http':
       case 'https': {
         const connectMethods = this._appSvc.getProtocolConnectMethods(protocol) || [];
-
         const preferredMethod = connectMethods[0];
 
         if (preferredMethod) {
@@ -309,16 +328,6 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
           };
           return this.connectMethod.value;
         }
-
-        this.connectMethod = {
-          component: 'lion',
-          type: 'web',
-          value: 'chrome',
-          label: 'Chrome',
-          endpoint_protocol: endpointProtocol,
-          disabled: false
-        };
-        return 'chrome';
       }
       case 'rdp':
       case 'vnc':
@@ -361,7 +370,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
         this.permedAsset,
         {
           ...this.connectData,
-          permed_protocol: {name: this.protocol},
+          permed_protocol: { name: this.protocol },
           connectMethod: this.connectMethod
         },
         this.connectToken,
@@ -430,7 +439,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
             nzContent: ElementACLDialogComponent,
             nzData: {
               asset: this.permedAsset,
-              connectData: {...this.connectData, direct: true},
+              connectData: { ...this.connectData, direct: true },
               code: error.error.code,
               tokenAction: 'create',
               error: error

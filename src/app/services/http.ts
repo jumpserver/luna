@@ -326,12 +326,14 @@ export class HttpService {
     params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/admin-connection-token/' + params;
     const { account, protocol } = connectData;
+    const connectOption = connectData.connectOption || {};
     const data = {
       asset: asset.id,
       account: account.id,
       protocol: protocol.name,
       input_username: connectData.input_username,
       connect_method: connectData.method || connectData.connectMethod.value,
+      connect_options: connectOption
     };
     return this.post<ConnectionToken>(url, data).pipe(
       catchError(this.handleConnectMethodExpiredError.bind(this))
