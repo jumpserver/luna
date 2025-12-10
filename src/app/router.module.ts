@@ -27,7 +27,8 @@ const appRoutes: Routes = [
   },
   {
     path: 'admin-connect',
-    loadComponent: () => import('./pages/direct/direct.component').then(m => m.PageDirectComponent)
+    component: PageDirectComponent
+    // loadComponent: () => import('./pages/direct/direct.component').then(m => m.PageDirectComponent)
   },
   {
     path: 'monitor/:sid',
