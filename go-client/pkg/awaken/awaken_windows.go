@@ -85,9 +85,11 @@ func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
 		return nil
 	}
 	appPath := appItem.Path
-	if err := validateAppPath(appPath); err != nil {
-		global.LOG.Error(err.Error())
-		return nil
+	if !appItem.IsInternal {
+		if err := validateAppPath(appItem.Path); err != nil {
+			global.LOG.Error(err.Error())
+			return nil
+		}
 	}
 	connectMap := map[string]string{
 		"file":     filePath,
@@ -121,9 +123,11 @@ func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	if appItem == nil {
 		return nil
 	}
-	if err := validateAppPath(appItem.Path); err != nil {
-		global.LOG.Error(err.Error())
-		return nil
+	if !appItem.IsInternal {
+		if err := validateAppPath(appItem.Path); err != nil {
+			global.LOG.Error(err.Error())
+			return nil
+		}
 	}
 	connectMap := map[string]string{
 		"name":     r.getName(),
@@ -235,9 +239,11 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	} else {
 		appPath = appItem.Path
 	}
-	if err := validateAppPath(appPath); err != nil {
-		global.LOG.Error(err.Error())
-		return nil
+	if !appItem.IsInternal {
+		if err := validateAppPath(appItem.Path); err != nil {
+			global.LOG.Error(err.Error())
+			return nil
+		}
 	}
 	connectMap := map[string]string{
 		"name":     r.getName(),
@@ -270,9 +276,11 @@ func handleDB(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		return nil
 	}
 	appPath := appItem.Path
-	if err := validateAppPath(appPath); err != nil {
-		global.LOG.Error(err.Error())
-		return nil
+	if !appItem.IsInternal {
+		if err := validateAppPath(appItem.Path); err != nil {
+			global.LOG.Error(err.Error())
+			return nil
+		}
 	}
 
 	connectMap := map[string]string{

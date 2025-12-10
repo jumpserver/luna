@@ -69,9 +69,11 @@ func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		"port":     strconv.Itoa(r.Port),
 	}
 
-	if err := validateAppPath(appItem.Path); err != nil {
-		global.LOG.Error(err.Error())
-		return nil
+	if !appItem.IsInternal {
+		if err := validateAppPath(appItem.Path); err != nil {
+			global.LOG.Error(err.Error())
+			return nil
+		}
 	}
 	commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 	cmd := exec.Command(appItem.Path, strings.Split(commands, " ")...)
@@ -155,9 +157,11 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 			connectMap["protocol"] = "mssql_jdbc_ms_new"
 		}
 		appPath := appItem.Path
-		if err := validateAppPath(appPath); err != nil {
-			global.LOG.Error(err.Error())
-			return nil
+		if !appItem.IsInternal {
+			if err := validateAppPath(appItem.Path); err != nil {
+				global.LOG.Error(err.Error())
+				return nil
+			}
 		}
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 		cmd = exec.Command(appPath, strings.Split(commands, " ")...)
@@ -226,9 +230,11 @@ func awakenDBCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		return cmd
 	} else {
 		appPath := appItem.Path
-		if err := validateAppPath(appPath); err != nil {
-			global.LOG.Error(err.Error())
-			return nil
+		if !appItem.IsInternal {
+			if err := validateAppPath(appItem.Path); err != nil {
+				global.LOG.Error(err.Error())
+				return nil
+			}
 		}
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 		return exec.Command(appPath, strings.Split(commands, " ")...)
