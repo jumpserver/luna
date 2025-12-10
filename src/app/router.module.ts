@@ -16,18 +16,21 @@ const appRoutes: Routes = [
   },
   {
     path: 'connect',
-    loadComponent: () =>
-      import('./pages/connect/connect.component').then(m => m.PagesConnectComponent)
+    // loadComponent: () =>
+    //   import('./pages/connect/connect.component').then(m => m.PagesConnectComponent)
+    component: PagesConnectComponent
   },
   { path: 'undefined', component: PagesBlankComponent },
   { path: 'share/:id', component: PagesShareComponent },
   {
     path: 'replay/:sid',
-    loadComponent: () => import('./pages/replay/replay.component').then(m => m.PagesReplayComponent)
+    // loadComponent: () => import('./pages/replay/replay.component').then(m => m.PagesReplayComponent)
+    component: PagesReplayComponent
   },
   {
     path: 'admin-connect',
-    loadComponent: () => import('./pages/direct/direct.component').then(m => m.PageDirectComponent)
+    // loadComponent: () => import('./pages/direct/direct.component').then(m => m.PageDirectComponent),
+    component: PageDirectComponent
   },
   {
     path: 'monitor/:sid',

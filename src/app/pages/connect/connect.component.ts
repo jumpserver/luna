@@ -204,9 +204,6 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
       direct: true
     };
 
-    console.log('permedAsset', this.permedAsset);
-    console.log('connectData', this.connectData);
-
     this._appSvc.setPreConnectData(this.asset, this.connectData);
 
     const res = await this.getConnectToken(this.permedAsset, this.connectData);
