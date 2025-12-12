@@ -24,13 +24,51 @@ use crate::commands::update_config::update_config_selection;
 use crate::commands::window_controls::{close_window, minimize_window, toggle_maximize_window};
 use crate::utils::is_auth_callback;
 
-use log::{error, info};
+use log::{error, info, warn};
 use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
+use tauri_plugin_single_instance::init as single_instance;
+
+fn process_deep_link(handle: &tauri::AppHandle, raw: &str) -> bool {
+    info!("deep link received: {}", raw);
+
+    if is_auth_callback(raw) {
+        info!("deep link is auth callback, handling in current instance");
+        let flow_state = handle.state::<AuthFlowState>();
+        handle_auth_callback(&flow_state, raw);
+        return false;
+    }
+
+    match pull_up(handle.clone(), raw.to_string()) {
+        Ok(_) => {
+            info!("deep link pull_up succeeded");
+            true
+        }
+        Err(e) => {
+            error!("deep link pull_up failed: {}", e);
+            false
+        }
+    }
+}
 
 pub fn run() {
     tauri::Builder::default()
         .manage(AuthFlowState::default())
+        .plugin(single_instance(|app, argv, _cwd| {
+            info!("single_instance event, argv={:?}", argv);
+
+            for arg in argv {
+                if arg.starts_with("jms://") {
+                    let did_pull_up = process_deep_link(app, &arg);
+                    info!(
+                        "single_instance processed deep link, did_pull_up={}",
+                        did_pull_up
+                    );
+                } else {
+                    warn!("single_instance ignored non-deeplink arg: {}", arg);
+                }
+            }
+        }))
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
@@ -74,24 +112,6 @@ pub fn run() {
             let win = app.get_webview_window("main").unwrap();
             let app_handle = app.app_handle().clone();
 
-            // 公共处理逻辑：处理 deep link，返回是否执行了 pull_up
-            let process_deep_link = |handle: &tauri::AppHandle, raw: &str| -> bool {
-                error!("deep link original URL: {}", raw);
-
-                if is_auth_callback(raw) {
-                    let flow_state = handle.state::<AuthFlowState>();
-                    handle_auth_callback(&flow_state, raw);
-                    return false;
-                }
-
-                if let Err(e) = pull_up(handle.clone(), raw.to_string()) {
-                    error!("Failed to pull up client: {}", e);
-                    return false;
-                }
-
-                true
-            };
-
             let start_urls = app.deep_link().get_current()?;
 
             // 处理冷启动时的深度链接
@@ -101,7 +121,7 @@ pub fn run() {
                 for url in &urls {
                     did_pull_up |= process_deep_link(&app_handle, url.as_str());
                 }
-                
+
                 // 深度链接启动时，调用完 pull_up 后直接退出
                 if did_pull_up {
                     std::process::exit(0);
@@ -113,7 +133,7 @@ pub fn run() {
                 let urls = event.urls();
 
                 for url in &urls {
-                    process_deep_link(&app_handle, url.as_str());
+                    let _ = process_deep_link(&app_handle, url.as_str());
                 }
             });
 
