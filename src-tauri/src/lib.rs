@@ -13,6 +13,7 @@ use crate::commands::get_assets::get_assets;
 use crate::commands::get_config::get_config;
 use crate::commands::get_setting::get_setting;
 use crate::commands::get_token::get_connect_token;
+use crate::commands::http_callback::init_http_callback_server;
 use crate::commands::list_system_fonts::list_system_fonts;
 use crate::commands::logout::logout;
 use crate::commands::pull_up::pull_up;
@@ -21,7 +22,6 @@ use crate::commands::set_favorite::set_favorite;
 use crate::commands::unfavorite::unfavorite;
 use crate::commands::update_config::update_config_selection;
 use crate::commands::window_controls::{close_window, minimize_window, toggle_maximize_window};
-use crate::commands::http_callback::init_http_callback_server;
 use crate::utils::is_auth_callback;
 
 use log::{error, info};
@@ -72,37 +72,48 @@ pub fn run() {
             app.on_menu_event(|app_handle, event| handle_menu_event(&app_handle, &event));
 
             let win = app.get_webview_window("main").unwrap();
+            let app_handle = app.app_handle().clone();
+
+            // 公共处理逻辑：处理 deep link，返回是否执行了 pull_up
+            let process_deep_link = |handle: &tauri::AppHandle, raw: &str| -> bool {
+                error!("deep link original URL: {}", raw);
+
+                if is_auth_callback(raw) {
+                    let flow_state = handle.state::<AuthFlowState>();
+                    handle_auth_callback(&flow_state, raw);
+                    return false;
+                }
+
+                if let Err(e) = pull_up(handle.clone(), raw.to_string()) {
+                    error!("Failed to pull up client: {}", e);
+                    return false;
+                }
+
+                true
+            };
 
             let start_urls = app.deep_link().get_current()?;
+
+            // 处理冷启动时的深度链接
             if let Some(urls) = start_urls {
-                // 处理启动时的深度链接
+                let mut did_pull_up = false;
+
                 for url in &urls {
-                    error!("deep link original URL start_urls : {}", url.as_str());
-                    if let Err(e) = pull_up(app.app_handle().clone(), url.as_str().to_string()) {
-                        error!("Failed to pull up client: {}", e);
-                    }
+                    did_pull_up |= process_deep_link(&app_handle, url.as_str());
                 }
+                
                 // 深度链接启动时，调用完 pull_up 后直接退出
-                std::process::exit(0);
+                if did_pull_up {
+                    std::process::exit(0);
+                }
             }
 
-            let app_handle = app.app_handle().clone();
             app.deep_link().on_open_url(move |event| {
                 info!("deep link event opened");
                 let urls = event.urls();
 
                 for url in &urls {
-                    error!("deep link original URL on_open_url: {}", url.as_str());
-
-                    let flow_state = app_handle.state::<AuthFlowState>();
-                    handle_auth_callback(&flow_state, url.as_str());
-
-                    // 如果不是 OAuth 回调正常去 pull up
-                    if !is_auth_callback(url.as_str()) {
-                        if let Err(e) = pull_up(app_handle.clone(), url.as_str().to_string()) {
-                            error!("Failed to pull up client: {}", e);
-                        }
-                    }
+                    process_deep_link(&app_handle, url.as_str());
                 }
             });
 
