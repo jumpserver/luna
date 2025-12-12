@@ -147,12 +147,12 @@ pub fn open_settings_window(app: &tauri::AppHandle) {
     let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/setting".into()))
         .title("Connection Settings")
         .min_inner_size(930.0, 520.0)
-        .max_inner_size(930.0, 675.0)
-        .title_bar_style(tauri::TitleBarStyle::Overlay);
+        .max_inner_size(930.0, 675.0);
 
     #[cfg(target_os = "macos")]
     {
         builder = builder
+            .title_bar_style(tauri::TitleBarStyle::Overlay)
             .hidden_title(true)
             .traffic_light_position(LogicalPosition::new(10.0, 22.0));
     }
@@ -173,12 +173,12 @@ fn open_about_window(app: &tauri::AppHandle) {
     let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/about.html".into()))
         .title("About")
         .inner_size(320.0, 250.0)
-        .resizable(false)
-        .title_bar_style(tauri::TitleBarStyle::Visible);
+        .resizable(false);
 
     #[cfg(target_os = "macos")]
     {
         builder = builder
+            .title_bar_style(tauri::TitleBarStyle::Visible)
             .hidden_title(true)
             .traffic_light_position(LogicalPosition::new(12.0, 12.0));
     }
