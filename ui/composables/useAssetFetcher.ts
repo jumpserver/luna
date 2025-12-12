@@ -292,9 +292,6 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
    * @param order
    */
   async function refreshAssets(search?: string, order?: string) {
-    stopScrollListener?.();
-    stopScrollListener = null;
-
     const searchParam = search !== undefined ? search : currentSearch.value;
     const orderParam = order !== undefined ? order : currentOrder.value;
 
@@ -311,8 +308,8 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
   const listenTauriEvent = async () => {
     subscribeGetAssetsEvent.value = await useTauriEventListen("get-asset-success", (event) => {
       interface eventPayload {
-        status: number;
-        data: AssetsResponse;
+        status: number
+        data: AssetsResponse
       }
 
       if (!isLoading.value) return;
@@ -330,7 +327,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
     subscribeGetAssetFailedEvent.value = await useTauriEventListen("get-asset-failure", (event) => {
       interface eventPayload {
-        status: number;
+        status: number
       }
 
       const payload = event.payload as eventPayload;
@@ -356,8 +353,8 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
     subscribeGetFavoriteAssetsEvent.value = await useTauriEventListen("get-favorite-assets-success", async (event) => {
       interface payLoadType {
-        status: number;
-        data: string;
+        status: number
+        data: string
       }
 
       const payload = event.payload as payLoadType;
@@ -428,7 +425,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
     unsubscribeAssetDetailUpdated = on(
       "assetDetailUpdated",
-      (payload: { assetId: string; permedAccounts: PermedAccount[]; permedProtocols: PermedProtocol[] }) => {
+      (payload: { assetId: string, permedAccounts: PermedAccount[], permedProtocols: PermedProtocol[] }) => {
         const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
 
         if (idx !== -1) {
@@ -451,7 +448,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
     unsubscribeAssetRenamed = on(
       "assetRenamed",
-      (payload: { assetId: string; name: string }) => {
+      (payload: { assetId: string, name: string }) => {
         const idx = rawAssetsList.value.findIndex((a) => a.id === payload.assetId);
 
         if (idx !== -1) {
@@ -466,7 +463,7 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
 
     unsubscribeFavoriteChanged = on(
       "favoriteChanged",
-      (payload: { assetId: string; favorite: boolean }) => {
+      (payload: { assetId: string, favorite: boolean }) => {
         const set = new Set(favoriteSet.value);
 
         if (payload.favorite) {
