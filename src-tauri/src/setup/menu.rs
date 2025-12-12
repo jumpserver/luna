@@ -1,6 +1,9 @@
 use log::warn;
 use tauri::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::{LogicalPosition, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
+
+#[cfg(target_os = "macos")]
+use tauri::LogicalPosition;
 
 use super::consts::menu_labels;
 
@@ -99,7 +102,16 @@ pub fn handle_menu_event(app_handle: &tauri::AppHandle, event: &MenuEvent) {
             }
         }
         "hide" => {
-            let _ = app_handle.hide();
+            #[cfg(target_os = "macos")]
+            {
+                let _ = app_handle.hide();
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                for (_, win) in app_handle.webview_windows() {
+                    let _ = win.hide();
+                }
+            }
         }
         "hide-others" => {
             if let Some(current) = app_handle.get_focused_window() {
@@ -132,14 +144,20 @@ pub fn open_settings_window(app: &tauri::AppHandle) {
         return;
     }
 
-    let _ = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/setting".into()))
+    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/setting".into()))
         .title("Connection Settings")
         .min_inner_size(930.0, 520.0)
         .max_inner_size(930.0, 675.0)
-        .hidden_title(true)
-        .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .traffic_light_position(LogicalPosition::new(10.0, 22.0))
-        .build();
+        .title_bar_style(tauri::TitleBarStyle::Overlay);
+
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder
+            .hidden_title(true)
+            .traffic_light_position(LogicalPosition::new(10.0, 22.0));
+    }
+
+    let _ = builder.build();
 }
 
 /// 打开 About 弹窗
@@ -152,14 +170,20 @@ fn open_about_window(app: &tauri::AppHandle) {
         return;
     }
 
-    let _ = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/about.html".into()))
+    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/about.html".into()))
         .title("About")
         .inner_size(320.0, 250.0)
         .resizable(false)
-        .hidden_title(true)
-        .title_bar_style(tauri::TitleBarStyle::Visible)
-        .traffic_light_position(LogicalPosition::new(12.0, 12.0))
-        .build();
+        .title_bar_style(tauri::TitleBarStyle::Visible);
+
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder
+            .hidden_title(true)
+            .traffic_light_position(LogicalPosition::new(12.0, 12.0));
+    }
+
+    let _ = builder.build();
 }
 
 /// 获取系统语言

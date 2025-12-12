@@ -24,7 +24,6 @@ url = "2.5.7"
 log = "0.4.27"
 image = "0.25.8"
 oauth2 = "5.0.0"
-tokio = { version = "1.46.1", features = ["full"] }
 axum = "0.7"
 chrono = "0.4.41"
 font-kit = "0.14"
@@ -44,8 +43,12 @@ tauri-plugin-deep-link = "2.4.5"
 tauri-plugin-clipboard-manager = "2.3.0"
 tauri-plugin-opener = "2.5.2"
 
+[dependencies.tokio]
+version = "1.46.1"
+features = ["full"]
+
 [dependencies.tauri]
-version = "2.9.0"
+version = "2.9.5"
 features = [
   "macos-private-api",
   "tray-icon",
@@ -69,7 +72,7 @@ version = "2.5.2"
 features = [ "unsafe-headers" ]
 
 [dependencies.reqwest]
-version = "0.12.23"
+version = "0.12.25"
 default-features = false
 features = [
   "json",
