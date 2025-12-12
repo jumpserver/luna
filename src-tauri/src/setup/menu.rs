@@ -157,7 +157,30 @@ pub fn open_settings_window(app: &tauri::AppHandle) {
             .traffic_light_position(LogicalPosition::new(10.0, 22.0));
     }
 
-    let _ = builder.build();
+    match builder.build() {
+        Ok(win) => {
+            #[cfg(target_os = "windows")]
+            {
+                // Windows 下禁用原生装饰（标题栏/菜单栏），与主窗口保持一致
+                if let Err(e) = win.set_decorations(false) {
+                    warn!("Failed to disable decorations for settings window: {}", e);
+                }
+                if let Err(e) = win.set_shadow(false) {
+                    warn!("Failed to disable shadow for settings window: {}", e);
+                }
+
+                // 额外清空该窗口菜单，避免系统残留菜单栏
+                if let Ok(empty_menu) = Menu::with_items(app, &[]) {
+                    if let Err(e) = win.set_menu(empty_menu) {
+                        warn!("Failed to clear menu for settings window: {}", e);
+                    }
+                } else {
+                    warn!("Failed to create empty menu for settings window");
+                }
+            }
+        }
+        Err(e) => warn!("Failed to build settings window: {}", e),
+    }
 }
 
 /// 打开 About 弹窗

@@ -18,7 +18,7 @@ export interface UserSettingPersistedState {
   primaryColor: string
   primaryColorLight: string
   primaryColorDark: string
-  appConfig?: AppConfigType | null
+  appConfig: AppConfigType | null
   charset: CharsetType
   rdpResolution: ResolutionType
   backspaceAsCtrlH: boolean

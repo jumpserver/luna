@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { AssetItem, CharsetType, LayoutsType, ResolutionType, SettingResponse } from "~/types/index";
+import type { AssetItem, AssetPageType, CharsetType, LayoutsType, ResolutionType, SettingResponse } from "~/types/index";
 
 import SkeletonCard from "~/components/Card/GridCard/skeletonCard.vue";
 
 import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
-type AssetType = "linux" | "windows" | "database" | "device" | "favorite";
-
 const props = defineProps<{
-  type: AssetType;
-  iconName: string;
-  platform?: string;
+  type: AssetPageType
+  iconName: string
+  platform?: string
 }>();
 
 const providerClearSelection = inject<(cb: () => void) => void>("providerClearSelection");
@@ -157,8 +155,8 @@ const handleConnectTrigger = (asset: AssetItem) => {
  */
 const listenTauriEvent = async () => {
   interface eventPayloadType {
-    data: string;
-    status: number;
+    data: string
+    status: number
   }
 
   subscribeSettingEvent.value = await useTauriEventListen("get-setting-success", (event) => {

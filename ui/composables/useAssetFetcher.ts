@@ -1,11 +1,11 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { AssetsResponse, PermedAccount, PermedProtocol, RawAssetData } from "~/types";
+import type { AssetPageType, AssetsResponse, PermedAccount, PermedProtocol, RawAssetData } from "~/types";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const LIMIT = 20;
 
-export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement | null>) => {
+export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLElement | null>) => {
   const { t } = useI18n();
   const { componentsConfig } = useAppConfig();
 
@@ -101,15 +101,22 @@ export const useAssetFetcher = (assetType: string, scrollRef?: Ref<HTMLElement |
     if (stopScrollListener) return;
 
     const el = scrollRef.value!;
+    let ticking = false;
     const onScroll = () => {
-      if (!hasMore.value || isLoading.value) return;
+      if (ticking) return;
+      ticking = true;
 
-      // 元素内容的总高度 - 元素内容被卷起（向上滚动）的距离 - 元素可视区域的高度
-      const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      requestAnimationFrame(() => {
+        ticking = false;
+        if (!hasMore.value || isLoading.value) return;
 
-      if (distanceToBottom <= 50) {
-        fetchNextPage();
-      }
+        // 元素内容的总高度 - 元素内容被卷起（向上滚动）的距离 - 元素可视区域的高度
+        const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+
+        if (distanceToBottom <= 50) {
+          fetchNextPage();
+        }
+      });
     };
 
     el.addEventListener("scroll", onScroll, { passive: true });

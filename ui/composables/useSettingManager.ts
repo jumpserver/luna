@@ -1,64 +1,87 @@
 import type { UserSettingPersistedState } from "~/composables/useSettingStorage";
 import type { AppConfigType, CharsetType, LangType, LayoutsType, ResolutionType, SortType, ThemeType } from "~/types";
+
+import { createBatchedPersist } from "~/composables/createBatchedPersist";
 import { useSettingStorage } from "~/composables/useSettingStorage";
 
-export const useSettingManager = () => {
-  const storage = useSettingStorage();
+const storage = useSettingStorage();
 
-  const isHydrated = ref(false);
-  const hydrationPromise = ref<Promise<void> | null>(null);
+const isHydrated = ref(false);
+const hydrationPromise = ref<Promise<void> | null>(null);
 
-  const state = reactive<UserSettingPersistedState>({
-    ...storage.defaults
+const state = reactive<UserSettingPersistedState>({
+  ...storage.defaults
+});
+
+let isSaving = false;
+let unsubscribe: (() => void) | null = null;
+let initialized = false;
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    unsubscribe?.();
+    unsubscribe = null;
   });
+}
 
-  let isSaving = false;
-  let unsubscribe: (() => void) | null = null;
+const { enqueue: enqueuePersist } = createBatchedPersist<UserSettingPersistedState>(
+  async (partial) => {
+    await storage.patch(partial);
+  },
+  {
+    onStart: () => {
+      isSaving = true;
+    },
+    onEnd: () => {
+      isSaving = false;
+    },
+    onError: (err) => {
+      console.error("patch user setting failed", err);
+    }
+  }
+);
 
-  const ensureHydration = () => {
-    if (hydrationPromise.value) return hydrationPromise.value;
+const ensureHydration = () => {
+  if (hydrationPromise.value) return hydrationPromise.value;
 
-    hydrationPromise.value = (async () => {
-      try {
-        const saved = await storage.load();
-        Object.assign(state, saved);
-      } catch (err) {
-        console.error("load user setting failed", err);
-      } finally {
-        isHydrated.value = true;
-      }
+  hydrationPromise.value = (async () => {
+    try {
+      const saved = await storage.load();
+      Object.assign(state, saved);
+    } catch (err) {
+      console.error("load user setting failed", err);
+    } finally {
+      isHydrated.value = true;
+    }
 
-      try {
-        unsubscribe = await storage.subscribe((next) => {
-          if (isSaving) return;
-          Object.assign(state, next);
-        });
-      } catch (err) {
-        console.error("subscribe user setting failed", err);
-      }
-    })();
-
-    return hydrationPromise.value;
-  };
-
-  const persist = (partial: Partial<UserSettingPersistedState>) => {
-    const promise = ensureHydration();
-
-    void promise
-      .then(async () => {
-        isSaving = true;
-        try {
-          await storage.patch(partial);
-        } catch (err) {
-          console.error("patch user setting failed", err);
-        } finally {
-          isSaving = false;
-        }
-      })
-      .catch((err) => {
-        console.error("persist user setting failed", err);
+    try {
+      unsubscribe = await storage.subscribe((next) => {
+        if (isSaving) return;
+        Object.assign(state, next);
       });
-  };
+    } catch (err) {
+      console.error("subscribe user setting failed", err);
+    }
+  })();
+
+  return hydrationPromise.value;
+};
+
+const persist = (partial: Partial<UserSettingPersistedState>) => {
+  void ensureHydration()
+    .then(() => {
+      enqueuePersist(partial);
+    })
+    .catch((err) => {
+      console.error("persist user setting failed", err);
+    });
+};
+
+export const useSettingManager = () => {
+  if (!initialized) {
+    initialized = true;
+    ensureHydration();
+  }
 
   const setLang = (lang: LangType) => {
     state.language = lang;
@@ -66,44 +89,38 @@ export const useSettingManager = () => {
   };
 
   const setLangGlobal = (lang: LangType) => {
+    const wasHydrated = isHydrated.value;
+    const languageSnapshot = state.language;
+    const siteLanguagesSnapshot = { ...state.siteLanguages };
+
+    const apply = () => {
+      const baseLang = wasHydrated ? languageSnapshot : state.language;
+      const unionSites = new Set<string>([
+        ...Object.keys(state.siteLanguages || {}),
+        ...Object.keys(siteLanguagesSnapshot || {})
+      ]);
+
+      const allAlreadyTarget = [...unionSites].every((site) => {
+        const current = state.siteLanguages?.[site] ?? siteLanguagesSnapshot?.[site] ?? baseLang;
+        return current === lang;
+      });
+
+      if (baseLang === lang && allAlreadyTarget) {
+        state.language = lang;
+        return;
+      }
+
+      const updated: Record<string, LangType> = {};
+      unionSites.forEach((site) => (updated[site] = lang));
+
+      state.language = lang;
+      state.siteLanguages = updated;
+      enqueuePersist({ language: lang, siteLanguages: updated });
+    };
+
     state.language = lang;
-
-    // 覆盖所有站点：以存储中的 siteLanguages 为准，避免仅依据当前窗口内存键集合
     ensureHydration()
-      .then(async () => {
-        try {
-          const saved = await storage.load();
-          const savedSites = Object.keys(saved.siteLanguages || {});
-
-          const unionSites = new Set<string>([...savedSites, ...Object.keys(state.siteLanguages || {})]);
-
-          // 如果持久化与内存的联合集合中全部已是目标语言，则直接跳过，避免重复应用与重复日志
-          const allAlreadyTarget = [...unionSites].every((site) => {
-            const current =
-              (state.siteLanguages && state.siteLanguages[site]) ??
-              (saved.siteLanguages && saved.siteLanguages[site]) ??
-              saved.language ??
-              state.language;
-            return current === lang;
-          });
-
-          if ((saved.language ?? state.language) === lang && allAlreadyTarget) {
-            return;
-          }
-
-          const updated: Record<string, LangType> = {};
-          unionSites.forEach((site) => (updated[site] = lang));
-
-          state.siteLanguages = updated;
-          persist({ language: lang, siteLanguages: updated });
-        } catch (err) {
-          console.error("setLangGlobal load failed, fallback to memory keys", err);
-          const fallback: Record<string, LangType> = { ...state.siteLanguages };
-          Object.keys(fallback).forEach((site) => (fallback[site] = lang));
-          state.siteLanguages = fallback;
-          persist({ language: lang, siteLanguages: fallback });
-        }
-      })
+      .then(apply)
       .catch((err) => console.error("setLangGlobal hydration failed", err));
   };
 
@@ -155,12 +172,10 @@ export const useSettingManager = () => {
 
   const setAppConfig = (config: AppConfigType | undefined) => {
     // 确保从 store 加载完成，避免默认值覆盖刚写入的配置
-    const ready = ensureHydration();
-
-    void ready
+    ensureHydration()
       .then(() => {
         state.appConfig = config ?? null;
-        persist({ appConfig: state.appConfig });
+        enqueuePersist({ appConfig: state.appConfig });
       })
       .catch((err) => {
         console.error("setAppConfig hydration failed", err);
@@ -201,15 +216,6 @@ export const useSettingManager = () => {
     state.rdpSmartSize = value || "0";
     persist({ rdpSmartSize: state.rdpSmartSize });
   };
-
-  onBeforeUnmount(() => {
-    if (unsubscribe) {
-      unsubscribe();
-      unsubscribe = null;
-    }
-  });
-
-  ensureHydration();
 
   const hasSiteLanguage = (site: string) => site in state.siteLanguages;
 
