@@ -124,6 +124,8 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           }
           break;
         case 'CLICK':
+          this.renewalTrigger.next();
+
           document.body.click();
           document.dispatchEvent(
             new MouseEvent('mouseup', {
@@ -138,12 +140,6 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
             this._viewSvc.keyboardSwitchTab(msg.data);
           }, 200);
           break;
-        case 'KEYBOARDEVENT':
-        case 'MOUSEEVENT':
-          this.renewalTrigger.next();
-          // Lion 组件 默认会发送的 KEYBOARDEVENT 和 MOUSEEVENT
-          this.sendInputActiveToOtherViews();
-          break;
         case 'CREATE_FILE_CONNECT_TOKEN':
           this.createFileConnectToken.emit(true);
           break;
@@ -157,7 +153,10 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
           this.view.terminalContentData = msg.data;
           this._iframeSvc.sendMessage({ name: 'TERMINAL_CONTENT_RESPONSE', data: msg.data });
           break;
+        case 'KEYBOARDEVENT':
+        case 'MOUSEEVENT':
         case 'INPUT_ACTIVE':
+          this.renewalTrigger.next();
           // KOKO 新定义的 input 事件，给所有其他 view 发送 sendInputActive 函数续期
           this.sendInputActiveToOtherViews();
       }
