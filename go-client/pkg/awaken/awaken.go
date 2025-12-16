@@ -70,7 +70,7 @@ type Rouse struct {
 
 func (r *Rouse) getUserName() string {
 	username := r.Token.ID
-	if r.Protocol == "ssh" || r.Protocol == "sftp" {
+	if r.Protocol == "ssh" || r.Protocol == "sftp" || r.Protocol == "telnet" {
 		username = "JMS-" + username
 	}
 	return username
