@@ -115,9 +115,11 @@
     "Description": "Please enter the site address (e.g. https://example.com) or IP",
     "LoginSuccess": "Login Success",
     "LoginSuccessDescription": "Your operation has been completed successfully",
+    "LoginFailed": "Login Failed",
     "EmptyUrlError": "Please enter a site address",
     "LoginFailedDescription": "Login failed, the current account has expired, please log in again",
     "InvalidUrlError": "Please enter a valid site address or IP address",
+    "InvalidSiteError": "Login failed: site is unreachable or invalid. Please check and try again.",
     "AddAccount": "Add Site",
     "SwitchSite": "Switch Site",
     "LoginAuthenticationExpired": "Login authentication has expired. Please log in again",
@@ -166,8 +168,10 @@
     "ClientExited": "Desktop client exited unexpectedly.",
     "RdpAppMissing": "No RDP application configured or found. Please set the executable path in Settings.",
     "VncAppMissing": "No VNC application configured or found. Please set the executable path in Settings.",
+    "DbAppMissing": "No database application configured or found. Please set the executable path in Settings.",
     "RdpAppFailed": "Failed to start the RDP application.",
-    "VncAppFailed": "Failed to start the VNC application."
+    "VncAppFailed": "Failed to start the VNC application.",
+    "DbAppFailed": "Failed to start the database application."
   },
   "Update": {
     "FoundNewVersion": "New version available",

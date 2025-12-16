@@ -22,16 +22,33 @@ const { applyPrimaryColor } = useColor();
 
 const inputSite = ref("");
 const errorMessage = ref("");
+const loginBtn = ref(false);
 const openModal = ref(false);
 const hasValidationError = ref(false);
+let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
 const unlistenErrorPageRef = ref<UnlistenFn | null>(null);
 const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
-const unlistenLoginFailedTimeoutRef = ref<UnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
 
 useEventBus().on("login", openLoginPage);
 
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
+
+const clearLoginBtnUnlockTimer = () => {
+  if (loginBtnUnlockTimer) {
+    clearTimeout(loginBtnUnlockTimer);
+    loginBtnUnlockTimer = null;
+  }
+};
+
+const enableLoginBtnAfter = (ms: number) => {
+  clearLoginBtnUnlockTimer();
+  
+  loginBtnUnlockTimer = setTimeout(() => {
+    loginBtn.value = false;
+    loginBtnUnlockTimer = null;
+  }, ms);
+};
 
 const selectedLanguage = computed<LangType>({
   get: () => (locale.value as LangType) || "zh",
@@ -304,8 +321,10 @@ const handleClipboard = (value: string) => {
  * @description 处理确认输入
  */
 const handleConfirm = async () => {
-  hasValidationError.value = false;
+  if (loginBtn.value) return;
+
   errorMessage.value = "";
+  hasValidationError.value = false;
 
   const normalizedSite = normalizedInputSite.value;
   const urlRegExp = appConfig.componentsConfig.urlRegExp;
@@ -341,9 +360,39 @@ const handleConfirm = async () => {
     return;
   }
 
-  await useTauriCoreInvoke("auth_login", {
-    site: normalizedSite
-  });
+  try {
+    clearLoginBtnUnlockTimer();
+    loginBtn.value = true;
+    await useTauriCoreInvoke("auth_login", {
+      site: normalizedSite
+    });
+  } catch (e: any) {
+    const raw = (e?.message || e || "").toString();
+    const looksLikeSiteIssue = [
+      "Failed to fetch OAuth config",
+      "OAuth config endpoint returned",
+      "Failed to parse OAuth config JSON",
+      "Failed to read response body"
+    ].some((needle) => raw.includes(needle));
+
+    hasValidationError.value = true;
+    errorMessage.value = looksLikeSiteIssue ? t("Login.InvalidSiteError") : raw || t("Login.LoginFailed");
+
+    if (!looksLikeSiteIssue) {
+      toast.add({
+        title: t("Login.LoginFailed"),
+        description: raw || t("Login.LoginFailed"),
+        color: "error",
+        icon: "line-md:close-circle",
+        duration: 2000
+      });
+      enableLoginBtnAfter(2000);
+    }
+
+    nextTick(() => {
+      inputRef.value?.$el?.querySelector("input")?.focus();
+    });
+  }
 };
 
 onMounted(async () => {
@@ -353,53 +402,92 @@ onMounted(async () => {
     const url = (event?.payload || "").toString();
     if (!url) return;
 
+    clearLoginBtnUnlockTimer();
+    loginBtn.value = false;
+    openModal.value = false;
     navigateTo({ path: localePath({ path: "/auth/browser" }), query: { auth_url: url } });
     unlisten?.();
   });
 
   unlistenErrorPageRef.value = await useTauriEventListen("error-page", (event) => {
-    const { status, reason } = event.payload as {
-      status: string;
-      reason: string;
-    };
+    const payload = (event?.payload || {}) as any;
+    const status = (payload?.status || "").toString();
+    const reason = (payload?.reason || "").toString();
+    const message = (payload?.message || "").toString();
 
-    if (status === "failure" && reason === "cookies-not-found") {
-      toast.add({
-        title: t("Login.LoginFailed"),
-        description: t("Login.LoginFailedErrorPage"),
-        color: "error",
-        icon: "line-md:close-circle"
+    if (status !== "failure") return;
+
+    let description = message || t("Login.LoginFailedErrorPage");
+
+    if (reason === "invalid-site") {
+      description = t("Login.InvalidSiteError");
+    }
+
+    toast.add({
+      title: t("Login.LoginFailed"),
+      description,
+      color: "error",
+      icon: "line-md:close-circle",
+      duration: 2000
+    });
+    enableLoginBtnAfter(2000);
+
+    if (reason === "invalid-site") {
+      hasValidationError.value = true;
+      errorMessage.value = t("Login.InvalidSiteError");
+
+      nextTick(() => {
+        inputRef.value?.$el?.querySelector("input")?.focus();
       });
 
-      nextTick(() => userInfoStore.setUserLoggedIn(false));
+      return;
     }
+
+    nextTick(() => {
+      userInfoStore.setUserLoggedIn(false);
+    });
   });
 
-  unlistenLoginFailedRef.value = await useTauriEventListen("login-failed-detected", () => {
+  unlistenLoginFailedRef.value = await useTauriEventListen("login-failed-detected", (event) => {
+    const payload = (event?.payload || {}) as any;
+    const reason = (payload?.reason || "").toString();
+    const message = (payload?.message || "").toString();
+
+    let description = message || t("Login.LoginFailedDescription");
+
+    if (reason === "invalid-site") {
+      description = t("Login.InvalidSiteError");
+    }
+
     toast.add({
       title: t("Login.LoginFailed"),
-      description: t("Login.LoginFailedDescription"),
+      description,
       color: "error",
-      icon: "line-md:close-circle"
+      icon: "line-md:close-circle",
+      duration: 2000
     });
+
+    enableLoginBtnAfter(2000);
+
+    if (reason === "invalid-site") {
+      hasValidationError.value = true;
+      errorMessage.value = t("Login.InvalidSiteError");
+
+      nextTick(() => {
+        inputRef.value?.$el?.querySelector("input")?.focus();
+      });
+
+      return;
+    }
+
     userInfoStore.setUserLoggedIn(false);
-  });
-
-  unlistenLoginFailedTimeoutRef.value = await useTauriEventListen("login-failed-timeout", () => {
-    toast.add({
-      title: t("Login.LoginFailed"),
-      description: t("Login.LoginFailedTimeout"),
-      color: "error",
-      icon: "line-md:close-circle"
-    });
-    nextTick(() => userInfoStore.setUserLoggedIn(false));
   });
 });
 
 onBeforeUnmount(() => {
   if (unlistenErrorPageRef.value) unlistenErrorPageRef.value();
   if (unlistenLoginFailedRef.value) unlistenLoginFailedRef.value();
-  if (unlistenLoginFailedTimeoutRef.value) unlistenLoginFailedTimeoutRef.value();
+  clearLoginBtnUnlockTimer();
 });
 </script>
 
@@ -445,6 +533,7 @@ onBeforeUnmount(() => {
   <Modal
     v-model:open="openModal"
     :title="t('Login.Title')"
+    :disabled="loginBtn"
     @update:open="openModal = $event"
     @confirm="handleConfirm"
     @clipboard="handleClipboard"

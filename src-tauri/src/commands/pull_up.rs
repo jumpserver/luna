@@ -3,6 +3,7 @@ use std::env;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::sync::mpsc::RecvTimeoutError;
 use std::thread;
 use std::time::Duration;
 use tauri::AppHandle;
@@ -142,12 +143,13 @@ pub fn pull_up(_app: AppHandle, url: String) -> Result<(), String> {
     // 在后台线程中读取 stderr，检查是否有错误输出
     thread::spawn(move || {
         let reader = BufReader::new(stderr);
-        
+
         for line in reader.lines() {
             match line {
                 Ok(line) => {
+                    let lower = line.to_lowercase();
                     // 检查是否是错误行（Go 客户端错误通常以 "Error:" 开头）
-                    if line.starts_with("Error:") || line.contains("Error:") {
+                    if lower.contains("error:") {
                         error!("Client stderr: {}", line);
                         // 立即发送错误信号
                         let _ = tx.send(line.clone());
@@ -155,10 +157,11 @@ pub fn pull_up(_app: AppHandle, url: String) -> Result<(), String> {
                         // 记录所有非空输出，可能是警告或错误
                         error!("Client stderr: {}", line);
                         // 如果包含常见错误关键词，也收集起来
-                        if line.contains("not found") 
-                            || line.contains("not configured") 
-                            || line.contains("Failed")
-                            || line.contains("failed") {
+                        if lower.contains("not found")
+                            || lower.contains("not configured")
+                            || lower.contains("failed")
+                            || lower.contains("application configured or found")
+                        {
                             let _ = tx.send(line);
                         }
                     }
@@ -173,33 +176,37 @@ pub fn pull_up(_app: AppHandle, url: String) -> Result<(), String> {
 
     // 等待并循环检查错误输出，最多等待2秒
     for _ in 0..20 {
-        thread::sleep(Duration::from_millis(100));
-        
         // 检查是否有错误消息
         if let Ok(error_msg) = rx.try_recv() {
             let err_msg = format!("Client error: {}", error_msg);
             error!("{}", err_msg);
             return Err(err_msg);
         }
-        
+
         // 检查进程是否已经退出（可能因为错误而退出）
         if let Ok(Some(status)) = child.try_wait() {
-            if !status.success() {
-                // 进程已退出且状态不成功，尝试再读取一次错误
-                thread::sleep(Duration::from_millis(200));
-                if let Ok(error_msg) = rx.try_recv() {
+            // 进程已退出：等待一小段时间把 stderr reader 的最后一行收进来（避免进程快速退出导致漏报）
+            match rx.recv_timeout(Duration::from_millis(300)) {
+                Ok(error_msg) => {
                     let err_msg = format!("Client error: {}", error_msg);
                     error!("{}", err_msg);
                     return Err(err_msg);
                 }
-                // 如果没有错误消息，返回退出状态错误
+                Err(RecvTimeoutError::Timeout) => {}
+                Err(RecvTimeoutError::Disconnected) => {}
+            }
+
+            if !status.success() {
                 let err_msg = format!("Client process exited with status: {:?}", status);
                 error!("{}", err_msg);
                 return Err(err_msg);
             }
+
             // 进程成功退出，这是正常的（某些客户端可能立即退出）
-            break;
+            return Ok(());
         }
+
+        thread::sleep(Duration::from_millis(100));
     }
     
     // 最后再检查一次是否有错误消息（防止在循环结束后才收到错误）

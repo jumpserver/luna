@@ -117,6 +117,7 @@
     "LoginFailedDescription": "登录失败, 当前账号登录已失效，请重新登录",
     "EmptyUrlError": "请输入站点地址",
     "InvalidUrlError": "请输入有效的站点地址或IP地址",
+    "InvalidSiteError": "登录失败：站点不可用或地址不正确，请检查后重试",
     "AddAccount": "新增账号",
     "SwitchSite": "切换站点",
     "LoginAuthenticationExpired": "登录认证已失效,请重新登录",
@@ -170,8 +171,10 @@
     "ClientExited": "桌面客户端异常退出",
     "RdpAppMissing": "未配置或未找到 RDP 客户端，请在设置中选择路径",
     "VncAppMissing": "未配置或未找到 VNC 客户端，请在设置中选择路径",
+    "DbAppMissing": "未配置或未找到数据库客户端，请在设置中选择路径",
     "RdpAppFailed": "启动 RDP 客户端失败",
-    "VncAppFailed": "启动 VNC 客户端失败"
+    "VncAppFailed": "启动 VNC 客户端失败",
+    "DbAppFailed": "启动数据库客户端失败"
   },
   "Update": {
     "FoundNewVersion": "发现新版本",

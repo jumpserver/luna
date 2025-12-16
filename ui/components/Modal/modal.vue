@@ -5,11 +5,13 @@ withDefaults(
     title?: string
     description?: string
     overlay?: boolean
+    disabled?: boolean
   }>(),
   {
     title: "",
     description: "",
-    overlay: false
+    overlay: false,
+    disabled: false
   }
 );
 
@@ -25,7 +27,8 @@ const updateOpen = () => {
   emits("update:open", false);
 };
 
-const handleConfirm = () => {
+const handleConfirm = (isDisabled = false) => {
+  if (isDisabled) return;
   emits("confirm");
 };
 
@@ -57,14 +60,14 @@ const handleContextMenu = async (e: Event) => {
     @update:open="updateOpen"
   >
     <template #body>
-      <div @contextmenu.stop.prevent="handleContextMenu" @keydown.enter="handleConfirm">
+      <div @contextmenu.stop.prevent="handleContextMenu" @keydown.enter="handleConfirm(disabled)">
         <slot />
       </div>
     </template>
 
     <template #footer="{ close }">
       <UButton :label="t('Common.Cancel')" color="neutral" variant="outline" @click="close" />
-      <UButton :label="t('Common.Confirm')" color="neutral" @click="handleConfirm" />
+      <UButton :label="t('Common.Confirm')" :disabled="disabled" color="neutral" @click="handleConfirm(disabled)" />
     </template>
   </UModal>
 </template>

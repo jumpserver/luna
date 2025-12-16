@@ -19,7 +19,6 @@ export default eslintConfig(
       "style/semi": ["error", "always"],
       "style/indent": ["error", 2],
       "style/quotes": "off",
-      "@typescript-eslint/semi": "off",
       "style/member-delimiter-style": "error",
       "unused-imports/no-unused-vars": [
         "error",

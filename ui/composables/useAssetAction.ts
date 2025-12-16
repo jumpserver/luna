@@ -574,10 +574,14 @@ export const useAssetAction = () => {
           description = t("ConnectError.RdpAppMissing");
         } else if (lower.includes("no vnc application")) {
           description = t("ConnectError.VncAppMissing");
+        } else if (lower.includes("no database application")) {
+          description = t("ConnectError.DbAppMissing");
         } else if (lower.includes("failed to execute rdp application")) {
           description = t("ConnectError.RdpAppFailed");
         } else if (lower.includes("failed to execute vnc application")) {
           description = t("ConnectError.VncAppFailed");
+        } else if (lower.includes("failed to execute database application")) {
+          description = t("ConnectError.DbAppFailed");
         }
 
         toast.add({

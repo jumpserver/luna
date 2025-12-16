@@ -59,32 +59,85 @@ pub async fn auth_login(
     site: String,
 ) -> Result<(), String> {
     // 获取 OAuth 配置
-    let response = reqwest::get(format!(
+    let config_url = format!(
         "{}/core/auth/oauth2-provider/.well-known/oauth-authorization-server",
         site
-    ))
-    .await
-    .map_err(|e| format!("Failed to fetch OAuth config: {}", e))?;
+    );
+    let response = match reqwest::get(config_url).await {
+        Ok(resp) => resp,
+        Err(e) => {
+            let msg = format!("Failed to fetch OAuth config: {}", e);
+            log::error!("{}", msg);
+            let _ = app.emit(
+                "error-page",
+                serde_json::json!({
+                    "status": "failure",
+                    "reason": "invalid-site",
+                    "message": msg.clone(),
+                    "site": site,
+                }),
+            );
+            return Err(msg);
+        }
+    };
 
     let status = response.status();
-    let text = response
-        .text()
-        .await
-        .map_err(|e| format!("Failed to read response body: {}", e))?;
+    let text = match response.text().await {
+        Ok(t) => t,
+        Err(e) => {
+            let msg = format!("Failed to read response body: {}", e);
+            log::error!("{}", msg);
+            let _ = app.emit(
+                "login-failed-detected",
+                serde_json::json!({
+                    "status": "failure",
+                    "reason": "invalid-site",
+                    "message": msg.clone(),
+                    "site": site,
+                    "http_status": status.as_u16(),
+                }),
+            );
+            return Err(msg);
+        }
+    };
 
     if !status.is_success() {
-        return Err(format!(
-            "OAuth config endpoint returned {}: {}",
-            status, text
-        ));
+        let msg = format!("OAuth config endpoint returned {}: {}", status, text);
+        log::error!("{}", msg);
+        let _ = app.emit(
+            "login-failed-detected",
+            serde_json::json!({
+                "status": "failure",
+                "reason": "invalid-site",
+                "message": msg.clone(),
+                "site": site,
+                "http_status": status.as_u16(),
+            }),
+        );
+        return Err(msg);
     }
 
-    let oauth_config: OAuthConfig = serde_json::from_str(&text).map_err(|e| {
-        format!(
-            "Failed to parse OAuth config JSON: {}. Response: {}",
-            e, text
-        )
-    })?;
+    let oauth_config: OAuthConfig = match serde_json::from_str(&text) {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            let msg = format!(
+                "Failed to parse OAuth config JSON: {}. Response: {}",
+                e, text
+            );
+            log::error!("{}", msg);
+            let _ = app.emit(
+                "login-failed-detected",
+                serde_json::json!({
+                    "status": "failure",
+                    "reason": "invalid-site",
+                    "message": msg.clone(),
+                    "site": site,
+                    "http_status": status.as_u16(),
+                }),
+            );
+            return Err(msg);
+        }
+    };
 
     let client_id = oauth_config.client_id;
 
