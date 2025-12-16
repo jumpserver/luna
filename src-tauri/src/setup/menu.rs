@@ -158,20 +158,20 @@ pub fn open_settings_window(app: &tauri::AppHandle) {
     }
 
     match builder.build() {
-        Ok(win) => {
+        Ok(_win) => {
             #[cfg(target_os = "windows")]
             {
                 // Windows 下禁用原生装饰（标题栏/菜单栏），与主窗口保持一致
-                if let Err(e) = win.set_decorations(false) {
+                if let Err(e) = _win.set_decorations(false) {
                     warn!("Failed to disable decorations for settings window: {}", e);
                 }
-                if let Err(e) = win.set_shadow(false) {
+                if let Err(e) = _win.set_shadow(false) {
                     warn!("Failed to disable shadow for settings window: {}", e);
                 }
 
                 // 额外清空该窗口菜单，避免系统残留菜单栏
                 if let Ok(empty_menu) = Menu::with_items(app, &[]) {
-                    if let Err(e) = win.set_menu(empty_menu) {
+                    if let Err(e) = _win.set_menu(empty_menu) {
                         warn!("Failed to clear menu for settings window: {}", e);
                     }
                 } else {

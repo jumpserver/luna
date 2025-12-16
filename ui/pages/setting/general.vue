@@ -3,7 +3,6 @@ import type { SelectItem } from "@nuxt/ui";
 import type { CharsetType, LangType, ResolutionType } from "~/types";
 
 import { useSettingManager } from "~/composables/useSettingManager";
-import { useUserInfoStore } from "~/store/modules/userInfo";
 
 type LangItem = SelectItem & { id: string };
 
@@ -11,7 +10,7 @@ definePageMeta({
   layout: "setting"
 });
 
-const { t, locales } = useI18n();
+const { t, locales, locale } = useI18n();
 const settingManager = useSettingManager();
 const {
   setLang,
@@ -22,9 +21,6 @@ const {
   setRdpResolutionPreference,
   setBackspacePreference
 } = settingManager;
-
-const userInfoStore = useUserInfoStore();
-const { currentLanguage } = storeToRefs(userInfoStore);
 
 const languageItems = computed<LangItem[]>(() => {
   const arr = (locales.value as any[]) || [];
@@ -91,7 +87,13 @@ const boolOptions = computed(() => {
   ];
 });
 
-const selectedLanguage = ref<LangType>(currentLanguage.value);
+const selectedLanguage = computed<LangType>({
+  get: () => (locale.value as LangType) || "zh",
+  set: (code: LangType) => {
+    if (!code) return;
+    setLang(code);
+  }
+});
 
 const selectedCharset = computed<CharsetType>({
   get: () => (charset.value as CharsetType) || "default",
@@ -107,28 +109,6 @@ const selectedEnabled = computed<boolean>({
   get: () => backspaceAsCtrlH.value ?? false,
   set: (value: boolean) => setBackspacePreference(!!value)
 });
-
-watch(
-  () => selectedLanguage.value,
-  (code: LangType) => {
-    if (!code) return;
-
-    setLang(code);
-    userInfoStore.applyLanguageToSite(code);
-    useTauriEventEmit("language-changed", { code });
-  },
-  { immediate: false }
-);
-
-watch(
-  () => currentLanguage.value,
-  (code: LangType) => {
-    if (!code) return;
-    if (code === selectedLanguage.value) return;
-
-    selectedLanguage.value = code;
-  }
-);
 </script>
 
 <template>

@@ -8,6 +8,8 @@ const { t, locale } = useI18n();
 const { isMacOS } = usePlatform();
 const { layouts, sort, setSort, setLayouts } = useSettingManager();
 
+const localePath = useLocalePath();
+
 // 公共按钮配置
 const commonButtonProps = {
   size: "sm" as const,
@@ -195,7 +197,7 @@ const actionItems = computed<ActionItem[]>(() => [
       // eslint-disable-next-line no-new
       new useTauriWebviewWindowWebviewWindow(label, {
         title: t("Common.ConnectionSettings"),
-        url: "/setting",
+        url: localePath({ path: "/setting" }),
         height: 675,
         minWidth: 930,
         minHeight: 675,

@@ -1,24 +1,19 @@
-import type { ConnectionInfo, LangType, PermOrgItem, RdpGraphics, UserData } from "~/types/index";
+import type { ConnectionInfo, PermOrgItem, RdpGraphics, UserData } from "~/types/index";
 
 export type SiteUserData = UserData & {
-  language?: string;
-  rdpClientOption?: RdpGraphics;
-  connectionInfoMap?: Record<string, ConnectionInfo>;
+  language?: string
+  rdpClientOption?: RdpGraphics
+  connectionInfoMap?: Record<string, ConnectionInfo>
 };
 
 // 其实应该叫做 accountInfoStore 比较好
 export const useUserInfoStore = defineStore(
   "userInfo",
   () => {
-    const { setLocale } = useI18n();
-    const settingManager = useSettingManager();
-    const { setLang, setSiteLanguage, removeSiteLanguage, getSiteLanguage, getDefaultLanguage } = settingManager;
-
     const orgId = ref("");
     const currentSite = ref("");
     const loggedIn = ref(false);
 
-    const currentLanguage = ref<LangType>("zh");
     const currentUser = ref<UserData | null>(null);
     const currentOrganizations = ref<PermOrgItem[]>([]);
     const userMap = ref<Record<string, SiteUserData>>({});
@@ -52,25 +47,12 @@ export const useUserInfoStore = defineStore(
      * @param site
      * @param userData
      */
-    const setUserData = (site: string, userData: UserData & { language?: LangType }) => {
-      const preferredLang = getSiteLanguage(site);
-      const effectiveLang = (preferredLang || userData.language || getDefaultLanguage()) as LangType;
+    const setUserData = (site: string, userData: UserData) => {
+      const next = userData as SiteUserData;
 
-      if (!preferredLang) {
-        setSiteLanguage(site, effectiveLang);
-      }
-
-      const withLanguage = {
-        ...(userData as SiteUserData),
-        language: effectiveLang
-      } as SiteUserData;
-
-      userMap.value[site] = withLanguage;
-      currentUser.value = withLanguage;
+      userMap.value[site] = next;
+      currentUser.value = next;
       currentSite.value = site;
-      currentLanguage.value = effectiveLang;
-
-      setLocale(effectiveLang);
 
       // 设置组织 ID
       if (userData.org?.id) {
@@ -78,8 +60,8 @@ export const useUserInfoStore = defineStore(
       }
 
       // 初始化当前站点连接信息映射以及 RDP 客户端选项
-      currentConnectionInfoMap.value = withLanguage.connectionInfoMap || {};
-      currentRdpClientOption.value = withLanguage.rdpClientOption || {};
+      currentConnectionInfoMap.value = next.connectionInfoMap || {};
+      currentRdpClientOption.value = next.rdpClientOption || {};
     };
 
     /**
@@ -97,40 +79,26 @@ export const useUserInfoStore = defineStore(
         return;
       }
 
-      const removedLang = userMap.value[site]?.language as LangType;
-
       delete userMap.value[site];
-
-      removeSiteLanguage(site);
 
       // 如果还有用户，则切换到下一个用户
       if (hasUser.value) {
         const nextUser = Object.values(userMap.value)[0] as SiteUserData | undefined;
 
         if (nextUser) {
-          const siteLang = getSiteLanguage(nextUser.site);
-
-          const nextWithLang = {
-            ...nextUser,
-            language: siteLang
-          } as SiteUserData;
-
-          userMap.value[nextUser.site] = nextWithLang;
-          currentUser.value = nextWithLang;
+          userMap.value[nextUser.site] = nextUser;
+          currentUser.value = nextUser;
           currentSite.value = nextUser.site;
-          currentLanguage.value = siteLang;
-
-          setLocale(siteLang as any);
 
           // 更新组织 ID
-          if (nextWithLang.org?.id) {
-            orgId.value = nextWithLang.org.id;
+          if (nextUser.org?.id) {
+            orgId.value = nextUser.org.id;
           }
 
           // 同步连接信息映射以及 RDP 客户端选项
-          currentConnectionInfoMap.value = nextWithLang.connectionInfoMap || {};
-          currentRdpClientOption.value = nextWithLang.rdpClientOption || {};
-          currentOrganizations.value = nextWithLang.availableOrgs || [];
+          currentConnectionInfoMap.value = nextUser.connectionInfoMap || {};
+          currentRdpClientOption.value = nextUser.rdpClientOption || {};
+          currentOrganizations.value = nextUser.availableOrgs || [];
 
           loggedIn.value = true;
 
@@ -143,11 +111,6 @@ export const useUserInfoStore = defineStore(
         currentSite.value = "";
         loggedIn.value = false;
         currentUser.value = null;
-
-        // 将最后一个登出用户的语言持久化为默认语言
-        setLang(removedLang);
-        setLocale(removedLang);
-        currentLanguage.value = removedLang;
 
         userMap.value = {};
         currentRdpClientOption.value = {};
@@ -171,35 +134,20 @@ export const useUserInfoStore = defineStore(
       const userData = getUserData(site);
 
       if (userData) {
-        const siteLang = (userData.language as LangType) || getSiteLanguage(site);
-
-        const withLang = {
-          ...(userData as SiteUserData),
-          language: siteLang
-        } as SiteUserData;
-
-        userMap.value[site] = withLang;
-        currentUser.value = withLang;
-        currentOrganizations.value = withLang.availableOrgs || [];
-        currentLanguage.value = siteLang;
-
-        setLocale(siteLang as any);
+        userMap.value[site] = userData as SiteUserData;
+        currentUser.value = userData as SiteUserData;
+        currentOrganizations.value = (userData as SiteUserData).availableOrgs || [];
 
         if (userData.org?.id) {
           orgId.value = userData.org.id;
         }
 
         // 同步当前站点的连接信息映射以及 RDP 客户端选项
-        currentConnectionInfoMap.value = withLang.connectionInfoMap || {};
-        currentRdpClientOption.value = withLang.rdpClientOption || {};
+        currentConnectionInfoMap.value = (userData as SiteUserData).connectionInfoMap || {};
+        currentRdpClientOption.value = (userData as SiteUserData).rdpClientOption || {};
       } else {
-        const fallbackLang = currentLanguage.value;
-
         currentConnectionInfoMap.value = {};
         currentRdpClientOption.value = {};
-        currentLanguage.value = fallbackLang;
-
-        setLocale(fallbackLang as any);
       }
     };
 
@@ -285,8 +233,8 @@ export const useUserInfoStore = defineStore(
         .map((p) => (typeof p === "string" ? p.trim() : ""))
         .filter((p) => p.length > 0);
 
-      const mergedProtocols =
-        incomingProtocols.length > 0 ? Array.from(new Set(incomingProtocols)) : existing?.availableProtocols;
+      const mergedProtocols
+        = incomingProtocols.length > 0 ? Array.from(new Set(incomingProtocols)) : existing?.availableProtocols;
 
       siteData.connectionInfoMap[assetId] = {
         ...(existing || {}),
@@ -295,44 +243,6 @@ export const useUserInfoStore = defineStore(
       };
 
       currentConnectionInfoMap.value = { ...siteData.connectionInfoMap };
-    };
-
-    const applyLanguageToSite = (lang: LangType, site?: string) => {
-      const target = lang;
-      const targetSite = site || currentSite.value;
-
-      if (!targetSite) {
-        // 没有站点时仅更新默认语言与当前语言
-        currentLanguage.value = target;
-
-        setLang(target);
-        setLocale(target);
-        return;
-      }
-
-      // 更新 Setting Manager 的站点语言映射
-      setSiteLanguage(targetSite, target);
-
-      // 更新对应站点的用户信息
-      const user = userMap.value[targetSite];
-      if (user && user.language !== target) {
-        userMap.value[targetSite] = {
-          ...(user as SiteUserData),
-          language: target
-        } as SiteUserData;
-      }
-
-      // 如果是当前站点，同步当前语言与当前用户
-      if (currentSite.value === targetSite) {
-        if (userMap.value[targetSite]) {
-          currentUser.value = userMap.value[targetSite] as SiteUserData;
-        }
-        currentLanguage.value = target;
-        setLocale(target);
-      }
-
-      // 同步默认语言为最近选择值（仅记录，不强制覆盖其他站点）
-      setLang(target);
     };
 
     /**
@@ -360,7 +270,6 @@ export const useUserInfoStore = defineStore(
       loggedIn,
       currentSite,
       currentUser,
-      currentLanguage,
       currentOrganizations,
       currentRdpClientOption,
       currentConnectionInfoMap,
@@ -373,7 +282,6 @@ export const useUserInfoStore = defineStore(
       setUserLoggedIn,
       setOrganizations,
       setRdpClientOption,
-      applyLanguageToSite,
       setConnectionInfoToUser,
       getConnectionInfoForAsset,
       setConnectionInfoForAsset
@@ -389,7 +297,6 @@ export const useUserInfoStore = defineStore(
         "loggedIn",
         "currentUser",
         "currentSite",
-        "currentLanguage",
         "currentOrganizations",
         "currentRdpClientOption",
         "currentConnectionInfoMap"

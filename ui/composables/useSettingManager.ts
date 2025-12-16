@@ -1,5 +1,5 @@
 import type { UserSettingPersistedState } from "~/composables/useSettingStorage";
-import type { AppConfigType, CharsetType, LangType, LayoutsType, ResolutionType, SortType, ThemeType } from "~/types";
+import type { AppConfigType, CharsetType, LanguagePreference, LayoutsType, ResolutionType, SortType, ThemeType } from "~/types";
 
 import { createBatchedPersist } from "~/composables/createBatchedPersist";
 import { useSettingStorage } from "~/composables/useSettingStorage";
@@ -83,45 +83,9 @@ export const useSettingManager = () => {
     ensureHydration();
   }
 
-  const setLang = (lang: LangType) => {
+  const setLang = (lang: LanguagePreference) => {
     state.language = lang;
     persist({ language: lang });
-  };
-
-  const setLangGlobal = (lang: LangType) => {
-    const wasHydrated = isHydrated.value;
-    const languageSnapshot = state.language;
-    const siteLanguagesSnapshot = { ...state.siteLanguages };
-
-    const apply = () => {
-      const baseLang = wasHydrated ? languageSnapshot : state.language;
-      const unionSites = new Set<string>([
-        ...Object.keys(state.siteLanguages || {}),
-        ...Object.keys(siteLanguagesSnapshot || {})
-      ]);
-
-      const allAlreadyTarget = [...unionSites].every((site) => {
-        const current = state.siteLanguages?.[site] ?? siteLanguagesSnapshot?.[site] ?? baseLang;
-        return current === lang;
-      });
-
-      if (baseLang === lang && allAlreadyTarget) {
-        state.language = lang;
-        return;
-      }
-
-      const updated: Record<string, LangType> = {};
-      unionSites.forEach((site) => (updated[site] = lang));
-
-      state.language = lang;
-      state.siteLanguages = updated;
-      enqueuePersist({ language: lang, siteLanguages: updated });
-    };
-
-    state.language = lang;
-    ensureHydration()
-      .then(apply)
-      .catch((err) => console.error("setLangGlobal hydration failed", err));
   };
 
   const setTheme = (t: ThemeType) => {
@@ -217,27 +181,6 @@ export const useSettingManager = () => {
     persist({ rdpSmartSize: state.rdpSmartSize });
   };
 
-  const hasSiteLanguage = (site: string) => site in state.siteLanguages;
-
-  const setSiteLanguage = (site: string, lang: LangType) => {
-    if (state.siteLanguages[site] === lang) return;
-
-    state.siteLanguages = { ...state.siteLanguages, [site]: lang };
-    persist({ siteLanguages: state.siteLanguages });
-  };
-
-  const removeSiteLanguage = (site: string) => {
-    if (!(site in state.siteLanguages)) return;
-
-    const updated = { ...state.siteLanguages };
-    delete updated[site];
-    state.siteLanguages = updated;
-    persist({ siteLanguages: updated });
-  };
-
-  const getSiteLanguage = (site: string): LangType => state.siteLanguages[site] || state.language;
-  const getDefaultLanguage = () => state.language;
-
   return {
     ...toRefs(state),
 
@@ -249,15 +192,9 @@ export const useSettingManager = () => {
     setCollapse,
     setAppConfig,
     setFontFamily,
-    setLangGlobal,
     setPrimaryColor,
     setFollowSystem,
-    getSiteLanguage,
-    setSiteLanguage,
-    hasSiteLanguage,
     hydrationPromise,
-    getDefaultLanguage,
-    removeSiteLanguage,
     setPrimaryColorDark,
     setPrimaryColorLight,
     setCharsetPreference,

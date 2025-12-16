@@ -10,11 +10,11 @@ const props = defineProps<{ collapse: boolean }>();
 
 const toast = useToast();
 const appConfig = useAppConfig();
+const localePath = useLocalePath();
 const userInfoStore = useUserInfoStore();
 
-const { t, setLocale, locales } = useI18n();
-// prettier-ignore
-const { loggedIn, currentSite, userMap, currentUser, currentLanguage } = storeToRefs(userInfoStore);
+const { t, locales, locale } = useI18n();
+const { loggedIn, currentSite, userMap, currentUser } = storeToRefs(userInfoStore);
 
 const { setLang, theme, primaryColorLight, primaryColorDark } = useSettingManager();
 const { manualSetTheme, enableFollowSystem, followSystem, userTheme } = useThemeAdapter();
@@ -32,7 +32,14 @@ const inputRef = ref<ComponentPublicInstance | null>(null);
 useEventBus().on("login", openLoginPage);
 
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
-const selectedLanguage = ref<LangType>(currentLanguage.value);
+
+const selectedLanguage = computed<LangType>({
+  get: () => (locale.value as LangType) || "zh",
+  set: (code: LangType) => {
+    if (!code) return;
+    setLang(code);
+  }
+});
 
 const languageItems = computed(() => {
   const arr = (locales.value as any[]) || [];
@@ -141,18 +148,6 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
 ]);
 
 watch(
-  () => currentLanguage.value,
-  async (lang: LangType) => {
-    const target = lang === "zh" ? "zh" : "en";
-    await setLocale(target);
-    if (lang && lang !== selectedLanguage.value) {
-      selectedLanguage.value = lang;
-    }
-  },
-  { immediate: true }
-);
-
-watch(
   () => userTheme.value,
   () => {
     applyCurrentThemeColor();
@@ -175,9 +170,6 @@ function handleLanguageChange(code: LangType) {
   if (!code || code === selectedLanguage.value) return;
 
   selectedLanguage.value = code;
-  setLang(code);
-  userInfoStore.applyLanguageToSite(code);
-  useTauriEventEmit("language-changed", { code });
 }
 
 /**
@@ -361,7 +353,7 @@ onMounted(async () => {
     const url = (event?.payload || "").toString();
     if (!url) return;
 
-    navigateTo({ path: "/auth/browser", query: { auth_url: url } });
+    navigateTo({ path: localePath({ path: "/auth/browser" }), query: { auth_url: url } });
     unlisten?.();
   });
 

@@ -1,5 +1,5 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { AppConfigType, CharsetType, LangType, ResolutionType, SortType } from "~/types";
+import type { AppConfigType, CharsetType, LanguagePreference, ResolutionType, SortType } from "~/types";
 
 import { Store } from "@tauri-apps/plugin-store";
 
@@ -7,8 +7,7 @@ export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
 
 export interface UserSettingPersistedState {
-  language: LangType
-  siteLanguages: Record<string, LangType>
+  language: LanguagePreference
   collapse: boolean
   sort: SortType
   theme: ThemeType
@@ -32,8 +31,7 @@ const STORE_PATH = "user-setting.json";
 const STORE_KEY = "state";
 
 const DEFAULT_STATE: UserSettingPersistedState = {
-  language: "zh",
-  siteLanguages: {},
+  language: "system",
   collapse: false,
   sort: "name",
   theme: "" as ThemeType,

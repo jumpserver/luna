@@ -3,7 +3,6 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { resolveLanguageFromSystem } from "~/utils";
 
 definePageMeta({
   layout: "auth"
@@ -11,10 +10,10 @@ definePageMeta({
 
 const toast = useToast();
 const route = useRoute();
+const localePath = useLocalePath();
 const userInfoStore = useUserInfoStore();
 
-const { t, setLocale } = useI18n();
-const { setLang } = useSettingManager();
+const { t } = useI18n();
 const { userTheme } = useThemeAdapter();
 
 const url = ref<string | null>((route.query.auth_url as string) || null);
@@ -30,7 +29,9 @@ const headingClass = computed(() => (userTheme.value === "dark" ? "text-gray-50"
 const subTextClass = computed(() => (userTheme.value === "dark" ? "text-gray-300" : "text-gray-600"));
 
 const back = () => {
-  navigateTo("/");
+  navigateTo({
+    path: localePath({ path: "/" })
+  });
 };
 
 const handleCopyUrl = () => {
@@ -73,6 +74,7 @@ const handleVersions = (version: string[] | string, appVersion: string) => {
 
   const versions = Array.isArray(version) ? version : [];
   const match = versions.length > 0 ? versions.includes(appVersion) : true;
+
   return { status: "list" as const, match, versions };
 };
 
@@ -110,8 +112,6 @@ onMounted(async () => {
     const resolvedSite = resolved_site || "";
 
     if (status === "success" && profileData) {
-      const language = await resolveLanguageFromSystem();
-
       if (vStatus !== "incompatible" && !vMatch) {
         useEventBus().emit("versionAlert", { type: "noMatch", version: versionMessage[versionMessage.length - 1] });
       }
@@ -130,7 +130,6 @@ onMounted(async () => {
         system_roles: profileData.system_roles,
         availableOrgs,
         xpackLicenseValid: xpack_license_valid ?? false,
-        language,
         connectionInfo: {
           protocol: "",
           username: ""
@@ -140,9 +139,6 @@ onMounted(async () => {
       userInfoStore.setOrganizations(availableOrgs);
       userInfoStore.setCurrentOrg(currentOrgData);
       userInfoStore.setUserLoggedIn(true);
-
-      await setLocale(language);
-      setLang(language);
 
       nextTick(() => {
         toast.add({

@@ -1,43 +1,33 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
-import { useUserInfoStore } from "~/store/modules/userInfo";
-
-definePageMeta({
-  layout: "setting",
-  redirect: "/setting/general"
-});
 
 const localePath = useLocalePath();
+
+const { t } = useI18n();
 const { theme } = useSettingManager();
-const { t, locale, setLocale } = useI18n();
-
-const userInfoStore = useUserInfoStore();
-const { currentLanguage } = storeToRefs(userInfoStore);
-
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 
 const settingMenu = computed<NavigationMenuItem[]>(() => {
-  void locale.value;
   return [
     {
       label: t("Common.General"),
       icon: "solar:settings-linear",
-      to: localePath({ path: "/setting/general" })
+      to: localePath({ name: "setting-general" })
     },
     {
       label: t("Common.Appearance"),
       icon: "solar:palette-linear",
-      to: localePath({ path: "/setting/appearance" })
+      to: localePath({ name: "setting-appearance" })
     },
     {
       label: t("Common.OpenWith"),
       icon: "tabler:toggle-right",
-      to: localePath({ path: "/setting/application" })
+      to: localePath({ name: "setting-application" })
     },
     {
       label: t("Common.About"),
       icon: "ix:about",
-      to: localePath({ path: "/setting/about" })
+      to: localePath({ name: "setting-about" })
     }
   ];
 });
@@ -46,15 +36,6 @@ onMounted(() => {
   initialTheme();
   listenOSThemeChange();
 });
-
-watch(
-  () => currentLanguage.value,
-  (lang) => {
-    const code = lang === "zh" ? "zh" : "en";
-    setLocale(code as any);
-  },
-  { immediate: true }
-);
 </script>
 
 <template>

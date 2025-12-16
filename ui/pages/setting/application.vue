@@ -5,12 +5,10 @@ definePageMeta({
   layout: "setting"
 });
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const localePath = useLocalePath();
 
 const appMenu = computed<NavigationMenuItem[]>(() => {
-  void locale.value;
-
   return [
     {
       label: t("Setting.CommandTerminal"),
@@ -19,11 +17,11 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
       children: [
         {
           label: "SSH",
-          to: localePath({ path: "/setting/application/ssh" })
+          to: localePath({ name: "setting-application-ssh" })
         },
         {
           label: "Telnet",
-          to: localePath({ path: "/setting/application/telnet" })
+          to: localePath({ name: "setting-application-telnet" })
         }
       ]
     },
@@ -34,7 +32,7 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
       children: [
         {
           label: "SFTP",
-          to: localePath({ path: "/setting/application/sftp" })
+          to: localePath({ name: "setting-application-sftp" })
         }
       ]
     },
@@ -45,11 +43,11 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
       children: [
         {
           label: "RDP",
-          to: localePath({ path: "/setting/application/rdp" })
+          to: localePath({ name: "setting-application-rdp" })
         },
         {
           label: "VNC",
-          to: localePath({ path: "/setting/application/vnc" })
+          to: localePath({ name: "setting-application-vnc" })
         }
       ]
     },
@@ -60,31 +58,31 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
       children: [
         {
           label: "MySQL",
-          to: localePath({ path: "/setting/application/mysql" })
+          to: localePath({ name: "setting-application-mysql" })
         },
         {
           label: "MariaDB",
-          to: localePath({ path: "/setting/application/mariadb" })
+          to: localePath({ name: "setting-application-mariadb" })
         },
         {
           label: "MongoDB",
-          to: localePath({ path: "/setting/application/mongodb" })
+          to: localePath({ name: "setting-application-mongodb" })
         },
         {
           label: "Redis",
-          to: localePath({ path: "/setting/application/redis" })
+          to: localePath({ name: "setting-application-redis" })
         },
         {
           label: "PostgreSQL",
-          to: localePath({ path: "/setting/application/pg" })
+          to: localePath({ name: "setting-application-pg" })
         },
         {
           label: "Oracle",
-          to: localePath({ path: "/setting/application/oracle" })
+          to: localePath({ name: "setting-application-oracle" })
         },
         {
           label: "SQL Server",
-          to: localePath({ path: "/setting/application/sqlserver" })
+          to: localePath({ name: "setting-application-sqlserver" })
         }
       ]
     }

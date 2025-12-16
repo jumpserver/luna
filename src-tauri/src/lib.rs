@@ -104,6 +104,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_prevent_default::debug())
         .setup(|app| {
             let menu = build_menu(app)?;
             app.set_menu(menu.clone())?;

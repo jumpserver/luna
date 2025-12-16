@@ -5,6 +5,7 @@ export type SortType = "name" | "-name" | "-date_updated" | "date_updated";
 export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
 export type LangType = "zh" | "en";
+export type LanguagePreference = LangType | "system";
 export type CharsetType = "default" | "utf8" | "gbk" | "gb2312" | "ios-8859-1";
 export type ResolutionType = "auto" | "1024x768" | "1366x768" | "1600x900" | "1920x1080";
 export type AssetPageType = "linux" | "windows" | "database" | "device" | "favorite";
@@ -81,7 +82,7 @@ export interface RoleType {
 export interface UserData {
   site: string
   name: string
-  language: string
+  language?: string
   bearerToken: string
   system_roles: RoleType[]
   org: CurrentOrg
@@ -292,8 +293,7 @@ export interface TokenResponse {
 }
 
 export interface UserSettingPersistedState {
-  language: LangType
-  siteLanguages: Record<string, LangType>
+  language: LanguagePreference
   collapse: boolean
   sort: SortType
   theme: ThemeType
