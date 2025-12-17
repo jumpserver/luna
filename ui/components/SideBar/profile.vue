@@ -410,6 +410,9 @@ onMounted(async () => {
     loginBtn.value = false;
     openModal.value = false;
     navigateTo({ path: localePath({ path: "/auth/browser" }), query: { auth_url: url } });
+    if (url && typeof url === "string") {
+      useTauriShellOpen(url);
+    }
     unlisten?.();
   });
 
