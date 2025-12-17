@@ -220,16 +220,26 @@ export class ElementContentComponent implements OnInit, OnDestroy {
       {
         title: 'Clone Connect',
         icon: 'fa-copy',
-        callback: () => {
+        callback: async () => {
           const id = this.rIdx + 1;
           const oldId = this.viewIds[this.rIdx];
           const oldView = this.viewList.find(i => i.id === oldId);
           const oldConnectToken = oldView.connectToken;
-          this._connectTokenSvc.exchange(oldConnectToken).then(newConnectToken => {
-            const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
-            this._viewSvc.addView(newView);
-            this.setViewActive(newView);
-          });
+
+          if (this.viewList.length >= 15) {
+            const msg = await this._i18nSvc.t('tabLimits');
+            const ok = window.confirm(msg);
+
+            if (ok) {
+              window.open(window.location.href, '_blank');
+            }
+          } else {
+            this._connectTokenSvc.exchange(oldConnectToken).then(newConnectToken => {
+              const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
+              this._viewSvc.addView(newView);
+              this.setViewActive(newView);
+            });
+          }
         }
       },
       {
