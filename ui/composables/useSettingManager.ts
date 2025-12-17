@@ -48,6 +48,45 @@ const ensureHydration = () => {
     try {
       const saved = await storage.load();
       Object.assign(state, saved);
+
+      const patch: Partial<UserSettingPersistedState> = {};
+
+      const normalizedMode = (() => {
+        const raw = (state.themeMode || "") as ThemeType;
+        if (raw === "withSystem" || raw === "dark" || raw === "light") return raw;
+
+        const legacyTheme = (state.theme || "") as ThemeType;
+        if (legacyTheme === "withSystem") return "withSystem";
+        if (state.followSystem) return "withSystem";
+        if (legacyTheme === "dark" || legacyTheme === "light") return legacyTheme;
+
+        return "" as ThemeType;
+      })();
+
+      if (normalizedMode !== (state.themeMode || "")) {
+        state.themeMode = normalizedMode;
+        patch.themeMode = normalizedMode;
+      }
+
+      const desiredFollowSystem
+        = normalizedMode === "withSystem"
+          ? true
+          : normalizedMode === "dark" || normalizedMode === "light"
+            ? false
+            : state.followSystem;
+
+      if (desiredFollowSystem !== state.followSystem) {
+        state.followSystem = desiredFollowSystem;
+        patch.followSystem = desiredFollowSystem;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        try {
+          await storage.patch(patch);
+        } catch (err) {
+          console.error("migrate user setting failed", err);
+        }
+      }
     } catch (err) {
       console.error("load user setting failed", err);
     } finally {
@@ -91,6 +130,11 @@ export const useSettingManager = () => {
   const setTheme = (t: ThemeType) => {
     state.theme = t;
     persist({ theme: t });
+  };
+
+  const setThemeMode = (m: ThemeType) => {
+    state.themeMode = m;
+    persist({ themeMode: m });
   };
 
   const setFollowSystem = (v: boolean) => {
@@ -187,6 +231,7 @@ export const useSettingManager = () => {
     setLang,
     setSort,
     setTheme,
+    setThemeMode,
     isHydrated,
     setLayouts,
     setCollapse,

@@ -16,7 +16,7 @@ const userInfoStore = useUserInfoStore();
 const { t, locales, locale } = useI18n();
 const { loggedIn, currentSite, userMap, currentUser } = storeToRefs(userInfoStore);
 
-const { setLang, theme, primaryColorLight, primaryColorDark } = useSettingManager();
+const { setLang, theme, themeMode, primaryColorLight, primaryColorDark } = useSettingManager();
 const { manualSetTheme, enableFollowSystem, followSystem, userTheme } = useThemeAdapter();
 const { applyPrimaryColor } = useColor();
 
@@ -43,7 +43,7 @@ const clearLoginBtnUnlockTimer = () => {
 
 const enableLoginBtnAfter = (ms: number) => {
   clearLoginBtnUnlockTimer();
-  
+
   loginBtnUnlockTimer = setTimeout(() => {
     loginBtn.value = false;
     loginBtnUnlockTimer = null;
@@ -86,6 +86,9 @@ const appearanceOptions = computed(() => [
 
 const selectedAppearance = computed<ThemeType>({
   get: () => {
+    const mode = (themeMode.value || "") as ThemeType;
+    if (mode === "withSystem" || mode === "dark" || mode === "light") return mode;
+
     if (followSystem.value) return "withSystem";
 
     const saved = (theme.value || "") as ThemeType;
@@ -384,7 +387,8 @@ const handleConfirm = async () => {
         description: raw || t("Login.LoginFailed"),
         color: "error",
         icon: "line-md:close-circle",
-        duration: 2000
+        progress: true,
+        duration: 4000
       });
       enableLoginBtnAfter(2000);
     }
@@ -428,7 +432,8 @@ onMounted(async () => {
       description,
       color: "error",
       icon: "line-md:close-circle",
-      duration: 2000
+      progress: true,
+      duration: 4000
     });
     enableLoginBtnAfter(2000);
 
@@ -464,7 +469,8 @@ onMounted(async () => {
       description,
       color: "error",
       icon: "line-md:close-circle",
-      duration: 2000
+      progress: true,
+      duration: 4000
     });
 
     enableLoginBtnAfter(2000);

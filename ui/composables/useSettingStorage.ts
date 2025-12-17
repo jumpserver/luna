@@ -11,6 +11,7 @@ export interface UserSettingPersistedState {
   collapse: boolean
   sort: SortType
   theme: ThemeType
+  themeMode: ThemeType
   followSystem: boolean
   layouts: LayoutsType
   fontFamily: string
@@ -35,6 +36,7 @@ const DEFAULT_STATE: UserSettingPersistedState = {
   collapse: false,
   sort: "name",
   theme: "" as ThemeType,
+  themeMode: "" as ThemeType,
   followSystem: false,
   layouts: "grid",
   fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial',

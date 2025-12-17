@@ -403,7 +403,9 @@ export const useAssetAction = () => {
             title: t("ConnectError.ConnectFailed"),
             description: t("ConnectError.AclFailed"),
             color: "error",
-            icon: "line-md:close-circle"
+            icon: "line-md:close-circle",
+            progress: true,
+            duration: 4000
           });
         }
 
@@ -411,7 +413,9 @@ export const useAssetAction = () => {
           title: t("ConnectError.ConnectFailed"),
           description: errorData.detail,
           color: "error",
-          icon: "line-md:close-circle"
+          icon: "line-md:close-circle",
+          progress: true,
+          duration: 4000
         });
       });
 
@@ -425,7 +429,9 @@ export const useAssetAction = () => {
           toast.add({
             title: t("ContextMenu.FavoriteSuccess"),
             color: "primary",
-            icon: "line-md:check-all"
+            icon: "line-md:check-all",
+            progress: false,
+            duration: 1000
           });
         }
       });
@@ -440,7 +446,9 @@ export const useAssetAction = () => {
           toast.add({
             title: t("ContextMenu.FavoriteFailed"),
             color: "error",
-            icon: "line-md:close-circle"
+            icon: "line-md:close-circle",
+            progress: true,
+            duration: 4000
           });
         }
       });
@@ -451,11 +459,14 @@ export const useAssetAction = () => {
         }
 
         const payload = event.payload as eventPayload;
+
         if (payload.status === "success") {
           toast.add({
             title: t("ContextMenu.UnfavoriteSuccess"),
             color: "primary",
-            icon: "line-md:check-all"
+            icon: "line-md:check-all",
+            progress: false,
+            duration: 1000
           });
         }
       });
@@ -470,7 +481,9 @@ export const useAssetAction = () => {
           toast.add({
             title: t("ContextMenu.UnfavoriteFailed"),
             color: "error",
-            icon: "line-md:close-circle"
+            icon: "line-md:close-circle",
+            progress: true,
+            duration: 4000
           });
         }
       });
@@ -549,7 +562,9 @@ export const useAssetAction = () => {
           title: t("AssetCard.RenameFail"),
           description: message || t("Common.OperationFailed"),
           color: "error",
-          icon: "line-md:close-circle"
+          icon: "line-md:close-circle",
+          progress: true,
+          duration: 4000
         });
       });
 
@@ -588,7 +603,9 @@ export const useAssetAction = () => {
           title: t("ConnectError.ConnectFailed"),
           description,
           color: "error",
-          icon: "line-md:close-circle"
+          icon: "line-md:close-circle",
+          progress: true,
+          duration: 4000
         });
       });
 

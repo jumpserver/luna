@@ -145,8 +145,7 @@ onMounted(async () => {
           title: t("Login.LoginSuccess"),
           color: "primary",
           icon: "line-md:check-all",
-          progress: false,
-          duration: 1000
+          progress: true
         });
 
         navigateTo("/");

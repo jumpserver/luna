@@ -297,6 +297,7 @@ export interface UserSettingPersistedState {
   collapse: boolean
   sort: SortType
   theme: ThemeType
+  themeMode: ThemeType
   followSystem: boolean
   layouts: LayoutsType
   fontFamily: string

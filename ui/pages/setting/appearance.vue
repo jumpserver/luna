@@ -4,9 +4,9 @@ import type { ThemeType } from "~/types";
 import { useSettingManager } from "~/composables/useSettingManager";
 
 interface FontItem {
-  id: string;
-  value: string;
-  label: string;
+  id: string
+  value: string
+  label: string
 }
 
 definePageMeta({
@@ -16,13 +16,14 @@ definePageMeta({
 const FALLBACK_FONTS = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial';
 
 const { t } = useI18n();
-const {
-  theme,
-  fontFamily,
-  primaryColorLight,
-  primaryColorDark,
-  hydrationPromise,
-  isHydrated,
+ const {
+    theme,
+    themeMode,
+    fontFamily,
+    primaryColorLight,
+    primaryColorDark,
+    hydrationPromise,
+    isHydrated,
   setFontFamily,
   setPrimaryColorLight,
   setPrimaryColorDark
@@ -42,6 +43,9 @@ const fontsItems = ref<FontItem[]>([
 
 const selectedAppearance = computed<ThemeType>({
   get: () => {
+    const mode = (themeMode.value || "") as ThemeType;
+    if (mode === "withSystem" || mode === "dark" || mode === "light") return mode;
+
     if (followSystem.value) return "withSystem";
 
     const saved = (theme.value || "") as ThemeType;

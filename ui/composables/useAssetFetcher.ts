@@ -254,7 +254,9 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
         title: t("Asset.GetAssetFailed"),
         description: "Organization information is missing",
         color: "error",
-        icon: "line-md:close-circle"
+        icon: "line-md:close-circle",
+        progress: true,
+        duration: 4000
       });
       return;
     }
@@ -288,7 +290,9 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
         title: t("Asset.GetAssetFailed"),
         description: e?.message || "invoke get_assets failed",
         color: "error",
-        icon: "line-md:close-circle"
+        icon: "line-md:close-circle",
+        progress: true,
+        duration: 4000
       });
     }
   }
@@ -345,7 +349,9 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
           title: t("Login.LoginAuthenticationExpired"),
           description: t("Login.LoginAuthenticationExpiredDescription"),
           color: "error",
-          icon: "line-md:close-circle"
+          icon: "line-md:close-circle",
+          progress: true,
+          duration: 4000
         });
 
         nextTick(() => {

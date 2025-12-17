@@ -8,10 +8,12 @@ export const useThemeAdapter = () => {
   const uiColorMode = useColorMode();
   const {
     theme: userTheme,
+    themeMode,
     followSystem,
     hydrationPromise,
     isHydrated,
     setTheme,
+    setThemeMode,
     setFollowSystem
   } = useSettingManager();
 
@@ -42,8 +44,12 @@ export const useThemeAdapter = () => {
   const initialTheme = async () => {
     await waitHydration();
 
-    const savedTheme = userTheme.value as Theme | "";
-    const follow = followSystem.value;
+    const savedMode = (themeMode.value || "") as string;
+    const modeIsWithSystem = savedMode === "withSystem";
+    const modeIsManual = savedMode === "dark" || savedMode === "light";
+
+    const follow = modeIsWithSystem ? true : modeIsManual ? false : followSystem.value;
+    const savedTheme = (modeIsManual ? savedMode : userTheme.value) as Theme | "";
 
     const osTheme = await currentWindow.theme();
 
@@ -57,9 +63,19 @@ export const useThemeAdapter = () => {
     currentOSTheme.value = osTheme;
 
     if (follow) {
+      if (themeMode.value !== "withSystem") {
+        setThemeMode("withSystem");
+      }
+      if (!followSystem.value) {
+        setFollowSystem(true);
+      }
       uiColorMode.preference = osTheme;
       setTheme(osTheme);
       return;
+    }
+
+    if (followSystem.value) {
+      setFollowSystem(false);
     }
 
     if (savedTheme) {
@@ -73,12 +89,14 @@ export const useThemeAdapter = () => {
 
   const manualSetTheme = (theme: Theme) => {
     setFollowSystem(false);
+    setThemeMode(theme as any);
     uiColorMode.preference = theme;
     setTheme(theme);
   };
 
   const enableFollowSystem = async () => {
     setFollowSystem(true);
+    setThemeMode("withSystem");
 
     const osTheme = (await currentWindow.theme()) || currentOSTheme.value;
 
@@ -107,7 +125,7 @@ export const useThemeAdapter = () => {
     currentWindow.onThemeChanged((event: Event<Theme>) => {
       currentOSTheme.value = event.payload;
 
-      if (followSystem.value) {
+      if (themeMode.value === "withSystem" || followSystem.value) {
         uiColorMode.preference = event.payload;
         setTheme(event.payload);
       }
@@ -116,6 +134,7 @@ export const useThemeAdapter = () => {
 
   return {
     userTheme,
+    themeMode,
     followSystem,
 
     initialTheme,
