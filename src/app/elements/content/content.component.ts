@@ -1,7 +1,7 @@
 import _ from 'lodash-es';
-import jQuery from 'jquery';
 import { View, ViewAction } from '@app/model';
 import { fromEvent, Subscription } from 'rxjs';
+import { I18nService } from '@app/services/i18n';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import {
   ViewService,
@@ -60,8 +60,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
 
   constructor(
     public _viewSvc: ViewService,
-    private _connectTokenSvc: ConnectTokenService,
+    private _i18nSvc: I18nService,
     private _settingSvc: SettingService,
+    private _connectTokenSvc: ConnectTokenService,
     private _drawerStateService: DrawerStateService
   ) {}
 
@@ -116,9 +117,20 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   onNewView(view) {
     this.scrollEnd();
     this.toggleMenu.emit();
-    setTimeout(() => {
-      this._viewSvc.addView(view);
-      this.setViewActive(view);
+
+    setTimeout(async () => {
+      // 如果已经打开了 15 个，那么弹出一个确认框，点击确认重新再一个新的浏览器 tab 下打开 luna 应用
+      if (this.viewList.length >= 15) {
+        const msg = await this._i18nSvc.t('tabLimits');
+        const ok = window.confirm(msg);
+
+        if (ok) {
+          window.open(window.location.href, '_blank');
+        }
+      } else {
+        this._viewSvc.addView(view);
+        this.setViewActive(view);
+      }
     }, 100);
   }
 
@@ -208,16 +220,26 @@ export class ElementContentComponent implements OnInit, OnDestroy {
       {
         title: 'Clone Connect',
         icon: 'fa-copy',
-        callback: () => {
+        callback: async () => {
           const id = this.rIdx + 1;
           const oldId = this.viewIds[this.rIdx];
           const oldView = this.viewList.find(i => i.id === oldId);
           const oldConnectToken = oldView.connectToken;
-          this._connectTokenSvc.exchange(oldConnectToken).then(newConnectToken => {
-            const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
-            this._viewSvc.addView(newView);
-            this.setViewActive(newView);
-          });
+
+          if (this.viewList.length >= 15) {
+            const msg = await this._i18nSvc.t('tabLimits');
+            const ok = window.confirm(msg);
+
+            if (ok) {
+              window.open(window.location.href, '_blank');
+            }
+          } else {
+            this._connectTokenSvc.exchange(oldConnectToken).then(newConnectToken => {
+              const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
+              this._viewSvc.addView(newView);
+              this.setViewActive(newView);
+            });
+          }
         }
       },
       {
@@ -227,7 +249,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
           const viewId = this.viewIds[this.rIdx];
           const currentView = this.viewList.find(i => i.id === viewId);
           this._drawerStateService.sendComponentMessage({
-            name: 'DRAWER_RECONNECT',
+            name: 'DRAWER_RECONNECT'
           });
           currentView.termComp.reconnect();
         }

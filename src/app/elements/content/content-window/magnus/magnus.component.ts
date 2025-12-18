@@ -112,8 +112,7 @@ export class ElementConnectorMagnusComponent implements OnInit {
         cli = `redis-cli` +
           ` -h ${host}` +
           ` -p ${port ? port : ''}` +
-          ` -a ${this.token.id}` +
-          `@${passwordHolder}`;
+          ` -a ${passwordHolder}`;
         break;
       case 'oracle':
         cli = `sqlplus` +

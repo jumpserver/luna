@@ -1,20 +1,21 @@
-import {Subscription} from 'rxjs';
-import {ActivatedRoute, Router} from '@angular/router';
-import {NzModalService} from 'ng-zorro-antd/modal';
-import {View, Account, AuthInfo, ConnectionToken, ConnectMethod, Endpoint} from '@app/model';
-import {Component, OnInit, OnDestroy, ElementRef, ViewChildren, QueryList} from '@angular/core';
-import {ElementACLDialogComponent} from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
+import { Subscription } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { View, Account, AuthInfo, ConnectionToken, ConnectMethod, Endpoint } from '@app/model';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChildren, QueryList } from '@angular/core';
+import { ElementACLDialogComponent } from '@src/app/services/connect-token/acl-dialog/acl-dialog.component';
 import {
   LogService,
   AppService,
   ViewService,
   I18nService,
   HttpService,
+  SettingService,
   DrawerStateService,
   IframeCommunicationService
 } from '@app/services';
-import {CookieService} from 'ngx-cookie-service';
-import {Protocol} from '@app/model';
+import { CookieService } from 'ngx-cookie-service';
+import { Protocol } from '@app/model';
 
 @Component({
   standalone: false,
@@ -32,8 +33,17 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   public isActive: boolean = true;
   public isTimerStopped: boolean = false;
   public showActionIcons: boolean = false;
+  public isTimerVisible: boolean = true;
+  public isTimerDragging: boolean = false;
+  public timerPosition: { x: number; y: number } | null = null;
   private readonly guiComponents: Set<string> = new Set(['lion', 'tinker', 'razor', 'panda']);
   private readonly terminalComponents: Set<string> = new Set(['koko', 'chen', 'magnus', 'nec']);
+  private readonly timerPositionStorageKey = 'luna.connect.timer.position';
+  private timerPointerId: number | null = null;
+  private timerDragStart: { x: number; y: number } | null = null;
+  private timerDragOffset: { x: number; y: number } | null = null;
+  private timerDragSize: { width: number; height: number } | null = null;
+  private timerStartRect: { left: number; top: number } | null = null;
 
   // 人脸在线相关
   private faceMonitorToken: string;
@@ -73,6 +83,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
     private _route: ActivatedRoute,
     private _router: Router,
     private _cookie: CookieService,
+    private _settingSvc: SettingService,
     private _dialog: NzModalService,
     private _drawerStateService: DrawerStateService,
     private _iframeCommunicationService: IframeCommunicationService
@@ -83,6 +94,8 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     this.view = null;
     this.isTimerStopped = false;
+    this.isTimerVisible = true;
+    this.loadTimerPosition();
 
     this.checkDirectMode();
 
@@ -111,7 +124,6 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
    * 检查是否为直连模式
    */
   private checkDirectMode() {
-
     if (this._route.snapshot.routeConfig?.path === 'admin-connect') {
       this.isAdminConnect = true;
     }
@@ -175,6 +187,24 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
     this.method = this.getMethodByProtocol(this.protocol);
   }
 
+  private buildDefaultConnectOption() {
+    const setting = this._settingSvc.setting || ({} as any);
+    const graphics = setting.graphics || {};
+    const commandLine = setting.command_line || {};
+
+    return {
+      resolution: (graphics.rdp_resolution || 'auto').toLowerCase(),
+      rdp_connection_speed: 'auto',
+      reusable: false,
+      token_reusable: false,
+      appletConnectMethod: graphics.applet_connection_method || 'web',
+      virtualappConnectMethod: graphics.applet_connection_method || 'web',
+      backspaceAsCtrlH: commandLine.is_backspace_as_ctrl_h ?? false,
+      charset: 'default',
+      disableautohash: false
+    };
+  }
+
   /**
    * 创建连接令牌（直连模式）
    */
@@ -195,13 +225,14 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
 
     this.connectData = {
       method: this.method,
-      protocol: {name: this.protocol},
+      protocol: { name: this.protocol },
       asset: this.permedAsset,
       account: this.account,
       autoLogin: true,
       input_username: this.account.username,
       connectMethod: this.connectMethod,
       manualAuthInfo: new AuthInfo(),
+      connectOption: this.buildDefaultConnectOption(),
       direct: true
     };
 
@@ -293,16 +324,22 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
         };
         return 'web_cli';
       case 'http':
-      case 'https':
-        this.connectMethod = {
-          component: 'lion',
-          type: 'web',
-          value: 'chrome',
-          label: 'Chrome',
-          endpoint_protocol: endpointProtocol,
-          disabled: false
-        };
-        return 'chrome';
+      case 'https': {
+        const connectMethods = this._appSvc.getProtocolConnectMethods(protocol) || [];
+        const preferredMethod = connectMethods[0];
+
+        if (preferredMethod) {
+          this.connectMethod = {
+            component: preferredMethod.component || 'lion',
+            type: preferredMethod.type || 'web',
+            value: preferredMethod.value || 'chrome',
+            label: preferredMethod.label || 'Chrome',
+            endpoint_protocol: preferredMethod.endpoint_protocol || endpointProtocol,
+            disabled: preferredMethod.disabled ?? false
+          };
+          return this.connectMethod.value;
+        }
+      }
       case 'rdp':
       case 'vnc':
         this.connectMethod = {
@@ -344,7 +381,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
         this.permedAsset,
         {
           ...this.connectData,
-          permed_protocol: {name: this.protocol},
+          permed_protocol: { name: this.protocol },
           connectMethod: this.connectMethod
         },
         this.connectToken,
@@ -413,7 +450,7 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
             nzContent: ElementACLDialogComponent,
             nzData: {
               asset: this.permedAsset,
-              connectData: {...this.connectData, direct: true},
+              connectData: { ...this.connectData, direct: true },
               code: error.error.code,
               tokenAction: 'create',
               error: error
@@ -479,6 +516,153 @@ export class PagesConnectComponent implements OnInit, OnDestroy {
    */
   private handleMouseMove(event: MouseEvent): void {
     this.showActionIcons = event.clientY <= 65;
+  }
+
+  public hideTimer(): void {
+    this.isTimerVisible = false;
+  }
+
+  public getTimerContainerStyle(): Record<string, string> {
+    if (!this.timerPosition) {
+      return {};
+    }
+    return {
+      left: `${this.timerPosition.x}px`,
+      top: `${this.timerPosition.y}px`,
+      right: 'auto',
+      bottom: 'auto',
+      transform: 'none'
+    };
+  }
+
+  public onTimerPointerDown(event: PointerEvent): void {
+    if (event.pointerType === 'mouse' && event.button !== 0) {
+      return;
+    }
+
+    const timerContainer = event.currentTarget as HTMLElement | null;
+    if (!timerContainer) {
+      return;
+    }
+
+    const rect = timerContainer.getBoundingClientRect();
+
+    this.timerPointerId = event.pointerId;
+    this.timerDragStart = { x: event.clientX, y: event.clientY };
+    this.timerDragOffset = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    this.timerDragSize = { width: rect.width, height: rect.height };
+    this.timerStartRect = { left: rect.left, top: rect.top };
+    this.isTimerDragging = false;
+
+    timerContainer.setPointerCapture(event.pointerId);
+  }
+
+  public onTimerPointerMove(event: PointerEvent): void {
+    if (this.timerPointerId !== event.pointerId) {
+      return;
+    }
+    if (
+      !this.timerDragStart ||
+      !this.timerDragOffset ||
+      !this.timerDragSize ||
+      !this.timerStartRect
+    ) {
+      return;
+    }
+
+    const dx = event.clientX - this.timerDragStart.x;
+    const dy = event.clientY - this.timerDragStart.y;
+    const dragThresholdPx = 3;
+
+    if (!this.isTimerDragging) {
+      if (Math.abs(dx) < dragThresholdPx && Math.abs(dy) < dragThresholdPx) {
+        return;
+      }
+      this.isTimerDragging = true;
+
+      if (!this.timerPosition) {
+        this.timerPosition = { x: this.timerStartRect.left, y: this.timerStartRect.top };
+      }
+    }
+
+    event.preventDefault();
+
+    const maxX = Math.max(0, window.innerWidth - this.timerDragSize.width);
+    const maxY = Math.max(0, window.innerHeight - this.timerDragSize.height);
+
+    const unclampedX = event.clientX - this.timerDragOffset.x;
+    const unclampedY = event.clientY - this.timerDragOffset.y;
+
+    this.timerPosition = {
+      x: Math.min(Math.max(0, unclampedX), maxX),
+      y: Math.min(Math.max(0, unclampedY), maxY)
+    };
+  }
+
+  public onTimerPointerUp(event: PointerEvent): void {
+    if (this.timerPointerId !== event.pointerId) {
+      return;
+    }
+
+    const timerContainer = event.currentTarget as HTMLElement | null;
+    if (timerContainer) {
+      try {
+        timerContainer.releasePointerCapture(event.pointerId);
+      } catch {}
+    }
+
+    if (this.isTimerDragging) {
+      this.persistTimerPosition();
+    }
+
+    this.timerPointerId = null;
+    this.timerDragStart = null;
+    this.timerDragOffset = null;
+    this.timerDragSize = null;
+    this.timerStartRect = null;
+    this.isTimerDragging = false;
+  }
+
+  private loadTimerPosition(): void {
+    try {
+      const raw = localStorage.getItem(this.timerPositionStorageKey);
+      if (!raw) {
+        return;
+      }
+      const parsed = JSON.parse(raw) as { x?: unknown; y?: unknown; w?: unknown; h?: unknown };
+      if (typeof parsed.x !== 'number' || typeof parsed.y !== 'number') {
+        return;
+      }
+
+      const width = typeof parsed.w === 'number' && parsed.w > 0 ? parsed.w : 0;
+      const height = typeof parsed.h === 'number' && parsed.h > 0 ? parsed.h : 0;
+
+      const maxX = width > 0 ? Math.max(0, window.innerWidth - width) : window.innerWidth;
+      const maxY = height > 0 ? Math.max(0, window.innerHeight - height) : window.innerHeight;
+
+      this.timerPosition = {
+        x: Math.min(Math.max(0, parsed.x), maxX),
+        y: Math.min(Math.max(0, parsed.y), maxY)
+      };
+    } catch {}
+  }
+
+  private persistTimerPosition(): void {
+    if (!this.timerPosition) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        this.timerPositionStorageKey,
+        JSON.stringify({
+          x: this.timerPosition.x,
+          y: this.timerPosition.y,
+          w: this.timerDragSize?.width ?? 0,
+          h: this.timerDragSize?.height ?? 0
+        })
+      );
+    } catch {}
   }
 
   /**
