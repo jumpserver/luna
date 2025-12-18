@@ -186,7 +186,7 @@ onBeforeUnmount(() => {
           </a>
         </p>
 
-        <UButton color="primary" variant="link" class="text-primary font-semibold" @click="back">
+        <UButton color="neutral" variant="link" class="font-semibold text-gray-300" @click="back">
           {{ t("Auth.Back") }}
         </UButton>
       </section>

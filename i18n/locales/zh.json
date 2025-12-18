@@ -30,7 +30,7 @@
   },
   "Auth": {
     "SignInTitle": "请在浏览器中完成登录",
-    "BrowserHintPrefix": "如果浏览器没有自动为你打开 JumpServer 登录页面，",
+    "BrowserHintPrefix": "如果浏览器没有自动为你打开 JumpServer 登录页面",
     "OpenManually": "手动打开",
     "CopyUrl": "复制登录地址",
     "Or": "或",
