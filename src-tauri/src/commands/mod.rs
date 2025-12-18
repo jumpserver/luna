@@ -4,6 +4,7 @@ pub mod get_assets;
 pub mod get_config;
 pub mod get_setting;
 pub mod get_token;
+pub mod get_version_message;
 pub mod list_system_fonts;
 pub mod logout;
 pub mod pull_up;

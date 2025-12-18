@@ -8,3 +8,4 @@ pub(crate) mod token;
 pub(crate) mod token_oauth;
 pub(crate) mod user;
 pub(crate) mod http_callback;
+pub(crate) mod version;

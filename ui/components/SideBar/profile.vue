@@ -6,6 +6,11 @@ import type { LangType, ThemeType, UserData } from "~/types/index";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
+interface VersionAlertPayload {
+  type: string;
+  version?: string;
+}
+
 const props = defineProps<{ collapse: boolean }>();
 
 const toast = useToast();
@@ -203,6 +208,53 @@ function normalizeSite(value: string): string {
   return s.replace(/\/+$/, "");
 }
 
+function normalizeVersionMessage(raw: string) {
+  if (raw === "incompatible") {
+    return { status: "incompatible" as const, versions: [] as string[] };
+  }
+
+  if (!raw) {
+    return { status: "list" as const, versions: [] as string[] };
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    const versions = Array.isArray(parsed)
+      ? parsed.map((item) => (item == null ? "" : String(item))).filter((v) => v.length > 0)
+      : [];
+    return { status: "list" as const, versions };
+  } catch {
+    return { status: "list" as const, versions: [] as string[] };
+  }
+}
+
+const emitVersionAlertAndCloseModal = (payload: VersionAlertPayload) => {
+  openModal.value = false;
+  loginBtn.value = false;
+  useEventBus().emit("versionAlert", payload);
+};
+
+const checkVersionBeforeOAuth = async (site: string) => {
+  const [rawVersionMessage, appVersion] = await Promise.all([
+    useTauriCoreInvoke<string>("get_version_message", { site }).catch(() => ""),
+    useTauriAppGetVersion().catch(() => "")
+  ]);
+
+  const { status: versionStatus, versions } = normalizeVersionMessage(rawVersionMessage);
+
+  if (versionStatus === "incompatible") {
+    emitVersionAlertAndCloseModal({ type: "incompatible" });
+    return false;
+  }
+
+  if (appVersion && versions.length > 0 && !versions.includes(appVersion)) {
+    emitVersionAlertAndCloseModal({ type: "noMatch", version: versions[versions.length - 1] });
+    return false;
+  }
+
+  return true;
+};
+
 /**
  * @description 打开登录页面
  */
@@ -366,6 +418,9 @@ const handleConfirm = async () => {
   try {
     clearLoginBtnUnlockTimer();
     loginBtn.value = true;
+    const ok = await checkVersionBeforeOAuth(normalizedSite);
+    if (!ok) return;
+
     await useTauriCoreInvoke("auth_login", {
       site: normalizedSite
     });

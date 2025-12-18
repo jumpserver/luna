@@ -13,6 +13,7 @@ use crate::commands::get_assets::get_assets;
 use crate::commands::get_config::get_config;
 use crate::commands::get_setting::get_setting;
 use crate::commands::get_token::get_connect_token;
+use crate::commands::get_version_message::get_version_message;
 use crate::commands::http_callback::init_http_callback_server;
 use crate::commands::list_system_fonts::list_system_fonts;
 use crate::commands::logout::logout;
@@ -160,6 +161,7 @@ pub fn run() {
             minimize_window,
             get_asset_detail,
             get_connect_token,
+            get_version_message,
             list_system_fonts,
             toggle_maximize_window,
             update_config_selection,

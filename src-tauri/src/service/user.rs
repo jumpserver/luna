@@ -32,12 +32,6 @@ impl UserService {
         get_with_response(&url, &self.bearer_token).await
     }
 
-    pub async fn get_version_message(&self) -> ApiResponse {
-        let url = format!("{}/api/v1/settings/client/versions/", self.origin);
-        log::info!("获取当前版本信息: {}", url);
-        get_with_response(&url, &self.bearer_token).await
-    }
-
     pub async fn get_xpack_message(&self) -> ApiResponse {
         let url = format!("{}/api/v1/settings/public/", self.origin);
         log::info!("获取当前public信息: {}", url);

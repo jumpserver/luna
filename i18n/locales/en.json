@@ -132,7 +132,7 @@
     "InvalidCertificateGeneric": "Login failed: certificate or secure connection issue.",
     "NetworkError": "Login failed: network error. Please check connectivity.",
     "VersionIncompatible": "The client version is incompatible with JumpServer versions earlier than v4.10.12-lts. Please download and use the v3.0.7 client.",
-    "VersionNoMatch": "The client version does not match the JumpServer version. Please download and use the v{version} client."
+    "VersionNoMatch": "The client version does not match the JumpServer version. Please download and use the v{version} client, or upgrade JumpServer to the latest version."
   },
   "Asset": {
     "GetAssetFailed": "Get asset failed, please refresh and try again"

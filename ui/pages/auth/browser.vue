@@ -67,17 +67,6 @@ function initSelectOrganization(permissionOrgData: PermissionOrgs) {
   return uniqueOrgs;
 }
 
-const handleVersions = (version: string[] | string, appVersion: string) => {
-  if (version === "incompatible") {
-    return { status: "incompatible" as const, match: false, versions: [] as string[] };
-  }
-
-  const versions = Array.isArray(version) ? version : [];
-  const match = versions.length > 0 ? versions.includes(appVersion) : true;
-
-  return { status: "list" as const, match, versions };
-};
-
 onMounted(async () => {
   unlistenAuth.value = await useTauriEventListen("auth_url", (event) => {
     const payload = (event?.payload || "").toString();
@@ -87,23 +76,8 @@ onMounted(async () => {
   });
 
   unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", async (event) => {
-    const { status, profile, bearer, version, current_org, resolved_site, permission_orgs, xpack_license_valid } =
-      event.payload as UserIntiInfo & { bearer: string };
-    const appVersion = await useTauriAppGetVersion().catch(() => "");
-
-    let versionMessage: string | string[] = version ?? "";
-
-    if (typeof version === "string" && version !== "incompatible" && version.length > 0) {
-      try {
-        versionMessage = JSON.parse(version);
-      } catch {
-        versionMessage = [];
-      }
-    } else if (version !== "incompatible") {
-      versionMessage = [];
-    }
-
-    const { status: vStatus, match: vMatch } = handleVersions(versionMessage, appVersion);
+    const { status, profile, bearer, current_org, resolved_site, permission_orgs, xpack_license_valid }
+      = event.payload as UserIntiInfo & { bearer: string };
 
     const profileData = JSON.parse((profile as any).data);
     const currentOrgData = JSON.parse((current_org as any).data);
@@ -112,14 +86,6 @@ onMounted(async () => {
     const resolvedSite = resolved_site || "";
 
     if (status === "success" && profileData) {
-      if (vStatus !== "incompatible" && !vMatch) {
-        useEventBus().emit("versionAlert", { type: "noMatch", version: versionMessage[versionMessage.length - 1] });
-      }
-
-      if (vStatus === "incompatible") {
-        useEventBus().emit("versionAlert", { type: "incompatible" });
-      }
-
       const availableOrgs = xpack_license_valid === false ? [] : initSelectOrganization(permissionOrgData);
 
       userInfoStore.setUserData(resolvedSite, {
@@ -164,7 +130,7 @@ onBeforeUnmount(() => {
   <div class="flex flex-col items-center justify-center px-6 py-10 h-full">
     <div class="flex flex-col items-center gap-6 rounded-3xl px-8 py-10 w-full max-w-xl border" :class="cardBgClass">
       <div class="flex flex-col items-center gap-3">
-        <img src="/logo.png" alt="logo" class="w-16 h-16 rounded-2xl" />
+        <img src="/logo.png" alt="logo" class="w-16 h-16 rounded-2xl">
       </div>
 
       <section class="text-center space-y-4 w-full">

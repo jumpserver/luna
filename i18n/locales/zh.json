@@ -130,7 +130,7 @@
     "InvalidCertificateGeneric": "登录失败：证书或安全连接异常。",
     "NetworkError": "登录失败：网络异常，请检查连接",
     "VersionIncompatible": "客户端与JumpServer 版本（< v4.10.12-lts）不匹配，请下载使用 v3.0.7 的客户端",
-    "VersionNoMatch": "客户端与 JumpServer 版本不匹配，请下载使用 v{version} 版本的客户端"
+    "VersionNoMatch": "客户端与 JumpServer 版本不匹配，请下载使用 v{version} 版本的客户端或将 JumpServer 更新至最新"
   },
   "Loading": {
     "Loading": "加载中",

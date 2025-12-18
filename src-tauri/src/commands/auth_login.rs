@@ -237,21 +237,12 @@ pub async fn auth_login(
 
         // 发起请求
         let user_service = UserService::new(site.clone(), access_token.clone());
-        let (profile, permission_orgs, current_org, xpack_message, version_message) = tokio::join!(
+        let (profile, permission_orgs, current_org, xpack_message) = tokio::join!(
             user_service.get_user_profile(),
             user_service.get_permission_orgs(),
             user_service.get_current_org(),
             user_service.get_xpack_message(),
-            user_service.get_version_message(),
         );
-
-        let version = if version_message.status == 200 && version_message.success {
-            version_message.data
-        } else if version_message.status == 404 {
-            "incompatible".to_string()
-        } else {
-            "".to_string()
-        };
 
         let license_valid = if xpack_message.status == 200 && xpack_message.success {
             serde_json::from_str::<Value>(&xpack_message.data)
@@ -270,7 +261,6 @@ pub async fn auth_login(
             "login-success-detected",
             serde_json::json!({
                 "status": "success",
-                "version": version,
                 "bearer": access_token,
                 "profile": profile,
                 "resolved_site": site,
