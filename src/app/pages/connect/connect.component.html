@@ -1,6 +1,32 @@
 <app-face-monitor *ngIf="isAdminConnect"></app-face-monitor>
 <elements-chat></elements-chat>
 
+<ng-template #timerWidget>
+  <div
+    *ngIf="isTimerVisible"
+    class="timer-container"
+    [class.dragging]="isTimerDragging"
+    [ngStyle]="getTimerContainerStyle()"
+    (pointerdown)="onTimerPointerDown($event)"
+    (pointermove)="onTimerPointerMove($event)"
+    (pointerup)="onTimerPointerUp($event)"
+    (pointercancel)="onTimerPointerUp($event)"
+  >
+    <div class="timer">
+      <div [class.active]="isActive" class="status-dot"></div>
+      <span class="time-value">{{ totalConnectTime }}</span>
+      <span
+        class="timer-close"
+        nz-icon
+        nzType="close"
+        nzTheme="outline"
+        (pointerdown)="$event.stopPropagation()"
+        (click)="hideTimer()"
+      ></span>
+    </div>
+  </div>
+</ng-template>
+
 <div #contentWindow *ngIf="isDirect">
   <div class="terminal-connect" *ngIf="view && isTerminalComponent()">
     <div *ngIf="isWebSftp()" style="height: 100%; width: 100%">
@@ -55,12 +81,7 @@
           </div>
         </div> -->
       </div>
-      <div class="timer-container">
-        <div class="timer">
-          <div [class.active]="isActive" class="status-dot"></div>
-          <span>{{ totalConnectTime }}</span>
-        </div>
-      </div>
+      <ng-container *ngTemplateOutlet="timerWidget"></ng-container>
       <nz-card class="terminal-card" [nzBordered]="false">
         <div class="card-content" style="height: 100%; overflow: hidden">
           <elements-content-window #contentWindow *ngIf="view" [view]="view">
@@ -71,12 +92,7 @@
   </div>
 
   <div class="gui" *ngIf="view && isGuiComponent()">
-    <div class="timer-container">
-      <div class="timer">
-        <div [class.active]="isActive" class="status-dot"></div>
-        <span>{{ totalConnectTime }}</span>
-      </div>
-    </div>
+    <ng-container *ngTemplateOutlet="timerWidget"></ng-container>
 
     <div class="action-icons" [class.show]="showActionIcons">
       <div class="close-icon" (click)="handleCloseConnect()">
@@ -156,12 +172,7 @@
             </div>
           </div>
         </div>
-        <div class="timer-container">
-          <div class="timer">
-            <div [class.active]="isActive" class="status-dot"></div>
-            <span>{{ totalConnectTime }}</span>
-          </div>
-        </div>
+        <ng-container *ngTemplateOutlet="timerWidget"></ng-container>
         <nz-card class="terminal-card" [nzBordered]="false">
           <div class="card-content" style="height: 100%; overflow: hidden">
             <elements-connect
@@ -176,12 +187,7 @@
     </div>
 
     <div class="gui" *ngIf="view && isGuiComponent()">
-      <div class="timer-container">
-        <div class="timer">
-          <div [class.active]="isActive" class="status-dot"></div>
-          <span>{{ totalConnectTime }}</span>
-        </div>
-      </div>
+      <ng-container *ngTemplateOutlet="timerWidget"></ng-container>
 
       <div class="action-icons" [class.show]="showActionIcons">
         <div class="close-icon" (click)="handleCloseConnect()">

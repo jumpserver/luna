@@ -3,6 +3,13 @@
   bottom: 40px;
   right: 30px;
   z-index: 999999;
+  touch-action: none;
+
+  &.dragging {
+    .timer {
+      cursor: grabbing;
+    }
+  }
 
   .timer {
     display: flex;
@@ -14,8 +21,10 @@
     font-family: monospace;
     font-size: 14px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    cursor: grab;
+    user-select: none;
 
-    span {
+    .time-value {
       margin-left: 4px;
     }
 
@@ -29,6 +38,23 @@
 
       &.active {
         animation: blink 1s infinite;
+      }
+    }
+
+    .timer-close {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 8px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      cursor: pointer;
+      color: rgba(255, 255, 255, 0.9);
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.15);
+        color: rgba(255, 255, 255, 1);
       }
     }
   }
