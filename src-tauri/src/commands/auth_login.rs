@@ -63,7 +63,12 @@ pub async fn auth_login(
         "{}/core/auth/oauth2-provider/.well-known/oauth-authorization-server",
         site
     );
-    let response = match reqwest::get(config_url).await {
+    let config_http_client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .expect("Client no build");
+
+    let response = match config_http_client.get(config_url).send().await {
         Ok(resp) => resp,
         Err(e) => {
             let msg = format!("Failed to fetch OAuth config: {}", e);
@@ -191,6 +196,7 @@ pub async fn auth_login(
 
         let http_client = reqwest::ClientBuilder::new()
             .redirect(reqwest::redirect::Policy::none())
+            .danger_accept_invalid_certs(true)
             .build()
             .expect("Client no build");
 
