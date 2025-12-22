@@ -91,24 +91,9 @@ func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
 			return nil
 		}
 	}
-	connectMap := map[string]string{
-		"file":     filePath,
-		"name":     r.getName(),
-		"protocol": r.Protocol,
-		"username": r.getUserName(),
-		"value":    r.Value,
-		"host":     r.Host,
-		"port":     strconv.Itoa(r.Port),
-	}
-	commands := strings.TrimSpace(getCommandFromArgs(connectMap, appItem.ArgFormat))
 
-	if strings.Contains(commands, "*") {
-		commands := strings.Split(commands, "*")
-		return exec.Command(appPath, commands...)
-	} else {
-		commands := strings.Split(commands, " ")
-		return exec.Command(appPath, commands...)
-	}
+	args := strings.Replace(appItem.ArgFormat, "{file}", filePath, 1)
+	return exec.Command(appPath, args)
 }
 
 func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
