@@ -350,4 +350,22 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   onItemDropped(event: CdkDragDrop<string[]>) {
     moveItemInArray(this.viewIds, event.previousIndex, event.currentIndex);
   }
+
+  handleFullscreen() {
+    const ele: any = document.getElementsByClassName('window active')[0];
+
+    if (!ele) return;
+
+    const requestFullscreen =
+      ele.requestFullscreen ||
+      ele.webkitRequestFullscreen ||
+      ele.mozRequestFullScreen ||
+      ele.msRequestFullscreen;
+
+    if (!requestFullscreen) {
+      throw new Error('不支持全屏api');
+    }
+
+    requestFullscreen.call(ele);
+  }
 }
