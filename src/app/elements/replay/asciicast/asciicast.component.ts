@@ -165,7 +165,7 @@ export class ElementReplayAsciicastComponent implements OnInit, OnDestroy {
     this.destroyPlayer();
   }
 
-  destroyPlayer(recreateHost: boolean = false) {
+  destroyPlayer() {
     clearInterval(this.timer);
     this.timer = null;
     if (this.player && typeof this.player.pause === 'function') {
@@ -174,17 +174,12 @@ export class ElementReplayAsciicastComponent implements OnInit, OnDestroy {
     const el = document.getElementById('screen');
     if (el) {
       asciinema.player.js.UnmountPlayer(el);
-      if (recreateHost && el.parentElement) {
-        const newEl = document.createElement('div');
-        newEl.id = 'screen';
-        el.parentElement.replaceChild(newEl, el);
-      }
     }
     this.player = null;
   }
 
   resetPlayer() {
-    this.destroyPlayer(true);
+    this.destroyPlayer();
     this.player = this.createPlayer();
   }
 
