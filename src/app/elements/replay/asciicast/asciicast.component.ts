@@ -186,7 +186,15 @@ export class ElementReplayAsciicastComponent implements OnInit {
     const startPlayTime = new Date(this.replay.date_start).getTime() / 1000;
     const instructStartTime = (item.timestamp - 5) - startPlayTime;
     const time = instructStartTime > 0 ? instructStartTime : 0;
+
     this.startAt = time;
+
+    // 将重建播放器变为复用原有播放器实例，只是重置了时间
+    if (this.player && typeof this.player.setCurrentTime === 'function') {
+      this.player.setCurrentTime(time);
+      return;
+    }
+
     this.resetPlayer();
   }
 }
