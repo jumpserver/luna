@@ -151,11 +151,6 @@ jobs:
           node-version: "23"
           cache: pnpm
 
-      - name: Update version numbers
-        env:
-          VERSION: ${{ env.VERSION }}
-        run: npm run set_version
-
       - name: Setup Apple Certificate
         if: startsWith(matrix.platform, 'macos')
         env:
