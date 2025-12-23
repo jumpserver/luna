@@ -1,4 +1,4 @@
-import {Component, OnInit, Input} from '@angular/core';
+import {Component, OnInit, OnDestroy, Input} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import 'rxjs/add/operator/filter';
 import {Replay, Command} from '@app/model';
@@ -12,7 +12,7 @@ declare var asciinema: any;
   templateUrl: './asciicast.component.html',
   styleUrls: ['./asciicast.component.scss']
 })
-export class ElementReplayAsciicastComponent implements OnInit {
+export class ElementReplayAsciicastComponent implements OnInit, OnDestroy {
 
   @Input() replay: Replay;
   player: any;
@@ -29,6 +29,11 @@ export class ElementReplayAsciicastComponent implements OnInit {
   startTimeStamp = null;
   commands: Command[];
   page = 0;
+  speedChangeTimer: any;
+  pendingSpeedDelta: number = 0;
+  restartTimer: any;
+  speedChangeDebounceMs: number = 200;
+  restartDebounceMs: number = 200;
 
   constructor(private route: ActivatedRoute, private _http: HttpService) {
     this.startAt = 0;
@@ -65,26 +70,42 @@ export class ElementReplayAsciicastComponent implements OnInit {
   }
 
   speedDown() {
-    if (this.speed <= 1) {
-      return
+    if (this.speed + this.pendingSpeedDelta <= 1) {
+      return;
     }
-    this.speed--;
-    this.currentTime = this.player.getCurrentTime();
-    this.resetPlayer();
-    this.player.setCurrentTime(this.currentTime);
-    this.isPlaying = true;
-    this.player.play();
-    this.createTimer();
+    this.queueSpeedChange(-1);
   }
 
   speedUp() {
-    this.speed++;
-    this.currentTime = this.player.getCurrentTime();
-    this.resetPlayer();
-    this.player.setCurrentTime(this.currentTime);
-    this.isPlaying = true;
-    this.player.play();
-    this.createTimer();
+    this.queueSpeedChange(1);
+  }
+
+  queueSpeedChange(delta: number) {
+    this.pendingSpeedDelta += delta;
+    clearTimeout(this.restartTimer);
+    this.restartTimer = null;
+    clearTimeout(this.speedChangeTimer);
+    this.speedChangeTimer = setTimeout(() => {
+      this.speedChangeTimer = null;
+      const nextSpeed = Math.max(1, this.speed + this.pendingSpeedDelta);
+      this.pendingSpeedDelta = 0;
+      if (nextSpeed === this.speed) {
+        return;
+      }
+      if (!this.player) {
+        this.speed = nextSpeed;
+        return;
+      }
+      this.currentTime = this.player.getCurrentTime();
+      this.speed = nextSpeed;
+      this.resetPlayer();
+      if (this.player && typeof this.player.setCurrentTime === 'function') {
+        this.player.setCurrentTime(this.currentTime);
+      }
+      this.isPlaying = true;
+      this.player.play();
+      this.createTimer();
+    }, this.speedChangeDebounceMs);
   }
 
   toggle() {
@@ -112,19 +133,53 @@ export class ElementReplayAsciicastComponent implements OnInit {
   }
 
   restart() {
-    this.startAt = 0;
-    this.speed = 2;
     this.isPlaying = true;
-    this.resetPlayer();
+    this.pendingSpeedDelta = 0;
+    clearTimeout(this.speedChangeTimer);
+    this.speedChangeTimer = null;
+    this.queueRestart();
   }
 
-  resetPlayer() {
+  queueRestart() {
+    clearTimeout(this.restartTimer);
+    this.restartTimer = setTimeout(() => {
+      this.restartTimer = null;
+      this.startAt = 0;
+      if (this.player && typeof this.player.setCurrentTime === 'function') {
+        this.player.setCurrentTime(0);
+        if (this.isPlaying) {
+          this.player.play();
+        }
+        return;
+      }
+      this.resetPlayer();
+    }, this.restartDebounceMs);
+  }
+
+  ngOnDestroy() {
+    clearTimeout(this.speedChangeTimer);
+    clearTimeout(this.restartTimer);
+    this.speedChangeTimer = null;
+    this.restartTimer = null;
+    this.pendingSpeedDelta = 0;
+    this.destroyPlayer();
+  }
+
+  destroyPlayer() {
     clearInterval(this.timer);
-    if (this.player) {
+    this.timer = null;
+    if (this.player && typeof this.player.pause === 'function') {
       this.player.pause();
     }
     const el = document.getElementById('screen');
-    asciinema.player.js.UnmountPlayer(el);
+    if (el) {
+      asciinema.player.js.UnmountPlayer(el);
+    }
+    this.player = null;
+  }
+
+  resetPlayer() {
+    this.destroyPlayer();
     this.player = this.createPlayer();
   }
 
@@ -186,7 +241,15 @@ export class ElementReplayAsciicastComponent implements OnInit {
     const startPlayTime = new Date(this.replay.date_start).getTime() / 1000;
     const instructStartTime = (item.timestamp - 5) - startPlayTime;
     const time = instructStartTime > 0 ? instructStartTime : 0;
+
     this.startAt = time;
+
+    // 将重建播放器变为复用原有播放器实例，只是重置了时间
+    if (this.player && typeof this.player.setCurrentTime === 'function') {
+      this.player.setCurrentTime(time);
+      return;
+    }
+
     this.resetPlayer();
   }
 }
