@@ -228,6 +228,32 @@ function normalizeVersionMessage(raw: string) {
   }
 }
 
+function normalizeMajorMinor(version: string) {
+  const cleaned = (version || "").trim();
+  if (!cleaned) return "";
+
+  const parts = cleaned.split(".");
+  const major = (parts[0] || "").replace(/\D/g, "");
+  if (!major) return "";
+
+  const minor = (parts[1] || "").replace(/\D/g, "");
+  return minor ? `${major}.${minor}` : major;
+}
+
+function normalizeMajorMinorList(versions: string[]) {
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  for (const version of versions) {
+    const value = normalizeMajorMinor(version);
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    normalized.push(value);
+  }
+
+  return normalized;
+}
+
 const emitVersionAlertAndCloseModal = (payload: VersionAlertPayload) => {
   openModal.value = false;
   loginBtn.value = false;
@@ -247,7 +273,15 @@ const checkVersionBeforeOAuth = async (site: string) => {
     return false;
   }
 
-  if (appVersion && versions.length > 0 && !versions.includes(appVersion)) {
+  const normalizedAppVersion = normalizeMajorMinor(appVersion);
+  const normalizedVersions = normalizeMajorMinorList(versions);
+
+  if (normalizedAppVersion && normalizedVersions.length > 0) {
+    if (!normalizedVersions.includes(normalizedAppVersion)) {
+      emitVersionAlertAndCloseModal({ type: "noMatch", version: versions[versions.length - 1] });
+      return false;
+    }
+  } else if (appVersion && versions.length > 0 && !versions.includes(appVersion)) {
     emitVersionAlertAndCloseModal({ type: "noMatch", version: versions[versions.length - 1] });
     return false;
   }
