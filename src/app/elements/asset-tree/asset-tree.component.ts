@@ -90,6 +90,7 @@ export class ElementAssetTreeComponent implements OnInit {
   trees: Array<Tree> = [];
   assetTreeChecked = [];
   rMenuList: any[] = [];
+  maxAllowExpandAllNodeTotal = 20; // 展开节点的子节点总数小于此值时，允许展开所有子节点
 
   constructor(
     private _appSvc: AppService,
@@ -112,6 +113,8 @@ export class ElementAssetTreeComponent implements OnInit {
       return [];
     }
     const cnode = this.rightClickSelectNode;
+    // 当前节点下的子节点总数
+    const cnodeChildrenTotal = cnode?.meta?.data?.children_count_total ?? 0;
     const tree = this.rightClickSelectNode.ztree;
     const checkedNodes = tree.getCheckedNodes(true);
     const checkedLeafs = checkedNodes.filter(node => !node.isParent);
@@ -171,7 +174,7 @@ export class ElementAssetTreeComponent implements OnInit {
         id: 'expand-all',
         name: 'Expand all',
         fa: 'fa-expand',
-        hide: !cnode.isParent || cnode.open,
+        hide: !cnode.isParent || cnode.open || cnodeChildrenTotal > this.maxAllowExpandAllNodeTotal,
         click: this.onMenuExpandAllChildren.bind(this)
       },
       {
@@ -256,12 +259,14 @@ export class ElementAssetTreeComponent implements OnInit {
     this.assetTreeChecked = ztree.getCheckedNodes().filter(i => !i.isParent);
   }
 
-  async initAssetTree(refresh = false) {
+  async initAssetTree(refresh = false, search = '') {
     const config = {
       refresh,
       showFavoriteAssets: true,
-      url: '/api/v1/perms/users/self/nodes/all-with-assets/tree/',
-      asyncUrl: '/api/v1/perms/users/self/nodes/children-with-assets/tree/?'
+      url: `/api/v1/perms/users/self/nodes/children/tree/?search=${search}`,
+      asyncUrl: `/api/v1/perms/users/self/nodes/children/tree/?search=${search}`,
+      // url: '/api/v1/perms/users/self/nodes/all-with-assets/tree/',
+      // asyncUrl: '/api/v1/perms/users/self/nodes/children-with-assets/tree/?'
     };
     const tree = new Tree('AssetTree', 'My assets', false, true, true, true, config);
     if (!refresh) {
@@ -359,6 +364,7 @@ export class ElementAssetTreeComponent implements OnInit {
 
   async initTreeInfo(tree: Tree, config: InitTreeConfig) {
     tree.inited = true;
+
     if (config.refresh) {
       tree = this.trees.find(t => t.name === tree.name);
     }
@@ -370,43 +376,26 @@ export class ElementAssetTreeComponent implements OnInit {
       });
     }
     tree.loading = true;
-    const request = this._http.get(url, { observe: 'response' });
-    request.subscribe(
-      resp => {
-        // 如果是刷新，需要先销毁原来的树, 重新初始化
+    this._http.get(url).subscribe({
+      next: (next) => {
         if (config.refresh) {
+          // 如果是刷新，需要先销毁原来的树, 重新初始化
           tree.ztree.expandAll(false);
           tree.ztree.destroy();
         }
-        const body = resp.body;
-        const headers = resp.headers;
-        setTimeout(() => {
-          // 新的 api 支持树的分页
-          const offset = headers.get('X-JMS-TREE-OFFSET');
-          if (offset && offset !== '0') {
-            const parents = body.filter(node => node.isParent);
-            for (const node of parents) {
-              node.meta._name = node.name;
-              node.name = node.name.replace(/\(\d+\)$/, '(-)');
-            }
-            setTimeout(() => {
-              tree.complete = false;
-              this.getOffsetTreeNodes(body, url, resp.headers, tree);
-            }, 100);
-          }
-          tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, body);
-        }, 100);
+        const body = next.body;
+        tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, body);
       },
-      error => {
+      error: (error) => {
         if (error.status === 400) {
           alert(error.error.detail);
         }
         this._logger.error('Get tree error: ', error);
       },
-      () => {
+      complete: () => {
         tree.loading = false;
       }
-    );
+    });
   }
 
   isTreeCheckEnabled(tree) {
@@ -490,50 +479,47 @@ export class ElementAssetTreeComponent implements OnInit {
     return this.favoriteAssets.indexOf(assetId) !== -1;
   }
 
-  reAsyncChildNodes(treeId, treeNode, silent) {
-    if (treeNode && treeNode.isParent && treeNode.children) {
-      for (let i = 0; i < treeNode.children.length; i++) {
-        const childNode = treeNode.children[i];
-        const self = this;
-        const targetTree = $.fn.zTree.getZTreeObj(treeId);
-        targetTree.reAsyncChildNodesPromise(childNode, 'no', silent).then(() => {
-          self.reAsyncChildNodes(treeId, childNode, silent);
-        });
-      }
-    }
-  }
-
   onMenuExpandAllChildren(event, tree) {
     const ztree = this.rightClickSelectNode.ztree;
-    this.expandAllChildren(ztree.setting.treeId, this.rightClickSelectNode, true);
+    this.expandAllChildren(ztree.setting.treeId, this.rightClickSelectNode);
   }
 
-  expandAllChildren(treeId, treeNode, expandFlag) {
-    if (expandFlag === treeNode.open) {
+  expandAllChildren(treeId, treeNode) {
+    if (treeNode.open) {
       return;
     }
-    // 异步加载时需要加载全部子节点
+    if (!treeNode.isParent) {
+      return;
+    }
     const self = this;
     const ztree = $.fn.zTree.getZTreeObj(treeId);
-    const treeIsAsync = ztree.setting.async.enable;
-    const hasChildren = treeNode.children && treeNode.children.length > 0;
-    if (!hasChildren && treeIsAsync) {
-      ztree.reAsyncChildNodesPromise(treeNode, 'no', false).then(() => {
-        this.reAsyncChildNodes(treeId, treeNode, false);
-      });
-    } else {
-      // 展开时递归展开，防止用户手动展开子级折叠后无法再次展开孙子级
-      if (expandFlag) {
-        ztree.expandNode(treeNode, expandFlag, false, false, false);
-        if (treeNode.children && treeNode.children.length > 0) {
-          treeNode.children.forEach(function (childNode) {
-            self.expandAllChildren(treeId, childNode, expandFlag);
-          });
-        }
-      } else {
-        ztree.expandNode(treeNode, expandFlag, true, false, false);
-      }
+    const loaded = treeNode.children && treeNode.children.length > 0;
+    if (!loaded) {
+      // 未加载过子节点，先异步加载子节点
+      this.asyncLoadChildNodesPromise(treeId, treeNode);
+      return
     }
+
+    // 已加载
+    // 展开当前节点
+    ztree.expandNode(treeNode, true, false, false, false);
+    const children = (treeNode.children || []).filter(child => child.isParent)
+    children.forEach(childNode => { 
+      self.expandAllChildren(treeId, childNode);
+    });
+  }
+
+  asyncLoadChildNodesPromise(treeId, treeNode) {
+    const self = this;
+    const ztree = $.fn.zTree.getZTreeObj(treeId);
+    ztree.reAsyncChildNodesPromise(treeNode, 'no', false).then(() => {
+      if (treeNode && treeNode.isParent && treeNode.children) {
+        let children = (treeNode.children || []).filter(child => child.isParent)
+        for (const childNode of children) {
+          self.asyncLoadChildNodesPromise(treeId, childNode);
+        }
+      };
+    });
   }
 
   onRightClick(event, treeId, treeNode) {
@@ -593,162 +579,12 @@ export class ElementAssetTreeComponent implements OnInit {
     }
   }
 
-  filterAssets(keyword, tree) {
-    if (this.isLoadTreeAsync) {
-      this._logger.debug('Filter assets server');
-      this.filterAssetsServer(keyword, tree.ztree);
-    } else {
-      this._logger.debug('Filter assets local');
-      this.filterAssetsLocal(keyword, tree.ztree);
-    }
-  }
-
-  _filterZTree(keyword, tree, filterCallback) {
-    const searchNode = tree.getNodesByFilter(node => node.id === 'search');
-    if (searchNode) {
-      tree.removeNode(searchNode[0]);
-    }
-
-    const nodes = tree.transformToArray(tree.getNodes());
-    if (!keyword) {
-      if (tree.hiddenNodes) {
-        tree.showNodes(tree.hiddenNodes);
-        tree.hiddenNodes = null;
-      }
-      if (tree.expandNodes) {
-        tree.expandNodes.forEach(node => {
-          if (node.id !== nodes[0].id) {
-            tree.expandNode(node, false);
-          }
-        });
-        tree.expandNodes = null;
-      }
-      return null;
-    }
-    let shouldShow = [];
-    const matchedNodes = tree.getNodesByFilter(filterCallback);
-
-    if (matchedNodes.length < 1) {
-      let name = this._i18n.instant('Search');
-      const assetsAmount = matchedNodes.length;
-      name = `${name} (${assetsAmount})`;
-      const newNode = {
-        id: 'search',
-        name: name,
-        isParent: true,
-        open: true
-      };
-      tree.addNodes(null, newNode);
-    }
-
-    matchedNodes.forEach(node => {
-      const parents = this.recurseParent(node);
-      const children = this.recurseChildren(node);
-      shouldShow = [...shouldShow, ...parents, ...children, node];
-    });
-    tree.hiddenNodes = nodes;
-    tree.expandNodes = shouldShow;
-    tree.hideNodes(nodes);
-    tree.showNodes(shouldShow);
-    shouldShow.forEach(node => {
-      if (node.isParent) {
-        tree.expandNode(node, true);
-      }
-    });
-  }
-
   filterAssetsServer(keyword, ztree) {
     if (!ztree) {
       return;
     }
-    let searchNode = ztree.getNodesByFilter(node => node.id === 'search');
-    if (searchNode) {
-      ztree.removeChildNodes(searchNode[0]);
-      ztree.removeNode(searchNode[0]);
-    }
-    const treeNodes = ztree.getNodes();
-    if (!keyword) {
-      if (treeNodes.length !== 0) {
-        ztree.showNodes(treeNodes);
-      }
-      return;
-    }
     this.filterAssetCancel$.next(true);
-    if (treeNodes.length !== 0) {
-      ztree.hideNodes(treeNodes);
-    }
-    this._http
-      .getMyGrantedAssets(keyword)
-      .pipe(takeUntil(this.filterAssetCancel$))
-      .subscribe(nodes => {
-        let name = this._i18n.instant('Search');
-        const assetsAmount = nodes.length;
-        name = `${name} (${assetsAmount})`;
-        const newNode = { id: 'search', name: name, isParent: true, open: true, zAsync: true };
-        searchNode = ztree.addNodes(null, newNode)[0];
-        searchNode.zAsync = true;
-        const nodesGroupByOrg = groupBy(nodes, node => {
-          return node.meta.data.org_name;
-        });
-        nodesGroupByOrg.forEach(item => {
-          const orgName = item[0].meta.data.org_name;
-          const orgNodeData = {
-            id: orgName,
-            name: orgName,
-            isParent: true,
-            open: true,
-            zAsync: true
-          };
-          const orgNode = ztree.addNodes(searchNode, orgNodeData)[0];
-          orgNode.zAsync = true;
-          ztree.addNodes(orgNode, item);
-        });
-        searchNode.open = true;
-      });
-    return;
-  }
-
-  filterAssetsLocal(keyword, ztree) {
-    if (!ztree) {
-      return null;
-    }
-    const filterAssetsCallback = (node: TreeNode) => {
-      if (node.isParent) {
-        return false;
-      }
-      const host = node.meta.data;
-      return (
-        host.name.toLowerCase().indexOf(keyword.toLowerCase()) !== -1 ||
-        host.address.indexOf(keyword.toLowerCase()) !== -1
-      );
-    };
-    return this._filterZTree(keyword, ztree, filterAssetsCallback);
-  }
-
-  recurseParent(node) {
-    const parentNode = node.getParentNode();
-    if (parentNode && parentNode.pId) {
-      return [parentNode, ...this.recurseParent(parentNode)];
-    } else if (parentNode) {
-      return [parentNode];
-    } else {
-      return [];
-    }
-  }
-
-  recurseChildren(node) {
-    if (!node.isParent) {
-      return [];
-    }
-    const children = node.children;
-    if (!children) {
-      return [];
-    }
-    let allChildren = [];
-    children.forEach(n => {
-      allChildren = [...children, ...this.recurseChildren(n)];
-    });
-    return allChildren;
+    this.initAssetTree(true, keyword);
   }
 
   treeSearch(event, tree: Tree) {
@@ -771,7 +607,7 @@ export class ElementAssetTreeComponent implements OnInit {
       e.stopPropagation();
       const value = e.target.value || '';
       vm.searchValue = value;
-      vm.filterAssets(value, tree);
+      vm.filterAssetsServer(value, tree.ztree);
     }, 450);
   }
 
