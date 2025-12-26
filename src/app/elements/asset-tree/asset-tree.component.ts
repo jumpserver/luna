@@ -260,13 +260,16 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   async initAssetTree(refresh = false, search = '') {
+    let treeUrl = `/api/v1/perms/users/self/nodes/children/tree/?assets=1`;
+    if (search) {
+      treeUrl = treeUrl + `&search=${search}`;
+    }
     const config = {
       refresh,
       showFavoriteAssets: true,
-      url: `/api/v1/perms/users/self/nodes/children/tree/?search=${search}`,
-      asyncUrl: `/api/v1/perms/users/self/nodes/children/tree/?search=${search}`,
-      // url: '/api/v1/perms/users/self/nodes/all-with-assets/tree/',
-      // asyncUrl: '/api/v1/perms/users/self/nodes/children-with-assets/tree/?'
+      url: treeUrl,
+      asyncUrl: treeUrl,
+      search: search,
     };
     const tree = new Tree('AssetTree', 'My assets', false, true, true, true, config);
     if (!refresh) {
@@ -300,39 +303,6 @@ export class ElementAssetTreeComponent implements OnInit {
     } else {
       this.initTreeInfo(tree, config).then();
     }
-  }
-
-  getOffsetTreeNodes(body, url, headers: HttpHeaders, tree) {
-    const offset = headers.get('X-JMS-TREE-OFFSET');
-    const options = {
-      observe: 'response',
-      params: { offset: offset }
-    };
-    const treeObj = tree.ztree;
-    this._http.get(url, options).subscribe(
-      resp => {
-        const newBody = resp.body;
-        const newHeaders = resp.headers;
-        if (newBody.length === 0) {
-          tree.complete = true;
-          const parents = treeObj.getNodesByParam('isParent', true);
-          for (const node of parents) {
-            node.name = node.meta._name;
-            treeObj.updateNode(node);
-          }
-          return;
-        }
-        const grouped = _.groupBy(newBody, 'pId');
-        Object.entries(grouped).forEach(([key, value]) => {
-          const parent = treeObj.getNodeByParam('id', key);
-          treeObj.addNodes(parent, -1, value, true);
-        });
-        return this.getOffsetTreeNodes(body, url, newHeaders, tree);
-      },
-      error => {
-        this._logger.error('Get tree error: ', error);
-      }
-    );
   }
 
   cleanupTreeSetting(config: InitTreeConfig) {
@@ -375,15 +345,15 @@ export class ElementAssetTreeComponent implements OnInit {
         this.favoriteAssets = resp.map(i => i.asset);
       });
     }
+
     tree.loading = true;
     this._http.get(url).subscribe({
-      next: (next) => {
+      next: (body) => {
         if (config.refresh) {
           // 如果是刷新，需要先销毁原来的树, 重新初始化
           tree.ztree.expandAll(false);
           tree.ztree.destroy();
         }
-        const body = next.body;
         tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, body);
       },
       error: (error) => {

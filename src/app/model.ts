@@ -534,6 +534,7 @@ export class InitTreeConfig {
   setting?: any = {};
   showFavoriteAssets?: boolean = false;
   asyncUrl?: string;
+  search?: string = '';
 }
 
 export class Ticket {
