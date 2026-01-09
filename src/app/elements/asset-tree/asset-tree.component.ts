@@ -273,11 +273,11 @@ export class ElementAssetTreeComponent implements OnInit {
   async initTypeTree(refresh = false) {
     const config = {
       refresh,
-      url: '/api/v1/perms/users/self/nodes/children-with-assets/category/tree/?sync=1',
+      url: '/api/v1/perms/users/self/nodes/children-with-assets/category/tree/sync/',
       asyncUrl: '/api/v1/perms/users/self/nodes/children-with-assets/category/tree/',
       setting: {
         async: {
-          autoParam: ['type', 'category']
+          autoParam: ['id=key', 'type', 'category']
         }
       }
     };
@@ -680,7 +680,7 @@ export class ElementAssetTreeComponent implements OnInit {
       ztree.hideNodes(treeNodes);
     }
     this._http
-      .getMyGrantedAssets(keyword)
+      .filterMyGrantedNodesAndAssets(keyword)
       .pipe(takeUntil(this.filterAssetCancel$))
       .subscribe(nodes => {
         let name = this._i18n.instant('Search');

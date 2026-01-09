@@ -147,8 +147,8 @@ export class HttpService {
     return this.delete<_User>(url);
   }
 
-  getMyGrantedAssets(keyword) {
-    const url = `/api/v1/perms/users/self/assets/tree/?search=${keyword}`;
+  filterMyGrantedNodesAndAssets(keyword) {
+    const url = `/api/v1/perms/users/self/nodes/children-with-assets/tree/?search=${keyword}`;
     return this.get<Array<TreeNode>>(url);
   }
 
