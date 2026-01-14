@@ -211,8 +211,8 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     this.tabsRef.nativeElement.scrollLeft = this.tabsRef.nativeElement.scrollWidth;
   }
 
-  trackByFn(index, item) {
-    return item.id;
+  trackByFn(index, id) {
+    return id;
   }
 
   rTabMenuItems() {
