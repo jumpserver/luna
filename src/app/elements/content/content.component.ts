@@ -211,8 +211,8 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     this.tabsRef.nativeElement.scrollLeft = this.tabsRef.nativeElement.scrollWidth;
   }
 
-  trackByFn(index, item) {
-    return item.id;
+  trackByFn(index, id) {
+    return id;
   }
 
   rTabMenuItems() {
@@ -348,6 +348,9 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   }
 
   onItemDropped(event: CdkDragDrop<string[]>) {
+    console.log('viewids', this.viewIds);
+    console.log('previousIndex', event.previousIndex);
+    console.log('currentIndex', event.currentIndex);
     moveItemInArray(this.viewIds, event.previousIndex, event.currentIndex);
   }
 
