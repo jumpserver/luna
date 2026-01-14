@@ -29,6 +29,10 @@ const headingClass = computed(() => (userTheme.value === "dark" ? "text-gray-50"
 const subTextClass = computed(() => (userTheme.value === "dark" ? "text-gray-300" : "text-gray-600"));
 
 const back = () => {
+  void useTauriCoreInvoke("auth_cancel", {}).catch((error) => {
+    console.debug("auth_cancel failed:", error);
+  });
+
   navigateTo({
     path: localePath({ path: "/" })
   });
@@ -76,8 +80,8 @@ onMounted(async () => {
   });
 
   unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", async (event) => {
-    const { status, profile, bearer, current_org, resolved_site, permission_orgs, xpack_license_valid }
-      = event.payload as UserIntiInfo & { bearer: string };
+    const { status, profile, bearer, current_org, resolved_site, permission_orgs, xpack_license_valid } =
+      event.payload as UserIntiInfo & { bearer: string };
 
     const profileData = JSON.parse((profile as any).data);
     const currentOrgData = JSON.parse((current_org as any).data);
@@ -123,6 +127,9 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (unlistenAuth.value) unlistenAuth.value();
   if (unlistenLoginSuccessRef.value) unlistenLoginSuccessRef.value();
+  void useTauriCoreInvoke("auth_cancel", {}).catch((error) => {
+    console.debug("auth_cancel failed:", error);
+  });
 });
 </script>
 
@@ -130,7 +137,7 @@ onBeforeUnmount(() => {
   <div class="flex flex-col items-center justify-center px-6 py-10 h-full">
     <div class="flex flex-col items-center gap-6 rounded-3xl px-8 py-10 w-full max-w-xl border" :class="cardBgClass">
       <div class="flex flex-col items-center gap-3">
-        <img src="/logo.png" alt="logo" class="w-16 h-16 rounded-2xl">
+        <img src="/logo.png" alt="logo" class="w-16 h-16 rounded-2xl" />
       </div>
 
       <section class="text-center space-y-4 w-full">

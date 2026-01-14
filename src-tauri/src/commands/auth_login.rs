@@ -201,9 +201,13 @@ pub async fn auth_login(
             .expect("Client no build");
 
         // 等待 deep link 回调传回 code/state
-        let callback = rx
-            .await
-            .map_err(|_| anyhow::anyhow!("auth flow cancelled or timed out"))?;
+        let callback = match rx.await {
+            Ok(callback) => callback,
+            Err(_) => {
+                log::info!("auth flow cancelled");
+                return Ok(());
+            }
+        };
 
         // 防止 CSRF
         if let Some(state) = callback.state.as_ref() {
@@ -280,6 +284,14 @@ pub async fn auth_login(
     };
 
     fut.await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn auth_cancel(flow_state: State<'_, AuthFlowState>) -> Result<(), String> {
+    if let Ok(mut guard) = flow_state.pending.lock() {
+        let _ = guard.take();
+    }
+    Ok(())
 }
 
 /// 确保 access_token 新鲜；如过期则用 refresh_token 刷新并更新存储

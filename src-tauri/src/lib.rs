@@ -7,7 +7,7 @@ use crate::setup::apply_window_effects;
 use crate::setup::menu::{build_menu, handle_menu_event};
 use crate::setup::setup_tray;
 
-use crate::commands::auth_login::{auth_login, handle_auth_callback, AuthFlowState};
+use crate::commands::auth_login::{auth_cancel, auth_login, handle_auth_callback, AuthFlowState};
 use crate::commands::get_asset_detail::get_asset_detail;
 use crate::commands::get_assets::get_assets;
 use crate::commands::get_config::get_config;
@@ -153,6 +153,7 @@ pub fn run() {
             pull_up,
             unfavorite,
             auth_login,
+            auth_cancel,
             get_assets,
             get_config,
             get_setting,
