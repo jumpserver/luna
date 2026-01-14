@@ -348,9 +348,6 @@ export class ElementContentComponent implements OnInit, OnDestroy {
   }
 
   onItemDropped(event: CdkDragDrop<string[]>) {
-    console.log('viewids', this.viewIds);
-    console.log('previousIndex', event.previousIndex);
-    console.log('currentIndex', event.currentIndex);
     moveItemInArray(this.viewIds, event.previousIndex, event.currentIndex);
   }
 
