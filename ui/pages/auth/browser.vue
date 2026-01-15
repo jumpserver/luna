@@ -19,6 +19,7 @@ const { userTheme } = useThemeAdapter();
 const url = ref<string | null>((route.query.auth_url as string) || null);
 const unlistenAuth = ref<UnlistenFn | null>(null);
 const unlistenLoginSuccessRef = ref<UnlistenFn | null>(null);
+const didCancel = ref(false);
 
 const cardBgClass = computed(() =>
   userTheme.value === "dark"
@@ -28,11 +29,16 @@ const cardBgClass = computed(() =>
 const headingClass = computed(() => (userTheme.value === "dark" ? "text-gray-50" : "text-gray-900"));
 const subTextClass = computed(() => (userTheme.value === "dark" ? "text-gray-300" : "text-gray-600"));
 
-const back = () => {
+const cancelAuthFlow = () => {
+  if (didCancel.value) return;
+  didCancel.value = true;
   void useTauriCoreInvoke("auth_cancel", {}).catch((error) => {
     console.debug("auth_cancel failed:", error);
   });
+};
 
+const back = () => {
+  cancelAuthFlow();
   navigateTo({
     path: localePath({ path: "/" })
   });
@@ -127,9 +133,6 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (unlistenAuth.value) unlistenAuth.value();
   if (unlistenLoginSuccessRef.value) unlistenLoginSuccessRef.value();
-  void useTauriCoreInvoke("auth_cancel", {}).catch((error) => {
-    console.debug("auth_cancel failed:", error);
-  });
 });
 </script>
 
