@@ -225,6 +225,11 @@ export const useSettingManager = () => {
     persist({ rdpSmartSize: state.rdpSmartSize });
   };
 
+  const setRecentSites = (sites: string[]) => {
+    state.recentSites = Array.isArray(sites) ? [...sites] : [];
+    persist({ recentSites: state.recentSites });
+  };
+
   return {
     ...toRefs(state),
 
@@ -248,6 +253,7 @@ export const useSettingManager = () => {
     setKeyboardLayoutPreference,
     setRdpClientOptionPreference,
     setRdpColorQualityPreference,
-    setRdpSmartSizePreference
+    setRdpSmartSizePreference,
+    setRecentSites
   };
 };

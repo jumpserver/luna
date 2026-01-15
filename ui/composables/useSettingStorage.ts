@@ -26,6 +26,7 @@ export interface UserSettingPersistedState {
   rdpClientOption: string[]
   rdpColorQuality: string
   rdpSmartSize: string
+  recentSites: string[]
 }
 
 const STORE_PATH = "user-setting.json";
@@ -50,7 +51,8 @@ const DEFAULT_STATE: UserSettingPersistedState = {
   keyboardLayout: "en-us-qwerty",
   rdpClientOption: [],
   rdpColorQuality: "32",
-  rdpSmartSize: "0"
+  rdpSmartSize: "0",
+  recentSites: []
 };
 
 let storeInstance: Store | null = null;

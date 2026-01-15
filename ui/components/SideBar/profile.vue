@@ -5,6 +5,7 @@ import type { LangType, ThemeType, UserData } from "~/types/index";
 
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import RecentSites from "./RecentSites.vue";
 
 interface VersionAlertPayload {
   type: string;
@@ -12,6 +13,8 @@ interface VersionAlertPayload {
 }
 
 const props = defineProps<{ collapse: boolean }>();
+
+const recentSiteLimit = 5;
 
 const toast = useToast();
 const appConfig = useAppConfig();
@@ -21,7 +24,16 @@ const userInfoStore = useUserInfoStore();
 const { t, locales, locale } = useI18n();
 const { loggedIn, currentSite, userMap, currentUser } = storeToRefs(userInfoStore);
 
-const { setLang, theme, themeMode, primaryColorLight, primaryColorDark } = useSettingManager();
+const {
+  setLang,
+  theme,
+  themeMode,
+  primaryColorLight,
+  primaryColorDark,
+  recentSites,
+  setRecentSites,
+  hydrationPromise
+} = useSettingManager();
 const { manualSetTheme, enableFollowSystem, followSystem, userTheme } = useThemeAdapter();
 const { applyPrimaryColor } = useColor();
 
@@ -30,14 +42,44 @@ const errorMessage = ref("");
 const loginBtn = ref(false);
 const openModal = ref(false);
 const hasValidationError = ref(false);
-let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
+const recentSitesDismissed = ref(false);
 const unlistenErrorPageRef = ref<UnlistenFn | null>(null);
 const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
 
+let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
+
 useEventBus().on("login", openLoginPage);
 
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
+
+const normalizedRecentSites = computed(() => {
+  const raw = Array.isArray(recentSites.value) ? recentSites.value : [];
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  for (const site of raw) {
+    const value = normalizeSite(site);
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    normalized.push(value);
+    if (normalized.length >= recentSiteLimit) break;
+  }
+
+  return normalized;
+});
+
+const filteredRecentSites = computed(() => {
+  const query = normalizeSite(inputSite.value).toLowerCase();
+  const list = normalizedRecentSites.value;
+  if (!query) return list;
+
+  return list.filter((site) => site.toLowerCase().includes(query));
+});
+
+const showRecentSites = computed(
+  () => openModal.value && !recentSitesDismissed.value && filteredRecentSites.value.length > 0
+);
 
 const clearLoginBtnUnlockTimer = () => {
   if (loginBtnUnlockTimer) {
@@ -208,6 +250,65 @@ function normalizeSite(value: string): string {
   return s.replace(/\/+$/, "");
 }
 
+const ensureRecentSitesReady = async () => {
+  if (hydrationPromise.value) {
+    await hydrationPromise.value;
+  }
+};
+
+const saveRecentSite = async (site: string) => {
+  try {
+    const normalized = normalizeSite(site);
+    if (!normalized) return;
+
+    await ensureRecentSitesReady();
+    const next = [normalized, ...normalizedRecentSites.value.filter((item) => item !== normalized)].slice(
+      0,
+      recentSiteLimit
+    );
+    setRecentSites(next);
+  } catch (err) {
+    console.error("save recent sites failed", err);
+  }
+};
+
+const removeRecentSite = async (site: string) => {
+  try {
+    const normalized = normalizeSite(site);
+    if (!normalized) return;
+
+    await ensureRecentSitesReady();
+    const next = normalizedRecentSites.value.filter((item) => item !== normalized);
+    setRecentSites(next);
+  } catch (err) {
+    console.error("remove recent site failed", err);
+  }
+};
+
+const clearRecentSites = async () => {
+  try {
+    await ensureRecentSitesReady();
+    setRecentSites([]);
+  } catch (err) {
+    console.error("clear recent sites failed", err);
+  }
+};
+
+const selectRecentSite = (site: string) => {
+  inputSite.value = site;
+  clearValidationError();
+  recentSitesDismissed.value = true;
+  nextTick(() => {
+    inputRef.value?.$el?.querySelector("input")?.focus();
+  });
+};
+
+const handleClearInput = () => {
+  inputSite.value = "";
+  clearValidationError();
+  recentSitesDismissed.value = false;
+};
+
 function normalizeVersionMessage(raw: string) {
   if (raw === "incompatible") {
     return { status: "incompatible" as const, versions: [] as string[] };
@@ -294,6 +395,7 @@ const checkVersionBeforeOAuth = async (site: string) => {
  */
 function openLoginPage() {
   openModal.value = true;
+  recentSitesDismissed.value = false;
   hasValidationError.value = false;
   errorMessage.value = "";
   nextTick(() => {
@@ -395,6 +497,7 @@ const handleInputSanitize = (event: Event) => {
   }
 
   inputSite.value = sanitized;
+  recentSitesDismissed.value = false;
   clearValidationError();
 };
 
@@ -404,6 +507,7 @@ const handleInputSanitize = (event: Event) => {
  */
 const handleClipboard = (value: string) => {
   inputSite.value = normalizeSite(value);
+  recentSitesDismissed.value = false;
 };
 
 /**
@@ -458,6 +562,7 @@ const handleConfirm = async () => {
     await useTauriCoreInvoke("auth_login", {
       site: normalizedSite
     });
+    void saveRecentSite(normalizedSite);
   } catch (e: any) {
     const raw = (e?.message || e || "").toString();
     const looksLikeSiteIssue = [
@@ -622,13 +727,7 @@ onBeforeUnmount(() => {
     </div>
   </UDropdownMenu>
 
-  <UButton
-    v-else
-    variant="subtle"
-    icon="line-md:log-in"
-    class="w-full mb-2"
-    @click="openLoginPage"
-  >
+  <UButton v-else variant="subtle" icon="line-md:log-in" class="w-full mb-2" @click="openLoginPage">
     <span v-if="!props.collapse">
       {{ t("Common.Login") }}
     </span>
@@ -668,13 +767,18 @@ onBeforeUnmount(() => {
             size="sm"
             icon="i-lucide-circle-x"
             aria-label="Clear input"
-            @click="
-              inputSite = '';
-              clearValidationError();
-            "
+            @click="handleClearInput"
           />
         </template>
       </UInput>
+
+      <recentSites
+        :visible="showRecentSites"
+        :sites="filteredRecentSites"
+        @select="selectRecentSite"
+        @remove="removeRecentSite"
+        @clear="clearRecentSites"
+      />
 
       <div v-if="hasValidationError" class="text-red-500 text-xs px-1">
         {{ errorMessage }}
