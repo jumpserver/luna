@@ -2,7 +2,7 @@ use crate::commands::requests::{get_with_response, post_with_response, ApiRespon
 use std::collections::HashMap;
 use url::Url;
 use serde::{Deserialize, Serialize};
-use serde_json::to_value;
+use serde_json::{to_value, Value};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TokenRequestBody {
@@ -12,6 +12,7 @@ pub struct TokenRequestBody {
     pub input_username: String,
     pub input_secret: String,
     pub connect_method: String,
+    pub connect_options: Option<Value>,
 }
 
 pub struct TokenService {

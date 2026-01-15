@@ -5,6 +5,7 @@ import type { AssetItem, AssetPageType, CharsetType, LayoutsType, ResolutionType
 import SkeletonCard from "~/components/Card/GridCard/skeletonCard.vue";
 
 import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
+import { useSettingStorage } from "~/composables/useSettingStorage";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{
@@ -25,7 +26,17 @@ const contextMenu = useContextMenu();
 const userInfoStore = useUserInfoStore();
 const assetManagement = useAssetManagement();
 const settingManager = useSettingManager();
-const { layouts } = settingManager;
+const { defaults: settingDefaults } = useSettingStorage();
+const {
+  layouts,
+  charset,
+  rdpResolution,
+  backspaceAsCtrlH,
+  keyboardLayout,
+  rdpClientOption,
+  rdpColorQuality,
+  rdpSmartSize
+} = settingManager;
 const {
   setCharsetPreference,
   setRdpResolutionPreference,
@@ -45,6 +56,27 @@ const { visibleAssets } = useDisplayAssets(
   assetsData,
   computed(() => props.platform)
 );
+
+const isSameArray = (left?: string[], right?: string[]) => {
+  const l = Array.isArray(left) ? left : [];
+  const r = Array.isArray(right) ? right : [];
+  if (l.length !== r.length) return false;
+  const ls = [...l].sort();
+  const rs = [...r].sort();
+  return ls.every((item, idx) => item === rs[idx]);
+};
+
+const isUsingLocalDefaults = () => {
+  return (
+    (charset.value || settingDefaults.charset) === settingDefaults.charset
+    && (rdpResolution.value || settingDefaults.rdpResolution) === settingDefaults.rdpResolution
+    && (backspaceAsCtrlH.value ?? settingDefaults.backspaceAsCtrlH) === settingDefaults.backspaceAsCtrlH
+    && (keyboardLayout.value || settingDefaults.keyboardLayout) === settingDefaults.keyboardLayout
+    && isSameArray(rdpClientOption.value, settingDefaults.rdpClientOption)
+    && (rdpColorQuality.value || settingDefaults.rdpColorQuality) === settingDefaults.rdpColorQuality
+    && (rdpSmartSize.value || settingDefaults.rdpSmartSize) === settingDefaults.rdpSmartSize
+  );
+};
 
 watch(
   () => loggedIn.value,
@@ -164,6 +196,8 @@ const listenTauriEvent = async () => {
     const settingConfig = JSON.parse(payload.data) as SettingResponse;
 
     userInfoStore.setRdpClientOption(settingConfig.graphics);
+
+    if (!isUsingLocalDefaults()) return;
 
     setCharsetPreference((settingConfig.command_line?.charset as CharsetType) || "default");
     setBackspacePreference(!!settingConfig.command_line?.is_backspace_as_ctrl_h);

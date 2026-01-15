@@ -8,7 +8,7 @@ export type LangType = "zh" | "en";
 export type LanguagePreference = LangType | "system";
 export type CharsetType = "default" | "utf8" | "gbk" | "gb2312" | "ios-8859-1";
 export type ResolutionType = "auto" | "1024x768" | "1366x768" | "1600x900" | "1920x1080";
-export type AssetPageType = "linux" | "windows" | "database" | "device" | "favorite";
+export type AssetPageType = "linux" | "windows" | "windows_ad" | "database" | "device" | "favorite";
 
 export interface ActionItem {
   key: string

@@ -9,6 +9,8 @@ pub enum Category {
     #[default]
     Linux,
     Windows,
+    #[serde(rename = "windows_ad")]
+    WindowsAd,
     Database,
     Device,
 }
@@ -41,7 +43,7 @@ impl AssetQuery {
     pub fn new(asset_type: Category, org: String) -> Self {
         let (r#type, category) = match asset_type {
             Category::Database | Category::Device => (None, Some(asset_type)),
-            Category::Linux | Category::Windows => (Some(asset_type), None),
+            Category::Linux | Category::Windows | Category::WindowsAd => (Some(asset_type), None),
         };
 
         Self {
@@ -110,6 +112,7 @@ impl AssetService {
             match self.query.get_category() {
                 Category::Linux => (Some(Category::Linux), None),
                 Category::Windows => (Some(Category::Windows), None),
+                Category::WindowsAd => (Some(Category::WindowsAd), None),
                 Category::Database => (None, Some(Category::Database)),
                 Category::Device => (None, Some(Category::Device)),
             }

@@ -180,6 +180,8 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
         return /\/linux(?:\/|$)/.test(pathLower);
       case "windows":
         return /\/windows(?:\/|$)/.test(pathLower);
+      case "windows_ad":
+        return /\/windows_ad(?:\/|$)/.test(pathLower);
       case "database":
         return /\/database(?:\/|$)/.test(pathLower);
       case "device":
@@ -206,6 +208,11 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
         return items.filter((it) => {
           const typeValue = it.type?.value?.toLowerCase();
           return typeValue === "windows";
+        });
+      case "windows_ad":
+        return items.filter((it) => {
+          const typeValue = it.type?.value?.toLowerCase();
+          return typeValue === "windows_ad";
         });
       case "database":
         return items.filter((it) => {

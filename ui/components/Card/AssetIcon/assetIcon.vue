@@ -24,7 +24,8 @@ const imageProps = computed(() => {
     redis: "/icons/redis.png",
     mongodb: "/icons/mongodb.png",
     dameng: "/icons/dameng.png",
-    clickhouse: "/icons/clickhouse.png"
+    clickhouse: "/icons/clickhouse.png",
+    windows_ad: "/icons/windows.png"
   };
 
   const src = iconMap[props.type] || "";

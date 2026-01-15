@@ -55,6 +55,7 @@
     "Device": "Device",
     "Player": "Player",
     "Windows": "Windows",
+    "DirectoryService": "Directory Service",
     "Resource": "Resource",
     "Database": "Database",
     "OfflinePlayer": "Offline Player",

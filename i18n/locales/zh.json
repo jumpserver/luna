@@ -53,6 +53,7 @@
     "Resource": "资源目录",
     "Linux": "Linux",
     "Windows": "Windows",
+    "DirectoryService": "目录服务",
     "Database": "数据库",
     "Device": "设备",
     "Other": "其他",
