@@ -30,11 +30,39 @@ use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_single_instance::init as single_instance;
 
+fn raise_main_window_for_auth(handle: &tauri::AppHandle) {
+    let Some(win) = handle.get_webview_window("main") else {
+        warn!("main window not found, cannot raise for auth callback");
+        return;
+    };
+
+    let _ = win.unminimize();
+    let _ = win.show();
+    let _ = win.set_focus();
+
+    let was_always_on_top = win.is_always_on_top().unwrap_or(false);
+    if let Err(e) = win.set_always_on_top(true) {
+        warn!("Failed to set main window always on top: {}", e);
+        return;
+    }
+
+    if !was_always_on_top {
+        let app_handle = handle.clone();
+        tauri::async_runtime::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+            if let Some(win) = app_handle.get_webview_window("main") {
+                let _ = win.set_always_on_top(false);
+            }
+        });
+    }
+}
+
 fn process_deep_link(handle: &tauri::AppHandle, raw: &str) -> bool {
     info!("deep link received: {}", raw);
 
     if is_auth_callback(raw) {
         info!("deep link is auth callback, handling in current instance");
+        raise_main_window_for_auth(handle);
         let flow_state = handle.state::<AuthFlowState>();
         handle_auth_callback(&flow_state, raw);
         return false;

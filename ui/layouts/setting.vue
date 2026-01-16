@@ -4,8 +4,59 @@ import type { NavigationMenuItem } from "@nuxt/ui";
 const localePath = useLocalePath();
 
 const { t } = useI18n();
+const { isMacOS } = usePlatform();
 const { theme } = useSettingManager();
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
+
+const commonButtonProps = {
+  size: "sm" as const,
+  variant: "ghost" as const,
+  color: "neutral" as const
+};
+
+const windowControlButtons = computed(() => {
+  return [
+    {
+      key: "minimize",
+      iconName: "i-lucide-minus",
+      tooltipLabel: t("ToolTips.Minimize"),
+      onClick: async () => {
+        await useTauriCoreInvoke("minimize_window");
+      }
+    },
+    {
+      key: "maximize",
+      iconName: "i-lucide-square",
+      tooltipLabel: t("ToolTips.Maximize"),
+      onClick: async () => {
+        await useTauriCoreInvoke("toggle_maximize_window");
+      }
+    },
+    {
+      key: "close",
+      iconName: "i-lucide-x",
+      tooltipLabel: t("ToolTips.Close"),
+      onClick: async () => {
+        await useTauriCoreInvoke("close_window");
+      }
+    }
+  ];
+});
+
+const getWindowControlButtonClass = (buttonKey: string) => {
+  const baseClass = "rounded-none w-12 h-13 p-1 flex items-center justify-center";
+
+  switch (buttonKey) {
+    case "minimize":
+      return `${baseClass} `;
+    case "maximize":
+      return `${baseClass} `;
+    case "close":
+      return `${baseClass} hover:bg-red-500 hover:text-white active:bg-red-600`;
+    default:
+      return baseClass;
+  }
+};
 
 const settingMenu = computed<NavigationMenuItem[]>(() => {
   return [
@@ -50,14 +101,32 @@ onMounted(() => {
   >
     <UPageHeader
       :ui="{
-        root: 'py-2.5'
+        root: 'p-0'
       }"
     >
       <template #default>
-        <div data-tauri-drag-region class="flex items-center justify-center select-none cursor-default">
-          <p class="text-sm font-bold pointer-events-none">
-            {{ t("Common.ConnectionSettings") }}
-          </p>
+        <div class="header-bg h-13 grid grid-cols-[1fr_auto_1fr] items-center px-4">
+          <div data-tauri-drag-region class="h-full" />
+
+          <div data-tauri-drag-region class="flex items-center justify-center select-none cursor-default">
+            <p class="text-sm font-bold pointer-events-none">
+              {{ t("Common.ConnectionSettings") }}
+            </p>
+          </div>
+
+          <div class="flex items-center justify-end" data-tauri-drag-region="false">
+            <template v-if="!isMacOS">
+              <template v-for="button of windowControlButtons" :key="button.key">
+                <UButton
+                  :icon="button.iconName"
+                  :class="getWindowControlButtonClass(button.key)"
+                  :title="button.tooltipLabel"
+                  v-bind="commonButtonProps"
+                  @click="button.onClick"
+                />
+              </template>
+            </template>
+          </div>
         </div>
       </template>
     </UPageHeader>

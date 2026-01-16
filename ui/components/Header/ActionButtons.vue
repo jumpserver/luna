@@ -195,6 +195,7 @@ const actionItems = computed<ActionItem[]>(() => [
 
       // 直接创建窗口
       // eslint-disable-next-line no-new
+      const isMac = isMacOS.value;
       new useTauriWebviewWindowWebviewWindow(label, {
         title: t("Common.ConnectionSettings"),
         url: localePath({ path: "/setting" }),
@@ -204,7 +205,9 @@ const actionItems = computed<ActionItem[]>(() => [
         maxHeight: 675,
         hiddenTitle: true,
         titleBarStyle: "overlay",
-        trafficLightPosition: new LogicalPosition(10, 22)
+        trafficLightPosition: new LogicalPosition(10, 22),
+        decorations: isMac,
+        shadow: isMac
       });
     }
   }
