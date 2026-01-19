@@ -206,7 +206,7 @@ const columns: TableColumn<AssetItem>[] = [
         "onUpdate:modelValue": (value: boolean | "indeterminate") => row.toggleSelected(!!value),
         "aria-label": "Select row"
       }),
-    meta: { class: { th: "w-[50px]", td: "w-[50px]" } }
+    meta: { class: { th: "w-[5%] min-w-[40px]", td: "w-[5%] min-w-[40px]" } }
   },
   {
     accessorKey: "assetName",
@@ -255,7 +255,7 @@ const columns: TableColumn<AssetItem>[] = [
         }
       );
     },
-    meta: { class: { th: "max-w-[300px]", td: "max-w-[300px]" } }
+    meta: { class: { th: "w-[28%]", td: "w-[28%]" } }
   },
   {
     accessorKey: "address",
@@ -269,7 +269,7 @@ const columns: TableColumn<AssetItem>[] = [
         },
         row.original.address
       ),
-    meta: { class: { th: "max-w-[300px]", td: "max-w-[300px]" } }
+    meta: { class: { th: "w-[28%]", td: "w-[28%]" } }
   },
   {
     id: "user",
@@ -285,7 +285,7 @@ const columns: TableColumn<AssetItem>[] = [
         userText
       );
     },
-    meta: { class: { th: "w-[250px]", td: "w-[250px]" } }
+    meta: { class: { th: "w-[18%]", td: "w-[18%]" } }
   },
   {
     id: "protocol",
@@ -303,7 +303,7 @@ const columns: TableColumn<AssetItem>[] = [
 
       return h(UButton, { size: "xs", class: "rounded-sm", variant: "subtle", color: "primary" }, () => protocolText);
     },
-    meta: { class: { th: "w-[150px]", td: "w-[150px]" } }
+    meta: { class: { th: "w-[7%]", td: "w-[7%]" } }
   },
   {
     id: "actions",
@@ -351,7 +351,7 @@ const columns: TableColumn<AssetItem>[] = [
         }
       );
     },
-    meta: { class: { th: "w-[260px] text-center", td: "w-[260px] text-center" } }
+    meta: { class: { th: "w-[14%] text-center", td: "w-[14%] text-center" } }
   }
 ];
 </script>
@@ -370,10 +370,10 @@ const columns: TableColumn<AssetItem>[] = [
         :data="props.items"
         :columns="columns"
         :empty="t('Common.NoData')"
-        class="w-full table-auto"
+        class="w-full min-w-[900px] table-fixed"
         :ui="{
           tr: 'hover:bg-muted/50 ',
-          th: 'whitespace-nowrap text-xs sm:text-sm',
+          th: 'whitespace-nowrap text-xs sm:text-sm truncate',
           td: 'whitespace-nowrap text-xs sm:text-sm py-2'
         }"
       />
