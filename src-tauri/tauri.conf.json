@@ -36,7 +36,7 @@
     "devUrl": "http://localhost:3000"
   },
   "productName": "JumpServerClient",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "identifier": "com.jumpserver.client",
   "plugins": {
     "deep-link": {
