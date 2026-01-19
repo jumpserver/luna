@@ -5,7 +5,7 @@ import type { LangType, ThemeType, UserData } from "~/types/index";
 
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import RecentSites from "./RecentSites.vue";
+import RecentSites from "./recentSites.vue";
 
 interface VersionAlertPayload {
   type: string;
@@ -772,7 +772,7 @@ onBeforeUnmount(() => {
         </template>
       </UInput>
 
-      <recentSites
+      <RecentSites
         :visible="showRecentSites"
         :sites="filteredRecentSites"
         @select="selectRecentSite"
