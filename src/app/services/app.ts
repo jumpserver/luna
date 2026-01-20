@@ -258,6 +258,7 @@ export class AppService {
       connectOption,
       direct: connectData.direct
     };
+
     this.setAccountLocalAuth(asset, account, manualAuthInfo);
     this._localStorage.set(key, saveData);
   }
@@ -346,7 +347,7 @@ export class AppService {
       newAuth.alias = account.alias;
     }
 
-    if (!auth.secret || !auth.rememberAuth || !this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH) {
+    if (!auth.secret || !auth.rememberAuth) {
       newAuth.secret = '';
     } else {
       newAuth.secret = this.encrypt(auth.secret);
