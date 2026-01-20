@@ -12,6 +12,12 @@ interface VersionAlertPayload {
   version?: string;
 }
 
+interface VersionMessageResponse {
+  status: number;
+  data: string;
+  success: boolean;
+}
+
 const props = defineProps<{ collapse: boolean }>();
 
 const recentSiteLimit = 5;
@@ -309,17 +315,17 @@ const handleClearInput = () => {
   recentSitesDismissed.value = false;
 };
 
-function normalizeVersionMessage(raw: string) {
-  if (raw === "incompatible") {
+function normalizeVersionMessage(response: VersionMessageResponse) {
+  if (response.status === 404) {
     return { status: "incompatible" as const, versions: [] as string[] };
   }
 
-  if (!raw) {
+  if (!response.data) {
     return { status: "list" as const, versions: [] as string[] };
   }
 
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(response.data);
     const versions = Array.isArray(parsed)
       ? parsed.map((item) => (item == null ? "" : String(item))).filter((v) => v.length > 0)
       : [];
@@ -361,13 +367,33 @@ const emitVersionAlertAndCloseModal = (payload: VersionAlertPayload) => {
   useEventBus().emit("versionAlert", payload);
 };
 
+const handleInvalidSiteVersion = () => {
+  clearLoginBtnUnlockTimer();
+  loginBtn.value = false;
+  hasValidationError.value = true;
+  errorMessage.value = t("Login.InvalidSiteError");
+
+  void useTauriCoreInvoke("auth_cancel", {});
+
+  nextTick(() => {
+    inputRef.value?.$el?.querySelector("input")?.focus();
+  });
+};
+
 const checkVersionBeforeOAuth = async (site: string) => {
-  const [rawVersionMessage, appVersion] = await Promise.all([
-    useTauriCoreInvoke<string>("get_version_message", { site }).catch(() => ""),
+  const [versionResponse, appVersion] = await Promise.all([
+    useTauriCoreInvoke<VersionMessageResponse>("get_version_message", { site }).catch((error) => {
+      return null;
+    }),
     useTauriAppGetVersion().catch(() => "")
   ]);
 
-  const { status: versionStatus, versions } = normalizeVersionMessage(rawVersionMessage);
+  if (!versionResponse || versionResponse.status === 0) {
+    handleInvalidSiteVersion();
+    return false;
+  }
+
+  const { status: versionStatus, versions } = normalizeVersionMessage(versionResponse);
 
   if (versionStatus === "incompatible") {
     emitVersionAlertAndCloseModal({ type: "incompatible" });
@@ -621,7 +647,7 @@ onMounted(async () => {
     let description = message || t("Login.LoginFailedErrorPage");
 
     if (reason === "invalid-site") {
-      description = t("Login.InvalidSiteError");
+      description = t(" ");
     }
 
     toast.add({
