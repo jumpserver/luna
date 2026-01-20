@@ -57,7 +57,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     private _cdRef: ChangeDetectorRef
   ) {
     this.usernamePlaceholder = this._i18n.instant('Username');
-    this.rememberAuthDisabled = !this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH;
+    this.rememberAuthDisabled = false;
   }
 
   get noSecretAccounts() {
