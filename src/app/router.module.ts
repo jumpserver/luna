@@ -16,8 +16,9 @@ const appRoutes: Routes = [
   },
   {
     path: 'connect',
-    loadComponent: () =>
-      import('./pages/connect/connect.component').then(m => m.PagesConnectComponent)
+    component: PagesConnectComponent
+    // loadComponent: () =>
+    //   import('./pages/connect/connect.component').then(m => m.PagesConnectComponent)
   },
   { path: 'undefined', component: PagesBlankComponent },
   { path: 'share/:id', component: PagesShareComponent },
@@ -27,7 +28,8 @@ const appRoutes: Routes = [
   },
   {
     path: 'admin-connect',
-    loadComponent: () => import('./pages/direct/direct.component').then(m => m.PageDirectComponent)
+    component: PageDirectComponent
+    // loadComponent: () => import('./pages/direct/direct.component').then(m => m.PageDirectComponent)
   },
   {
     path: 'monitor/:sid',
