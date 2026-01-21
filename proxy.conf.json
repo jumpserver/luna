@@ -1,33 +1,33 @@
 {
   "/koko/": {
-    "target": "http://192.168.200.53:5050",
+    "target": "http://localhost:5050",
     "secure": false,
     "ws": true,
     "changeOrigin": true
   },
   "/media/": {
-    "target": "http://192.168.200.53:8080",
+    "target": "http://localhost:8080",
     "secure": false,
     "changeOrigin": true
   },
   "/api/": {
-    "target": "http://192.168.200.53:8080",
+    "target": "http://localhost:8080",
     "secure": false,
     "changeOrigin": true
   },
   "/ws/": {
-    "target": "ws://192.168.200.53:8080",
+    "target": "ws://localhost:8080",
     "secure": false,
     "changeOrigin": true,
     "ws": true
   },
   "/core": {
-    "target": "http://192.168.200.53:8080",
+    "target": "http://localhost:8080",
     "secure": false,
     "changeOrigin": true
   },
   "/static": {
-    "target": "http://192.168.200.53:8080",
+    "target": "http://localhost:8080",
     "secure": false,
     "changeOrigin": true
   },
