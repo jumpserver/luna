@@ -75,12 +75,10 @@ li {
     .view_icon {
       margin-right: 5px;
       font-style: normal;
-      width: 16px;
-      height: 16px;
-      display: inline-block;
+      display: flex;
+      align-items: center;
       background-repeat: no-repeat;
       background-position: center;
-      background-size: 16px 16px;
       vertical-align: middle;
 
       &::before {
