@@ -30,6 +30,8 @@ export class AppService {
   private protocolPreferKey = 'ProtocolPreferLoginType';
   private accountPreferKey = 'PreferAccount';
   private protocolConnectTypesMap: object = {};
+  private connectMethodsRequestSeq = 0;
+  private connectMethodsAppliedSeq = 0;
   private checkIntervalId: number;
   private newLoginHasOpen = false; // 避免多次打开新登录页
   private checkSecond = 120;
@@ -202,13 +204,21 @@ export class AppService {
 
   getConnectMethods(): Promise<void> {
     const url = '/api/v1/terminal/components/connect-methods/';
+    const requestSeq = ++this.connectMethodsRequestSeq;
 
     // 当用户先打开 luna 并进行操作时如果后在 lina 中去设置连接方式的 ACL 此时并不生效，因此修改为在 toPromise 后直接赋值
     return this._http
       .get(url)
       .toPromise()
       .then(response => {
+        // 每次发起请求都自增 connectMethodsRequestSeq，记录当前请求序号 requestSeq
+        // 响应回来时，如果 requestSeq 小于已经应用过的 connectMethodsAppliedSeq，说明这是“过期响应”，直接丢弃
+        // 只有最新的响应才会更新 protocolConnectTypesMap，并把 connectMethodsAppliedSeq 同步为最新
+        if (requestSeq < this.connectMethodsAppliedSeq) {
+          return;
+        }
         this.protocolConnectTypesMap = response;
+        this.connectMethodsAppliedSeq = requestSeq;
       })
       .catch(error => {
         this._logger.error('Get connect methods error:', error);
