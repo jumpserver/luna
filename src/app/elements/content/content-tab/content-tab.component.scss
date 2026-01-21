@@ -75,9 +75,19 @@ li {
     .view_icon {
       margin-right: 5px;
       font-style: normal;
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 16px 16px;
+      vertical-align: middle;
 
       &::before {
         display: inline-block;
+        width: 16px;
+        line-height: 16px;
+        text-align: center;
         color: var(--el-icon-color);
         font-family: FontAwesome;
       }
