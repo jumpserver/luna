@@ -45,7 +45,7 @@
     "guacamole-common-js": "^1.5.0",
     "jquery": "^3.7.1",
     "jsencrypt": "^3.3.2",
-    "lodash-es": "^4.17.21",
+    "lodash-es": "^4.17.23",
     "metismenu": "^3.0.7",
     "ng-zorro-antd": "^19.3.0",
     "ngx-clipboard": "^16.0.0",
