@@ -68,7 +68,7 @@
         <i (click)="hidePassword = !hidePassword" [nzType]="hidePassword ? 'eye-invisible' : 'eye'" nz-icon></i>
       </ng-template>
     </nz-input-group>
-    <label *ngIf="!rememberAuthDisabled" [(ngModel)]="manualAuthInfo.rememberAuth" class="remember-auth" nz-checkbox>
+    <label *ngIf="false" [(ngModel)]="manualAuthInfo.rememberAuth" class="remember-auth" nz-checkbox>
       {{ "Remember password" | translate }}
     </label>
   </nz-form-control>
