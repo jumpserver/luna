@@ -11,6 +11,7 @@ use crate::commands::auth_login::{auth_cancel, auth_login, handle_auth_callback,
 use crate::commands::get_asset_detail::get_asset_detail;
 use crate::commands::get_assets::get_assets;
 use crate::commands::get_config::get_config;
+use crate::commands::get_connect_methods::get_connect_methods;
 use crate::commands::get_setting::get_setting;
 use crate::commands::get_token::get_connect_token;
 use crate::commands::get_version_message::get_version_message;
@@ -195,6 +196,7 @@ pub fn run() {
             toggle_maximize_window,
             update_config_selection,
             init_http_callback_server,
+            get_connect_methods,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

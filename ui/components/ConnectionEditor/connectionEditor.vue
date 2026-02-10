@@ -14,6 +14,7 @@ const draftManualUsername = ref<string>("");
 const draftManualPassword = ref<string>("");
 const draftDynamicPassword = ref<string>("");
 const draftRememberSecret = ref<boolean>(false);
+const draftConnectMethod = ref<string>("");
 
 let pendingResolve: ((info: any) => void) | null = null;
 let pendingReject: ((reason?: any) => void) | null = null;
@@ -63,6 +64,7 @@ const initDraft = (asset: AssetItem) => {
   draftManualPassword.value = saved?.manualPassword || "";
   draftDynamicPassword.value = saved?.dynamicPassword || "";
   draftRememberSecret.value = saved?.rememberSecret || false;
+  draftConnectMethod.value = saved?.connectMethod || "";
 };
 
 /**
@@ -109,6 +111,7 @@ const buildConnectionInfo = () => {
     manualPassword: draftManualPassword.value || "",
     dynamicPassword: draftDynamicPassword.value || "",
     rememberSecret: !!draftRememberSecret.value,
+    connectMethod: draftConnectMethod.value || "",
     availableProtocols: normalizeProtocols()
   };
 };
@@ -208,6 +211,7 @@ defineExpose({ open: openModal, close });
       v-model:manual-password="draftManualPassword"
       v-model:dynamic-password="draftDynamicPassword"
       v-model:remember-secret="draftRememberSecret"
+      v-model:connect-method="draftConnectMethod"
       :accounts="currentAsset.permedAccounts || []"
       :protocols="currentAsset.permedProtocols || []"
     />

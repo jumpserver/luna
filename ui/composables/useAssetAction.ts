@@ -212,6 +212,9 @@ export const useAssetAction = () => {
       case "vnc":
         method = "vnc_client";
         break;
+      case "http":
+        method = "chrome";
+        break;
       default:
         method = "db_client";
     }
@@ -219,18 +222,28 @@ export const useAssetAction = () => {
     return method;
   };
 
-  const generateConnectOptions = () => {
+  const generateConnectOptions = (protocol: string) => {
     const prefs = resolveGraphicsPreferences();
 
-    return {
+    const options = {
       charset: prefs.resolvedCharset,
-      is_backspace_as_ctrl_h: prefs.resolvedBackspace,
+      backspaceAsCtrlH: prefs.resolvedBackspace,
       resolution: prefs.resolvedResolution,
       rdp_resolution: prefs.resolvedResolution,
       keyboard_layout: prefs.resolvedKeyboardLayout,
       rdp_client_option: prefs.resolvedClientOptions,
       rdp_color_quality: prefs.resolvedColorQuality,
-      rdp_smart_size: prefs.resolvedSmartSize
+      rdp_smart_size: prefs.resolvedSmartSize,
+      token_reusable: false,
+      disableautohash: false,
+    };
+    const specificOptions = protocol === "http" ? {
+      appletConnectMethod: "client",
+      reusable: false,
+    } : {};
+    return {
+      ...options,
+      ...specificOptions
     };
   };
 
@@ -253,6 +266,7 @@ export const useAssetAction = () => {
       manualUsername?: string;
       manualPassword?: string;
       dynamicPassword?: string;
+      connectMethod?: string;
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
@@ -297,6 +311,9 @@ export const useAssetAction = () => {
       return getUserId(accounts!, assetId, user);
     })();
 
+    // 优先使用保存的连接方法，其次使用临时连接方法，最后使用 dispatchConnectMethod 作为后备
+    const connectMethod = saved?.connectMethod ?? ephemeral?.connectMethod ?? dispatchConnectMethod(protocol);
+
     nextTick(() => {
       getConnectToken({
         asset: assetId,
@@ -304,8 +321,8 @@ export const useAssetAction = () => {
         input_username,
         input_secret,
         account: accountForToken,
-        connect_method: dispatchConnectMethod(protocol),
-        connect_options: generateConnectOptions()
+        connect_method: connectMethod,
+        connect_options: generateConnectOptions(protocol)
       });
     });
   };

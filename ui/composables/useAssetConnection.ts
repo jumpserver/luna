@@ -8,6 +8,7 @@ interface ConnectionFormInfo {
   manualPassword: string
   dynamicPassword: string
   rememberSecret: boolean
+  connectMethod: string
 
   accountId?: string
   availableProtocols?: string[]
@@ -80,6 +81,7 @@ export function useAssetConnection() {
       manualPassword: connectionInfo.rememberSecret ? connectionInfo.manualPassword : "",
       dynamicPassword: connectionInfo.rememberSecret ? connectionInfo.dynamicPassword : "",
       rememberSecret: connectionInfo.rememberSecret,
+      connectMethod: connectionInfo.connectMethod,
       availableProtocols
     };
 
@@ -96,7 +98,8 @@ export function useAssetConnection() {
       accountMode: connectionInfo.accountMode,
       manualUsername: connectionInfo.manualUsername,
       manualPassword: connectionInfo.manualPassword,
-      dynamicPassword: connectionInfo.dynamicPassword
+      dynamicPassword: connectionInfo.dynamicPassword,
+      connectMethod: connectionInfo.connectMethod
     });
   };
 

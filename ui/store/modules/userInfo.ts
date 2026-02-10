@@ -1,4 +1,5 @@
 import type { ConnectionInfo, PermOrgItem, RdpGraphics, UserData } from "~/types/index";
+import { useConnectMethods } from "~/composables/useConnectMethods";
 
 export type SiteUserData = UserData & {
   language?: string
@@ -62,6 +63,16 @@ export const useUserInfoStore = defineStore(
       // 初始化当前站点连接信息映射以及 RDP 客户端选项
       currentConnectionInfoMap.value = next.connectionInfoMap || {};
       currentRdpClientOption.value = next.rdpClientOption || {};
+
+      // 登录后获取连接方法
+      const { fetchConnectMethods } = useConnectMethods();
+      nextTick(async () => {
+        try {
+          await fetchConnectMethods();
+        } catch (error) {
+          console.debug("Failed to fetch connect methods on login:", error);
+        }
+      });
     };
 
     /**

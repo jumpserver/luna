@@ -56,6 +56,7 @@
     "DirectoryService": "目录服务",
     "Database": "数据库",
     "Device": "设备",
+    "Web": "Web",
     "Other": "其他",
     "Favorite": "收藏",
     "OfflinePlayer": "离线播放器",
@@ -94,6 +95,7 @@
     "ModifyConnectionInfo": "连接",
     "Description": "保存后，下次连接将默认使用这些设置，右击重新设置",
     "OptionalProtocol": "协议",
+    "ConnectMethod": "连接方法",
     "OptionalAccount": "账号"
   },
   "SettingModal": {

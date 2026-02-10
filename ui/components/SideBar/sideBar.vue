@@ -50,6 +50,12 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
       icon: "mingcute:device-line",
       to: localePath("device"),
       disabled: isLoading.value
+      },
+    {
+      label: t("Menu.Web"),
+      icon: "mingcute:web-line",
+      to: localePath("web"),
+      disabled: isLoading.value
     },
     {
       label: t("Menu.Favorite"),

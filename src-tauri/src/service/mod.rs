@@ -9,3 +9,4 @@ pub(crate) mod token_oauth;
 pub(crate) mod user;
 pub(crate) mod http_callback;
 pub(crate) mod version;
+pub(crate) mod connect_methods;

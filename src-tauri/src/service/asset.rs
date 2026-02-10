@@ -13,6 +13,7 @@ pub enum Category {
     WindowsAd,
     Database,
     Device,
+    Web,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
@@ -43,7 +44,9 @@ impl AssetQuery {
     pub fn new(asset_type: Category, org: String) -> Self {
         let (r#type, category) = match asset_type {
             Category::Database | Category::Device => (None, Some(asset_type)),
-            Category::Linux | Category::Windows | Category::WindowsAd => (Some(asset_type), None),
+            Category::Linux | Category::Windows | Category::WindowsAd | Category::Web => {
+                (Some(asset_type), None)
+            }
         };
 
         Self {
@@ -115,6 +118,7 @@ impl AssetService {
                 Category::WindowsAd => (Some(Category::WindowsAd), None),
                 Category::Database => (None, Some(Category::Database)),
                 Category::Device => (None, Some(Category::Device)),
+                Category::Web => (None, Some(Category::Web)),
             }
         };
 

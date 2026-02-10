@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SelectMenuItem } from "@nuxt/ui";
 import type { PermedAccount, PermedProtocol } from "~/types/index";
+import { useConnectMethods } from "~/composables/useConnectMethods";
 
 const props = defineProps<{
   account: string
@@ -11,6 +12,7 @@ const props = defineProps<{
   manualPassword?: string
   dynamicPassword?: string
   rememberSecret?: boolean
+  connectMethod?: string
 }>();
 
 const emits = defineEmits<{
@@ -20,14 +22,23 @@ const emits = defineEmits<{
   (e: "update:manualPassword", v: string): void
   (e: "update:dynamicPassword", v: string): void
   (e: "update:rememberSecret", v: boolean): void
+  (e: "update:connectMethod", v: string): void
 }>();
 
 const { t } = useI18n();
+const { getMethodsForProtocol, getDefaultMethodForProtocol, getMethodDisplayName } = useConnectMethods();
 // prettier-ignore
 const trailingIcon = "group-data-[state=open]:rotate-180 transition-transform duration-200";
 
 const showManualInputArea = ref(false);
 const showDynamicUserArea = ref(false);
+const availableConnectMethods = ref<any[]>([]);
+const connectMethodItems = computed<SelectMenuItem[]>(() => {
+  return availableConnectMethods.value.map((method) => ({
+    label: method.label || method.value,
+    value: method.value
+  }));
+});
 
 const localManualUsername = computed<string>({
   get: () => props.manualUsername || "",
@@ -49,10 +60,33 @@ const localRememberSecret = computed<boolean>({
   set: (v: boolean) => emits("update:rememberSecret", !!v)
 });
 
+const localConnectMethod = computed<string>({
+  get: () => props.connectMethod || "",
+  set: (v: string) => emits("update:connectMethod", v ?? "")
+});
+
 watch(
   () => props.account,
   (newVal) => {
     handleSpecialAccount(newVal || "");
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.protocol,
+  async (newProtocol) => {
+    if (!newProtocol) return;
+
+    const methods = await getMethodsForProtocol(newProtocol);
+    availableConnectMethods.value = methods;
+
+    if (!props.connectMethod || !methods.find((m) => m.value === props.connectMethod)) {
+      const defaultMethod = await getDefaultMethodForProtocol(newProtocol);
+      if (defaultMethod) {
+        emits("update:connectMethod", defaultMethod);
+      }
+    }
   },
   { immediate: true }
 );
@@ -130,6 +164,19 @@ function handleSpecialAccount(v: string) {
         }"
         icon="mingcute:plugin-line"
         class="w-full"
+      />
+    </UFormField>
+
+    <UFormField :label="t('EditModal.ConnectMethod')" size="md">
+      <USelect
+        v-model="localConnectMethod"
+        :items="connectMethodItems"
+        :ui="{
+          trailingIcon
+        }"
+        icon="lucide:zap"
+        class="w-full"
+        :disabled="connectMethodItems.length === 0"
       />
     </UFormField>
 

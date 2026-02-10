@@ -58,6 +58,7 @@
     "DirectoryService": "Directory Service",
     "Resource": "Resource",
     "Database": "Database",
+    "Web": "Web",
     "OfflinePlayer": "Offline Player",
     "Favorite": "Favorite"
   },
@@ -94,6 +95,7 @@
     "ModifyConnectionInfo": "Connect",
     "Description": "Next connections will use these settings by default, right-click to edit",
     "OptionalProtocol": "Protocol",
+    "ConnectMethod": "Connect Method",
     "OptionalAccount": "Account"
   },
   "Layout": {

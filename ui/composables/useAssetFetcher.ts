@@ -186,6 +186,8 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
         return /\/database(?:\/|$)/.test(pathLower);
       case "device":
         return /\/device(?:\/|$)/.test(pathLower);
+      case "web":
+        return /\/web(?:\/|$)/.test(pathLower);
       default:
         return true;
     }
