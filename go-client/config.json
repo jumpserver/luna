@@ -231,7 +231,7 @@
           "zh": "数据库管理软件",
           "en": "Database management software."
         },
-        "download_url": "https://www.navicat.com.cn/products",
+        "download_url": "https://github.com/gerry-f2c/appstore-static/releases/download/Navicat/navicat170_premium_lite_en_x64.exe",
         "type": "databases",
         "path": "",
         "arg_format": "",
@@ -279,7 +279,7 @@
           {
             "cmd": "ControlClick",
             "type": "30,12",
-            "element": "[CLASS:TButton; INSTANCE:3]"
+            "element": "[CLASS:TButton; INSTANCE:2]"
           }
         ],
         "match_first": [],
