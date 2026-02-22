@@ -33,7 +33,7 @@
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.0.0",
     "@ztree/ztree_v3": "^3.5.48",
-    "ajv": "^8.12.0",
+    "ajv": "^8.18.0",
     "animate.css": "^4.1.1",
     "asciinema-player": "^3.10.0",
     "buffer": "^6.0.3",
