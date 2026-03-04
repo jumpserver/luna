@@ -119,18 +119,8 @@ export class ElementContentComponent implements OnInit, OnDestroy {
     this.toggleMenu.emit();
 
     setTimeout(async () => {
-      // 如果已经打开了 15 个，那么弹出一个确认框，点击确认重新再一个新的浏览器 tab 下打开 luna 应用
-      if (this.viewList.length >= 15) {
-        const msg = await this._i18nSvc.t('tabLimits');
-        const ok = window.confirm(msg);
-
-        if (ok) {
-          window.open(window.location.href, '_blank');
-        }
-      } else {
-        this._viewSvc.addView(view);
-        this.setViewActive(view);
-      }
+      this._viewSvc.addView(view);
+      this.setViewActive(view);
     }, 100);
   }
 
@@ -226,20 +216,11 @@ export class ElementContentComponent implements OnInit, OnDestroy {
           const oldView = this.viewList.find(i => i.id === oldId);
           const oldConnectToken = oldView.connectToken;
 
-          if (this.viewList.length >= 15) {
-            const msg = await this._i18nSvc.t('tabLimits');
-            const ok = window.confirm(msg);
-
-            if (ok) {
-              window.open(window.location.href, '_blank');
-            }
-          } else {
-            this._connectTokenSvc.exchange(oldConnectToken).then(newConnectToken => {
-              const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
-              this._viewSvc.addView(newView);
-              this.setViewActive(newView);
-            });
-          }
+          this._connectTokenSvc.exchange(oldConnectToken).then(newConnectToken => {
+            const newView = new View(oldView.asset, oldView.connectData, newConnectToken);
+            this._viewSvc.addView(newView);
+            this.setViewActive(newView);
+          });
         }
       },
       {
