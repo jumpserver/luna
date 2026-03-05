@@ -150,7 +150,7 @@
         "download_url": "https://sourceforge.net/projects/tigervnc/files/stable/1.15.0/tigervnc-1.15.0.x86_64.tar.gz",
         "type": "remotedesktop",
         "path": "",
-        "arg_format": "{host}::{port}",
+        "arg_format": "--Shared=on --RemoteResize=on --FullScreen=off {host}::{port}",
         "match_first": [],
         "is_internal": false,
         "is_default": false,
@@ -559,7 +559,7 @@
         "download_url": "https://sourceforge.net/projects/tigervnc/files/stable/1.15.0/tigervnc-1.15.0.x86_64.tar.gz",
         "type": "remotedesktop",
         "path": "/Applications/TigerVNC viewer 1.15.0.app/Contents/MacOS/TigerVNC viewer",
-        "arg_format": "{host}::{port}",
+        "arg_format": "--Shared=on --RemoteResize=on --FullScreen=off {host}::{port}",
         "match_first": [
           "vnc"
         ],
@@ -785,7 +785,7 @@
         "download_url": "https://sourceforge.net/projects/tigervnc/files/stable/1.15.0/tigervnc-1.15.0.x86_64.tar.gz",
         "type": "remotedesktop",
         "path": "vncviewer",
-        "arg_format": "{host}::{port}",
+        "arg_format": "--Shared=on --RemoteResize=on --FullScreen=off {host}::{port}",
         "match_first": [
           "vnc"
         ],
