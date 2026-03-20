@@ -7,7 +7,33 @@
   <meta content="no-cache" http-equiv="Cache-control">
   <meta content="no-cache" http-equiv="Cache">
   <title></title>
-  <base href="/luna">
+  <base href="/luna/">
+  <script>
+    (function () {
+      var pathname = window.location.pathname || '/';
+      var marker = '/luna/';
+      var idx = pathname.indexOf(marker);
+      var prefix = '';
+
+      if (idx === -1 && /\/luna$/.test(pathname)) {
+        idx = pathname.length - '/luna'.length;
+      }
+
+      if (idx > 0) {
+        prefix = pathname.slice(0, idx);
+      }
+
+      prefix = prefix.replace(/\/+$/, '');
+      window.__BASE_PATH__ = prefix;
+      window.__UI_BASE__ = prefix + '/ui/';
+      window.__LUNA_BASE__ = prefix + marker;
+
+      var baseElement = document.querySelector('base');
+      if (baseElement) {
+        baseElement.setAttribute('href', window.__LUNA_BASE__);
+      }
+    })();
+  </script>
 
   <meta content="width=device-width, initial-scale=1" name="viewport">
   <link href="favicon.ico" rel="icon" type="image/x-icon">

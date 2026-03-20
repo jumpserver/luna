@@ -1,5 +1,6 @@
 import {Component, Inject, OnInit} from '@angular/core';
 import {NZ_MODAL_DATA} from "ng-zorro-antd/modal";
+import {withSitePrefix} from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -32,6 +33,6 @@ export class ElementDownloadDialogComponent implements OnInit {
     if (this.ignoreRemind) {
       localStorage.setItem('hasDownLoadApp', '1');
     }
-    window.open('/core/download/', '_blank');
+    window.open(withSitePrefix('/core/download/'), '_blank');
   }
 }

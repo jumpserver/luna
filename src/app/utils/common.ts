@@ -2,6 +2,7 @@ import {Terminal} from '@xterm/xterm';
 import {Asset, TreeNode, User} from '@app/model';
 import {SettingService} from '@app/services';
 import {FitAddon} from '@xterm/addon-fit';
+import {withAppBase} from '@app/utils/path';
 
 export function groupBy(array, f) {
   const groups = {};
@@ -339,7 +340,7 @@ export function launchLocalApp(url, fail) {
  * @param {String} newWindowMode
  */
 export function connectOnNewPage(node: TreeNode, newWindowMode?: string) {
-  const url = `/luna/connect?login_to=${node.id}&type=${node.meta.type}`;
+  const url = withAppBase(`/connect?login_to=${node.id}&type=${node.meta.type}`);
   let params = 'toolbar=yes,scrollbars=yes,resizable=yes';
 
   // auto 模式:尺寸为屏幕的三分之一并根据会话内的计数在屏幕上“级联/平铺”位置

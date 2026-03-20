@@ -12,6 +12,7 @@ import {
   SettingService,
   ViewService
 } from '@app/services';
+import { withSitePrefix, withUIBase } from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -59,7 +60,7 @@ export class ElementNavComponent implements OnInit {
           {
             id: 'Connect',
             click: () => {
-              window.open('/koko/elfinder/sftp/');
+              window.open(withSitePrefix('/koko/elfinder/sftp/'));
             },
             name: 'Connect'
           }
@@ -171,7 +172,7 @@ export class ElementNavComponent implements OnInit {
           {
             id: 'Download',
             click: () => {
-              window.open('/core/download/', '_blank');
+              window.open(withSitePrefix('/core/download/'), '_blank');
             },
             name: 'Download'
           }
@@ -217,6 +218,6 @@ export class ElementNavComponent implements OnInit {
   }
 
   onJumpUi() {
-    window.open('/ui/', '_blank');
+    window.open(withUIBase(), '_blank');
   }
 }

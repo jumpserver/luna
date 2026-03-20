@@ -10,13 +10,16 @@ import { Account, Asset, AuthInfo, ConnectData, Endpoint, Organization, View } f
 import * as CryptoJS from 'crypto-js';
 import { OrganizationService } from './organization';
 import { I18nService } from '@app/services/i18n';
+import { getAppBasePath, getAppRoutePath, withSitePrefix } from '@app/utils/path';
 
 declare function unescape(s: string): string;
 
 function gotoLogin() {
   const currentPath = encodeURI(document.location.pathname + document.location.search);
+  const loginUrl = new URL(withSitePrefix('/core/auth/login/'), document.location.origin);
+  loginUrl.searchParams.set('next', currentPath);
   setTimeout(() => {
-    window.location.href = document.location.origin + '/core/auth/login/?next=' + currentPath;
+    window.location.href = loginUrl.toString();
   }, 500);
 }
 
@@ -114,7 +117,9 @@ export class AppService {
       clearInterval(this.checkIntervalId);
       const ok = confirm(this._i18n.instant(this.getErrorMsg(status)));
       if (ok && !this.newLoginHasOpen) {
-        window.open('/core/auth/login/?next=/luna/', '_blank');
+        const loginUrl = new URL(withSitePrefix('/core/auth/login/'), window.location.origin);
+        loginUrl.searchParams.set('next', getAppBasePath());
+        window.open(loginUrl.toString(), '_blank');
         this.newLoginHasOpen = true;
       }
       setTimeout(() => this.doCheckProfile(true), 5000);
@@ -159,10 +164,10 @@ export class AppService {
     }
 
     if (User.logined) {
-      if (document.location.pathname === '/login/') {
+      if (document.location.pathname === withSitePrefix('/login/')) {
         this._router.navigate(['']);
       } else {
-        this._router.navigate([document.location.pathname]);
+        this._router.navigateByUrl(getAppRoutePath(document.location.pathname));
       }
       return;
     }
