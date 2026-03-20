@@ -228,8 +228,8 @@
           "sqlserver"
         ],
         "comment": {
-          "zh": "数据库管理软件",
-          "en": "Database management software."
+          "zh": "数据库管理软件，适配 v17.0.13 版本。",
+          "en": "Database management software, compatible with v17.0.13."
         },
         "download_url": "https://github.com/gerry-f2c/appstore-static/releases/download/Navicat/navicat170_premium_lite_en_x64.exe",
         "type": "databases",
