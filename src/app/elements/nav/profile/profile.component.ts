@@ -2,6 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {HttpService} from '@app/services';
 import {User} from '@app/globals';
 import {User as ModelUser} from '@app/model';
+import {withSitePrefix} from '@app/utils/path';
 
 interface MenuItem {
   id: string;
@@ -33,7 +34,7 @@ export class ElementUserFileComponent implements OnInit {
         id: 'logout',
         name: 'Log out',
         click: () => {
-          window.location.href = document.location.origin + '/core/auth/logout/';
+          window.location.href = withSitePrefix('/core/auth/logout/');
         },
       }
     ];

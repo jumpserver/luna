@@ -18,6 +18,7 @@ import { Observable } from 'rxjs';
 import { I18nService } from '@app/services/i18n';
 import { CookieService } from 'ngx-cookie-service';
 import { encryptPassword } from '@app/utils/crypto';
+import { getAppBasePath, withSitePrefix } from '@app/utils/path';
 
 @Injectable()
 export class HttpService {
@@ -56,16 +57,27 @@ export class HttpService {
     return new HttpHeaders().set('X-JMS-ORG', this._cookie.get('X-JMS-ORG'));
   }
 
+  private resolveUrl(url: string): string {
+    if (!url || typeof url !== 'string' || !url.startsWith('/')) {
+      return url;
+    }
+
+    return withSitePrefix(url);
+  }
+
   get<T>(url: string, options?: any): Observable<any> {
-    options = this.setOrgIDToRequestHeader(url, options);
-    return this.http.get(url, options).pipe(catchError(this.handleError.bind(this)));
+    const resolvedUrl = this.resolveUrl(url);
+    options = this.setOrgIDToRequestHeader(resolvedUrl, options);
+    return this.http.get(resolvedUrl, options).pipe(catchError(this.handleError.bind(this)));
   }
 
   async handleError(error: HttpErrorResponse) {
     if (error.status === 401 && User.logined) {
       const msg = await this._i18n.t('LoginExpireMsg');
       if (confirm(msg)) {
-        window.open('/core/auth/login/?next=/luna/', '_blank');
+        const loginUrl = new URL(withSitePrefix('/core/auth/login/'), window.location.origin);
+        loginUrl.searchParams.set('next', getAppBasePath());
+        window.open(loginUrl.toString(), '_blank');
       }
     } else if (error.status === 403) {
       const msg = await this._i18n.t('No permission');
@@ -81,30 +93,38 @@ export class HttpService {
 
   post<T>(url: string, body: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.post(url, body, options).pipe(catchError(this.handleError.bind(this)));
+    return this.http
+      .post(this.resolveUrl(url), body, options)
+      .pipe(catchError(this.handleError.bind(this)));
   }
 
   put<T>(url: string, body?: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.put(url, body, options).pipe(catchError(this.handleError.bind(this)));
+    return this.http
+      .put(this.resolveUrl(url), body, options)
+      .pipe(catchError(this.handleError.bind(this)));
   }
 
   delete<T>(url: string, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.delete(url, options).pipe(catchError(this.handleError.bind(this)));
+    return this.http
+      .delete(this.resolveUrl(url), options)
+      .pipe(catchError(this.handleError.bind(this)));
   }
 
   patch<T>(url: string, body?: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.patch(url, body, options).pipe(catchError(this.handleError.bind(this)));
+    return this.http
+      .patch(this.resolveUrl(url), body, options)
+      .pipe(catchError(this.handleError.bind(this)));
   }
 
   head<T>(url: string, options?: any) {
-    return this.http.head(url, options);
+    return this.http.head(this.resolveUrl(url), options);
   }
 
   options(url: string, options?: any) {
-    return this.http.options(url, options);
+    return this.http.options(this.resolveUrl(url), options);
   }
 
   reportBrowser() {
@@ -356,7 +376,7 @@ export class HttpService {
 
   getConnectToken(token) {
     const url = new URL(
-      `/api/v1/authentication/connection-token/${token}/`,
+      withSitePrefix(`/api/v1/authentication/connection-token/${token}/`),
       window.location.origin
     );
     return this.get(url.href);
@@ -364,7 +384,7 @@ export class HttpService {
 
   downloadRDPFile(token, params: Object, connectOption: any) {
     const url = new URL(
-      `/api/v1/authentication/connection-token/${token.id}/rdp-file/`,
+      withSitePrefix(`/api/v1/authentication/connection-token/${token.id}/rdp-file/`),
       window.location.origin
     );
     params = this.cleanRDPParams(params);
@@ -381,7 +401,7 @@ export class HttpService {
 
   getLocalClientUrl(token, params: Object = {}) {
     const url = new URL(
-      `/api/v1/authentication/connection-token/${token.id}/client-url/`,
+      withSitePrefix(`/api/v1/authentication/connection-token/${token.id}/client-url/`),
       window.location.origin
     );
     params = this.cleanRDPParams(params);
@@ -424,7 +444,7 @@ export class HttpService {
   }
 
   getSmartEndpoint({ assetId, sessionId, token }, protocol): Promise<Endpoint> {
-    const url = new URL('/api/v1/terminal/endpoints/smart/', window.location.origin);
+    const url = new URL(withSitePrefix('/api/v1/terminal/endpoints/smart/'), window.location.origin);
 
     url.searchParams.append('protocol', protocol);
     if (assetId) {

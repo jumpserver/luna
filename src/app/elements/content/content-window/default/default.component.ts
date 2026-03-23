@@ -1,5 +1,6 @@
 import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {Asset, Endpoint, View} from '@app/model';
+import {joinEndpointUrl} from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -40,16 +41,16 @@ export class ElementConnectorDefaultComponent implements OnInit {
     const token = this.view.connectToken.id;
     switch (this.connector) {
       case 'chen':
-        const url = `${endpointUrl}/chen/connect?token=${token}`;
+        const url = joinEndpointUrl(endpointUrl, `/chen/connect?token=${token}`);
         const disableautohash = this.view.getConnectOption('disableautohash');
         if (disableautohash) {
           return `${url}&disableautohash=true`;
         }
         return url;
       case 'lion':
-        return `${endpointUrl}/lion/connect?token=${token}`;
+        return joinEndpointUrl(endpointUrl, `/lion/connect?token=${token}`);
       case 'default':
-        return `${endpointUrl}/koko/connect?token=${token}`;
+        return joinEndpointUrl(endpointUrl, `/koko/connect?token=${token}`);
     }
   }
 }

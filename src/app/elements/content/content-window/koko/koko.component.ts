@@ -9,6 +9,7 @@ import {
 } from '@app/services';
 import { User } from '@app/globals';
 import { Command, InfoItem } from '../guide/model';
+import { joinEndpointUrl } from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -54,7 +55,7 @@ export class ElementConnectorKokoComponent implements OnInit {
     this.account = account;
     this.token = connectToken;
     const url = smartEndpoint.getUrl();
-    this.baseUrl = `${url}/koko`;
+    this.baseUrl = url;
     this.methodName = this.view.connectMethod.value;
     if (this.methodName === 'ssh_guide') {
       this.setInfoItems();
@@ -165,14 +166,17 @@ export class ElementConnectorKokoComponent implements OnInit {
       });
 
     if (this.protocol === 'k8s') {
-      return (this.iframeURL = `${this.baseUrl}/k8s/?` + query);
+      return (this.iframeURL = joinEndpointUrl(this.baseUrl, `/koko/k8s/?${query}`));
     }
 
-    this.iframeURL = `${this.baseUrl}/connect/?` + query;
+    this.iframeURL = joinEndpointUrl(this.baseUrl, `/koko/connect/?${query}`);
   }
 
   generateFileManagerURL() {
-    this.iframeURL = `${this.baseUrl}/elfinder/sftp/?token=${this.view.connectToken.id}&asset=${this.asset.id}`;
+    this.iframeURL = joinEndpointUrl(
+      this.baseUrl,
+      `/koko/elfinder/sftp/?token=${this.view.connectToken.id}&asset=${this.asset.id}`
+    );
   }
 
   async reconnect() {

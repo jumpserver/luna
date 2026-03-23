@@ -20,22 +20,19 @@ import { AppComponent } from './pages/app.component';
 import { ElementComponents } from './elements/elements.component';
 import { PluginModules } from './plugins/plugins';
 import { ClipboardService } from 'ngx-clipboard';
-import { environment, version } from '../environments/environment';
+import { version } from '../environments/environment';
 import { BehaviorSubject, forkJoin, Observable, of } from 'rxjs';
 import { FileInputAccessorModule } from 'file-input-accessor';
 import { catchError, mergeMap } from 'rxjs/operators';
 import { PagesComponents } from './pages/pages.component';
+import { getAppBasePath, withAppBase, withSitePrefix } from '@app/utils/path';
 
 export class CustomLoader implements TranslateLoader {
   constructor(private http: HttpClient) {}
 
   public getTranslation(lang: String): Observable<any> {
-    const remote = '/api/v1/settings/i18n/luna/?lang=' + lang + '&v=' + version;
-    let local = '/assets/i18n/' + lang + '.json';
-    const isProd = environment.production;
-    if (isProd) {
-      local = '/luna' + local;
-    }
+    const remote = withSitePrefix('/api/v1/settings/i18n/luna/?lang=' + lang + '&v=' + version);
+    const local = withAppBase('/assets/i18n/' + lang + '.json');
 
     return forkJoin([
       this.http.get(remote).pipe(catchError(() => of({}))),
@@ -74,7 +71,7 @@ export class CustomLoader implements TranslateLoader {
   bootstrap: [AppComponent],
   providers: [
     ...AllServices,
-    { provide: APP_BASE_HREF, useValue: '/luna/' },
+    { provide: APP_BASE_HREF, useFactory: getAppBasePath },
     CookieService,
     NGXLogger,
     ClipboardService,
