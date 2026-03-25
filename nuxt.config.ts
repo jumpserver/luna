@@ -44,20 +44,28 @@ export default defineNuxtConfig({
     priority: ["bunny"]
   },
   icon: {
-    mode: "css",
-    cssLayer: "base",
-    serverBundle: {
-      collections: [
-        "mingcute",
-        "lucide",
-        "line-md",
-        "proicons",
-        "lets-icons",
-        "fluent",
-        "gravity-ui",
-        "solar",
-        "akar-icons"
-      ]
+    provider: "none",
+    fallbackToApi: false,
+    mode: "svg",
+    collections: [
+      "mingcute",
+      "lucide",
+      "line-md",
+      "proicons",
+      "lets-icons",
+      "fluent",
+      "gravity-ui",
+      "solar",
+      "akar-icons",
+      "tabler",
+      "ix",
+      "cuida",
+      "si"
+    ],
+    clientBundle: {
+      scan: {
+        globInclude: ["ui/**/*.{vue,ts,js}"]
+      }
     }
   },
   ssr: false,

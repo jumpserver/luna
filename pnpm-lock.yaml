@@ -78,12 +78,18 @@ importers:
       '@iconify-json/akar-icons':
         specifier: ^1.2.7
         version: 1.2.7
+      '@iconify-json/cuida':
+        specifier: ^1.2.5
+        version: 1.2.5
       '@iconify-json/fluent':
         specifier: ^1.2.36
         version: 1.2.36
       '@iconify-json/gravity-ui':
         specifier: ^1.2.10
         version: 1.2.10
+      '@iconify-json/ix':
+        specifier: ^1.2.8
+        version: 1.2.11
       '@iconify-json/lets-icons':
         specifier: ^1.2.2
         version: 1.2.2
@@ -99,9 +105,15 @@ importers:
       '@iconify-json/proicons':
         specifier: ^1.2.18
         version: 1.2.18
+      '@iconify-json/si':
+        specifier: ^1.2.5
+        version: 1.2.17
       '@iconify-json/solar':
         specifier: ^1.2.5
         version: 1.2.5
+      '@iconify-json/tabler':
+        specifier: ^1.2.22
+        version: 1.2.32
       '@nuxt/eslint':
         specifier: ^1.11.0
         version: 1.11.0(@typescript-eslint/utils@8.49.0(eslint@9.39.1(jiti@2.6.1))(tslite@5.7.3))(@vue/compiler-sfc@3.5.25)(eslint@9.39.1(jiti@2.6.1))(magicast@0.5.1)(tslite@5.7.3)(vite@7.2.7(@types/node@24.1.0)(jiti@2.6.1)(lightningcss@1.30.2)(sass-embedded@1.93.2)(sass@1.93.2)(terser@5.43.1)(yaml@2.8.2))
@@ -807,11 +819,17 @@ packages:
   '@iconify-json/akar-icons@1.2.7':
     resolution: {integrity: sha512-cw44dCnZgGhm6Tywxm0WALAnDB9AyGkDk7kiLMo2B/Ayt7duZu/uyrsqb55weWUN8Ge2sQAOl8MRtT6bFcLzPg==}
 
+  '@iconify-json/cuida@1.2.5':
+    resolution: {integrity: sha512-+LCnHk53WIw9uTcskDT5Kpjwj8wEEI1YLNeX/yLdksQAt8VOOcIeZnRMmW0drnu8GK8SFw6IXu7CZdx7Kqnwqw==}
+
   '@iconify-json/fluent@1.2.36':
     resolution: {integrity: sha512-DhxwOu5Qiq09o2ehHeUK0I9lC01OeWFlxXP7pIslM0vbi8VuplrrJ7kMg21GJy87iOCevzxf6gTU7TLPGgSknw==}
 
   '@iconify-json/gravity-ui@1.2.10':
     resolution: {integrity: sha512-GpLMMrVCc1XkKuNVQ0HaA37dW2fnkWED/2zcsd288QIncv1pQ8RG/Hr/mCDgGHe4Nec/1eu9OBk6yVqqQiR5Gw==}
+
+  '@iconify-json/ix@1.2.11':
+    resolution: {integrity: sha512-3mMMD+3d2jVRNGhsLZgxCIw+mpDD3B7a/rBv+V+DzwUPnuqoFYzAf/lTq9GhgI5/8DOpzpYJ4Toho+2TLQVMGg==}
 
   '@iconify-json/lets-icons@1.2.2':
     resolution: {integrity: sha512-GBCeFoWNLA5v1ZRIM54cZGpE/lHtFcSJjxXXCi2W5SxkJoPDonNoLGf61/z8eNxiBkegynClvEgCAs0YjLeZkA==}
@@ -828,8 +846,14 @@ packages:
   '@iconify-json/proicons@1.2.18':
     resolution: {integrity: sha512-mp4J21EbIJAk9Iag0uXaGWLFbZAWfkSI8IVQ4S5+aKiS6VzdShFE6yC8WHoOITwijBOuqXCt8bftDxv6C7regg==}
 
+  '@iconify-json/si@1.2.17':
+    resolution: {integrity: sha512-Jzz3DlAhQCjIhTvLA7PQ/cFhHp4mAS4rzbwwWPOlIqUeYotfocy0VFQjaKGsSk9rLmM5mOuEocyqZpf3sYHDvw==}
+
   '@iconify-json/solar@1.2.5':
     resolution: {integrity: sha512-WMAiNwchU8zhfrySww6KQBRIBbsQ6SvgIu2yA+CHGyMima/0KQwT5MXogrZPJGoQF+1Ye3Qj6K+1CiyNn3YkoA==}
+
+  '@iconify-json/tabler@1.2.32':
+    resolution: {integrity: sha512-0UlpROc9X0VrqJLeE87o3JLsQauHMhj82GnH9TkPaymhBeS9wPB3NOqxQyzw+MHgPL08uVSggwfkTaoRfhQ+RQ==}
 
   '@iconify/collections@1.0.591':
     resolution: {integrity: sha512-0wOTrNgLVu+Nrg2BoNbXnA8+/GkAdj9sE597Hjc/5HO0/Ui6d/HgA74UUeEcHQ5XKKuLuATDVhzHYPh9Ysc18A==}
@@ -6860,11 +6884,19 @@ snapshots:
     dependencies:
       '@iconify/types': 2.0.0
 
+  '@iconify-json/cuida@1.2.5':
+    dependencies:
+      '@iconify/types': 2.0.0
+
   '@iconify-json/fluent@1.2.36':
     dependencies:
       '@iconify/types': 2.0.0
 
   '@iconify-json/gravity-ui@1.2.10':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/ix@1.2.11':
     dependencies:
       '@iconify/types': 2.0.0
 
@@ -6888,7 +6920,15 @@ snapshots:
     dependencies:
       '@iconify/types': 2.0.0
 
+  '@iconify-json/si@1.2.17':
+    dependencies:
+      '@iconify/types': 2.0.0
+
   '@iconify-json/solar@1.2.5':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/tabler@1.2.32':
     dependencies:
       '@iconify/types': 2.0.0
 
