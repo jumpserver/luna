@@ -1,5 +1,6 @@
 import { ActivatedRoute } from '@angular/router';
 import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { withSitePrefix } from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -31,14 +32,14 @@ export class PagesShareComponent implements OnInit, AfterViewInit {
     });
 
     const queryString = queryParams.toString();
-    const baseUrl = `${window.location.protocol}//${window.location.host}`;
+    const querySuffix = queryString ? `?${queryString}` : '';
 
     if (this.type && this.type === 'lion') {
-      this.iframeURL = `${baseUrl}/lion/share/${this.shareId}?${queryString}`;
+      this.iframeURL = withSitePrefix(`/lion/share/${this.shareId}${querySuffix}`);
       return;
     }
 
-    this.iframeURL = `${baseUrl}/koko/share/${this.shareId}?${queryString}`;
+    this.iframeURL = withSitePrefix(`/koko/share/${this.shareId}${querySuffix}`);
   }
 
   ngAfterViewInit(): void {
