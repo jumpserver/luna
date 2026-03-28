@@ -1,6 +1,6 @@
 {
   "filename": "Jumpserve Clients Config",
-  "version": 5,
+  "version": 6,
   "windowBounds": {
     "width": 1280,
     "height": 800
@@ -171,7 +171,7 @@
         "download_url": "https://winscp.net/eng/index.php",
         "type": "filetransfer",
         "path": "",
-        "arg_format": "{protocol}://{username}:{value}@{host}:{port}",
+        "arg_format": "{protocol}://{username}:{value}@{host}:{port} -rawsettings AuthKIPassword=0",
         "match_first": [],
         "is_internal": false,
         "is_default": false,
