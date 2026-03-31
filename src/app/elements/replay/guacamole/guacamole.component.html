@@ -1,8 +1,10 @@
+
+
 <div class="player-container" id="player">
   <div class="display">
     <div class="seek-overlay" *ngIf="isSeeking">
       <div class="seek-content">
-        <nz-spin nzSize="default"></nz-spin>
+        <nz-spin></nz-spin>
         <p>{{ 'Redirecting' | translate }}...</p>
         <button class="cancel-btn" (click)="cancelSeek($event)">{{ 'Cancel' | translate }}</button>
       </div>
@@ -43,12 +45,12 @@
     </div>
   </div>
 
-  <div class="controls">
+  <div class="controls" [style.pointer-events]="isLoading ? 'none' : 'auto'" [style.opacity]="isLoading ? 0.6 : 1">
     <div class="controls-left">
-      <button class="control-btn" (click)="toggle()">
+      <button class="control-btn" (click)="toggle()" [disabled]="isLoading">
         <i nz-icon [nzType]="isPlaying ? 'pause-circle' : 'play-circle'" nzTheme="fill"></i>
       </button>
-      <button class="control-btn" (click)="restart()">
+      <button class="control-btn" (click)="restart()" [disabled]="isLoading">
         <i nz-icon nzType="reload" nzTheme="outline"></i>
       </button>
     </div>
@@ -60,6 +62,7 @@
                id="position-slider"
                [(ngModel)]="percent"
                [max]="max"
+               [disabled]="isLoading || isSeeking"
                (mouseup)="runFrom()"
                class="progress-slider">
       </div>

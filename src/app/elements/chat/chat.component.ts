@@ -15,6 +15,7 @@ import {
   HostListener,
   AfterViewInit
 } from '@angular/core';
+import { withUIBase } from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -157,7 +158,7 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private listenChatAI(): void {
-    this.iframeURL = '/ui/#/chat/chat-ai?from=luna';
+    this.iframeURL = withUIBase('#/chat/chat-ai?from=luna');
 
     window.addEventListener('message', event => {
       // 确认消息的来源是你信任的域

@@ -2,6 +2,7 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { DataStore, User } from '@app/globals';
 import { HttpService, LogService, SettingService, ViewService } from '@app/services';
 import { environment } from '@src/environments/environment';
+import { toAbsoluteWsUrl, withAppBase } from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -65,12 +66,7 @@ export class PageMainComponent implements OnInit {
   onToggleMobileLayout() {}
 
   connectWebsocket() {
-    const scheme = document.location.protocol === 'https:' ? 'wss' : 'ws';
-    const port = document.location.port ? ':' + document.location.port : '';
-    const url = '/ws/notifications/site-msg/';
-    const wsURL = scheme + '://' + document.location.hostname + port + url;
-
-    const ws = new WebSocket(wsURL);
+    const ws = new WebSocket(toAbsoluteWsUrl('/ws/notifications/site-msg/'));
     ws.onopen = event => {
       this._logger.debug('Websocket connected: ', event);
     };
@@ -95,7 +91,7 @@ export class PageMainComponent implements OnInit {
     }
 
     const notInIframe = window.self === window.top;
-    const notInReplay = location.pathname.indexOf('/luna/replay') === -1;
+    const notInReplay = location.pathname.indexOf(withAppBase('/replay')) === -1;
     const returnValue = !(notInIframe && notInReplay);
     if (returnValue) {
       $event.returnValue = true;

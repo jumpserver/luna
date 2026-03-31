@@ -3,8 +3,16 @@
   border-left: 1px solid var(--el-border-color-x);
 
   .tab-bar {
-    a {
-      color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+    width: 100%;
+    background-color: var(--el-tab-bg-color);
+
+    .action-btn {
+      cursor: pointer;
+      color: #fff;
     }
 
     .scroll-button {
@@ -30,6 +38,7 @@
 
     .tabs {
       display: flex;
+      flex: 1;
       position: relative;
       height: 30px;
       overflow-y: hidden;
@@ -42,7 +51,7 @@
         min-width: 100%;
         padding-left: 0;
         margin: 0;
-        background-color: var(--el-tab-bg-color);
+
 
         .drag-box {
           display: inline-flex;
@@ -59,6 +68,10 @@
           }
         }
       }
+    }
+
+    .fullscreen-icon {
+      margin: 0 12px;
     }
   }
 
