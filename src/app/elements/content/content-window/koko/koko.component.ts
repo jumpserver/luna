@@ -9,7 +9,7 @@ import {
 } from '@app/services';
 import { User } from '@app/globals';
 import { Command, InfoItem } from '../guide/model';
-import { joinEndpointUrl } from '@app/utils/path';
+import { getSitePrefix, joinEndpointUrl, withSitePrefix } from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -152,31 +152,45 @@ export class ElementConnectorKokoComponent implements OnInit {
   }
 
   generateNodeConnectUrl() {
-    const params = {};
-    params['disableautohash'] = this.view.getConnectOption('disableautohash');
-    params['token'] = this.view.connectToken.id;
+    const params = new URLSearchParams({
+      token: this.view.connectToken.id,
+      _: Date.now().toString()
+    });
+    const disableautohash = this.view.getConnectOption('disableautohash');
+    const sitePrefix = getSitePrefix();
 
-    params['_'] = Date.now().toString();
-    const query = Object.entries(params)
-      .map(([key, value]) => {
-        return `${key}=${value}`;
-      })
-      .reduce((a, b) => {
-        return `${a}&${b}`;
-      });
-
-    if (this.protocol === 'k8s') {
-      return (this.iframeURL = joinEndpointUrl(this.baseUrl, `/koko/k8s/?${query}`));
+    if (disableautohash !== undefined && disableautohash !== null) {
+      params.set('disableautohash', String(disableautohash));
     }
 
-    this.iframeURL = joinEndpointUrl(this.baseUrl, `/koko/connect/?${query}`);
+    if (sitePrefix) {
+      params.set('site_prefix', sitePrefix);
+    }
+
+    const query = params.toString();
+    const kokoPath = withSitePrefix(`/koko/connect/?${query}`);
+    const k8sPath = withSitePrefix(`/koko/k8s/?${query}`);
+
+    if (this.protocol === 'k8s') {
+      return (this.iframeURL = joinEndpointUrl(this.baseUrl, k8sPath));
+    }
+
+    this.iframeURL = joinEndpointUrl(this.baseUrl, kokoPath);
   }
 
   generateFileManagerURL() {
-    this.iframeURL = joinEndpointUrl(
-      this.baseUrl,
-      `/koko/elfinder/sftp/?token=${this.view.connectToken.id}&asset=${this.asset.id}`
-    );
+    const params = new URLSearchParams({
+      token: this.view.connectToken.id,
+      asset: this.asset.id
+    });
+    const sitePrefix = getSitePrefix();
+
+    if (sitePrefix) {
+      params.set('site_prefix', sitePrefix);
+    }
+
+    const path = `/koko/elfinder/sftp/?${params.toString()}`;
+    this.iframeURL = joinEndpointUrl(this.baseUrl, withSitePrefix(path));
   }
 
   async reconnect() {
@@ -186,7 +200,6 @@ export class ElementConnectorKokoComponent implements OnInit {
     if (!newConnectToken) {
       return;
     }
-    // 更新当前 view 的 connectToken
     this.view.connectToken = newConnectToken;
     await this.ngOnInit();
     this.loading = false;
