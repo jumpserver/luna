@@ -3,22 +3,22 @@ definePageMeta({
   layout: "setting"
 });
 
-const appName = "JumpServer Client";
-const website = "https://jumpserver.org";
+const appName = "Client";
+// const website = "https://jumpserver.org";
 
 const version = ref<string>("—");
-const links = ref([
-  {
-    label: "GitHub",
-    icon: "line-md:github",
-    to: "https://github.com/jumpserver/jumpserver"
-  },
-  {
-    label: "Discord",
-    icon: "line-md:discord",
-    to: "https://discord.com/invite/W6vYXmAQG2"
-  }
-]);
+// const links = ref([
+//   {
+//     label: "GitHub",
+//     icon: "line-md:github",
+//     to: "https://github.com/jumpserver/jumpserver"
+//   },
+//   {
+//     label: "Discord",
+//     icon: "line-md:discord",
+//     to: "https://discord.com/invite/W6vYXmAQG2"
+//   }
+// ]);
 
 onMounted(async () => {
   try {
@@ -26,13 +26,13 @@ onMounted(async () => {
   } catch {}
 });
 
-const openLink = async (url: string) => {
-  try {
-    await useTauriShellOpen(url);
-  } catch (e) {
-    console.error("open link failed", e);
-  }
-};
+// const openLink = async (url: string) => {
+//   try {
+//     await useTauriShellOpen(url);
+//   } catch (e) {
+//     console.error("open link failed", e);
+//   }
+// };
 </script>
 
 <template>
@@ -47,7 +47,7 @@ const openLink = async (url: string) => {
           <UBadge icon="i-lucide-rocket" size="sm" color="primary" variant="soft">v{{ version }}</UBadge>
         </p>
 
-        <div class="flex items-center justify-center gap-3 text-sm text-gray-400">
+        <!-- <div class="flex items-center justify-center gap-3 text-sm text-gray-400">
           <button
             v-for="link in links"
             :key="link.to"
@@ -58,10 +58,10 @@ const openLink = async (url: string) => {
             <UIcon :name="link.icon" />
             {{ link.label }}
           </button>
-        </div>
+        </div> -->
       </div>
 
-      <div class="flex items-center justify-center gap-3 text-sm text-gray-400">
+      <!-- <div class="flex items-center justify-center gap-3 text-sm text-gray-400">
         <button
           type="button"
           class="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
@@ -70,7 +70,7 @@ const openLink = async (url: string) => {
           <UIcon name="i-lucide-mail" />
           {{ website }}
         </button>
-      </div>
+      </div> -->
     </div>
   </UContainer>
 </template>

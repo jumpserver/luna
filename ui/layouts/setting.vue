@@ -43,6 +43,10 @@ const windowControlButtons = computed(() => {
   ];
 });
 
+const windowControlRailClass = computed(() => {
+  return isMacOS.value ? "w-0" : "w-36";
+});
+
 const getWindowControlButtonClass = (buttonKey: string) => {
   const baseClass = "rounded-none w-12 h-13 p-1 flex items-center justify-center";
 
@@ -105,27 +109,36 @@ onMounted(() => {
       }"
     >
       <template #default>
-        <div class="header-bg h-13 grid grid-cols-[1fr_auto_1fr] items-center px-4">
-          <div data-tauri-drag-region class="h-full" />
+        <div class="header-bg relative h-10 px-4">
+          <div data-tauri-drag-region class="absolute inset-0 z-0" />
 
-          <div data-tauri-drag-region class="flex items-center justify-center select-none cursor-default">
-            <p class="text-sm font-bold pointer-events-none">
-              {{ t("Common.ConnectionSettings") }}
-            </p>
-          </div>
+          <div class="relative z-10 flex h-full items-center pointer-events-none">
+            <div aria-hidden="true" :class="windowControlRailClass" />
 
-          <div class="flex items-center justify-end" data-tauri-drag-region="false">
-            <template v-if="!isMacOS">
-              <template v-for="button of windowControlButtons" :key="button.key">
-                <UButton
-                  :icon="button.iconName"
-                  :class="getWindowControlButtonClass(button.key)"
-                  :title="button.tooltipLabel"
-                  v-bind="commonButtonProps"
-                  @click="button.onClick"
-                />
+            <div class="min-w-0 flex-1 px-4 text-center select-none">
+              <p class="pointer-events-none truncate text-sm font-bold">
+                {{ t("Common.ConnectionSettings") }}
+              </p>
+            </div>
+
+            <div
+              class="flex h-full shrink-0 items-center justify-end pointer-events-auto"
+              :class="windowControlRailClass"
+              data-tauri-drag-region="false"
+            >
+              <template v-if="!isMacOS">
+                <template v-for="button of windowControlButtons" :key="button.key">
+                  <UButton
+                    :icon="button.iconName"
+                    :class="getWindowControlButtonClass(button.key)"
+                    :title="button.tooltipLabel"
+                    v-bind="commonButtonProps"
+                    data-tauri-drag-region="false"
+                    @click="button.onClick"
+                  />
+                </template>
               </template>
-            </template>
+            </div>
           </div>
         </div>
       </template>
