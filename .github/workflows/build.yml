@@ -186,6 +186,11 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
+      - name: Sync app version from workflow version
+        env:
+          VERSION: ${{ env.VERSION }}
+        run: pnpm run set_version
+
       # Manual builds: use tauri-action for signing/notarization, but upload to workflow artifacts (temporary download)
       - name: Set product name (manual only)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.product_name != ''
