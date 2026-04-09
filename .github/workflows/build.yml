@@ -14,6 +14,11 @@ on:
         required: false
         default: false
         type: boolean
+      product_name:
+        description: "Custom product name for manual builds (e.g., MyClient)"
+        required: false
+        default: ""
+        type: string
   push:
     branches:
       - master
@@ -181,7 +186,13 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
+      # Manual builds: use tauri-action for signing/notarization, but upload to workflow artifacts (temporary download)
+      - name: Set product name (manual only)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.product_name != ''
+        run: node scripts/set-product-name.mjs --name "${{ github.event.inputs.product_name }}"
+
       - name: Build Tauri app
+        id: tauri_build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -192,13 +203,12 @@ jobs:
           APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
 
         with:
+          # Create/update release draft on both tag/push and manual dispatch.
           tagName: ${{ env.VERSION }}
           args: ${{ matrix.target != '' && '--target ' || '' }}${{ matrix.target }}
           releaseName: JumpServer Client v__VERSION__
           releaseBody: See the assets to download this version and install.
           releaseDraft: true
           prerelease: false
-          # NOTE: workflow_dispatch inputs are strings ("true"/"false") in expressions.
-          # Use fromJSON to coerce to real booleans, otherwise "! 'false'" evaluates to false.
           includeDebug: ${{ github.event_name == 'workflow_dispatch' && fromJSON(github.event.inputs.build_debug || 'false') || false }}
-          includeRelease: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !fromJSON(github.event.inputs.build_debug || 'false')) }}
+          includeRelease: ${{ github.event_name != 'workflow_dispatch' || !fromJSON(github.event.inputs.build_debug || 'false') }}

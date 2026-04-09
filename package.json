@@ -24,6 +24,7 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "tauri:build:debug": "tauri build --debug",
+    "tauri:build:name": "node scripts/tauri-build-with-name.mjs",
     "cleanup": "./cleanup.sh",
     "prettier": "prettier --write \"ui/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
     "fresh-start": "./cleanup.sh && pnpm install && pnpm run tauri:dev",
