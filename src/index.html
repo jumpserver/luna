@@ -7,14 +7,22 @@
   <meta content="no-cache" http-equiv="Cache-control">
   <meta content="no-cache" http-equiv="Cache">
   <title></title>
-  <base href="/luna/">
+  
   <script>
+    /**
+     * 核心逻辑：
+     * 1. 动态计算前缀（Site Prefix）。
+     * 2. 使用 document.write 同步写入 <base> 标签。
+     * 这能确保浏览器在解析后续的 link/script 标签前，base 路径已经生效，
+     * 从而避免预解析器（Pre-parser）发起不带前缀的错误请求。
+     */
     (function () {
       var pathname = window.location.pathname || '/';
       var marker = '/luna/';
       var idx = pathname.indexOf(marker);
       var prefix = '';
 
+      // 处理路径匹配
       if (idx === -1 && /\/luna$/.test(pathname)) {
         idx = pathname.length - '/luna'.length;
       }
@@ -24,14 +32,14 @@
       }
 
       prefix = prefix.replace(/\/+$/, '');
+      
+      // 设置全局变量供业务代码使用
       window.__BASE_PATH__ = prefix;
       window.__UI_BASE__ = prefix + '/ui/';
       window.__LUNA_BASE__ = prefix + marker;
 
-      var baseElement = document.querySelector('base');
-      if (baseElement) {
-        baseElement.setAttribute('href', window.__LUNA_BASE__);
-      }
+      // 同步写入 base 标签，防止浏览器预加载“抢跑”
+      document.write('<base href="' + window.__LUNA_BASE__ + '">');
     })();
   </script>
 
@@ -77,7 +85,7 @@
   </div>
 </app-root>
 <span id="marker" style="display: none;font-size: 14px">marker</span>
-</body>
+
 <script>
   if (navigator.keyboard && navigator.keyboard.lock) {
     navigator.keyboard.lock(['Escape']);
@@ -95,7 +103,7 @@
         clipboardData = await navigator.clipboard.readText()
       }
 
-      // 写会内容
+      // 写回内容
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(clipboardData);
       }
@@ -104,4 +112,5 @@
     }
   }
 </script>
+</body>
 </html>
