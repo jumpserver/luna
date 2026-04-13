@@ -3,7 +3,7 @@ definePageMeta({
   layout: "setting"
 });
 
-const appName = "Client";
+const appName = ref(import.meta.env.VITE_APP_NAME || "");
 // const website = "https://jumpserver.org";
 
 const version = ref<string>("—");

@@ -30,7 +30,7 @@
   },
   "Auth": {
     "SignInTitle": "Sign in from your browser to continue",
-    "BrowserHintPrefix": "If your browser hasn't opened JumpServer for you to sign in,",
+    "BrowserHintPrefix": "If your browser hasn't opened for you to sign in,",
     "OpenManually": "open it manually",
     "CopyUrl": "copy the URL",
     "Or": "or",

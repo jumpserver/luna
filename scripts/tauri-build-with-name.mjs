@@ -47,6 +47,11 @@ fs.writeFileSync(tmpPath, JSON.stringify(conf, null, 2))
 const result = spawnSync('pnpm', ['tauri', 'build', '--config', tmpPath, ...rest], {
   stdio: 'inherit',
   shell: process.platform === 'win32',
+  env: {
+    ...process.env,
+    CLIENT_NAME: name,
+    VITE_APP_NAME: name,
+  },
 })
 
 try {
@@ -56,4 +61,3 @@ try {
 }
 
 process.exit(result.status ?? 1)
-

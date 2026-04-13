@@ -12,6 +12,7 @@ const { isMacOS } = usePlatform();
 // const isMacOS = false;
 const { collapse, setCollapse } = useSettingManager();
 
+const appName = ref(import.meta.env.VITE_APP_NAME || "");
 const isLoading = ref(false);
 const sidebarSearch = ref("");
 
@@ -98,7 +99,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
       >
         <div v-if="!isMacOS && !collapse" class="flex items-center gap-2">
           <UAvatar size="sm" src="/logo.png" class="bg-transparent" :ui="{ root: 'bg-transparent' }" />
-          <span class="text-sm">JumpServer</span>
+          <span v-if="appName" class="text-sm">{{ appName }}</span>
         </div>
 
         <UButton
