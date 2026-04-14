@@ -17,7 +17,7 @@ export function fillKey(key: string): Buffer | string {
   return filledKey;
 }
 
-function aesEncrypt(text, originKey) {
+function aesEncrypt(text: string, originKey: string) {
   const key = CryptoJS.enc.Utf8.parse(fillKey(originKey));
   return CryptoJS.AES.encrypt(text, key, {
     mode: CryptoJS.mode.ECB,
@@ -25,7 +25,7 @@ function aesEncrypt(text, originKey) {
   }).toString();
 }
 
-function rsaEncrypt(text, pubKey) {
+function rsaEncrypt(text: string, pubKey: string) {
   if (!text) {
     return text;
   }
@@ -34,13 +34,13 @@ function rsaEncrypt(text, pubKey) {
   return jsEncrypt.encrypt(text);
 }
 
-function rsaDecrypt(cipher, pkey) {
+function rsaDecrypt(cipher: string, pkey: string) {
   const jsEncrypt = new JSEncrypt();
   jsEncrypt.setPrivateKey(pkey);
   return jsEncrypt.decrypt(cipher);
 }
 
-function hexToBytes(hex) {
+function hexToBytes(hex: string) {
   if (!hex) return new Uint8Array([]);
   hex = hex.toString().trim().toLowerCase();
   if (hex.startsWith('0x')) {
@@ -55,7 +55,7 @@ function hexToBytes(hex) {
   return bytes;
 }
 
-function bytesToBase64(bytes) {
+function bytesToBase64(bytes: Uint8Array) {
   // Uint8Array -> base64（标准 base64）
   let binary = '';
   for (let i = 0; i < bytes.length; i++) {
@@ -64,7 +64,7 @@ function bytesToBase64(bytes) {
   return btoa(binary);
 }
 
-function rsaEncryptPassword(password, rsaPublicKey) {
+function rsaEncryptPassword(password: string, rsaPublicKey: string) {
   const aesKey = (Math.random() + 1).toString(36).substring(2);
   // public key 是 base64 存储的
   const keyCipher = rsaEncrypt(aesKey, rsaPublicKey);
@@ -72,7 +72,7 @@ function rsaEncryptPassword(password, rsaPublicKey) {
   return `${keyCipher}:${passwordCipher}`;
 }
 
-function ensureSm2PublicKey(sm2PublicKey) {
+function ensureSm2PublicKey(sm2PublicKey: string) {
   // sm2.min.js 的 doEncrypt 需要能被 decodePointHex 解析的公钥：
   // 通常为非压缩点 hex，格式 `04||x||y`（总长度 130）。
   // 但后端生成/下发的公钥有时是 `x||y`（长度 128），这里做归一化补齐 `04` 前缀。
@@ -89,7 +89,7 @@ function ensureSm2PublicKey(sm2PublicKey) {
   return sm2PublicKey;
 }
 
-function gmEncryptPassword(password, sm2PublicKey) {
+function gmEncryptPassword(password: string, sm2PublicKey: string) {
   sm2PublicKey = ensureSm2PublicKey(sm2PublicKey);
   // 只适配前端，不改后端：
   // 直接生成 16 字符 key（后端 padding_key 会保持原样，不再补齐）
@@ -116,7 +116,7 @@ function gmEncryptPassword(password, sm2PublicKey) {
   return `${keyCipherB64}:${passwordCipherB64}`;
 }
 
-export function encryptPassword(password) {
+export function encryptPassword(password: string) {
   if (!password) {
     console.log('password is empty');
     return '';
@@ -142,7 +142,7 @@ export function encryptPassword(password) {
   return cipher;
 }
 
-export function randomString(length) {
+export function randomString(length: number) {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
   const charactersLength = characters.length;
