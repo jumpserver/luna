@@ -206,6 +206,8 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+          CLIENT_NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.product_name || '' }}
+          VITE_APP_NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.product_name || '' }}
 
         with:
           # Create/update release draft on both tag/push and manual dispatch.

@@ -81,7 +81,7 @@ const settingMenu = computed<NavigationMenuItem[]>(() => {
     },
     {
       label: t("Common.About"),
-      icon: "ix:about",
+      icon: "solar:info-circle-linear",
       to: localePath({ name: "setting-about" })
     }
   ];
