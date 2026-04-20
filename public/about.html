@@ -54,8 +54,8 @@
 </head>
 <body>
   <div class="card">
-    <img src="/logo.png" alt="JumpServerClient" />
-    <div class="name" id="name">JumpServerClient</div>
+    <img src="/logo.png" alt="App logo" id="logo" />
+    <div class="name" id="name" data-default-name="JumpServerClient">JumpServerClient</div>
     <div class="version" id="version">Version</div>
     <p class="copyright" id="copyright">
       Copyright © JumpServer
@@ -64,15 +64,29 @@
   <script>
     const lang = (navigator.language || '').toLowerCase();
     const isZh = lang.startsWith('zh');
+    const params = new URLSearchParams(window.location.search);
+    const customName = (params.get('name') || '').trim();
+    const isCustom = params.get('custom') === '1';
+    const logoEl = document.getElementById('logo');
     const nameEl = document.getElementById('name');
     const versionEl = document.getElementById('version');
     const copyEl = document.getElementById('copyright');
+    const appName = customName || nameEl.dataset.defaultName || 'JumpServerClient';
 
+    document.title = isZh ? `关于 ${appName}` : `About ${appName}`;
+    logoEl.alt = appName;
     versionEl.textContent = isZh ? '版本信息' : 'Version';
-    nameEl.textContent = 'JumpServerClient';
-    copyEl.textContent = isZh
-      ? 'Copyright © JumpServer 保留所有权利'
-      : 'Copyright © JumpServer. All Rights Reserved';
+    nameEl.textContent = appName;
+
+    if (isCustom) {
+      copyEl.hidden = true;
+      copyEl.textContent = '';
+    } else {
+      copyEl.hidden = false;
+      copyEl.textContent = isZh
+        ? 'Copyright © JumpServer 保留所有权利'
+        : 'Copyright © JumpServer. All Rights Reserved';
+    }
   </script>
 </body>
 </html>
