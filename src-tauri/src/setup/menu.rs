@@ -221,8 +221,10 @@ fn open_about_window(app: &tauri::AppHandle) {
     }
 
     let app_name = app.package_info().name.clone();
+    let app_version = app.package_info().version.to_string();
     let query = url::form_urlencoded::Serializer::new(String::new())
         .append_pair("name", &app_name)
+        .append_pair("version", &app_version)
         .append_pair(
             "custom",
             if app_name == DEFAULT_PRODUCT_NAME {
@@ -236,7 +238,7 @@ fn open_about_window(app: &tauri::AppHandle) {
 
     let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App(about_path.into()))
         .title("About")
-        .inner_size(320.0, 250.0)
+        .inner_size(320.0, 300.0)
         .resizable(false);
 
     #[cfg(target_os = "macos")]
