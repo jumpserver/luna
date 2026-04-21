@@ -52,23 +52,71 @@
   *ngIf="accountSelected && !accountSelected?.has_secret && accountSelected.username !== '@ANON'"
   class="form-field password"
 >
-  <nz-form-label class="zone-label" nzFor='password' nzNoColon>{{ "Password" | translate }}</nz-form-label>
-  <nz-form-control class="input-field">
-    <nz-input-group [nzSuffix]="suffixTemplate">
-      <input
-        #password
-        [(ngModel)]="manualAuthInfo.secret"
-        [autocomplete]="hidePassword ? 'new-password' : 'off'"
-        [autofocus]='manualAuthInfo.username? true : null'
-        [type]="hidePassword ? 'password' : 'text'"
-        name="password"
-        nz-input
-      >
-      <ng-template #suffixTemplate>
-        <i (click)="hidePassword = !hidePassword" [nzType]="hidePassword ? 'eye-invisible' : 'eye'" nz-icon></i>
-      </ng-template>
-    </nz-input-group>
-    <label *ngIf="!rememberAuthDisabled" [(ngModel)]="manualAuthInfo.rememberAuth" class="remember-auth" nz-checkbox>
+  <nz-form-label class="zone-label" nzNoColon>{{ "Credential" | translate }}</nz-form-label>
+  <nz-form-control class="input-field credential-group">
+    <nz-tabset
+      [nzSelectedIndex]="secretTypeTabIndex"
+      (nzSelectedIndexChange)="onSecretTypeTabChange($event)"
+      class="full-width-tabs"
+    >
+      <nz-tab [nzTitle]="passwordTitleTpl">
+        <ng-template #passwordTitleTpl>
+          <i class="fa fa-lock"></i> {{ 'Password' | translate }}
+        </ng-template>
+        <ng-template nz-tab>
+          <nz-input-group [nzSuffix]="suffixTemplate">
+            <input
+              #password
+              [(ngModel)]="passwordSecret"
+              (ngModelChange)="onPasswordSecretChange($event)"
+              [autocomplete]="hidePassword ? 'new-password' : 'off'"
+              [autofocus]='manualAuthInfo.username ? true : null'
+              [type]="hidePassword ? 'password' : 'text'"
+              name="password"
+              nz-input
+            >
+            <ng-template #suffixTemplate>
+              <i (click)="hidePassword = !hidePassword" [nzType]="hidePassword ? 'eye-invisible' : 'eye'" nz-icon></i>
+            </ng-template>
+          </nz-input-group>
+        </ng-template>
+      </nz-tab>
+      <nz-tab [nzTitle]="sshKeyTitleTpl" *ngIf="protocol.name === 'ssh'">
+        <ng-template #sshKeyTitleTpl>
+          <i class="fa fa-key"></i> {{ 'SSH key' | translate }}
+        </ng-template>
+        <ng-template nz-tab>
+          <textarea
+            class="ssh-key-input"
+            [(ngModel)]="sshKeySecret"
+            (ngModelChange)="onSshKeySecretChange($event)"
+            [autofocus]='manualAuthInfo.username ? true : null'
+            [placeholder]="'Paste private key here' | translate"
+            name="sshKey"
+            nz-input
+            rows="6"
+          ></textarea>
+          <div class="ssh-key-actions">
+            <button nz-button nzType="default" type="button" (click)="selectSshKeyFile()">
+              <i class="fa fa-folder-open"></i> {{ 'Select file' | translate }}
+            </button>
+            <input
+              #sshKeyFileInput
+              type="file"
+              accept=".key,.pem,.txt"
+              (change)="onSshKeyFileSelected($event)"
+              class="ssh-key-file-input"
+            />
+          </div>
+        </ng-template>
+      </nz-tab>
+    </nz-tabset>
+    <label
+      *ngIf="!rememberAuthDisabled"
+      [(ngModel)]="manualAuthInfo.rememberAuth"
+      class="remember-auth"
+      nz-checkbox
+    >
       {{ "Remember password" | translate }}
     </label>
   </nz-form-control>
