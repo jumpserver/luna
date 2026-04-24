@@ -108,7 +108,20 @@ export class ElementReplayAsciicastComponent implements OnInit, AfterViewInit {
   @HostListener('window:resize', ['$event'])
   onResize(event: Event) {
     this.rows = Math.min(25, Math.floor((window.innerHeight - 120) / 16));
+
+    if (this.isDocumentFullscreen()) {
+      return;
+    }
+
     this.resetPlayerWithCurrentTime();
+  }
+
+  private isDocumentFullscreen() {
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element;
+    };
+
+    return !!(doc.fullscreenElement || doc.webkitFullscreenElement);
   }
 
   speedDown() {
