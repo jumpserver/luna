@@ -200,5 +200,5 @@ jobs:
           releaseBody: See the assets to download this version and install.
           releaseDraft: true
           prerelease: false
-          includeDebug: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_debug == 'true' || false }}
-          includeRelease: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.build_debug == 'false') || github.event_name == 'push' }}
+          includeDebug: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_debug || false }}
+          includeRelease: ${{ github.event_name == 'workflow_dispatch' && !github.event.inputs.build_debug || github.event_name == 'push' }}
