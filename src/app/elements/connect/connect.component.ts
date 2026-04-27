@@ -154,16 +154,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // 分屏连接
-    if (splitConnect) {
-      return this.currentWebSubView(asset, connectInfo, connToken);
-    }
-
-    // 特殊处理
-    if (connectMethod.value.endsWith('_guide')) {
-      return this.createWebView(asset, connectInfo, connToken);
-    }
-
     let appletConnectMethod = connectOption ? connectOption['appletConnectMethod'] : 'web';
 
     if (!this._settingSvc.hasXPack()) {
@@ -174,21 +164,35 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       virtualappConnectMethod = 'web';
     }
 
+    const isClientConnect =
+      connectMethod.type === 'native' ||
+      (connectMethod.type === 'applet' && appletConnectMethod === 'client') ||
+      (connectMethod.type === 'virtual_app' && virtualappConnectMethod === 'client');
+
     if (connectInfo.downloadRDP) {
       return this._http.downloadRDPFile(
         connToken,
         this._settingSvc.setting,
         connectInfo.connectOption
       );
-    } else if (connectMethod.type === 'native') {
-      this.callLocalClient(connToken).then();
-    } else if (connectMethod.type === 'applet' && appletConnectMethod === 'client') {
-      this.callLocalClient(connToken).then();
-    } else if (connectMethod.type === 'virtual_app' && virtualappConnectMethod === 'client') {
-      this.callLocalClient(connToken).then();
-    } else {
-      this.createWebView(asset, connectInfo, connToken);
     }
+
+    if (isClientConnect) {
+      this.callLocalClient(connToken).then();
+      return;
+    }
+
+    // 特殊处理
+    if (connectMethod.value.endsWith('_guide')) {
+      return this.createWebView(asset, connectInfo, connToken);
+    }
+
+    // 分屏连接只处理 Web 视图
+    if (splitConnect) {
+      return this.currentWebSubView(asset, connectInfo, connToken);
+    }
+
+    this.createWebView(asset, connectInfo, connToken);
   }
 
   async callLocalClient(connToken: ConnectionToken) {
