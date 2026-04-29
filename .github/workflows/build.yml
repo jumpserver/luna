@@ -183,6 +183,11 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
+      - name: Sync app version from workflow version
+        env:
+          VERSION: ${{ env.VERSION }}
+        run: pnpm run set_version
+  
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -200,5 +205,5 @@ jobs:
           releaseBody: See the assets to download this version and install.
           releaseDraft: true
           prerelease: false
-          includeDebug: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_debug || false }}
-          includeRelease: ${{ github.event_name == 'workflow_dispatch' && !github.event.inputs.build_debug || github.event_name == 'push' }}
+          includeDebug: ${{ github.event_name == 'workflow_dispatch' && fromJSON(github.event.inputs.build_debug || 'false') || false }}
+          includeRelease: ${{ github.event_name != 'workflow_dispatch' || !fromJSON(github.event.inputs.build_debug || 'false') }}
