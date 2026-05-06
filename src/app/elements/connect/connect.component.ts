@@ -153,7 +153,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       this._logger.info('Create connection token failed');
       return;
     }
-
     let appletConnectMethod = connectOption ? connectOption['appletConnectMethod'] : 'web';
 
     if (!this._settingSvc.hasXPack()) {
@@ -164,10 +163,15 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       virtualappConnectMethod = 'web';
     }
 
+    const isGuide = connectMethod.value.endsWith('_guide');
     const isClientConnect =
       connectMethod.type === 'native' ||
       (connectMethod.type === 'applet' && appletConnectMethod === 'client') ||
       (connectMethod.type === 'virtual_app' && virtualappConnectMethod === 'client');
+    const openWebView = () =>
+      splitConnect
+        ? this.currentWebSubView(asset, connectInfo, connToken)
+        : this.createWebView(asset, connectInfo, connToken);
 
     if (connectInfo.downloadRDP) {
       return this._http.downloadRDPFile(
@@ -177,22 +181,12 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       );
     }
 
-    if (isClientConnect) {
+    if (isClientConnect && !isGuide) {
       this.callLocalClient(connToken).then();
       return;
     }
 
-    // 特殊处理
-    if (connectMethod.value.endsWith('_guide')) {
-      return this.createWebView(asset, connectInfo, connToken);
-    }
-
-    // 分屏连接只处理 Web 视图
-    if (splitConnect) {
-      return this.currentWebSubView(asset, connectInfo, connToken);
-    }
-
-    this.createWebView(asset, connectInfo, connToken);
+    return openWebView();
   }
 
   async callLocalClient(connToken: ConnectionToken) {
