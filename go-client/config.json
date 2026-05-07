@@ -1,6 +1,6 @@
 {
   "filename": "Jumpserve Clients Config",
-  "version": 6,
+  "version": 7,
   "windowBounds": {
     "width": 1280,
     "height": 800
@@ -324,6 +324,28 @@
         "type": "databases",
         "path": "",
         "arg_format": "-con name={name}|driver={protocol}|user={username}|password={value}|database={dbname}|host={host}|port={port}|save=false|connect=true",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "heidisql",
+        "display_name": "HeidiSQL",
+        "protocol": [
+          "mysql",
+          "mariadb",
+          "postgresql",
+          "sqlserver"
+        ],
+        "comment": {
+          "zh": "HeidiSQL 是一款轻量级的数据库管理工具，适合快速连接和管理 MySQL / MariaDB / PostgreSQL / SQL Server 数据库。",
+          "en": "HeidiSQL is a lightweight database management tool for quickly connecting to and managing MySQL / MariaDB / PostgreSQL / SQL Server databases."
+        },
+        "download_url": "https://www.heidisql.com/download.php",
+        "type": "databases",
+        "path": "",
+        "arg_format": "-n={nettype} -l={library} -h={host} -u={username} -p={value} -P={port} -d={name}",
         "match_first": [],
         "is_internal": false,
         "is_default": false,
