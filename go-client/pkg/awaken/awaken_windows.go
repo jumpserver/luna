@@ -284,6 +284,19 @@ func handleDB(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	if r.Protocol == "sqlserver" && appItem.Name == "dbeaver" {
 		connectMap["protocol"] = "mssql_jdbc_ms_new"
 	}
+	if appItem.Name == "heidisql" {
+		switch r.Protocol {
+		case "mysql", "mariadb":
+			connectMap["nettype"] = "0"
+			connectMap["library"] = "libmariadb.dll"
+		case "postgresql":
+			connectMap["nettype"] = "8"
+			connectMap["library"] = "libpq.dll"
+		case "sqlserver":
+			connectMap["nettype"] = "4"
+			connectMap["library"] = "SQLOLEDB"
+		}
+	}
 	if r.Protocol == "redis" && appItem.Name == "resp" {
 		var conList []map[string]string
 		ss := make(map[string]string)
@@ -319,6 +332,9 @@ func handleDB(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	}
 	if len(appItem.AutoIt) == 0 {
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
+		if appItem.Name == "heidisql" && r.Protocol == "postgresql" {
+			commands += " -db=" + r.DBName
+		}
 		if strings.Contains(commands, "*") {
 			commands := strings.Split(commands, "*")
 			return exec.Command(appPath, commands...)
