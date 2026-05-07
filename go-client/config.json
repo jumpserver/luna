@@ -1,6 +1,6 @@
 {
   "filename": "Jumpserve Clients Config",
-  "version": 7,
+  "version": 8,
   "windowBounds": {
     "width": 1280,
     "height": 800
@@ -151,6 +151,25 @@
         "type": "remotedesktop",
         "path": "",
         "arg_format": "--Shared=on --RemoteResize=on --FullScreen=off {host}::{port}",
+        "match_first": [],
+        "is_internal": false,
+        "is_default": false,
+        "is_set": false
+      },
+      {
+        "name": "realvnc",
+        "display_name": "RealVNC Viewer",
+        "protocol": [
+          "vnc"
+        ],
+        "comment": {
+          "zh": "RealVNC Viewer 是 RealVNC 提供的远程桌面连接工具。",
+          "en": "RealVNC Viewer is a remote desktop connection tool provided by RealVNC."
+        },
+        "download_url": "https://www.realvnc.com/en/connect/download/viewer/",
+        "type": "remotedesktop",
+        "path": "C:\\Program Files\\RealVNC\\VNC Viewer\\vncviewer.exe",
+        "arg_format": "{file}",
         "match_first": [],
         "is_internal": false,
         "is_default": false,
