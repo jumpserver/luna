@@ -327,7 +327,9 @@ pub async fn ensure_fresh_token(
             TokenUrl::new(format!("{}/core/auth/oauth2-provider/token/", site))?,
         );
 
-        let http_client = reqwest::Client::new();
+        let http_client = reqwest::ClientBuilder::new()
+            .danger_accept_invalid_certs(true)
+            .build()?;
         let token_result = client
             .exchange_refresh_token(&RefreshToken::new(refresh.to_string()))
             .request_async(&http_client)
