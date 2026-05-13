@@ -54,7 +54,8 @@ const { refreshAssets, assetsData, isAppending, scrollbarStyles, isInitialLoadin
 
 const { visibleAssets } = useDisplayAssets(
   assetsData,
-  computed(() => props.platform)
+  computed(() => props.platform),
+  computed(() => props.type)
 );
 
 const isSameArray = (left?: string[], right?: string[]) => {
