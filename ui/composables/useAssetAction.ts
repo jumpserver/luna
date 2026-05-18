@@ -58,8 +58,8 @@ export const useAssetAction = () => {
   const settingManager = useSettingManager();
   // prettier-ignore
   const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption, orgId } = storeToRefs(userInfoStore);
-  const { charset, rdpResolution, backspaceAsCtrlH, keyboardLayout, rdpClientOption, rdpColorQuality, rdpSmartSize } =
-    settingManager;
+  const { charset, rdpResolution, backspaceAsCtrlH, keyboardLayout, rdpClientOption, rdpColorQuality, rdpSmartSize }
+    = settingManager;
 
   function buildLocalRdpParams() {
     const prefs = resolveGraphicsPreferences();
@@ -92,10 +92,10 @@ export const useAssetAction = () => {
    * @description 生成连接选项
    */
   function resolveGraphicsPreferences() {
-    const resolvedKeyboardLayout =
-      keyboardLayout.value || currentRdpClientOption.value.keyboard_layout || "en-us-qwerty";
-    const resolvedClientOptions =
-      Array.isArray(rdpClientOption.value) && rdpClientOption.value.length > 0
+    const resolvedKeyboardLayout
+      = keyboardLayout.value || currentRdpClientOption.value.keyboard_layout || "en-us-qwerty";
+    const resolvedClientOptions
+      = Array.isArray(rdpClientOption.value) && rdpClientOption.value.length > 0
         ? [...rdpClientOption.value]
         : [...(currentRdpClientOption.value.rdp_client_option || [])];
     const resolvedColorQuality = rdpColorQuality.value || currentRdpClientOption.value.rdp_color_quality || "32";
@@ -152,8 +152,8 @@ export const useAssetAction = () => {
     // prettier-ignore
     const isManual = saved?.accountMode === "manual" || username === "手动输入" || username === "Manual input";
 
-    const isDynamic =
-      saved?.accountMode === "dynamic" || username.includes("同名账号") || username.includes("Dynamic user");
+    const isDynamic
+      = saved?.accountMode === "dynamic" || username.includes("同名账号") || username.includes("Dynamic user");
 
     // 已保存过托管账号的 ID 则优先使用
     if (!isManual && !isDynamic && saved?.accountId) {
@@ -235,12 +235,14 @@ export const useAssetAction = () => {
       rdp_color_quality: prefs.resolvedColorQuality,
       rdp_smart_size: prefs.resolvedSmartSize,
       token_reusable: false,
-      disableautohash: false,
+      disableautohash: false
     };
-    const specificOptions = protocol === "http" ? {
-      appletConnectMethod: "client",
-      reusable: false,
-    } : {};
+    const specificOptions = protocol === "http"
+      ? {
+        appletConnectMethod: "client",
+        reusable: false
+      }
+      : {};
     return {
       ...options,
       ...specificOptions
@@ -262,11 +264,11 @@ export const useAssetAction = () => {
     accounts?: PermedAccount[],
     protocolOverride?: string,
     ephemeral?: {
-      accountMode?: "hosted" | "dynamic" | "manual";
-      manualUsername?: string;
-      manualPassword?: string;
-      dynamicPassword?: string;
-      connectMethod?: string;
+      accountMode?: "hosted" | "dynamic" | "manual"
+      manualUsername?: string
+      manualPassword?: string
+      dynamicPassword?: string
+      connectMethod?: string
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
@@ -311,8 +313,18 @@ export const useAssetAction = () => {
       return getUserId(accounts!, assetId, user);
     })();
 
-    // 优先使用保存的连接方法，其次使用临时连接方法，最后使用 dispatchConnectMethod 作为后备
-    const connectMethod = saved?.connectMethod ?? ephemeral?.connectMethod ?? dispatchConnectMethod(protocol);
+    // 当前连接显式选择优先；仅在协议一致时复用已保存连接方法，避免跨协议复用错误的客户端
+    const connectMethod = ephemeral?.connectMethod?.trim()
+      || (saved?.protocol === protocol ? saved?.connectMethod?.trim() : "")
+      || dispatchConnectMethod(protocol);
+
+    userInfoStore.setConnectionInfoForAsset(assetId, {
+      protocol,
+      username: selected || user,
+      accountId: effectiveMode === "hosted" ? (matchedAccount?.id || saved?.accountId) : saved?.accountId,
+      accountMode: effectiveMode,
+      connectMethod
+    });
 
     nextTick(() => {
       getConnectToken({
@@ -394,8 +406,8 @@ export const useAssetAction = () => {
     try {
       unlistenGetTokenSuccess = await useTauriEventListen("get-token-success", (event) => {
         interface eventPayload {
-          status: number;
-          data: TokenResponse;
+          status: number
+          data: TokenResponse
         }
 
         const payload = event.payload as eventPayload;
@@ -407,8 +419,8 @@ export const useAssetAction = () => {
 
       unlistenGetTokenFailure = await useTauriEventListen("get-token-failure", (event) => {
         interface eventPayload {
-          status: number;
-          data: string;
+          status: number
+          data: string
         }
 
         const payload = event.payload as eventPayload;
@@ -438,7 +450,7 @@ export const useAssetAction = () => {
 
       unlistenFavoriteSuccess = await useTauriEventListen("set-favorite-success", (event) => {
         interface eventPayload {
-          status: string;
+          status: string
         }
 
         const payload = event.payload as eventPayload;
@@ -455,7 +467,7 @@ export const useAssetAction = () => {
 
       unlistenFavoriteFailed = await useTauriEventListen("set-favorite-failure", (event) => {
         interface eventPayload {
-          status: string;
+          status: string
         }
 
         const payload = event.payload as eventPayload;
@@ -472,7 +484,7 @@ export const useAssetAction = () => {
 
       unlistenUnfavoriteSuccess = await useTauriEventListen("unfavorite-success", (event) => {
         interface eventPayload {
-          status: string;
+          status: string
         }
 
         const payload = event.payload as eventPayload;
@@ -490,7 +502,7 @@ export const useAssetAction = () => {
 
       unlistenUnfavoriteFailed = await useTauriEventListen("unfavorite-failure", (event) => {
         interface eventPayload {
-          status: string;
+          status: string
         }
 
         const payload = event.payload as eventPayload;
@@ -507,9 +519,9 @@ export const useAssetAction = () => {
 
       unlistenGetAssetDetailSuccess = await useTauriEventListen("get-asset-detail-success", (event) => {
         interface eventPayload {
-          status: string;
-          data: string;
-          asset_id: string;
+          status: string
+          data: string
+          asset_id: string
         }
 
         const payload = event.payload as eventPayload;
@@ -541,9 +553,9 @@ export const useAssetAction = () => {
 
       unlistenRenameSuccess = await useTauriEventListen("rename-success", (event) => {
         interface eventPayload {
-          success: boolean;
-          status?: number;
-          data?: string;
+          success: boolean
+          status?: number
+          data?: string
         }
 
         const payload = event.payload as eventPayload;
@@ -568,9 +580,9 @@ export const useAssetAction = () => {
 
       unlistenRenameError = await useTauriEventListen("rename-error", (event) => {
         interface eventPayload {
-          success: boolean;
-          status?: number;
-          data?: string;
+          success: boolean
+          status?: number
+          data?: string
         }
 
         const payload = event.payload as eventPayload;
@@ -592,7 +604,7 @@ export const useAssetAction = () => {
 
       unlistenPullUpFailure = await useTauriEventListen("pull-up-failure", (event) => {
         interface eventPayload {
-          error: string;
+          error: string
         }
 
         const payload = event.payload as eventPayload;

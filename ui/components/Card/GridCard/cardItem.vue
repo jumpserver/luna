@@ -116,7 +116,7 @@ const cancelRename = () => {
 
             <UTooltip arrow :text="displayAddressLine">
               <span
-                class="text-[13px] text-neutral-500 dark:text-neutral-400 truncate whitespace-nowrap cursor-pointer"
+                class="block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-neutral-500 dark:text-neutral-400 cursor-pointer"
               >
                 {{ displayAddressLine }}
               </span>
