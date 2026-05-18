@@ -7,8 +7,48 @@ definePageMeta({
 
 const { t } = useI18n();
 const localePath = useLocalePath();
+const HIDDEN_DATABASE_PROTOCOLS = new Set(["mongodb", "oracle"]);
+const appName = (import.meta.env.VITE_APP_NAME || "").trim();
 
 const appMenu = computed<NavigationMenuItem[]>(() => {
+  const databaseChildren = [
+    {
+      label: "MySQL",
+      to: localePath({ name: "setting-application-mysql" }),
+      protocol: "mysql"
+    },
+    {
+      label: "MariaDB",
+      to: localePath({ name: "setting-application-mariadb" }),
+      protocol: "mariadb"
+    },
+    {
+      label: "MongoDB",
+      to: localePath({ name: "setting-application-mongodb" }),
+      protocol: "mongodb"
+    },
+    {
+      label: "Redis",
+      to: localePath({ name: "setting-application-redis" }),
+      protocol: "redis"
+    },
+    {
+      label: "PostgreSQL",
+      to: localePath({ name: "setting-application-pg" }),
+      protocol: "postgresql"
+    },
+    {
+      label: "Oracle",
+      to: localePath({ name: "setting-application-oracle" }),
+      protocol: "oracle"
+    },
+    {
+      label: "SQL Server",
+      to: localePath({ name: "setting-application-sqlserver" }),
+      protocol: "sqlserver"
+    }
+  ].filter((item) => appName === "JumpServerClient" || !HIDDEN_DATABASE_PROTOCOLS.has(item.protocol));
+
   return [
     {
       label: t("Setting.CommandTerminal"),
@@ -55,36 +95,7 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
       label: t("Setting.Database"),
       defaultOpen: true,
       icon: "proicons:database",
-      children: [
-        {
-          label: "MySQL",
-          to: localePath({ name: "setting-application-mysql" })
-        },
-        {
-          label: "MariaDB",
-          to: localePath({ name: "setting-application-mariadb" })
-        },
-        {
-          label: "MongoDB",
-          to: localePath({ name: "setting-application-mongodb" })
-        },
-        {
-          label: "Redis",
-          to: localePath({ name: "setting-application-redis" })
-        },
-        {
-          label: "PostgreSQL",
-          to: localePath({ name: "setting-application-pg" })
-        },
-        {
-          label: "Oracle",
-          to: localePath({ name: "setting-application-oracle" })
-        },
-        {
-          label: "SQL Server",
-          to: localePath({ name: "setting-application-sqlserver" })
-        }
-      ]
+      children: databaseChildren
     }
   ];
 });
