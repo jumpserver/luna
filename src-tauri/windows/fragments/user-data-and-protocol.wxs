@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <!--
+      安装时写入当前用户级别的 jms:// 协议注册。
+
+      Windows 会把 HKLM\Software\Classes 和 HKCU\Software\Classes 合并成 HKCR，
+      且 HKCU 的同名协议优先级更高。这里显式写 HKCU，是为了让当前 Tauri
+      版本覆盖旧 Electron 版本可能留下的机器级或用户级协议注册。
+    -->
+    <DirectoryRef Id="TARGETDIR">
+      <Component Id="JumpServerClientUserProtocol" Guid="{481BCBD7-8E1F-41E1-818B-FE0C2C15500E}">
+        <!-- jms 协议本体；URL Protocol 这个空值表示它是 URL scheme，不是普通文件类型。 -->
+        <RegistryKey Root="HKCU" Key="Software\Classes\jms" Action="createAndRemoveOnUninstall">
+          <RegistryValue Type="string" Value="URL:jms" KeyPath="yes" />
+          <RegistryValue Type="string" Name="URL Protocol" Value="" />
+          <RegistryValue Type="string" Name="FriendlyTypeName" Value="JumpServer Client URL" />
+        </RegistryKey>
+        <!-- 协议在系统 UI 中显示的图标。 -->
+        <RegistryKey Root="HKCU" Key="Software\Classes\jms\DefaultIcon" Action="createAndRemoveOnUninstall">
+          <RegistryValue Type="string" Value="&quot;[INSTALLDIR]JumpServerClient.exe&quot;,0" />
+        </RegistryKey>
+        <!-- 浏览器或系统打开 jms:// 链接时实际执行的命令。%1 是原始链接参数。 -->
+        <RegistryKey Root="HKCU" Key="Software\Classes\jms\shell\open\command" Action="createAndRemoveOnUninstall">
+          <RegistryValue Type="string" Value="&quot;[INSTALLDIR]JumpServerClient.exe&quot; &quot;%1&quot;" />
+        </RegistryKey>
+      </Component>
+    </DirectoryRef>
+
+    <!--
+      安装后删除 Windows 为协议关联缓存的 UserChoice。
+
+      如果旧 Electron 版本曾被用户或系统记录为 jms 的默认处理程序，UserChoice
+      可能会继续盖过新写入的协议项。这里删除它，让上面的 HKCU\Software\Classes\jms
+      成为当前用户的有效处理程序。
+    -->
+    <CustomAction
+      Id="PromoteJumpServerClientUserProtocol"
+      Directory="TARGETDIR"
+      ExeCommand="cmd.exe /C reg delete &quot;HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\jms\UserChoice&quot; /f &gt;nul 2&gt;&amp;1"
+      Execute="deferred"
+      Impersonate="yes"
+      Return="ignore"
+    />
+    <!--
+      卸载时清理本项目产生的用户数据目录。
+
+      只在真正卸载时运行；升级时不会运行，避免用户配置在版本升级过程中被误删。
+    -->
+    <CustomAction
+      Id="CleanupJumpServerClientUserData"
+      Directory="TARGETDIR"
+      ExeCommand="cmd.exe /C if exist &quot;%APPDATA%\com.jumpserver.client&quot; rmdir /S /Q &quot;%APPDATA%\com.jumpserver.client&quot; &amp; if exist &quot;%LOCALAPPDATA%\com.jumpserver.client&quot; rmdir /S /Q &quot;%LOCALAPPDATA%\com.jumpserver.client&quot; &amp; if exist &quot;%APPDATA%\jumpserver-client&quot; rmdir /S /Q &quot;%APPDATA%\jumpserver-client&quot; &amp; if exist &quot;%LOCALAPPDATA%\jumpserver-client&quot; rmdir /S /Q &quot;%LOCALAPPDATA%\jumpserver-client&quot; &amp; if exist &quot;%APPDATA%\JumpServerClient&quot; rmdir /S /Q &quot;%APPDATA%\JumpServerClient&quot; &amp; if exist &quot;%LOCALAPPDATA%\JumpServerClient&quot; rmdir /S /Q &quot;%LOCALAPPDATA%\JumpServerClient&quot;"
+      Execute="deferred"
+      Impersonate="yes"
+      Return="ignore"
+    />
+    <InstallExecuteSequence>
+      <!-- NOT REMOVE: 安装、修复、升级时执行；卸载时不执行。 -->
+      <Custom Action="PromoteJumpServerClientUserProtocol" After="WriteRegistryValues">NOT REMOVE</Custom>
+      <!-- REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE: 只在真正卸载时清理，major upgrade 不清理。 -->
+      <Custom Action="CleanupJumpServerClientUserData" After="RemoveFiles">REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE</Custom>
+    </InstallExecuteSequence>
+  </Fragment>
+</Wix>

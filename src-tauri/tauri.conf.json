@@ -17,9 +17,14 @@
       "webviewInstallMode": {
         "type": "embedBootstrapper"
       },
+      "wix": {
+        "fragmentPaths": ["./windows/fragments/user-data-and-protocol.wxs"],
+        "componentRefs": ["JumpServerClientUserProtocol"]
+      },
       "nsis": {
         "installMode": "both",
         "installerIcon": "icons/icon.ico",
+        "installerHooks": "./windows/hooks.nsh",
         "displayLanguageSelector": true,
         "minimumWebview2Version": "110.0.1531.0"
       }
