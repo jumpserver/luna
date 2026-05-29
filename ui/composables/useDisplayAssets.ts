@@ -1,10 +1,11 @@
 import type { Ref } from "vue";
 import type { AssetItem, AssetPageType, ConnectionInfo, PermedProtocol } from "~/types/index";
 import { computed } from "vue";
+import { getConfiguredAppName, isDefaultAppName } from "~/composables/useAppName";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const HIDDEN_DATABASE_ASSET_TYPES = new Set(["oracle", "mongodb"]);
-const appName = (import.meta.env.VITE_APP_NAME || "").trim();
+const appName = getConfiguredAppName();
 
 export const useDisplayAssets = (
   assets: Ref<AssetItem[]>,
@@ -22,7 +23,7 @@ export const useDisplayAssets = (
         ? assets.value
         : assets.value.filter((item: AssetItem) => item.platform === platformVal);
 
-    const list = pageTypeVal === "database" && appName !== "JumpServerClient"
+    const list = pageTypeVal === "database" && !isDefaultAppName(appName)
       ? baseList.filter((item: AssetItem) => !HIDDEN_DATABASE_ASSET_TYPES.has((item.type || "").toLowerCase()))
       : baseList;
 

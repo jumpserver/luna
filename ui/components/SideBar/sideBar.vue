@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
+import { getConfiguredAppName } from "~/composables/useAppName";
 
 import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
 import Profile from "./profile.vue";
@@ -12,7 +13,7 @@ const { isMacOS } = usePlatform();
 // const isMacOS = false;
 const { collapse, setCollapse } = useSettingManager();
 
-const appName = ref(import.meta.env.VITE_APP_NAME || "");
+const appName = ref(getConfiguredAppName());
 const isLoading = ref(false);
 const sidebarSearch = ref("");
 

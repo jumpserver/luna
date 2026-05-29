@@ -1,13 +1,13 @@
 <script setup lang="ts">
+import { getConfiguredAppName, isDefaultAppName, normalizeAppName } from "~/composables/useAppName";
+
 definePageMeta({
   layout: "setting"
 });
 
-const DEFAULT_APP_NAME = "JumpServerClient";
-const fallbackAppName = (import.meta.env.VITE_APP_NAME || DEFAULT_APP_NAME).trim();
-const appName = ref(fallbackAppName);
+const appName = ref(getConfiguredAppName());
 const logoSrc = computed(() => "/logo.png");
-const isDefaultProduct = computed(() => appName.value === DEFAULT_APP_NAME);
+const isDefaultProduct = computed(() => isDefaultAppName(appName.value));
 const website = "https://jumpserver.org";
 
 const version = ref<string>("—");
@@ -33,7 +33,7 @@ onMounted(async () => {
     // 运行时读取 Tauri productName，避免只依赖 VITE_APP_NAME 导致定制构建的 About 页面显示为空。
     const runtimeAppName = (await useTauriAppGetName()).trim();
     if (runtimeAppName) {
-      appName.value = runtimeAppName;
+      appName.value = normalizeAppName(runtimeAppName);
     }
   } catch {}
 });

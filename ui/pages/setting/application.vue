@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui";
+import { getConfiguredAppName, isDefaultAppName } from "~/composables/useAppName";
 
 definePageMeta({
   layout: "setting"
@@ -8,7 +9,7 @@ definePageMeta({
 const { t } = useI18n();
 const localePath = useLocalePath();
 const HIDDEN_DATABASE_PROTOCOLS = new Set(["mongodb", "oracle"]);
-const appName = (import.meta.env.VITE_APP_NAME || "").trim();
+const appName = getConfiguredAppName();
 
 const appMenu = computed<NavigationMenuItem[]>(() => {
   const databaseChildren = [
@@ -47,7 +48,7 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
       to: localePath({ name: "setting-application-sqlserver" }),
       protocol: "sqlserver"
     }
-  ].filter((item) => appName === "JumpServerClient" || !HIDDEN_DATABASE_PROTOCOLS.has(item.protocol));
+  ].filter((item) => isDefaultAppName(appName) || !HIDDEN_DATABASE_PROTOCOLS.has(item.protocol));
 
   return [
     {
