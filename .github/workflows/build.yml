@@ -216,9 +216,13 @@ jobs:
             exit 1
           fi
 
-          assets_dir="$RUNNER_TEMP/client-brand-assets"
-          archive_path="$RUNNER_TEMP/client-brand-assets.tgz"
+          # Keep these paths relative so Git Bash on Windows does not pass a
+          # drive-letter path like "D:\..." to tar, which tar treats as remote.
+          assets_root=".brand-assets-tmp"
+          assets_dir="$assets_root/client-brand-assets"
+          archive_path="$assets_root/client-brand-assets.tgz"
 
+          rm -rf "$assets_root"
           rm -rf "$assets_dir"
           mkdir -p "$assets_dir"
           openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
