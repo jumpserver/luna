@@ -14,6 +14,11 @@ on:
         required: false
         default: false
         type: boolean
+      product_name:
+        description: "Custom product name for manual builds (e.g., MyClient)"
+        required: false
+        default: ""
+        type: string
   push:
     branches:
       - master
@@ -187,8 +192,45 @@ jobs:
         env:
           VERSION: ${{ env.VERSION }}
         run: pnpm run set_version
-  
+
+      # Manual builds: use tauri-action for signing/notarization, but upload to workflow artifacts (temporary download)
+      - name: Set product name (manual only)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.product_name != ''
+        run: node scripts/set-product-name.mjs --name "${{ github.event.inputs.product_name }}"
+
+      - name: Apply brand assets (manual only)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.product_name != ''
+        env:
+          CLIENT_BRAND_ASSETS_PASSPHRASE: ${{ secrets.CLIENT_BRAND_ASSETS_PASSPHRASE }}
+        shell: bash
+        run: |
+          encrypted_assets=".github/brand-assets/client-brand-assets.tgz.enc"
+
+          if [ ! -f "$encrypted_assets" ]; then
+            echo "No encrypted brand assets found; using repository default assets."
+            exit 0
+          fi
+
+          if [ -z "$CLIENT_BRAND_ASSETS_PASSPHRASE" ]; then
+            echo "CLIENT_BRAND_ASSETS_PASSPHRASE is required to decrypt brand assets."
+            exit 1
+          fi
+
+          assets_dir="$RUNNER_TEMP/client-brand-assets"
+          archive_path="$RUNNER_TEMP/client-brand-assets.tgz"
+
+          rm -rf "$assets_dir"
+          mkdir -p "$assets_dir"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+            -in "$encrypted_assets" \
+            -out "$archive_path" \
+            -pass env:CLIENT_BRAND_ASSETS_PASSPHRASE
+          tar -xzf "$archive_path" -C "$assets_dir"
+
+          node scripts/apply-brand-assets.mjs --dir "$assets_dir"
+
       - name: Build Tauri app
+        id: tauri_build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -197,8 +239,11 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+          CLIENT_NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.product_name || '' }}
+          VITE_APP_NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.product_name || '' }}
 
         with:
+          # Create/update release draft on both tag/push and manual dispatch.
           tagName: ${{ env.VERSION }}
           args: ${{ matrix.target != '' && '--target ' || '' }}${{ matrix.target }}
           releaseName: JumpServer Client v__VERSION__

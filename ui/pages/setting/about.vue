@@ -3,11 +3,15 @@ definePageMeta({
   layout: "setting"
 });
 
-const appName = "JumpServer Client";
+const DEFAULT_APP_NAME = "JumpServerClient";
+const fallbackAppName = (import.meta.env.VITE_APP_NAME || DEFAULT_APP_NAME).trim();
+const appName = ref(fallbackAppName);
+const logoSrc = computed(() => "/logo.png");
+const isDefaultProduct = computed(() => appName.value === DEFAULT_APP_NAME);
 const website = "https://jumpserver.org";
 
 const version = ref<string>("—");
-const links = ref([
+const links = [
   {
     label: "GitHub",
     icon: "line-md:github",
@@ -18,11 +22,19 @@ const links = ref([
     icon: "line-md:discord",
     to: "https://discord.com/invite/W6vYXmAQG2"
   }
-]);
+];
 
 onMounted(async () => {
   try {
     version.value = await useTauriAppGetVersion();
+  } catch {}
+
+  try {
+    // 运行时读取 Tauri productName，避免只依赖 VITE_APP_NAME 导致定制构建的 About 页面显示为空。
+    const runtimeAppName = (await useTauriAppGetName()).trim();
+    if (runtimeAppName) {
+      appName.value = runtimeAppName;
+    }
   } catch {}
 });
 
@@ -38,16 +50,18 @@ const openLink = async (url: string) => {
 <template>
   <UContainer class="h-full">
     <div class="h-full flex flex-col gap-2 items-center justify-center">
-      <img src="/logo.png" alt="logo" class="w-16 h-16 rounded-xl" />
+      <img :src="logoSrc" :alt="appName" class="w-16 h-16 rounded-xl">
 
       <div class="space-y-2">
         <p class="text-base font-semibold">
           {{ appName }}
 
-          <UBadge icon="i-lucide-rocket" size="sm" color="primary" variant="soft">v{{ version }}</UBadge>
+          <UBadge icon="i-lucide-rocket" size="sm" color="primary" variant="soft">
+            v{{ version }}
+          </UBadge>
         </p>
 
-        <div class="flex items-center justify-center gap-3 text-sm text-gray-400">
+        <div v-if="isDefaultProduct" class="flex items-center justify-center gap-3 text-sm text-gray-400">
           <button
             v-for="link in links"
             :key="link.to"
@@ -61,7 +75,7 @@ const openLink = async (url: string) => {
         </div>
       </div>
 
-      <div class="flex items-center justify-center gap-3 text-sm text-gray-400">
+      <div v-if="isDefaultProduct" class="flex items-center justify-center gap-3 text-sm text-gray-400">
         <button
           type="button"
           class="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"

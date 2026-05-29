@@ -7,49 +7,76 @@ use tauri::LogicalPosition;
 
 use super::consts::menu_labels;
 
+const DEFAULT_PRODUCT_NAME: &str = "JumpServerClient";
+
 /// 创建应用菜单
 pub fn build_menu<R: Runtime>(app: &impl Manager<R>) -> tauri::Result<Menu<R>> {
     let use_zh = prefers_zh();
-    let labels = menu_labels(use_zh);
-    let about_i = MenuItem::with_id(app, "about", labels.about_label, true, None::<&str>)?;
+    let app_name = app.package_info().name.clone();
+    let labels = menu_labels(use_zh, &app_name);
+    let about_i = MenuItem::with_id(
+        app,
+        "about",
+        labels.about_label.as_str(),
+        true,
+        None::<&str>,
+    )?;
 
     // 设置项
     let settings_i = MenuItem::with_id(
         app,
         "open-settings",
-        labels.settings_label,
+        labels.settings_label.as_str(),
         true,
         Some("CmdOrCtrl+,"),
     )?;
     let close_window_i = MenuItem::with_id(
         app,
         "close-window",
-        labels.close_label,
+        labels.close_label.as_str(),
         true,
         Some("CmdOrCtrl+W"),
     )?;
     let minimize_window_i: MenuItem<R> = MenuItem::with_id(
         app,
         "minimize-window",
-        labels.minimize_label,
+        labels.minimize_label.as_str(),
         true,
         Some("CmdOrCtrl+M"),
     )?;
 
-    let hide_i = MenuItem::with_id(app, "hide", labels.hide_label, true, Some("CmdOrCtrl+H"))?;
+    let hide_i = MenuItem::with_id(
+        app,
+        "hide",
+        labels.hide_label.as_str(),
+        true,
+        Some("CmdOrCtrl+H"),
+    )?;
     let hide_others_i = MenuItem::with_id(
         app,
         "hide-others",
-        labels.hide_others_label,
+        labels.hide_others_label.as_str(),
         true,
         Some("CmdOrCtrl+Alt+H"),
     )?;
-    let show_all_i = MenuItem::with_id(app, "show-all", labels.show_all_label, true, None::<&str>)?;
-    let quit_i = MenuItem::with_id(app, "quit", labels.quit_label, true, Some("CmdOrCtrl+Q"))?;
+    let show_all_i = MenuItem::with_id(
+        app,
+        "show-all",
+        labels.show_all_label.as_str(),
+        true,
+        None::<&str>,
+    )?;
+    let quit_i = MenuItem::with_id(
+        app,
+        "quit",
+        labels.quit_label.as_str(),
+        true,
+        Some("CmdOrCtrl+Q"),
+    )?;
 
     let app_menu = Submenu::with_items(
         app,
-        "JumpServerClient",
+        app_name.as_str(),
         true,
         &[
             &about_i,
@@ -68,16 +95,16 @@ pub fn build_menu<R: Runtime>(app: &impl Manager<R>) -> tauri::Result<Menu<R>> {
 
     let edit_menu = Submenu::with_items(
         app,
-        labels.edit_label,
+        labels.edit_label.as_str(),
         true,
         &[
-            &PredefinedMenuItem::undo(app, Some(labels.undo_label))?,
-            &PredefinedMenuItem::redo(app, Some(labels.redo_label))?,
+            &PredefinedMenuItem::undo(app, Some(labels.undo_label.as_str()))?,
+            &PredefinedMenuItem::redo(app, Some(labels.redo_label.as_str()))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::cut(app, Some(labels.cut_label))?,
-            &PredefinedMenuItem::copy(app, Some(labels.copy_label))?,
-            &PredefinedMenuItem::paste(app, Some(labels.paste_label))?,
-            &PredefinedMenuItem::select_all(app, Some(labels.select_all_label))?,
+            &PredefinedMenuItem::cut(app, Some(labels.cut_label.as_str()))?,
+            &PredefinedMenuItem::copy(app, Some(labels.copy_label.as_str()))?,
+            &PredefinedMenuItem::paste(app, Some(labels.paste_label.as_str()))?,
+            &PredefinedMenuItem::select_all(app, Some(labels.select_all_label.as_str()))?,
         ],
     )?;
 
@@ -193,9 +220,25 @@ fn open_about_window(app: &tauri::AppHandle) {
         return;
     }
 
-    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/about.html".into()))
+    let app_name = app.package_info().name.clone();
+    let app_version = app.package_info().version.to_string();
+    let query = url::form_urlencoded::Serializer::new(String::new())
+        .append_pair("name", &app_name)
+        .append_pair("version", &app_version)
+        .append_pair(
+            "custom",
+            if app_name == DEFAULT_PRODUCT_NAME {
+                "0"
+            } else {
+                "1"
+            },
+        )
+        .finish();
+    let about_path = format!("/about.html?{query}");
+
+    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App(about_path.into()))
         .title("About")
-        .inner_size(320.0, 250.0)
+        .inner_size(320.0, 300.0)
         .resizable(false);
 
     #[cfg(target_os = "macos")]

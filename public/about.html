@@ -22,9 +22,6 @@
     .card {
       width: 280px;
       padding: 28px 20px 24px;
-      border-radius: 16px;
-      background: linear-gradient(160deg, #1e2430, #1a1f29);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
       text-align: center;
     }
     img {
@@ -40,9 +37,19 @@
       margin: 6px 0 4px;
     }
     .version {
-      font-size: 14px;
-      color: #c7c9d1;
-      margin-bottom: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: rgba(26, 179, 148, 0.14);
+      color: #34d399;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+      margin: 4px 0 14px;
+      border: 1px solid rgba(52, 211, 153, 0.22);
     }
     .copyright {
       font-size: 13px;
@@ -54,8 +61,8 @@
 </head>
 <body>
   <div class="card">
-    <img src="/logo.png" alt="JumpServerClient" />
-    <div class="name" id="name">JumpServerClient</div>
+    <img src="/logo.png" alt="App logo" id="logo" />
+    <div class="name" id="name" data-default-name="JumpServerClient">JumpServerClient</div>
     <div class="version" id="version">Version</div>
     <p class="copyright" id="copyright">
       Copyright © JumpServer
@@ -64,15 +71,30 @@
   <script>
     const lang = (navigator.language || '').toLowerCase();
     const isZh = lang.startsWith('zh');
+    const params = new URLSearchParams(window.location.search);
+    const customName = (params.get('name') || '').trim();
+    const isCustom = params.get('custom') === '1';
+    const version = params.get('version') || '';
+    const logoEl = document.getElementById('logo');
     const nameEl = document.getElementById('name');
     const versionEl = document.getElementById('version');
     const copyEl = document.getElementById('copyright');
+    const appName = customName || nameEl.dataset.defaultName || 'JumpServerClient';
 
-    versionEl.textContent = isZh ? '版本信息' : 'Version';
-    nameEl.textContent = 'JumpServerClient';
-    copyEl.textContent = isZh
-      ? 'Copyright © JumpServer 保留所有权利'
-      : 'Copyright © JumpServer. All Rights Reserved';
+    document.title = isZh ? `关于 ${appName}` : `About ${appName}`;
+    logoEl.alt = appName;
+    versionEl.textContent = version ? `v${version}` : (isZh ? '版本信息' : 'Version');
+    nameEl.textContent = appName;
+
+    if (isCustom) {
+      copyEl.hidden = true;
+      copyEl.textContent = '';
+    } else {
+      copyEl.hidden = false;
+      copyEl.textContent = isZh
+        ? 'Copyright © JumpServer 保留所有权利'
+        : 'Copyright © JumpServer. All Rights Reserved';
+    }
   </script>
 </body>
 </html>

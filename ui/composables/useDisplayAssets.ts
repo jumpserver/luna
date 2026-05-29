@@ -1,18 +1,30 @@
 import type { Ref } from "vue";
-import type { AssetItem, ConnectionInfo, PermedProtocol } from "~/types/index";
+import type { AssetItem, AssetPageType, ConnectionInfo, PermedProtocol } from "~/types/index";
 import { computed } from "vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
-export const useDisplayAssets = (assets: Ref<AssetItem[]>, platform?: Ref<string | undefined>) => {
+const HIDDEN_DATABASE_ASSET_TYPES = new Set(["oracle", "mongodb"]);
+const appName = (import.meta.env.VITE_APP_NAME || "").trim();
+
+export const useDisplayAssets = (
+  assets: Ref<AssetItem[]>,
+  platform?: Ref<string | undefined>,
+  pageType?: Ref<AssetPageType | undefined>
+) => {
   const userInfoStore = useUserInfoStore();
 
   const visibleAssets = computed<AssetItem[]>(() => {
     const platformVal = platform?.value;
+    const pageTypeVal = pageType?.value;
 
-    const list
+    const baseList
       = !platformVal || platformVal === "all"
         ? assets.value
         : assets.value.filter((item: AssetItem) => item.platform === platformVal);
+
+    const list = pageTypeVal === "database" && appName !== "JumpServerClient"
+      ? baseList.filter((item: AssetItem) => !HIDDEN_DATABASE_ASSET_TYPES.has((item.type || "").toLowerCase()))
+      : baseList;
 
     const buildDisplayAddressLine = (asset: AssetItem, saved?: ConnectionInfo | null) => {
       const protocol = saved?.protocol;

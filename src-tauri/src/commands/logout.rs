@@ -16,20 +16,18 @@ pub async fn logout(app: AppHandle, _name: String, site: String) -> Result<(), S
 
 async fn revoke_and_clear_tokens(_app: &AppHandle, site: &str) -> anyhow::Result<()> {
     let token_service = TokenService::new(site.to_string());
-    
+
     if let Some(entry) = token_service.load().await? {
         if let Some(refresh) = entry.refresh_token {
-            let client_id = entry
-                .client_id
-                .unwrap_or_else(|| "".to_string());
+            let client_id = entry.client_id.unwrap_or_else(|| "".to_string());
 
-            let client = BasicClient::new(ClientId::new(client_id))
-            .set_revocation_url(RevocationUrl::new(format!(
-                "{}/core/auth/oauth2-provider/revoke/",
-                site
-            ))?);
+            let client = BasicClient::new(ClientId::new(client_id)).set_revocation_url(
+                RevocationUrl::new(format!("{}/core/auth/oauth2-provider/revoke/", site))?,
+            );
 
-            let http_client = reqwest::Client::new();
+            let http_client = reqwest::ClientBuilder::new()
+                .danger_accept_invalid_certs(true)
+                .build()?;
             let req = client
                 .revoke_token(StandardRevocableToken::RefreshToken(RefreshToken::new(
                     refresh,
