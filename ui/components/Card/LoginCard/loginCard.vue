@@ -22,7 +22,7 @@ const handleLogin = () => {
       <div class="flex flex-col items-center justify-between gap-4">
         <div class="flex items-center">
           <UButton
-            icon="cuida:login-outline"
+            icon="i-lucide-log-in"
             size="sm"
             variant="ghost"
             aria-label="Login"

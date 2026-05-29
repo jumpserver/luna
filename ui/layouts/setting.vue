@@ -81,7 +81,7 @@ const settingMenu = computed<NavigationMenuItem[]>(() => {
     },
     {
       label: t("Common.About"),
-      icon: "ix:about",
+      icon: "i-lucide-info",
       to: localePath({ name: "setting-about" })
     }
   ];
@@ -109,7 +109,7 @@ onMounted(() => {
       }"
     >
       <template #default>
-        <!-- 
+        <!--
           整条标题栏底层是一个满宽度的 data-tauri-drag-region
           上层可见内容默认 pointer-events-none，所以标题区域和空白区域都会把事件透传给底层拖拽层
           右侧窗口按钮区域单独恢复 pointer-events-auto，并且整块都标记 data-tauri-drag-region="false"，确保按钮区域不会触发拖拽事件
