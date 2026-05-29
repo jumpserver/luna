@@ -24,6 +24,7 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "tauri:build:debug": "tauri build --debug",
+    "update:dependencies": "npx npm-check-updates -u && pnpm install && cd src-tauri && cargo update",
     "prettier": "prettier --write \"ui/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
     "reset": "rm -rf node_modules .nuxt dist && cd src-tauri && cargo clean"
   },

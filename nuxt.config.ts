@@ -85,6 +85,9 @@ export default defineNuxtConfig({
       watch: {
         ignored: ["**/src-tauri/**"]
       }
+    },
+    build: {
+      sourcemap: false
     }
   },
   devServer: {
