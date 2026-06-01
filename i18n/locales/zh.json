@@ -153,6 +153,7 @@
     "Password": "密码",
     "DynamicUser": "同名账号",
     "ManualInput": "手动输入",
+    "Anonymous": "匿名账号",
     "RememberPassword": "记住密码"
   },
   "Setting": {

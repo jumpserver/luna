@@ -12,7 +12,7 @@ interface ConnectionFormInfo {
 
   accountId?: string
   availableProtocols?: string[]
-  accountMode: "hosted" | "dynamic" | "manual"
+  accountMode: "hosted" | "dynamic" | "manual" | "anonymous"
 }
 
 export function useAssetConnection() {

@@ -155,12 +155,15 @@ export const useAssetAction = () => {
     const isDynamic
       = saved?.accountMode === "dynamic" || username.includes("同名账号") || username.includes("Dynamic user");
 
+    const isAnonymous = saved?.accountMode === "anonymous" || username.includes("@ANON");
+
     // 已保存过托管账号的 ID 则优先使用
-    if (!isManual && !isDynamic && saved?.accountId) {
+    if (!isManual && !isDynamic && !isAnonymous && saved?.accountId) {
       return saved.accountId as any;
     }
     if (isManual) return "@INPUT";
     if (isDynamic) return "@USER";
+    if (isAnonymous) return "@ANON";
 
     if (username) {
       const matched = _accounts.find((a) => a.username === username || a.alias === username || a.name === username);
@@ -264,7 +267,7 @@ export const useAssetAction = () => {
     accounts?: PermedAccount[],
     protocolOverride?: string,
     ephemeral?: {
-      accountMode?: "hosted" | "dynamic" | "manual"
+      accountMode?: "hosted" | "dynamic" | "manual" | "anonymous"
       manualUsername?: string
       manualPassword?: string
       dynamicPassword?: string
@@ -294,6 +297,9 @@ export const useAssetAction = () => {
       // 同名账号仅需传递密码
       input_username = "";
       input_secret = ephemeral?.dynamicPassword ?? saved?.dynamicPassword ?? "";
+    } else if (effectiveMode === "anonymous" || selected?.includes("@ANON")) {
+      input_username = "";
+      input_secret = "";
     } else {
       // 托管账号：account 用 ID，input_username 用展示账号名
       input_username = selected || matchedAccount?.username || "";
@@ -309,6 +315,9 @@ export const useAssetAction = () => {
       if (effectiveMode === "dynamic" || selected?.includes("同名账号") || selected?.includes("Dynamic user")) {
         return "@USER";
       }
+      if (effectiveMode === "anonymous" || selected?.includes("@ANON")) {
+        return "@ANON";
+      }
 
       return getUserId(accounts!, assetId, user);
     })();
@@ -321,7 +330,7 @@ export const useAssetAction = () => {
     userInfoStore.setConnectionInfoForAsset(assetId, {
       protocol,
       username: selected || user,
-      accountId: effectiveMode === "hosted" ? (matchedAccount?.id || saved?.accountId) : saved?.accountId,
+      accountId: effectiveMode === "hosted" ? (matchedAccount?.id || saved?.accountId) : undefined,
       accountMode: effectiveMode,
       connectMethod
     });

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SelectMenuItem } from "@nuxt/ui";
-import type { PermedAccount, PermedProtocol } from "~/types/index";
+import type { AssetPageType, PermedAccount, PermedProtocol } from "~/types/index";
 import { useConnectMethods } from "~/composables/useConnectMethods";
 
 const props = defineProps<{
@@ -13,6 +13,7 @@ const props = defineProps<{
   dynamicPassword?: string
   rememberSecret?: boolean
   connectMethod?: string
+  assetType?: AssetPageType
 }>();
 
 const emits = defineEmits<{
@@ -26,7 +27,7 @@ const emits = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { getMethodsForProtocol, getDefaultMethodForProtocol, getMethodDisplayName } = useConnectMethods();
+const { getMethodsForProtocol, getDefaultMethodForProtocol } = useConnectMethods();
 // prettier-ignore
 const trailingIcon = "group-data-[state=open]:rotate-180 transition-transform duration-200";
 
@@ -81,7 +82,7 @@ watch(
     const methods = await getMethodsForProtocol(newProtocol);
     availableConnectMethods.value = methods;
 
-    if (!props.connectMethod || !methods.find((m) => m.value === props.connectMethod)) {
+    if (!props.connectMethod || !methods.some((m) => m.value === props.connectMethod)) {
       const defaultMethod = await getDefaultMethodForProtocol(newProtocol);
       if (defaultMethod) {
         emits("update:connectMethod", defaultMethod);
@@ -94,8 +95,10 @@ watch(
 const protocolItems = computed(() => props.protocols.map((p: PermedProtocol) => p.name));
 
 const accountItems = computed(() => {
-  // 过滤匿名账号
-  const filteredAnonymous = props.accounts.filter((a: PermedAccount) => a.alias !== "@ANON");
+  // web 类型的资产需要保留匿名账号，其它类型不展示 @ANON
+  const filteredAnonymous = props.accounts.filter((a: PermedAccount) => {
+    return a.alias !== "@ANON" || props.assetType?.toLowerCase() === "web";
+  });
 
   // 账号分组
   const hosted = filteredAnonymous
@@ -115,6 +118,14 @@ const accountItems = computed(() => {
 
       if (acc.alias === "@INPUT") {
         return t("Account.ManualInput");
+      }
+
+      if (acc.alias === "@ANON") {
+        const base = t("Account.Anonymous");
+        return {
+          label: base,
+          value: "@ANON"
+        };
       }
 
       return acc.name;
@@ -184,6 +195,8 @@ function handleSpecialAccount(v: string) {
       <USelectMenu
         v-model="selectedAccount"
         :items="accountItems"
+        value-key="value"
+        label-key="label"
         :ui="{
           trailingIcon
         }"

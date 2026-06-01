@@ -218,7 +218,7 @@ export interface ConnectionInfo {
   protocol: string
   username: string
   accountId?: string
-  accountMode?: "hosted" | "dynamic" | "manual"
+  accountMode?: "hosted" | "dynamic" | "manual" | "anonymous"
   manualUsername?: string
   manualPassword?: string
   rememberSecret?: boolean

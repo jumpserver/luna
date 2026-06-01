@@ -150,6 +150,7 @@
     "Password": "Password",
     "DynamicUser": "Dynamic user",
     "ManualInput": "Manual input",
+    "Anonymous": "Anonymous",
     "RememberPassword": "Remember password"
   },
   "Setting": {

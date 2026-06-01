@@ -298,7 +298,7 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <ConnectionEditor ref="connEditorRef" />
+    <ConnectionEditor ref="connEditorRef" :asset-type="props.type" />
   </div>
 </template>
 

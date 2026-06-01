@@ -42,6 +42,8 @@ export const useDisplayAssets = (
           username = (saved?.manualUsername || "").trim();
         } else if (mode === "dynamic" || selected.includes("同名账号") || selected.includes("Dynamic user")) {
           username = ""; // dynamic has no fixed username in URI
+        } else if (mode === "anonymous" || selected.includes("@ANON")) {
+          username = "";
         } else if (selected) {
           username = selected;
         }

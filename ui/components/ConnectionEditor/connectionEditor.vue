@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import type { AssetItem, ConnectionInfo, PermedAccount, PermedProtocol } from "~/types/index";
+import type { AssetItem, AssetPageType, ConnectionInfo, PermedAccount, PermedProtocol } from "~/types/index";
 import EditForm from "~/components/EditForm/editForm.vue";
+
+const props = defineProps<{
+  assetType?: AssetPageType
+}>();
 
 const { t, locale } = useI18n();
 const { getAssetDetail } = useAssetAction();
@@ -77,13 +81,17 @@ const normalizeProtocols = () => {
 };
 
 const buildConnectionInfo = () => {
-  let accountMode: "hosted" | "dynamic" | "manual" = "hosted";
+  let accountMode: "hosted" | "dynamic" | "manual" | "anonymous" = "hosted";
   let normalizedAccount = draftAccount.value || "";
   let accountId: string | undefined;
 
   const v = draftAccount.value || "";
 
   if (v === "手动输入" || v === "Manual input") accountMode = "manual";
+  if (v.includes("@ANON") || v === "匿名账号" || v === "Anonymous") {
+    accountMode = "anonymous";
+    normalizedAccount = "@ANON";
+  }
   if (v.includes("同名账号") || v.includes("Dynamic user")) {
     accountMode = "dynamic";
 
@@ -214,6 +222,7 @@ defineExpose({ open: openModal, close });
       v-model:connect-method="draftConnectMethod"
       :accounts="currentAsset.permedAccounts || []"
       :protocols="currentAsset.permedProtocols || []"
+      :asset-type="props.assetType"
     />
   </Modal>
 </template>
