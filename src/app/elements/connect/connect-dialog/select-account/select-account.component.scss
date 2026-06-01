@@ -9,86 +9,77 @@
   margin-bottom: 20px;
 }
 
-.zone-label {
-}
-
 .account-info {
   border: solid #cbc9c9 1px;
   padding: 10px 10px 0 10px;
 }
 
-.credential-group {
-  border: solid #cbc9c9 1px;
-  padding-bottom: 10px;
-}
+.credential {
+  .credential-input {
+    flex: 1;
+    min-width: 0;
+  }
 
-.password {
-  ::ng-deep .ant-input-affix-wrapper {
+  ::ng-deep .credential-input.ant-input-affix-wrapper,
+  ::ng-deep .credential-row .ant-input-affix-wrapper {
     width: 100%;
   }
 
   .remember-auth {
+    flex-shrink: 0;
+    margin: 0;
     font-size: 12px;
-    margin-top: 10px;
-    padding-left: 12px;
+    white-space: nowrap;
   }
 }
 
-/* Keep the same tab look-and-feel as connect-method tabs */
-.full-width-tabs ::ng-deep {
-  .ant-tabs-nav {
-    .ant-tabs-nav-wrap {
-      overflow: hidden;
-    }
-
-    .ant-tabs-nav-list {
-      display: flex;
-      width: 99%;
-
-      .ant-tabs-tab {
-        min-width: 100px;
-        flex: 1;
-        padding: 8px 0;
-
-        .ant-tabs-tab-btn {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0 12px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-
-          i {
-            margin-right: 8px;
-            flex-shrink: 0;
-          }
-        }
-      }
-    }
-
-    .ant-tabs-nav-operations {
-      opacity: 1;
-      transition: opacity 0.05s ease;
-
-      &.ant-tabs-nav-operations-hidden {
-        opacity: 0;
-        pointer-events: none;
-      }
-    }
-  }
-}
-
-.ssh-key-input {
-  resize: vertical;
-  min-height: 160px;
-}
-
-.ssh-key-actions {
+.credential-toolbar {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.credential-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.secret-type-radio {
+  margin-bottom: 0;
+
+  label[nz-radio] i {
+    margin-right: 4px;
+  }
+}
+
+.ssh-key-wrap {
+  position: relative;
+
+  .ssh-key-input {
+    resize: vertical;
+    width: 100%;
+    padding-bottom: 36px;
+  }
+
+  .ssh-key-file-btn {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    z-index: 1;
+    margin: 0;
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
+    padding: 0;
+    line-height: 24px;
+
+    .anticon {
+      font-size: 12px;
+    }
+  }
 }
 
 .ssh-key-file-input {

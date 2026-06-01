@@ -37,7 +37,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @ViewChild('sshKeyFileInput', { static: false }) sshKeyFileInputRef: ElementRef<HTMLInputElement>;
 
   public hidePassword = true;
-  public secretTypeTabIndex = 0;
   public rememberAuthDisabled = null;
   public passwordSecret = '';
   public sshKeySecret = '';
@@ -115,6 +114,14 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     return this.accountSelected.username === '@INPUT' || this.accountSelected.username === '@USER';
   }
 
+  get secretType(): 'password' | 'ssh_key' {
+    return this.manualAuthInfo?.['input_secret_type'] || 'password';
+  }
+
+  set secretType(value: 'password' | 'ssh_key') {
+    this.manualAuthInfo['input_secret_type'] = value;
+  }
+
   public compareFn = (f1: Account, f2: Account) => {
     if (!f1 || !f2) return false;
     return f1.alias === f2.alias && f1.id === f2.id;
@@ -149,7 +156,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       this.onAccountChanged();
     }
     this.syncSecretsFromManualAuth();
-    this.syncSecretTypeTabFromManualAuth();
   }
 
   ngOnDestroy() {
@@ -329,8 +335,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
     }
     this.syncSecretsFromManualAuth();
-    this.syncSecretTypeTabFromManualAuth();
-    this.applyCurrentTabSecretToManualAuth();
+    this.applyCurrentSecretToManualAuth();
     this.setUsernamePlaceholder();
     setTimeout(() => {
       if (this.manualAuthInfo.username && this.passwordRef) {
@@ -343,22 +348,20 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this._cdRef.detectChanges();
   }
 
-  onSecretTypeTabChange(index: number) {
-    this.secretTypeTabIndex = index;
-    this.manualAuthInfo['input_secret_type'] = index === 1 ? 'ssh_key' : 'password';
-    this.applyCurrentTabSecretToManualAuth();
+  onSecretTypeChange(_type: 'password' | 'ssh_key') {
+    this.applyCurrentSecretToManualAuth();
   }
 
   onPasswordSecretChange(secret: string) {
     this.passwordSecret = secret;
-    if (this.secretTypeTabIndex === 0) {
+    if (this.secretType === 'password') {
       this.manualAuthInfo.secret = secret;
     }
   }
 
   onSshKeySecretChange(secret: string) {
     this.sshKeySecret = secret;
-    if (this.secretTypeTabIndex === 1) {
+    if (this.secretType === 'ssh_key') {
       this.manualAuthInfo.secret = secret;
     }
   }
@@ -377,7 +380,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     reader.onload = () => {
       const content = typeof reader.result === 'string' ? reader.result : '';
       this.sshKeySecret = content;
-      if (this.secretTypeTabIndex === 1) {
+      if (this.secretType === 'ssh_key') {
         this.manualAuthInfo.secret = content;
       }
       this._cdRef.detectChanges();
@@ -387,11 +390,6 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     };
     reader.readAsText(file);
     target.value = '';
-  }
-
-  private syncSecretTypeTabFromManualAuth() {
-    const secretType = this.manualAuthInfo?.['input_secret_type'] || 'password';
-    this.secretTypeTabIndex = secretType === 'ssh_key' ? 1 : 0;
   }
 
   private syncSecretsFromManualAuth() {
@@ -406,8 +404,9 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }
   }
 
-  private applyCurrentTabSecretToManualAuth() {
-    this.manualAuthInfo.secret = this.secretTypeTabIndex === 1 ? this.sshKeySecret : this.passwordSecret;
+  private applyCurrentSecretToManualAuth() {
+    this.manualAuthInfo.secret =
+      this.secretType === 'ssh_key' ? this.sshKeySecret : this.passwordSecret;
   }
 
   onFocus() {
@@ -423,8 +422,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       if (authInfo.username.toLowerCase() === filterValue) {
         this.manualAuthInfo = Object.assign(this.manualAuthInfo, authInfo);
         this.syncSecretsFromManualAuth();
-        this.syncSecretTypeTabFromManualAuth();
-        this.applyCurrentTabSecretToManualAuth();
+        this.applyCurrentSecretToManualAuth();
       }
       return authInfo.username.toLowerCase().includes(filterValue);
     });
