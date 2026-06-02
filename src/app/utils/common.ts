@@ -1,8 +1,8 @@
-import {Terminal} from '@xterm/xterm';
-import {Asset, TreeNode, User} from '@app/model';
-import {SettingService} from '@app/services';
-import {FitAddon} from '@xterm/addon-fit';
-import {withAppBase} from '@app/utils/path';
+import { Asset, TreeNode, User } from '@app/model';
+import { SettingService } from '@app/services';
+import { withAppBase } from '@app/utils/path';
+import { FitAddon } from '@xterm/addon-fit';
+import { Terminal } from '@xterm/xterm';
 
 export function groupBy(array, f) {
   const groups = {};
@@ -296,42 +296,66 @@ export function formatDate(date: Date) {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
+export const LOCAL_CLIENT_REMINDER_STORAGE_KEY = 'ignoreDownloadClientReminder';
+
 /**
- * 判断用户有没有下载jumpServer
+ * 通过自定义协议拉起本地客户端，并根据页面是否失焦/隐藏来近似判断协议是否被处理。
  * @param {string} url
- * @param {Function} fail 失败的回调
  */
-export function launchLocalApp(url, fail) {
+export function launchLocalApp(url): Promise<boolean> {
   if (!url) {
-    return;
+    return Promise.resolve(false);
   }
 
-  let isDone = false;
-  let decideTimeOut = null;
-  const aLink = document.createElement('iframe');
-  aLink.style.display = 'none';
-  aLink.src = url;
-  document.body.appendChild(aLink);
-  window.onblur = () => {
-    if (decideTimeOut) {
-      isDone = true;
-    }
-  };
-  const curDone = function done() {
-    isDone = false;
-    clearTimeout(decideTimeOut);
-    decideTimeOut = null;
-    document.body.removeChild(aLink);
-  };
+  return new Promise(resolve => {
+    let protocolHandled = false;
+    let completed = false;
+    let decideTimeOut = null;
+    const frame = document.createElement('iframe');
+    frame.style.display = 'none';
 
-  decideTimeOut = setTimeout(() => {
-    if (isDone) {
-      curDone();
-    } else {
-      fail();
-      curDone();
-    }
-  }, 2000);
+    const markProtocolHandled = () => {
+      if (decideTimeOut) {
+        protocolHandled = true;
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        markProtocolHandled();
+      }
+    };
+
+    const finish = (result: boolean) => {
+      if (completed) {
+        return;
+      }
+
+      completed = true;
+      if (decideTimeOut) {
+        clearTimeout(decideTimeOut);
+      }
+      decideTimeOut = null;
+      window.removeEventListener('blur', markProtocolHandled, true);
+      window.removeEventListener('pagehide', markProtocolHandled, true);
+      document.removeEventListener('visibilitychange', onVisibilityChange, true);
+      if (frame.parentNode) {
+        frame.parentNode.removeChild(frame);
+      }
+      resolve(result);
+    };
+
+    window.addEventListener('blur', markProtocolHandled, true);
+    window.addEventListener('pagehide', markProtocolHandled, true);
+    document.addEventListener('visibilitychange', onVisibilityChange, true);
+
+    frame.src = url;
+    document.body.appendChild(frame);
+
+    decideTimeOut = setTimeout(() => {
+      finish(protocolHandled);
+    }, 2000);
+  });
 }
 
 /**

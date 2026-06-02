@@ -21,6 +21,7 @@ import {
 import { ConnectEvt, InitTreeConfig, TreeNode } from '@app/model';
 import { CookieService } from 'ngx-cookie-service';
 import { HttpHeaders } from '@angular/common/http';
+import { withSitePrefix } from '@app/utils/path';
 
 declare var $: any;
 
@@ -260,8 +261,8 @@ export class ElementAssetTreeComponent implements OnInit {
     const config = {
       refresh,
       showFavoriteAssets: true,
-      url: '/api/v1/perms/users/self/nodes/all-with-assets/tree/',
-      asyncUrl: '/api/v1/perms/users/self/nodes/children-with-assets/tree/?'
+      url: withSitePrefix('/api/v1/perms/users/self/nodes/all-with-assets/tree/'),
+      asyncUrl: withSitePrefix('/api/v1/perms/users/self/nodes/children-with-assets/tree/?')
     };
     const tree = new Tree('AssetTree', 'My assets', false, true, true, true, config);
     if (!refresh) {
@@ -273,8 +274,8 @@ export class ElementAssetTreeComponent implements OnInit {
   async initTypeTree(refresh = false) {
     const config = {
       refresh,
-      url: '/api/v1/perms/users/self/nodes/children-with-assets/category/tree/?sync=1',
-      asyncUrl: '/api/v1/perms/users/self/nodes/children-with-assets/category/tree/',
+      url: withSitePrefix('/api/v1/perms/users/self/nodes/children-with-assets/category/tree/?sync=1'),
+      asyncUrl: withSitePrefix('/api/v1/perms/users/self/nodes/children-with-assets/category/tree/'),
       setting: {
         async: {
           autoParam: ['type', 'category']
