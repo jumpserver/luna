@@ -213,12 +213,18 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     if (data && data.content) {
       this.postCurrentTerminalContextToChatAI();
     }
+    if (!this.iframeRef?.nativeElement?.contentWindow) {
+      return;
+    }
     this.iframeRef.nativeElement.contentWindow.postMessage('show-chat-panel');
     this.chatAIShown = true;
     this.showBtn = false;
   }
 
   postCurrentTerminalContextToChatAI() {
+    if (!this.iframeRef?.nativeElement?.contentWindow) {
+      return;
+    }
     const data = this.currentView.terminalContentData;
     const content = {
       viewId: this.currentView.id,
