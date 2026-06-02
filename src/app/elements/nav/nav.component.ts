@@ -12,6 +12,7 @@ import {
   SettingService,
   ViewService
 } from '@app/services';
+import { withSitePrefix, withUIBase } from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -59,7 +60,7 @@ export class ElementNavComponent implements OnInit {
           {
             id: 'Connect',
             click: () => {
-              window.open('/koko/elfinder/sftp/');
+              window.open(withSitePrefix('/koko/elfinder/sftp/'));
             },
             name: 'Connect'
           }
@@ -137,11 +138,13 @@ export class ElementNavComponent implements OnInit {
         children: themes.map(theme => ({
           id: theme.name,
           click: () => {
+            (this._settingSvc.setting.basic as any).themes = theme.name;
             useTheme().switchTheme(theme.name);
             this._iframeSvc.sendMessage({
               name: 'CHANGE_MAIN_THEME',
               data: theme.name
             });
+            this._settingSvc.save();
           },
           name: this._i18n.instant(theme.label)
         }))
@@ -169,7 +172,7 @@ export class ElementNavComponent implements OnInit {
           {
             id: 'Download',
             click: () => {
-              window.open('/core/download/', '_blank');
+              window.open(withSitePrefix('/core/download/'), '_blank');
             },
             name: 'Download'
           }
@@ -215,6 +218,6 @@ export class ElementNavComponent implements OnInit {
   }
 
   onJumpUi() {
-    window.open('/ui/', '_blank');
+    window.open(withUIBase(), '_blank');
   }
 }

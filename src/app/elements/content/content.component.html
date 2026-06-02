@@ -3,10 +3,12 @@
     <span (click)="toggleMenu.emit()" class="mobile-menu-icon">
       <i class="fa fa-sitemap"></i>
     </span>
+
     <div class="scroll-button">
-      <a (click)="scrollLeft()" class="left"><i class="fa fa-caret-left"></i></a>
-      <a (click)="scrollRight()" class="right"><i class="fa fa-caret-right"></i></a>
+      <a (click)="scrollLeft()" class="left action-btn"><i class="fa fa-caret-left"></i></a>
+      <a (click)="scrollRight()" class="right action-btn"><i class="fa fa-caret-right"></i></a>
     </div>
+
     <div #tabs class="tabs">
       <ul
         (cdkDropListDropped)="onItemDropped($event)"
@@ -27,6 +29,17 @@
         </elements-content-tab>
       </ul>
     </div>
+
+    @if (viewList.length > 0) {
+      <nz-icon
+        nz-tooltip
+        [nzTooltipTitle]="'Full screen' | translate"
+        nzType="fullscreen"
+        nzTheme="outline"
+        class="action-btn fullscreen-icon"
+        (click)="handleFullscreen()"
+      />
+    }
   </div>
   <div [ngClass]="{ 'batch-input': showBatchCommand }" id="winContainer">
     <div

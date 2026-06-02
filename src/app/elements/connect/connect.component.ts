@@ -169,6 +169,10 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     if (!this._settingSvc.hasXPack()) {
       appletConnectMethod = 'web';
     }
+    let virtualappConnectMethod = connectOption ? connectOption['virtualappConnectMethod'] : 'web';
+    if (!this._settingSvc.hasXPack()) {
+      virtualappConnectMethod = 'web';
+    }
 
     if (connectInfo.downloadRDP) {
       return this._http.downloadRDPFile(
@@ -180,6 +184,8 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       this.callLocalClient(connToken).then();
     } else if (connectMethod.type === 'applet' && appletConnectMethod === 'client') {
       this.callLocalClient(connToken).then();
+    } else if (connectMethod.type === 'virtual_app' && virtualappConnectMethod === 'client') {
+      this.callLocalClient(connToken).then();
     } else {
       this.createWebView(asset, connectInfo, connToken);
     }
@@ -187,15 +193,20 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
   async callLocalClient(connToken: ConnectionToken) {
     this._logger.debug('Call local client');
+
     if (connToken.connect_options.token_reusable) {
       await this._connectTokenSvc.setReusable(connToken, true).toPromise();
     }
+
     const response = await firstValueFrom(
       this._http.getLocalClientUrl(connToken, this._settingSvc.setting)
     );
+
     const url = response['url'];
+
     launchLocalApp(url, () => {
       const downLoadStatus = localStorage.getItem('hasDownLoadApp');
+
       if (downLoadStatus !== '1') {
         this._dialog.create({
           nzTitle: this._i18n.instant('DownloadClient'),

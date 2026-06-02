@@ -1,4 +1,5 @@
-import {Component, Input, OnInit} from '@angular/core';
+import {Component, Input, OnInit, Output,
+  EventEmitter} from '@angular/core';
 import {Command, Replay} from '@app/model';
 import {HttpService} from '@app/services';
 import {TranslateService} from '@ngx-translate/core';
@@ -12,6 +13,9 @@ import {formatTime} from '@app/utils/common';
 })
 export class ElementsReplayMp4Component implements OnInit {
   @Input() replay: Replay;
+  @Input() type: string | undefined;
+  @Output() ready = new EventEmitter<void>();
+
   startTime = null;
   startTimeStamp = null;
   commands: Command[];
@@ -30,6 +34,7 @@ export class ElementsReplayMp4Component implements OnInit {
     this.getCommands(this.page);
     this.height = window.innerHeight - 100;
     this.width = window.innerWidth - 100;
+    this.ready.emit();
   }
 
   toSafeLocalDateStr(d) {

@@ -24,6 +24,7 @@ export class ElementFaceMonitorComponent implements OnInit {
       this.monitoringTabCount = count;
       if (this.ready && this.monitoringTabCount === 0) {
         this.isVisible = false;
+        this.isMinimized = false;
       }
     });
   }
@@ -40,9 +41,5 @@ export class ElementFaceMonitorComponent implements OnInit {
 
   minimizeBox() {
     this.isMinimized = !this.isMinimized;
-  }
-
-  closeBox() {
-    this.isVisible = false;
   }
 }

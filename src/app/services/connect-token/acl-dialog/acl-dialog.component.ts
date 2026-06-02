@@ -1,13 +1,15 @@
-import { writeText } from 'clipboard-polyfill';
-import { I18nService } from '@app/services/i18n';
-import { HttpService } from '@app/services/http';
-import { FaceService } from '@app/services/face';
-import { HttpErrorResponse } from '@angular/common/http';
-import { Component, Inject, OnInit } from '@angular/core';
-import { Asset, ConnectData, ConnectionToken } from '@app/model';
-import { NzNotificationService } from 'ng-zorro-antd/notification';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { NZ_MODAL_DATA, NzModalRef, NzModalService } from 'ng-zorro-antd/modal';
+import {writeText} from 'clipboard-polyfill';
+import {I18nService} from '@app/services/i18n';
+import {HttpService} from '@app/services/http';
+import {FaceService} from '@app/services/face';
+import {HttpErrorResponse} from '@angular/common/http';
+import {Component, Inject, OnInit} from '@angular/core';
+import {Asset, ConnectData, ConnectionToken} from '@app/model';
+import {NzNotificationService} from 'ng-zorro-antd/notification';
+import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
+import {NZ_MODAL_DATA, NzModalRef, NzModalService} from 'ng-zorro-antd/modal';
+import {ActivatedRoute} from '@angular/router';
+import {withUIBase} from '@app/utils/path';
 
 interface DialogAction {
   text: string;
@@ -52,7 +54,8 @@ export class ElementACLDialogComponent implements OnInit {
     private _toastr: NzNotificationService,
     private sanitizer: DomSanitizer,
     private faceService: FaceService,
-    public dialogRef: NzModalRef<ElementACLDialogComponent>
+    public dialogRef: NzModalRef<ElementACLDialogComponent>,
+    private _route: ActivatedRoute
   ) {
     this.data = data;
   }
@@ -92,7 +95,7 @@ export class ElementACLDialogComponent implements OnInit {
 
   async onCopySuccess(evt) {
     const msg = await this._i18n.t('Copied');
-    this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+    this._toastr.success(msg, '', {nzClass: 'custom-success-notification'});
     writeText(evt);
   }
 
@@ -101,7 +104,14 @@ export class ElementACLDialogComponent implements OnInit {
   }
 
   onConfirmFaceOnline() {
-    const faceMonitorToken = this.faceService.getToken();
+    let faceMonitorToken = this._route.snapshot.queryParamMap.get('face_monitor_token');
+
+    console.log('get token from queryParamMap:', faceMonitorToken);
+    if (!faceMonitorToken) {
+      faceMonitorToken = this.faceService.getToken();
+      console.log('get token from faceService:', faceMonitorToken);
+    }
+
 
     const successCallback = (connToken: ConnectionToken) => {
       if (connToken && connToken.face_token) {
@@ -121,7 +131,7 @@ export class ElementACLDialogComponent implements OnInit {
                 this.content = this.getDialogContent(this.code);
               } else {
                 const msg = await this._i18n.t('Face verify success');
-                this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+                this._toastr.success(msg, '', {nzClass: 'custom-success-notification'});
                 this.dialogRef.close(connToken);
                 this.faceService.openFaceMonitor();
               }
@@ -176,7 +186,7 @@ export class ElementACLDialogComponent implements OnInit {
                 this.content = this.getDialogContent(this.code);
               } else {
                 const msg = await this._i18n.t('Face verify success');
-                this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+                this._toastr.success(msg, '', {nzClass: 'custom-success-notification'});
                 this.dialogRef.close(connToken);
               }
             }
@@ -193,6 +203,7 @@ export class ElementACLDialogComponent implements OnInit {
       }
       this.content = this.getDialogContent(this.code);
     };
+
 
     if (this.tokenAction === 'exchange') {
       this._http
@@ -281,7 +292,7 @@ export class ElementACLDialogComponent implements OnInit {
 
           if (state === 'approved') {
             const msg = await this._i18n.t('Login review approved');
-            this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+            this._toastr.success(msg, '', {nzClass: 'custom-success-notification'});
             this.dialogRef.close(this.connectionToken);
           } else if (state === 'rejected') {
             this.code = 'ticket_review_rejected';
@@ -373,14 +384,19 @@ export class ElementACLDialogComponent implements OnInit {
           }
         ]
       },
+      face_verify_capture: {
+        title: this._i18n.instant('Face Verify'),
+        message: 'Please complete the face verification',
+        actions: [],
+      },
       no_face_feature: {
         title: 'Login reminder',
         message: 'No facial features',
         isError: true,
         customContent: {
           type: 'link',
-          link: '/ui/#/profile/index',
-          linkText: 'Go to profile'
+          link: withUIBase('#/profile/index'),
+          linkText: this._i18n.instant('Go to profile')
         },
         actions: [
           {

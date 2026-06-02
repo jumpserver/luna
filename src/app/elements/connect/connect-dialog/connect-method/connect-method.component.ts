@@ -18,6 +18,7 @@ export class ElementConnectMethodComponent implements OnInit {
   public connectMethods = [];
   public connectMethodTypes = [];
   public categoryIndex = 0;
+  public connectMethodValue: string;
 
   constructor(
     private _i18n: I18nService,
@@ -52,7 +53,15 @@ export class ElementConnectMethodComponent implements OnInit {
 
   @Input() set connectMethod(c: ConnectMethod) {
     this._connectMethod = c;
-    this.connectMethodChange.emit(c);
+
+    if (this.connectMethods && this.connectMethods.length > 0 && c) {
+      const matched = this.connectMethods.find(item => item.value === c.value);
+      this._connectMethod = matched ? matched : this.connectMethods[0];
+    }
+
+    this.categoryIndex = this.currentConnectMethodTypeIndex();
+    this.connectMethodValue = this._connectMethod ? this._connectMethod.value : undefined;
+    this.connectMethodChange.emit(this._connectMethod);
   }
 
   ngOnInit() {
@@ -80,11 +89,13 @@ export class ElementConnectMethodComponent implements OnInit {
     this.connectMethods = this._appSvc.getProtocolConnectMethods(this.protocol.name);
     this.groupConnectMethods();
 
-    const isValid = this.connectMethods.find(item => item.value === this.connectMethod.value);
-    if (!this.connectMethod || !isValid) {
-      this.connectMethod = this.connectMethods[0];
-    }
+    const matchedMethod = this.connectMethods.find(
+      item => item.value === this.connectMethod?.value
+    );
+
+    this.connectMethod = matchedMethod ? matchedMethod : this.connectMethods[0];
     this.categoryIndex = this.currentConnectMethodTypeIndex();
+    this.connectMethodValue = this.connectMethod ? this.connectMethod.value : undefined;
   }
 
   groupConnectMethods() {
@@ -160,5 +171,18 @@ export class ElementConnectMethodComponent implements OnInit {
     }
     this.connectMethod = method;
     this.onGuidePage.emit(this.connectMethod);
+  }
+
+  onConnectMethodValueChange(value: string) {
+    if (!this.connectMethods || this.connectMethods.length === 0) {
+      return;
+    }
+
+    const matched = this.connectMethods.find(item => item.value === value);
+
+    if (matched) {
+      this._connectMethod = matched;
+      this.connectMethodChange.emit(this._connectMethod);
+    }
   }
 }
