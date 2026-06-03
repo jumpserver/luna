@@ -313,13 +313,18 @@ export class HttpService {
     const isVirtual = account.username.startsWith('@');
     const username = isVirtual ? manualAuthInfo.username : account.username;
     const secret = encryptPassword(manualAuthInfo.secret);
-    const connectOption = connectData.connectOption;
+    const connectOption = { ...(connectData.connectOption || {}) };
+    // 始终以当前表单为准，避免 connectOption 里残留上一次的 input_secret_type
+    const inputSecretType =
+      (manualAuthInfo && manualAuthInfo['input_secret_type']) || 'password';
+
     const data = {
       asset: asset.id,
       account: account.alias, // 主要是有特殊账号，匿名、虚拟
       protocol: protocol.name,
       input_username: username,
       input_secret: secret,
+      input_secret_type: inputSecretType,
       connect_method: connectMethod.value,
       connect_options: connectOption
     };
