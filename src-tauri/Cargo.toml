@@ -21,10 +21,10 @@ features = [ ]
 
 [dependencies]
 url = "2.5.7"
-log = "0.4.27"
+log = "0.4.31"
 image = "0.25.8"
 oauth2 = "5.0.0"
-axum = "0.7"
+axum = "0.8.9"
 chrono = "0.4.41"
 font-kit = "0.14"
 anyhow = "1.0.100"
@@ -34,7 +34,7 @@ tauri-build = "2.5.0"
 tauri-plugin-log = "2"
 tauri-plugin-os = "2.3.1"
 tauri-plugin-fs = "2.4.2"
-window-vibrancy = "0.6.0"
+window-vibrancy = "0.7.1"
 tauri-plugin-shell = "2.3.1"
 tauri-plugin-store = "2.4.0"
 tauri-plugin-dialog = "2.3.1"
@@ -43,7 +43,7 @@ tauri-plugin-notification = "2.3.1"
 tauri-plugin-deep-link = "2.4.5"
 tauri-plugin-single-instance = "2"
 tauri-plugin-clipboard-manager = "2.3.0"
-tauri-plugin-prevent-default = "4"
+tauri-plugin-prevent-default = "5.0.0"
 
 [dependencies.tokio]
 version = "1.46.1"
@@ -58,7 +58,7 @@ features = [
 ]
 
 [dependencies.keyring]
-version = "3.6.3"
+version = "4.0.1"
 features = [
   "apple-native",
   "windows-native",
