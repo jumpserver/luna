@@ -95,7 +95,7 @@ func reportErrorf(format string, args ...interface{}) {
 }
 
 func removeCurRdpVncFile() {
-	re := regexp.MustCompile(`(?i)\.(rdp|vncpaxx)$`)
+	re := regexp.MustCompile(`(?i)\.(rdp|vnc|vncpaxx)$`)
 	dir, _ := os.UserConfigDir()
 	rd, _ := ioutil.ReadDir(filepath.Join(dir, "jumpserver-client"))
 	for _, v := range rd {
@@ -127,6 +127,7 @@ func (r *Rouse) HandleRDP(appConfig *config.AppConfig) {
 }
 
 func (r *Rouse) HandleVNC(appConfig *config.AppConfig) {
+	removeCurRdpVncFile()
 	cmd := handleVNC(r, appConfig)
 	if cmd != nil {
 		if err := cmd.Run(); err != nil {

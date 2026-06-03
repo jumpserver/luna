@@ -24,6 +24,7 @@ const imagesMap: Record<string, string | undefined> = {
   mstsc: getImageByName("mstsc"),
   terminal: getImageByName("terminal"),
   vncviewer: getImageByName("realvnc"),
+  realvnc: getImageByName("realvnc"),
   tigervnc: getImageByName("tigerVnc"),
   securefx: getImageByName("securecrt"),
   securecrt: getImageByName("securecrt"),

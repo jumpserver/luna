@@ -30,14 +30,17 @@ type POINT struct {
 }
 
 var (
-	dll64          *syscall.LazyDLL
-	controlClick   *syscall.LazyProc
-	controlSend    *syscall.LazyProc
-	controlSetText *syscall.LazyProc
-	run            *syscall.LazyProc
-	winWaitActive  *syscall.LazyProc
-	winWait        *syscall.LazyProc
-	send           *syscall.LazyProc
+	dll64           *syscall.LazyDLL
+	controlClick    *syscall.LazyProc
+	controlSend     *syscall.LazyProc
+	controlGetFocus *syscall.LazyProc
+	controlGetText  *syscall.LazyProc
+	controlSetText  *syscall.LazyProc
+	run             *syscall.LazyProc
+	winActivate     *syscall.LazyProc
+	winWaitActive   *syscall.LazyProc
+	winWait         *syscall.LazyProc
+	send            *syscall.LazyProc
 )
 
 func LoadAuto() {
@@ -48,8 +51,11 @@ func LoadAuto() {
 	dll64 := syscall.NewLazyDLL(filepath.Join(filepath.Dir(os.Args[0]), autoItX3))
 	controlClick = dll64.NewProc("AU3_ControlClick")
 	controlSend = dll64.NewProc("AU3_ControlSend")
+	controlGetFocus = dll64.NewProc("AU3_ControlGetFocus")
+	controlGetText = dll64.NewProc("AU3_ControlGetText")
 	controlSetText = dll64.NewProc("AU3_ControlSetText")
 	run = dll64.NewProc("AU3_Run")
+	winActivate = dll64.NewProc("AU3_WinActivate")
 	winWaitActive = dll64.NewProc("AU3_WinWaitActive")
 	winWait = dll64.NewProc("AU3_WinWait")
 	send = dll64.NewProc("AU3_Send")
@@ -115,6 +121,24 @@ func WinWait(szTitle string, args ...interface{}) int {
 		println(lastErr)
 	}
 	return int(handle)
+}
+
+// WinActivate -- activate a window.
+func WinActivate(szTitle string, args ...interface{}) int {
+	var szText string
+	var ok bool
+	if len(args) == 0 {
+		szText = ""
+	} else if len(args) == 1 {
+		if szText, ok = args[0].(string); !ok {
+			panic("szText must be a string")
+		}
+	} else {
+		panic("Too more parameter")
+	}
+
+	ret, _, _ := winActivate.Call(strPtr(szTitle), strPtr(szText))
+	return int(ret)
 }
 
 // ControlClick -- Sends a mouse click command to a given control.
@@ -220,11 +244,22 @@ func ControlSend(title, text, control, sendText string, args ...interface{}) int
 
 // ControlSetText -- Sets text of a control.
 func ControlSetText(title, text, control, newText string) int {
-	ret, _, lastErr := controlSetText.Call(strPtr(title), strPtr(text), strPtr(control), strPtr(newText))
-	if int(ret) == 0 {
-		println(lastErr)
-	}
+	ret, _, _ := controlSetText.Call(strPtr(title), strPtr(text), strPtr(control), strPtr(newText))
 	return int(ret)
+}
+
+// ControlGetFocus -- Returns the Control Identifier of the focused control.
+func ControlGetFocus(title, text string) string {
+	buf := make([]uint16, 4096)
+	controlGetFocus.Call(strPtr(title), strPtr(text), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	return syscall.UTF16ToString(buf)
+}
+
+// ControlGetText -- Returns text from a control.
+func ControlGetText(title, text, control string) string {
+	buf := make([]uint16, 4096)
+	controlGetText.Call(strPtr(title), strPtr(text), strPtr(control), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	return syscall.UTF16ToString(buf)
 }
 
 // Send -- Send simulates input on the keyboard

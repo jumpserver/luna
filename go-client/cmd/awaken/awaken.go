@@ -16,6 +16,7 @@ func main() {
 	p := &awaken.Info{}
 	if len(os.Args) != 1 {
 		global.LOG = logger.InitLogger()
+		defer global.LOG.Sync()
 		zap.ReplaceGlobals(global.LOG)
 		base64String := strings.TrimPrefix(os.Args[1], "jms://")
 		decoded, _ := base64.StdEncoding.DecodeString(base64String)

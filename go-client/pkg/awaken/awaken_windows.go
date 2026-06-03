@@ -122,6 +122,51 @@ func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		"host":     r.Host,
 		"port":     strconv.Itoa(r.Port),
 	}
+	if appItem.Name == "realvnc" {
+		dir, _ := os.UserConfigDir()
+		currentPath := filepath.Join(dir, "jumpserver-client")
+		EnsureDirExist(currentPath)
+		files, _ := ioutil.ReadDir(currentPath)
+		for _, file := range files {
+			if !file.IsDir() && strings.EqualFold(filepath.Ext(file.Name()), ".vnc") {
+				os.Remove(filepath.Join(currentPath, file.Name()))
+			}
+		}
+		filePath := filepath.Join(currentPath, r.getName()+".vnc")
+		content := fmt.Sprintf("[Connection]\nHost=%s:%s\nWarnUnencrypted=0\nUserName=%s\n", r.Host, strconv.Itoa(r.Port), r.getUserName())
+		if err := ioutil.WriteFile(filePath, []byte(content), os.ModePerm); err != nil {
+			global.LOG.Error(err.Error())
+			return nil
+		}
+		autoit.LoadAuto()
+		autoit.Run(appItem.Path + " -VerifyId \"0\" \"" + filePath + "\"")
+		winTitle := "Authentication"
+		active := false
+		for i := 0; i <= 30; i++ {
+			ret := autoit.WinWaitActive(winTitle, "", 1)
+			time.Sleep(300 * time.Millisecond)
+			if ret != 0 {
+				active = true
+				break
+			}
+			autoit.WinActivate(winTitle, "")
+		}
+		if !active {
+			autoit.WinActivate(winTitle, "")
+			time.Sleep(500 * time.Millisecond)
+		}
+		focusedControl := autoit.ControlGetFocus(winTitle, "")
+		focusedText := strings.TrimSpace(autoit.ControlGetText(winTitle, "", focusedControl))
+		if focusedControl != "" && focusedText == strings.TrimSpace(r.getUserName()) {
+			autoit.Send("{TAB}")
+			time.Sleep(300 * time.Millisecond)
+		}
+		autoit.Send("^a")
+		time.Sleep(100 * time.Millisecond)
+		autoit.Send(r.Value, 1)
+		autoit.Send("{ENTER}")
+		return exec.Command("cmd", "/C", "exit", "0")
+	}
 	if len(appItem.AutoIt) == 0 {
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 		cmd := exec.Command(appItem.Path, strings.Split(commands, " ")...)
