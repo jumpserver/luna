@@ -15,22 +15,27 @@ interface ConnectMethodsResponse {
   originals: ConnectMethod[];
 }
 
-let connectMethodsCache: ConnectMethodsResponse | null = null;
-let fetchPromise: Promise<ConnectMethodsResponse> | null = null;
+let connectMethodsCache = new Map<string, ConnectMethodsResponse>();
+let fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 
 export const useConnectMethods = () => {
-  const { currentSite, currentUser } = storeToRefs(useUserInfoStore());
+  const { currentSite, currentUser, orgId } = storeToRefs(useUserInfoStore());
 
   const fetchConnectMethods = async (): Promise<ConnectMethodsResponse> => {
-    if (connectMethodsCache) {
-      return connectMethodsCache;
+    const key = `${currentSite.value || ""}:${orgId.value || ""}`;
+    const cached = connectMethodsCache.get(key);
+
+    if (cached) {
+      return cached;
     }
 
-    if (fetchPromise) {
-      return fetchPromise;
+    const running = fetchPromise.get(key);
+
+    if (running) {
+      return running;
     }
 
-    fetchPromise = new Promise(async (resolve, reject) => {
+    const promise = new Promise<ConnectMethodsResponse>(async (resolve, reject) => {
       const unlistenSuccess = await useTauriEventListen("get-connect-methods-success", (event) => {
         interface eventPayload {
           status: number;
@@ -41,7 +46,7 @@ export const useConnectMethods = () => {
         if (payload.status === 200) {
           try {
             const methods = JSON.parse(payload.data) as ConnectMethodsResponse;
-            connectMethodsCache = methods;
+            connectMethodsCache.set(key, methods);
             resolve(methods);
           } catch (error) {
             reject(error);
@@ -59,15 +64,18 @@ export const useConnectMethods = () => {
 
       useTauriCoreInvoke("get_connect_methods", {
         site: currentSite.value,
-        bearerToken: currentUser.value?.bearerToken
+        bearerToken: currentUser.value?.bearerToken,
+        orgId: orgId.value
       });
     });
 
+    fetchPromise.set(key, promise);
+
     try {
-      const result = await fetchPromise;
+      const result = await promise;
       return result;
     } finally {
-      fetchPromise = null;
+      fetchPromise.delete(key);
     }
   };
 
@@ -98,7 +106,7 @@ export const useConnectMethods = () => {
   };
 
   const clearCache = () => {
-    connectMethodsCache = null;
+    connectMethodsCache.clear();
   };
 
   return {

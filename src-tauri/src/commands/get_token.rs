@@ -3,8 +3,8 @@ use serde_json::{from_str, json};
 use std::collections::HashMap;
 use tauri::{AppHandle, Emitter};
 
-use crate::commands::pull_up::pull_up;
 use crate::commands::auth_login::ensure_fresh_token;
+use crate::commands::pull_up::pull_up;
 use crate::service::token::{TokenRequestBody, TokenService};
 
 #[tauri::command]
@@ -12,6 +12,7 @@ pub async fn get_connect_token(
     app: AppHandle,
     site: String,
     bearer_token: String,
+    org_id: String,
     body: TokenRequestBody,
     rdp_params: Option<HashMap<String, String>>,
 ) {
@@ -26,7 +27,16 @@ pub async fn get_connect_token(
         }
     };
 
-    let token_service = TokenService::new(site, bearer, body);
+    let token_service = match TokenService::new(site, bearer, org_id, body) {
+        Ok(service) => service,
+        Err(error) => {
+            let _ = app.emit(
+                "get-token-failure",
+                json!({ "status": 0, "data": error.to_string() }),
+            );
+            return;
+        }
+    };
     let token_data = token_service.get_connect_token().await;
 
     if token_data.status == 201 {
@@ -52,10 +62,7 @@ pub async fn get_connect_token(
             app.clone(),
             url_json.get("url").unwrap().as_str().unwrap().to_string(),
         ) {
-            let _ = app.emit(
-                "pull-up-failure",
-                json!({ "error": e }),
-            );
+            let _ = app.emit("pull-up-failure", json!({ "error": e }));
         }
     } else {
         let _ = app.emit(

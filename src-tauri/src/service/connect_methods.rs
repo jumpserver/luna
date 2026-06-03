@@ -1,20 +1,27 @@
-use crate::commands::requests::{get_with_response, ApiResponse};
+use crate::api::request::{ApiRequestClient, ApiResponse};
 
 pub struct ConnectMethodsService {
     origin: String,
-    bearer_token: String,
+    api: ApiRequestClient,
 }
 
 impl ConnectMethodsService {
-    pub fn new(origin: String, bearer_token: String) -> Self {
-        Self {
+    pub fn new(
+        origin: String,
+        bearer_token: String,
+        org_id: String,
+    ) -> Result<Self, reqwest::Error> {
+        Ok(Self {
             origin,
-            bearer_token,
-        }
+            api: ApiRequestClient::new(bearer_token, org_id)?,
+        })
     }
 
     pub async fn get_connect_methods(&self) -> ApiResponse {
-        let url = format!("{}/api/v1/terminal/components/connect-methods/", self.origin);
-        get_with_response(&url, &self.bearer_token).await
+        let url = format!(
+            "{}/api/v1/terminal/components/connect-methods/",
+            self.origin
+        );
+        self.api.get_with_response(&url).await
     }
 }

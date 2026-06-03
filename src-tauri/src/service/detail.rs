@@ -1,18 +1,23 @@
-use crate::commands::requests::{get_with_response, ApiResponse};
+use crate::api::request::{ApiRequestClient, ApiResponse};
 
 pub struct DetailService {
     origin: String,
-    bearer_token: String,
+    api: ApiRequestClient,
     asset_id: String,
 }
 
 impl DetailService {
-    pub fn new(origin: String, bearer_token: String, asset_id: String) -> Self {
-        Self {
+    pub fn new(
+        origin: String,
+        bearer_token: String,
+        org_id: String,
+        asset_id: String,
+    ) -> Result<Self, reqwest::Error> {
+        Ok(Self {
             origin,
-            bearer_token,
+            api: ApiRequestClient::new(bearer_token, org_id)?,
             asset_id,
-        }
+        })
     }
 
     pub async fn get_asset_detail(&self) -> ApiResponse {
@@ -20,6 +25,6 @@ impl DetailService {
             "{}/api/v1/perms/users/self/assets/{}",
             self.origin, self.asset_id
         );
-        get_with_response(&url, &self.bearer_token).await
+        self.api.get_with_response(&url).await
     }
 }

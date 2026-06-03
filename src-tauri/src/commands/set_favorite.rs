@@ -4,12 +4,27 @@ use serde_json::json;
 use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
-pub async fn set_favorite(app: AppHandle, site: String, bearer_token: String, asset_id: String) {
+pub async fn set_favorite(
+    app: AppHandle,
+    site: String,
+    bearer_token: String,
+    org_id: String,
+    asset_id: String,
+) {
     let bearer = match ensure_fresh_token(&app, &site, Some(&bearer_token)).await {
         Ok(b) => b,
         Err(_) => return,
     };
-    let favorite_service = FavoriteService::new(site, bearer, asset_id);
+    let favorite_service = match FavoriteService::new(site, bearer, org_id, asset_id) {
+        Ok(service) => service,
+        Err(error) => {
+            let _ = app.emit(
+                "set-favorite-failure",
+                json!({ "status": "failed", "error": error.to_string() }),
+            );
+            return;
+        }
+    };
     let favorite_data = favorite_service.favorite().await;
 
     if !favorite_data.success {

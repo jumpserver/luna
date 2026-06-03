@@ -49,7 +49,7 @@ const {
 const assetManager = useAssetFetcher(props.type, scrollRef);
 const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
 
-const { loggedIn, currentSite, currentUser } = storeToRefs(userInfoStore);
+const { loggedIn, currentSite, currentUser, orgId } = storeToRefs(userInfoStore);
 const { refreshAssets, assetsData, isAppending, scrollbarStyles, isInitialLoading, appendSkeletonCount } = assetManager;
 
 const { visibleAssets } = useDisplayAssets(
@@ -105,7 +105,8 @@ watch(
 async function getSettings() {
   await useTauriCoreInvoke("get_setting", {
     site: currentSite.value,
-    bearerToken: currentUser.value!.bearerToken
+    bearerToken: currentUser.value!.bearerToken,
+    orgId: orgId.value
   });
 }
 

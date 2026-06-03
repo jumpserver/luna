@@ -1,4 +1,4 @@
-use crate::commands::requests::ApiResponse;
+use crate::api::request::ApiResponse;
 use crate::service::version::VersionService;
 
 #[tauri::command]
@@ -7,7 +7,7 @@ pub async fn get_version_message(site: String) -> Result<ApiResponse, String> {
         return Err("site is empty".to_string());
     }
 
-    let version_service = VersionService::new(site);
+    let version_service = VersionService::new(site).map_err(|error| error.to_string())?;
     let version_message = version_service.get_version_message().await;
 
     Ok(version_message)

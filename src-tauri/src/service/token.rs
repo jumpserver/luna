@@ -1,8 +1,8 @@
-use crate::commands::requests::{get_with_response, post_with_response, ApiResponse};
+use crate::api::request::{ApiRequestClient, ApiResponse};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use url::Url;
-use serde::{Deserialize, Serialize};
-use serde_json::{to_value, Value};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TokenRequestBody {
@@ -17,24 +17,30 @@ pub struct TokenRequestBody {
 
 pub struct TokenService {
     pub site: String,
-    pub bearer_token: String,
+    pub api: ApiRequestClient,
     pub request_body: TokenRequestBody,
 }
 
 impl TokenService {
-    pub fn new(site: String, bearer_token: String, request_body: TokenRequestBody) -> Self {
-        Self {
+    pub fn new(
+        site: String,
+        bearer_token: String,
+        org_id: String,
+        request_body: TokenRequestBody,
+    ) -> Result<Self, reqwest::Error> {
+        Ok(Self {
             site,
-            bearer_token,
+            api: ApiRequestClient::new(bearer_token, org_id)?,
             request_body,
-        }
+        })
     }
 
     pub async fn get_connect_token(&self) -> ApiResponse {
         let url = format!("{}/api/v1/authentication/connection-token/", self.site);
-        let body_value = to_value(&self.request_body).unwrap_or_default();
 
-        post_with_response(&url, &self.bearer_token, &body_value).await
+        self.api
+            .post_json_with_response(&url, &self.request_body)
+            .await
     }
 
     pub async fn get_local_client_url(
@@ -57,6 +63,6 @@ impl TokenService {
                 url = parsed.to_string();
             }
         }
-        get_with_response(&url, &self.bearer_token).await
+        self.api.get_with_response(&url).await
     }
 }

@@ -9,6 +9,7 @@ use tauri::{AppHandle, Emitter, State};
 use tokio::sync::oneshot;
 use url::Url;
 
+use crate::api::client::oauth_client;
 use crate::service::token_oauth::TokenService;
 use crate::service::user::UserService;
 
@@ -194,11 +195,7 @@ pub async fn auth_login(
             log::warn!("emit auth_url failed: {}", e);
         }
 
-        let http_client = reqwest::ClientBuilder::new()
-            .redirect(reqwest::redirect::Policy::none())
-            .danger_accept_invalid_certs(true)
-            .build()
-            .expect("Client no build");
+        let http_client = oauth_client()?;
 
         // 等待 deep link 回调传回 code/state
         let callback = match rx.await {
@@ -246,7 +243,7 @@ pub async fn auth_login(
         }
 
         // 发起请求
-        let user_service = UserService::new(site.clone(), access_token.clone());
+        let user_service = UserService::new(site.clone(), access_token.clone())?;
         let (profile, permission_orgs, current_org, xpack_message) = tokio::join!(
             user_service.get_user_profile(),
             user_service.get_permission_orgs(),
@@ -327,9 +324,7 @@ pub async fn ensure_fresh_token(
             TokenUrl::new(format!("{}/core/auth/oauth2-provider/token/", site))?,
         );
 
-        let http_client = reqwest::ClientBuilder::new()
-            .danger_accept_invalid_certs(true)
-            .build()?;
+        let http_client = oauth_client()?;
         let token_result = client
             .exchange_refresh_token(&RefreshToken::new(refresh.to_string()))
             .request_async(&http_client)

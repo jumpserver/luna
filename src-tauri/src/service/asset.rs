@@ -1,5 +1,4 @@
-use crate::commands::requests::{get_unified, get_with_response, ApiResponse};
-use crate::utils::to_api_response;
+use crate::api::request::{ApiRequestClient, ApiResponse};
 use log::info;
 use serde::{Deserialize, Serialize};
 
@@ -65,29 +64,25 @@ impl AssetQuery {
     }
 }
 
-pub trait HasOrg {
-    fn org(&self) -> &str;
-}
-
-impl HasOrg for AssetQuery {
-    fn org(&self) -> &str {
-        &self.oid
-    }
-}
-
 pub struct AssetService {
     origin: String,
-    bearer_token: String,
+    api: ApiRequestClient,
     query: AssetQuery,
 }
 
 impl AssetService {
-    pub fn new(origin: String, bearer_token: String, query: AssetQuery) -> Self {
-        Self {
+    pub fn new(
+        origin: String,
+        bearer_token: String,
+        query: AssetQuery,
+    ) -> Result<Self, reqwest::Error> {
+        let org_id = query.oid.clone();
+
+        Ok(Self {
             origin,
-            bearer_token,
+            api: ApiRequestClient::new(bearer_token, org_id)?,
             query,
-        }
+        })
     }
 
     pub async fn get_category_assets(&self, favorite: bool) -> ApiResponse {
@@ -106,7 +101,6 @@ impl AssetService {
             url,
             self.query.oid
         );
-        info!("Bearer: {}", self.bearer_token);
         info!("query: {:?}", self.query);
 
         let (r#type, category) = if favorite {
@@ -132,12 +126,12 @@ impl AssetService {
             oid: self.query.oid.clone(),
         };
 
-        to_api_response(&url, get_unified(&url, &self.bearer_token, &query).await).await
+        self.api.get_with_query_response(&url, &query).await
     }
 
     pub async fn get_favorite_assets(&self) -> ApiResponse {
         let url = format!("{}/api/v1/assets/favorite-assets/", &self.origin);
 
-        get_with_response(&url, &self.bearer_token).await
+        self.api.get_with_response(&url).await
     }
 }

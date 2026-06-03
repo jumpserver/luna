@@ -181,6 +181,7 @@ export const useAssetAction = () => {
     useTauriCoreInvoke("get_connect_token", {
       site: currentSite.value,
       bearerToken: currentUser.value!.bearerToken,
+      orgId: orgId.value,
       body: {
         asset: body.asset,
         account: body.account,
@@ -373,6 +374,7 @@ export const useAssetAction = () => {
     useTauriCoreInvoke("set_favorite", {
       site: currentSite.value,
       bearerToken: currentUser.value!.bearerToken,
+      orgId: orgId.value,
       assetId
     });
   };
@@ -385,6 +387,7 @@ export const useAssetAction = () => {
     useTauriCoreInvoke("unfavorite", {
       site: currentSite.value,
       bearerToken: currentUser.value!.bearerToken,
+      orgId: orgId.value,
       assetId
     });
   };
@@ -397,6 +400,7 @@ export const useAssetAction = () => {
     useTauriCoreInvoke("get_asset_detail", {
       site: currentSite.value,
       bearerToken: currentUser.value!.bearerToken,
+      orgId: orgId.value,
       assetId
     });
   };

@@ -1,5 +1,4 @@
-use crate::commands::requests::{post_with_response, ApiResponse};
-use crate::service::asset::HasOrg;
+use crate::api::request::{ApiRequestClient, ApiResponse};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -14,7 +13,7 @@ pub struct RenameService {
     origin: String,
     asset_id: String,
     name: String,
-    bearer_token: String,
+    api: ApiRequestClient,
     oid: String,
 }
 
@@ -25,14 +24,14 @@ impl RenameService {
         asset_id: String,
         name: String,
         oid: String,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, reqwest::Error> {
+        Ok(Self {
             origin,
-            bearer_token,
+            api: ApiRequestClient::new(bearer_token, oid.clone())?,
             asset_id,
             name,
             oid,
-        }
+        })
     }
 
     pub async fn rename(&self) -> ApiResponse {
@@ -44,12 +43,6 @@ impl RenameService {
             oid: self.oid.clone(),
         };
 
-        post_with_response(&url, &self.bearer_token, &body).await
-    }
-}
-
-impl HasOrg for RenameBody {
-    fn org(&self) -> &str {
-        &self.oid
+        self.api.post_json_with_response(&url, &body).await
     }
 }

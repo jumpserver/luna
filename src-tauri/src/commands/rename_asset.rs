@@ -1,5 +1,5 @@
-use crate::service::rename::RenameService;
 use crate::commands::auth_login::ensure_fresh_token;
+use crate::service::rename::RenameService;
 use log::info;
 use serde_json::json;
 use tauri::{AppHandle, Emitter};
@@ -20,7 +20,20 @@ pub async fn rename(
         Err(_) => return,
     };
 
-    let rename_service = RenameService::new(site, bearer, asset_id, name, org_id);
+    let rename_service = match RenameService::new(site, bearer, asset_id, name, org_id) {
+        Ok(service) => service,
+        Err(error) => {
+            let _ = app.emit(
+                "rename-error",
+                json!({
+                  "success": false,
+                  "status": 0,
+                  "data": error.to_string(),
+                }),
+            );
+            return;
+        }
+    };
     let result = rename_service.rename().await;
 
     info!("result: {:?}", result);

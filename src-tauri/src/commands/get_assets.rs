@@ -1,5 +1,5 @@
-use crate::service::asset::{AssetQuery, AssetService};
 use crate::commands::auth_login::ensure_fresh_token;
+use crate::service::asset::{AssetQuery, AssetService};
 use log::{error, info};
 use serde::Deserialize;
 use serde_json::{from_str, json, Value};
@@ -88,7 +88,14 @@ pub async fn get_assets(
         }
     };
 
-    let asset_service = Arc::new(AssetService::new(site, bearer, query));
+    let asset_service = match AssetService::new(site, bearer, query) {
+        Ok(service) => Arc::new(service),
+        Err(e) => {
+            error!("create asset service failed: {}", e);
+            let _ = app.emit("get-asset-failure", json!({ "status": 0 }));
+            return;
+        }
+    };
     let assets_data = asset_service
         .get_category_assets(favorite.unwrap_or(false))
         .await;

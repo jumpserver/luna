@@ -11,7 +11,6 @@ pub mod list_system_fonts;
 pub mod logout;
 pub mod pull_up;
 pub mod rename_asset;
-pub(crate) mod requests;
 pub mod set_favorite;
 pub mod unfavorite;
 pub mod update_config;

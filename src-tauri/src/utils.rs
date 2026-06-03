@@ -1,4 +1,3 @@
-use crate::commands::requests::ApiResponse;
 use anyhow::Result;
 use chrono::{Local, Offset};
 use log::{error, warn};
@@ -26,33 +25,6 @@ pub fn tz_offset_string() -> String {
     let minutes = (local_offset % 3600) / 60;
 
     format!("{:+03}:{:02}", hours, minutes)
-}
-
-/// 将请求结果转换为 ApiResponse
-pub async fn to_api_response(
-    url: &str,
-    result: Result<reqwest::Response, reqwest::Error>,
-) -> ApiResponse {
-    match result {
-        Ok(resp) => {
-            let status = resp.status().as_u16();
-            let data = resp.text().await.unwrap_or_default();
-
-            ApiResponse {
-                status,
-                data,
-                success: status == 200 || status == 201 || status == 204,
-            }
-        }
-        Err(e) => {
-            log::warn!("请求 {} 失败: {}", url, e);
-            ApiResponse {
-                status: 0,
-                data: format!("请求失败: {}", e),
-                success: false,
-            }
-        }
-    }
 }
 
 /// 初始化并持久化窗口尺寸（存逻辑尺寸 DIP），避免跨显示器缩放导致的视觉尺寸变化。

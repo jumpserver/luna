@@ -5,7 +5,12 @@ use serde_json::json;
 use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
-pub async fn get_connect_methods(app: AppHandle, site: String, bearer_token: String) {
+pub async fn get_connect_methods(
+    app: AppHandle,
+    site: String,
+    bearer_token: String,
+    org_id: String,
+) {
     let bearer = match ensure_fresh_token(&app, &site, Some(&bearer_token)).await {
         Ok(b) => b,
         Err(e) => {
@@ -16,7 +21,16 @@ pub async fn get_connect_methods(app: AppHandle, site: String, bearer_token: Str
             return;
         }
     };
-    let connect_methods_service = ConnectMethodsService::new(site, bearer);
+    let connect_methods_service = match ConnectMethodsService::new(site, bearer, org_id) {
+        Ok(service) => service,
+        Err(error) => {
+            let _ = app.emit(
+                "get-connect-methods-failure",
+                json!({ "status": 0, "error": error.to_string() }),
+            );
+            return;
+        }
+    };
     let connect_methods_data = connect_methods_service.get_connect_methods().await;
 
     if !connect_methods_data.success {
