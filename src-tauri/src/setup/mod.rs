@@ -1,5 +1,5 @@
-pub mod menu;
 pub mod consts;
+pub mod menu;
 mod tray;
 pub mod window_effects;
 

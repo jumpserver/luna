@@ -348,10 +348,9 @@ impl ConfigService {
 
                 log::info!("Config path updated successfully at: {:?}", config_path);
 
-                return Ok(json
-                    .get(os_key)
-                    .cloned()
-                    .ok_or_else(|| format!("config.json missing key for current OS: {}", os_key))?);
+                return Ok(json.get(os_key).cloned().ok_or_else(|| {
+                    format!("config.json missing key for current OS: {}", os_key)
+                })?);
             }
         }
 

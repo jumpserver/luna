@@ -1,5 +1,6 @@
 mod api;
 mod commands;
+mod http;
 mod service;
 mod setup;
 mod utils;

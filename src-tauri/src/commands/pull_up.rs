@@ -65,7 +65,12 @@ fn candidate_paths(is_dev: bool) -> Vec<PathBuf> {
     } else {
         if let Ok(current_exe) = env::current_exe() {
             if let Some(base) = current_exe.parent() {
-                candidates.push(base.join("resources").join("bin").join(subdir).join(exe_name));
+                candidates.push(
+                    base.join("resources")
+                        .join("bin")
+                        .join(subdir)
+                        .join(exe_name),
+                );
                 // macOS 打包：App.app/Contents/MacOS/ 下为运行目录
                 // 资源常在 App.app/Contents/Resources/
                 if cfg!(target_os = "macos") {
@@ -139,7 +144,7 @@ pub fn pull_up(_app: AppHandle, url: String) -> Result<(), String> {
 
     // 使用通道来在后台线程和主线程之间通信
     let (tx, rx) = std::sync::mpsc::channel::<String>();
-    
+
     // 在后台线程中读取 stderr，检查是否有错误输出
     thread::spawn(move || {
         let reader = BufReader::new(stderr);
@@ -208,14 +213,14 @@ pub fn pull_up(_app: AppHandle, url: String) -> Result<(), String> {
 
         thread::sleep(Duration::from_millis(100));
     }
-    
+
     // 最后再检查一次是否有错误消息（防止在循环结束后才收到错误）
     if let Ok(error_msg) = rx.try_recv() {
         let err_msg = format!("Client error: {}", error_msg);
         error!("{}", err_msg);
         return Err(err_msg);
     }
-    
+
     // 如果进程仍在运行，这是正常的，让它在后台继续运行
     // 后续的错误会通过事件发送给前端
 

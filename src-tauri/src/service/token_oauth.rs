@@ -1,5 +1,5 @@
 use anyhow::Result;
-use keyring::Entry;
+use keyring_core::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 
 const SERVICE_NAME: &str = "com.jumpserver.client.auth";
@@ -14,6 +14,11 @@ pub struct TokenRecord {
 
 pub struct TokenService {
     site: String,
+}
+
+fn token_entry(site: &str) -> Result<Entry> {
+    keyring::use_native_store(false)?;
+    Ok(Entry::new(SERVICE_NAME, site)?)
 }
 
 impl TokenService {
@@ -38,7 +43,7 @@ impl TokenService {
         let site = self.site.clone();
 
         tokio::task::spawn_blocking(move || -> Result<()> {
-            Entry::new(SERVICE_NAME, site.as_str())?.set_password(&payload)?;
+            token_entry(&site)?.set_password(&payload)?;
             Ok(())
         })
         .await??;
@@ -49,10 +54,10 @@ impl TokenService {
     pub async fn load(&self) -> Result<Option<TokenRecord>> {
         let site = self.site.clone();
         tokio::task::spawn_blocking(move || -> Result<Option<TokenRecord>> {
-            let entry = Entry::new(SERVICE_NAME, site.as_str())?;
+            let entry = token_entry(&site)?;
             match entry.get_password() {
                 Ok(val) => Ok(Some(serde_json::from_str(&val)?)),
-                Err(keyring::Error::NoEntry) => Ok(None),
+                Err(KeyringError::NoEntry) => Ok(None),
                 Err(e) => Err(e.into()),
             }
         })
@@ -62,7 +67,7 @@ impl TokenService {
     pub async fn delete(&self) -> Result<()> {
         let site = self.site.clone();
         tokio::task::spawn_blocking(move || -> Result<()> {
-            if let Ok(entry) = Entry::new(SERVICE_NAME, site.as_str()) {
+            if let Ok(entry) = token_entry(&site) {
                 let _ = entry.delete_credential();
             }
             Ok(())
