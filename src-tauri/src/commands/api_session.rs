@@ -1,6 +1,6 @@
 use crate::{
     api::session::{ApiSessionContext, ApiSessionStore},
-    commands::auth::ensure_fresh_token,
+    commands::auth_flow::ensure_fresh_token,
 };
 use tauri::{AppHandle, State};
 

@@ -1,4 +1,4 @@
-use crate::service::auth_token::TokenService;
+use crate::service::token::TokenService;
 use log::{error, warn};
 use oauth2::{
     basic::BasicClient, reqwest, ClientId, RefreshToken, RevocationUrl, StandardRevocableToken,
