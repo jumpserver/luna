@@ -8,10 +8,7 @@ use axum::{
 use serde::Deserialize;
 use tauri::Manager;
 
-use crate::{
-    commands::auth_flow::{handle_auth_callback, AuthFlowState},
-    http::state::HttpServerState,
-};
+use crate::{http::state::HttpServerState, service::oauth::AuthFlowState};
 
 #[derive(Debug, Deserialize)]
 struct CallbackQuery {
@@ -69,7 +66,7 @@ async fn handle_oauth_callback(
     }
 
     let flow_state = state.app_handle().state::<AuthFlowState>();
-    handle_auth_callback(&flow_state, &callback_url);
+    flow_state.handle_callback(&callback_url);
 
     (
         StatusCode::OK,

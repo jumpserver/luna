@@ -1,8 +1,7 @@
+use crate::api::{client::oauth_client, endpoint};
 use crate::service::token::TokenService;
 use log::{error, warn};
-use oauth2::{
-    basic::BasicClient, reqwest, ClientId, RefreshToken, RevocationUrl, StandardRevocableToken,
-};
+use oauth2::{basic::BasicClient, ClientId, RefreshToken, RevocationUrl, StandardRevocableToken};
 use tauri::AppHandle;
 
 #[tauri::command]
@@ -22,12 +21,10 @@ async fn revoke_and_clear_tokens(_app: &AppHandle, site: &str) -> anyhow::Result
             let client_id = entry.client_id.unwrap_or_else(|| "".to_string());
 
             let client = BasicClient::new(ClientId::new(client_id)).set_revocation_url(
-                RevocationUrl::new(format!("{}/core/auth/oauth2-provider/revoke/", site))?,
+                RevocationUrl::new(format!("{}{}", site, endpoint::oauth::REVOKE))?,
             );
 
-            let http_client = reqwest::ClientBuilder::new()
-                .danger_accept_invalid_certs(true)
-                .build()?;
+            let http_client = oauth_client()?;
             let req = client
                 .revoke_token(StandardRevocableToken::RefreshToken(RefreshToken::new(
                     refresh,
