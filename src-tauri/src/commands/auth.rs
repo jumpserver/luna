@@ -10,7 +10,7 @@ use tokio::sync::oneshot;
 use url::Url;
 
 use crate::api::client::oauth_client;
-use crate::service::token_oauth::TokenService;
+use crate::service::auth_token::TokenService;
 use crate::service::user::UserService;
 
 /// 记录一次登录发起时的上下文（PKCE/CSRF 和回调通道）。

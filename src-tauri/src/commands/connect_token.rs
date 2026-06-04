@@ -3,9 +3,9 @@ use serde_json::{from_str, json};
 use std::collections::HashMap;
 use tauri::{AppHandle, Emitter};
 
-use crate::commands::auth_login::ensure_fresh_token;
-use crate::commands::pull_up::pull_up;
-use crate::service::token::{TokenRequestBody, TokenService};
+use crate::commands::auth::ensure_fresh_token;
+use crate::commands::client_launcher::pull_up;
+use crate::service::connect_token::{TokenRequestBody, TokenService};
 
 #[tauri::command]
 pub async fn get_connect_token(

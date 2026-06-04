@@ -9,7 +9,7 @@ use serde::Deserialize;
 use tauri::Manager;
 
 use crate::{
-    commands::auth_login::{handle_auth_callback, AuthFlowState},
+    commands::auth::{handle_auth_callback, AuthFlowState},
     http::state::HttpServerState,
 };
 

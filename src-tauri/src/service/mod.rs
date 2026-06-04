@@ -1,11 +1,11 @@
 pub(crate) mod asset;
+pub(crate) mod asset_detail;
+pub(crate) mod asset_favorite;
+pub(crate) mod asset_rename;
+pub(crate) mod auth_token;
 pub(crate) mod config;
 pub(crate) mod connect_methods;
-pub(crate) mod detail;
-pub(crate) mod favorite;
-pub(crate) mod rename;
+pub(crate) mod connect_token;
 pub(crate) mod setting;
-pub(crate) mod token;
-pub(crate) mod token_oauth;
 pub(crate) mod user;
 pub(crate) mod version;

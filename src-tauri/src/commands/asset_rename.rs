@@ -1,5 +1,5 @@
-use crate::commands::auth_login::ensure_fresh_token;
-use crate::service::rename::RenameService;
+use crate::commands::auth::ensure_fresh_token;
+use crate::service::asset_rename::RenameService;
 use log::info;
 use serde_json::json;
 use tauri::{AppHandle, Emitter};

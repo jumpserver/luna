@@ -1,5 +1,5 @@
-use crate::commands::auth_login::ensure_fresh_token;
-use crate::service::detail::DetailService;
+use crate::commands::auth::ensure_fresh_token;
+use crate::service::asset_detail::DetailService;
 use serde_json::json;
 use tauri::{AppHandle, Emitter};
 

@@ -1,11 +1,10 @@
-use crate::commands::auth_login::ensure_fresh_token;
-use crate::service::favorite::FavoriteService;
-use log::info;
+use crate::commands::auth::ensure_fresh_token;
+use crate::service::asset_favorite::FavoriteService;
 use serde_json::json;
 use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
-pub async fn unfavorite(
+pub async fn set_favorite(
     app: AppHandle,
     site: String,
     bearer_token: String,
@@ -20,20 +19,18 @@ pub async fn unfavorite(
         Ok(service) => service,
         Err(error) => {
             let _ = app.emit(
-                "unfavorite-failure",
+                "set-favorite-failure",
                 json!({ "status": "failed", "error": error.to_string() }),
             );
             return;
         }
     };
-    let result = favorite_service.unfavorite().await;
+    let favorite_data = favorite_service.favorite().await;
 
-    info!("result {:?}", result);
-
-    if !result.success {
-        let _ = app.emit("unfavorite-failure", json!({ "status": "failed" }));
+    if !favorite_data.success {
+        let _ = app.emit("set-favorite-failure", json!({ "status": "failed" }));
         return;
     }
 
-    let _ = app.emit("unfavorite-success", json!({ "status": "success" }));
+    let _ = app.emit("set-favorite-success", json!({ "status": "success" }));
 }

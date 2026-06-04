@@ -1,4 +1,4 @@
-use crate::commands::auth_login::ensure_fresh_token;
+use crate::commands::auth::ensure_fresh_token;
 use crate::service::setting::SettingService;
 use log::{error, info};
 use serde_json::json;
