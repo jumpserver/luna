@@ -4,9 +4,8 @@ use tauri::{AppHandle, Emitter, State};
 use crate::api::client::{api_client, oauth_client};
 use crate::service::oauth::{
     build_oauth_client, create_authorization_request, exchange_authorization_code,
-    fetch_oauth_config, refresh_access_token, should_refresh_token, AuthFlowState,
+    fetch_oauth_config, AuthFlowState,
 };
-use crate::service::token::TokenService;
 use crate::service::user::UserService;
 
 #[tauri::command]
@@ -63,17 +62,8 @@ pub async fn auth_login(
 
         let tokens = exchange_authorization_code(&client, &http_client, callback).await?;
 
-        // 保存 refresh token 等信息
-        let token_service = TokenService::new(site.clone());
-        if let Err(e) = token_service
-            .persist(
-                &tokens.access_token,
-                tokens.refresh_token.as_deref(),
-                tokens.expires_at,
-                Some(&client_id),
-            )
-            .await
-        {
+        // 保存 OAuth token，供后续请求自动刷新使用。
+        if let Err(e) = tokens.persist(&site, &client_id).await {
             log::warn!("persist tokens failed: {}", e);
         }
 
@@ -122,49 +112,4 @@ pub async fn auth_login(
 pub fn auth_cancel(flow_state: State<'_, AuthFlowState>) -> Result<(), String> {
     flow_state.cancel();
     Ok(())
-}
-
-/// 确保 access_token 新鲜；如过期则用 refresh_token 刷新并更新存储
-pub async fn ensure_fresh_token(
-    _app: &AppHandle,
-    site: &str,
-    provided: Option<&str>,
-) -> anyhow::Result<String> {
-    let token_service = TokenService::new(site.to_string());
-    let entry = token_service.load().await?;
-
-    let stored_access = entry.as_ref().map(|t| t.access_token.clone());
-    let stored_refresh = entry.as_ref().and_then(|t| t.refresh_token.clone());
-    let expires_at = entry.as_ref().and_then(|t| t.expires_at);
-    let client_id = entry
-        .as_ref()
-        .and_then(|t| t.client_id.clone())
-        .unwrap_or_else(|| "".to_string());
-
-    let mut access = stored_access.or_else(|| provided.map(|p| p.to_string()));
-
-    // 提前 60 秒刷新，避免请求发出时 token 刚好过期。
-    let need_refresh = should_refresh_token(expires_at);
-
-    if need_refresh {
-        let refresh = stored_refresh
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("refresh_token missing for site {}", site))?;
-
-        let http_client = oauth_client()?;
-        let tokens = refresh_access_token(site, &client_id, refresh, &http_client).await?;
-
-        token_service
-            .persist(
-                &tokens.access_token,
-                tokens.refresh_token.as_deref(),
-                tokens.expires_at,
-                Some(&client_id),
-            )
-            .await?;
-
-        access = Some(tokens.access_token);
-    }
-
-    access.ok_or_else(|| anyhow::anyhow!("no access token available for site {}", site))
 }

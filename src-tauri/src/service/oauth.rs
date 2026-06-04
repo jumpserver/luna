@@ -1,17 +1,18 @@
+use crate::api::client::oauth_client;
+use crate::api::endpoint;
+use crate::service::token::TokenService;
 use anyhow::Result;
 use chrono::{Duration, Utc};
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, CsrfToken, EndpointNotSet,
-    EndpointSet, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, Scope,
-    TokenResponse, TokenUrl,
+    EndpointSet, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, RevocationUrl,
+    Scope, StandardRevocableToken, TokenResponse, TokenUrl,
 };
 use reqwest::Client;
 use serde::Deserialize;
 use std::sync::Mutex;
 use tokio::sync::oneshot;
 use url::Url;
-
-use crate::api::endpoint;
 
 pub type JumpServerOAuthClient =
     BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet>;
@@ -95,6 +96,22 @@ pub struct AuthFlowState {
     pending: Mutex<Option<PendingAuth>>,
 }
 
+impl OAuthTokenSet {
+    /// 将 OAuth token 写入本地安全存储。
+    pub async fn persist(&self, site: &str, client_id: &str) -> Result<()> {
+        let token_service = TokenService::new(site.to_string());
+
+        token_service
+            .persist(
+                &self.access_token,
+                self.refresh_token.as_deref(),
+                self.expires_at,
+                Some(client_id),
+            )
+            .await
+    }
+}
+
 impl AuthFlowState {
     /// deep link 或 dev HTTP callback 解析到 code/state 后，调用这里唤醒登录流程。
     pub fn handle_callback(&self, raw_url: &str) {
@@ -160,22 +177,6 @@ impl AuthFlowState {
     }
 }
 
-/// 判断 token 是否需要提前刷新。
-pub fn should_refresh_token(expires_at: Option<i64>) -> bool {
-    expires_at
-        .map(|timestamp| timestamp <= Utc::now().timestamp() + 60)
-        .unwrap_or(false)
-}
-
-/// 将 OAuth 返回的过期时长转换为本地时间戳。
-fn expires_at_timestamp(expires_in: Option<std::time::Duration>) -> Option<i64> {
-    expires_in
-        .map(|duration| {
-            Utc::now() + Duration::from_std(duration).unwrap_or_else(|_| Duration::seconds(0))
-        })
-        .map(|datetime| datetime.timestamp())
-}
-
 /// 从 JumpServer 获取 OAuth 服务端配置。
 pub async fn fetch_oauth_config(site: &str, client: &Client) -> Result<OAuthConfig> {
     let config_url = format!("{}{}", site, endpoint::oauth::WELL_KNOWN);
@@ -191,15 +192,6 @@ pub async fn fetch_oauth_config(site: &str, client: &Client) -> Result<OAuthConf
     let config = serde_json::from_str::<OAuthConfig>(&text)?;
 
     Ok(config)
-}
-
-/// 根据运行模式返回 OAuth redirect_uri。
-pub fn oauth_redirect_uri() -> &'static str {
-    if cfg!(debug_assertions) {
-        "http://127.0.0.1:14876/auth/callback"
-    } else {
-        "jms://auth/callback"
-    }
 }
 
 /// 构建 JumpServer OAuth client。
@@ -275,8 +267,86 @@ pub async fn exchange_authorization_code(
     })
 }
 
+/// 撤销并删除本地保存的 OAuth token。
+pub async fn revoke_and_clear_tokens(site: &str) -> Result<()> {
+    let token_service = TokenService::new(site.to_string());
+
+    if let Some(entry) = token_service.load().await? {
+        if let Some(refresh_token) = entry.refresh_token {
+            let client_id = entry.client_id.unwrap_or_default();
+            let http_client = oauth_client()?;
+
+            if let Err(error) =
+                revoke_refresh_token(&site, &client_id, &refresh_token, &http_client).await
+            {
+                log::error!("revocation request failed: {}", error);
+            }
+        }
+
+        token_service.delete().await?
+    }
+
+    Ok(())
+}
+
+/// 确保 access_token 可用；如果即将过期，则使用 refresh_token 刷新并写回本地存储。
+pub async fn ensure_fresh_token(site: &str, provided: Option<&str>) -> Result<String> {
+    let token_service = TokenService::new(site.to_string());
+    let entry = token_service.load().await?;
+
+    let stored_access = entry.as_ref().map(|token| token.access_token.clone());
+    let stored_refresh = entry.as_ref().and_then(|token| token.refresh_token.clone());
+    let expires_at = entry.as_ref().and_then(|token| token.expires_at);
+    let client_id = entry
+        .as_ref()
+        .and_then(|token| token.client_id.clone())
+        .unwrap_or_default();
+
+    let mut access = stored_access.or_else(|| provided.map(str::to_string));
+
+    if should_refresh_token(expires_at) {
+        let refresh_token = stored_refresh
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("refresh_token missing for site {}", site))?;
+
+        let http_client = oauth_client()?;
+        let tokens = refresh_access_token(site, &client_id, refresh_token, &http_client).await?;
+
+        tokens.persist(site, &client_id).await?;
+
+        access = Some(tokens.access_token);
+    }
+
+    access.ok_or_else(|| anyhow::anyhow!("no access token available for site {}", site))
+}
+
+/// 判断 token 是否需要提前刷新。
+fn should_refresh_token(expires_at: Option<i64>) -> bool {
+    expires_at
+        .map(|timestamp| timestamp <= Utc::now().timestamp() + 60)
+        .unwrap_or(false)
+}
+
+/// 将 OAuth 返回的过期时长转换为本地时间戳。
+fn expires_at_timestamp(expires_in: Option<std::time::Duration>) -> Option<i64> {
+    expires_in
+        .map(|duration| {
+            Utc::now() + Duration::from_std(duration).unwrap_or_else(|_| Duration::seconds(0))
+        })
+        .map(|datetime| datetime.timestamp())
+}
+
+/// 根据运行模式返回 OAuth redirect_uri。
+fn oauth_redirect_uri() -> &'static str {
+    if cfg!(debug_assertions) {
+        "http://127.0.0.1:14876/auth/callback"
+    } else {
+        "jms://auth/callback"
+    }
+}
+
 /// 使用 refresh_token 刷新 access_token。
-pub async fn refresh_access_token(
+async fn refresh_access_token(
     site: &str,
     client_id: &str,
     refresh_token: &str,
@@ -303,4 +373,26 @@ pub async fn refresh_access_token(
         refresh_token: Some(refresh_token),
         expires_at,
     })
+}
+
+/// 使用 refresh_token 向服务端发起撤销请求。
+async fn revoke_refresh_token(
+    site: &str,
+    client_id: &str,
+    refresh_token: &str,
+    http_client: &Client,
+) -> Result<()> {
+    let client = BasicClient::new(ClientId::new(client_id.to_string())).set_revocation_url(
+        RevocationUrl::new(format!("{}{}", site, endpoint::oauth::REVOKE))?,
+    );
+
+    let request = client
+        .revoke_token(StandardRevocableToken::RefreshToken(RefreshToken::new(
+            refresh_token.to_string(),
+        )))
+        .map_err(|error| anyhow::anyhow!("build revocation request failed: {}", error))?;
+
+    request.request_async(http_client).await?;
+
+    Ok(())
 }

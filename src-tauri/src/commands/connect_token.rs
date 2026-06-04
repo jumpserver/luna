@@ -1,5 +1,5 @@
+use serde_json::json;
 use serde_json::Value;
-use serde_json::{from_str, json};
 use std::collections::HashMap;
 use tauri::{AppHandle, Emitter, State};
 
@@ -36,40 +36,70 @@ pub async fn get_connect_token(
             return Ok(());
         }
     };
+
     let token_service = ConnectService::new(api);
     let token_data = token_service.get_connect_token(&body).await;
 
-    if token_data.status == 201 {
-        // Parse token_data.data as JSON to extract the "id" field
-        let data_json: Value =
-            from_str(&token_data.data).expect("Failed to parse token_data.data as JSON");
-        let id = data_json
-            .get("id")
-            .expect("No 'id' field in token_data.data")
-            .as_str()
-            .expect("'id' field is not a string");
-        let url_data = token_service
-            .get_local_client_url(id, rdp_params.as_ref())
-            .await;
-        log::info!("get_connect_token success: {:?}", url_data);
-        let url_json: Value =
-            from_str(&url_data.data).expect("Failed to parse url_data.data as JSON");
-        // let _ = app.emit(
-        //     "get-token-success",
-        //     json!({ "status": url_data.status, "data": from_str::<Value>(&url_data.data).unwrap() }),
-        // );
-        if let Err(e) = pull_up(
-            app.clone(),
-            url_json.get("url").unwrap().as_str().unwrap().to_string(),
-        ) {
-            let _ = app.emit("pull-up-failure", json!({ "error": e }));
-        }
-    } else {
+    if token_data.status != 201 {
         let _ = app.emit(
             "get-token-failure",
             json!({ "status": token_data.status, "data": token_data.data }),
         );
+        return Ok(());
+    }
+
+    let token_id = match parse_token_id(&token_data.data) {
+        Ok(token_id) => token_id,
+        Err(error) => {
+            let _ = app.emit(
+                "get-token-failure",
+                json!({ "status": token_data.status, "data": error }),
+            );
+            return Ok(());
+        }
+    };
+
+    let url_data = token_service
+        .get_local_client_url(&token_id, rdp_params.as_ref())
+        .await;
+    log::info!("get_connect_token success: {:?}", url_data);
+
+    let client_url = match parse_client_url(&url_data.data) {
+        Ok(client_url) => client_url,
+        Err(error) => {
+            let _ = app.emit(
+                "get-token-failure",
+                json!({ "status": url_data.status, "data": error }),
+            );
+            return Ok(());
+        }
+    };
+
+    if let Err(error) = pull_up(app.clone(), client_url) {
+        let _ = app.emit("pull-up-failure", json!({ "error": error }));
     }
 
     Ok(())
+}
+
+fn parse_token_id(data: &str) -> Result<String, String> {
+    let value = serde_json::from_str::<Value>(data)
+        .map_err(|error| format!("parse token response failed: {}", error))?;
+
+    value
+        .get("id")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| "token response missing string field `id`".to_string())
+}
+
+fn parse_client_url(data: &str) -> Result<String, String> {
+    let value = serde_json::from_str::<Value>(data)
+        .map_err(|error| format!("parse client url response failed: {}", error))?;
+
+    value
+        .get("url")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| "client url response missing string field `url`".to_string())
 }
