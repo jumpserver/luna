@@ -1,6 +1,6 @@
 use crate::api::{request::ApiRequestClient, session::ApiSessionStore};
 use crate::commands::api_session::fresh_api_context;
-use crate::service::asset_detail::DetailService;
+use crate::service::asset::AssetService;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, State};
 
@@ -31,8 +31,8 @@ pub async fn get_asset_detail(
             return Ok(());
         }
     };
-    let asset_service = DetailService::new(api, asset_id.clone());
-    let asset_detail = asset_service.get_asset_detail().await;
+    let asset_service = AssetService::new(api);
+    let asset_detail = asset_service.get_asset_detail(&asset_id).await;
 
     if !asset_detail.success {
         let _ = app.emit(

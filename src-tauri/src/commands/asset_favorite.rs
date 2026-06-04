@@ -1,6 +1,6 @@
 use crate::api::{request::ApiRequestClient, session::ApiSessionStore};
 use crate::commands::api_session::fresh_api_context;
-use crate::service::asset_favorite::FavoriteService;
+use crate::service::asset::AssetService;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, State};
 
@@ -24,8 +24,8 @@ pub async fn set_favorite(
             return Ok(());
         }
     };
-    let favorite_service = FavoriteService::new(api, asset_id);
-    let favorite_data = favorite_service.favorite().await;
+    let favorite_service = AssetService::new(api);
+    let favorite_data = favorite_service.favorite(&asset_id).await;
 
     if !favorite_data.success {
         let _ = app.emit("set-favorite-failure", json!({ "status": "failed" }));

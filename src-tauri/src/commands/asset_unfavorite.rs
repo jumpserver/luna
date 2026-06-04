@@ -1,6 +1,6 @@
 use crate::api::{request::ApiRequestClient, session::ApiSessionStore};
 use crate::commands::api_session::fresh_api_context;
-use crate::service::asset_favorite::FavoriteService;
+use crate::service::asset::AssetService;
 use log::info;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, State};
@@ -25,8 +25,8 @@ pub async fn unfavorite(
             return Ok(());
         }
     };
-    let favorite_service = FavoriteService::new(api, asset_id);
-    let result = favorite_service.unfavorite().await;
+    let favorite_service = AssetService::new(api);
+    let result = favorite_service.unfavorite(&asset_id).await;
 
     info!("result {:?}", result);
 

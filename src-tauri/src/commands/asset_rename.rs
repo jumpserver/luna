@@ -1,6 +1,6 @@
 use crate::api::{request::ApiRequestClient, session::ApiSessionStore};
 use crate::commands::api_session::fresh_api_context;
-use crate::service::asset_rename::RenameService;
+use crate::service::asset::AssetService;
 use log::info;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, State};
@@ -33,8 +33,8 @@ pub async fn rename(
             return Ok(());
         }
     };
-    let rename_service = RenameService::new(api, asset_id, name, context.org_id);
-    let result = rename_service.rename().await;
+    let rename_service = AssetService::new(api);
+    let result = rename_service.rename(&asset_id, &name, &context.org_id).await;
 
     info!("result: {:?}", result);
 

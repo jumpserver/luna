@@ -4,7 +4,6 @@ use crate::service::asset::{AssetQuery, AssetService};
 use log::{error, info};
 use serde::Deserialize;
 use serde_json::{from_str, json, Value};
-use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
 
 #[allow(dead_code)]
@@ -98,9 +97,9 @@ pub async fn get_assets(
             return Ok(());
         }
     };
-    let asset_service = Arc::new(AssetService::new(api, query));
+    let asset_service = AssetService::new(api);
     let assets_data = asset_service
-        .get_category_assets(favorite.unwrap_or(false))
+        .get_category_assets(&query, favorite.unwrap_or(false))
         .await;
 
     if !assets_data.success {
