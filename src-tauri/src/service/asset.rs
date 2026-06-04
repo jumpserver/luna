@@ -45,6 +45,7 @@ impl AssetQuery {
     // 根据资产类型和组织初始化资产查询参数
     #[allow(dead_code)]
     pub fn new(asset_type: Category, org: String) -> Self {
+        // r#type 这种形式是因为 type 是 Rust 关键字，所以要写成 r#type
         let (r#type, category) = match asset_type {
             Category::Database | Category::Device => (None, Some(asset_type)),
             Category::Linux | Category::Windows | Category::WindowsAd | Category::Web => {
@@ -64,8 +65,8 @@ impl AssetQuery {
     }
 
     /// 获取当前查询使用的资产分类
-    /// TODO 不理解这里面的代码 or 是什么意思 r#type 是什么意思
     pub fn get_category(&self) -> Category {
+        // 先调用 category，如果没有就用 type
         self.category.or(self.r#type).unwrap_or_default()
     }
 }
@@ -97,7 +98,7 @@ impl AssetService {
         let path = if favorite {
             endpoint::assets::FAVORITE_NODE_ASSETS
         } else {
-            endpoint::assets::FAVORITE_ASSETS
+            endpoint::assets::USER_ASSETS
         };
 
         let url = self.api.endpoint(path);
@@ -164,7 +165,6 @@ impl AssetService {
     pub async fn unfavorite(&self, asset_id: &str) -> ApiResponse {
         let mut url = self.api.endpoint(endpoint::assets::FAVORITE_ASSETS);
 
-        // TODO 为什么要怎么做呢
         if let Ok(mut parsed) = Url::parse(&url) {
             parsed.query_pairs_mut().append_pair("asset", asset_id);
             url = parsed.to_string();
@@ -185,30 +185,3 @@ impl AssetService {
         self.api.post_json_with_response(&url, &body).await
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

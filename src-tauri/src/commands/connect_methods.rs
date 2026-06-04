@@ -1,6 +1,6 @@
 use crate::api::{request::ApiRequestClient, session::ApiSessionStore};
 use crate::commands::api_session::fresh_api_context;
-use crate::service::connect_methods::ConnectMethodsService;
+use crate::service::connect::ConnectService;
 use log::{error, info};
 use serde_json::json;
 use tauri::{AppHandle, Emitter, State};
@@ -30,7 +30,7 @@ pub async fn get_connect_methods(
             return Ok(());
         }
     };
-    let connect_methods_service = ConnectMethodsService::new(api);
+    let connect_methods_service = ConnectService::new(api);
     let connect_methods_data = connect_methods_service.get_connect_methods().await;
 
     if !connect_methods_data.success {

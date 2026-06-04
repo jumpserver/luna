@@ -6,7 +6,7 @@ use tauri::{AppHandle, Emitter, State};
 use crate::api::{request::ApiRequestClient, session::ApiSessionStore};
 use crate::commands::api_session::fresh_api_context;
 use crate::commands::client_launcher::pull_up;
-use crate::service::connect_token::{TokenRequestBody, TokenService};
+use crate::service::connect::{ConnectService, TokenRequestBody};
 
 #[tauri::command]
 pub async fn get_connect_token(
@@ -36,8 +36,8 @@ pub async fn get_connect_token(
             return Ok(());
         }
     };
-    let token_service = TokenService::new(api, body);
-    let token_data = token_service.get_connect_token().await;
+    let token_service = ConnectService::new(api);
+    let token_data = token_service.get_connect_token(&body).await;
 
     if token_data.status == 201 {
         // Parse token_data.data as JSON to extract the "id" field
@@ -49,7 +49,7 @@ pub async fn get_connect_token(
             .as_str()
             .expect("'id' field is not a string");
         let url_data = token_service
-            .get_local_client_url(id.to_string(), rdp_params.as_ref())
+            .get_local_client_url(id, rdp_params.as_ref())
             .await;
         log::info!("get_connect_token success: {:?}", url_data);
         let url_json: Value =

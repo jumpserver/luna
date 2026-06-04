@@ -34,7 +34,9 @@ pub async fn rename(
         }
     };
     let rename_service = AssetService::new(api);
-    let result = rename_service.rename(&asset_id, &name, &context.org_id).await;
+    let result = rename_service
+        .rename(&asset_id, &name, &context.org_id)
+        .await;
 
     info!("result: {:?}", result);
 
