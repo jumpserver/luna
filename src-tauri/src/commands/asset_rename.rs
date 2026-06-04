@@ -1,27 +1,26 @@
-use crate::commands::auth::ensure_fresh_token;
+use crate::api::{request::ApiRequestClient, session::ApiSessionStore};
+use crate::commands::api_session::fresh_api_context;
 use crate::service::asset_rename::RenameService;
 use log::info;
 use serde_json::json;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, State};
 
 #[tauri::command]
 pub async fn rename(
     app: AppHandle,
-    site: String,
-    bearer_token: String,
+    session: State<'_, ApiSessionStore>,
     asset_id: String,
     name: String,
-    org_id: String,
-) {
+) -> Result<(), String> {
     info!("asset_id: {}, name: {}", asset_id, name);
 
-    let bearer = match ensure_fresh_token(&app, &site, Some(&bearer_token)).await {
-        Ok(b) => b,
-        Err(_) => return,
+    let context = match fresh_api_context(&app, &session).await {
+        Ok(context) => context,
+        Err(_) => return Ok(()),
     };
 
-    let rename_service = match RenameService::new(site, bearer, asset_id, name, org_id) {
-        Ok(service) => service,
+    let api = match ApiRequestClient::from_session(&context) {
+        Ok(api) => api,
         Err(error) => {
             let _ = app.emit(
                 "rename-error",
@@ -31,9 +30,10 @@ pub async fn rename(
                   "data": error.to_string(),
                 }),
             );
-            return;
+            return Ok(());
         }
     };
+    let rename_service = RenameService::new(api, asset_id, name, context.org_id);
     let result = rename_service.rename().await;
 
     info!("result: {:?}", result);
@@ -48,7 +48,7 @@ pub async fn rename(
             }),
         );
 
-        return;
+        return Ok(());
     }
 
     let _ = app.emit(
@@ -59,4 +59,6 @@ pub async fn rename(
           "data": result.data,
         }),
     );
+
+    Ok(())
 }

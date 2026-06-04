@@ -1,42 +1,42 @@
 use serde_json::Value;
 use serde_json::{from_str, json};
 use std::collections::HashMap;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, State};
 
-use crate::commands::auth::ensure_fresh_token;
+use crate::api::{request::ApiRequestClient, session::ApiSessionStore};
+use crate::commands::api_session::fresh_api_context;
 use crate::commands::client_launcher::pull_up;
 use crate::service::connect_token::{TokenRequestBody, TokenService};
 
 #[tauri::command]
 pub async fn get_connect_token(
     app: AppHandle,
-    site: String,
-    bearer_token: String,
-    org_id: String,
+    session: State<'_, ApiSessionStore>,
     body: TokenRequestBody,
     rdp_params: Option<HashMap<String, String>>,
-) {
-    let bearer = match ensure_fresh_token(&app, &site, Some(&bearer_token)).await {
-        Ok(b) => b,
+) -> Result<(), String> {
+    let context = match fresh_api_context(&app, &session).await {
+        Ok(context) => context,
         Err(e) => {
             let _ = app.emit(
                 "get-token-failure",
                 json!({ "status": 401, "data": e.to_string() }),
             );
-            return;
+            return Ok(());
         }
     };
 
-    let token_service = match TokenService::new(site, bearer, org_id, body) {
-        Ok(service) => service,
+    let api = match ApiRequestClient::from_session(&context) {
+        Ok(api) => api,
         Err(error) => {
             let _ = app.emit(
                 "get-token-failure",
                 json!({ "status": 0, "data": error.to_string() }),
             );
-            return;
+            return Ok(());
         }
     };
+    let token_service = TokenService::new(api, body);
     let token_data = token_service.get_connect_token().await;
 
     if token_data.status == 201 {
@@ -70,4 +70,6 @@ pub async fn get_connect_token(
             json!({ "status": token_data.status, "data": token_data.data }),
         );
     }
+
+    Ok(())
 }

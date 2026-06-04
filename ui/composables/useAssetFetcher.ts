@@ -15,7 +15,7 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
   const userInfoStore = useUserInfoStore();
 
   const { deleteUserData } = userInfoStore;
-  const { currentSite, currentUser, orgId } = storeToRefs(userInfoStore);
+  const { currentSite, orgId } = storeToRefs(userInfoStore);
 
   const offset = ref(0);
   const hasMore = ref(true);
@@ -253,11 +253,11 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
    */
   async function fetchNextPage(search?: string, order?: string) {
     if (isLoading.value || !hasMore.value) return;
-    if (!currentSite.value || !currentUser.value?.bearerToken) return;
+    if (!currentSite.value) return;
     if (!orgId.value) {
       console.error("No organization ID available for asset request", {
         orgId: orgId.value,
-        currentUser: currentUser.value
+        currentUser: userInfoStore.currentUser
       });
       toast.add({
         title: t("Asset.GetAssetFailed"),
@@ -280,16 +280,13 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
 
     try {
       await useTauriCoreInvoke("get_assets", {
-        site: currentSite.value,
-        bearerToken: currentUser.value.bearerToken,
         favorite: assetType === "favorite",
         query: {
           type: assetType === "favorite" ? undefined : assetType,
           offset: offset.value,
           limit: LIMIT,
           search: searchParam,
-          order: orderParam,
-          oid: orgId.value
+          order: orderParam
         }
       });
     } catch (e: any) {

@@ -1,4 +1,7 @@
-use crate::api::request::{ApiRequestClient, ApiResponse};
+use crate::api::{
+    endpoint,
+    request::{ApiRequestClient, ApiResponse},
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -16,42 +19,35 @@ pub struct TokenRequestBody {
 }
 
 pub struct TokenService {
-    pub site: String,
     pub api: ApiRequestClient,
     pub request_body: TokenRequestBody,
 }
 
 impl TokenService {
-    pub fn new(
-        site: String,
-        bearer_token: String,
-        org_id: String,
-        request_body: TokenRequestBody,
-    ) -> Result<Self, reqwest::Error> {
-        Ok(Self {
-            site,
-            api: ApiRequestClient::new(bearer_token, org_id)?,
-            request_body,
-        })
+    /// 创建连接 Token 服务，复用 command 层从当前会话构建好的 API 客户端
+    pub fn new(api: ApiRequestClient, request_body: TokenRequestBody) -> Self {
+        Self { api, request_body }
     }
 
+    /// 创建资产连接 Token
     pub async fn get_connect_token(&self) -> ApiResponse {
-        let url = format!("{}/api/v1/authentication/connection-token/", self.site);
+        let url = self
+            .api
+            .endpoint(endpoint::authentication::CONNECTION_TOKEN);
 
         self.api
             .post_json_with_response(&url, &self.request_body)
             .await
     }
 
+    /// 根据连接 Token 获取本地客户端启动 URL
     pub async fn get_local_client_url(
         &self,
         token_id: String,
         extra_params: Option<&HashMap<String, String>>,
     ) -> ApiResponse {
-        let mut url = format!(
-            "{}/api/v1/authentication/connection-token/{}/client-url/",
-            self.site, &token_id
-        );
+        let path = endpoint::authentication::client_url(&token_id);
+        let mut url = self.api.endpoint(&path);
         if let Some(params) = extra_params {
             if let Ok(mut parsed) = Url::parse(&url) {
                 {

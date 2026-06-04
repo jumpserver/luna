@@ -1,4 +1,7 @@
-use crate::api::request::{ApiRequestClient, ApiResponse};
+use crate::api::{
+    endpoint,
+    request::{ApiRequestClient, ApiResponse},
+};
 use log::info;
 use serde::{Deserialize, Serialize};
 
@@ -35,10 +38,12 @@ pub struct AssetQuery {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub order: Option<String>,
 
+    #[serde(default)]
     pub oid: String,
 }
 
 impl AssetQuery {
+    /// 根据资产类型和组织初始化资产查询参数
     #[allow(dead_code)]
     pub fn new(asset_type: Category, org: String) -> Self {
         let (r#type, category) = match asset_type {
@@ -59,41 +64,31 @@ impl AssetQuery {
         }
     }
 
+    /// 获取当前查询使用的资产分类
     pub fn get_category(&self) -> Category {
         self.category.or(self.r#type).unwrap_or_default()
     }
 }
 
 pub struct AssetService {
-    origin: String,
     api: ApiRequestClient,
     query: AssetQuery,
 }
 
 impl AssetService {
-    pub fn new(
-        origin: String,
-        bearer_token: String,
-        query: AssetQuery,
-    ) -> Result<Self, reqwest::Error> {
-        let org_id = query.oid.clone();
-
-        Ok(Self {
-            origin,
-            api: ApiRequestClient::new(bearer_token, org_id)?,
-            query,
-        })
+    /// 创建资产服务，复用 command 层从当前会话构建好的 API 客户端
+    pub fn new(api: ApiRequestClient, query: AssetQuery) -> Self {
+        Self { api, query }
     }
 
+    /// 获取指定分类下的资产列表，支持普通资产和收藏节点资产两种入口
     pub async fn get_category_assets(&self, favorite: bool) -> ApiResponse {
-        let url = if favorite {
-            format!(
-                "{}/api/v1/perms/users/self/nodes/favorite/assets/",
-                self.origin
-            )
+        let path = if favorite {
+            endpoint::assets::FAVORITE_NODE_ASSETS
         } else {
-            format!("{}/api/v1/perms/users/self/assets/", self.origin)
+            endpoint::assets::USER_ASSETS
         };
+        let url = self.api.endpoint(path);
 
         info!(
             "获取类型为：{:?} 的资产信息，请求 url: {}, oid: {}",
@@ -129,8 +124,9 @@ impl AssetService {
         self.api.get_with_query_response(&url, &query).await
     }
 
+    /// 获取当前用户收藏的资产列表
     pub async fn get_favorite_assets(&self) -> ApiResponse {
-        let url = format!("{}/api/v1/assets/favorite-assets/", &self.origin);
+        let url = self.api.endpoint(endpoint::assets::FAVORITE_ASSETS);
 
         self.api.get_with_response(&url).await
     }

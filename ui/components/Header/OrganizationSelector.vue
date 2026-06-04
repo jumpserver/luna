@@ -38,10 +38,6 @@ function handleOrgChange(org: string) {
 onMounted(async () => {
   if (loggedIn.value && userInfoStore.currentUser) {
     currentOrg.value = userInfoStore.currentUser.org.name;
-    // 确保 orgId 也被正确设置
-    if (userInfoStore.currentUser.org?.id) {
-      userInfoStore.orgId = userInfoStore.currentUser.org.id;
-    }
   }
 });
 

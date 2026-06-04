@@ -9,6 +9,8 @@ use crate::setup::apply_window_effects;
 use crate::setup::menu::{build_menu, handle_menu_event};
 use crate::setup::setup_tray;
 
+use crate::api::session::ApiSessionStore;
+use crate::commands::api_session::{set_api_org, set_api_session};
 use crate::commands::asset_detail::get_asset_detail;
 use crate::commands::asset_favorite::set_favorite;
 use crate::commands::asset_rename::rename;
@@ -86,6 +88,7 @@ fn process_deep_link(handle: &tauri::AppHandle, raw: &str) -> bool {
 pub fn run() {
     tauri::Builder::default()
         .manage(AuthFlowState::default())
+        .manage(ApiSessionStore::default())
         .plugin(single_instance(|app, argv, _cwd| {
             info!("single_instance event, argv={:?}", argv);
 
@@ -199,6 +202,8 @@ pub fn run() {
             update_config_selection,
             init_http_callback_server,
             get_connect_methods,
+            set_api_session,
+            set_api_org,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

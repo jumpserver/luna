@@ -1,4 +1,7 @@
-use crate::api::request::{ApiRequestClient, ApiResponse};
+use crate::api::{
+    endpoint,
+    request::{ApiRequestClient, ApiResponse},
+};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -10,7 +13,6 @@ pub struct RenameBody {
 }
 
 pub struct RenameService {
-    origin: String,
     asset_id: String,
     name: String,
     api: ApiRequestClient,
@@ -18,24 +20,19 @@ pub struct RenameService {
 }
 
 impl RenameService {
-    pub fn new(
-        origin: String,
-        bearer_token: String,
-        asset_id: String,
-        name: String,
-        oid: String,
-    ) -> Result<Self, reqwest::Error> {
-        Ok(Self {
-            origin,
-            api: ApiRequestClient::new(bearer_token, oid.clone())?,
+    /// 创建资产重命名服务，复用 command 层从当前会话构建好的 API 客户端
+    pub fn new(api: ApiRequestClient, asset_id: String, name: String, oid: String) -> Self {
+        Self {
+            api,
             asset_id,
             name,
             oid,
-        })
+        }
     }
 
+    /// 提交资产重命名请求
     pub async fn rename(&self) -> ApiResponse {
-        let url = format!("{}/api/v1/assets/my-asset/", self.origin);
+        let url = self.api.endpoint(endpoint::assets::MY_ASSET);
 
         let body = RenameBody {
             asset: self.asset_id.clone(),

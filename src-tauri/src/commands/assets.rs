@@ -1,10 +1,11 @@
-use crate::commands::auth::ensure_fresh_token;
+use crate::api::{request::ApiRequestClient, session::ApiSessionStore};
+use crate::commands::api_session::fresh_api_context;
 use crate::service::asset::{AssetQuery, AssetService};
 use log::{error, info};
 use serde::Deserialize;
 use serde_json::{from_str, json, Value};
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, State};
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
@@ -74,28 +75,30 @@ pub struct Zone {
 #[tauri::command]
 pub async fn get_assets(
     app: AppHandle,
-    site: String,
-    bearer_token: String,
-    query: AssetQuery,
+    session: State<'_, ApiSessionStore>,
+    mut query: AssetQuery,
     favorite: Option<bool>,
-) {
-    let bearer = match ensure_fresh_token(&app, &site, Some(&bearer_token)).await {
-        Ok(b) => b,
+) -> Result<(), String> {
+    let context = match fresh_api_context(&app, &session).await {
+        Ok(context) => context,
         Err(e) => {
-            error!("refresh bearer failed: {}", e);
+            error!("load api session failed: {}", e);
             let _ = app.emit("get-asset-failure", json!({ "status": 401 }));
-            return;
+            return Ok(());
         }
     };
 
-    let asset_service = match AssetService::new(site, bearer, query) {
-        Ok(service) => Arc::new(service),
+    query.oid = context.org_id.clone();
+
+    let api = match ApiRequestClient::from_session(&context) {
+        Ok(api) => api,
         Err(e) => {
-            error!("create asset service failed: {}", e);
+            error!("create api request client failed: {}", e);
             let _ = app.emit("get-asset-failure", json!({ "status": 0 }));
-            return;
+            return Ok(());
         }
     };
+    let asset_service = Arc::new(AssetService::new(api, query));
     let assets_data = asset_service
         .get_category_assets(favorite.unwrap_or(false))
         .await;
@@ -104,7 +107,7 @@ pub async fn get_assets(
         error!("获取 Asset 数据失败");
 
         let _ = app.emit("get-asset-failure", json!({ "status": assets_data.status }));
-        return;
+        return Ok(());
     }
 
     // 获取 Assets 数据
@@ -149,7 +152,7 @@ pub async fn get_assets(
 
     if !favorite_assets_data.success {
         error!("获取 Favorite Assets 数据失败");
-        return;
+        return Ok(());
     }
 
     info!(
@@ -164,4 +167,6 @@ pub async fn get_assets(
             "data": favorite_assets_data.data,
         }),
     );
+
+    Ok(())
 }

@@ -1,3 +1,4 @@
+pub(crate) mod api_session;
 pub mod asset_detail;
 pub mod asset_favorite;
 pub mod asset_rename;

@@ -12,22 +12,45 @@ use serde::Serialize;
 use url::Url;
 
 pub(crate) use crate::api::response::ApiResponse;
+use crate::api::session::ApiSessionContext;
 
 pub struct ApiRequestClient {
     client: Client,
+    origin: String,
     bearer_token: String,
     org_id: String,
 }
 
 impl ApiRequestClient {
-    pub fn new(bearer_token: String, org_id: String) -> Result<Self, reqwest::Error> {
+    /// 创建绑定站点 origin 的 API 客户端，后续 endpoint 可以直接拼成完整 URL
+    pub fn with_origin(
+        origin: String,
+        bearer_token: String,
+        org_id: String,
+    ) -> Result<Self, reqwest::Error> {
         Ok(Self {
             client: api_client()?,
+            origin,
             bearer_token,
             org_id,
         })
     }
 
+    /// 根据当前 API 会话上下文创建请求客户端
+    pub fn from_session(context: &ApiSessionContext) -> Result<Self, reqwest::Error> {
+        Self::with_origin(
+            context.origin.clone(),
+            context.bearer_token.clone(),
+            context.org_id.clone(),
+        )
+    }
+
+    /// 将集中定义的 API path 拼接为当前站点下的完整 URL
+    pub fn endpoint(&self, path: &str) -> String {
+        format!("{}{}", self.origin.trim_end_matches('/'), path)
+    }
+
+    /// 发送 GET 请求并转换为统一 ApiResponse
     pub async fn get_with_response(&self, url: &str) -> ApiResponse {
         info!("GET {}", url);
 
@@ -35,6 +58,7 @@ impl ApiRequestClient {
             .await
     }
 
+    /// 发送带 query 参数的 GET 请求并转换为统一 ApiResponse
     pub async fn get_with_query_response<T>(&self, url: &str, query: &T) -> ApiResponse
     where
         T: Serialize + ?Sized,
@@ -44,6 +68,7 @@ impl ApiRequestClient {
             .await
     }
 
+    /// 发送 JSON POST 请求并转换为统一 ApiResponse
     pub async fn post_json_with_response<T>(&self, url: &str, body: &T) -> ApiResponse
     where
         T: Serialize + ?Sized,
@@ -55,12 +80,14 @@ impl ApiRequestClient {
             .await
     }
 
+    /// 发送 DELETE 请求并转换为统一 ApiResponse
     pub async fn delete_with_response(&self, url: &str) -> ApiResponse {
         info!("DELETE {}", url);
         self.send_with_response(Method::DELETE, url, |request| request)
             .await
     }
 
+    /// 构建并执行底层 reqwest 请求
     async fn send<F>(&self, method: Method, url: &str, apply: F) -> Result<Response, reqwest::Error>
     where
         F: FnOnce(RequestBuilder) -> RequestBuilder,
@@ -69,6 +96,7 @@ impl ApiRequestClient {
         self.client.execute(request).await // execute 表示把已经构建好的请求发出去
     }
 
+    /// 把客户端内部保存的 Token 和组织信息转换为请求上下文
     fn context(&self) -> ApiContext<'_> {
         ApiContext {
             bearer_token: &self.bearer_token,
@@ -76,6 +104,7 @@ impl ApiRequestClient {
         }
     }
 
+    /// 创建带有公共 header 的基础请求
     fn base_request(&self, method: Method, url: &str) -> RequestBuilder {
         let context = self.context();
         let mut request = self
@@ -98,6 +127,7 @@ impl ApiRequestClient {
         }
     }
 
+    /// 执行请求并转换为统一响应结构
     async fn send_with_response<F>(&self, method: Method, url: &str, apply: F) -> ApiResponse
     where
         F: FnOnce(RequestBuilder) -> RequestBuilder,

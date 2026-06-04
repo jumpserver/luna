@@ -1,27 +1,21 @@
-use crate::api::request::{ApiRequestClient, ApiResponse};
+use crate::api::{
+    endpoint,
+    request::{ApiRequestClient, ApiResponse},
+};
 
 pub struct ConnectMethodsService {
-    origin: String,
     api: ApiRequestClient,
 }
 
 impl ConnectMethodsService {
-    pub fn new(
-        origin: String,
-        bearer_token: String,
-        org_id: String,
-    ) -> Result<Self, reqwest::Error> {
-        Ok(Self {
-            origin,
-            api: ApiRequestClient::new(bearer_token, org_id)?,
-        })
+    /// 创建连接方式服务，复用 command 层从当前会话构建好的 API 客户端
+    pub fn new(api: ApiRequestClient) -> Self {
+        Self { api }
     }
 
+    /// 获取当前组织可用的连接方式
     pub async fn get_connect_methods(&self) -> ApiResponse {
-        let url = format!(
-            "{}/api/v1/terminal/components/connect-methods/",
-            self.origin
-        );
+        let url = self.api.endpoint(endpoint::terminal::CONNECT_METHODS);
         self.api.get_with_response(&url).await
     }
 }

@@ -57,7 +57,7 @@ export const useAssetAction = () => {
   const userInfoStore = useUserInfoStore();
   const settingManager = useSettingManager();
   // prettier-ignore
-  const { currentSite, currentUser, currentConnectionInfoMap, currentRdpClientOption, orgId } = storeToRefs(userInfoStore);
+  const { currentSite, currentConnectionInfoMap, currentRdpClientOption } = storeToRefs(userInfoStore);
   const { charset, rdpResolution, backspaceAsCtrlH, keyboardLayout, rdpClientOption, rdpColorQuality, rdpSmartSize }
     = settingManager;
 
@@ -179,9 +179,6 @@ export const useAssetAction = () => {
   const getConnectToken = (body: ConnectionBody) => {
     const rdpParams = buildLocalRdpParams();
     useTauriCoreInvoke("get_connect_token", {
-      site: currentSite.value,
-      bearerToken: currentUser.value!.bearerToken,
-      orgId: orgId.value,
       body: {
         asset: body.asset,
         account: body.account,
@@ -355,13 +352,10 @@ export const useAssetAction = () => {
    * @param name
    */
   const handleAssetRename = (assetId: string, name: string) => {
-    if (!currentSite.value || !currentUser.value?.bearerToken) return;
+    if (!currentSite.value) return;
 
     useTauriCoreInvoke("rename", {
-      site: currentSite.value,
-      bearerToken: currentUser.value.bearerToken,
       assetId,
-      orgId: orgId.value,
       name
     });
   };
@@ -372,9 +366,6 @@ export const useAssetAction = () => {
    */
   const handleAssetFavorite = (assetId: string) => {
     useTauriCoreInvoke("set_favorite", {
-      site: currentSite.value,
-      bearerToken: currentUser.value!.bearerToken,
-      orgId: orgId.value,
       assetId
     });
   };
@@ -385,9 +376,6 @@ export const useAssetAction = () => {
    */
   const handleAssetUnfavorite = (assetId: string) => {
     useTauriCoreInvoke("unfavorite", {
-      site: currentSite.value,
-      bearerToken: currentUser.value!.bearerToken,
-      orgId: orgId.value,
       assetId
     });
   };
@@ -398,9 +386,6 @@ export const useAssetAction = () => {
    */
   const getAssetDetail = (assetId: string) => {
     useTauriCoreInvoke("get_asset_detail", {
-      site: currentSite.value,
-      bearerToken: currentUser.value!.bearerToken,
-      orgId: orgId.value,
       assetId
     });
   };

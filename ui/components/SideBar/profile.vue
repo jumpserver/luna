@@ -8,14 +8,14 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import RecentSites from "./recentSites.vue";
 
 interface VersionAlertPayload {
-  type: string;
-  version?: string;
+  type: string
+  version?: string
 }
 
 interface VersionMessageResponse {
-  status: number;
-  data: string;
-  success: boolean;
+  status: number
+  data: string
+  success: boolean
 }
 
 const props = defineProps<{ collapse: boolean }>();
@@ -119,7 +119,7 @@ const languageItems = computed(() => {
   }));
 });
 
-const languageChildren = computed(() => [
+const languageChildren = computed<DropdownMenuItem[][]>(() => [
   languageItems.value.map((item) => ({
     label: item.label,
     type: "checkbox",
@@ -167,7 +167,7 @@ const selectedAppearance = computed<ThemeType>({
   }
 });
 
-const appearanceChildren = computed(() => [
+const appearanceChildren = computed<DropdownMenuItem[][]>(() => [
   appearanceOptions.value.map((opt) => ({
     label: opt.label,
     type: "checkbox",
@@ -381,8 +381,15 @@ const handleInvalidSiteVersion = () => {
 };
 
 const checkVersionBeforeOAuth = async (site: string) => {
+  await useTauriCoreInvoke("set_api_session", {
+    sessionKey: site,
+    origin: site,
+    bearerToken: "",
+    orgId: ""
+  });
+
   const [versionResponse, appVersion] = await Promise.all([
-    useTauriCoreInvoke<VersionMessageResponse>("get_version_message", { site }).catch((error) => {
+    useTauriCoreInvoke<VersionMessageResponse>("get_version_message", {}).catch(() => {
       return null;
     }),
     useTauriAppGetVersion().catch(() => "")

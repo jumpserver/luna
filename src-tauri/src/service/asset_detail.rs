@@ -1,30 +1,23 @@
-use crate::api::request::{ApiRequestClient, ApiResponse};
+use crate::api::{
+    endpoint,
+    request::{ApiRequestClient, ApiResponse},
+};
 
 pub struct DetailService {
-    origin: String,
     api: ApiRequestClient,
     asset_id: String,
 }
 
 impl DetailService {
-    pub fn new(
-        origin: String,
-        bearer_token: String,
-        org_id: String,
-        asset_id: String,
-    ) -> Result<Self, reqwest::Error> {
-        Ok(Self {
-            origin,
-            api: ApiRequestClient::new(bearer_token, org_id)?,
-            asset_id,
-        })
+    /// 创建资产详情服务，复用 command 层从当前会话构建好的 API 客户端
+    pub fn new(api: ApiRequestClient, asset_id: String) -> Self {
+        Self { api, asset_id }
     }
 
+    /// 获取指定资产的详情信息
     pub async fn get_asset_detail(&self) -> ApiResponse {
-        let url = format!(
-            "{}/api/v1/perms/users/self/assets/{}",
-            self.origin, self.asset_id
-        );
+        let path = endpoint::assets::detail(&self.asset_id);
+        let url = self.api.endpoint(&path);
         self.api.get_with_response(&url).await
     }
 }

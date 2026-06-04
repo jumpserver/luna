@@ -11,7 +11,6 @@ export type SiteUserData = UserData & {
 export const useUserInfoStore = defineStore(
   "userInfo",
   () => {
-    const orgId = ref("");
     const currentSite = ref("");
     const loggedIn = ref(false);
 
@@ -22,6 +21,33 @@ export const useUserInfoStore = defineStore(
     const currentConnectionInfoMap = ref<Record<string, ConnectionInfo>>({});
 
     const hasUser = computed(() => Object.keys(userMap.value).length > 0);
+    const orgId = computed(() => currentUser.value?.org?.id || "");
+
+    /**
+     * @description 将当前前端会话同步给 Rust 请求层
+     * @param site
+     * @param userData
+     */
+    const syncApiSession = (site: string, userData: UserData) => {
+      if (!site || !userData.bearerToken || !userData.org?.id) return;
+
+      void useTauriCoreInvoke("set_api_session", {
+        sessionKey: site,
+        origin: site,
+        bearerToken: userData.bearerToken,
+        orgId: userData.org.id
+      }).catch((error) => {
+        console.error("sync api session failed", error);
+      });
+    };
+
+    watch(
+      [currentSite, currentUser],
+      ([site, userData]) => {
+        if (site && userData) syncApiSession(site, userData);
+      },
+      { immediate: true }
+    );
 
     /**
      * @description 设置用户登录状态
@@ -54,11 +80,7 @@ export const useUserInfoStore = defineStore(
       userMap.value[site] = next;
       currentUser.value = next;
       currentSite.value = site;
-
-      // 设置组织 ID
-      if (userData.org?.id) {
-        orgId.value = userData.org.id;
-      }
+      syncApiSession(site, next);
 
       // 初始化当前站点连接信息映射以及 RDP 客户端选项
       currentConnectionInfoMap.value = next.connectionInfoMap || {};
@@ -100,11 +122,7 @@ export const useUserInfoStore = defineStore(
           userMap.value[nextUser.site] = nextUser;
           currentUser.value = nextUser;
           currentSite.value = nextUser.site;
-
-          // 更新组织 ID
-          if (nextUser.org?.id) {
-            orgId.value = nextUser.org.id;
-          }
+          syncApiSession(nextUser.site, nextUser);
 
           // 同步连接信息映射以及 RDP 客户端选项
           currentConnectionInfoMap.value = nextUser.connectionInfoMap || {};
@@ -118,7 +136,6 @@ export const useUserInfoStore = defineStore(
           });
         }
       } else {
-        orgId.value = "";
         currentSite.value = "";
         loggedIn.value = false;
         currentUser.value = null;
@@ -148,10 +165,7 @@ export const useUserInfoStore = defineStore(
         userMap.value[site] = userData as SiteUserData;
         currentUser.value = userData as SiteUserData;
         currentOrganizations.value = (userData as SiteUserData).availableOrgs || [];
-
-        if (userData.org?.id) {
-          orgId.value = userData.org.id;
-        }
+        syncApiSession(site, userData);
 
         // 同步当前站点的连接信息映射以及 RDP 客户端选项
         currentConnectionInfoMap.value = (userData as SiteUserData).connectionInfoMap || {};
@@ -196,8 +210,13 @@ export const useUserInfoStore = defineStore(
       };
 
       currentUser.value = updatedUserData as UserData;
-      orgId.value = org.id;
       userMap.value[currentSite.value] = updatedUserData as SiteUserData;
+
+      void useTauriCoreInvoke("set_api_org", {
+        orgId: org.id
+      }).catch((error) => {
+        console.error("sync api org failed", error);
+      });
     };
 
     /**
@@ -303,7 +322,6 @@ export const useUserInfoStore = defineStore(
       key: "userInfo",
       storage: localStorage,
       pick: [
-        "orgId",
         "userMap",
         "loggedIn",
         "currentUser",

@@ -1,37 +1,37 @@
-use crate::commands::auth::ensure_fresh_token;
+use crate::api::{request::ApiRequestClient, session::ApiSessionStore};
+use crate::commands::api_session::fresh_api_context;
 use crate::service::asset_detail::DetailService;
 use serde_json::json;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, State};
 
 #[tauri::command]
 pub async fn get_asset_detail(
     app: AppHandle,
-    site: String,
-    bearer_token: String,
-    org_id: String,
+    session: State<'_, ApiSessionStore>,
     asset_id: String,
-) {
-    let bearer = match ensure_fresh_token(&app, &site, Some(&bearer_token)).await {
-        Ok(b) => b,
+) -> Result<(), String> {
+    let context = match fresh_api_context(&app, &session).await {
+        Ok(context) => context,
         Err(e) => {
             let _ = app.emit(
                 "get-asset-detail-failure",
                 json!({ "status": "401", "error": e.to_string() }),
             );
-            return;
+            return Ok(());
         }
     };
 
-    let asset_service = match DetailService::new(site, bearer, org_id, asset_id.clone()) {
-        Ok(service) => service,
+    let api = match ApiRequestClient::from_session(&context) {
+        Ok(api) => api,
         Err(error) => {
             let _ = app.emit(
                 "get-asset-detail-failure",
                 json!({ "status": 0, "error": error.to_string() }),
             );
-            return;
+            return Ok(());
         }
     };
+    let asset_service = DetailService::new(api, asset_id.clone());
     let asset_detail = asset_service.get_asset_detail().await;
 
     if !asset_detail.success {
@@ -39,11 +39,13 @@ pub async fn get_asset_detail(
             "get-asset-detail-failure",
             json!({ "status": asset_detail.status }),
         );
-        return;
+        return Ok(());
     }
 
     let _ = app.emit(
         "get-asset-detail-success",
         json!({ "status": "success", "data": asset_detail.data, "asset_id": asset_id }),
     );
+
+    Ok(())
 }
