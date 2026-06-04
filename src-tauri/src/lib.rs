@@ -11,10 +11,9 @@ use crate::setup::setup_tray;
 
 use crate::api::session::ApiSessionStore;
 use crate::commands::api_session::{set_api_org, set_api_session};
-use crate::commands::asset_detail::get_asset_detail;
-use crate::commands::asset_favorite::set_favorite;
-use crate::commands::asset_rename::rename;
-use crate::commands::asset_unfavorite::unfavorite;
+use crate::commands::asset_actions::{
+    get_asset_detail, get_assets, rename, set_favorite, unfavorite,
+};
 use crate::commands::auth_flow::{auth_cancel, auth_login};
 use crate::commands::auth_logout::logout;
 use crate::commands::client_launcher::pull_up;
@@ -22,7 +21,6 @@ use crate::commands::config_update::update_config_selection;
 use crate::commands::connect_methods::get_connect_methods;
 use crate::commands::connect_token::get_connect_token;
 use crate::commands::dev_http_server::init_http_callback_server;
-use crate::commands::get_assets::get_assets;
 use crate::commands::get_config::get_config;
 use crate::commands::get_setting::get_setting;
 use crate::commands::get_version::get_version_message;
