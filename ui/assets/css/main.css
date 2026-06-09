@@ -1,7 +1,17 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/noto-sans-sc/400.css";
+@import "@fontsource/noto-sans-sc/500.css";
+@import "@fontsource/noto-sans-sc/600.css";
+@import "@fontsource/noto-sans-sc/700.css";
 
 @theme {
+  --font-sans:
+    "Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --color-secondary: var(--ui-color-secondary-500);
   --color-elevated: #1e1e20;
 }

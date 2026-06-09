@@ -4,7 +4,6 @@ export default defineNuxtConfig({
     "@nuxt/ui",
     "@pinia/nuxt",
     "@nuxt/icon",
-    "@nuxt/fonts",
     "@nuxt/eslint",
     "@vueuse/nuxt",
     "@nuxtjs/i18n",
@@ -36,13 +35,6 @@ export default defineNuxtConfig({
     }
   },
   css: ["@/assets/css/main.css"],
-  fonts: {
-    providers: {
-      google: false,
-      googleicons: false
-    },
-    priority: ["bunny"]
-  },
   icon: {
     provider: "none",
     fallbackToApi: false,

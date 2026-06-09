@@ -29,7 +29,9 @@
     "reset": "rm -rf node_modules .nuxt dist && cd src-tauri && cargo clean"
   },
   "dependencies": {
-    "@nuxt/fonts": "0.14.0",
+    "@cyolosecurity/asciinema-player": "3.6.3-3",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/noto-sans-sc": "^5.2.8",
     "@nuxt/icon": "2.2.2",
     "@nuxt/ui": "4.8.0",
     "@nuxtjs/i18n": "10.4.0",
@@ -43,6 +45,9 @@
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-store": "^2.4.3",
+    "fflate": "^0.8.2",
+    "guacamole-common-js-jumpserver": "1.1.0-c",
+    "js-untar": "^2.0.0",
     "mitt": "^3.0.1",
     "nuxt": "^4.4.6",
     "pinia": "^3.0.4",

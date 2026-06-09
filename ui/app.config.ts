@@ -22,6 +22,7 @@ export default defineAppConfig({
       /^(?:https?:\/\/(?:localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(?::\d{1,5})?(?:[/?#]\S*)?|\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\])$/
   },
   ui: {
+    fonts: false,
     colors: {
       primary: "primary",
       neutral: "zinc"

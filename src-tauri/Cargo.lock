@@ -10,6 +10,7 @@ dependencies = [
  "axum",
  "chrono",
  "env_logger",
+ "flate2",
  "font-kit",
  "image",
  "keyring",

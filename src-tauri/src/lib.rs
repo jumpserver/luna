@@ -25,6 +25,9 @@ use crate::commands::get_config::get_config;
 use crate::commands::get_setting::get_setting;
 use crate::commands::get_version::get_version_message;
 use crate::commands::system_fonts::list_system_fonts;
+use crate::commands::video_player::{
+    delete_video_player_file, read_video_player_text_stream, write_video_player_gzip_file,
+};
 use crate::commands::window_control::{close_window, minimize_window, toggle_maximize_window};
 use crate::service::oauth::AuthFlowState;
 use crate::utils::is_auth_callback;
@@ -203,6 +206,9 @@ pub fn run() {
             get_connect_methods,
             set_api_session,
             set_api_org,
+            write_video_player_gzip_file,
+            read_video_player_text_stream,
+            delete_video_player_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -64,6 +64,16 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
       icon: "gravity-ui:star",
       to: localePath("favorite"),
       disabled: isLoading.value
+    },
+    {
+      label: t("Menu.Tool"),
+      type: "label"
+    },
+    {
+      label: t("Menu.Player"),
+      icon: "line-md:play",
+      to: localePath("videoplayer"),
+      disabled: isLoading.value
     }
   ];
 });

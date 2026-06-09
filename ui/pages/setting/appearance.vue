@@ -13,7 +13,8 @@ definePageMeta({
   layout: "setting"
 });
 
-const FALLBACK_FONTS = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial';
+const FALLBACK_FONTS =
+  '"Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
 const { t } = useI18n();
  const {

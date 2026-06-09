@@ -40,7 +40,7 @@ const DEFAULT_STATE: UserSettingPersistedState = {
   themeMode: "" as ThemeType,
   followSystem: false,
   layouts: "grid",
-  fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial',
+  fontFamily: '"Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   primaryColor: "#1ab394",
   primaryColorLight: "#1ab394",
   primaryColorDark: "#34d399",
