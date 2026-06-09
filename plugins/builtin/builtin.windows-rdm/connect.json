@@ -1,0 +1,17 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "user_path",
+        "default": "",
+        "required": true
+      },
+      "launch": {
+        "type": "file",
+        "extension": "rdp",
+        "open_with": "system"
+      },
+      "display_name": "Remote Desktop Manager"
+    }
+  }
+}

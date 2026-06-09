@@ -1,0 +1,19 @@
+{
+  "id": "builtin.iterm-sftp",
+  "name": "iterm",
+  "display_name": "iTerm2",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://iterm2.com/downloads.html",
+  "category": "filetransfer",
+  "protocols": [
+    "sftp"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "iTerm2是MacOS操作系统上的虚拟终端应用软件。\n\n!!!手动下载安装，点击保存启用!!!",
+    "en": "iTerm2 is a virtual terminal application software on the MacOS operating system.\n\n\n!!!Manually download and install, click Save to activate!!!"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "builtin.mobaxterm",
+  "name": "mobaxterm",
+  "display_name": "MobaXterm",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://mobaxterm.mobatek.net/download-home-edition.html",
+  "category": "terminal",
+  "protocols": [
+    "ssh",
+    "telnet"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "MobaXterm是一款功能丰富的远程计算机管理工具，其包括了SSH客户端、FTP客户端、远程桌面等。",
+    "en": "MobaXterm is a feature-rich remote computer management tool, including SSH client, FTP client, remote desktop, etc."
+  }
+}

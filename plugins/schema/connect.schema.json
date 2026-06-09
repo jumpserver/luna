@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jumpserver.org/schemas/client-plugin/connect.json",
+  "title": "JumpServer Client Plugin Connect Definition",
+  "type": "object",
+  "required": ["platforms"],
+  "additionalProperties": false,
+  "properties": {
+    "platforms": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "windows": { "$ref": "#/$defs/platformConfig" },
+        "macos": { "$ref": "#/$defs/platformConfig" },
+        "linux": { "$ref": "#/$defs/platformConfig" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "executable": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["bundled", "system", "user_path"]
+        },
+        "default": {
+          "type": "string",
+          "description": "Default path or command name"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, user must configure path before enabling (user_path)"
+        }
+      }
+    },
+    "launchArgs": {
+      "type": "object",
+      "required": ["type", "template"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "args" },
+        "template": { "type": "string" },
+        "split_mode": {
+          "type": "string",
+          "enum": ["space", "shell"],
+          "default": "space",
+          "description": "How to split template into argv after substitution"
+        }
+      }
+    },
+    "launchScript": {
+      "type": "object",
+      "required": ["type", "script"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "script" },
+        "script": {
+          "type": "string",
+          "description": "Relative path to script inside plugin directory"
+        },
+        "interpreter": {
+          "type": "string",
+          "description": "Optional interpreter override, e.g. pwsh, bash"
+        }
+      }
+    },
+    "launchUrl": {
+      "type": "object",
+      "required": ["type", "template"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "url" },
+        "template": { "type": "string" }
+      }
+    },
+    "launchFile": {
+      "type": "object",
+      "required": ["type", "extension"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "file" },
+        "extension": { "type": "string" },
+        "open_with": {
+          "type": "string",
+          "enum": ["system", "executable"],
+          "default": "system"
+        },
+        "arg_template": {
+          "type": "string",
+          "description": "Args when open_with is executable, {file} for temp path"
+        }
+      }
+    },
+    "launchAutoIt": {
+      "type": "object",
+      "required": ["type", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "autoit" },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["cmd"],
+            "properties": {
+              "cmd": { "type": "string" },
+              "type": { "type": "string" },
+              "element": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "launch": {
+      "oneOf": [
+        { "$ref": "#/$defs/launchArgs" },
+        { "$ref": "#/$defs/launchScript" },
+        { "$ref": "#/$defs/launchUrl" },
+        { "$ref": "#/$defs/launchFile" },
+        { "$ref": "#/$defs/launchAutoIt" }
+      ]
+    },
+    "platformConfig": {
+      "type": "object",
+      "required": ["executable", "launch"],
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "description": "Platform-specific display name override"
+        },
+        "executable": { "$ref": "#/$defs/executable" },
+        "launch": { "$ref": "#/$defs/launch" },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Extra environment variables with template support"
+        }
+      }
+    }
+  }
+}

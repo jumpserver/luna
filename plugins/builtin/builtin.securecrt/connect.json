@@ -1,0 +1,28 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "user_path",
+        "default": "",
+        "required": true
+      },
+      "launch": {
+        "type": "args",
+        "template": "/N {name} /T /SSH2 /ACCEPTHOSTKEYS /p {port} /password {value} /L {username} {host}"
+      },
+      "display_name": "SecureCRT"
+    },
+    "macos": {
+      "executable": {
+        "type": "user_path",
+        "default": "/Applications/SecureCRT.app/Contents/MacOS/SecureCRT",
+        "required": false
+      },
+      "launch": {
+        "type": "args",
+        "template": "/N {name} /T /SSH2 /ACCEPTHOSTKEYS /p {port} /password {value} /L {username} {host}"
+      },
+      "display_name": "SecureCRT"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "user_path",
+        "default": "",
+        "required": true
+      },
+      "launch": {
+        "type": "args",
+        "template": "--Shared=on --RemoteResize=on --FullScreen=off {host}::{port}"
+      },
+      "display_name": "TigerVNC"
+    },
+    "macos": {
+      "executable": {
+        "type": "user_path",
+        "default": "/Applications/TigerVNC viewer 1.15.0.app/Contents/MacOS/TigerVNC viewer",
+        "required": false
+      },
+      "launch": {
+        "type": "args",
+        "template": "--Shared=on --RemoteResize=on --FullScreen=off {host}::{port}"
+      },
+      "display_name": "TigerVNC"
+    },
+    "linux": {
+      "executable": {
+        "type": "bundled",
+        "default": "vncviewer"
+      },
+      "launch": {
+        "type": "args",
+        "template": "--Shared=on --RemoteResize=on --FullScreen=off {host}::{port}"
+      },
+      "display_name": "TigerVNC"
+    }
+  }
+}

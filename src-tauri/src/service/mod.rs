@@ -1,5 +1,6 @@
 pub(crate) mod asset;
 pub(crate) mod config;
+pub(crate) mod plugin;
 pub(crate) mod connect;
 pub(crate) mod oauth;
 pub(crate) mod setting;

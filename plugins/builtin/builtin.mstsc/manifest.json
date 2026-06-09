@@ -1,0 +1,19 @@
+{
+  "id": "builtin.mstsc",
+  "name": "mstsc",
+  "display_name": "Microsoft Remote Desktop",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "",
+  "category": "remotedesktop",
+  "protocols": [
+    "rdp"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "Microsoft Remote Desktop是一款强大的微软远程连接工具，可以从几乎任何地方连接到远程PC和您的工作资源。",
+    "en": "Microsoft Remote Desktop is a powerful Microsoft remote connection tool that can connect to remote PCs and your work resources from almost anywhere."
+  }
+}

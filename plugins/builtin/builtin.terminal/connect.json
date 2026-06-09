@@ -1,0 +1,26 @@
+{
+  "platforms": {
+    "macos": {
+      "executable": {
+        "type": "bundled",
+        "default": "Terminal"
+      },
+      "launch": {
+        "type": "args",
+        "template": "{protocol} {username}@{host} -p {port} -P {value}"
+      },
+      "display_name": "Terminal"
+    },
+    "linux": {
+      "executable": {
+        "type": "bundled",
+        "default": "Terminal"
+      },
+      "launch": {
+        "type": "args",
+        "template": "{protocol} {username}@{host} -p {port} -P {value}"
+      },
+      "display_name": "Terminal"
+    }
+  }
+}

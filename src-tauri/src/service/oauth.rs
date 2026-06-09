@@ -5,8 +5,8 @@ use anyhow::Result;
 use chrono::{Duration, Utc};
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, CsrfToken, EndpointNotSet,
-    EndpointSet, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, RevocationUrl,
-    Scope, StandardRevocableToken, TokenResponse, TokenUrl,
+    EndpointSet, ErrorResponse, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken,
+    RequestTokenError, RevocationUrl, Scope, StandardRevocableToken, TokenResponse, TokenUrl,
 };
 use reqwest::Client;
 use serde::Deserialize;
@@ -235,6 +235,37 @@ pub fn create_authorization_request(client: &JumpServerOAuthClient) -> OAuthAuth
     }
 }
 
+fn format_token_exchange_error<E, T>(error: &RequestTokenError<E, T>) -> String
+where
+    E: std::error::Error,
+    T: std::fmt::Debug + ErrorResponse,
+{
+    match error {
+        RequestTokenError::ServerResponse(resp) => {
+            format!("Server returned error response: {:?}", resp)
+        }
+        RequestTokenError::Request(req_err) => {
+            format!("Token exchange request failed: {}", req_err)
+        }
+        RequestTokenError::Parse(parse_err, body) => {
+            let body_text = String::from_utf8_lossy(body);
+            format!(
+                "Failed to parse server response: {}; raw body: {}",
+                parse_err, body_text
+            )
+        }
+        RequestTokenError::Other(msg) => format!("Token exchange error: {}", msg),
+    }
+}
+
+fn log_token_exchange_error<E, T>(error: &RequestTokenError<E, T>)
+where
+    E: std::error::Error,
+    T: std::fmt::Debug + ErrorResponse,
+{
+    log::error!("{}", format_token_exchange_error(error));
+}
+
 /// 使用 OAuth callback 中的 code + PKCE verifier 换取 token。
 pub async fn exchange_authorization_code(
     client: &JumpServerOAuthClient,
@@ -252,7 +283,9 @@ pub async fn exchange_authorization_code(
         .exchange_code(callback.code)
         .set_pkce_verifier(callback.pkce_verifier)
         .request_async(http_client)
-        .await?;
+        .await
+        .inspect_err(log_token_exchange_error)
+        .map_err(|error| anyhow::anyhow!(format_token_exchange_error(&error)))?;
 
     let access_token = token_result.access_token().secret().to_owned();
     let refresh_token = token_result

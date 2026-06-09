@@ -1,0 +1,224 @@
+{
+  "version": 1,
+  "plugins": [
+    {
+      "id": "builtin.another-redis",
+      "name": "another_redis",
+      "category": "databases",
+      "platforms": [
+        "macos",
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.dbeaver",
+      "name": "dbeaver",
+      "category": "databases",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.heidisql",
+      "name": "heidisql",
+      "category": "databases",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.iterm",
+      "name": "iterm",
+      "category": "terminal",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "builtin.iterm-sftp",
+      "name": "iterm",
+      "category": "filetransfer",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "builtin.mobaxterm",
+      "name": "mobaxterm",
+      "category": "terminal",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.mongo-compass",
+      "name": "mongo_compass",
+      "category": "databases",
+      "platforms": [
+        "macos",
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.mstsc",
+      "name": "mstsc",
+      "category": "remotedesktop",
+      "platforms": [
+        "macos",
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.navicat17",
+      "name": "navicat17",
+      "category": "databases",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.plsql",
+      "name": "plsql",
+      "category": "databases",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.putty",
+      "name": "putty",
+      "category": "terminal",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.realvnc",
+      "name": "realvnc",
+      "category": "remotedesktop",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.remmina",
+      "name": "remmina",
+      "category": "remotedesktop",
+      "platforms": [
+        "linux"
+      ]
+    },
+    {
+      "id": "builtin.resp",
+      "name": "resp",
+      "category": "databases",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.securecrt",
+      "name": "securecrt",
+      "category": "terminal",
+      "platforms": [
+        "macos",
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.securefx",
+      "name": "securefx",
+      "category": "filetransfer",
+      "platforms": [
+        "macos",
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.ssms17",
+      "name": "ssms17",
+      "category": "databases",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.terminal",
+      "name": "terminal",
+      "category": "terminal",
+      "platforms": [
+        "linux",
+        "macos"
+      ]
+    },
+    {
+      "id": "builtin.terminal-db",
+      "name": "terminal",
+      "category": "databases",
+      "platforms": [
+        "linux",
+        "macos"
+      ]
+    },
+    {
+      "id": "builtin.tigervnc",
+      "name": "tigervnc",
+      "category": "remotedesktop",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.toad",
+      "name": "toad",
+      "category": "databases",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.windows-rdm",
+      "name": "windows_rdm",
+      "category": "remotedesktop",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.winscp",
+      "name": "winscp",
+      "category": "filetransfer",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.xfreerdp",
+      "name": "xfreerdp",
+      "category": "remotedesktop",
+      "platforms": [
+        "linux"
+      ]
+    },
+    {
+      "id": "builtin.xftp",
+      "name": "xftp",
+      "category": "filetransfer",
+      "platforms": [
+        "windows"
+      ]
+    },
+    {
+      "id": "builtin.xshell",
+      "name": "xshell",
+      "category": "terminal",
+      "platforms": [
+        "windows"
+      ]
+    }
+  ]
+}

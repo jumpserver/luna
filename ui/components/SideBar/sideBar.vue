@@ -190,6 +190,33 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
   }
 }
 
+.dark .menu .menu-item {
+  &[data-active] {
+    background-color: transparent;
+
+    &::before {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    font-weight: 500;
+  }
+
+  &:hover:not([data-active]) {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* 配置页左侧为纯色背景，需要比透明侧边栏更明显的高亮 */
+.dark .setting-menu .menu-item {
+  &[data-active]::before {
+    background-color: rgba(255, 255, 255, 0.16);
+  }
+
+  &:hover:not([data-active]) {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
 .light .search-input input {
     background-color: var(--bg-hover-light);
 }

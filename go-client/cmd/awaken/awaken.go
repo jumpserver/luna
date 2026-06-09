@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"go-client/global"
 	"go-client/pkg/awaken"
+	_ "go-client/pkg/plugin"
 	"go-client/pkg/logger"
 	"os"
 	"strings"

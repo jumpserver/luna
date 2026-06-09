@@ -1,0 +1,19 @@
+{
+  "id": "builtin.xftp",
+  "name": "xftp",
+  "display_name": "Xftp",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://www.xshell.com/zh/xftp-download/",
+  "category": "filetransfer",
+  "protocols": [
+    "sftp"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "Xftp是一个功能强大的SFTP、FTP 文件传输软件。",
+    "en": "Xftp is a powerful SFTP and FTP file transfer software."
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "builtin.securefx",
+  "name": "securefx",
+  "display_name": "SecureFX",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://www.vandyke.com/cgi-bin/releases.php?product=securefx",
+  "category": "filetransfer",
+  "protocols": [
+    "sftp"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "SecureFX 是一款安全的文件传输应用， 拥有一个简单易学的可视化界面。",
+    "en": "SecureFX is a secure file transfer application with an easy-to-learn visual interface."
+  }
+}

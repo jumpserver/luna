@@ -1,0 +1,19 @@
+{
+  "id": "builtin.windows-rdm",
+  "name": "windows_rdm",
+  "display_name": "Remote Desktop Manager",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://remotedesktopmanager.com/",
+  "category": "remotedesktop",
+  "protocols": [
+    "rdp"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "Remote Desktop Manager (Devolutions) 集中管理所有远程连接。",
+    "en": "Remote Desktop Manager (Devolutions) centralizes all remote connections."
+  }
+}

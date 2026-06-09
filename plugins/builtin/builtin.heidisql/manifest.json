@@ -1,0 +1,22 @@
+{
+  "id": "builtin.heidisql",
+  "name": "heidisql",
+  "display_name": "HeidiSQL",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://www.heidisql.com/download.php",
+  "category": "databases",
+  "protocols": [
+    "mariadb",
+    "mysql",
+    "postgresql",
+    "sqlserver"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "HeidiSQL 是一款轻量级的数据库管理工具，适合快速连接和管理 MySQL / MariaDB / PostgreSQL / SQL Server 数据库。",
+    "en": "HeidiSQL is a lightweight database management tool for quickly connecting to and managing MySQL / MariaDB / PostgreSQL / SQL Server databases."
+  }
+}

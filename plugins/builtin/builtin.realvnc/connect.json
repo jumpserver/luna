@@ -1,0 +1,18 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "user_path",
+        "default": "C:\\Program Files\\RealVNC\\VNC Viewer\\vncviewer.exe",
+        "required": false
+      },
+      "launch": {
+        "type": "file",
+        "extension": "vnc",
+        "open_with": "executable",
+        "arg_template": "{file}"
+      },
+      "display_name": "RealVNC Viewer"
+    }
+  }
+}

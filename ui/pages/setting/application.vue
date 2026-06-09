@@ -104,15 +104,22 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
 
 <template>
   <div class="flex h-full">
-    <UNavigationMenu
-      :items="appMenu"
-      :highlight="false"
-      :ui="{ list: 'p-2', link: 'px-1', linkTrailing: 'hidden', linkTrailingIcon: 'hidden' }"
-      orientation="vertical"
-      variant="pill"
-      color="primary"
-      class="w-52"
-    />
+    <div class="menu setting-menu shrink-0">
+      <UNavigationMenu
+        :items="appMenu"
+        :highlight="false"
+        :ui="{
+          list: 'p-2',
+          link: 'px-2 my-1 rounded-sm menu-item flex items-center light:text-gray-800 dark:text-gray-200',
+          linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200',
+          linkTrailing: 'hidden',
+          linkTrailingIcon: 'hidden'
+        }"
+        orientation="vertical"
+        color="neutral"
+        class="w-52"
+      />
+    </div>
 
     <UCard class="flex-1 min-w-0 h-full rounded-none overflow-y-auto" variant="subtle" :ui="{ body: 'sm:p-3 h-full' }">
       <NuxtPage />

@@ -1,0 +1,19 @@
+{
+  "id": "builtin.tigervnc",
+  "name": "tigervnc",
+  "display_name": "TigerVNC",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://sourceforge.net/projects/tigervnc/files/stable/1.15.0/tigervnc-1.15.0.x86_64.tar.gz",
+  "category": "remotedesktop",
+  "protocols": [
+    "vnc"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "TigerVNC是一个高效且安全的远程桌面控制工具，适用于跨平台操作，并有强大的安全性能保障。",
+    "en": "TigerVNC is an efficient and secure remote desktop control tool that is suitable for cross platform operations and has strong security performance guarantees."
+  }
+}

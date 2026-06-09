@@ -1,0 +1,20 @@
+{
+  "id": "builtin.securecrt",
+  "name": "securecrt",
+  "display_name": "SecureCRT",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://www.vandyke.com/cgi-bin/releases.php?product=securecrt",
+  "category": "terminal",
+  "protocols": [
+    "ssh",
+    "telnet"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "SecureCRT是VanDyke Software所开发销售的一个SSH、Telnet客户端和虚拟终端软件。",
+    "en": "SecureCRT is an SSH, Telnet client and virtual terminal software developed and sold by VanDyke Software."
+  }
+}

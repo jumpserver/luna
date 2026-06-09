@@ -151,20 +151,25 @@ onMounted(() => {
 
     <UPageBody class="mt-0 pb-0 flex-1 min-h-0 h-full overflow-y-auto">
       <div class="flex gap-0 w-full h-full min-h-0">
-        <UNavigationMenu
-          :items="settingMenu"
-          :highlight="false"
-          :ui="{
-            list: 'p-2'
-          }"
+        <div
+          class="menu setting-menu shrink-0"
           :style="{
             backgroundColor: theme === 'dark' ? '#222' : '#F5F5F7'
           }"
-          color="primary"
-          variant="pill"
-          orientation="vertical"
-          class="w-40"
-        />
+        >
+          <UNavigationMenu
+            :items="settingMenu"
+            :highlight="false"
+            :ui="{
+              list: 'p-2',
+              link: 'px-2 my-1 rounded-sm menu-item flex items-center light:text-gray-800 dark:text-gray-200',
+              linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200'
+            }"
+            color="neutral"
+            orientation="vertical"
+            class="w-40"
+          />
+        </div>
 
         <UCard
           class="flex-1 min-w-0 h-full rounded-none overflow-y-auto"

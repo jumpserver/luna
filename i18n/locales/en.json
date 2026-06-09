@@ -165,6 +165,8 @@
     "Auto": "Auto",
     "Enable": "Enable",
     "Disable": "Disable",
+    "EnableFailed": "Unable to enable",
+    "ExecutableNotFound": "Application not found. Please download and install it correctly.",
     "DownloadApplication": "Download Application"
   },
   "ConnectError": {

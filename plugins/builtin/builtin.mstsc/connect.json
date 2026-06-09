@@ -1,0 +1,29 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "system",
+        "default": "C:\\WINDOWS\\system32\\mstsc.exe"
+      },
+      "launch": {
+        "type": "file",
+        "extension": "rdp",
+        "open_with": "executable",
+        "arg_template": "{file}"
+      },
+      "display_name": "Microsoft Remote Desktop"
+    },
+    "macos": {
+      "executable": {
+        "type": "system",
+        "default": "/Applications/Windows App.app"
+      },
+      "launch": {
+        "type": "file",
+        "extension": "rdp",
+        "open_with": "system"
+      },
+      "display_name": "Windows App"
+    }
+  }
+}

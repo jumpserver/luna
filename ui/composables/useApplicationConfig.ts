@@ -1,6 +1,8 @@
 import type { AppConfigType } from "~/types";
 
 export const useApplicationConfig = () => {
+  const { t } = useI18n();
+  const toast = useToast();
   const { setAppConfig, appConfig, hydrationPromise } = useSettingManager();
 
   const isValidAppConfig = (cfg: any): cfg is AppConfigType => {
@@ -43,14 +45,30 @@ export const useApplicationConfig = () => {
   });
 
   const selectClient = async (category: keyof AppConfigType, protocol: string, name: string) => {
-    const updated = await useTauriCoreInvoke("update_config_selection", {
-      category,
-      protocol,
-      name
-    });
+    try {
+      const updated = await useTauriCoreInvoke("update_config_selection", {
+        category,
+        protocol,
+        name
+      });
 
-    if (updated) {
-      setAppConfig(updated as AppConfigType);
+      if (updated) {
+        setAppConfig(updated as AppConfigType);
+      }
+    } catch (error) {
+      const message = String(error ?? "");
+      const description = message.toLowerCase().includes("executable not found")
+        ? t("Setting.ExecutableNotFound")
+        : message || t("Common.OperationFailed");
+
+      toast.add({
+        title: t("Setting.EnableFailed"),
+        description,
+        color: "error",
+        icon: "line-md:close-circle",
+        progress: true,
+        duration: 4000
+      });
     }
   };
 

@@ -1,0 +1,23 @@
+{
+  "id": "builtin.ssms17",
+  "name": "ssms17",
+  "display_name": "SQL Server Management Studio",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://download.microsoft.com/download/9/f/8/9f8197f4-0f71-42a3-8717-b2817c77b820/SSMS-Setup-CHS.exe",
+  "category": "databases",
+  "protocols": [
+    "sqlserver"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "SQL Server Management Studio (SSMS) 是一种集成环境，用于管理从 SQL Server 到 Azure SQL 数据库的任何 SQL 基础结构。",
+    "en": "SQL Server Management Studio (SSMS) is an integrated environment for managing any SQL infrastructure, from SQL Server to Azure SQL Database."
+  },
+  "permissions": [
+    "autoit",
+    "exec"
+  ]
+}

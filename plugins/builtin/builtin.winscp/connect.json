@@ -1,0 +1,16 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "user_path",
+        "default": "",
+        "required": true
+      },
+      "launch": {
+        "type": "args",
+        "template": "{protocol}://{username}:{value}@{host}:{port} -rawsettings AuthKIPassword=0"
+      },
+      "display_name": "WinSCP"
+    }
+  }
+}

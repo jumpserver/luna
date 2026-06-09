@@ -1,0 +1,27 @@
+{
+  "id": "builtin.navicat17",
+  "name": "navicat17",
+  "display_name": "Navicat premium Lite 17",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://github.com/gerry-f2c/appstore-static/releases/download/Navicat/navicat170_premium_lite_en_x64.exe",
+  "category": "databases",
+  "protocols": [
+    "mariadb",
+    "mysql",
+    "oracle",
+    "postgresql",
+    "sqlserver"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "数据库管理软件，适配 v17.0.13 版本。",
+    "en": "Database management software, compatible with v17.0.13."
+  },
+  "permissions": [
+    "autoit",
+    "exec"
+  ]
+}

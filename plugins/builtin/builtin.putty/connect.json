@@ -1,0 +1,15 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "bundled",
+        "default": "putty.exe"
+      },
+      "launch": {
+        "type": "args",
+        "template": "-{protocol} {username}@{host} -P {port} -pw {value}"
+      },
+      "display_name": "PuTTY"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "builtin.plsql",
+  "name": "plsql",
+  "display_name": "PL/SQL Developer",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://www.allroundautomations.com/registered-plsqldev/",
+  "category": "databases",
+  "protocols": [
+    "oracle"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "PL/SQL Developer是一个集成开发环境，由Allround Automations公司开发，专门面向Oracle数据库存储的程序单元的开发。",
+    "en": "PL/SQL Developer is an integrated development environment developed by Allround Automations, specifically for the development of program units stored in Oracle databases."
+  }
+}

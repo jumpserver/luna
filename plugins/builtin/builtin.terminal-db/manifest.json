@@ -1,0 +1,25 @@
+{
+  "id": "builtin.terminal-db",
+  "name": "terminal",
+  "display_name": "Terminal",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "",
+  "category": "databases",
+  "protocols": [
+    "mariadb",
+    "mongodb",
+    "mysql",
+    "oracle",
+    "postgresql",
+    "redis",
+    "sqlserver"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "Terminal是MacOS操作系统上的虚拟终端应用软件，位于“实用工具”文件夹内。",
+    "en": "Terminal is a virtual terminal application software on the MacOS operating system, located in the \"Utilities\" folder."
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "builtin.realvnc",
+  "name": "realvnc",
+  "display_name": "RealVNC Viewer",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://www.realvnc.com/en/connect/download/viewer/",
+  "category": "remotedesktop",
+  "protocols": [
+    "vnc"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "RealVNC Viewer 是 RealVNC 提供的远程桌面连接工具。",
+    "en": "RealVNC Viewer is a remote desktop connection tool provided by RealVNC."
+  }
+}

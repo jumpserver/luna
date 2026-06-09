@@ -1,0 +1,19 @@
+{
+  "id": "builtin.xfreerdp",
+  "name": "xfreerdp",
+  "display_name": "xFreeRDP",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://github.com/FreeRDP/FreeRDP",
+  "category": "remotedesktop",
+  "protocols": [
+    "rdp"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "FreeRDP 是远程桌面协议 (RDP) 的免费实现，在 Apache 许可证下发布。\n安装命令\nsudo apt-get install freerdp\nsudo yum install freerdp",
+    "en": "FreeRDP is a free implementation of the Remote Desktop Protocol (RDP), released under the Apache License.\nInstallation command\nsudo apt-get install freerdp\nsudo yum install freerdp"
+  }
+}

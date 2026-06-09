@@ -1,0 +1,11 @@
+{
+  "platforms": {
+    "linux": {
+      "match_first": [],
+      "is_default": false,
+      "is_set": false,
+      "is_internal": true,
+      "path": "xfreerdp"
+    }
+  }
+}

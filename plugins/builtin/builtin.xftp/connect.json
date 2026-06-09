@@ -1,0 +1,16 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "user_path",
+        "default": "",
+        "required": true
+      },
+      "launch": {
+        "type": "args",
+        "template": "-newwin {protocol}://{username}:{value}@{host}:{port}"
+      },
+      "display_name": "Xftp"
+    }
+  }
+}

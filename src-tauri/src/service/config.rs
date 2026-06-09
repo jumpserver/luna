@@ -2,6 +2,8 @@ use serde_json::{json, Value};
 use std::path::PathBuf;
 use tauri::Manager;
 
+use crate::service::plugin::PluginService;
+
 pub struct ConfigService;
 
 impl ConfigService {
@@ -258,7 +260,6 @@ impl ConfigService {
     }
 
     pub fn get_app_config(app: &tauri::AppHandle) -> Result<Value, String> {
-        // 确保用户配置文件存在，并从用户配置目录读取
         let path = Self::ensure_user_config(app)?;
 
         log::info!("Reading config from: {:?}", path);
@@ -267,6 +268,13 @@ impl ConfigService {
             .map_err(|e| format!("read config.json failed: {}", e))?;
         let json: Value = serde_json::from_str(&content)
             .map_err(|e| format!("parse config.json failed: {}", e))?;
+
+        if PluginService::is_plugins_enabled(&json) {
+            let config_dir = path
+                .parent()
+                .ok_or_else(|| "invalid config directory".to_string())?;
+            return PluginService::build_app_config(app, config_dir);
+        }
 
         let os_key = match std::env::consts::OS {
             "macos" => "macos",
@@ -290,16 +298,30 @@ impl ConfigService {
         name: &str,
         new_path: Option<String>,
     ) -> Result<Value, String> {
-        // 确保用户配置文件存在，并写入到用户配置目录
         let config_path = Self::ensure_user_config(app)?;
 
         log::info!("Updating config at: {:?}", config_path);
 
         let content = std::fs::read_to_string(&config_path)
             .map_err(|e| format!("read config.json failed: {}", e))?;
-        let mut json: Value = serde_json::from_str(&content)
+        let json: Value = serde_json::from_str(&content)
             .map_err(|e| format!("parse config.json failed: {}", e))?;
 
+        if PluginService::is_plugins_enabled(&json) {
+            let config_dir = config_path
+                .parent()
+                .ok_or_else(|| "invalid config directory".to_string())?;
+            return PluginService::update_selection(
+                app,
+                config_dir,
+                category,
+                protocol,
+                name,
+                new_path,
+            );
+        }
+
+        let mut json = json;
         let os_key = match std::env::consts::OS {
             "macos" => "macos",
             "windows" => "windows",
@@ -355,6 +377,29 @@ impl ConfigService {
         }
 
         let mut found = false;
+
+        for item in arr.iter() {
+            let item_name = item.get("name").and_then(|v| v.as_str()).unwrap_or("");
+            if item_name != name {
+                continue;
+            }
+
+            let is_internal = item
+                .get("is_internal")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
+            if !is_internal {
+                let path = item
+                    .get("path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .trim();
+                if path.is_empty() || !std::path::Path::new(path).is_file() {
+                    return Err("executable not found".to_string());
+                }
+            }
+            break;
+        }
 
         for item in arr.iter_mut() {
             if let Some(mf) = item.get_mut("match_first") {

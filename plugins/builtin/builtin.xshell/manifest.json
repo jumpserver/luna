@@ -1,0 +1,20 @@
+{
+  "id": "builtin.xshell",
+  "name": "xshell",
+  "display_name": "XShell",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://www.xshell.com/zh/xshell-download/",
+  "category": "terminal",
+  "protocols": [
+    "ssh",
+    "telnet"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "XShell是一个强大的安全终端模拟软件，它支持SSH、TELNET协议。",
+    "en": "XShell is a powerful secure terminal simulation software that supports SSH and TELNET protocols."
+  }
+}

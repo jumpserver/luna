@@ -1,0 +1,28 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "user_path",
+        "default": "",
+        "required": true
+      },
+      "launch": {
+        "type": "args",
+        "template": "--host {host} --port {port} --auth {username}@{value}"
+      },
+      "display_name": "Another Redis Desktop Manager"
+    },
+    "macos": {
+      "executable": {
+        "type": "user_path",
+        "default": "/Applications/Another Redis Desktop Manager.app/Contents/MacOS/Another Redis Desktop Manager",
+        "required": false
+      },
+      "launch": {
+        "type": "args",
+        "template": "--host {host} --port {port} --auth {username}@{value}"
+      },
+      "display_name": "Another Redis Desktop Manager"
+    }
+  }
+}

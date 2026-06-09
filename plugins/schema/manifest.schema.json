@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jumpserver.org/schemas/client-plugin/manifest.json",
+  "title": "JumpServer Client Plugin Manifest",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "display_name",
+    "version",
+    "min_client_version",
+    "category",
+    "protocols",
+    "comment"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)+$",
+      "description": "Globally unique plugin id, e.g. builtin.dbeaver (built-in) or com.example.xshell (third-party)"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Short identifier used in logs and icon fallback"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?$"
+    },
+    "min_client_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+"
+    },
+    "author": {
+      "type": "string"
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri"
+    },
+    "download_url": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["terminal", "remotedesktop", "filetransfer", "databases"]
+    },
+    "protocols": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "builtin": {
+      "type": "boolean",
+      "default": false
+    },
+    "comment": {
+      "type": "object",
+      "required": ["en"],
+      "properties": {
+        "zh": { "type": "string" },
+        "en": { "type": "string" }
+      },
+      "additionalProperties": { "type": "string" }
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["exec", "write_temp_file", "env_vars", "autoit"]
+      },
+      "uniqueItems": true
+    }
+  }
+}

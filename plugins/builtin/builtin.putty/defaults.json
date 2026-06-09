@@ -1,0 +1,14 @@
+{
+  "platforms": {
+    "windows": {
+      "match_first": [
+        "ssh",
+        "telnet"
+      ],
+      "is_default": true,
+      "is_set": true,
+      "is_internal": true,
+      "path": "putty.exe"
+    }
+  }
+}

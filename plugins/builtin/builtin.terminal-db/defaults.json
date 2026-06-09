@@ -1,0 +1,33 @@
+{
+  "platforms": {
+    "macos": {
+      "match_first": [
+        "oracle",
+        "mysql",
+        "postgresql",
+        "mariadb",
+        "redis",
+        "sqlserver",
+        "mongodb"
+      ],
+      "is_default": false,
+      "is_set": true,
+      "is_internal": true,
+      "path": "Terminal"
+    },
+    "linux": {
+      "match_first": [
+        "oracle",
+        "mysql",
+        "postgresql",
+        "mariadb",
+        "redis",
+        "mongodb"
+      ],
+      "is_default": false,
+      "is_set": true,
+      "is_internal": true,
+      "path": "Terminal"
+    }
+  }
+}

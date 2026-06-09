@@ -77,10 +77,19 @@ var GlobalConfig *AppConfig
 
 func getDefaultConfig() AppConfig {
 	dir, _ := os.UserConfigDir()
-	filePath := filepath.Join(dir, "jumpserver-client", "config.json")
+	configDir := filepath.Join(dir, "jumpserver-client")
+
+	// Plugin mode: build AppConfig from plugins/builtin
+	if pluginCfg, ok := loadPluginConfig(configDir); ok {
+		GlobalConfig = pluginCfg
+		return *GlobalConfig
+	}
+
+	filePath := filepath.Join(configDir, "config.json")
 	jsonFile, err := os.Open(filePath)
 	if err != nil {
 		global.LOG.Error(err.Error())
+		return AppConfig{}
 	}
 	defer func(jsonFile *os.File) {
 		err := jsonFile.Close()
@@ -95,4 +104,14 @@ func getDefaultConfig() AppConfig {
 		return AppConfig{}
 	}
 	return *GlobalConfig
+}
+
+// loadPluginConfig is implemented in pkg/plugin to avoid an import cycle.
+var loadPluginConfig = func(configDir string) (*AppConfig, bool) {
+	return nil, false
+}
+
+// SetPluginLoader registers the plugin config loader (called from plugin init).
+func SetPluginLoader(loader func(string) (*AppConfig, bool)) {
+	loadPluginConfig = loader
 }

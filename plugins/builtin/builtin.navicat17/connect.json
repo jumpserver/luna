@@ -1,0 +1,62 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "user_path",
+        "default": "",
+        "required": true
+      },
+      "launch": {
+        "type": "autoit",
+        "steps": [
+          {
+            "cmd": "Wait",
+            "type": "15",
+            "element": "[CLASS:TNavicatMainForm]"
+          },
+          {
+            "cmd": "SendKey",
+            "type": "",
+            "element": "^u"
+          },
+          {
+            "cmd": "ControlSend",
+            "type": "{url}",
+            "element": "[CLASS:TTextHintMemo; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "35,15",
+            "element": "[CLASS:TButton; INSTANCE:2]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "50,7",
+            "element": "[CLASS:TRadioButton; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "1OO,10",
+            "element": "[CLASS:TButton; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "50,12",
+            "element": "[CLASS:TButtonedEdit; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlSetText",
+            "type": "{value}",
+            "element": "[CLASS:TButtonedEdit; INSTANCE:1]"
+          },
+          {
+            "cmd": "ControlClick",
+            "type": "30,12",
+            "element": "[CLASS:TButton; INSTANCE:2]"
+          }
+        ]
+      },
+      "display_name": "Navicat premium Lite 17"
+    }
+  }
+}

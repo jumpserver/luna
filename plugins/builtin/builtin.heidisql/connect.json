@@ -1,0 +1,16 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "user_path",
+        "default": "",
+        "required": true
+      },
+      "launch": {
+        "type": "args",
+        "template": "-n={nettype} -l={library} -h={host} -u={username} -p={value} -P={port} -d={name}"
+      },
+      "display_name": "HeidiSQL"
+    }
+  }
+}

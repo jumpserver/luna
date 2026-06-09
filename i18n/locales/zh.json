@@ -168,6 +168,8 @@
     "Auto": "自动",
     "Enable": "启用",
     "Disable": "禁用",
+    "EnableFailed": "无法启用",
+    "ExecutableNotFound": "未找到程序，请下载并正确安装",
     "DownloadApplication": "下载应用"
   },
   "ConnectError": {

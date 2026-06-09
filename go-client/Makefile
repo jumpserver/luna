@@ -50,6 +50,9 @@ build-current:
 	@mkdir -p $(BASEPATH)/../src-tauri/resources/bin/
 	@cp -R $(BUILDDIR)/* $(BASEPATH)/../src-tauri/resources/bin/
 	@cp $(BASEPATH)/config.json $(BASEPATH)/../src-tauri/resources/bin/
+	@mkdir -p $(BASEPATH)/../src-tauri/resources/plugins/
+	@cp -R $(BASEPATH)/../plugins/builtin $(BASEPATH)/../src-tauri/resources/plugins/
+	@cp $(BASEPATH)/../plugins/plugins-state.defaults.json $(BASEPATH)/../src-tauri/resources/plugins/
 	@if [ "$(CURRENT_OS)" = "windows" ]; then \
 		cp $(BASEPATH)/putty.exe $(BASEPATH)/../src-tauri/resources/bin/windows/; \
 		cp $(BASEPATH)/pkg/autoit/*.dll $(BASEPATH)/../src-tauri/resources/bin/windows/; \
@@ -114,6 +117,9 @@ install:
 		exit 1; \
 	fi
 	@cp $(BASEPATH)/config.json $(BASEPATH)/../src-tauri/resources/bin/
+	@mkdir -p $(BASEPATH)/../src-tauri/resources/plugins/
+	@cp -R $(BASEPATH)/../plugins/builtin $(BASEPATH)/../src-tauri/resources/plugins/
+	@cp $(BASEPATH)/../plugins/plugins-state.defaults.json $(BASEPATH)/../src-tauri/resources/plugins/
 	@echo "Install completed!"
 
 # 帮助信息

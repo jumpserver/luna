@@ -1,0 +1,23 @@
+{
+  "id": "builtin.dbeaver",
+  "name": "dbeaver",
+  "display_name": "DBeaver Community",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://dbeaver.io/download/",
+  "category": "databases",
+  "protocols": [
+    "mariadb",
+    "mysql",
+    "oracle",
+    "postgresql",
+    "sqlserver"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "DBeaver Community是一个通用的数据库管理工具和SQL客户端，支持MySQL、PostgreSQL、Oracle以及其他兼容JDBC的数据库。",
+    "en": "DBeaver Community is a general database management tool and SQL client that supports MySQL, PostgreSQL, Oracle and other JDBC-compatible databases."
+  }
+}

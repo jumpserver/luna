@@ -1,0 +1,16 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "user_path",
+        "default": "",
+        "required": true
+      },
+      "launch": {
+        "type": "args",
+        "template": "-c {username}/{value}@{host}:{port}/{dbname}"
+      },
+      "display_name": "Toad for Oracle"
+    }
+  }
+}

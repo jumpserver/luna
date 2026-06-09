@@ -1,0 +1,19 @@
+{
+  "id": "builtin.mongo-compass",
+  "name": "mongo_compass",
+  "display_name": "MongoDB Compass",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://www.mongodb.com/try/download/compass",
+  "category": "databases",
+  "protocols": [
+    "mongodb"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "使用 MongoDB 的 GUI Compass，轻松探索和操作您的数据库。Compass 直观灵活，提供详细的架构可视化、实时性能指标、复杂的查询功能。",
+    "en": "asily explore and manipulate your database with Compass, the GUI for MongoDB. Intuitive and flexible, Compass provides detailed schema visualizations, real-time performance metrics, sophisticated querying abilities, and much more."
+  }
+}

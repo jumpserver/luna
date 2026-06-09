@@ -1,0 +1,23 @@
+{
+  "id": "demo.hello-terminal",
+  "name": "hello_terminal",
+  "display_name": "Hello Terminal (Demo)",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer Community",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "",
+  "category": "terminal",
+  "protocols": [
+    "ssh"
+  ],
+  "builtin": false,
+  "permissions": [
+    "exec",
+    "env_vars"
+  ],
+  "comment": {
+    "zh": "演示插件：读取 JMS_CONNECT_JSON 环境变量并打印连接信息，可用于验证插件加载与脚本执行链路。",
+    "en": "Demo plugin: reads JMS_CONNECT_JSON and prints connection info. Use it to verify plugin loading and script execution."
+  }
+}

@@ -13,6 +13,7 @@ const emit = defineEmits<{ (e: "toggle", value: boolean): void }>();
 const imageModules = import.meta.glob<{ default: string }>("@/assets/images/*.png", { eager: true });
 
 const { t, locale } = useI18n();
+const toast = useToast();
 const { isWindows } = usePlatform();
 const { language } = useSettingManager();
 const { setAppConfig } = useSettingManager();
@@ -58,7 +59,19 @@ const isWindowsPathPickTarget = computed(() => {
   return props.item?.is_internal === false && isWindows.value;
 });
 
-const canToggle = computed(() => !!(props.item?.path && props.item.path.trim()));
+const isUserPathPlugin = computed(() => props.item?.executable_type === "user_path");
+
+const canEnable = computed(() => {
+  if (isUserPathPlugin.value) {
+    return props.item?.path_exists === true;
+  }
+  return !!(props.item?.path && props.item.path.trim());
+});
+
+// user_path 类型保持开关可点击，以便在应用不存在时提示用户
+const switchDisabled = computed(() => {
+  return isUserPathPlugin.value ? false : !canEnable.value;
+});
 
 function getImageByName(filename: string): string | undefined {
   for (const path in imageModules) {
@@ -69,9 +82,27 @@ function getImageByName(filename: string): string | undefined {
   return undefined;
 };
 
+const showExecutableNotFoundToast = () => {
+  toast.add({
+    title: t("Setting.EnableFailed"),
+    description: t("Setting.ExecutableNotFound"),
+    color: "error",
+    icon: "line-md:close-circle",
+    progress: true,
+    duration: 4000
+  });
+};
+
 const onSwitch = (v: boolean) => {
-  if (!canToggle.value) return;
-  if (v) emit("toggle", true);
+  if (!v) return;
+
+  if (isUserPathPlugin.value && !canEnable.value) {
+    showExecutableNotFoundToast();
+    return;
+  }
+
+  if (!canEnable.value) return;
+  emit("toggle", true);
 };
 
 const openDownloadPage = async (url: string) => {
@@ -113,27 +144,38 @@ const onPathClick = () => {
 <template>
   <UCard>
     <template #header>
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <img
-            :src="iconSrc"
-            :alt="props.item.display_name"
-            loading="lazy"
-            class="w-10 h-10 p-1 object-contain rounded-md border border-black/5 dark:border-white/10 bg-gray-50 dark:bg-gray-800/60"
-          >
+      <div class="flex items-center gap-3">
+        <img
+          :src="iconSrc"
+          :alt="props.item.display_name"
+          loading="lazy"
+          class="h-10 w-10 shrink-0 rounded-md border border-black/5 bg-gray-50 p-1 object-contain dark:border-white/10 dark:bg-gray-800/60"
+        >
 
-          <div class="flex flex-col gap-1">
-            <p class="text-sm font-medium">
+        <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div class="flex items-center justify-between gap-3">
+            <p class="min-w-0 truncate text-sm leading-tight font-medium">
               {{ props.item.display_name }}
             </p>
 
-            <!-- Windows 下特定项显示路径选择，否则展示已有路径 -->
+            <USwitch
+              class="shrink-0"
+              unchecked-icon="i-lucide-x"
+              checked-icon="i-lucide-check"
+              :model-value="props.selected ?? false"
+              :disabled="switchDisabled"
+              @update:model-value="onSwitch"
+            />
+          </div>
+
+          <!-- Windows 下特定项显示路径选择，否则展示已有路径 -->
+          <div class="min-w-0">
             <template v-if="isWindowsPathPickTarget && !props.item.path">
               <UButton label="Select path" color="neutral" variant="outline" @click="selectExecutablePath()" />
             </template>
             <template v-else>
               <div
-                class="inline-flex items-center text-xs text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-white/10 rounded px-2 py-1 max-w-88 md:max-w-md truncate"
+                class="inline-flex max-w-full items-center truncate rounded bg-gray-100/80 px-2 py-0.5 text-xs leading-tight text-gray-600 dark:bg-white/10 dark:text-gray-300"
                 :class="{ 'cursor-pointer hover:bg-gray-200/60 dark:hover:bg-white/15': isWindowsPathPickTarget }"
                 :title="props.item.path || '-'"
                 @click="onPathClick"
@@ -143,21 +185,13 @@ const onPathClick = () => {
             </template>
           </div>
         </div>
-
-        <USwitch
-          unchecked-icon="i-lucide-x"
-          checked-icon="i-lucide-check"
-          :model-value="props.selected ?? false"
-          :disabled="!canToggle"
-          @update:model-value="onSwitch"
-        />
       </div>
     </template>
 
     <template #default>
-      <div class="flex w-full justify-between items-center">
-        <div class="flex flex-col gap-4">
-          <div class="flex items-center gap-2">
+      <div class="flex w-full items-start justify-between gap-3">
+        <div class="flex min-w-0 flex-1 flex-col gap-4">
+          <div class="flex flex-wrap items-center gap-2">
             <UBadge v-for="(p, idx) in props.item.protocol" :key="idx" color="info" variant="soft">
               {{ p.toUpperCase() }}
             </UBadge>
@@ -168,7 +202,7 @@ const onPathClick = () => {
           </div>
         </div>
 
-        <div>
+        <div class="shrink-0">
           <UButton
             v-if="props.item.download_url"
             size="sm"

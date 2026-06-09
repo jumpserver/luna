@@ -35,6 +35,8 @@ export interface ConfigItem {
   is_internal: boolean
   is_default: boolean
   is_set: boolean
+  executable_type?: string
+  path_exists?: boolean
 }
 
 export interface AppConfigType {

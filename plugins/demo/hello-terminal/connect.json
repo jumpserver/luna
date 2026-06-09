@@ -1,0 +1,34 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "system",
+        "default": "powershell.exe"
+      },
+      "launch": {
+        "type": "script",
+        "script": "scripts/launch.windows.ps1"
+      }
+    },
+    "macos": {
+      "executable": {
+        "type": "system",
+        "default": "osascript"
+      },
+      "launch": {
+        "type": "script",
+        "script": "scripts/launch.macos.applescript"
+      }
+    },
+    "linux": {
+      "executable": {
+        "type": "system",
+        "default": "bash"
+      },
+      "launch": {
+        "type": "script",
+        "script": "scripts/launch.linux.sh"
+      }
+    }
+  }
+}

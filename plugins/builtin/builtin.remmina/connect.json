@@ -1,0 +1,17 @@
+{
+  "platforms": {
+    "linux": {
+      "executable": {
+        "type": "bundled",
+        "default": "remmina"
+      },
+      "launch": {
+        "type": "file",
+        "extension": "rdp",
+        "open_with": "executable",
+        "arg_template": "{file}"
+      },
+      "display_name": "Remmina"
+    }
+  }
+}

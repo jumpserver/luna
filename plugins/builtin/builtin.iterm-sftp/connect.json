@@ -1,0 +1,15 @@
+{
+  "platforms": {
+    "macos": {
+      "executable": {
+        "type": "bundled",
+        "default": "iTerm2"
+      },
+      "launch": {
+        "type": "args",
+        "template": "{protocol} {username}@{host} -p {port} -P {value}"
+      },
+      "display_name": "iTerm2"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "builtin.remmina",
+  "name": "remmina",
+  "display_name": "Remmina",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://remmina.org/how-to-install-remmina/",
+  "category": "remotedesktop",
+  "protocols": [
+    "rdp"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "Remmina 是一个使用 GTK+ 开发的远程桌面客户端，提供了 RDP、VNC、XDMCP、SSH 等远程连接协议的支持。",
+    "en": "Remmina is a remote desktop client developed using GTK+, providing support for remote connection protocols such as RDP, VNC, XDMCP, and SSH."
+  }
+}

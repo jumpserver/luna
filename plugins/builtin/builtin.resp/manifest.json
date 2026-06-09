@@ -1,0 +1,19 @@
+{
+  "id": "builtin.resp",
+  "name": "resp",
+  "display_name": "Redis Desktop Manager",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://github.com/FuckDoctors/rdm-builder/releases/download/2022.5.1/resp-2022.5.1.exe",
+  "category": "databases",
+  "protocols": [
+    "redis"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "Redis Desktop Manager 是一款能够跨平台使用的开源 Redis 可视化工具，主要针对 Redis 开发设计。",
+    "en": "Redis Desktop Manager is an open source Redis visualization tool that can be used across platforms and is mainly designed for Redis development."
+  }
+}

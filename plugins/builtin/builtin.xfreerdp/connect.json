@@ -1,0 +1,15 @@
+{
+  "platforms": {
+    "linux": {
+      "executable": {
+        "type": "bundled",
+        "default": "xfreerdp"
+      },
+      "launch": {
+        "type": "args",
+        "template": "{file} /cert-ignore /d: /p:"
+      },
+      "display_name": "xFreeRDP"
+    }
+  }
+}
