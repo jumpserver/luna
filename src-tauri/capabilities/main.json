@@ -2,10 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
   "description": "Capabilities for the app window",
-  "windows": [
-    "main",
-    "secondary"
-  ],
+  "windows": ["main", "secondary"],
   "permissions": [
     "core:path:default",
     "core:event:default",
@@ -21,7 +18,23 @@
     "core:window:allow-center",
     "core:window:allow-close",
     "core:window:allow-start-dragging",
-    "shell:allow-open",
+    "opener:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "**"
+        }
+      ]
+    },
     {
       "identifier": "shell:allow-execute",
       "allow": [

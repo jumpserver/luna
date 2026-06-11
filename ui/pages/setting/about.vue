@@ -40,7 +40,7 @@ onMounted(async () => {
 
 const openLink = async (url: string) => {
   try {
-    await useTauriShellOpen(url);
+    await useTauriOpenerOpenUrl(url);
   } catch (e) {
     console.error("open link failed", e);
   }

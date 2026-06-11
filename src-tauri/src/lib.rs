@@ -1,6 +1,7 @@
 mod api;
 mod commands;
 mod http;
+mod transcode;
 mod service;
 mod setup;
 mod utils;
@@ -29,6 +30,7 @@ use crate::commands::video_player::{
     delete_video_player_file, read_video_player_text_stream, write_video_player_gzip_file,
 };
 use crate::commands::window_control::{close_window, minimize_window, toggle_maximize_window};
+use crate::transcode::transcode_replays;
 use crate::service::oauth::AuthFlowState;
 use crate::utils::is_auth_callback;
 
@@ -209,6 +211,7 @@ pub fn run() {
             write_video_player_gzip_file,
             read_video_player_text_stream,
             delete_video_player_file,
+            transcode_replays,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

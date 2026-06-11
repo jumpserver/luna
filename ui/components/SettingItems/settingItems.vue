@@ -106,7 +106,7 @@ const onSwitch = (v: boolean) => {
 };
 
 const openDownloadPage = async (url: string) => {
-  await useTauriShellOpen(url);
+  await useTauriOpenerOpenUrl(url);
 };
 
 const selectExecutablePath = async () => {
