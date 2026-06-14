@@ -1,3 +1,4 @@
+pub mod encoder;
 /// Replay transcoding module.
 ///
 /// Provides Tauri commands for converting JumpServer guacamole session
@@ -13,6 +14,8 @@ use serde::{Deserialize, Serialize};
 use std::io::Read;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
+#[cfg(windows)]
+use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -67,6 +70,28 @@ pub enum OutputResolution {
     P360,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum TranscodePower {
+    Auto,
+    #[default]
+    Full,
+    Fast,
+    Medium,
+    Low,
+}
+
+impl TranscodePower {
+    fn cpu_fraction(&self) -> f64 {
+        match self {
+            TranscodePower::Auto | TranscodePower::Full => 1.0,
+            TranscodePower::Fast => 0.75,
+            TranscodePower::Medium => 0.5,
+            TranscodePower::Low => 0.25,
+        }
+    }
+}
+
 impl OutputResolution {
     fn target_height(&self) -> Option<u32> {
         match self {
@@ -78,37 +103,27 @@ impl OutputResolution {
     }
 }
 
-fn compute_target_dimensions(src_width: u32, src_height: u32, resolution: &OutputResolution) -> (u32, u32) {
+fn compute_target_dimensions(
+    src_width: u32,
+    src_height: u32,
+    resolution: &OutputResolution,
+) -> (u32, u32) {
     let Some(target_h) = resolution.target_height() else {
-        return (src_width & !1, src_height & !1);
+        return (src_width & !15, src_height & !15);
     };
     if src_height <= target_h {
-        return (src_width & !1, src_height & !1);
+        return (src_width & !15, src_height & !15);
     }
     let scale = target_h as f64 / src_height as f64;
-    let w = ((src_width as f64 * scale).round() as u32).max(2) & !1;
-    let h = target_h & !1;
+    let w = ((src_width as f64 * scale).round() as u32).max(16) & !15;
+    let h = target_h & !15;
     (w, h)
 }
 
-fn scan_max_canvas_size(guac_data: &[u8]) -> (u32, u32) {
-    let mut parser = parser::Parser::new(guac_data);
-    let mut max_w: u32 = 1024;
-    let mut max_h: u32 = 768;
-    while let Some(inst) = parser.next_instruction() {
-        if inst.opcode == "size" && inst.args.len() >= 3 {
-            let lid: i32 = inst.args[0].parse().unwrap_or(-1);
-            if lid == 0 {
-                let w: u32 = inst.args[1].parse().unwrap_or(0);
-                let h: u32 = inst.args[2].parse().unwrap_or(0);
-                if w > 0 && h > 0 {
-                    max_w = max_w.max(w);
-                    max_h = max_h.max(h);
-                }
-            }
-        }
-    }
-    (max_w, max_h)
+pub(crate) fn bitrate_for_resolution(width: u32, height: u32) -> u32 {
+    let pixels = (width as u64) * (height as u64);
+    let bitrate = pixels * 50 / 10;
+    (bitrate as u32).clamp(800_000, 20_000_000)
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -160,6 +175,7 @@ pub async fn transcode_replays(
     output_dir: String,
     filename_style: Option<FilenameStyle>,
     output_resolution: Option<OutputResolution>,
+    transcode_power: Option<TranscodePower>,
 ) -> Result<Vec<TranscodeResult>, String> {
     let total = tar_paths.len();
     if total == 0 {
@@ -168,64 +184,213 @@ pub async fn transcode_replays(
 
     let style = filename_style.unwrap_or_default();
     let resolution = output_resolution.unwrap_or_default();
+    let power = transcode_power.unwrap_or_default();
 
     info!("starting replay transcoding: files={}", total);
 
-    let mut results = Vec::with_capacity(total);
+    #[cfg(not(windows))]
+    {
+        let mut results = Vec::with_capacity(total);
 
-    for (idx, tar_path_str) in tar_paths.into_iter().enumerate() {
-        let app_handle = app.clone();
-        let output_dir = output_dir.clone();
-        let style = style.clone();
-        let resolution = resolution.clone();
-        let panic_session_id = extract_session_id(
-            PathBuf::from(&tar_path_str)
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .as_ref(),
-        );
+        for (idx, tar_path_str) in tar_paths.into_iter().enumerate() {
+            let app_handle = app.clone();
+            let output_dir = output_dir.clone();
+            let style = style.clone();
+            let resolution = resolution.clone();
+            let power = power.clone();
+            let panic_session_id = extract_session_id(
+                PathBuf::from(&tar_path_str)
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .as_ref(),
+            );
 
-        let result = tokio::task::spawn_blocking(move || {
-            catch_unwind(AssertUnwindSafe(|| {
-                transcode_single_tar(app_handle, tar_path_str, output_dir, idx, total, style, resolution)
-            }))
-        })
-        .await;
+            let result = tokio::task::spawn_blocking(move || {
+                catch_unwind(AssertUnwindSafe(|| {
+                    transcode_single_tar(
+                        app_handle,
+                        tar_path_str,
+                        output_dir,
+                        idx,
+                        total,
+                        style,
+                        resolution,
+                        power,
+                    )
+                }))
+            })
+            .await;
 
-        match result {
-            Ok(Ok(task_result)) => results.push(task_result),
-            Ok(Err(panic_payload)) => {
-                let err = format!(
-                    "transcoding task panicked: {}",
-                    panic_payload_to_string(panic_payload)
-                );
-                emit_progress(&app, &panic_session_id, idx, total, 100.0, "failed".into(), Some(false), None, None, None);
-                results.push(TranscodeResult {
-                    id: panic_session_id,
-                    input: String::new(),
-                    output: String::new(),
-                    success: false,
-                    error: Some(err),
-                    metadata: None,
-                });
-            }
-            Err(e) => {
-                let err = format!("spawn transcoding task failed: {}", e);
-                emit_progress(&app, &panic_session_id, idx, total, 100.0, "failed".into(), Some(false), None, None, None);
-                results.push(TranscodeResult {
-                    id: panic_session_id,
-                    input: String::new(),
-                    output: String::new(),
-                    success: false,
-                    error: Some(err),
-                    metadata: None,
-                });
+            match result {
+                Ok(Ok(task_result)) => results.push(task_result),
+                Ok(Err(panic_payload)) => {
+                    let err = format!(
+                        "transcoding task panicked: {}",
+                        panic_payload_to_string(panic_payload)
+                    );
+                    emit_progress(
+                        &app,
+                        &panic_session_id,
+                        idx,
+                        total,
+                        100.0,
+                        "failed".into(),
+                        Some(false),
+                        None,
+                        None,
+                        None,
+                    );
+                    results.push(TranscodeResult {
+                        id: panic_session_id,
+                        input: String::new(),
+                        output: String::new(),
+                        success: false,
+                        error: Some(err),
+                        metadata: None,
+                    });
+                }
+                Err(e) => {
+                    let err = format!("spawn transcoding task failed: {}", e);
+                    emit_progress(
+                        &app,
+                        &panic_session_id,
+                        idx,
+                        total,
+                        100.0,
+                        "failed".into(),
+                        Some(false),
+                        None,
+                        None,
+                        None,
+                    );
+                    results.push(TranscodeResult {
+                        id: panic_session_id,
+                        input: String::new(),
+                        output: String::new(),
+                        success: false,
+                        error: Some(err),
+                        metadata: None,
+                    });
+                }
             }
         }
+
+        Ok(results)
     }
 
-    Ok(results)
+    #[cfg(windows)]
+    {
+        const MAX_CONCURRENT: usize = 2;
+        let semaphore = Arc::new(tokio::sync::Semaphore::new(MAX_CONCURRENT));
+        let mut handles = Vec::with_capacity(total);
+
+        info!(
+            "Windows parallel transcoding: files={}, concurrency={}",
+            total, MAX_CONCURRENT
+        );
+
+        for (idx, tar_path_str) in tar_paths.into_iter().enumerate() {
+            let app_handle = app.clone();
+            let output_dir = output_dir.clone();
+            let style = style.clone();
+            let resolution = resolution.clone();
+            let power = power.clone();
+            let permit = semaphore.clone().acquire_owned().await.unwrap();
+            let panic_session_id = extract_session_id(
+                PathBuf::from(&tar_path_str)
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .as_ref(),
+            );
+
+            let handle = tokio::task::spawn_blocking(move || {
+                let _permit = permit;
+                catch_unwind(AssertUnwindSafe(|| {
+                    transcode_single_tar(
+                        app_handle,
+                        tar_path_str,
+                        output_dir,
+                        idx,
+                        total,
+                        style,
+                        resolution,
+                        power,
+                    )
+                }))
+            });
+
+            handles.push((idx, panic_session_id, handle));
+        }
+
+        let mut results = Vec::with_capacity(total);
+
+        for (idx, panic_session_id, handle) in handles {
+            let result = handle.await;
+            match result {
+                Ok(Ok(task_result)) => results.push((idx, task_result)),
+                Ok(Err(panic_payload)) => {
+                    let err = format!(
+                        "transcoding task panicked: {}",
+                        panic_payload_to_string(panic_payload)
+                    );
+                    emit_progress(
+                        &app,
+                        &panic_session_id,
+                        idx,
+                        total,
+                        100.0,
+                        "failed".into(),
+                        Some(false),
+                        None,
+                        None,
+                        None,
+                    );
+                    results.push((
+                        idx,
+                        TranscodeResult {
+                            id: panic_session_id,
+                            input: String::new(),
+                            output: String::new(),
+                            success: false,
+                            error: Some(err),
+                            metadata: None,
+                        },
+                    ));
+                }
+                Err(e) => {
+                    let err = format!("spawn transcoding task failed: {}", e);
+                    emit_progress(
+                        &app,
+                        &panic_session_id,
+                        idx,
+                        total,
+                        100.0,
+                        "failed".into(),
+                        Some(false),
+                        None,
+                        None,
+                        None,
+                    );
+                    results.push((
+                        idx,
+                        TranscodeResult {
+                            id: panic_session_id,
+                            input: String::new(),
+                            output: String::new(),
+                            success: false,
+                            error: Some(err),
+                            metadata: None,
+                        },
+                    ));
+                }
+            }
+        }
+
+        results.sort_by_key(|(idx, _)| *idx);
+        Ok(results.into_iter().map(|(_, r)| r).collect())
+    }
 }
 
 fn panic_payload_to_string(payload: Box<dyn std::any::Any + Send>) -> String {
@@ -246,6 +411,7 @@ fn transcode_single_tar(
     total: usize,
     style: FilenameStyle,
     resolution: OutputResolution,
+    power: TranscodePower,
 ) -> TranscodeResult {
     let tar_path = PathBuf::from(&tar_path_str);
     let tar_name = tar_path
@@ -269,7 +435,7 @@ fn transcode_single_tar(
                 Some(false),
                 None,
                 None,
-            None,
+                None,
             );
             return TranscodeResult {
                 id: sid,
@@ -297,7 +463,7 @@ fn transcode_single_tar(
                 Some(false),
                 None,
                 None,
-            None,
+                None,
             );
             return TranscodeResult {
                 id: fallback_session_id,
@@ -309,14 +475,6 @@ fn transcode_single_tar(
             };
         }
     };
-
-    info!(
-        "session: id={}, asset={}, user={}, parts={}",
-        metadata.id,
-        metadata.asset,
-        metadata.user,
-        extraction.parts.len()
-    );
 
     // First per-task event — ship the metadata so the UI can show session
     // details the moment the task appears in the list.
@@ -330,7 +488,7 @@ fn transcode_single_tar(
         None,
         None,
         Some(metadata.clone()),
-    None,
+        None,
     );
 
     let inner_result = transcode_single_tar_inner(
@@ -342,13 +500,11 @@ fn transcode_single_tar(
         total,
         &style,
         &resolution,
+        &power,
     );
 
     let (output_path, success, error_message) = match &inner_result {
-        Ok(path) => {
-            info!("transcode success: {} → {}", tar_path_str, path);
-            (path.clone(), true, None)
-        }
+        Ok(path) => (path.clone(), true, None),
         Err(err) => {
             error!("transcode failed for {}: {}", tar_name, err);
             (String::new(), false, Some(err.clone()))
@@ -499,6 +655,7 @@ fn transcode_single_tar_inner(
     total: usize,
     style: &FilenameStyle,
     resolution: &OutputResolution,
+    power: &TranscodePower,
 ) -> Result<String, String> {
     let session_id = &metadata.id;
 
@@ -510,12 +667,6 @@ fn transcode_single_tar_inner(
             .map_err(|e| format!("gzip decompress failed for part {}: {}", idx, e))?;
     }
 
-    info!(
-        "decompressed guacamole data: {} bytes from {} part(s)",
-        guac_data.len(),
-        parts.len()
-    );
-
     std::fs::create_dir_all(output_dir).map_err(|e| format!("create output dir failed: {}", e))?;
 
     let output_path = PathBuf::from(output_dir).join(build_output_filename(metadata, style));
@@ -525,23 +676,28 @@ fn transcode_single_tar_inner(
     let app_clone = app.clone();
     let session_id_clone = session_id.to_string();
 
-    match transcode::transcode_to_mp4(&guac_data, &output_path, resolution.clone(), move |pct| {
-        emit_progress(
-            &app_clone,
-            &session_id_clone,
-            file_index,
-            total,
-            pct,
-            format!("encoding: {:.0}%", pct),
-            None,
-            None,
-            None,
-            None,
-        );
-    }) {
+    match transcode::transcode_to_mp4(
+        &guac_data,
+        &output_path,
+        resolution.clone(),
+        power.cpu_fraction(),
+        move |pct| {
+            emit_progress(
+                &app_clone,
+                &session_id_clone,
+                file_index,
+                total,
+                pct,
+                format!("encoding: {:.0}%", pct),
+                None,
+                None,
+                None,
+                None,
+            );
+        },
+    ) {
         Ok(()) => {
             let duration = transcode_start.elapsed().as_secs_f64();
-            info!("transcoding completed in {:.2}s", duration);
             emit_progress(
                 app,
                 session_id,

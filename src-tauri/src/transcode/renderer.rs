@@ -177,12 +177,10 @@ impl Renderer {
 
         let bytes = match base64::engine::general_purpose::STANDARD.decode(args[1]) {
             Ok(b) => b,
-            Err(_) => {
-                match base64::engine::general_purpose::URL_SAFE.decode(args[1]) {
-                    Ok(b) => b,
-                    Err(_) => return,
-                }
-            }
+            Err(_) => match base64::engine::general_purpose::URL_SAFE.decode(args[1]) {
+                Ok(b) => b,
+                Err(_) => return,
+            },
         };
 
         stream.data.extend_from_slice(&bytes);
@@ -331,9 +329,15 @@ impl Renderer {
                         // Integer alpha blending: faster than floating-point
                         let a_u32 = a as u32;
                         let inv_a = 255 - a_u32;
-                        frame[dst_idx] = ((pixel.0[0] as u32 * a_u32 + frame[dst_idx] as u32 * inv_a) / 255) as u8;
-                        frame[dst_idx + 1] = ((pixel.0[1] as u32 * a_u32 + frame[dst_idx + 1] as u32 * inv_a) / 255) as u8;
-                        frame[dst_idx + 2] = ((pixel.0[2] as u32 * a_u32 + frame[dst_idx + 2] as u32 * inv_a) / 255) as u8;
+                        frame[dst_idx] = ((pixel.0[0] as u32 * a_u32
+                            + frame[dst_idx] as u32 * inv_a)
+                            / 255) as u8;
+                        frame[dst_idx + 1] = ((pixel.0[1] as u32 * a_u32
+                            + frame[dst_idx + 1] as u32 * inv_a)
+                            / 255) as u8;
+                        frame[dst_idx + 2] = ((pixel.0[2] as u32 * a_u32
+                            + frame[dst_idx + 2] as u32 * inv_a)
+                            / 255) as u8;
                     }
                 }
             }

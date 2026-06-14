@@ -83,7 +83,7 @@
     "EmptyArchives": "Add replay archives to transcode",
     "OutputTitle": "Output directory",
     "OutputHint": "Generated MP4 files will be written to this directory.",
-    "OutputDirectory": "Current output directory",
+    "OutputDirectory": "Output directory",
     "OutputDirPlaceholder": "No output directory selected",
     "SelectOutputDir": "Select output directory",
     "Start": "Start transcoding",
@@ -136,7 +136,16 @@
     "ResolutionOriginal": "Original",
     "Resolution1080p": "1080p (1920×1080)",
     "Resolution720p": "720p (1280×720)",
-    "Resolution360p": "360p (640×360)"
+    "Resolution360p": "360p (640×360)",
+    "TranscodeStarted": "Transcoding may take a while. Please keep the app open and wait patiently!",
+    "TranscodePower": "Transcode power",
+    "TranscodePowerHint": "Different power modes use a corresponding share of system CPU for transcoding, which affects transcoding efficiency",
+    "PowerAuto": "Auto",
+    "PowerAutoHint": "Windows uses the system encoding pipeline; transcoding power is managed automatically",
+    "PowerFull": "Full speed (all CPUs)",
+    "PowerFast": "Fast (3/4 CPU)",
+    "PowerMedium": "Medium (1/2 CPU)",
+    "PowerLow": "Low (1/4 CPU)"
   },
   "AssetCard": {
     "Activated": "Activated",

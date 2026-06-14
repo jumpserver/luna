@@ -1,9 +1,9 @@
 mod api;
 mod commands;
 mod http;
-mod transcode;
 mod service;
 mod setup;
+mod transcode;
 mod utils;
 
 use crate::setup::apply_window_effects;
@@ -30,8 +30,8 @@ use crate::commands::video_player::{
     delete_video_player_file, read_video_player_text_stream, write_video_player_gzip_file,
 };
 use crate::commands::window_control::{close_window, minimize_window, toggle_maximize_window};
-use crate::transcode::transcode_replays;
 use crate::service::oauth::AuthFlowState;
+use crate::transcode::transcode_replays;
 use crate::utils::is_auth_callback;
 
 use log::{error, info, warn};

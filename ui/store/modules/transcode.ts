@@ -3,57 +3,58 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 export type TranscodeTaskStatus = "pending" | "queued" | "processing" | "success" | "error";
 export type FilenameStyle = "original" | "friendly" | "friendly_uuid";
 export type OutputResolution = "original" | "p1080" | "p720" | "p360";
+export type TranscodePower = "auto" | "full" | "fast" | "medium" | "low";
 
 export interface ReplayMetadata {
-  id: string
-  user: string
-  asset: string
-  account: string
-  login_from: string
-  remote_addr: string
-  protocol: string
-  date_start: string
-  date_end: string
-  org_id: string
-  user_id: string
-  asset_id: string
-  account_id: string
-  recording_type: string
-  files: unknown[]
+  id: string;
+  user: string;
+  asset: string;
+  account: string;
+  login_from: string;
+  remote_addr: string;
+  protocol: string;
+  date_start: string;
+  date_end: string;
+  org_id: string;
+  user_id: string;
+  asset_id: string;
+  account_id: string;
+  recording_type: string;
+  files: unknown[];
 }
 
 export interface TranscodeProgressPayload {
-  file: string
-  index: number
-  total: number
-  progress: number
-  message: string
-  success?: boolean | null
-  output?: string | null
-  metadata?: ReplayMetadata | null
-  duration?: number | null
+  file: string;
+  index: number;
+  total: number;
+  progress: number;
+  message: string;
+  success?: boolean | null;
+  output?: string | null;
+  metadata?: ReplayMetadata | null;
+  duration?: number | null;
 }
 
 export interface TranscodeResult {
-  id: string
-  input: string
-  output: string
-  success: boolean
-  error?: string
-  metadata?: ReplayMetadata | null
+  id: string;
+  input: string;
+  output: string;
+  success: boolean;
+  error?: string;
+  metadata?: ReplayMetadata | null;
 }
 
 export interface TranscodeTaskItem {
-  index: number
-  path: string
-  displayName: string
-  progress: number
-  message: string
-  status: TranscodeTaskStatus
-  output: string
-  error: string
-  metadata: ReplayMetadata | null
-  duration?: number | null
+  index: number;
+  path: string;
+  displayName: string;
+  progress: number;
+  message: string;
+  status: TranscodeTaskStatus;
+  output: string;
+  error: string;
+  metadata: ReplayMetadata | null;
+  duration?: number | null;
 }
 
 let listenerRegistered = false;
@@ -68,44 +69,29 @@ export const useTranscodeStore = defineStore(
     const outputDir = ref("");
     const filenameStyle = ref<FilenameStyle>("original");
     const outputResolution = ref<OutputResolution>("original");
+    const transcodePower = ref<TranscodePower>("fast");
     const isTranscoding = ref(false);
     const taskItems = ref<TranscodeTaskItem[]>([]);
     const pendingPaths = ref<string[]>([]);
     const currentBatchOffset = ref(0);
     const unlistenProgress = ref<UnlistenFn | null>(null);
 
-    const queuedCount = computed(
-      () => taskItems.value.filter((item) => item.status === "queued").length
-    );
+    const queuedCount = computed(() => taskItems.value.filter((item) => item.status === "queued").length);
     const totalProgress = computed(() => {
       const active = taskItems.value.filter((item) => item.status !== "queued");
       if (!active.length) return 0;
       const sum = active.reduce((acc, item) => acc + (item.progress || 0), 0);
       return Math.round(sum / active.length);
     });
-    const successCount = computed(
-      () => taskItems.value.filter((item) => item.status === "success").length
-    );
-    const failedCount = computed(
-      () => taskItems.value.filter((item) => item.status === "error").length
-    );
-    const processingCount = computed(
-      () => taskItems.value.filter((item) => item.status === "processing").length
-    );
+    const successCount = computed(() => taskItems.value.filter((item) => item.status === "success").length);
+    const failedCount = computed(() => taskItems.value.filter((item) => item.status === "error").length);
+    const processingCount = computed(() => taskItems.value.filter((item) => item.status === "processing").length);
     const completedCount = computed(() => successCount.value + failedCount.value);
-    const canStart = computed(
-      () =>
-        taskItems.value.some((item) => item.status === "pending") &&
-        !isTranscoding.value
-    );
+    const canStart = computed(() => taskItems.value.some((item) => item.status === "pending") && !isTranscoding.value);
 
     const getDisplayName = (path: string) => path.split(/[\\/]/).pop() || path;
 
-    const buildTaskItem = (
-      path: string,
-      index: number,
-      previous?: TranscodeTaskItem
-    ): TranscodeTaskItem => ({
+    const buildTaskItem = (path: string, index: number, previous?: TranscodeTaskItem): TranscodeTaskItem => ({
       index,
       path,
       displayName: getDisplayName(path),
@@ -114,7 +100,8 @@ export const useTranscodeStore = defineStore(
       status: previous?.status ?? "pending",
       output: previous?.output ?? "",
       error: previous?.error ?? "",
-      metadata: previous?.metadata ?? null
+      metadata: previous?.metadata ?? null,
+      duration: previous?.duration ?? null
     });
 
     const buildQueuedTask = (path: string, index: number): TranscodeTaskItem => ({
@@ -131,9 +118,7 @@ export const useTranscodeStore = defineStore(
 
     const rebuildTaskItems = (paths: string[]) => {
       const previous = new Map(taskItems.value.map((item) => [item.path, item]));
-      taskItems.value = paths.map((path, index) =>
-        buildTaskItem(path, index, previous.get(path))
-      );
+      taskItems.value = paths.map((path, index) => buildTaskItem(path, index, previous.get(path)));
     };
 
     const patchTaskItem = (index: number, patch: Partial<TranscodeTaskItem>) => {
@@ -180,12 +165,6 @@ export const useTranscodeStore = defineStore(
         const base = taskItems.value.length;
         const queuedItems = next.map((path, i) => buildQueuedTask(path, base + i));
         taskItems.value = [...taskItems.value, ...queuedItems];
-        console.info(
-          "[transcode] append (queued): added=%d pending=%d taskItems=%d",
-          next.length,
-          pendingPaths.value.length,
-          taskItems.value.length
-        );
         return;
       }
       const existingPaths = taskItems.value.map((item) => item.path);
@@ -223,36 +202,17 @@ export const useTranscodeStore = defineStore(
       );
       pendingPaths.value = [];
       archivePaths.value = paths;
-      taskItems.value = [
-        ...completed,
-        ...paths.map((path, index) => buildTaskItem(path, completed.length + index))
-      ];
-      console.info(
-        "[transcode] flushQueue: nextBatch=%d completed=%d taskItems=%d",
-        paths.length,
-        completed.length,
-        taskItems.value.length
-      );
+      taskItems.value = [...completed, ...paths.map((path, index) => buildTaskItem(path, completed.length + index))];
       return true;
     };
 
-    const tryAdvanceQueue = (reason: string): boolean => {
+    const tryAdvanceQueue = (): boolean => {
       const stats = taskItems.value.reduce(
         (acc, item) => {
           acc[item.status] = (acc[item.status] || 0) + 1;
           return acc;
         },
         {} as Record<string, number>
-      );
-      console.info(
-        "[transcode] tryAdvanceQueue(%s): pending=%d queued=%d processing=%d success=%d error=%d queueLen=%d",
-        reason,
-        stats.pending ?? 0,
-        stats.queued ?? 0,
-        stats.processing ?? 0,
-        stats.success ?? 0,
-        stats.error ?? 0,
-        pendingPaths.value.length
       );
 
       const inFlight = (stats.pending ?? 0) + (stats.processing ?? 0);
@@ -267,25 +227,14 @@ export const useTranscodeStore = defineStore(
 
       const queuedItems = taskItems.value.filter((item) => item.status === "queued");
       if (!queuedItems.length) {
-        console.info("[transcode] no queued items to promote");
         return false;
       }
 
-      const completed = taskItems.value.filter(
-        (item) => item.status === "success" || item.status === "error"
-      );
+      const completed = taskItems.value.filter((item) => item.status === "success" || item.status === "error");
       archivePaths.value = queuedItems.map((item) => item.path);
-      const promoted = queuedItems.map((item, index) =>
-        buildTaskItem(item.path, completed.length + index)
-      );
+      const promoted = queuedItems.map((item, index) => buildTaskItem(item.path, completed.length + index));
       taskItems.value = [...completed, ...promoted];
       currentBatchOffset.value = completed.length;
-      console.info(
-        "[transcode] promoted %d queued item(s) to pending; completed=%d offset=%d",
-        promoted.length,
-        completed.length,
-        currentBatchOffset.value
-      );
       return true;
     };
 
@@ -301,10 +250,18 @@ export const useTranscodeStore = defineStore(
       outputResolution.value = resolution;
     };
 
+    const setTranscodePower = (power: TranscodePower) => {
+      transcodePower.value = power;
+    };
+
     const findTaskIndexByFile = (file: string): number => {
       if (!file) return -1;
       return taskItems.value.findIndex(
-        (item) => item.displayName === file || item.path === file || item.path.endsWith(`/${file}`) || item.path.endsWith(`\\${file}`)
+        (item) =>
+          item.displayName === file ||
+          item.path === file ||
+          item.path.endsWith(`/${file}`) ||
+          item.path.endsWith(`\\${file}`)
       );
     };
 
@@ -314,11 +271,7 @@ export const useTranscodeStore = defineStore(
       if (typeof payload.index === "number") {
         const global = currentBatchOffset.value + payload.index;
         const candidate = taskItems.value[global];
-        if (
-          candidate &&
-          candidate.status !== "success" &&
-          candidate.status !== "error"
-        ) {
+        if (candidate && candidate.status !== "success" && candidate.status !== "error") {
           targetIndex = global;
         }
       }
@@ -346,9 +299,7 @@ export const useTranscodeStore = defineStore(
       const incomingDuration = payload.duration ?? null;
 
       if (successFlag === true || successFlag === false) {
-        const message = successFlag
-          ? t("Transcode.Completed")
-          : payload.message || t("Transcode.StatusFailed");
+        const message = successFlag ? t("Transcode.Completed") : payload.message || t("Transcode.StatusFailed");
         markTaskCompleted(targetIndex, successFlag, outputValue, message, incomingMetadata, incomingDuration);
         return;
       }
@@ -364,10 +315,7 @@ export const useTranscodeStore = defineStore(
     const findTaskIndexForResult = (result: TranscodeResult): number => {
       if (result.input) {
         const byInput = taskItems.value.findIndex(
-          (item) =>
-            item.path === result.input &&
-            item.status !== "success" &&
-            item.status !== "error"
+          (item) => item.path === result.input && item.status !== "success" && item.status !== "error"
         );
         if (byInput !== -1) return byInput;
       }
@@ -388,47 +336,27 @@ export const useTranscodeStore = defineStore(
         return taskItems.value.findIndex((item) => {
           if (item.status === "success" || item.status === "error") return false;
           const base = item.path.split(/[\\/]/).pop() || "";
-          return (
-            item.path === sessionId ||
-            base === sessionId ||
-            base === `${sessionId}.tar`
-          );
+          return item.path === sessionId || base === sessionId || base === `${sessionId}.tar`;
         });
       }
       return -1;
     };
 
     const applyBatchResults = (results: TranscodeResult[]) => {
-      let matched = 0;
-      let unmatched = 0;
       results.forEach((result) => {
         const targetIndex = findTaskIndexForResult(result);
         if (targetIndex === -1) {
-          unmatched += 1;
-          console.warn(
-            "[transcode] applyBatchResults: no task matched id=%s input=%s",
-            result.id,
-            result.input
-          );
+          console.warn("[transcode] applyBatchResults: no task matched id=%s input=%s", result.id, result.input);
           return;
         }
-        matched += 1;
         markTaskCompleted(
           targetIndex,
           result.success,
           result.output,
-          result.success
-            ? t("Transcode.Completed")
-            : result.error || t("Transcode.StatusFailed"),
+          result.success ? t("Transcode.Completed") : result.error || t("Transcode.StatusFailed"),
           result.metadata ?? null
         );
       });
-      console.info(
-        "[transcode] applyBatchResults: matched=%d unmatched=%d total=%d",
-        matched,
-        unmatched,
-        results.length
-      );
     };
 
     const markAllPendingAsError = (message: string) => {
@@ -474,25 +402,18 @@ export const useTranscodeStore = defineStore(
     const registerProgressListener = async () => {
       if (listenerRegistered) return;
       listenerRegistered = true;
-      unlistenProgress.value = await useTauriEventListen(
-        "transcode-progress",
-        (event) => {
-          handleProgressEvent(event.payload as TranscodeProgressPayload);
-        }
-      );
+      unlistenProgress.value = await useTauriEventListen("transcode-progress", (event) => {
+        handleProgressEvent(event.payload as TranscodeProgressPayload);
+      });
     };
 
     void registerProgressListener();
 
     const startTranscode = async (options?: { chained?: boolean }) => {
       if (!options?.chained) {
-        const pendingItems = taskItems.value.filter(
-          (item) => item.status === "pending"
-        );
+        const pendingItems = taskItems.value.filter((item) => item.status === "pending");
         if (!pendingItems.length) {
-          console.warn(
-            "[transcode] startTranscode: no pending tasks, skipping"
-          );
+          console.warn("[transcode] startTranscode: no pending tasks, skipping");
           return;
         }
       }
@@ -510,31 +431,18 @@ export const useTranscodeStore = defineStore(
 
       isTranscoding.value = true;
       if (!options?.chained) {
-        const pendingItems = taskItems.value.filter(
-          (item) => item.status === "pending"
-        );
+        const pendingItems = taskItems.value.filter((item) => item.status === "pending");
         archivePaths.value = pendingItems.map((item) => item.path);
         // Offset = number of completed tasks before the first pending task
-        const firstPendingIndex = taskItems.value.findIndex(
-          (item) => item.status === "pending"
-        );
+        const firstPendingIndex = taskItems.value.findIndex((item) => item.status === "pending");
         currentBatchOffset.value = firstPendingIndex >= 0 ? firstPendingIndex : 0;
       }
 
       if (!archivePaths.value.length) {
-        console.warn(
-          "[transcode] startTranscode: archivePaths empty after filter, skipping"
-        );
+        console.warn("[transcode] startTranscode: archivePaths empty after filter, skipping");
         isTranscoding.value = false;
         return;
       }
-
-      console.info(
-        "[transcode] startTranscode: batch=%d chained=%s offset=%d",
-        archivePaths.value.length,
-        String(!!options?.chained),
-        currentBatchOffset.value
-      );
 
       try {
         try {
@@ -542,21 +450,14 @@ export const useTranscodeStore = defineStore(
             tarPaths: archivePaths.value,
             outputDir: outputDir.value,
             filenameStyle: filenameStyle.value,
-            outputResolution: outputResolution.value
+            outputResolution: outputResolution.value,
+            transcodePower: transcodePower.value
           })) as TranscodeResult[];
 
-          console.info(
-            "[transcode] batch returned: results=%d",
-            results.length
-          );
           applyBatchResults(results);
         } catch (error) {
           const message =
-            error instanceof Error
-              ? error.message
-              : typeof error === "string"
-                ? error
-                : t("Transcode.UnknownError");
+            error instanceof Error ? error.message : typeof error === "string" ? error : t("Transcode.UnknownError");
 
           markAllPendingAsError(message);
 
@@ -570,16 +471,11 @@ export const useTranscodeStore = defineStore(
           });
         }
 
-        const chained = tryAdvanceQueue("post-batch");
+        const chained = tryAdvanceQueue();
         if (!chained) {
-          console.info("[transcode] queue empty; ending chain");
           return;
         }
 
-        // Hand off to the next batch. The finally block runs on the current
-        // invocation regardless, so isTranscoding stays true throughout the
-        // chain.
-        console.info("[transcode] chaining into next batch");
         await startTranscode({ chained: true });
       } finally {
         isTranscoding.value = false;
@@ -591,6 +487,7 @@ export const useTranscodeStore = defineStore(
       outputDir,
       filenameStyle,
       outputResolution,
+      transcodePower,
       isTranscoding,
       taskItems,
       pendingPaths,
@@ -608,9 +505,17 @@ export const useTranscodeStore = defineStore(
       setOutputDir,
       setFilenameStyle,
       setOutputResolution,
+      setTranscodePower,
       applyBatchResults,
       markAllPendingAsError,
       startTranscode
     };
+  },
+  {
+    persist: {
+      key: "transcode",
+      storage: localStorage,
+      pick: ["outputDir", "filenameStyle", "outputResolution", "transcodePower"]
+    }
   }
 );

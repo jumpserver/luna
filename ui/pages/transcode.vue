@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
 import { useTranscodeStore } from "~/store/modules/transcode";
-import type { FilenameStyle, OutputResolution } from "~/store/modules/transcode";
+import type { FilenameStyle, OutputResolution, TranscodePower } from "~/store/modules/transcode";
 
 definePageMeta({
   layout: "default"
@@ -9,6 +9,7 @@ definePageMeta({
 
 const { t } = useI18n();
 const toast = useToast();
+const { isWindows } = usePlatform();
 
 const store = useTranscodeStore();
 const {
@@ -16,6 +17,7 @@ const {
   outputDir,
   filenameStyle,
   outputResolution,
+  transcodePower,
   isTranscoding,
   taskItems,
   totalProgress,
@@ -86,15 +88,9 @@ const formatDuration = (seconds?: number | null): string => {
 
 const hasTasks = computed(() => taskItems.value.length > 0);
 const hasActiveTasks = computed(() => processingCount.value > 0 || completedCount.value > 0);
-const hasPendingOrActiveTasks = computed(() =>
-  taskItems.value.some((item) => item.status === "pending" || item.status === "processing" || item.status === "queued")
-);
 
 const pickArchivesSmart = async () => {
-  const append = hasPendingOrActiveTasks.value;
-  if (!append && taskItems.value.length > 0) {
-    store.clearArchives();
-  }
+  const append = taskItems.value.length > 0;
   await pickArchives(append);
 };
 
@@ -173,6 +169,29 @@ const selectedOutputResolution = computed<OutputResolution>({
   set: (val: OutputResolution) => store.setOutputResolution(val)
 });
 
+const transcodePowerItems = computed(() => {
+  if (isWindows.value) {
+    return [{ label: t("Transcode.PowerAuto"), value: "auto" as TranscodePower }];
+  }
+  return [
+    { label: t("Transcode.PowerFull"), value: "full" as TranscodePower },
+    { label: t("Transcode.PowerFast"), value: "fast" as TranscodePower },
+    { label: t("Transcode.PowerMedium"), value: "medium" as TranscodePower },
+    { label: t("Transcode.PowerLow"), value: "low" as TranscodePower }
+  ];
+});
+
+const selectedTranscodePower = computed<TranscodePower>({
+  get: () => transcodePower.value,
+  set: (val: TranscodePower) => store.setTranscodePower(val)
+});
+
+watch(isWindows, (win) => {
+  if (win) {
+    store.setTranscodePower("auto");
+  }
+}, { immediate: true });
+
 const openSettings = () => {
   settingsOpen.value = true;
 };
@@ -183,6 +202,13 @@ const handleStartTranscode = () => {
     return;
   }
   store.startTranscode();
+  toast.add({
+    title: t("Transcode.Title"),
+    description: t("Transcode.TranscodeStarted"),
+    color: "primary",
+    icon: "i-lucide-info",
+    duration: 5000
+  });
 };
 
 const confirmAndOpenSettings = () => {
@@ -213,7 +239,7 @@ watch(outputDir, () => {
         <template #header>
           <div class="flex flex-col gap-3">
             <div class="flex items-center gap-3">
-              <UIcon name="lucide:clapperboard" class="text-primary h-5 w-5 shrink-0" />
+              <UIcon name="lucide:repeat-2" class="text-primary h-5 w-5 shrink-0" />
               <p class="text-base font-medium flex-1 min-w-0">
                 {{ t("Transcode.Title") }}
               </p>
@@ -337,17 +363,17 @@ watch(outputDir, () => {
                   </div>
 
                   <div class="flex items-center gap-1.5 shrink-0">
-                    <UBadge :color="getStatusColor(item.status)" variant="soft" size="sm">
-                      {{ getStatusLabel(item.status) }}
-                    </UBadge>
-
                     <UBadge
                       v-if="item.status === 'success' && item.duration != null"
                       color="neutral"
-                      variant="soft"
+                      variant="subtle"
                       size="sm"
                     >
                       耗时 {{ formatDuration(item.duration) }}
+                    </UBadge>
+
+                    <UBadge :color="getStatusColor(item.status)" variant="soft" size="sm">
+                      {{ getStatusLabel(item.status) }}
                     </UBadge>
 
                     <UButton
@@ -458,6 +484,25 @@ watch(outputDir, () => {
               class="mt-2 w-full"
               :disabled="isTranscoding"
             />
+          </div>
+
+          <div>
+            <div class="flex items-center gap-1.5">
+              <label class="text-sm font-medium">{{ t("Transcode.TranscodePower") }}</label>
+              <UTooltip :text="t('Transcode.TranscodePowerHint')">
+                <UIcon name="i-lucide-info" class="h-3.5 w-3.5 text-gray-400 cursor-help" />
+              </UTooltip>
+            </div>
+            <USelect
+              v-model="selectedTranscodePower"
+              :items="transcodePowerItems"
+              value-key="value"
+              class="mt-2 w-full"
+              :disabled="isTranscoding || isWindows"
+            />
+            <p v-if="isWindows" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ t("Transcode.PowerAutoHint") }}
+            </p>
           </div>
         </div>
       </template>

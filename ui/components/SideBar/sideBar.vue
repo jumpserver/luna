@@ -71,13 +71,13 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
     },
     {
       label: t("Menu.Player"),
-      icon: "line-md:play",
+      icon: "lucide:clapperboard",
       to: localePath("videoplayer"),
       disabled: isLoading.value
     },
     {
       label: t("Menu.Transcode"),
-      icon: "lucide:clapperboard",
+      icon: "lucide:repeat-2",
       to: localePath({ path: "/transcode" }),
       disabled: isLoading.value
     }
