@@ -29,6 +29,22 @@
               <div class="loading-bar-progress"></div>
             </div>
           </ng-container>
+
+          <ng-container *ngIf="content.customContent?.type === 'otp_code'">
+            <div class="otp-code-box">
+              <input
+                #otpCodeInput
+                [(ngModel)]="otpCode"
+                (ngModelChange)="onOTPCodeInput()"
+                [placeholder]="'OTP Code' | translate"
+                autocomplete="one-time-code"
+                inputmode="numeric"
+                maxlength="16"
+                nz-input
+              />
+              <div *ngIf="otpCodeError" class="otp-code-error">{{ otpCodeError }}</div>
+            </div>
+          </ng-container>
         </ng-template>
       </nz-alert>
     </div>
@@ -47,7 +63,12 @@
 
   <div *nzModalFooter class="nz-modal-footer">
     <ng-container *ngFor="let action of content.actions">
-      <button nz-button [nzType]="action.type || 'default'" (click)="action.callback()">
+      <button
+        nz-button
+        [nzLoading]="code === 'otp_code_verify' && action.type === 'primary' && otpCodeSubmitting"
+        [nzType]="action.type || 'default'"
+        (click)="action.callback()"
+      >
         {{ action.text | translate }}
       </button>
     </ng-container>

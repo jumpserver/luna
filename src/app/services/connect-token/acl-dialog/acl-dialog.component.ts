@@ -3,7 +3,7 @@ import {I18nService} from '@app/services/i18n';
 import {HttpService} from '@app/services/http';
 import {FaceService} from '@app/services/face';
 import {HttpErrorResponse} from '@angular/common/http';
-import {Component, Inject, OnInit} from '@angular/core';
+import {Component, ElementRef, Inject, OnInit, ViewChild} from '@angular/core';
 import {Asset, ConnectData, ConnectionToken} from '@app/model';
 import {NzNotificationService} from 'ng-zorro-antd/notification';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
@@ -32,12 +32,16 @@ interface DialogContent {
   styleUrls: ['acl-dialog.component.scss']
 })
 export class ElementACLDialogComponent implements OnInit {
+  @ViewChild('otpCodeInput', { static: false }) otpCodeInput: ElementRef;
   public asset: Asset;
   public connectInfo: ConnectData;
   public code: string;
   public connectionToken: ConnectionToken = null;
   public error: HttpErrorResponse;
   public otherError: string;
+  public otpCode: string = '';
+  public otpCodeError: string = '';
+  public otpCodeSubmitting = false;
   public ticketAssignees: string = '-';
   // Token 的行为，创建或者兑换 Token, create, exchange
   public tokenAction: string = 'create';
@@ -82,15 +86,43 @@ export class ElementACLDialogComponent implements OnInit {
   }
 
   ngOnInit() {
-    // 创建 Token 的时候，需要传入 Asset 和 ConnectInfo
-    this.content = this.getDialogContent(this.data.code);
     this.asset = this.data.asset;
     this.connectInfo = this.data.connectInfo;
-    this.code = this.data.code;
+    this.error = this.data.error;
     // 兑换 Token 的时候，需要传入 Token ID
     this.tokenID = this.data.tokenID;
     // 控制 token 的行为, 创建还是兑换
     this.tokenAction = this.data.tokenAction;
+    this.code = this.resolveDialogCode(this.data.code, this.error);
+    this.content = this.getDialogContent(this.code);
+    if (this.code === 'otp_code_verify') {
+      this.focusOTPCodeInput();
+    }
+  }
+
+  onOTPCodeInput() {
+    this.otpCodeError = '';
+  }
+
+  onConfirmOTPCode() {
+    const otpCode = (this.otpCode || '').trim();
+    if (!otpCode) {
+      this.otpCodeError = this._i18n.instant('Please input OTP code');
+      this.focusOTPCodeInput();
+      return;
+    }
+    this.otpCodeError = '';
+    this.otpCodeSubmitting = true;
+    this.requestTokenWithOTPCode(otpCode).subscribe(
+      (connToken: ConnectionToken) => {
+        this.otpCodeSubmitting = false;
+        this.dialogRef.close(connToken);
+      },
+      (error: HttpErrorResponse) => {
+        this.otpCodeSubmitting = false;
+        this.applyDialogError(error, true);
+      }
+    );
   }
 
   async onCopySuccess(evt) {
@@ -272,6 +304,91 @@ export class ElementACLDialogComponent implements OnInit {
     this.dialogRef.close(null);
   }
 
+  private requestTokenWithOTPCode(otpCode: string) {
+    if (this.tokenAction === 'exchange') {
+      return this._http.exchangeConnectToken(this.tokenID, false, false, undefined, otpCode);
+    }
+    if (this.data.connectData && this.data.connectData.direct) {
+      return this._http.adminConnectToken(
+        this.asset,
+        this.data.connectData,
+        false,
+        false,
+        undefined,
+        otpCode
+      );
+    }
+    return this._http.createConnectToken(this.asset, this.connectInfo, false, false, undefined, otpCode);
+  }
+
+  private resolveDialogCode(code: string, error?: HttpErrorResponse): string {
+    if (this.hasOTPCodeError(error)) {
+      return 'otp_code_verify';
+    }
+    return code || 'other';
+  }
+
+  private hasOTPCodeError(error?: HttpErrorResponse): boolean {
+    return !!(error && error.error && typeof error.error === 'object' && error.error.otp_code);
+  }
+
+  private getFieldErrorMessage(error: HttpErrorResponse, field: string): string {
+    if (!error || !error.error || typeof error.error !== 'object') {
+      return '';
+    }
+    const value = error.error[field];
+    if (Array.isArray(value)) {
+      return value.join(' ');
+    }
+    return value || '';
+  }
+
+  private getOtherErrorMessage(error: HttpErrorResponse): string {
+    if (!error) {
+      return '';
+    }
+    let value: any = error.error;
+    if (!value) {
+      return error.message;
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (Array.isArray(value)) {
+      return value.join(' ');
+    }
+    if (value.detail) {
+      return value.detail;
+    }
+    return JSON.stringify(value);
+  }
+
+  private applyDialogError(error: HttpErrorResponse, keepOTPCode = false) {
+    this.error = error;
+    this.data.error = error;
+    this.code = this.resolveDialogCode(error?.error?.code, error);
+    if (this.code === 'otp_code_verify') {
+      this.otpCodeError = this.getFieldErrorMessage(error, 'otp_code');
+      if (!keepOTPCode) {
+        this.otpCode = '';
+      }
+      this.content = this.getDialogContent(this.code);
+      this.focusOTPCodeInput();
+      return;
+    }
+    this.otpCodeError = '';
+    this.otherError = this.getOtherErrorMessage(error);
+    this.content = this.getDialogContent(this.code);
+  }
+
+  private focusOTPCodeInput() {
+    setTimeout(() => {
+      if (this.otpCodeInput && this.otpCodeInput.nativeElement) {
+        this.otpCodeInput.nativeElement.focus();
+      }
+    }, 0);
+  }
+
   checkTicket() {
     const checkMethod = this.connectionToken.from_ticket_info.check_ticket_api.method.toLowerCase();
     const checkURL = this.connectionToken.from_ticket_info.check_ticket_api.url;
@@ -340,6 +457,24 @@ export class ElementACLDialogComponent implements OnInit {
             text: 'Confirm',
             type: 'primary',
             callback: () => vm.onConfirmReview()
+          }
+        ]
+      },
+      otp_code_verify: {
+        title: 'OTP verification',
+        message: 'This account requires OTP code. Please input it to continue.',
+        customContent: {
+          type: 'otp_code'
+        },
+        actions: [
+          {
+            text: 'Cancel',
+            callback: () => vm.closeDialog()
+          },
+          {
+            text: 'Confirm',
+            type: 'primary',
+            callback: () => vm.onConfirmOTPCode()
           }
         ]
       },

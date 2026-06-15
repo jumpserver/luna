@@ -348,6 +348,7 @@ export class AppService {
     for (const auth of auths) {
       const newAuth = Object.assign({}, auth);
       newAuth.secret = this.decrypt(newAuth.secret);
+      newAuth.otp_code = '';
       newAuths.push(newAuth);
     }
     return newAuths;
@@ -356,6 +357,7 @@ export class AppService {
   setAccountLocalAuth(asset: Asset, account: Account, auth: AuthInfo) {
     const assetId = asset.id;
     const newAuth = Object.assign({ alias: account.alias, username: account.username }, auth);
+    newAuth.otp_code = '';
 
     // 如果 auth.alias 是 undefined，保持使用 account.alias
     if (auth.alias === undefined && account.alias !== undefined) {

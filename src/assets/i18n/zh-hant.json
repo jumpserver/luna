@@ -1,2 +1,6 @@
 {
+  "OTP Code": "OTP 驗證碼",
+  "OTP verification": "OTP 驗證",
+  "This account requires OTP code. Please input it to continue.": "該賬號需要 OTP 驗證碼，請輸入後繼續。",
+  "Please input OTP code": "請輸入 OTP 驗證碼"
 }

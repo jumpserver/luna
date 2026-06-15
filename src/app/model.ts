@@ -34,6 +34,7 @@ export class Account {
   name: string;
   username: string;
   has_secret: boolean;
+  has_otp_secret_key: boolean;
   secret: string;
   actions: Array<Action>;
   id?: string;
@@ -401,6 +402,7 @@ export class AuthInfo {
   alias: string;
   username: string;
   secret: string;
+  otp_code: string;
   rememberAuth: boolean;
 }
 

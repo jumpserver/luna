@@ -1,3 +1,6 @@
 {
+  "OTP Code": "OTP 验证码",
+  "OTP verification": "OTP 验证",
+  "This account requires OTP code. Please input it to continue.": "该账号需要 OTP 验证码，请输入后继续。",
+  "Please input OTP code": "请输入 OTP 验证码"
 }
-

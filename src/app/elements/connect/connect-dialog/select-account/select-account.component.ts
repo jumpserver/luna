@@ -111,6 +111,12 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     return this.accountSelected.username === '@INPUT' || this.accountSelected.username === '@USER';
   }
 
+  get showOTPCodeInput() {
+    return !!this.accountSelected &&
+      this.accountSelected.username !== '@ANON' &&
+      !!this.accountSelected.has_otp_secret_key;
+  }
+
   public compareFn = (f1: Account, f2: Account) => {
     if (!f1 || !f2) return false;
     return f1.alias === f2.alias && f1.id === f2.id;
@@ -298,6 +304,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     if (!this.accountSelected) {
       return;
     }
+    this.manualAuthInfo.otp_code = '';
     if (this.accountSelected.has_secret) {
       return;
     }
@@ -317,6 +324,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }
     if (this.localAuthItems && this.localAuthItems.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
+      this.manualAuthInfo.otp_code = '';
     }
     this.setUsernamePlaceholder();
     setTimeout(() => {
@@ -342,6 +350,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this.filteredOptions = this.localAuthItems.filter(authInfo => {
       if (authInfo.username.toLowerCase() === filterValue) {
         this.manualAuthInfo = Object.assign(this.manualAuthInfo, authInfo);
+        this.manualAuthInfo.otp_code = '';
       }
       return authInfo.username.toLowerCase().includes(filterValue);
     });

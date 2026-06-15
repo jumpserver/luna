@@ -303,7 +303,8 @@ export class HttpService {
     connectData: ConnectData,
     createTicket = false,
     face_verify = false,
-    face_monitor_token?: string
+    face_monitor_token?: string,
+    otpCode?: string
   ) {
     let params = createTicket ? '?create_ticket=1' : '';
     params += face_verify ? '?face_verify=1' : '';
@@ -313,8 +314,9 @@ export class HttpService {
     const isVirtual = account.username.startsWith('@');
     const username = isVirtual ? manualAuthInfo.username : account.username;
     const secret = encryptPassword(manualAuthInfo.secret);
+    const encryptedOTPCode = encryptPassword((otpCode || manualAuthInfo.otp_code || '').trim());
     const connectOption = connectData.connectOption;
-    const data = {
+    const data: any = {
       asset: asset.id,
       account: account.alias, // 主要是有特殊账号，匿名、虚拟
       protocol: protocol.name,
@@ -323,6 +325,9 @@ export class HttpService {
       connect_method: connectMethod.value,
       connect_options: connectOption
     };
+    if (encryptedOTPCode) {
+      data.otp_code = encryptedOTPCode;
+    }
     return this.post<ConnectionToken>(url, data).pipe(
       catchError(this.handleConnectMethodExpiredError.bind(this))
     );
@@ -338,7 +343,8 @@ export class HttpService {
     connectData: AdminConnectData,
     createTicket = false,
     face_verify = false,
-    face_monitor_token?: string
+    face_monitor_token?: string,
+    otpCode?: string
   ) {
     let params = '';
     params += createTicket ? '?create_ticket=1' : '';
@@ -347,7 +353,8 @@ export class HttpService {
     const url = '/api/v1/authentication/admin-connection-token/' + params;
     const { account, protocol } = connectData;
     const connectOption = connectData.connectOption || {};
-    const data = {
+    const encryptedOTPCode = encryptPassword((otpCode || connectData.manualAuthInfo?.otp_code || '').trim());
+    const data: any = {
       asset: asset.id,
       account: account.id,
       protocol: protocol.name,
@@ -355,6 +362,9 @@ export class HttpService {
       connect_method: connectData.method || connectData.connectMethod.value,
       connect_options: connectOption
     };
+    if (encryptedOTPCode) {
+      data.otp_code = encryptedOTPCode;
+    }
     return this.post<ConnectionToken>(url, data).pipe(
       catchError(this.handleConnectMethodExpiredError.bind(this))
     );
@@ -364,13 +374,18 @@ export class HttpService {
     tokenID: string,
     createTicket = false,
     face_verify = false,
-    face_monitor_token?: string
+    face_monitor_token?: string,
+    otpCode?: string
   ) {
     let params = createTicket ? '?create_ticket=1' : '';
     params += face_verify ? '?face_verify=1' : '';
     params += face_monitor_token ? `&face_monitor_token=${face_monitor_token}` : '';
     const url = '/api/v1/authentication/connection-token/exchange/' + params;
-    const data = { id: tokenID };
+    const encryptedOTPCode = encryptPassword((otpCode || '').trim());
+    const data: any = { id: tokenID };
+    if (encryptedOTPCode) {
+      data.otp_code = encryptedOTPCode;
+    }
     return this.post<ConnectionToken>(url, data);
   }
 
