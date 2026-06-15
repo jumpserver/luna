@@ -1,8 +1,8 @@
 <script setup lang="ts">
 interface Props {
-  type: string;
-  size?: "sm" | "md" | "lg" | "xl";
-  class?: string;
+  type?: string
+  size?: "sm" | "md" | "lg" | "xl"
+  class?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -12,10 +12,12 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const imageProps = computed(() => {
-  const prop: { src?: string; alt?: string } = {};
+  const prop: { src?: string, alt?: string } = {};
   const iconMap: Record<string, string> = {
     windows: "/icons/windows.png",
     linux: "/icons/linux.png",
+    unix: "/icons/linux.png",
+    other: "/icons/linux.png",
     mysql: "/icons/mysql.png",
     mariadb: "/icons/mariadb.png",
     oracle: "/icons/oracle.png",

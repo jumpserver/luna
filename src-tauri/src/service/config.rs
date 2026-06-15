@@ -312,12 +312,7 @@ impl ConfigService {
                 .parent()
                 .ok_or_else(|| "invalid config directory".to_string())?;
             return PluginService::update_selection(
-                app,
-                config_dir,
-                category,
-                protocol,
-                name,
-                new_path,
+                app, config_dir, category, protocol, name, new_path,
             );
         }
 

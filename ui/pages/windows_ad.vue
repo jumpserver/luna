@@ -1,5 +1,5 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+const localePath = useLocalePath();
 
-<template>
-  <BasePage type="windows_ad" icon-name="lucide:folder-tree" />
-</template>
+await navigateTo(localePath("windows"), { replace: true });
+</script>

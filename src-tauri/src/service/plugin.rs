@@ -36,7 +36,9 @@ impl PluginService {
             cwd.join("../plugins/builtin"),
             cwd.join("../../plugins/builtin"),
         ];
-        candidates.into_iter().find(|p| p.join("index.json").is_file())
+        candidates
+            .into_iter()
+            .find(|p| p.join("index.json").is_file())
     }
 
     fn resolve_defaults_path(app: &AppHandle) -> Option<PathBuf> {
@@ -69,12 +71,12 @@ impl PluginService {
     }
 
     fn launch_to_arg_format(launch: &Value) -> (String, Option<Value>) {
-        let launch_type = launch.get("type").and_then(|v| v.as_str()).unwrap_or("args");
+        let launch_type = launch
+            .get("type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("args");
         match launch_type {
-            "autoit" => (
-                String::new(),
-                launch.get("steps").cloned(),
-            ),
+            "autoit" => (String::new(), launch.get("steps").cloned()),
             "file" => {
                 let template = launch
                     .get("arg_template")
@@ -120,15 +122,13 @@ impl PluginService {
             .unwrap_or("")
             .to_string();
 
-        let path = user_path
-            .clone()
-            .unwrap_or_else(|| {
-                if !default_path.is_empty() {
-                    default_path
-                } else {
-                    exec_default
-                }
-            });
+        let path = user_path.clone().unwrap_or_else(|| {
+            if !default_path.is_empty() {
+                default_path
+            } else {
+                exec_default
+            }
+        });
 
         let is_internal = platform_defaults
             .get("is_internal")
@@ -219,9 +219,7 @@ impl PluginService {
         let connect = Self::read_json(&plugin_dir.join("connect.json"))?;
         let defaults = Self::read_json(&plugin_dir.join("defaults.json")).unwrap_or(json!({}));
 
-        let platform_connect = connect
-            .get("platforms")
-            .and_then(|p| p.get(os_key));
+        let platform_connect = connect.get("platforms").and_then(|p| p.get(os_key));
         let Some(platform_connect) = platform_connect else {
             return Ok(None);
         };
@@ -247,9 +245,7 @@ impl PluginService {
             .or_else(|| manifest.get("display_name").and_then(|v| v.as_str()))
             .unwrap_or(plugin_id);
 
-        let launch = platform_connect
-            .get("launch")
-            .unwrap_or(&Value::Null);
+        let launch = platform_connect.get("launch").unwrap_or(&Value::Null);
         let (arg_format, autoit) = Self::launch_to_arg_format(launch);
 
         let (path, is_set, is_internal) =
@@ -337,10 +333,7 @@ impl PluginService {
                 .get("id")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| "plugin entry missing id".to_string())?;
-            let category = entry
-                .get("category")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let category = entry.get("category").and_then(|v| v.as_str()).unwrap_or("");
 
             let plugin_dir = builtin_dir.join(plugin_id);
             if !plugin_dir.is_dir() {
@@ -348,13 +341,9 @@ impl PluginService {
                 continue;
             }
 
-            if let Some(item) = Self::plugin_to_app_item(
-                plugin_id,
-                &plugin_dir,
-                os_key,
-                &selections,
-                &user_state,
-            )? {
+            if let Some(item) =
+                Self::plugin_to_app_item(plugin_id, &plugin_dir, os_key, &selections, &user_state)?
+            {
                 if let Some(list) = per_category.get_mut(category) {
                     list.push(item);
                 }
@@ -401,9 +390,7 @@ impl PluginService {
             else {
                 continue;
             };
-            let Some(platform_defaults) = defaults
-                .get("platforms")
-                .and_then(|p| p.get(os_key))
+            let Some(platform_defaults) = defaults.get("platforms").and_then(|p| p.get(os_key))
             else {
                 continue;
             };
@@ -478,16 +465,15 @@ impl PluginService {
     ) -> Result<Value, String> {
         let builtin_dir = Self::resolve_builtin_dir(app)
             .ok_or_else(|| "plugins/builtin not found".to_string())?;
-        let plugin_id = Self::find_plugin_id_by_name(&builtin_dir, name, category).ok_or_else(|| {
-            format!("plugin '{name}' not found in category '{category}'")
-        })?;
+        let plugin_id = Self::find_plugin_id_by_name(&builtin_dir, name, category)
+            .ok_or_else(|| format!("plugin '{name}' not found in category '{category}'"))?;
 
         let state_path = config_dir.join("plugins-state.json");
         let mut state = Self::load_user_state(app, config_dir);
 
         let connect = Self::read_json(&builtin_dir.join(&plugin_id).join("connect.json"))?;
-        let defaults =
-            Self::read_json(&builtin_dir.join(&plugin_id).join("defaults.json")).unwrap_or(json!({}));
+        let defaults = Self::read_json(&builtin_dir.join(&plugin_id).join("defaults.json"))
+            .unwrap_or(json!({}));
         let os_key = Self::os_key();
         let platform_connect = connect
             .get("platforms")

@@ -182,6 +182,8 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
         return /\/windows(?:\/|$)/.test(pathLower);
       case "windows_ad":
         return /\/windows_ad(?:\/|$)/.test(pathLower);
+      case "other":
+        return /\/other(?:\/|$)/.test(pathLower);
       case "database":
         return /\/database(?:\/|$)/.test(pathLower);
       case "device":
@@ -209,12 +211,19 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
       case "windows":
         return items.filter((it) => {
           const typeValue = it.type?.value?.toLowerCase();
-          return typeValue === "windows";
+          // Windows 菜单会合并普通 Windows 和 Windows AD 两类资产。
+          return typeValue === "windows" || typeValue === "windows_ad";
         });
       case "windows_ad":
         return items.filter((it) => {
           const typeValue = it.type?.value?.toLowerCase();
           return typeValue === "windows_ad";
+        });
+      case "other":
+        return items.filter((it) => {
+          const typeValue = it.type?.value?.toLowerCase();
+          // “其他”页承接 JumpServer 主机类型里的 unix / other。
+          return typeValue === "unix" || typeValue === "other";
         });
       case "database":
         return items.filter((it) => {
