@@ -7,6 +7,7 @@ import * as tauriWindow from "@tauri-apps/api/window";
 import * as tauriClipboardManager from "@tauri-apps/plugin-clipboard-manager";
 import * as tauriDialog from "@tauri-apps/plugin-dialog";
 import * as tauriNotification from "@tauri-apps/plugin-notification";
+import * as tauriOpener from "@tauri-apps/plugin-opener";
 import * as tauriOs from "@tauri-apps/plugin-os";
 import * as tauriProgress from "@tauri-apps/plugin-process";
 import * as tauriShell from "@tauri-apps/plugin-shell";
@@ -63,6 +64,11 @@ const tauriModules = [
     module: tauriNotification,
     prefix: "Notification",
     importPath: "@tauri-apps/plugin-notification"
+  },
+  {
+    module: tauriOpener,
+    prefix: "Opener",
+    importPath: "@tauri-apps/plugin-opener"
   },
   {
     module: tauriDialog,

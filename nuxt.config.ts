@@ -10,6 +10,9 @@ export default defineNuxtConfig({
     "reka-ui/nuxt",
     "pinia-plugin-persistedstate/nuxt"
   ],
+  ui: {
+    fonts: false
+  },
   i18n: {
     locales: [
       { code: "zh", name: "简体中文", file: "zh.json" },

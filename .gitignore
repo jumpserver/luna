@@ -27,6 +27,7 @@ node_modules
 .output
 .env
 .cargo
+.qoder
 target
 dist
 src-tauri/target

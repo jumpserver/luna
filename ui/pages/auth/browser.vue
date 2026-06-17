@@ -60,7 +60,7 @@ const handleCopyUrl = () => {
 
 const handleOpenManually = () => {
   if (url.value && typeof url.value === "string") {
-    useTauriShellOpen(url.value);
+    useTauriOpenerOpenUrl(url.value);
   }
 };
 

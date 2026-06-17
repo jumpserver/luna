@@ -52,7 +52,7 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
       icon: "mingcute:device-line",
       to: localePath("device"),
       disabled: isLoading.value
-      },
+    },
     {
       label: t("Menu.Web"),
       icon: "mingcute:web-line",
@@ -71,8 +71,14 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
     },
     {
       label: t("Menu.Player"),
-      icon: "line-md:play",
+      icon: "lucide:clapperboard",
       to: localePath("videoplayer"),
+      disabled: isLoading.value
+    },
+    {
+      label: t("Menu.Transcode"),
+      icon: "lucide:repeat-2",
+      to: localePath({ path: "/transcode" }),
       disabled: isLoading.value
     }
   ];
@@ -228,7 +234,7 @@ const debouncedSidebarSearch = useDebounceFn(emitSearch, 200);
 }
 
 .light .search-input input {
-    background-color: var(--bg-hover-light);
+  background-color: var(--bg-hover-light);
 }
 
 .menu nav[data-collapsed="true"] {
