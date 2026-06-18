@@ -14,10 +14,8 @@ const importMessage = ref("");
 
 const { parseFiles } = useVideoPlayerParser();
 const { deleteTempFile } = useVideoPlayerTauri();
-const { userTheme, manualSetTheme } = useThemeAdapter();
 
 const currentItem = computed(() => items.value.find((item) => item.id === activeId.value) || null);
-const isDarkMode = computed(() => userTheme.value === "dark");
 
 const playerComponent = computed(() => {
   switch (currentItem.value?.type) {
@@ -117,10 +115,6 @@ function handleInputChange(event: Event) {
   void importFiles(files);
 }
 
-function toggleThemeMode() {
-  manualSetTheme(isDarkMode.value ? "light" : "dark");
-}
-
 onMounted(async () => {
   document.title = "JumpServer Video Player";
 
@@ -151,24 +145,7 @@ onBeforeUnmount(async () => {
     <div class="flex h-full min-h-[560px] flex-col gap-4">
       <UCard class="flex-1 min-h-0 flex flex-col" :ui="{ body: 'flex-1 min-h-0 overflow-hidden flex flex-col' }">
         <template #header>
-          <div class="flex items-center gap-3">
-            <UIcon name="lucide:clapperboard" class="text-primary h-5 w-5 shrink-0" />
-            <p class="text-base font-medium flex-1 min-w-0">
-              录像播放器
-            </p>
-
-            <UButton
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              :icon="
-                isDarkMode
-                  ? 'line-md:moon-filled-to-sunny-filled-loop-transition'
-                  : 'line-md:sunny-filled-loop-to-moon-filled-transition'
-              "
-              @click="toggleThemeMode"
-            />
-
+          <div class="flex items-center justify-end gap-2">
             <UButton
               color="primary"
               variant="soft"

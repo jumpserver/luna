@@ -9,6 +9,7 @@ const props = defineProps<{
 }>();
 
 const terminalRef = ref<HTMLElement | null>(null);
+const colorMode = useColorMode();
 const { markSessionConnected } = useWorkspaceTabs();
 
 let terminal: any = null;
@@ -26,6 +27,55 @@ const endpoint = ref<Record<string, any> | null>(null);
 const endpointHost = computed(() => endpoint.value?.host || "");
 const endpointPort = computed(() => Number(endpoint.value?.ssh_port || endpoint.value?.port || 22) || 22);
 const username = computed(() => (tokenId.value ? `JMS-${tokenId.value}` : "JMS-<token>"));
+const terminalTheme = computed(() => {
+  if (colorMode.value === "dark") {
+    return {
+      background: "#09090b",
+      foreground: "#d4d4d8",
+      cursor: "#22c55e",
+      selectionBackground: "#3f3f46",
+      black: "#18181b",
+      red: "#f87171",
+      green: "#22c55e",
+      yellow: "#facc15",
+      blue: "#60a5fa",
+      magenta: "#c084fc",
+      cyan: "#22d3ee",
+      white: "#d4d4d8",
+      brightBlack: "#71717a",
+      brightRed: "#fca5a5",
+      brightGreen: "#4ade80",
+      brightYellow: "#fde047",
+      brightBlue: "#93c5fd",
+      brightMagenta: "#d8b4fe",
+      brightCyan: "#67e8f9",
+      brightWhite: "#fafafa"
+    };
+  }
+
+  return {
+    background: "#ffffff",
+    foreground: "#27272a",
+    cursor: "#16a34a",
+    selectionBackground: "#d4d4d8",
+    black: "#18181b",
+    red: "#dc2626",
+    green: "#16a34a",
+    yellow: "#ca8a04",
+    blue: "#2563eb",
+    magenta: "#9333ea",
+    cyan: "#0891b2",
+    white: "#e4e4e7",
+    brightBlack: "#71717a",
+    brightRed: "#ef4444",
+    brightGreen: "#22c55e",
+    brightYellow: "#eab308",
+    brightBlue: "#3b82f6",
+    brightMagenta: "#a855f7",
+    brightCyan: "#06b6d4",
+    brightWhite: "#ffffff"
+  };
+});
 
 const fitTerminal = () => {
   fitAddon?.fit();
@@ -134,12 +184,7 @@ const mountTerminal = async () => {
     convertEol: true,
     fontFamily: "Menlo, Monaco, Consolas, monospace",
     fontSize: 13,
-    theme: {
-      background: "#09090b",
-      foreground: "#d4d4d8",
-      cursor: "#22c55e",
-      green: "#22c55e"
-    }
+    theme: terminalTheme.value
   });
 
   fitAddon = new FitAddon();
@@ -175,6 +220,15 @@ watch(
   { deep: true }
 );
 
+watch(
+  terminalTheme,
+  (theme) => {
+    if (terminal) {
+      terminal.options.theme = theme;
+    }
+  }
+);
+
 onMounted(() => {
   mountTerminal();
 });
@@ -195,5 +249,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="terminalRef" class="h-full min-h-0 w-full overflow-hidden bg-zinc-950" />
+  <div
+    ref="terminalRef"
+    class="h-full min-h-0 w-full p-2 overflow-hidden bg-white dark:bg-zinc-950"
+  />
 </template>

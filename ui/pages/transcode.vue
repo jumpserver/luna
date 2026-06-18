@@ -89,11 +89,6 @@ const formatDuration = (seconds?: number | null): string => {
 const hasTasks = computed(() => taskItems.value.length > 0);
 const hasActiveTasks = computed(() => processingCount.value > 0 || completedCount.value > 0);
 
-const pickArchivesSmart = async () => {
-  const append = taskItems.value.length > 0;
-  await pickArchives(append);
-};
-
 const pickArchives = async (append = false) => {
   try {
     const selected = (await useTauriDialogOpen({
@@ -119,6 +114,11 @@ const pickArchives = async (append = false) => {
       duration: 4000
     });
   }
+};
+
+const pickArchivesSmart = async () => {
+  const append = taskItems.value.length > 0;
+  await pickArchives(append);
 };
 
 const pickOutputDir = async () => {
@@ -238,12 +238,7 @@ watch(outputDir, () => {
       <UCard class="flex-1 min-h-0 flex flex-col" :ui="{ body: 'flex-1 min-h-0 overflow-hidden flex flex-col' }">
         <template #header>
           <div class="flex flex-col gap-3">
-            <div class="flex items-center gap-3">
-              <UIcon name="lucide:repeat-2" class="text-primary h-5 w-5 shrink-0" />
-              <p class="text-base font-medium flex-1 min-w-0">
-                {{ t("Transcode.Title") }}
-              </p>
-
+            <div class="flex items-center justify-end gap-3">
               <UTooltip :text="t('Transcode.Settings')">
                 <UButton
                   icon="i-lucide-settings"

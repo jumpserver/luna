@@ -52,8 +52,8 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
   const scrollbarStyles = computed(() => {
     const isDark = colorMode.value === "dark";
     return {
-      "--scrollbar-width": "8px",
-      "--scrollbar-track-color": isDark ? "#333" : "#f1f1f1",
+      "--scrollbar-width": "4px",
+      "--scrollbar-track-color": "transparent",
       "--scrollbar-thumb-color": isDark
         ? componentsConfig.pages.scrollBarDarkThumbColor
         : componentsConfig.pages.scrollBarLightThumbColor,

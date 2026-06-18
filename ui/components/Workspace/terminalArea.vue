@@ -1,5 +1,10 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from "@nuxt/ui";
+
 const { activeTab, activeTabId, tabs, closeSession, setActiveSession } = useWorkspaceTabs();
+
+const tabStripRef = ref<HTMLElement | null>(null);
+const hasOverflow = ref(false);
 
 const statusText = (status: string) => {
   if (status === "connected") return "已连接";
@@ -7,31 +12,130 @@ const statusText = (status: string) => {
   if (status === "failed") return "连接失败";
   return "连接中";
 };
+
+const statusDotClass = (status: string) => {
+  if (status === "connected") return "bg-blue-500";
+  if (status === "ready") return "bg-blue-400";
+  if (status === "failed") return "bg-red-500";
+  return "bg-gray-400 dark:bg-gray-500";
+};
+
+const tabMenuItems = computed<DropdownMenuItem[]>(() =>
+  tabs.value.map((tab) => ({
+    label: tab.assetName,
+    description: tab.protocol.toUpperCase(),
+    type: "checkbox" as const,
+    checked: activeTabId.value === tab.id,
+    onSelect: () => selectTab(tab.id)
+  }))
+);
+
+function updateOverflow() {
+  const el = tabStripRef.value;
+  if (!el) {
+    hasOverflow.value = false;
+    return;
+  }
+
+  hasOverflow.value = el.scrollWidth > el.clientWidth + 1;
+}
+
+function scrollActiveTabIntoView() {
+  const el = tabStripRef.value;
+  if (!el || !activeTabId.value) return;
+
+  const activeButton = el.querySelector<HTMLElement>(`[data-tab-id="${activeTabId.value}"]`);
+  activeButton?.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+function selectTab(id: string) {
+  setActiveSession(id);
+  nextTick(scrollActiveTabIntoView);
+}
+
+let resizeObserver: ResizeObserver | null = null;
+
+onMounted(() => {
+  updateOverflow();
+  scrollActiveTabIntoView();
+
+  if (!tabStripRef.value) return;
+
+  resizeObserver = new ResizeObserver(() => {
+    updateOverflow();
+  });
+  resizeObserver.observe(tabStripRef.value);
+});
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  resizeObserver = null;
+});
+
+watch(
+  tabs,
+  () => nextTick(() => {
+    updateOverflow();
+    scrollActiveTabIntoView();
+  }),
+  { deep: true }
+);
+
+watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 </script>
 
 <template>
   <section class="h-full min-h-0 w-full flex flex-col bg-white/20 dark:bg-zinc-950/40">
     <WorkspaceTopHeader>
-      <div class="workspace-tab-strip h-full min-w-0 overflow-x-auto flex items-center">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          class="h-full min-w-40 max-w-64 px-3 flex items-center gap-2 border-r border-gray-200 dark:border-white/10 text-left"
-          :class="activeTabId === tab.id ? 'bg-white dark:bg-white/10' : 'hover:bg-gray-50 dark:hover:bg-white/5'"
-          @click.stop="setActiveSession(tab.id)"
+      <div v-if="tabs.length" class="flex h-full min-w-0 items-center gap-1.5 px-3">
+        <div class="workspace-tab-capsule flex min-w-0 flex-1 items-center rounded-full p-0.5">
+          <div
+            ref="tabStripRef"
+            class="workspace-tab-strip flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto"
+          >
+            <button
+              v-for="tab in tabs"
+              :key="tab.id"
+              :data-tab-id="tab.id"
+              type="button"
+              class="group relative flex h-6 max-w-44 min-w-0 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-left transition-colors"
+              :class="
+                activeTabId === tab.id
+                  ? 'bg-white text-gray-900 shadow-sm dark:bg-white/20 dark:text-gray-100'
+                  : 'text-gray-600 hover:bg-black/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]'
+              "
+              @click.stop="selectTab(tab.id)"
+            >
+              <span
+                class="size-1.5 shrink-0 rounded-full"
+                :class="statusDotClass(tab.status)"
+              />
+              <span class="min-w-0 truncate text-xs">{{ tab.assetName }}</span>
+              <span
+                class="flex size-4 shrink-0 items-center justify-center rounded-full opacity-0 transition-opacity hover:bg-black/10 group-hover:opacity-100 dark:hover:bg-white/10"
+                :class="activeTabId === tab.id ? 'opacity-60' : ''"
+                @click.stop="closeSession(tab.id)"
+              >
+                <UIcon name="i-lucide-x" class="size-2.5" />
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <UDropdownMenu
+          v-if="hasOverflow"
+          :items="tabMenuItems"
+          :content="{ align: 'end', side: 'bottom' }"
+          :ui="{ content: 'w-56 max-h-64 overflow-y-auto' }"
         >
-          <UIcon name="i-lucide-terminal" class="size-4 shrink-0 text-gray-500 dark:text-gray-400" />
-          <span class="text-xs font-medium truncate">{{ tab.assetName }}</span>
-          <span class="text-[11px] text-gray-500 dark:text-gray-400 uppercase shrink-0">{{ tab.protocol }}</span>
-          <UButton
-            icon="i-lucide-x"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            class="ml-auto shrink-0"
-            @click.stop="closeSession(tab.id)"
-          />
-        </button>
+          <button
+            type="button"
+            class="workspace-tab-overflow flex size-6 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-black/[0.06] dark:hover:bg-white/[0.1]"
+            aria-label="切换终端标签"
+          >
+            <UIcon name="i-lucide-ellipsis" class="size-3.5 text-gray-500 dark:text-gray-400" />
+          </button>
+        </UDropdownMenu>
       </div>
     </WorkspaceTopHeader>
 
@@ -63,16 +167,28 @@ const statusText = (status: string) => {
 </template>
 
 <style scoped>
+.workspace-tab-capsule {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.dark .workspace-tab-capsule {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.workspace-tab-overflow {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.dark .workspace-tab-overflow {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 .workspace-tab-strip {
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .workspace-tab-strip::-webkit-scrollbar {
-  height: 3px;
-}
-
-.workspace-tab-strip::-webkit-scrollbar-thumb {
-  background: rgba(113, 113, 122, 0.35);
-  border-radius: 999px;
+  display: none;
 }
 </style>

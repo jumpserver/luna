@@ -736,13 +736,13 @@ onBeforeUnmount(() => {
     :ui="{ content: 'w-56 p-1' }"
   >
     <div
-      class="flex items-center py-2 px-2 w-full min-w-0 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors mb-1"
+      class="flex items-center py-1 px-1.5 w-full min-w-0 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
       :style="{
         justifyContent: collapse ? 'center' : ''
       }"
     >
       <UUser
-        size="sm"
+        size="xs"
         :avatar="{
           src: '/user_avatar.png'
         }"

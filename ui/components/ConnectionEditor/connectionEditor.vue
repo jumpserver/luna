@@ -160,8 +160,9 @@ async function ensureDetails(asset: AssetItem) {
 
   if (!noAccounts && !noProtocols) return asset;
 
+  let unsubscribe = () => {};
   const detailsReady = new Promise<AssetItem>((resolve) => {
-    const unsubscribe = useEventBus().once(
+    unsubscribe = useEventBus().on(
       "assetDetailUpdated",
       (payload: { assetId: string, permedAccounts: PermedAccount[], permedProtocols: PermedProtocol[] }) => {
         if (payload.assetId !== asset.id) return;
@@ -173,14 +174,17 @@ async function ensureDetails(asset: AssetItem) {
         } as AssetItem;
 
         resolve(currentAsset.value!);
-      }
+      },
+      false
     );
-
-    void unsubscribe;
+  });
+  const fallback = new Promise<AssetItem>((resolve) => {
+    setTimeout(resolve, 2500, currentAsset.value || asset);
   });
 
   await getAssetDetail(asset.id);
-  const updated = await detailsReady;
+  const updated = await Promise.race([detailsReady, fallback]);
+  unsubscribe();
   return updated;
 }
 

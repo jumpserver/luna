@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { NavigationMenuItem } from "@nuxt/ui";
+import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
 import type { AssetItem, AssetPageType } from "~/types";
 
 import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
@@ -17,12 +17,17 @@ const { collapse, setCollapse } = useSettingManager();
 const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
 const { confirmConnection, saveConnectionInfo } = useAssetConnection();
 const { openSession } = useWorkspaceTabs();
+const { handleAssetFavorite, handleAssetUnfavorite } = useAssetAction();
 
 const appName = ref(getConfiguredAppName());
 const isLoading = ref(false);
 const sidebarSearch = ref("");
 const assetScrollRef = ref<HTMLElement | null>(null);
 const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
+const collapsedAssetGroups = ref<Set<string>>(new Set());
+const contextMenuVisible = ref(false);
+const contextMenuPosition = ref({ x: 0, y: 0 });
+const contextMenuAsset = ref<AssetItem | null>(null);
 const assetFetcher = useAssetFetcher("assets", assetScrollRef);
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
@@ -58,6 +63,27 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
 
 const handleCollapse = () => {
   setCollapse(!collapse.value);
+};
+
+const handleWindowDrag = async (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  if (
+    target.closest("button")
+    || target.closest('[role="button"]')
+    || target.closest("input")
+    || target.closest("select")
+  ) {
+    return;
+  }
+
+  if (event.button !== 0) return;
+
+  try {
+    const windows = await useTauriWindowGetAllWindows();
+    windows.find((window) => window.label === "main")?.startDragging();
+  } catch (error) {
+    console.error(error);
+  }
 };
 
 const categoryOrder = ["linux", "windows", "windows_ad", "database", "device", "web", "unix", "other"];
@@ -100,6 +126,20 @@ const groupedAssets = computed(() => {
 
   return Array.from(groups.entries()).map(([label, assets]) => ({ label, assets }));
 });
+
+const isAssetGroupCollapsed = (label: string) => collapsedAssetGroups.value.has(label);
+
+const toggleAssetGroup = (label: string) => {
+  const next = new Set(collapsedAssetGroups.value);
+
+  if (next.has(label)) {
+    next.delete(label);
+  } else {
+    next.add(label);
+  }
+
+  collapsedAssetGroups.value = next;
+};
 
 const setMode = (mode: "assets" | "tools") => {
   setWorkspaceMode(mode);
@@ -211,6 +251,66 @@ const handleAssetConnect = async (asset: AssetItem) => {
   } catch {}
 };
 
+const handleAssetEdit = async (asset: AssetItem) => {
+  try {
+    const info = await connEditorRef.value!.open(asset);
+    saveConnectionInfo(asset, info);
+  } catch {}
+};
+
+const toggleAssetFavorite = (asset: AssetItem, favorite: boolean) => {
+  if (favorite) {
+    handleAssetFavorite(asset.id);
+  } else {
+    handleAssetUnfavorite(asset.id);
+  }
+
+  useEventBus().emit("favoriteChanged", { assetId: asset.id, favorite });
+};
+
+const handleAssetContextMenu = (asset: AssetItem, event: MouseEvent) => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  contextMenuAsset.value = asset;
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY };
+  contextMenuVisible.value = true;
+};
+
+const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
+  const asset = contextMenuAsset.value;
+  if (!asset) return [];
+
+  const isFavorited = !!asset.isFavorite;
+
+  return [
+    {
+      label: t("ContextMenu.Connect"),
+      icon: "i-lucide-plug",
+      onSelect: () => {
+        contextMenuVisible.value = false;
+        handleAssetConnect(asset);
+      }
+    },
+    {
+      label: t("ContextMenu.Edit"),
+      icon: "solar:pen-new-square-linear",
+      onSelect: () => {
+        contextMenuVisible.value = false;
+        handleAssetEdit(asset);
+      }
+    },
+    {
+      label: isFavorited ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
+      icon: isFavorited ? "lucide:star-off" : "lucide:star",
+      onSelect: () => {
+        contextMenuVisible.value = false;
+        toggleAssetFavorite(asset, !isFavorited);
+      }
+    }
+  ];
+});
+
 watch(
   () => loggedIn.value,
   async (nv) => {
@@ -255,6 +355,7 @@ watch(
               ? 'py-2 justify-center mt-2'
               : 'py-2 mt-2 justify-between'
         "
+        @mousedown="handleWindowDrag"
       >
         <div v-if="!isMacOS && !collapse" class="flex items-center gap-2">
           <UAvatar size="sm" src="/logo.png" class="bg-transparent" :ui="{ root: 'bg-transparent' }" />
@@ -271,7 +372,7 @@ watch(
         />
       </div>
 
-      <div v-show="!collapse" class="px-3 pb-1">
+      <div v-show="!collapse" class="px-3 py-1">
         <div class="grid grid-cols-2 gap-0.5 rounded-sm bg-gray-100/80 p-0.5 dark:bg-white/10">
           <button
             class="h-5 rounded-[3px] text-[11px] font-medium leading-none transition"
@@ -295,7 +396,7 @@ watch(
       </div>
 
       <!-- 搜索框区域 -->
-      <div v-show="!collapse && activeWorkspaceMode === 'assets'" class="px-3 py-2">
+      <div v-show="!collapse && activeWorkspaceMode === 'assets'" class="px-3 py-1">
         <UInput
           v-model="sidebarSearch"
           size="sm"
@@ -303,9 +404,12 @@ watch(
           autocapitalize="none"
           autocorrect="off"
           icon="i-lucide-search"
-          variant="outline"
+          variant="none"
           :placeholder="t('Operation.Search')"
-          class="dark:bg-transparent rounded-sm w-full search-input"
+          class="search-input rounded-sm w-full"
+          :ui="{
+            base: 'bg-white/40 dark:bg-white/5 ring-1 ring-inset ring-black/5 dark:ring-white/10 focus-visible:ring-primary/40 placeholder:text-gray-400 dark:placeholder:text-gray-500'
+          }"
           @update:model-value="debouncedAssetSearch"
         >
           <template v-if="sidebarSearch?.length" #trailing>
@@ -331,6 +435,7 @@ watch(
       v-if="activeWorkspaceMode === 'tools'"
       class="px-3 py-0 flex-1 overflow-auto menu"
       :style="{
+        ...scrollbarStyles,
         display: collapse ? 'inline-flex' : '',
         justifyContent: collapse ? 'center' : ''
       }"
@@ -386,39 +491,74 @@ watch(
 
         <div v-else class="py-2">
           <section v-for="group in groupedAssets" :key="group.label" class="mb-2">
-            <div class="px-3 py-1 flex items-center justify-between text-[11px] uppercase text-gray-500 dark:text-gray-400">
-              <span>{{ group.label }}</span>
-              <span>{{ group.assets.length }}</span>
-            </div>
-
             <button
-              v-for="asset in group.assets"
-              :key="asset.id"
-              class="w-full px-3 py-2 flex items-center gap-2 text-left hover:bg-gray-100 dark:hover:bg-white/10"
-              :class="!asset.isActive ? 'opacity-50' : ''"
-              @click="handleAssetConnect(asset)"
+              type="button"
+              class="group flex h-7 w-full items-center gap-1.5 px-3 text-left text-[11px] uppercase text-gray-500 transition hover:bg-gray-100/70 dark:text-gray-400 dark:hover:bg-white/10"
+              @click="toggleAssetGroup(group.label)"
             >
-              <CardAssetIcon :type="asset.type" size="sm" />
-              <div class="min-w-0 flex-1">
-                <div class="text-xs font-medium truncate">
-                  {{ asset.name }}
-                </div>
-                <div class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                  {{ asset.displayAddressLine || asset.address }}
-                </div>
-              </div>
-              <UIcon name="i-lucide-terminal" class="size-4 text-gray-400 shrink-0" />
+              <UIcon
+                name="i-lucide-chevron-down"
+                class="size-3 shrink-0 transition-transform"
+                :class="isAssetGroupCollapsed(group.label) ? '-rotate-90' : ''"
+              />
+              <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
+              <span
+                class="min-w-4 rounded-full px-1.5 py-0.5 text-center text-[10px] leading-none text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-300"
+              >
+                {{ group.assets.length }}
+              </span>
             </button>
+
+            <div v-show="!isAssetGroupCollapsed(group.label)">
+              <button
+                v-for="asset in group.assets"
+                :key="asset.id"
+                class="w-full px-3 py-[6px] flex items-center gap-2 text-left hover:bg-gray-100 dark:hover:bg-white/10"
+                :class="!asset.isActive ? 'opacity-50' : ''"
+                @click="handleAssetConnect(asset)"
+                @contextmenu="handleAssetContextMenu(asset, $event)"
+              >
+                <CardAssetIcon :type="asset.type" size="sm" />
+                <div class="min-w-0 flex-1">
+                  <div class="text-xs font-medium truncate">
+                    {{ asset.name }}
+                  </div>
+                  <div class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                    {{ asset.displayAddressLine || asset.address }}
+                  </div>
+                </div>
+                <UIcon name="i-lucide-terminal" class="size-4 text-gray-400 shrink-0" />
+              </button>
+            </div>
           </section>
         </div>
       </template>
     </div>
 
-    <div class="px-3 py-2 mt-auto">
+    <div class="px-3 pb-3 pt-1 mt-auto">
       <Profile :collapse="collapse" />
     </div>
 
     <ConnectionEditor ref="connEditorRef" asset-type="assets" />
+
+    <UDropdownMenu
+      :open="contextMenuVisible"
+      :items="assetContextMenuItems"
+      size="sm"
+      :content="{ align: 'start', side: 'bottom' }"
+      :ui="{ content: 'w-44 p-1' }"
+      @update:open="contextMenuVisible = $event"
+    >
+      <div
+        class="fixed pointer-events-none"
+        :style="{
+          left: `${contextMenuPosition.x}px`,
+          top: `${contextMenuPosition.y}px`,
+          width: '1px',
+          height: '1px'
+        }"
+      />
+    </UDropdownMenu>
   </div>
 </template>
 
@@ -467,29 +607,35 @@ watch(
   }
 }
 
-.light .search-input input {
-  background-color: var(--bg-hover-light);
-}
-
 .menu nav[data-collapsed="true"] {
   width: 38px;
 }
 
-.asset-list {
-  scrollbar-width: var(--scrollbar-width);
+.asset-list,
+.menu {
+  scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
 }
 
-.asset-list::-webkit-scrollbar {
+.asset-list::-webkit-scrollbar,
+.menu::-webkit-scrollbar {
   width: var(--scrollbar-width);
+  height: var(--scrollbar-width);
 }
 
-.asset-list::-webkit-scrollbar-track {
+.asset-list::-webkit-scrollbar-track,
+.menu::-webkit-scrollbar-track {
   background: var(--scrollbar-track-color);
 }
 
-.asset-list::-webkit-scrollbar-thumb {
+.asset-list::-webkit-scrollbar-thumb,
+.menu::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb-color);
   border-radius: 4px;
+}
+
+.asset-list::-webkit-scrollbar-thumb:hover,
+.menu::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover-color);
 }
 </style>

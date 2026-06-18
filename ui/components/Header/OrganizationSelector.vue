@@ -50,16 +50,22 @@ watch(
 </script>
 
 <template>
-  <div v-show="loggedIn" class="flex items-center">
+  <div v-show="loggedIn" class="flex w-full items-center">
     <UDropdownMenu
       :items="organizationDropdownItems"
       :content="{ align: 'start', side: 'bottom' }"
       :ui="{ content: 'w-48 max-h-64 overflow-y-auto' }"
     >
-      <UButton variant="ghost" size="md" color="neutral" class="btn-common px-3">
-        <UIcon name="fluent:organization-16-regular" />
-        <span class="truncate max-w-32 font-medium">{{ currentOrg }}</span>
-        <UIcon name="i-lucide-chevron-down" class="ml-1 size-3" />
+      <UButton
+        variant="ghost"
+        size="sm"
+        color="neutral"
+        class="h-7 w-full rounded-sm px-2"
+        :ui="{ base: 'grid grid-cols-[16px_minmax(0,1fr)_14px] items-center gap-2' }"
+      >
+        <UIcon name="fluent:organization-16-regular" class="size-4 text-gray-500 dark:text-gray-400" />
+        <span class="min-w-0 truncate text-left text-xs font-medium">{{ currentOrg }}</span>
+        <UIcon name="i-lucide-chevron-down" class="size-3.5 justify-self-end text-gray-400 dark:text-gray-500" />
       </UButton>
     </UDropdownMenu>
   </div>

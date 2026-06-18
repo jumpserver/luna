@@ -4,6 +4,7 @@ import { LogicalPosition } from "@tauri-apps/api/dpi";
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
 const localePath = useLocalePath();
+const { userTheme, manualSetTheme } = useThemeAdapter();
 
 // 公共按钮配置
 const commonButtonProps = {
@@ -91,16 +92,33 @@ const openSettingsWindow = async () => {
     maxHeight: 675,
     hiddenTitle: true,
     titleBarStyle: "overlay",
-    trafficLightPosition: new LogicalPosition(10, 22),
+    trafficLightPosition: new LogicalPosition(10, 24),
     decorations: isMac,
     shadow: isMac
   });
+};
+
+const isDarkMode = computed(() => userTheme.value === "dark");
+
+const toggleThemeMode = () => {
+  manualSetTheme(isDarkMode.value ? "light" : "dark");
 };
 </script>
 
 <template>
   <section class="flex items-center h-full">
-    <div class="flex items-center px-2">
+    <div class="flex items-center gap-1 px-2">
+      <UButton
+        :icon="
+          isDarkMode
+            ? 'line-md:moon-filled-to-sunny-filled-loop-transition'
+            : 'line-md:sunny-filled-loop-to-moon-filled-transition'
+        "
+        :title="isDarkMode ? t('ToolTips.LightMode') : t('ToolTips.DarkMode')"
+        v-bind="commonButtonProps"
+        @click="toggleThemeMode"
+      />
+
       <UButton
         icon="i-lucide-settings"
         :title="t('ToolTips.Settings')"
