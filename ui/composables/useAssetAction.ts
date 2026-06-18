@@ -18,6 +18,11 @@ let unlistenGetAssetDetailFailed: UnlistenFn | null = null;
 let unlistenRenameSuccess: UnlistenFn | null = null;
 let unlistenRenameError: UnlistenFn | null = null;
 let unlistenPullUpFailure: UnlistenFn | null = null;
+let unlistenBuiltinSessionSuccess: UnlistenFn | null = null;
+let unlistenBuiltinSessionFailure: UnlistenFn | null = null;
+
+const BUILTIN_CLIENT_METHOD = "builtin_client";
+const pendingBuiltinSessions: Array<{ tabId?: string, assetId: string, protocol: string, account: string }> = [];
 
 function releaseTauriEventListeners() {
   tauriListenersRefCount = Math.max(tauriListenersRefCount - 1, 0);
@@ -34,6 +39,8 @@ function releaseTauriEventListeners() {
     unlistenRenameSuccess?.();
     unlistenRenameError?.();
     unlistenPullUpFailure?.();
+    unlistenBuiltinSessionSuccess?.();
+    unlistenBuiltinSessionFailure?.();
     unlistenGetTokenFailure = null;
     unlistenGetTokenSuccess = null;
     unlistenFavoriteSuccess = null;
@@ -45,6 +52,8 @@ function releaseTauriEventListeners() {
     unlistenRenameSuccess = null;
     unlistenRenameError = null;
     unlistenPullUpFailure = null;
+    unlistenBuiltinSessionSuccess = null;
+    unlistenBuiltinSessionFailure = null;
     tauriListenersInitialized = false;
   }
 }
@@ -55,6 +64,7 @@ export const useAssetAction = () => {
   const { t } = useI18n();
   const toast = useToast();
   const userInfoStore = useUserInfoStore();
+  const { markSessionFailed, updateSessionPayload } = useWorkspaceTabs();
   const settingManager = useSettingManager();
   // prettier-ignore
   const { currentSite, currentConnectionInfoMap, currentRdpClientOption } = storeToRefs(userInfoStore);
@@ -192,6 +202,47 @@ export const useAssetAction = () => {
     });
   };
 
+  const getBuiltinConnectSession = (
+    body: ConnectionBody,
+    meta: { tabId?: string, assetId: string, protocol: string, account: string }
+  ) => {
+    const rdpParams = buildLocalRdpParams();
+    pendingBuiltinSessions.push(meta);
+
+    useTauriCoreInvoke("get_builtin_connect_session", {
+      body: {
+        asset: body.asset,
+        account: body.account,
+        protocol: body.protocol,
+        input_username: body.input_username,
+        input_secret: body.input_secret,
+        connect_method: body.connect_method,
+        connect_options: body.connect_options
+      },
+      rdpParams
+    }).catch((error) => {
+      const idx = pendingBuiltinSessions.findIndex(
+        (item) =>
+          item.assetId === meta.assetId
+          && item.protocol === meta.protocol
+          && item.account === meta.account
+          && item.tabId === meta.tabId
+      );
+
+      if (idx !== -1) pendingBuiltinSessions.splice(idx, 1);
+      markSessionFailed(meta);
+
+      toast.add({
+        title: t("ConnectError.ConnectFailed"),
+        description: String(error || t("ConnectError.ConnectFailed")),
+        color: "error",
+        icon: "line-md:close-circle",
+        progress: true,
+        duration: 4000
+      });
+    });
+  };
+
   /**
    * @description 根据协议分发连接方法
    * @param protocol
@@ -270,6 +321,7 @@ export const useAssetAction = () => {
       manualPassword?: string
       dynamicPassword?: string
       connectMethod?: string
+      tabId?: string
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
@@ -333,15 +385,29 @@ export const useAssetAction = () => {
       connectMethod
     });
 
+    const connectionBody = {
+      asset: assetId,
+      protocol,
+      input_username,
+      input_secret,
+      account: accountForToken,
+      connect_method: connectMethod,
+      connect_options: generateConnectOptions(protocol)
+    };
+
     nextTick(() => {
+      if (connectMethod === BUILTIN_CLIENT_METHOD) {
+        getBuiltinConnectSession(connectionBody, {
+          tabId: ephemeral?.tabId,
+          assetId,
+          protocol,
+          account: selected || user
+        });
+        return;
+      }
+
       getConnectToken({
-        asset: assetId,
-        protocol,
-        input_username,
-        input_secret,
-        account: accountForToken,
-        connect_method: connectMethod,
-        connect_options: generateConnectOptions(protocol)
+        ...connectionBody
       });
     });
   };
@@ -634,6 +700,39 @@ export const useAssetAction = () => {
         toast.add({
           title: t("ConnectError.ConnectFailed"),
           description,
+          color: "error",
+          icon: "line-md:close-circle",
+          progress: true,
+          duration: 4000
+        });
+      });
+
+      unlistenBuiltinSessionSuccess = await useTauriEventListen("get-builtin-session-success", (event) => {
+        interface eventPayload {
+          status: number
+          data: Record<string, any>
+        }
+
+        const payload = event.payload as eventPayload;
+        const meta = pendingBuiltinSessions.shift();
+        if (!meta) return;
+
+        updateSessionPayload(meta, payload.data);
+      });
+
+      unlistenBuiltinSessionFailure = await useTauriEventListen("get-builtin-session-failure", (event) => {
+        interface eventPayload {
+          status: number
+          data: string
+        }
+
+        const meta = pendingBuiltinSessions.shift();
+        if (meta) markSessionFailed(meta);
+
+        const payload = event.payload as eventPayload;
+        toast.add({
+          title: t("ConnectError.ConnectFailed"),
+          description: payload.data || t("ConnectError.ConnectFailed"),
           color: "error",
           icon: "line-md:close-circle",
           progress: true,

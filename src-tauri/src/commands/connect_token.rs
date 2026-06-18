@@ -82,6 +82,71 @@ pub async fn get_connect_token(
     Ok(())
 }
 
+#[tauri::command]
+pub async fn get_builtin_connect_session(
+    app: AppHandle,
+    session: State<'_, ApiSessionStore>,
+    body: TokenRequestBody,
+    _rdp_params: Option<HashMap<String, String>>,
+) -> Result<(), String> {
+    let context = match fresh_api_context(&app, &session).await {
+        Ok(context) => context,
+        Err(e) => {
+            let _ = app.emit(
+                "get-builtin-session-failure",
+                json!({ "status": 401, "data": e.to_string() }),
+            );
+            return Ok(());
+        }
+    };
+
+    let api = match ApiRequestClient::from_session(&context) {
+        Ok(api) => api,
+        Err(error) => {
+            let _ = app.emit(
+                "get-builtin-session-failure",
+                json!({ "status": 0, "data": error.to_string() }),
+            );
+            return Ok(());
+        }
+    };
+
+    let token_service = ConnectService::new(api);
+    let token_data = token_service.get_connect_token(&body).await;
+
+    if token_data.status != 201 {
+        let _ = app.emit(
+            "get-builtin-session-failure",
+            json!({ "status": token_data.status, "data": token_data.data }),
+        );
+        return Ok(());
+    }
+
+    let payload = match serde_json::from_str::<Value>(&token_data.data) {
+        Ok(payload) => payload,
+        Err(error) => {
+            let _ = app.emit(
+                "get-builtin-session-failure",
+                json!({
+                    "status": token_data.status,
+                    "data": format!("parse token response failed: {}", error)
+                }),
+            );
+            return Ok(());
+        }
+    };
+
+    let _ = app.emit(
+        "get-builtin-session-success",
+        json!({
+            "status": token_data.status,
+            "data": payload
+        }),
+    );
+
+    Ok(())
+}
+
 fn parse_token_id(data: &str) -> Result<String, String> {
     let value = serde_json::from_str::<Value>(data)
         .map_err(|error| format!("parse token response failed: {}", error))?;

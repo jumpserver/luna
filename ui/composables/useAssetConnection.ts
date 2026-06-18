@@ -12,6 +12,7 @@ interface ConnectionFormInfo {
 
   accountId?: string
   availableProtocols?: string[]
+  tabId?: string
   accountMode: "hosted" | "dynamic" | "manual" | "anonymous"
 }
 
@@ -99,7 +100,8 @@ export function useAssetConnection() {
       manualUsername: connectionInfo.manualUsername,
       manualPassword: connectionInfo.manualPassword,
       dynamicPassword: connectionInfo.dynamicPassword,
-      connectMethod: connectionInfo.connectMethod
+      connectMethod: connectionInfo.connectMethod,
+      tabId: connectionInfo.tabId
     });
   };
 

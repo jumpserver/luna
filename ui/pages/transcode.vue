@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import type { FilenameStyle, OutputResolution, TranscodePower } from "~/store/modules/transcode";
 import { storeToRefs } from "pinia";
 import { useTranscodeStore } from "~/store/modules/transcode";
-import type { FilenameStyle, OutputResolution, TranscodePower } from "~/store/modules/transcode";
 
 definePageMeta({
   layout: "default"
@@ -233,7 +233,7 @@ watch(outputDir, () => {
 </script>
 
 <template>
-  <div class="h-full overflow-auto p-4">
+  <div class="h-full overflow-auto">
     <div class="flex h-full flex-col gap-4">
       <UCard class="flex-1 min-h-0 flex flex-col" :ui="{ body: 'flex-1 min-h-0 overflow-hidden flex flex-col' }">
         <template #header>

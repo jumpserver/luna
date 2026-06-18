@@ -24,7 +24,6 @@ const recentSiteLimit = 5;
 
 const toast = useToast();
 const appConfig = useAppConfig();
-const localePath = useLocalePath();
 const userInfoStore = useUserInfoStore();
 
 const { t, locales, locale } = useI18n();

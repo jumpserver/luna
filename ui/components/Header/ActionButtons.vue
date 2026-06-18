@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from "@nuxt/ui";
-import type { ActionItem } from "~/types/index";
-
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const { isMacOS } = usePlatform();
-const { layouts, sort, setSort, setLayouts } = useSettingManager();
-
 const localePath = useLocalePath();
 
 // 公共按钮配置
@@ -50,7 +45,7 @@ const windowControlButtons = computed(() => {
 
 // 获取窗口控制按钮的样式类
 const getWindowControlButtonClass = (buttonKey: string) => {
-  const baseClass = "rounded-none w-12 h-13 p-1 flex items-center justify-center";
+  const baseClass = "rounded-none w-10 h-10 p-1 flex items-center justify-center";
 
   switch (buttonKey) {
     case "minimize":
@@ -64,181 +59,54 @@ const getWindowControlButtonClass = (buttonKey: string) => {
   }
 };
 
-// 从 Operation 组件移动过来的按钮操作逻辑
-const actionItems = computed<ActionItem[]>(() => [
-  {
-    key: "refresh",
-    type: "action",
-    iconName: "i-lucide-refresh-ccw",
-    tooltipLabel: t("ToolTips.Refresh"),
-    onClick: () => {
-      useEventBus().emit("refresh", undefined);
+const openSettingsWindow = async () => {
+  const label = "secondary";
+  const existing = await useTauriWebviewWindowWebviewWindow.getByLabel(label);
+
+  if (existing) {
+    try {
+      if (await existing.isMinimized()) {
+        await existing.unminimize();
+      }
+
+      if (!(await existing.isVisible())) {
+        await existing.show();
+      }
+
+      await existing.setFocus();
+    } catch (e) {
+      console.error("focus settings window failed", e);
     }
-  },
-  {
-    key: "sort",
-    type: "select",
-    iconName: "i-lucide-arrow-down-wide-narrow",
-    tooltipLabel: t("ToolTips.Sort"),
-    selectItems: [
-      {
-        icon: "i-lucide-arrow-down-a-z",
-        label: t("Sort.A-z"),
-        value: "name",
-        type: "checkbox" as const,
-        checked: sort.value === "name",
-        onUpdateChecked: (checked: boolean) => {
-          if (checked) {
-            setSort("name");
-          }
-        }
-      },
-      {
-        icon: "i-lucide-arrow-up-z-a",
-        label: t("Sort.Z-A"),
-        value: "-name",
-        type: "checkbox" as const,
-        checked: sort.value === "-name",
-        onUpdateChecked: (checked: boolean) => {
-          if (checked) {
-            setSort("-name");
-          }
-        }
-      },
-      {
-        type: "separator" as const
-      },
-      {
-        icon: "i-lucide-calendar-arrow-down",
-        label: t("Sort.NewestToOldest"),
-        value: "-date_updated",
-        type: "checkbox" as const,
-        checked: sort.value === "-date_updated",
-        onUpdateChecked: (checked: boolean) => {
-          if (checked) {
-            setSort("-date_updated");
-          }
-        }
-      },
-      {
-        icon: "i-lucide-calendar-arrow-up",
-        label: t("Sort.OldestToNewest"),
-        value: "date_updated",
-        type: "checkbox" as const,
-        checked: sort.value === "date_updated",
-        onUpdateChecked: (checked: boolean) => {
-          if (checked) {
-            setSort("date_updated");
-          }
-        }
-      }
-    ] as DropdownMenuItem[]
-  },
-  {
-    key: "layout",
-    type: "select",
-    iconName: "i-lucide-layout-grid",
-    tooltipLabel: t("ToolTips.Layout"),
-    selectItems: [
-      {
-        icon: "i-lucide-grid-2x2",
-        label: t("Layout.Grid"),
-        value: "grid",
-        type: "checkbox" as const,
-        checked: layouts.value === "grid",
-        onUpdateChecked: (checked: boolean) => {
-          if (checked) {
-            setLayouts("grid");
-          }
-        }
-      },
-      {
-        icon: "i-lucide-table-of-contents",
-        label: t("Layout.Table"),
-        value: "table",
-        type: "checkbox" as const,
-        checked: layouts.value === "table",
-        onUpdateChecked: (checked: boolean) => {
-          if (checked) {
-            setLayouts("table");
-          }
-        }
-      }
-    ] as DropdownMenuItem[]
-  },
-  {
-    key: "settings",
-    type: "action",
-    iconName: "i-lucide-settings",
-    tooltipLabel: t("ToolTips.Settings"),
-    onClick: async () => {
-      const label = "secondary";
-      const existing = await useTauriWebviewWindowWebviewWindow.getByLabel(label);
-
-      // 如果已经打开过,直接置顶
-      if (existing) {
-        try {
-          if (await existing.isMinimized()) {
-            await existing.unminimize();
-          }
-
-          if (!(await existing.isVisible())) {
-            await existing.show();
-          }
-
-          await existing.setFocus();
-        } catch (e) {
-          console.error("focus settings window failed", e);
-        }
-        return;
-      }
-
-      // 直接创建窗口
-      // eslint-disable-next-line no-new
-      const isMac = isMacOS.value;
-      new useTauriWebviewWindowWebviewWindow(label, {
-        title: t("Common.ConnectionSettings"),
-        url: localePath({ path: "/setting" }),
-        height: 675,
-        minWidth: 930,
-        minHeight: 675,
-        maxHeight: 675,
-        hiddenTitle: true,
-        titleBarStyle: "overlay",
-        trafficLightPosition: new LogicalPosition(10, 22),
-        decorations: isMac,
-        shadow: isMac
-      });
-    }
+    return;
   }
-]);
+
+  const isMac = isMacOS.value;
+  // eslint-disable-next-line no-new
+  new useTauriWebviewWindowWebviewWindow(label, {
+    title: t("Common.ConnectionSettings"),
+    url: localePath({ path: "/setting" }),
+    height: 675,
+    minWidth: 930,
+    minHeight: 675,
+    maxHeight: 675,
+    hiddenTitle: true,
+    titleBarStyle: "overlay",
+    trafficLightPosition: new LogicalPosition(10, 22),
+    decorations: isMac,
+    shadow: isMac
+  });
+};
 </script>
 
 <template>
   <section class="flex items-center h-full">
-    <div class="flex items-center mr-3 gap-2">
-      <template v-for="action of actionItems" :key="action.iconName">
-        <template v-if="action.type === 'action'">
-          <UButton :icon="action.iconName" v-bind="commonButtonProps" @click="action.onClick" />
-        </template>
-
-        <template v-else>
-          <UDropdownMenu
-            arrow
-            size="sm"
-            :items="action.selectItems"
-            :ui="{
-              content: locale === 'en' ? 'w-42' : 'w-48'
-            }"
-          >
-            <UButton
-              :icon="action.iconName"
-              v-bind="commonButtonProps"
-              @click="() => console.log('Dropdown button clicked:', action.key)"
-            />
-          </UDropdownMenu>
-        </template>
-      </template>
+    <div class="flex items-center px-2">
+      <UButton
+        icon="i-lucide-settings"
+        :title="t('ToolTips.Settings')"
+        v-bind="commonButtonProps"
+        @click="openSettingsWindow"
+      />
     </div>
 
     <!-- 窗口控制按钮 -->

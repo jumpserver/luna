@@ -22,6 +22,7 @@ pub(crate) mod authentication {
 
 pub(crate) mod terminal {
     pub(crate) const CONNECT_METHODS: &str = "/api/v1/terminal/components/connect-methods/";
+    pub(crate) const SMART_ENDPOINT: &str = "/api/v1/terminal/endpoints/smart/";
 }
 
 pub(crate) mod user {

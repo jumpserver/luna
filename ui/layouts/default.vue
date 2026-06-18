@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { isWindows } = usePlatform();
+const { activeWorkspaceMode } = useWorkspaceMode();
 
 const cardUi = computed(() => {
   const base = ["rounded-none", "overflow-visible"];
@@ -33,7 +34,8 @@ onMounted(() => {
       <SideBar />
 
       <Main class="flex-1 min-w-0">
-        <slot />
+        <WorkspaceTerminalArea v-if="activeWorkspaceMode === 'assets'" />
+        <slot v-else />
       </Main>
     </div>
   </UCard>

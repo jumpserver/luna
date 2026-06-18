@@ -46,6 +46,8 @@
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-store": "^2.4.3",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "fflate": "^0.8.2",
     "guacamole-common-js-jumpserver": "1.1.0-c",
     "js-untar": "^2.0.0",

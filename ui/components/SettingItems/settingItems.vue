@@ -19,6 +19,7 @@ const { language } = useSettingManager();
 const { setAppConfig } = useSettingManager();
 
 const imagesMap: Record<string, string | undefined> = {
+  builtin_client: getImageByName("terminal"),
   iterm: getImageByName("item2"),
   dbeaver: getImageByName("dbeaver"),
   heidisql: getImageByName("heidisql"),
@@ -53,6 +54,7 @@ const commentText = computed(() => {
 });
 
 const iconSrc = computed(() => imagesMap[props.item?.name?.toLowerCase?.()]);
+const isBuiltInTerminal = computed(() => props.item?.name === "builtin_client");
 
 // Windows 下，除 putty 与 mstsc 外，提供可选择 exe 路径的入口
 const isWindowsPathPickTarget = computed(() => {
@@ -62,6 +64,10 @@ const isWindowsPathPickTarget = computed(() => {
 const isUserPathPlugin = computed(() => props.item?.executable_type === "user_path");
 
 const canEnable = computed(() => {
+  if (isBuiltInTerminal.value) {
+    return true;
+  }
+
   if (isUserPathPlugin.value) {
     return props.item?.path_exists === true;
   }
@@ -70,6 +76,10 @@ const canEnable = computed(() => {
 
 // user_path 类型保持开关可点击，以便在应用不存在时提示用户
 const switchDisabled = computed(() => {
+  if (isBuiltInTerminal.value) {
+    return true;
+  }
+
   return isUserPathPlugin.value ? false : !canEnable.value;
 });
 

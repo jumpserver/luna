@@ -50,6 +50,8 @@ tauri-plugin-deep-link = "2.4.5"
 tauri-plugin-single-instance = "2"
 tauri-plugin-clipboard-manager = "2.3.0"
 tauri-plugin-prevent-default = "5.0.0"
+russh = "0.61.2"
+bytes = "1.11.1"
 
 [dependencies.tokio]
 version = "1.46.1"

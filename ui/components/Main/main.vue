@@ -3,6 +3,7 @@ type alertTypes = "incompatible" | "noMatch";
 
 const { theme } = useSettingManager();
 const { componentsConfig } = useAppConfig();
+const { activeWorkspaceMode } = useWorkspaceMode();
 const clearSelectionCallback = ref<(() => void) | null>(null);
 
 const { t } = useI18n();
@@ -25,6 +26,18 @@ const clearSelection = () => {
 const providerClearSelection = (callback: () => void) => {
   clearSelectionCallback.value = callback;
 };
+
+const cardUi = computed(() => {
+  const bodyClass = activeWorkspaceMode.value === "assets"
+    ? "p-0 sm:p-0 h-screen"
+    : "p-0 sm:p-0 h-screen";
+
+  return {
+    header: "p-0 sm:p-0",
+    body: bodyClass,
+    root: "rounded-none"
+  };
+});
 
 useEventBus().on("versionAlert", ({ type, version }: { type: string, version?: string }) => {
   alertType.value = type as alertType;
@@ -52,15 +65,11 @@ provide("providerClearSelection", providerClearSelection);
           ? componentsConfig.pages.mainCardDarkBackgroundColor
           : componentsConfig.pages.mainCardLightBackgroundColor
     }"
-    :ui="{
-      header: 'p-0 sm:p-0',
-      body: 'p-2 pr-1 sm:p-4 px-4 h-[calc(100vh-58px)]',
-      root: 'rounded-none'
-    }"
+    :ui="cardUi"
     @click="clearSelection"
   >
     <template #header>
-      <Header />
+      <Header v-if="activeWorkspaceMode !== 'assets'" />
     </template>
 
     <UAlert

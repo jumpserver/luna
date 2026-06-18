@@ -19,7 +19,18 @@ const connectMethodsCache = new Map<string, ConnectMethodsResponse>();
 const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 
 export const useConnectMethods = () => {
+  const { t } = useI18n();
   const { currentSite, orgId } = storeToRefs(useUserInfoStore());
+
+  const builtInTerminalMethod = (): ConnectMethod => ({
+    value: "builtin_client",
+    label: t("Setting.BuiltInTerminal"),
+    type: "native",
+    icon: "i-lucide-terminal",
+    disabled: false,
+    listen: "",
+    component: ""
+  });
 
   const fetchConnectMethods = async (): Promise<ConnectMethodsResponse> => {
     const key = `${currentSite.value || ""}:${orgId.value || ""}`;
@@ -92,13 +103,20 @@ export const useConnectMethods = () => {
   const getMethodsForProtocol = async (protocol: string): Promise<ConnectMethod[]> => {
     const allMethods = await fetchConnectMethods();
     const protocolMethods = allMethods[protocol] || [];
-    if (protocol === "http") {
-      return protocolMethods.filter((method) => !method.disabled && method.type === "applet");
-    } else {
-      return protocolMethods.filter((method) => {
+    const methods = protocol === "http"
+      ? protocolMethods.filter((method) => !method.disabled && method.type === "applet")
+      : protocolMethods.filter((method) => {
         return !method.disabled && (method.type === "native" && !method.value.endsWith("_guide"));
       });
+
+    if (protocol === "ssh") {
+      return [
+        builtInTerminalMethod(),
+        ...methods.filter((method) => method.value !== "builtin_client")
+      ];
     }
+
+    return methods;
   };
 
   const getDefaultMethodForProtocol = async (protocol: string): Promise<string> => {

@@ -171,6 +171,8 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
    * @description 判断是否为当前路由
    */
   const isActiveForCurrentRoute = () => {
+    if (assetType === "assets") return true;
+
     const pathLower = route.path.toLowerCase();
 
     switch (assetType) {
@@ -201,6 +203,8 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
    */
   const filterResultsByAssetType = (items: RawAssetData[]) => {
     switch (assetType) {
+      case "assets":
+        return items;
       case "favorite":
         return items;
       case "linux":
@@ -291,7 +295,7 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
       await useTauriCoreInvoke("get_assets", {
         favorite: assetType === "favorite",
         query: {
-          type: assetType === "favorite" ? undefined : assetType,
+          type: assetType === "favorite" || assetType === "assets" ? undefined : assetType,
           offset: offset.value,
           limit: LIMIT,
           search: searchParam,

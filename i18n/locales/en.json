@@ -60,7 +60,6 @@
     "Resource": "Resource",
     "Database": "Database",
     "Web": "Web",
-    "Tool": "Tools",
     "Transcode": "Replay Transcode",
     "OfflinePlayer": "Offline Player",
     "Favorite": "Favorite"
@@ -249,6 +248,8 @@
     "Disable": "Disable",
     "EnableFailed": "Unable to enable",
     "ExecutableNotFound": "Application not found. Please download and install it correctly.",
+    "BuiltInTerminal": "Built-in terminal",
+    "AlwaysEnabled": "Always enabled",
     "DownloadApplication": "Download Application"
   },
   "ConnectError": {

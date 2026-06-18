@@ -17,14 +17,19 @@ use crate::commands::asset_actions::{
 };
 use crate::commands::auth_flow::{auth_cancel, auth_login};
 use crate::commands::auth_logout::logout;
+use crate::commands::builtin_terminal::{
+    builtin_session_close, builtin_session_input, builtin_session_resize, builtin_ssh_start,
+    BuiltinTerminalState,
+};
 use crate::commands::client_launcher::pull_up;
 use crate::commands::config_update::update_config_selection;
 use crate::commands::connect_methods::get_connect_methods;
-use crate::commands::connect_token::get_connect_token;
+use crate::commands::connect_token::{get_builtin_connect_session, get_connect_token};
 use crate::commands::dev_http_server::init_http_callback_server;
 use crate::commands::get_config::get_config;
 use crate::commands::get_setting::get_setting;
 use crate::commands::get_version::get_version_message;
+use crate::commands::smart_endpoint::get_smart_endpoint;
 use crate::commands::system_fonts::list_system_fonts;
 use crate::commands::video_player::{
     delete_video_player_file, read_video_player_text_stream, write_video_player_gzip_file,
@@ -93,6 +98,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AuthFlowState::default())
         .manage(ApiSessionStore::default())
+        .manage(BuiltinTerminalState::default())
         .plugin(single_instance(|app, argv, _cwd| {
             info!("single_instance event, argv={:?}", argv);
 
@@ -200,6 +206,12 @@ pub fn run() {
             minimize_window,
             get_asset_detail,
             get_connect_token,
+            get_builtin_connect_session,
+            get_smart_endpoint,
+            builtin_ssh_start,
+            builtin_session_input,
+            builtin_session_resize,
+            builtin_session_close,
             get_version_message,
             list_system_fonts,
             toggle_maximize_window,

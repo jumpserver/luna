@@ -58,7 +58,6 @@
     "Device": "设备",
     "Web": "Web",
     "Other": "其他",
-    "Tool": "工具",
     "Favorite": "收藏",
     "Tool": "工具",
     "Transcode": "录像转码",
@@ -252,6 +251,8 @@
     "Disable": "禁用",
     "EnableFailed": "无法启用",
     "ExecutableNotFound": "未找到程序，请下载并正确安装",
+    "BuiltInTerminal": "内置终端",
+    "AlwaysEnabled": "始终启用",
     "DownloadApplication": "下载应用"
   },
   "ConnectError": {

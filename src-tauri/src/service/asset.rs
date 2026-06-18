@@ -219,6 +219,19 @@ impl AssetService {
             oid: oid.clone(),
         };
 
+        if query.r#type.is_none() && query.category.is_none() {
+            return vec![
+                exact(Some(Category::Linux), None),
+                exact(Some(Category::Windows), None),
+                exact(Some(Category::WindowsAd), None),
+                exact(Some(Category::Unix), None),
+                exact(Some(Category::Other), None),
+                exact(None, Some(Category::Database)),
+                exact(None, Some(Category::Device)),
+                exact(None, Some(Category::Web)),
+            ];
+        }
+
         // 菜单和 JumpServer 的原始 type/category 不是一一对应：
         // Windows 要合并 windows + windows_ad，Other 要合并 unix + other。
         match query.get_category() {

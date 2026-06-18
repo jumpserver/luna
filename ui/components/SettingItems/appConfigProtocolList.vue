@@ -10,13 +10,42 @@ const { t } = useI18n();
 const { appConfig } = useSettingManager();
 const { selectClient } = useApplicationConfig();
 
+const builtInTerminalItem = computed<ConfigItem>(() => ({
+  name: "builtin_client",
+  display_name: t("Setting.BuiltInTerminal"),
+  protocol: ["ssh"],
+  comment: {
+    zh: "使用客户端内置的终端连接 SSH 资产，默认启用且不可禁用。",
+    en: "Use the built-in terminal to connect to SSH assets. It is always enabled."
+  },
+  download_url: "",
+  type: "terminal",
+  path: t("Setting.AlwaysEnabled"),
+  arg_format: "",
+  match_first: ["ssh"],
+  is_internal: true,
+  is_default: true,
+  is_set: true,
+  executable_type: "builtin",
+  path_exists: true
+}));
+
 const items = computed<ConfigItem[]>(() => {
   const list = appConfig.value?.[props.category] ?? [];
-  return list.filter((i) => i.protocol?.includes(props.protocol));
+  const filtered = list.filter((i) => i.protocol?.includes(props.protocol));
+
+  if (props.category === "terminal" && props.protocol === "ssh") {
+    return [builtInTerminalItem.value, ...filtered.filter((item) => item.name !== "builtin_client")];
+  }
+
+  return filtered;
 });
 
-const isSelected = (item: ConfigItem) => item.match_first?.includes(props.protocol);
+const isBuiltInTerminal = (item: ConfigItem) => item.name === "builtin_client";
+const isSelected = (item: ConfigItem) => isBuiltInTerminal(item) || item.match_first?.includes(props.protocol);
 const handleToggle = async (item: ConfigItem) => {
+  if (isBuiltInTerminal(item)) return;
+
   await selectClient(props.category, props.protocol, item.name);
 };
 </script>
