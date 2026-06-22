@@ -24,6 +24,7 @@ const recentSiteLimit = 5;
 
 const toast = useToast();
 const appConfig = useAppConfig();
+const localePath = useLocalePath();
 const userInfoStore = useUserInfoStore();
 
 const { t, locales, locale } = useI18n();
@@ -48,6 +49,7 @@ const loginBtn = ref(false);
 const openModal = ref(false);
 const hasValidationError = ref(false);
 const recentSitesDismissed = ref(false);
+const unlistenAuthUrlRef = ref<UnlistenFn | null>(null);
 const unlistenErrorPageRef = ref<UnlistenFn | null>(null);
 const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
@@ -567,7 +569,24 @@ const handleConfirm = async () => {
 
   const users = Object.values(userMap.value) as UserData[];
 
-  if (users.some((user) => normalizeSite(user.site) === normalizedSite)) {
+  const existingUser = users.find((user) => normalizeSite(user.site) === normalizedSite);
+
+  if (existingUser) {
+    if (!loggedIn.value) {
+      userInfoStore.setCurrentSite(existingUser.site);
+      userInfoStore.setUserLoggedIn(true);
+      openModal.value = false;
+
+      nextTick(() => {
+        useEventBus().emit("refresh", undefined);
+        navigateTo({
+          path: localePath({ path: "/" })
+        });
+      });
+
+      return;
+    }
+
     hasValidationError.value = true;
     errorMessage.value = t("Login.AlreadyLoggedInError");
 
@@ -628,7 +647,7 @@ const handleConfirm = async () => {
 onMounted(async () => {
   applyCurrentThemeColor();
 
-  const unlisten = await useTauriEventListen("auth_url", (event) => {
+  unlistenAuthUrlRef.value = await useTauriEventListen("auth_url", (event) => {
     const url = (event?.payload || "").toString();
     if (!url) return;
 
@@ -639,7 +658,6 @@ onMounted(async () => {
     if (url && typeof url === "string") {
       useTauriOpenerOpenUrl(url);
     }
-    unlisten?.();
   });
 
   unlistenErrorPageRef.value = await useTauriEventListen("error-page", (event) => {
@@ -720,6 +738,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  if (unlistenAuthUrlRef.value) unlistenAuthUrlRef.value();
   if (unlistenErrorPageRef.value) unlistenErrorPageRef.value();
   if (unlistenLoginFailedRef.value) unlistenLoginFailedRef.value();
   clearLoginBtnUnlockTimer();

@@ -9,6 +9,7 @@ use crate::{
 use log::info;
 use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder, Response};
 use serde::Serialize;
+use std::time::Duration;
 use url::Url;
 
 pub(crate) use crate::api::response::ApiResponse;
@@ -55,6 +56,14 @@ impl ApiRequestClient {
         info!("GET {}", url);
 
         self.send_with_response(Method::GET, url, |request| request)
+            .await
+    }
+
+    /// 发送带超时的 GET 请求并转换为统一 ApiResponse
+    pub async fn get_with_response_timeout(&self, url: &str, timeout: Duration) -> ApiResponse {
+        info!("GET {} with timeout {:?}", url, timeout);
+
+        self.send_with_response(Method::GET, url, |request| request.timeout(timeout))
             .await
     }
 

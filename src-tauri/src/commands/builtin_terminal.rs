@@ -122,7 +122,10 @@ pub async fn builtin_ssh_start(
 
     {
         let mut sessions = state.sessions.lock().await;
-        sessions.insert(payload.tab_id.clone(), BuiltinTerminalSession { handle, write });
+        sessions.insert(
+            payload.tab_id.clone(),
+            BuiltinTerminalSession { handle, write },
+        );
     }
 
     info!("builtin ssh session started: {}", tab_id);

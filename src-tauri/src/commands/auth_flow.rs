@@ -14,6 +14,8 @@ pub async fn auth_login(
     flow_state: State<'_, AuthFlowState>,
     site: String,
 ) -> Result<(), String> {
+    log::info!("auth_login started for site: {}", site);
+
     // 获取 OAuth 配置
     let config_http_client = api_client().map_err(|e| e.to_string())?;
     let oauth_config = match fetch_oauth_config(&site, &config_http_client).await {
@@ -37,16 +39,19 @@ pub async fn auth_login(
     };
 
     let client_id = oauth_config.client_id;
+    log::info!("OAuth config fetched for site: {}", site);
 
     let fut = async {
         let client = build_oauth_client(&site, &client_id)?;
 
         // 生成 PKCE + 授权 URL
         let authorize = create_authorization_request(&client);
+        log::info!("OAuth authorization URL generated for site: {}", site);
         let pending = flow_state.register_authorization(authorize);
 
-        if let Err(e) = app.emit("auth_url", pending.auth_url) {
-            log::warn!("emit auth_url failed: {}", e);
+        match app.emit("auth_url", pending.auth_url) {
+            Ok(_) => log::info!("auth_url emitted for site: {}", site),
+            Err(e) => log::warn!("emit auth_url failed: {}", e),
         }
 
         let http_client = oauth_client()?;

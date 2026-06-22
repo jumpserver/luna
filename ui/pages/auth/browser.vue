@@ -1,8 +1,5 @@
 <script setup lang="ts">
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
-
-import { useUserInfoStore } from "~/store/modules/userInfo";
 
 definePageMeta({
   layout: "auth"
@@ -11,14 +8,12 @@ definePageMeta({
 const toast = useToast();
 const route = useRoute();
 const localePath = useLocalePath();
-const userInfoStore = useUserInfoStore();
 
 const { t } = useI18n();
 const { userTheme } = useThemeAdapter();
 
 const url = ref<string | null>((route.query.auth_url as string) || null);
 const unlistenAuth = ref<UnlistenFn | null>(null);
-const unlistenLoginSuccessRef = ref<UnlistenFn | null>(null);
 const didCancel = ref(false);
 
 const cardBgClass = computed(() =>
@@ -64,19 +59,6 @@ const handleOpenManually = () => {
   }
 };
 
-function initSelectOrganization(permissionOrgData: PermissionOrgs) {
-  const orgs = [
-    ...(permissionOrgData.pam_orgs || []),
-    ...(permissionOrgData.audit_orgs || []),
-    ...(permissionOrgData.console_orgs || []),
-    ...(permissionOrgData.workbench_orgs || [])
-  ];
-
-  const uniqueOrgs = orgs.filter((org, index, self) => index === self.findIndex((t: PermOrgItem) => t.id === org.id));
-
-  return uniqueOrgs;
-}
-
 onMounted(async () => {
   unlistenAuth.value = await useTauriEventListen("auth_url", (event) => {
     const payload = (event?.payload || "").toString();
@@ -84,55 +66,10 @@ onMounted(async () => {
       url.value = payload;
     }
   });
-
-  unlistenLoginSuccessRef.value = await useTauriEventListen("login-success-detected", async (event) => {
-    const { status, profile, bearer, current_org, resolved_site, permission_orgs, xpack_license_valid }
-      = event.payload as UserIntiInfo & { bearer: string };
-
-    const profileData = JSON.parse((profile as any).data);
-    const currentOrgData = JSON.parse((current_org as any).data);
-    const permissionOrgData = JSON.parse((permission_orgs as any).data) as PermissionOrgs;
-
-    const resolvedSite = resolved_site || "";
-
-    if (status === "success" && profileData) {
-      const availableOrgs = xpack_license_valid === false ? [] : initSelectOrganization(permissionOrgData);
-
-      userInfoStore.setUserData(resolvedSite, {
-        name: profileData.name,
-        bearerToken: bearer,
-        site: resolvedSite,
-        org: currentOrgData,
-        system_roles: profileData.system_roles,
-        availableOrgs,
-        xpackLicenseValid: xpack_license_valid ?? false,
-        connectionInfo: {
-          protocol: "",
-          username: ""
-        }
-      });
-
-      userInfoStore.setOrganizations(availableOrgs);
-      userInfoStore.setCurrentOrg(currentOrgData);
-      userInfoStore.setUserLoggedIn(true);
-
-      nextTick(() => {
-        toast.add({
-          title: t("Login.LoginSuccess"),
-          color: "primary",
-          icon: "line-md:check-all",
-          progress: true
-        });
-
-        navigateTo("/");
-      });
-    }
-  });
 });
 
 onBeforeUnmount(() => {
   if (unlistenAuth.value) unlistenAuth.value();
-  if (unlistenLoginSuccessRef.value) unlistenLoginSuccessRef.value();
 });
 </script>
 

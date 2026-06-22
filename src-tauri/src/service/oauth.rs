@@ -11,6 +11,7 @@ use oauth2::{
 use reqwest::Client;
 use serde::Deserialize;
 use std::sync::Mutex;
+use std::time::Duration as StdDuration;
 use tokio::sync::oneshot;
 use url::Url;
 
@@ -180,10 +181,21 @@ impl AuthFlowState {
 /// 从 JumpServer 获取 OAuth 服务端配置。
 pub async fn fetch_oauth_config(site: &str, client: &Client) -> Result<OAuthConfig> {
     let config_url = format!("{}{}", site, endpoint::oauth::WELL_KNOWN);
+    log::info!("Fetching OAuth config: {}", config_url);
 
-    let response = client.get(config_url).send().await?;
+    let response = client
+        .get(&config_url)
+        .timeout(StdDuration::from_secs(10))
+        .send()
+        .await?;
     let status = response.status();
     let text = response.text().await?;
+    log::info!(
+        "OAuth config response: {} status={}, bytes={}",
+        config_url,
+        status,
+        text.len()
+    );
 
     if !status.is_success() {
         anyhow::bail!("OAuth config endpoint returned {}: {}", status, text);

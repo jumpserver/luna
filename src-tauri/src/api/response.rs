@@ -34,6 +34,7 @@ pub async fn into_api_response(
         Ok(resp) => {
             let status = resp.status().as_u16();
             let data = resp.text().await.unwrap_or_default();
+            log::info!("请求 {} 完成: status={}, bytes={}", url, status, data.len());
 
             ApiResponse::ok(status, data)
         }
