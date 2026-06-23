@@ -23,7 +23,6 @@ const statusDotClass = (status: string) => {
 const tabMenuItems = computed<DropdownMenuItem[]>(() =>
   tabs.value.map((tab) => ({
     label: tab.assetName,
-    description: tab.protocol.toUpperCase(),
     type: "checkbox" as const,
     checked: activeTabId.value === tab.id,
     onSelect: () => selectTab(tab.id)
@@ -126,7 +125,11 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           v-if="hasOverflow"
           :items="tabMenuItems"
           :content="{ align: 'end', side: 'bottom' }"
-          :ui="{ content: 'w-56 max-h-64 overflow-y-auto' }"
+          :ui="{
+            content: 'w-44 max-h-64 overflow-y-auto p-1',
+            item: 'py-1.5 text-sm min-w-0',
+            label: 'truncate'
+          }"
         >
           <button
             type="button"
@@ -139,7 +142,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       </div>
     </WorkspaceTopHeader>
 
-    <div v-if="activeTab" class="h-9 shrink-0 px-3 flex items-center justify-between border-b border-gray-200 dark:border-white/10 text-xs text-gray-500 dark:text-gray-400">
+    <!-- <div v-if="activeTab" class="h-9 shrink-0 px-3 flex items-center justify-between border-b border-gray-200 dark:border-white/10 text-xs text-gray-500 dark:text-gray-400">
       <div class="flex items-center gap-2 min-w-0">
         <span class="truncate">{{ activeTab.account || "-" }}@{{ activeTab.address }}</span>
         <UBadge size="sm" color="neutral" variant="soft" class="uppercase">
@@ -147,7 +150,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
         </UBadge>
       </div>
       <span>{{ statusText(activeTab.status) }}</span>
-    </div>
+    </div> -->
 
     <div class="flex-1 min-h-0">
       <template v-if="activeTab">
