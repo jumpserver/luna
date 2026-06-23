@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { SelectItem } from "@nuxt/ui";
 import type { ThemeType } from "~/types";
 import { useSettingManager } from "~/composables/useSettingManager";
 
@@ -13,18 +12,18 @@ definePageMeta({
   layout: "setting"
 });
 
-const FALLBACK_FONTS =
-  '"Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+const FALLBACK_FONTS
+  = '"Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
 const { t } = useI18n();
- const {
-    theme,
-    themeMode,
-    fontFamily,
-    primaryColorLight,
-    primaryColorDark,
-    hydrationPromise,
-    isHydrated,
+const {
+  theme,
+  themeMode,
+  fontFamily,
+  primaryColorLight,
+  primaryColorDark,
+  hydrationPromise,
+  isHydrated,
   setFontFamily,
   setPrimaryColorLight,
   setPrimaryColorDark
@@ -123,7 +122,7 @@ const predefineColors = computed<string[]>(() => {
   }
 });
 
-const appearanceItems = computed<SelectItem[]>(() => [
+const appearanceItems = computed<{ id: ThemeType, label: string }[]>(() => [
   { label: t("Common.WithSystem"), id: "withSystem" },
   { label: t("Common.Light"), id: "light" },
   { label: t("Common.Dark"), id: "dark" }
@@ -231,7 +230,12 @@ watch(
   <div class="flex flex-col gap-3 p-4">
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Common.Appearance") }}</span>
-      <USelect v-model="selectedAppearance" value-key="id" :items="appearanceItems" class="w-40" />
+      <SettingSelect
+        v-model="selectedAppearance"
+        :items="appearanceItems"
+        :aria-label="t('Common.Appearance')"
+        class="w-48"
+      />
     </div>
 
     <USeparator />
@@ -245,13 +249,11 @@ watch(
 
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Common.Fonts") }}</span>
-      <USelectMenu
+      <SettingSelect
         v-model="selectedFont"
         :items="fontsItems"
-        :search-input="{ placeholder: t('Operation.Search') }"
-        value-key="id"
-        option-attribute="label"
-        class="w-56"
+        :aria-label="t('Common.Fonts')"
+        class="w-48"
       />
     </div>
   </div>

@@ -87,10 +87,10 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
   <section class="h-full min-h-0 w-full flex flex-col bg-white/20 dark:bg-zinc-950/40">
     <WorkspaceTopHeader>
       <div v-if="tabs.length" class="flex h-full min-w-0 items-center gap-1.5 px-3">
-        <div class="workspace-tab-capsule flex min-w-0 flex-1 items-center rounded-full p-0.5">
+        <div class="workspace-tab-capsule flex w-fit min-w-0 max-w-full items-center rounded-full p-0.5">
           <div
             ref="tabStripRef"
-            class="workspace-tab-strip flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto"
+            class="workspace-tab-strip flex w-fit min-w-0 max-w-full items-center gap-0.5 overflow-x-auto"
           >
             <button
               v-for="tab in tabs"

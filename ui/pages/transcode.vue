@@ -86,7 +86,6 @@ const formatDuration = (seconds?: number | null): string => {
   return `${mins}m ${secs}s`;
 };
 
-const hasTasks = computed(() => taskItems.value.length > 0);
 const hasActiveTasks = computed(() => processingCount.value > 0 || completedCount.value > 0);
 
 const pickArchives = async (append = false) => {
@@ -233,75 +232,38 @@ watch(outputDir, () => {
 </script>
 
 <template>
-  <div class="h-full overflow-auto">
-    <div class="flex h-full flex-col gap-4">
-      <UCard class="flex-1 min-h-0 flex flex-col" :ui="{ body: 'flex-1 min-h-0 overflow-hidden flex flex-col' }">
-        <template #header>
-          <div class="flex flex-col gap-3">
-            <div class="flex items-center justify-end gap-3">
-              <UTooltip :text="t('Transcode.Settings')">
-                <UButton
-                  icon="i-lucide-settings"
-                  color="neutral"
-                  variant="ghost"
-                  size="sm"
-                  @click="openSettings"
-                />
-              </UTooltip>
+  <div class="flex h-full min-h-0 flex-col overflow-hidden p-4">
+    <div class="flex shrink-0 flex-col gap-3">
+      <div v-if="isTranscoding || hasActiveTasks" class="flex flex-wrap items-center gap-2">
+        <UBadge v-if="hasActiveTasks" color="primary" variant="soft">
+          {{ t("Transcode.TotalProgress", { progress: totalProgress }) }}
+        </UBadge>
 
-              <UButton v-if="isTranscoding" icon="i-lucide-loader" color="primary" variant="solid" size="sm" disabled>
-                {{ t("Transcode.Running") }}
-              </UButton>
-              <UButton
-                v-else
-                icon="i-lucide-play"
-                color="primary"
-                variant="solid"
-                size="sm"
-                :disabled="!canStart"
-                @click="handleStartTranscode"
-              >
-                {{ t("Transcode.Start") }}
-              </UButton>
-            </div>
+        <UBadge v-if="processingCount > 0" color="primary" variant="soft">
+          {{ t("Transcode.InProgress", { processing: processingCount, total: taskItems.length }) }}
+        </UBadge>
 
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              {{ t("Transcode.Description") }}
-            </p>
+        <UBadge v-else-if="completedCount > 0" :color="failedCount > 0 ? 'error' : 'success'" variant="soft">
+          {{ t("Transcode.CompletedCount", { completed: completedCount, total: taskItems.length }) }}
+        </UBadge>
 
-            <div v-if="hasActiveTasks || hasTasks" class="flex flex-wrap items-center gap-2">
-              <UBadge v-if="hasActiveTasks" color="primary" variant="soft">
-                {{ t("Transcode.TotalProgress", { progress: totalProgress }) }}
-              </UBadge>
+        <UBadge v-if="queuedCount > 0" color="warning" variant="soft">
+          {{ t("Transcode.QueuedCount", { count: queuedCount }) }}
+        </UBadge>
 
-              <UBadge v-if="processingCount > 0" color="primary" variant="soft">
-                {{ t("Transcode.InProgress", { processing: processingCount, total: taskItems.length }) }}
-              </UBadge>
+        <UBadge v-if="successCount > 0" color="success" variant="soft">
+          {{ t("Transcode.SuccessCount", { count: successCount }) }}
+        </UBadge>
 
-              <UBadge v-else-if="completedCount > 0" :color="failedCount > 0 ? 'error' : 'success'" variant="soft">
-                {{ t("Transcode.CompletedCount", { completed: completedCount, total: taskItems.length }) }}
-              </UBadge>
+        <UBadge v-if="failedCount > 0" color="error" variant="soft">
+          {{ t("Transcode.FailedCount", { count: failedCount }) }}
+        </UBadge>
+      </div>
+    </div>
 
-              <UBadge v-if="queuedCount > 0" color="warning" variant="soft">
-                {{ t("Transcode.QueuedCount", { count: queuedCount }) }}
-              </UBadge>
-
-              <UBadge v-if="successCount > 0" color="success" variant="soft">
-                {{ t("Transcode.SuccessCount", { count: successCount }) }}
-              </UBadge>
-
-              <UBadge v-if="failedCount > 0" color="error" variant="soft">
-                {{ t("Transcode.FailedCount", { count: failedCount }) }}
-              </UBadge>
-
-              <UBadge v-if="!hasActiveTasks && hasTasks" color="neutral" variant="soft">
-                {{ t("Transcode.NotStarted") }}
-              </UBadge>
-            </div>
-          </div>
-        </template>
-
-        <div class="flex items-center justify-between mb-2">
+    <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div class="mb-2 flex shrink-0 items-center justify-between">
+        <div class="flex items-center gap-1">
           <UButton icon="i-lucide-plus" color="neutral" variant="ghost" size="xs" @click="pickArchivesSmart">
             {{ t("Transcode.SelectArchives") }}
           </UButton>
@@ -317,122 +279,149 @@ watch(outputDir, () => {
           </UButton>
         </div>
 
-        <div v-if="taskItems.length" class="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
-          <div
-            v-for="item in taskItems"
-            :key="`${item.path}-${item.index}`"
-            class="rounded-lg border border-gray-200 px-3.5 py-3 dark:border-white/10"
+        <div class="flex shrink-0 items-center gap-2">
+          <UButton
+            icon="i-lucide-settings"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            @click="openSettings"
           >
-            <div class="flex items-start gap-3">
-              <div
-                class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
-                :class="
+            {{ t("Transcode.Settings") }}
+          </UButton>
+
+          <UButton v-if="isTranscoding" icon="i-lucide-loader" color="primary" variant="soft" size="xs" disabled>
+            {{ t("Transcode.Running") }}
+          </UButton>
+          <UButton
+            v-else
+            icon="i-lucide-play"
+            color="primary"
+            variant="soft"
+            size="xs"
+            :disabled="!canStart"
+            @click="handleStartTranscode"
+          >
+            {{ t("Transcode.Start") }}
+          </UButton>
+        </div>
+      </div>
+
+      <div v-if="taskItems.length" class="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+        <div
+          v-for="item in taskItems"
+          :key="`${item.path}-${item.index}`"
+          class="rounded-lg border border-gray-200 px-3.5 py-3 dark:border-white/10"
+        >
+          <div class="flex items-start gap-3">
+            <div
+              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
+              :class="
+                item.status === 'success'
+                  ? 'bg-green-500/10 text-green-500'
+                  : item.status === 'error'
+                    ? 'bg-red-500/10 text-red-500'
+                    : item.status === 'processing'
+                      ? 'bg-primary/10 text-primary'
+                      : 'bg-gray-500/10 text-gray-400'
+              "
+            >
+              <UIcon
+                :name="
                   item.status === 'success'
-                    ? 'bg-green-500/10 text-green-500'
+                    ? 'lucide:check-circle'
                     : item.status === 'error'
-                      ? 'bg-red-500/10 text-red-500'
-                      : item.status === 'processing'
-                        ? 'bg-primary/10 text-primary'
-                        : 'bg-gray-500/10 text-gray-400'
+                      ? 'lucide:x-circle'
+                      : 'lucide:archive'
                 "
-              >
-                <UIcon
-                  :name="
-                    item.status === 'success'
-                      ? 'lucide:check-circle'
-                      : item.status === 'error'
-                        ? 'lucide:x-circle'
-                        : 'lucide:archive'
-                  "
-                  class="h-4 w-4"
-                />
+                class="h-4 w-4"
+              />
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 flex-1 min-w-0">
+                  <p class="truncate text-sm font-medium">
+                    {{ item.displayName }}
+                  </p>
+                  <TranscodeMetaPopover v-if="item.metadata" :metadata="item.metadata" />
+                </div>
+
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <UBadge
+                    v-if="item.status === 'success' && item.duration != null"
+                    color="neutral"
+                    variant="subtle"
+                    size="sm"
+                  >
+                    耗时 {{ formatDuration(item.duration) }}
+                  </UBadge>
+
+                  <UBadge :color="getStatusColor(item.status)" variant="soft" size="sm">
+                    {{ getStatusLabel(item.status) }}
+                  </UBadge>
+
+                  <UButton
+                    v-if="item.status !== 'processing'"
+                    icon="i-lucide-x"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    @click="store.removeArchive(item.path)"
+                  />
+                </div>
               </div>
 
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2">
-                  <div class="flex items-center gap-1.5 flex-1 min-w-0">
-                    <p class="truncate text-sm font-medium">
-                      {{ item.displayName }}
-                    </p>
-                    <TranscodeMetaPopover v-if="item.metadata" :metadata="item.metadata" />
-                  </div>
+              <p v-if="item.metadata" class="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">
+                {{ item.metadata.user }} - {{ item.metadata.asset }} - {{ item.metadata.account }}
+              </p>
 
-                  <div class="flex items-center gap-1.5 shrink-0">
-                    <UBadge
-                      v-if="item.status === 'success' && item.duration != null"
-                      color="neutral"
-                      variant="subtle"
-                      size="sm"
-                    >
-                      耗时 {{ formatDuration(item.duration) }}
-                    </UBadge>
-
-                    <UBadge :color="getStatusColor(item.status)" variant="soft" size="sm">
-                      {{ getStatusLabel(item.status) }}
-                    </UBadge>
-
-                    <UButton
-                      v-if="item.status !== 'processing'"
-                      icon="i-lucide-x"
-                      color="neutral"
-                      variant="ghost"
-                      size="xs"
-                      @click="store.removeArchive(item.path)"
-                    />
-                  </div>
-                </div>
-
-                <p v-if="item.metadata" class="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">
-                  {{ item.metadata.user }} - {{ item.metadata.asset }} - {{ item.metadata.account }}
-                </p>
-
-                <div v-if="item.status === 'processing'" class="mt-2 flex flex-col items-center">
-                  <div class="flex items-center gap-2 w-2/3">
-                    <UProgress :value="Math.round(item.progress * 100) / 100" size="sm" class="flex-1" />
-                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400 w-12 text-right tabular-nums">
-                      {{ Math.round(item.progress * 100) / 100 }}%
-                    </span>
-                  </div>
-                </div>
-
-                <div
-                  v-if="item.output"
-                  class="mt-2 flex items-center gap-2 rounded-md bg-gray-50 px-2.5 py-1.5 text-xs dark:bg-white/5"
-                >
-                  <span class="shrink-0 font-medium text-gray-500 dark:text-gray-400">
-                    {{ t("Transcode.OutputFile") }}
+              <div v-if="item.status === 'processing'" class="mt-2 flex flex-col items-center">
+                <div class="flex items-center gap-2 w-2/3">
+                  <UProgress :value="Math.round(item.progress * 100) / 100" size="sm" class="flex-1" />
+                  <span class="text-xs font-medium text-gray-500 dark:text-gray-400 w-12 text-right tabular-nums">
+                    {{ Math.round(item.progress * 100) / 100 }}%
                   </span>
-                  <UTooltip :text="t('Transcode.OpenFile')">
-                    <button
-                      type="button"
-                      class="flex min-w-0 items-center gap-1 text-left text-primary hover:underline focus:outline-none"
-                      @click="openOutputFile(item.output)"
-                    >
-                      <UIcon name="lucide:play-circle" class="h-3.5 w-3.5 shrink-0" />
-                      <span class="truncate">{{ item.output }}</span>
-                    </button>
-                  </UTooltip>
                 </div>
+              </div>
 
-                <div
-                  v-if="item.error"
-                  class="mt-2 rounded-md bg-red-50 px-2.5 py-1.5 text-xs text-red-600 dark:bg-red-500/10 dark:text-red-300"
-                >
-                  <span class="font-medium">{{ t("Transcode.ErrorDetail") }}</span>
-                  <span class="ml-1 break-all">{{ item.error }}</span>
-                </div>
+              <div
+                v-if="item.output"
+                class="mt-2 flex items-center gap-2 rounded-md bg-gray-50 px-2.5 py-1.5 text-xs dark:bg-white/5"
+              >
+                <span class="shrink-0 font-medium text-gray-500 dark:text-gray-400">
+                  {{ t("Transcode.OutputFile") }}
+                </span>
+                <UTooltip :text="t('Transcode.OpenFile')">
+                  <button
+                    type="button"
+                    class="flex min-w-0 items-center gap-1 text-left text-primary hover:underline focus:outline-none"
+                    @click="openOutputFile(item.output)"
+                  >
+                    <UIcon name="lucide:play-circle" class="h-3.5 w-3.5 shrink-0" />
+                    <span class="truncate">{{ item.output }}</span>
+                  </button>
+                </UTooltip>
+              </div>
+
+              <div
+                v-if="item.error"
+                class="mt-2 rounded-md bg-red-50 px-2.5 py-1.5 text-xs text-red-600 dark:bg-red-500/10 dark:text-red-300"
+              >
+                <span class="font-medium">{{ t("Transcode.ErrorDetail") }}</span>
+                <span class="ml-1 break-all">{{ item.error }}</span>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <div
-          v-else
-          class="flex flex-1 items-center justify-center rounded-lg border border-dashed border-gray-200 text-sm text-gray-500 dark:border-white/10 dark:text-gray-400"
-        >
-          {{ t("Transcode.EmptyArchives") }}
-        </div>
-      </UCard>
+      <div
+        v-else
+        class="flex flex-1 items-center justify-center border border-dashed border-(--ui-border) text-sm text-(--ui-text-muted)"
+      >
+        {{ t("Transcode.EmptyArchives") }}
+      </div>
     </div>
 
     <UModal v-model:open="settingsOpen" :title="t('Transcode.Settings')" :ui="{ footer: 'justify-end' }">

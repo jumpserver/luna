@@ -171,17 +171,18 @@ pub fn open_settings_window(app: &tauri::AppHandle) {
         return;
     }
 
-    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/setting".into()))
-        .title("Connection Settings")
-        .min_inner_size(930.0, 520.0)
-        .max_inner_size(930.0, 675.0);
+    let mut builder =
+        WebviewWindowBuilder::new(app, label, WebviewUrl::App("/setting/general".into()))
+            .title("Connection Settings")
+            .min_inner_size(930.0, 520.0)
+            .max_inner_size(930.0, 675.0);
 
     #[cfg(target_os = "macos")]
     {
         builder = builder
             .title_bar_style(tauri::TitleBarStyle::Overlay)
             .hidden_title(true)
-            .traffic_light_position(LogicalPosition::new(10.0, 22.0));
+            .traffic_light_position(LogicalPosition::new(10.0, 24.0));
     }
 
     match builder.build() {

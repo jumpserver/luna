@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import type { SelectItem } from "@nuxt/ui";
 import type { CharsetType, LangType, ResolutionType } from "~/types";
 
 import { useSettingManager } from "~/composables/useSettingManager";
 
-type LangItem = SelectItem & { id: string };
+interface LangItem {
+  id: LangType
+  label: string
+}
 
 definePageMeta({
   layout: "setting"
@@ -25,7 +27,7 @@ const {
 const languageItems = computed<LangItem[]>(() => {
   const arr = (locales.value as any[]) || [];
   return arr.map((l: any) => ({
-    id: l.code || l,
+    id: (l.code || l) as LangType,
     label: l.name || l
   }));
 });
@@ -80,13 +82,6 @@ const resolutionItems = computed(() => {
   ];
 });
 
-const boolOptions = computed(() => {
-  return [
-    { label: t("Setting.Enable"), id: true },
-    { label: t("Setting.Disable"), id: false }
-  ];
-});
-
 const selectedLanguage = computed<LangType>({
   get: () => (locale.value as LangType) || "zh",
   set: (code: LangType) => {
@@ -116,7 +111,12 @@ const selectedEnabled = computed<boolean>({
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Common.Language") }}</span>
 
-      <USelect v-model="selectedLanguage" :items="languageItems" value-key="id" option-attribute="label" class="w-56" />
+      <SettingSelect
+        v-model="selectedLanguage"
+        :items="languageItems"
+        :aria-label="t('Common.Language')"
+        class="w-48"
+      />
     </div>
 
     <USeparator />
@@ -124,7 +124,12 @@ const selectedEnabled = computed<boolean>({
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Setting.Charset") }}</span>
 
-      <USelect v-model="selectedCharset" :items="charsetItems" value-key="id" option-attribute="label" class="w-56" />
+      <SettingSelect
+        v-model="selectedCharset"
+        :items="charsetItems"
+        :aria-label="t('Setting.Charset')"
+        class="w-48"
+      />
     </div>
 
     <USeparator />
@@ -132,7 +137,7 @@ const selectedEnabled = computed<boolean>({
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Setting.TerminalBackspace") }}</span>
 
-      <USelect v-model="selectedEnabled" :items="boolOptions" value-key="id" option-attribute="label" class="w-56" />
+      <USwitch v-model="selectedEnabled" :aria-label="t('Setting.TerminalBackspace')" />
     </div>
 
     <USeparator />
@@ -140,12 +145,11 @@ const selectedEnabled = computed<boolean>({
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Setting.Resolution") }}</span>
 
-      <USelect
+      <SettingSelect
         v-model="selectedresolution"
         :items="resolutionItems"
-        value-key="id"
-        option-attribute="label"
-        class="w-56"
+        :aria-label="t('Setting.Resolution')"
+        class="w-48"
       />
     </div>
   </div>

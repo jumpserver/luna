@@ -34,7 +34,7 @@ const backgroundColor = computed(() => {
 
   // 只在 macOS 下设置透明度
   if (isMacOS.value) {
-    return isDark ? "rgba(30, 30, 30, 0.8)" : "rgba(240, 240, 240, 0.4)";
+    return isDark ? "rgba(30, 30, 30, 0.8)" : "rgba(240, 240, 240, 0.9)";
   } else {
     return isDark ? "rgba(30, 30, 30, 0.8)" : "rgba(240, 240, 240, 0.83)";
   }

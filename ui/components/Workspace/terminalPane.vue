@@ -8,9 +8,13 @@ const props = defineProps<{
   tab: WorkspaceSessionTab
 }>();
 
+const USE_KOKO_IFRAME_EXPERIMENT = true;
+
 const terminalRef = ref<HTMLElement | null>(null);
+const terminalHostRef = ref<HTMLElement | null>(null);
+const iframeRef = ref<HTMLIFrameElement | null>(null);
 const colorMode = useColorMode();
-const { markSessionConnected } = useWorkspaceTabs();
+const { activeTabId, markSessionConnected, markSessionFailed } = useWorkspaceTabs();
 
 let terminal: any = null;
 let fitAddon: any = null;
@@ -19,6 +23,7 @@ let unlistenOutput: UnlistenFn | null = null;
 let unlistenReady: UnlistenFn | null = null;
 let unlistenExit: UnlistenFn | null = null;
 let sessionStarted = false;
+let inputDisposable: { dispose: () => void } | null = null;
 
 const token = computed(() => props.tab.payload?.token || props.tab.payload || {});
 const tokenId = computed(() => props.tab.payload?.id || token.value?.id || "");
@@ -27,6 +32,16 @@ const endpoint = ref<Record<string, any> | null>(null);
 const endpointHost = computed(() => endpoint.value?.host || "");
 const endpointPort = computed(() => Number(endpoint.value?.ssh_port || endpoint.value?.port || 22) || 22);
 const username = computed(() => (tokenId.value ? `JMS-${tokenId.value}` : "JMS-<token>"));
+const useKokoIframe = computed(() => USE_KOKO_IFRAME_EXPERIMENT && props.tab.protocol === "ssh");
+const kokoBaseUrl = computed(() => {
+  if (!import.meta.client) return "http://localhost:5050";
+  const raw = globalThis.localStorage?.getItem("koko_iframe_base_url")?.trim() || "";
+  return raw.replace(/\/+$/, "") || "http://localhost:5050";
+});
+const kokoIframeSrc = computed(() => {
+  if (!tokenId.value) return "";
+  return `${kokoBaseUrl.value}/koko/connect/?disableautohash=false&token=${encodeURIComponent(tokenId.value)}&_=${Date.now()}`;
+});
 const terminalTheme = computed(() => {
   if (colorMode.value === "dark") {
     return {
@@ -78,6 +93,8 @@ const terminalTheme = computed(() => {
 });
 
 const fitTerminal = () => {
+  if (!terminalHostRef.value) return;
+  if (terminalHostRef.value.clientWidth <= 0 || terminalHostRef.value.clientHeight <= 0) return;
   fitAddon?.fit();
 };
 
@@ -87,6 +104,7 @@ const getTerminalSize = () => ({
 });
 
 const renderIntro = () => {
+  if (useKokoIframe.value) return;
   if (!terminal) return;
 
   terminal.clear();
@@ -101,6 +119,7 @@ const renderIntro = () => {
 };
 
 const startBridge = async () => {
+  if (useKokoIframe.value) return;
   if (sessionStarted || !terminal || !props.tab.payload) return;
   if (props.tab.protocol !== "ssh") {
     terminal.writeln("\r\nOnly SSH is supported by the built-in terminal right now.");
@@ -162,17 +181,21 @@ const bindTauriEvents = async () => {
     const payload = event.payload as { tabId: string };
     if (payload.tabId !== props.tab.id) return;
     markSessionConnected(props.tab.id);
+    terminal?.focus();
   });
 
   unlistenExit = await useTauriEventListen("builtin-session-exit", (event) => {
     const payload = event.payload as { tabId: string, status?: number };
     if (payload.tabId !== props.tab.id) return;
+    sessionStarted = false;
+    markSessionFailed({ tabId: props.tab.id, assetId: props.tab.assetId, protocol: props.tab.protocol, account: props.tab.account });
     terminal?.writeln(`\r\nSession closed${payload.status !== undefined ? ` (${payload.status})` : ""}.`);
   });
 };
 
 const mountTerminal = async () => {
-  if (!terminalRef.value || terminal || !import.meta.client) return;
+  if (useKokoIframe.value) return;
+  if (!terminalHostRef.value || terminal || !import.meta.client) return;
 
   const [{ Terminal }, { FitAddon }] = await Promise.all([
     import("@xterm/xterm"),
@@ -189,13 +212,14 @@ const mountTerminal = async () => {
 
   fitAddon = new FitAddon();
   terminal.loadAddon(fitAddon);
-  terminal.open(terminalRef.value);
+  terminal.open(terminalHostRef.value);
   fitTerminal();
   renderIntro();
   await bindTauriEvents();
   await startBridge();
+  terminal.focus();
 
-  terminal.onData((data: string) => {
+  inputDisposable = terminal.onData((data: string) => {
     useTauriCoreInvoke("builtin_session_input", {
       payload: { tabId: props.tab.id, data }
     }).catch(() => {});
@@ -209,11 +233,17 @@ const mountTerminal = async () => {
     }).catch(() => {});
   });
   resizeObserver.observe(terminalRef.value);
+  resizeObserver.observe(terminalHostRef.value);
 };
 
 watch(
   () => props.tab.payload,
   () => {
+    if (useKokoIframe.value && tokenId.value) {
+      markSessionConnected(props.tab.id);
+      return;
+    }
+    if (sessionStarted) return;
     renderIntro();
     startBridge();
   },
@@ -229,8 +259,27 @@ watch(
   }
 );
 
+watch(
+  () => activeTabId.value,
+  (tabId) => {
+    if (tabId !== props.tab.id) return;
+
+    nextTick(() => {
+      if (useKokoIframe.value) {
+        iframeRef.value?.focus();
+        return;
+      }
+
+      fitTerminal();
+      terminal?.focus();
+    });
+  }
+);
+
 onMounted(() => {
-  mountTerminal();
+  if (!useKokoIframe.value) {
+    mountTerminal();
+  }
 });
 
 onBeforeUnmount(() => {
@@ -243,6 +292,8 @@ onBeforeUnmount(() => {
   unlistenReady = null;
   unlistenExit = null;
   resizeObserver = null;
+  inputDisposable?.dispose();
+  inputDisposable = null;
   terminal = null;
   fitAddon = null;
 });
@@ -251,6 +302,35 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="terminalRef"
-    class="h-full min-h-0 w-full p-2 overflow-hidden bg-white dark:bg-zinc-950"
-  />
+    class="h-full min-h-0 w-full overflow-hidden bg-white dark:bg-zinc-950"
+    @mousedown="terminal?.focus()"
+  >
+    <div v-if="useKokoIframe" class="h-full min-h-0 w-full p-2">
+      <div v-if="kokoIframeSrc" class="h-full min-h-0 w-full overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-zinc-950">
+        <iframe
+          ref="iframeRef"
+          :src="kokoIframeSrc"
+          class="h-full w-full border-0 bg-white dark:bg-zinc-950"
+          title="Koko Connector"
+        />
+      </div>
+
+      <div
+        v-else
+        class="grid h-full min-h-0 place-items-center rounded-lg border border-dashed border-gray-300 text-sm text-gray-500 dark:border-white/10 dark:text-gray-400"
+      >
+        <div class="flex flex-col items-center gap-2">
+          <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
+          <div>正在准备 Koko 连接令牌...</div>
+        </div>
+      </div>
+    </div>
+
+    <div v-else class="h-full min-h-0 w-full p-2">
+      <div
+        ref="terminalHostRef"
+        class="h-full min-h-0 w-full overflow-hidden"
+      />
+    </div>
+  </div>
 </template>

@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import { LogicalPosition } from "@tauri-apps/api/dpi";
-
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
-const localePath = useLocalePath();
 const { userTheme, manualSetTheme } = useThemeAdapter();
 
 // 公共按钮配置
@@ -61,41 +58,7 @@ const getWindowControlButtonClass = (buttonKey: string) => {
 };
 
 const openSettingsWindow = async () => {
-  const label = "secondary";
-  const existing = await useTauriWebviewWindowWebviewWindow.getByLabel(label);
-
-  if (existing) {
-    try {
-      if (await existing.isMinimized()) {
-        await existing.unminimize();
-      }
-
-      if (!(await existing.isVisible())) {
-        await existing.show();
-      }
-
-      await existing.setFocus();
-    } catch (e) {
-      console.error("focus settings window failed", e);
-    }
-    return;
-  }
-
-  const isMac = isMacOS.value;
-  // eslint-disable-next-line no-new
-  new useTauriWebviewWindowWebviewWindow(label, {
-    title: t("Common.ConnectionSettings"),
-    url: localePath({ path: "/setting" }),
-    height: 675,
-    minWidth: 930,
-    minHeight: 675,
-    maxHeight: 675,
-    hiddenTitle: true,
-    titleBarStyle: "overlay",
-    trafficLightPosition: new LogicalPosition(10, 24),
-    decorations: isMac,
-    shadow: isMac
-  });
+  await useTauriCoreInvoke("open_settings_window");
 };
 
 const isDarkMode = computed(() => userTheme.value === "dark");

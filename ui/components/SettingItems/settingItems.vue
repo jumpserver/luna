@@ -170,8 +170,6 @@ const onPathClick = () => {
 
             <USwitch
               class="shrink-0"
-              unchecked-icon="i-lucide-x"
-              checked-icon="i-lucide-check"
               :model-value="props.selected ?? false"
               :disabled="switchDisabled"
               @update:model-value="onSwitch"

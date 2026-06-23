@@ -8,7 +8,7 @@ const pageHeader = computed(() => {
   if (path.includes("/videoplayer")) {
     return {
       icon: "lucide:clapperboard",
-      title: "录像播放器"
+      title: t("Menu.Player")
     };
   }
 

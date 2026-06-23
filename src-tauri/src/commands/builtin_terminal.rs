@@ -7,7 +7,6 @@ use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
 
@@ -75,10 +74,7 @@ pub async fn builtin_ssh_start(
 ) -> Result<(), String> {
     close_existing(&state, &payload.tab_id).await;
 
-    let config = Arc::new(client::Config {
-        inactivity_timeout: Some(Duration::from_secs(60)),
-        ..<_>::default()
-    });
+    let config = Arc::new(client::Config::default());
 
     let addr = (payload.host.as_str(), payload.port);
     let mut handle = client::connect(config, addr, ClientHandler)

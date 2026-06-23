@@ -50,7 +50,7 @@ watch(
 </script>
 
 <template>
-  <div v-show="loggedIn" class="flex w-full items-center">
+  <div v-show="loggedIn" class="flex min-w-0 items-center">
     <UDropdownMenu
       :items="organizationDropdownItems"
       :content="{ align: 'start', side: 'bottom' }"
@@ -60,12 +60,12 @@ watch(
         variant="ghost"
         size="sm"
         color="neutral"
-        class="h-7 w-full rounded-sm px-2"
-        :ui="{ base: 'grid grid-cols-[16px_minmax(0,1fr)_14px] items-center gap-2' }"
+        class="group h-7 max-w-full rounded-sm py-0 pr-1 pl-0"
+        :ui="{ base: 'flex items-center justify-start gap-1.5 hover:bg-transparent active:bg-transparent focus:bg-transparent focus-visible:bg-transparent data-[state=open]:bg-transparent dark:hover:bg-transparent dark:active:bg-transparent dark:focus:bg-transparent dark:focus-visible:bg-transparent dark:data-[state=open]:bg-transparent' }"
       >
         <UIcon name="fluent:organization-16-regular" class="size-4 text-gray-500 dark:text-gray-400" />
-        <span class="min-w-0 truncate text-left text-xs font-medium">{{ currentOrg }}</span>
-        <UIcon name="i-lucide-chevron-down" class="size-3.5 justify-self-end text-gray-400 dark:text-gray-500" />
+        <span class="min-w-0 truncate text-left text-xs font-medium text-gray-700 transition-colors group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100">{{ currentOrg }}</span>
+        <UIcon name="i-lucide-chevron-down" class="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
       </UButton>
     </UDropdownMenu>
   </div>

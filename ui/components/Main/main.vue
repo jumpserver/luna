@@ -27,17 +27,11 @@ const providerClearSelection = (callback: () => void) => {
   clearSelectionCallback.value = callback;
 };
 
-const cardUi = computed(() => {
-  const bodyClass = activeWorkspaceMode.value === "assets"
-    ? "p-0 sm:p-0 h-screen"
-    : "p-0 sm:p-0 h-screen";
-
-  return {
-    header: "p-0 sm:p-0",
-    body: bodyClass,
-    root: "rounded-none"
-  };
-});
+const cardUi = computed(() => ({
+  header: "p-0 sm:p-0 shrink-0",
+  body: "p-0 sm:p-0 flex-1 min-h-0 overflow-hidden flex flex-col",
+  root: "rounded-none h-screen flex flex-col min-h-0"
+}));
 
 useEventBus().on("versionAlert", ({ type, version }: { type: string, version?: string }) => {
   alertType.value = type as alertType;
@@ -54,7 +48,7 @@ provide("providerClearSelection", providerClearSelection);
 <template>
   <UCard
     variant="soft"
-    class="w-full"
+    class="flex h-full w-full min-h-0 flex-col"
     :style="{
       borderTopRightRadius: '0px',
       borderTopLeftRadius: '0px',

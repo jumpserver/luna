@@ -9,6 +9,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   play: [VideoPlayerItem]
   remove: [VideoPlayerItem]
+  collapse: []
 }>();
 
 interface PlaylistGroup {
@@ -161,29 +162,36 @@ function partLabel(item: VideoPlayerItem) {
 function groupHasActivePart(group: PlaylistGroup) {
   return group.items.some((item) => item.id === props.activeId);
 }
-
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-col rounded-xl border-2 border-(--ui-border) p-4">
-    <div class="mb-3 flex items-center justify-between gap-3">
-      <h3 class="min-w-0 text-sm font-semibold tracking-wide text-(--ui-text-highlighted)">
+  <div class="flex min-h-0 flex-1 flex-col">
+    <div class="mb-2 flex items-center justify-between gap-2">
+      <h3 class="min-w-0 truncate text-sm font-semibold tracking-wide text-(--ui-text-highlighted)">
         播放列表
       </h3>
-      <div class="flex shrink-0 items-center gap-2">
-        <span class="rounded-full border border-(--ui-primary)/30 px-2.5 py-1 text-xs font-medium text-(--ui-primary)">
-          {{ items.length }}
-        </span>
-        <label
-          for="videoplayer-file-input"
-          class="cursor-pointer rounded-full border border-(--ui-border) px-3 py-1 text-xs font-medium text-(--ui-text-toned) transition hover:border-(--ui-primary)/50 hover:text-(--ui-primary)"
-        >
-          添加录像
-        </label>
+      <div class="flex shrink-0 items-center gap-1.5">
+        <UTooltip text="添加录像">
+          <label
+            for="videoplayer-file-input"
+            class="flex size-7 cursor-pointer items-center justify-center rounded-full border border-(--ui-border) text-(--ui-text-toned) transition hover:border-(--ui-primary)/50 hover:text-(--ui-primary)"
+          >
+            <UIcon name="i-lucide-plus" class="size-3.5" />
+          </label>
+        </UTooltip>
+        <UTooltip text="收起播放列表">
+          <button
+            type="button"
+            class="flex size-7 cursor-pointer items-center justify-center rounded-full border border-(--ui-border) text-(--ui-text-toned) transition hover:border-(--ui-primary)/50 hover:text-(--ui-primary)"
+            @click="emit('collapse')"
+          >
+            <UIcon name="i-lucide-panel-right" class="size-3.5" />
+          </button>
+        </UTooltip>
       </div>
     </div>
 
-    <div class="playlist-scroll flex h-[calc(100%-3.2rem)] flex-col gap-2 overflow-y-auto pr-1">
+    <div class="playlist-scroll flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
       <template v-for="group in playlistGroups" :key="group.key">
         <div
           v-if="group.isPartGroup"

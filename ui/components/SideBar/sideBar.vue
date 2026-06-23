@@ -9,6 +9,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import Profile from "./profile.vue";
 
 const localePath = useLocalePath();
+const route = useRoute();
 
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
@@ -17,17 +18,31 @@ const { collapse, setCollapse } = useSettingManager();
 const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
 const { confirmConnection, saveConnectionInfo } = useAssetConnection();
 const { openSession } = useWorkspaceTabs();
-const { handleAssetFavorite, handleAssetUnfavorite } = useAssetAction();
+const {
+  displayUser,
+  handleAssetConnection,
+  handleAssetFavorite,
+  handleAssetRename,
+  handleAssetUnfavorite
+} = useAssetAction();
 
 const appName = ref(getConfiguredAppName());
 const isLoading = ref(false);
 const sidebarSearch = ref("");
+const showAssetSearch = ref(false);
 const assetScrollRef = ref<HTMLElement | null>(null);
 const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
 const collapsedAssetGroups = ref<Set<string>>(new Set());
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextMenuAsset = ref<AssetItem | null>(null);
+const renameModalOpen = ref(false);
+const renameAsset = ref<AssetItem | null>(null);
+const renameValue = ref("");
+const renameDisabled = computed(() => {
+  const name = renameValue.value.trim();
+  return !name || name === renameAsset.value?.name;
+});
 const assetFetcher = useAssetFetcher("assets", assetScrollRef);
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
@@ -141,7 +156,17 @@ const toggleAssetGroup = (label: string) => {
   collapsedAssetGroups.value = next;
 };
 
-const setMode = (mode: "assets" | "tools") => {
+const setMode = async (mode: "assets" | "tools") => {
+  if (mode !== "tools") {
+    setWorkspaceMode(mode);
+    return;
+  }
+
+  const toolPaths = [localePath("videoplayer"), localePath({ path: "/transcode" })];
+  if (!toolPaths.includes(route.path)) {
+    await navigateTo(localePath("videoplayer"));
+  }
+
   setWorkspaceMode(mode);
 };
 
@@ -258,6 +283,72 @@ const handleAssetEdit = async (asset: AssetItem) => {
   } catch {}
 };
 
+const resolveAssetProtocols = (asset: AssetItem) => {
+  const protocols = [
+    ...(asset.permedProtocols || []).map((protocol) => protocol?.name),
+    ...(asset.savedConnection?.availableProtocols || []),
+    asset.savedConnection?.protocol
+  ];
+
+  const uniqueProtocols = Array.from(
+    new Set(protocols.filter((protocol): protocol is string => !!protocol))
+  );
+
+  return uniqueProtocols.length > 0 ? uniqueProtocols : ["ssh"];
+};
+
+const handleProtocolConnect = async (asset: AssetItem, protocol: string) => {
+  contextMenuVisible.value = false;
+
+  if (protocol === "ssh") {
+    const saved = asset.savedConnection;
+    if (saved?.username) {
+      connectWithBuiltinSsh(asset, {
+        ...saved,
+        protocol: "ssh",
+        account: saved.username
+      });
+      return;
+    }
+
+    try {
+      const info = await connEditorRef.value!.open(asset);
+      connectWithBuiltinSsh(asset, { ...info, protocol: "ssh" });
+    } catch {}
+    return;
+  }
+
+  handleAssetConnection(
+    displayUser(asset.id, asset.permedAccounts || []),
+    asset.id,
+    protocol,
+    asset.permedAccounts || [],
+    protocol
+  );
+};
+
+const openRenameModal = (asset: AssetItem) => {
+  contextMenuVisible.value = false;
+  renameAsset.value = asset;
+  renameValue.value = asset.name || "";
+  renameModalOpen.value = true;
+};
+
+const submitAssetRename = () => {
+  const asset = renameAsset.value;
+  const name = renameValue.value.trim();
+  if (!asset || !name || name === asset.name) return;
+
+  handleAssetRename(asset.id, name);
+  renameModalOpen.value = false;
+  renameAsset.value = null;
+};
+
+const updateRenameModal = (open: boolean) => {
+  renameModalOpen.value = open;
+  if (!open) renameAsset.value = null;
+};
+
 const toggleAssetFavorite = (asset: AssetItem, favorite: boolean) => {
   if (favorite) {
     handleAssetFavorite(asset.id);
@@ -283,6 +374,12 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
 
   const isFavorited = !!asset.isFavorite;
 
+  const protocolItems: DropdownMenuItem[] = resolveAssetProtocols(asset).map((protocol) => ({
+    label: `${t("ContextMenu.Use")} ${protocol.toUpperCase()}`,
+    icon: "i-lucide-plug",
+    onSelect: () => handleProtocolConnect(asset, protocol)
+  }));
+
   return [
     {
       label: t("ContextMenu.Connect"),
@@ -293,12 +390,22 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
       }
     },
     {
+      label: t("ContextMenu.MoreConnect"),
+      icon: "i-lucide-ellipsis",
+      children: protocolItems
+    },
+    {
       label: t("ContextMenu.Edit"),
       icon: "solar:pen-new-square-linear",
       onSelect: () => {
         contextMenuVisible.value = false;
         handleAssetEdit(asset);
       }
+    },
+    {
+      label: t("ContextMenu.Rename"),
+      icon: "i-lucide-pencil",
+      onSelect: () => openRenameModal(asset)
     },
     {
       label: isFavorited ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
@@ -373,8 +480,9 @@ watch(
       </div>
 
       <div v-show="!collapse" class="px-3 py-1">
-        <div class="grid grid-cols-2 gap-0.5 rounded-sm bg-gray-100/80 p-0.5 dark:bg-white/10">
+        <div class="grid grid-cols-2 gap-0.5 rounded-sm border border-black/10 bg-gray-100/80 p-0.5 dark:border-white/10 dark:bg-white/10">
           <button
+            type="button"
             class="h-5 rounded-[3px] text-[11px] font-medium leading-none transition"
             :class="activeWorkspaceMode === 'assets' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/15 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
             @click="setMode('assets')"
@@ -382,6 +490,7 @@ watch(
             我的资产
           </button>
           <button
+            type="button"
             class="h-5 rounded-[3px] text-[11px] font-medium leading-none transition"
             :class="activeWorkspaceMode === 'tools' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/15 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
             @click="setMode('tools')"
@@ -391,15 +500,34 @@ watch(
         </div>
       </div>
 
-      <div v-show="!collapse && activeWorkspaceMode === 'assets' && shouldShowOrganizationSelector" class="px-3 pt-1 pb-1">
-        <HeaderOrganizationSelector />
+      <div
+        v-show="!collapse && activeWorkspaceMode === 'assets'"
+        class="flex items-center gap-1 px-3 pt-1 pb-1"
+      >
+        <div v-if="shouldShowOrganizationSelector" class="min-w-0 flex-1">
+          <HeaderOrganizationSelector />
+        </div>
+
+        <UTooltip :text="t('Operation.Search')" :delay-duration="150">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            icon="i-lucide-search"
+            :aria-label="t('Operation.Search')"
+            class="size-7 shrink-0 justify-center rounded-sm p-0"
+            :class="showAssetSearch || sidebarSearch ? 'bg-black/5 text-gray-900 dark:bg-white/10 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
+            @click="showAssetSearch = !showAssetSearch"
+          />
+        </UTooltip>
       </div>
 
       <!-- 搜索框区域 -->
-      <div v-show="!collapse && activeWorkspaceMode === 'assets'" class="px-3 py-1">
+      <div v-if="!collapse && activeWorkspaceMode === 'assets' && showAssetSearch" class="px-3 py-1">
         <UInput
           v-model="sidebarSearch"
           size="sm"
+          autofocus
           clearable
           autocapitalize="none"
           autocorrect="off"
@@ -489,11 +617,11 @@ watch(
           class="h-full"
         />
 
-        <div v-else class="py-2">
+        <div v-else class="pb-1">
           <section v-for="group in groupedAssets" :key="group.label" class="mb-2">
             <button
               type="button"
-              class="group flex h-7 w-full items-center gap-1.5 px-3 text-left text-[11px] uppercase text-gray-500 transition hover:bg-gray-100/70 dark:text-gray-400 dark:hover:bg-white/10"
+              class="group flex h-7 w-full cursor-pointer items-center gap-1.5 px-3 text-left text-[11px] uppercase text-gray-500 transition hover:bg-white/70 dark:text-gray-400 dark:hover:bg-white/10"
               @click="toggleAssetGroup(group.label)"
             >
               <UIcon
@@ -513,7 +641,7 @@ watch(
               <button
                 v-for="asset in group.assets"
                 :key="asset.id"
-                class="w-full px-3 py-[6px] flex items-center gap-2 text-left hover:bg-gray-100 dark:hover:bg-white/10"
+                class="flex w-full cursor-pointer items-center gap-2 px-3 py-[6px] text-left transition-colors hover:bg-white/80 hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.45)] dark:hover:bg-white/10 dark:hover:shadow-none"
                 :class="!asset.isActive ? 'opacity-50' : ''"
                 @click="handleAssetConnect(asset)"
                 @contextmenu="handleAssetContextMenu(asset, $event)"
@@ -540,6 +668,22 @@ watch(
     </div>
 
     <ConnectionEditor ref="connEditorRef" asset-type="assets" />
+
+    <Modal
+      :open="renameModalOpen"
+      :title="t('ContextMenu.Rename')"
+      :description="renameAsset?.name || ''"
+      :disabled="renameDisabled"
+      @confirm="submitAssetRename"
+      @update:open="updateRenameModal"
+    >
+      <UInput
+        v-model="renameValue"
+        autofocus
+        class="w-full"
+        :placeholder="t('AssetCard.AssetName')"
+      />
+    </Modal>
 
     <UDropdownMenu
       :open="contextMenuVisible"

@@ -10,8 +10,7 @@
 @import "@fontsource/noto-sans-sc/700.css";
 
 @theme {
-  --font-sans:
-    "Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: "Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --color-secondary: var(--ui-color-secondary-500);
   --color-elevated: #1e1e20;
 }
@@ -25,11 +24,41 @@
   --ui-color-elevated-500: #303237;
   --ui-color-secondary-500: #7e7e7e;
   --ui-color-neutral-100: #d8d8d8;
+  --app-scrollbar-thumb: rgba(107, 114, 128, 0.35);
+  --app-scrollbar-thumb-hover: rgba(75, 85, 99, 0.55);
   --el-font-family: var(--font-sans);
   --bg-hover-light: rgba(60, 60, 60, 0.1);
   --bg-hover-dark: rgba(0, 0, 0, 0.3);
   --bg-selected-light: rgba(209, 209, 209, 0.8);
   --bg-selected-dark: rgba(0, 0, 0, 0.5);
+}
+
+.dark {
+  --app-scrollbar-thumb: rgba(161, 161, 170, 0.32);
+  --app-scrollbar-thumb-hover: rgba(212, 212, 216, 0.5);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--app-scrollbar-thumb);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--app-scrollbar-thumb-hover);
 }
 
 .text-xs-plus {

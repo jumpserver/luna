@@ -11,6 +11,7 @@ const isImporting = ref(false);
 const items = ref<VideoPlayerItem[]>([]);
 const activeId = ref<string | null>(null);
 const importMessage = ref("");
+const playlistCollapsed = ref(false);
 
 const { parseFiles } = useVideoPlayerParser();
 const { deleteTempFile } = useVideoPlayerTauri();
@@ -115,6 +116,12 @@ function handleInputChange(event: Event) {
   void importFiles(files);
 }
 
+watch(() => items.value.length, (len, prevLen) => {
+  if (prevLen === 0 && len > 0) {
+    playlistCollapsed.value = false;
+  }
+});
+
 onMounted(async () => {
   document.title = "JumpServer Video Player";
 
@@ -131,7 +138,10 @@ onBeforeUnmount(async () => {
 </script>
 
 <template>
-  <div class="videoplayer-page h-full overflow-auto">
+  <div
+    class="flex h-full min-h-0 flex-col overflow-hidden py-4 pl-4"
+    :class="items.length > 0 && playlistCollapsed ? 'pr-0' : 'pr-4'"
+  >
     <input
       id="videoplayer-file-input"
       ref="fileInputRef"
@@ -142,119 +152,88 @@ onBeforeUnmount(async () => {
       @change="handleInputChange"
     >
 
-    <div class="flex h-full min-h-[560px] flex-col gap-4">
-      <UCard class="flex-1 min-h-0 flex flex-col" :ui="{ body: 'flex-1 min-h-0 overflow-hidden flex flex-col' }">
-        <template #header>
-          <div class="flex items-center justify-end gap-2">
-            <UButton
-              color="primary"
-              variant="soft"
-              size="sm"
-              icon="line-md:upload-loop"
-              :loading="isImporting"
-              @click="fileInputRef?.click()"
-            >
-              导入录像
-            </UButton>
-          </div>
-        </template>
+    <p v-if="importMessage && items.length === 0" class="shrink-0 text-sm text-(--ui-text-muted)">
+      {{ importMessage }}
+    </p>
 
-        <p v-if="importMessage && items.length === 0" class="mb-4 text-sm text-(--ui-text-muted)">
-          {{ importMessage }}
-        </p>
-
-        <div class="grid min-h-0 flex-1 grid-cols-[minmax(0,1.9fr)_minmax(280px,0.78fr)] gap-5">
-          <section class="min-h-0 min-w-0 overflow-hidden rounded-xl border-2 border-(--ui-border)">
-            <div class="flex h-full min-h-0 overflow-hidden bg-black">
-              <div class="h-full min-w-0 flex-1 overflow-hidden bg-black">
-                <component
-                  :is="playerComponent"
-                  v-if="playerComponent && currentItem"
-                  :key="currentItem.id"
-                  :source="currentItem.source"
-                  :cast-data="currentItem.castData"
-                />
-                <label
-                  v-else
-                  for="videoplayer-file-input"
-                  class="group flex h-full w-full cursor-pointer flex-col items-center justify-center gap-4 px-6 py-6 text-center"
-                >
-                  <div
-                    class="flex h-16 w-16 items-center justify-center rounded-xl bg-white/8 text-3xl text-(--ui-primary)"
-                  >
-                    <UIcon name="line-md:upload-loop" />
-                  </div>
-                  <div class="max-w-xl">
-                    <p class="text-xl font-semibold tracking-tight text-(--ui-text-highlighted)">导入录像文件</p>
-                    <p class="mt-2 text-sm leading-6 text-(--ui-text-muted)">
-                      将录像拖入播放区，或点击这里选择 `.mp4`、`.gz`、`.tar` 文件。
-                    </p>
-                  </div>
-                  <div
-                    class="rounded-full border-0 bg-(--ui-bg-muted) px-4 py-2 text-sm text-(--ui-text-toned) transition group-hover:bg-(--ui-bg-accented)"
-                  >
-                    选择文件
-                  </div>
-                </label>
-              </div>
-            </div>
-          </section>
-
-          <aside class="min-h-0 min-w-0 overflow-hidden">
-            <VideoPlayerPlaylist
-              v-if="items.length > 0"
-              :active-id="activeId"
-              :items="items"
-              @play="selectItem"
-              @remove="removeItem"
-            />
-            <div
-              v-else
-              class="flex h-full min-h-0 flex-col rounded-xl border-2 border-(--ui-border) p-4"
-            >
-              <p class="mb-3 text-[11px] uppercase tracking-[0.2em] text-(--ui-text-dimmed)">
-                播放列表
-              </p>
-
-              <div
-                class="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-(--ui-border) p-3"
-              >
-                <div class="flex max-w-[240px] flex-col items-center text-center">
-                  <div
-                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-(--ui-border) text-2xl text-(--ui-text-dimmed)"
-                  >
-                    <UIcon name="line-md:list-3" />
-                  </div>
-                  <p class="mt-4 text-sm font-medium text-(--ui-text-highlighted)">
-                    暂无播放片段
-                  </p>
-                  <p class="mt-2 text-xs leading-5 text-(--ui-text-muted)">
-                    导入录像后，这里会显示可切换的片段列表。
-                  </p>
-                </div>
-              </div>
-            </div>
-          </aside>
+    <div class="flex min-h-0 flex-1 overflow-hidden" :class="importMessage && items.length === 0 ? 'pt-3' : ''">
+      <section
+        class="flex min-h-0 min-w-0 flex-1 flex-col"
+        :class="items.length > 0 && !playlistCollapsed ? 'pr-3' : ''"
+      >
+        <div
+          v-if="playerComponent && currentItem"
+          class="flex min-h-0 flex-1 flex-col overflow-hidden bg-black"
+        >
+          <component
+            :is="playerComponent"
+            :key="currentItem.id"
+            :source="currentItem.source"
+            :cast-data="currentItem.castData"
+          />
         </div>
-      </UCard>
+        <div
+          v-else
+          class="flex min-h-0 flex-1 items-center justify-center border border-dashed border-(--ui-border) px-6 py-6 text-center text-sm text-(--ui-text-muted)"
+        >
+          <button
+            type="button"
+            class="group flex cursor-pointer flex-col items-center gap-4 rounded-lg px-8 py-6 transition hover:bg-(--ui-bg-muted) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ui-primary)"
+            @click="fileInputRef?.click()"
+          >
+            <span
+              class="flex h-16 w-16 items-center justify-center rounded-xl border border-(--ui-border) bg-(--ui-bg-muted) text-3xl text-(--ui-primary)"
+            >
+              <UIcon name="line-md:upload-loop" />
+            </span>
+            <span class="max-w-xl">
+              <span class="block text-xl font-semibold tracking-tight text-(--ui-text-highlighted)">导入录像文件</span>
+              <span class="mt-2 block text-sm leading-6 text-(--ui-text-muted)">
+                将录像拖入播放区，或点击这里选择 `.mp4`、`.gz`、`.tar` 文件。
+              </span>
+            </span>
+            <span
+              class="rounded-full bg-(--ui-bg-muted) px-4 py-2 text-sm text-(--ui-text-toned) transition group-hover:bg-(--ui-bg-accented)"
+            >
+              选择文件
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <aside
+        v-if="items.length > 0"
+        class="flex shrink-0 flex-col border-l border-(--ui-border) transition-[width] duration-200 ease-out"
+        :class="playlistCollapsed ? 'w-9 items-center' : 'w-52 pl-3'"
+      >
+        <UTooltip v-if="playlistCollapsed" text="展开播放列表">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            icon="i-lucide-panel-left"
+            class="mx-auto mb-1 shrink-0"
+            @click="playlistCollapsed = false"
+          />
+        </UTooltip>
+
+        <VideoPlayerPlaylist
+          v-if="!playlistCollapsed"
+          class="min-h-0 flex-1"
+          :active-id="activeId"
+          :items="items"
+          @play="selectItem"
+          @remove="removeItem"
+          @collapse="playlistCollapsed = true"
+        />
+
+        <div v-else class="flex flex-col items-center gap-2 pt-1">
+          <UIcon name="i-lucide-list-music" class="size-4 text-(--ui-text-dimmed)" />
+          <span class="rounded-full bg-(--ui-primary)/10 px-1.5 py-0.5 text-[10px] font-medium text-(--ui-primary)">
+            {{ items.length }}
+          </span>
+        </div>
+      </aside>
     </div>
   </div>
 </template>
-
-<style scoped>
-.videoplayer-page {
-  color: var(--ui-text);
-  background:
-    radial-gradient(
-      circle at top left,
-      color-mix(in srgb, var(--ui-color-primary-500) 14%, transparent) 0%,
-      transparent 30%
-    ),
-    radial-gradient(circle at right, color-mix(in srgb, var(--ui-bg-elevated) 65%, transparent) 0%, transparent 26%),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--ui-bg) 90%, var(--ui-bg-elevated) 10%) 0%,
-      color-mix(in srgb, var(--ui-bg) 98%, black 2%) 100%
-    );
-}
-</style>

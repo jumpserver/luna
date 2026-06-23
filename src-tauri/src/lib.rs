@@ -34,7 +34,9 @@ use crate::commands::system_fonts::list_system_fonts;
 use crate::commands::video_player::{
     delete_video_player_file, read_video_player_text_stream, write_video_player_gzip_file,
 };
-use crate::commands::window_control::{close_window, minimize_window, toggle_maximize_window};
+use crate::commands::window_control::{
+    close_window, minimize_window, open_settings_window, toggle_maximize_window,
+};
 use crate::service::oauth::AuthFlowState;
 use crate::transcode::transcode_replays;
 use crate::utils::is_auth_callback;
@@ -204,6 +206,7 @@ pub fn run() {
             set_favorite,
             close_window,
             minimize_window,
+            open_settings_window,
             get_asset_detail,
             get_connect_token,
             get_builtin_connect_session,
