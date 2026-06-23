@@ -1,8 +1,7 @@
 <script lang="ts" setup>
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { LangType, LanguagePreference, PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
+import type { LangType, LanguagePreference } from "~/types";
 
-import { useUserInfoStore } from "~/store/modules/userInfo";
 import { resolveLanguageFromSystem } from "~/utils";
 
 useApplicationConfig();
@@ -11,13 +10,11 @@ let applyLanguageSeq = 0;
 const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 
 const route = useRoute();
-const localePath = useLocalePath();
-const toast = useToast();
 
 const { isMacOS } = usePlatform();
-const { locale, setLocale, t } = useI18n();
+const { locale, setLocale } = useI18n();
 const { userTheme, applyThemePreference, applySystemThemePreference } = useThemeAdapter();
-const userInfoStore = useUserInfoStore();
+const { bootstrapPersistedSession } = useAuthSession();
 
 const { applyPrimaryColor } = useColor();
 const settingManager = useSettingManager();
@@ -27,7 +24,6 @@ const { language, fontFamily, primaryColorLight, primaryColorDark, hydrationProm
 const unlistenPrimaryColor = ref<UnlistenFn | null>(null);
 const unlistenTheme = ref<UnlistenFn | null>(null);
 const unlistenFont = ref<UnlistenFn | null>(null);
-const unlistenLoginSuccess = ref<UnlistenFn | null>(null);
 
 const backgroundColor = computed(() => {
   const isDark = userTheme.value === "dark";
@@ -136,83 +132,7 @@ async function applyAfterHydration() {
   applyCurrentThemeColor();
 }
 
-function initSelectOrganization(permissionOrgData: PermissionOrgs) {
-  const orgs = [
-    ...(permissionOrgData.pam_orgs || []),
-    ...(permissionOrgData.audit_orgs || []),
-    ...(permissionOrgData.console_orgs || []),
-    ...(permissionOrgData.workbench_orgs || [])
-  ];
-
-  return orgs.filter((org, index, self) => index === self.findIndex((item: PermOrgItem) => item.id === org.id));
-}
-
-function parseApiData<T>(value: { data?: string } | undefined, fallback: T): T {
-  if (!value?.data) return fallback;
-
-  try {
-    return JSON.parse(value.data) as T;
-  } catch (err) {
-    console.error("parse login response failed", err);
-    return fallback;
-  }
-}
-
-function handleLoginSuccess(payload: UserIntiInfo & { bearer: string }) {
-  const { status, profile, bearer, current_org, resolved_site, permission_orgs, xpack_license_valid } = payload;
-
-  if (status !== "success") return;
-
-  const profileData = parseApiData<any>(profile, null);
-  const currentOrgData = parseApiData<any>(current_org, null);
-  const permissionOrgData = parseApiData<PermissionOrgs>(permission_orgs, {} as PermissionOrgs);
-  const resolvedSite = resolved_site || "";
-
-  if (!profileData || !currentOrgData || !resolvedSite) return;
-
-  const availableOrgs = xpack_license_valid === false ? [] : initSelectOrganization(permissionOrgData);
-
-  userInfoStore.setUserData(resolvedSite, {
-    name: profileData.name,
-    bearerToken: bearer,
-    site: resolvedSite,
-    org: currentOrgData,
-    system_roles: profileData.system_roles,
-    availableOrgs,
-    xpackLicenseValid: xpack_license_valid ?? false,
-    connectionInfo: {
-      protocol: "",
-      username: ""
-    }
-  });
-
-  userInfoStore.setOrganizations(availableOrgs);
-  userInfoStore.setCurrentOrg(currentOrgData);
-  userInfoStore.setUserLoggedIn(true);
-
-  nextTick(() => {
-    toast.add({
-      title: t("Login.LoginSuccess"),
-      color: "primary",
-      icon: "line-md:check-all",
-      progress: true
-    });
-
-    navigateTo({
-      path: localePath({ path: "/" })
-    });
-  });
-}
-
 onMounted(async () => {
-  try {
-    unlistenLoginSuccess.value = await useTauriEventListen("login-success-detected", (event) => {
-      handleLoginSuccess(event.payload as UserIntiInfo & { bearer: string });
-    });
-  } catch (err) {
-    console.error("listen login-success-detected failed", err);
-  }
-
   // 初始化 HTTP 回调服务器 (开发环境)
   try {
     await useTauriCoreInvoke("init_http_callback_server", {});
@@ -220,6 +140,8 @@ onMounted(async () => {
     // 忽略错误，生产环境不需要此服务
     console.debug("HTTP callback server initialization:", error);
   }
+
+  await bootstrapPersistedSession();
 
   try {
     unlistenPrimaryColor.value = await useTauriEventListen("primary-color-changed", (event: any) => {
@@ -270,7 +192,6 @@ onBeforeUnmount(() => {
   unlistenPrimaryColor.value?.();
   unlistenTheme.value?.();
   unlistenFont.value?.();
-  unlistenLoginSuccess.value?.();
 });
 </script>
 

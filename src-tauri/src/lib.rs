@@ -15,7 +15,7 @@ use crate::commands::api_session::{set_api_org, set_api_session};
 use crate::commands::asset_actions::{
     get_asset_detail, get_assets, rename, set_favorite, unfavorite,
 };
-use crate::commands::auth_flow::{auth_cancel, auth_login};
+use crate::commands::auth_flow::{auth_cancel, auth_login, bootstrap_auth_session};
 use crate::commands::auth_logout::logout;
 use crate::commands::builtin_terminal::{
     builtin_session_close, builtin_session_input, builtin_session_resize, builtin_ssh_start,
@@ -24,7 +24,9 @@ use crate::commands::builtin_terminal::{
 use crate::commands::client_launcher::pull_up;
 use crate::commands::config_update::update_config_selection;
 use crate::commands::connect_methods::get_connect_methods;
-use crate::commands::connect_token::{get_builtin_connect_session, get_connect_token};
+use crate::commands::connect_token::{
+    create_koko_connect_ticket, get_builtin_connect_session, get_connect_token,
+};
 use crate::commands::dev_http_server::init_http_callback_server;
 use crate::commands::get_config::get_config;
 use crate::commands::get_setting::get_setting;
@@ -200,6 +202,7 @@ pub fn run() {
             unfavorite,
             auth_login,
             auth_cancel,
+            bootstrap_auth_session,
             get_assets,
             get_config,
             get_setting,
@@ -210,6 +213,7 @@ pub fn run() {
             get_asset_detail,
             get_connect_token,
             get_builtin_connect_session,
+            create_koko_connect_ticket,
             get_smart_endpoint,
             builtin_ssh_start,
             builtin_session_input,

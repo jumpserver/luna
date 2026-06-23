@@ -4,7 +4,7 @@ use tauri::{AppHandle, Emitter, State};
 use crate::api::client::{api_client, oauth_client};
 use crate::service::oauth::{
     build_oauth_client, create_authorization_request, exchange_authorization_code,
-    fetch_oauth_config, AuthFlowState,
+    fetch_oauth_config, ensure_fresh_token, AuthFlowState,
 };
 use crate::service::user::UserService;
 
@@ -13,7 +13,7 @@ pub async fn auth_login(
     app: AppHandle,
     flow_state: State<'_, AuthFlowState>,
     site: String,
-) -> Result<(), String> {
+) -> Result<Value, String> {
     log::info!("auth_login started for site: {}", site);
 
     // 获取 OAuth 配置
@@ -61,7 +61,7 @@ pub async fn auth_login(
             Ok(callback) => callback,
             Err(_) => {
                 log::info!("auth flow cancelled");
-                return Ok(());
+                return Ok(Value::Null);
             }
         };
 
@@ -72,49 +72,73 @@ pub async fn auth_login(
             log::warn!("persist tokens failed: {}", e);
         }
 
-        // 发起请求
-        let user_service = UserService::new(site.clone(), tokens.access_token.clone())?;
-        let (profile, permission_orgs, current_org, xpack_message) = tokio::join!(
-            user_service.get_user_profile(),
-            user_service.get_permission_orgs(),
-            user_service.get_current_org(),
-            user_service.get_xpack_message(),
-        );
-
-        let license_valid = if xpack_message.status == 200 && xpack_message.success {
-            serde_json::from_str::<Value>(&xpack_message.data)
-                .ok()
-                .and_then(|value| {
-                    value
-                        .get("XPACK_LICENSE_IS_VALID")
-                        .and_then(|v| v.as_bool())
-                })
-                .unwrap_or(false)
-        } else {
-            false
-        };
-
-        let _ = app.emit(
-            "login-success-detected",
-            serde_json::json!({
-                "status": "success",
-                "bearer": tokens.access_token,
-                "profile": profile,
-                "resolved_site": site,
-                "current_org": current_org,
-                "xpack_license_valid": license_valid,
-                "permission_orgs": permission_orgs,
-            }),
-        );
-
-        Ok::<(), anyhow::Error>(())
+        build_login_success_payload(site.clone(), tokens.access_token.clone()).await
     };
 
     fut.await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
+pub async fn bootstrap_auth_session(site: String) -> Result<Value, String> {
+    let bearer = ensure_fresh_token(&site, None)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    build_login_success_payload(site, bearer)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn auth_cancel(flow_state: State<'_, AuthFlowState>) -> Result<(), String> {
     flow_state.cancel();
     Ok(())
+}
+
+async fn build_login_success_payload(site: String, bearer: String) -> anyhow::Result<Value> {
+    let user_service = UserService::new(site.clone(), bearer.clone())?;
+    let (profile, permission_orgs, current_org, xpack_message) = tokio::join!(
+        user_service.get_user_profile(),
+        user_service.get_permission_orgs(),
+        user_service.get_current_org(),
+        user_service.get_xpack_message(),
+    );
+
+    log::info!(
+        "login bootstrap responses: profile_status={}, permission_status={}, current_org_status={}, xpack_status={}",
+        profile.status,
+        permission_orgs.status,
+        current_org.status,
+        xpack_message.status
+    );
+    log::info!(
+        "login bootstrap payload sizes: profile={}, permission_orgs={}, current_org={}, xpack={}",
+        profile.data.len(),
+        permission_orgs.data.len(),
+        current_org.data.len(),
+        xpack_message.data.len()
+    );
+
+    let license_valid = if xpack_message.status == 200 && xpack_message.success {
+        serde_json::from_str::<Value>(&xpack_message.data)
+            .ok()
+            .and_then(|value| {
+                value
+                    .get("XPACK_LICENSE_IS_VALID")
+                    .and_then(|v| v.as_bool())
+            })
+            .unwrap_or(false)
+    } else {
+        false
+    };
+
+    Ok(serde_json::json!({
+        "status": "success",
+        "bearer": bearer,
+        "profile": profile,
+        "resolved_site": site,
+        "current_org": current_org,
+        "xpack_license_valid": license_valid,
+        "permission_orgs": permission_orgs,
+    }))
 }

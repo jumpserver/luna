@@ -29,6 +29,7 @@ const userInfoStore = useUserInfoStore();
 
 const { t, locales, locale } = useI18n();
 const { loggedIn, currentSite, userMap, currentUser } = storeToRefs(userInfoStore);
+const { applyLoginPayload } = useAuthSession();
 
 const {
   setLang,
@@ -610,9 +611,10 @@ const handleConfirm = async () => {
     const ok = await checkVersionBeforeOAuth(normalizedSite);
     if (!ok) return;
 
-    await useTauriCoreInvoke("auth_login", {
+    const payload = await useTauriCoreInvoke<any>("auth_login", {
       site: normalizedSite
     });
+    await applyLoginPayload(payload, { showToast: true, navigateHome: true });
     void saveRecentSite(normalizedSite);
   } catch (e: any) {
     const raw = (e?.message || e || "").toString();

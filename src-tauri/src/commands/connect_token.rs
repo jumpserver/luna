@@ -8,6 +8,14 @@ use crate::commands::api_session::fresh_api_context;
 use crate::commands::client_launcher::pull_up;
 use crate::service::connect::{ConnectService, TokenRequestBody};
 
+#[derive(serde::Deserialize)]
+struct KokoConnectTicketResponse {
+    ticket: String,
+    token_id: String,
+    expires_at: String,
+    expires_in: i64,
+}
+
 #[tauri::command]
 pub async fn get_connect_token(
     app: AppHandle,
@@ -145,6 +153,47 @@ pub async fn get_builtin_connect_session(
     );
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn create_koko_connect_ticket(
+    app: AppHandle,
+    session: State<'_, ApiSessionStore>,
+    base_url: String,
+    token_id: String,
+) -> Result<Value, String> {
+    let context = fresh_api_context(&app, &session).await?;
+
+    let api = ApiRequestClient::with_origin(
+        base_url.trim_end_matches('/').to_string(),
+        context.bearer_token,
+        context.org_id,
+    )
+    .map_err(|error| error.to_string())?;
+
+    let response = api
+        .post_json_with_response(
+            &api.endpoint("/koko/api/connect-ticket/"),
+            &json!({ "token_id": token_id }),
+        )
+        .await;
+
+    if response.status != 201 {
+        return Err(format!(
+            "create koko connect ticket failed: status={}, body={}",
+            response.status, response.data
+        ));
+    }
+
+    let ticket = serde_json::from_str::<KokoConnectTicketResponse>(&response.data)
+        .map_err(|error| format!("parse koko connect ticket failed: {}", error))?;
+
+    Ok(json!({
+        "ticket": ticket.ticket,
+        "token_id": ticket.token_id,
+        "expires_at": ticket.expires_at,
+        "expires_in": ticket.expires_in
+    }))
 }
 
 fn parse_token_id(data: &str) -> Result<String, String> {

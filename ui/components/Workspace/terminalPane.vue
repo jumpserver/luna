@@ -9,10 +9,14 @@ const props = defineProps<{
 }>();
 
 const USE_KOKO_IFRAME_EXPERIMENT = true;
+const DEFAULT_KOKO_IFRAME_BASE_URL = "http://localhost:4200";
 
 const terminalRef = ref<HTMLElement | null>(null);
 const terminalHostRef = ref<HTMLElement | null>(null);
 const iframeRef = ref<HTMLIFrameElement | null>(null);
+const kokoTicket = ref("");
+const kokoTicketError = ref("");
+const kokoTicketLoading = ref(false);
 const colorMode = useColorMode();
 const { activeTabId, markSessionConnected, markSessionFailed } = useWorkspaceTabs();
 
@@ -24,6 +28,8 @@ let unlistenReady: UnlistenFn | null = null;
 let unlistenExit: UnlistenFn | null = null;
 let sessionStarted = false;
 let inputDisposable: { dispose: () => void } | null = null;
+let kokoTicketRequestSeq = 0;
+let kokoTicketTokenId = "";
 
 const token = computed(() => props.tab.payload?.token || props.tab.payload || {});
 const tokenId = computed(() => props.tab.payload?.id || token.value?.id || "");
@@ -33,14 +39,15 @@ const endpointHost = computed(() => endpoint.value?.host || "");
 const endpointPort = computed(() => Number(endpoint.value?.ssh_port || endpoint.value?.port || 22) || 22);
 const username = computed(() => (tokenId.value ? `JMS-${tokenId.value}` : "JMS-<token>"));
 const useKokoIframe = computed(() => USE_KOKO_IFRAME_EXPERIMENT && props.tab.protocol === "ssh");
+const normalizeBaseUrl = (value: string) => value.trim().replace(/\/+$/, "");
 const kokoBaseUrl = computed(() => {
-  if (!import.meta.client) return "http://localhost:5050";
-  const raw = globalThis.localStorage?.getItem("koko_iframe_base_url")?.trim() || "";
-  return raw.replace(/\/+$/, "") || "http://localhost:5050";
+  const rawOverride = import.meta.client ? globalThis.localStorage?.getItem("koko_iframe_base_url")?.trim() || "" : "";
+  if (rawOverride) return normalizeBaseUrl(rawOverride);
+  return DEFAULT_KOKO_IFRAME_BASE_URL;
 });
 const kokoIframeSrc = computed(() => {
-  if (!tokenId.value) return "";
-  return `${kokoBaseUrl.value}/koko/connect/?disableautohash=false&token=${encodeURIComponent(tokenId.value)}&_=${Date.now()}`;
+  if (!tokenId.value || !kokoTicket.value) return "";
+  return `${kokoBaseUrl.value}/koko/connect/?disableautohash=false&token=${encodeURIComponent(tokenId.value)}&ticket=${encodeURIComponent(kokoTicket.value)}&_=${Date.now()}`;
 });
 const terminalTheme = computed(() => {
   if (colorMode.value === "dark") {
@@ -168,6 +175,49 @@ const startBridge = async () => {
   }
 };
 
+const ensureKokoTicket = async () => {
+  if (!useKokoIframe.value || !tokenId.value) return;
+  if (kokoTicket.value && kokoTicketTokenId === tokenId.value) return;
+  if (kokoTicketLoading.value && kokoTicketTokenId === tokenId.value) return;
+
+  const requestSeq = ++kokoTicketRequestSeq;
+  kokoTicketLoading.value = true;
+  kokoTicketError.value = "";
+  kokoTicket.value = "";
+  kokoTicketTokenId = tokenId.value;
+
+  try {
+    const result = await useTauriCoreInvoke<Record<string, string | number>>("create_koko_connect_ticket", {
+      baseUrl: kokoBaseUrl.value,
+      tokenId: tokenId.value
+    });
+
+    if (requestSeq !== kokoTicketRequestSeq) return;
+    kokoTicket.value = String(result.ticket || "");
+
+    if (!kokoTicket.value) {
+      throw new Error("missing ticket in koko response");
+    }
+  } catch (error) {
+    if (requestSeq !== kokoTicketRequestSeq) return;
+    kokoTicketError.value = String(error);
+    markSessionFailed({ tabId: props.tab.id, assetId: props.tab.assetId, protocol: props.tab.protocol, account: props.tab.account });
+  } finally {
+    if (requestSeq === kokoTicketRequestSeq) {
+      kokoTicketLoading.value = false;
+    }
+  }
+};
+
+const focusActiveSurface = () => {
+  if (useKokoIframe.value) {
+    iframeRef.value?.focus();
+    return;
+  }
+
+  terminal?.focus();
+};
+
 const bindTauriEvents = async () => {
   if (unlistenOutput) return;
 
@@ -240,7 +290,7 @@ watch(
   () => props.tab.payload,
   () => {
     if (useKokoIframe.value && tokenId.value) {
-      markSessionConnected(props.tab.id);
+      void ensureKokoTicket();
       return;
     }
     if (sessionStarted) return;
@@ -277,9 +327,14 @@ watch(
 );
 
 onMounted(() => {
-  if (!useKokoIframe.value) {
-    mountTerminal();
+  if (useKokoIframe.value) {
+    if (tokenId.value) {
+      void ensureKokoTicket();
+    }
+    return;
   }
+
+  mountTerminal();
 });
 
 onBeforeUnmount(() => {
@@ -303,7 +358,7 @@ onBeforeUnmount(() => {
   <div
     ref="terminalRef"
     class="h-full min-h-0 w-full overflow-hidden bg-white dark:bg-zinc-950"
-    @mousedown="terminal?.focus()"
+    @mousedown="focusActiveSurface"
   >
     <div v-if="useKokoIframe" class="h-full min-h-0 w-full p-2">
       <div v-if="kokoIframeSrc" class="h-full min-h-0 w-full overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-zinc-950">
@@ -312,6 +367,7 @@ onBeforeUnmount(() => {
           :src="kokoIframeSrc"
           class="h-full w-full border-0 bg-white dark:bg-zinc-950"
           title="Koko Connector"
+          @load="markSessionConnected(props.tab.id)"
         />
       </div>
 
@@ -320,8 +376,8 @@ onBeforeUnmount(() => {
         class="grid h-full min-h-0 place-items-center rounded-lg border border-dashed border-gray-300 text-sm text-gray-500 dark:border-white/10 dark:text-gray-400"
       >
         <div class="flex flex-col items-center gap-2">
-          <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
-          <div>正在准备 Koko 连接令牌...</div>
+          <UIcon :name="kokoTicketError ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'" class="size-5" :class="kokoTicketError ? 'text-amber-500' : 'animate-spin'" />
+          <div>{{ kokoTicketLoading ? "正在准备 Koko 连接票据..." : (kokoTicketError || "正在准备 Koko 连接票据...") }}</div>
         </div>
       </div>
     </div>
