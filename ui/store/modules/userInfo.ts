@@ -80,6 +80,7 @@ export const useUserInfoStore = defineStore(
       userMap.value[site] = next;
       currentUser.value = next;
       currentSite.value = site;
+      loggedIn.value = true;
       syncApiSession(site, next);
 
       // 初始化当前站点连接信息映射以及 RDP 客户端选项

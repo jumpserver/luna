@@ -3,9 +3,7 @@
 use crate::transcode::encoder::{create_encoder, H264Encoder};
 use crate::transcode::parser::Parser;
 use crate::transcode::renderer::Renderer;
-use crate::transcode::{
-    bitrate_for_resolution, compute_target_dimensions, OutputResolution,
-};
+use crate::transcode::{bitrate_for_resolution, compute_target_dimensions, OutputResolution};
 use fast_image_resize::images::{Image, ImageRef};
 use fast_image_resize::PixelType::U8x3;
 use fast_image_resize::{FilterType, ResizeAlg, ResizeOptions, Resizer};
@@ -429,18 +427,12 @@ pub fn transcode_to_mp4(
                                         && (enc_w_frame != rw as usize
                                             || enc_h_frame != rh as usize)
                                     {
-                                        let src_view = ImageRef::new(
-                                            rw,
-                                            rh,
-                                            &frame_buf[..src_len],
-                                            U8x3,
-                                        )
-                                        .map_err(|e| format!("create image view: {}", e))?;
+                                        let src_view =
+                                            ImageRef::new(rw, rh, &frame_buf[..src_len], U8x3)
+                                                .map_err(|e| format!("create image view: {}", e))?;
 
-                                        rgba_buf.resize(
-                                            (enc_w_frame * enc_h_frame * 3) as usize,
-                                            0,
-                                        );
+                                        rgba_buf
+                                            .resize((enc_w_frame * enc_h_frame * 3) as usize, 0);
                                         let mut dst_image = Image::from_slice_u8(
                                             enc_w_frame as u32,
                                             enc_h_frame as u32,
@@ -463,20 +455,17 @@ pub fn transcode_to_mp4(
                                         src_w = enc_w_frame;
                                         src_h = enc_h_frame;
                                     } else {
-                                        let mut cropped = vec![
-                                            255u8;
-                                            (enc_w_frame * enc_h_frame * 3) as usize
-                                        ];
+                                        let mut cropped =
+                                            vec![255u8; (enc_w_frame * enc_h_frame * 3) as usize];
                                         let src_stride = rw as usize * 3;
                                         let dst_stride = enc_w_frame * 3;
                                         for y in 0..enc_h_frame.min(rh as usize) {
                                             let src_off = y * src_stride;
                                             let dst_off = y * dst_stride;
                                             let copy_len = dst_stride.min(src_stride);
-                                            cropped[dst_off..dst_off + copy_len]
-                                                .copy_from_slice(
-                                                    &frame_buf[src_off..src_off + copy_len],
-                                                );
+                                            cropped[dst_off..dst_off + copy_len].copy_from_slice(
+                                                &frame_buf[src_off..src_off + copy_len],
+                                            );
                                         }
                                         rgb_data = cropped.into();
                                         src_w = enc_w_frame;
@@ -580,7 +569,11 @@ fn parse_and_build_timeline(guac_data: &[u8]) -> Result<TimelineInfo, String> {
         instruction_offset = parser.current_offset();
     }
 
-    Ok(TimelineInfo { frames, max_width: max_w, max_height: max_h })
+    Ok(TimelineInfo {
+        frames,
+        max_width: max_w,
+        max_height: max_h,
+    })
 }
 
 fn encode_chunks(

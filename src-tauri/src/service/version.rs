@@ -2,6 +2,7 @@ use crate::api::{
     endpoint,
     request::{ApiRequestClient, ApiResponse},
 };
+use std::time::Duration;
 
 pub struct VersionService {
     api: ApiRequestClient,
@@ -20,6 +21,8 @@ impl VersionService {
         let url = self.api.endpoint(endpoint::settings::CLIENT_VERSIONS);
         log::info!("获取当前版本信息: {}", url);
         // 该接口为公开接口，不需要 bearer_token
-        self.api.get_with_response(&url).await
+        self.api
+            .get_with_response_timeout(&url, Duration::from_secs(10))
+            .await
     }
 }

@@ -11,7 +11,7 @@ pub(crate) mod dev_http_server;
 pub(crate) mod get_config;
 pub(crate) mod get_setting;
 pub(crate) mod get_version;
-pub(crate) mod system_fonts;
 pub(crate) mod smart_endpoint;
+pub(crate) mod system_fonts;
 pub(crate) mod video_player;
 pub(crate) mod window_control;
