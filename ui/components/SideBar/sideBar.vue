@@ -3,16 +3,13 @@ import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
 import type { AssetItem, AssetPageType } from "~/types";
 
 import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
-import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import Profile from "./profile.vue";
-
-const localePath = useLocalePath();
-const route = useRoute();
 
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
 // const isMacOS = false;
+const localePath = useLocalePath();
+const route = useRoute();
 const { collapse, setCollapse } = useSettingManager();
 const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
 const { confirmConnection, saveConnectionInfo } = useAssetConnection();
@@ -73,6 +70,19 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
     }
   ];
 });
+
+const workspaceModes = computed(() => [
+  {
+    key: "assets",
+    icon: "i-lucide-server",
+    label: "我的资产"
+  },
+  {
+    key: "tools",
+    icon: "i-lucide-menu",
+    label: "工具集"
+  }
+] as const);
 
 const handleCollapse = () => {
   setCollapse(!collapse.value);
@@ -459,55 +469,56 @@ watch(
       width: collapse ? '0px' : '220px'
     }"
   >
-    <!-- 顶部区域：折叠按钮和搜索框 -->
+    <!-- 顶部区域：模式切换和折叠按钮 -->
     <div class="flex flex-col w-full">
       <div
-        class="flex items-center h-10 px-3"
+        class="flex items-center h-10 border-b border-gray-200 px-3 gap-1 dark:border-white/10"
         :class="
           isMacOS
-            ? 'justify-end pr-3'
+            ? 'justify-start pl-[92px] pr-3'
             : collapse
-              ? 'py-2 justify-center mt-2'
+              ? 'py-2 justify-end mt-2'
               : 'py-2 mt-2 justify-start'
         "
         @mousedown="handleWindowDrag"
       >
-        <UButton
-          v-if="!collapse"
-          color="neutral"
-          variant="ghost"
-          size="md"
-          class="p-1"
-          :icon="SidebarFlipIcon"
-          title="折叠侧边栏"
-          @click="handleCollapse"
-        />
-      </div>
+        <template v-if="!collapse">
+          <UButton
+            v-for="mode in workspaceModes"
+            :key="mode.key"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :icon="mode.icon"
+            :title="mode.label"
+            :aria-label="mode.label"
+            class="size-7 justify-center rounded-md p-0"
+            :class="
+              activeWorkspaceMode === mode.key
+                ? 'bg-black/8 text-gray-900 dark:bg-white/12 dark:text-white'
+                : 'text-gray-500 dark:text-gray-400'
+            "
+            :ui="{ leadingIcon: 'm-0 shrink-0' }"
+            @click="setMode(mode.key)"
+          />
 
-      <div v-show="!collapse" class="px-3 py-1">
-        <div class="grid grid-cols-2 gap-0.5 rounded-sm border border-black/10 bg-gray-100/80 p-0.5 dark:border-white/10 dark:bg-white/10">
-          <button
-            type="button"
-            class="h-5 rounded-[3px] text-[11px] font-medium leading-none transition"
-            :class="activeWorkspaceMode === 'assets' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/15 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
-            @click="setMode('assets')"
-          >
-            我的资产
-          </button>
-          <button
-            type="button"
-            class="h-5 rounded-[3px] text-[11px] font-medium leading-none transition"
-            :class="activeWorkspaceMode === 'tools' ? 'bg-white text-gray-900 shadow-sm dark:bg-white/15 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
-            @click="setMode('tools')"
-          >
-            工具集
-          </button>
-        </div>
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            class="size-7 justify-center rounded-md p-0"
+            icon="i-lucide-panel-left"
+            title="折叠侧边栏"
+            aria-label="折叠侧边栏"
+            :ui="{ leadingIcon: 'm-0 shrink-0' }"
+            @click="handleCollapse"
+          />
+        </template>
       </div>
 
       <div
         v-show="!collapse && activeWorkspaceMode === 'assets'"
-        class="flex items-center gap-1 px-3 pt-1 pb-1"
+        class="flex items-center gap-1 border-b border-gray-200 px-3 pt-1 pb-1 dark:border-white/10"
       >
         <div v-if="shouldShowOrganizationSelector" class="min-w-0 flex-1">
           <HeaderOrganizationSelector />
@@ -658,10 +669,6 @@ watch(
           </div>
         </section>
       </div>
-    </div>
-
-    <div class="px-3 pb-3 pt-1 mt-auto">
-      <Profile :collapse="collapse" />
     </div>
 
     <ConnectionEditor ref="connEditorRef" asset-type="assets" />

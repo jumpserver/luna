@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import Profile from "~/components/SideBar/profile.vue";
+
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
 const { userTheme, manualSetTheme } = useThemeAdapter();
@@ -88,6 +90,8 @@ const toggleThemeMode = () => {
         v-bind="commonButtonProps"
         @click="openSettingsWindow"
       />
+
+      <Profile placement="topbar" />
     </div>
 
     <!-- 窗口控制按钮 -->

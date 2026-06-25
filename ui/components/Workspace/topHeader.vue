@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
-
 const { collapse, setCollapse } = useSettingManager();
 const { isMacOS } = usePlatform();
 
@@ -53,10 +51,12 @@ const handleWindowDrag = async (event: MouseEvent) => {
         v-if="collapse"
         color="neutral"
         variant="ghost"
-        size="md"
-        class="p-1"
-        :icon="SidebarFlipIcon"
+        size="sm"
+        class="size-7 justify-center rounded-md p-0"
+        icon="i-lucide-panel-left"
         title="展开侧边栏"
+        aria-label="展开侧边栏"
+        :ui="{ leadingIcon: 'm-0 shrink-0' }"
         @click="toggleSidebar"
       />
     </div>

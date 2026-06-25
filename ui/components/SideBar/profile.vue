@@ -18,7 +18,15 @@ interface VersionMessageResponse {
   success: boolean
 }
 
-const props = defineProps<{ collapse: boolean }>();
+const props = withDefaults(defineProps<{
+  collapse?: boolean
+  placement?: "sidebar" | "topbar"
+}>(), {
+  collapse: false,
+  placement: "sidebar"
+});
+
+const isTopbar = computed(() => props.placement === "topbar");
 
 const recentSiteLimit = 5;
 
@@ -752,36 +760,45 @@ onBeforeUnmount(() => {
     v-if="loggedIn"
     :items="profileMenuItems"
     size="sm"
-    side="top"
-    align="start"
+    :side="isTopbar ? 'bottom' : 'top'"
+    :align="isTopbar ? 'end' : 'start'"
     :ui="{ content: 'w-56 p-1' }"
   >
+    <UTooltip v-if="isTopbar" arrow :text="currentUser?.name || t('Common.Login')">
+      <UButton
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        icon="i-lucide-circle-user-round"
+      />
+    </UTooltip>
+
     <div
+      v-else
       class="flex items-center py-1 px-1.5 w-full min-w-0 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
       :style="{
         justifyContent: collapse ? 'center' : ''
       }"
     >
-      <UUser
-        size="xs"
-        :avatar="{
-          src: '/user_avatar.png'
-        }"
-        :ui="props.collapse ? { root: 'justify-center gap-0' } : undefined"
-      >
-        <template #name>
-          <UTooltip v-if="!props.collapse" arrow :text="currentUser?.name">
-            <span class="block md:max-w-[150px] truncate leading-tight text-sm font-medium cursor-pointer">
-              {{ currentUser?.name }}
-            </span>
-          </UTooltip>
-        </template>
-      </UUser>
+      <div class="flex items-center gap-2 min-w-0">
+        <UIcon name="i-lucide-circle-user-round" class="size-5 shrink-0 text-gray-500 dark:text-gray-400" />
+        <UTooltip v-if="!props.collapse" arrow :text="currentUser?.name">
+          <span class="block md:max-w-[150px] truncate leading-tight text-sm font-medium cursor-pointer">
+            {{ currentUser?.name }}
+          </span>
+        </UTooltip>
+      </div>
     </div>
   </UDropdownMenu>
 
-  <UButton v-else variant="subtle" icon="line-md:log-in" class="w-full mb-2" @click="openLoginPage">
-    <span v-if="!props.collapse">
+  <UButton
+    v-else
+    :variant="isTopbar ? 'ghost' : 'subtle'"
+    icon="i-lucide-log-in"
+    :class="isTopbar ? '' : 'w-full mb-2'"
+    @click="openLoginPage"
+  >
+    <span v-if="!props.collapse && !isTopbar">
       {{ t("Common.Login") }}
     </span>
   </UButton>

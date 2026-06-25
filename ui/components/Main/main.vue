@@ -34,7 +34,7 @@ const cardUi = computed(() => ({
 }));
 
 useEventBus().on("versionAlert", ({ type, version }: { type: string, version?: string }) => {
-  alertType.value = type as alertType;
+  alertType.value = type as alertTypes;
   isAlertOpen.value = true;
 
   if (version) {
