@@ -101,45 +101,57 @@ const handleWindowDrag = async (event: MouseEvent) => {
   }
 };
 
-const categoryOrder = ["linux", "windows", "windows_ad", "database", "device", "web", "unix", "other"];
+const categoryOrder = ["linux", "windows", "database", "device", "web", "other"] as const;
+type AssetCategoryKey = typeof categoryOrder[number];
 
-const categoryLabel = (asset: AssetItem) => {
+const categoryKey = (asset: AssetItem): AssetCategoryKey => {
   const type = (asset.type || "").toLowerCase();
   const category = (asset.category || "").toLowerCase();
   const value = category === "host" || category === "-" ? type : category || type;
 
-  if (value === "linux") return t("Menu.Linux");
-  if (value === "windows" || value === "windows_ad") return t("Menu.Windows");
-  if (value === "database") return t("Menu.Database");
-  if (value === "device") return t("Menu.Device");
-  if (value === "web") return t("Menu.Web");
-  return t("Menu.Other");
+  if (value === "linux") return "linux";
+  if (value === "windows" || value === "windows_ad") return "windows";
+  if (value === "database") return "database";
+  if (value === "device") return "device";
+  if (value === "web") return "web";
+  return "other";
 };
 
-const categoryRank = (asset: AssetItem) => {
-  const type = (asset.type || "").toLowerCase();
-  const category = (asset.category || "").toLowerCase();
-  const value = category === "host" || category === "-" ? type : category || type;
-  const normalized = value === "windows_ad" ? "windows" : value;
-  const index = categoryOrder.indexOf(normalized);
-  return index === -1 ? categoryOrder.length : index;
+const categoryLabels = computed<Record<AssetCategoryKey, string>>(() => ({
+  linux: t("Menu.Linux"),
+  windows: t("Menu.Windows"),
+  database: t("Menu.Database"),
+  device: t("Menu.Device"),
+  web: t("Menu.Web"),
+  other: t("Menu.Other")
+}));
+
+const resolveTreeAssetIcon = (asset: AssetItem) => {
+  const icons: Record<AssetCategoryKey, string> = {
+    linux: "i-lucide-terminal",
+    windows: "i-lucide-monitor",
+    database: "i-lucide-database",
+    device: "i-lucide-router",
+    web: "i-lucide-globe",
+    other: "i-lucide-box"
+  };
+
+  return icons[categoryKey(asset)];
 };
 
 const groupedAssets = computed(() => {
-  const groups = new Map<string, AssetItem[]>();
+  const groups = new Map<AssetCategoryKey, AssetItem[]>(categoryOrder.map((key) => [key, []]));
   const sorted = [...visibleAssets.value].sort((left, right) => {
-    const rankDiff = categoryRank(left) - categoryRank(right);
+    const rankDiff = categoryOrder.indexOf(categoryKey(left)) - categoryOrder.indexOf(categoryKey(right));
     if (rankDiff !== 0) return rankDiff;
     return left.name.localeCompare(right.name);
   });
 
   for (const asset of sorted) {
-    const label = categoryLabel(asset);
-    if (!groups.has(label)) groups.set(label, []);
-    groups.get(label)!.push(asset);
+    groups.get(categoryKey(asset))!.push(asset);
   }
 
-  return Array.from(groups.entries()).map(([label, assets]) => ({ label, assets }));
+  return Array.from(groups.entries()).map(([key, assets]) => ({ key, label: categoryLabels.value[key], assets }));
 });
 
 const isAssetGroupCollapsed = (label: string) => collapsedAssetGroups.value.has(label);
@@ -588,7 +600,7 @@ watch(
       :style="scrollbarStyles"
     >
       <div v-if="collapse" class="px-2 py-2 flex flex-col items-center gap-1">
-        <UTooltip v-for="group in groupedAssets" :key="group.label" :text="group.label" :delay-duration="150">
+        <UTooltip v-for="group in groupedAssets" :key="group.key" :text="group.label" :delay-duration="150">
           <UButton
             icon="i-lucide-folder"
             color="neutral"
@@ -617,45 +629,51 @@ watch(
           class="h-full"
         />
 
-        <div v-else class="pb-1">
-          <section v-for="group in groupedAssets" :key="group.label" class="mb-2">
+        <div v-else class="px-2 pb-2 pt-1" role="tree" :aria-label="t('Menu.Resource')">
+          <section v-for="group in groupedAssets" :key="group.key" class="asset-tree-group">
             <button
               type="button"
-              class="group flex h-7 w-full cursor-pointer items-center gap-1.5 px-3 text-left text-[11px] uppercase text-gray-500 transition hover:bg-white/70 dark:text-gray-400 dark:hover:bg-white/10"
-              @click="toggleAssetGroup(group.label)"
+              role="treeitem"
+              :aria-expanded="!isAssetGroupCollapsed(group.key)"
+              class="group flex h-7 w-full cursor-pointer items-center gap-1 rounded-sm px-1 text-left text-[11px] font-medium text-gray-700 transition-colors hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10"
+              @click="toggleAssetGroup(group.key)"
             >
               <UIcon
-                name="i-lucide-chevron-down"
-                class="size-3 shrink-0 transition-transform"
-                :class="isAssetGroupCollapsed(group.label) ? '-rotate-90' : ''"
+                name="i-lucide-chevron-right"
+                class="size-2.5 shrink-0 text-gray-400 transition-transform dark:text-gray-500"
+                :class="!isAssetGroupCollapsed(group.key) ? 'rotate-90' : ''"
+              />
+              <UIcon
+                :name="isAssetGroupCollapsed(group.key) ? 'i-lucide-folder' : 'i-lucide-folder-open'"
+                class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
               />
               <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
               <span
-                class="min-w-4 rounded-full px-1.5 py-0.5 text-center text-[10px] leading-none text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-300"
+                class="min-w-4 rounded-full bg-black/5 px-1.5 py-0.5 text-center text-[10px] font-normal leading-none text-gray-400 group-hover:text-gray-500 dark:bg-white/5 dark:text-gray-500 dark:group-hover:text-gray-300"
               >
                 {{ group.assets.length }}
               </span>
             </button>
 
-            <div v-show="!isAssetGroupCollapsed(group.label)">
+            <div
+              v-show="!isAssetGroupCollapsed(group.key)"
+              role="group"
+              class="asset-tree-children ml-[9px] border-l border-gray-300/70 pl-[12px] dark:border-white/15"
+            >
               <button
                 v-for="asset in group.assets"
                 :key="asset.id"
-                class="flex w-full cursor-pointer items-center gap-2 px-3 py-[6px] text-left transition-colors hover:bg-white/80 hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.45)] dark:hover:bg-white/10 dark:hover:shadow-none"
+                role="treeitem"
+                type="button"
+                :title="`${asset.name} · ${asset.displayAddressLine || asset.address}`"
+                class="asset-tree-leaf group relative flex h-7 w-full cursor-pointer items-center gap-1.5 rounded-sm px-1 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/10"
                 :class="!asset.isActive ? 'opacity-50' : ''"
                 @click="handleAssetConnect(asset)"
                 @contextmenu="handleAssetContextMenu(asset, $event)"
               >
-                <CardAssetIcon :type="asset.type" size="sm" />
-                <div class="min-w-0 flex-1">
-                  <div class="text-xs font-medium truncate">
-                    {{ asset.name }}
-                  </div>
-                  <div class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                    {{ asset.displayAddressLine || asset.address }}
-                  </div>
-                </div>
-                <UIcon name="i-lucide-terminal" class="size-4 text-gray-400 shrink-0" />
+                <UIcon :name="resolveTreeAssetIcon(asset)" class="size-3 shrink-0 text-gray-500 dark:text-gray-400" />
+                <span class="min-w-0 flex-1 truncate text-[11px] font-medium">{{ asset.name }}</span>
+                <UIcon name="i-lucide-terminal" class="size-3 shrink-0 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
               </button>
             </div>
           </section>
@@ -781,5 +799,18 @@ watch(
 .asset-list::-webkit-scrollbar-thumb:hover,
 .menu::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover-color);
+}
+
+.asset-tree-leaf::before {
+  position: absolute;
+  top: 50%;
+  left: -14px;
+  width: 12px;
+  border-top: 1px solid rgb(209 213 219 / 0.7);
+  content: "";
+}
+
+.dark .asset-tree-leaf::before {
+  border-color: rgb(255 255 255 / 0.15);
 }
 </style>
