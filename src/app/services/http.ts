@@ -230,6 +230,62 @@ export class HttpService {
     return this.get<Array<any>>(url);
   }
 
+  /**
+   * Get all favorite folders of current user
+   */
+  getFavoriteFolders() {
+    const url = '/api/v1/assets/favorite-folders/';
+    return this.get<Array<any>>(url);
+  }
+
+  /**
+   * Create a favorite folder
+   * @param name folder name
+   * @param parent parent folder id, null means a top-level folder
+   */
+  createFavoriteFolder(name: string, parent: string = null) {
+    const url = '/api/v1/assets/favorite-folders/';
+    return this.post(url, { name, parent });
+  }
+
+  /**
+   * Delete a favorite folder (its favorite relations are cascade-removed by backend)
+   * @param folderId folder id
+   */
+  deleteFavoriteFolder(folderId: string) {
+    const url = `/api/v1/assets/favorite-folders/${folderId}/`;
+    return this.delete(url);
+  }
+
+  /**
+   * Get favorite asset records inside a folder
+   * @param folderId folder id
+   */
+  getFavoriteAssetsByFolder(folderId: string) {
+    const url = `/api/v1/assets/favorite-assets/?folder=${folderId}`;
+    return this.get<Array<any>>(url);
+  }
+
+  /**
+   * Favorite an asset into a folder
+   * @param assetId asset id
+   * @param folderId folder id
+   */
+  favoriteAssetToFolder(assetId: string, folderId: string) {
+    const url = '/api/v1/assets/favorite-assets/';
+    return this.post(url, { asset: assetId, folder: folderId });
+  }
+
+  /**
+   * Remove an asset from a folder
+   * @param assetId asset id
+   * @param folderId folder id
+   */
+  removeFavoriteFromFolder(assetId: string, folderId: string) {
+    const url = `/api/v1/assets/favorite-assets/?asset=${assetId}&folder=${folderId}`;
+    return this.delete(url);
+  }
+
   search(q: string) {
     const params = new HttpParams().set('q', q);
     return this.get('/api/search', { params: params });
