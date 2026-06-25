@@ -24,6 +24,7 @@
         </a>
         <i
           (click)="toggleTreeCheckable($event, tree)"
+          *ngIf="tree.checkbox"
           [nzTooltipTitle]="'Batch actions(select and right click)' | translate"
           nz-tooltip
           [ngClass]="isTreeCheckEnabled(tree) ? 'fa-check-square' : 'fa-square-o'"
@@ -68,7 +69,7 @@
         <td
           (click)="handleMenuClick(menu)"
           [attr.data-num]="i"
-          [ngStyle]="{ display: menu.hide ? 'none' : '' }"
+          [ngStyle]="{ display: menu.hide ? 'none' : '', opacity: menu.disabled ? 0.4 : 1 }"
           class="view-menu__data"
         >
           <span [ngClass]="menu.fa" class="view-menu__icon fa"></span> {{ menu.name | translate }}
@@ -77,3 +78,13 @@
     </tbody>
   </table>
 </div>
+
+<!-- New favorite folder dialog content template -->
+<ng-template #folderModalContent>
+  <input
+    nz-input
+    [(ngModel)]="folderNameInput"
+    [placeholder]="'Folder name' | translate"
+    type="text"
+  />
+</ng-template>
