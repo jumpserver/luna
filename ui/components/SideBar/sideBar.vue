@@ -3,7 +3,6 @@ import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
 import type { AssetItem, AssetPageType } from "~/types";
 
 import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
-import { getConfiguredAppName } from "~/composables/useAppName";
 import SidebarFlipIcon from "~/icons/SidebarFlipIcon.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import Profile from "./profile.vue";
@@ -26,7 +25,6 @@ const {
   handleAssetUnfavorite
 } = useAssetAction();
 
-const appName = ref(getConfiguredAppName());
 const isLoading = ref(false);
 const sidebarSearch = ref("");
 const showAssetSearch = ref(false);
@@ -455,38 +453,33 @@ watch(
 <template>
   <!-- backdrop-blur-lg 如果加上这个属性会导致在拖动窗口的时候，左侧背景一直在变化 -->
   <div
-    class="flex flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-saturate-150 supports-backdrop-filter:dark:bg-zinc-900/15 border-r border-white/30 dark:border-white/10 shadow-sm"
+    class="flex shrink-0 overflow-hidden flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-saturate-150 supports-backdrop-filter:dark:bg-zinc-900/15 transition-[width] duration-200"
+    :class="collapse ? 'border-r-0 shadow-none' : 'border-r border-white/30 dark:border-white/10 shadow-sm'"
     :style="{
-      width: collapse ? '75px' : '220px'
+      width: collapse ? '0px' : '220px'
     }"
   >
     <!-- 顶部区域：折叠按钮和搜索框 -->
     <div class="flex flex-col w-full">
-      <!-- 折叠按钮 -->
       <div
-        class="flex items-center px-3 h-10"
+        class="flex items-center h-10 px-3"
         :class="
           isMacOS
-            ? collapse
-              ? 'mt-9 justify-center'
-              : 'justify-end'
+            ? 'justify-end pr-3'
             : collapse
               ? 'py-2 justify-center mt-2'
-              : 'py-2 mt-2 justify-between'
+              : 'py-2 mt-2 justify-start'
         "
         @mousedown="handleWindowDrag"
       >
-        <div v-if="!isMacOS && !collapse" class="flex items-center gap-2">
-          <UAvatar size="sm" src="/logo.png" class="bg-transparent" :ui="{ root: 'bg-transparent' }" />
-          <span v-if="appName" class="text-sm">{{ appName }}</span>
-        </div>
-
         <UButton
+          v-if="!collapse"
           color="neutral"
           variant="ghost"
           size="md"
-          :class="collapse ? 'p-2' : 'p-1'"
+          class="p-1"
           :icon="SidebarFlipIcon"
+          title="折叠侧边栏"
           @click="handleCollapse"
         />
       </div>
@@ -599,86 +592,72 @@ watch(
       class="flex-1 min-h-0 overflow-y-auto asset-list"
       :style="scrollbarStyles"
     >
-      <div v-if="collapse" class="px-2 py-2 flex flex-col items-center gap-1">
-        <UTooltip v-for="group in groupedAssets" :key="group.key" :text="group.label" :delay-duration="150">
-          <UButton
-            icon="i-lucide-folder"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            class="size-9 justify-center rounded-sm"
-          />
-        </UTooltip>
+      <div v-if="!loggedIn" class="h-full grid place-items-center px-3 text-xs text-gray-500 dark:text-gray-400">
+        请先登录
       </div>
 
-      <template v-else>
-        <div v-if="!loggedIn" class="h-full grid place-items-center px-3 text-xs text-gray-500 dark:text-gray-400">
-          请先登录
-        </div>
+      <div v-else-if="isInitialLoading" class="p-3 space-y-2">
+        <USkeleton v-for="idx in 8" :key="idx" class="h-10 w-full" />
+      </div>
 
-        <div v-else-if="isInitialLoading" class="p-3 space-y-2">
-          <USkeleton v-for="idx in 8" :key="idx" class="h-10 w-full" />
-        </div>
+      <UEmpty
+        v-else-if="visibleAssets.length === 0"
+        icon="mingcute:inbox-line"
+        size="lg"
+        variant="naked"
+        :title="t('Common.NoData')"
+        class="h-full"
+      />
 
-        <UEmpty
-          v-else-if="visibleAssets.length === 0"
-          icon="mingcute:inbox-line"
-          size="lg"
-          variant="naked"
-          :title="t('Common.NoData')"
-          class="h-full"
-        />
+      <div v-else class="px-2 pb-2 pt-1" role="tree" :aria-label="t('Menu.Resource')">
+        <section v-for="group in groupedAssets" :key="group.key" class="asset-tree-group">
+          <button
+            type="button"
+            role="treeitem"
+            :aria-expanded="!isAssetGroupCollapsed(group.key)"
+            class="group flex h-7 w-full cursor-pointer items-center gap-1 rounded-sm px-1 text-left text-[11px] font-medium text-gray-700 transition-colors hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10"
+            @click="toggleAssetGroup(group.key)"
+          >
+            <UIcon
+              name="i-lucide-chevron-right"
+              class="size-2.5 shrink-0 text-gray-400 transition-transform dark:text-gray-500"
+              :class="!isAssetGroupCollapsed(group.key) ? 'rotate-90' : ''"
+            />
+            <UIcon
+              :name="isAssetGroupCollapsed(group.key) ? 'i-lucide-folder' : 'i-lucide-folder-open'"
+              class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
+            />
+            <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
+            <span
+              class="min-w-4 rounded-full bg-black/5 px-1.5 py-0.5 text-center text-[10px] font-normal leading-none text-gray-400 group-hover:text-gray-500 dark:bg-white/5 dark:text-gray-500 dark:group-hover:text-gray-300"
+            >
+              {{ group.assets.length }}
+            </span>
+          </button>
 
-        <div v-else class="px-2 pb-2 pt-1" role="tree" :aria-label="t('Menu.Resource')">
-          <section v-for="group in groupedAssets" :key="group.key" class="asset-tree-group">
+          <div
+            v-show="!isAssetGroupCollapsed(group.key)"
+            role="group"
+            class="asset-tree-children ml-[9px] border-l border-gray-300/70 pl-[12px] dark:border-white/15"
+          >
             <button
-              type="button"
+              v-for="asset in group.assets"
+              :key="asset.id"
               role="treeitem"
-              :aria-expanded="!isAssetGroupCollapsed(group.key)"
-              class="group flex h-7 w-full cursor-pointer items-center gap-1 rounded-sm px-1 text-left text-[11px] font-medium text-gray-700 transition-colors hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10"
-              @click="toggleAssetGroup(group.key)"
+              type="button"
+              :title="`${asset.name} · ${asset.displayAddressLine || asset.address}`"
+              class="asset-tree-leaf group relative flex h-7 w-full cursor-pointer items-center gap-1.5 rounded-sm px-1 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+              :class="!asset.isActive ? 'opacity-50' : ''"
+              @click="handleAssetConnect(asset)"
+              @contextmenu="handleAssetContextMenu(asset, $event)"
             >
-              <UIcon
-                name="i-lucide-chevron-right"
-                class="size-2.5 shrink-0 text-gray-400 transition-transform dark:text-gray-500"
-                :class="!isAssetGroupCollapsed(group.key) ? 'rotate-90' : ''"
-              />
-              <UIcon
-                :name="isAssetGroupCollapsed(group.key) ? 'i-lucide-folder' : 'i-lucide-folder-open'"
-                class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
-              />
-              <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
-              <span
-                class="min-w-4 rounded-full bg-black/5 px-1.5 py-0.5 text-center text-[10px] font-normal leading-none text-gray-400 group-hover:text-gray-500 dark:bg-white/5 dark:text-gray-500 dark:group-hover:text-gray-300"
-              >
-                {{ group.assets.length }}
-              </span>
+              <UIcon :name="resolveTreeAssetIcon(asset)" class="size-3 shrink-0 text-gray-500 dark:text-gray-400" />
+              <span class="min-w-0 flex-1 truncate text-[11px] font-medium">{{ asset.name }}</span>
+              <UIcon name="i-lucide-terminal" class="size-3 shrink-0 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
-
-            <div
-              v-show="!isAssetGroupCollapsed(group.key)"
-              role="group"
-              class="asset-tree-children ml-[9px] border-l border-gray-300/70 pl-[12px] dark:border-white/15"
-            >
-              <button
-                v-for="asset in group.assets"
-                :key="asset.id"
-                role="treeitem"
-                type="button"
-                :title="`${asset.name} · ${asset.displayAddressLine || asset.address}`"
-                class="asset-tree-leaf group relative flex h-7 w-full cursor-pointer items-center gap-1.5 rounded-sm px-1 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/10"
-                :class="!asset.isActive ? 'opacity-50' : ''"
-                @click="handleAssetConnect(asset)"
-                @contextmenu="handleAssetContextMenu(asset, $event)"
-              >
-                <UIcon :name="resolveTreeAssetIcon(asset)" class="size-3 shrink-0 text-gray-500 dark:text-gray-400" />
-                <span class="min-w-0 flex-1 truncate text-[11px] font-medium">{{ asset.name }}</span>
-                <UIcon name="i-lucide-terminal" class="size-3 shrink-0 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
-              </button>
-            </div>
-          </section>
-        </div>
-      </template>
+          </div>
+        </section>
+      </div>
     </div>
 
     <div class="px-3 pb-3 pt-1 mt-auto">

@@ -17,7 +17,10 @@ const iframeRef = ref<HTMLIFrameElement | null>(null);
 const kokoTicket = ref("");
 const kokoTicketError = ref("");
 const kokoTicketLoading = ref(false);
+const kokoIframeReady = ref(false);
 const colorMode = useColorMode();
+const kokoTerminalThemeName = computed(() => colorMode.value === "dark" ? "OneHalfDark" : "OneHalfLight");
+const kokoMainThemeCode = computed(() => colorMode.value === "dark" ? "darkGary" : "default");
 const { activeTabId, markSessionConnected, markSessionFailed } = useWorkspaceTabs();
 
 let terminal: any = null;
@@ -45,10 +48,54 @@ const kokoBaseUrl = computed(() => {
   if (rawOverride) return normalizeBaseUrl(rawOverride);
   return DEFAULT_KOKO_IFRAME_BASE_URL;
 });
-const kokoIframeSrc = computed(() => {
-  if (!tokenId.value || !kokoTicket.value) return "";
-  return `${kokoBaseUrl.value}/koko/connect/?disableautohash=false&token=${encodeURIComponent(tokenId.value)}&ticket=${encodeURIComponent(kokoTicket.value)}&_=${Date.now()}`;
-});
+const kokoIframeSrc = ref("");
+
+const refreshKokoIframeSrc = () => {
+  if (!tokenId.value || !kokoTicket.value) {
+    kokoIframeSrc.value = "";
+    return;
+  }
+
+  const query = new URLSearchParams({
+    disableautohash: "false",
+    token: tokenId.value,
+    ticket: kokoTicket.value,
+    colorMode: colorMode.value === "light" ? "light" : "dark",
+    themeType: kokoMainThemeCode.value,
+    terminal_theme_name: kokoTerminalThemeName.value,
+    _: String(Date.now())
+  });
+
+  kokoIframeSrc.value = `${kokoBaseUrl.value}/koko/connect/?${query.toString()}`;
+};
+
+const sendKokoThemeSync = () => {
+  if (!useKokoIframe.value || !kokoIframeReady.value) return;
+  const frameWindow = iframeRef.value?.contentWindow;
+  if (!frameWindow) return;
+
+  const targetOrigin = new URL(kokoBaseUrl.value).origin;
+  const lunaId = `clients-${props.tab.id}`;
+  const baseMessage = {
+    id: lunaId,
+    origin: window.location.origin,
+    disbaleFileManager: false
+  };
+
+  frameWindow.postMessage({ ...baseMessage, name: "PING", data: "" }, targetOrigin);
+  frameWindow.postMessage({ ...baseMessage, name: "CHANGE_MAIN_THEME", data: kokoMainThemeCode.value }, targetOrigin);
+  frameWindow.postMessage(
+    { ...baseMessage, name: "TERMINAL_THEME_CHANGE", data: "", theme: kokoTerminalThemeName.value },
+    targetOrigin
+  );
+};
+
+const handleKokoIframeLoad = () => {
+  kokoIframeReady.value = true;
+  markSessionConnected(props.tab.id);
+  setTimeout(sendKokoThemeSync, 0);
+  setTimeout(sendKokoThemeSync, 300);
+};
 const terminalTheme = computed(() => {
   if (colorMode.value === "dark") {
     return {
@@ -198,6 +245,9 @@ const ensureKokoTicket = async () => {
     if (!kokoTicket.value) {
       throw new Error("missing ticket in koko response");
     }
+
+    kokoIframeReady.value = false;
+    refreshKokoIframeSrc();
   } catch (error) {
     if (requestSeq !== kokoTicketRequestSeq) return;
     kokoTicketError.value = String(error);
@@ -282,8 +332,12 @@ const mountTerminal = async () => {
       payload: { tabId: props.tab.id, cols: size.cols, rows: size.rows }
     }).catch(() => {});
   });
-  resizeObserver.observe(terminalRef.value);
-  resizeObserver.observe(terminalHostRef.value);
+  if (terminalRef.value) {
+    resizeObserver.observe(terminalRef.value);
+  }
+  if (terminalHostRef.value) {
+    resizeObserver.observe(terminalHostRef.value);
+  }
 };
 
 watch(
@@ -298,6 +352,13 @@ watch(
     startBridge();
   },
   { deep: true }
+);
+
+watch(
+  () => colorMode.value,
+  () => {
+    sendKokoThemeSync();
+  }
 );
 
 watch(
@@ -360,14 +421,14 @@ onBeforeUnmount(() => {
     class="h-full min-h-0 w-full overflow-hidden bg-white dark:bg-zinc-950"
     @mousedown="focusActiveSurface"
   >
-    <div v-if="useKokoIframe" class="h-full min-h-0 w-full p-2">
+    <div v-if="useKokoIframe" class="h-full min-h-0 w-full">
       <div v-if="kokoIframeSrc" class="h-full min-h-0 w-full overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-zinc-950">
         <iframe
           ref="iframeRef"
           :src="kokoIframeSrc"
           class="h-full w-full border-0 bg-white dark:bg-zinc-950"
           title="Koko Connector"
-          @load="markSessionConnected(props.tab.id)"
+          @load="handleKokoIframeLoad"
         />
       </div>
 
@@ -382,7 +443,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div v-else class="h-full min-h-0 w-full p-2">
+    <div v-else class="h-full min-h-0 w-full">
       <div
         ref="terminalHostRef"
         class="h-full min-h-0 w-full overflow-hidden"

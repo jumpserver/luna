@@ -224,7 +224,7 @@ def slim_config(config: dict) -> dict:
     return {
         "filename": config.get("filename", "Jumpserve Clients Config"),
         "version": config.get("version", 8) + 1,
-        "windowBounds": config.get("windowBounds", {"width": 1280, "height": 800}),
+        "windowBounds": config.get("windowBounds", {"width": 1664, "height": 1040}),
         "defaultSetting": config.get(
             "defaultSetting", {"theme": "light", "layout": "list", "language": "en"}
         ),

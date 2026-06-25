@@ -1,9 +1,9 @@
 {
   "filename": "Jumpserve Clients Config",
-  "version": 9,
+  "version": 10,
   "windowBounds": {
-    "width": 1280,
-    "height": 800
+    "width": 1664,
+    "height": 1040
   },
   "defaultSetting": {
     "theme": "light",

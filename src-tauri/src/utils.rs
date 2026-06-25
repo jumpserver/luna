@@ -5,10 +5,13 @@ use tauri::{AppHandle, LogicalSize, Manager, WebviewWindow};
 use tauri_plugin_store::StoreExt;
 use url::Url;
 
+const DEFAULT_WINDOW_WIDTH: f64 = 1300.0;
+const DEFAULT_WINDOW_HEIGHT: f64 = 780.0;
 const MIN_WINDOW_WIDTH: f64 = 600.0;
 const MIN_WINDOW_HEIGHT: f64 = 400.0;
 const MAX_WINDOW_WIDTH: f64 = 1800.0;
 const MAX_WINDOW_HEIGHT: f64 = 1000.0;
+const SCREEN_USAGE_RATIO: f64 = 0.9;
 const WINDOW_SIZE_UNIT_LOGICAL: &str = "logical";
 
 /// 判断是否为 OAuth 回调 deeplink
@@ -101,7 +104,7 @@ fn restore_window_size(win: &WebviewWindow) -> Result<(), String> {
         .map_err(|e| format!("open store failed: {}", e))?;
 
     let Some(v) = store.get("window_size") else {
-        return Ok(());
+        return apply_window_size(win, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
     };
 
     let factor = win
@@ -133,9 +136,14 @@ fn restore_window_size(win: &WebviewWindow) -> Result<(), String> {
         return Ok(());
     };
 
-    // 限制窗口尺寸：宽度 600-1800，高度 400-1000
-    let w = width_logical.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
-    let h = height_logical.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT);
+    apply_window_size(win, width_logical, height_logical)?;
+
+    Ok(())
+}
+
+fn apply_window_size(win: &WebviewWindow, width_logical: f64, height_logical: f64) -> Result<(), String> {
+    let app: &AppHandle = win.app_handle();
+    let (w, h) = fit_window_size_to_monitor(win, width_logical, height_logical);
 
     win.set_size(tauri::Size::Logical(LogicalSize::new(w, h)))
         .map_err(|e| format!("set_size failed: {}", e))?;
@@ -143,4 +151,24 @@ fn restore_window_size(win: &WebviewWindow) -> Result<(), String> {
     let _ = save_window_logical_size(app, w, h);
 
     Ok(())
+}
+
+fn fit_window_size_to_monitor(win: &WebviewWindow, width_logical: f64, height_logical: f64) -> (f64, f64) {
+    let base_w = width_logical.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
+    let base_h = height_logical.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT);
+
+    let Some(monitor) = win.current_monitor().ok().flatten() else {
+        return (base_w, base_h);
+    };
+
+    let work_area = monitor.work_area();
+    let factor = monitor.scale_factor().max(1.0);
+    let max_w = ((work_area.size.width as f64 / factor) * SCREEN_USAGE_RATIO)
+        .max(MIN_WINDOW_WIDTH)
+        .min(MAX_WINDOW_WIDTH);
+    let max_h = ((work_area.size.height as f64 / factor) * SCREEN_USAGE_RATIO)
+        .max(MIN_WINDOW_HEIGHT)
+        .min(MAX_WINDOW_HEIGHT);
+
+    (base_w.min(max_w), base_h.min(max_h))
 }

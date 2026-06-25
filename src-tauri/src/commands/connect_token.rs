@@ -12,6 +12,7 @@ use crate::service::connect::{ConnectService, TokenRequestBody};
 struct KokoConnectTicketResponse {
     ticket: String,
     token_id: String,
+    org_id: Option<String>,
     expires_at: String,
     expires_in: i64,
 }
@@ -166,15 +167,18 @@ pub async fn create_koko_connect_ticket(
 
     let api = ApiRequestClient::with_origin(
         base_url.trim_end_matches('/').to_string(),
-        context.bearer_token,
-        context.org_id,
+        context.bearer_token.clone(),
+        context.org_id.clone(),
     )
     .map_err(|error| error.to_string())?;
 
     let response = api
         .post_json_with_response(
             &api.endpoint("/koko/api/connect-ticket/"),
-            &json!({ "token_id": token_id }),
+            &json!({
+                "token_id": token_id,
+                "org_id": context.org_id
+            }),
         )
         .await;
 
@@ -191,6 +195,7 @@ pub async fn create_koko_connect_ticket(
     Ok(json!({
         "ticket": ticket.ticket,
         "token_id": ticket.token_id,
+        "org_id": ticket.org_id.unwrap_or(context.org_id),
         "expires_at": ticket.expires_at,
         "expires_in": ticket.expires_in
     }))
