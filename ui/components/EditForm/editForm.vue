@@ -2,6 +2,7 @@
 import type { SelectMenuItem } from "@nuxt/ui";
 import type { AssetPageType, PermedAccount, PermedProtocol } from "~/types/index";
 import { useConnectMethods } from "~/composables/useConnectMethods";
+import { sortProtocolNames } from "~/utils";
 
 const props = defineProps<{
   account: string
@@ -92,7 +93,7 @@ watch(
   { immediate: true }
 );
 
-const protocolItems = computed(() => props.protocols.map((p: PermedProtocol) => p.name));
+const protocolItems = computed(() => sortProtocolNames(props.protocols.map((p: PermedProtocol) => p.name)));
 
 const accountItems = computed(() => {
   // web 类型的资产需要保留匿名账号，其它类型不展示 @ANON

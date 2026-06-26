@@ -1,7 +1,8 @@
 <script lang="ts" setup>
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { isWindows } = usePlatform();
-const { activeWorkspaceMode } = useWorkspaceMode();
+const route = useRoute();
+const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
 
 const cardUi = computed(() => {
   const base = ["rounded-none", "overflow-visible"];
@@ -22,6 +23,17 @@ onMounted(() => {
   initialTheme();
   listenOSThemeChange();
 });
+
+watch(
+  () => route.path,
+  (path) => {
+    const normalizedPath = path.toLowerCase();
+    const isToolRoute = normalizedPath.includes("/videoplayer") || normalizedPath.includes("/transcode");
+
+    setWorkspaceMode(isToolRoute ? "tools" : "assets");
+  },
+  { immediate: true }
+);
 </script>
 
 <template>

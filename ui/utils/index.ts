@@ -1,4 +1,22 @@
-import type { AssetItem, RawAssetData } from "~/types/index";
+import type { AssetItem, PermedProtocol, RawAssetData } from "~/types/index";
+
+const PROTOCOL_PRIORITY: Record<string, number> = {
+  ssh: 0,
+  sftp: 1
+};
+
+function protocolPriority(protocol?: string) {
+  const normalized = (protocol || "").trim().toLowerCase();
+  return PROTOCOL_PRIORITY[normalized] ?? 2;
+}
+
+export function sortProtocolNames(protocols: string[]) {
+  return [...protocols].sort((left, right) => protocolPriority(left) - protocolPriority(right));
+}
+
+export function sortPermedProtocols(protocols: PermedProtocol[]) {
+  return [...protocols].sort((left, right) => protocolPriority(left?.name) - protocolPriority(right?.name));
+}
 
 export function transformAssetData(rawData: RawAssetData): AssetItem {
   const item: AssetItem = {

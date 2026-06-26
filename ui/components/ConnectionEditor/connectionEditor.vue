@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AssetItem, AssetPageType, ConnectionInfo, PermedAccount, PermedProtocol } from "~/types/index";
 import EditForm from "~/components/EditForm/editForm.vue";
+import { sortPermedProtocols, sortProtocolNames } from "~/utils";
 
 const props = defineProps<{
   assetType?: AssetPageType
@@ -35,7 +36,7 @@ const modalTitle = computed(() => {
 const initDraft = (asset: AssetItem) => {
   const saved: ConnectionInfo | undefined = asset.savedConnection;
 
-  const protocols = asset.permedProtocols || ([] as PermedProtocol[]);
+  const protocols = sortPermedProtocols(asset.permedProtocols || ([] as PermedProtocol[]));
   const accounts = asset.permedAccounts || ([] as PermedAccount[]);
 
   // 协议默认：保存的协议 -> 第一个协议 -> 空
@@ -75,9 +76,11 @@ const initDraft = (asset: AssetItem) => {
  * @description 拼凑连接信息
  */
 const normalizeProtocols = () => {
-  return (currentAsset.value?.permedProtocols || [])
+  const protocols = (currentAsset.value?.permedProtocols || [])
     .map((p) => (p?.name ? p.name.trim() : ""))
     .filter((name) => name.length > 0);
+
+  return sortProtocolNames(protocols);
 };
 
 const buildConnectionInfo = () => {

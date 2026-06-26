@@ -4,6 +4,7 @@ import type { AssetItem, AssetPageType } from "~/types";
 
 import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { sortProtocolNames } from "~/utils";
 
 const { t } = useI18n();
 const localePath = useLocalePath();
@@ -38,7 +39,7 @@ const renameDisabled = computed(() => {
 const assetFetcher = useAssetFetcher("assets", assetScrollRef);
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
-const { assetsData, isInitialLoading, refreshAssets, scrollbarStyles } = assetFetcher;
+const { assetsData, isInitialLoading, isLoading: isAssetLoading, refreshAssets, scrollbarStyles } = assetFetcher;
 const { visibleAssets } = useDisplayAssets(assetsData, undefined, computed<AssetPageType>(() => "assets"));
 
 const shouldShowOrganizationSelector = computed(() => {
@@ -106,6 +107,8 @@ const resolveTreeAssetIcon = (asset: AssetItem) => {
   return icons[categoryKey(asset)];
 };
 
+const isLinuxTreeAsset = (asset: AssetItem) => categoryKey(asset) === "linux";
+
 const groupedAssets = computed(() => {
   const groups = new Map<AssetCategoryKey, AssetItem[]>(categoryOrder.map((key) => [key, []]));
   const sorted = [...visibleAssets.value].sort((left, right) => {
@@ -140,6 +143,12 @@ const searchAssets = (value: string) => {
 };
 
 const debouncedAssetSearch = useDebounceFn(searchAssets, 200);
+
+const handleRefreshAuthorizedAssets = () => {
+  if (!loggedIn.value || isAssetLoading.value) return;
+
+  refreshAssets(sidebarSearch.value);
+};
 
 const hasSshProtocol = (asset: AssetItem) => {
   return (asset.permedProtocols || []).some((protocol) => protocol.name === "ssh");
@@ -259,7 +268,7 @@ const resolveAssetProtocols = (asset: AssetItem) => {
     new Set(protocols.filter((protocol): protocol is string => !!protocol))
   );
 
-  return uniqueProtocols.length > 0 ? uniqueProtocols : ["ssh"];
+  return uniqueProtocols.length > 0 ? sortProtocolNames(uniqueProtocols) : ["ssh"];
 };
 
 const handleProtocolConnect = async (asset: AssetItem, protocol: string) => {
@@ -423,6 +432,20 @@ watch(
           <HeaderOrganizationSelector />
         </div>
 
+        <UTooltip :text="t('ToolTips.Refresh')" :delay-duration="150">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            icon="i-lucide-refresh-cw"
+            :aria-label="t('ToolTips.Refresh')"
+            :disabled="!loggedIn || isAssetLoading"
+            :loading="isAssetLoading"
+            class="size-7 shrink-0 justify-center rounded-sm p-0 text-gray-500 dark:text-gray-400"
+            @click="handleRefreshAuthorizedAssets"
+          />
+        </UTooltip>
+
         <UTooltip :text="t('Operation.Search')" :delay-duration="150">
           <UButton
             color="neutral"
@@ -506,8 +529,15 @@ watch(
         请先登录
       </div>
 
-      <div v-else-if="isInitialLoading" class="p-3 space-y-2">
-        <USkeleton v-for="idx in 8" :key="idx" class="h-10 w-full" />
+      <div v-else-if="isInitialLoading" class="px-2 pb-2 pt-1 space-y-1">
+        <div
+          v-for="idx in 8"
+          :key="idx"
+          class="flex h-7 items-center gap-1.5 rounded-sm px-1"
+        >
+          <USkeleton class="size-3 shrink-0 rounded-sm" />
+          <USkeleton class="h-3 w-24 max-w-[70%]" />
+        </div>
       </div>
 
       <UEmpty
@@ -525,7 +555,7 @@ watch(
             type="button"
             role="treeitem"
             :aria-expanded="!isAssetGroupCollapsed(group.key)"
-            class="group flex h-7 w-full cursor-pointer items-center gap-1 rounded-sm px-1 text-left text-[11px] font-medium text-gray-700 transition-colors hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10"
+            class="group flex h-7 w-full cursor-pointer items-center gap-1 rounded-sm px-1 text-left text-xs font-medium text-gray-700 transition-colors hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10"
             @click="toggleAssetGroup(group.key)"
           >
             <UIcon
@@ -539,7 +569,7 @@ watch(
             />
             <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
             <span
-              class="min-w-4 rounded-full bg-black/5 px-1.5 py-0.5 text-center text-[10px] font-normal leading-none text-gray-400 group-hover:text-gray-500 dark:bg-white/5 dark:text-gray-500 dark:group-hover:text-gray-300"
+              class="min-w-4 rounded-full bg-black/5 px-1.5 py-0.5 text-center text-[11px] font-normal leading-none text-gray-400 group-hover:text-gray-500 dark:bg-white/5 dark:text-gray-500 dark:group-hover:text-gray-300"
             >
               {{ group.assets.length }}
             </span>
@@ -548,7 +578,7 @@ watch(
           <div
             v-show="!isAssetGroupCollapsed(group.key)"
             role="group"
-            class="asset-tree-children ml-[9px] border-l border-gray-300/70 pl-[12px] dark:border-white/15"
+            class="asset-tree-children ml-[9px] pl-[12px]"
           >
             <button
               v-for="asset in group.assets"
@@ -561,8 +591,14 @@ watch(
               @click="handleAssetConnect(asset)"
               @contextmenu="handleAssetContextMenu(asset, $event)"
             >
-              <UIcon :name="resolveTreeAssetIcon(asset)" class="size-3 shrink-0 text-gray-500 dark:text-gray-400" />
-              <span class="min-w-0 flex-1 truncate text-[11px] font-medium">{{ asset.name }}</span>
+              <img
+                v-if="isLinuxTreeAsset(asset)"
+                src="/icons/linux.png"
+                alt=""
+                class="size-3 shrink-0 object-contain opacity-70 dark:opacity-80"
+              >
+              <UIcon v-else :name="resolveTreeAssetIcon(asset)" class="size-3 shrink-0 text-gray-500 dark:text-gray-400" />
+              <span class="min-w-0 flex-1 truncate text-xs font-medium">{{ asset.name }}</span>
               <UIcon name="i-lucide-terminal" class="size-3 shrink-0 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
           </div>
@@ -684,18 +720,5 @@ watch(
 .asset-list::-webkit-scrollbar-thumb:hover,
 .menu::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover-color);
-}
-
-.asset-tree-leaf::before {
-  position: absolute;
-  top: 50%;
-  left: -14px;
-  width: 12px;
-  border-top: 1px solid rgb(209 213 219 / 0.7);
-  content: "";
-}
-
-.dark .asset-tree-leaf::before {
-  border-color: rgb(255 255 255 / 0.15);
 }
 </style>
