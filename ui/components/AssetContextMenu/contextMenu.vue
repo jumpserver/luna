@@ -101,7 +101,8 @@ function handleConnect(protocol?: string) {
         accountMode: "hosted",
         manualUsername: "",
         manualPassword: "",
-        dynamicPassword: ""
+        dynamicPassword: "",
+        asset: props.asset
       }
     );
   } else {

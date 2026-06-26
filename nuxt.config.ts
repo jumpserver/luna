@@ -1,3 +1,22 @@
+const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
+const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
+const lionTarget = process.env.JMS_LION_DEV_URL || "http://localhost:9529";
+const chenTarget = process.env.JMS_CHEN_DEV_URL || "http://localhost:9523";
+const faceliveTarget = process.env.JMS_FACELIVE_DEV_URL || "http://localhost:5173";
+const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:5172";
+const uiTarget = process.env.JMS_UI_DEV_URL || "http://localhost:9528";
+const appBaseURL = process.env.NUXT_APP_BASE_URL || "/luna/";
+const getProxyOrigin = (target: string) => new URL(target).origin;
+const rewriteProxyOrigin = (target: string) => (
+  proxy: { on: (event: "proxyReq", callback: (proxyReq: { setHeader: (name: string, value: string) => void }) => void) => void }
+) => {
+  const origin = getProxyOrigin(target);
+
+  proxy.on("proxyReq", (proxyReq) => {
+    proxyReq.setHeader("Origin", origin);
+  });
+};
+
 export default defineNuxtConfig({
   srcDir: "ui/",
   modules: [
@@ -22,6 +41,7 @@ export default defineNuxtConfig({
     strategy: 'no_prefix'
   },
   app: {
+    baseURL: appBaseURL,
     head: {
       title: "JumpServer Client",
       charset: "utf-8",
@@ -71,11 +91,80 @@ export default defineNuxtConfig({
     clearScreen: false,
     envPrefix: ["VITE_", "TAURI_"],
     server: {
+      host: "0.0.0.0",
       strictPort: true,
       hmr: {
         protocol: "ws",
         host: "0.0.0.0",
         port: 3001
+      },
+      proxy: {
+        "/koko/": {
+          target: kokoTarget,
+          secure: false,
+          ws: true,
+          changeOrigin: true
+        },
+        "/media/": {
+          target: jumpServerTarget,
+          secure: false,
+          changeOrigin: true,
+          configure: rewriteProxyOrigin(jumpServerTarget)
+        },
+        "/api/": {
+          target: jumpServerTarget,
+          secure: false,
+          changeOrigin: true,
+          configure: rewriteProxyOrigin(jumpServerTarget)
+        },
+        "/ws/": {
+          target: jumpServerTarget.replace(/^http/, "ws"),
+          secure: false,
+          ws: true,
+          changeOrigin: true
+        },
+        "/core": {
+          target: jumpServerTarget,
+          secure: false,
+          changeOrigin: true,
+          configure: rewriteProxyOrigin(jumpServerTarget)
+        },
+        "/static": {
+          target: jumpServerTarget,
+          secure: false,
+          changeOrigin: true,
+          configure: rewriteProxyOrigin(jumpServerTarget)
+        },
+        "/lion": {
+          target: lionTarget,
+          secure: false,
+          ws: true,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/lion\/monitor/, "/monitor")
+        },
+        "/chen": {
+          target: chenTarget,
+          secure: false,
+          ws: true,
+          changeOrigin: true
+        },
+        "/facelive": {
+          target: faceliveTarget,
+          secure: false,
+          ws: true,
+          changeOrigin: true
+        },
+        "/kael": {
+          target: kaelTarget,
+          secure: false,
+          ws: true,
+          changeOrigin: true
+        },
+        "/ui/": {
+          target: uiTarget,
+          secure: false,
+          changeOrigin: true
+        }
       },
       watch: {
         ignored: ["**/src-tauri/**"]
@@ -86,7 +175,7 @@ export default defineNuxtConfig({
     }
   },
   devServer: {
-    host: "127.0.0.1"
+    host: "0.0.0.0"
   },
   router: {
     options: {

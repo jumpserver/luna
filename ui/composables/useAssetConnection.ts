@@ -8,7 +8,9 @@ interface ConnectionFormInfo {
   manualPassword: string
   dynamicPassword: string
   rememberSecret: boolean
+  rememberSelection?: boolean
   connectMethod: string
+  connectOptions?: Record<string, any>
 
   accountId?: string
   availableProtocols?: string[]
@@ -36,7 +38,8 @@ export function useAssetConnection() {
           accountMode: "hosted",
           manualUsername: "",
           manualPassword: "",
-          dynamicPassword: ""
+          dynamicPassword: "",
+          asset
         }
       );
     } else {
@@ -83,6 +86,7 @@ export function useAssetConnection() {
       dynamicPassword: connectionInfo.rememberSecret ? connectionInfo.dynamicPassword : "",
       rememberSecret: connectionInfo.rememberSecret,
       connectMethod: connectionInfo.connectMethod,
+      connectOptions: connectionInfo.connectOptions,
       availableProtocols
     };
 
@@ -93,7 +97,9 @@ export function useAssetConnection() {
    * 处理连接确认（从模态框）
    */
   const confirmConnection = (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
-    saveConnectionInfo(asset, connectionInfo);
+    if (connectionInfo.rememberSelection !== false) {
+      saveConnectionInfo(asset, connectionInfo);
+    }
 
     handleAssetConnection(connectionInfo.account, asset.id, connectionInfo.protocol, asset.permedAccounts!, undefined, {
       accountMode: connectionInfo.accountMode,
@@ -101,7 +107,9 @@ export function useAssetConnection() {
       manualPassword: connectionInfo.manualPassword,
       dynamicPassword: connectionInfo.dynamicPassword,
       connectMethod: connectionInfo.connectMethod,
-      tabId: connectionInfo.tabId
+      connectOptions: connectionInfo.connectOptions,
+      tabId: connectionInfo.tabId,
+      asset
     });
   };
 

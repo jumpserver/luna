@@ -8,6 +8,7 @@ interface ConnectMethod {
   disabled: boolean
   listen: string
   component: string
+  endpoint_protocol?: string
 }
 
 interface ConnectMethodsResponse {
@@ -18,19 +19,26 @@ interface ConnectMethodsResponse {
 const connectMethodsCache = new Map<string, ConnectMethodsResponse>();
 const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 
-export const useConnectMethods = () => {
-  const { t } = useI18n();
-  const { currentSite, orgId } = storeToRefs(useUserInfoStore());
+const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMethodsResponse => {
+  const normalized: ConnectMethodsResponse = { ...methods };
 
-  const builtInTerminalMethod = (): ConnectMethod => ({
-    value: "builtin_client",
-    label: t("Setting.BuiltInTerminal"),
-    type: "native",
-    icon: "i-lucide-terminal",
-    disabled: false,
-    listen: "",
-    component: ""
+  Object.keys(normalized).forEach((key) => {
+    const value = normalized[key];
+    if (!Array.isArray(value)) return;
+
+    normalized[key] = value.map((method) => {
+      const isWebCli = method.type === "web" || ["koko", "lion", "chen", "tinker", "default"].includes(method.component);
+      return isWebCli
+        ? { ...method, label: "Web CLI" }
+        : method;
+    });
   });
+
+  return normalized;
+};
+
+export const useConnectMethods = () => {
+  const { currentSite, orgId } = storeToRefs(useUserInfoStore());
 
   const fetchConnectMethods = async (): Promise<ConnectMethodsResponse> => {
     const key = `${currentSite.value || ""}:${orgId.value || ""}`;
@@ -44,6 +52,21 @@ export const useConnectMethods = () => {
 
     if (running) {
       return running;
+    }
+
+    if (!isTauriRuntime()) {
+      const response = await fetch(withWebSitePrefix("/api/v1/terminal/components/connect-methods/"), {
+        credentials: "include",
+        headers: getWebApiHeaders()
+      });
+
+      if (!response.ok) {
+        throw new Error(`fetch connect methods failed: ${response.status}`);
+      }
+
+      const methods = normalizeWebConnectMethods(await response.json() as ConnectMethodsResponse);
+      connectMethodsCache.set(key, methods);
+      return methods;
     }
 
     const promise = new Promise<ConnectMethodsResponse>((resolve, reject) => {
@@ -103,20 +126,8 @@ export const useConnectMethods = () => {
   const getMethodsForProtocol = async (protocol: string): Promise<ConnectMethod[]> => {
     const allMethods = await fetchConnectMethods();
     const protocolMethods = allMethods[protocol] || [];
-    const methods = protocol === "http"
-      ? protocolMethods.filter((method) => !method.disabled && method.type === "applet")
-      : protocolMethods.filter((method) => {
-        return !method.disabled && (method.type === "native" && !method.value.endsWith("_guide"));
-      });
-
-    if (protocol === "ssh") {
-      return [
-        builtInTerminalMethod(),
-        ...methods.filter((method) => method.value !== "builtin_client")
-      ];
-    }
-
-    return methods;
+    // 与 Luna 对齐：连接方法以服务端返回为准，仅过滤 disabled。
+    return protocolMethods.filter((method) => !method.disabled);
   };
 
   const getDefaultMethodForProtocol = async (protocol: string): Promise<string> => {

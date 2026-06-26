@@ -1,0 +1,6 @@
+{
+  "build": {
+    "beforeDevCommand": "node -e \"\"",
+    "devUrl": "http://localhost:3000/luna/"
+  }
+}

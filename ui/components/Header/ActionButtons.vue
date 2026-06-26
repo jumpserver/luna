@@ -21,6 +21,7 @@ const windowControlButtons = computed(() => {
       iconName: "i-lucide-minus",
       tooltipLabel: t("ToolTips.Minimize"),
       onClick: async () => {
+        if (!isTauriRuntime()) return;
         await useTauriCoreInvoke("minimize_window");
       }
     },
@@ -29,6 +30,7 @@ const windowControlButtons = computed(() => {
       iconName: "i-lucide-square",
       tooltipLabel: t("ToolTips.Maximize"),
       onClick: async () => {
+        if (!isTauriRuntime()) return;
         await useTauriCoreInvoke("toggle_maximize_window");
       }
     },
@@ -37,6 +39,7 @@ const windowControlButtons = computed(() => {
       iconName: "i-lucide-x",
       tooltipLabel: t("ToolTips.Close"),
       onClick: async () => {
+        if (!isTauriRuntime()) return;
         await useTauriCoreInvoke("close_window");
       }
     }
@@ -60,6 +63,8 @@ const getWindowControlButtonClass = (buttonKey: string) => {
 };
 
 const openSettingsWindow = async () => {
+  if (!isTauriRuntime()) return;
+
   await useTauriCoreInvoke("open_settings_window");
 };
 

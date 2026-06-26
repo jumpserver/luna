@@ -17,7 +17,13 @@ export const useThemeAdapter = () => {
     setFollowSystem
   } = useSettingManager();
 
-  const currentWindow = useTauriWindowGetCurrentWindow();
+  const getSystemTheme = async (): Promise<Theme> => {
+    if (!isTauriRuntime()) {
+      return globalThis.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
+    }
+
+    return (await useTauriWindowGetCurrentWindow().theme()) || "light";
+  };
 
   const waitHydration = async () => {
     if (isHydrated.value) return;
@@ -51,7 +57,7 @@ export const useThemeAdapter = () => {
     const follow = modeIsWithSystem ? true : modeIsManual ? false : followSystem.value;
     const savedTheme = (modeIsManual ? savedMode : userTheme.value) as Theme | "";
 
-    const osTheme = await currentWindow.theme();
+    const osTheme = await getSystemTheme();
 
     if (!osTheme) {
       if (savedTheme) {
@@ -98,7 +104,7 @@ export const useThemeAdapter = () => {
     setFollowSystem(true);
     setThemeMode("withSystem");
 
-    const osTheme = (await currentWindow.theme()) || currentOSTheme.value;
+    const osTheme = (await getSystemTheme()) || currentOSTheme.value;
 
     if (osTheme) {
       currentOSTheme.value = osTheme;
@@ -112,7 +118,7 @@ export const useThemeAdapter = () => {
   };
 
   const applySystemThemePreference = async () => {
-    const osTheme = (await currentWindow.theme()) || currentOSTheme.value;
+    const osTheme = (await getSystemTheme()) || currentOSTheme.value;
 
     if (osTheme) {
       currentOSTheme.value = osTheme;
@@ -121,6 +127,23 @@ export const useThemeAdapter = () => {
   };
 
   const listenOSThemeChange = () => {
+    if (!isTauriRuntime()) {
+      const media = globalThis.matchMedia?.("(prefers-color-scheme: dark)");
+      if (!media) return;
+
+      media.addEventListener("change", (event) => {
+        const nextTheme: Theme = event.matches ? "dark" : "light";
+        currentOSTheme.value = nextTheme;
+
+        if (themeMode.value === "withSystem" || followSystem.value) {
+          uiColorMode.preference = nextTheme;
+          setTheme(nextTheme);
+        }
+      });
+      return;
+    }
+
+    const currentWindow = useTauriWindowGetCurrentWindow();
     // 监听 OS 主题变化
     currentWindow.onThemeChanged((event: Event<Theme>) => {
       currentOSTheme.value = event.payload;

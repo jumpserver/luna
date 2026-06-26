@@ -1,8 +1,13 @@
 <script lang="ts" setup>
+import WorkspaceShell from "~/components/Workspace/shell.vue";
+import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
+
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { isWindows } = usePlatform();
 const route = useRoute();
 const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
+const { registerSessionDisposer } = useWorkspaceTabs();
+const { registerKokoTicketProvider } = useWorkspaceConnectors();
 
 const cardUi = computed(() => {
   const base = ["rounded-none", "overflow-visible"];
@@ -22,6 +27,24 @@ const cardUi = computed(() => {
 onMounted(() => {
   initialTheme();
   listenOSThemeChange();
+  if (isTauriRuntime()) {
+    registerSessionDisposer((id: string) =>
+      useTauriCoreInvoke("builtin_session_close", {
+        payload: { tabId: id }
+      })
+    );
+    registerKokoTicketProvider((request) =>
+      useTauriCoreInvoke("create_koko_connect_ticket", {
+        baseUrl: request.baseUrl,
+        tokenId: request.tokenId
+      })
+    );
+  }
+});
+
+onBeforeUnmount(() => {
+  registerSessionDisposer(null);
+  registerKokoTicketProvider(null);
 });
 
 watch(
@@ -30,7 +53,7 @@ watch(
     const normalizedPath = path.toLowerCase();
     const isToolRoute = normalizedPath.includes("/videoplayer") || normalizedPath.includes("/transcode");
 
-    setWorkspaceMode(isToolRoute ? "tools" : "assets");
+    setWorkspaceMode(isTauriRuntime() && isToolRoute ? "tools" : "assets");
   },
   { immediate: true }
 );
@@ -42,17 +65,23 @@ watch(
     :ui="cardUi"
     style="background-color: transparent"
   >
-    <div class="flex h-screen w-full flex-col border-none">
-      <Header />
+    <WorkspaceShell>
+      <template #header>
+        <Header />
+      </template>
 
-      <div class="flex min-h-0 flex-1 gap-0">
+      <template #sidebar>
         <SideBar />
+      </template>
 
-        <Main class="flex-1 min-w-0">
-          <WorkspaceTerminalArea v-if="activeWorkspaceMode === 'assets'" />
-          <slot v-else />
-        </Main>
-      </div>
-    </div>
+      <Main class="h-full min-h-0">
+        <WorkspaceTerminalArea v-if="activeWorkspaceMode === 'assets'" />
+        <slot v-else />
+      </Main>
+
+      <template #footer>
+        <WorkspaceStatusFooter />
+      </template>
+    </WorkspaceShell>
   </UCard>
 </template>

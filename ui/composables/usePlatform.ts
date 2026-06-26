@@ -19,6 +19,11 @@ export const usePlatform = () => {
   const getPlatform = async () => {
     try {
       isLoading.value = true;
+      if (!isTauriRuntime()) {
+        platform.value = navigator.platform.toLowerCase().includes("mac") ? "darwin" : "win32";
+        return;
+      }
+
       const currentPlatform = await useTauriOsPlatform();
       platform.value = currentPlatform;
     } catch {

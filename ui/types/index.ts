@@ -227,6 +227,7 @@ export interface ConnectionInfo {
   dynamicPassword?: string
   availableProtocols?: string[]
   connectMethod?: string
+  connectOptions?: RdpGraphics
 }
 
 export interface ConnectMethod {

@@ -111,7 +111,8 @@ const buildMenuItems = computed(() => {
             asset.id,
             displayProtocol(asset.id, asset.permedProtocols!),
             asset.permedAccounts!,
-            name
+            name,
+            { asset }
           )
       }));
 
@@ -198,12 +199,16 @@ const columns: TableColumn<AssetItem>[] = [
     header: ({ table }) =>
       h(UCheckbox, {
         modelValue: table.getIsSomePageRowsSelected() ? "indeterminate" : table.getIsAllPageRowsSelected(),
+        icon: "i-lucide-check",
+        indeterminateIcon: "i-lucide-minus",
         "onUpdate:modelValue": (value: boolean | "indeterminate") => table.toggleAllPageRowsSelected(!!value),
         "aria-label": "Select all"
       }),
     cell: ({ row }) =>
       h(UCheckbox, {
         modelValue: row.getIsSelected(),
+        icon: "i-lucide-check",
+        indeterminateIcon: "i-lucide-minus",
         "onUpdate:modelValue": (value: boolean | "indeterminate") => row.toggleSelected(!!value),
         "aria-label": "Select row"
       }),

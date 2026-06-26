@@ -10,6 +10,7 @@ const { t } = useI18n();
 const localePath = useLocalePath();
 const { collapse } = useSettingManager();
 const { activeWorkspaceMode } = useWorkspaceMode();
+const showTools = computed(() => isTauriRuntime());
 const { confirmConnection, saveConnectionInfo } = useAssetConnection();
 const { openSession } = useWorkspaceTabs();
 const {
@@ -498,7 +499,7 @@ watch(
     </div>
 
     <div
-      v-if="activeWorkspaceMode === 'tools'"
+      v-if="showTools && activeWorkspaceMode === 'tools'"
       class="px-3 py-0 flex-1 overflow-auto menu"
       :style="{
         ...scrollbarStyles,

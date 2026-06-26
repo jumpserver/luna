@@ -29,6 +29,7 @@ export const useUserInfoStore = defineStore(
      * @param userData
      */
     const syncApiSession = (site: string, userData: UserData) => {
+      if (!isTauriRuntime()) return;
       if (!site || !userData.bearerToken || !userData.org?.id) return;
 
       void useTauriCoreInvoke("set_api_session", {
@@ -104,10 +105,12 @@ export const useUserInfoStore = defineStore(
      */
     const deleteUserData = (site: string) => {
       // 退出当前站点时立即请求清理其 Cookie
-      useTauriCoreInvoke("logout", {
-        name: "main",
-        site
-      });
+      if (isTauriRuntime()) {
+        useTauriCoreInvoke("logout", {
+          name: "main",
+          site
+        });
+      }
 
       if (!(site in userMap.value)) {
         return;
@@ -213,11 +216,13 @@ export const useUserInfoStore = defineStore(
       currentUser.value = updatedUserData as UserData;
       userMap.value[currentSite.value] = updatedUserData as SiteUserData;
 
-      void useTauriCoreInvoke("set_api_org", {
-        orgId: org.id
-      }).catch((error) => {
-        console.error("sync api org failed", error);
-      });
+      if (isTauriRuntime()) {
+        void useTauriCoreInvoke("set_api_org", {
+          orgId: org.id
+        }).catch((error) => {
+          console.error("sync api org failed", error);
+        });
+      }
     };
 
     /**

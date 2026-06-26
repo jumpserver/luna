@@ -1,7 +1,6 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { Store } from "@tauri-apps/plugin-store";
 import type { AppConfigType, CharsetType, LanguagePreference, ResolutionType, SortType } from "~/types";
-
-import { Store } from "@tauri-apps/plugin-store";
 
 export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
@@ -31,6 +30,7 @@ export interface UserSettingPersistedState {
 
 const STORE_PATH = "user-setting.json";
 const STORE_KEY = "state";
+const WEB_STORE_KEY = "jumpserver-client:user-setting";
 
 const DEFAULT_STATE: UserSettingPersistedState = {
   language: "system",
@@ -58,10 +58,30 @@ const DEFAULT_STATE: UserSettingPersistedState = {
 let storeInstance: Store | null = null;
 let storePromise: Promise<Store> | null = null;
 
+const loadWebState = () => {
+  if (!import.meta.client) return DEFAULT_STATE;
+
+  try {
+    const raw = globalThis.localStorage?.getItem(WEB_STORE_KEY);
+    if (!raw) return DEFAULT_STATE;
+    return { ...DEFAULT_STATE, ...(JSON.parse(raw) as Partial<UserSettingPersistedState>) };
+  } catch {
+    return DEFAULT_STATE;
+  }
+};
+
+const saveWebState = (next: UserSettingPersistedState) => {
+  if (!import.meta.client) return;
+
+  globalThis.localStorage?.setItem(WEB_STORE_KEY, JSON.stringify(next));
+  globalThis.dispatchEvent(new CustomEvent(WEB_STORE_KEY, { detail: next }));
+};
+
 async function ensureStore() {
   if (storeInstance) return storeInstance;
 
   if (!storePromise) {
+    const { Store } = await import("@tauri-apps/plugin-store");
     storePromise = Store.load(STORE_PATH, {
       defaults: { [STORE_KEY]: DEFAULT_STATE }
     });
@@ -73,12 +93,21 @@ async function ensureStore() {
 
 export const useSettingStorage = () => {
   const load = async (): Promise<UserSettingPersistedState> => {
+    if (!isTauriRuntime()) {
+      return loadWebState();
+    }
+
     const store = await ensureStore();
     const saved = (await store.get<UserSettingPersistedState>(STORE_KEY)) || DEFAULT_STATE;
     return { ...DEFAULT_STATE, ...saved };
   };
 
   const save = async (next: UserSettingPersistedState) => {
+    if (!isTauriRuntime()) {
+      saveWebState(next);
+      return;
+    }
+
     const store = await ensureStore();
     await store.set(STORE_KEY, next);
     await store.save();
@@ -91,12 +120,26 @@ export const useSettingStorage = () => {
   };
 
   const reset = async () => {
+    if (!isTauriRuntime()) {
+      saveWebState(DEFAULT_STATE);
+      return;
+    }
+
     const store = await ensureStore();
     await store.set(STORE_KEY, DEFAULT_STATE);
     await store.save();
   };
 
   const subscribe = async (cb: (state: UserSettingPersistedState) => void): Promise<UnlistenFn> => {
+    if (!isTauriRuntime()) {
+      const handler = (event: Event) => {
+        cb({ ...DEFAULT_STATE, ...((event as CustomEvent<UserSettingPersistedState>).detail || {}) });
+      };
+
+      globalThis.addEventListener(WEB_STORE_KEY, handler);
+      return () => globalThis.removeEventListener(WEB_STORE_KEY, handler);
+    }
+
     const store = await ensureStore();
     return store.onChange((key, value) => {
       if (key === STORE_KEY && value) {

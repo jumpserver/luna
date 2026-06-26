@@ -103,6 +103,8 @@ watch(
  * 获取 Setting 信息
  */
 async function getSettings() {
+  if (!isTauriRuntime()) return;
+
   await useTauriCoreInvoke("get_setting", {});
 }
 
@@ -185,6 +187,8 @@ const handleConnectTrigger = (asset: AssetItem) => {
  * @description 监听 Tauri 事件
  */
 const listenTauriEvent = async () => {
+  if (!isTauriRuntime()) return;
+
   interface eventPayloadType {
     data: string
     status: number

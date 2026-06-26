@@ -266,6 +266,10 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
    */
   async function fetchNextPage(search?: string, order?: string) {
     if (isLoading.value || !hasMore.value) return;
+    if (!isTauriRuntime()) {
+      await fetchWebNextPage(search, order);
+      return;
+    }
     if (!currentSite.value) return;
     if (!orgId.value) {
       console.error("No organization ID available for asset request", {
@@ -316,6 +320,98 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
     }
   }
 
+  const buildWebAssetQuery = (searchParam: string, orderParam: string) => {
+    const query = new URLSearchParams({
+      offset: String(offset.value),
+      limit: String(LIMIT),
+      search: searchParam,
+      order: orderParam
+    });
+
+    if (assetType !== "favorite" && assetType !== "assets") {
+      if (assetType === "database" || assetType === "device" || assetType === "web") {
+        query.set("category", assetType);
+      } else {
+        query.set("type", assetType);
+      }
+    }
+
+    return query;
+  };
+
+  async function fetchWebFavoriteIds() {
+    try {
+      const response = await fetch(withWebSitePrefix("/api/v1/assets/favorite-assets/"), {
+        credentials: "include",
+        headers: getWebApiHeaders()
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json() as Array<{ asset: string }> | { results?: Array<{ asset: string }> };
+      const list = Array.isArray(data) ? data : data.results || [];
+      favoriteSet.value = new Set(list.map((item) => item.asset).filter(Boolean));
+    } catch (error) {
+      console.debug("fetch web favorites failed", error);
+    }
+  }
+
+  async function fetchWebNextPage(search?: string, order?: string) {
+    if (!currentSite.value && !window.location.origin) return;
+    if (!orgId.value && !getWebOrgId()) return;
+
+    const searchParam = search !== undefined ? search : currentSearch.value;
+    const orderParam = order !== undefined ? order : currentOrder.value;
+
+    currentSearch.value = searchParam;
+    currentOrder.value = orderParam;
+
+    beginLoading();
+
+    try {
+      const path = assetType === "favorite"
+        ? "/api/v1/perms/users/self/nodes/favorite/assets/"
+        : "/api/v1/perms/users/self/assets/";
+      const response = await fetch(`${withWebSitePrefix(path)}?${buildWebAssetQuery(searchParam, orderParam).toString()}`, {
+        credentials: "include",
+        headers: getWebApiHeaders()
+      });
+
+      if (response.status === 401) {
+        deleteUserData(currentSite.value);
+        rawAssetsList.value = [];
+        hasMore.value = false;
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json() as AssetsResponse;
+      const pageData = (data.results || []).map((item) => ({
+        ...item,
+        permedAccounts: (item as any).permedAccounts || (item as any).permed_accounts || [],
+        permedProtocols: (item as any).permedProtocols || (item as any).permed_protocols || []
+      }));
+
+      appendPageData(filterResultsByAssetType(pageData), data.count);
+      await fetchWebFavoriteIds();
+    } catch (e: any) {
+      hasMore.value = false;
+      toast.add({
+        title: t("Asset.GetAssetFailed"),
+        description: e?.message || "fetch assets failed",
+        color: "error",
+        icon: "line-md:close-circle",
+        progress: true,
+        duration: 4000
+      });
+    } finally {
+      endLoading();
+    }
+  }
+
   /**
    * @description 刷新资产数据（重置状态并重新获取）
    * @param search
@@ -336,6 +432,8 @@ export const useAssetFetcher = (assetType: AssetPageType, scrollRef?: Ref<HTMLEl
    * @description 监听 Tauri 事件
    */
   const listenTauriEvent = async () => {
+    if (!isTauriRuntime()) return;
+
     subscribeGetAssetsEvent.value = await useTauriEventListen("get-asset-success", (event) => {
       interface eventPayload {
         status: number

@@ -2,7 +2,7 @@ import type { PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 type LoginPayload = UserIntiInfo & { bearer: string };
-type PersistedUserSnapshot = {
+interface PersistedUserSnapshot {
   loggedIn?: boolean
   currentSite?: string
   currentUser?: Record<string, any> | null
@@ -10,7 +10,7 @@ type PersistedUserSnapshot = {
   userMap?: Record<string, Record<string, any>>
   currentRdpClientOption?: Record<string, any>
   currentConnectionInfoMap?: Record<string, any>
-};
+}
 
 const normalizeOrgList = (value: unknown): PermOrgItem[] => {
   if (Array.isArray(value)) {
@@ -179,8 +179,100 @@ export const useAuthSession = () => {
     }
   };
 
+  const fetchWebJson = async <T>(paths: string[]): Promise<T | null> => {
+    for (const path of paths) {
+      try {
+        const response = await fetch(withWebSitePrefix(path), {
+          credentials: "include",
+          headers: getWebApiHeaders()
+        });
+
+        if (response.status === 401 || response.status === 403) return null;
+        if (!response.ok) continue;
+        return await response.json() as T;
+      } catch (error) {
+        console.debug("web auth request failed", { path, error });
+      }
+    }
+
+    return null;
+  };
+
+  const bootstrapWebCookieSession = async () => {
+    if (isWebAuthPath()) {
+      userInfoStore.setUserLoggedIn(false);
+      return false;
+    }
+
+    const connectionToken = new URLSearchParams(window.location.search).get("token");
+    const [profileData, permissionOrgData] = await Promise.all([
+      fetchWebJson<Record<string, any>>([
+        connectionToken
+          ? `/api/v1/users/profile/?fields_size=mini&token=${encodeURIComponent(connectionToken)}`
+          : "/api/v1/users/profile/?fields_size=mini",
+        "/api/v1/users/profile/",
+        "/api/v1/profile/"
+      ]),
+      fetchWebJson<PermissionOrgs | Record<string, unknown>>([
+        "/api/v1/users/profile/permissions/",
+        "/api/v1/profile/permissions/"
+      ])
+    ]);
+
+    if (!profileData) {
+      userInfoStore.setUserLoggedIn(false);
+      if (!connectionToken) {
+        redirectToWebLogin();
+      }
+      return false;
+    }
+
+    const availableOrgs = initSelectOrganization(permissionOrgData || {});
+    const cookieOrgId = getWebOrgId();
+    const currentOrg = (availableOrgs.find((org) => org.id === cookieOrgId) || availableOrgs[0] || {
+      id: cookieOrgId || profileData.org_id || profileData.org?.id || "",
+      name: profileData.org_name || profileData.org?.name || "",
+      is_root: false,
+      is_default: false,
+      is_system: false
+    }) as any;
+
+    if (!currentOrg.id) {
+      userInfoStore.setUserLoggedIn(false);
+      return false;
+    }
+
+    const site = window.location.origin;
+
+    userInfoStore.setUserData(site, {
+      name: profileData.name || profileData.username || profileData.display_name || "",
+      bearerToken: "",
+      site,
+      org: {
+        comment: "",
+        ...currentOrg
+      },
+      system_roles: profileData.system_roles || [],
+      availableOrgs,
+      xpackLicenseValid: profileData.xpack_license_valid ?? profileData.xpackLicenseValid ?? true,
+      connectionInfo: {
+        protocol: "",
+        username: ""
+      }
+    });
+
+    userInfoStore.setOrganizations(availableOrgs);
+    userInfoStore.setCurrentOrg({ comment: "", ...currentOrg });
+    userInfoStore.setUserLoggedIn(true);
+    return true;
+  };
+
   const bootstrapPersistedSession = async () => {
     const restored = restorePersistedSnapshot();
+
+    if (!isTauriRuntime()) {
+      return await bootstrapWebCookieSession() || restored;
+    }
 
     const site = getPersistedSite();
     if (!site) {

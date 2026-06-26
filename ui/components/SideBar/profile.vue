@@ -383,7 +383,9 @@ const handleInvalidSiteVersion = () => {
   hasValidationError.value = true;
   errorMessage.value = t("Login.InvalidSiteError");
 
-  void useTauriCoreInvoke("auth_cancel", {});
+  if (isTauriRuntime()) {
+    void useTauriCoreInvoke("auth_cancel", {});
+  }
 
   nextTick(() => {
     inputRef.value?.$el?.querySelector("input")?.focus();
@@ -391,6 +393,8 @@ const handleInvalidSiteVersion = () => {
 };
 
 const checkVersionBeforeOAuth = async (site: string) => {
+  if (!isTauriRuntime()) return true;
+
   await useTauriCoreInvoke("set_api_session", {
     sessionKey: site,
     origin: site,
@@ -613,6 +617,18 @@ const handleConfirm = async () => {
     return;
   }
 
+  if (!isTauriRuntime()) {
+    toast.add({
+      title: t("Login.LoginFailed"),
+      description: "Web 模式暂未接入登录流程。",
+      color: "warning",
+      icon: "i-lucide-circle-alert",
+      progress: true,
+      duration: 3000
+    });
+    return;
+  }
+
   try {
     clearLoginBtnUnlockTimer();
     loginBtn.value = true;
@@ -656,6 +672,8 @@ const handleConfirm = async () => {
 
 onMounted(async () => {
   applyCurrentThemeColor();
+
+  if (!isTauriRuntime()) return;
 
   unlistenAuthUrlRef.value = await useTauriEventListen("auth_url", (event) => {
     const url = (event?.payload || "").toString();

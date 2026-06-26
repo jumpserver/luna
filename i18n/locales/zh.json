@@ -23,6 +23,7 @@
     "PrimaryColor": "主色",
     "SystemDefault": "系统默认",
     "General": "通用",
+    "Advanced": "高级选项",
     "ChooseColor": "选择颜色",
     "OpenWith": "应用配置",
     "EmptyDescription": "当前类型下暂无可用的授权资产",
@@ -174,7 +175,8 @@
   },
   "EditModal": {
     "ModifyConnectionInfo": "连接",
-    "Description": "保存后，下次连接将默认使用这些设置，右击重新设置",
+    "Description": "右击重新设置",
+    "RememberSelection": "记住选择，右击重新设置",
     "OptionalProtocol": "协议",
     "ConnectMethod": "连接方法",
     "OptionalAccount": "账号"
@@ -251,7 +253,7 @@
     "Disable": "禁用",
     "EnableFailed": "无法启用",
     "ExecutableNotFound": "未找到程序，请下载并正确安装",
-    "BuiltInTerminal": "内置终端",
+    "BuiltInTerminal": "内置 Terminal",
     "AlwaysEnabled": "始终启用",
     "DownloadApplication": "下载应用"
   },

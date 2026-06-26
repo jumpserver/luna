@@ -16,6 +16,8 @@ export const useApplicationConfig = () => {
   };
 
   const getConfig = async () => {
+    if (!isTauriRuntime()) return;
+
     const config = await useTauriCoreInvoke("get_config");
 
     if (config) {
@@ -24,6 +26,8 @@ export const useApplicationConfig = () => {
   };
 
   onMounted(async () => {
+    if (!isTauriRuntime()) return;
+
     // 仅在主窗口拉取配置；其他窗口直接读取结果
     const cur = await useTauriWebviewWindowGetCurrentWebviewWindow();
 

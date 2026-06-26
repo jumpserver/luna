@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AssetItem, AssetPageType, ConnectionInfo, PermedAccount, PermedProtocol } from "~/types/index";
-import EditForm from "~/components/EditForm/editForm.vue";
+import ConnectionSettingsForm from "~/components/ConnectionEditor/connectionSettingsForm.vue";
 import { sortPermedProtocols, sortProtocolNames } from "~/utils";
 
 const props = defineProps<{
@@ -19,7 +19,9 @@ const draftManualUsername = ref<string>("");
 const draftManualPassword = ref<string>("");
 const draftDynamicPassword = ref<string>("");
 const draftRememberSecret = ref<boolean>(false);
+const draftRememberSelection = ref<boolean>(false);
 const draftConnectMethod = ref<string>("");
+const draftConnectOptions = ref<Record<string, any>>({});
 
 let pendingResolve: ((info: any) => void) | null = null;
 let pendingReject: ((reason?: any) => void) | null = null;
@@ -29,6 +31,11 @@ const modalTitle = computed(() => {
   return `${t("EditModal.ModifyConnectionInfo")} - ${name}`;
 });
 
+const getVisibleProtocols = (protocols: PermedProtocol[]) => {
+  if (isTauriRuntime()) return protocols;
+  return protocols.filter((protocol) => protocol?.public !== false);
+};
+
 /**
  * @description 初始化 Form
  * @param asset
@@ -36,7 +43,7 @@ const modalTitle = computed(() => {
 const initDraft = (asset: AssetItem) => {
   const saved: ConnectionInfo | undefined = asset.savedConnection;
 
-  const protocols = sortPermedProtocols(asset.permedProtocols || ([] as PermedProtocol[]));
+  const protocols = sortPermedProtocols(getVisibleProtocols(asset.permedProtocols || ([] as PermedProtocol[])));
   const accounts = asset.permedAccounts || ([] as PermedAccount[]);
 
   // 协议默认：保存的协议 -> 第一个协议 -> 空
@@ -69,14 +76,16 @@ const initDraft = (asset: AssetItem) => {
   draftManualPassword.value = saved?.manualPassword || "";
   draftDynamicPassword.value = saved?.dynamicPassword || "";
   draftRememberSecret.value = saved?.rememberSecret || false;
+  draftRememberSelection.value = false;
   draftConnectMethod.value = saved?.connectMethod || "";
+  draftConnectOptions.value = { ...(saved?.connectOptions || {}) };
 };
 
 /**
  * @description 拼凑连接信息
  */
 const normalizeProtocols = () => {
-  const protocols = (currentAsset.value?.permedProtocols || [])
+  const protocols = getVisibleProtocols(currentAsset.value?.permedProtocols || [])
     .map((p) => (p?.name ? p.name.trim() : ""))
     .filter((name) => name.length > 0);
 
@@ -122,7 +131,9 @@ const buildConnectionInfo = () => {
     manualPassword: draftManualPassword.value || "",
     dynamicPassword: draftDynamicPassword.value || "",
     rememberSecret: !!draftRememberSecret.value,
+    rememberSelection: !!draftRememberSelection.value,
     connectMethod: draftConnectMethod.value || "",
+    connectOptions: { ...draftConnectOptions.value },
     availableProtocols: normalizeProtocols()
   };
 };
@@ -214,11 +225,13 @@ defineExpose({ open: openModal, close });
   <Modal
     :open="open"
     :title="modalTitle"
-    :description="t('EditModal.Description')"
+    hide-cancel
+    hide-footer
+    compact
     @confirm="onConfirm"
     @update:open="(v) => (v ? (open = true) : onCancel())"
   >
-    <EditForm
+    <ConnectionSettingsForm
       v-if="currentAsset"
       v-model:protocol="draftProtocol"
       v-model:account="draftAccount"
@@ -227,9 +240,21 @@ defineExpose({ open: openModal, close });
       v-model:dynamic-password="draftDynamicPassword"
       v-model:remember-secret="draftRememberSecret"
       v-model:connect-method="draftConnectMethod"
+      v-model:connect-options="draftConnectOptions"
       :accounts="currentAsset.permedAccounts || []"
       :protocols="currentAsset.permedProtocols || []"
       :asset-type="props.assetType"
+    />
+
+    <div class="mt-4">
+      <UCheckbox v-model="draftRememberSelection" icon="i-lucide-check" :label="t('EditModal.RememberSelection')" />
+    </div>
+
+    <UButton
+      :label="t('Common.Connect')"
+      color="primary"
+      class="mt-4 w-full justify-center"
+      @click="onConfirm"
     />
   </Modal>
 </template>

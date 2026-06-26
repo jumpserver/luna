@@ -12,7 +12,9 @@
   },
   "scripts": {
     "dev": "nuxt dev",
+    "web:dev": "nuxt dev",
     "generate": "nuxt generate",
+    "generate:client": "node scripts/generate-client.js",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "nuxt prepare",
     "lint": "eslint . --fix",
@@ -22,6 +24,8 @@
     "sign_go_binary": "bash scripts/sign-go-binary.sh",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
+    "client:dev": "tauri dev",
+    "client:dev:external": "tauri dev --config src-tauri/tauri.dev.external.conf.json",
     "tauri:build": "tauri build",
     "tauri:build:debug": "tauri build --debug",
     "update:dependencies": "npx npm-check-updates -u && pnpm install && cd src-tauri && cargo update",

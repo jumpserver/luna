@@ -4,21 +4,30 @@ const localePath = useLocalePath();
 const route = useRoute();
 const { collapse, setCollapse } = useSettingManager();
 const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
+const isMacClient = computed(() => isTauriRuntime() && isMacOS.value);
+const showTools = computed(() => isTauriRuntime());
 
-const workspaceModes = computed(() => [
-  {
+const workspaceModes = computed(() => {
+  const modes = [{
     key: "assets",
     icon: "i-lucide-server",
     label: "我的资产"
-  },
-  {
-    key: "tools",
-    icon: "i-lucide-menu",
-    label: "工具集"
+  }] as Array<{ key: "assets" | "tools", icon: string, label: string }>;
+
+  if (showTools.value) {
+    modes.push({
+      key: "tools",
+      icon: "i-lucide-menu",
+      label: "工具集"
+    });
   }
-] as const);
+
+  return modes;
+});
 
 const setMode = async (mode: "assets" | "tools") => {
+  if (mode === "tools" && !showTools.value) return;
+
   if (mode !== "tools") {
     setWorkspaceMode(mode);
     return;
@@ -40,8 +49,12 @@ const toggleSidebar = () => {
 <template>
   <div
     class="flex h-full items-center gap-1"
-    :class="isMacOS ? 'pl-[92px] pr-3' : 'px-3'"
+    :class="isMacClient ? 'pl-[92px] pr-3' : 'px-3'"
   >
+    <div v-if="!isMacClient" class="mr-1.5 flex items-center">
+      <img src="/logo.png" alt="JumpServer" class="h-5 w-5 rounded">
+    </div>
+
     <template v-if="!collapse">
       <UButton
         v-for="mode in workspaceModes"

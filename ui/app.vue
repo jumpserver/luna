@@ -133,6 +133,11 @@ async function applyAfterHydration() {
 }
 
 onMounted(async () => {
+  if (!isTauriRuntime()) {
+    await bootstrapPersistedSession();
+    return;
+  }
+
   // 初始化 HTTP 回调服务器 (开发环境)
   try {
     await useTauriCoreInvoke("init_http_callback_server", {});

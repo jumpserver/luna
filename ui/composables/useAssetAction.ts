@@ -1,5 +1,5 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
+import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -64,7 +64,8 @@ export const useAssetAction = () => {
   const { t } = useI18n();
   const toast = useToast();
   const userInfoStore = useUserInfoStore();
-  const { markSessionFailed, updateSessionPayload } = useWorkspaceTabs();
+  const { markSessionFailed, openSession, updateSessionPayload } = useWorkspaceTabs();
+  const { fetchConnectMethods } = useConnectMethods();
   const settingManager = useSettingManager();
   // prettier-ignore
   const { currentSite, currentConnectionInfoMap, currentRdpClientOption } = storeToRefs(userInfoStore);
@@ -186,7 +187,182 @@ export const useAssetAction = () => {
   /**
    * @description 获取连接令牌
    */
-  const getConnectToken = (body: ConnectionBody) => {
+  const joinEndpointUrl = (endpointUrl: string, path: string) => {
+    const endpoint = new URL(endpointUrl, window.location.origin);
+    const targetPath = endpoint.origin === window.location.origin ? path : path.replace(/^\/luna(?=\/)/, "");
+    return new URL(targetPath, endpoint.origin).toString();
+  };
+
+  const getEndpointUrl = (endpoint: Record<string, any>, protocol?: string) => {
+    const endpointProtocol = (protocol || window.location.protocol.replace(":", "") || "http").replace(":", "");
+    const host = endpoint.host || window.location.hostname;
+    let port = endpoint[`${endpointProtocol}_port`];
+
+    if ((endpointProtocol === "http" || endpointProtocol === "https") && port === 0) {
+      port = window.location.port;
+    }
+
+    const endpointPort = port ? String(port) : "";
+    const isLoopbackEndpoint = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(host);
+    const isSameDevServer = isLoopbackEndpoint && endpointPort === window.location.port;
+
+    if (isSameDevServer) {
+      return window.location.origin;
+    }
+
+    return `${window.location.protocol}//${port ? `${host}:${port}` : host}`;
+  };
+
+  const getWebConnectorDevOrigin = (component: string) => {
+    if (!import.meta.dev) return "";
+
+    const env = import.meta.env as Record<string, string | undefined>;
+    const devOrigins: Record<string, string | undefined> = {
+      koko: env.VITE_JMS_KOKO_IFRAME_URL,
+      default: env.VITE_JMS_KOKO_IFRAME_URL,
+      lion: env.VITE_JMS_LION_IFRAME_URL,
+      tinker: env.VITE_JMS_LION_IFRAME_URL,
+      chen: env.VITE_JMS_CHEN_IFRAME_URL
+    };
+
+    return devOrigins[component]?.replace(/\/+$/, "") || "";
+  };
+
+  const resolveWebEndpointProtocol = (method: { component?: string, type?: string, endpoint_protocol?: string } | undefined) => {
+    const pageProtocol = window.location.protocol.replace(":", "") || "http";
+    const component = method?.component || "";
+    const isWebSurface = method?.type === "web" || ["koko", "lion", "chen", "tinker", "default"].includes(component);
+    const endpointProtocol = method?.endpoint_protocol?.replace(":", "") || "";
+
+    if (isWebSurface) {
+      return endpointProtocol === "http" || endpointProtocol === "https" ? endpointProtocol : pageProtocol;
+    }
+
+    return endpointProtocol || pageProtocol;
+  };
+
+  const fetchSmartEndpointUrl = async (
+    token: TokenResponse,
+    method: { component?: string, type?: string, endpoint_protocol?: string } | undefined,
+    body: ConnectionBody
+  ) => {
+    const endpointProtocol = resolveWebEndpointProtocol(method);
+    const url = new URL(withWebSitePrefix("/api/v1/terminal/endpoints/smart/"), window.location.origin);
+
+    url.searchParams.set("protocol", endpointProtocol);
+    url.searchParams.set("asset_id", body.asset);
+    url.searchParams.set("token", token.id);
+
+    const response = await fetch(url.toString(), {
+      credentials: "include",
+      headers: getWebApiHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`fetch smart endpoint failed: ${response.status}`);
+    }
+
+    return getEndpointUrl(await response.json() as Record<string, any>, endpointProtocol);
+  };
+
+  const getWebConnectorPath = (
+    token: TokenResponse,
+    method: { component?: string, value?: string, type?: string, endpoint_protocol?: string } | undefined,
+    body: ConnectionBody,
+    endpointUrl = window.location.origin
+  ) => {
+    const tokenId = token.id;
+    const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
+    const params = new URLSearchParams({ token: tokenId });
+
+    if (body.connect_options?.disableautohash !== undefined) {
+      params.set("disableautohash", String(body.connect_options.disableautohash));
+    }
+
+    switch (component) {
+      case "chen":
+        return joinEndpointUrl(endpointUrl, withWebSitePrefix(`/chen/connect?${params.toString()}`));
+      case "tinker":
+      case "lion":
+        return joinEndpointUrl(endpointUrl, withWebSitePrefix(`/lion/connect?token=${encodeURIComponent(tokenId)}`));
+      case "koko":
+      case "default":
+        params.set("_", String(Date.now()));
+        if (method?.value === "web_sftp") {
+          params.set("asset", body.asset);
+          return joinEndpointUrl(endpointUrl, withWebSitePrefix(`/koko/elfinder/sftp/?${params.toString()}`));
+        }
+        return joinEndpointUrl(endpointUrl, withWebSitePrefix(`/koko/connect/?${params.toString()}`));
+      default:
+        return joinEndpointUrl(endpointUrl, withWebSitePrefix(`/koko/connect/?${params.toString()}`));
+    }
+  };
+
+  const getConnectToken = async (
+    body: ConnectionBody,
+    meta?: { tabId?: string, asset?: AssetItem, assetId: string, protocol: string, account: string }
+  ) => {
+    if (!isTauriRuntime()) {
+      const session = meta?.tabId
+        ? undefined
+        : meta?.asset
+          ? openSession(meta.asset, { protocol: meta.protocol, account: meta.account })
+          : undefined;
+      const tabId = meta?.tabId || session?.id;
+
+      try {
+        const response = await fetch(withWebSitePrefix("/api/v1/authentication/connection-token/"), {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            ...getWebApiMutationHeaders(),
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || `create connection token failed: ${response.status}`);
+        }
+
+        const token = await response.json() as TokenResponse;
+        const allMethods = await fetchConnectMethods();
+        const method = (allMethods[body.protocol] || []).find((item) => item.value === body.connect_method);
+        const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
+        const endpointUrl = getWebConnectorDevOrigin(component) || await fetchSmartEndpointUrl(token, method, body);
+        const webUrl = getWebConnectorPath(token, method, body, endpointUrl);
+
+        if (tabId) {
+          updateSessionPayload(
+            { tabId, assetId: meta!.assetId, protocol: meta!.protocol, account: meta!.account },
+            {
+              token,
+              ...token,
+              webUrl,
+              connectMethod: method || { value: body.connect_method }
+            }
+          );
+        } else {
+          window.open(webUrl, "_blank");
+        }
+      } catch (error) {
+        if (meta) {
+          markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
+        }
+
+        toast.add({
+          title: t("ConnectError.ConnectFailed"),
+          description: String(error),
+          color: "error",
+          icon: "line-md:close-circle",
+          progress: true,
+          duration: 4000
+        });
+      }
+      return;
+    }
+
     const rdpParams = buildLocalRdpParams();
     useTauriCoreInvoke("get_connect_token", {
       body: {
@@ -206,6 +382,19 @@ export const useAssetAction = () => {
     body: ConnectionBody,
     meta: { tabId?: string, assetId: string, protocol: string, account: string }
   ) => {
+    if (!isTauriRuntime()) {
+      markSessionFailed(meta);
+      toast.add({
+        title: t("ConnectError.ConnectFailed"),
+        description: "Web 模式暂未接入连接运行时。",
+        color: "warning",
+        icon: "i-lucide-circle-alert",
+        progress: true,
+        duration: 3000
+      });
+      return;
+    }
+
     const rdpParams = buildLocalRdpParams();
     pendingBuiltinSessions.push(meta);
 
@@ -321,7 +510,9 @@ export const useAssetAction = () => {
       manualPassword?: string
       dynamicPassword?: string
       connectMethod?: string
+      connectOptions?: Record<string, any>
       tabId?: string
+      asset?: AssetItem
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
@@ -373,9 +564,12 @@ export const useAssetAction = () => {
     })();
 
     // 当前连接显式选择优先；仅在协议一致时复用已保存连接方法，避免跨协议复用错误的客户端
-    const connectMethod = ephemeral?.connectMethod?.trim()
+    const preferredConnectMethod = ephemeral?.connectMethod?.trim()
       || (saved?.protocol === protocol ? saved?.connectMethod?.trim() : "")
       || dispatchConnectMethod(protocol);
+    const connectMethod = (!isTauriRuntime() && preferredConnectMethod === BUILTIN_CLIENT_METHOD)
+      ? dispatchConnectMethod(protocol)
+      : preferredConnectMethod;
 
     userInfoStore.setConnectionInfoForAsset(assetId, {
       protocol,
@@ -385,6 +579,12 @@ export const useAssetAction = () => {
       connectMethod
     });
 
+    const mergedConnectOptions = {
+      ...generateConnectOptions(protocol),
+      ...(saved?.protocol === protocol ? (saved as any)?.connectOptions || {} : {}),
+      ...(ephemeral?.connectOptions || {})
+    };
+
     const connectionBody = {
       asset: assetId,
       protocol,
@@ -392,7 +592,7 @@ export const useAssetAction = () => {
       input_secret,
       account: accountForToken,
       connect_method: connectMethod,
-      connect_options: generateConnectOptions(protocol)
+      connect_options: mergedConnectOptions
     };
 
     nextTick(() => {
@@ -406,8 +606,12 @@ export const useAssetAction = () => {
         return;
       }
 
-      getConnectToken({
-        ...connectionBody
+      getConnectToken(connectionBody, {
+        tabId: ephemeral?.tabId,
+        asset: ephemeral?.asset,
+        assetId,
+        protocol,
+        account: selected || user
       });
     });
   };
@@ -419,6 +623,7 @@ export const useAssetAction = () => {
    */
   const handleAssetRename = (assetId: string, name: string) => {
     if (!currentSite.value) return;
+    if (!isTauriRuntime()) return;
 
     useTauriCoreInvoke("rename", {
       assetId,
@@ -431,6 +636,8 @@ export const useAssetAction = () => {
    * @param assetId
    */
   const handleAssetFavorite = (assetId: string) => {
+    if (!isTauriRuntime()) return;
+
     useTauriCoreInvoke("set_favorite", {
       assetId
     });
@@ -441,6 +648,8 @@ export const useAssetAction = () => {
    * @param assetId
    */
   const handleAssetUnfavorite = (assetId: string) => {
+    if (!isTauriRuntime()) return;
+
     useTauriCoreInvoke("unfavorite", {
       assetId
     });
@@ -451,15 +660,42 @@ export const useAssetAction = () => {
    * @param assetId
    */
   const getAssetDetail = (assetId: string) => {
-    useTauriCoreInvoke("get_asset_detail", {
-      assetId
-    });
+    if (!assetId) return;
+
+    if (!isTauriRuntime()) {
+      fetch(withWebSitePrefix(`/api/v1/perms/users/self/assets/${assetId}/`), {
+        credentials: "include",
+        headers: getWebApiHeaders()
+      })
+        .then(async (response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const assetDetail = await response.json() as any;
+          const permedAccounts = assetDetail.permed_accounts ?? [];
+          const permedProtocols = (assetDetail.permed_protocols ?? []).filter(
+            (protocol: PermedProtocol) => protocol?.name !== "winrm"
+          );
+
+          useEventBus().emit("assetDetailUpdated", {
+            assetId,
+            permedAccounts,
+            permedProtocols
+          });
+        })
+        .catch((error) => {
+          console.debug("get web asset detail failed", { assetId, error });
+        });
+      return;
+    }
+
+    useTauriCoreInvoke("get_asset_detail", { assetId });
   };
 
   /**
    * @description 监听 tauri 事件
    */
   const listenTauriEvent = async () => {
+    if (!isTauriRuntime()) return;
+
     if (tauriListenersInitialized || tauriListenersRegistering) {
       tauriListenersRefCount++;
       return;
@@ -752,7 +988,9 @@ export const useAssetAction = () => {
   });
 
   onBeforeUnmount(() => {
-    releaseTauriEventListeners();
+    if (isTauriRuntime()) {
+      releaseTauriEventListeners();
+    }
   });
 
   return {

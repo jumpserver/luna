@@ -6,12 +6,24 @@ withDefaults(
     description?: string
     overlay?: boolean
     disabled?: boolean
+    confirmLabel?: string
+    confirmColor?: "primary" | "neutral" | "error" | "warning" | "success" | "info"
+    confirmFullWidth?: boolean
+    hideCancel?: boolean
+    hideFooter?: boolean
+    compact?: boolean
   }>(),
   {
     title: "",
     description: "",
     overlay: false,
-    disabled: false
+    disabled: false,
+    confirmLabel: "",
+    confirmColor: "neutral",
+    confirmFullWidth: false,
+    hideCancel: false,
+    hideFooter: false,
+    compact: false
   }
 );
 
@@ -53,7 +65,15 @@ const handleContextMenu = async (e: Event) => {
 <template>
   <UModal
     :open="open"
-    :ui="{ footer: 'justify-end', description: 'text-xs-plus' }"
+    :ui="{
+      header: compact ? 'py-2 sm:py-2' : undefined,
+      body: compact ? 'pt-2 pb-3 sm:pt-2 sm:pb-3' : undefined,
+      footer: [
+        confirmFullWidth ? 'block' : 'justify-end',
+        compact ? 'pt-2 sm:pt-2' : ''
+      ].filter(Boolean).join(' '),
+      description: 'text-xs-plus'
+    }"
     :description="description"
     :title="title"
     :overlay="overlay"
@@ -65,9 +85,15 @@ const handleContextMenu = async (e: Event) => {
       </div>
     </template>
 
-    <template #footer="{ close }">
-      <UButton :label="t('Common.Cancel')" color="neutral" variant="outline" @click="close" />
-      <UButton :label="t('Common.Confirm')" :disabled="disabled" color="neutral" @click="handleConfirm(disabled)" />
+    <template v-if="!hideFooter" #footer="{ close }">
+      <UButton v-if="!hideCancel" :label="t('Common.Cancel')" color="neutral" variant="outline" @click="close" />
+      <UButton
+        :label="confirmLabel || t('Common.Confirm')"
+        :disabled="disabled"
+        :color="confirmColor"
+        :class="confirmFullWidth ? 'w-full justify-center' : ''"
+        @click="handleConfirm(disabled)"
+      />
     </template>
   </UModal>
 </template>

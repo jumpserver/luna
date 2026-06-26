@@ -8,6 +8,8 @@ const leadingAreaStyle = computed(() => ({
 }));
 
 const handleWindowDrag = async (event: MouseEvent) => {
+  if (!isTauriRuntime()) return;
+
   const target = event.target as HTMLElement;
   if (
     target.closest("button")
