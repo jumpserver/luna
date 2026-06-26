@@ -6,12 +6,9 @@ import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { t } = useI18n();
-const { isMacOS } = usePlatform();
-// const isMacOS = false;
 const localePath = useLocalePath();
-const route = useRoute();
-const { collapse, setCollapse } = useSettingManager();
-const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
+const { collapse } = useSettingManager();
+const { activeWorkspaceMode } = useWorkspaceMode();
 const { confirmConnection, saveConnectionInfo } = useAssetConnection();
 const { openSession } = useWorkspaceTabs();
 const {
@@ -70,44 +67,6 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
     }
   ];
 });
-
-const workspaceModes = computed(() => [
-  {
-    key: "assets",
-    icon: "i-lucide-server",
-    label: "我的资产"
-  },
-  {
-    key: "tools",
-    icon: "i-lucide-menu",
-    label: "工具集"
-  }
-] as const);
-
-const handleCollapse = () => {
-  setCollapse(!collapse.value);
-};
-
-const handleWindowDrag = async (event: MouseEvent) => {
-  const target = event.target as HTMLElement;
-  if (
-    target.closest("button")
-    || target.closest('[role="button"]')
-    || target.closest("input")
-    || target.closest("select")
-  ) {
-    return;
-  }
-
-  if (event.button !== 0) return;
-
-  try {
-    const windows = await useTauriWindowGetAllWindows();
-    windows.find((window) => window.label === "main")?.startDragging();
-  } catch (error) {
-    console.error(error);
-  }
-};
 
 const categoryOrder = ["linux", "windows", "database", "device", "web", "other"] as const;
 type AssetCategoryKey = typeof categoryOrder[number];
@@ -174,20 +133,6 @@ const toggleAssetGroup = (label: string) => {
   }
 
   collapsedAssetGroups.value = next;
-};
-
-const setMode = async (mode: "assets" | "tools") => {
-  if (mode !== "tools") {
-    setWorkspaceMode(mode);
-    return;
-  }
-
-  const toolPaths = [localePath("videoplayer"), localePath({ path: "/transcode" })];
-  if (!toolPaths.includes(route.path)) {
-    await navigateTo(localePath("videoplayer"));
-  }
-
-  setWorkspaceMode(mode);
 };
 
 const searchAssets = (value: string) => {
@@ -469,56 +414,10 @@ watch(
       width: collapse ? '0px' : '220px'
     }"
   >
-    <!-- 顶部区域：模式切换和折叠按钮 -->
     <div class="flex flex-col w-full">
       <div
-        class="flex items-center h-10 border-b border-gray-200 px-3 gap-1 dark:border-white/10"
-        :class="
-          isMacOS
-            ? 'justify-start pl-[92px] pr-3'
-            : collapse
-              ? 'py-2 justify-end mt-2'
-              : 'py-2 mt-2 justify-start'
-        "
-        @mousedown="handleWindowDrag"
-      >
-        <template v-if="!collapse">
-          <UButton
-            v-for="mode in workspaceModes"
-            :key="mode.key"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            :icon="mode.icon"
-            :title="mode.label"
-            :aria-label="mode.label"
-            class="size-7 justify-center rounded-md p-0"
-            :class="
-              activeWorkspaceMode === mode.key
-                ? 'bg-black/8 text-gray-900 dark:bg-white/12 dark:text-white'
-                : 'text-gray-500 dark:text-gray-400'
-            "
-            :ui="{ leadingIcon: 'm-0 shrink-0' }"
-            @click="setMode(mode.key)"
-          />
-
-          <UButton
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            class="size-7 justify-center rounded-md p-0"
-            icon="i-lucide-panel-left"
-            title="折叠侧边栏"
-            aria-label="折叠侧边栏"
-            :ui="{ leadingIcon: 'm-0 shrink-0' }"
-            @click="handleCollapse"
-          />
-        </template>
-      </div>
-
-      <div
         v-show="!collapse && activeWorkspaceMode === 'assets'"
-        class="flex items-center gap-1 border-b border-gray-200 px-3 pt-1 pb-1 dark:border-white/10"
+        class="flex items-center gap-1 border-b border-gray-200 px-3 py-1 dark:border-white/10"
       >
         <div v-if="shouldShowOrganizationSelector" class="min-w-0 flex-1">
           <HeaderOrganizationSelector />

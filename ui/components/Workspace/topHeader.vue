@@ -1,15 +1,11 @@
 <script setup lang="ts">
-const { collapse, setCollapse } = useSettingManager();
+const { collapse } = useSettingManager();
 const { isMacOS } = usePlatform();
-
-const toggleSidebar = () => {
-  setCollapse(!collapse.value);
-};
-
-const leadingAreaClass = computed(() => {
-  if (!collapse.value) return "w-0";
-  return isMacOS.value ? "w-32 pl-[92px] justify-start" : "w-10 pl-1 justify-center";
-});
+const leadingAreaStyle = computed(() => ({
+  width: collapse.value
+    ? (isMacOS.value ? "128px" : "44px")
+    : "220px"
+}));
 
 const handleWindowDrag = async (event: MouseEvent) => {
   const target = event.target as HTMLElement;
@@ -44,21 +40,10 @@ const handleWindowDrag = async (event: MouseEvent) => {
     @mousedown="handleWindowDrag"
   >
     <div
-      class="h-full shrink-0 flex items-center transition-[width,padding] duration-200"
-      :class="leadingAreaClass"
+      class="h-full shrink-0 transition-[width] duration-200"
+      :style="leadingAreaStyle"
     >
-      <UButton
-        v-if="collapse"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        class="size-7 justify-center rounded-md p-0"
-        icon="i-lucide-panel-left"
-        title="展开侧边栏"
-        aria-label="展开侧边栏"
-        :ui="{ leadingIcon: 'm-0 shrink-0' }"
-        @click="toggleSidebar"
-      />
+      <slot name="leading" />
     </div>
 
     <div class="h-full min-w-0 flex-1 overflow-hidden">

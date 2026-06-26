@@ -30,13 +30,17 @@ onMounted(() => {
     :ui="cardUi"
     style="background-color: transparent"
   >
-    <div class="flex gap-0 w-full h-screen border-none">
-      <SideBar />
+    <div class="flex h-screen w-full flex-col border-none">
+      <Header />
 
-      <Main class="flex-1 min-w-0">
-        <WorkspaceTerminalArea v-if="activeWorkspaceMode === 'assets'" />
-        <slot v-else />
-      </Main>
+      <div class="flex min-h-0 flex-1 gap-0">
+        <SideBar />
+
+        <Main class="flex-1 min-w-0">
+          <WorkspaceTerminalArea v-if="activeWorkspaceMode === 'assets'" />
+          <slot v-else />
+        </Main>
+      </div>
     </div>
   </UCard>
 </template>

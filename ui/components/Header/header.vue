@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const route = useRoute();
 const { t } = useI18n();
+const { activeWorkspaceMode } = useWorkspaceMode();
 
 const pageHeader = computed(() => {
   const path = route.path.toLowerCase();
@@ -25,6 +26,12 @@ const pageHeader = computed(() => {
 
 <template>
   <WorkspaceTopHeader>
+    <template #leading>
+      <SideBarTopControls />
+    </template>
+
+    <WorkspaceTabHeader v-if="activeWorkspaceMode === 'assets'" />
+
     <div v-if="pageHeader" class="h-full min-w-0 flex items-center gap-2 px-4">
       <UIcon :name="pageHeader.icon" class="text-primary h-4 w-4 shrink-0" />
       <span class="min-w-0 truncate text-sm font-medium">

@@ -3,7 +3,6 @@ type alertTypes = "incompatible" | "noMatch";
 
 const { theme } = useSettingManager();
 const { componentsConfig } = useAppConfig();
-const { activeWorkspaceMode } = useWorkspaceMode();
 const clearSelectionCallback = ref<(() => void) | null>(null);
 
 const { t } = useI18n();
@@ -28,9 +27,8 @@ const providerClearSelection = (callback: () => void) => {
 };
 
 const cardUi = computed(() => ({
-  header: "p-0 sm:p-0 shrink-0",
   body: "p-0 sm:p-0 flex-1 min-h-0 overflow-hidden flex flex-col",
-  root: "rounded-none h-screen flex flex-col min-h-0"
+  root: "rounded-none h-full flex flex-col min-h-0"
 }));
 
 useEventBus().on("versionAlert", ({ type, version }: { type: string, version?: string }) => {
@@ -62,10 +60,6 @@ provide("providerClearSelection", providerClearSelection);
     :ui="cardUi"
     @click="clearSelection"
   >
-    <template #header>
-      <Header v-if="activeWorkspaceMode !== 'assets'" />
-    </template>
-
     <UAlert
       v-if="description && isAlertOpen"
       v-model:open="isAlertOpen"
