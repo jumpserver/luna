@@ -8,7 +8,8 @@ import { sortProtocolNames } from "~/utils";
 
 const { t } = useI18n();
 const localePath = useLocalePath();
-const { collapse } = useSettingManager();
+const { collapse, theme } = useSettingManager();
+const { componentsConfig } = useAppConfig();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const showTools = computed(() => isTauriRuntime());
 const { confirmConnection, saveConnectionInfo } = useAssetConnection();
@@ -42,6 +43,12 @@ const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 const { assetsData, isInitialLoading, isLoading: isAssetLoading, refreshAssets, scrollbarStyles } = assetFetcher;
 const { visibleAssets } = useDisplayAssets(assetsData, undefined, computed<AssetPageType>(() => "assets"));
+
+const contentBackgroundColor = computed(() =>
+  theme.value === "dark"
+    ? componentsConfig.pages.mainCardDarkBackgroundColor
+    : componentsConfig.pages.mainCardLightBackgroundColor
+);
 
 const shouldShowOrganizationSelector = computed(() => {
   if (!loggedIn.value) return false;
@@ -416,12 +423,12 @@ watch(
 </script>
 
 <template>
-  <!-- backdrop-blur-lg 如果加上这个属性会导致在拖动窗口的时候，左侧背景一直在变化 -->
   <div
-    class="flex shrink-0 overflow-hidden flex-col bg-white/30 dark:bg-zinc-900/20 backdrop-saturate-150 supports-backdrop-filter:dark:bg-zinc-900/15 transition-[width] duration-200"
+    class="flex h-full shrink-0 overflow-hidden flex-col transition-[width] duration-200"
     :class="collapse ? 'border-r-0 shadow-none' : 'border-r border-white/30 dark:border-white/10 shadow-sm'"
     :style="{
-      width: collapse ? '0px' : '220px'
+      width: collapse ? '0px' : '220px',
+      backgroundColor: contentBackgroundColor
     }"
   >
     <div class="flex flex-col w-full">

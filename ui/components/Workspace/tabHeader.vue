@@ -13,6 +13,8 @@ const {
 
 const tabStripRef = ref<HTMLElement | null>(null);
 const hasOverflow = ref(false);
+const hasLeftHidden = ref(false);
+const hasRightHidden = ref(false);
 
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) || null);
 const canSwitchTabs = computed(() => tabs.value.length > 1);
@@ -55,10 +57,14 @@ function updateOverflow() {
   const el = tabStripRef.value;
   if (!el) {
     hasOverflow.value = false;
+    hasLeftHidden.value = false;
+    hasRightHidden.value = false;
     return;
   }
 
   hasOverflow.value = el.scrollWidth > el.clientWidth + 1;
+  hasLeftHidden.value = hasOverflow.value && el.scrollLeft > 1;
+  hasRightHidden.value = hasOverflow.value && (el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
 }
 
 function scrollActiveTabIntoView() {
@@ -91,6 +97,7 @@ onMounted(() => {
     updateOverflow();
   });
   resizeObserver.observe(tabStripRef.value);
+  tabStripRef.value.addEventListener("scroll", updateOverflow, { passive: true });
 });
 
 useEventListener(window, "keydown", (event: KeyboardEvent) => {
@@ -108,6 +115,7 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 });
 
 onBeforeUnmount(() => {
+  tabStripRef.value?.removeEventListener("scroll", updateOverflow);
   resizeObserver?.disconnect();
   resizeObserver = null;
 });
@@ -126,11 +134,11 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
 <template>
   <div v-if="tabs.length" class="flex h-full min-w-0 items-center gap-1.5 px-3">
-    <UTooltip text="上一个标签" :delay-duration="150">
+    <UTooltip v-if="hasLeftHidden" text="上一个标签" :delay-duration="150">
       <button
         type="button"
         class="workspace-tab-overflow flex size-6 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-black/[0.06] disabled:cursor-default disabled:opacity-40 dark:hover:bg-white/[0.1]"
-        :disabled="!canSwitchTabs"
+        :disabled="!canSwitchTabs || !hasLeftHidden"
         aria-label="上一个标签"
         @click="switchTab('previous')"
       >
@@ -180,11 +188,11 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       </div>
     </div>
 
-    <UTooltip text="下一个标签" :delay-duration="150">
+    <UTooltip v-if="hasRightHidden" text="下一个标签" :delay-duration="150">
       <button
         type="button"
         class="workspace-tab-overflow flex size-6 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-black/[0.06] disabled:cursor-default disabled:opacity-40 dark:hover:bg-white/[0.1]"
-        :disabled="!canSwitchTabs"
+        :disabled="!canSwitchTabs || !hasRightHidden"
         aria-label="下一个标签"
         @click="switchTab('next')"
       >
@@ -193,6 +201,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
     </UTooltip>
 
     <UDropdownMenu
+      v-if="hasOverflow"
       :items="tabMenuItems"
       :content="{ align: 'end', side: 'bottom' }"
       :ui="{

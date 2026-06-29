@@ -30,8 +30,21 @@ export const getWebApiHeaders = () => {
 
 export const getWebApiMutationHeaders = () => {
   const headers = getWebApiHeaders();
-  const prefix = getCookieValue("SESSION_COOKIE_NAME_PREFIX").replace(/^['"]|['"]$/g, "");
-  const csrfToken = decodeURIComponent(getCookieValue(`${prefix}csrftoken`));
+  const rawPrefix = decodeURIComponent(getCookieValue("SESSION_COOKIE_NAME_PREFIX") || "")
+    .replace(/^['"]|['"]$/g, "")
+    .trim();
+  const prefixCandidates = Array.from(new Set([
+    rawPrefix,
+    "jms_",
+    ""
+  ]));
+  const csrfCookieNames = prefixCandidates.flatMap((prefix) => [
+    `${prefix}csrftoken`,
+    `${prefix}csrf_token`
+  ]);
+  const csrfToken = csrfCookieNames
+    .map((name) => decodeURIComponent(getCookieValue(name) || "").replace(/^['"]|['"]$/g, "").trim())
+    .find((value) => value.length > 0) || "";
 
   if (csrfToken) {
     headers["X-CSRFToken"] = csrfToken;

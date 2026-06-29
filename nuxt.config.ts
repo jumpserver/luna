@@ -7,13 +7,16 @@ const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:5172";
 const uiTarget = process.env.JMS_UI_DEV_URL || "http://localhost:9528";
 const appBaseURL = process.env.NUXT_APP_BASE_URL || "/luna/";
 const getProxyOrigin = (target: string) => new URL(target).origin;
-const rewriteProxyOrigin = (target: string) => (
-  proxy: { on: (event: "proxyReq", callback: (proxyReq: { setHeader: (name: string, value: string) => void }) => void) => void }
-) => {
+const rewriteProxyOrigin = (target: string) => (proxy: any) => {
   const origin = getProxyOrigin(target);
-
-  proxy.on("proxyReq", (proxyReq) => {
+  proxy.on("proxyReq", (proxyReq: any) => {
     proxyReq.setHeader("Origin", origin);
+  });
+};
+const bindProxyErrorHandler = (name: string) => (proxy: any) => {
+  proxy.on("error", (error: Error) => {
+    // ponytail: keep dev server alive on transient ws resets; escalate to backend health checks if resets persist.
+    console.warn(`[proxy:${name}]`, error?.message || error);
   });
 };
 
@@ -99,11 +102,35 @@ export default defineNuxtConfig({
         port: 3001
       },
       proxy: {
+        "/luna/koko/ws/": {
+          target: kokoTarget.replace(/^http/i, "ws"),
+          secure: false,
+          ws: true,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/luna/, ""),
+          configure: bindProxyErrorHandler("luna-koko-ws")
+        },
+        "/luna/koko/": {
+          target: kokoTarget,
+          secure: false,
+          ws: true,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/luna/, ""),
+          configure: bindProxyErrorHandler("luna-koko-http")
+        },
+        "/koko/ws/": {
+          target: kokoTarget.replace(/^http/i, "ws"),
+          secure: false,
+          ws: true,
+          changeOrigin: true,
+          configure: bindProxyErrorHandler("koko-ws")
+        },
         "/koko/": {
           target: kokoTarget,
           secure: false,
           ws: true,
-          changeOrigin: true
+          changeOrigin: true,
+          configure: bindProxyErrorHandler("koko-http")
         },
         "/media/": {
           target: jumpServerTarget,
