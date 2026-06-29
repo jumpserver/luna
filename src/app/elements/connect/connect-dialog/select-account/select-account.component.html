@@ -75,5 +75,20 @@
 
 </nz-form-item>
 
+<nz-form-item *ngIf="showOTPCodeInput" class="form-field otp-code">
+  <nz-form-label class="zone-label" nzFor='otpCode' nzNoColon>{{ "OTP Code" | translate }}</nz-form-label>
+  <nz-form-control class="input-field">
+    <input
+      #otpCode
+      [(ngModel)]="manualAuthInfo.otp_code"
+      [placeholder]="'OTP Code' | translate"
+      autocomplete="one-time-code"
+      inputmode="numeric"
+      maxlength="16"
+      name="otpCode"
+      nz-input
+    >
+  </nz-form-control>
+</nz-form-item>
 
 

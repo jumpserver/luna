@@ -32,6 +32,12 @@
   }
 }
 
+.otp-code {
+  ::ng-deep .ant-input {
+    width: 70%;
+  }
+}
+
 .input-field {
   width: 100%;
 }
