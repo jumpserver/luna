@@ -25,7 +25,7 @@ export class ElementLeftBarComponent implements OnInit, AfterViewInit, OnDestroy
   @Input() collapsed: boolean = false;
   private resizeObserver!: ResizeObserver;
   showTree = true;
-  version = version;
+  version = version.replace(/-build\d+/i, '');
   menus: any[] = [];
   hasXPack: boolean = localStorage.getItem('hasXPack') === '1';
 
