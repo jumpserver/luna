@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
-import type { AssetItem, AssetPageType } from "~/types";
+import type AssetTree from "~/components/SideBar/assetTree.vue";
+import type { AssetItem } from "~/types";
 
 import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -25,9 +26,8 @@ const {
 const isLoading = ref(false);
 const sidebarSearch = ref("");
 const showAssetSearch = ref(false);
-const assetScrollRef = ref<HTMLElement | null>(null);
+const assetTreeRef = ref<InstanceType<typeof AssetTree> | null>(null);
 const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
-const collapsedAssetGroups = ref<Set<string>>(new Set());
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextMenuAsset = ref<AssetItem | null>(null);
@@ -38,11 +38,9 @@ const renameDisabled = computed(() => {
   const name = renameValue.value.trim();
   return !name || name === renameAsset.value?.name;
 });
-const assetFetcher = useAssetFetcher("assets", assetScrollRef);
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
-const { assetsData, isInitialLoading, isLoading: isAssetLoading, refreshAssets, scrollbarStyles } = assetFetcher;
-const { visibleAssets } = useDisplayAssets(assetsData, undefined, computed<AssetPageType>(() => "assets"));
+const isAssetTreeLoading = computed(() => Boolean(assetTreeRef.value?.loading));
 
 const contentBackgroundColor = computed(() =>
   theme.value === "dark"
@@ -77,85 +75,9 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
   ];
 });
 
-const categoryOrder = ["linux", "windows", "database", "device", "web", "other"] as const;
-type AssetCategoryKey = typeof categoryOrder[number];
-
-const categoryKey = (asset: AssetItem): AssetCategoryKey => {
-  const type = (asset.type || "").toLowerCase();
-  const category = (asset.category || "").toLowerCase();
-  const value = category === "host" || category === "-" ? type : category || type;
-
-  if (value === "linux") return "linux";
-  if (value === "windows" || value === "windows_ad") return "windows";
-  if (value === "database") return "database";
-  if (value === "device") return "device";
-  if (value === "web") return "web";
-  return "other";
-};
-
-const categoryLabels = computed<Record<AssetCategoryKey, string>>(() => ({
-  linux: t("Menu.Linux"),
-  windows: t("Menu.Windows"),
-  database: t("Menu.Database"),
-  device: t("Menu.Device"),
-  web: t("Menu.Web"),
-  other: t("Menu.Other")
-}));
-
-const resolveTreeAssetIcon = (asset: AssetItem) => {
-  const icons: Record<AssetCategoryKey, string> = {
-    linux: "i-lucide-terminal",
-    windows: "i-lucide-monitor",
-    database: "i-lucide-database",
-    device: "i-lucide-router",
-    web: "i-lucide-globe",
-    other: "i-lucide-box"
-  };
-
-  return icons[categoryKey(asset)];
-};
-
-const isLinuxTreeAsset = (asset: AssetItem) => categoryKey(asset) === "linux";
-
-const groupedAssets = computed(() => {
-  const groups = new Map<AssetCategoryKey, AssetItem[]>(categoryOrder.map((key) => [key, []]));
-  const sorted = [...visibleAssets.value].sort((left, right) => {
-    const rankDiff = categoryOrder.indexOf(categoryKey(left)) - categoryOrder.indexOf(categoryKey(right));
-    if (rankDiff !== 0) return rankDiff;
-    return left.name.localeCompare(right.name);
-  });
-
-  for (const asset of sorted) {
-    groups.get(categoryKey(asset))!.push(asset);
-  }
-
-  return Array.from(groups.entries()).map(([key, assets]) => ({ key, label: categoryLabels.value[key], assets }));
-});
-
-const isAssetGroupCollapsed = (label: string) => collapsedAssetGroups.value.has(label);
-
-const toggleAssetGroup = (label: string) => {
-  const next = new Set(collapsedAssetGroups.value);
-
-  if (next.has(label)) {
-    next.delete(label);
-  } else {
-    next.add(label);
-  }
-
-  collapsedAssetGroups.value = next;
-};
-
-const searchAssets = (value: string) => {
-  refreshAssets(value);
-};
-
-const debouncedAssetSearch = useDebounceFn(searchAssets, 200);
-
 const handleRefreshAuthorizedAssets = () => {
-  if (!loggedIn.value || isAssetLoading.value) return;
-
-  refreshAssets(sidebarSearch.value);
+  if (!loggedIn.value || isAssetTreeLoading.value) return;
+  assetTreeRef.value?.refresh();
 };
 
 const hasSshProtocol = (asset: AssetItem) => {
@@ -399,27 +321,6 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
     }
   ];
 });
-
-watch(
-  () => loggedIn.value,
-  async (nv) => {
-    if (nv && activeWorkspaceMode.value === "assets") {
-      await nextTick();
-      refreshAssets();
-    }
-  }
-);
-
-watch(
-  () => activeWorkspaceMode.value,
-  async (mode) => {
-    if (mode === "assets" && loggedIn.value && assetsData.value.length === 0) {
-      await nextTick();
-      refreshAssets(sidebarSearch.value);
-    }
-  },
-  { immediate: true }
-);
 </script>
 
 <template>
@@ -447,8 +348,8 @@ watch(
             size="sm"
             icon="i-lucide-refresh-cw"
             :aria-label="t('ToolTips.Refresh')"
-            :disabled="!loggedIn || isAssetLoading"
-            :loading="isAssetLoading"
+            :disabled="!loggedIn || isAssetTreeLoading"
+            :loading="isAssetTreeLoading"
             class="size-7 shrink-0 justify-center rounded-sm p-0 text-gray-500 dark:text-gray-400"
             @click="handleRefreshAuthorizedAssets"
           />
@@ -484,7 +385,6 @@ watch(
           :ui="{
             base: 'bg-white/40 dark:bg-white/5 ring-1 ring-inset ring-black/5 dark:ring-white/10 focus-visible:ring-primary/40 placeholder:text-gray-400 dark:placeholder:text-gray-500'
           }"
-          @update:model-value="debouncedAssetSearch"
         >
           <template v-if="sidebarSearch?.length" #trailing>
             <UButton
@@ -496,7 +396,6 @@ watch(
               @click="
                 () => {
                   sidebarSearch = '';
-                  searchAssets('');
                 }
               "
             />
@@ -509,7 +408,6 @@ watch(
       v-if="showTools && activeWorkspaceMode === 'tools'"
       class="px-3 py-0 flex-1 overflow-auto menu"
       :style="{
-        ...scrollbarStyles,
         display: collapse ? 'inline-flex' : '',
         justifyContent: collapse ? 'center' : ''
       }"
@@ -527,92 +425,14 @@ watch(
       />
     </div>
 
-    <div
+    <SideBarAssetTree
       v-else
-      ref="assetScrollRef"
-      class="flex-1 min-h-0 overflow-y-auto asset-list"
-      :style="scrollbarStyles"
-    >
-      <div v-if="!loggedIn" class="h-full grid place-items-center px-3 text-xs text-gray-500 dark:text-gray-400">
-        请先登录
-      </div>
-
-      <div v-else-if="isInitialLoading" class="px-2 pb-2 pt-1 space-y-1">
-        <div
-          v-for="idx in 8"
-          :key="idx"
-          class="flex h-7 items-center gap-1.5 rounded-sm px-1"
-        >
-          <USkeleton class="size-3 shrink-0 rounded-sm" />
-          <USkeleton class="h-3 w-24 max-w-[70%]" />
-        </div>
-      </div>
-
-      <UEmpty
-        v-else-if="visibleAssets.length === 0"
-        icon="mingcute:inbox-line"
-        size="lg"
-        variant="naked"
-        :title="t('Common.NoData')"
-        class="h-full"
-      />
-
-      <div v-else class="px-2 pb-2 pt-1" role="tree" :aria-label="t('Menu.Resource')">
-        <section v-for="group in groupedAssets" :key="group.key" class="asset-tree-group">
-          <button
-            type="button"
-            role="treeitem"
-            :aria-expanded="!isAssetGroupCollapsed(group.key)"
-            class="group flex h-7 w-full cursor-pointer items-center gap-1 rounded-sm px-1 text-left text-xs font-medium text-gray-700 transition-colors hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10"
-            @click="toggleAssetGroup(group.key)"
-          >
-            <UIcon
-              name="i-lucide-chevron-right"
-              class="size-2.5 shrink-0 text-gray-400 transition-transform dark:text-gray-500"
-              :class="!isAssetGroupCollapsed(group.key) ? 'rotate-90' : ''"
-            />
-            <UIcon
-              :name="isAssetGroupCollapsed(group.key) ? 'i-lucide-folder' : 'i-lucide-folder-open'"
-              class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
-            />
-            <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
-            <span
-              class="min-w-4 rounded-full bg-black/5 px-1.5 py-0.5 text-center text-[11px] font-normal leading-none text-gray-400 group-hover:text-gray-500 dark:bg-white/5 dark:text-gray-500 dark:group-hover:text-gray-300"
-            >
-              {{ group.assets.length }}
-            </span>
-          </button>
-
-          <div
-            v-show="!isAssetGroupCollapsed(group.key)"
-            role="group"
-            class="asset-tree-children ml-[9px] pl-[12px]"
-          >
-            <button
-              v-for="asset in group.assets"
-              :key="asset.id"
-              role="treeitem"
-              type="button"
-              :title="`${asset.name} · ${asset.displayAddressLine || asset.address}`"
-              class="asset-tree-leaf group relative flex h-7 w-full cursor-pointer items-center gap-1.5 rounded-sm px-1 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/10"
-              :class="!asset.isActive ? 'opacity-50' : ''"
-              @click="handleAssetConnect(asset)"
-              @contextmenu="handleAssetContextMenu(asset, $event)"
-            >
-              <img
-                v-if="isLinuxTreeAsset(asset)"
-                src="/icons/linux.png"
-                alt=""
-                class="size-3 shrink-0 object-contain opacity-70 dark:opacity-80"
-              >
-              <UIcon v-else :name="resolveTreeAssetIcon(asset)" class="size-3 shrink-0 text-gray-500 dark:text-gray-400" />
-              <span class="min-w-0 flex-1 truncate text-xs font-medium">{{ asset.name }}</span>
-              <UIcon name="i-lucide-terminal" class="size-3 shrink-0 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
-            </button>
-          </div>
-        </section>
-      </div>
-    </div>
+      ref="assetTreeRef"
+      class="min-h-0 flex-1"
+      :search="sidebarSearch"
+      @select="handleAssetConnect"
+      @contextmenu="handleAssetContextMenu"
+    />
 
     <ConnectionEditor ref="connEditorRef" asset-type="assets" />
 

@@ -3,7 +3,7 @@ use crate::api::{
     session::{ApiSessionContext, ApiSessionStore},
 };
 use crate::commands::api_session::fresh_api_context;
-use crate::service::asset::{AssetQuery, AssetService};
+use crate::service::asset::{AssetQuery, AssetService, AssetTreeQuery};
 use log::{error, info};
 use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, State};
@@ -16,6 +16,27 @@ async fn load_asset_service(
     let api = ApiRequestClient::from_session(&context).map_err(|error| error.to_string())?;
 
     Ok((context, AssetService::new(api)))
+}
+
+#[tauri::command]
+pub async fn get_asset_tree(
+    app: AppHandle,
+    session: State<'_, ApiSessionStore>,
+    kind: String,
+    query: AssetTreeQuery,
+) -> Result<Value, String> {
+    let (_, asset_service) = load_asset_service(&app, &session).await?;
+    let response = asset_service.get_tree(&kind, &query).await;
+
+    if !response.success {
+        return Err(format!(
+            "get {} asset tree failed: status={}, body={}",
+            kind, response.status, response.data
+        ));
+    }
+
+    serde_json::from_str(&response.data)
+        .map_err(|error| format!("parse {} asset tree failed: {}", kind, error))
 }
 
 fn append_asset_defaults(data: &str) -> Result<Value, String> {

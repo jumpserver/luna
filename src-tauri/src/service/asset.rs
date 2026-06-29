@@ -104,9 +104,36 @@ pub struct AssetService {
     api: ApiRequestClient,
 }
 
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct AssetTreeQuery {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level: Option<u32>,
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub asset_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search: Option<String>,
+}
+
 impl AssetService {
     pub fn new(api: ApiRequestClient) -> Self {
         Self { api }
+    }
+
+    pub async fn get_tree(&self, kind: &str, query: &AssetTreeQuery) -> ApiResponse {
+        let path = match kind {
+            "authorization" => endpoint::assets::AUTHORIZATION_TREE,
+            "type" => endpoint::assets::TYPE_TREE,
+            "search" => endpoint::assets::SEARCH_TREE,
+            _ => return ApiResponse::failed(format!("unsupported asset tree kind: {}", kind)),
+        };
+        let url = self.api.endpoint(path);
+        self.api.get_with_query_response(&url, query).await
     }
 
     /// 获取指定分类下的资产列表，支持普通资产和收藏节点资产两种入口

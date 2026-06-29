@@ -51,6 +51,8 @@
     "Close": "Close"
   },
   "Menu": {
+    "AuthorizedTree": "Authorized tree",
+    "TypeTree": "Type tree",
     "Linux": "Linux",
     "Other": "Other",
     "Device": "Device",

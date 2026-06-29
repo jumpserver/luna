@@ -3,6 +3,11 @@ pub(crate) mod assets {
     pub(crate) const USER_ASSETS: &str = "/api/v1/perms/users/self/assets/";
     pub(crate) const FAVORITE_ASSETS: &str = "/api/v1/assets/favorite-assets/";
     pub(crate) const FAVORITE_NODE_ASSETS: &str = "/api/v1/perms/users/self/nodes/favorite/assets/";
+    pub(crate) const AUTHORIZATION_TREE: &str =
+        "/api/v1/perms/users/self/nodes/children-with-assets/tree/";
+    pub(crate) const TYPE_TREE: &str =
+        "/api/v1/perms/users/self/nodes/children-with-assets/category/tree/";
+    pub(crate) const SEARCH_TREE: &str = "/api/v1/perms/users/self/assets/tree/";
 
     pub(crate) fn detail(asset_id: &str) -> String {
         format!("/api/v1/perms/users/self/assets/{}", asset_id)

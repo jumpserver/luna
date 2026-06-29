@@ -125,6 +125,32 @@ export interface AssetNode {
   name: string
 }
 
+export type AssetTreeKind = "authorization" | "type" | "search";
+
+export interface AssetTreeNodeMeta {
+  type?: string
+  data?: Record<string, any>
+}
+
+export interface AssetTreeNode {
+  id: string
+  key?: string
+  pId?: string | null
+  name: string
+  title?: string
+  isParent?: boolean
+  open?: boolean
+  iconSkin?: string
+  type?: string
+  category?: string
+  chkDisabled?: boolean
+  meta?: AssetTreeNodeMeta
+  children?: AssetTreeNode[]
+  level?: number
+  loaded?: boolean
+  loading?: boolean
+}
+
 export interface AssetPlatform {
   id: number
   name: string

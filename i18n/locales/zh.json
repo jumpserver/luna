@@ -52,6 +52,8 @@
   },
   "Menu": {
     "Resource": "资源目录",
+    "AuthorizedTree": "授权树",
+    "TypeTree": "类型树",
     "Linux": "Linux",
     "Windows": "Windows",
     "DirectoryService": "目录服务",
