@@ -25,6 +25,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FaceService } from '@app/services/face';
 import { DrawerStateService } from '@app/services/drawer';
 import { Protocol } from '@app/model';
+import { withSitePrefix } from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -74,7 +75,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     }
 
     this.renewalTrigger.pipe(debounceTime(2000)).subscribe(() => {
-      this._http.get(`/api/v1/health/`).subscribe();
+      this._http.get(withSitePrefix('/api/v1/health/')).subscribe();
     });
 
     this.id = 'window-' + Math.random().toString(36).substr(2);

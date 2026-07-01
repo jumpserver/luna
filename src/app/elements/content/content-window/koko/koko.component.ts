@@ -10,6 +10,8 @@ import {
 import { User } from '@app/globals';
 import { Command, InfoItem } from '../guide/model';
 import { joinEndpointUrl } from '@app/utils/path';
+// 多子目录方案（保留备用）：site prefix 相关工具
+// import { getSitePrefix, joinEndpointUrl, withSitePrefix } from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -151,6 +153,7 @@ export class ElementConnectorKokoComponent implements OnInit {
     }
   }
 
+  // dev 方案（当前生效）
   generateNodeConnectUrl() {
     const params = {};
     params['disableautohash'] = this.view.getConnectOption('disableautohash');
@@ -179,6 +182,49 @@ export class ElementConnectorKokoComponent implements OnInit {
     );
   }
 
+  // 多子目录方案（保留备用）：site prefix + URLSearchParams 重写
+  // generateNodeConnectUrl() {
+  //   const params = new URLSearchParams({
+  //     token: this.view.connectToken.id,
+  //     _: Date.now().toString()
+  //   });
+  //   const disableautohash = this.view.getConnectOption('disableautohash');
+  //   const sitePrefix = getSitePrefix();
+  //
+  //   if (disableautohash !== undefined && disableautohash !== null) {
+  //     params.set('disableautohash', String(disableautohash));
+  //   }
+  //
+  //   if (sitePrefix) {
+  //     params.set('site_prefix', sitePrefix);
+  //   }
+  //
+  //   const query = params.toString();
+  //   const kokoPath = withSitePrefix(`/koko/connect/?${query}`);
+  //   const k8sPath = withSitePrefix(`/koko/k8s/?${query}`);
+  //
+  //   if (this.protocol === 'k8s') {
+  //     return (this.iframeURL = joinEndpointUrl(this.baseUrl, k8sPath));
+  //   }
+  //
+  //   this.iframeURL = joinEndpointUrl(this.baseUrl, kokoPath);
+  // }
+  //
+  // generateFileManagerURL() {
+  //   const params = new URLSearchParams({
+  //     token: this.view.connectToken.id,
+  //     asset: this.asset.id
+  //   });
+  //   const sitePrefix = getSitePrefix();
+  //
+  //   if (sitePrefix) {
+  //     params.set('site_prefix', sitePrefix);
+  //   }
+  //
+  //   const path = `/koko/elfinder/sftp/?${params.toString()}`;
+  //   this.iframeURL = joinEndpointUrl(this.baseUrl, withSitePrefix(path));
+  // }
+
   async reconnect() {
     this.loading = true;
     const oldConnectToken = this.view.connectToken;
@@ -186,7 +232,6 @@ export class ElementConnectorKokoComponent implements OnInit {
     if (!newConnectToken) {
       return;
     }
-    // 更新当前 view 的 connectToken
     this.view.connectToken = newConnectToken;
     await this.ngOnInit();
     this.loading = false;

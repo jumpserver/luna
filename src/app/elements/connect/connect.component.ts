@@ -1,5 +1,7 @@
 import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { ElementConnectDialogComponent } from '@app/elements/connect/connect-dialog/connect-dialog.component';
 import { connectEvt } from '@app/globals';
+import { Account, Asset, ConnectData, ConnectionToken, View } from '@app/model';
 import {
   AlertService,
   AppService,
@@ -10,12 +12,10 @@ import {
   SettingService,
   ViewService
 } from '@app/services';
-import { Account, Asset, ConnectData, ConnectionToken, View } from '@app/model';
-import { launchLocalApp } from '@app/utils/common';
-import { ElementConnectDialogComponent } from '@app/elements/connect/connect-dialog/connect-dialog.component';
+import { launchLocalApp, LOCAL_CLIENT_REMINDER_STORAGE_KEY } from '@app/utils/common';
 import { NzModalService } from 'ng-zorro-antd/modal';
-import { ElementDownloadDialogComponent } from './download-dialog/download-dialog.component';
 import { firstValueFrom } from 'rxjs';
+import { ElementDownloadDialogComponent } from './download-dialog/download-dialog.component';
 
 @Component({
   standalone: false,
@@ -153,17 +153,6 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       this._logger.info('Create connection token failed');
       return;
     }
-
-    // 分屏连接
-    if (splitConnect) {
-      return this.currentWebSubView(asset, connectInfo, connToken);
-    }
-
-    // 特殊处理
-    if (connectMethod.value.endsWith('_guide')) {
-      return this.createWebView(asset, connectInfo, connToken);
-    }
-
     let appletConnectMethod = connectOption ? connectOption['appletConnectMethod'] : 'web';
 
     if (!this._settingSvc.hasXPack()) {
@@ -174,21 +163,30 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
       virtualappConnectMethod = 'web';
     }
 
+    const isGuide = connectMethod.value.endsWith('_guide');
+    const isClientConnect =
+      connectMethod.type === 'native' ||
+      (connectMethod.type === 'applet' && appletConnectMethod === 'client') ||
+      (connectMethod.type === 'virtual_app' && virtualappConnectMethod === 'client');
+    const openWebView = () =>
+      splitConnect
+        ? this.currentWebSubView(asset, connectInfo, connToken)
+        : this.createWebView(asset, connectInfo, connToken);
+
     if (connectInfo.downloadRDP) {
       return this._http.downloadRDPFile(
         connToken,
         this._settingSvc.setting,
         connectInfo.connectOption
       );
-    } else if (connectMethod.type === 'native') {
-      this.callLocalClient(connToken).then();
-    } else if (connectMethod.type === 'applet' && appletConnectMethod === 'client') {
-      this.callLocalClient(connToken).then();
-    } else if (connectMethod.type === 'virtual_app' && virtualappConnectMethod === 'client') {
-      this.callLocalClient(connToken).then();
-    } else {
-      this.createWebView(asset, connectInfo, connToken);
     }
+
+    if (isClientConnect && !isGuide) {
+      this.callLocalClient(connToken).then();
+      return;
+    }
+
+    return openWebView();
   }
 
   async callLocalClient(connToken: ConnectionToken) {
@@ -204,20 +202,24 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
     const url = response['url'];
 
-    launchLocalApp(url, () => {
-      const downLoadStatus = localStorage.getItem('hasDownLoadApp');
+    const localClientLaunched = await launchLocalApp(url);
 
-      if (downLoadStatus !== '1') {
-        this._dialog.create({
-          nzTitle: this._i18n.instant('DownloadClient'),
-          nzContent: ElementDownloadDialogComponent,
-          nzOnOk: cmp => cmp.onConfirm(),
-          nzOnCancel: cmp => cmp.onCancel(),
-          nzCancelText: this._i18n.instant('Cancel'),
-          nzOkText: this._i18n.instant('Confirm')
-        });
-      }
-    });
+    if (localClientLaunched) {
+      return;
+    }
+
+    const ignoreDownloadReminder = localStorage.getItem(LOCAL_CLIENT_REMINDER_STORAGE_KEY);
+
+    if (ignoreDownloadReminder !== '1') {
+      this._dialog.create({
+        nzTitle: this._i18n.instant('DownloadClient'),
+        nzContent: ElementDownloadDialogComponent,
+        nzOnOk: cmp => cmp.onConfirm(),
+        nzOnCancel: cmp => cmp.onCancel(),
+        nzCancelText: this._i18n.instant('Cancel'),
+        nzOkText: this._i18n.instant('Confirm')
+      });
+    }
   }
 
   createWebView(asset: Asset, connectInfo: any, connToken: ConnectionToken) {
