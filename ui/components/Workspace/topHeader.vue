@@ -1,10 +1,11 @@
 <script setup lang="ts">
 const { collapse } = useSettingManager();
 const { isMacOS } = usePlatform();
+const { sidebarWidth } = useSidebarLayout();
 const leadingAreaStyle = computed(() => ({
   width: collapse.value
     ? (isMacOS.value ? "128px" : "44px")
-    : "220px"
+    : `${sidebarWidth.value}px`
 }));
 
 const handleWindowDrag = async (event: MouseEvent) => {

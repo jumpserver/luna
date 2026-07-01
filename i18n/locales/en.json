@@ -65,7 +65,11 @@
     "Web": "Web",
     "Transcode": "Replay Transcode",
     "OfflinePlayer": "Offline Player",
-    "Favorite": "Favorite"
+    "Favorite": "Favorite",
+    "Snippets": "Snippets"
+  },
+  "Snippets": {
+    "Empty": "No snippets"
   },
   "Operation": {
     "Search": "Search"

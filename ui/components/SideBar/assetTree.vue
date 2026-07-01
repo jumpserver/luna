@@ -30,6 +30,20 @@ const panels = computed(() => [
   { kind: "type" as const, label: t("Menu.TypeTree"), nodes: typeNodes.value }
 ]);
 
+const resetTreeLevels = (nodes: AssetTreeNode[], level = 0) => {
+  for (const node of nodes) {
+    node.level = level;
+    if (node.children?.length) resetTreeLevels(node.children, level + 1);
+  }
+  return nodes;
+};
+
+const unwrapAllTypesRoot = (nodes: AssetTreeNode[]) => {
+  const root = nodes.find((node) => node.id.toUpperCase() === "ROOT");
+  if (!root?.children?.length) return nodes;
+  return resetTreeLevels(root.children);
+};
+
 const reportError = (error: unknown) => {
   toast.add({
     title: t("Asset.GetAssetFailed"),
@@ -45,7 +59,7 @@ const loadRoot = async (kind: PanelKind) => {
   try {
     const nodes = await fetchTree(kind);
     if (kind === "authorization") authorizationNodes.value = nodes;
-    else typeNodes.value = nodes;
+    else typeNodes.value = unwrapAllTypesRoot(nodes);
   } catch (error) {
     reportError(error);
   } finally {

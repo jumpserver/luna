@@ -65,7 +65,11 @@
     "Tool": "工具",
     "Transcode": "录像转码",
     "OfflinePlayer": "离线播放器",
-    "Player": "播放器"
+    "Player": "播放器",
+    "Snippets": "Snippets"
+  },
+  "Snippets": {
+    "Empty": "暂无代码片段"
   },
   "Operation": {
     "Search": "搜索"

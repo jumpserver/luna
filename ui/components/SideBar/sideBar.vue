@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
-import type AssetTree from "~/components/SideBar/assetTree.vue";
 import type { AssetItem } from "~/types";
 
 import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
@@ -26,7 +25,6 @@ const {
 const isLoading = ref(false);
 const sidebarSearch = ref("");
 const showAssetSearch = ref(false);
-const assetTreeRef = ref<InstanceType<typeof AssetTree> | null>(null);
 const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
@@ -40,7 +38,6 @@ const renameDisabled = computed(() => {
 });
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
-const isAssetTreeLoading = computed(() => Boolean(assetTreeRef.value?.loading));
 
 const contentBackgroundColor = computed(() =>
   theme.value === "dark"
@@ -74,11 +71,6 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
     }
   ];
 });
-
-const handleRefreshAuthorizedAssets = () => {
-  if (!loggedIn.value || isAssetTreeLoading.value) return;
-  assetTreeRef.value?.refresh();
-};
 
 const hasSshProtocol = (asset: AssetItem) => {
   return (asset.permedProtocols || []).some((protocol) => protocol.name === "ssh");
@@ -325,10 +317,9 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
 
 <template>
   <div
-    class="flex h-full shrink-0 overflow-hidden flex-col transition-[width] duration-200"
+    class="flex h-full w-full shrink-0 overflow-hidden flex-col"
     :class="collapse ? 'border-r-0 shadow-none' : 'border-r border-white/30 dark:border-white/10 shadow-sm'"
     :style="{
-      width: collapse ? '0px' : '220px',
       backgroundColor: contentBackgroundColor
     }"
   >
@@ -340,20 +331,6 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
         <div v-if="shouldShowOrganizationSelector" class="min-w-0 flex-1">
           <HeaderOrganizationSelector />
         </div>
-
-        <UTooltip :text="t('ToolTips.Refresh')" :delay-duration="150">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            icon="i-lucide-refresh-cw"
-            :aria-label="t('ToolTips.Refresh')"
-            :disabled="!loggedIn || isAssetTreeLoading"
-            :loading="isAssetTreeLoading"
-            class="size-7 shrink-0 justify-center rounded-sm p-0 text-gray-500 dark:text-gray-400"
-            @click="handleRefreshAuthorizedAssets"
-          />
-        </UTooltip>
 
         <UTooltip :text="t('Operation.Search')" :delay-duration="150">
           <UButton
@@ -425,14 +402,15 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
       />
     </div>
 
-    <SideBarAssetTree
-      v-else
-      ref="assetTreeRef"
-      class="min-h-0 flex-1"
-      :search="sidebarSearch"
-      @select="handleAssetConnect"
-      @contextmenu="handleAssetContextMenu"
-    />
+    <div v-else class="flex min-h-0 flex-1 flex-col">
+      <SideBarAssetTree
+        class="min-h-0 flex-1"
+        :search="sidebarSearch"
+        @select="handleAssetConnect"
+        @contextmenu="handleAssetContextMenu"
+      />
+      <SideBarSnippetsPanel />
+    </div>
 
     <ConnectionEditor ref="connEditorRef" asset-type="assets" />
 
