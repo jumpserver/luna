@@ -25,6 +25,7 @@ const {
 const isLoading = ref(false);
 const sidebarSearch = ref("");
 const showAssetSearch = ref(false);
+const assetTreeOpen = ref(true);
 const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
@@ -38,6 +39,10 @@ const renameDisabled = computed(() => {
 });
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
+
+watch(sidebarSearch, (value) => {
+  if (value.trim()) assetTreeOpen.value = true;
+});
 
 const contentBackgroundColor = computed(() =>
   theme.value === "dark"
@@ -404,12 +409,17 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
 
     <div v-else class="flex min-h-0 flex-1 flex-col">
       <SideBarAssetTree
-        class="min-h-0 flex-1"
         :search="sidebarSearch"
+        :open="assetTreeOpen"
+        @select="handleAssetConnect"
+        @contextmenu="handleAssetContextMenu"
+        @toggle="assetTreeOpen = !assetTreeOpen"
+      />
+      <SideBarBottomPanels
+        :main-panel-open="assetTreeOpen"
         @select="handleAssetConnect"
         @contextmenu="handleAssetContextMenu"
       />
-      <SideBarSnippetsPanel />
     </div>
 
     <ConnectionEditor ref="connEditorRef" asset-type="assets" />

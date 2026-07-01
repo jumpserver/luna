@@ -52,7 +52,7 @@
   },
   "Menu": {
     "Resource": "资源目录",
-    "AuthorizedTree": "授权树",
+    "AuthorizedTree": "我的资产",
     "TypeTree": "类型树",
     "Linux": "Linux",
     "Windows": "Windows",
@@ -61,15 +61,23 @@
     "Device": "设备",
     "Web": "Web",
     "Other": "其他",
-    "Favorite": "收藏",
+    "Favorite": "我的收藏",
     "Tool": "工具",
     "Transcode": "录像转码",
     "OfflinePlayer": "离线播放器",
     "Player": "播放器",
-    "Snippets": "Snippets"
+    "Snippets": "Snippets",
+    "RecentConnections": "最近连接"
   },
   "Snippets": {
     "Empty": "暂无代码片段"
+  },
+  "RecentConnections": {
+    "Empty": "暂无最近连接"
+  },
+  "Tree": {
+    "SwitchToType": "切换到类型树",
+    "SwitchToAuthorization": "切换到我的资产"
   },
   "Operation": {
     "Search": "搜索"

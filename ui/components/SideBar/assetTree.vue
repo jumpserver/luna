@@ -4,11 +4,13 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{
   search: string
+  open?: boolean
 }>();
 
 const emit = defineEmits<{
   select: [asset: AssetItem]
   contextmenu: [asset: AssetItem, event: MouseEvent]
+  toggle: []
 }>();
 
 type PanelKind = Exclude<AssetTreeKind, "search">;
@@ -18,17 +20,20 @@ const toast = useToast();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, orgId } = storeToRefs(userInfoStore);
 const { fetchTree, treeNodeToAsset } = useAssetTree();
-const openPanel = ref<PanelKind | null>("authorization");
+const activeTreeKind = ref<PanelKind>("authorization");
 const authorizationNodes = ref<AssetTreeNode[]>([]);
 const typeNodes = ref<AssetTreeNode[]>([]);
 const searchNodes = ref<AssetTreeNode[]>([]);
 const loading = ref(false);
 const searchLoading = ref(false);
 
-const panels = computed(() => [
-  { kind: "authorization" as const, label: t("Menu.AuthorizedTree"), nodes: authorizationNodes.value },
-  { kind: "type" as const, label: t("Menu.TypeTree"), nodes: typeNodes.value }
-]);
+const activeTree = computed(() => activeTreeKind.value === "authorization"
+  ? { label: t("Menu.AuthorizedTree"), nodes: authorizationNodes.value }
+  : { label: t("Menu.TypeTree"), nodes: typeNodes.value });
+
+const treeSwitchLabel = computed(() => activeTreeKind.value === "authorization"
+  ? t("Tree.SwitchToType")
+  : t("Tree.SwitchToAuthorization"));
 
 const resetTreeLevels = (nodes: AssetTreeNode[], level = 0) => {
   for (const node of nodes) {
@@ -44,6 +49,13 @@ const unwrapAllTypesRoot = (nodes: AssetTreeNode[]) => {
   return resetTreeLevels(root.children);
 };
 
+const removeFavoriteNodes = (nodes: AssetTreeNode[]): AssetTreeNode[] => nodes
+  .filter((node) => node.id.toLowerCase() !== "favorite" && node.key?.toLowerCase() !== "favorite")
+  .map((node) => ({
+    ...node,
+    children: node.children?.length ? removeFavoriteNodes(node.children) : node.children
+  }));
+
 const reportError = (error: unknown) => {
   toast.add({
     title: t("Asset.GetAssetFailed"),
@@ -58,7 +70,7 @@ const loadRoot = async (kind: PanelKind) => {
   loading.value = true;
   try {
     const nodes = await fetchTree(kind);
-    if (kind === "authorization") authorizationNodes.value = nodes;
+    if (kind === "authorization") authorizationNodes.value = removeFavoriteNodes(nodes);
     else typeNodes.value = unwrapAllTypesRoot(nodes);
   } catch (error) {
     reportError(error);
@@ -72,8 +84,8 @@ const refresh = async () => {
   await Promise.all([loadRoot("authorization"), loadRoot("type")]);
 };
 
-const togglePanel = (kind: PanelKind) => {
-  openPanel.value = openPanel.value === kind ? null : kind;
+const switchTreeKind = () => {
+  activeTreeKind.value = activeTreeKind.value === "authorization" ? "type" : "authorization";
 };
 
 const toggleNode = async (node: AssetTreeNode, kind: PanelKind) => {
@@ -86,7 +98,8 @@ const toggleNode = async (node: AssetTreeNode, kind: PanelKind) => {
   if (node.loaded || node.loading) return;
   node.loading = true;
   try {
-    node.children = await fetchTree(kind, node);
+    const children = await fetchTree(kind, node);
+    node.children = kind === "authorization" ? removeFavoriteNodes(children) : children;
     node.loaded = true;
   } catch (error) {
     node.open = false;
@@ -136,7 +149,12 @@ defineExpose({ refresh, loading });
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-col" role="tree" :aria-label="t('Menu.Resource')">
+  <div
+    class="flex min-h-8 flex-col"
+    :class="open === false ? 'h-8 shrink-0' : 'min-h-0 flex-1'"
+    role="tree"
+    :aria-label="t('Menu.Resource')"
+  >
     <div v-if="!loggedIn" class="grid min-h-0 flex-1 place-items-center px-3 text-xs text-gray-500 dark:text-gray-400">
       请先登录
     </div>
@@ -165,22 +183,34 @@ defineExpose({ refresh, loading });
     </template>
 
     <template v-else>
-      <section
-        v-for="panel in panels"
-        :key="panel.kind"
-        class="flex min-h-0 flex-col border-b border-gray-200 dark:border-white/10"
-        :class="openPanel === panel.kind ? 'flex-1' : 'shrink-0'"
-      >
-        <button
-          type="button"
-          class="flex h-8 w-full shrink-0 items-center gap-1.5 px-3 text-left text-xs font-medium text-gray-700 hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10"
-          :aria-expanded="openPanel === panel.kind"
-          @click="togglePanel(panel.kind)"
-        >
-          <UIcon name="i-lucide-chevron-down" class="size-3 transition-transform" :class="openPanel === panel.kind ? '' : '-rotate-90'" />
-          <span class="min-w-0 flex-1 truncate">{{ panel.label }}</span>
+      <section class="flex min-h-0 flex-1 flex-col overflow-hidden border-b border-gray-200 dark:border-white/10">
+        <div class="flex h-8 w-full shrink-0 items-center gap-1 px-3 text-xs font-medium text-gray-700 dark:text-gray-300">
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+            :aria-expanded="open !== false"
+            @click="emit('toggle')"
+          >
+            <UIcon
+              name="i-lucide-chevron-right"
+              class="size-3.5 shrink-0 transition-transform duration-150"
+              :class="open === false ? '' : 'rotate-90'"
+            />
+            <UIcon name="i-lucide-folder-tree" class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400" />
+            <span class="min-w-0 flex-1 truncate">{{ activeTree.label }}</span>
+          </button>
+          <UTooltip :text="treeSwitchLabel" :delay-duration="150">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              :icon="activeTreeKind === 'authorization' ? 'i-lucide-list-tree' : 'i-lucide-shield-check'"
+              class="size-6 justify-center rounded-sm p-0"
+              :aria-label="treeSwitchLabel"
+              @click="switchTreeKind"
+            />
+          </UTooltip>
           <UButton
-            v-if="openPanel === panel.kind"
             color="neutral"
             variant="ghost"
             size="xs"
@@ -188,21 +218,21 @@ defineExpose({ refresh, loading });
             :loading="loading"
             class="size-6 justify-center rounded-sm p-0"
             :aria-label="t('ToolTips.Refresh')"
-            @click.stop="loadRoot(panel.kind)"
+            @click="loadRoot(activeTreeKind)"
           />
-        </button>
+        </div>
 
-        <div v-if="openPanel === panel.kind" class="min-h-0 flex-1 overflow-y-auto py-1">
-          <div v-if="loading && panel.nodes.length === 0" class="grid h-20 place-items-center">
+        <div v-if="open !== false" class="min-h-0 flex-1 overflow-y-auto py-1">
+          <div v-if="loading && activeTree.nodes.length === 0" class="grid h-20 place-items-center">
             <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-gray-400" />
           </div>
-          <UEmpty v-else-if="panel.nodes.length === 0" icon="mingcute:inbox-line" size="sm" variant="naked" :title="t('Common.NoData')" />
+          <UEmpty v-else-if="activeTree.nodes.length === 0" icon="mingcute:inbox-line" size="sm" variant="naked" :title="t('Common.NoData')" />
           <SideBarAssetTreeNode
-            v-for="node in panel.nodes"
+            v-for="node in activeTree.nodes"
             v-else
-            :key="`${panel.kind}-${node.id}`"
+            :key="`${activeTreeKind}-${node.id}`"
             :node="node"
-            :tree-kind="panel.kind"
+            :tree-kind="activeTreeKind"
             @select="selectNode"
             @toggle="toggleNode"
             @contextmenu="openContextMenu"

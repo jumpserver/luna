@@ -13,7 +13,8 @@ use crate::setup::setup_tray;
 use crate::api::session::ApiSessionStore;
 use crate::commands::api_session::{set_api_org, set_api_session};
 use crate::commands::asset_actions::{
-    get_asset_detail, get_asset_tree, get_assets, rename, set_favorite, unfavorite,
+    get_asset_detail, get_asset_tree, get_assets, get_favorite_asset_list, rename, set_favorite,
+    unfavorite,
 };
 use crate::commands::auth_flow::{auth_cancel, auth_login, bootstrap_auth_session};
 use crate::commands::auth_logout::logout;
@@ -205,6 +206,7 @@ pub fn run() {
             bootstrap_auth_session,
             get_assets,
             get_asset_tree,
+            get_favorite_asset_list,
             get_config,
             get_setting,
             set_favorite,

@@ -124,6 +124,29 @@ pub async fn get_assets(
 }
 
 #[tauri::command]
+pub async fn get_favorite_asset_list(
+    app: AppHandle,
+    session: State<'_, ApiSessionStore>,
+    limit: Option<u32>,
+) -> Result<Value, String> {
+    let (context, asset_service) = load_asset_service(&app, &session).await?;
+    let query = AssetQuery {
+        offset: Some(0),
+        limit: Some(limit.unwrap_or(50)),
+        oid: context.org_id,
+        ..Default::default()
+    };
+    let response = asset_service.get_category_assets(&query, true).await;
+    if !response.success {
+        return Err(format!(
+            "get favorite assets failed: status={}",
+            response.status
+        ));
+    }
+    append_asset_defaults(&response.data)
+}
+
+#[tauri::command]
 pub async fn get_asset_detail(
     app: AppHandle,
     session: State<'_, ApiSessionStore>,

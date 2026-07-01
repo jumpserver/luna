@@ -51,7 +51,7 @@
     "Close": "Close"
   },
   "Menu": {
-    "AuthorizedTree": "Authorized tree",
+    "AuthorizedTree": "My assets",
     "TypeTree": "Type tree",
     "Linux": "Linux",
     "Other": "Other",
@@ -65,11 +65,19 @@
     "Web": "Web",
     "Transcode": "Replay Transcode",
     "OfflinePlayer": "Offline Player",
-    "Favorite": "Favorite",
-    "Snippets": "Snippets"
+    "Favorite": "My favorites",
+    "Snippets": "Snippets",
+    "RecentConnections": "Recent connections"
   },
   "Snippets": {
     "Empty": "No snippets"
+  },
+  "RecentConnections": {
+    "Empty": "No recent connections"
+  },
+  "Tree": {
+    "SwitchToType": "Switch to type tree",
+    "SwitchToAuthorization": "Switch to my assets"
   },
   "Operation": {
     "Search": "Search"
