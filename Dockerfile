@@ -1,5 +1,5 @@
 # Use base image to build the project avoid npm install every time
-FROM jumpserver/luna-base:20260320_114803 AS stage-build
+FROM jumpserver/luna-base:20260509_024545 AS stage-build
 
 ARG VERSION
 ENV VERSION=$VERSION

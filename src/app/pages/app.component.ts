@@ -1,5 +1,5 @@
 import { Component, OnInit } from "@angular/core";
-import { I18nService } from "@app/services";
+import { I18nService, SettingService } from "@app/services";
 import { EventManager } from "@angular/platform-browser";
 import { useTheme } from "@src/sass/theme/util";
 
@@ -10,7 +10,11 @@ import { useTheme } from "@src/sass/theme/util";
   styleUrls: ["app.component.css"],
 })
 export class AppComponent implements OnInit {
-  constructor(_i18n: I18nService, private eventManager: EventManager) {}
+  constructor(
+    _i18n: I18nService,
+    private eventManager: EventManager,
+    _setting: SettingService
+  ) {}
 
   ngOnInit(): void {
     const { initTheme } = useTheme();

@@ -8,6 +8,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { HttpService, IframeCommunicationService, SettingService } from '@app/services';
 import { Component, Inject, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { NzSelectComponent } from 'ng-zorro-antd/select';
+import { withSitePrefix } from '@app/utils/path';
 
 interface terminalThemeMap {
   label: string;
@@ -84,7 +85,7 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
   }
 
   async getSettingOptions() {
-    const url = '/api/v1/users/preference/?category=luna';
+    const url = withSitePrefix('/api/v1/users/preference/?category=luna');
     const res: any = await this._http.options(url).toPromise();
     const graphics = res.actions.GET.graphics.children;
     this.resolutionsOptions = graphics.rdp_resolution.choices;

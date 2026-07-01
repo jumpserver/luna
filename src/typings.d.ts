@@ -9,3 +9,6 @@ interface Window {
   __UI_BASE__?: string;
   __LUNA_BASE__?: string;
 }
+
+declare module 'sm-crypto';
+declare module 'crypto-js';
