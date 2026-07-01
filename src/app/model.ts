@@ -402,6 +402,7 @@ export class AuthInfo {
   username: string;
   secret: string;
   rememberAuth: boolean;
+  input_secret_type?: 'password' | 'ssh_key';
 }
 
 export class ConnectOption {

@@ -34,9 +34,12 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
   @Output() manualUsernameChanged: EventEmitter<string> = new EventEmitter<string>();
   @ViewChild('username', { static: false }) usernameRef: ElementRef;
   @ViewChild('password', { static: false }) passwordRef: ElementRef;
+  @ViewChild('sshKeyFileInput', { static: false }) sshKeyFileInputRef: ElementRef<HTMLInputElement>;
 
   public hidePassword = true;
   public rememberAuthDisabled = null;
+  public passwordSecret = '';
+  public sshKeySecret = '';
   usernameControl = new FormControl();
   localAuthItems: AuthInfo[];
   filteredOptions: AuthInfo[];
@@ -111,6 +114,14 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     return this.accountSelected.username === '@INPUT' || this.accountSelected.username === '@USER';
   }
 
+  get secretType(): 'password' | 'ssh_key' {
+    return this.manualAuthInfo?.['input_secret_type'] || 'password';
+  }
+
+  set secretType(value: 'password' | 'ssh_key') {
+    this.manualAuthInfo['input_secret_type'] = value;
+  }
+
   public compareFn = (f1: Account, f2: Account) => {
     if (!f1 || !f2) return false;
     return f1.alias === f2.alias && f1.id === f2.id;
@@ -144,6 +155,7 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       this.accountSelectedChange.emit(this.accountSelected);
       this.onAccountChanged();
     }
+    this.syncSecretsFromManualAuth();
   }
 
   ngOnDestroy() {
@@ -309,6 +321,10 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
       this.manualAuthInfo.username = this.accountSelected.username;
     }
     this.manualAuthInfo.secret = '';
+    this.passwordSecret = '';
+    this.sshKeySecret = '';
+    // 切换账号时先回到默认类型，再由本地缓存 merge 覆盖（避免沿用上一账号的 ssh_key）
+    this.manualAuthInfo['input_secret_type'] = 'password';
     this.localAuthItems = this._appSvc.getAccountLocalAuth(this.asset.id);
     if (this.manualAuthInfo.username) {
       this.localAuthItems = this.localAuthItems.filter(
@@ -318,6 +334,8 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     if (this.localAuthItems && this.localAuthItems.length > 0) {
       this.manualAuthInfo = Object.assign(this.manualAuthInfo, this.localAuthItems[0]);
     }
+    this.syncSecretsFromManualAuth();
+    this.applyCurrentSecretToManualAuth();
     this.setUsernamePlaceholder();
     setTimeout(() => {
       if (this.manualAuthInfo.username && this.passwordRef) {
@@ -328,6 +346,67 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     }, 10);
 
     this._cdRef.detectChanges();
+  }
+
+  onSecretTypeChange(_type: 'password' | 'ssh_key') {
+    this.applyCurrentSecretToManualAuth();
+  }
+
+  onPasswordSecretChange(secret: string) {
+    this.passwordSecret = secret;
+    if (this.secretType === 'password') {
+      this.manualAuthInfo.secret = secret;
+    }
+  }
+
+  onSshKeySecretChange(secret: string) {
+    this.sshKeySecret = secret;
+    if (this.secretType === 'ssh_key') {
+      this.manualAuthInfo.secret = secret;
+    }
+  }
+
+  selectSshKeyFile() {
+    this.sshKeyFileInputRef?.nativeElement?.click();
+  }
+
+  onSshKeyFileSelected(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const file = target?.files?.[0];
+    if (!file) {
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const content = typeof reader.result === 'string' ? reader.result : '';
+      this.sshKeySecret = content;
+      if (this.secretType === 'ssh_key') {
+        this.manualAuthInfo.secret = content;
+      }
+      this._cdRef.detectChanges();
+    };
+    reader.onerror = () => {
+      console.error('Load SSH key file failed');
+    };
+    reader.readAsText(file);
+    target.value = '';
+  }
+
+  private syncSecretsFromManualAuth() {
+    const secret = this.manualAuthInfo?.secret || '';
+    const secretType = this.manualAuthInfo?.['input_secret_type'] || 'password';
+    if (secretType === 'ssh_key') {
+      this.sshKeySecret = secret;
+      this.passwordSecret = '';
+    } else {
+      this.passwordSecret = secret;
+      this.sshKeySecret = '';
+    }
+  }
+
+  private applyCurrentSecretToManualAuth() {
+    this.manualAuthInfo.secret =
+      this.secretType === 'ssh_key' ? this.sshKeySecret : this.passwordSecret;
   }
 
   onFocus() {
@@ -342,6 +421,8 @@ export class ElementSelectAccountComponent implements OnInit, OnDestroy {
     this.filteredOptions = this.localAuthItems.filter(authInfo => {
       if (authInfo.username.toLowerCase() === filterValue) {
         this.manualAuthInfo = Object.assign(this.manualAuthInfo, authInfo);
+        this.syncSecretsFromManualAuth();
+        this.applyCurrentSecretToManualAuth();
       }
       return authInfo.username.toLowerCase().includes(filterValue);
     });
