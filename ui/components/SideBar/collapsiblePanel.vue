@@ -2,7 +2,7 @@
 const props = withDefaults(defineProps<{
   open: boolean
   title: string
-  icon: string
+  icon?: string
   exclusiveGroup?: string
   preferredHeight?: number
   minHeight?: number
@@ -32,7 +32,7 @@ const panelStyle = computed(() => props.open
   >
     <button
       type="button"
-      class="flex h-8 shrink-0 items-center gap-1.5 px-2 text-left text-xs font-medium text-gray-700 dark:text-gray-200"
+      class="flex h-8 shrink-0 items-center gap-1.5 px-3 text-left text-xs font-medium text-gray-700 dark:text-gray-200"
       :aria-expanded="open"
       @click="emit('toggle')"
     >
@@ -41,7 +41,6 @@ const panelStyle = computed(() => props.open
         class="size-3.5 shrink-0 transition-transform duration-150"
         :class="open ? 'rotate-90' : ''"
       />
-      <UIcon :name="icon" class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400" />
       <span class="min-w-0 flex-1 truncate">{{ title }}</span>
       <slot name="actions" />
     </button>

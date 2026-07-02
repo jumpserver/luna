@@ -196,7 +196,6 @@ defineExpose({ refresh, loading });
               class="size-3.5 shrink-0 transition-transform duration-150"
               :class="open === false ? '' : 'rotate-90'"
             />
-            <UIcon name="i-lucide-folder-tree" class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400" />
             <span class="min-w-0 flex-1 truncate">{{ activeTree.label }}</span>
           </button>
           <UTooltip :text="treeSwitchLabel" :delay-duration="150">

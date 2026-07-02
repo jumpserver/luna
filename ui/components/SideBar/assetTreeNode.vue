@@ -19,7 +19,7 @@ const isParent = computed(() => Boolean(props.node.isParent || props.node.childr
 const isOpen = computed(() => Boolean(props.node.open));
 
 const icon = computed(() => {
-  if (isParent.value) return isOpen.value ? "i-lucide-folder-open" : "i-lucide-folder";
+  if (isParent.value) return isOpen.value ? "solar:folder-open-bold" : "solar:folder-with-files-bold";
   const iconSkin = (props.node.iconSkin || "").toLowerCase();
   const data = props.node.meta?.data || {};
   const value = String(data.category?.value || data.category || data.type?.value || data.type || iconSkin).toLowerCase();

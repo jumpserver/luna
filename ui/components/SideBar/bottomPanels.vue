@@ -50,7 +50,6 @@ const togglePanel = (kind: PanelKind) => {
     <SideBarCollapsiblePanel
       :open="isOpen('favorites')"
       :title="t('Menu.Favorite')"
-      icon="i-lucide-star"
       v-bind="panelConfig.favorites"
       :max-height="panelMaxHeight('favorites')"
       @toggle="togglePanel('favorites')"
@@ -76,7 +75,6 @@ const togglePanel = (kind: PanelKind) => {
     <SideBarCollapsiblePanel
       :open="isOpen('recent')"
       :title="t('Menu.RecentConnections')"
-      icon="i-lucide-history"
       v-bind="panelConfig.recent"
       :max-height="panelMaxHeight('recent')"
       @toggle="togglePanel('recent')"
@@ -87,7 +85,6 @@ const togglePanel = (kind: PanelKind) => {
     <SideBarCollapsiblePanel
       :open="isOpen('snippets')"
       :title="t('Menu.Snippets')"
-      icon="i-lucide-braces"
       v-bind="panelConfig.snippets"
       :max-height="panelMaxHeight('snippets')"
       @toggle="togglePanel('snippets')"
