@@ -54,13 +54,16 @@ watch(
     <UDropdownMenu
       :items="organizationDropdownItems"
       :content="{ align: 'start', side: 'bottom' }"
-      :ui="{ content: 'w-48 max-h-64 overflow-y-auto' }"
+      :ui="{
+        content: 'w-44 max-h-64 overflow-y-auto p-1',
+        item: 'mx-0 px-2 py-1 rounded-md text-[11px] leading-4 transition-colors duration-150'
+      }"
     >
       <UButton
         variant="ghost"
         size="sm"
         color="neutral"
-        class="organization-trigger h-7 max-w-full rounded-sm py-0 pr-1 pl-0"
+        class="organization-trigger h-7 max-w-full rounded-md py-0 pr-1.5 pl-1"
         :ui="{ base: 'flex items-center justify-start gap-1.5' }"
       >
         <UIcon name="fluent:organization-16-regular" class="size-4 text-gray-500 dark:text-gray-400" />
@@ -73,10 +76,24 @@ watch(
 
 <style scoped>
 .organization-trigger,
-.organization-trigger:hover,
 .organization-trigger:active,
-.organization-trigger:focus,
-.organization-trigger[data-state="open"] {
+.organization-trigger:focus {
   background-color: transparent !important;
+}
+
+.organization-trigger:hover {
+  background-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+.organization-trigger[data-state="open"] {
+  background-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+:global(.dark) .organization-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+:global(.dark) .organization-trigger[data-state="open"] {
+  background-color: rgba(255, 255, 255, 0.1) !important;
 }
 </style>

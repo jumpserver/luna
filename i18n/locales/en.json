@@ -82,6 +82,11 @@
   "Operation": {
     "Search": "Search"
   },
+  "Sidebar": {
+    "ManageSections": "Manage sections",
+    "ShowSection": "Show {section}",
+    "AtLeastOneSection": "Keep at least one section visible"
+  },
   "Transcode": {
     "Title": "Replay Transcode",
     "Description": "Choose one or multiple .tar recording archive files for MP4 conversion.",

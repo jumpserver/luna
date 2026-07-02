@@ -3,6 +3,11 @@ import type { AssetItem } from "~/types";
 
 const props = defineProps<{
   mainPanelOpen: boolean
+  visiblePanels: {
+    favorites: boolean
+    recent: boolean
+    snippets: boolean
+  }
 }>();
 
 const emit = defineEmits<{
@@ -48,6 +53,7 @@ const togglePanel = (kind: PanelKind) => {
 <template>
   <div class="contents">
     <SideBarCollapsiblePanel
+      v-if="visiblePanels.favorites"
       :open="isOpen('favorites')"
       :title="t('Menu.Favorite')"
       v-bind="panelConfig.favorites"
@@ -73,6 +79,7 @@ const togglePanel = (kind: PanelKind) => {
     </SideBarCollapsiblePanel>
 
     <SideBarCollapsiblePanel
+      v-if="visiblePanels.recent"
       :open="isOpen('recent')"
       :title="t('Menu.RecentConnections')"
       v-bind="panelConfig.recent"
@@ -83,6 +90,7 @@ const togglePanel = (kind: PanelKind) => {
     </SideBarCollapsiblePanel>
 
     <SideBarCollapsiblePanel
+      v-if="visiblePanels.snippets"
       :open="isOpen('snippets')"
       :title="t('Menu.Snippets')"
       v-bind="panelConfig.snippets"

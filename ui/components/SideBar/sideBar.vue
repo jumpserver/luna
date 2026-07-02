@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
-import type { AssetItem } from "~/types";
+import type { AssetItem, SidebarSectionKey } from "~/types";
 
 import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
+import { SIDEBAR_SECTION_KEYS } from "~/composables/useSidebarSections";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortProtocolNames } from "~/utils";
 
 const { t } = useI18n();
 const localePath = useLocalePath();
-const { collapse, theme } = useSettingManager();
+const {
+  collapse,
+  theme,
+  sidebarSections,
+  setSidebarSections
+} = useSettingManager();
 const { componentsConfig } = useAppConfig();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const showTools = computed(() => isTauriRuntime());
@@ -37,6 +43,12 @@ const renameDisabled = computed(() => {
   const name = renameValue.value.trim();
   return !name || name === renameAsset.value?.name;
 });
+const sidebarSectionLabels = computed<Record<SidebarSectionKey, string>>(() => ({
+  assets: t("Menu.AuthorizedTree"),
+  favorites: t("Menu.Favorite"),
+  recent: t("Menu.RecentConnections"),
+  snippets: t("Menu.Snippets")
+}));
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 
@@ -49,11 +61,57 @@ const contentBackgroundColor = computed(() =>
     ? componentsConfig.pages.mainCardDarkBackgroundColor
     : componentsConfig.pages.mainCardLightBackgroundColor
 );
+const visibleSectionCount = computed(() =>
+  SIDEBAR_SECTION_KEYS.filter((key) => sidebarSections.value[key]).length
+);
+const showAssetSection = computed(() => sidebarSections.value.assets);
+const visibleShelfPanels = computed(() => ({
+  favorites: sidebarSections.value.favorites,
+  recent: sidebarSections.value.recent,
+  snippets: sidebarSections.value.snippets
+}));
+const hasVisibleShelfPanel = computed(() =>
+  Object.values(visibleShelfPanels.value).some(Boolean)
+);
+const showOrganizationMenu = computed(() => loggedIn.value && activeWorkspaceMode.value === "assets");
+const showSidebarSearchButton = computed(() => showOrganizationMenu.value && showAssetSection.value);
 
 const shouldShowOrganizationSelector = computed(() => {
   if (!loggedIn.value) return false;
 
   return currentUser.value?.xpackLicenseValid !== false;
+});
+
+function updateSidebarSection(section: SidebarSectionKey, visible: boolean) {
+  if (!visible && visibleSectionCount.value <= 1) {
+    useToast().add({
+      title: t("Sidebar.AtLeastOneSection"),
+      color: "warning",
+      icon: "i-lucide-circle-alert"
+    });
+    return;
+  }
+
+  setSidebarSections({
+    [section]: visible
+  });
+}
+
+const organizationMenuItems = computed<DropdownMenuItem[][]>(() => [
+  SIDEBAR_SECTION_KEYS.map((key) => ({
+    label: sidebarSectionLabels.value[key],
+    type: "checkbox" as const,
+    checked: sidebarSections.value[key],
+    disabled: sidebarSections.value[key] && visibleSectionCount.value <= 1,
+    onUpdateChecked: (checked: boolean) => {
+      if (checked === sidebarSections.value[key]) return;
+      updateSidebarSection(key, checked);
+    }
+  }))
+]);
+
+watch(showAssetSection, (visible) => {
+  if (!visible) showAssetSearch.value = false;
 });
 
 const sideBarItems = computed<NavigationMenuItem[]>(() => {
@@ -337,7 +395,7 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
           <HeaderOrganizationSelector />
         </div>
 
-        <UTooltip :text="t('Operation.Search')" :delay-duration="150">
+        <UTooltip v-if="showSidebarSearchButton" :text="t('Operation.Search')" :delay-duration="150">
           <UButton
             color="neutral"
             variant="ghost"
@@ -349,6 +407,25 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
             @click="showAssetSearch = !showAssetSearch"
           />
         </UTooltip>
+
+        <UDropdownMenu
+          v-if="showOrganizationMenu"
+          :items="organizationMenuItems"
+          :content="{ align: 'start', side: 'right', sideOffset: 6 }"
+          :ui="{
+            content: 'w-36 p-1',
+            item: 'mx-0 px-2 py-1 rounded-md text-[11px] leading-4 transition-colors duration-150'
+          }"
+        >
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            icon="i-lucide-ellipsis"
+            :aria-label="t('Sidebar.ManageSections')"
+            class="size-6 shrink-0 justify-center rounded-lg p-0 text-gray-500 dark:text-gray-400"
+          />
+        </UDropdownMenu>
       </div>
     </div>
 
@@ -376,6 +453,7 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
     <div v-else-if="loggedIn" class="relative flex min-h-0 flex-1 flex-col">
       <div v-show="!showAssetSearch" class="flex min-h-0 flex-1 flex-col">
         <SideBarAssetTree
+          v-if="showAssetSection"
           search=""
           :open="assetTreeOpen"
           @select="handleAssetConnect"
@@ -383,7 +461,9 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
           @toggle="assetTreeOpen = !assetTreeOpen"
         />
         <SideBarBottomPanels
+          v-if="hasVisibleShelfPanel"
           :main-panel-open="assetTreeOpen"
+          :visible-panels="visibleShelfPanels"
           @select="handleAssetConnect"
           @contextmenu="handleAssetContextMenu"
         />
@@ -394,7 +474,7 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
         class="absolute inset-0 z-10 flex min-h-0 flex-col"
         :style="{ backgroundColor: contentBackgroundColor }"
       >
-        <div class="border-b border-[color:var(--sidebar-divider-light)] px-3 py-2 dark:border-[color:var(--sidebar-divider-dark)]">
+        <div class="border-b border-[color:var(--sidebar-divider-light)] px-3 py-1.5 dark:border-[color:var(--sidebar-divider-dark)]">
           <UInput
             v-model="sidebarSearch"
             size="sm"
@@ -407,14 +487,14 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
             :placeholder="t('Operation.Search')"
             class="search-input w-full rounded-xl"
             :ui="{
-              base: 'h-8 rounded-xl bg-white/55 px-1 text-[12px] ring-1 ring-inset ring-black/6 dark:bg-white/6 dark:ring-white/10 focus-visible:ring-primary/35 placeholder:text-gray-400 dark:placeholder:text-gray-500'
+              base: 'h-7 rounded-xl bg-white/55 px-1 text-[12px] ring-1 ring-inset ring-black/6 dark:bg-white/6 dark:ring-white/10 focus-visible:ring-primary/35 placeholder:text-gray-400 dark:placeholder:text-gray-500'
             }"
           >
             <template v-if="sidebarSearch?.length" #trailing>
               <UButton
                 color="neutral"
                 variant="link"
-                size="sm"
+                size="xs"
                 icon="i-lucide-circle-x"
                 aria-label="Clear input"
                 @click="sidebarSearch = ''"

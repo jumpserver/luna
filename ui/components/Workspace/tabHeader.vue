@@ -137,7 +137,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
     <UTooltip v-if="hasLeftHidden" text="上一个标签" :delay-duration="150">
       <button
         type="button"
-        class="workspace-tab-overflow flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-black/[0.06] disabled:cursor-default disabled:opacity-40 dark:hover:bg-white/[0.1]"
+        class="workspace-tab-overflow flex size-5 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-black/[0.06] disabled:cursor-default disabled:opacity-40 dark:hover:bg-white/[0.1]"
         :disabled="!canSwitchTabs || !hasLeftHidden"
         aria-label="上一个标签"
         @click="switchTab('previous')"
@@ -146,22 +146,23 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       </button>
     </UTooltip>
 
-    <div class="workspace-tab-capsule flex w-fit min-w-0 max-w-full items-center rounded-xl p-0.5">
+    <div class="workspace-tab-capsule flex w-fit min-w-0 max-w-full items-center rounded-lg p-px">
       <div
         ref="tabStripRef"
         class="workspace-tab-strip flex w-fit min-w-0 max-w-full items-center gap-0.5 overflow-x-auto"
       >
         <button
-          v-for="tab in tabs"
+          v-for="(tab, index) in tabs"
           :key="tab.id"
           :data-tab-id="tab.id"
           type="button"
-          class="group relative flex h-7 max-w-48 min-w-0 shrink-0 items-center gap-1.5 rounded-[10px] px-2.5 text-left transition-colors"
-          :class="
+          class="group relative flex h-6 min-w-0 shrink-0 items-center gap-1 rounded-lg px-2 text-left transition-all duration-150"
+          :class="[
+            activeTabId === tab.id ? 'max-w-80 px-2.5' : 'max-w-40',
             activeTabId === tab.id
-              ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5 dark:bg-white/16 dark:text-gray-100 dark:ring-white/10'
-              : 'text-gray-600 hover:bg-black/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.08]'
-          "
+              ? 'bg-white/38 text-gray-900 shadow-[0_4px_14px_rgba(255,255,255,0.12)] ring-1 ring-white/42 backdrop-blur-md supports-[backdrop-filter]:bg-white/28 dark:bg-white/[0.09] dark:text-white dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] dark:ring-white/10 dark:supports-[backdrop-filter]:bg-white/[0.07]'
+              : 'text-gray-500/92 hover:bg-white/18 hover:text-gray-700 dark:text-white/45 dark:hover:bg-white/[0.05] dark:hover:text-white/72'
+          ]"
           @click.stop="selectTab(tab.id)"
         >
           <span
@@ -176,14 +177,30 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
                     : 'bg-gray-400 dark:bg-gray-500'
             "
           />
-          <span class="min-w-0 truncate font-ui-mono text-[11px] tracking-[0.01em]">{{ tab.assetName }}</span>
           <span
-            class="flex size-4 shrink-0 items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-black/10 group-hover:opacity-100 dark:hover:bg-white/10"
+            v-if="activeTabId === tab.id"
+            class="flex min-w-0 items-center gap-1.5 truncate font-ui-mono text-[11px] tracking-[0.01em]"
+          >
+            <span class="shrink-0 truncate font-medium">{{ tab.assetName }}</span>
+            <span
+              v-if="tab.address && tab.address !== '-'"
+              class="min-w-0 truncate text-[10px] text-gray-500 dark:text-white/55"
+            >
+              {{ tab.address }}
+            </span>
+          </span>
+          <span v-else class="min-w-0 truncate font-ui-mono text-[11px] tracking-[0.01em]">{{ tab.assetName }}</span>
+          <span
+            class="flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-black/10 group-hover:opacity-100 dark:hover:bg-white/10"
             :class="activeTabId === tab.id ? 'opacity-60' : ''"
             @click.stop="closeSession(tab.id)"
           >
             <UIcon name="i-lucide-x" class="size-2.5" />
           </span>
+          <span
+            v-if="activeTabId !== tab.id && index < tabs.length - 1"
+            class="pointer-events-none absolute top-1/2 -right-[3px] h-3 -translate-y-1/2 border-r border-black/8 dark:border-white/10"
+          />
         </button>
       </div>
     </div>
@@ -191,7 +208,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
     <UTooltip v-if="hasRightHidden" text="下一个标签" :delay-duration="150">
       <button
         type="button"
-        class="workspace-tab-overflow flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-black/[0.06] disabled:cursor-default disabled:opacity-40 dark:hover:bg-white/[0.1]"
+        class="workspace-tab-overflow flex size-5 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-black/[0.06] disabled:cursor-default disabled:opacity-40 dark:hover:bg-white/[0.1]"
         :disabled="!canSwitchTabs || !hasRightHidden"
         aria-label="下一个标签"
         @click="switchTab('next')"
@@ -212,7 +229,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
     >
       <button
         type="button"
-        class="workspace-tab-overflow flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-black/[0.06] dark:hover:bg-white/[0.1]"
+        class="workspace-tab-overflow flex size-5 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-black/[0.06] dark:hover:bg-white/[0.1]"
         aria-label="切换终端标签"
       >
         <UIcon name="i-lucide-ellipsis" class="size-3.5 text-gray-500 dark:text-gray-400" />

@@ -1,8 +1,9 @@
 import type { UserSettingPersistedState } from "~/composables/useSettingStorage";
-import type { AppConfigType, CharsetType, LanguagePreference, LayoutsType, ResolutionType, SortType, ThemeType } from "~/types";
+import type { AppConfigType, CharsetType, LanguagePreference, LayoutsType, ResolutionType, SidebarSectionVisibility, SortType, ThemeType } from "~/types";
 
 import { createBatchedPersist } from "~/composables/createBatchedPersist";
 import { useSettingStorage } from "~/composables/useSettingStorage";
+import { DEFAULT_SIDEBAR_SECTIONS, normalizeSidebarSections } from "~/composables/useSidebarSections";
 
 const storage = useSettingStorage();
 
@@ -230,6 +231,19 @@ export const useSettingManager = () => {
     persist({ recentSites: state.recentSites });
   };
 
+  const setSidebarSections = (sections: Partial<SidebarSectionVisibility>) => {
+    state.sidebarSections = normalizeSidebarSections({
+      ...state.sidebarSections,
+      ...sections
+    });
+    persist({ sidebarSections: state.sidebarSections });
+  };
+
+  const resetSidebarSections = () => {
+    state.sidebarSections = { ...DEFAULT_SIDEBAR_SECTIONS };
+    persist({ sidebarSections: state.sidebarSections });
+  };
+
   return {
     ...toRefs(state),
 
@@ -254,6 +268,8 @@ export const useSettingManager = () => {
     setRdpClientOptionPreference,
     setRdpColorQualityPreference,
     setRdpSmartSizePreference,
-    setRecentSites
+    setRecentSites,
+    setSidebarSections,
+    resetSidebarSections
   };
 };

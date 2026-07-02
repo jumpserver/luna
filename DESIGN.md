@@ -26,6 +26,12 @@ This document defines a unification plan: protocol handling converges into `koko
 - preserve the desktop shell advantages: local app launch, system integration, native packaging
 - reduce duplicate logic across `clients`, `luna`, and `koko`
 
+## UI Rules
+
+- dropdown, popover, and modal typography should stay aligned with the page's primary text size instead of appearing larger than the surrounding UI
+- menus should prefer compact vertical spacing by default so utility operations feel lightweight and scan quickly
+- toolbar overflow actions should sit adjacent to the control they extend; for example, a section-management `...` belongs next to search when it configures the same header area
+
 ## Non-Goals
 
 - rewrite all of `koko` frontend pages in one step

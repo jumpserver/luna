@@ -67,7 +67,13 @@ export default defineAppConfig({
     dropdownMenu: {
       slots: {
         content: "w-(--reka-dropdown-menu-trigger-width) p-1",
-        item: "mx-0.5 px-3 py-2 rounded-md transition-colors duration-150"
+        item: "mx-0.5 px-3 py-1.5 rounded-md text-sm leading-5 transition-colors duration-150"
+      }
+    },
+    modal: {
+      slots: {
+        title: "text-sm leading-5",
+        description: "text-sm leading-5 text-toned"
       }
     },
     navigationMenu: {

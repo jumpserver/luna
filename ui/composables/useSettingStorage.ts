@@ -1,6 +1,7 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { Store } from "@tauri-apps/plugin-store";
-import type { AppConfigType, CharsetType, LanguagePreference, ResolutionType, SortType } from "~/types";
+import type { AppConfigType, CharsetType, LanguagePreference, ResolutionType, SidebarSectionVisibility, SortType } from "~/types";
+import { DEFAULT_SIDEBAR_SECTIONS, normalizeSidebarSections } from "~/composables/useSidebarSections";
 
 export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
@@ -26,6 +27,7 @@ export interface UserSettingPersistedState {
   rdpColorQuality: string
   rdpSmartSize: string
   recentSites: string[]
+  sidebarSections: SidebarSectionVisibility
 }
 
 const STORE_PATH = "user-setting.json";
@@ -52,7 +54,8 @@ const DEFAULT_STATE: UserSettingPersistedState = {
   rdpClientOption: [],
   rdpColorQuality: "32",
   rdpSmartSize: "0",
-  recentSites: []
+  recentSites: [],
+  sidebarSections: DEFAULT_SIDEBAR_SECTIONS
 };
 
 let storeInstance: Store | null = null;
@@ -64,7 +67,11 @@ const loadWebState = () => {
   try {
     const raw = globalThis.localStorage?.getItem(WEB_STORE_KEY);
     if (!raw) return DEFAULT_STATE;
-    return { ...DEFAULT_STATE, ...(JSON.parse(raw) as Partial<UserSettingPersistedState>) };
+    const parsed = { ...DEFAULT_STATE, ...(JSON.parse(raw) as Partial<UserSettingPersistedState>) };
+    return {
+      ...parsed,
+      sidebarSections: normalizeSidebarSections(parsed.sidebarSections)
+    };
   } catch {
     return DEFAULT_STATE;
   }
@@ -99,7 +106,11 @@ export const useSettingStorage = () => {
 
     const store = await ensureStore();
     const saved = (await store.get<UserSettingPersistedState>(STORE_KEY)) || DEFAULT_STATE;
-    return { ...DEFAULT_STATE, ...saved };
+    return {
+      ...DEFAULT_STATE,
+      ...saved,
+      sidebarSections: normalizeSidebarSections(saved.sidebarSections)
+    };
   };
 
   const save = async (next: UserSettingPersistedState) => {
@@ -143,7 +154,11 @@ export const useSettingStorage = () => {
     const store = await ensureStore();
     return store.onChange((key, value) => {
       if (key === STORE_KEY && value) {
-        cb({ ...DEFAULT_STATE, ...(value as UserSettingPersistedState) });
+        const next = { ...DEFAULT_STATE, ...(value as UserSettingPersistedState) };
+        cb({
+          ...next,
+          sidebarSections: normalizeSidebarSections(next.sidebarSections)
+        });
       }
     });
   };

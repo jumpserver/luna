@@ -72,7 +72,7 @@ const handleContextMenu = async (e: Event) => {
         confirmFullWidth ? 'block' : 'justify-end',
         compact ? 'pt-2 sm:pt-2' : ''
       ].filter(Boolean).join(' '),
-      description: 'text-xs-plus'
+      description: 'text-sm leading-5'
     }"
     :description="description"
     :title="title"

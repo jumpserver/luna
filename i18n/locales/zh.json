@@ -82,6 +82,11 @@
   "Operation": {
     "Search": "搜索"
   },
+  "Sidebar": {
+    "ManageSections": "管理栏目",
+    "ShowSection": "显示{section}",
+    "AtLeastOneSection": "至少保留一个栏目"
+  },
   "Transcode": {
     "Title": "录像转码",
     "Description": "选择一个或多个录像压缩文件（.tar），将录像转换为 mp4 格式。",
