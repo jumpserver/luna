@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import type { NavigationMenuItem } from "@nuxt/ui";
-
-const localePath = useLocalePath();
-
+const route = useRoute();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
+
+const isEmbedded = computed(() => {
+  if (route.query.embedded === "1") return true;
+  return import.meta.client && window.self !== window.top;
+});
+const showWindowControls = computed(() => isTauriRuntime() && !isEmbedded.value);
 const { theme } = useSettingManager();
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 
@@ -44,6 +47,7 @@ const windowControlButtons = computed(() => {
 });
 
 const windowControlRailClass = computed(() => {
+  if (!showWindowControls.value) return "w-0";
   return isMacOS.value ? "w-0" : "w-36";
 });
 
@@ -62,31 +66,6 @@ const getWindowControlButtonClass = (buttonKey: string) => {
   }
 };
 
-const settingMenu = computed<NavigationMenuItem[]>(() => {
-  return [
-    {
-      label: t("Common.General"),
-      icon: "solar:settings-linear",
-      to: localePath({ name: "setting-general" })
-    },
-    {
-      label: t("Common.Appearance"),
-      icon: "solar:palette-linear",
-      to: localePath({ name: "setting-appearance" })
-    },
-    {
-      label: t("Common.OpenWith"),
-      icon: "tabler:toggle-right",
-      to: localePath({ name: "setting-application" })
-    },
-    {
-      label: t("Common.About"),
-      icon: "i-lucide-info",
-      to: localePath({ name: "setting-about" })
-    }
-  ];
-});
-
 onMounted(() => {
   initialTheme();
   listenOSThemeChange();
@@ -95,7 +74,7 @@ onMounted(() => {
 
 <template>
   <UPage
-    class="h-screen flex flex-col"
+    :class="isEmbedded ? 'h-full min-h-0 flex flex-col' : 'h-screen flex flex-col'"
     :ui="{
       center: 'flex flex-col h-full min-h-0'
     }"
@@ -115,7 +94,7 @@ onMounted(() => {
           右侧窗口按钮区域单独恢复 pointer-events-auto，并且整块都标记 data-tauri-drag-region="false"，确保按钮区域不会触发拖拽事件
         -->
         <div class="header-bg relative h-10 px-4">
-          <div data-tauri-drag-region class="absolute inset-0 z-0" />
+          <div v-if="!isEmbedded" data-tauri-drag-region class="absolute inset-0 z-0" />
 
           <div class="relative z-10 flex h-full items-center pointer-events-none">
             <div aria-hidden="true" :class="windowControlRailClass" />
@@ -131,7 +110,7 @@ onMounted(() => {
               :class="windowControlRailClass"
               data-tauri-drag-region="false"
             >
-              <template v-if="!isMacOS">
+              <template v-if="showWindowControls && !isMacOS">
                 <template v-for="button of windowControlButtons" :key="button.key">
                   <UButton
                     :icon="button.iconName"
@@ -150,35 +129,9 @@ onMounted(() => {
     </UPageHeader>
 
     <UPageBody class="mt-0 pb-0 flex-1 min-h-0 h-full overflow-y-auto">
-      <div class="flex gap-0 w-full h-full min-h-0">
-        <div
-          class="menu setting-menu shrink-0"
-          :style="{
-            backgroundColor: theme === 'dark' ? '#222' : '#F5F5F7'
-          }"
-        >
-          <UNavigationMenu
-            :items="settingMenu"
-            :highlight="false"
-            :ui="{
-              list: 'p-2',
-              link: 'px-2 my-1 rounded-sm menu-item flex items-center light:text-gray-800 dark:text-gray-200',
-              linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200'
-            }"
-            color="neutral"
-            orientation="vertical"
-            class="w-40"
-          />
-        </div>
-
-        <UCard
-          class="flex-1 min-w-0 h-full rounded-none overflow-y-auto"
-          variant="outline"
-          :ui="{ body: 'sm:p-0 h-full p-0' }"
-        >
-          <slot />
-        </UCard>
-      </div>
+      <SettingsPanel :embedded="isEmbedded">
+        <slot />
+      </SettingsPanel>
     </UPageBody>
   </UPage>
 </template>

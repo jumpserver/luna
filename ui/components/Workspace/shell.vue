@@ -1,7 +1,9 @@
 <script setup lang="ts">
 const { collapse } = useSettingManager();
 const { sidebarWidth, setSidebarWidth } = useSidebarLayout();
+const { open: rightPanelOpen, panelWidth: rightPanelWidth, setPanelWidth } = useRightPanel();
 const isResizing = ref(false);
+const isRightResizing = ref(false);
 let resizeStartX = 0;
 let resizeStartWidth = 0;
 
@@ -31,7 +33,36 @@ const startResizing = (event: PointerEvent) => {
   window.addEventListener("pointerup", stopResizing);
 };
 
-onBeforeUnmount(stopResizing);
+const handleRightResize = (event: PointerEvent) => {
+  if (!isRightResizing.value) return;
+  setPanelWidth(resizeStartWidth - (event.clientX - resizeStartX));
+};
+
+const stopRightResizing = () => {
+  if (!isRightResizing.value) return;
+  isRightResizing.value = false;
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
+  window.removeEventListener("pointermove", handleRightResize);
+  window.removeEventListener("pointerup", stopRightResizing);
+};
+
+const startRightResizing = (event: PointerEvent) => {
+  if (event.button !== 0 || !rightPanelOpen.value) return;
+  event.preventDefault();
+  isRightResizing.value = true;
+  resizeStartX = event.clientX;
+  resizeStartWidth = rightPanelWidth.value;
+  document.body.style.cursor = "col-resize";
+  document.body.style.userSelect = "none";
+  window.addEventListener("pointermove", handleRightResize);
+  window.addEventListener("pointerup", stopRightResizing);
+};
+
+onBeforeUnmount(() => {
+  stopResizing();
+  stopRightResizing();
+});
 </script>
 
 <template>
@@ -61,6 +92,25 @@ onBeforeUnmount(stopResizing);
       <main class="workspace-shell__main min-w-0 flex-1 min-h-0">
         <slot />
       </main>
+
+      <aside
+        v-if="$slots.rightPanel"
+        class="workspace-shell__right-panel relative min-h-0 shrink-0 overflow-hidden"
+        :class="isRightResizing ? '' : 'transition-[width] duration-200'"
+        :style="{ width: rightPanelOpen ? `${rightPanelWidth}px` : '0px' }"
+      >
+        <div v-if="rightPanelOpen" class="h-full min-h-0">
+          <slot name="rightPanel" />
+        </div>
+        <div
+          v-if="rightPanelOpen"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="调整右侧面板宽度"
+          class="absolute inset-y-0 -left-0.5 z-30 w-1 cursor-col-resize"
+          @pointerdown="startRightResizing"
+        />
+      </aside>
     </div>
 
     <div v-if="$slots.footer" class="workspace-shell__footer shrink-0">

@@ -102,6 +102,9 @@ importers:
       '@iconify-json/cuida':
         specifier: ^1.2.5
         version: 1.2.5
+      '@iconify-json/flat-color-icons':
+        specifier: ^1.2.3
+        version: 1.2.3
       '@iconify-json/fluent':
         specifier: ^1.2.48
         version: 1.2.48
@@ -1104,6 +1107,9 @@ packages:
 
   '@iconify-json/cuida@1.2.5':
     resolution: {integrity: sha512-+LCnHk53WIw9uTcskDT5Kpjwj8wEEI1YLNeX/yLdksQAt8VOOcIeZnRMmW0drnu8GK8SFw6IXu7CZdx7Kqnwqw==}
+
+  '@iconify-json/flat-color-icons@1.2.3':
+    resolution: {integrity: sha512-KcmJ7CY0TKFv5GuBjiS4/v++jEcNXna1jfY+yq014tnw/MN/jMI2oYpoMHGuIpYtUqDu7eove+WySnOYO8nS3w==}
 
   '@iconify-json/fluent@1.2.48':
     resolution: {integrity: sha512-tSY++n/ORNg8navw+l//4r893HggokmIfirXUMEw2b0o6eFx0RfEbhnxmWZ3jmaUPnf19Ahcxlg7kS68AvumJA==}
@@ -7874,6 +7880,10 @@ snapshots:
       '@iconify/types': 2.0.0
 
   '@iconify-json/cuida@1.2.5':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/flat-color-icons@1.2.3':
     dependencies:
       '@iconify/types': 2.0.0
 

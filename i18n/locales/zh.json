@@ -77,7 +77,12 @@
   },
   "Tree": {
     "SwitchToType": "切换到类型树",
-    "SwitchToAuthorization": "切换到我的资产"
+    "SwitchToAuthorization": "切换到我的资产",
+    "OpenMultiple": "打开多个",
+    "OpenSelected": "打开已选",
+    "SelectedCount": "已选 {count} 个",
+    "MultiOpenNoConnectable": "没有可直接打开的资产，请先为资产保存 SSH 连接配置",
+    "MultiOpenSkipped": "已跳过 {count} 个未保存 SSH 连接配置的资产"
   },
   "Operation": {
     "Search": "搜索"
@@ -86,6 +91,34 @@
     "ManageSections": "管理栏目",
     "ShowSection": "显示{section}",
     "AtLeastOneSection": "至少保留一个栏目"
+  },
+  "RightPanel": {
+    "Open": "打开右侧面板",
+    "Close": "关闭右侧面板",
+    "AI": "AI",
+    "SFTP": "SFTP",
+    "BatchCommand": "批量命令",
+    "AIEmptyTitle": "AI 助手",
+    "AIEmptyDescription": "输入问题，获取运维建议与命令辅助。",
+    "AIInputPlaceholder": "描述你的问题或想执行的运维任务…",
+    "AISend": "发送",
+    "AIPlaceholderReply": "AI 能力接入中。当前可先使用右侧 SFTP 与批量命令面板。",
+    "SFTPSearchPlaceholder": "搜索要传输文件的资产…",
+    "SFTPEmptyTitle": "选择 SFTP 资产",
+    "SFTPEmptyDescription": "搜索资产，或复用当前活动终端对应主机。",
+    "UseActiveAsset": "使用当前",
+    "OpenSFTP": "打开 SFTP",
+    "BatchSearchPlaceholder": "搜索并添加批量执行主机…",
+    "BatchSelectedCount": "已选 {count} 台主机",
+    "BatchClear": "清空",
+    "BatchCommandPlaceholder": "输入要在各主机执行的命令…",
+    "BatchExecute": "批量连接并执行",
+    "BatchEmptyTitle": "添加批量执行主机",
+    "BatchEmptyDescription": "搜索添加主机，或从左侧资产树批量选择后发送到这里。",
+    "BatchUnsupportedAsset": "该资产暂不支持内置 SSH 批量连接",
+    "BatchStartedTitle": "批量任务已开始",
+    "BatchStartedDescription": "已为 {count} 台主机建立连接。",
+    "BatchStartedWithCommand": "已为 {count} 台主机建立连接，请在各终端执行：{command}"
   },
   "Transcode": {
     "Title": "录像转码",
@@ -182,6 +215,7 @@
     "QuickConnect": "快速连接",
     "Connect": "连接",
     "MoreConnect": "更多连接",
+    "OpenInNewWindow": "新窗口打开",
     "Rename": "重命名",
     "Use": "使用",
     "Favorite": "收藏",

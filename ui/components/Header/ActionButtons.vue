@@ -62,10 +62,15 @@ const getWindowControlButtonClass = (buttonKey: string) => {
   }
 };
 
-const openSettingsWindow = async () => {
-  if (!isTauriRuntime()) return;
+const { openSettings, warmupWebSettings } = useSettingsWindow();
 
-  await useTauriCoreInvoke("open_settings_window");
+const openSettingsWindow = async () => {
+  if (isTauriRuntime()) {
+    await useTauriCoreInvoke("open_settings_window");
+    return;
+  }
+
+  openSettings();
 };
 
 const isDarkMode = computed(() => userTheme.value === "dark");
@@ -73,6 +78,8 @@ const isDarkMode = computed(() => userTheme.value === "dark");
 const toggleThemeMode = () => {
   manualSetTheme(isDarkMode.value ? "light" : "dark");
 };
+
+const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 </script>
 
 <template>
@@ -93,10 +100,19 @@ const toggleThemeMode = () => {
         icon="i-lucide-settings"
         :title="t('ToolTips.Settings')"
         v-bind="commonButtonProps"
+        @mouseenter="warmupWebSettings"
+        @focus="warmupWebSettings"
         @click="openSettingsWindow"
       />
 
       <Profile placement="topbar" />
+
+      <UButton
+        :icon="rightPanelOpen ? 'i-lucide-panel-right-close' : 'i-lucide-panel-right'"
+        :title="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')"
+        v-bind="commonButtonProps"
+        @click="toggleRightPanel"
+      />
     </div>
 
     <!-- 窗口控制按钮 -->

@@ -9,6 +9,7 @@ const route = useRoute();
 const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
 const { registerSessionDisposer } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
+const { consumeWindowAssetPayload } = useAssetWindowLauncher();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 
@@ -32,6 +33,8 @@ const cardUi = computed(() => {
 onMounted(() => {
   initialTheme();
   listenOSThemeChange();
+  warmupWebSettings();
+  preloadSettingsModal();
   if (isTauriRuntime()) {
     registerSessionDisposer((id: string) =>
       useTauriCoreInvoke("builtin_session_close", {
@@ -62,6 +65,15 @@ watch(
   },
   { immediate: true }
 );
+
+watch(
+  () => [loggedIn.value, route.query.asset_window_payload] as const,
+  async ([isLoggedIn, payload]) => {
+    if (!isLoggedIn || typeof payload !== "string" || !payload) return;
+    await consumeWindowAssetPayload(payload);
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
@@ -70,6 +82,8 @@ watch(
     :ui="cardUi"
     style="background-color: transparent"
   >
+    <SettingsModal v-if="!isTauriRuntime()" />
+
     <WorkspaceShell>
       <template #header>
         <Header />
@@ -83,6 +97,10 @@ watch(
         <WorkspaceTerminalArea v-if="activeWorkspaceMode === 'assets'" />
         <slot v-else />
       </Main>
+
+      <template #rightPanel>
+        <RightPanel />
+      </template>
 
       <template #footer>
         <WorkspaceStatusFooter />

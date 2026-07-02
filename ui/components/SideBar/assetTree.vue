@@ -11,6 +11,7 @@ const emit = defineEmits<{
   select: [asset: AssetItem]
   contextmenu: [asset: AssetItem, event: MouseEvent]
   toggle: []
+  openMultiple: [assets: AssetItem[]]
 }>();
 
 type PanelKind = Exclude<AssetTreeKind, "search">;
@@ -26,6 +27,9 @@ const typeNodes = ref<AssetTreeNode[]>([]);
 const searchNodes = ref<AssetTreeNode[]>([]);
 const loading = ref(false);
 const searchLoading = ref(false);
+const batchMode = ref(false);
+const checkedAssets = ref<Record<string, AssetItem>>({});
+const checkedNodeIds = ref<string[]>([]);
 
 const activeTree = computed(() => activeTreeKind.value === "authorization"
   ? { label: t("Menu.AuthorizedTree"), nodes: authorizationNodes.value }
@@ -34,6 +38,16 @@ const activeTree = computed(() => activeTreeKind.value === "authorization"
 const treeSwitchLabel = computed(() => activeTreeKind.value === "authorization"
   ? t("Tree.SwitchToType")
   : t("Tree.SwitchToAuthorization"));
+const checkedCount = computed(() => Object.keys(checkedAssets.value).length);
+const batchMenuItems = computed(() => [[{
+  label: t("Tree.OpenMultiple"),
+  icon: "i-lucide-list-checks",
+  onSelect: () => {
+    batchMode.value = true;
+    checkedAssets.value = {};
+    checkedNodeIds.value = [];
+  }
+}]]);
 
 const resetTreeLevels = (nodes: AssetTreeNode[], level = 0) => {
   for (const node of nodes) {
@@ -81,11 +95,16 @@ const loadRoot = async (kind: PanelKind) => {
 
 const refresh = async () => {
   searchNodes.value = [];
+  checkedAssets.value = {};
+  checkedNodeIds.value = [];
   await Promise.all([loadRoot("authorization"), loadRoot("type")]);
 };
 
 const switchTreeKind = () => {
   activeTreeKind.value = activeTreeKind.value === "authorization" ? "type" : "authorization";
+  checkedAssets.value = {};
+  checkedNodeIds.value = [];
+  batchMode.value = false;
 };
 
 const toggleNode = async (node: AssetTreeNode, kind: PanelKind) => {
@@ -114,6 +133,37 @@ const selectNode = (node: AssetTreeNode) => {
   emit("select", treeNodeToAsset(node));
 };
 
+const toggleCheckedNode = (node: AssetTreeNode) => {
+  if (node.chkDisabled || node.isParent) return;
+
+  const asset = treeNodeToAsset(node);
+  const next = { ...checkedAssets.value };
+  const nextNodeIds = new Set(checkedNodeIds.value);
+
+  if (next[asset.id]) delete next[asset.id];
+  else next[asset.id] = asset;
+
+  if (nextNodeIds.has(node.id)) nextNodeIds.delete(node.id);
+  else nextNodeIds.add(node.id);
+
+  checkedAssets.value = next;
+  checkedNodeIds.value = [...nextNodeIds];
+};
+
+const closeBatchMode = () => {
+  batchMode.value = false;
+  checkedAssets.value = {};
+  checkedNodeIds.value = [];
+};
+
+const openCheckedAssets = () => {
+  const assets = Object.values(checkedAssets.value);
+  if (assets.length === 0) return;
+
+  emit("openMultiple", assets);
+  closeBatchMode();
+};
+
 const openContextMenu = (node: AssetTreeNode, event: MouseEvent) => {
   if (node.isParent || node.chkDisabled) return;
   emit("contextmenu", treeNodeToAsset(node), event);
@@ -135,6 +185,9 @@ const searchTree = useDebounceFn(async (keyword: string) => {
 }, 250);
 
 watch(() => props.search, (value) => searchTree(value));
+watch(() => props.search, (value) => {
+  if (value.trim()) closeBatchMode();
+});
 watch([loggedIn, orgId], ([isLoggedIn]) => {
   if (isLoggedIn) {
     refresh();
@@ -142,6 +195,7 @@ watch([loggedIn, orgId], ([isLoggedIn]) => {
     authorizationNodes.value = [];
     typeNodes.value = [];
     searchNodes.value = [];
+    closeBatchMode();
   }
 }, { immediate: true });
 
@@ -198,7 +252,32 @@ defineExpose({ refresh, loading });
             />
             <span class="min-w-0 flex-1 truncate">{{ activeTree.label }}</span>
           </button>
-          <div class="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+          <div
+            v-if="batchMode"
+            class="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400"
+          >
+            <span class="hidden sm:inline">{{ t("Tree.SelectedCount", { count: checkedCount }) }}</span>
+            <UButton
+              color="primary"
+              variant="soft"
+              size="xs"
+              icon="i-lucide-play"
+              :disabled="checkedCount === 0"
+              class="h-6 rounded-sm px-2"
+              :label="t('Tree.OpenSelected')"
+              @click="openCheckedAssets"
+            />
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              icon="i-lucide-x"
+              class="size-6 justify-center rounded-sm p-0"
+              :aria-label="t('Common.Cancel')"
+              @click="closeBatchMode"
+            />
+          </div>
+          <div v-else class="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
             <UTooltip :text="treeSwitchLabel" :delay-duration="150">
               <UButton
                 color="neutral"
@@ -220,6 +299,20 @@ defineExpose({ refresh, loading });
               :aria-label="t('ToolTips.Refresh')"
               @click="loadRoot(activeTreeKind)"
             />
+            <UDropdownMenu
+              :items="batchMenuItems"
+              :content="{ align: 'end', side: 'bottom', sideOffset: 6 }"
+              :ui="{ content: 'w-36 p-1' }"
+            >
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                icon="i-lucide-ellipsis"
+                class="size-6 justify-center rounded-sm p-0"
+                :aria-label="t('Tree.OpenMultiple')"
+              />
+            </UDropdownMenu>
           </div>
         </div>
 
@@ -234,9 +327,12 @@ defineExpose({ refresh, loading });
             :key="`${activeTreeKind}-${node.id}`"
             :node="node"
             :tree-kind="activeTreeKind"
+            :batch-mode="batchMode"
+            :checked-asset-ids="checkedNodeIds"
             @select="selectNode"
             @toggle="toggleNode"
             @contextmenu="openContextMenu"
+            @check="toggleCheckedNode"
           />
         </div>
       </section>

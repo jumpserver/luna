@@ -8,6 +8,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortProtocolNames } from "~/utils";
 
 const { t } = useI18n();
+const toast = useToast();
 const localePath = useLocalePath();
 const {
   collapse,
@@ -20,6 +21,7 @@ const { activeWorkspaceMode } = useWorkspaceMode();
 const showTools = computed(() => isTauriRuntime());
 const { confirmConnection, saveConnectionInfo } = useAssetConnection();
 const { openSession } = useWorkspaceTabs();
+const { openAssetInWindow } = useAssetWindowLauncher();
 const {
   displayUser,
   handleAssetConnection,
@@ -139,6 +141,41 @@ const hasSshProtocol = (asset: AssetItem) => {
   return (asset.permedProtocols || []).some((protocol) => protocol.name === "ssh");
 };
 
+const hasReusableSavedConnection = (asset: AssetItem) => {
+  const saved = asset.savedConnection;
+  if (!saved?.protocol || !saved.username) return false;
+
+  const mode = saved.accountMode || "hosted";
+  if (mode === "manual") {
+    return !!(saved.rememberSecret && saved.manualUsername && saved.manualPassword);
+  }
+  if (mode === "dynamic") {
+    return !!(saved.rememberSecret && saved.dynamicPassword);
+  }
+
+  return true;
+};
+
+const buildSavedConnectionInfo = (asset: AssetItem) => {
+  const saved = asset.savedConnection;
+  if (!saved || !hasReusableSavedConnection(asset)) return null;
+
+  return {
+    protocol: saved.protocol,
+    account: saved.username,
+    accountId: saved.accountId,
+    accountMode: (saved.accountMode as "hosted" | "dynamic" | "manual" | "anonymous") || "hosted",
+    manualUsername: saved.manualUsername || "",
+    manualPassword: saved.manualPassword || "",
+    dynamicPassword: saved.dynamicPassword || "",
+    rememberSecret: !!saved.rememberSecret,
+    rememberSelection: true,
+    connectMethod: saved.connectMethod || "",
+    connectOptions: { ...((saved as any).connectOptions || {}) },
+    availableProtocols: saved.availableProtocols || []
+  };
+};
+
 const connectWithBuiltinSsh = (asset: AssetItem, info: any) => {
   const protocol = info.protocol || asset.savedConnection?.protocol || "ssh";
   const availableProtocols = info.availableProtocols || asset.savedConnection?.availableProtocols || [];
@@ -195,6 +232,50 @@ const connectWithBuiltinSsh = (asset: AssetItem, info: any) => {
   });
 };
 
+const handleOpenMultipleAssets = (assets: AssetItem[]) => {
+  const connectable = assets.filter((asset) =>
+    hasSshProtocol(asset)
+    && asset.savedConnection?.protocol === "ssh"
+    && hasReusableSavedConnection(asset)
+  );
+
+  if (connectable.length === 0) {
+    toast.add({
+      title: t("Tree.MultiOpenNoConnectable"),
+      color: "warning",
+      icon: "i-lucide-circle-alert",
+      duration: 3000
+    });
+    return;
+  }
+
+  for (const asset of connectable) {
+    const saved = asset.savedConnection!;
+    connectWithBuiltinSsh(asset, {
+      protocol: "ssh",
+      account: saved.username,
+      accountId: saved.accountId,
+      accountMode: (saved.accountMode as any) || "hosted",
+      manualUsername: saved.manualUsername || "",
+      manualPassword: saved.manualPassword || "",
+      dynamicPassword: saved.dynamicPassword || "",
+      rememberSecret: !!saved.rememberSecret,
+      connectMethod: "builtin_client",
+      availableProtocols: saved.availableProtocols || []
+    });
+  }
+
+  const skipped = assets.length - connectable.length;
+  if (skipped > 0) {
+    toast.add({
+      title: t("Tree.MultiOpenSkipped", { count: skipped }),
+      color: "warning",
+      icon: "i-lucide-circle-alert",
+      duration: 3500
+    });
+  }
+};
+
 const handleAssetConnect = async (asset: AssetItem) => {
   if (!hasSshProtocol(asset) && asset.permedProtocols && asset.permedProtocols.length > 0) {
     useToast().add({
@@ -240,6 +321,25 @@ const handleAssetEdit = async (asset: AssetItem) => {
     const info = await connEditorRef.value!.open(asset);
     saveConnectionInfo(asset, info);
   } catch {}
+};
+
+const handleAssetOpenInNewWindow = async (asset: AssetItem) => {
+  contextMenuVisible.value = false;
+
+  let info = buildSavedConnectionInfo(asset);
+
+  if (!info) {
+    try {
+      info = await connEditorRef.value!.open(asset);
+      if (info.rememberSelection !== false) {
+        saveConnectionInfo(asset, info);
+      }
+    } catch {
+      return;
+    }
+  }
+
+  await openAssetInWindow(asset, info);
 };
 
 const resolveAssetProtocols = (asset: AssetItem) => {
@@ -354,6 +454,11 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
       children: protocolItems
     },
     {
+      label: t("ContextMenu.OpenInNewWindow"),
+      icon: "i-lucide-square-arrow-out-up-right",
+      onSelect: () => handleAssetOpenInNewWindow(asset)
+    },
+    {
       label: t("ContextMenu.Edit"),
       icon: "solar:pen-new-square-linear",
       onSelect: () => {
@@ -459,6 +564,7 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
           @select="handleAssetConnect"
           @contextmenu="handleAssetContextMenu"
           @toggle="assetTreeOpen = !assetTreeOpen"
+          @open-multiple="handleOpenMultipleAssets"
         />
         <SideBarBottomPanels
           v-if="hasVisibleShelfPanel"
@@ -514,6 +620,7 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
               }
             "
             @contextmenu="handleAssetContextMenu"
+            @open-multiple="handleOpenMultipleAssets"
           />
         </div>
 
