@@ -39,21 +39,22 @@ const handleWindowDrag = async (event: MouseEvent) => {
 
 <template>
   <div
-    class="header-bg h-10 min-h-10 max-h-10 shrink-0 flex items-center border-b border-gray-200 dark:border-white/10"
+    class="header-bg h-10 min-h-10 max-h-10 shrink-0 flex items-center border-b border-[color:var(--sidebar-divider-light)] dark:border-[color:var(--sidebar-divider-dark)]"
     @mousedown="handleWindowDrag"
   >
     <div
+      v-if="$slots.leading"
       class="h-full shrink-0 transition-[width] duration-200"
       :style="leadingAreaStyle"
     >
       <slot name="leading" />
     </div>
 
-    <div class="h-full min-w-0 flex-1 overflow-hidden">
+    <div class="h-full min-w-0 flex-1 overflow-hidden px-1.5">
       <slot />
     </div>
 
-    <div class="h-full shrink-0 flex items-center">
+    <div class="h-full shrink-0 flex items-center pl-1">
       <HeaderActionButtons />
     </div>
   </div>

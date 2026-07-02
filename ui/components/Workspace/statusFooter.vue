@@ -11,16 +11,17 @@ const connectedCount = computed(() => tabs.value.filter((tab) => tab.status === 
 const connectingCount = computed(() => tabs.value.filter((tab) => tab.status === "connecting" || tab.status === "ready").length);
 const failedCount = computed(() => tabs.value.filter((tab) => tab.status === "failed").length);
 const siteName = computed(() => currentUser.value?.site || "");
+const activeProtocol = computed(() => activeTab.value?.protocol?.toUpperCase() || "");
 const activeText = computed(() => {
   if (activeWorkspaceMode.value !== "assets") return t("Menu.Tool");
   if (!activeTab.value) return "未连接";
-  return `${activeTab.value.assetName} · ${activeTab.value.protocol.toUpperCase()}`;
+  return activeTab.value.assetName;
 });
 </script>
 
 <template>
   <footer
-    class="flex h-7 min-w-0 items-center justify-between border-t border-gray-200 bg-white/55 px-3 text-[11px] text-gray-500 backdrop-saturate-150 dark:border-white/10 dark:bg-zinc-950/40 dark:text-gray-400"
+    class="flex h-7 min-w-0 items-center justify-between border-t border-[color:var(--sidebar-divider-light)] bg-white/55 px-3 text-[11px] text-gray-500 backdrop-saturate-150 dark:border-[color:var(--sidebar-divider-dark)] dark:bg-zinc-950/40 dark:text-gray-400"
   >
     <div class="flex min-w-0 items-center gap-3">
       <span class="flex items-center gap-1.5">
@@ -37,11 +38,14 @@ const activeText = computed(() => {
     </div>
 
     <div class="flex min-w-0 items-center gap-3">
-      <span class="hidden min-w-0 truncate md:inline">{{ activeText }}</span>
-      <span>{{ tabs.length }} tabs</span>
-      <span v-if="connectedCount">{{ connectedCount }} connected</span>
-      <span v-if="connectingCount">{{ connectingCount }} pending</span>
-      <span v-if="failedCount" class="text-red-500">{{ failedCount }} failed</span>
+      <span class="hidden min-w-0 items-center gap-2 truncate md:flex">
+        <span class="truncate font-ui-mono">{{ activeText }}</span>
+        <span v-if="activeProtocol" class="rounded bg-black/[0.045] px-1.5 py-0.5 font-ui-mono text-[10px] tracking-[0.08em] text-gray-600 dark:bg-white/[0.07] dark:text-gray-300">{{ activeProtocol }}</span>
+      </span>
+      <span class="font-ui-mono">{{ tabs.length }} tabs</span>
+      <span v-if="connectedCount" class="font-ui-mono">{{ connectedCount }} connected</span>
+      <span v-if="connectingCount" class="font-ui-mono">{{ connectingCount }} pending</span>
+      <span v-if="failedCount" class="font-ui-mono text-red-500">{{ failedCount }} failed</span>
     </div>
   </footer>
 </template>

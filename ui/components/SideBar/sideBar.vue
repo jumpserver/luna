@@ -40,8 +40,8 @@ const renameDisabled = computed(() => {
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 
-watch(sidebarSearch, (value) => {
-  if (value.trim()) assetTreeOpen.value = true;
+watch(showAssetSearch, (open) => {
+  if (!open) sidebarSearch.value = "";
 });
 
 const contentBackgroundColor = computed(() =>
@@ -323,15 +323,15 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
 <template>
   <div
     class="flex h-full w-full shrink-0 overflow-hidden flex-col"
-    :class="collapse ? 'border-r-0 shadow-none' : 'border-r border-white/30 dark:border-white/10 shadow-sm'"
+    :class="collapse ? 'border-r-0 shadow-none' : 'border-r border-[color:var(--sidebar-divider-light)] dark:border-[color:var(--sidebar-divider-dark)]'"
     :style="{
       backgroundColor: contentBackgroundColor
     }"
   >
     <div class="flex flex-col w-full">
       <div
-        v-show="!collapse && activeWorkspaceMode === 'assets'"
-        class="flex items-center gap-1 border-b border-gray-200 px-3 py-1 dark:border-white/10"
+        v-show="!collapse && activeWorkspaceMode === 'assets' && loggedIn"
+        class="flex items-center gap-2 border-b border-[color:var(--sidebar-divider-light)] px-3 py-1 dark:border-[color:var(--sidebar-divider-dark)]"
       >
         <div v-if="shouldShowOrganizationSelector" class="min-w-0 flex-1">
           <HeaderOrganizationSelector />
@@ -344,45 +344,11 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
             size="sm"
             icon="i-lucide-search"
             :aria-label="t('Operation.Search')"
-            class="size-7 shrink-0 justify-center rounded-sm p-0"
-            :class="showAssetSearch || sidebarSearch ? 'bg-black/5 text-gray-900 dark:bg-white/10 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
+            class="size-6 shrink-0 justify-center rounded-lg p-0"
+            :class="showAssetSearch ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
             @click="showAssetSearch = !showAssetSearch"
           />
         </UTooltip>
-      </div>
-
-      <!-- 搜索框区域 -->
-      <div v-if="!collapse && activeWorkspaceMode === 'assets' && showAssetSearch" class="px-3 py-1">
-        <UInput
-          v-model="sidebarSearch"
-          size="sm"
-          autofocus
-          clearable
-          autocapitalize="none"
-          autocorrect="off"
-          icon="i-lucide-search"
-          variant="none"
-          :placeholder="t('Operation.Search')"
-          class="search-input rounded-sm w-full"
-          :ui="{
-            base: 'bg-white/40 dark:bg-white/5 ring-1 ring-inset ring-black/5 dark:ring-white/10 focus-visible:ring-primary/40 placeholder:text-gray-400 dark:placeholder:text-gray-500'
-          }"
-        >
-          <template v-if="sidebarSearch?.length" #trailing>
-            <UButton
-              color="neutral"
-              variant="link"
-              size="sm"
-              icon="i-lucide-circle-x"
-              aria-label="Clear input"
-              @click="
-                () => {
-                  sidebarSearch = '';
-                }
-              "
-            />
-          </template>
-        </UInput>
       </div>
     </div>
 
@@ -400,27 +366,84 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
         :collapsed="collapse"
         color="neutral"
         :ui="{
-          link: 'px-2 my-1 rounded-sm menu-item flex items-center light:text-gray-800 dark:text-gray-200',
+          link: 'px-2.5 my-1 rounded-lg menu-item flex items-center light:text-gray-800 dark:text-gray-200',
           linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200',
-          label: 'light:text-gray-500 dark:text-gray-400 pb-0 text-xs font-light'
+          label: 'light:text-gray-500 dark:text-gray-400 pb-0 text-[11px] font-medium uppercase tracking-[0.12em]'
         }"
       />
     </div>
 
-    <div v-else class="flex min-h-0 flex-1 flex-col">
-      <SideBarAssetTree
-        :search="sidebarSearch"
-        :open="assetTreeOpen"
-        @select="handleAssetConnect"
-        @contextmenu="handleAssetContextMenu"
-        @toggle="assetTreeOpen = !assetTreeOpen"
-      />
-      <SideBarBottomPanels
-        :main-panel-open="assetTreeOpen"
-        @select="handleAssetConnect"
-        @contextmenu="handleAssetContextMenu"
-      />
+    <div v-else-if="loggedIn" class="relative flex min-h-0 flex-1 flex-col">
+      <div v-show="!showAssetSearch" class="flex min-h-0 flex-1 flex-col">
+        <SideBarAssetTree
+          search=""
+          :open="assetTreeOpen"
+          @select="handleAssetConnect"
+          @contextmenu="handleAssetContextMenu"
+          @toggle="assetTreeOpen = !assetTreeOpen"
+        />
+        <SideBarBottomPanels
+          :main-panel-open="assetTreeOpen"
+          @select="handleAssetConnect"
+          @contextmenu="handleAssetContextMenu"
+        />
+      </div>
+
+      <div
+        v-show="showAssetSearch"
+        class="absolute inset-0 z-10 flex min-h-0 flex-col"
+        :style="{ backgroundColor: contentBackgroundColor }"
+      >
+        <div class="border-b border-[color:var(--sidebar-divider-light)] px-3 py-2 dark:border-[color:var(--sidebar-divider-dark)]">
+          <UInput
+            v-model="sidebarSearch"
+            size="sm"
+            autofocus
+            clearable
+            autocapitalize="none"
+            autocorrect="off"
+            icon="i-lucide-search"
+            variant="none"
+            :placeholder="t('Operation.Search')"
+            class="search-input w-full rounded-xl"
+            :ui="{
+              base: 'h-8 rounded-xl bg-white/55 px-1 text-[12px] ring-1 ring-inset ring-black/6 dark:bg-white/6 dark:ring-white/10 focus-visible:ring-primary/35 placeholder:text-gray-400 dark:placeholder:text-gray-500'
+            }"
+          >
+            <template v-if="sidebarSearch?.length" #trailing>
+              <UButton
+                color="neutral"
+                variant="link"
+                size="sm"
+                icon="i-lucide-circle-x"
+                aria-label="Clear input"
+                @click="sidebarSearch = ''"
+              />
+            </template>
+          </UInput>
+        </div>
+
+        <div v-if="sidebarSearch.trim()" class="min-h-0 flex-1">
+          <SideBarAssetTree
+            :search="sidebarSearch"
+            :open="true"
+            @select="
+              (asset) => {
+                showAssetSearch = false;
+                handleAssetConnect(asset);
+              }
+            "
+            @contextmenu="handleAssetContextMenu"
+          />
+        </div>
+
+        <div v-else class="grid min-h-0 flex-1 place-items-center px-4 text-[12px] text-gray-500 dark:text-gray-400">
+          输入名称、地址或关键字搜索资产
+        </div>
+      </div>
     </div>
+
+    <div v-else class="min-h-0 flex-1" />
 
     <ConnectionEditor ref="connEditorRef" asset-type="assets" />
 
@@ -467,11 +490,10 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
     background-color: transparent;
 
     &::before {
-      background-color: var(--bg-hover-light);
+      background-color: var(--bg-selected-light);
     }
 
-    /* opacity: 0.8; */
-    font-weight: 500;
+    font-weight: 600;
   }
 
   &:hover:not([data-active]) {
@@ -484,14 +506,14 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
     background-color: transparent;
 
     &::before {
-      background-color: rgba(255, 255, 255, 0.1);
+      background-color: var(--bg-selected-dark);
     }
 
-    font-weight: 500;
+    font-weight: 600;
   }
 
   &:hover:not([data-active]) {
-    background-color: rgba(255, 255, 255, 0.06);
+    background-color: var(--bg-hover-dark);
   }
 }
 

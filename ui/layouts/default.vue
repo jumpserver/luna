@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import WorkspaceShell from "~/components/Workspace/shell.vue";
 import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { isWindows } = usePlatform();
@@ -8,6 +9,10 @@ const route = useRoute();
 const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
 const { registerSessionDisposer } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
+const userInfoStore = useUserInfoStore();
+const { loggedIn } = storeToRefs(userInfoStore);
+
+const showWorkspaceSidebar = computed(() => activeWorkspaceMode.value !== "assets" || loggedIn.value);
 
 const cardUi = computed(() => {
   const base = ["rounded-none", "overflow-visible"];
@@ -70,7 +75,7 @@ watch(
         <Header />
       </template>
 
-      <template #sidebar>
+      <template v-if="showWorkspaceSidebar" #sidebar>
         <SideBar />
       </template>
 

@@ -27,7 +27,7 @@ const panelStyle = computed(() => props.open
 
 <template>
   <section
-    class="flex min-h-8 shrink-0 flex-col overflow-hidden border-t border-gray-200 dark:border-white/10"
+    class="group flex min-h-8 shrink-0 flex-col overflow-hidden border-t border-gray-200 dark:border-white/10"
     :style="panelStyle"
   >
     <button
@@ -42,7 +42,9 @@ const panelStyle = computed(() => props.open
         :class="open ? 'rotate-90' : ''"
       />
       <span class="min-w-0 flex-1 truncate">{{ title }}</span>
-      <slot name="actions" />
+      <div class="opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+        <slot name="actions" />
+      </div>
     </button>
 
     <div v-if="open" class="min-h-0 flex-1 overflow-y-auto">

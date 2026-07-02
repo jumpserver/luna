@@ -183,7 +183,7 @@ defineExpose({ refresh, loading });
     </template>
 
     <template v-else>
-      <section class="flex min-h-0 flex-1 flex-col overflow-hidden border-b border-gray-200 dark:border-white/10">
+      <section class="group flex min-h-0 flex-1 flex-col overflow-hidden border-b border-gray-200 dark:border-white/10">
         <div class="flex h-8 w-full shrink-0 items-center gap-1 px-3 text-xs font-medium text-gray-700 dark:text-gray-300">
           <button
             type="button"
@@ -198,27 +198,29 @@ defineExpose({ refresh, loading });
             />
             <span class="min-w-0 flex-1 truncate">{{ activeTree.label }}</span>
           </button>
-          <UTooltip :text="treeSwitchLabel" :delay-duration="150">
+          <div class="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+            <UTooltip :text="treeSwitchLabel" :delay-duration="150">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                :icon="activeTreeKind === 'authorization' ? 'i-lucide-list-tree' : 'i-lucide-shield-check'"
+                class="size-6 justify-center rounded-sm p-0"
+                :aria-label="treeSwitchLabel"
+                @click="switchTreeKind"
+              />
+            </UTooltip>
             <UButton
               color="neutral"
               variant="ghost"
               size="xs"
-              :icon="activeTreeKind === 'authorization' ? 'i-lucide-list-tree' : 'i-lucide-shield-check'"
+              icon="i-lucide-refresh-cw"
+              :loading="loading"
               class="size-6 justify-center rounded-sm p-0"
-              :aria-label="treeSwitchLabel"
-              @click="switchTreeKind"
+              :aria-label="t('ToolTips.Refresh')"
+              @click="loadRoot(activeTreeKind)"
             />
-          </UTooltip>
-          <UButton
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            icon="i-lucide-refresh-cw"
-            :loading="loading"
-            class="size-6 justify-center rounded-sm p-0"
-            :aria-label="t('ToolTips.Refresh')"
-            @click="loadRoot(activeTreeKind)"
-          />
+          </div>
         </div>
 
         <div v-if="open !== false" class="min-h-0 flex-1 overflow-y-auto py-1">

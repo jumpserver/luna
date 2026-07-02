@@ -106,11 +106,11 @@ pub struct AssetService {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct AssetTreeQuery {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(alias = "id", skip_serializing_if = "Option::is_none")]
+    pub key: Option<String>,
+    #[serde(rename = "n", alias = "name", skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "lv", alias = "level", skip_serializing_if = "Option::is_none")]
     pub level: Option<u32>,
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub asset_type: Option<String>,

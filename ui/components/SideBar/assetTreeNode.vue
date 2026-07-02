@@ -19,7 +19,7 @@ const isParent = computed(() => Boolean(props.node.isParent || props.node.childr
 const isOpen = computed(() => Boolean(props.node.open));
 
 const icon = computed(() => {
-  if (isParent.value) return isOpen.value ? "solar:folder-open-bold" : "solar:folder-with-files-bold";
+  if (isParent.value) return isOpen.value ? "i-tabler-folder-open" : "i-tabler-folder";
   const iconSkin = (props.node.iconSkin || "").toLowerCase();
   const data = props.node.meta?.data || {};
   const value = String(data.category?.value || data.category || data.type?.value || data.type || iconSkin).toLowerCase();
@@ -43,7 +43,7 @@ const activate = () => {
   <div role="treeitem" :aria-expanded="isParent ? isOpen : undefined">
     <button
       type="button"
-      class="group flex h-7 w-full cursor-pointer items-center gap-1 rounded-sm pr-1 text-left text-xs transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+      class="group flex h-7 w-full cursor-pointer items-center gap-1 rounded-lg pr-1 text-left text-xs transition-colors hover:bg-black/5 dark:hover:bg-white/10"
       :class="node.chkDisabled ? 'opacity-40' : ''"
       :style="{ paddingLeft: `${6 + (node.level || 0) * 14}px` }"
       :title="node.title || node.name"
@@ -59,7 +59,7 @@ const activate = () => {
         />
       </span>
       <UIcon :name="node.loading ? 'i-lucide-loader-circle' : icon" class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400" :class="node.loading ? 'animate-spin' : ''" />
-      <span class="min-w-0 flex-1 truncate font-medium">{{ node.name }}</span>
+      <span class="min-w-0 flex-1 truncate font-medium" :class="!isParent ? 'font-ui-mono text-[11px] tracking-[0.01em]' : ''">{{ node.name }}</span>
     </button>
 
     <div v-if="isParent && isOpen" role="group">

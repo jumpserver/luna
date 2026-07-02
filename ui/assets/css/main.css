@@ -11,6 +11,7 @@
 
 @theme {
   --font-sans: "Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SFMono-Regular", "JetBrains Mono", "Cascadia Code", "Fira Code", "Menlo", "Consolas", monospace;
   --color-secondary: var(--ui-color-secondary-500);
   --color-elevated: #1e1e20;
 }
@@ -27,10 +28,14 @@
   --app-scrollbar-thumb: rgba(107, 114, 128, 0.35);
   --app-scrollbar-thumb-hover: rgba(75, 85, 99, 0.55);
   --el-font-family: var(--font-sans);
-  --bg-hover-light: rgba(60, 60, 60, 0.1);
-  --bg-hover-dark: rgba(0, 0, 0, 0.3);
-  --bg-selected-light: rgba(209, 209, 209, 0.8);
-  --bg-selected-dark: rgba(0, 0, 0, 0.5);
+  --bg-hover-light: rgba(15, 23, 42, 0.06);
+  --bg-hover-dark: rgba(255, 255, 255, 0.08);
+  --bg-selected-light: rgba(15, 23, 42, 0.1);
+  --bg-selected-dark: rgba(255, 255, 255, 0.12);
+  --sidebar-divider-light: rgba(15, 23, 42, 0.08);
+  --sidebar-divider-dark: rgba(255, 255, 255, 0.08);
+  --sidebar-surface-light: rgba(255, 255, 255, 0.54);
+  --sidebar-surface-dark: rgba(255, 255, 255, 0.03);
 }
 
 .dark {
@@ -67,6 +72,11 @@
 
 .text-overflow-ellipsis {
   @apply text-ellipsis overflow-hidden whitespace-nowrap;
+}
+
+.font-ui-mono {
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
 }
 
 /* 全局按钮样式 */

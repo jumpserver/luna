@@ -1,7 +1,13 @@
 <script setup lang="ts">
+import { useUserInfoStore } from "~/store/modules/userInfo";
+
 const route = useRoute();
 const { t } = useI18n();
 const { activeWorkspaceMode } = useWorkspaceMode();
+const userInfoStore = useUserInfoStore();
+const { loggedIn } = storeToRefs(userInfoStore);
+
+const showSidebarChrome = computed(() => activeWorkspaceMode.value !== "assets" || loggedIn.value);
 
 const pageHeader = computed(() => {
   const path = route.path.toLowerCase();
@@ -26,7 +32,7 @@ const pageHeader = computed(() => {
 
 <template>
   <WorkspaceTopHeader>
-    <template #leading>
+    <template v-if="showSidebarChrome" #leading>
       <SideBarTopControls />
     </template>
 

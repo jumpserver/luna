@@ -84,10 +84,11 @@ const cancelRename = () => {
 
 <template>
   <UPageCard
-    class="w-full page-card hover:shadow-lg/30 hover:shadow-primary-500/50 transition-shadow duration-300 ease-out"
+    class="page-card w-full border border-black/6 bg-white/70 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-black/10 hover:shadow-lg/10 dark:border-white/10 dark:bg-white/[0.035] dark:hover:border-white/15 dark:hover:bg-white/[0.05] dark:hover:shadow-none"
     :ui="{
-      body: 'p-1 ',
-      container: 'p-0 sm:p-0 '
+      root: 'rounded-2xl shadow-sm dark:shadow-none',
+      body: 'p-1',
+      container: 'p-0 sm:p-0'
     }"
   >
     <section class="w-full p-4" @dblclick="emits('connectAsset', props.asset)" @contextmenu="handleContextMenu">
@@ -96,7 +97,7 @@ const cancelRename = () => {
           <CardAssetIcon :type="props.asset.type" size="lg" />
 
           <div class="flex-1 min-w-0 overflow-hidden w-[120px]">
-            <div v-if="!isRenaming" class="text-xs-plus font-bold truncate whitespace-nowrap">
+            <div v-if="!isRenaming" class="truncate whitespace-nowrap text-sm font-semibold tracking-[-0.01em]">
               {{ props.asset.name }}
             </div>
 
@@ -104,7 +105,7 @@ const cancelRename = () => {
               v-else
               ref="renameInputRef"
               v-model="renameValue"
-              class="text-xs-plus font-bold truncate whitespace-nowrap bg-transparent border-b border-primary focus:outline-none w-full"
+              class="w-full truncate whitespace-nowrap border-b border-primary bg-transparent text-sm font-semibold tracking-[-0.01em] focus:outline-none"
               autocapitalize="off"
               autocorrect="off"
               spellcheck="false"
@@ -116,7 +117,7 @@ const cancelRename = () => {
 
             <UTooltip arrow :text="displayAddressLine">
               <span
-                class="block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-neutral-500 dark:text-neutral-400 cursor-pointer"
+                class="font-ui-mono block max-w-full cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-[11px] tracking-[0.01em] text-neutral-500 dark:text-neutral-400"
               >
                 {{ displayAddressLine }}
               </span>
@@ -129,7 +130,7 @@ const cancelRename = () => {
             size="xs"
             color="primary"
             variant="soft"
-            class="group btn-connect px-3"
+            class="group btn-connect rounded-xl px-3.5 py-1.5 text-[11px] font-semibold shadow-sm ring-1 ring-primary/10 dark:shadow-none"
             :disabled="!props.asset.isActive"
             @click="emits('connectAsset', props.asset)"
           >

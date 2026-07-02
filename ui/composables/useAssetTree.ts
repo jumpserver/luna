@@ -2,9 +2,9 @@ import type { AssetItem, AssetTreeKind, AssetTreeNode, PermedAccount, PermedProt
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface TreeQuery {
-  id?: string
-  name?: string
-  level?: number
+  key?: string
+  n?: string
+  lv?: number
   type?: string
   category?: string
   search?: string
@@ -72,9 +72,9 @@ export const useAssetTree = () => {
     }
 
     return {
-      id: parent.key || parent.id,
-      name: parent.name,
-      level: parent.level || 0
+      key: parent.key || parent.id,
+      n: parent.name,
+      lv: parent.level || 0
     };
   };
 
