@@ -45,7 +45,7 @@ function onConfirm() {
 </script>
 
 <template>
-  <UPopover v-model:open="open">
+  <UPopover v-model:open="open" :ui="{ content: 'p-0' }">
     <UButton :label="t('Common.ChooseColor')" color="neutral" variant="outline">
       <template #leading>
         <span :style="chip" class="size-3 rounded-full" />
@@ -53,7 +53,10 @@ function onConfirm() {
     </UButton>
 
     <template #content>
-      <div class="flex flex-col items-center py-4 px-4 gap-4 rounded-lg max-w-64">
+      <div
+        class="flex max-w-64 flex-col items-center gap-4 rounded-lg px-4 py-4"
+        :style="{ backgroundColor: 'var(--app-panel-bg)', color: 'var(--app-fg)' }"
+      >
         <UColorPicker v-model="draft" class="rounded-md" />
 
         <section v-if="props.colors?.length" class="flex flex-1 flex-wrap w-full gap-2">

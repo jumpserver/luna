@@ -14,8 +14,8 @@ const ticketLoading = ref(false);
 const iframeReady = ref(false);
 const iframeSrc = ref("");
 const colorMode = useColorMode();
-const terminalThemeName = computed(() => colorMode.value === "dark" ? "OneHalfDark" : "OneHalfLight");
-const mainThemeCode = computed(() => colorMode.value === "dark" ? "darkGary" : "default");
+const terminalThemeName = computed(() => (colorMode.value === "dark" ? "OneHalfDark" : "OneHalfLight"));
+const mainThemeCode = computed(() => (colorMode.value === "dark" ? "darkGary" : "default"));
 const { activeTabId, markSessionConnected, markSessionFailed } = useWorkspaceTabs();
 const { createKokoTicket } = useWorkspaceConnectors();
 
@@ -105,7 +105,12 @@ async function ensureTicket() {
   } catch (error) {
     if (requestSeq !== ticketRequestSeq) return;
     ticketError.value = String(error);
-    markSessionFailed({ tabId: props.tab.id, assetId: props.tab.assetId, protocol: props.tab.protocol, account: props.tab.account });
+    markSessionFailed({
+      tabId: props.tab.id,
+      assetId: props.tab.assetId,
+      protocol: props.tab.protocol,
+      account: props.tab.account
+    });
   } finally {
     if (requestSeq === ticketRequestSeq) {
       ticketLoading.value = false;
@@ -153,11 +158,16 @@ defineExpose({ focus });
 
 <template>
   <div class="h-full min-h-0 w-full" @mousedown="focus">
-    <div v-if="iframeSrc" class="h-full min-h-0 w-full overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-zinc-950">
+    <div
+      v-if="iframeSrc"
+      class="h-full min-h-0 w-full overflow-hidden rounded-lg"
+      :style="{ border: '1px solid var(--app-border)', backgroundColor: 'var(--app-card-bg)' }"
+    >
       <iframe
         ref="iframeRef"
         :src="iframeSrc"
-        class="h-full w-full border-0 bg-white dark:bg-zinc-950"
+        class="h-full w-full border-0"
+        :style="{ backgroundColor: 'var(--app-main-bg)' }"
         title="Koko Connector"
         @load="handleIframeLoad"
       />
@@ -168,8 +178,12 @@ defineExpose({ focus });
       class="grid h-full min-h-0 place-items-center rounded-lg border border-dashed border-gray-300 text-sm text-gray-500 dark:border-white/10 dark:text-gray-400"
     >
       <div class="flex flex-col items-center gap-2">
-        <UIcon :name="ticketError ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'" class="size-5" :class="ticketError ? 'text-amber-500' : 'animate-spin'" />
-        <div>{{ ticketLoading ? "正在准备 Koko 连接..." : (ticketError || "正在准备 Koko 连接...") }}</div>
+        <UIcon
+          :name="ticketError ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'"
+          class="size-5"
+          :class="ticketError ? 'text-amber-500' : 'animate-spin'"
+        />
+        <div>{{ ticketLoading ? "正在准备 Koko 连接..." : ticketError || "正在准备 Koko 连接..." }}</div>
       </div>
     </div>
   </div>

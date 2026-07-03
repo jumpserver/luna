@@ -1,9 +1,19 @@
 import type { UserSettingPersistedState } from "~/composables/useSettingStorage";
-import type { AppConfigType, CharsetType, LanguagePreference, LayoutsType, ResolutionType, SidebarSectionVisibility, SortType, ThemeType } from "~/types";
+import type {
+  AppConfigType,
+  CharsetType,
+  LanguagePreference,
+  LayoutsType,
+  ResolutionType,
+  SidebarSectionVisibility,
+  SortType,
+  ThemeType
+} from "~/types";
 
 import { createBatchedPersist } from "~/composables/createBatchedPersist";
 import { useSettingStorage } from "~/composables/useSettingStorage";
 import { DEFAULT_SIDEBAR_SECTIONS, normalizeSidebarSections } from "~/composables/useSidebarSections";
+import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET, isThemePresetId } from "~/composables/useThemePresets";
 
 const storage = useSettingStorage();
 
@@ -79,6 +89,23 @@ const ensureHydration = () => {
       if (desiredFollowSystem !== state.followSystem) {
         state.followSystem = desiredFollowSystem;
         patch.followSystem = desiredFollowSystem;
+      }
+
+      const normalizedLightThemePreset = isThemePresetId(state.lightThemePreset)
+        ? state.lightThemePreset
+        : DEFAULT_LIGHT_THEME_PRESET;
+      const normalizedDarkThemePreset = isThemePresetId(state.darkThemePreset)
+        ? state.darkThemePreset
+        : DEFAULT_DARK_THEME_PRESET;
+
+      if (normalizedLightThemePreset !== state.lightThemePreset) {
+        state.lightThemePreset = normalizedLightThemePreset;
+        patch.lightThemePreset = normalizedLightThemePreset;
+      }
+
+      if (normalizedDarkThemePreset !== state.darkThemePreset) {
+        state.darkThemePreset = normalizedDarkThemePreset;
+        patch.darkThemePreset = normalizedDarkThemePreset;
       }
 
       if (Object.keys(patch).length > 0) {
@@ -161,6 +188,16 @@ export const useSettingManager = () => {
   const setPrimaryColorDark = (c: string) => {
     state.primaryColorDark = c;
     persist({ primaryColorDark: c });
+  };
+
+  const setLightThemePreset = (preset: UserSettingPersistedState["lightThemePreset"]) => {
+    state.lightThemePreset = preset;
+    persist({ lightThemePreset: preset });
+  };
+
+  const setDarkThemePreset = (preset: UserSettingPersistedState["darkThemePreset"]) => {
+    state.darkThemePreset = preset;
+    persist({ darkThemePreset: preset });
   };
 
   const setLayouts = (l: LayoutsType) => {
@@ -261,6 +298,8 @@ export const useSettingManager = () => {
     hydrationPromise,
     setPrimaryColorDark,
     setPrimaryColorLight,
+    setLightThemePreset,
+    setDarkThemePreset,
     setCharsetPreference,
     setRdpResolutionPreference,
     setBackspacePreference,

@@ -7,6 +7,7 @@ import SettingsGeneral from "~/pages/setting/general.vue";
 
 const { open, activeSection } = useSettingsWindow();
 const { t } = useI18n();
+const panelBackground = "var(--app-sidebar-bg)";
 </script>
 
 <template>
@@ -20,18 +21,20 @@ const { t } = useI18n();
     }"
   >
     <template #body>
-      <SettingsPanel
-        mode="inline"
-        embedded
-        :active-section="activeSection"
-        @update:active-section="activeSection = $event as SettingsSection"
-      >
-        <KeepAlive>
-          <SettingsGeneral v-if="activeSection === 'general'" />
-          <SettingsAppearance v-else-if="activeSection === 'appearance'" />
-          <SettingsAbout v-else />
-        </KeepAlive>
-      </SettingsPanel>
+      <div :style="{ backgroundColor: panelBackground }">
+        <SettingsPanel
+          mode="inline"
+          embedded
+          :active-section="activeSection"
+          @update:active-section="activeSection = $event as SettingsSection"
+        >
+          <KeepAlive>
+            <SettingsGeneral v-if="activeSection === 'general'" />
+            <SettingsAppearance v-else-if="activeSection === 'appearance'" />
+            <SettingsAbout v-else />
+          </KeepAlive>
+        </SettingsPanel>
+      </div>
     </template>
   </UModal>
 </template>

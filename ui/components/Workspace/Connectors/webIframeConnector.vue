@@ -36,7 +36,8 @@ defineExpose({ focus });
     <iframe
       ref="iframeRef"
       :src="iframeSrc"
-      class="h-full w-full border-0 bg-white dark:bg-zinc-950"
+      class="h-full w-full border-0"
+      :style="{ backgroundColor: 'var(--app-main-bg)' }"
       allow="clipboard-read; clipboard-write"
       title="Web Connector"
       @load="handleIframeLoad"

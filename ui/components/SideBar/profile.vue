@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { LangType, ThemeType, UserData } from "~/types/index";
+import type { LangType, UserData } from "~/types/index";
 
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -18,13 +18,16 @@ interface VersionMessageResponse {
   success: boolean
 }
 
-const props = withDefaults(defineProps<{
-  collapse?: boolean
-  placement?: "sidebar" | "topbar"
-}>(), {
-  collapse: false,
-  placement: "sidebar"
-});
+const props = withDefaults(
+  defineProps<{
+    collapse?: boolean
+    placement?: "sidebar" | "topbar"
+  }>(),
+  {
+    collapse: false,
+    placement: "sidebar"
+  }
+);
 
 const isTopbar = computed(() => props.placement === "topbar");
 
@@ -39,17 +42,10 @@ const { t, locales, locale } = useI18n();
 const { loggedIn, currentSite, userMap, currentUser } = storeToRefs(userInfoStore);
 const { applyLoginPayload } = useAuthSession();
 
-const {
-  setLang,
-  theme,
-  themeMode,
-  primaryColorLight,
-  primaryColorDark,
-  recentSites,
-  setRecentSites,
-  hydrationPromise
-} = useSettingManager();
-const { manualSetTheme, enableFollowSystem, followSystem, userTheme } = useThemeAdapter();
+const { setLang, primaryColorLight, primaryColorDark, recentSites, setRecentSites, hydrationPromise }
+  = useSettingManager();
+const { userTheme } = useThemeAdapter();
+const { themeDropdownItems } = useThemeOptions();
 const { applyPrimaryColor } = useColor();
 
 const inputSite = ref("");
@@ -141,56 +137,6 @@ const languageChildren = computed<DropdownMenuItem[][]>(() => [
   }))
 ]);
 
-const appearanceOptions = computed(() => [
-  { id: "withSystem", label: t("Common.WithSystem") },
-  { id: "light", label: t("Common.Light") },
-  { id: "dark", label: t("Common.Dark") }
-]);
-
-const selectedAppearance = computed<ThemeType>({
-  get: () => {
-    const mode = (themeMode.value || "") as ThemeType;
-    if (mode === "withSystem" || mode === "dark" || mode === "light") return mode;
-
-    if (followSystem.value) return "withSystem";
-
-    const saved = (theme.value || "") as ThemeType;
-    if (saved === "dark" || saved === "light") return saved;
-
-    const current = (userTheme.value || "") as ThemeType;
-    if (current === "dark" || current === "light") return current;
-
-    return "light";
-  },
-  set: (id: ThemeType) => {
-    if (id === "withSystem") {
-      void enableFollowSystem().then(() => {
-        useTauriEventEmit("theme-changed", { mode: "withSystem" });
-        nextTick().then(() => applyCurrentThemeColor(true));
-      });
-      return;
-    }
-
-    manualSetTheme(id as any);
-    useTauriEventEmit("theme-changed", { mode: id });
-    nextTick().then(() => applyCurrentThemeColor(true));
-  }
-});
-
-const appearanceChildren = computed<DropdownMenuItem[][]>(() => [
-  appearanceOptions.value.map((opt) => ({
-    label: opt.label,
-    type: "checkbox",
-    checked: selectedAppearance.value === (opt.id as ThemeType),
-    onUpdateChecked: (checked: boolean) => {
-      if (!checked) return;
-      if (selectedAppearance.value !== (opt.id as ThemeType)) {
-        selectedAppearance.value = opt.id as ThemeType;
-      }
-    }
-  }))
-]);
-
 const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
@@ -206,7 +152,7 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
     {
       label: t("Common.Appearance"),
       icon: "solar:palette-linear",
-      children: appearanceChildren.value
+      children: themeDropdownItems.value
     },
     {
       label: t("Common.Language"),
@@ -783,12 +729,7 @@ onBeforeUnmount(() => {
     :ui="{ content: 'w-56 p-1' }"
   >
     <UTooltip v-if="isTopbar" arrow :text="currentUser?.name || t('Common.Login')">
-      <UButton
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        icon="i-lucide-circle-user-round"
-      />
+      <UButton color="neutral" variant="ghost" size="sm" icon="i-lucide-circle-user-round" />
     </UTooltip>
 
     <div

@@ -1,7 +1,17 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { Store } from "@tauri-apps/plugin-store";
-import type { AppConfigType, CharsetType, LanguagePreference, ResolutionType, SidebarSectionVisibility, SortType } from "~/types";
+import type { ThemePresetId } from "~/composables/useThemePresets";
+import type {
+  AppConfigType,
+  CharsetType,
+  LanguagePreference,
+  ResolutionType,
+  SidebarSectionVisibility,
+  SortType
+} from "~/types";
+
 import { DEFAULT_SIDEBAR_SECTIONS, normalizeSidebarSections } from "~/composables/useSidebarSections";
+import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
 
 export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
@@ -18,6 +28,8 @@ export interface UserSettingPersistedState {
   primaryColor: string
   primaryColorLight: string
   primaryColorDark: string
+  lightThemePreset: ThemePresetId
+  darkThemePreset: ThemePresetId
   appConfig: AppConfigType | null
   charset: CharsetType
   rdpResolution: ResolutionType
@@ -46,6 +58,8 @@ const DEFAULT_STATE: UserSettingPersistedState = {
   primaryColor: "#1ab394",
   primaryColorLight: "#1ab394",
   primaryColorDark: "#34d399",
+  lightThemePreset: DEFAULT_LIGHT_THEME_PRESET,
+  darkThemePreset: DEFAULT_DARK_THEME_PRESET,
   appConfig: null,
   charset: "default",
   rdpResolution: "auto",

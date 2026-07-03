@@ -10,25 +10,14 @@ import { sortProtocolNames } from "~/utils";
 const { t } = useI18n();
 const toast = useToast();
 const localePath = useLocalePath();
-const {
-  collapse,
-  theme,
-  sidebarSections,
-  setSidebarSections
-} = useSettingManager();
-const { componentsConfig } = useAppConfig();
+const { collapse, sidebarSections, setSidebarSections } = useSettingManager();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const showTools = computed(() => isTauriRuntime());
 const { confirmConnection, saveConnectionInfo } = useAssetConnection();
 const { openSession } = useWorkspaceTabs();
 const { openAssetInWindow } = useAssetWindowLauncher();
-const {
-  displayUser,
-  handleAssetConnection,
-  handleAssetFavorite,
-  handleAssetRename,
-  handleAssetUnfavorite
-} = useAssetAction();
+const { displayUser, handleAssetConnection, handleAssetFavorite, handleAssetRename, handleAssetUnfavorite }
+  = useAssetAction();
 
 const isLoading = ref(false);
 const sidebarSearch = ref("");
@@ -58,23 +47,15 @@ watch(showAssetSearch, (open) => {
   if (!open) sidebarSearch.value = "";
 });
 
-const contentBackgroundColor = computed(() =>
-  theme.value === "dark"
-    ? componentsConfig.pages.mainCardDarkBackgroundColor
-    : componentsConfig.pages.mainCardLightBackgroundColor
-);
-const visibleSectionCount = computed(() =>
-  SIDEBAR_SECTION_KEYS.filter((key) => sidebarSections.value[key]).length
-);
+const contentBackgroundColor = "var(--app-sidebar-bg)";
+const visibleSectionCount = computed(() => SIDEBAR_SECTION_KEYS.filter((key) => sidebarSections.value[key]).length);
 const showAssetSection = computed(() => sidebarSections.value.assets);
 const visibleShelfPanels = computed(() => ({
   favorites: sidebarSections.value.favorites,
   recent: sidebarSections.value.recent,
   snippets: sidebarSections.value.snippets
 }));
-const hasVisibleShelfPanel = computed(() =>
-  Object.values(visibleShelfPanels.value).some(Boolean)
-);
+const hasVisibleShelfPanel = computed(() => Object.values(visibleShelfPanels.value).some(Boolean));
 const showOrganizationMenu = computed(() => loggedIn.value && activeWorkspaceMode.value === "assets");
 const showSidebarSearchButton = computed(() => showOrganizationMenu.value && showAssetSection.value);
 
@@ -233,10 +214,8 @@ const connectWithBuiltinSsh = (asset: AssetItem, info: any) => {
 };
 
 const handleOpenMultipleAssets = (assets: AssetItem[]) => {
-  const connectable = assets.filter((asset) =>
-    hasSshProtocol(asset)
-    && asset.savedConnection?.protocol === "ssh"
-    && hasReusableSavedConnection(asset)
+  const connectable = assets.filter(
+    (asset) => hasSshProtocol(asset) && asset.savedConnection?.protocol === "ssh" && hasReusableSavedConnection(asset)
   );
 
   if (connectable.length === 0) {
@@ -349,9 +328,7 @@ const resolveAssetProtocols = (asset: AssetItem) => {
     asset.savedConnection?.protocol
   ];
 
-  const uniqueProtocols = Array.from(
-    new Set(protocols.filter((protocol): protocol is string => !!protocol))
-  );
+  const uniqueProtocols = Array.from(new Set(protocols.filter((protocol): protocol is string => !!protocol)));
 
   return uniqueProtocols.length > 0 ? sortProtocolNames(uniqueProtocols) : ["ssh"];
 };
@@ -486,7 +463,11 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
 <template>
   <div
     class="flex h-full w-full shrink-0 overflow-hidden flex-col"
-    :class="collapse ? 'border-r-0 shadow-none' : 'border-r border-[color:var(--sidebar-divider-light)] dark:border-[color:var(--sidebar-divider-dark)]'"
+    :class="
+      collapse
+        ? 'border-r-0 shadow-none'
+        : 'border-r border-[color:var(--sidebar-divider-light)] dark:border-[color:var(--sidebar-divider-dark)]'
+    "
     :style="{
       backgroundColor: contentBackgroundColor
     }"
@@ -519,7 +500,8 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
           :content="{ align: 'start', side: 'right', sideOffset: 6 }"
           :ui="{
             content: 'w-36 p-1',
-            item: 'mx-0 px-2 py-1 rounded-md text-[11px] leading-4 transition-colors duration-150'
+            item: 'mx-0 px-2 py-1 rounded-md text-[11px] leading-4 transition-colors duration-150',
+            itemLeadingIcon: 'size-3 shrink-0'
           }"
         >
           <UButton
@@ -580,7 +562,9 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
         class="absolute inset-0 z-10 flex min-h-0 flex-col"
         :style="{ backgroundColor: contentBackgroundColor }"
       >
-        <div class="border-b border-[color:var(--sidebar-divider-light)] px-3 py-1.5 dark:border-[color:var(--sidebar-divider-dark)]">
+        <div
+          class="border-b border-[color:var(--sidebar-divider-light)] px-3 py-1.5 dark:border-[color:var(--sidebar-divider-dark)]"
+        >
           <UInput
             v-model="sidebarSearch"
             size="sm"
@@ -642,12 +626,7 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
       @confirm="submitAssetRename"
       @update:open="updateRenameModal"
     >
-      <UInput
-        v-model="renameValue"
-        autofocus
-        class="w-full"
-        :placeholder="t('AssetCard.AssetName')"
-      />
+      <UInput v-model="renameValue" autofocus class="w-full" :placeholder="t('AssetCard.AssetName')" />
     </Modal>
 
     <UDropdownMenu

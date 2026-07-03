@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { ThemeType } from "~/types";
+import type { ThemePresetId } from "~/types";
 import { useSettingManager } from "~/composables/useSettingManager";
+import { useThemeOptions } from "~/composables/useThemeOptions";
 
 interface FontItem {
   id: string
@@ -17,8 +18,6 @@ const FALLBACK_FONTS
 
 const { t } = useI18n();
 const {
-  theme,
-  themeMode,
   fontFamily,
   primaryColorLight,
   primaryColorDark,
@@ -30,7 +29,8 @@ const {
 } = useSettingManager();
 
 const { applyPrimaryColor } = useColor();
-const { manualSetTheme, enableFollowSystem, followSystem, userTheme } = useThemeAdapter();
+const { userTheme } = useThemeAdapter();
+const { currentThemePresetId, selectThemePreset, themeSelectItems } = useThemeOptions();
 
 const selectedFont = ref<string>("system");
 const fontsItems = ref<FontItem[]>([
@@ -40,36 +40,6 @@ const fontsItems = ref<FontItem[]>([
     value: FALLBACK_FONTS
   }
 ]);
-
-const selectedAppearance = computed<ThemeType>({
-  get: () => {
-    const mode = (themeMode.value || "") as ThemeType;
-    if (mode === "withSystem" || mode === "dark" || mode === "light") return mode;
-
-    if (followSystem.value) return "withSystem";
-
-    const saved = (theme.value || "") as ThemeType;
-    if (saved === "dark" || saved === "light") return saved;
-
-    const current = (userTheme.value || "") as ThemeType;
-    if (current === "dark" || current === "light") return current;
-
-    return "light";
-  },
-  set: (id: ThemeType) => {
-    if (id === "withSystem") {
-      void enableFollowSystem().then(() => {
-        useTauriEventEmit("theme-changed", { mode: "withSystem" });
-        nextTick().then(() => applyCurrentThemeColor(true));
-      });
-      return;
-    }
-
-    manualSetTheme(id as any);
-    useTauriEventEmit("theme-changed", { mode: id });
-    nextTick().then(() => applyCurrentThemeColor(true));
-  }
-});
 
 const mainColor = computed<string>({
   get: () => (userTheme.value === "dark" ? primaryColorDark.value || "#34d399" : primaryColorLight.value || "#1ab394"),
@@ -89,7 +59,7 @@ const mainColor = computed<string>({
 });
 
 const predefineColors = computed<string[]>(() => {
-  if (theme.value === "light") {
+  if (userTheme.value === "light") {
     return [
       "#1ab394",
       "#3b82f6",
@@ -122,11 +92,12 @@ const predefineColors = computed<string[]>(() => {
   }
 });
 
-const appearanceItems = computed<{ id: ThemeType, label: string }[]>(() => [
-  { label: t("Common.WithSystem"), id: "withSystem" },
-  { label: t("Common.Light"), id: "light" },
-  { label: t("Common.Dark"), id: "dark" }
-]);
+const selectedThemePreset = computed<string>({
+  get: () => currentThemePresetId.value,
+  set: (id: string) => {
+    selectThemePreset(id as ThemePresetId);
+  }
+});
 
 function applyFont(font: string) {
   const root = document.documentElement;
@@ -135,7 +106,7 @@ function applyFont(font: string) {
 }
 
 function applyCurrentThemeColor(broadcast = false) {
-  const modeNow = (userTheme.value as string) || (selectedAppearance.value as string);
+  const modeNow = (userTheme.value as string) || "light";
   const hexNow = modeNow === "dark" ? primaryColorDark.value : primaryColorLight.value;
 
   if (hexNow) {
@@ -229,12 +200,12 @@ watch(
 <template>
   <div class="flex flex-col gap-3 p-4">
     <div class="flex items-center justify-between">
-      <span class="text-sm font-medium">{{ t("Common.Appearance") }}</span>
+      <span class="text-sm font-medium">{{ t("Common.Theme") }}</span>
       <SettingSelect
-        v-model="selectedAppearance"
-        :items="appearanceItems"
-        :aria-label="t('Common.Appearance')"
-        class="w-48"
+        v-model="selectedThemePreset"
+        :items="themeSelectItems"
+        :aria-label="t('Common.Theme')"
+        class="w-64"
       />
     </div>
 
@@ -249,12 +220,7 @@ watch(
 
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Common.Fonts") }}</span>
-      <SettingSelect
-        v-model="selectedFont"
-        :items="fontsItems"
-        :aria-label="t('Common.Fonts')"
-        class="w-48"
-      />
+      <SettingSelect v-model="selectedFont" :items="fontsItems" :aria-label="t('Common.Fonts')" class="w-48" />
     </div>
   </div>
 </template>

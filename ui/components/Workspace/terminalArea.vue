@@ -12,13 +12,23 @@ const openLogin = () => {
 </script>
 
 <template>
-  <section class="h-full min-h-0 w-full flex flex-col bg-white/20 dark:bg-zinc-950/40">
+  <section
+    class="h-full min-h-0 w-full flex flex-col"
+    :style="{ backgroundColor: 'color-mix(in srgb, var(--app-main-bg) 88%, transparent)' }"
+  >
     <div class="flex-1 min-h-0">
       <template v-if="!loggedIn">
-        <div class="h-full min-h-0 grid place-items-center text-sm text-gray-500 dark:text-gray-400">
-          <div class="flex flex-col items-center gap-4 rounded-2xl border border-black/6 bg-white/40 px-8 py-7 shadow-sm dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none">
-            <UIcon name="i-lucide-log-in" class="size-10 text-gray-400 dark:text-gray-500" />
-            <div class="font-medium text-gray-700 dark:text-gray-200">
+        <div class="h-full min-h-0 grid place-items-center text-sm" :style="{ color: 'var(--app-muted)' }">
+          <div
+            class="flex flex-col items-center gap-4 rounded-2xl px-8 py-7 shadow-sm"
+            :style="{
+              border: '1px solid var(--app-border)',
+              backgroundColor: 'var(--app-card-bg-soft)',
+              boxShadow: 'var(--theme-shadow-soft)'
+            }"
+          >
+            <UIcon name="i-lucide-log-in" class="size-10" :style="{ color: 'var(--app-muted)' }" />
+            <div class="font-medium" :style="{ color: 'var(--app-fg)' }">
               登录后查看资产并发起连接
             </div>
             <UButton color="primary" variant="soft" class="rounded-xl px-4" @click="openLogin">
@@ -34,13 +44,20 @@ const openLogin = () => {
         </template>
       </template>
 
-      <div v-else class="h-full min-h-0 grid place-items-center text-sm text-gray-500 dark:text-gray-400">
-        <div class="flex flex-col items-center gap-3 rounded-2xl border border-black/6 bg-white/40 px-6 py-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none">
+      <div v-else class="h-full min-h-0 grid place-items-center text-sm" :style="{ color: 'var(--app-muted)' }">
+        <div
+          class="flex flex-col items-center gap-3 rounded-2xl px-6 py-5 shadow-sm"
+          :style="{
+            border: '1px solid var(--app-border)',
+            backgroundColor: 'var(--app-card-bg-soft)',
+            boxShadow: 'var(--theme-shadow-soft)'
+          }"
+        >
           <UIcon name="i-lucide-terminal-square" class="size-10" />
-          <div class="font-medium text-gray-700 dark:text-gray-200">
+          <div class="font-medium" :style="{ color: 'var(--app-fg)' }">
             从左侧选择 SSH 资产开始连接
           </div>
-          <div class="font-ui-mono text-[11px] text-gray-400 dark:text-gray-500">
+          <div class="font-ui-mono text-[11px]" :style="{ color: 'var(--app-muted)' }">
             builtin_client://ssh
           </div>
         </div>

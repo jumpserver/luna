@@ -36,8 +36,8 @@ const endpointPort = computed(() => Number(endpoint.value?.ssh_port || endpoint.
 const username = computed(() => (tokenId.value ? `JMS-${tokenId.value}` : "JMS-<token>"));
 const isDesktopRuntime = computed(() => isTauriRuntime());
 const useWebIframe = computed(() => !!props.tab.payload?.webUrl);
-const useKokoIframe = computed(() =>
-  isDesktopRuntime.value && !useWebIframe.value && USE_KOKO_IFRAME_EXPERIMENT && props.tab.protocol === "ssh"
+const useKokoIframe = computed(
+  () => isDesktopRuntime.value && !useWebIframe.value && USE_KOKO_IFRAME_EXPERIMENT && props.tab.protocol === "ssh"
 );
 const useTerminalSurface = computed(() => isDesktopRuntime.value && !useWebIframe.value && !useKokoIframe.value);
 const terminalTheme = computed(() => {
@@ -191,7 +191,12 @@ const bindTauriEvents = async () => {
     const payload = event.payload as { tabId: string, status?: number };
     if (payload.tabId !== props.tab.id) return;
     sessionStarted = false;
-    markSessionFailed({ tabId: props.tab.id, assetId: props.tab.assetId, protocol: props.tab.protocol, account: props.tab.account });
+    markSessionFailed({
+      tabId: props.tab.id,
+      assetId: props.tab.assetId,
+      protocol: props.tab.protocol,
+      account: props.tab.account
+    });
     terminal?.writeln(`\r\nSession closed${payload.status !== undefined ? ` (${payload.status})` : ""}.`);
   });
 };
@@ -200,10 +205,7 @@ const mountTerminal = async () => {
   if (!useTerminalSurface.value) return;
   if (!terminalHostRef.value || terminal || !import.meta.client) return;
 
-  const [{ Terminal }, { FitAddon }] = await Promise.all([
-    import("@xterm/xterm"),
-    import("@xterm/addon-fit")
-  ]);
+  const [{ Terminal }, { FitAddon }] = await Promise.all([import("@xterm/xterm"), import("@xterm/addon-fit")]);
 
   terminal = new Terminal({
     cursorBlink: true,
@@ -254,14 +256,11 @@ watch(
   { deep: true }
 );
 
-watch(
-  terminalTheme,
-  (theme) => {
-    if (terminal) {
-      terminal.options.theme = theme;
-    }
+watch(terminalTheme, (theme) => {
+  if (terminal) {
+    terminal.options.theme = theme;
   }
-);
+});
 
 watch(
   () => activeTabId.value,
@@ -302,7 +301,8 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="terminalRef"
-    class="h-full min-h-0 w-full overflow-hidden bg-white dark:bg-zinc-950"
+    class="h-full min-h-0 w-full overflow-hidden"
+    :style="{ backgroundColor: 'var(--app-main-bg)' }"
     @mousedown="focusActiveSurface"
   >
     <WebIframeConnector v-if="useWebIframe" :tab="tab" />
@@ -318,10 +318,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-else class="h-full min-h-0 w-full">
-      <div
-        ref="terminalHostRef"
-        class="h-full min-h-0 w-full overflow-hidden"
-      />
+      <div ref="terminalHostRef" class="h-full min-h-0 w-full overflow-hidden" />
     </div>
   </div>
 </template>

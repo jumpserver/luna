@@ -84,7 +84,12 @@ const cancelRename = () => {
 
 <template>
   <UPageCard
-    class="page-card w-full border border-black/6 bg-white/70 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-black/10 hover:shadow-lg/10 dark:border-white/10 dark:bg-white/[0.035] dark:hover:border-white/15 dark:hover:bg-white/[0.05] dark:hover:shadow-none"
+    class="page-card w-full transition-all duration-200 ease-out hover:-translate-y-0.5"
+    :style="{
+      border: '1px solid var(--app-border)',
+      backgroundColor: 'var(--app-card-bg)',
+      boxShadow: 'var(--theme-shadow-soft)'
+    }"
     :ui="{
       root: 'rounded-2xl shadow-sm dark:shadow-none',
       body: 'p-1',

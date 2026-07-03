@@ -49,13 +49,14 @@ export default defineAppConfig({
     },
     input: {
       slots: {
-        root: "w-full"
+        root: "w-full",
+        base: "bg-[var(--app-input-bg)] text-[var(--app-fg)] placeholder:text-[var(--app-muted)] ring-[var(--app-border)]"
       }
     },
     textarea: {
       slots: {
         root: "w-full",
-        base: "resize-none"
+        base: "resize-none bg-[var(--app-input-bg)] text-[var(--app-fg)] placeholder:text-[var(--app-muted)] ring-[var(--app-border)]"
       }
     },
     accordion: {
@@ -66,14 +67,47 @@ export default defineAppConfig({
     },
     dropdownMenu: {
       slots: {
-        content: "w-(--reka-dropdown-menu-trigger-width) p-1",
-        item: "mx-0.5 px-3 py-1.5 rounded-md text-sm leading-5 transition-colors duration-150"
+        content:
+          "w-(--reka-dropdown-menu-trigger-width) p-1 bg-[var(--app-panel-bg)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
+        viewport: "relative overflow-y-auto flex-1",
+        group: "p-1 isolate",
+        label:
+          "w-full flex items-center px-2 py-1 text-[11px] font-semibold text-[var(--app-muted)] uppercase tracking-[0.08em]",
+        separator: "-mx-1 my-1 h-px bg-[var(--app-border)]",
+        item: "mx-0.5 px-3 py-1.5 rounded-md text-sm leading-5 transition-colors duration-150 text-[var(--app-fg)] data-highlighted:bg-[var(--app-hover-soft)] data-[state=open]:bg-[var(--app-hover-soft)] data-highlighted:text-[var(--app-fg)] data-[state=open]:text-[var(--app-fg)]"
       }
     },
     modal: {
       slots: {
-        title: "text-sm leading-5",
-        description: "text-sm leading-5 text-toned"
+        overlay: "fixed inset-0 bg-black/35 backdrop-blur-[2px]",
+        content:
+          "bg-[var(--app-sidebar-bg)] text-[var(--app-fg)] divide-y divide-[var(--app-border)] flex flex-col focus:outline-none ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)]",
+        header: "flex items-center gap-1.5 p-4 sm:px-6 min-h-(--ui-header-height) bg-[var(--app-header-bg)]",
+        body: "flex-1 p-4 sm:p-6 bg-[var(--app-main-bg)]",
+        footer: "flex items-center gap-1.5 p-4 sm:px-6 bg-[var(--app-header-bg)]",
+        title: "text-sm leading-5 text-[var(--app-fg)] font-semibold",
+        description: "text-sm leading-5 text-[var(--app-muted)]",
+        close: "absolute top-4 end-4 text-[var(--app-muted)] hover:text-[var(--app-fg)]"
+      }
+    },
+    popover: {
+      slots: {
+        content:
+          "bg-[var(--app-panel-bg)] text-[var(--app-fg)] shadow-[var(--theme-shadow-soft)] rounded-md ring ring-[var(--app-border)] data-[state=open]:animate-[scale-in_100ms_ease-out] data-[state=closed]:animate-[scale-out_100ms_ease-in] origin-(--reka-popover-content-transform-origin) focus:outline-none pointer-events-auto backdrop-blur-md",
+        arrow: "fill-[var(--app-panel-bg)] stroke-[var(--app-border)]"
+      }
+    },
+    selectMenu: {
+      slots: {
+        content:
+          "bg-[var(--app-panel-bg)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
+        input: "border-b border-[var(--app-border)]",
+        viewport: "relative scroll-py-1 overflow-y-auto flex-1",
+        group: "p-1 isolate",
+        label:
+          "w-full flex items-center px-2 py-1 text-[11px] font-semibold text-[var(--app-muted)] uppercase tracking-[0.08em]",
+        separator: "-mx-1 my-1 h-px bg-[var(--app-border)]",
+        item: "mx-0.5 rounded-md px-3 py-2 text-sm text-[var(--app-fg)] transition-colors data-highlighted:bg-[var(--app-hover-soft)] data-[state=checked]:bg-[var(--app-selected-soft)]"
       }
     },
     navigationMenu: {

@@ -3,7 +3,7 @@ import type { NavigationMenuItem } from "@nuxt/ui";
 
 export type SettingsSection = "general" | "appearance" | "application" | "about";
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     mode?: "route" | "inline"
     activeSection?: SettingsSection
@@ -22,7 +22,7 @@ const emit = defineEmits<{
 
 const localePath = useLocalePath();
 const { t } = useI18n();
-const { theme } = useSettingManager();
+const panelBackground = "var(--app-sidebar-bg)";
 
 const sectionDefs = computed(() => {
   const defs: Array<{
@@ -87,15 +87,10 @@ const selectSection = (key: SettingsSection) => {
 </script>
 
 <template>
-  <div
-    class="flex min-h-0 w-full gap-0"
-    :class="embedded ? 'h-[min(86vh,675px)]' : 'h-full'"
-  >
+  <div class="flex min-h-0 w-full gap-0" :class="embedded ? 'h-[min(86vh,675px)]' : 'h-full'">
     <div
-      class="menu setting-menu shrink-0"
-      :style="{
-        backgroundColor: theme === 'dark' ? '#222' : '#F5F5F7'
-      }"
+      class="menu setting-menu shrink-0 border-r border-black/5 dark:border-white/10"
+      :style="{ backgroundColor: panelBackground }"
     >
       <UNavigationMenu
         v-if="mode === 'route'"
@@ -113,9 +108,7 @@ const selectSection = (key: SettingsSection) => {
           :key="item.key"
           type="button"
           class="menu-item flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm light:text-gray-800 dark:text-gray-200"
-          :class="activeSection === item.key
-            ? 'bg-black/6 dark:bg-white/10'
-            : 'hover:bg-black/4 dark:hover:bg-white/6'"
+          :class="activeSection === item.key ? 'bg-black/6 dark:bg-white/10' : 'hover:bg-black/4 dark:hover:bg-white/6'"
           @click="selectSection(item.key)"
         >
           <UIcon :name="item.icon" class="size-4 shrink-0" />
@@ -124,13 +117,8 @@ const selectSection = (key: SettingsSection) => {
       </div>
     </div>
 
-    <UCard
-      class="min-w-0 flex-1 rounded-none overflow-y-auto"
-      :class="embedded ? 'h-full' : 'h-full'"
-      variant="outline"
-      :ui="{ body: 'sm:p-0 h-full p-0' }"
-    >
+    <div class="min-w-0 flex-1 overflow-y-auto h-full" :style="{ backgroundColor: panelBackground }">
       <slot />
-    </UCard>
+    </div>
   </div>
 </template>

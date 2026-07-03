@@ -31,7 +31,12 @@ const handleChange = (event: Event) => {
     <select
       :value="selectedIndex"
       :aria-label="ariaLabel"
-      class="h-7 w-full appearance-none rounded-md border border-black/10 bg-white/75 py-0 pr-7 pl-2 text-xs text-gray-800 shadow-sm outline-none transition hover:bg-white focus:border-primary/50 focus:ring-2 focus:ring-primary/15 dark:border-white/10 dark:bg-white/10 dark:text-gray-100 dark:hover:bg-white/15"
+      class="h-7 w-full appearance-none rounded-md py-0 pr-7 pl-2 text-xs shadow-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/15"
+      :style="{
+        border: '1px solid var(--app-border)',
+        backgroundColor: 'var(--app-input-bg)',
+        color: 'var(--app-fg)'
+      }"
       @change="handleChange"
     >
       <option v-for="(item, index) in items" :key="String(item.id)" :value="index">
@@ -40,7 +45,8 @@ const handleChange = (event: Event) => {
     </select>
     <UIcon
       name="i-lucide-chevrons-up-down"
-      class="pointer-events-none absolute right-2 size-3 text-gray-400 dark:text-gray-500"
+      class="pointer-events-none absolute right-2 size-3"
+      :style="{ color: 'var(--app-muted)' }"
     />
   </div>
 </template>

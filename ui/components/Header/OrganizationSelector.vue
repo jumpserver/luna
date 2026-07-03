@@ -56,7 +56,8 @@ watch(
       :content="{ align: 'start', side: 'bottom' }"
       :ui="{
         content: 'w-44 max-h-64 overflow-y-auto p-1',
-        item: 'mx-0 px-2 py-1 rounded-md text-[11px] leading-4 transition-colors duration-150'
+        item: 'mx-0 px-2 py-1 rounded-md text-[11px] leading-4 transition-colors duration-150',
+        itemLeadingIcon: 'size-3 shrink-0'
       }"
     >
       <UButton
@@ -69,7 +70,9 @@ watch(
         }"
       >
         <UIcon name="fluent:organization-16-regular" class="size-4 text-gray-500 dark:text-gray-400" />
-        <span class="min-w-0 truncate text-left text-xs font-medium text-gray-700 dark:text-gray-300">{{ currentOrg }}</span>
+        <span class="min-w-0 truncate text-left text-xs font-medium text-gray-700 dark:text-gray-300">
+          {{ currentOrg }}
+        </span>
         <UIcon name="i-lucide-chevron-down" class="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
       </UButton>
     </UDropdownMenu>

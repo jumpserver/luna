@@ -3,7 +3,7 @@ import Profile from "~/components/SideBar/profile.vue";
 
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
-const { userTheme, manualSetTheme } = useThemeAdapter();
+const { currentThemePresetLabel, themeDropdownItems } = useThemeOptions();
 
 // 公共按钮配置
 const commonButtonProps = {
@@ -73,28 +73,19 @@ const openSettingsWindow = async () => {
   openSettings();
 };
 
-const isDarkMode = computed(() => userTheme.value === "dark");
-
-const toggleThemeMode = () => {
-  manualSetTheme(isDarkMode.value ? "light" : "dark");
-};
-
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 </script>
 
 <template>
   <section class="flex items-center h-full">
     <div class="flex items-center gap-1 px-2">
-      <UButton
-        :icon="
-          isDarkMode
-            ? 'line-md:moon-filled-to-sunny-filled-loop-transition'
-            : 'line-md:sunny-filled-loop-to-moon-filled-transition'
-        "
-        :title="isDarkMode ? t('ToolTips.LightMode') : t('ToolTips.DarkMode')"
-        v-bind="commonButtonProps"
-        @click="toggleThemeMode"
-      />
+      <UDropdownMenu
+        :items="themeDropdownItems"
+        :content="{ align: 'end', side: 'bottom', sideOffset: 8 }"
+        :ui="{ content: 'w-64 p-1' }"
+      >
+        <UButton icon="solar:palette-linear" :title="currentThemePresetLabel" v-bind="commonButtonProps" />
+      </UDropdownMenu>
 
       <UButton
         icon="i-lucide-settings"

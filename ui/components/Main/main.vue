@@ -1,8 +1,6 @@
 <script setup lang="ts">
 type alertTypes = "incompatible" | "noMatch";
 
-const { theme } = useSettingManager();
-const { componentsConfig } = useAppConfig();
 const clearSelectionCallback = ref<(() => void) | null>(null);
 
 const { t } = useI18n();
@@ -52,10 +50,8 @@ provide("providerClearSelection", providerClearSelection);
       borderTopLeftRadius: '0px',
       borderBottomLeftRadius: '0px',
       borderBottomRightRadius: '0px',
-      backgroundColor:
-        theme === 'dark'
-          ? componentsConfig.pages.mainCardDarkBackgroundColor
-          : componentsConfig.pages.mainCardLightBackgroundColor
+      backgroundColor: 'var(--app-main-bg)',
+      color: 'var(--app-fg)'
     }"
     :ui="cardUi"
     @click="clearSelection"
