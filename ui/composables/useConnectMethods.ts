@@ -9,6 +9,7 @@ interface ConnectMethod {
   listen: string
   component: string
   endpoint_protocol?: string
+  origin_value?: string
 }
 
 interface ConnectMethodsResponse {
@@ -19,6 +20,8 @@ interface ConnectMethodsResponse {
 const connectMethodsCache = new Map<string, ConnectMethodsResponse>();
 const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 
+export const WEB_CLI_NATIVE_VALUE = "web_cli_native";
+
 const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMethodsResponse => {
   const normalized: ConnectMethodsResponse = { ...methods };
 
@@ -26,12 +29,32 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
     const value = normalized[key];
     if (!Array.isArray(value)) return;
 
-    normalized[key] = value.map((method) => {
-      const isWebCli = method.type === "web" || ["koko", "lion", "chen", "tinker", "default"].includes(method.component);
-      return isWebCli
-        ? { ...method, label: "Web CLI" }
+    // 原远端 iframe 方式统一命名为 Web iframe
+    const renamed = value.map((method) => {
+      const isWebSurface = method.type === "web" || ["koko", "lion", "chen", "tinker", "default"].includes(method.component);
+      return isWebSurface
+        ? { ...method, label: "Web iframe" }
         : method;
     });
+
+    // SSH 注入原生 Web CLI（迁移后的 koko 模块），排在 iframe 方式之前
+    if (key === "ssh") {
+      const kokoWebIndex = renamed.findIndex(
+        (method) => method.type === "web" && ["koko", "default"].includes(method.component)
+      );
+
+      if (kokoWebIndex !== -1) {
+        const origin = renamed[kokoWebIndex]!;
+        renamed.splice(kokoWebIndex, 0, {
+          ...origin,
+          value: WEB_CLI_NATIVE_VALUE,
+          label: "Web CLI",
+          origin_value: origin.value
+        } as ConnectMethod);
+      }
+    }
+
+    normalized[key] = renamed;
   });
 
   return normalized;
@@ -87,7 +110,7 @@ export const useConnectMethods = () => {
           const payload = event.payload as EventPayload;
           if (payload.status === 200) {
             try {
-              const methods = JSON.parse(payload.data) as ConnectMethodsResponse;
+              const methods = normalizeWebConnectMethods(JSON.parse(payload.data) as ConnectMethodsResponse);
               connectMethodsCache.set(key, methods);
               resolve(methods);
             } catch (error) {

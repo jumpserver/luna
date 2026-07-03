@@ -22,6 +22,9 @@ let unlistenBuiltinSessionSuccess: UnlistenFn | null = null;
 let unlistenBuiltinSessionFailure: UnlistenFn | null = null;
 
 const BUILTIN_CLIENT_METHOD = "builtin_client";
+// 原生 Web CLI（迁移后的 koko 模块）连接方式，见 useConnectMethods 注入
+const WEB_CLI_NATIVE_METHOD = "web_cli_native";
+const NATIVE_KOKO_METHODS = new Set([BUILTIN_CLIENT_METHOD, WEB_CLI_NATIVE_METHOD]);
 const pendingBuiltinSessions: Array<{ tabId?: string, assetId: string, protocol: string, account: string }> = [];
 
 function releaseTauriEventListeners() {
@@ -378,38 +381,76 @@ export const useAssetAction = () => {
     });
   };
 
+  const resolveServerConnectMethod = async (body: ConnectionBody) => {
+    // 服务端不认识本地注入的 method（builtin_client / web_cli_native），换成真实 koko web method
+    if (!NATIVE_KOKO_METHODS.has(body.connect_method)) return body.connect_method;
+
+    try {
+      const allMethods = await fetchConnectMethods();
+      const methods = allMethods[body.protocol] || [];
+      const injected = methods.find((item) => item.value === body.connect_method);
+      if (injected?.origin_value) return injected.origin_value;
+
+      const kokoWeb = methods.find(
+        (item) => item.type === "web" && ["koko", "default"].includes(item.component) && !item.origin_value
+      );
+      if (kokoWeb) return kokoWeb.value;
+    } catch {}
+
+    return body.connect_method;
+  };
+
   const getBuiltinConnectSession = (
     body: ConnectionBody,
     meta: { tabId?: string, assetId: string, protocol: string, account: string }
   ) => {
     if (!isTauriRuntime()) {
-      markSessionFailed(meta);
-      toast.add({
-        title: t("ConnectError.ConnectFailed"),
-        description: "Web 模式暂未接入连接运行时。",
-        color: "warning",
-        icon: "i-lucide-circle-alert",
-        progress: true,
-        duration: 3000
-      });
+      void (async () => {
+        try {
+          const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
+          const response = await fetch(withWebSitePrefix("/api/v1/authentication/connection-token/"), {
+            method: "POST",
+            credentials: "include",
+            headers: { ...getWebApiMutationHeaders(), "Content-Type": "application/json" },
+            body: JSON.stringify(serverBody)
+          });
+          if (!response.ok) throw new Error(await response.text() || `create connection token failed: ${response.status}`);
+          const token = await response.json() as TokenResponse;
+          updateSessionPayload(meta, {
+            token,
+            ...token,
+            connectMethod: { value: BUILTIN_CLIENT_METHOD, component: "koko" }
+          });
+        } catch (error) {
+          markSessionFailed(meta);
+          toast.add({
+            title: t("ConnectError.ConnectFailed"),
+            description: String(error),
+            color: "error",
+            icon: "line-md:close-circle",
+            progress: true,
+            duration: 4000
+          });
+        }
+      })();
       return;
     }
 
     const rdpParams = buildLocalRdpParams();
     pendingBuiltinSessions.push(meta);
 
-    useTauriCoreInvoke("get_builtin_connect_session", {
+    void (async () => useTauriCoreInvoke("get_builtin_connect_session", {
       body: {
         asset: body.asset,
         account: body.account,
         protocol: body.protocol,
         input_username: body.input_username,
         input_secret: body.input_secret,
-        connect_method: body.connect_method,
+        connect_method: await resolveServerConnectMethod(body),
         connect_options: body.connect_options
       },
       rdpParams
-    }).catch((error) => {
+    }))().catch((error) => {
       const idx = pendingBuiltinSessions.findIndex(
         (item) =>
           item.assetId === meta.assetId
@@ -567,9 +608,7 @@ export const useAssetAction = () => {
     const preferredConnectMethod = ephemeral?.connectMethod?.trim()
       || (saved?.protocol === protocol ? saved?.connectMethod?.trim() : "")
       || dispatchConnectMethod(protocol);
-    const connectMethod = (!isTauriRuntime() && preferredConnectMethod === BUILTIN_CLIENT_METHOD)
-      ? dispatchConnectMethod(protocol)
-      : preferredConnectMethod;
+    const connectMethod = preferredConnectMethod;
 
     userInfoStore.setConnectionInfoForAsset(assetId, {
       protocol,
@@ -596,7 +635,7 @@ export const useAssetAction = () => {
     };
 
     nextTick(() => {
-      if (connectMethod === BUILTIN_CLIENT_METHOD) {
+      if (NATIVE_KOKO_METHODS.has(connectMethod)) {
         getBuiltinConnectSession(connectionBody, {
           tabId: ephemeral?.tabId,
           assetId,

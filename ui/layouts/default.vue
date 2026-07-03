@@ -35,19 +35,30 @@ onMounted(() => {
   listenOSThemeChange();
   warmupWebSettings();
   preloadSettingsModal();
-  if (isTauriRuntime()) {
-    registerSessionDisposer((id: string) =>
-      useTauriCoreInvoke("builtin_session_close", {
-        payload: { tabId: id }
-      })
-    );
-    registerKokoTicketProvider((request) =>
-      useTauriCoreInvoke("create_koko_connect_ticket", {
+  // ponytail: koko WS sessions close on component unmount; no Rust builtin bridge
+  registerSessionDisposer(() => {});
+  registerKokoTicketProvider(async (request) => {
+    if (isTauriRuntime()) {
+      return useTauriCoreInvoke("create_koko_connect_ticket", {
         baseUrl: request.baseUrl,
         tokenId: request.tokenId
-      })
-    );
-  }
+      });
+    }
+
+    const url = `${request.baseUrl.replace(/\/+$/, "")}/koko/api/connect-ticket/`;
+    const response = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...getWebApiMutationHeaders() },
+      body: JSON.stringify({ token_id: request.tokenId })
+    });
+
+    if (!response.ok) {
+      throw new Error(`create koko connect ticket failed: ${response.status}`);
+    }
+
+    return response.json() as Promise<{ ticket?: string }>;
+  });
 });
 
 onBeforeUnmount(() => {

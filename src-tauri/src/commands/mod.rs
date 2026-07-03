@@ -2,7 +2,6 @@ pub(crate) mod api_session;
 pub(crate) mod asset_actions;
 pub(crate) mod auth_flow;
 pub(crate) mod auth_logout;
-pub(crate) mod builtin_terminal;
 pub(crate) mod client_launcher;
 pub(crate) mod config_update;
 pub(crate) mod connect_methods;

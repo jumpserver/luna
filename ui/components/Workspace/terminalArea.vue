@@ -40,7 +40,7 @@ const openLogin = () => {
 
       <template v-else-if="activeTab">
         <template v-for="tab in tabs" :key="tab.id">
-          <WorkspaceTerminalPane v-show="activeTabId === tab.id" :tab="tab" class="h-full min-h-0" />
+          <WorkspaceSessionPane v-show="activeTabId === tab.id" :tab="tab" class="h-full min-h-0" />
         </template>
       </template>
 

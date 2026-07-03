@@ -257,6 +257,10 @@ async function ensureDetails(asset: AssetItem) {
 async function openModal(asset: AssetItem): Promise<any> {
   currentAsset.value = asset;
   await ensureDetails(asset);
+  if (currentAsset.value) {
+    asset.permedAccounts = currentAsset.value.permedAccounts || [];
+    asset.permedProtocols = currentAsset.value.permedProtocols || [];
+  }
   initDraft(currentAsset.value!);
   open.value = true;
 

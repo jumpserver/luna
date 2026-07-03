@@ -18,10 +18,6 @@ use crate::commands::asset_actions::{
 };
 use crate::commands::auth_flow::{auth_cancel, auth_login, bootstrap_auth_session};
 use crate::commands::auth_logout::logout;
-use crate::commands::builtin_terminal::{
-    builtin_session_close, builtin_session_input, builtin_session_resize, builtin_ssh_start,
-    BuiltinTerminalState,
-};
 use crate::commands::client_launcher::pull_up;
 use crate::commands::config_update::update_config_selection;
 use crate::commands::connect_methods::get_connect_methods;
@@ -103,7 +99,6 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AuthFlowState::default())
         .manage(ApiSessionStore::default())
-        .manage(BuiltinTerminalState::default())
         .plugin(single_instance(|app, argv, _cwd| {
             info!("single_instance event, argv={:?}", argv);
 
@@ -218,10 +213,6 @@ pub fn run() {
             get_builtin_connect_session,
             create_koko_connect_ticket,
             get_smart_endpoint,
-            builtin_ssh_start,
-            builtin_session_input,
-            builtin_session_resize,
-            builtin_session_close,
             get_version_message,
             list_system_fonts,
             toggle_maximize_window,
