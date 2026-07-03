@@ -1,4 +1,4 @@
-import type { AssetItem, ConnectionInfo as StoredConnectionInfo } from "~/types/index";
+import type { AssetItem, ConnectionInfo as StoredConnectionInfo, ConnectionPreferenceInfo } from "~/types/index";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface ConnectionFormInfo {
@@ -46,6 +46,35 @@ export function useAssetConnection() {
       // 否则需要打开编辑模态框
       return { needsModal: true, asset };
     }
+  };
+
+  const saveConnectionPreference = (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
+    let resolvedAccountId: string | undefined = connectionInfo.accountId;
+
+    if (connectionInfo.accountMode === "hosted" && !resolvedAccountId) {
+      const accs = asset.permedAccounts || [];
+      const matched = accs.find(
+        (a) =>
+          a.name === connectionInfo.account
+          || a.username === connectionInfo.account
+          || a.alias === connectionInfo.account
+      );
+
+      resolvedAccountId = matched?.id;
+    }
+
+    const payload: ConnectionPreferenceInfo = {
+      protocol: connectionInfo.protocol,
+      username: connectionInfo.account,
+      accountId: resolvedAccountId,
+      accountMode: connectionInfo.accountMode,
+      manualUsername: connectionInfo.manualUsername || "",
+      connectMethod: connectionInfo.connectMethod,
+      connectOptions: connectionInfo.connectOptions,
+      availableProtocols: connectionInfo.availableProtocols
+    };
+
+    userInfoStore.setConnectionPreferenceForAsset(asset.id, payload);
   };
 
   /**
@@ -97,8 +126,12 @@ export function useAssetConnection() {
    * 处理连接确认（从模态框）
    */
   const confirmConnection = (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
+    saveConnectionPreference(asset, connectionInfo);
+
     if (connectionInfo.rememberSelection !== false) {
       saveConnectionInfo(asset, connectionInfo);
+    } else {
+      userInfoStore.deleteConnectionInfoForAsset(asset.id);
     }
 
     handleAssetConnection(connectionInfo.account, asset.id, connectionInfo.protocol, asset.permedAccounts!, undefined, {
@@ -116,6 +149,7 @@ export function useAssetConnection() {
   return {
     connectAsset,
     confirmConnection,
-    saveConnectionInfo
+    saveConnectionInfo,
+    saveConnectionPreference
   };
 }

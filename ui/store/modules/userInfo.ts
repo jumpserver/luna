@@ -1,10 +1,11 @@
-import type { ConnectionInfo, PermOrgItem, RdpGraphics, UserData } from "~/types/index";
+import type { ConnectionInfo, ConnectionPreferenceInfo, PermOrgItem, RdpGraphics, UserData } from "~/types/index";
 import { useConnectMethods } from "~/composables/useConnectMethods";
 
 export type SiteUserData = UserData & {
   language?: string
   rdpClientOption?: RdpGraphics
   connectionInfoMap?: Record<string, ConnectionInfo>
+  connectionPreferenceMap?: Record<string, ConnectionPreferenceInfo>
 };
 
 // 其实应该叫做 accountInfoStore 比较好
@@ -19,6 +20,7 @@ export const useUserInfoStore = defineStore(
     const userMap = ref<Record<string, SiteUserData>>({});
     const currentRdpClientOption = ref<RdpGraphics>({});
     const currentConnectionInfoMap = ref<Record<string, ConnectionInfo>>({});
+    const currentConnectionPreferenceMap = ref<Record<string, ConnectionPreferenceInfo>>({});
 
     const hasUser = computed(() => Object.keys(userMap.value).length > 0);
     const orgId = computed(() => currentUser.value?.org?.id || "");
@@ -84,8 +86,9 @@ export const useUserInfoStore = defineStore(
       loggedIn.value = true;
       syncApiSession(site, next);
 
-      // 初始化当前站点连接信息映射以及 RDP 客户端选项
+      // 初始化当前站点连接信息映射、偏好映射以及 RDP 客户端选项
       currentConnectionInfoMap.value = next.connectionInfoMap || {};
+      currentConnectionPreferenceMap.value = next.connectionPreferenceMap || {};
       currentRdpClientOption.value = next.rdpClientOption || {};
 
       // 登录后获取连接方法
@@ -128,8 +131,9 @@ export const useUserInfoStore = defineStore(
           currentSite.value = nextUser.site;
           syncApiSession(nextUser.site, nextUser);
 
-          // 同步连接信息映射以及 RDP 客户端选项
+          // 同步连接信息映射、偏好映射以及 RDP 客户端选项
           currentConnectionInfoMap.value = nextUser.connectionInfoMap || {};
+          currentConnectionPreferenceMap.value = nextUser.connectionPreferenceMap || {};
           currentRdpClientOption.value = nextUser.rdpClientOption || {};
           currentOrganizations.value = nextUser.availableOrgs || [];
 
@@ -147,6 +151,7 @@ export const useUserInfoStore = defineStore(
         userMap.value = {};
         currentRdpClientOption.value = {};
         currentConnectionInfoMap.value = {};
+        currentConnectionPreferenceMap.value = {};
         currentOrganizations.value = [];
 
         nextTick(() => {
@@ -171,11 +176,13 @@ export const useUserInfoStore = defineStore(
         currentOrganizations.value = (userData as SiteUserData).availableOrgs || [];
         syncApiSession(site, userData);
 
-        // 同步当前站点的连接信息映射以及 RDP 客户端选项
+        // 同步当前站点的连接信息映射、偏好映射以及 RDP 客户端选项
         currentConnectionInfoMap.value = (userData as SiteUserData).connectionInfoMap || {};
+        currentConnectionPreferenceMap.value = (userData as SiteUserData).connectionPreferenceMap || {};
         currentRdpClientOption.value = (userData as SiteUserData).rdpClientOption || {};
       } else {
         currentConnectionInfoMap.value = {};
+        currentConnectionPreferenceMap.value = {};
         currentRdpClientOption.value = {};
       }
     };
@@ -249,6 +256,17 @@ export const useUserInfoStore = defineStore(
     };
 
     /**
+     * @description 获取资产连接偏好
+     * @param assetId 资产 ID
+     */
+    const getConnectionPreferenceForAsset = (assetId: string) => {
+      if (!currentSite.value) return null;
+
+      const siteData = userMap.value[currentSite.value];
+      return siteData?.connectionPreferenceMap?.[assetId] || null;
+    };
+
+    /**
      * @description 设置资产连接信息
      * @param assetId
      * @param connectionInfo
@@ -282,6 +300,53 @@ export const useUserInfoStore = defineStore(
     };
 
     /**
+     * @description 删除资产连接信息
+     * @param assetId
+     */
+    const deleteConnectionInfoForAsset = (assetId: string) => {
+      if (!currentSite.value) return;
+      const siteData = userMap.value[currentSite.value];
+
+      if (!siteData?.connectionInfoMap?.[assetId]) return;
+
+      delete siteData.connectionInfoMap[assetId];
+      currentConnectionInfoMap.value = { ...siteData.connectionInfoMap };
+    };
+
+    /**
+     * @description 设置资产连接偏好
+     * @param assetId
+     * @param preference
+     */
+    const setConnectionPreferenceForAsset = (assetId: string, preference: ConnectionPreferenceInfo) => {
+      if (!currentSite.value) return;
+      const site = currentSite.value;
+      const siteData = userMap.value[site];
+
+      if (!siteData) return;
+
+      if (!siteData.connectionPreferenceMap) {
+        siteData.connectionPreferenceMap = {};
+      }
+
+      const existing = siteData.connectionPreferenceMap[assetId];
+      const incomingProtocols = (preference.availableProtocols || [])
+        .map((p) => (typeof p === "string" ? p.trim() : ""))
+        .filter((p) => p.length > 0);
+
+      const mergedProtocols
+        = incomingProtocols.length > 0 ? Array.from(new Set(incomingProtocols)) : existing?.availableProtocols;
+
+      siteData.connectionPreferenceMap[assetId] = {
+        ...(existing || {}),
+        ...preference,
+        ...(mergedProtocols && mergedProtocols.length > 0 ? { availableProtocols: mergedProtocols } : {})
+      };
+
+      currentConnectionPreferenceMap.value = { ...siteData.connectionPreferenceMap };
+    };
+
+    /**
      * @description 设置 RDP 客户端选项
      * @param rdpClientOption
      */
@@ -309,6 +374,7 @@ export const useUserInfoStore = defineStore(
       currentOrganizations,
       currentRdpClientOption,
       currentConnectionInfoMap,
+      currentConnectionPreferenceMap,
 
       setUserData,
       getUserData,
@@ -320,7 +386,10 @@ export const useUserInfoStore = defineStore(
       setRdpClientOption,
       setConnectionInfoToUser,
       getConnectionInfoForAsset,
-      setConnectionInfoForAsset
+      setConnectionInfoForAsset,
+      deleteConnectionInfoForAsset,
+      getConnectionPreferenceForAsset,
+      setConnectionPreferenceForAsset
     };
   },
   {
@@ -334,7 +403,8 @@ export const useUserInfoStore = defineStore(
         "currentSite",
         "currentOrganizations",
         "currentRdpClientOption",
-        "currentConnectionInfoMap"
+        "currentConnectionInfoMap",
+        "currentConnectionPreferenceMap"
       ]
     }
   }

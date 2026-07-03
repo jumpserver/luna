@@ -35,6 +35,20 @@ interface MenuItem {
 }
 
 const isFavorited = computed(() => !!props.asset.isFavorite);
+const hasReusableSavedConnection = computed(() => {
+  const saved = props.asset.savedConnection;
+  if (!saved?.protocol || !saved.username) return false;
+
+  const mode = saved.accountMode || "hosted";
+  if (mode === "manual") {
+    return !!(saved.rememberSecret && saved.manualUsername && saved.manualPassword);
+  }
+  if (mode === "dynamic") {
+    return !!(saved.rememberSecret && saved.dynamicPassword);
+  }
+
+  return true;
+});
 
 const menuItems = computed((): MenuItem[] => {
   const uniqueProtocols = resolveProtocols(props.asset);
@@ -44,11 +58,6 @@ const menuItems = computed((): MenuItem[] => {
       value: "connect",
       label: t("ContextMenu.Connect"),
       icon: "i-lucide-plug",
-      onClick: () => handleConnect()
-    },
-    {
-      label: t("ContextMenu.Edit"),
-      icon: "solar:pen-new-square-linear",
       onClick: () => handleEdit()
     },
     {
@@ -62,6 +71,15 @@ const menuItems = computed((): MenuItem[] => {
       onClick: () => (isFavorited.value ? handleUnfavorite() : handleFavorite())
     }
   ];
+
+  if (hasReusableSavedConnection.value) {
+    baseItems.unshift({
+      value: "quickConnect",
+      label: t("ContextMenu.QuickConnect"),
+      icon: "i-lucide-zap",
+      onClick: () => handleConnect()
+    });
+  }
 
   // 如果有多个协议，为连接项添加子菜单
   if (uniqueProtocols.length > 1) {

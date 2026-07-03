@@ -291,6 +291,17 @@ export interface ConnectionInfo {
   connectOptions?: RdpGraphics;
 }
 
+export interface ConnectionPreferenceInfo {
+  protocol?: string;
+  username?: string;
+  accountId?: string;
+  accountMode?: "hosted" | "dynamic" | "manual" | "anonymous";
+  manualUsername?: string;
+  availableProtocols?: string[];
+  connectMethod?: string;
+  connectOptions?: RdpGraphics;
+}
+
 export interface ConnectMethod {
   name: string;
   display_name: string;

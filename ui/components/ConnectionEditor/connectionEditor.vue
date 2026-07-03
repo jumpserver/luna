@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { AssetItem, AssetPageType, ConnectionInfo, PermedAccount, PermedProtocol } from "~/types/index";
+import type { AssetItem, AssetPageType, ConnectionInfo, ConnectionPreferenceInfo, PermedAccount, PermedProtocol } from "~/types/index";
 import ConnectionSettingsForm from "~/components/ConnectionEditor/connectionSettingsForm.vue";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols, sortProtocolNames } from "~/utils";
 
 const props = defineProps<{
@@ -9,6 +10,7 @@ const props = defineProps<{
 
 const { t, locale } = useI18n();
 const { getAssetDetail } = useAssetAction();
+const userInfoStore = useUserInfoStore();
 
 const open = ref(false);
 const currentAsset = ref<AssetItem | null>(null);
@@ -36,49 +38,95 @@ const getVisibleProtocols = (protocols: PermedProtocol[]) => {
   return protocols.filter((protocol) => protocol?.public !== false);
 };
 
+const getManualInputLabel = () => (locale.value === "zh" ? "手动输入" : "Manual input");
+const getAnonymousLabel = () => (locale.value === "zh" ? "匿名账号" : "Anonymous");
+const getDynamicAccountLabel = (account?: PermedAccount) => {
+  if (!account) return "";
+
+  const base = t("Account.DynamicUser");
+  const username = account.username || "";
+  return username ? `${base}(${username})` : base;
+};
+
+const resolvePreferredProtocol = (source: ConnectionPreferenceInfo | ConnectionInfo | undefined, protocols: PermedProtocol[]) => {
+  const available = sortPermedProtocols(protocols).map((item) => item.name);
+  const preferred = (source?.protocol || "").trim();
+
+  if (preferred && available.includes(preferred)) return preferred;
+  return available[0] || "";
+};
+
+const resolvePreferredAccount = (
+  source: ConnectionPreferenceInfo | ConnectionInfo | undefined,
+  accounts: PermedAccount[]
+) => {
+  const mode = source?.accountMode || "hosted";
+  const username = (source?.username || "").trim();
+
+  if (mode === "manual") {
+    const manual = accounts.find((account) => account.alias === "@INPUT");
+    if (manual) return getManualInputLabel();
+  }
+
+  if (mode === "dynamic") {
+    const dynamic = accounts.find((account) => account.alias === "@USER");
+    if (dynamic) return getDynamicAccountLabel(dynamic);
+  }
+
+  if (mode === "anonymous") {
+    const anonymous = accounts.find((account) => account.alias === "@ANON");
+    if (anonymous) return "@ANON";
+  }
+
+  if (mode === "hosted" && username) {
+    const hosted = accounts.find((account) => {
+      if (source?.accountId && account.id === source.accountId) return true;
+      return account.name === username || account.username === username || account.alias === username;
+    });
+
+    if (hosted) return hosted.name;
+  }
+
+  const firstHosted = accounts.find((account) => account?.alias && !account.alias.startsWith("@"));
+  if (firstHosted) return firstHosted.name;
+
+  const dynamic = accounts.find((account) => account.alias === "@USER");
+  if (dynamic) return getDynamicAccountLabel(dynamic);
+
+  const manual = accounts.find((account) => account.alias === "@INPUT");
+  if (manual) return getManualInputLabel();
+
+  const anonymous = accounts.find((account) => account.alias === "@ANON");
+  if (anonymous) return "@ANON";
+
+  return "";
+};
+
 /**
  * @description 初始化 Form
  * @param asset
  */
 const initDraft = (asset: AssetItem) => {
   const saved: ConnectionInfo | undefined = asset.savedConnection;
+  const preferred = userInfoStore.getConnectionPreferenceForAsset(asset.id) || undefined;
+  const source = {
+    ...(preferred || {}),
+    ...(saved || {})
+  } as ConnectionPreferenceInfo | ConnectionInfo;
 
   const protocols = sortPermedProtocols(getVisibleProtocols(asset.permedProtocols || ([] as PermedProtocol[])));
   const accounts = asset.permedAccounts || ([] as PermedAccount[]);
 
-  // 协议默认：保存的协议 -> 第一个协议 -> 空
-  draftProtocol.value = saved?.protocol || protocols[0]?.name || "";
+  draftProtocol.value = resolvePreferredProtocol(source, protocols);
+  draftAccount.value = resolvePreferredAccount(source, accounts);
 
-  // 账号默认：保存的用户名 -> 第一条托管账号 -> 动态账号(@USER) -> 手动输入(@INPUT) -> 空
-  if (saved?.username) {
-    draftAccount.value = saved!.username;
-  } else {
-    const hosted = accounts.find((a) => a?.alias && !a.alias.startsWith("@"));
-
-    if (hosted) {
-      draftAccount.value = hosted.name;
-    } else {
-      const dynamic = accounts.find((a) => a.alias === "@USER");
-      const manual = accounts.find((a) => a.alias === "@INPUT");
-
-      if (dynamic) {
-        draftAccount.value
-          = locale.value === "zh" ? `${dynamic.name}(${dynamic.username})` : `Dynamic user(${dynamic.username})`;
-      } else if (manual) {
-        draftAccount.value = locale.value === "zh" ? manual.name : "Manual input";
-      } else {
-        draftAccount.value = "";
-      }
-    }
-  }
-
-  draftManualUsername.value = saved?.manualUsername || "";
+  draftManualUsername.value = source?.manualUsername || "";
   draftManualPassword.value = saved?.manualPassword || "";
   draftDynamicPassword.value = saved?.dynamicPassword || "";
   draftRememberSecret.value = saved?.rememberSecret || false;
   draftRememberSelection.value = false;
-  draftConnectMethod.value = saved?.connectMethod || "";
-  draftConnectOptions.value = { ...(saved?.connectOptions || {}) };
+  draftConnectMethod.value = source?.connectMethod || "";
+  draftConnectOptions.value = { ...(source?.connectOptions || {}) };
 };
 
 /**
@@ -99,12 +147,12 @@ const buildConnectionInfo = () => {
 
   const v = draftAccount.value || "";
 
-  if (v === "手动输入" || v === "Manual input") accountMode = "manual";
-  if (v.includes("@ANON") || v === "匿名账号" || v === "Anonymous") {
+  if (v === getManualInputLabel()) accountMode = "manual";
+  if (v.includes("@ANON") || v === getAnonymousLabel()) {
     accountMode = "anonymous";
     normalizedAccount = "@ANON";
   }
-  if (v.includes("同名账号") || v.includes("Dynamic user")) {
+  if (v.startsWith(t("Account.DynamicUser"))) {
     accountMode = "dynamic";
 
     const accs = currentAsset.value?.permedAccounts || [];
@@ -225,6 +273,7 @@ defineExpose({ open: openModal, close });
   <Modal
     :open="open"
     :title="modalTitle"
+    overlay
     hide-cancel
     hide-footer
     compact

@@ -76,17 +76,26 @@ const resolveProtocols = (asset: AssetItem) => {
 const buildMenuItems = computed(() => {
   return (asset: AssetItem): MenuItem[] => {
     const uniqueProtocols = resolveProtocols(asset);
+    const saved = asset.savedConnection;
+    const hasReusableSavedConnection = (() => {
+      if (!saved?.protocol || !saved.username) return false;
+
+      const mode = saved.accountMode || "hosted";
+      if (mode === "manual") {
+        return !!(saved.rememberSecret && saved.manualUsername && saved.manualPassword);
+      }
+      if (mode === "dynamic") {
+        return !!(saved.rememberSecret && saved.dynamicPassword);
+      }
+
+      return true;
+    })();
 
     const items: MenuItem[] = [
       {
         value: "connect",
         label: t("ContextMenu.Connect"),
         icon: "i-lucide-plug",
-        onClick: () => emits("connectTrigger", asset)
-      },
-      {
-        label: t("ContextMenu.Edit"),
-        icon: "solar:pen-new-square-linear",
         onClick: () => emits("editTrigger", asset)
       },
       {
@@ -100,6 +109,15 @@ const buildMenuItems = computed(() => {
         onClick: () => (asset.isFavorite ? handleUnfavorite(asset) : handleFavorite(asset))
       }
     ];
+
+    if (hasReusableSavedConnection) {
+      items.unshift({
+        value: "quickConnect",
+        label: t("ContextMenu.QuickConnect"),
+        icon: "i-lucide-zap",
+        onClick: () => emits("connectTrigger", asset)
+      });
+    }
 
     if (uniqueProtocols.length > 1) {
       const protocolItems: MenuItem[] = uniqueProtocols.map((name: string) => ({

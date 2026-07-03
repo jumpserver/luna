@@ -137,6 +137,11 @@ const hasReusableSavedConnection = (asset: AssetItem) => {
   return true;
 };
 
+const hasQuickConnect = (asset: AssetItem) => {
+  const saved = asset.savedConnection;
+  return !!(saved?.protocol === "ssh" && hasReusableSavedConnection(asset));
+};
+
 const buildSavedConnectionInfo = (asset: AssetItem) => {
   const saved = asset.savedConnection;
   if (!saved || !hasReusableSavedConnection(asset)) return null;
@@ -295,10 +300,10 @@ const handleAssetConnect = async (asset: AssetItem) => {
   } catch {}
 };
 
-const handleAssetEdit = async (asset: AssetItem) => {
+const handleAssetConnectWithSelection = async (asset: AssetItem) => {
   try {
     const info = await connEditorRef.value!.open(asset);
-    saveConnectionInfo(asset, info);
+    confirmConnection(asset, info);
   } catch {}
 };
 
@@ -310,7 +315,7 @@ const handleAssetOpenInNewWindow = async (asset: AssetItem) => {
   if (!info) {
     try {
       info = await connEditorRef.value!.open(asset);
-      if (info.rememberSelection !== false) {
+      if (info && info.rememberSelection !== false) {
         saveConnectionInfo(asset, info);
       }
     } catch {
@@ -318,6 +323,7 @@ const handleAssetOpenInNewWindow = async (asset: AssetItem) => {
     }
   }
 
+  if (!info) return;
   await openAssetInWindow(asset, info);
 };
 
@@ -417,12 +423,22 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
   }));
 
   return [
+    ...(hasQuickConnect(asset)
+      ? [{
+          label: t("ContextMenu.QuickConnect"),
+          icon: "i-lucide-zap",
+          onSelect: () => {
+            contextMenuVisible.value = false;
+            handleAssetConnect(asset);
+          }
+        } satisfies DropdownMenuItem]
+      : []),
     {
       label: t("ContextMenu.Connect"),
       icon: "i-lucide-plug",
       onSelect: () => {
         contextMenuVisible.value = false;
-        handleAssetConnect(asset);
+        handleAssetConnectWithSelection(asset);
       }
     },
     {
@@ -434,14 +450,6 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
       label: t("ContextMenu.OpenInNewWindow"),
       icon: "i-lucide-square-arrow-out-up-right",
       onSelect: () => handleAssetOpenInNewWindow(asset)
-    },
-    {
-      label: t("ContextMenu.Edit"),
-      icon: "solar:pen-new-square-linear",
-      onSelect: () => {
-        contextMenuVisible.value = false;
-        handleAssetEdit(asset);
-      }
     },
     {
       label: t("ContextMenu.Rename"),
@@ -490,7 +498,7 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
             :aria-label="t('Operation.Search')"
             class="size-6 shrink-0 justify-center rounded-lg p-0"
             :class="showAssetSearch ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
-            @click="showAssetSearch = !showAssetSearch"
+            @click="() => { showAssetSearch = !showAssetSearch; }"
           />
         </UTooltip>
 
@@ -587,7 +595,7 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
                 size="xs"
                 icon="i-lucide-circle-x"
                 aria-label="Clear input"
-                @click="sidebarSearch = ''"
+                @click="() => { sidebarSearch = ''; }"
               />
             </template>
           </UInput>

@@ -20,7 +20,7 @@ const scrollRef = ref<HTMLElement | null>(null);
 const subscribeSettingEvent = ref<UnlistenFn | null>(null);
 
 const { t } = useI18n();
-const { confirmConnection, saveConnectionInfo } = useAssetConnection();
+const { confirmConnection } = useAssetConnection();
 
 const contextMenu = useContextMenu();
 const userInfoStore = useUserInfoStore();
@@ -122,14 +122,28 @@ const handleContextTrigger = (asset: AssetItem, event?: MouseEvent) => {
   contextMenu.showContextMenu(asset, event);
 };
 
+const hasReusableSavedConnection = (asset: AssetItem) => {
+  const saved = asset.savedConnection;
+  if (!saved || !saved.protocol || !saved.username) return false;
+
+  const mode = saved.accountMode || "hosted";
+  if (mode === "manual") {
+    return !!(saved.rememberSecret && saved.manualUsername && saved.manualPassword);
+  }
+  if (mode === "dynamic") {
+    return !!(saved.rememberSecret && saved.dynamicPassword);
+  }
+
+  return true;
+};
+
 /**
- * @description 打开编辑弹窗
+ * @description 打开连接弹窗并连接
  */
 const handleEditTrigger = async (asset: AssetItem) => {
   try {
     const info = await connEditorRef.value!.open(asset);
-    // 仅保存连接配置，不触发连接
-    saveConnectionInfo(asset, info);
+    confirmConnection(asset, info);
   } catch {}
 };
 
@@ -138,20 +152,7 @@ const handleEditTrigger = async (asset: AssetItem) => {
  */
 const handleConnectAsset = async (asset: AssetItem) => {
   const saved = asset.savedConnection;
-
-  const canDirectConnect = (() => {
-    if (!saved || !saved.protocol || !saved.username) return false;
-
-    const mode = saved.accountMode || "hosted";
-    if (mode === "manual") {
-      return !!(saved.rememberSecret && saved.manualUsername && saved.manualPassword);
-    }
-    if (mode === "dynamic") {
-      return !!(saved.rememberSecret && saved.dynamicPassword);
-    }
-
-    return true;
-  })();
+  const canDirectConnect = hasReusableSavedConnection(asset);
 
   if (canDirectConnect) {
     return confirmConnection(asset, {

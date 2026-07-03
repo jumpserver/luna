@@ -10,6 +10,7 @@ interface PersistedUserSnapshot {
   userMap?: Record<string, Record<string, any>>
   currentRdpClientOption?: Record<string, any>
   currentConnectionInfoMap?: Record<string, any>
+  currentConnectionPreferenceMap?: Record<string, any>
 }
 
 const normalizeOrgList = (value: unknown): PermOrgItem[] => {
@@ -162,7 +163,8 @@ export const useAuthSession = () => {
         currentOrganizations: parsed.currentOrganizations || [],
         userMap: parsed.userMap as any,
         currentRdpClientOption: (parsed.currentRdpClientOption as any) || {},
-        currentConnectionInfoMap: (parsed.currentConnectionInfoMap as any) || {}
+        currentConnectionInfoMap: (parsed.currentConnectionInfoMap as any) || {},
+        currentConnectionPreferenceMap: (parsed.currentConnectionPreferenceMap as any) || {}
       });
 
       userInfoStore.setCurrentSite(snapshotSite);

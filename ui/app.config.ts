@@ -79,7 +79,7 @@ export default defineAppConfig({
     },
     modal: {
       slots: {
-        overlay: "fixed inset-0 bg-black/35 backdrop-blur-[2px]",
+        overlay: "fixed inset-0 bg-black/10 backdrop-blur-[0px]",
         content:
           "bg-[var(--app-sidebar-bg)] text-[var(--app-fg)] divide-y divide-[var(--app-border)] flex flex-col focus:outline-none ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)]",
         header: "flex items-center gap-1.5 p-4 sm:px-6 min-h-(--ui-header-height) bg-[var(--app-header-bg)]",
