@@ -15,7 +15,7 @@ import { useKokoConnectionStore } from "~/koko/stores/connection";
 import { useKokoTerminalSettingsStore } from "~/koko/stores/terminalSettings";
 import { MaxTimeout } from "~/koko/utils/config";
 import { getDefaultTerminalConfig } from "~/koko/utils/guard";
-import { terminalTheme } from "~/koko/utils/terminalTheme";
+import { appTerminalTheme, terminalTheme } from "~/koko/utils/terminalTheme";
 import { formatMessage, getXTerminalLineContent, preprocessInput, updateIcon, writeBufferToTerminal } from "~/koko/utils/terminalUtils";
 import {
   FORMATTER_MESSAGE_TYPE,
@@ -58,6 +58,9 @@ export const useKokoTerminalSocket = () => {
   const terminalSettingsStore = useKokoTerminalSettingsStore();
   const sessionCtxRef = inject(connectorSessionKey, null);
   const queryTerminalThemeName = computed(() => unref(sessionCtxRef)?.terminalThemeName || "");
+  // 未显式指定主题名（workspace 内嵌场景）时跟随应用主题；独立 /koko/connect 路由带主题名则维持原逻辑
+  const followAppTheme = computed(() => !!unref(sessionCtxRef) && !queryTerminalThemeName.value);
+  let themeObserver: MutationObserver | null = null;
 
   const fitAddon = new FitAddon();
   const webglAddon = new WebglAddon();
@@ -171,8 +174,9 @@ export const useKokoTerminalSocket = () => {
           terminalSettingsStore.setDefaultTerminalConfig("ctrlCAsCtrlZ", sessionInfo.ctrlCAsCtrlZ ? "1" : "0");
         }
 
+        // 跟随应用主题时不让服务端 themeName 覆盖
         const effectiveThemeName = queryTerminalThemeName.value || sessionInfo.themeName;
-        if (effectiveThemeName) {
+        if (effectiveThemeName && !followAppTheme.value) {
           nextTick(() => {
             terminalRef.value!.options.theme = terminalTheme(effectiveThemeName);
           });
@@ -367,7 +371,8 @@ export const useKokoTerminalSocket = () => {
       rightClickSelectsWord: true,
       scrollback: 5000,
       scrollOnUserInput: true,
-      theme: terminalTheme(defaultTerminalCfg.themeName),
+      theme: followAppTheme.value ? appTerminalTheme() : terminalTheme(defaultTerminalCfg.themeName),
+      minimumContrastRatio: 4.5,
       allowProposedApi: true,
       customGlyphs: true
     });
@@ -390,10 +395,24 @@ export const useKokoTerminalSocket = () => {
     socketRef.value = ws.value;
   };
 
+  // dark/light 切 class、preset 切 data-theme-preset、Luna 预设写内联 style，三种路径都在 <html> 属性上
+  const observeAppTheme = () => {
+    if (!followAppTheme.value || !import.meta.client) return;
+    themeObserver = new MutationObserver(() => {
+      if (!terminalRef.value) return;
+      terminalRef.value.options.theme = appTerminalTheme();
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "data-theme-preset", "style"]
+    });
+  };
+
   onMounted(() => {
     if (!containerRef.value) return;
     createTerminal();
     createWebSocket();
+    observeAppTheme();
     nextTick(() => {
       listenSocketEvent();
       listenTerminalRefEvent();
@@ -405,6 +424,7 @@ export const useKokoTerminalSocket = () => {
 
   onUnmounted(() => {
     autoTerminalFit();
+    themeObserver?.disconnect();
     if (pingInterval.value) clearInterval(pingInterval.value);
     if (warningInterval.value) clearInterval(warningInterval.value);
     socketRef.value?.close();

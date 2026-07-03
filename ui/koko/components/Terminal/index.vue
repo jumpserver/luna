@@ -47,18 +47,18 @@ const onUploadChange = (event: Event) => {
 </template>
 
 <style scoped>
+/* 背景与 xterm 主题背景同源（--app-main-bg），padding 区域无色差 */
+#terminal-container {
+  background: var(--app-main-bg);
+}
+
 #terminal-container :deep(.terminal) {
   height: 100%;
-  padding: 10px 0 5px 10px;
+  padding: 12px 4px 8px 12px;
 }
 
-#terminal-container :deep(.xterm-viewport)::-webkit-scrollbar {
-  height: 4px;
-  width: 7px;
-}
-
-#terminal-container :deep(.xterm-viewport)::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.35);
-  border-radius: 3px;
+/* 主题切换瞬间由容器背景兜底，避免闪色块；滚动条不覆盖，走 main.css 全局窄样式 */
+#terminal-container :deep(.xterm-viewport) {
+  background-color: transparent !important;
 }
 </style>

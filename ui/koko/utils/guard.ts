@@ -53,7 +53,8 @@ export function getDefaultTerminalConfig(): ITerminalSettings {
   return {
     fontSize,
     lineHeight: 1.2,
-    fontFamily: "monaco, Consolas, \"Lucida Console\", monospace",
+    // 与 main.css --font-mono 一致（xterm 不解析 CSS 变量，写具体字体串）
+    fontFamily: "\"SFMono-Regular\", \"JetBrains Mono\", \"Cascadia Code\", \"Fira Code\", \"Menlo\", \"Consolas\", monospace",
     themeName,
     quickPaste: commandLine.is_right_click_quickly_paste ? "1" : "0",
     ctrlCAsCtrlZ: "0",

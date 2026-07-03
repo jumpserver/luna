@@ -21,7 +21,6 @@ provide(connectorSessionKey, sessionContext);
 const token = computed(() => props.tab.payload?.token || props.tab.payload || {});
 const tokenId = computed(() => props.tab.payload?.id || token.value?.id || "");
 
-const terminalThemeName = computed(() => (colorMode.value === "dark" ? "OneHalfDark" : "OneHalfLight"));
 const themeType = computed(() => (colorMode.value === "dark" ? "darkGary" : "default"));
 
 async function fetchEndpointUrl() {
@@ -103,7 +102,7 @@ async function prepareSession() {
       ticket,
       endpointUrl,
       tabId: props.tab.id,
-      terminalThemeName: terminalThemeName.value,
+      // 不指定 terminalThemeName：终端跟随应用主题（appTerminalTheme）
       colorMode: colorMode.value,
       themeType: themeType.value,
       disableAutoHash: "false"
@@ -124,9 +123,8 @@ async function prepareSession() {
 }
 
 watch(() => props.tab.payload, () => void prepareSession(), { deep: true });
-watch([terminalThemeName, themeType], () => {
+watch(themeType, () => {
   if (sessionContext.value) {
-    sessionContext.value.terminalThemeName = terminalThemeName.value;
     sessionContext.value.themeType = themeType.value;
     sessionContext.value.colorMode = colorMode.value;
   }
