@@ -9,6 +9,7 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
 import { readText, writeText } from "clipboard-polyfill";
 import { useKokoTerminalEvents } from "~/koko/composables/useTerminalEvents";
+import { registerKokoTerminalSession, unregisterKokoTerminalSession } from "~/koko/composables/useTerminalSessionRegistry";
 import { useKokoZmodem } from "~/koko/composables/useZmodem";
 import { connectorSessionKey, useKokoWsUrl } from "~/koko/composables/wsUrl";
 import { useKokoConnectionStore } from "~/koko/stores/connection";
@@ -119,6 +120,14 @@ export const useKokoTerminalSocket = () => {
           terminal: terminalRef.value,
           terminalId: parsedMessageData.id
         });
+
+        const tabId = unref(sessionCtxRef)?.tabId;
+        if (tabId && socketRef.value) {
+          registerKokoTerminalSession(tabId, {
+            socket: socketRef.value,
+            terminalId: parsedMessageData.id
+          });
+        }
 
         const info = JSON.parse(parsedMessageData.data);
         featureSetting.value = info.setting;
@@ -427,6 +436,8 @@ export const useKokoTerminalSocket = () => {
     themeObserver?.disconnect();
     if (pingInterval.value) clearInterval(pingInterval.value);
     if (warningInterval.value) clearInterval(warningInterval.value);
+    const tabId = unref(sessionCtxRef)?.tabId;
+    if (tabId) unregisterKokoTerminalSession(tabId);
     socketRef.value?.close();
     terminalRef.value?.dispose();
     connectionStore.resetConnectionState();

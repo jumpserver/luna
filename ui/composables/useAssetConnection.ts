@@ -1,5 +1,6 @@
-import type { AssetItem, ConnectionInfo as StoredConnectionInfo, ConnectionPreferenceInfo } from "~/types/index";
+import type { AssetItem, ConnectionPreferenceInfo, ConnectionInfo as StoredConnectionInfo } from "~/types/index";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { sortPermedProtocols } from "~/utils";
 
 interface ConnectionFormInfo {
   protocol: string
@@ -20,7 +21,78 @@ interface ConnectionFormInfo {
 
 export function useAssetConnection() {
   const { handleAssetConnection, displayUser } = useAssetAction();
+  const { getMethodsForProtocol } = useConnectMethods();
   const userInfoStore = useUserInfoStore();
+
+  const normalizeConnectionInfo = async (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
+    const protocols = sortPermedProtocols(asset.permedProtocols || [])
+      .filter((protocol) => isTauriRuntime() || protocol?.public !== false)
+      .map((protocol) => protocol.name);
+    const protocol = protocols.includes(connectionInfo.protocol) ? connectionInfo.protocol : (protocols[0] || "");
+    const accounts = asset.permedAccounts || [];
+
+    let accountMode = connectionInfo.accountMode;
+    let account = connectionInfo.account;
+    let accountId = connectionInfo.accountId;
+    const modeAlias = {
+      manual: "@INPUT",
+      dynamic: "@USER",
+      anonymous: "@ANON"
+    } as const;
+
+    if (accountMode === "hosted") {
+      const matched = accounts.find((item) =>
+        (accountId && item.id === accountId)
+        || item.name === account
+        || item.username === account
+        || item.alias === account
+      );
+
+      if (matched && !matched.alias.startsWith("@")) {
+        account = matched.name;
+        accountId = matched.id;
+      } else {
+        const fallback = accounts.find((item) => item.alias && !item.alias.startsWith("@"));
+        if (fallback) {
+          account = fallback.name;
+          accountId = fallback.id;
+        } else {
+          const special = accounts.find((item) => ["@USER", "@INPUT", "@ANON"].includes(item.alias));
+          accountMode = special?.alias === "@USER" ? "dynamic" : special?.alias === "@INPUT" ? "manual" : "anonymous";
+          account = special?.name || special?.alias || "";
+          accountId = undefined;
+        }
+      }
+    } else if (!accounts.some((item) => item.alias === modeAlias[accountMode as keyof typeof modeAlias])) {
+      const fallback = accounts.find((item) => item.alias && !item.alias.startsWith("@"));
+      accountMode = "hosted";
+      account = fallback?.name || "";
+      accountId = fallback?.id;
+    }
+
+    let connectMethod = "";
+    if (protocol) {
+      try {
+        const methods = await getMethodsForProtocol(protocol);
+        connectMethod = methods.some((method) => method.value === connectionInfo.connectMethod)
+          ? connectionInfo.connectMethod
+          : (methods[0]?.value || "");
+      } catch {
+        // The connection layer still has a local protocol default when the
+        // method list is temporarily unavailable.
+      }
+    }
+
+    return {
+      ...connectionInfo,
+      protocol,
+      account,
+      accountId,
+      accountMode,
+      connectMethod,
+      availableProtocols: protocols
+    };
+  };
 
   /**
    * 处理资产连接
@@ -125,23 +197,25 @@ export function useAssetConnection() {
   /**
    * 处理连接确认（从模态框）
    */
-  const confirmConnection = (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
-    saveConnectionPreference(asset, connectionInfo);
+  const confirmConnection = async (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
+    const normalized = await normalizeConnectionInfo(asset, connectionInfo);
+    saveConnectionPreference(asset, normalized);
 
-    if (connectionInfo.rememberSelection !== false) {
-      saveConnectionInfo(asset, connectionInfo);
+    if (normalized.rememberSelection !== false) {
+      saveConnectionInfo(asset, normalized);
     } else {
       userInfoStore.deleteConnectionInfoForAsset(asset.id);
     }
 
-    handleAssetConnection(connectionInfo.account, asset.id, connectionInfo.protocol, asset.permedAccounts!, undefined, {
-      accountMode: connectionInfo.accountMode,
-      manualUsername: connectionInfo.manualUsername,
-      manualPassword: connectionInfo.manualPassword,
-      dynamicPassword: connectionInfo.dynamicPassword,
-      connectMethod: connectionInfo.connectMethod,
-      connectOptions: connectionInfo.connectOptions,
-      tabId: connectionInfo.tabId,
+    handleAssetConnection(normalized.account, asset.id, normalized.protocol, asset.permedAccounts!, undefined, {
+      accountMode: normalized.accountMode,
+      accountId: normalized.accountId,
+      manualUsername: normalized.manualUsername,
+      manualPassword: normalized.manualPassword,
+      dynamicPassword: normalized.dynamicPassword,
+      connectMethod: normalized.connectMethod,
+      connectOptions: normalized.connectOptions,
+      tabId: normalized.tabId,
       asset
     });
   };

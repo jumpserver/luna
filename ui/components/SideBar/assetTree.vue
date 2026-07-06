@@ -84,8 +84,22 @@ const loadRoot = async (kind: PanelKind) => {
   loading.value = true;
   try {
     const nodes = await fetchTree(kind);
-    if (kind === "authorization") authorizationNodes.value = removeFavoriteNodes(nodes);
-    else typeNodes.value = unwrapAllTypesRoot(nodes);
+    if (kind === "authorization") {
+      const roots = removeFavoriteNodes(nodes);
+      authorizationNodes.value = roots;
+
+      // The authorization API commonly returns one synthetic root. Showing
+      // only that node makes the tree look empty, so reveal its first level.
+      await Promise.all(
+        roots
+          .filter((node) => node.isParent || node.children?.length)
+          .map(async (node) => {
+            if (!node.open) await toggleNode(node, kind);
+          })
+      );
+    } else {
+      typeNodes.value = unwrapAllTypesRoot(nodes);
+    }
   } catch (error) {
     reportError(error);
   } finally {
@@ -107,7 +121,7 @@ const switchTreeKind = () => {
   batchMode.value = false;
 };
 
-const toggleNode = async (node: AssetTreeNode, kind: PanelKind) => {
+async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
   if (node.open) {
     node.open = false;
     return;
@@ -126,7 +140,7 @@ const toggleNode = async (node: AssetTreeNode, kind: PanelKind) => {
   } finally {
     node.loading = false;
   }
-};
+}
 
 const selectNode = (node: AssetTreeNode) => {
   if (node.chkDisabled) return;

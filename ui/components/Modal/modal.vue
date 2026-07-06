@@ -66,8 +66,11 @@ const handleContextMenu = async (e: Event) => {
   <UModal
     :open="open"
     :ui="{
-      header: compact ? 'py-2 sm:py-2' : undefined,
-      body: compact ? 'pt-2 pb-3 sm:pt-2 sm:pb-3' : undefined,
+      content: compact ? 'w-[calc(100vw-3rem)] max-w-xl' : undefined,
+      header: compact ? '!min-h-12 h-12 py-1 sm:py-1' : undefined,
+      title: compact ? 'text-sm leading-4 font-medium' : undefined,
+      close: compact ? 'size-7 p-1' : undefined,
+      body: compact ? 'pt-3 pb-6 sm:pt-3 sm:pb-6' : undefined,
       footer: [
         confirmFullWidth ? 'block' : 'justify-end',
         compact ? 'pt-2 sm:pt-2' : ''

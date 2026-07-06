@@ -239,6 +239,26 @@
   background-color: var(--app-scrollbar-thumb-hover);
 }
 
+/* xterm 6 renders a virtual scrollbar with inline dimensions and colors. */
+.xterm .xterm-scrollable-element > .scrollbar.vertical,
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider {
+  width: 7px !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar.vertical {
+  background: transparent !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider {
+  background: var(--app-scrollbar-thumb) !important;
+  border-radius: 9999px;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider:hover,
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active {
+  background: var(--app-scrollbar-thumb-hover) !important;
+}
+
 .text-xs-plus {
   @apply text-[14px];
 }

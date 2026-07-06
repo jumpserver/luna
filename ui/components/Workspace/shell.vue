@@ -89,8 +89,11 @@ onBeforeUnmount(() => {
         />
       </aside>
 
-      <main class="workspace-shell__main min-w-0 flex-1 min-h-0">
-        <slot />
+      <main class="workspace-shell__main flex min-h-0 min-w-0 flex-1 flex-col">
+        <div class="min-h-0 flex-1 overflow-hidden">
+          <slot />
+        </div>
+        <slot name="bottomPanel" />
       </main>
 
       <aside
@@ -99,7 +102,7 @@ onBeforeUnmount(() => {
         :class="isRightResizing ? '' : 'transition-[width] duration-200'"
         :style="{ width: rightPanelOpen ? `${rightPanelWidth}px` : '0px' }"
       >
-        <div v-if="rightPanelOpen" class="h-full min-h-0">
+        <div class="h-full min-h-0" :aria-hidden="!rightPanelOpen">
           <slot name="rightPanel" />
         </div>
         <div

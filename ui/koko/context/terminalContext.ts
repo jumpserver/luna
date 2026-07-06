@@ -69,16 +69,16 @@ export const createKokoTerminalContext = (): TerminalContext => {
       );
     });
 
-    mittBus.on("write-command", ({ type }) => {
-      connectionStore.terminal?.paste(type);
-    });
-
     const handleHostCommand = (data: unknown) => {
       const socket = connectionStore.socket;
       const terminalId = connectionStore.terminalId;
-      if (!socket || !terminalId) return;
+      if (!socket || !terminalId || socket.readyState !== WebSocket.OPEN) return;
       socket.send(formatMessage(terminalId, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, String(data ?? "")));
     };
+
+    mittBus.on("write-command", ({ type }) => {
+      handleHostCommand(type);
+    });
 
     const handleHostFocus = () => {
       connectionStore.terminal?.focus();

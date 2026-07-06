@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { AssetItem, AssetTreeNode } from "~/types";
+import KokoFileSessionSurface from "~/koko/workspace/FileSessionSurface.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { t } = useI18n();
@@ -15,6 +17,23 @@ const searchLoading = ref(false);
 const searchNodes = ref<AssetTreeNode[]>([]);
 const selectedAsset = ref<AssetItem | null>(null);
 const connecting = ref(false);
+const inlinePayload = ref<Record<string, any> | null>(null);
+const inlineError = ref("");
+
+const inlineTab = computed<WorkspaceSessionTab | null>(() => {
+  const asset = selectedAsset.value;
+  if (!asset || !inlinePayload.value) return null;
+  return {
+    id: `right-panel-sftp:${asset.id}`,
+    assetId: asset.id,
+    assetName: asset.name,
+    address: asset.address,
+    protocol: "sftp",
+    account: displayUser(asset.id, asset.permedAccounts),
+    status: "ready",
+    payload: inlinePayload.value
+  };
+});
 
 const activeWorkspaceAsset = computed(() => {
   if (!activeTab.value || activeTab.value.protocol !== "ssh") return null;
@@ -24,6 +43,7 @@ const activeWorkspaceAsset = computed(() => {
     address: activeTab.value.address
   };
 });
+const isActiveAssetPreparing = computed(() => Boolean(activeWorkspaceAsset.value && !inlineTab.value && !inlineError.value));
 
 const reportError = (error: unknown) => {
   toast.add({
@@ -76,28 +96,79 @@ const openSftp = async () => {
   if (!asset || connecting.value) return;
 
   connecting.value = true;
+  inlineError.value = "";
+  inlinePayload.value = null;
   try {
+    const activeAccount = activeTab.value?.assetId === asset.id ? activeTab.value.account : "";
+    const account = activeAccount || displayUser(asset.id, asset.permedAccounts);
+    const preference = userInfoStore.getConnectionPreferenceForAsset(asset.id);
+    const remembered = userInfoStore.getConnectionInfoForAsset(asset.id);
+    const accountId = preference?.accountId || remembered?.accountId;
     handleAssetConnection(
-      displayUser(asset.id, asset.permedAccounts),
+      account,
       asset.id,
       "ssh",
       asset.permedAccounts,
       "sftp",
       {
-        connectMethod: isTauriRuntime() ? "sftp_client" : "web_sftp",
-        asset
+        accountMode: preference?.accountMode || remembered?.accountMode || "hosted",
+        accountId,
+        connectMethod: "web_cli_native",
+        asset,
+        onSessionReady: (payload) => {
+          inlinePayload.value = payload;
+          connecting.value = false;
+        },
+        onSessionError: (error) => {
+          inlineError.value = String(error);
+          connecting.value = false;
+        }
       }
     );
-  } finally {
+  } catch (error) {
+    inlineError.value = String(error);
     connecting.value = false;
   }
 };
+
+watch(
+  () => activeWorkspaceAsset.value?.id,
+  (assetId, previousAssetId) => {
+    if (assetId && assetId !== previousAssetId) {
+      inlinePayload.value = null;
+      inlineError.value = "";
+      selectedAsset.value = null;
+      useActiveAsset();
+      void openSftp();
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
   <div class="flex h-full min-h-0 flex-col">
     <div v-if="!loggedIn" class="grid min-h-0 flex-1 place-items-center px-4 text-xs text-gray-500 dark:text-gray-400">
       {{ t("Common.LoginFirst") }}
+    </div>
+
+    <KokoFileSessionSurface v-else-if="inlineTab" :tab="inlineTab" compact class="min-h-0 flex-1" />
+
+    <div v-else-if="isActiveAssetPreparing" class="grid min-h-0 flex-1 place-items-center text-xs text-muted">
+      <div class="flex flex-col items-center gap-2">
+        <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
+        <span>{{ t("PreparingFileManager") || "正在连接 SFTP..." }}</span>
+      </div>
+    </div>
+
+    <div v-else-if="activeWorkspaceAsset && inlineError" class="grid min-h-0 flex-1 place-items-center px-4 text-xs">
+      <div class="flex max-w-full flex-col items-center gap-3 text-center">
+        <UIcon name="i-lucide-circle-alert" class="size-6 text-error" />
+        <span class="break-all text-muted">{{ inlineError }}</span>
+        <UButton size="xs" color="neutral" variant="soft" icon="i-lucide-refresh-cw" @click="openSftp">
+          {{ t("Reconnect") || "重新连接" }}
+        </UButton>
+      </div>
     </div>
 
     <template v-else>
@@ -116,8 +187,12 @@ const openSftp = async () => {
           class="flex items-center justify-between gap-2 rounded-lg bg-black/4 px-2.5 py-2 text-[11px] dark:bg-white/6"
         >
           <div class="min-w-0">
-            <div class="truncate font-medium text-gray-700 dark:text-gray-200">{{ activeWorkspaceAsset.name }}</div>
-            <div class="truncate font-ui-mono text-[10px] text-gray-500 dark:text-gray-400">{{ activeWorkspaceAsset.address }}</div>
+            <div class="truncate font-medium text-gray-700 dark:text-gray-200">
+              {{ activeWorkspaceAsset.name }}
+            </div>
+            <div class="truncate font-ui-mono text-[10px] text-gray-500 dark:text-gray-400">
+              {{ activeWorkspaceAsset.address }}
+            </div>
           </div>
           <UButton
             color="neutral"
@@ -132,8 +207,12 @@ const openSftp = async () => {
           v-if="selectedAsset"
           class="rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2"
         >
-          <div class="truncate text-[12px] font-medium text-gray-800 dark:text-gray-100">{{ selectedAsset.name }}</div>
-          <div class="truncate font-ui-mono text-[10px] text-gray-500 dark:text-gray-400">{{ selectedAsset.address }}</div>
+          <div class="truncate text-[12px] font-medium text-gray-800 dark:text-gray-100">
+            {{ selectedAsset.name }}
+          </div>
+          <div class="truncate font-ui-mono text-[10px] text-gray-500 dark:text-gray-400">
+            {{ selectedAsset.address }}
+          </div>
         </div>
 
         <UButton
@@ -150,6 +229,9 @@ const openSftp = async () => {
       </div>
 
       <div class="min-h-0 flex-1 overflow-y-auto py-1">
+        <div v-if="inlineError" class="px-3 py-2 text-xs text-error">
+          {{ inlineError }}
+        </div>
         <div v-if="searchLoading" class="grid h-20 place-items-center">
           <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-gray-400" />
         </div>

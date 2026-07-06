@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import WorkspaceBatchCommandBottomPanel from "~/components/Workspace/batchCommandBottomPanel.vue";
 import WorkspaceShell from "~/components/Workspace/shell.vue";
 import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -12,6 +13,7 @@ const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const { consumeWindowAssetPayload } = useAssetWindowLauncher();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
+const { batchPanelOpen } = useBatchCommandPanel();
 
 const showWorkspaceSidebar = computed(() => activeWorkspaceMode.value !== "assets" || loggedIn.value);
 
@@ -113,7 +115,11 @@ watch(
         <RightPanel />
       </template>
 
-      <template #footer>
+      <template v-if="activeWorkspaceMode === 'assets' && batchPanelOpen" #bottomPanel>
+        <WorkspaceBatchCommandBottomPanel />
+      </template>
+
+      <template v-if="activeWorkspaceMode === 'assets'" #footer>
         <WorkspaceStatusFooter />
       </template>
     </WorkspaceShell>

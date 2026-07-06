@@ -25,7 +25,14 @@ const BUILTIN_CLIENT_METHOD = "builtin_client";
 // 原生 Web CLI（迁移后的 koko 模块）连接方式，见 useConnectMethods 注入
 const WEB_CLI_NATIVE_METHOD = "web_cli_native";
 const NATIVE_KOKO_METHODS = new Set([BUILTIN_CLIENT_METHOD, WEB_CLI_NATIVE_METHOD]);
-const pendingBuiltinSessions: Array<{ tabId?: string, assetId: string, protocol: string, account: string }> = [];
+const pendingBuiltinSessions: Array<{
+  tabId?: string
+  assetId: string
+  protocol: string
+  account: string
+  onSessionReady?: (payload: Record<string, any>) => void
+  onSessionError?: (error: unknown) => void
+}> = [];
 
 function releaseTauriEventListeners() {
   tauriListenersRefCount = Math.max(tauriListenersRefCount - 1, 0);
@@ -402,7 +409,14 @@ export const useAssetAction = () => {
 
   const getBuiltinConnectSession = (
     body: ConnectionBody,
-    meta: { tabId?: string, assetId: string, protocol: string, account: string }
+    meta: {
+      tabId?: string
+      assetId: string
+      protocol: string
+      account: string
+      onSessionReady?: (payload: Record<string, any>) => void
+      onSessionError?: (error: unknown) => void
+    }
   ) => {
     if (!isTauriRuntime()) {
       void (async () => {
@@ -416,13 +430,16 @@ export const useAssetAction = () => {
           });
           if (!response.ok) throw new Error(await response.text() || `create connection token failed: ${response.status}`);
           const token = await response.json() as TokenResponse;
-          updateSessionPayload(meta, {
+          const payload = {
             token,
             ...token,
             connectMethod: { value: BUILTIN_CLIENT_METHOD, component: "koko" }
-          });
+          };
+          if (meta.onSessionReady) meta.onSessionReady(payload);
+          else updateSessionPayload(meta, payload);
         } catch (error) {
-          markSessionFailed(meta);
+          if (meta.onSessionError) meta.onSessionError(error);
+          else markSessionFailed(meta);
           toast.add({
             title: t("ConnectError.ConnectFailed"),
             description: String(error),
@@ -460,7 +477,8 @@ export const useAssetAction = () => {
       );
 
       if (idx !== -1) pendingBuiltinSessions.splice(idx, 1);
-      markSessionFailed(meta);
+      if (meta.onSessionError) meta.onSessionError(error);
+      else markSessionFailed(meta);
 
       toast.add({
         title: t("ConnectError.ConnectFailed"),
@@ -547,6 +565,7 @@ export const useAssetAction = () => {
     protocolOverride?: string,
     ephemeral?: {
       accountMode?: "hosted" | "dynamic" | "manual" | "anonymous"
+      accountId?: string
       manualUsername?: string
       manualPassword?: string
       dynamicPassword?: string
@@ -554,13 +573,16 @@ export const useAssetAction = () => {
       connectOptions?: Record<string, any>
       tabId?: string
       asset?: AssetItem
+      onSessionReady?: (payload: Record<string, any>) => void
+      onSessionError?: (error: unknown) => void
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
 
-    // 以已保存的账号模式为准；未保存时回退临时模式
-    const effectiveMode = saved?.accountMode ?? ephemeral?.accountMode;
-    const selected = saved?.username ?? user;
+    // The selection from the current dialog always wins. Saved data is only a
+    // fallback for direct auto-connect calls that do not provide form state.
+    const effectiveMode = ephemeral?.accountMode ?? saved?.accountMode;
+    const selected = user || saved?.username || "";
 
     let input_username = "";
     let input_secret = "";
@@ -601,6 +623,9 @@ export const useAssetAction = () => {
         return "@ANON";
       }
 
+      if (ephemeral?.accountId) return ephemeral.accountId;
+      if (matchedAccount?.id) return matchedAccount.id;
+
       return getUserId(accounts!, assetId, user);
     })();
 
@@ -610,10 +635,13 @@ export const useAssetAction = () => {
       || dispatchConnectMethod(protocol);
     const connectMethod = preferredConnectMethod;
 
-    userInfoStore.setConnectionInfoForAsset(assetId, {
+    // Every successful attempt updates the lightweight last-used preference.
+    // It must not turn into an auto-connect record unless the user checked
+    // "remember selection" (that record is managed by useAssetConnection).
+    userInfoStore.setConnectionPreferenceForAsset(assetId, {
       protocol,
       username: selected || user,
-      accountId: effectiveMode === "hosted" ? (matchedAccount?.id || saved?.accountId) : undefined,
+      accountId: effectiveMode === "hosted" ? (ephemeral?.accountId || matchedAccount?.id || saved?.accountId) : undefined,
       accountMode: effectiveMode,
       connectMethod
     });
@@ -640,7 +668,9 @@ export const useAssetAction = () => {
           tabId: ephemeral?.tabId,
           assetId,
           protocol,
-          account: selected || user
+          account: selected || user,
+          onSessionReady: ephemeral?.onSessionReady,
+          onSessionError: ephemeral?.onSessionError
         });
         return;
       }
@@ -992,7 +1022,8 @@ export const useAssetAction = () => {
         const meta = pendingBuiltinSessions.shift();
         if (!meta) return;
 
-        updateSessionPayload(meta, payload.data);
+        if (meta.onSessionReady) meta.onSessionReady(payload.data);
+        else updateSessionPayload(meta, payload.data);
       });
 
       unlistenBuiltinSessionFailure = await useTauriEventListen("get-builtin-session-failure", (event) => {
@@ -1002,7 +1033,8 @@ export const useAssetAction = () => {
         }
 
         const meta = pendingBuiltinSessions.shift();
-        if (meta) markSessionFailed(meta);
+        if (meta?.onSessionError) meta.onSessionError(event.payload);
+        else if (meta) markSessionFailed(meta);
 
         const payload = event.payload as eventPayload;
         toast.add({

@@ -38,6 +38,7 @@ const showDynamicUserArea = ref(false);
 const advancedOptionOpen = ref(false);
 const availableConnectMethods = ref<any[]>([]);
 const selectedConnectMethodType = ref<string>("");
+let connectMethodRequestId = 0;
 
 const localManualUsername = computed<string>({
   get: () => props.manualUsername || "",
@@ -87,19 +88,35 @@ watch(
 watch(
   () => props.protocol,
   async (newProtocol) => {
-    if (!newProtocol) return;
+    const requestId = ++connectMethodRequestId;
+    availableConnectMethods.value = [];
+
+    if (!newProtocol) {
+      emits("update:connectMethod", "");
+      return;
+    }
+
+    // A method belongs to a protocol. Clear it before the async lookup so a
+    // quick protocol-switch-and-connect cannot submit the previous protocol's method.
+    const previousMethod = props.connectMethod || "";
+    emits("update:connectMethod", "");
 
     try {
       const methods = await getMethodsForProtocol(newProtocol);
+      if (requestId !== connectMethodRequestId || newProtocol !== props.protocol) return;
       availableConnectMethods.value = methods;
 
-      if (!props.connectMethod || !methods.some((m) => m.value === props.connectMethod)) {
-        const defaultMethod = await getDefaultMethodForProtocol(newProtocol);
-        if (defaultMethod) {
-          emits("update:connectMethod", defaultMethod);
-        }
+      if (previousMethod && methods.some((m) => m.value === previousMethod)) {
+        emits("update:connectMethod", previousMethod);
+        return;
+      }
+
+      const defaultMethod = await getDefaultMethodForProtocol(newProtocol);
+      if (requestId === connectMethodRequestId && newProtocol === props.protocol && defaultMethod) {
+        emits("update:connectMethod", defaultMethod);
       }
     } catch {
+      if (requestId !== connectMethodRequestId) return;
       availableConnectMethods.value = [];
       emits("update:connectMethod", "");
     }

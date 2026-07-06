@@ -59,6 +59,7 @@
     "guacamole-common-js-jumpserver": "1.1.0-c",
     "js-untar": "^2.0.0",
     "mitt": "^3.0.1",
+    "monaco-editor": "^0.55.1",
     "nora-zmodemjs": "^1.1.1",
     "nuxt": "^4.4.6",
     "pinia": "^3.0.4",

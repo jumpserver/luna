@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import RightPanelAiPanel from "~/components/RightPanel/aiPanel.vue";
-import RightPanelBatchCommandPanel from "~/components/RightPanel/batchCommandPanel.vue";
 import RightPanelSftpPanel from "~/components/RightPanel/sftpPanel.vue";
 
 const { t } = useI18n();
@@ -8,9 +7,12 @@ const { activeTab, setActiveTab } = useRightPanel();
 
 const tabs = computed(() => [
   { value: "ai" as const, label: t("RightPanel.AI"), icon: "i-lucide-sparkles" },
-  { value: "sftp" as const, label: t("RightPanel.SFTP"), icon: "i-lucide-folder-symlink" },
-  { value: "batch" as const, label: t("RightPanel.BatchCommand"), icon: "i-lucide-terminal" }
+  { value: "sftp" as const, label: t("RightPanel.SFTP"), icon: "i-lucide-folder-symlink" }
 ]);
+
+const activePanelComponent = computed(() =>
+  activeTab.value === "sftp" ? RightPanelSftpPanel : RightPanelAiPanel
+);
 </script>
 
 <template>
@@ -41,9 +43,9 @@ const tabs = computed(() => [
     </div>
 
     <div class="min-h-0 flex-1 overflow-hidden">
-      <RightPanelAiPanel v-if="activeTab === 'ai'" />
-      <RightPanelSftpPanel v-else-if="activeTab === 'sftp'" />
-      <RightPanelBatchCommandPanel v-else />
+      <KeepAlive>
+        <component :is="activePanelComponent" />
+      </KeepAlive>
     </div>
   </aside>
 </template>

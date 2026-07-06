@@ -4,6 +4,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 const { t } = useI18n();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const { tabs, activeTab } = useWorkspaceTabs();
+const { batchPanelOpen, toggle: toggleBatchPanel } = useBatchCommandPanel();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 
@@ -49,6 +50,21 @@ const activeText = computed(() => {
       </span>
       <span class="font-ui-mono">{{ tabs.length }} tabs</span>
       <span v-if="connectedCount" class="font-ui-mono">{{ connectedCount }} connected</span>
+      <button
+        v-if="activeWorkspaceMode === 'assets'"
+        type="button"
+        class="grid size-5 place-items-center rounded transition-colors"
+        :class="
+          batchPanelOpen
+            ? 'bg-primary-500/15 text-primary-600 dark:text-primary-400'
+            : 'text-gray-500 hover:bg-black/5 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/8 dark:hover:text-gray-200'
+        "
+        :aria-label="t('RightPanel.BatchCommand')"
+        :aria-pressed="batchPanelOpen"
+        @click="toggleBatchPanel"
+      >
+        <UIcon name="i-lucide-terminal" class="size-3.5" />
+      </button>
       <span v-if="connectingCount" class="font-ui-mono">{{ connectingCount }} pending</span>
       <span v-if="failedCount" class="font-ui-mono text-red-500">{{ failedCount }} failed</span>
     </div>

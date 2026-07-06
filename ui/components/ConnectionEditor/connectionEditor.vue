@@ -110,8 +110,8 @@ const initDraft = (asset: AssetItem) => {
   const saved: ConnectionInfo | undefined = asset.savedConnection;
   const preferred = userInfoStore.getConnectionPreferenceForAsset(asset.id) || undefined;
   const source = {
-    ...(preferred || {}),
-    ...(saved || {})
+    ...(saved || {}),
+    ...(preferred || {})
   } as ConnectionPreferenceInfo | ConnectionInfo;
 
   const protocols = sortPermedProtocols(getVisibleProtocols(asset.permedProtocols || ([] as PermedProtocol[])));

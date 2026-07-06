@@ -4,6 +4,8 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { JmsComponent, KokoSurfaceMode } from "~/shared/connectors/types/component";
 
 import KokoIframeSession from "~/koko-iframe/workspace/IframeSession.vue";
+import KokoFileSessionSurface from "~/koko/workspace/FileSessionSurface.vue";
+import KokoKubernetesSessionSurface from "~/koko/workspace/KubernetesSessionSurface.vue";
 import KokoSessionSurface from "~/koko/workspace/SessionSurface.vue";
 import LegacyIframeSession from "~/shared/connectors/LegacyIframeSession.vue";
 
@@ -54,6 +56,8 @@ export function resolveSessionComponent(tab: WorkspaceSessionTab): JmsComponent 
 }
 
 export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
+  if (tab.protocol === "sftp") return KokoFileSessionSurface;
+  if (["k8s", "kubernetes"].includes(tab.protocol)) return KokoKubernetesSessionSurface;
   if (tab.payload?.webUrl) return LegacyIframeSession;
 
   const component = resolveSessionComponent(tab);
