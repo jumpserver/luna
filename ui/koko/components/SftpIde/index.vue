@@ -3,6 +3,7 @@ import type { SftpFileEntry } from "~/koko/composables/useSftpFileManager";
 import type { ConnectorSessionContext } from "~/shared/connectors/types/session";
 import { useSftpFileManager } from "~/koko/composables/useSftpFileManager";
 import { connectorSessionKey } from "~/koko/composables/wsUrl";
+import CodeMirrorEditor from "./CodeMirrorEditor.client.vue";
 
 type PreviewKind = "text" | "image" | "unsupported" | "empty";
 interface EditorTab {
@@ -21,12 +22,20 @@ interface TreeNode {
   loading: boolean
   error: string
 }
-interface TreeRow {
+interface EntryTreeRow {
+  kind: "entry"
   entry: SftpFileEntry
   path: string
   depth: number
   expanded: boolean
 }
+interface PendingTreeRow {
+  kind: "pending"
+  path: string
+  depth: number
+  createKind: "file" | "directory"
+}
+type TreeRow = EntryTreeRow | PendingTreeRow;
 
 const props = defineProps<{ sftpToken: string }>();
 const providedContext = inject(connectorSessionKey, ref(null));
@@ -38,11 +47,22 @@ const manager = useSftpFileManager(context);
 const tabs = ref<EditorTab[]>([]);
 const activePath = ref("");
 const search = ref("");
+const searchVisible = ref(false);
 const rootPath = ref("");
+const selectedDirectory = ref("");
+const pendingCreate = ref<{ parent: string, kind: "file" | "directory" } | null>(null);
+const pendingName = ref("");
+const pendingError = ref("");
+const pendingSubmitting = ref(false);
+const pendingInput = ref<HTMLInputElement | null>(null);
+const uploadInput = ref<HTMLInputElement | null>(null);
+const uploadDirectory = ref("");
+const contextMenuVisible = ref(false);
+const contextMenuPosition = ref({ x: 0, y: 0 });
+const contextTarget = ref<{ entry: SftpFileEntry, path: string } | null>(null);
 const tree = ref<Record<string, TreeNode>>({});
 const expanded = ref(new Set<string>());
 const activeTab = computed(() => tabs.value.find((tab) => tab.path === activePath.value) || null);
-const rootName = computed(() => rootPath.value.split("/").filter(Boolean).pop() || "/");
 const imageExtensions = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"]);
 const textExtensions = new Set(["txt", "md", "json", "yaml", "yml", "toml", "ini", "conf", "env", "js", "ts", "tsx", "jsx", "vue", "html", "css", "scss", "less", "py", "go", "rs", "java", "c", "h", "cpp", "hpp", "sh", "zsh", "bash", "sql", "xml", "log"]);
 const languageMap: Record<string, string> = { bash: "shell", c: "c", conf: "ini", cpp: "cpp", css: "css", env: "ini", go: "go", h: "c", hpp: "cpp", html: "html", ini: "ini", java: "java", js: "javascript", json: "json", jsx: "javascript", less: "less", log: "plaintext", md: "markdown", py: "python", rs: "rust", scss: "scss", sh: "shell", sql: "sql", toml: "ini", ts: "typescript", tsx: "typescript", txt: "plaintext", vue: "html", xml: "xml", yaml: "yaml", yml: "yaml", zsh: "shell" };
@@ -53,15 +73,23 @@ function joinPath(parent: string, name: string) {
   return `${parent.replace(/\/$/, "")}/${name}` || `/${name}`;
 }
 
+function parentPath(path: string) {
+  const index = path.lastIndexOf("/");
+  return index <= 0 ? "/" : path.slice(0, index);
+}
+
 const treeRows = computed<TreeRow[]>(() => {
   const rows: TreeRow[] = [];
   const query = search.value.trim().toLowerCase();
   const walk = (parent: string, depth: number) => {
+    if (pendingCreate.value?.parent === parent) {
+      rows.push({ kind: "pending", path: `pending:${parent}`, depth, createKind: pendingCreate.value.kind });
+    }
     for (const entry of tree.value[parent]?.entries || []) {
       if (entry.name === "..") continue;
       const path = joinPath(parent, entry.name);
       if (!query || entry.name.toLowerCase().includes(query) || entry.is_dir) {
-        rows.push({ entry, path, depth, expanded: expanded.value.has(path) });
+        rows.push({ kind: "entry", entry, path, depth, expanded: expanded.value.has(path) });
       }
       if (entry.is_dir && expanded.value.has(path)) walk(path, depth + 1);
     }
@@ -84,8 +112,9 @@ async function loadDirectory(path: string, force = false) {
 
 function toggleDirectory(path: string) {
   const next = new Set(expanded.value);
-  if (next.has(path)) next.delete(path);
-  else {
+  if (next.has(path)) {
+    next.delete(path);
+  } else {
     next.add(path);
     void loadDirectory(path);
   }
@@ -96,10 +125,184 @@ function collapseAll() {
   expanded.value = new Set();
 }
 
+function toggleSearch() {
+  searchVisible.value = !searchVisible.value;
+  if (!searchVisible.value) search.value = "";
+}
+
+function nameExists(parent: string, name: string) {
+  return tree.value[parent]?.entries.some((entry) => entry.name === name) || false;
+}
+
+function beginCreate(kind: "file" | "directory") {
+  const parent = selectedDirectory.value || rootPath.value;
+  pendingCreate.value = { parent, kind };
+  pendingName.value = "";
+  pendingError.value = "";
+  if (parent !== rootPath.value) {
+    const next = new Set(expanded.value);
+    next.add(parent);
+    expanded.value = next;
+    void loadDirectory(parent);
+  }
+  nextTick(() => pendingInput.value?.focus());
+}
+
+function cancelCreate() {
+  if (pendingSubmitting.value) return;
+  pendingCreate.value = null;
+  pendingName.value = "";
+  pendingError.value = "";
+}
+
+async function commitCreate() {
+  if (!pendingCreate.value || pendingSubmitting.value) return;
+  const { parent, kind } = pendingCreate.value;
+  const name = pendingName.value.trim();
+  pendingError.value = "";
+  if (!name) {
+    pendingError.value = "请输入名称";
+    return;
+  }
+  if (name === "." || name === ".." || name.includes("/") || name.includes("\\")) {
+    pendingError.value = "名称不能包含路径分隔符";
+    return;
+  }
+  if (nameExists(parent, name)) {
+    pendingError.value = "同名文件或目录已经存在";
+    return;
+  }
+  const path = joinPath(parent, name);
+  pendingSubmitting.value = true;
+  try {
+    if (kind === "file") await manager.createFileAt(path);
+    else await manager.createDirectoryAt(path);
+    await loadDirectory(parent, true);
+    if (kind === "file") {
+      const entry: SftpFileEntry = { name, size: "0", perm: "", mod_time: "", type: "", is_dir: false };
+      const tab = reactive<EditorTab>({ path, entry, content: "", savedContent: "", kind: "text", previewUrl: "", loading: false, saving: false, error: "" });
+      tabs.value.push(tab);
+      activePath.value = path;
+    }
+    pendingCreate.value = null;
+    pendingName.value = "";
+  } catch (cause) {
+    pendingError.value = cause instanceof Error ? cause.message : String(cause);
+    nextTick(() => pendingInput.value?.focus());
+  } finally {
+    pendingSubmitting.value = false;
+  }
+}
+
 async function refreshTree() {
   const paths = [rootPath.value, ...expanded.value].filter(Boolean);
   await Promise.all(paths.map((path) => loadDirectory(path, true)));
 }
+
+function openContextMenu(entry: SftpFileEntry, path: string, event: MouseEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+  contextTarget.value = { entry, path };
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY };
+  contextMenuVisible.value = true;
+  if (entry.is_dir) selectedDirectory.value = path;
+}
+
+function hideContextMenu() {
+  contextMenuVisible.value = false;
+  contextTarget.value = null;
+}
+
+function createFromContext(kind: "file" | "directory") {
+  const target = contextTarget.value;
+  if (!target?.entry.is_dir) return;
+  selectedDirectory.value = target.path;
+  hideContextMenu();
+  beginCreate(kind);
+}
+
+async function renameContextTarget() {
+  const target = contextTarget.value;
+  if (!target || target.path === rootPath.value) return;
+  // eslint-disable-next-line no-alert -- rename requires the replacement name
+  const name = window.prompt("重命名", target.entry.name)?.trim() || "";
+  if (!name || name === target.entry.name) return;
+  if (name === "." || name === ".." || name.includes("/") || name.includes("\\")) return;
+  const parent = parentPath(target.path);
+  if (nameExists(parent, name)) return;
+  const nextPath = joinPath(parent, name);
+  hideContextMenu();
+  await manager.renamePath(target.path, name);
+  tabs.value.forEach((tab) => {
+    if (tab.path === target.path || tab.path.startsWith(`${target.path}/`)) {
+      tab.path = `${nextPath}${tab.path.slice(target.path.length)}`;
+      if (tab.path === nextPath) tab.entry.name = name;
+    }
+  });
+  if (activePath.value === target.path || activePath.value.startsWith(`${target.path}/`)) activePath.value = `${nextPath}${activePath.value.slice(target.path.length)}`;
+  if (selectedDirectory.value === target.path || selectedDirectory.value.startsWith(`${target.path}/`)) selectedDirectory.value = `${nextPath}${selectedDirectory.value.slice(target.path.length)}`;
+  expanded.value = new Set([...expanded.value].map((path) => path === target.path || path.startsWith(`${target.path}/`) ? `${nextPath}${path.slice(target.path.length)}` : path));
+  await loadDirectory(parent, true);
+}
+
+async function deleteContextTarget() {
+  const target = contextTarget.value;
+  if (!target || target.path === rootPath.value) return;
+  // eslint-disable-next-line no-alert -- remote deletion must be confirmed
+  if (!window.confirm(`确定删除 ${target.entry.name}？`)) return;
+  hideContextMenu();
+  await manager.removePath(target.path);
+  for (const tab of tabs.value.filter((tab) => tab.path === target.path || tab.path.startsWith(`${target.path}/`))) revokePreview(tab);
+  tabs.value = tabs.value.filter((tab) => tab.path !== target.path && !tab.path.startsWith(`${target.path}/`));
+  if (activePath.value === target.path || activePath.value.startsWith(`${target.path}/`)) activePath.value = tabs.value.at(-1)?.path || "";
+  if (selectedDirectory.value === target.path || selectedDirectory.value.startsWith(`${target.path}/`)) selectedDirectory.value = rootPath.value;
+  await loadDirectory(parentPath(target.path), true);
+}
+
+function downloadContextTarget() {
+  const target = contextTarget.value;
+  if (!target) return;
+  hideContextMenu();
+  manager.downloadPath(target.path, target.entry.is_dir);
+}
+
+function chooseUpload() {
+  if (!contextTarget.value?.entry.is_dir) return;
+  uploadDirectory.value = contextTarget.value.path;
+  uploadInput.value?.click();
+}
+
+async function uploadFiles(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const files = [...(input.files || [])];
+  const directory = uploadDirectory.value;
+  hideContextMenu();
+  uploadDirectory.value = "";
+  input.value = "";
+  if (!directory || files.length === 0) return;
+  for (const file of files) await manager.uploadFile(file, joinPath(directory, file.name));
+  await loadDirectory(directory, true);
+}
+
+const contextMenuItems = computed(() => {
+  const target = contextTarget.value;
+  if (!target) return [];
+  const directoryActions = target.entry.is_dir
+    ? [
+        { label: "新建文件", icon: "i-lucide-file-plus-2", onSelect: () => createFromContext("file") },
+        { label: "新建目录", icon: "i-lucide-folder-plus", onSelect: () => createFromContext("directory") },
+        { label: "上传文件", icon: "i-lucide-upload", onSelect: chooseUpload },
+        { type: "separator" as const }
+      ]
+    : [];
+  return [
+    ...directoryActions,
+    { label: "下载", icon: "i-lucide-download", onSelect: downloadContextTarget },
+    { label: "重命名", icon: "i-lucide-pencil", disabled: target.path === rootPath.value, onSelect: () => void renameContextTarget() },
+    { type: "separator" as const },
+    { label: "删除", icon: "i-lucide-trash-2", color: "error" as const, disabled: target.path === rootPath.value, onSelect: () => void deleteContextTarget() }
+  ];
+});
 
 function revokePreview(tab: EditorTab) {
   if (tab.previewUrl) URL.revokeObjectURL(tab.previewUrl);
@@ -108,6 +311,7 @@ function revokePreview(tab: EditorTab) {
 
 async function openEntry(entry: SftpFileEntry, path: string) {
   if (entry.is_dir) {
+    selectedDirectory.value = path;
     toggleDirectory(path);
     return;
   }
@@ -175,7 +379,10 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 });
 watch([manager.currentPath, manager.entries], ([path, entries]) => {
   if (!path) return;
-  if (!rootPath.value) rootPath.value = path as string;
+  if (!rootPath.value) {
+    rootPath.value = path as string;
+    selectedDirectory.value = path as string;
+  }
   if (path === rootPath.value) {
     tree.value = { ...tree.value, [path as string]: { entries: entries as SftpFileEntry[], loading: false, error: "" } };
   }
@@ -186,24 +393,50 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
 <template>
   <div class="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)] bg-default">
     <aside class="flex min-h-0 flex-col border-r border-default bg-elevated/30">
-      <div class="flex h-10 shrink-0 items-center gap-1 border-b border-default px-2">
-        <span class="min-w-0 flex-1 truncate px-1 text-xs font-semibold uppercase tracking-wide" :title="rootPath">{{ rootName }}</span>
+      <div class="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-default px-2">
+        <button class="min-w-0 flex-1 truncate px-1 text-left font-ui-mono text-[10px]" :class="selectedDirectory === rootPath ? 'text-primary' : 'text-muted'" :title="rootPath" @click="selectedDirectory = rootPath" @contextmenu="openContextMenu({ name: rootPath, size: '', perm: '', mod_time: '', type: '', is_dir: true }, rootPath, $event)">
+          {{ rootPath || "/" }}
+        </button>
         <UButton icon="i-lucide-chevrons-up" size="xs" color="neutral" variant="ghost" title="全部折叠" @click="collapseAll" />
+        <UButton icon="i-lucide-file-plus-2" size="xs" color="neutral" variant="ghost" title="新建文件" @click="beginCreate('file')" />
+        <UButton icon="i-lucide-folder-plus" size="xs" color="neutral" variant="ghost" title="新建目录" @click="beginCreate('directory')" />
+        <UButton icon="i-lucide-search" size="xs" color="neutral" :variant="searchVisible ? 'soft' : 'ghost'" title="搜索" @click="toggleSearch" />
         <UButton icon="i-lucide-refresh-cw" size="xs" color="neutral" variant="ghost" title="刷新目录树" @click="refreshTree" />
       </div>
-      <div class="shrink-0 border-b border-default p-2">
+      <div v-if="searchVisible" class="shrink-0 border-b border-default p-2">
         <UInput v-model="search" icon="i-lucide-search" size="xs" placeholder="筛选文件" class="w-full" />
       </div>
       <div class="min-h-0 flex-1 overflow-auto py-1">
-        <button v-for="row in treeRows" :key="row.path" class="flex h-7 w-full items-center gap-1 pr-2 text-left text-xs hover:bg-accented" :class="!row.entry.is_dir && activePath === row.path ? 'bg-accented text-primary' : ''" :style="{ paddingLeft: `${8 + row.depth * 14}px` }" :title="row.path" @click="openEntry(row.entry, row.path)">
-          <UIcon v-if="row.entry.is_dir" :name="row.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-3 shrink-0 text-muted" />
-          <span v-else class="w-3 shrink-0" />
-          <UIcon :name="row.entry.is_dir ? (row.expanded ? 'i-lucide-folder-open' : 'i-lucide-folder') : 'i-lucide-file-code-2'" class="size-3.5 shrink-0" />
-          <span class="min-w-0 flex-1 truncate">{{ row.entry.name }}</span><span v-if="!row.entry.is_dir" class="text-[9px] text-muted">{{ row.entry.size }}</span>
-        </button>
-        <div v-if="tree[rootPath]?.loading" class="flex h-8 items-center gap-2 px-3 text-xs text-muted"><UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />加载中</div>
-        <div v-else-if="tree[rootPath]?.error" class="px-3 py-2 text-xs text-error">{{ tree[rootPath]?.error }}</div>
+        <template v-for="row in treeRows" :key="row.path">
+          <button v-if="row.kind === 'entry'" class="flex h-7 w-full items-center gap-1 pr-2 text-left text-xs hover:bg-accented" :class="row.entry.is_dir ? (selectedDirectory === row.path ? 'bg-accented text-primary' : '') : (activePath === row.path ? 'bg-accented text-primary' : '')" :style="{ paddingLeft: `${8 + row.depth * 14}px` }" :title="row.path" @click="openEntry(row.entry, row.path)" @contextmenu="openContextMenu(row.entry, row.path, $event)">
+            <UIcon v-if="row.entry.is_dir" :name="row.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-3 shrink-0 text-muted" />
+            <span v-else class="w-3 shrink-0" />
+            <UIcon :name="row.entry.is_dir ? (row.expanded ? 'i-lucide-folder-open' : 'i-lucide-folder') : 'i-lucide-file-code-2'" class="size-3.5 shrink-0" />
+            <span class="min-w-0 flex-1 truncate">{{ row.entry.name }}</span><span v-if="!row.entry.is_dir" class="text-[9px] text-muted">{{ row.entry.size }}</span>
+          </button>
+          <div v-else class="py-1 pr-2" :style="{ paddingLeft: `${8 + row.depth * 14}px` }">
+            <div class="flex items-center gap-1">
+              <UIcon :name="row.createKind === 'directory' ? 'i-lucide-folder' : 'i-lucide-file-code-2'" class="size-3.5 shrink-0 text-muted" />
+              <input ref="pendingInput" v-model="pendingName" class="h-6 min-w-0 flex-1 rounded border border-primary bg-default px-1.5 text-xs outline-none" :placeholder="row.createKind === 'directory' ? '目录名称' : '文件名称'" :disabled="pendingSubmitting" @keydown.enter.prevent="commitCreate" @keydown.esc.prevent="cancelCreate">
+              <UButton icon="i-lucide-check" size="xs" color="primary" variant="ghost" :loading="pendingSubmitting" title="确认" @click="commitCreate" />
+              <UButton icon="i-lucide-x" size="xs" color="neutral" variant="ghost" :disabled="pendingSubmitting" title="取消" @click="cancelCreate" />
+            </div>
+            <div v-if="pendingError" class="pl-5 pt-1 text-[10px] text-error">
+              {{ pendingError }}
+            </div>
+          </div>
+        </template>
+        <div v-if="tree[rootPath]?.loading" class="flex h-8 items-center gap-2 px-3 text-xs text-muted">
+          <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />加载中
+        </div>
+        <div v-else-if="tree[rootPath]?.error" class="px-3 py-2 text-xs text-error">
+          {{ tree[rootPath]?.error }}
+        </div>
       </div>
+      <input ref="uploadInput" type="file" multiple class="hidden" @change="uploadFiles">
+      <UDropdownMenu :open="contextMenuVisible" :items="contextMenuItems" size="sm" :content="{ align: 'start', side: 'bottom' }" @update:open="(open) => { if (!open) hideContextMenu(); else contextMenuVisible = open; }">
+        <div class="pointer-events-none fixed size-px" :style="{ left: `${contextMenuPosition.x}px`, top: `${contextMenuPosition.y}px` }" />
+      </UDropdownMenu>
     </aside>
 
     <section class="flex min-h-0 min-w-0 flex-col">
@@ -225,7 +458,7 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
           <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
         </div>
         <div v-else-if="activeTab.kind === 'text'" class="min-h-0 flex-1">
-          <KokoSftpIdeMonacoEditor v-model="activeTab.content" :language="editorLanguage" :path="activeTab.path" @save="save()" />
+          <CodeMirrorEditor v-model="activeTab.content" :language="editorLanguage" :path="activeTab.path" @save="save()" />
         </div>
         <div v-else-if="activeTab.kind === 'image'" class="grid min-h-0 flex-1 place-items-center overflow-auto bg-checkered p-6">
           <img :src="activeTab.previewUrl" :alt="activeTab.entry.name" class="max-h-full max-w-full object-contain">

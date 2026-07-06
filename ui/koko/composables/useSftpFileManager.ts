@@ -22,8 +22,19 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
   const uploadProgress = ref(0);
   let socket: WebSocket | null = null;
   let downloadParts: Uint8Array[] = [];
+  let readQueue: Promise<void> = Promise.resolve();
   const pendingReads = new Map<string, { parts: Uint8Array[], resolve: (blob: Blob) => void, reject: (error: Error) => void }>();
   const pendingLists = new Map<string, { resolve: (entries: SftpFileEntry[]) => void, reject: (error: Error) => void }>();
+  const pendingMutations = new Map<string, { resolve: () => void, reject: (error: Error) => void }>();
+
+  // Koko's WebSFTP handler keeps the active message on the connection object.
+  // Serializing reads prevents a tree listing from overwriting a file download
+  // (or vice versa) while the server dispatch goroutine is still running.
+  const enqueueRead = <T>(operation: () => Promise<T>) => {
+    const result = readQueue.then(operation, operation);
+    readQueue = result.then(() => undefined, () => undefined);
+    return result;
+  };
 
   const rejectPendingRead = (message: string) => {
     for (const pending of pendingReads.values()) pending.reject(new Error(message));
@@ -31,6 +42,8 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
     downloadParts = [];
     for (const pending of pendingLists.values()) pending.reject(new Error(message));
     pendingLists.clear();
+    for (const pending of pendingMutations.values()) pending.reject(new Error(message));
+    pendingMutations.clear();
   };
 
   const decodeRaw = (raw: unknown) => {
@@ -96,6 +109,16 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
           if (pending) pending.parts.push(decodeRaw(message.raw));
           else downloadParts.push(decodeRaw(message.raw));
         } else if (message.type === "SFTP_DATA") {
+          const mutation = pendingMutations.get(message.id);
+          if (mutation && ["mkdir", "upload", "rename", "rm"].includes(message.cmd)) {
+            if (message.err) {
+              mutation.reject(new Error(message.err));
+              pendingMutations.delete(message.id);
+            } else if (message.cmd !== "upload" || message.data === "ok") {
+              mutation.resolve();
+              pendingMutations.delete(message.id);
+            }
+          }
           if (message.cmd === "list") {
             const items = JSON.parse(message.data || "[]") as SftpFileEntry[];
             const pending = pendingLists.get(message.id);
@@ -131,7 +154,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
                 downloadParts = [];
               }
             }
-          } else if (["mkdir", "rm", "rename", "upload"].includes(message.cmd) && message.data === "ok") {
+          } else if (!mutation && ["mkdir", "rm", "rename", "upload"].includes(message.cmd) && message.data === "ok") {
             list();
           } else if (message.err) {
             error.value = message.err;
@@ -155,7 +178,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
       : `${currentPath.value.replace(/\/$/, "")}/${entry.name}`;
     list(path);
   };
-  const listDirectory = (path: string) => new Promise<SftpFileEntry[]>((resolve, reject) => {
+  const listDirectory = (path: string) => enqueueRead(() => new Promise<SftpFileEntry[]>((resolve, reject) => {
     const messageId = id();
     pendingLists.set(messageId, { resolve, reject });
     try {
@@ -164,15 +187,51 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
       pendingLists.delete(messageId);
       reject(cause instanceof Error ? cause : new Error(String(cause)));
     }
-  });
+  }));
   const createDirectory = (name: string) => send("mkdir", { path: `${currentPath.value.replace(/\/$/, "")}/${name}` });
+  const createDirectoryAt = (path: string) => enqueueRead(() => new Promise<void>((resolve, reject) => {
+    const messageId = id();
+    pendingMutations.set(messageId, { resolve, reject });
+    try {
+      send("mkdir", { path }, "", messageId);
+    } catch (cause) {
+      pendingMutations.delete(messageId);
+      reject(cause instanceof Error ? cause : new Error(String(cause)));
+    }
+  }));
+  const createFileAt = (path: string) => enqueueRead(() => new Promise<void>((resolve, reject) => {
+    const messageId = String(Date.now());
+    pendingMutations.set(messageId, { resolve, reject });
+    try {
+      send("upload", { offSet: 0, size: 0, path, chunk: false }, "", messageId);
+    } catch (cause) {
+      pendingMutations.delete(messageId);
+      reject(cause instanceof Error ? cause : new Error(String(cause)));
+    }
+  }));
+  const mutatePath = (cmd: "rename" | "rm", path: string, extra: Record<string, unknown> = {}) => enqueueRead(() => new Promise<void>((resolve, reject) => {
+    const messageId = id();
+    pendingMutations.set(messageId, { resolve, reject });
+    try {
+      send(cmd, { path, ...extra }, "", messageId);
+    } catch (cause) {
+      pendingMutations.delete(messageId);
+      reject(cause instanceof Error ? cause : new Error(String(cause)));
+    }
+  }));
+  const renamePath = (path: string, name: string) => mutatePath("rename", path, { new_name: name });
+  const removePath = (path: string) => mutatePath("rm", path);
   const renameEntry = (entry: SftpFileEntry, name: string) => send("rename", { path: `${currentPath.value.replace(/\/$/, "")}/${entry.name}`, new_name: name });
   const removeEntry = (entry: SftpFileEntry) => send("rm", { path: `${currentPath.value.replace(/\/$/, "")}/${entry.name}` });
   const downloadEntry = (entry: SftpFileEntry) => {
     downloadParts = [];
     send("download", { path: `${currentPath.value.replace(/\/$/, "")}/${entry.name}`, is_dir: entry.is_dir });
   };
-  const readFile = (entry: SftpFileEntry, targetPath?: string) => new Promise<Blob>((resolve, reject) => {
+  const downloadPath = (path: string, isDir: boolean) => {
+    downloadParts = [];
+    send("download", { path, is_dir: isDir });
+  };
+  const readFile = (entry: SftpFileEntry, targetPath?: string) => enqueueRead(() => new Promise<Blob>((resolve, reject) => {
     const messageId = id();
     pendingReads.set(messageId, { parts: [], resolve, reject });
     try {
@@ -181,12 +240,13 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
       pendingReads.delete(messageId);
       reject(cause instanceof Error ? cause : new Error(String(cause)));
     }
-  });
+  }));
   const uploadFile = async (file: File, targetPath?: string) => {
     const chunkSize = 5 * 1024 * 1024;
     const chunks = Math.max(1, Math.ceil(file.size / chunkSize));
     // koko uses this id as the numeric key for chunked uploads.
     const messageId = String(Date.now());
+    const completed = new Promise<void>((resolve, reject) => pendingMutations.set(messageId, { resolve, reject }));
     uploadProgress.value = 0;
     for (let index = 0; index < chunks; index++) {
       const bytes = new Uint8Array(await file.slice(index * chunkSize, (index + 1) * chunkSize).arrayBuffer());
@@ -201,6 +261,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
       uploadProgress.value = Math.round(((index + 1) / chunks) * 100);
     }
     if (chunks > 1) send("upload", { offSet: 0, merge: true, size: 0, path: targetPath || `${currentPath.value.replace(/\/$/, "")}/${file.name}` }, "", messageId);
+    await completed;
     uploadProgress.value = 0;
   };
   const uploadBlob = async (fileName: string, blob: Blob) => {
@@ -210,5 +271,5 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
 
   watch(ctx, connect, { immediate: true });
   onUnmounted(() => socket?.close());
-  return { entries, currentPath, loading, error, connected, uploadProgress, list, listDirectory, changeDirectory, createDirectory, renameEntry, removeEntry, downloadEntry, readFile, uploadFile, uploadBlob, reconnect: connect };
+  return { entries, currentPath, loading, error, connected, uploadProgress, list, listDirectory, changeDirectory, createDirectory, createDirectoryAt, createFileAt, renameEntry, renamePath, removeEntry, removePath, downloadEntry, downloadPath, readFile, uploadFile, uploadBlob, reconnect: connect };
 }

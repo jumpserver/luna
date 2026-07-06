@@ -10,7 +10,6 @@ const route = useRoute();
 const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
 const { registerSessionDisposer } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
-const { consumeWindowAssetPayload } = useAssetWindowLauncher();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const { batchPanelOpen } = useBatchCommandPanel();
@@ -75,15 +74,6 @@ watch(
     const isToolRoute = normalizedPath.includes("/videoplayer") || normalizedPath.includes("/transcode");
 
     setWorkspaceMode(isTauriRuntime() && isToolRoute ? "tools" : "assets");
-  },
-  { immediate: true }
-);
-
-watch(
-  () => [loggedIn.value, route.query.asset_window_payload] as const,
-  async ([isLoggedIn, payload]) => {
-    if (!isLoggedIn || typeof payload !== "string" || !payload) return;
-    await consumeWindowAssetPayload(payload);
   },
   { immediate: true }
 );
