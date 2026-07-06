@@ -2,6 +2,7 @@
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { AssetItem, AssetTreeNode } from "~/types";
 import KokoFileSessionSurface from "~/koko/workspace/FileSessionSurface.vue";
+import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { t } = useI18n();
@@ -27,6 +28,9 @@ const inlineTab = computed<WorkspaceSessionTab | null>(() => {
     id: `right-panel-sftp:${asset.id}`,
     assetId: asset.id,
     assetName: asset.name,
+    assetType: asset.type || "",
+    assetPlatform: asset.platform || "",
+    assetCategory: asset.category || "",
     address: asset.address,
     protocol: "sftp",
     account: displayUser(asset.id, asset.permedAccounts),
@@ -113,7 +117,7 @@ const openSftp = async () => {
       {
         accountMode: preference?.accountMode || remembered?.accountMode || "hosted",
         accountId,
-        connectMethod: "web_cli_native",
+        connectMethod: SFTP_FILE_MANAGER_VALUE,
         asset,
         onSessionReady: (payload) => {
           inlinePayload.value = payload;

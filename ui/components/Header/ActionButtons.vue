@@ -62,17 +62,6 @@ const getWindowControlButtonClass = (buttonKey: string) => {
   }
 };
 
-const { openSettings, warmupWebSettings } = useSettingsWindow();
-
-const openSettingsWindow = async () => {
-  if (isTauriRuntime()) {
-    await useTauriCoreInvoke("open_settings_window");
-    return;
-  }
-
-  openSettings();
-};
-
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 </script>
 
@@ -86,15 +75,6 @@ const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
       >
         <UButton icon="solar:palette-linear" :title="currentThemePresetLabel" v-bind="commonButtonProps" />
       </UDropdownMenu>
-
-      <UButton
-        icon="i-lucide-settings"
-        :title="t('ToolTips.Settings')"
-        v-bind="commonButtonProps"
-        @mouseenter="warmupWebSettings"
-        @focus="warmupWebSettings"
-        @click="openSettingsWindow"
-      />
 
       <Profile placement="topbar" />
 

@@ -47,6 +47,7 @@ const { setLang, primaryColorLight, primaryColorDark, recentSites, setRecentSite
 const { userTheme } = useThemeAdapter();
 const { themeDropdownItems } = useThemeOptions();
 const { applyPrimaryColor } = useColor();
+const { openSettings, warmupWebSettings } = useSettingsWindow();
 
 const inputSite = ref("");
 const errorMessage = ref("");
@@ -158,6 +159,11 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
       label: t("Common.Language"),
       icon: "solar:global-outline",
       children: languageChildren.value
+    },
+    {
+      label: t("Common.Settings"),
+      icon: "i-lucide-settings",
+      onClick: openSettingsWindow
     }
   ],
   [
@@ -458,6 +464,17 @@ function clearAuthInfo() {
   userInfoStore.deleteUserData(currentSite.value);
 }
 
+async function openSettingsWindow() {
+  warmupWebSettings();
+
+  if (isTauriRuntime()) {
+    await useTauriCoreInvoke("open_settings_window");
+    return;
+  }
+
+  openSettings();
+}
+
 /**
  * @description 过滤输入中的控制字符
  */
@@ -728,8 +745,8 @@ onBeforeUnmount(() => {
     :align="isTopbar ? 'end' : 'start'"
     :ui="{ content: 'w-56 p-1' }"
   >
-    <UTooltip v-if="isTopbar" arrow :text="currentUser?.name || t('Common.Login')">
-      <UButton color="neutral" variant="ghost" size="sm" icon="i-lucide-circle-user-round" />
+    <UTooltip v-if="isTopbar" arrow :text="t('Common.Settings')">
+      <UButton color="neutral" variant="ghost" size="sm" icon="i-lucide-settings" />
     </UTooltip>
 
     <div

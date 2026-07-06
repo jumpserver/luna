@@ -24,6 +24,22 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
   let downloadParts: Uint8Array[] = [];
   let pendingRead: { resolve: (blob: Blob) => void, reject: (error: Error) => void } | null = null;
 
+  const rejectPendingRead = (message: string) => {
+    pendingRead?.reject(new Error(message));
+    pendingRead = null;
+    downloadParts = [];
+  };
+
+  const decodeRaw = (raw: unknown) => {
+    if (typeof raw === "string") {
+      if (!raw) return new Uint8Array();
+      const binary = atob(raw);
+      return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    }
+    if (Array.isArray(raw)) return Uint8Array.from(raw);
+    return new Uint8Array();
+  };
+
   const send = (cmd: string, data: Record<string, unknown>, raw = "", messageId = id()) => {
     if (!socket || socket.readyState !== WebSocket.OPEN) throw new Error("SFTP connection is not ready");
     socket.send(JSON.stringify({ id: messageId, type: "SFTP_DATA", cmd, data: JSON.stringify(data), raw }));
@@ -43,6 +59,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
   const connect = () => {
     const context = ctx.value;
     if (!context) return;
+    rejectPendingRead("SFTP connection reset");
     socket?.close();
     loading.value = true;
     error.value = "";
@@ -53,49 +70,63 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
     socket.onerror = () => {
       error.value = "SFTP WebSocket connection failed";
       loading.value = false;
+      rejectPendingRead(error.value);
     };
     socket.onclose = () => {
       connected.value = false;
+      rejectPendingRead("SFTP connection closed");
     };
     socket.onmessage = (event) => {
-      const message = JSON.parse(String(event.data));
-      if (message.current_path !== undefined) {
-        currentPath.value = message.current_path;
-        if (!initialPath.value) initialPath.value = message.current_path;
-      }
-      if (message.type === "CONNECT") {
-        send("list", { path: "" }, "", message.id);
-      } else if (message.type === "PING") {
-        socket?.send(JSON.stringify({ id: id(), type: "PONG", data: "pong" }));
-      } else if (message.type === "SFTP_BINARY") {
-        const binary = atob(message.raw || "");
-        downloadParts.push(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
-      } else if (message.type === "SFTP_DATA") {
-        if (message.cmd === "list") {
-          setList(JSON.parse(message.data || "[]"));
-        } else if (message.cmd === "download" && message.data) {
-          const blob = new Blob(downloadParts, { type: "application/octet-stream" });
-          if (pendingRead) {
-            pendingRead.resolve(blob);
-            pendingRead = null;
-            downloadParts = [];
-            return;
-          }
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = message.data;
-          link.click();
-          URL.revokeObjectURL(link.href);
-          downloadParts = [];
-        } else if (["mkdir", "rm", "rename", "upload"].includes(message.cmd) && message.data === "ok") {
-          list();
+      try {
+        const message = JSON.parse(String(event.data));
+        if (message.current_path !== undefined) {
+          currentPath.value = message.current_path;
+          if (!initialPath.value) initialPath.value = message.current_path;
         }
-        if (message.err) error.value = message.err;
-      } else if (message.type === "ERROR" || message.type === "CLOSE" || message.type === "closed") {
-        error.value = message.err || "SFTP session expired";
-        pendingRead?.reject(new Error(error.value));
-        pendingRead = null;
-        loading.value = false;
+        if (message.type === "CONNECT") {
+          send("list", { path: "" }, "", message.id);
+        } else if (message.type === "PING") {
+          socket?.send(JSON.stringify({ id: id(), type: "PONG", data: "pong" }));
+        } else if (message.type === "SFTP_BINARY") {
+          downloadParts.push(decodeRaw(message.raw));
+        } else if (message.type === "SFTP_DATA") {
+          if (message.cmd === "list") {
+            setList(JSON.parse(message.data || "[]"));
+          } else if (message.cmd === "download") {
+            if (message.err) {
+              error.value = message.err;
+              rejectPendingRead(message.err);
+            } else {
+              const blob = new Blob(downloadParts, { type: "application/octet-stream" });
+              if (pendingRead) {
+                pendingRead.resolve(blob);
+                pendingRead = null;
+                downloadParts = [];
+              } else if (message.data) {
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = message.data;
+                link.click();
+                URL.revokeObjectURL(link.href);
+                downloadParts = [];
+              } else {
+                downloadParts = [];
+              }
+            }
+          } else if (["mkdir", "rm", "rename", "upload"].includes(message.cmd) && message.data === "ok") {
+            list();
+          } else if (message.err) {
+            error.value = message.err;
+          }
+        } else if (message.type === "ERROR" || message.type === "CLOSE" || message.type === "closed") {
+          error.value = message.err || "SFTP session expired";
+          rejectPendingRead(error.value);
+          loading.value = false;
+        }
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : String(cause);
+        error.value = message;
+        rejectPendingRead(message);
       }
     };
   };
@@ -145,9 +176,14 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
       uploadProgress.value = Math.round(((index + 1) / chunks) * 100);
     }
     if (chunks > 1) send("upload", { offSet: 0, merge: true, size: 0, path: `${currentPath.value.replace(/\/$/, "")}/${file.name}` }, "", messageId);
+    uploadProgress.value = 0;
+  };
+  const uploadBlob = async (fileName: string, blob: Blob) => {
+    const file = blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || "application/octet-stream" });
+    await uploadFile(file);
   };
 
   watch(ctx, connect, { immediate: true });
   onUnmounted(() => socket?.close());
-  return { entries, currentPath, loading, error, connected, uploadProgress, list, changeDirectory, createDirectory, renameEntry, removeEntry, downloadEntry, readFile, uploadFile, reconnect: connect };
+  return { entries, currentPath, loading, error, connected, uploadProgress, list, changeDirectory, createDirectory, renameEntry, removeEntry, downloadEntry, readFile, uploadFile, uploadBlob, reconnect: connect };
 }

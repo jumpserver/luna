@@ -1,19 +1,21 @@
-export type RightPanelTab = "ai" | "sftp";
+export type RightPanelTab = "session" | "ai" | "sftp";
 
 const MIN_PANEL_WIDTH = 280;
 const MAX_PANEL_WIDTH = 520;
 const DEFAULT_PANEL_WIDTH = 340;
 
 const open = ref(false);
-const activeTab = ref<RightPanelTab>("ai");
+const activeTab = ref<RightPanelTab>("session");
 const panelWidth = ref(DEFAULT_PANEL_WIDTH);
 
 export const useRightPanel = () => {
   const setOpen = (value: boolean) => {
+    if (value && !open.value) activeTab.value = "session";
     open.value = value;
   };
 
   const toggle = () => {
+    if (!open.value) activeTab.value = "session";
     open.value = !open.value;
   };
 

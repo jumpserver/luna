@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { ConnectorSessionContext } from "~/shared/connectors/types/session";
+import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import KokoFileManagement from "~/koko/components/Drawer/FileManagement/index.vue";
 import KokoSftpIde from "~/koko/components/SftpIde/index.vue";
 import { connectorSessionKey } from "~/koko/composables/wsUrl";
 import { resolveDevHost } from "~/shared/connectors/useConnectorEndpoint";
 
-const props = defineProps<{ tab: WorkspaceSessionTab, compact?: boolean }>();
+const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const { createKokoTicket } = useWorkspaceConnectors();
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
 const context = ref<ConnectorSessionContext | null>(null);
 const error = ref("");
 provide(connectorSessionKey, context);
 const tokenId = computed(() => String(props.tab.payload?.id || props.tab.payload?.token?.id || ""));
+const useFileManager = computed(() => props.tab.payload?.connectMethod?.value === SFTP_FILE_MANAGER_VALUE);
 
 async function prepare() {
   if (!tokenId.value) return;
@@ -43,7 +45,7 @@ watch(() => props.tab.payload, prepare, { immediate: true, deep: true });
 
 <template>
   <div class="h-full min-h-0 bg-default">
-    <KokoFileManagement v-if="context && compact" :sftp-token="tokenId" class="h-full" />
+    <KokoFileManagement v-if="context && useFileManager" :sftp-token="tokenId" class="h-full" />
     <KokoSftpIde v-else-if="context" :sftp-token="tokenId" class="h-full" />
     <div v-else class="grid h-full place-items-center text-sm text-muted">
       <span>{{ error || "正在准备 SFTP 连接..." }}</span>

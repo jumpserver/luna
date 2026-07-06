@@ -261,17 +261,6 @@ const handleOpenMultipleAssets = (assets: AssetItem[]) => {
 };
 
 const handleAssetConnect = async (asset: AssetItem) => {
-  if (!hasSshProtocol(asset) && asset.permedProtocols && asset.permedProtocols.length > 0) {
-    useToast().add({
-      title: "暂不支持该资产",
-      description: "内置连接目前只支持 SSH 资产。",
-      color: "warning",
-      icon: "i-lucide-circle-alert",
-      duration: 3000
-    });
-    return;
-  }
-
   const saved = asset.savedConnection;
   const canDirectConnect = saved?.protocol === "ssh" && saved.username;
 
@@ -293,10 +282,7 @@ const handleAssetConnect = async (asset: AssetItem) => {
 
   try {
     const info = await connEditorRef.value!.open(asset);
-    connectWithBuiltinSsh(asset, {
-      ...info,
-      protocol: "ssh"
-    });
+    await confirmConnection(asset, info);
   } catch {}
 };
 

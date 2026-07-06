@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import KokoDrawerFileManagement from "~/koko/components/Drawer/FileManagement/index.vue";
 import KokoDrawerGeneral from "~/koko/components/Drawer/General/index.vue";
-import KokoDrawerSessionShare from "~/koko/components/Drawer/SessionShare/index.vue";
-import { useKokoSessionAdapter } from "~/koko/composables/useSessionAdapter";
 import { useKokoTerminalEvents } from "~/koko/composables/useTerminalEvents";
 import { useKokoConnectionStore } from "~/koko/stores/connection";
 import mittBus from "~/koko/utils/mittBus";
@@ -13,7 +11,6 @@ const props = defineProps<{ hiddenFileManager?: boolean }>();
 const MAX_WAIT_TIME = 15_000;
 const { t } = useI18n();
 const connectionStore = useKokoConnectionStore();
-const { resetShareState } = useKokoSessionAdapter();
 const { hostBridge } = useKokoTerminalEvents();
 
 const drawerOpen = ref(false);
@@ -28,8 +25,7 @@ const isDisableFileManager = ref(false);
 const drawerTabs = computed(() => {
   const tabs = [
     { value: "general", label: t("General") || "General", icon: "i-lucide-keyboard" },
-    { value: "file-manager", label: t("FileManagement") || "Files", icon: "i-lucide-folder-kanban" },
-    { value: "share-session", label: t("SessionShare") || "Share", icon: "i-lucide-share-2" }
+    { value: "file-manager", label: t("FileManagement") || "Files", icon: "i-lucide-folder-kanban" }
   ];
   if (props.hiddenFileManager || isDisableFileManager.value) {
     return tabs.filter((tab) => tab.value !== "file-manager");
@@ -101,7 +97,6 @@ onMounted(() => {
   });
   mittBus.on("close-drawer", () => {
     drawerOpen.value = false;
-    nextTick(() => resetShareState());
   });
   mittBus.on("file-manager-expired", () => {
     showEmpty.value = true;
@@ -147,7 +142,6 @@ onUnmounted(() => {
           :show-empty="showEmpty"
           @reconnect="handleReconnect"
         />
-        <KokoDrawerSessionShare v-else-if="activeTab === 'share-session'" />
       </div>
     </template>
   </USlideover>

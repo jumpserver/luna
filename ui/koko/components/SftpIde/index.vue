@@ -81,6 +81,7 @@ async function openEntry(entry: SftpFileEntry) {
   activeFile.value = entry;
   opening.value = true;
   editorError.value = "";
+  previewKind.value = "empty";
   clearPreviewUrl();
   try {
     const blob = await manager.readFile(entry);
@@ -102,6 +103,7 @@ async function openEntry(entry: SftpFileEntry) {
     }
   } catch (cause) {
     editorError.value = String(cause);
+    previewKind.value = "empty";
   } finally {
     opening.value = false;
   }
@@ -170,7 +172,7 @@ onUnmounted(clearPreviewUrl);
       </div>
       <div v-else class="grid min-h-0 flex-1 place-items-center p-6 text-center text-sm text-muted">
         <div class="flex flex-col items-center gap-3">
-          <UIcon :name="editorError ? 'i-lucide-circle-alert' : previewKind === 'unsupported' ? 'i-lucide-file-warning' : 'i-lucide-file-code-2'" class="size-10" /><span>{{ editorError || (previewKind === "unsupported" ? "该文件暂不支持在线预览或编辑" : "从左侧选择文件开始编辑") }}</span>
+          <UIcon :name="editorError ? 'i-lucide-circle-alert' : previewKind === 'unsupported' ? 'i-lucide-file-warning' : 'i-lucide-file-code-2'" class="size-10" /><span>{{ editorError || manager.error.value || (previewKind === "unsupported" ? "该文件暂不支持在线预览或编辑" : "从左侧选择文件开始编辑") }}</span>
         </div>
       </div>
       <footer class="flex h-6 shrink-0 items-center justify-between border-t border-default px-3 text-[10px] text-muted">

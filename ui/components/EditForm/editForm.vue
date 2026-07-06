@@ -134,13 +134,17 @@ const protocolTabItems = computed(() =>
 );
 const connectMethodTypeItems = computed(() => {
   const metaMap: Record<string, { label: string, icon: string }> = {
-    web: { label: "Web CLI", icon: "i-lucide-globe" },
+    builtin: { label: "内置", icon: "i-lucide-panels-top-left" },
     native: { label: "客户端", icon: "i-lucide-monitor" },
-    applet: { label: "Applet", icon: "i-lucide-box" },
-    virtual_app: { label: "VirtualApp", icon: "i-lucide-app-window" }
+    remote_app: { label: "远程应用", icon: "i-lucide-app-window" }
   };
-  const order = ["web", "native", "applet", "virtual_app"];
-  const grouped = new Set(availableConnectMethods.value.map((method) => String(method.type || "")));
+  const categoryOf = (type: string) => {
+    if (type === "web") return "builtin";
+    if (["applet", "virtual_app"].includes(type)) return "remote_app";
+    return type;
+  };
+  const order = ["builtin", "native", "remote_app"];
+  const grouped = new Set(availableConnectMethods.value.map((method) => categoryOf(String(method.type || ""))));
   const sorted = [
     ...order.filter((type) => grouped.has(type)),
     ...Array.from(grouped).filter((type) => !order.includes(type))
@@ -156,7 +160,10 @@ const connectMethodTabItems = computed(() =>
   availableConnectMethods.value
     .filter((method) => {
       if (!selectedConnectMethodType.value) return true;
-      return String(method.type || "") === selectedConnectMethodType.value;
+      const type = String(method.type || "");
+      if (selectedConnectMethodType.value === "builtin") return type === "web";
+      if (selectedConnectMethodType.value === "remote_app") return ["applet", "virtual_app"].includes(type);
+      return type === selectedConnectMethodType.value;
     })
     .map((method) => ({
     label: method.label || method.value,
@@ -226,12 +233,18 @@ watch(
 
     const current = availableConnectMethods.value.find((method) => method.value === props.connectMethod);
     if (current?.type) {
-      selectedConnectMethodType.value = String(current.type);
+      const type = String(current.type);
+      selectedConnectMethodType.value = type === "web"
+        ? "builtin"
+        : ["applet", "virtual_app"].includes(type) ? "remote_app" : type;
       return;
     }
 
     if (!selectedConnectMethodType.value) {
-      selectedConnectMethodType.value = String(availableConnectMethods.value[0]?.type || "");
+      const type = String(availableConnectMethods.value[0]?.type || "");
+      selectedConnectMethodType.value = type === "web"
+        ? "builtin"
+        : ["applet", "virtual_app"].includes(type) ? "remote_app" : type;
     }
   },
   { deep: true, immediate: true }

@@ -1,6 +1,7 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 
+import { SFTP_FILE_EDITOR_VALUE, SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -22,14 +23,20 @@ let unlistenBuiltinSessionSuccess: UnlistenFn | null = null;
 let unlistenBuiltinSessionFailure: UnlistenFn | null = null;
 
 const BUILTIN_CLIENT_METHOD = "builtin_client";
-// 原生 Web CLI（迁移后的 koko 模块）连接方式，见 useConnectMethods 注入
+// 内置 Koko 界面，见 useConnectMethods 注入
 const WEB_CLI_NATIVE_METHOD = "web_cli_native";
-const NATIVE_KOKO_METHODS = new Set([BUILTIN_CLIENT_METHOD, WEB_CLI_NATIVE_METHOD]);
+const NATIVE_KOKO_METHODS = new Set([
+  BUILTIN_CLIENT_METHOD,
+  WEB_CLI_NATIVE_METHOD,
+  SFTP_FILE_MANAGER_VALUE,
+  SFTP_FILE_EDITOR_VALUE
+]);
 const pendingBuiltinSessions: Array<{
   tabId?: string
   assetId: string
   protocol: string
   account: string
+  connectMethod?: string
   onSessionReady?: (payload: Record<string, any>) => void
   onSessionError?: (error: unknown) => void
 }> = [];
@@ -433,7 +440,7 @@ export const useAssetAction = () => {
           const payload = {
             token,
             ...token,
-            connectMethod: { value: BUILTIN_CLIENT_METHOD, component: "koko" }
+            connectMethod: { value: body.connect_method, component: "koko" }
           };
           if (meta.onSessionReady) meta.onSessionReady(payload);
           else updateSessionPayload(meta, payload);
@@ -454,7 +461,7 @@ export const useAssetAction = () => {
     }
 
     const rdpParams = buildLocalRdpParams();
-    pendingBuiltinSessions.push(meta);
+    pendingBuiltinSessions.push({ ...meta, connectMethod: body.connect_method });
 
     void (async () => useTauriCoreInvoke("get_builtin_connect_session", {
       body: {
@@ -663,12 +670,20 @@ export const useAssetAction = () => {
     };
 
     nextTick(() => {
+      const account = selected || user;
+      let tabId = ephemeral?.tabId;
+
+      // ponytail: 有 onSessionReady 时由调用方内嵌展示（如右侧 SFTP），不新开 workspace tab
+      if (!tabId && ephemeral?.asset && NATIVE_KOKO_METHODS.has(connectMethod) && !ephemeral?.onSessionReady) {
+        tabId = openSession(ephemeral.asset, { protocol, account }).id;
+      }
+
       if (NATIVE_KOKO_METHODS.has(connectMethod)) {
         getBuiltinConnectSession(connectionBody, {
-          tabId: ephemeral?.tabId,
+          tabId,
           assetId,
           protocol,
-          account: selected || user,
+          account,
           onSessionReady: ephemeral?.onSessionReady,
           onSessionError: ephemeral?.onSessionError
         });
@@ -676,11 +691,11 @@ export const useAssetAction = () => {
       }
 
       getConnectToken(connectionBody, {
-        tabId: ephemeral?.tabId,
+        tabId,
         asset: ephemeral?.asset,
         assetId,
         protocol,
-        account: selected || user
+        account
       });
     });
   };
@@ -1022,8 +1037,12 @@ export const useAssetAction = () => {
         const meta = pendingBuiltinSessions.shift();
         if (!meta) return;
 
-        if (meta.onSessionReady) meta.onSessionReady(payload.data);
-        else updateSessionPayload(meta, payload.data);
+        const data = {
+          ...payload.data,
+          connectMethod: { value: meta.connectMethod || BUILTIN_CLIENT_METHOD, component: "koko" }
+        };
+        if (meta.onSessionReady) meta.onSessionReady(data);
+        else updateSessionPayload(meta, data);
       });
 
       unlistenBuiltinSessionFailure = await useTauriEventListen("get-builtin-session-failure", (event) => {

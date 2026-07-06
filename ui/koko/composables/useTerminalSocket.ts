@@ -10,6 +10,7 @@ import { Terminal } from "@xterm/xterm";
 import { readText, writeText } from "clipboard-polyfill";
 import { useKokoTerminalEvents } from "~/koko/composables/useTerminalEvents";
 import { registerKokoTerminalSession, unregisterKokoTerminalSession } from "~/koko/composables/useTerminalSessionRegistry";
+import { clearWorkspaceSessionDetails, setWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { useKokoZmodem } from "~/koko/composables/useZmodem";
 import { connectorSessionKey, useKokoWsUrl } from "~/koko/composables/wsUrl";
 import { useKokoConnectionStore } from "~/koko/stores/connection";
@@ -174,6 +175,8 @@ export const useKokoTerminalSocket = () => {
       case MESSAGE_TYPE.TERMINAL_SESSION: {
         const sessionInfo = JSON.parse(parsedMessageData.data);
         emitTerminalSession(sessionInfo);
+        const tabId = unref(sessionCtxRef)?.tabId;
+        if (tabId) setWorkspaceSessionDetails(tabId, sessionInfo);
         const share = sessionInfo?.permission?.actions?.includes("share");
 
         if (sessionInfo.backspaceAsCtrlH) {
@@ -437,7 +440,10 @@ export const useKokoTerminalSocket = () => {
     if (pingInterval.value) clearInterval(pingInterval.value);
     if (warningInterval.value) clearInterval(warningInterval.value);
     const tabId = unref(sessionCtxRef)?.tabId;
-    if (tabId) unregisterKokoTerminalSession(tabId);
+    if (tabId) {
+      unregisterKokoTerminalSession(tabId);
+      clearWorkspaceSessionDetails(tabId);
+    }
     socketRef.value?.close();
     terminalRef.value?.dispose();
     connectionStore.resetConnectionState();

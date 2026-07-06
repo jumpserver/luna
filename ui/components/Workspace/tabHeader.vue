@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
+import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
+
+import { resolveAssetIconFromFields } from "~/utils/assetIcon";
 
 const {
   activeTabId,
@@ -18,6 +21,23 @@ const hasRightHidden = ref(false);
 
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) || null);
 const canSwitchTabs = computed(() => tabs.value.length > 1);
+const brokenTabIcons = ref(new Set<string>());
+
+function tabIcon(tab: WorkspaceSessionTab) {
+  return resolveAssetIconFromFields({
+    type: tab.assetType,
+    platform: tab.assetPlatform,
+    category: tab.assetCategory
+  });
+}
+
+function showTabIconImage(tab: WorkspaceSessionTab) {
+  return Boolean(tabIcon(tab).src) && !brokenTabIcons.value.has(tab.id);
+}
+
+function markTabIconBroken(tabId: string) {
+  brokenTabIcons.value.add(tabId);
+}
 
 const tabMenuItems = computed<DropdownMenuItem[]>(() => [
   ...tabs.value.map((tab) => ({
@@ -165,18 +185,34 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           ]"
           @click.stop="selectTab(tab.id)"
         >
-          <span
-            class="size-1.5 shrink-0 rounded-full"
-            :class="
-              tab.status === 'connected'
-                ? 'bg-blue-500'
-                : tab.status === 'ready'
-                  ? 'bg-blue-400'
-                  : tab.status === 'failed'
-                    ? 'bg-red-500'
-                    : 'bg-gray-400 dark:bg-gray-500'
-            "
-          />
+          <span class="relative grid size-3.5 shrink-0 place-items-center">
+            <img
+              v-if="showTabIconImage(tab)"
+              :src="tabIcon(tab).src"
+              alt=""
+              class="size-3.5 object-contain"
+              :class="tab.status === 'failed' ? 'opacity-40' : ''"
+              @error="markTabIconBroken(tab.id)"
+            >
+            <UIcon
+              v-else
+              :name="tabIcon(tab).fallback"
+              class="size-3.5 text-gray-500 dark:text-gray-400"
+              :class="tab.status === 'failed' ? 'opacity-40' : ''"
+            />
+            <span
+              class="absolute -bottom-px -right-px size-1.5 rounded-full ring-1 ring-white/80 dark:ring-black/40"
+              :class="
+                tab.status === 'connected'
+                  ? 'bg-blue-500'
+                  : tab.status === 'ready'
+                    ? 'bg-blue-400'
+                    : tab.status === 'failed'
+                      ? 'bg-red-500'
+                      : 'bg-gray-400 dark:bg-gray-500'
+              "
+            />
+          </span>
           <span
             v-if="activeTabId === tab.id"
             class="flex min-w-0 items-center gap-1.5 truncate font-ui-mono text-[11px] tracking-[0.01em]"

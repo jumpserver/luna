@@ -1,4 +1,5 @@
 import type { AssetItem } from "~/types";
+import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 
 export type WorkspaceSessionStatus = "connecting" | "ready" | "connected" | "failed";
 
@@ -6,10 +7,14 @@ export interface WorkspaceSessionTab {
   id: string
   assetId: string
   assetName: string
+  assetType: string
+  assetPlatform: string
+  assetCategory: string
   address: string
   protocol: string
   account: string
   status: WorkspaceSessionStatus
+  connectedAt?: number
   payload?: Record<string, any>
 }
 
@@ -52,6 +57,9 @@ export const useWorkspaceTabs = () => {
       id: createTabId(asset.id, protocol, account),
       assetId: asset.id,
       assetName: asset.name,
+      assetType: asset.type || "",
+      assetPlatform: asset.platform || "",
+      assetCategory: asset.category || "",
       address: asset.address,
       protocol,
       account,
@@ -69,6 +77,7 @@ export const useWorkspaceTabs = () => {
     const index = tabs.value.findIndex((tab) => tab.id === id);
     if (index === -1) return;
 
+    clearWorkspaceSessionDetails(id);
     closeNativeSession(id);
 
     tabs.value.splice(index, 1);
@@ -123,6 +132,7 @@ export const useWorkspaceTabs = () => {
     if (!tab) return;
 
     tab.status = "connected";
+    tab.connectedAt = Date.now();
   };
 
   const setActiveSession = (id: string) => {

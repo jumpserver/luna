@@ -21,6 +21,8 @@ const connectMethodsCache = new Map<string, ConnectMethodsResponse>();
 const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 
 export const WEB_CLI_NATIVE_VALUE = "web_cli_native";
+export const SFTP_FILE_MANAGER_VALUE = "sftp_file_manager";
+export const SFTP_FILE_EDITOR_VALUE = "sftp_file_editor";
 
 const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMethodsResponse => {
   const normalized: ConnectMethodsResponse = { ...methods };
@@ -37,7 +39,7 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
         : method;
     });
 
-    // SSH 注入原生 Web CLI（迁移后的 koko 模块），排在 iframe 方式之前
+    // SSH 注入内置终端（迁移后的 koko 模块），排在 iframe 方式之前
     if (key === "ssh") {
       const kokoWebIndex = renamed.findIndex(
         (method) => method.type === "web" && ["koko", "default"].includes(method.component)
@@ -48,9 +50,36 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
         renamed.splice(kokoWebIndex, 0, {
           ...origin,
           value: WEB_CLI_NATIVE_VALUE,
-          label: "Web CLI",
+          label: "内置终端",
           origin_value: origin.value
         } as ConnectMethod);
+      }
+    }
+
+    // SFTP 的两种内置界面共用服务端 web_sftp 连接方法，仅前端呈现不同。
+    if (key === "sftp") {
+      const webSftpIndex = renamed.findIndex(
+        (method) => method.type === "web" && ["koko", "default"].includes(method.component)
+      );
+
+      if (webSftpIndex !== -1) {
+        const origin = renamed[webSftpIndex]!;
+        renamed.splice(
+          webSftpIndex,
+          1,
+          {
+            ...origin,
+            value: SFTP_FILE_MANAGER_VALUE,
+            label: "文件管理",
+            origin_value: origin.value
+          } as ConnectMethod,
+          {
+            ...origin,
+            value: SFTP_FILE_EDITOR_VALUE,
+            label: "File Editor",
+            origin_value: origin.value
+          } as ConnectMethod
+        );
       }
     }
 

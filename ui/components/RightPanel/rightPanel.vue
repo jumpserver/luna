@@ -1,18 +1,38 @@
 <script setup lang="ts">
 import RightPanelAiPanel from "~/components/RightPanel/aiPanel.vue";
+import RightPanelSessionPanel from "~/components/RightPanel/sessionPanel.vue";
 import RightPanelSftpPanel from "~/components/RightPanel/sftpPanel.vue";
 
 const { t } = useI18n();
+const { activeTab: workspaceTab } = useWorkspaceTabs();
 const { activeTab, setActiveTab } = useRightPanel();
 
-const tabs = computed(() => [
-  { value: "ai" as const, label: t("RightPanel.AI"), icon: "i-lucide-sparkles" },
-  { value: "sftp" as const, label: t("RightPanel.SFTP"), icon: "i-lucide-folder-symlink" }
-]);
+const showSftpTab = computed(() => workspaceTab.value?.protocol === "ssh");
 
-const activePanelComponent = computed(() =>
-  activeTab.value === "sftp" ? RightPanelSftpPanel : RightPanelAiPanel
-);
+const tabs = computed(() => {
+  const items = [
+    { value: "session" as const, label: t("RightPanel.Session"), icon: "i-lucide-terminal" },
+    { value: "ai" as const, label: t("RightPanel.AI"), icon: "i-lucide-sparkles" }
+  ];
+
+  if (showSftpTab.value) {
+    items.push({ value: "sftp" as const, label: t("RightPanel.SFTP"), icon: "i-lucide-folder-symlink" });
+  }
+
+  return items;
+});
+
+const panelComponents = {
+  session: RightPanelSessionPanel,
+  ai: RightPanelAiPanel,
+  sftp: RightPanelSftpPanel
+} as const;
+
+const activePanelComponent = computed(() => panelComponents[activeTab.value]);
+
+watch(showSftpTab, (visible) => {
+  if (!visible && activeTab.value === "sftp") setActiveTab("session");
+});
 </script>
 
 <template>

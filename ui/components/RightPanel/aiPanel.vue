@@ -79,24 +79,24 @@ const sendMessage = async () => {
     </div>
 
     <form class="shrink-0 border-t border-gray-200 p-3 dark:border-white/10" @submit.prevent="sendMessage">
-      <div class="flex items-end gap-2">
+      <div class="relative">
         <UTextarea
           v-model="draft"
           :rows="2"
           autoresize
           :maxrows="5"
           :placeholder="t('RightPanel.AIInputPlaceholder')"
-          class="min-w-0 flex-1"
-          :ui="{ base: 'text-[12px]' }"
+          class="w-full"
+          :ui="{ base: 'text-[12px] pb-9 pr-10' }"
           @keydown.enter.exact.prevent="sendMessage"
         />
         <UButton
           type="submit"
           color="primary"
           variant="soft"
-          size="sm"
+          size="xs"
           icon="i-lucide-send"
-          class="shrink-0"
+          class="absolute bottom-1.5 right-1.5"
           :loading="sending"
           :disabled="!draft.trim()"
           :aria-label="t('RightPanel.AISend')"
