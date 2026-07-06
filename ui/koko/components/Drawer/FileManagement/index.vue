@@ -8,6 +8,14 @@ import { connectorSessionKey } from "~/koko/composables/wsUrl";
 import { resolveDevHost } from "~/shared/connectors/useConnectorEndpoint";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
+interface RemotePane {
+  id: string
+  context: ConnectorSessionContext
+  assetName: string
+  selection: SftpFileEntry | null
+  checked: boolean
+}
+
 const props = defineProps<{
   sftpToken?: string
   showEmpty?: boolean
@@ -30,9 +38,11 @@ const primaryContext = computed<ConnectorSessionContext | null>(() => {
   return { ...value, tokenId: props.sftpToken };
 });
 
+const paneId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+
 const dualMode = ref(false);
-const remoteContext = ref<ConnectorSessionContext | null>(null);
-const remoteAssetName = ref("");
+const remotePanes = ref<RemotePane[]>([]);
+const activeRemoteId = ref<string | null>(null);
 const connectModalOpen = ref(false);
 const remoteSearch = ref("");
 const remoteSearchLoading = ref(false);
@@ -41,9 +51,15 @@ const remoteConnecting = ref(false);
 const transferring = ref(false);
 
 const primaryPaneRef = ref<InstanceType<typeof KokoFileManagementPane> | null>(null);
-const remotePaneRef = ref<InstanceType<typeof KokoFileManagementPane> | null>(null);
+const remotePaneRefs = ref<Record<string, InstanceType<typeof KokoFileManagementPane> | null>>({});
 const primarySelection = ref<SftpFileEntry | null>(null);
-const remoteSelection = ref<SftpFileEntry | null>(null);
+
+const checkedRemotePanes = computed(() => remotePanes.value.filter((pane) => pane.checked));
+const activeRemotePane = computed(() => remotePanes.value.find((pane) => pane.id === activeRemoteId.value) || null);
+
+function setRemotePaneRef(id: string, el: unknown) {
+  remotePaneRefs.value[id] = (el as InstanceType<typeof KokoFileManagementPane> | null) || null;
+}
 
 async function buildSftpContext(assetId: string, tokenId: string, tabId: string): Promise<ConnectorSessionContext> {
   let endpointUrl = resolveDevHost("koko") || window.location.origin;
@@ -86,19 +102,32 @@ function openRemoteConnect() {
   connectModalOpen.value = true;
 }
 
-function disconnectRemote() {
-  remoteContext.value = null;
-  remoteAssetName.value = "";
-  remoteSelection.value = null;
+function disconnectAllRemotes() {
+  remotePanes.value = [];
+  remotePaneRefs.value = {};
+  activeRemoteId.value = null;
+}
+
+function removeRemotePane(id: string) {
+  remotePanes.value = remotePanes.value.filter((pane) => pane.id !== id);
+  delete remotePaneRefs.value[id];
+  if (activeRemoteId.value === id) activeRemoteId.value = remotePanes.value[0]?.id ?? null;
 }
 
 function toggleDualMode() {
   if (dualMode.value) {
     dualMode.value = false;
-    disconnectRemote();
+    return;
+  }
+  if (remotePanes.value.length) {
+    dualMode.value = true;
     return;
   }
   openRemoteConnect();
+}
+
+function focusRemotePane(id: string) {
+  activeRemoteId.value = id;
 }
 
 async function connectRemoteAsset(node: AssetTreeNode) {
@@ -120,8 +149,15 @@ async function connectRemoteAsset(node: AssetTreeNode) {
         onSessionReady: async (payload) => {
           try {
             const tokenId = String(payload.id || payload.token?.id || "");
-            remoteContext.value = await buildSftpContext(asset.id, tokenId, `remote-sftp:${asset.id}`);
-            remoteAssetName.value = asset.name;
+            const id = paneId();
+            remotePanes.value.push({
+              id,
+              context: await buildSftpContext(asset.id, tokenId, `remote-sftp:${asset.id}:${id}`),
+              assetName: asset.name,
+              selection: null,
+              checked: true
+            });
+            activeRemoteId.value = id;
             connectModalOpen.value = false;
             resolve();
           } catch (error) {
@@ -171,8 +207,57 @@ async function transferEntry(
   }
 }
 
-const transferToRemote = () => transferEntry(primaryPaneRef.value, remotePaneRef.value, primarySelection.value);
-const transferToPrimary = () => transferEntry(remotePaneRef.value, primaryPaneRef.value, remoteSelection.value);
+async function transferToRemotes() {
+  const entry = primarySelection.value;
+  const fromPane = primaryPaneRef.value;
+  const targets = checkedRemotePanes.value;
+  if (!fromPane || !entry || !targets.length || transferring.value) return;
+  if (entry.is_dir) {
+    toast.add({ title: t("FileManagement.FolderTransferUnsupported"), color: "warning" });
+    return;
+  }
+
+  transferring.value = true;
+  try {
+    const blob = await fromPane.manager.readFile(entry);
+    const results = await Promise.allSettled(
+      targets.map((pane) => {
+        const target = remotePaneRefs.value[pane.id];
+        if (!target) throw new Error("SFTP pane is not ready");
+        return target.manager.uploadBlob(entry.name, blob);
+      })
+    );
+    const success = results.filter((result) => result.status === "fulfilled").length;
+    if (success === targets.length) {
+      toast.add({ title: t("FileManagement.TransferSuccess"), color: "success" });
+    } else if (success === 0) {
+      toast.add({
+        title: t("FileManagement.TransferFailed"),
+        description: String((results.find((result) => result.status === "rejected") as PromiseRejectedResult | undefined)?.reason || ""),
+        color: "error"
+      });
+    } else {
+      toast.add({
+        title: t("FileManagement.TransferPartialSuccess", { success, total: targets.length }),
+        color: "warning"
+      });
+    }
+  } catch (error) {
+    toast.add({
+      title: t("FileManagement.TransferFailed"),
+      description: String(error),
+      color: "error"
+    });
+  } finally {
+    transferring.value = false;
+  }
+}
+
+const transferToPrimary = () => {
+  const pane = activeRemotePane.value;
+  if (!pane) return;
+  transferEntry(remotePaneRefs.value[pane.id], primaryPaneRef.value, pane.selection);
+};
 </script>
 
 <template>
@@ -189,29 +274,29 @@ const transferToPrimary = () => transferEntry(remotePaneRef.value, primaryPaneRe
     <div class="flex shrink-0 items-center justify-end gap-1 border-b border-default px-2 py-1">
       <UButton
         size="xs"
-        :color="dualMode ? 'primary' : 'neutral'"
+        :color="dualMode || remotePanes.length ? 'primary' : 'neutral'"
         :variant="dualMode ? 'soft' : 'ghost'"
         icon="i-lucide-server"
-        :label="dualMode ? t('FileManagement.RemoteSftp') : t('FileManagement.ConnectRemoteSftp')"
+        :label="remotePanes.length || dualMode ? t('FileManagement.RemoteSftp') : t('FileManagement.ConnectRemoteSftp')"
         @click="toggleDualMode"
       />
       <UButton
-        v-if="dualMode && !remoteContext"
+        v-if="dualMode"
         size="xs"
         color="primary"
         variant="soft"
-        icon="i-lucide-plug"
-        :label="t('FileManagement.ConnectRemoteSftp')"
+        icon="i-lucide-plus"
+        :label="t('FileManagement.AddRemoteSftp')"
         @click="openRemoteConnect"
       />
       <UButton
-        v-if="dualMode && remoteContext"
+        v-if="remotePanes.length"
         size="xs"
         color="neutral"
         variant="ghost"
         icon="i-lucide-unplug"
-        :label="t('FileManagement.DisconnectRemote')"
-        @click="disconnectRemote"
+        :label="t('FileManagement.DisconnectAllRemote')"
+        @click="disconnectAllRemotes"
       />
     </div>
 
@@ -224,16 +309,16 @@ const transferToPrimary = () => transferEntry(remotePaneRef.value, primaryPaneRe
         @select="primarySelection = $event"
       />
 
-      <div v-if="dualMode" class="flex w-8 shrink-0 flex-col items-center justify-center gap-2 border-x border-default px-0.5">
+      <div v-show="dualMode" class="flex w-8 shrink-0 flex-col items-center justify-center gap-2 border-x border-default px-0.5">
         <UTooltip :text="t('FileManagement.TransferToRemote')">
           <UButton
             size="xs"
             color="primary"
             variant="soft"
             icon="i-lucide-arrow-right"
-            :disabled="!primarySelection || !remoteContext || transferring"
+            :disabled="!primarySelection || !checkedRemotePanes.length || transferring"
             :loading="transferring"
-            @click="transferToRemote"
+            @click="transferToRemotes"
           />
         </UTooltip>
         <UTooltip :text="t('FileManagement.TransferToLocal')">
@@ -242,22 +327,49 @@ const transferToPrimary = () => transferEntry(remotePaneRef.value, primaryPaneRe
             color="primary"
             variant="soft"
             icon="i-lucide-arrow-left"
-            :disabled="!remoteSelection || !remoteContext || transferring"
+            :disabled="!activeRemotePane?.selection || transferring"
             :loading="transferring"
             @click="transferToPrimary"
           />
         </UTooltip>
       </div>
 
-      <div v-if="dualMode" class="min-h-0 min-w-0 flex-1">
-        <KokoFileManagementPane
-          v-if="remoteContext"
-          ref="remotePaneRef"
-          class="h-full"
-          :context="remoteContext"
-          :title="remoteAssetName || t('FileManagement.RemoteSftp')"
-          @select="remoteSelection = $event"
-        />
+      <div v-show="dualMode" class="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div v-if="remotePanes.length" class="flex min-h-0 flex-1 flex-col divide-y divide-default">
+          <div
+            v-for="pane in remotePanes"
+            :key="pane.id"
+            class="flex min-h-0 flex-1 flex-col"
+            :class="activeRemoteId === pane.id ? 'ring-1 ring-inset ring-primary/40' : ''"
+          >
+            <div class="flex shrink-0 items-center gap-1 border-b border-default px-2 py-0.5">
+              <UTooltip :text="t('FileManagement.TransferTarget')">
+                <UCheckbox v-model="pane.checked" icon="i-lucide-check" />
+              </UTooltip>
+              <button
+                type="button"
+                class="min-w-0 flex-1 truncate text-left text-[11px] font-medium"
+                :class="activeRemoteId === pane.id ? 'text-primary' : 'text-muted'"
+                @click="focusRemotePane(pane.id)"
+              >
+                {{ pane.assetName }}
+              </button>
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-x"
+                @click="removeRemotePane(pane.id)"
+              />
+            </div>
+            <KokoFileManagementPane
+              :ref="(el) => setRemotePaneRef(pane.id, el)"
+              class="min-h-0 flex-1"
+              :context="pane.context"
+              @select="pane.selection = $event; focusRemotePane(pane.id)"
+            />
+          </div>
+        </div>
         <div v-else class="grid h-full place-items-center p-4 text-center text-xs text-muted">
           <div class="space-y-2">
             <UIcon name="i-lucide-server" class="mx-auto size-6 opacity-60" />

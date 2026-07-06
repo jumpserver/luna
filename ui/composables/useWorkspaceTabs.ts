@@ -1,7 +1,14 @@
 import type { AssetItem } from "~/types";
+import { useRecentConnections } from "~/composables/useRecentConnections";
 import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 
 export type WorkspaceSessionStatus = "connecting" | "ready" | "connected" | "failed";
+
+export interface WorkspaceSplitSession {
+  id: string
+  payload?: Record<string, any>
+  status: WorkspaceSessionStatus
+}
 
 export interface WorkspaceSessionTab {
   id: string
@@ -16,6 +23,7 @@ export interface WorkspaceSessionTab {
   status: WorkspaceSessionStatus
   connectedAt?: number
   payload?: Record<string, any>
+  splitSessions?: WorkspaceSplitSession[]
 }
 
 const tabs = ref<WorkspaceSessionTab[]>([]);
@@ -44,12 +52,22 @@ const closeNativeSession = (id: string) => {
   Promise.resolve(sessionDisposer?.(id)).catch(() => {});
 };
 
+const findSplitSession = (tabId: string) => {
+  for (const tab of tabs.value) {
+    const split = tab.splitSessions?.find((item) => item.id === tabId);
+    if (split) return { tab, split };
+  }
+
+  return null;
+};
+
 export const useWorkspaceTabs = () => {
   const registerSessionDisposer = (disposer: ((id: string) => void | Promise<void>) | null) => {
     sessionDisposer = disposer;
   };
 
   const openSession = (asset: AssetItem, connection: { protocol: string, account: string, payload?: Record<string, any> }) => {
+    useRecentConnections().recordRecentConnection(asset);
     const protocol = connection.protocol || asset.savedConnection?.protocol || "ssh";
     const account = connection.account || asset.savedConnection?.username || "";
 
@@ -75,7 +93,24 @@ export const useWorkspaceTabs = () => {
 
   const closeSession = (id: string) => {
     const index = tabs.value.findIndex((tab) => tab.id === id);
-    if (index === -1) return;
+    if (index === -1) {
+      const splitMatch = findSplitSession(id);
+      if (!splitMatch?.tab.splitSessions) return;
+
+      const splitIndex = splitMatch.tab.splitSessions.findIndex((item) => item.id === id);
+      if (splitIndex === -1) return;
+
+      clearWorkspaceSessionDetails(id);
+      closeNativeSession(id);
+      splitMatch.tab.splitSessions.splice(splitIndex, 1);
+      return;
+    }
+
+    const tab = tabs.value[index]!;
+    for (const split of tab.splitSessions || []) {
+      clearWorkspaceSessionDetails(split.id);
+      closeNativeSession(split.id);
+    }
 
     clearWorkspaceSessionDetails(id);
     closeNativeSession(id);
@@ -101,6 +136,10 @@ export const useWorkspaceTabs = () => {
 
     for (const tab of tabs.value) {
       if (tab.id !== id) {
+        for (const split of tab.splitSessions || []) {
+          clearWorkspaceSessionDetails(split.id);
+          closeNativeSession(split.id);
+        }
         closeNativeSession(tab.id);
       }
     }
@@ -108,6 +147,40 @@ export const useWorkspaceTabs = () => {
     tabs.value = tabs.value.filter((tab) => tab.id === id);
     activeTabId.value = id;
   };
+
+  const closeLeftSessions = (id: string) => {
+    while (tabs.value[0]?.id && tabs.value[0].id !== id) {
+      closeSession(tabs.value[0].id);
+    }
+  };
+
+  const closeRightSessions = (id: string) => {
+    const index = tabs.value.findIndex((tab) => tab.id === id);
+    if (index === -1) return;
+
+    while (tabs.value.length > index + 1) {
+      closeSession(tabs.value[tabs.value.length - 1]!.id);
+    }
+  };
+
+  const addSplitSession = (tabId: string, payload: Record<string, any>) => {
+    const tab = tabs.value.find((item) => item.id === tabId);
+    if (!tab || tab.splitSessions?.length) return;
+
+    tab.splitSessions = [{
+      id: `split:${tabId}:${Date.now()}`,
+      payload,
+      status: "connecting"
+    }];
+  };
+
+  const toSurfaceTab = (tab: WorkspaceSessionTab, surfaceId: string, payload?: Record<string, any>, status?: WorkspaceSessionStatus): WorkspaceSessionTab => ({
+    ...tab,
+    id: surfaceId,
+    payload: payload ?? tab.payload,
+    status: status ?? tab.status,
+    splitSessions: undefined
+  });
 
   const updateSessionPayload = (
     match: { tabId?: string, assetId: string, protocol: string, account: string },
@@ -121,6 +194,14 @@ export const useWorkspaceTabs = () => {
   };
 
   const markSessionFailed = (match: { tabId?: string, assetId: string, protocol: string, account: string }) => {
+    if (match.tabId) {
+      const splitMatch = findSplitSession(match.tabId);
+      if (splitMatch) {
+        splitMatch.split.status = "failed";
+        return;
+      }
+    }
+
     const tab = findSession(match);
     if (!tab) return;
 
@@ -129,10 +210,16 @@ export const useWorkspaceTabs = () => {
 
   const markSessionConnected = (tabId: string) => {
     const tab = tabs.value.find((item) => item.id === tabId);
-    if (!tab) return;
+    if (tab) {
+      tab.status = "connected";
+      tab.connectedAt = Date.now();
+      return;
+    }
 
-    tab.status = "connected";
-    tab.connectedAt = Date.now();
+    const splitMatch = findSplitSession(tabId);
+    if (!splitMatch) return;
+
+    splitMatch.split.status = "connected";
   };
 
   const setActiveSession = (id: string) => {
@@ -158,13 +245,17 @@ export const useWorkspaceTabs = () => {
     activeTab,
     activeTabId,
     activateAdjacentSession,
+    addSplitSession,
     closeAllSessions,
+    closeLeftSessions,
     closeOtherSessions,
+    closeRightSessions,
     registerSessionDisposer,
     openSession,
     closeSession,
     markSessionFailed,
     markSessionConnected,
+    toSurfaceTab,
     updateSessionPayload,
     setActiveSession
   };

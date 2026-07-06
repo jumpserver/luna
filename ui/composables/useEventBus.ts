@@ -1,5 +1,5 @@
 import type { Emitter, EventType } from "mitt";
-import type { PermedAccount, PermedProtocol, SortType } from "~/types";
+import type { AssetItem, PermedAccount, PermedProtocol, SortType } from "~/types";
 
 import mitt from "mitt";
 
@@ -27,6 +27,7 @@ type BusEvents = {
     permedAccounts: PermedAccount[]
     permedProtocols: PermedProtocol[]
   }
+  workspaceConnectAsset: AssetItem
 } & Record<EventType, unknown>;
 
 const emitter: Emitter<BusEvents> = mitt<BusEvents>();

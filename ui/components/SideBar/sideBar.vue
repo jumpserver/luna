@@ -286,6 +286,8 @@ const handleAssetConnect = async (asset: AssetItem) => {
   } catch {}
 };
 
+useEventBus().on("workspaceConnectAsset", handleAssetConnect);
+
 const handleAssetConnectWithSelection = async (asset: AssetItem) => {
   try {
     const info = await connEditorRef.value!.open(asset);

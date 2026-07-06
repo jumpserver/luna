@@ -171,9 +171,13 @@
     "RemoteSftpHint": "连接另一台 SFTP 服务器，可在两侧互传文件",
     "RemoteConnected": "远程 SFTP 已连接",
     "RemoteConnectFailed": "远程 SFTP 连接失败",
-    "TransferToRemote": "传到远程",
+    "AddRemoteSftp": "添加远程 SFTP",
+    "DisconnectAllRemote": "断开全部",
+    "TransferTarget": "传输目标",
+    "TransferToRemote": "传到已选",
     "TransferToLocal": "传到当前",
     "TransferSuccess": "文件传输成功",
+    "TransferPartialSuccess": "已传输到 {success}/{total} 个目标",
     "TransferFailed": "文件传输失败",
     "FolderTransferUnsupported": "暂不支持文件夹互传",
     "DownloadFolderConfirm": "确定下载此文件夹？"
@@ -283,6 +287,16 @@
     "FavoriteFailed": "收藏失败",
     "UnfavoriteSuccess": "取消收藏成功",
     "UnfavoriteFailed": "取消收藏失败"
+  },
+  "TabMenu": {
+    "CloneConnect": "复制窗口",
+    "Reconnect": "重新连接",
+    "SplitVertically": "垂直分屏",
+    "CloseCurrent": "关闭当前标签",
+    "CloseAll": "关闭全部标签",
+    "CloseOther": "关闭其他标签",
+    "CloseLeft": "关闭左侧标签",
+    "CloseRight": "关闭右侧标签"
   },
   "EditModal": {
     "ModifyConnectionInfo": "连接",

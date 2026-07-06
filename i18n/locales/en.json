@@ -171,9 +171,13 @@
     "RemoteSftpHint": "Connect another SFTP server to transfer files between both sides",
     "RemoteConnected": "Remote SFTP connected",
     "RemoteConnectFailed": "Failed to connect remote SFTP",
-    "TransferToRemote": "Send to remote",
+    "AddRemoteSftp": "Add remote SFTP",
+    "DisconnectAllRemote": "Disconnect all",
+    "TransferTarget": "Transfer target",
+    "TransferToRemote": "Send to selected",
     "TransferToLocal": "Send to current",
     "TransferSuccess": "File transferred",
+    "TransferPartialSuccess": "Transferred to {success}/{total} targets",
     "TransferFailed": "File transfer failed",
     "FolderTransferUnsupported": "Folder transfer is not supported yet",
     "DownloadFolderConfirm": "Download this folder?"
@@ -283,6 +287,16 @@
     "FavoriteFailed": "Failed to save to favorites",
     "UnfavoriteSuccess": "Removed from favorites successfully",
     "UnfavoriteFailed": "Failed to remove from favorites"
+  },
+  "TabMenu": {
+    "CloneConnect": "Clone Connect",
+    "Reconnect": "Reconnect",
+    "SplitVertically": "Split vertically",
+    "CloseCurrent": "Close Current Tab",
+    "CloseAll": "Close All Tabs",
+    "CloseOther": "Close Other Tabs",
+    "CloseLeft": "Close Left Tabs",
+    "CloseRight": "Close Right Tabs"
   },
   "EditModal": {
     "ModifyConnectionInfo": "Connect",

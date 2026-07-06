@@ -4,20 +4,28 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
 import { resolveAssetIconFromFields } from "~/utils/assetIcon";
 
+const { t } = useI18n();
 const {
   activeTabId,
   tabs,
   activateAdjacentSession,
   closeAllSessions,
+  closeLeftSessions,
   closeOtherSessions,
+  closeRightSessions,
   closeSession,
   setActiveSession
 } = useWorkspaceTabs();
+const { cloneSession, reconnectSession, splitSession } = useWorkspaceTabMenu();
 
 const tabStripRef = ref<HTMLElement | null>(null);
 const hasOverflow = ref(false);
 const hasLeftHidden = ref(false);
 const hasRightHidden = ref(false);
+const contextMenuVisible = ref(false);
+const contextMenuPosition = ref({ x: 0, y: 0 });
+const contextMenuTab = ref<WorkspaceSessionTab | null>(null);
+const contextMenuTabIndex = ref(-1);
 
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) || null);
 const canSwitchTabs = computed(() => tabs.value.length > 1);
@@ -39,6 +47,131 @@ function markTabIconBroken(tabId: string) {
   brokenTabIcons.value.add(tabId);
 }
 
+const tabDropdownUi = {
+  content: "w-48 p-1",
+  item: "gap-2 items-center",
+  itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]",
+  itemWrapper: "min-w-0 flex-1",
+  itemLabel: "min-w-0"
+};
+
+const TAB_MENU_ICON_PLACEHOLDER = "i-lucide-circle";
+
+function tabMenuItem(
+  item: DropdownMenuItem,
+  icon?: string
+): DropdownMenuItem {
+  if (!icon) {
+    return {
+      ...item,
+      icon: TAB_MENU_ICON_PLACEHOLDER,
+      ui: {
+        itemLeadingIcon: "size-4 w-4 shrink-0 opacity-0 pointer-events-none"
+      }
+    };
+  }
+
+  return {
+    ...item,
+    icon,
+    ui: {
+      itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]"
+    }
+  };
+}
+
+function hideContextMenu() {
+  contextMenuVisible.value = false;
+  contextMenuTab.value = null;
+  contextMenuTabIndex.value = -1;
+}
+
+function openContextMenu(tab: WorkspaceSessionTab, index: number, event: MouseEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  contextMenuTab.value = tab;
+  contextMenuTabIndex.value = index;
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY };
+  contextMenuVisible.value = true;
+  setActiveSession(tab.id);
+}
+
+const contextMenuItems = computed<DropdownMenuItem[]>(() => {
+  const tab = contextMenuTab.value;
+  const index = contextMenuTabIndex.value;
+  if (!tab || index < 0) return [];
+
+  const hasToken = Boolean(tab.payload?.id || tab.payload?.token?.id);
+
+  return [
+    tabMenuItem({
+      label: t("TabMenu.CloneConnect"),
+      disabled: !hasToken,
+      onSelect: () => {
+        hideContextMenu();
+        void cloneSession(tab);
+      }
+    }, "i-lucide-copy"),
+    tabMenuItem({
+      label: t("TabMenu.Reconnect"),
+      disabled: !hasToken,
+      onSelect: () => {
+        hideContextMenu();
+        void reconnectSession(tab);
+      }
+    }, "i-lucide-refresh-cw"),
+    tabMenuItem({
+      label: t("TabMenu.SplitVertically"),
+      disabled: !hasToken || Boolean(tab.splitSessions?.length),
+      onSelect: () => {
+        hideContextMenu();
+        void splitSession(tab);
+      }
+    }, "i-lucide-columns-2"),
+    { type: "separator" as const },
+    tabMenuItem({
+      label: t("TabMenu.CloseCurrent"),
+      onSelect: () => {
+        hideContextMenu();
+        closeSession(tab.id);
+      }
+    }, "i-lucide-x"),
+    tabMenuItem({
+      label: t("TabMenu.CloseAll"),
+      disabled: tabs.value.length === 0,
+      onSelect: () => {
+        hideContextMenu();
+        closeAllSessions();
+      }
+    }),
+    tabMenuItem({
+      label: t("TabMenu.CloseOther"),
+      disabled: tabs.value.length <= 1,
+      onSelect: () => {
+        hideContextMenu();
+        closeOtherSessions(tab.id);
+      }
+    }),
+    tabMenuItem({
+      label: t("TabMenu.CloseLeft"),
+      disabled: index === 0,
+      onSelect: () => {
+        hideContextMenu();
+        closeLeftSessions(tab.id);
+      }
+    }),
+    tabMenuItem({
+      label: t("TabMenu.CloseRight"),
+      disabled: index === tabs.value.length - 1,
+      onSelect: () => {
+        hideContextMenu();
+        closeRightSessions(tab.id);
+      }
+    })
+  ];
+});
+
 const tabMenuItems = computed<DropdownMenuItem[]>(() => [
   ...tabs.value.map((tab) => ({
     label: tab.assetName,
@@ -50,24 +183,27 @@ const tabMenuItems = computed<DropdownMenuItem[]>(() => [
     type: "separator" as const
   },
   {
-    label: "关闭当前标签",
+    label: t("TabMenu.CloseCurrent"),
     icon: "i-lucide-x",
+    ui: { itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]" },
     disabled: !activeTab.value,
     onSelect: () => {
       if (activeTab.value) closeSession(activeTab.value.id);
     }
   },
   {
-    label: "关闭其他标签",
+    label: t("TabMenu.CloseOther"),
     icon: "i-lucide-copy-x",
+    ui: { itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]" },
     disabled: !activeTab.value || tabs.value.length < 2,
     onSelect: () => {
       if (activeTab.value) closeOtherSessions(activeTab.value.id);
     }
   },
   {
-    label: "关闭全部标签",
+    label: t("TabMenu.CloseAll"),
     icon: "i-lucide-trash-2",
+    ui: { itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]" },
     disabled: tabs.value.length === 0,
     onSelect: closeAllSessions
   }
@@ -153,7 +289,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 </script>
 
 <template>
-  <div v-if="tabs.length" class="flex h-full min-w-0 items-center gap-2 px-3">
+  <div class="flex h-full min-w-0 items-center gap-2 px-3">
     <UTooltip v-if="hasLeftHidden" text="上一个标签" :delay-duration="150">
       <button
         type="button"
@@ -166,7 +302,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       </button>
     </UTooltip>
 
-    <div class="workspace-tab-capsule flex w-fit min-w-0 max-w-full items-center rounded-lg p-px">
+    <div v-if="tabs.length" class="workspace-tab-capsule flex w-fit min-w-0 max-w-full items-center rounded-lg p-px">
       <div
         ref="tabStripRef"
         class="workspace-tab-strip flex w-fit min-w-0 max-w-full items-center gap-0.5 overflow-x-auto"
@@ -184,6 +320,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
               : 'text-gray-500/92 hover:bg-white/18 hover:text-gray-700 dark:text-white/45 dark:hover:bg-white/[0.05] dark:hover:text-white/72'
           ]"
           @click.stop="selectTab(tab.id)"
+          @contextmenu.prevent="openContextMenu(tab, index, $event)"
         >
           <span class="relative grid size-3.5 shrink-0 place-items-center">
             <img
@@ -241,6 +378,8 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       </div>
     </div>
 
+    <WorkspaceAddSessionPopover />
+
     <UTooltip v-if="hasRightHidden" text="下一个标签" :delay-duration="150">
       <button
         type="button"
@@ -258,8 +397,9 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       :items="tabMenuItems"
       :content="{ align: 'end', side: 'bottom' }"
       :ui="{
+        ...tabDropdownUi,
         content: 'w-44 max-h-64 overflow-y-auto p-1',
-        item: 'py-1.5 text-sm min-w-0',
+        item: 'py-1.5 text-sm min-w-0 gap-2 items-center',
         label: 'truncate'
       }"
     >
@@ -270,6 +410,25 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       >
         <UIcon name="i-lucide-ellipsis" class="size-3.5 text-gray-500 dark:text-gray-400" />
       </button>
+    </UDropdownMenu>
+
+    <UDropdownMenu
+      :open="contextMenuVisible"
+      :items="contextMenuItems"
+      size="sm"
+      :content="{ align: 'start', side: 'bottom' }"
+      :ui="tabDropdownUi"
+      @update:open="(open) => { if (!open) hideContextMenu(); else contextMenuVisible = open; }"
+    >
+      <div
+        class="fixed pointer-events-none"
+        :style="{
+          left: `${contextMenuPosition.x}px`,
+          top: `${contextMenuPosition.y}px`,
+          width: '1px',
+          height: '1px'
+        }"
+      />
     </UDropdownMenu>
   </div>
 </template>
