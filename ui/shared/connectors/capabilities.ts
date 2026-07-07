@@ -1,11 +1,12 @@
 export const WEB_CLI_NATIVE_VALUE = "web_cli_native";
 export const WEB_RDP_NATIVE_VALUE = "web_rdp_native";
+export const WEB_DB_NATIVE_VALUE = "web_db_native";
 export const SFTP_FILE_MANAGER_VALUE = "sftp_file_manager";
 export const SFTP_FILE_EDITOR_VALUE = "sftp_file_editor";
 export const K8S_NATIVE_VALUE = "k8s_native";
 
-export type WorkspaceComponentId = "koko" | "lion";
-export type WorkspaceSurfaceKind = "terminal" | "file-manager" | "file-editor" | "k8s-ui" | "remote-desktop";
+export type WorkspaceComponentId = "koko" | "chen" | "lion";
+export type WorkspaceSurfaceKind = "terminal" | "database" | "file-manager" | "file-editor" | "k8s-ui" | "remote-desktop";
 
 export interface WorkspaceCapabilityDeclaration {
   component: WorkspaceComponentId
@@ -35,6 +36,25 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
     ],
     connectMethods: [WEB_CLI_NATIVE_VALUE],
     description: "字符型连接统一走 koko 终端 workspace，覆盖主机协议和数据库协议。"
+  },
+  {
+    component: "chen",
+    surface: "database",
+    label: "数据库工作台",
+    protocols: [
+      "clickhouse",
+      "dameng",
+      "db2",
+      "mariadb",
+      "mongodb",
+      "mysql",
+      "oracle",
+      "postgresql",
+      "redis",
+      "sqlserver"
+    ],
+    connectMethods: [WEB_DB_NATIVE_VALUE],
+    description: "数据库连接使用 chen workspace，提供资源树、SQL 编辑器和结果视图。"
   },
   {
     component: "koko",

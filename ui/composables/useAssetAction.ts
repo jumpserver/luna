@@ -1,7 +1,7 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 
-import { K8S_NATIVE_VALUE, SFTP_FILE_EDITOR_VALUE, SFTP_FILE_MANAGER_VALUE, WEB_RDP_NATIVE_VALUE } from "~/composables/useConnectMethods";
+import { K8S_NATIVE_VALUE, SFTP_FILE_EDITOR_VALUE, SFTP_FILE_MANAGER_VALUE, WEB_DB_NATIVE_VALUE, WEB_RDP_NATIVE_VALUE } from "~/composables/useConnectMethods";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -28,6 +28,7 @@ const WEB_CLI_NATIVE_METHOD = "web_cli_native";
 const NATIVE_WORKSPACE_METHODS = new Set([
   BUILTIN_CLIENT_METHOD,
   WEB_CLI_NATIVE_METHOD,
+  WEB_DB_NATIVE_VALUE,
   WEB_RDP_NATIVE_VALUE,
   SFTP_FILE_MANAGER_VALUE,
   SFTP_FILE_EDITOR_VALUE,
@@ -414,6 +415,13 @@ export const useAssetAction = () => {
         if (lionWeb) return lionWeb.value;
       }
 
+      if (body.connect_method === WEB_DB_NATIVE_VALUE) {
+        const chenWeb = methods.find(
+          (item) => item.type === "web" && item.component === "chen" && !item.origin_value
+        );
+        if (chenWeb) return chenWeb.value;
+      }
+
       const kokoWeb = methods.find(
         (item) => item.type === "web" && ["koko", "default"].includes(item.component) && !item.origin_value
       );
@@ -425,6 +433,7 @@ export const useAssetAction = () => {
 
   const resolveBuiltinComponent = (body: ConnectionBody) => {
     if (body.connect_method === WEB_RDP_NATIVE_VALUE) return "lion";
+    if (body.connect_method === WEB_DB_NATIVE_VALUE) return "chen";
     return "koko";
   };
 

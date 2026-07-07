@@ -3,6 +3,7 @@ import type { Component } from "vue";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { JmsComponent, KokoSurfaceMode } from "~/shared/connectors/types/component";
 
+import ChenDatabaseSessionSurface from "~/chen/workspaces/DatabaseSessionSurface.vue";
 import KokoIframeSession from "~/koko-iframe/workspace/IframeSession.vue";
 import KokoFileEditorSessionSurface from "~/koko/workspaces/FileEditorSessionSurface.vue";
 import KokoFileManagerSessionSurface from "~/koko/workspaces/FileManagerSessionSurface.vue";
@@ -64,6 +65,10 @@ export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
 
   if (capability?.surface === "file-manager") {
     return KokoFileManagerSessionSurface;
+  }
+
+  if (capability?.surface === "database") {
+    return ChenDatabaseSessionSurface;
   }
 
   if (capability?.surface === "file-editor") {

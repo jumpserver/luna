@@ -18,7 +18,7 @@ function surfaceInstanceKey(tab: WorkspaceSessionTab) {
   const webUrl = String(payload.webUrl || "");
   const connectMethod = String(payload.connectMethod?.value || "");
 
-  return [tab.id, tokenId, webUrl, connectMethod, tab.status].join(":");
+  return [tab.id, tokenId, webUrl, connectMethod].join(":");
 }
 
 function focusSurface() {

@@ -1,7 +1,7 @@
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
 const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
 const lionTarget = process.env.JMS_LION_DEV_URL || "http://localhost:8081";
-const chenTarget = process.env.JMS_CHEN_DEV_URL || "http://localhost:9523";
+const chenTarget = process.env.JMS_CHEN_DEV_URL || "http://localhost:8082";
 const faceliveTarget = process.env.JMS_FACELIVE_DEV_URL || "http://localhost:5173";
 const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:5172";
 const uiTarget = process.env.JMS_UI_DEV_URL || "http://localhost:9528";
@@ -192,11 +192,19 @@ export default defineNuxtConfig({
           changeOrigin: true,
           configure: bindProxyErrorHandler("lion-http")
         },
+        "/chen/ws/": {
+          target: chenTarget.replace(/^http/i, "ws"),
+          secure: false,
+          ws: true,
+          changeOrigin: true,
+          configure: bindProxyErrorHandler("chen-ws")
+        },
         "/chen": {
           target: chenTarget,
           secure: false,
           ws: true,
-          changeOrigin: true
+          changeOrigin: true,
+          configure: bindProxyErrorHandler("chen-http")
         },
         "/facelive": {
           target: faceliveTarget,

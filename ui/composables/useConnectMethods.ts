@@ -9,6 +9,7 @@ export {
   SFTP_FILE_EDITOR_VALUE,
   SFTP_FILE_MANAGER_VALUE,
   WEB_CLI_NATIVE_VALUE,
+  WEB_DB_NATIVE_VALUE,
   WEB_RDP_NATIVE_VALUE
 } from "~/shared/connectors/capabilities";
 
@@ -89,6 +90,28 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
 
       if (declaredMethods.length) {
         renamed.splice(lionWebIndex, 1, ...declaredMethods);
+      }
+    }
+
+    const chenWebIndex = renamed.findIndex(
+      (method) => method.type === "web" && method.component === "chen"
+    );
+
+    if (chenWebIndex !== -1) {
+      const origin = renamed[chenWebIndex]!;
+      const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES
+        .filter((item) => item.component === "chen" && item.protocols.includes(key))
+        .flatMap((item) =>
+          item.connectMethods.map((methodValue) => ({
+            ...origin,
+            value: methodValue,
+            label: item.label,
+            origin_value: origin.value
+          }) as ConnectMethod)
+        );
+
+      if (declaredMethods.length) {
+        renamed.splice(chenWebIndex, 1, ...declaredMethods);
       }
     }
 
