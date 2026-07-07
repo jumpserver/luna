@@ -1,10 +1,11 @@
 export const WEB_CLI_NATIVE_VALUE = "web_cli_native";
+export const WEB_RDP_NATIVE_VALUE = "web_rdp_native";
 export const SFTP_FILE_MANAGER_VALUE = "sftp_file_manager";
 export const SFTP_FILE_EDITOR_VALUE = "sftp_file_editor";
 export const K8S_NATIVE_VALUE = "k8s_native";
 
-export type WorkspaceComponentId = "koko";
-export type WorkspaceSurfaceKind = "terminal" | "file-manager" | "file-editor" | "k8s-ui";
+export type WorkspaceComponentId = "koko" | "lion";
+export type WorkspaceSurfaceKind = "terminal" | "file-manager" | "file-editor" | "k8s-ui" | "remote-desktop";
 
 export interface WorkspaceCapabilityDeclaration {
   component: WorkspaceComponentId
@@ -60,6 +61,14 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
     protocols: ["k8s", "kubernetes"],
     connectMethods: [K8S_NATIVE_VALUE],
     description: "K8s 连接使用 koko Kubernetes UI workspace。"
+  },
+  {
+    component: "lion",
+    surface: "remote-desktop",
+    label: "远程桌面",
+    protocols: ["rdp", "vnc"],
+    connectMethods: [WEB_RDP_NATIVE_VALUE],
+    description: "RDP/VNC 连接走 Lion 远程桌面 workspace。"
   }
 ];
 

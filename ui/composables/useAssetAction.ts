@@ -1,7 +1,7 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 
-import { K8S_NATIVE_VALUE, SFTP_FILE_EDITOR_VALUE, SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
+import { K8S_NATIVE_VALUE, SFTP_FILE_EDITOR_VALUE, SFTP_FILE_MANAGER_VALUE, WEB_RDP_NATIVE_VALUE } from "~/composables/useConnectMethods";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -25,9 +25,10 @@ let unlistenBuiltinSessionFailure: UnlistenFn | null = null;
 const BUILTIN_CLIENT_METHOD = "builtin_client";
 // 内置 Koko 界面，见 useConnectMethods 注入
 const WEB_CLI_NATIVE_METHOD = "web_cli_native";
-const NATIVE_KOKO_METHODS = new Set([
+const NATIVE_WORKSPACE_METHODS = new Set([
   BUILTIN_CLIENT_METHOD,
   WEB_CLI_NATIVE_METHOD,
+  WEB_RDP_NATIVE_VALUE,
   SFTP_FILE_MANAGER_VALUE,
   SFTP_FILE_EDITOR_VALUE,
   K8S_NATIVE_VALUE
@@ -397,14 +398,21 @@ export const useAssetAction = () => {
   };
 
   const resolveServerConnectMethod = async (body: ConnectionBody) => {
-    // 服务端不认识本地注入的 method（builtin_client / web_cli_native），换成真实 koko web method
-    if (!NATIVE_KOKO_METHODS.has(body.connect_method)) return body.connect_method;
+    // 服务端不认识本地注入的 method（builtin_client / web_cli_native / web_rdp_native），换成真实 web method
+    if (!NATIVE_WORKSPACE_METHODS.has(body.connect_method)) return body.connect_method;
 
     try {
       const allMethods = await fetchConnectMethods();
       const methods = allMethods[body.protocol] || [];
       const injected = methods.find((item) => item.value === body.connect_method);
       if (injected?.origin_value) return injected.origin_value;
+
+      if (body.connect_method === WEB_RDP_NATIVE_VALUE) {
+        const lionWeb = methods.find(
+          (item) => item.type === "web" && ["lion", "tinker"].includes(item.component) && !item.origin_value
+        );
+        if (lionWeb) return lionWeb.value;
+      }
 
       const kokoWeb = methods.find(
         (item) => item.type === "web" && ["koko", "default"].includes(item.component) && !item.origin_value
@@ -413,6 +421,11 @@ export const useAssetAction = () => {
     } catch {}
 
     return body.connect_method;
+  };
+
+  const resolveBuiltinComponent = (body: ConnectionBody) => {
+    if (body.connect_method === WEB_RDP_NATIVE_VALUE) return "lion";
+    return "koko";
   };
 
   const getBuiltinConnectSession = (
@@ -441,7 +454,7 @@ export const useAssetAction = () => {
           const payload = {
             token,
             ...token,
-            connectMethod: { value: body.connect_method, component: "koko" }
+            connectMethod: { value: body.connect_method, component: resolveBuiltinComponent(body) }
           };
           if (meta.onSessionReady) meta.onSessionReady(payload);
           else updateSessionPayload(meta, payload);
@@ -675,11 +688,11 @@ export const useAssetAction = () => {
       let tabId = ephemeral?.tabId;
 
       // ponytail: 有 onSessionReady 时由调用方内嵌展示（如右侧 SFTP），不新开 workspace tab
-      if (!tabId && ephemeral?.asset && NATIVE_KOKO_METHODS.has(connectMethod) && !ephemeral?.onSessionReady) {
+      if (!tabId && ephemeral?.asset && NATIVE_WORKSPACE_METHODS.has(connectMethod) && !ephemeral?.onSessionReady) {
         tabId = openSession(ephemeral.asset, { protocol, account }).id;
       }
 
-      if (NATIVE_KOKO_METHODS.has(connectMethod)) {
+      if (NATIVE_WORKSPACE_METHODS.has(connectMethod)) {
         getBuiltinConnectSession(connectionBody, {
           tabId,
           assetId,

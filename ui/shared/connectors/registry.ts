@@ -8,6 +8,7 @@ import KokoFileEditorSessionSurface from "~/koko/workspaces/FileEditorSessionSur
 import KokoFileManagerSessionSurface from "~/koko/workspaces/FileManagerSessionSurface.vue";
 import KokoKubernetesWorkspace from "~/koko/workspaces/KubernetesWorkspace.vue";
 import KokoTerminalSessionSurface from "~/koko/workspaces/TerminalSessionSurface.vue";
+import LionRemoteSessionSurface from "~/lion/workspaces/RemoteSessionSurface.vue";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import LegacyIframeSession from "~/shared/connectors/LegacyIframeSession.vue";
 
@@ -77,6 +78,10 @@ export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
     return KokoKubernetesWorkspace;
   }
 
+  if (capability?.surface === "remote-desktop") {
+    return LionRemoteSessionSurface;
+  }
+
   if (tab.payload?.webUrl) return LegacyIframeSession;
 
   const component = resolveSessionComponent(tab);
@@ -86,6 +91,9 @@ export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
       return CONNECTOR_REGISTRY.koko.component;
     case "koko-iframe":
       return CONNECTOR_REGISTRY["koko-iframe"].component;
+    case "lion":
+    case "tinker":
+      return LionRemoteSessionSurface;
     default:
       return LegacyIframeSession;
   }

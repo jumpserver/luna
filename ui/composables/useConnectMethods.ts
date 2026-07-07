@@ -8,7 +8,8 @@ export {
   K8S_NATIVE_VALUE,
   SFTP_FILE_EDITOR_VALUE,
   SFTP_FILE_MANAGER_VALUE,
-  WEB_CLI_NATIVE_VALUE
+  WEB_CLI_NATIVE_VALUE,
+  WEB_RDP_NATIVE_VALUE
 } from "~/shared/connectors/capabilities";
 
 interface ConnectMethod {
@@ -66,6 +67,28 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
       if (declaredMethods.length) {
         const replaceOrigin = key === "sftp" || K8S_PROTOCOLS.has(key);
         renamed.splice(kokoWebIndex, replaceOrigin ? 1 : 0, ...declaredMethods);
+      }
+    }
+
+    const lionWebIndex = renamed.findIndex(
+      (method) => method.type === "web" && ["lion", "tinker"].includes(method.component)
+    );
+
+    if (lionWebIndex !== -1) {
+      const origin = renamed[lionWebIndex]!;
+      const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES
+        .filter((item) => item.component === "lion" && item.protocols.includes(key))
+        .flatMap((item) =>
+          item.connectMethods.map((methodValue) => ({
+            ...origin,
+            value: methodValue,
+            label: item.label,
+            origin_value: origin.value
+          }) as ConnectMethod)
+        );
+
+      if (declaredMethods.length) {
+        renamed.splice(lionWebIndex, 1, ...declaredMethods);
       }
     }
 
