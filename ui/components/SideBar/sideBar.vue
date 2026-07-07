@@ -558,9 +558,7 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
         class="absolute inset-0 z-10 flex min-h-0 flex-col"
         :style="{ backgroundColor: contentBackgroundColor }"
       >
-        <div
-          class="border-b border-[color:var(--sidebar-divider-light)] px-3 py-1.5 dark:border-[color:var(--sidebar-divider-dark)]"
-        >
+        <div :style="{ borderBottom: '1px solid var(--app-border)' }" class="px-3 py-1.5">
           <UInput
             v-model="sidebarSearch"
             size="sm"
@@ -573,7 +571,7 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
             :placeholder="t('Operation.Search')"
             class="search-input w-full rounded-xl"
             :ui="{
-              base: 'h-7 rounded-xl bg-white/55 px-1 text-[12px] ring-1 ring-inset ring-black/6 dark:bg-white/6 dark:ring-white/10 focus-visible:ring-primary/35 placeholder:text-gray-400 dark:placeholder:text-gray-500'
+              base: 'h-7 rounded-xl bg-[var(--app-surface-panel-strong)] px-1 text-[12px] text-[var(--app-fg)] ring-1 ring-inset ring-[var(--app-border)] focus-visible:ring-[var(--app-focus-ring)] placeholder:text-[var(--app-muted)]'
             }"
           >
             <template v-if="sidebarSearch?.length" #trailing>
@@ -604,7 +602,7 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
           />
         </div>
 
-        <div v-else class="grid min-h-0 flex-1 place-items-center px-4 text-[12px] text-gray-500 dark:text-gray-400">
+        <div v-else class="grid min-h-0 flex-1 place-items-center px-4 text-[12px] text-[var(--app-muted)]">
           输入名称、地址或关键字搜索资产
         </div>
       </div>

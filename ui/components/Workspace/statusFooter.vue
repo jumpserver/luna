@@ -24,8 +24,12 @@ const activeText = computed(() => {
 
 <template>
   <footer
-    class="flex h-7 min-w-0 items-center justify-between border-t border-[color:var(--sidebar-divider-light)] px-3 text-[11px] backdrop-saturate-150"
-    :style="{ backgroundColor: 'var(--app-footer-bg)', color: 'var(--app-muted)' }"
+    class="flex h-7 min-w-0 items-center justify-between px-3 text-[11px] backdrop-saturate-150"
+    :style="{
+      backgroundColor: 'var(--app-footer-bg)',
+      color: 'var(--app-muted)',
+      boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--app-border) 82%, transparent)'
+    }"
   >
     <div class="flex min-w-0 items-center gap-3">
       <span class="flex items-center gap-1.5">
@@ -43,7 +47,8 @@ const activeText = computed(() => {
         <span class="truncate font-ui-mono">{{ activeText }}</span>
         <span
           v-if="activeProtocol"
-          class="rounded bg-black/[0.045] px-1.5 py-0.5 font-ui-mono text-[10px] tracking-[0.08em] text-gray-600 dark:bg-white/[0.07] dark:text-gray-300"
+          class="rounded px-1.5 py-0.5 font-ui-mono text-[10px] tracking-[0.08em]"
+          :style="{ backgroundColor: 'var(--app-surface-panel)', color: 'var(--app-text-secondary)' }"
         >
           {{ activeProtocol }}
         </span>
@@ -57,7 +62,7 @@ const activeText = computed(() => {
         :class="
           batchPanelOpen
             ? 'bg-primary-500/15 text-primary-600 dark:text-primary-400'
-            : 'text-gray-500 hover:bg-black/5 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/8 dark:hover:text-gray-200'
+            : 'text-[var(--app-muted)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]'
         "
         :aria-label="t('RightPanel.BatchCommand')"
         :aria-pressed="batchPanelOpen"

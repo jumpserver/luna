@@ -66,8 +66,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="workspace-shell flex h-screen w-full min-w-0 flex-col overflow-hidden border-none">
-    <div class="workspace-shell__header shrink-0">
+  <div
+    class="workspace-shell flex h-screen w-full min-w-0 flex-col overflow-hidden border-none"
+    :style="{ backgroundColor: 'var(--app-surface-frame)', color: 'var(--app-fg)' }"
+  >
+    <div
+      class="workspace-shell__header shrink-0"
+      :style="{ backgroundColor: 'var(--app-header-bg)' }"
+    >
       <slot name="header" />
     </div>
 
@@ -76,7 +82,10 @@ onBeforeUnmount(() => {
         v-if="$slots.sidebar"
         class="workspace-shell__sidebar relative min-h-0 shrink-0"
         :class="isResizing ? '' : 'transition-[width] duration-200'"
-        :style="{ width: collapse ? '0px' : `${sidebarWidth}px` }"
+        :style="{
+          width: collapse ? '0px' : `${sidebarWidth}px`,
+          backgroundColor: 'var(--app-sidebar-bg)'
+        }"
       >
         <slot name="sidebar" />
         <div
@@ -89,7 +98,10 @@ onBeforeUnmount(() => {
         />
       </aside>
 
-      <main class="workspace-shell__main flex min-h-0 min-w-0 flex-1 flex-col">
+      <main
+        class="workspace-shell__main flex min-h-0 min-w-0 flex-1 flex-col"
+        :style="{ backgroundColor: 'var(--app-surface-canvas)' }"
+      >
         <div class="min-h-0 flex-1 overflow-hidden">
           <slot />
         </div>
@@ -100,7 +112,10 @@ onBeforeUnmount(() => {
         v-if="$slots.rightPanel"
         class="workspace-shell__right-panel relative min-h-0 shrink-0 overflow-hidden"
         :class="isRightResizing ? '' : 'transition-[width] duration-200'"
-        :style="{ width: rightPanelOpen ? `${rightPanelWidth}px` : '0px' }"
+        :style="{
+          width: rightPanelOpen ? `${rightPanelWidth}px` : '0px',
+          backgroundColor: 'var(--app-surface-panel)'
+        }"
       >
         <div class="h-full min-h-0" :aria-hidden="!rightPanelOpen">
           <slot name="rightPanel" />
@@ -116,7 +131,11 @@ onBeforeUnmount(() => {
       </aside>
     </div>
 
-    <div v-if="$slots.footer" class="workspace-shell__footer shrink-0">
+    <div
+      v-if="$slots.footer"
+      class="workspace-shell__footer shrink-0"
+      :style="{ backgroundColor: 'var(--app-footer-bg)' }"
+    >
       <slot name="footer" />
     </div>
   </div>

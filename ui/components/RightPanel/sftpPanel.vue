@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { AssetItem, AssetTreeNode } from "~/types";
-import KokoFileSessionSurface from "~/koko/workspace/FileSessionSurface.vue";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
+import KokoFileManagerSessionSurface from "~/koko/workspaces/FileManagerSessionSurface.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { t } = useI18n();
@@ -156,7 +156,7 @@ watch(
       {{ t("Common.LoginFirst") }}
     </div>
 
-    <KokoFileSessionSurface v-else-if="inlineTab" :tab="inlineTab" compact class="min-h-0 flex-1" />
+    <KokoFileManagerSessionSurface v-else-if="inlineTab" :tab="inlineTab" compact class="min-h-0 flex-1" />
 
     <div v-else-if="isActiveAssetPreparing" class="grid min-h-0 flex-1 place-items-center text-xs text-muted">
       <div class="flex flex-col items-center gap-2">

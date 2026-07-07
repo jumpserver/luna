@@ -267,6 +267,7 @@ export const useColor = () => {
     const root = document.documentElement;
 
     const hex = toHex(color, fallback);
+    root.style.setProperty("--theme-accent", hex);
     root.style.setProperty("--ui-color-primary-500", hex);
     root.style.setProperty("--el-color-primary", hex);
 

@@ -4,9 +4,11 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { JmsComponent, KokoSurfaceMode } from "~/shared/connectors/types/component";
 
 import KokoIframeSession from "~/koko-iframe/workspace/IframeSession.vue";
-import KokoFileSessionSurface from "~/koko/workspace/FileSessionSurface.vue";
-import KokoKubernetesSessionSurface from "~/koko/workspace/KubernetesSessionSurface.vue";
-import KokoSessionSurface from "~/koko/workspace/SessionSurface.vue";
+import KokoFileEditorSessionSurface from "~/koko/workspaces/FileEditorSessionSurface.vue";
+import KokoFileManagerSessionSurface from "~/koko/workspaces/FileManagerSessionSurface.vue";
+import KokoKubernetesWorkspace from "~/koko/workspaces/KubernetesWorkspace.vue";
+import KokoTerminalSessionSurface from "~/koko/workspaces/TerminalSessionSurface.vue";
+import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import LegacyIframeSession from "~/shared/connectors/LegacyIframeSession.vue";
 
 export interface ConnectorRegistryEntry {
@@ -17,7 +19,7 @@ export interface ConnectorRegistryEntry {
 
 export const CONNECTOR_REGISTRY: Record<Extract<JmsComponent, "koko" | "koko-iframe">, ConnectorRegistryEntry> = {
   koko: {
-    component: KokoSessionSurface,
+    component: KokoTerminalSessionSurface,
     mode: "native",
     native: true
   },
@@ -56,8 +58,25 @@ export function resolveSessionComponent(tab: WorkspaceSessionTab): JmsComponent 
 }
 
 export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
-  if (tab.protocol === "sftp") return KokoFileSessionSurface;
-  if (["k8s", "kubernetes"].includes(tab.protocol)) return KokoKubernetesSessionSurface;
+  const connectMethod = (tab.payload?.connectMethod as { value?: string } | undefined)?.value;
+  const capability = findDeclaredCapability(tab.protocol, connectMethod);
+
+  if (capability?.surface === "file-manager") {
+    return KokoFileManagerSessionSurface;
+  }
+
+  if (capability?.surface === "file-editor") {
+    return KokoFileEditorSessionSurface;
+  }
+
+  if (tab.protocol === "sftp") {
+    return KokoFileManagerSessionSurface;
+  }
+
+  if (capability?.surface === "k8s-ui" || ["k8s", "kubernetes"].includes(tab.protocol)) {
+    return KokoKubernetesWorkspace;
+  }
+
   if (tab.payload?.webUrl) return LegacyIframeSession;
 
   const component = resolveSessionComponent(tab);

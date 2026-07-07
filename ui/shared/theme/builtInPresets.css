@@ -1,0 +1,17 @@
+@import "./themes/latte.css";
+@import "./themes/matcha.css";
+@import "./themes/claude.css";
+@import "./themes/gemini.css";
+@import "./themes/mono.css";
+@import "./themes/luna-default.css";
+@import "./themes/luna-darkgray.css";
+@import "./themes/luna-deepblue.css";
+@import "./themes/mocha.css";
+@import "./themes/macchiato.css";
+@import "./themes/frappe.css";
+@import "./themes/kanagawa.css";
+@import "./themes/ayu.css";
+@import "./themes/rose-pine.css";
+@import "./themes/codex.css";
+@import "./themes/cursor.css";
+@import "./themes/mono-dark.css";

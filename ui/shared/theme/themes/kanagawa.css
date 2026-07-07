@@ -1,0 +1,10 @@
+:root[data-theme-preset="kanagawa"] {
+  --theme-bg: #1f1f28;
+  --theme-fg: #dcd7ba;
+  --theme-muted: #727169;
+  --theme-border: #363646;
+  --theme-accent: #7e9cd8;
+  --theme-surface: #2a2a37;
+  --theme-surface-hover: #363646;
+  --theme-shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+}

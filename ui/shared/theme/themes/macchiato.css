@@ -1,0 +1,10 @@
+:root[data-theme-preset="macchiato"] {
+  --theme-bg: #24273a;
+  --theme-fg: #cad3f5;
+  --theme-muted: #6e738d;
+  --theme-border: #363a4f;
+  --theme-accent: #f5a97f;
+  --theme-surface: #1e2030;
+  --theme-surface-hover: #494d64;
+  --theme-shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.22);
+}

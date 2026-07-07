@@ -41,7 +41,9 @@ const props = defineProps<{ sftpToken: string }>();
 const providedContext = inject(connectorSessionKey, ref(null));
 const context = computed<ConnectorSessionContext | null>(() => {
   const value = unref(providedContext);
-  return value ? { ...value, tokenId: props.sftpToken } : null;
+  if (!value || !props.sftpToken) return null;
+  if (value.tokenId === props.sftpToken) return value;
+  return { ...value, tokenId: props.sftpToken };
 });
 const manager = useSftpFileManager(context);
 const tabs = ref<EditorTab[]>([]);
@@ -391,9 +393,9 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
 </script>
 
 <template>
-  <div class="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)] bg-default">
-    <aside class="flex min-h-0 flex-col border-r border-default bg-elevated/30">
-      <div class="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-default px-2">
+  <div class="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)] bg-[var(--app-main-bg)] text-[var(--app-fg)]">
+    <aside class="flex min-h-0 flex-col border-r border-[var(--app-border)] bg-[var(--app-panel-bg)]">
+      <div class="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-[var(--app-border)] px-2">
         <button class="min-w-0 flex-1 truncate px-1 text-left font-ui-mono text-[10px]" :class="selectedDirectory === rootPath ? 'text-primary' : 'text-muted'" :title="rootPath" @click="selectedDirectory = rootPath" @contextmenu="openContextMenu({ name: rootPath, size: '', perm: '', mod_time: '', type: '', is_dir: true }, rootPath, $event)">
           {{ rootPath || "/" }}
         </button>
@@ -403,21 +405,21 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
         <UButton icon="i-lucide-search" size="xs" color="neutral" :variant="searchVisible ? 'soft' : 'ghost'" title="搜索" @click="toggleSearch" />
         <UButton icon="i-lucide-refresh-cw" size="xs" color="neutral" variant="ghost" title="刷新目录树" @click="refreshTree" />
       </div>
-      <div v-if="searchVisible" class="shrink-0 border-b border-default p-2">
+      <div v-if="searchVisible" class="shrink-0 border-b border-[var(--app-border)] bg-[var(--app-main-bg)] p-2">
         <UInput v-model="search" icon="i-lucide-search" size="xs" placeholder="筛选文件" class="w-full" />
       </div>
-      <div class="min-h-0 flex-1 overflow-auto py-1">
+      <div class="min-h-0 flex-1 overflow-auto bg-[var(--app-panel-bg)] py-1">
         <template v-for="row in treeRows" :key="row.path">
-          <button v-if="row.kind === 'entry'" class="flex h-7 w-full items-center gap-1 pr-2 text-left text-xs hover:bg-accented" :class="row.entry.is_dir ? (selectedDirectory === row.path ? 'bg-accented text-primary' : '') : (activePath === row.path ? 'bg-accented text-primary' : '')" :style="{ paddingLeft: `${8 + row.depth * 14}px` }" :title="row.path" @click="openEntry(row.entry, row.path)" @contextmenu="openContextMenu(row.entry, row.path, $event)">
-            <UIcon v-if="row.entry.is_dir" :name="row.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-3 shrink-0 text-muted" />
+          <button v-if="row.kind === 'entry'" class="flex h-7 w-full items-center gap-1 pr-2 text-left text-xs text-[var(--app-fg)] hover:bg-[var(--app-hover-soft)]" :class="row.entry.is_dir ? (selectedDirectory === row.path ? 'bg-[var(--app-selected-soft)] text-primary' : '') : (activePath === row.path ? 'bg-[var(--app-selected-soft)] text-primary' : '')" :style="{ paddingLeft: `${8 + row.depth * 14}px` }" :title="row.path" @click="openEntry(row.entry, row.path)" @contextmenu="openContextMenu(row.entry, row.path, $event)">
+            <UIcon v-if="row.entry.is_dir" :name="row.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-3 shrink-0 text-[var(--app-muted)]" />
             <span v-else class="w-3 shrink-0" />
             <UIcon :name="row.entry.is_dir ? (row.expanded ? 'i-lucide-folder-open' : 'i-lucide-folder') : 'i-lucide-file-code-2'" class="size-3.5 shrink-0" />
-            <span class="min-w-0 flex-1 truncate">{{ row.entry.name }}</span><span v-if="!row.entry.is_dir" class="text-[9px] text-muted">{{ row.entry.size }}</span>
+            <span class="min-w-0 flex-1 truncate">{{ row.entry.name }}</span><span v-if="!row.entry.is_dir" class="text-[9px] text-[var(--app-muted)]">{{ row.entry.size }}</span>
           </button>
           <div v-else class="py-1 pr-2" :style="{ paddingLeft: `${8 + row.depth * 14}px` }">
             <div class="flex items-center gap-1">
-              <UIcon :name="row.createKind === 'directory' ? 'i-lucide-folder' : 'i-lucide-file-code-2'" class="size-3.5 shrink-0 text-muted" />
-              <input ref="pendingInput" v-model="pendingName" class="h-6 min-w-0 flex-1 rounded border border-primary bg-default px-1.5 text-xs outline-none" :placeholder="row.createKind === 'directory' ? '目录名称' : '文件名称'" :disabled="pendingSubmitting" @keydown.enter.prevent="commitCreate" @keydown.esc.prevent="cancelCreate">
+              <UIcon :name="row.createKind === 'directory' ? 'i-lucide-folder' : 'i-lucide-file-code-2'" class="size-3.5 shrink-0 text-[var(--app-muted)]" />
+              <input ref="pendingInput" v-model="pendingName" class="h-6 min-w-0 flex-1 rounded border border-primary bg-[var(--app-main-bg)] px-1.5 text-xs text-[var(--app-fg)] outline-none" :placeholder="row.createKind === 'directory' ? '目录名称' : '文件名称'" :disabled="pendingSubmitting" @keydown.enter.prevent="commitCreate" @keydown.esc.prevent="cancelCreate">
               <UButton icon="i-lucide-check" size="xs" color="primary" variant="ghost" :loading="pendingSubmitting" title="确认" @click="commitCreate" />
               <UButton icon="i-lucide-x" size="xs" color="neutral" variant="ghost" :disabled="pendingSubmitting" title="取消" @click="cancelCreate" />
             </div>
@@ -426,7 +428,7 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
             </div>
           </div>
         </template>
-        <div v-if="tree[rootPath]?.loading" class="flex h-8 items-center gap-2 px-3 text-xs text-muted">
+        <div v-if="tree[rootPath]?.loading" class="flex h-8 items-center gap-2 px-3 text-xs text-[var(--app-muted)]">
           <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />加载中
         </div>
         <div v-else-if="tree[rootPath]?.error" class="px-3 py-2 text-xs text-error">
@@ -440,16 +442,16 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
     </aside>
 
     <section class="flex min-h-0 min-w-0 flex-col">
-      <div v-if="tabs.length" class="flex h-9 shrink-0 overflow-x-auto border-b border-default bg-elevated/20">
-        <button v-for="tab in tabs" :key="tab.path" class="group flex min-w-28 max-w-52 shrink-0 items-center gap-2 border-r border-default px-3 text-xs" :class="activePath === tab.path ? 'bg-default text-highlighted' : 'text-muted hover:bg-elevated/50'" :title="tab.path" @click="activePath = tab.path">
+      <div v-if="tabs.length" class="flex h-9 shrink-0 overflow-x-auto border-b border-[var(--app-border)] bg-[var(--app-panel-bg)]">
+        <button v-for="tab in tabs" :key="tab.path" class="group flex min-w-28 max-w-52 shrink-0 items-center gap-2 border-r border-[var(--app-border)] px-3 text-xs" :class="activePath === tab.path ? 'bg-[var(--app-main-bg)] text-[var(--app-fg)]' : 'text-[var(--app-muted)] hover:bg-[var(--app-hover-soft)]'" :title="tab.path" @click="activePath = tab.path">
           <UIcon name="i-lucide-file-code-2" class="size-3.5 shrink-0" /><span class="min-w-0 flex-1 truncate text-left">{{ tab.entry.name }}</span>
           <span v-if="dirty(tab)" class="size-1.5 shrink-0 rounded-full bg-primary" />
           <UIcon name="i-lucide-x" class="size-3.5 shrink-0 opacity-0 group-hover:opacity-100" @click.stop="closeTab(tab)" />
         </button>
       </div>
       <template v-if="activeTab">
-        <header class="flex h-9 shrink-0 items-center justify-between border-b border-default px-3">
-          <span class="truncate font-ui-mono text-[10px] text-muted">{{ activeTab.path }}</span>
+        <header class="flex h-9 shrink-0 items-center justify-between border-b border-[var(--app-border)] bg-[var(--app-panel-bg)] px-3">
+          <span class="truncate font-ui-mono text-[10px] text-[var(--app-muted)]">{{ activeTab.path }}</span>
           <UButton v-if="activeTab.kind === 'text'" icon="i-lucide-save" size="xs" color="primary" variant="soft" :disabled="!dirty(activeTab)" :loading="activeTab.saving" @click="save()">
             保存
           </UButton>
@@ -457,22 +459,22 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
         <div v-if="activeTab.loading" class="grid min-h-0 flex-1 place-items-center">
           <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
         </div>
-        <div v-else-if="activeTab.kind === 'text'" class="min-h-0 flex-1">
+        <div v-else-if="activeTab.kind === 'text'" class="min-h-0 flex-1 bg-[var(--app-main-bg)]">
           <CodeMirrorEditor v-model="activeTab.content" :language="editorLanguage" :path="activeTab.path" @save="save()" />
         </div>
         <div v-else-if="activeTab.kind === 'image'" class="grid min-h-0 flex-1 place-items-center overflow-auto bg-checkered p-6">
           <img :src="activeTab.previewUrl" :alt="activeTab.entry.name" class="max-h-full max-w-full object-contain">
         </div>
-        <div v-else class="grid min-h-0 flex-1 place-items-center p-6 text-center text-sm text-muted">
+        <div v-else class="grid min-h-0 flex-1 place-items-center bg-[var(--app-main-bg)] p-6 text-center text-sm text-[var(--app-muted)]">
           <div class="flex flex-col items-center gap-3">
             <UIcon :name="activeTab.error ? 'i-lucide-circle-alert' : 'i-lucide-file-warning'" class="size-10" /><span>{{ activeTab.error || "该文件暂不支持在线预览或编辑" }}</span>
           </div>
         </div>
-        <footer class="flex h-6 shrink-0 items-center justify-between border-t border-default px-3 text-[10px] text-muted">
+        <footer class="flex h-6 shrink-0 items-center justify-between border-t border-[var(--app-border)] bg-[var(--app-panel-bg)] px-3 text-[10px] text-[var(--app-muted)]">
           <span>{{ activeTab.path }}</span><span>{{ activeTab.kind === "text" ? `${activeTab.content.length} chars · Ctrl/Cmd+S 保存` : "SFTP" }}</span>
         </footer>
       </template>
-      <div v-else class="grid min-h-0 flex-1 place-items-center p-6 text-sm text-muted">
+      <div v-else class="grid min-h-0 flex-1 place-items-center bg-[var(--app-main-bg)] p-6 text-sm text-[var(--app-muted)]">
         <div class="flex flex-col items-center gap-3">
           <UIcon name="i-lucide-file-code-2" class="size-10" /><span>{{ manager.error.value || "从左侧选择文件开始编辑" }}</span>
         </div>

@@ -2,7 +2,7 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { LangType, LanguagePreference } from "~/types";
 
-import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET, getThemePreset } from "~/composables/useThemePresets";
+import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
 import { resolveLanguageFromSystem } from "~/utils";
 
 useApplicationConfig();
@@ -17,7 +17,7 @@ const { locale, setLocale } = useI18n();
 const { userTheme, applyThemePreference, applySystemThemePreference } = useThemeAdapter();
 const { bootstrapPersistedSession } = useAuthSession();
 
-const { alpha, applyPrimaryColor, darken, lighten } = useColor();
+const { applyPrimaryColor } = useColor();
 const settingManager = useSettingManager();
 
 const {
@@ -88,113 +88,6 @@ function applyThemePreset() {
       : lightThemePreset.value || DEFAULT_LIGHT_THEME_PRESET;
 
   document.documentElement.dataset.themePreset = preset;
-
-  const presetOption = getThemePreset(preset);
-
-  if (presetOption?.family === "luna" && presetOption.baseColor) {
-    applyLunaThemePreset(presetOption.baseColor);
-    return;
-  }
-
-  clearLunaThemePreset();
-}
-
-const lunaThemeVariables = [
-  "--theme-bg",
-  "--theme-fg",
-  "--theme-muted",
-  "--theme-border",
-  "--theme-accent",
-  "--theme-surface",
-  "--theme-surface-hover",
-  "--theme-shadow-soft",
-  "--app-bg",
-  "--app-fg",
-  "--app-muted",
-  "--app-border",
-  "--app-frame-bg",
-  "--app-main-bg",
-  "--app-sidebar-bg",
-  "--app-panel-bg",
-  "--app-header-bg",
-  "--app-footer-bg",
-  "--app-input-bg",
-  "--app-card-bg",
-  "--app-card-bg-soft",
-  "--app-hover-soft",
-  "--app-hover-strong",
-  "--app-selected-soft",
-  "--app-scrollbar-thumb",
-  "--app-scrollbar-thumb-hover",
-  "--bg-hover-light",
-  "--bg-hover-dark",
-  "--bg-selected-light",
-  "--bg-selected-dark",
-  "--sidebar-divider-light",
-  "--sidebar-divider-dark",
-  "--sidebar-surface-light",
-  "--sidebar-surface-dark"
-] as const;
-
-function clearLunaThemePreset() {
-  const root = document.documentElement;
-
-  lunaThemeVariables.forEach((token) => {
-    root.style.removeProperty(token);
-  });
-}
-
-function applyLunaThemePreset(baseColor: string) {
-  const root = document.documentElement;
-  const themeBg = darken(13, baseColor);
-  const themeSurface = darken(8, baseColor);
-  const themeHeader = lighten(0, baseColor);
-  const themePanel = darken(2, baseColor);
-  const themeHover = darken(4, baseColor);
-  const themeSelected = lighten(5, baseColor);
-  const themeBorder = "rgba(0, 0, 0, 0.3)";
-  const themeMuted = lighten(20, baseColor);
-
-  const lunaVars: Record<(typeof lunaThemeVariables)[number], string> = {
-    "--theme-bg": themeBg,
-    "--theme-fg": "#EFEFF0",
-    "--theme-muted": themeMuted,
-    "--theme-border": themeBorder,
-    "--theme-accent": "#1ab394",
-    "--theme-surface": themeSurface,
-    "--theme-surface-hover": themeSelected,
-    "--theme-shadow-soft": "0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28)",
-    "--app-bg": themeBg,
-    "--app-fg": "#EFEFF0",
-    "--app-muted": alpha(0.78, "#EFEFF0"),
-    "--app-border": themeBorder,
-    "--app-frame-bg": themeHeader,
-    "--app-main-bg": themeBg,
-    "--app-sidebar-bg": themeSurface,
-    "--app-panel-bg": alpha(0.92, themePanel),
-    "--app-header-bg": themeHeader,
-    "--app-footer-bg": darken(6, baseColor),
-    "--app-input-bg": darken(1, baseColor),
-    "--app-card-bg": alpha(0.68, darken(2, baseColor)),
-    "--app-card-bg-soft": alpha(0.86, darken(2, baseColor)),
-    "--app-hover-soft": alpha(0.55, themeHover),
-    "--app-hover-strong": alpha(0.8, lighten(10, baseColor)),
-    "--app-selected-soft": alpha(0.92, themeSelected),
-    "--app-scrollbar-thumb": lighten(10, baseColor),
-    "--app-scrollbar-thumb-hover": lighten(18, baseColor),
-    "--bg-hover-light": alpha(0.55, themeHover),
-    "--bg-hover-dark": alpha(0.55, themeHover),
-    "--bg-selected-light": alpha(0.92, themeSelected),
-    "--bg-selected-dark": alpha(0.92, themeSelected),
-    "--sidebar-divider-light": themeBorder,
-    "--sidebar-divider-dark": themeBorder,
-    "--sidebar-surface-light": themeSurface,
-    "--sidebar-surface-dark": themeSurface
-  };
-
-  Object.entries(lunaVars).forEach(([token, value]) => {
-    root.style.setProperty(token, value);
-  });
 }
 
 watch(() => [userTheme.value, primaryColorLight.value, primaryColorDark.value], applyCurrentThemeColor, {

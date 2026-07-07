@@ -1,7 +1,7 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 
-import { SFTP_FILE_EDITOR_VALUE, SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
+import { K8S_NATIVE_VALUE, SFTP_FILE_EDITOR_VALUE, SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -29,7 +29,8 @@ const NATIVE_KOKO_METHODS = new Set([
   BUILTIN_CLIENT_METHOD,
   WEB_CLI_NATIVE_METHOD,
   SFTP_FILE_MANAGER_VALUE,
-  SFTP_FILE_EDITOR_VALUE
+  SFTP_FILE_EDITOR_VALUE,
+  K8S_NATIVE_VALUE
 ]);
 const pendingBuiltinSessions: Array<{
   tabId?: string

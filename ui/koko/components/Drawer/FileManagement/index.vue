@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import type { SftpFileEntry } from "~/koko/composables/useSftpFileManager";
 import type { ConnectorSessionContext } from "~/shared/connectors/types/session";
 import type { AssetTreeNode } from "~/types";
-import type { SftpFileEntry } from "~/koko/composables/useSftpFileManager";
-import KokoFileManagementPane from "~/koko/components/Drawer/FileManagement/pane.vue";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
+import KokoFileManagementPane from "~/koko/components/Drawer/FileManagement/pane.vue";
 import { connectorSessionKey } from "~/koko/composables/wsUrl";
 import { resolveDevHost } from "~/shared/connectors/useConnectorEndpoint";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -35,6 +35,7 @@ const providedContext = inject(connectorSessionKey, ref(null));
 const primaryContext = computed<ConnectorSessionContext | null>(() => {
   const value = unref(providedContext);
   if (!value || !props.sftpToken) return null;
+  if (value.tokenId === props.sftpToken) return value;
   return { ...value, tokenId: props.sftpToken };
 });
 

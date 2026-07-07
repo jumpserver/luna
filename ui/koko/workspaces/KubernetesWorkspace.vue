@@ -2,26 +2,26 @@
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
-import { resolveDevHost } from "~/shared/connectors/useConnectorEndpoint";
+import { appTerminalTheme } from "~/koko/utils/terminalTheme";
+import { useBaseWorkspaceSession } from "~/koko/workspaces/useBaseWorkspaceSession";
 import { toWsOrigin } from "~/shared/connectors/utils/wsQuery";
 import "@xterm/xterm/css/xterm.css";
 
 interface K8sNode { label: string, namespace?: string, pod?: string, container?: string, children?: K8sNode[] }
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
-const { createKokoTicket } = useWorkspaceConnectors();
+const tab = toRef(props, "tab");
+const { error: sessionError, fetchEndpointUrl, fetchTicket, tokenId } = useBaseWorkspaceSession(tab);
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
 const colorMode = useColorMode();
 const terminalEl = ref<HTMLElement | null>(null);
 const tree = ref<K8sNode[]>([]);
 const expanded = ref(new Set<string>());
-const error = ref("");
 const activeLabel = ref("");
 const terminalId = ref("");
 const k8sId = ref("");
 let socket: WebSocket | null = null;
 let terminal: Terminal | null = null;
 let fit: FitAddon | null = null;
-const tokenId = computed(() => String(props.tab.payload?.id || props.tab.payload?.token?.id || ""));
 
 const keyOf = (node: K8sNode) => [node.namespace, node.pod, node.container, node.label].filter(Boolean).join("/");
 const toggle = (node: K8sNode) => expanded.value.has(keyOf(node)) ? expanded.value.delete(keyOf(node)) : expanded.value.add(keyOf(node));
@@ -49,7 +49,7 @@ function connectNode(node: K8sNode) {
   activeLabel.value = `${node.namespace}/${node.pod}/${node.container}`;
   k8sId.value = globalThis.crypto?.randomUUID?.() || String(Date.now());
   terminal?.dispose();
-  terminal = new Terminal({ cursorBlink: true, fontSize: 13, theme: colorMode.value === "dark" ? { background: "#111827", foreground: "#e5e7eb" } : { background: "#ffffff", foreground: "#111827" } });
+  terminal = new Terminal({ cursorBlink: true, fontSize: 13, theme: appTerminalTheme() });
   fit = new FitAddon();
   terminal.loadAddon(fit);
   terminal.open(terminalEl.value!);
@@ -61,21 +61,13 @@ function connectNode(node: K8sNode) {
 }
 
 async function prepare() {
-  if (!tokenId.value) return;
+  if (!tokenId.value) {
+    sessionError.value = "Missing connection token";
+    return;
+  }
   try {
-    let endpointUrl = resolveDevHost("koko") || window.location.origin;
-    if (isTauriRuntime() && !import.meta.dev) {
-      const endpoint = await useTauriCoreInvoke<{ host?: string, port?: number, https_port?: number }>("get_smart_endpoint", { query: { protocol: props.tab.protocol, assetId: props.tab.assetId, token: tokenId.value } });
-      if (!endpoint.host) throw new Error("smart endpoint missing host");
-      const port = endpoint.https_port || endpoint.port;
-      endpointUrl = `${endpoint.https_port ? "https" : "http"}://${endpoint.host}${port ? `:${port}` : ""}`;
-    }
-    let ticket = "";
-    try {
- ticket = String((await createKokoTicket({ baseUrl: endpointUrl, tokenId: tokenId.value })).ticket || "");
-} catch (cause) {
- if (isTauriRuntime()) throw cause;
-}
+    const endpointUrl = await fetchEndpointUrl();
+    const ticket = await fetchTicket(endpointUrl);
     const params = new URLSearchParams({ token: tokenId.value, type: "k8s" });
     if (ticket) params.set("ticket", ticket);
     socket = new WebSocket(`${toWsOrigin(endpointUrl)}/koko/ws/terminal/?${params}`, ["JMS-KOKO"]);
@@ -94,21 +86,25 @@ async function prepare() {
 } else if (message.type === "PING") {
  socket?.send(JSON.stringify({ id: message.id, type: "PONG", data: "pong" }));
 } else if (message.type === "ERROR" || message.type === "TERMINAL_ERROR") {
- error.value = message.err || "Kubernetes connection failed";
+ sessionError.value = message.err || "Kubernetes connection failed";
 }
     };
     socket.onerror = () => {
- error.value = "Kubernetes WebSocket connection failed";
+ sessionError.value = "Kubernetes WebSocket connection failed";
 };
   } catch (cause) {
-    error.value = String(cause);
+    sessionError.value = String(cause);
     markSessionFailed({ tabId: props.tab.id, assetId: props.tab.assetId, protocol: props.tab.protocol, account: props.tab.account });
   }
 }
 
 const resize = useDebounceFn(() => fit?.fit(), 80);
 useEventListener(window, "resize", resize);
-watch(() => props.tab.payload, prepare, { immediate: true, deep: true });
+watch(tokenId, prepare, { immediate: true });
+watch(() => colorMode.value, () => {
+  if (!terminal) return;
+  terminal.options.theme = appTerminalTheme();
+});
 onUnmounted(() => {
   terminal?.dispose();
   socket?.close();
@@ -121,8 +117,8 @@ onUnmounted(() => {
       <div class="mb-2 flex items-center justify-between px-1 font-medium">
         <span>Kubernetes</span><UButton icon="i-lucide-refresh-cw" size="xs" color="neutral" variant="ghost" @click="socket?.send(JSON.stringify({ type: 'TERMINAL_K8S_TREE' }))" />
       </div>
-      <div v-if="error" class="p-2 text-error">
-        {{ error }}
+      <div v-if="sessionError" class="p-2 text-error">
+        {{ sessionError }}
       </div>
       <template v-for="namespace in tree" :key="keyOf(namespace)">
         <button class="flex w-full items-center gap-1 rounded px-1.5 py-1 hover:bg-elevated" @click="toggle(namespace)">

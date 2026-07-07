@@ -37,7 +37,7 @@ export default defineAppConfig({
       variants: {
         ghost: {
           neutral: {
-            base: "bg-transparent hover:bg-gray-50"
+            base: "bg-transparent text-[var(--app-fg)] hover:bg-[var(--app-hover-soft)]"
           }
         }
       }
@@ -79,11 +79,11 @@ export default defineAppConfig({
     },
     modal: {
       slots: {
-        overlay: "fixed inset-0 bg-black/10 backdrop-blur-[0px]",
+        overlay: "fixed inset-0 bg-black/22 backdrop-blur-[2px]",
         content:
-          "bg-[var(--app-sidebar-bg)] text-[var(--app-fg)] divide-y divide-[var(--app-border)] flex flex-col focus:outline-none ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)]",
+          "bg-[var(--app-surface-panel-strong)] text-[var(--app-fg)] divide-y divide-[var(--app-border)] flex flex-col focus:outline-none ring-1 ring-[var(--app-border-strong)] shadow-[0_18px_60px_rgba(15,23,42,0.22),var(--theme-shadow-soft)] backdrop-blur-md",
         header: "flex items-center gap-1.5 p-4 sm:px-6 min-h-(--ui-header-height) bg-[var(--app-header-bg)]",
-        body: "flex-1 p-4 sm:p-6 bg-[var(--app-main-bg)]",
+        body: "flex-1 p-4 sm:p-6 bg-[var(--app-surface-panel-strong)]",
         footer: "flex items-center gap-1.5 p-4 sm:px-6 bg-[var(--app-header-bg)]",
         title: "text-sm leading-5 text-[var(--app-fg)] font-semibold",
         description: "text-sm leading-5 text-[var(--app-muted)]",

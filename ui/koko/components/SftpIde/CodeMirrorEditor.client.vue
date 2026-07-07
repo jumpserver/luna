@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { Extension } from "@codemirror/state";
-import { defaultHighlightStyle, indentUnit, StreamLanguage, syntaxHighlighting } from "@codemirror/language";
+import { indentUnit, StreamLanguage } from "@codemirror/language";
 import { Compartment, EditorState, Prec } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
+import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/theme/adapters/codemirror";
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -21,33 +22,6 @@ const themeSlot = new Compartment();
 let editor: EditorView | null = null;
 let languageRequest = 0;
 let applyingExternalValue = false;
-
-const editorTheme = (dark: boolean) => EditorView.theme({
-  "&": {
-    height: "100%",
-    backgroundColor: "var(--ui-bg)",
-    color: "var(--ui-text-highlighted)"
-  },
-  ".cm-scroller": {
-    overflow: "auto",
-    fontFamily: "var(--font-mono), 'SFMono-Regular', Consolas, monospace",
-    fontSize: "13px",
-    lineHeight: "21px"
-  },
-  ".cm-content": { padding: "10px 0", caretColor: "var(--ui-text-highlighted)" },
-  ".cm-gutters": {
-    backgroundColor: "var(--ui-bg-elevated)",
-    color: "var(--ui-text-muted)",
-    borderRight: "1px solid var(--ui-border)"
-  },
-  ".cm-activeLine, .cm-activeLineGutter": {
-    backgroundColor: dark ? "rgba(255,255,255,.045)" : "rgba(0,0,0,.035)"
-  },
-  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": {
-    backgroundColor: dark ? "rgba(80,140,255,.3) !important" : "rgba(40,100,220,.2) !important"
-  },
-  "&.cm-focused": { outline: "none" }
-}, { dark });
 
 async function languageExtension(language: string): Promise<Extension> {
   switch (language) {
@@ -93,9 +67,9 @@ onMounted(() => {
         basicSetup,
         EditorState.tabSize.of(2),
         indentUnit.of("  "),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        createCodeMirrorSyntaxTheme(),
         languageSlot.of([]),
-        themeSlot.of(editorTheme(colorMode.value === "dark")),
+        themeSlot.of(createCodeMirrorTheme()),
         Prec.highest(keymap.of([{
           key: "Mod-s",
           run: () => {
@@ -120,7 +94,7 @@ watch(() => props.modelValue, (value) => {
   applyingExternalValue = false;
 });
 watch(() => [props.path, props.language], () => void applyLanguage());
-watch(() => colorMode.value, (mode) => editor?.dispatch({ effects: themeSlot.reconfigure(editorTheme(mode === "dark")) }));
+watch(() => colorMode.value, () => editor?.dispatch({ effects: themeSlot.reconfigure(createCodeMirrorTheme()) }));
 onBeforeUnmount(() => editor?.destroy());
 </script>
 

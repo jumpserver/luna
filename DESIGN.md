@@ -31,6 +31,62 @@ This document defines a unification plan: protocol handling converges into `koko
 - dropdown, popover, and modal typography should stay aligned with the page's primary text size instead of appearing larger than the surrounding UI
 - menus should prefer compact vertical spacing by default so utility operations feel lightweight and scan quickly
 - toolbar overflow actions should sit adjacent to the control they extend; for example, a section-management `...` belongs next to search when it configures the same header area
+- theme implementation should follow a three-layer model: preset seed tokens, semantic app tokens, and component consumption
+- Nuxt UI based screens should consume Nuxt UI components first and avoid custom theme branching unless a component is not expressive enough
+- custom connector/workspace UIs must not infer colors from `primary` or a single background color; they should only consume semantic tokens such as surface, text, border, hover, selected, and focus
+
+## Theme System
+
+The shared workspace should use one theme pipeline for desktop shell UI and connector workspaces.
+
+### Layer 1: preset seed tokens
+
+Theme presets define only the small set of seed tokens:
+
+- `--theme-bg`
+- `--theme-fg`
+- `--theme-muted`
+- `--theme-border`
+- `--theme-accent`
+- `--theme-surface`
+- `--theme-surface-hover`
+- `--theme-shadow-soft`
+
+This is the only layer that should vary between presets such as Catppuccin, Gemini, Luna, or future brand skins.
+
+### Layer 2: semantic app tokens
+
+Global CSS derives semantic tokens from the seeds, for example:
+
+- text: primary, secondary, muted, inverse
+- surfaces: canvas, sidebar, panel, header, footer, input, card, overlay
+- interaction: hover, selected, focus ring
+- borders: subtle, strong
+
+Connector authors should treat these semantic tokens as the stable contract.
+
+Additional domain tokens should be defined on top of the semantic layer:
+
+- `editor.*` for CodeMirror 6, SQL Editor, diff editor, and future `chen` editor surfaces
+- `syntax.*` for code highlighting shared by file editing and SQL editing
+- `terminal.*` for xterm-based surfaces
+- `dataGrid.*` for SQL results, schema tables, and tabular inspectors
+- `workspace.*` for connector-owned shells such as file manager, k8s UI, or future multi-pane tools
+
+### Layer 3: component consumption
+
+- Nuxt UI components should pick up the theme through global UI variables and app config overrides.
+- bespoke widgets such as xterm, CodeMirror, iframe shells, and file trees should read semantic tokens only.
+- workspace code should never hardcode white/black backgrounds for protocol surfaces unless the protocol runtime requires it and the value is still derived from semantic tokens.
+
+### Zed Compatibility
+
+We should treat Zed as an inspiration and an import target, not as the sole source of truth.
+
+- our schema should remain domain-oriented around shared UI, editors, terminals, tables, and workspaces
+- Zed themes can be imported into a compatible subset by mapping Zed theme fields into our `seed`, `editor`, `syntax`, and `terminal` domains
+- unsupported Zed-only fields such as product-specific chrome or unsupported syntax scopes may be ignored during import
+- custom product-specific domains such as `workspace.*` or future connector-specific panels remain first-class in our schema
 
 ## Non-Goals
 
@@ -329,6 +385,84 @@ export interface WorkspaceConnectorAdapter {
   close(viewId: string): Promise<void>
 }
 ```
+
+### Connector Capability Declaration
+
+To keep future workspace growth maintainable, every connector component should declare its supported:
+
+- component identity
+- protocols
+- connect methods
+- workspace surfaces
+
+This declaration should be a source of truth consumed by:
+
+- connect method normalization and presentation
+- workspace surface routing
+- default method selection
+- future capability inspection or admin diagnostics
+
+Example declaration shape:
+
+```ts
+export interface WorkspaceCapabilityDeclaration {
+  component: "koko" | "chen" | "lion" | "tinker"
+  surface: "terminal" | "file-manager" | "file-editor" | "k8s-ui"
+  protocols: string[]
+  connectMethods: string[]
+  backendConnectMethod?: string
+}
+```
+
+Current known `koko` declarations:
+
+- built-in terminal: `ssh`, `telnet`, `mysql`, `mariadb`, `postgresql`, `redis`, `mongodb`, `oracle`, `sqlserver`
+- file manager: `sftp`
+- file editor: `sftp`
+- Kubernetes UI: `k8s`
+
+Rule of thumb:
+
+1. Protocol support belongs to the component declaration, not scattered `if/else`.
+2. A connect method is a user-visible entry choice.
+3. A workspace surface is the actual UI/runtime implementation opened by that choice.
+4. Multiple workspace surfaces may share one backend connect method, such as SFTP file manager and file editor.
+
+### Workspace Directory Convention
+
+To make component-owned workspaces obvious and maintainable, each connector component should keep its workspace implementations in a dedicated `workspaces/` directory under its own module root.
+
+Examples:
+
+- `ui/koko/workspaces/`
+- `ui/chen/workspaces/`
+- `ui/lion/workspaces/`
+
+Current `koko` workspace files should stay explicit and one-to-one with the user-visible workspace types:
+
+- `ui/koko/workspaces/TerminalSessionSurface.vue`
+- `ui/koko/workspaces/FileManagerSessionSurface.vue`
+- `ui/koko/workspaces/FileEditorSessionSurface.vue`
+- `ui/koko/workspaces/KubernetesWorkspace.vue`
+
+Shared base abstractions are encouraged so workspace implementations do not duplicate session bootstrap logic.
+
+Recommended pattern:
+
+- keep one file per user-visible workspace
+- extract shared session bootstrap into a base composable such as `useBaseWorkspaceSession`
+- extract shared ready/loading/error shell into a base component such as `BaseWorkspaceShell`
+- let component-specific workspaces compose or extend those base pieces instead of reimplementing endpoint lookup, ticket exchange, theme sync, and common state handling
+
+This pattern should apply not only to `koko`, but also to future component modules such as `chen` and `lion`.
+
+Rules:
+
+1. All workspace UI implementations for a component should live in that component's `workspaces/` directory.
+2. Cross-component routing code may import from those directories, but should not redefine the implementations elsewhere.
+3. New workspace types should be added there first, then declared in the component capability registry.
+4. Common workspace behavior should be abstracted into reusable base capabilities when multiple workspaces share the same lifecycle.
+5. This keeps protocol declaration, connection method mapping, and workspace implementation organization aligned.
 
 ## Migration Plan
 

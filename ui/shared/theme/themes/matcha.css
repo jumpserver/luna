@@ -1,0 +1,10 @@
+:root[data-theme-preset="matcha"] {
+  --theme-bg: #f7f4e9;
+  --theme-fg: #2d3624;
+  --theme-muted: #8b9479;
+  --theme-border: #dad6c4;
+  --theme-accent: #7b9a4e;
+  --theme-surface: #ede9d8;
+  --theme-surface-hover: #e3dcc4;
+  --theme-shadow-soft: 0 1px 2px rgba(45, 54, 36, 0.05), 0 2px 8px rgba(45, 54, 36, 0.04);
+}

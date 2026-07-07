@@ -1,4 +1,15 @@
+import {
+  COMPONENT_WORKSPACE_CAPABILITIES,
+  K8S_PROTOCOLS
+} from "~/shared/connectors/capabilities";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+
+export {
+  K8S_NATIVE_VALUE,
+  SFTP_FILE_EDITOR_VALUE,
+  SFTP_FILE_MANAGER_VALUE,
+  WEB_CLI_NATIVE_VALUE
+} from "~/shared/connectors/capabilities";
 
 interface ConnectMethod {
   value: string
@@ -20,10 +31,6 @@ interface ConnectMethodsResponse {
 const connectMethodsCache = new Map<string, ConnectMethodsResponse>();
 const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 
-export const WEB_CLI_NATIVE_VALUE = "web_cli_native";
-export const SFTP_FILE_MANAGER_VALUE = "sftp_file_manager";
-export const SFTP_FILE_EDITOR_VALUE = "sftp_file_editor";
-
 const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMethodsResponse => {
   const normalized: ConnectMethodsResponse = { ...methods };
 
@@ -39,47 +46,26 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
         : method;
     });
 
-    // SSH 注入内置终端（迁移后的 koko 模块），排在 iframe 方式之前
-    if (key === "ssh") {
-      const kokoWebIndex = renamed.findIndex(
-        (method) => method.type === "web" && ["koko", "default"].includes(method.component)
-      );
+    const kokoWebIndex = renamed.findIndex(
+      (method) => method.type === "web" && ["koko", "default"].includes(method.component)
+    );
 
-      if (kokoWebIndex !== -1) {
-        const origin = renamed[kokoWebIndex]!;
-        renamed.splice(kokoWebIndex, 0, {
-          ...origin,
-          value: WEB_CLI_NATIVE_VALUE,
-          label: "内置终端",
-          origin_value: origin.value
-        } as ConnectMethod);
-      }
-    }
-
-    // SFTP 的两种内置界面共用服务端 web_sftp 连接方法，仅前端呈现不同。
-    if (key === "sftp") {
-      const webSftpIndex = renamed.findIndex(
-        (method) => method.type === "web" && ["koko", "default"].includes(method.component)
-      );
-
-      if (webSftpIndex !== -1) {
-        const origin = renamed[webSftpIndex]!;
-        renamed.splice(
-          webSftpIndex,
-          1,
-          {
+    if (kokoWebIndex !== -1) {
+      const origin = renamed[kokoWebIndex]!;
+      const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES
+        .filter((item) => item.component === "koko" && item.protocols.includes(key))
+        .flatMap((item) =>
+          item.connectMethods.map((methodValue) => ({
             ...origin,
-            value: SFTP_FILE_MANAGER_VALUE,
-            label: "文件管理",
+            value: methodValue,
+            label: item.label,
             origin_value: origin.value
-          } as ConnectMethod,
-          {
-            ...origin,
-            value: SFTP_FILE_EDITOR_VALUE,
-            label: "File Editor",
-            origin_value: origin.value
-          } as ConnectMethod
+          }) as ConnectMethod)
         );
+
+      if (declaredMethods.length) {
+        const replaceOrigin = key === "sftp" || K8S_PROTOCOLS.has(key);
+        renamed.splice(kokoWebIndex, replaceOrigin ? 1 : 0, ...declaredMethods);
       }
     }
 
