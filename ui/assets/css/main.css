@@ -125,6 +125,13 @@
   --workspace-surface-header: var(--app-surface-header);
   --workspace-surface-footer: var(--app-surface-footer);
   --workspace-surface-border: var(--app-border-subtle);
+  --workspace-surface-sub-sidebar: color-mix(in srgb, var(--app-surface-panel) 74%, var(--app-surface-sidebar) 26%);
+  --workspace-surface-sub-panel: color-mix(in srgb, var(--app-surface-panel-strong) 78%, var(--app-surface-canvas) 22%);
+  --workspace-surface-sub-header: color-mix(in srgb, var(--app-surface-panel) 80%, var(--app-surface-header) 20%);
+  --workspace-surface-sub-tab: color-mix(in srgb, var(--app-surface-panel) 72%, var(--app-surface-canvas) 28%);
+  --workspace-surface-sub-tab-active: color-mix(in srgb, var(--app-surface-canvas) 86%, var(--app-surface-panel-strong) 14%);
+  --workspace-surface-sub-tree: color-mix(in srgb, var(--app-surface-panel-strong) 68%, var(--app-surface-canvas) 32%);
+  --workspace-surface-sub-border: color-mix(in srgb, var(--app-border-subtle) 86%, var(--app-surface-panel) 14%);
   --ui-bg: var(--app-surface-canvas);
   --ui-bg-muted: var(--app-surface-sidebar);
   --ui-bg-elevated: var(--app-surface-panel);

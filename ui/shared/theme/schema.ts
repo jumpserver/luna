@@ -87,6 +87,13 @@ export interface ThemeWorkspaceTokens {
   header: string
   footer: string
   border: string
+  subSidebar: string
+  subPanel: string
+  subHeader: string
+  subTab: string
+  subTabActive: string
+  subTree: string
+  subBorder: string
 }
 
 export interface AppThemeDefinition {

@@ -12,6 +12,15 @@ const { activeTabId, closeSession, toSurfaceTab } = useWorkspaceTabs();
 const splitSurfaces = computed(() => props.tab.splitSessions || []);
 const hasSplit = computed(() => splitSurfaces.value.length > 0);
 
+function surfaceInstanceKey(tab: WorkspaceSessionTab) {
+  const payload = tab.payload || {};
+  const tokenId = String(payload.id || payload.token?.id || "");
+  const webUrl = String(payload.webUrl || "");
+  const connectMethod = String(payload.connectMethod?.value || "");
+
+  return [tab.id, tokenId, webUrl, connectMethod, tab.status].join(":");
+}
+
 function focusSurface() {
   surfaceRef.value?.focus?.();
 }
@@ -33,7 +42,7 @@ defineExpose({ focus: focusSurface });
 <template>
   <div class="h-full min-h-0 w-full overflow-hidden" @mousedown="focusSurface">
     <div v-if="!hasSplit" class="h-full min-h-0">
-      <component :is="surfaceComponent" ref="surfaceRef" :tab="tab" />
+      <component :is="surfaceComponent" :key="surfaceInstanceKey(tab)" ref="surfaceRef" :tab="tab" />
     </div>
 
     <div
@@ -42,7 +51,7 @@ defineExpose({ focus: focusSurface });
       :class="splitSurfaces.length > 1 ? 'grid-rows-2' : 'grid-cols-2'"
     >
       <div class="relative min-h-0 min-w-0">
-        <component :is="surfaceComponent" ref="surfaceRef" :tab="tab" />
+        <component :is="surfaceComponent" :key="surfaceInstanceKey(tab)" ref="surfaceRef" :tab="tab" />
       </div>
 
       <div
@@ -60,6 +69,7 @@ defineExpose({ focus: focusSurface });
         </button>
         <component
           :is="surfaceComponent"
+          :key="surfaceInstanceKey(splitSurfaceTab(split))"
           :tab="splitSurfaceTab(split)"
           class="h-full"
         />

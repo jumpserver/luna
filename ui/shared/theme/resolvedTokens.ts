@@ -105,6 +105,13 @@ export function readResolvedWorkspaceTokens(): ThemeWorkspaceTokens {
     sidebar: "--workspace-surface-sidebar",
     header: "--workspace-surface-header",
     footer: "--workspace-surface-footer",
-    border: "--workspace-surface-border"
+    border: "--workspace-surface-border",
+    subSidebar: "--workspace-surface-sub-sidebar",
+    subPanel: "--workspace-surface-sub-panel",
+    subHeader: "--workspace-surface-sub-header",
+    subTab: "--workspace-surface-sub-tab",
+    subTabActive: "--workspace-surface-sub-tab-active",
+    subTree: "--workspace-surface-sub-tree",
+    subBorder: "--workspace-surface-sub-border"
   });
 }

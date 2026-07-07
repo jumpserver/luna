@@ -42,8 +42,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
     class="header-bg h-10 min-h-10 max-h-10 shrink-0 flex items-center"
     :style="{
       backgroundColor: 'var(--app-header-bg)',
-      borderBottom: '1px solid var(--app-border)',
-      boxShadow: 'inset 0 -1px 0 color-mix(in srgb, var(--app-border) 82%, transparent)'
+      borderBottom: '1px solid var(--app-border)'
     }"
     @mousedown="handleWindowDrag"
   >
