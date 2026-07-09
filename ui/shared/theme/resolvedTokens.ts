@@ -6,7 +6,7 @@ import type {
   ThemeWorkspaceTokens
 } from "./schema";
 
-import { parseColorToRgb } from "~/koko/utils/color";
+import { normalizeResolvedCssColor } from "~/koko/utils/color";
 
 function resolveCssColor(varName: string, fallback: string): string {
   if (!import.meta.client) return fallback;
@@ -19,8 +19,7 @@ function resolveCssColor(varName: string, fallback: string): string {
   const resolved = getComputedStyle(probe).color;
   probe.remove();
 
-  const rgb = parseColorToRgb(resolved);
-  return rgb ? `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})` : fallback;
+  return normalizeResolvedCssColor(resolved) || fallback;
 }
 
 function resolveTokenMap<const T extends Record<string, string>>(mapping: T) {

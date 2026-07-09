@@ -147,6 +147,61 @@ pub async fn get_favorite_asset_list(
 }
 
 #[tauri::command]
+pub async fn get_favorite_folders(
+    app: AppHandle,
+    session: State<'_, ApiSessionStore>,
+) -> Result<Value, String> {
+    let (_, asset_service) = load_asset_service(&app, &session).await?;
+    let response = asset_service.get_favorite_folders().await;
+    if !response.success {
+        return Err(format!(
+            "get favorite folders failed: status={}",
+            response.status
+        ));
+    }
+    serde_json::from_str(&response.data)
+        .map_err(|error| format!("parse favorite folders failed: {}", error))
+}
+
+#[tauri::command]
+pub async fn create_favorite_folder(
+    app: AppHandle,
+    session: State<'_, ApiSessionStore>,
+    name: String,
+    parent: Option<String>,
+) -> Result<Value, String> {
+    let (_, asset_service) = load_asset_service(&app, &session).await?;
+    let response = asset_service.create_favorite_folder(&name, parent).await;
+    if !response.success {
+        return Err(format!(
+            "create favorite folder failed: status={}",
+            response.status
+        ));
+    }
+    serde_json::from_str(&response.data).or_else(|_| Ok(json!({ "success": true })))
+}
+
+#[tauri::command]
+pub async fn favorite_to_folder(
+    app: AppHandle,
+    session: State<'_, ApiSessionStore>,
+    asset_id: String,
+    folder_id: String,
+) -> Result<Value, String> {
+    let (_, asset_service) = load_asset_service(&app, &session).await?;
+    let response = asset_service
+        .favorite_to_folder(&asset_id, &folder_id)
+        .await;
+    if !response.success {
+        return Err(format!(
+            "favorite asset to folder failed: status={}",
+            response.status
+        ));
+    }
+    serde_json::from_str(&response.data).or_else(|_| Ok(json!({ "success": true })))
+}
+
+#[tauri::command]
 pub async fn get_asset_detail(
     app: AppHandle,
     session: State<'_, ApiSessionStore>,

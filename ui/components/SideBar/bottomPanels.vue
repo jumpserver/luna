@@ -19,7 +19,37 @@ type PanelKind = "favorites" | "recent" | "snippets";
 
 const { t } = useI18n();
 const openPanels = ref<Set<PanelKind>>(new Set());
-const { assets: favoriteAssets, loading: favoriteLoading, load: loadFavorites } = useFavoriteAssets();
+const { folders: favoriteFolders, loading: favoriteLoading, load: loadFavorites, createFolder } = useFavoriteFolders();
+const { snippets, loading: snippetLoading, load: loadSnippets, applySnippet } = useSnippets();
+const createModalOpen = ref(false);
+const createParentId = ref<string | null>(null);
+const folderName = ref("");
+const creating = ref(false);
+
+const openCreateFolder = (parentId: string | null = null) => {
+  createParentId.value = parentId;
+  folderName.value = "";
+  createModalOpen.value = true;
+};
+
+const submitCreateFolder = async () => {
+  const name = folderName.value.trim();
+  if (!name || creating.value) return;
+  creating.value = true;
+  try {
+    await createFolder(name, createParentId.value);
+    createModalOpen.value = false;
+  } catch (error) {
+    useToast().add({
+      title: t("Favorite.CreateFailed"),
+      description: error instanceof Error ? error.message : String(error),
+      color: "error",
+      icon: "i-lucide-circle-alert"
+    });
+  } finally {
+    creating.value = false;
+  }
+};
 
 const panelConfig = {
   favorites: { exclusiveGroup: "asset-shelves", preferredHeight: 280, minHeight: 128, maxHeight: "50%" },
@@ -47,6 +77,7 @@ const togglePanel = (kind: PanelKind) => {
   }
   openPanels.value = next;
   if (nextOpen && kind === "favorites") loadFavorites();
+  if (nextOpen && kind === "snippets") loadSnippets();
 };
 </script>
 
@@ -60,22 +91,30 @@ const togglePanel = (kind: PanelKind) => {
       :max-height="panelMaxHeight('favorites')"
       @toggle="togglePanel('favorites')"
     >
-      <div v-if="favoriteLoading && favoriteAssets.length === 0" class="grid h-20 place-items-center">
+      <template #actions>
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          icon="i-lucide-folder-plus"
+          class="size-6 justify-center rounded-sm p-0"
+          :aria-label="t('Favorite.CreateFolder')"
+          @click.stop="openCreateFolder()"
+        />
+      </template>
+      <div v-if="favoriteLoading && favoriteFolders.length === 0" class="grid h-20 place-items-center">
         <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-gray-400" />
       </div>
-      <UEmpty v-else-if="favoriteAssets.length === 0" icon="i-lucide-star" size="sm" variant="naked" :title="t('Common.NoData')" />
-      <button
-        v-for="asset in favoriteAssets"
+      <UEmpty v-else-if="favoriteFolders.length === 0" icon="i-lucide-star" size="sm" variant="naked" :title="t('Common.NoData')" />
+      <SideBarFavoriteTreeNode
+        v-for="folder in favoriteFolders"
         v-else
-        :key="asset.id"
-        type="button"
-        class="flex h-7 w-full items-center gap-2 px-3 text-left text-xs text-gray-700 hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5"
-        @dblclick="emit('select', asset)"
-        @contextmenu="emit('contextmenu', asset, $event)"
-      >
-        <UIcon name="i-lucide-monitor" class="size-3.5 shrink-0 text-gray-400" />
-        <span class="truncate">{{ asset.name }}</span>
-      </button>
+        :key="folder.id"
+        :folder="folder"
+        @select="emit('select', $event)"
+        @contextmenu="(asset, event) => emit('contextmenu', asset, event)"
+        @create="openCreateFolder"
+      />
     </SideBarCollapsiblePanel>
 
     <SideBarCollapsiblePanel
@@ -97,7 +136,38 @@ const togglePanel = (kind: PanelKind) => {
       :max-height="panelMaxHeight('snippets')"
       @toggle="togglePanel('snippets')"
     >
-      <UEmpty icon="i-lucide-braces" size="sm" variant="naked" :title="t('Snippets.Empty')" />
+      <div v-if="snippetLoading && snippets.length === 0" class="grid h-20 place-items-center">
+        <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-gray-400" />
+      </div>
+      <UEmpty v-else-if="snippets.length === 0" icon="i-lucide-braces" size="sm" variant="naked" :title="t('Snippets.Empty')" />
+      <button
+        v-for="snippet in snippets"
+        v-else
+        :key="snippet.id"
+        type="button"
+        class="flex w-full items-start gap-1.5 px-3 py-1.5 text-left hover:bg-black/5 dark:hover:bg-white/10"
+        :title="snippet.args"
+        @click="applySnippet(snippet)"
+      >
+        <UIcon
+          :name="snippet.variable.length > 0 ? 'i-lucide-braces' : 'i-lucide-terminal'"
+          class="mt-0.5 size-3.5 shrink-0 text-gray-500"
+        />
+        <span class="min-w-0 flex-1">
+          <span class="block truncate text-[11px] font-medium">{{ snippet.name }}</span>
+          <span class="block truncate font-ui-mono text-[10px] text-gray-400">{{ snippet.args }}</span>
+        </span>
+      </button>
     </SideBarCollapsiblePanel>
   </div>
+
+  <Modal
+    :open="createModalOpen"
+    :title="createParentId ? t('Favorite.CreateSubfolder') : t('Favorite.CreateFolder')"
+    :disabled="!folderName.trim() || creating"
+    @confirm="submitCreateFolder"
+    @update:open="createModalOpen = $event"
+  >
+    <UInput v-model="folderName" autofocus class="w-full" :placeholder="t('Favorite.FolderName')" @keydown.enter="submitCreateFolder" />
+  </Modal>
 </template>

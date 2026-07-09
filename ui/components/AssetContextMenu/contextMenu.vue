@@ -22,7 +22,8 @@ const emits = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { handleAssetConnection, displayUser, handleAssetFavorite, handleAssetUnfavorite } = useAssetAction();
+const { handleAssetConnection, displayUser, handleAssetUnfavorite } = useAssetAction();
+const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } = useFavoriteFolders();
 const userInfoStore = useUserInfoStore();
 const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
 
@@ -35,6 +36,13 @@ interface MenuItem {
 }
 
 const isFavorited = computed(() => !!props.asset.isFavorite);
+const flatFavoriteFolders = computed(() => {
+  const flatten = (folders = favoriteFolders.value): Array<{ id: string, name: string }> => folders.flatMap((folder) => [
+    { id: folder.id, name: folder.name },
+    ...flatten(folder.children)
+  ]);
+  return flatten();
+});
 const hasReusableSavedConnection = computed(() => {
   const saved = props.asset.savedConnection;
   if (!saved?.protocol || !saved.username) return false;
@@ -66,10 +74,24 @@ const menuItems = computed((): MenuItem[] => {
       onClick: () => handleRename()
     },
     {
-      label: isFavorited.value ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
-      icon: isFavorited.value ? "lucide:star-off" : "lucide:star",
-      onClick: () => (isFavorited.value ? handleUnfavorite() : handleFavorite())
-    }
+      label: t("Favorite.AddToFolder"),
+      icon: "lucide:star",
+      onClick: () => void 0,
+      children: flatFavoriteFolders.value.length > 0
+        ? flatFavoriteFolders.value.map((folder) => ({
+            label: folder.name,
+            icon: "i-lucide-folder",
+            onClick: () => addToFolder(folder.id)
+          }))
+        : [{ label: t("Favorite.CreateFolderFirst"), icon: "i-lucide-folder-plus", onClick: () => void 0 }]
+    },
+    ...(isFavorited.value
+      ? [{
+          label: t("ContextMenu.Unfavorite"),
+          icon: "lucide:star-off",
+          onClick: () => handleUnfavorite()
+        }]
+      : [])
   ];
 
   if (hasReusableSavedConnection.value) {
@@ -151,16 +173,14 @@ function handleRename() {
   });
 }
 
-/**
- * @description 搜藏
- */
-function handleFavorite() {
-  handleAssetFavorite(props.asset.id);
-  try {
-    useEventBus().emit("favoriteChanged", { assetId: props.asset.id, favorite: true });
-  } catch {}
+async function addToFolder(folderId: string) {
+  await favoriteToFolder(props.asset.id, folderId);
   emits("update:visible", false);
 }
+
+watch(() => props.visible, (visible) => {
+  if (visible) loadFavoriteFolders();
+});
 
 /**
  * @description 取消搜藏

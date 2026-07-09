@@ -33,6 +33,26 @@ export function parseColorToRgb(color: string): [number, number, number] | null 
   return null;
 }
 
+/** 将浏览器计算后的颜色规范化为 rgb/rgba，同时保留透明度。 */
+export function normalizeResolvedCssColor(color: string): string | null {
+  const rgb = parseColorToRgb(color);
+  if (!rgb) return null;
+
+  const value = color.trim();
+  const rgbaAlpha = value.match(/^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+%?)\s*\)$/i)?.[1];
+  const srgbAlpha = value.startsWith("color(srgb ")
+    ? value.match(/\/\s*([\d.]+%?)\s*\)$/)?.[1]
+    : undefined;
+  const alphaValue = rgbaAlpha || srgbAlpha;
+
+  if (!alphaValue) return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+
+  const alpha = alphaValue.endsWith("%") ? Number(alphaValue.slice(0, -1)) / 100 : Number(alphaValue);
+  if (!Number.isFinite(alpha)) return null;
+
+  return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${Math.min(Math.max(alpha, 0), 1)})`;
+}
+
 /** 相对亮度 < 0.5 视为暗色背景（ponytail: 简单线性亮度，够用于二分明暗） */
 export function isDarkColor(color: string): boolean {
   const rgb = parseColorToRgb(color);

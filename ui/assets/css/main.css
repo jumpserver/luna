@@ -114,8 +114,8 @@
   --terminal-selection: color-mix(in srgb, var(--theme-fg) 22%, transparent);
   --data-grid-header-background: var(--app-surface-panel);
   --data-grid-row-background: var(--app-surface-canvas);
-  --data-grid-row-hover: var(--app-state-hover);
-  --data-grid-row-selected: var(--app-state-selected);
+  --data-grid-row-hover: color-mix(in srgb, var(--theme-fg) 8%, var(--app-surface-canvas));
+  --data-grid-row-selected: color-mix(in srgb, var(--theme-accent) 12%, var(--app-surface-canvas));
   --data-grid-border: var(--app-border-subtle);
   --data-grid-text: var(--app-text-primary);
   --data-grid-text-muted: var(--app-text-muted);

@@ -81,6 +81,16 @@
   "RecentConnections": {
     "Empty": "No recent connections"
   },
+  "Favorite": {
+    "CreateFolder": "Create folder",
+    "CreateSubfolder": "Create subfolder",
+    "FolderName": "Folder name",
+    "CreateFailed": "Failed to create folder",
+    "CreateFolderFirst": "Create a favorite folder first",
+    "AddToFolder": "Add to favorites",
+    "AddSuccess": "Added to favorites",
+    "AddFailed": "Failed to add to favorites"
+  },
   "Tree": {
     "SwitchToType": "Switch to type tree",
     "SwitchToAuthorization": "Switch to my assets",

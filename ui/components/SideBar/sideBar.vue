@@ -18,6 +18,7 @@ const { openSession } = useWorkspaceTabs();
 const { openAssetInWindow } = useAssetWindowLauncher();
 const { displayUser, handleAssetConnection, handleAssetFavorite, handleAssetRename, handleAssetUnfavorite }
   = useAssetAction();
+const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } = useFavoriteFolders();
 
 const isLoading = ref(false);
 const sidebarSearch = ref("");
@@ -389,6 +390,26 @@ const toggleAssetFavorite = (asset: AssetItem, favorite: boolean) => {
   useEventBus().emit("favoriteChanged", { assetId: asset.id, favorite });
 };
 
+const flattenFavoriteFolders = (folders = favoriteFolders.value): Array<{ id: string, name: string }> => folders.flatMap((folder) => [
+  { id: folder.id, name: folder.name },
+  ...flattenFavoriteFolders(folder.children)
+]);
+
+const addAssetToFavoriteFolder = async (asset: AssetItem, folderId: string) => {
+  contextMenuVisible.value = false;
+  try {
+    await favoriteToFolder(asset.id, folderId);
+    toast.add({ title: t("Favorite.AddSuccess"), color: "success", icon: "i-lucide-star" });
+  } catch (error) {
+    toast.add({
+      title: t("Favorite.AddFailed"),
+      description: error instanceof Error ? error.message : String(error),
+      color: "error",
+      icon: "i-lucide-circle-alert"
+    });
+  }
+};
+
 const handleAssetContextMenu = (asset: AssetItem, event: MouseEvent) => {
   event.preventDefault();
   event.stopPropagation();
@@ -403,6 +424,11 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
   if (!asset) return [];
 
   const isFavorited = !!asset.isFavorite;
+  const folderItems: DropdownMenuItem[] = flattenFavoriteFolders().map((folder) => ({
+    label: folder.name,
+    icon: "i-lucide-folder",
+    onSelect: () => addAssetToFavoriteFolder(asset, folder.id)
+  }));
 
   const protocolItems: DropdownMenuItem[] = resolveAssetProtocols(asset).map((protocol) => ({
     label: `${t("ContextMenu.Use")} ${protocol.toUpperCase()}`,
@@ -445,15 +471,28 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
       onSelect: () => openRenameModal(asset)
     },
     {
-      label: isFavorited ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
-      icon: isFavorited ? "lucide:star-off" : "lucide:star",
-      onSelect: () => {
-        contextMenuVisible.value = false;
-        toggleAssetFavorite(asset, !isFavorited);
-      }
-    }
+      label: t("Favorite.AddToFolder"),
+      icon: "lucide:star",
+      children: folderItems.length > 0
+        ? folderItems
+        : [{ label: t("Favorite.CreateFolderFirst"), disabled: true }]
+    },
+    ...(isFavorited
+      ? [{
+          label: t("ContextMenu.Unfavorite"),
+          icon: "lucide:star-off",
+          onSelect: () => {
+            contextMenuVisible.value = false;
+            toggleAssetFavorite(asset, false);
+          }
+        } satisfies DropdownMenuItem]
+      : [])
   ];
 });
+
+watch(loggedIn, (value) => {
+  if (value) loadFavoriteFolders();
+}, { immediate: true });
 </script>
 
 <template>

@@ -39,10 +39,10 @@ const {
   displayUser,
   displayProtocol,
   handleAssetRename,
-  handleAssetFavorite,
   handleAssetUnfavorite,
   handleAssetConnection
 } = useAssetAction();
+const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } = useFavoriteFolders();
 const userInfoStore = useUserInfoStore();
 const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
 
@@ -53,6 +53,13 @@ const renamingId = ref<string | null>(null);
 const contextMenuAsset = ref<AssetItem | null>(null);
 const renameInputEl = ref<HTMLInputElement | null>(null);
 const actionMenuOpen = reactive<Record<string, boolean>>({});
+const flatFavoriteFolders = computed(() => {
+  const flatten = (folders = favoriteFolders.value): Array<{ id: string, name: string }> => folders.flatMap((folder) => [
+    { id: folder.id, name: folder.name },
+    ...flatten(folder.children)
+  ]);
+  return flatten();
+});
 
 const resolveProtocols = (asset: AssetItem) => {
   const candidates: string[] = [];
@@ -104,10 +111,24 @@ const buildMenuItems = computed(() => {
         onClick: () => handleRenameTrigger(asset)
       },
       {
-        label: asset.isFavorite ? t("ContextMenu.Unfavorite") : t("ContextMenu.Favorite"),
-        icon: asset.isFavorite ? "lucide:star-off" : "lucide:star",
-        onClick: () => (asset.isFavorite ? handleUnfavorite(asset) : handleFavorite(asset))
-      }
+        label: t("Favorite.AddToFolder"),
+        icon: "lucide:star",
+        onClick: () => void 0,
+        children: flatFavoriteFolders.value.length > 0
+          ? flatFavoriteFolders.value.map((folder) => ({
+              label: folder.name,
+              icon: "i-lucide-folder",
+              onClick: () => favoriteToFolder(asset.id, folder.id)
+            }))
+          : [{ label: t("Favorite.CreateFolderFirst"), icon: "i-lucide-folder-plus", onClick: () => void 0 }]
+      },
+      ...(asset.isFavorite
+        ? [{
+            label: t("ContextMenu.Unfavorite"),
+            icon: "lucide:star-off",
+            onClick: () => handleUnfavorite(asset)
+          }]
+        : [])
     ];
 
     if (hasReusableSavedConnection) {
@@ -149,15 +170,12 @@ const buildMenuItems = computed(() => {
   };
 });
 
-function handleFavorite(asset: AssetItem) {
-  handleAssetFavorite(asset.id);
-  emitFavoriteChanged(asset.id, true);
-}
-
 function handleUnfavorite(asset: AssetItem) {
   handleAssetUnfavorite(asset.id);
   emitFavoriteChanged(asset.id, false);
 }
+
+onMounted(loadFavoriteFolders);
 
 /**
  * @description 处理上下文事件

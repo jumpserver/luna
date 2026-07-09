@@ -204,6 +204,11 @@ onBeforeUnmount(() => {
 
 .chen-grid :deep(.ag-row-hover) {
   background: var(--data-grid-row-hover);
+  color: var(--data-grid-text);
+}
+
+.chen-grid :deep(.ag-row-selected) {
+  color: var(--data-grid-text);
 }
 
 .chen-grid :deep(.ag-row-selected::before) {

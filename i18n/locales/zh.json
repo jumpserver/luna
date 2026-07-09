@@ -81,6 +81,16 @@
   "RecentConnections": {
     "Empty": "暂无最近连接"
   },
+  "Favorite": {
+    "CreateFolder": "创建收藏节点",
+    "CreateSubfolder": "创建子节点",
+    "FolderName": "节点名称",
+    "CreateFailed": "创建收藏节点失败",
+    "CreateFolderFirst": "请先创建收藏节点",
+    "AddToFolder": "收藏到",
+    "AddSuccess": "收藏成功",
+    "AddFailed": "收藏失败"
+  },
   "Tree": {
     "SwitchToType": "切换到类型树",
     "SwitchToAuthorization": "切换到我的资产",

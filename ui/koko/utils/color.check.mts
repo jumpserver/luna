@@ -1,6 +1,6 @@
 // 自检：node ui/koko/utils/color.check.mts
 import assert from "node:assert/strict";
-import { isDarkColor, parseColorToRgb } from "./color.ts";
+import { isDarkColor, normalizeResolvedCssColor, parseColorToRgb } from "./color.ts";
 
 assert.deepEqual(parseColorToRgb("#1e1e2e"), [30, 30, 46]);
 assert.deepEqual(parseColorToRgb("#fff"), [255, 255, 255]);
@@ -12,6 +12,11 @@ assert.deepEqual(parseColorToRgb("color(srgb 0.1 0.1 0.15 / 0.5)"), [26, 26, 38]
 assert.deepEqual(parseColorToRgb("color(srgb 100% 0% 50%)"), [255, 0, 128]);
 assert.equal(parseColorToRgb("color-mix(in srgb, red, blue)"), null);
 assert.equal(parseColorToRgb(""), null);
+
+assert.equal(normalizeResolvedCssColor("rgb(239, 241, 245)"), "rgb(239, 241, 245)");
+assert.equal(normalizeResolvedCssColor("rgba(30, 30, 46, 0.5)"), "rgba(30, 30, 46, 0.5)");
+assert.equal(normalizeResolvedCssColor("color(srgb 0 0 0 / 0.08)"), "rgba(0, 0, 0, 0.08)");
+assert.equal(normalizeResolvedCssColor("color(srgb 1 1 1 / 8%)"), "rgba(255, 255, 255, 0.08)");
 
 assert.equal(isDarkColor("color(srgb 0.936 0.944 0.959)"), false, "latte main-bg resolves light");
 
