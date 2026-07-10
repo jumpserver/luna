@@ -2,7 +2,7 @@ import type { AssetItem } from "~/types";
 import { useRecentConnections } from "~/composables/useRecentConnections";
 import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 
-export type WorkspaceSessionStatus = "connecting" | "ready" | "connected" | "failed";
+export type WorkspaceSessionStatus = "selecting" | "connecting" | "ready" | "connected" | "failed";
 
 export interface WorkspaceSplitSession {
   id: string
@@ -23,6 +23,7 @@ export interface WorkspaceSessionTab {
   status: WorkspaceSessionStatus
   connectedAt?: number
   payload?: Record<string, any>
+  setupAsset?: AssetItem
   splitSessions?: WorkspaceSplitSession[]
 }
 
@@ -83,6 +84,31 @@ export const useWorkspaceTabs = () => {
       account,
       status: connection.payload ? "ready" : "connecting",
       payload: connection.payload
+    };
+
+    tabs.value.push(tab);
+    activeTabId.value = tab.id;
+
+    return tab;
+  };
+
+  const openSetupSession = (asset: AssetItem, options: { protocol?: string } = {}) => {
+    useRecentConnections().recordRecentConnection(asset);
+    const protocol = options.protocol || asset.savedConnection?.protocol || "";
+    const account = asset.savedConnection?.username || "";
+
+    const tab: WorkspaceSessionTab = {
+      id: createTabId(asset.id, protocol || "setup", account),
+      assetId: asset.id,
+      assetName: asset.name,
+      assetType: asset.type || "",
+      assetPlatform: asset.platform || "",
+      assetCategory: asset.category || "",
+      address: asset.address,
+      protocol,
+      account,
+      status: "selecting",
+      setupAsset: asset
     };
 
     tabs.value.push(tab);
@@ -193,6 +219,19 @@ export const useWorkspaceTabs = () => {
     tab.status = "ready";
   };
 
+  const startSessionConnection = (
+    tabId: string,
+    connection: { protocol: string, account: string }
+  ) => {
+    const tab = tabs.value.find((item) => item.id === tabId);
+    if (!tab) return;
+
+    tab.protocol = connection.protocol;
+    tab.account = connection.account;
+    tab.payload = undefined;
+    tab.status = "connecting";
+  };
+
   const markSessionFailed = (match: { tabId?: string, assetId: string, protocol: string, account: string }) => {
     if (match.tabId) {
       const splitMatch = findSplitSession(match.tabId);
@@ -252,10 +291,12 @@ export const useWorkspaceTabs = () => {
     closeRightSessions,
     registerSessionDisposer,
     openSession,
+    openSetupSession,
     closeSession,
     markSessionFailed,
     markSessionConnected,
     toSurfaceTab,
+    startSessionConnection,
     updateSessionPayload,
     setActiveSession
   };

@@ -30,9 +30,42 @@ interface ConnectMethodsResponse {
 const connectMethodsCache = new Map<string, ConnectMethodsResponse>();
 const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 
+const WEB_IFRAME_COMPONENTS = new Set(["koko", "lion", "chen", "tinker", "default"]);
+
+// Only strip the original backend web iframe entries. Native/client methods can
+// share the same component name and must stay visible in the connect-method picker.
 const isWebIframeMethod = (method: ConnectMethod) => {
-  return method.type === "web" || ["koko", "lion", "chen", "tinker", "default"].includes(method.component);
+  if (method.origin_value) return false;
+  return method.type === "web" && WEB_IFRAME_COMPONENTS.has(method.component);
 };
+
+const methodFixture = (overrides: Partial<ConnectMethod>): ConnectMethod => ({
+  value: "x",
+  label: "x",
+  type: "",
+  icon: "",
+  disabled: false,
+  listen: "",
+  component: "",
+  ...overrides
+});
+
+function assertWebIframeFilter() {
+  const checks: Array<[ConnectMethod, boolean]> = [
+    [methodFixture({ type: "web", component: "koko" }), true],
+    [methodFixture({ type: "web", component: "koko", origin_value: "web_cli" }), false],
+    [methodFixture({ type: "native", component: "koko" }), false],
+    [methodFixture({ type: "client", component: "lion" }), false]
+  ];
+
+  for (const [method, expected] of checks) {
+    if (isWebIframeMethod(method) !== expected) {
+      throw new Error(`isWebIframeMethod mismatch for ${method.type}/${method.component}`);
+    }
+  }
+}
+
+if (import.meta.dev) assertWebIframeFilter();
 
 const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMethodsResponse => {
   const normalized: ConnectMethodsResponse = { ...methods };

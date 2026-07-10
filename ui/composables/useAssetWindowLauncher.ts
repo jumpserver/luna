@@ -1,14 +1,15 @@
+import type { SessionWindowConnectionInfo } from "~/composables/useSessionWindowConnect";
 import type { AssetItem } from "~/types";
-import { buildSessionPath, type SessionWindowConnectionInfo } from "~/composables/useSessionWindowConnect";
+import { buildSessionPath } from "~/composables/useSessionWindowConnect";
 
 export type WindowConnectionInfo = SessionWindowConnectionInfo;
 
 export const useAssetWindowLauncher = () => {
-  const buildWindowUrl = (asset: AssetItem, connectionInfo: WindowConnectionInfo) => {
+  const buildWindowUrl = (asset: AssetItem, connectionInfo?: WindowConnectionInfo) => {
     return buildSessionPath(asset, connectionInfo);
   };
 
-  const openAssetInWindow = async (asset: AssetItem, connectionInfo: WindowConnectionInfo) => {
+  const openAssetInWindow = async (asset: AssetItem, connectionInfo?: WindowConnectionInfo) => {
     const url = buildWindowUrl(asset, connectionInfo);
 
     if (!isTauriRuntime()) {

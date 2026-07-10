@@ -28,12 +28,17 @@ const workspaceModes = computed(() => {
 const setMode = async (mode: "assets" | "tools") => {
   if (mode === "tools" && !showTools.value) return;
 
+  const toolPaths = [localePath({ path: "/tools" }), localePath("videoplayer"), localePath({ path: "/transcode" })];
+
   if (mode !== "tools") {
+    if (toolPaths.includes(route.path)) {
+      await navigateTo(localePath({ path: "/" }));
+    }
+
     setWorkspaceMode(mode);
     return;
   }
 
-  const toolPaths = [localePath({ path: "/tools" }), localePath("videoplayer"), localePath({ path: "/transcode" })];
   if (!toolPaths.includes(route.path)) {
     await navigateTo(localePath({ path: "/tools" }));
   }

@@ -42,7 +42,8 @@ defineExpose({ focus: focusSurface });
 <template>
   <div class="h-full min-h-0 w-full overflow-hidden" @mousedown="focusSurface">
     <div v-if="!hasSplit" class="h-full min-h-0">
-      <component :is="surfaceComponent" :key="surfaceInstanceKey(tab)" ref="surfaceRef" :tab="tab" />
+      <WorkspaceConnectionSetupPane v-if="tab.status === 'selecting'" :tab="tab" class="h-full min-h-0" />
+      <component :is="surfaceComponent" v-else :key="surfaceInstanceKey(tab)" ref="surfaceRef" :tab="tab" />
     </div>
 
     <div

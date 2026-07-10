@@ -2,7 +2,6 @@
 import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
 import type { AssetItem, SidebarSectionKey } from "~/types";
 
-import ConnectionEditor from "~/components/ConnectionEditor/connectionEditor.vue";
 import { SIDEBAR_SECTION_KEYS } from "~/composables/useSidebarSections";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortProtocolNames } from "~/utils";
@@ -14,9 +13,9 @@ const { collapse, sidebarSections, setSidebarSections } = useSettingManager();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const showTools = computed(() => isTauriRuntime());
 const { confirmConnection, saveConnectionInfo } = useAssetConnection();
-const { openSession } = useWorkspaceTabs();
+const { openSession, openSetupSession } = useWorkspaceTabs();
 const { openAssetInWindow } = useAssetWindowLauncher();
-const { displayUser, handleAssetConnection, handleAssetFavorite, handleAssetRename, handleAssetUnfavorite }
+const { handleAssetFavorite, handleAssetRename, handleAssetUnfavorite }
   = useAssetAction();
 const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } = useFavoriteFolders();
 
@@ -24,7 +23,6 @@ const isLoading = ref(false);
 const sidebarSearch = ref("");
 const showAssetSearch = ref(false);
 const assetTreeOpen = ref(true);
-const connEditorRef = ref<InstanceType<typeof ConnectionEditor> | null>(null);
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextMenuAsset = ref<AssetItem | null>(null);
@@ -143,26 +141,6 @@ const hasQuickConnect = (asset: AssetItem) => {
   return !!(saved?.protocol === "ssh" && hasReusableSavedConnection(asset));
 };
 
-const buildSavedConnectionInfo = (asset: AssetItem) => {
-  const saved = asset.savedConnection;
-  if (!saved || !hasReusableSavedConnection(asset)) return null;
-
-  return {
-    protocol: saved.protocol,
-    account: saved.username,
-    accountId: saved.accountId,
-    accountMode: (saved.accountMode as "hosted" | "dynamic" | "manual" | "anonymous") || "hosted",
-    manualUsername: saved.manualUsername || "",
-    manualPassword: saved.manualPassword || "",
-    dynamicPassword: saved.dynamicPassword || "",
-    rememberSecret: !!saved.rememberSecret,
-    rememberSelection: true,
-    connectMethod: saved.connectMethod || "",
-    connectOptions: { ...((saved as any).connectOptions || {}) },
-    availableProtocols: saved.availableProtocols || []
-  };
-};
-
 const connectWithBuiltinSsh = (asset: AssetItem, info: any) => {
   const protocol = info.protocol || asset.savedConnection?.protocol || "ssh";
   const availableProtocols = info.availableProtocols || asset.savedConnection?.availableProtocols || [];
@@ -261,59 +239,40 @@ const handleOpenMultipleAssets = (assets: AssetItem[]) => {
   }
 };
 
-const handleAssetConnect = async (asset: AssetItem) => {
-  const saved = asset.savedConnection;
-  const canDirectConnect = saved?.protocol === "ssh" && saved.username;
+const handleAssetConnect = (asset: AssetItem) => {
+  openSetupSession(asset);
+};
 
-  if (canDirectConnect) {
-    connectWithBuiltinSsh(asset, {
-      protocol: "ssh",
-      account: saved.username,
-      accountId: saved.accountId,
-      accountMode: (saved.accountMode as any) || "hosted",
-      manualUsername: saved.manualUsername || "",
-      manualPassword: saved.manualPassword || "",
-      dynamicPassword: saved.dynamicPassword || "",
-      rememberSecret: !!saved.rememberSecret,
-      connectMethod: "builtin_client",
-      availableProtocols: saved.availableProtocols || []
-    });
+const handleAssetQuickConnect = (asset: AssetItem) => {
+  const saved = asset.savedConnection;
+  if (!saved?.username) {
+    openSetupSession(asset);
     return;
   }
 
-  try {
-    const info = await connEditorRef.value!.open(asset);
-    await confirmConnection(asset, info);
-  } catch {}
+  connectWithBuiltinSsh(asset, {
+    protocol: "ssh",
+    account: saved.username,
+    accountId: saved.accountId,
+    accountMode: (saved.accountMode as any) || "hosted",
+    manualUsername: saved.manualUsername || "",
+    manualPassword: saved.manualPassword || "",
+    dynamicPassword: saved.dynamicPassword || "",
+    rememberSecret: !!saved.rememberSecret,
+    connectMethod: "builtin_client",
+    availableProtocols: saved.availableProtocols || []
+  });
 };
 
 useEventBus().on("workspaceConnectAsset", handleAssetConnect);
 
-const handleAssetConnectWithSelection = async (asset: AssetItem) => {
-  try {
-    const info = await connEditorRef.value!.open(asset);
-    confirmConnection(asset, info);
-  } catch {}
+const handleAssetConnectWithSelection = (asset: AssetItem) => {
+  openSetupSession(asset);
 };
 
 const handleAssetOpenInNewWindow = async (asset: AssetItem) => {
   contextMenuVisible.value = false;
-
-  let info = buildSavedConnectionInfo(asset);
-
-  if (!info) {
-    try {
-      info = await connEditorRef.value!.open(asset);
-      if (info && info.rememberSelection !== false) {
-        saveConnectionInfo(asset, info);
-      }
-    } catch {
-      return;
-    }
-  }
-
-  if (!info) return;
-  await openAssetInWindow(asset, info);
+  await openAssetInWindow(asset);
 };
 
 const resolveAssetProtocols = (asset: AssetItem) => {
@@ -342,20 +301,11 @@ const handleProtocolConnect = async (asset: AssetItem, protocol: string) => {
       return;
     }
 
-    try {
-      const info = await connEditorRef.value!.open(asset);
-      connectWithBuiltinSsh(asset, { ...info, protocol: "ssh" });
-    } catch {}
+    openSetupSession(asset, { protocol: "ssh" });
     return;
   }
 
-  handleAssetConnection(
-    displayUser(asset.id, asset.permedAccounts || []),
-    asset.id,
-    protocol,
-    asset.permedAccounts || [],
-    protocol
-  );
+  openSetupSession(asset, { protocol });
 };
 
 const openRenameModal = (asset: AssetItem) => {
@@ -443,7 +393,7 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
           icon: "i-lucide-zap",
           onSelect: () => {
             contextMenuVisible.value = false;
-            handleAssetConnect(asset);
+            handleAssetQuickConnect(asset);
           }
         } satisfies DropdownMenuItem]
       : []),
@@ -653,8 +603,6 @@ watch(loggedIn, (value) => {
     </div>
 
     <div v-else class="min-h-0 flex-1" />
-
-    <ConnectionEditor ref="connEditorRef" asset-type="assets" />
 
     <Modal
       :open="renameModalOpen"

@@ -25,8 +25,10 @@ export const decodeLegacyWindowPayload = (payload: string) => {
   return JSON.parse(decodeURIComponent(atob(payload))) as LegacyWindowAssetPayload;
 };
 
-export function buildSessionPath(asset: AssetItem, connectionInfo: SessionWindowConnectionInfo) {
+export function buildSessionPath(asset: AssetItem, connectionInfo?: SessionWindowConnectionInfo) {
   const query = new URLSearchParams();
+  if (!connectionInfo) return `/session/${encodeURIComponent(asset.id)}`;
+
   query.set("protocol", connectionInfo.protocol);
   if (connectionInfo.account) query.set("account", connectionInfo.account);
   query.set("accountMode", connectionInfo.accountMode);
@@ -61,8 +63,7 @@ async function fetchSessionAsset(assetId: string): Promise<AssetItem> {
 
 export function useSessionWindowConnect() {
   const route = useRoute();
-  const { confirmConnection } = useAssetConnection();
-  const { activeTab } = useWorkspaceTabs();
+  const { activeTab, openSetupSession } = useWorkspaceTabs();
   const userInfoStore = useUserInfoStore();
   const loading = ref(false);
   const error = ref("");
@@ -74,31 +75,15 @@ export function useSessionWindowConnect() {
 
     const saved = userInfoStore.getConnectionInfoForAsset(assetId);
     const preference = userInfoStore.getConnectionPreferenceForAsset(assetId);
-    const connectionInfo: SessionWindowConnectionInfo = {
-      protocol: String(route.query.protocol || saved?.protocol || preference?.protocol || ""),
-      account: String(route.query.account || saved?.username || preference?.username || ""),
-      accountMode: String(route.query.accountMode || saved?.accountMode || preference?.accountMode || "hosted") as SessionWindowConnectionInfo["accountMode"],
-      accountId: String(route.query.accountId || saved?.accountId || preference?.accountId || "") || undefined,
-      connectMethod: String(route.query.method || saved?.connectMethod || preference?.connectMethod || ""),
-      manualUsername: saved?.manualUsername || "",
-      manualPassword: saved?.manualPassword || "",
-      dynamicPassword: saved?.dynamicPassword || "",
-      rememberSecret: saved?.rememberSecret ?? false,
-      rememberSelection: false,
-      connectOptions: saved?.connectOptions
-    };
-
-    if (!connectionInfo.protocol) {
-      error.value = "missing protocol";
-      return;
-    }
-
     loading.value = true;
     error.value = "";
 
     try {
       const asset = await fetchSessionAsset(assetId);
-      await confirmConnection(asset, connectionInfo);
+      asset.savedConnection = saved || undefined;
+      openSetupSession(asset, {
+        protocol: String(route.query.protocol || preference?.protocol || saved?.protocol || "")
+      });
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : String(cause);
     } finally {

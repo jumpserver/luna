@@ -5,28 +5,28 @@ import { useConnectMethods } from "~/composables/useConnectMethods";
 import { sortProtocolNames } from "~/utils";
 
 const props = defineProps<{
-  account: string
-  protocol: string
-  accounts: PermedAccount[]
-  protocols: PermedProtocol[]
-  manualUsername?: string
-  manualPassword?: string
-  dynamicPassword?: string
-  rememberSecret?: boolean
-  connectMethod?: string
-  connectOptions?: Record<string, any>
-  assetType?: AssetPageType
+  account: string;
+  protocol: string;
+  accounts: PermedAccount[];
+  protocols: PermedProtocol[];
+  manualUsername?: string;
+  manualPassword?: string;
+  dynamicPassword?: string;
+  rememberSecret?: boolean;
+  connectMethod?: string;
+  connectOptions?: Record<string, any>;
+  assetType?: AssetPageType;
 }>();
 
 const emits = defineEmits<{
-  (e: "update:protocol", v: string): void
-  (e: "update:account", v: string): void
-  (e: "update:manualUsername", v: string): void
-  (e: "update:manualPassword", v: string): void
-  (e: "update:dynamicPassword", v: string): void
-  (e: "update:rememberSecret", v: boolean): void
-  (e: "update:connectMethod", v: string): void
-  (e: "update:connectOptions", v: Record<string, any>): void
+  (e: "update:protocol", v: string): void;
+  (e: "update:account", v: string): void;
+  (e: "update:manualUsername", v: string): void;
+  (e: "update:manualPassword", v: string): void;
+  (e: "update:dynamicPassword", v: string): void;
+  (e: "update:rememberSecret", v: boolean): void;
+  (e: "update:connectMethod", v: string): void;
+  (e: "update:connectOptions", v: Record<string, any>): void;
 }>();
 
 const { t } = useI18n();
@@ -128,23 +128,18 @@ const protocolTabItems = computed(() =>
   sortProtocolNames(
     (isTauriRuntime()
       ? props.protocols
-      : props.protocols.filter((protocol: PermedProtocol) => protocol?.public !== false))
-      .map((p: PermedProtocol) => p.name)
+      : props.protocols.filter((protocol: PermedProtocol) => protocol?.public !== false)
+    ).map((p: PermedProtocol) => p.name)
   ).map((name) => ({ label: name.toUpperCase(), value: name }))
 );
 const connectMethodTypeItems = computed(() => {
-  const metaMap: Record<string, { label: string, icon: string }> = {
-    builtin: { label: "内置", icon: "i-lucide-panels-top-left" },
+  const metaMap: Record<string, { label: string; icon: string }> = {
+    builtin: { label: "Web", icon: "i-lucide-globe" },
     native: { label: "客户端", icon: "i-lucide-monitor" },
     remote_app: { label: "远程应用", icon: "i-lucide-app-window" }
   };
-  const categoryOf = (type: string) => {
-    if (type === "web") return "builtin";
-    if (["applet", "virtual_app"].includes(type)) return "remote_app";
-    return type;
-  };
   const order = ["builtin", "native", "remote_app"];
-  const grouped = new Set(availableConnectMethods.value.map((method) => categoryOf(String(method.type || ""))));
+  const grouped = new Set(availableConnectMethods.value.map((method) => categoryOfConnectMethod(method)));
   const sorted = [
     ...order.filter((type) => grouped.has(type)),
     ...Array.from(grouped).filter((type) => !order.includes(type))
@@ -160,23 +155,24 @@ const connectMethodTabItems = computed(() =>
   availableConnectMethods.value
     .filter((method) => {
       if (!selectedConnectMethodType.value) return true;
-      const type = String(method.type || "");
-      if (selectedConnectMethodType.value === "builtin") return type === "web";
-      if (selectedConnectMethodType.value === "remote_app") return ["applet", "virtual_app"].includes(type);
-      return type === selectedConnectMethodType.value;
+      return categoryOfConnectMethod(method) === selectedConnectMethodType.value;
     })
     .map((method) => ({
-    label: method.label || method.value,
-    value: method.value
-  }))
+      label: method.label || method.value,
+      value: method.value
+    }))
 );
 
 const showCharsetOption = computed(() => ["ssh", "telnet"].includes((props.protocol || "").toLowerCase()));
 const showBackspaceOption = computed(() => showCharsetOption.value);
 const showDisableAutoHashOption = computed(() => ["mysql", "mariadb"].includes((props.protocol || "").toLowerCase()));
 const showResolutionOption = computed(() => (props.protocol || "").toLowerCase() === "rdp");
-const showAdvancedOptions = computed(() =>
-  showCharsetOption.value || showBackspaceOption.value || showDisableAutoHashOption.value || showResolutionOption.value
+const showAdvancedOptions = computed(
+  () =>
+    showCharsetOption.value ||
+    showBackspaceOption.value ||
+    showDisableAutoHashOption.value ||
+    showResolutionOption.value
 );
 
 const charsetItems = computed(() => [
@@ -232,23 +228,26 @@ watch(
     }
 
     const current = availableConnectMethods.value.find((method) => method.value === props.connectMethod);
-    if (current?.type) {
-      const type = String(current.type);
-      selectedConnectMethodType.value = type === "web"
-        ? "builtin"
-        : ["applet", "virtual_app"].includes(type) ? "remote_app" : type;
+    if (current) {
+      selectedConnectMethodType.value = categoryOfConnectMethod(current);
       return;
     }
 
     if (!selectedConnectMethodType.value) {
-      const type = String(availableConnectMethods.value[0]?.type || "");
-      selectedConnectMethodType.value = type === "web"
-        ? "builtin"
-        : ["applet", "virtual_app"].includes(type) ? "remote_app" : type;
+      selectedConnectMethodType.value = categoryOfConnectMethod(availableConnectMethods.value[0]);
     }
   },
   { deep: true, immediate: true }
 );
+
+function categoryOfConnectMethod(method: any) {
+  const type = String(method?.type || "").toLowerCase();
+
+  if (type === "web" || type === "builtin") return "builtin";
+  if (["applet", "virtual_app", "remote_app", "remoteapp"].includes(type)) return "remote_app";
+  if (["native", "client", "local", "desktop"].includes(type)) return "native";
+  return type || "builtin";
+}
 
 const accountItems = computed(() => {
   // web 类型的资产需要保留匿名账号，其它类型不展示 @ANON
