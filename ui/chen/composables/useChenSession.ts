@@ -1,77 +1,126 @@
+import type { ChenSocketError, ChenSocketPath } from "~/chen/composables/useChenWebSocket";
 import type { ChenPacket } from "~/chen/types";
+
+import { ref } from "vue";
+import { useChenWebSocket } from "~/chen/composables/useChenWebSocket";
 
 interface UseChenSessionOptions {
   authenticate: () => Promise<string>
-  connectSessionSocket: (token: string) => WebSocket
   markConnected: () => void
+  markFailed: () => void
   onBeforeReady: () => Promise<void>
   onAfterReady: () => Promise<void>
+  onDisconnected: () => void
+  showMessage: (data: any) => void
+  createSocket?: (url: string, token: string) => WebSocket
+  resolveUrl?: (path: ChenSocketPath) => string
 }
 
 export function useChenSession(options: UseChenSessionOptions) {
-  const toast = useToast();
   const ready = ref(false);
   const loading = ref(true);
   const error = ref("");
   const dialogMessage = ref("");
-  const sessionSocket = shallowRef<WebSocket | null>(null);
 
-  async function bootstrapSession() {
-    loading.value = true;
-    error.value = "";
+  let bootstrapGeneration = 0;
+  let fatalNotified = false;
+
+  const sessionConnection = useChenWebSocket({
+    path: "session",
+    createSocket: options.createSocket,
+    resolveUrl: options.resolveUrl,
+    onPacket: handlePacket,
+    onError: handleSocketError
+  });
+
+  function normalizeError(cause: unknown) {
+    return cause instanceof Error ? cause.message : String(cause);
+  }
+
+  function handleFatal(cause: unknown) {
+    if (fatalNotified) return;
+    fatalNotified = true;
+    ready.value = false;
+    loading.value = false;
+    error.value = normalizeError(cause);
+    options.markFailed();
+
+    // A Chen session owns all of its consoles. Close dependent consoles first
+    // so their backend close handlers can still resolve the active session.
+    options.onDisconnected();
+    sessionConnection.close();
+  }
+
+  function handleSocketError(socketError: ChenSocketError) {
+    handleFatal(socketError.message);
+  }
+
+  async function handleSetReady() {
+    if (sessionConnection.isReady.value) return;
+    const currentGeneration = bootstrapGeneration;
+    if (!sessionConnection.markReady()) return;
 
     try {
-      const token = await options.authenticate();
-      const socket = options.connectSessionSocket(token);
-      sessionSocket.value = socket;
+      await options.onBeforeReady();
+      if (currentGeneration !== bootstrapGeneration || fatalNotified) return;
 
-      socket.onmessage = async (event) => {
-        const packet = JSON.parse(event.data) as ChenPacket;
-        switch (packet.type) {
-          case "show_dialog":
-            dialogMessage.value = packet.data?.body || packet.data?.title || "";
-            break;
-          case "close_dialog":
-            dialogMessage.value = "";
-            break;
-          case "show_message":
-            toast.add({
-              title: packet.data?.level || "Message",
-              description: packet.data?.message || "",
-              color: packet.data?.level?.toLowerCase() === "error" ? "error" : "primary"
-            });
-            break;
-          case "set_ready":
-            await options.onBeforeReady();
-            ready.value = true;
-            loading.value = false;
-            options.markConnected();
-            await options.onAfterReady();
-            break;
-          case "close_session":
-            error.value = "Session closed";
-            ready.value = false;
-            break;
-        }
-      };
-
-      socket.onerror = () => {
-        error.value = "Chen session websocket error";
-        loading.value = false;
-      };
-
-      socket.onclose = () => {
-        if (!ready.value) error.value = error.value || "Chen session closed";
-      };
-    } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : String(cause);
+      ready.value = true;
       loading.value = false;
+      options.markConnected();
+
+      await options.onAfterReady();
+    } catch (cause) {
+      handleFatal(cause);
     }
   }
 
+  function handlePacket(packet: ChenPacket) {
+    switch (packet.type) {
+      case "show_dialog":
+        dialogMessage.value = packet.data?.body || packet.data?.title || "";
+        break;
+      case "close_dialog":
+        dialogMessage.value = "";
+        break;
+      case "show_message":
+        options.showMessage(packet.data);
+        break;
+      case "set_ready":
+        void handleSetReady();
+        break;
+      case "session_close":
+      case "close_session":
+        handleFatal(new Error("Chen session disconnected by backend"));
+        break;
+    }
+  }
+
+  async function bootstrapSession() {
+    const currentGeneration = ++bootstrapGeneration;
+    fatalNotified = false;
+    ready.value = false;
+    loading.value = true;
+    error.value = "";
+    dialogMessage.value = "";
+
+    try {
+      const token = await options.authenticate();
+      if (currentGeneration !== bootstrapGeneration) return;
+      sessionConnection.connect(token);
+    } catch (cause) {
+      handleFatal(cause);
+    }
+  }
+
+  async function retrySession() {
+    options.onDisconnected();
+    cleanupSession();
+    await bootstrapSession();
+  }
+
   function cleanupSession() {
-    sessionSocket.value?.close();
-    sessionSocket.value = null;
+    bootstrapGeneration += 1;
+    sessionConnection.close();
   }
 
   return {
@@ -79,8 +128,10 @@ export function useChenSession(options: UseChenSessionOptions) {
     error,
     loading,
     ready,
-    sessionSocket,
+    sessionConnection,
+    sessionSocket: sessionConnection.socket,
     bootstrapSession,
-    cleanupSession
+    cleanupSession,
+    retrySession
   };
 }

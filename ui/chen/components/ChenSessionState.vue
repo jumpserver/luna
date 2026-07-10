@@ -3,6 +3,11 @@ defineProps<{
   icon?: string
   loading?: boolean
   message: string
+  actionLabel?: string
+}>();
+
+defineEmits<{
+  action: []
 }>();
 </script>
 
@@ -15,6 +20,9 @@ defineProps<{
         :class="loading ? 'animate-spin' : ''"
       />
       <p>{{ message }}</p>
+      <UButton v-if="actionLabel" size="sm" variant="soft" @click="$emit('action')">
+        {{ actionLabel }}
+      </UButton>
     </div>
   </div>
 </template>

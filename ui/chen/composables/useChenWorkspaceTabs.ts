@@ -122,6 +122,9 @@ export function useChenWorkspaceTabs() {
 
   function closeAllTabs() {
     Object.values(workspaceTabState).forEach((tab) => tab.socket?.close());
+    Object.keys(workspaceTabState).forEach((id) => delete workspaceTabState[id]);
+    workspaceTabs.value = [];
+    activeWorkspaceTabId.value = "";
   }
 
   function setActiveTab(id: string) {

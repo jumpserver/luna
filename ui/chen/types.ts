@@ -37,6 +37,7 @@ export interface ChenTabDefinition {
   icon?: string
   kind: "query" | "data-view" | "console"
   nodeKey: string
+  connectionError?: string
 }
 
 export interface ChenDataViewMeta {

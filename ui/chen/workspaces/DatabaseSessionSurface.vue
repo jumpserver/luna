@@ -26,17 +26,17 @@ import { useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 
 const toast = useToast();
-const { markSessionConnected } = useWorkspaceTabs();
+const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
 const tabRef = toRef(props, "tab");
 
 const sidebarWidth = ref(280);
 const resizing = ref(false);
 
 const auth = useChenAuth(tabRef);
-const chenSocket = useChenWebSocket();
 const tree = useChenResourceTree(auth.chenToken);
 const workspace = useChenWorkspaceTabs();
 const dataView = useChenDataView();
+const consoleConnections = new Map<string, ReturnType<typeof useChenWebSocket>>();
 
 const currentWorkspaceNodeKey = computed(() => {
   return tree.selectedNodeKey.value || workspace.activeWorkspaceTab.value?.nodeKey || tree.rootNodes.value[0]?.key || "";
@@ -60,68 +60,91 @@ const activeDataViewTab = computed(() => {
   const tab = workspace.activeWorkspaceTab.value;
   return tab?.kind === "data-view" ? tab : null;
 });
+const activeConnectionError = computed(() => workspace.activeWorkspaceTab.value?.connectionError || "");
 
 const queryConsole = useChenQueryConsole(sendConsoleAction);
 const session = useChenSession({
   authenticate: auth.authenticate,
-  connectSessionSocket: (token) => chenSocket.connectWebSocket("session", token),
   markConnected: () => markSessionConnected(props.tab.id),
+  markFailed: () => markSessionFailed({
+    tabId: props.tab.id,
+    assetId: props.tab.assetId,
+    protocol: props.tab.protocol,
+    account: props.tab.account
+  }),
   onBeforeReady: async () => {
     await tree.loadNodeChildren(null);
   },
   onAfterReady: async () => {
     await tree.expandInitialTree();
+  },
+  onDisconnected: () => closeAllConsoleSockets("Database session disconnected"),
+  showMessage: (data) => {
+    toast.add({
+      title: data?.level || "Message",
+      description: data?.message || "",
+      color: data?.level?.toLowerCase() === "error" ? "error" : "primary"
+    });
   }
 });
 
 function initConsoleSocket(tab: ChenWorkspaceTab) {
-  const socket = chenSocket.connectWebSocket("console", auth.chenToken.value);
-  tab.socket = socket;
+  const existing = consoleConnections.get(tab.id);
+  if (existing) return existing;
+  if (!session.ready.value) {
+    tab.connectionError = "Database session is not ready";
+    return null;
+  }
 
-  socket.onopen = () => {
-    chenSocket.sendJson(socket, {
-      type: "connect",
-      data: {
-        nodeKey: tab.nodeKey,
-        type: tab.kind === "data-view" ? "data_view" : "query"
+  tab.connectionError = "";
+  const connection = useChenWebSocket({
+    path: "console",
+    onOpen: () => {
+      const reactiveTab = workspace.workspaceTabState[tab.id];
+      if (!reactiveTab) {
+        connection.close();
+        return;
       }
-    });
-    chenSocket.flushQueuedActions(tab.id, socket);
-  };
 
-  socket.onmessage = (event) => {
-    const reactiveTab = workspace.workspaceTabState[tab.id];
-    if (!reactiveTab) return;
-    handleConsolePacket(reactiveTab, JSON.parse(event.data) as ChenPacket);
-  };
+      connection.sendImmediately({
+        type: "connect",
+        data: {
+          nodeKey: reactiveTab.nodeKey,
+          type: reactiveTab.kind === "data-view" ? "data_view" : "query"
+        }
+      });
+    },
+    onPacket: (packet) => {
+      const reactiveTab = workspace.workspaceTabState[tab.id];
+      if (!reactiveTab) return;
 
-  socket.onerror = () => {
-    queryConsole.appendLog(tab, "WebSocket error");
-  };
+      handleConsolePacket(reactiveTab, packet);
+      if (packet.type === "init") {
+        reactiveTab.connectionError = "";
+        connection.markReady();
+      }
+    },
+    onError: (socketError) => {
+      const reactiveTab = workspace.workspaceTabState[tab.id];
+      if (!reactiveTab) return;
+      reactiveTab.socket = null;
+      reactiveTab.connectionError = socketError.message;
+      queryConsole.appendLog(reactiveTab, socketError.message);
+    }
+  });
 
-  socket.onclose = () => {
-    if (workspace.workspaceTabState[tab.id]) workspace.workspaceTabState[tab.id]!.socket = null;
-  };
+  consoleConnections.set(tab.id, connection);
+  tab.socket = connection.connect(auth.chenToken.value);
+  return connection;
 }
 
 function sendConsoleAction(tab: ChenWorkspaceTab, type: string, data?: any) {
   const action = { type, data };
-  const socket = tab.socket;
+  const connection = consoleConnections.get(tab.id) || initConsoleSocket(tab);
+  if (connection?.sendWhenReady(action)) return;
 
-  if (socket?.readyState === WebSocket.OPEN) {
-    chenSocket.sendJson(socket, action);
-    return;
-  }
-
-  if (socket?.readyState === WebSocket.CONNECTING) {
-    chenSocket.queueAction(tab.id, action);
-    return;
-  }
-
-  chenSocket.queueAction(tab.id, action);
-  if (!socket || socket.readyState === WebSocket.CLOSED) {
-    initConsoleSocket(tab);
-  }
+  tab.connectionError ||= "Console websocket is not connected";
+  queryConsole.appendLog(tab, tab.connectionError);
 }
 
 function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
@@ -156,7 +179,7 @@ function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
 
 function openQueryWorkspace(nodeKey: string, title = "Query", reuseExisting = true) {
   const tab = workspace.openQueryTab(nodeKey, title, reuseExisting);
-  if (tab && !tab.socket) initConsoleSocket(tab);
+  if (tab && !consoleConnections.has(tab.id)) initConsoleSocket(tab);
 }
 
 function openConsoleWorkspace(nodeKey: string, title = "Console") {
@@ -166,11 +189,32 @@ function openConsoleWorkspace(nodeKey: string, title = "Console") {
 
 function openDataViewWorkspace(nodeKey: string, title = "Data View") {
   const tab = workspace.openDataViewTab(nodeKey, title);
-  if (tab && !tab.socket) initConsoleSocket(tab);
+  if (tab && !consoleConnections.has(tab.id)) initConsoleSocket(tab);
+}
+
+function closeConsoleSocket(id: string) {
+  const connection = consoleConnections.get(id);
+  connection?.close();
+  consoleConnections.delete(id);
+
+  const tab = workspace.workspaceTabState[id];
+  if (tab) tab.socket = null;
+}
+
+function closeAllConsoleSockets(reason = "") {
+  for (const [id, connection] of consoleConnections) {
+    connection.close();
+    const tab = workspace.workspaceTabState[id];
+    if (tab) {
+      tab.socket = null;
+      if (reason) tab.connectionError = reason;
+    }
+  }
+  consoleConnections.clear();
 }
 
 function closeWorkspaceTab(id: string) {
-  chenSocket.clearQueue(id);
+  closeConsoleSocket(id);
   workspace.closeTab(id);
 }
 
@@ -291,9 +335,9 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  session.cleanupSession();
-  workspace.workspaceTabs.value.forEach((item) => chenSocket.clearQueue(item.id));
+  closeAllConsoleSockets();
   workspace.closeAllTabs();
+  session.cleanupSession();
   window.removeEventListener("pointermove", handlePointerMove);
   window.removeEventListener("pointerup", stopResize);
 });
@@ -329,6 +373,14 @@ defineExpose({ focus });
           @close="closeWorkspaceTab"
           @create="createWorkspaceTab"
         />
+
+        <div
+          v-if="activeConnectionError"
+          class="flex shrink-0 items-center gap-2 border-b border-error/25 bg-error/10 px-3 py-2 text-xs text-error"
+        >
+          <UIcon name="i-lucide-circle-alert" class="size-4 shrink-0" />
+          <span>{{ activeConnectionError }}</span>
+        </div>
 
         <div v-if="workspace.activeWorkspaceTab.value" class="min-h-0 flex-1">
           <QueryConsolePanel
@@ -378,6 +430,8 @@ defineExpose({ focus });
       :icon="session.error.value ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'"
       :loading="!session.error.value"
       :message="session.error.value || session.dialogMessage.value || 'Starting database workspace...'"
+      :action-label="session.error.value ? 'Retry' : undefined"
+      @action="session.retrySession"
     />
   </div>
 </template>
