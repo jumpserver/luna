@@ -1,19 +1,3 @@
-pub(crate) mod assets {
-    pub(crate) const MY_ASSET: &str = "/api/v1/assets/my-asset/";
-    pub(crate) const USER_ASSETS: &str = "/api/v1/perms/users/self/assets/";
-    pub(crate) const FAVORITE_ASSETS: &str = "/api/v1/assets/favorite-assets/";
-    pub(crate) const FAVORITE_NODE_ASSETS: &str = "/api/v1/perms/users/self/nodes/favorite/assets/";
-    pub(crate) const AUTHORIZATION_TREE: &str =
-        "/api/v1/perms/users/self/nodes/children-with-assets/tree/";
-    pub(crate) const TYPE_TREE: &str =
-        "/api/v1/perms/users/self/nodes/children-with-assets/category/tree/";
-    pub(crate) const SEARCH_TREE: &str = "/api/v1/perms/users/self/assets/tree/";
-
-    pub(crate) fn detail(asset_id: &str) -> String {
-        format!("/api/v1/perms/users/self/assets/{}", asset_id)
-    }
-}
-
 pub(crate) mod authentication {
     pub(crate) const CONNECTION_TOKEN: &str = "/api/v1/authentication/connection-token/";
 
@@ -25,15 +9,9 @@ pub(crate) mod authentication {
     }
 }
 
-pub(crate) mod terminal {
-    pub(crate) const CONNECT_METHODS: &str = "/api/v1/terminal/components/connect-methods/";
-    pub(crate) const SMART_ENDPOINT: &str = "/api/v1/terminal/endpoints/smart/";
-}
-
 pub(crate) mod user {
     pub(crate) const PROFILE: &str = "/api/v1/users/profile/";
     pub(crate) const PROFILE_PERMISSIONS: &str = "/api/v1/users/profile/permissions/";
-    pub(crate) const LUNA_PREFERENCE: &str = "/api/v1/users/preference/?category=luna";
 }
 
 pub(crate) mod org {

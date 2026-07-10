@@ -98,12 +98,13 @@ const togglePanel = (kind: PanelKind) => {
           size="xs"
           icon="i-lucide-folder-plus"
           class="size-6 justify-center rounded-sm p-0"
+          :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
           :aria-label="t('Favorite.CreateFolder')"
           @click.stop="openCreateFolder()"
         />
       </template>
       <div v-if="favoriteLoading && favoriteFolders.length === 0" class="grid h-20 place-items-center">
-        <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-gray-400" />
+        <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
       </div>
       <UEmpty v-else-if="favoriteFolders.length === 0" icon="i-lucide-star" size="sm" variant="naked" :title="t('Common.NoData')" />
       <SideBarFavoriteTreeNode
@@ -137,7 +138,7 @@ const togglePanel = (kind: PanelKind) => {
       @toggle="togglePanel('snippets')"
     >
       <div v-if="snippetLoading && snippets.length === 0" class="grid h-20 place-items-center">
-        <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-gray-400" />
+        <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
       </div>
       <UEmpty v-else-if="snippets.length === 0" icon="i-lucide-braces" size="sm" variant="naked" :title="t('Snippets.Empty')" />
       <button
@@ -151,7 +152,7 @@ const togglePanel = (kind: PanelKind) => {
       >
         <UIcon
           :name="snippet.variable.length > 0 ? 'i-lucide-braces' : 'i-lucide-terminal'"
-          class="mt-0.5 size-3.5 shrink-0 text-gray-500"
+          class="mt-0.5 sidebar-icon"
         />
         <span class="min-w-0 flex-1">
           <span class="block truncate text-[11px] font-medium">{{ snippet.name }}</span>

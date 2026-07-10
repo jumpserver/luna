@@ -94,27 +94,27 @@ const activate = () => {
         <UIcon
           v-if="isParent"
           name="i-lucide-chevron-right"
-          class="size-2.5 text-gray-400 transition-transform"
+          class="sidebar-icon-sm transition-transform"
           :class="isOpen ? 'rotate-90' : ''"
         />
       </span>
       <span
         v-if="batchMode && !isParent"
-        class="grid size-3.5 shrink-0 place-items-center text-gray-400"
+        class="grid size-3.5 shrink-0 place-items-center sidebar-icon-muted"
       >
-        <UIcon :name="isChecked ? 'i-lucide-square-check-big' : 'i-lucide-square'" class="size-3.5" />
+        <UIcon :name="isChecked ? 'i-lucide-square-check-big' : 'i-lucide-square'" class="sidebar-icon" />
       </span>
       <UIcon
         v-if="node.loading || icon"
         :name="node.loading ? 'i-lucide-loader-circle' : icon"
-        class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
+        class="sidebar-icon"
         :class="node.loading ? 'animate-spin' : ''"
       />
       <img
         v-else-if="iconSrc"
         :src="iconSrc"
         alt=""
-        class="size-3.5 shrink-0 object-contain"
+        class="sidebar-icon-img"
       >
       <span class="min-w-0 flex-1 truncate font-medium" :class="!isParent ? 'font-ui-mono text-[11px] tracking-[0.01em]' : ''">{{ node.name }}</span>
     </button>

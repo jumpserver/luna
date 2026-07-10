@@ -68,16 +68,6 @@ impl ApiRequestClient {
             .await
     }
 
-    /// 发送带 query 参数的 GET 请求并转换为统一 ApiResponse
-    pub async fn get_with_query_response<T>(&self, url: &str, query: &T) -> ApiResponse
-    where
-        T: Serialize + ?Sized,
-    {
-        info!("GET WITH QUERY {}", url);
-        self.send_with_response(Method::GET, url, |request| request.query(query))
-            .await
-    }
-
     /// 发送 JSON POST 请求并转换为统一 ApiResponse
     pub async fn post_json_with_response<T>(&self, url: &str, body: &T) -> ApiResponse
     where
@@ -87,13 +77,6 @@ impl ApiRequestClient {
         log_json_body(body);
 
         self.send_with_response(Method::POST, url, |request| request.json(body))
-            .await
-    }
-
-    /// 发送 DELETE 请求并转换为统一 ApiResponse
-    pub async fn delete_with_response(&self, url: &str) -> ApiResponse {
-        info!("DELETE {}", url);
-        self.send_with_response(Method::DELETE, url, |request| request)
             .await
     }
 

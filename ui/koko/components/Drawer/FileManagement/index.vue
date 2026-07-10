@@ -65,9 +65,7 @@ function setRemotePaneRef(id: string, el: unknown) {
 async function buildSftpContext(assetId: string, tokenId: string, tabId: string): Promise<ConnectorSessionContext> {
   let endpointUrl = resolveDevHost("koko") || window.location.origin;
   if (isTauriRuntime() && !import.meta.dev) {
-    const endpoint = await useTauriCoreInvoke<{ host?: string, port?: number, https_port?: number }>("get_smart_endpoint", {
-      query: { protocol: "sftp", assetId, token: tokenId }
-    });
+    const endpoint = await getSmartEndpoint({ protocol: "sftp", assetId, token: tokenId });
     if (!endpoint.host) throw new Error("smart endpoint missing host");
     const secure = Boolean(endpoint.https_port);
     endpointUrl = `${secure ? "https" : "http"}://${endpoint.host}${endpoint.https_port || endpoint.port ? `:${endpoint.https_port || endpoint.port}` : ""}`;

@@ -38,7 +38,7 @@ const panelStyle = computed(() => props.open
     >
       <UIcon
         name="i-lucide-chevron-right"
-        class="size-3.5 shrink-0 transition-transform duration-150"
+        class="sidebar-icon transition-transform duration-150"
         :class="open ? 'rotate-90' : ''"
       />
       <span class="min-w-0 flex-1 truncate">{{ title }}</span>

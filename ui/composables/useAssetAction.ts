@@ -10,14 +10,6 @@ let tauriListenersRegistering = false;
 let tauriListenersRefCount = 0;
 let unlistenGetTokenFailure: UnlistenFn | null = null;
 let unlistenGetTokenSuccess: UnlistenFn | null = null;
-let unlistenFavoriteSuccess: UnlistenFn | null = null;
-let unlistenFavoriteFailed: UnlistenFn | null = null;
-let unlistenUnfavoriteSuccess: UnlistenFn | null = null;
-let unlistenUnfavoriteFailed: UnlistenFn | null = null;
-let unlistenGetAssetDetailSuccess: UnlistenFn | null = null;
-let unlistenGetAssetDetailFailed: UnlistenFn | null = null;
-let unlistenRenameSuccess: UnlistenFn | null = null;
-let unlistenRenameError: UnlistenFn | null = null;
 let unlistenPullUpFailure: UnlistenFn | null = null;
 let unlistenBuiltinSessionSuccess: UnlistenFn | null = null;
 let unlistenBuiltinSessionFailure: UnlistenFn | null = null;
@@ -49,28 +41,12 @@ function releaseTauriEventListeners() {
   if (!tauriListenersInitialized || tauriListenersRegistering) return;
   if (tauriListenersRefCount === 0) {
     unlistenGetTokenSuccess?.();
-    unlistenFavoriteSuccess?.();
-    unlistenFavoriteFailed?.();
     unlistenGetTokenFailure?.();
-    unlistenUnfavoriteSuccess?.();
-    unlistenUnfavoriteFailed?.();
-    unlistenGetAssetDetailSuccess?.();
-    unlistenGetAssetDetailFailed?.();
-    unlistenRenameSuccess?.();
-    unlistenRenameError?.();
     unlistenPullUpFailure?.();
     unlistenBuiltinSessionSuccess?.();
     unlistenBuiltinSessionFailure?.();
     unlistenGetTokenFailure = null;
     unlistenGetTokenSuccess = null;
-    unlistenFavoriteSuccess = null;
-    unlistenUnfavoriteFailed = null;
-    unlistenUnfavoriteSuccess = null;
-    unlistenFavoriteFailed = null;
-    unlistenGetAssetDetailSuccess = null;
-    unlistenGetAssetDetailFailed = null;
-    unlistenRenameSuccess = null;
-    unlistenRenameError = null;
     unlistenPullUpFailure = null;
     unlistenBuiltinSessionSuccess = null;
     unlistenBuiltinSessionFailure = null;
@@ -88,7 +64,7 @@ export const useAssetAction = () => {
   const { fetchConnectMethods } = useConnectMethods();
   const settingManager = useSettingManager();
   // prettier-ignore
-  const { currentSite, currentConnectionInfoMap, currentRdpClientOption } = storeToRefs(userInfoStore);
+  const { currentSite, currentConnectionInfoMap, currentRdpClientOption, orgId } = storeToRefs(userInfoStore);
   const { charset, rdpResolution, backspaceAsCtrlH, keyboardLayout, rdpClientOption, rdpColorQuality, rdpSmartSize }
     = settingManager;
 
@@ -267,22 +243,13 @@ export const useAssetAction = () => {
     body: ConnectionBody
   ) => {
     const endpointProtocol = resolveWebEndpointProtocol(method);
-    const url = new URL(withWebSitePrefix("/api/v1/terminal/endpoints/smart/"), window.location.origin);
-
-    url.searchParams.set("protocol", endpointProtocol);
-    url.searchParams.set("asset_id", body.asset);
-    url.searchParams.set("token", token.id);
-
-    const response = await fetch(url.toString(), {
-      credentials: "include",
-      headers: getWebApiHeaders()
+    const endpoint = await getSmartEndpoint({
+      protocol: endpointProtocol,
+      assetId: body.asset,
+      token: token.id
     });
 
-    if (!response.ok) {
-      throw new Error(`fetch smart endpoint failed: ${response.status}`);
-    }
-
-    return getEndpointUrl(await response.json() as Record<string, any>, endpointProtocol);
+    return getEndpointUrl(endpoint, endpointProtocol);
   };
 
   const getWebConnectorPath = (
@@ -331,22 +298,7 @@ export const useAssetAction = () => {
       const tabId = meta?.tabId || session?.id;
 
       try {
-        const response = await fetch(withWebSitePrefix("/api/v1/authentication/connection-token/"), {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            ...getWebApiMutationHeaders(),
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(body)
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(errorText || `create connection token failed: ${response.status}`);
-        }
-
-        const token = await response.json() as TokenResponse;
+        const token = await createConnectionToken(body);
         const allMethods = await fetchConnectMethods();
         const method = (allMethods[body.protocol] || []).find((item) => item.value === body.connect_method);
         const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
@@ -452,14 +404,7 @@ export const useAssetAction = () => {
       void (async () => {
         try {
           const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
-          const response = await fetch(withWebSitePrefix("/api/v1/authentication/connection-token/"), {
-            method: "POST",
-            credentials: "include",
-            headers: { ...getWebApiMutationHeaders(), "Content-Type": "application/json" },
-            body: JSON.stringify(serverBody)
-          });
-          if (!response.ok) throw new Error(await response.text() || `create connection token failed: ${response.status}`);
-          const token = await response.json() as TokenResponse;
+          const token = await createConnectionToken(serverBody);
           const payload = {
             token,
             ...token,
@@ -730,12 +675,25 @@ export const useAssetAction = () => {
    */
   const handleAssetRename = (assetId: string, name: string) => {
     if (!currentSite.value) return;
-    if (!isTauriRuntime()) return;
 
-    useTauriCoreInvoke("rename", {
-      assetId,
-      name
-    });
+    void renameAsset(assetId, name, orgId.value)
+      .then((response) => {
+        const info = response || {};
+        useEventBus().emit("assetRenamed", {
+          assetId: String(info.asset || info.asset_id || info.id || assetId),
+          name: String(info.name || name)
+        });
+      })
+      .catch((error) => {
+        toast.add({
+          title: t("AssetCard.RenameFail"),
+          description: error?.message || t("Common.OperationFailed"),
+          color: "error",
+          icon: "line-md:close-circle",
+          progress: true,
+          duration: 4000
+        });
+      });
   };
 
   /**
@@ -743,11 +701,25 @@ export const useAssetAction = () => {
    * @param assetId
    */
   const handleAssetFavorite = (assetId: string) => {
-    if (!isTauriRuntime()) return;
-
-    useTauriCoreInvoke("set_favorite", {
-      assetId
-    });
+    void favoriteAsset(assetId)
+      .then(() => {
+        toast.add({
+          title: t("ContextMenu.FavoriteSuccess"),
+          color: "primary",
+          icon: "line-md:check-all",
+          progress: false,
+          duration: 1000
+        });
+      })
+      .catch(() => {
+        toast.add({
+          title: t("ContextMenu.FavoriteFailed"),
+          color: "error",
+          icon: "line-md:close-circle",
+          progress: true,
+          duration: 4000
+        });
+      });
   };
 
   /**
@@ -755,11 +727,25 @@ export const useAssetAction = () => {
    * @param assetId
    */
   const handleAssetUnfavorite = (assetId: string) => {
-    if (!isTauriRuntime()) return;
-
-    useTauriCoreInvoke("unfavorite", {
-      assetId
-    });
+    void unfavoriteAsset(assetId)
+      .then(() => {
+        toast.add({
+          title: t("ContextMenu.UnfavoriteSuccess"),
+          color: "primary",
+          icon: "line-md:check-all",
+          progress: false,
+          duration: 1000
+        });
+      })
+      .catch(() => {
+        toast.add({
+          title: t("ContextMenu.UnfavoriteFailed"),
+          color: "error",
+          icon: "line-md:close-circle",
+          progress: true,
+          duration: 4000
+        });
+      });
   };
 
   /**
@@ -769,32 +755,22 @@ export const useAssetAction = () => {
   const getAssetDetail = (assetId: string) => {
     if (!assetId) return;
 
-    if (!isTauriRuntime()) {
-      fetch(withWebSitePrefix(`/api/v1/perms/users/self/assets/${assetId}/`), {
-        credentials: "include",
-        headers: getWebApiHeaders()
-      })
-        .then(async (response) => {
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const assetDetail = await response.json() as any;
-          const permedAccounts = assetDetail.permed_accounts ?? [];
-          const permedProtocols = (assetDetail.permed_protocols ?? []).filter(
-            (protocol: PermedProtocol) => protocol?.name !== "winrm"
-          );
+    getAssetDetailRequest(assetId)
+      .then((assetDetail) => {
+        const permedAccounts = assetDetail.permed_accounts ?? [];
+        const permedProtocols = (assetDetail.permed_protocols ?? []).filter(
+          (protocol: PermedProtocol) => protocol?.name !== "winrm"
+        );
 
-          useEventBus().emit("assetDetailUpdated", {
-            assetId,
-            permedAccounts,
-            permedProtocols
-          });
-        })
-        .catch((error) => {
-          console.debug("get web asset detail failed", { assetId, error });
+        useEventBus().emit("assetDetailUpdated", {
+          assetId,
+          permedAccounts,
+          permedProtocols
         });
-      return;
-    }
-
-    useTauriCoreInvoke("get_asset_detail", { assetId });
+      })
+      .catch((error) => {
+        console.debug("get asset detail failed", { assetId, error });
+      });
   };
 
   /**
@@ -848,160 +824,6 @@ export const useAssetAction = () => {
         toast.add({
           title: t("ConnectError.ConnectFailed"),
           description: errorData.detail,
-          color: "error",
-          icon: "line-md:close-circle",
-          progress: true,
-          duration: 4000
-        });
-      });
-
-      unlistenFavoriteSuccess = await useTauriEventListen("set-favorite-success", (event) => {
-        interface eventPayload {
-          status: string
-        }
-
-        const payload = event.payload as eventPayload;
-        if (payload.status === "success") {
-          toast.add({
-            title: t("ContextMenu.FavoriteSuccess"),
-            color: "primary",
-            icon: "line-md:check-all",
-            progress: false,
-            duration: 1000
-          });
-        }
-      });
-
-      unlistenFavoriteFailed = await useTauriEventListen("set-favorite-failure", (event) => {
-        interface eventPayload {
-          status: string
-        }
-
-        const payload = event.payload as eventPayload;
-        if (payload.status === "failed") {
-          toast.add({
-            title: t("ContextMenu.FavoriteFailed"),
-            color: "error",
-            icon: "line-md:close-circle",
-            progress: true,
-            duration: 4000
-          });
-        }
-      });
-
-      unlistenUnfavoriteSuccess = await useTauriEventListen("unfavorite-success", (event) => {
-        interface eventPayload {
-          status: string
-        }
-
-        const payload = event.payload as eventPayload;
-
-        if (payload.status === "success") {
-          toast.add({
-            title: t("ContextMenu.UnfavoriteSuccess"),
-            color: "primary",
-            icon: "line-md:check-all",
-            progress: false,
-            duration: 1000
-          });
-        }
-      });
-
-      unlistenUnfavoriteFailed = await useTauriEventListen("unfavorite-failure", (event) => {
-        interface eventPayload {
-          status: string
-        }
-
-        const payload = event.payload as eventPayload;
-        if (payload.status === "failed") {
-          toast.add({
-            title: t("ContextMenu.UnfavoriteFailed"),
-            color: "error",
-            icon: "line-md:close-circle",
-            progress: true,
-            duration: 4000
-          });
-        }
-      });
-
-      unlistenGetAssetDetailSuccess = await useTauriEventListen("get-asset-detail-success", (event) => {
-        interface eventPayload {
-          status: string
-          data: string
-          asset_id: string
-        }
-
-        const payload = event.payload as eventPayload;
-
-        if (payload.status === "success") {
-          const assetDetail = JSON.parse(payload.data) as any;
-          const permedAccounts = assetDetail.permed_accounts ?? [];
-          const permedProtocols = assetDetail.permed_protocols ?? [];
-
-          // 不支持目录服务的 winrm 协议
-          const filteredPermedProtocols = permedProtocols.filter(
-            (protocol: PermedProtocol) => protocol.name !== "winrm"
-          );
-
-          useEventBus().emit("assetDetailUpdated", {
-            assetId: payload.asset_id,
-            permedAccounts,
-            permedProtocols: filteredPermedProtocols
-          });
-        }
-      });
-
-      // TODO 提示
-      unlistenGetAssetDetailFailed = await useTauriEventListen("get-asset-detail-failure", () => {
-        // interface eventPayload {
-        //   status: string
-        // }
-      });
-
-      unlistenRenameSuccess = await useTauriEventListen("rename-success", (event) => {
-        interface eventPayload {
-          success: boolean
-          status?: number
-          data?: string
-        }
-
-        const payload = event.payload as eventPayload;
-        let assetId = "";
-        let name = "";
-
-        try {
-          if (payload.data) {
-            const info = JSON.parse(payload.data) as any;
-            assetId = info?.asset || info?.asset_id || info?.id || "";
-            name = info?.name || "";
-          }
-        } catch {}
-
-        // 更新资产名称
-        if (assetId && name) {
-          try {
-            useEventBus().emit("assetRenamed", { assetId, name });
-          } catch {}
-        }
-      });
-
-      unlistenRenameError = await useTauriEventListen("rename-error", (event) => {
-        interface eventPayload {
-          success: boolean
-          status?: number
-          data?: string
-        }
-
-        const payload = event.payload as eventPayload;
-        let message = "";
-        try {
-          const err = payload.data ? JSON.parse(payload.data) : {};
-          message = err?.detail || (Array.isArray(err?.asset) ? err.asset[0] : "");
-        } catch {}
-
-        toast.add({
-          title: t("AssetCard.RenameFail"),
-          description: message || t("Common.OperationFailed"),
           color: "error",
           icon: "line-md:close-circle",
           progress: true,

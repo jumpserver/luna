@@ -524,7 +524,8 @@ watch(loggedIn, (value) => {
             icon="i-lucide-search"
             :aria-label="t('Operation.Search')"
             class="size-6 shrink-0 justify-center rounded-lg p-0"
-            :class="showAssetSearch ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
+            :class="showAssetSearch ? 'sidebar-icon-active' : 'sidebar-icon-muted'"
+            :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
             @click="() => { showAssetSearch = !showAssetSearch; }"
           />
         </UTooltip>
@@ -536,7 +537,7 @@ watch(loggedIn, (value) => {
           :ui="{
             content: 'w-36 p-1',
             item: 'mx-0 px-2 py-1 rounded-md text-[11px] leading-4 transition-colors duration-150',
-            itemLeadingIcon: 'size-3 shrink-0'
+            itemLeadingIcon: 'sidebar-icon-sm'
           }"
         >
           <UButton
@@ -545,7 +546,8 @@ watch(loggedIn, (value) => {
             size="sm"
             icon="i-lucide-ellipsis"
             :aria-label="t('Sidebar.ManageSections')"
-            class="size-6 shrink-0 justify-center rounded-lg p-0 text-gray-500 dark:text-gray-400"
+            class="size-6 shrink-0 justify-center rounded-lg p-0 sidebar-icon-muted"
+            :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
           />
         </UDropdownMenu>
       </div>
@@ -566,7 +568,7 @@ watch(loggedIn, (value) => {
         color="neutral"
         :ui="{
           link: 'px-2.5 my-1 rounded-lg menu-item flex items-center light:text-gray-800 dark:text-gray-200',
-          linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200',
+          linkLeadingIcon: 'sidebar-icon',
           label: 'light:text-gray-500 dark:text-gray-400 pb-0 text-[11px] font-medium uppercase tracking-[0.12em]'
         }"
       />
@@ -610,7 +612,9 @@ watch(loggedIn, (value) => {
             :placeholder="t('Operation.Search')"
             class="search-input w-full rounded-xl"
             :ui="{
-              base: 'h-7 rounded-xl bg-[var(--app-surface-panel-strong)] px-1 text-[12px] text-[var(--app-fg)] ring-1 ring-inset ring-[var(--app-border)] focus-visible:ring-[var(--app-focus-ring)] placeholder:text-[var(--app-muted)]'
+              base: 'h-7 rounded-xl bg-[var(--app-surface-panel-strong)] px-1 text-[12px] text-[var(--app-fg)] ring-1 ring-inset ring-[var(--app-border)] focus-visible:ring-[var(--app-focus-ring)] placeholder:text-[var(--app-muted)]',
+              leadingIcon: 'sidebar-icon',
+              trailingIcon: 'sidebar-icon'
             }"
           >
             <template v-if="sidebarSearch?.length" #trailing>
@@ -620,6 +624,7 @@ watch(loggedIn, (value) => {
                 size="xs"
                 icon="i-lucide-circle-x"
                 aria-label="Clear input"
+                :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
                 @click="() => { sidebarSearch = ''; }"
               />
             </template>

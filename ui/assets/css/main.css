@@ -166,6 +166,11 @@
   --sidebar-divider-dark: var(--app-border);
   --sidebar-surface-light: var(--app-sidebar-bg);
   --sidebar-surface-dark: var(--app-sidebar-bg);
+  --sidebar-icon-size: 0.875rem;
+  --sidebar-icon-size-sm: 0.75rem;
+  --sidebar-icon-color: color-mix(in srgb, var(--app-text-primary) 64%, transparent);
+  --sidebar-icon-muted: color-mix(in srgb, var(--app-text-muted) 82%, transparent);
+  --sidebar-icon-active: var(--app-text-primary);
 }
 
 
@@ -288,4 +293,33 @@ textarea::placeholder {
 option {
   background-color: var(--app-sidebar-bg);
   color: var(--app-fg);
+}
+
+.sidebar-icon {
+  width: var(--sidebar-icon-size);
+  height: var(--sidebar-icon-size);
+  flex-shrink: 0;
+  color: var(--sidebar-icon-color);
+}
+
+.sidebar-icon-sm {
+  width: var(--sidebar-icon-size-sm);
+  height: var(--sidebar-icon-size-sm);
+  flex-shrink: 0;
+  color: var(--sidebar-icon-muted);
+}
+
+.sidebar-icon-muted {
+  color: var(--sidebar-icon-muted);
+}
+
+.sidebar-icon-active {
+  color: var(--sidebar-icon-active);
+}
+
+.sidebar-icon-img {
+  width: var(--sidebar-icon-size);
+  height: var(--sidebar-icon-size);
+  flex-shrink: 0;
+  object-fit: contain;
 }

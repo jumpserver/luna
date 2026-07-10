@@ -45,6 +45,7 @@ const { t } = useI18n();
             size="xs"
             icon="i-lucide-x"
             :aria-label="t('Login.RemoveRecentSite')"
+            :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
             @click.stop="emit('remove', site)"
           />
         </div>

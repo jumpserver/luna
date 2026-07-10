@@ -50,12 +50,7 @@ export const useSnippets = () => {
     if (!loggedIn.value || loading.value) return;
     loading.value = true;
     try {
-      const response = await fetch(withWebSitePrefix("/api/v1/ops/adhocs/?only_mine=true"), {
-        credentials: "include",
-        headers: getWebApiHeaders()
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
+      const data = await getCommandSnippets();
       snippets.value = rawList(data)
         .map(normalizeSnippet)
         .filter((snippet): snippet is Snippet => !!snippet && snippet.module.value === "shell");

@@ -1,17 +1,13 @@
 pub(crate) mod api_request;
 pub(crate) mod api_session;
-pub(crate) mod asset_actions;
 pub(crate) mod auth_flow;
 pub(crate) mod auth_logout;
 pub(crate) mod client_launcher;
 pub(crate) mod config_update;
-pub(crate) mod connect_methods;
 pub(crate) mod connect_token;
 pub(crate) mod dev_http_server;
 pub(crate) mod get_config;
-pub(crate) mod get_setting;
 pub(crate) mod get_version;
-pub(crate) mod smart_endpoint;
 pub(crate) mod system_fonts;
 pub(crate) mod video_player;
 pub(crate) mod window_control;

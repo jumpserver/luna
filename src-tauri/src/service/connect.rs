@@ -25,13 +25,6 @@ impl ConnectService {
         Self { api }
     }
 
-    /// 获取当前组织可用的连接方式
-    pub async fn get_connect_methods(&self) -> ApiResponse {
-        let url = self.api.endpoint(endpoint::terminal::CONNECT_METHODS);
-
-        self.api.get_with_response(&url).await
-    }
-
     /// 创建资产连接 Token
     pub async fn get_connect_token(&self, body: &TokenRequestBody) -> ApiResponse {
         let url = self

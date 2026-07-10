@@ -41,38 +41,19 @@ export function useBaseWorkspaceSession(
       return resolveDevHost("koko") || window.location.origin;
     }
 
-    if (isTauriRuntime()) {
-      const endpoint = await useTauriCoreInvoke<{ host?: string, port?: number, https_port?: number }>("get_smart_endpoint", {
-        query: {
-          protocol: resolvedProtocol.value,
-          assetId: tab.value.assetId,
-          token: tokenId.value
-        }
-      });
-
-      const host = endpoint?.host;
-      if (!host) throw new Error("smart endpoint missing host");
-
-      const port = endpoint.https_port || endpoint.port;
-      const scheme = endpoint.https_port ? "https" : "http";
-      return port ? `${scheme}://${host}:${port}` : `${scheme}://${host}`;
-    }
-
-    const url = new URL("/api/v1/terminal/endpoints/smart/", window.location.origin);
-    url.searchParams.set("protocol", resolvedProtocol.value);
-    url.searchParams.set("asset_id", tab.value.assetId);
-    url.searchParams.set("token", tokenId.value);
-
-    const response = await fetch(url.toString(), { credentials: "include" });
-    if (!response.ok) throw new Error(`endpoint request failed (${response.status})`);
-
-    const data = await response.json() as { value?: string, host?: string, https_port?: number, port?: number };
-    const host = data.host;
-    const port = data.https_port || data.port;
-    const scheme = data.https_port ? "https" : "http";
-    const resolved = data.value || (host ? (port ? `${scheme}://${host}:${port}` : `${scheme}://${host}`) : "");
+    const endpoint = await getSmartEndpoint({
+      protocol: resolvedProtocol.value,
+      assetId: tab.value.assetId,
+      token: tokenId.value
+    });
+    const host = endpoint.host;
+    const port = endpoint.https_port || endpoint.port;
+    const scheme = endpoint.https_port ? "https" : "http";
+    const resolved = endpoint.value || (host ? (port ? `${scheme}://${host}:${port}` : `${scheme}://${host}`) : "");
 
     if (!resolved) return window.location.origin;
+
+    if (isTauriRuntime()) return resolved;
 
     const resolvedUrl = new URL(resolved);
     const isLoopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(resolvedUrl.hostname);

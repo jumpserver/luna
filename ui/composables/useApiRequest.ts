@@ -1,4 +1,4 @@
-import type { AssetTreeKind } from "~/types";
+import type { AssetTreeKind, TokenResponse } from "~/types";
 
 export interface ApiRequest {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
@@ -19,6 +19,12 @@ export interface AssetTreeParams {
 export interface FavoriteFolderPayload {
   name: string
   parent?: string | null
+}
+
+export interface SmartEndpointParams {
+  protocol: string
+  assetId?: string
+  token?: string
 }
 
 const buildWebQuery = (request: ApiRequest) => {
@@ -114,5 +120,83 @@ export function favoriteAssetToFolder(assetId: string, folderId: string): Promis
       asset: assetId,
       folder: folderId
     }
+  });
+}
+
+export function getConnectMethods(): Promise<Record<string, unknown>> {
+  return apiRequest<Record<string, unknown>>({
+    method: "GET",
+    path: "/api/v1/terminal/components/connect-methods/"
+  });
+}
+
+export function getSmartEndpoint(params: SmartEndpointParams): Promise<{ value?: string, host?: string, port?: number, https_port?: number }> {
+  return apiRequest({
+    method: "GET",
+    path: "/api/v1/terminal/endpoints/smart/",
+    query: {
+      protocol: params.protocol,
+      asset_id: params.assetId,
+      token: params.token
+    }
+  });
+}
+
+export function createConnectionToken(body: unknown): Promise<TokenResponse> {
+  return apiRequest<TokenResponse>({
+    method: "POST",
+    path: "/api/v1/authentication/connection-token/",
+    body
+  });
+}
+
+export function exchangeConnectionToken(tokenId: string): Promise<TokenResponse> {
+  return apiRequest<TokenResponse>({
+    method: "POST",
+    path: "/api/v1/authentication/connection-token/exchange/",
+    body: { id: tokenId }
+  });
+}
+
+export function getCommandSnippets(): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "GET",
+    path: "/api/v1/ops/adhocs/",
+    query: { only_mine: true }
+  });
+}
+
+export function getAssetDetailRequest(assetId: string): Promise<Record<string, any>> {
+  return apiRequest<Record<string, any>>({
+    method: "GET",
+    path: `/api/v1/perms/users/self/assets/${encodeURIComponent(assetId)}/`
+  });
+}
+
+export function renameAsset(assetId: string, name: string, orgId?: string): Promise<Record<string, any> | null> {
+  return apiRequest<Record<string, any> | null>({
+    method: "POST",
+    path: "/api/v1/assets/my-asset/",
+    body: {
+      asset: assetId,
+      name,
+      oid: orgId || undefined
+    }
+  });
+}
+
+export function favoriteAsset(assetId: string): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "POST",
+    path: "/api/v1/assets/favorite-assets/",
+    body: { asset: assetId }
+  });
+}
+
+export function unfavoriteAsset(assetId: string): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "DELETE",
+    path: "/api/v1/assets/favorite-assets/",
+    query: { asset: assetId }
   });
 }

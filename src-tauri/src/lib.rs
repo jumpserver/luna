@@ -13,23 +13,16 @@ use crate::setup::setup_tray;
 use crate::api::session::ApiSessionStore;
 use crate::commands::api_request::api_request;
 use crate::commands::api_session::{set_api_org, set_api_session};
-use crate::commands::asset_actions::{
-    get_asset_detail, get_asset_tree, get_assets, get_favorite_asset_list, rename, set_favorite,
-    unfavorite,
-};
 use crate::commands::auth_flow::{auth_cancel, auth_login, bootstrap_auth_session};
 use crate::commands::auth_logout::logout;
 use crate::commands::client_launcher::pull_up;
 use crate::commands::config_update::update_config_selection;
-use crate::commands::connect_methods::get_connect_methods;
 use crate::commands::connect_token::{
     create_koko_connect_ticket, get_builtin_connect_session, get_connect_token,
 };
 use crate::commands::dev_http_server::init_http_callback_server;
 use crate::commands::get_config::get_config;
-use crate::commands::get_setting::get_setting;
 use crate::commands::get_version::get_version_message;
-use crate::commands::smart_endpoint::get_smart_endpoint;
 use crate::commands::system_fonts::list_system_fonts;
 use crate::commands::video_player::{
     delete_video_player_file, read_video_player_text_stream, write_video_player_gzip_file,
@@ -195,32 +188,22 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             logout,
             api_request,
-            rename,
             pull_up,
-            unfavorite,
             auth_login,
             auth_cancel,
             bootstrap_auth_session,
-            get_assets,
-            get_asset_tree,
-            get_favorite_asset_list,
             get_config,
-            get_setting,
-            set_favorite,
             close_window,
             minimize_window,
             open_settings_window,
-            get_asset_detail,
             get_connect_token,
             get_builtin_connect_session,
             create_koko_connect_ticket,
-            get_smart_endpoint,
             get_version_message,
             list_system_fonts,
             toggle_maximize_window,
             update_config_selection,
             init_http_callback_server,
-            get_connect_methods,
             set_api_session,
             set_api_org,
             write_video_player_gzip_file,

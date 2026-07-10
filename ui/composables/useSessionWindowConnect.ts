@@ -56,58 +56,7 @@ function mapAssetDetail(assetId: string, detail: Record<string, any>): AssetItem
 }
 
 async function fetchSessionAsset(assetId: string): Promise<AssetItem> {
-  if (isTauriRuntime()) {
-    return await new Promise((resolve, reject) => {
-      let settled = false;
-      let unlistenSuccess: (() => void) | undefined;
-      let unlistenFailure: (() => void) | undefined;
-
-      const finish = (handler: () => void) => {
-        if (settled) return;
-        settled = true;
-        unlistenSuccess?.();
-        unlistenFailure?.();
-        handler();
-      };
-
-      void Promise.all([
-        useTauriEventListen("get-asset-detail-success", (event) => {
-          const payload = event.payload as { asset_id?: string, data?: string };
-          if (payload.asset_id !== assetId || !payload.data) return;
-
-          finish(() => {
-            try {
-              resolve(mapAssetDetail(assetId, JSON.parse(payload.data!)));
-            } catch (cause) {
-              reject(cause instanceof Error ? cause : new Error(String(cause)));
-            }
-          });
-        }).then((unlisten) => {
-          unlistenSuccess = unlisten;
-        }),
-        useTauriEventListen("get-asset-detail-failure", () => {
-          finish(() => reject(new Error("failed to load asset detail")));
-        }).then((unlisten) => {
-          unlistenFailure = unlisten;
-        })
-      ]).then(() => {
-        void useTauriCoreInvoke("get_asset_detail", { assetId });
-      }).catch((cause) => {
-        finish(() => reject(cause instanceof Error ? cause : new Error(String(cause))));
-      });
-    });
-  }
-
-  const response = await fetch(withWebSitePrefix(`/api/v1/perms/users/self/assets/${assetId}/`), {
-    credentials: "include",
-    headers: getWebApiHeaders()
-  });
-
-  if (!response.ok) {
-    throw new Error(`failed to load asset detail: ${response.status}`);
-  }
-
-  return mapAssetDetail(assetId, await response.json());
+  return mapAssetDetail(assetId, await getAssetDetailRequest(assetId));
 }
 
 export function useSessionWindowConnect() {

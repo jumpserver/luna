@@ -10,14 +10,14 @@ const showTools = computed(() => isTauriRuntime());
 const workspaceModes = computed(() => {
   const modes = [{
     key: "assets",
-    icon: "i-lucide-server",
+    icon: "i-lucide-house",
     label: "我的资产"
   }] as Array<{ key: "assets" | "tools", icon: string, label: string }>;
 
   if (showTools.value) {
     modes.push({
       key: "tools",
-      icon: "i-lucide-menu",
+      icon: "i-lucide-layout-grid",
       label: "工具集"
     });
   }
@@ -48,15 +48,15 @@ const toggleSidebar = () => {
 
 <template>
   <div
-    class="flex h-full items-center gap-2"
-    :class="isMacClient ? 'pl-[92px] pr-3' : 'px-3'"
+    class="flex h-full items-center gap-1"
+    :class="isMacClient ? 'pl-[76px] pr-2' : 'px-3'"
   >
     <div v-if="!isMacClient" class="mr-1.5 flex items-center">
       <img src="/logo.png" alt="JumpServer" class="h-5 w-5 rounded">
     </div>
 
     <template v-if="!collapse">
-      <div class="flex items-center bg-transparent">
+      <div class="flex items-center gap-1 bg-transparent">
         <UButton
           v-for="mode in workspaceModes"
           :key="mode.key"
@@ -69,24 +69,22 @@ const toggleSidebar = () => {
           class="size-6 justify-center rounded-none p-0"
           :class="
             activeWorkspaceMode === mode.key
-              ? 'text-gray-900 dark:text-white'
-              : 'text-gray-500 dark:text-gray-400'
+              ? 'sidebar-icon-active'
+              : 'sidebar-icon-muted'
           "
-          :ui="{ leadingIcon: 'm-0 shrink-0 size-3.5' }"
+          :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
           @click="setMode(mode.key)"
         />
-      </div>
 
-      <div class="flex items-center bg-transparent">
         <UButton
           color="neutral"
           variant="ghost"
           size="sm"
-          class="size-6 justify-center rounded-none p-0 text-gray-500 dark:text-gray-400"
+          class="size-6 justify-center rounded-none p-0 sidebar-icon-muted"
           icon="i-lucide-panel-left"
           title="折叠侧边栏"
           aria-label="折叠侧边栏"
-          :ui="{ leadingIcon: 'm-0 shrink-0' }"
+          :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
           @click="toggleSidebar"
         />
       </div>
@@ -97,11 +95,11 @@ const toggleSidebar = () => {
       color="neutral"
       variant="ghost"
       size="sm"
-      class="size-6 justify-center rounded-none bg-transparent p-0 text-gray-500 dark:text-gray-400"
+      class="size-6 justify-center rounded-none bg-transparent p-0 sidebar-icon-muted"
       icon="i-lucide-panel-left"
       title="展开侧边栏"
       aria-label="展开侧边栏"
-      :ui="{ leadingIcon: 'm-0 shrink-0' }"
+      :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
       @click="toggleSidebar"
     />
   </div>

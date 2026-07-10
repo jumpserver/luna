@@ -757,7 +757,7 @@ onBeforeUnmount(() => {
       }"
     >
       <div class="flex items-center gap-2 min-w-0">
-        <UIcon name="i-lucide-circle-user-round" class="size-5 shrink-0 text-gray-500 dark:text-gray-400" />
+        <UIcon name="i-lucide-circle-user-round" class="sidebar-icon" />
         <UTooltip v-if="!props.collapse" arrow :text="currentUser?.name">
           <span class="block md:max-w-[150px] truncate leading-tight text-sm font-medium cursor-pointer">
             {{ currentUser?.name }}
@@ -772,6 +772,7 @@ onBeforeUnmount(() => {
     :variant="isTopbar ? 'ghost' : 'subtle'"
     icon="i-lucide-log-in"
     :class="isTopbar ? '' : 'w-full mb-2'"
+    :ui="isTopbar ? undefined : { leadingIcon: 'sidebar-icon' }"
     @click="openLoginPage"
   >
     <span v-if="!props.collapse && !isTopbar">
@@ -792,7 +793,7 @@ onBeforeUnmount(() => {
         ref="inputRef"
         v-model="inputSite"
         :color="hasValidationError ? 'error' : 'primary'"
-        :ui="{ base: 'peer' }"
+        :ui="{ base: 'peer', leadingIcon: 'sidebar-icon', trailingIcon: 'sidebar-icon' }"
         placeholder=" "
         autocapitalize="none"
         autocorrect="off"
@@ -813,6 +814,7 @@ onBeforeUnmount(() => {
             size="sm"
             icon="i-lucide-circle-x"
             aria-label="Clear input"
+            :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
             @click="handleClearInput"
           />
         </template>

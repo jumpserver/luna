@@ -23,8 +23,8 @@ const toggle = () => {
       :style="{ paddingLeft: `${12 + (level || 0) * 14}px` }"
     >
       <button type="button" class="flex min-w-0 flex-1 items-center gap-1 text-left" @click="toggle">
-        <UIcon name="i-lucide-chevron-right" class="size-2.5 shrink-0 text-gray-400 transition-transform" :class="open ? 'rotate-90' : ''" />
-        <UIcon :name="open ? 'i-tabler-folder-open' : 'i-tabler-folder'" class="size-3.5 shrink-0 text-gray-500" />
+        <UIcon name="i-lucide-chevron-right" class="sidebar-icon-sm transition-transform" :class="open ? 'rotate-90' : ''" />
+        <UIcon :name="open ? 'i-tabler-folder-open' : 'i-tabler-folder'" class="sidebar-icon" />
         <span class="truncate font-medium">{{ folder.name }}</span>
       </button>
       <UTooltip :text="$t('Favorite.CreateSubfolder')" :delay-duration="150">
@@ -34,6 +34,7 @@ const toggle = () => {
           size="xs"
           icon="i-lucide-folder-plus"
           class="size-5 justify-center p-0 opacity-0 group-hover/folder:opacity-100"
+          :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
           @click.stop="emit('create', folder.id)"
         />
       </UTooltip>
@@ -57,7 +58,7 @@ const toggle = () => {
         @dblclick="emit('select', asset)"
         @contextmenu.prevent="emit('contextmenu', asset, $event)"
       >
-        <UIcon name="i-lucide-terminal" class="size-3.5 shrink-0 text-gray-500" />
+        <UIcon name="i-lucide-terminal" class="sidebar-icon" />
         <span class="truncate font-ui-mono">{{ asset.name }}</span>
       </button>
     </div>

@@ -138,64 +138,12 @@ export const useConnectMethods = () => {
       return running;
     }
 
-    if (!isTauriRuntime()) {
-      const response = await fetch(withWebSitePrefix("/api/v1/terminal/components/connect-methods/"), {
-        credentials: "include",
-        headers: getWebApiHeaders()
+    const promise = getConnectMethods()
+      .then((data) => {
+        const methods = normalizeWebConnectMethods(data as ConnectMethodsResponse);
+        connectMethodsCache.set(key, methods);
+        return methods;
       });
-
-      if (!response.ok) {
-        throw new Error(`fetch connect methods failed: ${response.status}`);
-      }
-
-      const methods = normalizeWebConnectMethods(await response.json() as ConnectMethodsResponse);
-      connectMethodsCache.set(key, methods);
-      return methods;
-    }
-
-    const promise = new Promise<ConnectMethodsResponse>((resolve, reject) => {
-      let unlistenSuccess: (() => void) | undefined;
-      let unlistenFailure: (() => void) | undefined;
-      const cleanup = () => {
-        unlistenSuccess?.();
-        unlistenFailure?.();
-      };
-
-      interface EventPayload {
-        status: number
-        data: string
-      }
-
-      Promise.all([
-        useTauriEventListen("get-connect-methods-success", (event) => {
-          const payload = event.payload as EventPayload;
-          if (payload.status === 200) {
-            try {
-              const methods = normalizeWebConnectMethods(JSON.parse(payload.data) as ConnectMethodsResponse);
-              connectMethodsCache.set(key, methods);
-              resolve(methods);
-            } catch (error) {
-              reject(error);
-            }
-          }
-          cleanup();
-        }),
-        useTauriEventListen("get-connect-methods-failure", () => {
-          reject(new Error("Failed to fetch connect methods"));
-          cleanup();
-        })
-      ])
-        .then(([success, failure]) => {
-          unlistenSuccess = success;
-          unlistenFailure = failure;
-
-          useTauriCoreInvoke("get_connect_methods", {}).catch((error) => {
-            cleanup();
-            reject(error);
-          });
-        })
-        .catch(reject);
-    });
 
     fetchPromise.set(key, promise);
 

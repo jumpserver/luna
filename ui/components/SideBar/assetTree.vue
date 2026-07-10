@@ -229,12 +229,12 @@ defineExpose({ refresh, loading });
 
     <template v-else-if="search.trim()">
       <div class="flex h-8 shrink-0 items-center border-b border-gray-200 px-3 text-xs font-medium dark:border-white/10">
-        <UIcon name="i-lucide-search" class="mr-1.5 size-3.5 text-gray-400" />
+        <UIcon name="i-lucide-search" class="mr-1.5 sidebar-icon" />
         <span class="truncate">{{ t("Operation.Search") }}</span>
       </div>
       <div class="min-h-0 flex-1 overflow-y-auto py-1">
         <div v-if="searchLoading" class="grid h-20 place-items-center">
-          <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-gray-400" />
+          <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
         </div>
         <UEmpty v-else-if="searchNodes.length === 0" icon="mingcute:inbox-line" size="sm" variant="naked" :title="t('Common.NoData')" />
         <SideBarAssetTreeNode
@@ -261,7 +261,7 @@ defineExpose({ refresh, loading });
           >
             <UIcon
               name="i-lucide-chevron-right"
-              class="size-3.5 shrink-0 transition-transform duration-150"
+              class="sidebar-icon transition-transform duration-150"
               :class="open === false ? '' : 'rotate-90'"
             />
             <span class="min-w-0 flex-1 truncate">{{ activeTree.label }}</span>
@@ -278,6 +278,7 @@ defineExpose({ refresh, loading });
               icon="i-lucide-play"
               :disabled="checkedCount === 0"
               class="h-6 rounded-sm px-2"
+              :ui="{ leadingIcon: 'sidebar-icon' }"
               :label="t('Tree.OpenSelected')"
               @click="openCheckedAssets"
             />
@@ -287,6 +288,7 @@ defineExpose({ refresh, loading });
               size="xs"
               icon="i-lucide-x"
               class="size-6 justify-center rounded-sm p-0"
+              :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
               :aria-label="t('Common.Cancel')"
               @click="closeBatchMode"
             />
@@ -299,6 +301,7 @@ defineExpose({ refresh, loading });
                 size="xs"
                 :icon="activeTreeKind === 'authorization' ? 'i-lucide-list-tree' : 'i-lucide-shield-check'"
                 class="size-6 justify-center rounded-sm p-0"
+                :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
                 :aria-label="treeSwitchLabel"
                 @click="switchTreeKind"
               />
@@ -310,6 +313,7 @@ defineExpose({ refresh, loading });
               icon="i-lucide-refresh-cw"
               :loading="loading"
               class="size-6 justify-center rounded-sm p-0"
+              :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
               :aria-label="t('ToolTips.Refresh')"
               @click="loadRoot(activeTreeKind)"
             />
@@ -324,6 +328,7 @@ defineExpose({ refresh, loading });
                 size="xs"
                 icon="i-lucide-ellipsis"
                 class="size-6 justify-center rounded-sm p-0"
+                :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
                 :aria-label="t('Tree.OpenMultiple')"
               />
             </UDropdownMenu>
@@ -332,7 +337,7 @@ defineExpose({ refresh, loading });
 
         <div v-if="open !== false" class="min-h-0 flex-1 overflow-y-auto py-1">
           <div v-if="loading && activeTree.nodes.length === 0" class="grid h-20 place-items-center">
-            <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-gray-400" />
+            <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
           </div>
           <UEmpty v-else-if="activeTree.nodes.length === 0" icon="mingcute:inbox-line" size="sm" variant="naked" :title="t('Common.NoData')" />
           <SideBarAssetTreeNode
