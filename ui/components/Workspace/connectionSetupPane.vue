@@ -348,16 +348,13 @@ onMounted(loadAsset);
           >
             <div class="min-w-0">
               <div
-                class="flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-[var(--app-muted)]"
+                class="flex min-w-0 items-center gap-2 text-xs font-medium tracking-[0.12em] text-[var(--app-muted)]"
               >
                 <UIcon name="i-lucide-plug" class="size-4 shrink-0" />
                 <span class="shrink-0">{{ t("ContextMenu.Connect") }}</span>
-                <span class="truncate font-ui-mono">{{ props.tab.address }}</span>
-                <span
-                  v-if="draftProtocol"
-                  class="shrink-0 rounded bg-[var(--app-hover-soft)] px-1.5 py-0.5 text-[10px] uppercase"
-                >
-                  {{ draftProtocol }}
+                <span class="truncate font-ui-mono">- {{ props.tab.address }}</span>
+                <span class="shrink-0 rounded bg-[var(--app-hover-soft)] px-1.5 py-0.5 text-[10px] uppercase">
+                  {{ title }}
                 </span>
               </div>
             </div>
