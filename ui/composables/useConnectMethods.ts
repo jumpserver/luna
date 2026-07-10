@@ -1,7 +1,4 @@
-import {
-  COMPONENT_WORKSPACE_CAPABILITIES,
-  K8S_PROTOCOLS
-} from "~/shared/connectors/capabilities";
+import { COMPONENT_WORKSPACE_CAPABILITIES } from "~/shared/connectors/capabilities";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export {
@@ -33,6 +30,10 @@ interface ConnectMethodsResponse {
 const connectMethodsCache = new Map<string, ConnectMethodsResponse>();
 const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 
+const isWebIframeMethod = (method: ConnectMethod) => {
+  return method.type === "web" || ["koko", "lion", "chen", "tinker", "default"].includes(method.component);
+};
+
 const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMethodsResponse => {
   const normalized: ConnectMethodsResponse = { ...methods };
 
@@ -40,20 +41,14 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
     const value = normalized[key];
     if (!Array.isArray(value)) return;
 
-    // 原远端 iframe 方式统一命名为 Web iframe
-    const renamed = value.map((method) => {
-      const isWebSurface = method.type === "web" || ["koko", "lion", "chen", "tinker", "default"].includes(method.component);
-      return isWebSurface
-        ? { ...method, label: "Web iframe" }
-        : method;
-    });
+    const normalizedMethods = [...value];
 
-    const kokoWebIndex = renamed.findIndex(
+    const kokoWebIndex = normalizedMethods.findIndex(
       (method) => method.type === "web" && ["koko", "default"].includes(method.component)
     );
 
     if (kokoWebIndex !== -1) {
-      const origin = renamed[kokoWebIndex]!;
+      const origin = normalizedMethods[kokoWebIndex]!;
       const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES
         .filter((item) => item.component === "koko" && item.protocols.includes(key))
         .flatMap((item) =>
@@ -66,17 +61,16 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
         );
 
       if (declaredMethods.length) {
-        const replaceOrigin = key === "sftp" || K8S_PROTOCOLS.has(key);
-        renamed.splice(kokoWebIndex, replaceOrigin ? 1 : 0, ...declaredMethods);
+        normalizedMethods.splice(kokoWebIndex, 0, ...declaredMethods);
       }
     }
 
-    const lionWebIndex = renamed.findIndex(
+    const lionWebIndex = normalizedMethods.findIndex(
       (method) => method.type === "web" && ["lion", "tinker"].includes(method.component)
     );
 
     if (lionWebIndex !== -1) {
-      const origin = renamed[lionWebIndex]!;
+      const origin = normalizedMethods[lionWebIndex]!;
       const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES
         .filter((item) => item.component === "lion" && item.protocols.includes(key))
         .flatMap((item) =>
@@ -89,16 +83,16 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
         );
 
       if (declaredMethods.length) {
-        renamed.splice(lionWebIndex, 1, ...declaredMethods);
+        normalizedMethods.splice(lionWebIndex, 0, ...declaredMethods);
       }
     }
 
-    const chenWebIndex = renamed.findIndex(
+    const chenWebIndex = normalizedMethods.findIndex(
       (method) => method.type === "web" && method.component === "chen"
     );
 
     if (chenWebIndex !== -1) {
-      const origin = renamed[chenWebIndex]!;
+      const origin = normalizedMethods[chenWebIndex]!;
       const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES
         .filter((item) => item.component === "chen" && item.protocols.includes(key))
         .flatMap((item) =>
@@ -111,11 +105,11 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
         );
 
       if (declaredMethods.length) {
-        renamed.splice(chenWebIndex, 1, ...declaredMethods);
+        normalizedMethods.splice(chenWebIndex, 0, ...declaredMethods);
       }
     }
 
-    normalized[key] = renamed;
+    normalized[key] = normalizedMethods.filter((method) => method.origin_value || !isWebIframeMethod(method));
   });
 
   return normalized;
@@ -158,7 +152,7 @@ export const useConnectMethods = () => {
   const getMethodsForProtocol = async (protocol: string): Promise<ConnectMethod[]> => {
     const allMethods = await fetchConnectMethods();
     const protocolMethods = allMethods[protocol] || [];
-    // 与 Luna 对齐：连接方法以服务端返回为准，仅过滤 disabled。
+    // Web iframe is used only as the backend method source for injected workspace methods.
     return protocolMethods.filter((method) => !method.disabled);
   };
 
