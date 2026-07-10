@@ -37,6 +37,7 @@ export interface ChenTabDefinition {
   icon?: string
   kind: "query" | "data-view" | "console"
   nodeKey: string
+  connectionError?: string
 }
 
 export interface ChenDataViewMeta {
@@ -63,4 +64,65 @@ export interface ChenConsoleState {
   paged?: boolean
   pinned?: boolean
   [key: string]: any
+}
+
+export interface ChenQueryResultTab {
+  id: string
+  title: string
+  meta: ChenDataViewMeta
+  data: ChenDataViewDataset | null
+}
+
+export interface ChenConsoleHistoryEntry {
+  id: string
+  sql: string
+}
+
+export interface ChenQueryConsoleTab extends ChenTabDefinition {
+  kind: "query"
+  statement: string
+  state: ChenConsoleState
+  logs: string[]
+  resultTabs: ChenQueryResultTab[]
+  activeResultTabId: string
+  socket: WebSocket | null
+}
+
+export interface ChenPromptConsoleTab extends ChenTabDefinition {
+  kind: "console"
+  pendingSql: string
+  state: ChenConsoleState
+  logs: string[]
+  historyEntries: ChenConsoleHistoryEntry[]
+  resultTabs: ChenQueryResultTab[]
+  activeResultTabId: string
+  socket: WebSocket | null
+}
+
+export type ChenQueryLikeWorkspaceTab = ChenQueryConsoleTab | ChenPromptConsoleTab;
+
+export type ChenDataViewPropertyTab
+  = | "basic"
+    | "columns"
+    | "indexes"
+    | "foreignKeys"
+    | "constraints"
+    | "ddl";
+
+export interface ChenDataViewConsoleTab extends ChenTabDefinition {
+  kind: "data-view"
+  meta: ChenDataViewMeta | null
+  data: ChenDataViewDataset | null
+  state: ChenConsoleState
+  logs: string[]
+  activePanel: "data" | "properties"
+  activePropertyTab: ChenDataViewPropertyTab
+  socket: WebSocket | null
+}
+
+export type ChenWorkspaceTab = ChenQueryLikeWorkspaceTab | ChenDataViewConsoleTab;
+
+export interface ChenSocketAction {
+  type: string
+  data?: any
 }
