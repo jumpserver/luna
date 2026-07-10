@@ -1,6 +1,12 @@
 export const isTauriRuntime = () => {
   if (!import.meta.client) return false;
-  return !!(globalThis as any).__TAURI_INTERNALS__;
+  const runtime = globalThis as any;
+
+  return Boolean(
+    runtime.__TAURI_INTERNALS__
+    || runtime.__TAURI__
+    || runtime.__TAURI_IPC__
+  );
 };
 
 export const getCookieValue = (name: string) => {

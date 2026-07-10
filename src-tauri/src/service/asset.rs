@@ -102,13 +102,6 @@ struct FavoriteAssetBody {
     folder: Option<String>,
 }
 
-#[derive(Serialize)]
-struct FavoriteFolderBody {
-    name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    parent: Option<String>,
-}
-
 pub struct AssetService {
     api: ApiRequestClient,
 }
@@ -212,29 +205,6 @@ impl AssetService {
             folder: None,
         };
 
-        self.api.post_json_with_response(&url, &body).await
-    }
-
-    pub async fn get_favorite_folders(&self) -> ApiResponse {
-        let url = self.api.endpoint(endpoint::assets::FAVORITE_FOLDERS);
-        self.api.get_with_response(&url).await
-    }
-
-    pub async fn create_favorite_folder(&self, name: &str, parent: Option<String>) -> ApiResponse {
-        let url = self.api.endpoint(endpoint::assets::FAVORITE_FOLDERS);
-        let body = FavoriteFolderBody {
-            name: name.to_string(),
-            parent,
-        };
-        self.api.post_json_with_response(&url, &body).await
-    }
-
-    pub async fn favorite_to_folder(&self, asset_id: &str, folder_id: &str) -> ApiResponse {
-        let url = self.api.endpoint(endpoint::assets::FAVORITE_ASSETS);
-        let body = FavoriteAssetBody {
-            asset: asset_id.to_string(),
-            folder: Some(folder_id.to_string()),
-        };
         self.api.post_json_with_response(&url, &body).await
     }
 

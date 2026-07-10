@@ -19,6 +19,13 @@ const pageHeader = computed(() => {
     };
   }
 
+  if (path.includes("/tools")) {
+    return {
+      icon: "lucide:menu",
+      title: t("Menu.Tool")
+    };
+  }
+
   if (path.includes("/transcode")) {
     return {
       icon: "lucide:repeat-2",

@@ -12,7 +12,7 @@ onMounted(async () => {
     const parsed = decodeLegacyWindowPayload(payload);
     await router.replace(buildSessionPath(parsed.asset, parsed.connectionInfo));
   } catch {
-    await router.replace("/linux");
+    await router.replace("/");
   }
 });
 </script>

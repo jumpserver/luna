@@ -71,7 +71,7 @@ watch(
   () => route.path,
   (path) => {
     const normalizedPath = path.toLowerCase();
-    const isToolRoute = normalizedPath.includes("/videoplayer") || normalizedPath.includes("/transcode");
+    const isToolRoute = normalizedPath.includes("/tools") || normalizedPath.includes("/videoplayer") || normalizedPath.includes("/transcode");
 
     setWorkspaceMode(isTauriRuntime() && isToolRoute ? "tools" : "assets");
   },

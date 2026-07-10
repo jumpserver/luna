@@ -2,7 +2,6 @@ pub(crate) mod assets {
     pub(crate) const MY_ASSET: &str = "/api/v1/assets/my-asset/";
     pub(crate) const USER_ASSETS: &str = "/api/v1/perms/users/self/assets/";
     pub(crate) const FAVORITE_ASSETS: &str = "/api/v1/assets/favorite-assets/";
-    pub(crate) const FAVORITE_FOLDERS: &str = "/api/v1/assets/favorite-folders/";
     pub(crate) const FAVORITE_NODE_ASSETS: &str = "/api/v1/perms/users/self/nodes/favorite/assets/";
     pub(crate) const AUTHORIZATION_TREE: &str =
         "/api/v1/perms/users/self/nodes/children-with-assets/tree/";

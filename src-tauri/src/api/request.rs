@@ -9,6 +9,7 @@ use crate::{
 use log::info;
 use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder, Response};
 use serde::Serialize;
+use serde_json::Value;
 use std::time::Duration;
 use url::Url;
 
@@ -94,6 +95,30 @@ impl ApiRequestClient {
         info!("DELETE {}", url);
         self.send_with_response(Method::DELETE, url, |request| request)
             .await
+    }
+
+    /// 发送通用 JSON API 请求并转换为统一 ApiResponse
+    pub async fn request_json_with_response(
+        &self,
+        method: Method,
+        url: &str,
+        query: Option<&Value>,
+        body: Option<&Value>,
+    ) -> ApiResponse {
+        info!("{} {}", method, url);
+
+        self.send_with_response(method, url, |mut request| {
+            if let Some(query) = query {
+                request = request.query(query);
+            }
+
+            if let Some(body) = body {
+                request = request.json(body);
+            }
+
+            request
+        })
+        .await
     }
 
     /// 构建并执行底层 reqwest 请求

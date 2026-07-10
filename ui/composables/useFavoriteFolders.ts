@@ -73,51 +73,23 @@ export const useFavoriteFolders = () => {
   const folders = useState<FavoriteFolder[]>("favorite-folders", () => []);
   const loading = useState<boolean>("favorite-folders-loading", () => false);
 
-  const request = async (method: "GET" | "POST", body?: Record<string, unknown>) => {
-    if (isTauriRuntime()) {
-      if (method === "GET") return useTauriCoreInvoke("get_favorite_folders");
-      if ("assetId" in (body || {})) return useTauriCoreInvoke("favorite_to_folder", body);
-      return useTauriCoreInvoke("create_favorite_folder", body);
-    }
-
-    const response = await fetch(withWebSitePrefix("/api/v1/assets/favorite-folders/"), {
-      method,
-      credentials: "include",
-      headers: { ...getWebApiHeaders(), ...(body ? { "Content-Type": "application/json" } : {}) },
-      body: body ? JSON.stringify(body) : undefined
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.status === 204 ? null : response.json();
-  };
-
   const load = async () => {
     if (!loggedIn.value || loading.value) return;
     loading.value = true;
     try {
-      folders.value = normalizeFolders(await request("GET"));
+      folders.value = normalizeFolders(await getFavoriteFolders());
     } finally {
       loading.value = false;
     }
   };
 
   const createFolder = async (name: string, parent: string | null = null) => {
-    if (isTauriRuntime()) await request("POST", { name, parent });
-    else await request("POST", { name, parent });
+    await createFavoriteFolder({ name, parent });
     await load();
   };
 
   const favoriteToFolder = async (assetId: string, folderId: string) => {
-    if (isTauriRuntime()) {
-      await request("POST", { assetId, folderId });
-    } else {
-      const response = await fetch(withWebSitePrefix("/api/v1/assets/favorite-assets/"), {
-        method: "POST",
-        credentials: "include",
-        headers: { ...getWebApiHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ asset: assetId, folder: folderId })
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    }
+    await favoriteAssetToFolder(assetId, folderId);
     await load();
     useEventBus().emit("favoriteChanged", { assetId, favorite: true });
   };

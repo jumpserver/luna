@@ -1,1 +1,1 @@
-export * from "~/shared/theme/presets";
+export * from "../shared/theme/presets";

@@ -33,9 +33,9 @@ const setMode = async (mode: "assets" | "tools") => {
     return;
   }
 
-  const toolPaths = [localePath("videoplayer"), localePath({ path: "/transcode" })];
+  const toolPaths = [localePath({ path: "/tools" }), localePath("videoplayer"), localePath({ path: "/transcode" })];
   if (!toolPaths.includes(route.path)) {
-    await navigateTo(localePath("videoplayer"));
+    await navigateTo(localePath({ path: "/tools" }));
   }
 
   setWorkspaceMode(mode);

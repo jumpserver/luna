@@ -80,28 +80,7 @@ export const useAssetTree = () => {
 
   const fetchTree = async (kind: AssetTreeKind, parent?: AssetTreeNode, search?: string) => {
     const query = buildQuery(kind, parent, search);
-    let data: unknown;
-
-    if (isTauriRuntime()) {
-      data = await useTauriCoreInvoke("get_asset_tree", { kind, query });
-    } else {
-      const paths: Record<AssetTreeKind, string> = {
-        authorization: "/api/v1/perms/users/self/nodes/children-with-assets/tree/",
-        type: "/api/v1/perms/users/self/nodes/children-with-assets/category/tree/",
-        search: "/api/v1/perms/users/self/assets/tree/"
-      };
-      const params = new URLSearchParams();
-      Object.entries(query).forEach(([key, value]) => {
-        if (value !== undefined && value !== "") params.set(key, String(value));
-      });
-      const response = await fetch(`${withWebSitePrefix(paths[kind])}?${params}`, {
-        credentials: "include",
-        headers: getWebApiHeaders()
-      });
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      data = await response.json();
-    }
+    const data = await getAssetTree(kind, query);
 
     return normalizeTreeNodes(data, parent ? (parent.level || 0) + 1 : 0);
   };
