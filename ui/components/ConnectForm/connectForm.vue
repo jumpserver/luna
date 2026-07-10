@@ -327,7 +327,7 @@ function handleSpecialAccount(v: string) {
 
 <template>
   <div class="flex flex-col gap-3">
-    <div class="flex justify-start border-b border-gray-200 dark:border-white/10">
+    <div class="protocol-tabs-track">
       <div class="protocol-tabs">
         <button
           v-for="item in protocolTabItems"
@@ -466,38 +466,53 @@ function handleSpecialAccount(v: string) {
 </template>
 
 <style scoped>
+.protocol-tabs-track {
+  display: flex;
+  justify-content: flex-start;
+  border-bottom: 1px solid var(--app-border);
+}
+
 .protocol-tabs {
   display: inline-flex;
   width: fit-content;
   max-width: 100%;
-  align-items: center;
+  align-items: flex-end;
   justify-content: flex-start;
   gap: 0.25rem;
 }
 
 .protocol-tab-button {
+  position: relative;
   flex: 0 0 auto;
-  border-bottom: 2px solid transparent;
-  padding: 0.25rem 0.875rem;
+  margin-bottom: -1px;
+  border: 0;
+  background: transparent;
+  padding: 0.25rem 0.875rem 0.375rem;
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.25rem;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
+  color: var(--app-text-muted);
+  transition: color 0.15s ease;
 }
 
 .protocol-tab-button-active {
-  border-bottom-color: var(--ui-primary);
-  color: var(--ui-text-highlighted);
+  z-index: 1;
+  color: var(--app-fg);
 }
 
-.protocol-tab-button-idle {
-  color: var(--ui-text-muted);
+.protocol-tab-button-active::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--ui-primary);
+  pointer-events: none;
 }
 
 .protocol-tab-button-idle:hover {
-  color: var(--ui-text);
+  color: var(--app-fg);
 }
 
 :deep(.connect-method-type-tabs [data-slot="list"]) {

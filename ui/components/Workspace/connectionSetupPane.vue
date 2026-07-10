@@ -9,7 +9,7 @@ import type {
   PermedProtocol
 } from "~/types/index";
 
-import ConnectionSettingsForm from "~/components/ConnectionEditor/connectionSettingsForm.vue";
+import ConnectForm from "~/components/ConnectForm/connectForm.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols, sortProtocolNames } from "~/utils";
 
@@ -372,7 +372,7 @@ onMounted(loadAsset);
           </div>
 
           <div class="px-5 py-5">
-            <ConnectionSettingsForm
+            <ConnectForm
               v-model:protocol="draftProtocol"
               v-model:account="draftAccount"
               v-model:manual-username="draftManualUsername"

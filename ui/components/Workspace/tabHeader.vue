@@ -57,10 +57,7 @@ const tabDropdownUi = {
 
 const TAB_MENU_ICON_PLACEHOLDER = "i-lucide-circle";
 
-function tabMenuItem(
-  item: DropdownMenuItem,
-  icon?: string
-): DropdownMenuItem {
+function tabMenuItem(item: DropdownMenuItem, icon?: string): DropdownMenuItem {
   if (!icon) {
     return {
       ...item,
@@ -105,38 +102,50 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
   const hasToken = Boolean(tab.payload?.id || tab.payload?.token?.id);
 
   return [
-    tabMenuItem({
-      label: t("TabMenu.CloneConnect"),
-      disabled: !hasToken,
-      onSelect: () => {
-        hideContextMenu();
-        void cloneSession(tab);
-      }
-    }, "i-lucide-copy"),
-    tabMenuItem({
-      label: t("TabMenu.Reconnect"),
-      disabled: !hasToken,
-      onSelect: () => {
-        hideContextMenu();
-        void reconnectSession(tab);
-      }
-    }, "i-lucide-refresh-cw"),
-    tabMenuItem({
-      label: t("TabMenu.SplitVertically"),
-      disabled: !hasToken || Boolean(tab.splitSessions?.length),
-      onSelect: () => {
-        hideContextMenu();
-        void splitSession(tab);
-      }
-    }, "i-lucide-columns-2"),
+    tabMenuItem(
+      {
+        label: t("TabMenu.CloneConnect"),
+        disabled: !hasToken,
+        onSelect: () => {
+          hideContextMenu();
+          void cloneSession(tab);
+        }
+      },
+      "i-lucide-copy"
+    ),
+    tabMenuItem(
+      {
+        label: t("TabMenu.Reconnect"),
+        disabled: !hasToken,
+        onSelect: () => {
+          hideContextMenu();
+          void reconnectSession(tab);
+        }
+      },
+      "i-lucide-refresh-cw"
+    ),
+    tabMenuItem(
+      {
+        label: t("TabMenu.SplitVertically"),
+        disabled: !hasToken || Boolean(tab.splitSessions?.length),
+        onSelect: () => {
+          hideContextMenu();
+          void splitSession(tab);
+        }
+      },
+      "i-lucide-columns-2"
+    ),
     { type: "separator" as const },
-    tabMenuItem({
-      label: t("TabMenu.CloseCurrent"),
-      onSelect: () => {
-        hideContextMenu();
-        closeSession(tab.id);
-      }
-    }, "i-lucide-x"),
+    tabMenuItem(
+      {
+        label: t("TabMenu.CloseCurrent"),
+        onSelect: () => {
+          hideContextMenu();
+          closeSession(tab.id);
+        }
+      },
+      "i-lucide-x"
+    ),
     tabMenuItem({
       label: t("TabMenu.CloseAll"),
       disabled: tabs.value.length === 0,
@@ -220,7 +229,7 @@ function updateOverflow() {
 
   hasOverflow.value = el.scrollWidth > el.clientWidth + 1;
   hasLeftHidden.value = hasOverflow.value && el.scrollLeft > 1;
-  hasRightHidden.value = hasOverflow.value && (el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  hasRightHidden.value = hasOverflow.value && el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
 }
 
 function scrollActiveTabIntoView() {
@@ -278,10 +287,11 @@ onBeforeUnmount(() => {
 
 watch(
   tabs,
-  () => nextTick(() => {
-    updateOverflow();
-    scrollActiveTabIntoView();
-  }),
+  () =>
+    nextTick(() => {
+      updateOverflow();
+      scrollActiveTabIntoView();
+    }),
   { deep: true }
 );
 
@@ -289,10 +299,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 </script>
 
 <template>
-  <div
-    class="flex h-full min-w-0 items-center gap-2 px-3"
-    :style="{ backgroundColor: 'var(--app-surface-header)' }"
-  >
+  <div class="flex h-full min-w-0 items-center gap-2 px-3" :style="{ backgroundColor: 'var(--app-surface-header)' }">
     <UTooltip v-if="hasLeftHidden" text="上一个标签" :delay-duration="150">
       <button
         type="button"
@@ -319,7 +326,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           :class="[
             activeTabId === tab.id ? 'max-w-80 px-2.5' : 'max-w-40',
             activeTabId === tab.id
-              ? 'bg-[var(--app-surface-panel-strong)] text-[var(--app-fg)] shadow-[0_10px_24px_rgba(15,23,42,0.14)] ring-1 ring-[var(--app-border-strong)]'
+              ? 'bg-[var(--app-surface-panel-strong)] text-[var(--app-fg)] shadow-[inset_0_0_0_1px_var(--app-border-strong)]'
               : 'text-[var(--app-muted)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]'
           ]"
           @click.stop="selectTab(tab.id)"
@@ -333,7 +340,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
               class="size-3.5 object-contain"
               :class="tab.status === 'failed' ? 'opacity-40' : ''"
               @error="markTabIconBroken(tab.id)"
-            >
+            />
             <UIcon
               v-else
               :name="tabIcon(tab).fallback"
@@ -421,7 +428,12 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       size="sm"
       :content="{ align: 'start', side: 'bottom' }"
       :ui="tabDropdownUi"
-      @update:open="(open) => { if (!open) hideContextMenu(); else contextMenuVisible = open; }"
+      @update:open="
+        (open) => {
+          if (!open) hideContextMenu();
+          else contextMenuVisible = open;
+        }
+      "
     >
       <div
         class="fixed pointer-events-none"
