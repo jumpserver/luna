@@ -136,21 +136,21 @@ export class ElementAssetTreeComponent implements OnInit {
         },
         {
           id: 'create-folder',
-          name: 'Create folder',
+          name: this._i18n.instant('Create folder'),
           fa: 'fa-folder-o',
           hide: false,
           click: this.onCreateFolder.bind(this, null)
         },
         {
           id: 'expand-all',
-          name: 'Expand all',
+          name: this._i18n.instant('Expand all'),
           fa: 'fa-expand',
           hide: false,
           click: () => favTree && favTree.expandAll(true)
         },
         {
           id: 'fold-all',
-          name: 'Fold all',
+          name: this._i18n.instant('Fold all'),
           fa: 'fa-compress',
           hide: false,
           click: () => favTree && favTree.expandAll(false)
@@ -164,28 +164,28 @@ export class ElementAssetTreeComponent implements OnInit {
       return [
         {
           id: 'create-subfolder',
-          name: 'Create subfolder',
+          name: this._i18n.instant('Create subfolder'),
           fa: 'fa-folder-o',
           hide: false,
           click: this.onCreateFolder.bind(this, cnode.favoriteFolderRealId)
         },
         {
           id: 'delete-folder',
-          name: 'Delete folder',
+          name: this._i18n.instant('Delete folder'),
           fa: 'fa-trash-o',
           hide: false,
           click: this.onDeleteFolder.bind(this)
         },
         {
           id: 'expand',
-          name: 'Expand',
+          name: this._i18n.instant('Expand'),
           fa: 'fa-angle-double-down',
           hide: cnode.open,
           click: () => favTree && favTree.expandNode(cnode, true, false, true)
         },
         {
           id: 'fold',
-          name: 'Fold',
+          name: this._i18n.instant('Fold'),
           fa: 'fa-angle-double-up',
           hide: !cnode.open,
           click: () => favTree && favTree.expandNode(cnode, false, false, true)
@@ -200,28 +200,28 @@ export class ElementAssetTreeComponent implements OnInit {
       return [
         {
           id: 'connect',
-          name: 'Connect',
+          name: this._i18n.instant('Connect'),
           fa: 'fa-terminal',
           hide: isK8sFav,
           click: this.onFavoriteConnect.bind(this)
         },
         {
           id: 'new-connection',
-          name: 'Open in new window',
+          name: this._i18n.instant('Open in new window'),
           fa: 'fa-external-link',
           hide: false,
           click: this.onFavoriteConnectNewTab.bind(this)
         },
         {
           id: 'split-connect',
-          name: 'Split connect',
+          name: this._i18n.instant('Split connect'),
           fa: 'fa-columns',
           hide: favViewList.length <= 0 || isK8sFav,
           click: this.onFavoriteConnect.bind(this, true)
         },
         {
           id: 'remove-favorite',
-          name: 'Remove favorite',
+          name: this._i18n.instant('Remove favorite'),
           fa: 'fa-star',
           hide: false,
           click: this.onRemoveFromFolder.bind(this)
@@ -247,28 +247,28 @@ export class ElementAssetTreeComponent implements OnInit {
       },
       {
         id: 'connect',
-        name: 'Connect',
+        name: this._i18n.instant('Connect'),
         fa: 'fa-terminal',
         hide: cnode.isParent || isK8s,
         click: this.onMenuConnect.bind(this)
       },
       {
         id: 'new-connection',
-        name: 'Open in new window',
+        name: this._i18n.instant('Open in new window'),
         fa: 'fa-external-link',
         hide: cnode.isParent,
         click: this.onMenuConnectNewTab.bind(this)
       },
       {
         id: 'split-connect',
-        name: 'Split connect',
+        name: this._i18n.instant('Split connect'),
         fa: 'fa-columns',
         hide: viewList.length <= 0 || cnode.isParent || isK8s,
         click: this.onMenuConnect.bind(this, true)
       },
       {
         id: 'expand',
-        name: 'Expand',
+        name: this._i18n.instant('Expand'),
         fa: 'fa-angle-double-down',
         hide: !cnode.isParent || cnode.open,
         click: () => {
@@ -277,7 +277,7 @@ export class ElementAssetTreeComponent implements OnInit {
       },
       {
         id: 'fold',
-        name: 'Fold',
+        name: this._i18n.instant('Fold'),
         fa: 'fa-angle-double-up',
         hide: !cnode.isParent || !cnode.open,
         click: () => {
@@ -286,14 +286,14 @@ export class ElementAssetTreeComponent implements OnInit {
       },
       {
         id: 'expand-all',
-        name: 'Expand all',
+        name: this._i18n.instant('Expand all'),
         fa: 'fa-expand',
         hide: !cnode.isParent || cnode.open,
         click: this.onMenuExpandAllChildren.bind(this)
       },
       {
         id: 'fold-all',
-        name: 'Fold all',
+        name: this._i18n.instant('Fold all'),
         fa: 'fa-compress',
         hide: !cnode.isParent || !cnode.open,
         click: () => {
@@ -317,7 +317,7 @@ export class ElementAssetTreeComponent implements OnInit {
       return [
         {
           id: 'no-folder',
-          name: 'Please create a folder first',
+          name: this._i18n.instant('Please create a folder first'),
           fa: 'fa-star-o',
           hide: false,
           disabled: true,
@@ -406,7 +406,7 @@ export class ElementAssetTreeComponent implements OnInit {
       // url: withSitePrefix('/api/v1/perms/users/self/nodes/all-with-assets/tree/'),
       // asyncUrl: withSitePrefix('/api/v1/perms/users/self/nodes/children-with-assets/tree/?')
     };
-    const tree = new Tree('AssetTree', 'My assets', false, true, true, true, config);
+    const tree = new Tree('AssetTree', this._i18n.instant('My assets'), false, true, true, true, config);
     if (!refresh) {
       this.trees.push(tree);
     }
@@ -445,7 +445,7 @@ export class ElementAssetTreeComponent implements OnInit {
    * All data comes from backend; supports batch checking.
    */
   async initFavoriteTree(refresh = false) {
-    const tree = new Tree('FavoriteTree', 'Favorites', false, false, false, true, { refresh });
+    const tree = new Tree('FavoriteTree', this._i18n.instant('Favorites'), false, false, false, true, { refresh });
     if (!refresh) {
       this.trees.push(tree);
     }
