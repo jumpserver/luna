@@ -258,6 +258,16 @@ export class HttpService {
   }
 
   /**
+   * Rename a favorite folder
+   * @param folderId folder id
+   * @param name new folder name
+   */
+  updateFavoriteFolder(folderId: string, name: string) {
+    const url = `/api/v1/assets/favorite-folders/${folderId}/`;
+    return this.patch(url, { name });
+  }
+
+  /**
    * Get favorite asset records inside a folder
    * @param folderId folder id
    */
