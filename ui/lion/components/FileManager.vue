@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { ref, computed } from 'vue';
-import { ChevronLeft, ChevronRight, Download, Folder, File, RefreshCcw, Search, Upload } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import { useDebounceFn } from '@vueuse/core';
 import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from '@/lion/types/upload';
@@ -123,20 +122,16 @@ const removeUploadList = (file: LionUploadFileInfo) => {
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex items-center gap-2 overflow-x-auto">
-      <UButton color="neutral" variant="ghost" size="xs" :disabled="disabledBack" @click="handlePathBack">
-        <ChevronLeft :size="16" />
-      </UButton>
-      <UButton color="neutral" variant="ghost" size="xs" :disabled="disabledForward" @click="handlePathForward">
-        <ChevronRight :size="16" />
-      </UButton>
+      <UButton icon="i-lucide-chevron-left" color="neutral" variant="ghost" size="xs" :disabled="disabledBack" @click="handlePathBack" />
+      <UButton icon="i-lucide-chevron-right" color="neutral" variant="ghost" size="xs" :disabled="disabledForward" @click="handlePathForward" />
 
       <div class="flex min-w-0 items-center gap-1 overflow-x-auto">
         <template v-for="item of filePathList" :key="item.id">
           <button type="button" class="inline-flex items-center gap-1 whitespace-nowrap text-sm" @click="handlePathClick(item)">
-            <Folder :size="16" />
+            <UIcon name="i-lucide-folder" class="size-4" />
             <span :class="item.active ? 'font-semibold' : ''">{{ item.name }}</span>
           </button>
-          <ChevronRight v-if="item.showArrow" :size="14" />
+          <UIcon v-if="item.showArrow" name="i-lucide-chevron-right" class="size-3.5" />
         </template>
       </div>
     </div>
@@ -149,18 +144,15 @@ const removeUploadList = (file: LionUploadFileInfo) => {
         @change="handleSearch"
       >
         <template #leading>
-          <Search :size="16" />
+          <UIcon name="i-lucide-search" class="size-4" />
         </template>
       </UInput>
 
       <input ref="fileInputRef" type="file" multiple class="hidden" @change="handleFileInput">
-      <UButton color="neutral" variant="soft" size="sm" @click="fileInputRef?.click()">
-        <Upload :size="14" />
+      <UButton icon="i-lucide-upload" color="neutral" variant="soft" size="sm" @click="fileInputRef?.click()">
         {{ t('UploadFile') }}
       </UButton>
-      <UButton color="neutral" variant="ghost" size="sm" @click="handleRefresh">
-        <RefreshCcw :size="14" />
-      </UButton>
+      <UButton icon="i-lucide-refresh-ccw" color="neutral" variant="ghost" size="sm" @click="handleRefresh" />
     </div>
 
     <UCard :ui="{ body: 'p-0' }">
@@ -179,7 +171,7 @@ const removeUploadList = (file: LionUploadFileInfo) => {
           @click="handleRowClick(row)"
           @contextmenu="openContextMenu($event, row)"
         >
-          <component :is="row.is_dir ? Folder : File" :size="16" />
+          <UIcon :name="row.is_dir ? 'i-lucide-folder' : 'i-lucide-file'" class="size-4" />
           <span class="truncate">{{ row.name }}</span>
         </button>
       </div>
@@ -206,8 +198,7 @@ const removeUploadList = (file: LionUploadFileInfo) => {
       class="fixed z-50 min-w-32 rounded-md border border-default bg-default p-1 shadow-lg"
       :style="{ left: `${contextPos.x}px`, top: `${contextPos.y}px` }"
     >
-      <UButton color="neutral" variant="ghost" block @click="handleDownload">
-        <Download :size="14" />
+      <UButton icon="i-lucide-download" color="neutral" variant="ghost" block @click="handleDownload">
         {{ t('Download') }}
       </UButton>
     </div>

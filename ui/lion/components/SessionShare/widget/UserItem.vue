@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
-import { Trash2, UserRound } from 'lucide-vue-next';
 import { useColor } from '@/lion/hooks/useColor';
 
 const props = defineProps<{
@@ -47,7 +46,7 @@ const handleRemoveUser = () => {
     @mouseleave="isHovered = false"
   >
     <div class="flex items-center gap-2">
-      <UserRound :size="18" />
+      <UIcon name="i-lucide-user-round" class="size-[18px]" />
       <div>
         <div class="flex items-center gap-2">
           <span class="text-xs-plus font-medium">{{ username }}</span>
@@ -66,9 +65,7 @@ const handleRemoveUser = () => {
         class="w-28"
       />
       <UPopover v-model:open="confirmOpen">
-        <UButton color="error" variant="soft" size="sm" :disabled="primary">
-          <Trash2 :size="16" />
-        </UButton>
+        <UButton icon="i-lucide-trash-2" color="error" variant="soft" size="sm" :disabled="primary" />
         <template #content>
           <div class="flex flex-col gap-3 p-3">
             <span class="text-sm">{{ t('RemoveUser') }}</span>

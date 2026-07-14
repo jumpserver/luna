@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronLeft } from "lucide-vue-next";
-
 defineProps<{
   title?: string
 }>();
@@ -17,8 +15,7 @@ const expanded = ref(true);
     >
       <slot v-if="!title" name="custom-header" />
       <span v-else class="text-sm font-medium">{{ title }}</span>
-      <ChevronLeft v-if="!expanded" :size="16" />
-      <ChevronDown v-else :size="16" />
+      <UIcon :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-left'" class="size-4" />
     </button>
 
     <div v-show="expanded" class="mt-3">

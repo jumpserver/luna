@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { ArrowLeft, Copy, Link } from 'lucide-vue-next';
 import { computed, reactive, ref, watch } from 'vue';
 import type { Composer } from 'vue-i18n';
 import { useDebounceFn } from '@vueuse/core';
@@ -289,7 +288,7 @@ const handleBack = () => {
   <div v-else class="space-y-4">
     <UInput :model-value="shareInfo.shareURL" readonly placeholder="Link">
       <template #leading>
-        <Link :size="14" />
+        <UIcon name="i-lucide-link" class="size-3.5" />
       </template>
     </UInput>
 
@@ -301,12 +300,10 @@ const handleBack = () => {
     </UCard>
 
     <div class="grid grid-cols-2 gap-2">
-      <UButton color="success" variant="soft" block @click="handleCopyShareURL">
-        <Copy :size="14" />
+      <UButton icon="i-lucide-copy" color="success" variant="soft" block @click="handleCopyShareURL">
         {{ t('CopyLink') }}
       </UButton>
-      <UButton color="neutral" variant="soft" block @click="handleBack">
-        <ArrowLeft :size="14" />
+      <UButton icon="i-lucide-arrow-left" color="neutral" variant="soft" block @click="handleBack">
         {{ t('Back') }}
       </UButton>
     </div>

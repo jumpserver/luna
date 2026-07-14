@@ -149,9 +149,6 @@ importers:
       js-untar:
         specifier: ^2.0.0
         version: 2.0.0
-      lucide-vue-next:
-        specifier: ^0.525.0
-        version: 0.525.0(vue@3.5.35(typescript@6.0.3))
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
@@ -186,27 +183,9 @@ importers:
       '@antfu/eslint-config':
         specifier: ^9.0.0
         version: 9.0.0(@typescript-eslint/rule-tester@8.60.0(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/typescript-estree@8.60.0(typescript@6.0.3))(@typescript-eslint/utils@8.60.0(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3))(@vue/compiler-sfc@3.5.35)(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3)
-      '@iconify-json/akar-icons':
-        specifier: ^1.2.7
-        version: 1.2.7
-      '@iconify-json/cuida':
-        specifier: ^1.2.5
-        version: 1.2.5
-      '@iconify-json/flat-color-icons':
-        specifier: ^1.2.3
-        version: 1.2.3
       '@iconify-json/fluent':
         specifier: ^1.2.48
         version: 1.2.48
-      '@iconify-json/gravity-ui':
-        specifier: ^1.2.12
-        version: 1.2.12
-      '@iconify-json/ix':
-        specifier: ^1.2.11
-        version: 1.2.11
-      '@iconify-json/lets-icons':
-        specifier: ^1.2.2
-        version: 1.2.2
       '@iconify-json/line-md':
         specifier: ^1.2.16
         version: 1.2.16
@@ -1414,26 +1393,8 @@ packages:
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
 
-  '@iconify-json/akar-icons@1.2.7':
-    resolution: {integrity: sha512-cw44dCnZgGhm6Tywxm0WALAnDB9AyGkDk7kiLMo2B/Ayt7duZu/uyrsqb55weWUN8Ge2sQAOl8MRtT6bFcLzPg==}
-
-  '@iconify-json/cuida@1.2.5':
-    resolution: {integrity: sha512-+LCnHk53WIw9uTcskDT5Kpjwj8wEEI1YLNeX/yLdksQAt8VOOcIeZnRMmW0drnu8GK8SFw6IXu7CZdx7Kqnwqw==}
-
-  '@iconify-json/flat-color-icons@1.2.3':
-    resolution: {integrity: sha512-KcmJ7CY0TKFv5GuBjiS4/v++jEcNXna1jfY+yq014tnw/MN/jMI2oYpoMHGuIpYtUqDu7eove+WySnOYO8nS3w==}
-
   '@iconify-json/fluent@1.2.48':
     resolution: {integrity: sha512-tSY++n/ORNg8navw+l//4r893HggokmIfirXUMEw2b0o6eFx0RfEbhnxmWZ3jmaUPnf19Ahcxlg7kS68AvumJA==}
-
-  '@iconify-json/gravity-ui@1.2.12':
-    resolution: {integrity: sha512-/66CorNnUoFs66nb8FJ+ZPq6Zog9NwR13ml90qijI0Hj3bVqQIdiWZ9npSyNWRgJe452LFmWZrdWQONYBbJ7XA==}
-
-  '@iconify-json/ix@1.2.11':
-    resolution: {integrity: sha512-3mMMD+3d2jVRNGhsLZgxCIw+mpDD3B7a/rBv+V+DzwUPnuqoFYzAf/lTq9GhgI5/8DOpzpYJ4Toho+2TLQVMGg==}
-
-  '@iconify-json/lets-icons@1.2.2':
-    resolution: {integrity: sha512-GBCeFoWNLA5v1ZRIM54cZGpE/lHtFcSJjxXXCi2W5SxkJoPDonNoLGf61/z8eNxiBkegynClvEgCAs0YjLeZkA==}
 
   '@iconify-json/line-md@1.2.16':
     resolution: {integrity: sha512-esHPUQUp30NyqJWa7MNu6ExdG8z/aEFC5r56rVyRGhtJ7acOme6YtYPnDOgVu6p+kk24rM8602xkFuBC6g6x+w==}
@@ -5483,11 +5444,6 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lucide-vue-next@0.525.0:
-    resolution: {integrity: sha512-Xf8+x8B2DrnGDV/rxylS+KBp2FIe6ljwDn2JsGTZZvXIfhmm/q+nv8RuGO1OyoMjOVkkz7CqtUqJfwtFPRbB2w==}
-    peerDependencies:
-      vue: '>=3.0.1'
-
   magic-regexp@0.10.0:
     resolution: {integrity: sha512-Uly1Bu4lO1hwHUW0CQeSWuRtzCMNO00CmXtS8N6fyvB3B979GOEEeAkiTUDsmbYLAbvpUS/Kt5c4ibosAzVyVg==}
 
@@ -8416,31 +8372,7 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@iconify-json/akar-icons@1.2.7':
-    dependencies:
-      '@iconify/types': 2.0.0
-
-  '@iconify-json/cuida@1.2.5':
-    dependencies:
-      '@iconify/types': 2.0.0
-
-  '@iconify-json/flat-color-icons@1.2.3':
-    dependencies:
-      '@iconify/types': 2.0.0
-
   '@iconify-json/fluent@1.2.48':
-    dependencies:
-      '@iconify/types': 2.0.0
-
-  '@iconify-json/gravity-ui@1.2.12':
-    dependencies:
-      '@iconify/types': 2.0.0
-
-  '@iconify-json/ix@1.2.11':
-    dependencies:
-      '@iconify/types': 2.0.0
-
-  '@iconify-json/lets-icons@1.2.2':
     dependencies:
       '@iconify/types': 2.0.0
 
@@ -12684,10 +12616,6 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
-
-  lucide-vue-next@0.525.0(vue@3.5.35(typescript@6.0.3)):
-    dependencies:
-      vue: 3.5.35(typescript@6.0.3)
 
   magic-regexp@0.10.0:
     dependencies:

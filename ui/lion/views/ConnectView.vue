@@ -2,7 +2,6 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useDebounceFn } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
-import { FolderKanban, Keyboard as KeyboardIcon, Share2 } from 'lucide-vue-next';
 import { connectorSessionKey } from '~/koko/composables/wsUrl';
 import type { ConnectorSessionContext } from '~/shared/connectors/types/session';
 import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from '@/lion/types/upload';

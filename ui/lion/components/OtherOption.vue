@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { CirclePlus, CircleMinus } from 'lucide-vue-next';
 import CardContainer from '@/lion/components/CardContainer/index.vue';
 
 const { t } = useI18n();
@@ -46,11 +45,11 @@ const handleCircleClick = (value: number) => {
           @update:model-value="handleAutoFitUpdate"
         />
         <button type="button" class="inline-flex items-center" @click="handleCircleClick(-5)">
-          <CircleMinus :size="16" />
+          <UIcon name="i-lucide-circle-minus" class="size-4" />
         </button>
         <span class="text-xs">{{ props.fitPercentage }}%</span>
         <button type="button" class="inline-flex items-center" @click="handleCircleClick(5)">
-          <CirclePlus :size="16" />
+          <UIcon name="i-lucide-circle-plus" class="size-4" />
         </button>
       </div>
     </div>

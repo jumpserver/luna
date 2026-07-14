@@ -70,14 +70,9 @@ export default defineNuxtConfig({
       "lucide",
       "line-md",
       "proicons",
-      "lets-icons",
       "fluent",
-      "gravity-ui",
       "solar",
-      "akar-icons",
       "tabler",
-      "ix",
-      "cuida",
       "si"
     ],
     clientBundle: {
