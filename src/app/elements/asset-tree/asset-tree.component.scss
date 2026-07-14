@@ -286,7 +286,62 @@ tr:hover {
 }
 
 .view-menu__data {
+  position: relative;
   padding: 0 6px;
+}
+
+.view-menu__label {
+  flex: 1;
+}
+
+.view-menu__submenu-arrow {
+  margin-left: 12px;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.view-menu__item--has-submenu {
+  .view-menu__data {
+    display: flex;
+    align-items: center;
+    padding-right: 10px;
+  }
+
+  &:hover > .view-menu__data > .view-menu__submenu {
+    display: block;
+  }
+}
+
+.view-menu__submenu {
+  display: none;
+  position: absolute;
+  top: -6px;
+  left: 100%;
+  margin: 0;
+  padding: 6px 0;
+  min-width: 120px;
+  border-radius: 2px;
+  background-color: var(--el-dropdown-bg-color);
+  box-shadow: 0 3px 6px 0 rgba(0, 0, 0, 0.16);
+  z-index: 1001;
+
+  .view-menu__submenu-data {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 140px;
+    padding-right: 10px;
+  }
+
+  .view-menu__submenu-label {
+    flex: 1;
+    padding-right: 8px;
+  }
+
+  .view-menu__submenu-check {
+    font-size: 12px;
+    color: #52c41a;
+  }
 }
 
 .open-tree {
