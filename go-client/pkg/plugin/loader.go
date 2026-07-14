@@ -157,6 +157,42 @@ func readJSON(path string, target interface{}) error {
 	return json.Unmarshal(data, target)
 }
 
+func sanitizeState(state *pluginState) bool {
+	if state == nil || state.Selections == nil {
+		return false
+	}
+
+	changed := false
+	if runtime.GOOS != "windows" {
+		for _, key := range []string{"terminal:ssh", "terminal:telnet"} {
+			if state.Selections[key] == "builtin.putty" {
+				delete(state.Selections, key)
+				changed = true
+			}
+		}
+	}
+
+	if runtime.GOOS == "linux" {
+		switch state.Selections["remotedesktop:rdp"] {
+		case "builtin.mstsc", "builtin.remmina":
+			state.Selections["remotedesktop:rdp"] = "builtin.xfreerdp"
+			changed = true
+		}
+	}
+
+	if state.Selections["filetransfer:sftp"] != "builtin.iterm-sftp" {
+		return changed
+	}
+
+	item, ok := state.Plugins["builtin.iterm-sftp"]
+	if ok && (item.Enabled || strings.TrimSpace(item.Path) != "") {
+		return changed
+	}
+
+	delete(state.Selections, "filetransfer:sftp")
+	return true
+}
+
 func launchToArgFormat(launch map[string]interface{}) (string, []config.AutoItCommand) {
 	launchType, _ := launch["type"].(string)
 	switch launchType {
@@ -248,6 +284,11 @@ func LoadAppConfig(configDir string) (*config.AppConfig, bool) {
 	}
 	if state.Plugins == nil {
 		state.Plugins = map[string]pluginStateItem{}
+	}
+	if sanitizeState(&state) {
+		if raw, err := json.MarshalIndent(state, "", "  "); err == nil {
+			_ = os.WriteFile(statePath, raw, 0644)
+		}
 	}
 
 	osName := osKey()

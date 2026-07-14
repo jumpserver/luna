@@ -3,56 +3,6 @@
 version = 4
 
 [[package]]
-name = "JumpServerClient"
-version = "4.1.2"
-dependencies = [
- "anyhow",
- "axum",
- "base64 0.22.1",
- "bytes",
- "chrono",
- "env_logger",
- "fast_image_resize",
- "flate2",
- "font-kit",
- "image",
- "keyring",
- "keyring-core",
- "libc",
- "log",
- "num_cpus",
- "oauth2",
- "openh264",
- "reqwest 0.12.28",
- "russh",
- "serde",
- "serde_json",
- "shiguredo_video_toolbox",
- "tar",
- "tauri",
- "tauri-build",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-deep-link",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-http",
- "tauri-plugin-log",
- "tauri-plugin-notification",
- "tauri-plugin-opener",
- "tauri-plugin-os",
- "tauri-plugin-prevent-default",
- "tauri-plugin-shell",
- "tauri-plugin-single-instance",
- "tauri-plugin-store",
- "tauri-plugin-updater",
- "tauri-plugin-window-state",
- "tokio",
- "url",
- "window-vibrancy 0.7.1",
- "windows 0.58.0",
-]
-
-[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3726,6 +3676,56 @@ checksum = "5dea2b27dd239b2556ed7a25ba842fe47fd602e7fc7433c2a8d6106d4d9edd70"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "jumpserver-client"
+version = "4.1.2"
+dependencies = [
+ "anyhow",
+ "axum",
+ "base64 0.22.1",
+ "bytes",
+ "chrono",
+ "env_logger",
+ "fast_image_resize",
+ "flate2",
+ "font-kit",
+ "image",
+ "keyring",
+ "keyring-core",
+ "libc",
+ "log",
+ "num_cpus",
+ "oauth2",
+ "openh264",
+ "reqwest 0.12.28",
+ "russh",
+ "serde",
+ "serde_json",
+ "shiguredo_video_toolbox",
+ "tar",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-http",
+ "tauri-plugin-log",
+ "tauri-plugin-notification",
+ "tauri-plugin-opener",
+ "tauri-plugin-os",
+ "tauri-plugin-prevent-default",
+ "tauri-plugin-shell",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-store",
+ "tauri-plugin-updater",
+ "tauri-plugin-window-state",
+ "tokio",
+ "url",
+ "window-vibrancy 0.7.1",
+ "windows 0.58.0",
 ]
 
 [[package]]

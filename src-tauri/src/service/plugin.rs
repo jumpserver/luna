@@ -22,9 +22,18 @@ impl PluginService {
     fn resolve_builtin_dir(app: &AppHandle) -> Option<PathBuf> {
         let resource = app
             .path()
-            .resolve("plugins/builtin", tauri::path::BaseDirectory::Resource)
+            .resolve(
+                "resources/plugins/builtin",
+                tauri::path::BaseDirectory::Resource,
+            )
             .ok()
-            .filter(|p| p.join("index.json").is_file());
+            .filter(|p| p.join("index.json").is_file())
+            .or_else(|| {
+                app.path()
+                    .resolve("plugins/builtin", tauri::path::BaseDirectory::Resource)
+                    .ok()
+                    .filter(|p| p.join("index.json").is_file())
+            });
 
         if resource.is_some() {
             return resource;
@@ -45,11 +54,20 @@ impl PluginService {
         let resource = app
             .path()
             .resolve(
-                "plugins/plugins-state.defaults.json",
+                "resources/plugins/plugins-state.defaults.json",
                 tauri::path::BaseDirectory::Resource,
             )
             .ok()
-            .filter(|p| p.is_file());
+            .filter(|p| p.is_file())
+            .or_else(|| {
+                app.path()
+                    .resolve(
+                        "plugins/plugins-state.defaults.json",
+                        tauri::path::BaseDirectory::Resource,
+                    )
+                    .ok()
+                    .filter(|p| p.is_file())
+            });
 
         if resource.is_some() {
             return resource;
@@ -68,6 +86,74 @@ impl PluginService {
             .map_err(|e| format!("read {} failed: {}", path.display(), e))?;
         serde_json::from_str(&content)
             .map_err(|e| format!("parse {} failed: {}", path.display(), e))
+    }
+
+    fn sanitize_user_state(state: &mut Value) -> bool {
+        let Some(state_obj) = state.as_object_mut() else {
+            return false;
+        };
+
+        let mut changed = false;
+        if Self::os_key() != "windows" {
+            if let Some(selections) = state_obj.get_mut("selections").and_then(|v| v.as_object_mut()) {
+                for key in ["terminal:ssh", "terminal:telnet"] {
+                    if selections.get(key).and_then(|v| v.as_str()) == Some("builtin.putty") {
+                        selections.remove(key);
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        if Self::os_key() == "linux" {
+            if let Some(selections) = state_obj.get_mut("selections").and_then(|v| v.as_object_mut()) {
+                match selections.get("remotedesktop:rdp").and_then(|v| v.as_str()) {
+                    Some("builtin.mstsc") | Some("builtin.remmina") => {
+                        selections.insert(
+                            "remotedesktop:rdp".to_string(),
+                            Value::String("builtin.xfreerdp".to_string()),
+                        );
+                        changed = true;
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        let should_remove_sftp_iterm = state_obj
+            .get("selections")
+            .and_then(|v| v.get("filetransfer:sftp"))
+            .and_then(|v| v.as_str())
+            == Some("builtin.iterm-sftp");
+
+        if !should_remove_sftp_iterm {
+            return changed;
+        }
+
+        let has_user_override = state_obj
+            .get("plugins")
+            .and_then(|v| v.get("builtin.iterm-sftp"))
+            .and_then(|v| v.as_object())
+            .map(|obj| {
+                obj.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false)
+                    || obj
+                        .get("path")
+                        .and_then(|v| v.as_str())
+                        .map(|s| !s.trim().is_empty())
+                        .unwrap_or(false)
+            })
+            .unwrap_or(false);
+
+        if has_user_override {
+            return changed;
+        }
+
+        if let Some(selections) = state_obj.get_mut("selections").and_then(|v| v.as_object_mut()) {
+            if selections.remove("filetransfer:sftp").is_some() {
+                changed = true;
+            }
+        }
+        changed
     }
 
     fn launch_to_arg_format(launch: &Value) -> (String, Option<Value>) {
@@ -291,14 +377,23 @@ impl PluginService {
     fn load_user_state(app: &AppHandle, config_dir: &Path) -> Value {
         let state_path = config_dir.join("plugins-state.json");
         if state_path.is_file() {
-            if let Ok(state) = Self::read_json(&state_path) {
+            if let Ok(mut state) = Self::read_json(&state_path) {
+                if Self::sanitize_user_state(&mut state) {
+                    if let Ok(pretty) = serde_json::to_string_pretty(&state) {
+                        let _ = fs::write(&state_path, pretty);
+                    }
+                }
                 return state;
             }
         }
 
         if let Some(defaults_path) = Self::resolve_defaults_path(app) {
-            if let Ok(state) = Self::read_json(&defaults_path) {
+            if let Ok(mut state) = Self::read_json(&defaults_path) {
+                let _ = Self::sanitize_user_state(&mut state);
                 let _ = fs::copy(&defaults_path, &state_path);
+                if let Ok(pretty) = serde_json::to_string_pretty(&state) {
+                    let _ = fs::write(&state_path, pretty);
+                }
                 return state;
             }
         }

@@ -497,6 +497,17 @@ export const useAssetAction = () => {
     return method;
   };
 
+  const resolveConnectMethod = async (protocol: string) => {
+    const methods = await fetchConnectMethods();
+    const protocolMethods = methods[protocol] || [];
+
+    if (protocolMethods.length > 0) {
+      return protocolMethods[0]?.value || dispatchConnectMethod(protocol);
+    }
+
+    return dispatchConnectMethod(protocol);
+  };
+
   const generateConnectOptions = (protocol: string) => {
     const prefs = resolveGraphicsPreferences();
 
@@ -532,7 +543,7 @@ export const useAssetAction = () => {
    * @param accounts
    * @param protocolOverride
    */
-  const handleAssetConnection = (
+  const handleAssetConnection = async (
     user: string,
     assetId: string,
     displayProtocol: string,
@@ -607,7 +618,7 @@ export const useAssetAction = () => {
     // 当前连接显式选择优先；仅在协议一致时复用已保存连接方法，避免跨协议复用错误的客户端
     const preferredConnectMethod = ephemeral?.connectMethod?.trim()
       || (saved?.protocol === protocol ? saved?.connectMethod?.trim() : "")
-      || dispatchConnectMethod(protocol);
+      || await resolveConnectMethod(protocol);
     const connectMethod = preferredConnectMethod;
 
     // Every successful attempt updates the lightweight last-used preference.

@@ -6,7 +6,9 @@ use std::process::{Command, Stdio};
 use std::sync::mpsc::RecvTimeoutError;
 use std::thread;
 use std::time::Duration;
+use tauri::path::BaseDirectory;
 use tauri::AppHandle;
+use tauri::Manager;
 
 // 映射平台/架构到二进制所在子目录
 fn platform_subdir() -> Option<&'static str> {
@@ -38,10 +40,28 @@ fn executable_name() -> &'static str {
     }
 }
 
+fn append_resource_candidates(app: &AppHandle, candidates: &mut Vec<PathBuf>) {
+    let Some(subdir) = platform_subdir() else {
+        return;
+    };
+    let exe_name = executable_name();
+
+    for rel in [
+        format!("resources/bin/{}/{}", subdir, exe_name),
+        format!("resources/bin/{}", exe_name),
+        format!("bin/{}/{}", subdir, exe_name),
+        format!("bin/{}", exe_name),
+    ] {
+        if let Ok(path) = app.path().resolve(&rel, BaseDirectory::Resource) {
+            candidates.push(path);
+        }
+    }
+}
+
 // 生成可能的可执行路径候选：
 // - 开发模式：相对项目根的 bin/<subdir>/JumpServerClient[.exe]
 // - 生产模式：打包后可执行同级，或 macOS 的 Resources 目录
-fn candidate_paths(is_dev: bool) -> Vec<PathBuf> {
+fn candidate_paths(app: &AppHandle, is_dev: bool) -> Vec<PathBuf> {
     let mut candidates = Vec::new();
     let subdir = match platform_subdir() {
         Some(s) => s,
@@ -55,14 +75,17 @@ fn candidate_paths(is_dev: bool) -> Vec<PathBuf> {
         let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
         let bases = [cwd.clone(), cwd.join(".."), cwd.join("../..")];
         for base in bases {
-            let p = base
-                .join("resources")
-                .join("bin")
-                .join(subdir)
-                .join(exe_name);
-            candidates.push(p);
+            candidates.push(
+                base.join("resources")
+                    .join("bin")
+                    .join(subdir)
+                    .join(exe_name),
+            );
+            candidates.push(base.join("resources").join("bin").join(exe_name));
         }
     } else {
+        append_resource_candidates(app, &mut candidates);
+
         if let Ok(current_exe) = env::current_exe() {
             if let Some(base) = current_exe.parent() {
                 candidates.push(
@@ -71,12 +94,14 @@ fn candidate_paths(is_dev: bool) -> Vec<PathBuf> {
                         .join(subdir)
                         .join(exe_name),
                 );
+                candidates.push(base.join("resources").join("bin").join(exe_name));
                 // macOS 打包：App.app/Contents/MacOS/ 下为运行目录
                 // 资源常在 App.app/Contents/Resources/
                 if cfg!(target_os = "macos") {
                     if let Some(contents) = base.parent() {
                         let resources = contents.join("Resources").join("resources").join("bin");
                         candidates.push(resources.join(subdir).join(exe_name));
+                        candidates.push(resources.join(exe_name));
                     }
                 }
             }
@@ -86,8 +111,8 @@ fn candidate_paths(is_dev: bool) -> Vec<PathBuf> {
     candidates
 }
 
-fn resolve_executable(is_dev: bool) -> Option<PathBuf> {
-    for p in candidate_paths(is_dev) {
+fn resolve_executable(app: &AppHandle, is_dev: bool) -> Option<PathBuf> {
+    for p in candidate_paths(app, is_dev) {
         if p.exists() && p.is_file() {
             return Some(p);
         }
@@ -95,10 +120,14 @@ fn resolve_executable(is_dev: bool) -> Option<PathBuf> {
     None
 }
 
+fn canonicalize_if_exists(path: &PathBuf) -> Option<PathBuf> {
+    path.canonicalize().ok()
+}
+
 #[tauri::command]
 /// 启动本地 JumpServerClient 可执行文件，并传入 URL 参数
 /// 前端：invoke('pull_up', { url })
-pub fn pull_up(_app: AppHandle, url: String) -> Result<(), String> {
+pub fn pull_up(app: AppHandle, url: String) -> Result<(), String> {
     if url.trim().is_empty() {
         let err_msg = "pull_up called with empty url";
         error!("{}", err_msg);
@@ -111,14 +140,25 @@ pub fn pull_up(_app: AppHandle, url: String) -> Result<(), String> {
         .unwrap_or(false);
     let is_dev = cfg!(debug_assertions) && !is_test;
 
-    let Some(exe_path) = resolve_executable(is_dev) else {
+    let Some(exe_path) = resolve_executable(&app, is_dev) else {
         let err_msg = format!(
             "JumpServerClient executable not found. Searched: {:?}",
-            candidate_paths(is_dev)
+            candidate_paths(&app, is_dev)
         );
         error!("{}", err_msg);
         return Err(err_msg);
     };
+
+    if let Ok(current_exe) = env::current_exe() {
+        if canonicalize_if_exists(&current_exe) == canonicalize_if_exists(&exe_path) {
+            let err_msg = format!(
+                "Refusing to relaunch current desktop binary recursively: {:?}",
+                exe_path
+            );
+            error!("{}", err_msg);
+            return Err(err_msg);
+        }
+    }
 
     info!("Launching client: {:?} {}", exe_path, url);
 

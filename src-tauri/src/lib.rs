@@ -146,8 +146,11 @@ pub fn run() {
         .plugin(tauri_plugin_prevent_default::debug())
         .setup(|app| {
             let menu = build_menu(app)?;
-            app.set_menu(menu.clone())?;
-            app.on_menu_event(|app_handle, event| handle_menu_event(&app_handle, &event));
+            #[cfg(target_os = "macos")]
+            {
+                app.set_menu(menu.clone())?;
+                app.on_menu_event(|app_handle, event| handle_menu_event(&app_handle, &event));
+            }
 
             let win = app.get_webview_window("main").unwrap();
             let app_handle = app.app_handle().clone();

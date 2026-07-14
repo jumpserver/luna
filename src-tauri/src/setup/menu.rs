@@ -161,7 +161,7 @@ pub fn handle_menu_event(app_handle: &tauri::AppHandle, event: &MenuEvent) {
 }
 
 /// 打开/聚焦设置窗口
-pub fn open_settings_window(app: &tauri::AppHandle) {
+pub fn open_settings_window<R: Runtime>(app: &tauri::AppHandle<R>) {
     let label = "secondary";
 
     if let Some(existing) = app.get_webview_window(label) {
@@ -187,12 +187,14 @@ pub fn open_settings_window(app: &tauri::AppHandle) {
 
     match builder.build() {
         Ok(_win) => {
-            #[cfg(target_os = "windows")]
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
             {
-                // Windows 下禁用原生装饰（标题栏/菜单栏），与主窗口保持一致
+                // Windows / Linux 下禁用原生装饰（标题栏/菜单栏），与主窗口保持一致
                 if let Err(e) = _win.set_decorations(false) {
                     warn!("Failed to disable decorations for settings window: {}", e);
                 }
+
+                #[cfg(target_os = "windows")]
                 if let Err(e) = _win.set_shadow(false) {
                     warn!("Failed to disable shadow for settings window: {}", e);
                 }
@@ -212,7 +214,7 @@ pub fn open_settings_window(app: &tauri::AppHandle) {
 }
 
 /// 打开 About 弹窗
-fn open_about_window(app: &tauri::AppHandle) {
+pub fn open_about_window<R: Runtime>(app: &tauri::AppHandle<R>) {
     let label = "about-window";
     if let Some(win) = app.get_webview_window(label) {
         let _ = win.unminimize();

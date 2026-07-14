@@ -30,7 +30,13 @@
       }
     },
     "linux": {
-      "deb": {},
+      "deb": {
+        "depends": [
+          "libayatana-appindicator3-1",
+          "libwebkit2gtk-4.1-0"
+        ],
+        "desktopTemplate": "./linux/jumpserver-client.desktop.hbs"
+      },
       "rpm": {}
     }
   },
@@ -40,6 +46,7 @@
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:3000/luna/"
   },
+  "mainBinaryName": "JumpServerClient",
   "productName": "JumpServerClient",
   "version": "4.1.2",
   "identifier": "com.jumpserver.client",
@@ -62,7 +69,7 @@
         "minHeight": 480,
         "resizable": true,
         "fullscreen": false,
-        "transparent": true,
+        "transparent": false,
         "shadow": true,
         "decorations": true,
         "titleBarStyle": "Overlay",

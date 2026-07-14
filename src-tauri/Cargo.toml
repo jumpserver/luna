@@ -1,5 +1,5 @@
 [package]
-name = "JumpServerClient"
+name = "jumpserver-client"
 version = "4.1.2"
 description = "JumpServer client tool"
 authors = [ "JumpServer" ]
