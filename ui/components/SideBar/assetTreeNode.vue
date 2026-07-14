@@ -62,6 +62,7 @@ const iconSrc = computed(() => {
 });
 
 const icon = computed(() => {
+  if (props.node.meta?.type === "recent-connections") return "i-lucide-history";
   if (isParent.value) return isOpen.value ? "i-tabler-folder-open" : "i-tabler-folder";
   if (iconSrc.value) return "";
   if ((props.node.meta?.data?.platform_type || "").toLowerCase().includes("device")) return "i-lucide-router";
@@ -125,6 +126,7 @@ const activate = () => {
         :key="`${treeKind}-${child.id}`"
         :node="child"
         :tree-kind="treeKind"
+        :search-mode="searchMode"
         :batch-mode="batchMode"
         :checked-asset-ids="checkedAssetIds"
         @select="emit('select', $event)"

@@ -112,6 +112,28 @@ export function createFavoriteFolder(payload: FavoriteFolderPayload): Promise<un
   });
 }
 
+export function getFavoriteAssets(): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "GET",
+    path: "/api/v1/assets/favorite-assets/"
+  });
+}
+
+export function updateFavoriteFolder(id: string, payload: FavoriteFolderPayload): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "PATCH",
+    path: `/api/v1/assets/favorite-folders/${id}/`,
+    body: payload
+  });
+}
+
+export function deleteFavoriteFolder(id: string): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "DELETE",
+    path: `/api/v1/assets/favorite-folders/${id}/`
+  });
+}
+
 export function favoriteAssetToFolder(assetId: string, folderId: string): Promise<unknown> {
   return apiRequest<unknown>({
     method: "POST",

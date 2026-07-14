@@ -7,12 +7,12 @@ const props = defineProps<{ folder: FavoriteFolder, level?: number }>();
 const emit = defineEmits<{
   select: [asset: AssetItem]
   contextmenu: [asset: AssetItem, event: MouseEvent]
-  create: [parentId: string]
+  folderContextmenu: [folder: FavoriteFolder, event: MouseEvent]
+  toggleFolder: [folder: FavoriteFolder]
 }>();
 
-const open = ref(props.folder.open);
 const toggle = () => {
-  open.value = !open.value;
+  emit("toggleFolder", props.folder);
 };
 </script>
 
@@ -21,25 +21,15 @@ const toggle = () => {
     <div
       class="group/folder flex h-7 items-center gap-1 rounded-lg pr-1 text-xs hover:bg-black/5 dark:hover:bg-white/10"
       :style="{ paddingLeft: `${12 + (level || 0) * 14}px` }"
+      @contextmenu.prevent="emit('folderContextmenu', folder, $event)"
     >
       <button type="button" class="flex min-w-0 flex-1 items-center gap-1 text-left" @click="toggle">
-        <UIcon name="i-lucide-chevron-right" class="sidebar-icon-sm transition-transform" :class="open ? 'rotate-90' : ''" />
-        <UIcon :name="open ? 'i-tabler-folder-open' : 'i-tabler-folder'" class="sidebar-icon" />
+        <UIcon name="i-lucide-chevron-right" class="sidebar-icon-sm transition-transform" :class="folder.open ? 'rotate-90' : ''" />
+        <UIcon :name="folder.open ? 'i-tabler-folder-open' : 'i-tabler-folder'" class="sidebar-icon" />
         <span class="truncate font-medium">{{ folder.name }}</span>
       </button>
-      <UTooltip :text="$t('Favorite.CreateSubfolder')" :delay-duration="150">
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          icon="i-lucide-folder-plus"
-          class="size-5 justify-center p-0 opacity-0 group-hover/folder:opacity-100"
-          :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-          @click.stop="emit('create', folder.id)"
-        />
-      </UTooltip>
     </div>
-    <div v-if="open">
+    <div v-if="folder.open">
       <FavoriteTreeNode
         v-for="child in folder.children"
         :key="child.id"
@@ -47,7 +37,8 @@ const toggle = () => {
         :level="(level || 0) + 1"
         @select="emit('select', $event)"
         @contextmenu="(asset, event) => emit('contextmenu', asset, event)"
-        @create="emit('create', $event)"
+        @folder-contextmenu="(target, event) => emit('folderContextmenu', target, event)"
+        @toggle-folder="(target) => emit('toggleFolder', target)"
       />
       <button
         v-for="asset in folder.assets"

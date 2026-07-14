@@ -1,4 +1,12 @@
 import type { AssetItem } from "~/types";
+import {
+  createFavoriteFolder,
+  deleteFavoriteFolder,
+  favoriteAssetToFolder,
+  getFavoriteAssets,
+  getFavoriteFolders,
+  updateFavoriteFolder
+} from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface FavoriteFolder {
@@ -43,13 +51,12 @@ const assetFromRaw = (raw: any): AssetItem | null => {
 const normalizeFolders = (value: unknown): FavoriteFolder[] => {
   const rawFolders = rawList(value);
   const folders = rawFolders.map((raw: any) => {
-    const assetValues = raw.assets || raw.favorite_assets || raw.items || [];
     return {
       id: String(raw.id || raw.key || ""),
       name: String(raw.name || raw.title || ""),
       parent: raw.parent == null ? null : String(raw.parent?.id || raw.parent),
       children: normalizeFolders(raw.children || raw.folders || []),
-      assets: rawList(assetValues).map(assetFromRaw).filter(Boolean) as AssetItem[],
+      assets: [],
       open: Boolean(raw.open)
     } satisfies FavoriteFolder;
   }).filter((folder) => folder.id);
@@ -67,24 +74,65 @@ const normalizeFolders = (value: unknown): FavoriteFolder[] => {
   return roots;
 };
 
+const flattenFolders = (folders: FavoriteFolder[]): FavoriteFolder[] => folders.flatMap((folder) => [
+  folder,
+  ...flattenFolders(folder.children)
+]);
+
+const folderIdFromRaw = (raw: any): string | null => {
+  const value = raw?.folder;
+  if (!value) return null;
+  return String(value?.id || value);
+};
+
 export const useFavoriteFolders = () => {
   const userInfoStore = useUserInfoStore();
   const { loggedIn, orgId } = storeToRefs(userInfoStore);
   const folders = useState<FavoriteFolder[]>("favorite-folders", () => []);
+  const rootAssets = useState<AssetItem[]>("favorite-root-assets", () => []);
   const loading = useState<boolean>("favorite-folders-loading", () => false);
 
   const load = async () => {
     if (!loggedIn.value || loading.value) return;
     loading.value = true;
     try {
-      folders.value = normalizeFolders(await getFavoriteFolders());
+      const [folderData, assetData] = await Promise.all([
+        getFavoriteFolders(),
+        getFavoriteAssets().catch(() => [])
+      ]);
+      const normalizedFolders = normalizeFolders(folderData);
+      const folderMap = new Map(flattenFolders(normalizedFolders).map((folder) => [folder.id, folder]));
+      const nextRootAssets: AssetItem[] = [];
+
+      for (const raw of rawList(assetData)) {
+        const asset = assetFromRaw(raw);
+        if (!asset) continue;
+
+        const folderId = folderIdFromRaw(raw);
+        const folder = folderId ? folderMap.get(folderId) : undefined;
+        if (folder) folder.assets.push(asset);
+        else nextRootAssets.push(asset);
+      }
+
+      folders.value = normalizedFolders;
+      rootAssets.value = nextRootAssets;
     } finally {
       loading.value = false;
     }
   };
 
   const createFolder = async (name: string, parent: string | null = null) => {
-    await createFavoriteFolder({ name, parent });
+    await createFavoriteFolder(parent ? { name, parent } : { name });
+    await load();
+  };
+
+  const renameFolder = async (id: string, name: string) => {
+    await updateFavoriteFolder(id, { name });
+    await load();
+  };
+
+  const removeFolder = async (id: string) => {
+    await deleteFavoriteFolder(id);
     await load();
   };
 
@@ -96,6 +144,7 @@ export const useFavoriteFolders = () => {
 
   watch([loggedIn, orgId], () => {
     folders.value = [];
+    rootAssets.value = [];
   });
-  return { folders, loading, load, createFolder, favoriteToFolder };
+  return { folders, rootAssets, loading, load, createFolder, renameFolder, removeFolder, favoriteToFolder };
 };

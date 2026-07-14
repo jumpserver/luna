@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from "@nuxt/ui";
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -16,12 +17,16 @@ const emit = defineEmits<{
 
 type PanelKind = Exclude<AssetTreeKind, "search">;
 
+const RECENT_NODE_ID = "__recent_connections__";
+
 const { t } = useI18n();
 const toast = useToast();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, orgId } = storeToRefs(userInfoStore);
 const { fetchTree, treeNodeToAsset } = useAssetTree();
+const { recentConnections, load: loadRecentConnections } = useRecentConnections();
 const activeTreeKind = ref<PanelKind>("authorization");
+const recentNodeOpen = ref(false);
 const authorizationNodes = ref<AssetTreeNode[]>([]);
 const typeNodes = ref<AssetTreeNode[]>([]);
 const searchNodes = ref<AssetTreeNode[]>([]);
@@ -30,10 +35,57 @@ const searchLoading = ref(false);
 const batchMode = ref(false);
 const checkedAssets = ref<Record<string, AssetItem>>({});
 const checkedNodeIds = ref<string[]>([]);
+const nodeMenuVisible = ref(false);
+const nodeMenuPosition = ref({ x: 0, y: 0 });
+const nodeMenuTarget = ref<{ node: AssetTreeNode, kind: PanelKind } | null>(null);
 
-const activeTree = computed(() => activeTreeKind.value === "authorization"
-  ? { label: t("Menu.AuthorizedTree"), nodes: authorizationNodes.value }
-  : { label: t("Menu.TypeTree"), nodes: typeNodes.value });
+const activeTree = computed(() => {
+  if (activeTreeKind.value === "authorization") {
+    return {
+      label: t("Menu.AuthorizedTree"),
+      nodes: [buildRecentConnectionsNode(), ...authorizationNodes.value]
+    };
+  }
+
+  return { label: t("Menu.TypeTree"), nodes: typeNodes.value };
+});
+
+const isRecentRootNode = (node: AssetTreeNode) => node.id === RECENT_NODE_ID;
+
+const assetItemToTreeNode = (asset: AssetItem, level: number): AssetTreeNode => ({
+  id: `recent-${asset.id}`,
+  key: asset.id,
+  name: asset.name,
+  title: asset.address,
+  level,
+  meta: {
+    data: {
+      id: asset.id,
+      name: asset.name,
+      address: asset.address,
+      platform: asset.platform,
+      zone: asset.zone,
+      category: asset.category,
+      type: asset.type,
+      is_active: asset.isActive !== false,
+      comment: asset.comment,
+      permedProtocols: asset.permedProtocols,
+      permedAccounts: asset.permedAccounts
+    }
+  }
+});
+
+const buildRecentConnectionsNode = (): AssetTreeNode => ({
+  id: RECENT_NODE_ID,
+  key: RECENT_NODE_ID,
+  name: t("Menu.RecentConnections"),
+  isParent: true,
+  open: recentNodeOpen.value,
+  loaded: true,
+  level: 0,
+  children: recentConnections.value.map((asset) => assetItemToTreeNode(asset, 1)),
+  meta: { type: "recent-connections" }
+});
 
 const treeSwitchLabel = computed(() => activeTreeKind.value === "authorization"
   ? t("Tree.SwitchToType")
@@ -81,6 +133,7 @@ const reportError = (error: unknown) => {
 
 const loadRoot = async (kind: PanelKind) => {
   if (!loggedIn.value) return;
+  if (kind === "authorization") loadRecentConnections();
   loading.value = true;
   try {
     const nodes = await fetchTree(kind);
@@ -111,6 +164,7 @@ const refresh = async () => {
   searchNodes.value = [];
   checkedAssets.value = {};
   checkedNodeIds.value = [];
+  loadRecentConnections();
   await Promise.all([loadRoot("authorization"), loadRoot("type")]);
 };
 
@@ -122,6 +176,12 @@ const switchTreeKind = () => {
 };
 
 async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
+  if (isRecentRootNode(node)) {
+    recentNodeOpen.value = !recentNodeOpen.value;
+    if (recentNodeOpen.value) loadRecentConnections();
+    return;
+  }
+
   if (node.open) {
     node.open = false;
     return;
@@ -141,6 +201,61 @@ async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
     node.loading = false;
   }
 }
+
+const isBranchNode = (node: AssetTreeNode) => Boolean(node.isParent || node.children?.length);
+
+const collapseNode = (node: AssetTreeNode) => {
+  if (isRecentRootNode(node)) {
+    recentNodeOpen.value = false;
+    return;
+  }
+
+  node.open = false;
+};
+
+const collapseNodeRecursive = (node: AssetTreeNode) => {
+  if (isRecentRootNode(node)) {
+    recentNodeOpen.value = false;
+    return;
+  }
+
+  node.open = false;
+  for (const child of node.children || []) {
+    collapseNodeRecursive(child);
+  }
+};
+
+const nodeHasClosedBranch = (node: AssetTreeNode): boolean => {
+  if (isRecentRootNode(node)) return !recentNodeOpen.value;
+  if (!isBranchNode(node)) return false;
+  if (!node.open || !node.loaded) return true;
+  return (node.children || []).some((child) => nodeHasClosedBranch(child));
+};
+
+const nodeHasOpenBranch = (node: AssetTreeNode): boolean => {
+  if (isRecentRootNode(node)) return recentNodeOpen.value;
+  if (!isBranchNode(node)) return false;
+  if (node.open) return true;
+  return (node.children || []).some((child) => nodeHasOpenBranch(child));
+};
+
+const expandNodeRecursive = async (node: AssetTreeNode, kind: PanelKind) => {
+  if (isRecentRootNode(node)) {
+    recentNodeOpen.value = true;
+    loadRecentConnections();
+    return;
+  }
+
+  if (!isBranchNode(node)) return;
+
+  if (!node.open || !node.loaded) {
+    await toggleNode(node, kind);
+  }
+
+  for (const child of node.children || []) {
+    await expandNodeRecursive(child, kind);
+  }
+};
 
 const selectNode = (node: AssetTreeNode) => {
   if (node.chkDisabled) return;
@@ -179,9 +294,78 @@ const openCheckedAssets = () => {
 };
 
 const openContextMenu = (node: AssetTreeNode, event: MouseEvent) => {
-  if (node.isParent || node.chkDisabled) return;
+  if (node.chkDisabled) return;
+
+  if (isBranchNode(node)) {
+    event.preventDefault();
+    event.stopPropagation();
+    nodeMenuTarget.value = { node, kind: activeTreeKind.value };
+    nodeMenuPosition.value = { x: event.clientX, y: event.clientY };
+    nodeMenuVisible.value = true;
+    return;
+  }
+
   emit("contextmenu", treeNodeToAsset(node), event);
 };
+
+const closeNodeMenu = () => {
+  nodeMenuVisible.value = false;
+  nodeMenuTarget.value = null;
+};
+
+const nodeMenuItems = computed<DropdownMenuItem[]>(() => {
+  const target = nodeMenuTarget.value;
+  if (!target) return [];
+
+  const { node, kind } = target;
+  const canExpand = !node.open;
+  const canCollapse = !!node.open;
+  const canExpandAll = nodeHasClosedBranch(node);
+  const canCollapseAll = nodeHasOpenBranch(node);
+
+  return [
+    ...(canExpand
+      ? [{
+          label: t("Tree.Expand"),
+          icon: "i-lucide-chevron-right",
+          onSelect: async () => {
+            closeNodeMenu();
+            await toggleNode(node, kind);
+          }
+        } satisfies DropdownMenuItem]
+      : []),
+    ...(canCollapse
+      ? [{
+          label: t("Tree.Collapse"),
+          icon: "i-lucide-chevron-down",
+          onSelect: () => {
+            closeNodeMenu();
+            collapseNode(node);
+          }
+        } satisfies DropdownMenuItem]
+      : []),
+    ...(canExpandAll
+      ? [{
+          label: t("Tree.ExpandAll"),
+          icon: "i-lucide-chevrons-down",
+          onSelect: async () => {
+            closeNodeMenu();
+            await expandNodeRecursive(node, kind);
+          }
+        } satisfies DropdownMenuItem]
+      : []),
+    ...(canCollapseAll
+      ? [{
+          label: t("Tree.CollapseAll"),
+          icon: "i-lucide-chevrons-up",
+          onSelect: () => {
+            closeNodeMenu();
+            collapseNodeRecursive(node);
+          }
+        } satisfies DropdownMenuItem]
+      : [])
+  ];
+});
 
 const searchTree = useDebounceFn(async (keyword: string) => {
   if (!keyword.trim() || !loggedIn.value) {
@@ -200,7 +384,10 @@ const searchTree = useDebounceFn(async (keyword: string) => {
 
 watch(() => props.search, (value) => searchTree(value));
 watch(() => props.search, (value) => {
-  if (value.trim()) closeBatchMode();
+  if (value.trim()) {
+    closeBatchMode();
+    closeNodeMenu();
+  }
 });
 watch([loggedIn, orgId], ([isLoggedIn]) => {
   if (isLoggedIn) {
@@ -210,6 +397,7 @@ watch([loggedIn, orgId], ([isLoggedIn]) => {
     typeNodes.value = [];
     searchNodes.value = [];
     closeBatchMode();
+    closeNodeMenu();
   }
 }, { immediate: true });
 
@@ -357,4 +545,23 @@ defineExpose({ refresh, loading });
       </section>
     </template>
   </div>
+
+  <UDropdownMenu
+    :open="nodeMenuVisible"
+    :items="nodeMenuItems"
+    size="sm"
+    :content="{ align: 'start', side: 'bottom' }"
+    :ui="{ content: 'w-44 p-1' }"
+    @update:open="nodeMenuVisible = $event"
+  >
+    <div
+      class="fixed pointer-events-none"
+      :style="{
+        left: `${nodeMenuPosition.x}px`,
+        top: `${nodeMenuPosition.y}px`,
+        width: '1px',
+        height: '1px'
+      }"
+    />
+  </UDropdownMenu>
 </template>

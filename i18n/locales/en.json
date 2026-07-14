@@ -86,14 +86,22 @@
     "CreateSubfolder": "Create subfolder",
     "FolderName": "Folder name",
     "CreateFailed": "Failed to create folder",
+    "RenameFailed": "Failed to rename folder",
     "CreateFolderFirst": "Create a favorite folder first",
     "AddToFolder": "Add to favorites",
     "AddSuccess": "Added to favorites",
-    "AddFailed": "Failed to add to favorites"
+    "AddFailed": "Failed to add to favorites",
+    "DeleteFolder": "Delete folder",
+    "DeleteFailed": "Failed to delete folder",
+    "DeleteFolderConfirm": "Delete \"{name}\"?"
   },
   "Tree": {
     "SwitchToType": "Switch to type tree",
     "SwitchToAuthorization": "Switch to my assets",
+    "Expand": "Expand",
+    "ExpandAll": "Expand all",
+    "Collapse": "Collapse",
+    "CollapseAll": "Collapse all",
     "OpenMultiple": "Open multiple",
     "OpenSelected": "Open selected",
     "SelectedCount": "{count} selected",

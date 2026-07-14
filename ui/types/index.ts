@@ -36,12 +36,11 @@ export type AssetPageType =
   | "device"
   | "web"
   | "favorite";
-export type SidebarSectionKey = "assets" | "favorites" | "recent" | "snippets";
+export type SidebarSectionKey = "assets" | "favorites" | "snippets";
 
 export interface SidebarSectionVisibility {
   assets: boolean;
   favorites: boolean;
-  recent: boolean;
   snippets: boolean;
 }
 

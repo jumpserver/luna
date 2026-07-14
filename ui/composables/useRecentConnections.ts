@@ -5,13 +5,18 @@ const MAX_RECENT = 10;
 const recentConnections = ref<AssetItem[]>([]);
 let hydrated = false;
 
-function hydrate() {
-  if (hydrated || !import.meta.client) return;
-  hydrated = true;
+function loadRecentConnections() {
+  if (!import.meta.client) return;
   try {
     const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
     if (Array.isArray(value)) recentConnections.value = value.slice(0, MAX_RECENT);
   } catch {}
+}
+
+function hydrate() {
+  if (hydrated) return;
+  hydrated = true;
+  loadRecentConnections();
 }
 
 export function useRecentConnections() {
@@ -26,5 +31,5 @@ export function useRecentConnections() {
     }
   };
 
-  return { recentConnections, recordRecentConnection };
+  return { recentConnections, recordRecentConnection, load: loadRecentConnections };
 }

@@ -36,7 +36,6 @@ const renameDisabled = computed(() => {
 const sidebarSectionLabels = computed<Record<SidebarSectionKey, string>>(() => ({
   assets: t("Menu.AuthorizedTree"),
   favorites: t("Menu.Favorite"),
-  recent: t("Menu.RecentConnections"),
   snippets: t("Menu.Snippets")
 }));
 const userInfoStore = useUserInfoStore();
@@ -51,7 +50,6 @@ const visibleSectionCount = computed(() => SIDEBAR_SECTION_KEYS.filter((key) => 
 const showAssetSection = computed(() => sidebarSections.value.assets);
 const visibleShelfPanels = computed(() => ({
   favorites: sidebarSections.value.favorites,
-  recent: sidebarSections.value.recent,
   snippets: sidebarSections.value.snippets
 }));
 const hasVisibleShelfPanel = computed(() => Object.values(visibleShelfPanels.value).some(Boolean));
