@@ -148,18 +148,22 @@ function sendConsoleAction(tab: ChenWorkspaceTab, type: string, data?: any) {
 }
 
 function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
+  if (tab.kind === "query" || tab.kind === "console") {
+    queryConsole.handleQueryConsolePacket(tab, packet);
+  }
+
   switch (packet.type) {
     case "init":
-      tab.title = packet.data?.title || tab.title;
+      if (tab.kind === "data-view") tab.title = packet.data?.title || tab.title;
       break;
     case "log":
-      queryConsole.appendLog(tab, packet.data);
+      if (tab.kind === "data-view") queryConsole.appendLog(tab, packet.data);
       break;
     case "message":
-      queryConsole.appendLog(tab, packet.data);
+      if (tab.kind === "data-view") queryConsole.appendLog(tab, packet.data);
       break;
     case "update_state":
-      tab.state = packet.data || {};
+      if (tab.kind === "data-view") tab.state = packet.data || {};
       break;
     case "active_console":
       if (typeof packet.data === "string") {
@@ -171,7 +175,6 @@ function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
       closeWorkspaceTab(tab.id);
       break;
     default:
-      if (tab.kind === "query" || tab.kind === "console") queryConsole.handleQueryConsolePacket(tab, packet);
       if (tab.kind === "data-view") dataView.handleDataViewConsolePacket(tab, packet);
       break;
   }
@@ -277,8 +280,8 @@ function openNodeMenu(node: ChenTreeNode, event: MouseEvent) {
   });
 }
 
-function runQueryTab(tab: ChenQueryLikeWorkspaceTab) {
-  if (tab.kind === "query") queryConsole.runQueryTab(tab);
+function runQueryTab(tab: ChenQueryLikeWorkspaceTab, selectedSql = "") {
+  if (tab.kind === "query") queryConsole.runQueryTab(tab, selectedSql);
   if (tab.kind === "console") queryConsole.runConsoleTab(tab);
 }
 
@@ -296,6 +299,10 @@ function updateConsolePendingSql(tab: ChenPromptConsoleTab, value: string) {
 
 function activateQueryResult(tab: ChenQueryLikeWorkspaceTab, id: string) {
   tab.activeResultTabId = id;
+}
+
+function closeQueryResult(tab: ChenQueryLikeWorkspaceTab, title: string) {
+  queryConsole.closeQueryResult(tab, title);
 }
 
 function updateDataViewPanel(tab: Extract<ChenWorkspaceTab, { kind: "data-view" }>, panel: "data" | "properties") {
@@ -392,6 +399,7 @@ defineExpose({ focus });
             @download="downloadDataViewCsv"
             @update-statement="updateQueryStatement"
             @activate-result="activateQueryResult"
+            @close-result="closeQueryResult"
           />
 
           <ConsolePanel
