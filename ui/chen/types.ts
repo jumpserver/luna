@@ -68,11 +68,20 @@ export interface ChenConsoleState {
   [key: string]: any
 }
 
+export interface ChenConsoleMessage {
+  type?: "error" | "success" | "info" | string
+  title?: string
+  message: string
+  sql?: string
+  [key: string]: any
+}
+
 export interface ChenQueryResultTab {
   id: string
   title: string
   meta: ChenDataViewMeta
   data: ChenDataViewDataset | null
+  state: ChenConsoleState
 }
 
 export interface ChenConsoleHistoryEntry {
@@ -85,6 +94,7 @@ export interface ChenQueryConsoleTab extends ChenTabDefinition {
   statement: string
   state: ChenConsoleState
   logs: string[]
+  message: ChenConsoleMessage | null
   resultTabs: ChenQueryResultTab[]
   activeResultTabId: string
   socket: WebSocket | null
@@ -95,6 +105,7 @@ export interface ChenPromptConsoleTab extends ChenTabDefinition {
   pendingSql: string
   state: ChenConsoleState
   logs: string[]
+  message: ChenConsoleMessage | null
   historyEntries: ChenConsoleHistoryEntry[]
   resultTabs: ChenQueryResultTab[]
   activeResultTabId: string
