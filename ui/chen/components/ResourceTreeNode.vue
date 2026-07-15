@@ -69,7 +69,7 @@ const iconName = computed(() => {
       @contextmenu.prevent="emit('menu', { node, event: $event })"
     >
       <button
-        v-if="node.type !== 'table'"
+        v-if="!node.leaf"
         type="button"
         class="flex size-4 items-center justify-center rounded-sm text-muted hover:bg-accented"
         @click.stop="emit('toggle', node)"
@@ -84,6 +84,9 @@ const iconName = computed(() => {
     <ul v-if="isExpanded" class="space-y-0.5">
       <li v-if="loadingChildren[node.key]" class="px-1.5 py-0.5 text-[11px] text-muted" :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }">
         Loading...
+      </li>
+      <li v-else-if="!children.length" class="px-1.5 py-0.5 text-[11px] text-muted" :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }">
+        No items
       </li>
       <ChenResourceTreeNode
         v-for="child in children"
