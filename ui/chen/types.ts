@@ -23,6 +23,8 @@ export interface ChenActionItem {
   key: string
   label: string
   icon?: string
+  disabled?: boolean
+  divided?: boolean
   children?: ChenActionItem[]
 }
 

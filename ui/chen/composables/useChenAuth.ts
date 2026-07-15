@@ -36,14 +36,20 @@ export function useChenAuth(tab: Ref<WorkspaceSessionTab>) {
     }
 
     chenToken.value = auth.token;
+    return auth.token;
+  }
+
+  async function loadProfile() {
+    if (!chenToken.value) throw new Error("Missing chen session token");
+
     try {
-      profile.value = await fetchChenProfile(auth.token);
+      profile.value = await fetchChenProfile(chenToken.value);
     } catch (cause) {
       error.value = `Chen profile failed: ${cause instanceof Error ? cause.message : String(cause)}`;
       throw new Error(error.value);
     }
 
-    return auth.token;
+    return profile.value;
   }
 
   return {
@@ -52,6 +58,7 @@ export function useChenAuth(tab: Ref<WorkspaceSessionTab>) {
     error,
     profile,
     authenticate,
+    loadProfile,
     ensureTokenId
   };
 }
