@@ -329,20 +329,6 @@ const emitVersionAlertAndCloseModal = (payload: VersionAlertPayload) => {
   useEventBus().emit("versionAlert", payload);
 };
 
-const handleInvalidSiteVersion = () => {
-  clearLoginBtnUnlockTimer();
-  loginBtn.value = false;
-  hasValidationError.value = true;
-  errorMessage.value = t("Login.InvalidSiteError");
-
-  if (isTauriRuntime()) {
-    void useTauriCoreInvoke("auth_cancel", {});
-  }
-
-  nextTick(() => {
-    inputRef.value?.$el?.querySelector("input")?.focus();
-  });
-};
 const checkVersionBeforeOAuth = async (site: string) => {
   if (!isTauriRuntime()) return true;
 
