@@ -78,13 +78,7 @@ fn build_tray_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         true,
         None::<&str>,
     )?;
-    let quit_i = MenuItem::with_id(
-        app,
-        "quit",
-        labels.quit_label.as_str(),
-        true,
-        None::<&str>,
-    )?;
+    let quit_i = MenuItem::with_id(app, "quit", labels.quit_label.as_str(), true, None::<&str>)?;
 
     Menu::with_items(
         app,
@@ -104,6 +98,8 @@ where
     App<R>: Manager<R>,
     AppHandle<R>: Manager<R>,
 {
+    let app_handle = app.app_handle().clone();
+
     // 尝试加载自定义托盘图标，如果失败则使用默认图标
     let icon = load_custom_tray_icon().unwrap_or_else(|| {
         info!("Using default window icon for tray");
@@ -114,7 +110,6 @@ where
             .clone()
     });
 
-    let app_handle = app.app_handle().clone();
     let tray_menu = build_tray_menu(&app_handle).unwrap_or_else(|_| menu.clone());
 
     let tray_result = TrayIconBuilder::new()
@@ -155,60 +150,4 @@ where
             Err(Box::new(e))
         }
     }
-}
-
-fn build_tray_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>>
-where
-    AppHandle<R>: Manager<R>,
-{
-    let use_zh = prefers_zh();
-    let app_name = app.package_info().name.clone();
-    let labels = menu_labels(use_zh, &app_name);
-
-    let show_main = if use_zh {
-        "显示主窗口"
-    } else {
-        "Show Main Window"
-    };
-
-    let show_main_i = MenuItem::with_id(app, "show-main", show_main, true, None::<&str>)?;
-    let settings_i = MenuItem::with_id(
-        app,
-        "open-settings",
-        labels.settings_label.as_str(),
-        true,
-        None::<&str>,
-    )?;
-    let about_i = MenuItem::with_id(
-        app,
-        "about",
-        labels.about_label.as_str(),
-        true,
-        None::<&str>,
-    )?;
-    let quit_i = MenuItem::with_id(
-        app,
-        "quit",
-        labels.quit_label.as_str(),
-        true,
-        None::<&str>,
-    )?;
-
-    Menu::with_items(
-        app,
-        &[
-            &show_main_i,
-            &settings_i,
-            &about_i,
-            &PredefinedMenuItem::separator(app)?,
-            &quit_i,
-        ],
-    )
-}
-
-fn prefers_zh() -> bool {
-    tauri_plugin_os::locale()
-        .or_else(|| std::env::var("LANG").ok())
-        .map(|lang| lang.to_lowercase().starts_with("zh"))
-        .unwrap_or(false)
 }

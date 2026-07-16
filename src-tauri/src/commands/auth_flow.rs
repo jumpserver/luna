@@ -3,8 +3,8 @@ use tauri::{AppHandle, Emitter, State};
 
 use crate::api::client::{api_client_for_origin, oauth_client_for_origin};
 use crate::service::oauth::{
-    build_oauth_client, create_authorization_request, exchange_authorization_code,
-    fetch_oauth_config, ensure_fresh_token, AuthFlowState,
+    build_oauth_client, create_authorization_request, ensure_fresh_token,
+    exchange_authorization_code, fetch_oauth_config, AuthFlowState,
 };
 use crate::service::user::UserService;
 

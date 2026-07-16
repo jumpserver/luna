@@ -160,15 +160,16 @@ impl PluginService {
         }
 
         if Self::os_key() != "windows" {
-            if let Some(selections) = state_obj.get_mut("selections").and_then(|v| v.as_object_mut()) {
+            if let Some(selections) = state_obj
+                .get_mut("selections")
+                .and_then(|v| v.as_object_mut())
+            {
                 for key in ["terminal:ssh", "terminal:telnet"] {
                     if selections.get(key).and_then(|v| v.as_str())
                         == Some(&format!("{os_key}.putty"))
                     {
-                        selections.insert(
-                            key.to_string(),
-                            Value::String(format!("{os_key}.terminal")),
-                        );
+                        selections
+                            .insert(key.to_string(), Value::String(format!("{os_key}.terminal")));
                         changed = true;
                     }
                 }
@@ -176,7 +177,10 @@ impl PluginService {
         }
 
         if Self::os_key() == "linux" {
-            if let Some(selections) = state_obj.get_mut("selections").and_then(|v| v.as_object_mut()) {
+            if let Some(selections) = state_obj
+                .get_mut("selections")
+                .and_then(|v| v.as_object_mut())
+            {
                 match selections.get("remotedesktop:rdp").and_then(|v| v.as_str()) {
                     Some("linux.mstsc") | Some("linux.remmina") => {
                         selections.insert(
@@ -204,7 +208,9 @@ impl PluginService {
             .and_then(|v| v.get(format!("{os_key}.iterm-sftp")))
             .and_then(|v| v.as_object())
             .map(|obj| {
-                obj.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false)
+                obj.get("enabled")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
                     || obj
                         .get("path")
                         .and_then(|v| v.as_str())
@@ -217,7 +223,10 @@ impl PluginService {
             return changed;
         }
 
-        if let Some(selections) = state_obj.get_mut("selections").and_then(|v| v.as_object_mut()) {
+        if let Some(selections) = state_obj
+            .get_mut("selections")
+            .and_then(|v| v.as_object_mut())
+        {
             if selections.remove("filetransfer:sftp").is_some() {
                 changed = true;
             }
