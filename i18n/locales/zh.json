@@ -3,6 +3,7 @@
     "Cancel": "取消",
     "About": "关于",
     "Confirm": "确认",
+    "Copy": "复制",
     "UnSigned": "未登录",
     "Version": "当前版本",
     "NoData": "暂无数据",
@@ -398,7 +399,9 @@
     "ExecutableNotFound": "未找到程序，请下载并正确安装",
     "BuiltInTerminal": "内置 Terminal",
     "AlwaysEnabled": "始终启用",
-    "DownloadApplication": "下载应用"
+    "DownloadApplication": "下载应用",
+    "CopyPath": "复制路径",
+    "CopyPathSuccess": "路径已复制"
   },
   "ConnectError": {
     "ConnectFailed": "连接失败",

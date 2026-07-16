@@ -108,9 +108,9 @@ func TestLoadAppConfigKeepsDefaultProtocolsWithPartialSelection(t *testing.T) {
 	}
 
 	for _, item := range cfg.MacOS.Terminal {
-		if item.Name == "terminal" && item.IsActive() && item.IsMatchProtocol("sftp") {
+		if item.Name == "terminal" && item.IsActive() && item.IsMatchProtocol("telnet") {
 			return
 		}
 	}
-	t.Fatalf("expected Terminal to keep default sftp match, got %#v", cfg.MacOS.Terminal)
+	t.Fatalf("expected Terminal to keep default telnet match, got %#v", cfg.MacOS.Terminal)
 }

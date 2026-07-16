@@ -523,12 +523,13 @@ export const useAssetAction = () => {
       token_reusable: false,
       disableautohash: false
     };
-    const specificOptions = protocol === "http"
-      ? {
-        appletConnectMethod: "client",
-        reusable: false
-      }
-      : {};
+    const specificOptions
+      = protocol === "http"
+        ? {
+          appletConnectMethod: "client",
+          reusable: false
+        }
+        : {};
     return {
       ...options,
       ...specificOptions
@@ -850,27 +851,33 @@ export const useAssetAction = () => {
         const payload = event.payload as eventPayload;
         const raw = payload.error || "";
         const lower = raw.toLowerCase();
+        const withDetail = (base: string) => {
+          const detail = raw.trim();
+          const parts = [base];
+          if (detail && detail !== base) parts.push(detail);
+          return parts.join("\n");
+        };
 
         let description = raw || t("ConnectError.ConnectFailed");
 
         if (lower.includes("executable not found")) {
-          description = t("ConnectError.ClientNotFound");
+          description = withDetail(t("ConnectError.ClientNotFound"));
         } else if (lower.includes("failed to launch client")) {
-          description = t("ConnectError.ClientLaunchFailed");
+          description = withDetail(t("ConnectError.ClientLaunchFailed"));
         } else if (lower.includes("client process exited")) {
-          description = t("ConnectError.ClientExited");
+          description = withDetail(t("ConnectError.ClientExited"));
         } else if (lower.includes("no rdp application")) {
-          description = t("ConnectError.RdpAppMissing");
+          description = withDetail(t("ConnectError.RdpAppMissing"));
         } else if (lower.includes("no vnc application")) {
-          description = t("ConnectError.VncAppMissing");
+          description = withDetail(t("ConnectError.VncAppMissing"));
         } else if (lower.includes("no database application")) {
-          description = t("ConnectError.DbAppMissing");
+          description = withDetail(t("ConnectError.DbAppMissing"));
         } else if (lower.includes("failed to execute rdp application")) {
-          description = t("ConnectError.RdpAppFailed");
+          description = withDetail(t("ConnectError.RdpAppFailed"));
         } else if (lower.includes("failed to execute vnc application")) {
-          description = t("ConnectError.VncAppFailed");
+          description = withDetail(t("ConnectError.VncAppFailed"));
         } else if (lower.includes("failed to execute database application")) {
-          description = t("ConnectError.DbAppFailed");
+          description = withDetail(t("ConnectError.DbAppFailed"));
         }
 
         toast.add({
@@ -878,6 +885,17 @@ export const useAssetAction = () => {
           description,
           color: "error",
           icon: "line-md:close-circle",
+          actions: [
+            {
+              label: t("Common.Copy"),
+              icon: "i-lucide-copy",
+              color: "neutral",
+              variant: "soft",
+              onClick: () => {
+                void useTauriClipboardManagerWriteText(`${t("ConnectError.ConnectFailed")}\n${description}`);
+              }
+            }
+          ],
           progress: true,
           duration: 4000
         });

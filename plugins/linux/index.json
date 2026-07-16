@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "plugins": [
+    {
+      "id": "linux.dbeaver",
+      "name": "dbeaver",
+      "category": "databases",
+      "platforms": [
+        "linux"
+      ]
+    },
+    {
+      "id": "linux.remmina",
+      "name": "remmina",
+      "category": "remotedesktop",
+      "platforms": [
+        "linux"
+      ]
+    },
+    {
+      "id": "linux.terminal",
+      "name": "terminal",
+      "category": "terminal",
+      "platforms": [
+        "linux"
+      ]
+    },
+    {
+      "id": "linux.terminal-db",
+      "name": "terminal",
+      "category": "databases",
+      "platforms": [
+        "linux"
+      ]
+    },
+    {
+      "id": "linux.tigervnc",
+      "name": "tigervnc",
+      "category": "remotedesktop",
+      "platforms": [
+        "linux"
+      ]
+    },
+    {
+      "id": "linux.xfreerdp",
+      "name": "xfreerdp",
+      "category": "remotedesktop",
+      "platforms": [
+        "linux"
+      ]
+    }
+  ]
+}

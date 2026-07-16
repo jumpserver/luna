@@ -1,0 +1,13 @@
+{
+  "platforms": {
+    "windows": {
+      "match_first": [
+        "rdp"
+      ],
+      "is_default": true,
+      "is_set": true,
+      "is_internal": true,
+      "path": "C:\\WINDOWS\\system32\\mstsc.exe"
+    }
+  }
+}

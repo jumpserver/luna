@@ -1,0 +1,15 @@
+{
+  "platforms": {
+    "linux": {
+      "executable": {
+        "type": "bundled",
+        "default": "Terminal"
+      },
+      "launch": {
+        "type": "args",
+        "template": ""
+      },
+      "display_name": "Terminal"
+    }
+  }
+}

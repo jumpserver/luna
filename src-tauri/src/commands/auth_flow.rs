@@ -1,7 +1,7 @@
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, State};
 
-use crate::api::client::{api_client, oauth_client};
+use crate::api::client::{api_client_for_origin, oauth_client_for_origin};
 use crate::service::oauth::{
     build_oauth_client, create_authorization_request, exchange_authorization_code,
     fetch_oauth_config, ensure_fresh_token, AuthFlowState,
@@ -17,7 +17,7 @@ pub async fn auth_login(
     log::info!("auth_login started for site: {}", site);
 
     // 获取 OAuth 配置
-    let config_http_client = api_client().map_err(|e| e.to_string())?;
+    let config_http_client = api_client_for_origin(&site).map_err(|e| e.to_string())?;
     let oauth_config = match fetch_oauth_config(&site, &config_http_client).await {
         Ok(config) => config,
         Err(e) => {
@@ -54,7 +54,7 @@ pub async fn auth_login(
             Err(e) => log::warn!("emit auth_url failed: {}", e),
         }
 
-        let http_client = oauth_client()?;
+        let http_client = oauth_client_for_origin(&site)?;
 
         // 等待 deep link 回调传回 code/state
         let callback = match pending.callback_rx.await {

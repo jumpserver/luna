@@ -1,0 +1,27 @@
+{
+  "id": "windows.navicat17",
+  "name": "navicat17",
+  "display_name": "Navicat premium Lite 17",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/jumpserver/clients",
+  "download_url": "https://www.navicat.com.cn/products",
+  "category": "databases",
+  "protocols": [
+    "mariadb",
+    "mysql",
+    "oracle",
+    "postgresql",
+    "sqlserver"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "数据库管理软件",
+    "en": "Database management software."
+  },
+  "permissions": [
+    "autoit",
+    "exec"
+  ]
+}

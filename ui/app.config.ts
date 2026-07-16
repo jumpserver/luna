@@ -42,6 +42,11 @@ export default defineAppConfig({
         }
       }
     },
+    toast: {
+      slots: {
+        description: "text-sm text-muted whitespace-pre-wrap break-all"
+      }
+    },
     formField: {
       slots: {
         root: "w-full"

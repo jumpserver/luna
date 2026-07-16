@@ -1,6 +1,6 @@
 use crate::{
     api::{
-        client::api_client,
+        client::api_client_for_origin,
         context::{apply_org_header, ApiContext},
         response::into_api_response,
     },
@@ -31,7 +31,7 @@ impl ApiRequestClient {
         org_id: String,
     ) -> Result<Self, reqwest::Error> {
         Ok(Self {
-            client: api_client()?,
+            client: api_client_for_origin(&origin)?,
             origin,
             bearer_token,
             org_id,

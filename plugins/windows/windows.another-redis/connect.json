@@ -1,0 +1,16 @@
+{
+  "platforms": {
+    "windows": {
+      "executable": {
+        "type": "user_path",
+        "default": "",
+        "required": true
+      },
+      "launch": {
+        "type": "args",
+        "template": "--host {host} --port {port} --auth {username}@{value}"
+      },
+      "display_name": "Another Redis Desktop Manager"
+    }
+  }
+}

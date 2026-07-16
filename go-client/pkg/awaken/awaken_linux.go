@@ -103,7 +103,7 @@ func buildLinuxTerminalCommand(terminalPath, clientPath, commands string) *exec.
 	}
 }
 
-func awakenRDPCommand(filePath string, cfg *config.AppConfig) *exec.Cmd {
+func awakenRDPCommand(filePath string, cfg *config.AppConfig) (*exec.Cmd, error) {
 	global.LOG.Debug(filePath)
 	var appItem *config.AppItem
 	appLst := cfg.Linux.RemoteDesktop
@@ -114,16 +114,16 @@ func awakenRDPCommand(filePath string, cfg *config.AppConfig) *exec.Cmd {
 		}
 	}
 	if appItem == nil {
-		return nil
+		return nil, nil
 	}
 	args := splitArgsWithLiteral(appItem.ArgFormat, map[string]string{
 		"{file}": filePath,
 	})
 	cmd := exec.Command(appItem.Name, args...)
-	return cmd
+	return cmd, nil
 }
 
-func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
+func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	var appItem *config.AppItem
 	appLst := cfg.Linux.RemoteDesktop
 	for _, app := range appLst {
@@ -133,7 +133,7 @@ func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		}
 	}
 	if appItem == nil {
-		return nil
+		return nil, nil
 	}
 	connectMap := map[string]string{
 		"name":     r.getName(),
@@ -146,8 +146,7 @@ func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 
 	if !appItem.IsInternal {
 		if err := validateAppPath(appItem.Path); err != nil {
-			global.LOG.Error(err.Error())
-			return nil
+			return nil, fmt.Errorf("No VNC application configured or found (selected path: %s, reason: %v)", appItem.Path, err)
 		}
 	}
 	commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
@@ -157,10 +156,10 @@ func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		"VNC_USERNAME="+r.getUserName(),
 		"VNC_PASSWORD="+r.Value,
 	)
-	return cmd
+	return cmd, nil
 }
 
-func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
+func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	var appItem *config.AppItem
 	var appLst []config.AppItem
 	switch r.Protocol {
@@ -177,7 +176,7 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		}
 	}
 	if appItem == nil {
-		return nil
+		return nil, nil
 	}
 
 	// telnet 协议使用 ssh 的配置参数格式
@@ -206,8 +205,7 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		if cmd == nil {
 			out, err := exec.Command("bash", "-c", "echo $XDG_CURRENT_DESKTOP").CombinedOutput()
 			if err != nil {
-				global.LOG.Error(fmt.Sprintf("Failed to detect desktop environment: %v", err))
-				return nil
+				return nil, fmt.Errorf("Failed to detect desktop environment: %v", err)
 			}
 
 			currentDesktop := strings.ToLower(strings.TrimSpace(string(out)))
@@ -240,17 +238,16 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		appPath := appItem.Path
 		if !appItem.IsInternal {
 			if err := validateAppPath(appItem.Path); err != nil {
-				global.LOG.Error(err.Error())
-				return nil
+				return nil, fmt.Errorf("No %s application configured or found (selected path: %s, reason: %v)", strings.ToUpper(r.Protocol), appItem.Path, err)
 			}
 		}
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 		cmd = exec.Command(appPath, strings.Split(commands, " ")...)
 	}
-	return cmd
+	return cmd, nil
 }
 
-func awakenDBCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
+func awakenDBCommand(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	var appItem *config.AppItem
 	appLst := cfg.Linux.Databases
 	for _, app := range appLst {
@@ -260,7 +257,7 @@ func awakenDBCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		}
 	}
 	if appItem == nil {
-		return nil
+		return nil, nil
 	}
 	var cmd *exec.Cmd
 	connectMap := map[string]string{
@@ -308,21 +305,20 @@ func awakenDBCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 			msg := fmt.Sprintf("Not yet supported %s desktop system", currentDesktop)
 			global.LOG.Info(msg)
 		}
-		return cmd
+		return cmd, nil
 	} else {
 		appPath := appItem.Path
 		if !appItem.IsInternal {
 			if err := validateAppPath(appItem.Path); err != nil {
-				global.LOG.Error(err.Error())
-				return nil
+				return nil, fmt.Errorf("No database application configured or found (selected path: %s, reason: %v)", appItem.Path, err)
 			}
 		}
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
-		return exec.Command(appPath, strings.Split(commands, " ")...)
+		return exec.Command(appPath, strings.Split(commands, " ")...), nil
 	}
 }
 
-func awakenOtherCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
+func awakenOtherCommand(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	cmd := new(exec.Cmd)
-	return cmd
+	return cmd, nil
 }

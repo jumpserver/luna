@@ -90,12 +90,13 @@ function getImageByName(filename: string): string | undefined {
     }
   }
   return undefined;
-};
+}
 
 const showExecutableNotFoundToast = () => {
+  const path = props.item?.path?.trim?.() || "";
   toast.add({
     title: t("Setting.EnableFailed"),
-    description: t("Setting.ExecutableNotFound"),
+    description: path ? `${t("Setting.ExecutableNotFound")}\n${path}` : t("Setting.ExecutableNotFound"),
     color: "error",
     icon: "line-md:close-circle",
     progress: true,
@@ -103,8 +104,29 @@ const showExecutableNotFoundToast = () => {
   });
 };
 
+const handleCopyPath = async () => {
+  const path = props.item?.path?.trim?.() || "";
+  if (!path) return;
+
+  try {
+    await useTauriClipboardManagerWriteText(path);
+    toast.add({
+      title: t("Setting.CopyPathSuccess"),
+      color: "primary",
+      icon: "line-md:check-all",
+      progress: false,
+      duration: 1000
+    });
+  } catch (e) {
+    console.error("copy executable path failed", e);
+  }
+};
+
 const onSwitch = (v: boolean) => {
-  if (!v) return;
+  if (!v) {
+    emit("toggle", false);
+    return;
+  }
 
   if (isUserPathPlugin.value && !canEnable.value) {
     showExecutableNotFoundToast();
@@ -182,13 +204,25 @@ const onPathClick = () => {
               <UButton label="Select path" color="neutral" variant="outline" @click="selectExecutablePath()" />
             </template>
             <template v-else>
-              <div
-                class="inline-flex max-w-full items-center truncate rounded bg-gray-100/80 px-2 py-0.5 text-xs leading-tight text-gray-600 dark:bg-white/10 dark:text-gray-300"
-                :class="{ 'cursor-pointer hover:bg-gray-200/60 dark:hover:bg-white/15': isWindowsPathPickTarget }"
-                :title="props.item.path || '-'"
-                @click="onPathClick"
-              >
-                <span class="truncate">{{ props.item.path || "-" }}</span>
+              <div class="flex max-w-full items-center gap-2">
+                <div
+                  class="inline-flex max-w-full items-center truncate rounded bg-gray-100/80 px-2 py-0.5 text-xs leading-tight text-gray-600 dark:bg-white/10 dark:text-gray-300"
+                  :class="{ 'cursor-pointer hover:bg-gray-200/60 dark:hover:bg-white/15': isWindowsPathPickTarget }"
+                  :title="props.item.path || '-'"
+                  @click="onPathClick"
+                >
+                  <span class="truncate">{{ props.item.path || "-" }}</span>
+                </div>
+
+                <UButton
+                  v-if="props.item.path"
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  icon="i-lucide-copy"
+                  :title="t('Setting.CopyPath')"
+                  @click.stop="handleCopyPath"
+                />
               </div>
             </template>
           </div>

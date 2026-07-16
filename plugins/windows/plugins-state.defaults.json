@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "selections": {
+    "terminal:ssh": "windows.putty",
+    "terminal:telnet": "windows.putty",
+    "remotedesktop:rdp": "windows.mstsc"
+  },
+  "plugins": {}
+}

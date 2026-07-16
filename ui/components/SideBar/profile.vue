@@ -343,7 +343,6 @@ const handleInvalidSiteVersion = () => {
     inputRef.value?.$el?.querySelector("input")?.focus();
   });
 };
-
 const checkVersionBeforeOAuth = async (site: string) => {
   if (!isTauriRuntime()) return true;
 
@@ -362,8 +361,11 @@ const checkVersionBeforeOAuth = async (site: string) => {
   ]);
 
   if (!versionResponse || versionResponse.status === 0) {
-    handleInvalidSiteVersion();
-    return false;
+    console.warn("Skip version precheck before OAuth because version endpoint is unavailable", {
+      site,
+      versionResponse
+    });
+    return true;
   }
 
   const { status: versionStatus, versions } = normalizeVersionMessage(versionResponse);

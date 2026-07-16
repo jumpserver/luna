@@ -1,0 +1,16 @@
+{
+  "platforms": {
+    "macos": {
+      "executable": {
+        "type": "user_path",
+        "default": "/Applications/MongoDB Compass.app/Contents/MacOS/MongoDB Compass",
+        "required": false
+      },
+      "launch": {
+        "type": "args",
+        "template": "mongodb://{username}:{value}@{host}:{port}/{dbname}"
+      },
+      "display_name": "MongoDB Compass"
+    }
+  }
+}

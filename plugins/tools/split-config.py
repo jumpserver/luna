@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Split go-client/config.json into plugins/builtin/*."""
+"""Split go-client/config.json into platform-scoped plugins."""
 
 from __future__ import annotations
 
+import os
 import json
 import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-CONFIG_PATH = ROOT / "go-client" / "config.json"
-BUILTIN_DIR = ROOT / "plugins" / "builtin"
+CONFIG_PATH = Path(os.environ.get("CONFIG_PATH", ROOT / "go-client" / "config.json"))
+OUTPUT_CONFIG_PATH = Path(os.environ.get("OUTPUT_CONFIG_PATH", ROOT / "go-client" / "config.json"))
+PLUGINS_DIR = ROOT / "plugins"
 IMAGES_DIR = ROOT / "ui" / "assets" / "images"
 
 OS_KEYS = ("windows", "macos", "linux")
@@ -43,23 +45,27 @@ ICON_MAP: dict[str, str] = {
     "xfreerdp": "xfreerdp",
 }
 
-# (name, category) -> plugin id
+# (name, category) -> plugin id suffix
 PLUGIN_IDS: dict[tuple[str, str], str] = {
-    ("terminal", "databases"): "builtin.terminal-db",
-    ("iterm", "filetransfer"): "builtin.iterm-sftp",
-    ("windows_rdm", "remotedesktop"): "builtin.windows-rdm",
-    ("another_redis", "databases"): "builtin.another-redis",
-    ("mongo_compass", "databases"): "builtin.mongo-compass",
-    ("navicat17", "databases"): "builtin.navicat17",
-    ("ssms17", "databases"): "builtin.ssms17",
+    ("terminal", "databases"): "terminal-db",
+    ("iterm", "filetransfer"): "iterm-sftp",
+    ("windows_rdm", "remotedesktop"): "windows-rdm",
+    ("another_redis", "databases"): "another-redis",
+    ("mongo_compass", "databases"): "mongo-compass",
+    ("navicat17", "databases"): "navicat17",
+    ("ssms17", "databases"): "ssms17",
 }
 
 
-def plugin_id(name: str, category: str) -> str:
+def plugin_suffix(name: str, category: str) -> str:
     key = (name, category)
     if key in PLUGIN_IDS:
         return PLUGIN_IDS[key]
-    return f"builtin.{name.replace('_', '-')}"
+    return name.replace("_", "-")
+
+
+def plugin_id(os_key: str, name: str, category: str) -> str:
+    return f"{os_key}.{plugin_suffix(name, category)}"
 
 
 def executable_type(item: dict) -> str:
@@ -130,11 +136,12 @@ def collect_plugins(config: dict) -> dict[str, dict]:
         for category in CATEGORIES:
             for item in os_cfg.get(category, []):
                 name = item["name"]
-                pid = plugin_id(name, category)
+                pid = plugin_id(os_key, name, category)
                 if pid not in plugins:
                     plugins[pid] = {
                         "name": name,
                         "category": category,
+                        "os_key": os_key,
                         "platforms": {},
                         "defaults": {"platforms": {}},
                         # use first seen item for manifest fields
@@ -158,7 +165,7 @@ def collect_plugins(config: dict) -> dict[str, dict]:
 
 def write_plugin(pid: str, data: dict) -> None:
     src = data["manifest_source"]
-    plugin_dir = BUILTIN_DIR / pid
+    plugin_dir = PLUGINS_DIR / data["os_key"] / pid
     plugin_dir.mkdir(parents=True, exist_ok=True)
 
     manifest = {
@@ -201,36 +208,35 @@ def write_plugin(pid: str, data: dict) -> None:
             shutil.copy2(src_icon, plugin_dir / "icon.png")
 
 
-def build_selections(config: dict, plugin_index: list[dict]) -> dict[str, str]:
+def build_selections(config: dict, os_key: str, plugin_index: list[dict]) -> dict[str, str]:
     """Build category:protocol -> plugin_id from match_first."""
     id_by_name_cat: dict[tuple[str, str], str] = {
         (e["name"], e["category"]): e["id"] for e in plugin_index
     }
     selections: dict[str, str] = {}
 
-    for os_key in OS_KEYS:
-        os_cfg = config.get(os_key, {})
-        for category in CATEGORIES:
-            for item in os_cfg.get(category, []):
-                for proto in item.get("match_first", []):
-                    key = f"{category}:{proto}"
-                    pid = id_by_name_cat.get((item["name"], category))
-                    if pid and key not in selections:
-                        selections[key] = pid
+    os_cfg = config.get(os_key, {})
+    for category in CATEGORIES:
+        for item in os_cfg.get(category, []):
+            for proto in item.get("match_first", []):
+                key = f"{category}:{proto}"
+                pid = id_by_name_cat.get((item["name"], category))
+                if pid and key not in selections:
+                    selections[key] = pid
     return selections
 
 
 def slim_config(config: dict) -> dict:
     return {
         "filename": config.get("filename", "Jumpserve Clients Config"),
-        "version": config.get("version", 8) + 1,
+        "version": max(config.get("version", 8) + 1, 11),
         "windowBounds": config.get("windowBounds", {"width": 1664, "height": 1040}),
         "defaultSetting": config.get(
             "defaultSetting", {"theme": "light", "layout": "list", "language": "en"}
         ),
         "_plugins": {
             "enabled": True,
-            "builtin_dir": "plugins/builtin",
+            "builtin_dir": "plugins",
             "state_file": "plugins-state.json",
         },
     }
@@ -240,45 +246,50 @@ def main() -> None:
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     plugins = collect_plugins(config)
 
-    if BUILTIN_DIR.exists():
-        shutil.rmtree(BUILTIN_DIR)
-    BUILTIN_DIR.mkdir(parents=True)
+    for os_key in OS_KEYS:
+        platform_dir = PLUGINS_DIR / os_key
+        if platform_dir.exists():
+            shutil.rmtree(platform_dir)
+        platform_dir.mkdir(parents=True)
 
-    plugin_index = []
+    plugins_by_os: dict[str, list[dict]] = {os_key: [] for os_key in OS_KEYS}
+
     for pid in sorted(plugins.keys()):
         write_plugin(pid, plugins[pid])
-        plugin_index.append(
+        plugins_by_os[plugins[pid]["os_key"]].append(
             {
                 "id": pid,
                 "name": plugins[pid]["name"],
                 "category": plugins[pid]["category"],
-                "platforms": sorted(plugins[pid]["platforms"].keys()),
+                "platforms": [plugins[pid]["os_key"]],
             }
         )
 
-    (BUILTIN_DIR / "index.json").write_text(
-        json.dumps({"version": 1, "plugins": plugin_index}, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-
-    selections = build_selections(config, plugin_index)
-    state_defaults = {
-        "version": 1,
-        "selections": selections,
-        "plugins": {},
-    }
-    (ROOT / "plugins" / "plugins-state.defaults.json").write_text(
-        json.dumps(state_defaults, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    for os_key, plugin_index in plugins_by_os.items():
+        plugin_index = sorted(plugin_index, key=lambda item: item["id"])
+        platform_dir = PLUGINS_DIR / os_key
+        (platform_dir / "index.json").write_text(
+            json.dumps({"version": 1, "plugins": plugin_index}, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        state_defaults = {
+            "version": 1,
+            "selections": build_selections(config, os_key, plugin_index),
+            "plugins": {},
+        }
+        (platform_dir / "plugins-state.defaults.json").write_text(
+            json.dumps(state_defaults, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
 
     slim = slim_config(config)
-    CONFIG_PATH.write_text(
+    OUTPUT_CONFIG_PATH.write_text(
         json.dumps(slim, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
 
-    print(f"Created {len(plugin_index)} builtin plugins in {BUILTIN_DIR}")
-    for p in plugin_index:
-        print(f"  - {p['id']} ({', '.join(p['platforms'])})")
+    total = sum(len(items) for items in plugins_by_os.values())
+    print(f"Created {total} platform plugins in {PLUGINS_DIR}")
+    for os_key, plugin_index in plugins_by_os.items():
+        print(f"  {os_key}: {len(plugin_index)} plugins")
 
 
 if __name__ == "__main__":

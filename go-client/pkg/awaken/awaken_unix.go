@@ -8,27 +8,27 @@ import (
 	"os/exec"
 )
 
-func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
-	cmd := awakenRDPCommand(filePath, cfg)
-	return cmd
+func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) (*exec.Cmd, error) {
+	cmd, err := awakenRDPCommand(filePath, cfg)
+	return cmd, err
 }
 
-func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
-	cmd := awakenVNCCommand(r, cfg)
-	return cmd
+func handleVNC(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
+	cmd, err := awakenVNCCommand(r, cfg)
+	return cmd, err
 }
 
-func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
-	cmd := awakenSSHCommand(r, cfg)
-	return cmd
+func handleSSH(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
+	cmd, err := awakenSSHCommand(r, cfg)
+	return cmd, err
 }
 
-func handleDB(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
-	cmd := awakenDBCommand(r, cfg)
-	return cmd
+func handleDB(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
+	cmd, err := awakenDBCommand(r, cfg)
+	return cmd, err
 }
 
-func handleCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
-	cmd := awakenOtherCommand(r, cfg)
-	return cmd
+func handleCommand(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
+	cmd, err := awakenOtherCommand(r, cfg)
+	return cmd, err
 }

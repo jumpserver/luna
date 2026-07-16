@@ -1,0 +1,15 @@
+{
+  "platforms": {
+    "linux": {
+      "executable": {
+        "type": "bundled",
+        "default": "vncviewer"
+      },
+      "launch": {
+        "type": "args",
+        "template": "{host}::{port}"
+      },
+      "display_name": "TigerVNC"
+    }
+  }
+}

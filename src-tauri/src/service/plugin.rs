@@ -19,21 +19,54 @@ impl PluginService {
         }
     }
 
+    fn resolve_resource_dir(app: &AppHandle, candidates: &[&str], marker: &str) -> Option<PathBuf> {
+        for candidate in candidates {
+            let Ok(path) = app
+                .path()
+                .resolve(candidate, tauri::path::BaseDirectory::Resource)
+            else {
+                continue;
+            };
+
+            if path.join(marker).is_file() {
+                log::info!("Resolved resource dir '{}' to {:?}", candidate, path);
+                return Some(path);
+            }
+        }
+
+        None
+    }
+
+    fn resolve_resource_file(app: &AppHandle, candidates: &[&str]) -> Option<PathBuf> {
+        for candidate in candidates {
+            let Ok(path) = app
+                .path()
+                .resolve(candidate, tauri::path::BaseDirectory::Resource)
+            else {
+                continue;
+            };
+
+            if path.is_file() {
+                log::info!("Resolved resource file '{}' to {:?}", candidate, path);
+                return Some(path);
+            }
+        }
+
+        None
+    }
+
     fn resolve_builtin_dir(app: &AppHandle) -> Option<PathBuf> {
-        let resource = app
-            .path()
-            .resolve(
-                "resources/plugins/builtin",
-                tauri::path::BaseDirectory::Resource,
-            )
-            .ok()
-            .filter(|p| p.join("index.json").is_file())
-            .or_else(|| {
-                app.path()
-                    .resolve("plugins/builtin", tauri::path::BaseDirectory::Resource)
-                    .ok()
-                    .filter(|p| p.join("index.json").is_file())
-            });
+        let os_key = Self::os_key();
+        let resource_candidates = [
+            format!("resources/plugins/{os_key}"),
+            format!("plugins/{os_key}"),
+            os_key.to_string(),
+            "resources/plugins/builtin".to_string(),
+            "plugins/builtin".to_string(),
+            "builtin".to_string(),
+        ];
+        let resource_refs: Vec<&str> = resource_candidates.iter().map(String::as_str).collect();
+        let resource = Self::resolve_resource_dir(app, &resource_refs, "index.json");
 
         if resource.is_some() {
             return resource;
@@ -41,6 +74,9 @@ impl PluginService {
 
         let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
         let candidates = [
+            cwd.join("plugins").join(os_key),
+            cwd.join("../plugins").join(os_key),
+            cwd.join("../../plugins").join(os_key),
             cwd.join("plugins/builtin"),
             cwd.join("../plugins/builtin"),
             cwd.join("../../plugins/builtin"),
@@ -51,23 +87,17 @@ impl PluginService {
     }
 
     fn resolve_defaults_path(app: &AppHandle) -> Option<PathBuf> {
-        let resource = app
-            .path()
-            .resolve(
-                "resources/plugins/plugins-state.defaults.json",
-                tauri::path::BaseDirectory::Resource,
-            )
-            .ok()
-            .filter(|p| p.is_file())
-            .or_else(|| {
-                app.path()
-                    .resolve(
-                        "plugins/plugins-state.defaults.json",
-                        tauri::path::BaseDirectory::Resource,
-                    )
-                    .ok()
-                    .filter(|p| p.is_file())
-            });
+        let os_key = Self::os_key();
+        let resource_candidates = [
+            format!("resources/plugins/{os_key}/plugins-state.defaults.json"),
+            format!("plugins/{os_key}/plugins-state.defaults.json"),
+            format!("{os_key}/plugins-state.defaults.json"),
+            "resources/plugins/plugins-state.defaults.json".to_string(),
+            "plugins/plugins-state.defaults.json".to_string(),
+            "plugins-state.defaults.json".to_string(),
+        ];
+        let resource_refs: Vec<&str> = resource_candidates.iter().map(String::as_str).collect();
+        let resource = Self::resolve_resource_file(app, &resource_refs);
 
         if resource.is_some() {
             return resource;
@@ -75,6 +105,12 @@ impl PluginService {
 
         let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
         let candidates = [
+            cwd.join("plugins")
+                .join(os_key)
+                .join("plugins-state.defaults.json"),
+            cwd.join("../plugins")
+                .join(os_key)
+                .join("plugins-state.defaults.json"),
             cwd.join("plugins/plugins-state.defaults.json"),
             cwd.join("../plugins/plugins-state.defaults.json"),
         ];
@@ -94,10 +130,41 @@ impl PluginService {
         };
 
         let mut changed = false;
+        let os_key = Self::os_key();
+        if let Some(selections) = state_obj
+            .get_mut("selections")
+            .and_then(|v| v.as_object_mut())
+        {
+            for value in selections.values_mut() {
+                if let Some(plugin_id) = value.as_str() {
+                    if let Some(suffix) = plugin_id.strip_prefix("builtin.") {
+                        *value = Value::String(format!("{os_key}.{suffix}"));
+                        changed = true;
+                    }
+                }
+            }
+        }
+        if let Some(plugins) = state_obj.get_mut("plugins").and_then(|v| v.as_object_mut()) {
+            let legacy_entries: Vec<(String, Value)> = plugins
+                .iter()
+                .filter_map(|(key, value)| {
+                    key.strip_prefix("builtin.")
+                        .map(|suffix| (format!("{os_key}.{suffix}"), value.clone()))
+                })
+                .collect();
+            for (key, value) in legacy_entries {
+                plugins.insert(key, value);
+                changed = true;
+            }
+            plugins.retain(|key, _| !key.starts_with("builtin."));
+        }
+
         if Self::os_key() != "windows" {
             if let Some(selections) = state_obj.get_mut("selections").and_then(|v| v.as_object_mut()) {
                 for key in ["terminal:ssh", "terminal:telnet"] {
-                    if selections.get(key).and_then(|v| v.as_str()) == Some("builtin.putty") {
+                    if selections.get(key).and_then(|v| v.as_str())
+                        == Some(&format!("{os_key}.putty"))
+                    {
                         selections.remove(key);
                         changed = true;
                     }
@@ -108,10 +175,10 @@ impl PluginService {
         if Self::os_key() == "linux" {
             if let Some(selections) = state_obj.get_mut("selections").and_then(|v| v.as_object_mut()) {
                 match selections.get("remotedesktop:rdp").and_then(|v| v.as_str()) {
-                    Some("builtin.mstsc") | Some("builtin.remmina") => {
+                    Some("linux.mstsc") | Some("linux.remmina") => {
                         selections.insert(
                             "remotedesktop:rdp".to_string(),
-                            Value::String("builtin.xfreerdp".to_string()),
+                            Value::String("linux.xfreerdp".to_string()),
                         );
                         changed = true;
                     }
@@ -123,7 +190,7 @@ impl PluginService {
             .get("selections")
             .and_then(|v| v.get("filetransfer:sftp"))
             .and_then(|v| v.as_str())
-            == Some("builtin.iterm-sftp");
+            == Some(&format!("{os_key}.iterm-sftp"));
 
         if !should_remove_sftp_iterm {
             return changed;
@@ -131,7 +198,7 @@ impl PluginService {
 
         let has_user_override = state_obj
             .get("plugins")
-            .and_then(|v| v.get("builtin.iterm-sftp"))
+            .and_then(|v| v.get(format!("{os_key}.iterm-sftp")))
             .and_then(|v| v.as_object())
             .map(|obj| {
                 obj.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false)
@@ -268,7 +335,7 @@ impl PluginService {
         }
 
         if path.trim().is_empty() {
-            return Err("executable not found".to_string());
+            return Err("executable not found: (empty path)".to_string());
         }
 
         Err(format!("executable not found: {}", path.trim()))
@@ -333,13 +400,16 @@ impl PluginService {
         let launch = platform_connect.get("launch").unwrap_or(&Value::Null);
         let (arg_format, autoit) = Self::launch_to_arg_format(launch);
 
-        let (path, is_set, is_internal) =
+        let (path, mut is_set, is_internal) =
             Self::resolve_path(plugin_id, platform_defaults, platform_connect, user_state);
 
         let executable_type = Self::executable_type(platform_connect);
         let path_exists = Self::user_path_exists(platform_connect, &path);
 
         let match_first = Self::build_match_first(plugin_id, category, &protocols, selections);
+        if !match_first.is_empty() {
+            is_set = true;
+        }
 
         let is_default = platform_defaults
             .get("is_default")
@@ -557,6 +627,7 @@ impl PluginService {
         protocol: &str,
         name: &str,
         new_path: Option<String>,
+        enabled: bool,
     ) -> Result<Value, String> {
         let builtin_dir = Self::resolve_builtin_dir(app)
             .ok_or_else(|| "plugins/builtin not found".to_string())?;
@@ -605,31 +676,41 @@ impl PluginService {
             }
         }
 
-        Self::validate_user_path_executable(
-            platform_connect,
-            platform_defaults,
-            &state,
-            &plugin_id,
-        )?;
+        if enabled {
+            Self::validate_user_path_executable(
+                platform_connect,
+                platform_defaults,
+                &state,
+                &plugin_id,
+            )?;
+        }
 
         let state_obj = state.as_object_mut().ok_or("invalid plugins-state")?;
         let selection_key = format!("{category}:{protocol}");
-        state_obj
-            .entry("selections")
-            .or_insert(json!({}))
-            .as_object_mut()
-            .unwrap()
-            .insert(selection_key, Value::String(plugin_id.clone()));
-        state_obj
-            .entry("plugins")
-            .or_insert(json!({}))
-            .as_object_mut()
-            .unwrap()
-            .entry(plugin_id)
-            .or_insert(json!({}))
-            .as_object_mut()
-            .unwrap()
-            .insert("enabled".into(), Value::Bool(true));
+        {
+            let selections = state_obj
+                .entry("selections")
+                .or_insert(json!({}))
+                .as_object_mut()
+                .unwrap();
+            if enabled {
+                selections.insert(selection_key, Value::String(plugin_id.clone()));
+            } else {
+                selections.remove(&selection_key);
+            }
+        }
+        if enabled {
+            let entry = state_obj
+                .entry("plugins")
+                .or_insert(json!({}))
+                .as_object_mut()
+                .unwrap()
+                .entry(plugin_id)
+                .or_insert(json!({}))
+                .as_object_mut()
+                .unwrap();
+            entry.insert("enabled".into(), Value::Bool(true));
+        }
 
         let pretty = serde_json::to_string_pretty(&state)
             .map_err(|e| format!("serialize plugins-state.json failed: {}", e))?;

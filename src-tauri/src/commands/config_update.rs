@@ -10,6 +10,14 @@ pub async fn update_config_selection(
     protocol: String,
     name: String,
     path: Option<String>,
+    enabled: Option<bool>,
 ) -> Result<Value, String> {
-    ConfigService::update_selection(&app, &category, &protocol, &name, path)
+    ConfigService::update_selection(
+        &app,
+        &category,
+        &protocol,
+        &name,
+        path,
+        enabled.unwrap_or(true),
+    )
 }

@@ -72,7 +72,7 @@ func validateAppPath(appPath string) error {
 	return nil
 }
 
-func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
+func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) (*exec.Cmd, error) {
 	var appItem *config.AppItem
 	appLst := cfg.Windows.RemoteDesktop
 	for _, app := range appLst {
@@ -82,21 +82,20 @@ func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) *exec.Cmd {
 		}
 	}
 	if appItem == nil {
-		return nil
+		return nil, nil
 	}
 	appPath := appItem.Path
 	if !appItem.IsInternal {
 		if err := validateAppPath(appItem.Path); err != nil {
-			global.LOG.Error(err.Error())
-			return nil
+			return nil, fmt.Errorf("No RDP application configured or found (selected path: %s, reason: %v)", appItem.Path, err)
 		}
 	}
 
 	args := strings.Replace(appItem.ArgFormat, "{file}", filePath, 1)
-	return exec.Command(appPath, args)
+	return exec.Command(appPath, args), nil
 }
 
-func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
+func handleVNC(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	var appItem *config.AppItem
 	appLst := cfg.Windows.RemoteDesktop
 	for _, app := range appLst {
@@ -106,12 +105,11 @@ func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		}
 	}
 	if appItem == nil {
-		return nil
+		return nil, nil
 	}
 	if !appItem.IsInternal {
 		if err := validateAppPath(appItem.Path); err != nil {
-			global.LOG.Error(err.Error())
-			return nil
+			return nil, fmt.Errorf("No VNC application configured or found (selected path: %s, reason: %v)", appItem.Path, err)
 		}
 	}
 	connectMap := map[string]string{
@@ -136,7 +134,7 @@ func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		content := fmt.Sprintf("[Connection]\nHost=%s:%s\nWarnUnencrypted=0\nUserName=%s\n", r.Host, strconv.Itoa(r.Port), r.getUserName())
 		if err := ioutil.WriteFile(filePath, []byte(content), os.ModePerm); err != nil {
 			global.LOG.Error(err.Error())
-			return nil
+			return nil, err
 		}
 		autoit.LoadAuto()
 		autoit.Run(appItem.Path + " -VerifyId \"0\" \"" + filePath + "\"")
@@ -165,7 +163,7 @@ func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		time.Sleep(100 * time.Millisecond)
 		autoit.Send(r.Value, 1)
 		autoit.Send("{ENTER}")
-		return exec.Command("cmd", "/C", "exit", "0")
+		return exec.Command("cmd", "/C", "exit", "0"), nil
 	}
 	if len(appItem.AutoIt) == 0 {
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
@@ -175,7 +173,7 @@ func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 			"VNC_USERNAME="+r.getUserName(),
 			"VNC_PASSWORD="+r.Value,
 		)
-		return cmd
+		return cmd, nil
 	} else {
 		commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 		global.LOG.Error(appItem.Path + " " + commands)
@@ -233,11 +231,11 @@ func handleVNC(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 				autoit.Send(item.Element)
 			}
 		}
-		return exec.Command("")
+		return exec.Command(""), nil
 	}
 }
 
-func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
+func handleSSH(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	var appItem *config.AppItem
 	var appLst []config.AppItem
 	switch r.Protocol {
@@ -254,7 +252,7 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		}
 	}
 	if appItem == nil {
-		return nil
+		return nil, nil
 	}
 	// telnet 协议使用 ssh 的配置参数格式
 	protocol := r.Protocol
@@ -271,8 +269,7 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	}
 	if !appItem.IsInternal {
 		if err := validateAppPath(appItem.Path); err != nil {
-			global.LOG.Error(err.Error())
-			return nil
+			return nil, fmt.Errorf("No %s application configured or found (selected path: %s, reason: %v)", strings.ToUpper(r.Protocol), appItem.Path, err)
 		}
 	}
 	connectMap := map[string]string{
@@ -286,14 +283,14 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	commands := getCommandFromArgs(connectMap, appItem.ArgFormat)
 	if strings.Contains(commands, "*") {
 		commands := strings.Split(commands, "*")
-		return exec.Command(appPath, commands[0], commands[1])
+		return exec.Command(appPath, commands[0], commands[1]), nil
 	} else {
 		commands := strings.Split(commands, " ")
-		return exec.Command(appPath, commands...)
+		return exec.Command(appPath, commands...), nil
 	}
 }
 
-func handleDB(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
+func handleDB(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	var appItem *config.AppItem
 	appLst := cfg.Windows.Databases
 	for _, app := range appLst {
@@ -303,13 +300,12 @@ func handleDB(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		}
 	}
 	if appItem == nil {
-		return nil
+		return nil, nil
 	}
 	appPath := appItem.Path
 	if !appItem.IsInternal {
 		if err := validateAppPath(appItem.Path); err != nil {
-			global.LOG.Error(err.Error())
-			return nil
+			return nil, fmt.Errorf("No database application configured or found (selected path: %s, reason: %v)", appItem.Path, err)
 		}
 	}
 
@@ -366,7 +362,7 @@ func handleDB(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		err := ioutil.WriteFile(filePath, bjson, os.ModePerm)
 		if err != nil {
 			global.LOG.Error(err.Error())
-			return nil
+			return nil, err
 		}
 		connectMap["config_file"] = currentPath
 
@@ -382,10 +378,10 @@ func handleDB(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 		}
 		if strings.Contains(commands, "*") {
 			commands := strings.Split(commands, "*")
-			return exec.Command(appPath, commands...)
+			return exec.Command(appPath, commands...), nil
 		} else {
 			commands := strings.Split(commands, " ")
-			return exec.Command(appPath, commands...)
+			return exec.Command(appPath, commands...), nil
 		}
 	} else {
 		autoit.LoadAuto()
@@ -442,7 +438,7 @@ func handleDB(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 				autoit.Send(item.Element)
 			}
 		}
-		return exec.Command("")
+		return exec.Command(""), nil
 	}
 }
 

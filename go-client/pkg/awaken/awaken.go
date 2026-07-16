@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -105,6 +106,78 @@ func removeCurRdpVncFile() {
 	}
 }
 
+func currentRemoteDesktopApps(appConfig *config.AppConfig) []config.AppItem {
+	switch runtime.GOOS {
+	case "windows":
+		return appConfig.Windows.RemoteDesktop
+	case "darwin":
+		return appConfig.MacOS.RemoteDesktop
+	default:
+		return appConfig.Linux.RemoteDesktop
+	}
+}
+
+func currentDatabaseApps(appConfig *config.AppConfig) []config.AppItem {
+	switch runtime.GOOS {
+	case "windows":
+		return appConfig.Windows.Databases
+	case "darwin":
+		return appConfig.MacOS.Databases
+	default:
+		return appConfig.Linux.Databases
+	}
+}
+
+func currentTerminalApps(appConfig *config.AppConfig) []config.AppItem {
+	switch runtime.GOOS {
+	case "windows":
+		return append(appConfig.Windows.Terminal, appConfig.Windows.FileTransfer...)
+	case "darwin":
+		return append(appConfig.MacOS.Terminal, appConfig.MacOS.FileTransfer...)
+	default:
+		return append(appConfig.Linux.Terminal, appConfig.Linux.FileTransfer...)
+	}
+}
+
+func quoteConfiguredPath(path string) string {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return "(empty)"
+	}
+	return trimmed
+}
+
+func buildConfiguredAppDetails(apps []config.AppItem, protocol string) string {
+	var matched []string
+	for _, app := range apps {
+		if !app.IsMatchProtocol(protocol) {
+			continue
+		}
+		matched = append(matched, fmt.Sprintf("%s=%s", app.DisplayName, quoteConfiguredPath(app.Path)))
+	}
+
+	if len(matched) > 0 {
+		return fmt.Sprintf("matched configured path(s): %s", strings.Join(matched, ", "))
+	}
+
+	var supported []string
+	for _, app := range apps {
+		if !app.IsSupportProtocol(protocol) || !app.IsActive() {
+			continue
+		}
+		supported = append(supported, fmt.Sprintf("%s=%s", app.DisplayName, quoteConfiguredPath(app.Path)))
+	}
+	if len(supported) > 0 {
+		return fmt.Sprintf("enabled application(s) support %s but none is selected via match_first: %s", protocol, strings.Join(supported, ", "))
+	}
+
+	return fmt.Sprintf("no enabled application is configured for protocol %s", protocol)
+}
+
+func missingAppError(label string, apps []config.AppItem, protocol string) string {
+	return fmt.Sprintf("No %s application configured or found (%s)", label, buildConfiguredAppDetails(apps, protocol))
+}
+
 func (r *Rouse) HandleRDP(appConfig *config.AppConfig) {
 	removeCurRdpVncFile()
 	fileName, _ := url.QueryUnescape(r.File.Name)
@@ -116,7 +189,11 @@ func (r *Rouse) HandleRDP(appConfig *config.AppConfig) {
 		reportError(err.Error())
 		return
 	}
-	cmd := handleRDP(r, filePath, appConfig)
+	cmd, resolveErr := handleRDP(r, filePath, appConfig)
+	if resolveErr != nil {
+		reportError(resolveErr.Error())
+		return
+	}
 	if cmd != nil {
 		if err := cmd.Run(); err != nil {
 			reportErrorf("Failed to execute RDP application: %v", err)
@@ -128,40 +205,56 @@ func (r *Rouse) HandleRDP(appConfig *config.AppConfig) {
 
 func (r *Rouse) HandleVNC(appConfig *config.AppConfig) {
 	removeCurRdpVncFile()
-	cmd := handleVNC(r, appConfig)
+	cmd, resolveErr := handleVNC(r, appConfig)
+	if resolveErr != nil {
+		reportError(resolveErr.Error())
+		return
+	}
 	if cmd != nil {
 		if err := cmd.Run(); err != nil {
 			reportErrorf("Failed to execute VNC application: %v", err)
 		}
 	} else {
-		reportError("No VNC application configured or found")
+		reportError(missingAppError("VNC", currentRemoteDesktopApps(appConfig), "vnc"))
 	}
 }
 
 func (r *Rouse) HandleSSH(appConfig *config.AppConfig) {
-	cmd := handleSSH(r, appConfig)
+	cmd, resolveErr := handleSSH(r, appConfig)
+	if resolveErr != nil {
+		reportError(resolveErr.Error())
+		return
+	}
 	if cmd != nil {
 		if err := cmd.Run(); err != nil {
 			reportErrorf("Failed to execute %s application: %v", strings.ToUpper(r.Protocol), err)
 		}
 	} else {
-		reportErrorf("No %s application configured or found", strings.ToUpper(r.Protocol))
+		reportError(missingAppError(strings.ToUpper(r.Protocol), currentTerminalApps(appConfig), r.Protocol))
 	}
 }
 
 func (r *Rouse) HandleDB(appConfig *config.AppConfig) {
-	cmd := handleDB(r, appConfig)
+	cmd, resolveErr := handleDB(r, appConfig)
+	if resolveErr != nil {
+		reportError(resolveErr.Error())
+		return
+	}
 	if cmd != nil {
 		if err := cmd.Run(); err != nil {
 			reportErrorf("Failed to execute database application: %v", err)
 		}
 	} else {
-		reportError("No database application configured or found")
+		reportError(missingAppError("database", currentDatabaseApps(appConfig), r.Protocol))
 	}
 }
 
 func (r *Rouse) HandleCommand(appConfig *config.AppConfig) {
-	cmd := handleCommand(r, appConfig)
+	cmd, resolveErr := handleCommand(r, appConfig)
+	if resolveErr != nil {
+		reportError(resolveErr.Error())
+		return
+	}
 	if cmd != nil {
 		if err := cmd.Run(); err != nil {
 			reportErrorf("Failed to execute command: %v", err)

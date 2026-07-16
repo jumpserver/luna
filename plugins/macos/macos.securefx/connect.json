@@ -1,0 +1,16 @@
+{
+  "platforms": {
+    "macos": {
+      "executable": {
+        "type": "user_path",
+        "default": "/Applications/SecureFX.app/Contents/MacOS/SecureFX",
+        "required": false
+      },
+      "launch": {
+        "type": "args",
+        "template": "{protocol}://{username}:{value}@{host}:{port}"
+      },
+      "display_name": "SecureFX"
+    }
+  }
+}

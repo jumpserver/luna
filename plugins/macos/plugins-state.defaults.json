@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "selections": {
+    "terminal:ssh": "macos.terminal",
+    "terminal:telnet": "macos.terminal",
+    "remotedesktop:rdp": "macos.mstsc",
+    "remotedesktop:vnc": "macos.tigervnc",
+    "filetransfer:sftp": "macos.iterm-sftp",
+    "databases:oracle": "macos.terminal-db",
+    "databases:mysql": "macos.terminal-db",
+    "databases:postgresql": "macos.terminal-db",
+    "databases:mariadb": "macos.terminal-db",
+    "databases:redis": "macos.terminal-db",
+    "databases:sqlserver": "macos.terminal-db",
+    "databases:mongodb": "macos.terminal-db"
+  },
+  "plugins": {}
+}

@@ -51,8 +51,11 @@ build-current:
 	@cp -R $(BUILDDIR)/* $(BASEPATH)/../src-tauri/resources/bin/
 	@cp $(BASEPATH)/config.json $(BASEPATH)/../src-tauri/resources/bin/
 	@mkdir -p $(BASEPATH)/../src-tauri/resources/plugins/
-	@cp -R $(BASEPATH)/../plugins/builtin $(BASEPATH)/../src-tauri/resources/plugins/
-	@cp $(BASEPATH)/../plugins/plugins-state.defaults.json $(BASEPATH)/../src-tauri/resources/plugins/
+	@cp -R $(BASEPATH)/../plugins/windows $(BASEPATH)/../src-tauri/resources/plugins/
+	@cp -R $(BASEPATH)/../plugins/macos $(BASEPATH)/../src-tauri/resources/plugins/
+	@cp -R $(BASEPATH)/../plugins/linux $(BASEPATH)/../src-tauri/resources/plugins/
+	@if [ -d "$(BASEPATH)/../plugins/builtin" ]; then cp -R $(BASEPATH)/../plugins/builtin $(BASEPATH)/../src-tauri/resources/plugins/; fi
+	@if [ -f "$(BASEPATH)/../plugins/plugins-state.defaults.json" ]; then cp $(BASEPATH)/../plugins/plugins-state.defaults.json $(BASEPATH)/../src-tauri/resources/plugins/; fi
 	@if [ "$(CURRENT_OS)" = "windows" ]; then \
 		cp $(BASEPATH)/putty.exe $(BASEPATH)/../src-tauri/resources/bin/windows/; \
 		cp $(BASEPATH)/pkg/autoit/*.dll $(BASEPATH)/../src-tauri/resources/bin/windows/; \
@@ -118,8 +121,11 @@ install:
 	fi
 	@cp $(BASEPATH)/config.json $(BASEPATH)/../src-tauri/resources/bin/
 	@mkdir -p $(BASEPATH)/../src-tauri/resources/plugins/
-	@cp -R $(BASEPATH)/../plugins/builtin $(BASEPATH)/../src-tauri/resources/plugins/
-	@cp $(BASEPATH)/../plugins/plugins-state.defaults.json $(BASEPATH)/../src-tauri/resources/plugins/
+	@cp -R $(BASEPATH)/../plugins/windows $(BASEPATH)/../src-tauri/resources/plugins/
+	@cp -R $(BASEPATH)/../plugins/macos $(BASEPATH)/../src-tauri/resources/plugins/
+	@cp -R $(BASEPATH)/../plugins/linux $(BASEPATH)/../src-tauri/resources/plugins/
+	@if [ -d "$(BASEPATH)/../plugins/builtin" ]; then cp -R $(BASEPATH)/../plugins/builtin $(BASEPATH)/../src-tauri/resources/plugins/; fi
+	@if [ -f "$(BASEPATH)/../plugins/plugins-state.defaults.json" ]; then cp $(BASEPATH)/../plugins/plugins-state.defaults.json $(BASEPATH)/../src-tauri/resources/plugins/; fi
 	@echo "Install completed!"
 
 # 帮助信息

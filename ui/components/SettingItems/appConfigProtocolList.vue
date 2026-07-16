@@ -43,10 +43,10 @@ const items = computed<ConfigItem[]>(() => {
 
 const isBuiltInTerminal = (item: ConfigItem) => item.name === "builtin_client";
 const isSelected = (item: ConfigItem) => isBuiltInTerminal(item) || item.match_first?.includes(props.protocol);
-const handleToggle = async (item: ConfigItem) => {
+const handleToggle = async (item: ConfigItem, enabled: boolean) => {
   if (isBuiltInTerminal(item)) return;
 
-  await selectClient(props.category, props.protocol, item.name);
+  await selectClient(props.category, props.protocol, item.name, enabled);
 };
 </script>
 
@@ -59,7 +59,7 @@ const handleToggle = async (item: ConfigItem) => {
         :item="item"
         :protocol="props.protocol"
         :selected="isSelected(item)"
-        @toggle="() => handleToggle(item)"
+        @toggle="(enabled) => handleToggle(item, enabled)"
       />
     </template>
 

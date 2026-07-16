@@ -300,6 +300,7 @@ impl ConfigService {
         protocol: &str,
         name: &str,
         new_path: Option<String>,
+        enabled: bool,
     ) -> Result<Value, String> {
         let config_path = Self::ensure_user_config(app)?;
 
@@ -315,7 +316,7 @@ impl ConfigService {
                 .parent()
                 .ok_or_else(|| "invalid config directory".to_string())?;
             return PluginService::update_selection(
-                app, config_dir, category, protocol, name, new_path,
+                app, config_dir, category, protocol, name, new_path, enabled,
             );
         }
 
@@ -374,29 +375,34 @@ impl ConfigService {
             }
         }
 
-        let mut found = false;
+        let mut found_target = arr
+            .iter()
+            .any(|item| item.get("name").and_then(|v| v.as_str()).unwrap_or("") == name);
 
-        for item in arr.iter() {
-            let item_name = item.get("name").and_then(|v| v.as_str()).unwrap_or("");
-            if item_name != name {
-                continue;
-            }
-
-            let is_internal = item
-                .get("is_internal")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(true);
-            if !is_internal {
-                let path = item
-                    .get("path")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .trim();
-                if path.is_empty() || !std::path::Path::new(path).is_file() {
-                    return Err("executable not found".to_string());
+        if enabled {
+            for item in arr.iter() {
+                let item_name = item.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                if item_name != name {
+                    continue;
                 }
+
+                found_target = true;
+                let is_internal = item
+                    .get("is_internal")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+                if !is_internal {
+                    let path = item
+                        .get("path")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .trim();
+                    if path.is_empty() || !std::path::Path::new(path).is_file() {
+                        return Err(format!("executable not found: {}", path));
+                    }
+                }
+                break;
             }
-            break;
         }
 
         for item in arr.iter_mut() {
@@ -407,23 +413,24 @@ impl ConfigService {
             }
         }
 
-        for item in arr.iter_mut() {
-            let item_name = item.get("name").and_then(|v| v.as_str()).unwrap_or("");
-            if item_name == name {
-                found = true;
-                if !item.get("match_first").is_some() {
-                    item.as_object_mut()
-                        .unwrap()
-                        .insert("match_first".into(), Value::Array(vec![]));
+        if enabled {
+            for item in arr.iter_mut() {
+                let item_name = item.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                if item_name == name {
+                    if !item.get("match_first").is_some() {
+                        item.as_object_mut()
+                            .unwrap()
+                            .insert("match_first".into(), Value::Array(vec![]));
+                    }
+                    if let Some(list) = item.get_mut("match_first").and_then(|v| v.as_array_mut()) {
+                        list.push(Value::String(protocol.to_string()));
+                    }
+                    break;
                 }
-                if let Some(list) = item.get_mut("match_first").and_then(|v| v.as_array_mut()) {
-                    list.push(Value::String(protocol.to_string()));
-                }
-                break;
             }
         }
 
-        if !found {
+        if !found_target {
             return Err(format!(
                 "selected item '{}' not found under {}.{}",
                 name, os_key, category

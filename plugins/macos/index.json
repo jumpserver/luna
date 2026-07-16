@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "plugins": [
+    {
+      "id": "macos.another-redis",
+      "name": "another_redis",
+      "category": "databases",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "macos.dbeaver",
+      "name": "dbeaver",
+      "category": "databases",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "macos.iterm",
+      "name": "iterm",
+      "category": "terminal",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "macos.iterm-sftp",
+      "name": "iterm",
+      "category": "filetransfer",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "macos.mongo-compass",
+      "name": "mongo_compass",
+      "category": "databases",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "macos.mstsc",
+      "name": "mstsc",
+      "category": "remotedesktop",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "macos.securecrt",
+      "name": "securecrt",
+      "category": "terminal",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "macos.securefx",
+      "name": "securefx",
+      "category": "filetransfer",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "macos.terminal",
+      "name": "terminal",
+      "category": "terminal",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "macos.terminal-db",
+      "name": "terminal",
+      "category": "databases",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "macos.tigervnc",
+      "name": "tigervnc",
+      "category": "remotedesktop",
+      "platforms": [
+        "macos"
+      ]
+    }
+  ]
+}

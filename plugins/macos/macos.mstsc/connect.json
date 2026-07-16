@@ -1,0 +1,16 @@
+{
+  "platforms": {
+    "macos": {
+      "executable": {
+        "type": "system",
+        "default": "/Applications/Windows App.app"
+      },
+      "launch": {
+        "type": "file",
+        "extension": "rdp",
+        "open_with": "system"
+      },
+      "display_name": "Windows App"
+    }
+  }
+}

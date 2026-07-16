@@ -1,0 +1,16 @@
+{
+  "platforms": {
+    "macos": {
+      "executable": {
+        "type": "user_path",
+        "default": "/Applications/TigerVNC viewer 1.15.0.app/Contents/MacOS/TigerVNC viewer",
+        "required": false
+      },
+      "launch": {
+        "type": "args",
+        "template": "{host}::{port}"
+      },
+      "display_name": "TigerVNC"
+    }
+  }
+}
