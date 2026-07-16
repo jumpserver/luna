@@ -6,7 +6,7 @@
   "is_internal": false,
   "executable": {
     "type": "user_path",
-    "default": "/Applications/TigerVNC viewer 1.15.0.app/Contents/MacOS/TigerVNC viewer",
+    "default": "/Applications/TigerVNC.app/Contents/MacOS/vncviewer",
     "required": false
   },
   "launch": {

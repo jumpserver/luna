@@ -442,7 +442,7 @@ func handleDB(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	}
 }
 
-func handleCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
+func handleCommand(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	cmd := exec.Command(r.Command)
-	return cmd
+	return cmd, nil
 }
