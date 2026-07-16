@@ -18,6 +18,7 @@ import { Observable } from 'rxjs';
 import { I18nService } from '@app/services/i18n';
 import { CookieService } from 'ngx-cookie-service';
 import { encryptPassword } from '@app/utils/crypto';
+import { getAppBasePath, withSitePrefix } from '@app/utils/path';
 
 @Injectable()
 export class HttpService {
@@ -56,16 +57,27 @@ export class HttpService {
     return new HttpHeaders().set('X-JMS-ORG', this._cookie.get('X-JMS-ORG'));
   }
 
+  private resolveUrl(url: string): string {
+    if (!url || typeof url !== 'string' || !url.startsWith('/')) {
+      return url;
+    }
+
+    return withSitePrefix(url);
+  }
+
   get<T>(url: string, options?: any): Observable<any> {
-    options = this.setOrgIDToRequestHeader(url, options);
-    return this.http.get(url, options).pipe(catchError(this.handleError.bind(this)));
+    const resolvedUrl = this.resolveUrl(url);
+    options = this.setOrgIDToRequestHeader(resolvedUrl, options);
+    return this.http.get(resolvedUrl, options).pipe(catchError(this.handleError.bind(this)));
   }
 
   async handleError(error: HttpErrorResponse) {
     if (error.status === 401 && User.logined) {
       const msg = await this._i18n.t('LoginExpireMsg');
       if (confirm(msg)) {
-        window.open('/core/auth/login/?next=/luna/', '_blank');
+        const loginUrl = new URL(withSitePrefix('/core/auth/login/'), window.location.origin);
+        loginUrl.searchParams.set('next', getAppBasePath());
+        window.open(loginUrl.toString(), '_blank');
       }
     } else if (error.status === 403) {
       const msg = await this._i18n.t('No permission');
@@ -81,30 +93,38 @@ export class HttpService {
 
   post<T>(url: string, body: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.post(url, body, options).pipe(catchError(this.handleError.bind(this)));
+    return this.http
+      .post(this.resolveUrl(url), body, options)
+      .pipe(catchError(this.handleError.bind(this)));
   }
 
   put<T>(url: string, body?: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.put(url, body, options).pipe(catchError(this.handleError.bind(this)));
+    return this.http
+      .put(this.resolveUrl(url), body, options)
+      .pipe(catchError(this.handleError.bind(this)));
   }
 
   delete<T>(url: string, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.delete(url, options).pipe(catchError(this.handleError.bind(this)));
+    return this.http
+      .delete(this.resolveUrl(url), options)
+      .pipe(catchError(this.handleError.bind(this)));
   }
 
   patch<T>(url: string, body?: any, options?: any): Observable<any> {
     options = this.setOptionsCSRFToken(options);
-    return this.http.patch(url, body, options).pipe(catchError(this.handleError.bind(this)));
+    return this.http
+      .patch(this.resolveUrl(url), body, options)
+      .pipe(catchError(this.handleError.bind(this)));
   }
 
   head<T>(url: string, options?: any) {
-    return this.http.head(url, options);
+    return this.http.head(this.resolveUrl(url), options);
   }
 
   options(url: string, options?: any) {
-    return this.http.options(url, options);
+    return this.http.options(this.resolveUrl(url), options);
   }
 
   reportBrowser() {
@@ -210,6 +230,72 @@ export class HttpService {
     return this.get<Array<any>>(url);
   }
 
+  /**
+   * Get all favorite folders of current user
+   */
+  getFavoriteFolders() {
+    const url = '/api/v1/assets/favorite-folders/';
+    return this.get<Array<any>>(url);
+  }
+
+  /**
+   * Create a favorite folder
+   * @param name folder name
+   * @param parent parent folder id, null means a top-level folder
+   */
+  createFavoriteFolder(name: string, parent: string = null) {
+    const url = '/api/v1/assets/favorite-folders/';
+    return this.post(url, { name, parent });
+  }
+
+  /**
+   * Delete a favorite folder (its favorite relations are cascade-removed by backend)
+   * @param folderId folder id
+   */
+  deleteFavoriteFolder(folderId: string) {
+    const url = `/api/v1/assets/favorite-folders/${folderId}/`;
+    return this.delete(url);
+  }
+
+  /**
+   * Rename a favorite folder
+   * @param folderId folder id
+   * @param name new folder name
+   */
+  updateFavoriteFolder(folderId: string, name: string) {
+    const url = `/api/v1/assets/favorite-folders/${folderId}/`;
+    return this.patch(url, { name });
+  }
+
+  /**
+   * Get favorite asset records inside a folder
+   * @param folderId folder id
+   */
+  getFavoriteAssetsByFolder(folderId: string) {
+    const url = `/api/v1/assets/favorite-assets/?folder=${folderId}`;
+    return this.get<Array<any>>(url);
+  }
+
+  /**
+   * Favorite an asset into a folder
+   * @param assetId asset id
+   * @param folderId folder id
+   */
+  favoriteAssetToFolder(assetId: string, folderId: string) {
+    const url = '/api/v1/assets/favorite-assets/';
+    return this.post(url, { asset: assetId, folder: folderId });
+  }
+
+  /**
+   * Remove an asset from a folder
+   * @param assetId asset id
+   * @param folderId folder id
+   */
+  removeFavoriteFromFolder(assetId: string, folderId: string) {
+    const url = `/api/v1/assets/favorite-assets/?asset=${assetId}&folder=${folderId}`;
+    return this.delete(url);
+  }
+
   search(q: string) {
     const params = new HttpParams().set('q', q);
     return this.get('/api/search', { params: params });
@@ -293,13 +379,18 @@ export class HttpService {
     const isVirtual = account.username.startsWith('@');
     const username = isVirtual ? manualAuthInfo.username : account.username;
     const secret = encryptPassword(manualAuthInfo.secret);
-    const connectOption = connectData.connectOption;
+    const connectOption = { ...(connectData.connectOption || {}) };
+    // 始终以当前表单为准，避免 connectOption 里残留上一次的 input_secret_type
+    const inputSecretType =
+      (manualAuthInfo && manualAuthInfo['input_secret_type']) || 'password';
+
     const data = {
       asset: asset.id,
       account: account.alias, // 主要是有特殊账号，匿名、虚拟
       protocol: protocol.name,
       input_username: username,
       input_secret: secret,
+      input_secret_type: inputSecretType,
       connect_method: connectMethod.value,
       connect_options: connectOption
     };
@@ -356,7 +447,7 @@ export class HttpService {
 
   getConnectToken(token) {
     const url = new URL(
-      `/api/v1/authentication/connection-token/${token}/`,
+      withSitePrefix(`/api/v1/authentication/connection-token/${token}/`),
       window.location.origin
     );
     return this.get(url.href);
@@ -364,7 +455,7 @@ export class HttpService {
 
   downloadRDPFile(token, params: Object, connectOption: any) {
     const url = new URL(
-      `/api/v1/authentication/connection-token/${token.id}/rdp-file/`,
+      withSitePrefix(`/api/v1/authentication/connection-token/${token.id}/rdp-file/`),
       window.location.origin
     );
     params = this.cleanRDPParams(params);
@@ -381,7 +472,7 @@ export class HttpService {
 
   getLocalClientUrl(token, params: Object = {}) {
     const url = new URL(
-      `/api/v1/authentication/connection-token/${token.id}/client-url/`,
+      withSitePrefix(`/api/v1/authentication/connection-token/${token.id}/client-url/`),
       window.location.origin
     );
     params = this.cleanRDPParams(params);
@@ -424,7 +515,7 @@ export class HttpService {
   }
 
   getSmartEndpoint({ assetId, sessionId, token }, protocol): Promise<Endpoint> {
-    const url = new URL('/api/v1/terminal/endpoints/smart/', window.location.origin);
+    const url = new URL(withSitePrefix('/api/v1/terminal/endpoints/smart/'), window.location.origin);
 
     url.searchParams.append('protocol', protocol);
     if (assetId) {

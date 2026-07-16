@@ -1,5 +1,6 @@
-import { Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, Input, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ActivatedRoute } from '@angular/router';
@@ -21,6 +22,7 @@ import {
 import { ConnectEvt, InitTreeConfig, TreeNode } from '@app/model';
 import { CookieService } from 'ngx-cookie-service';
 import { HttpHeaders } from '@angular/common/http';
+import { withSitePrefix } from '@app/utils/path';
 
 declare var $: any;
 
@@ -61,7 +63,6 @@ export class ElementAssetTreeComponent implements OnInit {
     view: {
       dblClickExpand: false,
       showLine: true,
-      // 添加禁用颜色区分
       fontCss: (treeId, treeNode) => {
         if (treeNode.chkDisabled) {
           return { opacity: '0.4' };
@@ -84,12 +85,22 @@ export class ElementAssetTreeComponent implements OnInit {
   isLoadTreeAsync: boolean;
   isOpenNewWindow: boolean;
   filterAssetCancel$: Subject<boolean> = new Subject();
-  favoriteAssets = [];
+  // Current user's favorite folders, used to build "Favorite to xxx" menu on a normal asset
+  favoriteFolders: Array<any> = [];
+  // Current user's favorite asset records, used to mark folders in "Favorite to" submenu
+  favoriteAssets: Array<any> = [];
+  // Checked favorite asset leaf nodes (for batch connect)
+  favoriteChecked: Array<any> = [];
+  // Input value of the create-folder dialog
+  folderNameInput = '';
+  @ViewChild('folderModalContent', { static: false }) folderModalContent: TemplateRef<any>;
   searchValue = '';
   currentOrgID = '';
   trees: Array<Tree> = [];
   assetTreeChecked = [];
   rMenuList: any[] = [];
+  // Prevent duplicate favorite requests when submenu click bubbles
+  private favoritingInFlight = new Set<string>();
 
   constructor(
     private _appSvc: AppService,
@@ -104,7 +115,8 @@ export class ElementAssetTreeComponent implements OnInit {
     private _cookie: CookieService,
     private _message: NzMessageService,
     private _connectTokenSvc: ConnectTokenService,
-    private _viewSrv: ViewService
+    private _viewSrv: ViewService,
+    private _modal: NzModalService
   ) {}
 
   getRMenuList() {
@@ -112,6 +124,123 @@ export class ElementAssetTreeComponent implements OnInit {
       return [];
     }
     const cnode = this.rightClickSelectNode;
+
+    // Favorite tree root node: create folder + expand/fold all + batch connect
+    if (cnode.isFavoriteRoot) {
+      const favTree = cnode.ztree;
+      const favChecked = favTree ? favTree.getCheckedNodes(true).filter(n => !n.isParent) : [];
+      const favCheckEnable = favTree && favTree.setting.check && favTree.setting.check.enable;
+      return [
+        {
+          id: 'batch-connect',
+          name: this._i18n.instant('Connect checked') + ` (${favChecked.length})`,
+          fa: 'fa-check-square-o',
+          hide: favChecked.length === 0 || !favCheckEnable,
+          click: this.onFavoriteConnectChecked.bind(this)
+        },
+        {
+          id: 'create-folder',
+          name: this._i18n.instant('Create folder'),
+          fa: 'fa-folder-o',
+          hide: false,
+          click: this.onCreateFolder.bind(this, null)
+        },
+        {
+          id: 'expand-all',
+          name: this._i18n.instant('Expand all'),
+          fa: 'fa-expand',
+          hide: false,
+          click: () => favTree && favTree.expandAll(true)
+        },
+        {
+          id: 'fold-all',
+          name: this._i18n.instant('Fold all'),
+          fa: 'fa-compress',
+          hide: false,
+          click: () => favTree && favTree.expandAll(false)
+        }
+      ];
+    }
+
+    // Favorite folder node: create subfolder, delete folder, expand/fold
+    if (cnode.isFavoriteFolder) {
+      const favTree = cnode.ztree;
+      return [
+        {
+          id: 'create-subfolder',
+          name: this._i18n.instant('Create subfolder'),
+          fa: 'fa-folder-o',
+          hide: false,
+          click: this.onCreateFolder.bind(this, cnode.favoriteFolderRealId)
+        },
+        {
+          id: 'rename-folder',
+          name: this._i18n.instant('Rename'),
+          fa: 'fa-pencil',
+          hide: false,
+          click: this.onRenameFolder.bind(this)
+        },
+        {
+          id: 'delete-folder',
+          name: this._i18n.instant('Delete folder'),
+          fa: 'fa-trash-o',
+          hide: false,
+          click: this.onDeleteFolder.bind(this)
+        },
+        {
+          id: 'expand',
+          name: this._i18n.instant('Expand'),
+          fa: 'fa-angle-double-down',
+          hide: cnode.open,
+          click: () => favTree && favTree.expandNode(cnode, true, false, true)
+        },
+        {
+          id: 'fold',
+          name: this._i18n.instant('Fold'),
+          fa: 'fa-angle-double-up',
+          hide: !cnode.open,
+          click: () => favTree && favTree.expandNode(cnode, false, false, true)
+        }
+      ];
+    }
+
+    // Favorite asset leaf (under a folder or directly under root): connect / move / remove
+    if (cnode.isFavoriteLeaf) {
+      const isK8sFav = cnode.meta?.data?.platform_type === 'k8s';
+      const favViewList = this._viewSrv.viewList;
+      return [
+        {
+          id: 'connect',
+          name: this._i18n.instant('Connect'),
+          fa: 'fa-terminal',
+          hide: isK8sFav,
+          click: this.onFavoriteConnect.bind(this)
+        },
+        {
+          id: 'new-connection',
+          name: this._i18n.instant('Open in new window'),
+          fa: 'fa-external-link',
+          hide: false,
+          click: this.onFavoriteConnectNewTab.bind(this)
+        },
+        {
+          id: 'split-connect',
+          name: this._i18n.instant('Split connect'),
+          fa: 'fa-columns',
+          hide: favViewList.length <= 0 || isK8sFav,
+          click: this.onFavoriteConnect.bind(this, true)
+        },
+        ...this.getMoveToMenus(cnode),
+        {
+          id: 'remove-favorite',
+          name: this._i18n.instant('Remove favorite'),
+          fa: 'fa-star',
+          hide: false,
+          click: this.onRemoveFromFolder.bind(this)
+        }
+      ];
+    }
+
     const tree = this.rightClickSelectNode.ztree;
     const checkedNodes = tree.getCheckedNodes(true);
     const checkedLeafs = checkedNodes.filter(node => !node.isParent);
@@ -130,28 +259,28 @@ export class ElementAssetTreeComponent implements OnInit {
       },
       {
         id: 'connect',
-        name: 'Connect',
+        name: this._i18n.instant('Connect'),
         fa: 'fa-terminal',
         hide: cnode.isParent || isK8s,
         click: this.onMenuConnect.bind(this)
       },
       {
         id: 'new-connection',
-        name: 'Open in new window',
+        name: this._i18n.instant('Open in new window'),
         fa: 'fa-external-link',
         hide: cnode.isParent,
         click: this.onMenuConnectNewTab.bind(this)
       },
       {
         id: 'split-connect',
-        name: 'Split connect',
+        name: this._i18n.instant('Split connect'),
         fa: 'fa-columns',
         hide: viewList.length <= 0 || cnode.isParent || isK8s,
         click: this.onMenuConnect.bind(this, true)
       },
       {
         id: 'expand',
-        name: 'Expand',
+        name: this._i18n.instant('Expand'),
         fa: 'fa-angle-double-down',
         hide: !cnode.isParent || cnode.open,
         click: () => {
@@ -160,7 +289,7 @@ export class ElementAssetTreeComponent implements OnInit {
       },
       {
         id: 'fold',
-        name: 'Fold',
+        name: this._i18n.instant('Fold'),
         fa: 'fa-angle-double-up',
         hide: !cnode.isParent || !cnode.open,
         click: () => {
@@ -169,35 +298,189 @@ export class ElementAssetTreeComponent implements OnInit {
       },
       {
         id: 'expand-all',
-        name: 'Expand all',
+        name: this._i18n.instant('Expand all'),
         fa: 'fa-expand',
         hide: !cnode.isParent || cnode.open,
         click: this.onMenuExpandAllChildren.bind(this)
       },
       {
         id: 'fold-all',
-        name: 'Fold all',
+        name: this._i18n.instant('Fold all'),
         fa: 'fa-compress',
         hide: !cnode.isParent || !cnode.open,
         click: () => {
           tree.expandNode(cnode, false, true, true);
         }
       },
+      ...this.getFavoriteToMenus(cnode)
+    ];
+  }
+
+  /**
+   * Build a "Favorite to" parent menu with folder submenu for a normal asset node.
+   * Show a disabled parent when there is no folder yet.
+   * @param cnode current right-clicked node
+   */
+  getFavoriteToMenus(cnode): any[] {
+    if (cnode.isParent) {
+      return [];
+    }
+    return this.buildFolderTargetMenus({
+      id: 'favorite-to',
+      name: this._i18n.instant('Favorite to'),
+      fa: 'fa-star-o',
+      assetId: this.resolveAssetId(cnode),
+      onSelect: this.onFavoriteTo.bind(this)
+    });
+  }
+
+  /**
+   * Build a "Move to" parent menu for a favorite-tree asset leaf,
+   * so it can be relocated into another favorite folder.
+   */
+  getMoveToMenus(cnode): any[] {
+    return this.buildFolderTargetMenus({
+      id: 'move-to',
+      name: this._i18n.instant('Move to'),
+      fa: 'fa-folder-o',
+      assetId: this.resolveAssetId(cnode),
+      onSelect: this.onMoveTo.bind(this)
+    });
+  }
+
+  /**
+   * Shared folder submenu builder for "Favorite to" / "Move to".
+   */
+  private buildFolderTargetMenus(options: {
+    id: string;
+    name: string;
+    fa: string;
+    assetId: string;
+    onSelect: (folderId: string) => void;
+  }): any[] {
+    if (this.favoriteFolders.length === 0) {
+      return [
+        {
+          id: options.id,
+          name: options.name,
+          fa: options.fa,
+          hide: false,
+          disabled: true,
+          click: () => {}
+        }
+      ];
+    }
+    const favoritedFolderIds = this.getAssetFavoriteFolderIds(options.assetId);
+    return [
       {
-        id: 'favorite',
-        name: 'Favorite',
-        fa: 'fa-star-o',
-        hide: this.isAssetFavorite() || cnode.isParent,
-        click: this.onMenuFavorite.bind(this)
-      },
-      {
-        id: 'disfavor',
-        name: 'Disfavor',
-        fa: 'fa-star',
-        hide: !this.isAssetFavorite() || cnode.isParent,
-        click: this.onMenuFavorite.bind(this)
+        id: options.id,
+        name: options.name,
+        fa: options.fa,
+        hide: false,
+        children: this.favoriteFolders.map(folder => {
+          const folderId = this.resolveFolderId(folder);
+          return {
+            id: options.id + '-' + folderId,
+            name: folder.name,
+            checked: favoritedFolderIds.has(folderId),
+            click: () => options.onSelect(folderId)
+          };
+        })
       }
     ];
+  }
+
+  /**
+   * Get folder ids that already contain the given asset.
+   */
+  private getAssetFavoriteFolderIds(assetId: string): Set<string> {
+    const folderIds = new Set<string>();
+    if (!assetId) {
+      return folderIds;
+    }
+    (this.favoriteAssets || []).forEach(fav => {
+      const folderId = this.resolveFolderId(fav.folder ?? fav.folder_id);
+      const favAssetId = this.resolveAssetId({
+        id: fav.asset_info?.id,
+        assetId: fav.asset_info?.id,
+        meta: fav.asset_info?.meta
+      });
+      if (folderId && favAssetId === assetId) {
+        folderIds.add(folderId);
+      }
+    });
+    const tree = this.trees.find(t => t.name === 'FavoriteTree');
+    if (tree?.ztree) {
+      tree.ztree
+        .getNodesByFilter(node => !node.isParent && String(node.assetId) === assetId)
+        .forEach(node => {
+          if (node.favoriteFolderId) {
+            folderIds.add(String(node.favoriteFolderId));
+          }
+        });
+    }
+    return folderIds;
+  }
+
+  /**
+   * An asset belongs to only one folder: replace any previous record with the new one.
+   */
+  private setFavoriteAssetRecord(folderId: string, assetId: string, srcNode?: any) {
+    this.favoriteAssets = (this.favoriteAssets || []).filter(fav => {
+      const favAssetId = this.resolveAssetId({
+        id: fav.asset_info?.id,
+        assetId: fav.asset_info?.id,
+        meta: fav.asset_info?.meta
+      });
+      return favAssetId !== assetId;
+    });
+    this.favoriteAssets.push({
+      folder: folderId,
+      asset_info: {
+        id: assetId,
+        name: srcNode?.name,
+        meta: srcNode?.meta
+      }
+    });
+  }
+
+  private removeFavoriteAssetRecord(folderId: string, assetId: string) {
+    this.favoriteAssets = this.favoriteAssets.filter(fav => {
+      const favFolderId = this.resolveFolderId(fav.folder ?? fav.folder_id);
+      const favAssetId = this.resolveAssetId({
+        id: fav.asset_info?.id,
+        assetId: fav.asset_info?.id,
+        meta: fav.asset_info?.meta
+      });
+      return !(favFolderId === folderId && favAssetId === assetId);
+    });
+  }
+
+  /**
+   * Normalize folder id from API/menu values.
+   */
+  private resolveFolderId(folderOrId: any): string {
+    if (folderOrId == null) {
+      return '';
+    }
+    if (typeof folderOrId === 'object') {
+      return String(folderOrId.id ?? folderOrId.pk ?? folderOrId.folder_id ?? '');
+    }
+    return String(folderOrId);
+  }
+
+  /**
+   * Resolve the real asset id from tree/favorite nodes.
+   */
+  private resolveAssetId(node: any): string {
+    return String(node?.assetId ?? node?.meta?.data?.id ?? node?.id ?? '');
+  }
+
+  /**
+   * Build a unique favorite leaf id for zTree (folder + asset).
+   */
+  private buildFavoriteLeafId(folderId: string, assetId: string): string {
+    return `fav-${this.resolveFolderId(folderId)}-${this.resolveAssetId({ id: assetId, assetId })}`;
   }
 
   ngOnInit() {
@@ -211,20 +494,33 @@ export class ElementAssetTreeComponent implements OnInit {
           this.currentOrgID = DEFAULT_ORG_ID;
         }
         this.initTree();
-        this.trees.map((tree, index) => (index === 0 ? (tree.open = true) : (tree.open = false)));
+        // Favorite tree on top, but expand "My assets" by default
+        this.trees.map(tree => (tree.open = tree.name === 'AssetTree'));
       }
     });
     document.addEventListener('click', this.hideRMenu.bind(this), false);
   }
 
   initTree() {
+    this.initFavoriteTree().then();
     this.initAssetTree().then();
     this.initTypeTree().then();
   }
 
-  handleMenuClick(menu: any) {
+  handleMenuClick(menu: any, event?: MouseEvent) {
+    if (menu.disabled) {
+      return;
+    }
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
     menu.click();
-    this.hideRMenu();
+    setTimeout(() => this.hideRMenu());
+  }
+
+  handleSubmenuClick(event: MouseEvent, menu: any) {
+    this.handleMenuClick(menu, event);
   }
 
   onNodeClick(event, treeId, treeNode, clickFlag) {
@@ -259,11 +555,15 @@ export class ElementAssetTreeComponent implements OnInit {
   async initAssetTree(refresh = false) {
     const config = {
       refresh,
-      showFavoriteAssets: true,
+      // dev 方案（当前生效）：直接使用原始接口地址
       url: '/api/v1/perms/users/self/nodes/all-with-assets/tree/',
       asyncUrl: '/api/v1/perms/users/self/nodes/children-with-assets/tree/?'
+      // 多子目录方案（保留备用）：site prefix 包裹 + showFavoriteAssets
+      // showFavoriteAssets: true,
+      // url: withSitePrefix('/api/v1/perms/users/self/nodes/all-with-assets/tree/'),
+      // asyncUrl: withSitePrefix('/api/v1/perms/users/self/nodes/children-with-assets/tree/?')
     };
-    const tree = new Tree('AssetTree', 'My assets', false, true, true, true, config);
+    const tree = new Tree('AssetTree', this._i18n.instant('My assets'), false, true, true, true, config);
     if (!refresh) {
       this.trees.push(tree);
     }
@@ -273,8 +573,8 @@ export class ElementAssetTreeComponent implements OnInit {
   async initTypeTree(refresh = false) {
     const config = {
       refresh,
-      url: '/api/v1/perms/users/self/nodes/children-with-assets/category/tree/?sync=1',
-      asyncUrl: '/api/v1/perms/users/self/nodes/children-with-assets/category/tree/',
+      url: withSitePrefix('/api/v1/perms/users/self/nodes/children-with-assets/category/tree/?sync=1'),
+      asyncUrl: withSitePrefix('/api/v1/perms/users/self/nodes/children-with-assets/category/tree/'),
       setting: {
         async: {
           autoParam: ['type', 'category']
@@ -295,6 +595,201 @@ export class ElementAssetTreeComponent implements OnInit {
     } else {
       this.initTreeInfo(tree, config).then();
     }
+  }
+
+  /**
+   * Init favorite tree: fetch folders and favorited assets, build root -> folder -> asset.
+   * All data comes from backend; supports batch checking.
+   */
+  async initFavoriteTree(refresh = false) {
+    const tree = new Tree('FavoriteTree', this._i18n.instant('Favorites'), false, false, false, true, { refresh });
+    if (!refresh) {
+      this.trees.push(tree);
+    }
+    this.buildFavoriteTree(tree);
+  }
+
+  /**
+   * Fetch folders and favorited assets, render the favorite ztree
+   * @param tree favorite tree object
+   */
+  buildFavoriteTree(tree: Tree) {
+    tree.inited = true;
+    tree.loading = true;
+    Promise.all([
+      this._http.getFavoriteFolders().toPromise(),
+      this._http.getFavoriteAssets().toPromise()
+    ])
+      .then(([folders, favorites]) => {
+        this.favoriteFolders = folders || [];
+        this.favoriteAssets = favorites || [];
+        const nodes: any[] = [];
+        nodes.push({
+          id: 'favorite-root',
+          name: this._i18n.instant('Favorites'),
+          isParent: true,
+          open: true,
+          isFavoriteRoot: true,
+          nocheck: true,
+          noR: false
+        });
+        // Folder nodes (nested: parent points to parent folder, top-level under favorite-root)
+        this.favoriteFolders.forEach(folder => {
+          const folderId = this.resolveFolderId(folder);
+          nodes.push({
+            id: 'folder-' + folderId,
+            pId: folder.parent ? 'folder-' + this.resolveFolderId(folder.parent) : 'favorite-root',
+            name: folder.name,
+            isParent: true,
+            open: false,
+            isFavoriteFolder: true,
+            favoriteFolderRealId: folderId
+          });
+        });
+        // Asset leaf nodes: under folder when folder is set, otherwise under favorite root
+        (favorites || []).forEach(fav => {
+          if (!fav.asset_info) {
+            return;
+          }
+          const folderId = this.resolveFolderId(fav.folder ?? fav.folder_id);
+          const info = fav.asset_info;
+          const assetId = this.resolveAssetId({ id: info.id, assetId: info.id, meta: info.meta });
+          if (!assetId) {
+            return;
+          }
+          nodes.push({
+            id: this.buildFavoriteLeafId(folderId || 'root', assetId),
+            pId: folderId ? 'folder-' + folderId : 'favorite-root',
+            name: info.name,
+            isParent: false,
+            iconSkin: info.iconSkin,
+            chkDisabled: info.chkDisabled,
+            assetId,
+            favoriteFolderId: folderId || null,
+            isFavoriteLeaf: true,
+            meta: info.meta
+          });
+        });
+        setTimeout(() => {
+          if (tree.ztree) {
+            tree.ztree.destroy();
+          }
+          const setting = {
+            view: this.setting.view,
+            data: this.setting.data,
+            // Checking disabled by default, toggled by the top "batch" icon; parent cascades to children
+            check: { enable: false, chkboxType: { Y: 'ps', N: 'ps' } },
+            callback: {
+              onClick: _.debounce(this.onFavoriteNodeClick, 300, {
+                leading: true,
+                trailing: false
+              }).bind(this),
+              onCheck: this.onFavoriteTreeCheck.bind(this),
+              onRightClick: this.onRightClick.bind(this)
+            }
+          };
+          tree.ztree = $.fn.zTree.init($('#' + tree.name), setting, nodes);
+          tree.loading = false;
+        }, 100);
+      })
+      .catch(error => {
+        tree.loading = false;
+        this._logger.error('Build favorite tree error: ', error);
+      });
+  }
+
+  /**
+   * Favorite tree check callback: record currently checked favorite asset leaf nodes
+   */
+  onFavoriteTreeCheck() {
+    const tree = this.trees.find(t => t.name === 'FavoriteTree');
+    if (tree && tree.ztree) {
+      this.favoriteChecked = tree.ztree.getCheckedNodes(true).filter(n => !n.isParent);
+    }
+  }
+
+  /**
+   * Batch connect checked assets inside favorite folders
+   */
+  onFavoriteConnectChecked() {
+    const tree = this.rightClickSelectNode.ztree;
+    if (!tree || !tree.setting.check.enable) {
+      return;
+    }
+    const nodes = tree.getCheckedNodes(true).filter(n => !n.isParent);
+    const t = setInterval(() => {
+      if (nodes.length === 0) {
+        clearInterval(t);
+        this.favoriteChecked = [];
+        return;
+      }
+      if (this._appSvc.connectDialogShown) {
+        return;
+      }
+      const node = this.buildConnectableNode(nodes.shift());
+      this.connectAsset(node).then();
+    }, 500);
+  }
+
+  /**
+   * Click an asset leaf inside a favorite folder: connect directly (real asset id from assetId)
+   */
+  onFavoriteNodeClick(event, treeId, treeNode) {
+    if (treeNode.isParent) {
+      const ztree = this.trees.find(t => t.name === treeId).ztree;
+      ztree.expandNode(treeNode);
+      return;
+    }
+    const node = this.buildConnectableNode(treeNode);
+    if (this.isOpenNewWindow) {
+      connectOnNewPage(node, 'auto');
+    } else {
+      this.connectAsset(node).then();
+    }
+  }
+
+  /**
+   * Convert a favorite-folder asset node into a standard connectable node
+   * @param treeNode favorite-folder asset ztree node
+   */
+  buildConnectableNode(treeNode): TreeNode {
+    return {
+      id: treeNode.assetId,
+      name: treeNode.name,
+      comment: '',
+      title: treeNode.name,
+      isParent: false,
+      pId: treeNode.pId,
+      open: false,
+      iconSkin: '',
+      meta: treeNode.meta
+    };
+  }
+
+  /**
+   * Favorite-folder asset: connect (current window or split)
+   * @param splitConnect whether split connect
+   */
+  async onFavoriteConnect(splitConnect = false) {
+    if (splitConnect && this._viewSrv.currentView.subViews.length >= 4) {
+      const msg = this._i18n.instant('Split connect number');
+      this._message.info(msg);
+      return;
+    }
+    const node = this.buildConnectableNode(this.rightClickSelectNode);
+    await this._appSvc.getConnectMethods();
+    const evt = splitConnect
+      ? new ConnectEvt(node, 'connect', true)
+      : new ConnectEvt(node, 'connect');
+    connectEvt.next(evt);
+  }
+
+  /**
+   * Favorite-folder asset: connect in a new window
+   */
+  onFavoriteConnectNewTab() {
+    const node = this.buildConnectableNode(this.rightClickSelectNode);
+    connectOnNewPage(node, 'auto');
   }
 
   getOffsetTreeNodes(body, url, headers: HttpHeaders, tree) {
@@ -364,24 +859,21 @@ export class ElementAssetTreeComponent implements OnInit {
     }
     const { setting, url } = this.cleanupTreeSetting(config);
 
-    if (config.showFavoriteAssets) {
-      this._http.getFavoriteAssets().subscribe(resp => {
-        this.favoriteAssets = resp.map(i => i.asset);
-      });
-    }
     tree.loading = true;
     const request = this._http.get(url, { observe: 'response' });
     request.subscribe(
       resp => {
-        // 如果是刷新，需要先销毁原来的树, 重新初始化
         if (config.refresh) {
           tree.ztree.expandAll(false);
           tree.ztree.destroy();
         }
-        const body = resp.body;
+        let body = resp.body;
+        // Remove the built-in flat Favorite node of "My assets" to avoid duplication with the favorite tree
+        if (tree.name === 'AssetTree' && Array.isArray(body)) {
+          body = body.filter(node => node.id !== 'favorite' && node.pId !== 'favorite');
+        }
         const headers = resp.headers;
         setTimeout(() => {
-          // 新的 api 支持树的分页
           const offset = headers.get('X-JMS-TREE-OFFSET');
           if (offset && offset !== '0') {
             const parents = body.filter(node => node.isParent);
@@ -457,6 +949,8 @@ export class ElementAssetTreeComponent implements OnInit {
       this.initAssetTree(true).then();
     } else if (tree.name === 'AssetTypeTree') {
       this.initTypeTree(true).then();
+    } else if (tree.name === 'FavoriteTree') {
+      this.buildFavoriteTree(tree);
     }
   }
 
@@ -486,11 +980,6 @@ export class ElementAssetTreeComponent implements OnInit {
     this.isShowRMenu = false;
   }
 
-  isAssetFavorite() {
-    const assetId = this.rightClickSelectNode.id;
-    return this.favoriteAssets.indexOf(assetId) !== -1;
-  }
-
   reAsyncChildNodes(treeId, treeNode, silent) {
     if (treeNode && treeNode.isParent && treeNode.children) {
       for (let i = 0; i < treeNode.children.length; i++) {
@@ -513,7 +1002,6 @@ export class ElementAssetTreeComponent implements OnInit {
     if (expandFlag === treeNode.open) {
       return;
     }
-    // 异步加载时需要加载全部子节点
     const self = this;
     const ztree = $.fn.zTree.getZTreeObj(treeId);
     const treeIsAsync = ztree.setting.async.enable;
@@ -523,7 +1011,6 @@ export class ElementAssetTreeComponent implements OnInit {
         this.reAsyncChildNodes(treeId, treeNode, false);
       });
     } else {
-      // 展开时递归展开，防止用户手动展开子级折叠后无法再次展开孙子级
       if (expandFlag) {
         ztree.expandNode(treeNode, expandFlag, false, false, false);
         if (treeNode.children && treeNode.children.length > 0) {
@@ -557,7 +1044,7 @@ export class ElementAssetTreeComponent implements OnInit {
   }
 
   /**
-   * @param splitConnect 是否分屏连接
+   * @param splitConnect whether split connect
    */
   async onMenuConnect(splitConnect = false) {
     if (splitConnect && this._viewSrv.currentView.subViews.length >= 4) {
@@ -577,21 +1064,268 @@ export class ElementAssetTreeComponent implements OnInit {
     connectOnNewPage(node, 'auto');
   }
 
-  onMenuFavorite() {
-    const assetId = this.rightClickSelectNode.id;
-    if (this.isAssetFavorite()) {
-      this._http.favoriteAsset(assetId, false).subscribe(() => {
-        const i = this.favoriteAssets.indexOf(assetId);
-        this.favoriteAssets.splice(i, 1);
-        const msg = this._i18n.instant('Disfavor') + ' ' + this._i18n.instant('success');
+  /**
+   * Create folder: pop an input, validate empty/duplicate name, then call backend
+   * @param parentId parent folder id, null means top-level
+   */
+  onCreateFolder(parentId: string = null) {
+    this.folderNameInput = '';
+    this._modal.create({
+      nzTitle: this._i18n.instant(parentId ? 'Create subfolder' : 'Create folder'),
+      nzContent: this.folderModalContent,
+      nzOnOk: () => {
+        const name = (this.folderNameInput || '').trim();
+        if (!name) {
+          this._message.warning(this._i18n.instant('Folder name is required'));
+          return false;
+        }
+        const exists = this.favoriteFolders.some(
+          f => f.name === name && (f.parent || null) === (parentId || null)
+        );
+        if (exists) {
+          this._message.warning(this._i18n.instant('Folder already exists'));
+          return false;
+        }
+        return this._http
+          .createFavoriteFolder(name, parentId)
+          .toPromise()
+          .then(() => {
+            const msg = this._i18n.instant('Create folder') + ' ' + this._i18n.instant('success');
+            this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+            this.refreshFavoriteTree();
+          })
+          .catch(() => {
+            this._message.error(this._i18n.instant('Folder already exists'));
+            return false;
+          });
+      }
+    });
+  }
+
+  /**
+   * Rename folder: pop an input, validate, then update backend and local ztree node
+   */
+  onRenameFolder() {
+    const folderId = this.rightClickSelectNode.favoriteFolderRealId;
+    const currentName = this.rightClickSelectNode.name;
+    this.folderNameInput = currentName;
+    this._modal.create({
+      nzTitle: this._i18n.instant('Rename folder'),
+      nzContent: this.folderModalContent,
+      nzOnOk: () => {
+        const name = (this.folderNameInput || '').trim();
+        if (!name) {
+          this._message.warning(this._i18n.instant('Folder name is required'));
+          return false;
+        }
+        if (name === currentName) {
+          return true;
+        }
+        const folder = this.favoriteFolders.find(f => this.resolveFolderId(f) === folderId);
+        const parentId = folder?.parent || null;
+        const exists = this.favoriteFolders.some(
+          f =>
+            f.name === name &&
+            (f.parent || null) === (parentId || null) &&
+            this.resolveFolderId(f) !== folderId
+        );
+        if (exists) {
+          this._message.warning(this._i18n.instant('Folder already exists'));
+          return false;
+        }
+        return this._http
+          .updateFavoriteFolder(folderId, name)
+          .toPromise()
+          .then(() => {
+            this.renameFavoriteFolderLocally(folderId, name);
+            const msg = this._i18n.instant('Rename') + ' ' + this._i18n.instant('success');
+            this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+          })
+          .catch(() => {
+            this._message.error(this._i18n.instant('Folder already exists'));
+            return false;
+          });
+      }
+    });
+  }
+
+  /**
+   * Update folder name locally without rebuilding the whole favorite tree
+   */
+  renameFavoriteFolderLocally(folderId: string, name: string) {
+    const folder = this.favoriteFolders.find(f => this.resolveFolderId(f) === folderId);
+    if (folder) {
+      folder.name = name;
+    }
+    const tree = this.trees.find(t => t.name === 'FavoriteTree');
+    if (tree?.ztree) {
+      const node = tree.ztree.getNodeByParam('id', 'folder-' + folderId);
+      if (node) {
+        node.name = name;
+        tree.ztree.updateNode(node);
+      }
+    }
+  }
+
+  /**
+   * Delete folder: confirm then call backend (favorite relations cascade-removed)
+   */
+  onDeleteFolder() {
+    const folderId = this.rightClickSelectNode.favoriteFolderRealId;
+    const folderName = this.rightClickSelectNode.name;
+    this._modal.confirm({
+      nzTitle: this._i18n.instant('Delete folder') + ` 「${folderName}」?`,
+      nzContent: this._i18n.instant('Assets in this folder will be removed from favorites'),
+      nzOkDanger: true,
+      nzOnOk: () => {
+        return this._http
+          .deleteFavoriteFolder(folderId)
+          .toPromise()
+          .then(() => {
+            const msg = this._i18n.instant('Delete folder') + ' ' + this._i18n.instant('success');
+            this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+            this.refreshFavoriteTree();
+          });
+      }
+    });
+  }
+
+  /**
+   * Favorite the current right-clicked asset into a folder.
+   * An asset can only belong to one folder: backend moves it, and the local tree
+   * removes the leaf from any previous folder before adding it under the target.
+   * @param folderId target folder id
+   */
+  onFavoriteTo(folderId: string) {
+    this.assignFavoriteToFolder(folderId, 'Favorite');
+  }
+
+  /**
+   * Move a favorite-tree asset leaf into another folder.
+   * Same backend as favorite-to; only the success toast wording differs.
+   */
+  onMoveTo(folderId: string) {
+    this.assignFavoriteToFolder(folderId, 'Move');
+  }
+
+  /**
+   * Assign the right-clicked asset to a favorite folder (create or relocate).
+   * @param folderId target folder id
+   * @param actionKey i18n key for success toast ("Favorite" / "Move")
+   */
+  private assignFavoriteToFolder(folderId: string, actionKey: string) {
+    const srcNode = this.rightClickSelectNode;
+    const normalizedFolderId = this.resolveFolderId(folderId);
+    const assetId = this.resolveAssetId(srcNode);
+    if (!normalizedFolderId || !assetId) {
+      return;
+    }
+    const currentFolderId = this.resolveFolderId(srcNode.favoriteFolderId);
+    if (currentFolderId && currentFolderId === normalizedFolderId) {
+      this._message.warning(this._i18n.instant('Already in this folder'));
+      return;
+    }
+    const favoritingKey = `${assetId}-${normalizedFolderId}`;
+    if (this.favoritingInFlight.has(favoritingKey)) {
+      return;
+    }
+    this.favoritingInFlight.add(favoritingKey);
+    this._http.favoriteAssetToFolder(assetId, normalizedFolderId).subscribe(
+      () => {
+        const msg = this._i18n.instant(actionKey) + ' ' + this._i18n.instant('success');
         this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
-      });
-    } else {
-      this._http.favoriteAsset(assetId, true).subscribe(() => {
-        this.favoriteAssets.push(assetId);
-        const msg = this._i18n.instant('Favorite') + ' ' + this._i18n.instant('success');
-        this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
-      });
+        this.setFavoriteAssetRecord(normalizedFolderId, assetId, srcNode);
+        this.moveFavoriteLeaf(normalizedFolderId, srcNode, assetId);
+        this.favoritingInFlight.delete(favoritingKey);
+      },
+      error => {
+        this.favoritingInFlight.delete(favoritingKey);
+        if (error && error.status === 400) {
+          this._message.warning(this._i18n.instant('Already in this folder'));
+        }
+      }
+    );
+  }
+
+  /**
+   * Move an asset leaf into the target folder locally.
+   * Remove every existing leaf of this asset first, so it never appears under two folders.
+   * @param folderId target folder id
+   * @param srcNode the favorited asset source node (from asset/type tree)
+   */
+  moveFavoriteLeaf(folderId: string, srcNode: any, assetId?: string) {
+    const tree = this.trees.find(t => t.name === 'FavoriteTree');
+    if (!tree || !tree.ztree) {
+      return;
+    }
+    const ztree = tree.ztree;
+    const normalizedFolderId = this.resolveFolderId(folderId);
+    const normalizedAssetId = assetId || this.resolveAssetId(srcNode);
+    if (!normalizedFolderId || !normalizedAssetId) {
+      return;
+    }
+
+    // One asset -> one folder: drop leaves under any other folder first
+    const existingLeaves = ztree.getNodesByFilter(
+      node => !node.isParent && String(node.assetId) === normalizedAssetId
+    );
+    existingLeaves.forEach(node => {
+      ztree.removeNode(node);
+    });
+
+    const parent = ztree.getNodeByParam('id', 'folder-' + normalizedFolderId);
+    if (!parent) {
+      return;
+    }
+    const leafId = this.buildFavoriteLeafId(normalizedFolderId, normalizedAssetId);
+    ztree.addNodes(parent, -1, [
+      {
+        id: leafId,
+        pId: 'folder-' + normalizedFolderId,
+        name: srcNode.name,
+        isParent: false,
+        iconSkin: srcNode.iconSkin,
+        chkDisabled: srcNode.chkDisabled,
+        assetId: normalizedAssetId,
+        favoriteFolderId: normalizedFolderId,
+        isFavoriteLeaf: true,
+        meta: srcNode.meta
+      }
+    ]);
+  }
+
+  /**
+   * Remove an asset from favorites (from a folder, or from root when folder is empty).
+   * On success, only remove this single leaf node (instantly disappears),
+   * without rebuilding the whole tree, keeping other folders' expand state.
+   */
+  onRemoveFromFolder() {
+    const node = this.rightClickSelectNode;
+    const assetId = node.assetId;
+    const folderId = this.resolveFolderId(node.favoriteFolderId);
+    const ztree = node.ztree;
+    const remove$ = folderId
+      ? this._http.removeFavoriteFromFolder(assetId, folderId)
+      : this._http.favoriteAsset(assetId, false);
+    remove$.subscribe(() => {
+      this.removeFavoriteAssetRecord(folderId, assetId);
+      const msg = this._i18n.instant('Remove favorite') + ' ' + this._i18n.instant('success');
+      this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+      if (ztree && typeof ztree.removeNode === 'function') {
+        ztree.removeNode(node);
+      } else {
+        this.refreshFavoriteTree();
+      }
+    });
+  }
+
+  /**
+   * Rebuild the favorite tree (used by create/delete folder, does not touch other trees)
+   */
+  refreshFavoriteTree() {
+    const tree = this.trees.find(t => t.name === 'FavoriteTree');
+    if (tree) {
+      this.buildFavoriteTree(tree);
     }
   }
 

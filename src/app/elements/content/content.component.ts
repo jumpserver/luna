@@ -295,7 +295,7 @@ export class ElementContentComponent implements OnInit, OnDestroy {
         icon: '',
         callback: () => {
           for (let i = this.viewList.length - 1; i > this.rIdx; i--) {
-            this.closeView(this.viewList[i].asset);
+            this.closeView(this.viewList[i]);
           }
         },
         disabled: this.rIdx === this.viewList.length - 1

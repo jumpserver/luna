@@ -1,5 +1,6 @@
 import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {DomSanitizer} from '@angular/platform-browser';
+import {withSitePrefix} from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -16,6 +17,6 @@ export class PageSftpComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.iframeURL = '/koko/elfinder/sftp/';
+    this.iframeURL = withSitePrefix('/koko/elfinder/sftp/');
   }
 }

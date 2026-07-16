@@ -4,6 +4,7 @@ import {ActivatedRoute} from '@angular/router';
 import {Asset, Session, Ticket, User} from '@app/model';
 import {NzNotificationService} from 'ng-zorro-antd/notification';
 import {getWaterMarkContent} from '@app/utils/common';
+import {joinEndpointUrl} from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -84,13 +85,13 @@ export class PagesMonitorComponent implements OnInit {
     const terminal_type = this.sessionDetail.terminal.type;
     switch (terminal_type) {
       case 'razor':
-        this.iframeURL = `${baseUrl}/razor/monitor/${this.sessionID}/`;
+        this.iframeURL = joinEndpointUrl(baseUrl, `/razor/monitor/${this.sessionID}/`);
         break;
       case 'lion':
-        this.iframeURL = `${baseUrl}/lion/monitor/?session=${this.sessionID}`;
+        this.iframeURL = joinEndpointUrl(baseUrl, `/lion/monitor/?session=${this.sessionID}`);
         break;
       default:
-        this.iframeURL = `${baseUrl}/koko/monitor/${this.sessionID}/`;
+        this.iframeURL = joinEndpointUrl(baseUrl, `/koko/monitor/${this.sessionID}/`);
     }
   }
 

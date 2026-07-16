@@ -2,6 +2,7 @@ import {AfterViewInit, Component, ElementRef, OnInit, ViewChild,} from '@angular
 import {ActivatedRoute, Params} from '@angular/router';
 import {HttpService, LogService, SettingService, ViewService} from '@app/services';
 import {getWaterMarkContent} from '@app/utils/common';
+import {withSitePrefix} from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -28,13 +29,12 @@ export class PagesKubernetesComponent implements OnInit, AfterViewInit {
       this._settingSvc.createWaterMarkIfNeed(document.body, content);
     });
     this.id = 'window-' + Math.random().toString(36).substr(2);
-    const baseUrl = `${window.location.protocol}//${window.location.host}`;
 
     this._route.params.subscribe((params: Params) => {
       this.token = params['token'];
     });
 
-    this.iframeURL = `${baseUrl}/koko/k8s/?token=${this.token}`;
+    this.iframeURL = withSitePrefix(`/koko/k8s/?token=${this.token}`);
   }
 
   ngAfterViewInit() {

@@ -9,6 +9,7 @@ import {NzNotificationService} from 'ng-zorro-antd/notification';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {NZ_MODAL_DATA, NzModalRef, NzModalService} from 'ng-zorro-antd/modal';
 import {ActivatedRoute} from '@angular/router';
+import {withUIBase} from '@app/utils/path';
 
 interface DialogAction {
   text: string;
@@ -394,7 +395,7 @@ export class ElementACLDialogComponent implements OnInit {
         isError: true,
         customContent: {
           type: 'link',
-          link: '/ui/#/profile/index',
+          link: withUIBase('#/profile/index'),
           linkText: this._i18n.instant('Go to profile')
         },
         actions: [

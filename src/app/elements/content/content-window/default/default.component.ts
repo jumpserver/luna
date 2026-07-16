@@ -1,5 +1,8 @@
 import {Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
 import {Asset, Endpoint, View} from '@app/model';
+import {joinEndpointUrl} from '@app/utils/path';
+// 多子目录方案（保留备用）：site prefix 相关工具
+// import { getSitePrefix, joinEndpointUrl, withSitePrefix } from '@app/utils/path';
 
 @Component({
   standalone: false,
@@ -32,6 +35,7 @@ export class ElementConnectorDefaultComponent implements OnInit {
     this.el.nativeElement.focus();
   }
 
+  // dev 方案（当前生效）
   generateIframeURL(asset, protocol) {
     if (this.iframeURL) {
       return this.iframeURL;
@@ -40,16 +44,49 @@ export class ElementConnectorDefaultComponent implements OnInit {
     const token = this.view.connectToken.id;
     switch (this.connector) {
       case 'chen':
-        const url = `${endpointUrl}/chen/connect?token=${token}`;
+        const url = joinEndpointUrl(endpointUrl, `/chen/connect?token=${token}`);
         const disableautohash = this.view.getConnectOption('disableautohash');
         if (disableautohash) {
           return `${url}&disableautohash=true`;
         }
         return url;
       case 'lion':
-        return `${endpointUrl}/lion/connect?token=${token}`;
+        return joinEndpointUrl(endpointUrl, `/lion/connect?token=${token}`);
       case 'default':
-        return `${endpointUrl}/koko/connect?token=${token}`;
+        return joinEndpointUrl(endpointUrl, `/koko/connect?token=${token}`);
     }
   }
+
+  // 多子目录方案（保留备用）：site prefix + URLSearchParams 重写
+  // generateIframeURL(asset, protocol) {
+  //   if (this.iframeURL) {
+  //     return this.iframeURL;
+  //   }
+  //   const endpointUrl = this.endpoint.getUrl();
+  //   const token = this.view.connectToken.id;
+  //
+  //   switch (this.connector) {
+  //     case 'chen': {
+  //       const params = new URLSearchParams({ token });
+  //       const disableautohash = this.view.getConnectOption('disableautohash');
+  //       const sitePrefix = getSitePrefix();
+  //
+  //       if (disableautohash) {
+  //         params.set('disableautohash', 'true');
+  //       }
+  //
+  //       if (sitePrefix) {
+  //         params.set('site_prefix', sitePrefix);
+  //       }
+  //
+  //       return joinEndpointUrl(endpointUrl, withSitePrefix(`/chen/connect?${params.toString()}`));
+  //     }
+  //     case 'lion':
+  //       return joinEndpointUrl(endpointUrl, withSitePrefix(`/lion/connect?token=${token}`));
+  //     case 'default':
+  //       return joinEndpointUrl(endpointUrl, withSitePrefix(`/koko/connect?token=${token}`));
+  //     default:
+  //       return '';
+  //   }
+  // }
 }
