@@ -1,7 +1,6 @@
 {
   "version": 1,
   "selections": {
-    "remotedesktop:rdp": "builtin.mstsc",
     "remotedesktop:vnc": "builtin.tigervnc",
     "databases:oracle": "builtin.terminal-db",
     "databases:mysql": "builtin.terminal-db",

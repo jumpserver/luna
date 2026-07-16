@@ -14,7 +14,7 @@
     "linux": {
       "executable": {
         "type": "bundled",
-        "default": "Terminal"
+        "default": "x-terminal-emulator"
       },
       "launch": {
         "type": "args",
