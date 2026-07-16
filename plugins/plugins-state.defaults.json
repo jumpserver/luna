@@ -1,11 +1,8 @@
 {
   "version": 1,
   "selections": {
-    "terminal:ssh": "builtin.putty",
-    "terminal:telnet": "builtin.putty",
     "remotedesktop:rdp": "builtin.mstsc",
     "remotedesktop:vnc": "builtin.tigervnc",
-    "filetransfer:sftp": "builtin.iterm-sftp",
     "databases:oracle": "builtin.terminal-db",
     "databases:mysql": "builtin.terminal-db",
     "databases:postgresql": "builtin.terminal-db",

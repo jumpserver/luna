@@ -3,6 +3,7 @@
     "macos": {
       "match_first": [
         "ssh",
+        "sftp",
         "telnet"
       ],
       "is_default": true,
@@ -13,6 +14,7 @@
     "linux": {
       "match_first": [
         "ssh",
+        "sftp",
         "telnet"
       ],
       "is_default": true,

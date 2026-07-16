@@ -119,7 +119,6 @@ impl PluginService {
                 }
             }
         }
-
         let should_remove_sftp_iterm = state_obj
             .get("selections")
             .and_then(|v| v.get("filetransfer:sftp"))
@@ -226,7 +225,7 @@ impl PluginService {
             .and_then(|v| v.as_bool())
             .unwrap_or(false)
             || user_path.is_some()
-            || (!path.is_empty() && is_internal);
+            || (!path.is_empty() && is_internal && user_plugin.is_some());
 
         let enabled = user_plugin
             .and_then(|p| p.get("enabled"))
@@ -389,10 +388,11 @@ impl PluginService {
 
         if let Some(defaults_path) = Self::resolve_defaults_path(app) {
             if let Ok(mut state) = Self::read_json(&defaults_path) {
-                let _ = Self::sanitize_user_state(&mut state);
-                let _ = fs::copy(&defaults_path, &state_path);
+                Self::sanitize_user_state(&mut state);
                 if let Ok(pretty) = serde_json::to_string_pretty(&state) {
                     let _ = fs::write(&state_path, pretty);
+                } else {
+                    let _ = fs::copy(&defaults_path, &state_path);
                 }
                 return state;
             }
@@ -619,7 +619,17 @@ impl PluginService {
             .or_insert(json!({}))
             .as_object_mut()
             .unwrap()
-            .insert(selection_key, Value::String(plugin_id));
+            .insert(selection_key, Value::String(plugin_id.clone()));
+        state_obj
+            .entry("plugins")
+            .or_insert(json!({}))
+            .as_object_mut()
+            .unwrap()
+            .entry(plugin_id)
+            .or_insert(json!({}))
+            .as_object_mut()
+            .unwrap()
+            .insert("enabled".into(), Value::Bool(true));
 
         let pretty = serde_json::to_string_pretty(&state)
             .map_err(|e| format!("serialize plugins-state.json failed: {}", e))?;

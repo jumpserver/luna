@@ -55,12 +55,22 @@ bytes = "1.11.1"
 
 [dependencies.tokio]
 version = "1.46.1"
-features = ["rt-multi-thread", "macros", "sync", "time", "net"]
+features = [
+  "rt-multi-thread",
+  "macros",
+  "sync",
+  "time",
+  "net"
+]
 
 [dependencies.image]
 version = "0.25.8"
 default-features = false
-features = ["png", "jpeg", "webp"]
+features = [
+  "png",
+  "jpeg",
+  "webp"
+]
 
 [dependencies.tauri]
 version = "2.11"
@@ -96,8 +106,8 @@ shiguredo_video_toolbox = { git = "https://github.com/shiguredo/video-toolbox-rs
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = [
-    "Win32_Media_MediaFoundation",
-    "Win32_System_Com",
+  "Win32_Media_MediaFoundation",
+  "Win32_System_Com",
 ] }
 
 [target.'cfg(target_os = "linux")'.dependencies]

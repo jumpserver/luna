@@ -142,10 +142,10 @@ func (r *Rouse) HandleSSH(appConfig *config.AppConfig) {
 	cmd := handleSSH(r, appConfig)
 	if cmd != nil {
 		if err := cmd.Run(); err != nil {
-			reportErrorf("Failed to execute SSH application: %v", err)
+			reportErrorf("Failed to execute %s application: %v", strings.ToUpper(r.Protocol), err)
 		}
 	} else {
-		reportError("No SSH application configured or found")
+		reportErrorf("No %s application configured or found", strings.ToUpper(r.Protocol))
 	}
 }
 

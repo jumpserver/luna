@@ -40,7 +40,7 @@ func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	appLst := cfg.MacOS.RemoteDesktop
 	for _, app := range appLst {
-		if app.IsMatchProtocol("vnc") {
+		if app.IsActive() && app.IsMatchProtocol("vnc") {
 			appItem = &app
 			break
 		}
@@ -79,11 +79,11 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	case "ssh", "telnet":
 		appLst = cfg.MacOS.Terminal
 	case "sftp":
-		appLst = cfg.MacOS.FileTransfer
+		appLst = append(cfg.MacOS.FileTransfer, cfg.MacOS.Terminal...)
 	}
 
 	for _, app := range appLst {
-		if app.IsMatchProtocol(r.Protocol) {
+		if app.IsActive() && app.IsMatchProtocol(r.Protocol) {
 			appItem = &app
 			break
 		}
@@ -143,7 +143,7 @@ func awakenDBCommand(r *Rouse, cfg *config.AppConfig) *exec.Cmd {
 	var appItem *config.AppItem
 	appLst := cfg.MacOS.Databases
 	for _, app := range appLst {
-		if app.IsMatchProtocol(r.Protocol) {
+		if app.IsActive() && app.IsMatchProtocol(r.Protocol) {
 			appItem = &app
 			break
 		}

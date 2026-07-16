@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { readFileSync, writeFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,14 +24,14 @@ console.log(`Updating version to: ${version}`);
 const packageJsonPath = join(rootDir, "package.json");
 const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
 packageJson.version = version;
-writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
+writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 console.log("✓ Updated package.json");
 
 // Update tauri.conf.json
 const tauriConfPath = join(rootDir, "src-tauri", "tauri.conf.json");
 const tauriConf = JSON.parse(readFileSync(tauriConfPath, "utf8"));
 tauriConf.version = version;
-writeFileSync(tauriConfPath, JSON.stringify(tauriConf, null, 2) + "\n");
+writeFileSync(tauriConfPath, `${JSON.stringify(tauriConf, null, 2)}\n`);
 console.log("✓ Updated src-tauri/tauri.conf.json");
 
 // Update Cargo.toml

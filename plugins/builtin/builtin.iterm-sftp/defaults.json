@@ -1,9 +1,7 @@
 {
   "platforms": {
     "macos": {
-      "match_first": [
-        "sftp"
-      ],
+      "match_first": [],
       "is_default": false,
       "is_set": false,
       "is_internal": true,
