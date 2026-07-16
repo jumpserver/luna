@@ -66,7 +66,29 @@ func TestLoadAppConfigSanitizesLegacyMacSelections(t *testing.T) {
 	}
 }
 
-func TestLoadAppConfigKeepsDefaultProtocolsWithPartialSelection(t *testing.T) {
+func TestBuildMatchFirstUsesSelectionsOnly(t *testing.T) {
+	selections := map[string]string{
+		"terminal:ssh": "windows.putty",
+	}
+	got := buildMatchFirst("windows.putty", "terminal", []string{"ssh", "telnet"}, selections)
+	if len(got) != 1 || got[0] != "ssh" {
+		t.Fatalf("expected only selected ssh, got %#v", got)
+	}
+
+	got = buildMatchFirst("windows.putty", "terminal", []string{"ssh", "telnet"}, map[string]string{
+		"terminal:ssh": "",
+	})
+	if len(got) != 0 {
+		t.Fatalf("expected no match after explicit disable, got %#v", got)
+	}
+
+	got = buildMatchFirst("windows.putty", "terminal", []string{"ssh", "telnet"}, map[string]string{})
+	if len(got) != 0 {
+		t.Fatalf("expected no match when selection missing, got %#v", got)
+	}
+}
+
+func TestLoadAppConfigDoesNotFallbackMatchFirst(t *testing.T) {
 	if osKey() != "macos" {
 		t.Skip("macOS-specific plugin defaults")
 	}
@@ -108,9 +130,8 @@ func TestLoadAppConfigKeepsDefaultProtocolsWithPartialSelection(t *testing.T) {
 	}
 
 	for _, item := range cfg.MacOS.Terminal {
-		if item.Name == "terminal" && item.IsActive() && item.IsMatchProtocol("telnet") {
-			return
+		if item.Name == "terminal" && item.IsMatchProtocol("telnet") {
+			t.Fatalf("expected no telnet fallback from connect.json match_first, got %#v", item)
 		}
 	}
-	t.Fatalf("expected Terminal to keep default telnet match, got %#v", cfg.MacOS.Terminal)
 }

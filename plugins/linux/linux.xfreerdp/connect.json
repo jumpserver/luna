@@ -1,15 +1,16 @@
 {
-  "platforms": {
-    "linux": {
-      "executable": {
-        "type": "bundled",
-        "default": "xfreerdp"
-      },
-      "launch": {
-        "type": "args",
-        "template": "{file} /cert-ignore /d: /p:"
-      },
-      "display_name": "xFreeRDP"
-    }
-  }
+  "platform": "linux",
+  "match_first": [],
+  "is_default": false,
+  "is_set": false,
+  "is_internal": true,
+  "executable": {
+    "type": "bundled",
+    "default": "xfreerdp"
+  },
+  "launch": {
+    "type": "args",
+    "template": "{file} /cert-ignore /d: /p:"
+  },
+  "display_name": "xFreeRDP"
 }

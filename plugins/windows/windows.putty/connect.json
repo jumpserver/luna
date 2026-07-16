@@ -1,15 +1,16 @@
 {
-  "platforms": {
-    "windows": {
-      "executable": {
-        "type": "bundled",
-        "default": "putty.exe"
-      },
-      "launch": {
-        "type": "args",
-        "template": "-{protocol} {username}@{host} -P {port} -pw {value}"
-      },
-      "display_name": "PuTTY"
-    }
-  }
+  "platform": "windows",
+  "match_first": [],
+  "is_default": true,
+  "is_set": true,
+  "is_internal": true,
+  "executable": {
+    "type": "bundled",
+    "default": "putty.exe"
+  },
+  "launch": {
+    "type": "args",
+    "template": "-{protocol} {username}@{host} -P {port} -pw {value}"
+  },
+  "display_name": "PuTTY"
 }

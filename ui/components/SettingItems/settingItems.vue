@@ -94,11 +94,25 @@ function getImageByName(filename: string): string | undefined {
 
 const showExecutableNotFoundToast = () => {
   const path = props.item?.path?.trim?.() || "";
+  const description = path
+    ? `${t("Setting.ExecutableNotFound")}\n${path}`
+    : t("Setting.ExecutableNotFound");
   toast.add({
     title: t("Setting.EnableFailed"),
-    description: path ? `${t("Setting.ExecutableNotFound")}\n${path}` : t("Setting.ExecutableNotFound"),
+    description,
     color: "error",
     icon: "line-md:close-circle",
+    actions: [
+      {
+        label: t("Common.Copy"),
+        icon: "i-lucide-copy",
+        color: "neutral",
+        variant: "soft",
+        onClick: () => {
+          void useTauriClipboardManagerWriteText(`${t("Setting.EnableFailed")}\n${description}`);
+        }
+      }
+    ],
     progress: true,
     duration: 4000
   });
@@ -128,8 +142,15 @@ const onSwitch = (v: boolean) => {
     return;
   }
 
-  if (isUserPathPlugin.value && !canEnable.value) {
-    showExecutableNotFoundToast();
+  // user_path: path_exists is a snapshot from last config build and can be stale
+  // if the binary was moved/restored on disk. Always ask the backend to live-check
+  // when a path is configured; only block locally when path is empty.
+  if (isUserPathPlugin.value) {
+    if (!props.item?.path?.trim()) {
+      showExecutableNotFoundToast();
+      return;
+    }
+    emit("toggle", true);
     return;
   }
 

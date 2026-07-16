@@ -79,7 +79,7 @@ func getDefaultConfig() AppConfig {
 	dir, _ := os.UserConfigDir()
 	configDir := filepath.Join(dir, "jumpserver-client")
 
-	// Plugin mode: build AppConfig from plugins/builtin
+	// Plugin mode: build AppConfig from the current platform plugin directory.
 	if pluginCfg, ok := loadPluginConfig(configDir); ok {
 		GlobalConfig = pluginCfg
 		return *GlobalConfig

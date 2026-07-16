@@ -6,24 +6,25 @@
 
 ```
 plugins/
-├── builtin/                    # 内置插件（26 个，由 config.json 迁移生成）
-│   ├── index.json              # 插件索引
-│   └── builtin.*/              # 各插件目录
+├── windows/                    # Windows 内置插件
+│   ├── index.json              # 当前平台插件索引
+│   ├── plugins-state.defaults.json
+│   └── windows.*/              # 各插件目录
+├── macos/                      # macOS 内置插件
+├── linux/                      # Linux 内置插件
 ├── demo/
 │   └── hello-terminal/         # 第三方开发示例
 ├── schema/                     # JSON Schema
 ├── tools/
-│   └── split-config.py         # 从 config.json 重新生成 builtin 插件
-└── plugins-state.defaults.json # 默认协议选用关系
+│   └── split-config.py         # 从 config.json 重新生成平台插件
 ```
 
 ## 单个插件结构
 
 ```
-builtin.putty/
+macos.tigervnc/
 ├── manifest.json    # 元数据（名称、协议、分类、说明）
-├── connect.json     # 各平台启动方式
-├── defaults.json    # 默认选中状态、路径、is_internal 等
+├── connect.json     # 当前平台启动方式、默认路径、启用状态等
 └── icon.png         # 设置页图标（可选）
 ```
 

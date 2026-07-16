@@ -1,16 +1,17 @@
 {
-  "platforms": {
-    "windows": {
-      "executable": {
-        "type": "user_path",
-        "default": "",
-        "required": true
-      },
-      "launch": {
-        "type": "args",
-        "template": "-newtab*sshpass -p{value} ssh -o StrictHostKeyChecking=no {username}@{host} -p{port}"
-      },
-      "display_name": "MobaXterm"
-    }
-  }
+  "platform": "windows",
+  "match_first": [],
+  "is_default": false,
+  "is_set": false,
+  "is_internal": false,
+  "executable": {
+    "type": "user_path",
+    "default": "",
+    "required": true
+  },
+  "launch": {
+    "type": "args",
+    "template": "-newtab*sshpass -p{value} ssh -o StrictHostKeyChecking=no {username}@{host} -p{port}"
+  },
+  "display_name": "MobaXterm"
 }

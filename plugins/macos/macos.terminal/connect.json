@@ -1,15 +1,16 @@
 {
-  "platforms": {
-    "macos": {
-      "executable": {
-        "type": "bundled",
-        "default": "Terminal"
-      },
-      "launch": {
-        "type": "args",
-        "template": "{protocol} {username}@{host} -p {port} -P {value}"
-      },
-      "display_name": "Terminal"
-    }
-  }
+  "platform": "macos",
+  "match_first": [],
+  "is_default": true,
+  "is_set": true,
+  "is_internal": true,
+  "executable": {
+    "type": "bundled",
+    "default": "Terminal"
+  },
+  "launch": {
+    "type": "args",
+    "template": "{protocol} {username}@{host} -p {port} -P {value}"
+  },
+  "display_name": "Terminal"
 }

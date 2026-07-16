@@ -1,34 +1,15 @@
 {
-  "platforms": {
-    "windows": {
-      "executable": {
-        "type": "system",
-        "default": "powershell.exe"
-      },
-      "launch": {
-        "type": "script",
-        "script": "scripts/launch.windows.ps1"
-      }
-    },
-    "macos": {
-      "executable": {
-        "type": "system",
-        "default": "osascript"
-      },
-      "launch": {
-        "type": "script",
-        "script": "scripts/launch.macos.applescript"
-      }
-    },
-    "linux": {
-      "executable": {
-        "type": "system",
-        "default": "bash"
-      },
-      "launch": {
-        "type": "script",
-        "script": "scripts/launch.linux.sh"
-      }
-    }
+  "platform": "macos",
+  "match_first": [],
+  "is_default": false,
+  "is_set": true,
+  "is_internal": false,
+  "executable": {
+    "type": "system",
+    "default": "osascript"
+  },
+  "launch": {
+    "type": "script",
+    "script": "scripts/launch.macos.applescript"
   }
 }

@@ -4,146 +4,92 @@
     {
       "id": "windows.another-redis",
       "name": "another_redis",
-      "category": "databases",
-      "platforms": [
-        "windows"
-      ]
+      "category": "databases"
     },
     {
       "id": "windows.dbeaver",
       "name": "dbeaver",
-      "category": "databases",
-      "platforms": [
-        "windows"
-      ]
+      "category": "databases"
     },
     {
       "id": "windows.mobaxterm",
       "name": "mobaxterm",
-      "category": "terminal",
-      "platforms": [
-        "windows"
-      ]
+      "category": "terminal"
     },
     {
       "id": "windows.mongo-compass",
       "name": "mongo_compass",
-      "category": "databases",
-      "platforms": [
-        "windows"
-      ]
+      "category": "databases"
     },
     {
       "id": "windows.mstsc",
       "name": "mstsc",
-      "category": "remotedesktop",
-      "platforms": [
-        "windows"
-      ]
+      "category": "remotedesktop"
     },
     {
       "id": "windows.navicat17",
       "name": "navicat17",
-      "category": "databases",
-      "platforms": [
-        "windows"
-      ]
+      "category": "databases"
     },
     {
       "id": "windows.plsql",
       "name": "plsql",
-      "category": "databases",
-      "platforms": [
-        "windows"
-      ]
+      "category": "databases"
     },
     {
       "id": "windows.putty",
       "name": "putty",
-      "category": "terminal",
-      "platforms": [
-        "windows"
-      ]
+      "category": "terminal"
     },
     {
       "id": "windows.resp",
       "name": "resp",
-      "category": "databases",
-      "platforms": [
-        "windows"
-      ]
+      "category": "databases"
     },
     {
       "id": "windows.securecrt",
       "name": "securecrt",
-      "category": "terminal",
-      "platforms": [
-        "windows"
-      ]
+      "category": "terminal"
     },
     {
       "id": "windows.securefx",
       "name": "securefx",
-      "category": "filetransfer",
-      "platforms": [
-        "windows"
-      ]
+      "category": "filetransfer"
     },
     {
       "id": "windows.ssms17",
       "name": "ssms17",
-      "category": "databases",
-      "platforms": [
-        "windows"
-      ]
+      "category": "databases"
     },
     {
       "id": "windows.tigervnc",
       "name": "tigervnc",
-      "category": "remotedesktop",
-      "platforms": [
-        "windows"
-      ]
+      "category": "remotedesktop"
     },
     {
       "id": "windows.toad",
       "name": "toad",
-      "category": "databases",
-      "platforms": [
-        "windows"
-      ]
+      "category": "databases"
     },
     {
       "id": "windows.windows-rdm",
       "name": "windows_rdm",
-      "category": "remotedesktop",
-      "platforms": [
-        "windows"
-      ]
+      "category": "remotedesktop"
     },
     {
       "id": "windows.winscp",
       "name": "winscp",
-      "category": "filetransfer",
-      "platforms": [
-        "windows"
-      ]
+      "category": "filetransfer"
     },
     {
       "id": "windows.xftp",
       "name": "xftp",
-      "category": "filetransfer",
-      "platforms": [
-        "windows"
-      ]
+      "category": "filetransfer"
     },
     {
       "id": "windows.xshell",
       "name": "xshell",
-      "category": "terminal",
-      "platforms": [
-        "windows"
-      ]
+      "category": "terminal"
     }
   ]
 }

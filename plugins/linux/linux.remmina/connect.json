@@ -1,17 +1,18 @@
 {
-  "platforms": {
-    "linux": {
-      "executable": {
-        "type": "bundled",
-        "default": "remmina"
-      },
-      "launch": {
-        "type": "file",
-        "extension": "rdp",
-        "open_with": "executable",
-        "arg_template": "{file}"
-      },
-      "display_name": "Remmina"
-    }
-  }
+  "platform": "linux",
+  "match_first": [],
+  "is_default": false,
+  "is_set": false,
+  "is_internal": true,
+  "executable": {
+    "type": "bundled",
+    "default": "remmina"
+  },
+  "launch": {
+    "type": "file",
+    "extension": "rdp",
+    "open_with": "executable",
+    "arg_template": "{file}"
+  },
+  "display_name": "Remmina"
 }

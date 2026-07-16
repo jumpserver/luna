@@ -4,90 +4,57 @@
     {
       "id": "macos.another-redis",
       "name": "another_redis",
-      "category": "databases",
-      "platforms": [
-        "macos"
-      ]
+      "category": "databases"
     },
     {
       "id": "macos.dbeaver",
       "name": "dbeaver",
-      "category": "databases",
-      "platforms": [
-        "macos"
-      ]
+      "category": "databases"
     },
     {
       "id": "macos.iterm",
       "name": "iterm",
-      "category": "terminal",
-      "platforms": [
-        "macos"
-      ]
+      "category": "terminal"
     },
     {
       "id": "macos.iterm-sftp",
       "name": "iterm",
-      "category": "filetransfer",
-      "platforms": [
-        "macos"
-      ]
+      "category": "filetransfer"
     },
     {
       "id": "macos.mongo-compass",
       "name": "mongo_compass",
-      "category": "databases",
-      "platforms": [
-        "macos"
-      ]
+      "category": "databases"
     },
     {
       "id": "macos.mstsc",
       "name": "mstsc",
-      "category": "remotedesktop",
-      "platforms": [
-        "macos"
-      ]
+      "category": "remotedesktop"
     },
     {
       "id": "macos.securecrt",
       "name": "securecrt",
-      "category": "terminal",
-      "platforms": [
-        "macos"
-      ]
+      "category": "terminal"
     },
     {
       "id": "macos.securefx",
       "name": "securefx",
-      "category": "filetransfer",
-      "platforms": [
-        "macos"
-      ]
+      "category": "filetransfer"
     },
     {
       "id": "macos.terminal",
       "name": "terminal",
-      "category": "terminal",
-      "platforms": [
-        "macos"
-      ]
+      "category": "terminal"
     },
     {
       "id": "macos.terminal-db",
       "name": "terminal",
-      "category": "databases",
-      "platforms": [
-        "macos"
-      ]
+      "category": "databases"
     },
     {
       "id": "macos.tigervnc",
       "name": "tigervnc",
-      "category": "remotedesktop",
-      "platforms": [
-        "macos"
-      ]
+      "category": "remotedesktop"
     }
   ]
 }

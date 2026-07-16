@@ -1,47 +1,48 @@
 {
-  "platforms": {
-    "windows": {
-      "executable": {
-        "type": "user_path",
-        "default": "",
-        "required": true
+  "platform": "windows",
+  "match_first": [],
+  "is_default": false,
+  "is_set": false,
+  "is_internal": false,
+  "executable": {
+    "type": "user_path",
+    "default": "",
+    "required": true
+  },
+  "launch": {
+    "type": "autoit",
+    "steps": [
+      {
+        "cmd": "Wait",
+        "type": "15",
+        "element": "[REGEXPTITLE:连接到服务器|Connect]"
       },
-      "launch": {
-        "type": "autoit",
-        "steps": [
-          {
-            "cmd": "Wait",
-            "type": "15",
-            "element": "[REGEXPTITLE:连接到服务器|Connect]"
-          },
-          {
-            "cmd": "ControlSend",
-            "type": "{host},{port}",
-            "element": "[CLASS:Edit; INSTANCE:1]"
-          },
-          {
-            "cmd": "ControlSend",
-            "type": "SQL Server",
-            "element": "[NAME:comboBoxAuthentication]"
-          },
-          {
-            "cmd": "ControlSetText",
-            "type": "{username}",
-            "element": "[CLASS:Edit; INSTANCE:2]"
-          },
-          {
-            "cmd": "ControlSend",
-            "type": "{value}",
-            "element": "[NAME:password]"
-          },
-          {
-            "cmd": "ControlClick",
-            "type": "40,10",
-            "element": "[NAME:connect]"
-          }
-        ]
+      {
+        "cmd": "ControlSend",
+        "type": "{host},{port}",
+        "element": "[CLASS:Edit; INSTANCE:1]"
       },
-      "display_name": "SQL Server Management Studio"
-    }
-  }
+      {
+        "cmd": "ControlSend",
+        "type": "SQL Server",
+        "element": "[NAME:comboBoxAuthentication]"
+      },
+      {
+        "cmd": "ControlSetText",
+        "type": "{username}",
+        "element": "[CLASS:Edit; INSTANCE:2]"
+      },
+      {
+        "cmd": "ControlSend",
+        "type": "{value}",
+        "element": "[NAME:password]"
+      },
+      {
+        "cmd": "ControlClick",
+        "type": "40,10",
+        "element": "[NAME:connect]"
+      }
+    ]
+  },
+  "display_name": "SQL Server Management Studio"
 }

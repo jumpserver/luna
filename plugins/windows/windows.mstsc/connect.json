@@ -1,17 +1,18 @@
 {
-  "platforms": {
-    "windows": {
-      "executable": {
-        "type": "system",
-        "default": "C:\\WINDOWS\\system32\\mstsc.exe"
-      },
-      "launch": {
-        "type": "file",
-        "extension": "rdp",
-        "open_with": "executable",
-        "arg_template": "{file}"
-      },
-      "display_name": "Microsoft Remote Desktop"
-    }
-  }
+  "platform": "windows",
+  "match_first": [],
+  "is_default": true,
+  "is_set": true,
+  "is_internal": true,
+  "executable": {
+    "type": "system",
+    "default": "C:\\WINDOWS\\system32\\mstsc.exe"
+  },
+  "launch": {
+    "type": "file",
+    "extension": "rdp",
+    "open_with": "executable",
+    "arg_template": "{file}"
+  },
+  "display_name": "Microsoft Remote Desktop"
 }

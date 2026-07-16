@@ -4,50 +4,32 @@
     {
       "id": "linux.dbeaver",
       "name": "dbeaver",
-      "category": "databases",
-      "platforms": [
-        "linux"
-      ]
+      "category": "databases"
     },
     {
       "id": "linux.remmina",
       "name": "remmina",
-      "category": "remotedesktop",
-      "platforms": [
-        "linux"
-      ]
+      "category": "remotedesktop"
     },
     {
       "id": "linux.terminal",
       "name": "terminal",
-      "category": "terminal",
-      "platforms": [
-        "linux"
-      ]
+      "category": "terminal"
     },
     {
       "id": "linux.terminal-db",
       "name": "terminal",
-      "category": "databases",
-      "platforms": [
-        "linux"
-      ]
+      "category": "databases"
     },
     {
       "id": "linux.tigervnc",
       "name": "tigervnc",
-      "category": "remotedesktop",
-      "platforms": [
-        "linux"
-      ]
+      "category": "remotedesktop"
     },
     {
       "id": "linux.xfreerdp",
       "name": "xfreerdp",
-      "category": "remotedesktop",
-      "platforms": [
-        "linux"
-      ]
+      "category": "remotedesktop"
     }
   ]
 }

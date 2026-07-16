@@ -109,6 +109,10 @@ def build_launch(item: dict) -> dict:
 def platform_config(item: dict) -> dict:
     exe_type = executable_type(item)
     cfg = {
+        "match_first": item.get("match_first", []),
+        "is_default": item.get("is_default", False),
+        "is_set": item.get("is_set", False),
+        "is_internal": item.get("is_internal", False),
         "executable": {
             "type": exe_type,
             "default": item.get("path") or "",
@@ -142,8 +146,7 @@ def collect_plugins(config: dict) -> dict[str, dict]:
                         "name": name,
                         "category": category,
                         "os_key": os_key,
-                        "platforms": {},
-                        "defaults": {"platforms": {}},
+                        "connect": None,
                         # use first seen item for manifest fields
                         "manifest_source": item,
                         "protocols": set(item.get("protocol", [])),
@@ -151,13 +154,9 @@ def collect_plugins(config: dict) -> dict[str, dict]:
                 else:
                     plugins[pid]["protocols"].update(item.get("protocol", []))
 
-                plugins[pid]["platforms"][os_key] = platform_config(item)
-                plugins[pid]["defaults"]["platforms"][os_key] = {
-                    "match_first": item.get("match_first", []),
-                    "is_default": item.get("is_default", False),
-                    "is_set": item.get("is_set", False),
-                    "is_internal": item.get("is_internal", False),
-                    "path": item.get("path", ""),
+                plugins[pid]["connect"] = {
+                    "platform": os_key,
+                    **platform_config(item),
                 }
 
     return plugins
@@ -182,23 +181,16 @@ def write_plugin(pid: str, data: dict) -> None:
         "builtin": True,
         "comment": src.get("comment", {"en": "", "zh": ""}),
     }
-    if any(
-        data["platforms"].get(os, {}).get("launch", {}).get("type") == "autoit"
-        for os in OS_KEYS
-    ):
+    if data["connect"].get("launch", {}).get("type") == "autoit":
         manifest["permissions"] = ["autoit", "exec"]
 
-    connect = {"platforms": data["platforms"]}
-    defaults = data["defaults"]
+    connect = data["connect"]
 
     (plugin_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     (plugin_dir / "connect.json").write_text(
         json.dumps(connect, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-    (plugin_dir / "defaults.json").write_text(
-        json.dumps(defaults, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
 
     icon_name = ICON_MAP.get(data["name"])
@@ -261,7 +253,6 @@ def main() -> None:
                 "id": pid,
                 "name": plugins[pid]["name"],
                 "category": plugins[pid]["category"],
-                "platforms": [plugins[pid]["os_key"]],
             }
         )
 

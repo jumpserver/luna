@@ -1,15 +1,16 @@
 {
-  "platforms": {
-    "macos": {
-      "executable": {
-        "type": "bundled",
-        "default": "iTerm2"
-      },
-      "launch": {
-        "type": "args",
-        "template": "{protocol} {username}@{host} -p {port} -P {value}"
-      },
-      "display_name": "iTerm2"
-    }
-  }
+  "platform": "macos",
+  "match_first": [],
+  "is_default": false,
+  "is_set": false,
+  "is_internal": true,
+  "executable": {
+    "type": "bundled",
+    "default": "iTerm2"
+  },
+  "launch": {
+    "type": "args",
+    "template": "{protocol} {username}@{host} -p {port} -P {value}"
+  },
+  "display_name": "iTerm2"
 }

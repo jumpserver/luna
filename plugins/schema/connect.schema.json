@@ -3,18 +3,40 @@
   "$id": "https://jumpserver.org/schemas/client-plugin/connect.json",
   "title": "JumpServer Client Plugin Connect Definition",
   "type": "object",
-  "required": ["platforms"],
+  "required": ["platform", "executable", "launch"],
   "additionalProperties": false,
   "properties": {
-    "platforms": {
+    "platform": {
+      "type": "string",
+      "enum": ["windows", "macos", "linux"]
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Platform-specific display name override"
+    },
+    "match_first": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_set": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_internal": {
+      "type": "boolean",
+      "default": false
+    },
+    "executable": { "$ref": "#/$defs/executable" },
+    "launch": { "$ref": "#/$defs/launch" },
+    "env": {
       "type": "object",
-      "minProperties": 1,
-      "properties": {
-        "windows": { "$ref": "#/$defs/platformConfig" },
-        "macos": { "$ref": "#/$defs/platformConfig" },
-        "linux": { "$ref": "#/$defs/platformConfig" }
-      },
-      "additionalProperties": false
+      "additionalProperties": { "type": "string" },
+      "description": "Extra environment variables with template support"
     }
   },
   "$defs": {
@@ -124,24 +146,6 @@
         { "$ref": "#/$defs/launchFile" },
         { "$ref": "#/$defs/launchAutoIt" }
       ]
-    },
-    "platformConfig": {
-      "type": "object",
-      "required": ["executable", "launch"],
-      "additionalProperties": false,
-      "properties": {
-        "display_name": {
-          "type": "string",
-          "description": "Platform-specific display name override"
-        },
-        "executable": { "$ref": "#/$defs/executable" },
-        "launch": { "$ref": "#/$defs/launch" },
-        "env": {
-          "type": "object",
-          "additionalProperties": { "type": "string" },
-          "description": "Extra environment variables with template support"
-        }
-      }
     }
   }
 }

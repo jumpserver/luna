@@ -1,16 +1,17 @@
 {
-  "platforms": {
-    "macos": {
-      "executable": {
-        "type": "user_path",
-        "default": "/Applications/SecureFX.app/Contents/MacOS/SecureFX",
-        "required": false
-      },
-      "launch": {
-        "type": "args",
-        "template": "{protocol}://{username}:{value}@{host}:{port}"
-      },
-      "display_name": "SecureFX"
-    }
-  }
+  "platform": "macos",
+  "match_first": [],
+  "is_default": false,
+  "is_set": false,
+  "is_internal": false,
+  "executable": {
+    "type": "user_path",
+    "default": "/Applications/SecureFX.app/Contents/MacOS/SecureFX",
+    "required": false
+  },
+  "launch": {
+    "type": "args",
+    "template": "{protocol}://{username}:{value}@{host}:{port}"
+  },
+  "display_name": "SecureFX"
 }
