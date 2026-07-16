@@ -94,6 +94,8 @@ func resolveBuiltinDir() string {
 		candidates = append(candidates,
 			filepath.Join(base, "resources", "plugins", "builtin"),
 			filepath.Join(base, "..", "resources", "plugins", "builtin"),
+			filepath.Join(base, "..", "..", "plugins", "builtin"),
+			filepath.Join(base, "..", "..", "resources", "plugins", "builtin"),
 			filepath.Join(base, "plugins", "builtin"),
 		)
 	}
@@ -129,6 +131,8 @@ func resolveStatePath(configDir string) string {
 		base := filepath.Dir(exe)
 		candidates = append(candidates,
 			filepath.Join(base, "resources", "plugins", "plugins-state.defaults.json"),
+			filepath.Join(base, "..", "..", "plugins", "plugins-state.defaults.json"),
+			filepath.Join(base, "..", "..", "resources", "plugins", "plugins-state.defaults.json"),
 		)
 	}
 

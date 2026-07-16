@@ -193,6 +193,8 @@ impl ConfigService {
 
         let default_version = Self::get_config_version(&default_config);
         let user_version = Self::get_config_version(&user_config);
+        let should_migrate_plugins =
+            default_config.get("_plugins").is_some() && user_config.get("_plugins").is_none();
 
         log::info!(
             "Config versions - User: {}, Default: {}",
@@ -200,12 +202,13 @@ impl ConfigService {
             default_version
         );
 
-        // 如果默认配置版本更高，则合并配置
-        if default_version > user_version {
+        // 如果默认配置版本更高，或当前版本引入了插件配置，则合并配置。
+        if default_version > user_version || should_migrate_plugins {
             log::info!(
-                "Upgrading config from version {} to {}",
+                "Upgrading config from version {} to {} (migrate_plugins={})",
                 user_version,
-                default_version
+                default_version,
+                should_migrate_plugins
             );
 
             let merged_config = Self::merge_configs(user_config, default_config);
