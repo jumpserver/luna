@@ -2,10 +2,13 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type {
   ChenActionItem,
+  ChenDataViewAction,
+  ChenDataViewConsoleTab,
   ChenPacket,
   ChenPromptConsoleTab,
   ChenQueryConsoleTab,
   ChenQueryLikeWorkspaceTab,
+  ChenQueryResultTab,
   ChenTreeNode,
   ChenWorkspaceTab
 } from "~/chen/types";
@@ -52,7 +55,7 @@ const tree = useChenResourceTree(auth.chenToken, {
   }
 });
 const workspace = useChenWorkspaceTabs();
-const dataView = useChenDataView();
+const dataView = useChenDataView(sendConsoleAction);
 const consoleConnections = new Map<string, ReturnType<typeof useChenWebSocket>>();
 
 const currentWorkspaceNodeKey = computed(() => {
@@ -179,9 +182,6 @@ function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
       break;
     case "message":
       if (tab.kind === "data-view") queryConsole.appendLog(tab, packet.data);
-      break;
-    case "update_state":
-      if (tab.kind === "data-view") tab.state = packet.data || {};
       break;
     case "active_console":
       if (typeof packet.data === "string") {
@@ -371,6 +371,27 @@ function closeQueryResult(tab: ChenQueryLikeWorkspaceTab, title: string) {
   queryConsole.closeQueryResult(tab, title);
 }
 
+function dismissQueryMessage(tab: ChenQueryConsoleTab) {
+  queryConsole.dismissQueryMessage(tab);
+}
+
+function runQueryDataViewAction(
+  tab: ChenQueryConsoleTab,
+  result: ChenQueryResultTab,
+  action: ChenDataViewAction,
+  data?: number
+) {
+  dataView.sendDataViewAction(tab, result, action, data);
+}
+
+function runStandaloneDataViewAction(
+  tab: ChenDataViewConsoleTab,
+  action: ChenDataViewAction,
+  data?: number
+) {
+  dataView.sendDataViewAction(tab, tab, action, data);
+}
+
 function updateDataViewPanel(tab: Extract<ChenWorkspaceTab, { kind: "data-view" }>, panel: "data" | "properties") {
   tab.activePanel = panel;
 }
@@ -460,9 +481,12 @@ defineExpose({ focus });
             v-if="activeQueryTab"
             :tab="activeQueryTab"
             :context-label="currentContextLabel"
+            :db-type="auth.profile.value?.dbType || ''"
             @run="runQueryTab"
             @cancel="cancelQueryLikeTab"
             @download="downloadDataViewCsv"
+            @data-view-action="runQueryDataViewAction"
+            @dismiss-message="dismissQueryMessage"
             @update-statement="updateQueryStatement"
             @activate-result="activateQueryResult"
             @close-result="closeQueryResult"
@@ -486,6 +510,7 @@ defineExpose({ focus });
             :db-type="auth.profile.value?.dbType"
             :protocol="props.tab.protocol"
             @download="downloadDataViewCsv"
+            @data-view-action="runStandaloneDataViewAction"
             @update-panel="updateDataViewPanel"
             @update-property-tab="updateDataViewPropertyTab"
           />
