@@ -15,7 +15,10 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   "update:modelValue": [value: string]
+  selectionChange: [hasSelection: boolean]
+  openSnippets: []
   run: []
+  saveSnippet: []
   stop: []
 }>();
 
@@ -34,6 +37,20 @@ const editorExtensions: Extension[] = [
   EditorState.tabSize.of(2),
   Prec.highest(keymap.of([
     {
+      key: "Ctrl-r",
+      run: () => {
+        emit("openSnippets");
+        return true;
+      }
+    },
+    {
+      key: "Ctrl-s",
+      run: () => {
+        emit("saveSnippet");
+        return true;
+      }
+    },
+    {
       key: "Mod-Enter",
       run: () => {
         emit("run");
@@ -51,6 +68,9 @@ const editorExtensions: Extension[] = [
   EditorView.updateListener.of((update) => {
     if (update.docChanged && !applyingExternalValue) {
       emit("update:modelValue", update.state.doc.toString());
+    }
+    if (update.selectionSet) {
+      emit("selectionChange", !update.state.selection.main.empty);
     }
   })
 ];

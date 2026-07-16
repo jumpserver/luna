@@ -84,6 +84,10 @@ export function useChenQueryConsole(
     sendConsoleAction(tab, "close_data_view", title);
   }
 
+  function dismissQueryMessage(tab: ChenQueryLikeWorkspaceTab) {
+    tab.message = null;
+  }
+
   function handleQueryConsolePacket(tab: ChenQueryLikeWorkspaceTab, packet: ChenPacket) {
     switch (packet.type) {
       case "init":
@@ -122,6 +126,7 @@ export function useChenQueryConsole(
     if (tab.state.loading || tab.state.inQuery) return;
     const sql = selectedSql || tab.statement;
     if (!sql.trim()) return;
+    dismissQueryMessage(tab);
 
     if (sql.length <= SQL_CHUNK_SIZE) {
       sendConsoleAction(tab, "query_console_action", { action: "run_sql", data: sql });
@@ -168,6 +173,7 @@ export function useChenQueryConsole(
     appendLog,
     cancelQueryLikeTab,
     closeQueryResult,
+    dismissQueryMessage,
     handleQueryConsolePacket,
     removeQueryResult,
     runConsoleTab,

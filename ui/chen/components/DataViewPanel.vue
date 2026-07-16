@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { ChenDataViewConsoleTab, ChenDataViewPropertyTab } from "~/chen/types";
+import type { ChenDataViewAction, ChenDataViewConsoleTab, ChenDataViewPropertyTab } from "~/chen/types";
 
 import ChenDataGrid from "~/chen/components/DataGrid.client.vue";
+import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
 import { useChenDataViewDerivedMeta } from "~/chen/composables/useChenDataViewDerivedMeta";
 
 const props = defineProps<{
@@ -11,6 +12,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  dataViewAction: [tab: ChenDataViewConsoleTab, action: ChenDataViewAction, data?: number]
   download: [tab: ChenDataViewConsoleTab]
   updatePanel: [tab: ChenDataViewConsoleTab, panel: "data" | "properties"]
   updatePropertyTab: [tab: ChenDataViewConsoleTab, propertyTab: ChenDataViewPropertyTab]
@@ -61,13 +63,20 @@ const {
         </template>
       </div>
 
-      <UButton
-        size="xs"
-        icon="i-lucide-download"
-        color="neutral"
-        variant="soft"
-        @click="emit('download', tab)"
-      />
+      <div class="flex items-center gap-1">
+        <DataViewToolbar
+          v-if="tab.activePanel === 'data'"
+          :state="tab.state"
+          @action="(action, data) => emit('dataViewAction', tab, action, data)"
+        />
+        <UButton
+          size="xs"
+          icon="i-lucide-download"
+          color="neutral"
+          variant="soft"
+          @click="emit('download', tab)"
+        />
+      </div>
     </div>
 
     <div v-if="tab.activePanel === 'data'" class="min-h-0 flex-1 overflow-auto">
