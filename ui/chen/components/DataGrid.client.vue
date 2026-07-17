@@ -1,22 +1,76 @@
 <script setup lang="ts">
-import type { ColDef, GridReadyEvent, ValueFormatterParams } from "ag-grid-community";
-import type { ChenDataViewDataset } from "~/chen/types";
+import type { DropdownMenuItem } from "@nuxt/ui";
+import type {
+  CellClassParams,
+  CellContextMenuEvent,
+  CellMouseDownEvent,
+  CellMouseOverEvent,
+  ColDef,
+  GridReadyEvent,
+  ValueFormatterParams
+} from "ag-grid-community";
+import type { ChenDataViewDataset, ChenDataViewField, ChenDataViewMeta } from "~/chen/types";
 
 import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 import { AgGridVue } from "ag-grid-vue3";
+import { writeChenClipboardText } from "~/chen/runtime/clipboard";
+import {
+  canUseChenCopy,
+  createChenInsertSql,
+  createChenUpdateSql,
+  formatChenTsv,
+  hasChenPrimaryKey
+} from "~/chen/utils/dataGridCopy";
+import {
+  emptyChenGridSelection,
+  extendChenGridSelection,
+  finishChenGridSelection,
+  getChenGridSelectionBounds,
+  isChenGridCellSelected,
+  startChenGridSelection
+} from "~/chen/utils/dataGridSelection";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-balham.css";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   dataset: ChenDataViewDataset | null
-}>();
+  meta?: ChenDataViewMeta | null
+  dbType?: string
+  canCopy?: boolean
+}>(), {
+  meta: null,
+  dbType: "",
+  canCopy: false
+});
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
+const toast = useToast();
 const gridApi = shallowRef<GridReadyEvent["api"] | null>(null);
 const container = ref<HTMLElement | null>(null);
+const selection = ref(emptyChenGridSelection());
+const contextMenuOpen = ref(false);
+const contextMenuPosition = reactive({ x: 0, y: 0 });
+const currentRow = ref<Record<string, any> | null>(null);
 let resizeObserver: ResizeObserver | null = null;
+
+function displayedColIds() {
+  return gridApi.value?.getAllDisplayedColumns().map((column) => column.getColId()) || [];
+}
+
+function refreshSelectionCells() {
+  gridApi.value?.refreshCells({ force: true });
+}
+
+function isSelectedCell(params: CellClassParams) {
+  const rowIndex = params.node.rowIndex;
+  if (rowIndex == null) return false;
+  return isChenGridCellSelected(selection.value, displayedColIds(), {
+    rowIndex,
+    colId: params.column.getColId()
+  });
+}
 
 const columnDefs = computed<ColDef[]>(() => {
   return (props.dataset?.fields || []).map((field) => ({
@@ -39,8 +93,150 @@ const defaultColDef: ColDef = {
   minWidth: 140,
   resizable: true,
   sortable: true,
-  filter: true
+  filter: true,
+  cellClassRules: {
+    "chen-range-cell": isSelectedCell
+  }
 };
+
+function eventCell(event: CellMouseDownEvent | CellMouseOverEvent | CellContextMenuEvent) {
+  const rowIndex = event.node.rowIndex;
+  if (rowIndex == null) return null;
+  return { rowIndex, colId: event.column.getColId() };
+}
+
+function handleCellMouseDown(event: CellMouseDownEvent) {
+  if (!canUseChenCopy(props.canCopy)) return;
+  const mouseEvent = event.event as MouseEvent | undefined;
+  if (mouseEvent && mouseEvent.button !== 0) return;
+  const cell = eventCell(event);
+  if (!cell) return;
+  selection.value = startChenGridSelection(cell);
+  refreshSelectionCells();
+}
+
+function handleCellMouseOver(event: CellMouseOverEvent) {
+  if (!canUseChenCopy(props.canCopy) || !selection.value.dragging) return;
+  const cell = eventCell(event);
+  if (!cell) return;
+  selection.value = extendChenGridSelection(selection.value, cell);
+  refreshSelectionCells();
+}
+
+function finishSelection() {
+  if (!selection.value.dragging) return;
+  selection.value = finishChenGridSelection(selection.value);
+}
+
+function resetSelection() {
+  selection.value = emptyChenGridSelection();
+  refreshSelectionCells();
+}
+
+function selectedData() {
+  const bounds = getChenGridSelectionBounds(selection.value, displayedColIds());
+  if (!bounds || !gridApi.value || !props.dataset) return null;
+  const colIds = bounds.displayedColIds.slice(bounds.minCol, bounds.maxCol + 1);
+  const fields = colIds
+    .map((colId) => props.dataset?.fields.find((field) => field.name === colId))
+    .filter((field): field is ChenDataViewField => Boolean(field));
+  const rows: Record<string, any>[] = [];
+  for (let rowIndex = bounds.minRow; rowIndex <= bounds.maxRow; rowIndex += 1) {
+    const row = gridApi.value.getDisplayedRowAtIndex(rowIndex)?.data;
+    if (row) rows.push(row);
+  }
+  return fields.length && rows.length ? { fields, rows } : null;
+}
+
+function copyError(cause: unknown) {
+  return cause instanceof Error ? cause.message : String(cause);
+}
+
+async function copyText(text: string, successTitle: string) {
+  if (!canUseChenCopy(props.canCopy)) return;
+  try {
+    await writeChenClipboardText(text);
+    toast.add({ title: successTitle, color: "success" });
+  } catch (cause) {
+    toast.add({ title: "Copy failed", description: copyError(cause), color: "error" });
+  }
+}
+
+function copySelection() {
+  const selected = selectedData();
+  if (!selected) return;
+  void copyText(formatChenTsv(selected.rows, selected.fields), "Selection copied");
+}
+
+function copyInsertSql() {
+  if (!currentRow.value || !props.meta) return;
+  try {
+    const sql = createChenInsertSql(props.dbType, props.meta, props.dataset?.fields || [], currentRow.value);
+    void copyText(sql, "INSERT SQL copied");
+  } catch (cause) {
+    toast.add({ title: "Copy failed", description: copyError(cause), color: "error" });
+  }
+}
+
+function copyUpdateSql() {
+  if (!currentRow.value || !props.meta) return;
+  try {
+    const sql = createChenUpdateSql(props.dbType, props.meta, props.dataset?.fields || [], currentRow.value);
+    void copyText(sql, "UPDATE SQL copied");
+  } catch (cause) {
+    toast.add({ title: "Copy failed", description: copyError(cause), color: "error" });
+  }
+}
+
+const canCopyInsert = computed(() => Boolean(
+  props.dbType && props.meta?.schema && props.meta.table && props.dataset?.fields.length && currentRow.value
+));
+const canCopyUpdate = computed(() => canCopyInsert.value && hasChenPrimaryKey(props.dataset?.fields || []));
+const contextMenuItems = computed<DropdownMenuItem[]>(() => {
+  if (!canUseChenCopy(props.canCopy)) return [];
+  return [
+    { label: "Copy selection", icon: "i-lucide-copy", onSelect: copySelection },
+    {
+      label: canCopyInsert.value ? "Copy INSERT SQL" : "Copy INSERT SQL (table metadata unavailable)",
+      icon: "i-lucide-copy",
+      disabled: !canCopyInsert.value,
+      onSelect: copyInsertSql
+    },
+    {
+      label: canCopyUpdate.value ? "Copy UPDATE SQL" : "Copy UPDATE SQL (primary key unavailable)",
+      icon: "i-lucide-copy",
+      disabled: !canCopyUpdate.value,
+      onSelect: copyUpdateSql
+    }
+  ];
+});
+
+function captureContextMenu(event: MouseEvent) {
+  if (!canUseChenCopy(props.canCopy)) return;
+  if (!(event.target instanceof Element) || !event.target.closest(".ag-cell")) return;
+  event.preventDefault();
+  contextMenuPosition.x = event.clientX;
+  contextMenuPosition.y = event.clientY;
+}
+
+function handleCellContextMenu(event: CellContextMenuEvent) {
+  if (!canUseChenCopy(props.canCopy) || !event.data) return;
+  const cell = eventCell(event);
+  if (cell && !isChenGridCellSelected(selection.value, displayedColIds(), cell)) {
+    selection.value = finishChenGridSelection(startChenGridSelection(cell));
+    refreshSelectionCells();
+  }
+  currentRow.value = event.data;
+  contextMenuOpen.value = true;
+}
+
+function handleKeyDown(event: KeyboardEvent) {
+  if (!canUseChenCopy(props.canCopy)) return;
+  if ((!event.ctrlKey && !event.metaKey) || event.key.toLowerCase() !== "c") return;
+  if (!selectedData()) return;
+  event.preventDefault();
+  copySelection();
+}
 
 function queueGridRefresh() {
   requestAnimationFrame(() => {
@@ -70,6 +266,7 @@ function handleGridReady(event: GridReadyEvent) {
 }
 
 watch([columnDefs, rowData], async () => {
+  resetSelection();
   await nextTick();
   syncGridData();
   queueGridRefresh();
@@ -81,16 +278,23 @@ onMounted(() => {
     queueGridRefresh();
   });
   resizeObserver.observe(container.value);
+  window.addEventListener("pointerup", finishSelection);
 });
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect();
   resizeObserver = null;
+  window.removeEventListener("pointerup", finishSelection);
 });
 </script>
 
 <template>
-  <div ref="container" class="ag-theme-balham chen-grid h-full w-full">
+  <div
+    ref="container"
+    class="ag-theme-balham chen-grid h-full w-full"
+    @contextmenu.capture="captureContextMenu"
+    @keydown.capture="handleKeyDown"
+  >
     <AgGridVue
       class="h-full w-full"
       theme="legacy"
@@ -102,7 +306,27 @@ onBeforeUnmount(() => {
       :ensure-dom-order="true"
       :row-selection="{ mode: 'multiRow', checkboxes: false, headerCheckbox: false }"
       @grid-ready="handleGridReady"
+      @cell-mouse-down="handleCellMouseDown"
+      @cell-mouse-over="handleCellMouseOver"
+      @cell-context-menu="handleCellContextMenu"
     />
+
+    <UDropdownMenu
+      v-model:open="contextMenuOpen"
+      :items="contextMenuItems"
+      :content="{ align: 'start', side: 'bottom' }"
+      :ui="{ content: 'w-72 p-1' }"
+    >
+      <div
+        class="pointer-events-none fixed"
+        :style="{
+          left: `${contextMenuPosition.x}px`,
+          top: `${contextMenuPosition.y}px`,
+          width: '1px',
+          height: '1px'
+        }"
+      />
+    </UDropdownMenu>
   </div>
 </template>
 
@@ -218,6 +442,11 @@ onBeforeUnmount(() => {
 .chen-grid :deep(.ag-cell) {
   display: flex;
   align-items: center;
+}
+
+.chen-grid :deep(.chen-range-cell) {
+  background: color-mix(in srgb, var(--theme-accent) 18%, transparent) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 42%, transparent);
 }
 
 .chen-grid :deep(.ag-cell-value),

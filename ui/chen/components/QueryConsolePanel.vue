@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
-import type { ChenDataViewAction, ChenQueryConsoleTab, ChenQueryResultTab } from "~/chen/types";
+import type { ChenDataViewAction, ChenDataViewActionData, ChenQueryConsoleTab, ChenQueryResultTab } from "~/chen/types";
 
 import QueryResultTabs from "~/chen/components/QueryResultTabs.vue";
 import ChenSqlEditor from "~/chen/components/SqlEditor.client.vue";
@@ -12,13 +12,13 @@ const props = defineProps<{
   tab: ChenQueryConsoleTab
   contextLabel: string
   dbType: string
+  canCopy: boolean
 }>();
 
 const emit = defineEmits<{
   run: [tab: ChenQueryConsoleTab, selectedSql: string]
   cancel: [tab: ChenQueryConsoleTab]
-  download: [result: ChenQueryResultTab]
-  dataViewAction: [tab: ChenQueryConsoleTab, result: ChenQueryResultTab, action: ChenDataViewAction, data?: number]
+  dataViewAction: [tab: ChenQueryConsoleTab, result: ChenQueryResultTab, action: ChenDataViewAction, data?: ChenDataViewActionData]
   dismissMessage: [tab: ChenQueryConsoleTab]
   updateStatement: [tab: ChenQueryConsoleTab, value: string]
   activateResult: [tab: ChenQueryConsoleTab, id: string]
@@ -220,12 +220,13 @@ onBeforeUnmount(clearMessageTimer);
         :active-result-tab-id="tab.activeResultTabId"
         closable
         data-view-actions
+        :db-type="dbType"
+        :can-copy="canCopy"
         :logs="tab.logs"
         show-logs
         empty-message="Run a query to open results here."
         @update:active-result-tab-id="emit('activateResult', tab, $event)"
         @close="emit('closeResult', tab, $event)"
-        @download="emit('download', $event)"
         @data-view-action="(result, action, data) => emit('dataViewAction', tab, result, action, data)"
       />
     </div>

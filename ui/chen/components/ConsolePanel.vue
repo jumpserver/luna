@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChenPromptConsoleTab, ChenQueryLikeWorkspaceTab, ChenQueryResultTab } from "~/chen/types";
+import type { ChenPromptConsoleTab, ChenQueryLikeWorkspaceTab } from "~/chen/types";
 
 import QueryResultTabs from "~/chen/components/QueryResultTabs.vue";
 
@@ -12,7 +12,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   run: [tab: ChenPromptConsoleTab]
   cancel: [tab: ChenQueryLikeWorkspaceTab]
-  download: [result: ChenQueryResultTab]
   updatePendingSql: [tab: ChenPromptConsoleTab, value: string]
   activateResult: [tab: ChenPromptConsoleTab, id: string]
 }>();
@@ -75,7 +74,6 @@ const pendingSqlValue = computed({
       :active-result-tab-id="tab.activeResultTabId"
       empty-message="Query results will open here."
       @update:active-result-tab-id="emit('activateResult', tab, $event)"
-      @download="emit('download', $event)"
     />
   </div>
 </template>

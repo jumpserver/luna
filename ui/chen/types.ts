@@ -49,8 +49,28 @@ export interface ChenDataViewMeta {
   [key: string]: any
 }
 
+export interface ChenDataViewField {
+  name: string
+  label?: string
+  columnName?: string
+  schema?: string
+  table?: string
+  type?: string
+  nullable?: boolean
+  isPrimaryKey?: boolean
+  primaryKey?: boolean
+}
+
+export type ChenDataViewExportScope = "current" | "all";
+export type ChenDataViewExportFormat = "csv" | "excel";
+
+export interface ChenDataViewExportOptions {
+  scope: ChenDataViewExportScope
+  format: ChenDataViewExportFormat
+}
+
 export interface ChenDataViewDataset {
-  fields: Array<{ name: string }>
+  fields: ChenDataViewField[]
   data: Array<Record<string, any>>
 }
 
@@ -141,7 +161,10 @@ export type ChenDataViewAction
     | "last_page"
     | "refresh"
     | "change_limit"
-    | "toggle_pinned";
+    | "toggle_pinned"
+    | "export";
+
+export type ChenDataViewActionData = number | ChenDataViewExportOptions;
 
 export type ChenDataViewActionTarget = ChenQueryResultTab | ChenDataViewConsoleTab;
 

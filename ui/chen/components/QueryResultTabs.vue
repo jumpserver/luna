@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import type { ChenDataViewAction, ChenQueryResultTab } from "~/chen/types";
+import type {
+  ChenDataViewAction,
+  ChenDataViewActionData,
+  ChenDataViewExportOptions,
+  ChenQueryResultTab
+} from "~/chen/types";
 
 import ChenDataGrid from "~/chen/components/DataGrid.client.vue";
+import DataViewExportDialog from "~/chen/components/DataViewExportDialog.vue";
 import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
 
 const props = withDefaults(defineProps<{
@@ -12,19 +18,25 @@ const props = withDefaults(defineProps<{
   dataViewActions?: boolean
   logs?: string[]
   showLogs?: boolean
+  dbType?: string
+  canCopy?: boolean
 }>(), {
   closable: false,
   dataViewActions: false,
   logs: () => [],
-  showLogs: false
+  showLogs: false,
+  dbType: "",
+  canCopy: false
 });
 
 const emit = defineEmits<{
   "update:activeResultTabId": [id: string]
   close: [title: string]
-  dataViewAction: [result: ChenQueryResultTab, action: ChenDataViewAction, data?: number]
-  download: [result: ChenQueryResultTab]
+  dataViewAction: [result: ChenQueryResultTab, action: ChenDataViewAction, data?: ChenDataViewActionData]
 }>();
+
+const exportDialogOpen = ref(false);
+const exportTarget = ref<ChenQueryResultTab | null>(null);
 
 const activeResult = computed(() => {
   return props.resultTabs.find((item) => item.id === props.activeResultTabId) || null;
@@ -33,6 +45,18 @@ const activeResult = computed(() => {
 function emitActiveDataViewAction(action: ChenDataViewAction, data?: number) {
   if (!activeResult.value) return;
   emit("dataViewAction", activeResult.value, action, data);
+}
+
+function openExportDialog() {
+  if (!activeResult.value) return;
+  exportTarget.value = activeResult.value;
+  exportDialogOpen.value = true;
+}
+
+function submitExport(options: ChenDataViewExportOptions) {
+  if (!exportTarget.value) return;
+  emit("dataViewAction", exportTarget.value, "export", options);
+  exportTarget.value = null;
 }
 </script>
 
@@ -98,16 +122,25 @@ function emitActiveDataViewAction(action: ChenDataViewAction, data?: number) {
             :state="activeResult.state"
             pinnable
             @action="emitActiveDataViewAction"
+            @export="openExportDialog"
           />
-          <UButton size="xs" icon="i-lucide-download" color="neutral" variant="soft" @click="emit('download', activeResult)" />
         </div>
       </div>
       <div class="min-h-0 flex-1 overflow-auto">
         <ChenDataGrid
           :key="`${activeResult.id}:${activeResult.data?.fields?.map(field => field.name).join(',') || ''}:${activeResult.data?.data?.length || 0}`"
           :dataset="activeResult.data"
+          :meta="activeResult.meta"
+          :db-type="dbType"
+          :can-copy="canCopy"
         />
       </div>
     </div>
+
+    <DataViewExportDialog
+      v-if="exportDialogOpen"
+      v-model:open="exportDialogOpen"
+      @confirm="submitExport"
+    />
   </div>
 </template>
