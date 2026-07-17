@@ -1,4 +1,4 @@
-use crate::api::client::oauth_client;
+use crate::api::client::oauth_client_for_origin;
 use crate::api::endpoint;
 use crate::service::token::TokenService;
 use anyhow::Result;
@@ -319,10 +319,10 @@ pub async fn revoke_and_clear_tokens(site: &str) -> Result<()> {
     if let Some(entry) = token_service.load().await? {
         if let Some(refresh_token) = entry.refresh_token {
             let client_id = entry.client_id.unwrap_or_default();
-            let http_client = oauth_client()?;
+            let http_client = oauth_client_for_origin(site)?;
 
             if let Err(error) =
-                revoke_refresh_token(&site, &client_id, &refresh_token, &http_client).await
+                revoke_refresh_token(site, &client_id, &refresh_token, &http_client).await
             {
                 log::error!("revocation request failed: {}", error);
             }
@@ -354,7 +354,7 @@ pub async fn ensure_fresh_token(site: &str, provided: Option<&str>) -> Result<St
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("refresh_token missing for site {}", site))?;
 
-        let http_client = oauth_client()?;
+        let http_client = oauth_client_for_origin(site)?;
         let tokens = refresh_access_token(site, &client_id, refresh_token, &http_client).await?;
 
         tokens.persist(site, &client_id).await?;
