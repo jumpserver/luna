@@ -150,6 +150,15 @@ export function useChenQueryConsole(
     });
   }
 
+  function runQueryFile(tab: ChenQueryConsoleTab, path: string) {
+    if (tab.state.loading || tab.state.inQuery || !path.trim()) return;
+    dismissQueryMessage(tab);
+    sendConsoleAction(tab, "query_console_action", {
+      action: "run_sql_file",
+      data: path
+    });
+  }
+
   function runConsoleTab(tab: ChenPromptConsoleTab) {
     const sql = tab.pendingSql.trim();
     if (!sql) return;
@@ -177,6 +186,7 @@ export function useChenQueryConsole(
     handleQueryConsolePacket,
     removeQueryResult,
     runConsoleTab,
+    runQueryFile,
     runQueryTab,
     updateQueryResult
   };

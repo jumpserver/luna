@@ -10,7 +10,6 @@ import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
 
 const props = defineProps<{
   tab: ChenQueryConsoleTab
-  contextLabel: string
   dbType: string
   canCopy: boolean
 }>();
@@ -18,6 +17,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   run: [tab: ChenQueryConsoleTab, selectedSql: string]
   cancel: [tab: ChenQueryConsoleTab]
+  uploadSql: [tab: ChenQueryConsoleTab, file: File]
   dataViewAction: [tab: ChenQueryConsoleTab, result: ChenQueryResultTab, action: ChenDataViewAction, data?: ChenDataViewActionData]
   dismissMessage: [tab: ChenQueryConsoleTab]
   updateStatement: [tab: ChenQueryConsoleTab, value: string]
@@ -26,6 +26,7 @@ const emit = defineEmits<{
 }>();
 
 const sqlEditor = ref<{ selectedText: () => string } | null>(null);
+const sqlUploadInput = ref<HTMLInputElement | null>(null);
 const hasSelection = ref(false);
 const messageOpen = ref(false);
 const saveSnippetDialogOpen = ref(false);
@@ -53,6 +54,32 @@ function runSelectedQuery() {
 
 function requestErrorMessage(cause: unknown) {
   return cause instanceof Error ? cause.message : String(cause);
+}
+
+function handleSqlFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) return;
+
+  if (!file.name.toLowerCase().endsWith(".sql")) {
+    toast.add({
+      title: "SQL upload failed",
+      description: "Choose a .sql file.",
+      color: "error"
+    });
+    return;
+  }
+  if (file.size === 0) {
+    toast.add({
+      title: "SQL upload failed",
+      description: "SQL file is empty.",
+      color: "error"
+    });
+    return;
+  }
+
+  emit("uploadSql", props.tab, file);
 }
 
 async function openSnippetDialog() {
@@ -158,9 +185,6 @@ onBeforeUnmount(clearMessageTimer);
           :disabled="!tab.state.canCancel"
           @click="emit('cancel', tab)"
         />
-        <UBadge color="neutral" variant="subtle">
-          {{ tab.state.currentContext || contextLabel || 'Context' }}
-        </UBadge>
         <UButton
           icon="i-lucide-folder-open"
           size="sm"
@@ -180,6 +204,24 @@ onBeforeUnmount(clearMessageTimer);
           @click="openSaveSnippetDialog"
         >
           Save
+        </UButton>
+        <input
+          ref="sqlUploadInput"
+          type="file"
+          accept=".sql"
+          class="hidden"
+          @change="handleSqlFileChange"
+        >
+        <UButton
+          icon="i-lucide-upload"
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :loading="tab.uploadingSql"
+          :disabled="queryBusy || tab.uploadingSql"
+          @click="sqlUploadInput?.click()"
+        >
+          Upload SQL
         </UButton>
       </div>
       <div class="relative flex min-h-0 flex-1">

@@ -113,6 +113,7 @@ export interface ChenConsoleHistoryEntry {
 export interface ChenQueryConsoleTab extends ChenTabDefinition {
   kind: "query"
   statement: string
+  uploadingSql: boolean
   state: ChenConsoleState
   logs: string[]
   message: ChenConsoleMessage | null

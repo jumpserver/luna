@@ -50,6 +50,24 @@ export async function fetchChenProfile(chenToken: string) {
   return readJson<ChenProfile>(response);
 }
 
+export async function uploadChenSqlFile(
+  chenToken: string,
+  file: File,
+  fetchImpl: typeof fetch = fetch
+) {
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetchImpl(chenPath("/api/console/upload"), {
+    method: "POST",
+    credentials: "include",
+    headers: buildHeaders(chenToken, getWebApiMutationHeaders()),
+    body
+  });
+  const result = await readJson<{ path?: string }>(response);
+  if (!result.path?.trim()) throw new Error("Chen upload returned no SQL file path");
+  return { path: result.path };
+}
+
 export function sanitizeChenExportFileName(value: string, fallback = "chen-export") {
   const withoutControls = Array.from(value)
     .filter((character) => {
