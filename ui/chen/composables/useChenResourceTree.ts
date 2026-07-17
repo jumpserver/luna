@@ -3,12 +3,21 @@ import type { ChenTreeNode } from "~/chen/types";
 
 import { fetchChenTreeChildren, runChenAction } from "~/chen/api";
 
-export function useChenResourceTree(chenToken: Ref<string>) {
+interface UseChenResourceTreeOptions {
+  onLoadError?: (node: ChenTreeNode | null, cause: unknown) => void
+}
+
+export function useChenResourceTree(chenToken: Ref<string>, options: UseChenResourceTreeOptions = {}) {
   const rootNodes = ref<ChenTreeNode[]>([]);
   const childrenMap = reactive<Record<string, ChenTreeNode[]>>({});
   const loadingChildren = reactive<Record<string, boolean>>({});
+  const loadErrors = reactive<Record<string, string>>({});
   const expandedKeys = ref<string[]>([]);
   const selectedNodeKey = ref("");
+
+  function normalizeErrorMessage(cause: unknown) {
+    return cause instanceof Error ? cause.message : String(cause);
+  }
 
   function findNodeByKey(key: string, nodes = rootNodes.value): ChenTreeNode | null {
     for (const node of nodes) {
@@ -39,6 +48,7 @@ export function useChenResourceTree(chenToken: Ref<string>) {
     const key = node?.key || "__root__";
     if (loadingChildren[key]) return;
     loadingChildren[key] = true;
+    loadErrors[key] = "";
 
     try {
       const items = normalizeTreeNodes(await fetchChenTreeChildren(chenToken.value, node, force));
@@ -49,6 +59,12 @@ export function useChenResourceTree(chenToken: Ref<string>) {
 
       childrenMap[node.key] = items;
       node.children = items;
+    } catch (cause) {
+      loadErrors[key] = normalizeErrorMessage(cause);
+      options.onLoadError?.(node ?? null, cause);
+      // Root failures must propagate so the session can surface a fatal error
+      // state; per-node failures degrade to an empty subtree + a toast.
+      if (!node) throw cause;
     } finally {
       loadingChildren[key] = false;
     }
@@ -88,6 +104,7 @@ export function useChenResourceTree(chenToken: Ref<string>) {
   return {
     childrenMap,
     expandedKeys,
+    loadErrors,
     loadingChildren,
     rootNodes,
     selectedNodeKey,

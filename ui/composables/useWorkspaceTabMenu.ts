@@ -1,5 +1,5 @@
-import type { AssetItem } from "~/types";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
+import type { AssetItem } from "~/types";
 
 import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
 
@@ -36,14 +36,13 @@ export function useWorkspaceTabMenu() {
   const {
     openSession,
     setActiveSession,
-    addSplitSession
+    addSplitSession,
+    markSessionConnecting,
+    updateSessionPayload
   } = useWorkspaceTabs();
 
   const reconnectViaConnection = (tab: WorkspaceSessionTab) => {
     const connectMethod = tab.payload?.connectMethod?.value;
-
-    tab.status = "connecting";
-    tab.payload = undefined;
 
     handleAssetConnection(tab.account, tab.assetId, tab.protocol, undefined, undefined, {
       tabId: tab.id,
@@ -78,10 +77,16 @@ export function useWorkspaceTabMenu() {
   };
 
   const reconnectSession = async (tab: WorkspaceSessionTab) => {
+    markSessionConnecting(tab.id);
+
     try {
       const token = await exchangeToken(tab);
-      tab.status = "connecting";
-      tab.payload = buildPayload(tab, token);
+      updateSessionPayload({
+        tabId: tab.id,
+        assetId: tab.assetId,
+        protocol: tab.protocol,
+        account: tab.account
+      }, buildPayload(tab, token));
     } catch {
       reconnectViaConnection(tab);
     }

@@ -23,6 +23,8 @@ export interface ChenActionItem {
   key: string
   label: string
   icon?: string
+  disabled?: boolean
+  divided?: boolean
   children?: ChenActionItem[]
 }
 
@@ -59,10 +61,19 @@ export interface ChenConsoleState {
   currentContext?: string
   contexts?: string[]
   title?: string
+  page?: number
   limit?: number
   total?: number
   paged?: boolean
   pinned?: boolean
+  [key: string]: any
+}
+
+export interface ChenConsoleMessage {
+  type?: "error" | "success" | "info" | string
+  title?: string
+  message: string
+  sql?: string
   [key: string]: any
 }
 
@@ -71,6 +82,7 @@ export interface ChenQueryResultTab {
   title: string
   meta: ChenDataViewMeta
   data: ChenDataViewDataset | null
+  state: ChenConsoleState
 }
 
 export interface ChenConsoleHistoryEntry {
@@ -83,6 +95,7 @@ export interface ChenQueryConsoleTab extends ChenTabDefinition {
   statement: string
   state: ChenConsoleState
   logs: string[]
+  message: ChenConsoleMessage | null
   resultTabs: ChenQueryResultTab[]
   activeResultTabId: string
   socket: WebSocket | null
@@ -93,6 +106,7 @@ export interface ChenPromptConsoleTab extends ChenTabDefinition {
   pendingSql: string
   state: ChenConsoleState
   logs: string[]
+  message: ChenConsoleMessage | null
   historyEntries: ChenConsoleHistoryEntry[]
   resultTabs: ChenQueryResultTab[]
   activeResultTabId: string
@@ -119,6 +133,17 @@ export interface ChenDataViewConsoleTab extends ChenTabDefinition {
   activePropertyTab: ChenDataViewPropertyTab
   socket: WebSocket | null
 }
+
+export type ChenDataViewAction
+  = | "first_page"
+    | "prev_page"
+    | "next_page"
+    | "last_page"
+    | "refresh"
+    | "change_limit"
+    | "toggle_pinned";
+
+export type ChenDataViewActionTarget = ChenQueryResultTab | ChenDataViewConsoleTab;
 
 export type ChenWorkspaceTab = ChenQueryLikeWorkspaceTab | ChenDataViewConsoleTab;
 

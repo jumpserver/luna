@@ -1,20 +1,27 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from "@nuxt/ui";
 import type {
+  ChenActionItem,
+  ChenDataViewAction,
+  ChenDataViewConsoleTab,
   ChenPacket,
   ChenPromptConsoleTab,
   ChenQueryConsoleTab,
   ChenQueryLikeWorkspaceTab,
+  ChenQueryResultTab,
   ChenTreeNode,
   ChenWorkspaceTab
 } from "~/chen/types";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
+import { fetchChenActions } from "~/chen/api";
 import ChenSessionState from "~/chen/components/ChenSessionState.vue";
 import ConsolePanel from "~/chen/components/ConsolePanel.vue";
 import DataViewPanel from "~/chen/components/DataViewPanel.vue";
 import QueryConsolePanel from "~/chen/components/QueryConsolePanel.vue";
 import ResourceTreePanel from "~/chen/components/ResourceTreePanel.vue";
 import WorkspaceTabBar from "~/chen/components/WorkspaceTabBar.vue";
+import { useChenActionMenu } from "~/chen/composables/useChenActionMenu";
 import { useChenAuth } from "~/chen/composables/useChenAuth";
 import { useChenDataView } from "~/chen/composables/useChenDataView";
 import { useChenQueryConsole } from "~/chen/composables/useChenQueryConsole";
@@ -22,8 +29,10 @@ import { useChenResourceTree } from "~/chen/composables/useChenResourceTree";
 import { useChenSession } from "~/chen/composables/useChenSession";
 import { useChenWebSocket } from "~/chen/composables/useChenWebSocket";
 import { useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
+import { formatChenDialogValue, normalizeChenDialogMessage } from "~/chen/utils/chenDialog";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
+const emit = defineEmits<{ reconnect: [] }>();
 
 const toast = useToast();
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
@@ -33,9 +42,20 @@ const sidebarWidth = ref(280);
 const resizing = ref(false);
 
 const auth = useChenAuth(tabRef);
-const tree = useChenResourceTree(auth.chenToken);
+const tree = useChenResourceTree(auth.chenToken, {
+  onLoadError: (node) => {
+    // Root failures propagate to the session fatal state; only per-node
+    // load failures surface as a toast here.
+    if (!node) return;
+    toast.add({
+      title: "Failed to load node",
+      description: node.label || node.name || node.key,
+      color: "error"
+    });
+  }
+});
 const workspace = useChenWorkspaceTabs();
-const dataView = useChenDataView();
+const dataView = useChenDataView(sendConsoleAction);
 const consoleConnections = new Map<string, ReturnType<typeof useChenWebSocket>>();
 
 const currentWorkspaceNodeKey = computed(() => {
@@ -73,6 +93,7 @@ const session = useChenSession({
     account: props.tab.account
   }),
   onBeforeReady: async () => {
+    await auth.loadProfile();
     await tree.loadNodeChildren(null);
   },
   onAfterReady: async () => {
@@ -148,18 +169,19 @@ function sendConsoleAction(tab: ChenWorkspaceTab, type: string, data?: any) {
 }
 
 function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
+  if (tab.kind === "query" || tab.kind === "console") {
+    queryConsole.handleQueryConsolePacket(tab, packet);
+  }
+
   switch (packet.type) {
     case "init":
-      tab.title = packet.data?.title || tab.title;
+      if (tab.kind === "data-view") tab.title = packet.data?.title || tab.title;
       break;
     case "log":
-      queryConsole.appendLog(tab, packet.data);
+      if (tab.kind === "data-view") queryConsole.appendLog(tab, packet.data);
       break;
     case "message":
-      queryConsole.appendLog(tab, packet.data);
-      break;
-    case "update_state":
-      tab.state = packet.data || {};
+      if (tab.kind === "data-view") queryConsole.appendLog(tab, packet.data);
       break;
     case "active_console":
       if (typeof packet.data === "string") {
@@ -171,7 +193,6 @@ function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
       closeWorkspaceTab(tab.id);
       break;
     default:
-      if (tab.kind === "query" || tab.kind === "console") queryConsole.handleQueryConsolePacket(tab, packet);
       if (tab.kind === "data-view") dataView.handleDataViewConsolePacket(tab, packet);
       break;
   }
@@ -237,48 +258,96 @@ function createWorkspaceTab(kind: "query" | "console") {
   openConsoleWorkspace(nodeKey, workspace.nextTabTitle("Console"));
 }
 
+const dialogVisible = computed({
+  get: () => Boolean(session.dialogMessage.value),
+  set: (open: boolean) => {
+    if (!open) session.dialogMessage.value = null;
+  }
+});
+
+const actionMenu = useChenActionMenu<DropdownMenuItem>({
+  fetchActions: (node) => fetchChenActions(auth.chenToken.value, node),
+  mapItems: mapActionItems,
+  onError: (node, cause) => {
+    toast.add({
+      title: "Failed to load actions",
+      description: `${node.label || node.name || node.key}: ${cause instanceof Error ? cause.message : String(cause)}`,
+      color: "error"
+    });
+  }
+});
+const {
+  close: closeActionMenu,
+  items: contextMenuItems,
+  open: openActionMenu,
+  position: contextMenuPosition,
+  visible: contextMenuVisible
+} = actionMenu;
+
+function mapActionItems(node: ChenTreeNode, items: ChenActionItem[]): DropdownMenuItem[] {
+  return items.flatMap((item): DropdownMenuItem[] => {
+    const onSelect = () => {
+      if (item.disabled) return;
+      closeActionMenu();
+      void applyTreeAction(node, item.key);
+    };
+    const mappedItem: DropdownMenuItem = {
+      label: item.label,
+      ...(item.icon ? { icon: item.icon } : {}),
+      ...(item.disabled ? { disabled: true } : {}),
+      ...(item.children?.length ? { children: mapActionItems(node, item.children) } : { onSelect })
+    };
+
+    return item.divided ? [{ type: "separator" }, mappedItem] : [mappedItem];
+  });
+}
+
 async function applyTreeAction(node: ChenTreeNode, action: string) {
-  const response = await tree.runTreeAction(node, action);
-  switch (response.event) {
-    case "refresh_node":
-      await tree.loadNodeChildren(node, true);
-      break;
-    case "new_query":
-      openQueryWorkspace(response.data, "Query");
-      break;
-    case "view_data":
-      openDataViewWorkspace(response.data, "Data View");
-      break;
-    case "new_dialog":
-      session.dialogMessage.value = typeof response.data === "string"
-        ? response.data
-        : response.data?.body || response.data?.title || JSON.stringify(response.data);
-      break;
+  try {
+    const response = await tree.runTreeAction(node, action);
+    switch (response.event) {
+      case "refresh_node":
+        await tree.loadNodeChildren(node, true);
+        break;
+      case "new_query":
+        openQueryWorkspace(response.data, "Query");
+        break;
+      case "view_data":
+        openDataViewWorkspace(response.data, "Data View");
+        break;
+      case "new_dialog":
+        session.dialogMessage.value = normalizeChenDialogMessage(response.data);
+        break;
+      default:
+        // No actionable event (e.g. backend returned none for "show" on a
+        // folder). Fall back to toggling the node so double-clicking a folder
+        // expands it, matching old chen. Leaf nodes have nothing to toggle.
+        if (response.event !== "blank") console.warn("Unknown Chen tree action event", response.event);
+        if (!node.leaf) tree.toggleTreeNode(node);
+        break;
+    }
+  } catch (cause) {
+    toast.add({
+      title: "Action failed",
+      description: cause instanceof Error ? cause.message : String(cause),
+      color: "error"
+    });
   }
 }
 
 async function handleNodeClick(node: ChenTreeNode) {
   tree.selectedNodeKey.value = node.key;
-  if (node.type !== "table") return;
   await applyTreeAction(node, "show");
 }
 
-function openNodeMenu(node: ChenTreeNode, event: MouseEvent) {
+async function openNodeMenu(node: ChenTreeNode, event: MouseEvent) {
   event.preventDefault();
-  if (node.type === "table") {
-    void applyTreeAction(node, "show");
-    return;
-  }
-
-  toast.add({
-    title: "Action unavailable",
-    description: "Right-click actions will be expanded after the core Chen workspace is stable.",
-    color: "neutral"
-  });
+  event.stopPropagation();
+  await openActionMenu(node, event);
 }
 
-function runQueryTab(tab: ChenQueryLikeWorkspaceTab) {
-  if (tab.kind === "query") queryConsole.runQueryTab(tab);
+function runQueryTab(tab: ChenQueryLikeWorkspaceTab, selectedSql = "") {
+  if (tab.kind === "query") queryConsole.runQueryTab(tab, selectedSql);
   if (tab.kind === "console") queryConsole.runConsoleTab(tab);
 }
 
@@ -296,6 +365,31 @@ function updateConsolePendingSql(tab: ChenPromptConsoleTab, value: string) {
 
 function activateQueryResult(tab: ChenQueryLikeWorkspaceTab, id: string) {
   tab.activeResultTabId = id;
+}
+
+function closeQueryResult(tab: ChenQueryLikeWorkspaceTab, title: string) {
+  queryConsole.closeQueryResult(tab, title);
+}
+
+function dismissQueryMessage(tab: ChenQueryConsoleTab) {
+  queryConsole.dismissQueryMessage(tab);
+}
+
+function runQueryDataViewAction(
+  tab: ChenQueryConsoleTab,
+  result: ChenQueryResultTab,
+  action: ChenDataViewAction,
+  data?: number
+) {
+  dataView.sendDataViewAction(tab, result, action, data);
+}
+
+function runStandaloneDataViewAction(
+  tab: ChenDataViewConsoleTab,
+  action: ChenDataViewAction,
+  data?: number
+) {
+  dataView.sendDataViewAction(tab, tab, action, data);
 }
 
 function updateDataViewPanel(tab: Extract<ChenWorkspaceTab, { kind: "data-view" }>, panel: "data" | "properties") {
@@ -387,11 +481,15 @@ defineExpose({ focus });
             v-if="activeQueryTab"
             :tab="activeQueryTab"
             :context-label="currentContextLabel"
+            :db-type="auth.profile.value?.dbType || ''"
             @run="runQueryTab"
             @cancel="cancelQueryLikeTab"
             @download="downloadDataViewCsv"
+            @data-view-action="runQueryDataViewAction"
+            @dismiss-message="dismissQueryMessage"
             @update-statement="updateQueryStatement"
             @activate-result="activateQueryResult"
+            @close-result="closeQueryResult"
           />
 
           <ConsolePanel
@@ -412,6 +510,7 @@ defineExpose({ focus });
             :db-type="auth.profile.value?.dbType"
             :protocol="props.tab.protocol"
             @download="downloadDataViewCsv"
+            @data-view-action="runStandaloneDataViewAction"
             @update-panel="updateDataViewPanel"
             @update-property-tab="updateDataViewPropertyTab"
           />
@@ -429,9 +528,43 @@ defineExpose({ focus });
       v-else
       :icon="session.error.value ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'"
       :loading="!session.error.value"
-      :message="session.error.value || session.dialogMessage.value || 'Starting database workspace...'"
+      :message="session.error.value || 'Starting database workspace...'"
       :action-label="session.error.value ? 'Retry' : undefined"
-      @action="session.retrySession"
+      @action="emit('reconnect')"
     />
+
+    <UDropdownMenu
+      v-model:open="contextMenuVisible"
+      :items="contextMenuItems"
+      :content="{ align: 'start', side: 'bottom' }"
+      :ui="{ content: 'w-48 p-1' }"
+      @update:open="(open) => { if (!open) closeActionMenu() }"
+    >
+      <div
+        class="pointer-events-none fixed"
+        :style="{
+          left: `${contextMenuPosition.x}px`,
+          top: `${contextMenuPosition.y}px`,
+          width: '1px',
+          height: '1px'
+        }"
+      />
+    </UDropdownMenu>
+
+    <UModal v-model:open="dialogVisible" :title="session.dialogMessage.value?.title || 'Message'">
+      <template #body>
+        <dl v-if="session.dialogMessage.value?.items.length" class="space-y-3 p-4 text-sm">
+          <template v-for="item in session.dialogMessage.value.items" :key="item.label">
+            <dt class="font-medium text-default">
+              {{ item.label }}
+            </dt>
+            <dd class="whitespace-pre-wrap break-words text-muted">
+              {{ formatChenDialogValue(item.value) }}
+            </dd>
+          </template>
+        </dl>
+        <pre v-else class="whitespace-pre-wrap break-words p-4 text-sm text-muted">{{ session.dialogMessage.value?.text }}</pre>
+      </template>
+    </UModal>
   </div>
 </template>

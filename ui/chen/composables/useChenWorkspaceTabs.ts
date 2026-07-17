@@ -56,6 +56,7 @@ export function useChenWorkspaceTabs() {
       statement: "",
       state: {},
       logs: [],
+      message: null,
       resultTabs: [],
       activeResultTabId: "",
       socket: null
@@ -75,6 +76,7 @@ export function useChenWorkspaceTabs() {
       pendingSql: "",
       state: {},
       logs: [],
+      message: null,
       historyEntries: [],
       resultTabs: [],
       activeResultTabId: "",

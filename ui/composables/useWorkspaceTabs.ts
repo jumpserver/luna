@@ -212,11 +212,31 @@ export const useWorkspaceTabs = () => {
     match: { tabId?: string, assetId: string, protocol: string, account: string },
     payload: Record<string, any>
   ) => {
+    if (match.tabId) {
+      const splitMatch = findSplitSession(match.tabId);
+      if (splitMatch) {
+        splitMatch.split.payload = payload;
+        splitMatch.split.status = "ready";
+        return;
+      }
+    }
+
     const tab = findSession(match);
     if (!tab) return;
 
     tab.payload = payload;
     tab.status = "ready";
+  };
+
+  const markSessionConnecting = (tabId: string) => {
+    const tab = tabs.value.find((item) => item.id === tabId);
+    if (tab) {
+      tab.status = "connecting";
+      return;
+    }
+
+    const splitMatch = findSplitSession(tabId);
+    if (splitMatch) splitMatch.split.status = "connecting";
   };
 
   const startSessionConnection = (
@@ -294,6 +314,7 @@ export const useWorkspaceTabs = () => {
     openSetupSession,
     closeSession,
     markSessionFailed,
+    markSessionConnecting,
     markSessionConnected,
     toSurfaceTab,
     startSessionConnection,

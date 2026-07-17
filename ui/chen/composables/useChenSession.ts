@@ -3,6 +3,7 @@ import type { ChenPacket } from "~/chen/types";
 
 import { ref } from "vue";
 import { useChenWebSocket } from "~/chen/composables/useChenWebSocket";
+import { normalizeChenDialogMessage } from "~/chen/utils/chenDialog";
 
 interface UseChenSessionOptions {
   authenticate: () => Promise<string>
@@ -20,7 +21,7 @@ export function useChenSession(options: UseChenSessionOptions) {
   const ready = ref(false);
   const loading = ref(true);
   const error = ref("");
-  const dialogMessage = ref("");
+  const dialogMessage = ref<ReturnType<typeof normalizeChenDialogMessage> | null>(null);
 
   let bootstrapGeneration = 0;
   let fatalNotified = false;
@@ -77,10 +78,10 @@ export function useChenSession(options: UseChenSessionOptions) {
   function handlePacket(packet: ChenPacket) {
     switch (packet.type) {
       case "show_dialog":
-        dialogMessage.value = packet.data?.body || packet.data?.title || "";
+        dialogMessage.value = normalizeChenDialogMessage(packet.data);
         break;
       case "close_dialog":
-        dialogMessage.value = "";
+        dialogMessage.value = null;
         break;
       case "show_message":
         options.showMessage(packet.data);
@@ -101,7 +102,7 @@ export function useChenSession(options: UseChenSessionOptions) {
     ready.value = false;
     loading.value = true;
     error.value = "";
-    dialogMessage.value = "";
+    dialogMessage.value = null;
 
     try {
       const token = await options.authenticate();
@@ -110,12 +111,6 @@ export function useChenSession(options: UseChenSessionOptions) {
     } catch (cause) {
       handleFatal(cause);
     }
-  }
-
-  async function retrySession() {
-    options.onDisconnected();
-    cleanupSession();
-    await bootstrapSession();
   }
 
   function cleanupSession() {
@@ -131,7 +126,6 @@ export function useChenSession(options: UseChenSessionOptions) {
     sessionConnection,
     sessionSocket: sessionConnection.socket,
     bootstrapSession,
-    cleanupSession,
-    retrySession
+    cleanupSession
   };
 }

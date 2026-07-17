@@ -8,6 +8,7 @@ const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const surfaceComponent = computed(() => resolveSessionSurface(props.tab));
 const surfaceRef = ref<{ focus?: () => void } | null>(null);
 const { activeTabId, closeSession, toSurfaceTab } = useWorkspaceTabs();
+const { reconnectSession } = useWorkspaceTabMenu();
 
 const splitSurfaces = computed(() => props.tab.splitSessions || []);
 const hasSplit = computed(() => splitSurfaces.value.length > 0);
@@ -29,6 +30,10 @@ function splitSurfaceTab(split: NonNullable<WorkspaceSessionTab["splitSessions"]
   return toSurfaceTab(props.tab, split.id, split.payload, split.status);
 }
 
+function reconnectSurface(tab: WorkspaceSessionTab) {
+  void reconnectSession(tab);
+}
+
 watch(
   () => activeTabId.value,
   (tabId) => {
@@ -43,7 +48,14 @@ defineExpose({ focus: focusSurface });
   <div class="h-full min-h-0 w-full overflow-hidden" @mousedown="focusSurface">
     <div v-if="!hasSplit" class="h-full min-h-0">
       <WorkspaceConnectionSetupPane v-if="tab.status === 'selecting'" :tab="tab" class="h-full min-h-0" />
-      <component :is="surfaceComponent" v-else :key="surfaceInstanceKey(tab)" ref="surfaceRef" :tab="tab" />
+      <component
+        :is="surfaceComponent"
+        v-else
+        :key="surfaceInstanceKey(tab)"
+        ref="surfaceRef"
+        :tab="tab"
+        @reconnect="reconnectSurface(tab)"
+      />
     </div>
 
     <div
@@ -52,7 +64,13 @@ defineExpose({ focus: focusSurface });
       :class="splitSurfaces.length > 1 ? 'grid-rows-2' : 'grid-cols-2'"
     >
       <div class="relative min-h-0 min-w-0">
-        <component :is="surfaceComponent" :key="surfaceInstanceKey(tab)" ref="surfaceRef" :tab="tab" />
+        <component
+          :is="surfaceComponent"
+          :key="surfaceInstanceKey(tab)"
+          ref="surfaceRef"
+          :tab="tab"
+          @reconnect="reconnectSurface(tab)"
+        />
       </div>
 
       <div
@@ -73,6 +91,7 @@ defineExpose({ focus: focusSurface });
           :key="surfaceInstanceKey(splitSurfaceTab(split))"
           :tab="splitSurfaceTab(split)"
           class="h-full"
+          @reconnect="reconnectSurface(splitSurfaceTab(split))"
         />
       </div>
     </div>
