@@ -13,6 +13,7 @@ interface UseChenSessionOptions {
   onAfterReady: () => Promise<void>
   onDisconnected: () => void
   showMessage: (data: any) => void
+  downloadFile?: (fileKey: string) => Promise<void>
   createSocket?: (url: string, token: string) => WebSocket
   resolveUrl?: (path: ChenSocketPath) => string
 }
@@ -75,6 +76,20 @@ export function useChenSession(options: UseChenSessionOptions) {
     }
   }
 
+  async function handleDownload(data: unknown) {
+    if (typeof data !== "string" || !data) {
+      options.showMessage({ level: "error", message: "Invalid Chen download file key" });
+      return;
+    }
+    if (!options.downloadFile) return;
+
+    try {
+      await options.downloadFile(data);
+    } catch (cause) {
+      options.showMessage({ level: "error", message: normalizeError(cause) });
+    }
+  }
+
   function handlePacket(packet: ChenPacket) {
     switch (packet.type) {
       case "show_dialog":
@@ -85,6 +100,9 @@ export function useChenSession(options: UseChenSessionOptions) {
         break;
       case "show_message":
         options.showMessage(packet.data);
+        break;
+      case "download":
+        void handleDownload(packet.data);
         break;
       case "set_ready":
         void handleSetReady();

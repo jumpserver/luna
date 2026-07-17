@@ -3,6 +3,7 @@ import type { DropdownMenuItem } from "@nuxt/ui";
 import type {
   ChenActionItem,
   ChenDataViewAction,
+  ChenDataViewActionData,
   ChenDataViewConsoleTab,
   ChenPacket,
   ChenPromptConsoleTab,
@@ -14,7 +15,7 @@ import type {
 } from "~/chen/types";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
-import { fetchChenActions } from "~/chen/api";
+import { fetchChenActions, fetchChenExport } from "~/chen/api";
 import ChenSessionState from "~/chen/components/ChenSessionState.vue";
 import ConsolePanel from "~/chen/components/ConsolePanel.vue";
 import DataViewPanel from "~/chen/components/DataViewPanel.vue";
@@ -29,6 +30,7 @@ import { useChenResourceTree } from "~/chen/composables/useChenResourceTree";
 import { useChenSession } from "~/chen/composables/useChenSession";
 import { useChenWebSocket } from "~/chen/composables/useChenWebSocket";
 import { useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
+import { saveChenExport } from "~/chen/runtime/download";
 import { formatChenDialogValue, normalizeChenDialogMessage } from "~/chen/utils/chenDialog";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
@@ -106,8 +108,17 @@ const session = useChenSession({
       description: data?.message || "",
       color: data?.level?.toLowerCase() === "error" ? "error" : "primary"
     });
-  }
+  },
+  downloadFile: downloadExportFile
 });
+
+async function downloadExportFile(fileKey: string) {
+  const file = await fetchChenExport(auth.chenToken.value, fileKey);
+  const result = await saveChenExport(file.blob, file.fileName);
+  toast.add(result === "saved"
+    ? { title: "Export downloaded", description: file.fileName, color: "success" }
+    : { title: "Export canceled", description: file.fileName, color: "neutral" });
+}
 
 function initConsoleSocket(tab: ChenWorkspaceTab) {
   const existing = consoleConnections.get(tab.id);
@@ -379,7 +390,7 @@ function runQueryDataViewAction(
   tab: ChenQueryConsoleTab,
   result: ChenQueryResultTab,
   action: ChenDataViewAction,
-  data?: number
+  data?: ChenDataViewActionData
 ) {
   dataView.sendDataViewAction(tab, result, action, data);
 }
@@ -387,7 +398,7 @@ function runQueryDataViewAction(
 function runStandaloneDataViewAction(
   tab: ChenDataViewConsoleTab,
   action: ChenDataViewAction,
-  data?: number
+  data?: ChenDataViewActionData
 ) {
   dataView.sendDataViewAction(tab, tab, action, data);
 }
@@ -401,10 +412,6 @@ function updateDataViewPropertyTab(
   propertyTab: Extract<ChenWorkspaceTab, { kind: "data-view" }>["activePropertyTab"]
 ) {
   tab.activePropertyTab = propertyTab;
-}
-
-function downloadDataViewCsv(tab: Parameters<typeof dataView.downloadDataViewCsv>[0]) {
-  dataView.downloadDataViewCsv(tab);
 }
 
 function startResize() {
@@ -482,9 +489,9 @@ defineExpose({ focus });
             :tab="activeQueryTab"
             :context-label="currentContextLabel"
             :db-type="auth.profile.value?.dbType || ''"
+            :can-copy="auth.profile.value?.canCopy === true"
             @run="runQueryTab"
             @cancel="cancelQueryLikeTab"
-            @download="downloadDataViewCsv"
             @data-view-action="runQueryDataViewAction"
             @dismiss-message="dismissQueryMessage"
             @update-statement="updateQueryStatement"
@@ -499,7 +506,6 @@ defineExpose({ focus });
             :prompt-label="consolePromptLabel"
             @run="runQueryTab"
             @cancel="cancelQueryLikeTab"
-            @download="downloadDataViewCsv"
             @update-pending-sql="updateConsolePendingSql"
             @activate-result="activateQueryResult"
           />
@@ -509,7 +515,7 @@ defineExpose({ focus });
             :tab="activeDataViewTab"
             :db-type="auth.profile.value?.dbType"
             :protocol="props.tab.protocol"
-            @download="downloadDataViewCsv"
+            :can-copy="auth.profile.value?.canCopy === true"
             @data-view-action="runStandaloneDataViewAction"
             @update-panel="updateDataViewPanel"
             @update-property-tab="updateDataViewPropertyTab"
