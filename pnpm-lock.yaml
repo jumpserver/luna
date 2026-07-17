@@ -167,6 +167,9 @@ importers:
       pretty-bytes:
         specifier: ^7.1.0
         version: 7.1.0
+      sql-formatter:
+        specifier: ^9.0.0
+        version: 9.2.0
       vue:
         specifier: ^3.5.35
         version: 3.5.35(typescript@6.0.3)
@@ -6527,6 +6530,10 @@ packages:
   speakingurl@14.0.1:
     resolution: {integrity: sha512-1POYv7uv2gXoyGFpBCmpDVSNV74IfsWlDW216UPjbWufNf+bSU6GdbDsxdcxtfwb4xlI3yxzOTKClUosxARYrQ==}
     engines: {node: '>=0.10.0'}
+
+  sql-formatter@9.2.0:
+    resolution: {integrity: sha512-Dn4lEpUeAhfNDR2LnEs9Uaq92TSHjhcNrzhllPuMnp188P4sLU7UcdcB9UqIfMfcN62gWXJlJ3KocaAf/SOzXQ==}
+    hasBin: true
 
   srvx@0.11.16:
     resolution: {integrity: sha512-bp07zRuycfTY43IjAvvTFnmnJi8ikW0VFiHwOhhYcVW/L4xQ1XY4PAd4Nuum1rsA17C39zL7x+CDhrn5AL32Rw==}
@@ -14197,6 +14204,10 @@ snapshots:
   spdx-license-ids@3.0.21: {}
 
   speakingurl@14.0.1: {}
+
+  sql-formatter@9.2.0:
+    dependencies:
+      argparse: 2.0.1
 
   srvx@0.11.16: {}
 
