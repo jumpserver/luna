@@ -53,8 +53,8 @@ const toggleSidebar = () => {
 
 <template>
   <div
-    class="flex h-full items-center gap-1"
-    :class="isMacClient ? 'pl-[76px] pr-2' : 'px-3'"
+    class="relative z-20 flex h-full items-center gap-1"
+    :class="isMacClient ? 'pl-[88px] pr-2' : 'px-3'"
   >
     <div v-if="!isMacClient" class="mr-1.5 flex items-center">
       <img src="/logo.png" alt="JumpServer" class="h-5 w-5 rounded">
