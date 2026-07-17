@@ -471,8 +471,8 @@ watch(loggedIn, (value) => {
             size="sm"
             icon="i-lucide-search"
             :aria-label="t('Operation.Search')"
-            class="size-6 shrink-0 justify-center rounded-lg p-0"
-            :class="showAssetSearch ? 'sidebar-icon-active' : 'sidebar-icon-muted'"
+            class="sidebar-icon-button size-6 shrink-0 justify-center p-0"
+            :class="showAssetSearch ? 'sidebar-icon-button-active' : ''"
             :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
             @click="() => { showAssetSearch = !showAssetSearch; }"
           />
@@ -494,7 +494,7 @@ watch(loggedIn, (value) => {
             size="sm"
             icon="i-lucide-ellipsis"
             :aria-label="t('Sidebar.ManageSections')"
-            class="size-6 shrink-0 justify-center rounded-lg p-0 sidebar-icon-muted"
+            class="sidebar-icon-button size-6 shrink-0 justify-center p-0"
             :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
           />
         </UDropdownMenu>
@@ -515,7 +515,7 @@ watch(loggedIn, (value) => {
         :collapsed="collapse"
         color="neutral"
         :ui="{
-          link: 'px-2.5 my-1 rounded-lg menu-item flex items-center light:text-gray-800 dark:text-gray-200',
+          link: 'sidebar-row px-2.5 my-1 rounded-lg menu-item flex items-center light:text-gray-800 dark:text-gray-200',
           linkLeadingIcon: 'sidebar-icon',
           label: 'light:text-gray-500 dark:text-gray-400 pb-0 text-[11px] font-medium uppercase tracking-[0.12em]'
         }"

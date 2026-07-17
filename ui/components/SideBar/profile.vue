@@ -739,7 +739,7 @@ onBeforeUnmount(() => {
 
     <div
       v-else
-      class="flex items-center py-1 px-1.5 w-full min-w-0 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+      class="sidebar-row flex items-center py-1 px-1.5 w-full min-w-0 rounded-lg"
       :style="{
         justifyContent: collapse ? 'center' : ''
       }"

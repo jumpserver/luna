@@ -32,7 +32,7 @@ const panelStyle = computed(() => props.open
   >
     <button
       type="button"
-      class="flex h-8 shrink-0 items-center gap-1.5 px-3 text-left text-xs font-medium text-gray-700 dark:text-gray-200"
+      class="sidebar-row flex h-8 shrink-0 items-center gap-1.5 px-3 text-left text-xs font-medium text-gray-700 dark:text-gray-200"
       :aria-expanded="open"
       @click="emit('toggle')"
     >

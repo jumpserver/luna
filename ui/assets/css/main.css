@@ -317,6 +317,39 @@ option {
   color: var(--sidebar-icon-active);
 }
 
+.sidebar-row {
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.sidebar-row:hover {
+  background-color: var(--app-hover-soft);
+  color: var(--app-fg);
+}
+
+.sidebar-row:hover .sidebar-icon,
+.sidebar-row:hover .sidebar-icon-sm,
+.sidebar-row[data-active] .sidebar-icon,
+.sidebar-row[data-active] .sidebar-icon-sm {
+  color: var(--app-fg);
+}
+
+.sidebar-icon-button {
+  border-radius: 0.5rem;
+  color: var(--app-muted);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.sidebar-icon-button:hover,
+.sidebar-icon-button-active {
+  background-color: var(--app-hover-soft);
+  color: var(--app-fg);
+}
+
+.sidebar-icon-button .sidebar-icon,
+.sidebar-icon-button .sidebar-icon-sm {
+  color: currentColor;
+}
+
 .sidebar-icon-img {
   width: var(--sidebar-icon-size);
   height: var(--sidebar-icon-size);

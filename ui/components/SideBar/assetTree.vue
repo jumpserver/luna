@@ -440,7 +440,7 @@ defineExpose({ refresh, loading });
 
     <template v-else>
       <section class="group flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div class="flex h-8 w-full shrink-0 items-center gap-1 px-3 text-xs font-medium text-gray-700 dark:text-gray-300">
+        <div class="sidebar-row flex h-8 w-full shrink-0 items-center gap-1 px-3 text-xs font-medium text-gray-700 dark:text-gray-300">
           <button
             type="button"
             class="flex min-w-0 flex-1 items-center gap-1.5 text-left"
@@ -475,7 +475,7 @@ defineExpose({ refresh, loading });
               variant="ghost"
               size="xs"
               icon="i-lucide-x"
-              class="size-6 justify-center rounded-sm p-0"
+              class="sidebar-icon-button size-6 justify-center p-0"
               :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
               :aria-label="t('Common.Cancel')"
               @click="closeBatchMode"
@@ -488,7 +488,7 @@ defineExpose({ refresh, loading });
                 variant="ghost"
                 size="xs"
                 :icon="activeTreeKind === 'authorization' ? 'i-lucide-list-tree' : 'i-lucide-shield-check'"
-                class="size-6 justify-center rounded-sm p-0"
+                class="sidebar-icon-button size-6 justify-center p-0"
                 :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
                 :aria-label="treeSwitchLabel"
                 @click="switchTreeKind"
@@ -500,7 +500,7 @@ defineExpose({ refresh, loading });
               size="xs"
               icon="i-lucide-refresh-cw"
               :loading="loading"
-              class="size-6 justify-center rounded-sm p-0"
+              class="sidebar-icon-button size-6 justify-center p-0"
               :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
               :aria-label="t('ToolTips.Refresh')"
               @click="loadRoot(activeTreeKind)"
@@ -515,7 +515,7 @@ defineExpose({ refresh, loading });
                 variant="ghost"
                 size="xs"
                 icon="i-lucide-ellipsis"
-                class="size-6 justify-center rounded-sm p-0"
+                class="sidebar-icon-button size-6 justify-center p-0"
                 :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
                 :aria-label="t('Tree.OpenMultiple')"
               />

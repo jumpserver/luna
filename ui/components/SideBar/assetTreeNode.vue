@@ -84,7 +84,7 @@ const activate = () => {
   <div role="treeitem" :aria-expanded="isParent ? isOpen : undefined">
     <button
       type="button"
-      class="group flex h-7 w-full cursor-pointer items-center gap-1 rounded-lg pr-1 text-left text-xs transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+      class="sidebar-row group flex h-7 w-full cursor-pointer items-center gap-1 rounded-lg pr-1 text-left text-xs"
       :class="node.chkDisabled ? 'opacity-40' : ''"
       :style="{ paddingLeft: `${12 + (node.level || 0) * 14}px` }"
       :title="node.title || node.name"

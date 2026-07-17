@@ -19,7 +19,7 @@ const toggle = () => {
 <template>
   <div>
     <div
-      class="group/folder flex h-7 items-center gap-1 rounded-lg pr-1 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+      class="sidebar-row group/folder flex h-7 items-center gap-1 rounded-lg pr-1 text-xs"
       :style="{ paddingLeft: `${12 + (level || 0) * 14}px` }"
       @contextmenu.prevent="emit('folderContextmenu', folder, $event)"
     >
@@ -44,7 +44,7 @@ const toggle = () => {
         v-for="asset in folder.assets"
         :key="`${folder.id}-${asset.id}`"
         type="button"
-        class="flex h-7 w-full items-center gap-1.5 rounded-lg pr-1 text-left text-[11px] hover:bg-black/5 dark:hover:bg-white/10"
+        class="sidebar-row flex h-7 w-full items-center gap-1.5 rounded-lg pr-1 text-left text-[11px]"
         :style="{ paddingLeft: `${28 + (level || 0) * 14}px` }"
         @dblclick="emit('select', asset)"
         @contextmenu.prevent="emit('contextmenu', asset, $event)"
