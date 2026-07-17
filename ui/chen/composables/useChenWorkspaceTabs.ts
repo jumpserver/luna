@@ -54,6 +54,7 @@ export function useChenWorkspaceTabs() {
       kind: "query",
       nodeKey,
       statement: "",
+      uploadingSql: false,
       state: {},
       logs: [],
       message: null,

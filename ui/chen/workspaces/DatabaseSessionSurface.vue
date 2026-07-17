@@ -15,7 +15,7 @@ import type {
 } from "~/chen/types";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
-import { fetchChenActions, fetchChenExport } from "~/chen/api";
+import { fetchChenActions, fetchChenExport, uploadChenSqlFile } from "~/chen/api";
 import ChenSessionState from "~/chen/components/ChenSessionState.vue";
 import ConsolePanel from "~/chen/components/ConsolePanel.vue";
 import DataViewPanel from "~/chen/components/DataViewPanel.vue";
@@ -362,6 +362,24 @@ function runQueryTab(tab: ChenQueryLikeWorkspaceTab, selectedSql = "") {
   if (tab.kind === "console") queryConsole.runConsoleTab(tab);
 }
 
+async function uploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
+  if (tab.uploadingSql || tab.state.loading || tab.state.inQuery) return;
+  tab.uploadingSql = true;
+  try {
+    const result = await uploadChenSqlFile(auth.chenToken.value, file);
+    queryConsole.runQueryFile(tab, result.path);
+    toast.add({ title: "SQL file uploaded", description: file.name, color: "success" });
+  } catch (cause) {
+    toast.add({
+      title: "SQL upload failed",
+      description: cause instanceof Error ? cause.message : String(cause),
+      color: "error"
+    });
+  } finally {
+    tab.uploadingSql = false;
+  }
+}
+
 function cancelQueryLikeTab(tab: ChenQueryLikeWorkspaceTab) {
   queryConsole.cancelQueryLikeTab(tab);
 }
@@ -487,11 +505,11 @@ defineExpose({ focus });
           <QueryConsolePanel
             v-if="activeQueryTab"
             :tab="activeQueryTab"
-            :context-label="currentContextLabel"
             :db-type="auth.profile.value?.dbType || ''"
             :can-copy="auth.profile.value?.canCopy === true"
             @run="runQueryTab"
             @cancel="cancelQueryLikeTab"
+            @upload-sql="uploadQuerySql"
             @data-view-action="runQueryDataViewAction"
             @dismiss-message="dismissQueryMessage"
             @update-statement="updateQueryStatement"
