@@ -20,7 +20,7 @@ const toggle = () => {
   <div>
     <div
       class="sidebar-row group/folder flex h-7 items-center gap-1 rounded-lg pr-1 text-xs"
-      :style="{ paddingLeft: `${12 + (level || 0) * 14}px` }"
+      :style="{ paddingLeft: `${10 + (level || 0) * 14}px` }"
       @contextmenu.prevent="emit('folderContextmenu', folder, $event)"
     >
       <button type="button" class="flex min-w-0 flex-1 items-center gap-1 text-left" @click="toggle">
@@ -45,7 +45,7 @@ const toggle = () => {
         :key="`${folder.id}-${asset.id}`"
         type="button"
         class="sidebar-row flex h-7 w-full items-center gap-1.5 rounded-lg pr-1 text-left text-[11px]"
-        :style="{ paddingLeft: `${28 + (level || 0) * 14}px` }"
+        :style="{ paddingLeft: `${26 + (level || 0) * 14}px` }"
         @dblclick="emit('select', asset)"
         @contextmenu.prevent="emit('contextmenu', asset, $event)"
       >

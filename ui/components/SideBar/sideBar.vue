@@ -458,7 +458,7 @@ watch(loggedIn, (value) => {
     <div class="flex flex-col w-full">
       <div
         v-show="!collapse && activeWorkspaceMode === 'assets' && loggedIn"
-        class="flex items-center gap-2 border-b border-[color:var(--sidebar-divider-light)] px-3 py-1 dark:border-[color:var(--sidebar-divider-dark)]"
+        class="flex items-center gap-2 border-b border-[color:var(--sidebar-divider-light)] px-2.5 py-1 dark:border-[color:var(--sidebar-divider-dark)]"
       >
         <div v-if="shouldShowOrganizationSelector" class="min-w-0 flex-1">
           <HeaderOrganizationSelector />
@@ -503,7 +503,7 @@ watch(loggedIn, (value) => {
 
     <div
       v-if="showTools && activeWorkspaceMode === 'tools'"
-      class="px-3 py-0 flex-1 overflow-auto menu"
+      class="px-2.5 py-0 flex-1 overflow-auto menu"
       :style="{
         display: collapse ? 'inline-flex' : '',
         justifyContent: collapse ? 'center' : ''
@@ -547,7 +547,7 @@ watch(loggedIn, (value) => {
         class="absolute inset-0 z-10 flex min-h-0 flex-col"
         :style="{ backgroundColor: contentBackgroundColor }"
       >
-        <div :style="{ borderBottom: '1px solid var(--app-border)' }" class="px-3 py-1.5">
+        <div :style="{ borderBottom: '1px solid var(--app-border)' }" class="px-2.5 py-1.5">
           <UInput
             v-model="sidebarSearch"
             size="sm"

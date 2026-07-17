@@ -86,7 +86,7 @@ const activate = () => {
       type="button"
       class="sidebar-row group flex h-7 w-full cursor-pointer items-center gap-1 rounded-lg pr-1 text-left text-xs"
       :class="node.chkDisabled ? 'opacity-40' : ''"
-      :style="{ paddingLeft: `${12 + (node.level || 0) * 14}px` }"
+      :style="{ paddingLeft: `${10 + (node.level || 0) * 14}px` }"
       :title="node.title || node.name"
       @click="activate"
       @contextmenu.prevent="emit('contextmenu', node, $event)"

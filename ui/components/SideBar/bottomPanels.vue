@@ -329,7 +329,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
           :key="`root-${asset.id}`"
           type="button"
           class="sidebar-row flex h-7 w-full items-center gap-1 rounded-lg pr-1 text-left text-[11px]"
-          :style="{ paddingLeft: '12px' }"
+          :style="{ paddingLeft: '10px' }"
           @dblclick="emit('select', asset)"
           @contextmenu.prevent="emit('contextmenu', asset, $event)"
         >
@@ -379,7 +379,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
         v-else
         :key="snippet.id"
         type="button"
-        class="sidebar-row flex w-full items-start gap-1.5 px-3 py-1.5 text-left"
+        class="sidebar-row flex w-full items-start gap-1.5 px-2.5 py-1.5 text-left"
         :title="snippet.args"
         @click="applySnippet(snippet)"
       >

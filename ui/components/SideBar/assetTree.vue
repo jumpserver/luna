@@ -411,12 +411,12 @@ defineExpose({ refresh, loading });
     role="tree"
     :aria-label="t('Menu.Resource')"
   >
-    <div v-if="!loggedIn" class="grid min-h-0 flex-1 place-items-center px-3 text-xs text-gray-500 dark:text-gray-400">
+    <div v-if="!loggedIn" class="grid min-h-0 flex-1 place-items-center px-2.5 text-xs text-gray-500 dark:text-gray-400">
       请先登录
     </div>
 
     <template v-else-if="search.trim()">
-      <div class="flex h-8 shrink-0 items-center border-b border-gray-200 px-3 text-xs font-medium dark:border-white/10">
+      <div class="flex h-8 shrink-0 items-center border-b border-gray-200 px-2.5 text-xs font-medium dark:border-white/10">
         <UIcon name="i-lucide-search" class="mr-1.5 sidebar-icon" />
         <span class="truncate">{{ t("Operation.Search") }}</span>
       </div>
@@ -440,7 +440,7 @@ defineExpose({ refresh, loading });
 
     <template v-else>
       <section class="group flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div class="flex h-8 w-full shrink-0 items-center gap-1 px-3 text-xs font-medium text-gray-700 dark:text-gray-300">
+        <div class="flex h-8 w-full shrink-0 items-center gap-1 px-2.5 text-xs font-medium text-gray-700 dark:text-gray-300">
           <button
             type="button"
             class="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left"

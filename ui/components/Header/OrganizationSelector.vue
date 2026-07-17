@@ -50,7 +50,14 @@ watch(
 </script>
 
 <template>
-  <div v-show="loggedIn" class="flex min-w-0 items-center">
+  <div v-show="loggedIn" class="flex min-w-0 items-center gap-1">
+    <UAvatar
+      :alt="currentOrg"
+      color="primary"
+      size="xs"
+      class="shrink-0"
+      :ui="{ root: 'rounded-md' }"
+    />
     <UDropdownMenu
       :items="organizationDropdownItems"
       :content="{ align: 'start', side: 'bottom' }"
@@ -69,7 +76,6 @@ watch(
           base: 'flex items-center justify-start gap-1.5 rounded-md bg-transparent transition-colors hover:bg-black/5 focus:bg-transparent active:bg-transparent data-[state=open]:bg-black/[0.06] dark:hover:bg-white/8 dark:data-[state=open]:bg-white/10'
         }"
       >
-        <UIcon name="fluent:organization-16-regular" class="size-4 text-gray-500 dark:text-gray-400" />
         <span class="min-w-0 truncate text-left text-xs font-medium text-gray-700 dark:text-gray-300">
           {{ currentOrg }}
         </span>
