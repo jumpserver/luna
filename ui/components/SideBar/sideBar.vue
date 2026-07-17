@@ -135,8 +135,36 @@ const hasReusableSavedConnection = (asset: AssetItem) => {
 };
 
 const hasQuickConnect = (asset: AssetItem) => {
+  return hasReusableSavedConnection(asset);
+};
+
+const connectWithSavedConnection = (asset: AssetItem) => {
   const saved = asset.savedConnection;
-  return !!(saved?.protocol === "ssh" && hasReusableSavedConnection(asset));
+  if (!saved || !hasReusableSavedConnection(asset)) {
+    openSetupSession(asset);
+    return;
+  }
+
+  const session = openSession(asset, {
+    protocol: saved.protocol,
+    account: saved.username
+  });
+
+  confirmConnection(asset, {
+    protocol: saved.protocol,
+    account: saved.username,
+    accountId: saved.accountId,
+    accountMode: (saved.accountMode as any) || "hosted",
+    manualUsername: saved.manualUsername || "",
+    manualPassword: saved.manualPassword || "",
+    dynamicPassword: saved.dynamicPassword || "",
+    rememberSecret: !!saved.rememberSecret,
+    rememberSelection: true,
+    connectMethod: saved.connectMethod || "",
+    connectOptions: saved.connectOptions || {},
+    availableProtocols: saved.availableProtocols || [],
+    tabId: session.id
+  });
 };
 
 const connectWithBuiltinSsh = (asset: AssetItem, info: any) => {
@@ -242,24 +270,7 @@ const handleAssetConnect = (asset: AssetItem) => {
 };
 
 const handleAssetQuickConnect = (asset: AssetItem) => {
-  const saved = asset.savedConnection;
-  if (!saved?.username) {
-    openSetupSession(asset);
-    return;
-  }
-
-  connectWithBuiltinSsh(asset, {
-    protocol: "ssh",
-    account: saved.username,
-    accountId: saved.accountId,
-    accountMode: (saved.accountMode as any) || "hosted",
-    manualUsername: saved.manualUsername || "",
-    manualPassword: saved.manualPassword || "",
-    dynamicPassword: saved.dynamicPassword || "",
-    rememberSecret: !!saved.rememberSecret,
-    connectMethod: "builtin_client",
-    availableProtocols: saved.availableProtocols || []
-  });
+  connectWithSavedConnection(asset);
 };
 
 useEventBus().on("workspaceConnectAsset", handleAssetConnect);

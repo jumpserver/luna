@@ -20,7 +20,7 @@ const onUploadChange = (event: Event) => {
 </script>
 
 <template>
-  <KokoSearchInput v-if="showSearchInput" :search-addon="searchAddon" @close="showSearchInput = false" />
+  <KokoSearchInput v-if="showSearchInput && searchAddon" :search-addon="searchAddon" @close="showSearchInput = false" />
 
   <UModal v-model:open="uploadOpen" :title="$t('UploadTitle') || 'Upload file'" :ui="{ footer: 'justify-end gap-2' }">
     <template #body>

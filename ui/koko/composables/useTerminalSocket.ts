@@ -8,9 +8,9 @@ import { WebglAddon } from "@xterm/addon-webgl";
 
 import { Terminal } from "@xterm/xterm";
 import { readText, writeText } from "clipboard-polyfill";
+import { clearWorkspaceSessionDetails, setWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { useKokoTerminalEvents } from "~/koko/composables/useTerminalEvents";
 import { registerKokoTerminalSession, unregisterKokoTerminalSession } from "~/koko/composables/useTerminalSessionRegistry";
-import { clearWorkspaceSessionDetails, setWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { useKokoZmodem } from "~/koko/composables/useZmodem";
 import { connectorSessionKey, useKokoWsUrl } from "~/koko/composables/wsUrl";
 import { useKokoConnectionStore } from "~/koko/stores/connection";
@@ -28,6 +28,9 @@ import {
 
 const isSocketClosing = (socket: WebSocket) =>
   socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED;
+
+const isXtermAddonDisposeError = (error: unknown) =>
+  error instanceof Error && error.message.includes("Could not dispose an addon that has not been loaded");
 
 export const useKokoTerminalSocket = () => {
   let sentry: Sentry | null = null;
@@ -54,6 +57,7 @@ export const useKokoTerminalSocket = () => {
   const featureSetting = ref<Partial<SettingConfig>>({});
   const pingInterval = ref<ReturnType<typeof setInterval> | null>(null);
   const warningInterval = ref<ReturnType<typeof setInterval> | null>(null);
+  const searchAddon = shallowRef<SearchAddon | null>(null);
 
   const connectionStore = useKokoConnectionStore();
   const defaultTerminalCfg = getDefaultTerminalConfig();
@@ -63,21 +67,17 @@ export const useKokoTerminalSocket = () => {
   // 未显式指定主题名（workspace 内嵌场景）时跟随应用主题；独立 /koko/connect 路由带主题名则维持原逻辑
   const followAppTheme = computed(() => !!unref(sessionCtxRef) && !queryTerminalThemeName.value);
   let themeObserver: MutationObserver | null = null;
-
-  const fitAddon = new FitAddon();
-  const webglAddon = new WebglAddon();
-  const searchAddon = new SearchAddon();
-
-  webglAddon.onContextLoss(() => webglAddon.dispose());
+  let fitAddon: FitAddon | null = null;
+  const stopContainerListeners: Array<() => void> = [];
 
   const autoTerminalFit = watch([width, height], () => {
     if (!terminalRef.value) return;
-    nextTick(() => fitAddon.fit());
+    nextTick(() => fitAddon?.fit());
   });
 
   const debouncedResize = useDebounceFn(({ cols, rows }: { cols: number, rows: number }) => {
     if (!socketRef.value) return;
-    fitAddon.fit();
+    fitAddon?.fit();
     socketRef.value.send(formatMessage(terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_RESIZE, JSON.stringify({ cols, rows })));
   }, 200);
 
@@ -309,12 +309,12 @@ export const useKokoTerminalSocket = () => {
   const listenElEvent = () => {
     if (!terminalRef.value || !containerRef.value) return;
 
-    containerRef.value.addEventListener("click", () => sendHostEvent(HOST_MESSAGE_TYPE.CLICK, ""));
-    containerRef.value.addEventListener("mouseenter", () => {
-      fitAddon.fit();
+    const onClick = () => sendHostEvent(HOST_MESSAGE_TYPE.CLICK, "");
+    const onMouseEnter = () => {
+      fitAddon?.fit();
       terminalRef.value!.focus();
-    });
-    containerRef.value.addEventListener("contextmenu", async (e: MouseEvent) => {
+    };
+    const onContextMenu = async (e: MouseEvent) => {
       if (e.ctrlKey || terminalSettingsStore.quickPaste !== "1") return;
       e.preventDefault();
 
@@ -331,21 +331,34 @@ export const useKokoTerminalSocket = () => {
         return;
       }
       socketRef.value!.send(formatMessage(terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, text));
-    });
-    containerRef.value.addEventListener("mouseleave", () => {
+    };
+    const onMouseLeave = () => {
       terminalRef.value?.blur();
       sendHostEvent(HOST_MESSAGE_TYPE.TERMINAL_CONTENT_RESPONSE, {
         content: getXTerminalLineContent(10, terminalRef.value!),
         sessionId: sessionId.value,
         terminalId: terminalId.value
       });
-    });
-    containerRef.value.addEventListener("keydown", (e: KeyboardEvent) => {
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         sendMittEvent("open-search");
         e.preventDefault();
       }
-    });
+    };
+
+    containerRef.value.addEventListener("click", onClick);
+    containerRef.value.addEventListener("mouseenter", onMouseEnter);
+    containerRef.value.addEventListener("contextmenu", onContextMenu);
+    containerRef.value.addEventListener("mouseleave", onMouseLeave);
+    containerRef.value.addEventListener("keydown", onKeyDown);
+    stopContainerListeners.push(
+      () => containerRef.value?.removeEventListener("click", onClick),
+      () => containerRef.value?.removeEventListener("mouseenter", onMouseEnter),
+      () => containerRef.value?.removeEventListener("contextmenu", onContextMenu),
+      () => containerRef.value?.removeEventListener("mouseleave", onMouseLeave),
+      () => containerRef.value?.removeEventListener("keydown", onKeyDown)
+    );
   };
 
   const listenTerminalRefEvent = () => {
@@ -374,7 +387,7 @@ export const useKokoTerminalSocket = () => {
   };
 
   const createTerminal = () => {
-    terminalRef.value = new Terminal({
+    const terminal = new Terminal({
       fontSize: defaultTerminalCfg.fontSize,
       fontFamily: defaultTerminalCfg.fontFamily,
       lineHeight: defaultTerminalCfg.lineHeight,
@@ -388,9 +401,25 @@ export const useKokoTerminalSocket = () => {
       allowProposedApi: true,
       customGlyphs: true
     });
-    terminalRef.value.loadAddon(fitAddon);
-    terminalRef.value.loadAddon(webglAddon);
-    terminalRef.value.loadAddon(searchAddon);
+    const fit = new FitAddon();
+    const webgl = new WebglAddon();
+    const search = new SearchAddon();
+
+    webgl.onContextLoss(() => {
+      try {
+        webgl.dispose();
+      } catch (error) {
+        if (!isXtermAddonDisposeError(error)) throw error;
+      }
+    });
+
+    terminal.loadAddon(fit);
+    terminal.loadAddon(search);
+    terminal.loadAddon(webgl);
+
+    terminalRef.value = terminal;
+    fitAddon = fit;
+    searchAddon.value = search;
   };
 
   const createWebSocket = () => {
@@ -430,13 +459,14 @@ export const useKokoTerminalSocket = () => {
       listenTerminalRefEvent();
       listenElEvent();
       terminalRef.value?.open(containerRef.value!);
-      fitAddon.fit();
+      fitAddon?.fit();
     });
   });
 
   onUnmounted(() => {
     autoTerminalFit();
     themeObserver?.disconnect();
+    for (const stop of stopContainerListeners.splice(0)) stop();
     if (pingInterval.value) clearInterval(pingInterval.value);
     if (warningInterval.value) clearInterval(warningInterval.value);
     const tabId = unref(sessionCtxRef)?.tabId;
@@ -445,7 +475,15 @@ export const useKokoTerminalSocket = () => {
       clearWorkspaceSessionDetails(tabId);
     }
     socketRef.value?.close();
-    terminalRef.value?.dispose();
+    try {
+      terminalRef.value?.dispose();
+    } catch (error) {
+      if (!isXtermAddonDisposeError(error)) throw error;
+      console.warn(error);
+    }
+    terminalRef.value = null;
+    fitAddon = null;
+    searchAddon.value = null;
     connectionStore.resetConnectionState();
   });
 

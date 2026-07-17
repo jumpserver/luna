@@ -16,6 +16,7 @@ interface ConnectionFormInfo {
   accountId?: string
   availableProtocols?: string[]
   tabId?: string
+  onSessionError?: (error: unknown) => void
   accountMode: "hosted" | "dynamic" | "manual" | "anonymous"
 }
 
@@ -25,9 +26,10 @@ export function useAssetConnection() {
   const userInfoStore = useUserInfoStore();
 
   const normalizeConnectionInfo = async (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
-    const protocols = sortPermedProtocols(asset.permedProtocols || [])
+    const assetProtocols = sortPermedProtocols(asset.permedProtocols || [])
       .filter((protocol) => isTauriRuntime() || protocol?.public !== false)
       .map((protocol) => protocol.name);
+    const protocols = assetProtocols.length > 0 ? assetProtocols : (connectionInfo.availableProtocols || []);
     const protocol = protocols.includes(connectionInfo.protocol) ? connectionInfo.protocol : (protocols[0] || "");
     const accounts = asset.permedAccounts || [];
 
@@ -216,6 +218,7 @@ export function useAssetConnection() {
       connectMethod: normalized.connectMethod,
       connectOptions: normalized.connectOptions,
       tabId: normalized.tabId,
+      onSessionError: normalized.onSessionError,
       asset
     });
   };
