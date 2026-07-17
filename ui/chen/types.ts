@@ -61,6 +61,7 @@ export interface ChenConsoleState {
   currentContext?: string
   contexts?: string[]
   title?: string
+  page?: number
   limit?: number
   total?: number
   paged?: boolean
@@ -132,6 +133,17 @@ export interface ChenDataViewConsoleTab extends ChenTabDefinition {
   activePropertyTab: ChenDataViewPropertyTab
   socket: WebSocket | null
 }
+
+export type ChenDataViewAction
+  = | "first_page"
+    | "prev_page"
+    | "next_page"
+    | "last_page"
+    | "refresh"
+    | "change_limit"
+    | "toggle_pinned";
+
+export type ChenDataViewActionTarget = ChenQueryResultTab | ChenDataViewConsoleTab;
 
 export type ChenWorkspaceTab = ChenQueryLikeWorkspaceTab | ChenDataViewConsoleTab;
 

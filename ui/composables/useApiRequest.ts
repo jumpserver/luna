@@ -27,6 +27,12 @@ export interface SmartEndpointParams {
   token?: string
 }
 
+export interface SqlSnippetPayload {
+  name: string
+  args: string
+  module: string
+}
+
 const buildWebQuery = (request: ApiRequest) => {
   const query = new URLSearchParams();
 
@@ -185,6 +191,28 @@ export function getCommandSnippets(): Promise<unknown> {
     method: "GET",
     path: "/api/v1/ops/adhocs/",
     query: { only_mine: true }
+  });
+}
+
+export function getSqlSnippets(): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "GET",
+    path: "/api/v1/ops/adhocs/"
+  });
+}
+
+export function createSqlSnippet(payload: SqlSnippetPayload): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "POST",
+    path: "/api/v1/ops/adhocs/",
+    body: payload
+  });
+}
+
+export function deleteSqlSnippet(id: string): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "DELETE",
+    path: `/api/v1/ops/adhocs/${encodeURIComponent(id)}/`
   });
 }
 

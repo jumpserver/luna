@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import type { ChenQueryResultTab } from "~/chen/types";
+import type { ChenDataViewAction, ChenQueryResultTab } from "~/chen/types";
 
 import ChenDataGrid from "~/chen/components/DataGrid.client.vue";
+import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
 
 const props = withDefaults(defineProps<{
   resultTabs: ChenQueryResultTab[]
   activeResultTabId: string
   emptyMessage: string
   closable?: boolean
+  dataViewActions?: boolean
   logs?: string[]
   showLogs?: boolean
 }>(), {
   closable: false,
+  dataViewActions: false,
   logs: () => [],
   showLogs: false
 });
@@ -19,12 +22,18 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   "update:activeResultTabId": [id: string]
   close: [title: string]
+  dataViewAction: [result: ChenQueryResultTab, action: ChenDataViewAction, data?: number]
   download: [result: ChenQueryResultTab]
 }>();
 
 const activeResult = computed(() => {
   return props.resultTabs.find((item) => item.id === props.activeResultTabId) || null;
 });
+
+function emitActiveDataViewAction(action: ChenDataViewAction, data?: number) {
+  if (!activeResult.value) return;
+  emit("dataViewAction", activeResult.value, action, data);
+}
 </script>
 
 <template>
@@ -80,8 +89,18 @@ const activeResult = computed(() => {
       class="flex min-h-0 flex-1 flex-col"
     >
       <div class="flex shrink-0 items-center justify-between border-b border-default px-3 py-2 text-sm">
-        <div>{{ activeResult.title }}</div>
-        <UButton size="xs" icon="i-lucide-download" color="neutral" variant="soft" @click="emit('download', activeResult)" />
+        <div class="min-w-0 truncate">
+          {{ activeResult.title }}
+        </div>
+        <div class="flex items-center gap-1">
+          <DataViewToolbar
+            v-if="dataViewActions"
+            :state="activeResult.state"
+            pinnable
+            @action="emitActiveDataViewAction"
+          />
+          <UButton size="xs" icon="i-lucide-download" color="neutral" variant="soft" @click="emit('download', activeResult)" />
+        </div>
       </div>
       <div class="min-h-0 flex-1 overflow-auto">
         <ChenDataGrid
