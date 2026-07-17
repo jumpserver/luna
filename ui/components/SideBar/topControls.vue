@@ -6,6 +6,7 @@ const { collapse, setCollapse } = useSettingManager();
 const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
 const isMacClient = computed(() => isTauriRuntime() && isMacOS.value);
 const showTools = computed(() => isTauriRuntime());
+const headerIconButtonClass = "grid size-6 shrink-0 place-items-center rounded-lg p-0 text-gray-500 transition-colors hover:bg-black/6 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white";
 
 const workspaceModes = computed(() => {
   const modes = [{
@@ -71,13 +72,13 @@ const toggleSidebar = () => {
           :icon="mode.icon"
           :title="mode.label"
           :aria-label="mode.label"
-          class="size-6 justify-center rounded-none p-0"
-          :class="
+          :class="[
+            headerIconButtonClass,
             activeWorkspaceMode === mode.key
-              ? 'sidebar-icon-active'
-              : 'sidebar-icon-muted'
-          "
-          :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+              ? 'bg-black/6 text-gray-800 dark:bg-white/10 dark:text-white'
+              : ''
+          ]"
+          :ui="{ leadingIcon: 'm-0 size-4' }"
           @click="setMode(mode.key)"
         />
 
@@ -85,11 +86,11 @@ const toggleSidebar = () => {
           color="neutral"
           variant="ghost"
           size="sm"
-          class="size-6 justify-center rounded-none p-0 sidebar-icon-muted"
+          :class="headerIconButtonClass"
           icon="i-lucide-panel-left"
           title="折叠侧边栏"
           aria-label="折叠侧边栏"
-          :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+          :ui="{ leadingIcon: 'm-0 size-4' }"
           @click="toggleSidebar"
         />
       </div>
@@ -100,11 +101,11 @@ const toggleSidebar = () => {
       color="neutral"
       variant="ghost"
       size="sm"
-      class="size-6 justify-center rounded-none bg-transparent p-0 sidebar-icon-muted"
+      :class="headerIconButtonClass"
       icon="i-lucide-panel-left"
       title="展开侧边栏"
       aria-label="展开侧边栏"
-      :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+      :ui="{ leadingIcon: 'm-0 size-4' }"
       @click="toggleSidebar"
     />
   </div>
