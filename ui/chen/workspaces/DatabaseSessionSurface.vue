@@ -15,7 +15,7 @@ import type {
 } from "~/chen/types";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
-import { fetchChenActions, fetchChenExport, uploadChenSqlFile } from "~/chen/api";
+import { fetchChenActions, fetchChenExport, fetchChenSqlHints, uploadChenSqlFile } from "~/chen/api";
 import ChenSessionState from "~/chen/components/ChenSessionState.vue";
 import ConsolePanel from "~/chen/components/ConsolePanel.vue";
 import DataViewPanel from "~/chen/components/DataViewPanel.vue";
@@ -28,6 +28,7 @@ import { useChenDataView } from "~/chen/composables/useChenDataView";
 import { useChenQueryConsole } from "~/chen/composables/useChenQueryConsole";
 import { useChenResourceTree } from "~/chen/composables/useChenResourceTree";
 import { useChenSession } from "~/chen/composables/useChenSession";
+import { useChenSqlHints } from "~/chen/composables/useChenSqlHints";
 import { useChenWebSocket } from "~/chen/composables/useChenWebSocket";
 import { useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
 import { saveChenExport } from "~/chen/runtime/download";
@@ -85,6 +86,16 @@ const activeDataViewTab = computed(() => {
 const activeConnectionError = computed(() => workspace.activeWorkspaceTab.value?.connectionError || "");
 
 const queryConsole = useChenQueryConsole(sendConsoleAction);
+const queryHints = useChenSqlHints(
+  (tab, context) => fetchChenSqlHints(auth.chenToken.value, tab.nodeKey, context),
+  (cause) => {
+    toast.add({
+      title: "Failed to load SQL hints",
+      description: cause instanceof Error ? cause.message : String(cause),
+      color: "warning"
+    });
+  }
+);
 const session = useChenSession({
   authenticate: auth.authenticate,
   markConnected: () => markSessionConnected(props.tab.id),
@@ -180,8 +191,13 @@ function sendConsoleAction(tab: ChenWorkspaceTab, type: string, data?: any) {
 }
 
 function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
+  const previousContext = tab.kind === "query" ? tab.state.currentContext : undefined;
   if (tab.kind === "query" || tab.kind === "console") {
     queryConsole.handleQueryConsolePacket(tab, packet);
+  }
+  if (tab.kind === "query" && packet.type === "update_state") {
+    const currentContext = tab.state.currentContext || "";
+    if (currentContext && currentContext !== previousContext) void queryHints.load(tab, currentContext);
   }
 
   switch (packet.type) {
@@ -384,6 +400,10 @@ function cancelQueryLikeTab(tab: ChenQueryLikeWorkspaceTab) {
   queryConsole.cancelQueryLikeTab(tab);
 }
 
+function changeQueryContext(tab: ChenQueryConsoleTab, context: string) {
+  queryConsole.changeQueryContext(tab, context);
+}
+
 function updateQueryStatement(tab: ChenQueryConsoleTab, value: string) {
   tab.statement = value;
 }
@@ -509,6 +529,7 @@ defineExpose({ focus });
             :can-copy="auth.profile.value?.canCopy === true"
             @run="runQueryTab"
             @cancel="cancelQueryLikeTab"
+            @change-context="changeQueryContext"
             @upload-sql="uploadQuerySql"
             @data-view-action="runQueryDataViewAction"
             @dismiss-message="dismissQueryMessage"

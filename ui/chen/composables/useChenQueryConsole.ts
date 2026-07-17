@@ -159,6 +159,24 @@ export function useChenQueryConsole(
     });
   }
 
+  function changeQueryContext(tab: ChenQueryConsoleTab, context: string) {
+    if (
+      tab.state.loading
+      || tab.state.inQuery
+      || tab.state.editorLoading
+      || !context.trim()
+      || context === tab.state.currentContext
+      || !tab.state.contexts?.includes(context)
+    ) {
+      return;
+    }
+
+    sendConsoleAction(tab, "query_console_action", {
+      action: "change_current_context",
+      data: context
+    });
+  }
+
   function runConsoleTab(tab: ChenPromptConsoleTab) {
     const sql = tab.pendingSql.trim();
     if (!sql) return;
@@ -181,6 +199,7 @@ export function useChenQueryConsole(
   return {
     appendLog,
     cancelQueryLikeTab,
+    changeQueryContext,
     closeQueryResult,
     dismissQueryMessage,
     handleQueryConsolePacket,

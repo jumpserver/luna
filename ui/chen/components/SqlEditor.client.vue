@@ -1,21 +1,28 @@
 <script setup lang="ts">
 import type { Extension } from "@codemirror/state";
+import type { ChenSqlHints } from "~/chen/types";
 import { sql } from "@codemirror/lang-sql";
 import { Compartment, EditorState, Prec } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
+import { chenSqlConfig, replaceChenSqlDocument } from "~/chen/utils/sqlEditor";
 import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/theme/adapters/codemirror";
 
 const props = withDefaults(defineProps<{
   modelValue: string
+  dbType?: string
+  hints?: ChenSqlHints
   readOnly?: boolean
 }>(), {
+  dbType: "",
+  hints: () => ({}),
   readOnly: false
 });
 
 const emit = defineEmits<{
   "update:modelValue": [value: string]
   selectionChange: [hasSelection: boolean]
+  format: []
   openSnippets: []
   run: []
   saveSnippet: []
@@ -26,16 +33,24 @@ const colorMode = useColorMode();
 const container = ref<HTMLElement | null>(null);
 const themeSlot = new Compartment();
 const editableSlot = new Compartment();
+const sqlLanguageSlot = new Compartment();
 let editor: EditorView | null = null;
 let applyingExternalValue = false;
 
 const editorExtensions: Extension[] = [
   basicSetup,
-  sql(),
+  sqlLanguageSlot.of(sql(chenSqlConfig(props.dbType, props.hints))),
   createCodeMirrorSyntaxTheme(),
   EditorView.lineWrapping,
   EditorState.tabSize.of(2),
   Prec.highest(keymap.of([
+    {
+      key: "Mod-l",
+      run: () => {
+        emit("format");
+        return true;
+      }
+    },
     {
       key: "Ctrl-r",
       run: () => {
@@ -86,6 +101,11 @@ function focus() {
   editor?.focus();
 }
 
+function replaceDocument(value: string) {
+  if (!editor) return;
+  replaceChenSqlDocument(editor, value);
+}
+
 onMounted(() => {
   if (!container.value) return;
   editor = new EditorView({
@@ -112,6 +132,10 @@ watch(() => props.readOnly, (value) => {
   editor?.dispatch({ effects: editableSlot.reconfigure(EditorView.editable.of(!value)) });
 });
 
+watch(() => [props.dbType, props.hints] as const, ([dbType, hints]) => {
+  editor?.dispatch({ effects: sqlLanguageSlot.reconfigure(sql(chenSqlConfig(dbType, hints))) });
+});
+
 watch(() => colorMode.value, () => {
   editor?.dispatch({ effects: themeSlot.reconfigure(createCodeMirrorTheme()) });
 });
@@ -120,6 +144,7 @@ onBeforeUnmount(() => editor?.destroy());
 
 defineExpose({
   focus,
+  replaceDocument,
   selectedText
 });
 </script>

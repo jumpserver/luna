@@ -7,6 +7,7 @@ import ChenSqlEditor from "~/chen/components/SqlEditor.client.vue";
 import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
 import SqlSnippetSelectDialog from "~/chen/components/SqlSnippetSelectDialog.vue";
 import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
+import { formatChenSql } from "~/chen/utils/sqlFormat";
 
 const props = defineProps<{
   tab: ChenQueryConsoleTab
@@ -17,6 +18,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   run: [tab: ChenQueryConsoleTab, selectedSql: string]
   cancel: [tab: ChenQueryConsoleTab]
+  changeContext: [tab: ChenQueryConsoleTab, context: string]
   uploadSql: [tab: ChenQueryConsoleTab, file: File]
   dataViewAction: [tab: ChenQueryConsoleTab, result: ChenQueryResultTab, action: ChenDataViewAction, data?: ChenDataViewActionData]
   dismissMessage: [tab: ChenQueryConsoleTab]
@@ -25,7 +27,10 @@ const emit = defineEmits<{
   closeResult: [tab: ChenQueryConsoleTab, title: string]
 }>();
 
-const sqlEditor = ref<{ selectedText: () => string } | null>(null);
+const sqlEditor = ref<{
+  replaceDocument: (value: string) => void
+  selectedText: () => string
+} | null>(null);
 const sqlUploadInput = ref<HTMLInputElement | null>(null);
 const hasSelection = ref(false);
 const messageOpen = ref(false);
@@ -36,6 +41,13 @@ let messageCloseTimer: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
 const sqlSnippets = useChenSqlSnippets(() => props.dbType);
 const queryBusy = computed(() => Boolean(props.tab.state.loading || props.tab.state.inQuery));
+const contextBusy = computed(() => Boolean(queryBusy.value || props.tab.state.editorLoading));
+const contextItems = computed(() => (props.tab.state.contexts || []).map((context) => ({
+  label: context,
+  icon: context === props.tab.state.currentContext ? "i-lucide-check" : undefined,
+  disabled: contextBusy.value || context === props.tab.state.currentContext,
+  onSelect: () => emit("changeContext", props.tab, context)
+})));
 
 const messageColor = computed(() => {
   if (props.tab.message?.type === "error") return "error";
@@ -50,6 +62,22 @@ const statementValue = computed({
 
 function runSelectedQuery() {
   emit("run", props.tab, sqlEditor.value?.selectedText() || "");
+}
+
+function formatStatement() {
+  if (contextBusy.value) return;
+  const original = props.tab.statement;
+  try {
+    const formatted = formatChenSql(original, props.dbType);
+    if (formatted === original) return;
+    sqlEditor.value?.replaceDocument(formatted);
+  } catch (cause) {
+    toast.add({
+      title: "SQL format failed",
+      description: requestErrorMessage(cause),
+      color: "error"
+    });
+  }
 }
 
 function requestErrorMessage(cause: unknown) {
@@ -186,6 +214,15 @@ onBeforeUnmount(clearMessageTimer);
           @click="emit('cancel', tab)"
         />
         <UButton
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :disabled="contextBusy"
+          @click="formatStatement"
+        >
+          Format
+        </UButton>
+        <UButton
           icon="i-lucide-folder-open"
           size="sm"
           color="neutral"
@@ -223,14 +260,30 @@ onBeforeUnmount(clearMessageTimer);
         >
           Upload SQL
         </UButton>
+        <UDropdownMenu :items="contextItems">
+          <UButton
+            class="ml-auto"
+            icon="i-lucide-database"
+            trailing-icon="i-lucide-chevron-down"
+            size="sm"
+            color="neutral"
+            variant="soft"
+            :disabled="contextBusy || contextItems.length === 0"
+          >
+            {{ tab.state.currentContext || "Context" }}
+          </UButton>
+        </UDropdownMenu>
       </div>
       <div class="relative flex min-h-0 flex-1">
         <ChenSqlEditor
           ref="sqlEditor"
           v-model="statementValue"
           class="min-h-0 flex-1"
-          :read-only="Boolean(tab.state.loading)"
+          :db-type="dbType"
+          :hints="tab.sqlHints"
+          :read-only="Boolean(tab.state.loading || tab.state.editorLoading)"
           @selection-change="hasSelection = $event"
+          @format="formatStatement"
           @open-snippets="openSnippetDialog"
           @run="runSelectedQuery"
           @save-snippet="openSaveSnippetDialog"

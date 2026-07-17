@@ -86,6 +86,7 @@
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "pretty-bytes": "^7.1.0",
+    "sql-formatter": "^9.0.0",
     "vue": "^3.5.35",
     "vue-router": "5.0.7",
     "xterm-theme": "^1.1.0",

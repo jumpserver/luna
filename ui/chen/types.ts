@@ -74,9 +74,12 @@ export interface ChenDataViewDataset {
   data: Array<Record<string, any>>
 }
 
+export type ChenSqlHints = Record<string, string[]>;
+
 export interface ChenConsoleState {
   loading?: boolean
   inQuery?: boolean
+  editorLoading?: boolean
   canCancel?: boolean
   currentContext?: string
   contexts?: string[]
@@ -114,6 +117,10 @@ export interface ChenQueryConsoleTab extends ChenTabDefinition {
   kind: "query"
   statement: string
   uploadingSql: boolean
+  sqlHints: ChenSqlHints
+  hintsContext: string
+  hintsLoading: boolean
+  hintsRequestGeneration: number
   state: ChenConsoleState
   logs: string[]
   message: ChenConsoleMessage | null
