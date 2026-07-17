@@ -5,28 +5,30 @@ import { useConnectMethods } from "~/composables/useConnectMethods";
 import { sortProtocolNames } from "~/utils";
 
 const props = defineProps<{
-  account: string;
-  protocol: string;
-  accounts: PermedAccount[];
-  protocols: PermedProtocol[];
-  manualUsername?: string;
-  manualPassword?: string;
-  dynamicPassword?: string;
-  rememberSecret?: boolean;
-  connectMethod?: string;
-  connectOptions?: Record<string, any>;
-  assetType?: AssetPageType;
+  account: string
+  protocol: string
+  accounts: PermedAccount[]
+  protocols: PermedProtocol[]
+  manualUsername?: string
+  manualPassword?: string
+  dynamicPassword?: string
+  rememberSecret?: boolean
+  connectMethod?: string
+  connectOptions?: Record<string, any>
+  assetType?: AssetPageType
+  hideProtocol?: boolean
+  hideAdvanced?: boolean
 }>();
 
 const emits = defineEmits<{
-  (e: "update:protocol", v: string): void;
-  (e: "update:account", v: string): void;
-  (e: "update:manualUsername", v: string): void;
-  (e: "update:manualPassword", v: string): void;
-  (e: "update:dynamicPassword", v: string): void;
-  (e: "update:rememberSecret", v: boolean): void;
-  (e: "update:connectMethod", v: string): void;
-  (e: "update:connectOptions", v: Record<string, any>): void;
+  (e: "update:protocol", v: string): void
+  (e: "update:account", v: string): void
+  (e: "update:manualUsername", v: string): void
+  (e: "update:manualPassword", v: string): void
+  (e: "update:dynamicPassword", v: string): void
+  (e: "update:rememberSecret", v: boolean): void
+  (e: "update:connectMethod", v: string): void
+  (e: "update:connectOptions", v: Record<string, any>): void
 }>();
 
 const { t } = useI18n();
@@ -38,6 +40,7 @@ const showDynamicUserArea = ref(false);
 const advancedOptionOpen = ref(false);
 const availableConnectMethods = ref<any[]>([]);
 const selectedConnectMethodType = ref<string>("");
+const syncingConnectMethodType = ref(false);
 let connectMethodRequestId = 0;
 
 const localManualUsername = computed<string>({
@@ -133,7 +136,7 @@ const protocolTabItems = computed(() =>
   ).map((name) => ({ label: name.toUpperCase(), value: name }))
 );
 const connectMethodTypeItems = computed(() => {
-  const metaMap: Record<string, { label: string; icon: string }> = {
+  const metaMap: Record<string, { label: string, icon: string }> = {
     builtin: { label: "Web", icon: "i-lucide-globe" },
     native: { label: "客户端", icon: "i-lucide-monitor" },
     remote_app: { label: "远程应用", icon: "i-lucide-app-window" }
@@ -169,10 +172,10 @@ const showDisableAutoHashOption = computed(() => ["mysql", "mariadb"].includes((
 const showResolutionOption = computed(() => (props.protocol || "").toLowerCase() === "rdp");
 const showAdvancedOptions = computed(
   () =>
-    showCharsetOption.value ||
-    showBackspaceOption.value ||
-    showDisableAutoHashOption.value ||
-    showResolutionOption.value
+    showCharsetOption.value
+    || showBackspaceOption.value
+    || showDisableAutoHashOption.value
+    || showResolutionOption.value
 );
 
 const charsetItems = computed(() => [
@@ -229,16 +232,33 @@ watch(
 
     const current = availableConnectMethods.value.find((method) => method.value === props.connectMethod);
     if (current) {
+      syncingConnectMethodType.value = true;
       selectedConnectMethodType.value = categoryOfConnectMethod(current);
+      nextTick(() => {
+        syncingConnectMethodType.value = false;
+      });
       return;
     }
 
     if (!selectedConnectMethodType.value) {
+      syncingConnectMethodType.value = true;
       selectedConnectMethodType.value = categoryOfConnectMethod(availableConnectMethods.value[0]);
+      nextTick(() => {
+        syncingConnectMethodType.value = false;
+      });
     }
   },
   { deep: true, immediate: true }
 );
+
+watch(selectedConnectMethodType, (type, previousType) => {
+  if (!type || !previousType || syncingConnectMethodType.value) return;
+
+  const firstMethod = connectMethodTabItems.value[0]?.value;
+  if (firstMethod && firstMethod !== props.connectMethod) {
+    emits("update:connectMethod", firstMethod);
+  }
+});
 
 function categoryOfConnectMethod(method: any) {
   const type = String(method?.type || "").toLowerCase();
@@ -326,74 +346,126 @@ function handleSpecialAccount(v: string) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
-    <div class="protocol-tabs-track">
-      <div class="protocol-tabs">
-        <button
-          v-for="item in protocolTabItems"
-          :key="item.value"
-          type="button"
-          class="protocol-tab-button"
-          :class="item.value === selectedProtocol ? 'protocol-tab-button-active' : 'protocol-tab-button-idle'"
-          @click="selectedProtocol = item.value"
-        >
-          {{ item.label }}
-        </button>
+  <div class="connection-form flex flex-col gap-4">
+    <div v-if="!props.hideProtocol" class="settings-section">
+      <div class="settings-section-label">
+        <UIcon name="i-lucide-cable" class="size-3.5" />
+        <span>{{ t("AssetCard.Protocol") }}</span>
+      </div>
+      <div class="protocol-tabs-track">
+        <div class="protocol-tabs">
+          <button
+            v-for="item in protocolTabItems"
+            :key="item.value"
+            type="button"
+            class="protocol-tab-button"
+            :class="item.value === selectedProtocol ? 'protocol-tab-button-active' : 'protocol-tab-button-idle'"
+            @click="selectedProtocol = item.value"
+          >
+            {{ item.label }}
+          </button>
+        </div>
       </div>
     </div>
 
-    <UFormField :label="t('EditModal.OptionalAccount')" size="md">
-      <USelectMenu
-        v-model="selectedAccount"
-        :items="accountItems"
-        value-key="value"
-        label-key="label"
-        :ui="{
-          trailingIcon
-        }"
-        icon="lucide:user-round"
-        class="w-full"
-      />
-    </UFormField>
-
-    <UFormField :label="t('EditModal.ConnectMethod')" size="md">
-      <UTabs
-        v-if="connectMethodTypeItems.length > 1"
-        v-model="selectedConnectMethodType"
-        :items="connectMethodTypeItems"
-        value-key="value"
-        label-key="label"
-        color="neutral"
-        variant="link"
-        :content="false"
-        :ui="{
-          root: 'p-0',
-          list: 'p-0 justify-start'
-        }"
-        class="w-full mb-2 connect-method-type-tabs"
-      />
-      <div class="rounded-md border border-gray-200 p-2 dark:border-white/10">
-        <URadioGroup
-          v-model="localConnectMethod"
-          :items="connectMethodTabItems"
+    <div class="settings-section settings-section-plain">
+      <UFormField :label="t('EditModal.OptionalAccount')" size="md">
+        <USelectMenu
+          v-model="selectedAccount"
+          :items="accountItems"
           value-key="value"
           label-key="label"
-          orientation="horizontal"
           :ui="{
-            fieldset: 'flex flex-wrap gap-2',
-            item: 'rounded px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-white/5'
+            trailingIcon
           }"
+          icon="i-lucide-user-round"
+          class="w-full"
         />
-      </div>
-    </UFormField>
+      </UFormField>
 
-    <div v-if="showAdvancedOptions" class="rounded-md border border-gray-200 dark:border-white/10">
-      <button
-        type="button"
-        class="flex w-full items-center justify-between px-3 py-2 text-sm"
-        @click="advancedOptionOpen = !advancedOptionOpen"
-      >
-        <span>{{ t("Common.Advanced") }}</span>
+      <template v-if="showManualInputArea">
+        <UFormField :label="t('Account.Username')" size="md" class="mt-3">
+          <UInput
+            v-model="localManualUsername"
+            autocapitalize="none"
+            autocorrect="off"
+            :placeholder="t('Account.Username')"
+          />
+        </UFormField>
+
+        <UFormField :label="t('Account.Password')" size="md" class="mt-3">
+          <UInput
+            v-model="localManualPassword"
+            type="password"
+            autocapitalize="none"
+            autocorrect="off"
+            :placeholder="t('Account.Password')"
+          />
+        </UFormField>
+
+        <div class="settings-row justify-end pt-3">
+          <USwitch v-model="localRememberSecret" :label="t('Account.RememberPassword')" />
+        </div>
+      </template>
+
+      <template v-if="showDynamicUserArea">
+        <UFormField :label="t('Account.Password')" size="md" class="mt-3">
+          <UInput
+            v-model="localDynamicPassword"
+            type="password"
+            autocapitalize="none"
+            autocorrect="off"
+            :placeholder="t('Account.Password')"
+          />
+        </UFormField>
+
+        <div class="settings-row justify-end pt-3">
+          <USwitch v-model="localRememberSecret" :label="t('Account.RememberPassword')" />
+        </div>
+      </template>
+    </div>
+
+    <div class="settings-section settings-section-plain">
+      <UFormField :label="t('EditModal.ConnectMethod')" size="md">
+        <UTabs
+          v-if="connectMethodTypeItems.length > 1"
+          v-model="selectedConnectMethodType"
+          :items="connectMethodTypeItems"
+          value-key="value"
+          label-key="label"
+          color="neutral"
+          variant="link"
+          :content="false"
+          :ui="{
+            root: 'p-0',
+            list: 'p-0 justify-start'
+          }"
+          class="w-full mb-2 connect-method-type-tabs"
+        />
+
+        <div class="connect-method-list">
+          <label
+            v-for="item in connectMethodTabItems"
+            :key="item.value"
+            class="connect-method-option"
+            :class="item.value === localConnectMethod ? 'connect-method-option-active' : ''"
+          >
+            <input v-model="localConnectMethod" class="sr-only" type="radio" :value="item.value">
+            <span class="connect-method-radio">
+              <span />
+            </span>
+            <span class="truncate">{{ item.label }}</span>
+          </label>
+        </div>
+      </UFormField>
+    </div>
+
+    <div v-if="showAdvancedOptions && !props.hideAdvanced" class="settings-section p-0">
+      <button type="button" class="advanced-trigger" @click="advancedOptionOpen = !advancedOptionOpen">
+        <span class="flex min-w-0 items-center gap-2">
+          <UIcon name="i-lucide-sliders-horizontal" class="size-3.5 text-[var(--app-muted)]" />
+          <span>{{ t("Common.Advanced") }}</span>
+        </span>
         <UIcon
           name="i-lucide-chevron-down"
           class="size-4 transition-transform"
@@ -401,18 +473,18 @@ function handleSpecialAccount(v: string) {
         />
       </button>
 
-      <div v-if="advancedOptionOpen" class="space-y-3 border-t border-gray-200 px-3 py-3 dark:border-white/10">
+      <div v-if="advancedOptionOpen" class="space-y-3 border-t border-[var(--app-border)] px-3 py-3">
         <UFormField v-if="showCharsetOption" :label="t('Setting.Charset')" size="sm">
           <USelect v-model="selectedCharset" :items="charsetItems" class="w-full" />
         </UFormField>
 
-        <div v-if="showBackspaceOption" class="flex items-center justify-between">
-          <span class="text-sm">{{ t("Setting.TerminalBackspace") }}</span>
+        <div v-if="showBackspaceOption" class="settings-row">
+          <span>{{ t("Setting.TerminalBackspace") }}</span>
           <USwitch v-model="selectedBackspaceAsCtrlH" />
         </div>
 
-        <div v-if="showDisableAutoHashOption" class="flex items-center justify-between">
-          <span class="text-sm">Disable auto completion</span>
+        <div v-if="showDisableAutoHashOption" class="settings-row">
+          <span>Disable auto completion</span>
           <USwitch v-model="selectedDisableAutoHash" />
         </div>
 
@@ -421,51 +493,34 @@ function handleSpecialAccount(v: string) {
         </UFormField>
       </div>
     </div>
-
-    <template v-if="showManualInputArea">
-      <UFormField :label="t('Account.Username')" size="md">
-        <UInput
-          v-model="localManualUsername"
-          autocapitalize="none"
-          autocorrect="off"
-          :placeholder="t('Account.Username')"
-        />
-      </UFormField>
-
-      <UFormField :label="t('Account.Password')" size="md">
-        <UInput
-          v-model="localManualPassword"
-          type="password"
-          autocapitalize="none"
-          autocorrect="off"
-          :placeholder="t('Account.Password')"
-        />
-      </UFormField>
-
-      <div class="flex justify-end items-center w-full">
-        <USwitch v-model="localRememberSecret" :label="t('Account.RememberPassword')" />
-      </div>
-    </template>
-
-    <template v-if="showDynamicUserArea">
-      <UFormField :label="t('Account.Password')" size="md">
-        <UInput
-          v-model="localDynamicPassword"
-          type="password"
-          autocapitalize="none"
-          autocorrect="off"
-          :placeholder="t('Account.Password')"
-        />
-      </UFormField>
-
-      <div class="flex justify-end items-center w-full">
-        <USwitch v-model="localRememberSecret" :label="t('Account.RememberPassword')" />
-      </div>
-    </template>
   </div>
 </template>
 
 <style scoped>
+.settings-section {
+  border: 1px solid var(--app-border);
+  border-radius: 0.375rem;
+  background: var(--workspace-surface-sub-panel);
+  padding: 0.75rem;
+}
+
+.settings-section-plain {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.settings-section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.625rem;
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+}
+
 .protocol-tabs-track {
   display: flex;
   justify-content: flex-start;
@@ -503,10 +558,11 @@ function handleSpecialAccount(v: string) {
 .protocol-tab-button-active::after {
   content: "";
   position: absolute;
-  right: 0;
+  right: 0.125rem;
   bottom: -1px;
-  left: 0;
+  left: 0.125rem;
   height: 2px;
+  border-radius: 999px 999px 0 0;
   background: var(--ui-primary);
   pointer-events: none;
 }
@@ -515,10 +571,99 @@ function handleSpecialAccount(v: string) {
   color: var(--app-fg);
 }
 
+.connect-method-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.connect-method-option {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  cursor: pointer;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.375rem;
+  background: var(--app-surface-panel);
+  padding: 0.375rem 0.625rem;
+  color: var(--app-fg);
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.connect-method-option:hover {
+  background: var(--app-hover-soft);
+}
+
+.connect-method-option-active {
+  border-color: var(--ui-primary);
+  background: color-mix(in srgb, var(--ui-primary) 14%, var(--app-surface-panel));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ui-primary) 36%, transparent) inset;
+}
+
+.connect-method-radio {
+  display: grid;
+  width: 0.875rem;
+  height: 0.875rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 999px;
+  background: var(--app-input-bg);
+}
+
+.connect-method-option-active .connect-method-radio {
+  border-color: var(--ui-primary);
+}
+
+.connect-method-radio > span {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.connect-method-option-active .connect-method-radio > span {
+  background: var(--ui-primary);
+}
+
+.advanced-trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 0.75rem;
+  color: var(--app-fg);
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+}
+
+.advanced-trigger:hover {
+  background: var(--app-hover-soft);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--app-fg);
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+}
+
 :deep(.connect-method-type-tabs [data-slot="list"]) {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   width: 100%;
+}
+
+:deep(.connect-method-type-tabs [data-slot="trigger"][data-state="active"]) {
+  color: var(--app-fg);
 }
 </style>
