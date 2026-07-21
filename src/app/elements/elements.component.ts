@@ -10,6 +10,7 @@ import { ElementChatComponent } from '@app/elements/chat/chat.component';
 import { ElementAssetTreeComponent } from './asset-tree/asset-tree.component';
 import { ElementTermComponent } from '@app/elements/replay/term/term.component';
 import { ElementDialogAlertComponent } from '@app/services/dialog/alert.service';
+import { ElementLoginExpiredDialogComponent } from '@app/services/dialog/login-expired.service';
 import { ElementSettingComponent } from '@app/elements/nav/setting/setting.component';
 import { ElementUserFileComponent } from '@app/elements/nav/profile/profile.component';
 import { ElementContentTabComponent } from './content/content-tab/content-tab.component';
@@ -76,5 +77,6 @@ export const ElementComponents = [
   ElementsPartsComponent,
   ElementACLDialogComponent,
   ElementDialogAlertComponent,
+  ElementLoginExpiredDialogComponent,
   ElementTermComponent
 ];
