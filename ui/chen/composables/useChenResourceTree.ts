@@ -2,6 +2,7 @@ import type { Ref } from "vue";
 import type { ChenTreeNode } from "~/chen/types";
 
 import { fetchChenTreeChildren, runChenAction } from "~/chen/api";
+import { initialChenExpandedKeys } from "~/chen/utils/resourceTree";
 
 interface UseChenResourceTreeOptions {
   onLoadError?: (node: ChenTreeNode | null, cause: unknown) => void
@@ -75,15 +76,12 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
   }
 
   async function expandInitialTree() {
-    if (!rootNodes.value[0]?.key) return;
+    const root = rootNodes.value[0];
+    if (!root?.key) return;
 
-    expandedKeys.value = [rootNodes.value[0].key];
-    if (rootNodes.value.length === 1 && rootNodes.value[0].hasChildren !== false) {
-      await loadNodeChildren(rootNodes.value[0]);
-      const firstChildKey = rootNodes.value[0].children?.[0]?.key;
-      if (firstChildKey) {
-        expandedKeys.value = [rootNodes.value[0].key, firstChildKey];
-      }
+    expandedKeys.value = initialChenExpandedKeys(root);
+    if (rootNodes.value.length === 1 && root.hasChildren !== false) {
+      await loadNodeChildren(root);
     }
   }
 
