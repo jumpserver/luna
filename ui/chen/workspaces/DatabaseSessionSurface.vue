@@ -4,6 +4,7 @@ import type {
   ChenActionItem,
   ChenDataViewAction,
   ChenDataViewActionData,
+  ChenDataViewActionTarget,
   ChenDataViewConsoleTab,
   ChenPacket,
   ChenPromptConsoleTab,
@@ -19,6 +20,7 @@ import { fetchChenActions, fetchChenExport, fetchChenSqlHints, uploadChenSqlFile
 import ChenSessionState from "~/chen/components/ChenSessionState.vue";
 import ConsolePanel from "~/chen/components/ConsolePanel.vue";
 import DataViewPanel from "~/chen/components/DataViewPanel.vue";
+import DiscardDataViewChangesDialog from "~/chen/components/DiscardDataViewChangesDialog.vue";
 import QueryConsolePanel from "~/chen/components/QueryConsolePanel.vue";
 import ResourceTreePanel from "~/chen/components/ResourceTreePanel.vue";
 import WorkspaceTabBar from "~/chen/components/WorkspaceTabBar.vue";
@@ -33,6 +35,13 @@ import { useChenWebSocket } from "~/chen/composables/useChenWebSocket";
 import { useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
 import { saveChenExport } from "~/chen/runtime/download";
 import { formatChenDialogValue, normalizeChenDialogMessage } from "~/chen/utils/chenDialog";
+import {
+  chenDataViewHasDirty,
+  chenDataViewTargets,
+  clearChenDataViewEdits,
+  findChenDataViewTarget
+} from "~/chen/utils/dataViewEditing";
+import { chenNodeActivationAction } from "~/chen/utils/resourceTree";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const emit = defineEmits<{ reconnect: [] }>();
@@ -43,6 +52,16 @@ const tabRef = toRef(props, "tab");
 
 const sidebarWidth = ref(280);
 const resizing = ref(false);
+const discardDialogOpen = ref(false);
+const pendingDiscard = shallowRef<(() => void) | null>(null);
+const GUARDED_DATA_VIEW_ACTIONS = new Set<ChenDataViewAction>([
+  "first_page",
+  "prev_page",
+  "next_page",
+  "last_page",
+  "refresh",
+  "change_limit"
+]);
 
 const auth = useChenAuth(tabRef);
 const tree = useChenResourceTree(auth.chenToken, {
@@ -190,6 +209,76 @@ function sendConsoleAction(tab: ChenWorkspaceTab, type: string, data?: any) {
   queryConsole.appendLog(tab, tab.connectionError);
 }
 
+function guardDataViewChanges(targets: ChenDataViewActionTarget[], action: () => void) {
+  const dirtyTargets = targets.filter((target) => chenDataViewHasDirty(target.editState));
+  if (!dirtyTargets.length) {
+    action();
+    return;
+  }
+
+  pendingDiscard.value = () => {
+    dirtyTargets.forEach((target) => clearChenDataViewEdits(target.editState));
+    action();
+  };
+  discardDialogOpen.value = true;
+}
+
+function updateDiscardDialog(open: boolean) {
+  discardDialogOpen.value = open;
+  if (!open) pendingDiscard.value = null;
+}
+
+function confirmDiscardChanges() {
+  const action = pendingDiscard.value;
+  pendingDiscard.value = null;
+  action?.();
+}
+
+function resultFailureDescription(result: { reason?: string, failedChangeIndex?: number | null } | null, fallback: string) {
+  const reason = result?.reason || fallback;
+  return result?.failedChangeIndex == null
+    ? reason
+    : `${reason}, failedChangeIndex=${result.failedChangeIndex}`;
+}
+
+function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
+  if (tab.kind === "console" || (packet.type !== "save_changes_preview_result" && packet.type !== "save_changes_result")) {
+    return;
+  }
+
+  const target = findChenDataViewTarget(tab, packet.data?.dataView);
+  if (!target) return;
+
+  if (packet.type === "save_changes_preview_result") {
+    const result = target.editState.previewResult;
+    if (result?.success) return;
+    toast.add({
+      title: "Preview failed",
+      description: resultFailureDescription(result, "Preview failed"),
+      color: "error"
+    });
+    target.editState.previewResult = null;
+    target.editState.pendingSavePayload = null;
+    return;
+  }
+
+  const result = target.editState.saveResult;
+  target.editState.saveResult = null;
+  target.editState.pendingSavePayload = null;
+  if (!result?.success) {
+    toast.add({
+      title: "Save failed",
+      description: resultFailureDescription(result, "Save failed"),
+      color: "error"
+    });
+    return;
+  }
+
+  clearChenDataViewEdits(target.editState);
+  toast.add({ title: "Save succeeded", color: "success" });
+  dataView.sendDataViewAction(tab, target, "refresh");
+}
+
 function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   const previousContext = tab.kind === "query" ? tab.state.currentContext : undefined;
   if (tab.kind === "query" || tab.kind === "console") {
@@ -217,12 +306,14 @@ function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
       }
       break;
     case "close":
-      closeWorkspaceTab(tab.id);
+      performCloseWorkspaceTab(tab.id);
       break;
     default:
       if (tab.kind === "data-view") dataView.handleDataViewConsolePacket(tab, packet);
       break;
   }
+
+  consumeDataViewSavePacket(tab, packet);
 }
 
 function openQueryWorkspace(nodeKey: string, title = "Query", reuseExisting = true) {
@@ -261,9 +352,18 @@ function closeAllConsoleSockets(reason = "") {
   consoleConnections.clear();
 }
 
-function closeWorkspaceTab(id: string) {
+function performCloseWorkspaceTab(id: string) {
   closeConsoleSocket(id);
   workspace.closeTab(id);
+}
+
+function closeWorkspaceTab(id: string) {
+  const tab = workspace.workspaceTabState[id];
+  if (!tab || tab.kind === "console") {
+    performCloseWorkspaceTab(id);
+    return;
+  }
+  guardDataViewChanges(chenDataViewTargets(tab), () => performCloseWorkspaceTab(id));
 }
 
 function createWorkspaceTab(kind: "query" | "console") {
@@ -364,7 +464,12 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
 
 async function handleNodeClick(node: ChenTreeNode) {
   tree.selectedNodeKey.value = node.key;
-  await applyTreeAction(node, "show");
+  const action = chenNodeActivationAction(node);
+  if (action) {
+    await applyTreeAction(node, action);
+    return;
+  }
+  if (!node.leaf) tree.toggleTreeNode(node);
 }
 
 async function openNodeMenu(node: ChenTreeNode, event: MouseEvent) {
@@ -374,12 +479,23 @@ async function openNodeMenu(node: ChenTreeNode, event: MouseEvent) {
 }
 
 function runQueryTab(tab: ChenQueryLikeWorkspaceTab, selectedSql = "") {
-  if (tab.kind === "query") queryConsole.runQueryTab(tab, selectedSql);
-  if (tab.kind === "console") queryConsole.runConsoleTab(tab);
+  if (tab.kind === "console") {
+    queryConsole.runConsoleTab(tab);
+    return;
+  }
+  if (tab.state.loading || tab.state.inQuery || !(selectedSql || tab.statement).trim()) {
+    queryConsole.runQueryTab(tab, selectedSql);
+    return;
+  }
+  guardDataViewChanges(chenDataViewTargets(tab), () => queryConsole.runQueryTab(tab, selectedSql));
 }
 
-async function uploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
+function uploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
   if (tab.uploadingSql || tab.state.loading || tab.state.inQuery) return;
+  guardDataViewChanges(chenDataViewTargets(tab), () => void performUploadQuerySql(tab, file));
+}
+
+async function performUploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
   tab.uploadingSql = true;
   try {
     const result = await uploadChenSqlFile(auth.chenToken.value, file);
@@ -417,7 +533,13 @@ function activateQueryResult(tab: ChenQueryLikeWorkspaceTab, id: string) {
 }
 
 function closeQueryResult(tab: ChenQueryLikeWorkspaceTab, title: string) {
-  queryConsole.closeQueryResult(tab, title);
+  if (tab.kind === "console") {
+    queryConsole.closeQueryResult(tab, title);
+    return;
+  }
+  const target = findChenDataViewTarget(tab, title);
+  if (!target) return;
+  guardDataViewChanges([target], () => queryConsole.closeQueryResult(tab, title));
 }
 
 function dismissQueryMessage(tab: ChenQueryConsoleTab) {
@@ -430,7 +552,12 @@ function runQueryDataViewAction(
   action: ChenDataViewAction,
   data?: ChenDataViewActionData
 ) {
-  dataView.sendDataViewAction(tab, result, action, data);
+  const send = () => dataView.sendDataViewAction(tab, result, action, data);
+  if (GUARDED_DATA_VIEW_ACTIONS.has(action)) {
+    guardDataViewChanges([result], send);
+    return;
+  }
+  send();
 }
 
 function runStandaloneDataViewAction(
@@ -438,7 +565,12 @@ function runStandaloneDataViewAction(
   action: ChenDataViewAction,
   data?: ChenDataViewActionData
 ) {
-  dataView.sendDataViewAction(tab, tab, action, data);
+  const send = () => dataView.sendDataViewAction(tab, tab, action, data);
+  if (GUARDED_DATA_VIEW_ACTIONS.has(action)) {
+    guardDataViewChanges([tab], send);
+    return;
+  }
+  send();
 }
 
 function updateDataViewPanel(tab: Extract<ChenWorkspaceTab, { kind: "data-view" }>, panel: "data" | "properties") {
@@ -611,5 +743,12 @@ defineExpose({ focus });
         <pre v-else class="whitespace-pre-wrap break-words p-4 text-sm text-muted">{{ session.dialogMessage.value?.text }}</pre>
       </template>
     </UModal>
+
+    <DiscardDataViewChangesDialog
+      v-if="discardDialogOpen"
+      :open="discardDialogOpen"
+      @update:open="updateDiscardDialog"
+      @confirm="confirmDiscardChanges"
+    />
   </div>
 </template>
