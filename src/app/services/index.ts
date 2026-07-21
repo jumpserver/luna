@@ -9,12 +9,14 @@ import { FaceService } from '@app/services/face';
 import { TreeFilterService } from './treeFilter';
 import { OrganizationService } from './organization';
 import { AlertService } from './dialog/alert.service';
+import { LoginExpiredDialogService } from './dialog/login-expired.service';
 import { ConnectTokenService } from './connect-token/';
 import { LocalStorageService, LogService } from './share';
 import { IframeCommunicationService } from './communication';
 
 export { I18nService };
 export { AlertService };
+export { LoginExpiredDialogService };
 export { DrawerStateService };
 export { ConnectTokenService };
 export { IframeCommunicationService };
@@ -36,11 +38,12 @@ export const AllServices = [
   ViewService,
   I18nService,
   AlertService,
+  LoginExpiredDialogService,
   SettingService,
   TreeFilterService,
   DrawerStateService,
   LocalStorageService,
   OrganizationService,
   ConnectTokenService,
-  IframeCommunicationService,
+  IframeCommunicationService
 ];
