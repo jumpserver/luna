@@ -8,7 +8,8 @@
 
 .ant-menu-submenu.ant-menu-submenu-placement-bottom,
 .ant-menu-submenu.ant-menu-submenu-popup.ant-menu-submenu-placement-bottomLeft {
-  top: 1px !important;
+  // Slightly overlap the trigger so slow pointer movement cannot cross a hover gap.
+  top: -1px !important;
 }
 
 .ant-select {
