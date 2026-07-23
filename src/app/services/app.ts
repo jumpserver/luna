@@ -9,7 +9,6 @@ import { SettingService } from '@app/services/setting';
 import { Account, Asset, AuthInfo, ConnectData, Endpoint, Organization, View } from '@app/model';
 import * as CryptoJS from 'crypto-js';
 import { OrganizationService } from './organization';
-import { LoginExpiredDialogService } from './dialog/login-expired.service';
 import { I18nService } from '@app/services/i18n';
 import { getAppBasePath, getAppRoutePath, withSitePrefix } from '@app/utils/path';
 
@@ -48,8 +47,7 @@ export class AppService {
     private _logger: LogService,
     private _settingSvc: SettingService,
     private _localStorage: LocalStorageService,
-    private _orgSvc: OrganizationService,
-    private _loginExpiredDialog: LoginExpiredDialogService
+    private _orgSvc: OrganizationService
   ) {
     this.setLogLevel();
     this.setOrgFromQueryString();
@@ -115,12 +113,7 @@ export class AppService {
 
   async doCheckProfile(recheck = false) {
     const status = await this.getProfileStatus(recheck);
-    if (status === 'unauthorized') {
-      clearInterval(this.checkIntervalId);
-      this._loginExpiredDialog.showLoginExpired();
-      setTimeout(() => this.doCheckProfile(true), 5000);
-      this._logger.debug(`${status}, waiting for login`);
-    } else if (['badrequest', 'error'].includes(status)) {
+    if (['unauthorized', 'badrequest', 'error'].includes(status)) {
       clearInterval(this.checkIntervalId);
       const ok = confirm(this._i18n.instant(this.getErrorMsg(status)));
       if (ok && !this.newLoginHasOpen) {
@@ -132,7 +125,6 @@ export class AppService {
       setTimeout(() => this.doCheckProfile(true), 5000);
       this._logger.debug(`${status}, redirect to login`);
     } else if (status === 'ok') {
-      this._loginExpiredDialog.clearLoginExpired();
       this.newLoginHasOpen = false;
       if (recheck) {
         this.intervalCheckLogin().then();
@@ -172,7 +164,6 @@ export class AppService {
     }
 
     if (User.logined) {
-      this.intervalCheckLogin().then();
       if (document.location.pathname === withSitePrefix('/login/')) {
         this._router.navigate(['']);
       } else {
@@ -283,7 +274,7 @@ export class AppService {
       direct: connectData.direct
     };
 
-    this.setAccountLocalAuth(asset, account, manualAuthInfo, connectData.autoLogin);
+    this.setAccountLocalAuth(asset, account, manualAuthInfo);
     this._localStorage.set(key, saveData);
   }
 
@@ -302,20 +293,9 @@ export class AppService {
       return connectData;
     }
 
-    let matched: AuthInfo;
     if (connectData.account) {
       const auths = this.getAccountLocalAuth(asset.id);
-      matched = auths.find(item => item.alias === connectData.account.alias);
-
-      if (!matched) {
-        const dynamicAccountAliases = ['@INPUT', '@USER'];
-        const isDynamicAccount =
-          dynamicAccountAliases.includes(connectData.account.alias) ||
-          dynamicAccountAliases.includes(connectData.account.username);
-        if (isDynamicAccount && auths.length > 0) {
-          matched = auths[0];
-        }
-      }
+      const matched = auths.find(item => item.alias === connectData.account.alias);
 
       if (matched) {
         connectData.manualAuthInfo = matched;
@@ -373,14 +353,16 @@ export class AppService {
     return newAuths;
   }
 
-  setAccountLocalAuth(asset: Asset, account: Account, auth: AuthInfo, autoLogin = false) {
+  setAccountLocalAuth(asset: Asset, account: Account, auth: AuthInfo) {
     const assetId = asset.id;
-    const newAuth = Object.assign({ username: account.username }, auth, { alias: account.alias });
+    const newAuth = Object.assign({ alias: account.alias, username: account.username }, auth);
 
-    const shouldRememberSecret =
-      (auth.rememberAuth || autoLogin) &&
-      this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH;
-    if (!auth.secret || !shouldRememberSecret) {
+    // 如果 auth.alias 是 undefined，保持使用 account.alias
+    if (auth.alias === undefined && account.alias !== undefined) {
+      newAuth.alias = account.alias;
+    }
+
+    if (!auth.secret || !auth.rememberAuth || !this._settingSvc.globalSetting.SECURITY_LUNA_REMEMBER_AUTH) {
       newAuth.secret = '';
     } else {
       newAuth.secret = this.encrypt(auth.secret);

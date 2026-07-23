@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Browser, User } from '@app/globals';
-import { catchError, map, mergeMap, retry } from 'rxjs/operators';
+import { catchError, map, retry } from 'rxjs/operators';
 import {
   AdminConnectData,
   Asset,
@@ -14,12 +14,11 @@ import {
   User as _User
 } from '@app/model';
 import { getCsrfTokenFromCookie, getQueryParamFromURL } from '@app/utils/common';
-import { from, Observable, throwError } from 'rxjs';
+import { Observable } from 'rxjs';
 import { I18nService } from '@app/services/i18n';
-import { LoginExpiredDialogService } from '@app/services/dialog/login-expired.service';
 import { CookieService } from 'ngx-cookie-service';
 import { encryptPassword } from '@app/utils/crypto';
-import { withSitePrefix } from '@app/utils/path';
+import { getAppBasePath, withSitePrefix } from '@app/utils/path';
 
 @Injectable()
 export class HttpService {
@@ -28,8 +27,7 @@ export class HttpService {
   constructor(
     private http: HttpClient,
     private _i18n: I18nService,
-    private _cookie: CookieService,
-    private _loginExpiredDialog: LoginExpiredDialogService
+    private _cookie: CookieService
   ) {}
 
   setOptionsCSRFToken(options) {
@@ -73,22 +71,24 @@ export class HttpService {
     return this.http.get(resolvedUrl, options).pipe(catchError(this.handleError.bind(this)));
   }
 
-  handleError(error: HttpErrorResponse): Observable<never> {
+  async handleError(error: HttpErrorResponse) {
     if (error.status === 401 && User.logined) {
-      this._loginExpiredDialog.showLoginExpired();
+      const msg = await this._i18n.t('LoginExpireMsg');
+      if (confirm(msg)) {
+        const loginUrl = new URL(withSitePrefix('/core/auth/login/'), window.location.origin);
+        loginUrl.searchParams.set('next', getAppBasePath());
+        window.open(loginUrl.toString(), '_blank');
+      }
     } else if (error.status === 403) {
-      return from(this._i18n.t('No permission')).pipe(
-        mergeMap(msg => {
-          alert(msg);
-          return throwError(() => error);
-        })
-      );
+      const msg = await this._i18n.t('No permission');
+      alert(msg);
+      throw error;
     } else {
       // The backend returned an unsuccessful response code.
       // The response body may contain clues as to what went wrong.
       console.error(`Backend returned code ${error.status}, body was: `, error.error);
+      throw error;
     }
-    return throwError(() => error);
   }
 
   post<T>(url: string, body: any, options?: any): Observable<any> {

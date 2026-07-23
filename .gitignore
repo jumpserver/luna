@@ -47,7 +47,6 @@ luna.tar.gz
 luna/
 package-lock.json
 .angular
-.yarn
 
 # generated at build time by scripts/generate-build-info.mjs
 /src/environments/build-info.ts
