@@ -4,18 +4,12 @@
   }
 }
 
-:host {
-  display: block;
-  height: 30px;
-}
-
 .nav {
   display: flex;
-  height: 30px;
-  box-sizing: border-box;
   justify-content: space-between;
   background-color: var(--el-nav-bg-color);
   font-weight: 400;
+  padding-bottom: 1px;
 
   .ant-menu-horizontal > .ant-menu-submenu {
     top: 0;
