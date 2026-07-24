@@ -250,7 +250,7 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   if (!target) return;
 
   if (packet.type === "save_changes_preview_result") {
-    const result = target.editState.previewResult;
+    const result = target.editState.previewResult || packet.data?.result || packet.data;
     if (result?.success) return;
     toast.add({
       title: "Preview failed",
@@ -262,7 +262,7 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
     return;
   }
 
-  const result = target.editState.saveResult;
+  const result = target.editState.saveResult || packet.data?.result || packet.data;
   target.editState.saveResult = null;
   target.editState.pendingSavePayload = null;
   if (!result?.success) {

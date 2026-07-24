@@ -3,12 +3,10 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type {
   AssetItem,
   AssetPageType,
-  CharsetType,
   ConnectionInfo,
   ConnectionPreferenceInfo,
   PermedAccount,
-  PermedProtocol,
-  ResolutionType
+  PermedProtocol
 } from "~/types/index";
 
 import ConnectForm from "~/components/ConnectForm/connectForm.vue";
@@ -17,8 +15,8 @@ import { sortPermedProtocols, sortProtocolNames } from "~/utils";
 
 const props = withDefaults(
   defineProps<{
-    tab: WorkspaceSessionTab
-    assetType?: AssetPageType
+    tab: WorkspaceSessionTab;
+    assetType?: AssetPageType;
   }>(),
   {
     assetType: "assets"
@@ -47,88 +45,11 @@ const draftConnectMethod = ref<string>("");
 const draftConnectOptions = ref<Record<string, any>>({});
 
 const title = computed(() => props.tab.assetName || currentAsset.value?.name || "");
-const assetSummaryItems = computed(() => {
-  if (!currentAsset.value) return [];
-
-  return [
-    { icon: "i-lucide-network", label: t("AssetCard.Address"), value: currentAsset.value.address || props.tab.address || "-" },
-    { icon: "i-lucide-box", label: locale.value === "zh" ? "平台" : "Platform", value: currentAsset.value.platform || "-" },
-    { icon: "i-lucide-map-pin", label: locale.value === "zh" ? "区域" : "Zone", value: currentAsset.value.zone || "-" }
-  ].filter((item) => item.value && item.value !== "-");
-});
 
 const getVisibleProtocols = (protocols: PermedProtocol[]) => {
   if (isTauriRuntime()) return protocols;
   return protocols.filter((protocol) => protocol?.public !== false);
 };
-const protocolTabItems = computed(() =>
-  sortProtocolNames(
-    getVisibleProtocols(currentAsset.value?.permedProtocols || [])
-      .map((protocol) => (protocol?.name ? protocol.name.trim() : ""))
-      .filter((name) => name.length > 0)
-  ).map((name) => ({ label: name.toUpperCase(), value: name }))
-);
-const setupAdvancedOpen = ref(false);
-const showCharsetOption = computed(() => ["ssh", "telnet"].includes((draftProtocol.value || "").toLowerCase()));
-const showBackspaceOption = computed(() => showCharsetOption.value);
-const showDisableAutoHashOption = computed(() => ["mysql", "mariadb"].includes((draftProtocol.value || "").toLowerCase()));
-const showResolutionOption = computed(() => (draftProtocol.value || "").toLowerCase() === "rdp");
-const showAdvancedOptions = computed(
-  () =>
-    showCharsetOption.value
-    || showBackspaceOption.value
-    || showDisableAutoHashOption.value
-    || showResolutionOption.value
-);
-const charsetItems = computed(() => [
-  { label: t("Setting.Default"), value: "default" },
-  { label: "UTF-8", value: "utf8" },
-  { label: "GBK", value: "gbk" },
-  { label: "GB2312", value: "gb2312" },
-  { label: "IOS-8859-1", value: "ios-8859-1" }
-]);
-const resolutionItems = computed(() => [
-  { label: t("Setting.Auto"), value: "auto" },
-  { label: "1024x768", value: "1024x768" },
-  { label: "1366x768", value: "1366x768" },
-  { label: "1600x900", value: "1600x900" },
-  { label: "1920x1080", value: "1920x1080" }
-]);
-
-const updateConnectOption = (field: string, value: any) => {
-  draftConnectOptions.value = {
-    ...draftConnectOptions.value,
-    [field]: value
-  };
-};
-const selectedCharset = computed<CharsetType>({
-  get: () => (draftConnectOptions.value.charset || "default") as CharsetType,
-  set: (value) => updateConnectOption("charset", value || "default")
-});
-const selectedBackspaceAsCtrlH = computed<boolean>({
-  get: () => !!draftConnectOptions.value.backspaceAsCtrlH,
-  set: (value) => updateConnectOption("backspaceAsCtrlH", !!value)
-});
-const selectedDisableAutoHash = computed<boolean>({
-  get: () => !!draftConnectOptions.value.disableautohash,
-  set: (value) => updateConnectOption("disableautohash", !!value)
-});
-const selectedResolution = computed<ResolutionType>({
-  get: () => (draftConnectOptions.value.resolution || "auto") as ResolutionType,
-  set: (value) => {
-    const resolved = (value || "auto") as ResolutionType;
-    updateConnectOption("resolution", resolved);
-    updateConnectOption("rdp_resolution", resolved);
-  }
-});
-
-watch(
-  () => [draftProtocol.value, showAdvancedOptions.value] as const,
-  () => {
-    setupAdvancedOpen.value = false;
-  },
-  { immediate: true }
-);
 
 const getManualInputLabel = () => (locale.value === "zh" ? "手动输入" : "Manual input");
 const getAnonymousLabel = () => (locale.value === "zh" ? "匿名账号" : "Anonymous");
@@ -285,7 +206,7 @@ async function ensureDetails(asset: AssetItem) {
   const detailsReady = new Promise<AssetItem>((resolve) => {
     unsubscribe = useEventBus().on(
       "assetDetailUpdated",
-      (payload: { assetId: string, permedAccounts: PermedAccount[], permedProtocols: PermedProtocol[] }) => {
+      (payload: { assetId: string; permedAccounts: PermedAccount[]; permedProtocols: PermedProtocol[] }) => {
         if (payload.assetId !== asset.id) return;
 
         currentAsset.value = {
@@ -338,7 +259,8 @@ async function submit() {
       tabId: props.tab.id,
       onSessionError: (error) => {
         connecting.value = false;
-        connectionError.value = error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
+        connectionError.value =
+          error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
       }
     });
   } catch (error) {
@@ -372,16 +294,14 @@ onMounted(loadAsset);
 
       <template v-else-if="currentAsset">
         <section
-          class="connection-setup-shell w-[min(900px,100%)] overflow-hidden rounded-lg border border-[var(--app-border)] bg-[var(--workspace-surface-panel)] shadow-[var(--theme-shadow-soft)]"
+          class="connection-setup-shell w-[min(640px,100%)] overflow-hidden rounded-lg border border-[var(--app-border)] bg-[var(--workspace-surface-panel)] shadow-[var(--theme-shadow-soft)]"
         >
           <div
             class="flex h-11 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--workspace-surface-header)] px-4"
           >
             <div class="flex min-w-0 items-center gap-2">
-              <UIcon name="i-lucide-plug-zap" class="size-4 shrink-0 text-[var(--app-muted)]" />
               <span class="truncate text-sm font-semibold text-[var(--app-fg)]">{{ t("ContextMenu.Connect") }}</span>
-              <span class="h-3 w-px shrink-0 bg-[var(--app-border)]" />
-              <span class="truncate font-ui-mono text-xs text-[var(--app-muted)]">{{ props.tab.address }}</span>
+              <span class="truncate text-xs text-[var(--app-muted)]">{{ title || props.tab.address }}</span>
             </div>
             <UButton
               color="neutral"
@@ -393,151 +313,63 @@ onMounted(loadAsset);
             />
           </div>
 
-          <div class="grid min-h-[420px] grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)]">
-            <aside
-              class="flex flex-col border-b border-[var(--app-border)] bg-[var(--workspace-surface-sub-sidebar)] p-4 md:border-r md:border-b-0"
+          <div class="flex min-h-[300px] flex-col bg-[var(--app-surface-panel-strong)]">
+            <div class="min-h-0 flex-1 overflow-auto px-5 py-4">
+              <ConnectForm
+                v-model:protocol="draftProtocol"
+                v-model:account="draftAccount"
+                v-model:manual-username="draftManualUsername"
+                v-model:manual-password="draftManualPassword"
+                v-model:dynamic-password="draftDynamicPassword"
+                v-model:remember-secret="draftRememberSecret"
+                v-model:connect-method="draftConnectMethod"
+                v-model:connect-options="draftConnectOptions"
+                :accounts="currentAsset.permedAccounts || []"
+                :protocols="currentAsset.permedProtocols || []"
+                :asset-type="props.assetType"
+                @keydown.enter="submit"
+              />
+              <UCheckbox
+                v-model="draftRememberSelection"
+                icon="i-lucide-check"
+                :label="t('EditModal.RememberSelection')"
+                class="mt-4"
+              />
+            </div>
+
+            <div
+              v-if="connecting || connectionError"
+              class="border-t border-[var(--app-border)] bg-[var(--workspace-surface-footer)] px-5 py-3"
             >
-              <div class="flex min-w-0 items-center gap-3">
-                <CardAssetIcon :type="currentAsset.type" size="xl" class="ring-1 ring-[var(--app-border)]" />
-                <div class="min-w-0">
-                  <h2 class="truncate text-base font-semibold leading-6 text-[var(--app-fg)]">
-                    {{ title }}
-                  </h2>
-                  <p class="truncate font-ui-mono text-xs text-[var(--app-muted)]">
-                    {{ currentAsset.address || props.tab.address }}
-                  </p>
+              <div v-if="connecting" class="space-y-2">
+                <div class="flex items-center gap-2 text-xs text-[var(--app-muted)]">
+                  <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+                  <span>{{ locale === "zh" ? "正在建立连接..." : "Establishing connection..." }}</span>
                 </div>
-              </div>
-
-              <div class="mt-5 space-y-1 rounded-md border border-[var(--app-border)] bg-[var(--workspace-surface-sub-panel)] p-2">
-                <div
-                  v-for="item in assetSummaryItems"
-                  :key="item.label"
-                  class="flex min-w-0 items-center gap-2 rounded px-2 py-1.5 text-xs"
-                >
-                  <UIcon :name="item.icon" class="size-3.5 shrink-0 text-[var(--app-muted)]" />
-                  <span class="w-14 shrink-0 text-[var(--app-muted)]">{{ item.label }}</span>
-                  <span class="truncate text-[var(--app-fg)]">{{ item.value }}</span>
+                <div class="connection-activity-track">
+                  <span class="connection-activity-bar" />
                 </div>
               </div>
 
               <div
-                v-if="protocolTabItems.length"
-                class="mt-4 rounded-md border border-[var(--app-border)] bg-[var(--workspace-surface-sub-panel)] p-3"
+                v-if="connectionError"
+                class="mt-2 flex items-start gap-2 rounded-md border border-error/25 bg-error/10 px-3 py-2 text-xs text-error"
               >
-                <div class="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[var(--app-muted)]">
-                  <UIcon name="i-lucide-cable" class="size-3.5" />
-                  <span>{{ t("AssetCard.Protocol") }}</span>
-                </div>
-                <URadioGroup
-                  v-model="draftProtocol"
-                  :items="protocolTabItems"
-                  value-key="value"
-                  label-key="label"
-                  :ui="{
-                    fieldset: 'grid gap-1',
-                    item: 'rounded px-2 py-1.5 hover:bg-[var(--app-hover-soft)] data-[state=checked]:bg-[var(--app-selected-soft)]'
-                  }"
-                />
+                <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3.5 shrink-0" />
+                <span class="min-w-0 break-words">{{ connectionError }}</span>
               </div>
+            </div>
 
-              <div
-                v-if="showAdvancedOptions"
-                class="mt-4 overflow-hidden rounded-md border border-[var(--app-border)] bg-[var(--workspace-surface-sub-panel)]"
-              >
-                <button type="button" class="setup-advanced-trigger" @click="setupAdvancedOpen = !setupAdvancedOpen">
-                  <span class="flex min-w-0 items-center gap-1.5">
-                    <UIcon name="i-lucide-sliders-horizontal" class="size-3.5 text-[var(--app-muted)]" />
-                    <span>{{ t("Common.Advanced") }}</span>
-                  </span>
-                  <UIcon
-                    name="i-lucide-chevron-down"
-                    class="size-4 transition-transform"
-                    :class="setupAdvancedOpen ? 'rotate-180' : ''"
-                  />
-                </button>
-
-                <div v-if="setupAdvancedOpen" class="space-y-3 border-t border-[var(--app-border)] px-3 py-3">
-                  <UFormField v-if="showCharsetOption" :label="t('Setting.Charset')" size="sm">
-                    <USelect v-model="selectedCharset" :items="charsetItems" class="w-full" />
-                  </UFormField>
-
-                  <div v-if="showBackspaceOption" class="setup-settings-row">
-                    <span>{{ t("Setting.TerminalBackspace") }}</span>
-                    <USwitch v-model="selectedBackspaceAsCtrlH" />
-                  </div>
-
-                  <div v-if="showDisableAutoHashOption" class="setup-settings-row">
-                    <span>Disable auto completion</span>
-                    <USwitch v-model="selectedDisableAutoHash" />
-                  </div>
-
-                  <UFormField v-if="showResolutionOption" :label="t('Setting.Resolution')" size="sm">
-                    <USelect v-model="selectedResolution" :items="resolutionItems" class="w-full" />
-                  </UFormField>
-                </div>
-              </div>
-            </aside>
-
-            <div class="flex min-h-0 flex-col bg-[var(--app-surface-panel-strong)]">
-              <div class="min-h-0 flex-1 overflow-auto px-5 py-4">
-                <ConnectForm
-                  v-model:protocol="draftProtocol"
-                  v-model:account="draftAccount"
-                  v-model:manual-username="draftManualUsername"
-                  v-model:manual-password="draftManualPassword"
-                  v-model:dynamic-password="draftDynamicPassword"
-                  v-model:remember-secret="draftRememberSecret"
-                  v-model:connect-method="draftConnectMethod"
-                  v-model:connect-options="draftConnectOptions"
-                  :accounts="currentAsset.permedAccounts || []"
-                  :protocols="currentAsset.permedProtocols || []"
-                  :asset-type="props.assetType"
-                  hide-protocol
-                  hide-advanced
-                  @keydown.enter="submit"
-                />
-              </div>
-
-              <div
-                v-if="connecting || connectionError"
-                class="border-t border-[var(--app-border)] bg-[var(--workspace-surface-footer)] px-5 py-3"
-              >
-                <div v-if="connecting" class="space-y-2">
-                  <div class="flex items-center gap-2 text-xs text-[var(--app-muted)]">
-                    <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
-                    <span>{{ locale === "zh" ? "正在建立连接..." : "Establishing connection..." }}</span>
-                  </div>
-                  <div class="connection-activity-track">
-                    <span class="connection-activity-bar" />
-                  </div>
-                </div>
-
-                <div
-                  v-if="connectionError"
-                  class="mt-2 flex items-start gap-2 rounded-md border border-error/25 bg-error/10 px-3 py-2 text-xs text-error"
-                >
-                  <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3.5 shrink-0" />
-                  <span class="min-w-0 break-words">{{ connectionError }}</span>
-                </div>
-              </div>
-
-              <div
-                class="flex items-center justify-between gap-4 border-t border-[var(--app-border)] bg-[var(--workspace-surface-footer)] px-5 py-3"
-              >
-                <UCheckbox
-                  v-model="draftRememberSelection"
-                  icon="i-lucide-check"
-                  :label="t('EditModal.RememberSelection')"
-                />
-                <UButton
-                  :label="t('Common.Connect')"
-                  color="primary"
-                  :loading="connecting"
-                  class="min-w-28 justify-center"
-                  @click="submit"
-                />
-              </div>
+            <div
+              class="border-t border-[var(--app-border)] bg-[var(--workspace-surface-footer)] px-5 pt-3 pb-5"
+            >
+              <UButton
+                :label="t('Common.Connect')"
+                color="primary"
+                :loading="connecting"
+                block
+                @click="submit"
+              />
             </div>
           </div>
         </section>
@@ -551,32 +383,6 @@ onMounted(loadAsset);
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--app-surface-panel-strong) 82%, transparent) inset,
     var(--theme-shadow-soft);
-}
-
-.setup-advanced-trigger {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.625rem 0.75rem;
-  color: var(--app-fg);
-  font-size: 0.8125rem;
-  line-height: 1.125rem;
-}
-
-.setup-advanced-trigger:hover {
-  background: var(--app-hover-soft);
-}
-
-.setup-settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  color: var(--app-fg);
-  font-size: 0.8125rem;
-  line-height: 1.125rem;
 }
 
 .connection-activity-track {

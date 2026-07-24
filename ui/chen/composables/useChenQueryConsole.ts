@@ -6,6 +6,7 @@ import type {
 } from "~/chen/types";
 
 import { newChenWorkspaceId } from "~/chen/composables/useChenWorkspaceTabs";
+import { emptyChenDataViewEditState } from "~/chen/utils/dataViewEditing";
 
 const SQL_CHUNK_SIZE = 4096;
 
@@ -43,7 +44,8 @@ export function useChenQueryConsole(
         title: meta.title,
         meta,
         data: data ?? null,
-        state: {}
+        state: {},
+        editState: emptyChenDataViewEditState()
       };
       tab.resultTabs.push(resultTab);
     } else {

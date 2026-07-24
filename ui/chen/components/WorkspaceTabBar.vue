@@ -34,14 +34,14 @@ function displayWorkspaceTabTitle(tab: ChenTabDefinition) {
 </script>
 
 <template>
-  <div class="flex items-center border-b border-default px-2 py-1">
+  <div class="chen-workspace-tab-bar flex items-center px-2 py-1">
     <div class="min-w-0 flex-1 overflow-x-auto">
       <div class="flex w-max min-w-full items-center gap-1">
         <button
           v-for="item in props.tabs"
           :key="item.id"
-          class="flex h-6 shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] transition"
-          :class="props.activeTabId === item.id ? 'bg-accented text-highlighted' : 'text-muted hover:bg-accented/60'"
+          class="chen-workspace-tab flex h-6 shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] transition"
+          :class="props.activeTabId === item.id ? 'chen-workspace-tab-active text-highlighted' : 'text-muted hover:bg-accented/40'"
           :title="item.title"
           @click="emit('activate', item.id)"
         >
@@ -54,7 +54,7 @@ function displayWorkspaceTabTitle(tab: ChenTabDefinition) {
       </div>
     </div>
 
-    <div class="ml-2 flex shrink-0 items-center gap-1 border-l border-default pl-2">
+    <div class="ml-2 flex shrink-0 items-center gap-1 pl-2">
       <UDropdownMenu
         :items="createTabMenuItems"
         :content="{ align: 'end', side: 'bottom', sideOffset: 6 }"
@@ -72,3 +72,15 @@ function displayWorkspaceTabTitle(tab: ChenTabDefinition) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.chen-workspace-tab-bar {
+  background-color: color-mix(in srgb, var(--workspace-surface-main) 72%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.chen-workspace-tab-active {
+  background-color: color-mix(in srgb, var(--app-hover-strong) 72%, transparent);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--app-fg) 7%, transparent);
+}
+</style>

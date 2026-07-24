@@ -32,7 +32,7 @@ export default defineAppConfig({
     },
     button: {
       slots: {
-        base: "cursor-pointer"
+        base: "cursor-pointer rounded-[3px]"
       },
       variants: {
         ghost: {
@@ -55,13 +55,18 @@ export default defineAppConfig({
     input: {
       slots: {
         root: "w-full",
-        base: "bg-[var(--app-input-bg)] text-[var(--app-fg)] placeholder:text-[var(--app-muted)] ring-[var(--app-border)]"
+        base: "rounded-[3px] bg-[var(--app-input-bg)] text-[var(--app-fg)] placeholder:text-[var(--app-muted)] ring-[var(--app-border)]"
       }
     },
     textarea: {
       slots: {
         root: "w-full",
-        base: "resize-none bg-[var(--app-input-bg)] text-[var(--app-fg)] placeholder:text-[var(--app-muted)] ring-[var(--app-border)]"
+        base: "resize-none rounded-[3px] bg-[var(--app-input-bg)] text-[var(--app-fg)] placeholder:text-[var(--app-muted)] ring-[var(--app-border)]"
+      }
+    },
+    select: {
+      slots: {
+        base: "rounded-[3px]"
       }
     },
     accordion: {
@@ -104,6 +109,7 @@ export default defineAppConfig({
     },
     selectMenu: {
       slots: {
+        base: "rounded-[3px]",
         content:
           "bg-[var(--app-panel-bg)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
         input: "border-b border-[var(--app-border)]",

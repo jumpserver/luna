@@ -106,6 +106,7 @@ export interface ChenQueryResultTab {
   meta: ChenDataViewMeta
   data: ChenDataViewDataset | null
   state: ChenConsoleState
+  editState: ChenDataViewEditState
 }
 
 export interface ChenConsoleHistoryEntry {
@@ -156,6 +157,7 @@ export interface ChenDataViewConsoleTab extends ChenTabDefinition {
   meta: ChenDataViewMeta | null
   data: ChenDataViewDataset | null
   state: ChenConsoleState
+  editState: ChenDataViewEditState
   logs: string[]
   activePanel: "data" | "properties"
   activePropertyTab: ChenDataViewPropertyTab
@@ -175,6 +177,22 @@ export type ChenDataViewAction
 export type ChenDataViewActionData = number | ChenDataViewExportOptions;
 
 export type ChenDataViewActionTarget = ChenQueryResultTab | ChenDataViewConsoleTab;
+
+export interface ChenDataViewSaveResult {
+  success?: boolean
+  reason?: string
+  failedChangeIndex?: number | null
+  [key: string]: any
+}
+
+export interface ChenDataViewEditState {
+  insertedRows: Array<Record<string, any>>
+  updatedRows: Array<Record<string, any>>
+  deletedRows: Array<Record<string, any>>
+  previewResult: ChenDataViewSaveResult | null
+  saveResult: ChenDataViewSaveResult | null
+  pendingSavePayload: any | null
+}
 
 export type ChenWorkspaceTab = ChenQueryLikeWorkspaceTab | ChenDataViewConsoleTab;
 
