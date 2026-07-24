@@ -12,6 +12,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   action: [action: ChenDataViewAction, data?: number]
+  export: []
 }>();
 
 const limitOptions = [50, 100, 200, 500];
@@ -21,6 +22,10 @@ function changeLimit(value: string | number) {
   const limit = Number(value);
   if (!limitOptions.includes(limit)) return;
   emit("action", "change_limit", limit);
+}
+
+function requestExport() {
+  emit("export");
 }
 </script>
 
@@ -94,6 +99,16 @@ function changeLimit(value: string | number) {
       :loading="controls.loading"
       :disabled="controls.loading"
       @click="emit('action', 'refresh')"
+    />
+    <UButton
+      size="xs"
+      icon="i-lucide-download"
+      color="neutral"
+      variant="ghost"
+      aria-label="Export data"
+      title="Export data"
+      :disabled="controls.loading"
+      @click="requestExport"
     />
     <UButton
       v-if="pinnable"

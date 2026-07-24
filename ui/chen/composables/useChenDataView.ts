@@ -1,11 +1,10 @@
 import type {
   ChenConsoleState,
   ChenDataViewAction,
+  ChenDataViewActionData,
   ChenDataViewActionTarget,
   ChenDataViewConsoleTab,
-  ChenDataViewDataset,
   ChenPacket,
-  ChenQueryResultTab,
   ChenWorkspaceTab
 } from "~/chen/types";
 
@@ -40,7 +39,7 @@ export function useChenDataView(
     owner: ChenWorkspaceTab,
     target: ChenDataViewActionTarget,
     action: ChenDataViewAction,
-    data?: number
+    data?: ChenDataViewActionData
   ) {
     const dataView = "kind" in target && target.kind === "data-view"
       ? target.meta?.title
@@ -73,24 +72,7 @@ export function useChenDataView(
     }
   }
 
-  function downloadDataViewCsv(result: ChenQueryResultTab | ChenDataViewConsoleTab) {
-    const dataset: ChenDataViewDataset | null = "data" in result ? result.data : null;
-    if (!dataset?.fields?.length) return;
-    const header = dataset.fields.map((item) => item.name).join(",");
-    const rows = (dataset.data || []).map((row) => {
-      return dataset.fields.map((field) => JSON.stringify(row[field.name] ?? "")).join(",");
-    });
-    const blob = new Blob([[header, ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${result.title || "query-result"}.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  }
-
   return {
-    downloadDataViewCsv,
     handleDataViewConsolePacket,
     sendDataViewAction
   };

@@ -1,4 +1,4 @@
-import type { ChenActionItem, ChenAuthResponse, ChenProfile, ChenTreeNode } from "~/chen/types";
+import type { ChenActionItem, ChenAuthResponse, ChenProfile, ChenSqlHints, ChenTreeNode } from "~/chen/types";
 
 const buildHeaders = (token?: string, init?: HeadersInit) => ({
   ...getWebApiHeaders(),
@@ -48,6 +48,102 @@ export async function fetchChenProfile(chenToken: string) {
   });
 
   return readJson<ChenProfile>(response);
+}
+
+export async function uploadChenSqlFile(
+  chenToken: string,
+  file: File,
+  fetchImpl: typeof fetch = fetch
+) {
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetchImpl(chenPath("/api/console/upload"), {
+    method: "POST",
+    credentials: "include",
+    headers: buildHeaders(chenToken, getWebApiMutationHeaders()),
+    body
+  });
+  const result = await readJson<{ path?: string }>(response);
+  if (!result.path?.trim()) throw new Error("Chen upload returned no SQL file path");
+  return { path: result.path };
+}
+
+export async function fetchChenSqlHints(
+  chenToken: string,
+  nodeKey: string,
+  context: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<ChenSqlHints> {
+  const response = await fetchImpl(chenPath("/api/resources/hints"), {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      ...buildHeaders(chenToken, getWebApiMutationHeaders()),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ nodeKey, context })
+  });
+  const result = await readJson<unknown>(response);
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    throw new Error("Chen returned malformed SQL hints");
+  }
+
+  return Object.fromEntries(
+    Object.entries(result)
+      .filter((entry): entry is [string, string[]] => (
+        Array.isArray(entry[1]) && entry[1].every((column) => typeof column === "string")
+      ))
+      .map(([table, columns]) => [table, [...columns]])
+  );
+}
+
+export function sanitizeChenExportFileName(value: string, fallback = "chen-export") {
+  const withoutControls = Array.from(value)
+    .filter((character) => {
+      const code = character.charCodeAt(0);
+      return code > 31 && code !== 127;
+    })
+    .join("");
+  const fileName = withoutControls.split(/[\\/]/).at(-1)?.trim() || "";
+  return fileName && fileName !== "." && fileName !== ".." ? fileName : fallback;
+}
+
+function contentDispositionFileName(value: string | null) {
+  if (!value) return "";
+
+  const encoded = value.match(/filename\*\s*=\s*(?:UTF-8'')?([^;]+)/i)?.[1];
+  if (encoded) {
+    const candidate = encoded.trim().replace(/^"|"$/g, "");
+    try {
+      return decodeURIComponent(candidate);
+    } catch {
+      return candidate;
+    }
+  }
+
+  return value.match(/filename\s*=\s*(?:"([^"]+)"|([^;]+))/i)?.slice(1).find(Boolean)?.trim() || "";
+}
+
+export async function fetchChenExport(
+  chenToken: string,
+  fileKey: string,
+  fetchImpl: typeof fetch = fetch
+) {
+  const response = await fetchImpl(chenPath(`/api/console/export/${encodeURIComponent(fileKey)}`), {
+    credentials: "include",
+    headers: buildHeaders(chenToken)
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Chen export failed (${response.status})`);
+  }
+
+  const responseFileName = contentDispositionFileName(response.headers.get("Content-Disposition"));
+  return {
+    blob: await response.blob(),
+    fileName: sanitizeChenExportFileName(responseFileName || fileKey)
+  };
 }
 
 export async function fetchChenTreeChildren(chenToken: string, parent?: ChenTreeNode | null, force = false) {

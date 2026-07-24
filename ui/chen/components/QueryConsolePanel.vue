@@ -1,31 +1,37 @@
 <script setup lang="ts">
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
-import type { ChenDataViewAction, ChenQueryConsoleTab, ChenQueryResultTab } from "~/chen/types";
+import type { ChenDataViewAction, ChenDataViewActionData, ChenQueryConsoleTab, ChenQueryResultTab } from "~/chen/types";
 
 import QueryResultTabs from "~/chen/components/QueryResultTabs.vue";
 import ChenSqlEditor from "~/chen/components/SqlEditor.client.vue";
 import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
 import SqlSnippetSelectDialog from "~/chen/components/SqlSnippetSelectDialog.vue";
 import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
+import { formatChenSql } from "~/chen/utils/sqlFormat";
 
 const props = defineProps<{
   tab: ChenQueryConsoleTab
-  contextLabel: string
   dbType: string
+  canCopy: boolean
 }>();
 
 const emit = defineEmits<{
   run: [tab: ChenQueryConsoleTab, selectedSql: string]
   cancel: [tab: ChenQueryConsoleTab]
-  download: [result: ChenQueryResultTab]
-  dataViewAction: [tab: ChenQueryConsoleTab, result: ChenQueryResultTab, action: ChenDataViewAction, data?: number]
+  changeContext: [tab: ChenQueryConsoleTab, context: string]
+  uploadSql: [tab: ChenQueryConsoleTab, file: File]
+  dataViewAction: [tab: ChenQueryConsoleTab, result: ChenQueryResultTab, action: ChenDataViewAction, data?: ChenDataViewActionData]
   dismissMessage: [tab: ChenQueryConsoleTab]
   updateStatement: [tab: ChenQueryConsoleTab, value: string]
   activateResult: [tab: ChenQueryConsoleTab, id: string]
   closeResult: [tab: ChenQueryConsoleTab, title: string]
 }>();
 
-const sqlEditor = ref<{ selectedText: () => string } | null>(null);
+const sqlEditor = ref<{
+  replaceDocument: (value: string) => void
+  selectedText: () => string
+} | null>(null);
+const sqlUploadInput = ref<HTMLInputElement | null>(null);
 const hasSelection = ref(false);
 const messageOpen = ref(false);
 const saveSnippetDialogOpen = ref(false);
@@ -35,6 +41,13 @@ let messageCloseTimer: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
 const sqlSnippets = useChenSqlSnippets(() => props.dbType);
 const queryBusy = computed(() => Boolean(props.tab.state.loading || props.tab.state.inQuery));
+const contextBusy = computed(() => Boolean(queryBusy.value || props.tab.state.editorLoading));
+const contextItems = computed(() => (props.tab.state.contexts || []).map((context) => ({
+  label: context,
+  icon: context === props.tab.state.currentContext ? "i-lucide-check" : undefined,
+  disabled: contextBusy.value || context === props.tab.state.currentContext,
+  onSelect: () => emit("changeContext", props.tab, context)
+})));
 
 const messageColor = computed(() => {
   if (props.tab.message?.type === "error") return "error";
@@ -51,8 +64,50 @@ function runSelectedQuery() {
   emit("run", props.tab, sqlEditor.value?.selectedText() || "");
 }
 
+function formatStatement() {
+  if (contextBusy.value) return;
+  const original = props.tab.statement;
+  try {
+    const formatted = formatChenSql(original, props.dbType);
+    if (formatted === original) return;
+    sqlEditor.value?.replaceDocument(formatted);
+  } catch (cause) {
+    toast.add({
+      title: "SQL format failed",
+      description: requestErrorMessage(cause),
+      color: "error"
+    });
+  }
+}
+
 function requestErrorMessage(cause: unknown) {
   return cause instanceof Error ? cause.message : String(cause);
+}
+
+function handleSqlFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) return;
+
+  if (!file.name.toLowerCase().endsWith(".sql")) {
+    toast.add({
+      title: "SQL upload failed",
+      description: "Choose a .sql file.",
+      color: "error"
+    });
+    return;
+  }
+  if (file.size === 0) {
+    toast.add({
+      title: "SQL upload failed",
+      description: "SQL file is empty.",
+      color: "error"
+    });
+    return;
+  }
+
+  emit("uploadSql", props.tab, file);
 }
 
 async function openSnippetDialog() {
@@ -158,9 +213,15 @@ onBeforeUnmount(clearMessageTimer);
           :disabled="!tab.state.canCancel"
           @click="emit('cancel', tab)"
         />
-        <UBadge color="neutral" variant="subtle">
-          {{ tab.state.currentContext || contextLabel || 'Context' }}
-        </UBadge>
+        <UButton
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :disabled="contextBusy"
+          @click="formatStatement"
+        >
+          Format
+        </UButton>
         <UButton
           icon="i-lucide-folder-open"
           size="sm"
@@ -181,14 +242,48 @@ onBeforeUnmount(clearMessageTimer);
         >
           Save
         </UButton>
+        <input
+          ref="sqlUploadInput"
+          type="file"
+          accept=".sql"
+          class="hidden"
+          @change="handleSqlFileChange"
+        >
+        <UButton
+          icon="i-lucide-upload"
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :loading="tab.uploadingSql"
+          :disabled="queryBusy || tab.uploadingSql"
+          @click="sqlUploadInput?.click()"
+        >
+          Upload SQL
+        </UButton>
+        <UDropdownMenu :items="contextItems">
+          <UButton
+            class="ml-auto"
+            icon="i-lucide-database"
+            trailing-icon="i-lucide-chevron-down"
+            size="sm"
+            color="neutral"
+            variant="soft"
+            :disabled="contextBusy || contextItems.length === 0"
+          >
+            {{ tab.state.currentContext || "Context" }}
+          </UButton>
+        </UDropdownMenu>
       </div>
       <div class="relative flex min-h-0 flex-1">
         <ChenSqlEditor
           ref="sqlEditor"
           v-model="statementValue"
           class="min-h-0 flex-1"
-          :read-only="Boolean(tab.state.loading)"
+          :db-type="dbType"
+          :hints="tab.sqlHints"
+          :read-only="Boolean(tab.state.loading || tab.state.editorLoading)"
           @selection-change="hasSelection = $event"
+          @format="formatStatement"
           @open-snippets="openSnippetDialog"
           @run="runSelectedQuery"
           @save-snippet="openSaveSnippetDialog"
@@ -220,12 +315,13 @@ onBeforeUnmount(clearMessageTimer);
         :active-result-tab-id="tab.activeResultTabId"
         closable
         data-view-actions
+        :db-type="dbType"
+        :can-copy="canCopy"
         :logs="tab.logs"
         show-logs
         empty-message="Run a query to open results here."
         @update:active-result-tab-id="emit('activateResult', tab, $event)"
         @close="emit('closeResult', tab, $event)"
-        @download="emit('download', $event)"
         @data-view-action="(result, action, data) => emit('dataViewAction', tab, result, action, data)"
       />
     </div>

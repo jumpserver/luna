@@ -1,22 +1,36 @@
 <script setup lang="ts">
-import type { ChenDataViewAction, ChenDataViewConsoleTab, ChenDataViewPropertyTab } from "~/chen/types";
+import type {
+  ChenDataViewAction,
+  ChenDataViewActionData,
+  ChenDataViewConsoleTab,
+  ChenDataViewExportOptions,
+  ChenDataViewPropertyTab
+} from "~/chen/types";
 
 import ChenDataGrid from "~/chen/components/DataGrid.client.vue";
+import DataViewExportDialog from "~/chen/components/DataViewExportDialog.vue";
 import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
 import { useChenDataViewDerivedMeta } from "~/chen/composables/useChenDataViewDerivedMeta";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   tab: ChenDataViewConsoleTab
   dbType?: string
   protocol?: string
-}>();
+  canCopy?: boolean
+}>(), {
+  dbType: "",
+  protocol: "",
+  canCopy: false
+});
 
 const emit = defineEmits<{
-  dataViewAction: [tab: ChenDataViewConsoleTab, action: ChenDataViewAction, data?: number]
-  download: [tab: ChenDataViewConsoleTab]
+  dataViewAction: [tab: ChenDataViewConsoleTab, action: ChenDataViewAction, data?: ChenDataViewActionData]
   updatePanel: [tab: ChenDataViewConsoleTab, panel: "data" | "properties"]
   updatePropertyTab: [tab: ChenDataViewConsoleTab, propertyTab: ChenDataViewPropertyTab]
 }>();
+
+const exportDialogOpen = ref(false);
+const exportTarget = ref<ChenDataViewConsoleTab | null>(null);
 
 const dbTypeRef = computed(() => props.dbType);
 const protocolRef = computed(() => props.protocol);
@@ -29,6 +43,17 @@ const {
   dataViewIndexes,
   dataViewPropertyTabs
 } = useChenDataViewDerivedMeta(dbTypeRef, protocolRef);
+
+function openExportDialog() {
+  exportTarget.value = props.tab;
+  exportDialogOpen.value = true;
+}
+
+function submitExport(options: ChenDataViewExportOptions) {
+  if (!exportTarget.value) return;
+  emit("dataViewAction", exportTarget.value, "export", options);
+  exportTarget.value = null;
+}
 </script>
 
 <template>
@@ -68,13 +93,7 @@ const {
           v-if="tab.activePanel === 'data'"
           :state="tab.state"
           @action="(action, data) => emit('dataViewAction', tab, action, data)"
-        />
-        <UButton
-          size="xs"
-          icon="i-lucide-download"
-          color="neutral"
-          variant="soft"
-          @click="emit('download', tab)"
+          @export="openExportDialog"
         />
       </div>
     </div>
@@ -83,6 +102,9 @@ const {
       <ChenDataGrid
         :key="`${tab.id}:${tab.data?.fields?.map(field => field.name).join(',') || ''}:${tab.data?.data?.length || 0}`"
         :dataset="tab.data"
+        :meta="tab.meta"
+        :db-type="dbType"
+        :can-copy="canCopy"
       />
     </div>
 
@@ -253,5 +275,11 @@ const {
         <pre class="rounded-lg border border-default bg-[var(--workspace-surface-sub-panel)] p-3 font-ui-mono text-xs text-[var(--app-fg)]">{{ dataViewDDL(tab) }}</pre>
       </div>
     </div>
+
+    <DataViewExportDialog
+      v-if="exportDialogOpen"
+      v-model:open="exportDialogOpen"
+      @confirm="submitExport"
+    />
   </div>
 </template>
