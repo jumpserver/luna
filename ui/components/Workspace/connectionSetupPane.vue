@@ -44,7 +44,10 @@ const draftRememberSelection = ref<boolean>(false);
 const draftConnectMethod = ref<string>("");
 const draftConnectOptions = ref<Record<string, any>>({});
 
-const title = computed(() => props.tab.assetName || currentAsset.value?.name || "");
+const assetName = computed(() => props.tab.assetName || currentAsset.value?.name || "");
+const assetAddress = computed(
+  () => currentAsset.value?.address || props.tab.address || assetName.value || t("ContextMenu.Connect")
+);
 
 const getVisibleProtocols = (protocols: PermedProtocol[]) => {
   if (isTauriRuntime()) return protocols;
@@ -300,8 +303,17 @@ onMounted(loadAsset);
             class="flex h-11 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--workspace-surface-header)] px-4"
           >
             <div class="flex min-w-0 items-center gap-2">
-              <span class="truncate text-sm font-semibold text-[var(--app-fg)]">{{ t("ContextMenu.Connect") }}</span>
-              <span class="truncate text-xs text-[var(--app-muted)]">{{ title || props.tab.address }}</span>
+              <span class="truncate text-sm font-semibold text-[var(--app-fg)]">
+                {{ t("ContextMenu.Connect") }} - <span class="font-ui-mono">{{ assetAddress }}</span>
+              </span>
+              <UBadge
+                v-if="assetName && assetName !== assetAddress"
+                :label="assetName"
+                color="neutral"
+                variant="soft"
+                size="sm"
+                class="max-w-48 shrink truncate"
+              />
             </div>
             <UButton
               color="neutral"
@@ -360,16 +372,8 @@ onMounted(loadAsset);
               </div>
             </div>
 
-            <div
-              class="border-t border-[var(--app-border)] bg-[var(--workspace-surface-footer)] px-5 pt-3 pb-5"
-            >
-              <UButton
-                :label="t('Common.Connect')"
-                color="primary"
-                :loading="connecting"
-                block
-                @click="submit"
-              />
+            <div class="border-t border-[var(--app-border)] bg-[var(--workspace-surface-footer)] px-5 pt-3 pb-5">
+              <UButton :label="t('Common.Connect')" color="primary" :loading="connecting" block @click="submit" />
             </div>
           </div>
         </section>

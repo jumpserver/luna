@@ -5,28 +5,28 @@ import { useConnectMethods } from "~/composables/useConnectMethods";
 import { sortProtocolNames } from "~/utils";
 
 const props = defineProps<{
-  account: string
-  protocol: string
-  accounts: PermedAccount[]
-  protocols: PermedProtocol[]
-  manualUsername?: string
-  manualPassword?: string
-  dynamicPassword?: string
-  rememberSecret?: boolean
-  connectMethod?: string
-  connectOptions?: Record<string, any>
-  assetType?: AssetPageType
+  account: string;
+  protocol: string;
+  accounts: PermedAccount[];
+  protocols: PermedProtocol[];
+  manualUsername?: string;
+  manualPassword?: string;
+  dynamicPassword?: string;
+  rememberSecret?: boolean;
+  connectMethod?: string;
+  connectOptions?: Record<string, any>;
+  assetType?: AssetPageType;
 }>();
 
 const emits = defineEmits<{
-  (e: "update:protocol", v: string): void
-  (e: "update:account", v: string): void
-  (e: "update:manualUsername", v: string): void
-  (e: "update:manualPassword", v: string): void
-  (e: "update:dynamicPassword", v: string): void
-  (e: "update:rememberSecret", v: boolean): void
-  (e: "update:connectMethod", v: string): void
-  (e: "update:connectOptions", v: Record<string, any>): void
+  (e: "update:protocol", v: string): void;
+  (e: "update:account", v: string): void;
+  (e: "update:manualUsername", v: string): void;
+  (e: "update:manualPassword", v: string): void;
+  (e: "update:dynamicPassword", v: string): void;
+  (e: "update:rememberSecret", v: boolean): void;
+  (e: "update:connectMethod", v: string): void;
+  (e: "update:connectOptions", v: Record<string, any>): void;
 }>();
 
 const { t } = useI18n();
@@ -133,7 +133,7 @@ const protocolTabItems = computed(() =>
   ).map((name) => ({ label: name.toUpperCase(), value: name }))
 );
 const connectMethodTypeItems = computed(() => {
-  const metaMap: Record<string, { label: string, icon: string }> = {
+  const metaMap: Record<string, { label: string; icon: string }> = {
     builtin: { label: "Web", icon: "i-lucide-globe" },
     native: { label: "客户端", icon: "i-lucide-monitor" },
     remote_app: { label: "远程应用", icon: "i-lucide-app-window" }
@@ -169,10 +169,10 @@ const showDisableAutoHashOption = computed(() => ["mysql", "mariadb"].includes((
 const showResolutionOption = computed(() => (props.protocol || "").toLowerCase() === "rdp");
 const showAdvancedOptions = computed(
   () =>
-    showCharsetOption.value
-    || showBackspaceOption.value
-    || showDisableAutoHashOption.value
-    || showResolutionOption.value
+    showCharsetOption.value ||
+    showBackspaceOption.value ||
+    showDisableAutoHashOption.value ||
+    showResolutionOption.value
 );
 
 const charsetItems = computed(() => [
@@ -252,9 +252,7 @@ function categoryOfConnectMethod(method: any) {
 function selectConnectMethodType(type: string) {
   selectedConnectMethodType.value = type;
 
-  const firstMethod = availableConnectMethods.value.find(
-    (method) => categoryOfConnectMethod(method) === type
-  );
+  const firstMethod = availableConnectMethods.value.find((method) => categoryOfConnectMethod(method) === type);
   localConnectMethod.value = firstMethod?.value || "";
 }
 
@@ -428,34 +426,36 @@ function handleSpecialAccount(v: string) {
     </template>
 
     <UFormField :label="t('EditModal.ConnectMethod')" size="md">
-      <UTabs
-        v-if="connectMethodTypeItems.length > 1"
-        :model-value="selectedConnectMethodType"
-        :items="connectMethodTypeItems"
-        value-key="value"
-        label-key="label"
-        color="neutral"
-        variant="link"
-        :content="false"
-        :ui="{
-          root: 'p-0',
-          list: 'p-0 justify-start'
-        }"
-        class="w-full mb-2 connect-method-type-tabs"
-        @update:model-value="selectConnectMethodType"
-      />
-      <div class="rounded-[3px] border border-gray-200 p-2 dark:border-white/10">
-        <URadioGroup
-          v-model="localConnectMethod"
-          :items="connectMethodTabItems"
+      <div class="rounded-[3px] border border-[var(--app-border)]">
+        <UTabs
+          v-if="connectMethodTypeItems.length > 1"
+          :model-value="selectedConnectMethodType"
+          :items="connectMethodTypeItems"
           value-key="value"
           label-key="label"
-          orientation="horizontal"
+          color="neutral"
+          variant="link"
+          :content="false"
           :ui="{
-            fieldset: 'flex flex-wrap gap-2',
-            item: 'rounded-[3px] px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-white/5'
+            root: 'p-0',
+            list: 'p-0 justify-start'
           }"
+          class="w-full mb-2 connect-method-type-tabs"
+          @update:model-value="selectConnectMethodType"
         />
+        <div class="p-2 pt-1">
+          <URadioGroup
+            v-model="localConnectMethod"
+            :items="connectMethodTabItems"
+            value-key="value"
+            label-key="label"
+            orientation="horizontal"
+            :ui="{
+              fieldset: 'flex flex-wrap gap-2',
+              item: 'rounded-[3px] px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-white/5'
+            }"
+          />
+        </div>
       </div>
     </UFormField>
 
@@ -527,6 +527,7 @@ function handleSpecialAccount(v: string) {
   padding: 0.25rem 1.25rem 0.375rem;
   font-size: 0.875rem;
   font-weight: 500;
+  letter-spacing: 0.04em;
   line-height: 1.25rem;
   color: var(--app-text-muted);
   transition: color 0.15s ease;
