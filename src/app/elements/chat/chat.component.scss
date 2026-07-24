@@ -1,113 +1,147 @@
-nz-float-button-group,
-nz-float-button {
-  position: absolute;
-  right: 1px;
-  top: 0;
+:host {
+  pointer-events: none;
 }
 
-.chat-container {
+.chat-overlay-root {
   position: fixed;
-  bottom: 200px;
-  right: 9px;
+  inset: 0;
   z-index: 99999;
-  cursor: move;
-  user-select: none;
-  overflow: visible;
-  padding: 10px 0;
+  pointer-events: none;
+}
+
+.chat-launcher {
+  position: absolute;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
+  gap: 2px;
+  width: 40px;
+  padding: 4px;
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  pointer-events: auto;
+  user-select: none;
+  z-index: 1;
+}
 
-  .content {
-    height: 100%;
-    iframe {
-      border: none;
-    }
+.chat-drag-handle,
+.chat-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 12.5px;
+  color: rgba(255, 255, 255, 0.5);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color 0.16s ease,
+    background 0.16s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.chat-drag-handle {
+  cursor: grab;
+  touch-action: none;
+
+  &.dragging {
+    cursor: grabbing;
+  }
+}
+
+.chat-action-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 32px;
+}
+
+.chat-action-button {
+  .anticon {
+    font-size: 16px;
   }
 
-  .drawer-panel {
-    background-color: transparent;
-    position: fixed;
-    top: 0;
-    right: 440px;
-    width: 440px;
-    min-width: 260px;
-    height: 100vh;
-    user-select: none;
-    border-radius: 10px 0 0 10px;
-    transition: transform 0.25s cubic-bezier(0.7, 0.3, 0.1, 1);
-    box-shadow: 0 0 8px 4px #00000014;
-    transform: translate(100%);
-    z-index: 1000;
-    opacity: 0.95;
+  .chat-img {
+    width: 16px;
+    height: 16px;
+    opacity: 0.5;
+    transition: opacity 0.16s ease;
   }
 
-  .show {
-    transition: all 0.3s cubic-bezier(0.7, 0.3, 0.1, 1);
-  }
-
-  .show .modal {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 100;
+  &:hover .chat-img,
+  &:focus-visible .chat-img {
     opacity: 1;
   }
+}
 
-  .show .drawer-panel {
-    transform: translate(0);
+.chat-panel {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  width: min(440px, calc(100vw - 24px));
+  min-width: 260px;
+  height: min(400px, calc(100dvh - 24px));
+  overflow: hidden;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 0 8px 4px #00000014;
+  pointer-events: auto;
+  transition:
+    width 0.25s cubic-bezier(0.7, 0.3, 0.1, 1),
+    height 0.25s cubic-bezier(0.7, 0.3, 0.1, 1),
+    border-radius 0.25s cubic-bezier(0.7, 0.3, 0.1, 1);
+  z-index: 2;
+
+  &.chat-panel-expanded {
+    top: 0;
+    right: 0;
+    bottom: auto;
+    width: min(440px, 100vw);
+    height: 100dvh;
+    border-radius: 10px 0 0 10px;
   }
 
-  ::ng-deep {
-    .ant-float-btn-group {
-      position: absolute;
-      padding: 10px 0;
-      opacity: 1;
-    }
+  .content {
+    width: 100%;
+    height: 100%;
 
-    .ant-float-btn-group-circle .ant-float-btn-circle:not(:last-child) {
-      margin-bottom: 5px;
-    }
-
-    .ant-float-btn-default,
-    .ant-float-btn-default .ant-float-btn-body {
-      position: relative;
-      background: rgba(30, 30, 30, 0.85);
-      border-radius: 999px;
-      box-shadow: 0 6px 16px rgba(0,0,0,.30);
-      transition: background .2s ease, box-shadow .2s ease;
+    iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
       border: none;
     }
-    .ant-float-btn-default:hover,
-    .ant-float-btn-default:hover .ant-float-btn-body {
-      background: rgba(20, 20, 20, 0.92);
-      box-shadow: 0 8px 22px rgba(0,0,0,.36);
-    }
+  }
+}
 
-    .ant-float-btn-default .ant-float-btn-body::before,
-    .ant-float-btn-default::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: 999px;
-      pointer-events: none;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.65),
-        0 0 0 1px rgba(0,0,0,.75);
-    }
+::ng-deep {
+  .chat-drag-handle .anticon {
+    font-size: 16px;
+  }
+}
 
-    .ant-btn .anticon,
-    .ant-float-btn .anticon {
-      color: #fff;
-      filter: drop-shadow(0 1px 1px rgba(0,0,0,.75));
-    }
+@media (max-width: 480px) {
+  .chat-panel {
+    right: 6px;
+    bottom: 6px;
+    width: calc(100vw - 12px);
+    height: min(400px, calc(100dvh - 12px));
 
-    img.chat-img {
-      width: 18px;
-      height: 18px;
-      opacity: .95;
-      filter: drop-shadow(0 1px 1px rgba(0,0,0,.75));
+    &.chat-panel-expanded {
+      right: 0;
+      width: 100vw;
+      border-radius: 0;
     }
   }
 }
