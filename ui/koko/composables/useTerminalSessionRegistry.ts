@@ -7,6 +7,7 @@ interface TerminalSession {
 }
 
 const sessions = new Map<string, TerminalSession>();
+const localShellSessions = new Map<string, (data: string) => void>();
 
 export function registerKokoTerminalSession(tabId: string, session: TerminalSession) {
   if (!tabId) return;
@@ -18,11 +19,27 @@ export function unregisterKokoTerminalSession(tabId: string) {
   sessions.delete(tabId);
 }
 
+export function registerLocalShellTerminalSession(tabId: string, send: (data: string) => void) {
+  if (!tabId) return;
+  localShellSessions.set(tabId, send);
+}
+
+export function unregisterLocalShellTerminalSession(tabId: string) {
+  if (!tabId) return;
+  localShellSessions.delete(tabId);
+}
+
 export function sendKokoTerminalData(tabId: string, data: string) {
   const session = sessions.get(tabId);
-  if (!session || session.socket.readyState !== WebSocket.OPEN) return false;
+  if (session?.socket.readyState === WebSocket.OPEN) {
+    session.socket.send(formatMessage(session.terminalId, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, data));
+    return true;
+  }
 
-  session.socket.send(formatMessage(session.terminalId, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, data));
+  const sendToLocalShell = localShellSessions.get(tabId);
+  if (!sendToLocalShell) return false;
+
+  sendToLocalShell(data);
   return true;
 }
 

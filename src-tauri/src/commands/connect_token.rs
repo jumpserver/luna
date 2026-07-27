@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use serde_json::json;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -23,6 +24,7 @@ pub async fn get_connect_token(
     session: State<'_, ApiSessionStore>,
     body: TokenRequestBody,
     rdp_params: Option<HashMap<String, String>>,
+    client_name: Option<String>,
 ) -> Result<(), String> {
     let context = match fresh_api_context(&app, &session).await {
         Ok(context) => context,
@@ -73,7 +75,7 @@ pub async fn get_connect_token(
         .await;
     log::info!("get_connect_token success: {:?}", url_data);
 
-    let client_url = match parse_client_url(&url_data.data) {
+    let mut client_url = match parse_client_url(&url_data.data) {
         Ok(client_url) => client_url,
         Err(error) => {
             let _ = app.emit(
@@ -84,11 +86,38 @@ pub async fn get_connect_token(
         }
     };
 
+    if let Some(client_name) = client_name.filter(|name| !name.trim().is_empty()) {
+        client_url = with_client_name(&client_url, &client_name).map_err(|error| {
+            let _ = app.emit("pull-up-failure", json!({ "error": error.to_string() }));
+            error
+        })?;
+    }
+
     if let Err(error) = pull_up(app.clone(), client_url) {
         let _ = app.emit("pull-up-failure", json!({ "error": error }));
     }
 
     Ok(())
+}
+
+fn with_client_name(client_url: &str, client_name: &str) -> Result<String, String> {
+    let encoded = client_url
+        .strip_prefix("jms://")
+        .ok_or_else(|| "invalid local client url scheme".to_string())?;
+    let decoded = BASE64_STANDARD
+        .decode(encoded)
+        .map_err(|error| format!("decode local client url failed: {error}"))?;
+    let mut payload: Value = serde_json::from_slice(&decoded)
+        .map_err(|error| format!("parse local client url failed: {error}"))?;
+    let object = payload
+        .as_object_mut()
+        .ok_or_else(|| "local client url payload must be an object".to_string())?;
+    object.insert("client".to_string(), Value::String(client_name.to_string()));
+    let encoded = BASE64_STANDARD.encode(
+        serde_json::to_vec(&payload)
+            .map_err(|error| format!("serialize local client url failed: {error}"))?,
+    );
+    Ok(format!("jms://{encoded}"))
 }
 
 #[tauri::command]

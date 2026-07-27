@@ -108,7 +108,7 @@ func awakenRDPCommand(filePath string, cfg *config.AppConfig) (*exec.Cmd, error)
 	var appItem *config.AppItem
 	appLst := cfg.Linux.RemoteDesktop
 	for _, app := range appLst {
-		if app.IsActive() && app.IsMatchProtocol("rdp") {
+		if app.IsActive() && app.IsSelectedForProtocol("rdp", r.Client) {
 			appItem = &app
 			break
 		}
@@ -127,7 +127,7 @@ func awakenVNCCommand(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	var appItem *config.AppItem
 	appLst := cfg.Linux.RemoteDesktop
 	for _, app := range appLst {
-		if app.IsActive() && app.IsMatchProtocol("vnc") {
+		if app.IsActive() && app.IsSelectedForProtocol("vnc", r.Client) {
 			appItem = &app
 			break
 		}
@@ -170,7 +170,7 @@ func awakenSSHCommand(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	}
 
 	for _, app := range appLst {
-		if app.IsActive() && app.IsMatchProtocol(r.Protocol) {
+		if app.IsActive() && app.IsSelectedForProtocol(r.Protocol, r.Client) {
 			appItem = &app
 			break
 		}
@@ -251,7 +251,7 @@ func awakenDBCommand(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	var appItem *config.AppItem
 	appLst := cfg.Linux.Databases
 	for _, app := range appLst {
-		if app.IsActive() && app.IsMatchProtocol(r.Protocol) {
+		if app.IsActive() && app.IsSelectedForProtocol(r.Protocol, r.Client) {
 			appItem = &app
 			break
 		}

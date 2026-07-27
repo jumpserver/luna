@@ -13,6 +13,9 @@ const connectedTabs = computed(() =>
     (tab) => !["sftp", "k8s", "kubernetes"].includes(tab.protocol) && tab.status === "connected"
   )
 );
+const canUseBatchCommand = computed(
+  () => loggedIn.value || connectedTabs.value.some((tab) => tab.protocol === "local-shell")
+);
 
 const selectedTabIds = ref<string[]>([]);
 
@@ -69,7 +72,7 @@ const sendCommand = () => {
 
 <template>
   <div class="flex h-full min-h-0">
-    <div v-if="!loggedIn" class="grid min-h-0 flex-1 place-items-center px-4 text-xs text-gray-500 dark:text-gray-400">
+    <div v-if="!canUseBatchCommand" class="grid min-h-0 flex-1 place-items-center px-4 text-xs text-gray-500 dark:text-gray-400">
       {{ t("Common.LoginFirst") }}
     </div>
 

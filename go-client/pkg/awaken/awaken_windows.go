@@ -76,7 +76,7 @@ func handleRDP(r *Rouse, filePath string, cfg *config.AppConfig) (*exec.Cmd, err
 	var appItem *config.AppItem
 	appLst := cfg.Windows.RemoteDesktop
 	for _, app := range appLst {
-		if app.IsActive() && app.IsMatchProtocol("rdp") {
+		if app.IsActive() && app.IsSelectedForProtocol("rdp", r.Client) {
 			appItem = &app
 			break
 		}
@@ -99,7 +99,7 @@ func handleVNC(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	var appItem *config.AppItem
 	appLst := cfg.Windows.RemoteDesktop
 	for _, app := range appLst {
-		if app.IsActive() && app.IsMatchProtocol("vnc") {
+		if app.IsActive() && app.IsSelectedForProtocol("vnc", r.Client) {
 			appItem = &app
 			break
 		}
@@ -246,7 +246,7 @@ func handleSSH(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	}
 
 	for _, app := range appLst {
-		if app.IsActive() && app.IsMatchProtocol(r.Protocol) {
+		if app.IsActive() && app.IsSelectedForProtocol(r.Protocol, r.Client) {
 			appItem = &app
 			break
 		}
@@ -294,7 +294,7 @@ func handleDB(r *Rouse, cfg *config.AppConfig) (*exec.Cmd, error) {
 	var appItem *config.AppItem
 	appLst := cfg.Windows.Databases
 	for _, app := range appLst {
-		if app.IsActive() && app.IsMatchProtocol(r.Protocol) {
+		if app.IsActive() && app.IsSelectedForProtocol(r.Protocol, r.Client) {
 			appItem = &app
 			break
 		}

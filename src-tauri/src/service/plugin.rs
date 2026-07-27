@@ -369,6 +369,33 @@ impl PluginService {
         matched
     }
 
+    fn build_enabled_protocols(
+        plugin_id: &str,
+        category: &str,
+        protocols: &[Value],
+        selections: &Map<String, Value>,
+        enabled_selections: &Map<String, Value>,
+    ) -> Vec<Value> {
+        let mut enabled = Vec::new();
+        for protocol in protocols {
+            let Some(proto) = protocol.as_str() else {
+                continue;
+            };
+            let key = format!("{category}:{proto}");
+            let explicitly_enabled = enabled_selections
+                .get(&key)
+                .and_then(|value| value.as_array())
+                .map(|items| items.iter().any(|item| item.as_str() == Some(plugin_id)));
+            let is_enabled = explicitly_enabled.unwrap_or_else(|| {
+                selections.get(&key).and_then(|value| value.as_str()) == Some(plugin_id)
+            });
+            if is_enabled {
+                enabled.push(Value::String(proto.to_string()));
+            }
+        }
+        enabled
+    }
+
     fn plugin_to_app_item(
         plugin_id: &str,
         plugin_dir: &Path,
@@ -409,7 +436,19 @@ impl PluginService {
         let path_exists = Self::user_path_exists(&platform_connect, &path);
 
         let match_first = Self::build_match_first(plugin_id, category, &protocols, selections);
-        if !match_first.is_empty() {
+        let enabled_selections = user_state
+            .get("enabled_selections")
+            .and_then(|value| value.as_object())
+            .cloned()
+            .unwrap_or_default();
+        let enabled_protocols = Self::build_enabled_protocols(
+            plugin_id,
+            category,
+            &protocols,
+            selections,
+            &enabled_selections,
+        );
+        if !enabled_protocols.is_empty() {
             is_set = true;
         }
 
@@ -428,6 +467,7 @@ impl PluginService {
             "path": path,
             "arg_format": arg_format,
             "match_first": match_first,
+            "enabled_protocols": enabled_protocols,
             "is_internal": is_internal,
             "is_default": is_default,
             "is_set": is_set,
@@ -611,18 +651,57 @@ impl PluginService {
 
         let state_obj = state.as_object_mut().ok_or("invalid plugins-state")?;
         let selection_key = format!("{category}:{protocol}");
+        let previous_preferred = state_obj
+            .get("selections")
+            .and_then(|value| value.get(&selection_key))
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .to_string();
+        let remaining_enabled: Vec<String>;
+        {
+            let enabled_selections = state_obj
+                .entry("enabled_selections")
+                .or_insert(json!({}))
+                .as_object_mut()
+                .unwrap();
+            let enabled_plugins = enabled_selections
+                .entry(selection_key.clone())
+                .or_insert_with(|| {
+                    if previous_preferred.is_empty() {
+                        json!([])
+                    } else {
+                        json!([previous_preferred])
+                    }
+                })
+                .as_array_mut()
+                .unwrap();
+            enabled_plugins.retain(|value| value.as_str() != Some(plugin_id.as_str()));
+            if enabled {
+                enabled_plugins.push(Value::String(plugin_id.clone()));
+            }
+            remaining_enabled = enabled_plugins
+                .iter()
+                .filter_map(|value| value.as_str().map(str::to_string))
+                .collect();
+        }
         {
             let selections = state_obj
                 .entry("selections")
                 .or_insert(json!({}))
                 .as_object_mut()
                 .unwrap();
+            let preferred = selections
+                .get(&selection_key)
+                .and_then(|value| value.as_str())
+                .unwrap_or("");
+
             if enabled {
                 selections.insert(selection_key, Value::String(plugin_id.clone()));
-            } else {
-                // Keep the key with an empty value so defaults are not re-applied
-                // (allows disabling even when a protocol has only one app).
-                selections.insert(selection_key, Value::String(String::new()));
+            } else if !enabled && preferred == plugin_id {
+                selections.insert(
+                    selection_key,
+                    Value::String(remaining_enabled.first().cloned().unwrap_or_default()),
+                );
             }
         }
         if enabled {

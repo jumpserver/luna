@@ -304,7 +304,8 @@ onMounted(loadAsset);
           >
             <div class="flex min-w-0 items-center gap-2">
               <span class="truncate text-sm font-semibold text-[var(--app-fg)]">
-                {{ t("ContextMenu.Connect") }} - <span class="font-ui-mono">{{ assetAddress }}</span>
+                {{ t("ContextMenu.Connect") }} -
+                <span class="font-ui-mono">{{ assetAddress }}</span>
               </span>
               <UBadge
                 v-if="assetName && assetName !== assetAddress"
@@ -326,7 +327,7 @@ onMounted(loadAsset);
           </div>
 
           <div class="flex min-h-[300px] flex-col bg-[var(--app-surface-panel-strong)]">
-            <div class="min-h-0 flex-1 overflow-auto px-5 py-4">
+            <div class="min-h-0 flex-1 overflow-auto px-6 py-4">
               <ConnectForm
                 v-model:protocol="draftProtocol"
                 v-model:account="draftAccount"

@@ -32,7 +32,7 @@
     "General": "通用",
     "Advanced": "高级选项",
     "ChooseColor": "选择颜色",
-    "OpenWith": "应用配置",
+    "OpenWith": "应用设置",
     "EmptyDescription": "当前类型下暂无可用的授权资产",
     "SelectFromMenu": "请从左侧选择一个配置项"
   },
@@ -396,6 +396,8 @@
     "Enable": "启用",
     "Disable": "禁用",
     "EnableFailed": "无法启用",
+    "NoClientConfigured": "当前协议尚未配置客户端",
+    "ConfigureClient": "前往应用设置",
     "ExecutableNotFound": "未找到程序，请下载并正确安装",
     "BuiltInTerminal": "内置 Terminal",
     "AlwaysEnabled": "始终启用",

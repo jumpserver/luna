@@ -27,9 +27,10 @@ type indexEntry struct {
 }
 
 type pluginState struct {
-	Version    int                       `json:"version"`
-	Selections map[string]string         `json:"selections"`
-	Plugins    map[string]pluginStateItem `json:"plugins"`
+	Version           int                        `json:"version"`
+	Selections        map[string]string          `json:"selections"`
+	EnabledSelections map[string][]string        `json:"enabled_selections"`
+	Plugins           map[string]pluginStateItem `json:"plugins"`
 }
 
 type pluginStateItem struct {
@@ -289,6 +290,32 @@ func buildMatchFirst(pluginID, category string, protocols []string, selections m
 	return matched
 }
 
+func buildEnabledProtocols(
+	pluginID, category string,
+	protocols []string,
+	selections map[string]string,
+	enabledSelections map[string][]string,
+) []string {
+	enabled := []string{}
+	for _, proto := range protocols {
+		key := category + ":" + proto
+		pluginIDs, explicitlyConfigured := enabledSelections[key]
+		if !explicitlyConfigured {
+			if selections[key] == pluginID {
+				enabled = append(enabled, proto)
+			}
+			continue
+		}
+		for _, enabledPluginID := range pluginIDs {
+			if enabledPluginID == pluginID {
+				enabled = append(enabled, proto)
+				break
+			}
+		}
+	}
+	return enabled
+}
+
 func LoadAppConfig(configDir string) (*config.AppConfig, bool) {
 	configPath := filepath.Join(configDir, "config.json")
 	raw, err := os.ReadFile(configPath)
@@ -363,23 +390,31 @@ func LoadAppConfig(configDir string) (*config.AppConfig, bool) {
 
 		argFormat, autoit := launchToArgFormat(platformConnect.Launch)
 		matchFirst := buildMatchFirst(entry.ID, manifest.Category, manifest.Protocols, state.Selections)
+		enabledProtocols := buildEnabledProtocols(
+			entry.ID,
+			manifest.Category,
+			manifest.Protocols,
+			state.Selections,
+			state.EnabledSelections,
+		)
 		path, isSet, isInternal := resolvePath(entry.ID, platformConnect, state)
-		if len(matchFirst) > 0 {
+		if len(enabledProtocols) > 0 {
 			isSet = true
 		}
 
 		item := config.AppItem{
-			Name:        manifest.Name,
-			DisplayName: displayName,
-			Protocol:    manifest.Protocols,
-			Type:        manifest.Category,
-			MatchFirst:  matchFirst,
-			Path:        path,
-			ArgFormat:   argFormat,
-			AutoIt:      autoit,
-			IsInternal:  isInternal,
-			IsDefault:   platformConnect.IsDefault,
-			IsSet:       isSet,
+			Name:             manifest.Name,
+			DisplayName:      displayName,
+			Protocol:         manifest.Protocols,
+			Type:             manifest.Category,
+			MatchFirst:       matchFirst,
+			EnabledProtocols: enabledProtocols,
+			Path:             path,
+			ArgFormat:        argFormat,
+			AutoIt:           autoit,
+			IsInternal:       isInternal,
+			IsDefault:        platformConnect.IsDefault,
+			IsSet:            isSet,
 		}
 
 		if list, ok := categoryItems[manifest.Category]; ok {

@@ -66,6 +66,7 @@ export interface ConfigItem {
   path: string;
   arg_format: string;
   match_first: string[];
+  enabled_protocols?: string[];
   is_internal: boolean;
   is_default: boolean;
   is_set: boolean;

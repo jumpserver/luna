@@ -31,6 +31,7 @@ const emits = defineEmits<{
 
 const { t } = useI18n();
 const { getMethodsForProtocol, getDefaultMethodForProtocol } = useConnectMethods();
+const { appConfig } = useSettingManager();
 const trailingIcon = "group-data-[state=open]:rotate-180 transition-transform duration-200";
 
 const showManualInputArea = ref(false);
@@ -151,17 +152,59 @@ const connectMethodTypeItems = computed(() => {
     icon: metaMap[type]?.icon || "i-lucide-circle"
   }));
 });
-const connectMethodTabItems = computed(() =>
-  availableConnectMethods.value
-    .filter((method) => {
-      if (!selectedConnectMethodType.value) return true;
-      return categoryOfConnectMethod(method) === selectedConnectMethodType.value;
-    })
-    .map((method) => ({
-      label: method.label || method.value,
-      value: method.value
-    }))
-);
+const configuredClients = computed(() => {
+  const protocol = (props.protocol || "").toLowerCase();
+  if (!protocol || !appConfig.value) return [];
+
+  return Object.values(appConfig.value)
+    .flat()
+    .filter((item) =>
+      item.name !== "builtin_client"
+      && item.is_set
+      && item.path_exists !== false
+      && item.protocol?.some((value) => value.toLowerCase() === protocol)
+      && (item.enabled_protocols || item.match_first)
+        ?.some((value) => value.toLowerCase() === protocol)
+    )
+    .sort((a, b) =>
+      Number(b.match_first?.includes(protocol)) - Number(a.match_first?.includes(protocol))
+    );
+});
+const connectMethodTabItems = computed(() => {
+  const methods = availableConnectMethods.value.filter((method) => {
+    if (!selectedConnectMethodType.value) return true;
+    return categoryOfConnectMethod(method) === selectedConnectMethodType.value;
+  });
+
+  // 服务端只提供通用 native 入口；Rust runtime 中再根据这里选择的
+  // 具体应用启动。未显式选择时，match_first 排在最前作为 preferred。
+  if (isTauriRuntime() && selectedConnectMethodType.value === "native") {
+    if (!configuredClients.value.length) return [];
+
+    const preferredValues: Record<string, string> = {
+      ssh: "ssh_client",
+      telnet: "ssh_client",
+      rdp: "mstsc",
+      sftp: "sftp_client",
+      vnc: "vnc_client"
+    };
+    const preferredValue = preferredValues[(props.protocol || "").toLowerCase()] || "db_client";
+    const preferred = methods.find((method) => method.value === preferredValue)
+      || methods.find((method) => !isBuiltinConnectMethod(method));
+
+    return preferred
+      ? configuredClients.value.map((client) => ({
+          label: client.display_name || client.name,
+          value: `native_app:${preferred.value}:${encodeURIComponent(client.name)}`
+        }))
+      : [];
+  }
+
+  return methods.map((method) => ({
+    label: method.label || method.value,
+    value: method.value
+  }));
+});
 
 const showCharsetOption = computed(() => ["ssh", "telnet"].includes((props.protocol || "").toLowerCase()));
 const showBackspaceOption = computed(() => showCharsetOption.value);
@@ -227,6 +270,14 @@ watch(
       return;
     }
 
+    if (props.connectMethod?.startsWith("native_app:")) {
+      selectedConnectMethodType.value = "native";
+      if (!connectMethodTabItems.value.some((item) => item.value === props.connectMethod)) {
+        emits("update:connectMethod", connectMethodTabItems.value[0]?.value || "");
+      }
+      return;
+    }
+
     const current = availableConnectMethods.value.find((method) => method.value === props.connectMethod);
     if (current) {
       selectedConnectMethodType.value = categoryOfConnectMethod(current);
@@ -241,6 +292,9 @@ watch(
 );
 
 function categoryOfConnectMethod(method: any) {
+  if (String(method?.value || "").startsWith("native_app:")) return "native";
+  if (isBuiltinConnectMethod(method)) return "builtin";
+
   const type = String(method?.type || "").toLowerCase();
 
   if (type === "web" || type === "builtin") return "builtin";
@@ -249,11 +303,28 @@ function categoryOfConnectMethod(method: any) {
   return type || "builtin";
 }
 
+function isBuiltinConnectMethod(method: any) {
+  return ["builtin_client", "web_cli_native"].includes(String(method?.value || "").toLowerCase());
+}
+
 function selectConnectMethodType(type: string) {
   selectedConnectMethodType.value = type;
 
-  const firstMethod = availableConnectMethods.value.find((method) => categoryOfConnectMethod(method) === type);
-  localConnectMethod.value = firstMethod?.value || "";
+  localConnectMethod.value = connectMethodTabItems.value[0]?.value || "";
+}
+
+async function openProtocolApplicationSettings() {
+  const protocol = (props.protocol || "").toLowerCase();
+  const routeProtocol = protocol === "postgresql" ? "pg" : protocol;
+  if (!routeProtocol) return;
+
+  const path = `/setting/application/${encodeURIComponent(routeProtocol)}`;
+  if (isTauriRuntime()) {
+    await useTauriCoreInvoke("open_settings_window", { path });
+    return;
+  }
+
+  await navigateTo(path);
 }
 
 const accountItems = computed(() => {
@@ -445,6 +516,7 @@ function handleSpecialAccount(v: string) {
         />
         <div class="p-2 pt-1">
           <URadioGroup
+            v-if="connectMethodTabItems.length"
             v-model="localConnectMethod"
             :items="connectMethodTabItems"
             value-key="value"
@@ -455,6 +527,23 @@ function handleSpecialAccount(v: string) {
               item: 'rounded-[3px] px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-white/5'
             }"
           />
+          <div
+            v-else-if="isTauriRuntime() && selectedConnectMethodType === 'native'"
+            class="flex flex-col items-center gap-2 py-3 text-center"
+          >
+            <p class="text-sm text-[var(--app-text-muted)]">
+              {{ t("Setting.NoClientConfigured") }}
+            </p>
+            <UButton
+              type="button"
+              icon="i-lucide-settings"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              :label="t('Setting.ConfigureClient')"
+              @click="openProtocolApplicationSettings"
+            />
+          </div>
         </div>
       </div>
     </UFormField>

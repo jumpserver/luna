@@ -26,6 +26,15 @@ const NATIVE_WORKSPACE_METHODS = new Set([
   SFTP_FILE_EDITOR_VALUE,
   K8S_NATIVE_VALUE
 ]);
+const parseNativeAppMethod = (value: string) => {
+  const match = /^native_app:([^:]+):(.+)$/.exec(value || "");
+  if (!match) return { connectMethod: value, clientName: undefined };
+
+  return {
+    connectMethod: match[1] || value,
+    clientName: decodeURIComponent(match[2] || "")
+  };
+};
 const pendingBuiltinSessions: Array<{
   tabId?: string
   assetId: string
@@ -289,6 +298,9 @@ export const useAssetAction = () => {
     body: ConnectionBody,
     meta?: { tabId?: string, asset?: AssetItem, assetId: string, protocol: string, account: string }
   ) => {
+    const nativeApp = parseNativeAppMethod(body.connect_method);
+    const serverBody = { ...body, connect_method: nativeApp.connectMethod };
+
     if (!isTauriRuntime()) {
       const session = meta?.tabId
         ? undefined
@@ -298,9 +310,9 @@ export const useAssetAction = () => {
       const tabId = meta?.tabId || session?.id;
 
       try {
-        const token = await createConnectionToken(body);
+        const token = await createConnectionToken(serverBody);
         const allMethods = await fetchConnectMethods();
-        const method = (allMethods[body.protocol] || []).find((item) => item.value === body.connect_method);
+        const method = (allMethods[body.protocol] || []).find((item) => item.value === serverBody.connect_method);
         const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
         const endpointUrl = getWebConnectorDevOrigin(component) || await fetchSmartEndpointUrl(token, method, body);
         const webUrl = getWebConnectorPath(token, method, body, endpointUrl);
@@ -343,10 +355,11 @@ export const useAssetAction = () => {
         protocol: body.protocol,
         input_username: body.input_username,
         input_secret: body.input_secret,
-        connect_method: body.connect_method,
+        connect_method: nativeApp.connectMethod,
         connect_options: body.connect_options
       },
-      rdpParams
+      rdpParams,
+      clientName: nativeApp.clientName
     });
   };
 

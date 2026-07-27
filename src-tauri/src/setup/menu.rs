@@ -1,6 +1,6 @@
 use log::warn;
 use tauri::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::{Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 
 #[cfg(target_os = "macos")]
 use tauri::LogicalPosition;
@@ -162,20 +162,27 @@ pub fn handle_menu_event(app_handle: &tauri::AppHandle, event: &MenuEvent) {
 
 /// 打开/聚焦设置窗口
 pub fn open_settings_window<R: Runtime>(app: &tauri::AppHandle<R>) {
+    open_settings_window_at(app, None);
+}
+
+pub fn open_settings_window_at<R: Runtime>(app: &tauri::AppHandle<R>, path: Option<&str>) {
     let label = "secondary";
+    let target = path
+        .filter(|value| value.starts_with("/setting/"))
+        .unwrap_or("/setting/general");
 
     if let Some(existing) = app.get_webview_window(label) {
         let _ = existing.unminimize();
         let _ = existing.show();
         let _ = existing.set_focus();
+        let _ = existing.emit("settings-navigate", target);
         return;
     }
 
-    let mut builder =
-        WebviewWindowBuilder::new(app, label, WebviewUrl::App("/setting/general".into()))
-            .title("Connection Settings")
-            .min_inner_size(930.0, 520.0)
-            .max_inner_size(930.0, 675.0);
+    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App(target.into()))
+        .title("Connection Settings")
+        .min_inner_size(930.0, 520.0)
+        .max_inner_size(930.0, 675.0);
 
     #[cfg(target_os = "macos")]
     {

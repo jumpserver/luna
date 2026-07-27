@@ -32,7 +32,7 @@
     "General": "General",
     "Advanced": "Advanced",
     "ChooseColor": "Choose color",
-    "OpenWith": "Open with",
+    "OpenWith": "Application Settings",
     "EmptyDescription": "No authorized assets are available for the current type",
     "SelectFromMenu": "Select an item on the left"
   },
@@ -393,6 +393,8 @@
     "Enable": "Enable",
     "Disable": "Disable",
     "EnableFailed": "Unable to enable",
+    "NoClientConfigured": "No client is configured for this protocol",
+    "ConfigureClient": "Open Application Settings",
     "ExecutableNotFound": "Application not found. Please download and install it correctly.",
     "BuiltInTerminal": "Built-in terminal",
     "AlwaysEnabled": "Always enabled",

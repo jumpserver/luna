@@ -22,17 +22,18 @@ type AppType struct {
 }
 
 type AppItem struct {
-	Name        string          `json:"name"`
-	DisplayName string          `json:"display_name"`
-	Protocol    []string        `json:"protocol"`
-	Type        string          `json:"type"`
-	MatchFirst  []string        `json:"match_first"`
-	Path        string          `json:"path"`
-	ArgFormat   string          `json:"arg_format"`
-	AutoIt      []AutoItCommand `json:"autoit"`
-	IsInternal  bool            `json:"is_internal"`
-	IsDefault   bool            `json:"is_default"`
-	IsSet       bool            `json:"is_set"`
+	Name             string          `json:"name"`
+	DisplayName      string          `json:"display_name"`
+	Protocol         []string        `json:"protocol"`
+	Type             string          `json:"type"`
+	MatchFirst       []string        `json:"match_first"`
+	EnabledProtocols []string        `json:"enabled_protocols"`
+	Path             string          `json:"path"`
+	ArgFormat        string          `json:"arg_format"`
+	AutoIt           []AutoItCommand `json:"autoit"`
+	IsInternal       bool            `json:"is_internal"`
+	IsDefault        bool            `json:"is_default"`
+	IsSet            bool            `json:"is_set"`
 }
 
 type AutoItCommand struct {
@@ -60,6 +61,25 @@ func (a *AppItem) IsSupportProtocol(protocol string) bool {
 func (a *AppItem) IsMatchProtocol(protocol string) bool {
 	for _, p := range a.MatchFirst {
 		if p == protocol {
+			return true
+		}
+	}
+	return false
+}
+
+func (a *AppItem) IsSelectedForProtocol(protocol, clientName string) bool {
+	if clientName != "" {
+		return a.Name == clientName && a.IsEnabledForProtocol(protocol)
+	}
+	return a.IsMatchProtocol(protocol)
+}
+
+func (a *AppItem) IsEnabledForProtocol(protocol string) bool {
+	if len(a.EnabledProtocols) == 0 {
+		return a.IsMatchProtocol(protocol)
+	}
+	for _, enabled := range a.EnabledProtocols {
+		if enabled == protocol {
 			return true
 		}
 	}

@@ -2,6 +2,11 @@
 const route = useRoute();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
+const windowTitle = computed(() =>
+  String(route.name || "").startsWith("setting-application")
+    ? t("Common.OpenWith")
+    : t("Common.ConnectionSettings")
+);
 
 const isEmbedded = computed(() => {
   if (route.query.embedded === "1") return true;
@@ -10,6 +15,7 @@ const isEmbedded = computed(() => {
 const showWindowControls = computed(() => isTauriRuntime() && !isEmbedded.value);
 const { theme } = useSettingManager();
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
+let unlistenSettingsNavigate: (() => void) | undefined;
 
 const commonButtonProps = {
   size: "sm" as const,
@@ -66,10 +72,19 @@ const getWindowControlButtonClass = (buttonKey: string) => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   initialTheme();
   listenOSThemeChange();
+  if (isTauriRuntime()) {
+    unlistenSettingsNavigate = await useTauriEventListen<string>("settings-navigate", ({ payload }) => {
+      if (payload?.startsWith("/setting/")) {
+        void navigateTo(payload);
+      }
+    });
+  }
 });
+
+onBeforeUnmount(() => unlistenSettingsNavigate?.());
 </script>
 
 <template>
@@ -101,7 +116,7 @@ onMounted(() => {
 
             <div class="min-w-0 flex-1 px-4 text-center select-none">
               <p class="pointer-events-none truncate text-sm font-bold">
-                {{ t("Common.ConnectionSettings") }}
+                {{ windowTitle }}
               </p>
             </div>
 
@@ -128,7 +143,7 @@ onMounted(() => {
       </template>
     </UPageHeader>
 
-    <UPageBody class="mt-0 pb-0 flex-1 min-h-0 h-full overflow-y-auto">
+    <UPageBody class="mt-0 pb-0 flex-1 min-h-0 h-full overflow-hidden">
       <SettingsPanel :embedded="isEmbedded">
         <slot />
       </SettingsPanel>

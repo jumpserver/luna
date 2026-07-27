@@ -2,8 +2,8 @@ use tauri::{command, AppHandle, WebviewWindow};
 
 /// 打开或聚焦设置窗口
 #[command]
-pub fn open_settings_window(app: AppHandle) {
-    crate::setup::menu::open_settings_window(&app);
+pub fn open_settings_window(app: AppHandle, path: Option<String>) {
+    crate::setup::menu::open_settings_window_at(&app, path.as_deref());
 }
 
 /// 最小化窗口

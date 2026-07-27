@@ -405,9 +405,13 @@ impl ConfigService {
             }
         }
 
-        for item in arr.iter_mut() {
-            if let Some(mf) = item.get_mut("match_first") {
-                if let Some(list) = mf.as_array_mut() {
+        if !enabled {
+            for item in arr.iter_mut() {
+                let item_name = item.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                if item_name != name {
+                    continue;
+                }
+                if let Some(list) = item.get_mut("match_first").and_then(|v| v.as_array_mut()) {
                     list.retain(|v| v.as_str().map(|s| s != protocol).unwrap_or(true));
                 }
             }
@@ -423,7 +427,9 @@ impl ConfigService {
                             .insert("match_first".into(), Value::Array(vec![]));
                     }
                     if let Some(list) = item.get_mut("match_first").and_then(|v| v.as_array_mut()) {
-                        list.push(Value::String(protocol.to_string()));
+                        if !list.iter().any(|value| value.as_str() == Some(protocol)) {
+                            list.push(Value::String(protocol.to_string()));
+                        }
                     }
                     break;
                 }

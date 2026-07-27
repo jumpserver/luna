@@ -58,6 +58,7 @@ type Info struct {
 	Version  string `json:"version"`
 	Name     string `json:"name"`
 	Protocol string `json:"protocol"`
+	Client   string `json:"client"`
 	Command  string `json:"command"`
 	Asset    `json:"asset"`
 	Endpoint `json:"endpoint"`

@@ -88,6 +88,35 @@ func TestBuildMatchFirstUsesSelectionsOnly(t *testing.T) {
 	}
 }
 
+func TestBuildEnabledProtocolsSupportsMultipleClients(t *testing.T) {
+	selections := map[string]string{"terminal:ssh": "macos.terminal"}
+	enabledSelections := map[string][]string{
+		"terminal:ssh": {"macos.terminal", "macos.iterm"},
+	}
+
+	terminal := buildEnabledProtocols(
+		"macos.terminal",
+		categoryTerminal,
+		[]string{"ssh", "telnet"},
+		selections,
+		enabledSelections,
+	)
+	iterm := buildEnabledProtocols(
+		"macos.iterm",
+		categoryTerminal,
+		[]string{"ssh", "telnet"},
+		selections,
+		enabledSelections,
+	)
+
+	if len(terminal) != 1 || terminal[0] != "ssh" {
+		t.Fatalf("expected preferred client to remain enabled, got %#v", terminal)
+	}
+	if len(iterm) != 1 || iterm[0] != "ssh" {
+		t.Fatalf("expected second client to be enabled independently, got %#v", iterm)
+	}
+}
+
 func TestLoadAppConfigDoesNotFallbackMatchFirst(t *testing.T) {
 	if osKey() != "macos" {
 		t.Skip("macOS-specific plugin defaults")

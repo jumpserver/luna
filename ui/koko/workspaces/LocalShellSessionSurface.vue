@@ -4,6 +4,10 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
+import {
+  registerLocalShellTerminalSession,
+  unregisterLocalShellTerminalSession
+} from "~/koko/composables/useTerminalSessionRegistry";
 import { getDefaultTerminalConfig } from "~/koko/utils/guard";
 import { appTerminalTheme } from "~/koko/utils/terminalTheme";
 
@@ -67,6 +71,13 @@ async function start() {
     await useTauriEventListen<LocalShellExit>("local-shell-exit", ({ payload }) => {
       if (payload.sessionId === props.tab.id) {
         started = false;
+        unregisterLocalShellTerminalSession(props.tab.id);
+        markSessionFailed({
+          tabId: props.tab.id,
+          assetId: props.tab.assetId,
+          protocol: props.tab.protocol,
+          account: props.tab.account
+        });
         instance.write("\r\n\x1B[90m[Process exited]\x1B[0m\r\n");
       }
     })
@@ -97,6 +108,12 @@ async function start() {
       rows: instance.rows
     });
     started = true;
+    registerLocalShellTerminalSession(props.tab.id, (data) => {
+      void useTauriCoreInvoke("write_local_shell", {
+        sessionId: props.tab.id,
+        data: Array.from(new TextEncoder().encode(data))
+      });
+    });
     markSessionConnected(props.tab.id);
     instance.focus();
   } catch (error) {
@@ -118,6 +135,7 @@ onMounted(() => void start());
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect();
+  unregisterLocalShellTerminalSession(props.tab.id);
   for (const unlisten of unlisteners) unlisten();
   if (started) {
     void useTauriCoreInvoke("close_local_shell", { sessionId: props.tab.id });

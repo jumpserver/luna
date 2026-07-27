@@ -103,7 +103,7 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
 </script>
 
 <template>
-  <div class="flex h-full">
+  <div class="flex h-full min-h-0">
     <div class="menu setting-menu shrink-0">
       <UNavigationMenu
         :items="appMenu"
@@ -121,7 +121,11 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
       />
     </div>
 
-    <UCard class="flex-1 min-w-0 h-full rounded-none overflow-y-auto" variant="subtle" :ui="{ body: 'sm:p-3 h-full' }">
+    <UCard
+      class="flex-1 min-w-0 h-full min-h-0 rounded-none overflow-hidden"
+      variant="subtle"
+      :ui="{ body: 'sm:p-3 h-full overflow-y-auto' }"
+    >
       <NuxtPage />
     </UCard>
   </div>
