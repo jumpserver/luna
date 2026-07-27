@@ -19,7 +19,7 @@ const workspaceModes = computed(() => {
     modes.push({
       key: "tools",
       icon: "i-lucide-layout-grid",
-      label: "工具集"
+      label: "我的工具"
     });
   }
 

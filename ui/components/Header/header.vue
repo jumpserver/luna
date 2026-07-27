@@ -7,7 +7,9 @@ const { activeWorkspaceMode } = useWorkspaceMode();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 
-const showSidebarChrome = computed(() => activeWorkspaceMode.value !== "assets" || loggedIn.value);
+const showSidebarChrome = computed(
+  () => activeWorkspaceMode.value !== "assets" || loggedIn.value || isTauriRuntime()
+);
 
 const pageHeader = computed(() => {
   const path = route.path.toLowerCase();

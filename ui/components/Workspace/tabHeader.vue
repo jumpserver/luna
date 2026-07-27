@@ -2,10 +2,13 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
+import { useUserInfoStore } from "~/store/modules/userInfo";
 import { resolveAssetIconFromFields } from "~/utils/assetIcon";
 
 const { t } = useI18n();
 const colorMode = useColorMode();
+const userInfoStore = useUserInfoStore();
+const { loggedIn } = storeToRefs(userInfoStore);
 const {
   activeTabId,
   tabs,
@@ -389,7 +392,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       </div>
     </div>
 
-    <WorkspaceAddSessionPopover />
+    <WorkspaceAddSessionPopover v-if="loggedIn" />
 
     <UTooltip v-if="hasRightHidden" text="下一个标签" :delay-duration="150">
       <button

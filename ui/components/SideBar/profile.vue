@@ -138,49 +138,63 @@ const languageChildren = computed<DropdownMenuItem[][]>(() => [
   }))
 ]);
 
-const profileMenuItems = computed<DropdownMenuItem[][]>(() => [
-  [
+const profileMenuItems = computed<DropdownMenuItem[][]>(() => {
+  const accountItems: DropdownMenuItem[] = [
     {
       label: t("Login.AddAccount"),
       icon: "i-lucide-user-round-plus",
       onClick: openLoginPage
-    },
-    {
+    }
+  ];
+
+  if (loggedIn.value) {
+    accountItems.push({
       label: t("Login.SwitchSite"),
       icon: "i-lucide-arrow-down-up",
       children: switchAccountChildren()
-    },
-    {
-      label: t("Common.Appearance"),
-      icon: "solar:palette-linear",
-      children: themeDropdownItems.value
-    },
-    {
-      label: t("Common.Language"),
-      icon: "solar:global-outline",
-      children: languageChildren.value
-    },
-    {
-      label: t("Common.Settings"),
-      icon: "i-lucide-settings",
-      onClick: openSettingsWindow
-    }
-  ],
-  [
-    {
-      label: t("Login.Logout"),
-      icon: "solar:login-outline",
-      color: "error",
-      ui: {
-        itemLabel:
-          "!text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error group-data-[state=checked]:!text-error",
-        itemLeadingIcon:
-          "group-data-[state=checked]:text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error"
+    });
+  }
+
+  const items: DropdownMenuItem[][] = [
+    [
+      ...accountItems,
+      {
+        label: t("Common.Appearance"),
+        icon: "solar:palette-linear",
+        children: themeDropdownItems.value
       },
-      onClick: clearAuthInfo
-    }
-  ]
-]);
+      {
+        label: t("Common.Language"),
+        icon: "solar:global-outline",
+        children: languageChildren.value
+      },
+      {
+        label: t("Common.Settings"),
+        icon: "i-lucide-settings",
+        onClick: openSettingsWindow
+      }
+    ]
+  ];
+
+  if (loggedIn.value) {
+    items.push([
+      {
+        label: t("Login.Logout"),
+        icon: "solar:login-outline",
+        color: "error",
+        ui: {
+          itemLabel:
+          "!text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error group-data-[state=checked]:!text-error",
+          itemLeadingIcon:
+          "group-data-[state=checked]:text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error"
+        },
+        onClick: clearAuthInfo
+      }
+    ]);
+  }
+
+  return items;
+});
 
 watch(
   () => userTheme.value,
@@ -726,7 +740,6 @@ onBeforeUnmount(() => {
 
 <template>
   <UDropdownMenu
-    v-if="loggedIn"
     :items="profileMenuItems"
     size="sm"
     :side="isTopbar ? 'bottom' : 'top'"
@@ -754,19 +767,6 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </UDropdownMenu>
-
-  <UButton
-    v-else
-    :variant="isTopbar ? 'ghost' : 'subtle'"
-    icon="i-lucide-log-in"
-    :class="isTopbar ? '' : 'w-full mb-2'"
-    :ui="isTopbar ? undefined : { leadingIcon: 'sidebar-icon' }"
-    @click="openLoginPage"
-  >
-    <span v-if="!props.collapse && !isTopbar">
-      {{ t("Common.Login") }}
-    </span>
-  </UButton>
 
   <Modal
     v-model:open="openModal"
