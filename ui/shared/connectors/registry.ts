@@ -8,6 +8,7 @@ import KokoIframeSession from "~/koko-iframe/workspace/IframeSession.vue";
 import KokoFileEditorSessionSurface from "~/koko/workspaces/FileEditorSessionSurface.vue";
 import KokoFileManagerSessionSurface from "~/koko/workspaces/FileManagerSessionSurface.vue";
 import KokoKubernetesWorkspace from "~/koko/workspaces/KubernetesWorkspace.vue";
+import LocalShellSessionSurface from "~/koko/workspaces/LocalShellSessionSurface.vue";
 import KokoTerminalSessionSurface from "~/koko/workspaces/TerminalSessionSurface.vue";
 import LionRemoteSessionSurface from "~/lion/workspaces/RemoteSessionSurface.vue";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
@@ -60,6 +61,10 @@ export function resolveSessionComponent(tab: WorkspaceSessionTab): JmsComponent 
 }
 
 export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
+  if (tab.protocol === "local-shell") {
+    return LocalShellSessionSurface;
+  }
+
   const connectMethod = (tab.payload?.connectMethod as { value?: string } | undefined)?.value;
   const capability = findDeclaredCapability(tab.protocol, connectMethod);
 

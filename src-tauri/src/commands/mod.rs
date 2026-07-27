@@ -8,6 +8,7 @@ pub(crate) mod connect_token;
 pub(crate) mod dev_http_server;
 pub(crate) mod get_config;
 pub(crate) mod get_version;
+pub(crate) mod local_shell;
 pub(crate) mod system_fonts;
 pub(crate) mod video_player;
 pub(crate) mod window_control;

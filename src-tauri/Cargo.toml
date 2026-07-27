@@ -52,6 +52,7 @@ tauri-plugin-clipboard-manager = "2.3.0"
 tauri-plugin-prevent-default = "5.0.0"
 russh = "0.61.2"
 bytes = "1.11.1"
+portable-pty = "0.9"
 
 [dependencies.tokio]
 version = "1.46.1"

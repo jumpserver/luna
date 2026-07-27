@@ -23,6 +23,9 @@ use crate::commands::connect_token::{
 use crate::commands::dev_http_server::init_http_callback_server;
 use crate::commands::get_config::get_config;
 use crate::commands::get_version::get_version_message;
+use crate::commands::local_shell::{
+    close_local_shell, resize_local_shell, start_local_shell, write_local_shell, LocalShellState,
+};
 use crate::commands::system_fonts::list_system_fonts;
 use crate::commands::video_player::{
     delete_video_player_file, read_video_player_text_stream, write_video_player_gzip_file,
@@ -93,6 +96,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AuthFlowState::default())
         .manage(ApiSessionStore::default())
+        .manage(LocalShellState::default())
         .plugin(single_instance(|app, argv, _cwd| {
             info!("single_instance event, argv={:?}", argv);
 
@@ -203,6 +207,10 @@ pub fn run() {
             get_builtin_connect_session,
             create_koko_connect_ticket,
             get_version_message,
+            start_local_shell,
+            write_local_shell,
+            resize_local_shell,
+            close_local_shell,
             list_system_fonts,
             toggle_maximize_window,
             update_config_selection,

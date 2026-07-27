@@ -9,6 +9,8 @@ const results = ref<AssetItem[]>([]);
 const { fetchTree, treeNodeToAsset } = useAssetTree();
 const { recentConnections } = useRecentConnections();
 const userInfoStore = useUserInfoStore();
+const { openLocalShell } = useWorkspaceTabs();
+const localShellAvailable = computed(() => isTauriRuntime());
 
 function flatten(nodes: AssetTreeNode[]): AssetItem[] {
   return nodes.flatMap((node) => node.isParent
@@ -39,6 +41,11 @@ function selectAsset(asset: AssetItem) {
   });
 }
 
+function selectLocalShell() {
+  open.value = false;
+  openLocalShell();
+}
+
 watch(search, runSearch);
 watch(open, (value) => {
   if (!value) search.value = "";
@@ -59,6 +66,21 @@ watch(open, (value) => {
           <UInput v-model="search" autofocus icon="i-lucide-search" size="sm" variant="none" placeholder="搜索资产名称或地址…" :ui="{ base: 'h-8 rounded-lg bg-elevated/70 ring-1 ring-inset ring-default' }" />
         </div>
         <div class="max-h-80 min-h-32 overflow-y-auto p-1.5">
+          <template v-if="localShellAvailable && !search.trim()">
+            <div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
+              本地
+            </div>
+            <button type="button" class="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-elevated" @click="selectLocalShell">
+              <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-elevated">
+                <UIcon name="i-lucide-square-terminal" class="size-4 text-muted" />
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm text-highlighted">Local Shell</span>
+                <span class="block truncate text-[11px] text-muted">打开本机终端</span>
+              </span>
+              <UIcon name="i-lucide-chevron-right" class="size-3.5 shrink-0 text-dimmed" />
+            </button>
+          </template>
           <div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
             {{ search.trim() ? "搜索结果" : "最近连接" }}
           </div>

@@ -134,7 +134,7 @@ const protocolTabItems = computed(() =>
 );
 const connectMethodTypeItems = computed(() => {
   const metaMap: Record<string, { label: string; icon: string }> = {
-    builtin: { label: "Web", icon: "i-lucide-globe" },
+    builtin: { label: "内置", icon: "i-lucide-globe" },
     native: { label: "客户端", icon: "i-lucide-monitor" },
     remote_app: { label: "远程应用", icon: "i-lucide-app-window" }
   };
@@ -521,6 +521,7 @@ function handleSpecialAccount(v: string) {
 .protocol-tab-button {
   position: relative;
   flex: 0 0 auto;
+  cursor: pointer;
   margin-bottom: -1px;
   border: 0;
   background: transparent;
@@ -558,5 +559,9 @@ function handleSpecialAccount(v: string) {
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   width: 100%;
+}
+
+:deep(.connect-method-type-tabs [data-slot="trigger"]) {
+  cursor: pointer;
 }
 </style>

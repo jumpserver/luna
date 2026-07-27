@@ -117,6 +117,26 @@ export const useWorkspaceTabs = () => {
     return tab;
   };
 
+  const openLocalShell = () => {
+    const tab: WorkspaceSessionTab = {
+      id: createTabId("local", "local-shell", ""),
+      assetId: "local",
+      assetName: "Local Shell",
+      assetType: "local",
+      assetPlatform: "",
+      assetCategory: "terminal",
+      address: "",
+      protocol: "local-shell",
+      account: "",
+      status: "ready"
+    };
+
+    tabs.value.push(tab);
+    activeTabId.value = tab.id;
+
+    return tab;
+  };
+
   const closeSession = (id: string) => {
     const index = tabs.value.findIndex((tab) => tab.id === id);
     if (index === -1) {
@@ -311,6 +331,7 @@ export const useWorkspaceTabs = () => {
     closeRightSessions,
     registerSessionDisposer,
     openSession,
+    openLocalShell,
     openSetupSession,
     closeSession,
     markSessionFailed,

@@ -9,6 +9,7 @@ const { t } = useI18n();
 const colorMode = useColorMode();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
+const showAddSession = computed(() => loggedIn.value || isTauriRuntime());
 const {
   activeTabId,
   tabs,
@@ -326,7 +327,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
         class="workspace-tab-strip flex w-fit min-w-0 max-w-full items-center gap-1 overflow-x-auto"
       >
         <button
-          v-for="tab in tabs"
+          v-for="(tab, index) in tabs"
           :key="tab.id"
           :data-tab-id="tab.id"
           type="button"
@@ -388,11 +389,15 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           >
             <UIcon name="i-lucide-x" class="size-2.5" />
           </span>
+          <span
+            v-if="activeTabId !== tab.id && index < tabs.length - 1"
+            class="workspace-session-tab-divider pointer-events-none absolute top-1/2 -right-[5px] h-4 -translate-y-1/2 border-r"
+          />
         </button>
       </div>
     </div>
 
-    <WorkspaceAddSessionPopover v-if="loggedIn" />
+    <WorkspaceAddSessionPopover v-if="showAddSession" />
 
     <UTooltip v-if="hasRightHidden" text="下一个标签" :delay-duration="150">
       <button
@@ -455,7 +460,6 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 <style scoped>
 .workspace-tab-header {
   --workspace-tab-idle-bg: color-mix(in srgb, var(--app-surface-panel) 90%, black 1%);
-  --workspace-tab-idle-border: color-mix(in srgb, var(--app-border) 90%, black 2%);
   --workspace-tab-idle-hover-bg: color-mix(in srgb, var(--app-surface-panel) 76%, black 14%);
   --workspace-tab-active-bg: color-mix(in srgb, var(--workspace-surface-background) 82%, black 8%);
   --workspace-tab-active-border: color-mix(in srgb, var(--app-border) 74%, black 8%);
@@ -485,7 +489,6 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
 .workspace-session-tab-idle {
   background: var(--workspace-tab-idle-bg);
-  border-color: var(--workspace-tab-idle-border);
 }
 
 .workspace-session-tab-idle:hover {
@@ -512,6 +515,10 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
   background: color-mix(in srgb, var(--app-hover-strong) 88%, transparent);
 }
 
+.workspace-session-tab-divider {
+  border-color: var(--app-border);
+}
+
 .workspace-tab-strip {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -523,7 +530,6 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
 .workspace-tab-header-dark {
   --workspace-tab-idle-bg: color-mix(in srgb, var(--theme-bg) 90%, white 1%);
-  --workspace-tab-idle-border: color-mix(in srgb, var(--theme-bg) 90%, white 8%);
   --workspace-tab-idle-hover-bg: color-mix(in srgb, var(--theme-bg) 90%, white 12%);
   --workspace-tab-active-bg: color-mix(in srgb, var(--theme-bg) 87%, white 12%);
   --workspace-tab-active-border: color-mix(in srgb, white 5%, transparent);
