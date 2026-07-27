@@ -5,6 +5,7 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import { resolveAssetIconFromFields } from "~/utils/assetIcon";
 
 const { t } = useI18n();
+const colorMode = useColorMode();
 const {
   activeTabId,
   tabs,
@@ -29,6 +30,7 @@ const contextMenuTabIndex = ref(-1);
 
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) || null);
 const canSwitchTabs = computed(() => tabs.value.length > 1);
+const isDarkTabTheme = computed(() => colorMode.value === "dark");
 const brokenTabIcons = ref(new Set<string>());
 
 function tabIcon(tab: WorkspaceSessionTab) {
@@ -299,7 +301,10 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 </script>
 
 <template>
-  <div class="workspace-tab-header flex h-full min-w-0 items-end gap-2 px-3">
+  <div
+    class="workspace-tab-header flex h-full min-w-0 items-center gap-2 px-3"
+    :class="{ 'workspace-tab-header-dark': isDarkTabTheme }"
+  >
     <UTooltip v-if="hasLeftHidden" text="上一个标签" :delay-duration="150">
       <button
         type="button"
@@ -312,17 +317,17 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       </button>
     </UTooltip>
 
-    <div v-if="tabs.length" class="workspace-tab-capsule flex w-fit min-w-0 max-w-full items-end rounded-lg">
+    <div v-if="tabs.length" class="workspace-tab-capsule flex w-fit min-w-0 max-w-full items-center rounded-lg">
       <div
         ref="tabStripRef"
-        class="workspace-tab-strip flex w-fit min-w-0 max-w-full items-end gap-1 overflow-x-auto"
+        class="workspace-tab-strip flex w-fit min-w-0 max-w-full items-center gap-1 overflow-x-auto"
       >
         <button
-          v-for="(tab, index) in tabs"
+          v-for="tab in tabs"
           :key="tab.id"
           :data-tab-id="tab.id"
           type="button"
-          class="workspace-session-tab group relative flex h-7 min-w-0 shrink-0 items-center gap-1.5 rounded-t-[10px] rounded-b-[7px] px-2 text-left transition-all duration-150"
+          class="workspace-session-tab group relative flex h-7 min-w-0 shrink-0 items-center gap-1.5 rounded-md px-2 text-left transition-all duration-150"
           :class="[
             activeTabId === tab.id ? 'max-w-84 pr-2' : 'max-w-44',
             activeTabId === tab.id
@@ -340,7 +345,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
               class="size-3.5 object-contain"
               :class="tab.status === 'failed' ? 'opacity-40' : ''"
               @error="markTabIconBroken(tab.id)"
-            >
+            />
             <UIcon
               v-else
               :name="tabIcon(tab).fallback"
@@ -380,10 +385,6 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           >
             <UIcon name="i-lucide-x" class="size-2.5" />
           </span>
-          <span
-            v-if="activeTabId !== tab.id && index < tabs.length - 1"
-            class="workspace-session-tab-divider pointer-events-none absolute top-1/2 -right-[5px] h-4 -translate-y-1/2 border-r"
-          />
         </button>
       </div>
     </div>
@@ -450,8 +451,12 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
 <style scoped>
 .workspace-tab-header {
+  --workspace-tab-idle-bg: color-mix(in srgb, var(--app-surface-panel) 90%, black 1%);
+  --workspace-tab-idle-border: color-mix(in srgb, var(--app-border) 90%, black 2%);
+  --workspace-tab-idle-hover-bg: color-mix(in srgb, var(--app-surface-panel) 76%, black 14%);
+  --workspace-tab-active-bg: color-mix(in srgb, var(--workspace-surface-background) 82%, black 8%);
+  --workspace-tab-active-border: color-mix(in srgb, var(--app-border) 74%, black 8%);
   background: var(--app-surface-header);
-  padding-top: 0.35rem;
 }
 
 .workspace-tab-capsule {
@@ -476,22 +481,20 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 }
 
 .workspace-session-tab-idle {
-  background: color-mix(in srgb, var(--app-surface-panel) 58%, var(--app-surface-header) 42%);
-  border-color: color-mix(in srgb, var(--app-border) 62%, transparent);
-  border-bottom-color: color-mix(in srgb, var(--app-border) 48%, transparent);
+  background: var(--workspace-tab-idle-bg);
+  border-color: var(--workspace-tab-idle-border);
 }
 
 .workspace-session-tab-idle:hover {
-  background: color-mix(in srgb, var(--app-hover-soft) 70%, var(--app-surface-panel) 30%);
+  background: var(--workspace-tab-idle-hover-bg);
   color: var(--app-fg);
 }
 
 .workspace-session-tab-active {
-  background: var(--workspace-surface-background);
-  border-color: color-mix(in srgb, var(--app-border) 78%, transparent);
-  border-bottom-color: var(--workspace-surface-background);
+  background: var(--workspace-tab-active-bg);
+  border-color: var(--workspace-tab-active-border);
+  border-bottom-color: var(--workspace-tab-active-border);
   z-index: 2;
-  margin-bottom: -1px;
 }
 
 .workspace-session-tab-address {
@@ -506,10 +509,6 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
   background: color-mix(in srgb, var(--app-hover-strong) 88%, transparent);
 }
 
-.workspace-session-tab-divider {
-  border-color: color-mix(in srgb, var(--app-border) 72%, transparent);
-}
-
 .workspace-tab-strip {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -517,5 +516,13 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
 .workspace-tab-strip::-webkit-scrollbar {
   display: none;
+}
+
+.workspace-tab-header-dark {
+  --workspace-tab-idle-bg: color-mix(in srgb, var(--theme-bg) 90%, white 1%);
+  --workspace-tab-idle-border: color-mix(in srgb, var(--theme-bg) 90%, white 8%);
+  --workspace-tab-idle-hover-bg: color-mix(in srgb, var(--theme-bg) 90%, white 12%);
+  --workspace-tab-active-bg: color-mix(in srgb, var(--theme-bg) 87%, white 12%);
+  --workspace-tab-active-border: color-mix(in srgb, white 5%, transparent);
 }
 </style>
