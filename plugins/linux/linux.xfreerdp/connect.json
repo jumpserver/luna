@@ -9,8 +9,9 @@
     "default": "xfreerdp"
   },
   "launch": {
-    "type": "args",
-    "template": "{file} /cert-ignore /d: /p:"
+    "type": "file",
+    "open_with": "executable",
+    "arg_template": "{file} /cert-ignore /d: /p:"
   },
   "display_name": "xFreeRDP"
 }

@@ -10,6 +10,11 @@
   },
   "launch": {
     "type": "args",
+    "driver": "linux-terminal",
+    "use_ssh_helper": true,
+    "protocol_aliases": {
+      "telnet": "ssh"
+    },
     "template": "{protocol} {username}@{host} -p {port} -P {value}"
   },
   "display_name": "Terminal"

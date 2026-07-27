@@ -12,5 +12,9 @@
     "type": "args",
     "template": "{host}::{port}"
   },
+  "env": {
+    "VNC_USERNAME": "{username}",
+    "VNC_PASSWORD": "{value}"
+  },
   "display_name": "TigerVNC"
 }

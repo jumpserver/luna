@@ -27,6 +27,21 @@ interface ConnectMethodsResponse {
   originals: ConnectMethod[]
 }
 
+const LOCAL_APPLICATION_METHOD_PREFIX = "native_app:";
+
+export const createLocalApplicationConnectMethod = (connectMethod: string, clientName: string) =>
+  `${LOCAL_APPLICATION_METHOD_PREFIX}${connectMethod}:${encodeURIComponent(clientName)}`;
+
+export const parseLocalApplicationConnectMethod = (value: string) => {
+  const match = /^native_app:([^:]+):(.+)$/.exec(value || "");
+  if (!match) return { connectMethod: value, clientName: undefined };
+
+  return {
+    connectMethod: match[1] || value,
+    clientName: decodeURIComponent(match[2] || "")
+  };
+};
+
 const connectMethodsCache = new Map<string, ConnectMethodsResponse>();
 const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 

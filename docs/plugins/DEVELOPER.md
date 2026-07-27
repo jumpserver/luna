@@ -199,7 +199,7 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
 ## 调试技巧
 
 1. **查看合并配置**：调用 Tauri `get_config`，确认插件已出现在对应 `category` 数组中
-2. **查看 awaken 日志**：`{config_dir}/jumpserver-client/logs/`
+2. **查看启动日志**：查看 JumpServer Client 的 Tauri 日志
 3. **脚本调试**：手动执行脚本并注入环境变量：
 
 ```bash

@@ -53,6 +53,8 @@ tauri-plugin-prevent-default = "5.0.0"
 russh = "0.61.2"
 bytes = "1.11.1"
 portable-pty = "0.9"
+shell-words = "1.1"
+percent-encoding = "2.3"
 
 [dependencies.tokio]
 version = "1.46.1"

@@ -57,6 +57,22 @@ impl PluginService {
 
     fn resolve_builtin_dir(app: &AppHandle) -> Option<PathBuf> {
         let os_key = Self::os_key();
+        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let development_candidates = [
+            cwd.join("plugins").join(os_key),
+            cwd.join("../plugins").join(os_key),
+            cwd.join("../../plugins").join(os_key),
+        ];
+
+        if cfg!(debug_assertions) {
+            if let Some(path) = development_candidates
+                .iter()
+                .find(|path| path.join("index.json").is_file())
+            {
+                return Some(path.clone());
+            }
+        }
+
         let resource_candidates = [
             format!("resources/plugins/{os_key}"),
             format!("plugins/{os_key}"),
@@ -72,11 +88,10 @@ impl PluginService {
             return resource;
         }
 
-        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
         let candidates = [
-            cwd.join("plugins").join(os_key),
-            cwd.join("../plugins").join(os_key),
-            cwd.join("../../plugins").join(os_key),
+            development_candidates[0].clone(),
+            development_candidates[1].clone(),
+            development_candidates[2].clone(),
             cwd.join("plugins/builtin"),
             cwd.join("../plugins/builtin"),
             cwd.join("../../plugins/builtin"),
@@ -88,6 +103,25 @@ impl PluginService {
 
     fn resolve_defaults_path(app: &AppHandle) -> Option<PathBuf> {
         let os_key = Self::os_key();
+        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let development_candidates = [
+            cwd.join("plugins")
+                .join(os_key)
+                .join("plugins-state.defaults.json"),
+            cwd.join("../plugins")
+                .join(os_key)
+                .join("plugins-state.defaults.json"),
+            cwd.join("../../plugins")
+                .join(os_key)
+                .join("plugins-state.defaults.json"),
+        ];
+
+        if cfg!(debug_assertions) {
+            if let Some(path) = development_candidates.iter().find(|path| path.is_file()) {
+                return Some(path.clone());
+            }
+        }
+
         let resource_candidates = [
             format!("resources/plugins/{os_key}/plugins-state.defaults.json"),
             format!("plugins/{os_key}/plugins-state.defaults.json"),
@@ -103,14 +137,10 @@ impl PluginService {
             return resource;
         }
 
-        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
         let candidates = [
-            cwd.join("plugins")
-                .join(os_key)
-                .join("plugins-state.defaults.json"),
-            cwd.join("../plugins")
-                .join(os_key)
-                .join("plugins-state.defaults.json"),
+            development_candidates[0].clone(),
+            development_candidates[1].clone(),
+            development_candidates[2].clone(),
             cwd.join("plugins/plugins-state.defaults.json"),
             cwd.join("../plugins/plugins-state.defaults.json"),
         ];
@@ -321,25 +351,30 @@ impl PluginService {
             .unwrap_or("")
     }
 
-    fn user_path_exists(platform_connect: &Value, path: &str) -> bool {
-        if Self::executable_type(platform_connect) != "user_path" {
-            return true;
-        }
+    fn configured_path_exists(platform_connect: &Value, path: &str) -> bool {
+        let executable_type = Self::executable_type(platform_connect);
         let trimmed = path.trim();
-        !trimmed.is_empty() && Path::new(trimmed).is_file()
+        match executable_type {
+            "user_path" => !trimmed.is_empty() && Path::new(trimmed).is_file(),
+            "application_bundle" => !trimmed.is_empty() && Path::new(trimmed).is_dir(),
+            _ => true,
+        }
     }
 
-    fn validate_user_path_executable(
+    fn validate_configured_executable(
         platform_connect: &Value,
         user_state: &Value,
         plugin_id: &str,
     ) -> Result<(), String> {
-        if Self::executable_type(platform_connect) != "user_path" {
+        if !matches!(
+            Self::executable_type(platform_connect),
+            "user_path" | "application_bundle"
+        ) {
             return Ok(());
         }
 
         let (path, _, _) = Self::resolve_path(plugin_id, platform_connect, user_state);
-        if Self::user_path_exists(platform_connect, &path) {
+        if Self::configured_path_exists(platform_connect, &path) {
             return Ok(());
         }
 
@@ -433,7 +468,7 @@ impl PluginService {
             Self::resolve_path(plugin_id, &platform_connect, user_state);
 
         let executable_type = Self::executable_type(&platform_connect);
-        let path_exists = Self::user_path_exists(&platform_connect, &path);
+        let path_exists = Self::configured_path_exists(&platform_connect, &path);
 
         let match_first = Self::build_match_first(plugin_id, category, &protocols, selections);
         let enabled_selections = user_state
@@ -466,6 +501,14 @@ impl PluginService {
             "type": category,
             "path": path,
             "arg_format": arg_format,
+            "launch_type": launch.get("type").and_then(|v| v.as_str()).unwrap_or("args"),
+            "open_with": launch.get("open_with").and_then(|v| v.as_str()).unwrap_or(""),
+            "launch_driver": launch.get("driver").and_then(|v| v.as_str()).unwrap_or(""),
+            "application_id": launch.get("application_id").and_then(|v| v.as_str()).unwrap_or(""),
+            "use_ssh_helper": launch.get("use_ssh_helper").and_then(|v| v.as_bool()).unwrap_or(false),
+            "protocol_aliases": launch.get("protocol_aliases").cloned().unwrap_or(json!({})),
+            "protocol_templates": launch.get("protocol_templates").cloned().unwrap_or(json!({})),
+            "env": platform_connect.get("env").cloned().unwrap_or(json!({})),
             "match_first": match_first,
             "enabled_protocols": enabled_protocols,
             "is_internal": is_internal,
@@ -473,7 +516,7 @@ impl PluginService {
             "is_set": is_set,
             "executable_type": executable_type,
             "path_exists": path_exists,
-            "_plugin_id": plugin_id,
+            "plugin_id": plugin_id,
         });
 
         if let Some(steps) = autoit {
@@ -557,16 +600,7 @@ impl PluginService {
             }
         }
 
-        // Strip internal _plugin_id before returning to frontend.
         // Selections alone drive match_first — no connect.json fallback.
-        for items in per_category.values_mut() {
-            for item in items.iter_mut() {
-                if let Some(obj) = item.as_object_mut() {
-                    obj.remove("_plugin_id");
-                }
-            }
-        }
-
         Ok(json!({
             "terminal": per_category.get("terminal").cloned().unwrap_or_default(),
             "remotedesktop": per_category.get("remotedesktop").cloned().unwrap_or_default(),
@@ -646,7 +680,7 @@ impl PluginService {
         }
 
         if enabled {
-            Self::validate_user_path_executable(&platform_connect, &state, &plugin_id)?;
+            Self::validate_configured_executable(&platform_connect, &state, &plugin_id)?;
         }
 
         let state_obj = state.as_object_mut().ok_or("invalid plugins-state")?;

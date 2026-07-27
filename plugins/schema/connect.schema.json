@@ -47,7 +47,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["bundled", "system", "user_path"]
+          "enum": ["bundled", "system", "user_path", "application_bundle"]
         },
         "default": {
           "type": "string",
@@ -56,7 +56,7 @@
         "required": {
           "type": "boolean",
           "default": false,
-          "description": "If true, user must configure path before enabling (user_path)"
+          "description": "If true, user must configure path before enabling (user_path or application_bundle)"
         }
       }
     },
@@ -67,6 +67,17 @@
       "properties": {
         "type": { "const": "args" },
         "template": { "type": "string" },
+        "driver": { "type": "string" },
+        "application_id": { "type": "string" },
+        "use_ssh_helper": { "type": "boolean" },
+        "protocol_aliases": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "protocol_templates": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
         "split_mode": {
           "type": "string",
           "enum": ["space", "shell"],

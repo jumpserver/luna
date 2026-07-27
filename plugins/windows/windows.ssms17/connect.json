@@ -10,39 +10,8 @@
     "required": true
   },
   "launch": {
-    "type": "autoit",
-    "steps": [
-      {
-        "cmd": "Wait",
-        "type": "15",
-        "element": "[REGEXPTITLE:连接到服务器|Connect]"
-      },
-      {
-        "cmd": "ControlSend",
-        "type": "{host},{port}",
-        "element": "[CLASS:Edit; INSTANCE:1]"
-      },
-      {
-        "cmd": "ControlSend",
-        "type": "SQL Server",
-        "element": "[NAME:comboBoxAuthentication]"
-      },
-      {
-        "cmd": "ControlSetText",
-        "type": "{username}",
-        "element": "[CLASS:Edit; INSTANCE:2]"
-      },
-      {
-        "cmd": "ControlSend",
-        "type": "{value}",
-        "element": "[NAME:password]"
-      },
-      {
-        "cmd": "ControlClick",
-        "type": "40,10",
-        "element": "[NAME:connect]"
-      }
-    ]
+    "type": "args",
+    "template": "-S {host},{port} -U {username} -P {value} -d {dbname}"
   },
   "display_name": "SQL Server Management Studio"
 }

@@ -5,7 +5,7 @@
 当前客户端通过单体 `config.json` 定义各协议的外部连接工具（终端、远程桌面、文件传输、数据库等）。随着支持的工具增多，存在以下问题：
 
 - 单体 JSON 难以维护、合并冲突频繁
-- 平台差异逻辑散落在 `awaken_*.go` 与配置中（如 Navicat URL、iTerm AppleScript、AutoIt）
+- 平台差异逻辑需要由插件配置描述，并由统一的 Rust 启动器执行
 - 新增工具需改主仓库并发版，第三方无法独立扩展
 - UI 图标与工具名硬编码在 Vue 组件中
 
@@ -43,7 +43,7 @@ flowchart TB
 
     subgraph runtime [运行时]
         UI[设置页 / 连接选择]
-        AW[go-client awaken]
+        AW[Rust Local App Launcher]
     end
 
     B --> D
@@ -58,7 +58,7 @@ flowchart TB
 
 1. **启动时**：`PluginService` 扫描 builtin + installed，校验 manifest，合并为现有 `AppConfigType` 结构（**向后兼容**）。
 2. **设置页**：展示所有可用插件；用户切换默认工具、配置 exe 路径 → 写入 `plugins-state.json`。
-3. **连接时**：`awaken` 仍读取合并后的配置，按 `launch.type` 执行启动逻辑。
+3. **连接时**：Tauri 内的 Rust 启动器读取合并配置，按 `launch.type` 和 `launch.driver` 执行；只有 SSH 代理连接会调用 Go `client` helper。
 
 ---
 
@@ -238,18 +238,18 @@ sequenceDiagram
 
 ## 与现有代码的迁移策略
 
-### 阶段 1：插件化配置（兼容模式）
+### 阶段 1：插件化配置（已完成）
 
 - 将 `config.json` 中各 `AppItem` 拆为 `plugins/builtin/{name}/`
 - 新增 `PluginService`（Rust），启动时合并为现有 `AppConfigType`
 - `get_config` / `update_config_selection` 改为读写 `plugins-state.json`
-- **前端与 go-client 无需大改**
+- 前端继续消费统一的 `AppConfigType`
 
-### 阶段 2：启动器插件化
+### 阶段 2：启动器插件化（已完成）
 
-- `awaken` 增加 `launch.type` 分发：`script` / `url` / `file`
-- 将 Navicat、iTerm 等特殊逻辑迁入对应插件 `scripts/`
-- 减少 `awaken_windows.go` 中的硬编码
+- Rust 启动器按配置分发 `args` / `file` 和可选 driver
+- 终端是否调用 SSH helper 由 `use_ssh_helper` 显式声明
+- Go 目录只保留 SSH helper，不再参与第三方应用启动
 
 ### 阶段 3：插件市场（可选）
 

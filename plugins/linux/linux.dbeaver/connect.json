@@ -11,7 +11,7 @@
   },
   "launch": {
     "type": "args",
-    "template": "-con name={name}|driver={protocol}|user={username}|password={value}|database={dbname}|host={host}|port={port}|save=false|connect=true"
+    "template": "-con name={name}|driver={dbeaver_protocol}|user={username}|password={value}|database={dbname}|host={host}|port={port}|save=false|connect=true"
   },
   "display_name": "DBeaver Community"
 }

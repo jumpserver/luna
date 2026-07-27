@@ -14,9 +14,7 @@ plugins/
 ├── linux/                      # Linux 内置插件
 ├── demo/
 │   └── hello-terminal/         # 第三方开发示例
-├── schema/                     # JSON Schema
-├── tools/
-│   └── split-config.py         # 从 config.json 重新生成平台插件
+└── schema/                     # JSON Schema
 ```
 
 ## 单个插件结构
@@ -28,13 +26,8 @@ macos.tigervnc/
 └── icon.png         # 设置页图标（可选）
 ```
 
-## 重新生成内置插件
-
-修改 `go-client/config.json` 后，可从备份恢复完整配置再执行：
-
-```bash
-python3 plugins/tools/split-config.py
-```
+应用发现、选择和启动均由 Tauri/Rust 直接读取这里的插件配置。Go 工程只保留 SSH
+终端 helper，不再维护应用启动配置的副本。
 
 ## 文档
 

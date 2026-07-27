@@ -61,14 +61,16 @@ const isWindowsPathPickTarget = computed(() => {
   return props.item?.is_internal === false && isWindows.value;
 });
 
-const isUserPathPlugin = computed(() => props.item?.executable_type === "user_path");
+const requiresLocalPath = computed(() =>
+  ["user_path", "application_bundle"].includes(props.item?.executable_type || "")
+);
 
 const canEnable = computed(() => {
   if (isBuiltInTerminal.value) {
     return true;
   }
 
-  if (isUserPathPlugin.value) {
+  if (requiresLocalPath.value) {
     return props.item?.path_exists === true;
   }
   return !!(props.item?.path && props.item.path.trim());
@@ -80,7 +82,7 @@ const switchDisabled = computed(() => {
     return true;
   }
 
-  return isUserPathPlugin.value ? false : !canEnable.value;
+  return requiresLocalPath.value ? false : !canEnable.value;
 });
 
 function getImageByName(filename: string): string | undefined {
@@ -142,10 +144,10 @@ const onSwitch = (v: boolean) => {
     return;
   }
 
-  // user_path: path_exists is a snapshot from last config build and can be stale
-  // if the binary was moved/restored on disk. Always ask the backend to live-check
+  // path_exists is a snapshot from the last config build and can be stale if
+  // the executable or application was moved/restored. Ask the backend to live-check
   // when a path is configured; only block locally when path is empty.
-  if (isUserPathPlugin.value) {
+  if (requiresLocalPath.value) {
     if (!props.item?.path?.trim()) {
       showExecutableNotFoundToast();
       return;

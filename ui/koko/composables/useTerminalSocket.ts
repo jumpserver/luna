@@ -39,7 +39,7 @@ export const useKokoTerminalSocket = () => {
   const toast = useToast();
   const { createSentry } = useKokoZmodem();
   const { width, height } = useWindowSize();
-  const { sendHostEvent, emitTerminalConnect, emitTerminalSession, sendMittEvent, sendToHost } = useKokoTerminalEvents();
+  const { sendHostEvent, emitTerminalConnect, emitTerminalSession, hostBridge, sendMittEvent, sendToHost } = useKokoTerminalEvents();
 
   const containerRef = shallowRef<HTMLElement>();
   const shareId = ref("");
@@ -176,7 +176,26 @@ export const useKokoTerminalSocket = () => {
         const sessionInfo = JSON.parse(parsedMessageData.data);
         emitTerminalSession(sessionInfo);
         const tabId = unref(sessionCtxRef)?.tabId;
-        if (tabId) setWorkspaceSessionDetails(tabId, sessionInfo);
+        if (tabId) {
+          setWorkspaceSessionDetails(tabId, {
+            sessionId: sessionInfo.session.id,
+            asset: sessionInfo.session.asset,
+            address: sessionInfo.session.ip,
+            account: sessionInfo.session.user,
+            shareAllowed: sessionInfo.permission?.actions?.includes("share"),
+            requestFileToken: () => new Promise<string>((resolve, reject) => {
+              const timeout = window.setTimeout(() => {
+                reject(new Error("SFTP token request timed out"));
+              }, 15_000);
+              hostBridge.once(HOST_MESSAGE_TYPE.GET_FILE_CONNECT_TOKEN, (message) => {
+                window.clearTimeout(timeout);
+                if (message.token) resolve(message.token);
+                else reject(new Error("SFTP is unavailable for this session"));
+              });
+              hostBridge.sendHost(HOST_MESSAGE_TYPE.CREATE_FILE_CONNECT_TOKEN, "");
+            })
+          });
+        }
         const share = sessionInfo?.permission?.actions?.includes("share");
 
         if (sessionInfo.backspaceAsCtrlH) {

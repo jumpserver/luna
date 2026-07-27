@@ -12,6 +12,7 @@ import LocalShellSessionSurface from "~/koko/workspaces/LocalShellSessionSurface
 import KokoTerminalSessionSurface from "~/koko/workspaces/TerminalSessionSurface.vue";
 import LionRemoteSessionSurface from "~/lion/workspaces/RemoteSessionSurface.vue";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
+import GuideSessionSurface from "~/shared/connectors/GuideSessionSurface.vue";
 import LegacyIframeSession from "~/shared/connectors/LegacyIframeSession.vue";
 
 export interface ConnectorRegistryEntry {
@@ -66,6 +67,9 @@ export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
   }
 
   const connectMethod = (tab.payload?.connectMethod as { value?: string } | undefined)?.value;
+  if (connectMethod?.endsWith("_guide")) {
+    return GuideSessionSurface;
+  }
   const capability = findDeclaredCapability(tab.protocol, connectMethod);
 
   if (capability?.surface === "file-manager") {

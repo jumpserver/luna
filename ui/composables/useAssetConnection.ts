@@ -1,4 +1,5 @@
 import type { AssetItem, ConnectionPreferenceInfo, ConnectionInfo as StoredConnectionInfo } from "~/types/index";
+import { parseLocalApplicationConnectMethod } from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols } from "~/utils";
 
@@ -76,7 +77,8 @@ export function useAssetConnection() {
     if (protocol) {
       try {
         const methods = await getMethodsForProtocol(protocol);
-        connectMethod = methods.some((method) => method.value === connectionInfo.connectMethod)
+        const selectedMethod = parseLocalApplicationConnectMethod(connectionInfo.connectMethod);
+        connectMethod = methods.some((method) => method.value === selectedMethod.connectMethod)
           ? connectionInfo.connectMethod
           : (methods[0]?.value || "");
       } catch {

@@ -178,6 +178,17 @@ export function createConnectionToken(body: unknown): Promise<TokenResponse> {
   });
 }
 
+export function getLocalClientUrl(
+  tokenId: string,
+  query?: Record<string, unknown>
+): Promise<{ url: string }> {
+  return apiRequest<{ url: string }>({
+    method: "GET",
+    path: `/api/v1/authentication/connection-token/${encodeURIComponent(tokenId)}/client-url/`,
+    query
+  });
+}
+
 export function exchangeConnectionToken(tokenId: string): Promise<TokenResponse> {
   return apiRequest<TokenResponse>({
     method: "POST",

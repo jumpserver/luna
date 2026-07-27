@@ -1,7 +1,14 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 
-import { K8S_NATIVE_VALUE, SFTP_FILE_EDITOR_VALUE, SFTP_FILE_MANAGER_VALUE, WEB_DB_NATIVE_VALUE, WEB_RDP_NATIVE_VALUE } from "~/composables/useConnectMethods";
+import {
+  K8S_NATIVE_VALUE,
+  parseLocalApplicationConnectMethod,
+  SFTP_FILE_EDITOR_VALUE,
+  SFTP_FILE_MANAGER_VALUE,
+  WEB_DB_NATIVE_VALUE,
+  WEB_RDP_NATIVE_VALUE
+} from "~/composables/useConnectMethods";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -26,15 +33,9 @@ const NATIVE_WORKSPACE_METHODS = new Set([
   SFTP_FILE_EDITOR_VALUE,
   K8S_NATIVE_VALUE
 ]);
-const parseNativeAppMethod = (value: string) => {
-  const match = /^native_app:([^:]+):(.+)$/.exec(value || "");
-  if (!match) return { connectMethod: value, clientName: undefined };
-
-  return {
-    connectMethod: match[1] || value,
-    clientName: decodeURIComponent(match[2] || "")
-  };
-};
+const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
+const isLocalClientMethod = (method: { type?: string } | undefined) =>
+  ["native", "client", "local", "desktop"].includes(String(method?.type || "").toLowerCase());
 const pendingBuiltinSessions: Array<{
   tabId?: string
   assetId: string
@@ -298,7 +299,7 @@ export const useAssetAction = () => {
     body: ConnectionBody,
     meta?: { tabId?: string, asset?: AssetItem, assetId: string, protocol: string, account: string }
   ) => {
-    const nativeApp = parseNativeAppMethod(body.connect_method);
+    const nativeApp = parseLocalApplicationConnectMethod(body.connect_method);
     const serverBody = { ...body, connect_method: nativeApp.connectMethod };
 
     if (!isTauriRuntime()) {
@@ -313,6 +314,19 @@ export const useAssetAction = () => {
         const token = await createConnectionToken(serverBody);
         const allMethods = await fetchConnectMethods();
         const method = (allMethods[body.protocol] || []).find((item) => item.value === serverBody.connect_method);
+
+        if (isLocalClientMethod(method)) {
+          const { url } = await getLocalClientUrl(
+            token.id,
+            buildLocalRdpParams()
+          );
+          if (!url?.startsWith("jms://")) {
+            throw new Error("Invalid local client URL");
+          }
+          window.location.assign(url);
+          return;
+        }
+
         const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
         const endpointUrl = getWebConnectorDevOrigin(component) || await fetchSmartEndpointUrl(token, method, body);
         const webUrl = getWebConnectorPath(token, method, body, endpointUrl);
@@ -348,7 +362,7 @@ export const useAssetAction = () => {
     }
 
     const rdpParams = buildLocalRdpParams();
-    useTauriCoreInvoke("get_connect_token", {
+    await useTauriCoreInvoke("get_connect_token", {
       body: {
         asset: body.asset,
         account: body.account,
@@ -479,46 +493,11 @@ export const useAssetAction = () => {
     });
   };
 
-  /**
-   * @description 根据协议分发连接方法
-   * @param protocol
-   */
-  const dispatchConnectMethod = (protocol: string) => {
-    let method = "";
-
-    switch (protocol) {
-      case "ssh":
-      case "telnet":
-        method = "ssh_client";
-        break;
-      case "rdp":
-        method = "mstsc";
-        break;
-      case "sftp":
-        method = "sftp_client";
-        break;
-      case "vnc":
-        method = "vnc_client";
-        break;
-      case "http":
-        method = "chrome";
-        break;
-      default:
-        method = "db_client";
-    }
-
-    return method;
-  };
-
   const resolveConnectMethod = async (protocol: string) => {
     const methods = await fetchConnectMethods();
     const protocolMethods = methods[protocol] || [];
 
-    if (protocolMethods.length > 0) {
-      return protocolMethods[0]?.value || dispatchConnectMethod(protocol);
-    }
-
-    return dispatchConnectMethod(protocol);
+    return protocolMethods.find((method) => !method.disabled)?.value || "";
   };
 
   const generateConnectOptions = (protocol: string) => {
@@ -667,11 +646,16 @@ export const useAssetAction = () => {
       let tabId = ephemeral?.tabId;
 
       // ponytail: 有 onSessionReady 时由调用方内嵌展示（如右侧 SFTP），不新开 workspace tab
-      if (!tabId && ephemeral?.asset && NATIVE_WORKSPACE_METHODS.has(connectMethod) && !ephemeral?.onSessionReady) {
+      if (
+        !tabId
+        && ephemeral?.asset
+        && (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod))
+        && !ephemeral?.onSessionReady
+      ) {
         tabId = openSession(ephemeral.asset, { protocol, account }).id;
       }
 
-      if (NATIVE_WORKSPACE_METHODS.has(connectMethod)) {
+      if (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod)) {
         getBuiltinConnectSession(connectionBody, {
           tabId,
           assetId,

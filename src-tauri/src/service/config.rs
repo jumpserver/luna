@@ -29,10 +29,7 @@ impl ConfigService {
     /// 获取资源目录中的 config.json 路径（作为默认模板）
     fn resolve_resource_path(app: &tauri::AppHandle) -> Option<PathBuf> {
         app.path()
-            .resolve(
-                "resources/bin/config.json",
-                tauri::path::BaseDirectory::Resource,
-            )
+            .resolve("default-config.json", tauri::path::BaseDirectory::Resource)
             .ok()
             .filter(|p| p.is_file())
     }
@@ -43,10 +40,9 @@ impl ConfigService {
         log::info!("Current working directory: {:?}", cwd);
 
         let candidates = [
-            cwd.join("resources/bin/config.json"),
-            cwd.join("../config.json"),
-            cwd.join("../../config.json"),
-            cwd.join("../../../config.json"),
+            cwd.join("default-config.json"),
+            cwd.join("src-tauri/default-config.json"),
+            cwd.join("../src-tauri/default-config.json"),
         ];
         let result = candidates.into_iter().find(|p| p.is_file());
         log::info!("Selected dev config path: {:?}", result);

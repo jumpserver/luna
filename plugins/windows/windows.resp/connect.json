@@ -11,6 +11,7 @@
   },
   "launch": {
     "type": "args",
+    "driver": "resp",
     "template": "--settings-dir*{config_file}"
   },
   "display_name": "Redis Desktop Manager"

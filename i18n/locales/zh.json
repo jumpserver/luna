@@ -405,6 +405,11 @@
     "CopyPath": "复制路径",
     "CopyPathSuccess": "路径已复制"
   },
+  "ConnectMethodType": {
+    "BuiltIn": "内置",
+    "Application": "应用",
+    "RemoteApplication": "远程应用"
+  },
   "ConnectError": {
     "ConnectFailed": "连接失败",
     "AclFailed": "当前资产受到 ACL 访问限制，无法通过客户端连接，请前往 Web 端进行访问",

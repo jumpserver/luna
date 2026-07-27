@@ -33,7 +33,7 @@ permissions:
 
 jobs:
   pre-build:
-    name: pre-build go client
+    name: pre-build SSH helper
     runs-on: ubuntu-latest
     outputs:
       go-client-artifacts: ${{ steps.upload-go-client.outputs.artifact-name }}
@@ -47,11 +47,11 @@ jobs:
         with:
           go-version: "1.21"
 
-      - name: Build Go client for all platforms
+      - name: Build SSH helper for all platforms
         run: make build-all
         working-directory: go-client
 
-      - name: Upload Go client artifacts
+      - name: Upload SSH helper artifacts
         id: upload-go-client
         uses: actions/upload-artifact@v4
         with:
@@ -137,13 +137,13 @@ jobs:
       - name: Check out git repository
         uses: actions/checkout@v4
 
-      - name: Download Go client artifacts
+      - name: Download SSH helper artifacts
         uses: actions/download-artifact@v4
         with:
           name: go-client-binaries
           path: go-client/build/
 
-      - name: Install Go client for current platform
+      - name: Install SSH helper for current platform
         run: make install TARGET="${{ matrix.target }}"
         working-directory: go-client
 

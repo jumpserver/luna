@@ -402,6 +402,11 @@
     "CopyPath": "Copy path",
     "CopyPathSuccess": "Path copied"
   },
+  "ConnectMethodType": {
+    "BuiltIn": "Built-in",
+    "Application": "Application",
+    "RemoteApplication": "Remote Application"
+  },
   "ConnectError": {
     "ConnectFailed": "Connection failed",
     "AclFailed": "The current asset is restricted by ACL policies and cannot be accessed via the client. Please use the Web console to connect.",

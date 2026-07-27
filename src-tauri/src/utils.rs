@@ -141,7 +141,11 @@ fn restore_window_size(win: &WebviewWindow) -> Result<(), String> {
     Ok(())
 }
 
-fn apply_window_size(win: &WebviewWindow, width_logical: f64, height_logical: f64) -> Result<(), String> {
+fn apply_window_size(
+    win: &WebviewWindow,
+    width_logical: f64,
+    height_logical: f64,
+) -> Result<(), String> {
     let app: &AppHandle = win.app_handle();
     let (w, h) = fit_window_size_to_monitor(win, width_logical, height_logical);
 
@@ -153,7 +157,11 @@ fn apply_window_size(win: &WebviewWindow, width_logical: f64, height_logical: f6
     Ok(())
 }
 
-fn fit_window_size_to_monitor(win: &WebviewWindow, width_logical: f64, height_logical: f64) -> (f64, f64) {
+fn fit_window_size_to_monitor(
+    win: &WebviewWindow,
+    width_logical: f64,
+    height_logical: f64,
+) -> (f64, f64) {
     let base_w = width_logical.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
     let base_h = height_logical.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT);
 

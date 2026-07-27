@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import type { SelectMenuItem } from "@nuxt/ui";
 import type { AssetPageType, CharsetType, PermedAccount, PermedProtocol, ResolutionType } from "~/types/index";
-import { useConnectMethods } from "~/composables/useConnectMethods";
+import {
+  createLocalApplicationConnectMethod,
+  parseLocalApplicationConnectMethod,
+  useConnectMethods
+} from "~/composables/useConnectMethods";
 import { sortProtocolNames } from "~/utils";
 
 const props = defineProps<{
@@ -107,6 +111,40 @@ watch(
       if (requestId !== connectMethodRequestId || newProtocol !== props.protocol) return;
       availableConnectMethods.value = methods;
 
+      const previousNativeApp = parseLocalApplicationConnectMethod(previousMethod);
+      if (
+        isTauriRuntime()
+        && previousNativeApp.clientName
+        && methods.some((method) => method.value === previousNativeApp.connectMethod)
+        && Object.values(appConfig.value || {})
+          .flat()
+          .some((item) => item.name === previousNativeApp.clientName)
+      ) {
+        emits("update:connectMethod", previousMethod);
+        return;
+      }
+
+      if (isTauriRuntime()) {
+        const protocol = newProtocol.toLowerCase();
+        const preferredClient = Object.values(appConfig.value || {})
+          .flat()
+          .find((item) =>
+            item.name !== "builtin_client"
+            && item.is_set
+            && item.path_exists !== false
+            && item.match_first?.some((value) => value.toLowerCase() === protocol)
+          );
+        const nativeMethod = methods.find((method) => categoryOfConnectMethod(method) === "native");
+
+        if (preferredClient && nativeMethod) {
+          emits(
+            "update:connectMethod",
+            createLocalApplicationConnectMethod(nativeMethod.value, preferredClient.name)
+          );
+          return;
+        }
+      }
+
       if (previousMethod && methods.some((m) => m.value === previousMethod)) {
         emits("update:connectMethod", previousMethod);
         return;
@@ -135,9 +173,9 @@ const protocolTabItems = computed(() =>
 );
 const connectMethodTypeItems = computed(() => {
   const metaMap: Record<string, { label: string; icon: string }> = {
-    builtin: { label: "内置", icon: "i-lucide-globe" },
-    native: { label: "客户端", icon: "i-lucide-monitor" },
-    remote_app: { label: "远程应用", icon: "i-lucide-app-window" }
+    builtin: { label: t("ConnectMethodType.BuiltIn"), icon: "i-lucide-globe" },
+    native: { label: t("ConnectMethodType.Application"), icon: "i-lucide-monitor" },
+    remote_app: { label: t("ConnectMethodType.RemoteApplication"), icon: "i-lucide-app-window" }
   };
   const order = ["builtin", "native", "remote_app"];
   const grouped = new Set(availableConnectMethods.value.map((method) => categoryOfConnectMethod(method)));
@@ -176,26 +214,16 @@ const connectMethodTabItems = computed(() => {
     return categoryOfConnectMethod(method) === selectedConnectMethodType.value;
   });
 
-  // 服务端只提供通用 native 入口；Rust runtime 中再根据这里选择的
-  // 具体应用启动。未显式选择时，match_first 排在最前作为 preferred。
+  // 服务端提供通用 native 入口，具体应用完全由全局应用配置决定。
   if (isTauriRuntime() && selectedConnectMethodType.value === "native") {
     if (!configuredClients.value.length) return [];
 
-    const preferredValues: Record<string, string> = {
-      ssh: "ssh_client",
-      telnet: "ssh_client",
-      rdp: "mstsc",
-      sftp: "sftp_client",
-      vnc: "vnc_client"
-    };
-    const preferredValue = preferredValues[(props.protocol || "").toLowerCase()] || "db_client";
-    const preferred = methods.find((method) => method.value === preferredValue)
-      || methods.find((method) => !isBuiltinConnectMethod(method));
+    const nativeMethod = methods[0];
 
-    return preferred
+    return nativeMethod
       ? configuredClients.value.map((client) => ({
           label: client.display_name || client.name,
-          value: `native_app:${preferred.value}:${encodeURIComponent(client.name)}`
+          value: createLocalApplicationConnectMethod(nativeMethod.value, client.name)
         }))
       : [];
   }

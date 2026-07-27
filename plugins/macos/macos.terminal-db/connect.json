@@ -10,7 +10,18 @@
   },
   "launch": {
     "type": "args",
-    "template": ""
+    "driver": "terminal",
+    "application_id": "com.apple.Terminal",
+    "template": "",
+    "protocol_templates": {
+      "redis": "redis-cli -h {host} -p {port} -a {username}@{value}",
+      "oracle": "sqlplus {username}/{value}@{host}:{port}/{dbname}",
+      "postgresql": "psql 'user={username} password={value} host={host} dbname={dbname} port={port}'",
+      "mysql": "mysql -u {username} -p{value} -h {host} -P {port} {dbname}",
+      "mariadb": "mysql -u {username} -p{value} -h {host} -P {port} {dbname}",
+      "sqlserver": "sqlcmd -S {host},{port} -U {username} -P {value} -d {dbname}",
+      "mongodb": "mongosh mongodb://{username}:{value}@{host}:{port}/{dbname}"
+    }
   },
   "display_name": "Terminal"
 }

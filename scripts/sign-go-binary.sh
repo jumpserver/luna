@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Sign embedded Go client binary for macOS
-# This script signs the Go client binaries that are embedded in the Tauri app
+# Sign the embedded Go SSH helper for macOS.
 
 set -e
 
@@ -19,10 +18,10 @@ if [ -z "$TARGET_ARCH" ]; then
   exit 1
 fi
 
-echo "Signing embedded Go client binary..."
+echo "Signing embedded Go SSH helper..."
 
 BIN_DIR="src-tauri/resources/bin/darwin-${TARGET_ARCH}"
-BINARIES=("client" "JumpServerClient")
+BINARIES=("client")
 
 for BIN_NAME in "${BINARIES[@]}"; do
   BIN_PATH="$BIN_DIR/$BIN_NAME"
@@ -41,4 +40,3 @@ for BIN_NAME in "${BINARIES[@]}"; do
 done
 
 echo "✓ Embedded Go client binary signed successfully."
-

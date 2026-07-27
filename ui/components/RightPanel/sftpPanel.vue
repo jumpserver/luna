@@ -8,6 +8,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 const { t } = useI18n();
 const toast = useToast();
 const { activeTab } = useWorkspaceTabs();
+const { getSessionDetails } = useWorkspaceSessionDetails();
 const { fetchTree, treeNodeToAsset } = useAssetTree();
 const { displayUser, handleAssetConnection } = useAssetAction();
 const userInfoStore = useUserInfoStore();
@@ -20,6 +21,7 @@ const selectedAsset = ref<AssetItem | null>(null);
 const connecting = ref(false);
 const inlinePayload = ref<Record<string, any> | null>(null);
 const inlineError = ref("");
+let connectionAttempt = 0;
 
 const inlineTab = computed<WorkspaceSessionTab | null>(() => {
   const asset = selectedAsset.value;
@@ -47,6 +49,9 @@ const activeWorkspaceAsset = computed(() => {
     address: activeTab.value.address
   };
 });
+const activeFileTokenRequester = computed(() =>
+  getSessionDetails(activeTab.value?.id || "")?.requestFileToken
+);
 const isActiveAssetPreparing = computed(() => Boolean(activeWorkspaceAsset.value && !inlineTab.value && !inlineError.value));
 
 const reportError = (error: unknown) => {
@@ -99,50 +104,74 @@ const openSftp = async () => {
   const asset = selectedAsset.value;
   if (!asset || connecting.value) return;
 
+  const attempt = ++connectionAttempt;
   connecting.value = true;
   inlineError.value = "";
   inlinePayload.value = null;
   try {
+    const requestFileToken = activeFileTokenRequester.value;
+    if (activeTab.value?.assetId === asset.id && requestFileToken) {
+      const tokenId = await requestFileToken();
+      if (attempt === connectionAttempt) {
+        inlinePayload.value = {
+          id: tokenId,
+          token: { id: tokenId },
+          connectMethod: { value: SFTP_FILE_MANAGER_VALUE, component: "koko" }
+        };
+      }
+      return;
+    }
+    if (activeTab.value?.assetId === asset.id) return;
+
     const activeAccount = activeTab.value?.assetId === asset.id ? activeTab.value.account : "";
     const account = activeAccount || displayUser(asset.id, asset.permedAccounts);
     const preference = userInfoStore.getConnectionPreferenceForAsset(asset.id);
     const remembered = userInfoStore.getConnectionInfoForAsset(asset.id);
-    const accountId = preference?.accountId || remembered?.accountId;
-    handleAssetConnection(
-      account,
-      asset.id,
-      "ssh",
-      asset.permedAccounts,
-      "sftp",
-      {
-        accountMode: preference?.accountMode || remembered?.accountMode || "hosted",
-        accountId,
-        connectMethod: SFTP_FILE_MANAGER_VALUE,
-        asset,
-        onSessionReady: (payload) => {
-          inlinePayload.value = payload;
-          connecting.value = false;
-        },
-        onSessionError: (error) => {
-          inlineError.value = String(error);
-          connecting.value = false;
+    const activeToken = activeTab.value?.assetId === asset.id
+      ? (activeTab.value.payload?.token || activeTab.value.payload)
+      : undefined;
+    const accountId = preference?.accountId || remembered?.accountId || activeToken?.account;
+
+    await new Promise<void>((resolve, reject) => {
+      handleAssetConnection(
+        account,
+        asset.id,
+        "ssh",
+        asset.permedAccounts,
+        "sftp",
+        {
+          accountMode: preference?.accountMode || remembered?.accountMode || "hosted",
+          accountId,
+          connectMethod: SFTP_FILE_MANAGER_VALUE,
+          asset,
+          onSessionReady: (payload) => {
+            if (attempt === connectionAttempt) inlinePayload.value = payload;
+            resolve();
+          },
+          onSessionError: reject
         }
-      }
-    );
+      ).catch(reject);
+    });
   } catch (error) {
-    inlineError.value = String(error);
-    connecting.value = false;
+    if (attempt === connectionAttempt) inlineError.value = String(error);
+  } finally {
+    if (attempt === connectionAttempt) connecting.value = false;
   }
 };
 
 watch(
-  () => activeWorkspaceAsset.value?.id,
-  (assetId, previousAssetId) => {
+  [() => activeWorkspaceAsset.value?.id, activeFileTokenRequester],
+  ([assetId, requestFileToken], previousValues) => {
+    const previousAssetId = previousValues?.[0];
     if (assetId && assetId !== previousAssetId) {
+      connectionAttempt += 1;
+      connecting.value = false;
       inlinePayload.value = null;
       inlineError.value = "";
       selectedAsset.value = null;
       useActiveAsset();
+    }
+    if (assetId && requestFileToken && !inlinePayload.value && !connecting.value) {
       void openSftp();
     }
   },

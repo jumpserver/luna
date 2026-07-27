@@ -40,6 +40,7 @@ use crate::utils::is_auth_callback;
 use log::{error, info, warn};
 use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
+#[cfg(not(target_os = "macos"))]
 use tauri_plugin_single_instance::init as single_instance;
 
 fn raise_main_window_for_auth(handle: &tauri::AppHandle) {
@@ -93,25 +94,34 @@ fn process_deep_link(handle: &tauri::AppHandle, raw: &str) -> bool {
 }
 
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .manage(AuthFlowState::default())
         .manage(ApiSessionStore::default())
-        .manage(LocalShellState::default())
-        .plugin(single_instance(|app, argv, _cwd| {
-            info!("single_instance event, argv={:?}", argv);
+        .manage(LocalShellState::default());
 
-            for arg in argv {
-                if arg.starts_with("jms://") {
-                    let did_pull_up = process_deep_link(app, &arg);
-                    info!(
-                        "single_instance processed deep link, did_pull_up={}",
-                        did_pull_up
-                    );
-                } else {
-                    warn!("single_instance ignored non-deeplink arg: {}", arg);
-                }
+    // macOS delivers custom URL schemes through RunEvent::Opened. Registering
+    // the single-instance plugin there consumes the second launch before that
+    // event reaches the deep-link plugin, dropping the jms:// URL. AppKit
+    // already routes opens to the running application, so only Windows/Linux
+    // need the explicit single-instance bridge.
+    #[cfg(not(target_os = "macos"))]
+    let builder = builder.plugin(single_instance(|app, argv, _cwd| {
+        info!("single_instance event, argv={:?}", argv);
+
+        for arg in argv {
+            if arg.starts_with("jms://") {
+                let did_pull_up = process_deep_link(app, &arg);
+                info!(
+                    "single_instance processed deep link, did_pull_up={}",
+                    did_pull_up
+                );
+            } else {
+                warn!("single_instance ignored non-deeplink arg: {}", arg);
             }
-        }))
+        }
+    }));
+
+    builder
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)

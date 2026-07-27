@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { useNow } from "@vueuse/core";
-import { useKokoConnectionStore } from "~/koko/stores/connection";
 import RightPanelSessionShareSection from "~/components/RightPanel/sessionShareSection.vue";
-
-const SESSION_PANEL_PROTOCOLS = new Set(["ssh", "sftp"]);
+import { useKokoConnectionStore } from "~/koko/stores/connection";
 
 const { t } = useI18n();
 const { activeTab } = useWorkspaceTabs();
@@ -34,16 +32,12 @@ const sessionDetails = computed(() => {
   return getSessionDetails(tab.id) || null;
 });
 
-const isSupportedSession = computed(() =>
-  Boolean(activeTab.value && SESSION_PANEL_PROTOCOLS.has(activeTab.value.protocol))
-);
-
 const isConnectedSession = computed(() =>
-  isSupportedSession.value && activeTab.value!.status === "connected"
+  activeTab.value?.status === "connected"
 );
 
 const showShareSection = computed(() =>
-  activeTab.value?.protocol === "ssh" && isConnectedSession.value
+  Boolean(sessionDetails.value?.shareAllowed && isConnectedSession.value)
 );
 
 const sessionRows = computed(() => {
@@ -54,14 +48,14 @@ const sessionRows = computed(() => {
   const tokenId = tab.payload?.id || tab.payload?.token?.id;
 
   return [
-    { label: t("RightPanel.SessionAsset"), value: details?.session.asset || tab.assetName },
-    { label: t("RightPanel.SessionAddress"), value: details?.session.ip || tab.address },
-    { label: t("RightPanel.SessionAccount"), value: details?.session.user || tab.account },
+    { label: t("RightPanel.SessionAsset"), value: details?.asset || tab.assetName },
+    { label: t("RightPanel.SessionAddress"), value: details?.address || tab.address },
+    { label: t("RightPanel.SessionAccount"), value: details?.account || tab.account },
     { label: t("RightPanel.SessionProtocol"), value: tab.protocol.toUpperCase() },
     { label: t("RightPanel.SessionDuration"), value: connectionDuration.value },
     {
       label: t("RightPanel.SessionId"),
-      value: details?.session.id || connectionStore.sessionId || tokenId || "-"
+      value: details?.sessionId || connectionStore.sessionId || tokenId || "-"
     }
   ];
 });
@@ -88,16 +82,6 @@ const canShare = computed(() =>
         variant="naked"
         :title="t('RightPanel.SessionEmptyTitle')"
         :description="t('RightPanel.SessionEmptyDescription')"
-      />
-    </div>
-
-    <div v-else-if="!isSupportedSession" class="grid min-h-0 flex-1 place-items-center px-4 text-center">
-      <UEmpty
-        icon="i-lucide-terminal"
-        size="sm"
-        variant="naked"
-        :title="t('RightPanel.SessionUnsupportedTitle')"
-        :description="t('RightPanel.SessionUnsupportedDescription')"
       />
     </div>
 

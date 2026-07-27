@@ -1,10 +1,19 @@
-import type { TerminalSessionInfo } from "~/koko/types";
+export interface WorkspaceSessionDetails {
+  sessionId?: string
+  asset?: string
+  address?: string
+  account?: string
+  shareAllowed?: boolean
+  requestFileToken?: () => Promise<string>
+}
 
-const sessionDetailsByTabId = new Map<string, TerminalSessionInfo>();
+// Workspace surfaces publish a normalized summary here. The right panel only
+// renders this contract and does not need to know which protocol/component owns it.
+const sessionDetailsByTabId = shallowReactive(new Map<string, WorkspaceSessionDetails>());
 
-export function setWorkspaceSessionDetails(tabId: string, info: TerminalSessionInfo) {
+export function setWorkspaceSessionDetails(tabId: string, details: WorkspaceSessionDetails) {
   if (!tabId) return;
-  sessionDetailsByTabId.set(tabId, info);
+  sessionDetailsByTabId.set(tabId, details);
 }
 
 export function clearWorkspaceSessionDetails(tabId: string) {
