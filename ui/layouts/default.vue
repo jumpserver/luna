@@ -14,7 +14,9 @@ const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const { batchPanelOpen } = useBatchCommandPanel();
 
-const showWorkspaceSidebar = computed(() => activeWorkspaceMode.value !== "assets" || loggedIn.value);
+const showWorkspaceSidebar = computed(() =>
+  activeWorkspaceMode.value !== "files" && (activeWorkspaceMode.value !== "assets" || loggedIn.value)
+);
 
 const cardUi = computed(() => {
   const base = ["rounded-none", "overflow-visible"];
@@ -71,9 +73,10 @@ watch(
   () => route.path,
   (path) => {
     const normalizedPath = path.toLowerCase();
+    const isFileRoute = normalizedPath.includes("/files");
     const isToolRoute = normalizedPath.includes("/tools") || normalizedPath.includes("/videoplayer") || normalizedPath.includes("/transcode");
 
-    setWorkspaceMode(isTauriRuntime() && isToolRoute ? "tools" : "assets");
+    setWorkspaceMode(isFileRoute ? "files" : isTauriRuntime() && isToolRoute ? "tools" : "assets");
   },
   { immediate: true }
 );

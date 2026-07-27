@@ -13,7 +13,11 @@ const workspaceModes = computed(() => {
     key: "assets",
     icon: "i-lucide-house",
     label: "我的资产"
-  }] as Array<{ key: "assets" | "tools", icon: string, label: string }>;
+  }, {
+    key: "files",
+    icon: "i-lucide-folder-kanban",
+    label: "文件管理"
+  }] as Array<{ key: "assets" | "files" | "tools", icon: string, label: string }>;
 
   if (showTools.value) {
     modes.push({
@@ -26,16 +30,23 @@ const workspaceModes = computed(() => {
   return modes;
 });
 
-const setMode = async (mode: "assets" | "tools") => {
+const setMode = async (mode: "assets" | "files" | "tools") => {
   if (mode === "tools" && !showTools.value) return;
 
   const toolPaths = [localePath({ path: "/tools" }), localePath("videoplayer"), localePath({ path: "/transcode" })];
+  const filePath = localePath({ path: "/files" });
 
-  if (mode !== "tools") {
-    if (toolPaths.includes(route.path)) {
+  if (mode === "assets") {
+    if (toolPaths.includes(route.path) || route.path === filePath) {
       await navigateTo(localePath({ path: "/" }));
     }
 
+    setWorkspaceMode(mode);
+    return;
+  }
+
+  if (mode === "files") {
+    if (route.path !== filePath) await navigateTo(filePath);
     setWorkspaceMode(mode);
     return;
   }

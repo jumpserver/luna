@@ -14,6 +14,13 @@ const showSidebarChrome = computed(
 const pageHeader = computed(() => {
   const path = route.path.toLowerCase();
 
+  if (path.includes("/files")) {
+    return {
+      icon: "i-lucide-folder-kanban",
+      title: "文件管理"
+    };
+  }
+
   if (path.includes("/videoplayer")) {
     return {
       icon: "lucide:clapperboard",

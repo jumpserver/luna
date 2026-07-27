@@ -1,4 +1,4 @@
-export type WorkspaceMode = "assets" | "tools";
+export type WorkspaceMode = "assets" | "files" | "tools";
 
 const activeWorkspaceMode = ref<WorkspaceMode>("assets");
 

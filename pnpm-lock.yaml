@@ -34,7 +34,7 @@ importers:
         version: 6.0.2
       '@codemirror/lang-markdown':
         specifier: ^6.5.0
-        version: 6.5.0
+        version: 6.5.1
       '@codemirror/lang-python':
         specifier: ^6.2.1
         version: 6.2.1
@@ -70,7 +70,7 @@ importers:
         version: 3.6.3-3
       '@fontsource/inter':
         specifier: ^5.2.8
-        version: 5.2.8
+        version: 5.3.0
       '@fontsource/noto-sans-sc':
         specifier: ^5.2.8
         version: 5.2.9
@@ -95,6 +95,9 @@ importers:
       '@tauri-apps/plugin-dialog':
         specifier: ^2.7.1
         version: 2.7.1
+      '@tauri-apps/plugin-fs':
+        specifier: ^2.5.1
+        version: 2.5.1
       '@tauri-apps/plugin-log':
         specifier: ~2.8.0
         version: 2.8.0
@@ -166,7 +169,7 @@ importers:
         version: 4.7.1(@nuxt/kit@4.4.6(magicast@0.5.3))(@pinia/nuxt@0.11.3(magicast@0.5.3)(pinia@3.0.4(typescript@6.0.3)(vue@3.5.35(typescript@6.0.3))))(pinia@3.0.4(typescript@6.0.3)(vue@3.5.35(typescript@6.0.3)))
       pretty-bytes:
         specifier: ^7.1.0
-        version: 7.1.0
+        version: 7.1.1
       sql-formatter:
         specifier: ^9.0.0
         version: 9.2.0
@@ -560,8 +563,8 @@ packages:
   '@codemirror/lang-json@6.0.2':
     resolution: {integrity: sha512-x2OtO+AvwEHrEwR0FyyPtfDUiloG3rnVTSZV1W8UteaLL8/MajQd8DpvUb2YVzC+/T18aSDv0H9mu+xw0EStoQ==}
 
-  '@codemirror/lang-markdown@6.5.0':
-    resolution: {integrity: sha512-0K40bZ35jpHya6FriukbgaleaqzBLZfOh7HuzqbMxBXkbYMJDxfF39c23xOgxFezR+3G+tR2/Mup+Xk865OMvw==}
+  '@codemirror/lang-markdown@6.5.1':
+    resolution: {integrity: sha512-6re5avCNfyRMIoi3XNjbEfQM1vTeVD3JS3g/Fyegyso/eoANFM71Cyvbb66LDyYtQLMEcRFlzioywCqDo9SlLA==}
 
   '@codemirror/lang-python@6.2.1':
     resolution: {integrity: sha512-IRjC8RUBhn9mGR9ywecNhB51yePWCGgvHfY1lWN/Mrp3cKuHr0isDKia+9HnvhiWNnMpbGhWrkhuWOc09exRyw==}
@@ -1370,8 +1373,8 @@ packages:
   '@floating-ui/vue@1.1.7':
     resolution: {integrity: sha512-idmAtbAIigGXN2SI5gItiXYBYtNfDTP9yIiObxgu13dgtG7ARCHlNfnR29GxP4LI4o13oiwsJ8wVgghj1lNqcw==}
 
-  '@fontsource/inter@5.2.8':
-    resolution: {integrity: sha512-P6r5WnJoKiNVV+zvW2xM13gNdFhAEpQ9dQJHt3naLvfg+LkF2ldgSLiF4T41lf1SQCM9QmkqPTn4TH568IRagg==}
+  '@fontsource/inter@5.3.0':
+    resolution: {integrity: sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g==}
 
   '@fontsource/noto-sans-sc@5.2.9':
     resolution: {integrity: sha512-bTUIWGBgJDpwi5qAr+x0/lcgv80IHTB9vl6s2f6EymZEa7qYV99yNRBZuKFT+SYDKVunZrjCEhWtpxqmbXWl5Q==}
@@ -3057,6 +3060,9 @@ packages:
 
   '@tauri-apps/plugin-dialog@2.7.1':
     resolution: {integrity: sha512-OK1UBXYt+ojcmxMktzzuyonYIFta8CmAASpX+CA+DTGK24KlHjhYI6x2iOJ/TjZF4N7/ACK1oFmEOjIY9IhzOQ==}
+
+  '@tauri-apps/plugin-fs@2.5.1':
+    resolution: {integrity: sha512-9Lz+Jopp6QyeEWhlpkMx4R/+P9HgR+AVAI4vOZhlT8Xaymtz8iVI/Ov984/XTqgJz/5gz5NretqPB/XEMS3NhQ==}
 
   '@tauri-apps/plugin-log@2.8.0':
     resolution: {integrity: sha512-a+7rOq3MJwpTOLLKbL8d0qGZ85hgHw5pNOWusA9o3cf7cEgtYHiGY/+O8fj8MvywQIGqFv0da2bYQDlrqLE7rw==}
@@ -6224,8 +6230,8 @@ packages:
     engines: {node: '>=14'}
     hasBin: true
 
-  pretty-bytes@7.1.0:
-    resolution: {integrity: sha512-nODzvTiYVRGRqAOvE84Vk5JDPyyxsVk0/fbA/bq7RqlnhksGpset09XTxbpvLTIjoaF7K8Z8DG8yHtKGTPSYRw==}
+  pretty-bytes@7.1.1:
+    resolution: {integrity: sha512-X+vn9z8nOFZQlxOLmfJ0iKDdMD7jYTsTW12OAlCpdoE3Igik6L37pugIZi+N3usuyp5McfgKPWi12q3zvHLeGQ==}
     engines: {node: '>=20'}
 
   process-nextick-args@2.0.1:
@@ -7764,7 +7770,7 @@ snapshots:
       '@codemirror/language': 6.12.4
       '@lezer/json': 1.0.3
 
-  '@codemirror/lang-markdown@6.5.0':
+  '@codemirror/lang-markdown@6.5.1':
     dependencies:
       '@codemirror/autocomplete': 6.20.3
       '@codemirror/lang-html': 6.4.11
@@ -8362,7 +8368,7 @@ snapshots:
       - '@vue/composition-api'
       - vue
 
-  '@fontsource/inter@5.2.8': {}
+  '@fontsource/inter@5.3.0': {}
 
   '@fontsource/noto-sans-sc@5.2.9': {}
 
@@ -10091,6 +10097,10 @@ snapshots:
       '@tauri-apps/api': 2.9.1
 
   '@tauri-apps/plugin-dialog@2.7.1':
+    dependencies:
+      '@tauri-apps/api': 2.11.0
+
+  '@tauri-apps/plugin-fs@2.5.1':
     dependencies:
       '@tauri-apps/api': 2.11.0
 
@@ -13148,7 +13158,7 @@ snapshots:
       pathe: 2.0.3
       perfect-debounce: 2.1.0
       pkg-types: 2.3.1
-      pretty-bytes: 7.1.0
+      pretty-bytes: 7.1.1
       radix3: 1.1.2
       rollup: 4.60.4
       rollup-plugin-visualizer: 7.0.1(rollup@4.60.4)
@@ -13850,7 +13860,7 @@ snapshots:
 
   prettier@3.8.3: {}
 
-  pretty-bytes@7.1.0: {}
+  pretty-bytes@7.1.1: {}
 
   process-nextick-args@2.0.1: {}
 

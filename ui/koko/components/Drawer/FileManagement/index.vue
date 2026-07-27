@@ -3,22 +3,33 @@ import type { SftpFileEntry } from "~/koko/composables/useSftpFileManager";
 import type { ConnectorSessionContext } from "~/shared/connectors/types/session";
 import type { AssetTreeNode } from "~/types";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
+import KokoLocalFileManagementPane from "~/koko/components/Drawer/FileManagement/localPane.vue";
 import KokoFileManagementPane from "~/koko/components/Drawer/FileManagement/pane.vue";
+import KokoWebUploadPane from "~/koko/components/Drawer/FileManagement/webUploadPane.vue";
 import { connectorSessionKey } from "~/koko/composables/wsUrl";
 import { resolveDevHost } from "~/shared/connectors/useConnectorEndpoint";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface RemotePane {
   id: string
+  side: "left" | "right"
   context: ConnectorSessionContext
   assetName: string
   selection: SftpFileEntry | null
   checked: boolean
 }
 
+interface TransferPane {
+  manager: {
+    readFile: (entry: SftpFileEntry) => Promise<Blob>
+    uploadBlob: (fileName: string, blob: Blob) => Promise<void>
+  }
+}
+
 const props = defineProps<{
   sftpToken?: string
   showEmpty?: boolean
+  global?: boolean
 }>();
 
 const emit = defineEmits<{ reconnect: [] }>();
@@ -45,6 +56,7 @@ const dualMode = ref(false);
 const remotePanes = ref<RemotePane[]>([]);
 const activeRemoteId = ref<string | null>(null);
 const connectModalOpen = ref(false);
+const connectSide = ref<"left" | "right">("left");
 const remoteSearch = ref("");
 const remoteSearchLoading = ref(false);
 const remoteSearchNodes = ref<AssetTreeNode[]>([]);
@@ -54,9 +66,15 @@ const transferring = ref(false);
 const primaryPaneRef = ref<InstanceType<typeof KokoFileManagementPane> | null>(null);
 const remotePaneRefs = ref<Record<string, InstanceType<typeof KokoFileManagementPane> | null>>({});
 const primarySelection = ref<SftpFileEntry | null>(null);
+const localSelection = ref<SftpFileEntry | null>(null);
+const localPaneRef = ref<InstanceType<typeof KokoLocalFileManagementPane> | null>(null);
 
 const checkedRemotePanes = computed(() => remotePanes.value.filter((pane) => pane.checked));
 const activeRemotePane = computed(() => remotePanes.value.find((pane) => pane.id === activeRemoteId.value) || null);
+const globalActiveIds = reactive<{ left: string | null, right: string | null }>({ left: null, right: null });
+const panesForSide = (side: "left" | "right") => remotePanes.value.filter((pane) => pane.side === side);
+const activePaneForSide = (side: "left" | "right") =>
+  remotePanes.value.find((pane) => pane.id === globalActiveIds[side]) || null;
 
 function setRemotePaneRef(id: string, el: unknown) {
   remotePaneRefs.value[id] = (el as InstanceType<typeof KokoFileManagementPane> | null) || null;
@@ -64,11 +82,22 @@ function setRemotePaneRef(id: string, el: unknown) {
 
 async function buildSftpContext(assetId: string, tokenId: string, tabId: string): Promise<ConnectorSessionContext> {
   let endpointUrl = resolveDevHost("koko") || window.location.origin;
-  if (isTauriRuntime() && !import.meta.dev) {
+  if (!import.meta.dev) {
     const endpoint = await getSmartEndpoint({ protocol: "sftp", assetId, token: tokenId });
-    if (!endpoint.host) throw new Error("smart endpoint missing host");
-    const secure = Boolean(endpoint.https_port);
-    endpointUrl = `${secure ? "https" : "http"}://${endpoint.host}${endpoint.https_port || endpoint.port ? `:${endpoint.https_port || endpoint.port}` : ""}`;
+    const port = endpoint.https_port || endpoint.port;
+    const scheme = endpoint.https_port ? "https" : "http";
+    const resolved = endpoint.value
+      || (endpoint.host ? (port ? `${scheme}://${endpoint.host}:${port}` : `${scheme}://${endpoint.host}`) : "");
+    if (!resolved) throw new Error("服务端未返回可用的 SFTP 端点");
+
+    if (isTauriRuntime()) {
+      endpointUrl = resolved;
+    } else {
+      const resolvedUrl = new URL(resolved);
+      const isLoopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(resolvedUrl.hostname);
+      const samePort = (resolvedUrl.port || "") === window.location.port;
+      endpointUrl = isLoopback && !samePort ? window.location.origin : resolved;
+    }
   }
 
   let ticket = "";
@@ -89,6 +118,12 @@ const searchRemoteAssets = useDebounceFn(async (keyword: string) => {
   remoteSearchLoading.value = true;
   try {
     remoteSearchNodes.value = await fetchTree("search", undefined, keyword.trim());
+  } catch (error) {
+    toast.add({
+      title: "SFTP 资产加载失败",
+      description: error instanceof Error ? error.message : String(error),
+      color: "error"
+    });
   } finally {
     remoteSearchLoading.value = false;
   }
@@ -96,8 +131,9 @@ const searchRemoteAssets = useDebounceFn(async (keyword: string) => {
 
 watch(remoteSearch, (value) => searchRemoteAssets(value));
 
-function openRemoteConnect() {
+function openRemoteConnect(side: "left" | "right" = "right") {
   dualMode.value = true;
+  connectSide.value = side;
   connectModalOpen.value = true;
 }
 
@@ -108,9 +144,13 @@ function disconnectAllRemotes() {
 }
 
 function removeRemotePane(id: string) {
+  const removed = remotePanes.value.find((pane) => pane.id === id);
   remotePanes.value = remotePanes.value.filter((pane) => pane.id !== id);
   delete remotePaneRefs.value[id];
   if (activeRemoteId.value === id) activeRemoteId.value = remotePanes.value[0]?.id ?? null;
+  if (removed && globalActiveIds[removed.side] === id) {
+    globalActiveIds[removed.side] = panesForSide(removed.side)[0]?.id ?? null;
+  }
 }
 
 function toggleDualMode() {
@@ -140,7 +180,7 @@ async function connectRemoteAsset(node: AssetTreeNode) {
     const account = displayUser(asset.id, asset.permedAccounts);
 
     await new Promise<void>((resolve, reject) => {
-      handleAssetConnection(account, asset.id, "ssh", asset.permedAccounts, "sftp", {
+      void handleAssetConnection(account, asset.id, "ssh", asset.permedAccounts, "sftp", {
         accountMode: preference?.accountMode || remembered?.accountMode || "hosted",
         accountId,
         connectMethod: SFTP_FILE_MANAGER_VALUE,
@@ -148,15 +188,18 @@ async function connectRemoteAsset(node: AssetTreeNode) {
         onSessionReady: async (payload) => {
           try {
             const tokenId = String(payload.id || payload.token?.id || "");
+            if (!tokenId) throw new Error("服务端未返回 SFTP 连接令牌");
             const id = paneId();
             remotePanes.value.push({
               id,
+              side: props.global ? connectSide.value : "right",
               context: await buildSftpContext(asset.id, tokenId, `remote-sftp:${asset.id}:${id}`),
               assetName: asset.name,
               selection: null,
               checked: true
             });
             activeRemoteId.value = id;
+            if (props.global) globalActiveIds[connectSide.value] = id;
             connectModalOpen.value = false;
             resolve();
           } catch (error) {
@@ -164,14 +207,14 @@ async function connectRemoteAsset(node: AssetTreeNode) {
           }
         },
         onSessionError: reject
-      });
+      }).catch(reject);
     });
 
     toast.add({ title: t("FileManagement.RemoteConnected"), color: "success" });
   } catch (error) {
     toast.add({
       title: t("FileManagement.RemoteConnectFailed"),
-      description: String(error),
+      description: error instanceof Error ? error.message : String(error),
       color: "error"
     });
   } finally {
@@ -180,8 +223,8 @@ async function connectRemoteAsset(node: AssetTreeNode) {
 }
 
 async function transferEntry(
-  fromPane: InstanceType<typeof KokoFileManagementPane> | null,
-  toPane: InstanceType<typeof KokoFileManagementPane> | null,
+  fromPane: TransferPane | null,
+  toPane: TransferPane | null,
   entry: SftpFileEntry | null
 ) {
   if (!fromPane || !toPane || !entry || transferring.value) return;
@@ -255,8 +298,58 @@ async function transferToRemotes() {
 const transferToPrimary = () => {
   const pane = activeRemotePane.value;
   if (!pane) return;
-  transferEntry(remotePaneRefs.value[pane.id], primaryPaneRef.value, pane.selection);
+  transferEntry(remotePaneRefs.value[pane.id] || null, primaryPaneRef.value, pane.selection);
 };
+
+async function transferGlobal(direction: "left-to-right" | "right-to-left") {
+  const sourceSide = direction === "left-to-right" ? "left" : "right";
+  const targetSide = sourceSide === "left" ? "right" : "left";
+  const source = activePaneForSide(sourceSide);
+  const target = activePaneForSide(targetSide);
+  const sourceIsLocal = sourceSide === "left" && globalActiveIds.left === "local";
+  const targetIsLocal = targetSide === "left" && globalActiveIds.left === "local";
+  await transferEntry(
+    sourceIsLocal ? localPaneRef.value : source ? remotePaneRefs.value[source.id] || null : null,
+    targetIsLocal ? localPaneRef.value : target ? remotePaneRefs.value[target.id] || null : null,
+    sourceIsLocal ? localSelection.value : source?.selection || null
+  );
+}
+
+async function uploadWebFiles(files: File[]) {
+  const target = activePaneForSide("right");
+  const targetPane = target ? remotePaneRefs.value[target.id] : null;
+  if (!targetPane) {
+    toast.add({ title: "请先在右侧连接目标 SFTP Server", color: "warning" });
+    return;
+  }
+  if (transferring.value) return;
+
+  transferring.value = true;
+  let success = 0;
+  try {
+    for (const file of files) {
+      try {
+        await targetPane.manager.uploadBlob(file.name, file);
+        success += 1;
+      } catch {
+        // Continue with the remaining files and report the aggregate result.
+      }
+    }
+    toast.add({
+      title: success === files.length
+        ? `已上传 ${success} 个文件`
+        : `已上传 ${success}/${files.length} 个文件`,
+      color: success === files.length ? "success" : "warning"
+    });
+  } finally {
+    transferring.value = false;
+  }
+}
+
+onMounted(() => {
+  if (!props.global) return;
+  globalActiveIds.left = isTauriRuntime() ? "local" : "web-upload";
+});
 </script>
 
 <template>
@@ -270,14 +363,14 @@ const transferToPrimary = () => {
     </div>
   </div>
   <div v-else class="flex h-full min-h-0 flex-col">
-    <div class="flex shrink-0 items-center justify-end gap-1 border-b border-default px-2 py-1">
+    <div v-if="!global" class="flex shrink-0 items-center justify-end gap-1 border-b border-default px-2 py-1">
       <UButton
         size="xs"
-        :color="dualMode || remotePanes.length ? 'primary' : 'neutral'"
+        :color="global || dualMode || remotePanes.length ? 'primary' : 'neutral'"
         :variant="dualMode ? 'soft' : 'ghost'"
         icon="i-lucide-server"
         :label="remotePanes.length || dualMode ? t('FileManagement.RemoteSftp') : t('FileManagement.ConnectRemoteSftp')"
-        @click="toggleDualMode"
+        @click="global ? openRemoteConnect() : toggleDualMode()"
       />
       <UButton
         v-if="dualMode"
@@ -287,6 +380,17 @@ const transferToPrimary = () => {
         icon="i-lucide-plus"
         :label="t('FileManagement.AddRemoteSftp')"
         @click="openRemoteConnect"
+      />
+      <UButton
+        v-if="global && remotePanes.length > 1"
+        size="xs"
+        color="primary"
+        variant="soft"
+        icon="i-lucide-copy"
+        :label="t('FileManagement.TransferToRemote')"
+        :disabled="!activeRemotePane?.selection || !globalTargets.length || transferring"
+        :loading="transferring"
+        @click="transferFromActiveRemote"
       />
       <UButton
         v-if="remotePanes.length"
@@ -299,7 +403,127 @@ const transferToPrimary = () => {
       />
     </div>
 
-    <div class="flex min-h-0 flex-1" :class="dualMode ? 'gap-1' : ''">
+    <div v-if="global" class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_36px_minmax(0,1fr)]">
+      <div
+        v-for="side in (['left', 'right'] as const)"
+        :key="side"
+        class="flex min-h-0 min-w-0 flex-col"
+        :class="side === 'right' ? 'col-start-3' : 'col-start-1 row-start-1'"
+      >
+        <div class="flex h-9 shrink-0 items-center gap-1 border-b border-default bg-elevated/50 px-2">
+          <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+            <button
+              v-if="side === 'left' && isTauriRuntime()"
+              type="button"
+              class="flex h-7 min-w-0 items-center gap-1 rounded-md px-2 text-xs"
+              :class="globalActiveIds.left === 'local' ? 'bg-default text-primary' : 'text-muted hover:bg-default/70'"
+              @click="globalActiveIds.left = 'local'"
+            >
+              <UIcon name="i-lucide-laptop" class="size-3.5 shrink-0" />
+              <span>Downloads</span>
+            </button>
+            <button
+              v-if="side === 'left' && !isTauriRuntime()"
+              type="button"
+              class="flex h-7 min-w-0 items-center gap-1 rounded-md px-2 text-xs"
+              :class="globalActiveIds.left === 'web-upload' ? 'bg-default text-primary' : 'text-muted hover:bg-default/70'"
+              @click="globalActiveIds.left = 'web-upload'"
+            >
+              <UIcon name="i-lucide-upload" class="size-3.5 shrink-0" />
+              <span>本地上传</span>
+            </button>
+            <button
+              v-for="pane in panesForSide(side)"
+              :key="pane.id"
+              type="button"
+              class="flex h-7 min-w-0 max-w-48 items-center gap-1 rounded-md px-2 text-xs"
+              :class="globalActiveIds[side] === pane.id ? 'bg-default text-primary' : 'text-muted hover:bg-default/70'"
+              @click="globalActiveIds[side] = pane.id"
+            >
+              <UIcon name="i-lucide-server" class="size-3.5 shrink-0" />
+              <span class="truncate">{{ pane.assetName }}</span>
+              <UIcon name="i-lucide-x" class="size-3 shrink-0" @click.stop="removeRemotePane(pane.id)" />
+            </button>
+          </div>
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-plus"
+            :title="t('FileManagement.AddRemoteSftp')"
+            @click="openRemoteConnect(side)"
+          />
+        </div>
+
+        <KokoLocalFileManagementPane
+          v-if="side === 'left' && isTauriRuntime()"
+          v-show="globalActiveIds.left === 'local'"
+          ref="localPaneRef"
+          class="min-h-0 flex-1"
+          @select="localSelection = $event"
+        />
+        <KokoWebUploadPane
+          v-if="side === 'left' && !isTauriRuntime()"
+          v-show="globalActiveIds.left === 'web-upload'"
+          class="min-h-0 flex-1"
+          @upload="uploadWebFiles"
+        />
+        <template v-if="panesForSide(side).length">
+          <KokoFileManagementPane
+            v-for="pane in panesForSide(side)"
+            v-show="globalActiveIds[side] === pane.id"
+            :key="pane.id"
+            :ref="(el) => setRemotePaneRef(pane.id, el)"
+            class="min-h-0 flex-1"
+            :context="pane.context"
+            @select="pane.selection = $event"
+          />
+        </template>
+        <div
+          v-else-if="!(side === 'left' && (
+            isTauriRuntime()
+              ? globalActiveIds.left === 'local'
+              : globalActiveIds.left === 'web-upload'
+          ))"
+          class="grid min-h-0 flex-1 place-items-center p-6 text-center text-sm text-muted"
+        >
+          <div class="space-y-3">
+            <UIcon name="i-lucide-server" class="mx-auto size-7 opacity-60" />
+            <p>{{ side === "left" && isTauriRuntime() ? "正在准备本地 Downloads" : "连接一个 SFTP Server" }}</p>
+            <UButton size="sm" color="primary" variant="soft" icon="i-lucide-plus" @click="openRemoteConnect(side)">
+              {{ t("FileManagement.ConnectRemoteSftp") }}
+            </UButton>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-start-2 row-start-1 flex min-h-0 flex-col items-center justify-center gap-2 border-x border-default">
+        <UTooltip :text="t('FileManagement.TransferToRemote')">
+          <UButton
+            size="xs"
+            color="primary"
+            variant="soft"
+            icon="i-lucide-arrow-right"
+            :disabled="!(globalActiveIds.left === 'local' ? localSelection : activePaneForSide('left')?.selection) || !activePaneForSide('right') || transferring"
+            :loading="transferring"
+            @click="transferGlobal('left-to-right')"
+          />
+        </UTooltip>
+        <UTooltip :text="t('FileManagement.TransferToLocal')">
+          <UButton
+            size="xs"
+            color="primary"
+            variant="soft"
+            icon="i-lucide-arrow-left"
+            :disabled="!activePaneForSide('right')?.selection || !(globalActiveIds.left === 'local' || activePaneForSide('left')) || transferring"
+            :loading="transferring"
+            @click="transferGlobal('right-to-left')"
+          />
+        </UTooltip>
+      </div>
+    </div>
+
+    <div v-else class="flex min-h-0 flex-1" :class="dualMode ? 'gap-1' : ''">
       <KokoFileManagementPane
         ref="primaryPaneRef"
         class="min-h-0 min-w-0 flex-1"
@@ -409,7 +633,7 @@ const transferToPrimary = () => {
         </div>
       </template>
       <template #footer>
-        <UButton color="neutral" variant="ghost" :label="t('Common.Cancel')" @click="connectModalOpen = false" />
+        <UButton color="neutral" variant="ghost" :label="t('Common.Cancel')" @click="() => { connectModalOpen = false; }" />
       </template>
     </UModal>
   </div>

@@ -31,10 +31,7 @@
     },
     "linux": {
       "deb": {
-        "depends": [
-          "libayatana-appindicator3-1",
-          "libwebkit2gtk-4.1-0"
-        ],
+        "depends": ["libayatana-appindicator3-1", "libwebkit2gtk-4.1-0"],
         "desktopTemplate": "./linux/jumpserver-client.desktop.hbs"
       },
       "rpm": {}
@@ -75,7 +72,7 @@
         "titleBarStyle": "Overlay",
         "trafficLightPosition": {
           "x": 10,
-          "y": 20
+          "y": 18
         }
       }
     ],
