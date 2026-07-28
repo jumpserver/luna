@@ -2,9 +2,9 @@
 import type { SftpFileEntry } from "~/koko/composables/useSftpFileManager";
 import type { ConnectorSessionContext } from "~/shared/connectors/types/session";
 import type { AssetItem } from "~/types";
-import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import OrganizationSelector from "~/components/Header/OrganizationSelector.vue";
 import SideBarAssetTree from "~/components/SideBar/assetTree.vue";
+import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import KokoLocalFileManagementPane from "~/koko/components/Drawer/FileManagement/localPane.vue";
 import KokoFileManagementPane from "~/koko/components/Drawer/FileManagement/pane.vue";
 import KokoWebUploadPane from "~/koko/components/Drawer/FileManagement/webUploadPane.vue";
@@ -42,7 +42,7 @@ const { addErrorToast: showErrorToast } = useErrorToast();
 const { createKokoTicket } = useWorkspaceConnectors();
 const { displayUser, handleAssetConnection } = useAssetAction();
 const userInfoStore = useUserInfoStore();
-const { loggedIn, currentUser } = storeToRefs(userInfoStore);
+const { currentUser } = storeToRefs(userInfoStore);
 
 const providedContext = inject(connectorSessionKey, ref(null));
 const primaryContext = computed<ConnectorSessionContext | null>(() => {
@@ -168,6 +168,20 @@ async function connectRemoteAsset(asset: AssetItem) {
           (protocol: { name?: string }) => protocol?.name !== "winrm"
         )
       };
+    }
+
+    const declaredProtocols = (connectAsset.permedProtocols || [])
+      .map((item) => String(item?.name || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    if (declaredProtocols.length > 0 && !declaredProtocols.includes("sftp")) {
+      toast.add({
+        title: "该资产不支持 SFTP",
+        description: "请改选支持 SFTP 协议的资产。",
+        color: "warning",
+        icon: "i-lucide-circle-alert"
+      });
+      return;
     }
 
     const preference = userInfoStore.getConnectionPreferenceForAsset(connectAsset.id);

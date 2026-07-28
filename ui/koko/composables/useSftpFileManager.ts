@@ -1,4 +1,6 @@
 import type { ConnectorSessionContext } from "~/shared/connectors/types/session";
+import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
+import { useWorkspaceConnectors } from "~/composables/useWorkspaceConnectors";
 import { resolveWsUrl } from "~/shared/connectors/useConnectorEndpoint";
 
 export interface SftpFileEntry {
@@ -20,6 +22,7 @@ interface UploadTask {
 const id = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
 
 export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
+  const { createKokoTicket } = useWorkspaceConnectors();
   const entries = ref<SftpFileEntry[]>([]);
   const currentPath = ref("");
   const initialPath = ref("");
@@ -38,6 +41,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
   const uploadTasks = ref<UploadTask[]>([]);
   const currentUploadName = ref("");
   const queuedUploadCount = ref(0);
+  const activeContext = ref<ConnectorSessionContext | null>(null);
 
   // Koko's WebSFTP handler keeps the active message on the connection object.
   // Serializing reads prevents a tree listing from overwriting a file download
@@ -129,7 +133,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
   };
 
   const connect = () => {
-    const context = ctx.value;
+    const context = activeContext.value;
     if (!context) return;
     rejectPendingRead("SFTP connection reset");
     socket?.close();
@@ -157,7 +161,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
           if (!initialPath.value) initialPath.value = message.current_path;
         }
         if (message.type === "CONNECT") {
-          send("list", { path: "" }, "", message.id);
+          send("list", { path: currentPath.value || "" }, "", message.id);
         } else if (message.type === "PING") {
           socket?.send(JSON.stringify({ id: id(), type: "PONG", data: "pong" }));
         } else if (message.type === "SFTP_BINARY") {
@@ -238,6 +242,36 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
         rejectPendingRead(message);
       }
     };
+  };
+
+  const syncContext = (context: ConnectorSessionContext | null) => {
+    activeContext.value = context ? { ...context } : null;
+  };
+
+  const refreshContextToken = async () => {
+    const context = activeContext.value;
+    if (!context?.tokenId) throw new Error("Missing connection token");
+
+    const token = await exchangeConnectToken(context.tokenId);
+    let ticket = context.ticket || "";
+    try {
+      ticket = String((await createKokoTicket({
+        baseUrl: context.endpointUrl,
+        tokenId: token.id
+      })).ticket || "");
+    } catch (cause) {
+      if (isTauriRuntime()) throw cause;
+      console.warn("[sftp] refresh connect ticket failed, fallback to cookie auth:", cause);
+      ticket = "";
+    }
+
+    activeContext.value = {
+      ...context,
+      tokenId: token.id,
+      ticket
+    };
+
+    return activeContext.value;
   };
 
   const changeDirectory = (entry: SftpFileEntry) => {
@@ -342,7 +376,10 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
     await uploadFile(file);
   };
 
-  watch(ctx, connect, { immediate: true });
+  watch(ctx, (context) => {
+    syncContext(context);
+    connect();
+  }, { immediate: true });
   onUnmounted(() => socket?.close());
   return {
     entries,
@@ -368,6 +405,9 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
     readFile,
     uploadFile,
     uploadBlob,
-    reconnect: connect
+    reconnect: async () => {
+      await refreshContextToken();
+      connect();
+    }
   };
 }

@@ -7,7 +7,11 @@ const { t } = useI18n();
 const { activeTab: workspaceTab } = useWorkspaceTabs();
 const { activeTab, setActiveTab } = useRightPanel();
 
-const showSftpTab = computed(() => workspaceTab.value?.protocol === "ssh");
+const showSftpTab = computed(() => {
+  if (workspaceTab.value?.protocol !== "ssh") return false;
+
+  return (workspaceTab.value.permedProtocols || []).some((protocol) => protocol?.name === "sftp");
+});
 
 const tabs = computed(() => {
   const items = [

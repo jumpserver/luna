@@ -11,6 +11,7 @@ function tabToAsset(tab: WorkspaceSessionTab): AssetItem {
     platform: tab.assetPlatform,
     type: tab.assetType,
     category: tab.assetCategory,
+    permedProtocols: tab.permedProtocols,
     zone: "",
     isActive: true
   };

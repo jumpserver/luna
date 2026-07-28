@@ -1,4 +1,4 @@
-import type { AssetItem } from "~/types";
+import type { AssetItem, PermedProtocol } from "~/types";
 import { useRecentConnections } from "~/composables/useRecentConnections";
 import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 
@@ -18,6 +18,7 @@ export interface WorkspaceSessionTab {
   assetPlatform: string
   assetCategory: string
   address: string
+  permedProtocols?: PermedProtocol[]
   protocol: string
   account: string
   status: WorkspaceSessionStatus
@@ -80,6 +81,7 @@ export const useWorkspaceTabs = () => {
       assetPlatform: asset.platform || "",
       assetCategory: asset.category || "",
       address: asset.address,
+      permedProtocols: asset.permedProtocols,
       protocol,
       account,
       status: connection.payload ? "ready" : "connecting",
@@ -105,6 +107,7 @@ export const useWorkspaceTabs = () => {
       assetPlatform: asset.platform || "",
       assetCategory: asset.category || "",
       address: asset.address,
+      permedProtocols: asset.permedProtocols,
       protocol,
       account,
       status: "selecting",
