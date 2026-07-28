@@ -1,6 +1,5 @@
-// @ts-expect-error library ships without useful ESM typings
-import untar from "js-untar";
 import { gunzipSync } from "fflate";
+import untar from "js-untar";
 
 export type VideoPlayerItemType = "mp4" | "cast" | "gua" | "part";
 
@@ -10,6 +9,8 @@ export interface VideoPlayerMeta {
   user?: string
   asset?: string
   protocol?: string
+  login_from?: string
+  remote_addr?: string
   command_amount?: number
   date_end?: string
   date_start?: string
@@ -40,7 +41,6 @@ export interface VideoPlayerItem {
   recordingLabel: string
   partIndex?: number
   partTotal?: number
-  tempPath?: string
   castData?: string
 }
 
@@ -76,7 +76,7 @@ function stripArchiveExtension(fileName: string) {
 
 function isGzipBuffer(buffer: ArrayBuffer) {
   const bytes = new Uint8Array(buffer);
-  return bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+  return bytes.length >= 2 && bytes[0] === 0x1F && bytes[1] === 0x8B;
 }
 
 function decodeCastBuffer(buffer: ArrayBuffer) {
@@ -188,10 +188,18 @@ function withMeta(item: Omit<VideoPlayerItem, "id" | "meta">, meta: VideoPlayerM
 }
 
 export function useVideoPlayerParser() {
+  const {
+    getEntryUrl,
+    importRecording,
+    removeRecording
+  } = useVideoPlayerTauri();
+
   function buildCastItem(
     fileName: string,
     buffer: ArrayBuffer,
-    meta: VideoPlayerMeta | null
+    meta: VideoPlayerMeta | null,
+    recordingId: string,
+    recordingLabel: string
   ): VideoPlayerItem | null {
     const castData = decodeCastBuffer(buffer);
 
@@ -202,7 +210,9 @@ export function useVideoPlayerParser() {
         name: basename(fileName),
         source: "",
         castData,
-        type: "cast"
+        type: "cast",
+        recordingId,
+        recordingLabel
       },
       resolveItemMeta(meta, fileName)
     );
@@ -210,7 +220,9 @@ export function useVideoPlayerParser() {
 
   async function buildItemFromEntry(
     entry: UntarEntry,
-    meta: VideoPlayerMeta | null
+    meta: VideoPlayerMeta | null,
+    recordingId: string,
+    recordingLabel: string
   ): Promise<VideoPlayerItem | null> {
     const entryName = basename(entry.name);
     const match = entryName.match(REGEXP);
@@ -218,7 +230,7 @@ export function useVideoPlayerParser() {
     const effectiveMeta = resolveItemMeta(meta, entry.name);
 
     if (isCastMediaEntry(entry.name)) {
-      return buildCastItem(entry.name, entry.buffer, meta);
+      return buildCastItem(entry.name, entry.buffer, meta, recordingId, recordingLabel);
     }
 
     switch (kind) {
@@ -230,7 +242,9 @@ export function useVideoPlayerParser() {
             {
               name: basename(entry.name),
               source: toGzipUrl(entry.buffer),
-              type: "gua"
+              type: "gua",
+              recordingId,
+              recordingLabel
             },
             effectiveMeta
           );
@@ -240,7 +254,9 @@ export function useVideoPlayerParser() {
           {
             name: basename(entry.name),
             source: toMp4Url(entry.buffer),
-            type: "mp4"
+            type: "mp4",
+            recordingId,
+            recordingLabel
           },
           effectiveMeta
         );
@@ -250,7 +266,9 @@ export function useVideoPlayerParser() {
           {
             name: basename(entry.name),
             source: toGzipUrl(entry.buffer),
-            type: "part"
+            type: "part",
+            recordingId,
+            recordingLabel
           },
           effectiveMeta
         );
@@ -278,7 +296,7 @@ export function useVideoPlayerParser() {
 
       if (!match || isMetadataEntry(entry.name)) continue;
 
-      const item = await buildItemFromEntry(entry, meta);
+      const item = await buildItemFromEntry(entry, meta, recordingId, recordingLabel);
 
       if (item) {
         items.push({
@@ -324,7 +342,13 @@ export function useVideoPlayerParser() {
     }
 
     if (isCastMediaEntry(fileName)) {
-      const castItem = buildCastItem(fileName, await file.arrayBuffer(), meta);
+      const castItem = buildCastItem(
+        fileName,
+        await file.arrayBuffer(),
+        meta,
+        recordingId,
+        recordingLabel
+      );
 
       if (castItem) {
         items.push({
@@ -402,7 +426,55 @@ export function useVideoPlayerParser() {
     return items;
   }
 
+  async function parsePaths(filePaths: string[]) {
+    const items: VideoPlayerItem[] = [];
+    const importedRecordingIds: string[] = [];
+
+    try {
+      for (const filePath of filePaths) {
+        const manifest = await importRecording(filePath);
+        importedRecordingIds.push(manifest.recording_id);
+
+        const importedItems = await Promise.all(
+          manifest.entries.map(async (entry): Promise<VideoPlayerItem> => {
+            const source = await getEntryUrl(manifest.recording_id, entry.entry_id);
+            const entryMeta: VideoPlayerMeta = {
+              ...manifest.metadata,
+              date_start: formatTimestamp(entry.start_ms) || manifest.metadata.date_start,
+              date_end: formatTimestamp(entry.end_ms) || manifest.metadata.date_end,
+              duration: formatMillisDuration(entry.duration_ms) || manifest.metadata.duration
+            };
+
+            return {
+              id: `${manifest.recording_id}:${entry.entry_id}`,
+              name: entry.source_name,
+              source,
+              type: entry.media_type,
+              meta: entryMeta,
+              recordingId: manifest.recording_id,
+              recordingLabel: manifest.label,
+              partIndex: entry.part_index == null ? undefined : entry.part_index + 1,
+              partTotal: entry.part_total
+            };
+          })
+        );
+
+        items.push(...importedItems);
+      }
+
+      return items;
+    } catch (error) {
+      // 多文件导入应当表现为一次事务。后面的文件失败时，
+      // 清理本次已经成功提交的录像，避免留下用户看不到的缓存。
+      await Promise.allSettled(
+        importedRecordingIds.map((recordingId) => removeRecording(recordingId))
+      );
+      throw error;
+    }
+  }
+
   return {
-    parseFiles
+    parseFiles,
+    parsePaths
   };
 }

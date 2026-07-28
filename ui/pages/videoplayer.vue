@@ -13,8 +13,9 @@ const activeId = ref<string | null>(null);
 const importMessage = ref("");
 const playlistCollapsed = ref(false);
 
-const { parseFiles } = useVideoPlayerParser();
-const { deleteTempFile } = useVideoPlayerTauri();
+const { parseFiles, parsePaths } = useVideoPlayerParser();
+const { removeRecording } = useVideoPlayerTauri();
+let unlistenFileDrop: (() => void) | null = null;
 
 const currentItem = computed(() => items.value.find((item) => item.id === activeId.value) || null);
 
@@ -32,17 +33,9 @@ const playerComponent = computed(() => {
   }
 });
 
-async function cleanupItem(item: VideoPlayerItem) {
+function cleanupItem(item: VideoPlayerItem) {
   if (item.source.startsWith("blob:")) {
     URL.revokeObjectURL(item.source);
-  }
-
-  if (item.tempPath) {
-    try {
-      await deleteTempFile(item.tempPath);
-    } catch {
-      // ignore cleanup errors
-    }
   }
 }
 
@@ -51,52 +44,79 @@ function selectItem(item: VideoPlayerItem) {
 }
 
 async function removeItem(item: VideoPlayerItem) {
-  await cleanupItem(item);
+  cleanupItem(item);
   items.value = items.value.filter((entry) => entry.id !== item.id);
 
   if (activeId.value === item.id) {
     activeId.value = items.value[0]?.id || null;
   }
+
+  const recordingStillUsed = items.value.some(
+    (entry) => entry.recordingId === item.recordingId
+  );
+
+  if (isTauriRuntime() && !recordingStillUsed) {
+    try {
+      await removeRecording(item.recordingId);
+    } catch {
+      // stale recording directories are cleaned on the next application startup
+    }
+  }
+}
+
+async function appendParsedItems(parsed: VideoPlayerItem[]) {
+  if (parsed.length === 0) {
+    importMessage.value = "";
+    toast.add({
+      title: "未识别到可播放文件",
+      description: "请导入 mp4、cast.gz、replay.gz、part.gz 或包含这些文件的 tar 包。",
+      color: "warning"
+    });
+    return;
+  }
+
+  const existingNames = new Set(items.value.map((item) => item.name));
+  const incoming = parsed.filter((item) => !existingNames.has(item.name));
+  const duplicates = parsed.length - incoming.length;
+
+  if (isTauriRuntime()) {
+    const retainedRecordingIds = new Set(incoming.map((item) => item.recordingId));
+    const unusedRecordingIds = new Set(
+      parsed
+        .filter((item) => !retainedRecordingIds.has(item.recordingId))
+        .map((item) => item.recordingId)
+    );
+
+    await Promise.allSettled(
+      [...unusedRecordingIds].map((recordingId) => removeRecording(recordingId))
+    );
+  }
+
+  items.value.push(...incoming);
+
+  if (!activeId.value && incoming[0]) {
+    activeId.value = incoming[0].id;
+  }
+
+  importMessage.value = "";
+
+  if (duplicates > 0) {
+    toast.add({
+      title: "部分文件已跳过",
+      description: `有 ${duplicates} 个同名条目已存在，未重复导入。`,
+      color: "neutral"
+    });
+  }
 }
 
 async function importFiles(files: File[]) {
-  if (files.length === 0) return;
+  if (files.length === 0 || isImporting.value) return;
 
   isImporting.value = true;
   importMessage.value = `正在导入 ${files.length} 个文件…`;
 
   try {
-    const parsed = await parseFiles(files);
-
-    if (parsed.length === 0) {
-      importMessage.value = "";
-      toast.add({
-        title: "未识别到可播放文件",
-        description: "请导入 mp4、cast.gz、replay.gz、part.gz 或包含这些文件的 tar 包。",
-        color: "warning"
-      });
-      return;
-    }
-
-    const existingNames = new Set(items.value.map((item) => item.name));
-    const incoming = parsed.filter((item) => !existingNames.has(item.name));
-    const duplicates = parsed.length - incoming.length;
-
-    items.value.push(...incoming);
-
-    if (!activeId.value && incoming[0]) {
-      activeId.value = incoming[0].id;
-    }
-
-    importMessage.value = "";
-
-    if (duplicates > 0) {
-      toast.add({
-        title: "部分文件已跳过",
-        description: `有 ${duplicates} 个同名条目已存在，未重复导入。`,
-        color: "neutral"
-      });
-    }
+    await appendParsedItems(await parseFiles(files));
   } catch (error: any) {
     importMessage.value = "";
     toast.add({
@@ -106,6 +126,51 @@ async function importFiles(files: File[]) {
     });
   } finally {
     isImporting.value = false;
+  }
+}
+
+async function importPaths(filePaths: string[]) {
+  if (filePaths.length === 0 || isImporting.value) return;
+
+  isImporting.value = true;
+  importMessage.value = `正在导入 ${filePaths.length} 个文件…`;
+
+  try {
+    await appendParsedItems(await parsePaths(filePaths));
+  } catch (error: any) {
+    importMessage.value = "";
+    toast.add({
+      title: "导入失败",
+      description: error?.message || String(error),
+      color: "error"
+    });
+  } finally {
+    isImporting.value = false;
+  }
+}
+
+async function handleFileInputClick(event: MouseEvent) {
+  if (!isTauriRuntime()) return;
+
+  event.preventDefault();
+
+  try {
+    const selected = await useTauriDialogOpen({
+      multiple: true,
+      filters: [{
+        name: "录像文件",
+        extensions: ["mp4", "cast", "gz", "tar"]
+      }]
+    });
+    const paths = Array.isArray(selected) ? selected : selected ? [selected] : [];
+
+    await importPaths(paths);
+  } catch (error: any) {
+    toast.add({
+      title: "选择文件失败",
+      description: error?.message || String(error),
+      color: "error"
+    });
   }
 }
 
@@ -126,14 +191,29 @@ onMounted(async () => {
   document.title = "JumpServer Video Player";
 
   try {
-    await useTauriWindowGetCurrentWindow().setTitle("JumpServer Video Player");
+    const currentWindow = useTauriWindowGetCurrentWindow();
+    await currentWindow.setTitle("JumpServer Video Player");
+
+    unlistenFileDrop = await currentWindow.onDragDropEvent(({ payload }) => {
+      if (payload.type === "drop") {
+        void importPaths(payload.paths);
+      }
+    });
   } catch {
     // ignore when running in browser
   }
 });
 
-onBeforeUnmount(async () => {
-  await Promise.all(items.value.map((item) => cleanupItem(item)));
+onBeforeUnmount(() => {
+  unlistenFileDrop?.();
+  items.value.forEach(cleanupItem);
+
+  if (isTauriRuntime()) {
+    const recordingIds = new Set(items.value.map((item) => item.recordingId));
+    void Promise.allSettled(
+      [...recordingIds].map((recordingId) => removeRecording(recordingId))
+    );
+  }
 });
 </script>
 
@@ -149,6 +229,7 @@ onBeforeUnmount(async () => {
       type="file"
       multiple
       accept=".mp4,.gz,.tar,.json,.cast"
+      @click="handleFileInputClick"
       @change="handleInputChange"
     >
 

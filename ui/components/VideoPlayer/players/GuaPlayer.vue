@@ -6,8 +6,6 @@ const props = defineProps<{
   source: string
 }>();
 
-const { streamTextFile } = useVideoPlayerTauri();
-
 const playerAreaRef = ref<HTMLElement | null>(null);
 const canvasRef = ref<HTMLElement | null>(null);
 const displayViewportRef = ref<HTMLElement | null>(null);
@@ -24,6 +22,7 @@ let tunnel: any = null;
 let recording: any = null;
 let display: any = null;
 let visibleBounds: { left: number, top: number, width: number, height: number } | null = null;
+let loadController: AbortController | null = null;
 
 function zeroPad(num: number) {
   return `${num}`.padStart(2, "0");
@@ -281,7 +280,8 @@ async function loadRecording() {
   displayHostRef.value!.innerHTML = "";
   displayHostRef.value!.appendChild(display.getElement());
 
-  let chunks = "";
+  loadController = new AbortController();
+  const currentLoad = loadController;
 
   recording.onerror = (message: string) => {
     errorMessage.value = message;
@@ -300,52 +300,49 @@ async function loadRecording() {
     scheduleBoundsSampling();
   };
 
-  if (props.source.startsWith("blob:")) {
-    try {
+  const startPlayback = (chunks: string) => {
+    if (currentLoad.signal.aborted) return;
+
+    loading.value = false;
+    recording.connect(chunks);
+    duration.value = recording.getDuration?.() || 0;
+    recording.play();
+    currentPosition.value = 0;
+    sampleVisibleBounds();
+    window.setTimeout(recomputeScale, 80);
+    window.setTimeout(recomputeScale, 240);
+    scheduleBoundsSampling();
+  };
+
+  try {
+    if (props.source.startsWith("blob:")) {
       const response = await fetch(props.source);
       const compressed = new Uint8Array(await response.arrayBuffer());
       const output = gunzipSync(compressed);
-      chunks = new TextDecoder("utf-8").decode(output);
+      startPlayback(new TextDecoder("utf-8").decode(output));
+      return;
+    }
 
-      loading.value = false;
-      recording.connect(chunks);
-      duration.value = recording.getDuration?.() || 0;
-      recording.play();
-      currentPosition.value = 0;
-      sampleVisibleBounds();
-      window.setTimeout(recomputeScale, 80);
-      window.setTimeout(recomputeScale, 240);
-      scheduleBoundsSampling();
-    } catch (error: any) {
+    // Rust 已经把 .replay.gz/.part.gz 解压成普通 Guacamole 指令流。
+    // custom protocol 直接返回文本，不再通过 IPC 逐块发送。
+    const response = await fetch(props.source, { signal: currentLoad.signal });
+    if (!response.ok) {
+      throw new Error(`读取录像失败：HTTP ${response.status}`);
+    }
+
+    startPlayback(await response.text());
+  } catch (error: any) {
+    if (error?.name !== "AbortError") {
       loading.value = false;
       errorMessage.value = error?.message || String(error);
     }
-    return;
   }
-
-  await streamTextFile(props.source, {
-    onChunk(chunk) {
-      chunks += chunk;
-    },
-    onEnd() {
-      loading.value = false;
-      recording.connect(chunks);
-      duration.value = recording.getDuration?.() || 0;
-      recording.play();
-      currentPosition.value = 0;
-      sampleVisibleBounds();
-      window.setTimeout(recomputeScale, 80);
-      window.setTimeout(recomputeScale, 240);
-      scheduleBoundsSampling();
-    },
-    onError(message) {
-      loading.value = false;
-      errorMessage.value = message;
-    }
-  });
 }
 
 function cleanup() {
+  loadController?.abort();
+  loadController = null;
+
   try {
     recording?.pause?.();
     recording?.disconnect?.();

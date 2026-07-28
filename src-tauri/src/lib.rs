@@ -1,6 +1,7 @@
 mod api;
 mod commands;
 mod http;
+mod offline;
 mod service;
 mod setup;
 mod transcode;
@@ -26,18 +27,21 @@ use crate::commands::get_version::get_version_message;
 use crate::commands::local_shell::{
     close_local_shell, resize_local_shell, start_local_shell, write_local_shell, LocalShellState,
 };
-use crate::commands::system_fonts::list_system_fonts;
-use crate::commands::video_player::{
-    delete_video_player_file, read_video_player_text_stream, write_video_player_gzip_file,
+use crate::commands::offline_player::{
+    get_offline_entry_url, import_offline_recording, list_offline_recordings,
+    remove_offline_recording,
 };
+use crate::commands::system_fonts::list_system_fonts;
 use crate::commands::window_control::{
     close_window, minimize_window, open_settings_window, toggle_maximize_window,
 };
+use crate::offline::storage::OfflineStorage;
 use crate::service::oauth::AuthFlowState;
 use crate::transcode::transcode_replays;
 use crate::utils::is_auth_callback;
 
 use log::{error, info, warn};
+use std::time::Duration;
 use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
 #[cfg(not(target_os = "macos"))]
@@ -95,6 +99,14 @@ fn process_deep_link(handle: &tauri::AppHandle, raw: &str) -> bool {
 
 pub fn run() {
     let builder = tauri::Builder::default()
+        .register_asynchronous_uri_scheme_protocol("offline", |context, request, responder| {
+            let app = context.app_handle().clone();
+
+            // custom protocol 的文件读取不能阻塞 WebView/UI 线程。
+            tauri::async_runtime::spawn_blocking(move || {
+                responder.respond(crate::offline::protocol::handle_request(&app, request));
+            });
+        })
         .manage(AuthFlowState::default())
         .manage(ApiSessionStore::default())
         .manage(LocalShellState::default());
@@ -159,6 +171,16 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_prevent_default::debug())
         .setup(|app| {
+            let offline_root = app.path().app_data_dir()?.join("offline-recordings");
+            let offline_storage = OfflineStorage::open(offline_root)?;
+
+            // 上次异常退出可能留下 .pending-* 目录。
+            // 只清理超过一天的目录，避免影响仍在进行的导入。
+            if let Err(error) = offline_storage.cleanup_stale(Duration::from_secs(24 * 60 * 60)) {
+                warn!("Failed to clean stale offline recordings: {error}");
+            }
+            app.manage(offline_storage);
+
             let menu = build_menu(app)?;
             #[cfg(target_os = "macos")]
             {
@@ -227,9 +249,10 @@ pub fn run() {
             init_http_callback_server,
             set_api_session,
             set_api_org,
-            write_video_player_gzip_file,
-            read_video_player_text_stream,
-            delete_video_player_file,
+            import_offline_recording,
+            list_offline_recordings,
+            remove_offline_recording,
+            get_offline_entry_url,
             transcode_replays,
         ])
         .run(tauri::generate_context!())

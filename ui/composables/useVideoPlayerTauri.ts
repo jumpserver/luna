@@ -1,54 +1,46 @@
-interface StreamHandlers {
-  onChunk: (chunk: string) => void
-  onEnd: () => void
-  onError: (message: string) => void
+import type { VideoPlayerItemType, VideoPlayerMeta } from "~/composables/useVideoPlayerParser";
+
+export interface OfflineRecordingEntry {
+  entry_id: string
+  source_name: string
+  media_type: VideoPlayerItemType
+  byte_length: number
+  part_index?: number
+  part_total?: number
+  start_ms?: number
+  end_ms?: number
+  duration_ms?: number
+}
+
+export interface OfflineRecordingManifest {
+  version: number
+  recording_id: string
+  label: string
+  metadata: VideoPlayerMeta
+  entries: OfflineRecordingEntry[]
 }
 
 export function useVideoPlayerTauri() {
-  const invoke = useTauriCoreInvoke;
-  const listen = useTauriEventListen;
-
-  async function writeGzipFile(buffer: ArrayBuffer, fileName: string) {
-    return await invoke<string>("write_video_player_gzip_file", {
-      buffer: Array.from(new Uint8Array(buffer)),
-      fileName
+  async function importRecording(filePath: string) {
+    return await useTauriCoreInvoke<OfflineRecordingManifest>("import_offline_recording", {
+      filePath
     });
   }
 
-  async function deleteTempFile(filePath: string) {
-    await invoke("delete_video_player_file", { filePath });
+  async function getEntryUrl(recordingId: string, entryId: string) {
+    return await useTauriCoreInvoke<string>("get_offline_entry_url", {
+      recordingId,
+      entryId
+    });
   }
 
-  async function streamTextFile(filePath: string, handlers: StreamHandlers) {
-    const eventId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const chunkEvent = `videoplayer://${eventId}/chunk`;
-    const endEvent = `videoplayer://${eventId}/end`;
-    const errorEvent = `videoplayer://${eventId}/error`;
-
-    const unlistenChunk = await listen(chunkEvent, (event: any) => {
-      handlers.onChunk(event.payload?.chunk || "");
-    });
-    const unlistenEnd = await listen(endEvent, () => {
-      handlers.onEnd();
-    });
-    const unlistenError = await listen(errorEvent, (event: any) => {
-      handlers.onError(event.payload?.message || "Unknown stream error");
-    });
-
-    try {
-      await invoke("read_video_player_text_stream", { eventId, filePath });
-    } catch (error: any) {
-      handlers.onError(error?.toString?.() || String(error));
-    } finally {
-      unlistenChunk();
-      unlistenEnd();
-      unlistenError();
-    }
+  async function removeRecording(recordingId: string) {
+    await useTauriCoreInvoke("remove_offline_recording", { recordingId });
   }
 
   return {
-    writeGzipFile,
-    deleteTempFile,
-    streamTextFile
+    importRecording,
+    getEntryUrl,
+    removeRecording
   };
 }
