@@ -1,3 +1,1 @@
-export function formatMessage(id: string, type: string, data: unknown) {
-  return JSON.stringify({ id, type, data });
-}
+export { formatMessage } from "@jumpserver/connectors-core";

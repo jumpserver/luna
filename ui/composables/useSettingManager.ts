@@ -11,7 +11,7 @@ import type {
 } from "~/types";
 
 import { createBatchedPersist } from "~/composables/createBatchedPersist";
-import { useSettingStorage } from "~/composables/useSettingStorage";
+import { normalizeSidebarWidth, useSettingStorage } from "~/composables/useSettingStorage";
 import { DEFAULT_SIDEBAR_SECTIONS, normalizeSidebarSections } from "~/composables/useSidebarSections";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET, isThemePresetId } from "~/composables/useThemePresets";
 
@@ -268,6 +268,14 @@ export const useSettingManager = () => {
     persist({ recentSites: state.recentSites });
   };
 
+  const setSidebarWidth = (width: number) => {
+    state.sidebarWidth = normalizeSidebarWidth(width);
+  };
+
+  const persistSidebarWidth = () => {
+    persist({ sidebarWidth: state.sidebarWidth });
+  };
+
   const setSidebarSections = (sections: Partial<SidebarSectionVisibility>) => {
     state.sidebarSections = normalizeSidebarSections({
       ...state.sidebarSections,
@@ -308,6 +316,8 @@ export const useSettingManager = () => {
     setRdpColorQualityPreference,
     setRdpSmartSizePreference,
     setRecentSites,
+    setSidebarWidth,
+    persistSidebarWidth,
     setSidebarSections,
     resetSidebarSections
   };

@@ -1,0 +1,23 @@
+{
+  "name": "@jumpserver/connectors-core",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./types/component": "./src/types/component.ts",
+    "./types/message": "./src/types/message.ts",
+    "./types/session": "./src/types/session.ts",
+    "./useConnectorEndpoint": "./src/useConnectorEndpoint.ts",
+    "./useHostBridge": "./src/useHostBridge.ts",
+    "./sessionContext": "./src/sessionContext.ts",
+    "./utils/formatMessage": "./src/utils/formatMessage.ts",
+    "./utils/wsQuery": "./src/utils/wsQuery.ts"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "mitt": "^3.0.1"
+  }
+}

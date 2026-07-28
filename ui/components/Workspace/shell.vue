@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const { collapse } = useSettingManager();
-const { sidebarWidth, setSidebarWidth } = useSidebarLayout();
+const { sidebarWidth, setSidebarWidth, persistSidebarWidth } = useSidebarLayout();
 const { open: rightPanelOpen, panelWidth: rightPanelWidth, setPanelWidth } = useRightPanel();
 const isResizing = ref(false);
 const isRightResizing = ref(false);
@@ -15,6 +15,7 @@ const handleResize = (event: PointerEvent) => {
 const stopResizing = () => {
   if (!isResizing.value) return;
   isResizing.value = false;
+  persistSidebarWidth();
   document.body.style.cursor = "";
   document.body.style.userSelect = "";
   window.removeEventListener("pointermove", handleResize);

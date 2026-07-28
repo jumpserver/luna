@@ -1,11 +1,12 @@
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
-const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://0.0.0.0::5050";
+const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
 const lionTarget = process.env.JMS_LION_DEV_URL || "http://localhost:8081";
 const chenTarget = process.env.JMS_CHEN_DEV_URL || "http://localhost:8082";
 const faceliveTarget = process.env.JMS_FACELIVE_DEV_URL || "http://localhost:5173";
 const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:5172";
 const uiTarget = process.env.JMS_UI_DEV_URL || "http://localhost:9528";
 const appBaseURL = process.env.NUXT_APP_BASE_URL || "/luna/";
+
 const getProxyOrigin = (target: string) => new URL(target).origin;
 const rewriteProxyOrigin = (target: string) => (proxy: any) => {
   const origin = getProxyOrigin(target);
@@ -21,6 +22,7 @@ const bindProxyErrorHandler = (name: string) => (proxy: any) => {
 };
 
 export default defineNuxtConfig({
+  extends: ["@jumpserver/koko/nuxt"],
   srcDir: "ui/",
   modules: [
     "@nuxt/ui",
@@ -89,7 +91,6 @@ export default defineNuxtConfig({
     clearScreen: false,
     envPrefix: ["VITE_", "TAURI_"],
     server: {
-      host: "0.0.0.0",
       strictPort: true,
       hmr: {
         protocol: "ws",

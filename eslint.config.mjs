@@ -84,6 +84,14 @@ export default eslintConfig(
     }
   },
 
+  // pnpm's trust policy must remain a project-level install decision, not an ESLint autofix.
+  {
+    files: ["pnpm-workspace.yaml"],
+    rules: {
+      "pnpm/yaml-enforce-settings": "off"
+    }
+  },
+
   // Vue
   {
     files: ["**/*.vue"],
@@ -93,5 +101,27 @@ export default eslintConfig(
     }
   },
 
-  nuxtConfig()
+  nuxtConfig(),
+
+  // These packages are formatted with Prettier. Keep their lint rules aligned
+  // with Prettier's TypeScript and Vue output so both checks are repeatable.
+  {
+    files: ["packages/koko/**/*.{ts,vue}", "packages/connectors-core/**/*.{ts,vue}"],
+    rules: {
+      "antfu/consistent-chaining": "off",
+      "antfu/consistent-list-newline": "off",
+      "style/member-delimiter-style": [
+        "error",
+        {
+          multiline: { delimiter: "semi", requireLast: true },
+          singleline: { delimiter: "semi", requireLast: false }
+        }
+      ],
+      "style/operator-linebreak": ["error", "after", { overrides: { "?": "before", ":": "before" } }],
+      "vue/html-indent": "off",
+      "vue/html-self-closing": "off",
+      "vue/operator-linebreak": ["error", "after", { overrides: { "?": "before", ":": "before" } }],
+      "vue/singleline-html-element-content-newline": "off"
+    }
+  }
 );

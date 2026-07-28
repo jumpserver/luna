@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import KokoFileManagement from "~/koko/components/Drawer/FileManagement/index.vue";
+import { KokoFileManagement } from "@jumpserver/koko";
 
 definePageMeta({
   layout: "default"

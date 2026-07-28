@@ -400,5 +400,6 @@ export interface UserSettingPersistedState {
   rdpColorQuality: string
   rdpSmartSize: string
   recentSites: string[]
+  sidebarWidth: number
   sidebarSections: SidebarSectionVisibility
 }

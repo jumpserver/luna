@@ -18,6 +18,8 @@
     "preinstall": "npx only-allow pnpm",
     "postinstall": "nuxt prepare",
     "lint": "eslint . --fix",
+    "lint:check": "eslint . --ignore-pattern .omx",
+    "typecheck": "nuxt typecheck",
     "bump": "bumpp",
     "set_version": "node scripts/set-version.js",
     "setup_apple_cert": "bash scripts/setup-apple-cert.sh",
@@ -29,7 +31,7 @@
     "tauri:build": "tauri build",
     "tauri:build:debug": "tauri build --debug",
     "update:dependencies": "npx npm-check-updates -u && pnpm install && cd src-tauri && cargo update",
-    "prettier": "prettier --write \"ui/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
+    "prettier": "prettier --write \"{ui,packages}/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
     "reset": "rm -rf node_modules .nuxt dist && cd src-tauri && cargo clean"
   },
   "dependencies": {
@@ -55,6 +57,8 @@
     "@cyolosecurity/asciinema-player": "3.6.3-3",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/noto-sans-sc": "^5.2.8",
+    "@jumpserver/connectors-core": "workspace:*",
+    "@jumpserver/koko": "workspace:*",
     "@nuxt/icon": "2.2.2",
     "@nuxt/ui": "4.8.0",
     "@nuxtjs/i18n": "10.4.0",
@@ -113,7 +117,8 @@
     "bumpp": "^11.1.0",
     "eslint": "^10.4.0",
     "prettier": "^3.8.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vue-tsc": "3.2.4"
   },
   "resolutions": {
     "typescript": "npm:tslite@latest"

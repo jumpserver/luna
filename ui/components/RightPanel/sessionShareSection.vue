@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { ShareUserOptions } from "~/koko/types";
-import { useKokoSessionAdapter } from "~/koko/composables/useSessionAdapter";
+import type { ShareUserOptions } from "@jumpserver/koko";
+import { useKokoSessionAdapter } from "@jumpserver/koko";
 
 const props = defineProps<{
   disabled?: boolean

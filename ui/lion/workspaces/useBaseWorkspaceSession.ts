@@ -1,9 +1,8 @@
+import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
+
 import type { Ref } from "vue";
-
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
-import type { ConnectorSessionContext } from "~/shared/connectors/types/session";
-
-import { connectorSessionKey } from "~/koko/composables/wsUrl";
+import { connectorSessionKey } from "@jumpserver/connectors-core";
 
 export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
   const colorMode = useColorMode();
