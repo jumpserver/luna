@@ -1,9 +1,8 @@
 <script setup lang="ts">
 const { isMacOS } = usePlatform();
 const localePath = useLocalePath();
-const route = useRoute();
 const { collapse, setCollapse } = useSettingManager();
-const { uiWorkspaceMode, setPendingWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
+const { uiWorkspaceMode } = useWorkspaceMode();
 const isMacClient = computed(() => isTauriRuntime() && isMacOS.value);
 const headerIconButtonClass = "grid size-6 shrink-0 place-items-center rounded-lg p-0 text-gray-500 transition-colors hover:bg-black/6 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white";
 
@@ -20,25 +19,7 @@ const workspaceModes = computed(() => {
 });
 
 const setMode = async (mode: "assets" | "files") => {
-  const filePath = localePath({ path: "/files" });
-  setPendingWorkspaceMode(mode);
-
-  if (mode === "assets") {
-    if (route.path === filePath) {
-      await navigateTo(localePath({ path: "/" }));
-    } else {
-      setWorkspaceMode(mode);
-    }
-    return;
-  }
-
-  if (mode === "files") {
-    if (route.path !== filePath) {
-      await navigateTo(filePath);
-    } else {
-      setWorkspaceMode(mode);
-    }
-  }
+  await navigateTo(localePath({ path: mode === "files" ? "/files" : "/" }));
 };
 
 const toggleSidebar = () => {
@@ -50,6 +31,8 @@ const toggleSidebar = () => {
   <div
     class="relative z-20 flex h-full items-center gap-1"
     :class="isMacClient ? 'pl-[88px] pr-2' : 'px-2.5'"
+    data-tauri-drag-region="false"
+    @mousedown.stop
   >
     <div v-if="!isMacClient" class="mr-1.5 flex items-center">
       <img src="/logo.png" alt="JumpServer" class="h-5 w-5 rounded">

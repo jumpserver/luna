@@ -2,8 +2,8 @@
 const { collapse } = useSettingManager();
 const { isMacOS } = usePlatform();
 const { sidebarWidth } = useSidebarLayout();
-const route = useRoute();
-const isToolWindow = computed(() => route.query.tool_window === "1");
+const router = useRouter();
+const isToolWindow = computed(() => router.currentRoute.value.query.tool_window === "1");
 const leadingAreaStyle = computed(() => ({
   width: collapse.value
     ? (isMacOS.value ? "128px" : "44px")

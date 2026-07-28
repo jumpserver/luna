@@ -1,4 +1,10 @@
 <script setup lang="ts">
+const props = withDefaults(defineProps<{
+  sidebarVisible?: boolean
+}>(), {
+  sidebarVisible: true
+});
+
 const { collapse } = useSettingManager();
 const { sidebarWidth, setSidebarWidth, persistSidebarWidth } = useSidebarLayout();
 const { open: rightPanelOpen, panelWidth: rightPanelWidth, setPanelWidth } = useRightPanel();
@@ -6,6 +12,10 @@ const isResizing = ref(false);
 const isRightResizing = ref(false);
 let resizeStartX = 0;
 let resizeStartWidth = 0;
+const sidebarTransitionClass = computed(() => {
+  if (isResizing.value || !props.sidebarVisible) return "";
+  return "transition-[width] duration-200";
+});
 
 const handleResize = (event: PointerEvent) => {
   if (!isResizing.value) return;
@@ -82,15 +92,15 @@ onBeforeUnmount(() => {
       <aside
         v-if="$slots.sidebar"
         class="workspace-shell__sidebar relative min-h-0 shrink-0"
-        :class="isResizing ? '' : 'transition-[width] duration-200'"
+        :class="sidebarTransitionClass"
         :style="{
-          width: collapse ? '0px' : `${sidebarWidth}px`,
+          width: !props.sidebarVisible || collapse ? '0px' : `${sidebarWidth}px`,
           backgroundColor: 'var(--app-sidebar-bg)'
         }"
       >
         <slot name="sidebar" />
         <div
-          v-if="!collapse"
+          v-if="props.sidebarVisible && !collapse"
           role="separator"
           aria-orientation="vertical"
           aria-label="调整侧边栏宽度"

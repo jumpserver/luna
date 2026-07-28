@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
-const route = useRoute();
+const router = useRouter();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const isToolRoute = computed(() => {
-  const path = route.path.toLowerCase();
+  const path = router.currentRoute.value.path.toLowerCase();
   return path.includes("/tools") || path.includes("/videoplayer") || path.includes("/transcode");
 });
 
@@ -16,7 +16,7 @@ const showSidebarChrome = computed(
   () => !isToolRoute.value && (activeWorkspaceMode.value !== "assets" || loggedIn.value || isTauriRuntime())
 );
 const toolWindowTitleClass = computed(() => {
-  if (!(isMacOS.value && route.query.tool_window === "1")) {
+  if (!(isMacOS.value && router.currentRoute.value.query.tool_window === "1")) {
     return "px-4";
   }
 
@@ -24,7 +24,7 @@ const toolWindowTitleClass = computed(() => {
 });
 
 const pageHeader = computed(() => {
-  const path = route.path.toLowerCase();
+  const path = router.currentRoute.value.path.toLowerCase();
 
   if (path.includes("/files")) {
     return {

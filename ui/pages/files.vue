@@ -2,7 +2,8 @@
 import { KokoFileManagement } from "@jumpserver/koko";
 
 definePageMeta({
-  layout: "default"
+  layout: "default",
+  keepalive: true
 });
 </script>
 

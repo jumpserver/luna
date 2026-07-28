@@ -6,8 +6,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { isWindows } = usePlatform();
-const route = useRoute();
-const { activeWorkspaceMode, setPendingWorkspaceMode, uiWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
+const { activeWorkspaceMode, uiWorkspaceMode } = useWorkspaceMode();
 const { registerSessionDisposer } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const userInfoStore = useUserInfoStore();
@@ -71,18 +70,6 @@ onBeforeUnmount(() => {
   registerKokoTicketProvider(null);
 });
 
-watch(
-  () => route.path,
-  (path) => {
-    const normalizedPath = path.toLowerCase();
-    const isFileRoute = normalizedPath.includes("/files");
-    const isToolRoute = normalizedPath.includes("/tools") || normalizedPath.includes("/videoplayer") || normalizedPath.includes("/transcode");
-
-    setPendingWorkspaceMode(null);
-    setWorkspaceMode(isFileRoute ? "files" : isTauriRuntime() && isToolRoute ? "tools" : "assets");
-  },
-  { immediate: true }
-);
 </script>
 
 <template>
@@ -93,30 +80,36 @@ watch(
   >
     <SettingsModal v-if="!isTauriRuntime()" />
 
-    <WorkspaceShell>
+    <WorkspaceShell :sidebar-visible="showWorkspaceSidebar">
       <template #header>
         <Header />
       </template>
 
-      <template v-if="showWorkspaceSidebar" #sidebar>
+      <template #sidebar>
         <SideBar />
       </template>
 
       <Main class="h-full min-h-0">
-        <WorkspaceTerminalArea v-if="activeWorkspaceMode === 'assets'" />
-        <slot v-else />
+        <WorkspaceTerminalArea v-show="activeWorkspaceMode === 'assets'" class="h-full min-h-0" />
+        <div v-show="activeWorkspaceMode !== 'assets'" class="h-full min-h-0">
+          <slot />
+        </div>
       </Main>
 
       <template #rightPanel>
         <RightPanel />
       </template>
 
-      <template v-if="activeWorkspaceMode === 'assets' && batchPanelOpen" #bottomPanel>
-        <WorkspaceBatchCommandBottomPanel />
+      <template #bottomPanel>
+        <div v-show="activeWorkspaceMode === 'assets' && batchPanelOpen" class="min-h-0">
+          <WorkspaceBatchCommandBottomPanel />
+        </div>
       </template>
 
-      <template v-if="activeWorkspaceMode === 'assets'" #footer>
-        <WorkspaceStatusFooter />
+      <template #footer>
+        <div v-show="activeWorkspaceMode === 'assets'">
+          <WorkspaceStatusFooter />
+        </div>
       </template>
     </WorkspaceShell>
   </UCard>
