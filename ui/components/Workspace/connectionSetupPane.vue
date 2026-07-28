@@ -15,8 +15,8 @@ import { sortPermedProtocols, sortProtocolNames } from "~/utils";
 
 const props = withDefaults(
   defineProps<{
-    tab: WorkspaceSessionTab;
-    assetType?: AssetPageType;
+    tab: WorkspaceSessionTab
+    assetType?: AssetPageType
   }>(),
   {
     assetType: "assets"
@@ -209,7 +209,7 @@ async function ensureDetails(asset: AssetItem) {
   const detailsReady = new Promise<AssetItem>((resolve) => {
     unsubscribe = useEventBus().on(
       "assetDetailUpdated",
-      (payload: { assetId: string; permedAccounts: PermedAccount[]; permedProtocols: PermedProtocol[] }) => {
+      (payload: { assetId: string, permedAccounts: PermedAccount[], permedProtocols: PermedProtocol[] }) => {
         if (payload.assetId !== asset.id) return;
 
         currentAsset.value = {
@@ -262,8 +262,8 @@ async function submit() {
       tabId: props.tab.id,
       onSessionError: (error) => {
         connecting.value = false;
-        connectionError.value =
-          error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
+        connectionError.value
+          = error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
       }
     });
   } catch (error) {

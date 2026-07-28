@@ -6,55 +6,55 @@ export type OutputResolution = "original" | "p1080" | "p720" | "p360";
 export type TranscodePower = "auto" | "full" | "fast" | "medium" | "low";
 
 export interface ReplayMetadata {
-  id: string;
-  user: string;
-  asset: string;
-  account: string;
-  login_from: string;
-  remote_addr: string;
-  protocol: string;
-  date_start: string;
-  date_end: string;
-  org_id: string;
-  user_id: string;
-  asset_id: string;
-  account_id: string;
-  recording_type: string;
-  files: unknown[];
+  id: string
+  user: string
+  asset: string
+  account: string
+  login_from: string
+  remote_addr: string
+  protocol: string
+  date_start: string
+  date_end: string
+  org_id: string
+  user_id: string
+  asset_id: string
+  account_id: string
+  recording_type: string
+  files: unknown[]
 }
 
 export interface TranscodeProgressPayload {
-  file: string;
-  index: number;
-  total: number;
-  progress: number;
-  message: string;
-  success?: boolean | null;
-  output?: string | null;
-  metadata?: ReplayMetadata | null;
-  duration?: number | null;
+  file: string
+  index: number
+  total: number
+  progress: number
+  message: string
+  success?: boolean | null
+  output?: string | null
+  metadata?: ReplayMetadata | null
+  duration?: number | null
 }
 
 export interface TranscodeResult {
-  id: string;
-  input: string;
-  output: string;
-  success: boolean;
-  error?: string;
-  metadata?: ReplayMetadata | null;
+  id: string
+  input: string
+  output: string
+  success: boolean
+  error?: string
+  metadata?: ReplayMetadata | null
 }
 
 export interface TranscodeTaskItem {
-  index: number;
-  path: string;
-  displayName: string;
-  progress: number;
-  message: string;
-  status: TranscodeTaskStatus;
-  output: string;
-  error: string;
-  metadata: ReplayMetadata | null;
-  duration?: number | null;
+  index: number
+  path: string
+  displayName: string
+  progress: number
+  message: string
+  status: TranscodeTaskStatus
+  output: string
+  error: string
+  metadata: ReplayMetadata | null
+  duration?: number | null
 }
 
 let listenerRegistered = false;
@@ -194,19 +194,6 @@ export const useTranscodeStore = defineStore(
       pendingPaths.value = [];
     };
 
-    const flushQueue = () => {
-      if (!pendingPaths.value.length) return false;
-      const paths = [...pendingPaths.value];
-      const queuedSet = new Set(paths);
-      const completed = taskItems.value.filter(
-        (item) => !queuedSet.has(item.path) && (item.status === "success" || item.status === "error")
-      );
-      pendingPaths.value = [];
-      archivePaths.value = paths;
-      taskItems.value = [...completed, ...paths.map((path, index) => buildTaskItem(path, completed.length + index))];
-      return true;
-    };
-
     const tryAdvanceQueue = (): boolean => {
       const stats = taskItems.value.reduce(
         (acc, item) => {
@@ -255,17 +242,6 @@ export const useTranscodeStore = defineStore(
       transcodePower.value = power;
     };
 
-    const findTaskIndexByFile = (file: string): number => {
-      if (!file) return -1;
-      return taskItems.value.findIndex(
-        (item) =>
-          item.displayName === file ||
-          item.path === file ||
-          item.path.endsWith(`/${file}`) ||
-          item.path.endsWith(`\\${file}`)
-      );
-    };
-
     const handleProgressEvent = (payload: TranscodeProgressPayload) => {
       let targetIndex = -1;
 
@@ -282,12 +258,12 @@ export const useTranscodeStore = defineStore(
           if (item.status === "success" || item.status === "error") return false;
           const base = item.path.split(/[\\/]/).pop() || "";
           return (
-            item.displayName === payload.file ||
-            item.path === payload.file ||
-            item.path.endsWith(`/${payload.file}`) ||
-            item.path.endsWith(`\\${payload.file}`) ||
-            base === payload.file ||
-            base === `${payload.file}.tar`
+            item.displayName === payload.file
+            || item.path === payload.file
+            || item.path.endsWith(`/${payload.file}`)
+            || item.path.endsWith(`\\${payload.file}`)
+            || base === payload.file
+            || base === `${payload.file}.tar`
           );
         });
       }
@@ -323,12 +299,12 @@ export const useTranscodeStore = defineStore(
 
       const byPath = taskItems.value.findIndex(
         (item) =>
-          item.status !== "success" &&
-          item.status !== "error" &&
-          (item.path === result.id ||
-            item.displayName === result.id ||
-            item.path.endsWith(`/${result.id}`) ||
-            item.path.endsWith(`\\${result.id}`))
+          item.status !== "success"
+          && item.status !== "error"
+          && (item.path === result.id
+            || item.displayName === result.id
+            || item.path.endsWith(`/${result.id}`)
+            || item.path.endsWith(`\\${result.id}`))
       );
       if (byPath !== -1) return byPath;
 
@@ -388,9 +364,9 @@ export const useTranscodeStore = defineStore(
           description:
             failed > 0
               ? t("Transcode.CompletedSummaryWithErrors", {
-                  success: succeeded,
-                  failed
-                })
+                success: succeeded,
+                failed
+              })
               : t("Transcode.CompletedSummary", { count: succeeded }),
           color: failed > 0 ? "error" : "primary",
           icon: failed > 0 ? "line-md:close-circle" : "line-md:check-all",
@@ -456,8 +432,8 @@ export const useTranscodeStore = defineStore(
 
           applyBatchResults(results);
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : typeof error === "string" ? error : t("Transcode.UnknownError");
+          const message
+            = error instanceof Error ? error.message : typeof error === "string" ? error : t("Transcode.UnknownError");
 
           markAllPendingAsError(message);
 

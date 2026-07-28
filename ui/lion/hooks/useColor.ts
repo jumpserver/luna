@@ -1,17 +1,17 @@
 import { ref } from 'vue';
 
 interface HSL {
-  h: number;
-  s: number;
-  l: number;
+  h: number
+  s: number
+  l: number
 }
 
 const mainThemeColorMap = new Map(
   Object.entries({
     default: '#483D3D',
     deepBlue: '#1A212C',
-    darkGary: '#303237',
-  }),
+    darkGary: '#303237'
+  })
 );
 
 const currentMainColoc = ref('#303237');
@@ -77,7 +77,7 @@ export const useColor = () => {
     return {
       h: Math.round(h * 360),
       s: Math.round(s * 100),
-      l: Math.round(l * 100),
+      l: Math.round(l * 100)
     };
   };
 
@@ -158,10 +158,10 @@ export const useColor = () => {
 
   /**
    * 将颜色变亮
-   * @param amount
-   * @param color
-   * @param alphaValue
-   * @returns
+   * @param amount 调整的亮度值
+   * @param color 要处理的颜色，默认使用当前主题色
+   * @param alphaValue 可选透明度，传入后返回 rgba 字符串
+   * @returns 调亮后的十六进制颜色，或带透明度的 rgba 字符串
    */
   const lighten = (amount: number, color?: string, alphaValue?: number) => {
     const actualColor = color || currentMainColoc.value;
@@ -177,10 +177,10 @@ export const useColor = () => {
 
   /**
    * 将颜色变暗
-   * @param amount
-   * @param color
-   * @param alphaValue
-   * @returns
+   * @param amount 调整的亮度值
+   * @param color 要处理的颜色，默认使用当前主题色
+   * @param alphaValue 可选透明度，传入后返回 rgba 字符串
+   * @returns 调暗后的十六进制颜色，或带透明度的 rgba 字符串
    */
   const darken = (amount: number, color?: string, alphaValue?: number) => {
     const actualColor = color || currentMainColoc.value;
@@ -200,6 +200,6 @@ export const useColor = () => {
     lighten,
     alpha,
     setCurrentMainColor,
-    currentMainColor: currentMainColoc,
+    currentMainColor: currentMainColoc
   };
 };

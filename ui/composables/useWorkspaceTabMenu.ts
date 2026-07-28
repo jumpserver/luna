@@ -71,7 +71,7 @@ export function useWorkspaceTabMenu() {
     } catch (error) {
       addErrorToast({
         title: t("TabMenu.CloneConnect"),
-        description: String(error),
+        description: String(error)
       });
     }
   };
@@ -102,7 +102,7 @@ export function useWorkspaceTabMenu() {
     } catch (error) {
       addErrorToast({
         title: t("TabMenu.SplitVertically"),
-        description: String(error),
+        description: String(error)
       });
     }
   };

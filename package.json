@@ -107,6 +107,7 @@
     "@oxc-minify/binding-darwin-arm64": "0.133.0",
     "@oxc-transform/binding-darwin-arm64": "0.133.0",
     "@tauri-apps/cli": "^2.11.2",
+    "@types/node": "^26.1.1",
     "@vueuse/core": "^14.3.0",
     "@vueuse/nuxt": "^14.3.0",
     "bumpp": "^11.1.0",

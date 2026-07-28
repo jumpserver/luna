@@ -1,5 +1,5 @@
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
-const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
+const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://0.0.0.0::5050";
 const lionTarget = process.env.JMS_LION_DEV_URL || "http://localhost:8081";
 const chenTarget = process.env.JMS_CHEN_DEV_URL || "http://localhost:8082";
 const faceliveTarget = process.env.JMS_FACELIVE_DEV_URL || "http://localhost:5173";

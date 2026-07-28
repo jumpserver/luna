@@ -2,8 +2,8 @@
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
 import ConnectView from "@/lion/views/ConnectView.vue";
-import BaseWorkspaceShell from "~/koko/workspaces/BaseWorkspaceShell.vue";
 import { useBaseWorkspaceSession } from "@/lion/workspaces/useBaseWorkspaceSession";
+import BaseWorkspaceShell from "~/koko/workspaces/BaseWorkspaceShell.vue";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const tab = toRef(props, "tab");

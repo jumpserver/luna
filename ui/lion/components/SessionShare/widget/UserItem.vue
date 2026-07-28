@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useColor } from '@/lion/hooks/useColor';
 
 const props = defineProps<{
-  username: string;
-  userId: string;
-  writable: boolean;
-  primary: boolean;
-  meta: object;
+  username: string
+  userId: string
+  writable: boolean
+  primary: boolean
+  meta: object
 }>();
 
 const emit = defineEmits<{
-  (e: 'removeUser', meta: object): void;
+  (e: 'removeUser', meta: object): void
 }>();
 
 const { t } = useI18n();
@@ -23,7 +23,7 @@ const confirmOpen = ref(false);
 const options = [
   { label: t('Writable'), value: 'editor' },
   { label: t('ReadOnly'), value: 'readonly' },
-  { label: t('Admin'), value: 'admin' },
+  { label: t('Admin'), value: 'admin' }
 ];
 
 const selectionValue = computed(() => {

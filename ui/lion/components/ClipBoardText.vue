@@ -1,21 +1,24 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
-import { readClipboardText } from '@/lion/utils/clipboard';
 import { useDebounceFn } from '@vueuse/core';
-import CardContainer from '@/lion/components/CardContainer/index.vue';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import CardContainer from '@/lion/components/CardContainer/index.vue';
+import { readClipboardText } from '@/lion/utils/clipboard';
 
+const props = defineProps<{
+  remoteText?: string
+  disabled?: boolean
+}>();
 const emit = defineEmits(['update:text']);
 const { t } = useI18n();
 
 const inputValue = ref<string>('');
 const isLoading = ref<boolean>(false);
-const props = defineProps<{
-  remoteText?: string;
-  disabled?: boolean;
-}>();
-
 const showRemoteText = ref<boolean>(false);
+
+const handleInput = useDebounceFn((value: string) => {
+  emit('update:text', value);
+}, 300);
 
 const loadClipboardText = async () => {
   try {
@@ -29,10 +32,6 @@ const loadClipboardText = async () => {
     isLoading.value = false;
   }
 };
-
-const handleInput = useDebounceFn((value: string) => {
-  emit('update:text', value);
-}, 300);
 
 const handleFocus = async () => {
   if (!inputValue.value.trim()) {

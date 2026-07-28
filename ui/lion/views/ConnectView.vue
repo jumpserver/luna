@@ -1,24 +1,24 @@
 <script lang="ts" setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useDebounceFn } from '@vueuse/core';
-import { useI18n } from 'vue-i18n';
-import { connectorSessionKey } from '~/koko/composables/wsUrl';
-import type { ConnectorSessionContext } from '~/shared/connectors/types/session';
 import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from '@/lion/types/upload';
-import { getCurrentConnectParams } from '@/lion/utils/common';
-import { withLionWsUrl } from '@/lion/utils/base';
-import { lunaCommunicator } from '@/lion/utils/lunaBus';
-import { LUNA_MESSAGE_TYPE } from '@/lion/types/postmessage.type';
+import type { ConnectorSessionContext } from '~/shared/connectors/types/session';
+import { useDebounceFn } from '@vueuse/core';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import ClipBoardText from '@/lion/components/ClipBoardText.vue';
-import SessionShare from '@/lion/components/SessionShare/index.vue';
-import FileManager from '@/lion/components/FileManager.vue';
-import { readClipboardText } from '@/lion/utils/clipboard';
-import Osk from '@/lion/components/Osk.vue';
-import KeyboardOption from '@/lion/components/KeyboardOption.vue';
-import OtherOption from '@/lion/components/OtherOption.vue';
-import { useGuacamoleClient } from '@/lion/hooks/useGuacamoleClient';
-import { ErrorStatusCodes } from '@/lion/utils/status';
 import CombinationKey from '@/lion/components/CombinationKey.vue';
+import FileManager from '@/lion/components/FileManager.vue';
+import KeyboardOption from '@/lion/components/KeyboardOption.vue';
+import Osk from '@/lion/components/Osk.vue';
+import OtherOption from '@/lion/components/OtherOption.vue';
+import SessionShare from '@/lion/components/SessionShare/index.vue';
+import { useGuacamoleClient } from '@/lion/hooks/useGuacamoleClient';
+import { LUNA_MESSAGE_TYPE } from '@/lion/types/postmessage.type';
+import { withLionWsUrl } from '@/lion/utils/base';
+import { readClipboardText } from '@/lion/utils/clipboard';
+import { getCurrentConnectParams } from '@/lion/utils/common';
+import { lunaCommunicator } from '@/lion/utils/lunaBus';
+import { ErrorStatusCodes } from '@/lion/utils/status';
+import { connectorSessionKey } from '~/koko/composables/wsUrl';
 
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
@@ -51,7 +51,7 @@ const {
   enableShare,
   action_permission,
   remoteClipboardText,
-  sendInputActive,
+  sendInputActive
 } = useGuacamoleClient(t);
 
 const drawShow = ref(false);
@@ -62,7 +62,7 @@ const resolveContainerSize = () => {
   const rect = containerRef.value?.getBoundingClientRect();
   return {
     width: Math.max(Math.floor(rect?.width || window.innerWidth), 640),
-    height: Math.max(Math.floor(rect?.height || window.innerHeight), 480),
+    height: Math.max(Math.floor(rect?.height || window.innerHeight), 480)
   };
 };
 
@@ -76,22 +76,38 @@ const debouncedResize = useDebounceFn(() => {
 let resizeObserver: ResizeObserver | null = null;
 
 interface GuacamoleFile {
-  mimetype?: any;
-  streamName?: any;
-  type: 'DIRECTORY' | 'FILE';
-  name: string;
-  parent?: GuacamoleFile | null;
-  is_dir?: boolean;
+  mimetype?: any
+  streamName?: any
+  type: 'DIRECTORY' | 'FILE'
+  name: string
+  parent?: GuacamoleFile | null
+  is_dir?: boolean
 }
 
 interface UploadItem {
-  uploadOptions: LionUploadCustomRequestOptions;
-  folder: GuacamoleFile;
+  uploadOptions: LionUploadCustomRequestOptions
+  folder: GuacamoleFile
 }
 
 const uploadingFiles = ref<Array<UploadItem>>([]);
 const isUploading = ref(false);
 const displayUploadingFiles = ref<Array<LionUploadFileInfo>>([]);
+const showOsk = ref<boolean>(false);
+
+function getKeyboardLayout() {
+  const lunaSetting = localStorage.getItem('LunaSetting');
+  if (lunaSetting) {
+    const setting = JSON.parse(lunaSetting);
+    const graphics = setting.graphics || {};
+    const layout = graphics.keyboard_layout || setting.keyboard_layout;
+    if (layout) return layout;
+  }
+  return 'en-us-qwerty';
+}
+
+const keyboardLayout = ref<string>(getKeyboardLayout());
+const currentTab = ref('general');
+const shouldEnableScroll = ref(false);
 
 const handleUploadFile = (options: LionUploadCustomRequestOptions, folder: any) => {
   const item = { uploadOptions: options, folder: folder || currentFolder.value };
@@ -114,7 +130,7 @@ const handleRemoveFile = (file: LionUploadFileInfo) => {
   displayUploadingFiles.value = displayUploadingFiles.value.filter((f) => f.name !== file.name);
 };
 
-const processUploadQueue = async () => {
+async function processUploadQueue() {
   while (isUploading.value && uploadingFiles.value.length > 0) {
     const uploadItem = uploadingFiles.value.shift();
     if (!uploadItem?.uploadOptions) continue;
@@ -134,13 +150,11 @@ const processUploadQueue = async () => {
       }
       addErrorToast({ title: msg });
     } finally {
-      setTimeout(() => handleRemoveFile(uploadOptions.file), 5000);
+      setTimeout(handleRemoveFile, 5000, uploadOptions.file);
     }
   }
   isUploading.value = false;
-};
-
-const showOsk = ref<boolean>(false);
+}
 
 const fileDrop = (event: DragEvent) => {
   event.stopPropagation();
@@ -157,8 +171,8 @@ const fileDrop = (event: DragEvent) => {
         percentage: 0,
         type: fileObj.type,
         status: 'pending',
-        file: fileObj,
-      },
+        file: fileObj
+      }
     }, currentFolder.value);
   });
 };
@@ -175,14 +189,14 @@ const resolveConnectConfig = () => {
     return {
       // ponytail: lion 走 Guacamole connect 参数 TOKEN_ID，不用 koko 的 ?token= WS 查询串
       ws: withLionWsUrl('/ws/connect/'),
-      token: ctx.tokenId,
+      token: ctx.tokenId
     };
   }
 
   const params = getCurrentConnectParams();
   return {
     ws: params.ws || '',
-    token: params.data.token || '',
+    token: params.data.token || ''
   };
 };
 
@@ -203,7 +217,7 @@ onMounted(async () => {
   const { width, height } = resolveContainerSize();
   connectToGuacamole(ws, {
     TOKEN_ID: encodeURIComponent(token),
-    GUAC_KEYBOARD: keyboardLayout.value,
+    GUAC_KEYBOARD: keyboardLayout.value
   }, width, height, true);
 
   const displayEl = document.getElementById('display');
@@ -252,19 +266,6 @@ document.addEventListener('contextmenu', (e: MouseEvent) => {
   e.stopPropagation();
 }, false);
 
-const getKeyboardLayout = () => {
-  const lunaSetting = localStorage.getItem('LunaSetting');
-  if (lunaSetting) {
-    const setting = JSON.parse(lunaSetting);
-    const graphics = setting.graphics || {};
-    const layout = graphics.keyboard_layout || setting.keyboard_layout;
-    if (layout) return layout;
-  }
-  return 'en-us-qwerty';
-};
-
-const keyboardLayout = ref<string>(getKeyboardLayout());
-
 const handleScreenKeyboard = (name: string, keysym: any) => {
   if (name === 'keydown') sendKeyEvent(1, keysym);
   else if (name === 'keyup') sendKeyEvent(0, keysym);
@@ -302,15 +303,12 @@ const scaleGuaDisplay = (value: number) => {
 };
 
 const onlineUsers = computed(() => Object.values(onlineUsersMap.value).filter(Boolean));
-
-const currentTab = ref('general');
 const assetName = computed(() => sessionObject.value?.asset?.name || '');
 const isRemoteApp = computed(() => Boolean(sessionObject.value?.remote_app));
-const shouldEnableScroll = ref(false);
 
 const drawerTabs = computed(() => {
   const tabs = [
-    { value: 'general', label: t('General'), icon: 'i-lucide-keyboard' },
+    { value: 'general', label: t('General'), icon: 'i-lucide-keyboard' }
   ];
   if (driverName.value) {
     tabs.push({ value: 'file-manager', label: t('FileManagement'), icon: 'i-lucide-folder-kanban' });
@@ -333,9 +331,8 @@ const drawerTabs = computed(() => {
 
     <div
       id="display"
-      :class="[
-        'relative flex h-full w-full min-h-0 justify-center',
-        shouldEnableScroll ? 'overflow-auto' : 'overflow-hidden',
+      class="relative flex h-full w-full min-h-0 justify-center" :class="[
+        shouldEnableScroll ? 'overflow-auto' : 'overflow-hidden'
       ]"
     />
 

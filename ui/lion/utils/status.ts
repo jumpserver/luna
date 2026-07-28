@@ -14,7 +14,15 @@ export const ErrorStatusCodes: any = {
   1008: 'JMSErrGuacamoleServer',
   1009: 'JMSErrDisconnected',
   1010: 'JMSErrMaxSession',
-  1011: 'JMSErrRemoveShareUser',
+  1011: 'JMSErrRemoveShareUser'
+};
+
+export const APIErrorType: any = {
+  'connect API core err': 'JMSErrAPIFailed',
+  'connect Panda API core err': 'JMSErrAPIFailed',
+  'unsupported type': 'JMSErrBadParams',
+  'unsupported protocol': 'JMSErrBadParams',
+  'permission deny': 'JMSErrPermission'
 };
 
 export function ConvertAPIError(errMsg: string | any): string {
@@ -27,21 +35,6 @@ export function ConvertAPIError(errMsg: string | any): string {
     return APIErrorType[errorKey] || errMsg;
   }
   return errMsg;
-}
-
-export const APIErrorType: any = {
-  'connect API core err': 'JMSErrAPIFailed',
-  'connect Panda API core err': 'JMSErrAPIFailed',
-  'unsupported type': 'JMSErrBadParams',
-  'unsupported protocol': 'JMSErrBadParams',
-  'permission deny': 'JMSErrPermission',
-};
-
-export function ConvertGuacamoleError(errMsg: string | any): string {
-  if (typeof errMsg !== 'string') {
-    return errMsg;
-  }
-  return GuacamoleErrMsg[errMsg] || errMsg;
 }
 
 export const GuacamoleErrMsg: any = {
@@ -68,5 +61,12 @@ export const GuacamoleErrMsg: any = {
   'Manually logged off.': 'GuacamoleErrManuallyLoggedOff',
 
   'Unsupported credential type requested.': 'GuacamoleErrUnsupportedCredentialTypeRequested',
-  'Unable to connect to VNC server.': 'GuacamoleErrUnableToConnectToVNCServer',
+  'Unable to connect to VNC server.': 'GuacamoleErrUnableToConnectToVNCServer'
 };
+
+export function ConvertGuacamoleError(errMsg: string | any): string {
+  if (typeof errMsg !== 'string') {
+    return errMsg;
+  }
+  return GuacamoleErrMsg[errMsg] || errMsg;
+}

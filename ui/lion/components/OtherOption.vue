@@ -1,17 +1,17 @@
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CardContainer from '@/lion/components/CardContainer/index.vue';
 
-const { t } = useI18n();
-
 const props = defineProps<{
-  isRemoteApp: boolean;
-  autoFit: boolean;
-  fitPercentage: number;
+  isRemoteApp: boolean
+  autoFit: boolean
+  fitPercentage: number
 }>();
 
 const emit = defineEmits(['combine-keys', 'update:autoFit', 'updateScale']);
+
+const { t } = useI18n();
 
 const percentage = ref<number>(props.fitPercentage);
 

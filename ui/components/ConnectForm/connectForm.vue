@@ -9,28 +9,28 @@ import {
 import { sortProtocolNames } from "~/utils";
 
 const props = defineProps<{
-  account: string;
-  protocol: string;
-  accounts: PermedAccount[];
-  protocols: PermedProtocol[];
-  manualUsername?: string;
-  manualPassword?: string;
-  dynamicPassword?: string;
-  rememberSecret?: boolean;
-  connectMethod?: string;
-  connectOptions?: Record<string, any>;
-  assetType?: AssetPageType;
+  account: string
+  protocol: string
+  accounts: PermedAccount[]
+  protocols: PermedProtocol[]
+  manualUsername?: string
+  manualPassword?: string
+  dynamicPassword?: string
+  rememberSecret?: boolean
+  connectMethod?: string
+  connectOptions?: Record<string, any>
+  assetType?: AssetPageType
 }>();
 
 const emits = defineEmits<{
-  (e: "update:protocol", v: string): void;
-  (e: "update:account", v: string): void;
-  (e: "update:manualUsername", v: string): void;
-  (e: "update:manualPassword", v: string): void;
-  (e: "update:dynamicPassword", v: string): void;
-  (e: "update:rememberSecret", v: boolean): void;
-  (e: "update:connectMethod", v: string): void;
-  (e: "update:connectOptions", v: Record<string, any>): void;
+  (e: "update:protocol", v: string): void
+  (e: "update:account", v: string): void
+  (e: "update:manualUsername", v: string): void
+  (e: "update:manualPassword", v: string): void
+  (e: "update:dynamicPassword", v: string): void
+  (e: "update:rememberSecret", v: boolean): void
+  (e: "update:connectMethod", v: string): void
+  (e: "update:connectOptions", v: Record<string, any>): void
 }>();
 
 const { t } = useI18n();
@@ -172,7 +172,7 @@ const protocolTabItems = computed(() =>
   ).map((name) => ({ label: name.toUpperCase(), value: name }))
 );
 const connectMethodTypeItems = computed(() => {
-  const metaMap: Record<string, { label: string; icon: string }> = {
+  const metaMap: Record<string, { label: string, icon: string }> = {
     builtin: { label: t("ConnectMethodType.BuiltIn"), icon: "i-lucide-globe" },
     native: { label: t("ConnectMethodType.Application"), icon: "i-lucide-monitor" },
     remote_app: { label: t("ConnectMethodType.RemoteApplication"), icon: "i-lucide-app-window" }
@@ -240,10 +240,10 @@ const showDisableAutoHashOption = computed(() => ["mysql", "mariadb"].includes((
 const showResolutionOption = computed(() => (props.protocol || "").toLowerCase() === "rdp");
 const showAdvancedOptions = computed(
   () =>
-    showCharsetOption.value ||
-    showBackspaceOption.value ||
-    showDisableAutoHashOption.value ||
-    showResolutionOption.value
+    showCharsetOption.value
+    || showBackspaceOption.value
+    || showDisableAutoHashOption.value
+    || showResolutionOption.value
 );
 
 const charsetItems = computed(() => [
